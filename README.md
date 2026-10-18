@@ -1,5 +1,9 @@
 # lazyplan (`lp`) — v0.7.0
 
+[![PyPI](https://img.shields.io/pypi/v/lazyplan-tui)](https://pypi.org/project/lazyplan-tui/)
+[![Python](https://img.shields.io/pypi/pyversions/lazyplan-tui)](https://pypi.org/project/lazyplan-tui/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
 Terminal stream-of-consciousness console for issue tracking + roadmap planning,
 built to run in tmux next to `opencode` and `lazygit`. Design rules live in
 [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md), enforced by `src/lazyplan/design.py`.
@@ -7,7 +11,7 @@ built to run in tmux next to `opencode` and `lazygit`. Design rules live in
 ## Install
 
 ```bash
-pipx install lazyplan-tui   # isolated global `lp` (once published to PyPI)
+pipx install lazyplan-tui   # isolated global `lp`
 # or from source: pipx install ~/personal-repos/lazyplan
 # or: python3 -m venv .venv && . .venv/bin/activate && pip install -e .
 lp --help

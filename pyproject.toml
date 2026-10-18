@@ -1,11 +1,24 @@
 [project]
-name = "lazyplan"
+name = "lazyplan-tui"
 version = "0.7.0"
 description = "Terminal stream-of-consciousness console for issue tracking + roadmap planning alongside AI agents."
 readme = "README.md"
-license = { text = "MIT" }
+license = "MIT"
 requires-python = ">=3.11"
 dependencies = ["textual>=3"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Operating System :: OS Independent",
+    "Environment :: Console",
+    "Topic :: Software Development :: Bug Tracking",
+    "Topic :: Office/Business :: Scheduling",
+]
+[project.urls]
+Homepage = "https://github.com/fluxion-dev/lazyplan"
+Repository = "https://github.com/fluxion-dev/lazyplan"
+Issues = "https://github.com/fluxion-dev/lazyplan/issues"
+Changelog = "https://github.com/fluxion-dev/lazyplan/releases"
 [project.scripts]
 lp = "lazyplan.cli:main"
 [project.optional-dependencies]

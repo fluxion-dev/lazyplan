@@ -7,7 +7,8 @@ built to run in tmux next to `opencode` and `lazygit`. Design rules live in
 ## Install
 
 ```bash
-pipx install ~/personal-repos/lazyplan   # isolated global `lp`
+pipx install lazyplan-tui   # isolated global `lp` (once published to PyPI)
+# or from source: pipx install ~/personal-repos/lazyplan
 # or: python3 -m venv .venv && . .venv/bin/activate && pip install -e .
 lp --help
 # optional: shell completions

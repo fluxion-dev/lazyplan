@@ -1,0 +1,21 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install (editable + dev extras)
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install -e ".[dev,postgres]"
+      - name: Gates (ruff + mypy + unittest x2)
+        run: ./tools/check.sh

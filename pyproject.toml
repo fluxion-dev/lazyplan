@@ -1,0 +1,55 @@
+[project]
+name = "lazyplan-tui"
+version = "0.8.0"
+description = "Terminal stream-of-consciousness console for issue tracking + roadmap planning alongside AI agents."
+readme = "README.md"
+license = "MIT"
+authors = [{name = "Brad Lindsay"}]
+requires-python = ">=3.11"
+dependencies = ["textual>=3"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Operating System :: OS Independent",
+    "Environment :: Console",
+    "Topic :: Software Development :: Bug Tracking",
+    "Topic :: Office/Business :: Scheduling",
+]
+[project.urls]
+Homepage = "https://github.com/fluxion-dev/lazyplan"
+Repository = "https://github.com/fluxion-dev/lazyplan"
+Issues = "https://github.com/fluxion-dev/lazyplan/issues"
+Changelog = "https://github.com/fluxion-dev/lazyplan/releases"
+[project.scripts]
+lazyplan = "lazyplan.cli:main"
+lpui = "lazyplan.cli:main"
+[project.optional-dependencies]
+postgres = ["psycopg[binary]>=3.1"]
+dev = ["ruff>=0.8", "mypy>=1.13"]
+test = ["pytest>=8"]
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "W"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["lazyplan"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+show_error_codes = true
+disallow_untyped_defs = true

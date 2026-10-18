@@ -37,9 +37,11 @@ APP_CSS = f"""
 ModalScreen {{ align: center middle; }}
 """
 
-# -- label language (used by `lpui list` AND the TUI tree) ------------------
-# Canonical row grammar:
+# -- label language ---------------------------------------------------------
+# Canonical row grammar (plain text: `lpui list`, palette, tests):
 #   KIND#id [status] !p0 title @owner (start..end) ~estimate [1/2✓] [!blocked by 3]
+# TUI project rows are Rich markup (Tree labels and Static both parse it):
+#   [reverse] P1 [/] title (due DATE)
 # Tree indentation is the viewer's job ("", "  ", "    " for CLI).
 
 INDENT = ("", "  ", "    ")
@@ -80,9 +82,29 @@ def date_span(start: str, end: str) -> str:
     return f"({start}..{end})"
 
 
+def pill_tag(text: str) -> str:
+    """Reverse-video pill for TUI rows (Rich markup; Tree/Static parse it)."""
+    return f"[reverse] {text} [/]"
+
+
+def delivery_tag(end: str) -> str:
+    """(due DATE) suffix for a target delivery date, or empty when unset."""
+    return f" (due {end})" if end else ""
+
+
+def _escape_markup(text: str) -> str:
+    """Escape `[` so titles render literally in markup-parsed TUI rows."""
+    return text.replace("[", "\\[")
+
+
 def project_label(p: Project) -> str:
-    """Canonical row label for a project."""
+    """Canonical row label for a project (plain text: CLI, palette, tests)."""
     return f"P#{p.id} [{_status(p.status)}] {p.name} {date_span(p.start_date, p.end_date)}"
+
+
+def project_row(p: Project) -> str:
+    """TUI project row (Rich markup): pill number + title + delivery date only."""
+    return f"{pill_tag(f'P{p.id}')} {_escape_markup(p.name)}{delivery_tag(p.end_date)}"
 
 
 def _crit_progress(store: Store | None, kind: str, obj_id: int) -> tuple[int | None, int | None]:

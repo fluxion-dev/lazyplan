@@ -33,6 +33,17 @@ class TestDesignSystem(unittest.TestCase):
         self.assertIn("~2d", design.task_label(t))
         self.assertEqual(design.owner_tag(""), "")
 
+    def test_project_row_pill_title_delivery_date(self):
+        p = Project(id=1, name="N", start_date="2026-01-01", end_date="2026-02-01")
+        self.assertEqual(design.project_row(p), "[reverse] P1 [/] N (due 2026-02-01)")
+        self.assertEqual(design.delivery_tag("2026-02-01"), " (due 2026-02-01)")
+        self.assertEqual(design.delivery_tag(""), "")
+
+    def test_project_row_no_date_and_escaped_title(self):
+        p = Project(id=7, name="Ray [old]", end_date="")
+        self.assertEqual(design.project_row(p), "[reverse] P7 [/] Ray \\[old]")
+        self.assertNotIn("[todo]", design.project_row(p))
+
     def test_cli_uses_design_labels(self):
         p = self.store.add_project("P", start_date="2026-01-01", end_date="2026-02-01")
         s = self.store.add_story(p.id, "S", owner="agent-1")

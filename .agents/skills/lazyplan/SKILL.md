@@ -32,7 +32,7 @@ lpui show --kind project|story|task --id N                          # full conte
 lpui gantt [--tasks] [--width 40]                                   # timeline
 lpui feed --limit 20                                                # recent activity
 lpui export --format json                                           # full dump when you need everything
-lpui info                                                           # resolved db path + counts (scope debugging)
+lpui info                                                           # resolved db path + scope + counts (scope debugging)
 ```
 
 Add `--json` for machine-parseable output (`lpui list --json`).
@@ -59,7 +59,7 @@ Closing with open acceptance criteria warns but never blocks.
 ```bash
 lpui --actor NAME add-criteria --kind task --id T --text "Works offline"  # acceptance item
 lpui criteria --kind task --id T                                          # list items
-lpui check --id C / lpui uncheck --id C                                     # tick/untick (advisory)
+lpui --actor NAME check --id C / lpui --actor NAME uncheck --id C                 # tick/untick (advisory)
 lpui --actor NAME delete-criteria --id C
 lpui --actor NAME add-link --kind task --id T --url URL [--label spec]    # attach reference
 lpui links --kind task --id T                                             # list links

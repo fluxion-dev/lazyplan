@@ -37,7 +37,7 @@ thing. That predictability is the whole system.
 
 | Type | Realization |
 |---|---|
-| Visual | Tokens in `design.py`: one border (`solid green`), one panel height, one-row bars, one label grammar, one date shape `(start..end)`, one owner shape `@name` |
+| Visual | Tokens in `design.py`: one border (`solid green`), one panel height, one-row bars, one plain label grammar, one TUI project row (`[reverse]` pill + title + `(due DATE)`), one date shape `(start..end)`, one owner shape `@name` |
 | Functional | `lpui` verbs == TUI `:` verbs; one key does one thing in every view (`1/2/3` views, `space` cycles status, `enter` details) |
 | Internal | CLI and TUI render from `design.*` helpers — no local format strings (`test_design.py` fails the build on drift) |
 | External | Shell conventions: `--help`, `--json` before or after the verb, `--db`/`$LAZYPLAN_DB`/repo/global resolution, exit non-zero on error, `KEY=value` env overrides |

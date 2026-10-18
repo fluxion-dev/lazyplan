@@ -29,7 +29,7 @@ from .design import (
     EMPTY_FILTERED,
     EMPTY_NO_PROJECTS,
     msg_error,
-    project_label,
+    project_row,
     story_label,
     task_label,
 )
@@ -305,7 +305,7 @@ if _TEXTUAL_OK:
             root = tree.root
             for p, stories in self._filtered_tree():
                 pn = root.add(
-                    project_label(p),
+                    project_row(p),
                     data={"kind": "project", "id": p.id},
                     allow_expand=bool(stories),
                 )
@@ -364,7 +364,7 @@ if _TEXTUAL_OK:
             lo, hi = span(dates, self.gantt_width)
             lines = [f"{lo} .. {hi} (w={self.gantt_width}, +/- zoom)"]
             for p, stories in tree:
-                lines.append(f"P#{p.id} {p.name}")
+                lines.append(project_row(p))
                 crit = set(self.store.critical_path(p.id))
                 for m in ms_by_project.get(p.id, []):
                     lines.append(f"  ◆ {m.date or '????-??-??'} M#{m.id} {m.title}")

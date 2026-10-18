@@ -196,8 +196,12 @@ class TestStore(unittest.TestCase):
 
     def test_export_import_roundtrip(self):
         p = self.store.add_project("P", goal="g")
+        self.store.set_status("project", p.id, Status.DOING)
         s = self.store.add_story(p.id, "S", priority="p1")
+        b = self.store.add_story(p.id, "B")
+        self.store.update_story(s.id, blocked_by=str(b.id))
         t = self.store.add_task(s.id, "T", description="d")
+        self.store.set_status("task", t.id, Status.DONE)
         self.store.add_criteria("task", t.id, "works")
         self.store.add_risk(p.id, "r1")
         self.store.add_milestone(p.id, "M1", "2026-12-01")
@@ -212,7 +216,7 @@ class TestStore(unittest.TestCase):
             counts,
             {
                 "projects": 1,
-                "stories": 1,
+                "stories": 2,
                 "tasks": 1,
                 "links": 1,
                 "criteria": 1,
@@ -220,9 +224,14 @@ class TestStore(unittest.TestCase):
                 "milestones": 1,
             },
         )
+        self.assertEqual(s2.get_project(1).status, Status.DOING)
         self.assertEqual(s2.get_project(1).goal, "g")
         self.assertEqual(s2.get_task(1).description, "d")
+        self.assertEqual(s2.get_task(1).status, Status.DONE)
         self.assertEqual(s2.criteria_progress("task", 1), (0, 1))
+        full = s2.get_full("story", 1)
+        assert full is not None
+        self.assertEqual(full["story"]["blocked_by"], [b.id])
         with self.assertRaises(ValueError):
             s2.import_all({"nope": True})
 

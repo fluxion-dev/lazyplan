@@ -1139,7 +1139,8 @@ class Store:
         return d
 
     def import_all(self, data: dict, actor: str = "human") -> dict[str, int]:
-        """Load an export_all() dump, remapping ids. Returns counts."""
+        """Load an export_all() dump, remapping ids. Preserves statuses,
+        criteria ticks, and blocked_by chains. Returns counts."""
         if not isinstance(data, dict) or data.get("lazyplan") != 1:
             raise ValueError("not a lazyplan export (missing lazyplan: 1)")
         counts = {
@@ -1151,6 +1152,13 @@ class Store:
             "risks": 0,
             "milestones": 0,
         }
+        story_map: dict[int, int] = {}
+        task_map: dict[int, int] = {}
+
+        def _apply_status(kind: str, obj_id: int, status: str) -> None:
+            if status and status != Status.TODO.value:
+                self.set_status(kind, obj_id, Status(status), actor=actor)
+
         for entry in data.get("projects", []):
             p = entry["project"]
             np = self.add_project(
@@ -1165,9 +1173,10 @@ class Store:
                 assumptions=p.get("assumptions", ""),
                 actor=actor,
             )
+            _apply_status("project", np.id, p.get("status", ""))
             counts["projects"] += 1
             for risk in entry.get("risks", []):
-                self.add_risk(
+                nr = self.add_risk(
                     np.id,
                     risk.get("title", ""),
                     risk.get("likelihood", "med"),
@@ -1175,6 +1184,8 @@ class Store:
                     risk.get("mitigation", ""),
                     actor=actor,
                 )
+                if risk.get("status", "open") != "open":
+                    self.set_risk(nr.id, status=RiskStatus(risk["status"]), actor=actor)
                 counts["risks"] += 1
             for ms in entry.get("milestones", []):
                 self.add_milestone(np.id, ms.get("title", ""), ms.get("date", ""), actor=actor)
@@ -1193,6 +1204,8 @@ class Store:
                     estimate=sp.get("estimate", ""),
                     actor=actor,
                 )
+                story_map[int(sp.get("id", -1))] = ns.id
+                _apply_status("story", ns.id, sp.get("status", ""))
                 counts["stories"] += 1
                 for li in sentry.get("links", []):
                     self.add_link("story", ns.id, li["url"], li.get("label", ""), actor=actor)
@@ -1216,6 +1229,8 @@ class Store:
                         labels=",".join(tp.get("labels", [])),
                         actor=actor,
                     )
+                    task_map[int(tp.get("id", -1))] = nt.id
+                    _apply_status("task", nt.id, tp.get("status", ""))
                     counts["tasks"] += 1
                     for li in tentry.get("links", []):
                         self.add_link("task", nt.id, li["url"], li.get("label", ""), actor=actor)
@@ -1225,8 +1240,28 @@ class Store:
                         if c.get("done"):
                             self.set_criteria(nc.id, True, actor=actor)
                         counts["criteria"] += 1
-        # blocked_by references are id-scoped to the source db; re-linking them
-        # across an id-remapping import is intentionally out of scope for v1.
+        # second pass: re-link blocked_by chains through the id maps
+        for entry in data.get("projects", []):
+            for sentry in entry.get("stories", []):
+                sp = sentry["story"]
+                if sp.get("blocked_by") and sp.get("id") in story_map:
+                    remapped = [story_map[b] for b in sp["blocked_by"] if b in story_map]
+                    if remapped:
+                        self.update_story(
+                            story_map[sp["id"]],
+                            blocked_by=",".join(str(i) for i in remapped),
+                            actor=actor,
+                        )
+                for tentry in sentry.get("tasks", []):
+                    tp = tentry["task"]
+                    if tp.get("blocked_by") and tp.get("id") in task_map:
+                        remapped_t = [task_map[b] for b in tp["blocked_by"] if b in task_map]
+                        if remapped_t:
+                            self.update_task(
+                                task_map[tp["id"]],
+                                blocked_by=",".join(str(i) for i in remapped_t),
+                                actor=actor,
+                            )
         return counts
 
     def critical_path(self, project_id: int) -> list[int]:

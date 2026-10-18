@@ -22,6 +22,7 @@ from .models import Project, Status, Task, UserStory
 from .render import render_full, render_markdown, tree_lines
 from .repo import ensure_plan_dir, find_repo_root, repo_label
 from .seed import seed as seed_demo
+from .skills import handle_init as _init_skills
 from .store import Store, _ser
 
 
@@ -45,6 +46,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.cmd == "init":
             plan_dir = ensure_plan_dir(store.path)
             root = find_repo_root(os.getcwd())
+            skills_info = _init_skills(args, root)
             return _emit(
                 args,
                 {
@@ -53,6 +55,7 @@ def main(argv: list[str] | None = None) -> int:
                     "plan_dir": str(plan_dir),
                     "scope": repo_label(store.path),
                     "counts": store.counts(),
+                    "skills": skills_info,
                 },
             )
         if args.cmd == "info":

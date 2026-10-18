@@ -26,7 +26,11 @@ Each git repo gets its own plan, stored with the code:
 
 ```bash
 cd ~/my-project
-lp init        # creates .plan/lazyplan.db + .plan/config.json
+lp init        # creates .plan/lazyplan.db + .plan/config.json, then offers
+               # the agent-skills wizard (universal `.agents/skills/lazyplan/`
+               # + `## lazyplan` pointer in AGENTS.md). Flags: --no-skills,
+               # --yes, --skills-scope project|global|both|none; --json stays
+               # machine-readable and never prompts.
 lp info        # resolved db path, repo root, counts, .plan files
 lp add-project --name "my-project" --start 2026-10-18 --end 2026-12-31
 lp ui          # statusbar shows [my-project]; agents in any subdir share it

@@ -33,7 +33,15 @@ def build_parser() -> argparse.ArgumentParser:
     common.add_argument("--actor", default=argparse.SUPPRESS)
     sub = p.add_subparsers(dest="cmd", required=True)
 
-    sub.add_parser("init", help="init .plan/ in this repo (or global db)", parents=[common])
+    init = sub.add_parser("init", help="init .plan/ in this repo (or global db)", parents=[common])
+    init.add_argument("--no-skills", action="store_true", help="skip the agent-skills wizard")
+    init.add_argument("--yes", action="store_true", help="install default skills without prompting")
+    init.add_argument(
+        "--skills-scope",
+        choices=["project", "global", "both", "none"],
+        default="",
+        help="install agent skills to a scope without prompting (none = skip)",
+    )
     sub.add_parser("seed", help="insert demo project/stories/tasks", parents=[common])
     sub.add_parser("info", help="show resolved db path, repo root, counts", parents=[common])
     li = sub.add_parser("list", help="ascii tree of projects > stories > tasks", parents=[common])

@@ -135,6 +135,20 @@ def msg_error(exc: BaseException) -> str:
     return f"error: {exc}"
 
 
+# -- `lp init` skill-wizard text (wizard prints these; keep wording stable) --
+INIT_SKILLS_TITLE = "== lp init: agent skills =="
+INIT_SKILLS_EXPLAIN = "One universal skill teaches your agents to use `lp` for planning."
+INIT_SKILLS_COVERAGE = (
+    "Install target `.agents/skills/lazyplan/SKILL.md` auto-loads in "
+    "OpenCode, Codex, Gemini CLI, and Cursor. A `.claude/skills/` copy is "
+    "added automatically when Claude Code is detected."
+)
+INIT_SKILLS_DONE = "Done. Restart your agent session, then try `lp list`."
+INIT_SKILLS_COMMIT_TIP = (
+    "Tip: commit `.agents/skills/lazyplan/`, `.claude/skills/` (if any), and AGENTS.md."
+)
+
+
 # -- help (TUI `?` overlay AND `lp help` render this same text) -------------
 HELP_TEXT = """lazyplan — stream-of-consciousness console (lp CLI == : command bar)
 views: 1 tree · 2 gantt · 3 feed · 4 proposals

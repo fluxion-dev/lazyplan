@@ -1,8 +1,8 @@
 """Single-panel Textual TUI: tree | gantt | feed, nano-style bottom bar.
 
-Keys: 1/2/3 views, j/k navigate, n contextual new, P/S/T new project/story/task,
+Keys: 1/2/3 views, j/k navigate, z/Z fold one/all, n contextual new, P/S/T new project/story/task,
   e edit, space cycle status, enter detail, +/- gantt zoom, f status filter,
-  o project filter, r refresh, ? help, q quit. Mouse click/expand works.
+  o project filter, r refresh, ? help, q quit. Mouse click folds/unfolds too.
 Command bar accepts the same verbs as `lp`, e.g. `add-task --story 1 --title x`.
 Agent writes via `lp --actor NAME ...` land in the same SQLite file; the TUI
 polls fingerprint() every second and toasts + activity-line.
@@ -10,7 +10,7 @@ polls fingerprint() every second and toasts + activity-line.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 try:
     from textual.app import App, ComposeResult
@@ -53,6 +53,23 @@ STATUS_CYCLE: list[Status | None] = [None, Status.TODO, Status.DOING, Status.DON
 
 if _TEXTUAL_OK:
 
+    class FoldTree(Tree):
+        """Project/story tree with app-level key semantics.
+
+        The native Tree space/shift+space bindings stay (so they keep working
+        and mouse toggles are untouched), but their actions delegate to the
+        app: `space` cycles status, shift+space folds all. Folding one node
+        lives on `z`; collapse state is tracked in app._collapsed.
+        """
+
+        def action_toggle_node(self) -> None:
+            """Space: cycle status instead of toggling the node."""
+            cast("LazyplanApp", self.app).action_toggle_status()
+
+        def action_toggle_expand_all(self) -> None:
+            """Shift+space: fold-all with app semantics."""
+            cast("LazyplanApp", self.app).action_fold_all()
+
     class LazyplanApp(App):
         """Single-panel TUI: tree | gantt | feed | proposals."""
 
@@ -77,6 +94,8 @@ if _TEXTUAL_OK:
             Binding("c", "criteria", "Check"),
             Binding("d", "delete", "Delete"),
             Binding("space", "toggle_status", "Done"),
+            Binding("z", "fold", "Fold"),
+            Binding("Z", "fold_all", "FoldAll", show=False),
             Binding("plus", "zoom_in", "Zoom+"),
             Binding("minus", "zoom_out", "Zoom-"),
             Binding("f", "filter_status", "Filter"),
@@ -98,12 +117,13 @@ if _TEXTUAL_OK:
             self.owner_filter: str | None = None
             self.gantt_width = 40
             self._row_nodes: dict[tuple[str, int], TreeNode] = {}
+            self._collapsed: set[tuple[str, int]] = set()
             self._fp: Any = store.fingerprint()
 
         def compose(self) -> ComposeResult:
             yield Header(show_clock=True)
             with Vertical(id="panel"):
-                yield Tree("projects", id="tree")
+                yield FoldTree("projects", id="tree")
                 yield Static("", id="gantt", markup=False)
                 yield Static("", id="feed", markup=False)
                 yield OptionList(id="props")
@@ -134,11 +154,65 @@ if _TEXTUAL_OK:
         def on_tree_node_highlighted(self, e: Tree.NodeHighlighted) -> None:
             self._track(e.node)
 
+        @staticmethod
+        def _node_key(node: TreeNode) -> tuple[str, int] | None:
+            data = getattr(node, "data", None)
+            if isinstance(data, dict) and "kind" in data and "id" in data:
+                return (str(data["kind"]), int(data["id"]))
+            return None
+
+        def on_tree_node_collapsed(self, e: Tree.NodeCollapsed) -> None:
+            """Remember mouse folds across refreshes/polls."""
+            key = self._node_key(e.node)
+            if key is not None and key[0] in ("project", "story"):
+                self._collapsed.add(key)
+
+        def on_tree_node_expanded(self, e: Tree.NodeExpanded) -> None:
+            key = self._node_key(e.node)
+            if key is not None:
+                self._collapsed.discard(key)
+
         def action_cursor_down(self) -> None:
             self.query_one("#tree", Tree).action_cursor_down()
 
         def action_cursor_up(self) -> None:
             self.query_one("#tree", Tree).action_cursor_up()
+
+        def action_fold(self) -> None:
+            """Toggle the selected project/story open/closed (z)."""
+            if self.selected is None:
+                self.notify("select a row first (z folds it)")
+                return
+            node = self._row_nodes.get(self.selected)
+            if node is None or not node.allow_expand or not node.children:
+                self.notify("nothing to fold here")
+                return
+            key = self.selected
+            if key in self._collapsed:
+                node.expand()
+                self._collapsed.discard(key)
+                self.refresh_all(f"{key[0]} #{key[1]} unfolded")
+            else:
+                node.collapse()
+                self._collapsed.add(key)
+                self.refresh_all(f"{key[0]} #{key[1]} folded")
+
+        def action_fold_all(self) -> None:
+            """Collapse every project/story, or re-open all when fully folded (Z)."""
+            keys = [k for k, n in self._row_nodes.items() if n.allow_expand and n.children]
+            if not keys:
+                self.notify("nothing to fold")
+                return
+            if all(k in self._collapsed for k in keys):
+                for k in keys:
+                    self._row_nodes[k].expand()
+                self._collapsed.clear()
+                self.refresh_all("unfolded all")
+            else:
+                for k in keys:
+                    self._row_nodes[k].collapse()
+                    self._collapsed.add(k)
+                self.refresh_all(f"folded {len(keys)} rows")
 
         # -- polling (M3: fingerprint, not just mtime) -------------------
         def _poll(self) -> None:
@@ -170,14 +244,24 @@ if _TEXTUAL_OK:
                 pn = root.add(project_label(p), data={"kind": "project", "id": p.id})
                 self._row_nodes[("project", p.id)] = pn
                 for s, tasks in stories:
-                    sn = pn.add_leaf(story_label(s, self.store), data={"kind": "story", "id": s.id})
+                    sn = pn.add(
+                        story_label(s, self.store),
+                        data={"kind": "story", "id": s.id},
+                        allow_expand=bool(tasks),
+                    )
                     self._row_nodes[("story", s.id)] = sn
                     for t in tasks:
                         leaf = sn.add_leaf(
                             task_label(t, self.store), data={"kind": "task", "id": t.id}
                         )
                         self._row_nodes[("task", t.id)] = leaf
-            root.expand_all()
+            root.expand()
+            self._collapsed &= set(self._row_nodes)  # drop rows deleted since last build
+            for key, node in self._row_nodes.items():
+                if key in self._collapsed:
+                    node.collapse()
+                elif node.allow_expand:
+                    node.expand()
             self._render_gantt()
             self._render_feed()
             self._render_props()

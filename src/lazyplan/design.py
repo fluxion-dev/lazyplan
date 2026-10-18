@@ -154,7 +154,7 @@ HELP_TEXT = """lazyplan — stream-of-consciousness console (lp CLI == : command
 views: 1 tree · 2 gantt · 3 feed · 4 proposals
 move: j/k or arrows + click · enter edits detail in place
 n new (context) · P/S/T new project/story/task · e edit · d delete
-space cycle status · c tick criteria · +/- gantt zoom
+space cycle status · c tick criteria · z/Z fold one/all · +/- gantt zoom
 f status filter · o project filter · O owner filter
 s search · ctrl+p palette · a/x approve/reject proposal
 r refresh · / command bar · ? help · q quit

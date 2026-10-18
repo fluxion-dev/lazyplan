@@ -25,7 +25,7 @@ class TestVersion(unittest.TestCase):
         with open(ROOT / "pyproject.toml", "rb") as fh:
             version = tomllib.load(fh)["project"]["version"]
         header = (ROOT / "README.md").read_text().splitlines()[0]
-        self.assertEqual(header, f"# lazyplan (`lp`) — v{version}")
+        self.assertEqual(header, f"# lazyplan (`lpui`) — v{version}")
 
 
 if __name__ == "__main__":

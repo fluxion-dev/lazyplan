@@ -1,4 +1,4 @@
-"""Agent-skill installer for `lp init`.
+"""Agent-skill installer for `lpui init`.
 
 One universal skill covers every modern agent host: OpenCode, Claude Code,
 Codex, Gemini CLI, and Cursor all discover skills under `.agents/skills/`
@@ -38,25 +38,25 @@ AGENTS_MARK_END = "<!-- lazyplan:end -->"
 
 SKILL_FRONTMATTER = """---
 name: lazyplan
-description: Plan and track work with lazyplan (lp) — projects, stories, tasks, proposals. Use when the user asks to plan work, track progress, break down a feature, check status, or when repo instructions mention `lp`.
+description: Plan and track work with lazyplan (lpui) — projects, stories, tasks, proposals. Use when the user asks to plan work, track progress, break down a feature, check status, or when repo instructions mention `lpui`.
 license: MIT
 compatibility: opencode, claude-code, codex, gemini-cli, cursor
 ---
 """
 
-SKILL_BODY = """# lazyplan (`lp`) — repo issue tracker
+SKILL_BODY = """# lazyplan (`lpui`) — repo issue tracker
 
-`lp` is the repo's plan of record: projects > stories > tasks, stored in
+`lpui` is the repo's plan of record: projects > stories > tasks, stored in
 `.plan/lazyplan.db` (SQLite, committed with the repo or local — check
-`.plan/config.json`). The human watches `lp ui`; agents inject work through
-the CLI. Never touch the TUI process — only call `lp`.
+`.plan/config.json`). The human watches `lpui ui`; agents inject work through
+the CLI. Never touch the TUI process — only call `lpui`.
 
 ## Identity
 
 Pass `--actor <name>` on every write so the human sees who did what in
-`lp feed` (e.g. `lp --actor opencode add-task ...`). Reads don't need it.
+`lpui feed` (e.g. `lpui --actor opencode add-task ...`). Reads don't need it.
 `--actor` and `--json` work before or after the verb
-(`lp list --json` == `lp --json list`).
+(`lpui list --json` == `lpui --json list`).
 
 ## DB scoping (first match wins)
 
@@ -67,15 +67,15 @@ of the repo resolves to that repo's DB. Don't override `--db` unless asked.
 ## Read first
 
 ```bash
-lp list [--status todo|doing|done] [--project ID] [--owner NAME]  # tree
-lp show --kind project|story|task --id N                          # full context
-lp gantt [--tasks] [--width 40]                                   # timeline
-lp feed --limit 20                                                # recent activity
-lp export --format json                                           # full dump when you need everything
-lp info                                                           # resolved db path + counts (scope debugging)
+lpui list [--status todo|doing|done] [--project ID] [--owner NAME]  # tree
+lpui show --kind project|story|task --id N                          # full context
+lpui gantt [--tasks] [--width 40]                                   # timeline
+lpui feed --limit 20                                                # recent activity
+lpui export --format json                                           # full dump when you need everything
+lpui info                                                           # resolved db path + counts (scope debugging)
 ```
 
-Add `--json` for machine-parseable output (`lp list --json`).
+Add `--json` for machine-parseable output (`lpui list --json`).
 
 ## Write: full CRUD
 
@@ -83,12 +83,12 @@ Every entity supports create → read (`show`) → update/status → delete.
 `--kind` is project|story|task everywhere it appears.
 
 ```bash
-lp --actor NAME add-project --name "API v2" [--goal .. --metrics .. --scope-in .. --scope-out ..]
-lp --actor NAME add-story --project P --title "Feature Y" [--owner me --priority p0 --estimate 2w]
-lp --actor NAME add-task --story S --title "Do X" [--desc ctx --owner me --priority p1 --estimate 2d]
-lp --actor NAME update --kind task --id T [--title .. --desc .. --owner .. --priority p0|none --estimate ..]
-lp --actor NAME status --kind task --id T --to doing|done
-lp --actor NAME delete --kind task --id T                         # immediate, no confirm
+lpui --actor NAME add-project --name "API v2" [--goal .. --metrics .. --scope-in .. --scope-out ..]
+lpui --actor NAME add-story --project P --title "Feature Y" [--owner me --priority p0 --estimate 2w]
+lpui --actor NAME add-task --story S --title "Do X" [--desc ctx --owner me --priority p1 --estimate 2d]
+lpui --actor NAME update --kind task --id T [--title .. --desc .. --owner .. --priority p0|none --estimate ..]
+lpui --actor NAME status --kind task --id T --to doing|done
+lpui --actor NAME delete --kind task --id T                         # immediate, no confirm
 ```
 
 Deleting a project removes its stories and tasks — double-check ids first.
@@ -97,33 +97,33 @@ Closing with open acceptance criteria warns but never blocks.
 ## Checklists, links, risks, milestones
 
 ```bash
-lp --actor NAME add-criteria --kind task --id T --text "Works offline"  # acceptance item
-lp criteria --kind task --id T                                          # list items
-lp check --id C / lp uncheck --id C                                     # tick/untick (advisory)
-lp --actor NAME delete-criteria --id C
-lp --actor NAME add-link --kind task --id T --url URL [--label spec]    # attach reference
-lp links --kind task --id T                                             # list links
-lp --actor NAME delete-link --id L
-lp --actor NAME add-risk --project P --title "Slip" [--likelihood high --impact high --mitigation buf]
-lp risks --project P                                                    # likelihood x impact first
-lp --actor NAME risk-status --id R --to mitigated
-lp --actor NAME add-milestone --project P --title "Beta" --date 2026-11-15
-lp milestones --project P                                               # list markers
-lp --actor NAME delete-milestone --id M
-lp --actor NAME import --file dump.json                                 # load an export dump (remaps ids)
+lpui --actor NAME add-criteria --kind task --id T --text "Works offline"  # acceptance item
+lpui criteria --kind task --id T                                          # list items
+lpui check --id C / lpui uncheck --id C                                     # tick/untick (advisory)
+lpui --actor NAME delete-criteria --id C
+lpui --actor NAME add-link --kind task --id T --url URL [--label spec]    # attach reference
+lpui links --kind task --id T                                             # list links
+lpui --actor NAME delete-link --id L
+lpui --actor NAME add-risk --project P --title "Slip" [--likelihood high --impact high --mitigation buf]
+lpui risks --project P                                                    # likelihood x impact first
+lpui --actor NAME risk-status --id R --to mitigated
+lpui --actor NAME add-milestone --project P --title "Beta" --date 2026-11-15
+lpui milestones --project P                                               # list markers
+lpui --actor NAME delete-milestone --id M
+lpui --actor NAME import --file dump.json                                 # load an export dump (remaps ids)
 ```
 
 ## Human-in-the-loop (preferred for judgment calls)
 
 ```bash
-lp --actor NAME propose --kind task --parent S --title "Refactor X"  # parent: story id for tasks, project id for stories
-lp --actor NAME ask --question "Which scope: minimal or full?"       # human answers in UI
-lp questions --all          # check for answers (poll; agents: lp feed --json --follow &)
-lp proposals --status pending
+lpui --actor NAME propose --kind task --parent S --title "Refactor X"  # parent: story id for tasks, project id for stories
+lpui --actor NAME ask --question "Which scope: minimal or full?"       # human answers in UI
+lpui questions --all          # check for answers (poll; agents: lpui feed --json --follow &)
+lpui proposals --status pending
 ```
 
 Propose/ask instead of guessing when scope, taste, or repo-wide impact is
-involved. The human approves (`4` then `a`/`x` in `lp ui`). Never
+involved. The human approves (`4` then `a`/`x` in `lpui ui`). Never
 `approve`/`reject` your own proposals or `answer` your own questions —
 those verbs belong to the human in the UI.
 
@@ -131,21 +131,21 @@ those verbs belong to the human in the UI.
 
 - One DB write = one feed event; keep titles imperative and scoped.
 - Prefer update/status over delete + recreate (ids and history survive).
-- Never invent project/story ids: `lp list` to discover them.
-- Never `lp seed` a real repo plan — it inserts demo data.
-- Full verb reference: `lp --help` (CLI == TUI `:` command bar).
+- Never invent project/story ids: `lpui list` to discover them.
+- Never `lpui seed` a real repo plan — it inserts demo data.
+- Full verb reference: `lpui --help` (CLI == TUI `:` command bar).
 """
 
-AGENTS_SNIPPET = """## lazyplan (`lp`)
+AGENTS_SNIPPET = """## lazyplan (`lpui`)
 
 Repo plan of record: projects > stories > tasks in `.plan/lazyplan.db`.
-Human watches `lp ui`; agents work via the CLI with `--actor <name>`.
+Human watches `lpui ui`; agents work via the CLI with `--actor <name>`.
 
-- Read: `lp list`, `lp show --kind story --id N`, `lp feed --limit 20` (`--json` for parsing)
-- Write (full CRUD): `lp add-project`, `lp add-story`, `lp add-task`, `lp update`, `lp status`, `lp delete` (all with `--actor <name>`)
-- Extras: `lp add-criteria`, `lp add-link`, `lp add-risk`, `lp add-milestone` (flags in the skill)
-- Unsure? `lp propose` / `lp ask` for human approval
-- Full skill: `.agents/skills/lazyplan/SKILL.md` · verbs: `lp --help`
+- Read: `lpui list`, `lpui show --kind story --id N`, `lpui feed --limit 20` (`--json` for parsing)
+- Write (full CRUD): `lpui add-project`, `lpui add-story`, `lpui add-task`, `lpui update`, `lpui status`, `lpui delete` (all with `--actor <name>`)
+- Extras: `lpui add-criteria`, `lpui add-link`, `lpui add-risk`, `lpui add-milestone` (flags in the skill)
+- Unsure? `lpui propose` / `lpui ask` for human approval
+- Full skill: `.agents/skills/lazyplan/SKILL.md` · verbs: `lpui --help`
 """
 
 
@@ -161,7 +161,7 @@ class AgentHost:
 
 @dataclass
 class InstallResult:
-    """Outcome of a skill install, serialized into `lp init` JSON."""
+    """Outcome of a skill install, serialized into `lpui init` JSON."""
 
     scope: str
     installed: list[str] = field(default_factory=list)
@@ -318,7 +318,7 @@ def run_wizard(
     read: Callable[[], str] | None = None,
     write: TextIO | None = None,
 ) -> InstallResult:
-    """Interactive `lp init` wizard. All I/O on stderr/stdin; stdout stays JSON."""
+    """Interactive `lpui init` wizard. All I/O on stderr/stdin; stdout stays JSON."""
     import sys
 
     home = home or Path.home()
@@ -399,7 +399,7 @@ def run_wizard(
 
 
 def should_prompt(args: Namespace, is_tty: bool) -> bool:
-    """True only for an interactive human `lp init` with no scope overrides."""
+    """True only for an interactive human `lpui init` with no scope overrides."""
     no_skills = bool(getattr(args, "no_skills", False))
     scope_arg = str(getattr(args, "skills_scope", "") or "").strip()
     yes = bool(getattr(args, "yes", False))
@@ -410,7 +410,7 @@ def should_prompt(args: Namespace, is_tty: bool) -> bool:
 
 
 def handle_init(args: Namespace, repo_root: Path | None, home: Path | None = None) -> dict:
-    """Decide interactive vs non-interactive skill setup for `lp init`."""
+    """Decide interactive vs non-interactive skill setup for `lpui init`."""
     import sys
 
     home = home or Path.home()

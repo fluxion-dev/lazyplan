@@ -1,4 +1,4 @@
-"""SQLite persistence. Stdlib only. Shared by TUI and `lp` CLI (agent ingress)."""
+"""SQLite persistence. Stdlib only. Shared by TUI and `lpui` CLI (agent ingress)."""
 
 from __future__ import annotations
 
@@ -161,7 +161,7 @@ def _actor(explicit: str = "") -> str:
 
 
 class Store:
-    """SQLite persistence shared by the TUI and the lp CLI."""
+    """SQLite persistence shared by the TUI and the lpui CLI."""
 
     def __init__(self, path: str | Path | None = None) -> None:
         self.path = resolve_db_path(path)
@@ -1321,7 +1321,7 @@ class Store:
         return [r["owner"] for r in rows]
 
     def get_full(self, kind: str, obj_id: int) -> dict | None:
-        """Full context record for `lp show`: fields + links + children."""
+        """Full context record for `lpui show`: fields + links + children."""
         if kind == "project":
             p = self.get_project(obj_id)
             if p is None:

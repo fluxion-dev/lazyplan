@@ -1,4 +1,4 @@
-"""`lp` argument parser (every verb the CLI and TUI command bar share)."""
+"""`lpui` argument parser (every verb the CLI and TUI command bar share)."""
 
 from __future__ import annotations
 
@@ -9,8 +9,10 @@ from .models import Status
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """lp argument parser; globals repeat on every subcommand."""
-    p = argparse.ArgumentParser(prog="lp", description="lazyplan: projects > stories > tasks")
+    """lpui argument parser; globals repeat on every subcommand."""
+    p = argparse.ArgumentParser(
+        description="lazyplan: projects > stories > tasks (lpui; alias: lazyplan)"
+    )
     p.add_argument(
         "--db",
         default=None,
@@ -22,7 +24,8 @@ def build_parser() -> argparse.ArgumentParser:
         default=os.environ.get("USER", "human"),
         help="who is making this change (surfaced in feed)",
     )
-    # repeat globals on subcommands so `lp list --json` works as well as `lp --json list`.
+    # repeat globals on every subcommand so `lpui list --json` works as well as
+    # `lpui --json list`.
     # SUPPRESS defaults: an explicit global flag must survive when the
     # subcommand flag is absent (argparse would otherwise let the
     # subcommand default clobber it).
@@ -208,7 +211,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     ex = sub.add_parser("export", help="full dump (agents: --format json)", parents=[common])
     ex.add_argument("--format", choices=["json", "markdown"], default="json")
-    im = sub.add_parser("import", help="load an `lp export --format json` dump", parents=[common])
+    im = sub.add_parser("import", help="load an `lpui export --format json` dump", parents=[common])
     im.add_argument("--file", required=True)
     sy = sub.add_parser("sync", help="snapshot SQLite -> Postgres replica (S#5)", parents=[common])
     sy.add_argument(

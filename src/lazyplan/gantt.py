@@ -1,4 +1,4 @@
-"""ASCII gantt helpers. Shared by `lp gantt` (agents/CI) and the Textual gantt view."""
+"""ASCII gantt helpers. Shared by `lpui gantt` (agents/CI) and the Textual gantt view."""
 
 from __future__ import annotations
 

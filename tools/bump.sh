@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Bump the lazyplan semantic version: major | minor | patch.
 # Single source of truth is `version = "x.y.z"` in pyproject.toml; the
-# README header (`# lazyplan (`lp`) — v0.7.0`) mirrors it and is updated here.
+# README header (`# lazyplan (`lpui`) — v0.7.0`) mirrors it and is updated here.
 # Commits the change and tags `vX.Y.Z` (annotated). Push with --push.
 #
 # Usage: ./tools/bump.sh patch [--push] | [--dry-run]

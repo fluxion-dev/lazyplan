@@ -2,7 +2,7 @@
 
 The replica exists so dashboards, SQL-savvy agents, and multi-machine readers
 can query the plan without touching the live SQLite file. SQLite stays the
-source of truth; `lp sync` overwrites replica tables wholesale.
+source of truth; `lpui sync` overwrites replica tables wholesale.
 
 Requires: pip install "lazyplan[postgres]"  (psycopg v3)
 """

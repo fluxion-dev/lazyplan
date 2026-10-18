@@ -1,5 +1,6 @@
-"""`lp` companion CLI. Human + agent ingress: every mutation writes SQLite;
-the running TUI auto-refreshes. Stdlib only (no Textual import here)."""
+"""`lpui` companion CLI (`lazyplan` is the same binary). Human + agent ingress:
+every mutation writes SQLite; the running TUI auto-refreshes. Stdlib only
+(no Textual import here)."""
 
 from __future__ import annotations
 
@@ -32,7 +33,7 @@ def _emit(args: argparse.Namespace, payload: object) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Dispatch one lp invocation; exit codes are agent-readable."""
+    """Dispatch one lpui invocation; exit codes are agent-readable."""
     args = build_parser().parse_args(argv)
     # `watch` is `feed --follow`
     if args.cmd == "watch":
@@ -512,9 +513,10 @@ def main(argv: list[str] | None = None) -> int:
                 "completion",
             ]
             if args.shell == "bash":
-                print(f'complete -W "{" ".join(cmds)}" lp')
+                print(f'complete -W "{" ".join(cmds)}" lpui')
+                print(f'complete -W "{" ".join(cmds)}" lazyplan')
             else:
-                print(f"#compdef lp\n_arguments '1:command:({' '.join(cmds)})'")
+                print(f"#compdef lpui lazyplan\n_arguments '1:command:({' '.join(cmds)})'")
             return 0
         if args.cmd == "ui":
             from .tui import run

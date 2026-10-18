@@ -4,6 +4,7 @@ version = "0.7.0"
 description = "Terminal stream-of-consciousness console for issue tracking + roadmap planning alongside AI agents."
 readme = "README.md"
 license = "MIT"
+authors = [{name = "Brad Lindsay"}]
 requires-python = ">=3.11"
 dependencies = ["textual>=3"]
 classifiers = [
@@ -20,7 +21,8 @@ Repository = "https://github.com/fluxion-dev/lazyplan"
 Issues = "https://github.com/fluxion-dev/lazyplan/issues"
 Changelog = "https://github.com/fluxion-dev/lazyplan/releases"
 [project.scripts]
-lp = "lazyplan.cli:main"
+lazyplan = "lazyplan.cli:main"
+lpui = "lazyplan.cli:main"
 [project.optional-dependencies]
 postgres = ["psycopg[binary]>=3.1"]
 dev = ["ruff>=0.8", "mypy>=1.13"]

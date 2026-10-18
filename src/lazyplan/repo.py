@@ -6,7 +6,7 @@ Resolution order for the DB path:
   3. enclosing git repo root + `.plan/lazyplan.db` (created on demand)
   4. global fallback `~/.local/share/lazyplan/lazyplan.db`
 
-`lp init` marks a repo as planned: ensures `.plan/` + config + schema.
+`lpui init` marks a repo as planned: ensures `.plan/` + config + schema.
 Stdlib only.
 """
 

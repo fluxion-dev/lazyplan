@@ -10,7 +10,7 @@ from contextlib import redirect_stdout
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from lazyplan import design
-from lazyplan.cli import main as lp_main
+from lazyplan.cli import main as lpui_main
 from lazyplan.models import Project, Task, UserStory
 from lazyplan.store import Store
 
@@ -39,7 +39,7 @@ class TestDesignSystem(unittest.TestCase):
         t = self.store.add_task(s.id, "T", estimate="2d")
         buf = io.StringIO()
         with redirect_stdout(buf):
-            self.assertEqual(lp_main(["--db", self.db, "list"]), 0)
+            self.assertEqual(lpui_main(["--db", self.db, "list"]), 0)
         lines = buf.getvalue().splitlines()
         self.assertEqual(lines[0], design.project_label(p))
         self.assertEqual(lines[1], "  " + design.story_label(s))
@@ -48,7 +48,7 @@ class TestDesignSystem(unittest.TestCase):
     def test_help_single_source(self):
         buf = io.StringIO()
         with redirect_stdout(buf):
-            self.assertEqual(lp_main(["--db", self.db, "help"]), 0)
+            self.assertEqual(lpui_main(["--db", self.db, "help"]), 0)
         self.assertEqual(buf.getvalue().strip(), design.HELP_TEXT.strip())
         try:
             from lazyplan.screens import HelpScreen  # needs textual installed

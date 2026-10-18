@@ -433,7 +433,7 @@ if _TEXTUAL_OK:
             self.dismiss(True)
 
     class HelpScreen(_Form):
-        """Shared help text overlay; same source as `lp help`."""
+        """Shared help text overlay; same source as `lpui help`."""
 
         HELP = HELP_TEXT
 

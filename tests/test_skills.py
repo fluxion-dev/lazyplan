@@ -1,4 +1,4 @@
-"""Skill-installer tests: `lp init` wizard paths stay non-interactive-safe."""
+"""Skill-installer tests: `lpui init` wizard paths stay non-interactive-safe."""
 
 import io
 import json
@@ -12,7 +12,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from lazyplan import skills
-from lazyplan.cli import main as lp_main
+from lazyplan.cli import main as lpui_main
 from lazyplan.cli_parser import build_parser
 
 
@@ -21,7 +21,7 @@ def _answers(items):
     return lambda: next(it)
 
 
-# Every `lp` example taught by the templates, as parser argv (ids substituted).
+# Every `lpui` example taught by the templates, as parser argv (ids substituted).
 # If a template gains an example, add its argv here — this is the drift guard.
 TEMPLATE_EXAMPLE_ARGV = [
     ["list", "--status", "todo", "--project", "1", "--owner", "a1"],
@@ -104,12 +104,12 @@ TEMPLATE_EXAMPLE_ARGV = [
 TEMPLATE_FRAGMENTS = [
     "--actor",
     "--json",
-    "lp list",
-    "lp show --kind project|story|task --id N",
-    "lp gantt [--tasks] [--width 40]",
-    "lp feed --limit 20",
-    "lp export --format json",
-    "lp info",
+    "lpui list",
+    "lpui show --kind project|story|task --id N",
+    "lpui gantt [--tasks] [--width 40]",
+    "lpui feed --limit 20",
+    "lpui export --format json",
+    "lpui info",
     "add-project --name",
     "add-story --project P",
     "add-task --story S",
@@ -118,7 +118,7 @@ TEMPLATE_FRAGMENTS = [
     "delete --kind task --id T",
     "add-criteria --kind task --id T",
     "criteria --kind task --id T",
-    "lp check --id C / lp uncheck --id C",
+    "lpui check --id C / lpui uncheck --id C",
     "delete-criteria --id C",
     "add-link --kind task --id T --url URL",
     "links --kind task --id T",
@@ -138,7 +138,7 @@ TEMPLATE_FRAGMENTS = [
 
 
 class TestTemplateParity(unittest.TestCase):
-    """Templates must teach only real `lp` invocations (best-practice drift guard)."""
+    """Templates must teach only real `lpui` invocations (best-practice drift guard)."""
 
     def test_every_template_example_parses(self):
         parser = build_parser()
@@ -172,7 +172,7 @@ class TestTemplateParity(unittest.TestCase):
         import re
 
         body, snippet = skills.SKILL_BODY, skills.AGENTS_SNIPPET
-        for verb in set(re.findall(r"`lp ([a-z-]+)", snippet)):
+        for verb in set(re.findall(r"`lpui ([a-z-]+)", snippet)):
             with self.subTest(verb=verb):
                 self.assertIn(verb, body)
         expected_path = f"{skills.AGENTS_DIR}/{skills.SKILLS_DIR}/{skills.SKILL_NAME}/SKILL.md"
@@ -336,7 +336,7 @@ class TestInitCli(unittest.TestCase):
     def _init_json(self, argv):
         buf = io.StringIO()
         with redirect_stdout(buf):
-            self.assertEqual(lp_main(argv), 0)
+            self.assertEqual(lpui_main(argv), 0)
         return json.loads(buf.getvalue())
 
     def test_init_no_skills_flag(self):

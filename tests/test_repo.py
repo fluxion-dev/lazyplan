@@ -6,7 +6,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from lazyplan.cli import main as lp_main
+from lazyplan.cli import main as lpui_main
 from lazyplan.repo import find_repo_root, repo_label, resolve_db_path
 from lazyplan.store import Store
 
@@ -80,11 +80,11 @@ class TestRepoScope(unittest.TestCase):
 
     def test_lp_init_and_info_in_repo(self):
         os.chdir(self.repo)
-        self.assertEqual(lp_main(["init"]), 0)
+        self.assertEqual(lpui_main(["init"]), 0)
         self.assertTrue(os.path.isfile(os.path.join(self.repo, ".plan", "lazyplan.db")))
-        self.assertEqual(lp_main(["info"]), 0)
+        self.assertEqual(lpui_main(["info"]), 0)
         # data added via cwd resolves to the same repo db
-        self.assertEqual(lp_main(["add-project", "--name", "RP"]), 0)
+        self.assertEqual(lpui_main(["add-project", "--name", "RP"]), 0)
         s = Store(None)
         self.assertEqual(len(s.list_projects()), 1)
 

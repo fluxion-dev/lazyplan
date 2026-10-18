@@ -29,7 +29,7 @@ add a view, command, label, empty state, or message.
 ## The commitment
 
 Wherever you see `T#12 [doing] Title @agent-1`, it means the same thing in
-`lp list`, the TUI tree, JSON output, and the gantt tooltip. Wherever you type
+`lpui list`, the TUI tree, JSON output, and the gantt tooltip. Wherever you type
 `status --kind task --id 1 --to done` (shell or `:` bar), it does the same
 thing. That predictability is the whole system.
 
@@ -38,7 +38,7 @@ thing. That predictability is the whole system.
 | Type | Realization |
 |---|---|
 | Visual | Tokens in `design.py`: one border (`solid green`), one panel height, one-row bars, one label grammar, one date shape `(start..end)`, one owner shape `@name` |
-| Functional | `lp` verbs == TUI `:` verbs; one key does one thing in every view (`1/2/3` views, `space` cycles status, `enter` details) |
+| Functional | `lpui` verbs == TUI `:` verbs; one key does one thing in every view (`1/2/3` views, `space` cycles status, `enter` details) |
 | Internal | CLI and TUI render from `design.*` helpers — no local format strings (`test_design.py` fails the build on drift) |
 | External | Shell conventions: `--help`, `--json` before or after the verb, `--db`/`$LAZYPLAN_DB`/repo/global resolution, exit non-zero on error, `KEY=value` env overrides |
 
@@ -46,7 +46,7 @@ thing. That predictability is the whole system.
 
 Two users share one DB in tmux: a **human planner** (stream-of-consciousness
 capture, keyboard-first, glanceable roadmap) and **coding agents** (inject work
-via `lp --actor NAME`, read context via `lp show`/`--json`, never touch the TUI
+via `lpui --actor NAME`, read context via `lpui show`/`--json`, never touch the TUI
 process). Every design decision serves both: human-readable first,
 machine-parseable always.
 
@@ -83,7 +83,7 @@ links, narrative) lives one `enter` away in the detail modal, never in the row.
 
 No silent state changes: a write always logs a feed event; a reload always
 updates the activity line; destructive or surprising outcomes get a toast.
-(`lp delete` is immediate — no confirm — matching CLI norms; a TUI delete with
+(`lpui delete` is immediate — no confirm — matching CLI norms; a TUI delete with
 confirm is a tracked gap, S#2.)
 
 ## Adding something — checklist

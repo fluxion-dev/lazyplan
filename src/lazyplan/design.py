@@ -2,7 +2,7 @@
 
 Maps to the four UXPin consistency types:
   visual    - tokens below (border, heights, placeholder/command prefixes)
-  functional- same verbs everywhere (`lp` CLI == TUI command bar); same key does
+  functional- same verbs everywhere (`lpui` CLI == TUI command bar); same key does
               the same thing in every view
   internal  - CLI and TUI render labels, empty states, and help from THESE
               helpers, never from drum-rolled local format strings
@@ -37,7 +37,7 @@ APP_CSS = f"""
 ModalScreen {{ align: center middle; }}
 """
 
-# -- label language (used by `lp list` AND the TUI tree) ------------------
+# -- label language (used by `lpui list` AND the TUI tree) ------------------
 # Canonical row grammar:
 #   KIND#id [status] !p0 title @owner (start..end) ~estimate [1/2✓] [!blocked by 3]
 # Tree indentation is the viewer's job ("", "  ", "    " for CLI).
@@ -120,9 +120,9 @@ def task_label(t: Task, store: Store | None = None) -> str:
 
 
 # -- empty states (identical wording everywhere) --------------------------
-EMPTY_NO_PROJECTS = "No projects yet — press n to seed, or run: lp seed"
+EMPTY_NO_PROJECTS = "No projects yet — press n to seed, or run: lpui seed"
 EMPTY_FILTERED = "(filter hides everything — f/o/O to clear, or n to add)"
-EMPTY_FEED = "(no activity yet — agents write via `lp add-task ...`)"
+EMPTY_FEED = "(no activity yet — agents write via `lpui add-task ...`)"
 
 
 # -- messages ---------------------------------------------------------------
@@ -136,22 +136,22 @@ def msg_error(exc: BaseException) -> str:
     return f"error: {exc}"
 
 
-# -- `lp init` skill-wizard text (wizard prints these; keep wording stable) --
-INIT_SKILLS_TITLE = "== lp init: agent skills =="
-INIT_SKILLS_EXPLAIN = "One universal skill teaches your agents to use `lp` for planning."
+# -- `lpui init` skill-wizard text (wizard prints these; keep wording stable) --
+INIT_SKILLS_TITLE = "== lpui init: agent skills =="
+INIT_SKILLS_EXPLAIN = "One universal skill teaches your agents to use `lpui` for planning."
 INIT_SKILLS_COVERAGE = (
     "Install target `.agents/skills/lazyplan/SKILL.md` auto-loads in "
     "OpenCode, Codex, Gemini CLI, and Cursor. A `.claude/skills/` copy is "
     "added automatically when Claude Code is detected."
 )
-INIT_SKILLS_DONE = "Done. Restart your agent session, then try `lp list`."
+INIT_SKILLS_DONE = "Done. Restart your agent session, then try `lpui list`."
 INIT_SKILLS_COMMIT_TIP = (
     "Tip: commit `.agents/skills/lazyplan/`, `.claude/skills/` (if any), and AGENTS.md."
 )
 
 
-# -- help (TUI `?` overlay AND `lp help` render this same text) -------------
-HELP_TEXT = """lazyplan — stream-of-consciousness console (lp CLI == : command bar)
+# -- help (TUI `?` overlay AND `lpui help` render this same text) -------------
+HELP_TEXT = """lazyplan — stream-of-consciousness console (lpui CLI == : command bar)
 views: 1 tree · 2 gantt · 3 feed · 4 proposals
 move: j/k or up/down + click · left/right collapse/expand · enter edits detail in place
 n new (context) · P/S/T new project/story/task · e edit · d delete
@@ -159,5 +159,5 @@ space cycle status · c tick criteria · z/Z fold one/all · +/- gantt zoom
 f status filter · o project filter · O owner filter
 s search · ctrl+p palette · a/x approve/reject proposal
 r refresh · / command bar · ? help · q quit
-: commands = lp verbs, e.g. show --kind story --id 1
-agents: lp propose ... / lp ask ... (human approves/answers in UI)"""
+: commands = lpui verbs, e.g. show --kind story --id 1
+agents: lpui propose ... / lpui ask ... (human approves/answers in UI)"""

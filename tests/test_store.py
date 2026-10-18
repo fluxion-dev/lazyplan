@@ -5,7 +5,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from lazyplan.cli import main as lp_main
+from lazyplan.cli import main as lpui_main
 from lazyplan.gantt import bar, span
 from lazyplan.models import RiskStatus, Status
 from lazyplan.store import Store
@@ -40,11 +40,11 @@ class TestStore(unittest.TestCase):
             self.store.add_task(999, "nope")
 
     def test_cli_json_ingress(self):
-        rc = lp_main(["--db", self.db, "--json", "add-project", "--name", "P1"])
+        rc = lpui_main(["--db", self.db, "--json", "add-project", "--name", "P1"])
         self.assertEqual(rc, 0)
-        rc = lp_main(["--db", self.db, "--json", "add-story", "--project", "1", "--title", "S1"])
+        rc = lpui_main(["--db", self.db, "--json", "add-story", "--project", "1", "--title", "S1"])
         self.assertEqual(rc, 0)
-        rc = lp_main(["--db", self.db, "--json", "add-task", "--story", "1", "--title", "T1"])
+        rc = lpui_main(["--db", self.db, "--json", "add-task", "--story", "1", "--title", "T1"])
         self.assertEqual(rc, 0)
         self.assertEqual(self.store.counts()["tasks"], 1)
 
@@ -236,9 +236,9 @@ class TestStore(unittest.TestCase):
             s2.import_all({"nope": True})
 
     def test_cli_planning_surface(self):
-        self.assertEqual(lp_main(["--db", self.db, "add-project", "--name", "P1"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "add-project", "--name", "P1"]), 0)
         self.assertEqual(
-            lp_main(
+            lpui_main(
                 [
                     "--db",
                     self.db,
@@ -258,27 +258,29 @@ class TestStore(unittest.TestCase):
             0,
         )
         self.assertEqual(
-            lp_main(
+            lpui_main(
                 ["--db", self.db, "add-task", "--story", "1", "--title", "T1", "--priority", "p1"]
             ),
             0,
         )
         self.assertEqual(
-            lp_main(["--db", self.db, "update", "--kind", "task", "--id", "1", "--blocked-by", ""]),
+            lpui_main(
+                ["--db", self.db, "update", "--kind", "task", "--id", "1", "--blocked-by", ""]
+            ),
             0,
         )
-        self.assertEqual(lp_main(["--db", self.db, "list", "--priority", "p0"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "list", "--priority", "p0"]), 0)
         self.assertEqual(
-            lp_main(
+            lpui_main(
                 ["--db", self.db, "add-criteria", "--kind", "task", "--id", "1", "--text", "works"]
             ),
             0,
         )
-        self.assertEqual(lp_main(["--db", self.db, "criteria", "--kind", "task", "--id", "1"]), 0)
-        self.assertEqual(lp_main(["--db", self.db, "check", "--id", "1"]), 0)
-        self.assertEqual(lp_main(["--db", self.db, "uncheck", "--id", "1"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "criteria", "--kind", "task", "--id", "1"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "check", "--id", "1"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "uncheck", "--id", "1"]), 0)
         self.assertEqual(
-            lp_main(
+            lpui_main(
                 [
                     "--db",
                     self.db,
@@ -293,12 +295,12 @@ class TestStore(unittest.TestCase):
             ),
             0,
         )
-        self.assertEqual(lp_main(["--db", self.db, "risks", "--project", "1"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "risks", "--project", "1"]), 0)
         self.assertEqual(
-            lp_main(["--db", self.db, "risk-status", "--id", "1", "--to", "mitigated"]), 0
+            lpui_main(["--db", self.db, "risk-status", "--id", "1", "--to", "mitigated"]), 0
         )
         self.assertEqual(
-            lp_main(
+            lpui_main(
                 [
                     "--db",
                     self.db,
@@ -313,14 +315,14 @@ class TestStore(unittest.TestCase):
             ),
             0,
         )
-        self.assertEqual(lp_main(["--db", self.db, "milestones", "--project", "1"]), 0)
-        self.assertEqual(lp_main(["--db", self.db, "gantt", "--tasks", "--width", "20"]), 0)
-        self.assertEqual(lp_main(["--db", self.db, "export", "--format", "markdown"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "milestones", "--project", "1"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "gantt", "--tasks", "--width", "20"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "export", "--format", "markdown"]), 0)
         self.assertEqual(
-            lp_main(["--db", self.db, "status", "--kind", "task", "--id", "1", "--to", "done"]), 0
+            lpui_main(["--db", self.db, "status", "--kind", "task", "--id", "1", "--to", "done"]), 0
         )  # warns, proceeds
-        self.assertEqual(lp_main(["--db", self.db, "delete-criteria", "--id", "1"]), 0)
-        self.assertEqual(lp_main(["--db", self.db, "delete-milestone", "--id", "1"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "delete-criteria", "--id", "1"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "delete-milestone", "--id", "1"]), 0)
 
     def test_proposals_and_questions(self):
         p = self.store.add_project("P")
@@ -347,12 +349,12 @@ class TestStore(unittest.TestCase):
         self.assertEqual(len(self.store.list_questions(open_only=False)), 1)
 
     def test_cli_proposals_questions(self):
-        self.assertEqual(lp_main(["--db", self.db, "add-project", "--name", "P"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "add-project", "--name", "P"]), 0)
         self.assertEqual(
-            lp_main(["--db", self.db, "add-story", "--project", "1", "--title", "S"]), 0
+            lpui_main(["--db", self.db, "add-story", "--project", "1", "--title", "S"]), 0
         )
         self.assertEqual(
-            lp_main(
+            lpui_main(
                 [
                     "--db",
                     self.db,
@@ -369,13 +371,13 @@ class TestStore(unittest.TestCase):
             ),
             0,
         )
-        self.assertEqual(lp_main(["--db", self.db, "proposals"]), 0)
-        self.assertEqual(lp_main(["--db", self.db, "reject", "--id", "1"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "proposals"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "reject", "--id", "1"]), 0)
         self.assertEqual(
-            lp_main(["--db", self.db, "--actor", "agent-1", "ask", "--question", "Q?"]), 0
+            lpui_main(["--db", self.db, "--actor", "agent-1", "ask", "--question", "Q?"]), 0
         )
-        self.assertEqual(lp_main(["--db", self.db, "questions"]), 0)
-        self.assertEqual(lp_main(["--db", self.db, "answer", "--id", "1", "--text", "A"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "questions"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "answer", "--id", "1", "--text", "A"]), 0)
 
     def test_critical_path(self):
         p = self.store.add_project("P")
@@ -391,10 +393,10 @@ class TestStore(unittest.TestCase):
 
     def test_cli_show_and_links(self):
         self.assertEqual(
-            lp_main(["--db", self.db, "add-project", "--name", "P1", "--goal", "g1"]), 0
+            lpui_main(["--db", self.db, "add-project", "--name", "P1", "--goal", "g1"]), 0
         )
         self.assertEqual(
-            lp_main(
+            lpui_main(
                 [
                     "--db",
                     self.db,
@@ -410,11 +412,13 @@ class TestStore(unittest.TestCase):
             0,
         )
         self.assertEqual(
-            lp_main(["--db", self.db, "add-task", "--story", "1", "--title", "T1", "--desc", "d1"]),
+            lpui_main(
+                ["--db", self.db, "add-task", "--story", "1", "--title", "T1", "--desc", "d1"]
+            ),
             0,
         )
         self.assertEqual(
-            lp_main(
+            lpui_main(
                 [
                     "--db",
                     self.db,
@@ -431,11 +435,11 @@ class TestStore(unittest.TestCase):
             ),
             0,
         )
-        self.assertEqual(lp_main(["--db", self.db, "links", "--kind", "story", "--id", "1"]), 0)
-        self.assertEqual(lp_main(["--db", self.db, "show", "--kind", "project", "--id", "1"]), 0)
-        self.assertEqual(lp_main(["--db", self.db, "show", "--kind", "story", "--id", "1"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "links", "--kind", "story", "--id", "1"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "show", "--kind", "project", "--id", "1"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "show", "--kind", "story", "--id", "1"]), 0)
         self.assertEqual(
-            lp_main(
+            lpui_main(
                 [
                     "--db",
                     self.db,
@@ -453,8 +457,8 @@ class TestStore(unittest.TestCase):
             0,
         )
         self.assertEqual(self.store.get_task(1).owner, "agent-9")
-        self.assertEqual(lp_main(["--db", self.db, "list", "--owner", "agent-9"]), 0)
-        self.assertEqual(lp_main(["--db", self.db, "delete-link", "--id", "1"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "list", "--owner", "agent-9"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "delete-link", "--id", "1"]), 0)
 
     def test_task_dates_and_update(self):
         p = self.store.add_project("P")
@@ -498,13 +502,15 @@ class TestStore(unittest.TestCase):
         self.assertEqual(only_p2[0][0].id, p2.id)
 
     def test_cli_update_delete_feed(self):
-        self.assertEqual(lp_main(["--db", self.db, "add-project", "--name", "P1"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "add-project", "--name", "P1"]), 0)
         self.assertEqual(
-            lp_main(["--db", self.db, "add-story", "--project", "1", "--title", "S1"]), 0
+            lpui_main(["--db", self.db, "add-story", "--project", "1", "--title", "S1"]), 0
         )
-        self.assertEqual(lp_main(["--db", self.db, "add-task", "--story", "1", "--title", "T1"]), 0)
         self.assertEqual(
-            lp_main(
+            lpui_main(["--db", self.db, "add-task", "--story", "1", "--title", "T1"]), 0
+        )
+        self.assertEqual(
+            lpui_main(
                 [
                     "--db",
                     self.db,
@@ -523,11 +529,12 @@ class TestStore(unittest.TestCase):
         )
         self.assertEqual(self.store.get_task(1).title, "T1b")
         self.assertEqual(
-            lp_main(["--db", self.db, "status", "--kind", "task", "--id", "1", "--to", "doing"]), 0
+            lpui_main(["--db", self.db, "status", "--kind", "task", "--id", "1", "--to", "doing"]),
+            0,
         )
-        self.assertEqual(lp_main(["--db", self.db, "feed", "--limit", "3"]), 0)
-        self.assertEqual(lp_main(["--db", self.db, "gantt", "--tasks", "--width", "20"]), 0)
-        self.assertEqual(lp_main(["--db", self.db, "delete", "--kind", "task", "--id", "1"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "feed", "--limit", "3"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "gantt", "--tasks", "--width", "20"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "delete", "--kind", "task", "--id", "1"]), 0)
         self.assertEqual(self.store.counts()["tasks"], 0)
 
 

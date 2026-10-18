@@ -3,8 +3,8 @@
 Keys: 1/2/3 views, j/k navigate, z/Z fold one/all, n contextual new, P/S/T new project/story/task,
   e edit, space cycle status, enter detail, +/- gantt zoom, f status filter,
   o project filter, r refresh, ? help, q quit. Mouse click folds/unfolds too.
-Command bar accepts the same verbs as `lp`, e.g. `add-task --story 1 --title x`.
-Agent writes via `lp --actor NAME ...` land in the same SQLite file; the TUI
+Command bar accepts the same verbs as `lpui`, e.g. `add-task --story 1 --title x`.
+Agent writes via `lpui --actor NAME ...` land in the same SQLite file; the TUI
 polls fingerprint() every second and toasts + activity-line.
 """
 
@@ -132,7 +132,8 @@ if _TEXTUAL_OK:
             yield Label("", id="activity")
             yield Label("", id="statusbar")
             yield Input(
-                placeholder=": help · agents inject via `lp --actor NAME add-task ...`", id="cmdbar"
+                placeholder=": help · agents inject via `lpui --actor NAME add-task ...`",
+                id="cmdbar",
             )
             yield Footer()
 
@@ -412,7 +413,7 @@ if _TEXTUAL_OK:
             pend = self.store.list_proposals("pending")
             if not pend:
                 lst.add_option(
-                    _Option("(no pending proposals — agents submit via lp propose)", id="none")
+                    _Option("(no pending proposals — agents submit via lpui propose)", id="none")
                 )
                 return
             import json as _json
@@ -881,8 +882,8 @@ if _TEXTUAL_OK:
 def run(db_path: str | None = None) -> int:
     """Run the TUI; exit 3 when Textual is missing."""
     if not _TEXTUAL_OK:
-        print("Textual not installed. Run: pip install -e . then: lp ui")
-        print("Fallback (no TUI): lp list   |   lp gantt")
+        print("Textual not installed. Run: pip install -e . then: lpui ui")
+        print("Fallback (no TUI): lpui list   |   lpui gantt")
         return 3
     create_app(db_path).run()
     return 0

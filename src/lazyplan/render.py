@@ -36,7 +36,7 @@ def tree_lines(
 
 
 def render_full(kind: str, full: dict) -> str:
-    """Human-readable `lp show`: narrative + links + children."""
+    """Human-readable `lpui show`: narrative + links + children."""
     lines: list[str] = []
 
     def links_block(items: list[dict]) -> None:

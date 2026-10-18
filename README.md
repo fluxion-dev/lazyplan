@@ -1,4 +1,4 @@
-# lazyplan (`lp`) — v0.7.0
+# lazyplan (`lpui`) — v0.7.0
 
 [![PyPI](https://img.shields.io/pypi/v/lazyplan-tui)](https://pypi.org/project/lazyplan-tui/)
 [![Python](https://img.shields.io/pypi/pyversions/lazyplan-tui)](https://pypi.org/project/lazyplan-tui/)
@@ -11,15 +11,17 @@ built to run in tmux next to `opencode` and `lazygit`. Design rules live in
 ## Install
 
 ```bash
-pipx install lazyplan-tui   # isolated global `lp`
-# or from source: pipx install ~/personal-repos/lazyplan
+pipx install lazyplan-tui   # isolated global `lpui` (+ `lazyplan` alias)
+# or from a checkout: pipx install .
 # or: python3 -m venv .venv && . .venv/bin/activate && pip install -e .
-lp --help
+lpui --help
 # optional: shell completions
-eval "$(lp completion --shell bash)"   # or --shell zsh
+eval "$(lpui completion --shell bash)"   # or --shell zsh
 ```
-Note: this shadows the classic Unix print command `/usr/bin/lp`.
-Use `command lp` or the full path if you ever need the printer.
+Renamed from `lp` to `lpui` (`lazyplan` works too): plain `lp` collided with
+the classic Unix print command `/usr/bin/lp`, which shadows pipx's
+`~/.local/bin` on default Fedora `PATH` order. Use `command lp` or the full
+path if you ever need the printer.
 
 DB resolution (first match wins): `--db PATH` → `$LAZYPLAN_DB` →
 enclosing git repo's `.plan/lazyplan.db` → global
@@ -31,17 +33,17 @@ Each git repo gets its own plan, stored with the code:
 
 ```bash
 cd ~/my-project
-lp init        # creates .plan/lazyplan.db + .plan/config.json, then offers
+lpui init        # creates .plan/lazyplan.db + .plan/config.json, then offers
                # the agent-skills wizard (universal `.agents/skills/lazyplan/`
                # + `## lazyplan` pointer in AGENTS.md). Flags: --no-skills,
                # --yes, --skills-scope project|global|both|none; --json stays
                # machine-readable and never prompts.
-lp info        # resolved db path, repo root, counts, .plan files
-lp add-project --name "my-project" --start 2026-10-18 --end 2026-12-31
-lp ui          # statusbar shows [my-project]; agents in any subdir share it
+lpui info        # resolved db path, repo root, counts, .plan files
+lpui add-project --name "my-project" --start 2026-10-18 --end 2026-12-31
+lpui ui          # statusbar shows [my-project]; agents in any subdir share it
 ```
 
-Run `lp` from any subdirectory — it walks up to the repo root (via
+Run `lpui` from any subdirectory — it walks up to the repo root (via
 `git rev-parse` with a `.git` fallback). Outside a repo it uses the global DB.
 Commit `.plan/` to share the plan with the team, or ignore `*.db` to keep it
 local — your call.
@@ -70,7 +72,7 @@ auto-generated notes. CI (`ci.yml`) runs `./tools/check.sh` on every push/PR.
 ## Dev / gates
 
 ```bash
-pip install -e ".[dev,postgres]"   # ruff + mypy (+ psycopg for `lp sync`)
+pip install -e ".[dev,postgres]"   # ruff + mypy (+ psycopg for `lpui sync`)
 ./tools/check.sh                   # ruff check + format --check + mypy (strict)
                                    # + unittest on system python AND venv python
 ```
@@ -78,13 +80,13 @@ pip install -e ".[dev,postgres]"   # ruff + mypy (+ psycopg for `lp sync`)
 Standards live in [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) (§Python standards,
 pyguide-based).
 
-Agents never touch the TUI process — they call `lp --actor NAME ...` against
+Agents never touch the TUI process — they call `lpui --actor NAME ...` against
 the same SQLite file (proposals/questions for anything needing human eyes);
 the TUI polls a fingerprint (mtime + counts + max ids + last event) every
-second and toasts + activity-lines new arrivals. `lp sync` snapshots the db
+second and toasts + activity-lines new arrivals. `lpui sync` snapshots the db
 to Postgres for SQL-side readers (see `src/lazyplan/postgres_sync.py`).
 
-## TUI (`lp ui`)
+## TUI (`lpui ui`)
 
 Single panel, nano-style bottom bar (activity line, statusbar, command bar,
 key footer). Mouse click/expand works.
@@ -103,46 +105,47 @@ key footer). Mouse click/expand works.
 | `4` then `a`/`x` | proposals view · approve / reject |
 | `/` | focus command bar · `?` help · `r` refresh · `q` quit |
 
-The command bar accepts the same verbs as `lp`
+The command bar accepts the same verbs as `lpui`
 (`add-task --story 1 --title x`, `status --kind task --id 1 --to done`,
 `tree`/`gantt`/`feed`, `help`).
 
 ## CLI (agent ingress)
 
-Flags work before or after the subcommand (`lp list --json` == `lp --json list`).
+Flags work before or after the subcommand (`lpui list --json` == `lpui --json list`).
 
 ```bash
-lp seed
-lp list [--status todo|doing|done] [--project ID] [--owner NAME] [--priority p0]
-lp gantt [--tasks] [--width 40] [--status ..] [--project ID] [--owner NAME] [--priority p0]
+lpui seed
+lpui list [--status todo|doing|done] [--project ID] [--owner NAME] [--priority p0]
+lpui gantt [--tasks] [--width 40] [--status ..] [--project ID] [--owner NAME] [--priority p0]
 # * = critical path, ! = blocked, ◆ = milestone
-lp show --kind project|story|task --id N   # full context: narrative + links + children
-lp add-project --name "API v2" [--goal .. --metrics .. --scope-in .. --scope-out .. --assumptions ..]
-lp add-story --project 1 --title "Auth refresh" [--owner a1 --priority p0 --labels x,y --estimate 2w --blocked-by 3]
-lp add-task --story 1 --title "Rotate tokens" [--desc ctx --owner a1 --priority p1 --estimate 2d --blocked-by 4]
-lp add-link --kind story --id 1 --url URL [--label spec]
-lp add-criteria --kind task --id 1 --text "works offline"
-lp check --id 1 / lp uncheck --id 1        # tick acceptance items (advisory)
-lp add-risk --project 1 --title "slip" [--likelihood high --impact high --mitigation buf]
-lp add-milestone --project 1 --title "Beta" --date 2026-11-15
-lp propose --kind task --parent 1 --title "Refactor X" [--priority p1 --owner a1]
-lp proposals [--status pending] | lp approve --id 1 / lp reject --id 1
-lp ask --question "Which scope?" | lp questions | lp answer --id 1 --text "Minimal"
-lp export [--format json|markdown] | lp import --file dump.json
-lp sync --dsn postgresql://issues:issues@localhost:5433/issues   # one-way replica
-lp update --kind task --id 1 [--title --desc --owner --estimate --priority p0|none --labels a,b --blocked-by 1,2]
-lp status --kind task --id 1 --to doing    # closing with open criteria warns, never blocks
-lp delete --kind task --id 1
-lp feed [--limit 20]            # recent human/agent activity
-lp watch [--limit 20]           # tail (agents: lp feed --json --follow &)
-lp --actor agent-1 add-task --story 3 --title "Draft proposal"
+lpui show --kind project|story|task --id N   # full context: narrative + links + children
+lpui add-project --name "API v2" [--goal .. --metrics .. --scope-in .. --scope-out .. --assumptions ..]
+lpui add-story --project 1 --title "Auth refresh" [--owner a1 --priority p0 --labels x,y --estimate 2w --blocked-by 3]
+lpui add-task --story 1 --title "Rotate tokens" [--desc ctx --owner a1 --priority p1 --estimate 2d --blocked-by 4]
+lpui add-link --kind story --id 1 --url URL [--label spec]
+lpui add-criteria --kind task --id 1 --text "works offline"
+lpui check --id 1 / lpui uncheck --id 1        # tick acceptance items (advisory)
+lpui add-risk --project 1 --title "slip" [--likelihood high --impact high --mitigation buf]
+lpui add-milestone --project 1 --title "Beta" --date 2026-11-15
+lpui propose --kind task --parent 1 --title "Refactor X" [--priority p1 --owner a1]
+lpui proposals [--status pending] | lpui approve --id 1 / lpui reject --id 1
+lpui ask --question "Which scope?" | lpui questions | lpui answer --id 1 --text "Minimal"
+lpui export [--format json|markdown] | lpui import --file dump.json
+lpui sync --dsn postgresql://issues:issues@localhost:5433/issues   # one-way replica
+lpui update --kind task --id 1 [--title --desc --owner --estimate --priority p0|none --labels a,b --blocked-by 1,2]
+lpui status --kind task --id 1 --to doing    # closing with open criteria warns, never blocks
+lpui delete --kind task --id 1
+lpui feed [--limit 20]            # recent human/agent activity
+lpui watch [--limit 20]           # tail (agents: lpui feed --json --follow &)
+lpui --actor agent-1 add-task --story 3 --title "Draft proposal"
 ```
 
 ## Roadmap (dogfooded)
 
-The default DB holds project **P#1 “lazyplan roadmap”** (11 stories, 37 tasks).
-Done: S#1 MVP, S#4 planning power, S#6 distribution, S#7 ownership,
-S#8 acceptance criteria, S#9 risk register, S#10 goals/scope, S#11 materials.
-Doing: S#2 TUI polish (palette/search/editable-detail left). Open: S#3 agent
-ingress, S#5 postgres sync. All feature work goes here — `lp list`,
-`lp gantt --tasks`, `lp show --kind story --id N`, `lp ui`.
+The repo DB holds **2 projects** (17 stories, 60 tasks, all done): P#1
+“lazyplan roadmap” (11 stories, 37 tasks — MVP, planning power, distribution,
+ownership, acceptance criteria, risks, goals/scope, materials, agent ingress,
+postgres sync, TUI polish) and P#2 “lazyplan architecture hardening”
+(6 stories, 23 tasks — toolchain, types, style, architecture, test hygiene,
+docs). All feature work goes here — `lpui list`,
+`lpui gantt --tasks`, `lpui show --kind story --id N`, `lpui ui`.

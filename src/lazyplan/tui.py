@@ -96,6 +96,8 @@ if _TEXTUAL_OK:
             Binding("space", "toggle_status", "Done"),
             Binding("z", "fold", "Fold"),
             Binding("Z", "fold_all", "FoldAll", show=False),
+            Binding("left", "fold_left", "Fold", show=False),
+            Binding("right", "fold_right", "Unfold", show=False),
             Binding("plus", "zoom_in", "Zoom+"),
             Binding("minus", "zoom_out", "Zoom-"),
             Binding("f", "filter_status", "Filter"),
@@ -214,6 +216,66 @@ if _TEXTUAL_OK:
                     self._collapsed.add(k)
                 self.refresh_all(f"folded {len(keys)} rows")
 
+        def _children_of(self, kind: str, oid: int) -> list[tuple[str, int]]:
+            """Visible child row keys, in tree order."""
+            if kind == "project":
+                return [
+                    ("story", s.id)
+                    for s in self.store.list_stories(oid)
+                    if ("story", s.id) in self._row_nodes
+                ]
+            if kind == "story":
+                return [
+                    ("task", t.id)
+                    for t in self.store.list_tasks(oid)
+                    if ("task", t.id) in self._row_nodes
+                ]
+            return []
+
+        def _parent_of(self, kind: str, oid: int) -> tuple[str, int] | None:
+            if kind == "story":
+                s = self.store.get_story(oid)
+                return ("project", s.project_id) if s else None
+            if kind == "task":
+                t = self.store.get_task(oid)
+                return ("story", t.story_id) if t else None
+            return None
+
+        def action_fold_left(self) -> None:
+            """Left: collapse the header, else jump to its parent."""
+            if self.mode != "tree" or self.selected is None:
+                return
+            kind, oid = self.selected
+            node = self._row_nodes.get(self.selected)
+            if (
+                node is not None
+                and node.allow_expand
+                and node.children
+                and (kind, oid) not in self._collapsed
+            ):
+                node.collapse()
+                self._collapsed.add((kind, oid))
+                self.refresh_all(f"{kind} #{oid} folded")
+                return
+            parent = self._parent_of(kind, oid)
+            if parent is not None and parent in self._row_nodes:
+                self.query_one("#tree", Tree).move_cursor(self._row_nodes[parent])
+
+        def action_fold_right(self) -> None:
+            """Right: expand the header, else jump to its first child."""
+            if self.mode != "tree" or self.selected is None:
+                return
+            kind, oid = self.selected
+            node = self._row_nodes.get(self.selected)
+            if node is not None and (kind, oid) in self._collapsed:
+                node.expand()
+                self._collapsed.discard((kind, oid))
+                self.refresh_all(f"{kind} #{oid} unfolded")
+                return
+            for child in self._children_of(kind, oid):
+                self.query_one("#tree", Tree).move_cursor(self._row_nodes[child])
+                return
+
         # -- polling (M3: fingerprint, not just mtime) -------------------
         def _poll(self) -> None:
             fp = self.store.fingerprint()
@@ -241,7 +303,11 @@ if _TEXTUAL_OK:
             self._row_nodes = {}
             root = tree.root
             for p, stories in self._filtered_tree():
-                pn = root.add(project_label(p), data={"kind": "project", "id": p.id})
+                pn = root.add(
+                    project_label(p),
+                    data={"kind": "project", "id": p.id},
+                    allow_expand=bool(stories),
+                )
                 self._row_nodes[("project", p.id)] = pn
                 for s, tasks in stories:
                     sn = pn.add(

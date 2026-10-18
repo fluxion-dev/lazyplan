@@ -131,8 +131,89 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
             self.assertFalse(proj.is_expanded)
             self.assertIn(("project", self.pid), self.app._collapsed)
 
+    async def test_left_collapses_header(self):
+        from textual.widgets import Tree
+
+        async with self.app.run_test() as pilot:
+            await pilot.pause()
+            tree = self.app.query_one("#tree", Tree)
+            tree.move_cursor(self.app._row_nodes[("project", self.pid)])
+            await pilot.pause()
+            await pilot.press("left")
+            await pilot.pause()
+            proj, _ = self._nodes()
+            self.assertFalse(proj.is_expanded)
+            self.assertIn(("project", self.pid), self.app._collapsed)
+
+    async def test_left_on_folded_story_jumps_to_parent(self):
+        from textual.widgets import Tree
+
+        async with self.app.run_test() as pilot:
+            await pilot.pause()
+            tree = self.app.query_one("#tree", Tree)
+            tree.move_cursor(self.app._row_nodes[("story", self.sid)])
+            await pilot.pause()
+            await pilot.press("z")
+            await pilot.pause()
+            tree.move_cursor(self.app._row_nodes[("story", self.sid)])
+            await pilot.pause()
+            await pilot.press("left")
+            await pilot.pause()
+            cursor = tree.cursor_node
+            self.assertIsNotNone(cursor)
+            assert cursor is not None
+            self.assertEqual(getattr(cursor, "data", {}).get("kind"), "project")
+            self.assertEqual(getattr(cursor, "data", {}).get("id"), self.pid)
+
+    async def test_right_expands_header(self):
+        from textual.widgets import Tree
+
+        async with self.app.run_test() as pilot:
+            await pilot.pause()
+            tree = self.app.query_one("#tree", Tree)
+            tree.move_cursor(self.app._row_nodes[("project", self.pid)])
+            await pilot.pause()
+            await pilot.press("left")
+            await pilot.pause()
+            tree.move_cursor(self.app._row_nodes[("project", self.pid)])
+            await pilot.pause()
+            await pilot.press("right")
+            await pilot.pause()
+            proj, _ = self._nodes()
+            self.assertTrue(proj.is_expanded)
+            self.assertNotIn(("project", self.pid), self.app._collapsed)
+
+    async def test_right_on_open_story_jumps_to_first_task(self):
+        from textual.widgets import Tree
+
+        async with self.app.run_test() as pilot:
+            await pilot.pause()
+            tree = self.app.query_one("#tree", Tree)
+            tree.move_cursor(self.app._row_nodes[("story", self.sid)])
+            await pilot.pause()
+            await pilot.press("right")
+            await pilot.pause()
+            cursor = tree.cursor_node
+            self.assertIsNotNone(cursor)
+            assert cursor is not None
+            self.assertEqual(getattr(cursor, "data", {}).get("kind"), "task")
+
+    async def test_arrows_noop_outside_tree(self):
+        from textual.widgets import Tree  # noqa: F401
+
+        async with self.app.run_test() as pilot:
+            await pilot.pause()
+            self.app.action_view_gantt()
+            await pilot.pause()
+            await pilot.press("left")
+            await pilot.press("right")
+            await pilot.pause()
+            self.assertEqual(self.app.mode, "gantt")
+            self.assertEqual(self.app._collapsed, set())
+
     def test_help_mentions_fold(self):
         self.assertIn("z/Z fold one/all", design.HELP_TEXT)
+        self.assertIn("left/right collapse/expand", design.HELP_TEXT)
 
 
 if __name__ == "__main__":

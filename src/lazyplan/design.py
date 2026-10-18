@@ -152,7 +152,7 @@ INIT_SKILLS_COMMIT_TIP = (
 # -- help (TUI `?` overlay AND `lp help` render this same text) -------------
 HELP_TEXT = """lazyplan — stream-of-consciousness console (lp CLI == : command bar)
 views: 1 tree · 2 gantt · 3 feed · 4 proposals
-move: j/k or arrows + click · enter edits detail in place
+move: j/k or up/down + click · left/right collapse/expand · enter edits detail in place
 n new (context) · P/S/T new project/story/task · e edit · d delete
 space cycle status · c tick criteria · z/Z fold one/all · +/- gantt zoom
 f status filter · o project filter · O owner filter

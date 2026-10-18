@@ -64,6 +64,12 @@ sed -i.bak "s/^version = \".*\"$/version = \"$NEXT\"/" pyproject.toml && rm pypr
 sed -i.bak "1s/ — v[0-9][0-9.]*$/ — v$NEXT/" README.md && rm README.md.bak
 sed -i.bak -E "s/lazyplan_[0-9]+\.[0-9]+\.[0-9]+-1_/lazyplan_${NEXT}-1_/g" README.md && rm README.md.bak
 sed -i.bak -E "s/lazyplan-[0-9]+\.[0-9]+\.[0-9]+-1\./lazyplan-${NEXT}-1./g" README.md && rm README.md.bak
+# Man page embeds the version (tests/test_help.py enforces it) — regenerate.
+python3 tools/gen-man.py
+if ! grep -q "lazyplan-tui $NEXT" docs/lpui.1; then
+  echo "error: man page regen failed" >&2
+  exit 1
+fi
 # Site mirrors: version-pinned release asset URLs, JSON-LD version, sitemap date.
 if [[ -f site/index.html ]]; then
   sed -i.bak -E "s|/releases/download/v[0-9]+\.[0-9]+\.[0-9]+/|/releases/download/v${NEXT}/|g" site/index.html && rm site/index.html.bak
@@ -72,7 +78,7 @@ if [[ -f site/index.html ]]; then
   sed -i.bak -E "s/\"version\": \"[0-9]+\.[0-9]+\.[0-9]+\"/\"version\": \"$NEXT\"/" site/index.html && rm site/index.html.bak
 fi
 if [[ -f site/package.json ]]; then
-  sed -i.bak -E "s/^  \"version\": \"[0-9]+\.[0-9]+\.[0-9]+\"$/  \"version\": \"$NEXT\"/" site/package.json && rm site/package.json.bak
+  sed -i.bak -E "s/^  \"version\": \"[0-9]+\.[0-9]+\.[0-9]+\"(,?)$/  \"version\": \"$NEXT\"\1/" site/package.json && rm site/package.json.bak
 fi
 if [[ -f site/public/sitemap.xml ]]; then
   TODAY="$(date +%F)"
@@ -87,7 +93,7 @@ if ! head -1 README.md | grep -q " — v$NEXT$"; then
   exit 1
 fi
 
-git add pyproject.toml README.md
+git add pyproject.toml README.md docs/
 if [[ -f site/index.html ]]; then git add site/index.html site/public/sitemap.xml site/package.json; fi
 git commit -m "release v$NEXT"
 git tag -a "v$NEXT" -m "lazyplan v$NEXT"

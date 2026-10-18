@@ -40,33 +40,11 @@ jobs:
         run: gh release create "$GITHUB_REF_NAME" --generate-notes dist/*
 
   # PyPI publishing via Trusted Publishing (OIDC — no API tokens stored).
-  # One-time setup (account owner, on pypi.org AND test.pypi.org):
+  # One-time setup (account owner, on pypi.org):
   #   project settings → Publishing → "Add a new pending publisher":
   #   owner fluxion-dev, repo lazyplan, workflow release.yml.
-  # TestPyPI first: a tag push publishes there; prod PyPI follows on success.
-  publish-testpypi:
-    needs: [release]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - name: Build sdist + wheel
-        run: |
-          python3 -m pip install build
-          python3 -m build
-      - name: Publish to TestPyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: https://test.pypi.org/legacy/
-          verbose: true
-
   publish-pypi:
-    needs: [publish-testpypi]
+    needs: [release]
     runs-on: ubuntu-latest
     permissions:
       contents: read

@@ -34,6 +34,7 @@ APP_CSS = f"""
 #statusbar {{ height: {BAR_HEIGHT}; background: $primary; }}
 #cmdbar {{ height: {CMD_HEIGHT}; }}
 #dlg {{ width: 60; height: auto; border: {BORDER}; padding: 1; }}
+ModalScreen {{ align: center middle; }}
 """
 
 # -- label language (used by `lp list` AND the TUI tree) ------------------

@@ -842,9 +842,36 @@ if _TEXTUAL_OK:
                 return
             from . import cli as _cli
 
+            if args.cmd in ("delete", "delete-link", "delete-criteria", "delete-milestone"):
+                self._confirm_cli_delete(args, text)
+                return
             _cli.main(["--db", str(self.store.path), "--actor", "tui", *shlex.split(text)])
             self._fp = self.store.fingerprint()
             self.refresh_all(f"ran: {text}")
+
+        def _confirm_cli_delete(self, args: Any, text: str) -> None:
+            """Destructive `: ` verbs confirm first, exactly like the `d` key."""
+            if args.cmd == "delete":
+                label = f"Delete {args.kind} #{args.id}?\n(children go too.)"
+            elif args.cmd == "delete-link":
+                label = f"Delete link #{args.id}?"
+            elif args.cmd == "delete-criteria":
+                label = f"Delete criteria #{args.id}?"
+            else:
+                label = f"Delete milestone #{args.id}?"
+
+            def cb(confirmed: bool | None) -> None:
+                if not confirmed:
+                    return
+                import shlex as _shlex
+
+                from . import cli as _cli
+
+                _cli.main(["--db", str(self.store.path), "--actor", "tui", *_shlex.split(text)])
+                self._fp = self.store.fingerprint()
+                self.refresh_all(f"ran: {text}")
+
+            self.push_screen(ConfirmScreen(label), cb)
 
     def create_app(db_path: str | None = None) -> LazyplanApp:
         """Build the app bound to a store."""

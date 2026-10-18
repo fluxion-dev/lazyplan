@@ -1,0 +1,61 @@
+name: "lazyplan"
+arch: "${ARCH}"
+platform: "linux"
+version: "${VERSION}"
+release: "1"
+section: "utils"
+priority: "optional"
+maintainer: "Brad Lindsay"
+description: "Terminal issue tracker + roadmap planner for humans and coding agents (lpui / lazyplan)."
+vendor: "fluxion-dev"
+homepage: "https://github.com/fluxion-dev/lazyplan"
+license: "MIT"
+depends:
+  - "python3"
+recommends:
+  - "git"
+contents:
+  - src: "staging/usr/lib/lazyplan"
+    dst: "/usr/lib/lazyplan"
+    type: "tree"
+  - src: "staging/usr/bin/lpui"
+    dst: "/usr/bin/lpui"
+    type: "file"
+    file_info:
+      mode: 0755
+  - src: "staging/usr/bin/lazyplan"
+    dst: "/usr/bin/lazyplan"
+    type: "file"
+    file_info:
+      mode: 0755
+  - src: "staging/usr/share/man/man1/lpui.1"
+    dst: "/usr/share/man/man1/lpui.1"
+    type: "file"
+  - src: "staging/usr/share/man/man1/lazyplan.1"
+    dst: "/usr/share/man/man1/lazyplan.1"
+    type: "file"
+  - src: "staging/usr/share/doc/lazyplan/README.md"
+    dst: "/usr/share/doc/lazyplan/README.md"
+    type: "file"
+  - src: "staging/usr/share/doc/lazyplan/LICENSE"
+    dst: "/usr/share/doc/lazyplan/LICENSE"
+    type: "file"
+  - src: "staging/usr/share/bash-completion/completions/lpui"
+    dst: "/usr/share/bash-completion/completions/lpui"
+    type: "file"
+  - src: "staging/usr/share/bash-completion/completions/lazyplan"
+    dst: "/usr/share/bash-completion/completions/lazyplan"
+    type: "file"
+  - src: "staging/usr/share/zsh/site-functions/_lpui"
+    dst: "/usr/share/zsh/site-functions/_lpui"
+    type: "file"
+  - src: "staging/usr/share/zsh/site-functions/_lazyplan"
+    dst: "/usr/share/zsh/site-functions/_lazyplan"
+    type: "file"
+overrides:
+  deb:
+    depends:
+      - "python3 (>= 3.11)"
+  rpm:
+    depends:
+      - "python3 >= 3.11"

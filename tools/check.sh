@@ -10,6 +10,8 @@ echo "== ruff format --check =="
 "$VENV_BIN"/ruff format --check src tests
 echo "== mypy (strict incl. untyped defs) =="
 "$VENV_BIN"/mypy src
+echo "== man page in sync =="
+"$VENV_BIN"/python tools/gen-man.py --check
 echo "== unittest (system python, stdlib only) =="
 PYTHONPATH=src python3 -m unittest discover -s tests
 echo "== unittest (venv python, with textual) =="

@@ -35,6 +35,9 @@ def _emit(args: argparse.Namespace, payload: object) -> int:
 def main(argv: list[str] | None = None) -> int:
     """Dispatch one lpui invocation; exit codes are agent-readable."""
     args = build_parser().parse_args(argv)
+    if args.cmd is None:
+        # Bare `lpui` (or global flags only) opens the standard TUI.
+        args.cmd = "ui"
     # `watch` is `feed --follow`
     if args.cmd == "watch":
         args.cmd = "feed"

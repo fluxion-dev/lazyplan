@@ -9,3 +9,10 @@ build/
 .mypy_cache/
 .ruff_cache/
 .pytest_cache/
+
+# Node (site/)
+node_modules/
+site/node_modules/
+
+# Vite site build output (CI rebuilds it via pages.yml; never committed)
+site/dist/

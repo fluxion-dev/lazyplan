@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Bump the lazyplan semantic version: major | minor | patch.
 # Single source of truth is `version = "x.y.z"` in pyproject.toml; the
-# README header (`# lazyplan (`lpui`) — v0.7.0`) mirrors it and is updated here.
+# README header (`# lazyplan (`lpui`) — vX.Y.Z`) and the version-pinned
+# asset URLs in README.md + site/index.html mirror it and are updated here.
 # Commits the change and tags `vX.Y.Z` (annotated). Push with --push.
 #
 # Usage: ./tools/bump.sh patch [--push] | [--dry-run]
@@ -61,6 +62,22 @@ fi
 
 sed -i.bak "s/^version = \".*\"$/version = \"$NEXT\"/" pyproject.toml && rm pyproject.toml.bak
 sed -i.bak "1s/ — v[0-9][0-9.]*$/ — v$NEXT/" README.md && rm README.md.bak
+sed -i.bak -E "s/lazyplan_[0-9]+\.[0-9]+\.[0-9]+-1_/lazyplan_${NEXT}-1_/g" README.md && rm README.md.bak
+sed -i.bak -E "s/lazyplan-[0-9]+\.[0-9]+\.[0-9]+-1\./lazyplan-${NEXT}-1./g" README.md && rm README.md.bak
+# Site mirrors: version-pinned release asset URLs, JSON-LD version, sitemap date.
+if [[ -f site/index.html ]]; then
+  sed -i.bak -E "s|/releases/download/v[0-9]+\.[0-9]+\.[0-9]+/|/releases/download/v${NEXT}/|g" site/index.html && rm site/index.html.bak
+  sed -i.bak -E "s/lazyplan_[0-9]+\.[0-9]+\.[0-9]+-1_/lazyplan_${NEXT}-1_/g" site/index.html && rm site/index.html.bak
+  sed -i.bak -E "s/lazyplan-[0-9]+\.[0-9]+\.[0-9]+-1\./lazyplan-${NEXT}-1./g" site/index.html && rm site/index.html.bak
+  sed -i.bak -E "s/\"version\": \"[0-9]+\.[0-9]+\.[0-9]+\"/\"version\": \"$NEXT\"/" site/index.html && rm site/index.html.bak
+fi
+if [[ -f site/package.json ]]; then
+  sed -i.bak -E "s/^  \"version\": \"[0-9]+\.[0-9]+\.[0-9]+\"$/  \"version\": \"$NEXT\"/" site/package.json && rm site/package.json.bak
+fi
+if [[ -f site/public/sitemap.xml ]]; then
+  TODAY="$(date +%F)"
+  sed -i.bak -E "s|<lastmod>[0-9]{4}-[0-9]{2}-[0-9]{2}</lastmod>|<lastmod>$TODAY</lastmod>|" site/public/sitemap.xml && rm site/public/sitemap.xml.bak
+fi
 if ! grep -q "^version = \"$NEXT\"$" pyproject.toml; then
   echo "error: pyproject update failed" >&2
   exit 1
@@ -71,6 +88,7 @@ if ! head -1 README.md | grep -q " — v$NEXT$"; then
 fi
 
 git add pyproject.toml README.md
+if [[ -f site/index.html ]]; then git add site/index.html site/public/sitemap.xml site/package.json; fi
 git commit -m "release v$NEXT"
 git tag -a "v$NEXT" -m "lazyplan v$NEXT"
 echo "committed + tagged v$NEXT"

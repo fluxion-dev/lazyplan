@@ -3,6 +3,8 @@ name: release
 # Cut a GitHub Release from a version tag. Tags are created by
 # ./tools/bump.sh (locally with --push, or via the bump workflow),
 # which guarantees the tag matches pyproject.toml.
+# Artifacts per release: sdist + wheel (PyPI/pipx), .deb + .rpm per arch
+# (system install), and install.sh (curl|sh front-end for all methods).
 on:
   push:
     tags:
@@ -34,10 +36,30 @@ jobs:
         run: |
           python3 -m pip install build
           python3 -m build
+      - name: Install nfpm (deb/rpm packager)
+        run: |
+          NFPM_VERSION="v2.47.0"
+          curl -fsSL "https://github.com/goreleaser/nfpm/releases/download/${NFPM_VERSION}/nfpm_${NFPM_VERSION#v}_Linux_x86_64.tar.gz" -o /tmp/nfpm.tar.gz
+          tar -xzf /tmp/nfpm.tar.gz -C /tmp nfpm
+          chmod +x /tmp/nfpm
+          /tmp/nfpm --version
+          echo "NFPM_BIN=/tmp/nfpm" >> "$GITHUB_ENV"
+      - name: Build deb + rpm (amd64, arm64)
+        run: |
+          ./tools/package.sh --version "${GITHUB_REF_NAME#v}" --arch amd64 --format all --output dist/
+          ./tools/package.sh --version "${GITHUB_REF_NAME#v}" --arch arm64 --format all --output dist/
+          ls -la dist/
+      - name: Smoke test (deb install + system wrapper)
+        run: |
+          sudo apt install -y ./dist/lazyplan_*_amd64.deb
+          lpui --help
+          lazyplan --help
+          lpui list --help
+          test -f /usr/share/man/man1/lpui.1
       - name: GitHub Release (auto-generated notes)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release create "$GITHUB_REF_NAME" --generate-notes dist/*
+        run: gh release create "$GITHUB_REF_NAME" --generate-notes dist/* install.sh
 
   # PyPI publishing via Trusted Publishing (OIDC — no API tokens stored).
   # One-time setup (account owner, on pypi.org):

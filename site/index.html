@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>lazyplan (lpui) — terminal issue tracker + roadmap planner</title>
+<meta name="description" content="lazyplan tracks projects > stories > tasks in a per-repo SQLite DB: a keyboard-first Textual TUI for humans and a --json CLI agents can drive. Install via pipx, .deb, .rpm, or curl|sh.">
+<meta name="keywords" content="issue tracker, roadmap planner, terminal TUI, textual, coding agent, sqlite planning, lpui">
+<meta name="author" content="Brad Lindsay">
+<meta name="theme-color" content="#09090B">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://fluxion-dev.github.io/lazyplan/">
+<meta property="og:title" content="lazyplan (lpui) — terminal issue tracker + roadmap planner">
+<meta property="og:description" content="Projects > stories > tasks in a per-repo SQLite DB: a keyboard-first TUI for humans, a --json CLI for coding agents.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://fluxion-dev.github.io/lazyplan/">
+<meta property="og:site_name" content="lazyplan">
+<!-- Stable logo URL (self-hosted SVG, copied from public/ at build time). -->
+<meta property="og:image" content="https://fluxion-dev.github.io/lazyplan/logo.svg">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="lazyplan (lpui) — terminal issue tracker + roadmap planner">
+<meta name="twitter:description" content="Projects > stories > tasks in a per-repo SQLite DB: a keyboard-first TUI for humans, a --json CLI for coding agents.">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "lazyplan",
+  "version": "0.8.0",
+  "url": "https://fluxion-dev.github.io/lazyplan/",
+  "author": {
+    "@type": "Person",
+    "name": "Brad Lindsay"
+  },
+  "license": "MIT",
+  "operatingSystem": ["Linux"],
+  "downloadUrl": [
+    "https://github.com/fluxion-dev/lazyplan/releases/latest/download/install.sh",
+    "https://github.com/fluxion-dev/lazyplan/releases/download/v0.8.0/lazyplan_0.8.0-1_amd64.deb",
+    "https://github.com/fluxion-dev/lazyplan/releases/download/v0.8.0/lazyplan_0.8.0-1_arm64.deb",
+    "https://github.com/fluxion-dev/lazyplan/releases/download/v0.8.0/lazyplan-0.8.0-1.x86_64.rpm",
+    "https://github.com/fluxion-dev/lazyplan/releases/download/v0.8.0/lazyplan-0.8.0-1.aarch64.rpm"
+  ]
+}
+</script>
+<link rel="icon" href="./logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body id="top" class="bg-plan-canvas text-zinc-200 antialiased">
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<nav aria-label="Primary" class="sticky top-0 z-40 border-b border-plan-border/80 bg-plan-canvas/85 backdrop-blur-md">
+  <div class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-5 gap-y-2 px-6 py-3">
+    <a href="#top" class="mr-auto inline-flex items-center gap-2 text-xl font-extrabold tracking-wide text-white no-underline"><img src="./logo.svg" alt="" width="32" height="32" class="h-8 w-8" aria-hidden="true">lazyplan<span class="text-viking-gold">.</span></a>
+    <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#features">Features</a>
+    <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#quickstart">Quickstart</a>
+    <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#agents">Agents</a>
+    <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#install">Install</a>
+    <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#exits">CI+Exits</a>
+    <a class="inline-flex items-center gap-1.5 text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="https://github.com/fluxion-dev/lazyplan">
+      <!-- lucide:github -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-4 w-4"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+      GitHub
+    </a>
+    <a class="rounded-lg bg-viking-blue px-3.5 py-1.5 text-sm font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="#install">Quick Install</a>
+  </div>
+</nav>
+
+<header class="relative overflow-hidden px-6 pt-24 md:pt-32 pb-20 md:pb-28 text-center">
+  <div aria-hidden="true" class="pointer-events-none absolute inset-0">
+    <div class="absolute -top-32 left-1/2 h-80 w-[42rem] -translate-x-1/2 rounded-full bg-viking-blue/25 blur-3xl"></div>
+    <div class="absolute top-20 -left-24 h-64 w-64 rounded-full bg-cyber-cyan/15 blur-3xl"></div>
+    <div class="absolute top-24 -right-24 h-64 w-64 rounded-full bg-viking-gold/20 blur-3xl"></div>
+  </div>
+  <div class="relative mx-auto max-w-6xl">
+    <h1 class="m-0 text-6xl font-extrabold tracking-tight text-white">lazyplan<span class="text-viking-gold">.</span></h1>
+    <p class="mx-auto mt-8 max-w-3xl text-lg text-zinc-300">Issue tracker + roadmap planner that lives in your terminal: <code class="whitespace-nowrap rounded bg-white/10 px-2 py-0.5 font-mono text-[0.9em] text-white">lpui</code> gives humans a keyboard-first TUI and coding agents a <code class="whitespace-nowrap rounded bg-white/10 px-2 py-0.5 font-mono text-[0.9em] text-white">--json</code> CLI over the same per-repo SQLite DB.</p>
+    <p class="mx-auto mt-2 max-w-3xl text-2xl font-bold tracking-tight text-white">One Plan. Two Drivers. Zero Muck.</p>
+    <p class="mx-auto mt-2 max-w-3xl text-base text-zinc-400">You steer in the TUI; your agent injects work through the CLI.</p>
+
+    <div class="mx-auto mt-8 flex max-w-xl items-center gap-2 rounded-xl border border-plan-border bg-plan-surface/80 p-2 pl-4 text-left shadow-lg shadow-viking-blue/25 backdrop-blur">
+      <!-- lucide:terminal -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-5 w-5 shrink-0 text-cyber-cyan"><path d="m4 17 6-6-6-6"/><path d="M12 19h8"/></svg>
+      <code id="hero-cmd" class="min-w-0 flex-1 truncate font-mono text-sm text-zinc-100">pipx install lazyplan-tui</code>
+      <button id="hero-copy" type="button" class="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-viking-blue px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-viking-blue/80">
+        <!-- lucide:copy -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-4 w-4"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+        Copy
+      </button>
+    </div>
+    <span id="copy-status" role="status" aria-live="polite" class="mt-2 block min-h-5 text-sm text-cyber-cyan"></span>
+
+    <div class="mt-8 flex flex-col items-center justify-center gap-2.5 sm:flex-row sm:flex-wrap">
+      <a class="inline-flex items-center gap-2 rounded-xl bg-viking-blue px-5 py-2.5 font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="#install">
+        <!-- lucide:download -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-4 w-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+        Install
+      </a>
+      <a class="inline-flex items-center gap-2 rounded-xl border border-plan-border bg-white/5 px-5 py-2.5 font-semibold text-white no-underline backdrop-blur transition hover:border-zinc-500 hover:bg-white/10" href="https://github.com/fluxion-dev/lazyplan/releases">
+        <!-- lucide:tags -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-4 w-4"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></svg>
+        View releases
+      </a>
+    </div>
+
+    <div class="mt-8 flex flex-wrap items-center justify-center gap-x-2 gap-y-2">
+      <a class="no-underline" href="https://github.com/fluxion-dev/lazyplan/actions/workflows/ci.yml"><img class="inline h-5 align-middle" src="https://github.com/fluxion-dev/lazyplan/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+      <a class="no-underline" href="https://github.com/fluxion-dev/lazyplan/releases"><img class="inline h-5 align-middle" src="https://img.shields.io/github/v/release/fluxion-dev/lazyplan" alt="Release"></a>
+      <a class="no-underline" href="https://pypi.org/project/lazyplan-tui/"><img class="inline h-5 align-middle" src="https://img.shields.io/pypi/v/lazyplan-tui" alt="PyPI"></a>
+      <a class="no-underline" href="https://github.com/fluxion-dev/lazyplan"><img class="inline h-5 align-middle" src="https://img.shields.io/github/license/fluxion-dev/lazyplan" alt="License"></a>
+    </div>
+
+    <figure class="mx-auto mt-12 max-w-2xl text-left">
+      <div class="terminal-window overflow-hidden backdrop-blur">
+        <div class="flex items-center gap-1.5 border-b border-plan-border px-4 py-2.5" aria-hidden="true">
+          <span class="h-3 w-3 rounded-full bg-[#ff5f57]"></span>
+          <span class="h-3 w-3 rounded-full bg-[#febc2e]"></span>
+          <span class="h-3 w-3 rounded-full bg-[#28c840]"></span>
+          <span class="ml-2 font-mono text-xs text-zinc-500">lpui list — ascii tree</span>
+        </div>
+        <div class="space-y-2 p-4 font-mono text-[0.85rem] leading-relaxed">
+          <p class="m-0 text-zinc-400"><span class="mr-2 text-cyber-cyan">$</span>lpui list</p>
+          <pre class="m-0 overflow-x-auto text-zinc-200">P#1 [todo] Website relaunch (2026-10-20..2026-12-15)
+  S#1 [todo] Public homepage (2026-10-20..2026-11-10)
+    T#1 [todo] Design hero section ~3d
+    T#2 [todo] Wire signup API ~2d
+  S#2 [todo] Docs portal (2026-11-01..2026-12-01)
+    T#3 [todo] Port markdown content ~5d</pre>
+          <ul class="m-0 flex list-none flex-wrap gap-2 p-0">
+            <li class="badge-todo">todo</li>
+            <li class="badge-unknown">doing</li>
+            <li class="badge-resolved">done</li>
+          </ul>
+        </div>
+      </div>
+      <figcaption class="mt-2 text-center text-sm text-zinc-500">Real output (<code class="font-mono">lpui seed</code> demo data) — same tree the TUI renders live</figcaption>
+    </figure>
+  </div>
+</header>
+
+<main id="main">
+
+<section id="features" class="mx-auto max-w-7xl scroll-mt-20 px-6 py-20 md:py-28">
+  <h2 class="mb-4 text-2xl font-bold text-white"><span class="mr-1.5" aria-hidden="true">🧭</span>Problems lazyplan solves</h2>
+  <p class="mb-10 md:mb-14 text-lg text-zinc-400">Plans rot in chat logs and scattered markdown. lazyplan answers “what are we doing, who owns it, and what changed?” with one DB both you and your agent share.</p>
+  <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8 shadow-lg shadow-black/30 backdrop-blur transition hover:border-viking-blue/50 sm:col-span-2 lg:col-span-2">
+      <!-- lucide:layout-list -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="mb-2 h-6 w-6 text-cyber-cyan"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+      <h3 class="mb-1.5 text-lg font-semibold text-white">🗂️ Projects &gt; stories &gt; tasks, three views</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">One hierarchy, three lenses: <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">1</code> tree, <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">2</code> gantt (<code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">*</code> critical path, <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">!</code> blocked, <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">◆</code> milestones), <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">3</code> feed. Priorities <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">p0–p3</code>, labels, estimates, dependencies with cycle guard, acceptance criteria, risks, milestones, links.</p>
+    </div>
+    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8 shadow-lg shadow-black/30 backdrop-blur transition hover:border-viking-blue/50">
+      <!-- lucide:terminal -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="mb-2 h-6 w-6 text-viking-blue"><path d="m4 17 6-6-6-6"/><path d="M12 19h8"/></svg>
+      <h3 class="mb-1.5 text-lg font-semibold text-white">⌨️ CLI == TUI command bar</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Every verb works in both places: the TUI <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">/</code> bar takes the same <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">add-task --story 1 --title x</code> you type in a shell. Nano-style bottom bar, fuzzy palette (<code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">ctrl+p</code>), in-place editing.</p>
+    </div>
+    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8 shadow-lg shadow-black/30 backdrop-blur transition hover:border-viking-blue/50">
+      <!-- lucide:bot -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="mb-2 h-6 w-6 text-cyber-cyan"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+      <h3 class="mb-1.5 text-lg font-semibold text-white">🤖 Agent-native by design</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Stdlib-only CLI, <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">--json</code> everywhere, machine-readable exit codes, <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">--actor NAME</code> attribution in <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">feed</code>. Agents propose and ask; you approve and answer in the UI.</p>
+    </div>
+    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8 shadow-lg shadow-black/30 backdrop-blur transition hover:border-viking-blue/50">
+      <!-- lucide:database -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="mb-2 h-6 w-6 text-scanner-green"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>
+      <h3 class="mb-1.5 text-lg font-semibold text-white">🗄️ One repo, one SQLite DB</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">.plan/lazyplan.db</code> sits next to the code it plans — every subdir resolves to it. JSON export/import for backup, one-way Postgres sync for dashboards.</p>
+    </div>
+    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8 shadow-lg shadow-black/30 backdrop-blur transition hover:border-viking-blue/50">
+      <!-- lucide:search -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="mb-2 h-6 w-6 text-viking-gold"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <h3 class="mb-1.5 text-lg font-semibold text-white">🔎 Search, filter, follow</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Status / project / owner filters, fuzzy search, live feed that toasts arrivals while the TUI runs. <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui feed --json --follow</code> tails activity from any script.</p>
+    </div>
+    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8 shadow-lg shadow-black/30 backdrop-blur transition hover:border-viking-blue/50">
+      <!-- lucide:package -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="mb-2 h-6 w-6 text-viking-blue"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+      <h3 class="mb-1.5 text-lg font-semibold text-white">📦 Installs anywhere</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">pipx</code>, vendored <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">.deb</code>/<code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">.rpm</code> (only <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">python3 ≥ 3.11</code> required), or the <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">curl|sh</code> one-liner — with man pages and shell completions included.</p>
+    </div>
+  </div>
+</section>
+
+<section id="quickstart" class="mx-auto max-w-6xl scroll-mt-20 px-6 py-20 md:py-28">
+  <h2 class="mb-4 text-2xl font-bold text-white"><span class="mr-1.5" aria-hidden="true">🚀</span>Quickstart</h2>
+  <p class="mb-10 md:mb-14 text-lg text-zinc-400">Three commands to a live plan — then drive it from the keyboard or the shell:</p>
+<div class="space-y-6">
+<pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-surface p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono">cd ~/my-project
+lpui init --yes             <span class="text-zinc-500"># creates .plan/lazyplan.db + .plan/config.json</span>
+lpui add-project --name "my-project"
+lpui                        <span class="text-zinc-500"># TUI (same as `lpui ui`)</span>
+</code></pre>
+  <p class="text-zinc-300">Plan from the shell — same verbs the TUI command bar takes:</p>
+<pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-surface p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono">lpui add-story --project 1 --title "Auth refresh" --priority p0 --estimate 2w
+lpui add-task --story 1 --title "Rotate tokens" --owner a1 --priority p1 --estimate 2d
+lpui list
+lpui gantt --tasks --width 60   <span class="text-zinc-500"># `*` critical path, `!` blocked</span>
+lpui status --kind task --id 1 --to doing
+lpui show --kind story --id 1   <span class="text-zinc-500"># full context: fields + links + children</span>
+</code></pre>
+  <p class="text-zinc-300">TUI keys (also: <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui help</code>, or <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">?</code> inside):</p>
+<pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-surface p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono">1/2/3 views (tree/gantt/feed)    j/k navigate · enter edit · ←/→ fold
+n new (context) · P/S/T new project/story/task · e edit · d delete
+space cycle status · c tick criteria · z/Z fold one/all · +/− gantt zoom
+f/o/O filters · s search · ctrl+p palette · 4 then a/x proposals
+/ command bar · ? help · r refresh · q quit
+</code></pre>
+</div>
+</section>
+
+<section id="agents" class="mx-auto max-w-6xl scroll-mt-20 px-6 py-20 md:py-28">
+  <h2 class="mb-4 text-2xl font-bold text-white"><span class="mr-1.5" aria-hidden="true">🤖</span>Agent API</h2>
+  <p class="mb-10 md:mb-14 text-lg text-zinc-400">The CLI is stdlib-only (no Textual import): <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">--json</code> on every verb, exit codes machines can branch on, <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">--actor NAME</code> on every write.</p>
+<div class="space-y-6">
+<pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-surface p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono">lpui --actor helper list --json                  <span class="text-zinc-500"># read the tree</span>
+lpui --actor helper show --kind task --id 3       <span class="text-zinc-500"># full context</span>
+lpui --actor helper add-task --story 1 --title "Draft proposal"
+lpui --actor helper propose --kind task --parent 1 --title "Refactor X"
+lpui --actor helper ask --question "Minimal or full scope?"
+lpui feed --json --follow &amp;                        <span class="text-zinc-500"># tail activity</span>
+</code></pre>
+  <ul class="list-disc pl-6 text-[0.95rem] text-zinc-400">
+    <li class="mb-1.5">Never invent ids — <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">list</code> first; prefer <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">update</code>/<code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">status</code> over delete + recreate.</li>
+    <li class="mb-1.5"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">propose</code> / <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">ask</code> for judgment calls — the human approves (<code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">4</code> then <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">a</code>) and answers in the UI.</li>
+    <li class="mb-1.5">Never <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">approve</code>/<code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">reject</code> your own proposals or <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">answer</code> your own questions.</li>
+    <li class="mb-1.5">Full agent contract ships in the repo: <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">.agents/skills/lazyplan/SKILL.md</code> — <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui init</code> installs it into your coding agent.</li>
+  </ul>
+</div>
+</section>
+
+<section id="install" class="mx-auto max-w-6xl scroll-mt-20 px-6 py-20 md:py-28">
+  <h2 class="mb-4 text-2xl font-bold text-white"><span class="mr-1.5" aria-hidden="true">📦</span>Install</h2>
+  <p class="mb-10 md:mb-14 text-zinc-300">Each <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">v*</code> tag ships an sdist + wheel (PyPI) plus <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">.deb</code>/<code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">.rpm</code> per arch (<code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">.github/workflows/release.yml</code>) attached to that tag's GitHub Release — pick your installer:</p>
+<div class="space-y-6">
+
+  <div role="tablist" aria-label="Install methods" class="mb-0 flex flex-wrap gap-2 border-b border-plan-border pb-0">
+    <button id="tab-pipx" type="button" role="tab" aria-selected="true" aria-controls="panel-pipx" class="rounded-t-lg border border-b-0 border-plan-border bg-plan-surface px-4 py-2 text-sm font-semibold text-white aria-selected:border-viking-blue/60 aria-selected:bg-viking-blue/15 aria-selected:text-white">pipx (recommended)</button>
+    <button id="tab-system" type="button" role="tab" aria-selected="false" aria-controls="panel-system" tabindex="-1" class="rounded-t-lg border border-b-0 border-plan-border bg-transparent px-4 py-2 text-sm font-semibold text-zinc-400 aria-selected:border-viking-blue/60 aria-selected:bg-viking-blue/15 aria-selected:text-white">
+      System packages
+    </button>
+    <button id="tab-oneliner" type="button" role="tab" aria-selected="false" aria-controls="panel-oneliner" tabindex="-1" class="rounded-t-lg border border-b-0 border-plan-border bg-transparent px-4 py-2 text-sm font-semibold text-zinc-400 aria-selected:border-viking-blue/60 aria-selected:bg-viking-blue/15 aria-selected:text-white">
+      curl|sh
+    </button>
+    <button id="tab-source" type="button" role="tab" aria-selected="false" aria-controls="panel-source" tabindex="-1" class="rounded-t-lg border border-b-0 border-plan-border bg-transparent px-4 py-2 text-sm font-semibold text-zinc-400 aria-selected:border-viking-blue/60 aria-selected:bg-viking-blue/15 aria-selected:text-white">
+      From source
+    </button>
+  </div>
+
+  <div id="panel-pipx" role="tabpanel" aria-labelledby="tab-pipx" class="rounded-b-xl rounded-tr-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8 space-y-6 backdrop-blur">
+    <h3 class="mb-2 mt-1 text-xl font-semibold text-white">Isolated install from PyPI</h3>
+    <p class="text-zinc-300">The recommended path — <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">pipx</code> installs <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lazyplan-tui</code> into its own venv and puts <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui</code> (plus the <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lazyplan</code> alias) on your PATH:</p>
+<pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-canvas p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono">pipx install lazyplan-tui
+lpui --help
+<span class="text-zinc-500"># later releases:</span>
+pipx upgrade lazyplan-tui
+</code></pre>
+  </div>
+  <div id="panel-system" role="tabpanel" aria-labelledby="tab-system" hidden class="rounded-b-xl rounded-tr-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8 space-y-6 backdrop-blur">
+    <h3 class="mb-2 mt-1 text-xl font-semibold text-white">Native packages (vendored deps)</h3>
+    <p class="text-zinc-300">Self-contained under <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">/usr/lib/lazyplan</code> — the only requirement is <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">python3 ≥ 3.11</code>. Wrappers land in <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">/usr/bin</code>; man pages and shell completions included:</p>
+<pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-canvas p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono"><span class="text-zinc-500"># Fedora / RHEL / openSUSE</span>
+sudo dnf install ./lazyplan-0.8.0-1.x86_64.rpm   <span class="text-zinc-500"># or -1.aarch64.rpm on ARM</span>
+<span class="text-zinc-500"># Debian / Ubuntu</span>
+sudo apt install ./lazyplan_0.8.0-1_amd64.deb     <span class="text-zinc-500"># or -1_arm64.deb on ARM</span>
+</code></pre>
+  </div>
+  <div id="panel-oneliner" role="tabpanel" aria-labelledby="tab-oneliner" hidden class="rounded-b-xl rounded-tr-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8 space-y-6 backdrop-blur">
+    <h3 class="mb-2 mt-1 text-xl font-semibold text-white">One script, every method</h3>
+    <p class="text-zinc-300"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">install.sh</code> auto-picks <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">rpm</code>/<code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">deb</code> on supported distros, else <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">pipx</code>, else an isolated venv — POSIX <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">sh</code>, never writes as root except through the system package manager:</p>
+<pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-canvas p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono">curl -fsSL https://github.com/fluxion-dev/lazyplan/releases/latest/download/install.sh | sh
+<span class="text-zinc-500"># pin + choose:</span>
+sh install.sh --version X.Y.Z --method rpm|deb|pipx|venv
+<span class="text-zinc-500"># uninstall:</span>
+sh install.sh --uninstall
+</code></pre>
+  </div>
+  <div id="panel-source" role="tabpanel" aria-labelledby="tab-source" hidden class="rounded-b-xl rounded-tr-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8 space-y-6 backdrop-blur">
+    <p class="text-zinc-300">Hacking on lazyplan itself — editable install with dev extras:</p>
+<pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-canvas p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono">git clone https://github.com/fluxion-dev/lazyplan.git
+cd lazyplan
+python3 -m venv .venv &amp;&amp; source .venv/bin/activate
+python -m pip install -e ".[dev,postgres]"
+./tools/check.sh   <span class="text-zinc-500"># lint + format + types + unittest (both interpreters)</span>
+</code></pre>
+  </div>
+
+  <div class="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap">
+    <a class="inline-flex items-center justify-center gap-2 rounded-xl bg-viking-blue px-5 py-2.5 text-center font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="https://github.com/fluxion-dev/lazyplan/releases/download/v0.8.0/lazyplan_0.8.0-1_amd64.deb">
+      <!-- lucide:download -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-4 w-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+      .deb amd64
+    </a>
+    <a class="inline-flex items-center justify-center gap-2 rounded-xl bg-viking-blue px-5 py-2.5 text-center font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="https://github.com/fluxion-dev/lazyplan/releases/download/v0.8.0/lazyplan_0.8.0-1_arm64.deb">
+      <!-- lucide:download -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-4 w-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+      .deb arm64
+    </a>
+    <a class="inline-flex items-center justify-center gap-2 rounded-xl bg-viking-blue px-5 py-2.5 text-center font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="https://github.com/fluxion-dev/lazyplan/releases/download/v0.8.0/lazyplan-0.8.0-1.x86_64.rpm">
+      <!-- lucide:download -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-4 w-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+      .rpm x86_64
+    </a>
+    <a class="inline-flex items-center justify-center gap-2 rounded-xl bg-viking-blue px-5 py-2.5 text-center font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="https://github.com/fluxion-dev/lazyplan/releases/download/v0.8.0/lazyplan-0.8.0-1.aarch64.rpm">
+      <!-- lucide:download -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-4 w-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+      .rpm aarch64
+    </a>
+  </div>
+  <p class="text-[0.95rem] text-zinc-400">Prefer to browse? <a class="text-cyber-cyan hover:underline" href="https://github.com/fluxion-dev/lazyplan/releases">All releases on GitHub</a> — every tag also attaches the sdist, wheel, and <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">install.sh</code> one-liner.</p>
+  <table class="w-full border-collapse text-[0.95rem]">
+    <tr><th class="border-b border-plan-border bg-white/5 px-3 py-2 text-left text-zinc-200">Arch</th><th class="border-b border-plan-border bg-white/5 px-3 py-2 text-left text-zinc-200">deb (Debian/Ubuntu)</th><th class="border-b border-plan-border bg-white/5 px-3 py-2 text-left text-zinc-200">rpm (Fedora/RHEL/SUSE)</th></tr>
+    <tr><td class="border-b border-plan-border px-3 py-2 text-left text-zinc-300">amd64 / x86_64</td><td class="border-b border-plan-border px-3 py-2 text-left"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lazyplan_0.8.0-1_amd64.deb</code></td><td class="border-b border-plan-border px-3 py-2 text-left"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lazyplan-0.8.0-1.x86_64.rpm</code></td></tr>
+    <tr><td class="border-b border-plan-border px-3 py-2 text-left text-zinc-300">arm64 / aarch64</td><td class="border-b border-plan-border px-3 py-2 text-left"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lazyplan_0.8.0-1_arm64.deb</code></td><td class="border-b border-plan-border px-3 py-2 text-left"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lazyplan-0.8.0-1.aarch64.rpm</code></td></tr>
+  </table>
+  <ul class="list-disc pl-6 text-[0.95rem] text-zinc-400">
+    <li class="mb-1.5">System packages need only <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">python3 ≥ 3.11</code> — dependencies ride along under <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">/usr/lib/lazyplan</code>.</li>
+    <li class="mb-1.5">Man pages (<code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">man lpui</code>) and bash/zsh completions ship in every package.</li>
+    <li class="mb-1.5">No root for user installs: <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">pipx</code> and the <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">venv</code> path stay in your home directory.</li>
+  </ul>
+</div>
+</section>
+
+<section id="exits" class="mx-auto max-w-6xl scroll-mt-20 px-6 py-20 md:py-28">
+  <h2 class="mb-4 text-2xl font-bold text-white"><span class="mr-1.5" aria-hidden="true">🔢</span>Exit codes &amp; data</h2>
+  <p class="mb-10 md:mb-14 text-lg text-zinc-400">Four codes, one DB rule — scripts and CI steps can branch on both with confidence.</p>
+  <div class="mb-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="rounded-xl border border-scanner-green/30 bg-scanner-green/5 p-6 md:p-8 backdrop-blur">
+      <!-- lucide:circle-check -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="mb-2 h-6 w-6 text-scanner-green"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+      <h3 class="mb-1.5 text-lg font-semibold text-white"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em]">0</code> Success</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Wrote, listed, or rendered — including <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">--help</code></p>
+    </div>
+    <div class="rounded-xl border border-strict-red/30 bg-strict-red/5 p-6 md:p-8 backdrop-blur">
+      <!-- lucide:circle-x -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="mb-2 h-6 w-6 text-strict-red"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
+      <h3 class="mb-1.5 text-lg font-semibold text-white"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em]">1</code> Not found</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Row id doesn't exist (e.g. task #7)</p>
+    </div>
+    <div class="rounded-xl border border-viking-gold/30 bg-viking-gold/5 p-6 md:p-8 backdrop-blur">
+      <!-- lucide:triangle-alert -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="mb-2 h-6 w-6 text-viking-gold"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+      <h3 class="mb-1.5 text-lg font-semibold text-white"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em]">2</code> Usage error</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Bad flags, validation, or <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">error: …</code> on stderr</p>
+    </div>
+    <div class="rounded-xl border border-viking-blue/30 bg-viking-blue/5 p-6 md:p-8 backdrop-blur">
+      <!-- lucide:monitor-x -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="mb-2 h-6 w-6 text-viking-blue"><path d="M2 4.535A1.5 1.5 0 0 1 3.515 3h16.97A1.5 1.5 0 0 1 22 4.535V15.5a1.5 1.5 0 0 1-1.515 1.465H2.146A1.5 1.5 0 0 1 .63 15.5Z"/><path d="m7 7 7 7"/><path d="m14 7-7 7"/></svg>
+      <h3 class="mb-1.5 text-lg font-semibold text-white"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em]">3</code> No TUI</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Textual missing — reinstall with dependencies</p>
+    </div>
+  </div>
+  <div class="space-y-6">
+<h3 class="mb-4 text-xl font-semibold text-white">Where the data lives</h3>
+  <p class="text-sm text-zinc-400">First match wins — run <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui info</code> when in doubt:</p>
+<pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-surface p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono"><span class="text-zinc-500"># example config — not executed</span>
+--db PATH                          <span class="text-zinc-500"># explicit override</span>
+$LAZYPLAN_DB                       <span class="text-zinc-500"># environment override</span>
+./.plan/lazyplan.db                <span class="text-zinc-500"># inside a repo (via git rev-parse)</span>
+~/.local/share/lazyplan/lazyplan.db  <span class="text-zinc-500"># global fallback</span>
+</code></pre>
+  <ul class="list-disc pl-6 text-[0.95rem] text-zinc-400">
+    <li class="mb-1.5"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">LAZYPLAN_PG_DSN</code> (or <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">--dsn</code>) targets the Postgres replica for <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui sync</code>.</li>
+    <li class="mb-1.5">Back up with <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui export --format json</code>, restore with <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui import --file</code>.</li>
+  </ul>
+</div>
+</section>
+
+</main>
+
+<footer class="border-t border-plan-border bg-plan-surface/60 px-6 py-12 text-center text-[0.92rem] text-zinc-400 backdrop-blur">
+  <p class="m-0"><a class="text-cyber-cyan hover:underline" href="https://github.com/fluxion-dev/lazyplan">lazyplan</a> — plans with you, in the terminal, next to the code. Reports issues upstream.</p>
+  <ul class="mt-6 flex list-none flex-wrap items-center justify-center gap-x-6 gap-y-2 p-0">
+    <li><a class="text-zinc-300 no-underline hover:text-white hover:underline" href="https://github.com/fluxion-dev/lazyplan">Repository</a></li>
+    <li><a class="text-zinc-300 no-underline hover:text-white hover:underline" href="https://github.com/fluxion-dev/lazyplan/issues">Issues</a></li>
+    <li><a class="text-zinc-300 no-underline hover:text-white hover:underline" href="https://github.com/fluxion-dev/lazyplan/releases">Releases</a></li>
+    <li><a class="text-zinc-300 no-underline hover:text-white hover:underline" href="https://github.com/fluxion-dev/lazyplan/blob/main/LICENSE">License</a></li>
+  </ul>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+  function selectTab(tab, tabs) {
+    tabs.forEach(function (t) {
+      var selected = t === tab;
+      t.setAttribute('aria-selected', selected ? 'true' : 'false');
+      t.tabIndex = selected ? 0 : -1;
+      var panel = document.getElementById(t.getAttribute('aria-controls'));
+      if (panel) {
+        if (selected) {
+          panel.removeAttribute('hidden');
+        } else {
+          panel.setAttribute('hidden', '');
+        }
+      }
+    });
+  }
+  document.querySelectorAll('[role="tablist"]').forEach(function (list) {
+    var tabs = Array.prototype.slice.call(list.querySelectorAll('[role="tab"]'));
+    tabs.forEach(function (tab, index) {
+      tab.addEventListener('click', function () {
+        selectTab(tab, tabs);
+      });
+      tab.addEventListener('keydown', function (event) {
+        var next = null;
+        if (event.key === 'ArrowRight') {
+          next = (index + 1) % tabs.length;
+        } else if (event.key === 'ArrowLeft') {
+          next = (index - 1 + tabs.length) % tabs.length;
+        } else if (event.key === 'Home') {
+          next = 0;
+        } else if (event.key === 'End') {
+          next = tabs.length - 1;
+        }
+        if (next !== null) {
+          event.preventDefault();
+          tabs[next].focus();
+          selectTab(tabs[next], tabs);
+        }
+      });
+    });
+  });
+  var copyBtn = document.getElementById('hero-copy');
+  var copySrc = document.getElementById('hero-cmd');
+  var copyStatus = document.getElementById('copy-status');
+  function announce(message) {
+    if (!copyStatus) {
+      return;
+    }
+    copyStatus.textContent = message;
+    window.setTimeout(function () {
+      copyStatus.textContent = '';
+    }, 2000);
+  }
+  function legacyCopy(text) {
+    var area = document.createElement('textarea');
+    area.value = text;
+    area.setAttribute('readonly', '');
+    area.style.position = 'absolute';
+    area.style.left = '-9999px';
+    document.body.appendChild(area);
+    area.select();
+    var ok = false;
+    try {
+      ok = document.execCommand('copy');
+    } catch (err) {
+      ok = false;
+    }
+    document.body.removeChild(area);
+    return ok;
+  }
+  if (copyBtn && copySrc) {
+    copyBtn.addEventListener('click', function () {
+      var text = copySrc.textContent;
+      function done(ok) {
+        if (ok) {
+          announce('Copied to clipboard.');
+        } else {
+          announce('Copy failed — select the command and copy it manually.');
+        }
+      }
+      if (window.isSecureContext && navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(
+          function () {
+            done(true);
+          },
+          function () {
+            done(legacyCopy(text));
+          }
+        );
+      } else {
+        done(legacyCopy(text));
+      }
+    });
+  }
+})();
+</script>
+
+</body>
+</html>

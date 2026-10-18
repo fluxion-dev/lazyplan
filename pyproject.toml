@@ -17,6 +17,7 @@ classifiers = [
 ]
 [project.urls]
 Homepage = "https://github.com/fluxion-dev/lazyplan"
+Documentation = "https://fluxion-dev.github.io/lazyplan/"
 Repository = "https://github.com/fluxion-dev/lazyplan"
 Issues = "https://github.com/fluxion-dev/lazyplan/issues"
 Changelog = "https://github.com/fluxion-dev/lazyplan/releases"
@@ -32,6 +33,9 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.data-files]
+"share/man/man1" = ["docs/lpui.1", "docs/lazyplan.1"]
 
 [tool.ruff]
 target-version = "py311"

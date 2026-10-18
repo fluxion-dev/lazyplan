@@ -1,0 +1,17 @@
+{
+  "name": "lazyplan-site",
+  "private": true,
+  "version": "0.8.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "^4",
+    "tailwindcss": "^4",
+    "vite": "^7"
+  }
+}

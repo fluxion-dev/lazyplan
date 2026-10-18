@@ -1,4 +1,4 @@
-# lazyplan (`lpui`) — v0.7.0
+# lazyplan (`lpui`) — v0.8.0
 
 [![PyPI](https://img.shields.io/pypi/v/lazyplan-tui)](https://pypi.org/project/lazyplan-tui/)
 [![Python](https://img.shields.io/pypi/pyversions/lazyplan-tui)](https://pypi.org/project/lazyplan-tui/)

@@ -72,22 +72,46 @@ lp show --kind project|story|task --id N                          # full context
 lp gantt [--tasks] [--width 40]                                   # timeline
 lp feed --limit 20                                                # recent activity
 lp export --format json                                           # full dump when you need everything
+lp info                                                           # resolved db path + counts (scope debugging)
 ```
 
 Add `--json` for machine-parseable output (`lp list --json`).
 
-## Write (always with --actor)
+## Write: full CRUD
+
+Every entity supports create → read (`show`) → update/status → delete.
+`--kind` is project|story|task everywhere it appears.
 
 ```bash
+lp --actor NAME add-project --name "API v2" [--goal .. --metrics .. --scope-in .. --scope-out ..]
+lp --actor NAME add-story --project P --title "Feature Y" [--owner me --priority p0 --estimate 2w]
 lp --actor NAME add-task --story S --title "Do X" [--desc ctx --owner me --priority p1 --estimate 2d]
-lp --actor NAME add-story --project P --title "Feature Y" [--owner me --priority p0]
+lp --actor NAME update --kind task --id T [--title .. --desc .. --owner .. --priority p0|none --estimate ..]
 lp --actor NAME status --kind task --id T --to doing|done
-lp --actor NAME update --kind task --id T --title "New title"
-lp --actor NAME add-criteria --kind task --id T --text "Works offline"  # acceptance item
-lp check --id C / lp uncheck --id C                                     # tick/untick (advisory)
+lp --actor NAME delete --kind task --id T                         # immediate, no confirm
 ```
 
+Deleting a project removes its stories and tasks — double-check ids first.
 Closing with open acceptance criteria warns but never blocks.
+
+## Checklists, links, risks, milestones
+
+```bash
+lp --actor NAME add-criteria --kind task --id T --text "Works offline"  # acceptance item
+lp criteria --kind task --id T                                          # list items
+lp check --id C / lp uncheck --id C                                     # tick/untick (advisory)
+lp --actor NAME delete-criteria --id C
+lp --actor NAME add-link --kind task --id T --url URL [--label spec]    # attach reference
+lp links --kind task --id T                                             # list links
+lp --actor NAME delete-link --id L
+lp --actor NAME add-risk --project P --title "Slip" [--likelihood high --impact high --mitigation buf]
+lp risks --project P                                                    # likelihood x impact first
+lp --actor NAME risk-status --id R --to mitigated
+lp --actor NAME add-milestone --project P --title "Beta" --date 2026-11-15
+lp milestones --project P                                               # list markers
+lp --actor NAME delete-milestone --id M
+lp --actor NAME import --file dump.json                                 # load an export dump (remaps ids)
+```
 
 ## Human-in-the-loop (preferred for judgment calls)
 
@@ -106,8 +130,9 @@ those verbs belong to the human in the UI.
 ## Rules
 
 - One DB write = one feed event; keep titles imperative and scoped.
-- `lp delete` is immediate with no confirm — double-check ids first.
+- Prefer update/status over delete + recreate (ids and history survive).
 - Never invent project/story ids: `lp list` to discover them.
+- Never `lp seed` a real repo plan — it inserts demo data.
 - Full verb reference: `lp --help` (CLI == TUI `:` command bar).
 """
 
@@ -117,8 +142,9 @@ Repo plan of record: projects > stories > tasks in `.plan/lazyplan.db`.
 Human watches `lp ui`; agents work via the CLI with `--actor <name>`.
 
 - Read: `lp list`, `lp show --kind story --id N`, `lp feed --limit 20` (`--json` for parsing)
-- Write: `lp --actor <name> add-task --story S --title "Do X"`, `lp --actor <name> status --kind task --id T --to done`
-- Unsure? `lp --actor <name> propose --kind task --parent S --title ...` / `lp --actor <name> ask --question ...` for human approval
+- Write (full CRUD): `lp add-project`, `lp add-story`, `lp add-task`, `lp update`, `lp status`, `lp delete` (all with `--actor <name>`)
+- Extras: `lp add-criteria`, `lp add-link`, `lp add-risk`, `lp add-milestone` (flags in the skill)
+- Unsure? `lp propose` / `lp ask` for human approval
 - Full skill: `.agents/skills/lazyplan/SKILL.md` · verbs: `lp --help`
 """
 

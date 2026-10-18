@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 
 try:
     from textual.app import ComposeResult
+    from textual.binding import Binding
     from textual.containers import Vertical
     from textual.screen import ModalScreen
     from textual.widgets import Button, Checkbox, Input, Label, OptionList, Static, TextArea
@@ -25,9 +26,17 @@ if TYPE_CHECKING:
 if _TEXTUAL_OK:
 
     class _Form(ModalScreen):
-        """Modal base; dialog chrome comes from design.APP_CSS."""
+        """Modal base; dialog chrome comes from design.APP_CSS.
 
-        pass
+        Esc backs out of every form without saving (matches the Cancel
+        button); per-screen callbacks already treat a None result as cancel.
+        """
+
+        BINDINGS = [Binding("escape", "cancel", "Cancel")]
+
+        def action_cancel(self) -> None:
+            """Return to the previous screen, discarding edits."""
+            self.dismiss(None)
 
     class NewProjectScreen(_Form):
         """Create-project form."""

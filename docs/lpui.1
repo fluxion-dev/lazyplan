@@ -19,6 +19,9 @@ sqlite path (default: $LAZYPLAN_DB, else \./\.plan/ in repo, else global)
 .B \-\-json
 agent\-friendly JSON output
 .TP
+.B \-\-version
+print the installed version and exit
+.TP
 .B \-\-actor NAME
 who is making this change (surfaced in feed; default: $USER or 'human')
 .SH COMMANDS
@@ -30,6 +33,11 @@ init \.plan/ in this repo (or global db)
 .TP
 .B \-\-json
 agent\-friendly JSON output
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
 .RE
 .RS
 .TP
@@ -61,6 +69,11 @@ agent\-friendly JSON output
 .RE
 .RS
 .TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
 .B \-\-actor NAME
 who acted (shown in feed)
 .RE
@@ -74,6 +87,11 @@ agent\-friendly JSON output
 .RE
 .RS
 .TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
 .B \-\-actor NAME
 who acted (shown in feed)
 .RE
@@ -84,6 +102,11 @@ ascii tree of projects > stories > tasks
 .TP
 .B \-\-json
 agent\-friendly JSON output
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
 .RE
 .RS
 .TP
@@ -117,6 +140,11 @@ ascii gantt of stories (+tasks)
 .TP
 .B \-\-json
 agent\-friendly JSON output
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
 .RE
 .RS
 .TP
@@ -160,6 +188,11 @@ agent/human: add a project
 .TP
 .B \-\-json
 agent\-friendly JSON output
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
 .RE
 .RS
 .TP
@@ -218,6 +251,11 @@ agent/human: add a story
 .TP
 .B \-\-json
 agent\-friendly JSON output
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
 .RE
 .RS
 .TP
@@ -284,6 +322,11 @@ agent\-friendly JSON output
 .RE
 .RS
 .TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
 .B \-\-actor NAME
 who acted (shown in feed)
 .RE
@@ -344,6 +387,11 @@ edit title/desc/estimate/dates/narrative/owner/plan fields
 .TP
 .B \-\-json
 agent\-friendly JSON output
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
 .RE
 .RS
 .TP
@@ -445,6 +493,11 @@ agent\-friendly JSON output
 .RE
 .RS
 .TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
 .B \-\-actor NAME
 who acted (shown in feed)
 .RE
@@ -465,6 +518,11 @@ attach a supporting link to a story/task
 .TP
 .B \-\-json
 agent\-friendly JSON output
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
 .RE
 .RS
 .TP
@@ -501,6 +559,11 @@ agent\-friendly JSON output
 .RE
 .RS
 .TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
 .B \-\-actor NAME
 who acted (shown in feed)
 .RE
@@ -524,6 +587,11 @@ agent\-friendly JSON output
 .RE
 .RS
 .TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
 .B \-\-actor NAME
 who acted (shown in feed)
 .RE
@@ -539,6 +607,11 @@ add an acceptance\-checklist item
 .TP
 .B \-\-json
 agent\-friendly JSON output
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
 .RE
 .RS
 .TP
@@ -570,6 +643,11 @@ agent\-friendly JSON output
 .RE
 .RS
 .TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
 .B \-\-actor NAME
 who acted (shown in feed)
 .RE
@@ -593,6 +671,11 @@ agent\-friendly JSON output
 .RE
 .RS
 .TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
 .B \-\-actor NAME
 who acted (shown in feed)
 .RE
@@ -608,6 +691,11 @@ reopen a criterion
 .TP
 .B \-\-json
 agent\-friendly JSON output
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
 .RE
 .RS
 .TP
@@ -629,6 +717,11 @@ agent\-friendly JSON output
 .RE
 .RS
 .TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
 .B \-\-actor NAME
 who acted (shown in feed)
 .RE
@@ -644,6 +737,11 @@ register a project risk
 .TP
 .B \-\-json
 agent\-friendly JSON output
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
 .RE
 .RS
 .TP
@@ -685,6 +783,11 @@ agent\-friendly JSON output
 .RE
 .RS
 .TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
 .B \-\-actor NAME
 who acted (shown in feed)
 .RE
@@ -700,6 +803,11 @@ move a risk open|mitigated|retired / set mitigation
 .TP
 .B \-\-json
 agent\-friendly JSON output
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
 .RE
 .RS
 .TP
@@ -731,6 +839,11 @@ agent\-friendly JSON output
 .RE
 .RS
 .TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
 .B \-\-actor NAME
 who acted (shown in feed)
 .RE
@@ -759,6 +872,11 @@ agent\-friendly JSON output
 .RE
 .RS
 .TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
 .B \-\-actor NAME
 who acted (shown in feed)
 .RE
@@ -777,6 +895,11 @@ agent\-friendly JSON output
 .RE
 .RS
 .TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
 .B \-\-actor NAME
 who acted (shown in feed)
 .RE
@@ -792,6 +915,11 @@ agent: submit a story/task for human approval
 .TP
 .B \-\-json
 agent\-friendly JSON output
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
 .RE
 .RS
 .TP
@@ -863,6 +991,11 @@ agent\-friendly JSON output
 .RE
 .RS
 .TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
 .B \-\-actor NAME
 who acted (shown in feed)
 .RE
@@ -878,6 +1011,11 @@ approve a proposal (creates the item)
 .TP
 .B \-\-json
 agent\-friendly JSON output
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
 .RE
 .RS
 .TP
@@ -899,6 +1037,11 @@ agent\-friendly JSON output
 .RE
 .RS
 .TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
 .B \-\-actor NAME
 who acted (shown in feed)
 .RE
@@ -914,6 +1057,11 @@ agent: ask the human a question
 .TP
 .B \-\-json
 agent\-friendly JSON output
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
 .RE
 .RS
 .TP
@@ -935,6 +1083,11 @@ agent\-friendly JSON output
 .RE
 .RS
 .TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
 .B \-\-actor NAME
 who acted (shown in feed)
 .RE
@@ -950,6 +1103,11 @@ human: answer a question
 .TP
 .B \-\-json
 agent\-friendly JSON output
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
 .RE
 .RS
 .TP
@@ -976,6 +1134,11 @@ agent\-friendly JSON output
 .RE
 .RS
 .TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
 .B \-\-actor NAME
 who acted (shown in feed)
 .RE
@@ -991,6 +1154,11 @@ load an `lpui export \-\-format json` dump
 .TP
 .B \-\-json
 agent\-friendly JSON output
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
 .RE
 .RS
 .TP
@@ -1012,6 +1180,11 @@ agent\-friendly JSON output
 .RE
 .RS
 .TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
 .B \-\-actor NAME
 who acted (shown in feed)
 .RE
@@ -1027,6 +1200,11 @@ move project/story/task to a status
 .TP
 .B \-\-json
 agent\-friendly JSON output
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
 .RE
 .RS
 .TP
@@ -1058,6 +1236,11 @@ agent\-friendly JSON output
 .RE
 .RS
 .TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
 .B \-\-actor NAME
 who acted (shown in feed)
 .RE
@@ -1078,6 +1261,11 @@ recent agent/human activity
 .TP
 .B \-\-json
 agent\-friendly JSON output
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
 .RE
 .RS
 .TP
@@ -1109,6 +1297,11 @@ agent\-friendly JSON output
 .RE
 .RS
 .TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
 .B \-\-actor NAME
 who acted (shown in feed)
 .RE
@@ -1124,6 +1317,11 @@ shell completions
 .TP
 .B \-\-json
 agent\-friendly JSON output
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
 .RE
 .RS
 .TP
@@ -1145,6 +1343,11 @@ agent\-friendly JSON output
 .RE
 .RS
 .TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
 .B \-\-actor NAME
 who acted (shown in feed)
 .RE
@@ -1155,6 +1358,11 @@ launch Textual TUI (default when no command is given)
 .TP
 .B \-\-json
 agent\-friendly JSON output
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
 .RE
 .RS
 .TP

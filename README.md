@@ -108,6 +108,7 @@ Full help is installed with the package:
 
 ```bash
 lpui --help              # globals + examples + env/files/exit codes
+lpui --version           # print the installed version and exit
 lpui <command> --help    # per-command flags, e.g. lpui add-task --help
 man lpui                 # full manual (also `man lazyplan`); installed to share/man/man1
 lpui help                # TUI keybindings (same as `?` in the TUI)

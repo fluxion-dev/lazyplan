@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
+from pathlib import Path
 
 from .models import Status
 
@@ -51,6 +53,23 @@ more help:
 """
 
 
+def package_version() -> str:
+    """Version of the running code: pyproject next to the source tree, else installed dist metadata."""
+    try:
+        text = (Path(__file__).resolve().parent.parent.parent / "pyproject.toml").read_text()
+    except OSError:
+        text = ""
+    m = re.search(r'^version = "(.*)"$', text, re.M) if text else None
+    if m:
+        return m.group(1)
+    try:
+        from importlib.metadata import PackageNotFoundError, version
+
+        return version("lazyplan-tui")
+    except PackageNotFoundError:
+        return "unknown"
+
+
 def build_parser() -> argparse.ArgumentParser:
     """lpui argument parser; globals repeat on every subcommand."""
     p = argparse.ArgumentParser(
@@ -65,6 +84,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="sqlite path (default: $LAZYPLAN_DB, else ./.plan/ in repo, else global)",
     )
     p.add_argument("--json", action="store_true", help="agent-friendly JSON output")
+    p.add_argument("--version", action="store_true", help="print the installed version and exit")
     p.add_argument(
         "--actor",
         default=os.environ.get("USER", "human"),
@@ -79,6 +99,12 @@ def build_parser() -> argparse.ArgumentParser:
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument(
         "--json", action="store_true", default=argparse.SUPPRESS, help="agent-friendly JSON output"
+    )
+    common.add_argument(
+        "--version",
+        action="store_true",
+        default=argparse.SUPPRESS,
+        help="print the installed version and exit",
     )
     common.add_argument(
         "--actor", default=argparse.SUPPRESS, metavar="NAME", help="who acted (shown in feed)"

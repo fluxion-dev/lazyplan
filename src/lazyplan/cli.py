@@ -10,7 +10,7 @@ import os
 import sys
 import time
 
-from .cli_parser import build_parser
+from .cli_parser import build_parser, package_version
 from .design import (
     EMPTY_FEED,
     EMPTY_NO_PROJECTS,
@@ -35,6 +35,10 @@ def _emit(args: argparse.Namespace, payload: object) -> int:
 def main(argv: list[str] | None = None) -> int:
     """Dispatch one lpui invocation; exit codes are agent-readable."""
     args = build_parser().parse_args(argv)
+    if getattr(args, "version", False):
+        # Before Store(): printing the version must not create a DB.
+        print(package_version())
+        return 0
     if args.cmd is None:
         # Bare `lpui` (or global flags only) opens the standard TUI.
         args.cmd = "ui"

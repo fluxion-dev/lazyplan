@@ -1,0 +1,40 @@
+name: release
+
+# Cut a GitHub Release from a version tag. Tags are created by
+# ./tools/bump.sh (locally with --push, or via the bump workflow),
+# which guarantees the tag matches pyproject.toml.
+on:
+  push:
+    tags:
+      - "v[0-9]*.[0-9]*.[0-9]*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Tag must match pyproject version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PYVER="$(sed -n 's/^version = "\(.*\)"$/\1/p' pyproject.toml)"
+          if [[ "$TAG" != "$PYVER" ]]; then
+            echo "error: tag v$TAG != pyproject version $PYVER" >&2
+            exit 1
+          fi
+          echo "releasing v$TAG"
+      - name: Build sdist + wheel
+        run: |
+          python3 -m pip install build
+          python3 -m build
+      - name: GitHub Release (auto-generated notes)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "$GITHUB_REF_NAME" --generate-notes dist/*

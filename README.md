@@ -41,6 +41,21 @@ Run `lp` from any subdirectory — it walks up to the repo root (via
 Commit `.plan/` to share the plan with the team, or ignore `*.db` to keep it
 local — your call.
 
+## Release (semver)
+
+Version lives in one place: `version` in `pyproject.toml`. The README header
+mirrors it; `tests/test_version.py` fails the gates on drift.
+
+```bash
+./tools/bump.sh patch [--push]   # or minor | major; --dry-run to preview
+```
+
+`bump.sh` validates semver, updates `pyproject.toml` + README, commits, and
+tags `vX.Y.Z` (refuses a dirty tree or an existing tag). Pushing the tag
+(`--push`, or Actions → bump → patch/minor/major) triggers the release
+workflow: tag-vs-pyproject check, sdist/wheel build, GitHub Release with
+auto-generated notes. CI (`ci.yml`) runs `./tools/check.sh` on every push/PR.
+
 ## tmux workflow
 
 ```bash

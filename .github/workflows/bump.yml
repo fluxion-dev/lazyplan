@@ -1,0 +1,30 @@
+name: bump
+
+# One-click semver progression: bump pyproject + README, commit, tag.
+# The tag push triggers release.yml. Run from the Actions tab.
+on:
+  workflow_dispatch:
+    inputs:
+      part:
+        description: "Semver part to bump"
+        required: true
+        default: patch
+        type: choice
+        options: [patch, minor, major]
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+      - name: Bump, commit, tag, push
+        run: ./tools/bump.sh "${{ inputs.part }}" --push

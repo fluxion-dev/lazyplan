@@ -37,16 +37,32 @@ ModalScreen {{ align: center middle; }}
 
 # -- label language ---------------------------------------------------------
 # Canonical row grammar (plain text: `lpui list`, tests):
-#   KIND#id [status] !p0 title [1/2✓]
-# TUI project rows are Rich markup (Tree labels parse it):
-#   [reverse] P1 [/] !p0 title
+#   GLYPH KIND#id !p0 title [1/2✓]   (GLYPH is ⬜ todo, 🔵 doing, ✅ done)
+# The glyph carries ANSI color on a tty CLI and Rich color in the TUI tree.
 # Tree indentation is the viewer's job ("", "  ", "    " for CLI).
 
 INDENT = ("", "  ", "    ")
 
+STATUS_ANSI = {"todo": "33", "doing": "34", "done": "32"}
+STATUS_RICH = {"todo": "yellow", "doing": "blue", "done": "green"}
+STATUS_EMOJI = {"todo": "⬜", "doing": "🔵", "done": "✅"}
+
 
 def _status(value: Status | str) -> str:
     return value.value if isinstance(value, Status) else str(value)
+
+
+def status_word(status: Status | str, dot: str = "plain") -> str:
+    """Status glyph: plain, ANSI-colored (tty CLI), or Rich markup (TUI)."""
+    name = _status(status)
+    glyph = STATUS_EMOJI.get(name, "?")
+    if dot == "ansi":
+        return f"\x1b[{STATUS_ANSI.get(name, '37')}m{glyph}\x1b[0m"
+    if dot == "rich":
+        return f"[{STATUS_RICH.get(name, 'white')}]{glyph}[/]"
+    if dot != "plain":
+        raise ValueError("dot must be plain|ansi|rich")
+    return glyph
 
 
 def priority_tag(priority: str) -> str:
@@ -77,38 +93,66 @@ def _crit_progress(store: Store | None, kind: str, obj_id: int) -> tuple[int | N
     return store.criteria_progress(kind, obj_id)
 
 
-def project_label(p: Project, store: Store | None = None) -> str:
+_CORE_SPEC: dict[str, tuple[str, str]] = {
+    "project": ("P", "name"),
+    "story": ("S", "title"),
+    "task": ("T", "title"),
+}
+
+
+def _core(kind: str, obj: Project | UserStory | Task, store: Store | None) -> str:
+    """Label body without the leading status word, shared by label and row."""
+    letter, title_attr = _CORE_SPEC[kind]
+    done, total = _crit_progress(store, kind, obj.id)
+    title = getattr(obj, title_attr)
+    return f"{letter}#{obj.id}{priority_tag(obj.priority)} {title}{crit_tag(done, total)}"
+
+
+def _label(kind: str, obj: Project | UserStory | Task, store: Store | None, dot: str) -> str:
+    """Canonical row label: status word + body (plain text: CLI, tests)."""
+    return f"{status_word(obj.status, dot)} {_core(kind, obj, store)}"
+
+
+def _row(kind: str, obj: Project | UserStory | Task, store: Store | None) -> str:
+    """TUI row: Rich status word + escaped body."""
+    return f"{status_word(obj.status, 'rich')} {_escape_markup(_core(kind, obj, store))}"
+
+
+def project_label(p: Project, store: Store | None = None, dot: str = "plain") -> str:
     """Canonical row label for a project (plain text: CLI, tests)."""
-    done, total = _crit_progress(store, "project", p.id)
-    return (
-        f"P#{p.id} [{_status(p.status)}]{priority_tag(p.priority)} {p.name}{crit_tag(done, total)}"
-    )
+    return _label("project", p, store, dot)
 
 
 def project_row(p: Project, store: Store | None = None) -> str:
-    """TUI project row (Rich markup): pill number + priority + title."""
-    return f"{pill_tag(f'P{p.id}')}{priority_tag(p.priority)} {_escape_markup(p.name)}"
+    """TUI project row (Rich markup): status word + pill number + priority + title."""
+    return (
+        f"{status_word(p.status, 'rich')} {pill_tag(f'P{p.id}')}"
+        f"{priority_tag(p.priority)} {_escape_markup(p.name)}"
+    )
 
 
-def story_label(s: UserStory, store: Store | None = None) -> str:
+def story_label(s: UserStory, store: Store | None = None, dot: str = "plain") -> str:
     """Canonical row label for a story."""
-    done, total = _crit_progress(store, "story", s.id)
-    return (
-        f"S#{s.id} [{_status(s.status)}]{priority_tag(s.priority)} {s.title}{crit_tag(done, total)}"
-    )
+    return _label("story", s, store, dot)
 
 
-def task_label(t: Task, store: Store | None = None) -> str:
+def story_row(s: UserStory, store: Store | None = None) -> str:
+    """TUI story row (Rich markup): status word + canonical label."""
+    return _row("story", s, store)
+
+
+def task_label(t: Task, store: Store | None = None, dot: str = "plain") -> str:
     """Canonical row label for a task."""
-    done, total = _crit_progress(store, "task", t.id)
-    return (
-        f"T#{t.id} [{_status(t.status)}]{priority_tag(t.priority)} {t.title}{crit_tag(done, total)}"
-    )
+    return _label("task", t, store, dot)
+
+
+def task_row(t: Task, store: Store | None = None) -> str:
+    """TUI task row (Rich markup): status word + canonical label."""
+    return _row("task", t, store)
 
 
 # -- empty states (identical wording everywhere) --------------------------
 EMPTY_NO_PROJECTS = "No projects yet — press n to seed, or run: lpui seed"
-EMPTY_FILTERED = "(filter hides everything — f/o to clear, or n to add)"
 EMPTY_FEED = "(no activity yet — agents write via `lpui add-task ...`)"
 
 
@@ -139,7 +183,7 @@ INIT_SKILLS_COMMIT_TIP = (
 
 # -- help (TUI `?` overlay AND `lpui help` render this same text) -------------
 HELP_TEXT = """lazyplan — local project journal (TUI is keyboard-only; agents use lpui)
-tree: j/k or up/down + click · left/right collapse/expand · enter detail
+tree: j/k or up/down + click select · left/right collapse/expand · enter/double-click detail
 n new (context) · P/S/T new project/story/task · e edit · d delete
 space cycle status · c tick criteria · z/Z fold one/all
 f status filter · o project filter

@@ -115,8 +115,13 @@ who acted (shown in feed)
 .RE
 .RS
 .TP
-.B \-\-status {todo|doing|done}
-filter by status Choices: todo, doing, done\.
+.B \-\-status {todo|doing|done|all}
+filter by status (default: all) Choices: todo, doing, done, all\.
+.RE
+.RS
+.TP
+.B \-\-archived
+show only archived projects (done over a day ago)
 .RE
 .RS
 .TP
@@ -255,7 +260,7 @@ details / context
 .RS
 .TP
 .B \-\-priority {p0|p1|p2|p3}
-priority (p0 highest) Choices: p0, p1, p2, p3\.
+priority (default: p1; p0 highest) Choices: p0, p1, p2, p3\.
 .RE
 .TP
 .B lpui update
@@ -556,6 +561,24 @@ row id Required\.
 .TP
 .B \-\-to {todo|doing|done}
 new status (required) Choices: todo, doing, done\. Required\.
+.RE
+.TP
+.B lpui reconcile
+recompute parent statuses from children
+.RS
+.TP
+.B \-\-json
+agent\-friendly JSON output
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who acted (shown in feed)
 .RE
 .TP
 .B lpui delete

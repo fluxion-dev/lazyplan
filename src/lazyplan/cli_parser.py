@@ -7,7 +7,7 @@ import os
 import re
 from pathlib import Path
 
-from .models import Status
+from .models import DEFAULT_TASK_PRIORITY, Status
 
 _PARSER_DESCRIPTION = (
     "lazyplan: projects > stories > tasks in a per-repo SQLite DB "
@@ -126,7 +126,15 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("info", help="show resolved db path, repo root, counts", parents=[common])
     li = sub.add_parser("list", help="ascii tree of projects > stories > tasks", parents=[common])
     li.add_argument(
-        "--status", choices=[v.value for v in Status], default=None, help="filter by status"
+        "--status",
+        choices=[v.value for v in Status] + ["all"],
+        default=None,
+        help="filter by status (default: all)",
+    )
+    li.add_argument(
+        "--archived",
+        action="store_true",
+        help="show only archived projects (done over a day ago)",
     )
     li.add_argument("--project", type=int, default=None, metavar="ID", help="only this project")
     li.add_argument(
@@ -160,7 +168,10 @@ def build_parser() -> argparse.ArgumentParser:
     a.add_argument("--title", required=True, metavar="TEXT", help="task title (required)")
     a.add_argument("--desc", default="", metavar="TEXT", help="details / context")
     a.add_argument(
-        "--priority", choices=["p0", "p1", "p2", "p3"], default="", help="priority (p0 highest)"
+        "--priority",
+        choices=["p0", "p1", "p2", "p3"],
+        default=DEFAULT_TASK_PRIORITY,
+        help="priority (default: p1; p0 highest)",
     )
 
     u = sub.add_parser(
@@ -228,6 +239,8 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument(
         "--to", choices=[v.value for v in Status], required=True, help="new status (required)"
     )
+
+    sub.add_parser("reconcile", help="recompute parent statuses from children", parents=[common])
 
     d = sub.add_parser("delete", help="delete a project/story/task", parents=[common])
     d.add_argument(

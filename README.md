@@ -90,7 +90,7 @@ the classic Unix print command.
 
 | key | action |
 |---|---|
-| `j`/`k`, arrows, click | navigate · `enter` edits detail in place · `left`/`right` collapse/expand |
+| `j`/`k`, arrows, click | navigate + select · `enter`/double-click edits detail in place · `left`/`right` collapse/expand |
 | `n` | contextual new (task→story→project) |
 | `P`/`S`/`T` | new project / story / task forms |
 | `e` / `d` | edit · delete (with confirm) |
@@ -118,7 +118,7 @@ Flags work before or after the subcommand (`lpui list --json` == `lpui --json li
 
 ```bash
 lpui seed
-lpui list [--status todo|doing|done] [--project ID] [--priority p0]
+lpui list [--status todo|doing|done|all] [--archived] [--project ID] [--priority p0]  # default: all
 lpui show --kind project|story|task --id N   # full context: why/what + criteria + children
 lpui add-project --title "API v2" --why ".." --what ".." --priority p1
 lpui add-criteria --kind project --id 1 --text "works offline"

@@ -26,12 +26,43 @@ class TestDesignSystem(unittest.TestCase):
 
     def test_label_grammar(self):
         p = Project(id=1, name="N", priority="p1")
-        self.assertEqual(design.project_label(p), "P#1 [todo] !p1 N")
+        self.assertEqual(design.project_label(p), "⬜ P#1 !p1 N")
         s = UserStory(id=2, project_id=1, title="S", priority="p0")
-        self.assertEqual(design.story_label(s), "S#2 [todo] !p0 S")
+        self.assertEqual(design.story_label(s), "⬜ S#2 !p0 S")
         t = Task(id=3, story_id=2, title="T")
-        self.assertEqual(design.task_label(t), "T#3 [todo] T")
+        self.assertEqual(design.task_label(t), "⬜ T#3 T")
         self.assertEqual(design.priority_tag(""), "")
+
+    def test_status_word_forms(self):
+        self.assertEqual(design.status_word("todo"), "⬜")
+        self.assertEqual(design.status_word("doing", "ansi"), "\x1b[34m🔵\x1b[0m")
+        self.assertEqual(design.status_word("done", "ansi"), "\x1b[32m✅\x1b[0m")
+        self.assertEqual(design.status_word("todo", "ansi"), "\x1b[33m⬜\x1b[0m")
+        self.assertEqual(design.status_word("doing", "rich"), "[blue]🔵[/]")
+        self.assertEqual(design.status_word("done", "rich"), "[green]✅[/]")
+        self.assertEqual(design.status_word("todo", "rich"), "[yellow]⬜[/]")
+        with self.assertRaises(ValueError):
+            design.status_word("todo", "neon")
+
+    def test_ansi_labels_colorize_the_word(self):
+        p = Project(id=1, name="N", priority="p1")
+        self.assertIn("\x1b[33m⬜\x1b[0m P#1", design.project_label(p, dot="ansi"))
+        s = UserStory(id=2, project_id=1, title="S")
+        self.assertTrue(design.story_label(s, dot="ansi").startswith("\x1b[33m⬜\x1b[0m S#2"))
+        t = Task(id=3, story_id=2, title="T")
+        self.assertTrue(design.task_label(t, dot="ansi").startswith("\x1b[33m⬜\x1b[0m T#3"))
+        self.assertNotIn("\x1b[", design.project_label(p))
+
+    def test_rich_rows_for_tui(self):
+        s = UserStory(id=2, project_id=1, title="S")
+        self.assertTrue(design.story_row(s).startswith("[yellow]⬜[/]"))
+        self.assertIn("S#2 S", design.story_row(s))
+        self.assertEqual(design.story_row(s).count("⬜"), 1)
+        t = Task(id=3, story_id=2, title="T")
+        self.assertTrue(design.task_row(t).startswith("[yellow]⬜[/]"))
+        self.assertEqual(design.task_row(t).count("⬜"), 1)
+        p = Project(id=1, name="N")
+        self.assertEqual(design.project_row(p).count("⬜"), 1)
 
     def test_criteria_progress_in_labels(self):
         p = self.store.add_project("P")
@@ -43,8 +74,8 @@ class TestDesignSystem(unittest.TestCase):
 
     def test_project_row_pill_and_escaped_title(self):
         p = Project(id=1, name="Ray [old]", priority="p1")
-        self.assertEqual(design.project_row(p), "[reverse] P1 [/] !p1 Ray \\[old]")
-        self.assertNotIn("[todo]", design.project_row(p))
+        self.assertEqual(design.project_row(p), "[yellow]⬜[/] [reverse] P1 [/] !p1 Ray \\[old]")
+        self.assertNotIn("TODO", design.project_row(p))
 
     def test_cli_uses_design_labels(self):
         p = self.store.add_project("P", priority="p1")
@@ -81,7 +112,7 @@ class TestDesignSystem(unittest.TestCase):
     def test_message_helpers(self):
         self.assertEqual(design.msg_not_found("task", 7), "task #7 not found")
         self.assertTrue(design.msg_error(ValueError("x")).startswith("error:"))
-        for const in (design.EMPTY_NO_PROJECTS, design.EMPTY_FILTERED, design.EMPTY_FEED):
+        for const in (design.EMPTY_NO_PROJECTS, design.EMPTY_FEED):
             self.assertTrue(isinstance(const, str) and len(const) > 0)
 
 

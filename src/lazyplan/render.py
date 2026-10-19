@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .design import INDENT, project_label, story_label, task_label
+from .design import INDENT, project_label, status_word, story_label, task_label
 
 if TYPE_CHECKING:
     from .models import Status
@@ -20,15 +20,19 @@ def tree_lines(
     status: Status | None,
     project_id: int | None,
     priority: str | None = None,
+    dot: str = "plain",
+    archived: str = "hide",
 ) -> list[str]:
     """Indented tree lines using the canonical design labels."""
     lines = []
-    for p, stories in store.tree(status=status, project_id=project_id, priority=priority):
-        lines.append(f"{INDENT[0]}{project_label(p, store)}")
+    for p, stories in store.tree(
+        status=status, project_id=project_id, priority=priority, archived=archived
+    ):
+        lines.append(f"{INDENT[0]}{project_label(p, store, dot)}")
         for s, tasks in stories:
-            lines.append(f"{INDENT[1]}{story_label(s, store)}")
+            lines.append(f"{INDENT[1]}{story_label(s, store, dot)}")
             for t in tasks:
-                lines.append(f"{INDENT[2]}{task_label(t, store)}")
+                lines.append(f"{INDENT[2]}{task_label(t, store, dot)}")
     return lines
 
 
@@ -50,7 +54,7 @@ def render_full(kind: str, full: dict) -> str:
     if kind == "project":
         p = full["project"]
         pri = f" !{p['priority']}" if p.get("priority") else ""
-        lines.append(f"P#{p['id']} [{p['status']}] {p['name']}{pri}")
+        lines.append(f"{status_word(p['status'])} P#{p['id']} {p['name']}{pri}")
         meta_line("why", p.get("goal"))
         if p.get("description"):
             lines.append(f"\nwhat: {p['description']}")
@@ -60,11 +64,13 @@ def render_full(kind: str, full: dict) -> str:
         for entry in full["stories"]:
             s = entry["story"]
             spri = f" !{s['priority']}" if s.get("priority") else ""
-            lines.append(f"\n  S#{s['id']} [{s['status']}] {s['title']}{spri}")
+            lines.append(f"\n  {status_word(s['status'])} S#{s['id']} {s['title']}{spri}")
     elif kind == "story":
         s = full["story"]
         spri = f" !{s['priority']}" if s.get("priority") else ""
-        lines.append(f"S#{s['id']} [{s['status']}] {s['title']}{spri} (P#{s['project_id']})")
+        lines.append(
+            f"{status_word(s['status'])} S#{s['id']} {s['title']}{spri} (P#{s['project_id']})"
+        )
         if s.get("description"):
             lines.append(f"\ndetails: {s['description']}")
         if full.get("criteria"):
@@ -73,13 +79,15 @@ def render_full(kind: str, full: dict) -> str:
         for entry in full["tasks"]:
             t = entry["task"]
             tpri = f" !{t['priority']}" if t.get("priority") else ""
-            lines.append(f"\n  T#{t['id']} [{t['status']}] {t['title']}{tpri}")
+            lines.append(f"\n  {status_word(t['status'])} T#{t['id']} {t['title']}{tpri}")
             if t.get("description"):
                 lines.append(f"  {t['description']}")
     else:
         t = full["task"]
         tpri = f" !{t['priority']}" if t.get("priority") else ""
-        lines.append(f"T#{t['id']} [{t['status']}] {t['title']}{tpri} (S#{t['story_id']})")
+        lines.append(
+            f"{status_word(t['status'])} T#{t['id']} {t['title']}{tpri} (S#{t['story_id']})"
+        )
         if t.get("description"):
             lines.append(f"\ndetails: {t['description']}")
         if full.get("criteria"):
@@ -94,7 +102,7 @@ def render_markdown(data: dict) -> str:
     for entry in data.get("projects", []):
         p = entry["project"]
         pri = f" !{p['priority']}" if p.get("priority") else ""
-        lines.append(f"## P#{p['id']} {p['name']} [{p['status']}] {pri}".rstrip())
+        lines.append(f"## {status_word(p['status'])} P#{p['id']} {p['name']} {pri}".rstrip())
         if p.get("goal"):
             lines.append(f"> why: {p['goal']}")
         if p.get("description"):
@@ -104,7 +112,7 @@ def render_markdown(data: dict) -> str:
             lines.append(f"- [{box}] {c['text']}")
         for sentry in entry.get("stories", []):
             s = sentry["story"]
-            lines.append(f"\n### S#{s['id']} {s['title']} [{s['status']}]")
+            lines.append(f"\n### {status_word(s['status'])} S#{s['id']} {s['title']}")
             for tentry in sentry.get("tasks", []):
                 t = tentry["task"]
                 box = "x" if t["status"] == "done" else " "

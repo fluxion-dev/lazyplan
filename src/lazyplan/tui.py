@@ -9,9 +9,11 @@ polls fingerprint() every second and toasts + activity-line.
 
 from __future__ import annotations
 
+import time
 from typing import Any, cast
 
 try:
+    from textual import events
     from textual.app import App, ComposeResult
     from textual.binding import Binding
     from textual.containers import Vertical
@@ -25,10 +27,10 @@ except ImportError:  # pragma: no cover
 from .design import (
     APP_CSS,
     project_row,
-    story_label,
-    task_label,
+    story_row,
+    task_row,
 )
-from .models import Project, Status, Task, UserStory
+from .models import DEFAULT_TASK_PRIORITY, Project, Status, Task, UserStory
 from .repo import repo_label
 from .screens import (
     ConfirmScreen,
@@ -42,6 +44,7 @@ from .screens import (
 from .store import Store
 
 STATUS_CYCLE: list[Status | None] = [None, Status.TODO, Status.DOING, Status.DONE]
+DOUBLE_CLICK_WINDOW = 0.5  # seconds between two clicks on one row
 
 if _TEXTUAL_OK:
 
@@ -52,7 +55,10 @@ if _TEXTUAL_OK:
         and mouse toggles are untouched), but their actions delegate to the
         app: `space` cycles status, shift+space folds all. Folding one node
         lives on `z`; collapse state is tracked in app._collapsed.
+        Enter opens the detail dialog instead of merely selecting.
         """
+
+        BINDINGS = [Binding("enter", "open_detail", "Detail")]
 
         def action_toggle_node(self) -> None:
             """Space: cycle status instead of toggling the node."""
@@ -61,6 +67,27 @@ if _TEXTUAL_OK:
         def action_toggle_expand_all(self) -> None:
             """Shift+space: fold-all with app semantics."""
             cast("LazyplanApp", self.app).action_fold_all()
+
+        def action_open_detail(self) -> None:
+            """Enter: open the detail dialog for the selected row."""
+            cast("LazyplanApp", self.app).action_open_detail()
+
+        async def _on_click(self, event: events.Click) -> None:
+            """Single click selects; two quick clicks on one row open detail."""
+            await super()._on_click(event)
+            app = cast("LazyplanApp", self.app)
+            meta = event.style.meta
+            if "line" not in meta or meta.get("toggle", False):
+                return
+            try:
+                node = self.get_node_at_line(meta["line"])
+            except IndexError:
+                return
+            if node is None:
+                return
+            key = LazyplanApp._node_key(node)
+            if key is not None and app.note_click(key):
+                app._open_detail(*key)
 
     class LazyplanApp(App):
         """Single-panel TUI: the project tree."""
@@ -78,6 +105,7 @@ if _TEXTUAL_OK:
             Binding("c", "criteria", "Check"),
             Binding("d", "delete", "Delete"),
             Binding("space", "toggle_status", "Done"),
+            Binding("enter", "open_detail", "Detail"),
             Binding("z", "fold", "Fold"),
             Binding("Z", "fold_all", "FoldAll", show=False),
             Binding("left", "fold_left", "Fold", show=False),
@@ -97,6 +125,9 @@ if _TEXTUAL_OK:
             self.project_filter: int | None = None
             self._row_nodes: dict[tuple[str, int], TreeNode] = {}
             self._collapsed: set[tuple[str, int]] = set()
+            self._expanded: set[tuple[str, int]] = set()
+            self._last_click_key: tuple[str, int] | None = None
+            self._last_click_at: float = 0.0
             self._fp: Any = store.fingerprint()
 
         def compose(self) -> ComposeResult:
@@ -133,11 +164,14 @@ if _TEXTUAL_OK:
             key = self._node_key(e.node)
             if key is not None and key[0] in ("project", "story"):
                 self._collapsed.add(key)
+                self._expanded.discard(key)
 
         def on_tree_node_expanded(self, e: Tree.NodeExpanded) -> None:
             key = self._node_key(e.node)
             if key is not None:
                 self._collapsed.discard(key)
+                if key[0] == "project":
+                    self._expanded.add(key)
 
         def action_cursor_down(self) -> None:
             self.query_one("#tree", Tree).action_cursor_down()
@@ -158,10 +192,13 @@ if _TEXTUAL_OK:
             if key in self._collapsed:
                 node.expand()
                 self._collapsed.discard(key)
+                if key[0] == "project":
+                    self._expanded.add(key)
                 self.refresh_all(f"{key[0]} #{key[1]} unfolded")
             else:
                 node.collapse()
                 self._collapsed.add(key)
+                self._expanded.discard(key)
                 self.refresh_all(f"{key[0]} #{key[1]} folded")
 
         def action_fold_all(self) -> None:
@@ -174,11 +211,13 @@ if _TEXTUAL_OK:
                 for k in keys:
                     self._row_nodes[k].expand()
                 self._collapsed.clear()
+                self._expanded.update(k for k in keys if k[0] == "project")
                 self.refresh_all("unfolded all")
             else:
                 for k in keys:
                     self._row_nodes[k].collapse()
                     self._collapsed.add(k)
+                self._expanded.clear()
                 self.refresh_all(f"folded {len(keys)} rows")
 
         def _children_of(self, kind: str, oid: int) -> list[tuple[str, int]]:
@@ -220,6 +259,7 @@ if _TEXTUAL_OK:
             ):
                 node.collapse()
                 self._collapsed.add((kind, oid))
+                self._expanded.discard((kind, oid))
                 self.refresh_all(f"{kind} #{oid} folded")
                 return
             parent = self._parent_of(kind, oid)
@@ -235,6 +275,8 @@ if _TEXTUAL_OK:
             if node is not None and (kind, oid) in self._collapsed:
                 node.expand()
                 self._collapsed.discard((kind, oid))
+                if kind == "project":
+                    self._expanded.add((kind, oid))
                 self.refresh_all(f"{kind} #{oid} unfolded")
                 return
             for child in self._children_of(kind, oid):
@@ -274,21 +316,28 @@ if _TEXTUAL_OK:
                 self._row_nodes[("project", p.id)] = pn
                 for s, tasks in stories:
                     sn = pn.add(
-                        story_label(s, self.store),
+                        story_row(s, self.store),
                         data={"kind": "story", "id": s.id},
                         allow_expand=bool(tasks),
                     )
                     self._row_nodes[("story", s.id)] = sn
                     for t in tasks:
                         leaf = sn.add_leaf(
-                            task_label(t, self.store), data={"kind": "task", "id": t.id}
+                            task_row(t, self.store), data={"kind": "task", "id": t.id}
                         )
                         self._row_nodes[("task", t.id)] = leaf
             root.expand()
             self._collapsed &= set(self._row_nodes)  # drop rows deleted since last build
+            self._expanded &= set(self._row_nodes)
+            done_projects = {
+                ("project", p.id) for p, _ in self._filtered_tree() if p.status == Status.DONE
+            }
             for key, node in self._row_nodes.items():
                 if key in self._collapsed:
                     node.collapse()
+                elif key in done_projects and key not in self._expanded:
+                    node.collapse()
+                    self._collapsed.add(key)
                 elif node.allow_expand:
                     node.expand()
             c = self.store.counts()
@@ -303,12 +352,17 @@ if _TEXTUAL_OK:
             self.query_one("#statusbar", Label).update(
                 f" [{repo_label(self.store.path)}]"
                 f" P:{c['projects']} S:{c['stories']} T:{c['tasks_done']}/{c['tasks']}"
+                f" Q:{c['projects_todo']}/{c['projects_doing']}/{c['projects_done']}"
                 f" · f:{sf} o:{pf}" + (f" — {note}" if note else "")
             )
 
         def action_refresh(self) -> None:
+            self._saved("manual refresh")
+
+        def _saved(self, note: str = "") -> None:
+            """Refresh fingerprint + tree after a mutation."""
             self._fp = self.store.fingerprint()
-            self.refresh_all("manual refresh")
+            self.refresh_all(note)
 
         def action_filter_status(self) -> None:
             i = STATUS_CYCLE.index(self.status_filter)
@@ -318,7 +372,7 @@ if _TEXTUAL_OK:
             )
 
         def action_filter_project(self) -> None:
-            ids = [p.id for p in self.store.list_projects()]
+            ids = [p.id for p in self.store.list_projects() if not self.store.is_archived(p)]
             order: list[int | None] = [None, *ids]
             try:
                 i = order.index(self.project_filter)
@@ -386,8 +440,7 @@ if _TEXTUAL_OK:
                     )
                 except ValueError as exc:
                     self.notify(f"error: {exc}")
-                self._fp = self.store.fingerprint()
-                self.refresh_all("project created")
+                self._saved("project created")
 
             self.push_screen(NewProjectScreen(), cb)
 
@@ -413,8 +466,7 @@ if _TEXTUAL_OK:
                     )
                 except (ValueError, KeyError) as exc:
                     self.notify(f"error: {exc}")
-                self._fp = self.store.fingerprint()
-                self.refresh_all("story created")
+                self._saved("story created")
 
             self.push_screen(NewStoryScreen(pid), cb)
 
@@ -432,13 +484,12 @@ if _TEXTUAL_OK:
                         sid,
                         data["title"],
                         data["desc"],
-                        priority=data["priority"],
+                        priority=data["priority"] or DEFAULT_TASK_PRIORITY,
                         actor="tui",
                     )
                 except (ValueError, KeyError) as exc:
                     self.notify(f"error: {exc}")
-                self._fp = self.store.fingerprint()
-                self.refresh_all("task created")
+                self._saved("task created")
 
             self.push_screen(NewTaskScreen(sid), cb)
 
@@ -494,8 +545,7 @@ if _TEXTUAL_OK:
                         )
                 except ValueError as exc:
                     self.notify(f"error: {exc}")
-                self._fp = self.store.fingerprint()
-                self.refresh_all("saved")
+                self._saved("saved")
 
             self.push_screen(EditScreen(kind, oid, title, details, priority), cb)
 
@@ -511,8 +561,7 @@ if _TEXTUAL_OK:
             nxt = self.store.cycle_status(kind, oid, actor="tui")
             if nxt is None:
                 self.notify("selected row no longer exists")
-            self._fp = self.store.fingerprint()
-            self.refresh_all(f"{kind} #{oid} -> {nxt.value if nxt else '?'}")
+            self._saved(f"{kind} #{oid} -> {nxt.value if nxt else '?'}")
 
         def action_criteria(self) -> None:
             """Tick first open criterion; if none open, reopen the last done one."""
@@ -532,9 +581,8 @@ if _TEXTUAL_OK:
             else:
                 target, reopen = items[-1], True  # nothing open: re-affirm by reopening last
             self.store.set_criteria(target.id, not reopen, actor="tui")
-            self._fp = self.store.fingerprint()
             verb = "reopened" if reopen else "checked"
-            self.refresh_all(f"criteria #{target.id} {verb}")
+            self._saved(f"criteria #{target.id} {verb}")
 
         def action_delete(self) -> None:
             if self.selected is None:
@@ -548,27 +596,37 @@ if _TEXTUAL_OK:
                 if not self.store.delete(kind, oid, actor="tui"):
                     self.notify("already gone — refreshing")
                 self.selected = None
-                self._fp = self.store.fingerprint()
-                self.refresh_all(f"deleted {kind} #{oid}")
+                self._saved(f"deleted {kind} #{oid}")
 
             self.push_screen(ConfirmScreen(f"Delete {kind} #{oid}?\n(children go too.)"), cb)
 
-        def on_tree_node_selected(self, e: Tree.NodeSelected) -> None:  # enter key: editable detail
+        def on_tree_node_selected(self, e: Tree.NodeSelected) -> None:
+            """Clicks and cursor moves select only; enter/double-click open detail."""
             self._track(e.node)
-            data = getattr(e.node, "data", None)
-            if not isinstance(data, dict):
-                return
-            kind, oid = data.get("kind"), data.get("id")
-            if kind not in ("project", "story", "task") or not isinstance(oid, int):
-                self.notify("select a row first, then enter")
-                return
 
+        def note_click(self, key: tuple[str, int]) -> bool:
+            """True when this click completes a double-click on the same row."""
+            now = time.monotonic()
+            double = (
+                key == self._last_click_key and (now - self._last_click_at) < DOUBLE_CLICK_WINDOW
+            )
+            self._last_click_key, self._last_click_at = key, now
+            return double
+
+        def _open_detail(self, kind: str, oid: int) -> None:
             def cb(saved: bool | None) -> None:
                 if saved:
-                    self._fp = self.store.fingerprint()
-                    self.refresh_all("saved detail")
+                    self._saved("saved detail")
 
             self.push_screen(DetailScreen(self.store, kind, oid), cb)
+
+        def action_open_detail(self) -> None:
+            if len(self.screen_stack) > 1:
+                return  # a modal owns enter
+            if self.selected is None:
+                self.notify("select a row first, then enter")
+                return
+            self._open_detail(*self.selected)
 
     def create_app(db_path: str | None = None) -> LazyplanApp:
         """Build the app bound to a store."""

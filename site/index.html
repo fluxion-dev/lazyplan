@@ -120,12 +120,11 @@
         </div>
         <div class="space-y-2 p-4 font-mono text-[0.85rem] leading-relaxed">
           <p class="m-0 text-zinc-400"><span class="mr-2 text-cyber-cyan">$</span>lpui list</p>
-          <pre class="m-0 overflow-x-auto text-zinc-200">P#1 [todo] Website relaunch (2026-10-20..2026-12-15)
-  S#1 [todo] Public homepage (2026-10-20..2026-11-10)
-    T#1 [todo] Design hero section ~3d
-    T#2 [todo] Wire signup API ~2d
-  S#2 [todo] Docs portal (2026-11-01..2026-12-01)
-    T#3 [todo] Port markdown content ~5d</pre>
+          <pre class="m-0 overflow-x-auto text-zinc-200">⬜ P#1 !p1 Website relaunch [0/2✓]
+  ⬜ S#1 !p0 Public homepage
+    ✅ T#1 Design hero section
+    ⬜ T#2 Wire signup API
+  ⬜ S#2 Docs portal</pre>
           <ul class="m-0 flex list-none flex-wrap gap-2 p-0">
             <li class="badge-todo">todo</li>
             <li class="badge-unknown">doing</li>
@@ -201,7 +200,7 @@ lpui status --kind task --id 1 --to doing
 lpui show --kind project --id 1   <span class="text-zinc-500"># full context: why/what + criteria + children</span>
 </code></pre>
   <p class="text-zinc-300">TUI keys (also: <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui help</code>, or <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">?</code> inside):</p>
-<pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-surface p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono">j/k navigate · enter edit · ←/→ fold
+<pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-surface p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono">j/k navigate · click select · enter/double-click edit · ←/→ fold
 n new (context) · P/S/T new project/story/task · e edit · d delete
 space cycle status · c tick criteria · z/Z fold one/all
 f/o filters

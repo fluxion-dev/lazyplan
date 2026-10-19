@@ -9,6 +9,7 @@ from pathlib import Path
 
 from .models import (
     CRITERION_PARENTS,
+    DEFAULT_TASK_PRIORITY,
     PRIORITY_RANK,
     Criterion,
     Project,
@@ -208,16 +209,21 @@ class Store:
         self.log(actor, "project", "add", f"P#{p.id} {p.name}")
         return p
 
+    @staticmethod
+    def _opt(r: sqlite3.Row, keys: set[str], name: str) -> str:
+        """Optional text column, tolerant of legacy tables missing it."""
+        return r[name] if name in keys and r[name] else ""
+
     def _row_to_project(self, r: sqlite3.Row) -> Project:
         """Row to Project (tolerates legacy columns on old DBs)."""
         keys = set(r.keys())
         return Project(
             id=r["id"],
             name=r["name"],
-            description=r["description"] if "description" in keys else "",
+            description=self._opt(r, keys, "description"),
             status=Status(r["status"]) if "status" in keys else Status.TODO,
-            goal=r["goal"] if "goal" in keys and r["goal"] else "",
-            priority=r["priority"] if "priority" in keys and r["priority"] else "",
+            goal=self._opt(r, keys, "goal"),
+            priority=self._opt(r, keys, "priority"),
         )
 
     def get_project(self, pid: int) -> Project | None:
@@ -227,9 +233,9 @@ class Store:
         return self._row_to_project(r) if r is not None else None
 
     def list_projects(self) -> list[Project]:
-        """All projects, id order."""
+        """All projects, newest first."""
         with self._connect() as conn:
-            rows = conn.execute("SELECT * FROM projects ORDER BY id").fetchall()
+            rows = conn.execute("SELECT * FROM projects ORDER BY id DESC").fetchall()
         return [self._row_to_project(r) for r in rows]
 
     def update_project(
@@ -299,9 +305,9 @@ class Store:
             id=r["id"],
             project_id=r["project_id"],
             title=r["title"],
-            description=r["description"] if "description" in keys else "",
+            description=self._opt(r, keys, "description"),
             status=Status(r["status"]) if "status" in keys else Status.TODO,
-            priority=r["priority"] if "priority" in keys and r["priority"] else "",
+            priority=self._opt(r, keys, "priority"),
         )
 
     def get_story(self, sid: int) -> UserStory | None:
@@ -354,7 +360,7 @@ class Store:
         story_id: int,
         title: str,
         description: str = "",
-        priority: str = "",
+        priority: str = DEFAULT_TASK_PRIORITY,
         actor: str = "human",
     ) -> Task:
         """Insert a task and log the event."""
@@ -385,8 +391,8 @@ class Store:
             story_id=r["story_id"],
             title=r["title"],
             status=Status(r["status"]) if "status" in keys else Status.TODO,
-            description=r["description"] if "description" in keys and r["description"] else "",
-            priority=r["priority"] if "priority" in keys and r["priority"] else "",
+            description=self._opt(r, keys, "description"),
+            priority=self._opt(r, keys, "priority"),
         )
 
     def get_task(self, tid: int) -> Task | None:
@@ -647,6 +653,8 @@ class Store:
                     _apply_status("task", nt.id, tp.get("status", ""))
                     counts["tasks"] += 1
                     _import_criteria("task", nt.id, tentry.get("criteria", []))
+            # Stories landed after the project's own status: recompute it.
+            self._heal("project", np.id, actor)
         return counts
 
     def get_full(self, kind: str, obj_id: int) -> dict | None:
@@ -692,9 +700,105 @@ class Store:
             }
         raise ValueError("kind must be project|story|task")
 
+    # -- archive (day-old done hides; computed from status history) -----
+    ARCHIVE_AFTER_SECS = 24 * 3600
+
+    @staticmethod
+    def _last_status_change(
+        conn: sqlite3.Connection, kind: str, obj_id: int
+    ) -> tuple[float, str] | None:
+        """Latest (ts, target) status move for one row, parsed from the event log."""
+        rows = conn.execute(
+            "SELECT ts, detail FROM events WHERE kind=? AND action='status' ORDER BY id DESC",
+            (kind,),
+        ).fetchall()
+        prefix = f"{kind} #{obj_id} -> "
+        for r in rows:
+            detail = r["detail"].removesuffix(" (rollup)")
+            if detail.startswith(prefix):
+                return (r["ts"], detail[len(prefix) :])
+        return None
+
+    def is_archived(self, project: Project) -> bool:
+        """Done longer than a day, with history to prove it. No proof: never hide."""
+        if project.status != Status.DONE:
+            return False
+        with self._connect() as conn:
+            last = self._last_status_change(conn, "project", project.id)
+        if last is None:
+            return False
+        ts, target = last
+        return target == Status.DONE.value and (time.time() - ts) > self.ARCHIVE_AFTER_SECS
+
+    @staticmethod
+    def _rollup_target(statuses: list[Status]) -> Status:
+        """Parent state from children: all done -> done, any doing -> doing, else todo."""
+        if all(s == Status.DONE for s in statuses):
+            return Status.DONE
+        if any(s == Status.DOING for s in statuses):
+            return Status.DOING
+        return Status.TODO
+
+    def _heal(self, kind: str, obj_id: int, actor: str) -> bool:
+        """Recompute one story/project from its children. Returns changed."""
+        if kind == "story":
+            obj: Project | UserStory | None = self.get_story(obj_id)
+            kids = [t.status for t in self.list_tasks(obj_id)] if obj is not None else []
+            table = "stories"
+        elif kind == "project":
+            obj = self.get_project(obj_id)
+            kids = [s.status for s in self.list_stories(obj_id)] if obj is not None else []
+            table = "projects"
+        else:
+            raise ValueError("kind must be story|project")
+        if obj is None or not kids:
+            return False
+        target = self._rollup_target(kids)
+        if obj.status == target:
+            return False
+        with self._connect() as conn:
+            conn.execute(f"UPDATE {table} SET status=? WHERE id=?", (target.value, obj_id))
+        self.log(actor, kind, "status", f"{kind} #{obj_id} -> {target.value} (rollup)")
+        return True
+
+    def _heal_parent(self, kind: str, obj_id: int, actor: str) -> None:
+        """Recompute ancestors after a status write; childless rows keep manual status."""
+        if kind == "task":
+            t = self.get_task(obj_id)
+            if t is None:
+                return
+            self._heal("story", t.story_id, actor)
+            s = self.get_story(t.story_id)
+            if s is not None:
+                self._heal("project", s.project_id, actor)
+        elif kind == "story":
+            self._heal("story", obj_id, actor)
+            s = self.get_story(obj_id)
+            if s is not None:
+                self._heal("project", s.project_id, actor)
+        elif kind == "project":
+            self._heal("project", obj_id, actor)
+
+    def reconcile(self, actor: str = "human") -> list[dict]:
+        """Recompute every parent from its children; childless rows untouched."""
+        changes: list[dict] = []
+        for p in self.list_projects():
+            before_p = p.status
+            for s in self.list_stories(p.id):
+                before = s.status
+                self._heal("story", s.id, actor)
+                after = self.get_story(s.id)
+                if after is not None and after.status != before:
+                    changes.append({"kind": "story", "id": s.id, "to": after.status.value})
+            self._heal("project", p.id, actor)
+            after_p = self.get_project(p.id)
+            if after_p is not None and after_p.status != before_p:
+                changes.append({"kind": "project", "id": p.id, "to": after_p.status.value})
+        return changes
+
     # -- status --------------------------------------------------------
     def set_status(self, kind: str, obj_id: int, status: Status, actor: str = "human") -> bool:
-        """Move a row and log the transition."""
+        """Move a row, heal the subtree state, and log the transition."""
         table = {"project": "projects", "story": "stories", "task": "tasks"}.get(kind)
         if table is None:
             raise ValueError("kind must be project|story|task")
@@ -703,6 +807,7 @@ class Store:
             ok = (cur.rowcount or 0) > 0
         if ok:
             self.log(actor, kind, "status", f"{kind} #{obj_id} -> {status.value}")
+            self._heal_parent(kind, obj_id, actor)
         return ok
 
     def cycle_status(self, kind: str, obj_id: int, actor: str = "human") -> Status | None:
@@ -730,11 +835,22 @@ class Store:
         status: Status | None = None,
         project_id: int | None = None,
         priority: str | None = None,
+        archived: str = "hide",
     ) -> list[tuple[Project, list[tuple[UserStory, list[Task]]]]]:
-        """Nested projects, stories, and tasks with filters."""
+        """Nested projects, stories, and tasks with filters.
+
+        archived: "hide" (default views), "only" (--archived), "show" (--status all).
+        """
+        if archived not in ("hide", "only", "show"):
+            raise ValueError("archived must be hide|only|show")
         out = []
         for p in self.list_projects():
             if project_id is not None and p.id != project_id:
+                continue
+            arch = self.is_archived(p)
+            if archived == "only" and not arch:
+                continue
+            if archived == "hide" and arch:
                 continue
             stories = []
             for s in self.list_stories(p.id):
@@ -756,10 +872,27 @@ class Store:
         return out
 
     def counts(self) -> dict[str, int]:
-        """Project, story, and task totals."""
+        """Project, story, and task totals, plus per-state project counts."""
         with self._connect() as conn:
             np = conn.execute("SELECT COUNT(*) c FROM projects").fetchone()["c"]
             ns = conn.execute("SELECT COUNT(*) c FROM stories").fetchone()["c"]
             nt = conn.execute("SELECT COUNT(*) c FROM tasks").fetchone()["c"]
             nd = conn.execute("SELECT COUNT(*) c FROM tasks WHERE status='done'").fetchone()["c"]
-        return {"projects": np, "stories": ns, "tasks": nt, "tasks_done": nd}
+            npt = conn.execute("SELECT COUNT(*) c FROM projects WHERE status='todo'").fetchone()[
+                "c"
+            ]
+            npd = conn.execute("SELECT COUNT(*) c FROM projects WHERE status='doing'").fetchone()[
+                "c"
+            ]
+            npn = conn.execute("SELECT COUNT(*) c FROM projects WHERE status='done'").fetchone()[
+                "c"
+            ]
+        return {
+            "projects": np,
+            "stories": ns,
+            "tasks": nt,
+            "tasks_done": nd,
+            "projects_todo": npt,
+            "projects_doing": npd,
+            "projects_done": npn,
+        }

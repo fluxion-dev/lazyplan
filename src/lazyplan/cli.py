@@ -31,6 +31,13 @@ def _emit(args: argparse.Namespace, payload: object) -> int:
     return 0
 
 
+def _tty_dot(args: argparse.Namespace) -> str:
+    """ANSI dots on a tty; plain otherwise (pipes and --json stay clean)."""
+    if getattr(args, "json", False):
+        return "plain"
+    return "ansi" if sys.stdout.isatty() else "plain"
+
+
 def _resolve_title(args: argparse.Namespace) -> str:
     """--title wins, --name is the legacy alias."""
     if getattr(args, "title", None):
@@ -95,7 +102,14 @@ def main(argv: list[str] | None = None) -> int:
             seed_demo(store)
             return _emit(args, {"db": str(store.path), "counts": store.counts()})
         if args.cmd == "list":
-            status = Status(args.status) if args.status else None
+            if args.archived:
+                archived, status = "only", None
+            elif args.status is None:
+                archived, status = "hide", None
+            elif args.status == "all":
+                archived, status = "show", None
+            else:
+                archived, status = "hide", Status(args.status)
             if args.json:
                 payload = [
                     {
@@ -122,10 +136,13 @@ def main(argv: list[str] | None = None) -> int:
                         status=status,
                         project_id=args.project,
                         priority=args.priority,
+                        archived=archived,
                     )
                 ]
                 return _emit(args, payload)
-            lines = tree_lines(store, status, args.project, args.priority)
+            lines = tree_lines(
+                store, status, args.project, args.priority, dot=_tty_dot(args), archived=archived
+            )
             print("\n".join(lines) if lines else EMPTY_NO_PROJECTS)
             return 0
         if args.cmd == "help":
@@ -227,6 +244,8 @@ def main(argv: list[str] | None = None) -> int:
                 print(msg_not_found(args.kind, args.id), file=sys.stderr)
                 return 1
             return _emit(args, {"ok": True, "kind": args.kind, "id": args.id, "to": args.to})
+        if args.cmd == "reconcile":
+            return _emit(args, {"reconciled": store.reconcile(actor=actor)})
         if args.cmd == "delete":
             ok = store.delete(args.kind, args.id, actor=actor)
             if not ok:
@@ -323,6 +342,7 @@ def main(argv: list[str] | None = None) -> int:
                 "export",
                 "import",
                 "status",
+                "reconcile",
                 "delete",
                 "feed",
                 "watch",

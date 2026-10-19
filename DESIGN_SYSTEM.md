@@ -28,7 +28,7 @@ add a view, command, label, empty state, or message.
 
 ## The commitment
 
-Wherever you see `T#12 [doing] !p0 Title [1/2✓]`, it means the same thing in
+Wherever you see `🔵 T#12 !p0 Title [1/2✓]`, it means the same thing in
 `lpui list`, the TUI tree, and JSON output. Wherever you type
 `status --kind task --id 1 --to done` (shell or `:` bar), it does the same
 thing. That predictability is the whole system.
@@ -56,7 +56,9 @@ human-readable first, machine-parseable always.
 Project: title + priority (`p0`–`p3`) + why (`goal`) + what (`description`) +
 acceptance criteria (project-level checklist). Story: title + details +
 priority. Task: title + details + priority. Every level: `todo` → `doing` →
-`done`. No dates, owners, labels, estimates, dependencies, links, risks, or
+`done`, and parents roll up automatically: all children done → done, any
+child doing → doing, otherwise todo (childless rows keep manual status;
+`lpui reconcile` recomputes everything). No dates, owners, labels, estimates, dependencies, links, risks, or
 milestones — if it is not title/details/priority/status/why/what/criteria,
 it does not exist.
 
@@ -69,12 +71,13 @@ it does not exist.
 ## Hierarchy (what the eye hits, in order)
 
 `Header` (app + clock) → `#panel` (tree) → `#activity` (last agent/human
-event) → `#statusbar` (`[scope] P/S/T · filters · note`) → `Footer` (keys). Secondary info (why/what, details, criteria) lives
+event) → `#statusbar` (`[scope] P/S/T · Q:todo/doing/done · filters · note`) → `Footer` (keys). Secondary info (why/what, details, criteria) lives
 one `enter` away in the detail modal, never in the row.
 
 ## Components
 
-- Rows: `KIND#id [status] !p0 title [done/total✓]` (`design.*_label`)
+- Rows: `GLYPH KIND#id !p0 title [done/total✓]` (`design.*_label`, GLYPH is
+  ⬜/🔵/✅ for todo/doing/done, ANSI-colored on a tty, Rich-colored in the TUI)
 - Status tokens: `todo` / `doing` / `done` — lowercase, everywhere, JSON included
 - Forms: one `_Form` base; project/story/task create + edit + detail + help
 - Feedback: toast on every external change, activity line shows latest event,
@@ -86,7 +89,8 @@ one `enter` away in the detail modal, never in the row.
   **what** (`description`); **actor** (who acted); `doing`, not "in progress"
 - Errors: `error: <what>` on stderr, exit 2; missing rows: `<kind> #<id> not found`, exit 1
 - Empty states: `EMPTY_NO_PROJECTS` / `EMPTY_FILTERED` / `EMPTY_FEED` — same words in CLI and TUI
-- Defaults: feed limit 20, poll 1s; priorities `p0` (highest) – `p3`
+- Defaults: list and tree show everything; `--status` / `f` filter down,
+  feed limit 20, poll 1s; priorities `p0` (highest) – `p3`
 
 ## Communication rules
 

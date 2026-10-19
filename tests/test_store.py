@@ -169,7 +169,8 @@ class TestStore(unittest.TestCase):
         s2 = Store(db2)
         counts = s2.import_all(data)
         self.assertEqual(counts, {"projects": 1, "stories": 1, "tasks": 1, "criteria": 2})
-        self.assertEqual(s2.get_project(1).status, Status.DOING)
+        self.assertEqual(s2.get_project(1).status, Status.DONE)  # rolled up: only story done
+        self.assertEqual(s2.get_story(1).status, Status.DONE)  # rolled up: its task is done
         self.assertEqual(s2.get_project(1).goal, "g")
         self.assertEqual(s2.get_project(1).priority, "p1")
         self.assertEqual(s2.get_task(1).description, "d")
@@ -341,6 +342,205 @@ class TestStore(unittest.TestCase):
         self.assertEqual(lpui_main(["--db", self.db, "feed", "--limit", "3"]), 0)
         self.assertEqual(lpui_main(["--db", self.db, "delete", "--kind", "task", "--id", "1"]), 0)
         self.assertEqual(self.store.counts()["tasks"], 0)
+
+    def test_status_rollup_cascade(self):
+        p = self.store.add_project("P")
+        s = self.store.add_story(p.id, "S")
+        t1 = self.store.add_task(s.id, "T1")
+        t2 = self.store.add_task(s.id, "T2")
+        self.store.set_status("task", t1.id, Status.DOING)
+        self.assertEqual(self.store.get_story(s.id).status, Status.DOING)
+        self.assertEqual(self.store.get_project(p.id).status, Status.DOING)
+        self.store.set_status("task", t1.id, Status.DONE)
+        self.assertEqual(self.store.get_story(s.id).status, Status.TODO)  # T2 still open
+        self.assertEqual(self.store.get_project(p.id).status, Status.TODO)
+        self.store.set_status("task", t2.id, Status.DONE)
+        self.assertEqual(self.store.get_story(s.id).status, Status.DONE)
+        self.assertEqual(self.store.get_project(p.id).status, Status.DONE)
+
+    def test_rollup_empty_keeps_manual(self):
+        p = self.store.add_project("P")
+        s = self.store.add_story(p.id, "S")
+        self.assertTrue(self.store.set_status("story", s.id, Status.DONE))
+        self.assertEqual(self.store.get_story(s.id).status, Status.DONE)  # no tasks: untouched
+        # the done story rolls its project up (all children done -> done)
+        self.assertEqual(self.store.get_project(p.id).status, Status.DONE)
+        p2 = self.store.add_project("P2")  # no stories: manual sticks
+        self.assertTrue(self.store.set_status("project", p2.id, Status.DOING))
+        self.assertEqual(self.store.get_project(p2.id).status, Status.DOING)
+
+    def test_manual_parent_yields_to_children(self):
+        p = self.store.add_project("P")
+        s = self.store.add_story(p.id, "S")
+        self.store.add_task(s.id, "T")
+        self.assertTrue(self.store.set_status("story", s.id, Status.DONE))
+        self.assertEqual(self.store.get_story(s.id).status, Status.TODO)  # rolled back
+
+    def test_reconcile_fixes_drift(self):
+        import sqlite3
+
+        p = self.store.add_project("P")
+        s = self.store.add_story(p.id, "S")
+        t = self.store.add_task(s.id, "T")
+        conn = sqlite3.connect(self.db)  # bypass rollup to simulate drift
+        conn.execute("UPDATE stories SET status='done' WHERE id=?", (s.id,))
+        conn.execute("UPDATE projects SET status='done' WHERE id=?", (p.id,))
+        conn.commit()
+        conn.close()
+        changes = self.store.reconcile(actor="t")
+        self.assertEqual(
+            changes,
+            [
+                {"kind": "story", "id": s.id, "to": "todo"},
+                {"kind": "project", "id": p.id, "to": "todo"},
+            ],
+        )
+        self.assertEqual(self.store.get_story(s.id).status, Status.TODO)
+        self.assertEqual(self.store.get_project(p.id).status, Status.TODO)
+        self.assertEqual(self.store.reconcile(actor="t"), [])
+        self.assertIsNotNone(t)
+
+    def test_cli_status_and_reconcile(self):
+        self.assertEqual(lpui_main(["--db", self.db, "add-project", "--title", "P1"]), 0)
+        self.assertEqual(
+            lpui_main(["--db", self.db, "add-story", "--project", "1", "--title", "S1"]), 0
+        )
+        self.assertEqual(
+            lpui_main(["--db", self.db, "add-task", "--story", "1", "--title", "T1"]), 0
+        )
+        self.assertEqual(
+            lpui_main(["--db", self.db, "status", "--kind", "task", "--id", "1", "--to", "done"]),
+            0,
+        )
+        self.assertEqual(self.store.get_story(1).status, Status.DONE)
+        self.assertEqual(self.store.get_project(1).status, Status.DONE)
+        self.assertEqual(lpui_main(["--db", self.db, "reconcile"]), 0)
+
+    def test_list_shows_all_by_default(self):
+        import io
+        import json
+        from contextlib import redirect_stdout
+
+        p = self.store.add_project("P")
+        s = self.store.add_story(p.id, "S")
+        self.store.add_task(s.id, "T1")
+        t2 = self.store.add_task(s.id, "T2")
+        self.store.set_status("task", t2.id, Status.DONE)
+
+        def _list_out(argv):
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                self.assertEqual(lpui_main(["--db", self.db, *argv]), 0)
+            return buf.getvalue()
+
+        bare = _list_out(["list"])
+        self.assertIn("T1", bare)
+        self.assertIn("T2", bare)
+        everything = _list_out(["list", "--status", "all"])
+        self.assertIn("T1", everything)
+        self.assertIn("T2", everything)
+        todo_only = _list_out(["list", "--status", "todo"])
+        self.assertIn("T1", todo_only)
+        self.assertNotIn("T2", todo_only)
+        done_only = _list_out(["list", "--status", "done"])
+        self.assertIn("T2", done_only)
+        self.assertNotIn("T1", done_only)
+        payload = json.loads(_list_out(["list", "--json"]))
+        tasks = [
+            t["task"]["title"] for entry in payload for s_ in entry["stories"] for t in s_["tasks"]
+        ]
+        self.assertEqual(sorted(tasks), ["T1", "T2"])
+
+    def test_project_order_newest_first(self):
+        a = self.store.add_project("Old")
+        b = self.store.add_project("New")
+        self.assertEqual([p.id for p in self.store.list_projects()], [b.id, a.id])
+        tree = self.store.tree()
+        self.assertEqual([p.id for p, _ in tree], [b.id, a.id])
+
+    def test_new_tasks_default_p1(self):
+        import io
+        from contextlib import redirect_stdout
+
+        p = self.store.add_project("P")
+        s = self.store.add_story(p.id, "S")
+        t = self.store.add_task(s.id, "NoPri")
+        self.assertEqual(t.priority, "p1")
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            self.assertEqual(
+                lpui_main(["--db", self.db, "add-task", "--story", "1", "--title", "Cli"]), 0
+            )
+        self.assertEqual(self.store.get_task(2).priority, "p1")
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            self.assertEqual(
+                lpui_main(
+                    [
+                        "--db",
+                        self.db,
+                        "add-task",
+                        "--story",
+                        "1",
+                        "--title",
+                        "Exp",
+                        "--priority",
+                        "p0",
+                    ]
+                ),
+                0,
+            )
+        self.assertEqual(self.store.get_task(3).priority, "p0")
+
+    def test_archive_rule_and_view(self):
+        import io
+        import sqlite3
+        import time
+        from contextlib import redirect_stdout
+
+        old = self.store.add_project("Old")
+        fresh = self.store.add_project("Fresh")
+        openp = self.store.add_project("Open")
+        self.store.set_status("project", old.id, Status.DONE)
+        self.store.set_status("project", fresh.id, Status.DONE)
+        conn = sqlite3.connect(self.db)
+        conn.execute(
+            "UPDATE events SET ts=? WHERE kind='project' AND detail LIKE 'project #1%'",
+            (time.time() - 90000,),
+        )
+        conn.commit()
+        conn.close()
+        self.assertTrue(self.store.is_archived(self.store.get_project(old.id)))
+        self.assertFalse(self.store.is_archived(self.store.get_project(fresh.id)))
+        self.assertFalse(self.store.is_archived(self.store.get_project(openp.id)))
+        names = [p.name for p, _ in self.store.tree()]
+        self.assertNotIn("Old", names)
+        self.assertIn("Fresh", names)
+        self.assertEqual([p.name for p, _ in self.store.tree(archived="only")], ["Old"])
+        self.assertEqual(len(self.store.tree(archived="show")), 3)
+        with self.assertRaises(ValueError):
+            self.store.tree(archived="yesterday")
+
+        def _list_out(argv):
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                self.assertEqual(lpui_main(["--db", self.db, *argv]), 0)
+            return buf.getvalue()
+
+        self.assertNotIn("Old", _list_out(["list"]))
+        self.assertIn("Old", _list_out(["list", "--archived"]))
+        self.assertNotIn("Fresh", _list_out(["list", "--archived"]))
+        self.assertIn("Old", _list_out(["list", "--status", "all"]))
+
+    def test_counts_by_state(self):
+        self.store.add_project("Todo")
+        p2 = self.store.add_project("Doing")
+        p3 = self.store.add_project("Done")
+        self.store.set_status("project", p2.id, Status.DOING)
+        self.store.set_status("project", p3.id, Status.DONE)
+        c = self.store.counts()
+        self.assertEqual((c["projects_todo"], c["projects_doing"], c["projects_done"]), (1, 1, 1))
+        self.assertEqual(c["projects"], 3)
 
     def test_removed_verbs_are_gone(self):
         import io

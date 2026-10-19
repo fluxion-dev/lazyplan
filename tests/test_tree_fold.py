@@ -54,7 +54,8 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             await pilot.press("space")
             await pilot.pause()
-            self.assertEqual(self.store.get_project(self.pid).status.value, "doing")
+            # children still open: rollup heals the manual cycle back to todo
+            self.assertEqual(self.store.get_project(self.pid).status.value, "todo")
             proj, _ = self._nodes()
             self.assertTrue(proj.is_expanded)
 
@@ -68,7 +69,78 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             await pilot.press("space")
             await pilot.pause()
-            self.assertEqual(self.store.get_story(self.sid).status.value, "doing")
+            # tasks still open: rollup heals the manual cycle back to todo
+            self.assertEqual(self.store.get_story(self.sid).status.value, "todo")
+
+    async def test_space_cycles_childless_story(self):
+        from textual.widgets import Tree
+
+        async with self.app.run_test() as pilot:
+            await pilot.pause()
+            tree = self.app.query_one("#tree", Tree)
+            tree.move_cursor(self.app._row_nodes[("story", self.bare_sid)])
+            await pilot.pause()
+            await pilot.press("space")
+            await pilot.pause()
+            self.assertEqual(self.store.get_story(self.bare_sid).status.value, "doing")
+
+    def test_tui_starts_unfiltered(self):
+        self.assertIsNone(self.app.status_filter)
+
+    async def test_single_click_selects_without_dialog(self):
+        async with self.app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            tid = Store(self.db).list_tasks(self.sid)[0].id
+            await pilot.click("#tree", offset=(10, 3))
+            await pilot.pause()
+            self.assertEqual(len(self.app.screen_stack), 1)
+            self.assertEqual(self.app.selected, ("task", tid))
+
+    async def test_double_click_opens_detail(self):
+        from lazyplan.screens import DetailScreen
+
+        async with self.app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            await pilot.click("#tree", offset=(10, 3))
+            await pilot.pause()
+            await pilot.click("#tree", offset=(10, 3))
+            await pilot.pause()
+            self.assertEqual(len(self.app.screen_stack), 2)
+            self.assertIsInstance(self.app.screen, DetailScreen)
+
+    async def test_slow_clicks_do_not_open(self):
+        import asyncio
+
+        async with self.app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            await pilot.click("#tree", offset=(10, 3))
+            await pilot.pause()
+            await asyncio.sleep(0.6)
+            await pilot.click("#tree", offset=(10, 3))
+            await pilot.pause()
+            self.assertEqual(len(self.app.screen_stack), 1)
+
+    async def test_enter_opens_detail(self):
+        from textual.widgets import Tree
+
+        from lazyplan.screens import DetailScreen
+
+        async with self.app.run_test() as pilot:
+            await pilot.pause()
+            tree = self.app.query_one("#tree", Tree)
+            tree.move_cursor(self.app._row_nodes[("story", self.sid)])
+            await pilot.pause()
+            await pilot.press("enter")
+            await pilot.pause()
+            self.assertEqual(len(self.app.screen_stack), 2)
+            self.assertIsInstance(self.app.screen, DetailScreen)
+
+    def test_note_click_window(self):
+        self.assertFalse(self.app.note_click(("task", 1)))
+        self.assertTrue(self.app.note_click(("task", 1)))
+        self.app._last_click_at -= 1.0
+        self.assertFalse(self.app.note_click(("task", 1)))
+        self.assertFalse(self.app.note_click(("task", 2)))
 
     async def test_z_folds_selected_story(self):
         from textual.widgets import Tree
@@ -208,9 +280,72 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             self.assertEqual(self.app._collapsed, set())
 
+    async def test_statusbar_shows_queue_counts(self):
+        from textual.widgets import Label
+
+        async with self.app.run_test() as pilot:
+            await pilot.pause()
+            bar = self.app.query_one("#statusbar", Label)
+            self.assertIn("Q:1/0/0", str(bar.content))
+
     def test_help_mentions_fold(self):
         self.assertIn("z/Z fold one/all", design.HELP_TEXT)
         self.assertIn("left/right collapse/expand", design.HELP_TEXT)
+
+
+@unittest.skipUnless(tui_mod is not None and tui_mod._TEXTUAL_OK, "textual not installed")
+class TestDoneCollapsed(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.db = os.path.join(self.tmp.name, "t.db")
+        store = Store(self.db)
+        self.did = store.add_project("Done").id
+        dsid = store.add_story(self.did, "DS").id
+        dtid = store.add_task(dsid, "DT").id
+        from lazyplan.models import Status
+
+        store.set_status("task", dtid, Status.DONE)
+        self.oid = store.add_project("Open").id
+        store.add_story(self.oid, "OS")
+        self.app = tui_mod.create_app(self.db)
+
+    async def asyncTearDown(self):
+        self.tmp.cleanup()
+
+    async def test_done_project_collapsed_open_expanded(self):
+        async with self.app.run_test() as pilot:
+            await pilot.pause()
+            self.assertFalse(self.app._row_nodes[("project", self.did)].is_expanded)
+            self.assertTrue(self.app._row_nodes[("project", self.oid)].is_expanded)
+
+    async def test_manual_expand_survives_refresh(self):
+        from textual.widgets import Tree
+
+        async with self.app.run_test() as pilot:
+            await pilot.pause()
+            tree = self.app.query_one("#tree", Tree)
+            tree.move_cursor(self.app._row_nodes[("project", self.did)])
+            await pilot.pause()
+            await pilot.press("z")
+            await pilot.pause()
+            self.assertTrue(self.app._row_nodes[("project", self.did)].is_expanded)
+            self.app.refresh_all("")
+            await pilot.pause()
+            self.assertTrue(self.app._row_nodes[("project", self.did)].is_expanded)
+
+    async def test_z_refolds_expanded_done(self):
+        from textual.widgets import Tree
+
+        async with self.app.run_test() as pilot:
+            await pilot.pause()
+            tree = self.app.query_one("#tree", Tree)
+            tree.move_cursor(self.app._row_nodes[("project", self.did)])
+            await pilot.pause()
+            await pilot.press("z")  # expand
+            await pilot.pause()
+            await pilot.press("z")  # refold
+            await pilot.pause()
+            self.assertFalse(self.app._row_nodes[("project", self.did)].is_expanded)
 
 
 if __name__ == "__main__":

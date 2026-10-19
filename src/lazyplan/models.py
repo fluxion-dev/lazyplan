@@ -22,6 +22,9 @@ class Status(StrEnum):
 PRIORITIES = ("p0", "p1", "p2", "p3")
 PRIORITY_RANK = {"p0": 0, "p1": 1, "p2": 2, "p3": 3, "": 99}
 
+#: New tasks land here unless a priority is given.
+DEFAULT_TASK_PRIORITY = "p1"
+
 #: Where acceptance criteria may live.
 CRITERION_PARENTS = ("project", "story", "task")
 

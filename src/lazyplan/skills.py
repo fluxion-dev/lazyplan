@@ -70,15 +70,32 @@ of the repo resolves to that repo's DB. Don't override `--db` unless asked.
 
 ## Starting a project: interview first
 
-Never invent a project's why/what/acceptance criteria. When the user asks to
-plan something, interview them before writing anything:
+Never invent a project's definition. When the user asks to plan something,
+interview them before writing anything. A solid definition covers:
 
-1. Ask why this exists (one or two sentences).
-2. Ask what gets built (scope in plain language).
-3. Ask for acceptance criteria (how we know it is done).
-4. Confirm the title and priority (p0 highest, p3 lowest).
+- Vision: why this exists (one or two sentences) — the problem and the value.
+- Scope: explicit in-scope and out-of-scope lists, in plain language. Push
+  until both lists are concrete — vague scope is rejected, not recorded.
+- Deliverables: tangible outputs and their order.
+- Constraints: technical or operational limits, plus assumptions.
+- Success metrics: measurable outcomes that mean it worked.
+- Acceptance criteria: how we know it is done.
+- Quality: ask whether QA testing, refactoring, and documentation cleanup
+  steps should be included, and ask what testing is relevant to the changes
+  being made. All three are included by default — only an explicit opt-out
+  excludes them.
 
-Then record the definition:
+Fold vision into `--why`; scope, deliverables, constraints, and metrics into
+`--what`; acceptance criteria become project-level checklist items. There are
+no stakeholder, owner, or estimate fields — if it does not fit why, what, or
+criteria, it does not belong in the definition.
+
+While interviewing, scout the codebase (explore agents, grep, file reads) so
+each question clears up real ambiguity: what exists, what constrains the
+approach, what the deliverables touch. Never cut work from an unscouted
+definition. Scouting is mandatory before creating anything — project, story,
+or task. No row is written from unscouted ground, in any case, no exceptions.
+Then record it:
 
 ```bash
 lpui --actor NAME add-project --title "API v2" --why ".." --what ".." --priority p1
@@ -88,23 +105,34 @@ lpui check --id C / lpui uncheck --id C                                 # tick/u
 ```
 
 Only once the definition is agreed, cut the work — stories from the project,
-then prioritized tasks from each story:
+then prioritized tasks from each story, shaped as below plus the default QA,
+refactor, and documentation tasks.
 
-```bash
-lpui --actor NAME add-story --project P --title "Feature Y" --desc ".." --priority p1
-lpui --actor NAME add-task --story S --title "Do X" --desc "context" --priority p0
-```
+Every plan carries QA testing tasks, a refactoring task, and documentation
+cleanup by default, shaped by the interview's testing answer. Ground every QA task in the acceptance criteria: each criterion is exercised by a named test task, and DoD checklists reference the criteria they satisfy. Only an explicit user opt-out ("skip QA", "no refactoring") excludes them — silence means include.
 
 Work top priority first. Move rows through todo → doing → done as you go.
+
+## Review gate: plan is truth
+
+Once the definition is recorded and the work is cut, present the plan for check-off before implementing anything:
+
+```bash
+lpui list --status all                 # the whole tree
+lpui show --kind project --id P        # why/what + criteria + children
+```
+
+Walk the human through every story and task, make last edits on the spot, and start executing only on explicit check-off. During execution the plan stays the truth: fold new findings into the plan before changing code, never around it.
 
 ## Read first
 
 ```bash
-lpui list [--status todo|doing|done] [--project ID] [--priority p0]  # tree
+lpui list [--status todo|doing|done|all] [--archived] [--project ID] [--priority p0]  # tree (default: all)
 lpui show --kind project|story|task --id N                           # full context
 lpui feed --limit 20                                                 # recent activity
 lpui export --format json                                            # full dump when you need everything
 lpui info                                                            # resolved db path + counts (scope debugging)
+lpui reconcile                                                       # recompute parent statuses from children
 ```
 
 Add `--json` for machine-parseable output (`lpui list --json`).
@@ -125,7 +153,9 @@ lpui --actor NAME delete --kind task --id T                          # immediate
 ```
 
 Deleting a project removes its stories and tasks — double-check ids first.
-Closing with open acceptance criteria warns but never blocks.
+Status moves roll parents up automatically: closing the last open task
+completes its story and project. Closing with open acceptance criteria warns
+but never blocks.
 
 ## Acceptance criteria
 
@@ -140,12 +170,42 @@ lpui --actor NAME import --file dump.json                                    # l
 Criteria live on projects, stories, and tasks. Project-level criteria are the
 definition of done — tick them as the work lands.
 
+## Story standard
+
+Each story states user value in narrative form, with testable criteria:
+
+```bash
+lpui --actor NAME add-story --project P --title "Feature Y" --desc "As a [persona], I want [action] so that [benefit]" --priority p1
+lpui --actor NAME add-criteria --kind story --id S --text "Given [context], when [action], then [outcome]"
+```
+
+Keep stories INVEST: independent, negotiable, valuable, estimable, small,
+testable. At creation, `--desc` carries the narrative plus the INVEST check
+and the inputs/prerequisites — a story without them is not ready to cut. No
+dependency, estimate, or owner fields — sequencing lives in priority order
+(work p0 first), context lives in `--desc`.
+
+## Task standard
+
+Task titles start with a verb and name the target. `--desc` carries the
+technical how: approach, code references, inputs and prerequisites. Task-level
+checklists are the definition of done:
+
+```bash
+lpui --actor NAME add-task --story S --title "Implement token rotation" --desc "Approach and file refs" --priority p0
+lpui --actor NAME add-task --story S --title "Run the relevant test suites" --desc "Suites named in the interview" --priority p1
+lpui --actor NAME add-task --story S --title "Refactor what the change touched" --desc "Leave the area cleaner" --priority p2
+lpui --actor NAME add-task --story S --title "Clean up touched documentation" --desc "Docs matching the final code" --priority p2
+lpui --actor NAME add-criteria --kind task --id T --text "Unit tests pass"
+```
+
+No assignee or effort fields — ownership is the `--actor` on each write, size
+is the priority. Every task `--desc` names the technical approach and the inputs/prerequisites — a task missing either is not ready to cut. Cut tasks only from scouted ground: each one must name real files, real constraints, real prerequisites.
+
 ## Human-in-the-loop (preferred for judgment calls)
 
 Scope, taste, and repo-wide impact belong to the human: ask in conversation
-and wait for an answer before writing. Never decide a project's why/what or
-its acceptance criteria on your own — interview, record, confirm. Status moves
-and task execution are yours once the definition is agreed.
+and wait for an answer before writing. Never decide a project's why/what or its acceptance criteria on your own — interview, record, confirm. Scout the codebase during the interview to target real files and constraints. Status moves and task execution are yours once the definition is agreed.
 
 ## Rules
 
@@ -153,6 +213,8 @@ and task execution are yours once the definition is agreed.
 - Prefer update/status over delete + recreate (ids and history survive).
 - Never invent project/story ids: `lpui list` to discover them.
 - Never `lpui seed` a real repo plan — it inserts demo data.
+- The plan is the truth for the desired implementation: change it before changing course.
+- Format for scanability: short headers, fenced code blocks, one concern per block, verdict first.
 - Full verb reference: `lpui --help` (agents use the CLI; the TUI is keyboard-only).
 """
 
@@ -161,11 +223,15 @@ AGENTS_SNIPPET = """## lazyplan (`lpui`)
 Repo plan of record: projects > stories > tasks in `.plan/lazyplan.db`.
 Human watches `lpui ui`; agents work via the CLI with `--actor <name>`.
 
-- New project? Interview the human first: why, what, acceptance criteria, priority.
+- New project? Interview the human first: vision, scope in and out, deliverables, constraints, metrics, acceptance criteria (priority only if volunteered; new tasks default p1). Scout the codebase during the interview.
 - Read: `lpui list`, `lpui show --kind project --id N`, `lpui feed --limit 20` (`--json` for parsing)
 - Write (full CRUD): `lpui add-project`, `lpui add-story`, `lpui add-task`, `lpui update`, `lpui status`, `lpui delete` (all with `--actor <name>`)
+- Stories read As a/I want/so that with Given-When-Then criteria; tasks start with a verb and carry a DoD checklist; cut both from scouted ground only
+- Scout before creating anything — no row from unscouted ground; scope lists what is in and out explicitly
+- Plans include QA, refactoring, and documentation cleanup by default; ask about relevant testing in the interview, drop them only on explicit opt-out
 - Done means: `lpui add-criteria --kind project`, cut stories, cut prioritized tasks, work p0 first
 - Unsure on scope or taste? Ask the human in conversation — never guess the definition
+- Review gate: present the plan, edit on the spot, execute only on check-off; the plan is the truth
 - Full skill: `.agents/skills/lazyplan/SKILL.md` · verbs: `lpui --help`
 """
 

@@ -84,7 +84,7 @@ def render() -> str:
     out: list[str] = []
     out.append(f'.TH LPUI 1 "{today}" "lazyplan-tui {version}" "User Commands"')
     out.append(".SH NAME")
-    out.append("lpui \\- terminal issue tracker and roadmap planner for humans and coding agents")
+    out.append("lpui \\- local project journal for humans and coding agents")
     out.append(".SH SYNOPSIS")
     out.append(".B lpui")
     out.append("[\\fIGLOBAL OPTIONS\\fR] [\\fICOMMAND\\fR [\\fICOMMAND OPTIONS\\fR]]")
@@ -96,9 +96,12 @@ def render() -> str:
     out.append(".SH DESCRIPTION")
     out.append(
         "lazyplan tracks projects > stories > tasks in a per\\-repo SQLite database. "
-        "Humans drive the keyboard\\-first Textual TUI; coding agents drive the same "
-        "database through this CLI with \\fB\\-\\-actor NAME\\fR and \\fB\\-\\-json\\fR. "
-        "Every mutation appends a feed event; the running TUI polls and toasts arrivals."
+        "A project is a title plus a priority, a why, a what, and acceptance "
+        "criteria; stories cut it into slices and tasks cut stories into "
+        "prioritized units of work. Humans drive the keyboard\\-first Textual TUI; "
+        "coding agents drive the same database through this CLI with "
+        "\\fB\\-\\-actor NAME\\fR and \\fB\\-\\-json\\fR. Every mutation appends a "
+        "feed event; the running TUI polls and toasts arrivals."
     )
     out.append(".SH GLOBAL OPTIONS")
     for a in parser._actions:
@@ -135,13 +138,12 @@ def render() -> str:
     for line in [
         "lpui                             # TUI (same as `lpui ui`)",
         "lpui list                        # ascii tree",
-        "lpui list --status doing --owner alice",
-        "lpui gantt --tasks --width 60",
-        "lpui show --kind story --id 1",
+        "lpui list --status doing --priority p0",
+        "lpui show --kind project --id 1",
+        "lpui --actor alice add-project --title \\(dqAPI v2\\(dq --why \\(dq..\\(dq --priority p1",
+        "lpui --actor alice add-criteria --kind project --id 1 --text \\(dqWorks offline\\(dq",
         "lpui --actor alice add-task --story 1 --title \\(dqFix bug\\(dq --priority p1",
         "lpui status --kind task --id 3 --to done",
-        "lpui propose --kind task --parent 1 --title \\(dqRefactor X\\(dq",
-        "lpui proposals   # approve in TUI with 4 then a",
         "lpui feed --limit 20",
         "lpui export --format json > backup.json",
         "lpui import --file backup.json",
@@ -152,9 +154,6 @@ def render() -> str:
     out.append(".TP")
     out.append(".B LAZYPLAN_DB")
     out.append("SQLite path override (same as \\fB\\-\\-db\\fR).")
-    out.append(".TP")
-    out.append(".B LAZYPLAN_PG_DSN")
-    out.append("Postgres DSN for \\fBlpui sync\\fR (or pass \\fB\\-\\-dsn\\fR).")
     out.append(".TP")
     out.append(".B USER")
     out.append("Default for \\fB\\-\\-actor\\fR when not given.")

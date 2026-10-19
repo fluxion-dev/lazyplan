@@ -198,17 +198,14 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
             assert cursor is not None
             self.assertEqual(getattr(cursor, "data", {}).get("kind"), "task")
 
-    async def test_arrows_noop_outside_tree(self):
-        from textual.widgets import Tree  # noqa: F401
-
+    async def test_arrows_noop_without_selection(self):
         async with self.app.run_test() as pilot:
             await pilot.pause()
-            self.app.action_view_gantt()
+            self.app.selected = None
             await pilot.pause()
             await pilot.press("left")
             await pilot.press("right")
             await pilot.pause()
-            self.assertEqual(self.app.mode, "gantt")
             self.assertEqual(self.app._collapsed, set())
 
     def test_help_mentions_fold(self):

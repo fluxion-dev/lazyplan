@@ -39,7 +39,7 @@ class TestComprehensiveHelp(unittest.TestCase):
     def test_every_action_has_help(self):
         parser = build_parser()
         subs = next(a for a in parser._actions if isinstance(a, argparse._SubParsersAction))
-        self.assertTrue(len(subs.choices) >= 30, "expected 30+ subcommands")
+        self.assertTrue(len(subs.choices) >= 20, "expected 20+ subcommands")
         for name, sp in subs.choices.items():
             for a in sp._actions:
                 if a.dest == "help":
@@ -105,7 +105,7 @@ class TestManPageInstalled(unittest.TestCase):
         subs = next(a for a in parser._actions if isinstance(a, argparse._SubParsersAction))
         for name in subs.choices:
             self.assertIn(f"lpui {name}", plain, f"man page missing command {name}")
-        for env in ("LAZYPLAN_DB", "LAZYPLAN_PG_DSN"):
+        for env in ("LAZYPLAN_DB",):
             self.assertIn(env, text, f"man page missing {env}")
 
     def test_man_in_sync_with_parser(self):

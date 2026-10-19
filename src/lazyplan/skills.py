@@ -38,18 +38,22 @@ AGENTS_MARK_END = "<!-- lazyplan:end -->"
 
 SKILL_FRONTMATTER = """---
 name: lazyplan
-description: Plan and track work with lazyplan (lpui) — projects, stories, tasks, proposals. Use when the user asks to plan work, track progress, break down a feature, check status, or when repo instructions mention `lpui`.
+description: Plan and track work with lazyplan (lpui) — interview for a project's why/what/acceptance criteria, then cut prioritized stories and tasks. Use when the user asks to plan work, track progress, break down a feature, check status, or when repo instructions mention `lpui`.
 license: MIT
 compatibility: opencode, claude-code, codex, gemini-cli, cursor
 ---
 """
 
-SKILL_BODY = """# lazyplan (`lpui`) — repo issue tracker
+SKILL_BODY = """# lazyplan (`lpui`) — local project journal
 
 `lpui` is the repo's plan of record: projects > stories > tasks, stored in
 `.plan/lazyplan.db` (SQLite, committed with the repo or local — check
 `.plan/config.json`). The human watches `lpui ui`; agents inject work through
 the CLI. Never touch the TUI process — only call `lpui`.
+
+A project is: title + priority + why + what + acceptance criteria. Stories cut
+a project into slices; tasks cut a story into prioritized units of work. That
+is the whole model — no dates, owners, labels, or estimates.
 
 ## Identity
 
@@ -64,15 +68,43 @@ Pass `--actor <name>` on every write so the human sees who did what in
 global `~/.local/share/lazyplan/lazyplan.db`. Running from any subdirectory
 of the repo resolves to that repo's DB. Don't override `--db` unless asked.
 
+## Starting a project: interview first
+
+Never invent a project's why/what/acceptance criteria. When the user asks to
+plan something, interview them before writing anything:
+
+1. Ask why this exists (one or two sentences).
+2. Ask what gets built (scope in plain language).
+3. Ask for acceptance criteria (how we know it is done).
+4. Confirm the title and priority (p0 highest, p3 lowest).
+
+Then record the definition:
+
+```bash
+lpui --actor NAME add-project --title "API v2" --why ".." --what ".." --priority p1
+lpui --actor NAME add-criteria --kind project --id P --text "Works offline"
+lpui criteria --kind project --id P                                     # list items
+lpui check --id C / lpui uncheck --id C                                 # tick/untick (advisory)
+```
+
+Only once the definition is agreed, cut the work — stories from the project,
+then prioritized tasks from each story:
+
+```bash
+lpui --actor NAME add-story --project P --title "Feature Y" --desc ".." --priority p1
+lpui --actor NAME add-task --story S --title "Do X" --desc "context" --priority p0
+```
+
+Work top priority first. Move rows through todo → doing → done as you go.
+
 ## Read first
 
 ```bash
-lpui list [--status todo|doing|done] [--project ID] [--owner NAME]  # tree
-lpui show --kind project|story|task --id N                          # full context
-lpui gantt [--tasks] [--width 40]                                   # timeline
-lpui feed --limit 20                                                # recent activity
-lpui export --format json                                           # full dump when you need everything
-lpui info                                                           # resolved db path + counts (scope debugging)
+lpui list [--status todo|doing|done] [--project ID] [--priority p0]  # tree
+lpui show --kind project|story|task --id N                           # full context
+lpui feed --limit 20                                                 # recent activity
+lpui export --format json                                            # full dump when you need everything
+lpui info                                                            # resolved db path + counts (scope debugging)
 ```
 
 Add `--json` for machine-parseable output (`lpui list --json`).
@@ -83,49 +115,37 @@ Every entity supports create → read (`show`) → update/status → delete.
 `--kind` is project|story|task everywhere it appears.
 
 ```bash
-lpui --actor NAME add-project --name "API v2" [--goal .. --metrics .. --scope-in .. --scope-out ..]
-lpui --actor NAME add-story --project P --title "Feature Y" [--owner me --priority p0 --estimate 2w]
-lpui --actor NAME add-task --story S --title "Do X" [--desc ctx --owner me --priority p1 --estimate 2d]
-lpui --actor NAME update --kind task --id T [--title .. --desc .. --owner .. --priority p0|none --estimate ..]
+lpui --actor NAME add-project --title "API v2" --why ".." --what ".." --priority p1
+lpui --actor NAME add-story --project P --title "Feature Y" [--desc .. --priority p0]
+lpui --actor NAME add-task --story S --title "Do X" [--desc ctx --priority p1]
+lpui --actor NAME update --kind task --id T [--title .. --desc .. --priority p0|none]
+lpui --actor NAME update --kind project --id P [--title .. --what .. --why .. --priority p0|none]
 lpui --actor NAME status --kind task --id T --to doing|done
-lpui --actor NAME delete --kind task --id T                         # immediate, no confirm
+lpui --actor NAME delete --kind task --id T                          # immediate, no confirm
 ```
 
 Deleting a project removes its stories and tasks — double-check ids first.
 Closing with open acceptance criteria warns but never blocks.
 
-## Checklists, links, risks, milestones
+## Acceptance criteria
 
 ```bash
-lpui --actor NAME add-criteria --kind task --id T --text "Works offline"  # acceptance item
-lpui criteria --kind task --id T                                          # list items
-lpui check --id C / lpui uncheck --id C                                     # tick/untick (advisory)
+lpui --actor NAME add-criteria --kind project --id P --text "Works offline"  # acceptance item
+lpui criteria --kind project --id P                                          # list items
+lpui check --id C / lpui uncheck --id C                                      # tick/untick (advisory)
 lpui --actor NAME delete-criteria --id C
-lpui --actor NAME add-link --kind task --id T --url URL [--label spec]    # attach reference
-lpui links --kind task --id T                                             # list links
-lpui --actor NAME delete-link --id L
-lpui --actor NAME add-risk --project P --title "Slip" [--likelihood high --impact high --mitigation buf]
-lpui risks --project P                                                    # likelihood x impact first
-lpui --actor NAME risk-status --id R --to mitigated
-lpui --actor NAME add-milestone --project P --title "Beta" --date 2026-11-15
-lpui milestones --project P                                               # list markers
-lpui --actor NAME delete-milestone --id M
-lpui --actor NAME import --file dump.json                                 # load an export dump (remaps ids)
+lpui --actor NAME import --file dump.json                                    # load an export dump (remaps ids)
 ```
+
+Criteria live on projects, stories, and tasks. Project-level criteria are the
+definition of done — tick them as the work lands.
 
 ## Human-in-the-loop (preferred for judgment calls)
 
-```bash
-lpui --actor NAME propose --kind task --parent S --title "Refactor X"  # parent: story id for tasks, project id for stories
-lpui --actor NAME ask --question "Which scope: minimal or full?"       # human answers in UI
-lpui questions --all          # check for answers (poll; agents: lpui feed --json --follow &)
-lpui proposals --status pending
-```
-
-Propose/ask instead of guessing when scope, taste, or repo-wide impact is
-involved. The human approves (`4` then `a`/`x` in `lpui ui`). Never
-`approve`/`reject` your own proposals or `answer` your own questions —
-those verbs belong to the human in the UI.
+Scope, taste, and repo-wide impact belong to the human: ask in conversation
+and wait for an answer before writing. Never decide a project's why/what or
+its acceptance criteria on your own — interview, record, confirm. Status moves
+and task execution are yours once the definition is agreed.
 
 ## Rules
 
@@ -133,7 +153,7 @@ those verbs belong to the human in the UI.
 - Prefer update/status over delete + recreate (ids and history survive).
 - Never invent project/story ids: `lpui list` to discover them.
 - Never `lpui seed` a real repo plan — it inserts demo data.
-- Full verb reference: `lpui --help` (CLI == TUI `:` command bar).
+- Full verb reference: `lpui --help` (agents use the CLI; the TUI is keyboard-only).
 """
 
 AGENTS_SNIPPET = """## lazyplan (`lpui`)
@@ -141,10 +161,11 @@ AGENTS_SNIPPET = """## lazyplan (`lpui`)
 Repo plan of record: projects > stories > tasks in `.plan/lazyplan.db`.
 Human watches `lpui ui`; agents work via the CLI with `--actor <name>`.
 
-- Read: `lpui list`, `lpui show --kind story --id N`, `lpui feed --limit 20` (`--json` for parsing)
+- New project? Interview the human first: why, what, acceptance criteria, priority.
+- Read: `lpui list`, `lpui show --kind project --id N`, `lpui feed --limit 20` (`--json` for parsing)
 - Write (full CRUD): `lpui add-project`, `lpui add-story`, `lpui add-task`, `lpui update`, `lpui status`, `lpui delete` (all with `--actor <name>`)
-- Extras: `lpui add-criteria`, `lpui add-link`, `lpui add-risk`, `lpui add-milestone` (flags in the skill)
-- Unsure? `lpui propose` / `lpui ask` for human approval
+- Done means: `lpui add-criteria --kind project`, cut stories, cut prioritized tasks, work p0 first
+- Unsure on scope or taste? Ask the human in conversation — never guess the definition
 - Full skill: `.agents/skills/lazyplan/SKILL.md` · verbs: `lpui --help`
 """
 

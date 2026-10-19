@@ -2,7 +2,7 @@
 
 Maps to the four UXPin consistency types:
   visual    - tokens below (border, heights, placeholder/command prefixes)
-  functional- same verbs everywhere (`lpui` CLI == TUI command bar); same key does
+  functional- same keys everywhere; TUI is keyboard-only, agents use `lpui`
               the same thing in every view
   internal  - CLI and TUI render labels, empty states, and help from THESE
               helpers, never from drum-rolled local format strings
@@ -26,22 +26,20 @@ if TYPE_CHECKING:
 BORDER = "solid green"
 PANEL_HEIGHT = "1fr"
 BAR_HEIGHT = "1"  # activity line + statusbar: exactly one row each
-CMD_HEIGHT = "3"  # command bar: input + frame, nano-style
 
 APP_CSS = f"""
 #panel {{ height: {PANEL_HEIGHT}; border: {BORDER}; }}
 #activity {{ height: {BAR_HEIGHT}; background: $surface; }}
 #statusbar {{ height: {BAR_HEIGHT}; background: $primary; }}
-#cmdbar {{ height: {CMD_HEIGHT}; }}
 #dlg {{ width: 60; height: auto; border: {BORDER}; padding: 1; }}
 ModalScreen {{ align: center middle; }}
 """
 
 # -- label language ---------------------------------------------------------
-# Canonical row grammar (plain text: `lpui list`, palette, tests):
-#   KIND#id [status] !p0 title @owner (start..end) ~estimate [1/2✓] [!blocked by 3]
-# TUI project rows are Rich markup (Tree labels and Static both parse it):
-#   [reverse] P1 [/] title (due DATE)
+# Canonical row grammar (plain text: `lpui list`, tests):
+#   KIND#id [status] !p0 title [1/2✓]
+# TUI project rows are Rich markup (Tree labels parse it):
+#   [reverse] P1 [/] !p0 title
 # Tree indentation is the viewer's job ("", "  ", "    " for CLI).
 
 INDENT = ("", "  ", "    ")
@@ -49,11 +47,6 @@ INDENT = ("", "  ", "    ")
 
 def _status(value: Status | str) -> str:
     return value.value if isinstance(value, Status) else str(value)
-
-
-def owner_tag(owner: str) -> str:
-    """@owner suffix, or empty."""
-    return f" @{owner}" if owner else ""
 
 
 def priority_tag(priority: str) -> str:
@@ -68,43 +61,14 @@ def crit_tag(done: int | None, total: int | None) -> str:
     return f" [{done or 0}/{total}✓]"
 
 
-def blocked_tag(blockers: list[int] | tuple, actively_blocked: bool) -> str:
-    """[!]blocked-by marker, or empty."""
-    if not blockers:
-        return ""
-    ids = ",".join(str(i) for i in blockers)
-    mark = "!" if actively_blocked else ""
-    return f" [{mark}blocked by {ids}]"
-
-
-def date_span(start: str, end: str) -> str:
-    """(start..end) range."""
-    return f"({start}..{end})"
-
-
 def pill_tag(text: str) -> str:
-    """Reverse-video pill for TUI rows (Rich markup; Tree/Static parse it)."""
+    """Reverse-video pill for TUI rows (Rich markup; Tree parses it)."""
     return f"[reverse] {text} [/]"
-
-
-def delivery_tag(end: str) -> str:
-    """(due DATE) suffix for a target delivery date, or empty when unset."""
-    return f" (due {end})" if end else ""
 
 
 def _escape_markup(text: str) -> str:
     """Escape `[` so titles render literally in markup-parsed TUI rows."""
     return text.replace("[", "\\[")
-
-
-def project_label(p: Project) -> str:
-    """Canonical row label for a project (plain text: CLI, palette, tests)."""
-    return f"P#{p.id} [{_status(p.status)}] {p.name} {date_span(p.start_date, p.end_date)}"
-
-
-def project_row(p: Project) -> str:
-    """TUI project row (Rich markup): pill number + title + delivery date only."""
-    return f"{pill_tag(f'P{p.id}')} {_escape_markup(p.name)}{delivery_tag(p.end_date)}"
 
 
 def _crit_progress(store: Store | None, kind: str, obj_id: int) -> tuple[int | None, int | None]:
@@ -113,37 +77,38 @@ def _crit_progress(store: Store | None, kind: str, obj_id: int) -> tuple[int | N
     return store.criteria_progress(kind, obj_id)
 
 
+def project_label(p: Project, store: Store | None = None) -> str:
+    """Canonical row label for a project (plain text: CLI, tests)."""
+    done, total = _crit_progress(store, "project", p.id)
+    return (
+        f"P#{p.id} [{_status(p.status)}]{priority_tag(p.priority)} {p.name}{crit_tag(done, total)}"
+    )
+
+
+def project_row(p: Project, store: Store | None = None) -> str:
+    """TUI project row (Rich markup): pill number + priority + title."""
+    return f"{pill_tag(f'P{p.id}')}{priority_tag(p.priority)} {_escape_markup(p.name)}"
+
+
 def story_label(s: UserStory, store: Store | None = None) -> str:
     """Canonical row label for a story."""
     done, total = _crit_progress(store, "story", s.id)
-    blocked = store.is_blocked("story", s.id) if store is not None else False
     return (
-        f"S#{s.id} [{_status(s.status)}]{priority_tag(s.priority)} {s.title}"
-        f"{owner_tag(s.owner)} {date_span(s.start_date, s.end_date)}"
-        f"{crit_tag(done, total)}{blocked_tag(s.blocked_by, blocked)}"
+        f"S#{s.id} [{_status(s.status)}]{priority_tag(s.priority)} {s.title}{crit_tag(done, total)}"
     )
 
 
 def task_label(t: Task, store: Store | None = None) -> str:
     """Canonical row label for a task."""
-    extra = "".join(
-        [
-            f" ~{t.estimate}" if t.estimate else "",
-            f" {t.start_date}..{t.end_date}" if t.start_date or t.end_date else "",
-        ]
-    )
     done, total = _crit_progress(store, "task", t.id)
-    blocked = store.is_blocked("task", t.id) if store is not None else False
     return (
-        f"T#{t.id} [{_status(t.status)}]{priority_tag(t.priority)} {t.title}"
-        f"{owner_tag(t.owner)}{extra}"
-        f"{crit_tag(done, total)}{blocked_tag(t.blocked_by, blocked)}"
+        f"T#{t.id} [{_status(t.status)}]{priority_tag(t.priority)} {t.title}{crit_tag(done, total)}"
     )
 
 
 # -- empty states (identical wording everywhere) --------------------------
 EMPTY_NO_PROJECTS = "No projects yet — press n to seed, or run: lpui seed"
-EMPTY_FILTERED = "(filter hides everything — f/o/O to clear, or n to add)"
+EMPTY_FILTERED = "(filter hides everything — f/o to clear, or n to add)"
 EMPTY_FEED = "(no activity yet — agents write via `lpui add-task ...`)"
 
 
@@ -173,13 +138,10 @@ INIT_SKILLS_COMMIT_TIP = (
 
 
 # -- help (TUI `?` overlay AND `lpui help` render this same text) -------------
-HELP_TEXT = """lazyplan — stream-of-consciousness console (lpui CLI == : command bar)
-views: 1 tree · 2 gantt · 3 feed · 4 proposals
-move: j/k or up/down + click · left/right collapse/expand · enter edits detail in place
+HELP_TEXT = """lazyplan — local project journal (TUI is keyboard-only; agents use lpui)
+tree: j/k or up/down + click · left/right collapse/expand · enter detail
 n new (context) · P/S/T new project/story/task · e edit · d delete
-space cycle status · c tick criteria · z/Z fold one/all · +/- gantt zoom
-f status filter · o project filter · O owner filter
-s search · ctrl+p palette · a/x approve/reject proposal
-r refresh · / command bar · ? help · q quit
-: commands = lpui verbs, e.g. show --kind story --id 1
-agents: lpui propose ... / lpui ask ... (human approves/answers in UI)"""
+space cycle status · c tick criteria · z/Z fold one/all
+f status filter · o project filter
+r refresh · ? help · q quit
+workflow: interview why/what/acceptance criteria, add-project, cut prioritized stories + tasks"""

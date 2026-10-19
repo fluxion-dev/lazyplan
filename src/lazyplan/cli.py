@@ -18,7 +18,6 @@ from .design import (
     msg_error,
     msg_not_found,
 )
-from .gantt import bar, span
 from .models import Project, Status, Task, UserStory
 from .render import render_full, render_markdown, tree_lines
 from .repo import ensure_plan_dir, find_repo_root, repo_label
@@ -30,6 +29,15 @@ from .store import Store, _ser
 def _emit(args: argparse.Namespace, payload: object) -> int:
     print(json.dumps(payload, indent=2, default=str))
     return 0
+
+
+def _resolve_title(args: argparse.Namespace) -> str:
+    """--title wins, --name is the legacy alias."""
+    if getattr(args, "title", None):
+        return str(args.title)
+    if getattr(args, "name", None):
+        return str(args.name)
+    return ""
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -92,17 +100,14 @@ def main(argv: list[str] | None = None) -> int:
                 payload = [
                     {
                         "project": _ser(vars(p)),
+                        "criteria": [vars(c) for c in store.list_criteria("project", p.id)],
                         "stories": [
                             {
                                 "story": _ser(vars(s)),
-                                "links": [vars(li) for li in store.list_links("story", s.id)],
                                 "criteria": [vars(c) for c in store.list_criteria("story", s.id)],
                                 "tasks": [
                                     {
                                         "task": _ser(vars(t)),
-                                        "links": [
-                                            vars(li) for li in store.list_links("task", t.id)
-                                        ],
                                         "criteria": [
                                             vars(c) for c in store.list_criteria("task", t.id)
                                         ],
@@ -116,60 +121,12 @@ def main(argv: list[str] | None = None) -> int:
                     for p, stories in store.tree(
                         status=status,
                         project_id=args.project,
-                        owner=args.owner,
                         priority=args.priority,
                     )
                 ]
                 return _emit(args, payload)
-            lines = tree_lines(store, status, args.project, args.owner, args.priority)
+            lines = tree_lines(store, status, args.project, args.priority)
             print("\n".join(lines) if lines else EMPTY_NO_PROJECTS)
-            return 0
-        if args.cmd == "gantt":
-            status = Status(args.status) if args.status else None
-            tree = store.tree(
-                status=status, project_id=args.project, owner=args.owner, priority=args.priority
-            )
-            ms_by_project: dict[int, list] = {}
-            dates = []
-            for _, stories in tree:
-                for s, tasks in stories:
-                    dates += [s.start_date, s.end_date]
-                    if args.tasks:
-                        for t in tasks:
-                            dates += [t.start_date, t.end_date]
-            if args.project is not None:
-                ms_by_project[args.project] = store.list_milestones(args.project)
-            else:
-                for p, _ in tree:
-                    ms_by_project[p.id] = store.list_milestones(p.id)
-            for ms in ms_by_project.values():
-                dates += [m.date for m in ms if m.date]
-            dates = [d for d in dates if d]
-            lo, hi = span(dates, args.width)
-            print(f"{lo} .. {hi} (w={args.width})")
-            for p, stories in tree:
-                print(f"P#{p.id} {p.name}")
-                crit_ids = set(store.critical_path(p.id))
-                for m in ms_by_project.get(p.id, []):
-                    print(f"  ◆ {m.date or '????-??-??'} M#{m.id} {m.title}")
-                for s, tasks in stories:
-                    mark = ("*" if s.id in crit_ids else " ") + (
-                        "!" if store.is_blocked("story", s.id) else " "
-                    )
-                    print(
-                        f"{mark} S#{s.id:>3} {bar(s.start_date, s.end_date, lo, hi, args.width)} {s.title} [{s.status.value}]"
-                    )
-                    if args.tasks:
-                        for t in tasks:
-                            tmark = " " + ("!" if store.is_blocked("task", t.id) else " ")
-                            b = (
-                                bar(t.start_date, t.end_date, lo, hi, args.width)
-                                if (t.start_date and t.end_date)
-                                else "(no dates)"
-                            )
-                            print(f"{tmark} T#{t.id:>3} {b} {t.title} [{t.status.value}]")
-            if not tree:
-                print(EMPTY_NO_PROJECTS)
             return 0
         if args.cmd == "help":
             if args.json:
@@ -177,16 +134,17 @@ def main(argv: list[str] | None = None) -> int:
             print(HELP_TEXT)
             return 0
         if args.cmd == "add-project":
+            title = _resolve_title(args)
+            if not title.strip():
+                print("error: add-project needs --title", file=sys.stderr)
+                return 2
+            desc = args.desc if args.desc is not None else (args.what or "")
+            goal = args.goal if args.goal is not None else (args.why or "")
             p = store.add_project(
-                args.name,
-                args.desc,
-                args.start,
-                args.end,
-                goal=args.goal,
-                success_metrics=args.metrics,
-                scope_in=args.scope_in,
-                scope_out=args.scope_out,
-                assumptions=args.assumptions,
+                title,
+                desc,
+                goal=goal,
+                priority=args.priority,
                 actor=actor,
             )
             return _emit(args, {"project": _ser(vars(p))})
@@ -195,13 +153,7 @@ def main(argv: list[str] | None = None) -> int:
                 args.project,
                 args.title,
                 args.desc,
-                args.start,
-                args.end,
-                owner=args.owner,
                 priority=args.priority,
-                labels=args.labels,
-                estimate=args.estimate,
-                blocked_by=args.blocked_by,
                 actor=actor,
             )
             return _emit(args, {"story": _ser(vars(s))})
@@ -209,19 +161,14 @@ def main(argv: list[str] | None = None) -> int:
             t = store.add_task(
                 args.story,
                 args.title,
-                args.estimate,
-                args.start,
-                args.end,
                 description=args.desc,
-                owner=args.owner,
                 priority=args.priority,
-                labels=args.labels,
-                blocked_by=args.blocked_by,
                 actor=actor,
             )
             return _emit(args, {"task": _ser(vars(t))})
         if args.cmd == "update":
-            title = args.title or args.name
+            title_patch = _resolve_title(args) or None
+            desc_patch: str | None = args.desc if args.desc is not None else args.what
             priority = (
                 None
                 if args.priority is None
@@ -229,45 +176,29 @@ def main(argv: list[str] | None = None) -> int:
             )
             updated: Project | UserStory | Task | None = None
             if args.kind == "project":
+                goal = args.goal if args.goal is not None else args.why
                 updated = store.update_project(
                     args.id,
-                    name=title,
-                    description=args.desc,
-                    start_date=args.start,
-                    end_date=args.end,
-                    goal=args.goal,
-                    success_metrics=args.metrics,
-                    scope_in=args.scope_in,
-                    scope_out=args.scope_out,
-                    assumptions=args.assumptions,
+                    name=title_patch,
+                    description=desc_patch,
+                    goal=goal,
+                    priority=priority,
                     actor=actor,
                 )
             elif args.kind == "story":
                 updated = store.update_story(
                     args.id,
-                    title=title,
-                    description=args.desc,
-                    start_date=args.start,
-                    end_date=args.end,
-                    owner=args.owner,
+                    title=title_patch,
+                    description=desc_patch,
                     priority=priority,
-                    labels=args.labels,
-                    estimate=args.estimate,
-                    blocked_by=args.blocked_by,
                     actor=actor,
                 )
             else:
                 updated = store.update_task(
                     args.id,
-                    title=title,
-                    estimate=args.estimate,
-                    start_date=args.start,
-                    end_date=args.end,
-                    description=args.desc,
-                    owner=args.owner,
+                    title=title_patch,
+                    description=desc_patch,
                     priority=priority,
-                    labels=args.labels,
-                    blocked_by=args.blocked_by,
                     actor=actor,
                 )
             if updated is None:
@@ -283,29 +214,14 @@ def main(argv: list[str] | None = None) -> int:
                 return _emit(args, full)
             print(render_full(args.kind, full))
             return 0
-        if args.cmd == "add-link":
-            link = store.add_link(args.kind, args.id, args.url, args.label, actor=actor)
-            return _emit(args, {"link": vars(link)})
-        if args.cmd == "links":
-            found = store.get_story(args.id) if args.kind == "story" else store.get_task(args.id)
-            if found is None:
-                print(msg_not_found(args.kind, args.id), file=sys.stderr)
-                return 1
-            return _emit(args, [vars(li) for li in store.list_links(args.kind, args.id)])
-        if args.cmd == "delete-link":
-            if not store.delete_link(args.id, actor=actor):
-                print(msg_not_found("link", args.id), file=sys.stderr)
-                return 1
-            return _emit(args, {"ok": True, "deleted": f"link #{args.id}"})
         if args.cmd == "status":
-            if args.to == "done" and args.kind in ("story", "task"):
-                left = store.open_criteria(args.kind, args.id)
-                if left:
-                    print(
-                        f"warning: {len(left)} open acceptance criteria "
-                        f"({', '.join(c.text[:40] for c in left[:3])}); closing anyway",
-                        file=sys.stderr,
-                    )
+            left = store.open_criteria(args.kind, args.id)
+            if args.to == "done" and left:
+                print(
+                    f"warning: {len(left)} open acceptance criteria "
+                    f"({', '.join(c.text[:40] for c in left[:3])}); closing anyway",
+                    file=sys.stderr,
+                )
             ok = store.set_status(args.kind, args.id, Status(args.to), actor=actor)
             if not ok:
                 print(msg_not_found(args.kind, args.id), file=sys.stderr)
@@ -321,7 +237,7 @@ def main(argv: list[str] | None = None) -> int:
             c = store.add_criteria(args.kind, args.id, args.text, actor=actor)
             return _emit(args, {"criteria": vars(c)})
         if args.cmd == "criteria":
-            found = store.get_story(args.id) if args.kind == "story" else store.get_task(args.id)
+            found = store.get_parent(args.kind, args.id)
             if found is None:
                 print(msg_not_found(args.kind, args.id), file=sys.stderr)
                 return 1
@@ -337,77 +253,6 @@ def main(argv: list[str] | None = None) -> int:
                 print(msg_not_found("criteria", args.id), file=sys.stderr)
                 return 1
             return _emit(args, {"ok": True, "deleted": f"criteria #{args.id}"})
-        if args.cmd == "add-risk":
-            from .models import RiskStatus as _RS
-
-            r = store.add_risk(
-                args.project, args.title, args.likelihood, args.impact, args.mitigation, actor=actor
-            )
-            d = vars(r)
-            d["status"] = r.status.value
-            return _emit(args, {"risk": d})
-        if args.cmd == "risks":
-            if store.get_project(args.project) is None:
-                print(msg_not_found("project", args.project), file=sys.stderr)
-                return 1
-            return _emit(args, [store._risk_to_dict(r) for r in store.list_risks(args.project)])
-        if args.cmd == "risk-status":
-            from .models import RiskStatus as _RS
-
-            to = _RS(args.to) if args.to else None
-            risk = store.set_risk(args.id, status=to, mitigation=args.mitigation, actor=actor)
-            if risk is None:
-                print(msg_not_found("risk", args.id), file=sys.stderr)
-                return 1
-            return _emit(args, {"risk": store._risk_to_dict(risk)})
-        if args.cmd == "add-milestone":
-            m = store.add_milestone(args.project, args.title, args.date, actor=actor)
-            return _emit(args, {"milestone": vars(m)})
-        if args.cmd == "milestones":
-            if store.get_project(args.project) is None:
-                print(msg_not_found("project", args.project), file=sys.stderr)
-                return 1
-            return _emit(args, [vars(m) for m in store.list_milestones(args.project)])
-        if args.cmd == "delete-milestone":
-            if not store.delete_milestone(args.id, actor=actor):
-                print(msg_not_found("milestone", args.id), file=sys.stderr)
-                return 1
-            return _emit(args, {"ok": True, "deleted": f"milestone #{args.id}"})
-        if args.cmd == "propose":
-            fields = {
-                "title": args.title,
-                "description": args.desc,
-                "owner": args.owner,
-                "priority": args.priority,
-                "labels": args.labels,
-                "estimate": args.estimate,
-                "start_date": args.start,
-                "end_date": args.end,
-                "blocked_by": args.blocked_by,
-            }
-            return _emit(args, store.propose(args.kind, args.parent, fields, actor=actor))
-        if args.cmd == "proposals":
-            return _emit(args, store.list_proposals(args.status))
-        if args.cmd in ("approve", "reject"):
-            try:
-                res = store.decide_proposal(args.id, args.cmd == "approve", actor=actor)
-            except ValueError as exc:
-                print(msg_error(exc), file=sys.stderr)
-                return 2
-            if res is None:
-                print(msg_not_found("proposal", args.id), file=sys.stderr)
-                return 1
-            return _emit(args, res)
-        if args.cmd == "ask":
-            return _emit(args, store.ask(actor, args.question))
-        if args.cmd == "questions":
-            return _emit(args, store.list_questions(open_only=not args.all))
-        if args.cmd == "answer":
-            res = store.answer_question(args.id, args.text, actor=actor)
-            if res is None:
-                print(msg_not_found("question", args.id), file=sys.stderr)
-                return 1
-            return _emit(args, res)
         if args.cmd == "export":
             data = store.export_all()
             if args.format == "json":
@@ -460,56 +305,23 @@ def main(argv: list[str] | None = None) -> int:
                 if fresh:
                     seen = max(e["id"] for e in fresh)
                 time.sleep(args.interval)
-        if args.cmd == "sync":
-            import os as _os
-
-            dsn = args.dsn.strip() or _os.environ.get("LAZYPLAN_PG_DSN", "").strip()
-            if not dsn:
-                print("need --dsn or $LAZYPLAN_PG_DSN", file=sys.stderr)
-                return 2
-            from .postgres_sync import sync_sqlite_to_pg
-
-            try:
-                counts = sync_sqlite_to_pg(str(store.path), dsn)
-            except RuntimeError as exc:
-                print(msg_error(exc), file=sys.stderr)
-                return 2
-            return _emit(args, {"synced_to": dsn.split("@")[-1], "counts": counts})
         if args.cmd == "completion":
             cmds = [
                 "init",
                 "seed",
                 "list",
-                "gantt",
                 "add-project",
                 "add-story",
                 "add-task",
                 "update",
                 "show",
-                "add-link",
-                "links",
-                "delete-link",
                 "add-criteria",
                 "criteria",
                 "check",
                 "uncheck",
                 "delete-criteria",
-                "add-risk",
-                "risks",
-                "risk-status",
-                "add-milestone",
-                "milestones",
-                "delete-milestone",
-                "propose",
-                "proposals",
-                "approve",
-                "reject",
-                "ask",
-                "questions",
-                "answer",
                 "export",
                 "import",
-                "sync",
                 "status",
                 "delete",
                 "feed",

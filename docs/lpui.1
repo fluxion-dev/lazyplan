@@ -1,6 +1,6 @@
 .TH LPUI 1 "2026-10-18" "lazyplan-tui 0.8.4" "User Commands"
 .SH NAME
-lpui \- terminal issue tracker and roadmap planner for humans and coding agents
+lpui \- local project journal for humans and coding agents
 .SH SYNOPSIS
 .B lpui
 [\fIGLOBAL OPTIONS\fR] [\fICOMMAND\fR [\fICOMMAND OPTIONS\fR]]
@@ -10,7 +10,7 @@ is the same program under its long name.
 .br
 With no COMMAND, \fBlpui\fR launches the Textual TUI (same as \fBlpui ui\fR).
 .SH DESCRIPTION
-lazyplan tracks projects > stories > tasks in a per\-repo SQLite database. Humans drive the keyboard\-first Textual TUI; coding agents drive the same database through this CLI with \fB\-\-actor NAME\fR and \fB\-\-json\fR. Every mutation appends a feed event; the running TUI polls and toasts arrivals.
+lazyplan tracks projects > stories > tasks in a per\-repo SQLite database. A project is a title plus a priority, a why, a what, and acceptance criteria; stories cut it into slices and tasks cut stories into prioritized units of work. Humans drive the keyboard\-first Textual TUI; coding agents drive the same database through this CLI with \fB\-\-actor NAME\fR and \fB\-\-json\fR. Every mutation appends a feed event; the running TUI polls and toasts arrivals.
 .SH GLOBAL OPTIONS
 .TP
 .B \-\-db PATH
@@ -125,61 +125,8 @@ only this project
 .RE
 .RS
 .TP
-.B \-\-owner NAME
-only rows owned by NAME
-.RE
-.RS
-.TP
 .B \-\-priority {p0|p1|p2|p3}
 only this priority (p0 highest) Choices: p0, p1, p2, p3\.
-.RE
-.TP
-.B lpui gantt
-ascii gantt of stories (+tasks)
-.RS
-.TP
-.B \-\-json
-agent\-friendly JSON output
-.RE
-.RS
-.TP
-.B \-\-version
-print the installed version and exit
-.RE
-.RS
-.TP
-.B \-\-actor NAME
-who acted (shown in feed)
-.RE
-.RS
-.TP
-.B \-\-width N
-bar width (default: 40)
-.RE
-.RS
-.TP
-.B \-\-status {todo|doing|done}
-filter by status Choices: todo, doing, done\.
-.RE
-.RS
-.TP
-.B \-\-project ID
-only this project
-.RE
-.RS
-.TP
-.B \-\-owner NAME
-only rows owned by NAME
-.RE
-.RS
-.TP
-.B \-\-priority {p0|p1|p2|p3}
-only this priority (p0 highest) Choices: p0, p1, p2, p3\.
-.RE
-.RS
-.TP
-.B \-\-tasks
-also render task bars (default: stories)
 .RE
 .TP
 .B lpui add\-project
@@ -201,48 +148,38 @@ who acted (shown in feed)
 .RE
 .RS
 .TP
+.B \-\-title TEXT
+project title
+.RE
+.RS
+.TP
 .B \-\-name NAME
-project name (required) Required\.
+alias of \-\-title
+.RE
+.RS
+.TP
+.B \-\-what TEXT
+what gets built
 .RE
 .RS
 .TP
 .B \-\-desc TEXT
-one\-line description
+alias of \-\-what
 .RE
 .RS
 .TP
-.B \-\-start YYYY\-MM\-DD
-start date
-.RE
-.RS
-.TP
-.B \-\-end YYYY\-MM\-DD
-end date
+.B \-\-why TEXT
+why this exists
 .RE
 .RS
 .TP
 .B \-\-goal TEXT
-project goal / narrative
+alias of \-\-why
 .RE
 .RS
 .TP
-.B \-\-metrics TEXT
-success metrics
-.RE
-.RS
-.TP
-.B \-\-scope\-in TEXT
-in scope
-.RE
-.RS
-.TP
-.B \-\-scope\-out TEXT
-out of scope
-.RE
-.RS
-.TP
-.B \-\-assumptions TEXT
-assumptions
+.B \-\-priority {p0|p1|p2|p3}
+priority (p0 highest) Choices: p0, p1, p2, p3\.
 .RE
 .TP
 .B lpui add\-story
@@ -275,42 +212,12 @@ story title (required) Required\.
 .RS
 .TP
 .B \-\-desc TEXT
-description
-.RE
-.RS
-.TP
-.B \-\-start YYYY\-MM\-DD
-start date
-.RE
-.RS
-.TP
-.B \-\-end YYYY\-MM\-DD
-end date
-.RE
-.RS
-.TP
-.B \-\-owner NAME
-owner (person or agent id)
+details
 .RE
 .RS
 .TP
 .B \-\-priority {p0|p1|p2|p3}
 priority (p0 highest) Choices: p0, p1, p2, p3\.
-.RE
-.RS
-.TP
-.B \-\-labels A,B
-comma\-separated labels
-.RE
-.RS
-.TP
-.B \-\-estimate TEXT
-rough estimate, e\.g\. 2w
-.RE
-.RS
-.TP
-.B \-\-blocked\-by IDS
-comma\-separated blocker story ids
 .RE
 .TP
 .B lpui add\-task
@@ -342,47 +249,17 @@ task title (required) Required\.
 .RE
 .RS
 .TP
-.B \-\-estimate TEXT
-estimate, e\.g\. 2d
-.RE
-.RS
-.TP
-.B \-\-start YYYY\-MM\-DD
-start date
-.RE
-.RS
-.TP
-.B \-\-end YYYY\-MM\-DD
-end date
-.RE
-.RS
-.TP
 .B \-\-desc TEXT
-description / context
-.RE
-.RS
-.TP
-.B \-\-owner NAME
-owner (person or agent id)
+details / context
 .RE
 .RS
 .TP
 .B \-\-priority {p0|p1|p2|p3}
 priority (p0 highest) Choices: p0, p1, p2, p3\.
 .RE
-.RS
-.TP
-.B \-\-labels A,B
-comma\-separated labels
-.RE
-.RS
-.TP
-.B \-\-blocked\-by IDS
-comma\-separated blocker task ids
-.RE
 .TP
 .B lpui update
-edit title/desc/estimate/dates/narrative/owner/plan fields
+edit title/details/why/priority
 .RS
 .TP
 .B \-\-json
@@ -421,71 +298,31 @@ alias of \-\-title for projects
 .RS
 .TP
 .B \-\-desc TEXT
-new description
+new details
 .RE
 .RS
 .TP
-.B \-\-estimate TEXT
-new estimate
+.B \-\-what TEXT
+alias of \-\-desc for projects
 .RE
 .RS
 .TP
-.B \-\-start YYYY\-MM\-DD
-new start date
+.B \-\-why TEXT
+new why (projects)
 .RE
 .RS
 .TP
-.B \-\-end YYYY\-MM\-DD
-new end date
-.RE
-.RS
-.TP
-.B \-\-owner NAME
-new owner (empty clears)
+.B \-\-goal TEXT
+alias of \-\-why
 .RE
 .RS
 .TP
 .B \-\-priority {p0|p1|p2|p3|none}
 new priority (`none` clears) Choices: p0, p1, p2, p3, none\.
 .RE
-.RS
-.TP
-.B \-\-labels A,B
-new labels (empty clears)
-.RE
-.RS
-.TP
-.B \-\-blocked\-by IDS
-new blockers (empty clears)
-.RE
-.RS
-.TP
-.B \-\-goal TEXT
-new goal (projects)
-.RE
-.RS
-.TP
-.B \-\-metrics TEXT
-new metrics (projects)
-.RE
-.RS
-.TP
-.B \-\-scope\-in TEXT
-new in\-scope (projects)
-.RE
-.RS
-.TP
-.B \-\-scope\-out TEXT
-new out\-of\-scope (projects)
-.RE
-.RS
-.TP
-.B \-\-assumptions TEXT
-new assumptions (projects)
-.RE
 .TP
 .B lpui show
-full context record: fields + links + children
+full context record: fields + criteria + children
 .RS
 .TP
 .B \-\-json
@@ -512,95 +349,6 @@ what to show Choices: project, story, task\. Required\.
 row id Required\.
 .RE
 .TP
-.B lpui add\-link
-attach a supporting link to a story/task
-.RS
-.TP
-.B \-\-json
-agent\-friendly JSON output
-.RE
-.RS
-.TP
-.B \-\-version
-print the installed version and exit
-.RE
-.RS
-.TP
-.B \-\-actor NAME
-who acted (shown in feed)
-.RE
-.RS
-.TP
-.B \-\-kind {story|task}
-parent kind Choices: story, task\. Required\.
-.RE
-.RS
-.TP
-.B \-\-id ID
-parent id Required\.
-.RE
-.RS
-.TP
-.B \-\-url URL
-link URL (required) Required\.
-.RE
-.RS
-.TP
-.B \-\-label TEXT
-short label
-.RE
-.TP
-.B lpui links
-list links on a story/task
-.RS
-.TP
-.B \-\-json
-agent\-friendly JSON output
-.RE
-.RS
-.TP
-.B \-\-version
-print the installed version and exit
-.RE
-.RS
-.TP
-.B \-\-actor NAME
-who acted (shown in feed)
-.RE
-.RS
-.TP
-.B \-\-kind {story|task}
-parent kind Choices: story, task\. Required\.
-.RE
-.RS
-.TP
-.B \-\-id ID
-parent id Required\.
-.RE
-.TP
-.B lpui delete\-link
-remove a link by its id
-.RS
-.TP
-.B \-\-json
-agent\-friendly JSON output
-.RE
-.RS
-.TP
-.B \-\-version
-print the installed version and exit
-.RE
-.RS
-.TP
-.B \-\-actor NAME
-who acted (shown in feed)
-.RE
-.RS
-.TP
-.B \-\-id ID
-link id Required\.
-.RE
-.TP
 .B lpui add\-criteria
 add an acceptance\-checklist item
 .RS
@@ -620,8 +368,8 @@ who acted (shown in feed)
 .RE
 .RS
 .TP
-.B \-\-kind {story|task}
-parent kind Choices: story, task\. Required\.
+.B \-\-kind {project|story|task}
+parent kind Choices: project, story, task\. Required\.
 .RE
 .RS
 .TP
@@ -653,8 +401,8 @@ who acted (shown in feed)
 .RE
 .RS
 .TP
-.B \-\-kind {story|task}
-parent kind Choices: story, task\. Required\.
+.B \-\-kind {project|story|task}
+parent kind Choices: project, story, task\. Required\.
 .RE
 .RS
 .TP
@@ -731,400 +479,6 @@ who acted (shown in feed)
 criteria id Required\.
 .RE
 .TP
-.B lpui add\-risk
-register a project risk
-.RS
-.TP
-.B \-\-json
-agent\-friendly JSON output
-.RE
-.RS
-.TP
-.B \-\-version
-print the installed version and exit
-.RE
-.RS
-.TP
-.B \-\-actor NAME
-who acted (shown in feed)
-.RE
-.RS
-.TP
-.B \-\-project ID
-project id Required\.
-.RE
-.RS
-.TP
-.B \-\-title TEXT
-risk title (required) Required\.
-.RE
-.RS
-.TP
-.B \-\-likelihood {low|med|high}
-likelihood (default: med) Choices: low, med, high\.
-.RE
-.RS
-.TP
-.B \-\-impact {low|med|high}
-impact (default: med) Choices: low, med, high\.
-.RE
-.RS
-.TP
-.B \-\-mitigation TEXT
-mitigation plan
-.RE
-.TP
-.B lpui risks
-list project risks (likelihood x impact first)
-.RS
-.TP
-.B \-\-json
-agent\-friendly JSON output
-.RE
-.RS
-.TP
-.B \-\-version
-print the installed version and exit
-.RE
-.RS
-.TP
-.B \-\-actor NAME
-who acted (shown in feed)
-.RE
-.RS
-.TP
-.B \-\-project ID
-project id Required\.
-.RE
-.TP
-.B lpui risk\-status
-move a risk open|mitigated|retired / set mitigation
-.RS
-.TP
-.B \-\-json
-agent\-friendly JSON output
-.RE
-.RS
-.TP
-.B \-\-version
-print the installed version and exit
-.RE
-.RS
-.TP
-.B \-\-actor NAME
-who acted (shown in feed)
-.RE
-.RS
-.TP
-.B \-\-id ID
-risk id Required\.
-.RE
-.RS
-.TP
-.B \-\-to {open|mitigated|retired}
-new status Choices: open, mitigated, retired\.
-.RE
-.RS
-.TP
-.B \-\-mitigation TEXT
-new mitigation text
-.RE
-.TP
-.B lpui add\-milestone
-add a dated timeline marker
-.RS
-.TP
-.B \-\-json
-agent\-friendly JSON output
-.RE
-.RS
-.TP
-.B \-\-version
-print the installed version and exit
-.RE
-.RS
-.TP
-.B \-\-actor NAME
-who acted (shown in feed)
-.RE
-.RS
-.TP
-.B \-\-project ID
-project id Required\.
-.RE
-.RS
-.TP
-.B \-\-title TEXT
-milestone title (required) Required\.
-.RE
-.RS
-.TP
-.B \-\-date YYYY\-MM\-DD
-milestone date
-.RE
-.TP
-.B lpui milestones
-list project milestones
-.RS
-.TP
-.B \-\-json
-agent\-friendly JSON output
-.RE
-.RS
-.TP
-.B \-\-version
-print the installed version and exit
-.RE
-.RS
-.TP
-.B \-\-actor NAME
-who acted (shown in feed)
-.RE
-.RS
-.TP
-.B \-\-project ID
-project id Required\.
-.RE
-.TP
-.B lpui delete\-milestone
-remove a milestone by its id
-.RS
-.TP
-.B \-\-json
-agent\-friendly JSON output
-.RE
-.RS
-.TP
-.B \-\-version
-print the installed version and exit
-.RE
-.RS
-.TP
-.B \-\-actor NAME
-who acted (shown in feed)
-.RE
-.RS
-.TP
-.B \-\-id ID
-milestone id Required\.
-.RE
-.TP
-.B lpui propose
-agent: submit a story/task for human approval
-.RS
-.TP
-.B \-\-json
-agent\-friendly JSON output
-.RE
-.RS
-.TP
-.B \-\-version
-print the installed version and exit
-.RE
-.RS
-.TP
-.B \-\-actor NAME
-who acted (shown in feed)
-.RE
-.RS
-.TP
-.B \-\-kind {story|task}
-what to propose Choices: story, task\. Required\.
-.RE
-.RS
-.TP
-.B \-\-parent ID
-project id (story) or story id (task) Required\.
-.RE
-.RS
-.TP
-.B \-\-title TEXT
-title (required) Required\.
-.RE
-.RS
-.TP
-.B \-\-desc TEXT
-description
-.RE
-.RS
-.TP
-.B \-\-owner NAME
-suggested owner
-.RE
-.RS
-.TP
-.B \-\-priority {p0|p1|p2|p3}
-suggested priority Choices: p0, p1, p2, p3\.
-.RE
-.RS
-.TP
-.B \-\-labels A,B
-suggested labels
-.RE
-.RS
-.TP
-.B \-\-estimate TEXT
-suggested estimate
-.RE
-.RS
-.TP
-.B \-\-start YYYY\-MM\-DD
-suggested start
-.RE
-.RS
-.TP
-.B \-\-end YYYY\-MM\-DD
-suggested end
-.RE
-.RS
-.TP
-.B \-\-blocked\-by IDS
-suggested blockers
-.RE
-.TP
-.B lpui proposals
-list proposals
-.RS
-.TP
-.B \-\-json
-agent\-friendly JSON output
-.RE
-.RS
-.TP
-.B \-\-version
-print the installed version and exit
-.RE
-.RS
-.TP
-.B \-\-actor NAME
-who acted (shown in feed)
-.RE
-.RS
-.TP
-.B \-\-status {pending|approved|rejected|applied}
-filter by status (default: all) Choices: pending, approved, rejected, applied\.
-.RE
-.TP
-.B lpui approve
-approve a proposal (creates the item)
-.RS
-.TP
-.B \-\-json
-agent\-friendly JSON output
-.RE
-.RS
-.TP
-.B \-\-version
-print the installed version and exit
-.RE
-.RS
-.TP
-.B \-\-actor NAME
-who acted (shown in feed)
-.RE
-.RS
-.TP
-.B \-\-id ID
-proposal id Required\.
-.RE
-.TP
-.B lpui reject
-reject a proposal
-.RS
-.TP
-.B \-\-json
-agent\-friendly JSON output
-.RE
-.RS
-.TP
-.B \-\-version
-print the installed version and exit
-.RE
-.RS
-.TP
-.B \-\-actor NAME
-who acted (shown in feed)
-.RE
-.RS
-.TP
-.B \-\-id ID
-proposal id Required\.
-.RE
-.TP
-.B lpui ask
-agent: ask the human a question
-.RS
-.TP
-.B \-\-json
-agent\-friendly JSON output
-.RE
-.RS
-.TP
-.B \-\-version
-print the installed version and exit
-.RE
-.RS
-.TP
-.B \-\-actor NAME
-who acted (shown in feed)
-.RE
-.RS
-.TP
-.B \-\-question TEXT
-question (required) Required\.
-.RE
-.TP
-.B lpui questions
-list questions
-.RS
-.TP
-.B \-\-json
-agent\-friendly JSON output
-.RE
-.RS
-.TP
-.B \-\-version
-print the installed version and exit
-.RE
-.RS
-.TP
-.B \-\-actor NAME
-who acted (shown in feed)
-.RE
-.RS
-.TP
-.B \-\-all
-include answered
-.RE
-.TP
-.B lpui answer
-human: answer a question
-.RS
-.TP
-.B \-\-json
-agent\-friendly JSON output
-.RE
-.RS
-.TP
-.B \-\-version
-print the installed version and exit
-.RE
-.RS
-.TP
-.B \-\-actor NAME
-who acted (shown in feed)
-.RE
-.RS
-.TP
-.B \-\-id ID
-question id Required\.
-.RE
-.RS
-.TP
-.B \-\-text TEXT
-answer (required) Required\.
-.RE
-.TP
 .B lpui export
 full dump (agents: \-\-format json)
 .RS
@@ -1169,29 +523,6 @@ who acted (shown in feed)
 .TP
 .B \-\-file PATH
 dump file (required) Required\.
-.RE
-.TP
-.B lpui sync
-snapshot SQLite \-> Postgres replica (S#5)
-.RS
-.TP
-.B \-\-json
-agent\-friendly JSON output
-.RE
-.RS
-.TP
-.B \-\-version
-print the installed version and exit
-.RE
-.RS
-.TP
-.B \-\-actor NAME
-who acted (shown in feed)
-.RE
-.RS
-.TP
-.B \-\-dsn DSN
-postgresql://user:pass@host:port/db (or $LAZYPLAN_PG_DSN)
 .RE
 .TP
 .B lpui status
@@ -1373,13 +704,12 @@ who acted (shown in feed)
 .nf
 lpui                             # TUI (same as `lpui ui`)
 lpui list                        # ascii tree
-lpui list --status doing --owner alice
-lpui gantt --tasks --width 60
-lpui show --kind story --id 1
+lpui list --status doing --priority p0
+lpui show --kind project --id 1
+lpui --actor alice add-project --title \(dqAPI v2\(dq --why \(dq..\(dq --priority p1
+lpui --actor alice add-criteria --kind project --id 1 --text \(dqWorks offline\(dq
 lpui --actor alice add-task --story 1 --title \(dqFix bug\(dq --priority p1
 lpui status --kind task --id 3 --to done
-lpui propose --kind task --parent 1 --title \(dqRefactor X\(dq
-lpui proposals   # approve in TUI with 4 then a
 lpui feed --limit 20
 lpui export --format json > backup.json
 lpui import --file backup.json
@@ -1388,9 +718,6 @@ lpui import --file backup.json
 .TP
 .B LAZYPLAN_DB
 SQLite path override (same as \fB\-\-db\fR).
-.TP
-.B LAZYPLAN_PG_DSN
-Postgres DSN for \fBlpui sync\fR (or pass \fB\-\-dsn\fR).
 .TP
 .B USER
 Default for \fB\-\-actor\fR when not given.

@@ -6,8 +6,7 @@ import unittest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from lazyplan.cli import main as lpui_main
-from lazyplan.gantt import bar, span
-from lazyplan.models import RiskStatus, Status
+from lazyplan.models import Status
 from lazyplan.store import Store
 
 
@@ -21,9 +20,9 @@ class TestStore(unittest.TestCase):
         self.tmp.cleanup()
 
     def test_hierarchy(self):
-        p = self.store.add_project("Site", start_date="2026-10-20", end_date="2026-12-01")
-        s = self.store.add_story(p.id, "Home", start_date="2026-10-20", end_date="2026-11-01")
-        t = self.store.add_task(s.id, "Hero", estimate="3d")
+        p = self.store.add_project("Site", goal="why", priority="p1")
+        s = self.store.add_story(p.id, "Home", priority="p0")
+        t = self.store.add_task(s.id, "Hero", description="do it", priority="p0")
         self.assertEqual(self.store.counts()["tasks"], 1)
         tree = self.store.tree()
         self.assertEqual(tree[0][0].id, p.id)
@@ -34,13 +33,15 @@ class TestStore(unittest.TestCase):
     def test_validation(self):
         with self.assertRaises(ValueError):
             self.store.add_project("   ")
+        with self.assertRaises(ValueError):
+            self.store.add_project("P", priority="p9")
         with self.assertRaises(KeyError):
             self.store.add_story(999, "nope")
         with self.assertRaises(KeyError):
             self.store.add_task(999, "nope")
 
     def test_cli_json_ingress(self):
-        rc = lpui_main(["--db", self.db, "--json", "add-project", "--name", "P1"])
+        rc = lpui_main(["--db", self.db, "--json", "add-project", "--title", "P1"])
         self.assertEqual(rc, 0)
         rc = lpui_main(["--db", self.db, "--json", "add-story", "--project", "1", "--title", "S1"])
         self.assertEqual(rc, 0)
@@ -48,46 +49,58 @@ class TestStore(unittest.TestCase):
         self.assertEqual(rc, 0)
         self.assertEqual(self.store.counts()["tasks"], 1)
 
-    def test_narrative_show_and_links(self):
-        p = self.store.add_project(
-            "P",
-            goal="ship it",
-            success_metrics="done",
-            scope_in="a",
-            scope_out="b",
-            assumptions="c",
-        )
-        s = self.store.add_story(p.id, "S", owner="agent-1")
-        t = self.store.add_task(s.id, "T", description="do the thing", owner="agent-1")
-        self.store.update_project(p.id, goal="ship it well")
-        self.assertEqual(self.store.get_project(p.id).goal, "ship it well")
-        self.assertEqual(self.store.get_task(t.id).description, "do the thing")
-        self.assertEqual(self.store.distinct_owners(), ["agent-1"])
-        self.assertEqual(len(self.store.tree(owner="agent-1")[0][1]), 1)
-        self.assertEqual(self.store.tree(owner="nobody"), [])
-        li = self.store.add_link("story", s.id, "https://example.com/spec", "spec")
-        self.assertEqual(li.id, 1)
-        self.assertEqual(len(self.store.list_links("story", s.id)), 1)
-        full = self.store.get_full("story", s.id)
-        assert full is not None
-        self.assertEqual(full["links"][0]["url"], "https://example.com/spec")
-        self.assertEqual(len(full["tasks"]), 1)
-        self.assertTrue(self.store.delete_link(li.id))
-        self.assertEqual(self.store.list_links("story", s.id), [])
-        with self.assertRaises(KeyError):
-            self.store.add_link("story", 999, "https://x")
-        with self.assertRaises(ValueError):
-            self.store.add_link("project", p.id, "https://x")
+    def test_project_why_what_priority(self):
+        p = self.store.add_project("P", description="the what", goal="the why", priority="p1")
+        self.assertEqual(self.store.get_project(p.id).goal, "the why")
+        self.assertEqual(self.store.get_project(p.id).priority, "p1")
+        upd = self.store.update_project(p.id, goal="why v2", priority="p0")
+        assert upd is not None
+        self.assertEqual(upd.goal, "why v2")
+        self.assertEqual(upd.priority, "p0")
+        cleared = self.store.update_project(p.id, priority="")
+        assert cleared is not None
+        self.assertEqual(cleared.priority, "")
 
-    def test_link_cascade_on_delete(self):
+    def test_priority_sort(self):
+        p = self.store.add_project("P")
+        self.store.add_story(p.id, "Low", priority="p2")
+        self.store.add_story(p.id, "High", priority="p0")
+        self.assertEqual([s.title for s in self.store.list_stories(p.id)], ["High", "Low"])
+        with self.assertRaises(ValueError):
+            self.store.add_story(p.id, "Bad", priority="p9")
+        with self.assertRaises(ValueError):
+            self.store.add_task(1, "Bad", priority="p9")
+
+    def test_criteria_on_project_story_task(self):
         p = self.store.add_project("P")
         s = self.store.add_story(p.id, "S")
         t = self.store.add_task(s.id, "T")
-        self.store.add_link("story", s.id, "https://s")
-        self.store.add_link("task", t.id, "https://t")
-        self.assertTrue(self.store.delete("story", s.id))
-        self.assertEqual(self.store.list_links("story", s.id), [])
-        self.assertEqual(self.store.list_links("task", t.id), [])
+        for kind, oid in (("project", p.id), ("story", s.id), ("task", t.id)):
+            c1 = self.store.add_criteria(kind, oid, "works")
+            c2 = self.store.add_criteria(kind, oid, "fast")
+            self.assertEqual(self.store.criteria_progress(kind, oid), (0, 2))
+            self.store.set_criteria(c1.id, True)
+            self.assertEqual(self.store.criteria_progress(kind, oid), (1, 2))
+            self.assertEqual(len(self.store.open_criteria(kind, oid)), 1)
+            self.assertTrue(self.store.delete_criteria(c2.id))
+        with self.assertRaises(KeyError):
+            self.store.add_criteria("task", 999, "x")
+        with self.assertRaises(KeyError):
+            self.store.add_criteria("project", 999, "x")
+        with self.assertRaises(ValueError):
+            self.store.add_criteria("nope", 1, "x")
+
+    def test_criteria_cascade_on_delete(self):
+        p = self.store.add_project("P")
+        s = self.store.add_story(p.id, "S")
+        t = self.store.add_task(s.id, "T")
+        self.store.add_criteria("project", p.id, "pc")
+        self.store.add_criteria("story", s.id, "sc")
+        self.store.add_criteria("task", t.id, "tc")
+        self.assertTrue(self.store.delete("project", p.id))
+        self.assertEqual(self.store.list_criteria("project", p.id), [])
+        self.assertEqual(self.store.list_criteria("story", s.id), [])
+        self.assertEqual(self.store.list_criteria("task", t.id), [])
 
     def test_migration_from_old_db(self):
         import sqlite3
@@ -97,146 +110,94 @@ class TestStore(unittest.TestCase):
         conn.executescript("""
         CREATE TABLE projects (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL,
             description TEXT NOT NULL DEFAULT '', start_date TEXT NOT NULL DEFAULT '',
-            end_date TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'todo');
+            end_date TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'todo',
+            goal TEXT NOT NULL DEFAULT '', success_metrics TEXT NOT NULL DEFAULT '',
+            scope_in TEXT NOT NULL DEFAULT '', scope_out TEXT NOT NULL DEFAULT '',
+            assumptions TEXT NOT NULL DEFAULT '');
         CREATE TABLE stories (id INTEGER PRIMARY KEY AUTOINCREMENT,
             project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
             title TEXT NOT NULL, description TEXT NOT NULL DEFAULT '',
             status TEXT NOT NULL DEFAULT 'todo', start_date TEXT NOT NULL DEFAULT '',
-            end_date TEXT NOT NULL DEFAULT '');
+            end_date TEXT NOT NULL DEFAULT '', owner TEXT NOT NULL DEFAULT '',
+            priority TEXT NOT NULL DEFAULT '', labels TEXT NOT NULL DEFAULT '',
+            estimate TEXT NOT NULL DEFAULT '', blocked_by TEXT NOT NULL DEFAULT '');
         CREATE TABLE tasks (id INTEGER PRIMARY KEY AUTOINCREMENT,
             story_id INTEGER NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
             title TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'todo',
-            estimate TEXT NOT NULL DEFAULT '');
+            estimate TEXT NOT NULL DEFAULT '', start_date TEXT NOT NULL DEFAULT '',
+            end_date TEXT NOT NULL DEFAULT '', description TEXT NOT NULL DEFAULT '',
+            owner TEXT NOT NULL DEFAULT '', priority TEXT NOT NULL DEFAULT '',
+            labels TEXT NOT NULL DEFAULT '', blocked_by TEXT NOT NULL DEFAULT '');
+        CREATE TABLE criteria (id INTEGER PRIMARY KEY AUTOINCREMENT,
+            parent_kind TEXT NOT NULL CHECK (parent_kind IN ('story', 'task')),
+            parent_id INTEGER NOT NULL,
+            text TEXT NOT NULL CHECK (trim(text) <> ''),
+            done INTEGER NOT NULL DEFAULT 0);
         CREATE TABLE events (id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL NOT NULL,
             actor TEXT NOT NULL DEFAULT 'human', kind TEXT NOT NULL DEFAULT '',
             action TEXT NOT NULL DEFAULT '', detail TEXT NOT NULL DEFAULT '');
-        INSERT INTO projects (name) VALUES ('Old');
-        INSERT INTO stories (project_id, title) VALUES (1, 'OldS');
+        INSERT INTO projects (name, goal) VALUES ('Old', 'old-why');
+        INSERT INTO stories (project_id, title, priority) VALUES (1, 'OldS', 'p0');
         INSERT INTO tasks (story_id, title) VALUES (1, 'OldT');
+        INSERT INTO criteria (parent_kind, parent_id, text) VALUES ('story', 1, 'old-crit');
         """)
         conn.commit()
         conn.close()
         s = Store(legacy)  # must migrate, not crash
         self.assertEqual(s.get_project(1).name, "Old")
-        self.assertEqual(s.get_project(1).goal, "")
+        self.assertEqual(s.get_project(1).goal, "old-why")
+        self.assertEqual(s.get_project(1).priority, "")
         self.assertEqual(s.get_task(1).description, "")
-        self.assertEqual(s.get_task(1).owner, "")
+        self.assertEqual(s.list_criteria("story", 1)[0].text, "old-crit")
+        # project-level criteria now allowed on the migrated table
+        c = s.add_criteria("project", 1, "new-crit")
+        self.assertEqual(c.text, "new-crit")
         self.assertEqual(s.counts()["tasks"], 1)
 
-    def test_planning_fields_sort_and_guards(self):
-        p = self.store.add_project("P")
-        low = self.store.add_story(p.id, "Low", priority="p2", labels="UI, ui, backend")
-        high = self.store.add_story(p.id, "High", priority="p0")
-        self.assertEqual([s.title for s in self.store.list_stories(p.id)], ["High", "Low"])
-        self.assertEqual(low.labels, ["ui", "backend"])
-        with self.assertRaises(ValueError):
-            self.store.add_story(p.id, "Bad", priority="p9")
-        t1 = self.store.add_task(high.id, "T1")
-        t2 = self.store.add_task(high.id, "T2", blocked_by=str(t1.id))
-        self.assertTrue(self.store.is_blocked("task", t2.id))
-        self.store.set_status("task", t1.id, Status.DONE)
-        self.assertFalse(self.store.is_blocked("task", t2.id))
-        with self.assertRaises(ValueError):
-            self.store.update_task(t1.id, blocked_by=str(t2.id))  # cycle
-        with self.assertRaises(ValueError):
-            self.store.update_task(t1.id, blocked_by=str(t1.id))  # self
-        with self.assertRaises(KeyError):
-            self.store.update_task(t1.id, blocked_by="4242")
-        est = self.store.update_story(high.id, estimate="~2w")
-        assert est is not None
-        self.assertEqual(est.estimate, "~2w")
-        self.assertEqual(len(self.store.tree(priority="p0")[0][1]), 1)
-
-    def test_criteria_risks_milestones(self):
-        p = self.store.add_project("P")
-        s = self.store.add_story(p.id, "S")
-        t = self.store.add_task(s.id, "T")
-        c1 = self.store.add_criteria("task", t.id, "works")
-        c2 = self.store.add_criteria("task", t.id, "fast")
-        self.assertEqual(self.store.criteria_progress("task", t.id), (0, 2))
-        self.store.set_criteria(c1.id, True)
-        self.assertEqual(self.store.criteria_progress("task", t.id), (1, 2))
-        self.assertEqual(len(self.store.open_criteria("task", t.id)), 1)
-        self.assertTrue(self.store.delete_criteria(c2.id))
-        with self.assertRaises(KeyError):
-            self.store.add_criteria("task", 999, "x")
-        r = self.store.add_risk(p.id, "slip", likelihood="high", impact="high")
-        self.assertEqual(self.store.list_risks(p.id)[0].id, r.id)
-        self.store.set_risk(r.id, status=RiskStatus.MITIGATED, mitigation="buffer")
-        self.assertEqual(self.store.set_risk(r.id).status, RiskStatus.MITIGATED)
-        m = self.store.add_milestone(p.id, "Beta", "2026-11-15")
-        self.assertEqual(self.store.list_milestones(p.id)[0].id, m.id)
-        full = self.store.get_full("project", p.id)
-        assert full is not None
-        self.assertEqual(len(full["risks"]), 1)
-        self.assertEqual(len(full["milestones"]), 1)
-        self.assertTrue(self.store.delete_milestone(m.id))
-
-    def test_sync_to_postgres_live(self):
-        dsn = os.environ.get("LAZYPLAN_TEST_PG_DSN", "")
-        if not dsn:
-            self.skipTest("no live postgres (set LAZYPLAN_TEST_PG_DSN)")
-        try:
-            import psycopg  # noqa: F401
-        except ImportError:
-            self.skipTest("psycopg not installed")
-        from lazyplan.postgres_sync import sync_sqlite_to_pg
-
-        p = self.store.add_project("P")
-        s = self.store.add_story(p.id, "S")
-        t = self.store.add_task(s.id, "T")
-        self.store.add_criteria("task", t.id, "works")
-        counts = sync_sqlite_to_pg(str(self.store.path), dsn)
-        self.assertEqual(counts["tasks"], 1)
-        import psycopg as _pg
-
-        with _pg.connect(dsn) as conn, conn.cursor() as cur:
-            cur.execute("SELECT title FROM tasks WHERE id=%s", (t.id,))
-            self.assertEqual(cur.fetchone()[0], "T")
-
     def test_export_import_roundtrip(self):
-        p = self.store.add_project("P", goal="g")
+        p = self.store.add_project("P", goal="g", priority="p1")
         self.store.set_status("project", p.id, Status.DOING)
         s = self.store.add_story(p.id, "S", priority="p1")
-        b = self.store.add_story(p.id, "B")
-        self.store.update_story(s.id, blocked_by=str(b.id))
+        self.store.add_criteria("project", p.id, "pcrit")
         t = self.store.add_task(s.id, "T", description="d")
         self.store.set_status("task", t.id, Status.DONE)
         self.store.add_criteria("task", t.id, "works")
-        self.store.add_risk(p.id, "r1")
-        self.store.add_milestone(p.id, "M1", "2026-12-01")
-        self.store.add_link("story", s.id, "https://ex.com")
         data = self.store.export_all()
         import tempfile
 
         db2 = os.path.join(tempfile.mkdtemp(), "imp.db")
         s2 = Store(db2)
         counts = s2.import_all(data)
-        self.assertEqual(
-            counts,
-            {
-                "projects": 1,
-                "stories": 2,
-                "tasks": 1,
-                "links": 1,
-                "criteria": 1,
-                "risks": 1,
-                "milestones": 1,
-            },
-        )
+        self.assertEqual(counts, {"projects": 1, "stories": 1, "tasks": 1, "criteria": 2})
         self.assertEqual(s2.get_project(1).status, Status.DOING)
         self.assertEqual(s2.get_project(1).goal, "g")
+        self.assertEqual(s2.get_project(1).priority, "p1")
         self.assertEqual(s2.get_task(1).description, "d")
         self.assertEqual(s2.get_task(1).status, Status.DONE)
+        self.assertEqual(s2.criteria_progress("project", 1), (0, 1))
         self.assertEqual(s2.criteria_progress("task", 1), (0, 1))
-        full = s2.get_full("story", 1)
-        assert full is not None
-        self.assertEqual(full["story"]["blocked_by"], [b.id])
         with self.assertRaises(ValueError):
             s2.import_all({"nope": True})
 
     def test_cli_planning_surface(self):
-        self.assertEqual(lpui_main(["--db", self.db, "add-project", "--name", "P1"]), 0)
+        self.assertEqual(
+            lpui_main(
+                [
+                    "--db",
+                    self.db,
+                    "add-project",
+                    "--title",
+                    "P1",
+                    "--why",
+                    "w",
+                    "--what",
+                    "x",
+                    "--priority",
+                    "p1",
+                ]
+            ),
+            0,
+        )
         self.assertEqual(
             lpui_main(
                 [
@@ -249,10 +210,8 @@ class TestStore(unittest.TestCase):
                     "S1",
                     "--priority",
                     "p0",
-                    "--labels",
-                    "a,b",
-                    "--estimate",
-                    "big",
+                    "--desc",
+                    "d",
                 ]
             ),
             0,
@@ -263,181 +222,33 @@ class TestStore(unittest.TestCase):
             ),
             0,
         )
-        self.assertEqual(
-            lpui_main(
-                ["--db", self.db, "update", "--kind", "task", "--id", "1", "--blocked-by", ""]
-            ),
-            0,
-        )
         self.assertEqual(lpui_main(["--db", self.db, "list", "--priority", "p0"]), 0)
         self.assertEqual(
             lpui_main(
-                ["--db", self.db, "add-criteria", "--kind", "task", "--id", "1", "--text", "works"]
+                [
+                    "--db",
+                    self.db,
+                    "add-criteria",
+                    "--kind",
+                    "project",
+                    "--id",
+                    "1",
+                    "--text",
+                    "works",
+                ]
             ),
             0,
         )
-        self.assertEqual(lpui_main(["--db", self.db, "criteria", "--kind", "task", "--id", "1"]), 0)
+        self.assertEqual(
+            lpui_main(["--db", self.db, "criteria", "--kind", "project", "--id", "1"]), 0
+        )
         self.assertEqual(lpui_main(["--db", self.db, "check", "--id", "1"]), 0)
         self.assertEqual(lpui_main(["--db", self.db, "uncheck", "--id", "1"]), 0)
-        self.assertEqual(
-            lpui_main(
-                [
-                    "--db",
-                    self.db,
-                    "add-risk",
-                    "--project",
-                    "1",
-                    "--title",
-                    "slip",
-                    "--likelihood",
-                    "high",
-                ]
-            ),
-            0,
-        )
-        self.assertEqual(lpui_main(["--db", self.db, "risks", "--project", "1"]), 0)
-        self.assertEqual(
-            lpui_main(["--db", self.db, "risk-status", "--id", "1", "--to", "mitigated"]), 0
-        )
-        self.assertEqual(
-            lpui_main(
-                [
-                    "--db",
-                    self.db,
-                    "add-milestone",
-                    "--project",
-                    "1",
-                    "--title",
-                    "Beta",
-                    "--date",
-                    "2026-11-15",
-                ]
-            ),
-            0,
-        )
-        self.assertEqual(lpui_main(["--db", self.db, "milestones", "--project", "1"]), 0)
-        self.assertEqual(lpui_main(["--db", self.db, "gantt", "--tasks", "--width", "20"]), 0)
         self.assertEqual(lpui_main(["--db", self.db, "export", "--format", "markdown"]), 0)
         self.assertEqual(
             lpui_main(["--db", self.db, "status", "--kind", "task", "--id", "1", "--to", "done"]), 0
         )  # warns, proceeds
         self.assertEqual(lpui_main(["--db", self.db, "delete-criteria", "--id", "1"]), 0)
-        self.assertEqual(lpui_main(["--db", self.db, "delete-milestone", "--id", "1"]), 0)
-
-    def test_proposals_and_questions(self):
-        p = self.store.add_project("P")
-        s = self.store.add_story(p.id, "S")
-        pr = self.store.propose("task", s.id, {"title": "PT", "priority": "p1"}, actor="agent-1")
-        self.assertEqual(pr["status"], "pending")
-        with self.assertRaises(KeyError):
-            self.store.propose("task", 999, {"title": "x"})
-        with self.assertRaises(ValueError):
-            self.store.propose("task", s.id, {"title": "  "})
-        res = self.store.decide_proposal(pr["id"], True, actor="human")
-        assert res is not None
-        self.assertEqual(res["status"], "applied")
-        self.assertEqual(self.store.get_task(res["result_id"]).priority, "p1")
-        pr2 = self.store.propose("story", p.id, {"title": "PS"}, actor="agent-1")
-        self.store.decide_proposal(pr2["id"], False)
-        self.assertEqual(self.store.list_proposals("pending"), [])
-        with self.assertRaises(ValueError):
-            self.store.decide_proposal(pr2["id"], True)  # already rejected
-        q = self.store.ask("agent-1", "Which?")
-        self.assertEqual(len(self.store.list_questions()), 1)
-        self.store.answer_question(q["id"], "Blue", actor="human")
-        self.assertEqual(self.store.list_questions(), [])
-        self.assertEqual(len(self.store.list_questions(open_only=False)), 1)
-
-    def test_cli_proposals_questions(self):
-        self.assertEqual(lpui_main(["--db", self.db, "add-project", "--name", "P"]), 0)
-        self.assertEqual(
-            lpui_main(["--db", self.db, "add-story", "--project", "1", "--title", "S"]), 0
-        )
-        self.assertEqual(
-            lpui_main(
-                [
-                    "--db",
-                    self.db,
-                    "--actor",
-                    "agent-1",
-                    "propose",
-                    "--kind",
-                    "task",
-                    "--parent",
-                    "1",
-                    "--title",
-                    "PT",
-                ]
-            ),
-            0,
-        )
-        self.assertEqual(lpui_main(["--db", self.db, "proposals"]), 0)
-        self.assertEqual(lpui_main(["--db", self.db, "reject", "--id", "1"]), 0)
-        self.assertEqual(
-            lpui_main(["--db", self.db, "--actor", "agent-1", "ask", "--question", "Q?"]), 0
-        )
-        self.assertEqual(lpui_main(["--db", self.db, "questions"]), 0)
-        self.assertEqual(lpui_main(["--db", self.db, "answer", "--id", "1", "--text", "A"]), 0)
-
-    def test_critical_path(self):
-        p = self.store.add_project("P")
-        a = self.store.add_story(p.id, "A", start_date="2026-01-01", end_date="2026-01-10")
-        b = self.store.add_story(
-            p.id, "B", start_date="2026-01-05", end_date="2026-01-06", blocked_by=str(a.id)
-        )
-        c = self.store.add_story(p.id, "C", blocked_by=str(b.id))
-        self.assertEqual(self.store.critical_path(p.id), [a.id, b.id, c.id])
-        full = self.store.get_full("project", p.id)
-        assert full is not None
-        self.assertEqual(full["critical"], [a.id, b.id, c.id])
-
-    def test_cli_show_and_links(self):
-        self.assertEqual(
-            lpui_main(["--db", self.db, "add-project", "--name", "P1", "--goal", "g1"]), 0
-        )
-        self.assertEqual(
-            lpui_main(
-                [
-                    "--db",
-                    self.db,
-                    "add-story",
-                    "--project",
-                    "1",
-                    "--title",
-                    "S1",
-                    "--owner",
-                    "agent-9",
-                ]
-            ),
-            0,
-        )
-        self.assertEqual(
-            lpui_main(
-                ["--db", self.db, "add-task", "--story", "1", "--title", "T1", "--desc", "d1"]
-            ),
-            0,
-        )
-        self.assertEqual(
-            lpui_main(
-                [
-                    "--db",
-                    self.db,
-                    "add-link",
-                    "--kind",
-                    "story",
-                    "--id",
-                    "1",
-                    "--url",
-                    "https://ex.com",
-                    "--label",
-                    "spec",
-                ]
-            ),
-            0,
-        )
-        self.assertEqual(lpui_main(["--db", self.db, "links", "--kind", "story", "--id", "1"]), 0)
-        self.assertEqual(lpui_main(["--db", self.db, "show", "--kind", "project", "--id", "1"]), 0)
-        self.assertEqual(lpui_main(["--db", self.db, "show", "--kind", "story", "--id", "1"]), 0)
         self.assertEqual(
             lpui_main(
                 [
@@ -445,33 +256,39 @@ class TestStore(unittest.TestCase):
                     self.db,
                     "update",
                     "--kind",
-                    "task",
+                    "project",
                     "--id",
                     "1",
-                    "--owner",
-                    "agent-9",
-                    "--desc",
-                    "d2",
+                    "--why",
+                    "w2",
+                    "--priority",
+                    "none",
                 ]
             ),
             0,
         )
-        self.assertEqual(self.store.get_task(1).owner, "agent-9")
-        self.assertEqual(lpui_main(["--db", self.db, "list", "--owner", "agent-9"]), 0)
-        self.assertEqual(lpui_main(["--db", self.db, "delete-link", "--id", "1"]), 0)
+        self.assertEqual(self.store.get_project(1).priority, "")
 
-    def test_task_dates_and_update(self):
-        p = self.store.add_project("P")
-        s = self.store.add_story(p.id, "S", start_date="2026-10-20", end_date="2026-11-01")
-        t = self.store.add_task(s.id, "T", start_date="2026-10-21", end_date="2026-10-25")
-        self.assertEqual(t.start_date, "2026-10-21")
-        upd = self.store.update_task(t.id, title="T2", estimate="2d")
-        assert upd is not None
-        self.assertEqual(upd.title, "T2")
-        self.assertEqual(self.store.get_task(t.id).estimate, "2d")
-        dates = ["2026-10-20", "2026-11-01", "2026-10-21", "2026-10-25"]
-        lo, hi = span(dates)
-        self.assertIn("█", bar("2026-10-21", "2026-10-25", lo, hi))
+    def test_cli_show(self):
+        self.assertEqual(
+            lpui_main(["--db", self.db, "add-project", "--title", "P1", "--why", "g1"]), 0
+        )
+        self.assertEqual(
+            lpui_main(["--db", self.db, "add-story", "--project", "1", "--title", "S1"]), 0
+        )
+        self.assertEqual(
+            lpui_main(
+                ["--db", self.db, "add-task", "--story", "1", "--title", "T1", "--desc", "d1"]
+            ),
+            0,
+        )
+        self.assertEqual(lpui_main(["--db", self.db, "show", "--kind", "project", "--id", "1"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "show", "--kind", "story", "--id", "1"]), 0)
+        self.assertEqual(
+            lpui_main(["--db", self.db, "update", "--kind", "task", "--id", "1", "--desc", "d2"]),
+            0,
+        )
+        self.assertEqual(self.store.get_task(1).description, "d2")
 
     def test_events_and_fingerprint(self):
         fp0 = self.store.fingerprint()
@@ -488,11 +305,11 @@ class TestStore(unittest.TestCase):
         self.assertEqual(self.store.counts()["tasks"], 0)
 
     def test_filters(self):
-        p1 = self.store.add_project("P1")
-        p2 = self.store.add_project("P2")
-        s1 = self.store.add_story(p1.id, "S1")
+        p1 = self.store.add_project("P1", priority="p0")
+        p2 = self.store.add_project("P2", priority="p2")
+        s1 = self.store.add_story(p1.id, "S1", priority="p0")
         s2 = self.store.add_story(p2.id, "S2")
-        t1 = self.store.add_task(s1.id, "T1")
+        t1 = self.store.add_task(s1.id, "T1", priority="p1")
         self.store.add_task(s2.id, "T2")
         self.store.set_status("task", t1.id, Status.DONE)
         done = self.store.tree(status=Status.DONE)
@@ -500,9 +317,12 @@ class TestStore(unittest.TestCase):
         only_p2 = self.store.tree(project_id=p2.id)
         self.assertEqual(len(only_p2), 1)
         self.assertEqual(only_p2[0][0].id, p2.id)
+        pri = self.store.tree(priority="p0")
+        self.assertEqual(len(pri), 1)
+        self.assertEqual(pri[0][0].id, p1.id)
 
     def test_cli_update_delete_feed(self):
-        self.assertEqual(lpui_main(["--db", self.db, "add-project", "--name", "P1"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "add-project", "--title", "P1"]), 0)
         self.assertEqual(
             lpui_main(["--db", self.db, "add-story", "--project", "1", "--title", "S1"]), 0
         )
@@ -510,21 +330,7 @@ class TestStore(unittest.TestCase):
             lpui_main(["--db", self.db, "add-task", "--story", "1", "--title", "T1"]), 0
         )
         self.assertEqual(
-            lpui_main(
-                [
-                    "--db",
-                    self.db,
-                    "update",
-                    "--kind",
-                    "task",
-                    "--id",
-                    "1",
-                    "--title",
-                    "T1b",
-                    "--estimate",
-                    "1d",
-                ]
-            ),
+            lpui_main(["--db", self.db, "update", "--kind", "task", "--id", "1", "--title", "T1b"]),
             0,
         )
         self.assertEqual(self.store.get_task(1).title, "T1b")
@@ -533,9 +339,28 @@ class TestStore(unittest.TestCase):
             0,
         )
         self.assertEqual(lpui_main(["--db", self.db, "feed", "--limit", "3"]), 0)
-        self.assertEqual(lpui_main(["--db", self.db, "gantt", "--tasks", "--width", "20"]), 0)
         self.assertEqual(lpui_main(["--db", self.db, "delete", "--kind", "task", "--id", "1"]), 0)
         self.assertEqual(self.store.counts()["tasks"], 0)
+
+    def test_removed_verbs_are_gone(self):
+        import io
+        from contextlib import redirect_stderr
+
+        for argv in (
+            ["gantt"],
+            ["propose", "--kind", "task", "--parent", "1", "--title", "x"],
+            ["ask", "--question", "q"],
+            ["sync"],
+            ["add-link", "--kind", "task", "--id", "1", "--url", "https://x"],
+            ["add-risk", "--project", "1", "--title", "r"],
+            ["add-milestone", "--project", "1", "--title", "m"],
+        ):
+            with self.subTest(argv=argv):
+                buf = io.StringIO()
+                with redirect_stderr(buf):
+                    with self.assertRaises(SystemExit) as ctx:
+                        lpui_main(["--db", self.db, *argv])
+                self.assertEqual(ctx.exception.code, 2)
 
 
 if __name__ == "__main__":

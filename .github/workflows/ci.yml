@@ -16,6 +16,6 @@ jobs:
       - name: Install (editable + dev extras)
         run: |
           python3 -m venv .venv
-          .venv/bin/pip install -e ".[dev,postgres]"
+          .venv/bin/pip install -e ".[dev]"
       - name: Gates (ruff + mypy + unittest x2)
         run: ./tools/check.sh

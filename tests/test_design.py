@@ -25,36 +25,38 @@ class TestDesignSystem(unittest.TestCase):
         self.tmp.cleanup()
 
     def test_label_grammar(self):
-        p = Project(id=1, name="N", start_date="2026-01-01", end_date="2026-02-01")
-        self.assertEqual(design.project_label(p), "P#1 [todo] N (2026-01-01..2026-02-01)")
-        s = UserStory(id=2, project_id=1, title="S", owner="agent-1")
-        self.assertIn("@agent-1", design.story_label(s))
-        t = Task(id=3, story_id=2, title="T", estimate="2d")
-        self.assertIn("~2d", design.task_label(t))
-        self.assertEqual(design.owner_tag(""), "")
+        p = Project(id=1, name="N", priority="p1")
+        self.assertEqual(design.project_label(p), "P#1 [todo] !p1 N")
+        s = UserStory(id=2, project_id=1, title="S", priority="p0")
+        self.assertEqual(design.story_label(s), "S#2 [todo] !p0 S")
+        t = Task(id=3, story_id=2, title="T")
+        self.assertEqual(design.task_label(t), "T#3 [todo] T")
+        self.assertEqual(design.priority_tag(""), "")
 
-    def test_project_row_pill_title_delivery_date(self):
-        p = Project(id=1, name="N", start_date="2026-01-01", end_date="2026-02-01")
-        self.assertEqual(design.project_row(p), "[reverse] P1 [/] N (due 2026-02-01)")
-        self.assertEqual(design.delivery_tag("2026-02-01"), " (due 2026-02-01)")
-        self.assertEqual(design.delivery_tag(""), "")
+    def test_criteria_progress_in_labels(self):
+        p = self.store.add_project("P")
+        self.store.add_criteria("project", p.id, "done-thing", actor="t")
+        c2 = self.store.add_criteria("project", p.id, "open-thing", actor="t")
+        self.assertIn("[0/2✓]", design.project_label(p, self.store))
+        self.store.set_criteria(c2.id, True, actor="t")
+        self.assertIn("[1/2✓]", design.project_label(p, self.store))
 
-    def test_project_row_no_date_and_escaped_title(self):
-        p = Project(id=7, name="Ray [old]", end_date="")
-        self.assertEqual(design.project_row(p), "[reverse] P7 [/] Ray \\[old]")
+    def test_project_row_pill_and_escaped_title(self):
+        p = Project(id=1, name="Ray [old]", priority="p1")
+        self.assertEqual(design.project_row(p), "[reverse] P1 [/] !p1 Ray \\[old]")
         self.assertNotIn("[todo]", design.project_row(p))
 
     def test_cli_uses_design_labels(self):
-        p = self.store.add_project("P", start_date="2026-01-01", end_date="2026-02-01")
-        s = self.store.add_story(p.id, "S", owner="agent-1")
-        t = self.store.add_task(s.id, "T", estimate="2d")
+        p = self.store.add_project("P", priority="p1")
+        s = self.store.add_story(p.id, "S", priority="p0")
+        t = self.store.add_task(s.id, "T")
         buf = io.StringIO()
         with redirect_stdout(buf):
             self.assertEqual(lpui_main(["--db", self.db, "list"]), 0)
         lines = buf.getvalue().splitlines()
-        self.assertEqual(lines[0], design.project_label(p))
-        self.assertEqual(lines[1], "  " + design.story_label(s))
-        self.assertEqual(lines[2], "    " + design.task_label(t))
+        self.assertEqual(lines[0], design.project_label(p, self.store))
+        self.assertEqual(lines[1], "  " + design.story_label(s, self.store))
+        self.assertEqual(lines[2], "    " + design.task_label(t, self.store))
 
     def test_help_single_source(self):
         buf = io.StringIO()

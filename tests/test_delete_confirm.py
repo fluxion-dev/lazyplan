@@ -1,4 +1,4 @@
-"""Destructive `: ` verbs confirm first; confirm dialogs render centered.
+"""Destructive keys confirm first; confirm dialogs render centered.
 
 Headless Textual pilot tests (skipped on stdlib-only interpreters).
 """
@@ -28,26 +28,17 @@ class TestDeleteConfirm(unittest.IsolatedAsyncioTestCase):
         self.pid = store.add_project("P").id
         self.sid = store.add_story(self.pid, "S").id
         self.tid = store.add_task(self.sid, "T").id
-        self.lid = store.add_link("task", self.tid, "https://x.example").id
         self.app = tui_mod.create_app(self.db)
 
     async def asyncTearDown(self):
         self.tmp.cleanup()
 
-    async def _submit(self, pilot, text):
-        from textual.widgets import Input
-
-        bar = self.app.query_one("#cmdbar", Input)
-        bar.focus()
-        bar.value = text
-        await pilot.pause()
-        await pilot.press("enter")
-        await pilot.pause()
-
-    async def test_cmdbar_delete_asks_first(self):
+    async def test_d_key_delete_asks_first(self):
         async with self.app.run_test() as pilot:
             await pilot.pause()
-            await self._submit(pilot, f"delete --kind task --id {self.tid}")
+            self.app.selected = ("task", self.tid)
+            await pilot.press("d")
+            await pilot.pause()
             self.assertEqual(len(self.app.screen_stack), 2)
             self.assertIsInstance(self.app.screen, ConfirmScreen)
             # cancel: row survives
@@ -56,25 +47,34 @@ class TestDeleteConfirm(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(len(self.app.screen_stack), 1)
             self.assertIsNotNone(Store(self.db).get_task(self.tid))
             # confirm: row goes
-            await self._submit(pilot, f"delete --kind task --id {self.tid}")
+            await pilot.press("d")
+            await pilot.pause()
             await pilot.click("#ok")
             await pilot.pause()
             self.assertEqual(len(self.app.screen_stack), 1)
             self.assertIsNone(Store(self.db).get_task(self.tid))
 
-    async def test_cmdbar_delete_link_confirms(self):
+    async def test_c_key_ticks_criteria(self):
+        store = Store(self.db)
+        cid = store.add_criteria("task", self.tid, "works").id
         async with self.app.run_test() as pilot:
             await pilot.pause()
-            await self._submit(pilot, f"delete-link --id {self.lid}")
-            self.assertIsInstance(self.app.screen, ConfirmScreen)
-            await pilot.press("escape")
+            self.app.selected = ("task", self.tid)
+            await pilot.press("c")
             await pilot.pause()
-            self.assertEqual(len(Store(self.db).list_links("task", self.tid)), 1)
+            self.assertTrue(Store(self.db).list_criteria("task", self.tid)[0].done)
+            await pilot.press("c")  # nothing open: reopens the last one
+            await pilot.pause()
+            crit = Store(self.db).list_criteria("task", self.tid)[0]
+            self.assertEqual(crit.id, cid)
+            self.assertFalse(crit.done)
 
-    async def test_cmdbar_status_runs_without_confirm(self):
+    async def test_space_runs_without_confirm(self):
         async with self.app.run_test() as pilot:
             await pilot.pause()
-            await self._submit(pilot, f"status --kind task --id {self.tid} --to doing")
+            self.app.selected = ("task", self.tid)
+            await pilot.press("space")
+            await pilot.pause()
             self.assertEqual(len(self.app.screen_stack), 1)
             self.assertEqual(Store(self.db).get_task(self.tid).status.value, "doing")
 

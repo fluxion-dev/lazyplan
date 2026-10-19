@@ -20,7 +20,6 @@ try:
         EditScreen,
         HelpScreen,
         NewTaskScreen,
-        PaletteScreen,
     )
 except ImportError:  # stdlib-only interpreter: no textual, no screens
     tui_mod = None  # type: ignore[assignment]
@@ -91,10 +90,9 @@ class TestEscBacksOut(unittest.IsolatedAsyncioTestCase):
             await self._esc_out(pilot, ConfirmScreen("Delete task?"))
             self.assertIsNotNone(Store(self.db).get_task(self.tid))
 
-    async def test_palette_and_help_esc(self):
+    async def test_help_esc(self):
         async with self.app.run_test() as pilot:
             await pilot.pause()
-            await self._esc_out(pilot, PaletteScreen(Store(self.db)))
             await self._esc_out(pilot, HelpScreen())
 
 

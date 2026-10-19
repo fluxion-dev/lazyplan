@@ -20,16 +20,16 @@ add a view, command, label, empty state, or message.
   `design.msg_error` / `msg_not_found`; TUI notifies via the same helpers.
   `except Exception` only as a documented isolation point, otherwise narrow.
 - No mutable defaults, no `assert` for logic, no eval/exec (audited clean).
-- Naming matches pyguide §3.16 as-is (argparse-builder temporaries and
-  gantt math variables excepted as conventional).
+- Naming matches pyguide §3.16 as-is (argparse-builder temporaries excepted
+  as conventional).
 - Reference: https://google.github.io/styleguide/pyguide.html — §2.1 lint,
   §2.2 imports, §2.4 exceptions, §2.5 globals, §2.21/§3.19 types,
   §3.8 docstrings, §3.16 naming.
 
 ## The commitment
 
-Wherever you see `T#12 [doing] Title @agent-1`, it means the same thing in
-`lpui list`, the TUI tree, JSON output, and the gantt tooltip. Wherever you type
+Wherever you see `T#12 [doing] !p0 Title [1/2✓]`, it means the same thing in
+`lpui list`, the TUI tree, and JSON output. Wherever you type
 `status --kind task --id 1 --to done` (shell or `:` bar), it does the same
 thing. That predictability is the whole system.
 
@@ -37,35 +37,44 @@ thing. That predictability is the whole system.
 
 | Type | Realization |
 |---|---|
-| Visual | Tokens in `design.py`: one border (`solid green`), one panel height, one-row bars, one plain label grammar, one TUI project row (`[reverse]` pill + title + `(due DATE)`), one date shape `(start..end)`, one owner shape `@name` |
-| Functional | `lpui` verbs == TUI `:` verbs; one key does one thing in every view (`1/2/3` views, `space` cycles status, `enter` details) |
+| Visual | Tokens in `design.py`: one border (`solid green`), one panel height, one-row bars, one plain label grammar (`KIND#id [status] !p0 title [done/total✓]`), one TUI project row (`[reverse]` pill + priority + title) |
+| Functional | `lpui` verbs == TUI `:` verbs; one key does one thing (`space` cycles status, `enter` details) |
 | Internal | CLI and TUI render from `design.*` helpers — no local format strings (`test_design.py` fails the build on drift) |
 | External | Shell conventions: `--help`, `--json` before or after the verb, `--db`/`$LAZYPLAN_DB`/repo/global resolution, exit non-zero on error, `KEY=value` env overrides |
 
 ## User goals (research first)
 
-Two users share one DB in tmux: a **human planner** (stream-of-consciousness
-capture, keyboard-first, glanceable roadmap) and **coding agents** (inject work
-via `lpui --actor NAME`, read context via `lpui show`/`--json`, never touch the TUI
-process). Every design decision serves both: human-readable first,
-machine-parseable always.
+Two users share one DB in tmux: a **human planner** (interviewed for each
+project's why/what/acceptance criteria, keyboard-first, glanceable tree) and
+**coding agents** (cut prioritized stories + tasks once the definition is
+agreed, inject work via `lpui --actor NAME`, read context via `lpui show`/
+`--json`, never touch the TUI process). Every design decision serves both:
+human-readable first, machine-parseable always.
+
+## The model (the whole thing)
+
+Project: title + priority (`p0`–`p3`) + why (`goal`) + what (`description`) +
+acceptance criteria (project-level checklist). Story: title + details +
+priority. Task: title + details + priority. Every level: `todo` → `doing` →
+`done`. No dates, owners, labels, estimates, dependencies, links, risks, or
+milestones — if it is not title/details/priority/status/why/what/criteria,
+it does not exist.
 
 ## Patterns (don't reinvent)
 
-- nano/vi: always-visible footer hints, `/` focuses the command bar, `?` overlay, `q` quits
-- Single panel, three views (`1` tree · `2` gantt · `3` feed) — never split panes
+- nano/vi: always-visible footer hints, `?` overlay, `q` quits
+- Single panel, one view (tree) — never split panes, never extra views, no command entry
 - Modal forms: title + inputs with examples + Create/Save + Cancel, `esc` backs out
 
 ## Hierarchy (what the eye hits, in order)
 
-`Header` (app + clock) → `#panel` (tree/gantt/feed, exactly one visible) →
-`#activity` (last agent/human event) → `#statusbar` (`[scope] P/S/T · filters · zoom · note`)
-→ `#cmdbar` (`:` verbs) → `Footer` (keys). Secondary info (descriptions,
-links, narrative) lives one `enter` away in the detail modal, never in the row.
+`Header` (app + clock) → `#panel` (tree) → `#activity` (last agent/human
+event) → `#statusbar` (`[scope] P/S/T · filters · note`) → `Footer` (keys). Secondary info (why/what, details, criteria) lives
+one `enter` away in the detail modal, never in the row.
 
 ## Components
 
-- Rows: `KIND#id [status] !p0 title @owner (dates) ~estimate [done/total✓] [!blocked by ids]` (`design.*_label`)
+- Rows: `KIND#id [status] !p0 title [done/total✓]` (`design.*_label`)
 - Status tokens: `todo` / `doing` / `done` — lowercase, everywhere, JSON included
 - Forms: one `_Form` base; project/story/task create + edit + detail + help
 - Feedback: toast on every external change, activity line shows latest event,
@@ -73,11 +82,11 @@ links, narrative) lives one `enter` away in the detail modal, never in the row.
 
 ## Content rules
 
-- Glossary (never synonyms): project > story > task; **owner** (responsible) vs
-  **actor** (who acted); `doing`, not "in progress"
+- Glossary (never synonyms): project > story > task; **why** (`goal`) vs
+  **what** (`description`); **actor** (who acted); `doing`, not "in progress"
 - Errors: `error: <what>` on stderr, exit 2; missing rows: `<kind> #<id> not found`, exit 1
 - Empty states: `EMPTY_NO_PROJECTS` / `EMPTY_FILTERED` / `EMPTY_FEED` — same words in CLI and TUI
-- Defaults: gantt width 40 (zoom 20–100), feed limit 20, poll 1s, empty dates sort as undated
+- Defaults: feed limit 20, poll 1s; priorities `p0` (highest) – `p3`
 
 ## Communication rules
 

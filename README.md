@@ -1,4 +1,4 @@
-# lazyplan (`lpui`) — v0.12.0
+# lazyplan (`lpui`) — v0.13.0
 
 [![CI](https://github.com/fluxion-dev/lazyplan/actions/workflows/ci.yml/badge.svg)](https://github.com/fluxion-dev/lazyplan/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/fluxion-dev/lazyplan)](https://github.com/fluxion-dev/lazyplan/releases)
@@ -25,9 +25,9 @@ System packages (vendored deps, needs only `python3 >= 3.11`):
 
 ```bash
 # Fedora / RHEL / openSUSE — grab the matching asset from Releases
-sudo dnf install ./lazyplan-0.12.0-1.x86_64.rpm   # or -1.aarch64.rpm on ARM
+sudo dnf install ./lazyplan-0.13.0-1.x86_64.rpm   # or -1.aarch64.rpm on ARM
 # Debian / Ubuntu
-sudo apt install ./lazyplan_0.12.0-1_amd64.deb     # or -1_arm64.deb on ARM
+sudo apt install ./lazyplan_0.13.0-1_amd64.deb     # or -1_arm64.deb on ARM
 ```
 
 One-liner (picks rpm/deb on supported distros, else pipx, else venv):

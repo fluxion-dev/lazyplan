@@ -25,7 +25,7 @@
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   "name": "lazyplan",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "url": "https://fluxion-dev.github.io/lazyplan/",
   "author": {
     "@type": "Person",
@@ -35,10 +35,10 @@
   "operatingSystem": ["Linux"],
   "downloadUrl": [
     "https://github.com/fluxion-dev/lazyplan/releases/latest/download/install.sh",
-    "https://github.com/fluxion-dev/lazyplan/releases/download/v0.12.0/lazyplan_0.12.0-1_amd64.deb",
-    "https://github.com/fluxion-dev/lazyplan/releases/download/v0.12.0/lazyplan_0.12.0-1_arm64.deb",
-    "https://github.com/fluxion-dev/lazyplan/releases/download/v0.12.0/lazyplan-0.12.0-1.x86_64.rpm",
-    "https://github.com/fluxion-dev/lazyplan/releases/download/v0.12.0/lazyplan-0.12.0-1.aarch64.rpm"
+    "https://github.com/fluxion-dev/lazyplan/releases/download/v0.13.0/lazyplan_0.13.0-1_amd64.deb",
+    "https://github.com/fluxion-dev/lazyplan/releases/download/v0.13.0/lazyplan_0.13.0-1_arm64.deb",
+    "https://github.com/fluxion-dev/lazyplan/releases/download/v0.13.0/lazyplan-0.13.0-1.x86_64.rpm",
+    "https://github.com/fluxion-dev/lazyplan/releases/download/v0.13.0/lazyplan-0.13.0-1.aarch64.rpm"
   ]
 }
 </script>
@@ -258,9 +258,9 @@ pipx upgrade lazyplan-tui
     <h3 class="mb-2 mt-1 text-xl font-semibold text-white">Native packages (vendored deps)</h3>
     <p class="text-zinc-300">Self-contained under <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">/usr/lib/lazyplan</code> — the only requirement is <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">python3 ≥ 3.11</code>. Wrappers land in <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">/usr/bin</code>; man pages and shell completions included:</p>
 <pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-canvas p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono"><span class="text-zinc-500"># Fedora / RHEL / openSUSE</span>
-sudo dnf install ./lazyplan-0.12.0-1.x86_64.rpm   <span class="text-zinc-500"># or -1.aarch64.rpm on ARM</span>
+sudo dnf install ./lazyplan-0.13.0-1.x86_64.rpm   <span class="text-zinc-500"># or -1.aarch64.rpm on ARM</span>
 <span class="text-zinc-500"># Debian / Ubuntu</span>
-sudo apt install ./lazyplan_0.12.0-1_amd64.deb     <span class="text-zinc-500"># or -1_arm64.deb on ARM</span>
+sudo apt install ./lazyplan_0.13.0-1_amd64.deb     <span class="text-zinc-500"># or -1_arm64.deb on ARM</span>
 </code></pre>
   </div>
   <div id="panel-oneliner" role="tabpanel" aria-labelledby="tab-oneliner" hidden class="rounded-b-xl rounded-tr-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8 space-y-6 backdrop-blur">
@@ -284,22 +284,22 @@ python -m pip install -e ".[dev]"
   </div>
 
   <div class="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap">
-    <a class="inline-flex items-center justify-center gap-2 rounded-xl bg-viking-blue px-5 py-2.5 text-center font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="https://github.com/fluxion-dev/lazyplan/releases/download/v0.12.0/lazyplan_0.12.0-1_amd64.deb">
+    <a class="inline-flex items-center justify-center gap-2 rounded-xl bg-viking-blue px-5 py-2.5 text-center font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="https://github.com/fluxion-dev/lazyplan/releases/download/v0.13.0/lazyplan_0.13.0-1_amd64.deb">
       <!-- lucide:download -->
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-4 w-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
       .deb amd64
     </a>
-    <a class="inline-flex items-center justify-center gap-2 rounded-xl bg-viking-blue px-5 py-2.5 text-center font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="https://github.com/fluxion-dev/lazyplan/releases/download/v0.12.0/lazyplan_0.12.0-1_arm64.deb">
+    <a class="inline-flex items-center justify-center gap-2 rounded-xl bg-viking-blue px-5 py-2.5 text-center font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="https://github.com/fluxion-dev/lazyplan/releases/download/v0.13.0/lazyplan_0.13.0-1_arm64.deb">
       <!-- lucide:download -->
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-4 w-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
       .deb arm64
     </a>
-    <a class="inline-flex items-center justify-center gap-2 rounded-xl bg-viking-blue px-5 py-2.5 text-center font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="https://github.com/fluxion-dev/lazyplan/releases/download/v0.12.0/lazyplan-0.12.0-1.x86_64.rpm">
+    <a class="inline-flex items-center justify-center gap-2 rounded-xl bg-viking-blue px-5 py-2.5 text-center font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="https://github.com/fluxion-dev/lazyplan/releases/download/v0.13.0/lazyplan-0.13.0-1.x86_64.rpm">
       <!-- lucide:download -->
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-4 w-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
       .rpm x86_64
     </a>
-    <a class="inline-flex items-center justify-center gap-2 rounded-xl bg-viking-blue px-5 py-2.5 text-center font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="https://github.com/fluxion-dev/lazyplan/releases/download/v0.12.0/lazyplan-0.12.0-1.aarch64.rpm">
+    <a class="inline-flex items-center justify-center gap-2 rounded-xl bg-viking-blue px-5 py-2.5 text-center font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="https://github.com/fluxion-dev/lazyplan/releases/download/v0.13.0/lazyplan-0.13.0-1.aarch64.rpm">
       <!-- lucide:download -->
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-4 w-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
       .rpm aarch64
@@ -308,8 +308,8 @@ python -m pip install -e ".[dev]"
   <p class="text-[0.95rem] text-zinc-400">Prefer to browse? <a class="text-cyber-cyan hover:underline" href="https://github.com/fluxion-dev/lazyplan/releases">All releases on GitHub</a> — every tag also attaches the sdist, wheel, and <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">install.sh</code> one-liner.</p>
   <table class="w-full border-collapse text-[0.95rem]">
     <tr><th class="border-b border-plan-border bg-white/5 px-3 py-2 text-left text-zinc-200">Arch</th><th class="border-b border-plan-border bg-white/5 px-3 py-2 text-left text-zinc-200">deb (Debian/Ubuntu)</th><th class="border-b border-plan-border bg-white/5 px-3 py-2 text-left text-zinc-200">rpm (Fedora/RHEL/SUSE)</th></tr>
-    <tr><td class="border-b border-plan-border px-3 py-2 text-left text-zinc-300">amd64 / x86_64</td><td class="border-b border-plan-border px-3 py-2 text-left"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lazyplan_0.12.0-1_amd64.deb</code></td><td class="border-b border-plan-border px-3 py-2 text-left"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lazyplan-0.12.0-1.x86_64.rpm</code></td></tr>
-    <tr><td class="border-b border-plan-border px-3 py-2 text-left text-zinc-300">arm64 / aarch64</td><td class="border-b border-plan-border px-3 py-2 text-left"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lazyplan_0.12.0-1_arm64.deb</code></td><td class="border-b border-plan-border px-3 py-2 text-left"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lazyplan-0.12.0-1.aarch64.rpm</code></td></tr>
+    <tr><td class="border-b border-plan-border px-3 py-2 text-left text-zinc-300">amd64 / x86_64</td><td class="border-b border-plan-border px-3 py-2 text-left"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lazyplan_0.13.0-1_amd64.deb</code></td><td class="border-b border-plan-border px-3 py-2 text-left"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lazyplan-0.13.0-1.x86_64.rpm</code></td></tr>
+    <tr><td class="border-b border-plan-border px-3 py-2 text-left text-zinc-300">arm64 / aarch64</td><td class="border-b border-plan-border px-3 py-2 text-left"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lazyplan_0.13.0-1_arm64.deb</code></td><td class="border-b border-plan-border px-3 py-2 text-left"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lazyplan-0.13.0-1.aarch64.rpm</code></td></tr>
   </table>
   <ul class="list-disc pl-6 text-[0.95rem] text-zinc-400">
     <li class="mb-1.5">System packages need only <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">python3 ≥ 3.11</code> — dependencies ride along under <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">/usr/lib/lazyplan</code>.</li>

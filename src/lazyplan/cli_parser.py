@@ -28,9 +28,14 @@ examples:
   lpui --actor alice add-story --project 1 --title "Feature Y" --priority p1
   lpui --actor alice add-task --story 1 --title "Do X" --priority p0
   lpui status --kind task --id 3 --to done
+  lpui link --kind task --id 3           attach HEAD commit (git repos only)
+  lpui commits --kind task --id 3        list linked commits
   lpui feed --limit 20                   recent human/agent activity
   lpui export --format json > backup.json
   lpui import --file backup.json
+
+vcs: link/unlink/commits need a git repo; outside git, link/unlink fail
+  (exit 2) and commits reads empty. status --to done auto-captures HEAD.
 
 flags work before or after the verb (`lpui list --json` == `lpui --json list`).
 `--actor NAME` on writes surfaces who did what in `feed`.
@@ -220,6 +225,35 @@ def build_parser() -> argparse.ArgumentParser:
         cc.add_argument("--id", type=int, required=True, metavar="ID", help="criteria id")
     dc = sub.add_parser("delete-criteria", help="remove a criterion by its id", parents=[common])
     dc.add_argument("--id", type=int, required=True, metavar="ID", help="criteria id")
+
+    lk = sub.add_parser(
+        "link", help="attach a git commit to a project/story/task", parents=[common]
+    )
+    lk.add_argument(
+        "--kind", choices=["project", "story", "task"], required=True, help="what to link"
+    )
+    lk.add_argument("--id", type=int, required=True, metavar="ID", help="row id")
+    lk.add_argument(
+        "--sha",
+        default=None,
+        metavar="SHA",
+        help="commit hash (default: current HEAD)",
+    )
+    ul = sub.add_parser(
+        "unlink", help="detach a git commit from a project/story/task", parents=[common]
+    )
+    ul.add_argument(
+        "--kind", choices=["project", "story", "task"], required=True, help="what to unlink"
+    )
+    ul.add_argument("--id", type=int, required=True, metavar="ID", help="row id")
+    ul.add_argument("--sha", required=True, metavar="SHA", help="commit hash (required)")
+    cm = sub.add_parser(
+        "commits", help="list commits linked to a project/story/task", parents=[common]
+    )
+    cm.add_argument(
+        "--kind", choices=["project", "story", "task"], required=True, help="what to list"
+    )
+    cm.add_argument("--id", type=int, required=True, metavar="ID", help="row id")
 
     ex = sub.add_parser("export", help="full dump (agents: --format json)", parents=[common])
     ex.add_argument(

@@ -484,6 +484,100 @@ who acted (shown in feed)
 criteria id Required\.
 .RE
 .TP
+.B lpui link
+attach a git commit to a project/story/task
+.RS
+.TP
+.B \-\-json
+agent\-friendly JSON output
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who acted (shown in feed)
+.RE
+.RS
+.TP
+.B \-\-kind {project|story|task}
+what to link Choices: project, story, task\. Required\.
+.RE
+.RS
+.TP
+.B \-\-id ID
+row id Required\.
+.RE
+.RS
+.TP
+.B \-\-sha SHA
+commit hash (default: current HEAD)
+.RE
+.TP
+.B lpui unlink
+detach a git commit from a project/story/task
+.RS
+.TP
+.B \-\-json
+agent\-friendly JSON output
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who acted (shown in feed)
+.RE
+.RS
+.TP
+.B \-\-kind {project|story|task}
+what to unlink Choices: project, story, task\. Required\.
+.RE
+.RS
+.TP
+.B \-\-id ID
+row id Required\.
+.RE
+.RS
+.TP
+.B \-\-sha SHA
+commit hash (required) Required\.
+.RE
+.TP
+.B lpui commits
+list commits linked to a project/story/task
+.RS
+.TP
+.B \-\-json
+agent\-friendly JSON output
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who acted (shown in feed)
+.RE
+.RS
+.TP
+.B \-\-kind {project|story|task}
+what to list Choices: project, story, task\. Required\.
+.RE
+.RS
+.TP
+.B \-\-id ID
+row id Required\.
+.RE
+.TP
 .B lpui export
 full dump (agents: \-\-format json)
 .RS

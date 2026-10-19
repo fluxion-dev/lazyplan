@@ -168,7 +168,9 @@ class TestStore(unittest.TestCase):
         db2 = os.path.join(tempfile.mkdtemp(), "imp.db")
         s2 = Store(db2)
         counts = s2.import_all(data)
-        self.assertEqual(counts, {"projects": 1, "stories": 1, "tasks": 1, "criteria": 2})
+        self.assertEqual(
+            counts, {"projects": 1, "stories": 1, "tasks": 1, "criteria": 2, "links": 0}
+        )
         self.assertEqual(s2.get_project(1).status, Status.DONE)  # rolled up: only story done
         self.assertEqual(s2.get_story(1).status, Status.DONE)  # rolled up: its task is done
         self.assertEqual(s2.get_project(1).goal, "g")

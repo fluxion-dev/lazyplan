@@ -12,18 +12,22 @@ import time
 
 from .cli_parser import build_parser, package_version
 from .design import (
+    EMPTY_COMMITS,
     EMPTY_FEED,
     EMPTY_NO_PROJECTS,
     HELP_TEXT,
     msg_error,
+    msg_no_head,
+    msg_no_vcs,
     msg_not_found,
 )
 from .models import Project, Status, Task, UserStory
-from .render import render_full, render_markdown, tree_lines
+from .render import render_commits, render_full, render_markdown, tree_lines
 from .repo import ensure_plan_dir, find_repo_root, repo_label
 from .seed import seed as seed_demo
 from .skills import handle_init as _init_skills
 from .store import Store, _ser
+from .vcs import current_head, detect_backend
 
 
 def _emit(args: argparse.Namespace, payload: object) -> int:
@@ -45,6 +49,35 @@ def _resolve_title(args: argparse.Namespace) -> str:
     if getattr(args, "name", None):
         return str(args.name)
     return ""
+
+
+def _auto_link_head(store: Store, kind: str, obj_id: int, actor: str) -> None:
+    """Best-effort HEAD capture on status->done. Silent outside git or with no HEAD."""
+    try:
+        _backend, info = current_head(".")
+    except Exception:
+        return
+    if info is None:
+        return
+    try:
+        existing = store.list_links(kind, obj_id)
+    except (ValueError, KeyError):
+        return
+    if any(link.sha == info.sha for link in existing):
+        return
+    try:
+        store.link_commit(
+            kind,
+            obj_id,
+            info.sha,
+            subject=info.subject,
+            author=info.author,
+            timestamp=info.timestamp,
+            repo_root=info.repo_root,
+            actor=actor,
+        )
+    except (ValueError, KeyError):
+        return
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -115,16 +148,19 @@ def main(argv: list[str] | None = None) -> int:
                     {
                         "project": _ser(vars(p)),
                         "criteria": [vars(c) for c in store.list_criteria("project", p.id)],
+                        "links": [vars(c) for c in store.list_links("project", p.id)],
                         "stories": [
                             {
                                 "story": _ser(vars(s)),
                                 "criteria": [vars(c) for c in store.list_criteria("story", s.id)],
+                                "links": [vars(c) for c in store.list_links("story", s.id)],
                                 "tasks": [
                                     {
                                         "task": _ser(vars(t)),
                                         "criteria": [
                                             vars(c) for c in store.list_criteria("task", t.id)
                                         ],
+                                        "links": [vars(c) for c in store.list_links("task", t.id)],
                                     }
                                     for t in ts
                                 ],
@@ -243,6 +279,8 @@ def main(argv: list[str] | None = None) -> int:
             if not ok:
                 print(msg_not_found(args.kind, args.id), file=sys.stderr)
                 return 1
+            if args.to == "done":
+                _auto_link_head(store, args.kind, args.id, actor)
             return _emit(args, {"ok": True, "kind": args.kind, "id": args.id, "to": args.to})
         if args.cmd == "reconcile":
             return _emit(args, {"reconciled": store.reconcile(actor=actor)})
@@ -272,6 +310,61 @@ def main(argv: list[str] | None = None) -> int:
                 print(msg_not_found("criteria", args.id), file=sys.stderr)
                 return 1
             return _emit(args, {"ok": True, "deleted": f"criteria #{args.id}"})
+        if args.cmd == "link":
+            if store.get_parent(args.kind, args.id) is None:
+                print(msg_not_found(args.kind, args.id), file=sys.stderr)
+                return 1
+            backend, root = detect_backend(".")
+            if backend is None or root is None:
+                print(msg_no_vcs(), file=sys.stderr)
+                return 2
+            if getattr(args, "sha", None):
+                info = backend.show(root, str(args.sha))
+                if info is None:
+                    print(msg_error(ValueError(f"unknown commit {args.sha!r}")), file=sys.stderr)
+                    return 2
+            else:
+                _, info = current_head(".")
+                if info is None:
+                    print(msg_no_head(), file=sys.stderr)
+                    return 2
+            link = store.link_commit(
+                args.kind,
+                args.id,
+                info.sha,
+                subject=info.subject,
+                author=info.author,
+                timestamp=info.timestamp,
+                repo_root=info.repo_root,
+                actor=actor,
+            )
+            return _emit(args, {"link": vars(link)})
+        if args.cmd == "unlink":
+            if store.get_parent(args.kind, args.id) is None:
+                print(msg_not_found(args.kind, args.id), file=sys.stderr)
+                return 1
+            backend, _root = detect_backend(".")
+            if backend is None:
+                print(msg_no_vcs(), file=sys.stderr)
+                return 2
+            ok = store.unlink_commit(args.kind, args.id, str(args.sha), actor=actor)
+            if not ok:
+                print(msg_error(ValueError(f"no such link {args.sha!r}")), file=sys.stderr)
+                return 1
+            return _emit(args, {"ok": True, "unlinked": str(args.sha)})
+        if args.cmd == "commits":
+            if store.get_parent(args.kind, args.id) is None:
+                print(msg_not_found(args.kind, args.id), file=sys.stderr)
+                return 1
+            backend, _root = detect_backend(".")
+            links = [] if backend is None else store.list_links(args.kind, args.id)
+            if args.json:
+                return _emit(args, [vars(c) for c in links])
+            if not links:
+                print(EMPTY_COMMITS)
+                return 0
+            print(render_commits([vars(c) for c in links]))
+            return 0
         if args.cmd == "export":
             data = store.export_all()
             if args.format == "json":
@@ -339,6 +432,9 @@ def main(argv: list[str] | None = None) -> int:
                 "check",
                 "uncheck",
                 "delete-criteria",
+                "link",
+                "unlink",
+                "commits",
                 "export",
                 "import",
                 "status",

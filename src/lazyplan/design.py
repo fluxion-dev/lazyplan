@@ -162,6 +162,19 @@ def msg_not_found(kind: str, obj_id: int) -> str:
     return f"{kind} #{obj_id} not found"
 
 
+def msg_no_vcs() -> str:
+    """Standard VCS-unavailable message (linking disabled outside a git repo)."""
+    return "error: no VCS backend available (not in a git repo)"
+
+
+def msg_no_head() -> str:
+    """Standard no-commit message (git repo with no HEAD yet)."""
+    return "error: no HEAD commit found (empty git repo?)"
+
+
+EMPTY_COMMITS = "(no commits linked)"
+
+
 def msg_error(exc: BaseException) -> str:
     """Standard 'error: <exc>' message."""
     return f"error: {exc}"

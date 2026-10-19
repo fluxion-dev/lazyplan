@@ -36,8 +36,22 @@ def tree_lines(
     return lines
 
 
+def render_commits(links: list[dict]) -> str:
+    """Human-readable commit list for `lpui commits` and `show` sections."""
+    lines = []
+    for link in links:
+        sha = str(link.get("sha", ""))
+        short = sha[:12] if len(sha) >= 12 else sha
+        subject = str(link.get("subject", "") or "").strip()
+        author = str(link.get("author", "") or "").strip()
+        extra = f" ({author})" if author and subject else author
+        line = f"{short} {subject}{extra}".rstrip() if (subject or extra) else short
+        lines.append(line)
+    return "\n".join(lines)
+
+
 def render_full(kind: str, full: dict) -> str:
-    """Human-readable `lpui show`: why/what + criteria + children."""
+    """Human-readable `lpui show`: why/what + criteria + commits + children."""
     lines: list[str] = []
 
     def crit_block(items: list[dict]) -> None:
@@ -45,6 +59,11 @@ def render_full(kind: str, full: dict) -> str:
         for c in items:
             box = "x" if c.get("done") else " "
             lines.append(f"  [{box}] #{c['id']} {c['text']}")
+
+    def commits_block(items: list[dict]) -> None:
+        """Append linked-commit lines."""
+        for line in render_commits(items).splitlines():
+            lines.append(f"  {line}")
 
     def meta_line(label: str, value: object) -> None:
         """Append a 'label: value' line when the value is set."""
@@ -61,6 +80,9 @@ def render_full(kind: str, full: dict) -> str:
         if full.get("criteria"):
             lines.append("\nacceptance:")
             crit_block(full["criteria"])
+        if full.get("links"):
+            lines.append("\ncommits:")
+            commits_block(full["links"])
         for entry in full["stories"]:
             s = entry["story"]
             spri = f" !{s['priority']}" if s.get("priority") else ""
@@ -76,6 +98,9 @@ def render_full(kind: str, full: dict) -> str:
         if full.get("criteria"):
             lines.append("\nacceptance:")
             crit_block(full["criteria"])
+        if full.get("links"):
+            lines.append("\ncommits:")
+            commits_block(full["links"])
         for entry in full["tasks"]:
             t = entry["task"]
             tpri = f" !{t['priority']}" if t.get("priority") else ""
@@ -93,6 +118,9 @@ def render_full(kind: str, full: dict) -> str:
         if full.get("criteria"):
             lines.append("\nacceptance:")
             crit_block(full["criteria"])
+        if full.get("links"):
+            lines.append("\ncommits:")
+            commits_block(full["links"])
     return "\n".join(lines)
 
 

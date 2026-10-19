@@ -102,3 +102,25 @@ class Criterion:
             raise ValueError("parent_kind must be project|story|task")
         if not self.text.strip():
             raise ValueError("criterion text must not be empty")
+
+
+@dataclass
+class VcsLink:
+    """One commit linked to a project, story, or task."""
+
+    id: int
+    parent_kind: str  # "project" | "story" | "task"
+    parent_id: int
+    sha: str  # full 40-char commit hash
+    subject: str = ""
+    author: str = ""
+    timestamp: int = 0
+    repo_root: str = ""
+
+    def __post_init__(self) -> None:
+        if self.parent_kind not in CRITERION_PARENTS:
+            raise ValueError("parent_kind must be project|story|task")
+        sha = self.sha.strip().lower()
+        if len(sha) != 40 or any(c not in "0123456789abcdef" for c in sha):
+            raise ValueError("sha must be a 40-char hex commit hash")
+        self.sha = sha

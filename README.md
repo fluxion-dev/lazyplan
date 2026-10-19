@@ -119,12 +119,15 @@ Flags work before or after the subcommand (`lpui list --json` == `lpui --json li
 ```bash
 lpui seed
 lpui list [--status todo|doing|done|all] [--archived] [--project ID] [--priority p0]  # default: all
-lpui show --kind project|story|task --id N   # full context: why/what + criteria + children
+lpui show --kind project|story|task --id N   # full context: why/what + criteria + commits + children
 lpui add-project --title "API v2" --why ".." --what ".." --priority p1
 lpui add-criteria --kind project --id 1 --text "works offline"
 lpui check --id 1 / lpui uncheck --id 1        # tick acceptance items (advisory)
 lpui add-story --project 1 --title "Auth refresh" [--desc .. --priority p0]
 lpui add-task --story 1 --title "Rotate tokens" [--desc ctx --priority p1]
+lpui link --kind task --id 1 [--sha HASH]      # attach HEAD (git repos only; disabled otherwise)
+lpui commits --kind task --id 1                # list linked commits (empty outside git)
+lpui unlink --kind task --id 1 --sha HASH      # detach a commit
 lpui export [--format json|markdown] | lpui import --file dump.json
 lpui update --kind task --id 1 [--title --desc --priority p0|none]
 lpui update --kind project --id 1 [--title --what --why --priority p0|none]

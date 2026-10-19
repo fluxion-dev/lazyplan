@@ -16,6 +16,7 @@ from .models import (
     Status,
     Task,
     UserStory,
+    VcsLink,
     check_priority,
 )
 from .repo import ensure_plan_dir, resolve_db_path
@@ -53,6 +54,18 @@ CREATE TABLE IF NOT EXISTS criteria (
     done INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_criteria_parent ON criteria(parent_kind, parent_id);
+CREATE TABLE IF NOT EXISTS vcs_links (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    parent_kind TEXT NOT NULL CHECK (parent_kind IN ('project', 'story', 'task')),
+    parent_id INTEGER NOT NULL,
+    sha TEXT NOT NULL CHECK (length(sha) = 40),
+    subject TEXT NOT NULL DEFAULT '',
+    author TEXT NOT NULL DEFAULT '',
+    timestamp INTEGER NOT NULL DEFAULT 0,
+    repo_root TEXT NOT NULL DEFAULT '',
+    UNIQUE(parent_kind, parent_id, sha)
+);
+CREATE INDEX IF NOT EXISTS idx_vcs_links_parent ON vcs_links(parent_kind, parent_id);
 CREATE TABLE IF NOT EXISTS events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     ts REAL NOT NULL,
@@ -180,7 +193,8 @@ class Store:
             mt = conn.execute("SELECT COALESCE(MAX(id),0) m FROM tasks").fetchone()["m"]
             me = conn.execute("SELECT COALESCE(MAX(id),0) m FROM events").fetchone()["m"]
             mc = conn.execute("SELECT COALESCE(MAX(id),0) m FROM criteria").fetchone()["m"]
-        return (mtime, c["projects"], c["stories"], c["tasks"], mp, ms, mt, me, mc)
+            ml = conn.execute("SELECT COALESCE(MAX(id),0) m FROM vcs_links").fetchone()["m"]
+        return (mtime, c["projects"], c["stories"], c["tasks"], mp, ms, mt, me, mc, ml)
 
     # -- projects ------------------------------------------------------
     def add_project(
@@ -440,7 +454,7 @@ class Store:
         return t
 
     def delete(self, kind: str, obj_id: int, actor: str = "human") -> bool:
-        """Delete a row and its subtree (criteria purged manually; FK cascades the rest)."""
+        """Delete a row and its subtree (criteria/links purged manually; FK cascades the rest)."""
         table = {"project": "projects", "story": "stories", "task": "tasks"}.get(kind)
         if table is None:
             raise ValueError("kind must be project|story|task")
@@ -455,13 +469,22 @@ class Store:
                 conn.execute(
                     "DELETE FROM criteria WHERE parent_kind='project' AND parent_id=?", (obj_id,)
                 )
+                conn.execute(
+                    "DELETE FROM vcs_links WHERE parent_kind='project' AND parent_id=?",
+                    (obj_id,),
+                )
                 for sid in sids:
                     self._delete_story_criteria(conn, sid)
+                    self._delete_story_links(conn, sid)
             elif kind == "story":
                 self._delete_story_criteria(conn, obj_id)
+                self._delete_story_links(conn, obj_id)
             else:
                 conn.execute(
                     "DELETE FROM criteria WHERE parent_kind='task' AND parent_id=?", (obj_id,)
+                )
+                conn.execute(
+                    "DELETE FROM vcs_links WHERE parent_kind='task' AND parent_id=?", (obj_id,)
                 )
             cur = conn.execute(f"DELETE FROM {table} WHERE id=?", (obj_id,))
             ok = (cur.rowcount or 0) > 0
@@ -479,6 +502,17 @@ class Store:
         conn.execute("DELETE FROM criteria WHERE parent_kind='story' AND parent_id=?", (story_id,))
         for tid in tids:
             conn.execute("DELETE FROM criteria WHERE parent_kind='task' AND parent_id=?", (tid,))
+
+    @staticmethod
+    def _delete_story_links(conn: sqlite3.Connection, story_id: int) -> None:
+        """Remove VCS links under a story and its tasks."""
+        tids = [
+            r["id"]
+            for r in conn.execute("SELECT id FROM tasks WHERE story_id=?", (story_id,)).fetchall()
+        ]
+        conn.execute("DELETE FROM vcs_links WHERE parent_kind='story' AND parent_id=?", (story_id,))
+        for tid in tids:
+            conn.execute("DELETE FROM vcs_links WHERE parent_kind='task' AND parent_id=?", (tid,))
 
     # -- criteria (acceptance checklists, advisory only) -----------------
     def _parent_exists(self, parent_kind: str, parent_id: int) -> bool:
@@ -559,6 +593,97 @@ class Store:
         """Not-done checklist items."""
         return [c for c in self.list_criteria(kind, obj_id) if not c.done]
 
+    # -- VCS links (commits attached to P/S/T) ------------------------------
+    @staticmethod
+    def _row_to_link(r: sqlite3.Row) -> VcsLink:
+        """Row to VcsLink."""
+        return VcsLink(
+            id=r["id"],
+            parent_kind=r["parent_kind"],
+            parent_id=r["parent_id"],
+            sha=r["sha"],
+            subject=r["subject"] or "",
+            author=r["author"] or "",
+            timestamp=int(r["timestamp"] or 0),
+            repo_root=r["repo_root"] or "",
+        )
+
+    def link_commit(
+        self,
+        parent_kind: str,
+        parent_id: int,
+        sha: str,
+        subject: str = "",
+        author: str = "",
+        timestamp: int = 0,
+        repo_root: str = "",
+        actor: str = "human",
+    ) -> VcsLink:
+        """Attach a commit to a project, story, or task (idempotent on re-link)."""
+        link = VcsLink(
+            id=0,
+            parent_kind=parent_kind,
+            parent_id=parent_id,
+            sha=sha,
+            subject=subject,
+            author=author,
+            timestamp=timestamp,
+            repo_root=repo_root,
+        )
+        if not self._parent_exists(parent_kind, parent_id):
+            raise KeyError(f"{parent_kind} #{parent_id} not found")
+        with self._connect() as conn:
+            conn.execute(
+                "INSERT OR IGNORE INTO vcs_links"
+                " (parent_kind, parent_id, sha, subject, author, timestamp, repo_root)"
+                " VALUES (?,?,?,?,?,?,?)",
+                (
+                    link.parent_kind,
+                    link.parent_id,
+                    link.sha,
+                    link.subject,
+                    link.author,
+                    link.timestamp,
+                    link.repo_root,
+                ),
+            )
+            r = conn.execute(
+                "SELECT * FROM vcs_links WHERE parent_kind=? AND parent_id=? AND sha=?",
+                (link.parent_kind, link.parent_id, link.sha),
+            ).fetchone()
+            assert r is not None
+            link = self._row_to_link(r)
+        self.log(actor, "vcs", "link", f"{parent_kind} #{parent_id}: {link.sha[:12]}")
+        return link
+
+    def unlink_commit(
+        self, parent_kind: str, parent_id: int, sha: str, actor: str = "human"
+    ) -> bool:
+        """Detach a commit; True when a row was removed."""
+        if parent_kind not in CRITERION_PARENTS:
+            raise ValueError("parent_kind must be project|story|task")
+        norm = sha.strip().lower()
+        with self._connect() as conn:
+            cur = conn.execute(
+                "DELETE FROM vcs_links WHERE parent_kind=? AND parent_id=? AND sha=?",
+                (parent_kind, parent_id, norm),
+            )
+            ok = (cur.rowcount or 0) > 0
+        if ok:
+            self.log(actor, "vcs", "unlink", f"{parent_kind} #{parent_id}: {norm[:12]}")
+        return ok
+
+    def list_links(self, parent_kind: str, parent_id: int) -> list[VcsLink]:
+        """Commits attached to a project, story, or task, oldest first."""
+        if parent_kind not in CRITERION_PARENTS:
+            raise ValueError("parent_kind must be project|story|task")
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT * FROM vcs_links WHERE parent_kind=? AND parent_id=? ORDER BY id",
+                (parent_kind, parent_id),
+            ).fetchall()
+        return [self._row_to_link(r) for r in rows]
+
     def get_parent(self, kind: str, obj_id: int) -> Project | UserStory | Task | None:
         """Fetch any row by kind (criteria parent lookup)."""
         if kind == "project":
@@ -571,7 +696,7 @@ class Store:
 
     # -- export / import (portability) -----------------------------------
     def export_all(self) -> dict:
-        """Full dump: projects (with criteria) holding stories and tasks."""
+        """Full dump: projects (with criteria + links) holding stories and tasks."""
         projects = []
         for p in self.list_projects():
             stories = []
@@ -582,12 +707,14 @@ class Store:
                         {
                             "task": _ser(vars(t)),
                             "criteria": [vars(c) for c in self.list_criteria("task", t.id)],
+                            "links": [vars(c) for c in self.list_links("task", t.id)],
                         }
                     )
                 stories.append(
                     {
                         "story": _ser(vars(s)),
                         "criteria": [vars(c) for c in self.list_criteria("story", s.id)],
+                        "links": [vars(c) for c in self.list_links("story", s.id)],
                         "tasks": tasks,
                     }
                 )
@@ -595,6 +722,7 @@ class Store:
                 {
                     "project": _ser(vars(p)),
                     "criteria": [vars(c) for c in self.list_criteria("project", p.id)],
+                    "links": [vars(c) for c in self.list_links("project", p.id)],
                     "stories": stories,
                 }
             )
@@ -604,7 +732,7 @@ class Store:
         """Load an export_all() dump. Returns counts."""
         if not isinstance(data, dict) or data.get("lazyplan") != 1:
             raise ValueError("not a lazyplan export (missing lazyplan: 1)")
-        counts = {"projects": 0, "stories": 0, "tasks": 0, "criteria": 0}
+        counts = {"projects": 0, "stories": 0, "tasks": 0, "criteria": 0, "links": 0}
 
         def _apply_status(kind: str, obj_id: int, status: str) -> None:
             if status and status != Status.TODO.value:
@@ -616,6 +744,26 @@ class Store:
                 if c.get("done"):
                     self.set_criteria(nc.id, True, actor=actor)
                 counts["criteria"] += 1
+
+        def _import_links(kind: str, obj_id: int, items: list) -> None:
+            for c in items:
+                sha = str(c.get("sha", "") or "").strip()
+                if not sha:
+                    continue
+                try:
+                    self.link_commit(
+                        kind,
+                        obj_id,
+                        sha,
+                        subject=str(c.get("subject", "") or ""),
+                        author=str(c.get("author", "") or ""),
+                        timestamp=int(c.get("timestamp", 0) or 0),
+                        repo_root=str(c.get("repo_root", "") or ""),
+                        actor=actor,
+                    )
+                except ValueError:
+                    continue
+                counts["links"] += 1
 
         for entry in data.get("projects", []):
             p = entry["project"]
@@ -629,6 +777,7 @@ class Store:
             _apply_status("project", np.id, p.get("status", ""))
             counts["projects"] += 1
             _import_criteria("project", np.id, entry.get("criteria", []))
+            _import_links("project", np.id, entry.get("links", []))
             for sentry in entry.get("stories", []):
                 sp = sentry["story"]
                 ns = self.add_story(
@@ -641,6 +790,7 @@ class Store:
                 _apply_status("story", ns.id, sp.get("status", ""))
                 counts["stories"] += 1
                 _import_criteria("story", ns.id, sentry.get("criteria", []))
+                _import_links("story", ns.id, sentry.get("links", []))
                 for tentry in sentry.get("tasks", []):
                     tp = tentry["task"]
                     nt = self.add_task(
@@ -653,12 +803,13 @@ class Store:
                     _apply_status("task", nt.id, tp.get("status", ""))
                     counts["tasks"] += 1
                     _import_criteria("task", nt.id, tentry.get("criteria", []))
+                    _import_links("task", nt.id, tentry.get("links", []))
             # Stories landed after the project's own status: recompute it.
             self._heal("project", np.id, actor)
         return counts
 
     def get_full(self, kind: str, obj_id: int) -> dict | None:
-        """Full context record for `lpui show`: fields + criteria + children."""
+        """Full context record for `lpui show`: fields + criteria + links + children."""
         if kind == "project":
             p = self.get_project(obj_id)
             if p is None:
@@ -666,6 +817,7 @@ class Store:
             return {
                 "project": _ser(vars(p)),
                 "criteria": [vars(c) for c in self.list_criteria("project", p.id)],
+                "links": [vars(c) for c in self.list_links("project", p.id)],
                 "stories": [
                     {
                         "story": _ser(vars(s)),
@@ -682,6 +834,7 @@ class Store:
             return {
                 "story": _ser(vars(s)),
                 "criteria": [vars(c) for c in self.list_criteria("story", s.id)],
+                "links": [vars(c) for c in self.list_links("story", s.id)],
                 "tasks": [
                     {
                         "task": _ser(vars(t)),
@@ -697,6 +850,7 @@ class Store:
             return {
                 "task": _ser(vars(t)),
                 "criteria": [vars(c) for c in self.list_criteria("task", t.id)],
+                "links": [vars(c) for c in self.list_links("task", t.id)],
             }
         raise ValueError("kind must be project|story|task")
 

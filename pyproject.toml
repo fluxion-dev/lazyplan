@@ -1,6 +1,6 @@
 [project]
 name = "lazyplan-tui"
-version = "0.8.4"
+version = "0.9.0"
 description = "Terminal stream-of-consciousness console for issue tracking + roadmap planning alongside AI agents."
 readme = "README.md"
 license = "MIT"

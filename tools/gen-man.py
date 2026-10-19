@@ -159,7 +159,7 @@ def render() -> str:
     out.append("Default for \\fB\\-\\-actor\\fR when not given.")
     out.append(".SH FILES")
     out.append(".TP")
-    out.append(".B .plan/lazyplan.db")
+    out.append(".B .lazyplan/lazyplan.db")
     out.append("Per\\-repo database (resolved via git rev\\-parse; commit it to share).")
     out.append(".TP")
     out.append(".B ~/.local/share/lazyplan/lazyplan.db")

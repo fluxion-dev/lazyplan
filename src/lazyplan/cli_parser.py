@@ -16,7 +16,7 @@ _PARSER_DESCRIPTION = (
 
 _PARSER_EPILOG = """\
 database (first match wins):
-  --db PATH | $LAZYPLAN_DB | ./.plan/lazyplan.db (inside a repo) | ~/.local/share/lazyplan/lazyplan.db
+  --db PATH | $LAZYPLAN_DB | ./.lazyplan/lazyplan.db (inside a repo) | ~/.local/share/lazyplan/lazyplan.db
 
 examples:
   lpui                                   launch the TUI (same as `lpui ui`)
@@ -47,7 +47,7 @@ environment:
   LAZYPLAN_DB       sqlite path override (same as --db)
 
 files:
-  .plan/lazyplan.db                      per-repo database (commit it to share)
+  .lazyplan/lazyplan.db                      per-repo database (commit it to share)
   ~/.local/share/lazyplan/lazyplan.db    global fallback outside a repo
 
 exit codes: 0 ok · 1 not found · 2 usage/error · 3 TUI unavailable (Textual missing).
@@ -87,7 +87,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--db",
         default=None,
         metavar="PATH",
-        help="sqlite path (default: $LAZYPLAN_DB, else ./.plan/ in repo, else global)",
+        help="sqlite path (default: $LAZYPLAN_DB, else ./.lazyplan/ in repo, else global)",
     )
     p.add_argument("--json", action="store_true", help="agent-friendly JSON output")
     p.add_argument("--version", action="store_true", help="print the installed version and exit")
@@ -117,7 +117,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sub = p.add_subparsers(dest="cmd", required=False, title="commands", metavar="COMMAND")
 
-    init = sub.add_parser("init", help="init .plan/ in this repo (or global db)", parents=[common])
+    init = sub.add_parser(
+        "init", help="init .lazyplan/ in this repo (or global db)", parents=[common]
+    )
     init.add_argument("--no-skills", action="store_true", help="skip the agent-skills wizard")
     init.add_argument("--yes", action="store_true", help="install default skills without prompting")
     init.add_argument(

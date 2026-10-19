@@ -397,6 +397,114 @@ class TestInitCli(unittest.TestCase):
         payload = self._init_json(["init", "--yes"])
         self.assertEqual(payload["skills"]["scope"], "project")
 
+    def test_init_yes_adds_gitignore(self):
+        os.chdir(self.repo)
+        payload = self._init_json(["init", "--yes"])
+        gi = os.path.join(self.repo, ".gitignore")
+        self.assertTrue(os.path.isfile(gi))
+        text = open(gi).read()
+        self.assertIn(".lazyplan/", text)
+        self.assertIn(".agents/skills/lazyplan/", text)
+        self.assertIn(".lazyplan/", payload["gitignore"]["added"])
+        # second run adds nothing twice
+        self._init_json(["init", "--yes"])
+        self.assertEqual(open(gi).read().count(".lazyplan/"), 1)
+
+    def test_init_without_yes_leaves_gitignore_alone(self):
+        os.chdir(self.repo)
+        self._init_json(["init", "--skills-scope", "project"])
+        self.assertFalse(os.path.exists(os.path.join(self.repo, ".gitignore")))
+
+    def test_offer_gitignore_tty_accept(self):
+        from unittest import mock
+
+        from lazyplan.cli import _maybe_offer_gitignore
+
+        os.chdir(self.repo)
+        plan = os.path.join(self.repo, ".lazyplan")
+        os.makedirs(plan)
+        skilldir = os.path.join(self.repo, ".agents", "skills", "lazyplan")
+        os.makedirs(skilldir)
+        import argparse
+
+        args = argparse.Namespace(yes=False, json=False)
+        skills_info = {"installed": [f"{skilldir}/SKILL.md (wrote)"]}
+        with (
+            mock.patch.object(sys.stdin, "isatty", return_value=True),
+            mock.patch("builtins.input", return_value="Y"),
+        ):
+            added = _maybe_offer_gitignore(args, Path(self.repo), Path(plan), skills_info)
+        self.assertEqual(added, [".lazyplan/", ".agents/skills/lazyplan/"])
+        self.assertIn(".lazyplan/", open(os.path.join(self.repo, ".gitignore")).read())
+
+    def test_offer_gitignore_decline_and_json(self):
+        from unittest import mock
+
+        from lazyplan.cli import _maybe_offer_gitignore
+
+        os.chdir(self.repo)
+        plan = os.path.join(self.repo, ".lazyplan")
+        os.makedirs(plan)
+        import argparse
+
+        args = argparse.Namespace(yes=False, json=False)
+        with (
+            mock.patch.object(sys.stdin, "isatty", return_value=True),
+            mock.patch("builtins.input", return_value="n"),
+        ):
+            self.assertEqual(_maybe_offer_gitignore(args, Path(self.repo), Path(plan), {}), [])
+        self.assertFalse(os.path.exists(os.path.join(self.repo, ".gitignore")))
+        args = argparse.Namespace(yes=False, json=True)
+        self.assertEqual(_maybe_offer_gitignore(args, Path(self.repo), Path(plan), {}), [])
+
+
+class TestAppendGitignore(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.repo = os.path.join(self.tmp.name, "r")
+        os.makedirs(self.repo)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_adds_and_dedupes(self):
+        from lazyplan.skills import append_gitignore
+
+        root = Path(self.repo)
+        self.assertTrue(append_gitignore(root, ".lazyplan/"))
+        self.assertFalse(append_gitignore(root, ".lazyplan/"))
+        self.assertFalse(append_gitignore(root, ".lazyplan"))
+        self.assertFalse(append_gitignore(root, ""))
+        self.assertEqual(open(root / ".gitignore").read(), ".lazyplan/\n")
+
+    def test_missing_trailing_newline(self):
+        from lazyplan.skills import append_gitignore
+
+        root = Path(self.repo)
+        (root / ".gitignore").write_text("*.db")
+        self.assertTrue(append_gitignore(root, ".lazyplan/"))
+        self.assertEqual(open(root / ".gitignore").read(), "*.db\n.lazyplan/\n")
+
+
+class TestPromptConfirm(unittest.TestCase):
+    def test_yes_variants(self):
+        for ans in ("Y", "y", ""):
+            self.assertTrue(skills.prompt_confirm("Q?", read=_answers([ans])))
+
+    def test_no_variants(self):
+        for ans in ("N", "n"):
+            self.assertFalse(skills.prompt_confirm("Q?", read=_answers([ans])))
+
+    def test_eof_means_default(self):
+        def _boom():
+            raise EOFError
+
+        self.assertTrue(skills.prompt_confirm("Q?", read=_boom))
+        self.assertFalse(skills.prompt_confirm("Q?", default_yes=False, read=_boom))
+
+    def test_invalid_falls_back_to_default(self):
+        self.assertTrue(skills.prompt_confirm("Q?", read=_answers(["maybe"])))
+
 
 if __name__ == "__main__":
     unittest.main()

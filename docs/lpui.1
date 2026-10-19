@@ -14,7 +14,7 @@ lazyplan tracks projects > stories > tasks in a per\-repo SQLite database. A pro
 .SH GLOBAL OPTIONS
 .TP
 .B \-\-db PATH
-sqlite path (default: $LAZYPLAN_DB, else \./\.plan/ in repo, else global)
+sqlite path (default: $LAZYPLAN_DB, else \./\.lazyplan/ in repo, else global)
 .TP
 .B \-\-json
 agent\-friendly JSON output
@@ -28,7 +28,7 @@ who is making this change (surfaced in feed; default: $USER or 'human')
 Flags work before or after the verb: \fBlpui list \-\-json\fR == \fBlpui \-\-json list\fR. Run \fBlpui COMMAND \-\-help\fR for details.
 .TP
 .B lpui init
-init \.plan/ in this repo (or global db)
+init \.lazyplan/ in this repo (or global db)
 .RS
 .TP
 .B \-\-json
@@ -840,7 +840,7 @@ SQLite path override (same as \fB\-\-db\fR).
 Default for \fB\-\-actor\fR when not given.
 .SH FILES
 .TP
-.B .plan/lazyplan.db
+.B .lazyplan/lazyplan.db
 Per\-repo database (resolved via git rev\-parse; commit it to share).
 .TP
 .B ~/.local/share/lazyplan/lazyplan.db

@@ -53,21 +53,22 @@ python -m pip install -e ".[dev]"
 
 ```bash
 cd ~/my-project
-lpui init --yes             # creates .plan/lazyplan.db + .plan/config.json
+lpui init --yes             # creates .lazyplan/lazyplan.db + .lazyplan/config.json
 lpui add-project --title "my-project" --why "reason" --what "scope" --priority p1
 lpui                        # TUI; every subdir of the repo shares this DB (`lpui ui` also works)
 ```
 
 `lpui init` with no flags offers an agent-skills wizard instead
 (`--no-skills`, `--skills-scope project|global|both|none`, `--json`
-stays machine-readable and never prompts).
+stays machine-readable and never prompts). On a TTY it also offers to
+move a legacy `.plan/` dir and to gitignore the dirs it created.
 
 Run from any subdirectory — the repo root is found via `git rev-parse`
 (`.git` fallback); outside a repo the global DB is used.
 
 DB resolution (first match wins): `--db PATH` → `$LAZYPLAN_DB` →
-repo `.plan/lazyplan.db` → global `~/.local/share/lazyplan/lazyplan.db`.
-Commit `.plan/config.json` to share the plan with the team; the `*.db`
+repo `.lazyplan/lazyplan.db` → global `~/.local/share/lazyplan/lazyplan.db`.
+Commit `.lazyplan/config.json` to share the plan with the team; the `*.db`
 itself stays local (gitignored) unless you force-add it.
 
 Shell completions: `eval "$(lpui completion --shell bash)"` (or `--shell zsh`).
@@ -168,8 +169,8 @@ first. Repo skill with the full contract:
 
 ## Data, backup, replicas
 
-- One repo, one DB: `.plan/lazyplan.db` next to the code it plans
-  (`.plan/config.json` marks the scope; commit the config, not the DB).
+- One repo, one DB: `.lazyplan/lazyplan.db` next to the code it plans
+  (`.lazyplan/config.json` marks the scope; commit the config, not the DB).
 - Back up or move plans: `lpui export --format json > backup.json` /
   `lpui import --file backup.json` (ids remap on import).
 - Demo data to explore the tree: `lpui seed` (never in a real repo plan).

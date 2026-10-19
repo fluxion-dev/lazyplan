@@ -165,7 +165,7 @@
       <!-- lucide:database -->
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="mb-2 h-6 w-6 text-scanner-green"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>
       <h3 class="mb-1.5 text-lg font-semibold text-white">🗄️ One repo, one SQLite DB</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">.plan/lazyplan.db</code> sits next to the code it plans — every subdir resolves to it. JSON export/import for backup.</p>
+      <p class="m-0 text-[0.95rem] text-zinc-400"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">.lazyplan/lazyplan.db</code> sits next to the code it plans — every subdir resolves to it. JSON export/import for backup.</p>
     </div>
     <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8 shadow-lg shadow-black/30 backdrop-blur transition hover:border-viking-blue/50">
       <!-- lucide:search -->
@@ -187,7 +187,7 @@
   <p class="mb-10 md:mb-14 text-lg text-zinc-400">Three commands to a live plan — then drive it from the keyboard or the shell:</p>
 <div class="space-y-6">
 <pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-surface p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono">cd ~/my-project
-lpui init --yes             <span class="text-zinc-500"># creates .plan/lazyplan.db + .plan/config.json</span>
+lpui init --yes             <span class="text-zinc-500"># creates .lazyplan/lazyplan.db + .lazyplan/config.json</span>
 lpui add-project --title "my-project" --why "reason" --what "scope" --priority p1
 lpui                        <span class="text-zinc-500"># TUI (same as `lpui ui`)</span>
 </code></pre>
@@ -354,7 +354,7 @@ python -m pip install -e ".[dev]"
 <pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-surface p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono"><span class="text-zinc-500"># example config — not executed</span>
 --db PATH                          <span class="text-zinc-500"># explicit override</span>
 $LAZYPLAN_DB                       <span class="text-zinc-500"># environment override</span>
-./.plan/lazyplan.db                <span class="text-zinc-500"># inside a repo (via git rev-parse)</span>
+./.lazyplan/lazyplan.db                <span class="text-zinc-500"># inside a repo (via git rev-parse)</span>
 ~/.local/share/lazyplan/lazyplan.db  <span class="text-zinc-500"># global fallback</span>
 </code></pre>
   <ul class="list-disc pl-6 text-[0.95rem] text-zinc-400">

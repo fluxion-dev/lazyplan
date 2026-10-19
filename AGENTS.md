@@ -3,7 +3,7 @@
 <!-- lazyplan:start -->
 ## lazyplan (`lpui`)
 
-Repo plan of record: projects > stories > tasks in `.plan/lazyplan.db`.
+Repo plan of record: projects > stories > tasks in `.lazyplan/lazyplan.db`.
 Human watches `lpui ui`; agents work via the CLI with `--actor <name>`.
 
 - New project? Interview the human first: vision, scope in and out, deliverables, constraints, metrics, acceptance criteria (priority only if volunteered; new tasks default p1). Scout the codebase during the interview.

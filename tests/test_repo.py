@@ -43,7 +43,7 @@ class TestRepoScope(unittest.TestCase):
 
         os.chdir(self.repo)
         self.assertEqual(
-            pathlib.Path(resolve_db_path()), pathlib.Path(self.repo) / ".plan" / "lazyplan.db"
+            pathlib.Path(resolve_db_path()), pathlib.Path(self.repo) / ".lazyplan" / "lazyplan.db"
         )
 
     def test_explicit_and_env_win(self):
@@ -58,8 +58,8 @@ class TestRepoScope(unittest.TestCase):
     def test_store_creates_plan_dir_and_config(self):
         os.chdir(self.repo)
         s = Store(None)
-        self.assertTrue(os.path.isfile(os.path.join(self.repo, ".plan", "lazyplan.db")))
-        cfg = os.path.join(self.repo, ".plan", "config.json")
+        self.assertTrue(os.path.isfile(os.path.join(self.repo, ".lazyplan", "lazyplan.db")))
+        cfg = os.path.join(self.repo, ".lazyplan", "config.json")
         self.assertTrue(os.path.isfile(cfg))
         self.assertEqual(json.load(open(cfg))["db"], "lazyplan.db")
         self.assertEqual(repo_label(s.path), "myproj")
@@ -81,12 +81,73 @@ class TestRepoScope(unittest.TestCase):
     def test_lp_init_and_info_in_repo(self):
         os.chdir(self.repo)
         self.assertEqual(lpui_main(["init"]), 0)
-        self.assertTrue(os.path.isfile(os.path.join(self.repo, ".plan", "lazyplan.db")))
+        self.assertTrue(os.path.isfile(os.path.join(self.repo, ".lazyplan", "lazyplan.db")))
         self.assertEqual(lpui_main(["info"]), 0)
         # data added via cwd resolves to the same repo db
         self.assertEqual(lpui_main(["add-project", "--name", "RP"]), 0)
         s = Store(None)
         self.assertEqual(len(s.list_projects()), 1)
+
+
+class TestLegacyPlanDir(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.repo = os.path.join(self.tmp.name, "myproj")
+        os.makedirs(os.path.join(self.repo, ".git"))  # fake repo root (fallback walk)
+        self.old_cwd = os.getcwd()
+        self.old_env = os.environ.pop("LAZYPLAN_DB", None)
+
+    def tearDown(self):
+        os.chdir(self.old_cwd)
+        if self.old_env is not None:
+            os.environ["LAZYPLAN_DB"] = self.old_env
+        self.tmp.cleanup()
+
+    def test_legacy_resolves_when_no_lazyplan(self):
+        import pathlib
+
+        os.makedirs(os.path.join(self.repo, ".plan"))
+        os.chdir(self.repo)
+        self.assertEqual(
+            pathlib.Path(resolve_db_path()),
+            pathlib.Path(self.repo) / ".plan" / "lazyplan.db",
+        )
+        self.assertEqual(repo_label(resolve_db_path()), "myproj")
+
+    def test_lazyplan_wins_when_both(self):
+        import pathlib
+
+        os.makedirs(os.path.join(self.repo, ".plan"))
+        os.makedirs(os.path.join(self.repo, ".lazyplan"))
+        os.chdir(self.repo)
+        self.assertEqual(
+            pathlib.Path(resolve_db_path()),
+            pathlib.Path(self.repo) / ".lazyplan" / "lazyplan.db",
+        )
+
+    def test_move_legacy(self):
+        import pathlib
+
+        from lazyplan.repo import move_legacy_plan_dir
+
+        legacy = os.path.join(self.repo, ".plan")
+        os.makedirs(legacy)
+        with open(os.path.join(legacy, "lazyplan.db"), "w") as fh:
+            fh.write("data")
+        self.assertEqual(move_legacy_plan_dir(self.repo), pathlib.Path(self.repo) / ".lazyplan")
+        self.assertFalse(os.path.exists(legacy))
+        self.assertTrue(os.path.isfile(os.path.join(self.repo, ".lazyplan", "lazyplan.db")))
+        # nothing left to move, and never clobber an existing .lazyplan/
+        self.assertIsNone(move_legacy_plan_dir(self.repo))
+        os.makedirs(os.path.join(self.repo, ".plan"))
+        self.assertIsNone(move_legacy_plan_dir(self.repo))
+
+    def test_init_noninteractive_keeps_legacy(self):
+        os.makedirs(os.path.join(self.repo, ".plan"))
+        os.chdir(self.repo)
+        self.assertEqual(lpui_main(["--json", "init", "--skills-scope", "none"]), 0)
+        self.assertTrue(os.path.isdir(os.path.join(self.repo, ".plan")))
+        self.assertFalse(os.path.exists(os.path.join(self.repo, ".lazyplan")))
 
 
 if __name__ == "__main__":

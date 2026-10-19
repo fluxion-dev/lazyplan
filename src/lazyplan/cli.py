@@ -9,6 +9,7 @@ import json
 import os
 import sys
 import time
+from pathlib import Path
 
 from .cli_parser import build_parser, package_version
 from .design import (
@@ -23,8 +24,15 @@ from .design import (
 )
 from .models import Project, Status, Task, UserStory
 from .render import render_commits, render_full, render_markdown, tree_lines
-from .repo import ensure_plan_dir, find_repo_root, repo_label
+from .repo import (
+    ensure_plan_dir,
+    find_repo_root,
+    legacy_plan_dir,
+    move_legacy_plan_dir,
+    repo_label,
+)
 from .seed import seed as seed_demo
+from .skills import append_gitignore, prompt_confirm
 from .skills import handle_init as _init_skills
 from .store import Store, _ser
 from .vcs import current_head, detect_backend
@@ -80,6 +88,58 @@ def _auto_link_head(store: Store, kind: str, obj_id: int, actor: str) -> None:
         return
 
 
+def _maybe_move_legacy_plan_dir(root: Path | None, db_path: Path) -> Path | None:
+    """Offer to move legacy `.plan/` to `.lazyplan/` on a TTY; new dir or None."""
+    if root is None:
+        return None
+    if Path(db_path).expanduser().parent != legacy_plan_dir(root):
+        return None
+    if not sys.stdin.isatty():
+        return None
+    if not prompt_confirm("Move legacy .plan/ to .lazyplan/"):
+        return None
+    return move_legacy_plan_dir(root)
+
+
+def _gitignore_entries(root: Path | None, plan_dir: Path, skills_info: dict) -> list[str]:
+    """Repo-local dirs this init created, as .gitignore entries."""
+    if root is None:
+        return []
+    entries: list[str] = []
+    if Path(plan_dir).expanduser().parent == Path(root).expanduser():
+        entries.append(Path(plan_dir).name + "/")
+    for line in skills_info.get("installed", []):
+        if not str(line).endswith("(wrote)"):
+            continue
+        dest = str(line).rsplit(" (", 1)[0]
+        try:
+            rel = Path(dest).relative_to(root)
+        except ValueError:
+            continue
+        entries.append(rel.parent.as_posix() + "/")
+    return list(dict.fromkeys(entries))
+
+
+def _maybe_offer_gitignore(
+    args: argparse.Namespace, root: Path | None, plan_dir: Path, skills_info: dict
+) -> list[str]:
+    """Add .gitignore entries for created repo-local dirs. Returns added entries."""
+    if root is None:
+        return []
+    entries = _gitignore_entries(root, plan_dir, skills_info)
+    if not entries:
+        return []
+    if getattr(args, "yes", False):
+        return [e for e in entries if append_gitignore(root, e)]
+    if getattr(args, "json", False) or not sys.stdin.isatty():
+        return []
+    return [
+        e
+        for e in entries
+        if prompt_confirm(f"Add {e} to .gitignore?") and append_gitignore(root, e)
+    ]
+
+
 def main(argv: list[str] | None = None) -> int:
     """Dispatch one lpui invocation; exit codes are agent-readable."""
     args = build_parser().parse_args(argv)
@@ -103,6 +163,12 @@ def main(argv: list[str] | None = None) -> int:
             plan_dir = ensure_plan_dir(store.path)
             root = find_repo_root(os.getcwd())
             skills_info = _init_skills(args, root)
+            # Only the repo's own default dir gets migrated, never an explicit --db.
+            if args.db is None and not os.environ.get("LAZYPLAN_DB", "").strip():
+                if _maybe_move_legacy_plan_dir(root, store.path) is not None:
+                    store = Store(args.db)
+                    plan_dir = ensure_plan_dir(store.path)
+            gitignored = _maybe_offer_gitignore(args, root, plan_dir, skills_info)
             return _emit(
                 args,
                 {
@@ -112,6 +178,7 @@ def main(argv: list[str] | None = None) -> int:
                     "scope": repo_label(store.path),
                     "counts": store.counts(),
                     "skills": skills_info,
+                    "gitignore": {"added": gitignored},
                 },
             )
         if args.cmd == "info":

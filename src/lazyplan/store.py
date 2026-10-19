@@ -86,7 +86,7 @@ _MIGRATIONS: dict[str, tuple[str, ...]] = {
 
 
 def default_db_path() -> Path:
-    """Resolved default DB: $LAZYPLAN_DB > enclosing repo `.plan/` > global."""
+    """Resolved default DB: $LAZYPLAN_DB > enclosing repo `.lazyplan/` > global."""
     return resolve_db_path()
 
 

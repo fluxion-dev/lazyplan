@@ -7,8 +7,8 @@ compatibility: opencode, claude-code, codex, gemini-cli, cursor
 # lazyplan (`lpui`) — local project journal
 
 `lpui` is the repo's plan of record: projects > stories > tasks, stored in
-`.plan/lazyplan.db` (SQLite, committed with the repo or local — check
-`.plan/config.json`). The human watches `lpui ui`; agents inject work through
+`.lazyplan/lazyplan.db` (SQLite, committed with the repo or local — check
+`.lazyplan/config.json`). The human watches `lpui ui`; agents inject work through
 the CLI. Never touch the TUI process — only call `lpui`.
 
 A project is: title + priority + why + what + acceptance criteria. Stories cut
@@ -24,7 +24,7 @@ Pass `--actor <name>` on every write so the human sees who did what in
 
 ## DB scoping (first match wins)
 
-`--db PATH` → `$LAZYPLAN_DB` → enclosing git repo's `.plan/lazyplan.db` →
+`--db PATH` → `$LAZYPLAN_DB` → enclosing git repo's `.lazyplan/lazyplan.db` →
 global `~/.local/share/lazyplan/lazyplan.db`. Running from any subdirectory
 of the repo resolves to that repo's DB. Don't override `--db` unless asked.
 

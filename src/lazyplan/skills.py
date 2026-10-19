@@ -47,8 +47,8 @@ compatibility: opencode, claude-code, codex, gemini-cli, cursor
 SKILL_BODY = """# lazyplan (`lpui`) — local project journal
 
 `lpui` is the repo's plan of record: projects > stories > tasks, stored in
-`.plan/lazyplan.db` (SQLite, committed with the repo or local — check
-`.plan/config.json`). The human watches `lpui ui`; agents inject work through
+`.lazyplan/lazyplan.db` (SQLite, committed with the repo or local — check
+`.lazyplan/config.json`). The human watches `lpui ui`; agents inject work through
 the CLI. Never touch the TUI process — only call `lpui`.
 
 A project is: title + priority + why + what + acceptance criteria. Stories cut
@@ -64,7 +64,7 @@ Pass `--actor <name>` on every write so the human sees who did what in
 
 ## DB scoping (first match wins)
 
-`--db PATH` → `$LAZYPLAN_DB` → enclosing git repo's `.plan/lazyplan.db` →
+`--db PATH` → `$LAZYPLAN_DB` → enclosing git repo's `.lazyplan/lazyplan.db` →
 global `~/.local/share/lazyplan/lazyplan.db`. Running from any subdirectory
 of the repo resolves to that repo's DB. Don't override `--db` unless asked.
 
@@ -220,7 +220,7 @@ and wait for an answer before writing. Never decide a project's why/what or its 
 
 AGENTS_SNIPPET = """## lazyplan (`lpui`)
 
-Repo plan of record: projects > stories > tasks in `.plan/lazyplan.db`.
+Repo plan of record: projects > stories > tasks in `.lazyplan/lazyplan.db`.
 Human watches `lpui ui`; agents work via the CLI with `--actor <name>`.
 
 - New project? Interview the human first: vision, scope in and out, deliverables, constraints, metrics, acceptance criteria (priority only if volunteered; new tasks default p1). Scout the codebase during the interview.
@@ -397,6 +397,47 @@ def _prompt(
         print(f"  pick one of {sorted(valid)} — using default [{default}]", file=out)
         return default
     return line or default
+
+
+def append_gitignore(root: Path, entry: str) -> bool:
+    """Append entry to the repo .gitignore when missing. Returns True when added."""
+    entry = entry.strip()
+    if not entry:
+        return False
+    gi = Path(root).expanduser() / ".gitignore"
+    try:
+        raw = gi.read_text() if gi.is_file() else ""
+    except OSError:
+        return False
+    lines = [ln.strip().rstrip("/") for ln in raw.splitlines()]
+    if entry.rstrip("/") in lines:
+        return False
+    try:
+        with open(gi, "a") as fh:
+            if raw and not raw.endswith("\n"):
+                fh.write("\n")
+            fh.write(entry + "\n")
+    except OSError:
+        return False
+    return True
+
+
+def prompt_confirm(
+    prompt: str,
+    default_yes: bool = True,
+    read: Callable[[], str] | None = None,
+    write: TextIO | None = None,
+) -> bool:
+    """Y/n prompt on stderr/stdin; EOF/empty means the default. Never raises."""
+    default = "Y" if default_yes else "N"
+    ans = _prompt(
+        f"{prompt} [{'Y/n' if default_yes else 'y/N'}]: ",
+        valid={"y", "n", "Y", "N", ""},
+        default=default,
+        read=read,
+        write=write,
+    )
+    return ans.lower() != "n" if default_yes else ans.lower() == "y"
 
 
 def run_wizard(

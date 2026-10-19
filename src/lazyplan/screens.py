@@ -19,6 +19,7 @@ except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
 from .design import HELP_TEXT, msg_error
+from .render import render_commits
 
 if TYPE_CHECKING:
     from .store import Store
@@ -186,6 +187,8 @@ if _TEXTUAL_OK:
                 yield Input(placeholder="why does this exist?", id="d-why")
             with Vertical(id="d-crit"):
                 yield Label("acceptance (tick = done):")
+            with Vertical(id="d-commits"):
+                yield Label("commits:")
             yield Button("Save", id="ok", variant="primary")
             yield Button("Cancel", id="cancel")
 
@@ -211,6 +214,12 @@ if _TEXTUAL_OK:
                 crit_box.mount(
                     Checkbox(f"#{c['id']} {c['text']}", value=bool(c["done"]), id=f"crit-{c['id']}")
                 )
+            commits_box = self.query_one("#d-commits", Vertical)
+            links = full.get("links", [])
+            if not links:
+                commits_box.display = False
+            else:
+                commits_box.mount(Static(render_commits(links), markup=False))
 
         def on_button_pressed(self, e: Button.Pressed) -> None:
             if e.button.id != "ok":

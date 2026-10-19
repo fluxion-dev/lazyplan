@@ -307,23 +307,25 @@ if _TEXTUAL_OK:
             tree.clear()
             self._row_nodes = {}
             root = tree.root
+            link_map = self.store.links_map()
             for p, stories in self._filtered_tree():
                 pn = root.add(
-                    project_row(p),
+                    project_row(p, links=link_map.get(("project", p.id))),
                     data={"kind": "project", "id": p.id},
                     allow_expand=bool(stories),
                 )
                 self._row_nodes[("project", p.id)] = pn
                 for s, tasks in stories:
                     sn = pn.add(
-                        story_row(s, self.store),
+                        story_row(s, self.store, links=link_map.get(("story", s.id))),
                         data={"kind": "story", "id": s.id},
                         allow_expand=bool(tasks),
                     )
                     self._row_nodes[("story", s.id)] = sn
                     for t in tasks:
                         leaf = sn.add_leaf(
-                            task_row(t, self.store), data={"kind": "task", "id": t.id}
+                            task_row(t, self.store, links=link_map.get(("task", t.id))),
+                            data={"kind": "task", "id": t.id},
                         )
                         self._row_nodes[("task", t.id)] = leaf
             root.expand()

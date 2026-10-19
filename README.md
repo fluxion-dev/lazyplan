@@ -83,6 +83,8 @@ the classic Unix print command.
   why, what, acceptance criteria, priority — then records the definition.
 - Once the definition is agreed, stories cut the project into slices and
   prioritized tasks cut each story into units of work. Work p0 first.
+- Rows with linked git commits show short-SHA chips; `enter` on a row lists
+  its commits in the detail dialog read-only.
 - Any coding agent reads (`list`, `show`, `feed --json`) and writes
   (`--actor NAME add-task …`) against the same SQLite file; the TUI
   re-reads every second and toasts new arrivals. Agents never touch the

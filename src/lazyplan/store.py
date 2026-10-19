@@ -684,6 +684,20 @@ class Store:
             ).fetchall()
         return [self._row_to_link(r) for r in rows]
 
+    def links_map(self) -> dict[tuple[str, int], list[str]]:
+        """Every linked SHA grouped by (parent_kind, parent_id), oldest first.
+
+        One query per call so tree renders stay O(1) in queries.
+        """
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT parent_kind, parent_id, sha FROM vcs_links ORDER BY id"
+            ).fetchall()
+        out: dict[tuple[str, int], list[str]] = {}
+        for r in rows:
+            out.setdefault((r["parent_kind"], r["parent_id"]), []).append(r["sha"])
+        return out
+
     def get_parent(self, kind: str, obj_id: int) -> Project | UserStory | Task | None:
         """Fetch any row by kind (criteria parent lookup)."""
         if kind == "project":

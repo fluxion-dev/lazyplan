@@ -14,6 +14,7 @@ Rule: if you add a view, command, or message, add it here first.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
 from .models import Status
@@ -82,6 +83,13 @@ def pill_tag(text: str) -> str:
     return f"[reverse] {text} [/]"
 
 
+def commits_chip(shas: Sequence[str] | None) -> str:
+    """Short-SHA chips, one per linked commit; empty when there are no links."""
+    if not shas:
+        return ""
+    return " ".join(pill_tag(s[:12]) for s in shas)
+
+
 def _escape_markup(text: str) -> str:
     """Escape `[` so titles render literally in markup-parsed TUI rows."""
     return text.replace("[", "\\[")
@@ -113,9 +121,16 @@ def _label(kind: str, obj: Project | UserStory | Task, store: Store | None, dot:
     return f"{status_word(obj.status, dot)} {_core(kind, obj, store)}"
 
 
-def _row(kind: str, obj: Project | UserStory | Task, store: Store | None) -> str:
-    """TUI row: Rich status word + escaped body."""
-    return f"{status_word(obj.status, 'rich')} {_escape_markup(_core(kind, obj, store))}"
+def _row(
+    kind: str,
+    obj: Project | UserStory | Task,
+    store: Store | None,
+    links: Sequence[str] | None = None,
+) -> str:
+    """TUI row: Rich status word + escaped body + commit chips (when linked)."""
+    base = f"{status_word(obj.status, 'rich')} {_escape_markup(_core(kind, obj, store))}"
+    chips = commits_chip(links)
+    return f"{base} {chips}" if chips else base
 
 
 def project_label(p: Project, store: Store | None = None, dot: str = "plain") -> str:
@@ -123,12 +138,14 @@ def project_label(p: Project, store: Store | None = None, dot: str = "plain") ->
     return _label("project", p, store, dot)
 
 
-def project_row(p: Project, store: Store | None = None) -> str:
-    """TUI project row (Rich markup): status word + pill number + priority + title."""
-    return (
+def project_row(p: Project, store: Store | None = None, links: Sequence[str] | None = None) -> str:
+    """TUI project row (Rich markup): status + pill + priority + title + chips."""
+    base = (
         f"{status_word(p.status, 'rich')} {pill_tag(f'P{p.id}')}"
         f"{priority_tag(p.priority)} {_escape_markup(p.name)}"
     )
+    chips = commits_chip(links)
+    return f"{base} {chips}" if chips else base
 
 
 def story_label(s: UserStory, store: Store | None = None, dot: str = "plain") -> str:
@@ -136,9 +153,9 @@ def story_label(s: UserStory, store: Store | None = None, dot: str = "plain") ->
     return _label("story", s, store, dot)
 
 
-def story_row(s: UserStory, store: Store | None = None) -> str:
-    """TUI story row (Rich markup): status word + canonical label."""
-    return _row("story", s, store)
+def story_row(s: UserStory, store: Store | None = None, links: Sequence[str] | None = None) -> str:
+    """TUI story row (Rich markup): status word + canonical label + chips."""
+    return _row("story", s, store, links)
 
 
 def task_label(t: Task, store: Store | None = None, dot: str = "plain") -> str:
@@ -146,9 +163,9 @@ def task_label(t: Task, store: Store | None = None, dot: str = "plain") -> str:
     return _label("task", t, store, dot)
 
 
-def task_row(t: Task, store: Store | None = None) -> str:
-    """TUI task row (Rich markup): status word + canonical label."""
-    return _row("task", t, store)
+def task_row(t: Task, store: Store | None = None, links: Sequence[str] | None = None) -> str:
+    """TUI task row (Rich markup): status word + canonical label + chips."""
+    return _row("task", t, store, links)
 
 
 # -- empty states (identical wording everywhere) --------------------------

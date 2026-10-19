@@ -115,6 +115,28 @@ class TestDesignSystem(unittest.TestCase):
         for const in (design.EMPTY_NO_PROJECTS, design.EMPTY_FEED):
             self.assertTrue(isinstance(const, str) and len(const) > 0)
 
+    def test_commits_chip(self):
+        self.assertEqual(design.commits_chip(None), "")
+        self.assertEqual(design.commits_chip([]), "")
+        sha = "a" * 40
+        self.assertEqual(design.commits_chip([sha]), "[reverse] aaaaaaaaaaaa [/]")
+        self.assertEqual(
+            design.commits_chip([sha, "b" * 40]),
+            "[reverse] aaaaaaaaaaaa [/] [reverse] bbbbbbbbbbbb [/]",
+        )
+
+    def test_rows_show_chips_only_when_linked(self):
+        p = Project(id=1, name="N", priority="p1")
+        self.assertEqual(design.project_row(p), design.project_row(p, links=None))
+        self.assertEqual(design.project_row(p), design.project_row(p, links=[]))
+        self.assertIn("a" * 12, design.project_row(p, links=["a" * 40]))
+        s = UserStory(id=2, project_id=1, title="S")
+        self.assertEqual(design.story_row(s), design.story_row(s, links=[]))
+        self.assertIn("b" * 12, design.story_row(s, links=["b" * 40]))
+        t = Task(id=3, story_id=2, title="T")
+        self.assertEqual(design.task_row(t), design.task_row(t, links=None))
+        self.assertIn("c" * 12, design.task_row(t, links=["c" * 40]))
+
 
 if __name__ == "__main__":
     unittest.main()

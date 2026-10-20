@@ -160,7 +160,7 @@ lpui --actor helper add-task --milestone 1 --title "Draft proposal" --priority p
 lpui feed --json --follow &                         # tail activity (polls every second)
 ```
 
-How your agent is expected to work: it asks you about the plan first (why it exists, what it covers, how you will know it is done, how urgent it is — it never makes that up). On implementation requests it hunts ambiguity first: in/out scope, touch-points, edge cases, non-goals, assumptions. Then it breaks the work into milestones and prioritized tasks. It looks up ids with `list` instead of guessing them. It prefers `update` and `status` over deleting and re-creating. It works on `p0` first. Every row is written for scanning — paragraphs and sections, never a single blob or placeholder text. The full contract lives in the repo skill file `.agents/skills/lazyplan/SKILL.md`. If you contribute code, follow the design rules in [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md).
+How your agent is expected to work: it asks you about the plan first (why it exists, what it covers, how you will know it is done, how urgent it is — it never makes that up). On implementation requests it hunts ambiguity first: in/out scope, touch-points, edge cases, non-goals, assumptions. Then it breaks the work into milestones and prioritized tasks. It looks up ids with `list` instead of guessing them. It prefers `update` and `status` over deleting and re-creating. It works on `p0` first. Every row is written for scanning — paragraphs and sections, never a single blob or placeholder text. The full agent contract is generated per clone by `lpui init --team`. If you contribute code, follow the design rules in `src/lazyplan/design.py`.
 
 ## Data, backup, replicas
 

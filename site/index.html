@@ -187,7 +187,7 @@
   <p class="mb-10 md:mb-14 text-lg text-zinc-400">Three commands give you a live plan. Then drive it from the keyboard or the shell:</p>
 <div class="space-y-6">
 <pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-surface p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono">cd ~/my-plan
-lpui init --yes             <span class="text-zinc-500"># creates .agents/lazyplan/lazyplan.db + .agents/lazyplan/config.json</span>
+lpui init --yes             <span class="text-zinc-500"># zero-touch: local skills + DB, no repo writes (--team to share)</span>
 lpui add-plan --title "my-plan" --why "reason" --what "scope" --priority p1
 lpui                        <span class="text-zinc-500"># TUI (same as `lpui ui`)</span>
 </code></pre>
@@ -195,9 +195,10 @@ lpui                        <span class="text-zinc-500"># TUI (same as `lpui ui`
 <pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-surface p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono">lpui add-criteria --kind plan --id 1 --text "Works offline"
 lpui add-milestone --plan 1 --title "Auth refresh" --priority p0
 lpui add-task --milestone 1 --title "Rotate tokens" --priority p1
-lpui list
+lpui link-repo --kind plan --id 1 --repo ~/checkouts/api
+lpui list --repo ~/checkouts/api
 lpui status --kind task --id 1 --to doing
-lpui show --kind plan --id 1   <span class="text-zinc-500"># full context: why/what + criteria + children</span>
+lpui show --kind plan --id 1   <span class="text-zinc-500"># full context: why/what + criteria + children + repos</span>
 </code></pre>
   <p class="text-zinc-300">Keys for the screen (see also <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui help</code>, or press <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">?</code> inside the app):</p>
 <pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-surface p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono">j/k navigate · click select · enter/double-click edit · ←/→ fold

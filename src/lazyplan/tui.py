@@ -318,9 +318,14 @@ if _TEXTUAL_OK:
             self._row_nodes = {}
             root = tree.root
             link_map = self.store.links_map()
+            repos_map = self.store.repos_map()
             for p, milestones in self._filtered_tree():
                 pn = root.add(
-                    plan_row(p, links=link_map.get(("plan", p.id))),
+                    plan_row(
+                        p,
+                        links=link_map.get(("plan", p.id)),
+                        repos=repos_map.get(("plan", p.id)),
+                    ),
                     data={"kind": "plan", "id": p.id},
                     allow_expand=bool(milestones),
                 )

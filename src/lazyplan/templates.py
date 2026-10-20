@@ -72,8 +72,38 @@ class TemplateChoices:
 
     require_why_what: bool = True
     require_desc: bool = True
-    with_examples: bool = True
+    # Legacy switch: starter criteria lists are empty, so fresh rows ship
+    # with zero auto-added criteria and the interview must add real ones.
+    # Kept so old callers constructing TemplateChoices keep working.
+    with_examples: bool = False
     task_priority: str = "p1"
+
+
+# Readability gate: long free text must be structured (paragraphs/sections),
+# never a single blob. Short one-liners stay legal.
+READABILITY_THRESHOLD = 300
+
+SECTION_MARKERS = ("#", "- ", "* ", "> ", "1.", "2.", "3.", "4.", "5.")
+
+
+def _is_sectioned(value: str) -> bool:
+    """True when text has paragraph breaks or section/list markers."""
+    if "\n\n" in value:
+        return True
+    return any(line.lstrip().startswith(SECTION_MARKERS) for line in value.splitlines())
+
+
+def check_readable(kind: str, field: str, value: str) -> None:
+    """Reject long single-blob text; raises naming the field. Short text passes."""
+    if field not in ("why", "what", "desc"):
+        return
+    if value and len(value) > READABILITY_THRESHOLD and not _is_sectioned(value):
+        flag = FLAG_BY_FIELD.get(field, field)
+        raise ValueError(
+            f"template {kind}.md requires readable '{field}' "
+            f"(over {READABILITY_THRESHOLD} chars with no paragraphs or sections) "
+            f"— split into paragraphs and sections, then pass {flag} again"
+        )
 
 
 def _frontmatter(defaults: dict[str, str], required: list[str], criteria: list[str]) -> str:
@@ -102,8 +132,19 @@ How `add-plan` (and TUI `P`) uses this file:
 - `required`: must be non-empty after fill, or creation fails naming the
   field. Keep `why`/`what` here so every plan records its purpose; drop
   them to allow one-liner plans.
-- `criteria`: one acceptance row auto-added to every new plan. Keep the
-  examples until you have real ones, then delete them.
+- `criteria`: acceptance rows auto-added to every new plan. Fresh starters
+  ship EMPTY on purpose: the interview must add real, measurable criteria
+  per plan (never ship bracket or example text as acceptance).
+
+Implementation interrogation (run before any row is written): pin down
+explicit in-scope and out-of-scope lists, the files/touch-points involved,
+edge cases, non-goals, and assumptions. Vague scope is rejected, not recorded.
+
+Readability (enforced): write `why`/`what` for scanning — short paragraphs
+separated by blank lines, sections with headers or lists where needed
+(e.g. Scope in/out, Deliverables in order, Constraints/assumptions,
+Metrics). Long single-blob text is rejected at creation; short one-liners
+stay legal.
 
 Example: to require only a title, set `required: [title]`.
 """
@@ -117,8 +158,15 @@ How `add-milestone` (and TUI `M`) uses this file:
   [benefit]`. A milestone without them is not ready to cut.
 - `required`: keep `desc` here so slices always carry user value; drop it to
   allow title-only milestones.
-- `criteria`: Given/When/Then rows auto-added to every new milestone, e.g.
-  `Given [context], when [action], then [outcome]`.
+- `criteria`: Given/When/Then rows auto-added to every new milestone.
+  Fresh starters ship EMPTY on purpose: add real, measurable criteria per
+  milestone (e.g. `Given [context], when [action], then [outcome]` with
+  concrete values, never brackets). Each criterion must be exercisable by a
+  named task.
+
+Readability (enforced): structure `desc` in paragraphs and sections —
+narrative first, then inputs/prerequisites. Long single-blob text is
+rejected at creation; short descs stay legal.
 
 Example: to require only a title, set `required: [title]`.
 """
@@ -127,27 +175,31 @@ TASK_BODY = """
 # task template — edit the frontmatter above; everything below is guidance.
 
 How `add-task` (and TUI `T`) uses this file:
-- `defaults`: `desc` should carry the approach, code references, and
-  inputs/prerequisites — a task missing them is not ready to cut. `priority`
-  is the default when `--priority` is omitted (`p1` keeps headers clean).
+- `defaults`: `desc` must carry the technical how in sections: Approach,
+  code references, and inputs/prerequisites — a task missing them is not
+  ready to cut. Name real files, real constraints, real prerequisites:
+  cut tasks only from scouted ground. `priority` is the default when
+  `--priority` is omitted (`p1` keeps headers clean).
 - `required`: keep `desc` here so tasks always carry context; drop it to
-  allow title-only tasks. Titles should start with a verb naming the target.
-- `criteria`: definition-of-done rows auto-added to every new task.
+  allow title-only tasks. Titles start with a verb naming the target.
+- `criteria`: definition-of-done rows auto-added to every new task. Fresh
+  starters ship EMPTY on purpose: add DoD checklists per task, each one
+  referencing the plan criterion it satisfies (never ship example text).
+
+Readability (enforced): structure `desc` in paragraphs and sections.
+Long single-blob text is rejected at creation; short descs stay legal.
 
 Example: to require only a title, set `required: [title]`.
 """
 
-PLAN_EXAMPLES = [
-    "Example: works end to end (edit or delete me)",
-    "Example: docs updated (edit or delete me)",
-]
+# Fresh starters ship with zero auto-added criteria: the planning interview
+# must add real, measurable criteria per row. Never put placeholder or
+# example text here — it would ship as fake acceptance.
+PLAN_EXAMPLES: list[str] = []
 
-MILESTONE_EXAMPLES = ["Given [context], when [action], then [outcome] (edit or delete me)"]
+MILESTONE_EXAMPLES: list[str] = []
 
-TASK_EXAMPLES = [
-    "Unit tests pass (example — edit or delete me)",
-    "Touched docs updated (example — edit or delete me)",
-]
+TASK_EXAMPLES: list[str] = []
 
 
 def render_starter(kind: str, choices: TemplateChoices) -> str:
@@ -528,6 +580,9 @@ def apply_template(kind: str, fields: dict[str, str], db_path: str | Path) -> di
         if not out.get(name, "").strip():
             flag = FLAG_BY_FIELD.get(name, name)
             raise ValueError(f"template {kind}.md requires '{name}' (empty) — pass {flag}")
+    for name in ("why", "what", "desc"):
+        if name in allowed:
+            check_readable(kind, name, out.get(name, ""))
     return out
 
 

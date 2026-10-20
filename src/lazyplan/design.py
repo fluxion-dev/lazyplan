@@ -14,7 +14,7 @@ Rule: if you add a view, command, or message, add it here first.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING
 
 from .kinds import LABEL_LETTERS, MILESTONE, PLAN, TASK
@@ -82,6 +82,31 @@ def commits_chip(shas: Sequence[str] | None) -> str:
     return " ".join(pill_tag(s[:12]) for s in shas)
 
 
+def repo_project_name(repo: Mapping[str, object] | None) -> str:
+    """Project name for a linked repo: remote repo name, else checkout basename."""
+    if not repo:
+        return ""
+    remote = str(repo.get("repo_remote") or "").strip().rstrip("/")
+    if remote:
+        tail = remote.rsplit(":", 1)[-1].rsplit("/", 1)[-1]
+        if tail.lower().endswith(".git"):
+            tail = tail[: -len(".git")]
+        if tail:
+            return tail
+    path = str(repo.get("repo_path") or "").strip().rstrip("/")
+    if path:
+        return path.rsplit("/", 1)[-1] or path
+    return ""
+
+
+def repos_chip(repos: Sequence[Mapping[str, object]] | None) -> str:
+    """Pill chips, one per linked repo project; empty when there are no links."""
+    names = [n for n in (repo_project_name(r) for r in repos or []) if n]
+    if not names:
+        return ""
+    return " ".join(pill_tag(n) for n in names)
+
+
 def _escape_markup(text: str) -> str:
     """Escape `[` so titles render literally in markup-parsed TUI rows."""
     return text.replace("[", "\\[")
@@ -120,13 +145,25 @@ def _row(
 
 def plan_label(p: Plan, store: Store | None = None, dot: str = "plain") -> str:
     """Canonical row label for a plan (plain text: CLI, tests)."""
-    return _label("plan", p, store, dot)
+    base = _label("plan", p, store, dot)
+    if store is None:
+        return base
+    names = [n for n in (repo_project_name(r) for r in store.effective_repos("plan", p.id)) if n]
+    return f"{base} [{', '.join(names)}]" if names else base
 
 
-def plan_row(p: Plan, store: Store | None = None, links: Sequence[str] | None = None) -> str:
+def plan_row(
+    p: Plan,
+    store: Store | None = None,
+    links: Sequence[str] | None = None,
+    repos: Sequence[Mapping[str, object]] | None = None,
+) -> str:
     """TUI plan row (Rich markup): status + pill + title + chips."""
     base = f"{status_word(p.status, 'rich')} {pill_tag(f'P{p.id}')} {_escape_markup(p.name)}"
     chips = commits_chip(links)
+    repo_chips = repos_chip(repos)
+    if repo_chips:
+        chips = f"{chips} {repo_chips}" if chips else repo_chips
     return f"{base} {chips}" if chips else base
 
 

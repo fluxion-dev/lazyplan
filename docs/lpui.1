@@ -28,7 +28,7 @@ who is making this change (you see it in feed; default: $USER or 'human')
 Flags work before or after the command: \fBlpui list \-\-json\fR means the same as \fBlpui \-\-json list\fR. Run \fBlpui COMMAND \-\-help\fR for details.
 .TP
 .B lpui init
-set up \.agents/lazyplan/ in this repo (or use the global database)
+set up agent skills locally (zero\-touch) or share this repo with \-\-team
 .RS
 .TP
 .B \-\-json
@@ -63,6 +63,16 @@ install agent helper files to one place without asking first (none = skip) Choic
 .TP
 .B \-\-skills\-dir PATH
 put the skill in this folder instead of the detected ones
+.RE
+.RS
+.TP
+.B \-\-team
+write repo\-shared files (\.agents/lazyplan/, AGENTS\.md pointer, templates) for teams
+.RE
+.RS
+.TP
+.B \-\-agents LIST
+which agents to install for (space/comma list, 'all', or detected by default)
 .RE
 .TP
 .B lpui seed
@@ -147,6 +157,11 @@ show no more than N plans
 .TP
 .B \-\-priority {p0|p1|p2|p3}
 show only this priority (p0 matters most) Choices: p0, p1, p2, p3\.
+.RE
+.RS
+.TP
+.B \-\-repo PATH
+show only rows linked to this repo (matches effective repos)
 .RE
 .TP
 .B lpui add\-plan
@@ -591,6 +606,115 @@ which kind of row to list Choices: plan, milestone, task\. Required\.
 .TP
 .B \-\-id ID
 id of the row Required\.
+.RE
+.TP
+.B lpui link\-repo
+attach a repo checkout to a row
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B \-\-kind {plan|milestone|task}
+which kind of row to attach to Choices: plan, milestone, task\. Required\.
+.RE
+.RS
+.TP
+.B \-\-id ID
+id of the row Required\.
+.RE
+.RS
+.TP
+.B \-\-repo PATH
+repo checkout path (absolute or relative; stored absolute) Required\.
+.RE
+.RS
+.TP
+.B \-\-remote URL
+remote URL (default: git remote get\-url origin for the path, else empty)
+.RE
+.TP
+.B lpui unlink\-repo
+detach a repo checkout from a row
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B \-\-kind {plan|milestone|task}
+which kind of row to detach from Choices: plan, milestone, task\. Required\.
+.RE
+.RS
+.TP
+.B \-\-id ID
+id of the row Required\.
+.RE
+.RS
+.TP
+.B \-\-repo PATH
+which repo path to detach Required\.
+.RE
+.RS
+.TP
+.B \-\-remote URL
+only detach this remote (default: all remotes for the path)
+.RE
+.TP
+.B lpui repos
+list the repos attached to a row
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B \-\-kind {plan|milestone|task}
+which kind of row to list Choices: plan, milestone, task\. Required\.
+.RE
+.RS
+.TP
+.B \-\-id ID
+id of the row Required\.
+.RE
+.RS
+.TP
+.B \-\-effective
+show inherited repos when the row has no explicit links
 .RE
 .TP
 .B lpui export

@@ -62,16 +62,24 @@ Run these three commands. You will have a live plan you can open:
 
 ```bash
 cd ~/my-plan
-lpui init --yes             # creates .agents/lazyplan/lazyplan.db + .agents/lazyplan/config.json
+lpui init --yes             # zero-touch: local skills + DB, no repo writes
 lpui add-plan --title "my-plan" --why "reason" --what "scope" --priority p1
-lpui                        # TUI; every subdir of the repo shares this DB (`lpui ui` also works)
+lpui                        # TUI (`lpui ui` also works)
 ```
 
-The first time you run `lpui init` with no flags, it offers to install helper files for your coding agent. It detects your agents and writes the skill into each one's own skills folder, plus the shared `.agents/skills/` copy every tool reads. You can skip that step with `--no-skills`, pick where they go with `--skills-scope project|global|both|none`, force one folder with `--skills-dir PATH` (or `$LAZYPLAN_SKILLS_DIR`), or pass `--json` for machine-readable output that never asks you questions. On a terminal it can also move an old `.plan/` folder for you and suggest entries for your `.gitignore`.
+The first time you run `lpui init` with no flags, it asks which agents to install for, then writes the skill into each selected agent's own local skills folder (plus a sibling `lazyplan.db` per skill dir) without touching your repo. Pass `--team` to opt a repo into shared storage instead: `lpui init --team` writes `.agents/lazyplan/`, repo skills, the `AGENTS.md` pointer, and templates, and offers `.gitignore` entries. You can skip skills with `--no-skills`, pick agents non-interactively with `--agents "opencode,claude"` (or `all`), force one folder with `--skills-dir PATH` (or `$LAZYPLAN_SKILLS_DIR`), or pass `--json` for machine-readable output that never asks you questions.
 
-You can run `lpui` from any folder inside your repo. It finds the repo for you. Outside a repo, it uses a global database on your machine instead.
+You can run `lpui` from any folder. By default it stays out of your repo: it uses the first existing agent-local skill DB, else the global database. Only team-initialized repos resolve into the repo.
 
-Where does it look for the database? The first match wins: `--db PATH`, then `$LAZYPLAN_DB`, then the repo's `.agents/lazyplan/lazyplan.db`, then the global `~/.local/share/lazyplan/lazyplan.db`. Commit `.agents/lazyplan/config.json` to share the plan with your team. The `*.db` file itself stays local (it is gitignored) unless you force-add it.
+Where does it look for the database? The first match wins: `--db PATH`, then `$LAZYPLAN_DB`, then the repo's team-initialized `.agents/lazyplan/lazyplan.db`, then the first existing agent-local skill DB, then the global `~/.local/share/lazyplan/lazyplan.db`. For teams, commit `.agents/lazyplan/config.json` to share the plan. The `*.db` file itself stays local (it is gitignored) unless you force-add it.
+
+Planning across checkouts? Link repos to any row (0..n, path plus remote URL). Tasks inherit their milestone's repos, milestones inherit their plan's:
+
+```bash
+lpui link-repo --kind plan --id 1 --repo ~/checkouts/api
+lpui repos --kind task --id 2 --effective
+lpui list --repo ~/checkouts/api
+```
 
 Need tab completion? Run `eval "$(lpui completion --shell bash)"` (or `--shell zsh`). System packages include completions plus the `man lpui` page out of the box.
 
@@ -124,6 +132,10 @@ lpui add-task --milestone 1 --title "Rotate tokens" [--desc ctx --priority p1]
 lpui link --kind task --id 1 [--sha HASH]      # attach HEAD (git repos only; disabled otherwise)
 lpui commits --kind task --id 1                # list linked commits (empty outside git)
 lpui unlink --kind task --id 1 --sha HASH      # detach a commit
+lpui link-repo --kind plan --id 1 --repo ~/checkouts/api [--remote URL]
+lpui unlink-repo --kind plan --id 1 --repo ~/checkouts/api
+lpui repos --kind task --id 1 [--effective]    # explicit links, or inherited
+lpui list [--repo ~/checkouts/api]             # filter by effective repo
 lpui export [--format json|markdown] | lpui import --file dump.json
 lpui update --kind task --id 1 [--title --desc --priority p0|none]
 lpui update --kind plan --id 1 [--title --what --why --priority p0|none]
@@ -147,12 +159,12 @@ lpui --actor helper add-task --milestone 1 --title "Draft proposal" --priority p
 lpui feed --json --follow &                         # tail activity (polls every second)
 ```
 
-How your agent is expected to work: it asks you about the plan first (why it exists, what it covers, how you will know it is done, how urgent it is — it never makes that up). Then it breaks the work into milestones and prioritized tasks. It looks up ids with `list` instead of guessing them. It prefers `update` and `status` over deleting and re-creating. It works on `p0` first. The full contract lives in the repo skill file `.agents/skills/lazyplan/SKILL.md`. If you contribute code, follow the design rules in [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md).
+How your agent is expected to work: it asks you about the plan first (why it exists, what it covers, how you will know it is done, how urgent it is — it never makes that up). On implementation requests it hunts ambiguity first: in/out scope, touch-points, edge cases, non-goals, assumptions. Then it breaks the work into milestones and prioritized tasks. It looks up ids with `list` instead of guessing them. It prefers `update` and `status` over deleting and re-creating. It works on `p0` first. Every row is written for scanning — paragraphs and sections, never a single blob or placeholder text. The full contract lives in the repo skill file `.agents/skills/lazyplan/SKILL.md`. If you contribute code, follow the design rules in [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md).
 
 ## Data, backup, replicas
 
-- One repo keeps one database: `.agents/lazyplan/lazyplan.db` sits next to the code it plans. The `.agents/lazyplan/config.json` file marks which folder it belongs to. Commit the config file so your team shares the plan. The database itself stays on your machine.
-- Need a backup, or moving to a new machine? Run `lpui export --format json > backup.json` to save, and `lpui import --file backup.json` to load it back (ids change on import, and that is fine).
+- Zero-touch by default: `lpui init` keeps skills plus a sibling `lazyplan.db` in each agent-local skill dir and writes nothing to your repo. For teams, `lpui init --team` creates `.agents/lazyplan/lazyplan.db` next to the code it plans. The `.agents/lazyplan/config.json` file marks which folder it belongs to. Commit the config file so your team shares the plan. The database itself stays on your machine.
+- Need a backup, or moving to a new machine? Run `lpui export --format json > backup.json` to save, and `lpui import --file backup.json` to load it back (ids change on import, and that is fine). Exports include linked repos.
 - Want to click around first? Run `lpui seed` for demo data. Never run it in a repo with a real plan.
 
 ## Develop

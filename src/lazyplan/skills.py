@@ -38,10 +38,9 @@ AGENTS_MARK_END = "<!-- lazyplan:end -->"
 INIT_SKILLS_TITLE = "== lpui init: agent skills =="
 INIT_SKILLS_EXPLAIN = "One universal skill teaches your agents to use `lpui` for planning."
 INIT_SKILLS_COVERAGE = (
-    "Installs to each detected agent's own skills folder, plus the shared "
-    "`.agents/skills/lazyplan/SKILL.md` that OpenCode, Codex, Gemini CLI, "
-    "and Cursor all read. A `.claude/skills/` copy is added automatically "
-    "when Claude Code is detected."
+    "Writes one copy per selected agent into that agent's own skills folder "
+    "(e.g. `~/.config/opencode/skills/lazyplan/`). Tools without a known "
+    "folder share `~/.agents/skills/lazyplan/`."
 )
 INIT_SKILLS_DONE = "Done. Restart your agent session, then try `lpui list`."
 INIT_SKILLS_COMMIT_TIP = (
@@ -54,13 +53,13 @@ TEMPLATE_SETUP_TITLE = "== lpui init: creation templates =="
 TEMPLATE_SETUP_EXPLAIN = (
     "`.agents/lazyplan/templates/` defines what new plans, milestones, and tasks look "
     "like: defaults fill empty flags, required fields fail creation naming the "
-    "field, criteria auto-add on create. Answer four questions to tailor the "
+    "field, long single-blob text fails creation until it uses paragraphs and "
+    "sections. Answer three questions to tailor the "
     "starters (silent runs use the opinionated defaults)."
 )
 TEMPLATE_REVIEW = "Review existing templates in .agents/lazyplan/templates/?"
 TEMPLATE_Q_WHYWHAT = "Require plan why and what on creation?"
 TEMPLATE_Q_DESC = "Require milestone/task details (desc)?"
-TEMPLATE_Q_EXAMPLES = "Include example starter criteria (trim them later)?"
 TEMPLATE_Q_PRIORITY = "Default task priority? [p0/p1/p2/p3] (default p1): "
 TEMPLATE_DONE = "Templates settled — edit `.agents/lazyplan/templates/*.md` any time."
 
@@ -92,9 +91,33 @@ Pass `--actor <name>` on every write so the human sees who did what in
 
 ## DB scoping (first match wins)
 
-`--db PATH` → `$LAZYPLAN_DB` → enclosing git repo's `.agents/lazyplan/lazyplan.db` →
-global `~/.local/share/lazyplan/lazyplan.db`. Running from any subdirectory
-of the repo resolves to that repo's DB. Don't override `--db` unless asked.
+`--db PATH` → `$LAZYPLAN_DB` → enclosing git repo's team-initialized
+`.agents/lazyplan/lazyplan.db` (only when `lpui init --team` created it) →
+first existing agent-local skill DB (one per installed agent, e.g.
+`~/.config/opencode/skills/lazyplan/lazyplan.db`) →
+global `~/.local/share/lazyplan/lazyplan.db`.
+`lpui init` defaults to zero-touch: no repo writes, skills plus a sibling
+`lazyplan.db` per agent-local skill dir. Pass `--team` (or
+`--skills-scope project|both`) to opt a repo into shared storage
+(`.agents/lazyplan/`, repo skills, `AGENTS.md` pointer, templates).
+Don't override `--db` unless asked.
+
+## Linked repos (central plan, many checkouts)
+
+Plans, milestones, and tasks each link 0..n repo checkouts so one central
+DB can plan work across repos. A row with no explicit links inherits:
+a task inherits its milestone's effective repos, a milestone inherits its
+plan's. Link by absolute checkout path plus remote URL (auto-detected
+from `git remote get-url origin` when omitted):
+
+```bash
+lpui --actor NAME link-repo --kind plan --id P --repo /path/to/checkout [--remote URL]
+lpui --actor NAME unlink-repo --kind plan --id P --repo /path/to/checkout
+lpui repos --kind task --id T [--effective]    # explicit vs inherited
+lpui list --repo /path/to/checkout             # only matching rows
+```
+
+`show`, `list --json`, and `export` include `repos` plus `effective_repos`.
 
 ## Starting a plan: interview first
 
@@ -117,6 +140,30 @@ Fold vision into `--why`; scope, deliverables, constraints, and metrics into
 `--what`; acceptance criteria become plan-level checklist items. There are
 no stakeholder, owner, or estimate fields — if it does not fit why, what, or
 criteria, it does not belong in the definition.
+
+## Implementation requests: close the ambiguity gap
+
+When the user asks to build, implement, or change something, run the
+interview above as an ambiguity hunt before writing any row. Do not accept
+"implement X" at face value — pin down all of these in conversation:
+
+- Scope: explicit in-scope and out-of-scope lists, in plain language.
+- Touch-points: the files, commands, and surfaces involved (scouted, real paths).
+- Edge cases and non-goals: what must keep working, what is explicitly excluded.
+- Assumptions: what you take for granted, stated so the human can correct it.
+
+Vague scope is rejected, not recorded. No row is written from unscouted
+ground, in any case, no exceptions.
+
+## Readability: structure every row
+
+Write every plan why/what, milestone desc, and task desc for scanning:
+short paragraphs separated by blank lines, sections with headers or lists
+where needed. Creation rejects long single-blob text (over 300 chars with
+no paragraph breaks or section markers) — split it into paragraphs and
+sections. Short one-liners stay legal. Never ship bracket, example, or
+placeholder text as content or criteria — starters ship empty on purpose,
+and the interview must fill them with real words.
 
 While interviewing, scout the codebase (explore agents, grep, file reads) so
 each question clears up real ambiguity: what exists, what constrains the
@@ -167,23 +214,27 @@ Add `--json` for machine-parseable output (`lpui list --json`).
 
 ## Templates (per-repo creation defaults)
 
-`.agents/lazyplan/templates/{plan,milestone,task}.md` (scaffolded by `lpui init`,
-commit them to share) define what new rows look like. Each file is Markdown
+`.agents/lazyplan/templates/{plan,milestone,task}.md` (scaffolded by `lpui init --team`,
+commit them to share) define what new rows look like. Team repos share them;
+zero-touch local DBs keep a sibling `templates/` dir beside the skill DB.
+Each file is Markdown
 with YAML frontmatter; the body is guidance and ignored:
 
 ```yaml
 defaults: {why: "", what: "", priority: ""}   # filled when a flag is empty
 required: [title]                             # must be non-empty after fill
-criteria: ["Works offline"]                   # auto-added rows on create
+criteria: []                                  # starters ship empty: add real criteria per row
 ```
 
+Long single-blob `why`/`what`/`desc` (over 300 chars with no paragraph
+breaks or section markers) fails creation — use paragraphs and sections.
 Field names are per kind: plan `title/why/what/priority`, milestone and task
 `title/desc/priority`. Missing `required` entries fail with exit 2 naming the
 field; missing template files mean legacy behavior (tasks default `p1`).
 
-`lpui init` walks the user through template setup: on a TTY it asks four
+`lpui init` walks the user through template setup: on a TTY it asks three
 convention questions (require plan why/what, require milestone/task desc,
-example starter criteria, default task priority) and writes tailored
+default task priority) and writes tailored
 starters; `--yes`/`--json`/non-TTY writes the opinionated defaults silently.
 Rerunning `init` on a TTY offers per-file keep/edit/reset (default keep) —
 edits are never overwritten without an explicit reset.
@@ -279,6 +330,8 @@ Human watches `lpui ui`; agents work via the CLI with `--actor <name>`.
 - Write (full CRUD): `lpui add-plan`, `lpui add-milestone`, `lpui add-task`, `lpui update`, `lpui status`, `lpui delete` (all with `--actor <name>`)
 - Milestones read As a/I want/so that with Given-When-Then criteria; tasks start with a verb and carry a DoD checklist; cut both from scouted ground only
 - Scout before creating anything — no row from unscouted ground; scope lists what is in and out explicitly
+- Implementation requests get an ambiguity hunt first: touch-points, edge cases, non-goals, assumptions — never accept "implement X" at face value
+- Write every row for scanning: paragraphs and sections, no single-blob text, no placeholder content; starters ship empty, fill them with real words
 - Templates in `.agents/lazyplan/templates/` fill/enforce/auto-add criteria at creation; missing templates mean legacy defaults; `lpui init` walks through setup, reruns offer keep/edit/reset
 - Plans include QA, refactoring, and documentation cleanup by default; ask about relevant testing in the interview, drop them only on explicit opt-out
 - Done means: `lpui add-criteria --kind plan`, cut milestones, cut prioritized tasks, work p0 first
@@ -376,6 +429,68 @@ TOOL_SKILL_DIRS: dict[str, tuple[str, str]] = {
     "cursor": (".cursor/skills", ".cursor/skills"),
 }
 
+KNOWN_TOOLS: tuple[str, ...] = ("opencode", "claude", "codex", "gemini", "cursor", "copilot")
+
+# Sibling DB filename kept next to each installed SKILL.md so an
+# agent-local install is self-contained (skill + DB, no repo writes).
+SKILL_DB_NAME = "lazyplan.db"
+
+
+def skill_db_path(skill_file: str | Path) -> Path:
+    """DB sibling for an installed SKILL.md (per agent-skill dir)."""
+    return Path(skill_file).expanduser().parent / SKILL_DB_NAME
+
+
+def agent_local_db_candidates(home: Path | None = None) -> list[Path]:
+    """Preferred agent-local DBs, most-shared first (no side effects)."""
+    home = (home or Path.home()).expanduser()
+    candidates: list[Path] = [
+        home / AGENTS_DIR / SKILLS_DIR / SKILL_NAME / SKILL_DB_NAME,
+    ]
+    for tool in KNOWN_TOOLS:
+        entry = TOOL_SKILL_DIRS.get(tool)
+        if entry is None:
+            continue
+        _, home_dir = entry
+        if not home_dir:
+            continue
+        candidates.append(home / home_dir / SKILL_NAME / SKILL_DB_NAME)
+    seen: list[Path] = []
+    for cand in candidates:
+        if cand not in seen:
+            seen.append(cand)
+    return seen
+
+
+def ensure_skill_db(skill_file: str | Path) -> Path:
+    """Ensure the sibling DB dir exists; returns the DB path (no schema here)."""
+    db = skill_db_path(skill_file)
+    db.parent.mkdir(parents=True, exist_ok=True)
+    return db
+
+
+def parse_tool_selection(raw: str, hosts: list[AgentHost]) -> list[str]:
+    """Parse wizard tool picking: numbers, keys, 'all', or '' (default)."""
+    valid = [h.key for h in hosts if h.key in KNOWN_TOOLS]
+    detected = [h.key for h in hosts if h.detected and h.key in KNOWN_TOOLS]
+    text = (raw or "").strip().lower()
+    if not text:
+        return list(detected) if detected else ["opencode"]
+    if text in ("all", "*"):
+        return list(valid)
+    picked: list[str] = []
+    for part in text.replace(",", " ").split():
+        key: str | None = None
+        if part.isdigit():
+            idx = int(part) - 1
+            if 0 <= idx < len(valid):
+                key = valid[idx]
+        elif part in valid:
+            key = part
+        if key is not None and key not in picked:
+            picked.append(key)
+    return picked if picked else (list(detected) if detected else ["opencode"])
+
 
 def tool_skill_targets(tool: str, scope: str, repo_root: Path | None, home: Path) -> list[Path]:
     """Native SKILL.md destinations for one tool at a scope.
@@ -392,6 +507,26 @@ def tool_skill_targets(tool: str, scope: str, repo_root: Path | None, home: Path
         targets.append(repo_root / project_dir / SKILL_NAME / "SKILL.md")
     if scope in ("global", "both"):
         targets.append(home / home_dir / SKILL_NAME / "SKILL.md")
+    return targets
+
+
+def global_skill_targets(tools: list[str] | None, home: Path) -> list[Path]:
+    """Local install targets: exactly one dir per tool.
+
+    Tools with a known home folder get their canonical dir; tools without
+    one (copilot) and the legacy tools=None path share `~/.agents/skills`.
+    """
+    if tools is None:
+        return [home / AGENTS_DIR / SKILLS_DIR / SKILL_NAME / "SKILL.md"]
+    targets: list[Path] = []
+    for tool in tools:
+        entry = TOOL_SKILL_DIRS.get(tool)
+        if entry is not None and entry[1]:
+            dest = home / entry[1] / SKILL_NAME / "SKILL.md"
+        else:
+            dest = home / AGENTS_DIR / SKILLS_DIR / SKILL_NAME / "SKILL.md"
+        if dest not in targets:
+            targets.append(dest)
     return targets
 
 
@@ -425,6 +560,50 @@ def ensure_agents_md(repo_root: Path) -> tuple[bool, str]:
     return True, "created"
 
 
+def _write_skill(seen: set[Path], installed: list[str], dest: Path) -> None:
+    """Write one SKILL.md unless already written (dedupes across sides)."""
+    if dest in seen:
+        return
+    seen.add(dest)
+    _, status = write_skill_file(dest)
+    installed.append(f"{dest} ({status})")
+
+
+def _install_team_side(
+    seen: set[Path],
+    installed: list[str],
+    repo_root: Path,
+    home: Path,
+    with_claude_copy: bool,
+    tools: list[str] | None,
+) -> None:
+    """Team side: shared repo standard + native per-tool repo dirs."""
+    for dest in skill_targets("project", repo_root, home):
+        _write_skill(seen, installed, dest)
+    if with_claude_copy:
+        for dest in tool_skill_targets("claude", "project", repo_root, home):
+            _write_skill(seen, installed, dest)
+    for tool in tools or []:
+        for dest in tool_skill_targets(tool, "project", repo_root, home):
+            _write_skill(seen, installed, dest)
+
+
+def _install_local_side(
+    seen: set[Path],
+    installed: list[str],
+    repo_root: Path | None,
+    home: Path,
+    with_claude_copy: bool,
+    tools: list[str] | None,
+) -> None:
+    """Local side: exactly one dir per tool (no universal duplicate)."""
+    for dest in global_skill_targets(tools, home):
+        _write_skill(seen, installed, dest)
+    if with_claude_copy and tools is None:
+        for dest in tool_skill_targets("claude", "global", repo_root, home):
+            _write_skill(seen, installed, dest)
+
+
 def install(
     scope: str,
     repo_root: Path | None,
@@ -443,25 +622,15 @@ def install(
         scope = "global"
     result = InstallResult(scope=scope)
     seen: set[Path] = set()
-
-    def _write(dest: Path) -> None:
-        if dest in seen:
-            return
-        seen.add(dest)
-        _, status = write_skill_file(dest)
-        result.installed.append(f"{dest} ({status})")
-
     if skills_dir is not None:
-        _write(Path(skills_dir).expanduser() / SKILL_NAME / "SKILL.md")
+        _write_skill(
+            seen, result.installed, Path(skills_dir).expanduser() / SKILL_NAME / "SKILL.md"
+        )
     else:
-        for dest in skill_targets(scope, repo_root, home):
-            _write(dest)
-        if with_claude_copy:
-            for dest in tool_skill_targets("claude", scope, repo_root, home):
-                _write(dest)
-        for tool in tools or []:
-            for dest in tool_skill_targets(tool, scope, repo_root, home):
-                _write(dest)
+        if scope in ("project", "both") and repo_root is not None:
+            _install_team_side(seen, result.installed, repo_root, home, with_claude_copy, tools)
+        if scope in ("global", "both"):
+            _install_local_side(seen, result.installed, repo_root, home, with_claude_copy, tools)
     if with_agents_md and scope in ("project", "both") and repo_root is not None:
         _, status = ensure_agents_md(repo_root)
         result.updated_agents_md = f"{repo_root / 'AGENTS.md'} ({status})"
@@ -532,10 +701,9 @@ def prompt_confirm(
 
 
 def _ask_template_choices(read: Callable[[], str] | None, out: TextIO) -> TemplateChoices:
-    """Four convention questions (EOF/empty means the opinionated default)."""
+    """Three convention questions (EOF/empty means the opinionated default)."""
     require_why_what = prompt_confirm(TEMPLATE_Q_WHYWHAT, read=read, write=out)
     require_desc = prompt_confirm(TEMPLATE_Q_DESC, read=read, write=out)
-    with_examples = prompt_confirm(TEMPLATE_Q_EXAMPLES, read=read, write=out)
     pri = _prompt(
         TEMPLATE_Q_PRIORITY,
         valid={"p0", "p1", "p2", "p3", ""},
@@ -546,7 +714,6 @@ def _ask_template_choices(read: Callable[[], str] | None, out: TextIO) -> Templa
     return TemplateChoices(
         require_why_what=require_why_what,
         require_desc=require_desc,
-        with_examples=with_examples,
         task_priority=pri or "p1",
     )
 
@@ -579,12 +746,12 @@ def run_template_phase(
 
 
 def _report_detected(hosts: list[AgentHost], out: TextIO) -> None:
-    """Print which agent hosts were found on this machine."""
+    """Print which agent hosts were found on this machine (names only)."""
     found = [h for h in hosts if h.detected]
     if found:
         print("Detected on this machine:", file=out)
         for h in found:
-            print(f"  [x] {h.label} ({h.hint})", file=out)
+            print(f"  [x] {h.label}", file=out)
         missing = [h.label for h in hosts if not h.detected]
         if missing:
             print(f"Not found (still covered): {', '.join(missing)}", file=out)
@@ -595,39 +762,80 @@ def _report_detected(hosts: list[AgentHost], out: TextIO) -> None:
         )
 
 
-def _ask_scope(
+def _ask_tools(
+    hosts: list[AgentHost],
+    read: Callable[[], str] | None,
+    out: TextIO,
+) -> list[str]:
+    """Ask which agents to install for; returns tool keys (names only, no paths)."""
+    valid = [h.key for h in hosts if h.key in KNOWN_TOOLS]
+    print("", file=out)
+    print("Which agents should get the skill?", file=out)
+    for i, key in enumerate(valid, start=1):
+        host = next(h for h in hosts if h.key == key)
+        mark = "x" if host.detected else " "
+        print(f"  {i}) [{mark}] {host.label}", file=out)
+    print("Pick numbers/keys separated by space, 'all', or Enter for detected.", file=out)
+    raw = _prompt(
+        "Agents [detected]: ",
+        valid=None,
+        default="",
+        read=read,
+        write=out,
+    )
+    return parse_tool_selection(raw, hosts)
+
+
+def _local_skill_dirs(picked: list[str], home: Path) -> list[Path]:
+    """Resolved local install dirs for picked tools (one per tool)."""
+    return [d.parent for d in global_skill_targets(picked, home)]
+
+
+def _ask_install_paths(
+    picked: list[str],
     repo_root: Path | None,
     home: Path,
     read: Callable[[], str] | None,
     out: TextIO,
-) -> str:
-    """Ask where the skill should live; returns the final scope."""
-    dflt = default_scope(repo_root)
+) -> tuple[str, str | None]:
+    """Dictate where skills land; returns (scope, custom skills-dir override)."""
     print("", file=out)
-    print("Where should the skill live?", file=out)
+    print("Where should the skills be installed?", file=out)
+    print("  Local default (no repo writes):", file=out)
+    for d in _local_skill_dirs(picked, home):
+        print(f"    - {d}/", file=out)
+    print("  1) Local    (use these paths)", file=out)
     if repo_root is not None:
-        print(
-            f"  1) Plan  {repo_root}/.agents/skills/lazyplan/  (commit it — team shares it)",
-            file=out,
-        )
+        print("  2) Team     (repo-shared dirs — commit them)", file=out)
     else:
-        print("  1) Plan  (unavailable — not inside a git repo)", file=out)
-    print(f"  2) Global   {home}/.agents/skills/lazyplan/  (all your repos)", file=out)
-    print("  3) Both     (plan + global)", file=out)
-    print("  4) Skip     (DB only, no skill files)", file=out)
-    dflt_num = {"project": "1", "global": "2", "both": "3"}[dflt]
+        print("  2) Team     (unavailable — not inside a git repo)", file=out)
+    print("  3) Both     (local + team)", file=out)
+    print("  4) Custom   (type a folder below)", file=out)
+    print("  5) Skip     (DB only, no skill files)", file=out)
     choice = _prompt(
-        f"Pick [1/2/3/4] (default {dflt_num}): ",
-        valid={"1", "2", "3", "4"},
-        default=dflt_num,
+        "Pick [1/2/3/4/5] (default 1): ",
+        valid={"1", "2", "3", "4", "5"},
+        default="1",
         read=read,
         write=out,
     )
-    scope = {"1": "project", "2": "global", "3": "both", "4": "none"}[choice]
+    if choice == "4":
+        custom = _prompt(
+            "Custom skills folder: ",
+            valid=None,
+            default="",
+            read=read,
+            write=out,
+        ).strip()
+        if not custom:
+            print("Empty — using local defaults.", file=out)
+            return "global", None
+        return "global", str(Path(custom).expanduser())
+    scope = {"1": "global", "2": "project", "3": "both", "5": "none"}[choice]
     if scope == "project" and repo_root is None:
-        print("Not in a repo — installing globally instead.", file=out)
+        print("Not in a repo — installing locally instead.", file=out)
         scope = "global"
-    return scope
+    return scope, None
 
 
 def _ask_agents_md(
@@ -676,18 +884,33 @@ def run_wizard(
     _report_detected(hosts, out)
     print(INIT_SKILLS_COVERAGE, file=out)
 
-    scope = _ask_scope(repo_root, home, read, out)
+    picked = _ask_tools(hosts, read, out)
+    scope, skills_override = _ask_install_paths(picked, repo_root, home, read, out)
     if scope == "none":
         print("Skipped skill setup — DB is ready.", file=out)
         return InstallResult(scope=scope, skipped="user skipped skill setup")
 
-    with_claude = any(h.key == "claude" and h.detected for h in hosts)
-    if with_claude:
-        print("Claude Code detected — also writing the `.claude/skills/` copy.", file=out)
+    with_claude = "claude" in picked
+    if with_claude and skills_override is None:
+        print("Also writing the `.claude/skills/` copy.", file=out)
 
     with_md = _ask_agents_md(scope, repo_root, read, out)
 
-    result = install(scope, repo_root, home, with_claude_copy=with_claude, with_agents_md=with_md)
+    result = install(
+        scope,
+        repo_root,
+        home,
+        with_claude_copy=False,
+        tools=picked,
+        with_agents_md=with_md,
+        skills_dir=skills_override,
+    )
+    for dest_line in list(result.installed):
+        dest = dest_line.rsplit(" (", 1)[0]
+        try:
+            ensure_skill_db(dest)
+        except OSError:
+            pass
     _report_install(result, out)
     if scope in ("project", "both") and repo_root is not None:
         resolved = plan_dir or (repo_root / PLAN_DIR)
@@ -703,9 +926,11 @@ def should_prompt(args: Namespace, is_tty: bool) -> bool:
     """True only for an interactive human `lpui init` with no scope overrides."""
     no_skills = bool(getattr(args, "no_skills", False))
     scope_arg = str(getattr(args, "skills_scope", "") or "").strip()
+    team = bool(getattr(args, "team", False))
+    agents = str(getattr(args, "agents", "") or "").strip()
     yes = bool(getattr(args, "yes", False))
     as_json = bool(getattr(args, "json", False))
-    if no_skills or scope_arg or yes or as_json or not is_tty:
+    if no_skills or scope_arg or team or agents or yes or as_json or not is_tty:
         return False
     return True
 
@@ -720,13 +945,23 @@ def _skills_dir_override(args: Namespace) -> str | None:
 
 
 def _install_for_scope(
-    scope: str, repo_root: Path | None, home: Path, override: str | None
+    scope: str,
+    repo_root: Path | None,
+    home: Path,
+    override: str | None,
+    tools: list[str] | None = None,
 ) -> InstallResult:
     """Detect hosts and install to scope (shared by flag and --yes paths)."""
     hosts = detect_agents(home)
-    with_claude = any(h.key == "claude" and h.detected for h in hosts)
-    native = [h.key for h in hosts if h.detected and h.key in TOOL_SKILL_DIRS]
-    return install(
+    if tools is None:
+        with_claude = any(h.key == "claude" and h.detected for h in hosts)
+        native = [h.key for h in hosts if h.detected and h.key in KNOWN_TOOLS]
+    else:
+        with_claude = False
+        # Keep every known tool: tools without a native folder (copilot)
+        # fall back to the shared ~/.agents/skills dir in global_skill_targets.
+        native = [t for t in tools if t in KNOWN_TOOLS]
+    res = install(
         scope,
         repo_root,
         home,
@@ -734,6 +969,25 @@ def _install_for_scope(
         tools=native,
         skills_dir=override,
     )
+    for dest_line in list(res.installed):
+        dest = dest_line.rsplit(" (", 1)[0]
+        try:
+            ensure_skill_db(dest)
+        except OSError:
+            pass
+    return res
+
+
+def _agents_override(args: Namespace) -> list[str] | None:
+    """Explicit agent list: --agents wins, then $LAZYPLAN_AGENTS."""
+    flag = str(getattr(args, "agents", "") or "").strip()
+    if not flag:
+        flag = os.environ.get("LAZYPLAN_AGENTS", "").strip()
+    if not flag:
+        return None
+    if flag.lower() in ("all", "*"):
+        return list(KNOWN_TOOLS)
+    return [p.strip().lower() for p in flag.replace(",", " ").split() if p.strip()]
 
 
 def handle_init(
@@ -748,16 +1002,20 @@ def handle_init(
     home = home or Path.home()
     no_skills = bool(getattr(args, "no_skills", False))
     scope_arg = str(getattr(args, "skills_scope", "") or "").strip()
+    team = bool(getattr(args, "team", False))
+    # Zero-touch default: local-only unless team opt-in.
+    # Legacy --skills-scope project/both still means team repo writes.
+    if team and not scope_arg:
+        scope_arg = "project"
+    tools = _agents_override(args)
     yes = bool(getattr(args, "yes", False))
     if no_skills or scope_arg == "none":
         return InstallResult(scope="none", skipped="--no-skills").to_dict()
     if scope_arg in ("project", "global", "both"):
-        res = _install_for_scope(scope_arg, repo_root, home, _skills_dir_override(args))
+        res = _install_for_scope(scope_arg, repo_root, home, _skills_dir_override(args), tools)
         return res.to_dict()
     if yes:
-        res = _install_for_scope(
-            default_scope(repo_root), repo_root, home, _skills_dir_override(args)
-        )
+        res = _install_for_scope("global", repo_root, home, _skills_dir_override(args), tools)
         return res.to_dict()
     is_tty = bool(sys.stdin.isatty() and sys.stdout.isatty())
     if should_prompt(args, is_tty):
@@ -765,6 +1023,13 @@ def handle_init(
             return run_wizard(repo_root, home, plan_dir=plan_dir).to_dict()
         except (EOFError, KeyboardInterrupt, OSError):
             return InstallResult(scope="none", skipped="non-interactive").to_dict()
+    # Non-interactive default: zero-touch local install (never repo writes).
+    if _skills_dir_override(args) is not None or tools is not None or team:
+        scope = scope_arg if scope_arg in ("project", "global", "both") else "global"
+        if team and scope == "global":
+            scope = "project"
+        res = _install_for_scope(scope, repo_root, home, _skills_dir_override(args), tools)
+        return res.to_dict()
     reason = "--json (machine output)" if bool(getattr(args, "json", False)) else "non-interactive"
     if os.environ.get("LAZYPLAN_NO_SKILLS", "").strip():
         reason = "$LAZYPLAN_NO_SKILLS"

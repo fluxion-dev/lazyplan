@@ -223,6 +223,8 @@ if _TEXTUAL_OK:
                 yield Label("acceptance (tick = done):")
             with Vertical(id="d-commits"):
                 yield Label("commits:")
+            with Vertical(id="d-repos"):
+                yield Label("repos:")
             yield Button("Save", id="ok", variant="primary")
             yield Button("Cancel", id="cancel")
 
@@ -254,6 +256,17 @@ if _TEXTUAL_OK:
                 commits_box.display = False
             else:
                 commits_box.mount(Static(render_commits(links), markup=False))
+            repos_box = self.query_one("#d-repos", Vertical)
+            repos = full.get("effective_repos") or full.get("repos") or []
+            if not repos:
+                repos_box.display = False
+            else:
+                lines = [
+                    str(r.get("repo_path", ""))
+                    + (f" ({r.get('repo_remote')})" if r.get("repo_remote") else "")
+                    for r in repos
+                ]
+                repos_box.mount(Static("\n".join(lines), markup=False))
 
         def on_button_pressed(self, e: Button.Pressed) -> None:
             if e.button.id != "ok":

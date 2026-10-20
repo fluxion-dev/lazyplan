@@ -285,6 +285,43 @@ def _filtered_milestones(
     return milestones
 
 
+def _repo_match(want: str, repos: list[dict]) -> bool:
+    """True when a repo filter matches any effective repo (path or remote)."""
+    from pathlib import Path
+
+    needle = (want or "").strip()
+    if not needle:
+        return True
+    try:
+        norm = str(Path(needle).expanduser().resolve())
+    except OSError:
+        norm = str(Path(needle).expanduser().absolute())
+    lowered = needle.lower()
+    for r in repos:
+        path = str(r.get("repo_path", "") or "")
+        remote = str(r.get("repo_remote", "") or "")
+        if path and (path == norm or path == needle):
+            return True
+        if remote and (remote == needle or lowered in remote.lower()):
+            return True
+        if needle in path:
+            return True
+    return False
+
+
+def _plan_matches_repo(store: Store, plan_id: int, want: str) -> bool:
+    """True when a plan or any descendant effectively links the wanted repo."""
+    if _repo_match(want, store.effective_repos("plan", plan_id)):
+        return True
+    for s in store.list_milestones(plan_id):
+        if _repo_match(want, store.effective_repos("milestone", s.id)):
+            return True
+        for t in store.list_tasks(s.id):
+            if _repo_match(want, store.effective_repos("task", t.id)):
+                return True
+    return False
+
+
 def _visible_plan(
     store: Store,
     p: Plan,
@@ -313,18 +350,22 @@ def tree(
     priority: str | None = None,
     archived: str = "hide",
     limit: int | None = None,
+    repo: str | None = None,
 ) -> list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]:
     """Nested plans, milestones, and tasks with filters.
 
     archived: "hide" (default views), "only" (--archived), "show" (--status all).
     Plans order most-recently-active first (id fallback); limit caps the
     plan count (None = all). An explicit plan_id bypasses the cap.
+    repo: only plans (or descendants) effectively linked to this repo.
     """
     if archived not in ("hide", "only", "show"):
         raise ValueError("archived must be hide|only|show")
     out = []
     for p in store.list_plans():
         if plan_id is not None and p.id != plan_id:
+            continue
+        if repo and not _plan_matches_repo(store, p.id, repo):
             continue
         milestones = _filtered_milestones(store, p.id, status, priority)
         if _visible_plan(store, p, milestones, status, priority, archived):
@@ -339,7 +380,7 @@ def tree(
 
 # -- export / import (portability) ------------------------------------------
 def export_all(store: Store) -> dict:
-    """Full dump: plans (with criteria + links) holding milestones and tasks."""
+    """Full dump: plans (with criteria + links + repos) holding milestones and tasks."""
     plans = []
     for p in store.list_plans():
         milestones = []
@@ -351,6 +392,7 @@ def export_all(store: Store) -> dict:
                         "task": _ser(vars(t)),
                         "criteria": [vars(c) for c in store.list_criteria("task", t.id)],
                         "links": [vars(c) for c in store.list_links("task", t.id)],
+                        "repos": store.list_repos("task", t.id),
                     }
                 )
             milestones.append(
@@ -358,6 +400,7 @@ def export_all(store: Store) -> dict:
                     "milestone": _ser(vars(s)),
                     "criteria": [vars(c) for c in store.list_criteria("milestone", s.id)],
                     "links": [vars(c) for c in store.list_links("milestone", s.id)],
+                    "repos": store.list_repos("milestone", s.id),
                     "tasks": tasks,
                 }
             )
@@ -366,6 +409,7 @@ def export_all(store: Store) -> dict:
                 "plan": _ser(vars(p)),
                 "criteria": [vars(c) for c in store.list_criteria("plan", p.id)],
                 "links": [vars(c) for c in store.list_links("plan", p.id)],
+                "repos": store.list_repos("plan", p.id),
                 "milestones": milestones,
             }
         )
@@ -379,7 +423,7 @@ def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]
     """
     if not isinstance(data, dict) or data.get("lazyplan") != 1:
         raise ValueError("not a lazyplan export (missing lazyplan: 1)")
-    counts = {"plans": 0, "milestones": 0, "tasks": 0, "criteria": 0, "links": 0}
+    counts = {"plans": 0, "milestones": 0, "tasks": 0, "criteria": 0, "links": 0, "repos": 0}
 
     def _apply_status(kind: str, obj_id: int, status: str) -> None:
         if status and status != Status.TODO.value:
@@ -412,6 +456,23 @@ def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]
                 continue
             counts["links"] += 1
 
+    def _import_repos(kind: str, obj_id: int, items: list) -> None:
+        for r in items:
+            path = str(r.get("repo_path", "") or "").strip()
+            if not path:
+                continue
+            try:
+                store.add_repo_link(
+                    kind,
+                    obj_id,
+                    path,
+                    repo_remote=str(r.get("repo_remote", "") or ""),
+                    actor=actor,
+                )
+            except (ValueError, KeyError):
+                continue
+            counts["repos"] = counts.get("repos", 0) + 1
+
     for entry in data.get("plans", []):
         p = entry["plan"]
         np = store.add_plan(
@@ -425,6 +486,7 @@ def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]
         counts["plans"] += 1
         _import_criteria("plan", np.id, entry.get("criteria", []))
         _import_links("plan", np.id, entry.get("links", []))
+        _import_repos("plan", np.id, entry.get("repos", []))
         for sentry in entry.get("milestones", []):
             sp = sentry["milestone"]
             ns = store.add_milestone(
@@ -438,6 +500,7 @@ def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]
             counts["milestones"] += 1
             _import_criteria("milestone", ns.id, sentry.get("criteria", []))
             _import_links("milestone", ns.id, sentry.get("links", []))
+            _import_repos("milestone", ns.id, sentry.get("repos", []))
             for tentry in sentry.get("tasks", []):
                 tp = tentry["task"]
                 nt = store.add_task(
@@ -451,6 +514,7 @@ def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]
                 counts["tasks"] += 1
                 _import_criteria("task", nt.id, tentry.get("criteria", []))
                 _import_links("task", nt.id, tentry.get("links", []))
+                _import_repos("task", nt.id, tentry.get("repos", []))
         # Milestones landed after the plan's own status: recompute it.
         heal(store, "plan", np.id, actor)
     return counts

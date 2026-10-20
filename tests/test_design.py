@@ -134,6 +134,52 @@ class TestDesignSystem(unittest.TestCase):
         self.assertEqual(design.plan_row(p), design.plan_row(p, links=None))
         self.assertEqual(design.plan_row(p), design.plan_row(p, links=[]))
         self.assertIn("a" * 12, design.plan_row(p, links=["a" * 40]))
+
+    def test_repo_project_name_prefers_remote(self):
+        self.assertEqual(
+            design.repo_project_name(
+                {"repo_path": "/home/u/checkouts/api", "repo_remote": "git@github.com:org/api.git"}
+            ),
+            "api",
+        )
+        self.assertEqual(
+            design.repo_project_name(
+                {
+                    "repo_path": "/home/u/checkouts/api",
+                    "repo_remote": "https://github.com/org/web.git",
+                }
+            ),
+            "web",
+        )
+        self.assertEqual(
+            design.repo_project_name({"repo_path": "/home/u/checkouts/api", "repo_remote": ""}),
+            "api",
+        )
+        self.assertEqual(design.repo_project_name({}), "")
+        self.assertEqual(design.repo_project_name(None), "")
+
+    def test_repos_chip(self):
+        self.assertEqual(design.repos_chip(None), "")
+        self.assertEqual(design.repos_chip([]), "")
+        self.assertEqual(
+            design.repos_chip([{"repo_path": "/x/api", "repo_remote": ""}]),
+            "[reverse] api [/]",
+        )
+
+    def test_plan_label_shows_linked_project(self):
+        p = self.store.add_plan("P")
+        self.assertEqual(design.plan_label(p, self.store), "⬜ P#1 P")
+        self.store.add_repo_link(
+            "plan", p.id, "/home/u/checkouts/api", "git@github.com:org/api.git"
+        )
+        self.assertEqual(design.plan_label(p, self.store), "⬜ P#1 P [api]")
+
+    def test_plan_row_shows_repo_pill(self):
+        p = Plan(id=1, name="N", priority="p1")
+        self.assertEqual(design.plan_row(p), design.plan_row(p, repos=None))
+        self.assertEqual(design.plan_row(p), design.plan_row(p, repos=[]))
+        row = design.plan_row(p, repos=[{"repo_path": "/x/api", "repo_remote": ""}])
+        self.assertIn("[reverse] api [/]", row)
         s = Milestone(id=2, plan_id=1, title="S")
         self.assertEqual(design.milestone_row(s), design.milestone_row(s, links=[]))
         self.assertIn("b" * 12, design.milestone_row(s, links=["b" * 40]))

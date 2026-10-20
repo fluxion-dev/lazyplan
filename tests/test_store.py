@@ -203,7 +203,7 @@ class TestStore(unittest.TestCase):
         s2 = Store(db2)
         counts = services.import_all(s2, data)
         self.assertEqual(
-            counts, {"plans": 1, "milestones": 1, "tasks": 1, "criteria": 2, "links": 0}
+            counts, {"plans": 1, "milestones": 1, "tasks": 1, "criteria": 2, "links": 0, "repos": 0}
         )
         self.assertEqual(s2.get_plan(1).status, Status.DONE)  # rolled up: only milestone done
         self.assertEqual(s2.get_milestone(1).status, Status.DONE)  # rolled up: its task is done

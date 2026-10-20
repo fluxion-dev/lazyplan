@@ -84,7 +84,11 @@ class Store:
             me = conn.execute("SELECT COALESCE(MAX(id),0) m FROM events").fetchone()["m"]
             mc = conn.execute("SELECT COALESCE(MAX(id),0) m FROM criteria").fetchone()["m"]
             ml = conn.execute("SELECT COALESCE(MAX(id),0) m FROM vcs_links").fetchone()["m"]
-        return (mtime, c["plans"], c["milestones"], c["tasks"], mp, ms, mt, me, mc, ml)
+            try:
+                mr = conn.execute("SELECT COALESCE(MAX(id),0) m FROM entity_repos").fetchone()["m"]
+            except Exception:
+                mr = 0
+        return (mtime, c["plans"], c["milestones"], c["tasks"], mp, ms, mt, me, mc, ml, mr)
 
     # -- plans ------------------------------------------------------
     def add_plan(
@@ -346,7 +350,7 @@ class Store:
         return t
 
     def delete(self, kind: str, obj_id: int, actor: str = "human") -> bool:
-        """Delete a row and its subtree (criteria/links purged manually; FK cascades the rest)."""
+        """Delete a row and its subtree (criteria/links/repos purged; FK cascades rest)."""
         table = table_for(kind)
         with self._connect() as conn:
             if kind == "plan":
@@ -363,12 +367,15 @@ class Store:
                     "DELETE FROM vcs_links WHERE parent_kind='plan' AND parent_id=?",
                     (obj_id,),
                 )
+                self._delete_entity_repos(conn, "plan", obj_id)
                 for sid in sids:
                     self._delete_milestone_criteria(conn, sid)
                     self._delete_milestone_links(conn, sid)
+                    self._delete_milestone_repos(conn, sid)
             elif kind == "milestone":
                 self._delete_milestone_criteria(conn, obj_id)
                 self._delete_milestone_links(conn, obj_id)
+                self._delete_milestone_repos(conn, obj_id)
             else:
                 conn.execute(
                     "DELETE FROM criteria WHERE parent_kind='task' AND parent_id=?", (obj_id,)
@@ -376,6 +383,7 @@ class Store:
                 conn.execute(
                     "DELETE FROM vcs_links WHERE parent_kind='task' AND parent_id=?", (obj_id,)
                 )
+                self._delete_entity_repos(conn, "task", obj_id)
             cur = conn.execute(f"DELETE FROM {table} WHERE id=?", (obj_id,))
             ok = (cur.rowcount or 0) > 0
         if ok:
@@ -411,6 +419,19 @@ class Store:
         )
         for tid in tids:
             conn.execute("DELETE FROM vcs_links WHERE parent_kind='task' AND parent_id=?", (tid,))
+
+    @staticmethod
+    def _delete_milestone_repos(conn: sqlite3.Connection, milestone_id: int) -> None:
+        """Remove repo links under a milestone and its tasks."""
+        tids = [
+            r["id"]
+            for r in conn.execute(
+                "SELECT id FROM tasks WHERE milestone_id=?", (milestone_id,)
+            ).fetchall()
+        ]
+        Store._delete_entity_repos(conn, "milestone", milestone_id)
+        for tid in tids:
+            Store._delete_entity_repos(conn, "task", tid)
 
     # -- criteria (acceptance checklists, advisory only) -----------------
     def _parent_exists(self, parent_kind: str, parent_id: int) -> bool:
@@ -593,6 +614,128 @@ class Store:
             out.setdefault((r["parent_kind"], r["parent_id"]), []).append(r["sha"])
         return out
 
+    # -- linked repos (0..n checkouts per plan/milestone/task) ------------
+    @staticmethod
+    def _norm_repo_path(path: str | Path) -> str:
+        """Absolute normalized repo path (no existence requirement)."""
+        p = Path(str(path)).expanduser()
+        try:
+            return str(p.resolve())
+        except OSError:
+            return str(p.absolute())
+
+    def add_repo_link(
+        self,
+        parent_kind: str,
+        parent_id: int,
+        repo_path: str,
+        repo_remote: str = "",
+        actor: str = "human",
+    ) -> dict:
+        """Link a repo checkout to a row (idempotent on re-link)."""
+        check_parent_kind(parent_kind)
+        if not self._parent_exists(parent_kind, parent_id):
+            raise KeyError(f"{parent_kind} #{parent_id} not found")
+        norm_path = self._norm_repo_path(repo_path)
+        if not norm_path.strip():
+            raise ValueError("repo path must not be empty")
+        remote = (repo_remote or "").strip()
+        with self._connect() as conn:
+            conn.execute(
+                "INSERT OR IGNORE INTO entity_repos"
+                " (parent_kind, parent_id, repo_path, repo_remote)"
+                " VALUES (?,?,?,?)",
+                (parent_kind, parent_id, norm_path, remote),
+            )
+            r = conn.execute(
+                "SELECT * FROM entity_repos WHERE parent_kind=? AND parent_id=?"
+                " AND repo_path=? AND repo_remote=?",
+                (parent_kind, parent_id, norm_path, remote),
+            ).fetchone()
+            assert r is not None
+            row = dict(r)
+        self.log(actor, "repo", "link", f"{parent_kind} #{parent_id}: {norm_path}")
+        return row
+
+    def remove_repo_link(
+        self,
+        parent_kind: str,
+        parent_id: int,
+        repo_path: str,
+        repo_remote: str | None = None,
+        actor: str = "human",
+    ) -> bool:
+        """Unlink a repo; without remote, removes all remotes for the path."""
+        check_parent_kind(parent_kind)
+        norm_path = self._norm_repo_path(repo_path)
+        with self._connect() as conn:
+            if repo_remote is None:
+                cur = conn.execute(
+                    "DELETE FROM entity_repos WHERE parent_kind=? AND parent_id=? AND repo_path=?",
+                    (parent_kind, parent_id, norm_path),
+                )
+            else:
+                cur = conn.execute(
+                    "DELETE FROM entity_repos WHERE parent_kind=? AND parent_id=?"
+                    " AND repo_path=? AND repo_remote=?",
+                    (parent_kind, parent_id, norm_path, (repo_remote or "").strip()),
+                )
+            ok = (cur.rowcount or 0) > 0
+        if ok:
+            self.log(actor, "repo", "unlink", f"{parent_kind} #{parent_id}: {norm_path}")
+        return ok
+
+    def list_repos(self, parent_kind: str, parent_id: int) -> list[dict]:
+        """Explicit repo links on one row, oldest first."""
+        check_parent_kind(parent_kind)
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT * FROM entity_repos WHERE parent_kind=? AND parent_id=? ORDER BY id",
+                (parent_kind, parent_id),
+            ).fetchall()
+        return [dict(r) for r in rows]
+
+    def effective_repos(self, parent_kind: str, parent_id: int) -> list[dict]:
+        """Effective repos: explicit links, else inherited from parent plan."""
+        check_parent_kind(parent_kind)
+        explicit = self.list_repos(parent_kind, parent_id)
+        if explicit:
+            return explicit
+        if parent_kind == "task":
+            t = self.get_task(parent_id)
+            if t is not None:
+                return self.effective_repos("milestone", t.milestone_id)
+        elif parent_kind == "milestone":
+            s = self.get_milestone(parent_id)
+            if s is not None:
+                return self.list_repos("plan", s.plan_id)
+        return []
+
+    def repos_map(self) -> dict[tuple[str, int], list[dict]]:
+        """Every linked repo grouped by (parent_kind, parent_id), oldest first."""
+        with self._connect() as conn:
+            try:
+                rows = conn.execute(
+                    "SELECT parent_kind, parent_id, repo_path, repo_remote"
+                    " FROM entity_repos ORDER BY id"
+                ).fetchall()
+            except Exception:
+                return {}
+        out: dict[tuple[str, int], list[dict]] = {}
+        for r in rows:
+            out.setdefault((r["parent_kind"], r["parent_id"]), []).append(dict(r))
+        return out
+
+    @staticmethod
+    def _delete_entity_repos(conn: sqlite3.Connection, kind: str, obj_id: int) -> None:
+        """Remove repo links on one row (callers handle subtree fan-out)."""
+        try:
+            conn.execute(
+                "DELETE FROM entity_repos WHERE parent_kind=? AND parent_id=?", (kind, obj_id)
+            )
+        except Exception:
+            pass
+
     def get_parent(self, kind: str, obj_id: int) -> Plan | Milestone | Task | None:
         """Fetch any row by kind (criteria parent lookup)."""
         if kind == "plan":
@@ -605,7 +748,7 @@ class Store:
 
     # -- export / import (portability) -----------------------------------
     def get_full(self, kind: str, obj_id: int) -> dict | None:
-        """Full context record for `lpui show`: fields + criteria + links + children."""
+        """Full context record for `lpui show`: fields + criteria + links + repos + children."""
         if kind == "plan":
             p = self.get_plan(obj_id)
             if p is None:
@@ -614,10 +757,14 @@ class Store:
                 "plan": _ser(vars(p)),
                 "criteria": [vars(c) for c in self.list_criteria("plan", p.id)],
                 "links": [vars(c) for c in self.list_links("plan", p.id)],
+                "repos": self.list_repos("plan", p.id),
+                "effective_repos": self.effective_repos("plan", p.id),
                 "milestones": [
                     {
                         "milestone": _ser(vars(s)),
                         "criteria": [vars(c) for c in self.list_criteria("milestone", s.id)],
+                        "repos": self.list_repos("milestone", s.id),
+                        "effective_repos": self.effective_repos("milestone", s.id),
                         "tasks": [_ser(vars(t)) for t in self.list_tasks(s.id)],
                     }
                     for s in self.list_milestones(p.id)
@@ -631,6 +778,8 @@ class Store:
                 "milestone": _ser(vars(s)),
                 "criteria": [vars(c) for c in self.list_criteria("milestone", s.id)],
                 "links": [vars(c) for c in self.list_links("milestone", s.id)],
+                "repos": self.list_repos("milestone", s.id),
+                "effective_repos": self.effective_repos("milestone", s.id),
                 "tasks": [
                     {
                         "task": _ser(vars(t)),
@@ -647,6 +796,8 @@ class Store:
                 "task": _ser(vars(t)),
                 "criteria": [vars(c) for c in self.list_criteria("task", t.id)],
                 "links": [vars(c) for c in self.list_links("task", t.id)],
+                "repos": self.list_repos("task", t.id),
+                "effective_repos": self.effective_repos("task", t.id),
             }
         raise ValueError(KIND_ERROR)
 

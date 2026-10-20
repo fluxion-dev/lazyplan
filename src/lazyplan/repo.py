@@ -78,13 +78,44 @@ def global_db_path() -> Path:
     return Path(xdg) / "lazyplan" / DB_NAME
 
 
+def repo_plan_db_path(root: str | Path) -> Path:
+    """Repo-shared DB path for a repo root (team mode). No side effects."""
+    return Path(root).expanduser() / PLAN_DIR / DB_NAME
+
+
+def preferred_local_db(home: str | Path | None = None) -> Path:
+    """Zero-touch DB: first existing agent-local skill DB, else global fallback."""
+    try:
+        from .skills import agent_local_db_candidates
+    except ImportError:
+        return global_db_path()
+    base = Path(home).expanduser() if home is not None else None
+    try:
+        candidates = agent_local_db_candidates(base or Path.home())
+    except OSError:
+        return global_db_path()
+    for cand in candidates:
+        try:
+            if cand.is_file():
+                return cand
+        except OSError:
+            continue
+    return global_db_path()
+
+
 def legacy_plan_dir(root: str | Path) -> Path:
     """Legacy plan dir, kept resolving until `lpui init` moves it."""
     return Path(root).expanduser() / LEGACY_PLAN_DIR
 
 
 def resolve_db_path(explicit: str | Path | None = None, cwd: str | Path = ".") -> Path:
-    """DB path: explicit --db, $LAZYPLAN_DB, repo .agents/lazyplan (else legacy .plan), else global."""
+    """DB path: explicit --db, $LAZYPLAN_DB, team repo dir, agent-local skill DB, else global.
+
+    Zero-touch default: a repo without a team-initialized `.agents/lazyplan/`
+    dir never resolves into the repo — it uses the first existing
+    agent-local skill DB, else the global fallback. `init --team` (or an
+    existing repo plan dir) opts back into repo-shared storage.
+    """
     if explicit:
         return Path(explicit).expanduser()
     env = os.environ.get("LAZYPLAN_DB", "").strip()
@@ -94,7 +125,21 @@ def resolve_db_path(explicit: str | Path | None = None, cwd: str | Path = ".") -
     if root is not None:
         if not (root / PLAN_DIR).is_dir() and (root / LEGACY_PLAN_DIR).is_dir():
             return root / LEGACY_PLAN_DIR / DB_NAME
-        return root / PLAN_DIR / DB_NAME
+        if (root / PLAN_DIR).is_dir():
+            return root / PLAN_DIR / DB_NAME
+    try:
+        from .skills import agent_local_db_candidates
+    except ImportError:
+        return global_db_path()
+    try:
+        for cand in agent_local_db_candidates(Path.home()):
+            try:
+                if cand.is_file():
+                    return cand
+            except OSError:
+                continue
+    except OSError:
+        pass
     return global_db_path()
 
 

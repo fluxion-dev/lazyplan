@@ -19,9 +19,11 @@ _PARSER_DESCRIPTION = (
 
 _PARSER_EPILOG = """\
 your database (the first match wins):
-  --db PATH | $LAZYPLAN_DB | ./.agents/lazyplan/lazyplan.db (inside a repo) | ~/.local/share/lazyplan/lazyplan.db
+  --db PATH | $LAZYPLAN_DB | team ./.agents/lazyplan/lazyplan.db (init --team only)
+  | agent-local skill DB | ~/.local/share/lazyplan/lazyplan.db
 
 examples:
+  lpui init --team                     share this repo's plan with the team
   lpui                                   open the screen (same as `lpui ui`)
   lpui list                              show plans, milestones, and tasks as a tree
   lpui list --status doing --priority p0
@@ -33,6 +35,9 @@ examples:
   lpui status --kind task --id 3 --to done
   lpui link --kind task --id 3           attach the current commit (needs a git repo)
   lpui commits --kind task --id 3        list the attached commits
+  lpui link-repo --kind plan --id 1 --repo ~/checkouts/api
+  lpui repos --kind task --id 3 --effective
+  lpui list --repo ~/checkouts/api
   lpui feed --limit 20                   show recent activity by you and your agents
   lpui export --format json > backup.json
   lpui import --file backup.json
@@ -40,6 +45,10 @@ examples:
 vcs: link, unlink, and commits need a git repo. Outside a repo, link and
   unlink fail (exit 2) and commits shows nothing. Marking a row done with
   status --to done attaches the current commit for you.
+
+repos: link-repo, unlink-repo, and repos work anywhere (no git needed).
+  A task with no explicit links inherits its milestone's repos, and a
+  milestone inherits its plan's. list --repo matches effective repos.
 
 flags work before or after the command (`lpui list --json` means the same as
 `lpui --json list`). On commands that change data, `--actor NAME` records who
@@ -52,10 +61,11 @@ workflow: starting a plan? Ask the human what to build, why it matters,
 environment:
   LAZYPLAN_DB       which database file to use (same as --db)
 
-files:
-  .agents/lazyplan/lazyplan.db                      the database for this repo (commit it to share)
+files: zero-touch by default (--team opts a repo into shared storage)
+  .agents/lazyplan/lazyplan.db                      team database for this repo (commit it to share)
   .agents/lazyplan/templates/{plan,milestone,task}.md  creation templates (commit them to share)
-  ~/.local/share/lazyplan/lazyplan.db    used when you are outside a repo
+  ~/.agents/skills/lazyplan/lazyplan.db    agent-local database beside the skill
+  ~/.local/share/lazyplan/lazyplan.db    global fallback
 
 exit codes: 0 it worked · 1 id not found · 2 flags or input were wrong · 3 screen cannot start (Textual is missing).
 
@@ -134,7 +144,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     init = sub.add_parser(
         "init",
-        help="set up .agents/lazyplan/ in this repo (or use the global database)",
+        help="set up agent skills locally (zero-touch) or share this repo with --team",
         parents=[common],
     )
     init.add_argument(
@@ -159,6 +169,17 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         metavar="PATH",
         help="put the skill in this folder instead of the detected ones",
+    )
+    init.add_argument(
+        "--team",
+        action="store_true",
+        help="write repo-shared files (.agents/lazyplan/, AGENTS.md pointer, templates) for teams",
+    )
+    init.add_argument(
+        "--agents",
+        default="",
+        metavar="LIST",
+        help="which agents to install for (space/comma list, 'all', or detected by default)",
     )
     sub.add_parser(
         "seed", help="add demo data: one plan with milestones and tasks", parents=[common]
@@ -200,6 +221,12 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["p0", "p1", "p2", "p3"],
         default=None,
         help="show only this priority (p0 matters most)",
+    )
+    li.add_argument(
+        "--repo",
+        default=None,
+        metavar="PATH",
+        help="show only rows linked to this repo (matches effective repos)",
     )
 
     a = sub.add_parser(
@@ -365,6 +392,55 @@ def build_parser() -> argparse.ArgumentParser:
         help="which kind of row to list",
     )
     cm.add_argument("--id", type=int, required=True, metavar="ID", help="id of the row")
+
+    lr = sub.add_parser("link-repo", help="attach a repo checkout to a row", parents=[common])
+    lr.add_argument(
+        "--kind",
+        choices=list(KINDS),
+        required=True,
+        help="which kind of row to attach to",
+    )
+    lr.add_argument("--id", type=int, required=True, metavar="ID", help="id of the row")
+    lr.add_argument(
+        "--repo",
+        required=True,
+        metavar="PATH",
+        help="repo checkout path (absolute or relative; stored absolute)",
+    )
+    lr.add_argument(
+        "--remote",
+        default=None,
+        metavar="URL",
+        help="remote URL (default: git remote get-url origin for the path, else empty)",
+    )
+    ulr = sub.add_parser("unlink-repo", help="detach a repo checkout from a row", parents=[common])
+    ulr.add_argument(
+        "--kind",
+        choices=list(KINDS),
+        required=True,
+        help="which kind of row to detach from",
+    )
+    ulr.add_argument("--id", type=int, required=True, metavar="ID", help="id of the row")
+    ulr.add_argument("--repo", required=True, metavar="PATH", help="which repo path to detach")
+    ulr.add_argument(
+        "--remote",
+        default=None,
+        metavar="URL",
+        help="only detach this remote (default: all remotes for the path)",
+    )
+    rp = sub.add_parser("repos", help="list the repos attached to a row", parents=[common])
+    rp.add_argument(
+        "--kind",
+        choices=list(KINDS),
+        required=True,
+        help="which kind of row to list",
+    )
+    rp.add_argument("--id", type=int, required=True, metavar="ID", help="id of the row")
+    rp.add_argument(
+        "--effective",
+        action="store_true",
+        help="show inherited repos when the row has no explicit links",
+    )
 
     ex = sub.add_parser(
         "export", help="save everything (agents: use --format json)", parents=[common]

@@ -27,7 +27,6 @@ from .design import (
 from .models import Milestone, Plan, Status, Task
 from .render import render_commits, render_full, render_markdown, tree_lines
 from .repo import (
-    LEGACY_PLAN_DIR,
     ensure_plan_dir,
     find_repo_root,
     is_repo_plan_dir,
@@ -162,24 +161,76 @@ def _maybe_offer_gitignore(
     ]
 
 
+def _final_init_db(args: argparse.Namespace, root: Path | None, skills_info: dict) -> Path:
+    """Final DB for init: explicit/env wins, team scopes use the repo, else local."""
+    from .repo import global_db_path, preferred_local_db, repo_plan_db_path
+
+    explicit = getattr(args, "db", None)
+    if explicit:
+        return Path(str(explicit)).expanduser()
+    env = os.environ.get("LAZYPLAN_DB", "").strip()
+    if env:
+        return Path(env).expanduser()
+    scope = str(skills_info.get("scope", "") or "")
+    if scope in ("project", "both") and root is not None:
+        return repo_plan_db_path(root)
+    installed = skills_info.get("installed", []) or []
+    for line in installed:
+        dest = str(line).rsplit(" (", 1)[0]
+        try:
+            from .skills import skill_db_path
+
+            cand = skill_db_path(dest)
+        except (OSError, ValueError):
+            continue
+        if cand is not None:
+            return cand
+    try:
+        return preferred_local_db()
+    except OSError:
+        return global_db_path()
+
+
 def _cmd_init(store: Store, args: argparse.Namespace, actor: str) -> int:
-    plan_dir = ensure_plan_dir(store.path)
     root = find_repo_root(os.getcwd())
     _warn_stale_plan_dir(root)
-    # Only the repo's own default dir gets migrated, never an explicit --db.
-    # Migrate before skill/template setup so the wizard writes final paths.
-    if args.db is None and not os.environ.get("LAZYPLAN_DB", "").strip():
+    explicit = args.db is not None or bool(os.environ.get("LAZYPLAN_DB", "").strip())
+    # Zero-touch: skills wizard decides the final DB; never pre-create repo dirs.
+    # Team scopes (project/both, --team) opt back into repo-shared files.
+    skills_info = _init_skills(args, root, plan_dir=None)
+    scope = str(skills_info.get("scope", "") or "")
+    team = scope in ("project", "both") and root is not None
+    if team and not explicit:
         if _maybe_move_legacy_plan_dir(root, store.path) is not None:
-            store = Store(args.db)
-            plan_dir = ensure_plan_dir(store.path)
-    skills_info = _init_skills(args, root, plan_dir=plan_dir)
+            pass
+        from .repo import repo_plan_db_path
+
+        assert root is not None
+        store = Store(str(repo_plan_db_path(root)))
+    elif explicit:
+        # Explicit --db/env: keep the pre-opened store (already the right DB).
+        pass
+    else:
+        final_db = _final_init_db(args, root, skills_info)
+        if Path(str(final_db)).expanduser() != Path(str(store.path)).expanduser():
+            store = Store(str(final_db))
+    plan_dir = ensure_plan_dir(store.path)
+    # Templates live with the DB: repo team dirs keep templates, local DBs
+    # keep their own sibling templates dir (no repo writes).
     summary = skills_info.get("templates")
     if summary is None:
-        if is_repo_plan_dir(plan_dir) or plan_dir.name == LEGACY_PLAN_DIR:
+        if team or is_repo_plan_dir(plan_dir):
             summary = run_template_setup(plan_dir, interactive=False)
         else:
-            summary = {"added": [], "kept": [], "reset": []}
-    gitignored = _maybe_offer_gitignore(args, root, plan_dir, skills_info)
+            # Local DB: scaffold templates beside the DB so agents share
+            # conventions without touching any repo.
+            try:
+                summary = run_template_setup(plan_dir, interactive=False)
+            except OSError:
+                summary = {"added": [], "kept": [], "reset": []}
+    gitignored: list[str] = []
+    if team:
+        gitignored = _maybe_offer_gitignore(args, root, plan_dir, skills_info)
     return _emit(
         args,
         {
@@ -234,22 +285,29 @@ def _cmd_list(store: Store, args: argparse.Namespace, actor: str) -> int:
         limit = args.limit
     else:
         limit = args.limit if args.limit is not None else services.DEFAULT_PLAN_LIMIT
+    repo_filter = getattr(args, "repo", None)
     if args.json:
         payload = [
             {
                 "plan": _ser(vars(p)),
                 "criteria": [vars(c) for c in store.list_criteria("plan", p.id)],
                 "links": [vars(c) for c in store.list_links("plan", p.id)],
+                "repos": store.list_repos("plan", p.id),
+                "effective_repos": store.effective_repos("plan", p.id),
                 "milestones": [
                     {
                         "milestone": _ser(vars(s)),
                         "criteria": [vars(c) for c in store.list_criteria("milestone", s.id)],
                         "links": [vars(c) for c in store.list_links("milestone", s.id)],
+                        "repos": store.list_repos("milestone", s.id),
+                        "effective_repos": store.effective_repos("milestone", s.id),
                         "tasks": [
                             {
                                 "task": _ser(vars(t)),
                                 "criteria": [vars(c) for c in store.list_criteria("task", t.id)],
                                 "links": [vars(c) for c in store.list_links("task", t.id)],
+                                "repos": store.list_repos("task", t.id),
+                                "effective_repos": store.effective_repos("task", t.id),
                             }
                             for t in ts
                         ],
@@ -264,6 +322,7 @@ def _cmd_list(store: Store, args: argparse.Namespace, actor: str) -> int:
                 priority=args.priority,
                 archived=archived,
                 limit=limit,
+                repo=repo_filter,
             )
         ]
         return _emit(args, payload)
@@ -275,6 +334,7 @@ def _cmd_list(store: Store, args: argparse.Namespace, actor: str) -> int:
         dot=_tty_dot(args),
         archived=archived,
         limit=limit,
+        repo=repo_filter,
     )
     print("\n".join(lines) if lines else EMPTY_NO_PLANS)
     return 0
@@ -503,6 +563,70 @@ def _cmd_commits(store: Store, args: argparse.Namespace, actor: str) -> int:
     return 0
 
 
+def _repo_remote_default(repo_path: str) -> str:
+    """Best-effort remote URL for a checkout path (git remote get-url origin)."""
+    import subprocess
+
+    try:
+        out = subprocess.run(
+            ["git", "-C", repo_path, "remote", "get-url", "origin"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (FileNotFoundError, subprocess.SubprocessError, OSError):
+        return ""
+    if out.returncode != 0:
+        return ""
+    return out.stdout.strip()
+
+
+def _cmd_link_repo(store: Store, args: argparse.Namespace, actor: str) -> int:
+    if store.get_parent(args.kind, args.id) is None:
+        print(msg_not_found(args.kind, args.id), file=sys.stderr)
+        return 1
+    remote = args.remote
+    if remote is None:
+        remote = _repo_remote_default(str(args.repo))
+    try:
+        row = store.add_repo_link(args.kind, args.id, str(args.repo), remote or "", actor=actor)
+    except (ValueError, KeyError) as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 2
+    return _emit(args, {"repo": row})
+
+
+def _cmd_unlink_repo(store: Store, args: argparse.Namespace, actor: str) -> int:
+    if store.get_parent(args.kind, args.id) is None:
+        print(msg_not_found(args.kind, args.id), file=sys.stderr)
+        return 1
+    ok = store.remove_repo_link(args.kind, args.id, str(args.repo), args.remote, actor=actor)
+    if not ok:
+        print(msg_error(ValueError(f"no such repo link {args.repo!r}")), file=sys.stderr)
+        return 1
+    return _emit(args, {"ok": True, "unlinked": str(args.repo)})
+
+
+def _cmd_repos(store: Store, args: argparse.Namespace, actor: str) -> int:
+    if store.get_parent(args.kind, args.id) is None:
+        print(msg_not_found(args.kind, args.id), file=sys.stderr)
+        return 1
+    rows = (
+        store.effective_repos(args.kind, args.id)
+        if getattr(args, "effective", False)
+        else store.list_repos(args.kind, args.id)
+    )
+    if args.json:
+        return _emit(args, rows)
+    if not rows:
+        print(EMPTY_COMMITS)
+        return 0
+    for r in rows:
+        remote = f" ({r['repo_remote']})" if r.get("repo_remote") else ""
+        print(f"{r['repo_path']}{remote}")
+    return 0
+
+
 def _cmd_export(store: Store, args: argparse.Namespace, actor: str) -> int:
     data = services.export_all(store)
     if args.format == "json":
@@ -625,6 +749,9 @@ _COMMANDS: dict[str, Callable[[Store, argparse.Namespace, str], int]] = {
     "link": _cmd_link,
     "unlink": _cmd_unlink,
     "commits": _cmd_commits,
+    "link-repo": _cmd_link_repo,
+    "unlink-repo": _cmd_unlink_repo,
+    "repos": _cmd_repos,
     "export": _cmd_export,
     "import": _cmd_import,
     "feed": _cmd_feed,
@@ -649,7 +776,23 @@ def main(argv: list[str] | None = None) -> int:
         args.follow = True
         args.interval = 1.0
         args.json = getattr(args, "json", False)
-    store = Store(args.db)
+    if args.cmd == "init" and args.db is None and not os.environ.get("LAZYPLAN_DB", "").strip():
+        # Zero-touch init must not dirty the repo before the wizard picks
+        # a target: open the global fallback first; _cmd_init re-opens
+        # the final DB (repo only for explicit team scopes).
+        from .repo import global_db_path
+
+        try:
+            store = Store(str(global_db_path()))
+        except RuntimeError as exc:
+            print(msg_error(exc), file=sys.stderr)
+            return 2
+    else:
+        try:
+            store = Store(args.db)
+        except RuntimeError as exc:
+            print(msg_error(exc), file=sys.stderr)
+            return 2
     actor = getattr(args, "actor", "human")
     try:
         handler = _COMMANDS.get(args.cmd)

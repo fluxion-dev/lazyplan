@@ -322,6 +322,27 @@ class TestNativeInstall(unittest.TestCase):
         res = skills.install("project", self.repo, self.home, tools=["opencode"])
         self.assertTrue(all("up-to-date" in line for line in res.installed))
 
+    def test_global_install_is_one_dir_per_agent(self):
+        res = skills.install("global", self.repo, self.home, tools=["opencode", "claude"])
+        paths = sorted(line.rsplit(" (", 1)[0] for line in res.installed)
+        self.assertEqual(
+            paths,
+            sorted(
+                [
+                    str(self.home / ".config/opencode/skills/lazyplan/SKILL.md"),
+                    str(self.home / ".claude/skills/lazyplan/SKILL.md"),
+                ]
+            ),
+        )
+        self.assertFalse((self.home / ".agents").exists())
+
+    def test_global_unknown_tool_falls_back_to_universal(self):
+        res = skills.install("global", self.repo, self.home, tools=["copilot"])
+        self.assertEqual(
+            res.installed,
+            [f"{self.home}/.agents/skills/lazyplan/SKILL.md (wrote)"],
+        )
+
 
 class TestSkillsDirOverride(unittest.TestCase):
     def setUp(self):
@@ -421,13 +442,25 @@ class TestWizard(unittest.TestCase):
 
     def test_wizard_skip(self):
         err = io.StringIO()
-        res = skills.run_wizard(self.repo, self.home, read=_answers(["4"]), write=err)
+        res = skills.run_wizard(self.repo, self.home, read=_answers(["", "5"]), write=err)
         self.assertEqual(res.scope, "none")
+        self.assertFalse((self.repo / ".agents").exists())
+
+    def test_wizard_custom_skills_dir(self):
+        err = io.StringIO()
+        custom = str(self.home / "custom-skills")
+        res = skills.run_wizard(
+            self.repo, self.home, read=_answers(["opencode", "4", custom]), write=err
+        )
+        self.assertEqual(res.scope, "global")
+        self.assertEqual(res.installed, [f"{custom}/lazyplan/SKILL.md (wrote)"])
+        self.assertTrue(Path(custom, "lazyplan", "SKILL.md").is_file())
+        self.assertTrue(Path(custom, "lazyplan", "lazyplan.db").parent.is_dir())
         self.assertFalse((self.repo / ".agents").exists())
 
     def test_wizard_project_with_agents_md_yes(self):
         err = io.StringIO()
-        res = skills.run_wizard(self.repo, self.home, read=_answers(["1", "Y"]), write=err)
+        res = skills.run_wizard(self.repo, self.home, read=_answers(["", "2", "Y"]), write=err)
         self.assertEqual(res.scope, "project")
         self.assertTrue((self.repo / ".agents" / "skills" / "lazyplan" / "SKILL.md").is_file())
         self.assertTrue((self.repo / "AGENTS.md").is_file())
@@ -439,16 +472,21 @@ class TestWizard(unittest.TestCase):
             raise EOFError
 
         res = skills.run_wizard(self.repo, self.home, read=_eof, write=err)
-        # EOF takes defaults: project scope, AGENTS.md yes
-        self.assertEqual(res.scope, "project")
-        self.assertTrue((self.repo / ".agents" / "skills" / "lazyplan" / "SKILL.md").is_file())
+        # EOF takes defaults: tools fallback, local scope, no repo writes.
+        self.assertEqual(res.scope, "global")
+        self.assertFalse((self.repo / ".agents").exists())
+        # One dir per agent: opencode's canonical folder, no universal duplicate.
+        self.assertTrue(
+            (self.home / ".config" / "opencode" / "skills" / "lazyplan" / "SKILL.md").is_file()
+        )
+        self.assertFalse((self.home / ".agents" / "skills" / "lazyplan" / "SKILL.md").exists())
 
     def test_wizard_tailors_fresh_templates(self):
         err = io.StringIO()
         res = skills.run_wizard(
             self.repo,
             self.home,
-            read=_answers(["1", "Y", "n", "n", "n", "p2"]),
+            read=_answers(["", "2", "Y", "n", "n", "p2"]),
             write=err,
         )
         self.assertEqual(res.scope, "project")
@@ -468,7 +506,7 @@ class TestWizard(unittest.TestCase):
         res = skills.run_wizard(
             self.repo,
             self.home,
-            read=_answers(["1", "Y", "Y", "", "", "", "", "k"]),
+            read=_answers(["", "2", "Y", "Y", "", "", "", "", "k"]),
             write=err,
         )
         summary = res.to_dict()["templates"]
@@ -542,19 +580,42 @@ class TestInitCli(unittest.TestCase):
     def test_init_yes_installs_defaults(self):
         os.chdir(self.repo)
         payload = self._init_json(["init", "--yes"])
+        # Zero-touch default: local install, no repo writes, one dir per agent.
+        self.assertEqual(payload["skills"]["scope"], "global")
+        self.assertFalse(os.path.exists(os.path.join(self.repo, ".agents")))
+        self.assertTrue(
+            os.path.isfile(
+                os.path.join(
+                    os.environ["HOME"], ".config", "opencode", "skills", "lazyplan", "SKILL.md"
+                )
+            )
+        )
+        self.assertFalse(os.path.exists(os.path.join(os.environ["HOME"], ".agents", "skills")))
+
+    def test_init_team_yes_writes_repo_files(self):
+        os.chdir(self.repo)
+        payload = self._init_json(["init", "--team", "--yes"])
         self.assertEqual(payload["skills"]["scope"], "project")
+        self.assertTrue(
+            os.path.isfile(os.path.join(self.repo, ".agents", "skills", "lazyplan", "SKILL.md"))
+        )
 
     def test_init_yes_adds_gitignore(self):
         os.chdir(self.repo)
+        # Zero-touch --yes leaves the repo alone.
         payload = self._init_json(["init", "--yes"])
+        self.assertFalse(os.path.exists(os.path.join(self.repo, ".gitignore")))
+        self.assertEqual(payload["gitignore"]["added"], [])
+        # Team --yes offers repo gitignore entries.
+        payload = self._init_json(["init", "--team", "--yes"])
         gi = os.path.join(self.repo, ".gitignore")
         self.assertTrue(os.path.isfile(gi))
         text = open(gi).read()
         self.assertIn(".agents/lazyplan/", text)
         self.assertIn(".agents/skills/lazyplan/", text)
         self.assertIn(".agents/lazyplan/", payload["gitignore"]["added"])
-        # second run adds nothing twice
-        self._init_json(["init", "--yes"])
+        # second team run adds nothing twice
+        self._init_json(["init", "--team", "--yes"])
         self.assertEqual(open(gi).read().count(".agents/lazyplan/"), 1)
 
     def test_init_without_yes_leaves_gitignore_alone(self):

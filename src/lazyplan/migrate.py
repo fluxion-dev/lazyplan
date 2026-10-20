@@ -52,6 +52,15 @@ CREATE TABLE IF NOT EXISTS vcs_links (
     UNIQUE(parent_kind, parent_id, sha)
 );
 CREATE INDEX IF NOT EXISTS idx_vcs_links_parent ON vcs_links(parent_kind, parent_id);
+CREATE TABLE IF NOT EXISTS entity_repos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    parent_kind TEXT NOT NULL CHECK (parent_kind IN ('plan', 'milestone', 'task')),
+    parent_id INTEGER NOT NULL,
+    repo_path TEXT NOT NULL,
+    repo_remote TEXT NOT NULL DEFAULT '',
+    UNIQUE(parent_kind, parent_id, repo_path, repo_remote)
+);
+CREATE INDEX IF NOT EXISTS idx_entity_repos_parent ON entity_repos(parent_kind, parent_id);
 CREATE TABLE IF NOT EXISTS events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     ts REAL NOT NULL,

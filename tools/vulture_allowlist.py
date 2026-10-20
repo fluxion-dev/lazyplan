@@ -46,3 +46,5 @@ STARTERS
 ensure_templates
 _.is_available
 backends
+default_scope
+repos_map

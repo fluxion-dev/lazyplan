@@ -97,14 +97,17 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(self.app.selected, ("task", tid))
 
     async def test_double_click_opens_detail(self):
+        from unittest import mock
+
         from lazyplan.screens import DetailScreen
 
         async with self.app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
-            await pilot.click("#tree", offset=(10, 3))
-            await pilot.pause()
-            await pilot.click("#tree", offset=(10, 3))
-            await pilot.pause()
+            with mock.patch.object(tui_mod, "DOUBLE_CLICK_WINDOW", 30.0):
+                await pilot.click("#tree", offset=(10, 3))
+                await pilot.pause()
+                await pilot.click("#tree", offset=(10, 3))
+                await pilot.pause()
             self.assertEqual(len(self.app.screen_stack), 2)
             self.assertIsInstance(self.app.screen, DetailScreen)
 

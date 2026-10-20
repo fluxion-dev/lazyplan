@@ -72,8 +72,10 @@ class TestParseTemplate(unittest.TestCase):
             with self.subTest(kind=kind):
                 t = templates.parse_template(kind, text)
                 self.assertEqual(t.required, expected_required[kind])
-                self.assertTrue(len(t.criteria) >= 1)
-                self.assertTrue(all("edit or delete me" in c for c in t.criteria))
+                # Starters ship empty: real criteria come from the interview,
+                # never from placeholder or example text.
+                self.assertEqual(t.criteria, [])
+                self.assertNotIn("edit or delete me", text)
         task = templates.parse_template("task", templates.STARTERS["task"])
         self.assertEqual(task.defaults.get("priority"), "p1")
 
@@ -111,6 +113,45 @@ class TestParseTemplate(unittest.TestCase):
     def test_unclosed_frontmatter_rejected(self):
         with self.assertRaises(ValueError):
             templates.parse_template("plan", "---\ndefaults:\n  why: x\n")
+
+
+class TestReadability(unittest.TestCase):
+    def test_short_text_always_passes(self):
+        out = templates.apply_template(
+            "task", {"title": "T", "desc": "Do the thing"}, "/tmp/nonexistent.db"
+        )
+        self.assertEqual(out["desc"], "Do the thing")
+
+    def test_long_single_blob_rejected_per_field(self):
+        blob = "x" * (templates.READABILITY_THRESHOLD + 1)
+        for kind, fields in [
+            ("plan", {"title": "P", "why": blob, "what": "short"}),
+            ("plan", {"title": "P", "why": "short", "what": blob}),
+            ("milestone", {"title": "M", "desc": blob}),
+            ("task", {"title": "T", "desc": blob}),
+        ]:
+            with self.subTest(kind=kind):
+                with self.assertRaises(ValueError) as ctx:
+                    templates.apply_template(kind, fields, "/tmp/nonexistent.db")
+                self.assertIn("paragraphs and sections", str(ctx.exception))
+
+    def test_boundary_length_passes(self):
+        ok = "x" * templates.READABILITY_THRESHOLD
+        out = templates.apply_template("task", {"title": "T", "desc": ok}, "/tmp/nonexistent.db")
+        self.assertEqual(out["desc"], ok)
+
+    def test_long_sectioned_text_passes(self):
+        bodies = [
+            "First paragraph.\n\nSecond paragraph. " + "y" * templates.READABILITY_THRESHOLD,
+            "# Head\n\n" + "y" * templates.READABILITY_THRESHOLD,
+            "Intro.\n- one\n- " + "z" * templates.READABILITY_THRESHOLD,
+        ]
+        for body in bodies:
+            with self.subTest(body=body[:20]):
+                out = templates.apply_template(
+                    "task", {"title": "T", "desc": body}, "/tmp/nonexistent.db"
+                )
+                self.assertEqual(out["desc"], body)
 
 
 class TestTemplateDirs(unittest.TestCase):
@@ -218,7 +259,8 @@ class TestTemplateSetup(unittest.TestCase):
             self.assertEqual((summary["kept"], summary["reset"]), ([], []))
             proj = templates.parse_template("plan", (plan / "templates" / "plan.md").read_text())
             self.assertEqual(proj.required, ["title", "why", "what"])
-            self.assertTrue(proj.criteria)
+            # Opinionated starters ship empty: criteria come from the interview.
+            self.assertEqual(proj.criteria, [])
 
     def test_rerun_missing_only_never_clobbers(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -258,8 +300,8 @@ class TestTemplateSetup(unittest.TestCase):
             task = templates.parse_template("task", (plan / "templates" / "task.md").read_text())
             self.assertEqual(task.required, ["title"])
             self.assertEqual(task.defaults.get("priority"), "p2")
-            # edit preserves the file's own criteria lines
-            self.assertTrue(any("Unit tests pass" in c for c in task.criteria))
+            # edit preserves the file's own criteria lines (starters ship empty)
+            self.assertEqual(task.criteria, [])
 
     def test_edit_unparseable_keeps(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -288,6 +330,8 @@ class TestTemplateCli(unittest.TestCase):
         self.old_home = os.environ.get("HOME")
         os.environ["HOME"] = os.path.join(self.tmp.name, "home")
         os.makedirs(os.environ["HOME"], exist_ok=True)
+        self.old_xdg = os.environ.get("XDG_DATA_HOME")
+        os.environ["XDG_DATA_HOME"] = os.path.join(self.tmp.name, "xdg")
 
     def tearDown(self):
         os.chdir(self.old_cwd)
@@ -297,6 +341,10 @@ class TestTemplateCli(unittest.TestCase):
             os.environ.pop("HOME", None)
         else:
             os.environ["HOME"] = self.old_home
+        if self.old_xdg is None:
+            os.environ.pop("XDG_DATA_HOME", None)
+        else:
+            os.environ["XDG_DATA_HOME"] = self.old_xdg
         self.tmp.cleanup()
 
     def _run(self, argv):
@@ -311,16 +359,22 @@ class TestTemplateCli(unittest.TestCase):
         return rc, buf.getvalue(), err.getvalue()
 
     def test_init_scaffolds_templates(self):
-        rc, out, _ = self._run(["init", "--skills-scope", "none"])
+        # Team scope scaffolds repo-shared templates.
+        rc, out, _ = self._run(["init", "--skills-scope", "project"])
         self.assertEqual(rc, 0)
         payload = json.loads(out)
         self.assertEqual(len(payload["templates"]["added"]), 3)
         self.assertTrue((self.repo / ".agents/lazyplan" / "templates" / "milestone.md").is_file())
-        rc, out, _ = self._run(["init", "--skills-scope", "none"])
+        rc, out, _ = self._run(["init", "--skills-scope", "project"])
         self.assertEqual(json.loads(out)["templates"]["added"], [])
 
+    def test_zero_touch_init_leaves_repo_alone(self):
+        rc, out, _ = self._run(["init", "--skills-scope", "none"])
+        self.assertEqual(rc, 0)
+        self.assertFalse((self.repo / ".agents").exists())
+
     def test_cli_required_error_is_exit_2(self):
-        self._run(["init", "--skills-scope", "none"])
+        self._run(["init", "--skills-scope", "project"])
         (self.repo / ".agents/lazyplan" / "templates" / "plan.md").write_text(
             "---\nrequired: [title]\n---\n"
         )

@@ -91,13 +91,12 @@ Pass `--actor <name>` on every write so the human sees who did what in
 
 ## DB scoping (first match wins)
 
-`--db PATH` → `$LAZYPLAN_DB` → enclosing git repo's team-initialized
-`.agents/lazyplan/lazyplan.db` (only when `lpui init --team` created it) →
-first existing agent-local skill DB (one per installed agent, e.g.
-`~/.config/opencode/skills/lazyplan/lazyplan.db`) →
-global `~/.local/share/lazyplan/lazyplan.db`.
-`lpui init` defaults to zero-touch: no repo writes, skills plus a sibling
-`lazyplan.db` per agent-local skill dir. Pass `--team` (or
+`--db PATH` → `$LAZYPLAN_DB` → nearest team-initialized
+`.agents/lazyplan/lazyplan.db` walking up (only when `lpui init --team`
+created it) → shared `~/.lazyplan/lazyplan.db`
+(`%LOCALAPPDATA%/lazyplan/lazyplan.db` on Windows).
+`lpui init` defaults to the shared home: no repo writes, skills installed
+per agent, one database everybody shares. Pass `--team` (or
 `--skills-scope project|both`) to opt a repo into shared storage
 (`.agents/lazyplan/`, repo skills, `AGENTS.md` pointer, templates).
 Don't override `--db` unless asked.
@@ -216,7 +215,7 @@ Add `--json` for machine-parseable output (`lpui list --json`).
 
 `.agents/lazyplan/templates/{plan,milestone,task}.md` (scaffolded by `lpui init --team`,
 commit them to share) define what new rows look like. Team repos share them;
-zero-touch local DBs keep a sibling `templates/` dir beside the skill DB.
+otherwise templates live beside the shared home DB at `~/.lazyplan/templates/`.
 Each file is Markdown
 with YAML frontmatter; the body is guidance and ignored:
 
@@ -431,8 +430,9 @@ TOOL_SKILL_DIRS: dict[str, tuple[str, str]] = {
 
 KNOWN_TOOLS: tuple[str, ...] = ("opencode", "claude", "codex", "gemini", "cursor", "copilot")
 
-# Sibling DB filename kept next to each installed SKILL.md so an
-# agent-local install is self-contained (skill + DB, no repo writes).
+# Sibling DB filename kept next to each installed SKILL.md. New installs
+# share the ~/.lazyplan home DB; these per-tool paths are legacy one-time
+# import sources only (see repo.legacy_db_candidates).
 SKILL_DB_NAME = "lazyplan.db"
 
 
@@ -442,7 +442,10 @@ def skill_db_path(skill_file: str | Path) -> Path:
 
 
 def agent_local_db_candidates(home: Path | None = None) -> list[Path]:
-    """Preferred agent-local DBs, most-shared first (no side effects)."""
+    """Legacy per-agent DB locations, most-shared first (no side effects).
+
+    Only used as one-time import sources for the shared home DB.
+    """
     home = (home or Path.home()).expanduser()
     candidates: list[Path] = [
         home / AGENTS_DIR / SKILLS_DIR / SKILL_NAME / SKILL_DB_NAME,
@@ -1026,7 +1029,7 @@ def handle_init(
             return run_wizard(repo_root, home, plan_dir=plan_dir).to_dict()
         except (EOFError, KeyboardInterrupt, OSError):
             return InstallResult(scope="none", skipped="non-interactive").to_dict()
-    # Non-interactive default: zero-touch local install (never repo writes).
+    # Non-interactive default: shared-home install (never repo writes).
     if _skills_dir_override(args) is not None or tools is not None or team:
         scope = scope_arg if scope_arg in ("project", "global", "both") else "global"
         if team and scope == "global":

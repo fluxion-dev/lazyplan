@@ -19,8 +19,8 @@ _PARSER_DESCRIPTION = (
 
 _PARSER_EPILOG = """\
 your database (the first match wins):
-  --db PATH | $LAZYPLAN_DB | team ./.agents/lazyplan/lazyplan.db (init --team only)
-  | agent-local skill DB | ~/.local/share/lazyplan/lazyplan.db
+  --db PATH | $LAZYPLAN_DB | nearest team ./.agents/lazyplan/lazyplan.db walking up
+  | ~/.lazyplan/lazyplan.db shared home (%LOCALAPPDATA%/lazyplan on Windows)
 
 examples:
   lpui init --team                     share this repo's plan with the team
@@ -62,11 +62,11 @@ workflow: starting a plan? Ask the human what to build, why it matters,
 environment:
   LAZYPLAN_DB       which database file to use (same as --db)
 
-files: zero-touch by default (--team opts a repo into shared storage)
-  .agents/lazyplan/lazyplan.db                      team database for this repo (commit it to share)
+files: shared home by default (--team opts a repo into shared storage)
+  ~/.lazyplan/lazyplan.db                 your plans, every agent and folder (default)
+  ~/.lazyplan/templates/                  creation templates shared by every agent
+  .agents/lazyplan/lazyplan.db            team database for this repo (commit it to share)
   .agents/lazyplan/templates/{plan,milestone,task}.md  creation templates (commit them to share)
-  ~/.agents/skills/lazyplan/lazyplan.db    agent-local database beside the skill
-  ~/.local/share/lazyplan/lazyplan.db    global fallback
 
 exit codes: 0 it worked · 1 id not found · 2 flags or input were wrong · 3 screen cannot start (Textual is missing).
 
@@ -145,7 +145,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     init = sub.add_parser(
         "init",
-        help="set up agent skills locally (zero-touch) or share this repo with --team",
+        help="set up agent skills locally (shared home) or share this repo with --team",
         parents=[common],
     )
     init.add_argument(

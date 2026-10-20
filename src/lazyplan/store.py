@@ -19,7 +19,7 @@ from .models import (
     VcsLink,
     check_priority,
 )
-from .repo import ensure_plan_dir, resolve_db_path
+from .repo import ensure_plan_dir, resolve_db_path, seed_shared_db, shared_db_path
 
 
 def _ser(d: dict) -> dict:
@@ -42,6 +42,11 @@ class Store:
 
     def __init__(self, path: str | Path | None = None) -> None:
         self.path = resolve_db_path(path)
+        try:
+            if Path(self.path).expanduser() == shared_db_path():
+                seed_shared_db(self.path)
+        except OSError:
+            pass
         ensure_plan_dir(self.path)
         with self._connect() as conn:
             migrate(conn)

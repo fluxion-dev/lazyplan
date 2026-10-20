@@ -359,9 +359,8 @@ python -m pip install -e ".[dev]"
 <pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-surface p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono"><span class="text-zinc-500"># example setup — not executed</span>
 --db PATH                          <span class="text-zinc-500"># use exactly this file</span>
 $LAZYPLAN_DB                       <span class="text-zinc-500"># pick the file with a setting</span>
-./.agents/lazyplan/lazyplan.db                <span class="text-zinc-500"># shared copy inside a team project</span>
-&lt;agent-skills&gt;/lazyplan/lazyplan.db  <span class="text-zinc-500"># your personal copy beside your agent setup (default)</span>
-~/.local/share/lazyplan/lazyplan.db  <span class="text-zinc-500"># shared fallback on this computer</span>
+./.agents/lazyplan/lazyplan.db                <span class="text-zinc-500"># shared copy inside a team project (found walking up)</span>
+~/.lazyplan/lazyplan.db            <span class="text-zinc-500"># your shared copy for every agent and folder (default)</span>
 </code></pre>
   <ul class="list-disc pl-6 text-[0.95rem] text-zinc-400">
     <li class="mb-1.5">Back up with <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui export --format json</code>. Restore with <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui import --file</code>.</li>

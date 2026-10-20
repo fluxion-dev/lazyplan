@@ -172,8 +172,8 @@ def _maybe_offer_gitignore(
 
 
 def _final_init_db(args: argparse.Namespace, root: Path | None, skills_info: dict) -> Path:
-    """Final DB for init: explicit/env wins, team scopes use the repo, else local."""
-    from .repo import global_db_path, preferred_local_db, repo_plan_db_path
+    """Final DB for init: explicit/env wins, team scopes use the repo, else shared."""
+    from .repo import global_db_path, repo_plan_db_path, shared_db_path
 
     explicit = getattr(args, "db", None)
     if explicit:
@@ -184,20 +184,9 @@ def _final_init_db(args: argparse.Namespace, root: Path | None, skills_info: dic
     scope = str(skills_info.get("scope", "") or "")
     if scope in ("project", "both") and root is not None:
         return repo_plan_db_path(root)
-    installed = skills_info.get("installed", []) or []
-    for line in installed:
-        dest = str(line).rsplit(" (", 1)[0]
-        try:
-            from .skills import skill_db_path
-
-            cand = skill_db_path(dest)
-        except (OSError, ValueError):
-            continue
-        if cand is not None:
-            return cand
     try:
-        return preferred_local_db()
-    except OSError:
+        return shared_db_path()
+    except (OSError, RuntimeError):
         return global_db_path()
 
 
@@ -866,13 +855,13 @@ def main(argv: list[str] | None = None) -> int:
         args.interval = 1.0
         args.json = getattr(args, "json", False)
     if args.cmd == "init" and args.db is None and not os.environ.get("LAZYPLAN_DB", "").strip():
-        # Zero-touch init must not dirty the repo before the wizard picks
-        # a target: open the global fallback first; _cmd_init re-opens
-        # the final DB (repo only for explicit team scopes).
-        from .repo import global_db_path
+        # Init must not dirty the repo before the wizard picks a target:
+        # open the shared home first; _cmd_init re-opens the final DB
+        # (repo only for explicit team scopes).
+        from .repo import shared_db_path
 
         try:
-            store = Store(str(global_db_path()))
+            store = Store(str(shared_db_path()))
         except RuntimeError as exc:
             print(msg_error(exc), file=sys.stderr)
             return 2

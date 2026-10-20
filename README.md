@@ -62,16 +62,16 @@ Run these three commands. You will have a live plan you can open:
 
 ```bash
 cd ~/my-plan
-lpui init --yes             # zero-touch: local skills + DB, no repo writes
+lpui init --yes             # local skills + shared DB, no repo writes
 lpui add-plan --title "my-plan" --why "reason" --what "scope" --priority p1
 lpui                        # TUI (`lpui ui` also works)
 ```
 
-The first time you run `lpui init` with no flags, it asks which agents to install for, then writes the skill into each selected agent's own local skills folder (plus a sibling `lazyplan.db` per skill dir) without touching your repo. Pass `--team` to opt a repo into shared storage instead: `lpui init --team` writes `.agents/lazyplan/`, repo skills, the `AGENTS.md` pointer, and templates, and offers `.gitignore` entries. You can skip skills with `--no-skills`, pick agents non-interactively with `--agents "opencode,claude"` (or `all`), force one folder with `--skills-dir PATH` (or `$LAZYPLAN_SKILLS_DIR`), or pass `--json` for machine-readable output that never asks you questions.
+The first time you run `lpui init` with no flags, it asks which agents to install for, then writes the skill into each selected agent's own local skills folder without touching your repo (all agents share the one database in `~/.lazyplan`). Pass `--team` to opt a repo into shared storage instead: `lpui init --team` writes `.agents/lazyplan/`, repo skills, the `AGENTS.md` pointer, and templates, and offers `.gitignore` entries. You can skip skills with `--no-skills`, pick agents non-interactively with `--agents "opencode,claude"` (or `all`), force one folder with `--skills-dir PATH` (or `$LAZYPLAN_SKILLS_DIR`), or pass `--json` for machine-readable output that never asks you questions.
 
-You can run `lpui` from any folder. By default it stays out of your repo: it uses the first existing agent-local skill DB, else the global database. Only team-initialized repos resolve into the repo.
+You can run `lpui` from any folder. By default every agent and every folder shares one database in your home folder (`~/.lazyplan`, or `%LOCALAPPDATA%/lazyplan` on Windows). Only team-initialized repos resolve into the repo.
 
-Where does it look for the database? The first match wins: `--db PATH`, then `$LAZYPLAN_DB`, then the repo's team-initialized `.agents/lazyplan/lazyplan.db`, then the first existing agent-local skill DB, then the global `~/.local/share/lazyplan/lazyplan.db`. For teams, commit `.agents/lazyplan/config.json` to share the plan. The `*.db` file itself stays local (it is gitignored) unless you force-add it.
+Where does it look for the database? The first match wins: `--db PATH`, then `$LAZYPLAN_DB`, then the nearest team-initialized `.agents/lazyplan/lazyplan.db` walking up from where you run it, then the shared `~/.lazyplan/lazyplan.db` (`%LOCALAPPDATA%/lazyplan` on Windows). For teams, commit `.agents/lazyplan/config.json` to share the plan. The `*.db` file itself stays local (it is gitignored) unless you force-add it.
 
 Planning across checkouts? Link repos to any row (0..n, path plus remote URL). Tasks inherit their milestone's repos, milestones inherit their plan's:
 
@@ -164,7 +164,7 @@ How your agent is expected to work: it asks you about the plan first (why it exi
 
 ## Data, backup, replicas
 
-- Zero-touch by default: `lpui init` keeps skills plus a sibling `lazyplan.db` in each agent-local skill dir and writes nothing to your repo. For teams, `lpui init --team` creates `.agents/lazyplan/lazyplan.db` next to the code it plans. The `.agents/lazyplan/config.json` file marks which folder it belongs to. Commit the config file so your team shares the plan. The database itself stays on your machine.
+- Shared home by default: `lpui init` installs skills and keeps one `~/.lazyplan/lazyplan.db` for every agent, writing nothing to your repo. For teams, `lpui init --team` creates `.agents/lazyplan/lazyplan.db` next to the code it plans. The `.agents/lazyplan/config.json` file marks which folder it belongs to. Commit the config file so your team shares the plan. The database itself stays on your machine.
 - Need a backup, or moving to a new machine? Run `lpui export --format json > backup.json` to save, and `lpui import --file backup.json` to load it back (ids change on import, and that is fine). Exports include linked repos.
 - Want to click around first? Run `lpui seed` for demo data. Never run it in a repo with a real plan.
 

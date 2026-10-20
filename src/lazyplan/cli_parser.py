@@ -513,6 +513,17 @@ def build_parser() -> argparse.ArgumentParser:
         "--shell", choices=["bash", "zsh"], required=True, help="which shell you use (required)"
     )
 
+    up = sub.add_parser(
+        "upgrade",
+        help="upgrade lpui itself to the latest release (pipx/venv installs)",
+        parents=[common],
+    )
+    up.add_argument(
+        "--check",
+        action="store_true",
+        help="only report the installed and latest versions, change nothing",
+    )
+
     sub.add_parser(
         "help", help="show the screen's key bindings (same as ? in the app)", parents=[common]
     )

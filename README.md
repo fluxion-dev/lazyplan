@@ -54,7 +54,7 @@ python3 -m venv .venv && source .venv/bin/activate
 python -m pip install -e ".[dev]"
 ```
 
-When a new version comes out, run `pipx upgrade lazyplan-tui`. If you do not have pipx, the `--method venv` path gives you the same isolated install without it.
+When a new version comes out, run `lpui upgrade` (`lpui upgrade --check` reports without changing anything). It manages pipx and venv installs; system packages upgrade through your package manager instead. If you do not have pipx, the `--method venv` path gives you the same isolated install without it.
 
 ## Quick start
 
@@ -141,6 +141,7 @@ lpui update --kind task --id 1 [--title --desc --priority p0|none]
 lpui update --kind plan --id 1 [--title --what --why --priority p0|none]
 lpui status --kind task --id 1 --to doing    # closing with open criteria warns, never blocks
 lpui delete --kind task --id 1
+lpui upgrade [--check]                   # self-update pipx/venv installs (system pkgs: use dnf/apt)
 lpui feed [--limit 20]            # recent human/agent activity
 lpui watch [--limit 20]           # tail (agents: lpui feed --json --follow &)
 lpui --actor helper add-task --milestone 3 --title "Draft proposal"

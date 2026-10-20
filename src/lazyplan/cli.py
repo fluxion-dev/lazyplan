@@ -40,6 +40,14 @@ from .skills import append_gitignore, prompt_confirm
 from .skills import handle_init as _init_skills
 from .store import Store, _ser
 from .templates import run_template_setup
+from .upgrade import (
+    UpgradeError,
+    detect,
+    guard_message,
+    latest_version,
+    parse_version,
+    run_upgrade,
+)
 from .vcs import current_head, detect_backend
 
 
@@ -703,6 +711,7 @@ def _cmd_completion(store: Store, args: argparse.Namespace, actor: str) -> int:
         "commits",
         "export",
         "import",
+        "upgrade",
         "status",
         "reconcile",
         "delete",
@@ -725,6 +734,63 @@ def _cmd_ui(store: Store, args: argparse.Namespace, actor: str) -> int:
     from .tui import run
 
     return run(db_path=args.db)
+
+
+def _cmd_upgrade(store: Store | None, args: argparse.Namespace, actor: str) -> int:
+    """Upgrade this install to the latest release; needs no database."""
+    del store, actor
+    info = detect()
+    installed = package_version()
+    try:
+        latest = latest_version()
+    except UpgradeError as exc:
+        # Fail open: a missing network must never break the tool.
+        if args.json:
+            return _emit(
+                args,
+                {
+                    "method": info.method,
+                    "upgradeable": info.upgradeable,
+                    "installed": installed,
+                    "latest": None,
+                    "upgraded": False,
+                    "warning": str(exc),
+                },
+            )
+        print(f"warning: {exc}; skipping upgrade check", file=sys.stderr)
+        return 0
+    payload = {
+        "method": info.method,
+        "upgradeable": info.upgradeable,
+        "installed": installed,
+        "latest": latest,
+        "upgraded": False,
+    }
+    if not info.upgradeable and not args.check:
+        print(msg_error(UpgradeError(guard_message(info))), file=sys.stderr)
+        return 2
+    try:
+        up_to_date = parse_version(latest) <= parse_version(installed)
+    except UpgradeError:
+        up_to_date = False
+    if args.check or up_to_date:
+        if args.json:
+            return _emit(args, payload)
+        if up_to_date:
+            print(f"lpui v{installed} is the latest release ({info.method})")
+        else:
+            print(f"lpui v{installed} -> v{latest} available ({info.method}); run `lpui upgrade`")
+        return 0
+    try:
+        run_upgrade(info, latest, sys.executable)
+    except UpgradeError as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 1
+    payload["upgraded"] = True
+    if args.json:
+        return _emit(args, payload)
+    print(f"upgraded lpui v{installed} -> v{latest} ({info.method})")
+    return 0
 
 
 _COMMANDS: dict[str, Callable[[Store, argparse.Namespace, str], int]] = {
@@ -754,6 +820,7 @@ _COMMANDS: dict[str, Callable[[Store, argparse.Namespace, str], int]] = {
     "repos": _cmd_repos,
     "export": _cmd_export,
     "import": _cmd_import,
+    "upgrade": _cmd_upgrade,
     "feed": _cmd_feed,
     "completion": _cmd_completion,
     "ui": _cmd_ui,
@@ -767,6 +834,10 @@ def main(argv: list[str] | None = None) -> int:
         # Before Store(): printing the version must not create a DB.
         print(package_version())
         return 0
+    actor = getattr(args, "actor", "human")
+    if args.cmd == "upgrade":
+        # Self-upgrade manages the install, not plan data: no database.
+        return _cmd_upgrade(None, args, actor)
     if args.cmd is None:
         # Bare `lpui` (or global flags only) opens the standard TUI.
         args.cmd = "ui"
@@ -793,7 +864,6 @@ def main(argv: list[str] | None = None) -> int:
         except RuntimeError as exc:
             print(msg_error(exc), file=sys.stderr)
             return 2
-    actor = getattr(args, "actor", "human")
     try:
         handler = _COMMANDS.get(args.cmd)
         if handler is None:

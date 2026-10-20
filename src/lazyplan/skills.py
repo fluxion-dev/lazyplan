@@ -956,6 +956,9 @@ def _install_for_scope(
     if tools is None:
         with_claude = any(h.key == "claude" and h.detected for h in hosts)
         native = [h.key for h in hosts if h.detected and h.key in KNOWN_TOOLS]
+        if not native:
+            # Bare machine: --yes means the opinionated defaults, not nothing.
+            native = ["opencode"]
     else:
         with_claude = False
         # Keep every known tool: tools without a native folder (copilot)

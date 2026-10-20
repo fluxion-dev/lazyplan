@@ -23,6 +23,12 @@ pipx install lazyplan-tui   # recommended: provides `lpui` (+ `lazyplan` alias)
 lpui --help
 ```
 
+On Windows (PowerShell), use the pip backend:
+
+```powershell
+pipx install --backend pip lazyplan-tui
+```
+
 Need a system package instead? These bundles include everything they need. You only need `python3 >= 3.11` on your machine:
 
 ```bash

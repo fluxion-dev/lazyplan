@@ -150,6 +150,7 @@ def render() -> str:
         "lpui --actor alice add-criteria --kind plan --id 1 --text \\(dqWorks offline\\(dq",
         "lpui --actor alice add-task --milestone 1 --title \\(dqFix bug\\(dq --priority p1",
         "lpui status --kind task --id 3 --to done",
+        "lpui upgrade --check",
         "lpui feed --limit 20",
         "lpui export --format json > backup.json",
         "lpui import --file backup.json",

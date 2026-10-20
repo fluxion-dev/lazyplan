@@ -39,6 +39,7 @@ examples:
   lpui repos --kind task --id 3 --effective
   lpui list --repo ~/checkouts/api
   lpui feed --limit 20                   show recent activity by you and your agents
+  lpui upgrade [--check]                 self-update pipx/venv installs (no repo needed)
   lpui export --format json > backup.json
   lpui import --file backup.json
 

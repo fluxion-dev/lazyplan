@@ -16,6 +16,7 @@ REPO = "fluxion-dev/lazyplan"
 PYPI_PKG = "lazyplan-tui"
 RELEASES_LATEST = f"https://github.com/{REPO}/releases/latest"
 RESOLVE_TIMEOUT = 10.0
+NOTICE_TIMEOUT = 3.0
 UPGRADE_TIMEOUT = 300.0
 
 PIPX = "pipx"
@@ -191,6 +192,26 @@ def guard_message(info: InstallInfo) -> str:
     if info.method == SOURCE:
         return f"source checkout ({info.detail}): update with `git pull`; {upgradeable}"
     return f"unrecognized install layout ({info.detail}); reinstall with {INSTALL_SH}"
+
+
+def notice_text(info: InstallInfo, installed: str, latest: str) -> str | None:
+    """Short update notice for the TUI statusbar and toast; None when current."""
+    try:
+        current = parse_version(latest) <= parse_version(installed)
+    except UpgradeError:
+        return None
+    if current:
+        return None
+    if info.method in UPGRADEABLE:
+        return f"update v{latest} available (installed v{installed}) — run `lpui upgrade`"
+    if info.method == SOURCE:
+        return f"update v{latest} available (installed v{installed}) — update with `git pull`"
+    if info.method in (RPM, DEB):
+        return (
+            f"update v{latest} available (installed v{installed}) "
+            "— upgrade with your package manager"
+        )
+    return f"update v{latest} available (installed v{installed})"
 
 
 def run_upgrade(info: InstallInfo, version: str, exe: str | None = None) -> None:

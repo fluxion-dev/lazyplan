@@ -1,0 +1,186 @@
+"""Update-availability notice: text builder plus TUI surface (mocked network)."""
+
+import os
+import sys
+import tempfile
+import unittest
+from unittest import mock
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+
+from lazyplan import cli as cli_mod  # noqa: E402
+from lazyplan import upgrade  # noqa: E402
+from lazyplan.store import Store  # noqa: E402
+
+try:
+    from lazyplan import tui as tui_mod
+except ImportError:  # stdlib-only interpreter: no textual, no screens
+    tui_mod = None  # type: ignore[assignment]
+
+
+class TestNoticeText(unittest.TestCase):
+    def test_pipx_names_upgrade(self):
+        info = upgrade.InstallInfo(upgrade.PIPX, True)
+        text = upgrade.notice_text(info, "0.15.0", "0.16.0")
+        assert text is not None
+        self.assertIn("0.16.0", text)
+        self.assertIn("lpui upgrade", text)
+
+    def test_current_returns_none(self):
+        info = upgrade.InstallInfo(upgrade.PIPX, True)
+        self.assertIsNone(upgrade.notice_text(info, "0.16.0", "0.16.0"))
+        self.assertIsNone(upgrade.notice_text(info, "0.17.0", "0.16.0"))
+
+    def test_unparseable_returns_none(self):
+        info = upgrade.InstallInfo(upgrade.PIPX, True)
+        self.assertIsNone(upgrade.notice_text(info, "bogus", "0.16.0"))
+
+    def test_source_names_git_pull(self):
+        info = upgrade.InstallInfo(upgrade.SOURCE, False)
+        text = upgrade.notice_text(info, "0.15.0", "0.16.0")
+        assert text is not None
+        self.assertIn("git pull", text)
+        self.assertNotIn("lpui upgrade", text)
+
+    def test_system_names_package_manager(self):
+        for method in (upgrade.RPM, upgrade.DEB):
+            info = upgrade.InstallInfo(method, False)
+            text = upgrade.notice_text(info, "0.15.0", "0.16.0")
+            assert text is not None
+            self.assertIn("package manager", text)
+
+
+@unittest.skipUnless(tui_mod is not None and tui_mod._TEXTUAL_OK, "textual not installed")
+class TestTuiNotice(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.db = os.path.join(self.tmp.name, "t.db")
+        Store(self.db).add_plan("P")
+        self.app = tui_mod.create_app(self.db)
+
+    async def asyncTearDown(self):
+        self.tmp.cleanup()
+
+    async def _wait_for_notice(self, pilot, app):
+        for _ in range(100):
+            if app._update_notice is not None:
+                return
+            await pilot.pause()
+        self.fail("update notice never landed")
+
+    async def test_outdated_shows_statusbar_and_toast_once(self):
+        from textual.widgets import Label
+
+        info = upgrade.InstallInfo(upgrade.PIPX, True)
+        with (
+            mock.patch.object(tui_mod, "latest_version", return_value="9.9.9") as latest,
+            mock.patch.object(tui_mod, "detect", return_value=info),
+            mock.patch.object(tui_mod, "package_version", return_value="0.16.0"),
+            mock.patch.object(self.app, "notify") as toast,
+        ):
+            async with self.app.run_test() as pilot:
+                await self._wait_for_notice(pilot, self.app)
+                await pilot.pause()
+                bar = self.app.query_one("#statusbar", Label)
+                self.assertIn("9.9.9", str(bar.content))
+                self.assertIn("lpui upgrade", str(bar.content))
+                self.assertEqual(latest.call_count, 1)
+                self.app._announce_update(self.app._update_notice or "")
+                self.app._announce_update(self.app._update_notice or "")
+                self.assertEqual(toast.call_count, 1)
+
+    async def test_offline_stays_silent(self):
+        with mock.patch.object(
+            tui_mod, "latest_version", side_effect=upgrade.UpgradeError("no network")
+        ):
+            async with self.app.run_test() as pilot:
+                await pilot.pause()
+                await pilot.pause()
+                self.assertIsNone(self.app._update_notice)
+                self.assertFalse(self.app._update_toasted)
+
+    async def test_current_stays_silent(self):
+        info = upgrade.InstallInfo(upgrade.PIPX, True)
+        with (
+            mock.patch.object(tui_mod, "latest_version", return_value=tui_mod.package_version()),
+            mock.patch.object(tui_mod, "detect", return_value=info),
+        ):
+            async with self.app.run_test() as pilot:
+                await pilot.pause()
+                await pilot.pause()
+                self.assertIsNone(self.app._update_notice)
+
+
+class TestCliNotice(unittest.TestCase):
+    def _run(self, argv: list[str]) -> tuple[int, str, str]:
+        import io
+        import warnings
+        from contextlib import redirect_stderr, redirect_stdout
+
+        from lazyplan.cli import main
+
+        out, err = io.StringIO(), io.StringIO()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            with redirect_stdout(out), redirect_stderr(err):
+                code = main(argv)
+        return code, out.getvalue(), err.getvalue()
+
+    def _db_argv(self, tmp: str, extra: list[str]) -> list[str]:
+        return ["--db", os.path.join(tmp, "t.db"), *extra]
+
+    def test_outdated_lists_notice_on_stderr(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            info = upgrade.InstallInfo(upgrade.PIPX, True)
+            with (
+                mock.patch.object(cli_mod, "latest_version", return_value="9.9.9"),
+                mock.patch.object(cli_mod, "detect", return_value=info),
+            ):
+                code, out, err = self._run(self._db_argv(tmp, ["list"]))
+        self.assertEqual(code, 0)
+        self.assertIn("9.9.9", err)
+        self.assertIn("lpui upgrade", err)
+        self.assertNotIn("9.9.9", out)
+
+    def test_json_stays_silent(self):
+        import json
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            info = upgrade.InstallInfo(upgrade.PIPX, True)
+            with (
+                mock.patch.object(cli_mod, "latest_version", return_value="9.9.9"),
+                mock.patch.object(cli_mod, "detect", return_value=info),
+            ):
+                code, out, err = self._run(self._db_argv(tmp, ["list", "--json"]))
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        json.loads(out)
+
+    def test_version_and_upgrade_skip_notice(self):
+        info = upgrade.InstallInfo(upgrade.PIPX, True)
+        with (
+            mock.patch.object(cli_mod, "latest_version", return_value="9.9.9"),
+            mock.patch.object(cli_mod, "detect", return_value=info),
+        ):
+            _, _, err_version = self._run(["--version"])
+            self.assertEqual(err_version, "")
+            _, _, err_upgrade = self._run(["upgrade", "--check"])
+            self.assertNotIn("available", err_upgrade)
+
+    def test_offline_cli_stays_silent(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            with mock.patch.object(
+                cli_mod, "latest_version", side_effect=upgrade.UpgradeError("down")
+            ):
+                code, _, err = self._run(self._db_argv(tmp, ["list"]))
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+
+
+if __name__ == "__main__":
+    unittest.main()

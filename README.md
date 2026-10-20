@@ -54,7 +54,7 @@ python3 -m venv .venv && source .venv/bin/activate
 python -m pip install -e ".[dev]"
 ```
 
-When a new version comes out, run `lpui upgrade` (`lpui upgrade --check` reports without changing anything). It manages pipx and venv installs; system packages upgrade through your package manager instead. If you do not have pipx, the `--method venv` path gives you the same isolated install without it.
+When a new version comes out, run `lpui upgrade` (`lpui upgrade --check` reports without changing anything). It manages pipx and venv installs; system packages upgrade through your package manager instead. You do not have to check manually: the TUI statusbar says when an update is available, and CLI commands repeat it on stderr (never on stdout, so `--json` and scripts are unaffected). If you do not have pipx, the `--method venv` path gives you the same isolated install without it.
 
 ## Quick start
 

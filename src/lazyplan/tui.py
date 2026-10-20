@@ -25,6 +25,7 @@ except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
 from . import services
+from .cli_parser import package_version
 from .design import (
     APP_CSS,
     milestone_row,
@@ -44,6 +45,7 @@ from .screens import (
 )
 from .store import Store
 from .templates import load_template
+from .upgrade import UpgradeError, detect, latest_version, notice_text
 
 STATUS_CYCLE: list[Status | None] = [None, Status.TODO, Status.DOING, Status.DONE]
 DOUBLE_CLICK_WINDOW = 0.5  # seconds between two clicks on one row
@@ -133,6 +135,8 @@ if _TEXTUAL_OK:
             self._last_click_key: tuple[str, int] | None = None
             self._last_click_at: float = 0.0
             self._fp: Any = store.fingerprint()
+            self._update_notice: str | None = None
+            self._update_toasted: bool = False
 
         def compose(self) -> ComposeResult:
             yield Header(show_clock=True)
@@ -145,7 +149,25 @@ if _TEXTUAL_OK:
         def on_mount(self) -> None:
             self.refresh_all("ready — ? help")
             self.set_interval(1.0, self._poll)
+            self.run_worker(self._check_update, thread=True, exclusive=True)
             self.query_one("#tree", Tree).focus()
+
+        def _check_update(self) -> None:
+            """One background latest-version check per session; silent on failure."""
+            try:
+                latest = latest_version()
+            except UpgradeError:
+                return
+            notice = notice_text(detect(), package_version(), latest)
+            if notice is not None:
+                self.call_from_thread(self._announce_update, notice)
+
+        def _announce_update(self, notice: str) -> None:
+            self._update_notice = notice
+            if not self._update_toasted:
+                self._update_toasted = True
+                self.notify(notice, timeout=8)
+            self.refresh_all()
 
         # -- selection --------------------------------------------------
         def _track(self, node: TreeNode) -> None:
@@ -366,13 +388,17 @@ if _TEXTUAL_OK:
             self.query_one("#activity", Label).update(" " + act)
             sf = self.status_filter.value if self.status_filter else "all"
             pf = f"P#{self.plan_filter}" if self.plan_filter else "all"
-            self.query_one("#statusbar", Label).update(
+            bar = (
                 f" [{repo_label(self.store.path)}]"
                 f" P:{c['plans']} S:{c['milestones']} T:{c['tasks_done']}/{c['tasks']}"
                 f" Q:{c['plans_todo']}/{c['plans_doing']}/{c['plans_done']}"
                 f" · f:{sf} o:{pf} A:{'all' if self.show_all else services.DEFAULT_PLAN_LIMIT}"
-                + (f" — {note}" if note else "")
             )
+            if self._update_notice is not None:
+                bar += f" · {self._update_notice}"
+            if note:
+                bar += f" — {note}"
+            self.query_one("#statusbar", Label).update(bar)
 
         def action_refresh(self) -> None:
             self._saved("manual refresh")

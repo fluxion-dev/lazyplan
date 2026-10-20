@@ -41,10 +41,12 @@ from .skills import handle_init as _init_skills
 from .store import Store, _ser
 from .templates import run_template_setup
 from .upgrade import (
+    NOTICE_TIMEOUT,
     UpgradeError,
     detect,
     guard_message,
     latest_version,
+    notice_text,
     parse_version,
     run_upgrade,
 )
@@ -736,6 +738,21 @@ def _cmd_ui(store: Store, args: argparse.Namespace, actor: str) -> int:
     return run(db_path=args.db)
 
 
+def _maybe_notice_update(args: argparse.Namespace) -> None:
+    """One stderr notice per process when a newer release exists; never breaks."""
+    if args.cmd in (None, "ui", "upgrade"):
+        return
+    if getattr(args, "json", False) or getattr(args, "version", False):
+        return
+    try:
+        latest = latest_version(timeout=NOTICE_TIMEOUT)
+        notice = notice_text(detect(), package_version(), latest)
+    except Exception:
+        return
+    if notice is not None:
+        print(notice, file=sys.stderr)
+
+
 def _cmd_upgrade(store: Store | None, args: argparse.Namespace, actor: str) -> int:
     """Upgrade this install to the latest release; needs no database."""
     del store, actor
@@ -835,6 +852,7 @@ def main(argv: list[str] | None = None) -> int:
         print(package_version())
         return 0
     actor = getattr(args, "actor", "human")
+    _maybe_notice_update(args)
     if args.cmd == "upgrade":
         # Self-upgrade manages the install, not plan data: no database.
         return _cmd_upgrade(None, args, actor)

@@ -36,6 +36,13 @@ _.action_delete
 _.action_toggle_status
 _.action_fold_all
 _.action_cancel
+_.action_close
+_.action_save_all
+_.action_export_md
+_.on_descendant_focus
+_.on_descendant_blur
+_.export_plan
+_.render_plan_markdown
 BINDINGS
 CSS
 TITLE
@@ -43,6 +50,7 @@ _.display
 _.row_factory
 _.criteria_progress
 STARTERS
+KEYMAP
 ensure_templates
 _.is_available
 backends

@@ -153,21 +153,80 @@ def render_markdown(data: dict) -> str:
     """Human/portable markdown export of the whole db."""
     lines = ["# lazyplan export", ""]
     for entry in data.get("plans", []):
-        p = entry["plan"]
-        lines.append(f"## {status_word(p['status'])} P#{p['id']} {p['name']}".rstrip())
-        if p.get("goal"):
-            lines.append(f"> why: {p['goal']}")
-        if p.get("description"):
-            lines.append(f"> what: {p['description']}")
-        for c in entry.get("criteria", []):
-            box = "x" if c.get("done") else " "
-            lines.append(f"- [{box}] {c['text']}")
-        for sentry in entry.get("milestones", []):
-            s = sentry["milestone"]
-            lines.append(f"\n### {status_word(s['status'])} M#{s['id']} {s['title']}")
-            for tentry in sentry.get("tasks", []):
-                t = tentry["task"]
-                box = "x" if t["status"] == "done" else " "
-                lines.append(f"- [{box}] T#{t['id']} {t['title']}")
+        lines.append(render_plan_markdown(entry))
         lines.append("")
+    return "\n".join(lines)
+
+
+def _md_crit(lines: list[str], items: list[dict], indent: str = "") -> None:
+    """Checklist lines with ids + ticks."""
+    for c in items:
+        box = "x" if c.get("done") else " "
+        lines.append(f"{indent}- [{box}] #{c['id']} {c['text']}")
+
+
+def _md_repos(lines: list[str], items: list[dict], indent: str = "") -> None:
+    """Repo link lines."""
+    for r in items:
+        remote = f" ({r['repo_remote']})" if r.get("repo_remote") else ""
+        lines.append(f"{indent}- repo: {r.get('repo_path', '')}{remote}")
+
+
+def _md_task_lines(tentry: dict) -> list[str]:
+    """Full-fidelity lines for one task entry."""
+    lines: list[str] = []
+    t = tentry["task"]
+    box = "x" if t["status"] == "done" else " "
+    lines.append(f"- [{box}] T#{t['id']} {t['title']} ({t['status']})")
+    if t.get("priority"):
+        lines.append(f"  priority: {t['priority']}")
+    if t.get("description"):
+        for dline in str(t["description"]).splitlines():
+            lines.append(f"  {dline}")
+    for c in tentry.get("criteria", []):
+        cbox = "x" if c.get("done") else " "
+        lines.append(f"  - [{cbox}] #{c['id']} {c['text']}")
+    return lines
+
+
+def _md_milestone_lines(sentry: dict) -> list[str]:
+    """Full-fidelity lines for one milestone entry."""
+    lines: list[str] = []
+    s = sentry["milestone"]
+    lines.append(f"\n### {status_word(s['status'])} M#{s['id']} {s['title']}")
+    if s.get("priority"):
+        lines.append(f"priority: {s['priority']}")
+    if s.get("description"):
+        lines.append(str(s["description"]))
+    _md_crit(lines, sentry.get("criteria", []))
+    _md_repos(lines, sentry.get("repos", []))
+    for tentry in sentry.get("tasks", []):
+        lines.extend(_md_task_lines(tentry))
+    return lines
+
+
+def render_plan_markdown(entry: dict) -> str:
+    """Full-fidelity markdown for ONE plan entry (export_all shape).
+
+    Carries every editable field: status, priority, why/what, criteria
+    (with ids + ticks), repos, commits, plus per-milestone/task bodies.
+    Stays non-importable by design; JSON remains the round-trip format.
+    """
+    lines: list[str] = []
+    p = entry["plan"]
+    lines.append(f"## {status_word(p['status'])} P#{p['id']} {p['name']}".rstrip())
+    if p.get("priority"):
+        lines.append(f"priority: {p['priority']}")
+    if p.get("goal"):
+        lines.append(f"> why: {p['goal']}")
+    if p.get("description"):
+        lines.append(f"> what: {p['description']}")
+    _md_crit(lines, entry.get("criteria", []))
+    _md_repos(lines, entry.get("repos", []))
+    for link in entry.get("links", []):
+        sha = str(link.get("sha", ""))[:12]
+        subject = str(link.get("subject", "") or "").strip()
+        lines.append(f"- commit: {sha} {subject}".rstrip())
+    for sentry in entry.get("milestones", []):
+        lines.extend(_md_milestone_lines(sentry))
     return "\n".join(lines)

@@ -627,10 +627,29 @@ def _cmd_repos(store: Store, args: argparse.Namespace, actor: str) -> int:
 
 
 def _cmd_export(store: Store, args: argparse.Namespace, actor: str) -> int:
-    data = services.export_all(store)
-    if args.format == "json":
-        return _emit(args, data)
-    print(render_markdown(data))
+    from .render import render_plan_markdown
+
+    plan_id = getattr(args, "plan", None)
+    dest = getattr(args, "file", None)
+    if plan_id is not None:
+        entry = services.export_plan(store, plan_id)
+        if entry is None:
+            print(msg_not_found("plan", plan_id), file=sys.stderr)
+            return 1
+        if args.format == "json":
+            payload: object = {"lazyplan": 1, "plans": [entry]}
+            text = json.dumps(payload, indent=2, default=str)
+        else:
+            text = render_plan_markdown(entry)
+    else:
+        data = services.export_all(store)
+        if args.format == "json":
+            return _emit(args, data)
+        text = render_markdown(data)
+    if dest:
+        Path(dest).write_text(text + ("" if text.endswith("\n") else "\n"))
+        return _emit(args, {"exported": dest})
+    print(text)
     return 0
 
 

@@ -17,9 +17,9 @@ try:
     from lazyplan.screens import (
         ConfirmScreen,
         DetailScreen,
-        EditScreen,
         HelpScreen,
         NewTaskScreen,
+        ProjectEditorScreen,
     )
 except ImportError:  # stdlib-only interpreter: no textual, no screens
     tui_mod = None  # type: ignore[assignment]
@@ -47,20 +47,33 @@ class TestEscBacksOut(unittest.IsolatedAsyncioTestCase):
         await pilot.pause()
         self.assertEqual(len(self.app.screen_stack), 1)
 
-    async def test_edit_esc_discards(self):
-        from textual.widgets import Input
-
+    async def test_editor_esc_discards_clean(self):
         async with self.app.run_test() as pilot:
             await pilot.pause()
-            self.app.push_screen(EditScreen("task", self.tid, "T", "2d", ""))
+            self.app.push_screen(ProjectEditorScreen(Store(self.db), self.pid))
             await pilot.pause()
-            field = self.app.screen.query_one("#f-title", Input)
-            field.focus()
-            field.value = "CHANGED"
+            self.assertGreater(len(self.app.screen_stack), 1)
             await pilot.press("escape")
             await pilot.pause()
             self.assertEqual(len(self.app.screen_stack), 1)
             self.assertEqual(Store(self.db).get_task(self.tid).title, "T")
+
+    async def test_editor_esc_dirty_prompts_then_discards(self):
+        from textual.widgets import Input
+
+        async with self.app.run_test() as pilot:
+            await pilot.pause()
+            self.app.push_screen(ProjectEditorScreen(Store(self.db), self.pid))
+            await pilot.pause()
+            self.app.screen.query_one("#p-title", Input).value = "CHANGED"
+            await pilot.pause()
+            await pilot.press("escape")
+            await pilot.pause()
+            self.assertIsInstance(self.app.screen, ConfirmScreen)
+            await pilot.click("#ok")
+            await pilot.pause()
+            self.assertEqual(len(self.app.screen_stack), 1)
+            self.assertEqual(Store(self.db).get_plan(self.pid).name, "P")
 
     async def test_detail_esc_discards_textarea(self):
         from textual.widgets import TextArea

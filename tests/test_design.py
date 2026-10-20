@@ -113,6 +113,26 @@ class TestDesignSystem(unittest.TestCase):
             self.assertIn("HELP = HELP_TEXT", src)
             self.assertIn("HELP_TEXT", src.split("from .design import")[1].split(")")[0])
 
+    def test_keymap_mirrors_help(self):
+        for key, _action, _surface in design.KEYMAP:
+            parts = [p.strip().split()[0] for p in key.split(",")]
+            self.assertTrue(any(p and p in design.HELP_TEXT for p in parts), key)
+
+    def test_bindings_match_keymap(self):
+        try:
+            from lazyplan.tui import LazyplanApp  # needs textual installed
+        except ImportError:
+            self.skipTest("textual not installed")
+            return
+        keys = set()
+        for b in LazyplanApp.BINDINGS:
+            keys.update(k.strip() for k in b.key.split(","))
+        keys.discard("question_mark")
+        table = " ".join(k for k, _a, _s in design.KEYMAP)
+        for key in keys:
+            self.assertIn(key, table, key)
+        self.assertIn("?", table)
+
     def test_message_helpers(self):
         self.assertEqual(design.msg_not_found("task", 7), "task #7 not found")
         self.assertTrue(design.msg_error(ValueError("x")).startswith("error:"))

@@ -416,6 +416,16 @@ def export_all(store: Store) -> dict:
     return {"lazyplan": 1, "plans": plans}
 
 
+def export_plan(store: Store, plan_id: int) -> dict | None:
+    """Single-plan entry in export_all() shape (or None when missing)."""
+    plans: list[dict] = export_all(store)["plans"]
+    for entry in plans:
+        plan: dict = entry["plan"]
+        if plan["id"] == plan_id:
+            return entry
+    return None
+
+
 def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]:
     """Load an export_all() dump. Returns counts.
 

@@ -116,7 +116,8 @@ lpui repos --kind task --id T [--effective]    # explicit vs inherited
 lpui list --repo /path/to/checkout             # only matching rows
 ```
 
-`show`, `list --json`, and `export` include `repos` plus `effective_repos`.
+`show` and `list --json` include `repos` plus `effective_repos`;
+`export --format json` carries explicit `repos` (import round-trip).
 
 ## Starting a plan: interview first
 
@@ -205,6 +206,7 @@ lpui list [--status todo|doing|done|all] [--archived] [--plan ID] [--priority p0
 lpui show --kind plan|milestone|task --id N                           # full context
 lpui feed --limit 20                                                 # recent activity
 lpui export --format json                                            # full dump when you need everything
+lpui export --format markdown --plan ID [--file out.md]              # one full-fidelity plan doc
 lpui info                                                            # resolved db path + counts (scope debugging)
 lpui reconcile                                                       # recompute parent statuses from children
 ```

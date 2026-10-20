@@ -31,10 +31,24 @@ BAR_HEIGHT = "1"  # activity line + statusbar: exactly one row each
 
 APP_CSS = f"""
 #panel {{ height: {PANEL_HEIGHT}; border: {BORDER}; }}
+#main {{ height: {PANEL_HEIGHT}; }}
+#nav {{ width: 1fr; min-width: 30; border-right: {BORDER}; }}
+#filter {{ height: 1; margin: 0 1; }}
+#preview {{ width: 1fr; min-width: 30; padding: 0 1; }}
+#preview-body {{ height: auto; }}
 #activity {{ height: {BAR_HEIGHT}; background: $surface; }}
 #statusbar {{ height: {BAR_HEIGHT}; background: $primary; }}
 #dlg {{ width: 60; height: auto; border: {BORDER}; padding: 1; }}
 ModalScreen {{ align: center middle; }}
+#editor {{ height: 1fr; }}
+#editor Collapsible {{ margin: 1 0; }}
+#cards {{ height: auto; }}
+#editor Button {{ min-width: 0; width: auto; height: 1; padding: 0 1; }}
+#dlg Button {{ min-width: 0; width: auto; height: 1; padding: 0 1; }}
+.card {{ border: {BORDER}; padding: 1; margin: 1 0; }}
+.card-t {{ margin-left: 2; }}
+#editor-bar {{ height: 1; padding: 0 1; }}
+.btn-row {{ width: 1fr; height: auto; }}
 """
 
 # -- label language ---------------------------------------------------------
@@ -218,11 +232,36 @@ def msg_error(exc: BaseException) -> str:
     return f"error: {exc}"
 
 
+# -- keymap (canonical table; HELP_TEXT below mirrors it) -------------------
+# (key, action, surfaces)
+KEYMAP: tuple[tuple[str, str, str], ...] = (
+    ("j/k, up/down, click", "move cursor / select", "tree"),
+    ("enter, double-click", "detail", "tree"),
+    ("space", "cycle status", "tree"),
+    ("n / P / M / T", "new context / plan / milestone / task", "tree"),
+    ("e", "project editor", "tree"),
+    ("X", "export plan .md", "tree"),
+    ("c", "tick criteria", "tree"),
+    ("d", "delete (confirm)", "tree"),
+    ("z/Z, left/right", "fold", "tree"),
+    ("f", "status filter", "tree"),
+    ("A", "show all / capped", "tree"),
+    ("ctrl+p", "command palette", "tree"),
+    ("slash, escape", "search filter / clear", "tree"),
+    ("r", "refresh", "tree"),
+    ("?", "help", "tree"),
+    ("q", "quit", "tree"),
+    ("ctrl+s", "save all", "editor"),
+    ("esc", "close (dirty prompts) / cancel", "editor, modals"),
+)
+
+
 # -- help (TUI `?` overlay AND `lpui help` render this same text) -------------
 HELP_TEXT = """lazyplan — local plan journal (TUI is keyboard-only; agents use lpui)
 tree: j/k or up/down + click select · left/right collapse/expand · enter/double-click detail
-n new (context) · P/M/T new plan/milestone/task · e edit · d delete
+n new (context) · P/M/T new plan/milestone/task · e project editor · X export .md
 space cycle status · c tick criteria · z/Z fold one/all
-f status filter · o plan filter · A show all/capped
+f status filter · A show all/capped · ctrl+p palette · slash search, escape clear (/ , esc)
 r refresh · ? help · q quit
+editor: per-row Save + Save-all (ctrl+s) · esc closes (prompts when dirty)
 workflow: interview why/what/acceptance criteria, add-plan, cut prioritized milestones + tasks"""

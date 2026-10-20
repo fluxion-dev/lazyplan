@@ -1,10 +1,11 @@
-"""Single-panel Textual TUI: plan tree, nano-style bottom bar.
+"""IDE-style Textual TUI: nav tree + live preview, palette, filter.
 
-Keys: j/k navigate, z/Z fold one/all, n contextual new, P/S/T new plan/milestone/task,
-  e edit, space cycle status, c tick criteria, enter detail, f status filter,
-  o plan filter, r refresh, ? help, q quit. Mouse click folds/unfolds too.
-Keyboard-only: agents use the `lpui` CLI against the same SQLite file; the TUI
-polls fingerprint() every second and toasts + activity-line.
+Keys: j/k navigate, z/Z fold one/all, n contextual new, P/M/T new plan/milestone/task,
+  e project editor, space cycle status, c tick criteria, enter detail, f status filter,
+  A show all, slash/escape filter, ctrl+p palette, X export, r refresh, ? help, q quit.
+  Mouse click selects; double-click opens detail.
+Keyboard-only: agents use the `lpui` CLI against the same SQLite file; local edits
+bump reactive rev, external DB changes arrive via fingerprint() poll + feed toast.
 """
 
 from __future__ import annotations
@@ -13,11 +14,12 @@ import time
 from typing import Any, cast
 
 try:
-    from textual import events
+    from textual import events, on
     from textual.app import App, ComposeResult
     from textual.binding import Binding
-    from textual.containers import Vertical
-    from textual.widgets import Footer, Header, Label, Tree
+    from textual.containers import Horizontal, Vertical, VerticalScroll
+    from textual.reactive import reactive
+    from textual.widgets import Footer, Header, Input, Label, Static, Tree
     from textual.widgets.tree import TreeNode
 
     _TEXTUAL_OK = True
@@ -28,20 +30,24 @@ from . import services
 from .cli_parser import package_version
 from .design import (
     APP_CSS,
+    EMPTY_FEED,
+    EMPTY_NO_PLANS,
     milestone_row,
     plan_row,
     task_row,
 )
+from .messages import RowAction, SelectionChanged
 from .models import Milestone, Plan, Status, Task
 from .repo import repo_label
 from .screens import (
     ConfirmScreen,
     DetailScreen,
-    EditScreen,
     HelpScreen,
     NewMilestoneScreen,
     NewPlanScreen,
     NewTaskScreen,
+    PaletteScreen,
+    ProjectEditorScreen,
 )
 from .store import Store
 from .templates import load_template
@@ -64,17 +70,33 @@ if _TEXTUAL_OK:
 
         BINDINGS = [Binding("enter", "open_detail", "Detail")]
 
+        def on_tree_node_highlighted(self, e: Tree.NodeHighlighted) -> None:
+            """Bubble selection as a custom message (guide/events pattern)."""
+            key = LazyplanApp._node_key(e.node)
+            if key is not None:
+                self.post_message(SelectionChanged(kind=key[0], oid=key[1]))
+
         def action_toggle_node(self) -> None:
-            """Space: cycle status instead of toggling the node."""
-            cast("LazyplanApp", self.app).action_toggle_status()
+            """Space: post intent; App handles via @on (messages-up)."""
+            app = cast("LazyplanApp", self.app)
+            if app.selected is not None:
+                kind, oid = app.selected
+                self.post_message(RowAction("toggle-status", kind, oid))
+            else:
+                app.action_toggle_status()
 
         def action_toggle_expand_all(self) -> None:
-            """Shift+space: fold-all with app semantics."""
-            cast("LazyplanApp", self.app).action_fold_all()
+            """Shift+space: post intent; App handles via @on."""
+            self.post_message(RowAction("fold-all", None, None))
 
         def action_open_detail(self) -> None:
-            """Enter: open the detail dialog for the selected row."""
-            cast("LazyplanApp", self.app).action_open_detail()
+            """Enter: post intent; App handles via @on."""
+            app = cast("LazyplanApp", self.app)
+            if app.selected is not None:
+                kind, oid = app.selected
+                self.post_message(RowAction("open-detail", kind, oid))
+            else:
+                app.action_open_detail()
 
         async def _on_click(self, event: events.Click) -> None:
             """Single click selects; two quick clicks on one row open detail."""
@@ -90,14 +112,19 @@ if _TEXTUAL_OK:
             if node is None:
                 return
             key = LazyplanApp._node_key(node)
-            if key is not None and app.note_click(key):
-                app._open_detail(*key)
+            if key is None:
+                return
+            # Messages-up: announce selection, then open on double-click.
+            self.post_message(SelectionChanged(kind=key[0], oid=key[1]))
+            if app.note_click(key):
+                self.post_message(RowAction("open-detail", key[0], key[1]))
 
     class LazyplanApp(App):
         """Single-panel TUI: the plan tree."""
 
         TITLE = "lazyplan"
         CSS = APP_CSS
+        ENABLE_COMMAND_PALETTE = False
         BINDINGS = [
             Binding("j", "cursor_down", "Down", show=False),
             Binding("k", "cursor_up", "Up", show=False),
@@ -105,7 +132,8 @@ if _TEXTUAL_OK:
             Binding("P", "new_plan", "NewPlan", show=False),
             Binding("M", "new_milestone", "NewMilestone", show=False),
             Binding("T", "new_task", "NewTask", show=False),
-            Binding("e", "edit", "Edit"),
+            Binding("e", "edit", "Editor"),
+            Binding("X", "export_md", "ExportMd"),
             Binding("c", "criteria", "Check"),
             Binding("d", "delete", "Delete"),
             Binding("space", "toggle_status", "Done"),
@@ -115,8 +143,10 @@ if _TEXTUAL_OK:
             Binding("left", "fold_left", "Fold", show=False),
             Binding("right", "fold_right", "Unfold", show=False),
             Binding("f", "filter_status", "Filter"),
-            Binding("o", "filter_plan", "Plan"),
             Binding("A", "toggle_show_all", "All"),
+            Binding("ctrl+p", "palette", "Palette"),
+            Binding("slash", "focus_filter", "Search", show=False),
+            Binding("escape", "clear_filter", "Clear", show=False),
             Binding("r", "refresh", "Refresh"),
             Binding("question_mark", "help", "Help"),
             Binding("q", "quit", "Quit"),
@@ -127,8 +157,8 @@ if _TEXTUAL_OK:
             self.store = store
             self.selected: tuple[str, int] | None = None
             self.status_filter: Status | None = None
-            self.plan_filter: int | None = None
             self.show_all: bool = False
+            self.filter_text: str = ""
             self._row_nodes: dict[tuple[str, int], TreeNode] = {}
             self._collapsed: set[tuple[str, int]] = set()
             self._expanded: set[tuple[str, int]] = set()
@@ -137,16 +167,42 @@ if _TEXTUAL_OK:
             self._fp: Any = store.fingerprint()
             self._update_notice: str | None = None
             self._update_toasted: bool = False
+            self._pending_note: str = ""
+            self._mounted: bool = False
+
+        # Reactive revision: local mutations bump rev; watch_rev refreshes.
+        # External CLI writes still arrive via _poll fingerprint check.
+        rev = reactive(0, init=False)
+
+        def watch_rev(self, _old: int, _new: int) -> None:
+            if not self._mounted:
+                return
+            try:
+                self._fp = self.store.fingerprint()
+            except Exception:
+                pass
+            note = self._pending_note
+            self._pending_note = ""
+            try:
+                self.refresh_all(note)
+            except Exception:
+                pass
 
         def compose(self) -> ComposeResult:
             yield Header(show_clock=True)
             with Vertical(id="panel"):
-                yield FoldTree("plans", id="tree")
+                with Horizontal(id="main"):
+                    with Vertical(id="nav"):
+                        yield Input(placeholder="filter… ( / focuses, esc clears )", id="filter")
+                        yield FoldTree("plans", id="tree")
+                    with VerticalScroll(id="preview"):
+                        yield Static("", id="preview-body")
             yield Label("", id="activity")
             yield Label("", id="statusbar")
             yield Footer()
 
         def on_mount(self) -> None:
+            self._mounted = True
             self.refresh_all("ready — ? help")
             self.set_interval(1.0, self._poll)
             self.run_worker(self._check_update, thread=True, exclusive=True)
@@ -174,9 +230,94 @@ if _TEXTUAL_OK:
             data = getattr(node, "data", None)
             if isinstance(data, dict) and "kind" in data and "id" in data:
                 self.selected = (data["kind"], int(data["id"]))
+                self.update_preview()
 
         def on_tree_node_highlighted(self, e: Tree.NodeHighlighted) -> None:
             self._track(e.node)
+
+        @on(SelectionChanged)
+        def _on_selection_changed(self, e: SelectionChanged) -> None:
+            """Custom message (bubbles FoldTree -> App): track cursor."""
+            self.selected = (e.kind, e.oid)
+            self.update_preview()
+
+        def update_preview(self) -> None:
+            """Reactive preview: render selected row without modal."""
+            try:
+                body = self.query_one("#preview-body", Static)
+            except Exception:
+                return
+            try:
+                total_plans = self.store.counts()["plans"]
+            except Exception:
+                total_plans = 1
+            if total_plans == 0:
+                body.update(EMPTY_NO_PLANS)
+                return
+            if self.selected is None:
+                body.update("select a row (j/k + click) — preview appears here")
+                return
+            kind, oid = self.selected
+            try:
+                full = self.store.get_full(kind, oid)
+            except Exception:
+                body.update(f"{kind} #{oid} — gone, press r")
+                return
+            if full is None:
+                body.update(f"{kind} #{oid} — gone, press r")
+                return
+            obj_key = {"plan": "plan", "milestone": "milestone", "task": "task"}[kind]
+            obj = full.get(obj_key, {})
+            title = str(obj.get("title", obj.get("name", "")))
+            status = str(obj.get("status", ""))
+            pri = str(obj.get("priority", "") or "-")
+            desc = str(obj.get("description", "") or "")
+            goal = str(obj.get("goal", "") or "") if kind == "plan" else ""
+            crits = full.get("criteria", [])
+            done = sum(1 for c in crits if c.get("done"))
+            lines = [f"{kind} #{oid} [{status}] pri:{pri}", title]
+            if goal:
+                lines.append(f"why: {goal}")
+            if desc:
+                lines.extend(["", *desc.splitlines()[:10]])
+            if crits:
+                lines.append("")
+                lines.append(f"acceptance {done}/{len(crits)}:")
+                for c in crits[:10]:
+                    mark = "x" if c.get("done") else " "
+                    lines.append(f"[{mark}] #{c.get('id')} {c.get('text')}")
+            links = full.get("links", [])
+            if links:
+                lines.append("")
+                lines.append(f"commits: {len(links)} linked")
+            repos = full.get("effective_repos") or full.get("repos") or []
+            if repos:
+                names = [str(r.get("repo_path", "")) for r in repos[:3]]
+                lines.append(f"repos: {', '.join(names)}")
+            if kind == "plan":
+                ms = full.get("milestones", [])
+                tcount = sum(len(e.get("tasks", [])) for e in ms)
+                lines.append("")
+                lines.append(f"{len(ms)} milestones, {tcount} tasks — enter for detail, e for editor")
+            body.update("\n".join(lines))
+
+        @on(RowAction)
+        def _on_row_action(self, e: RowAction) -> None:
+            """Custom intents bubble here; App owns the side effects."""
+            if e.action == "toggle-status":
+                self.action_toggle_status()
+            elif e.action == "open-detail":
+                if e.kind is not None and e.oid is not None:
+                    self._open_detail(e.kind, e.oid)
+                else:
+                    self.action_open_detail()
+            elif e.action == "fold-all":
+                self.action_fold_all()
+            elif e.action == "detail-saved":
+                self._saved("saved detail")
+            elif e.action == "editor-saved":
+                self._saved("edited project")
+            e.stop()
 
         @staticmethod
         def _node_key(node: TreeNode) -> tuple[str, int] | None:
@@ -311,37 +452,109 @@ if _TEXTUAL_OK:
 
         # -- polling (fingerprint, not just mtime) ----------------------
         def _poll(self) -> None:
-            fp = self.store.fingerprint()
+            """External-change detector; local edits go through rev."""
+            try:
+                fp = self.store.fingerprint()
+            except Exception:
+                return
             if fp != self._fp:
-                self._fp = fp
-                events = self.store.feed(1)
+                events_ = self.store.feed(1)
                 note = "db changed — refreshed"
-                if events:
-                    e = events[0]
+                if events_:
+                    e = events_[0]
                     note = f"[{e['actor']}] {e['kind']}/{e['action']}: {e['detail']}"
-                    self.notify(note, timeout=4)
-                self.refresh_all(note)
+                    try:
+                        self.notify(note, timeout=4)
+                    except Exception:
+                        pass
+                self._pending_note = note
+                self.rev += 1
 
         # -- rendering ---------------------------------------------------
         def _filtered_tree(
             self,
         ) -> list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]:
-            if self.show_all or self.plan_filter is not None:
-                return services.tree(
-                    self.store, status=self.status_filter, plan_id=self.plan_filter
+            if self.show_all or self.filter_text.strip():
+                base = services.tree(self.store, status=self.status_filter)
+            else:
+                base = services.tree(
+                    self.store, status=self.status_filter, limit=services.DEFAULT_PLAN_LIMIT
                 )
-            return services.tree(
-                self.store, status=self.status_filter, limit=services.DEFAULT_PLAN_LIMIT
-            )
+            query = self.filter_text.strip().lower()
+            if not query:
+                return base
+            filtered: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]] = []
+            for p, milestones in base:
+                if query in p.name.lower():
+                    filtered.append((p, milestones))
+                    continue
+                kept_ms: list[tuple[Milestone, list[Task]]] = []
+                for s, tasks in milestones:
+                    if query in s.title.lower():
+                        kept_ms.append((s, list(tasks)))
+                        continue
+                    hits = [t for t in tasks if query in t.title.lower()]
+                    if hits:
+                        kept_ms.append((s, hits))
+                if kept_ms:
+                    filtered.append((p, kept_ms))
+            return filtered
+
+        @on(Input.Changed, "#filter")
+        def _on_filter_changed(self, e: Input.Changed) -> None:
+            self.filter_text = e.value
+            self._pending_note = f"filter: {e.value}" if e.value else "filter cleared"
+            try:
+                self.rev += 1
+            except Exception:
+                self.refresh_all(self._pending_note)
+            e.stop()
+
+        def action_focus_filter(self) -> None:
+            if len(self.screen_stack) > 1:
+                return
+            try:
+                self.query_one("#filter", Input).focus()
+            except Exception:
+                pass
+
+        def action_clear_filter(self) -> None:
+            if len(self.screen_stack) > 1:
+                return
+            try:
+                inp = self.query_one("#filter", Input)
+            except Exception:
+                return
+            if self.filter_text or inp.value:
+                inp.value = ""
+                self.filter_text = ""
+                self._pending_note = "filter cleared"
+                try:
+                    self.rev += 1
+                except Exception:
+                    self.refresh_all("filter cleared")
+                try:
+                    self.query_one("#tree", Tree).focus()
+                except Exception:
+                    pass
 
         def refresh_all(self, note: str = "") -> None:
             tree = self.query_one("#tree", Tree)
+            prev_selected = self.selected
+            prev_cursor = None
+            try:
+                cur = tree.cursor_node
+                if cur is not None:
+                    prev_cursor = self._node_key(cur)
+            except Exception:
+                pass
             tree.clear()
             self._row_nodes = {}
             root = tree.root
             link_map = self.store.links_map()
             repos_map = self.store.repos_map()
-            for p, milestones in self._filtered_tree():
+            filtered = self._filtered_tree()
+            for p, milestones in filtered:
                 pn = root.add(
                     plan_row(
                         p,
@@ -368,9 +581,7 @@ if _TEXTUAL_OK:
             root.expand()
             self._collapsed &= set(self._row_nodes)  # drop rows deleted since last build
             self._expanded &= set(self._row_nodes)
-            done_plans = {
-                ("plan", p.id) for p, _ in self._filtered_tree() if p.status == Status.DONE
-            }
+            done_plans = {("plan", p.id) for p, _ in filtered if p.status == Status.DONE}
             for key, node in self._row_nodes.items():
                 if key in self._collapsed:
                     node.collapse()
@@ -381,32 +592,71 @@ if _TEXTUAL_OK:
                     node.expand()
             c = self.store.counts()
             events = self.store.feed(1)
-            act = ""
             if events:
                 e = events[0]
                 act = f"last: [{e['actor']}] {e['kind']}/{e['action']}: {e['detail']}"
+            else:
+                act = EMPTY_FEED
             self.query_one("#activity", Label).update(" " + act)
             sf = self.status_filter.value if self.status_filter else "all"
-            pf = f"P#{self.plan_filter}" if self.plan_filter else "all"
+            shown_plans = len(self._row_nodes and [k for k in self._row_nodes if k[0] == "plan"] or [])
             bar = (
                 f" [{repo_label(self.store.path)}]"
                 f" P:{c['plans']} S:{c['milestones']} T:{c['tasks_done']}/{c['tasks']}"
                 f" Q:{c['plans_todo']}/{c['plans_doing']}/{c['plans_done']}"
-                f" · f:{sf} o:{pf} A:{'all' if self.show_all else services.DEFAULT_PLAN_LIMIT}"
+                f" · f:{sf} A:{'all' if self.show_all else services.DEFAULT_PLAN_LIMIT}"
             )
+            if self.filter_text.strip():
+                bar += f" · /{self.filter_text.strip()} ({shown_plans} plans)"
             if self._update_notice is not None:
                 bar += f" · {self._update_notice}"
             if note:
                 bar += f" — {note}"
             self.query_one("#statusbar", Label).update(bar)
+            # -- focus/collapse preservation (keyboard-nav polish) --
+            target = prev_selected if prev_selected in self._row_nodes else prev_cursor
+            if target not in self._row_nodes:
+                target = None
+            if target is None and self._row_nodes:
+                # keep selection valid: first visible plan, else first row
+                for k in self._row_nodes:
+                    if k[0] == "plan":
+                        target = k
+                        break
+                if target is None:
+                    target = next(iter(self._row_nodes))
+                self.selected = target
+            if target in self._row_nodes:
+                node = self._row_nodes[target]
+                try:
+                    tree.move_cursor(node)
+                except Exception:
+                    pass
+
+                def _restore(n=node) -> None:
+                    try:
+                        tree.move_cursor(n)
+                        tree.scroll_to_node(n)
+                    except Exception:
+                        pass
+
+                try:
+                    self.call_after_refresh(_restore)
+                except Exception:
+                    pass
+            self.update_preview()
 
         def action_refresh(self) -> None:
             self._saved("manual refresh")
 
         def _saved(self, note: str = "") -> None:
-            """Refresh fingerprint + tree after a mutation."""
-            self._fp = self.store.fingerprint()
-            self.refresh_all(note)
+            """Local mutation path: bump reactive rev, watch refreshes."""
+            self._pending_note = note
+            try:
+                self.rev += 1
+            except Exception:
+                self._fp = self.store.fingerprint()
+                self.refresh_all(note)
 
         def action_filter_status(self) -> None:
             i = STATUS_CYCLE.index(self.status_filter)
@@ -415,22 +665,51 @@ if _TEXTUAL_OK:
                 f"status filter: {self.status_filter.value if self.status_filter else 'all'}"
             )
 
-        def action_filter_plan(self) -> None:
-            ids = [p.id for p in self.store.list_plans() if not services.is_archived(self.store, p)]
-            order: list[int | None] = [None, *ids]
-            try:
-                i = order.index(self.plan_filter)
-            except ValueError:
-                i = 0
-            self.plan_filter = order[(i + 1) % len(order)]
-            self.refresh_all(f"plan filter: {self.plan_filter or 'all'}")
-
         def action_toggle_show_all(self) -> None:
             self.show_all = not self.show_all
             self.refresh_all("showing all plans" if self.show_all else "showing recent plans")
 
         def action_help(self) -> None:
             self.push_screen(HelpScreen())
+
+        def action_palette(self) -> None:
+            """Fuzzy palette: every action discoverable without memorizing keys."""
+
+            def cb(cmd: str | None) -> None:
+                if not cmd:
+                    return
+                try:
+                    self.store.feed(0)
+                except Exception:
+                    pass
+                dispatch = {
+                    "new-context": self.action_new_context,
+                    "new-plan": self.action_new_plan,
+                    "new-milestone": self.action_new_milestone,
+                    "new-task": self.action_new_task,
+                    "editor": self.action_edit,
+                    "export-md": self.action_export_md,
+                    "criteria": self.action_criteria,
+                    "delete": self.action_delete,
+                    "fold": self.action_fold,
+                    "fold-all": self.action_fold_all,
+                    "filter": self.action_filter_status,
+                    "show-all": self.action_toggle_show_all,
+                    "refresh": self.action_refresh,
+                    "help": self.action_help,
+                    "quit": self.action_quit if hasattr(self, "action_quit") else self.exit,
+                }
+                fn = dispatch.get(cmd)
+                if fn is not None:
+                    fn()
+                    self._pending_note = f"palette: {cmd}"
+                    # actor trail: palette runs are TUI writes
+                    try:
+                        self._fp = self.store.fingerprint()
+                    except Exception:
+                        pass
+
+            self.push_screen(PaletteScreen(), cb)
 
         # -- editing ------------------------------------------------------
         def _milestone_for_task_ctx(self) -> int | None:
@@ -445,8 +724,6 @@ if _TEXTUAL_OK:
             return None
 
         def _plan_ctx(self) -> int | None:
-            if self.plan_filter is not None:
-                return self.plan_filter
             if self.selected is None:
                 return None
             kind, oid = self.selected
@@ -498,11 +775,8 @@ if _TEXTUAL_OK:
         def action_new_milestone(self) -> None:
             pid = self._plan_ctx()
             if pid is None:
-                plans = self.store.list_plans()
-                if not plans:
-                    self.notify("no plans — press P to create one first")
-                    return
-                pid = plans[0].id
+                self.notify("select a plan first (j/k + click)")
+                return
 
             def cb(data: dict | None) -> None:
                 if not data:
@@ -554,60 +828,19 @@ if _TEXTUAL_OK:
             )
 
         def action_edit(self) -> None:
-            if self.selected is None:
-                self.notify("select a row first (j/k + click)")
+            """Open the fullscreen project editor focused on the selected row."""
+            if len(self.screen_stack) > 1:
+                return  # a modal owns e
+            ctx = self._editor_plan_ctx()
+            if ctx is None:
+                self.notify("select a row first, then e")
                 return
-            kind, oid = self.selected
-            obj: Plan | Milestone | Task | None = None
-            if kind == "plan":
-                obj = self.store.get_plan(oid)
-                title = obj.name if obj else ""
-            elif kind == "milestone":
-                obj = self.store.get_milestone(oid)
-                title = obj.title if obj else ""
-            else:
-                obj = self.store.get_task(oid)
-                title = obj.title if obj else ""
-            if obj is None:
-                self.notify("selected row no longer exists — refreshing")
-                self.refresh_all("")
-                return
-            details = obj.description
-            priority = obj.priority
+            pid, fkind, fid = ctx
 
-            def cb(data: dict | None) -> None:
-                if not data:
-                    return
-                try:
-                    if kind == "plan":
-                        self.store.update_plan(
-                            oid,
-                            name=data["title"],
-                            description=data["details"],
-                            priority=data["priority"],
-                            actor="tui",
-                        )
-                    elif kind == "milestone":
-                        self.store.update_milestone(
-                            oid,
-                            title=data["title"],
-                            description=data["details"],
-                            priority=data["priority"],
-                            actor="tui",
-                        )
-                    else:
-                        self.store.update_task(
-                            oid,
-                            title=data["title"],
-                            description=data["details"],
-                            priority=data["priority"],
-                            actor="tui",
-                        )
-                except ValueError as exc:
-                    self.notify(f"error: {exc}")
-                self._saved("saved")
+            def cb(_saved: bool | None) -> None:
+                self._saved("edited project")
 
-            self.push_screen(EditScreen(kind, oid, title, details, priority), cb)
+            self.push_screen(ProjectEditorScreen(self.store, pid, fkind, fid), cb)
 
         def action_toggle_status(self) -> None:
             if self.selected is None:
@@ -680,6 +913,40 @@ if _TEXTUAL_OK:
                     self._saved("saved detail")
 
             self.push_screen(DetailScreen(self.store, kind, oid), cb)
+
+        def _editor_plan_ctx(self) -> tuple[int, str, int] | None:
+            """(plan_id, focus_kind, focus_id) for the unified editor."""
+            if self.selected is None:
+                return None
+            kind, oid = self.selected
+            if kind == "plan":
+                return (oid, kind, oid)
+            if kind == "milestone":
+                s = self.store.get_milestone(oid)
+                return (s.plan_id, kind, oid) if s else None
+            t = self.store.get_task(oid)
+            if t is None:
+                return None
+            s = self.store.get_milestone(t.milestone_id)
+            return (s.plan_id, kind, oid) if s else None
+
+        def action_export_md(self) -> None:
+            ctx = self._editor_plan_ctx()
+            if ctx is None:
+                self.notify("select a row first, then X")
+                return
+            pid, _, _ = ctx
+            entry = services.export_plan(self.store, pid)
+            if entry is None:
+                self.notify("selected plan no longer exists — refreshing")
+                self.refresh_all("")
+                return
+            from .render import render_plan_markdown
+
+            path = f"plan-P{pid}.md"
+            with open(path, "w") as fh:
+                fh.write(render_plan_markdown(entry) + "\n")
+            self._saved(f"exported {path}")
 
         def action_open_detail(self) -> None:
             if len(self.screen_stack) > 1:

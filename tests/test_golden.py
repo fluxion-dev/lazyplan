@@ -69,9 +69,25 @@ class TestGoldenOutputs(unittest.TestCase):
         text = render.render_markdown(data)
         self.assertIn("## 🔵 P#1 Website", text)
         self.assertIn("> why: Convert", text)
-        self.assertIn("- [ ] Loads fast", text)
+        self.assertIn("- [ ] #1 Loads fast", text)
         self.assertIn("### 🔵 M#1 Homepage", text)
-        self.assertIn("- [ ] T#1 Design hero", text)
+        self.assertIn("- [ ] T#1 Design hero (doing)", text)
+
+    def test_render_plan_markdown_full_fidelity(self):
+        data = services.export_all(self.store)
+        (entry,) = data["plans"]
+        text = render.render_plan_markdown(entry)
+        self.assertIn("## 🔵 P#1 Website", text)
+        self.assertIn("priority: ", text)
+        self.assertIn("- [ ] #1 Loads fast", text)
+        self.assertIn("### 🔵 M#1 Homepage", text)
+        self.assertIn("Hero work", text)
+        self.assertIn("- [ ] T#1 Design hero (doing)", text)
+        self.assertIn("Design hero", text)
+        entry2 = services.export_plan(self.store, 1)
+        assert entry2 is not None
+        self.assertEqual(render.render_plan_markdown(entry2), text)
+        self.assertIsNone(services.export_plan(self.store, 9999))
 
     def test_export_json_shape(self):
         data = services.export_all(self.store)

@@ -452,6 +452,19 @@ def build_parser() -> argparse.ArgumentParser:
         default="json",
         help="which format to save in (default: json)",
     )
+    ex.add_argument(
+        "--plan",
+        type=int,
+        default=None,
+        metavar="ID",
+        help="export one plan only (default: whole db)",
+    )
+    ex.add_argument(
+        "--file",
+        default=None,
+        metavar="PATH",
+        help="write to a file instead of stdout",
+    )
     im = sub.add_parser(
         "import", help="load a file saved by `lpui export --format json`", parents=[common]
     )

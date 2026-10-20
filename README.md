@@ -102,8 +102,12 @@ You plan in `lpui` (`lpui ui` opens the same screen). Here is what you will see:
 | `e` / `d` | edit · delete (it asks you to confirm) |
 | `space` / `c` | move to next status · tick off the first open checklist item |
 | `z` / `Z` | fold one group / fold everything |
-| `f` / `o` | filter by status / filter by plan |
+| `f` / `A` | filter by status / show all vs capped |
+| `slash` / `escape` | focus search filter / clear filter |
+| `ctrl+p` | command palette (fuzzy, keyboard-first) |
+| `X` | export plan to `.md` |
 
+Left pane is the plan tree, right pane is a live preview (no modal needed).
 Agents use the `lpui` command line. The screen is keyboard-only with no place to type commands. For the full key list, run `lpui help` (or press `?` inside the app).
 
 ## CLI reference

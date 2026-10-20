@@ -5,6 +5,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from lazyplan import services
 from lazyplan.cli import main as lpui_main
 from lazyplan.models import Status
 from lazyplan.store import Store
@@ -20,62 +21,64 @@ class TestStore(unittest.TestCase):
         self.tmp.cleanup()
 
     def test_hierarchy(self):
-        p = self.store.add_project("Site", goal="why", priority="p1")
-        s = self.store.add_story(p.id, "Home", priority="p0")
+        p = self.store.add_plan("Site", goal="why", priority="p1")
+        s = self.store.add_milestone(p.id, "Home", priority="p0")
         t = self.store.add_task(s.id, "Hero", description="do it", priority="p0")
         self.assertEqual(self.store.counts()["tasks"], 1)
-        tree = self.store.tree()
+        tree = services.tree(
+            self.store,
+        )
         self.assertEqual(tree[0][0].id, p.id)
         self.assertEqual(tree[0][1][0][1][0].id, t.id)
-        self.assertTrue(self.store.set_status("task", t.id, Status.DONE))
+        self.assertTrue(services.set_status(self.store, "task", t.id, Status.DONE))
         self.assertEqual(self.store.counts()["tasks_done"], 1)
 
     def test_validation(self):
         with self.assertRaises(ValueError):
-            self.store.add_project("   ")
+            self.store.add_plan("   ")
         with self.assertRaises(ValueError):
-            self.store.add_project("P", priority="p9")
+            self.store.add_plan("P", priority="p9")
         with self.assertRaises(KeyError):
-            self.store.add_story(999, "nope")
+            self.store.add_milestone(999, "nope")
         with self.assertRaises(KeyError):
             self.store.add_task(999, "nope")
 
     def test_cli_json_ingress(self):
-        rc = lpui_main(["--db", self.db, "--json", "add-project", "--title", "P1"])
+        rc = lpui_main(["--db", self.db, "--json", "add-plan", "--title", "P1"])
         self.assertEqual(rc, 0)
-        rc = lpui_main(["--db", self.db, "--json", "add-story", "--project", "1", "--title", "S1"])
+        rc = lpui_main(["--db", self.db, "--json", "add-milestone", "--plan", "1", "--title", "S1"])
         self.assertEqual(rc, 0)
-        rc = lpui_main(["--db", self.db, "--json", "add-task", "--story", "1", "--title", "T1"])
+        rc = lpui_main(["--db", self.db, "--json", "add-task", "--milestone", "1", "--title", "T1"])
         self.assertEqual(rc, 0)
         self.assertEqual(self.store.counts()["tasks"], 1)
 
-    def test_project_why_what_priority(self):
-        p = self.store.add_project("P", description="the what", goal="the why", priority="p1")
-        self.assertEqual(self.store.get_project(p.id).goal, "the why")
-        self.assertEqual(self.store.get_project(p.id).priority, "p1")
-        upd = self.store.update_project(p.id, goal="why v2", priority="p0")
+    def test_plan_why_what_priority(self):
+        p = self.store.add_plan("P", description="the what", goal="the why", priority="p1")
+        self.assertEqual(self.store.get_plan(p.id).goal, "the why")
+        self.assertEqual(self.store.get_plan(p.id).priority, "p1")
+        upd = self.store.update_plan(p.id, goal="why v2", priority="p0")
         assert upd is not None
         self.assertEqual(upd.goal, "why v2")
         self.assertEqual(upd.priority, "p0")
-        cleared = self.store.update_project(p.id, priority="")
+        cleared = self.store.update_plan(p.id, priority="")
         assert cleared is not None
         self.assertEqual(cleared.priority, "")
 
     def test_priority_sort(self):
-        p = self.store.add_project("P")
-        self.store.add_story(p.id, "Low", priority="p2")
-        self.store.add_story(p.id, "High", priority="p0")
-        self.assertEqual([s.title for s in self.store.list_stories(p.id)], ["High", "Low"])
+        p = self.store.add_plan("P")
+        self.store.add_milestone(p.id, "Low", priority="p2")
+        self.store.add_milestone(p.id, "High", priority="p0")
+        self.assertEqual([s.title for s in self.store.list_milestones(p.id)], ["High", "Low"])
         with self.assertRaises(ValueError):
-            self.store.add_story(p.id, "Bad", priority="p9")
+            self.store.add_milestone(p.id, "Bad", priority="p9")
         with self.assertRaises(ValueError):
             self.store.add_task(1, "Bad", priority="p9")
 
-    def test_criteria_on_project_story_task(self):
-        p = self.store.add_project("P")
-        s = self.store.add_story(p.id, "S")
+    def test_criteria_on_plan_milestone_task(self):
+        p = self.store.add_plan("P")
+        s = self.store.add_milestone(p.id, "S")
         t = self.store.add_task(s.id, "T")
-        for kind, oid in (("project", p.id), ("story", s.id), ("task", t.id)):
+        for kind, oid in (("plan", p.id), ("milestone", s.id), ("task", t.id)):
             c1 = self.store.add_criteria(kind, oid, "works")
             c2 = self.store.add_criteria(kind, oid, "fast")
             self.assertEqual(self.store.criteria_progress(kind, oid), (0, 2))
@@ -86,20 +89,20 @@ class TestStore(unittest.TestCase):
         with self.assertRaises(KeyError):
             self.store.add_criteria("task", 999, "x")
         with self.assertRaises(KeyError):
-            self.store.add_criteria("project", 999, "x")
+            self.store.add_criteria("plan", 999, "x")
         with self.assertRaises(ValueError):
             self.store.add_criteria("nope", 1, "x")
 
     def test_criteria_cascade_on_delete(self):
-        p = self.store.add_project("P")
-        s = self.store.add_story(p.id, "S")
+        p = self.store.add_plan("P")
+        s = self.store.add_milestone(p.id, "S")
         t = self.store.add_task(s.id, "T")
-        self.store.add_criteria("project", p.id, "pc")
-        self.store.add_criteria("story", s.id, "sc")
+        self.store.add_criteria("plan", p.id, "pc")
+        self.store.add_criteria("milestone", s.id, "sc")
         self.store.add_criteria("task", t.id, "tc")
-        self.assertTrue(self.store.delete("project", p.id))
-        self.assertEqual(self.store.list_criteria("project", p.id), [])
-        self.assertEqual(self.store.list_criteria("story", s.id), [])
+        self.assertTrue(self.store.delete("plan", p.id))
+        self.assertEqual(self.store.list_criteria("plan", p.id), [])
+        self.assertEqual(self.store.list_criteria("milestone", s.id), [])
         self.assertEqual(self.store.list_criteria("task", t.id), [])
 
     def test_migration_from_old_db(self):
@@ -109,25 +112,16 @@ class TestStore(unittest.TestCase):
         conn = sqlite3.connect(legacy)
         conn.executescript("""
         CREATE TABLE projects (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL,
-            description TEXT NOT NULL DEFAULT '', start_date TEXT NOT NULL DEFAULT '',
-            end_date TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'todo',
-            goal TEXT NOT NULL DEFAULT '', success_metrics TEXT NOT NULL DEFAULT '',
-            scope_in TEXT NOT NULL DEFAULT '', scope_out TEXT NOT NULL DEFAULT '',
-            assumptions TEXT NOT NULL DEFAULT '');
+            description TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'todo',
+            goal TEXT NOT NULL DEFAULT '', priority TEXT NOT NULL DEFAULT '');
         CREATE TABLE stories (id INTEGER PRIMARY KEY AUTOINCREMENT,
             project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
             title TEXT NOT NULL, description TEXT NOT NULL DEFAULT '',
-            status TEXT NOT NULL DEFAULT 'todo', start_date TEXT NOT NULL DEFAULT '',
-            end_date TEXT NOT NULL DEFAULT '', owner TEXT NOT NULL DEFAULT '',
-            priority TEXT NOT NULL DEFAULT '', labels TEXT NOT NULL DEFAULT '',
-            estimate TEXT NOT NULL DEFAULT '', blocked_by TEXT NOT NULL DEFAULT '');
+            status TEXT NOT NULL DEFAULT 'todo', priority TEXT NOT NULL DEFAULT '');
         CREATE TABLE tasks (id INTEGER PRIMARY KEY AUTOINCREMENT,
             story_id INTEGER NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
             title TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'todo',
-            estimate TEXT NOT NULL DEFAULT '', start_date TEXT NOT NULL DEFAULT '',
-            end_date TEXT NOT NULL DEFAULT '', description TEXT NOT NULL DEFAULT '',
-            owner TEXT NOT NULL DEFAULT '', priority TEXT NOT NULL DEFAULT '',
-            labels TEXT NOT NULL DEFAULT '', blocked_by TEXT NOT NULL DEFAULT '');
+            description TEXT NOT NULL DEFAULT '', priority TEXT NOT NULL DEFAULT '');
         CREATE TABLE criteria (id INTEGER PRIMARY KEY AUTOINCREMENT,
             parent_kind TEXT NOT NULL CHECK (parent_kind IN ('story', 'task')),
             parent_id INTEGER NOT NULL,
@@ -144,43 +138,83 @@ class TestStore(unittest.TestCase):
         conn.commit()
         conn.close()
         s = Store(legacy)  # must migrate, not crash
-        self.assertEqual(s.get_project(1).name, "Old")
-        self.assertEqual(s.get_project(1).goal, "old-why")
-        self.assertEqual(s.get_project(1).priority, "")
+        self.assertEqual(s.get_plan(1).name, "Old")
+        self.assertEqual(s.get_plan(1).goal, "old-why")
+        self.assertEqual(s.get_plan(1).priority, "")
         self.assertEqual(s.get_task(1).description, "")
-        self.assertEqual(s.list_criteria("story", 1)[0].text, "old-crit")
-        # project-level criteria now allowed on the migrated table
-        c = s.add_criteria("project", 1, "new-crit")
+        self.assertEqual(s.get_milestone(1).plan_id, 1)
+        self.assertEqual(s.get_task(1).milestone_id, 1)
+        self.assertEqual(s.list_criteria("milestone", 1)[0].text, "old-crit")
+        # plan-level criteria now allowed on the migrated table
+        c = s.add_criteria("plan", 1, "new-crit")
         self.assertEqual(c.text, "new-crit")
         self.assertEqual(s.counts()["tasks"], 1)
 
+    def test_migration_drops_empty_legacy_milestones_table(self):
+        import sqlite3
+
+        legacy = os.path.join(self.tmp.name, "legacy2.db")
+        conn = sqlite3.connect(legacy)
+        conn.execute("CREATE TABLE projects (id INTEGER PRIMARY KEY, name TEXT)")
+        conn.execute("INSERT INTO projects (name) VALUES ('Old')")
+        conn.execute(
+            "CREATE TABLE milestones (id INTEGER PRIMARY KEY,"
+            " project_id INTEGER, title TEXT, date TEXT)"
+        )
+        conn.commit()
+        conn.close()
+        s = Store(legacy)
+        self.assertEqual([p.name for p in s.list_plans()], ["Old"])
+        cols = {
+            r[1]
+            for r in sqlite3.connect(legacy).execute("PRAGMA table_info(milestones)").fetchall()
+        }
+        self.assertIn("plan_id", cols)
+        self.assertNotIn("project_id", cols)
+
+    def test_migration_refuses_nonempty_legacy_milestones_table(self):
+        import sqlite3
+
+        legacy = os.path.join(self.tmp.name, "legacy3.db")
+        conn = sqlite3.connect(legacy)
+        conn.execute("CREATE TABLE projects (id INTEGER PRIMARY KEY, name TEXT)")
+        conn.execute(
+            "CREATE TABLE milestones (id INTEGER PRIMARY KEY,"
+            " project_id INTEGER, title TEXT, date TEXT)"
+        )
+        conn.execute("INSERT INTO milestones (project_id, title) VALUES (1, 'X')")
+        conn.commit()
+        conn.close()
+        with self.assertRaises(RuntimeError):
+            Store(legacy)
+
     def test_export_import_roundtrip(self):
-        p = self.store.add_project("P", goal="g", priority="p1")
-        self.store.set_status("project", p.id, Status.DOING)
-        s = self.store.add_story(p.id, "S", priority="p1")
-        self.store.add_criteria("project", p.id, "pcrit")
+        p = self.store.add_plan("P", goal="g", priority="p1")
+        services.set_status(self.store, "plan", p.id, Status.DOING)
+        s = self.store.add_milestone(p.id, "S", priority="p1")
+        self.store.add_criteria("plan", p.id, "pcrit")
         t = self.store.add_task(s.id, "T", description="d")
-        self.store.set_status("task", t.id, Status.DONE)
+        services.set_status(self.store, "task", t.id, Status.DONE)
         self.store.add_criteria("task", t.id, "works")
-        data = self.store.export_all()
+        data = services.export_all(self.store)
         import tempfile
 
         db2 = os.path.join(tempfile.mkdtemp(), "imp.db")
         s2 = Store(db2)
-        counts = s2.import_all(data)
+        counts = services.import_all(s2, data)
         self.assertEqual(
-            counts, {"projects": 1, "stories": 1, "tasks": 1, "criteria": 2, "links": 0}
+            counts, {"plans": 1, "milestones": 1, "tasks": 1, "criteria": 2, "links": 0}
         )
-        self.assertEqual(s2.get_project(1).status, Status.DONE)  # rolled up: only story done
-        self.assertEqual(s2.get_story(1).status, Status.DONE)  # rolled up: its task is done
-        self.assertEqual(s2.get_project(1).goal, "g")
-        self.assertEqual(s2.get_project(1).priority, "p1")
+        self.assertEqual(s2.get_plan(1).status, Status.DONE)  # rolled up: only milestone done
+        self.assertEqual(s2.get_milestone(1).status, Status.DONE)  # rolled up: its task is done
+        self.assertEqual(s2.get_plan(1).goal, "g")
+        self.assertEqual(s2.get_plan(1).priority, "p1")
         self.assertEqual(s2.get_task(1).description, "d")
         self.assertEqual(s2.get_task(1).status, Status.DONE)
-        self.assertEqual(s2.criteria_progress("project", 1), (0, 1))
+        self.assertEqual(s2.criteria_progress("plan", 1), (0, 1))
         self.assertEqual(s2.criteria_progress("task", 1), (0, 1))
         with self.assertRaises(ValueError):
-            s2.import_all({"nope": True})
+            services.import_all(s2, {"nope": True})
 
     def test_cli_planning_surface(self):
         self.assertEqual(
@@ -188,7 +222,7 @@ class TestStore(unittest.TestCase):
                 [
                     "--db",
                     self.db,
-                    "add-project",
+                    "add-plan",
                     "--title",
                     "P1",
                     "--why",
@@ -206,8 +240,8 @@ class TestStore(unittest.TestCase):
                 [
                     "--db",
                     self.db,
-                    "add-story",
-                    "--project",
+                    "add-milestone",
+                    "--plan",
                     "1",
                     "--title",
                     "S1",
@@ -221,7 +255,17 @@ class TestStore(unittest.TestCase):
         )
         self.assertEqual(
             lpui_main(
-                ["--db", self.db, "add-task", "--story", "1", "--title", "T1", "--priority", "p1"]
+                [
+                    "--db",
+                    self.db,
+                    "add-task",
+                    "--milestone",
+                    "1",
+                    "--title",
+                    "T1",
+                    "--priority",
+                    "p1",
+                ]
             ),
             0,
         )
@@ -233,7 +277,7 @@ class TestStore(unittest.TestCase):
                     self.db,
                     "add-criteria",
                     "--kind",
-                    "project",
+                    "plan",
                     "--id",
                     "1",
                     "--text",
@@ -242,9 +286,7 @@ class TestStore(unittest.TestCase):
             ),
             0,
         )
-        self.assertEqual(
-            lpui_main(["--db", self.db, "criteria", "--kind", "project", "--id", "1"]), 0
-        )
+        self.assertEqual(lpui_main(["--db", self.db, "criteria", "--kind", "plan", "--id", "1"]), 0)
         self.assertEqual(lpui_main(["--db", self.db, "check", "--id", "1"]), 0)
         self.assertEqual(lpui_main(["--db", self.db, "uncheck", "--id", "1"]), 0)
         self.assertEqual(lpui_main(["--db", self.db, "export", "--format", "markdown"]), 0)
@@ -259,7 +301,7 @@ class TestStore(unittest.TestCase):
                     self.db,
                     "update",
                     "--kind",
-                    "project",
+                    "plan",
                     "--id",
                     "1",
                     "--why",
@@ -270,23 +312,25 @@ class TestStore(unittest.TestCase):
             ),
             0,
         )
-        self.assertEqual(self.store.get_project(1).priority, "")
+        self.assertEqual(self.store.get_plan(1).priority, "")
 
     def test_cli_show(self):
         self.assertEqual(
-            lpui_main(["--db", self.db, "add-project", "--title", "P1", "--why", "g1"]), 0
+            lpui_main(["--db", self.db, "add-plan", "--title", "P1", "--why", "g1"]), 0
         )
         self.assertEqual(
-            lpui_main(["--db", self.db, "add-story", "--project", "1", "--title", "S1"]), 0
+            lpui_main(["--db", self.db, "add-milestone", "--plan", "1", "--title", "S1"]), 0
         )
         self.assertEqual(
             lpui_main(
-                ["--db", self.db, "add-task", "--story", "1", "--title", "T1", "--desc", "d1"]
+                ["--db", self.db, "add-task", "--milestone", "1", "--title", "T1", "--desc", "d1"]
             ),
             0,
         )
-        self.assertEqual(lpui_main(["--db", self.db, "show", "--kind", "project", "--id", "1"]), 0)
-        self.assertEqual(lpui_main(["--db", self.db, "show", "--kind", "story", "--id", "1"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "show", "--kind", "plan", "--id", "1"]), 0)
+        self.assertEqual(
+            lpui_main(["--db", self.db, "show", "--kind", "milestone", "--id", "1"]), 0
+        )
         self.assertEqual(
             lpui_main(["--db", self.db, "update", "--kind", "task", "--id", "1", "--desc", "d2"]),
             0,
@@ -295,42 +339,112 @@ class TestStore(unittest.TestCase):
 
     def test_events_and_fingerprint(self):
         fp0 = self.store.fingerprint()
-        p = self.store.add_project("P", actor="agent-1")
+        p = self.store.add_plan("P", actor="agent-1")
         fp1 = self.store.fingerprint()
         self.assertNotEqual(fp0, fp1)
         events = self.store.feed(5)
-        self.assertTrue(any(e["actor"] == "agent-1" and e["kind"] == "project" for e in events))
-        s = self.store.add_story(p.id, "S", actor="agent-1")
+        self.assertTrue(any(e["actor"] == "agent-1" and e["kind"] == "plan" for e in events))
+        s = self.store.add_milestone(p.id, "S", actor="agent-1")
         t = self.store.add_task(s.id, "T", actor="agent-1")
-        self.assertEqual(self.store.cycle_status("task", t.id, actor="agent-1"), Status.DOING)
-        self.assertEqual(self.store.cycle_status("task", t.id, actor="agent-1"), Status.DONE)
+        self.assertEqual(
+            services.cycle_status(self.store, "task", t.id, actor="agent-1"), Status.DOING
+        )
+        self.assertEqual(
+            services.cycle_status(self.store, "task", t.id, actor="agent-1"), Status.DONE
+        )
         self.assertTrue(self.store.delete("task", t.id, actor="agent-1"))
         self.assertEqual(self.store.counts()["tasks"], 0)
 
+    def test_tree_orders_by_recent_activity_with_id_fallback(self):
+        ids = [self.store.add_plan(f"P{i}").id for i in range(7)]
+        # touch the oldest plan last: it jumps to the front
+        m = self.store.add_milestone(ids[0], "M")
+        t = self.store.add_task(m.id, "T")
+        services.set_status(self.store, "task", t.id, Status.DOING)
+        ordered = [
+            p.id
+            for p, _ in services.tree(
+                self.store,
+            )
+        ]
+        self.assertEqual(ordered[0], ids[0])
+        self.assertEqual(ordered[1:], ids[:0:-1])
+
+    def test_tree_limit_caps_and_plan_id_bypasses(self):
+        ids = [self.store.add_plan(f"P{i}").id for i in range(7)]
+        self.assertEqual(len(services.tree(self.store, limit=5)), 5)
+        self.assertEqual(len(services.tree(self.store, limit=2)), 2)
+        self.assertEqual(len(services.tree(self.store, limit=0)), 0)
+        pinned = services.tree(self.store, plan_id=ids[0], limit=1)
+        self.assertEqual([p.id for p, _ in pinned], [ids[0]])
+
     def test_filters(self):
-        p1 = self.store.add_project("P1", priority="p0")
-        p2 = self.store.add_project("P2", priority="p2")
-        s1 = self.store.add_story(p1.id, "S1", priority="p0")
-        s2 = self.store.add_story(p2.id, "S2")
+        p1 = self.store.add_plan("P1", priority="p0")
+        p2 = self.store.add_plan("P2", priority="p2")
+        s1 = self.store.add_milestone(p1.id, "S1", priority="p0")
+        s2 = self.store.add_milestone(p2.id, "S2")
         t1 = self.store.add_task(s1.id, "T1", priority="p1")
         self.store.add_task(s2.id, "T2")
-        self.store.set_status("task", t1.id, Status.DONE)
-        done = self.store.tree(status=Status.DONE)
-        self.assertEqual(sum(len(ts) for _, stories in done for _, ts in stories), 1)
-        only_p2 = self.store.tree(project_id=p2.id)
+        services.set_status(self.store, "task", t1.id, Status.DONE)
+        done = services.tree(self.store, status=Status.DONE)
+        self.assertEqual(sum(len(ts) for _, milestones in done for _, ts in milestones), 1)
+        only_p2 = services.tree(self.store, plan_id=p2.id)
         self.assertEqual(len(only_p2), 1)
         self.assertEqual(only_p2[0][0].id, p2.id)
-        pri = self.store.tree(priority="p0")
+        pri = services.tree(self.store, priority="p0")
         self.assertEqual(len(pri), 1)
         self.assertEqual(pri[0][0].id, p1.id)
 
+    def test_cli_list_cap_flags(self):
+        import io
+        from contextlib import redirect_stdout
+
+        for i in range(7):
+            self.assertEqual(lpui_main(["--db", self.db, "add-plan", "--title", f"P{i}"]), 0)
+
+        def _lines(*argv: str) -> list[str]:
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                self.assertEqual(lpui_main(["--db", self.db, *argv]), 0)
+            return [line for line in buf.getvalue().splitlines() if line.strip()]
+
+        default_rows = [line for line in _lines("list") if line.startswith(("⬜", "🔵", "✅"))]
+        self.assertEqual(len(default_rows), 5)
+        all_rows = [line for line in _lines("list", "--all") if line.startswith(("⬜", "🔵", "✅"))]
+        self.assertEqual(len(all_rows), 7)
+        limited = [
+            line for line in _lines("list", "--limit", "2") if line.startswith(("⬜", "🔵", "✅"))
+        ]
+        self.assertEqual(len(limited), 2)
+        pinned = [
+            line for line in _lines("list", "--plan", "1") if line.startswith(("⬜", "🔵", "✅"))
+        ]
+        self.assertEqual(len(pinned), 1)
+
+    def test_cli_list_json_complete_unless_limited(self):
+        import io
+        import json
+        from contextlib import redirect_stdout
+
+        for i in range(7):
+            self.assertEqual(lpui_main(["--db", self.db, "add-plan", "--title", f"J{i}"]), 0)
+
+        def _json(*argv: str) -> list:
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                self.assertEqual(lpui_main(["--db", self.db, *argv]), 0)
+            return json.loads(buf.getvalue())
+
+        self.assertEqual(len(_json("list", "--json")), 7)
+        self.assertEqual(len(_json("list", "--json", "--limit", "2")), 2)
+
     def test_cli_update_delete_feed(self):
-        self.assertEqual(lpui_main(["--db", self.db, "add-project", "--title", "P1"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "add-plan", "--title", "P1"]), 0)
         self.assertEqual(
-            lpui_main(["--db", self.db, "add-story", "--project", "1", "--title", "S1"]), 0
+            lpui_main(["--db", self.db, "add-milestone", "--plan", "1", "--title", "S1"]), 0
         )
         self.assertEqual(
-            lpui_main(["--db", self.db, "add-task", "--story", "1", "--title", "T1"]), 0
+            lpui_main(["--db", self.db, "add-task", "--milestone", "1", "--title", "T1"]), 0
         )
         self.assertEqual(
             lpui_main(["--db", self.db, "update", "--kind", "task", "--id", "1", "--title", "T1b"]),
@@ -346,76 +460,76 @@ class TestStore(unittest.TestCase):
         self.assertEqual(self.store.counts()["tasks"], 0)
 
     def test_status_rollup_cascade(self):
-        p = self.store.add_project("P")
-        s = self.store.add_story(p.id, "S")
+        p = self.store.add_plan("P")
+        s = self.store.add_milestone(p.id, "S")
         t1 = self.store.add_task(s.id, "T1")
         t2 = self.store.add_task(s.id, "T2")
-        self.store.set_status("task", t1.id, Status.DOING)
-        self.assertEqual(self.store.get_story(s.id).status, Status.DOING)
-        self.assertEqual(self.store.get_project(p.id).status, Status.DOING)
-        self.store.set_status("task", t1.id, Status.DONE)
-        self.assertEqual(self.store.get_story(s.id).status, Status.TODO)  # T2 still open
-        self.assertEqual(self.store.get_project(p.id).status, Status.TODO)
-        self.store.set_status("task", t2.id, Status.DONE)
-        self.assertEqual(self.store.get_story(s.id).status, Status.DONE)
-        self.assertEqual(self.store.get_project(p.id).status, Status.DONE)
+        services.set_status(self.store, "task", t1.id, Status.DOING)
+        self.assertEqual(self.store.get_milestone(s.id).status, Status.DOING)
+        self.assertEqual(self.store.get_plan(p.id).status, Status.DOING)
+        services.set_status(self.store, "task", t1.id, Status.DONE)
+        self.assertEqual(self.store.get_milestone(s.id).status, Status.TODO)  # T2 still open
+        self.assertEqual(self.store.get_plan(p.id).status, Status.TODO)
+        services.set_status(self.store, "task", t2.id, Status.DONE)
+        self.assertEqual(self.store.get_milestone(s.id).status, Status.DONE)
+        self.assertEqual(self.store.get_plan(p.id).status, Status.DONE)
 
     def test_rollup_empty_keeps_manual(self):
-        p = self.store.add_project("P")
-        s = self.store.add_story(p.id, "S")
-        self.assertTrue(self.store.set_status("story", s.id, Status.DONE))
-        self.assertEqual(self.store.get_story(s.id).status, Status.DONE)  # no tasks: untouched
-        # the done story rolls its project up (all children done -> done)
-        self.assertEqual(self.store.get_project(p.id).status, Status.DONE)
-        p2 = self.store.add_project("P2")  # no stories: manual sticks
-        self.assertTrue(self.store.set_status("project", p2.id, Status.DOING))
-        self.assertEqual(self.store.get_project(p2.id).status, Status.DOING)
+        p = self.store.add_plan("P")
+        s = self.store.add_milestone(p.id, "S")
+        self.assertTrue(services.set_status(self.store, "milestone", s.id, Status.DONE))
+        self.assertEqual(self.store.get_milestone(s.id).status, Status.DONE)  # no tasks: untouched
+        # the done milestone rolls its plan up (all children done -> done)
+        self.assertEqual(self.store.get_plan(p.id).status, Status.DONE)
+        p2 = self.store.add_plan("P2")  # no milestones: manual sticks
+        self.assertTrue(services.set_status(self.store, "plan", p2.id, Status.DOING))
+        self.assertEqual(self.store.get_plan(p2.id).status, Status.DOING)
 
     def test_manual_parent_yields_to_children(self):
-        p = self.store.add_project("P")
-        s = self.store.add_story(p.id, "S")
+        p = self.store.add_plan("P")
+        s = self.store.add_milestone(p.id, "S")
         self.store.add_task(s.id, "T")
-        self.assertTrue(self.store.set_status("story", s.id, Status.DONE))
-        self.assertEqual(self.store.get_story(s.id).status, Status.TODO)  # rolled back
+        self.assertTrue(services.set_status(self.store, "milestone", s.id, Status.DONE))
+        self.assertEqual(self.store.get_milestone(s.id).status, Status.TODO)  # rolled back
 
     def test_reconcile_fixes_drift(self):
         import sqlite3
 
-        p = self.store.add_project("P")
-        s = self.store.add_story(p.id, "S")
+        p = self.store.add_plan("P")
+        s = self.store.add_milestone(p.id, "S")
         t = self.store.add_task(s.id, "T")
         conn = sqlite3.connect(self.db)  # bypass rollup to simulate drift
-        conn.execute("UPDATE stories SET status='done' WHERE id=?", (s.id,))
-        conn.execute("UPDATE projects SET status='done' WHERE id=?", (p.id,))
+        conn.execute("UPDATE milestones SET status='done' WHERE id=?", (s.id,))
+        conn.execute("UPDATE plans SET status='done' WHERE id=?", (p.id,))
         conn.commit()
         conn.close()
-        changes = self.store.reconcile(actor="t")
+        changes = services.reconcile(self.store, actor="t")
         self.assertEqual(
             changes,
             [
-                {"kind": "story", "id": s.id, "to": "todo"},
-                {"kind": "project", "id": p.id, "to": "todo"},
+                {"kind": "milestone", "id": s.id, "to": "todo"},
+                {"kind": "plan", "id": p.id, "to": "todo"},
             ],
         )
-        self.assertEqual(self.store.get_story(s.id).status, Status.TODO)
-        self.assertEqual(self.store.get_project(p.id).status, Status.TODO)
-        self.assertEqual(self.store.reconcile(actor="t"), [])
+        self.assertEqual(self.store.get_milestone(s.id).status, Status.TODO)
+        self.assertEqual(self.store.get_plan(p.id).status, Status.TODO)
+        self.assertEqual(services.reconcile(self.store, actor="t"), [])
         self.assertIsNotNone(t)
 
     def test_cli_status_and_reconcile(self):
-        self.assertEqual(lpui_main(["--db", self.db, "add-project", "--title", "P1"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "add-plan", "--title", "P1"]), 0)
         self.assertEqual(
-            lpui_main(["--db", self.db, "add-story", "--project", "1", "--title", "S1"]), 0
+            lpui_main(["--db", self.db, "add-milestone", "--plan", "1", "--title", "S1"]), 0
         )
         self.assertEqual(
-            lpui_main(["--db", self.db, "add-task", "--story", "1", "--title", "T1"]), 0
+            lpui_main(["--db", self.db, "add-task", "--milestone", "1", "--title", "T1"]), 0
         )
         self.assertEqual(
             lpui_main(["--db", self.db, "status", "--kind", "task", "--id", "1", "--to", "done"]),
             0,
         )
-        self.assertEqual(self.store.get_story(1).status, Status.DONE)
-        self.assertEqual(self.store.get_project(1).status, Status.DONE)
+        self.assertEqual(self.store.get_milestone(1).status, Status.DONE)
+        self.assertEqual(self.store.get_plan(1).status, Status.DONE)
         self.assertEqual(lpui_main(["--db", self.db, "reconcile"]), 0)
 
     def test_list_shows_all_by_default(self):
@@ -423,11 +537,11 @@ class TestStore(unittest.TestCase):
         import json
         from contextlib import redirect_stdout
 
-        p = self.store.add_project("P")
-        s = self.store.add_story(p.id, "S")
+        p = self.store.add_plan("P")
+        s = self.store.add_milestone(p.id, "S")
         self.store.add_task(s.id, "T1")
         t2 = self.store.add_task(s.id, "T2")
-        self.store.set_status("task", t2.id, Status.DONE)
+        services.set_status(self.store, "task", t2.id, Status.DONE)
 
         def _list_out(argv):
             buf = io.StringIO()
@@ -449,29 +563,34 @@ class TestStore(unittest.TestCase):
         self.assertNotIn("T1", done_only)
         payload = json.loads(_list_out(["list", "--json"]))
         tasks = [
-            t["task"]["title"] for entry in payload for s_ in entry["stories"] for t in s_["tasks"]
+            t["task"]["title"]
+            for entry in payload
+            for s_ in entry["milestones"]
+            for t in s_["tasks"]
         ]
         self.assertEqual(sorted(tasks), ["T1", "T2"])
 
-    def test_project_order_newest_first(self):
-        a = self.store.add_project("Old")
-        b = self.store.add_project("New")
-        self.assertEqual([p.id for p in self.store.list_projects()], [b.id, a.id])
-        tree = self.store.tree()
+    def test_plan_order_newest_first(self):
+        a = self.store.add_plan("Old")
+        b = self.store.add_plan("New")
+        self.assertEqual([p.id for p in self.store.list_plans()], [b.id, a.id])
+        tree = services.tree(
+            self.store,
+        )
         self.assertEqual([p.id for p, _ in tree], [b.id, a.id])
 
     def test_new_tasks_default_p1(self):
         import io
         from contextlib import redirect_stdout
 
-        p = self.store.add_project("P")
-        s = self.store.add_story(p.id, "S")
-        t = self.store.add_task(s.id, "NoPri")
+        p = self.store.add_plan("P")
+        s = self.store.add_milestone(p.id, "S")
+        t = services.create_task(self.store, s.id, "NoPri")
         self.assertEqual(t.priority, "p1")
         buf = io.StringIO()
         with redirect_stdout(buf):
             self.assertEqual(
-                lpui_main(["--db", self.db, "add-task", "--story", "1", "--title", "Cli"]), 0
+                lpui_main(["--db", self.db, "add-task", "--milestone", "1", "--title", "Cli"]), 0
             )
         self.assertEqual(self.store.get_task(2).priority, "p1")
         buf = io.StringIO()
@@ -482,7 +601,7 @@ class TestStore(unittest.TestCase):
                         "--db",
                         self.db,
                         "add-task",
-                        "--story",
+                        "--milestone",
                         "1",
                         "--title",
                         "Exp",
@@ -500,28 +619,33 @@ class TestStore(unittest.TestCase):
         import time
         from contextlib import redirect_stdout
 
-        old = self.store.add_project("Old")
-        fresh = self.store.add_project("Fresh")
-        openp = self.store.add_project("Open")
-        self.store.set_status("project", old.id, Status.DONE)
-        self.store.set_status("project", fresh.id, Status.DONE)
+        old = self.store.add_plan("Old")
+        fresh = self.store.add_plan("Fresh")
+        openp = self.store.add_plan("Open")
+        services.set_status(self.store, "plan", old.id, Status.DONE)
+        services.set_status(self.store, "plan", fresh.id, Status.DONE)
         conn = sqlite3.connect(self.db)
         conn.execute(
-            "UPDATE events SET ts=? WHERE kind='project' AND detail LIKE 'project #1%'",
+            "UPDATE events SET ts=? WHERE kind='plan' AND detail LIKE 'plan #1%'",
             (time.time() - 90000,),
         )
         conn.commit()
         conn.close()
-        self.assertTrue(self.store.is_archived(self.store.get_project(old.id)))
-        self.assertFalse(self.store.is_archived(self.store.get_project(fresh.id)))
-        self.assertFalse(self.store.is_archived(self.store.get_project(openp.id)))
-        names = [p.name for p, _ in self.store.tree()]
+        self.assertTrue(services.is_archived(self.store, self.store.get_plan(old.id)))
+        self.assertFalse(services.is_archived(self.store, self.store.get_plan(fresh.id)))
+        self.assertFalse(services.is_archived(self.store, self.store.get_plan(openp.id)))
+        names = [
+            p.name
+            for p, _ in services.tree(
+                self.store,
+            )
+        ]
         self.assertNotIn("Old", names)
         self.assertIn("Fresh", names)
-        self.assertEqual([p.name for p, _ in self.store.tree(archived="only")], ["Old"])
-        self.assertEqual(len(self.store.tree(archived="show")), 3)
+        self.assertEqual([p.name for p, _ in services.tree(self.store, archived="only")], ["Old"])
+        self.assertEqual(len(services.tree(self.store, archived="show")), 3)
         with self.assertRaises(ValueError):
-            self.store.tree(archived="yesterday")
+            services.tree(self.store, archived="yesterday")
 
         def _list_out(argv):
             buf = io.StringIO()
@@ -535,14 +659,14 @@ class TestStore(unittest.TestCase):
         self.assertIn("Old", _list_out(["list", "--status", "all"]))
 
     def test_counts_by_state(self):
-        self.store.add_project("Todo")
-        p2 = self.store.add_project("Doing")
-        p3 = self.store.add_project("Done")
-        self.store.set_status("project", p2.id, Status.DOING)
-        self.store.set_status("project", p3.id, Status.DONE)
+        self.store.add_plan("Todo")
+        p2 = self.store.add_plan("Doing")
+        p3 = self.store.add_plan("Done")
+        services.set_status(self.store, "plan", p2.id, Status.DOING)
+        services.set_status(self.store, "plan", p3.id, Status.DONE)
         c = self.store.counts()
-        self.assertEqual((c["projects_todo"], c["projects_doing"], c["projects_done"]), (1, 1, 1))
-        self.assertEqual(c["projects"], 3)
+        self.assertEqual((c["plans_todo"], c["plans_doing"], c["plans_done"]), (1, 1, 1))
+        self.assertEqual(c["plans"], 3)
 
     def test_removed_verbs_are_gone(self):
         import io
@@ -554,8 +678,8 @@ class TestStore(unittest.TestCase):
             ["ask", "--question", "q"],
             ["sync"],
             ["add-link", "--kind", "task", "--id", "1", "--url", "https://x"],
-            ["add-risk", "--project", "1", "--title", "r"],
-            ["add-milestone", "--project", "1", "--title", "m"],
+            ["add-risk", "--plan", "1", "--title", "r"],
+            ["add-story", "--project", "1", "--title", "m"],
         ):
             with self.subTest(argv=argv):
                 buf = io.StringIO()

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tmux dashboard: lazyplan + agent + files.
 # Usage: ./tools/tmux-lazyplan.sh [session] [directory]
-#   directory defaults to cwd; `lpui` resolves that repo's .lazyplan/ from there.
+#   directory defaults to cwd; `lpui` resolves that repo's .agents/lazyplan/ from there.
 set -euo pipefail
 SESSION="${1:-lazyplan}"
 DIR="${2:-$PWD}"

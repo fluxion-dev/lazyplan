@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from lazyplan import design
 from lazyplan.cli import main as lpui_main
-from lazyplan.models import Project, Task, UserStory
+from lazyplan.models import Milestone, Plan, Task
 from lazyplan.store import Store
 
 
@@ -25,13 +25,15 @@ class TestDesignSystem(unittest.TestCase):
         self.tmp.cleanup()
 
     def test_label_grammar(self):
-        p = Project(id=1, name="N", priority="p1")
-        self.assertEqual(design.project_label(p), "⬜ P#1 !p1 N")
-        s = UserStory(id=2, project_id=1, title="S", priority="p0")
-        self.assertEqual(design.story_label(s), "⬜ S#2 !p0 S")
-        t = Task(id=3, story_id=2, title="T")
+        p = Plan(id=1, name="N", priority="p1")
+        self.assertEqual(design.plan_label(p), "⬜ P#1 N")
+        s = Milestone(id=2, plan_id=1, title="S", priority="p0")
+        self.assertEqual(design.milestone_label(s), "⬜ M#2 S")
+        t = Task(id=3, milestone_id=2, title="T")
         self.assertEqual(design.task_label(t), "⬜ T#3 T")
-        self.assertEqual(design.priority_tag(""), "")
+        # priority stays on the model but never renders in headers
+        self.assertNotIn("!p1", design.plan_label(p))
+        self.assertNotIn("!p0", design.milestone_label(s))
 
     def test_status_word_forms(self):
         self.assertEqual(design.status_word("todo"), "⬜")
@@ -45,48 +47,50 @@ class TestDesignSystem(unittest.TestCase):
             design.status_word("todo", "neon")
 
     def test_ansi_labels_colorize_the_word(self):
-        p = Project(id=1, name="N", priority="p1")
-        self.assertIn("\x1b[33m⬜\x1b[0m P#1", design.project_label(p, dot="ansi"))
-        s = UserStory(id=2, project_id=1, title="S")
-        self.assertTrue(design.story_label(s, dot="ansi").startswith("\x1b[33m⬜\x1b[0m S#2"))
-        t = Task(id=3, story_id=2, title="T")
+        p = Plan(id=1, name="N", priority="p1")
+        self.assertIn("\x1b[33m⬜\x1b[0m P#1", design.plan_label(p, dot="ansi"))
+        s = Milestone(id=2, plan_id=1, title="S")
+        self.assertTrue(design.milestone_label(s, dot="ansi").startswith("\x1b[33m⬜\x1b[0m M#2"))
+        t = Task(id=3, milestone_id=2, title="T")
         self.assertTrue(design.task_label(t, dot="ansi").startswith("\x1b[33m⬜\x1b[0m T#3"))
-        self.assertNotIn("\x1b[", design.project_label(p))
+        self.assertNotIn("\x1b[", design.plan_label(p))
 
     def test_rich_rows_for_tui(self):
-        s = UserStory(id=2, project_id=1, title="S")
-        self.assertTrue(design.story_row(s).startswith("[yellow]⬜[/]"))
-        self.assertIn("S#2 S", design.story_row(s))
-        self.assertEqual(design.story_row(s).count("⬜"), 1)
-        t = Task(id=3, story_id=2, title="T")
+        s = Milestone(id=2, plan_id=1, title="S")
+        self.assertTrue(design.milestone_row(s).startswith("[yellow]⬜[/]"))
+        self.assertIn("M#2 S", design.milestone_row(s))
+        self.assertEqual(design.milestone_row(s).count("⬜"), 1)
+        t = Task(id=3, milestone_id=2, title="T")
         self.assertTrue(design.task_row(t).startswith("[yellow]⬜[/]"))
         self.assertEqual(design.task_row(t).count("⬜"), 1)
-        p = Project(id=1, name="N")
-        self.assertEqual(design.project_row(p).count("⬜"), 1)
+        p = Plan(id=1, name="N")
+        self.assertEqual(design.plan_row(p).count("⬜"), 1)
 
-    def test_criteria_progress_in_labels(self):
-        p = self.store.add_project("P")
-        self.store.add_criteria("project", p.id, "done-thing", actor="t")
-        c2 = self.store.add_criteria("project", p.id, "open-thing", actor="t")
-        self.assertIn("[0/2✓]", design.project_label(p, self.store))
+    def test_no_criteria_progress_in_labels(self):
+        p = self.store.add_plan("P")
+        self.store.add_criteria("plan", p.id, "done-thing", actor="t")
+        c2 = self.store.add_criteria("plan", p.id, "open-thing", actor="t")
+        self.assertEqual(design.plan_label(p, self.store), "⬜ P#1 P")
         self.store.set_criteria(c2.id, True, actor="t")
-        self.assertIn("[1/2✓]", design.project_label(p, self.store))
+        label = design.plan_label(p, self.store)
+        self.assertEqual(label, "⬜ P#1 P")
+        self.assertNotRegex(label, r"\[\d+/\d+✓\]")
 
-    def test_project_row_pill_and_escaped_title(self):
-        p = Project(id=1, name="Ray [old]", priority="p1")
-        self.assertEqual(design.project_row(p), "[yellow]⬜[/] [reverse] P1 [/] !p1 Ray \\[old]")
-        self.assertNotIn("TODO", design.project_row(p))
+    def test_plan_row_pill_and_escaped_title(self):
+        p = Plan(id=1, name="Ray [old]", priority="p1")
+        self.assertEqual(design.plan_row(p), "[yellow]⬜[/] [reverse] P1 [/] Ray \\[old]")
+        self.assertNotIn("TODO", design.plan_row(p))
 
     def test_cli_uses_design_labels(self):
-        p = self.store.add_project("P", priority="p1")
-        s = self.store.add_story(p.id, "S", priority="p0")
+        p = self.store.add_plan("P", priority="p1")
+        s = self.store.add_milestone(p.id, "S", priority="p0")
         t = self.store.add_task(s.id, "T")
         buf = io.StringIO()
         with redirect_stdout(buf):
             self.assertEqual(lpui_main(["--db", self.db, "list"]), 0)
         lines = buf.getvalue().splitlines()
-        self.assertEqual(lines[0], design.project_label(p, self.store))
-        self.assertEqual(lines[1], "  " + design.story_label(s, self.store))
+        self.assertEqual(lines[0], design.plan_label(p, self.store))
+        self.assertEqual(lines[1], "  " + design.milestone_label(s, self.store))
         self.assertEqual(lines[2], "    " + design.task_label(t, self.store))
 
     def test_help_single_source(self):
@@ -112,7 +116,7 @@ class TestDesignSystem(unittest.TestCase):
     def test_message_helpers(self):
         self.assertEqual(design.msg_not_found("task", 7), "task #7 not found")
         self.assertTrue(design.msg_error(ValueError("x")).startswith("error:"))
-        for const in (design.EMPTY_NO_PROJECTS, design.EMPTY_FEED):
+        for const in (design.EMPTY_NO_PLANS, design.EMPTY_FEED):
             self.assertTrue(isinstance(const, str) and len(const) > 0)
 
     def test_commits_chip(self):
@@ -126,14 +130,14 @@ class TestDesignSystem(unittest.TestCase):
         )
 
     def test_rows_show_chips_only_when_linked(self):
-        p = Project(id=1, name="N", priority="p1")
-        self.assertEqual(design.project_row(p), design.project_row(p, links=None))
-        self.assertEqual(design.project_row(p), design.project_row(p, links=[]))
-        self.assertIn("a" * 12, design.project_row(p, links=["a" * 40]))
-        s = UserStory(id=2, project_id=1, title="S")
-        self.assertEqual(design.story_row(s), design.story_row(s, links=[]))
-        self.assertIn("b" * 12, design.story_row(s, links=["b" * 40]))
-        t = Task(id=3, story_id=2, title="T")
+        p = Plan(id=1, name="N", priority="p1")
+        self.assertEqual(design.plan_row(p), design.plan_row(p, links=None))
+        self.assertEqual(design.plan_row(p), design.plan_row(p, links=[]))
+        self.assertIn("a" * 12, design.plan_row(p, links=["a" * 40]))
+        s = Milestone(id=2, plan_id=1, title="S")
+        self.assertEqual(design.milestone_row(s), design.milestone_row(s, links=[]))
+        self.assertIn("b" * 12, design.milestone_row(s, links=["b" * 40]))
+        t = Task(id=3, milestone_id=2, title="T")
         self.assertEqual(design.task_row(t), design.task_row(t, links=None))
         self.assertIn("c" * 12, design.task_row(t, links=["c" * 40]))
 

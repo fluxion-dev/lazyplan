@@ -7,8 +7,8 @@ compatibility: opencode, claude-code, codex, gemini-cli, cursor
 # lazyplan (`lpui`) — local project journal
 
 `lpui` is the repo's plan of record: projects > stories > tasks, stored in
-`.lazyplan/lazyplan.db` (SQLite, committed with the repo or local — check
-`.lazyplan/config.json`). The human watches `lpui ui`; agents inject work through
+`.agents/plan/lazyplan.db` (SQLite, committed with the repo or local — check
+`.agents/plan/config.json`). The human watches `lpui ui`; agents inject work through
 the CLI. Never touch the TUI process — only call `lpui`.
 
 A project is: title + priority + why + what + acceptance criteria. Stories cut
@@ -24,7 +24,7 @@ Pass `--actor <name>` on every write so the human sees who did what in
 
 ## DB scoping (first match wins)
 
-`--db PATH` → `$LAZYPLAN_DB` → enclosing git repo's `.lazyplan/lazyplan.db` →
+`--db PATH` → `$LAZYPLAN_DB` → enclosing git repo's `.agents/plan/lazyplan.db` →
 global `~/.local/share/lazyplan/lazyplan.db`. Running from any subdirectory
 of the repo resolves to that repo's DB. Don't override `--db` unless asked.
 
@@ -96,6 +96,29 @@ lpui reconcile                                                       # recompute
 ```
 
 Add `--json` for machine-parseable output (`lpui list --json`).
+
+## Templates (per-repo creation defaults)
+
+`.agents/plan/templates/{project,story,task}.md` (scaffolded by `lpui init`,
+commit them to share) define what new rows look like. Each file is Markdown
+with YAML frontmatter; the body is guidance and ignored:
+
+```yaml
+defaults: {why: "", what: "", priority: ""}   # filled when a flag is empty
+required: [title]                             # must be non-empty after fill
+criteria: ["Works offline"]                   # auto-added rows on create
+```
+
+Field names are per kind: project `title/why/what/priority`, story and task
+`title/desc/priority`. Missing `required` entries fail with exit 2 naming the
+field; missing template files mean legacy behavior (tasks default `p1`).
+
+`lpui init` walks the user through template setup: on a TTY it asks four
+convention questions (require project why/what, require story/task desc,
+example starter criteria, default task priority) and writes tailored
+starters; `--yes`/`--json`/non-TTY writes the opinionated defaults silently.
+Rerunning `init` on a TTY offers per-file keep/edit/reset (default keep) —
+edits are never overwritten without an explicit reset.
 
 ## Write: full CRUD
 

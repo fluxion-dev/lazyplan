@@ -1,8 +1,8 @@
-"""Single-panel Textual TUI: project tree, nano-style bottom bar.
+"""Single-panel Textual TUI: plan tree, nano-style bottom bar.
 
-Keys: j/k navigate, z/Z fold one/all, n contextual new, P/S/T new project/story/task,
+Keys: j/k navigate, z/Z fold one/all, n contextual new, P/S/T new plan/milestone/task,
   e edit, space cycle status, c tick criteria, enter detail, f status filter,
-  o project filter, r refresh, ? help, q quit. Mouse click folds/unfolds too.
+  o plan filter, r refresh, ? help, q quit. Mouse click folds/unfolds too.
 Keyboard-only: agents use the `lpui` CLI against the same SQLite file; the TUI
 polls fingerprint() every second and toasts + activity-line.
 """
@@ -24,24 +24,26 @@ try:
 except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
+from . import services
 from .design import (
     APP_CSS,
-    project_row,
-    story_row,
+    milestone_row,
+    plan_row,
     task_row,
 )
-from .models import DEFAULT_TASK_PRIORITY, Project, Status, Task, UserStory
+from .models import Milestone, Plan, Status, Task
 from .repo import repo_label
 from .screens import (
     ConfirmScreen,
     DetailScreen,
     EditScreen,
     HelpScreen,
-    NewProjectScreen,
-    NewStoryScreen,
+    NewMilestoneScreen,
+    NewPlanScreen,
     NewTaskScreen,
 )
 from .store import Store
+from .templates import load_template
 
 STATUS_CYCLE: list[Status | None] = [None, Status.TODO, Status.DOING, Status.DONE]
 DOUBLE_CLICK_WINDOW = 0.5  # seconds between two clicks on one row
@@ -49,7 +51,7 @@ DOUBLE_CLICK_WINDOW = 0.5  # seconds between two clicks on one row
 if _TEXTUAL_OK:
 
     class FoldTree(Tree):
-        """Project/story tree with app-level key semantics.
+        """Plan/milestone tree with app-level key semantics.
 
         The native Tree space/shift+space bindings stay (so they keep working
         and mouse toggles are untouched), but their actions delegate to the
@@ -90,7 +92,7 @@ if _TEXTUAL_OK:
                 app._open_detail(*key)
 
     class LazyplanApp(App):
-        """Single-panel TUI: the project tree."""
+        """Single-panel TUI: the plan tree."""
 
         TITLE = "lazyplan"
         CSS = APP_CSS
@@ -98,8 +100,8 @@ if _TEXTUAL_OK:
             Binding("j", "cursor_down", "Down", show=False),
             Binding("k", "cursor_up", "Up", show=False),
             Binding("n", "new_context", "New"),
-            Binding("P", "new_project", "NewProj", show=False),
-            Binding("S", "new_story", "NewStory", show=False),
+            Binding("P", "new_plan", "NewPlan", show=False),
+            Binding("M", "new_milestone", "NewMilestone", show=False),
             Binding("T", "new_task", "NewTask", show=False),
             Binding("e", "edit", "Edit"),
             Binding("c", "criteria", "Check"),
@@ -111,7 +113,8 @@ if _TEXTUAL_OK:
             Binding("left", "fold_left", "Fold", show=False),
             Binding("right", "fold_right", "Unfold", show=False),
             Binding("f", "filter_status", "Filter"),
-            Binding("o", "filter_project", "Proj"),
+            Binding("o", "filter_plan", "Plan"),
+            Binding("A", "toggle_show_all", "All"),
             Binding("r", "refresh", "Refresh"),
             Binding("question_mark", "help", "Help"),
             Binding("q", "quit", "Quit"),
@@ -122,7 +125,8 @@ if _TEXTUAL_OK:
             self.store = store
             self.selected: tuple[str, int] | None = None
             self.status_filter: Status | None = None
-            self.project_filter: int | None = None
+            self.plan_filter: int | None = None
+            self.show_all: bool = False
             self._row_nodes: dict[tuple[str, int], TreeNode] = {}
             self._collapsed: set[tuple[str, int]] = set()
             self._expanded: set[tuple[str, int]] = set()
@@ -133,7 +137,7 @@ if _TEXTUAL_OK:
         def compose(self) -> ComposeResult:
             yield Header(show_clock=True)
             with Vertical(id="panel"):
-                yield FoldTree("projects", id="tree")
+                yield FoldTree("plans", id="tree")
             yield Label("", id="activity")
             yield Label("", id="statusbar")
             yield Footer()
@@ -162,7 +166,7 @@ if _TEXTUAL_OK:
         def on_tree_node_collapsed(self, e: Tree.NodeCollapsed) -> None:
             """Remember mouse folds across refreshes/polls."""
             key = self._node_key(e.node)
-            if key is not None and key[0] in ("project", "story"):
+            if key is not None and key[0] in ("plan", "milestone"):
                 self._collapsed.add(key)
                 self._expanded.discard(key)
 
@@ -170,7 +174,7 @@ if _TEXTUAL_OK:
             key = self._node_key(e.node)
             if key is not None:
                 self._collapsed.discard(key)
-                if key[0] == "project":
+                if key[0] == "plan":
                     self._expanded.add(key)
 
         def action_cursor_down(self) -> None:
@@ -180,7 +184,7 @@ if _TEXTUAL_OK:
             self.query_one("#tree", Tree).action_cursor_up()
 
         def action_fold(self) -> None:
-            """Toggle the selected project/story open/closed (z)."""
+            """Toggle the selected plan/milestone open/closed (z)."""
             if self.selected is None:
                 self.notify("select a row first (z folds it)")
                 return
@@ -192,7 +196,7 @@ if _TEXTUAL_OK:
             if key in self._collapsed:
                 node.expand()
                 self._collapsed.discard(key)
-                if key[0] == "project":
+                if key[0] == "plan":
                     self._expanded.add(key)
                 self.refresh_all(f"{key[0]} #{key[1]} unfolded")
             else:
@@ -202,7 +206,7 @@ if _TEXTUAL_OK:
                 self.refresh_all(f"{key[0]} #{key[1]} folded")
 
         def action_fold_all(self) -> None:
-            """Collapse every project/story, or re-open all when fully folded (Z)."""
+            """Collapse every plan/milestone, or re-open all when fully folded (Z)."""
             keys = [k for k, n in self._row_nodes.items() if n.allow_expand and n.children]
             if not keys:
                 self.notify("nothing to fold")
@@ -211,7 +215,7 @@ if _TEXTUAL_OK:
                 for k in keys:
                     self._row_nodes[k].expand()
                 self._collapsed.clear()
-                self._expanded.update(k for k in keys if k[0] == "project")
+                self._expanded.update(k for k in keys if k[0] == "plan")
                 self.refresh_all("unfolded all")
             else:
                 for k in keys:
@@ -222,13 +226,13 @@ if _TEXTUAL_OK:
 
         def _children_of(self, kind: str, oid: int) -> list[tuple[str, int]]:
             """Visible child row keys, in tree order."""
-            if kind == "project":
+            if kind == "plan":
                 return [
-                    ("story", s.id)
-                    for s in self.store.list_stories(oid)
-                    if ("story", s.id) in self._row_nodes
+                    ("milestone", s.id)
+                    for s in self.store.list_milestones(oid)
+                    if ("milestone", s.id) in self._row_nodes
                 ]
-            if kind == "story":
+            if kind == "milestone":
                 return [
                     ("task", t.id)
                     for t in self.store.list_tasks(oid)
@@ -237,12 +241,12 @@ if _TEXTUAL_OK:
             return []
 
         def _parent_of(self, kind: str, oid: int) -> tuple[str, int] | None:
-            if kind == "story":
-                s = self.store.get_story(oid)
-                return ("project", s.project_id) if s else None
+            if kind == "milestone":
+                s = self.store.get_milestone(oid)
+                return ("plan", s.plan_id) if s else None
             if kind == "task":
                 t = self.store.get_task(oid)
-                return ("story", t.story_id) if t else None
+                return ("milestone", t.milestone_id) if t else None
             return None
 
         def action_fold_left(self) -> None:
@@ -275,7 +279,7 @@ if _TEXTUAL_OK:
             if node is not None and (kind, oid) in self._collapsed:
                 node.expand()
                 self._collapsed.discard((kind, oid))
-                if kind == "project":
+                if kind == "plan":
                     self._expanded.add((kind, oid))
                 self.refresh_all(f"{kind} #{oid} unfolded")
                 return
@@ -299,8 +303,14 @@ if _TEXTUAL_OK:
         # -- rendering ---------------------------------------------------
         def _filtered_tree(
             self,
-        ) -> list[tuple[Project, list[tuple[UserStory, list[Task]]]]]:
-            return self.store.tree(status=self.status_filter, project_id=self.project_filter)
+        ) -> list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]:
+            if self.show_all or self.plan_filter is not None:
+                return services.tree(
+                    self.store, status=self.status_filter, plan_id=self.plan_filter
+                )
+            return services.tree(
+                self.store, status=self.status_filter, limit=services.DEFAULT_PLAN_LIMIT
+            )
 
         def refresh_all(self, note: str = "") -> None:
             tree = self.query_one("#tree", Tree)
@@ -308,20 +318,20 @@ if _TEXTUAL_OK:
             self._row_nodes = {}
             root = tree.root
             link_map = self.store.links_map()
-            for p, stories in self._filtered_tree():
+            for p, milestones in self._filtered_tree():
                 pn = root.add(
-                    project_row(p, links=link_map.get(("project", p.id))),
-                    data={"kind": "project", "id": p.id},
-                    allow_expand=bool(stories),
+                    plan_row(p, links=link_map.get(("plan", p.id))),
+                    data={"kind": "plan", "id": p.id},
+                    allow_expand=bool(milestones),
                 )
-                self._row_nodes[("project", p.id)] = pn
-                for s, tasks in stories:
+                self._row_nodes[("plan", p.id)] = pn
+                for s, tasks in milestones:
                     sn = pn.add(
-                        story_row(s, self.store, links=link_map.get(("story", s.id))),
-                        data={"kind": "story", "id": s.id},
+                        milestone_row(s, self.store, links=link_map.get(("milestone", s.id))),
+                        data={"kind": "milestone", "id": s.id},
                         allow_expand=bool(tasks),
                     )
-                    self._row_nodes[("story", s.id)] = sn
+                    self._row_nodes[("milestone", s.id)] = sn
                     for t in tasks:
                         leaf = sn.add_leaf(
                             task_row(t, self.store, links=link_map.get(("task", t.id))),
@@ -331,13 +341,13 @@ if _TEXTUAL_OK:
             root.expand()
             self._collapsed &= set(self._row_nodes)  # drop rows deleted since last build
             self._expanded &= set(self._row_nodes)
-            done_projects = {
-                ("project", p.id) for p, _ in self._filtered_tree() if p.status == Status.DONE
+            done_plans = {
+                ("plan", p.id) for p, _ in self._filtered_tree() if p.status == Status.DONE
             }
             for key, node in self._row_nodes.items():
                 if key in self._collapsed:
                     node.collapse()
-                elif key in done_projects and key not in self._expanded:
+                elif key in done_plans and key not in self._expanded:
                     node.collapse()
                     self._collapsed.add(key)
                 elif node.allow_expand:
@@ -350,12 +360,13 @@ if _TEXTUAL_OK:
                 act = f"last: [{e['actor']}] {e['kind']}/{e['action']}: {e['detail']}"
             self.query_one("#activity", Label).update(" " + act)
             sf = self.status_filter.value if self.status_filter else "all"
-            pf = f"P#{self.project_filter}" if self.project_filter else "all"
+            pf = f"P#{self.plan_filter}" if self.plan_filter else "all"
             self.query_one("#statusbar", Label).update(
                 f" [{repo_label(self.store.path)}]"
-                f" P:{c['projects']} S:{c['stories']} T:{c['tasks_done']}/{c['tasks']}"
-                f" Q:{c['projects_todo']}/{c['projects_doing']}/{c['projects_done']}"
-                f" · f:{sf} o:{pf}" + (f" — {note}" if note else "")
+                f" P:{c['plans']} S:{c['milestones']} T:{c['tasks_done']}/{c['tasks']}"
+                f" Q:{c['plans_todo']}/{c['plans_doing']}/{c['plans_done']}"
+                f" · f:{sf} o:{pf} A:{'all' if self.show_all else services.DEFAULT_PLAN_LIMIT}"
+                + (f" — {note}" if note else "")
             )
 
         def action_refresh(self) -> None:
@@ -373,67 +384,72 @@ if _TEXTUAL_OK:
                 f"status filter: {self.status_filter.value if self.status_filter else 'all'}"
             )
 
-        def action_filter_project(self) -> None:
-            ids = [p.id for p in self.store.list_projects() if not self.store.is_archived(p)]
+        def action_filter_plan(self) -> None:
+            ids = [p.id for p in self.store.list_plans() if not services.is_archived(self.store, p)]
             order: list[int | None] = [None, *ids]
             try:
-                i = order.index(self.project_filter)
+                i = order.index(self.plan_filter)
             except ValueError:
                 i = 0
-            self.project_filter = order[(i + 1) % len(order)]
-            self.refresh_all(f"project filter: {self.project_filter or 'all'}")
+            self.plan_filter = order[(i + 1) % len(order)]
+            self.refresh_all(f"plan filter: {self.plan_filter or 'all'}")
+
+        def action_toggle_show_all(self) -> None:
+            self.show_all = not self.show_all
+            self.refresh_all("showing all plans" if self.show_all else "showing recent plans")
 
         def action_help(self) -> None:
             self.push_screen(HelpScreen())
 
         # -- editing ------------------------------------------------------
-        def _story_for_task_ctx(self) -> int | None:
+        def _milestone_for_task_ctx(self) -> int | None:
             if self.selected is None:
                 return None
             kind, oid = self.selected
-            if kind == "story":
+            if kind == "milestone":
                 return oid
             if kind == "task":
                 t = self.store.get_task(oid)
-                return t.story_id if t else None
+                return t.milestone_id if t else None
             return None
 
-        def _project_ctx(self) -> int | None:
-            if self.project_filter is not None:
-                return self.project_filter
+        def _plan_ctx(self) -> int | None:
+            if self.plan_filter is not None:
+                return self.plan_filter
             if self.selected is None:
                 return None
             kind, oid = self.selected
-            if kind == "project":
+            if kind == "plan":
                 return oid
-            if kind == "story":
-                s = self.store.get_story(oid)
-                return s.project_id if s else None
+            if kind == "milestone":
+                s = self.store.get_milestone(oid)
+                return s.plan_id if s else None
             if kind == "task":
                 t = self.store.get_task(oid)
                 if t is None:
                     return None
-                s = self.store.get_story(t.story_id)
-                return s.project_id if s else None
+                s = self.store.get_milestone(t.milestone_id)
+                return s.plan_id if s else None
             return None
 
         def action_new_context(self) -> None:
-            sid = self._story_for_task_ctx()
+            sid = self._milestone_for_task_ctx()
             if sid is not None:
                 self.action_new_task()
                 return
-            pid = self._project_ctx()
+            pid = self._plan_ctx()
             if pid is not None:
-                self.action_new_story()
+                self.action_new_milestone()
                 return
-            self.action_new_project()
+            self.action_new_plan()
 
-        def action_new_project(self) -> None:
+        def action_new_plan(self) -> None:
             def cb(data: dict | None) -> None:
                 if not data:
                     return
                 try:
-                    self.store.add_project(
+                    services.create_plan(
+                        self.store,
                         data["title"],
                         data["what"],
                         goal=data["why"],
@@ -442,24 +458,27 @@ if _TEXTUAL_OK:
                     )
                 except ValueError as exc:
                     self.notify(f"error: {exc}")
-                self._saved("project created")
+                self._saved("plan created")
 
-            self.push_screen(NewProjectScreen(), cb)
+            self.push_screen(
+                NewPlanScreen(defaults=load_template("plan", self.store.path).defaults), cb
+            )
 
-        def action_new_story(self) -> None:
-            pid = self._project_ctx()
+        def action_new_milestone(self) -> None:
+            pid = self._plan_ctx()
             if pid is None:
-                projects = self.store.list_projects()
-                if not projects:
-                    self.notify("no projects — press P to create one first")
+                plans = self.store.list_plans()
+                if not plans:
+                    self.notify("no plans — press P to create one first")
                     return
-                pid = projects[0].id
+                pid = plans[0].id
 
             def cb(data: dict | None) -> None:
                 if not data:
                     return
                 try:
-                    self.store.add_story(
+                    services.create_milestone(
+                        self.store,
                         pid,
                         data["title"],
                         data["desc"],
@@ -468,44 +487,52 @@ if _TEXTUAL_OK:
                     )
                 except (ValueError, KeyError) as exc:
                     self.notify(f"error: {exc}")
-                self._saved("story created")
+                self._saved("milestone created")
 
-            self.push_screen(NewStoryScreen(pid), cb)
+            self.push_screen(
+                NewMilestoneScreen(
+                    pid, defaults=load_template("milestone", self.store.path).defaults
+                ),
+                cb,
+            )
 
         def action_new_task(self) -> None:
-            sid = self._story_for_task_ctx()
+            sid = self._milestone_for_task_ctx()
             if sid is None:
-                self.notify("select a story first (or press S to create one)")
+                self.notify("select a milestone first (or press M to create one)")
                 return
 
             def cb(data: dict | None) -> None:
                 if not data:
                     return
                 try:
-                    self.store.add_task(
+                    services.create_task(
+                        self.store,
                         sid,
                         data["title"],
                         data["desc"],
-                        priority=data["priority"] or DEFAULT_TASK_PRIORITY,
+                        priority=data["priority"],
                         actor="tui",
                     )
                 except (ValueError, KeyError) as exc:
                     self.notify(f"error: {exc}")
                 self._saved("task created")
 
-            self.push_screen(NewTaskScreen(sid), cb)
+            self.push_screen(
+                NewTaskScreen(sid, defaults=load_template("task", self.store.path).defaults), cb
+            )
 
         def action_edit(self) -> None:
             if self.selected is None:
                 self.notify("select a row first (j/k + click)")
                 return
             kind, oid = self.selected
-            obj: Project | UserStory | Task | None = None
-            if kind == "project":
-                obj = self.store.get_project(oid)
+            obj: Plan | Milestone | Task | None = None
+            if kind == "plan":
+                obj = self.store.get_plan(oid)
                 title = obj.name if obj else ""
-            elif kind == "story":
-                obj = self.store.get_story(oid)
+            elif kind == "milestone":
+                obj = self.store.get_milestone(oid)
                 title = obj.title if obj else ""
             else:
                 obj = self.store.get_task(oid)
@@ -521,16 +548,16 @@ if _TEXTUAL_OK:
                 if not data:
                     return
                 try:
-                    if kind == "project":
-                        self.store.update_project(
+                    if kind == "plan":
+                        self.store.update_plan(
                             oid,
                             name=data["title"],
                             description=data["details"],
                             priority=data["priority"],
                             actor="tui",
                         )
-                    elif kind == "story":
-                        self.store.update_story(
+                    elif kind == "milestone":
+                        self.store.update_milestone(
                             oid,
                             title=data["title"],
                             description=data["details"],
@@ -557,10 +584,11 @@ if _TEXTUAL_OK:
                 return
             kind, oid = self.selected
             left = self.store.open_criteria(kind, oid)
-            if left and self.store._current_status(kind, oid) != Status.DONE:
+            current = self.store.get_parent(kind, oid)
+            if left and (current is None or current.status != Status.DONE):
                 # advisory only: warn, then proceed (flow first)
                 self.notify(f"warning: {len(left)} open criteria — closing anyway", timeout=5)
-            nxt = self.store.cycle_status(kind, oid, actor="tui")
+            nxt = services.cycle_status(self.store, kind, oid, actor="tui")
             if nxt is None:
                 self.notify("selected row no longer exists")
             self._saved(f"{kind} #{oid} -> {nxt.value if nxt else '?'}")

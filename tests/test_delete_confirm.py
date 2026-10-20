@@ -25,8 +25,8 @@ class TestDeleteConfirm(unittest.IsolatedAsyncioTestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.db = os.path.join(self.tmp.name, "t.db")
         store = Store(self.db)
-        self.pid = store.add_project("P").id
-        self.sid = store.add_story(self.pid, "S").id
+        self.pid = store.add_plan("P").id
+        self.sid = store.add_milestone(self.pid, "S").id
         self.tid = store.add_task(self.sid, "T").id
         self.app = tui_mod.create_app(self.db)
 

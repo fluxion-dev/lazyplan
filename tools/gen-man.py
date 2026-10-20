@@ -37,7 +37,9 @@ def _opt_invocation(a: argparse.Action) -> str:
         return "\\-h, \\-\\-help"
     parts = list(a.option_strings)
     inv = ", ".join(_esc(p) for p in parts)
-    if isinstance(a, (argparse._StoreTrueAction, argparse._StoreFalseAction, argparse._CountAction)):
+    if isinstance(
+        a, (argparse._StoreTrueAction, argparse._StoreFalseAction, argparse._CountAction)
+    ):
         return inv
     meta = ""
     if isinstance(a.metavar, str):
@@ -84,7 +86,7 @@ def render() -> str:
     out: list[str] = []
     out.append(f'.TH LPUI 1 "{today}" "lazyplan-tui {version}" "User Commands"')
     out.append(".SH NAME")
-    out.append("lpui \\- local project journal for humans and coding agents")
+    out.append("lpui \\- local plan journal for you and your coding agent")
     out.append(".SH SYNOPSIS")
     out.append(".B lpui")
     out.append("[\\fIGLOBAL OPTIONS\\fR] [\\fICOMMAND\\fR [\\fICOMMAND OPTIONS\\fR]]")
@@ -92,16 +94,20 @@ def render() -> str:
     out.append(".B lazyplan")
     out.append("is the same program under its long name.")
     out.append(".br")
-    out.append("With no COMMAND, \\fBlpui\\fR launches the Textual TUI (same as \\fBlpui ui\\fR).")
+    out.append(
+        "With no COMMAND, \\fBlpui\\fR opens the keyboard\\-driven screen (same as \\fBlpui ui\\fR)."
+    )
     out.append(".SH DESCRIPTION")
     out.append(
-        "lazyplan tracks projects > stories > tasks in a per\\-repo SQLite database. "
-        "A project is a title plus a priority, a why, a what, and acceptance "
-        "criteria; stories cut it into slices and tasks cut stories into "
-        "prioritized units of work. Humans drive the keyboard\\-first Textual TUI; "
-        "coding agents drive the same database through this CLI with "
-        "\\fB\\-\\-actor NAME\\fR and \\fB\\-\\-json\\fR. Every mutation appends a "
-        "feed event; the running TUI polls and toasts arrivals."
+        "lazyplan keeps your plans, milestones, and tasks in a small database next "
+        "to your code. A plan is a title plus a priority, a reason why it "
+        "exists, a description of what to build, and a checklist that says when "
+        "it is done; you break the plan into milestones and each milestone into "
+        "prioritized tasks. You drive the keyboard\\-driven screen; your coding "
+        "agent drives the same database through this command line with "
+        "\\fB\\-\\-actor NAME\\fR and \\fB\\-\\-json\\fR. Every change adds an "
+        "entry to the feed; the running screen refreshes and tells you what "
+        "arrived."
     )
     out.append(".SH GLOBAL OPTIONS")
     for a in parser._actions:
@@ -112,8 +118,8 @@ def render() -> str:
         out.append(_esc(_opt_desc(a)))
     out.append(".SH COMMANDS")
     out.append(
-        "Flags work before or after the verb: \\fBlpui list \\-\\-json\\fR == "
-        "\\fBlpui \\-\\-json list\\fR. Run \\fBlpui COMMAND \\-\\-help\\fR for details."
+        "Flags work before or after the command: \\fBlpui list \\-\\-json\\fR means "
+        "the same as \\fBlpui \\-\\-json list\\fR. Run \\fBlpui COMMAND \\-\\-help\\fR for details."
     )
     for name in names:
         sp = sub.choices[name]
@@ -136,13 +142,13 @@ def render() -> str:
     out.append(".SH EXAMPLES")
     out.append(".nf")
     for line in [
-        "lpui                             # TUI (same as `lpui ui`)",
-        "lpui list                        # ascii tree",
+        "lpui                             # open the screen (same as `lpui ui`)",
+        "lpui list                        # show everything as a tree",
         "lpui list --status doing --priority p0",
-        "lpui show --kind project --id 1",
-        "lpui --actor alice add-project --title \\(dqAPI v2\\(dq --why \\(dq..\\(dq --priority p1",
-        "lpui --actor alice add-criteria --kind project --id 1 --text \\(dqWorks offline\\(dq",
-        "lpui --actor alice add-task --story 1 --title \\(dqFix bug\\(dq --priority p1",
+        "lpui show --kind plan --id 1",
+        "lpui --actor alice add-plan --title \\(dqAPI v2\\(dq --why \\(dq..\\(dq --priority p1",
+        "lpui --actor alice add-criteria --kind plan --id 1 --text \\(dqWorks offline\\(dq",
+        "lpui --actor alice add-task --milestone 1 --title \\(dqFix bug\\(dq --priority p1",
         "lpui status --kind task --id 3 --to done",
         "lpui feed --limit 20",
         "lpui export --format json > backup.json",
@@ -153,34 +159,36 @@ def render() -> str:
     out.append(".SH ENVIRONMENT")
     out.append(".TP")
     out.append(".B LAZYPLAN_DB")
-    out.append("SQLite path override (same as \\fB\\-\\-db\\fR).")
+    out.append("Which database file to use (same as \\fB\\-\\-db\\fR).")
     out.append(".TP")
     out.append(".B USER")
-    out.append("Default for \\fB\\-\\-actor\\fR when not given.")
+    out.append("Used for \\fB\\-\\-actor\\fR when you do not give one.")
     out.append(".SH FILES")
     out.append(".TP")
-    out.append(".B .lazyplan/lazyplan.db")
-    out.append("Per\\-repo database (resolved via git rev\\-parse; commit it to share).")
+    out.append(".B .agents/lazyplan/lazyplan.db")
+    out.append("The database for this repo (found with git rev\\-parse; commit it to share).")
     out.append(".TP")
     out.append(".B ~/.local/share/lazyplan/lazyplan.db")
-    out.append("Global fallback when outside a repo.")
+    out.append("Used when you are outside a repo.")
     out.append(".SH EXIT STATUS")
     out.append(".TP")
     out.append(".B 0")
-    out.append("Success.")
+    out.append("It worked.")
     out.append(".TP")
     out.append(".B 1")
-    out.append("Row not found (e.g. task #7 not found).")
+    out.append("The id you gave was not found (for example, task #7).")
     out.append(".TP")
     out.append(".B 2")
-    out.append("Usage or validation error (argparse or error: ... on stderr).")
+    out.append("The flags or input were wrong (details start with error: ... on stderr).")
     out.append(".TP")
     out.append(".B 3")
-    out.append("TUI unavailable (Textual not installed).")
+    out.append("The screen cannot start (Textual is not installed).")
     out.append(".SH SEE ALSO")
     out.append(".BR lazyplan (1),")
-    out.append("lpui \\fB\\-\\-help\\fR, lpui \\fICOMMAND\\fR \\fB\\-\\-help\\fR, "
-               "lpui \\fBhelp\\fR (TUI keys, same as ? in the TUI)")
+    out.append(
+        "lpui \\fB\\-\\-help\\fR, lpui \\fICOMMAND\\fR \\fB\\-\\-help\\fR, "
+        "lpui \\fBhelp\\fR (screen keys, same as ? in the app)"
+    )
     out.append("Full docs: https://github.com/fluxion-dev/lazyplan")
     return "\n".join(out) + "\n"
 
@@ -193,6 +201,7 @@ def main(argv: list[str] | None = None) -> int:
     target = docs / "lpui.1"
     if check:
         current = target.read_text() if target.exists() else ""
+
         # Ignore the quoted date line: compare everything else.
         def _strip_date(s: str) -> str:
             return re.sub(r'^\.TH LPUI 1 ".*"$', ".TH", s, flags=re.M)

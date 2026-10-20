@@ -43,7 +43,8 @@ class TestRepoScope(unittest.TestCase):
 
         os.chdir(self.repo)
         self.assertEqual(
-            pathlib.Path(resolve_db_path()), pathlib.Path(self.repo) / ".lazyplan" / "lazyplan.db"
+            pathlib.Path(resolve_db_path()),
+            pathlib.Path(self.repo) / ".agents/lazyplan" / "lazyplan.db",
         )
 
     def test_explicit_and_env_win(self):
@@ -58,13 +59,47 @@ class TestRepoScope(unittest.TestCase):
     def test_store_creates_plan_dir_and_config(self):
         os.chdir(self.repo)
         s = Store(None)
-        self.assertTrue(os.path.isfile(os.path.join(self.repo, ".lazyplan", "lazyplan.db")))
-        cfg = os.path.join(self.repo, ".lazyplan", "config.json")
+        self.assertTrue(os.path.isfile(os.path.join(self.repo, ".agents/lazyplan", "lazyplan.db")))
+        cfg = os.path.join(self.repo, ".agents/lazyplan", "config.json")
         self.assertTrue(os.path.isfile(cfg))
         self.assertEqual(json.load(open(cfg))["db"], "lazyplan.db")
         self.assertEqual(repo_label(s.path), "myproj")
-        p = s.add_project("P", actor="t")
+        p = s.add_plan("P", actor="t")
         self.assertEqual(p.id, 1)
+
+    def test_stale_lazyplan_warns_and_ignored(self):
+        import io
+        import pathlib
+        from contextlib import redirect_stderr
+
+        from lazyplan.repo import stale_plan_dirs
+
+        stale = os.path.join(self.repo, ".lazyplan")
+        os.makedirs(stale)
+        with open(os.path.join(stale, "lazyplan.db"), "w") as fh:
+            fh.write("data")
+        also_stale = os.path.join(self.repo, ".agents", "plan")
+        os.makedirs(also_stale)
+        os.chdir(self.repo)
+        # resolution ignores the stale dirs
+        self.assertEqual(
+            pathlib.Path(resolve_db_path()),
+            pathlib.Path(self.repo) / ".agents" / "lazyplan" / "lazyplan.db",
+        )
+        self.assertEqual(
+            stale_plan_dirs(self.repo), [pathlib.Path(stale), pathlib.Path(also_stale)]
+        )
+        self.assertEqual(stale_plan_dirs(os.path.join(self.tmp.name, "noroot")), [])
+        # init warns on stderr, builds the new dir, never migrates
+        err = io.StringIO()
+        with redirect_stderr(err):
+            self.assertEqual(lpui_main(["init", "--skills-scope", "none"]), 0)
+        self.assertIn(".lazyplan", err.getvalue())
+        self.assertIn(os.path.join(".agents", "plan"), err.getvalue())
+        self.assertEqual(open(os.path.join(stale, "lazyplan.db")).read(), "data")
+        self.assertTrue(
+            os.path.isfile(os.path.join(self.repo, ".agents", "lazyplan", "lazyplan.db"))
+        )
 
     def test_global_fallback_outside_repo(self):
         plain = os.path.join(self.tmp.name, "plain")
@@ -81,12 +116,13 @@ class TestRepoScope(unittest.TestCase):
     def test_lp_init_and_info_in_repo(self):
         os.chdir(self.repo)
         self.assertEqual(lpui_main(["init"]), 0)
-        self.assertTrue(os.path.isfile(os.path.join(self.repo, ".lazyplan", "lazyplan.db")))
+        self.assertTrue(os.path.isfile(os.path.join(self.repo, ".agents/lazyplan", "lazyplan.db")))
         self.assertEqual(lpui_main(["info"]), 0)
         # data added via cwd resolves to the same repo db
-        self.assertEqual(lpui_main(["add-project", "--name", "RP"]), 0)
+        # (silent init writes opinionated starters requiring why/what)
+        self.assertEqual(lpui_main(["add-plan", "--name", "RP", "--why", "w", "--what", "x"]), 0)
         s = Store(None)
-        self.assertEqual(len(s.list_projects()), 1)
+        self.assertEqual(len(s.list_plans()), 1)
 
 
 class TestLegacyPlanDir(unittest.TestCase):
@@ -118,11 +154,11 @@ class TestLegacyPlanDir(unittest.TestCase):
         import pathlib
 
         os.makedirs(os.path.join(self.repo, ".plan"))
-        os.makedirs(os.path.join(self.repo, ".lazyplan"))
+        os.makedirs(os.path.join(self.repo, ".agents/lazyplan"))
         os.chdir(self.repo)
         self.assertEqual(
             pathlib.Path(resolve_db_path()),
-            pathlib.Path(self.repo) / ".lazyplan" / "lazyplan.db",
+            pathlib.Path(self.repo) / ".agents/lazyplan" / "lazyplan.db",
         )
 
     def test_move_legacy(self):
@@ -134,10 +170,12 @@ class TestLegacyPlanDir(unittest.TestCase):
         os.makedirs(legacy)
         with open(os.path.join(legacy, "lazyplan.db"), "w") as fh:
             fh.write("data")
-        self.assertEqual(move_legacy_plan_dir(self.repo), pathlib.Path(self.repo) / ".lazyplan")
+        self.assertEqual(
+            move_legacy_plan_dir(self.repo), pathlib.Path(self.repo) / ".agents/lazyplan"
+        )
         self.assertFalse(os.path.exists(legacy))
-        self.assertTrue(os.path.isfile(os.path.join(self.repo, ".lazyplan", "lazyplan.db")))
-        # nothing left to move, and never clobber an existing .lazyplan/
+        self.assertTrue(os.path.isfile(os.path.join(self.repo, ".agents/lazyplan", "lazyplan.db")))
+        # nothing left to move, and never clobber an existing .agents/lazyplan/
         self.assertIsNone(move_legacy_plan_dir(self.repo))
         os.makedirs(os.path.join(self.repo, ".plan"))
         self.assertIsNone(move_legacy_plan_dir(self.repo))
@@ -147,7 +185,7 @@ class TestLegacyPlanDir(unittest.TestCase):
         os.chdir(self.repo)
         self.assertEqual(lpui_main(["--json", "init", "--skills-scope", "none"]), 0)
         self.assertTrue(os.path.isdir(os.path.join(self.repo, ".plan")))
-        self.assertFalse(os.path.exists(os.path.join(self.repo, ".lazyplan")))
+        self.assertFalse(os.path.exists(os.path.join(self.repo, ".agents/lazyplan")))
 
 
 if __name__ == "__main__":

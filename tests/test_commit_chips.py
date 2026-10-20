@@ -24,13 +24,13 @@ class TestCommitChips(unittest.IsolatedAsyncioTestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.db = os.path.join(self.tmp.name, "t.db")
         store = Store(self.db)
-        self.pid = store.add_project("P").id
-        self.sid = store.add_story(self.pid, "S").id
+        self.pid = store.add_plan("P").id
+        self.sid = store.add_milestone(self.pid, "S").id
         self.tid = store.add_task(self.sid, "T").id
         self.bare_tid = store.add_task(self.sid, "Bare").id
         self.sha = "a" * 40
         store.link_commit("task", self.tid, self.sha, subject="work")
-        store.link_commit("project", self.pid, "b" * 40)
+        store.link_commit("plan", self.pid, "b" * 40)
         self.store = Store(self.db)
         self.app = tui_mod.create_app(self.db)
 
@@ -42,7 +42,7 @@ class TestCommitChips(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             task_label = str(self.app._row_nodes[("task", self.tid)].label)
             self.assertIn(self.sha[:12], task_label)
-            proj_label = str(self.app._row_nodes[("project", self.pid)].label)
+            proj_label = str(self.app._row_nodes[("plan", self.pid)].label)
             self.assertIn("b" * 12, proj_label)
             bare_label = str(self.app._row_nodes[("task", self.bare_tid)].label)
             self.assertNotIn(self.sha[:12], bare_label)

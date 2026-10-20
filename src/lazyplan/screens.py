@@ -39,16 +39,32 @@ if _TEXTUAL_OK:
             """Return to the previous screen, discarding edits."""
             self.dismiss(None)
 
-    class NewProjectScreen(_Form):
-        """Create-project form: title + priority + why + what."""
+    class NewPlanScreen(_Form):
+        """Create-plan form: title + priority + why + what."""
+
+        def __init__(self, defaults: dict[str, str] | None = None) -> None:
+            super().__init__()
+            self._defaults = defaults or {}
 
         def compose(self) -> ComposeResult:
             with Vertical(id="dlg"):
-                yield Label("New project  (opens as P#...)")
+                yield Label("New plan  (opens as P#...)")
                 yield Input(placeholder="title *", id="f-title")
-                yield Input(placeholder="priority p0..p3", id="f-priority")
-                yield Input(placeholder="why does this exist?", id="f-why")
-                yield Input(placeholder="what gets built?", id="f-what")
+                yield Input(
+                    value=self._defaults.get("priority", ""),
+                    placeholder="priority p0..p3",
+                    id="f-priority",
+                )
+                yield Input(
+                    value=self._defaults.get("why", ""),
+                    placeholder="why does this exist?",
+                    id="f-why",
+                )
+                yield Input(
+                    value=self._defaults.get("what", ""),
+                    placeholder="what gets built?",
+                    id="f-what",
+                )
                 yield Button("Create", id="ok")
                 yield Button("Cancel", id="cancel")
 
@@ -63,19 +79,28 @@ if _TEXTUAL_OK:
             else:
                 self.dismiss(None)
 
-    class NewStoryScreen(_Form):
-        """Create-story form for one project."""
+    class NewMilestoneScreen(_Form):
+        """Create-milestone form for one plan."""
 
-        def __init__(self, project_id: int) -> None:
+        def __init__(self, plan_id: int, defaults: dict[str, str] | None = None) -> None:
             super().__init__()
-            self.project_id = project_id
+            self.plan_id = plan_id
+            self._defaults = defaults or {}
 
         def compose(self) -> ComposeResult:
             with Vertical(id="dlg"):
-                yield Label(f"New story in P#{self.project_id}")
+                yield Label(f"New milestone in P#{self.plan_id}")
                 yield Input(placeholder="title *", id="f-title")
-                yield Input(placeholder="priority p0..p3", id="f-priority")
-                yield Input(placeholder="details", id="f-desc")
+                yield Input(
+                    value=self._defaults.get("priority", ""),
+                    placeholder="priority p0..p3",
+                    id="f-priority",
+                )
+                yield Input(
+                    value=self._defaults.get("desc", ""),
+                    placeholder="details",
+                    id="f-desc",
+                )
                 yield Button("Create", id="ok")
                 yield Button("Cancel", id="cancel")
 
@@ -91,18 +116,27 @@ if _TEXTUAL_OK:
                 self.dismiss(None)
 
     class NewTaskScreen(_Form):
-        """Create-task form for one story."""
+        """Create-task form for one milestone."""
 
-        def __init__(self, story_id: int) -> None:
+        def __init__(self, milestone_id: int, defaults: dict[str, str] | None = None) -> None:
             super().__init__()
-            self.story_id = story_id
+            self.milestone_id = milestone_id
+            self._defaults = defaults or {}
 
         def compose(self) -> ComposeResult:
             with Vertical(id="dlg"):
-                yield Label(f"New task in S#{self.story_id}")
+                yield Label(f"New task in M#{self.milestone_id}")
                 yield Input(placeholder="title *", id="f-title")
-                yield Input(placeholder="priority p0..p3", id="f-priority")
-                yield Input(placeholder="details", id="f-desc")
+                yield Input(
+                    value=self._defaults.get("priority", ""),
+                    placeholder="priority p0..p3",
+                    id="f-priority",
+                )
+                yield Input(
+                    value=self._defaults.get("desc", ""),
+                    placeholder="details",
+                    id="f-desc",
+                )
                 yield Button("Create", id="ok")
                 yield Button("Cancel", id="cancel")
 
@@ -197,11 +231,11 @@ if _TEXTUAL_OK:
             if full is None:
                 self.dismiss(None)
                 return
-            obj = full[{"project": "project", "story": "story", "task": "task"}[self.dkind]]
+            obj = full[{"plan": "plan", "milestone": "milestone", "task": "task"}[self.dkind]]
             self.query_one("#d-title", Input).value = str(obj.get("title", obj.get("name", "")))
             self.query_one("#d-desc", TextArea).text = str(obj.get("description", ""))
             self.query_one("#d-pri", Input).value = str(obj.get("priority", ""))
-            is_proj = self.dkind == "project"
+            is_proj = self.dkind == "plan"
             self.query_one("#d-why-box", Vertical).display = is_proj
             if is_proj:
                 self.query_one("#d-why", Input).value = str(obj.get("goal", ""))
@@ -234,8 +268,8 @@ if _TEXTUAL_OK:
                 for cid in self._crit_ids:
                     box = self.query_one(f"#crit-{cid}", Checkbox)
                     store.set_criteria(cid, box.value, actor="tui")
-                if self.dkind == "project":
-                    store.update_project(
+                if self.dkind == "plan":
+                    store.update_plan(
                         self.doid,
                         name=title or None,
                         description=desc,
@@ -243,8 +277,8 @@ if _TEXTUAL_OK:
                         priority=pri,
                         actor="tui",
                     )
-                elif self.dkind == "story":
-                    store.update_story(
+                elif self.dkind == "milestone":
+                    store.update_milestone(
                         self.doid,
                         title=title or None,
                         description=desc,

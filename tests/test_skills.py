@@ -6,6 +6,7 @@ import os
 import sys
 import tempfile
 import unittest
+from argparse import Namespace
 from contextlib import redirect_stdout
 from pathlib import Path
 
@@ -24,23 +25,23 @@ def _answers(items):
 # Every `lpui` example taught by the templates, as parser argv (ids substituted).
 # If a template gains an example, add its argv here — this is the drift guard.
 TEMPLATE_EXAMPLE_ARGV = [
-    ["list", "--status", "todo", "--project", "1", "--priority", "p0"],
+    ["list", "--status", "todo", "--plan", "1", "--priority", "p0"],
     ["list", "--status", "all"],
     ["list", "--archived"],
-    ["show", "--kind", "project", "--id", "1"],
-    ["show", "--kind", "story", "--id", "1"],
+    ["show", "--kind", "plan", "--id", "1"],
+    ["show", "--kind", "milestone", "--id", "1"],
     ["show", "--kind", "task", "--id", "1"],
     ["feed", "--limit", "20"],
     ["export", "--format", "json"],
     ["list", "--json"],
     ["--json", "list"],
-    ["--actor", "opencode", "add-task", "--story", "1", "--title", "Do X"],
-    ["add-task", "--story", "1", "--title", "Do X", "--actor", "opencode"],
+    ["--actor", "opencode", "add-task", "--milestone", "1", "--title", "Do X"],
+    ["add-task", "--milestone", "1", "--title", "Do X", "--actor", "opencode"],
     [
         "--actor",
         "opencode",
         "add-task",
-        "--story",
+        "--milestone",
         "1",
         "--title",
         "Do X",
@@ -49,12 +50,12 @@ TEMPLATE_EXAMPLE_ARGV = [
         "--priority",
         "p1",
     ],
-    ["--actor", "opencode", "add-story", "--project", "1", "--title", "F"],
+    ["--actor", "opencode", "add-milestone", "--plan", "1", "--title", "F"],
     [
         "--actor",
         "opencode",
-        "add-story",
-        "--project",
+        "add-milestone",
+        "--plan",
         "1",
         "--title",
         "F",
@@ -66,7 +67,7 @@ TEMPLATE_EXAMPLE_ARGV = [
     [
         "--actor",
         "opencode",
-        "add-project",
+        "add-plan",
         "--title",
         "API v2",
         "--why",
@@ -78,7 +79,7 @@ TEMPLATE_EXAMPLE_ARGV = [
     ],
     ["--actor", "opencode", "status", "--kind", "task", "--id", "1", "--to", "doing"],
     ["--actor", "opencode", "status", "--kind", "task", "--id", "1", "--to", "done"],
-    ["--actor", "opencode", "status", "--kind", "project", "--id", "1", "--to", "doing"],
+    ["--actor", "opencode", "status", "--kind", "plan", "--id", "1", "--to", "doing"],
     ["--actor", "opencode", "update", "--kind", "task", "--id", "1", "--title", "N"],
     ["--actor", "opencode", "update", "--kind", "task", "--id", "1", "--priority", "none"],
     [
@@ -86,7 +87,7 @@ TEMPLATE_EXAMPLE_ARGV = [
         "opencode",
         "update",
         "--kind",
-        "project",
+        "plan",
         "--id",
         "1",
         "--why",
@@ -95,11 +96,11 @@ TEMPLATE_EXAMPLE_ARGV = [
         "none",
     ],
     ["--actor", "opencode", "delete", "--kind", "task", "--id", "1"],
-    ["--actor", "opencode", "delete", "--kind", "story", "--id", "1"],
-    ["--actor", "opencode", "delete", "--kind", "project", "--id", "1"],
-    ["--actor", "opencode", "add-criteria", "--kind", "project", "--id", "1", "--text", "T"],
+    ["--actor", "opencode", "delete", "--kind", "milestone", "--id", "1"],
+    ["--actor", "opencode", "delete", "--kind", "plan", "--id", "1"],
+    ["--actor", "opencode", "add-criteria", "--kind", "plan", "--id", "1", "--text", "T"],
     ["--actor", "opencode", "add-criteria", "--kind", "task", "--id", "1", "--text", "T"],
-    ["criteria", "--kind", "project", "--id", "1"],
+    ["criteria", "--kind", "plan", "--id", "1"],
     ["criteria", "--kind", "task", "--id", "1"],
     ["check", "--id", "1"],
     ["uncheck", "--id", "1"],
@@ -115,19 +116,19 @@ TEMPLATE_FRAGMENTS = [
     "--actor",
     "--json",
     "lpui list",
-    "lpui show --kind project|story|task --id N",
+    "lpui show --kind plan|milestone|task --id N",
     "lpui feed --limit 20",
     "lpui export --format json",
     "lpui info",
-    "add-project --title",
-    "add-story --project P",
-    "add-task --story S",
+    "add-plan --title",
+    "add-milestone --plan P",
+    "add-task --milestone S",
     "status --kind task --id T --to doing|done",
     "update --kind task --id T",
-    "update --kind project --id P",
+    "update --kind plan --id P",
     "delete --kind task --id T",
-    "add-criteria --kind project --id P",
-    "criteria --kind project --id P",
+    "add-criteria --kind plan --id P",
+    "criteria --kind plan --id P",
     "lpui check --id C / lpui uncheck --id C",
     "delete-criteria --id C",
     "import --file dump.json",
@@ -157,7 +158,7 @@ TEMPLATE_FRAGMENTS = [
     "Scouting is mandatory before creating anything",
     "No row is written from unscouted ground, in any case, no exceptions",
     "At creation, `--desc` carries the narrative plus the INVEST check",
-    "a story without them is not ready to cut",
+    "a milestone without them is not ready to cut",
     "names the technical approach",
     "a task missing either is not ready to cut",
     "Format for scanability",
@@ -196,7 +197,7 @@ class TestTemplateParity(unittest.TestCase):
     def test_human_in_loop_flagged(self):
         text = skills.render_skill()
         self.assertIn("interview", text)
-        self.assertIn("Never decide a project's why/what", text)
+        self.assertIn("Never decide a plan's why/what", text)
         self.assertIn("belong to the human", text)
 
     def test_snippet_teaches_nothing_the_skill_does_not(self):
@@ -244,6 +245,118 @@ class TestSkillContent(unittest.TestCase):
     def test_default_scope(self):
         self.assertEqual(skills.default_scope(Path("/repo")), "project")
         self.assertEqual(skills.default_scope(None), "global")
+
+
+class TestToolTargets(unittest.TestCase):
+    def test_every_tool_both_scopes(self):
+        repo, home = Path("/repo"), Path("/home")
+        self.assertEqual(
+            skills.tool_skill_targets("opencode", "both", repo, home),
+            [
+                repo / ".opencode/skills/lazyplan/SKILL.md",
+                home / ".config/opencode/skills/lazyplan/SKILL.md",
+            ],
+        )
+        self.assertEqual(
+            skills.tool_skill_targets("gemini", "project", repo, home),
+            [repo / ".gemini/skills/lazyplan/SKILL.md"],
+        )
+        self.assertEqual(
+            skills.tool_skill_targets("cursor", "global", repo, home),
+            [home / ".cursor/skills/lazyplan/SKILL.md"],
+        )
+
+    def test_codex_has_no_project_side(self):
+        repo, home = Path("/repo"), Path("/home")
+        self.assertEqual(skills.tool_skill_targets("codex", "project", repo, home), [])
+        self.assertEqual(
+            skills.tool_skill_targets("codex", "global", repo, home),
+            [home / ".codex/skills/lazyplan/SKILL.md"],
+        )
+
+    def test_unknown_tool_yields_nothing(self):
+        repo, home = Path("/repo"), Path("/home")
+        for scope in ("project", "global", "both", "none"):
+            self.assertEqual(skills.tool_skill_targets("copilot", scope, repo, home), [])
+
+    def test_no_repo_means_no_project_side(self):
+        home = Path("/home")
+        self.assertEqual(skills.tool_skill_targets("opencode", "project", None, home), [])
+        self.assertEqual(
+            skills.tool_skill_targets("opencode", "both", None, home),
+            [home / ".config/opencode/skills/lazyplan/SKILL.md"],
+        )
+
+
+class TestNativeInstall(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.repo = Path(self.tmp.name) / "proj"
+        self.repo.mkdir()
+        self.home = Path(self.tmp.name) / "home"
+        self.home.mkdir()
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_native_tools_written_alongside_standard(self):
+        res = skills.install("project", self.repo, self.home, tools=["opencode", "cursor"])
+        paths = [line.rsplit(" (", 1)[0] for line in res.installed]
+        self.assertIn(str(self.repo / ".agents/skills/lazyplan/SKILL.md"), paths)
+        self.assertIn(str(self.repo / ".opencode/skills/lazyplan/SKILL.md"), paths)
+        self.assertIn(str(self.repo / ".cursor/skills/lazyplan/SKILL.md"), paths)
+        for p in paths:
+            self.assertTrue(Path(p).is_file())
+
+    def test_unknown_tool_ignored(self):
+        res = skills.install("project", self.repo, self.home, tools=["copilot"])
+        self.assertEqual(len(res.installed), 1)
+
+    def test_claude_deduped_across_flag_and_tools(self):
+        res = skills.install("both", self.repo, self.home, with_claude_copy=True, tools=["claude"])
+        claude_lines = [line for line in res.installed if ".claude/skills/" in line]
+        self.assertEqual(len(claude_lines), 2)
+
+    def test_second_run_reports_up_to_date(self):
+        skills.install("project", self.repo, self.home, tools=["opencode"])
+        res = skills.install("project", self.repo, self.home, tools=["opencode"])
+        self.assertTrue(all("up-to-date" in line for line in res.installed))
+
+
+class TestSkillsDirOverride(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.repo = Path(self.tmp.name) / "proj"
+        self.repo.mkdir()
+        self.home = Path(self.tmp.name) / "home"
+        self.home.mkdir()
+        self.old_env = os.environ.pop("LAZYPLAN_SKILLS_DIR", None)
+
+    def tearDown(self):
+        if self.old_env is not None:
+            os.environ["LAZYPLAN_SKILLS_DIR"] = self.old_env
+        self.tmp.cleanup()
+
+    def test_flag_redirects_all_skill_writes(self):
+        custom = self.tmp.name + "/custom-skills"
+        res = skills.install("both", self.repo, self.home, tools=["opencode"], skills_dir=custom)
+        self.assertEqual(res.installed, [f"{custom}/lazyplan/SKILL.md (wrote)"])
+        self.assertTrue(Path(custom, "lazyplan/SKILL.md").is_file())
+        self.assertFalse((self.repo / ".agents").exists())
+
+    def test_flag_beats_env(self):
+        os.environ["LAZYPLAN_SKILLS_DIR"] = "/tmp/from-env"
+        args = Namespace(skills_dir="/tmp/from-flag")
+        self.assertEqual(skills._skills_dir_override(args), "/tmp/from-flag")
+
+    def test_env_used_when_no_flag(self):
+        os.environ["LAZYPLAN_SKILLS_DIR"] = "/tmp/from-env"
+        args = Namespace(skills_dir="")
+        self.assertEqual(skills._skills_dir_override(args), "/tmp/from-env")
+
+    def test_none_when_neither(self):
+        args = Namespace(skills_dir="")
+        self.assertIsNone(skills._skills_dir_override(args))
 
 
 class TestInstall(unittest.TestCase):
@@ -330,6 +443,40 @@ class TestWizard(unittest.TestCase):
         self.assertEqual(res.scope, "project")
         self.assertTrue((self.repo / ".agents" / "skills" / "lazyplan" / "SKILL.md").is_file())
 
+    def test_wizard_tailors_fresh_templates(self):
+        err = io.StringIO()
+        res = skills.run_wizard(
+            self.repo,
+            self.home,
+            read=_answers(["1", "Y", "n", "n", "n", "p2"]),
+            write=err,
+        )
+        self.assertEqual(res.scope, "project")
+        summary = res.to_dict()["templates"]
+        self.assertEqual(len(summary["added"]), 3)
+        proj = (self.repo / ".agents/lazyplan" / "templates" / "plan.md").read_text()
+        self.assertIn("required: [title]", proj)
+        self.assertNotIn("edit or delete me", proj)
+        task = (self.repo / ".agents/lazyplan" / "templates" / "task.md").read_text()
+        self.assertIn('priority: "p2"', task)
+
+    def test_wizard_rerun_keeps_edits_by_default(self):
+        tdir = self.repo / ".agents/lazyplan" / "templates"
+        tdir.mkdir(parents=True)
+        (tdir / "plan.md").write_text("edited")
+        err = io.StringIO()
+        res = skills.run_wizard(
+            self.repo,
+            self.home,
+            read=_answers(["1", "Y", "Y", "", "", "", "", "k"]),
+            write=err,
+        )
+        summary = res.to_dict()["templates"]
+        self.assertEqual((tdir / "plan.md").read_text(), "edited")
+        self.assertTrue((tdir / "milestone.md").is_file())
+        self.assertIn(str(tdir / "plan.md"), summary["kept"])
+        self.assertIn(str(tdir / "milestone.md"), summary["added"])
+
 
 class TestInitCli(unittest.TestCase):
     def setUp(self):
@@ -374,7 +521,7 @@ class TestInitCli(unittest.TestCase):
         os.chdir(self.repo)
         payload = self._init_json(["init", "--no-skills"])
         self.assertEqual(payload["skills"]["scope"], "none")
-        self.assertFalse(os.path.exists(os.path.join(self.repo, ".agents")))
+        self.assertFalse(os.path.exists(os.path.join(self.repo, ".agents", "skills")))
 
     def test_init_scope_project_writes_files(self):
         os.chdir(self.repo)
@@ -403,12 +550,12 @@ class TestInitCli(unittest.TestCase):
         gi = os.path.join(self.repo, ".gitignore")
         self.assertTrue(os.path.isfile(gi))
         text = open(gi).read()
-        self.assertIn(".lazyplan/", text)
+        self.assertIn(".agents/lazyplan/", text)
         self.assertIn(".agents/skills/lazyplan/", text)
-        self.assertIn(".lazyplan/", payload["gitignore"]["added"])
+        self.assertIn(".agents/lazyplan/", payload["gitignore"]["added"])
         # second run adds nothing twice
         self._init_json(["init", "--yes"])
-        self.assertEqual(open(gi).read().count(".lazyplan/"), 1)
+        self.assertEqual(open(gi).read().count(".agents/lazyplan/"), 1)
 
     def test_init_without_yes_leaves_gitignore_alone(self):
         os.chdir(self.repo)
@@ -421,7 +568,7 @@ class TestInitCli(unittest.TestCase):
         from lazyplan.cli import _maybe_offer_gitignore
 
         os.chdir(self.repo)
-        plan = os.path.join(self.repo, ".lazyplan")
+        plan = os.path.join(self.repo, ".agents/lazyplan")
         os.makedirs(plan)
         skilldir = os.path.join(self.repo, ".agents", "skills", "lazyplan")
         os.makedirs(skilldir)
@@ -434,8 +581,8 @@ class TestInitCli(unittest.TestCase):
             mock.patch("builtins.input", return_value="Y"),
         ):
             added = _maybe_offer_gitignore(args, Path(self.repo), Path(plan), skills_info)
-        self.assertEqual(added, [".lazyplan/", ".agents/skills/lazyplan/"])
-        self.assertIn(".lazyplan/", open(os.path.join(self.repo, ".gitignore")).read())
+        self.assertEqual(added, [".agents/lazyplan/", ".agents/skills/lazyplan/"])
+        self.assertIn(".agents/lazyplan/", open(os.path.join(self.repo, ".gitignore")).read())
 
     def test_offer_gitignore_decline_and_json(self):
         from unittest import mock
@@ -443,7 +590,7 @@ class TestInitCli(unittest.TestCase):
         from lazyplan.cli import _maybe_offer_gitignore
 
         os.chdir(self.repo)
-        plan = os.path.join(self.repo, ".lazyplan")
+        plan = os.path.join(self.repo, ".agents/lazyplan")
         os.makedirs(plan)
         import argparse
 
@@ -471,19 +618,19 @@ class TestAppendGitignore(unittest.TestCase):
         from lazyplan.skills import append_gitignore
 
         root = Path(self.repo)
-        self.assertTrue(append_gitignore(root, ".lazyplan/"))
-        self.assertFalse(append_gitignore(root, ".lazyplan/"))
-        self.assertFalse(append_gitignore(root, ".lazyplan"))
+        self.assertTrue(append_gitignore(root, ".agents/lazyplan/"))
+        self.assertFalse(append_gitignore(root, ".agents/lazyplan/"))
+        self.assertFalse(append_gitignore(root, ".agents/lazyplan"))
         self.assertFalse(append_gitignore(root, ""))
-        self.assertEqual(open(root / ".gitignore").read(), ".lazyplan/\n")
+        self.assertEqual(open(root / ".gitignore").read(), ".agents/lazyplan/\n")
 
     def test_missing_trailing_newline(self):
         from lazyplan.skills import append_gitignore
 
         root = Path(self.repo)
         (root / ".gitignore").write_text("*.db")
-        self.assertTrue(append_gitignore(root, ".lazyplan/"))
-        self.assertEqual(open(root / ".gitignore").read(), "*.db\n.lazyplan/\n")
+        self.assertTrue(append_gitignore(root, ".agents/lazyplan/"))
+        self.assertEqual(open(root / ".gitignore").read(), "*.db\n.agents/lazyplan/\n")
 
 
 class TestPromptConfirm(unittest.TestCase):

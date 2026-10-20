@@ -3,11 +3,12 @@
 Resolution order for the DB path:
   1. explicit `--db PATH`
   2. `$LAZYPLAN_DB`
-  3. enclosing git repo root + `.lazyplan/lazyplan.db` (created on demand;
-     a legacy `.plan/` dir keeps resolving until `lpui init` moves it)
+  3. enclosing git repo root + `.agents/lazyplan/lazyplan.db` (created on demand;
+     a legacy `.plan/` dir keeps resolving until `lpui init` moves it;
+     a stale `.lazyplan/` dir from older versions is ignored with a warning)
   4. global fallback `~/.local/share/lazyplan/lazyplan.db`
 
-`lpui init` marks a repo as planned: ensures `.lazyplan/` + config + schema.
+`lpui init` marks a repo as planned: ensures `.agents/lazyplan/` + config + schema.
 Stdlib only.
 """
 
@@ -20,8 +21,24 @@ import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 
-PLAN_DIR = ".lazyplan"
+PLAN_DIR = ".agents/lazyplan"
+PLAN_DIR_NAME = Path(PLAN_DIR).name
 LEGACY_PLAN_DIR = ".plan"
+STALE_PLAN_DIRS = (".lazyplan", ".agents/plan")
+
+
+def is_repo_plan_dir(plan_dir: str | Path) -> bool:
+    """True for the repo-owned `.agents/lazyplan/` dir (not legacy, not global)."""
+    p = Path(plan_dir).expanduser()
+    return p.name == PLAN_DIR_NAME and p.parent.name == ".agents"
+
+
+def stale_plan_dirs(root: str | Path) -> list[Path]:
+    """Pre-move plan dirs, if present: ignored by resolution, warned about at init."""
+    base = Path(root).expanduser()
+    return [base / d for d in STALE_PLAN_DIRS if (base / d).is_dir()]
+
+
 DB_NAME = "lazyplan.db"
 CONFIG_NAME = "config.json"
 
@@ -67,7 +84,7 @@ def legacy_plan_dir(root: str | Path) -> Path:
 
 
 def resolve_db_path(explicit: str | Path | None = None, cwd: str | Path = ".") -> Path:
-    """DB path: explicit --db, $LAZYPLAN_DB, repo .lazyplan (else legacy .plan), else global."""
+    """DB path: explicit --db, $LAZYPLAN_DB, repo .agents/lazyplan (else legacy .plan), else global."""
     if explicit:
         return Path(explicit).expanduser()
     env = os.environ.get("LAZYPLAN_DB", "").strip()
@@ -82,12 +99,13 @@ def resolve_db_path(explicit: str | Path | None = None, cwd: str | Path = ".") -
 
 
 def move_legacy_plan_dir(root: str | Path) -> Path | None:
-    """Move legacy `.plan/` to `.lazyplan/`; None when there is nothing safe to move."""
+    """Move legacy `.plan/` to `.agents/lazyplan/`; None when there is nothing safe to move."""
     root = Path(root).expanduser()
     legacy = root / LEGACY_PLAN_DIR
     primary = root / PLAN_DIR
     if not legacy.is_dir() or primary.exists():
         return None
+    primary.parent.mkdir(parents=True, exist_ok=True)
     shutil.move(str(legacy), str(primary))
     return primary
 
@@ -95,17 +113,19 @@ def move_legacy_plan_dir(root: str | Path) -> Path | None:
 def repo_label(db_path: str | Path) -> str:
     """Short human label for the statusbar: repo dir name or 'global'."""
     p = Path(db_path).expanduser()
-    if p.parent.name in (PLAN_DIR, LEGACY_PLAN_DIR):
+    if is_repo_plan_dir(p.parent):
+        return p.parent.parent.parent.name or "repo"
+    if p.parent.name == LEGACY_PLAN_DIR:
         return p.parent.parent.name or "repo"
     return "global"
 
 
 def ensure_plan_dir(db_path: str | Path) -> Path:
-    """Ensure the `.lazyplan/` dir exists; write config.json if repo-scoped. Returns dir."""
+    """Ensure the `.agents/lazyplan/` dir exists; write config.json if repo-scoped. Returns dir."""
     p = Path(db_path).expanduser()
     plan_dir = p.parent
     plan_dir.mkdir(parents=True, exist_ok=True)
-    if plan_dir.name == PLAN_DIR:
+    if is_repo_plan_dir(plan_dir):
         cfg = plan_dir / CONFIG_NAME
         if not cfg.exists():
             cfg.write_text(

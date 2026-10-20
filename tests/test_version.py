@@ -61,7 +61,7 @@ class TestVersionFlag(unittest.TestCase):
             finally:
                 os.chdir(cwd)
             self.assertEqual(code, 0)
-            self.assertFalse((Path(tmp) / ".lazyplan").exists())
+            self.assertFalse((Path(tmp) / ".agents/plan").exists())
 
 
 if __name__ == "__main__":

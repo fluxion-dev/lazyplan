@@ -7,21 +7,23 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Docs](https://img.shields.io/badge/docs-fluxion--dev.github.io%2Flazyplan-blue)](https://fluxion-dev.github.io/lazyplan/)
 
-Terminal project journal for you **and** your coding agent:
-projects > stories > tasks in a per-repo SQLite DB, a keyboard-first TUI
-for humans, and a `--json` CLI agents can drive. A project is a title plus
-a priority, a why, a what, and acceptance criteria — nothing else. Full
-guide with install tabs and examples:
+You plan work here, and your coding agent plans here too.
+
+Everything lives in one small database next to your code. You get a keyboard-driven screen for yourself. Your agent gets a `--json` command line that reads the same data. Each plan has a title, a priority, a reason why it exists, a description of what to build, and a checklist that says when it is done. That is all there is to it.
+
+Want the full guide with pictures? Start here:
 **[fluxion-dev.github.io/lazyplan](https://fluxion-dev.github.io/lazyplan/)**.
 
 ## Install
+
+Pick one of the four ways below. The first one suits most people.
 
 ```bash
 pipx install lazyplan-tui   # recommended: provides `lpui` (+ `lazyplan` alias)
 lpui --help
 ```
 
-System packages (vendored deps, needs only `python3 >= 3.11`):
+Need a system package instead? These bundles include everything they need. You only need `python3 >= 3.11` on your machine:
 
 ```bash
 # Fedora / RHEL / openSUSE — grab the matching asset from Releases
@@ -30,7 +32,7 @@ sudo dnf install ./lazyplan-0.13.0-1.x86_64.rpm   # or -1.aarch64.rpm on ARM
 sudo apt install ./lazyplan_0.13.0-1_amd64.deb     # or -1_arm64.deb on ARM
 ```
 
-One-liner (picks rpm/deb on supported distros, else pipx, else venv):
+Want the installer to choose for you? This one-liner picks the right method for your machine:
 
 ```bash
 curl -fsSL https://github.com/fluxion-dev/lazyplan/releases/latest/download/install.sh | sh
@@ -39,143 +41,117 @@ curl -fsSL https://github.com/fluxion-dev/lazyplan/releases/latest/download/inst
 # uninstall:     sh install.sh --uninstall
 ```
 
-From source (editable install with dev extras):
+Working on lazyplan itself? Install it straight from source:
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
 python -m pip install -e ".[dev]"
 ```
 
-`pipx upgrade lazyplan-tui` for later releases. No pipx? The
-`--method venv` path is the same isolated install without it.
+When a new version comes out, run `pipx upgrade lazyplan-tui`. If you do not have pipx, the `--method venv` path gives you the same isolated install without it.
 
 ## Quick start
 
+Run these three commands. You will have a live plan you can open:
+
 ```bash
-cd ~/my-project
-lpui init --yes             # creates .lazyplan/lazyplan.db + .lazyplan/config.json
-lpui add-project --title "my-project" --why "reason" --what "scope" --priority p1
+cd ~/my-plan
+lpui init --yes             # creates .agents/lazyplan/lazyplan.db + .agents/lazyplan/config.json
+lpui add-plan --title "my-plan" --why "reason" --what "scope" --priority p1
 lpui                        # TUI; every subdir of the repo shares this DB (`lpui ui` also works)
 ```
 
-`lpui init` with no flags offers an agent-skills wizard instead
-(`--no-skills`, `--skills-scope project|global|both|none`, `--json`
-stays machine-readable and never prompts). On a TTY it also offers to
-move a legacy `.plan/` dir and to gitignore the dirs it created.
+The first time you run `lpui init` with no flags, it offers to install helper files for your coding agent. It detects your agents and writes the skill into each one's own skills folder, plus the shared `.agents/skills/` copy every tool reads. You can skip that step with `--no-skills`, pick where they go with `--skills-scope project|global|both|none`, force one folder with `--skills-dir PATH` (or `$LAZYPLAN_SKILLS_DIR`), or pass `--json` for machine-readable output that never asks you questions. On a terminal it can also move an old `.plan/` folder for you and suggest entries for your `.gitignore`.
 
-Run from any subdirectory — the repo root is found via `git rev-parse`
-(`.git` fallback); outside a repo the global DB is used.
+You can run `lpui` from any folder inside your repo. It finds the repo for you. Outside a repo, it uses a global database on your machine instead.
 
-DB resolution (first match wins): `--db PATH` → `$LAZYPLAN_DB` →
-repo `.lazyplan/lazyplan.db` → global `~/.local/share/lazyplan/lazyplan.db`.
-Commit `.lazyplan/config.json` to share the plan with the team; the `*.db`
-itself stays local (gitignored) unless you force-add it.
+Where does it look for the database? The first match wins: `--db PATH`, then `$LAZYPLAN_DB`, then the repo's `.agents/lazyplan/lazyplan.db`, then the global `~/.local/share/lazyplan/lazyplan.db`. Commit `.agents/lazyplan/config.json` to share the plan with your team. The `*.db` file itself stays local (it is gitignored) unless you force-add it.
 
-Shell completions: `eval "$(lpui completion --shell bash)"` (or `--shell zsh`).
-System packages ship these plus `man lpui` out of the box.
+Need tab completion? Run `eval "$(lpui completion --shell bash)"` (or `--shell zsh`). System packages include completions plus the `man lpui` page out of the box.
 
-Note: versions ≤0.7.0 shipped this as `lp`, renamed to avoid clashing with
-the classic Unix print command.
+Note: versions up to 0.7.0 shipped this tool as `lp`, renamed because that name clashed with the classic Unix print command.
 
 ## How it works
 
-- You plan in `lpui` (`lpui ui` is the same): a project tree with a
-  nano-style bottom bar. New project? The agent interviews you first —
-  why, what, acceptance criteria, priority — then records the definition.
-- Once the definition is agreed, stories cut the project into slices and
-  prioritized tasks cut each story into units of work. Work p0 first.
-- Rows with linked git commits show short-SHA chips; `enter` on a row lists
-  its commits in the detail dialog read-only.
-- Any coding agent reads (`list`, `show`, `feed --json`) and writes
-  (`--actor NAME add-task …`) against the same SQLite file; the TUI
-  re-reads every second and toasts new arrivals. Agents never touch the
-  TUI process — scope and taste stay a human conversation.
+You plan in `lpui` (`lpui ui` opens the same screen). Here is what you will see:
 
-| key | action |
+- You start a plan tree with a bar of shortcuts at the bottom, like nano. Starting out? Your agent asks you first what you want to build, why it matters, and how you will know it is done. Then it writes that down as the plan.
+- Once you agree on the plan, your agent breaks it into milestones, then breaks each milestone into small prioritized tasks. It always works on `p0` first.
+- Rows that came from a git commit show a short commit chip. Press `enter` on a row to see its commits in a read-only panel.
+- You and your agent share one SQLite file. The screen refreshes every second and tells you when something new arrives. Your agent never touches the screen itself. Big decisions about wording and scope stay a conversation with you.
+
+| key | what it does |
 |---|---|
-| `j`/`k`, arrows, click | navigate + select · `enter`/double-click edits detail in place · `left`/`right` collapse/expand |
-| `n` | contextual new (task→story→project) |
-| `P`/`S`/`T` | new project / story / task forms |
-| `e` / `d` | edit · delete (with confirm) |
-| `space` / `c` | cycle status · tick first open criterion |
-| `z` / `Z` | fold one / fold all |
-| `f` / `o` | status / project filter |
+| `j`/`k`, arrows, click | move around and select · `enter`/double-click edits in place · `left`/`right` fold and unfold |
+| `n` | new item (task→milestone→plan, depending on where you are) |
+| `P`/`M`/`T` | new plan / milestone / task |
+| `e` / `d` | edit · delete (it asks you to confirm) |
+| `space` / `c` | move to next status · tick off the first open checklist item |
+| `z` / `Z` | fold one group / fold everything |
+| `f` / `o` | filter by status / filter by plan |
 
-Agents use the `lpui` CLI; the TUI is keyboard-only with no command entry.
-Full key list: `lpui help` (same as `?`).
+Agents use the `lpui` command line. The screen is keyboard-only with no place to type commands. For the full key list, run `lpui help` (or press `?` inside the app).
 
 ## CLI reference
 
-Full help is installed with the package:
+The package installs full help text. Start here:
 
 ```bash
 lpui --help              # globals + examples + env/files/exit codes
 lpui --version           # print the installed version and exit
 lpui <command> --help    # per-command flags, e.g. lpui add-task --help
 man lpui                 # full manual (also `man lazyplan`); installed to share/man/man1
-lpui help                # TUI keybindings (same as `?` in the TUI)
+lpui help                # screen key bindings (same as `?` in the app)
 ```
 
-Flags work before or after the subcommand (`lpui list --json` == `lpui --json list`).
-`--actor NAME` on writes surfaces who did what in `feed`.
+Flags work before or after the command (`lpui list --json` means the same as `lpui --json list`). On commands that change data, `--actor NAME` records who did it so you can see it in `feed`.
 
 ```bash
 lpui seed
-lpui list [--status todo|doing|done|all] [--archived] [--project ID] [--priority p0]  # default: all
-lpui show --kind project|story|task --id N   # full context: why/what + criteria + commits + children
-lpui add-project --title "API v2" --why ".." --what ".." --priority p1
-lpui add-criteria --kind project --id 1 --text "works offline"
+lpui list [--status todo|doing|done|all] [--archived] [--plan ID] [--priority p0] [--all] [--limit N]  # default: 5 most recent
+lpui show --kind plan|milestone|task --id N   # full context: why/what + criteria + commits + children
+lpui add-plan --title "API v2" --why ".." --what ".." --priority p1
+lpui add-criteria --kind plan --id 1 --text "works offline"
 lpui check --id 1 / lpui uncheck --id 1        # tick acceptance items (advisory)
-lpui add-story --project 1 --title "Auth refresh" [--desc .. --priority p0]
-lpui add-task --story 1 --title "Rotate tokens" [--desc ctx --priority p1]
+lpui add-milestone --plan 1 --title "Auth refresh" [--desc .. --priority p0]
+lpui add-task --milestone 1 --title "Rotate tokens" [--desc ctx --priority p1]
 lpui link --kind task --id 1 [--sha HASH]      # attach HEAD (git repos only; disabled otherwise)
 lpui commits --kind task --id 1                # list linked commits (empty outside git)
 lpui unlink --kind task --id 1 --sha HASH      # detach a commit
 lpui export [--format json|markdown] | lpui import --file dump.json
 lpui update --kind task --id 1 [--title --desc --priority p0|none]
-lpui update --kind project --id 1 [--title --what --why --priority p0|none]
+lpui update --kind plan --id 1 [--title --what --why --priority p0|none]
 lpui status --kind task --id 1 --to doing    # closing with open criteria warns, never blocks
 lpui delete --kind task --id 1
 lpui feed [--limit 20]            # recent human/agent activity
 lpui watch [--limit 20]           # tail (agents: lpui feed --json --follow &)
-lpui --actor helper add-task --story 3 --title "Draft proposal"
+lpui --actor helper add-task --milestone 3 --title "Draft proposal"
 ```
 
-Exit codes: `0` ok · `1` row not found · `2` usage/validation error ·
-`3` TUI unavailable (Textual missing — reinstall with dependencies:
-`pip install "lazyplan-tui"` / `pipx reinstall lazyplan-tui`).
+Exit codes: `0` means it worked · `1` means the row was not found · `2` means the flags or input were wrong · `3` means the screen cannot start because Textual is missing. If that happens, reinstall with dependencies: `pip install "lazyplan-tui"` or `pipx reinstall lazyplan-tui`.
 
 ## Agents
 
-The CLI is the agent API: stdlib-only (no Textual import), `--json`
-everywhere, exit codes machines can branch on. Identity comes from
-`--actor NAME` (defaults to `$USER`); every write lands in `feed` with
-that actor attached.
+Your agent talks to the same database through the command line. It only needs the standard library (it never imports the screen code). Every command accepts `--json`. Exit codes tell scripts what happened. Each write carries an `--actor NAME` label (it defaults to `$USER`) so you can see in `feed` who did what.
 
 ```bash
 lpui --actor helper list --json                    # read the tree
-lpui --actor helper show --kind project --id 1    # full context: why/what + criteria
-lpui --actor helper add-task --story 1 --title "Draft proposal" --priority p1
-lpui feed --json --follow &                        # tail activity (polls every second)
+lpui --actor helper show --kind plan --id 1    # full context: why/what + criteria
+lpui --actor helper add-task --milestone 1 --title "Draft proposal" --priority p1
+lpui feed --json --follow &                         # tail activity (polls every second)
 ```
 
-Rules: interview the human before creating a project (why, what,
-acceptance criteria, priority — never invent the definition); cut stories
-then prioritized tasks once the definition is agreed; never invent ids
-(`list` first); prefer `update`/`status` over delete + recreate; work p0
-first. Repo skill with the full contract:
-`.agents/skills/lazyplan/SKILL.md`; design rules contributors must follow:
-[DESIGN_SYSTEM.md](DESIGN_SYSTEM.md).
+How your agent is expected to work: it asks you about the plan first (why it exists, what it covers, how you will know it is done, how urgent it is — it never makes that up). Then it breaks the work into milestones and prioritized tasks. It looks up ids with `list` instead of guessing them. It prefers `update` and `status` over deleting and re-creating. It works on `p0` first. The full contract lives in the repo skill file `.agents/skills/lazyplan/SKILL.md`. If you contribute code, follow the design rules in [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md).
 
 ## Data, backup, replicas
 
-- One repo, one DB: `.lazyplan/lazyplan.db` next to the code it plans
-  (`.lazyplan/config.json` marks the scope; commit the config, not the DB).
-- Back up or move plans: `lpui export --format json > backup.json` /
-  `lpui import --file backup.json` (ids remap on import).
-- Demo data to explore the tree: `lpui seed` (never in a real repo plan).
+- One repo keeps one database: `.agents/lazyplan/lazyplan.db` sits next to the code it plans. The `.agents/lazyplan/config.json` file marks which folder it belongs to. Commit the config file so your team shares the plan. The database itself stays on your machine.
+- Need a backup, or moving to a new machine? Run `lpui export --format json > backup.json` to save, and `lpui import --file backup.json` to load it back (ids change on import, and that is fine).
+- Want to click around first? Run `lpui seed` for demo data. Never run it in a repo with a real plan.
 
 ## Develop
+
+You need `python3` to hack on lazyplan. The normal flow looks like this:
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
@@ -186,11 +162,7 @@ python -m pip install -e ".[dev]"   # ruff + mypy
 ./tools/tmux-lazyplan.sh           # plan | agent | git panes — edit the script to swap in your tools
 ```
 
-Gates: `ruff check` + `ruff format --check`, `mypy` (strict incl. untyped
-defs), man page in sync (`tools/gen-man.py`), full unittest suite on both
-interpreters. Single source of truth for the version is
-`version = "x.y.z"` in `pyproject.toml` (`tests/test_version.py` enforces
-the README header mirror; `tools/bump.sh` updates both plus site asset URLs).
+Before you push, `./tools/check.sh` must pass: `ruff check` plus `ruff format --check`, `mypy` in strict mode (every function needs types, no `type: ignore` without a TODO link), the man page matching the code (`tools/gen-man.py`), and the full test suite on both interpreters. The version lives in one place only: `version = "x.y.z"` in `pyproject.toml` (`tests/test_version.py` checks that the README header matches; `tools/bump.sh` updates both, plus the download links on the site).
 
 ## Project
 
@@ -198,6 +170,6 @@ the README header mirror; `tools/bump.sh` updates both plus site asset URLs).
 - Repository: <https://github.com/fluxion-dev/lazyplan>
 - Releases (binaries, debs, rpms): <https://github.com/fluxion-dev/lazyplan/releases>
 - Issues: <https://github.com/fluxion-dev/lazyplan/issues>
-- Changelog: <https://github.com/fluxion-dev/lazyplan/releases> (auto-generated per tag)
+- Changelog: <https://github.com/fluxion-dev/lazyplan/releases> (written automatically for each release)
 
-This repo plans itself here: `lpui list`. License: MIT — see [LICENSE](LICENSE).
+This repo plans itself right here: run `lpui list`. License: MIT — see [LICENSE](LICENSE).

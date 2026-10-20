@@ -1,14 +1,17 @@
 """Domain entities. Pure dataclasses.
 
-Minimal journal model: projects carry a title, a priority, a why, a what,
-and acceptance criteria. Stories break a project down; tasks break a story
-down. Every level has title + details + priority + status. Nothing else.
+Minimal journal model: plans carry a title, a priority, a why, a what,
+and acceptance criteria. Milestones break a plan down; tasks break a
+milestone down. Every level has title + details + priority + status.
+Nothing else.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+
+from .kinds import KINDS, PARENT_KIND_ERROR
 
 
 class Status(StrEnum):
@@ -26,7 +29,7 @@ PRIORITY_RANK = {"p0": 0, "p1": 1, "p2": 2, "p3": 3, "": 99}
 DEFAULT_TASK_PRIORITY = "p1"
 
 #: Where acceptance criteria may live.
-CRITERION_PARENTS = ("project", "story", "task")
+CRITERION_PARENTS = KINDS
 
 
 def check_priority(priority: str) -> str:
@@ -37,7 +40,7 @@ def check_priority(priority: str) -> str:
 
 
 @dataclass
-class Project:
+class Plan:
     """A unit of planned work: title + priority + why + what + acceptance criteria."""
 
     id: int
@@ -49,16 +52,16 @@ class Project:
 
     def __post_init__(self) -> None:
         if not self.name.strip():
-            raise ValueError("project name must not be empty")
+            raise ValueError("plan name must not be empty")
         check_priority(self.priority)
 
 
 @dataclass
 class Task:
-    """An atomic unit of work under a story."""
+    """An atomic unit of work under a milestone."""
 
     id: int
-    story_id: int
+    milestone_id: int
     title: str
     status: Status = Status.TODO
     description: str = ""  # details / context for whoever picks this up
@@ -71,11 +74,11 @@ class Task:
 
 
 @dataclass
-class UserStory:
-    """A slice of a project, broken into tasks."""
+class Milestone:
+    """A slice of a plan, broken into tasks."""
 
     id: int
-    project_id: int
+    plan_id: int
     title: str
     description: str = ""
     status: Status = Status.TODO
@@ -83,33 +86,33 @@ class UserStory:
 
     def __post_init__(self) -> None:
         if not self.title.strip():
-            raise ValueError("story title must not be empty")
+            raise ValueError("milestone title must not be empty")
         check_priority(self.priority)
 
 
 @dataclass
 class Criterion:
-    """One acceptance-checklist item on a project, story, or task. Advisory, never blocking."""
+    """One acceptance-checklist item on a plan, milestone, or task. Advisory, never blocking."""
 
     id: int
-    parent_kind: str  # "project" | "story" | "task"
+    parent_kind: str  # "plan" | "milestone" | "task"
     parent_id: int
     text: str
     done: bool = False
 
     def __post_init__(self) -> None:
         if self.parent_kind not in CRITERION_PARENTS:
-            raise ValueError("parent_kind must be project|story|task")
+            raise ValueError(PARENT_KIND_ERROR)
         if not self.text.strip():
             raise ValueError("criterion text must not be empty")
 
 
 @dataclass
 class VcsLink:
-    """One commit linked to a project, story, or task."""
+    """One commit linked to a plan, milestone, or task."""
 
     id: int
-    parent_kind: str  # "project" | "story" | "task"
+    parent_kind: str  # "plan" | "milestone" | "task"
     parent_id: int
     sha: str  # full 40-char commit hash
     subject: str = ""
@@ -119,7 +122,7 @@ class VcsLink:
 
     def __post_init__(self) -> None:
         if self.parent_kind not in CRITERION_PARENTS:
-            raise ValueError("parent_kind must be project|story|task")
+            raise ValueError(PARENT_KIND_ERROR)
         sha = self.sha.strip().lower()
         if len(sha) != 40 or any(c not in "0123456789abcdef" for c in sha):
             raise ValueError("sha must be a 40-char hex commit hash")

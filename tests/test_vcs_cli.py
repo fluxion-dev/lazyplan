@@ -57,8 +57,8 @@ class TestVcsCLI(unittest.TestCase):
         os.makedirs(self.plain)
         self.db = os.path.join(self.tmp.name, "t.db")
         store = Store(self.db)
-        p = store.add_project("P")
-        s = store.add_story(p.id, "S")
+        p = store.add_plan("P")
+        s = store.add_milestone(p.id, "S")
         store.add_task(s.id, "T")
         self.old_cwd = os.getcwd()
 

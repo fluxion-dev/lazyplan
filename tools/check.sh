@@ -10,6 +10,10 @@ echo "== ruff format --check =="
 "$VENV_BIN"/ruff format --check src tests
 echo "== mypy (strict incl. untyped defs) =="
 "$VENV_BIN"/mypy src
+echo "== vulture (no dead code outside the allowlist) =="
+"$VENV_BIN"/python -m vulture src/ tools/vulture_allowlist.py
+echo "== xenon (no block worse than C) =="
+"$VENV_BIN"/python -m xenon --max-absolute C src
 echo "== man page in sync =="
 "$VENV_BIN"/python tools/gen-man.py --check
 echo "== unittest (system python, stdlib only) =="

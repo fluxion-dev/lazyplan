@@ -1,6 +1,6 @@
-.TH LPUI 1 "2026-10-18" "lazyplan-tui 0.13.0" "User Commands"
+.TH LPUI 1 "2026-10-20" "lazyplan-tui 0.13.0" "User Commands"
 .SH NAME
-lpui \- local project journal for humans and coding agents
+lpui \- local plan journal for you and your coding agent
 .SH SYNOPSIS
 .B lpui
 [\fIGLOBAL OPTIONS\fR] [\fICOMMAND\fR [\fICOMMAND OPTIONS\fR]]
@@ -8,31 +8,31 @@ lpui \- local project journal for humans and coding agents
 .B lazyplan
 is the same program under its long name.
 .br
-With no COMMAND, \fBlpui\fR launches the Textual TUI (same as \fBlpui ui\fR).
+With no COMMAND, \fBlpui\fR opens the keyboard\-driven screen (same as \fBlpui ui\fR).
 .SH DESCRIPTION
-lazyplan tracks projects > stories > tasks in a per\-repo SQLite database. A project is a title plus a priority, a why, a what, and acceptance criteria; stories cut it into slices and tasks cut stories into prioritized units of work. Humans drive the keyboard\-first Textual TUI; coding agents drive the same database through this CLI with \fB\-\-actor NAME\fR and \fB\-\-json\fR. Every mutation appends a feed event; the running TUI polls and toasts arrivals.
+lazyplan keeps your plans, milestones, and tasks in a small database next to your code. A plan is a title plus a priority, a reason why it exists, a description of what to build, and a checklist that says when it is done; you break the plan into milestones and each milestone into prioritized tasks. You drive the keyboard\-driven screen; your coding agent drives the same database through this command line with \fB\-\-actor NAME\fR and \fB\-\-json\fR. Every change adds an entry to the feed; the running screen refreshes and tells you what arrived.
 .SH GLOBAL OPTIONS
 .TP
 .B \-\-db PATH
-sqlite path (default: $LAZYPLAN_DB, else \./\.lazyplan/ in repo, else global)
+which database file to use (default: $LAZYPLAN_DB, else \./\.agents/lazyplan/ in a repo, else the global one)
 .TP
 .B \-\-json
-agent\-friendly JSON output
+print output as JSON so scripts and agents can read it
 .TP
 .B \-\-version
 print the installed version and exit
 .TP
 .B \-\-actor NAME
-who is making this change (surfaced in feed; default: $USER or 'human')
+who is making this change (you see it in feed; default: $USER or 'human')
 .SH COMMANDS
-Flags work before or after the verb: \fBlpui list \-\-json\fR == \fBlpui \-\-json list\fR. Run \fBlpui COMMAND \-\-help\fR for details.
+Flags work before or after the command: \fBlpui list \-\-json\fR means the same as \fBlpui \-\-json list\fR. Run \fBlpui COMMAND \-\-help\fR for details.
 .TP
 .B lpui init
-init \.lazyplan/ in this repo (or global db)
+set up \.agents/lazyplan/ in this repo (or use the global database)
 .RS
 .TP
 .B \-\-json
-agent\-friendly JSON output
+print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
@@ -42,30 +42,35 @@ print the installed version and exit
 .RS
 .TP
 .B \-\-actor NAME
-who acted (shown in feed)
+who made this change (you see it in feed)
 .RE
 .RS
 .TP
 .B \-\-no\-skills
-skip the agent\-skills wizard
+skip the setup wizard that installs helper files for your coding agent
 .RE
 .RS
 .TP
 .B \-\-yes
-install default skills without prompting
+install the default agent helper files without asking first
 .RE
 .RS
 .TP
 .B \-\-skills\-scope SCOPE
-install agent skills to a scope without prompting (none = skip) Choices: project, global, both, none\.
+install agent helper files to one place without asking first (none = skip) Choices: project, global, both, none\.
+.RE
+.RS
+.TP
+.B \-\-skills\-dir PATH
+put the skill in this folder instead of the detected ones
 .RE
 .TP
 .B lpui seed
-insert demo project/stories/tasks
+add demo data: one plan with milestones and tasks
 .RS
 .TP
 .B \-\-json
-agent\-friendly JSON output
+print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
@@ -75,15 +80,15 @@ print the installed version and exit
 .RS
 .TP
 .B \-\-actor NAME
-who acted (shown in feed)
+who made this change (you see it in feed)
 .RE
 .TP
 .B lpui info
-show resolved db path, repo root, counts
+show which database file is in use, the repo root, and how many plans, milestones, and tasks you have
 .RS
 .TP
 .B \-\-json
-agent\-friendly JSON output
+print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
@@ -93,15 +98,15 @@ print the installed version and exit
 .RS
 .TP
 .B \-\-actor NAME
-who acted (shown in feed)
+who made this change (you see it in feed)
 .RE
 .TP
 .B lpui list
-ascii tree of projects > stories > tasks
+show plans, milestones, and tasks as a text tree
 .RS
 .TP
 .B \-\-json
-agent\-friendly JSON output
+print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
@@ -111,35 +116,45 @@ print the installed version and exit
 .RS
 .TP
 .B \-\-actor NAME
-who acted (shown in feed)
+who made this change (you see it in feed)
 .RE
 .RS
 .TP
 .B \-\-status {todo|doing|done|all}
-filter by status (default: all) Choices: todo, doing, done, all\.
+show only rows with this status (default: all) Choices: todo, doing, done, all\.
 .RE
 .RS
 .TP
 .B \-\-archived
-show only archived projects (done over a day ago)
+show only finished plans older than a day
 .RE
 .RS
 .TP
-.B \-\-project ID
-only this project
+.B \-\-plan ID
+show only this plan
+.RE
+.RS
+.TP
+.B \-\-all
+show every plan instead of just recent ones
+.RE
+.RS
+.TP
+.B \-\-limit N
+show no more than N plans
 .RE
 .RS
 .TP
 .B \-\-priority {p0|p1|p2|p3}
-only this priority (p0 highest) Choices: p0, p1, p2, p3\.
+show only this priority (p0 matters most) Choices: p0, p1, p2, p3\.
 .RE
 .TP
-.B lpui add\-project
-agent/human: add a project
+.B lpui add\-plan
+add a plan (works for you and your agent)
 .RS
 .TP
 .B \-\-json
-agent\-friendly JSON output
+print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
@@ -149,50 +164,50 @@ print the installed version and exit
 .RS
 .TP
 .B \-\-actor NAME
-who acted (shown in feed)
+who made this change (you see it in feed)
 .RE
 .RS
 .TP
 .B \-\-title TEXT
-project title
+title of the plan
 .RE
 .RS
 .TP
 .B \-\-name NAME
-alias of \-\-title
+same as \-\-title
 .RE
 .RS
 .TP
 .B \-\-what TEXT
-what gets built
+what you will build
 .RE
 .RS
 .TP
 .B \-\-desc TEXT
-alias of \-\-what
+same as \-\-what
 .RE
 .RS
 .TP
 .B \-\-why TEXT
-why this exists
+why this plan exists
 .RE
 .RS
 .TP
 .B \-\-goal TEXT
-alias of \-\-why
+same as \-\-why
 .RE
 .RS
 .TP
 .B \-\-priority {p0|p1|p2|p3}
-priority (p0 highest) Choices: p0, p1, p2, p3\.
+how urgent this is (p0 matters most) Choices: p0, p1, p2, p3\.
 .RE
 .TP
-.B lpui add\-story
-agent/human: add a story
+.B lpui add\-milestone
+add a milestone to a plan (works for you and your agent)
 .RS
 .TP
 .B \-\-json
-agent\-friendly JSON output
+print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
@@ -202,35 +217,35 @@ print the installed version and exit
 .RS
 .TP
 .B \-\-actor NAME
-who acted (shown in feed)
+who made this change (you see it in feed)
 .RE
 .RS
 .TP
-.B \-\-project ID
-parent project id Required\.
+.B \-\-plan ID
+id of the plan that owns this milestone Required\.
 .RE
 .RS
 .TP
 .B \-\-title TEXT
-story title (required) Required\.
+title of the milestone (required) Required\.
 .RE
 .RS
 .TP
 .B \-\-desc TEXT
-details
+extra details about the milestone
 .RE
 .RS
 .TP
 .B \-\-priority {p0|p1|p2|p3}
-priority (p0 highest) Choices: p0, p1, p2, p3\.
+how urgent this is (p0 matters most) Choices: p0, p1, p2, p3\.
 .RE
 .TP
 .B lpui add\-task
-agent/human: add a task
+add a task to a milestone (works for you and your agent)
 .RS
 .TP
 .B \-\-json
-agent\-friendly JSON output
+print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
@@ -240,35 +255,35 @@ print the installed version and exit
 .RS
 .TP
 .B \-\-actor NAME
-who acted (shown in feed)
+who made this change (you see it in feed)
 .RE
 .RS
 .TP
-.B \-\-story ID
-parent story id Required\.
+.B \-\-milestone ID
+id of the milestone that owns this task Required\.
 .RE
 .RS
 .TP
 .B \-\-title TEXT
-task title (required) Required\.
+title of the task (required) Required\.
 .RE
 .RS
 .TP
 .B \-\-desc TEXT
-details / context
+what the task involves and what it needs
 .RE
 .RS
 .TP
 .B \-\-priority {p0|p1|p2|p3}
-priority (default: p1; p0 highest) Choices: p0, p1, p2, p3\.
+how urgent this is (default: your template, else p1; p0 matters most) Choices: p0, p1, p2, p3\.
 .RE
 .TP
 .B lpui update
-edit title/details/why/priority
+change the title, details, reason, or priority of a row
 .RS
 .TP
 .B \-\-json
-agent\-friendly JSON output
+print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
@@ -278,60 +293,60 @@ print the installed version and exit
 .RS
 .TP
 .B \-\-actor NAME
-who acted (shown in feed)
+who made this change (you see it in feed)
 .RE
 .RS
 .TP
-.B \-\-kind {project|story|task}
-what to edit Choices: project, story, task\. Required\.
+.B \-\-kind {plan|milestone|task}
+which kind of row to change Choices: plan, milestone, task\. Required\.
 .RE
 .RS
 .TP
 .B \-\-id ID
-row id Required\.
+id of the row Required\.
 .RE
 .RS
 .TP
 .B \-\-title TEXT
-new title
+the new title
 .RE
 .RS
 .TP
 .B \-\-name NAME
-alias of \-\-title for projects
+same as \-\-title, for plans
 .RE
 .RS
 .TP
 .B \-\-desc TEXT
-new details
+the new details
 .RE
 .RS
 .TP
 .B \-\-what TEXT
-alias of \-\-desc for projects
+same as \-\-desc, for plans
 .RE
 .RS
 .TP
 .B \-\-why TEXT
-new why (projects)
+the new reason why (plans)
 .RE
 .RS
 .TP
 .B \-\-goal TEXT
-alias of \-\-why
+same as \-\-why
 .RE
 .RS
 .TP
 .B \-\-priority {p0|p1|p2|p3|none}
-new priority (`none` clears) Choices: p0, p1, p2, p3, none\.
+the new priority (`none` clears it) Choices: p0, p1, p2, p3, none\.
 .RE
 .TP
 .B lpui show
-full context record: fields + criteria + children
+show everything about one row: its fields, checklist, and children
 .RS
 .TP
 .B \-\-json
-agent\-friendly JSON output
+print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
@@ -341,25 +356,25 @@ print the installed version and exit
 .RS
 .TP
 .B \-\-actor NAME
-who acted (shown in feed)
+who made this change (you see it in feed)
 .RE
 .RS
 .TP
-.B \-\-kind {project|story|task}
-what to show Choices: project, story, task\. Required\.
+.B \-\-kind {plan|milestone|task}
+which kind of row to show Choices: plan, milestone, task\. Required\.
 .RE
 .RS
 .TP
 .B \-\-id ID
-row id Required\.
+id of the row Required\.
 .RE
 .TP
 .B lpui add\-criteria
-add an acceptance\-checklist item
+add one checklist item to a row
 .RS
 .TP
 .B \-\-json
-agent\-friendly JSON output
+print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
@@ -369,30 +384,30 @@ print the installed version and exit
 .RS
 .TP
 .B \-\-actor NAME
-who acted (shown in feed)
+who made this change (you see it in feed)
 .RE
 .RS
 .TP
-.B \-\-kind {project|story|task}
-parent kind Choices: project, story, task\. Required\.
+.B \-\-kind {plan|milestone|task}
+which kind of row this item belongs to Choices: plan, milestone, task\. Required\.
 .RE
 .RS
 .TP
 .B \-\-id ID
-parent id Required\.
+id of the row this item belongs to Required\.
 .RE
 .RS
 .TP
 .B \-\-text TEXT
-criterion text (required) Required\.
+the checklist text (required) Required\.
 .RE
 .TP
 .B lpui criteria
-list acceptance criteria
+list the checklist items on a row
 .RS
 .TP
 .B \-\-json
-agent\-friendly JSON output
+print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
@@ -402,25 +417,25 @@ print the installed version and exit
 .RS
 .TP
 .B \-\-actor NAME
-who acted (shown in feed)
+who made this change (you see it in feed)
 .RE
 .RS
 .TP
-.B \-\-kind {project|story|task}
-parent kind Choices: project, story, task\. Required\.
+.B \-\-kind {plan|milestone|task}
+which kind of row to list Choices: plan, milestone, task\. Required\.
 .RE
 .RS
 .TP
 .B \-\-id ID
-parent id Required\.
+id of the row Required\.
 .RE
 .TP
 .B lpui check
-tick a criterion done
+tick one checklist item done
 .RS
 .TP
 .B \-\-json
-agent\-friendly JSON output
+print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
@@ -430,20 +445,20 @@ print the installed version and exit
 .RS
 .TP
 .B \-\-actor NAME
-who acted (shown in feed)
+who made this change (you see it in feed)
 .RE
 .RS
 .TP
 .B \-\-id ID
-criteria id Required\.
+id of the checklist item Required\.
 .RE
 .TP
 .B lpui uncheck
-reopen a criterion
+reopen one checklist item
 .RS
 .TP
 .B \-\-json
-agent\-friendly JSON output
+print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
@@ -453,20 +468,20 @@ print the installed version and exit
 .RS
 .TP
 .B \-\-actor NAME
-who acted (shown in feed)
+who made this change (you see it in feed)
 .RE
 .RS
 .TP
 .B \-\-id ID
-criteria id Required\.
+id of the checklist item Required\.
 .RE
 .TP
 .B lpui delete\-criteria
-remove a criterion by its id
+remove one checklist item by its id
 .RS
 .TP
 .B \-\-json
-agent\-friendly JSON output
+print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
@@ -476,20 +491,20 @@ print the installed version and exit
 .RS
 .TP
 .B \-\-actor NAME
-who acted (shown in feed)
+who made this change (you see it in feed)
 .RE
 .RS
 .TP
 .B \-\-id ID
-criteria id Required\.
+id of the checklist item Required\.
 .RE
 .TP
 .B lpui link
-attach a git commit to a project/story/task
+attach a git commit to a row
 .RS
 .TP
 .B \-\-json
-agent\-friendly JSON output
+print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
@@ -499,30 +514,30 @@ print the installed version and exit
 .RS
 .TP
 .B \-\-actor NAME
-who acted (shown in feed)
+who made this change (you see it in feed)
 .RE
 .RS
 .TP
-.B \-\-kind {project|story|task}
-what to link Choices: project, story, task\. Required\.
+.B \-\-kind {plan|milestone|task}
+which kind of row to attach to Choices: plan, milestone, task\. Required\.
 .RE
 .RS
 .TP
 .B \-\-id ID
-row id Required\.
+id of the row Required\.
 .RE
 .RS
 .TP
 .B \-\-sha SHA
-commit hash (default: current HEAD)
+which commit to attach (default: the current HEAD commit)
 .RE
 .TP
 .B lpui unlink
-detach a git commit from a project/story/task
+detach a git commit from a row
 .RS
 .TP
 .B \-\-json
-agent\-friendly JSON output
+print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
@@ -532,30 +547,30 @@ print the installed version and exit
 .RS
 .TP
 .B \-\-actor NAME
-who acted (shown in feed)
+who made this change (you see it in feed)
 .RE
 .RS
 .TP
-.B \-\-kind {project|story|task}
-what to unlink Choices: project, story, task\. Required\.
+.B \-\-kind {plan|milestone|task}
+which kind of row to detach from Choices: plan, milestone, task\. Required\.
 .RE
 .RS
 .TP
 .B \-\-id ID
-row id Required\.
+id of the row Required\.
 .RE
 .RS
 .TP
 .B \-\-sha SHA
-commit hash (required) Required\.
+which commit to detach (required) Required\.
 .RE
 .TP
 .B lpui commits
-list commits linked to a project/story/task
+list the commits attached to a row
 .RS
 .TP
 .B \-\-json
-agent\-friendly JSON output
+print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
@@ -565,25 +580,25 @@ print the installed version and exit
 .RS
 .TP
 .B \-\-actor NAME
-who acted (shown in feed)
+who made this change (you see it in feed)
 .RE
 .RS
 .TP
-.B \-\-kind {project|story|task}
-what to list Choices: project, story, task\. Required\.
+.B \-\-kind {plan|milestone|task}
+which kind of row to list Choices: plan, milestone, task\. Required\.
 .RE
 .RS
 .TP
 .B \-\-id ID
-row id Required\.
+id of the row Required\.
 .RE
 .TP
 .B lpui export
-full dump (agents: \-\-format json)
+save everything (agents: use \-\-format json)
 .RS
 .TP
 .B \-\-json
-agent\-friendly JSON output
+print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
@@ -593,20 +608,20 @@ print the installed version and exit
 .RS
 .TP
 .B \-\-actor NAME
-who acted (shown in feed)
+who made this change (you see it in feed)
 .RE
 .RS
 .TP
 .B \-\-format {json|markdown}
-output format (default: json) Choices: json, markdown\.
+which format to save in (default: json) Choices: json, markdown\.
 .RE
 .TP
 .B lpui import
-load an `lpui export \-\-format json` dump
+load a file saved by `lpui export \-\-format json`
 .RS
 .TP
 .B \-\-json
-agent\-friendly JSON output
+print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
@@ -616,20 +631,20 @@ print the installed version and exit
 .RS
 .TP
 .B \-\-actor NAME
-who acted (shown in feed)
+who made this change (you see it in feed)
 .RE
 .RS
 .TP
 .B \-\-file PATH
-dump file (required) Required\.
+the saved file to load (required) Required\.
 .RE
 .TP
 .B lpui status
-move project/story/task to a status
+move a row to a new status
 .RS
 .TP
 .B \-\-json
-agent\-friendly JSON output
+print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
@@ -639,30 +654,30 @@ print the installed version and exit
 .RS
 .TP
 .B \-\-actor NAME
-who acted (shown in feed)
+who made this change (you see it in feed)
 .RE
 .RS
 .TP
-.B \-\-kind {project|story|task}
-what to move Choices: project, story, task\. Required\.
+.B \-\-kind {plan|milestone|task}
+which kind of row to move Choices: plan, milestone, task\. Required\.
 .RE
 .RS
 .TP
 .B \-\-id ID
-row id Required\.
+id of the row Required\.
 .RE
 .RS
 .TP
 .B \-\-to {todo|doing|done}
-new status (required) Choices: todo, doing, done\. Required\.
+the new status (required) Choices: todo, doing, done\. Required\.
 .RE
 .TP
 .B lpui reconcile
-recompute parent statuses from children
+fix up parent statuses to match their children
 .RS
 .TP
 .B \-\-json
-agent\-friendly JSON output
+print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
@@ -672,15 +687,15 @@ print the installed version and exit
 .RS
 .TP
 .B \-\-actor NAME
-who acted (shown in feed)
+who made this change (you see it in feed)
 .RE
 .TP
 .B lpui delete
-delete a project/story/task
+delete a row
 .RS
 .TP
 .B \-\-json
-agent\-friendly JSON output
+print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
@@ -690,25 +705,25 @@ print the installed version and exit
 .RS
 .TP
 .B \-\-actor NAME
-who acted (shown in feed)
+who made this change (you see it in feed)
 .RE
 .RS
 .TP
-.B \-\-kind {project|story|task}
-what to delete Choices: project, story, task\. Required\.
+.B \-\-kind {plan|milestone|task}
+which kind of row to delete Choices: plan, milestone, task\. Required\.
 .RE
 .RS
 .TP
 .B \-\-id ID
-row id Required\.
+id of the row Required\.
 .RE
 .TP
 .B lpui feed
-recent agent/human activity
+recent activity by you and your agents
 .RS
 .TP
 .B \-\-json
-agent\-friendly JSON output
+print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
@@ -718,30 +733,30 @@ print the installed version and exit
 .RS
 .TP
 .B \-\-actor NAME
-who acted (shown in feed)
+who made this change (you see it in feed)
 .RE
 .RS
 .TP
 .B \-\-limit N
-how many events (default: 20)
+how many recent events to show (default: 20)
 .RE
 .RS
 .TP
 .B \-\-follow
-tail new events
+keep showing new events as they arrive
 .RE
 .RS
 .TP
 .B \-\-interval SECS
-poll interval for \-\-follow (default: 1\.0)
+how often to check for new events, in seconds (default: 1\.0)
 .RE
 .TP
 .B lpui watch
-alias of feed \-\-follow
+same as feed \-\-follow
 .RS
 .TP
 .B \-\-json
-agent\-friendly JSON output
+print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
@@ -751,20 +766,20 @@ print the installed version and exit
 .RS
 .TP
 .B \-\-actor NAME
-who acted (shown in feed)
+who made this change (you see it in feed)
 .RE
 .RS
 .TP
 .B \-\-limit N
-how many events (default: 20)
+how many recent events to show (default: 20)
 .RE
 .TP
 .B lpui completion
-shell completions
+print tab\-completions for your shell
 .RS
 .TP
 .B \-\-json
-agent\-friendly JSON output
+print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
@@ -774,20 +789,20 @@ print the installed version and exit
 .RS
 .TP
 .B \-\-actor NAME
-who acted (shown in feed)
+who made this change (you see it in feed)
 .RE
 .RS
 .TP
 .B \-\-shell {bash|zsh}
-shell (required) Choices: bash, zsh\. Required\.
+which shell you use (required) Choices: bash, zsh\. Required\.
 .RE
 .TP
 .B lpui help
-print shared help text (same as TUI ?)
+show the screen's key bindings (same as ? in the app)
 .RS
 .TP
 .B \-\-json
-agent\-friendly JSON output
+print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
@@ -797,15 +812,15 @@ print the installed version and exit
 .RS
 .TP
 .B \-\-actor NAME
-who acted (shown in feed)
+who made this change (you see it in feed)
 .RE
 .TP
 .B lpui ui
-launch Textual TUI (default when no command is given)
+open the keyboard\-driven screen (this runs when you give no command)
 .RS
 .TP
 .B \-\-json
-agent\-friendly JSON output
+print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
@@ -815,17 +830,17 @@ print the installed version and exit
 .RS
 .TP
 .B \-\-actor NAME
-who acted (shown in feed)
+who made this change (you see it in feed)
 .RE
 .SH EXAMPLES
 .nf
-lpui                             # TUI (same as `lpui ui`)
-lpui list                        # ascii tree
+lpui                             # open the screen (same as `lpui ui`)
+lpui list                        # show everything as a tree
 lpui list --status doing --priority p0
-lpui show --kind project --id 1
-lpui --actor alice add-project --title \(dqAPI v2\(dq --why \(dq..\(dq --priority p1
-lpui --actor alice add-criteria --kind project --id 1 --text \(dqWorks offline\(dq
-lpui --actor alice add-task --story 1 --title \(dqFix bug\(dq --priority p1
+lpui show --kind plan --id 1
+lpui --actor alice add-plan --title \(dqAPI v2\(dq --why \(dq..\(dq --priority p1
+lpui --actor alice add-criteria --kind plan --id 1 --text \(dqWorks offline\(dq
+lpui --actor alice add-task --milestone 1 --title \(dqFix bug\(dq --priority p1
 lpui status --kind task --id 3 --to done
 lpui feed --limit 20
 lpui export --format json > backup.json
@@ -834,31 +849,31 @@ lpui import --file backup.json
 .SH ENVIRONMENT
 .TP
 .B LAZYPLAN_DB
-SQLite path override (same as \fB\-\-db\fR).
+Which database file to use (same as \fB\-\-db\fR).
 .TP
 .B USER
-Default for \fB\-\-actor\fR when not given.
+Used for \fB\-\-actor\fR when you do not give one.
 .SH FILES
 .TP
-.B .lazyplan/lazyplan.db
-Per\-repo database (resolved via git rev\-parse; commit it to share).
+.B .agents/lazyplan/lazyplan.db
+The database for this repo (found with git rev\-parse; commit it to share).
 .TP
 .B ~/.local/share/lazyplan/lazyplan.db
-Global fallback when outside a repo.
+Used when you are outside a repo.
 .SH EXIT STATUS
 .TP
 .B 0
-Success.
+It worked.
 .TP
 .B 1
-Row not found (e.g. task #7 not found).
+The id you gave was not found (for example, task #7).
 .TP
 .B 2
-Usage or validation error (argparse or error: ... on stderr).
+The flags or input were wrong (details start with error: ... on stderr).
 .TP
 .B 3
-TUI unavailable (Textual not installed).
+The screen cannot start (Textual is not installed).
 .SH SEE ALSO
 .BR lazyplan (1),
-lpui \fB\-\-help\fR, lpui \fICOMMAND\fR \fB\-\-help\fR, lpui \fBhelp\fR (TUI keys, same as ? in the TUI)
+lpui \fB\-\-help\fR, lpui \fICOMMAND\fR \fB\-\-help\fR, lpui \fBhelp\fR (screen keys, same as ? in the app)
 Full docs: https://github.com/fluxion-dev/lazyplan

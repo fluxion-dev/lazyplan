@@ -1,11 +1,11 @@
-"""lazyplan: Projects > UserStories > Tasks. TUI first, agent-injectable."""
+"""lazyplan: Plans > Milestones > Tasks. TUI first, agent-injectable."""
 
-from .models import Criterion, Project, Status, Task, UserStory
+from .models import Criterion, Milestone, Plan, Status, Task
 
 __all__ = [
     "Criterion",
-    "Project",
+    "Milestone",
+    "Plan",
     "Status",
     "Task",
-    "UserStory",
 ]

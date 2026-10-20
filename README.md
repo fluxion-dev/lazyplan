@@ -1,4 +1,4 @@
-# lazyplan (`lpui`) — v0.14.0
+# lazyplan (`lpui`) — v0.14.1
 
 [![CI](https://github.com/fluxion-dev/lazyplan/actions/workflows/ci.yml/badge.svg)](https://github.com/fluxion-dev/lazyplan/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/fluxion-dev/lazyplan)](https://github.com/fluxion-dev/lazyplan/releases)
@@ -33,9 +33,9 @@ Need a system package instead? These bundles include everything they need. You o
 
 ```bash
 # Fedora / RHEL / openSUSE — grab the matching asset from Releases
-sudo dnf install ./lazyplan-0.14.0-1.x86_64.rpm   # or -1.aarch64.rpm on ARM
+sudo dnf install ./lazyplan-0.14.1-1.x86_64.rpm   # or -1.aarch64.rpm on ARM
 # Debian / Ubuntu
-sudo apt install ./lazyplan_0.14.0-1_amd64.deb     # or -1_arm64.deb on ARM
+sudo apt install ./lazyplan_0.14.1-1_amd64.deb     # or -1_arm64.deb on ARM
 ```
 
 Want the installer to choose for you? This one-liner picks the right method for your machine:

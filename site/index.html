@@ -16,10 +16,15 @@
 <meta property="og:url" content="https://fluxion-dev.github.io/lazyplan/">
 <meta property="og:site_name" content="lazyplan">
 <!-- Stable logo URL (self-hosted SVG, copied from public/ at build time). -->
-<meta property="og:image" content="https://fluxion-dev.github.io/lazyplan/logo.svg">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://fluxion-dev.github.io/lazyplan/screens/og-lpui-and-agent.png">
+<meta property="og:image:alt" content="lpui plan tree beside a coding agent terminal running lpui commands">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="lazyplan (lpui) — terminal plan tracker for you and your coding agent">
 <meta name="twitter:description" content="Plans, milestones, and tasks in a small database next to your code: a screen you drive with your keyboard, and a command line your coding agent can read.">
+<meta name="twitter:image" content="https://fluxion-dev.github.io/lazyplan/screens/og-lpui-and-agent.png">
+<meta name="twitter:image:alt" content="lpui plan tree beside a coding agent terminal running lpui commands">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -27,6 +32,7 @@
   "name": "lazyplan",
   "version": "0.19.0",
   "url": "https://fluxion-dev.github.io/lazyplan/",
+  "screenshot": "https://fluxion-dev.github.io/lazyplan/screens/og-lpui-and-agent.png",
   "author": {
     "@type": "Person",
     "name": "Brad Lindsay"
@@ -53,6 +59,7 @@
   <div class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-5 gap-y-2 px-6 py-3">
     <a href="#top" class="mr-auto inline-flex items-center gap-2 text-xl font-extrabold tracking-wide text-white no-underline"><img src="./logo.svg" alt="" width="32" height="32" class="h-8 w-8" aria-hidden="true">lazyplan<span class="text-viking-gold">.</span></a>
     <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#features">Features</a>
+    <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#screens">Screenshots</a>
     <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#quickstart">Quickstart</a>
     <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#agents">Agents</a>
     <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#install">Install</a>
@@ -135,6 +142,39 @@
 </header>
 
 <main id="main">
+
+<section id="screens" class="mx-auto max-w-7xl scroll-mt-20 px-6 py-20 md:py-28">
+  <div class="mb-10 max-w-3xl md:mb-14">
+    <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">See it in action</p>
+    <h2 class="mb-4 text-2xl font-bold text-white">Your plan on the left. Your agent on the right.</h2>
+    <p class="text-lg text-zinc-400">Both work from the same SQLite file. The screen refreshes as your agent adds tasks, moves work, and ticks acceptance criteria.</p>
+  </div>
+
+  <figure class="m-0 overflow-hidden rounded-xl border border-plan-border bg-plan-surface/70 p-2 shadow-2xl shadow-black/40 md:p-3">
+    <picture>
+      <source srcset="./screens/lpui-and-agent.webp" type="image/webp">
+      <img src="./screens/lpui-and-agent.png" width="1600" height="760" loading="eager" decoding="async" alt="lpui plan tree and preview on the left, with a coding agent terminal on the right running lpui commands." class="block h-auto w-full rounded-lg">
+    </picture>
+    <figcaption class="px-2 pb-1 pt-3 text-sm text-zinc-500">The plan tree and live preview on the left; your coding agent's terminal on the right. The status line shows the latest change.</figcaption>
+  </figure>
+
+  <div class="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
+    <figure class="m-0 overflow-hidden rounded-xl border border-plan-border bg-plan-surface/70 p-2 shadow-xl shadow-black/30">
+      <picture>
+        <source srcset="./screens/lpui-detail.webp" type="image/webp">
+        <img src="./screens/lpui-detail.png" width="1400" height="900" loading="lazy" decoding="async" alt="lpui read-only detail page showing a plan's reason, what to build, acceptance criteria, and milestones." class="block h-auto w-full rounded-lg">
+      </picture>
+      <figcaption class="px-2 pb-1 pt-3 text-sm text-zinc-500"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">Enter</code> opens a read-only page: why, what, acceptance, and milestones. Press <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">e</code> to edit.</figcaption>
+    </figure>
+    <figure class="m-0 overflow-hidden rounded-xl border border-plan-border bg-plan-surface/70 p-2 shadow-xl shadow-black/30">
+      <picture>
+        <source srcset="./screens/lpui-narrow.webp" type="image/webp">
+        <img src="./screens/lpui-narrow.png" width="900" height="600" loading="lazy" decoding="async" alt="lpui at 80 by 24 columns, with the plan tree at full width and the key bar at the bottom." class="block h-auto w-full rounded-lg">
+      </picture>
+      <figcaption class="px-2 pb-1 pt-3 text-sm text-zinc-500">At 80×24 the preview steps aside; the tree keeps the full width and the key bar still fits.</figcaption>
+    </figure>
+  </div>
+</section>
 
 <section id="features" class="mx-auto max-w-7xl scroll-mt-20 px-6 py-20 md:py-28">
   <h2 class="mb-4 text-2xl font-bold text-white"><span class="mr-1.5" aria-hidden="true">🧭</span>Problems lazyplan solves</h2>

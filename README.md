@@ -89,6 +89,8 @@ Note: versions up to 0.7.0 shipped this tool as `lp`, renamed because that name 
 
 You plan in `lpui` (`lpui ui` opens the same screen). Here is what you will see:
 
+See screenshots of the screen beside a coding agent at <https://fluxion-dev.github.io/lazyplan/#screens>.
+
 - Plans start as one-line summaries with progress, for example `◐ P2 API v2 3/8`. Press `right` or `z` to reveal milestones, then tasks. Nothing is dumped on you at once.
 - The right pane previews the selected row: why/what, the next few open tasks, acceptance progress, commits, and repos. At narrow widths the preview steps aside and `enter` opens the full detail page.
 - `enter` opens the detail page in a read-only view. Press `e` to edit, `s` to advance status, `x` to tick a criterion, `a` to add one, `n` to add the next level, and `d` to delete (the confirmation says what else will go). `escape` goes back.

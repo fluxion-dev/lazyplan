@@ -1,4 +1,4 @@
-.TH LPUI 1 "2026-10-21" "lazyplan-tui 0.18.0" "User Commands"
+.TH LPUI 1 "2026-10-22" "lazyplan-tui 0.19.0" "User Commands"
 .SH NAME
 lpui \- local plan journal for you and your coding agent
 .SH SYNOPSIS
@@ -112,7 +112,7 @@ who made this change (you see it in feed)
 .RE
 .TP
 .B lpui list
-show plans, milestones, and tasks as a text tree
+show plans as summaries (add \-\-tree for the full tree)
 .RS
 .TP
 .B \-\-json
@@ -158,9 +158,111 @@ show no more than N plans
 .B \-\-repo PATH
 show only rows linked to this repo (matches effective repos)
 .RE
+.RS
+.TP
+.B \-\-tree
+show the full plan/milestone/task tree instead of plan summaries
+.RE
+.RS
+.TP
+.B \-\-milestone ID
+show only this milestone and its tasks (implies \-\-tree)
+.RE
+.TP
+.B lpui plan
+add, edit, show, list, move, or delete a plan
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B  ACTION
+what to do with a plan Choices: add, edit, show, list, move, delete\. Required\.
+.RE
+.TP
+.B lpui milestone
+add, edit, show, list, move, or delete a milestone
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B  ACTION
+what to do with a milestone Choices: add, edit, show, list, move, delete\. Required\.
+.RE
+.TP
+.B lpui task
+add, edit, show, list, move, or delete a task
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B  ACTION
+what to do with a task Choices: add, edit, show, list, move, delete\. Required\.
+.RE
+.TP
+.B lpui criterion
+add, list, tick, untick, or delete an acceptance criterion
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B  ACTION
+what to do with a criterion Choices: add, list, tick, untick, delete\. Required\.
+.RE
 .TP
 .B lpui add\-plan
-add a plan (works for you and your agent)
+legacy alias for `plan add`
 .RS
 .TP
 .B \-\-json
@@ -208,7 +310,7 @@ same as \-\-why
 .RE
 .TP
 .B lpui add\-milestone
-add a milestone to a plan (works for you and your agent)
+legacy alias for `milestone add`
 .RS
 .TP
 .B \-\-json
@@ -241,7 +343,7 @@ extra details about the milestone
 .RE
 .TP
 .B lpui add\-task
-add a task to a milestone (works for you and your agent)
+legacy alias for `task add`
 .RS
 .TP
 .B \-\-json
@@ -274,7 +376,7 @@ what the task involves and what it needs
 .RE
 .TP
 .B lpui update
-change the title, details, or reason of a row
+legacy alias for `plan|milestone|task edit`
 .RS
 .TP
 .B \-\-json
@@ -332,7 +434,7 @@ same as \-\-why
 .RE
 .TP
 .B lpui show
-show everything about one row: its fields, checklist, and children
+legacy alias for `<noun> show`
 .RS
 .TP
 .B \-\-json
@@ -360,7 +462,7 @@ id of the row Required\.
 .RE
 .TP
 .B lpui add\-criteria
-add one checklist item to a row
+legacy alias for `criterion add`
 .RS
 .TP
 .B \-\-json
@@ -393,7 +495,7 @@ the checklist text (required) Required\.
 .RE
 .TP
 .B lpui criteria
-list the checklist items on a row
+legacy alias for `criterion list`
 .RS
 .TP
 .B \-\-json
@@ -421,7 +523,7 @@ id of the row Required\.
 .RE
 .TP
 .B lpui check
-tick one checklist item done
+legacy alias for `criterion tick`
 .RS
 .TP
 .B \-\-json
@@ -444,7 +546,7 @@ id of the checklist item Required\.
 .RE
 .TP
 .B lpui uncheck
-reopen one checklist item
+legacy alias for `criterion untick`
 .RS
 .TP
 .B \-\-json
@@ -467,7 +569,7 @@ id of the checklist item Required\.
 .RE
 .TP
 .B lpui delete\-criteria
-remove one checklist item by its id
+legacy alias for `criterion delete`
 .RS
 .TP
 .B \-\-json
@@ -749,7 +851,7 @@ the saved file to load (required) Required\.
 .RE
 .TP
 .B lpui status
-move a row to a new status
+legacy alias for `<noun> move`
 .RS
 .TP
 .B \-\-json
@@ -800,7 +902,7 @@ who made this change (you see it in feed)
 .RE
 .TP
 .B lpui delete
-delete a row
+legacy alias for `<noun> delete`
 .RS
 .TP
 .B \-\-json

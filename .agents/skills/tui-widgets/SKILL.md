@@ -22,7 +22,7 @@ Distilled from https://textual.textualize.io/widget_gallery/ plus
 - Sections: `Collapsible` — constructor children collapse; post-mounts land
   outside the body, so prebuild all children. `enter` on the title toggles.
 - Chrome: `Header` (per-screen `TITLE`) and `Footer` (auto-shows bindings).
-- Fullscreen editor: plain `Screen`. Dialogs: `ModalScreen`.
+- Detail page: plain `Screen`. Dialogs: `ModalScreen`.
 
 ## Version flags (8.2.8)
 

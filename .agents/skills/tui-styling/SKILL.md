@@ -24,6 +24,6 @@ https://textual.textualize.io/guide/design/.
 - Component sub-parts: `tree--cursor`, `input--cursor`,
   `text-area--gutter`, `toggle--button`. Theme vars `$primary`, `$panel`,
   `$foreground`, `$success`, `$error`.
-- Compact buttons: `min-width: 0; width: auto; height: 1; padding: 0 1;`
-  scoped to `#editor` and `#dlg`; short labels (`Save`, status value,
-  `+Task`, `Del`, `.md`, `+MS`, `Close`).
+- Compact buttons: `min-width: 0; width: auto; height: 3; padding: 0 1;`
+  scoped to `#dlg`, `#help`, and `#detail-page`; height 1 clips the label
+  in Textual 8.2.8. Short labels (`Save`, `Cancel`, `Create`, `Close`).

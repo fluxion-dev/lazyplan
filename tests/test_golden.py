@@ -40,7 +40,7 @@ class TestGoldenOutputs(unittest.TestCase):
     def test_tree_lines(self):
         self.assertEqual(
             render.tree_lines(self.store, None, None),
-            ["🔵 P#1 Website", "  🔵 M#1 Homepage", "    🔵 T#1 Design hero"],
+            ["◐ P1 Website", "  ◐ M1 Homepage", "    ◐ T1 Design hero"],
         )
 
     def test_render_full_plan(self):
@@ -48,12 +48,12 @@ class TestGoldenOutputs(unittest.TestCase):
         assert full is not None
         self.assertEqual(
             render.render_full("plan", full),
-            "🔵 P#1 Website\n"
+            "◐ P1 Website\n"
             "why: Convert\n"
             "\nwhat: Marketing site\n"
             "\nacceptance:\n"
-            "  [ ] #1 Loads fast\n"
-            "\n  🔵 M#1 Homepage",
+            "  [ ] Loads fast\n"
+            "\n  ◐ M1 Homepage",
         )
 
     def test_render_full_milestone(self):
@@ -61,28 +61,28 @@ class TestGoldenOutputs(unittest.TestCase):
         assert full is not None
         self.assertEqual(
             render.render_full("milestone", full),
-            "🔵 M#1 Homepage (P#1)\n\ndetails: Hero work\n\n  🔵 T#1 Design hero",
+            "◐ M1 Homepage (P1)\n\ndetails: Hero work\n\n  ◐ T1 Design hero",
         )
 
     def test_render_markdown(self):
         data = services.export_all(self.store)
         text = render.render_markdown(data)
-        self.assertIn("## 🔵 P#1 Website", text)
+        self.assertIn("## ◐ P1 Website", text)
         self.assertIn("> why: Convert", text)
-        self.assertIn("- [ ] #1 Loads fast", text)
-        self.assertIn("### 🔵 M#1 Homepage", text)
-        self.assertIn("- [ ] T#1 Design hero (doing)", text)
+        self.assertIn("- [ ] Loads fast", text)
+        self.assertIn("### ◐ M1 Homepage", text)
+        self.assertIn("- [ ] T1 Design hero (doing)", text)
 
     def test_render_plan_markdown_full_fidelity(self):
         data = services.export_all(self.store)
         (entry,) = data["plans"]
         text = render.render_plan_markdown(entry)
-        self.assertIn("## 🔵 P#1 Website", text)
+        self.assertIn("## ◐ P1 Website", text)
         self.assertNotIn("priority", text)
-        self.assertIn("- [ ] #1 Loads fast", text)
-        self.assertIn("### 🔵 M#1 Homepage", text)
+        self.assertIn("- [ ] Loads fast", text)
+        self.assertIn("### ◐ M1 Homepage", text)
         self.assertIn("Hero work", text)
-        self.assertIn("- [ ] T#1 Design hero (doing)", text)
+        self.assertIn("- [ ] T1 Design hero (doing)", text)
         self.assertIn("Design hero", text)
         entry2 = services.export_plan(self.store, 1)
         assert entry2 is not None

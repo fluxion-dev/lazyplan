@@ -336,6 +336,7 @@ def tree(
     archived: str = "hide",
     limit: int | None = None,
     repo: str | None = None,
+    milestone_id: int | None = None,
 ) -> list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]:
     """Nested plans, milestones, and tasks with filters.
 
@@ -343,6 +344,7 @@ def tree(
     Plans order most-recently-active first (id fallback); limit caps the
     plan count (None = all). An explicit plan_id bypasses the cap.
     repo: only plans (or descendants) effectively linked to this repo.
+    milestone_id: only this milestone (and its tasks) inside each plan.
     """
     if archived not in ("hide", "only", "show"):
         raise ValueError("archived must be hide|only|show")
@@ -353,9 +355,11 @@ def tree(
         if repo and not _plan_matches_repo(store, p.id, repo):
             continue
         milestones = _filtered_milestones(store, p.id, status)
+        if milestone_id is not None:
+            milestones = [(s, tasks) for s, tasks in milestones if s.id == milestone_id]
         if _visible_plan(store, p, milestones, status, archived):
             out.append((p, milestones))
-    if plan_id is None:
+    if plan_id is None and milestone_id is None:
         activity = plan_activity(store)
         out.sort(key=lambda e: (activity.get(e[0].id, 0.0), e[0].id), reverse=True)
         if limit is not None:

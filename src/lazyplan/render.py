@@ -16,6 +16,42 @@ if TYPE_CHECKING:
     from .store import Store
 
 
+def _progress_map(store: Store) -> dict[int, tuple[int, int]]:
+    """Task progress per plan, independent of status/limit filters."""
+    out: dict[int, tuple[int, int]] = {}
+    for plan, milestones in service_tree(store, status=None, archived="show"):
+        tasks = [task for _, items in milestones for task in items]
+        out[plan.id] = (sum(1 for task in tasks if task.status.value == "done"), len(tasks))
+    return out
+
+
+def summary_lines(
+    store: Store,
+    status: Status | None,
+    plan_id: int | None,
+    dot: str = "plain",
+    archived: str = "hide",
+    limit: int | None = None,
+    repo: str | None = None,
+) -> list[str]:
+    """One scannable line per plan: label + done/total tasks."""
+    entries = service_tree(
+        store,
+        status=status,
+        plan_id=plan_id,
+        archived=archived,
+        limit=limit,
+        repo=repo,
+    )
+    entries.sort(key=lambda entry: entry[0].status.value == "done")
+    progress = _progress_map(store)
+    lines = []
+    for plan, _milestones in entries:
+        done, total = progress.get(plan.id, (0, 0))
+        lines.append(f"{plan_label(plan, store, dot)} {done}/{total}")
+    return lines
+
+
 def tree_lines(
     store: Store,
     status: Status | None,
@@ -24,6 +60,7 @@ def tree_lines(
     archived: str = "hide",
     limit: int | None = None,
     repo: str | None = None,
+    milestone_id: int | None = None,
 ) -> list[str]:
     """Indented tree lines using the canonical design labels."""
     lines = []
@@ -34,6 +71,7 @@ def tree_lines(
         archived=archived,
         limit=limit,
         repo=repo,
+        milestone_id=milestone_id,
     ):
         lines.append(f"{INDENT[0]}{plan_label(p, store, dot)}")
         for s, tasks in milestones:
@@ -61,7 +99,7 @@ def _append_crit(lines: list[str], items: list[dict]) -> None:
     """Append checklist lines."""
     for c in items:
         box = "x" if c.get("done") else " "
-        lines.append(f"  [{box}] #{c['id']} {c['text']}")
+        lines.append(f"  [{box}] {c['text']}")
 
 
 def _append_commits(lines: list[str], items: list[dict]) -> None:
@@ -97,7 +135,7 @@ def _render_plan_full(full: dict, lines: list[str]) -> None:
     from .design import status_word
 
     p = full["plan"]
-    lines.append(f"{status_word(p['status'])} P#{p['id']} {p['name']}")
+    lines.append(f"{status_word(p['status'])} P{p['id']} {p['name']}")
     if p.get("goal"):
         lines.append(f"why: {p['goal']}")
     if p.get("description"):
@@ -105,7 +143,7 @@ def _render_plan_full(full: dict, lines: list[str]) -> None:
     _append_common(lines, full)
     for entry in full["milestones"]:
         s = entry["milestone"]
-        lines.append(f"\n  {status_word(s['status'])} M#{s['id']} {s['title']}")
+        lines.append(f"\n  {status_word(s['status'])} M{s['id']} {s['title']}")
 
 
 def _render_milestone_full(full: dict, lines: list[str]) -> None:
@@ -113,13 +151,13 @@ def _render_milestone_full(full: dict, lines: list[str]) -> None:
     from .design import status_word
 
     s = full["milestone"]
-    lines.append(f"{status_word(s['status'])} M#{s['id']} {s['title']} (P#{s['plan_id']})")
+    lines.append(f"{status_word(s['status'])} M{s['id']} {s['title']} (P{s['plan_id']})")
     if s.get("description"):
         lines.append(f"\ndetails: {s['description']}")
     _append_common(lines, full)
     for entry in full["tasks"]:
         t = entry["task"]
-        lines.append(f"\n  {status_word(t['status'])} T#{t['id']} {t['title']}")
+        lines.append(f"\n  {status_word(t['status'])} T{t['id']} {t['title']}")
         if t.get("description"):
             lines.append(f"  {t['description']}")
 
@@ -129,7 +167,7 @@ def _render_task_full(full: dict, lines: list[str]) -> None:
     from .design import status_word
 
     t = full["task"]
-    lines.append(f"{status_word(t['status'])} T#{t['id']} {t['title']} (M#{t['milestone_id']})")
+    lines.append(f"{status_word(t['status'])} T{t['id']} {t['title']} (M{t['milestone_id']})")
     if t.get("description"):
         lines.append(f"\ndetails: {t['description']}")
     _append_common(lines, full)
@@ -160,7 +198,7 @@ def _md_crit(lines: list[str], items: list[dict], indent: str = "") -> None:
     """Checklist lines with ids + ticks."""
     for c in items:
         box = "x" if c.get("done") else " "
-        lines.append(f"{indent}- [{box}] #{c['id']} {c['text']}")
+        lines.append(f"{indent}- [{box}] {c['text']}")
 
 
 def _md_repos(lines: list[str], items: list[dict], indent: str = "") -> None:
@@ -175,13 +213,13 @@ def _md_task_lines(tentry: dict) -> list[str]:
     lines: list[str] = []
     t = tentry["task"]
     box = "x" if t["status"] == "done" else " "
-    lines.append(f"- [{box}] T#{t['id']} {t['title']} ({t['status']})")
+    lines.append(f"- [{box}] T{t['id']} {t['title']} ({t['status']})")
     if t.get("description"):
         for dline in str(t["description"]).splitlines():
             lines.append(f"  {dline}")
     for c in tentry.get("criteria", []):
         cbox = "x" if c.get("done") else " "
-        lines.append(f"  - [{cbox}] #{c['id']} {c['text']}")
+        lines.append(f"  - [{cbox}] {c['text']}")
     return lines
 
 
@@ -189,7 +227,7 @@ def _md_milestone_lines(sentry: dict) -> list[str]:
     """Full-fidelity lines for one milestone entry."""
     lines: list[str] = []
     s = sentry["milestone"]
-    lines.append(f"\n### {status_word(s['status'])} M#{s['id']} {s['title']}")
+    lines.append(f"\n### {status_word(s['status'])} M{s['id']} {s['title']}")
     if s.get("description"):
         lines.append(str(s["description"]))
     _md_crit(lines, sentry.get("criteria", []))
@@ -208,7 +246,7 @@ def render_plan_markdown(entry: dict) -> str:
     """
     lines: list[str] = []
     p = entry["plan"]
-    lines.append(f"## {status_word(p['status'])} P#{p['id']} {p['name']}".rstrip())
+    lines.append(f"## {status_word(p['status'])} P{p['id']} {p['name']}".rstrip())
     if p.get("goal"):
         lines.append(f"> why: {p['goal']}")
     if p.get("description"):

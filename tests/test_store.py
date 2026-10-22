@@ -61,9 +61,7 @@ class TestStore(unittest.TestCase):
         p = self.store.add_plan("P")
         self.store.add_milestone(p.id, "First")
         self.store.add_milestone(p.id, "Second")
-        self.assertEqual(
-            [s.title for s in self.store.list_milestones(p.id)], ["First", "Second"]
-        )
+        self.assertEqual([s.title for s in self.store.list_milestones(p.id)], ["First", "Second"])
         s = self.store.list_milestones(p.id)[0]
         self.store.add_task(s.id, "A")
         self.store.add_task(s.id, "B")
@@ -394,16 +392,16 @@ class TestStore(unittest.TestCase):
                 self.assertEqual(lpui_main(["--db", self.db, *argv]), 0)
             return [line for line in buf.getvalue().splitlines() if line.strip()]
 
-        default_rows = [line for line in _lines("list") if line.startswith(("⬜", "🔵", "✅"))]
+        default_rows = [line for line in _lines("list") if line.startswith(("○", "◐", "●"))]
         self.assertEqual(len(default_rows), 5)
-        all_rows = [line for line in _lines("list", "--all") if line.startswith(("⬜", "🔵", "✅"))]
+        all_rows = [line for line in _lines("list", "--all") if line.startswith(("○", "◐", "●"))]
         self.assertEqual(len(all_rows), 7)
         limited = [
-            line for line in _lines("list", "--limit", "2") if line.startswith(("⬜", "🔵", "✅"))
+            line for line in _lines("list", "--limit", "2") if line.startswith(("○", "◐", "●"))
         ]
         self.assertEqual(len(limited), 2)
         pinned = [
-            line for line in _lines("list", "--plan", "1") if line.startswith(("⬜", "🔵", "✅"))
+            line for line in _lines("list", "--plan", "1") if line.startswith(("○", "◐", "●"))
         ]
         self.assertEqual(len(pinned), 1)
 
@@ -535,16 +533,16 @@ class TestStore(unittest.TestCase):
                 self.assertEqual(lpui_main(["--db", self.db, *argv]), 0)
             return buf.getvalue()
 
-        bare = _list_out(["list"])
+        bare = _list_out(["list", "--tree"])
         self.assertIn("T1", bare)
         self.assertIn("T2", bare)
-        everything = _list_out(["list", "--status", "all"])
+        everything = _list_out(["list", "--tree", "--status", "all"])
         self.assertIn("T1", everything)
         self.assertIn("T2", everything)
-        todo_only = _list_out(["list", "--status", "todo"])
+        todo_only = _list_out(["list", "--tree", "--status", "todo"])
         self.assertIn("T1", todo_only)
         self.assertNotIn("T2", todo_only)
-        done_only = _list_out(["list", "--status", "done"])
+        done_only = _list_out(["list", "--tree", "--status", "done"])
         self.assertIn("T2", done_only)
         self.assertNotIn("T1", done_only)
         payload = json.loads(_list_out(["list", "--json"]))

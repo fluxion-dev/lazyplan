@@ -108,12 +108,12 @@ class TestParseTemplate(unittest.TestCase):
 
     def test_retired_priority_key_ignored(self):
         # Old template files still carry priority; parsing must not fail.
-        t = templates.parse_template("task", "---\ndefaults:\n  priority: p9\nrequired: [title]\n---\n")
+        t = templates.parse_template(
+            "task", "---\ndefaults:\n  priority: p9\nrequired: [title]\n---\n"
+        )
         self.assertEqual(t.required, ["title"])
         self.assertNotIn("priority", t.defaults)
-        t2 = templates.parse_template(
-            "task", "---\nrequired:\n  - title\n  - priority\n---\n"
-        )
+        t2 = templates.parse_template("task", "---\nrequired:\n  - title\n  - priority\n---\n")
         self.assertEqual(t2.required, ["title"])
 
     def test_unclosed_frontmatter_rejected(self):

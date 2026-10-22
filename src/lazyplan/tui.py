@@ -28,13 +28,17 @@ except ImportError:  # pragma: no cover
 
 from . import services
 from .cli_parser import package_version
+from .commands import COMMANDS, by_id, hint_bar
 from .design import (
     APP_CSS,
-    EMPTY_FEED,
     EMPTY_NO_PLANS,
+    escape_markup,
     milestone_row,
     plan_row,
+    repo_project_name,
+    status_word,
     task_row,
+    truncate,
 )
 from .messages import RowAction, SelectionChanged
 from .models import Milestone, Plan, Status, Task
@@ -121,11 +125,25 @@ if _TEXTUAL_OK:
         BINDINGS = [
             Binding("j", "cursor_down", "Down", show=False),
             Binding("k", "cursor_up", "Up", show=False),
-            Binding("enter", "open_detail", "Detail"),
+            Binding("enter", "open_detail", "Open"),
             Binding("left", "fold_left", "Fold", show=False),
             Binding("right", "fold_right", "Unfold", show=False),
-            Binding("escape", "clear_filter", "Clear", show=False),
+            Binding("escape", "clear_filter", "Back", show=False),
             Binding("c", "command_palette", "Palette"),
+            Binding("n", "new_context", "New"),
+            Binding("e", "edit_selection", "Edit"),
+            Binding("s", "toggle_status", "Status"),
+            Binding("x", "criteria", "Tick"),
+            Binding("a", "add_criterion", "Criterion"),
+            Binding("d", "delete", "Delete"),
+            Binding("z", "fold", "Fold", show=False),
+            Binding("Z", "fold_all", "Fold all", show=False),
+            Binding("slash", "filter_text", "Filter"),
+            Binding("f", "filter_status", "Status filter", show=False),
+            Binding("A", "toggle_show_all", "All plans", show=False),
+            Binding("r", "refresh", "Refresh", show=False),
+            Binding("question_mark", "help", "Help"),
+            Binding("q", "quit", "Quit"),
         ]
 
         def __init__(self, store: Store) -> None:
@@ -145,6 +163,7 @@ if _TEXTUAL_OK:
             self._update_toasted: bool = False
             self._pending_note: str = ""
             self._mounted: bool = False
+            self._refreshing: bool = False
 
         # Reactive revision: local mutations bump rev; watch_rev refreshes.
         # External CLI writes still arrive via _poll fingerprint check.
@@ -171,14 +190,33 @@ if _TEXTUAL_OK:
                         yield FoldTree("plans", id="tree")
                     with VerticalScroll(id="preview"):
                         yield Static("", id="preview-body")
+            yield Label("", id="hints")
             yield Label("", id="status")
 
         def on_mount(self) -> None:
             self._mounted = True
-            self.refresh_all("ready — c for commands")
+            self._apply_layout()
+            self.refresh_all("ready — ? for help")
+            self.call_after_refresh(lambda: self.refresh_all())
             self.set_interval(1.0, self._poll)
             self.run_worker(self._check_update, thread=True, exclusive=True)
             self.query_one("#tree", Tree).focus()
+
+        async def _on_resize(self, event: events.Resize) -> None:
+            """Textual stops Resize at the App; re-apply the shell after it."""
+            await super()._on_resize(event)
+            self._apply_layout(event.size.width)
+            if self._mounted:
+                self.call_after_refresh(self.refresh_all)
+
+        def _apply_layout(self, width: int | None = None) -> None:
+            """Two panes when there is room; one pane on narrow terminals."""
+            try:
+                main = self.query_one("#main", Horizontal)
+            except Exception:
+                return
+            available = self.size.width if width is None else width
+            main.set_class(available < 100, "narrow")
 
         def _check_update(self) -> None:
             """One background latest-version check per session; silent on failure."""
@@ -213,8 +251,111 @@ if _TEXTUAL_OK:
             self.selected = (e.kind, e.oid)
             self.update_preview()
 
+        def _preview_tasks(self, kind: str, full: dict[str, Any]) -> list[dict[str, Any]]:
+            """Flat task dicts for a preview card (plan/milestone/task)."""
+            if kind == "plan":
+                return [
+                    task for entry in full.get("milestones", []) for task in entry.get("tasks", [])
+                ]
+            if kind == "milestone":
+                return [entry.get("task", {}) for entry in full.get("tasks", [])]
+            return [full.get("task", {})]
+
+        def _preview_title(self, kind: str, oid: int, obj: dict[str, Any]) -> list[str]:
+            title = str(obj.get("title", obj.get("name", "")))
+            status = str(obj.get("status", ""))
+            label = {"plan": "P", "milestone": "M", "task": "T"}[kind]
+            lines = [
+                f"{status_word(status, 'rich')} "
+                f"[dim]{label}{oid}[/] [bold]{escape_markup(title)}[/]"
+            ]
+            if kind == "milestone":
+                lines.append(f"[dim]P{obj.get('plan_id')} › M{oid}[/]")
+            elif kind == "task":
+                milestone = self.store.get_milestone(int(obj.get("milestone_id", 0)))
+                plan_id = milestone.plan_id if milestone else "?"
+                lines.append(f"[dim]P{plan_id} › M{obj.get('milestone_id')} › T{oid}[/]")
+            return lines
+
+        def _preview_common(self, lines: list[str], full: dict[str, Any]) -> None:
+            crits = full.get("criteria", [])
+            if crits:
+                crit_done = sum(1 for crit in crits if crit.get("done"))
+                open_crits = [crit for crit in crits if not crit.get("done")]
+                tail = f" · {len(open_crits)} open" if open_crits else " · complete"
+                lines.extend(["", f"[dim]acceptance {crit_done}/{len(crits)}{tail}[/]"])
+                for crit in open_crits[:3]:
+                    lines.append(f"  · {escape_markup(str(crit.get('text', '')))}")
+            links = full.get("links", [])
+            repos = full.get("effective_repos") or full.get("repos") or []
+            if links or repos:
+                bits = []
+                if links:
+                    bits.append(f"{len(links)} commits")
+                if repos:
+                    names = [name for name in (repo_project_name(r) for r in repos) if name]
+                    bits.append(
+                        "repos: " + ", ".join(names[:3]) if names else f"{len(repos)} repos"
+                    )
+                lines.append(f"[dim]{' · '.join(bits)}[/]")
+
+        def _preview_plan(self, full: dict[str, Any], oid: int) -> list[str]:
+            obj = full.get("plan", {})
+            lines = self._preview_title("plan", oid, obj)
+            tasks = self._preview_tasks("plan", full)
+            milestones = full.get("milestones", [])
+            if tasks:
+                done = sum(1 for task in tasks if task.get("status") == "done")
+                lines.append(f"[dim]{done}/{len(tasks)} tasks · {len(milestones)} milestones[/]")
+            goal = str(obj.get("goal", "") or "").strip()
+            desc = str(obj.get("description", "") or "").strip()
+            if goal:
+                lines.extend(["", "[dim]why[/]", goal])
+            if desc:
+                lines.extend(["", "[dim]what[/]", desc])
+            open_tasks = [task for task in tasks if task.get("status") != "done"]
+            if open_tasks:
+                lines.extend(["", "[dim]next[/]"])
+                for task in open_tasks[:3]:
+                    lines.append(
+                        f"  {status_word(str(task.get('status', '')), 'rich')} "
+                        f"[dim]T{task.get('id')}[/] {escape_markup(str(task.get('title', '')))}"
+                    )
+            self._preview_common(lines, full)
+            return lines
+
+        def _preview_milestone(self, full: dict[str, Any], oid: int) -> list[str]:
+            obj = full.get("milestone", {})
+            lines = self._preview_title("milestone", oid, obj)
+            tasks = self._preview_tasks("milestone", full)
+            if tasks:
+                done = sum(1 for task in tasks if task.get("status") == "done")
+                lines.append(f"[dim]{done}/{len(tasks)} tasks[/]")
+            desc = str(obj.get("description", "") or "").strip()
+            if desc:
+                lines.extend(["", "[dim]details[/]", desc])
+            open_tasks = [task for task in tasks if task.get("status") != "done"]
+            if open_tasks:
+                lines.extend(["", "[dim]next[/]"])
+                for task in open_tasks[:3]:
+                    lines.append(
+                        f"  {status_word(str(task.get('status', '')), 'rich')} "
+                        f"[dim]T{task.get('id')}[/] {escape_markup(str(task.get('title', '')))}"
+                    )
+            self._preview_common(lines, full)
+            return lines
+
+        def _preview_task(self, full: dict[str, Any], oid: int) -> list[str]:
+            obj = full.get("task", {})
+            lines = self._preview_title("task", oid, obj)
+            desc = str(obj.get("description", "") or "").strip()
+            if desc:
+                lines.extend(["", "[dim]details[/]", desc])
+            self._preview_common(lines, full)
+            return lines
+
         def update_preview(self) -> None:
-            """Reactive preview: render selected row without modal."""
+            """Selection preview: a bounded summary, never the full plan."""
             try:
                 body = self.query_one("#preview-body", Static)
             except Exception:
@@ -227,49 +368,24 @@ if _TEXTUAL_OK:
                 body.update(EMPTY_NO_PLANS)
                 return
             if self.selected is None:
-                body.update("select a row (j/k + click) — preview appears here")
+                body.update("select a plan (j/k or click) — enter opens it")
                 return
             kind, oid = self.selected
             try:
                 full = self.store.get_full(kind, oid)
             except Exception:
-                body.update(f"{kind} #{oid} — gone, press r")
+                body.update(f"{kind} {oid} — gone, press r")
                 return
             if full is None:
-                body.update(f"{kind} #{oid} — gone, press r")
+                body.update(f"{kind} {oid} — gone, press r")
                 return
-            obj_key = {"plan": "plan", "milestone": "milestone", "task": "task"}[kind]
-            obj = full.get(obj_key, {})
-            title = str(obj.get("title", obj.get("name", "")))
-            status = str(obj.get("status", ""))
-            desc = str(obj.get("description", "") or "")
-            goal = str(obj.get("goal", "") or "") if kind == "plan" else ""
-            crits = full.get("criteria", [])
-            done = sum(1 for c in crits if c.get("done"))
-            lines = [f"{kind} #{oid} [{status}]", title]
-            if goal:
-                lines.append(f"why: {goal}")
-            if desc:
-                lines.extend(["", *desc.splitlines()[:10]])
-            if crits:
-                lines.append("")
-                lines.append(f"acceptance {done}/{len(crits)}:")
-                for c in crits[:10]:
-                    mark = "x" if c.get("done") else " "
-                    lines.append(f"[{mark}] #{c.get('id')} {c.get('text')}")
-            links = full.get("links", [])
-            if links:
-                lines.append("")
-                lines.append(f"commits: {len(links)} linked")
-            repos = full.get("effective_repos") or full.get("repos") or []
-            if repos:
-                names = [str(r.get("repo_path", "")) for r in repos[:3]]
-                lines.append(f"repos: {', '.join(names)}")
             if kind == "plan":
-                ms = full.get("milestones", [])
-                tcount = sum(len(e.get("tasks", [])) for e in ms)
-                lines.append("")
-                lines.append(f"{len(ms)} milestones, {tcount} tasks — enter for detail")
+                lines = self._preview_plan(full, oid)
+            elif kind == "milestone":
+                lines = self._preview_milestone(full, oid)
+            else:
+                lines = self._preview_task(full, oid)
+            lines.extend(["", "[dim]enter open · e edit[/]"])
             body.update("\n".join(lines))
 
         @on(RowAction)
@@ -297,16 +413,20 @@ if _TEXTUAL_OK:
 
         def on_tree_node_collapsed(self, e: Tree.NodeCollapsed) -> None:
             """Remember mouse folds across refreshes/polls."""
+            if self._refreshing:
+                return
             key = self._node_key(e.node)
             if key is not None and key[0] in ("plan", "milestone"):
                 self._collapsed.add(key)
                 self._expanded.discard(key)
 
         def on_tree_node_expanded(self, e: Tree.NodeExpanded) -> None:
+            if self._refreshing:
+                return
             key = self._node_key(e.node)
             if key is not None:
                 self._collapsed.discard(key)
-                if key[0] == "plan":
+                if key[0] in ("plan", "milestone"):
                     self._expanded.add(key)
 
         def action_cursor_down(self) -> None:
@@ -325,36 +445,35 @@ if _TEXTUAL_OK:
                 self.notify("nothing to fold here")
                 return
             key = self.selected
-            if key in self._collapsed:
-                node.expand()
-                self._collapsed.discard(key)
-                if key[0] == "plan":
-                    self._expanded.add(key)
-                self.refresh_all(f"{key[0]} #{key[1]} unfolded")
-            else:
+            if key in self._expanded:
                 node.collapse()
-                self._collapsed.add(key)
                 self._expanded.discard(key)
-                self.refresh_all(f"{key[0]} #{key[1]} folded")
+                self._collapsed.add(key)
+                self.refresh_all(f"{key[0]} {key[1]} folded")
+            else:
+                node.expand()
+                self._expanded.add(key)
+                self._collapsed.discard(key)
+                self.refresh_all(f"{key[0]} {key[1]} unfolded")
 
         def action_fold_all(self) -> None:
-            """Collapse every plan/milestone, or re-open all when fully folded (Z)."""
+            """Collapse every plan/milestone, or re-open all when fully expanded (Z)."""
             keys = [k for k, n in self._row_nodes.items() if n.allow_expand and n.children]
             if not keys:
                 self.notify("nothing to fold")
                 return
-            if all(k in self._collapsed for k in keys):
-                for k in keys:
-                    self._row_nodes[k].expand()
-                self._collapsed.clear()
-                self._expanded.update(k for k in keys if k[0] == "plan")
-                self.refresh_all("unfolded all")
-            else:
+            if all(k in self._expanded for k in keys):
                 for k in keys:
                     self._row_nodes[k].collapse()
-                    self._collapsed.add(k)
                 self._expanded.clear()
+                self._collapsed.update(keys)
                 self.refresh_all(f"folded {len(keys)} rows")
+            else:
+                for k in keys:
+                    self._row_nodes[k].expand()
+                self._expanded.update(keys)
+                self._collapsed.difference_update(keys)
+                self.refresh_all("unfolded all")
 
         def _children_of(self, kind: str, oid: int) -> list[tuple[str, int]]:
             """Visible child row keys, in tree order."""
@@ -391,12 +510,12 @@ if _TEXTUAL_OK:
                 node is not None
                 and node.allow_expand
                 and node.children
-                and (kind, oid) not in self._collapsed
+                and (kind, oid) in self._expanded
             ):
                 node.collapse()
-                self._collapsed.add((kind, oid))
                 self._expanded.discard((kind, oid))
-                self.refresh_all(f"{kind} #{oid} folded")
+                self._collapsed.add((kind, oid))
+                self.refresh_all(f"{kind} {oid} folded")
                 return
             parent = self._parent_of(kind, oid)
             if parent is not None and parent in self._row_nodes:
@@ -408,12 +527,16 @@ if _TEXTUAL_OK:
                 return
             kind, oid = self.selected
             node = self._row_nodes.get(self.selected)
-            if node is not None and (kind, oid) in self._collapsed:
+            if (
+                node is not None
+                and node.allow_expand
+                and node.children
+                and (kind, oid) not in self._expanded
+            ):
                 node.expand()
+                self._expanded.add((kind, oid))
                 self._collapsed.discard((kind, oid))
-                if kind == "plan":
-                    self._expanded.add((kind, oid))
-                self.refresh_all(f"{kind} #{oid} unfolded")
+                self.refresh_all(f"{kind} {oid} unfolded")
                 return
             for child in self._children_of(kind, oid):
                 self.query_one("#tree", Tree).move_cursor(self._row_nodes[child])
@@ -484,111 +607,159 @@ if _TEXTUAL_OK:
                 except Exception:
                     pass
 
-        def refresh_all(self, note: str = "") -> None:
-            tree = self.query_one("#tree", Tree)
-            prev_selected = self.selected
-            prev_cursor = None
-            try:
-                cur = tree.cursor_node
-                if cur is not None:
-                    prev_cursor = self._node_key(cur)
-            except Exception:
-                pass
-            tree.clear()
-            self._row_nodes = {}
-            root = tree.root
-            link_map = self.store.links_map()
-            repos_map = self.store.repos_map()
-            filtered = self._filtered_tree()
-            for p, milestones in filtered:
-                pn = root.add(
-                    plan_row(
-                        p,
-                        links=link_map.get(("plan", p.id)),
-                        repos=repos_map.get(("plan", p.id)),
-                    ),
-                    data={"kind": "plan", "id": p.id},
-                    allow_expand=bool(milestones),
+        def _progress_map(self) -> dict[tuple[str, int], tuple[int, int]]:
+            """Task progress per plan and milestone, independent of filters."""
+            out: dict[tuple[str, int], tuple[int, int]] = {}
+            for plan, milestones in services.tree(self.store, status=None, archived="show"):
+                all_tasks = [task for _, tasks in milestones for task in tasks]
+                out[("plan", plan.id)] = (
+                    sum(1 for task in all_tasks if task.status == Status.DONE),
+                    len(all_tasks),
                 )
-                self._row_nodes[("plan", p.id)] = pn
-                for s, tasks in milestones:
-                    sn = pn.add(
-                        milestone_row(s, self.store, links=link_map.get(("milestone", s.id))),
-                        data={"kind": "milestone", "id": s.id},
-                        allow_expand=bool(tasks),
+                for milestone, tasks in milestones:
+                    out[("milestone", milestone.id)] = (
+                        sum(1 for task in tasks if task.status == Status.DONE),
+                        len(tasks),
                     )
-                    self._row_nodes[("milestone", s.id)] = sn
-                    for t in tasks:
-                        leaf = sn.add_leaf(
-                            task_row(t, self.store, links=link_map.get(("task", t.id))),
-                            data={"kind": "task", "id": t.id},
-                        )
-                        self._row_nodes[("task", t.id)] = leaf
-            root.expand()
-            self._collapsed &= set(self._row_nodes)  # drop rows deleted since last build
-            self._expanded &= set(self._row_nodes)
-            done_plans = {("plan", p.id) for p, _ in filtered if p.status == Status.DONE}
-            for key, node in self._row_nodes.items():
-                if key in self._collapsed:
-                    node.collapse()
-                elif key in done_plans and key not in self._expanded:
-                    node.collapse()
-                    self._collapsed.add(key)
-                elif node.allow_expand:
-                    node.expand()
-            c = self.store.counts()
+            return out
+
+        def _status_text(self, counts: dict[str, int], note: str) -> str:
+            """Human counts, filter state, update notice, and the latest event."""
+            open_tasks = counts["tasks"] - counts["tasks_done"]
+            bits = [
+                repo_label(self.store.path),
+                f"{counts['plans']} plans",
+                f"{open_tasks} open",
+                f"{counts['plans_doing']} doing",
+            ]
+            if self.status_filter is not None:
+                bits.append(f"status {self.status_filter.value}")
+            if self.filter_text.strip():
+                bits.append(f'filter "{self.filter_text.strip()}"')
+            if not self.show_all:
+                bits.append(f"recent {services.DEFAULT_PLAN_LIMIT}")
+            if self._update_notice is not None:
+                bits.append("update available")
+            text = " · ".join(bits)
+            if note:
+                text += f" — {note}"
             events = self.store.feed(1)
             if events:
-                e = events[0]
-                act = f"last: [{e['actor']}] {e['kind']}/{e['action']}: {e['detail']}"
-            else:
-                act = EMPTY_FEED
-            sf = self.status_filter.value if self.status_filter else "all"
-            shown_plans = len(self._row_nodes and [k for k in self._row_nodes if k[0] == "plan"] or [])
-            bar = (
-                f" [{repo_label(self.store.path)}]"
-                f" P:{c['plans']} S:{c['milestones']} T:{c['tasks_done']}/{c['tasks']}"
-                f" Q:{c['plans_todo']}/{c['plans_doing']}/{c['plans_done']}"
-                f" · f:{sf} A:{'all' if self.show_all else services.DEFAULT_PLAN_LIMIT}"
+                event = events[0]
+                text += f" · last: {event['actor']} {event['kind']}/{event['action']}: {event['detail']}"
+            return truncate(text, max(10, self.size.width - 2))
+
+        def _row_width(self, tree: Tree, depth: int) -> int:
+            """Usable label width for a row at `depth`, excluding tree guides."""
+            base = tree.size.width or (
+                max(20, self.size.width // 2)
+                if self.size.width >= 100
+                else max(20, self.size.width)
             )
-            if self.filter_text.strip():
-                bar += f" · /{self.filter_text.strip()} ({shown_plans} plans)"
-            if self._update_notice is not None:
-                bar += f" · {self._update_notice}"
-            if note:
-                bar += f" — {note}"
-            self.query_one("#status", Label).update(f"{bar} · {act}")
-            # -- focus/collapse preservation (keyboard-nav polish) --
+            return max(10, base - 5 - depth)
+
+        def _build_rows(self, root: Any, tree: Tree, filtered: list, progress: dict) -> None:
+            """Create plan/milestone/task nodes for one refresh."""
+            for plan, milestones in filtered:
+                plan_node = root.add(
+                    plan_row(
+                        plan,
+                        progress=progress.get(("plan", plan.id)),
+                        width=self._row_width(tree, 3),
+                    ),
+                    data={"kind": "plan", "id": plan.id},
+                    allow_expand=bool(milestones),
+                )
+                self._row_nodes[("plan", plan.id)] = plan_node
+                for milestone, tasks in milestones:
+                    milestone_node = plan_node.add(
+                        milestone_row(
+                            milestone,
+                            self.store,
+                            progress=progress.get(("milestone", milestone.id)),
+                            width=self._row_width(tree, 7),
+                        ),
+                        data={"kind": "milestone", "id": milestone.id},
+                        allow_expand=bool(tasks),
+                    )
+                    self._row_nodes[("milestone", milestone.id)] = milestone_node
+                    for task in tasks:
+                        leaf = milestone_node.add_leaf(
+                            task_row(task, self.store, width=self._row_width(tree, 11)),
+                            data={"kind": "task", "id": task.id},
+                        )
+                        self._row_nodes[("task", task.id)] = leaf
+
+        def _apply_folds(self) -> None:
+            """Plans open to milestones, milestones to tasks, only when expanded."""
+            try:
+                for key, node in self._row_nodes.items():
+                    if not node.allow_expand or not node.children:
+                        continue
+                    if key in self._expanded:
+                        node.expand()
+                    else:
+                        node.collapse()
+            finally:
+                self._refreshing = False
+
+        def _restore_selection(
+            self, tree: Tree, prev_selected: tuple[str, int] | None, prev_cursor: Any
+        ) -> None:
+            """Keep the cursor on the same row across rebuilds."""
             target = prev_selected if prev_selected in self._row_nodes else prev_cursor
             if target not in self._row_nodes:
                 target = None
             if target is None and self._row_nodes:
-                # keep selection valid: first visible plan, else first row
-                for k in self._row_nodes:
-                    if k[0] == "plan":
-                        target = k
+                for key in self._row_nodes:
+                    if key[0] == "plan":
+                        target = key
                         break
                 if target is None:
                     target = next(iter(self._row_nodes))
                 self.selected = target
-            if target in self._row_nodes:
-                node = self._row_nodes[target]
+            if target not in self._row_nodes:
+                return
+            node = self._row_nodes[target]
+            try:
+                tree.move_cursor(node)
+            except Exception:
+                pass
+
+            def _restore(n: Any = node) -> None:
                 try:
-                    tree.move_cursor(node)
+                    tree.move_cursor(n)
+                    tree.scroll_to_node(n)
                 except Exception:
                     pass
 
-                def _restore(n=node) -> None:
-                    try:
-                        tree.move_cursor(n)
-                        tree.scroll_to_node(n)
-                    except Exception:
-                        pass
+            try:
+                self.call_after_refresh(_restore)
+            except Exception:
+                pass
 
-                try:
-                    self.call_after_refresh(_restore)
-                except Exception:
-                    pass
+        def refresh_all(self, note: str = "") -> None:
+            tree = self.query_one("#tree", Tree)
+            self._refreshing = True
+            prev_selected = self.selected
+            try:
+                cursor = tree.cursor_node
+                prev_cursor = self._node_key(cursor) if cursor is not None else None
+            except Exception:
+                prev_cursor = None
+            tree.clear()
+            self._row_nodes = {}
+            progress = self._progress_map()
+            filtered = self._filtered_tree()
+            filtered.sort(key=lambda entry: entry[0].status == Status.DONE)
+            self._build_rows(tree.root, tree, filtered, progress)
+            tree.root.expand()
+            self._collapsed &= set(self._row_nodes)
+            self._expanded &= set(self._row_nodes)
+            self._apply_folds()
+            self.query_one("#status", Label).update(self._status_text(self.store.counts(), note))
+            self.query_one("#hints", Label).update(hint_bar(max(10, self.size.width - 2)))
+            self._restore_selection(tree, prev_selected, prev_cursor)
             self.update_preview()
 
         def action_refresh(self) -> None:
@@ -617,11 +788,34 @@ if _TEXTUAL_OK:
         def action_help(self) -> None:
             self.push_screen(HelpScreen())
 
+        def _palette_context(self) -> dict[str, str | None]:
+            """Disable commands that cannot run for the current selection."""
+            selected = self.selected is not None
+            plan_id = self._plan_ctx()
+            milestone_id = self._milestone_for_task_ctx()
+            context: dict[str, str | None] = {cmd.id: None for cmd in COMMANDS}
+            if not selected:
+                for cmd in COMMANDS:
+                    if cmd.context == "selection":
+                        context[cmd.id] = "Select a row first"
+            if plan_id is None:
+                context["create-milestone"] = "Select a plan first"
+                context["export-plan"] = "Select a plan first"
+            if milestone_id is None:
+                context["create-task"] = "Select a milestone first"
+            if self.selected is not None and self.selected[0] == "task":
+                context["fold-one"] = "Nothing to fold"
+            return context
+
         def action_command_palette(self) -> None:
             """Open the modal command palette (c)."""
             if len(self.screen_stack) > 1:
                 return
-            self.push_screen(PaletteScreen(), self._run_palette_command)
+            self.push_screen(PaletteScreen(self._palette_context()), self._run_palette_command)
+
+        def action_filter_text(self) -> None:
+            """Prompt for filter text (slash)."""
+            self._open_filter_prompt()
 
         def _open_filter_prompt(self) -> None:
             """Prompt for tree filter text; empty clears the filter."""
@@ -638,41 +832,42 @@ if _TEXTUAL_OK:
 
             self.push_screen(FilterPromptScreen(), cb)
 
-        def _run_palette_command(self, cmd: str | None) -> None:
-            """Run one palette command id from the modal palette."""
-            if not cmd:
+        def _run_palette_command(self, command_id: str | None) -> None:
+            """Run one palette command id through the shared registry."""
+            if not command_id:
                 return
-            if cmd == "filter-text":
-                self._open_filter_prompt()
+            command = by_id(command_id)
+            if command is None:
                 return
-            try:
-                self.store.feed(0)
-            except Exception:
-                pass
-            dispatch = {
-                "create": self.action_new_context,
-                "open-detail": self.action_open_detail,
-                "export-md": self.action_export_md,
-                "criteria": self.action_criteria,
-                "delete": self.action_delete,
-                "toggle-status": self.action_toggle_status,
+            handlers: dict[str, Any] = {
+                "new_plan": self.action_new_plan,
+                "new_milestone": self.action_new_milestone,
+                "new_task": self.action_new_task,
+                "add_criterion": self.action_add_criterion,
+                "edit_selection": self.action_edit_selection,
+                "move_todo": lambda: self.action_move(Status.TODO),
+                "move_doing": lambda: self.action_move(Status.DOING),
+                "move_done": lambda: self.action_move(Status.DONE),
+                "tick_criterion": self.action_criteria,
+                "untick_criterion": self.action_untick_criterion,
+                "delete_selection": self.action_delete,
+                "open_detail": self.action_open_detail,
                 "fold": self.action_fold,
-                "fold-all": self.action_fold_all,
-                "filter": self.action_filter_status,
-                "show-all": self.action_toggle_show_all,
+                "fold_all": self.action_fold_all,
+                "filter_text": self.action_filter_text,
+                "filter_status": self.action_filter_status,
+                "toggle_show_all": self.action_toggle_show_all,
                 "refresh": self.action_refresh,
+                "command_palette": self.action_command_palette,
+                "export_md": self.action_export_md,
                 "help": self.action_help,
-                "quit": self.action_quit if hasattr(self, "action_quit") else self.exit,
+                "quit": self.exit,
             }
-            fn = dispatch.get(cmd)
-            if fn is not None:
-                fn()
-                self._pending_note = f"palette: {cmd}"
-                # actor trail: palette runs are TUI writes
-                try:
-                    self._fp = self.store.fingerprint()
-                except Exception:
-                    pass
+            fn = handlers.get(command.handler)
+            if fn is None:
+                return
+            fn()
+            self._pending_note = command.label.lower()
 
         # -- editing ------------------------------------------------------
         def _milestone_for_task_ctx(self) -> int | None:
@@ -774,7 +969,9 @@ if _TEXTUAL_OK:
 
             self.push_screen(
                 NewMilestoneScreen(
-                    pid, defaults=load_template("milestone", self.store.path).defaults
+                    pid,
+                    defaults=load_template("milestone", self.store.path).defaults,
+                    context=f"P{pid}",
                 ),
                 cb,
             )
@@ -782,7 +979,7 @@ if _TEXTUAL_OK:
         def action_new_task(self) -> None:
             sid = self._milestone_for_task_ctx()
             if sid is None:
-                self.notify("select a milestone first (or press M to create one)")
+                self.notify("select a milestone first (n on a plan creates one)")
                 return
 
             def cb(data: dict | None) -> None:
@@ -800,13 +997,20 @@ if _TEXTUAL_OK:
                     self.notify(f"error: {exc}")
                 self._saved("task created")
 
+            milestone = self.store.get_milestone(sid)
+            where = f"P{milestone.plan_id} › M{sid}" if milestone else f"M{sid}"
             self.push_screen(
-                NewTaskScreen(sid, defaults=load_template("task", self.store.path).defaults), cb
+                NewTaskScreen(
+                    sid,
+                    defaults=load_template("task", self.store.path).defaults,
+                    context=where,
+                ),
+                cb,
             )
 
         def action_toggle_status(self) -> None:
             if self.selected is None:
-                self.notify("select a row first (space cycles its status)")
+                self.notify("select a row first (s advances status)")
                 return
             kind, oid = self.selected
             left = self.store.open_criteria(kind, oid)
@@ -817,18 +1021,83 @@ if _TEXTUAL_OK:
             nxt = services.cycle_status(self.store, kind, oid, actor="tui")
             if nxt is None:
                 self.notify("selected row no longer exists")
-            self._saved(f"{kind} #{oid} -> {nxt.value if nxt else '?'}")
+            self._saved(f"{kind} {oid} -> {nxt.value if nxt else '?'}")
+
+        def action_move(self, status: Status) -> None:
+            """Move the selection to an explicit status (palette)."""
+            if self.selected is None:
+                self.notify("select a row first, then move it")
+                return
+            kind, oid = self.selected
+            left = self.store.open_criteria(kind, oid)
+            if status == Status.DONE and left:
+                self.notify(f"warning: {len(left)} open criteria — closing anyway", timeout=5)
+            if not services.set_status(self.store, kind, oid, status, actor="tui"):
+                self.notify("selected row no longer exists")
+                return
+            self._saved(f"{kind} {oid} -> {status.value}")
+
+        def action_add_criterion(self) -> None:
+            """Prompt for a new criterion on the selected row."""
+            if self.selected is None:
+                self.notify("select a row first (a adds a criterion)")
+                return
+            kind, oid = self.selected
+
+            def cb(text: str | None) -> None:
+                if not text:
+                    return
+                try:
+                    self.store.add_criteria(kind, oid, text, actor="tui")
+                except (ValueError, KeyError) as exc:
+                    self.notify(f"error: {exc}")
+                    return
+                self._saved("criterion added")
+
+            self.push_screen(
+                FilterPromptScreen(
+                    title=f"New criterion on {kind} {oid}",
+                    placeholder="what must be true?",
+                    submit_label="Add",
+                ),
+                cb,
+            )
+
+        def action_untick_criterion(self) -> None:
+            """Reopen the last ticked criterion on the selected row."""
+            if self.selected is None:
+                self.notify("select a row first (x ticks criteria)")
+                return
+            kind, oid = self.selected
+            done = [c for c in self.store.list_criteria(kind, oid) if c.done]
+            if not done:
+                self.notify("no ticked criteria to reopen")
+                return
+            target = done[-1]
+            self.store.set_criteria(target.id, False, actor="tui")
+            self._saved(f"criterion #{target.id} reopened")
+
+        def action_edit_selection(self) -> None:
+            """Edit the selected row; detail owns the edit form."""
+            if self.selected is None:
+                self.notify("select a row first (e edits it)")
+                return
+            self._open_detail(*self.selected, edit=True)
+
+        async def action_quit(self) -> None:
+            """Leave the screen (q)."""
+            self.exit()
 
         def action_criteria(self) -> None:
             """Tick first open criterion; if none open, reopen the last done one."""
             if self.selected is None:
-                self.notify("select a row first (c ticks criteria)")
+                self.notify("select a row first (x ticks criteria)")
                 return
             kind, oid = self.selected
             items = self.store.list_criteria(kind, oid)
             if not items:
                 self.notify(
-                    f'no criteria — add via: add-criteria --kind {kind} --id {oid} --text "..."'
+                    f'no criteria — add via: lpui add-criteria --kind {kind} --id {oid} --text "..."'
                 )
                 return
             open_items = [c for c in items if not c.done]
@@ -838,7 +1107,7 @@ if _TEXTUAL_OK:
                 target, reopen = items[-1], True  # nothing open: re-affirm by reopening last
             self.store.set_criteria(target.id, not reopen, actor="tui")
             verb = "reopened" if reopen else "checked"
-            self._saved(f"criteria #{target.id} {verb}")
+            self._saved(f"criterion {target.id} {verb}")
 
         def action_delete(self) -> None:
             if self.selected is None:
@@ -869,12 +1138,12 @@ if _TEXTUAL_OK:
             self._last_click_key, self._last_click_at = key, now
             return double
 
-        def _open_detail(self, kind: str, oid: int) -> None:
+        def _open_detail(self, kind: str, oid: int, edit: bool = False) -> None:
             def cb(saved: bool | None) -> None:
                 if saved:
                     self._saved("saved detail")
 
-            self.push_screen(DetailScreen(self.store, kind, oid), cb)
+            self.push_screen(DetailScreen(self.store, kind, oid, edit=edit), cb)
 
         def action_export_md(self) -> None:
             pid = self._plan_ctx()

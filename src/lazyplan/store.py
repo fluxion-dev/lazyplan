@@ -192,8 +192,7 @@ class Store:
             if conn.execute("SELECT 1 FROM plans WHERE id=?", (plan_id,)).fetchone() is None:
                 raise KeyError(f"plan #{plan_id} not found")
             cur = conn.execute(
-                "INSERT INTO milestones (plan_id, title, description, status)"
-                " VALUES (?,?,?,?)",
+                "INSERT INTO milestones (plan_id, title, description, status) VALUES (?,?,?,?)",
                 (s.plan_id, s.title, s.description, s.status.value),
             )
             s.id = cur.lastrowid or 0
@@ -272,8 +271,7 @@ class Store:
             ):
                 raise KeyError(f"milestone #{milestone_id} not found")
             cur = conn.execute(
-                "INSERT INTO tasks (milestone_id, title, status, description)"
-                " VALUES (?,?,?,?)",
+                "INSERT INTO tasks (milestone_id, title, status, description) VALUES (?,?,?,?)",
                 (t.milestone_id, t.title, t.status.value, t.description),
             )
             t.id = cur.lastrowid or 0
@@ -580,20 +578,6 @@ class Store:
                 (parent_kind, parent_id),
             ).fetchall()
         return [self._row_to_link(r) for r in rows]
-
-    def links_map(self) -> dict[tuple[str, int], list[str]]:
-        """Every linked SHA grouped by (parent_kind, parent_id), oldest first.
-
-        One query per call so tree renders stay O(1) in queries.
-        """
-        with self._connect() as conn:
-            rows = conn.execute(
-                "SELECT parent_kind, parent_id, sha FROM vcs_links ORDER BY id"
-            ).fetchall()
-        out: dict[tuple[str, int], list[str]] = {}
-        for r in rows:
-            out.setdefault((r["parent_kind"], r["parent_id"]), []).append(r["sha"])
-        return out
 
     # -- linked repos (0..n checkouts per plan/milestone/task) ------------
     @staticmethod

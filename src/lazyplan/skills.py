@@ -84,7 +84,7 @@ is the whole model — no dates, owners, labels, or estimates.
 ## Identity
 
 Pass `--actor <name>` on every write so the human sees who did what in
-`lpui feed` (e.g. `lpui --actor opencode add-task ...`). Reads don't need it.
+`lpui feed` (e.g. `lpui --actor opencode task add ...`). Reads don't need it.
 `--actor` and `--json` work before or after the verb
 (`lpui list --json` == `lpui --json list`).
 
@@ -172,10 +172,10 @@ or task. No row is written from unscouted ground, in any case, no exceptions.
 Then record it:
 
 ```bash
-lpui --actor NAME add-plan --title "API v2" --why ".." --what ".."
-lpui --actor NAME add-criteria --kind plan --id P --text "Works offline"
-lpui criteria --kind plan --id P                                     # list items
-lpui check --id C / lpui uncheck --id C                                 # tick/untick (advisory)
+lpui --actor NAME plan add --title "API v2" --why ".." --what ".."
+lpui --actor NAME criterion add --kind plan --id P --text "Works offline"
+lpui criterion list --kind plan --id P                                     # list items
+lpui criterion tick --id C / lpui criterion untick --id C                                 # tick/untick (advisory)
 ```
 
 Only once the definition is agreed, cut the work — milestones from the plan,
@@ -193,7 +193,7 @@ Once the definition is recorded and the work is cut, present the plan for check-
 
 ```bash
 lpui list --status all                 # the whole tree
-lpui show --kind plan --id P        # why/what + criteria + children
+lpui plan show --id P        # why/what + criteria + children
 ```
 
 Walk the human through every milestone and task, make last edits on the spot, and start executing only on explicit check-off. During execution the plan stays the truth: fold new findings into the plan before changing code, never around it.
@@ -202,7 +202,7 @@ Walk the human through every milestone and task, make last edits on the spot, an
 
 ```bash
 lpui list [--status todo|doing|done|all] [--archived] [--plan ID]  # tree (default: all)
-lpui show --kind plan|milestone|task --id N                           # full context
+lpui plan show --id N                                            # full context
 lpui feed --limit 20                                                 # recent activity
 lpui export --format json                                            # full dump when you need everything
 lpui export --format markdown --plan ID [--file out.md]              # one full-fidelity plan doc
@@ -245,13 +245,13 @@ Every entity supports create → read (`show`) → update/status → delete.
 `--kind` is plan|milestone|task everywhere it appears.
 
 ```bash
-lpui --actor NAME add-plan --title "API v2" --why ".." --what ".."
-lpui --actor NAME add-milestone --plan P --title "Feature Y" [--desc ..]
-lpui --actor NAME add-task --milestone S --title "Do X" [--desc ctx]
-lpui --actor NAME update --kind task --id T [--title .. --desc ..]
-lpui --actor NAME update --kind plan --id P [--title .. --what .. --why ..]
-lpui --actor NAME status --kind task --id T --to doing|done
-lpui --actor NAME delete --kind task --id T                          # immediate, no confirm
+lpui --actor NAME plan add --title "API v2" --why ".." --what ".."
+lpui --actor NAME milestone add --plan P --title "Feature Y" [--desc ..]
+lpui --actor NAME task add --milestone S --title "Do X" [--desc ctx]
+lpui --actor NAME task edit --id T [--title .. --desc ..]
+lpui --actor NAME plan edit --id P [--title .. --what .. --why ..]
+lpui --actor NAME task move --id T --to doing|done
+lpui --actor NAME task delete --id T                          # immediate, no confirm
 ```
 
 Deleting a plan removes its milestones and tasks — double-check ids first.
@@ -262,10 +262,10 @@ but never blocks.
 ## Acceptance criteria
 
 ```bash
-lpui --actor NAME add-criteria --kind plan --id P --text "Works offline"  # acceptance item
-lpui criteria --kind plan --id P                                          # list items
-lpui check --id C / lpui uncheck --id C                                      # tick/untick (advisory)
-lpui --actor NAME delete-criteria --id C
+lpui --actor NAME criterion add --kind plan --id P --text "Works offline"  # acceptance item
+lpui criterion list --kind plan --id P                                          # list items
+lpui criterion tick --id C / lpui criterion untick --id C                                      # tick/untick (advisory)
+lpui --actor NAME criterion delete --id C
 lpui --actor NAME import --file dump.json                                    # load an export dump (remaps ids)
 ```
 
@@ -277,8 +277,8 @@ definition of done — tick them as the work lands.
 Each milestone states user value in narrative form, with testable criteria:
 
 ```bash
-lpui --actor NAME add-milestone --plan P --title "Feature Y" --desc "As a [persona], I want [action] so that [benefit]"
-lpui --actor NAME add-criteria --kind milestone --id S --text "Given [context], when [action], then [outcome]"
+lpui --actor NAME milestone add --plan P --title "Feature Y" --desc "As a [persona], I want [action] so that [benefit]"
+lpui --actor NAME criterion add --kind milestone --id S --text "Given [context], when [action], then [outcome]"
 ```
 
 Keep milestones INVEST: independent, negotiable, valuable, estimable, small,
@@ -294,11 +294,11 @@ technical how: approach, code references, inputs and prerequisites. Task-level
 checklists are the definition of done:
 
 ```bash
-lpui --actor NAME add-task --milestone S --title "Implement token rotation" --desc "Approach and file refs"
-lpui --actor NAME add-task --milestone S --title "Run the relevant test suites" --desc "Suites named in the interview"
-lpui --actor NAME add-task --milestone S --title "Refactor what the change touched" --desc "Leave the area cleaner"
-lpui --actor NAME add-task --milestone S --title "Clean up touched documentation" --desc "Docs matching the final code"
-lpui --actor NAME add-criteria --kind task --id T --text "Unit tests pass"
+lpui --actor NAME task add --milestone S --title "Implement token rotation" --desc "Approach and file refs"
+lpui --actor NAME task add --milestone S --title "Run the relevant test suites" --desc "Suites named in the interview"
+lpui --actor NAME task add --milestone S --title "Refactor what the change touched" --desc "Leave the area cleaner"
+lpui --actor NAME task add --milestone S --title "Clean up touched documentation" --desc "Docs matching the final code"
+lpui --actor NAME criterion add --kind task --id T --text "Unit tests pass"
 ```
 
 No assignee or effort fields — ownership is the `--actor` on each write, size
@@ -326,15 +326,15 @@ Repo plan of record: plans > milestones > tasks in `.agents/lazyplan/lazyplan.db
 Human watches `lpui ui`; agents work via the CLI with `--actor <name>`.
 
 - New plan? Interview the human first: vision, scope in and out, deliverables, constraints, metrics, acceptance criteria. Scout the codebase during the interview.
-- Read: `lpui list`, `lpui show --kind plan --id N`, `lpui feed --limit 20` (`--json` for parsing)
-- Write (full CRUD): `lpui add-plan`, `lpui add-milestone`, `lpui add-task`, `lpui update`, `lpui status`, `lpui delete` (all with `--actor <name>`)
+- Read: `lpui list`, `lpui plan show --id N`, `lpui feed --limit 20` (`--json` for parsing)
+- Write (full CRUD): `lpui plan|milestone|task add`, `... edit`, `... move`, `... delete`; `lpui criterion add|tick|untick|delete` (all with `--actor <name>`)
 - Milestones read As a/I want/so that with Given-When-Then criteria; tasks start with a verb and carry a DoD checklist; cut both from scouted ground only
 - Scout before creating anything — no row from unscouted ground; scope lists what is in and out explicitly
 - Implementation requests get an ambiguity hunt first: touch-points, edge cases, non-goals, assumptions — never accept "implement X" at face value
 - Write every row for scanning: paragraphs and sections, no single-blob text, no placeholder content; starters ship empty, fill them with real words
 - Templates in `.agents/lazyplan/templates/` fill/enforce/auto-add criteria at creation; missing templates mean legacy defaults; `lpui init` walks through setup, reruns offer keep/edit/reset
 - Plans include QA, refactoring, and documentation cleanup by default; ask about relevant testing in the interview, drop them only on explicit opt-out
-- Done means: `lpui add-criteria --kind plan`, cut milestones, cut tasks, work in creation order
+- Done means: `lpui criterion add --kind plan`, cut milestones, cut tasks, work in creation order
 - Unsure on scope or taste? Ask the human in conversation — never guess the definition
 - Review gate: present the plan, edit on the spot, execute only on check-off; the plan is the truth
 - Full skill: `.agents/skills/lazyplan/SKILL.md` · verbs: `lpui --help`

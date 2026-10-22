@@ -82,12 +82,14 @@ class TestTuiNotice(unittest.IsolatedAsyncioTestCase):
                 await self._wait_for_notice(pilot, self.app)
                 await pilot.pause()
                 bar = self.app.query_one("#status", Label)
-                self.assertIn("9.9.9", str(bar.content))
-                self.assertIn("lpui upgrade", str(bar.content))
+                self.assertIn("update available", str(bar.content))
                 self.assertEqual(latest.call_count, 1)
                 self.app._announce_update(self.app._update_notice or "")
                 self.app._announce_update(self.app._update_notice or "")
                 self.assertEqual(toast.call_count, 1)
+                notice = toast.call_args[0][0]
+                self.assertIn("9.9.9", notice)
+                self.assertIn("lpui upgrade", notice)
 
     async def test_offline_stays_silent(self):
         with mock.patch.object(

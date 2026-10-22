@@ -1,4 +1,4 @@
-# lazyplan (`lpui`) — v0.18.0
+# lazyplan (`lpui`) — v0.19.0
 
 [![CI](https://github.com/fluxion-dev/lazyplan/actions/workflows/ci.yml/badge.svg)](https://github.com/fluxion-dev/lazyplan/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/fluxion-dev/lazyplan)](https://github.com/fluxion-dev/lazyplan/releases)
@@ -33,9 +33,9 @@ Need a system package instead? These bundles include everything they need. You o
 
 ```bash
 # Fedora / RHEL / openSUSE — grab the matching asset from Releases
-sudo dnf install ./lazyplan-0.18.0-1.x86_64.rpm   # or -1.aarch64.rpm on ARM
+sudo dnf install ./lazyplan-0.19.0-1.x86_64.rpm   # or -1.aarch64.rpm on ARM
 # Debian / Ubuntu
-sudo apt install ./lazyplan_0.18.0-1_amd64.deb     # or -1_arm64.deb on ARM
+sudo apt install ./lazyplan_0.19.0-1_amd64.deb     # or -1_arm64.deb on ARM
 ```
 
 Want the installer to choose for you? This one-liner picks the right method for your machine:
@@ -63,7 +63,7 @@ Run these three commands. You will have a live plan you can open:
 ```bash
 cd ~/my-plan
 lpui init --yes             # local skills + shared DB, no repo writes
-lpui add-plan --title "my-plan" --why "reason" --what "scope"
+lpui plan add --title "my-plan" --why "reason" --what "scope"
 lpui                        # TUI (`lpui ui` also works)
 ```
 
@@ -89,21 +89,23 @@ Note: versions up to 0.7.0 shipped this tool as `lp`, renamed because that name 
 
 You plan in `lpui` (`lpui ui` opens the same screen). Here is what you will see:
 
-- You start a plan tree with a bar of shortcuts at the bottom, like nano. Starting out? Your agent asks you first what you want to build, why it matters, and how you will know it is done. Then it writes that down as the plan.
-- Once you agree on the plan, your agent breaks it into milestones, then breaks each milestone into small tasks. It works in creation order.
-- Rows that came from a git commit show a short commit chip. Press `enter` on a row to see its commits in a read-only panel.
+- Plans start as one-line summaries with progress, for example `◐ P2 API v2 3/8`. Press `right` or `z` to reveal milestones, then tasks. Nothing is dumped on you at once.
+- The right pane previews the selected row: why/what, the next few open tasks, acceptance progress, commits, and repos. At narrow widths the preview steps aside and `enter` opens the full detail page.
+- `enter` opens the detail page in a read-only view. Press `e` to edit, `s` to advance status, `x` to tick a criterion, `a` to add one, `n` to add the next level, and `d` to delete (the confirmation says what else will go). `escape` goes back.
+- The bottom line shows human counts (`3 plans · 12 open · 1 doing`) and the keys that work right now. The palette lists plain outcomes and disables commands that cannot run for the current selection.
 - You and your agent share one SQLite file. The screen refreshes every second and tells you when something new arrives. Your agent never touches the screen itself. Big decisions about wording and scope stay a conversation with you.
 
 | key | what it does |
 |---|---|
-| `j`/`k`, arrows, click | move around and select · `enter`/double-click edits in place · `left`/`right` fold and unfold |
-| `c` | command palette: type a command, `enter` runs it · `filter by text` narrows the tree |
-| `escape` | clear filter / close (dirty prompts) |
+| `j`/`k`, arrows, click | move and select · `left`/`right` fold and unfold · `enter` open detail |
+| `e` / `s` / `x` / `a` / `d` | edit · advance status · tick next criterion · add criterion · delete |
+| `n` | create by context (plan, milestone, or task); the form names its target |
+| `/` | filter by text · `f` change status filter · `A` show all plans · `r` refresh |
+| `?` | help · `c` command palette · `q` quit |
 
-Everything else lives in the command palette: create (adaptive to the selection), open detail, export, status, criteria, delete, fold, filter, refresh, help, quit. Press `c`, type a prefix (`create`, `open`, `cycle`, `tick`, `fold`, `filter`, …) and `enter` runs the first match.
+The palette and the CLI use the same names: Create plan, Move to doing, Tick next criterion, Delete selection. Old CLI verbs still work as aliases, and typing one in the palette finds the canonical command.
 
-Left pane is the plan tree, right pane is a live preview (no modal needed).
-Agents use the `lpui` command line. The screen is keyboard-only: `c` opens the command palette. For the full key list, run `lpui help` (same text as the in-app help screen).
+Plans start collapsed. Press `right` (or `z`) on a plan to show its milestones; tasks stay folded until you open their milestone. Completed plans are dimmed and sorted last.
 
 ## CLI reference
 
@@ -112,7 +114,7 @@ The package installs full help text. Start here:
 ```bash
 lpui --help              # globals + examples + env/files/exit codes
 lpui --version           # print the installed version and exit
-lpui <command> --help    # per-command flags, e.g. lpui add-task --help
+lpui <command> --help    # per-command flags, e.g. lpui task add --help
 man lpui                 # full manual (also `man lazyplan`); installed to share/man/man1
 lpui help                # screen key bindings (same as the in-app help screen)
 ```
@@ -121,13 +123,28 @@ Flags work before or after the command (`lpui list --json` means the same as `lp
 
 ```bash
 lpui seed
-lpui list [--status todo|doing|done|all] [--archived] [--plan ID] [--all] [--limit N]  # default: 5 most recent
-lpui show --kind plan|milestone|task --id N   # full context: why/what + criteria + commits + children
-lpui add-plan --title "API v2" --why ".." --what ".."
-lpui add-criteria --kind plan --id 1 --text "works offline"
-lpui check --id 1 / lpui uncheck --id 1        # tick acceptance items (advisory)
-lpui add-milestone --plan 1 --title "Auth refresh" [--desc ..]
-lpui add-task --milestone 1 --title "Rotate tokens" [--desc ctx]
+lpui list [--tree] [--status todo|doing|done|all] [--archived] [--plan ID] [--all] [--limit N]
+lpui plan list                              # summaries; 5 most recent by default
+lpui plan list --tree                       # full plan/milestone/task tree
+lpui plan show --id 1                       # why/what + criteria + commits + children
+lpui plan add --title "API v2" --why ".." --what ".."
+lpui plan edit --id 1 [--title --what --why]
+lpui plan move --id 1 --to doing            # closing with open criteria warns, never blocks
+lpui plan delete --id 1
+lpui milestone add --plan 1 --title "Auth refresh" [--desc ..]
+lpui milestone edit --id 2 [--title --desc]
+lpui milestone show --id 2
+lpui milestone move --id 2 --to done
+lpui milestone delete --id 2
+lpui task add --milestone 1 --title "Rotate tokens" [--desc ctx]
+lpui task edit --id 3 [--title --desc]
+lpui task show --id 3
+lpui task move --id 3 --to done
+lpui task delete --id 3
+lpui criterion add --kind plan --id 1 --text "works offline"
+lpui criterion list --kind plan --id 1
+lpui criterion tick --id 4 / lpui criterion untick --id 4
+lpui criterion delete --id 4
 lpui link --kind task --id 1 [--sha HASH]      # attach HEAD (git repos only; disabled otherwise)
 lpui commits --kind task --id 1                # list linked commits (empty outside git)
 lpui unlink --kind task --id 1 --sha HASH      # detach a commit
@@ -136,15 +153,13 @@ lpui unlink-repo --kind plan --id 1 --repo ~/checkouts/api
 lpui repos --kind task --id 1 [--effective]    # explicit links, or inherited
 lpui list [--repo ~/checkouts/api]             # filter by effective repo
 lpui export [--format json|markdown] | lpui import --file dump.json
-lpui update --kind task --id 1 [--title --desc]
-lpui update --kind plan --id 1 [--title --what --why]
-lpui status --kind task --id 1 --to doing    # closing with open criteria warns, never blocks
-lpui delete --kind task --id 1
 lpui upgrade [--check]                   # self-update pipx/venv installs (system pkgs: use dnf/apt)
 lpui feed [--limit 20]            # recent human/agent activity
 lpui watch [--limit 20]           # tail (agents: lpui feed --json --follow &)
-lpui --actor helper add-task --milestone 3 --title "Draft proposal"
+lpui --actor helper task add --milestone 3 --title "Draft proposal"
 ```
+
+Legacy flat verbs (`add-plan`, `add-task`, `update`, `status`, `delete`, `check`, `uncheck`, …) still work and remain in `lpui --help` as aliases.
 
 Exit codes: `0` means it worked · `1` means the row was not found · `2` means the flags or input were wrong · `3` means the screen cannot start because Textual is missing. If that happens, reinstall with dependencies: `pip install "lazyplan-tui"` or `pipx reinstall lazyplan-tui`.
 
@@ -154,8 +169,8 @@ Your agent talks to the same database through the command line. It only needs th
 
 ```bash
 lpui --actor helper list --json                    # read the tree
-lpui --actor helper show --kind plan --id 1    # full context: why/what + criteria
-lpui --actor helper add-task --milestone 1 --title "Draft proposal"
+lpui --actor helper plan show --id 1           # full context: why/what + criteria
+lpui --actor helper task add --milestone 1 --title "Draft proposal"
 lpui feed --json --follow &                         # tail activity (polls every second)
 ```
 

@@ -130,21 +130,31 @@ lazyplan: pilot patterns in `tests/test_screens_esc.py`; state asserts on
   watches selection via `update_preview()`.
   https://textual.textualize.io/guide/reactivity/
 - Layout: `Screen` vertical by default; `Horizontal#main` splits nav/preview
-  `1fr/1fr`; `VerticalScroll` needs inner `height: auto`; `dock` chrome,
-  `display: none` removes layout. Focus restore via `call_after_refresh`
-  after rebuild, else cursor is `None`.
+  `1fr/1fr` above 100 columns. `_on_resize` toggles `#main.narrow`, which
+  hides the preview; `VerticalScroll` needs inner `height: auto`; `dock`
+  chrome, `display: none` removes layout. Focus restore via
+  `call_after_refresh` after rebuild, else cursor is `None`.
   https://textual.textualize.io/guide/layout/
+- Progressive disclosure: plans start collapsed; `_expanded` holds the
+  explicit open keys, and `_refreshing` suppresses Tree expand/collapse
+  events during a rebuild. Right/`z` reveals milestones, then tasks.
+  Done plans are dimmed and sorted last.
+  https://textual.textualize.io/guide/reactivity/
 - Palette/discovery: built-in `CommandPalette` stays disabled
   (`ENABLE_COMMAND_PALETTE = False`) so no hidden second palette owns a
-  key. The centered `PaletteScreen` modal renders `PALETTE_SECTIONS` —
-  five labeled groups over all 18 `PALETTE_COMMANDS` — with live
-  `@on(Changed)` filtering; `Submitted/OptionSelected` dismisses with the
-  id and App `_run_palette_command` dispatches, then focus returns to the
-  tree. Headers are disabled `Option` rows (no `Separator` in 8.2.8):
-  they never match the filter, empty sections vanish, and `enter` on one
-  is a no-op. `c` opens it. Filter text lives behind a `filter-text`
-  command opening a small prompt modal instead of a second input bar.
-  Native Tree space/shift+space are parked as no-ops in `FoldTree`.
+  key. The centered `PaletteScreen` modal renders `commands.py` sections
+  (Create/Edit/View/App) with live `@on(Changed)` filtering, a match
+  count, a no-match row, and context-disabled options that name the
+  reason. The list scrolls inside a max-height `#dlg`, so every command is
+  reachable at 80x24. `Submitted/OptionSelected` dismisses with the id and
+  `_run_palette_command` dispatches through registry handlers. Headers are
+  disabled `Option` rows (no `Separator` in 8.2.8). `?` opens the
+  task-grouped help; `/` opens the filter prompt. Native Tree
+  space/shift+space are parked as no-ops in `FoldTree`.
+- Detail: a plain `Screen` with read and edit modes. Read mode is a
+  scrolling `Static` card; `e` swaps to labeled inputs with a dirty
+  snapshot, `ctrl+s` saves, and `Esc` confirms before discarding.
+  https://textual.textualize.io/guide/screens/
 - UX references: lazygit left-tree/right-detail ratio, k9s `describe`
   pane, VSCode `ctrl+p`/`ctrl+k` palette, Linear side-peek
   for detail, posting modal validation. Master-detail + progressive

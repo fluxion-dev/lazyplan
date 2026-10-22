@@ -25,7 +25,7 @@
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   "name": "lazyplan",
-  "version": "0.18.0",
+  "version": "0.19.0",
   "url": "https://fluxion-dev.github.io/lazyplan/",
   "author": {
     "@type": "Person",
@@ -35,10 +35,10 @@
   "operatingSystem": ["Linux"],
   "downloadUrl": [
     "https://github.com/fluxion-dev/lazyplan/releases/latest/download/install.sh",
-    "https://github.com/fluxion-dev/lazyplan/releases/download/v0.18.0/lazyplan_0.18.0-1_amd64.deb",
-    "https://github.com/fluxion-dev/lazyplan/releases/download/v0.18.0/lazyplan_0.18.0-1_arm64.deb",
-    "https://github.com/fluxion-dev/lazyplan/releases/download/v0.18.0/lazyplan-0.18.0-1.x86_64.rpm",
-    "https://github.com/fluxion-dev/lazyplan/releases/download/v0.18.0/lazyplan-0.18.0-1.aarch64.rpm"
+    "https://github.com/fluxion-dev/lazyplan/releases/download/v0.19.0/lazyplan_0.19.0-1_amd64.deb",
+    "https://github.com/fluxion-dev/lazyplan/releases/download/v0.19.0/lazyplan_0.19.0-1_arm64.deb",
+    "https://github.com/fluxion-dev/lazyplan/releases/download/v0.19.0/lazyplan-0.19.0-1.x86_64.rpm",
+    "https://github.com/fluxion-dev/lazyplan/releases/download/v0.19.0/lazyplan-0.19.0-1.aarch64.rpm"
   ]
 }
 </script>
@@ -116,15 +116,12 @@
           <span class="h-3 w-3 rounded-full bg-[#ff5f57]"></span>
           <span class="h-3 w-3 rounded-full bg-[#febc2e]"></span>
           <span class="h-3 w-3 rounded-full bg-[#28c840]"></span>
-          <span class="ml-2 font-mono text-xs text-zinc-500">lpui list — your plans as a tree</span>
+          <span class="ml-2 font-mono text-xs text-zinc-500">lpui plan list — plans at a glance</span>
         </div>
         <div class="space-y-2 p-4 font-mono text-[0.85rem] leading-relaxed">
-          <p class="m-0 text-zinc-400"><span class="mr-2 text-cyber-cyan">$</span>lpui list</p>
-          <pre class="m-0 overflow-x-auto text-zinc-200">⬜ P#1 Website relaunch
-  ⬜ M#1 Public homepage
-    ✅ T#1 Design hero section
-    ⬜ T#2 Wire signup API
-  ⬜ M#2 Docs portal</pre>
+          <p class="m-0 text-zinc-400"><span class="mr-2 text-cyber-cyan">$</span>lpui plan list</p>
+          <pre class="m-0 overflow-x-auto text-zinc-200">◐ P1 Website relaunch 1/3
+○ P2 API v2 0/4</pre>
           <ul class="m-0 flex list-none flex-wrap gap-2 p-0">
             <li class="badge-todo">todo</li>
             <li class="badge-unknown">doing</li>
@@ -132,7 +129,7 @@
           </ul>
         </div>
       </div>
-      <figcaption class="mt-2 text-center text-sm text-zinc-500">Sample output (run <code class="font-mono">lpui seed</code> for demo data). The screen shows this same tree, live.</figcaption>
+      <figcaption class="mt-2 text-center text-sm text-zinc-500">Sample output (run <code class="font-mono">lpui seed</code> for demo data). Press right or <code class="font-mono">z</code> in the screen to reveal milestones, then tasks.</figcaption>
     </figure>
   </div>
 </header>
@@ -146,14 +143,14 @@
     <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8 shadow-lg shadow-black/30 backdrop-blur transition hover:border-viking-blue/50 sm:col-span-2 lg:col-span-2">
       <!-- lucide:layout-list -->
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="mb-2 h-6 w-6 text-cyber-cyan"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
-      <h3 class="mb-1.5 text-lg font-semibold text-white">🗂️ Projects with a reason, a plan, and a checklist</h3>
+      <h3 class="mb-1.5 text-lg font-semibold text-white">🗂️ Plans with a reason, what to build, and a checklist</h3>
       <p class="m-0 text-[0.95rem] text-zinc-400">One list, nothing else. Each plan has a title, a reason why it exists, a description of what to build, and a checklist that says when it is done. You break a plan into milestones. You break each milestone into small tasks. There are no dates, owners, labels, or time estimates.</p>
     </div>
     <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8 shadow-lg shadow-black/30 backdrop-blur transition hover:border-viking-blue/50">
       <!-- lucide:terminal -->
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="mb-2 h-6 w-6 text-viking-blue"><path d="m4 17 6-6-6-6"/><path d="M12 19h8"/></svg>
       <h3 class="mb-1.5 text-lg font-semibold text-white">⌨️ A screen for you, commands for your agent</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400">The screen is driven by keyboard shortcuts only — there is nowhere to type commands in it. Your agent drives the same plans from the shell, for example with <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">add-task --milestone 1 --title x</code>. The bottom of the screen always shows the shortcuts. You edit rows right where they are.</p>
+      <p class="m-0 text-[0.95rem] text-zinc-400">The screen is driven by keyboard shortcuts only — there is nowhere to type commands in it. Your agent drives the same plans from the shell, for example with <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">task add --milestone 1 --title x</code>. The bottom line shows the keys that work right now. Detail opens in a read-only view; press <code class="font-mono">e</code> to edit.</p>
     </div>
     <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8 shadow-lg shadow-black/30 backdrop-blur transition hover:border-viking-blue/50">
       <!-- lucide:bot -->
@@ -188,24 +185,23 @@
 <div class="space-y-6">
 <pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-surface p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono">cd ~/my-plan
 lpui init --yes             <span class="text-zinc-500"># sets up locally, leaves your repo alone (add --team to share it)</span>
-lpui add-plan --title "my-plan" --why "reason" --what "scope"
+lpui plan add --title "my-plan" --why "reason" --what "scope"
 lpui                        <span class="text-zinc-500"># opens the screen (same as lpui ui)</span>
 </code></pre>
   <p class="text-zinc-300">You can also plan from the shell, using the same commands your agent uses:</p>
-<pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-surface p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono">lpui add-criteria --kind plan --id 1 --text "Works offline"
-lpui add-milestone --plan 1 --title "Auth refresh"
-lpui add-task --milestone 1 --title "Rotate tokens"
+<pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-surface p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono">lpui criterion add --kind plan --id 1 --text "Works offline"
+lpui milestone add --plan 1 --title "Auth refresh"
+lpui task add --milestone 1 --title "Rotate tokens"
 lpui link-repo --kind plan --id 1 --repo ~/checkouts/api
 lpui list --repo ~/checkouts/api
-lpui status --kind task --id 1 --to doing
-lpui show --kind plan --id 1   <span class="text-zinc-500"># full details: reason, plan, checklist, linked code</span>
+lpui task move --id 1 --to doing
+lpui plan show --id 1   <span class="text-zinc-500"># full details: reason, plan, checklist, linked code</span>
 </code></pre>
   <p class="text-zinc-300">Keys for the screen (see also <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui help</code>, or press <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">?</code> inside the app):</p>
-<pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-surface p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono">j/k navigate · click select · enter/double-click edit · ←/→ fold
-n new (context) · P/M/T new plan/milestone/task · e edit · d delete
-space cycle status · c tick criteria · z/Z fold one/all
-f/o filters
-? help · r refresh · q quit
+<pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-surface p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono">j/k navigate · click select · ←/→ fold · enter open detail
+n new (context) · e edit · s advance status · x tick criterion
+a add criterion · d delete · / filter · f status filter
+A show all plans · z/Z fold one/all · ? help · c commands · q quit
 </code></pre>
 </div>
 </section>
@@ -216,12 +212,12 @@ f/o filters
 <div class="space-y-6">
 <pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-surface p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono">lpui --actor helper list --json                  <span class="text-zinc-500"># read the tree</span>
 lpui --actor helper show --kind plan --id 1    <span class="text-zinc-500"># why/what + criteria</span>
-lpui --actor helper add-task --milestone 1 --title "Draft proposal"
+lpui --actor helper task add --milestone 1 --title "Draft proposal"
 lpui feed --json --follow &amp;                        <span class="text-zinc-500"># tail activity</span>
 </code></pre>
   <ul class="list-disc pl-6 text-[0.95rem] text-zinc-400">
-    <li class="mb-1.5">Never guess an id — run <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">list</code> first. Prefer <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">update</code> and <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">status</code> over deleting and re-creating.</li>
-    <li class="mb-1.5">Starting a plan? Ask the person first: what to build, why it matters, how to tell it is done, how urgent it is. Never make that up.</li>
+    <li class="mb-1.5">Never guess an id — run <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">list</code> first. Prefer <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">edit</code> and <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">move</code> over deleting and re-creating.</li>
+    <li class="mb-1.5">Starting a plan? Ask the person first: what to build, why it matters, and how to tell it is done. Never make that up.</li>
     <li class="mb-1.5">Once you agree on the plan, break it into milestones, then into tasks. Work in creation order.</li>
     <li class="mb-1.5">The full rules for agents are generated per clone: running <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui init --team</code> writes them into the repo, and <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui init</code> installs them into your coding agent.</li>
   </ul>
@@ -263,9 +259,9 @@ lpui upgrade
     <h3 class="mb-2 mt-1 text-xl font-semibold text-white">System packages for Linux</h3>
     <p class="text-zinc-300">These unpack themselves under <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">/usr/lib/lazyplan</code>. You only need <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">python3 ≥ 3.11</code>. The <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui</code> command lands in <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">/usr/bin</code>, and help pages plus tab-completion come along:</p>
 <pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-canvas p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono"><span class="text-zinc-500"># Fedora / RHEL / openSUSE</span>
-sudo dnf install ./lazyplan-0.18.0-1.x86_64.rpm   <span class="text-zinc-500"># or -1.aarch64.rpm on ARM</span>
+sudo dnf install ./lazyplan-0.19.0-1.x86_64.rpm   <span class="text-zinc-500"># or -1.aarch64.rpm on ARM</span>
 <span class="text-zinc-500"># Debian / Ubuntu</span>
-sudo apt install ./lazyplan_0.18.0-1_amd64.deb     <span class="text-zinc-500"># or -1_arm64.deb on ARM</span>
+sudo apt install ./lazyplan_0.19.0-1_amd64.deb     <span class="text-zinc-500"># or -1_arm64.deb on ARM</span>
 </code></pre>
   </div>
   <div id="panel-oneliner" role="tabpanel" aria-labelledby="tab-oneliner" hidden class="rounded-b-xl rounded-tr-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8 space-y-6 backdrop-blur">
@@ -289,22 +285,22 @@ python -m pip install -e ".[dev]"
   </div>
 
   <div class="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap">
-    <a class="inline-flex items-center justify-center gap-2 rounded-xl bg-viking-blue px-5 py-2.5 text-center font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="https://github.com/fluxion-dev/lazyplan/releases/download/v0.18.0/lazyplan_0.18.0-1_amd64.deb">
+    <a class="inline-flex items-center justify-center gap-2 rounded-xl bg-viking-blue px-5 py-2.5 text-center font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="https://github.com/fluxion-dev/lazyplan/releases/download/v0.19.0/lazyplan_0.19.0-1_amd64.deb">
       <!-- lucide:download -->
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-4 w-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
       .deb amd64
     </a>
-    <a class="inline-flex items-center justify-center gap-2 rounded-xl bg-viking-blue px-5 py-2.5 text-center font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="https://github.com/fluxion-dev/lazyplan/releases/download/v0.18.0/lazyplan_0.18.0-1_arm64.deb">
+    <a class="inline-flex items-center justify-center gap-2 rounded-xl bg-viking-blue px-5 py-2.5 text-center font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="https://github.com/fluxion-dev/lazyplan/releases/download/v0.19.0/lazyplan_0.19.0-1_arm64.deb">
       <!-- lucide:download -->
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-4 w-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
       .deb arm64
     </a>
-    <a class="inline-flex items-center justify-center gap-2 rounded-xl bg-viking-blue px-5 py-2.5 text-center font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="https://github.com/fluxion-dev/lazyplan/releases/download/v0.18.0/lazyplan-0.18.0-1.x86_64.rpm">
+    <a class="inline-flex items-center justify-center gap-2 rounded-xl bg-viking-blue px-5 py-2.5 text-center font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="https://github.com/fluxion-dev/lazyplan/releases/download/v0.19.0/lazyplan-0.19.0-1.x86_64.rpm">
       <!-- lucide:download -->
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-4 w-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
       .rpm x86_64
     </a>
-    <a class="inline-flex items-center justify-center gap-2 rounded-xl bg-viking-blue px-5 py-2.5 text-center font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="https://github.com/fluxion-dev/lazyplan/releases/download/v0.18.0/lazyplan-0.18.0-1.aarch64.rpm">
+    <a class="inline-flex items-center justify-center gap-2 rounded-xl bg-viking-blue px-5 py-2.5 text-center font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="https://github.com/fluxion-dev/lazyplan/releases/download/v0.19.0/lazyplan-0.19.0-1.aarch64.rpm">
       <!-- lucide:download -->
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-4 w-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
       .rpm aarch64
@@ -313,8 +309,8 @@ python -m pip install -e ".[dev]"
   <p class="text-[0.95rem] text-zinc-400">Rather browse? See <a class="text-cyber-cyan hover:underline" href="https://github.com/fluxion-dev/lazyplan/releases">all versions on GitHub</a>. Every version also includes the Python packages and the <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">install.sh</code> one-line installer.</p>
   <table class="w-full border-collapse text-[0.95rem]">
     <tr><th class="border-b border-plan-border bg-white/5 px-3 py-2 text-left text-zinc-200">Computer</th><th class="border-b border-plan-border bg-white/5 px-3 py-2 text-left text-zinc-200">Deb file (Debian/Ubuntu)</th><th class="border-b border-plan-border bg-white/5 px-3 py-2 text-left text-zinc-200">Rpm file (Fedora/RHEL/SUSE)</th></tr>
-    <tr><td class="border-b border-plan-border px-3 py-2 text-left text-zinc-300">Intel/AMD 64-bit</td><td class="border-b border-plan-border px-3 py-2 text-left"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lazyplan_0.18.0-1_amd64.deb</code></td><td class="border-b border-plan-border px-3 py-2 text-left"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lazyplan-0.18.0-1.x86_64.rpm</code></td></tr>
-    <tr><td class="border-b border-plan-border px-3 py-2 text-left text-zinc-300">ARM 64-bit (Apple Silicon, newer Raspberry Pi, cloud servers)</td><td class="border-b border-plan-border px-3 py-2 text-left"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lazyplan_0.18.0-1_arm64.deb</code></td><td class="border-b border-plan-border px-3 py-2 text-left"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lazyplan-0.18.0-1.aarch64.rpm</code></td></tr>
+    <tr><td class="border-b border-plan-border px-3 py-2 text-left text-zinc-300">Intel/AMD 64-bit</td><td class="border-b border-plan-border px-3 py-2 text-left"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lazyplan_0.19.0-1_amd64.deb</code></td><td class="border-b border-plan-border px-3 py-2 text-left"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lazyplan-0.19.0-1.x86_64.rpm</code></td></tr>
+    <tr><td class="border-b border-plan-border px-3 py-2 text-left text-zinc-300">ARM 64-bit (Apple Silicon, newer Raspberry Pi, cloud servers)</td><td class="border-b border-plan-border px-3 py-2 text-left"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lazyplan_0.19.0-1_arm64.deb</code></td><td class="border-b border-plan-border px-3 py-2 text-left"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lazyplan-0.19.0-1.aarch64.rpm</code></td></tr>
   </table>
   <ul class="list-disc pl-6 text-[0.95rem] text-zinc-400">
     <li class="mb-1.5">System packages need only <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">python3 ≥ 3.11</code>. Everything else rides along under <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">/usr/lib/lazyplan</code>.</li>
@@ -338,7 +334,7 @@ python -m pip install -e ".[dev]"
       <!-- lucide:circle-x -->
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="mb-2 h-6 w-6 text-strict-red"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
       <h3 class="mb-1.5 text-lg font-semibold text-white"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em]">1</code> Not found</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400">No plan, milestone, or task has that number (for example, task #7).</p>
+      <p class="m-0 text-[0.95rem] text-zinc-400">No plan, milestone, or task has that number (for example, task 7).</p>
     </div>
     <div class="rounded-xl border border-viking-gold/30 bg-viking-gold/5 p-6 md:p-8 backdrop-blur">
       <!-- lucide:triangle-alert -->

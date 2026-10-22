@@ -1,6 +1,6 @@
 ---
 name: tui-input
-description: Keyboard, focus, and dirty-state rules for the lazyplan TUI. Use when adding keybindings, changing focus behavior, editing save/close flows, or touching BINDINGS, Footer, or the editor dirty check.
+description: Keyboard, focus, and dirty-state rules for the lazyplan TUI. Use when adding keybindings, changing focus behavior, editing save/close flows, or touching BINDINGS or form dirty checks.
 license: MIT
 compatibility: opencode, claude-code, codex, gemini-cli, cursor
 ---

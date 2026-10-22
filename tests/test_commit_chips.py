@@ -37,68 +37,49 @@ class TestCommitChips(unittest.IsolatedAsyncioTestCase):
     async def asyncTearDown(self):
         self.tmp.cleanup()
 
-    async def test_linked_rows_show_chips(self):
+    async def test_linked_rows_stay_clean_and_preview_counts(self):
+        from textual.widgets import Static, Tree
+
         async with self.app.run_test() as pilot:
             await pilot.pause()
             task_label = str(self.app._row_nodes[("task", self.tid)].label)
-            self.assertIn(self.sha[:12], task_label)
-            proj_label = str(self.app._row_nodes[("plan", self.pid)].label)
-            self.assertIn("b" * 12, proj_label)
-            bare_label = str(self.app._row_nodes[("task", self.bare_tid)].label)
-            self.assertNotIn(self.sha[:12], bare_label)
-            self.assertNotIn("b" * 12, bare_label)
-
-    async def test_refresh_prefetches_links_once(self):
-        async with self.app.run_test() as pilot:
-            await pilot.pause()
-            calls = []
-            orig = self.app.store.links_map
-
-            def counting():
-                calls.append(1)
-                return orig()
-
-            self.app.store.links_map = counting  # type: ignore[method-assign]
-            self.app.refresh_all("probe")
-            await pilot.pause()
-            self.assertEqual(len(calls), 1)
-
-    async def test_detail_lists_commits(self):
-        from textual.containers import Vertical
-        from textual.widgets import Static, Tree
-
-        from lazyplan.screens import DetailScreen
-
-        async with self.app.run_test() as pilot:
-            await pilot.pause()
+            self.assertNotIn(self.sha[:12], task_label)
+            plan_label = str(self.app._row_nodes[("plan", self.pid)].label)
+            self.assertNotIn("b" * 12, plan_label)
             tree = self.app.query_one("#tree", Tree)
             tree.move_cursor(self.app._row_nodes[("task", self.tid)])
             await pilot.pause()
-            await pilot.press("enter")
-            await pilot.pause()
-            self.assertIsInstance(self.app.screen, DetailScreen)
-            box = self.app.screen.query_one("#d-commits", Vertical)
-            self.assertTrue(box.display)
-            text = "\n".join(str(s.render()) for s in box.query(Static))
-            self.assertIn(self.sha[:12], text)
-            self.assertIn("work", text)
+            preview = str(self.app.query_one("#preview-body", Static).render())
+            self.assertIn("1 commits", preview)
 
-    async def test_detail_hides_empty_commits(self):
-        from textual.containers import Vertical
-        from textual.widgets import Tree
+    async def test_detail_lists_commits(self):
+        from textual.widgets import Static
 
         from lazyplan.screens import DetailScreen
 
         async with self.app.run_test() as pilot:
             await pilot.pause()
-            tree = self.app.query_one("#tree", Tree)
-            tree.move_cursor(self.app._row_nodes[("task", self.bare_tid)])
-            await pilot.pause()
+            self.app.selected = ("task", self.tid)
             await pilot.press("enter")
             await pilot.pause()
             self.assertIsInstance(self.app.screen, DetailScreen)
-            box = self.app.screen.query_one("#d-commits", Vertical)
-            self.assertFalse(box.display)
+            body = str(self.app.screen.query_one("#detail-body", Static).render())
+            self.assertIn(self.sha[:12], body)
+            self.assertIn("work", body)
+
+    async def test_detail_hides_empty_commits(self):
+        from textual.widgets import Static
+
+        from lazyplan.screens import DetailScreen
+
+        async with self.app.run_test() as pilot:
+            await pilot.pause()
+            self.app.selected = ("task", self.bare_tid)
+            await pilot.press("enter")
+            await pilot.pause()
+            self.assertIsInstance(self.app.screen, DetailScreen)
+            body = str(self.app.screen.query_one("#detail-body", Static).render())
+            self.assertNotIn("commits", body)
 
 
 if __name__ == "__main__":

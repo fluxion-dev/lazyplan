@@ -1,76 +1,123 @@
 # lazyplan design system
 
-Single source of truth: `src/lazyplan/design.py`. If you add a view,
-command, or message, add it there first. Research: `docs/textual-research.md`.
-Local skills: `.agents/skills/tui-*`.
+Single source of truth: `src/lazyplan/design.py` for rows, glyphs, chips,
+empty states, and CSS; `src/lazyplan/commands.py` for command names,
+sections, context rules, key hints, and help text. If you add a view,
+command, or message, add it there first. Research:
+`docs/textual-research.md`. Local skills: `.agents/skills/tui-*`.
 
 ## Tokens
 
-Visual: `BORDER = "solid green"`, one-row `#status`. No `Header`,
-no `Footer`, no `#activity`, no bottom input. Two-pane `#main`
-(`#nav` with focused `FoldTree` + `VerticalScroll#preview`
-with `Static#preview-body`) inside `#panel`. Status glyphs
-`⬜ todo`, `🔵 doing`, `✅ done`
-with ANSI (CLI tty) and Rich (TUI tree) variants. Row grammar
-`GLYPH KIND#id title`. Commit chips
-and repo pills via `commits_chip` / `repos_chip`.
-Empty states from `EMPTY_NO_PLANS` / `EMPTY_FEED` (same in CLI and TUI).
+Visual: `BORDER = "solid green"`, one-row `#status` and `#hints`.
+No `Header`, no `Footer`, no bottom input. Adaptive shell: `#main` holds
+`#nav` (focused `FoldTree`) and `#preview` (`VerticalScroll` +
+`Static#preview-body`) side by side at >= 100 columns; below that
+`#main.narrow` hides the preview and the tree owns the width.
+Status glyphs are single-cell: `○ todo`, `◐ doing`, `● done`, with ANSI
+(CLI tty) and Rich (TUI) variants. Row grammar:
+`GLYPH KIND<id> title`, plus `done/total` progress on plan and milestone
+rows. Titles are bold, ids and progress are dim, done rows are dim.
+Long titles end in `…`; the full title lives in the preview/detail.
+Commit and repo chips stay in the preview (`N commits`, repo names) and
+detail, not in tree rows, so titles keep their width.
 
-## Widget patterns per surface
+Empty states come from `EMPTY_NO_PLANS` / `EMPTY_FEED` (same in CLI and
+TUI).
 
-- Tree + preview (`tui.py`): `Horizontal#main` with `Vertical#nav`
-  (focused `FoldTree`) and `VerticalScroll#preview`
-  (`Static#preview-body`). `FoldTree` posts `SelectionChanged` /
-  `RowAction` (see `messages.py`, bubbles to App, handled via `@on`);
-  `NodeHighlighted` also tracks for compat. `update_preview()` renders
-  `store.get_full` without modal. Cursor/fold preserved via
-  `call_after_refresh(move_cursor + scroll_to_node)`.
-  Reactive `rev` drives local refreshes; `_poll` only handles external
-  `fingerprint()` diffs plus `feed` toast. Background upgrade check runs
-  in `run_worker`. Native Tree space/shift+space are parked no-ops;
-  status and folding live in the modal palette.
-- Modal palette (`screens.py` + `tui.py`): `PaletteScreen` (`ModalScreen`,
-  `Input#palette-input` + `OptionList#palette-list`) renders
-  `PALETTE_SECTIONS` — five labeled groups (Create, Edit, Track, View,
-  App) over 18 `PALETTE_COMMANDS` incl. `open-detail` and `toggle-status`.
-  Group headers are disabled `Option` rows (8.2.8 has no `Separator`);
-  `@on(Changed)` filters commands only, empty sections vanish,
-  `Submitted/OptionSelected` dismisses with the command id; App
-  `_run_palette_command` dispatches, then focus returns to the tree.
-  `c` opens it (`action_command_palette`, screen-stack guarded).
-  Every command logs via actor `tui` path.
-  `ENABLE_COMMAND_PALETTE = False` keeps the builtin palette from
-  stealing keys.
-- Filter text: palette command `filter-text` opens `FilterPromptScreen`
-  (`_Form` + `Input#filter-input`, `Submitted` applies); the value sets
-  `filter_text` and bumps `rev`. `_filtered_tree()` substring-matches
-  plan/milestone/task titles, bypasses cap when filtering, shows
-  `/query (N plans)` in `#status`. `escape` clears the mode.
-- Modals: `_Form` (`ModalScreen`, Esc cancels, `dismiss(None)`); button
-  pairs in `.btn-row`; payload dicts on `ok`, `None` on cancel.
-  All `on_button_pressed` migrated to `@on(Button.Pressed, "#id")`.
-- Detail (`screens.py`): `DetailScreen` focuses `#d-title` on mount,
-  `@on(Button.Pressed)` save posts `RowAction("detail-saved")`; App
-  refreshes via `_saved`.
-- Help: `HELP_TEXT` renders in the `?` overlay, `HelpScreen`, and
-  `lpui help` — one string, three surfaces (enforced by tests).
+## Shell (`tui.py`)
+
+- `FoldTree` posts `SelectionChanged` / `RowAction` (see `messages.py`);
+  `NodeHighlighted` also tracks for compatibility. `update_preview()`
+  renders a bounded card from `store.get_full`: title, progress, why/what,
+  three next open tasks, acceptance progress, commits/repos, and
+  `enter open · e edit`.
+- Progressive disclosure: plans start collapsed. Right/`z` reveals
+  milestones; tasks appear only when their milestone is expanded.
+  `_expanded` is the source of truth; `_refreshing` suppresses the Tree's
+  own expand/collapse events during rebuilds. Done plans are dimmed and
+  sorted last.
+- Reactive `rev` drives local refreshes; `_poll` handles external
+  `fingerprint()` diffs plus a `feed` toast. Background upgrade check runs
+  in `run_worker`.
+- `#status` is human: `3 plans · 12 open · 1 doing`, active filters,
+  update notice, and a truncated last event. `#hints` is the current
+  key bar from `commands.hint_bar()`.
+- `_on_resize` re-applies the narrow/wide class and refreshes widths.
+- Native Tree space/shift+space stay parked no-ops; direct keys own
+  status, folding, and creation.
+
+## Command registry (`commands.py`)
+
+`Command` carries id, label, section, canonical verb/nouns, direct key,
+help key/hint, context, handler, and search aliases. The palette, keymap,
+help screen, and `lpui help` all render from it.
+
+### Palette
+
+`PaletteScreen` renders four sections: Create, Edit, View, App. It filters
+by label, id, verb, noun, and aliases; shows `N commands`; disables
+commands that cannot run and appends the reason (`Select a row first`,
+`Select a milestone first`); and scrolls inside a fixed-height `#dlg` so
+every item is reachable at 80x24. `c` opens it; `Enter` runs the first
+enabled match; `Esc` cancels. `_run_palette_command` dispatches through
+the registry handler map.
+
+### Help
+
+`HELP_TEXT` is grouped as MOVE / CHANGE / FIND / APP and includes
+`lpui help` as the same text at the shell. `?` and F1 open `HelpScreen`
+inside a scrolling `#help` panel. `lpui help` prints the same string.
+
+## Detail (`screens.py`)
+
+`DetailScreen` is a plain `Screen` with two modes.
+Read mode: breadcrumb (`P2 › M3 › T4`), title/status, why/what (or
+details), acceptance checklist, child milestones/tasks with progress,
+commits, and repos. No editable widgets.
+Edit mode (`e`): labeled Title/Why/What or Details fields, a multi-line
+TextArea, Save/Cancel, `ctrl+s`, and a dirty guard that confirms before
+discarding. Row actions: `s` status, `x` tick next criterion, `a` add
+criterion, `n` add child, `d` delete with an exact cascade summary;
+`Esc` backs out. Delete focuses Cancel by default.
+
+## Forms
+
+`_Form(ModalScreen)` is the shared base: Esc cancels, a starting-value
+snapshot detects real drafts, and a dirty cancel asks first. Every field
+has a visible `Label`; required inputs are validated inline. `#dlg` is
+90% wide (max 72) so forms fit 80x24. Button rows use `.btn-row` with
+3-row buttons (height 1 clips the label in Textual 8.2.8).
 
 ## Keymap
 
-Canonical table in `design.py` as `KEYMAP`; `HELP_TEXT` mirrors it
-(enforced by `test_design.py`).
+Canonical table in `commands.py` as `KEYMAP`; `HELP_TEXT` mirrors it and
+tests enforce the match.
 
 | Key | Action | Surface |
 | --- | ------ | ------- |
 | j/k, up/down, click | move cursor / select | tree |
-| enter, double-click | detail | tree |
 | left/right | fold / unfold | tree |
+| enter, double-click | open detail | tree |
+| n | create by context | tree |
+| e | edit selection | tree, detail |
+| s | advance status | tree, detail |
+| x | tick next criterion | tree, detail |
+| a | add criterion | tree, detail |
+| d | delete selection | tree, detail |
+| / | filter by text | tree |
+| f | change status filter | tree |
+| A | show/hide completed plans | tree |
+| z / Z | fold one / fold all | tree |
+| ? / F1 | help | tree |
 | c | command palette | tree |
-| escape | clear filter / cancel | tree, modals |
-| esc | cancel | modals |
+| q | quit | tree |
+| esc | back / cancel / clear filter | all |
 
 ## Reusable bases
 
-- `_Form(ModalScreen)`: Esc→cancel binding, centered `#dlg` chrome.
-- `_row(*buttons) -> Horizontal` (`.btn-row`): every action row in the
-  modals.
+- `_Form(ModalScreen)`: Esc cancel, dirty snapshot, centered `#dlg`.
+- `_row(*buttons) -> Horizontal` (`.btn-row`): every action row.
+- `FilterPromptScreen(title, placeholder, submit_label)`: one-line prompts
+  used by tree filter and add-criterion.
+- `ConfirmScreen(text, confirm_label, variant)`: one destructive confirm,
+  Cancel focused by default.

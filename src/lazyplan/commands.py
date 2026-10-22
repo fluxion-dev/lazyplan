@@ -1,0 +1,490 @@
+"""Canonical commands, key hints, and help text for every surface.
+
+The TUI palette, the key map, the help screen, and `lpui help` all render
+from this module. It imports the standard library only, so the CLI and the
+stdlib test run can use it without Textual installed.
+
+Rule: add a command here first. The palette, keymap, and help follow.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+# -- sections (palette order) ---------------------------------------------
+CREATE = "Create"
+EDIT = "Edit"
+VIEW = "View"
+APP = "App"
+SECTIONS: tuple[str, ...] = (CREATE, EDIT, VIEW, APP)
+
+# -- canonical glossary ---------------------------------------------------
+VERBS: tuple[str, ...] = (
+    "add",
+    "edit",
+    "move",
+    "tick",
+    "untick",
+    "delete",
+    "show",
+    "list",
+    "export",
+    "help",
+)
+NOUNS: tuple[str, ...] = ("plan", "milestone", "task", "criterion")
+
+#: Legacy CLI verbs that must keep working as aliases for canonical work.
+#: The parser is the source of truth; this table drives the parity tests
+#: until the noun-first groups land and then keeps the aliases honest.
+LEGACY_COMMANDS: dict[tuple[str, str], tuple[str, ...]] = {
+    ("plan", "add"): ("add-plan",),
+    ("milestone", "add"): ("add-milestone",),
+    ("task", "add"): ("add-task",),
+    ("criterion", "add"): ("add-criteria",),
+    ("plan", "edit"): ("update",),
+    ("milestone", "edit"): ("update",),
+    ("task", "edit"): ("update",),
+    ("plan", "move"): ("status",),
+    ("milestone", "move"): ("status",),
+    ("task", "move"): ("status",),
+    ("criterion", "tick"): ("check",),
+    ("criterion", "untick"): ("uncheck",),
+    ("plan", "delete"): ("delete",),
+    ("milestone", "delete"): ("delete",),
+    ("task", "delete"): ("delete",),
+    ("criterion", "delete"): ("delete-criteria",),
+    ("plan", "show"): ("show",),
+    ("milestone", "show"): ("show",),
+    ("task", "show"): ("show",),
+    ("", "list"): ("list",),
+    ("", "export"): ("export",),
+    ("", "help"): ("help",),
+}
+
+
+@dataclass(frozen=True)
+class Command:
+    """One named action shared by the palette, keymap, and help."""
+
+    id: str
+    label: str
+    section: str
+    verb: str = ""
+    nouns: tuple[str, ...] = ()
+    key: str = ""
+    help_key: str = ""
+    context: str = "always"
+    handler: str = ""
+    aliases: tuple[str, ...] = ()
+    help_group: str = ""
+    help_hint: str = ""
+    in_palette: bool = True
+    tui_only: bool = False
+
+
+COMMANDS: tuple[Command, ...] = (
+    # -- create ----------------------------------------------------------
+    Command(
+        id="create-plan",
+        label="Create plan",
+        section=CREATE,
+        verb="add",
+        nouns=("plan",),
+        context="always",
+        handler="new_plan",
+        aliases=("add plan", "add-plan", "create", "new plan"),
+        help_group="CHANGE",
+        help_hint="new plan / milestone / task by context",
+        help_key="n",
+    ),
+    Command(
+        id="create-milestone",
+        label="Create milestone",
+        section=CREATE,
+        verb="add",
+        nouns=("milestone",),
+        context="plan",
+        handler="new_milestone",
+        aliases=("add milestone", "add-milestone", "new milestone"),
+        help_group="CHANGE",
+        help_hint="new milestone in the selected plan",
+    ),
+    Command(
+        id="create-task",
+        label="Create task",
+        section=CREATE,
+        verb="add",
+        nouns=("task",),
+        context="milestone",
+        handler="new_task",
+        aliases=("add task", "add-task", "new task"),
+        help_group="CHANGE",
+        help_hint="new task in the selected milestone",
+    ),
+    Command(
+        id="add-criterion",
+        label="Add criterion",
+        section=CREATE,
+        verb="add",
+        nouns=("criterion",),
+        key="a",
+        context="selection",
+        handler="add_criterion",
+        aliases=("add criteria", "add-criteria", "new criterion"),
+        help_group="CHANGE",
+        help_hint="add a criterion to the selection",
+    ),
+    # -- edit ------------------------------------------------------------
+    Command(
+        id="edit-selection",
+        label="Edit selection",
+        section=EDIT,
+        verb="edit",
+        nouns=("plan", "milestone", "task"),
+        key="e",
+        context="selection",
+        handler="edit_selection",
+        aliases=("update", "edit", "rename"),
+        help_group="CHANGE",
+        help_hint="edit the selected row",
+    ),
+    Command(
+        id="move-todo",
+        label="Move to todo",
+        section=EDIT,
+        verb="move",
+        nouns=("plan", "milestone", "task"),
+        context="selection",
+        handler="move_todo",
+        aliases=("mark todo", "reopen"),
+        help_group="CHANGE",
+        help_hint="move the selection back to todo",
+    ),
+    Command(
+        id="move-doing",
+        label="Move to doing",
+        section=EDIT,
+        verb="move",
+        nouns=("plan", "milestone", "task"),
+        context="selection",
+        handler="move_doing",
+        aliases=("cycle status", "advance status", "mark doing", "start"),
+        help_group="CHANGE",
+        help_hint="advance status: todo → doing → done",
+        help_key="s",
+    ),
+    Command(
+        id="move-done",
+        label="Move to done",
+        section=EDIT,
+        verb="move",
+        nouns=("plan", "milestone", "task"),
+        context="selection",
+        handler="move_done",
+        aliases=("mark done", "complete", "finish"),
+        help_group="CHANGE",
+        help_hint="move the selection to done",
+    ),
+    Command(
+        id="tick-criterion",
+        label="Tick next criterion",
+        section=EDIT,
+        verb="tick",
+        nouns=("criterion",),
+        key="x",
+        context="selection",
+        handler="tick_criterion",
+        aliases=("tick criteria", "check", "tick"),
+        help_group="CHANGE",
+        help_hint="tick the next open criterion",
+    ),
+    Command(
+        id="untick-criterion",
+        label="Reopen last criterion",
+        section=EDIT,
+        verb="untick",
+        nouns=("criterion",),
+        context="selection",
+        handler="untick_criterion",
+        aliases=("uncheck", "reopen criterion"),
+        help_group="CHANGE",
+        help_hint="reopen the last ticked criterion",
+    ),
+    Command(
+        id="delete-selection",
+        label="Delete selection",
+        section=EDIT,
+        verb="delete",
+        nouns=("plan", "milestone", "task"),
+        key="d",
+        context="selection",
+        handler="delete_selection",
+        aliases=("delete", "remove", "delete with confirm"),
+        help_group="CHANGE",
+        help_hint="delete the selection after a confirm",
+    ),
+    # -- view ------------------------------------------------------------
+    Command(
+        id="open-detail",
+        label="Open detail",
+        section=VIEW,
+        verb="show",
+        nouns=("plan", "milestone", "task"),
+        key="enter",
+        context="selection",
+        handler="open_detail",
+        aliases=("show", "detail", "open"),
+        help_group="MOVE",
+        help_hint="open detail (or double-click)",
+    ),
+    Command(
+        id="fold-one",
+        label="Fold/unfold row",
+        section=VIEW,
+        key="z",
+        context="selection",
+        handler="fold",
+        aliases=("fold one", "fold", "unfold"),
+        help_group="MOVE",
+        help_hint="fold or unfold the selected row",
+        tui_only=True,
+    ),
+    Command(
+        id="fold-all",
+        label="Fold/unfold all",
+        section=VIEW,
+        key="Z",
+        context="always",
+        handler="fold_all",
+        aliases=("fold all", "unfold all"),
+        help_group="MOVE",
+        help_hint="fold or unfold every row",
+        tui_only=True,
+    ),
+    Command(
+        id="filter-text",
+        label="Filter by text",
+        section=VIEW,
+        verb="list",
+        key="/",
+        context="always",
+        handler="filter_text",
+        aliases=("filter by text", "filter", "search"),
+        help_group="FIND",
+        help_hint="filter the tree by text",
+    ),
+    Command(
+        id="filter-status",
+        label="Filter by status",
+        section=VIEW,
+        verb="list",
+        key="f",
+        context="always",
+        handler="filter_status",
+        aliases=("cycle status filter", "status filter"),
+        help_group="FIND",
+        help_hint="change the status filter",
+    ),
+    Command(
+        id="toggle-done",
+        label="Show/hide completed plans",
+        section=VIEW,
+        verb="list",
+        key="A",
+        context="always",
+        handler="toggle_show_all",
+        aliases=("show all", "show all / capped", "all plans", "show completed"),
+        help_group="FIND",
+        help_hint="show every plan, or just recent ones",
+    ),
+    Command(
+        id="refresh",
+        label="Refresh",
+        section=VIEW,
+        key="r",
+        context="always",
+        handler="refresh",
+        aliases=("reload",),
+        help_group="FIND",
+        help_hint="refresh the tree",
+        tui_only=True,
+    ),
+    # -- app -------------------------------------------------------------
+    Command(
+        id="command-palette",
+        label="Command palette",
+        section=APP,
+        key="c",
+        context="always",
+        handler="command_palette",
+        aliases=("commands", "palette"),
+        help_group="APP",
+        help_hint="open the command palette",
+        in_palette=False,
+        tui_only=True,
+    ),
+    Command(
+        id="export-plan",
+        label="Export plan as Markdown",
+        section=APP,
+        verb="export",
+        context="selection",
+        handler="export_md",
+        aliases=("export plan .md", "export md", "markdown"),
+        help_group="APP",
+        help_hint="export the selected plan to Markdown",
+    ),
+    Command(
+        id="help",
+        label="Help",
+        section=APP,
+        verb="help",
+        key="?",
+        context="always",
+        handler="help",
+        aliases=("keys", "keybindings"),
+        help_group="APP",
+        help_hint="this help",
+    ),
+    Command(
+        id="quit",
+        label="Quit",
+        section=APP,
+        key="q",
+        context="always",
+        handler="quit",
+        aliases=("exit",),
+        help_group="APP",
+        help_hint="quit the screen",
+        tui_only=True,
+    ),
+)
+
+#: Navigation rows that are not palette commands.
+NAV_ROWS: tuple[tuple[str, str], ...] = (
+    ("j/k, up/down, click", "move cursor / select"),
+    ("left/right", "fold / unfold row"),
+    ("escape", "clear filter / back"),
+)
+
+#: One-line hint bar: (key, short label) in reading order.
+HINT_ITEMS: tuple[tuple[str, str], ...] = (
+    ("n", "new"),
+    ("e", "edit"),
+    ("s", "status"),
+    ("x", "tick"),
+    ("d", "delete"),
+    ("/", "filter"),
+    ("?", "help"),
+    ("c", "commands"),
+)
+
+HELP_GROUPS: tuple[str, ...] = ("MOVE", "CHANGE", "FIND", "APP")
+_HELP_WIDTH = 20
+
+
+def by_id(command_id: str) -> Command | None:
+    """Look up one command by its stable id."""
+    for cmd in COMMANDS:
+        if cmd.id == command_id:
+            return cmd
+    return None
+
+
+def palette_commands() -> tuple[Command, ...]:
+    """Commands shown in the modal palette, in registry order."""
+    return tuple(cmd for cmd in COMMANDS if cmd.in_palette)
+
+
+def palette_sections() -> tuple[tuple[str, tuple[str, ...]], ...]:
+    """Palette section headers and their command ids (single source)."""
+    out: list[tuple[str, tuple[str, ...]]] = []
+    for section in SECTIONS:
+        ids = tuple(cmd.id for cmd in COMMANDS if cmd.in_palette and cmd.section == section)
+        if ids:
+            out.append((section, ids))
+    return tuple(out)
+
+
+def _matches(cmd: Command, query: str) -> bool:
+    if not query:
+        return True
+    haystack = [
+        cmd.id.replace("-", " "),
+        cmd.label.lower(),
+        cmd.help_hint.lower(),
+        cmd.verb,
+        *cmd.nouns,
+        *cmd.aliases,
+    ]
+    return any(query in item.lower() for item in haystack if item)
+
+
+def matching(query: str) -> list[tuple[str, list[Command]]]:
+    """Palette sections for a query; section headers never match."""
+    q = query.strip().lower()
+    out: list[tuple[str, list[Command]]] = []
+    for section in SECTIONS:
+        cmds = [
+            cmd
+            for cmd in COMMANDS
+            if cmd.in_palette and cmd.section == section and _matches(cmd, q)
+        ]
+        if cmds:
+            out.append((section, cmds))
+    return out
+
+
+def keymap() -> tuple[tuple[str, str, str], ...]:
+    """Canonical key table: direct keys from commands plus navigation."""
+    rows: list[tuple[str, str, str]] = [(key, hint, "tree") for key, hint in NAV_ROWS]
+    for cmd in COMMANDS:
+        key = cmd.key or cmd.help_key
+        if key:
+            rows.append((key, cmd.help_hint or cmd.label.lower(), "tree"))
+    return tuple(rows)
+
+
+def _help_rows(group: str) -> list[tuple[str, str]]:
+    rows: list[tuple[str, str]] = []
+    if group == "MOVE":
+        rows.extend(NAV_ROWS)
+    rows.extend(
+        (cmd.help_key or cmd.key, cmd.help_hint or cmd.label.lower())
+        for cmd in COMMANDS
+        if cmd.help_group == group and (cmd.help_key or cmd.key)
+    )
+    return rows
+
+
+def help_text() -> str:
+    """Task-grouped help shared by `?`, the help screen, and `lpui help`."""
+    lines = ["lazyplan — plan journal for you and your agent", ""]
+    for group in HELP_GROUPS:
+        rows = _help_rows(group)
+        if not rows:
+            continue
+        lines.append(group)
+        for key, hint in rows:
+            lines.append(f"  {key:<{_HELP_WIDTH}} {hint}")
+        lines.append("")
+    lines.append("  lpui help".ljust(_HELP_WIDTH + 2) + " same help at the shell")
+    return "\n".join(lines).rstrip()
+
+
+def hint_bar(width: int | None = None) -> str:
+    """One-line key hints; drops the least important items on narrow screens."""
+    items = list(HINT_ITEMS)
+    text = " · ".join(f"{key} {label}" for key, label in items)
+    for key in ("c", "d", "x"):
+        if width is None or len(text) <= width:
+            break
+        items = [item for item in items if item[0] != key]
+        text = " · ".join(f"{key_} {label}" for key_, label in items)
+    return text
+
+
+HELP_TEXT = help_text()
+KEYMAP = keymap()
+PALETTE_COMMANDS = tuple((cmd.id, cmd.label) for cmd in palette_commands())
+PALETTE_SECTIONS = palette_sections()

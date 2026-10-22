@@ -25,7 +25,7 @@ from .design import (
     msg_not_found,
 )
 from .models import Milestone, Plan, Status, Task
-from .render import render_commits, render_full, render_markdown, tree_lines
+from .render import render_commits, render_full, render_markdown, summary_lines, tree_lines
 from .repo import (
     ensure_plan_dir,
     find_repo_root,
@@ -269,70 +269,128 @@ def _cmd_seed(store: Store, args: argparse.Namespace, actor: str) -> int:
     return _emit(args, {"db": str(store.path), "counts": store.counts()})
 
 
-def _cmd_list(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _list_filters(args: argparse.Namespace) -> tuple[str, Status | None]:
+    """Translate --archived/--status into service filters."""
     if args.archived:
-        archived, status = "only", None
-    elif args.status is None:
-        archived, status = "hide", None
-    elif args.status == "all":
-        archived, status = "show", None
-    else:
-        archived, status = "hide", Status(args.status)
+        return "only", None
+    if args.status is None:
+        return "hide", None
+    if args.status == "all":
+        return "show", None
+    return "hide", Status(args.status)
+
+
+def _list_limit(args: argparse.Namespace) -> int | None:
+    """Default text lists cap plans; explicit rows, --all, and JSON do not."""
     if args.plan is not None or args.all:
-        limit = None
-    elif args.json:
-        limit = args.limit
-    else:
-        limit = args.limit if args.limit is not None else services.DEFAULT_PLAN_LIMIT
-    repo_filter = getattr(args, "repo", None)
+        return None
     if args.json:
-        payload = [
-            {
-                "plan": _ser(vars(p)),
-                "criteria": [vars(c) for c in store.list_criteria("plan", p.id)],
-                "links": [vars(c) for c in store.list_links("plan", p.id)],
-                "repos": store.list_repos("plan", p.id),
-                "effective_repos": store.effective_repos("plan", p.id),
-                "milestones": [
-                    {
-                        "milestone": _ser(vars(s)),
-                        "criteria": [vars(c) for c in store.list_criteria("milestone", s.id)],
-                        "links": [vars(c) for c in store.list_links("milestone", s.id)],
-                        "repos": store.list_repos("milestone", s.id),
-                        "effective_repos": store.effective_repos("milestone", s.id),
-                        "tasks": [
-                            {
-                                "task": _ser(vars(t)),
-                                "criteria": [vars(c) for c in store.list_criteria("task", t.id)],
-                                "links": [vars(c) for c in store.list_links("task", t.id)],
-                                "repos": store.list_repos("task", t.id),
-                                "effective_repos": store.effective_repos("task", t.id),
-                            }
-                            for t in ts
-                        ],
-                    }
-                    for s, ts in milestones
-                ],
-            }
-            for p, milestones in services.tree(
-                store,
-                status=status,
-                plan_id=args.plan,
-                archived=archived,
-                limit=limit,
-                repo=repo_filter,
-            )
-        ]
-        return _emit(args, payload)
-    lines = tree_lines(
+        return int(args.limit) if args.limit is not None else None
+    return int(args.limit) if args.limit is not None else services.DEFAULT_PLAN_LIMIT
+
+
+def _list_payload(
+    store: Store,
+    status: Status | None,
+    archived: str,
+    limit: int | None,
+    repo: str | None,
+    milestone: int | None,
+    plan_id: int | None,
+) -> list[dict]:
+    """Full JSON tree; shape stays stable for scripts."""
+    return [
+        {
+            "plan": _ser(vars(plan)),
+            "criteria": [vars(c) for c in store.list_criteria("plan", plan.id)],
+            "links": [vars(c) for c in store.list_links("plan", plan.id)],
+            "repos": store.list_repos("plan", plan.id),
+            "effective_repos": store.effective_repos("plan", plan.id),
+            "milestones": [
+                {
+                    "milestone": _ser(vars(s)),
+                    "criteria": [vars(c) for c in store.list_criteria("milestone", s.id)],
+                    "links": [vars(c) for c in store.list_links("milestone", s.id)],
+                    "repos": store.list_repos("milestone", s.id),
+                    "effective_repos": store.effective_repos("milestone", s.id),
+                    "tasks": [
+                        {
+                            "task": _ser(vars(t)),
+                            "criteria": [vars(c) for c in store.list_criteria("task", t.id)],
+                            "links": [vars(c) for c in store.list_links("task", t.id)],
+                            "repos": store.list_repos("task", t.id),
+                            "effective_repos": store.effective_repos("task", t.id),
+                        }
+                        for t in tasks
+                    ],
+                }
+                for s, tasks in milestones
+            ],
+        }
+        for plan, milestones in services.tree(
+            store,
+            status=status,
+            plan_id=plan_id,
+            archived=archived,
+            limit=limit,
+            repo=repo,
+            milestone_id=milestone,
+        )
+    ]
+
+
+def _list_lines(
+    store: Store,
+    args: argparse.Namespace,
+    status: Status | None,
+    archived: str,
+    limit: int | None,
+    repo: str | None,
+    milestone: int | None,
+) -> list[str]:
+    """Summary by default; --tree (or a milestone filter) shows hierarchy."""
+    dot = _tty_dot(args)
+    if getattr(args, "tree", False) or milestone is not None:
+        return tree_lines(
+            store,
+            status,
+            args.plan,
+            dot=dot,
+            archived=archived,
+            limit=limit,
+            repo=repo,
+            milestone_id=milestone,
+        )
+    return summary_lines(
         store,
         status,
         args.plan,
-        dot=_tty_dot(args),
+        dot=dot,
         archived=archived,
         limit=limit,
-        repo=repo_filter,
+        repo=repo,
     )
+
+
+def _cmd_list(store: Store, args: argparse.Namespace, actor: str) -> int:
+    archived, status = _list_filters(args)
+    limit = _list_limit(args)
+    repo_filter = getattr(args, "repo", None)
+    milestone_filter = getattr(args, "milestone", None)
+    if args.json:
+        return _emit(
+            args,
+            _list_payload(
+                store,
+                status,
+                archived,
+                limit,
+                repo_filter,
+                milestone_filter,
+                args.plan,
+            ),
+        )
+    lines = _list_lines(store, args, status, archived, limit, repo_filter, milestone_filter)
     print("\n".join(lines) if lines else EMPTY_NO_PLANS)
     return 0
 
@@ -347,7 +405,7 @@ def _cmd_help(store: Store, args: argparse.Namespace, actor: str) -> int:
 def _cmd_add_plan(store: Store, args: argparse.Namespace, actor: str) -> int:
     title = _resolve_title(args)
     if not title.strip():
-        print("error: add-plan needs --title", file=sys.stderr)
+        print("error: plan add needs --title", file=sys.stderr)
         return 2
     desc = args.desc if args.desc is not None else (args.what or "")
     goal = args.goal if args.goal is not None else (args.why or "")
@@ -693,36 +751,9 @@ def _cmd_feed(store: Store, args: argparse.Namespace, actor: str) -> int:
 
 
 def _cmd_completion(store: Store, args: argparse.Namespace, actor: str) -> int:
-    cmds = [
-        "init",
-        "seed",
-        "list",
-        "add-plan",
-        "add-milestone",
-        "add-task",
-        "update",
-        "show",
-        "add-criteria",
-        "criteria",
-        "check",
-        "uncheck",
-        "delete-criteria",
-        "link",
-        "unlink",
-        "commits",
-        "export",
-        "import",
-        "upgrade",
-        "status",
-        "reconcile",
-        "delete",
-        "feed",
-        "watch",
-        "info",
-        "help",
-        "ui",
-        "completion",
-    ]
+    parser = build_parser()
+    subs = next(a for a in parser._actions if isinstance(a, argparse._SubParsersAction))
+    cmds = list(subs.choices)
     if args.shell == "bash":
         print(f'complete -W "{" ".join(cmds)}" lpui')
         print(f'complete -W "{" ".join(cmds)}" lazyplan')
@@ -809,6 +840,33 @@ def _cmd_upgrade(store: Store | None, args: argparse.Namespace, actor: str) -> i
     return 0
 
 
+_GROUP_CMDS: dict[tuple[str, str], str] = {
+    ("plan", "add"): "add-plan",
+    ("plan", "edit"): "update",
+    ("plan", "show"): "show",
+    ("plan", "list"): "list",
+    ("plan", "move"): "status",
+    ("plan", "delete"): "delete",
+    ("milestone", "add"): "add-milestone",
+    ("milestone", "edit"): "update",
+    ("milestone", "show"): "show",
+    ("milestone", "list"): "list",
+    ("milestone", "move"): "status",
+    ("milestone", "delete"): "delete",
+    ("task", "add"): "add-task",
+    ("task", "edit"): "update",
+    ("task", "show"): "show",
+    ("task", "list"): "list",
+    ("task", "move"): "status",
+    ("task", "delete"): "delete",
+    ("criterion", "add"): "add-criteria",
+    ("criterion", "list"): "criteria",
+    ("criterion", "tick"): "check",
+    ("criterion", "untick"): "uncheck",
+    ("criterion", "delete"): "delete-criteria",
+}
+
+
 _COMMANDS: dict[str, Callable[[Store, argparse.Namespace, str], int]] = {
     "init": _cmd_init,
     "info": _cmd_info,
@@ -846,6 +904,23 @@ _COMMANDS: dict[str, Callable[[Store, argparse.Namespace, str], int]] = {
 def main(argv: list[str] | None = None) -> int:
     """Dispatch one lpui invocation; exit codes are agent-readable."""
     args = build_parser().parse_args(argv)
+    noun_group = getattr(args, "noun_group", None)
+    if noun_group:
+        action = getattr(args, "action", None)
+        canonical = _GROUP_CMDS.get((noun_group, action or ""))
+        if canonical is None:
+            print(f"error: unknown {noun_group} action {action!r}", file=sys.stderr)
+            return 2
+        args.cmd = canonical
+        if noun_group in ("plan", "milestone", "task") and canonical in (
+            "update",
+            "show",
+            "status",
+            "delete",
+        ):
+            args.kind = noun_group
+        if noun_group in ("milestone", "task") and canonical == "list":
+            args.tree = True
     if getattr(args, "version", False):
         # Before Store(): printing the version must not create a DB.
         print(package_version())

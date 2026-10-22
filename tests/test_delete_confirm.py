@@ -1,6 +1,7 @@
-"""Destructive keys confirm first; confirm dialogs render centered.
+"""Destructive palette commands confirm first; confirm dialogs render centered.
 
 Headless Textual pilot tests (skipped on stdlib-only interpreters).
+Minimal keys own the tree; mutations run through the modal palette.
 """
 
 import os
@@ -17,6 +18,18 @@ try:
     from lazyplan.screens import ConfirmScreen
 except ImportError:  # stdlib-only interpreter: no textual, no screens
     tui_mod = None  # type: ignore[assignment]
+
+
+async def _palette(pilot, query: str) -> None:
+    """Drive the modal palette: open with c, type query, run first match."""
+    await pilot.press("c")
+    await pilot.pause()
+    for ch in query:
+        await pilot.press(ch)
+    await pilot.pause()
+    await pilot.press("enter")
+    await pilot.pause()
+    await pilot.pause()
 
 
 @unittest.skipUnless(tui_mod is not None and tui_mod._TEXTUAL_OK, "textual not installed")
@@ -37,8 +50,7 @@ class TestDeleteConfirm(unittest.IsolatedAsyncioTestCase):
         async with self.app.run_test() as pilot:
             await pilot.pause()
             self.app.selected = ("task", self.tid)
-            await pilot.press("d")
-            await pilot.pause()
+            await _palette(pilot, "delete")
             self.assertEqual(len(self.app.screen_stack), 2)
             self.assertIsInstance(self.app.screen, ConfirmScreen)
             # cancel: row survives
@@ -47,8 +59,7 @@ class TestDeleteConfirm(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(len(self.app.screen_stack), 1)
             self.assertIsNotNone(Store(self.db).get_task(self.tid))
             # confirm: row goes
-            await pilot.press("d")
-            await pilot.pause()
+            await _palette(pilot, "delete")
             await pilot.click("#ok")
             await pilot.pause()
             self.assertEqual(len(self.app.screen_stack), 1)
@@ -60,11 +71,9 @@ class TestDeleteConfirm(unittest.IsolatedAsyncioTestCase):
         async with self.app.run_test() as pilot:
             await pilot.pause()
             self.app.selected = ("task", self.tid)
-            await pilot.press("c")
-            await pilot.pause()
+            await _palette(pilot, "tick criteria")
             self.assertTrue(Store(self.db).list_criteria("task", self.tid)[0].done)
-            await pilot.press("c")  # nothing open: reopens the last one
-            await pilot.pause()
+            await _palette(pilot, "tick criteria")  # nothing open: reopens the last one
             crit = Store(self.db).list_criteria("task", self.tid)[0]
             self.assertEqual(crit.id, cid)
             self.assertFalse(crit.done)
@@ -75,6 +84,10 @@ class TestDeleteConfirm(unittest.IsolatedAsyncioTestCase):
             self.app.selected = ("task", self.tid)
             await pilot.press("space")
             await pilot.pause()
+            # space is parked: nothing happens without the palette
+            self.assertEqual(len(self.app.screen_stack), 1)
+            self.assertEqual(Store(self.db).get_task(self.tid).status.value, "todo")
+            await _palette(pilot, "cycle status")
             self.assertEqual(len(self.app.screen_stack), 1)
             self.assertEqual(Store(self.db).get_task(self.tid).status.value, "doing")
 

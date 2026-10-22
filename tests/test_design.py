@@ -25,15 +25,14 @@ class TestDesignSystem(unittest.TestCase):
         self.tmp.cleanup()
 
     def test_label_grammar(self):
-        p = Plan(id=1, name="N", priority="p1")
+        p = Plan(id=1, name="N")
         self.assertEqual(design.plan_label(p), "⬜ P#1 N")
-        s = Milestone(id=2, plan_id=1, title="S", priority="p0")
+        s = Milestone(id=2, plan_id=1, title="S")
         self.assertEqual(design.milestone_label(s), "⬜ M#2 S")
         t = Task(id=3, milestone_id=2, title="T")
         self.assertEqual(design.task_label(t), "⬜ T#3 T")
-        # priority stays on the model but never renders in headers
-        self.assertNotIn("!p1", design.plan_label(p))
-        self.assertNotIn("!p0", design.milestone_label(s))
+        # labels carry only status + id + title
+        self.assertNotIn("p1", design.plan_label(p))
 
     def test_status_word_forms(self):
         self.assertEqual(design.status_word("todo"), "⬜")
@@ -47,7 +46,7 @@ class TestDesignSystem(unittest.TestCase):
             design.status_word("todo", "neon")
 
     def test_ansi_labels_colorize_the_word(self):
-        p = Plan(id=1, name="N", priority="p1")
+        p = Plan(id=1, name="N")
         self.assertIn("\x1b[33m⬜\x1b[0m P#1", design.plan_label(p, dot="ansi"))
         s = Milestone(id=2, plan_id=1, title="S")
         self.assertTrue(design.milestone_label(s, dot="ansi").startswith("\x1b[33m⬜\x1b[0m M#2"))
@@ -77,13 +76,13 @@ class TestDesignSystem(unittest.TestCase):
         self.assertNotRegex(label, r"\[\d+/\d+✓\]")
 
     def test_plan_row_pill_and_escaped_title(self):
-        p = Plan(id=1, name="Ray [old]", priority="p1")
+        p = Plan(id=1, name="Ray [old]")
         self.assertEqual(design.plan_row(p), "[yellow]⬜[/] [reverse] P1 [/] Ray \\[old]")
         self.assertNotIn("TODO", design.plan_row(p))
 
     def test_cli_uses_design_labels(self):
-        p = self.store.add_plan("P", priority="p1")
-        s = self.store.add_milestone(p.id, "S", priority="p0")
+        p = self.store.add_plan("P")
+        s = self.store.add_milestone(p.id, "S")
         t = self.store.add_task(s.id, "T")
         buf = io.StringIO()
         with redirect_stdout(buf):
@@ -131,13 +130,21 @@ class TestDesignSystem(unittest.TestCase):
         table = " ".join(k for k, _a, _s in design.KEYMAP)
         for key in keys:
             self.assertIn(key, table, key)
-        self.assertIn("?", table)
+        # palette model: help lives in the palette, not on a `?` key
+        self.assertIn("c", table)
 
     def test_message_helpers(self):
         self.assertEqual(design.msg_not_found("task", 7), "task #7 not found")
         self.assertTrue(design.msg_error(ValueError("x")).startswith("error:"))
         for const in (design.EMPTY_NO_PLANS, design.EMPTY_FEED):
             self.assertTrue(isinstance(const, str) and len(const) > 0)
+
+    def test_palette_sections_cover_every_command_once(self):
+        ids = [cid for cid, _ in design.PALETTE_COMMANDS]
+        sectioned = [cid for _, cids in design.PALETTE_SECTIONS for cid in cids]
+        self.assertEqual(sorted(sectioned), sorted(ids))
+        self.assertEqual(len(sectioned), len(set(sectioned)))
+        self.assertEqual(len(design.PALETTE_SECTIONS), 5)
 
     def test_commits_chip(self):
         self.assertEqual(design.commits_chip(None), "")
@@ -150,7 +157,7 @@ class TestDesignSystem(unittest.TestCase):
         )
 
     def test_rows_show_chips_only_when_linked(self):
-        p = Plan(id=1, name="N", priority="p1")
+        p = Plan(id=1, name="N")
         self.assertEqual(design.plan_row(p), design.plan_row(p, links=None))
         self.assertEqual(design.plan_row(p), design.plan_row(p, links=[]))
         self.assertIn("a" * 12, design.plan_row(p, links=["a" * 40]))
@@ -195,7 +202,7 @@ class TestDesignSystem(unittest.TestCase):
         self.assertEqual(design.plan_label(p, self.store), "⬜ P#1 P [api]")
 
     def test_plan_row_shows_repo_pill(self):
-        p = Plan(id=1, name="N", priority="p1")
+        p = Plan(id=1, name="N")
         self.assertEqual(design.plan_row(p), design.plan_row(p, repos=None))
         self.assertEqual(design.plan_row(p), design.plan_row(p, repos=[]))
         row = design.plan_row(p, repos=[{"repo_path": "/x/api", "repo_remote": ""}])

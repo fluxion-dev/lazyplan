@@ -60,12 +60,11 @@ TEMPLATE_SETUP_EXPLAIN = (
 TEMPLATE_REVIEW = "Review existing templates in .agents/lazyplan/templates/?"
 TEMPLATE_Q_WHYWHAT = "Require plan why and what on creation?"
 TEMPLATE_Q_DESC = "Require milestone/task details (desc)?"
-TEMPLATE_Q_PRIORITY = "Default task priority? [p0/p1/p2/p3] (default p1): "
 TEMPLATE_DONE = "Templates settled — edit `.agents/lazyplan/templates/*.md` any time."
 
 SKILL_FRONTMATTER = """---
 name: lazyplan
-description: Plan and track work with lazyplan (lpui) — interview for a plan's why/what/acceptance criteria, then cut prioritized milestones and tasks. Use when the user asks to plan work, track progress, break down a feature, check status, or when repo instructions mention `lpui`.
+description: Plan and track work with lazyplan (lpui) — interview for a plan's why/what/acceptance criteria, then cut milestones and tasks. Use when the user asks to plan work, track progress, break down a feature, check status, or when repo instructions mention `lpui`.
 license: MIT
 compatibility: opencode, claude-code, codex, gemini-cli, cursor
 ---
@@ -78,8 +77,8 @@ SKILL_BODY = """# lazyplan (`lpui`) — local plan journal
 `.agents/lazyplan/config.json`). The human watches `lpui ui`; agents inject work through
 the CLI. Never touch the TUI process — only call `lpui`.
 
-A plan is: title + priority + why + what + acceptance criteria. Milestones cut
-a plan into slices; tasks cut a milestone into prioritized units of work. That
+A plan is: title + why + what + acceptance criteria. Milestones cut
+a plan into slices; tasks cut a milestone into units of work. That
 is the whole model — no dates, owners, labels, or estimates.
 
 ## Identity
@@ -173,20 +172,20 @@ or task. No row is written from unscouted ground, in any case, no exceptions.
 Then record it:
 
 ```bash
-lpui --actor NAME add-plan --title "API v2" --why ".." --what ".." --priority p1
+lpui --actor NAME add-plan --title "API v2" --why ".." --what ".."
 lpui --actor NAME add-criteria --kind plan --id P --text "Works offline"
 lpui criteria --kind plan --id P                                     # list items
 lpui check --id C / lpui uncheck --id C                                 # tick/untick (advisory)
 ```
 
 Only once the definition is agreed, cut the work — milestones from the plan,
-then prioritized tasks from each milestone, shaped as below plus the default QA,
+then tasks from each milestone, shaped as below plus the default QA,
 refactor, and documentation tasks.
 
 Every plan carries QA testing tasks, a refactoring task, and documentation
 cleanup by default, shaped by the interview's testing answer. Ground every QA task in the acceptance criteria: each criterion is exercised by a named test task, and DoD checklists reference the criteria they satisfy. Only an explicit user opt-out ("skip QA", "no refactoring") excludes them — silence means include.
 
-Work top priority first. Move rows through todo → doing → done as you go.
+Work top-down in creation order. Move rows through todo → doing → done as you go.
 
 ## Review gate: plan is truth
 
@@ -202,7 +201,7 @@ Walk the human through every milestone and task, make last edits on the spot, an
 ## Read first
 
 ```bash
-lpui list [--status todo|doing|done|all] [--archived] [--plan ID] [--priority p0]  # tree (default: all)
+lpui list [--status todo|doing|done|all] [--archived] [--plan ID]  # tree (default: all)
 lpui show --kind plan|milestone|task --id N                           # full context
 lpui feed --limit 20                                                 # recent activity
 lpui export --format json                                            # full dump when you need everything
@@ -222,20 +221,20 @@ Each file is Markdown
 with YAML frontmatter; the body is guidance and ignored:
 
 ```yaml
-defaults: {why: "", what: "", priority: ""}   # filled when a flag is empty
+defaults: {why: "", what: ""}   # filled when a flag is empty
 required: [title]                             # must be non-empty after fill
 criteria: []                                  # starters ship empty: add real criteria per row
 ```
 
 Long single-blob `why`/`what`/`desc` (over 300 chars with no paragraph
 breaks or section markers) fails creation — use paragraphs and sections.
-Field names are per kind: plan `title/why/what/priority`, milestone and task
-`title/desc/priority`. Missing `required` entries fail with exit 2 naming the
+Field names are per kind: plan `title/why/what`, milestone and task
+`title/desc`. Missing `required` entries fail with exit 2 naming the
 field; missing template files mean legacy behavior (tasks default `p1`).
 
 `lpui init` walks the user through template setup: on a TTY it asks three
 convention questions (require plan why/what, require milestone/task desc,
-default task priority) and writes tailored
+and the details requirement) and writes tailored
 starters; `--yes`/`--json`/non-TTY writes the opinionated defaults silently.
 Rerunning `init` on a TTY offers per-file keep/edit/reset (default keep) —
 edits are never overwritten without an explicit reset.
@@ -246,11 +245,11 @@ Every entity supports create → read (`show`) → update/status → delete.
 `--kind` is plan|milestone|task everywhere it appears.
 
 ```bash
-lpui --actor NAME add-plan --title "API v2" --why ".." --what ".." --priority p1
-lpui --actor NAME add-milestone --plan P --title "Feature Y" [--desc .. --priority p0]
-lpui --actor NAME add-task --milestone S --title "Do X" [--desc ctx --priority p1]
-lpui --actor NAME update --kind task --id T [--title .. --desc .. --priority p0|none]
-lpui --actor NAME update --kind plan --id P [--title .. --what .. --why .. --priority p0|none]
+lpui --actor NAME add-plan --title "API v2" --why ".." --what ".."
+lpui --actor NAME add-milestone --plan P --title "Feature Y" [--desc ..]
+lpui --actor NAME add-task --milestone S --title "Do X" [--desc ctx]
+lpui --actor NAME update --kind task --id T [--title .. --desc ..]
+lpui --actor NAME update --kind plan --id P [--title .. --what .. --why ..]
 lpui --actor NAME status --kind task --id T --to doing|done
 lpui --actor NAME delete --kind task --id T                          # immediate, no confirm
 ```
@@ -278,14 +277,14 @@ definition of done — tick them as the work lands.
 Each milestone states user value in narrative form, with testable criteria:
 
 ```bash
-lpui --actor NAME add-milestone --plan P --title "Feature Y" --desc "As a [persona], I want [action] so that [benefit]" --priority p1
+lpui --actor NAME add-milestone --plan P --title "Feature Y" --desc "As a [persona], I want [action] so that [benefit]"
 lpui --actor NAME add-criteria --kind milestone --id S --text "Given [context], when [action], then [outcome]"
 ```
 
 Keep milestones INVEST: independent, negotiable, valuable, estimable, small,
 testable. At creation, `--desc` carries the narrative plus the INVEST check
 and the inputs/prerequisites — a milestone without them is not ready to cut. No
-dependency, estimate, or owner fields — sequencing lives in priority order
+dependency, estimate, or owner fields — sequencing lives in creation order
 (work p0 first), context lives in `--desc`.
 
 ## Task standard
@@ -295,15 +294,15 @@ technical how: approach, code references, inputs and prerequisites. Task-level
 checklists are the definition of done:
 
 ```bash
-lpui --actor NAME add-task --milestone S --title "Implement token rotation" --desc "Approach and file refs" --priority p0
-lpui --actor NAME add-task --milestone S --title "Run the relevant test suites" --desc "Suites named in the interview" --priority p1
-lpui --actor NAME add-task --milestone S --title "Refactor what the change touched" --desc "Leave the area cleaner" --priority p2
-lpui --actor NAME add-task --milestone S --title "Clean up touched documentation" --desc "Docs matching the final code" --priority p2
+lpui --actor NAME add-task --milestone S --title "Implement token rotation" --desc "Approach and file refs"
+lpui --actor NAME add-task --milestone S --title "Run the relevant test suites" --desc "Suites named in the interview"
+lpui --actor NAME add-task --milestone S --title "Refactor what the change touched" --desc "Leave the area cleaner"
+lpui --actor NAME add-task --milestone S --title "Clean up touched documentation" --desc "Docs matching the final code"
 lpui --actor NAME add-criteria --kind task --id T --text "Unit tests pass"
 ```
 
 No assignee or effort fields — ownership is the `--actor` on each write, size
-is the priority. Every task `--desc` names the technical approach and the inputs/prerequisites — a task missing either is not ready to cut. Cut tasks only from scouted ground: each one must name real files, real constraints, real prerequisites.
+is its position in the list. Every task `--desc` names the technical approach and the inputs/prerequisites — a task missing either is not ready to cut. Cut tasks only from scouted ground: each one must name real files, real constraints, real prerequisites.
 
 ## Human-in-the-loop (preferred for judgment calls)
 
@@ -326,7 +325,7 @@ AGENTS_SNIPPET = """## lazyplan (`lpui`)
 Repo plan of record: plans > milestones > tasks in `.agents/lazyplan/lazyplan.db`.
 Human watches `lpui ui`; agents work via the CLI with `--actor <name>`.
 
-- New plan? Interview the human first: vision, scope in and out, deliverables, constraints, metrics, acceptance criteria (priority only if volunteered; new tasks default p1). Scout the codebase during the interview.
+- New plan? Interview the human first: vision, scope in and out, deliverables, constraints, metrics, acceptance criteria. Scout the codebase during the interview.
 - Read: `lpui list`, `lpui show --kind plan --id N`, `lpui feed --limit 20` (`--json` for parsing)
 - Write (full CRUD): `lpui add-plan`, `lpui add-milestone`, `lpui add-task`, `lpui update`, `lpui status`, `lpui delete` (all with `--actor <name>`)
 - Milestones read As a/I want/so that with Given-When-Then criteria; tasks start with a verb and carry a DoD checklist; cut both from scouted ground only
@@ -335,7 +334,7 @@ Human watches `lpui ui`; agents work via the CLI with `--actor <name>`.
 - Write every row for scanning: paragraphs and sections, no single-blob text, no placeholder content; starters ship empty, fill them with real words
 - Templates in `.agents/lazyplan/templates/` fill/enforce/auto-add criteria at creation; missing templates mean legacy defaults; `lpui init` walks through setup, reruns offer keep/edit/reset
 - Plans include QA, refactoring, and documentation cleanup by default; ask about relevant testing in the interview, drop them only on explicit opt-out
-- Done means: `lpui add-criteria --kind plan`, cut milestones, cut prioritized tasks, work p0 first
+- Done means: `lpui add-criteria --kind plan`, cut milestones, cut tasks, work in creation order
 - Unsure on scope or taste? Ask the human in conversation — never guess the definition
 - Review gate: present the plan, edit on the spot, execute only on check-off; the plan is the truth
 - Full skill: `.agents/skills/lazyplan/SKILL.md` · verbs: `lpui --help`
@@ -706,20 +705,12 @@ def prompt_confirm(
 
 
 def _ask_template_choices(read: Callable[[], str] | None, out: TextIO) -> TemplateChoices:
-    """Three convention questions (EOF/empty means the opinionated default)."""
+    """Two convention questions (EOF/empty means the opinionated default)."""
     require_why_what = prompt_confirm(TEMPLATE_Q_WHYWHAT, read=read, write=out)
     require_desc = prompt_confirm(TEMPLATE_Q_DESC, read=read, write=out)
-    pri = _prompt(
-        TEMPLATE_Q_PRIORITY,
-        valid={"p0", "p1", "p2", "p3", ""},
-        default="p1",
-        read=read,
-        write=out,
-    )
     return TemplateChoices(
         require_why_what=require_why_what,
         require_desc=require_desc,
-        task_priority=pri or "p1",
     )
 
 

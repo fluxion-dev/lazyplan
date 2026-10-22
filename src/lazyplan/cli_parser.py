@@ -26,12 +26,12 @@ examples:
   lpui init --team                     share this repo's plan with the team
   lpui                                   open the screen (same as `lpui ui`)
   lpui list                              show plans, milestones, and tasks as a tree
-  lpui list --status doing --priority p0
+  lpui list --status doing
   lpui show --kind plan --id 1        show one row with its reason, plan, checklist, and children
-  lpui --actor alice add-plan --title "API v2" --why ".." --what ".." --priority p1
+  lpui --actor alice add-plan --title "API v2" --why ".." --what ".."
   lpui --actor alice add-criteria --kind plan --id 1 --text "Works offline"
-  lpui --actor alice add-milestone --plan 1 --title "Feature Y" --priority p1
-  lpui --actor alice add-task --milestone 1 --title "Do X" --priority p0
+  lpui --actor alice add-milestone --plan 1 --title "Feature Y"
+  lpui --actor alice add-task --milestone 1 --title "Do X"
   lpui status --kind task --id 3 --to done
   lpui link --kind task --id 3           attach the current commit (needs a git repo)
   lpui commits --kind task --id 3        list the attached commits
@@ -218,12 +218,6 @@ def build_parser() -> argparse.ArgumentParser:
         help="show no more than N plans",
     )
     li.add_argument(
-        "--priority",
-        choices=["p0", "p1", "p2", "p3"],
-        default=None,
-        help="show only this priority (p0 matters most)",
-    )
-    li.add_argument(
         "--repo",
         default=None,
         metavar="PATH",
@@ -239,12 +233,6 @@ def build_parser() -> argparse.ArgumentParser:
     a.add_argument("--desc", default=None, metavar="TEXT", help="same as --what")
     a.add_argument("--why", default="", metavar="TEXT", help="why this plan exists")
     a.add_argument("--goal", default=None, metavar="TEXT", help="same as --why")
-    a.add_argument(
-        "--priority",
-        choices=["p0", "p1", "p2", "p3"],
-        default="",
-        help="how urgent this is (p0 matters most)",
-    )
 
     a = sub.add_parser(
         "add-milestone",
@@ -262,12 +250,6 @@ def build_parser() -> argparse.ArgumentParser:
         "--title", required=True, metavar="TEXT", help="title of the milestone (required)"
     )
     a.add_argument("--desc", default="", metavar="TEXT", help="extra details about the milestone")
-    a.add_argument(
-        "--priority",
-        choices=["p0", "p1", "p2", "p3"],
-        default="",
-        help="how urgent this is (p0 matters most)",
-    )
 
     a = sub.add_parser(
         "add-task",
@@ -285,16 +267,10 @@ def build_parser() -> argparse.ArgumentParser:
     a.add_argument(
         "--desc", default="", metavar="TEXT", help="what the task involves and what it needs"
     )
-    a.add_argument(
-        "--priority",
-        choices=["p0", "p1", "p2", "p3"],
-        default="",
-        help="how urgent this is (default: your template, else p1; p0 matters most)",
-    )
 
     u = sub.add_parser(
         "update",
-        help="change the title, details, reason, or priority of a row",
+        help="change the title, details, or reason of a row",
         parents=[common],
     )
     u.add_argument(
@@ -310,12 +286,6 @@ def build_parser() -> argparse.ArgumentParser:
     u.add_argument("--what", default=None, metavar="TEXT", help="same as --desc, for plans")
     u.add_argument("--why", default=None, metavar="TEXT", help="the new reason why (plans)")
     u.add_argument("--goal", default=None, metavar="TEXT", help="same as --why")
-    u.add_argument(
-        "--priority",
-        choices=["p0", "p1", "p2", "p3", "none"],
-        default=None,
-        help="the new priority (`none` clears it)",
-    )
 
     sh = sub.add_parser(
         "show",

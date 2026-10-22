@@ -20,7 +20,6 @@ def tree_lines(
     store: Store,
     status: Status | None,
     plan_id: int | None,
-    priority: str | None = None,
     dot: str = "plain",
     archived: str = "hide",
     limit: int | None = None,
@@ -32,7 +31,6 @@ def tree_lines(
         store,
         status=status,
         plan_id=plan_id,
-        priority=priority,
         archived=archived,
         limit=limit,
         repo=repo,
@@ -178,8 +176,6 @@ def _md_task_lines(tentry: dict) -> list[str]:
     t = tentry["task"]
     box = "x" if t["status"] == "done" else " "
     lines.append(f"- [{box}] T#{t['id']} {t['title']} ({t['status']})")
-    if t.get("priority"):
-        lines.append(f"  priority: {t['priority']}")
     if t.get("description"):
         for dline in str(t["description"]).splitlines():
             lines.append(f"  {dline}")
@@ -194,8 +190,6 @@ def _md_milestone_lines(sentry: dict) -> list[str]:
     lines: list[str] = []
     s = sentry["milestone"]
     lines.append(f"\n### {status_word(s['status'])} M#{s['id']} {s['title']}")
-    if s.get("priority"):
-        lines.append(f"priority: {s['priority']}")
     if s.get("description"):
         lines.append(str(s["description"]))
     _md_crit(lines, sentry.get("criteria", []))
@@ -208,15 +202,13 @@ def _md_milestone_lines(sentry: dict) -> list[str]:
 def render_plan_markdown(entry: dict) -> str:
     """Full-fidelity markdown for ONE plan entry (export_all shape).
 
-    Carries every editable field: status, priority, why/what, criteria
+    Carries every editable field: status, why/what, criteria
     (with ids + ticks), repos, commits, plus per-milestone/task bodies.
     Stays non-importable by design; JSON remains the round-trip format.
     """
     lines: list[str] = []
     p = entry["plan"]
     lines.append(f"## {status_word(p['status'])} P#{p['id']} {p['name']}".rstrip())
-    if p.get("priority"):
-        lines.append(f"priority: {p['priority']}")
     if p.get("goal"):
         lines.append(f"> why: {p['goal']}")
     if p.get("description"):

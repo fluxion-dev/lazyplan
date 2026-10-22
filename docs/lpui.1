@@ -1,4 +1,4 @@
-.TH LPUI 1 "2026-10-20" "lazyplan-tui 0.18.0" "User Commands"
+.TH LPUI 1 "2026-10-21" "lazyplan-tui 0.18.0" "User Commands"
 .SH NAME
 lpui \- local plan journal for you and your coding agent
 .SH SYNOPSIS
@@ -10,7 +10,7 @@ is the same program under its long name.
 .br
 With no COMMAND, \fBlpui\fR opens the keyboard\-driven screen (same as \fBlpui ui\fR).
 .SH DESCRIPTION
-lazyplan keeps your plans, milestones, and tasks in a small database next to your code. A plan is a title plus a priority, a reason why it exists, a description of what to build, and a checklist that says when it is done; you break the plan into milestones and each milestone into prioritized tasks. You drive the keyboard\-driven screen; your coding agent drives the same database through this command line with \fB\-\-actor NAME\fR and \fB\-\-json\fR. Every change adds an entry to the feed; the running screen refreshes and tells you what arrived.
+lazyplan keeps your plans, milestones, and tasks in a small database next to your code. A plan is a title, a reason why it exists, a description of what to build, and a checklist that says when it is done; you break the plan into milestones and each milestone into tasks. You drive the keyboard\-driven screen; your coding agent drives the same database through this command line with \fB\-\-actor NAME\fR and \fB\-\-json\fR. Every change adds an entry to the feed; the running screen refreshes and tells you what arrived.
 .SH GLOBAL OPTIONS
 .TP
 .B \-\-db PATH
@@ -155,11 +155,6 @@ show no more than N plans
 .RE
 .RS
 .TP
-.B \-\-priority {p0|p1|p2|p3}
-show only this priority (p0 matters most) Choices: p0, p1, p2, p3\.
-.RE
-.RS
-.TP
 .B \-\-repo PATH
 show only rows linked to this repo (matches effective repos)
 .RE
@@ -211,11 +206,6 @@ why this plan exists
 .B \-\-goal TEXT
 same as \-\-why
 .RE
-.RS
-.TP
-.B \-\-priority {p0|p1|p2|p3}
-how urgent this is (p0 matters most) Choices: p0, p1, p2, p3\.
-.RE
 .TP
 .B lpui add\-milestone
 add a milestone to a plan (works for you and your agent)
@@ -248,11 +238,6 @@ title of the milestone (required) Required\.
 .TP
 .B \-\-desc TEXT
 extra details about the milestone
-.RE
-.RS
-.TP
-.B \-\-priority {p0|p1|p2|p3}
-how urgent this is (p0 matters most) Choices: p0, p1, p2, p3\.
 .RE
 .TP
 .B lpui add\-task
@@ -287,14 +272,9 @@ title of the task (required) Required\.
 .B \-\-desc TEXT
 what the task involves and what it needs
 .RE
-.RS
-.TP
-.B \-\-priority {p0|p1|p2|p3}
-how urgent this is (default: your template, else p1; p0 matters most) Choices: p0, p1, p2, p3\.
-.RE
 .TP
 .B lpui update
-change the title, details, reason, or priority of a row
+change the title, details, or reason of a row
 .RS
 .TP
 .B \-\-json
@@ -349,11 +329,6 @@ the new reason why (plans)
 .TP
 .B \-\-goal TEXT
 same as \-\-why
-.RE
-.RS
-.TP
-.B \-\-priority {p0|p1|p2|p3|none}
-the new priority (`none` clears it) Choices: p0, p1, p2, p3, none\.
 .RE
 .TP
 .B lpui show
@@ -993,11 +968,11 @@ who made this change (you see it in feed)
 .nf
 lpui                             # open the screen (same as `lpui ui`)
 lpui list                        # show everything as a tree
-lpui list --status doing --priority p0
+lpui list --status doing
 lpui show --kind plan --id 1
-lpui --actor alice add-plan --title \(dqAPI v2\(dq --why \(dq..\(dq --priority p1
+lpui --actor alice add-plan --title \(dqAPI v2\(dq --why \(dq..\(dq
 lpui --actor alice add-criteria --kind plan --id 1 --text \(dqWorks offline\(dq
-lpui --actor alice add-task --milestone 1 --title \(dqFix bug\(dq --priority p1
+lpui --actor alice add-task --milestone 1 --title \(dqFix bug\(dq
 lpui status --kind task --id 3 --to done
 lpui upgrade --check
 lpui feed --limit 20

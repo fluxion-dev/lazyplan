@@ -10,14 +10,12 @@ from pathlib import Path
 from .kinds import KIND_ERROR, check_parent_kind, table_for
 from .migrate import migrate
 from .models import (
-    PRIORITY_RANK,
     Criterion,
     Milestone,
     Plan,
     Status,
     Task,
     VcsLink,
-    check_priority,
 )
 from .repo import ensure_plan_dir, resolve_db_path, seed_shared_db, shared_db_path
 
@@ -101,7 +99,6 @@ class Store:
         name: str,
         description: str = "",
         goal: str = "",
-        priority: str = "",
         actor: str = "human",
     ) -> Plan:
         """Insert a plan row and log the event (no template fill; see services)."""
@@ -110,12 +107,11 @@ class Store:
             name=name.strip(),
             description=description,
             goal=goal,
-            priority=check_priority(priority),
         )
         with self._connect() as conn:
             cur = conn.execute(
-                "INSERT INTO plans (name, description, status, goal, priority) VALUES (?,?,?,?,?)",
-                (p.name, p.description, p.status.value, p.goal, p.priority),
+                "INSERT INTO plans (name, description, status, goal) VALUES (?,?,?,?)",
+                (p.name, p.description, p.status.value, p.goal),
             )
             p.id = cur.lastrowid or 0
         self.log(actor, "plan", "add", f"P#{p.id} {p.name}")
@@ -135,7 +131,6 @@ class Store:
             description=self._opt(r, keys, "description"),
             status=Status(r["status"]) if "status" in keys else Status.TODO,
             goal=self._opt(r, keys, "goal"),
-            priority=self._opt(r, keys, "priority"),
         )
 
     def get_plan(self, pid: int) -> Plan | None:
@@ -156,7 +151,6 @@ class Store:
         name: str | None = None,
         description: str | None = None,
         goal: str | None = None,
-        priority: str | None = None,
         actor: str = "human",
     ) -> Plan | None:
         """Patch plan fields and log."""
@@ -171,12 +165,10 @@ class Store:
             p.description = description
         if goal is not None:
             p.goal = goal
-        if priority is not None:
-            p.priority = check_priority(priority)
         with self._connect() as conn:
             conn.execute(
-                "UPDATE plans SET name=?, description=?, goal=?, priority=? WHERE id=?",
-                (p.name, p.description, p.goal, p.priority, pid),
+                "UPDATE plans SET name=?, description=?, goal=? WHERE id=?",
+                (p.name, p.description, p.goal, pid),
             )
         self.log(actor, "plan", "edit", f"P#{pid} {p.name}")
         return p
@@ -187,7 +179,6 @@ class Store:
         plan_id: int,
         title: str,
         description: str = "",
-        priority: str = "",
         actor: str = "human",
     ) -> Milestone:
         """Insert a milestone row and log the event (no template fill; see services)."""
@@ -196,15 +187,14 @@ class Store:
             plan_id=plan_id,
             title=title.strip(),
             description=description,
-            priority=check_priority(priority),
         )
         with self._connect() as conn:
             if conn.execute("SELECT 1 FROM plans WHERE id=?", (plan_id,)).fetchone() is None:
                 raise KeyError(f"plan #{plan_id} not found")
             cur = conn.execute(
-                "INSERT INTO milestones (plan_id, title, description, status, priority)"
-                " VALUES (?,?,?,?,?)",
-                (s.plan_id, s.title, s.description, s.status.value, s.priority),
+                "INSERT INTO milestones (plan_id, title, description, status)"
+                " VALUES (?,?,?,?)",
+                (s.plan_id, s.title, s.description, s.status.value),
             )
             s.id = cur.lastrowid or 0
         self.log(actor, "milestone", "add", f"M#{s.id} {s.title}")
@@ -219,7 +209,6 @@ class Store:
             title=r["title"],
             description=self._opt(r, keys, "description"),
             status=Status(r["status"]) if "status" in keys else Status.TODO,
-            priority=self._opt(r, keys, "priority"),
         )
 
     def get_milestone(self, sid: int) -> Milestone | None:
@@ -229,21 +218,18 @@ class Store:
         return self._row_to_milestone(r) if r is not None else None
 
     def list_milestones(self, plan_id: int) -> list[Milestone]:
-        """Milestones of a plan, priority then id."""
+        """Milestones of a plan, in creation order."""
         with self._connect() as conn:
             rows = conn.execute(
                 "SELECT * FROM milestones WHERE plan_id=? ORDER BY id", (plan_id,)
             ).fetchall()
-        out = [self._row_to_milestone(r) for r in rows]
-        out.sort(key=lambda s: (PRIORITY_RANK.get(s.priority, 99), s.id))
-        return out
+        return [self._row_to_milestone(r) for r in rows]
 
     def update_milestone(
         self,
         sid: int,
         title: str | None = None,
         description: str | None = None,
-        priority: str | None = None,
         actor: str = "human",
     ) -> Milestone | None:
         """Patch milestone fields and log."""
@@ -256,12 +242,10 @@ class Store:
             s.title = title.strip()
         if description is not None:
             s.description = description
-        if priority is not None:
-            s.priority = check_priority(priority)
         with self._connect() as conn:
             conn.execute(
-                "UPDATE milestones SET title=?, description=?, priority=? WHERE id=?",
-                (s.title, s.description, s.priority, sid),
+                "UPDATE milestones SET title=?, description=? WHERE id=?",
+                (s.title, s.description, sid),
             )
         self.log(actor, "milestone", "edit", f"M#{sid} {s.title}")
         return s
@@ -272,7 +256,6 @@ class Store:
         milestone_id: int,
         title: str,
         description: str = "",
-        priority: str = "",
         actor: str = "human",
     ) -> Task:
         """Insert a task row and log the event (no template fill; see services)."""
@@ -281,7 +264,6 @@ class Store:
             milestone_id=milestone_id,
             title=title.strip(),
             description=description,
-            priority=check_priority(priority),
         )
         with self._connect() as conn:
             if (
@@ -290,9 +272,9 @@ class Store:
             ):
                 raise KeyError(f"milestone #{milestone_id} not found")
             cur = conn.execute(
-                "INSERT INTO tasks (milestone_id, title, status, description, priority)"
-                " VALUES (?,?,?,?,?)",
-                (t.milestone_id, t.title, t.status.value, t.description, t.priority),
+                "INSERT INTO tasks (milestone_id, title, status, description)"
+                " VALUES (?,?,?,?)",
+                (t.milestone_id, t.title, t.status.value, t.description),
             )
             t.id = cur.lastrowid or 0
         self.log(actor, "task", "add", f"T#{t.id} {t.title}")
@@ -307,7 +289,6 @@ class Store:
             title=r["title"],
             status=Status(r["status"]) if "status" in keys else Status.TODO,
             description=self._opt(r, keys, "description"),
-            priority=self._opt(r, keys, "priority"),
         )
 
     def get_task(self, tid: int) -> Task | None:
@@ -317,21 +298,18 @@ class Store:
         return self._row_to_task(r) if r is not None else None
 
     def list_tasks(self, milestone_id: int) -> list[Task]:
-        """Tasks of a milestone, priority then id."""
+        """Tasks of a milestone, in creation order."""
         with self._connect() as conn:
             rows = conn.execute(
                 "SELECT * FROM tasks WHERE milestone_id=? ORDER BY id", (milestone_id,)
             ).fetchall()
-        out = [self._row_to_task(r) for r in rows]
-        out.sort(key=lambda t: (PRIORITY_RANK.get(t.priority, 99), t.id))
-        return out
+        return [self._row_to_task(r) for r in rows]
 
     def update_task(
         self,
         tid: int,
         title: str | None = None,
         description: str | None = None,
-        priority: str | None = None,
         actor: str = "human",
     ) -> Task | None:
         """Patch task fields and log."""
@@ -344,12 +322,10 @@ class Store:
             t.title = title.strip()
         if description is not None:
             t.description = description
-        if priority is not None:
-            t.priority = check_priority(priority)
         with self._connect() as conn:
             conn.execute(
-                "UPDATE tasks SET title=?, description=?, priority=? WHERE id=?",
-                (t.title, t.description, t.priority, tid),
+                "UPDATE tasks SET title=?, description=? WHERE id=?",
+                (t.title, t.description, tid),
             )
         self.log(actor, "task", "edit", f"T#{tid} {t.title}")
         return t

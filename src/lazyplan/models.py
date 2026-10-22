@@ -1,9 +1,8 @@
 """Domain entities. Pure dataclasses.
 
-Minimal journal model: plans carry a title, a priority, a why, a what,
-and acceptance criteria. Milestones break a plan down; tasks break a
-milestone down. Every level has title + details + priority + status.
-Nothing else.
+Minimal journal model: plans carry a title, a why, a what, and acceptance
+criteria. Milestones break a plan down; tasks break a milestone down.
+Every level has title + details + status. Nothing else.
 """
 
 from __future__ import annotations
@@ -22,38 +21,23 @@ class Status(StrEnum):
     DONE = "done"
 
 
-PRIORITIES = ("p0", "p1", "p2", "p3")
-PRIORITY_RANK = {"p0": 0, "p1": 1, "p2": 2, "p3": 3, "": 99}
-
-#: New tasks land here unless a priority is given.
-DEFAULT_TASK_PRIORITY = "p1"
-
 #: Where acceptance criteria may live.
 CRITERION_PARENTS = KINDS
 
 
-def check_priority(priority: str) -> str:
-    """Validate a priority value ("" clears)."""
-    if priority not in ("", *PRIORITIES):
-        raise ValueError(f"priority must be one of p0..p3, got {priority!r}")
-    return priority
-
-
 @dataclass
 class Plan:
-    """A unit of planned work: title + priority + why + what + acceptance criteria."""
+    """A unit of planned work: title + why + what + acceptance criteria."""
 
     id: int
     name: str
     description: str = ""  # the what
     status: Status = Status.TODO
     goal: str = ""  # the why
-    priority: str = ""  # "" | p0..p3
 
     def __post_init__(self) -> None:
         if not self.name.strip():
             raise ValueError("plan name must not be empty")
-        check_priority(self.priority)
 
 
 @dataclass
@@ -65,12 +49,10 @@ class Task:
     title: str
     status: Status = Status.TODO
     description: str = ""  # details / context for whoever picks this up
-    priority: str = ""  # "" | p0..p3
 
     def __post_init__(self) -> None:
         if not self.title.strip():
             raise ValueError("task title must not be empty")
-        check_priority(self.priority)
 
 
 @dataclass
@@ -82,12 +64,10 @@ class Milestone:
     title: str
     description: str = ""
     status: Status = Status.TODO
-    priority: str = ""  # "" | p0..p3
 
     def __post_init__(self) -> None:
         if not self.title.strip():
             raise ValueError("milestone title must not be empty")
-        check_priority(self.priority)
 
 
 @dataclass

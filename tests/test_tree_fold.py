@@ -1,8 +1,8 @@
-"""Tree folding: z/Z collapse, state survives refresh, space still cycles status.
+"""Tree folding: modal palette folds, state survives refresh, space is parked.
 
 Headless Textual pilot tests (skipped on stdlib-only interpreters).
-Covers the space-shadowing regression: the native Tree space-toggle is
-dropped so app-level `space` always cycles status.
+Minimal keys own the tree (j/k, arrows, enter, esc, c); every mutation
+runs through the modal palette.
 """
 
 import os
@@ -19,6 +19,18 @@ try:
     from lazyplan import tui as tui_mod
 except ImportError:  # stdlib-only interpreter: no textual, no screens
     tui_mod = None  # type: ignore[assignment]
+
+
+async def _palette(pilot, query: str) -> None:
+    """Drive the modal palette: open with c, type query, run first match."""
+    await pilot.press("c")
+    await pilot.pause()
+    for ch in query:
+        await pilot.press(ch)
+    await pilot.pause()
+    await pilot.press("enter")
+    await pilot.pause()
+    await pilot.pause()
 
 
 @unittest.skipUnless(tui_mod is not None and tui_mod._TEXTUAL_OK, "textual not installed")
@@ -54,7 +66,10 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             await pilot.press("space")
             await pilot.pause()
-            # children still open: rollup heals the manual cycle back to todo
+            # space is parked: nothing happens without the palette
+            self.assertEqual(self.store.get_plan(self.pid).status.value, "todo")
+            await _palette(pilot, "cycle status")
+            # children still open: rollup heals the palette cycle back to todo
             self.assertEqual(self.store.get_plan(self.pid).status.value, "todo")
             proj, _ = self._nodes()
             self.assertTrue(proj.is_expanded)
@@ -69,7 +84,10 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             await pilot.press("space")
             await pilot.pause()
-            # tasks still open: rollup heals the manual cycle back to todo
+            # space is parked: nothing happens without the palette
+            self.assertEqual(self.store.get_milestone(self.sid).status.value, "todo")
+            await _palette(pilot, "cycle status")
+            # tasks still open: rollup heals the palette cycle back to todo
             self.assertEqual(self.store.get_milestone(self.sid).status.value, "todo")
 
     async def test_space_cycles_childless_milestone(self):
@@ -82,6 +100,9 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             await pilot.press("space")
             await pilot.pause()
+            # space is parked: nothing happens without the palette
+            self.assertEqual(self.store.get_milestone(self.bare_sid).status.value, "todo")
+            await _palette(pilot, "cycle status")
             self.assertEqual(self.store.get_milestone(self.bare_sid).status.value, "doing")
 
     def test_tui_starts_unfiltered(self):
@@ -154,13 +175,11 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
             tree.move_cursor(self.app._row_nodes[("milestone", self.sid)])
             await pilot.pause()
             self.assertNotIn(("milestone", self.sid), self.app._collapsed)
-            await pilot.press("z")
-            await pilot.pause()
+            await _palette(pilot, "fold one")
             _, milestone = self._nodes()
             self.assertFalse(milestone.is_expanded)
             self.assertIn(("milestone", self.sid), self.app._collapsed)
-            await pilot.press("z")
-            await pilot.pause()
+            await _palette(pilot, "fold one")
             _, milestone = self._nodes()
             self.assertTrue(milestone.is_expanded)
             self.assertNotIn(("milestone", self.sid), self.app._collapsed)
@@ -179,13 +198,11 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
             tree = self.app.query_one("#tree", Tree)
             tree.move_cursor(self.app._row_nodes[("plan", self.pid)])
             await pilot.pause()
-            await pilot.press("Z")
-            await pilot.pause()
+            await _palette(pilot, "fold all")
             proj, milestone = self._nodes()
             self.assertFalse(proj.is_expanded)
             self.assertFalse(milestone.is_expanded)
-            await pilot.press("Z")
-            await pilot.pause()
+            await _palette(pilot, "fold all")
             proj, milestone = self._nodes()
             self.assertTrue(proj.is_expanded)
             self.assertTrue(milestone.is_expanded)
@@ -198,8 +215,7 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
             tree = self.app.query_one("#tree", Tree)
             tree.move_cursor(self.app._row_nodes[("plan", self.pid)])
             await pilot.pause()
-            await pilot.press("z")
-            await pilot.pause()
+            await _palette(pilot, "fold one")
             self.app.refresh_all("probe")
             await pilot.pause()
             proj, _ = self._nodes()
@@ -228,8 +244,7 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
             tree = self.app.query_one("#tree", Tree)
             tree.move_cursor(self.app._row_nodes[("milestone", self.sid)])
             await pilot.pause()
-            await pilot.press("z")
-            await pilot.pause()
+            await _palette(pilot, "fold one")
             tree.move_cursor(self.app._row_nodes[("milestone", self.sid)])
             await pilot.pause()
             await pilot.press("left")
@@ -288,12 +303,12 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
 
         async with self.app.run_test() as pilot:
             await pilot.pause()
-            bar = self.app.query_one("#statusbar", Label)
+            bar = self.app.query_one("#status", Label)
             self.assertIn("Q:1/0/0", str(bar.content))
 
     def test_help_mentions_fold(self):
-        self.assertIn("z/Z fold one/all", design.HELP_TEXT)
-        self.assertIn("left/right collapse/expand", design.HELP_TEXT)
+        self.assertIn("fold", design.HELP_TEXT)
+        self.assertIn("left/right", design.HELP_TEXT)
 
 
 @unittest.skipUnless(tui_mod is not None and tui_mod._TEXTUAL_OK, "textual not installed")
@@ -330,8 +345,7 @@ class TestDoneCollapsed(unittest.IsolatedAsyncioTestCase):
             tree = self.app.query_one("#tree", Tree)
             tree.move_cursor(self.app._row_nodes[("plan", self.did)])
             await pilot.pause()
-            await pilot.press("z")
-            await pilot.pause()
+            await _palette(pilot, "fold one")
             self.assertTrue(self.app._row_nodes[("plan", self.did)].is_expanded)
             self.app.refresh_all("")
             await pilot.pause()
@@ -345,10 +359,8 @@ class TestDoneCollapsed(unittest.IsolatedAsyncioTestCase):
             tree = self.app.query_one("#tree", Tree)
             tree.move_cursor(self.app._row_nodes[("plan", self.did)])
             await pilot.pause()
-            await pilot.press("z")  # expand
-            await pilot.pause()
-            await pilot.press("z")  # refold
-            await pilot.pause()
+            await _palette(pilot, "fold one")  # expand
+            await _palette(pilot, "fold one")  # refold
             self.assertFalse(self.app._row_nodes[("plan", self.did)].is_expanded)
 
 
@@ -373,11 +385,9 @@ class TestShowAllToggle(unittest.IsolatedAsyncioTestCase):
         async with self.app.run_test() as pilot:
             await pilot.pause()
             self.assertEqual(len(self._plan_rows()), 5)
-            await pilot.press("A")
-            await pilot.pause()
+            await _palette(pilot, "show all")
             self.assertEqual(len(self._plan_rows()), 7)
-            await pilot.press("A")
-            await pilot.pause()
+            await _palette(pilot, "show all")
             self.assertEqual(len(self._plan_rows()), 5)
 
 

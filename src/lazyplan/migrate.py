@@ -13,24 +13,21 @@ CREATE TABLE IF NOT EXISTS plans (
     name TEXT NOT NULL,
     description TEXT NOT NULL DEFAULT '',
     status TEXT NOT NULL DEFAULT 'todo',
-    goal TEXT NOT NULL DEFAULT '',
-    priority TEXT NOT NULL DEFAULT ''
+    goal TEXT NOT NULL DEFAULT ''
 );
 CREATE TABLE IF NOT EXISTS milestones (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
     description TEXT NOT NULL DEFAULT '',
-    status TEXT NOT NULL DEFAULT 'todo',
-    priority TEXT NOT NULL DEFAULT ''
+    status TEXT NOT NULL DEFAULT 'todo'
 );
 CREATE TABLE IF NOT EXISTS tasks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     milestone_id INTEGER NOT NULL REFERENCES milestones(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'todo',
-    description TEXT NOT NULL DEFAULT '',
-    priority TEXT NOT NULL DEFAULT ''
+    description TEXT NOT NULL DEFAULT ''
 );
 CREATE TABLE IF NOT EXISTS criteria (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -76,14 +73,14 @@ CREATE INDEX IF NOT EXISTS idx_events_id ON events(id);
 
 # Idempotent migrations for DBs created by older versions.
 _MIGRATIONS: dict[str, tuple[str, ...]] = {
-    "plans": ("goal", "priority"),
+    "plans": ("goal",),
 }
 
 
 def _migrate_elements(conn: sqlite3.Connection) -> None:
     """Rename pre-rename tables/kinds to plans/milestones, preserving data and ids.
 
-    Old DBs (any version: with or without goal/priority columns, with story|task-
+    Old DBs (any version: with or without goal columns, with story|task-
     only or full criteria CHECKs, plus unrelated debris tables from older
     generations) are rebuilt to the current schema. Each element migrates
     independently, so a previously interrupted migration resumes cleanly.
@@ -184,10 +181,19 @@ def _migrate_elements(conn: sqlite3.Connection) -> None:
     # Remaining indexes are (re)created by SCHEMA in migrate() right after.
 
 
+def _drop_priority_columns(conn: sqlite3.Connection) -> None:
+    """Retire priority: drop the column from every element table when present."""
+    for table in ("plans", "milestones", "tasks"):
+        existing = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+        if "priority" in existing:
+            conn.execute(f"ALTER TABLE {table} DROP COLUMN priority")
+
+
 def migrate(conn: sqlite3.Connection) -> None:
     """Bring any DB to the current schema: migrate, create, backfill. Idempotent."""
     _migrate_elements(conn)
     conn.executescript(SCHEMA)
+    _drop_priority_columns(conn)
     for table, cols in _MIGRATIONS.items():
         existing = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()}
         for col in cols:

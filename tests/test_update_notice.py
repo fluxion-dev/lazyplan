@@ -81,7 +81,7 @@ class TestTuiNotice(unittest.IsolatedAsyncioTestCase):
             async with self.app.run_test() as pilot:
                 await self._wait_for_notice(pilot, self.app)
                 await pilot.pause()
-                bar = self.app.query_one("#statusbar", Label)
+                bar = self.app.query_one("#status", Label)
                 self.assertIn("9.9.9", str(bar.content))
                 self.assertIn("lpui upgrade", str(bar.content))
                 self.assertEqual(latest.call_count, 1)

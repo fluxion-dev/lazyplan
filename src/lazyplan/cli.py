@@ -318,7 +318,6 @@ def _cmd_list(store: Store, args: argparse.Namespace, actor: str) -> int:
                 store,
                 status=status,
                 plan_id=args.plan,
-                priority=args.priority,
                 archived=archived,
                 limit=limit,
                 repo=repo_filter,
@@ -329,7 +328,6 @@ def _cmd_list(store: Store, args: argparse.Namespace, actor: str) -> int:
         store,
         status,
         args.plan,
-        args.priority,
         dot=_tty_dot(args),
         archived=archived,
         limit=limit,
@@ -358,7 +356,6 @@ def _cmd_add_plan(store: Store, args: argparse.Namespace, actor: str) -> int:
         title,
         desc,
         goal=goal,
-        priority=args.priority,
         actor=actor,
     )
     return _emit(args, {"plan": _ser(vars(p))})
@@ -370,7 +367,6 @@ def _cmd_add_milestone(store: Store, args: argparse.Namespace, actor: str) -> in
         args.plan,
         args.title,
         args.desc,
-        priority=args.priority,
         actor=actor,
     )
     return _emit(args, {"milestone": _ser(vars(s))})
@@ -382,7 +378,6 @@ def _cmd_add_task(store: Store, args: argparse.Namespace, actor: str) -> int:
         args.milestone,
         args.title,
         description=args.desc,
-        priority=args.priority,
         actor=actor,
     )
     return _emit(args, {"task": _ser(vars(t))})
@@ -391,7 +386,6 @@ def _cmd_add_task(store: Store, args: argparse.Namespace, actor: str) -> int:
 def _cmd_update(store: Store, args: argparse.Namespace, actor: str) -> int:
     title_patch = _resolve_title(args) or None
     desc_patch: str | None = args.desc if args.desc is not None else args.what
-    priority = None if args.priority is None else ("" if args.priority == "none" else args.priority)
     updated: Plan | Milestone | Task | None = None
     if args.kind == "plan":
         goal = args.goal if args.goal is not None else args.why
@@ -400,7 +394,6 @@ def _cmd_update(store: Store, args: argparse.Namespace, actor: str) -> int:
             name=title_patch,
             description=desc_patch,
             goal=goal,
-            priority=priority,
             actor=actor,
         )
     elif args.kind == "milestone":
@@ -408,7 +401,6 @@ def _cmd_update(store: Store, args: argparse.Namespace, actor: str) -> int:
             args.id,
             title=title_patch,
             description=desc_patch,
-            priority=priority,
             actor=actor,
         )
     else:
@@ -416,7 +408,6 @@ def _cmd_update(store: Store, args: argparse.Namespace, actor: str) -> int:
             args.id,
             title=title_patch,
             description=desc_patch,
-            priority=priority,
             actor=actor,
         )
     if updated is None:

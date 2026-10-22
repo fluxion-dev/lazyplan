@@ -37,7 +37,8 @@ class TestParseTemplate(unittest.TestCase):
             "# guidance ignored\n"
         )
         t = templates.parse_template("plan", text)
-        self.assertEqual(t.defaults, {"why": "W", "what": "", "priority": "p1"})
+        # retired priority key in old templates is ignored, not rejected
+        self.assertEqual(t.defaults, {"why": "W", "what": ""})
         self.assertEqual(t.required, ["title", "why"])
         self.assertEqual(t.criteria, ["First", "Second"])
 
@@ -77,14 +78,13 @@ class TestParseTemplate(unittest.TestCase):
                 self.assertEqual(t.criteria, [])
                 self.assertNotIn("edit or delete me", text)
         task = templates.parse_template("task", templates.STARTERS["task"])
-        self.assertEqual(task.defaults.get("priority"), "p1")
+        self.assertNotIn("priority", task.defaults)
 
     def test_render_starter_choices(self):
         lean = templates.TemplateChoices(
             require_why_what=False,
             require_desc=False,
             with_examples=False,
-            task_priority="p2",
         )
         p = templates.parse_template("plan", templates.render_starter("plan", lean))
         self.assertEqual((p.required, p.criteria), (["title"], []))
@@ -92,7 +92,7 @@ class TestParseTemplate(unittest.TestCase):
         self.assertEqual((s.required, s.criteria), (["title"], []))
         t = templates.parse_template("task", templates.render_starter("task", lean))
         self.assertEqual(t.required, ["title"])
-        self.assertEqual(t.defaults.get("priority"), "p2")
+        self.assertNotIn("priority", t.defaults)
         self.assertEqual(t.criteria, [])
         with self.assertRaises(ValueError):
             templates.render_starter("nope", templates.OPINIONATED)
@@ -106,9 +106,15 @@ class TestParseTemplate(unittest.TestCase):
                 "---\nrequired: [title, why]\n---\n",  # why is plan-only
             )
 
-    def test_bad_priority_rejected(self):
-        with self.assertRaises(ValueError):
-            templates.parse_template("task", "---\ndefaults:\n  priority: p9\n---\n")
+    def test_retired_priority_key_ignored(self):
+        # Old template files still carry priority; parsing must not fail.
+        t = templates.parse_template("task", "---\ndefaults:\n  priority: p9\nrequired: [title]\n---\n")
+        self.assertEqual(t.required, ["title"])
+        self.assertNotIn("priority", t.defaults)
+        t2 = templates.parse_template(
+            "task", "---\nrequired:\n  - title\n  - priority\n---\n"
+        )
+        self.assertEqual(t2.required, ["title"])
 
     def test_unclosed_frontmatter_rejected(self):
         with self.assertRaises(ValueError):
@@ -195,11 +201,11 @@ class TestStoreTemplates(unittest.TestCase):
 
     def test_no_templates_is_legacy(self):
         p = self.store.add_plan("P")
-        self.assertEqual((p.goal, p.priority), ("", ""))
+        self.assertEqual(p.goal, "")
         s = self.store.add_milestone(p.id, "S")
-        self.assertEqual(s.priority, "")
         t = self.store.add_task(s.id, "T")
-        self.assertEqual(t.priority, "")
+        self.assertFalse(hasattr(s, "priority"))
+        self.assertFalse(hasattr(t, "priority"))
         self.assertEqual(self.store.list_criteria("plan", p.id), [])
 
     def test_fill_and_auto_criteria(self):
@@ -224,18 +230,19 @@ class TestStoreTemplates(unittest.TestCase):
             services.create_milestone(store, p.id, "S")
         self.assertIn("'desc'", str(ctx.exception))
 
-    def test_task_priority_fallback_and_override(self):
+    def test_retired_priority_default_ignored(self):
         p = self.store.add_plan("P")
         s = self.store.add_milestone(p.id, "S")
         store = Store(self.db)
-        self.assertEqual(services.create_task(store, s.id, "A").priority, "p1")
+        t = services.create_task(store, s.id, "A")
+        self.assertFalse(hasattr(t, "priority"))
         templates.ensure_templates(self.db.parent)
         (self.db.parent / "templates" / "task.md").write_text(
             "---\ndefaults:\n  priority: p2\nrequired: [title]\n---\n"
         )
         store = Store(self.db)
-        self.assertEqual(services.create_task(store, s.id, "B").priority, "p2")
-        self.assertEqual(services.create_task(store, s.id, "C", priority="p0").priority, "p0")
+        t2 = services.create_task(store, s.id, "B")
+        self.assertFalse(hasattr(t2, "priority"))
 
     def test_malformed_template_raises(self):
         templates.ensure_templates(self.db.parent)
@@ -283,7 +290,6 @@ class TestTemplateSetup(unittest.TestCase):
                 require_why_what=False,
                 require_desc=False,
                 with_examples=False,
-                task_priority="p2",
             )
             summary = templates.run_template_setup(
                 plan,
@@ -299,7 +305,7 @@ class TestTemplateSetup(unittest.TestCase):
             self.assertEqual((milestone.required, milestone.criteria), (["title"], []))
             task = templates.parse_template("task", (plan / "templates" / "task.md").read_text())
             self.assertEqual(task.required, ["title"])
-            self.assertEqual(task.defaults.get("priority"), "p2")
+            self.assertNotIn("priority", task.defaults)
             # edit preserves the file's own criteria lines (starters ship empty)
             self.assertEqual(task.criteria, [])
 

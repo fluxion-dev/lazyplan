@@ -2,7 +2,7 @@
 
 Distilled from tutorial, guide, widget gallery, how-to, and FAQ at
 https://textual.textualize.io/ — links, not copies. Each section ends with
-what it means for lazyplan (keyboard-only Tree + forms + fullscreen editor).
+what it means for lazyplan (keyboard-only Tree + modal forms).
 
 ## Mental model
 
@@ -15,7 +15,7 @@ what it means for lazyplan (keyboard-only Tree + forms + fullscreen editor).
 - Reactives (`reactive`, `watch_*`, `compute_*`) replace manual refreshes.
 - https://textual.textualize.io/tutorial/ · https://textual.textualize.io/guide/events/ · https://textual.textualize.io/guide/reactivity/
 
-lazyplan: tree `NodeHighlighted` drives previews; `enter` pushes the editor;
+lazyplan: tree `NodeHighlighted` drives previews; `enter` pushes the detail dialog;
 leaf widgets post `Changed/Submitted/Pressed`, screens coordinate.
 
 ## Layout
@@ -31,7 +31,7 @@ leaf widgets post `Changed/Submitted/Pressed`, screens coordinate.
 - https://textual.textualize.io/guide/layout/ · https://textual.textualize.io/how-to/work-with-containers/ · https://textual.textualize.io/how-to/design-a-layout/
 
 lazyplan: `#cards { height: auto; }` inside `VerticalScroll` is what makes the
-editor scroll; button rows are `Horizontal` with compact CSS.
+editor-area scroll; button rows are `Horizontal` with compact CSS.
 
 ## Styling
 
@@ -45,7 +45,7 @@ editor scroll; button rows are `Horizontal` with compact CSS.
 - https://textual.textualize.io/guide/CSS/ · https://textual.textualize.io/guide/styles/ · https://textual.textualize.io/guide/design/
 
 lazyplan: all row grammar and tokens live in `design.py` (`APP_CSS`); app CSS
-wins over widget defaults — scope editor/dialog rules under `#editor`/`#dlg`.
+wins over widget defaults — scope dialog rules under `#dlg`.
 
 ## Widgets in use
 
@@ -73,8 +73,9 @@ wins over widget defaults — scope editor/dialog rules under `#editor`/`#dlg`.
   `Screen.TITLE`.
 - **Screen/ModalScreen** (`guide/screens/`, `api/screen/`): stack via
   `push_screen` / `pop_screen` / `switch_screen`; `dismiss(result)` returns
-  data; only the top screen receives input. Fullscreen editor = plain
-  `Screen`, dialogs = `ModalScreen`.
+  data; only the top screen receives input. lazyplan uses `ModalScreen`
+  dialogs only — the fullscreen editor is gone, `DetailScreen` edits in
+  place.
 
 ## Keys, focus, modality
 
@@ -133,12 +134,18 @@ lazyplan: pilot patterns in `tests/test_screens_esc.py`; state asserts on
   `display: none` removes layout. Focus restore via `call_after_refresh`
   after rebuild, else cursor is `None`.
   https://textual.textualize.io/guide/layout/
-- Palette/discovery: built-in `CommandPalette` owned by `ctrl+p`
-  (`ENABLE_COMMAND_PALETTE = False` to reclaim); custom
-  `PaletteScreen` (`Input` + `OptionList`, substring filter) is simpler
-  and testable via pilot. `Footer` shows contextual bindings; `priority=True`
-  for `esc`/`ctrl+s` inside `Input`s.
+- Palette/discovery: built-in `CommandPalette` stays disabled
+  (`ENABLE_COMMAND_PALETTE = False`) so no hidden second palette owns a
+  key. The centered `PaletteScreen` modal renders `PALETTE_SECTIONS` —
+  five labeled groups over all 18 `PALETTE_COMMANDS` — with live
+  `@on(Changed)` filtering; `Submitted/OptionSelected` dismisses with the
+  id and App `_run_palette_command` dispatches, then focus returns to the
+  tree. Headers are disabled `Option` rows (no `Separator` in 8.2.8):
+  they never match the filter, empty sections vanish, and `enter` on one
+  is a no-op. `c` opens it. Filter text lives behind a `filter-text`
+  command opening a small prompt modal instead of a second input bar.
+  Native Tree space/shift+space are parked as no-ops in `FoldTree`.
 - UX references: lazygit left-tree/right-detail ratio, k9s `describe`
-  pane + slash-filter, VSCode `ctrl+p`/`ctrl+k` palette, Linear side-peek
+  pane, VSCode `ctrl+p`/`ctrl+k` palette, Linear side-peek
   for detail, posting modal validation. Master-detail + progressive
   disclosure beats single-tree modals for 300-task DBs.

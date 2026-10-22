@@ -19,9 +19,9 @@ from lazyplan.store import Store
 def build_fixture(db_path: str) -> tuple[Store, int, int, int]:
     """Deterministic plan + milestone + task + criterion, task doing."""
     s = Store(db_path)
-    p = s.add_plan("Website", "Marketing site", goal="Convert", priority="p1")
-    m = s.add_milestone(p.id, "Homepage", "Hero work", priority="p0")
-    t = s.add_task(m.id, "Design hero", priority="p0")
+    p = s.add_plan("Website", "Marketing site", goal="Convert")
+    m = s.add_milestone(p.id, "Homepage", "Hero work")
+    t = s.add_task(m.id, "Design hero")
     s.add_criteria("plan", p.id, "Loads fast")
     services.set_status(s, "task", t.id, Status.DOING)
     return s, p.id, m.id, t.id
@@ -78,7 +78,7 @@ class TestGoldenOutputs(unittest.TestCase):
         (entry,) = data["plans"]
         text = render.render_plan_markdown(entry)
         self.assertIn("## 🔵 P#1 Website", text)
-        self.assertIn("priority: ", text)
+        self.assertNotIn("priority", text)
         self.assertIn("- [ ] #1 Loads fast", text)
         self.assertIn("### 🔵 M#1 Homepage", text)
         self.assertIn("Hero work", text)

@@ -9,7 +9,7 @@
 
 You plan work here, and your coding agent plans here too.
 
-Everything lives in one small database next to your code. You get a keyboard-driven screen for yourself. Your agent gets a `--json` command line that reads the same data. Each plan has a title, a priority, a reason why it exists, a description of what to build, and a checklist that says when it is done. That is all there is to it.
+Everything lives in one small database next to your code. You get a keyboard-driven screen for yourself. Your agent gets a `--json` command line that reads the same data. Each plan has a title, a reason why it exists, a description of what to build, and a checklist that says when it is done. That is all there is to it.
 
 Want the full guide with pictures? Start here:
 **[fluxion-dev.github.io/lazyplan](https://fluxion-dev.github.io/lazyplan/)**.
@@ -63,7 +63,7 @@ Run these three commands. You will have a live plan you can open:
 ```bash
 cd ~/my-plan
 lpui init --yes             # local skills + shared DB, no repo writes
-lpui add-plan --title "my-plan" --why "reason" --what "scope" --priority p1
+lpui add-plan --title "my-plan" --why "reason" --what "scope"
 lpui                        # TUI (`lpui ui` also works)
 ```
 
@@ -90,25 +90,20 @@ Note: versions up to 0.7.0 shipped this tool as `lp`, renamed because that name 
 You plan in `lpui` (`lpui ui` opens the same screen). Here is what you will see:
 
 - You start a plan tree with a bar of shortcuts at the bottom, like nano. Starting out? Your agent asks you first what you want to build, why it matters, and how you will know it is done. Then it writes that down as the plan.
-- Once you agree on the plan, your agent breaks it into milestones, then breaks each milestone into small prioritized tasks. It always works on `p0` first.
+- Once you agree on the plan, your agent breaks it into milestones, then breaks each milestone into small tasks. It works in creation order.
 - Rows that came from a git commit show a short commit chip. Press `enter` on a row to see its commits in a read-only panel.
 - You and your agent share one SQLite file. The screen refreshes every second and tells you when something new arrives. Your agent never touches the screen itself. Big decisions about wording and scope stay a conversation with you.
 
 | key | what it does |
 |---|---|
 | `j`/`k`, arrows, click | move around and select · `enter`/double-click edits in place · `left`/`right` fold and unfold |
-| `n` | new item (task→milestone→plan, depending on where you are) |
-| `P`/`M`/`T` | new plan / milestone / task |
-| `e` / `d` | edit · delete (it asks you to confirm) |
-| `space` / `c` | move to next status · tick off the first open checklist item |
-| `z` / `Z` | fold one group / fold everything |
-| `f` / `A` | filter by status / show all vs capped |
-| `slash` / `escape` | focus search filter / clear filter |
-| `ctrl+p` | command palette (fuzzy, keyboard-first) |
-| `X` | export plan to `.md` |
+| `c` | command palette: type a command, `enter` runs it · `filter by text` narrows the tree |
+| `escape` | clear filter / close (dirty prompts) |
+
+Everything else lives in the command palette: create (adaptive to the selection), open detail, export, status, criteria, delete, fold, filter, refresh, help, quit. Press `c`, type a prefix (`create`, `open`, `cycle`, `tick`, `fold`, `filter`, …) and `enter` runs the first match.
 
 Left pane is the plan tree, right pane is a live preview (no modal needed).
-Agents use the `lpui` command line. The screen is keyboard-only with no place to type commands. For the full key list, run `lpui help` (or press `?` inside the app).
+Agents use the `lpui` command line. The screen is keyboard-only: `c` opens the command palette. For the full key list, run `lpui help` (same text as the in-app help screen).
 
 ## CLI reference
 
@@ -119,20 +114,20 @@ lpui --help              # globals + examples + env/files/exit codes
 lpui --version           # print the installed version and exit
 lpui <command> --help    # per-command flags, e.g. lpui add-task --help
 man lpui                 # full manual (also `man lazyplan`); installed to share/man/man1
-lpui help                # screen key bindings (same as `?` in the app)
+lpui help                # screen key bindings (same as the in-app help screen)
 ```
 
 Flags work before or after the command (`lpui list --json` means the same as `lpui --json list`). On commands that change data, `--actor NAME` records who did it so you can see it in `feed`.
 
 ```bash
 lpui seed
-lpui list [--status todo|doing|done|all] [--archived] [--plan ID] [--priority p0] [--all] [--limit N]  # default: 5 most recent
+lpui list [--status todo|doing|done|all] [--archived] [--plan ID] [--all] [--limit N]  # default: 5 most recent
 lpui show --kind plan|milestone|task --id N   # full context: why/what + criteria + commits + children
-lpui add-plan --title "API v2" --why ".." --what ".." --priority p1
+lpui add-plan --title "API v2" --why ".." --what ".."
 lpui add-criteria --kind plan --id 1 --text "works offline"
 lpui check --id 1 / lpui uncheck --id 1        # tick acceptance items (advisory)
-lpui add-milestone --plan 1 --title "Auth refresh" [--desc .. --priority p0]
-lpui add-task --milestone 1 --title "Rotate tokens" [--desc ctx --priority p1]
+lpui add-milestone --plan 1 --title "Auth refresh" [--desc ..]
+lpui add-task --milestone 1 --title "Rotate tokens" [--desc ctx]
 lpui link --kind task --id 1 [--sha HASH]      # attach HEAD (git repos only; disabled otherwise)
 lpui commits --kind task --id 1                # list linked commits (empty outside git)
 lpui unlink --kind task --id 1 --sha HASH      # detach a commit
@@ -141,8 +136,8 @@ lpui unlink-repo --kind plan --id 1 --repo ~/checkouts/api
 lpui repos --kind task --id 1 [--effective]    # explicit links, or inherited
 lpui list [--repo ~/checkouts/api]             # filter by effective repo
 lpui export [--format json|markdown] | lpui import --file dump.json
-lpui update --kind task --id 1 [--title --desc --priority p0|none]
-lpui update --kind plan --id 1 [--title --what --why --priority p0|none]
+lpui update --kind task --id 1 [--title --desc]
+lpui update --kind plan --id 1 [--title --what --why]
 lpui status --kind task --id 1 --to doing    # closing with open criteria warns, never blocks
 lpui delete --kind task --id 1
 lpui upgrade [--check]                   # self-update pipx/venv installs (system pkgs: use dnf/apt)
@@ -160,11 +155,11 @@ Your agent talks to the same database through the command line. It only needs th
 ```bash
 lpui --actor helper list --json                    # read the tree
 lpui --actor helper show --kind plan --id 1    # full context: why/what + criteria
-lpui --actor helper add-task --milestone 1 --title "Draft proposal" --priority p1
+lpui --actor helper add-task --milestone 1 --title "Draft proposal"
 lpui feed --json --follow &                         # tail activity (polls every second)
 ```
 
-How your agent is expected to work: it asks you about the plan first (why it exists, what it covers, how you will know it is done, how urgent it is — it never makes that up). On implementation requests it hunts ambiguity first: in/out scope, touch-points, edge cases, non-goals, assumptions. Then it breaks the work into milestones and prioritized tasks. It looks up ids with `list` instead of guessing them. It prefers `update` and `status` over deleting and re-creating. It works on `p0` first. Every row is written for scanning — paragraphs and sections, never a single blob or placeholder text. The full agent contract is generated per clone by `lpui init --team`. If you contribute code, follow the design rules in `src/lazyplan/design.py`.
+How your agent is expected to work: it asks you about the plan first (why it exists, what it covers, how you will know it is done — it never makes that up). On implementation requests it hunts ambiguity first: in/out scope, touch-points, edge cases, non-goals, assumptions. Then it breaks the work into milestones and tasks. It looks up ids with `list` instead of guessing them. It prefers `update` and `status` over deleting and re-creating. It works in creation order. Every row is written for scanning — paragraphs and sections, never a single blob or placeholder text. The full agent contract is generated per clone by `lpui init --team`. If you contribute code, follow the design rules in `src/lazyplan/design.py`.
 
 ## Data, backup, replicas
 

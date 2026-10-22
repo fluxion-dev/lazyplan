@@ -25,7 +25,7 @@ def _answers(items):
 # Every `lpui` example taught by the templates, as parser argv (ids substituted).
 # If a template gains an example, add its argv here — this is the drift guard.
 TEMPLATE_EXAMPLE_ARGV = [
-    ["list", "--status", "todo", "--plan", "1", "--priority", "p0"],
+    ["list", "--status", "todo", "--plan", "1"],
     ["list", "--status", "all"],
     ["list", "--archived"],
     ["show", "--kind", "plan", "--id", "1"],
@@ -47,8 +47,6 @@ TEMPLATE_EXAMPLE_ARGV = [
         "Do X",
         "--desc",
         "ctx",
-        "--priority",
-        "p1",
     ],
     ["--actor", "opencode", "add-milestone", "--plan", "1", "--title", "F"],
     [
@@ -61,8 +59,6 @@ TEMPLATE_EXAMPLE_ARGV = [
         "F",
         "--desc",
         "d",
-        "--priority",
-        "p0",
     ],
     [
         "--actor",
@@ -74,14 +70,12 @@ TEMPLATE_EXAMPLE_ARGV = [
         "w",
         "--what",
         "x",
-        "--priority",
-        "p1",
     ],
     ["--actor", "opencode", "status", "--kind", "task", "--id", "1", "--to", "doing"],
     ["--actor", "opencode", "status", "--kind", "task", "--id", "1", "--to", "done"],
     ["--actor", "opencode", "status", "--kind", "plan", "--id", "1", "--to", "doing"],
     ["--actor", "opencode", "update", "--kind", "task", "--id", "1", "--title", "N"],
-    ["--actor", "opencode", "update", "--kind", "task", "--id", "1", "--priority", "none"],
+
     [
         "--actor",
         "opencode",
@@ -92,8 +86,6 @@ TEMPLATE_EXAMPLE_ARGV = [
         "1",
         "--why",
         "w2",
-        "--priority",
-        "none",
     ],
     ["--actor", "opencode", "delete", "--kind", "task", "--id", "1"],
     ["--actor", "opencode", "delete", "--kind", "milestone", "--id", "1"],
@@ -486,7 +478,7 @@ class TestWizard(unittest.TestCase):
         res = skills.run_wizard(
             self.repo,
             self.home,
-            read=_answers(["", "2", "Y", "n", "n", "p2"]),
+            read=_answers(["", "2", "Y", "n"]),
             write=err,
         )
         self.assertEqual(res.scope, "project")
@@ -496,7 +488,7 @@ class TestWizard(unittest.TestCase):
         self.assertIn("required: [title]", proj)
         self.assertNotIn("edit or delete me", proj)
         task = (self.repo / ".agents/lazyplan" / "templates" / "task.md").read_text()
-        self.assertIn('priority: "p2"', task)
+        self.assertNotIn("priority", task)
 
     def test_wizard_rerun_keeps_edits_by_default(self):
         tdir = self.repo / ".agents/lazyplan" / "templates"

@@ -100,10 +100,10 @@ def render() -> str:
     out.append(".SH DESCRIPTION")
     out.append(
         "lazyplan keeps your plans, milestones, and tasks in a small database next "
-        "to your code. A plan is a title plus a priority, a reason why it "
+        "to your code. A plan is a title, a reason why it "
         "exists, a description of what to build, and a checklist that says when "
         "it is done; you break the plan into milestones and each milestone into "
-        "prioritized tasks. You drive the keyboard\\-driven screen; your coding "
+        "tasks. You drive the keyboard\\-driven screen; your coding "
         "agent drives the same database through this command line with "
         "\\fB\\-\\-actor NAME\\fR and \\fB\\-\\-json\\fR. Every change adds an "
         "entry to the feed; the running screen refreshes and tells you what "
@@ -144,11 +144,11 @@ def render() -> str:
     for line in [
         "lpui                             # open the screen (same as `lpui ui`)",
         "lpui list                        # show everything as a tree",
-        "lpui list --status doing --priority p0",
+        "lpui list --status doing",
         "lpui show --kind plan --id 1",
-        "lpui --actor alice add-plan --title \\(dqAPI v2\\(dq --why \\(dq..\\(dq --priority p1",
+        "lpui --actor alice add-plan --title \\(dqAPI v2\\(dq --why \\(dq..\\(dq",
         "lpui --actor alice add-criteria --kind plan --id 1 --text \\(dqWorks offline\\(dq",
-        "lpui --actor alice add-task --milestone 1 --title \\(dqFix bug\\(dq --priority p1",
+        "lpui --actor alice add-task --milestone 1 --title \\(dqFix bug\\(dq",
         "lpui status --kind task --id 3 --to done",
         "lpui upgrade --check",
         "lpui feed --limit 20",

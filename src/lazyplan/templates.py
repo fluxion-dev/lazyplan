@@ -10,7 +10,6 @@ File shape (Markdown + YAML frontmatter; body is guidance, ignored):
     defaults:
       why: ""
       what: ""
-      priority: ""
     required: [title]
     criteria:
       - "Works offline"
@@ -18,9 +17,9 @@ File shape (Markdown + YAML frontmatter; body is guidance, ignored):
     # guidance for editors (ignored by the loader)
 
 Canonical field names per kind:
-  plan:      title, why, what, priority
-  milestone: title, desc, priority
-  task:      title, desc, priority
+  plan:      title, why, what
+  milestone: title, desc
+  task:      title, desc
 
 Behavior:
   fill     — empty creation flags fall back to template defaults.
@@ -40,7 +39,6 @@ from pathlib import Path
 from typing import TextIO
 
 from .kinds import KIND_ERROR
-from .models import check_priority
 from .repo import LEGACY_PLAN_DIR, is_repo_plan_dir
 
 TEMPLATE_DIRNAME = "templates"
@@ -52,9 +50,9 @@ TEMPLATE_FILES: dict[str, str] = {
 }
 
 FIELDS_BY_KIND: dict[str, tuple[str, ...]] = {
-    "plan": ("title", "why", "what", "priority"),
-    "milestone": ("title", "desc", "priority"),
-    "task": ("title", "desc", "priority"),
+    "plan": ("title", "why", "what"),
+    "milestone": ("title", "desc"),
+    "task": ("title", "desc"),
 }
 
 FLAG_BY_FIELD: dict[str, str] = {
@@ -62,7 +60,6 @@ FLAG_BY_FIELD: dict[str, str] = {
     "why": "--why",
     "what": "--what",
     "desc": "--desc",
-    "priority": "--priority",
 }
 
 
@@ -76,7 +73,6 @@ class TemplateChoices:
     # with zero auto-added criteria and the interview must add real ones.
     # Kept so old callers constructing TemplateChoices keep working.
     with_examples: bool = False
-    task_priority: str = "p1"
 
 
 # Readability gate: long free text must be structured (paragraphs/sections),
@@ -126,9 +122,8 @@ def _frontmatter(defaults: dict[str, str], required: list[str], criteria: list[s
 PLAN_BODY = """
 # plan template — edit the frontmatter above; everything below is guidance.
 
-How `add-plan` (and TUI `P`) uses this file:
-- `defaults`: fills any flag you leave empty (`--why`, `--what`,
-  `--priority`). Empty `priority` means unset (priority stays hidden).
+How `add-plan` (and the TUI create command) uses this file:
+- `defaults`: fills any flag you leave empty (`--why`, `--what`).
 - `required`: must be non-empty after fill, or creation fails naming the
   field. Keep `why`/`what` here so every plan records its purpose; drop
   them to allow one-liner plans.
@@ -152,7 +147,7 @@ Example: to require only a title, set `required: [title]`.
 MILESTONE_BODY = """
 # milestone template — edit the frontmatter above; everything below is guidance.
 
-How `add-milestone` (and TUI `M`) uses this file:
+How `add-milestone` (and the TUI create command) uses this file:
 - `defaults`: `desc` should carry the narrative plus the INVEST check and
   inputs/prerequisites, e.g. `As a [persona], I want [action] so that
   [benefit]`. A milestone without them is not ready to cut.
@@ -174,12 +169,11 @@ Example: to require only a title, set `required: [title]`.
 TASK_BODY = """
 # task template — edit the frontmatter above; everything below is guidance.
 
-How `add-task` (and TUI `T`) uses this file:
+How `add-task` (and the TUI create command) uses this file:
 - `defaults`: `desc` must carry the technical how in sections: Approach,
   code references, and inputs/prerequisites — a task missing them is not
   ready to cut. Name real files, real constraints, real prerequisites:
-  cut tasks only from scouted ground. `priority` is the default when
-  `--priority` is omitted (`p1` keeps headers clean).
+  cut tasks only from scouted ground.
 - `required`: keep `desc` here so tasks always carry context; drop it to
   allow title-only tasks. Titles start with a verb naming the target.
 - `criteria`: definition-of-done rows auto-added to every new task. Fresh
@@ -207,7 +201,7 @@ def render_starter(kind: str, choices: TemplateChoices) -> str:
     if kind == "plan":
         required = ["title", "why", "what"] if choices.require_why_what else ["title"]
         fm = _frontmatter(
-            {"why": "", "what": "", "priority": ""},
+            {"why": "", "what": ""},
             required,
             list(PLAN_EXAMPLES) if choices.with_examples else [],
         )
@@ -215,7 +209,7 @@ def render_starter(kind: str, choices: TemplateChoices) -> str:
     if kind == "milestone":
         required = ["title", "desc"] if choices.require_desc else ["title"]
         fm = _frontmatter(
-            {"desc": "", "priority": ""},
+            {"desc": ""},
             required,
             list(MILESTONE_EXAMPLES) if choices.with_examples else [],
         )
@@ -223,7 +217,7 @@ def render_starter(kind: str, choices: TemplateChoices) -> str:
     if kind == "task":
         required = ["title", "desc"] if choices.require_desc else ["title"]
         fm = _frontmatter(
-            {"desc": "", "priority": choices.task_priority},
+            {"desc": ""},
             required,
             list(TASK_EXAMPLES) if choices.with_examples else [],
         )
@@ -296,13 +290,13 @@ def edit_template(path: str | Path, kind: str, choices: TemplateChoices) -> bool
         body = {"plan": PLAN_BODY, "milestone": MILESTONE_BODY, "task": TASK_BODY}[kind]
     if kind == "plan":
         required = ["title", "why", "what"] if choices.require_why_what else ["title"]
-        defaults = {"why": "", "what": "", "priority": ""}
+        defaults = {"why": "", "what": ""}
     elif kind == "milestone":
         required = ["title", "desc"] if choices.require_desc else ["title"]
-        defaults = {"desc": "", "priority": ""}
+        defaults = {"desc": ""}
     else:
         required = ["title", "desc"] if choices.require_desc else ["title"]
-        defaults = {"desc": "", "priority": choices.task_priority}
+        defaults = {"desc": ""}
     dest.write_text(_frontmatter(defaults, required, current.criteria) + body)
     return True
 
@@ -436,6 +430,8 @@ def _parse_section_entry(
             raise ValueError(f"template {kind}.md line {lineno}: bad default entry")
         k, _, v = stripped.partition(":")
         k, v = k.strip(), _strip_quotes(v)
+        if k == "priority":
+            return  # retired concept: old templates keep this key; ignore it
         if k not in allowed:
             raise ValueError(f"template {kind}.md line {lineno}: unknown field {k!r}")
         defaults[k] = v
@@ -443,7 +439,10 @@ def _parse_section_entry(
     if not stripped.startswith("- "):
         raise ValueError(f"template {kind}.md line {lineno}: bad {section} entry")
     if section == "required":
-        required.append(_strip_quotes(stripped[2:]))
+        name = _strip_quotes(stripped[2:])
+        if name == "priority":
+            return  # retired concept: ignore in old templates
+        required.append(name)
         return
     item = _strip_quotes(stripped[2:]).strip()
     if item:
@@ -509,16 +508,10 @@ class _PartialTemplate:
         )
 
     def validate(self, kind: str) -> None:
-        """Cross-check required fields and priority values."""
+        """Cross-check required fields."""
         for name in self.required:
             if name not in self.allowed:
                 raise ValueError(f"template {kind}.md: unknown required field {name!r}")
-        for name, value in self.defaults.items():
-            if name == "priority":
-                try:
-                    check_priority(value)
-                except ValueError as exc:
-                    raise ValueError(f"template {kind}.md: {exc}") from exc
 
     def build(self, kind: str) -> Template:
         """Freeze into an immutable Template."""

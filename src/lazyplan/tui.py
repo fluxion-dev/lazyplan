@@ -1,8 +1,8 @@
-"""IDE-style Textual TUI: nav tree + live preview, palette, filter.
+"""Modal-palette Textual TUI: nav tree + live preview, one status line.
 
-Keys: j/k navigate, z/Z fold one/all, n contextual new, P/M/T new plan/milestone/task,
-  e project editor, space cycle status, c tick criteria, enter detail, f status filter,
-  A show all, slash/escape filter, ctrl+p palette, X export, r refresh, ? help, q quit.
+Keys: j/k navigate, left/right fold, enter detail, c palette,
+  escape clear. Press c then type a prefix (new, cycle, tick,
+  fold, filter, ...) and enter runs the match.
   Mouse click selects; double-click opens detail.
 Keyboard-only: agents use the `lpui` CLI against the same SQLite file; local edits
 bump reactive rev, external DB changes arrive via fingerprint() poll + feed toast.
@@ -19,7 +19,7 @@ try:
     from textual.binding import Binding
     from textual.containers import Horizontal, Vertical, VerticalScroll
     from textual.reactive import reactive
-    from textual.widgets import Footer, Header, Input, Label, Static, Tree
+    from textual.widgets import Label, Static, Tree
     from textual.widgets.tree import TreeNode
 
     _TEXTUAL_OK = True
@@ -42,12 +42,12 @@ from .repo import repo_label
 from .screens import (
     ConfirmScreen,
     DetailScreen,
+    FilterPromptScreen,
     HelpScreen,
     NewMilestoneScreen,
     NewPlanScreen,
     NewTaskScreen,
     PaletteScreen,
-    ProjectEditorScreen,
 )
 from .store import Store
 from .templates import load_template
@@ -59,13 +59,11 @@ DOUBLE_CLICK_WINDOW = 0.5  # seconds between two clicks on one row
 if _TEXTUAL_OK:
 
     class FoldTree(Tree):
-        """Plan/milestone tree with app-level key semantics.
+        """Plan/milestone tree: j/k + arrows move, enter opens detail.
 
-        The native Tree space/shift+space bindings stay (so they keep working
-        and mouse toggles are untouched), but their actions delegate to the
-        app: `space` cycles status, shift+space folds all. Folding one node
-        lives on `z`; collapse state is tracked in app._collapsed.
-        Enter opens the detail dialog instead of merely selecting.
+        Minimal keys own the tree; every mutation runs through the modal
+        palette (c). Native Tree space/shift+space are parked
+        here so they do nothing — status and folding live in the palette.
         """
 
         BINDINGS = [Binding("enter", "open_detail", "Detail")]
@@ -77,17 +75,12 @@ if _TEXTUAL_OK:
                 self.post_message(SelectionChanged(kind=key[0], oid=key[1]))
 
         def action_toggle_node(self) -> None:
-            """Space: post intent; App handles via @on (messages-up)."""
-            app = cast("LazyplanApp", self.app)
-            if app.selected is not None:
-                kind, oid = app.selected
-                self.post_message(RowAction("toggle-status", kind, oid))
-            else:
-                app.action_toggle_status()
+            """Space: parked — use the modal palette for status changes."""
+            return
 
         def action_toggle_expand_all(self) -> None:
-            """Shift+space: post intent; App handles via @on."""
-            self.post_message(RowAction("fold-all", None, None))
+            """Shift+space: parked — use the modal palette for folding."""
+            return
 
         def action_open_detail(self) -> None:
             """Enter: post intent; App handles via @on."""
@@ -128,28 +121,11 @@ if _TEXTUAL_OK:
         BINDINGS = [
             Binding("j", "cursor_down", "Down", show=False),
             Binding("k", "cursor_up", "Up", show=False),
-            Binding("n", "new_context", "New"),
-            Binding("P", "new_plan", "NewPlan", show=False),
-            Binding("M", "new_milestone", "NewMilestone", show=False),
-            Binding("T", "new_task", "NewTask", show=False),
-            Binding("e", "edit", "Editor"),
-            Binding("X", "export_md", "ExportMd"),
-            Binding("c", "criteria", "Check"),
-            Binding("d", "delete", "Delete"),
-            Binding("space", "toggle_status", "Done"),
             Binding("enter", "open_detail", "Detail"),
-            Binding("z", "fold", "Fold"),
-            Binding("Z", "fold_all", "FoldAll", show=False),
             Binding("left", "fold_left", "Fold", show=False),
             Binding("right", "fold_right", "Unfold", show=False),
-            Binding("f", "filter_status", "Filter"),
-            Binding("A", "toggle_show_all", "All"),
-            Binding("ctrl+p", "palette", "Palette"),
-            Binding("slash", "focus_filter", "Search", show=False),
             Binding("escape", "clear_filter", "Clear", show=False),
-            Binding("r", "refresh", "Refresh"),
-            Binding("question_mark", "help", "Help"),
-            Binding("q", "quit", "Quit"),
+            Binding("c", "command_palette", "Palette"),
         ]
 
         def __init__(self, store: Store) -> None:
@@ -189,21 +165,17 @@ if _TEXTUAL_OK:
                 pass
 
         def compose(self) -> ComposeResult:
-            yield Header(show_clock=True)
             with Vertical(id="panel"):
                 with Horizontal(id="main"):
                     with Vertical(id="nav"):
-                        yield Input(placeholder="filter… ( / focuses, esc clears )", id="filter")
                         yield FoldTree("plans", id="tree")
                     with VerticalScroll(id="preview"):
                         yield Static("", id="preview-body")
-            yield Label("", id="activity")
-            yield Label("", id="statusbar")
-            yield Footer()
+            yield Label("", id="status")
 
         def on_mount(self) -> None:
             self._mounted = True
-            self.refresh_all("ready — ? help")
+            self.refresh_all("ready — c for commands")
             self.set_interval(1.0, self._poll)
             self.run_worker(self._check_update, thread=True, exclusive=True)
             self.query_one("#tree", Tree).focus()
@@ -270,12 +242,11 @@ if _TEXTUAL_OK:
             obj = full.get(obj_key, {})
             title = str(obj.get("title", obj.get("name", "")))
             status = str(obj.get("status", ""))
-            pri = str(obj.get("priority", "") or "-")
             desc = str(obj.get("description", "") or "")
             goal = str(obj.get("goal", "") or "") if kind == "plan" else ""
             crits = full.get("criteria", [])
             done = sum(1 for c in crits if c.get("done"))
-            lines = [f"{kind} #{oid} [{status}] pri:{pri}", title]
+            lines = [f"{kind} #{oid} [{status}]", title]
             if goal:
                 lines.append(f"why: {goal}")
             if desc:
@@ -298,7 +269,7 @@ if _TEXTUAL_OK:
                 ms = full.get("milestones", [])
                 tcount = sum(len(e.get("tasks", [])) for e in ms)
                 lines.append("")
-                lines.append(f"{len(ms)} milestones, {tcount} tasks — enter for detail, e for editor")
+                lines.append(f"{len(ms)} milestones, {tcount} tasks — enter for detail")
             body.update("\n".join(lines))
 
         @on(RowAction)
@@ -315,8 +286,6 @@ if _TEXTUAL_OK:
                 self.action_fold_all()
             elif e.action == "detail-saved":
                 self._saved("saved detail")
-            elif e.action == "editor-saved":
-                self._saved("edited project")
             e.stop()
 
         @staticmethod
@@ -500,33 +469,10 @@ if _TEXTUAL_OK:
                     filtered.append((p, kept_ms))
             return filtered
 
-        @on(Input.Changed, "#filter")
-        def _on_filter_changed(self, e: Input.Changed) -> None:
-            self.filter_text = e.value
-            self._pending_note = f"filter: {e.value}" if e.value else "filter cleared"
-            try:
-                self.rev += 1
-            except Exception:
-                self.refresh_all(self._pending_note)
-            e.stop()
-
-        def action_focus_filter(self) -> None:
-            if len(self.screen_stack) > 1:
-                return
-            try:
-                self.query_one("#filter", Input).focus()
-            except Exception:
-                pass
-
         def action_clear_filter(self) -> None:
             if len(self.screen_stack) > 1:
                 return
-            try:
-                inp = self.query_one("#filter", Input)
-            except Exception:
-                return
-            if self.filter_text or inp.value:
-                inp.value = ""
+            if self.filter_text:
                 self.filter_text = ""
                 self._pending_note = "filter cleared"
                 try:
@@ -597,7 +543,6 @@ if _TEXTUAL_OK:
                 act = f"last: [{e['actor']}] {e['kind']}/{e['action']}: {e['detail']}"
             else:
                 act = EMPTY_FEED
-            self.query_one("#activity", Label).update(" " + act)
             sf = self.status_filter.value if self.status_filter else "all"
             shown_plans = len(self._row_nodes and [k for k in self._row_nodes if k[0] == "plan"] or [])
             bar = (
@@ -612,7 +557,7 @@ if _TEXTUAL_OK:
                 bar += f" · {self._update_notice}"
             if note:
                 bar += f" — {note}"
-            self.query_one("#statusbar", Label).update(bar)
+            self.query_one("#status", Label).update(f"{bar} · {act}")
             # -- focus/collapse preservation (keyboard-nav polish) --
             target = prev_selected if prev_selected in self._row_nodes else prev_cursor
             if target not in self._row_nodes:
@@ -672,44 +617,62 @@ if _TEXTUAL_OK:
         def action_help(self) -> None:
             self.push_screen(HelpScreen())
 
-        def action_palette(self) -> None:
-            """Fuzzy palette: every action discoverable without memorizing keys."""
+        def action_command_palette(self) -> None:
+            """Open the modal command palette (c)."""
+            if len(self.screen_stack) > 1:
+                return
+            self.push_screen(PaletteScreen(), self._run_palette_command)
 
-            def cb(cmd: str | None) -> None:
-                if not cmd:
+        def _open_filter_prompt(self) -> None:
+            """Prompt for tree filter text; empty clears the filter."""
+
+            def cb(text: str | None) -> None:
+                if text is None:
                     return
+                self.filter_text = text
+                self._pending_note = f"filter: {text}" if text else "filter cleared"
                 try:
-                    self.store.feed(0)
+                    self.rev += 1
+                except Exception:
+                    self.refresh_all(self._pending_note)
+
+            self.push_screen(FilterPromptScreen(), cb)
+
+        def _run_palette_command(self, cmd: str | None) -> None:
+            """Run one palette command id from the modal palette."""
+            if not cmd:
+                return
+            if cmd == "filter-text":
+                self._open_filter_prompt()
+                return
+            try:
+                self.store.feed(0)
+            except Exception:
+                pass
+            dispatch = {
+                "create": self.action_new_context,
+                "open-detail": self.action_open_detail,
+                "export-md": self.action_export_md,
+                "criteria": self.action_criteria,
+                "delete": self.action_delete,
+                "toggle-status": self.action_toggle_status,
+                "fold": self.action_fold,
+                "fold-all": self.action_fold_all,
+                "filter": self.action_filter_status,
+                "show-all": self.action_toggle_show_all,
+                "refresh": self.action_refresh,
+                "help": self.action_help,
+                "quit": self.action_quit if hasattr(self, "action_quit") else self.exit,
+            }
+            fn = dispatch.get(cmd)
+            if fn is not None:
+                fn()
+                self._pending_note = f"palette: {cmd}"
+                # actor trail: palette runs are TUI writes
+                try:
+                    self._fp = self.store.fingerprint()
                 except Exception:
                     pass
-                dispatch = {
-                    "new-context": self.action_new_context,
-                    "new-plan": self.action_new_plan,
-                    "new-milestone": self.action_new_milestone,
-                    "new-task": self.action_new_task,
-                    "editor": self.action_edit,
-                    "export-md": self.action_export_md,
-                    "criteria": self.action_criteria,
-                    "delete": self.action_delete,
-                    "fold": self.action_fold,
-                    "fold-all": self.action_fold_all,
-                    "filter": self.action_filter_status,
-                    "show-all": self.action_toggle_show_all,
-                    "refresh": self.action_refresh,
-                    "help": self.action_help,
-                    "quit": self.action_quit if hasattr(self, "action_quit") else self.exit,
-                }
-                fn = dispatch.get(cmd)
-                if fn is not None:
-                    fn()
-                    self._pending_note = f"palette: {cmd}"
-                    # actor trail: palette runs are TUI writes
-                    try:
-                        self._fp = self.store.fingerprint()
-                    except Exception:
-                        pass
-
-            self.push_screen(PaletteScreen(), cb)
 
         # -- editing ------------------------------------------------------
         def _milestone_for_task_ctx(self) -> int | None:
@@ -740,7 +703,24 @@ if _TEXTUAL_OK:
                 return s.plan_id if s else None
             return None
 
+        def _cursor_is_root(self) -> bool:
+            """True when the cursor sits on the dataless plans root or empty tree."""
+            try:
+                tree = self.query_one("#tree", Tree)
+            except Exception:
+                return True
+            try:
+                cur = tree.cursor_node
+            except Exception:
+                return True
+            if cur is None:
+                return True
+            return self._node_key(cur) is None
+
         def action_new_context(self) -> None:
+            if self._cursor_is_root():
+                self.action_new_plan()
+                return
             sid = self._milestone_for_task_ctx()
             if sid is not None:
                 self.action_new_task()
@@ -761,7 +741,6 @@ if _TEXTUAL_OK:
                         data["title"],
                         data["what"],
                         goal=data["why"],
-                        priority=data["priority"],
                         actor="tui",
                     )
                 except ValueError as exc:
@@ -787,7 +766,6 @@ if _TEXTUAL_OK:
                         pid,
                         data["title"],
                         data["desc"],
-                        priority=data["priority"],
                         actor="tui",
                     )
                 except (ValueError, KeyError) as exc:
@@ -816,7 +794,6 @@ if _TEXTUAL_OK:
                         sid,
                         data["title"],
                         data["desc"],
-                        priority=data["priority"],
                         actor="tui",
                     )
                 except (ValueError, KeyError) as exc:
@@ -826,21 +803,6 @@ if _TEXTUAL_OK:
             self.push_screen(
                 NewTaskScreen(sid, defaults=load_template("task", self.store.path).defaults), cb
             )
-
-        def action_edit(self) -> None:
-            """Open the fullscreen project editor focused on the selected row."""
-            if len(self.screen_stack) > 1:
-                return  # a modal owns e
-            ctx = self._editor_plan_ctx()
-            if ctx is None:
-                self.notify("select a row first, then e")
-                return
-            pid, fkind, fid = ctx
-
-            def cb(_saved: bool | None) -> None:
-                self._saved("edited project")
-
-            self.push_screen(ProjectEditorScreen(self.store, pid, fkind, fid), cb)
 
         def action_toggle_status(self) -> None:
             if self.selected is None:
@@ -914,28 +876,11 @@ if _TEXTUAL_OK:
 
             self.push_screen(DetailScreen(self.store, kind, oid), cb)
 
-        def _editor_plan_ctx(self) -> tuple[int, str, int] | None:
-            """(plan_id, focus_kind, focus_id) for the unified editor."""
-            if self.selected is None:
-                return None
-            kind, oid = self.selected
-            if kind == "plan":
-                return (oid, kind, oid)
-            if kind == "milestone":
-                s = self.store.get_milestone(oid)
-                return (s.plan_id, kind, oid) if s else None
-            t = self.store.get_task(oid)
-            if t is None:
-                return None
-            s = self.store.get_milestone(t.milestone_id)
-            return (s.plan_id, kind, oid) if s else None
-
         def action_export_md(self) -> None:
-            ctx = self._editor_plan_ctx()
-            if ctx is None:
-                self.notify("select a row first, then X")
+            pid = self._plan_ctx()
+            if pid is None:
+                self.notify("select a row first, then export")
                 return
-            pid, _, _ = ctx
             entry = services.export_plan(self.store, pid)
             if entry is None:
                 self.notify("selected plan no longer exists — refreshing")

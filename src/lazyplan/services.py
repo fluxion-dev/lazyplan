@@ -12,7 +12,7 @@ import re
 import time
 
 from .kinds import check_kind
-from .models import DEFAULT_TASK_PRIORITY, Milestone, Plan, Status, Task
+from .models import Milestone, Plan, Status, Task
 from .store import Store, _ser
 from .templates import apply_template, template_criteria
 
@@ -25,20 +25,18 @@ def create_plan(
     name: str,
     description: str = "",
     goal: str = "",
-    priority: str = "",
     actor: str = "human",
 ) -> Plan:
     """Insert a plan with template defaults and auto-criteria."""
     filled = apply_template(
         "plan",
-        {"title": name, "why": goal, "what": description, "priority": priority},
+        {"title": name, "why": goal, "what": description},
         store.path,
     )
     p = store.add_plan(
         name=filled["title"].strip(),
         description=filled["what"],
         goal=filled["why"],
-        priority=filled["priority"],
         actor=actor,
     )
     for text in template_criteria("plan", store.path):
@@ -51,20 +49,18 @@ def create_milestone(
     plan_id: int,
     title: str,
     description: str = "",
-    priority: str = "",
     actor: str = "human",
 ) -> Milestone:
     """Insert a milestone with template defaults and auto-criteria."""
     filled = apply_template(
         "milestone",
-        {"title": title, "desc": description, "priority": priority},
+        {"title": title, "desc": description},
         store.path,
     )
     s = store.add_milestone(
         plan_id=plan_id,
         title=filled["title"].strip(),
         description=filled["desc"],
-        priority=filled["priority"],
         actor=actor,
     )
     for text in template_criteria("milestone", store.path):
@@ -77,20 +73,18 @@ def create_task(
     milestone_id: int,
     title: str,
     description: str = "",
-    priority: str = "",
     actor: str = "human",
 ) -> Task:
     """Insert a task with template defaults and auto-criteria."""
     filled = apply_template(
         "task",
-        {"title": title, "desc": description, "priority": priority},
+        {"title": title, "desc": description},
         store.path,
     )
     t = store.add_task(
         milestone_id=milestone_id,
         title=filled["title"].strip(),
         description=filled["desc"],
-        priority=filled["priority"] or DEFAULT_TASK_PRIORITY,
         actor=actor,
     )
     for text in template_criteria("task", store.path):
@@ -267,16 +261,11 @@ def _filtered_milestones(
     store: Store,
     plan_id: int,
     status: Status | None,
-    priority: str | None,
 ) -> list[tuple[Milestone, list[Task]]]:
-    """Milestone/task pairs of one plan honoring status/priority filters."""
+    """Milestone/task pairs of one plan honoring the status filter."""
     milestones = []
     for s in store.list_milestones(plan_id):
         tasks = store.list_tasks(s.id)
-        if priority is not None:
-            tasks = [t for t in tasks if t.priority == priority]
-            if s.priority != priority and not tasks:
-                continue
         if status is not None:
             tasks = [t for t in tasks if t.status == status]
             if s.status != status and not tasks:
@@ -327,18 +316,15 @@ def _visible_plan(
     p: Plan,
     milestones: list[tuple[Milestone, list[Task]]],
     status: Status | None,
-    priority: str | None,
     archived: str,
 ) -> bool:
-    """Whether a plan survives status/priority/archive filters."""
+    """Whether a plan survives status/archive filters."""
     arch = is_archived(store, p)
     if archived == "only" and not arch:
         return False
     if archived == "hide" and arch:
         return False
     if status is not None and p.status != status and not milestones:
-        return False
-    if priority is not None and p.priority != priority and not milestones:
         return False
     return True
 
@@ -347,7 +333,6 @@ def tree(
     store: Store,
     status: Status | None = None,
     plan_id: int | None = None,
-    priority: str | None = None,
     archived: str = "hide",
     limit: int | None = None,
     repo: str | None = None,
@@ -367,8 +352,8 @@ def tree(
             continue
         if repo and not _plan_matches_repo(store, p.id, repo):
             continue
-        milestones = _filtered_milestones(store, p.id, status, priority)
-        if _visible_plan(store, p, milestones, status, priority, archived):
+        milestones = _filtered_milestones(store, p.id, status)
+        if _visible_plan(store, p, milestones, status, archived):
             out.append((p, milestones))
     if plan_id is None:
         activity = plan_activity(store)
@@ -489,7 +474,6 @@ def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]
             p.get("name", p.get("title", "imported")),
             p.get("description", ""),
             goal=p.get("goal", ""),
-            priority=p.get("priority", ""),
             actor=actor,
         )
         _apply_status("plan", np.id, p.get("status", ""))
@@ -503,7 +487,6 @@ def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]
                 np.id,
                 sp.get("title", ""),
                 sp.get("description", ""),
-                priority=sp.get("priority", ""),
                 actor=actor,
             )
             _apply_status("milestone", ns.id, sp.get("status", ""))
@@ -517,7 +500,6 @@ def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]
                     ns.id,
                     tp.get("title", ""),
                     description=tp.get("description", ""),
-                    priority=tp.get("priority", ""),
                     actor=actor,
                 )
                 _apply_status("task", nt.id, tp.get("status", ""))

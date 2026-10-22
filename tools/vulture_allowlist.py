@@ -30,17 +30,12 @@ _.action_new_context
 _.action_new_plan
 _.action_new_milestone
 _.action_new_task
-_.action_edit
 _.action_criteria
 _.action_delete
 _.action_toggle_status
 _.action_fold_all
 _.action_cancel
-_.action_close
-_.action_save_all
 _.action_export_md
-_.on_descendant_focus
-_.on_descendant_blur
 _.export_plan
 _.render_plan_markdown
 BINDINGS

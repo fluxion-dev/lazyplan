@@ -21,9 +21,9 @@ class TestStore(unittest.TestCase):
         self.tmp.cleanup()
 
     def test_hierarchy(self):
-        p = self.store.add_plan("Site", goal="why", priority="p1")
-        s = self.store.add_milestone(p.id, "Home", priority="p0")
-        t = self.store.add_task(s.id, "Hero", description="do it", priority="p0")
+        p = self.store.add_plan("Site", goal="why")
+        s = self.store.add_milestone(p.id, "Home")
+        t = self.store.add_task(s.id, "Hero", description="do it")
         self.assertEqual(self.store.counts()["tasks"], 1)
         tree = services.tree(
             self.store,
@@ -36,8 +36,6 @@ class TestStore(unittest.TestCase):
     def test_validation(self):
         with self.assertRaises(ValueError):
             self.store.add_plan("   ")
-        with self.assertRaises(ValueError):
-            self.store.add_plan("P", priority="p9")
         with self.assertRaises(KeyError):
             self.store.add_milestone(999, "nope")
         with self.assertRaises(KeyError):
@@ -52,27 +50,24 @@ class TestStore(unittest.TestCase):
         self.assertEqual(rc, 0)
         self.assertEqual(self.store.counts()["tasks"], 1)
 
-    def test_plan_why_what_priority(self):
-        p = self.store.add_plan("P", description="the what", goal="the why", priority="p1")
+    def test_plan_why_what(self):
+        p = self.store.add_plan("P", description="the what", goal="the why")
         self.assertEqual(self.store.get_plan(p.id).goal, "the why")
-        self.assertEqual(self.store.get_plan(p.id).priority, "p1")
-        upd = self.store.update_plan(p.id, goal="why v2", priority="p0")
+        upd = self.store.update_plan(p.id, goal="why v2")
         assert upd is not None
         self.assertEqual(upd.goal, "why v2")
-        self.assertEqual(upd.priority, "p0")
-        cleared = self.store.update_plan(p.id, priority="")
-        assert cleared is not None
-        self.assertEqual(cleared.priority, "")
 
-    def test_priority_sort(self):
+    def test_creation_order(self):
         p = self.store.add_plan("P")
-        self.store.add_milestone(p.id, "Low", priority="p2")
-        self.store.add_milestone(p.id, "High", priority="p0")
-        self.assertEqual([s.title for s in self.store.list_milestones(p.id)], ["High", "Low"])
-        with self.assertRaises(ValueError):
-            self.store.add_milestone(p.id, "Bad", priority="p9")
-        with self.assertRaises(ValueError):
-            self.store.add_task(1, "Bad", priority="p9")
+        self.store.add_milestone(p.id, "First")
+        self.store.add_milestone(p.id, "Second")
+        self.assertEqual(
+            [s.title for s in self.store.list_milestones(p.id)], ["First", "Second"]
+        )
+        s = self.store.list_milestones(p.id)[0]
+        self.store.add_task(s.id, "A")
+        self.store.add_task(s.id, "B")
+        self.assertEqual([t.title for t in self.store.list_tasks(s.id)], ["A", "B"])
 
     def test_criteria_on_plan_milestone_task(self):
         p = self.store.add_plan("P")
@@ -140,7 +135,10 @@ class TestStore(unittest.TestCase):
         s = Store(legacy)  # must migrate, not crash
         self.assertEqual(s.get_plan(1).name, "Old")
         self.assertEqual(s.get_plan(1).goal, "old-why")
-        self.assertEqual(s.get_plan(1).priority, "")
+        legacy_cols = {
+            row[1] for row in sqlite3.connect(legacy).execute("PRAGMA table_info(plans)")
+        }
+        self.assertNotIn("priority", legacy_cols)
         self.assertEqual(s.get_task(1).description, "")
         self.assertEqual(s.get_milestone(1).plan_id, 1)
         self.assertEqual(s.get_task(1).milestone_id, 1)
@@ -189,9 +187,9 @@ class TestStore(unittest.TestCase):
             Store(legacy)
 
     def test_export_import_roundtrip(self):
-        p = self.store.add_plan("P", goal="g", priority="p1")
+        p = self.store.add_plan("P", goal="g")
         services.set_status(self.store, "plan", p.id, Status.DOING)
-        s = self.store.add_milestone(p.id, "S", priority="p1")
+        s = self.store.add_milestone(p.id, "S")
         self.store.add_criteria("plan", p.id, "pcrit")
         t = self.store.add_task(s.id, "T", description="d")
         services.set_status(self.store, "task", t.id, Status.DONE)
@@ -208,7 +206,6 @@ class TestStore(unittest.TestCase):
         self.assertEqual(s2.get_plan(1).status, Status.DONE)  # rolled up: only milestone done
         self.assertEqual(s2.get_milestone(1).status, Status.DONE)  # rolled up: its task is done
         self.assertEqual(s2.get_plan(1).goal, "g")
-        self.assertEqual(s2.get_plan(1).priority, "p1")
         self.assertEqual(s2.get_task(1).description, "d")
         self.assertEqual(s2.get_task(1).status, Status.DONE)
         self.assertEqual(s2.criteria_progress("plan", 1), (0, 1))
@@ -229,8 +226,6 @@ class TestStore(unittest.TestCase):
                     "w",
                     "--what",
                     "x",
-                    "--priority",
-                    "p1",
                 ]
             ),
             0,
@@ -245,8 +240,6 @@ class TestStore(unittest.TestCase):
                     "1",
                     "--title",
                     "S1",
-                    "--priority",
-                    "p0",
                     "--desc",
                     "d",
                 ]
@@ -263,13 +256,11 @@ class TestStore(unittest.TestCase):
                     "1",
                     "--title",
                     "T1",
-                    "--priority",
-                    "p1",
                 ]
             ),
             0,
         )
-        self.assertEqual(lpui_main(["--db", self.db, "list", "--priority", "p0"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "list"]), 0)
         self.assertEqual(
             lpui_main(
                 [
@@ -306,13 +297,11 @@ class TestStore(unittest.TestCase):
                     "1",
                     "--why",
                     "w2",
-                    "--priority",
-                    "none",
                 ]
             ),
             0,
         )
-        self.assertEqual(self.store.get_plan(1).priority, "")
+        self.assertEqual(self.store.get_plan(1).goal, "w2")
 
     def test_cli_show(self):
         self.assertEqual(
@@ -379,11 +368,11 @@ class TestStore(unittest.TestCase):
         self.assertEqual([p.id for p, _ in pinned], [ids[0]])
 
     def test_filters(self):
-        p1 = self.store.add_plan("P1", priority="p0")
-        p2 = self.store.add_plan("P2", priority="p2")
-        s1 = self.store.add_milestone(p1.id, "S1", priority="p0")
+        p1 = self.store.add_plan("P1")
+        p2 = self.store.add_plan("P2")
+        s1 = self.store.add_milestone(p1.id, "S1")
         s2 = self.store.add_milestone(p2.id, "S2")
-        t1 = self.store.add_task(s1.id, "T1", priority="p1")
+        t1 = self.store.add_task(s1.id, "T1")
         self.store.add_task(s2.id, "T2")
         services.set_status(self.store, "task", t1.id, Status.DONE)
         done = services.tree(self.store, status=Status.DONE)
@@ -391,9 +380,6 @@ class TestStore(unittest.TestCase):
         only_p2 = services.tree(self.store, plan_id=p2.id)
         self.assertEqual(len(only_p2), 1)
         self.assertEqual(only_p2[0][0].id, p2.id)
-        pri = services.tree(self.store, priority="p0")
-        self.assertEqual(len(pri), 1)
-        self.assertEqual(pri[0][0].id, p1.id)
 
     def test_cli_list_cap_flags(self):
         import io
@@ -579,39 +565,11 @@ class TestStore(unittest.TestCase):
         )
         self.assertEqual([p.id for p, _ in tree], [b.id, a.id])
 
-    def test_new_tasks_default_p1(self):
-        import io
-        from contextlib import redirect_stdout
-
-        p = self.store.add_plan("P")
-        s = self.store.add_milestone(p.id, "S")
-        t = services.create_task(self.store, s.id, "NoPri")
-        self.assertEqual(t.priority, "p1")
-        buf = io.StringIO()
-        with redirect_stdout(buf):
-            self.assertEqual(
-                lpui_main(["--db", self.db, "add-task", "--milestone", "1", "--title", "Cli"]), 0
+    def test_cli_rejects_priority_flag(self):
+        with self.assertRaises(SystemExit):
+            lpui_main(
+                ["--db", self.db, "add-plan", "--title", "P", "--why", "w", "--priority", "p0"]
             )
-        self.assertEqual(self.store.get_task(2).priority, "p1")
-        buf = io.StringIO()
-        with redirect_stdout(buf):
-            self.assertEqual(
-                lpui_main(
-                    [
-                        "--db",
-                        self.db,
-                        "add-task",
-                        "--milestone",
-                        "1",
-                        "--title",
-                        "Exp",
-                        "--priority",
-                        "p0",
-                    ]
-                ),
-                0,
-            )
-        self.assertEqual(self.store.get_task(3).priority, "p0")
 
     def test_archive_rule_and_view(self):
         import io

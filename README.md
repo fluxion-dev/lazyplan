@@ -1,4 +1,4 @@
-# lazyplan (`lpui`) — v0.19.0
+# lazyplan (`lpui`) — v0.20.0
 
 [![CI](https://github.com/fluxion-dev/lazyplan/actions/workflows/ci.yml/badge.svg)](https://github.com/fluxion-dev/lazyplan/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/fluxion-dev/lazyplan)](https://github.com/fluxion-dev/lazyplan/releases)
@@ -9,7 +9,7 @@
 
 You plan work here, and your coding agent plans here too.
 
-Everything lives in one small database next to your code. You get a keyboard-driven screen for yourself. Your agent gets a `--json` command line that reads the same data. Each plan has a title, a reason why it exists, a description of what to build, and a checklist that says when it is done. That is all there is to it.
+Everything lives in one small SQLite database — shared in your home by default, or inside a repo when you opt in with `--team`. You get a keyboard-driven screen for yourself. Your agent gets a `--json` command line that reads the same data. Each plan has a title, a reason why it exists, a description of what to build, and a checklist that says when it is done. That is all there is to it.
 
 Want the full guide with pictures? Start here:
 **[fluxion-dev.github.io/lazyplan](https://fluxion-dev.github.io/lazyplan/)**.
@@ -33,9 +33,9 @@ Need a system package instead? These bundles include everything they need. You o
 
 ```bash
 # Fedora / RHEL / openSUSE — grab the matching asset from Releases
-sudo dnf install ./lazyplan-0.19.0-1.x86_64.rpm   # or -1.aarch64.rpm on ARM
+sudo dnf install ./lazyplan-0.20.0-1.x86_64.rpm   # or -1.aarch64.rpm on ARM
 # Debian / Ubuntu
-sudo apt install ./lazyplan_0.19.0-1_amd64.deb     # or -1_arm64.deb on ARM
+sudo apt install ./lazyplan_0.20.0-1_amd64.deb     # or -1_arm64.deb on ARM
 ```
 
 Want the installer to choose for you? This one-liner picks the right method for your machine:
@@ -62,12 +62,38 @@ Run these three commands. You will have a live plan you can open:
 
 ```bash
 cd ~/my-plan
-lpui init --yes             # local skills + shared DB, no repo writes
+lpui init --yes             # local skills + shared DB (clean repo stays untouched)
 lpui plan add --title "my-plan" --why "reason" --what "scope"
 lpui                        # TUI (`lpui ui` also works)
 ```
 
-The first time you run `lpui init` with no flags, it asks which agents to install for, then writes the skill into each selected agent's own local skills folder without touching your repo (all agents share the one database in `~/.lazyplan`). Pass `--team` to opt a repo into shared storage instead: `lpui init --team` writes `.agents/lazyplan/`, repo skills, the `AGENTS.md` pointer, and templates, and offers `.gitignore` entries. You can skip skills with `--no-skills`, pick agents non-interactively with `--agents "opencode,claude"` (or `all`), force one folder with `--skills-dir PATH` (or `$LAZYPLAN_SKILLS_DIR`), or pass `--json` for machine-readable output that never asks you questions.
+The first time you run `lpui init` with no flags, it asks which agents to install for, then writes the skill into each selected agent's own local skills folder without touching a clean repo (all agents share the one database in `~/.lazyplan`). Leftovers from an earlier scoped install are reported and repaired with backups. Pass `--team` to opt a repo into shared storage instead: `lpui init --team` writes `.agents/lazyplan/`, repo skills, the `AGENTS.md` pointer, and templates, and offers `.gitignore` entries. You can skip skills with `--no-skills`, pick agents non-interactively with `--agents "opencode,claude"` (or `all`), force one folder with `--skills-dir PATH` (or `$LAZYPLAN_SKILLS_DIR`), or pass `--json` for machine-readable output that never asks you questions.
+
+### Where init puts things
+
+The scope you choose is the single authority for every resource:
+
+| You run | Database | Templates | `config.json` | Skills | `AGENTS.md` |
+| --- | --- | --- | --- | --- | --- |
+| `lpui init` | `~/.lazyplan/lazyplan.db` | `~/.lazyplan/templates/` | not written | each agent's home skill dir | not written |
+| `lpui init --team` (or `--skills-scope project`) | `<repo>/.agents/lazyplan/lazyplan.db` | `<repo>/.agents/lazyplan/templates/` | `<repo>/.agents/lazyplan/config.json` (commit it) | repo skill dirs | repo pointer |
+| `lpui init --skills-scope both` | repo database | repo templates | repo config | repo and home skill dirs | repo pointer |
+| `lpui init --no-skills` | same storage as the other flags | same | same | none | none |
+| `--db PATH` / `$LAZYPLAN_DB` | `PATH` | beside `PATH` | repo config only when `PATH` is a repo plan dir | per scope flags | per scope flags |
+
+`--team --no-skills` still selects repo storage. An explicit `--db` or `$LAZYPLAN_DB` always wins and is never moved.
+
+Inspect the expected versus actual layout without writing anything:
+
+```bash
+lpui init --check          # same flags as init, no changes
+lpui doctor                # the same report without init flags
+lpui init --check --json   # machine-readable, stable JSON
+```
+
+Exit code `0` means clean, `1` means misplaced resources, `2` means bad flags. `doctor --team` checks the repo-owned layout.
+
+Global init repairs leftovers from an earlier scoped install. A repo database moves to the home path when the home database is empty; repo config, templates, generated skills, the marked `AGENTS.md` block, and lazyplan `.gitignore` entries are cleaned up or moved home. Every touched file is backed up under `~/.lazyplan/backups/<timestamp>/`, and the report lists each backup. If both databases already contain plans, init stops, backs up the repo database, and prints an export/import next step — it never merges or deletes plans. Team init never moves home data.
 
 You can run `lpui` from any folder. By default every agent and every folder shares one database in your home folder (`~/.lazyplan`, or `%LOCALAPPDATA%/lazyplan` on Windows). Only team-initialized repos resolve into the repo.
 
@@ -180,7 +206,7 @@ How your agent is expected to work: it asks you about the plan first (why it exi
 
 ## Data, backup, replicas
 
-- Shared home by default: `lpui init` installs skills and keeps one `~/.lazyplan/lazyplan.db` for every agent, writing nothing to your repo. For teams, `lpui init --team` creates `.agents/lazyplan/lazyplan.db` next to the code it plans. The `.agents/lazyplan/config.json` file marks which folder it belongs to. Commit the config file so your team shares the plan. The database itself stays on your machine.
+- Shared home by default: `lpui init` installs skills and keeps one `~/.lazyplan/lazyplan.db` for every agent. On a clean repo it creates no repo files; if an earlier scoped install left DB, config, template, skill, `AGENTS.md`, or `.gitignore` artifacts behind, global init repairs them with backups. For teams, `lpui init --team` creates `.agents/lazyplan/lazyplan.db` next to the code it plans. The `.agents/lazyplan/config.json` file marks which folder it belongs to. Commit the config file so your team shares the plan. The database itself stays on your machine.
 - Need a backup, or moving to a new machine? Run `lpui export --format json > backup.json` to save, and `lpui import --file backup.json` to load it back (ids change on import, and that is fine). Exports include linked repos.
 - Want to click around first? Run `lpui seed` for demo data. Never run it in a repo with a real plan.
 

@@ -1,4 +1,4 @@
-.TH LPUI 1 "2026-10-22" "lazyplan-tui 0.19.0" "User Commands"
+.TH LPUI 1 "2026-10-22" "lazyplan-tui 0.20.0" "User Commands"
 .SH NAME
 lpui \- local plan journal for you and your coding agent
 .SH SYNOPSIS
@@ -10,7 +10,7 @@ is the same program under its long name.
 .br
 With no COMMAND, \fBlpui\fR opens the keyboard\-driven screen (same as \fBlpui ui\fR).
 .SH DESCRIPTION
-lazyplan keeps your plans, milestones, and tasks in a small database next to your code. A plan is a title, a reason why it exists, a description of what to build, and a checklist that says when it is done; you break the plan into milestones and each milestone into tasks. You drive the keyboard\-driven screen; your coding agent drives the same database through this command line with \fB\-\-actor NAME\fR and \fB\-\-json\fR. Every change adds an entry to the feed; the running screen refreshes and tells you what arrived.
+lazyplan keeps your plans, milestones, and tasks in one SQLite database: shared in your home by default, or inside a repo after \fBlpui init \-\-team\fR. A plan is a title, a reason why it exists, a description of what to build, and a checklist that says when it is done; you break the plan into milestones and each milestone into tasks. You drive the keyboard\-driven screen; your coding agent drives the same database through this command line with \fB\-\-actor NAME\fR and \fB\-\-json\fR. Every change adds an entry to the feed; the running screen refreshes and tells you what arrived.
 .SH GLOBAL OPTIONS
 .TP
 .B \-\-db PATH
@@ -28,7 +28,7 @@ who is making this change (you see it in feed; default: $USER or 'human')
 Flags work before or after the command: \fBlpui list \-\-json\fR means the same as \fBlpui \-\-json list\fR. Run \fBlpui COMMAND \-\-help\fR for details.
 .TP
 .B lpui init
-set up agent skills locally (shared home) or share this repo with \-\-team
+set up the plan store and agent skills; \-\-team shares them with the repo
 .RS
 .TP
 .B \-\-json
@@ -71,6 +71,11 @@ write repo\-shared files (\.agents/lazyplan/, AGENTS\.md pointer, templates) for
 .RE
 .RS
 .TP
+.B \-\-check
+report the resolved resource layout without writing anything
+.RE
+.RS
+.TP
 .B \-\-agents LIST
 which agents to install for (space/comma list, 'all', or detected by default)
 .RE
@@ -109,6 +114,34 @@ print the installed version and exit
 .TP
 .B \-\-actor NAME
 who made this change (you see it in feed)
+.RE
+.TP
+.B lpui doctor
+report the expected and actual init resource layout without writing
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B \-\-team
+check the repo\-owned layout instead of the global layout
+.RE
+.RS
+.TP
+.B \-\-skills\-scope SCOPE
+check the layout this init scope would use Choices: project, global, both, none\.
 .RE
 .TP
 .B lpui list

@@ -22,16 +22,27 @@ SEMVER = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
 
 
 class TestVersion(unittest.TestCase):
-    def test_pyproject_version_is_semver(self):
+    def _version(self) -> str:
         with open(ROOT / "pyproject.toml", "rb") as fh:
-            version = tomllib.load(fh)["project"]["version"]
-        self.assertRegex(version, SEMVER)
+            return tomllib.load(fh)["project"]["version"]
+
+    def test_pyproject_version_is_semver(self):
+        self.assertRegex(self._version(), SEMVER)
 
     def test_readme_header_matches_pyproject(self):
-        with open(ROOT / "pyproject.toml", "rb") as fh:
-            version = tomllib.load(fh)["project"]["version"]
+        version = self._version()
         header = (ROOT / "README.md").read_text().splitlines()[0]
         self.assertEqual(header, f"# lazyplan (`lpui`) — v{version}")
+
+    def test_site_version_matches_pyproject(self):
+        import json
+
+        version = self._version()
+        html = (ROOT / "site/index.html").read_text()
+        self.assertIn(f'"version": "{version}"', html)
+        self.assertIn(f"/releases/download/v{version}/", html)
+        package = json.loads((ROOT / "site/package.json").read_text())
+        self.assertEqual(package["version"], version)
 
 
 class TestVersionFlag(unittest.TestCase):

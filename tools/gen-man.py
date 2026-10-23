@@ -99,8 +99,9 @@ def render() -> str:
     )
     out.append(".SH DESCRIPTION")
     out.append(
-        "lazyplan keeps your plans, milestones, and tasks in a small database next "
-        "to your code. A plan is a title, a reason why it "
+        "lazyplan keeps your plans, milestones, and tasks in one SQLite database: "
+        "shared in your home by default, or inside a repo after "
+        "\\fBlpui init \\-\\-team\\fR. A plan is a title, a reason why it "
         "exists, a description of what to build, and a checklist that says when "
         "it is done; you break the plan into milestones and each milestone into "
         "tasks. You drive the keyboard\\-driven screen; your coding "

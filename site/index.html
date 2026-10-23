@@ -4,14 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>lazyplan (lpui) — terminal plan tracker for you and your coding agent</title>
-<meta name="description" content="lazyplan keeps your plans, milestones, and tasks in a small database next to your code. You get a keyboard-driven screen, and your coding agent gets a command line that speaks JSON. Install with pipx, .deb, .rpm, or a one-line installer.">
+<meta name="description" content="lazyplan keeps your plans, milestones, and tasks in one SQLite database, shared in your home by default or inside a repo with --team. You get a keyboard-driven screen, and your coding agent gets a command line that speaks JSON. Install with pipx, .deb, .rpm, or a one-line installer.">
 <meta name="keywords" content="plan tracker, todo list, terminal app, coding agent, sqlite planning, lpui">
 <meta name="author" content="Brad Lindsay">
 <meta name="theme-color" content="#09090B">
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="https://fluxion-dev.github.io/lazyplan/">
 <meta property="og:title" content="lazyplan (lpui) — terminal plan tracker for you and your coding agent">
-<meta property="og:description" content="Plans, milestones, and tasks in a small database next to your code: a screen you drive with your keyboard, and a command line your coding agent can read.">
+<meta property="og:description" content="Plans, milestones, and tasks in one SQLite database — shared in your home by default, or inside a repo with --team. A screen you drive with your keyboard, and a command line your coding agent can read.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://fluxion-dev.github.io/lazyplan/">
 <meta property="og:site_name" content="lazyplan">
@@ -22,7 +22,7 @@
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="lazyplan (lpui) — terminal plan tracker for you and your coding agent">
-<meta name="twitter:description" content="Plans, milestones, and tasks in a small database next to your code: a screen you drive with your keyboard, and a command line your coding agent can read.">
+<meta name="twitter:description" content="Plans, milestones, and tasks in one SQLite database — shared in your home by default, or inside a repo with --team. A screen you drive with your keyboard, and a command line your coding agent can read.">
 <meta name="twitter:image" content="https://fluxion-dev.github.io/lazyplan/screens/og-lpui-and-agent.png">
 <meta name="twitter:image:alt" content="lpui plan tree beside a coding agent terminal running lpui commands">
 <script type="application/ld+json">
@@ -30,7 +30,7 @@
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   "name": "lazyplan",
-  "version": "0.19.0",
+  "version": "0.20.0",
   "url": "https://fluxion-dev.github.io/lazyplan/",
   "screenshot": "https://fluxion-dev.github.io/lazyplan/screens/og-lpui-and-agent.png",
   "author": {
@@ -41,10 +41,10 @@
   "operatingSystem": ["Linux"],
   "downloadUrl": [
     "https://github.com/fluxion-dev/lazyplan/releases/latest/download/install.sh",
-    "https://github.com/fluxion-dev/lazyplan/releases/download/v0.19.0/lazyplan_0.19.0-1_amd64.deb",
-    "https://github.com/fluxion-dev/lazyplan/releases/download/v0.19.0/lazyplan_0.19.0-1_arm64.deb",
-    "https://github.com/fluxion-dev/lazyplan/releases/download/v0.19.0/lazyplan-0.19.0-1.x86_64.rpm",
-    "https://github.com/fluxion-dev/lazyplan/releases/download/v0.19.0/lazyplan-0.19.0-1.aarch64.rpm"
+    "https://github.com/fluxion-dev/lazyplan/releases/download/v0.20.0/lazyplan_0.20.0-1_amd64.deb",
+    "https://github.com/fluxion-dev/lazyplan/releases/download/v0.20.0/lazyplan_0.20.0-1_arm64.deb",
+    "https://github.com/fluxion-dev/lazyplan/releases/download/v0.20.0/lazyplan-0.20.0-1.x86_64.rpm",
+    "https://github.com/fluxion-dev/lazyplan/releases/download/v0.20.0/lazyplan-0.20.0-1.aarch64.rpm"
   ]
 }
 </script>
@@ -81,7 +81,7 @@
   </div>
   <div class="relative mx-auto max-w-6xl">
     <h1 class="m-0 text-6xl font-extrabold tracking-tight text-white">lazyplan<span class="text-viking-gold">.</span></h1>
-    <p class="mx-auto mt-8 max-w-3xl text-lg text-zinc-300">A plan tracker that lives in your terminal. <code class="whitespace-nowrap rounded bg-white/10 px-2 py-0.5 font-mono text-[0.9em] text-white">lpui</code> gives you a screen you drive with your keyboard. Your coding agent gets a <code class="whitespace-nowrap rounded bg-white/10 px-2 py-0.5 font-mono text-[0.9em] text-white">--json</code> command line. Both read the same small database next to your code.</p>
+    <p class="mx-auto mt-8 max-w-3xl text-lg text-zinc-300">A plan tracker that lives in your terminal. <code class="whitespace-nowrap rounded bg-white/10 px-2 py-0.5 font-mono text-[0.9em] text-white">lpui</code> gives you a screen you drive with your keyboard. Your coding agent gets a <code class="whitespace-nowrap rounded bg-white/10 px-2 py-0.5 font-mono text-[0.9em] text-white">--json</code> command line. Both read the same SQLite database — shared in your home by default, or inside a repo with <code class="whitespace-nowrap rounded bg-white/10 px-2 py-0.5 font-mono text-[0.9em] text-white">--team</code>.</p>
     <p class="mx-auto mt-2 max-w-3xl text-2xl font-bold tracking-tight text-white">One plan. You drive. Your agent helps.</p>
     <p class="mx-auto mt-2 max-w-3xl text-base text-zinc-400">You steer on the screen. Your agent adds work through the command line.</p>
 
@@ -202,7 +202,7 @@
       <!-- lucide:database -->
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="mb-2 h-6 w-6 text-scanner-green"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>
       <h3 class="mb-1.5 text-lg font-semibold text-white">🗄️ Your data stays yours</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400">By default your plans live beside your agent setup and your repo is never touched. Teams can share one copy inside the repo instead. Either way, everything sits in a single file you can back up with a JSON export and load back with an import.</p>
+      <p class="m-0 text-[0.95rem] text-zinc-400">By default your plans live beside your agent setup and a clean repo stays untouched; any old mis-scoped files are repaired with backups. Teams can share one copy inside the repo instead. Either way, everything sits in a single file you can back up with a JSON export and load back with an import.</p>
     </div>
     <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8 shadow-lg shadow-black/30 backdrop-blur transition hover:border-viking-blue/50">
       <!-- lucide:search -->
@@ -224,10 +224,11 @@
   <p class="mb-10 md:mb-14 text-lg text-zinc-400">Three commands give you a live plan. Then drive it from the keyboard or the command line:</p>
 <div class="space-y-6">
 <pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-surface p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono">cd ~/my-plan
-lpui init --yes             <span class="text-zinc-500"># sets up locally, leaves your repo alone (add --team to share it)</span>
+lpui init --yes             <span class="text-zinc-500"># local setup, shared DB, clean repo stays untouched (add --team to share it)</span>
 lpui plan add --title "my-plan" --why "reason" --what "scope"
 lpui                        <span class="text-zinc-500"># opens the screen (same as lpui ui)</span>
 </code></pre>
+  <p class="text-zinc-400"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui init</code> is home-only by default. Add <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">--team</code> to put the database, templates, skills, and <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">AGENTS.md</code> pointer in the repo. Run <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui init --check</code> or <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui doctor</code> to see expected versus actual paths without writing. Global init repairs mis-scoped leftovers with timestamped backups and stops safely when both databases hold plans.</p>
   <p class="text-zinc-300">You can also plan from the shell, using the same commands your agent uses:</p>
 <pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-surface p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono">lpui criterion add --kind plan --id 1 --text "Works offline"
 lpui milestone add --plan 1 --title "Auth refresh"
@@ -299,9 +300,9 @@ lpui upgrade
     <h3 class="mb-2 mt-1 text-xl font-semibold text-white">System packages for Linux</h3>
     <p class="text-zinc-300">These unpack themselves under <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">/usr/lib/lazyplan</code>. You only need <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">python3 ≥ 3.11</code>. The <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui</code> command lands in <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">/usr/bin</code>, and help pages plus tab-completion come along:</p>
 <pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-canvas p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono"><span class="text-zinc-500"># Fedora / RHEL / openSUSE</span>
-sudo dnf install ./lazyplan-0.19.0-1.x86_64.rpm   <span class="text-zinc-500"># or -1.aarch64.rpm on ARM</span>
+sudo dnf install ./lazyplan-0.20.0-1.x86_64.rpm   <span class="text-zinc-500"># or -1.aarch64.rpm on ARM</span>
 <span class="text-zinc-500"># Debian / Ubuntu</span>
-sudo apt install ./lazyplan_0.19.0-1_amd64.deb     <span class="text-zinc-500"># or -1_arm64.deb on ARM</span>
+sudo apt install ./lazyplan_0.20.0-1_amd64.deb     <span class="text-zinc-500"># or -1_arm64.deb on ARM</span>
 </code></pre>
   </div>
   <div id="panel-oneliner" role="tabpanel" aria-labelledby="tab-oneliner" hidden class="rounded-b-xl rounded-tr-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8 space-y-6 backdrop-blur">
@@ -325,22 +326,22 @@ python -m pip install -e ".[dev]"
   </div>
 
   <div class="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap">
-    <a class="inline-flex items-center justify-center gap-2 rounded-xl bg-viking-blue px-5 py-2.5 text-center font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="https://github.com/fluxion-dev/lazyplan/releases/download/v0.19.0/lazyplan_0.19.0-1_amd64.deb">
+    <a class="inline-flex items-center justify-center gap-2 rounded-xl bg-viking-blue px-5 py-2.5 text-center font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="https://github.com/fluxion-dev/lazyplan/releases/download/v0.20.0/lazyplan_0.20.0-1_amd64.deb">
       <!-- lucide:download -->
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-4 w-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
       .deb amd64
     </a>
-    <a class="inline-flex items-center justify-center gap-2 rounded-xl bg-viking-blue px-5 py-2.5 text-center font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="https://github.com/fluxion-dev/lazyplan/releases/download/v0.19.0/lazyplan_0.19.0-1_arm64.deb">
+    <a class="inline-flex items-center justify-center gap-2 rounded-xl bg-viking-blue px-5 py-2.5 text-center font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="https://github.com/fluxion-dev/lazyplan/releases/download/v0.20.0/lazyplan_0.20.0-1_arm64.deb">
       <!-- lucide:download -->
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-4 w-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
       .deb arm64
     </a>
-    <a class="inline-flex items-center justify-center gap-2 rounded-xl bg-viking-blue px-5 py-2.5 text-center font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="https://github.com/fluxion-dev/lazyplan/releases/download/v0.19.0/lazyplan-0.19.0-1.x86_64.rpm">
+    <a class="inline-flex items-center justify-center gap-2 rounded-xl bg-viking-blue px-5 py-2.5 text-center font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="https://github.com/fluxion-dev/lazyplan/releases/download/v0.20.0/lazyplan-0.20.0-1.x86_64.rpm">
       <!-- lucide:download -->
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-4 w-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
       .rpm x86_64
     </a>
-    <a class="inline-flex items-center justify-center gap-2 rounded-xl bg-viking-blue px-5 py-2.5 text-center font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="https://github.com/fluxion-dev/lazyplan/releases/download/v0.19.0/lazyplan-0.19.0-1.aarch64.rpm">
+    <a class="inline-flex items-center justify-center gap-2 rounded-xl bg-viking-blue px-5 py-2.5 text-center font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="https://github.com/fluxion-dev/lazyplan/releases/download/v0.20.0/lazyplan-0.20.0-1.aarch64.rpm">
       <!-- lucide:download -->
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-4 w-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
       .rpm aarch64
@@ -349,8 +350,8 @@ python -m pip install -e ".[dev]"
   <p class="text-[0.95rem] text-zinc-400">Rather browse? See <a class="text-cyber-cyan hover:underline" href="https://github.com/fluxion-dev/lazyplan/releases">all versions on GitHub</a>. Every version also includes the Python packages and the <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">install.sh</code> one-line installer.</p>
   <table class="w-full border-collapse text-[0.95rem]">
     <tr><th class="border-b border-plan-border bg-white/5 px-3 py-2 text-left text-zinc-200">Computer</th><th class="border-b border-plan-border bg-white/5 px-3 py-2 text-left text-zinc-200">Deb file (Debian/Ubuntu)</th><th class="border-b border-plan-border bg-white/5 px-3 py-2 text-left text-zinc-200">Rpm file (Fedora/RHEL/SUSE)</th></tr>
-    <tr><td class="border-b border-plan-border px-3 py-2 text-left text-zinc-300">Intel/AMD 64-bit</td><td class="border-b border-plan-border px-3 py-2 text-left"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lazyplan_0.19.0-1_amd64.deb</code></td><td class="border-b border-plan-border px-3 py-2 text-left"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lazyplan-0.19.0-1.x86_64.rpm</code></td></tr>
-    <tr><td class="border-b border-plan-border px-3 py-2 text-left text-zinc-300">ARM 64-bit (Apple Silicon, newer Raspberry Pi, cloud servers)</td><td class="border-b border-plan-border px-3 py-2 text-left"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lazyplan_0.19.0-1_arm64.deb</code></td><td class="border-b border-plan-border px-3 py-2 text-left"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lazyplan-0.19.0-1.aarch64.rpm</code></td></tr>
+    <tr><td class="border-b border-plan-border px-3 py-2 text-left text-zinc-300">Intel/AMD 64-bit</td><td class="border-b border-plan-border px-3 py-2 text-left"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lazyplan_0.20.0-1_amd64.deb</code></td><td class="border-b border-plan-border px-3 py-2 text-left"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lazyplan-0.20.0-1.x86_64.rpm</code></td></tr>
+    <tr><td class="border-b border-plan-border px-3 py-2 text-left text-zinc-300">ARM 64-bit (Apple Silicon, newer Raspberry Pi, cloud servers)</td><td class="border-b border-plan-border px-3 py-2 text-left"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lazyplan_0.20.0-1_arm64.deb</code></td><td class="border-b border-plan-border px-3 py-2 text-left"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lazyplan-0.20.0-1.aarch64.rpm</code></td></tr>
   </table>
   <ul class="list-disc pl-6 text-[0.95rem] text-zinc-400">
     <li class="mb-1.5">System packages need only <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">python3 ≥ 3.11</code>. Everything else rides along under <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">/usr/lib/lazyplan</code>.</li>
@@ -374,7 +375,7 @@ python -m pip install -e ".[dev]"
       <!-- lucide:circle-x -->
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="mb-2 h-6 w-6 text-strict-red"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
       <h3 class="mb-1.5 text-lg font-semibold text-white"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em]">1</code> Not found</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400">No plan, milestone, or task has that number (for example, task 7).</p>
+      <p class="m-0 text-[0.95rem] text-zinc-400">No plan, milestone, or task has that number (for example, task 7), or <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui init --check</code> found resources in the wrong scope. Run <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui doctor</code> to see them.</p>
     </div>
     <div class="rounded-xl border border-viking-gold/30 bg-viking-gold/5 p-6 md:p-8 backdrop-blur">
       <!-- lucide:triangle-alert -->
@@ -399,6 +400,8 @@ $LAZYPLAN_DB                       <span class="text-zinc-500"># pick the file w
 ~/.lazyplan/lazyplan.db            <span class="text-zinc-500"># your shared copy for every agent and folder (default)</span>
 </code></pre>
   <ul class="list-disc pl-6 text-[0.95rem] text-zinc-400">
+    <li class="mb-1.5">Check where init will put things without writing: <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui init --check</code> or <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui doctor</code>. Exit 0 means clean, 1 means misplaced resources, 2 means bad flags.</li>
+    <li class="mb-1.5">Global init repairs mis-scoped leftovers and backs up every touched file under <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">~/.lazyplan/backups/&lt;timestamp&gt;/</code>. If both databases hold plans it stops and prints the export/import next step; it never merges them.</li>
     <li class="mb-1.5">Back up with <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui export --format json</code>. Restore with <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui import --file</code>.</li>
   </ul>
 </div>
@@ -407,7 +410,7 @@ $LAZYPLAN_DB                       <span class="text-zinc-500"># pick the file w
 </main>
 
 <footer class="border-t border-plan-border bg-plan-surface/60 px-6 py-12 text-center text-[0.92rem] text-zinc-400 backdrop-blur">
-  <p class="m-0"><a class="text-cyber-cyan hover:underline" href="https://github.com/fluxion-dev/lazyplan">lazyplan</a> — plans with you, in the terminal, next to your code. Found a bug? Please report it.</p>
+  <p class="m-0"><a class="text-cyber-cyan hover:underline" href="https://github.com/fluxion-dev/lazyplan">lazyplan</a> — plans with you, in the terminal, wherever your code lives. Found a bug? Please report it.</p>
   <ul class="mt-6 flex list-none flex-wrap items-center justify-center gap-x-6 gap-y-2 p-0">
     <li><a class="text-zinc-300 no-underline hover:text-white hover:underline" href="https://github.com/fluxion-dev/lazyplan">Repository</a></li>
     <li><a class="text-zinc-300 no-underline hover:text-white hover:underline" href="https://github.com/fluxion-dev/lazyplan/issues">Issues</a></li>

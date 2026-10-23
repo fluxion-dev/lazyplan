@@ -223,6 +223,8 @@ python -m pip install -e ".[dev]"   # ruff + mypy
 ./tools/tmux-lazyplan.sh           # plan | agent | git panes — edit the script to swap in your tools
 ```
 
+Release steps and rollback commands live in `docs/releasing.md`.
+
 Before you push, `./tools/check.sh` must pass: `ruff check` plus `ruff format --check`, `mypy` in strict mode (every function needs types, no `type: ignore` without a TODO link), the man page matching the code (`tools/gen-man.py`), and the full test suite on both interpreters. The version lives in one place only: `version = "x.y.z"` in `pyproject.toml` (`tests/test_version.py` checks that the README header matches; `tools/bump.sh` updates both, plus the download links on the site).
 
 ## Project

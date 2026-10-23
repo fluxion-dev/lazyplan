@@ -614,48 +614,6 @@ class TestInitCli(unittest.TestCase):
         self._init_json(["init", "--skills-scope", "project"])
         self.assertFalse(os.path.exists(os.path.join(self.repo, ".gitignore")))
 
-    def test_offer_gitignore_tty_accept(self):
-        from unittest import mock
-
-        from lazyplan.cli import _maybe_offer_gitignore
-
-        os.chdir(self.repo)
-        plan = os.path.join(self.repo, ".agents/lazyplan")
-        os.makedirs(plan)
-        skilldir = os.path.join(self.repo, ".agents", "skills", "lazyplan")
-        os.makedirs(skilldir)
-        import argparse
-
-        args = argparse.Namespace(yes=False, json=False)
-        skills_info = {"installed": [f"{skilldir}/SKILL.md (wrote)"]}
-        with (
-            mock.patch.object(sys.stdin, "isatty", return_value=True),
-            mock.patch("builtins.input", return_value="Y"),
-        ):
-            added = _maybe_offer_gitignore(args, Path(self.repo), Path(plan), skills_info)
-        self.assertEqual(added, [".agents/lazyplan/", ".agents/skills/lazyplan/"])
-        self.assertIn(".agents/lazyplan/", open(os.path.join(self.repo, ".gitignore")).read())
-
-    def test_offer_gitignore_decline_and_json(self):
-        from unittest import mock
-
-        from lazyplan.cli import _maybe_offer_gitignore
-
-        os.chdir(self.repo)
-        plan = os.path.join(self.repo, ".agents/lazyplan")
-        os.makedirs(plan)
-        import argparse
-
-        args = argparse.Namespace(yes=False, json=False)
-        with (
-            mock.patch.object(sys.stdin, "isatty", return_value=True),
-            mock.patch("builtins.input", return_value="n"),
-        ):
-            self.assertEqual(_maybe_offer_gitignore(args, Path(self.repo), Path(plan), {}), [])
-        self.assertFalse(os.path.exists(os.path.join(self.repo, ".gitignore")))
-        args = argparse.Namespace(yes=False, json=True)
-        self.assertEqual(_maybe_offer_gitignore(args, Path(self.repo), Path(plan), {}), [])
-
 
 class TestAppendGitignore(unittest.TestCase):
     def setUp(self):

@@ -87,3 +87,4 @@ _._on_row_action
 _.action_clear_filter
 bubble
 rev
+run_wizard

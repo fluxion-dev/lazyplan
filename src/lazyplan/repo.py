@@ -51,26 +51,27 @@ def _os_name() -> str:
     return os.name
 
 
-def shared_home() -> Path:
+def shared_home(home: str | Path | None = None) -> Path:
     """Shared home dir for the DB, config, and templates (no side effects).
 
     `%LOCALAPPDATA%/lazyplan` on Windows, `~/.lazyplan` elsewhere; falls
     back to `~/.lazyplan` when LOCALAPPDATA is missing or unreadable.
     """
-    if _os_name() == "nt":
+    base_home = Path(home).expanduser() if home is not None else Path.home()
+    if _os_name() == "nt" and home is None:
         base = os.environ.get("LOCALAPPDATA", "").strip()
         if base:
             try:
                 return Path(base).expanduser() / SHARED_WINDOWS_DIR_NAME
             except (OSError, RuntimeError):
                 pass
-        return Path.home() / SHARED_DIR_NAME
-    return Path.home() / SHARED_DIR_NAME
+        return base_home / SHARED_DIR_NAME
+    return base_home / SHARED_DIR_NAME
 
 
-def shared_db_path() -> Path:
+def shared_db_path(home: str | Path | None = None) -> Path:
     """Shared DB path for this user account (no side effects)."""
-    return shared_home() / DB_NAME
+    return shared_home(home) / DB_NAME
 
 
 def walk_up_team_db(cwd: str | Path = ".") -> Path | None:
@@ -198,7 +199,7 @@ def seed_shared_db(target: str | Path | None = None) -> Path | None:
 def resolve_db_path(explicit: str | Path | None = None, cwd: str | Path = ".") -> Path:
     """DB path: explicit --db, $LAZYPLAN_DB, walk-up team dir, else shared home.
 
-    Zero-touch default: without a team-initialized `.agents/lazyplan/`
+    Home default: without a team-initialized `.agents/lazyplan/`
     above cwd, every agent resolves the same shared home DB. Legacy
     `.plan/` dirs never resolve by themselves (`init` migrates them).
     """

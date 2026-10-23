@@ -11,10 +11,10 @@ from .kinds import KINDS
 from .models import Status
 
 _PARSER_DESCRIPTION = (
-    "lazyplan keeps your plans, milestones, and tasks in a small database next to "
-    "your code (run it as lpui, or by its long name lazyplan). You get a "
-    "keyboard-driven screen, and your coding agent gets a command line that "
-    "reads the same database."
+    "lazyplan keeps your plans, milestones, and tasks in one SQLite database, "
+    "shared in your home by default or inside a repo after `lpui init --team` "
+    "(run it as lpui, or by its long name lazyplan). You get a keyboard-driven "
+    "screen, and your coding agent gets a command line that reads the same data."
 )
 
 _PARSER_EPILOG = """\
@@ -24,6 +24,8 @@ your database (the first match wins):
 
 examples:
   lpui init --team                     share this repo's plan with the team
+  lpui init --check                    show the resolved DB, templates, skills, and repairs
+  lpui doctor                          same read-only layout report, no init flags
   lpui                                   open the screen (same as `lpui ui`)
   lpui plan list                         show plans as summaries with progress
   lpui plan list --tree                  show the full plan/milestone/task tree
@@ -146,7 +148,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     init = sub.add_parser(
         "init",
-        help="set up agent skills locally (shared home) or share this repo with --team",
+        help="set up the plan store and agent skills; --team shares them with the repo",
         parents=[common],
     )
     init.add_argument(
@@ -178,6 +180,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="write repo-shared files (.agents/lazyplan/, AGENTS.md pointer, templates) for teams",
     )
     init.add_argument(
+        "--check",
+        action="store_true",
+        help="report the resolved resource layout without writing anything",
+    )
+    init.add_argument(
         "--agents",
         default="",
         metavar="LIST",
@@ -190,6 +197,23 @@ def build_parser() -> argparse.ArgumentParser:
         "info",
         help="show which database file is in use, the repo root, and how many plans, milestones, and tasks you have",
         parents=[common],
+    )
+    doc = sub.add_parser(
+        "doctor",
+        help="report the expected and actual init resource layout without writing",
+        parents=[common],
+    )
+    doc.add_argument(
+        "--team",
+        action="store_true",
+        help="check the repo-owned layout instead of the global layout",
+    )
+    doc.add_argument(
+        "--skills-scope",
+        choices=["project", "global", "both", "none"],
+        default="",
+        metavar="SCOPE",
+        help="check the layout this init scope would use",
     )
     li = sub.add_parser(
         "list", help="show plans as summaries (add --tree for the full tree)", parents=[common]

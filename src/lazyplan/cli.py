@@ -12,7 +12,7 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 
-from . import services
+from . import init_layout, services
 from .cli_parser import build_parser, package_version
 from .design import (
     EMPTY_COMMITS,
@@ -27,19 +27,19 @@ from .design import (
 from .models import Milestone, Plan, Status, Task
 from .render import render_commits, render_full, render_markdown, summary_lines, tree_lines
 from .repo import (
-    ensure_plan_dir,
     find_repo_root,
-    is_repo_plan_dir,
-    legacy_plan_dir,
-    move_legacy_plan_dir,
     repo_label,
     stale_plan_dirs,
 )
 from .seed import seed as seed_demo
-from .skills import append_gitignore, prompt_confirm
-from .skills import handle_init as _init_skills
+from .skills import (
+    SkillPlan,
+    append_gitignore,
+    apply_skill_plan,
+    plan_init,
+    prompt_confirm,
+)
 from .store import Store, _ser
-from .templates import run_template_setup
 from .upgrade import (
     NOTICE_TIMEOUT,
     UpgradeError,
@@ -103,19 +103,6 @@ def _auto_link_head(store: Store, kind: str, obj_id: int, actor: str) -> None:
         return
 
 
-def _maybe_move_legacy_plan_dir(root: Path | None, db_path: Path) -> Path | None:
-    """Offer to move legacy `.plan/` to `.agents/lazyplan/` on a TTY; new dir or None."""
-    if root is None:
-        return None
-    if Path(db_path).expanduser().parent != legacy_plan_dir(root):
-        return None
-    if not sys.stdin.isatty():
-        return None
-    if not prompt_confirm("Move legacy .plan/ to .agents/lazyplan/"):
-        return None
-    return move_legacy_plan_dir(root)
-
-
 def _warn_stale_plan_dir(root: Path | None) -> None:
     """Warn about pre-move plan dirs: ignored, never migrated."""
     if root is None:
@@ -128,121 +115,206 @@ def _warn_stale_plan_dir(root: Path | None) -> None:
         )
 
 
-def _gitignore_entries(root: Path | None, plan_dir: Path, skills_info: dict) -> list[str]:
-    """Repo-local dirs this init created, as .gitignore entries."""
-    if root is None:
-        return []
-    entries: list[str] = []
-    try:
-        rel = Path(plan_dir).expanduser().relative_to(Path(root).expanduser())
-    except ValueError:
-        rel = None
-    if rel is not None and str(rel) != ".":
-        entries.append(rel.as_posix() + "/")
-    for line in skills_info.get("installed", []):
-        if not str(line).endswith("(wrote)"):
-            continue
-        dest = str(line).rsplit(" (", 1)[0]
-        try:
-            rel = Path(dest).relative_to(root)
-        except ValueError:
-            continue
-        entries.append(rel.parent.as_posix() + "/")
-    return list(dict.fromkeys(entries))
+def _print_layout(layout: init_layout.InitLayout, repairs: init_layout.RepairPlan) -> None:
+    """Human preflight on stderr; stdout stays JSON."""
+    print("lpui init will use:", file=sys.stderr)
+    print(f"  database:  {layout.db}", file=sys.stderr)
+    print(f"  templates: {layout.templates_dir}", file=sys.stderr)
+    if layout.config:
+        print(f"  config:    {layout.config}", file=sys.stderr)
+    for path in layout.skill_plan.skill_files:
+        print(f"  skill:     {path}", file=sys.stderr)
+    if layout.agents_md:
+        print(f"  agents-md: {layout.agents_md}", file=sys.stderr)
+    for entry in layout.gitignore_entries:
+        print(f"  gitignore: {entry}", file=sys.stderr)
+    for note in init_layout.notes(layout):
+        print(f"  note:      {note}", file=sys.stderr)
+    if repairs.stop:
+        print(f"  stop:      {repairs.stop}", file=sys.stderr)
+    for action in repairs.actions:
+        print(f"  repair:    {action.action} {action.source}", file=sys.stderr)
 
 
-def _maybe_offer_gitignore(
-    args: argparse.Namespace, root: Path | None, plan_dir: Path, skills_info: dict
-) -> list[str]:
-    """Add .gitignore entries for created repo-local dirs. Returns added entries."""
-    if root is None:
-        return []
-    entries = _gitignore_entries(root, plan_dir, skills_info)
-    if not entries:
-        return []
-    if getattr(args, "yes", False):
-        return [e for e in entries if append_gitignore(root, e)]
-    if getattr(args, "json", False) or not sys.stdin.isatty():
-        return []
-    return [
-        e
-        for e in entries
-        if prompt_confirm(f"Add {e} to .gitignore?") and append_gitignore(root, e)
-    ]
-
-
-def _final_init_db(args: argparse.Namespace, root: Path | None, skills_info: dict) -> Path:
-    """Final DB for init: explicit/env wins, team scopes use the repo, else shared."""
-    from .repo import global_db_path, repo_plan_db_path, shared_db_path
-
-    explicit = getattr(args, "db", None)
-    if explicit:
-        return Path(str(explicit)).expanduser()
-    env = os.environ.get("LAZYPLAN_DB", "").strip()
-    if env:
-        return Path(env).expanduser()
-    scope = str(skills_info.get("scope", "") or "")
-    if scope in ("project", "both") and root is not None:
-        return repo_plan_db_path(root)
-    try:
-        return shared_db_path()
-    except (OSError, RuntimeError):
-        return global_db_path()
-
-
-def _cmd_init(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _init_context(
+    args: argparse.Namespace,
+) -> tuple[Path | None, Path, SkillPlan, init_layout.InitLayout, init_layout.RepairPlan]:
     root = find_repo_root(os.getcwd())
     _warn_stale_plan_dir(root)
-    explicit = args.db is not None or bool(os.environ.get("LAZYPLAN_DB", "").strip())
-    # Zero-touch: skills wizard decides the final DB; never pre-create repo dirs.
-    # Team scopes (project/both, --team) opt back into repo-shared files.
-    skills_info = _init_skills(args, root, plan_dir=None)
-    scope = str(skills_info.get("scope", "") or "")
-    team = scope in ("project", "both") and root is not None
-    if team and not explicit:
-        if _maybe_move_legacy_plan_dir(root, store.path) is not None:
-            pass
-        from .repo import repo_plan_db_path
+    home = Path.home()
+    skill_plan = plan_init(args, root, home)
+    layout = init_layout.resolve(args, root, skill_plan, home)
+    repairs = init_layout.plan_repairs(layout)
+    return root, home, skill_plan, layout, repairs
 
-        assert root is not None
-        store = Store(str(repo_plan_db_path(root)))
-    elif explicit:
-        # Explicit --db/env: keep the pre-opened store (already the right DB).
-        pass
-    else:
-        final_db = _final_init_db(args, root, skills_info)
-        if Path(str(final_db)).expanduser() != Path(str(store.path)).expanduser():
-            store = Store(str(final_db))
-    plan_dir = ensure_plan_dir(store.path)
-    # Templates live with the DB: repo team dirs keep templates, local DBs
-    # keep their own sibling templates dir (no repo writes).
-    summary = skills_info.get("templates")
-    if summary is None:
-        if team or is_repo_plan_dir(plan_dir):
-            summary = run_template_setup(plan_dir, interactive=False)
-        else:
-            # Local DB: scaffold templates beside the DB so agents share
-            # conventions without touching any repo.
-            try:
-                summary = run_template_setup(plan_dir, interactive=False)
-            except OSError:
-                summary = {"added": [], "kept": [], "reset": []}
+
+def _check_report(
+    args: argparse.Namespace,
+    layout: init_layout.InitLayout,
+    repairs: init_layout.RepairPlan,
+) -> int:
+    report = init_layout.inventory(layout)
+    report["repairs"] = repairs.to_dict()
+    code = 0 if report["clean"] else 1
+    if args.json:
+        _emit(args, report)
+        return code
+    print(f"database:  {layout.db}")
+    print(f"templates: {layout.templates_dir}")
+    print(f"config:    {layout.config or '-'}")
+    print(f"skills:    {len(layout.skill_plan.skill_files)} planned")
+    print(f"clean:     {'yes' if report['clean'] else 'no'}")
+    for item in report["misplaced"]:
+        print(f"misplaced: {item}")
+    for item in report["missing"]:
+        print(f"missing:   {item}")
+    for note in report["notes"]:
+        print(f"note:      {note}")
+    for action in repairs.actions:
+        print(f"repair:    {action.action} {action.source}")
+    if repairs.stop:
+        print(f"stop:      {repairs.stop}")
+    return code
+
+
+def _confirm_init(
+    args: argparse.Namespace,
+    root: Path | None,
+    layout: init_layout.InitLayout,
+    repairs: init_layout.RepairPlan,
+    interactive: bool,
+) -> int | None:
+    if getattr(args, "yes", False) or getattr(args, "json", False) or not interactive:
+        return None
+    _print_layout(layout, repairs)
+    if prompt_confirm("Write these resources?"):
+        return None
+    return _emit(
+        args,
+        {
+            "db": str(layout.db),
+            "repo": str(root) if root else None,
+            "plan_dir": str(layout.plan_dir),
+            "scope": repo_label(layout.db),
+            "cancelled": True,
+        },
+    )
+
+
+def _stop_init(
+    args: argparse.Namespace,
+    root: Path | None,
+    layout: init_layout.InitLayout,
+    repaired: dict,
+    stop: str,
+) -> int:
+    print(f"error: {stop}", file=sys.stderr)
+    _emit(
+        args,
+        {
+            "db": str(layout.db),
+            "repo": str(root) if root else None,
+            "plan_dir": str(layout.plan_dir),
+            "scope": repo_label(layout.db),
+            "repairs": repaired,
+            "error": stop,
+        },
+    )
+    return 1
+
+
+def _apply_init(
+    args: argparse.Namespace,
+    root: Path | None,
+    home: Path,
+    layout: init_layout.InitLayout,
+    skill_plan: SkillPlan,
+    interactive: bool,
+    repaired: dict,
+) -> int:
+    layout_summary = init_layout.apply_layout(
+        layout,
+        interactive=interactive,
+        read=None,
+        write=sys.stderr,
+    )
+    try:
+        store = Store(str(layout.db))
+    except (RuntimeError, OSError) as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 2
+    skills_info = apply_skill_plan(skill_plan, root, home)
     gitignored: list[str] = []
-    if team:
-        gitignored = _maybe_offer_gitignore(args, root, plan_dir, skills_info)
+    if (
+        root is not None
+        and layout.gitignore_entries
+        and (getattr(args, "yes", False) or interactive)
+    ):
+        gitignored = [entry for entry in layout.gitignore_entries if append_gitignore(root, entry)]
     return _emit(
         args,
         {
             "db": str(store.path),
             "repo": str(root) if root else None,
-            "plan_dir": str(plan_dir),
+            "plan_dir": str(layout.plan_dir),
             "scope": repo_label(store.path),
             "counts": store.counts(),
-            "skills": skills_info,
-            "templates": summary,
+            "skills": skills_info.to_dict(),
+            "templates": layout_summary["templates"],
+            "legacy": layout_summary["legacy"],
             "gitignore": {"added": gitignored},
+            "layout": layout.to_dict(),
+            "notes": init_layout.notes(layout),
+            "repairs": repaired,
         },
     )
+
+
+def _init_error(args: argparse.Namespace, message: str) -> int:
+    print(f"error: {message}", file=sys.stderr)
+    _emit(args, {"error": message})
+    return 2
+
+
+def _check_init_args(args: argparse.Namespace, root: Path | None) -> str | None:
+    """Reject flag combinations that cannot honor the chosen scope."""
+    if root is not None:
+        return None
+    if bool(getattr(args, "team", False)):
+        return "`--team` needs a git repository"
+    scope = str(getattr(args, "skills_scope", "") or "").strip()
+    if scope == "project":
+        return "`--skills-scope project` needs a git repository"
+    return None
+
+
+def _cmd_init(store: Store | None, args: argparse.Namespace, actor: str) -> int:
+    root = find_repo_root(os.getcwd())
+    error = _check_init_args(args, root)
+    if error is not None:
+        return _init_error(args, error)
+    root, home, skill_plan, layout, repairs = _init_context(args)
+    if getattr(args, "check", False):
+        return _check_report(args, layout, repairs)
+    interactive = bool(sys.stdin.isatty() and sys.stdout.isatty())
+    cancelled = _confirm_init(args, root, layout, repairs, interactive)
+    if cancelled is not None:
+        return cancelled
+    repaired = init_layout.apply_repairs(repairs)
+    if repairs.stop:
+        return _stop_init(args, root, layout, repaired, repairs.stop)
+    return _apply_init(args, root, home, layout, skill_plan, interactive, repaired)
+
+
+def _cmd_doctor(store: Store | None, args: argparse.Namespace, actor: str) -> int:
+    """Read-only init layout report; never opens a database."""
+    root = find_repo_root(os.getcwd())
+    error = _check_init_args(args, root)
+    if error is not None:
+        return _init_error(args, error)
+    args.check = True
+    _, _, _, layout, repairs = _init_context(args)
+    return _check_report(args, layout, repairs)
 
 
 def _cmd_info(store: Store, args: argparse.Namespace, actor: str) -> int:
@@ -869,6 +941,7 @@ _GROUP_CMDS: dict[tuple[str, str], str] = {
 
 _COMMANDS: dict[str, Callable[[Store, argparse.Namespace, str], int]] = {
     "init": _cmd_init,
+    "doctor": _cmd_doctor,
     "info": _cmd_info,
     "seed": _cmd_seed,
     "list": _cmd_list,
@@ -933,29 +1006,22 @@ def main(argv: list[str] | None = None) -> int:
     if args.cmd is None:
         # Bare `lpui` (or global flags only) opens the standard TUI.
         args.cmd = "ui"
+    if args.cmd == "init":
+        # Init resolves its own layout; never open a DB before that.
+        return _cmd_init(None, args, actor)
+    if args.cmd == "doctor":
+        return _cmd_doctor(None, args, actor)
     # `watch` is `feed --follow`
     if args.cmd == "watch":
         args.cmd = "feed"
         args.follow = True
         args.interval = 1.0
         args.json = getattr(args, "json", False)
-    if args.cmd == "init" and args.db is None and not os.environ.get("LAZYPLAN_DB", "").strip():
-        # Init must not dirty the repo before the wizard picks a target:
-        # open the shared home first; _cmd_init re-opens the final DB
-        # (repo only for explicit team scopes).
-        from .repo import shared_db_path
-
-        try:
-            store = Store(str(shared_db_path()))
-        except RuntimeError as exc:
-            print(msg_error(exc), file=sys.stderr)
-            return 2
-    else:
-        try:
-            store = Store(args.db)
-        except RuntimeError as exc:
-            print(msg_error(exc), file=sys.stderr)
-            return 2
+    try:
+        store = Store(args.db)
+    except RuntimeError as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 2
     try:
         handler = _COMMANDS.get(args.cmd)
         if handler is None:

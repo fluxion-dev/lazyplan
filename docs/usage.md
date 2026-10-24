@@ -200,6 +200,13 @@ Your agent is expected to work from the plan, not invent it:
 - Look up ids with `list`; never guess them.
 - Prefer `edit` and `move` over deleting and re-creating.
 - Work in creation order.
+- Plan the commit sequence before coding: every task lands as one or more
+  small, green commits, never one batch for the whole plan or milestone.
+- Name each task's expected commit slice and verification in its desc, and
+  commit after each task completes rather than deferring work to the end.
+- Link commits after the fact with `lpui link` or `task finish`; no commit
+  trailer is required. These rules apply to new plans; existing plans are
+  not rewritten.
 - Write rows for scanning: short paragraphs and sections, no placeholder text.
 
 `lpui init --team` writes the full contract into the repo. `lpui init` installs

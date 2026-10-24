@@ -205,6 +205,9 @@ interview them before writing anything. A solid definition covers:
 - Scope: explicit in-scope and out-of-scope lists, in plain language. Push
   until both lists are concrete — vague scope is rejected, not recorded.
 - Deliverables: tangible outputs and their order.
+- Commit strategy: the ordered slices of small commits that will land the
+  work, and the check that keeps each commit green. A plan that cannot name
+  its slices is not ready to cut.
 - Constraints: technical or operational limits, plus assumptions.
 - Success metrics: measurable outcomes that mean it worked.
 - Acceptance criteria: how we know it is done.
@@ -213,10 +216,10 @@ interview them before writing anything. A solid definition covers:
   being made. All three are included by default — only an explicit opt-out
   excludes them.
 
-Fold vision into `--why`; scope, deliverables, constraints, and metrics into
-`--what`; acceptance criteria become plan-level checklist items. There are
-no stakeholder, owner, or estimate fields — if it does not fit why, what, or
-criteria, it does not belong in the definition.
+Fold vision into `--why`; scope, deliverables, commit strategy, constraints,
+and metrics into `--what`; acceptance criteria become plan-level checklist
+items. There are no stakeholder, owner, or estimate fields — if it does not
+fit why, what, or criteria, it does not belong in the definition.
 
 ## Implementation requests: close the ambiguity gap
 
@@ -274,7 +277,7 @@ lpui list --status all                 # the whole tree
 lpui plan show --id P        # why/what + criteria + children
 ```
 
-Walk the human through every milestone and task, make last edits on the spot, and start executing only on explicit check-off. During execution the plan stays the truth: fold new findings into the plan before changing code, never around it.
+Walk the human through every milestone and task, make last edits on the spot, and start executing only on explicit check-off. Check that the plan names its commit strategy and that every task desc names its expected commit slice and verification; reject a plan that batches a whole milestone or plan into one commit. During execution the plan stays the truth: fold new findings into the plan before changing code, never around it.
 
 ## Read first
 

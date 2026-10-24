@@ -93,7 +93,7 @@
       "name": "How does git and pull request provenance work?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Link a commit to a task, or finish a task on a recorded branch. lazyplan can refresh linked commits into pull requests and cache checks and merge state. Press g in the TUI to browse repository, commit, changed file, and PR evidence for any plan, milestone, or task."
+        "text": "Link a commit to a task, or finish a task on a recorded branch. lazyplan can refresh linked commits into pull requests and cache checks and merge state. Press g in the TUI to browse repository, commit, changed file, and PR evidence for any plan, milestone, or task. Highlight a commit or file to read its unified diff in place, bounded to keep the pane readable; o opens the full commit."
       }
     },
     {
@@ -253,7 +253,7 @@
   <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
     <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
       <h3 class="mb-2 text-lg font-semibold text-white">Source trail</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400">A keyboard tree groups each checkout by repository, commit, and changed file. Plans and milestones roll descendant work up, so plan-level proof is one key away.</p>
+      <p class="m-0 text-[0.95rem] text-zinc-400">A keyboard tree groups each checkout by repository, commit, and changed file. Plans and milestones roll descendant work up, so plan-level proof is one key away. Highlight a commit or file to read its unified diff in place, with old and new line numbers and explicit binary, root, merge, empty, and missing states.</p>
     </div>
     <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
       <h3 class="mb-2 text-lg font-semibold text-white">Open or copy fast</h3>
@@ -363,7 +363,7 @@ lpui task move --id 1 --to done
     </details>
     <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
       <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">How does git and pull request provenance work?</summary>
-      <p class="mt-3 text-zinc-400">Link a commit to a task, or finish a task on a recorded branch. lazyplan can refresh linked commits into pull requests and cache checks and merge state. Press <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">g</code> in the TUI to browse repository, commit, changed file, and PR evidence for any plan, milestone, or task.</p>
+      <p class="mt-3 text-zinc-400">Link a commit to a task, or finish a task on a recorded branch. lazyplan can refresh linked commits into pull requests and cache checks and merge state. Press <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">g</code> in the TUI to browse repository, commit, changed file, and PR evidence for any plan, milestone, or task. Highlight a commit or file to read its unified diff in place, bounded to keep the pane readable; <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">o</code> opens the full commit.</p>
     </details>
     <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
       <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">Where is my plan data stored?</summary>

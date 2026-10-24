@@ -388,9 +388,7 @@ Each task lands as one or more small commits. Every commit is green — the
 relevant checks pass and the tree builds — and independently reviewable. Keep
 behavior, tests, docs, and refactors in separate commits when they can stand
 alone. Never batch a whole milestone or plan into one commit. The task `--desc`
-names the expected commit slice and the verification for each commit. Link
-commits after the fact with `lpui link` or `task finish`; no commit trailer is
-required.
+names the expected commit slice and the verification for each commit. Link commits after the fact with `lpui link` or `task finish`; no commit trailer is required.
 
 No assignee or effort fields — ownership is the `--actor` on each write, size
 is its position in the list. Every task `--desc` names the technical approach, the inputs/prerequisites, and the expected commit slice — a task missing any of them is not ready to cut. Cut tasks only from scouted ground: each one must

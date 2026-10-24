@@ -30,8 +30,13 @@ TUI).
 
 ## Shell (`tui.py`)
 
-- `FoldTree` posts `SelectionChanged` / `RowAction` (see `messages.py`);
-  `NodeHighlighted` also tracks for compatibility. `update_preview()`
+- `FoldTree` extends the shared `NavTree` (`tree_nav.py`) and posts
+  `SelectionChanged` / `RowAction` (see `messages.py`); `NodeHighlighted`
+  also tracks for compatibility. `NavTree` owns the unified gestures:
+  `j`/`k` move, `left` collapses or walks to the parent, `right` expands or
+  walks to the first child, and clicking a row arrow toggles it. Textual
+  dispatches `_on_click` for every class in the MRO, so `FoldTree` must not
+  call `super()._on_click` or an arrow click toggles twice. `update_preview()`
   renders a bounded card from `store.get_full`: title, progress, why/what,
   three next open tasks, acceptance progress, commit/PR/file counts, newest
   commit, repos, and `enter open · e edit`.
@@ -88,9 +93,11 @@ cascade summary; `Esc` backs out. Delete focuses Cancel by default.
 ## Source screen (`source_screen.py`)
 
 `SourceScreen` is a plain `Screen` opened by `g` from the tree or detail.
-It groups cached provenance into repository → commit → changed file, with
-linked PRs under the repo, and keeps a Static preview for the highlighted
-node. Every source row ends in `⎇`. Highlighting a commit or file reads a
+Its tree is the same `NavTree`, so `j`/`k`, `left`/`right`, click-select,
+and click-arrow folding behave exactly like the main tree. It groups cached
+provenance into repository → commit → changed file, with linked PRs under
+the repo, and keeps a Static preview for the highlighted node. Every source
+row ends in `⎇`. Highlighting a commit or file reads a
 bounded unified diff through `source.read_diff` (LRU keyed by repo, sha,
 path) and renders file/hunk headers, old/new line numbers, and green/red
 add/remove lines. Preview caps are `DIFF_PREVIEW_LINES` and
@@ -117,8 +124,8 @@ tests enforce the match.
 
 | Key | Action | Surface |
 | --- | ------ | ------- |
-| j/k, up/down, click | move cursor / select | tree |
-| left/right | fold / unfold | tree |
+| j/k, up/down, click | move cursor / select | tree, source |
+| left/right, click arrow | fold / unfold | tree, source |
 | enter, double-click | open detail | tree |
 | n | create by context | tree |
 | e | edit selection | tree, detail |

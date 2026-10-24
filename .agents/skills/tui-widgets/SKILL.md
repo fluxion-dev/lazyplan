@@ -16,7 +16,10 @@ Distilled from https://textual.textualize.io/widget_gallery/ plus
 
 - Hierarchy display: `Tree` with model ids in `TreeNode.data`.
   `NodeHighlighted` drives previews, `NodeSelected` (enter) opens editors.
-  Never rebind `space` (toggle), `shift+space` (expand all), or arrows.
+  Use the shared `NavTree` (`tree_nav.py`) instead of a bare `Tree`: it adds
+  `j`/`k` movement and `left`/`right` fold-or-walk while leaving native
+  `space` (toggle), `shift+space` (expand all), click-select, and row-arrow
+  toggling intact. Never rebind those native keys on a subclass.
   Programmatic control: `reset()`, `clear()`, `select_node()`,
   `scroll_to_node()`, `move_cursor()`, `set_label()`.
 - Single-line entry: `Input`. Multi-line: `TextArea` — but mounting many

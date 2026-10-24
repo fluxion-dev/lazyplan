@@ -92,6 +92,8 @@ _.action_open_source
 _.action_open
 _.action_copy
 _.action_filter
+_.check_action
+_._on_click
 _._on_highlight
 _._on_filter_changed
 _._on_filter_submitted

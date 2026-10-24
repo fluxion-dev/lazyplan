@@ -41,6 +41,7 @@ src/lazyplan/cli_parser.py argparse surface
 src/lazyplan/init_layout.py resolved init resources and repairs
 src/lazyplan/store.py      SQLite persistence
 src/lazyplan/tui.py        Textual app
+src/lazyplan/tree_nav.py   shared tree gestures (j/k, left/right, click)
 src/lazyplan/screens.py    detail and form screens
 src/lazyplan/design.py     one source of truth for TUI styling
 src/lazyplan/skills.py     agent skill text and install

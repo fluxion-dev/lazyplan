@@ -158,8 +158,10 @@ and leaves the link for you. `show` includes inherited commits, stale markers,
 and web URLs when the origin remote can be mapped.
 
 In the TUI, select a row and press `g` (or use **Open source trail**) to browse
-repo → commit → changed file plus linked PRs. Highlighting a commit or file
-renders a read-only unified diff with line numbers; large diffs stop at 20
+repo → commit → changed file plus linked PRs. The tree uses the same `j`/`k`,
+`left`/`right`, click-select, and click-arrow gestures as the main tree.
+Highlighting a commit or file renders a read-only unified diff with line
+numbers; large diffs stop at 20
 files / 300 lines with a `+N more` notice, and `o` opens the full commit.
 Binary, root, merge, empty, and missing states are explicit. Diffs are read
 live and never persisted. Rows with source details end in a single-cell `⎇`

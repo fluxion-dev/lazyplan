@@ -23,6 +23,8 @@ try:
     from textual.widgets import Label, Static, Tree
     from textual.widgets.tree import TreeNode
 
+    from .tree_nav import NavTree
+
     _TEXTUAL_OK = True
 except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
@@ -66,12 +68,12 @@ DOUBLE_CLICK_WINDOW = 0.5  # seconds between two clicks on one row
 
 if _TEXTUAL_OK:
 
-    class FoldTree(Tree):
-        """Plan/milestone tree: j/k + arrows move, enter opens detail.
+    class FoldTree(NavTree):
+        """Plan/milestone tree: j/k + arrows move, left/right fold, enter opens.
 
-        Minimal keys own the tree; every mutation runs through the modal
-        palette (c). Native Tree space/shift+space are parked
-        here so they do nothing — status and folding live in the palette.
+        Every mutation runs through the modal palette (c). Native Tree
+        space/shift+space are parked here so they do nothing — status and
+        folding live in the palette and the shared tree gestures.
         """
 
         BINDINGS = [Binding("enter", "open_detail", "Detail")]
@@ -100,8 +102,12 @@ if _TEXTUAL_OK:
                 app.action_open_detail()
 
         async def _on_click(self, event: events.Click) -> None:
-            """Single click selects; two quick clicks on one row open detail."""
-            await super()._on_click(event)
+            """Single click selects; two quick clicks on one row open detail.
+
+            Textual dispatches `_on_click` for every class in the MRO, so the
+            base Tree handler still runs after this one. Do not call super()
+            here or an arrow click would toggle twice and appear to do nothing.
+            """
             app = cast("LazyplanApp", self.app)
             meta = event.style.meta
             if "line" not in meta or meta.get("toggle", False):
@@ -127,11 +133,7 @@ if _TEXTUAL_OK:
         CSS = APP_CSS
         ENABLE_COMMAND_PALETTE = False
         BINDINGS = [
-            Binding("j", "cursor_down", "Down", show=False),
-            Binding("k", "cursor_up", "Up", show=False),
             Binding("enter", "open_detail", "Open"),
-            Binding("left", "fold_left", "Fold", show=False),
-            Binding("right", "fold_right", "Unfold", show=False),
             Binding("escape", "clear_filter", "Back", show=False),
             Binding("c", "command_palette", "Palette"),
             Binding("n", "new_context", "New"),
@@ -200,6 +202,17 @@ if _TEXTUAL_OK:
                         yield Static("", id="preview-body")
             yield Label("", id="hints")
             yield Label("", id="status")
+
+        def check_action(self, action: str, _parameters: tuple[object, ...]) -> bool | None:
+            """Keep app-level row actions on the main tree screen.
+
+            A Source, Detail, help, or modal screen owns its own keys; without
+            this guard, `d` or `s` pressed there would mutate the hidden main
+            selection.
+            """
+            if len(self.screen_stack) > 1 and action not in ("quit", "help"):
+                return False
+            return True
 
         def on_mount(self) -> None:
             self._mounted = True
@@ -515,12 +528,6 @@ if _TEXTUAL_OK:
                 if key[0] in ("plan", "milestone"):
                     self._expanded.add(key)
 
-        def action_cursor_down(self) -> None:
-            self.query_one("#tree", Tree).action_cursor_down()
-
-        def action_cursor_up(self) -> None:
-            self.query_one("#tree", Tree).action_cursor_up()
-
         def action_fold(self) -> None:
             """Toggle the selected plan/milestone open/closed (z)."""
             if self.selected is None:
@@ -560,73 +567,6 @@ if _TEXTUAL_OK:
                 self._expanded.update(keys)
                 self._collapsed.difference_update(keys)
                 self.refresh_all("unfolded all")
-
-        def _children_of(self, kind: str, oid: int) -> list[tuple[str, int]]:
-            """Visible child row keys, in tree order."""
-            if kind == "plan":
-                return [
-                    ("milestone", s.id)
-                    for s in self.store.list_milestones(oid)
-                    if ("milestone", s.id) in self._row_nodes
-                ]
-            if kind == "milestone":
-                return [
-                    ("task", t.id)
-                    for t in self.store.list_tasks(oid)
-                    if ("task", t.id) in self._row_nodes
-                ]
-            return []
-
-        def _parent_of(self, kind: str, oid: int) -> tuple[str, int] | None:
-            if kind == "milestone":
-                s = self.store.get_milestone(oid)
-                return ("plan", s.plan_id) if s else None
-            if kind == "task":
-                t = self.store.get_task(oid)
-                return ("milestone", t.milestone_id) if t else None
-            return None
-
-        def action_fold_left(self) -> None:
-            """Left: collapse the header, else jump to its parent."""
-            if self.selected is None:
-                return
-            kind, oid = self.selected
-            node = self._row_nodes.get(self.selected)
-            if (
-                node is not None
-                and node.allow_expand
-                and node.children
-                and (kind, oid) in self._expanded
-            ):
-                node.collapse()
-                self._expanded.discard((kind, oid))
-                self._collapsed.add((kind, oid))
-                self.refresh_all(f"{kind} {oid} folded")
-                return
-            parent = self._parent_of(kind, oid)
-            if parent is not None and parent in self._row_nodes:
-                self.query_one("#tree", Tree).move_cursor(self._row_nodes[parent])
-
-        def action_fold_right(self) -> None:
-            """Right: expand the header, else jump to its first child."""
-            if self.selected is None:
-                return
-            kind, oid = self.selected
-            node = self._row_nodes.get(self.selected)
-            if (
-                node is not None
-                and node.allow_expand
-                and node.children
-                and (kind, oid) not in self._expanded
-            ):
-                node.expand()
-                self._expanded.add((kind, oid))
-                self._collapsed.discard((kind, oid))
-                self.refresh_all(f"{kind} {oid} unfolded")
-                return
-            for child in self._children_of(kind, oid):
-                self.query_one("#tree", Tree).move_cursor(self._row_nodes[child])
-                return
 
         # -- polling (fingerprint, not just mtime) ----------------------
         def _poll(self) -> None:

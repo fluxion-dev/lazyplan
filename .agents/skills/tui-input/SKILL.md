@@ -30,8 +30,12 @@ https://textual.textualize.io/guide/actions/.
 - Dirty state is a baseline snapshot comparison (`_snapshot` /
   `_is_dirty`), never event flags — mount-time `Changed` messages make
   clean screens arrive dirty. Esc compares and prompts only on real edits.
-- Source screen keys: `g` opens, `j/k`/arrows navigate, `o` opens, `y`
-  copies, `/` filters, `r` refreshes and clears the diff cache, `esc`
-  returns. Keep these screen-level bindings; do not bind them on the inner
-  Tree except navigation. Highlighting a commit/file reads its diff without
-  adding a binding.
+- Tree gestures live on `NavTree`, not the App: `j/k` move, `left/right`
+  collapse/expand or walk to parent/first child, click selects, and clicking
+  a row arrow toggles it. The main tree and Source screen share this class,
+  so keys never leak into the hidden tree behind a screen. Do not add App
+  bindings for navigation.
+- Source screen keys: `g` opens, `o` opens, `y` copies, `/` filters, `r`
+  refreshes and clears the diff cache, `esc` returns. Keep these
+  screen-level bindings; the tree owns navigation. Highlighting a
+  commit/file reads its diff without adding a binding.

@@ -22,6 +22,11 @@ https://textual.textualize.io/api/pilot/.
 - Assert on state, not visuals: `Store` reads, widget values, screen
   stack depth and type, `scroll_y`. Existing patterns live in
   `tests/test_screens_esc.py` (esc discards, dirty-prompt flow).
+- Tree navigation tests live in `tests/test_tree_fold.py` and
+  `tests/test_source_screen.py`: `pilot.press("j"/"k")` to move,
+  `left`/`right` to fold and walk, and `pilot.click("#tree", offset=(4, 1))`
+  on the row arrow to toggle without opening detail. Always assert the other
+  screen's tree did not move when testing Source screen keys.
 - Source screen tests live in `tests/test_source_screen.py`: build a real
   temp repo, open `SourceScreen`, assert tree labels, then `select_node`
   plus `y`/`o` with clipboard/browser mocked. Diff tests call

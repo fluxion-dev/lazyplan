@@ -193,6 +193,102 @@ class TestSourceScreen(unittest.IsolatedAsyncioTestCase):
             tree = screen.query_one("#source-tree", Tree)
             self.assertIn("stale", str(tree.root.children[0].children[0].label))
 
+    async def test_tree_navigation_and_folding_keys(self):
+        async with self.app.run_test(size=(120, 30)) as pilot:
+            await pilot.pause()
+            screen = await self._open(pilot)
+            tree = screen.query_one("#source-tree", Tree)
+            repo = tree.root.children[0]
+            commit = repo.children[0]
+            tree.move_cursor(repo)
+            await pilot.pause()
+            await pilot.press("j")
+            await pilot.pause()
+            self.assertIs(tree.cursor_node, commit)
+            await pilot.press("k")
+            await pilot.pause()
+            self.assertIs(tree.cursor_node, repo)
+            self.assertTrue(repo.is_expanded)
+            await pilot.press("left")
+            await pilot.pause()
+            self.assertFalse(repo.is_expanded)
+            await pilot.press("right")
+            await pilot.pause()
+            self.assertTrue(repo.is_expanded)
+            repo.collapse()
+            tree.move_cursor(repo)
+            await pilot.pause()
+            await pilot.press("left")
+            await pilot.pause()
+            self.assertIs(tree.cursor_node, tree.root)
+
+    async def test_source_keys_do_not_move_the_main_tree(self):
+        from textual.widgets import Tree as TextualTree
+
+        async with self.app.run_test(size=(120, 30)) as pilot:
+            await pilot.pause()
+            main_tree = self.app.query_one("#tree", TextualTree)
+            main_plan = self.app._row_nodes[("plan", self.pid)]
+            main_cursor = main_tree.cursor_node
+            main_expanded = main_plan.is_expanded
+            screen = await self._open(pilot)
+            tree = screen.query_one("#source-tree", Tree)
+            tree.move_cursor(tree.root.children[0])
+            await pilot.pause()
+            for key in ("right", "left", "j", "k"):
+                await pilot.press(key)
+                await pilot.pause()
+            self.assertIs(main_tree.cursor_node, main_cursor)
+            self.assertEqual(main_plan.is_expanded, main_expanded)
+
+    async def test_main_row_actions_do_not_fire_from_source(self):
+        status_before = self.store.get_plan(self.pid).status.value
+        async with self.app.run_test(size=(120, 30)) as pilot:
+            await pilot.pause()
+            screen = await self._open(pilot)
+            for key in ("d", "s", "e", "n", "g", "f", "F", "A"):
+                await pilot.press(key)
+                await pilot.pause()
+                self.assertIs(self.app.screen, screen, key)
+            self.assertEqual(self.store.get_plan(self.pid).status.value, status_before)
+
+    async def test_click_selects_a_source_row(self):
+        async with self.app.run_test(size=(120, 30)) as pilot:
+            await pilot.pause()
+            screen = await self._open(pilot)
+            tree = screen.query_one("#source-tree", Tree)
+            clicked = await pilot.click("#source-tree", offset=(10, 1))
+            await pilot.pause()
+            self.assertTrue(clicked)
+            self.assertIsNotNone(tree.cursor_node)
+            assert tree.cursor_node is not None
+            self.assertEqual(tree.cursor_node.data.get("kind"), "repo")
+            body = str(screen.query_one("#source-preview-body").render())
+            self.assertIn("repo", body)
+
+    async def test_clicking_a_source_arrow_toggles_the_node(self):
+        async with self.app.run_test(size=(120, 30)) as pilot:
+            await pilot.pause()
+            screen = await self._open(pilot)
+            tree = screen.query_one("#source-tree", Tree)
+            repo = tree.root.children[0]
+            self.assertTrue(repo.is_expanded)
+            clicked = await pilot.click("#source-tree", offset=(4, 1))
+            await pilot.pause()
+            self.assertTrue(clicked)
+            self.assertFalse(repo.is_expanded)
+            await pilot.click("#source-tree", offset=(4, 1))
+            await pilot.pause()
+            self.assertTrue(repo.is_expanded)
+            root = tree.root
+            self.assertTrue(root.is_expanded)
+            await pilot.click("#source-tree", offset=(0, 0))
+            await pilot.pause()
+            self.assertFalse(root.is_expanded)
+            await pilot.click("#source-tree", offset=(0, 0))
+            await pilot.pause()
+            self.assertTrue(root.is_expanded)
+
     async def test_commit_and_file_previews_render_diff(self):
         async with self.app.run_test(size=(120, 30)) as pilot:
             await pilot.pause()

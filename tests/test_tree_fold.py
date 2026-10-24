@@ -319,16 +319,53 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
             assert cursor is not None
             self.assertEqual(getattr(cursor, "data", {}).get("kind"), "task")
 
-    async def test_arrows_noop_without_selection(self):
+    async def test_arrows_follow_the_tree_cursor(self):
         async with self.app.run_test() as pilot:
             await pilot.pause()
             self.app.selected = None
             await pilot.pause()
-            await pilot.press("left")
             await pilot.press("right")
             await pilot.pause()
-            self.assertEqual(self.app._expanded, set())
-            self.assertIsNone(self.app.selected)
+            proj, _ = self._nodes()
+            self.assertTrue(proj.is_expanded)
+            self.assertIn(("plan", self.pid), self.app._expanded)
+            await pilot.press("left")
+            await pilot.pause()
+            self.assertFalse(proj.is_expanded)
+            self.assertNotIn(("plan", self.pid), self.app._expanded)
+
+    async def test_j_and_k_move_the_cursor(self):
+        from textual.widgets import Tree
+
+        async with self.app.run_test() as pilot:
+            await pilot.pause()
+            await self._expand(pilot, "plan", self.pid)
+            await self._select(pilot, "plan", self.pid)
+            await pilot.press("j")
+            await pilot.pause()
+            cursor = self.app.query_one("#tree", Tree).cursor_node
+            assert cursor is not None
+            self.assertEqual(getattr(cursor, "data", {}).get("kind"), "milestone")
+            await pilot.press("k")
+            await pilot.pause()
+            cursor = self.app.query_one("#tree", Tree).cursor_node
+            assert cursor is not None
+            self.assertEqual(getattr(cursor, "data", {}).get("kind"), "plan")
+
+    async def test_clicking_the_row_arrow_toggles_the_plan(self):
+        async with self.app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            proj, _ = self._nodes()
+            self.assertFalse(proj.is_expanded)
+            clicked = await pilot.click("#tree", offset=(4, 1))
+            await pilot.pause()
+            self.assertTrue(clicked)
+            self.assertTrue(proj.is_expanded)
+            self.assertEqual(len(self.app.screen_stack), 1)
+            await pilot.click("#tree", offset=(4, 1))
+            await pilot.pause()
+            self.assertFalse(proj.is_expanded)
+            self.assertEqual(len(self.app.screen_stack), 1)
 
     async def test_statusbar_shows_human_counts(self):
         from textual.widgets import Label

@@ -431,7 +431,7 @@ COMMANDS: tuple[Command, ...] = (
 #: Navigation rows that are not palette commands.
 NAV_ROWS: tuple[tuple[str, str], ...] = (
     ("j/k, up/down, click", "move cursor / select"),
-    ("left/right", "fold / unfold row"),
+    ("left/right, click arrow", "fold / unfold row"),
     ("escape", "clear filter / back"),
 )
 

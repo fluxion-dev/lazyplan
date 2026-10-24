@@ -15,6 +15,8 @@ try:
     from textual.widgets import Footer, Input, Static, Tree
     from textual.widgets.tree import TreeNode
 
+    from .tree_nav import NavTree
+
     _TEXTUAL_OK = True
 except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
@@ -135,7 +137,7 @@ if _TEXTUAL_OK:
                 yield Input(placeholder="filter source…", id="source-filter")
                 with Horizontal(id="source-main"):
                     with VerticalScroll(id="source-tree-wrap"):
-                        yield Tree("source", id="source-tree")
+                        yield NavTree("source", id="source-tree")
                     with VerticalScroll(id="source-preview"):
                         yield Static("", id="source-preview-body")
                 yield Footer(compact=True)
@@ -143,7 +145,7 @@ if _TEXTUAL_OK:
         def on_mount(self) -> None:
             self.query_one("#source-filter", Input).display = False
             self._load()
-            self.query_one("#source-tree", Tree).focus()
+            self.query_one("#source-tree", NavTree).focus()
 
         def _load(self) -> None:
             self._trail = build_source_trail(self._store, self._kind, self._oid)
@@ -161,7 +163,7 @@ if _TEXTUAL_OK:
             self._build_tree()
 
         def _build_tree(self) -> None:
-            tree = self.query_one("#source-tree", Tree)
+            tree = self.query_one("#source-tree", NavTree)
             tree.clear()
             tree.root.expand()
             if self._trail.empty:
@@ -396,7 +398,7 @@ if _TEXTUAL_OK:
             return "\n".join(lines)
 
         def _selected(self) -> dict[str, Any] | None:
-            node = self.query_one("#source-tree", Tree).cursor_node
+            node = self.query_one("#source-tree", NavTree).cursor_node
             data = node.data if node is not None else None
             return data if isinstance(data, dict) else None
 
@@ -440,7 +442,7 @@ if _TEXTUAL_OK:
             self._filter = event.value
             self.query_one("#source-filter", Input).display = False
             self._build_tree()
-            self.query_one("#source-tree", Tree).focus()
+            self.query_one("#source-tree", NavTree).focus()
 
         def action_refresh(self) -> None:
             """Rebuild from cached data and drop in-memory diff bodies."""

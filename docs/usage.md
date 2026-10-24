@@ -166,7 +166,7 @@ folded until you open their milestone. Completed plans are dimmed and sorted las
 | key | action |
 |---|---|
 | `j`/`k`, arrows, click | move and select |
-| `left`/`right` | fold and unfold; open detail |
+| `left`/`right`, click arrow | collapse/expand, or walk to parent / first child |
 | `enter` | open the read-only detail page |
 | `e` / `s` / `x` / `a` / `d` | edit · advance status · tick next criterion · add criterion · delete |
 | `n` | create by context (plan, milestone, or task) |
@@ -314,7 +314,8 @@ empty or broken pane.
 
 Keys:
 
-- `j`/`k` or arrows move; `left`/`right` fold and unfold.
+- `j`/`k` or arrows move; `left`/`right` collapse/expand or walk to the
+  parent/first child. Clicking a row arrow toggles it.
 - `o` opens the selected commit, PR, or file in the browser.
 - `y` copies the selected SHA, file path, or URL.
 - `/` filters repos, commits, files, and PRs; `enter` applies, `esc` closes.

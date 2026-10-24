@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS vcs_links (
     author TEXT NOT NULL DEFAULT '',
     timestamp INTEGER NOT NULL DEFAULT 0,
     repo_root TEXT NOT NULL DEFAULT '',
+    files TEXT NOT NULL DEFAULT '[]',
     stale INTEGER NOT NULL DEFAULT 0,
     checked_at INTEGER NOT NULL DEFAULT 0,
     UNIQUE(parent_kind, parent_id, sha)
@@ -225,12 +226,14 @@ def _drop_priority_columns(conn: sqlite3.Connection) -> None:
 
 
 def _migrate_vcs_link_state(conn: sqlite3.Connection) -> None:
-    """Add refresh state columns to vcs_links when missing."""
+    """Add refresh state and changed-file columns to vcs_links when missing."""
     existing = {r["name"] for r in conn.execute("PRAGMA table_info(vcs_links)").fetchall()}
     if "stale" not in existing:
         conn.execute("ALTER TABLE vcs_links ADD COLUMN stale INTEGER NOT NULL DEFAULT 0")
     if "checked_at" not in existing:
         conn.execute("ALTER TABLE vcs_links ADD COLUMN checked_at INTEGER NOT NULL DEFAULT 0")
+    if "files" not in existing:
+        conn.execute("ALTER TABLE vcs_links ADD COLUMN files TEXT NOT NULL DEFAULT '[]'")
 
 
 def _migrate_entity_repo_branch(conn: sqlite3.Connection) -> None:

@@ -385,6 +385,17 @@ def commit_url(remote: str, sha: str) -> str:
     return f"{base}/commit/{commit}"
 
 
+def file_url(remote: str, sha: str, path: str) -> str:
+    """Web URL for one file at a commit, or empty when it cannot be mapped."""
+    base = web_remote(remote)
+    commit = sha.strip()
+    file_path = path.strip().lstrip("/")
+    if not base or not commit or not file_path:
+        return ""
+    quoted = "/".join(urllib.parse.quote(part, safe="") for part in file_path.split("/"))
+    return f"{base}/blob/{commit}/{quoted}"
+
+
 def backends() -> list[VCSBackend]:
     """Registered backends; append new ones here to support more VCSs."""
     return list(_BACKENDS)

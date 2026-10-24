@@ -34,18 +34,27 @@ class TestVcsLinks(unittest.TestCase):
         t = self.store.add_task(s.id, "T")
         sha = "b" * 40
         first = self.store.link_commit(
-            "task", t.id, sha, subject="fix", author="me", timestamp=7, repo_root="/r"
+            "task",
+            t.id,
+            sha,
+            subject="fix",
+            author="me",
+            timestamp=7,
+            repo_root="/r",
+            files=("src/a.py", "tests/test_a.py"),
         )
         self.assertEqual(first.sha, sha)
         self.assertEqual(first.subject, "fix")
+        self.assertEqual(first.files, ("src/a.py", "tests/test_a.py"))
         # plan + milestone links work too
         self.store.link_commit("plan", p.id, "a" * 40)
         self.store.link_commit("milestone", s.id, "c" * 40)
         self.assertEqual(len(self.store.list_links("plan", p.id)), 1)
         self.assertEqual(len(self.store.list_links("milestone", s.id)), 1)
-        # re-link is idempotent
+        # re-link is idempotent and preserves metadata when not supplied
         again = self.store.link_commit("task", t.id, sha)
         self.assertEqual(again.id, first.id)
+        self.assertEqual(again.files, ("src/a.py", "tests/test_a.py"))
         self.assertEqual(len(self.store.list_links("task", t.id)), 1)
         # unlink + missing unlink
         self.assertTrue(self.store.unlink_commit("task", t.id, sha))
@@ -132,6 +141,7 @@ class TestVcsLinks(unittest.TestCase):
         self.assertEqual(len(links), 1)
         self.assertFalse(links[0].stale)
         self.assertEqual(links[0].checked_at, 0)
+        self.assertEqual(links[0].files, ())
         # Migration is idempotent.
         Store(legacy)
 
@@ -170,6 +180,7 @@ class TestVcsLinks(unittest.TestCase):
         links = {link.sha: link for link in self.store.list_links("task", t.id)}
         self.assertEqual(links[sha].subject, "real subject")
         self.assertEqual(links[sha].author, "Tester")
+        self.assertEqual(links[sha].files, ("f.txt",))
         self.assertFalse(links[sha].stale)
         self.assertTrue(links[fake].stale)
         self.assertGreater(links[fake].checked_at, 0)
@@ -251,7 +262,7 @@ class TestVcsLinks(unittest.TestCase):
         s = self.store.add_milestone(p.id, "S")
         t = self.store.add_task(s.id, "T")
         self.store.link_commit("plan", p.id, "a" * 40, subject="psub")
-        self.store.link_commit("task", t.id, "b" * 40, subject="tsub")
+        self.store.link_commit("task", t.id, "b" * 40, subject="tsub", files=("src/x.py",))
         data = services.export_all(self.store)
         db2 = os.path.join(tempfile.mkdtemp(), "imp.db")
         s2 = Store(db2)
@@ -259,6 +270,7 @@ class TestVcsLinks(unittest.TestCase):
         self.assertEqual(counts["links"], 2)
         self.assertEqual(s2.list_links("plan", 1)[0].subject, "psub")
         self.assertEqual(s2.list_links("task", 1)[0].sha, "b" * 40)
+        self.assertEqual(s2.list_links("task", 1)[0].files, ("src/x.py",))
         self.assertIn("links", s2.get_full("plan", 1))
         self.assertIn("links", s2.get_full("milestone", 1))
         self.assertIn("links", s2.get_full("task", 1))

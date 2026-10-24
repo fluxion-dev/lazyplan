@@ -325,6 +325,7 @@ def build_parser() -> argparse.ArgumentParser:
     _a.add_argument("--goal", default=None, metavar="TEXT", help="same as --why")
     _a = _actions.add_parser("show", help="show one plan", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="plan id")
+    _a.add_argument("--files", action="store_true", help="list changed files per commit")
     _a = _actions.add_parser("list", help="list plans as summaries", parents=[common])
     _plan_list_flags(_a)
     _a = _actions.add_parser("move", help="move a plan to a status", parents=[common])
@@ -346,6 +347,7 @@ def build_parser() -> argparse.ArgumentParser:
     _a.add_argument("--desc", default=None, metavar="TEXT", help="the new details")
     _a = _actions.add_parser("show", help="show one milestone", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="milestone id")
+    _a.add_argument("--files", action="store_true", help="list changed files per commit")
     _a = _actions.add_parser("list", help="list one plan's milestones as a tree", parents=[common])
     _a.add_argument("--plan", type=int, required=True, metavar="ID", help="plan id")
     _plan_list_flags(_a)
@@ -368,6 +370,7 @@ def build_parser() -> argparse.ArgumentParser:
     _a.add_argument("--desc", default=None, metavar="TEXT", help="the new details")
     _a = _actions.add_parser("show", help="show one task", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="task id")
+    _a.add_argument("--files", action="store_true", help="list changed files per commit")
     _a = _actions.add_parser("list", help="list one milestone's tasks as a tree", parents=[common])
     _a.add_argument("--milestone", type=int, required=True, metavar="ID", help="milestone id")
     _plan_list_flags(_a)
@@ -553,6 +556,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="which kind of row to show",
     )
     sh.add_argument("--id", type=int, required=True, metavar="ID", help="id of the row")
+    sh.add_argument("--files", action="store_true", help="list changed files per commit")
 
     ac = sub.add_parser("add-criteria", help="legacy alias for `criterion add`", parents=[common])
     ac.add_argument(
@@ -623,6 +627,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="which kind of row to list",
     )
     cm.add_argument("--id", type=int, required=True, metavar="ID", help="id of the row")
+    cm.add_argument("--files", action="store_true", help="list changed files per commit")
     cm.add_argument(
         "--refresh",
         action="store_true",

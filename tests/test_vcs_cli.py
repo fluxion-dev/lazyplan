@@ -120,6 +120,22 @@ class TestVcsCLI(unittest.TestCase):
         )
         self.assertEqual(rc, 1)
 
+    def test_show_and_commits_files_flag(self):
+        os.chdir(self.repo)
+        _run(["--db", self.db, "link", "--kind", "task", "--id", "1"])
+        rc, out, _ = _run(["--db", self.db, "show", "--kind", "task", "--id", "1", "--files"])
+        self.assertEqual(rc, 0)
+        self.assertIn("f.txt", out)
+        rc, out, _ = _run(["--db", self.db, "commits", "--kind", "task", "--id", "1", "--files"])
+        self.assertEqual(rc, 0)
+        self.assertIn("f.txt", out)
+        rc, out, _ = _run(["--db", self.db, "commits", "--kind", "task", "--id", "1"])
+        self.assertEqual(rc, 0)
+        self.assertNotIn("f.txt", out)
+        rc, out, _ = _run(["--db", self.db, "show", "--kind", "task", "--id", "1", "--json"])
+        self.assertEqual(rc, 0)
+        self.assertEqual(json.loads(out)["links"][0]["files"], ["f.txt"])
+
     def test_outside_git_disabled(self):
         os.chdir(self.plain)
         rc, _, err = _run(["--db", self.db, "link", "--kind", "task", "--id", "1"])

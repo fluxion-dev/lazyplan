@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import sqlite3
 import time
@@ -27,6 +28,30 @@ def _ser(d: dict) -> dict:
     if isinstance(d.get("status"), Status):
         d["status"] = d["status"].value
     return d
+
+
+def _files_json(files: tuple[str, ...] | list[str]) -> str:
+    """Canonical JSON array for changed file paths."""
+    seen: set[str] = set()
+    out: list[str] = []
+    for path in files:
+        text = str(path or "").strip()
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        out.append(text)
+    return json.dumps(out, separators=(",", ":"))
+
+
+def _files_tuple(payload: str) -> tuple[str, ...]:
+    """Decode a stored file list, tolerating legacy or malformed values."""
+    try:
+        raw = json.loads(payload or "[]")
+    except ValueError:
+        return ()
+    if not isinstance(raw, list):
+        return ()
+    return tuple(str(item) for item in raw if isinstance(item, str) and item)
 
 
 def _actor(explicit: str = "") -> str:
@@ -533,6 +558,7 @@ class Store:
             author=r["author"] or "",
             timestamp=int(r["timestamp"] or 0),
             repo_root=r["repo_root"] or "",
+            files=_files_tuple(r["files"] or "") if "files" in r.keys() else (),
             stale=bool(r["stale"]) if "stale" in r.keys() else False,
             checked_at=int(r["checked_at"] or 0) if "checked_at" in r.keys() else 0,
         )
@@ -546,6 +572,7 @@ class Store:
         author: str = "",
         timestamp: int = 0,
         repo_root: str = "",
+        files: tuple[str, ...] = (),
         actor: str = "human",
     ) -> VcsLink:
         """Attach a commit to a plan, milestone, or task (idempotent on re-link)."""
@@ -558,14 +585,22 @@ class Store:
             author=author,
             timestamp=timestamp,
             repo_root=repo_root,
+            files=files,
         )
         if not self._parent_exists(parent_kind, parent_id):
             raise KeyError(f"{parent_kind} #{parent_id} not found")
+        files_json = _files_json(files)
         with self._connect() as conn:
             conn.execute(
-                "INSERT OR IGNORE INTO vcs_links"
-                " (parent_kind, parent_id, sha, subject, author, timestamp, repo_root)"
-                " VALUES (?,?,?,?,?,?,?)",
+                "INSERT INTO vcs_links"
+                " (parent_kind, parent_id, sha, subject, author, timestamp, repo_root, files)"
+                " VALUES (?,?,?,?,?,?,?,?)"
+                " ON CONFLICT(parent_kind, parent_id, sha) DO UPDATE SET"
+                " subject=CASE WHEN excluded.subject <> '' THEN excluded.subject ELSE subject END,"
+                " author=CASE WHEN excluded.author <> '' THEN excluded.author ELSE author END,"
+                " timestamp=CASE WHEN excluded.timestamp > 0 THEN excluded.timestamp ELSE timestamp END,"
+                " repo_root=CASE WHEN excluded.repo_root <> '' THEN excluded.repo_root ELSE repo_root END,"
+                " files=CASE WHEN excluded.files <> '[]' THEN excluded.files ELSE files END",
                 (
                     link.parent_kind,
                     link.parent_id,
@@ -574,6 +609,7 @@ class Store:
                     link.author,
                     link.timestamp,
                     link.repo_root,
+                    files_json,
                 ),
             )
             r = conn.execute(
@@ -595,18 +631,23 @@ class Store:
         repo_root: str,
         stale: bool,
         checked_at: int,
+        files: tuple[str, ...] = (),
         actor: str = "human",
     ) -> VcsLink | None:
-        """Refresh one link's cached metadata and stale flag; None when gone."""
+        """Refresh one link's cached metadata, files, and stale flag; None when gone."""
+        files_json = _files_json(files)
         with self._connect() as conn:
             cur = conn.execute(
                 "UPDATE vcs_links SET subject=?, author=?, timestamp=?, repo_root=?,"
+                " files=CASE WHEN ? <> '[]' THEN ? ELSE files END,"
                 " stale=?, checked_at=? WHERE id=?",
                 (
                     subject,
                     author,
                     timestamp,
                     repo_root,
+                    files_json,
+                    files_json,
                     1 if stale else 0,
                     checked_at,
                     link_id,
@@ -902,6 +943,16 @@ class Store:
         out: dict[tuple[str, int], list[ForgeLink]] = {}
         for row in rows:
             link = self._row_to_forge_link(row)
+            out.setdefault((link.parent_kind, link.parent_id), []).append(link)
+        return out
+
+    def vcs_links_map(self) -> dict[tuple[str, int], list[VcsLink]]:
+        """Every commit link grouped by (parent_kind, parent_id), oldest first."""
+        with self._connect() as conn:
+            rows = conn.execute("SELECT * FROM vcs_links ORDER BY id").fetchall()
+        out: dict[tuple[str, int], list[VcsLink]] = {}
+        for row in rows:
+            link = self._row_to_link(row)
             out.setdefault((link.parent_kind, link.parent_id), []).append(link)
         return out
 

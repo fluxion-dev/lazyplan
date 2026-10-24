@@ -99,6 +99,7 @@ class VcsLink:
     author: str = ""
     timestamp: int = 0
     repo_root: str = ""
+    files: tuple[str, ...] = ()
     stale: bool = False
     checked_at: int = 0
 

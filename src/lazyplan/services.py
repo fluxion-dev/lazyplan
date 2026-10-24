@@ -288,14 +288,16 @@ def _link_commits(
     for commit in backend.log(root, f"{base}..HEAD"):
         if commit.sha in existing:
             continue
+        info = backend.show(root, commit.sha) or commit
         store.link_commit(
             "task",
             task_id,
-            commit.sha,
-            subject=commit.subject,
-            author=commit.author,
-            timestamp=commit.timestamp,
-            repo_root=commit.repo_root,
+            info.sha,
+            subject=info.subject,
+            author=info.author,
+            timestamp=info.timestamp,
+            repo_root=info.repo_root,
+            files=info.files,
             actor=actor,
         )
         existing.add(commit.sha)
@@ -399,6 +401,7 @@ def _scan_ref_action(
     ref_id: int,
     dry_run: bool,
     actor: str,
+    files: tuple[str, ...] = (),
 ) -> str:
     """Link one ref or report why it was not written."""
     already = any(link.sha == commit.sha for link in store.list_links(ref_kind, ref_id))
@@ -414,6 +417,7 @@ def _scan_ref_action(
         author=commit.author,
         timestamp=commit.timestamp,
         repo_root=commit.repo_root,
+        files=files,
         actor=actor,
     )
     return "linked"
@@ -448,7 +452,10 @@ def scan_commits(
                 continue
             if store.get_parent(ref_kind, ref_id) is None:
                 continue
-            action = _scan_ref_action(store, commit, ref_kind, ref_id, dry_run, actor)
+            info = backend.show(root, commit.sha) or commit
+            action = _scan_ref_action(
+                store, commit, ref_kind, ref_id, dry_run, actor, files=info.files
+            )
             matches.append(
                 {
                     "sha": commit.sha,
@@ -543,6 +550,7 @@ def auto_capture_head(
         author=info.author,
         timestamp=info.timestamp,
         repo_root=info.repo_root,
+        files=info.files,
         actor=actor,
     )
     return None
@@ -1056,6 +1064,7 @@ def refresh_links(
             repo_root=info.repo_root,
             stale=False,
             checked_at=now,
+            files=info.files,
             actor=actor,
         )
         updated += 1
@@ -1356,6 +1365,7 @@ def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]
                     author=str(c.get("author", "") or ""),
                     timestamp=int(c.get("timestamp", 0) or 0),
                     repo_root=str(c.get("repo_root", "") or ""),
+                    files=tuple(str(p) for p in c.get("files", []) if isinstance(p, str)),
                     actor=actor,
                 )
             except ValueError:

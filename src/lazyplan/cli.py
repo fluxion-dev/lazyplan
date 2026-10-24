@@ -534,7 +534,7 @@ def _cmd_show(store: Store, args: argparse.Namespace, actor: str) -> int:
         return 1
     if args.json:
         return _emit(args, full)
-    print(render_full(args.kind, full))
+    print(render_full(args.kind, full, files=bool(getattr(args, "files", False))))
     return 0
 
 
@@ -788,6 +788,7 @@ def _cmd_link(store: Store, args: argparse.Namespace, actor: str) -> int:
         author=info.author,
         timestamp=info.timestamp,
         repo_root=info.repo_root,
+        files=info.files,
         actor=actor,
     )
     return _emit(args, {"link": vars(link)})
@@ -820,7 +821,7 @@ def _cmd_commits(store: Store, args: argparse.Namespace, actor: str) -> int:
     if not links:
         print(EMPTY_COMMITS)
         return 0
-    print(render_commits([vars(c) for c in links]))
+    print(render_commits([vars(c) for c in links], files=bool(getattr(args, "files", False))))
     return 0
 
 

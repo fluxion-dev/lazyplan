@@ -6,7 +6,15 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from lazyplan.vcs import GitBackend, backends, commit_url, current_head, detect_backend, web_remote
+from lazyplan.vcs import (
+    GitBackend,
+    backends,
+    commit_url,
+    current_head,
+    detect_backend,
+    file_url,
+    web_remote,
+)
 
 
 def _git_available() -> bool:
@@ -71,6 +79,12 @@ class TestVCS(unittest.TestCase):
             f"https://github.com/org/repo/commit/{sha}",
         )
         self.assertEqual(commit_url("", sha), "")
+        self.assertEqual(
+            file_url("git@github.com:org/repo.git", sha, "src/my file.py"),
+            f"https://github.com/org/repo/blob/{sha}/src/my%20file.py",
+        )
+        self.assertEqual(file_url("", sha, "src/a.py"), "")
+        self.assertEqual(file_url("git@github.com:org/repo.git", sha, ""), "")
 
     def test_non_repo_unavailable(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -82,7 +82,32 @@ def tree_lines(
     return lines
 
 
-def render_commits(links: list[dict]) -> str:
+def _commit_line(link: dict, show_repo: bool) -> str:
+    """One commit line: short SHA, subject, author, optional repo, stale."""
+    sha = str(link.get("sha", ""))
+    short = sha[:12] if len(sha) >= 12 else sha
+    subject = str(link.get("subject", "") or "").strip()
+    author = str(link.get("author", "") or "").strip()
+    extra = f" ({author})" if author and subject else author
+    line = f"{short} {subject}{extra}".rstrip() if (subject or extra) else short
+    repo = str(link.get("repo_root", "") or "")
+    if show_repo and repo:
+        line = f"{line} · {Path(repo).name}"
+    if link.get("stale"):
+        line = f"{line} [stale]"
+    return line
+
+
+def _commit_file_lines(link: dict) -> list[str]:
+    """Indented changed-file lines for one commit."""
+    paths = [str(path) for path in link.get("files", []) if str(path)]
+    lines = [f"  {path}" for path in paths[:8]]
+    if len(paths) > 8:
+        lines.append(f"  +{len(paths) - 8} more")
+    return lines
+
+
+def render_commits(links: list[dict], files: bool = False) -> str:
     """Human-readable commit list for `lpui commits` and `show` sections."""
     roots = {
         str(link.get("repo_root", "") or "")
@@ -92,19 +117,9 @@ def render_commits(links: list[dict]) -> str:
     show_repo = len(roots) > 1
     lines = []
     for link in links:
-        sha = str(link.get("sha", ""))
-        short = sha[:12] if len(sha) >= 12 else sha
-        subject = str(link.get("subject", "") or "").strip()
-        author = str(link.get("author", "") or "").strip()
-        extra = f" ({author})" if author and subject else author
-        line = f"{short} {subject}{extra}".rstrip() if (subject or extra) else short
-        if show_repo:
-            repo = str(link.get("repo_root", "") or "")
-            if repo:
-                line = f"{line} · {Path(repo).name}"
-        if link.get("stale"):
-            line = f"{line} [stale]"
-        lines.append(line)
+        lines.append(_commit_line(link, show_repo))
+        if files:
+            lines.extend(_commit_file_lines(link))
     return "\n".join(lines)
 
 
@@ -209,9 +224,9 @@ def _append_crit(lines: list[str], items: list[dict]) -> None:
         lines.append(f"  [{box}] {c['text']}")
 
 
-def _append_commits(lines: list[str], items: list[dict]) -> None:
+def _append_commits(lines: list[str], items: list[dict], files: bool = False) -> None:
     """Append linked-commit lines."""
-    for line in render_commits(items).splitlines():
+    for line in render_commits(items, files=files).splitlines():
         lines.append(f"  {line}")
 
 
@@ -226,7 +241,7 @@ def _append_repos(lines: list[str], full: dict) -> None:
             lines.append(f"  {path}" + (f" ({remote})" if remote else ""))
 
 
-def _append_common(lines: list[str], full: dict) -> None:
+def _append_common(lines: list[str], full: dict, files: bool = False) -> None:
     """Shared show sections: acceptance + commits + PRs + repos."""
     if full.get("criteria"):
         lines.append("\nacceptance:")
@@ -234,7 +249,7 @@ def _append_common(lines: list[str], full: dict) -> None:
     links = full.get("effective_links") or full.get("links")
     if links:
         lines.append("\ncommits:")
-        _append_commits(lines, links)
+        _append_commits(lines, links, files=files)
     forge_links = full.get("effective_forge_links") or full.get("forge_links")
     if forge_links:
         lines.append("\npull requests:")
@@ -243,7 +258,7 @@ def _append_common(lines: list[str], full: dict) -> None:
     _append_repos(lines, full)
 
 
-def _render_plan_full(full: dict, lines: list[str]) -> None:
+def _render_plan_full(full: dict, lines: list[str], files: bool = False) -> None:
     """Plan show body."""
     from .design import status_word
 
@@ -253,13 +268,13 @@ def _render_plan_full(full: dict, lines: list[str]) -> None:
         lines.append(f"why: {p['goal']}")
     if p.get("description"):
         lines.append(f"\nwhat: {p['description']}")
-    _append_common(lines, full)
+    _append_common(lines, full, files=files)
     for entry in full["milestones"]:
         s = entry["milestone"]
         lines.append(f"\n  {status_word(s['status'])} M{s['id']} {s['title']}")
 
 
-def _render_milestone_full(full: dict, lines: list[str]) -> None:
+def _render_milestone_full(full: dict, lines: list[str], files: bool = False) -> None:
     """Milestone show body."""
     from .design import status_word
 
@@ -267,7 +282,7 @@ def _render_milestone_full(full: dict, lines: list[str]) -> None:
     lines.append(f"{status_word(s['status'])} M{s['id']} {s['title']} (P{s['plan_id']})")
     if s.get("description"):
         lines.append(f"\ndetails: {s['description']}")
-    _append_common(lines, full)
+    _append_common(lines, full, files=files)
     for entry in full["tasks"]:
         t = entry["task"]
         lines.append(f"\n  {status_word(t['status'])} T{t['id']} {t['title']}")
@@ -275,7 +290,7 @@ def _render_milestone_full(full: dict, lines: list[str]) -> None:
             lines.append(f"  {t['description']}")
 
 
-def _render_task_full(full: dict, lines: list[str]) -> None:
+def _render_task_full(full: dict, lines: list[str], files: bool = False) -> None:
     """Task show body."""
     from .design import status_word
 
@@ -283,18 +298,18 @@ def _render_task_full(full: dict, lines: list[str]) -> None:
     lines.append(f"{status_word(t['status'])} T{t['id']} {t['title']} (M{t['milestone_id']})")
     if t.get("description"):
         lines.append(f"\ndetails: {t['description']}")
-    _append_common(lines, full)
+    _append_common(lines, full, files=files)
 
 
-def render_full(kind: str, full: dict) -> str:
+def render_full(kind: str, full: dict, files: bool = False) -> str:
     """Human-readable `lpui show`: why/what + criteria + commits + repos + children."""
     lines: list[str] = []
     if kind == "plan":
-        _render_plan_full(full, lines)
+        _render_plan_full(full, lines, files=files)
     elif kind == "milestone":
-        _render_milestone_full(full, lines)
+        _render_milestone_full(full, lines, files=files)
     else:
-        _render_task_full(full, lines)
+        _render_task_full(full, lines, files=files)
     return "\n".join(lines)
 
 

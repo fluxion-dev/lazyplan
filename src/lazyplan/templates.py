@@ -135,6 +135,10 @@ Implementation interrogation (run before any row is written): pin down
 explicit in-scope and out-of-scope lists, the files/touch-points involved,
 edge cases, non-goals, and assumptions. Vague scope is rejected, not recorded.
 
+Commit strategy: state the ordered slices of small commits in `what`, and the
+check that keeps each commit green. Do not plan one batch commit for the whole
+plan. Every task desc names the slice it advances.
+
 Readability (enforced): write `why`/`what` for scanning — short paragraphs
 separated by blank lines, sections with headers or lists where needed
 (e.g. Scope in/out, Deliverables in order, Constraints/assumptions,
@@ -148,9 +152,10 @@ MILESTONE_BODY = """
 # milestone template — edit the frontmatter above; everything below is guidance.
 
 How `add-milestone` (and the TUI create command) uses this file:
-- `defaults`: `desc` should carry the narrative plus the INVEST check and
-  inputs/prerequisites, e.g. `As a [persona], I want [action] so that
-  [benefit]`. A milestone without them is not ready to cut.
+- `defaults`: `desc` should carry the narrative plus the INVEST check, the
+  inputs/prerequisites, and the ordered commit slices, e.g. `As a [persona],
+  I want [action] so that [benefit]`. A milestone without them is not ready
+  to cut.
 - `required`: keep `desc` here so slices always carry user value; drop it to
   allow title-only milestones.
 - `criteria`: Given/When/Then rows auto-added to every new milestone.
@@ -158,6 +163,9 @@ How `add-milestone` (and the TUI create command) uses this file:
   milestone (e.g. `Given [context], when [action], then [outcome]` with
   concrete values, never brackets). Each criterion must be exercisable by a
   named task.
+
+Commit order: map each task to the slice it advances. A milestone that only
+works as one batch commit is not ready to cut.
 
 Readability (enforced): structure `desc` in paragraphs and sections —
 narrative first, then inputs/prerequisites. Long single-blob text is

@@ -80,6 +80,39 @@ class TestParseTemplate(unittest.TestCase):
         task = templates.parse_template("task", templates.STARTERS["task"])
         self.assertNotIn("priority", task.defaults)
 
+    def test_starters_carry_commit_slice_guidance(self):
+        fragments = {
+            "plan": (
+                "Commit strategy",
+                "ordered slices of small commits",
+                "Do not plan one batch commit",
+            ),
+            "milestone": (
+                "ordered commit slices",
+                "Commit order",
+                "one batch commit",
+            ),
+            "task": (
+                "Commit slice",
+                "one or more small commits",
+                "Every commit is green",
+                "verification that keeps it green",
+            ),
+        }
+        for kind, expected in fragments.items():
+            with self.subTest(kind=kind):
+                body = templates.STARTERS[kind]
+                for fragment in expected:
+                    self.assertIn(fragment, body)
+
+    def test_local_repo_templates_match_starters_when_present(self):
+        repo_templates = Path(__file__).parent.parent / ".agents/lazyplan/templates"
+        if not repo_templates.is_dir():
+            self.skipTest("repo templates are local-only (gitignored)")
+        for kind, starter in templates.STARTERS.items():
+            with self.subTest(kind=kind):
+                self.assertEqual((repo_templates / f"{kind}.md").read_text(), starter)
+
     def test_render_starter_choices(self):
         lean = templates.TemplateChoices(
             require_why_what=False,

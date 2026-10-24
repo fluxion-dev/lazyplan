@@ -188,10 +188,7 @@ How `add-task` (and the TUI create command) uses this file:
   starters ship EMPTY on purpose: add DoD checklists per task, each one
   referencing the plan criterion it satisfies (never ship example text).
 
-Commit slice: one task lands as one or more small commits. Every commit is
-green — the relevant checks pass and the tree builds — and independently
-reviewable. Name what each commit proves and the verification that keeps it
-green. Never batch a whole milestone or plan into one commit.
+Commit slice: one task lands as one or more small commits. Every commit is green — the relevant checks pass and the tree builds — and independently reviewable. Name what each commit proves and the verification that keeps it green. Never batch a whole milestone or plan into one commit.
 
 Readability (enforced): structure `desc` in paragraphs and sections.
 Long single-blob text is rejected at creation; short descs stay legal.

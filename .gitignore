@@ -3,7 +3,6 @@ __pycache__/
 *.pyc
 *.db
 # lazyplan state (new home; db stays local, config+templates stay local too)
-.agents/lazyplan/
 # stale pre-move location: never read, never migrated; carry data via export/import
 .lazyplan/
 dist/
@@ -19,4 +18,3 @@ site/node_modules/
 
 # Vite site build output (CI rebuilds it via pages.yml; never committed)
 site/dist/
-.agents/skills/lazyplan/

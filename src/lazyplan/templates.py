@@ -179,14 +179,19 @@ TASK_BODY = """
 
 How `add-task` (and the TUI create command) uses this file:
 - `defaults`: `desc` must carry the technical how in sections: Approach,
-  code references, and inputs/prerequisites — a task missing them is not
-  ready to cut. Name real files, real constraints, real prerequisites:
-  cut tasks only from scouted ground.
+  code references, inputs/prerequisites, and the expected commit slice —
+  a task missing them is not ready to cut. Name real files, real
+  constraints, real prerequisites: cut tasks only from scouted ground.
 - `required`: keep `desc` here so tasks always carry context; drop it to
   allow title-only tasks. Titles start with a verb naming the target.
 - `criteria`: definition-of-done rows auto-added to every new task. Fresh
   starters ship EMPTY on purpose: add DoD checklists per task, each one
   referencing the plan criterion it satisfies (never ship example text).
+
+Commit slice: one task lands as one or more small commits. Every commit is
+green — the relevant checks pass and the tree builds — and independently
+reviewable. Name what each commit proves and the verification that keeps it
+green. Never batch a whole milestone or plan into one commit.
 
 Readability (enforced): structure `desc` in paragraphs and sections.
 Long single-blob text is rejected at creation; short descs stay legal.

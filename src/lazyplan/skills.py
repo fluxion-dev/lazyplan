@@ -129,14 +129,16 @@ lpui list --repo /path/to/checkout             # only matching rows
 
 ## Git proof
 
-Rows can carry the exact commits that shipped them. `link` attaches HEAD, or
-a SHA, from the current checkout; `--repo PATH` reads a different linked
-checkout. `commits` lists direct and inherited commits, and `--refresh`
-re-resolves cached metadata, marking missing commits `[stale]`:
+Rows can carry the exact commits that shipped them, including changed files.
+`link` attaches HEAD, or a SHA, from the current checkout; `--repo PATH` reads
+a different linked checkout. `commits` lists direct and inherited commits, and
+`--refresh` re-resolves cached metadata/files and marks missing commits
+`[stale]`. Add `--files` to `show` or `commits` to list paths.
 
 ```bash
 lpui --actor NAME link --kind task --id T [--sha SHA] [--repo PATH]
-lpui commits --kind task --id T [--refresh]
+lpui commits --kind task --id T [--refresh] [--files]
+lpui show --kind task --id T [--files]
 lpui git status --kind task --id T [--json]
 lpui git scan --since 7.days [--dry-run] [--repo PATH]
 ```
@@ -154,6 +156,11 @@ already linked to another row. A task with a started branch must be on that
 branch and the commit must be on the task branch history; otherwise lpui warns
 and leaves the link for you. `show` includes inherited commits, stale markers,
 and web URLs when the origin remote can be mapped.
+
+In the TUI, select a row and press `g` (or use **Open source trail**) to browse
+repo → commit → changed file plus linked PRs. `o` opens, `y` copies, `/`
+filters. Plans and milestones aggregate descendant work. `F` cycles source
+filters: all, linked, has PR, stale, unlinked.
 
 ## GitHub pull requests
 

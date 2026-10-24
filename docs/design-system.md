@@ -18,8 +18,10 @@ Status glyphs are single-cell: `○ todo`, `◐ doing`, `● done`, with ANSI
 `GLYPH KIND<id> title`, plus `done/total` progress on plan and milestone
 rows. Titles are bold, ids and progress are dim, done rows are dim.
 Long titles end in `…`; the full title lives in the preview/detail.
-Commit and repo chips stay in the preview (`N commits`, repo names) and
-detail, not in tree rows, so titles keep their width.
+Plan and milestone rows show compact source counts (`2c · 1 PR · 1 stale`)
+and repo chips; task rows show up to two short SHAs plus `+N`, a stale `!`,
+and a PR chip. The preview expands those counts with the newest commit and
+changed-file count. Titles keep priority over chips via width truncation.
 
 Empty states come from `EMPTY_NO_PLANS` / `EMPTY_FEED` (same in CLI and
 TUI).
@@ -29,8 +31,8 @@ TUI).
 - `FoldTree` posts `SelectionChanged` / `RowAction` (see `messages.py`);
   `NodeHighlighted` also tracks for compatibility. `update_preview()`
   renders a bounded card from `store.get_full`: title, progress, why/what,
-  three next open tasks, acceptance progress, commits/repos, and
-  `enter open · e edit`.
+  three next open tasks, acceptance progress, commit/PR/file counts, newest
+  commit, repos, and `enter open · e edit`.
 - Progressive disclosure: plans start collapsed. Right/`z` reveals
   milestones; tasks appear only when their milestone is expanded.
   `_expanded` is the source of truth; `_refreshing` suppresses the Tree's
@@ -73,12 +75,23 @@ inside a scrolling `#help` panel. `lpui help` prints the same string.
 `DetailScreen` is a plain `Screen` with two modes.
 Read mode: breadcrumb (`P2 › M3 › T4`), title/status, why/what (or
 details), acceptance checklist, child milestones/tasks with progress,
-commits, and repos. No editable widgets.
+pull requests, source summary (repos, branch/dirty, commit/file/PR counts,
+latest commits), commits, and repos. No editable widgets.
 Edit mode (`e`): labeled Title/Why/What or Details fields, a multi-line
 TextArea, Save/Cancel, `ctrl+s`, and a dirty guard that confirms before
 discarding. Row actions: `s` status, `x` tick next criterion, `a` add
-criterion, `n` add child, `d` delete with an exact cascade summary;
-`Esc` backs out. Delete focuses Cancel by default.
+criterion, `g` source trail, `n` add child, `d` delete with an exact
+cascade summary; `Esc` backs out. Delete focuses Cancel by default.
+
+## Source screen (`source_screen.py`)
+
+`SourceScreen` is a plain `Screen` opened by `g` from the tree or detail.
+It groups cached provenance into repository → commit → changed file, with
+linked PRs under the repo, and keeps a Static preview for the highlighted
+node. `o` opens the selected commit/PR/file URL, `y` copies the SHA/path/
+URL, `/` filters, `r` rebuilds from cache, and `Esc` returns. The model is
+built by `source.build_source_trail`; opening the screen never calls the
+network, and live git reads are limited to selected repos.
 
 ## Forms
 
@@ -106,12 +119,18 @@ tests enforce the match.
 | d | delete selection | tree, detail |
 | / | filter by text | tree |
 | f | change status filter | tree |
+| F | cycle source filter | tree |
+| g | open source trail | tree, detail |
 | A | show/hide completed plans | tree |
 | z / Z | fold one / fold all | tree |
 | ? / F1 | help | tree |
 | c | command palette | tree |
 | q | quit | tree |
 | esc | back / cancel / clear filter | all |
+| o | open selected source item | source |
+| y | copy selected SHA/path/URL | source |
+| / | filter source tree | source |
+| r | rebuild source trail | source |
 
 ## Reusable bases
 

@@ -232,7 +232,8 @@ lpui criterion tick --id 4
 lpui criterion untick --id 4
 lpui criterion delete --id 4
 lpui link --kind task --id 1 [--sha HASH] [--repo PATH]
-lpui commits --kind task --id 1 [--refresh]
+lpui commits --kind task --id 1 [--refresh] [--files]
+lpui show --kind task --id 1 [--files]
 lpui unlink --kind task --id 1 --sha HASH
 lpui git status --kind task --id 1 [--json]
 lpui git scan --since 7.days [--dry-run] [--repo PATH]
@@ -262,11 +263,12 @@ manual. Legacy flat verbs (`add-plan`, `add-task`, `update`, `status`, `delete`,
 
 ## Git proof
 
-Rows can carry the exact commits that shipped them. `link` attaches HEAD, or a
-SHA, from the current checkout. Pass `--repo PATH` to read a different linked
-checkout without changing directory. `commits` lists direct and inherited
-commits; `--refresh` re-resolves their cached metadata and marks commits that
-no longer resolve as `[stale]`.
+Rows can carry the exact commits that shipped them, including the files each
+commit changed. `link` attaches HEAD, or a SHA, from the current checkout. Pass
+`--repo PATH` to read a different linked checkout without changing directory.
+`commits` lists direct and inherited commits; `--refresh` re-resolves their
+cached metadata and changed files and marks commits that no longer resolve as
+`[stale]`. Add `--files` to `show` or `commits` to list changed paths.
 
 `task start` sets a task doing and records an existing branch plus its base. It
 uses the current branch unless `--branch NAME` names another existing branch.
@@ -289,6 +291,29 @@ Marking a row done links HEAD only when the tree is clean and HEAD is not
 already linked to another row. A task with a started branch must be on that
 branch and the commit must be on the task branch history. Otherwise lpui prints
 one warning and leaves the link for you; the status move is not blocked.
+
+## Source trail (TUI)
+
+Select a plan, milestone, or task and press `g` (or run **Open source trail**
+from the palette) to browse where it landed. The screen groups each checkout
+into repository → commits → changed files, with linked pull requests alongside.
+Plans and milestones aggregate descendant work, so a plan-level trail shows
+which tasks produced each commit.
+
+Keys:
+
+- `j`/`k` or arrows move; `left`/`right` fold and unfold.
+- `o` opens the selected commit, PR, or file in the browser.
+- `y` copies the selected SHA, file path, or URL.
+- `/` filters repos, commits, files, and PRs; `enter` applies, `esc` closes.
+- `r` rebuilds from cached data; `esc` returns to the previous screen.
+
+The detail page shows a compact source summary and hints at `g`. The main tree
+shows compact commit/PR chips. `F` cycles source filters: all, linked, has PR,
+stale, unlinked. Dirty state is shown per selected checkout; it is not a
+whole-tree filter because it requires live git reads.
+
+Opening the Source screen makes no network call. Browser launch is explicit.
 
 ## GitHub pull requests
 

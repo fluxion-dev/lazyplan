@@ -6,6 +6,9 @@ compatibility: opencode, claude-code, codex, gemini-cli, cursor
 ---
 # tui-layout — containers and scroll (Textual 8.2.8 pinned)
 
+Reviewed 2026-10-24 against the current layout guide and container how-to.
+8.2.8 is the latest PyPI release.
+
 Distilled from https://textual.textualize.io/guide/layout/ and
 https://textual.textualize.io/how-to/work-with-containers/.
 
@@ -20,8 +23,12 @@ https://textual.textualize.io/how-to/work-with-containers/.
 - Collapsed `Collapsible` sections cost one row each — the default for
   long lists; only the focus chain opens.
 - `Screen` stacks vertically by default. Dock chrome (`Header`/`Footer`);
-  `1fr` shares whatever remains.
+  `1fr` shares whatever remains. `Footer(compact=True)` and
+  `Header(show_clock=False)` reclaim chrome rows without losing bindings.
 - `display: none` removes layout; `visibility: hidden` keeps space.
+- Source screen: `#source-main` is a `Horizontal` with two
+  `VerticalScroll` children (tree and preview); the filter Input sits above
+  it and is hidden until `/`.
 
 ## Mount / scroll discipline
 

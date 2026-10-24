@@ -1,8 +1,37 @@
 # Textual research notes (pinned 8.2.8)
 
+Reviewed 2026-10-24 against the current guide, widget pages, and changelog.
+Textual 8.2.8 remains the latest PyPI release (2026-06-30), so the pin is
+current rather than merely frozen.
+
 Distilled from tutorial, guide, widget gallery, how-to, and FAQ at
 https://textual.textualize.io/ — links, not copies. Each section ends with
 what it means for lazyplan (keyboard-only Tree + modal forms).
+
+## 8.2.x deltas worth knowing
+
+- 8.2.0 added selection over containers and auto-scroll on select
+  (`App.ENABLE_SELECT_AUTO_SCROLL`, `SELECT_AUTO_SCROLL_LINES`,
+  `SELECT_AUTO_SCROLL_SPEED`). Useful for copying commit/PR text from the
+  detail page; don't build a second scroll model around it.
+- 8.2.4 added `DOMNode.update_classes(element, add=..., remove=...)` for
+  atomic multi-class state changes. Prefer it when a row switches between
+  mutually exclusive visual states.
+- 8.2.5 added `ansi-dark` / `ansi-light` themes and an `ansi` theme value.
+- 8.2.7/8.2.8 improved the Kitty keyboard protocol, including modifier
+  detection and alt+backspace on supported terminals. ctrl/alt/cmd bindings
+  are safer than before, but still probe with `textual keys` and keep
+  letter/arrow fallbacks.
+- Current widget constructors add `Footer(compact=...)`,
+  `Footer(show_command_palette=...)`, `Input(compact=...)`,
+  `Checkbox(compact=...)`, `OptionList(compact=...)`, and
+  `SelectionList(compact=...)`. `TextArea` also exposes `soft_wrap`,
+  `read_only`, `show_line_numbers`, `theme`, and `highlight_cursor_line`.
+- `App.push_screen_wait()` waits for a screen result, but only from a worker;
+  lazyplan's callback-based modal flow stays simpler and avoids nested waits.
+- `Tree` exposes `reset()`, `clear()`, `select_node()`, `scroll_to_node()`,
+  `move_cursor()`, and `set_label()` for programmatic rebuilds without
+  reaching into node internals.
 
 ## Mental model
 

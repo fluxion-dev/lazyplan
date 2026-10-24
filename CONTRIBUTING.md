@@ -53,6 +53,24 @@ site/                      marketing site (Vite)
 Keep the CLI and the TUI on the same data model. The plan is the design: write
 the row before the code, and keep the row current when the code changes.
 
+## Screenshots
+
+Site screenshots come from the real TUI, never hand-drawn. `tools/capture-screens.py`
+builds a throwaway git repo and plan database with fixed commit dates and a
+fictional `acme/web` remote, opens the source trail at 130x35, and writes the
+PNG and WebP into `site/public/screens/`.
+
+```bash
+.venv/bin/python tools/capture-screens.py
+.venv/bin/python tools/capture-screens.py --out /tmp/shots --keep-svg /tmp/trail.svg
+```
+
+Requires `git`, ImageMagick 7 with WebP and librsvg, and textual installed in
+the venv. The fixture is deterministic: two runs produce byte-identical files,
+so a diff of the committed images shows exactly what changed. Add new content
+by extending `COMMITS` and `PRS` in the tool, then commit both formats and
+delete the intermediate SVG.
+
 ## Style
 
 - Plain words in user-facing text. Name the outcome, not the implementation.

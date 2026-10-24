@@ -355,7 +355,9 @@ class TestSkillsDirOverride(unittest.TestCase):
         self.old_env = os.environ.pop("LAZYPLAN_SKILLS_DIR", None)
 
     def tearDown(self):
-        if self.old_env is not None:
+        if self.old_env is None:
+            os.environ.pop("LAZYPLAN_SKILLS_DIR", None)
+        else:
             os.environ["LAZYPLAN_SKILLS_DIR"] = self.old_env
         self.tmp.cleanup()
 

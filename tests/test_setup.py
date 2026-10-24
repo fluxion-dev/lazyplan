@@ -143,6 +143,29 @@ class TestFindings(unittest.TestCase):
         self._repo_db()
         self.assertEqual(setup.detect_findings(self.repo, self.home, explicit_db="/tmp/x.db"), [])
 
+    def test_repo_resources_without_db_are_a_finding(self):
+        (self.repo / PLAN_DIR / "templates").mkdir(parents=True)
+        state = setup.SetupState(placement=setup.HOME)
+        kinds = [f.kind for f in setup.detect_findings(self.repo, self.home, state)]
+        self.assertIn("repo-resources", kinds)
+
+    def test_legacy_per_agent_database_is_a_finding(self):
+        legacy = self.home / ".config/opencode/skills/lazyplan/lazyplan.db"
+        legacy.parent.mkdir(parents=True)
+        Store(legacy)
+        kinds = [f.kind for f in setup.detect_findings(self.repo, self.home)]
+        self.assertIn("legacy-db", kinds)
+
+    def test_outdated_skill_copy_is_a_finding(self):
+        skill = self.home / ".agents/skills/lazyplan/SKILL.md"
+        skill.parent.mkdir(parents=True)
+        skill.write_text("---\nname: lazyplan\n---\nold init instructions\n")
+        findings = [
+            f for f in setup.detect_findings(self.repo, self.home) if f.kind == "stale-skill"
+        ]
+        self.assertEqual(len(findings), 1)
+        self.assertTrue(findings[0].state)
+
 
 if __name__ == "__main__":
     unittest.main()

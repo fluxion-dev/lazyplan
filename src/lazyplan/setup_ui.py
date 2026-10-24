@@ -16,7 +16,7 @@ from typing import TextIO
 from .design import ANSI, ASCII_ICONS, ICONS
 from .skills import AgentHost
 
-Progress = Callable[[str], None]
+Progress = Callable[[str], object]
 
 
 def color_enabled(stream: TextIO, json_mode: bool = False) -> bool:

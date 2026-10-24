@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
+import subprocess
 import sys
 import time
 from collections.abc import Callable
@@ -87,15 +87,35 @@ def _cmd_setup(store: Store | None, args: argparse.Namespace, actor: str) -> int
         and sys.stderr.isatty()
     )
     if interactive:
-        result = setup.run_wizard(os.getcwd(), home, state, version)
+        result = setup.run_wizard(Path.cwd(), home, state, version)
         if result is None:
             if getattr(args, "json", False):
                 return _emit(args, {"cancelled": True})
             return 0
     else:
-        choice = setup.choice_from_args(args, os.getcwd(), home, state)
-        root = find_repo_root(os.getcwd())
+        choice = setup.choice_from_args(args, Path.cwd(), home, state)
+        root = find_repo_root(Path.cwd())
         result = setup.apply_choice(choice, root, home, version)
+    if result.get("placement") == setup.HOME:
+        findings = setup.detect_findings(Path.cwd(), home, setup.load_state(home))
+        if findings:
+            review_prompt = (
+                not getattr(args, "json", False)
+                and setup_ui.stdin_tty()
+                and sys.stderr.isatty()
+                and (interactive or bool(getattr(args, "post_upgrade", False)))
+            )
+            setup.review_findings(
+                findings,
+                setup.load_state(home),
+                home,
+                find_repo_root(Path.cwd()),
+                read=input,
+                write=sys.stderr,
+                color=setup_ui.color_enabled(sys.stderr, bool(getattr(args, "json", False))),
+                allow_prompt=review_prompt,
+                json_mode=bool(getattr(args, "json", False)),
+            )
     if getattr(args, "json", False):
         return _emit(args, result)
     print(f"database:  {result['db']}")
@@ -116,7 +136,7 @@ def _cmd_doctor(store: Store | None, args: argparse.Namespace, actor: str) -> in
     home = Path.home()
     state = setup.load_state(home)
     choice = setup.default_choice(Path.cwd(), home, state)
-    root = find_repo_root(os.getcwd())
+    root = find_repo_root(Path.cwd())
     layout, skill_files = setup.preview(choice, root, home)
     report = setup_layout.inventory(layout)
     report["findings"] = [
@@ -146,7 +166,7 @@ def _cmd_doctor(store: Store | None, args: argparse.Namespace, actor: str) -> in
 
 
 def _cmd_info(store: Store, args: argparse.Namespace, actor: str) -> int:
-    root = find_repo_root(os.getcwd())
+    root = find_repo_root(Path.cwd())
     plan_dir = store.path.parent
     try:
         contents = sorted(f.name for f in plan_dir.iterdir()) if plan_dir.is_dir() else []
@@ -865,7 +885,7 @@ def _cmd_feed(store: Store, args: argparse.Namespace, actor: str) -> int:
         time.sleep(args.interval)
 
 
-def _cmd_completion(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_completion(store: Store | None, args: argparse.Namespace, actor: str) -> int:
     parser = build_parser()
     subs = next(a for a in parser._actions if isinstance(a, argparse._SubParsersAction))
     cmds = list(subs.choices)
@@ -952,7 +972,29 @@ def _cmd_upgrade(store: Store | None, args: argparse.Namespace, actor: str) -> i
     if args.json:
         return _emit(args, payload)
     print(f"upgraded lpui v{installed} -> v{latest} ({info.method})")
+    _post_upgrade_review()
     return 0
+
+
+def _stderr_is_tty() -> bool:
+    try:
+        return sys.stderr.isatty()
+    except (AttributeError, ValueError):
+        return False
+
+
+def _post_upgrade_review() -> None:
+    """Run setup review with the just-installed binary; never break the upgrade."""
+    if not (setup_ui.stdin_tty() and _stderr_is_tty()):
+        return
+    try:
+        subprocess.run(
+            [sys.argv[0], "setup", "--post-upgrade"],
+            check=False,
+            timeout=300,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return
 
 
 _GROUP_CMDS: dict[tuple[str, str], str] = {
@@ -1080,6 +1122,9 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_setup(None, args, actor)
     if args.cmd == "doctor":
         return _cmd_doctor(None, args, actor)
+    if args.cmd == "completion":
+        # Install-time helper: never create or open a database.
+        return _cmd_completion(None, args, actor)
     # `watch` is `feed --follow`
     if args.cmd == "watch":
         args.cmd = "feed"

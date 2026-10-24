@@ -1,12 +1,12 @@
 """First-run setup: remembered choices, placement, findings, and safe moves.
 
-Setup replaces `lpui init`. It runs before the database opens, remembers what it
-installed in `~/.lazyplan/setup.json`, and reviews layout drift once per finding
+Setup runs before the database opens, remembers what it installed in `~/.lazyplan/setup.json`, and reviews layout drift once per finding
 instead of nagging on every upgrade. Stdlib only.
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shutil
@@ -236,12 +236,17 @@ def choice_from_args(
         )
     if find_repo_root(cwd) is None:
         placement = HOME
-    raw_agents = str(getattr(args, "agents", "") or "").strip()
+    raw_agents = str(getattr(args, "agents", "") or os.environ.get("LAZYPLAN_AGENTS", "")).strip()
     if raw_agents:
         agents = _parse_agents(raw_agents, home)
     else:
         agents = state.agents or _parse_agents("", home)
-    skills_dir = str(getattr(args, "skills_dir", "") or "").strip() or state.skills_dir or None
+    skills_dir = (
+        str(getattr(args, "skills_dir", "") or "").strip()
+        or os.environ.get("LAZYPLAN_SKILLS_DIR", "").strip()
+        or state.skills_dir
+        or None
+    )
     return SetupChoice(
         placement=placement,
         agents=agents,
@@ -355,6 +360,22 @@ def run_wizard(
     read = read or (lambda: input(""))
     write = write or sys.stderr
     color = setup_ui.color_enabled(write, json_mode)
+    try:
+        return _run_wizard(cwd, home, state, version, read, write, color)
+    except (EOFError, KeyboardInterrupt):
+        setup_ui.note(write, "Setup cancelled; nothing was written.", color, "warn")
+        return None
+
+
+def _run_wizard(
+    cwd: Path,
+    home: Path,
+    state: SetupState,
+    version: str,
+    read: Any,
+    write: Any,
+    color: bool,
+) -> dict[str, Any] | None:
     root = find_repo_root(cwd)
     setup_ui.banner(write, color, version)
     repo_db = repo_plan_db_path(root) if root is not None else None
@@ -392,6 +413,167 @@ def run_wizard(
     return result
 
 
+def _record(state: SetupState, finding: Finding, decision: str) -> None:
+    state.decisions[finding.fingerprint] = {
+        "decision": decision,
+        "seen_at": _timestamp(),
+        "path": str(finding.path),
+        "state": finding.state,
+    }
+
+
+def _move_sources(repo_db: Path, root: Path | None) -> list[Path]:
+    """Every file a move touches, in backup order."""
+    sources = [repo_db]
+    config = repo_db.parent / "config.json"
+    templates = repo_db.parent / "templates"
+    if config.is_file():
+        sources.append(config)
+    if templates.is_dir():
+        sources.append(templates)
+    if root is not None:
+        for name in ("AGENTS.md", ".gitignore"):
+            path = root / name
+            if path.is_file():
+                sources.append(path)
+    return sources
+
+
+def _merge_templates(source: Path, dest: Path) -> None:
+    """Move loose template files home without overwriting existing ones."""
+    dest.mkdir(parents=True, exist_ok=True)
+    for item in source.iterdir():
+        target = dest / item.name
+        if item.is_file() and not target.exists():
+            shutil.move(str(item), str(target))
+
+
+def _strip_repo_markers(root: Path) -> None:
+    """Remove the generated AGENTS.md block and gitignore lines after a move."""
+    agents = root / "AGENTS.md"
+    if agents.is_file():
+        setup_layout._strip_agents(agents)
+    gitignore = root / ".gitignore"
+    if gitignore.is_file():
+        setup_layout._strip_gitignore(gitignore)
+
+
+def _prune_moved_dirs(repo_dir: Path, templates: Path) -> None:
+    """Remove only the empty directories a move emptied."""
+    try:
+        if templates.is_dir() and not any(templates.iterdir()):
+            templates.rmdir()
+        if repo_dir.is_dir() and not any(repo_dir.iterdir()):
+            repo_dir.rmdir()
+    except OSError:
+        pass
+
+
+def move_repo_db(
+    repo_db: Path,
+    home: Path | None = None,
+    repo_root: Path | None = None,
+) -> tuple[bool, str]:
+    """Move an untracked repo database home after backing up every touched file."""
+    home = home or Path.home()
+    home_db = shared_db_path(home)
+    repo_db = Path(repo_db)
+    if home_db.is_file() and plans_in(home_db) > 0 and plans_in(repo_db) > 0:
+        return (
+            False,
+            "both databases contain plans; export one and import it before moving",
+        )
+    root = repo_root or (
+        repo_db.parent.parent.parent if repo_db.parent.name == "lazyplan" else None
+    )
+    backups = setup_layout._new_backup_dir(home)
+    for source in _move_sources(repo_db, root):
+        setup_layout._backup_file(backups, source)
+    if home_db.is_file():
+        setup_layout._backup_file(backups, home_db)
+        home_db.unlink()
+    home_db.parent.mkdir(parents=True, exist_ok=True)
+    shutil.move(str(repo_db), str(home_db))
+    templates = repo_db.parent / "templates"
+    config = repo_db.parent / "config.json"
+    if templates.is_dir():
+        _merge_templates(templates, home_db.parent / "templates")
+    if config.is_file():
+        config.unlink()
+    if root is not None:
+        _strip_repo_markers(root)
+    _prune_moved_dirs(repo_db.parent, templates)
+    return True, f"moved {repo_db} to {home_db} (backup: {backups})"
+
+
+def review_findings(
+    findings: list[Finding],
+    state: SetupState,
+    home: Path | None = None,
+    root: Path | None = None,
+    read: Any = None,
+    write: Any = None,
+    color: bool = False,
+    allow_prompt: bool = True,
+    json_mode: bool = False,
+) -> list[str]:
+    """Offer one choice per undecided finding; remember the answer."""
+    home = home or Path.home()
+    write = write or sys.stderr
+    read = read or (lambda: input(""))
+    notes: list[str] = []
+    for finding in findings:
+        if finding.fingerprint in state.decisions:
+            continue
+        if finding.kind != "repo-db":
+            if finding.kind == "db-conflict":
+                notes.append(
+                    "both databases contain plans; export one with "
+                    "`lpui export --format json` and import it before moving"
+                )
+            elif finding.kind in ("legacy-dir", "stale-dir"):
+                notes.append(f"{finding.detail} at {finding.path} is not used by this version")
+            elif finding.kind == "legacy-db":
+                notes.append(
+                    f"older database at {finding.path} is no longer read; "
+                    "import it with `lpui import --file` or delete it"
+                )
+            elif finding.kind == "repo-resources":
+                notes.append(
+                    f"repo resources at {finding.path} are ignored while plans live at home; "
+                    "run `lpui setup --placement repo` to use them"
+                )
+            elif finding.kind == "stale-skill":
+                notes.append(f"older skill copy at {finding.path} is refreshed with a backup")
+            continue
+        if finding.state == "tracked":
+            notes.append(f"{finding.path} is tracked by git; leaving it in place")
+            continue
+        if not allow_prompt:
+            notes.append(
+                f"repo database {finding.path} is {finding.state}; run `lpui setup` to move it home"
+            )
+            continue
+        action = setup_ui.ask_migration(
+            write,
+            read,
+            finding.path,
+            finding.state,
+            shared_db_path(home),
+            color,
+        )
+        if action == "move":
+            ok, message = move_repo_db(finding.path, home, root)
+            notes.append(message)
+            if not ok:
+                # A refused move must stay armed for the next human run.
+                continue
+            state.placement = HOME
+        _record(state, finding, action)
+        save_state(state, home)
+    return notes
+
+
 def ensure(
     cmd: str | None,
     args: Any,
@@ -424,7 +606,20 @@ def ensure(
     if human and can_prompt and first:
         return run_wizard(cwd, home, state, version, json_mode=bool(getattr(args, "json", False)))
     choice = choice_from_args(args, cwd, home, state)
-    result = apply_choice(choice, find_repo_root(cwd), home, version)
+    root = find_repo_root(cwd)
+    result = apply_choice(choice, root, home, version)
+    if human and findings:
+        fresh = load_state(home)
+        review_findings(
+            findings,
+            fresh,
+            home,
+            root,
+            write=sys.stderr,
+            color=setup_ui.color_enabled(sys.stderr, bool(getattr(args, "json", False))),
+            allow_prompt=can_prompt,
+            json_mode=bool(getattr(args, "json", False)),
+        )
     return result
 
 
@@ -484,4 +679,68 @@ def detect_findings(
                     detail="pre-move plan directory",
                 )
             )
+        out.extend(_repo_resource_findings(root, state))
+    out.extend(_legacy_db_findings(home))
+    out.extend(_stale_skill_findings(home))
+    return out
+
+
+def _repo_resource_findings(root: Path, state: SetupState) -> list[Finding]:
+    """Repo templates/config/skills ignored while plans live at home."""
+    if state.placement != HOME:
+        return []
+    plan_dir = root / ".agents" / "lazyplan"
+    shared = plan_dir / "lazyplan.db"
+    if shared.is_file() or not plan_dir.is_dir():
+        return []
+    return [
+        Finding(
+            key=f"repo-resources:{plan_dir}",
+            kind="repo-resources",
+            path=plan_dir,
+            detail="repo resources while plans live at home",
+        )
+    ]
+
+
+def _legacy_db_findings(home: Path) -> list[Finding]:
+    """Old per-agent databases that resolution no longer reads."""
+    home_db = shared_db_path(home)
+    out: list[Finding] = []
+    for path in skills.agent_local_db_candidates(home):
+        if path == home_db or not path.is_file():
+            continue
+        out.append(
+            Finding(
+                key=f"legacy-db:{path}",
+                kind="legacy-db",
+                path=path,
+                detail="old per-agent database",
+            )
+        )
+    return out
+
+
+def _stale_skill_findings(home: Path) -> list[Finding]:
+    """Installed generated skill copies older than the current render."""
+    current = skills.render_skill()
+    out: list[Finding] = []
+    for path in _installed_skill_files(home):
+        try:
+            if not path.is_file():
+                continue
+            text = path.read_text()
+        except OSError:
+            continue
+        if text == current or "name: lazyplan" not in text[:500]:
+            continue
+        out.append(
+            Finding(
+                key=f"stale-skill:{path}",
+                kind="stale-skill",
+                path=path,
+                detail="outdated generated skill",
+                state=hashlib.sha256(text.encode()).hexdigest()[:12],
+            )
+        )
     return out

@@ -231,6 +231,20 @@ class TestUpgradeCommand(unittest.TestCase):
         )
         self.assertIn("latest", payload)
 
+    def test_successful_upgrade_reviews_setup_once(self):
+        with (
+            mock.patch.object(cli_mod, "detect", return_value=PIPX_INFO),
+            mock.patch.object(cli_mod, "latest_version", return_value="9.9.9"),
+            mock.patch.object(cli_mod, "run_upgrade"),
+            mock.patch.object(cli_mod.setup_ui, "stdin_tty", return_value=True),
+            mock.patch.object(cli_mod, "_stderr_is_tty", return_value=True),
+            mock.patch.object(cli_mod.subprocess, "run") as spawn,
+        ):
+            code, _out, _ = self._run(["upgrade"])
+        self.assertEqual(code, 0)
+        spawn.assert_called_once()
+        self.assertEqual(spawn.call_args.args[0][1:], ["setup", "--post-upgrade"])
+
     def test_already_latest(self):
         with (
             mock.patch.object(cli_mod, "detect", return_value=VENV_INFO),

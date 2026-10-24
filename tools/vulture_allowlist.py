@@ -118,7 +118,6 @@ old_start
 old_count
 new_start
 new_count
-plan_repairs
-apply_repairs
 ask_migration
 _skills_dir_override
+prompt_confirm

@@ -134,7 +134,7 @@ class TestApply(LayoutCase):
     def test_old_skill_copy_is_backed_up_and_refreshed(self):
         target = self.home / ".config/opencode/skills/lazyplan/SKILL.md"
         target.parent.mkdir(parents=True)
-        target.write_text("---\nname: lazyplan\ndescription: old\n---\nrun lpui init\n")
+        target.write_text("---\nname: lazyplan\ndescription: old\n---\nrun an old command\n")
         result = setup.apply_choice(self.choice("home"), self.repo, self.home, "0.23.0")
         self.assertIn(str(target), result["refreshed"])
         self.assertEqual(target.read_text(), skills.render_skill())
@@ -194,6 +194,12 @@ class TestCommandSurface(LayoutCase):
         before = setup.load_state(self.home).to_dict()
         self._run(["list", "--json"])
         self.assertEqual(setup.load_state(self.home).to_dict(), before)
+
+    def test_install_helpers_do_not_setup(self):
+        self._run(["completion", "--shell", "bash"])
+        self._run(["doctor"])
+        self.assertFalse(setup.state_path(self.home).exists())
+        self.assertFalse((self.home / ".lazyplan/lazyplan.db").exists())
 
     def test_no_setup_env_skips_state(self):
         old = os.environ.get(setup.NO_SETUP_ENV)

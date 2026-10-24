@@ -536,7 +536,9 @@ class TestInitCli(unittest.TestCase):
 
     def tearDown(self):
         os.chdir(self.old_cwd)
-        if self.old_env is not None:
+        if self.old_env is None:
+            os.environ.pop("LAZYPLAN_DB", None)
+        else:
             os.environ["LAZYPLAN_DB"] = self.old_env
         if self.old_xdg is None:
             os.environ.pop("XDG_DATA_HOME", None)
@@ -555,36 +557,34 @@ class TestInitCli(unittest.TestCase):
     def _init_json(self, argv):
         buf = io.StringIO()
         with redirect_stdout(buf):
-            self.assertEqual(lpui_main(argv), 0)
+            self.assertEqual(lpui_main([*argv, "--json"]), 0)
         return json.loads(buf.getvalue())
 
-    def test_init_no_skills_flag(self):
+    def test_setup_no_skills_flag(self):
         os.chdir(self.repo)
-        payload = self._init_json(["init", "--no-skills"])
-        self.assertEqual(payload["skills"]["scope"], "none")
+        payload = self._init_json(["setup", "--yes", "--no-skills"])
+        self.assertEqual(payload["skills"], [])
         self.assertFalse(os.path.exists(os.path.join(self.repo, ".agents", "skills")))
 
-    def test_init_scope_project_writes_files(self):
+    def test_setup_repo_writes_files(self):
         os.chdir(self.repo)
-        payload = self._init_json(["init", "--skills-scope", "project"])
-        self.assertEqual(payload["skills"]["scope"], "project")
+        payload = self._init_json(["setup", "--placement", "repo", "--yes"])
         self.assertTrue(
             os.path.isfile(os.path.join(self.repo, ".agents", "skills", "lazyplan", "SKILL.md"))
         )
-        self.assertTrue(any("SKILL.md" in line for line in payload["skills"]["installed"]))
+        self.assertTrue(any("SKILL.md" in line for line in payload["installed"]))
 
-    def test_init_json_stays_machine_readable(self):
+    def test_setup_json_stays_machine_readable(self):
         # --json must not prompt even on a tty: stdout parses as JSON.
         os.chdir(self.repo)
-        payload = self._init_json(["init", "--json"])
+        payload = self._init_json(["setup", "--json"])
         self.assertIn("db", payload)
         self.assertIn("skills", payload)
 
-    def test_init_yes_installs_defaults(self):
+    def test_setup_yes_installs_defaults(self):
         os.chdir(self.repo)
-        payload = self._init_json(["init", "--yes"])
+        self._init_json(["setup", "--yes"])
         # Zero-touch default: local install, no repo writes, one dir per agent.
-        self.assertEqual(payload["skills"]["scope"], "global")
         self.assertFalse(os.path.exists(os.path.join(self.repo, ".agents")))
         self.assertTrue(
             os.path.isfile(
@@ -595,36 +595,27 @@ class TestInitCli(unittest.TestCase):
         )
         self.assertFalse(os.path.exists(os.path.join(os.environ["HOME"], ".agents", "skills")))
 
-    def test_init_team_yes_writes_repo_files(self):
+    def test_setup_repo_yes_writes_repo_files(self):
         os.chdir(self.repo)
-        payload = self._init_json(["init", "--team", "--yes"])
-        self.assertEqual(payload["skills"]["scope"], "project")
+        self._init_json(["setup", "--placement", "repo", "--yes"])
         self.assertTrue(
             os.path.isfile(os.path.join(self.repo, ".agents", "skills", "lazyplan", "SKILL.md"))
         )
 
-    def test_init_yes_adds_gitignore(self):
+    def test_setup_adds_gitignore_once(self):
         os.chdir(self.repo)
-        # Zero-touch --yes leaves the repo alone.
-        payload = self._init_json(["init", "--yes"])
+        # Zero-touch setup leaves the repo alone.
+        self._init_json(["setup", "--yes"])
         self.assertFalse(os.path.exists(os.path.join(self.repo, ".gitignore")))
-        self.assertEqual(payload["gitignore"]["added"], [])
-        # Team --yes offers repo gitignore entries.
-        payload = self._init_json(["init", "--team", "--yes"])
+        # Repo placement writes lazyplan entries.
+        self._init_json(["setup", "--placement", "repo", "--yes"])
         gi = os.path.join(self.repo, ".gitignore")
-        self.assertTrue(os.path.isfile(gi))
         text = open(gi).read()
         self.assertIn(".agents/lazyplan/", text)
         self.assertIn(".agents/skills/lazyplan/", text)
-        self.assertIn(".agents/lazyplan/", payload["gitignore"]["added"])
-        # second team run adds nothing twice
-        self._init_json(["init", "--team", "--yes"])
+        # second run adds nothing twice
+        self._init_json(["setup", "--placement", "repo", "--yes"])
         self.assertEqual(open(gi).read().count(".agents/lazyplan/"), 1)
-
-    def test_init_without_yes_leaves_gitignore_alone(self):
-        os.chdir(self.repo)
-        self._init_json(["init", "--skills-scope", "project"])
-        self.assertFalse(os.path.exists(os.path.join(self.repo, ".gitignore")))
 
 
 class TestAppendGitignore(unittest.TestCase):

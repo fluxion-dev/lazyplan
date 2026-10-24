@@ -497,16 +497,6 @@ class SkillPlan:
         }
 
 
-def _resolve_tools(args: Namespace, home: Path) -> list[str] | None:
-    """Explicit --agents/env, else detected native hosts, else the default."""
-    tools = _agents_override(args)
-    if tools is not None:
-        return tools
-    hosts = detect_agents(home)
-    native = [h.key for h in hosts if h.detected and h.key in KNOWN_TOOLS]
-    return native or ["opencode"]
-
-
 def skill_destinations(
     scope: str,
     repo_root: Path | None,
@@ -572,60 +562,24 @@ def _plan_for(
     )
 
 
-def _wizard_plan(
-    answers: WizardAnswers,
-    repo_root: Path | None,
-    home: Path,
-) -> SkillPlan:
-    if answers.scope == "none":
-        return _empty_plan("user skipped skill setup")
-    return _plan_for(
-        answers.scope,
-        repo_root,
-        home,
-        answers.picked,
-        answers.skills_dir,
-        with_agents_md=answers.with_agents_md,
-    )
-
-
-def plan_init(
-    args: Namespace,
+def plan_choice(
+    choice: object,
     repo_root: Path | None,
     home: Path | None = None,
-    read: Callable[[], str] | None = None,
-    write: TextIO | None = None,
 ) -> SkillPlan:
-    """Resolve skill destinations without writing anything.
-
-    Interactive input is read here; every write happens later in
-    `apply_skill_plan`, so init can preflight the whole resource layout.
-    """
-    import sys
-
+    """Resolve skill destinations from a SetupChoice (no argparse, no prompts)."""
     home = home or Path.home()
-    out: TextIO = write if write is not None else sys.stderr
-    no_skills = bool(getattr(args, "no_skills", False))
-    scope_arg = str(getattr(args, "skills_scope", "") or "").strip()
-    if bool(getattr(args, "team", False)) and not scope_arg:
-        scope_arg = "project"
     if os.environ.get("LAZYPLAN_NO_SKILLS", "").strip():
         return _empty_plan("$LAZYPLAN_NO_SKILLS")
-    if no_skills or scope_arg == "none":
+    if getattr(choice, "explicit_db", None):
+        return _empty_plan("explicit database")
+    if bool(getattr(choice, "no_skills", False)):
         return _empty_plan("--no-skills")
-    tools = _resolve_tools(args, home)
-    skills_dir = _skills_dir_override(args)
-    if scope_arg in ("project", "global", "both"):
-        return _plan_for(scope_arg, repo_root, home, tools, skills_dir)
-    if (
-        bool(getattr(args, "yes", False))
-        or bool(getattr(args, "check", False))
-        or bool(getattr(args, "json", False))
-        or not should_prompt(args, bool(sys.stdin.isatty() and sys.stdout.isatty()))
-    ):
-        return _plan_for("global", repo_root, home, tools, skills_dir)
-    answers = _ask_wizard_answers(repo_root, home, read, out)
-    return _wizard_plan(answers, repo_root, home)
+    placement = str(getattr(choice, "placement", "home") or "home")
+    scope = "project" if placement == "repo" and repo_root is not None else "global"
+    tools = getattr(choice, "agents", None) or None
+    skills_dir = getattr(choice, "skills_dir", None)
+    return _plan_for(scope, repo_root, home, tools, skills_dir)
 
 
 def apply_skill_plan(
@@ -1211,19 +1165,6 @@ def run_wizard(
     return result
 
 
-def should_prompt(args: Namespace, is_tty: bool) -> bool:
-    """True only for an interactive human `lpui init` with no scope overrides."""
-    no_skills = bool(getattr(args, "no_skills", False))
-    scope_arg = str(getattr(args, "skills_scope", "") or "").strip()
-    team = bool(getattr(args, "team", False))
-    agents = str(getattr(args, "agents", "") or "").strip()
-    yes = bool(getattr(args, "yes", False))
-    as_json = bool(getattr(args, "json", False))
-    if no_skills or scope_arg or team or agents or yes or as_json or not is_tty:
-        return False
-    return True
-
-
 def _skills_dir_override(args: Namespace) -> str | None:
     """Explicit skill dir: --skills-dir wins, then $LAZYPLAN_SKILLS_DIR."""
     flag = str(getattr(args, "skills_dir", "") or "").strip()
@@ -1231,15 +1172,3 @@ def _skills_dir_override(args: Namespace) -> str | None:
         return flag
     env = os.environ.get("LAZYPLAN_SKILLS_DIR", "").strip()
     return env or None
-
-
-def _agents_override(args: Namespace) -> list[str] | None:
-    """Explicit agent list: --agents wins, then $LAZYPLAN_AGENTS."""
-    flag = str(getattr(args, "agents", "") or "").strip()
-    if not flag:
-        flag = os.environ.get("LAZYPLAN_AGENTS", "").strip()
-    if not flag:
-        return None
-    if flag.lower() in ("all", "*"):
-        return list(KNOWN_TOOLS)
-    return [p.strip().lower() for p in flag.replace(",", " ").split() if p.strip()]

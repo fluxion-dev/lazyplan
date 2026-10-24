@@ -42,7 +42,18 @@ STORAGE_EXPLICIT = "explicit"
 
 
 @dataclass(frozen=True)
-class InitLayout:
+class SetupChoice:
+    """Placement and skill selection, independent of argparse."""
+
+    placement: str = "home"
+    agents: list[str] | None = None
+    skills_dir: str | None = None
+    no_skills: bool = False
+    explicit_db: str | None = None
+
+
+@dataclass(frozen=True)
+class SetupLayout:
     """Everything init is allowed to create, resolved before any write."""
 
     storage: str
@@ -114,13 +125,6 @@ def _explicit_db(args: Namespace) -> Path | None:
     return Path(env).expanduser() if env else None
 
 
-def _repo_storage(args: Namespace, repo_root: Path | None) -> bool:
-    if repo_root is None:
-        return False
-    scope = str(getattr(args, "skills_scope", "") or "").strip()
-    return bool(getattr(args, "team", False)) or scope in ("project", "both")
-
-
 def _gitignore_entries(
     repo_root: Path | None,
     plan_dir: Path,
@@ -149,23 +153,43 @@ def resolve(
     repo_root: Path | None,
     skill_plan: SkillPlan,
     home: Path | None = None,
-) -> InitLayout:
+) -> SetupLayout:
+    """Legacy adapter: build a SetupChoice from init flags, then resolve it."""
+    scope = str(getattr(args, "skills_scope", "") or "").strip()
+    placement = (
+        "repo" if bool(getattr(args, "team", False)) or scope in ("project", "both") else "home"
+    )
+    choice = SetupChoice(
+        placement=placement,
+        agents=None,
+        skills_dir=None,
+        no_skills=bool(getattr(args, "no_skills", False)),
+        explicit_db=_explicit_db(args),
+    )
+    return resolve_choice(choice, repo_root, skill_plan, home)
+
+
+def resolve_choice(
+    choice: SetupChoice,
+    repo_root: Path | None,
+    skill_plan: SkillPlan,
+    home: Path | None = None,
+) -> SetupLayout:
     """Resolve every destination without creating a file or directory."""
     home = home or Path.home()
-    explicit_db = _explicit_db(args)
+    explicit_db = Path(choice.explicit_db).expanduser() if choice.explicit_db else None
     if explicit_db is not None:
         storage = STORAGE_EXPLICIT
         db = explicit_db
-    elif _repo_storage(args, repo_root):
+    elif choice.placement == "repo" and repo_root is not None:
         storage = STORAGE_REPO
-        assert repo_root is not None
         db = repo_plan_db_path(repo_root)
     else:
         storage = STORAGE_HOME
         db = shared_db_path(home)
     plan_dir = db.parent
     config = plan_dir / CONFIG_NAME if is_repo_plan_dir(plan_dir) else None
-    return InitLayout(
+    return SetupLayout(
         storage=storage,
         repo_root=repo_root,
         db=db,
@@ -289,7 +313,7 @@ def _repo_resources(repo: Path) -> list[str]:
     return resources
 
 
-def _expected_paths(layout: InitLayout) -> list[Path]:
+def _expected_paths(layout: SetupLayout) -> list[Path]:
     paths = [layout.db, layout.templates_dir]
     if layout.config is not None:
         paths.append(layout.config)
@@ -299,14 +323,14 @@ def _expected_paths(layout: InitLayout) -> list[Path]:
     return paths
 
 
-def _layout_resources(layout: InitLayout) -> list[str]:
+def _layout_resources(layout: SetupLayout) -> list[str]:
     actual: list[str] = []
     for path in _expected_paths(layout):
         actual.extend(_existing_files(path))
     return list(dict.fromkeys(actual))
 
 
-def notes(layout: InitLayout) -> list[str]:
+def notes(layout: SetupLayout) -> list[str]:
     """Human notes about overrides and legacy paths; read-only."""
     out: list[str] = []
     if layout.explicit:
@@ -320,7 +344,7 @@ def notes(layout: InitLayout) -> list[str]:
     return out
 
 
-def inventory(layout: InitLayout) -> dict:
+def inventory(layout: SetupLayout) -> dict:
     """Read-only expected/actual resource report for init --check and doctor."""
     repo_resources = _repo_resources(layout.repo_root) if layout.repo_root is not None else []
     misplaced = list(repo_resources) if layout.storage == STORAGE_HOME else []
@@ -335,7 +359,7 @@ def inventory(layout: InitLayout) -> dict:
     }
 
 
-def plan_repairs(layout: InitLayout) -> RepairPlan:
+def plan_repairs(layout: SetupLayout) -> RepairPlan:
     """Plan safe repairs for a home-scoped init with repo leftovers."""
     if layout.storage != STORAGE_HOME or layout.repo_root is None:
         return RepairPlan()
@@ -536,7 +560,7 @@ def _cleanup_empty_dirs(repo_root: Path) -> None:
 
 
 def apply_layout(
-    layout: InitLayout,
+    layout: SetupLayout,
     *,
     interactive: bool = False,
     read: Callable[[], str] | None = None,

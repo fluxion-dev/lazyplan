@@ -85,6 +85,39 @@ ModalScreen {{ align: center middle; }}
 
 INDENT = ("", "  ", "    ")
 
+# -- setup wizard palette ---------------------------------------------------
+# ANSI codes stay here so setup output matches the TUI without a second
+# styling language. Callers opt in through color_enabled().
+ANSI = {
+    "reset": "\x1b[0m",
+    "bold": "\x1b[1m",
+    "dim": "\x1b[2m",
+    "cyan": "\x1b[36m",
+    "green": "\x1b[32m",
+    "yellow": "\x1b[33m",
+    "red": "\x1b[31m",
+    "white": "\x1b[97m",
+}
+
+ICONS = {
+    "setup": "◆",
+    "check": "✓",
+    "circle": "○",
+    "arrow": "→",
+    "warn": "⚠",
+    "branch": "⎇",
+    "dot": "·",
+}
+ASCII_ICONS = {
+    "setup": "*",
+    "check": "[x]",
+    "circle": "[ ]",
+    "arrow": "->",
+    "warn": "!",
+    "branch": "Y",
+    "dot": "-",
+}
+
 STATUS_GLYPH = {"todo": "○", "doing": "◐", "done": "●"}
 STATUS_ANSI = {"todo": "90", "doing": "33", "done": "32"}
 STATUS_RICH = {"todo": "dim", "doing": "yellow", "done": "green"}

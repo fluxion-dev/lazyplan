@@ -27,8 +27,8 @@ who is making this change (you see it in feed; default: $USER or 'human')
 .SH COMMANDS
 Flags work before or after the command: \fBlpui list \-\-json\fR means the same as \fBlpui \-\-json list\fR. Run \fBlpui COMMAND \-\-help\fR for details.
 .TP
-.B lpui init
-set up the plan store and agent skills; \-\-team shares them with the repo
+.B lpui setup
+re\-run setup: where plans live, which agents get the skill, and layout review
 .RS
 .TP
 .B \-\-json
@@ -46,18 +46,13 @@ who made this change (you see it in feed)
 .RE
 .RS
 .TP
-.B \-\-no\-skills
-skip the setup wizard that installs helper files for your coding agent
+.B \-\-placement {home|repo}
+store plans in your home or in this repo (repo needs a git checkout) Choices: home, repo\.
 .RE
 .RS
 .TP
-.B \-\-yes
-install the default agent helper files without asking first
-.RE
-.RS
-.TP
-.B \-\-skills\-scope SCOPE
-install agent helper files to one place without asking first (none = skip) Choices: project, global, both, none\.
+.B \-\-agents LIST
+which agents to install for (space/comma list, 'all', or 'none')
 .RE
 .RS
 .TP
@@ -66,18 +61,18 @@ put the skill in this folder instead of the detected ones
 .RE
 .RS
 .TP
-.B \-\-team
-write repo\-shared files (\.agents/lazyplan/, AGENTS\.md pointer, templates) for teams
+.B \-\-no\-skills
+skip installing agent helper files
 .RE
 .RS
 .TP
-.B \-\-check
-report the resolved resource layout without writing anything
+.B \-\-yes
+apply the current choices without asking
 .RE
 .RS
 .TP
-.B \-\-agents LIST
-which agents to install for (space/comma list, 'all', or detected by default)
+.B \-\-post\-upgrade
+==SUPPRESS==
 .RE
 .TP
 .B lpui seed
@@ -117,7 +112,7 @@ who made this change (you see it in feed)
 .RE
 .TP
 .B lpui doctor
-report the expected and actual init resource layout without writing
+read\-only report of the resolved setup layout and findings
 .RS
 .TP
 .B \-\-json
@@ -132,16 +127,6 @@ print the installed version and exit
 .TP
 .B \-\-actor NAME
 who made this change (you see it in feed)
-.RE
-.RS
-.TP
-.B \-\-team
-check the repo\-owned layout instead of the global layout
-.RE
-.RS
-.TP
-.B \-\-skills\-scope SCOPE
-check the layout this init scope would use Choices: project, global, both, none\.
 .RE
 .TP
 .B lpui list

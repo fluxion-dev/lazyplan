@@ -27,7 +27,9 @@ class TestRepoScope(unittest.TestCase):
 
     def tearDown(self):
         os.chdir(self.old_cwd)
-        if self.old_env is not None:
+        if self.old_env is None:
+            os.environ.pop("LAZYPLAN_DB", None)
+        else:
             os.environ["LAZYPLAN_DB"] = self.old_env
         if self.old_xdg is None:
             os.environ.pop("XDG_DATA_HOME", None)
@@ -113,9 +115,7 @@ class TestRepoScope(unittest.TestCase):
         self.assertEqual(p.id, 1)
 
     def test_stale_lazyplan_warns_and_ignored(self):
-        import io
         import pathlib
-        from contextlib import redirect_stderr
 
         from lazyplan.repo import stale_plan_dirs
 
@@ -135,12 +135,8 @@ class TestRepoScope(unittest.TestCase):
             stale_plan_dirs(self.repo), [pathlib.Path(stale), pathlib.Path(also_stale)]
         )
         self.assertEqual(stale_plan_dirs(os.path.join(self.tmp.name, "noroot")), [])
-        # shared-home init warns on stderr, never migrates, writes no repo DB
-        err = io.StringIO()
-        with redirect_stderr(err):
-            self.assertEqual(lpui_main(["init", "--skills-scope", "none"]), 0)
-        self.assertIn(".lazyplan", err.getvalue())
-        self.assertIn(os.path.join(".agents", "plan"), err.getvalue())
+        # setup never migrates stale dirs on its own; it writes no repo DB
+        self.assertEqual(lpui_main(["setup", "--yes", "--no-skills"]), 0)
         self.assertEqual(open(os.path.join(stale, "lazyplan.db")).read(), "data")
         self.assertFalse(
             os.path.exists(os.path.join(self.repo, ".agents", "lazyplan", "lazyplan.db"))
@@ -158,14 +154,14 @@ class TestRepoScope(unittest.TestCase):
         )
         self.assertEqual(repo_label(resolve_db_path()), "global")
 
-    def test_lp_init_and_info_in_repo(self):
+    def test_setup_and_info_in_repo(self):
         os.chdir(self.repo)
         # Zero-touch default leaves the repo alone, DB lives in the shared home.
-        self.assertEqual(lpui_main(["init"]), 0)
+        self.assertEqual(lpui_main(["setup", "--yes", "--no-skills"]), 0)
         self.assertFalse(os.path.exists(os.path.join(self.repo, ".agents")))
         self.assertEqual(lpui_main(["info"]), 0)
-        # Team opt-in writes the repo-shared DB.
-        self.assertEqual(lpui_main(["init", "--skills-scope", "project"]), 0)
+        # Repo placement writes the repo-shared DB.
+        self.assertEqual(lpui_main(["setup", "--placement", "repo", "--yes", "--no-skills"]), 0)
         self.assertTrue(os.path.isfile(os.path.join(self.repo, ".agents/lazyplan", "lazyplan.db")))
 
 
@@ -184,7 +180,9 @@ class TestLegacyPlanDir(unittest.TestCase):
 
     def tearDown(self):
         os.chdir(self.old_cwd)
-        if self.old_env is not None:
+        if self.old_env is None:
+            os.environ.pop("LAZYPLAN_DB", None)
+        else:
             os.environ["LAZYPLAN_DB"] = self.old_env
         if self.old_xdg is None:
             os.environ.pop("XDG_DATA_HOME", None)
@@ -238,10 +236,10 @@ class TestLegacyPlanDir(unittest.TestCase):
         os.makedirs(os.path.join(self.repo, ".plan"))
         self.assertIsNone(move_legacy_plan_dir(self.repo))
 
-    def test_init_noninteractive_keeps_legacy(self):
+    def test_setup_noninteractive_keeps_legacy(self):
         os.makedirs(os.path.join(self.repo, ".plan"))
         os.chdir(self.repo)
-        self.assertEqual(lpui_main(["--json", "init", "--skills-scope", "none"]), 0)
+        self.assertEqual(lpui_main(["--json", "setup", "--yes", "--no-skills"]), 0)
         self.assertTrue(os.path.isdir(os.path.join(self.repo, ".plan")))
         self.assertFalse(os.path.exists(os.path.join(self.repo, ".agents/lazyplan")))
 
@@ -356,7 +354,9 @@ class TestSharedSeed(unittest.TestCase):
 
     def tearDown(self):
         os.chdir(self.old_cwd)
-        if self.old_env is not None:
+        if self.old_env is None:
+            os.environ.pop("LAZYPLAN_DB", None)
+        else:
             os.environ["LAZYPLAN_DB"] = self.old_env
         if self.old_xdg is None:
             os.environ.pop("XDG_DATA_HOME", None)
@@ -434,7 +434,9 @@ class TestInitParity(unittest.TestCase):
 
     def tearDown(self):
         os.chdir(self.old_cwd)
-        if self.old_env is not None:
+        if self.old_env is None:
+            os.environ.pop("LAZYPLAN_DB", None)
+        else:
             os.environ["LAZYPLAN_DB"] = self.old_env
         if self.old_home is None:
             os.environ.pop("HOME", None)
@@ -454,7 +456,7 @@ class TestInitParity(unittest.TestCase):
         os.chdir(cwd)
         buf = io.StringIO()
         with redirect_stdout(buf):
-            self.assertEqual(lpui_main(["--json", "init", "--no-skills"]), 0)
+            self.assertEqual(lpui_main(["--json", "setup", "--yes", "--no-skills"]), 0)
         return json.loads(buf.getvalue())["db"]
 
     def test_non_team_init_identical_in_repo_and_bare(self):
@@ -465,7 +467,7 @@ class TestInitParity(unittest.TestCase):
         self.assertFalse(os.path.exists(os.path.join(self.repo, ".agents")))
         self.assertEqual(self._init_db(self.bare), shared)
 
-    def test_team_init_writes_repo_dir(self):
+    def test_repo_setup_writes_repo_dir(self):
         import io
         import json
         import pathlib
@@ -474,7 +476,9 @@ class TestInitParity(unittest.TestCase):
         os.chdir(self.repo)
         buf = io.StringIO()
         with redirect_stdout(buf):
-            self.assertEqual(lpui_main(["--json", "init", "--team"]), 0)
+            self.assertEqual(
+                lpui_main(["--json", "setup", "--placement", "repo", "--yes", "--no-skills"]), 0
+            )
         payload = json.loads(buf.getvalue())
         self.assertEqual(
             payload["db"], str(pathlib.Path(self.repo) / ".agents/lazyplan" / "lazyplan.db")

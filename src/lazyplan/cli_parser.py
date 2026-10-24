@@ -12,9 +12,10 @@ from .models import Status
 
 _PARSER_DESCRIPTION = (
     "lazyplan keeps your plans, milestones, and tasks in one SQLite database, "
-    "shared in your home by default or inside a repo after `lpui init --team` "
-    "(run it as lpui, or by its long name lazyplan). You get a keyboard-driven "
-    "screen, and your coding agent gets a command line that reads the same data."
+    "shared in your home by default or inside a repo through `lpui setup` "
+    "(run it as lpui, or by its long name lazyplan). The first run sets up the "
+    "database and agent skills. You get a keyboard-driven screen, and your "
+    "coding agent gets a command line that reads the same data."
 )
 
 _PARSER_EPILOG = """\
@@ -23,9 +24,9 @@ your database (the first match wins):
   | ~/.lazyplan/lazyplan.db shared home (%LOCALAPPDATA%/lazyplan on Windows)
 
 examples:
-  lpui init --team                     share this repo's plan with the team
-  lpui init --check                    show the resolved DB, templates, skills, and repairs
-  lpui doctor                          same read-only layout report, no init flags
+  lpui                                   first run sets up, then opens the screen
+  lpui setup                            re-run setup: placement, agents, and drift review
+  lpui doctor                           read-only report of the resolved layout and findings
   lpui                                   open the screen (same as `lpui ui`)
   lpui plan list                         show plans as summaries with progress
   lpui plan list --tree                  show the full plan/milestone/task tree
@@ -78,12 +79,15 @@ workflow: starting a plan? Ask the human what to build, why it matters,
 
 environment:
   LAZYPLAN_DB       which database file to use (same as --db)
+  LAZYPLAN_NO_SETUP skip first-run setup and upgrade review
+  NO_COLOR          plain setup output (also CLICOLOR=0 and TERM=dumb)
 
-files: shared home by default (--team opts a repo into shared storage)
+files: shared home by default (`lpui setup --placement repo` opts a repo in)
   ~/.lazyplan/lazyplan.db                 your plans, every agent and folder (default)
+  ~/.lazyplan/setup.json                  remembered setup choices and decisions
   ~/.lazyplan/templates/                  creation templates shared by every agent
-  .agents/lazyplan/lazyplan.db            team database for this repo (commit it to share)
-  .agents/lazyplan/templates/{plan,milestone,task}.md  creation templates (commit them to share)
+  .agents/lazyplan/lazyplan.db            repo database when placement is repo
+  .agents/lazyplan/templates/{plan,milestone,task}.md  repo creation templates
 
 exit codes: 0 it worked · 1 id not found · 2 flags or input were wrong · 3 screen cannot start (Textual is missing).
 
@@ -160,49 +164,43 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sub = p.add_subparsers(dest="cmd", required=False, title="commands", metavar="COMMAND")
 
-    init = sub.add_parser(
-        "init",
-        help="set up the plan store and agent skills; --team shares them with the repo",
+    setup = sub.add_parser(
+        "setup",
+        help="re-run setup: where plans live, which agents get the skill, and layout review",
         parents=[common],
     )
-    init.add_argument(
-        "--no-skills",
-        action="store_true",
-        help="skip the setup wizard that installs helper files for your coding agent",
-    )
-    init.add_argument(
-        "--yes",
-        action="store_true",
-        help="install the default agent helper files without asking first",
-    )
-    init.add_argument(
-        "--skills-scope",
-        choices=["project", "global", "both", "none"],
+    setup.add_argument(
+        "--placement",
+        choices=["home", "repo"],
         default="",
-        metavar="SCOPE",
-        help="install agent helper files to one place without asking first (none = skip)",
+        help="store plans in your home or in this repo (repo needs a git checkout)",
     )
-    init.add_argument(
+    setup.add_argument(
+        "--agents",
+        default="",
+        metavar="LIST",
+        help="which agents to install for (space/comma list, 'all', or 'none')",
+    )
+    setup.add_argument(
         "--skills-dir",
         default=None,
         metavar="PATH",
         help="put the skill in this folder instead of the detected ones",
     )
-    init.add_argument(
-        "--team",
+    setup.add_argument(
+        "--no-skills",
         action="store_true",
-        help="write repo-shared files (.agents/lazyplan/, AGENTS.md pointer, templates) for teams",
+        help="skip installing agent helper files",
     )
-    init.add_argument(
-        "--check",
+    setup.add_argument(
+        "--yes",
         action="store_true",
-        help="report the resolved resource layout without writing anything",
+        help="apply the current choices without asking",
     )
-    init.add_argument(
-        "--agents",
-        default="",
-        metavar="LIST",
-        help="which agents to install for (space/comma list, 'all', or detected by default)",
+    setup.add_argument(
+        "--post-upgrade",
+        action="store_true",
+        help=argparse.SUPPRESS,
     )
     sub.add_parser(
         "seed", help="add demo data: one plan with milestones and tasks", parents=[common]
@@ -212,22 +210,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="show which database file is in use, the repo root, and how many plans, milestones, and tasks you have",
         parents=[common],
     )
-    doc = sub.add_parser(
+    sub.add_parser(
         "doctor",
-        help="report the expected and actual init resource layout without writing",
+        help="read-only report of the resolved setup layout and findings",
         parents=[common],
-    )
-    doc.add_argument(
-        "--team",
-        action="store_true",
-        help="check the repo-owned layout instead of the global layout",
-    )
-    doc.add_argument(
-        "--skills-scope",
-        choices=["project", "global", "both", "none"],
-        default="",
-        metavar="SCOPE",
-        help="check the layout this init scope would use",
     )
     li = sub.add_parser(
         "list", help="show plans as summaries (add --tree for the full tree)", parents=[common]

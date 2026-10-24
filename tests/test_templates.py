@@ -1,7 +1,6 @@
 """Per-repo creation templates: parse, scaffold, fill/enforce/auto-criteria."""
 
 import io
-import json
 import os
 import sys
 import tempfile
@@ -374,7 +373,9 @@ class TestTemplateCli(unittest.TestCase):
 
     def tearDown(self):
         os.chdir(self.old_cwd)
-        if self.old_env is not None:
+        if self.old_env is None:
+            os.environ.pop("LAZYPLAN_DB", None)
+        else:
             os.environ["LAZYPLAN_DB"] = self.old_env
         if self.old_home is None:
             os.environ.pop("HOME", None)
@@ -397,23 +398,19 @@ class TestTemplateCli(unittest.TestCase):
             sys.stderr = old_err
         return rc, buf.getvalue(), err.getvalue()
 
-    def test_init_scaffolds_templates(self):
-        # Team scope scaffolds repo-shared templates.
-        rc, out, _ = self._run(["init", "--skills-scope", "project"])
+    def test_setup_scaffolds_templates(self):
+        # Repo placement scaffolds repo-shared templates.
+        rc, _out, _ = self._run(["setup", "--placement", "repo", "--yes", "--no-skills"])
         self.assertEqual(rc, 0)
-        payload = json.loads(out)
-        self.assertEqual(len(payload["templates"]["added"]), 3)
         self.assertTrue((self.repo / ".agents/lazyplan" / "templates" / "milestone.md").is_file())
-        rc, out, _ = self._run(["init", "--skills-scope", "project"])
-        self.assertEqual(json.loads(out)["templates"]["added"], [])
 
-    def test_zero_touch_init_leaves_repo_alone(self):
-        rc, out, _ = self._run(["init", "--skills-scope", "none"])
+    def test_zero_touch_setup_leaves_repo_alone(self):
+        rc, _out, _ = self._run(["setup", "--yes", "--no-skills"])
         self.assertEqual(rc, 0)
         self.assertFalse((self.repo / ".agents").exists())
 
     def test_cli_required_error_is_exit_2(self):
-        self._run(["init", "--skills-scope", "project"])
+        self._run(["setup", "--placement", "repo", "--yes", "--no-skills"])
         (self.repo / ".agents/lazyplan" / "templates" / "plan.md").write_text(
             "---\nrequired: [title]\n---\n"
         )

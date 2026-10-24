@@ -151,7 +151,7 @@ TEMPLATE_FRAGMENTS = [
     "At creation, `--desc` carries the narrative plus the INVEST check",
     "a milestone without them is not ready to cut",
     "names the technical approach",
-    "a task missing either is not ready to cut",
+    "a task missing any of them is not ready to cut",
     "Format for scanability",
     "present the plan for check-off before implementing anything",
     "make last edits on the spot",

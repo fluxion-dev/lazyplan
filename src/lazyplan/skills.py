@@ -266,7 +266,9 @@ refactor, and documentation tasks.
 Every plan carries QA testing tasks, a refactoring task, and documentation
 cleanup by default, shaped by the interview's testing answer. Ground every QA task in the acceptance criteria: each criterion is exercised by a named test task, and DoD checklists reference the criteria they satisfy. Only an explicit user opt-out ("skip QA", "no refactoring") excludes them — silence means include.
 
-Work top-down in creation order. Move rows through todo → doing → done as you go.
+Work top-down in creation order. Commit each task as it completes — or in a
+tight series of green commits — then link it and move it through todo → doing
+→ done. Do not defer commits to the end of the plan.
 
 ## Review gate: plan is truth
 
@@ -363,10 +365,10 @@ lpui --actor NAME criterion add --kind milestone --id S --text "Given [context],
 ```
 
 Keep milestones INVEST: independent, negotiable, valuable, estimable, small,
-testable. At creation, `--desc` carries the narrative plus the INVEST check
-and the inputs/prerequisites — a milestone without them is not ready to cut. No
-dependency, estimate, or owner fields — sequencing lives in creation order
-(work p0 first), context lives in `--desc`.
+testable. At creation, `--desc` carries the narrative plus the INVEST check,
+the inputs/prerequisites, and the ordered commit slices; a milestone without them is not ready to cut. Each task advances one small, green commit series; a milestone that only works as one batch commit is not ready. No dependency,
+estimate, or owner fields — sequencing lives in creation order (work p0 first),
+context lives in `--desc`.
 
 ## Task standard
 
@@ -382,8 +384,17 @@ lpui --actor NAME task add --milestone S --title "Clean up touched documentation
 lpui --actor NAME criterion add --kind task --id T --text "Unit tests pass"
 ```
 
+Each task lands as one or more small commits. Every commit is green — the
+relevant checks pass and the tree builds — and independently reviewable. Keep
+behavior, tests, docs, and refactors in separate commits when they can stand
+alone. Never batch a whole milestone or plan into one commit. The task `--desc`
+names the expected commit slice and the verification for each commit. Link
+commits after the fact with `lpui link` or `task finish`; no commit trailer is
+required.
+
 No assignee or effort fields — ownership is the `--actor` on each write, size
-is its position in the list. Every task `--desc` names the technical approach and the inputs/prerequisites — a task missing either is not ready to cut. Cut tasks only from scouted ground: each one must name real files, real constraints, real prerequisites.
+is its position in the list. Every task `--desc` names the technical approach, the inputs/prerequisites, and the expected commit slice — a task missing any of them is not ready to cut. Cut tasks only from scouted ground: each one must
+name real files, real constraints, real prerequisites.
 
 ## Human-in-the-loop (preferred for judgment calls)
 

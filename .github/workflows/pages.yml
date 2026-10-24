@@ -29,6 +29,8 @@ jobs:
         working-directory: site
       - run: npm run build
         working-directory: site
+      - name: Check site discoverability
+        run: python3 tools/check-site.py --dist site/dist
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

@@ -16,6 +16,8 @@ echo "== xenon (no block worse than C) =="
 "$VENV_BIN"/python -m xenon --max-absolute C src
 echo "== man page in sync =="
 "$VENV_BIN"/python tools/gen-man.py --check
+echo "== site discoverability =="
+python3 tools/check-site.py
 echo "== unittest (system python, stdlib only) =="
 PYTHONPATH=src python3 -m unittest discover -s tests
 echo "== unittest (venv python, with textual) =="

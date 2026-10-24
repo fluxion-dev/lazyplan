@@ -59,6 +59,10 @@ curl -fsSL https://github.com/fluxion-dev/lazyplan/releases/latest/download/inst
 gh release view vX.Y.Z
 ```
 
+A just-published version can take a minute to appear in the simple index, and
+pip caches the miss in that window. Use `pip install --no-cache-dir` (or
+`pipx --pip-args=--no-cache-dir`) when verifying immediately after the upload.
+
 Also check that the deployed site shows the new version, the new copy, and
 working screenshots:
 
@@ -97,3 +101,23 @@ Never force-push `main` or rewrite release history.
 
 Record the failing run URL and the recovery command used in the release notes
 or the next plan row so the next release has the context.
+
+## Release log
+
+### v0.22.0 (2026-10-24)
+
+- Minor bump from 0.21.0 with `./tools/bump.sh minor`: release commit
+  `b56345d`, annotated tag `v0.22.0`.
+- `ci.yml` and `pages.yml` green on `b56345d`:
+  [ci](https://github.com/fluxion-dev/lazyplan/actions/runs/40127821060),
+  [pages](https://github.com/fluxion-dev/lazyplan/actions/runs/40127821062).
+- `release.yml` green for the tag, with both the `release` and `publish-pypi`
+  jobs succeeding:
+  [run](https://github.com/fluxion-dev/lazyplan/actions/runs/40128048379).
+- PyPI lagged about two minutes behind the upload, and pip cached the miss; an
+  isolated `pip install --no-cache-dir lazyplan-tui==0.22.0` then printed
+  `0.22.0`. The tip above came from this run.
+- Verified: PyPI JSON 0.22.0, all seven release assets, `install.sh`, the
+  deployed site showing 0.22.0 and the diff copy, canonical/FAQ/JSON-LD,
+  sitemap, robots, social preview asset, and the release badge.
+- No deviations from the runbook and no fix-forward commits.

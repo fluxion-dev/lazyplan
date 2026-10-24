@@ -92,6 +92,20 @@ intents, FAQPage/SoftwareApplication structured data validate, and
 before Pages deploy. Live Lighthouse and mobile-width checks run immediately
 after deploy; record the scores in the release notes if they miss the target.
 
+### v0.22.0 pass (2026-10-24)
+
+After: the provenance copy names live in-place diffs in the Source trail card,
+the visible FAQ, and the FAQPage JSON-LD. Version pins, release asset URLs, and
+the sitemap moved to 0.22.0; canonical, robots, structured data, and the social
+preview asset are unchanged and serve cleanly.
+
+Verified live with the commands below plus the release badge endpoint: the page
+contains 0.22.0 and the diff copy, `sitemap.xml` is current, and
+`screens/og-lpui-and-agent.png` returns 200.
+
+Human-only follow-ups: submit the updated URL to search engines, record
+Lighthouse/mobile scores, and confirm the social card in a real client.
+
 ## Post-deploy verification
 
 Run after Pages is green:

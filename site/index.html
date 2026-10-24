@@ -250,6 +250,14 @@
     <p class="text-lg text-zinc-400">Link commits to tasks, then press <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">g</code> to follow the evidence from plan element to repository, branch, commit, changed file, and pull request.</p>
   </div>
 
+  <figure class="m-0 mb-10 overflow-hidden rounded-xl border border-plan-border bg-plan-surface/70 p-2 shadow-2xl shadow-black/40 md:mb-14 md:p-3">
+    <picture>
+      <source srcset="./screens/lpui-source-trail.webp" type="image/webp">
+      <img src="./screens/lpui-source-trail.png" width="1604" height="904" loading="lazy" decoding="async" alt="lazyplan source trail for a task: an expanded web repository with commits, changed files, merged and open pull requests, and a selected file showing its unified diff with old and new line numbers." class="block h-auto w-full rounded-lg">
+    </picture>
+    <figcaption class="px-2 pb-1 pt-3 text-sm text-zinc-500">Press g to follow the plan into the repo, then highlight a file to read its diff.</figcaption>
+  </figure>
+
   <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
     <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
       <h3 class="mb-2 text-lg font-semibold text-white">Source trail</h3>
@@ -265,31 +273,14 @@
     </div>
   </div>
 
-  <div class="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
-    <div class="terminal-window overflow-hidden">
-      <div class="flex items-center gap-1.5 border-b border-plan-border px-4 py-2.5" aria-hidden="true">
-        <span class="h-3 w-3 rounded-full bg-[#ff5f57]"></span>
-        <span class="h-3 w-3 rounded-full bg-[#febc2e]"></span>
-        <span class="h-3 w-3 rounded-full bg-[#28c840]"></span>
-        <span class="ml-2 font-mono text-xs text-zinc-500">lpui — source trail</span>
-      </div>
-      <pre class="m-0 overflow-x-auto p-4 font-mono text-[0.85rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono">source · 3 commits · 8 files · 1 PR
-  api · main · clean · 3c · 1PR
-    a1b2c3 Add source trail · 4 files
-    d4e5f6 Cache PR state · 2 files
-  web · main · clean · 0c · 0PR
-
-o open · y copy · / filter · r refresh</code></pre>
-    </div>
-    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8">
-      <h3 class="mb-3 text-lg font-semibold text-white">Works with the tools you already use</h3>
-      <ul class="m-0 space-y-3 p-0 text-[0.95rem] text-zinc-400 list-none">
-        <li><strong class="text-zinc-200">Commits:</strong> link a SHA, capture a task finish range, or scan Lazyplan trailers.</li>
-        <li><strong class="text-zinc-200">Branches:</strong> record an existing branch and base before the work starts.</li>
-        <li><strong class="text-zinc-200">Pull requests:</strong> refresh cached state, checks, reviews, and merge evidence from GitHub.</li>
-        <li><strong class="text-zinc-200">Filters:</strong> show only linked work, PRs, stale links, or unlinked rows.</li>
-      </ul>
-    </div>
+  <div class="mt-8 rounded-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8">
+    <h3 class="mb-3 text-lg font-semibold text-white">Works with the tools you already use</h3>
+    <ul class="m-0 grid grid-cols-1 gap-3 p-0 text-[0.95rem] text-zinc-400 list-none sm:grid-cols-2">
+      <li><strong class="text-zinc-200">Commits:</strong> link a SHA, capture a task finish range, or scan Lazyplan trailers.</li>
+      <li><strong class="text-zinc-200">Branches:</strong> record an existing branch and base before the work starts.</li>
+      <li><strong class="text-zinc-200">Pull requests:</strong> refresh cached state, checks, reviews, and merge evidence from GitHub.</li>
+      <li><strong class="text-zinc-200">Filters:</strong> show only linked work, PRs, stale links, or unlinked rows.</li>
+    </ul>
   </div>
 </section>
 

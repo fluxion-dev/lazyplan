@@ -35,8 +35,10 @@ Distilled from https://textual.textualize.io/widget_gallery/ plus
   `OptionList` is the single-choice palette base, `SelectionList` is for
   multi-select checklists.
 - Source trail: `Tree` with repo/commit/file/PR nodes in `TreeNode.data`;
-  keep the preview in a `Static` and actions on the screen. Do not mount a
-  second widget tree just for details.
+  keep the preview in a `Static` (inside `#source-preview`) and actions on
+  the screen. Diff text is plain Rich markup in that Static — no second
+  widget tree and no syntax-highlight widget. Do not mount a second widget
+  tree just for details.
 - Detail page: plain `Screen`. Dialogs: `ModalScreen`.
 
 ## Version flags (8.2.8)

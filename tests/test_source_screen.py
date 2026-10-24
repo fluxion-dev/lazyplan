@@ -9,7 +9,9 @@ from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from lazyplan.design import SOURCE_MARKER
 from lazyplan.store import Store
+from lazyplan.vcs import DiffRead
 
 try:
     from textual.widgets import Input, Tree
@@ -190,6 +192,84 @@ class TestSourceScreen(unittest.IsolatedAsyncioTestCase):
             screen = await self._open(pilot)
             tree = screen.query_one("#source-tree", Tree)
             self.assertIn("stale", str(tree.root.children[0].children[0].label))
+
+    async def test_commit_and_file_previews_render_diff(self):
+        async with self.app.run_test(size=(120, 30)) as pilot:
+            await pilot.pause()
+            screen = await self._open(pilot)
+            tree = screen.query_one("#source-tree", Tree)
+            repo_node = tree.root.children[0]
+            commit_node = repo_node.children[0]
+            tree.select_node(commit_node)
+            await pilot.pause()
+            body = str(screen.query_one("#source-preview-body").render())
+            self.assertIn("root commit", body)
+            self.assertIn("+a", body)
+            block = screen._diff_block(self.repo, self.sha)
+            self.assertTrue(any("[green]" in row for row in block))
+            self.assertTrue(any("   1" in row for row in block))
+
+            commit_node.expand()
+            tree.select_node(commit_node.children[0])
+            await pilot.pause()
+            file_body = str(screen.query_one("#source-preview-body").render())
+            self.assertIn("a.py", file_body)
+            self.assertIn("+a", file_body)
+
+    async def test_large_diff_is_capped_with_remainder(self):
+        with open(os.path.join(self.repo, "big.txt"), "w") as fh:
+            fh.write("".join(f"line {i}\n" for i in range(20)))
+        subprocess.run(["git", "-C", self.repo, "add", "."], check=True, timeout=10)
+        subprocess.run(
+            ["git", "-C", self.repo, "commit", "-qm", "big change"], check=True, timeout=10
+        )
+        big = subprocess.run(
+            ["git", "-C", self.repo, "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=True,
+        ).stdout.strip()
+        async with self.app.run_test(size=(120, 30)) as pilot:
+            await pilot.pause()
+            screen = await self._open(pilot)
+            with mock.patch("lazyplan.source_screen.DIFF_PREVIEW_LINES", 3):
+                block = screen._diff_block(self.repo, big)
+            self.assertTrue(any("more lines" in row for row in block))
+
+    async def test_diff_states_are_explicit(self):
+        async with self.app.run_test(size=(120, 30)) as pilot:
+            await pilot.pause()
+            screen = await self._open(pilot)
+            for state, detail, needle in (
+                ("binary", "binary file", "binary"),
+                ("merge", "merge commit", "merge commit"),
+                ("empty", "no textual changes", "no textual changes"),
+                ("missing", "commit not found", "not found"),
+                ("error", "diff unavailable", "unavailable"),
+            ):
+                with mock.patch(
+                    "lazyplan.source_screen.read_diff",
+                    return_value=DiffRead(state=state, detail=detail),
+                ):
+                    block = screen._diff_block(self.repo, self.sha)
+                self.assertTrue(any(needle in row.lower() for row in block), state)
+
+    async def test_source_rows_carry_marker(self):
+        async with self.app.run_test(size=(120, 30)) as pilot:
+            await pilot.pause()
+            screen = await self._open(pilot)
+            tree = screen.query_one("#source-tree", Tree)
+            repo_node = tree.root.children[0]
+            commit_node = repo_node.children[0]
+            pull_node = repo_node.children[1]
+            for node in (repo_node, commit_node, commit_node.children[0], pull_node):
+                self.assertIn(SOURCE_MARKER, str(node.label))
+            empty = self.store.add_task(self.sid, "No source")
+            self.app.push_screen(SourceScreen(self.store, "task", empty.id))
+            await pilot.pause()
+            empty_tree = self.app.screen.query_one("#source-tree", Tree)
+            self.assertNotIn(SOURCE_MARKER, str(empty_tree.root.children[0].label))
 
     async def test_empty_state(self):
         empty = self.store.add_task(self.sid, "No source")

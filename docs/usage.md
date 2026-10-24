@@ -300,18 +300,32 @@ into repository → commits → changed files, with linked pull requests alongsi
 Plans and milestones aggregate descendant work, so a plan-level trail shows
 which tasks produced each commit.
 
+Highlighting a commit or file reads its unified diff with a read-only
+`git show` and renders it in the preview: file and hunk headers, old/new line
+numbers, and green additions / red removals. Selecting another row scrolls the
+preview back to the top. The diff is read live from the checkout, kept in a
+small in-memory cache, and never written to the database, export, or feed.
+
+Previews are bounded: at most 20 files and 300 lines are shown, followed by a
+`+N more lines` or `+N more files` notice. Press `o` for the full commit in the
+browser. Binary files, root commits, merge commits, empty diffs, missing
+commits, and non-git checkouts each render an explicit message instead of an
+empty or broken pane.
+
 Keys:
 
 - `j`/`k` or arrows move; `left`/`right` fold and unfold.
 - `o` opens the selected commit, PR, or file in the browser.
 - `y` copies the selected SHA, file path, or URL.
 - `/` filters repos, commits, files, and PRs; `enter` applies, `esc` closes.
-- `r` rebuilds from cached data; `esc` returns to the previous screen.
+- `r` rebuilds from cached data and clears the diff cache; `esc` returns.
 
 The detail page shows a compact source summary and hints at `g`. The main tree
-shows compact commit/PR chips. `F` cycles source filters: all, linked, has PR,
-stale, unlinked. Dirty state is shown per selected checkout; it is not a
-whole-tree filter because it requires live git reads.
+shows compact commit/PR chips and a single-cell `⎇` marker on rows that have
+commits, pull requests, or repo links. Rows without provenance stay unchanged.
+`F` cycles source filters: all, linked, has PR, stale, unlinked. Dirty state is
+shown per selected checkout; it is not a whole-tree filter because it requires
+live git reads.
 
 Opening the Source screen makes no network call. Browser launch is explicit.
 

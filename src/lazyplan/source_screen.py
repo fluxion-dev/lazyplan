@@ -19,16 +19,24 @@ try:
 except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
-from .design import escape_markup
+from .design import SOURCE_MARKER_RICH, escape_markup
 from .source import (
+    DiffFile,
+    DiffLine,
     SourceCommit,
     SourceFile,
     SourcePull,
     SourceRepo,
     SourceTrail,
     build_source_trail,
+    clear_diff_cache,
+    parse_patch,
+    read_diff,
 )
 from .store import Store
+
+DIFF_PREVIEW_LINES = 300
+DIFF_PREVIEW_FILES = 20
 
 
 def _when(timestamp: int) -> str:
@@ -45,7 +53,7 @@ def _commit_label(commit: SourceCommit) -> str:
     subject = escape_markup(commit.subject or "(no subject)")
     count = f" · {len(commit.files)} files" if commit.files else ""
     stale = " [red]stale[/]" if commit.stale else ""
-    return f"[dim]{commit.short}[/] {subject}[dim]{count}[/]{stale}"
+    return f"[dim]{commit.short}[/] {subject}[dim]{count}[/]{stale} {SOURCE_MARKER_RICH}"
 
 
 def _repo_label(repo: SourceRepo) -> str:
@@ -54,14 +62,50 @@ def _repo_label(repo: SourceRepo) -> str:
     return (
         f"[bold]{escape_markup(repo.name)}[/] "
         f"[dim]{escape_markup(branch)} · {state} · {len(repo.commits)} commits"
-        f" · {len(repo.pulls)} PRs[/]"
+        f" · {len(repo.pulls)} PRs[/] {SOURCE_MARKER_RICH}"
     )
 
 
 def _pull_label(pull: SourcePull) -> str:
     title = escape_markup(pull.title or "")
     state = pull.state or "unknown"
-    return f"[dim]PR #{pull.number}[/] {state} {title}".rstrip()
+    return f"[dim]PR #{pull.number}[/] {state} {title} {SOURCE_MARKER_RICH}".rstrip()
+
+
+def _diff_gutter(line: DiffLine) -> str:
+    """Aligned old/new line-number gutter for one diff line."""
+    old = f"{line.old_no:>4}" if line.old_no is not None else "    "
+    new = f"{line.new_no:>4}" if line.new_no is not None else "    "
+    return f"[dim]{old} {new}[/]"
+
+
+def _diff_row(line: DiffLine) -> str:
+    """One diff line: colored add/remove, dim context, plain meta."""
+    text = escape_markup(line.text)
+    gutter = _diff_gutter(line)
+    if line.kind == "add":
+        return f"{gutter} [green]+{text}[/]"
+    if line.kind == "remove":
+        return f"{gutter} [red]-{text}[/]"
+    if line.kind == "meta":
+        return f"[dim]{text}[/]"
+    return f"{gutter} {text}"
+
+
+def _diff_rows(files: tuple[DiffFile, ...], max_files: int) -> list[str]:
+    """Render file headers, hunk headers, and numbered lines up to a file cap."""
+    rows: list[str] = []
+    for index, item in enumerate(files):
+        if index >= max_files:
+            break
+        if item.binary:
+            rows.append(f"[yellow]binary[/] {escape_markup(item.path)}")
+            continue
+        rows.append(f"[bold]{escape_markup(item.path)}[/]")
+        for hunk in item.hunks:
+            rows.append(f"[cyan]{escape_markup(hunk.header)}[/]")
+            rows.extend(_diff_row(line) for line in hunk.lines)
+    return rows
 
 
 if _TEXTUAL_OK:
@@ -142,7 +186,7 @@ if _TEXTUAL_OK:
                         if needle and needle not in item.path.lower():
                             continue
                         commit_node.add_leaf(
-                            f"[dim]{escape_markup(item.path)}[/]",
+                            f"[dim]{escape_markup(item.path)}[/] {SOURCE_MARKER_RICH}",
                             data=self._file_data(repo, commit, item),
                         )
                 for pull in repo.pulls:
@@ -222,21 +266,27 @@ if _TEXTUAL_OK:
         def _preview(self, node: TreeNode | None) -> None:
             body = self.query_one("#source-preview-body", Static)
             data = node.data if node is not None else None
-            if not isinstance(data, dict):
-                body.update("Select a repo, commit, file, or pull request.")
-                return
-            kind = str(data.get("kind", ""))
-            obj = data.get("object")
-            if kind == "repo" and isinstance(obj, SourceRepo):
-                body.update(self._repo_preview(obj))
-            elif kind == "commit" and isinstance(obj, SourceCommit):
-                body.update(self._commit_preview(obj))
-            elif kind == "file" and isinstance(obj, SourceFile):
-                body.update(self._file_preview(obj))
-            elif kind == "pull" and isinstance(obj, SourcePull):
-                body.update(self._pull_preview(obj))
-            else:
-                body.update("No source linked for this row.")
+            text = "Select a repo, commit, file, or pull request."
+            if isinstance(data, dict):
+                kind = str(data.get("kind", ""))
+                obj = data.get("object")
+                repo = str(data.get("repo", "") or "")
+                sha = str(data.get("sha", "") or "")
+                if kind == "repo" and isinstance(obj, SourceRepo):
+                    text = self._repo_preview(obj)
+                elif kind == "commit" and isinstance(obj, SourceCommit):
+                    text = self._commit_preview(obj, repo)
+                elif kind == "file" and isinstance(obj, SourceFile):
+                    text = self._file_preview(obj, repo, sha)
+                elif kind == "pull" and isinstance(obj, SourcePull):
+                    text = self._pull_preview(obj)
+                else:
+                    text = "No source linked for this row."
+            body.update(text)
+            try:
+                self.query_one("#source-preview", VerticalScroll).scroll_home(animate=False)
+            except Exception:
+                pass
 
         def _repo_preview(self, repo: SourceRepo) -> str:
             lines = [
@@ -255,7 +305,7 @@ if _TEXTUAL_OK:
             )
             return "\n".join(lines)
 
-        def _commit_preview(self, commit: SourceCommit) -> str:
+        def _commit_preview(self, commit: SourceCommit, repo: str = "") -> str:
             lines = [
                 f"[bold]{commit.short}[/] {escape_markup(commit.subject or '(no subject)')}",
                 f"[dim]{escape_markup(commit.sha)}[/]",
@@ -279,15 +329,52 @@ if _TEXTUAL_OK:
                 lines.extend(["", f"[dim]files {len(commit.files)}[/]"])
                 for item in commit.files:
                     lines.append(f"  {escape_markup(item.path)}")
+            if repo:
+                lines.extend(["", *self._diff_block(repo, commit.sha)])
             return "\n".join(lines)
 
-        def _file_preview(self, item: SourceFile) -> str:
+        def _file_preview(self, item: SourceFile, repo: str = "", sha: str = "") -> str:
             lines = [f"[bold]{escape_markup(item.path)}[/]"]
             if item.url:
                 lines.append(item.url)
             else:
                 lines.append("[dim]no web URL for this remote[/]")
+            if repo and sha:
+                lines.extend(["", *self._diff_block(repo, sha, item.path)])
             return "\n".join(lines)
+
+        def _diff_block(self, repo: str, sha: str, path: str = "") -> list[str]:
+            """Read and render a bounded diff preview, or an explicit state."""
+            read = read_diff(repo, sha, path)
+            if read.state == "missing":
+                return [f"[red]{escape_markup(read.detail or 'commit not available')}[/]"]
+            if read.state == "merge":
+                return [
+                    f"[yellow]{escape_markup(read.detail or 'merge commit')}[/]",
+                    "[dim]combined merge diffs are not rendered; press o to open it[/]",
+                ]
+            if read.state == "binary":
+                return [f"[yellow]{escape_markup(read.detail or 'binary file')}[/]"]
+            if read.state == "empty":
+                return [f"[dim]{escape_markup(read.detail or 'no textual changes')}[/]"]
+            if read.state == "error":
+                return [f"[red]{escape_markup(read.detail or 'diff unavailable')}[/]"]
+            files = parse_patch(read.patch)
+            if not files:
+                return ["[dim]no textual changes[/]"]
+            prefix = ["[dim]root commit · full tree diff[/]"] if read.state == "root" else []
+            diff_rows = _diff_rows(files, DIFF_PREVIEW_FILES)
+            budget = max(1, DIFF_PREVIEW_LINES - len(prefix))
+            shown = prefix + diff_rows[:budget]
+            remainder = len(diff_rows) - budget
+            if remainder > 0:
+                shown.append(f"[dim]+{remainder} more lines — o opens the full diff[/]")
+            extra_files = len(files) - DIFF_PREVIEW_FILES
+            if extra_files > 0:
+                shown.append(f"[dim]+{extra_files} more files[/]")
+            if read.truncated:
+                shown.append("[dim]diff truncated — o opens the full commit[/]")
+            return shown
 
         def _pull_preview(self, pull: SourcePull) -> str:
             lines = [
@@ -356,6 +443,7 @@ if _TEXTUAL_OK:
             self.query_one("#source-tree", Tree).focus()
 
         def action_refresh(self) -> None:
-            """Rebuild from cached data."""
+            """Rebuild from cached data and drop in-memory diff bodies."""
+            clear_diff_cache()
             self._load()
             self.notify("source refreshed", timeout=3)

@@ -111,3 +111,8 @@ _.action_clear_filter
 bubble
 rev
 run_wizard
+# Diff model metadata: parsed, tested, and part of the read-only source API.
+old_start
+old_count
+new_start
+new_count

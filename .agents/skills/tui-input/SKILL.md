@@ -31,5 +31,7 @@ https://textual.textualize.io/guide/actions/.
   `_is_dirty`), never event flags — mount-time `Changed` messages make
   clean screens arrive dirty. Esc compares and prompts only on real edits.
 - Source screen keys: `g` opens, `j/k`/arrows navigate, `o` opens, `y`
-  copies, `/` filters, `r` refreshes, `esc` returns. Keep these screen-level
-  bindings; do not bind them on the inner Tree except navigation.
+  copies, `/` filters, `r` refreshes and clears the diff cache, `esc`
+  returns. Keep these screen-level bindings; do not bind them on the inner
+  Tree except navigation. Highlighting a commit/file reads its diff without
+  adding a binding.

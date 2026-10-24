@@ -3,6 +3,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
@@ -260,6 +261,89 @@ class TestVCS(unittest.TestCase):
             self.assertEqual(logged[0].body, "body line")
             self.assertEqual(logged[0].parents, (first,))
             self.assertEqual(logged[0].files, ())
+
+    @unittest.skipUnless(_git_available(), "git CLI required")
+    def test_diff_reads_commit_and_path(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            _init_repo(tmp)
+            _commit(tmp, "a.txt", "one\ntwo\n", "first")
+            _commit(tmp, "b.txt", "bee\n", "second")
+            sha = self.backend.head(tmp)
+            assert sha is not None
+            read = self.backend.diff(tmp, sha)
+            self.assertEqual(read.state, "ok")
+            self.assertIn("+bee", read.patch)
+            self.assertFalse(read.truncated)
+            scoped = self.backend.diff(tmp, sha, "b.txt")
+            self.assertEqual(scoped.state, "ok")
+            self.assertIn("b.txt", scoped.patch)
+            self.assertNotIn("a.txt", scoped.patch)
+            self.assertEqual(self.backend.diff(tmp, "0" * 40).state, "missing")
+            self.assertEqual(self.backend.diff(tmp, "").state, "missing")
+
+    @unittest.skipUnless(_git_available(), "git CLI required")
+    def test_diff_marks_root_merge_and_binary(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            _init_repo(tmp)
+            _commit(tmp, "a.txt", "one\n", "root")
+            root = self.backend.head(tmp)
+            assert root is not None
+            read = self.backend.diff(tmp, root)
+            self.assertEqual(read.state, "root")
+            self.assertIn("+one", read.patch)
+
+            subprocess.run(["git", "-C", tmp, "checkout", "-qb", "side"], check=True, timeout=10)
+            _commit(tmp, "side.txt", "side\n", "side work")
+            subprocess.run(["git", "-C", tmp, "checkout", "-q", "main"], check=True, timeout=10)
+            _commit(tmp, "main.txt", "main\n", "main work")
+            subprocess.run(
+                ["git", "-C", tmp, "merge", "-q", "--no-ff", "-m", "merge side", "side"],
+                check=True,
+                timeout=10,
+            )
+            merge = self.backend.head(tmp)
+            assert merge is not None
+            self.assertEqual(self.backend.diff(tmp, merge).state, "merge")
+
+            with open(os.path.join(tmp, "blob.bin"), "wb") as fh:
+                fh.write(b"\x00\x01\x02")
+            subprocess.run(["git", "-C", tmp, "add", "."], check=True, timeout=10)
+            subprocess.run(["git", "-C", tmp, "commit", "-qm", "binary"], check=True, timeout=10)
+            binary = self.backend.head(tmp)
+            assert binary is not None
+            self.assertEqual(self.backend.diff(tmp, binary).state, "binary")
+
+    @unittest.skipUnless(_git_available(), "git CLI required")
+    def test_diff_caps_output(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            _init_repo(tmp)
+            body = "".join(f"line {i}\n" for i in range(20))
+            _commit(tmp, "a.txt", body, "many lines")
+            sha = self.backend.head(tmp)
+            assert sha is not None
+            with mock.patch("lazyplan.vcs.DIFF_MAX_LINES", 3):
+                read = self.backend.diff(tmp, sha)
+            self.assertTrue(read.truncated)
+            self.assertLessEqual(len(read.patch.splitlines()), 3)
+
+    @unittest.skipUnless(_git_available(), "git CLI required")
+    def test_diff_uses_only_read_only_git(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            _init_repo(tmp)
+            _commit(tmp, "a.txt", "one\n", "first")
+            sha = self.backend.head(tmp)
+            assert sha is not None
+            calls: list[list[str]] = []
+            real_run = subprocess.run
+
+            def record(*args, **kwargs):
+                calls.append(list(args[0]))
+                return real_run(*args, **kwargs)
+
+            with mock.patch("lazyplan.vcs.subprocess.run", side_effect=record):
+                self.backend.diff(tmp, sha)
+            verbs = {call[3] for call in calls}
+            self.assertLessEqual(verbs, {"rev-parse", "rev-list", "show"})
 
     @unittest.skipUnless(_git_available(), "git CLI required")
     def test_ahead_and_behind_with_upstream(self):

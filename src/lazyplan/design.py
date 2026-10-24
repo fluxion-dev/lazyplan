@@ -177,6 +177,20 @@ def source_chip(commit_count: int = 0, pull_count: int = 0, stale: int = 0) -> s
     return f"[dim]{' · '.join(parts)}[/]" if parts else ""
 
 
+SOURCE_MARKER = "⎇"
+SOURCE_MARKER_RICH = f"[dim]{SOURCE_MARKER}[/]"
+
+
+def has_source(commits: int = 0, pulls: int = 0, repos: int = 0) -> bool:
+    """True when a row carries any commit, pull request, or repo link."""
+    return commits > 0 or pulls > 0 or repos > 0
+
+
+def source_marker(commits: int = 0, pulls: int = 0, repos: int = 0) -> str:
+    """Single-cell `⎇` marker for rows with source details; empty otherwise."""
+    return SOURCE_MARKER_RICH if has_source(commits, pulls, repos) else ""
+
+
 _PR_STYLE = {
     "merged": ("green", "PR"),
     "open": ("yellow", "PR"),
@@ -232,6 +246,7 @@ def _row(
     pr_checks: str = "",
     stale: bool = False,
     source_counts: tuple[int, int, int] | None = None,
+    repo_count: int = 0,
 ) -> str:
     """TUI row: Rich status glyph + dim id + bold title + progress/chips."""
     letter, title_attr = _CORE_SPEC[kind]
@@ -258,6 +273,12 @@ def _row(
     if pr:
         suffix += f" {pr}"
         plain_suffix += " PR"
+    commits = source_counts[0] if source_counts is not None else len(links or ())
+    pulls = source_counts[1] if source_counts is not None else int(bool(pr_state or pr_checks))
+    marker = source_marker(commits, pulls, repo_count)
+    if marker:
+        suffix += f" {marker}"
+        plain_suffix += f" {SOURCE_MARKER}"
     prefix_plain = f"{status_word(obj.status)} {id_part} "
     available = None if width is None else width - len(prefix_plain) - len(plain_suffix)
     title = truncate(title, available)
@@ -274,6 +295,36 @@ def plan_label(p: Plan, store: Store | None = None, dot: str = "plain") -> str:
     return f"{base} [{', '.join(names)}]" if names else base
 
 
+def _plan_source_suffix(
+    links: Sequence[str] | None,
+    repos: Sequence[Mapping[str, object]] | None,
+    source_counts: tuple[int, int, int] | None,
+    repo_count: int,
+) -> tuple[str, str]:
+    """Rich and plain source suffix (counts, repo chips, `⎇`) for a plan row."""
+    repo_count = repo_count or len(repos or ())
+    chips = source_chip(*source_counts) if source_counts is not None else commits_chip(links)
+    all_chips = " ".join(chip for chip in (chips, repos_chip(repos)) if chip)
+    rich = f" {all_chips}" if all_chips else ""
+    plain = ""
+    if all_chips:
+        if source_counts is not None:
+            commits, pulls, stale_count = source_counts
+            plain += f" {commits}c {pulls}PR {stale_count}stale"
+        else:
+            plain += " " + " ".join(sha[:12] for sha in (links or [])[:2])
+        plain += " " + " ".join(
+            part for part in (repo_project_name(r) for r in (repos or [])) if part
+        )
+    commits = source_counts[0] if source_counts is not None else len(links or ())
+    pulls = source_counts[1] if source_counts is not None else 0
+    marker = source_marker(commits, pulls, repo_count)
+    if marker:
+        rich += f" {marker}"
+        plain += f" {SOURCE_MARKER}"
+    return rich, plain
+
+
 def plan_row(
     p: Plan,
     store: Store | None = None,
@@ -282,28 +333,15 @@ def plan_row(
     progress: tuple[int, int] | None = None,
     width: int | None = None,
     source_counts: tuple[int, int, int] | None = None,
+    repo_count: int = 0,
 ) -> str:
     """TUI plan row (Rich markup): glyph + id + title + progress + chips."""
     id_part = f"P{p.id}"
-    chips = source_chip(*source_counts) if source_counts is not None else commits_chip(links)
-    repo_chips = repos_chip(repos)
-    all_chips = " ".join(chip for chip in (chips, repo_chips) if chip)
-    suffix = ""
-    plain_suffix = ""
+    suffix, plain_suffix = _plan_source_suffix(links, repos, source_counts, repo_count)
     if progress is not None:
         done, total = progress
-        suffix += f" [dim]{progress_text(done, total)}[/]"
-        plain_suffix += f" {progress_text(done, total)}"
-    if all_chips:
-        suffix += f" {all_chips}"
-        if source_counts is not None:
-            commits, pulls, stale_count = source_counts
-            plain_suffix += f" {commits}c {pulls}PR {stale_count}stale"
-        else:
-            plain_suffix += " " + " ".join(sha[:12] for sha in (links or [])[:2])
-        plain_suffix += " " + " ".join(
-            part for part in (repo_project_name(r) for r in (repos or [])) if part
-        )
+        suffix = f" [dim]{progress_text(done, total)}[/]" + suffix
+        plain_suffix = f" {progress_text(done, total)}" + plain_suffix
     prefix_plain = f"{status_word(p.status)} {id_part} "
     available = None if width is None else width - len(prefix_plain) - len(plain_suffix)
     title = truncate(p.name, available)
@@ -323,6 +361,7 @@ def milestone_row(
     progress: tuple[int, int] | None = None,
     width: int | None = None,
     source_counts: tuple[int, int, int] | None = None,
+    repo_count: int = 0,
 ) -> str:
     """TUI milestone row (Rich markup): glyph + id + title + progress + chips."""
     return _row(
@@ -332,6 +371,7 @@ def milestone_row(
         progress,
         width,
         source_counts=source_counts,
+        repo_count=repo_count,
     )
 
 
@@ -348,9 +388,10 @@ def task_row(
     pr_state: str = "",
     pr_checks: str = "",
     stale: bool = False,
+    repo_count: int = 0,
 ) -> str:
     """TUI task row (Rich markup): glyph + id + title + PR/commit chips."""
-    return _row("task", t, links, None, width, pr_state, pr_checks, stale)
+    return _row("task", t, links, None, width, pr_state, pr_checks, stale, repo_count=repo_count)
 
 
 # -- empty states (identical wording everywhere) --------------------------

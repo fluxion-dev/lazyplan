@@ -26,8 +26,10 @@ Distilled from https://textual.textualize.io/guide/screens/.
   selection, the palette disables the command with a reason.
 - `SourceScreen` is a plain `Screen` opened by `g` from the main tree or
   detail. It owns a `Tree` (`repo -> commit -> file`, PRs grouped by repo), a
-  Static preview, and a Footer; `escape` pops back. Open/copy are explicit
-  actions and never call the network.
+  Static preview, and a Footer; `escape` pops back. Commit/file highlights
+  read a bounded diff via `source.read_diff` and render it in the preview;
+  binary/root/merge/empty/missing states are explicit messages. Open/copy
+  are explicit actions and never call the network.
 - Structural mutations (add/delete/status) rebuild and re-snapshot; new
   ids come from `services.create_*` with `actor="tui"`.
 - Patch writes use `Store.update_*` (`None` keeps, `""` clears priority)

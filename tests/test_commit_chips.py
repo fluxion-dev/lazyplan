@@ -28,9 +28,11 @@ class TestCommitChips(unittest.IsolatedAsyncioTestCase):
         self.sid = store.add_milestone(self.pid, "S").id
         self.tid = store.add_task(self.sid, "T").id
         self.bare_tid = store.add_task(self.sid, "Bare").id
+        self.repo_tid = store.add_task(self.sid, "Repo only").id
         self.sha = "a" * 40
         store.link_commit("task", self.tid, self.sha, subject="work")
         store.link_commit("plan", self.pid, "b" * 40)
+        store.add_repo_link("task", self.repo_tid, "/tmp/api", "git@github.com:org/api.git")
         self.store = Store(self.db)
         self.app = tui_mod.create_app(self.db)
 
@@ -57,6 +59,20 @@ class TestCommitChips(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             plan_preview = str(self.app.query_one("#preview-body", Static).render())
             self.assertIn("2 commits", plan_preview)
+
+    async def test_marker_only_on_rows_with_source(self):
+        from lazyplan.design import SOURCE_MARKER
+
+        async with self.app.run_test() as pilot:
+            await pilot.pause()
+            linked = str(self.app._row_nodes[("task", self.tid)].label)
+            repo_only = str(self.app._row_nodes[("task", self.repo_tid)].label)
+            bare = str(self.app._row_nodes[("task", self.bare_tid)].label)
+            plan = str(self.app._row_nodes[("plan", self.pid)].label)
+            self.assertIn(SOURCE_MARKER, linked)
+            self.assertIn(SOURCE_MARKER, repo_only)
+            self.assertIn(SOURCE_MARKER, plan)
+            self.assertNotIn(SOURCE_MARKER, bare)
 
     async def test_detail_lists_commits(self):
         from textual.widgets import Static

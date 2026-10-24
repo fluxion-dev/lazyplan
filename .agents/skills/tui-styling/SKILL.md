@@ -34,3 +34,6 @@ https://textual.textualize.io/guide/design/.
 - Source CSS: `#source-page` is the frame, `#source-main` splits a
   `1fr/1fr` tree and preview, `#source-filter` is a hidden Input revealed by
   `/`. Keep the tree scroller and preview scroller independent.
+- Diff previews use Rich markup only: `[green]+` / `[red]-`, dim line-number
+  gutters, bold file headers, cyan hunk headers. `SOURCE_MARKER` (`⎇`) is a
+  single-cell dim suffix from `design.py`; never bake it into a title.

@@ -28,7 +28,8 @@ https://textual.textualize.io/how-to/work-with-containers/.
 - `display: none` removes layout; `visibility: hidden` keeps space.
 - Source screen: `#source-main` is a `Horizontal` with two
   `VerticalScroll` children (tree and preview); the filter Input sits above
-  it and is hidden until `/`.
+  it and is hidden until `/`. The preview scroller owns diff overflow and
+  resets to the top (`scroll_home`) on every selection change.
 
 ## Mount / scroll discipline
 

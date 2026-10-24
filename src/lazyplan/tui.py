@@ -649,50 +649,57 @@ if _TEXTUAL_OK:
                 self.rev += 1
 
         # -- rendering ---------------------------------------------------
-        def _source_stats(self) -> dict[tuple[str, int], tuple[int, int, int]]:
+        def _source_stats(self) -> dict[tuple[str, int], tuple[int, int, int, int]]:
             """Direct plus descendant provenance counts per row, one store read each."""
             vcs = self.store.vcs_links_map()
             forge = self.store.forge_links_map()
+            repos = self.store.repos_map()
 
-            def direct(kind: str, oid: int) -> tuple[int, int, int]:
+            def direct(kind: str, oid: int) -> tuple[int, int, int, int]:
                 links = vcs.get((kind, oid), [])
                 pulls = forge.get((kind, oid), [])
                 return (
                     len(links),
                     len(pulls),
                     sum(1 for link in links if link.stale) + sum(1 for link in pulls if link.stale),
+                    len(repos.get((kind, oid), [])),
                 )
 
-            stats: dict[tuple[str, int], tuple[int, int, int]] = {}
+            stats: dict[tuple[str, int], tuple[int, int, int, int]] = {}
             for plan, milestones in services.tree(self.store, status=self.status_filter):
-                pc, pp, ps = direct("plan", plan.id)
+                pc, pp, ps, pr = direct("plan", plan.id)
+                plan_repos = pr
                 for milestone, tasks in milestones:
-                    mc, mp, ms = direct("milestone", milestone.id)
+                    mc, mp, ms, mr = direct("milestone", milestone.id)
+                    milestone_repos = mr or plan_repos
                     for task in tasks:
-                        tc, tp, ts = direct("task", task.id)
-                        stats[("task", task.id)] = (tc, tp, ts)
+                        tc, tp, ts, tr = direct("task", task.id)
+                        task_repos = tr or milestone_repos
+                        stats[("task", task.id)] = (tc, tp, ts, task_repos)
                         mc, mp, ms = mc + tc, mp + tp, ms + ts
-                    stats[("milestone", milestone.id)] = (mc, mp, ms)
+                        milestone_repos = max(milestone_repos, task_repos)
+                    stats[("milestone", milestone.id)] = (mc, mp, ms, milestone_repos)
                     pc, pp, ps = pc + mc, pp + mp, ps + ms
-                stats[("plan", plan.id)] = (pc, pp, ps)
+                    plan_repos = max(plan_repos, milestone_repos)
+                stats[("plan", plan.id)] = (pc, pp, ps, plan_repos)
             return stats
 
-        def _source_match(self, stats: tuple[int, int, int]) -> bool:
-            commits, pulls, stale = stats
+        def _source_match(self, stats: tuple[int, int, int, int]) -> bool:
+            commits, pulls, stale, repos = stats
             if self.source_filter == "linked":
-                return commits > 0 or pulls > 0
+                return commits > 0 or pulls > 0 or repos > 0
             if self.source_filter == "pr":
                 return pulls > 0
             if self.source_filter == "stale":
                 return stale > 0
             if self.source_filter == "unlinked":
-                return commits == 0 and pulls == 0
+                return commits == 0 and pulls == 0 and repos == 0
             return True
 
         def _filter_source_tree(
             self,
             base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]],
-            stats: dict[tuple[str, int], tuple[int, int, int]],
+            stats: dict[tuple[str, int], tuple[int, int, int, int]],
         ) -> list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]:
             """Keep rows whose cached provenance matches the active source filter."""
             if self.source_filter == "all":
@@ -704,13 +711,13 @@ if _TEXTUAL_OK:
                     kept_tasks = [
                         task
                         for task in tasks
-                        if self._source_match(stats.get(("task", task.id), (0, 0, 0)))
+                        if self._source_match(stats.get(("task", task.id), (0, 0, 0, 0)))
                     ]
                     if kept_tasks or self._source_match(
-                        stats.get(("milestone", milestone.id), (0, 0, 0))
+                        stats.get(("milestone", milestone.id), (0, 0, 0, 0))
                     ):
                         kept_ms.append((milestone, kept_tasks))
-                if kept_ms or self._source_match(stats.get(("plan", plan.id), (0, 0, 0))):
+                if kept_ms or self._source_match(stats.get(("plan", plan.id), (0, 0, 0, 0))):
                     out.append((plan, kept_ms))
             return out
 
@@ -825,25 +832,39 @@ if _TEXTUAL_OK:
         ) -> None:
             """Create plan/milestone/task nodes for one refresh."""
             for plan, milestones in filtered:
+                plan_stats = source_stats.get(("plan", plan.id))
                 plan_node = root.add(
                     plan_row(
                         plan,
                         progress=progress.get(("plan", plan.id)),
                         width=self._row_width(tree, 3),
-                        source_counts=source_stats.get(("plan", plan.id)),
+                        source_counts=(
+                            (plan_stats[0], plan_stats[1], plan_stats[2]) if plan_stats else None
+                        ),
+                        repo_count=plan_stats[3] if plan_stats else 0,
                     ),
                     data={"kind": "plan", "id": plan.id},
                     allow_expand=bool(milestones),
                 )
                 self._row_nodes[("plan", plan.id)] = plan_node
                 for milestone, tasks in milestones:
+                    milestone_stats = source_stats.get(("milestone", milestone.id))
                     milestone_node = plan_node.add(
                         milestone_row(
                             milestone,
                             self.store,
                             progress=progress.get(("milestone", milestone.id)),
                             width=self._row_width(tree, 7),
-                            source_counts=source_stats.get(("milestone", milestone.id)),
+                            source_counts=(
+                                (
+                                    milestone_stats[0],
+                                    milestone_stats[1],
+                                    milestone_stats[2],
+                                )
+                                if milestone_stats
+                                else None
+                            ),
+                            repo_count=milestone_stats[3] if milestone_stats else 0,
                         ),
                         data={"kind": "milestone", "id": milestone.id},
                         allow_expand=bool(tasks),
@@ -853,6 +874,7 @@ if _TEXTUAL_OK:
                         prs = forge_map.get(("task", task.id), [])
                         pr = prs[0] if prs else None
                         task_links = vcs_map.get(("task", task.id), [])
+                        task_stats = source_stats.get(("task", task.id))
                         leaf = milestone_node.add_leaf(
                             task_row(
                                 task,
@@ -862,6 +884,7 @@ if _TEXTUAL_OK:
                                 pr_state=pr.state if pr else "",
                                 pr_checks=pr.checks if pr else "",
                                 stale=any(link.stale for link in task_links),
+                                repo_count=task_stats[3] if task_stats else 0,
                             ),
                             data={"kind": "task", "id": task.id},
                         )

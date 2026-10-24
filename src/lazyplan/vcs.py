@@ -51,6 +51,25 @@ class RepoStatus:
     detached: bool = False
 
 
+@dataclass(frozen=True)
+class DiffRead:
+    """Bounded read-only patch output for one commit and optional path.
+
+    `state` is one of ok, empty, binary, root, merge, missing, or error.
+    Root patches are still returned (the whole tree); merge patches are not,
+    because a combined diff is rarely what the preview wants.
+    """
+
+    state: str = "ok"
+    patch: str = ""
+    truncated: bool = False
+    detail: str = ""
+
+
+DIFF_MAX_BYTES = 160_000
+DIFF_MAX_LINES = 4_000
+
+
 class VCSBackend(ABC):
     """Pluggable version-control backend. Git is the only one for now."""
 
@@ -111,6 +130,11 @@ class VCSBackend(ABC):
         """Best common ancestor of two refs, or None when unrelated."""
         raise NotImplementedError
 
+    @abstractmethod
+    def diff(self, root: str | Path, sha: str, path: str = "") -> DiffRead:
+        """Bounded read-only patch for one commit, optionally one path."""
+        raise NotImplementedError
+
 
 def _run_git(root: str | Path, *args: str) -> subprocess.CompletedProcess[str] | None:
     """Run git in root; None on missing binary or timeout."""
@@ -123,6 +147,21 @@ def _run_git(root: str | Path, *args: str) -> subprocess.CompletedProcess[str] |
         )
     except (FileNotFoundError, subprocess.SubprocessError, OSError):
         return None
+
+
+def _bound_patch(text: str) -> tuple[str, bool]:
+    """Trim a patch to the byte and line caps, reporting whether it was cut."""
+    lines = text.splitlines(keepends=True)
+    truncated = len(lines) > DIFF_MAX_LINES
+    body = "".join(lines[:DIFF_MAX_LINES])
+    encoded = body.encode("utf-8", "replace")
+    if len(encoded) > DIFF_MAX_BYTES:
+        encoded = encoded[:DIFF_MAX_BYTES]
+        body = encoded.decode("utf-8", "ignore")
+        if "\n" in body:
+            body = body.rsplit("\n", 1)[0] + "\n"
+        truncated = True
+    return body, truncated
 
 
 class GitBackend(VCSBackend):
@@ -232,6 +271,47 @@ class GitBackend(VCSBackend):
             return None
         sha = out.stdout.strip()
         return sha or None
+
+    def diff(self, root: str | Path, sha: str, path: str = "") -> DiffRead:
+        """Read one commit patch with `git show`; never writes or fetches."""
+        ref = sha.strip()
+        if not ref:
+            return DiffRead(state="missing", detail="no commit selected")
+        resolved = _run_git(root, "rev-parse", "--verify", f"{ref}^{{commit}}")
+        if resolved is None or resolved.returncode != 0:
+            return DiffRead(state="missing", detail="commit not found in this checkout")
+        full = resolved.stdout.strip()
+        if not full:
+            return DiffRead(state="missing", detail="commit not found in this checkout")
+        parents = _run_git(root, "rev-list", "--parents", "-n", "1", full)
+        parent_count = 1
+        if parents is not None and parents.returncode == 0:
+            parent_count = max(0, len(parents.stdout.split()) - 1)
+        if parent_count > 1:
+            return DiffRead(state="merge", detail="merge commit: open it in the browser")
+        args = [
+            "show",
+            "--no-color",
+            "--no-ext-diff",
+            "--no-textconv",
+            "--format=",
+            "--patch",
+        ]
+        if parent_count == 0:
+            args.append("--root")
+        args.append(full)
+        if path.strip():
+            args.extend(["--", path.strip()])
+        out = _run_git(root, *args)
+        if out is None or out.returncode != 0:
+            return DiffRead(state="error", detail="git could not read this diff")
+        patch, truncated = _bound_patch(out.stdout)
+        if not patch.strip():
+            return DiffRead(state="empty", detail="no textual changes")
+        if "GIT binary patch" in patch or "Binary files " in patch:
+            return DiffRead(state="binary", detail="binary file: open it in the browser")
+        state = "root" if parent_count == 0 else "ok"
+        return DiffRead(state=state, patch=patch, truncated=truncated)
 
     @staticmethod
     def _dirty(root: str | Path) -> bool:

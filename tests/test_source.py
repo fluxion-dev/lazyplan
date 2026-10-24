@@ -5,11 +5,18 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from lazyplan.source import build_source_trail
+from lazyplan.source import (
+    build_source_trail,
+    clear_diff_cache,
+    parse_patch,
+    read_diff,
+)
 from lazyplan.store import Store
+from lazyplan.vcs import DiffRead
 
 
 def _git_available() -> bool:
@@ -18,6 +25,70 @@ def _git_available() -> bool:
     except (FileNotFoundError, OSError):
         return False
     return out.returncode == 0
+
+
+class TestDiffParsing(unittest.TestCase):
+    PATCH = (
+        "diff --git a/a.txt b/a.txt\n"
+        "index 111..222 100644\n"
+        "--- a/a.txt\n"
+        "+++ b/a.txt\n"
+        "@@ -1,2 +1,3 @@ section\n"
+        " one\n"
+        "-two\n"
+        "+TWO\n"
+        "+three\n"
+        "\\ No newline at end of file\n"
+        "diff --git a/img.png b/img.png\n"
+        "Binary files a/img.png and b/img.png differ\n"
+    )
+
+    def test_parse_files_hunks_and_line_numbers(self):
+        files = parse_patch(self.PATCH)
+        self.assertEqual(len(files), 2)
+        first = files[0]
+        self.assertEqual(first.path, "a.txt")
+        self.assertEqual(first.old_path, "a.txt")
+        self.assertFalse(first.binary)
+        self.assertEqual(len(first.hunks), 1)
+        hunk = first.hunks[0]
+        self.assertEqual((hunk.old_start, hunk.old_count), (1, 2))
+        self.assertEqual((hunk.new_start, hunk.new_count), (1, 3))
+        self.assertEqual(
+            [line.kind for line in hunk.lines], ["context", "remove", "add", "add", "meta"]
+        )
+        self.assertEqual((hunk.lines[0].old_no, hunk.lines[0].new_no), (1, 1))
+        self.assertEqual((hunk.lines[1].old_no, hunk.lines[1].new_no), (2, None))
+        self.assertEqual((hunk.lines[2].old_no, hunk.lines[2].new_no), (None, 2))
+        self.assertEqual((hunk.lines[3].old_no, hunk.lines[3].new_no), (None, 3))
+        self.assertTrue(files[1].binary)
+
+    def test_parse_empty_patch(self):
+        self.assertEqual(parse_patch(""), ())
+
+    def test_read_diff_cache_and_clear(self):
+        class FakeBackend:
+            def __init__(self) -> None:
+                self.calls = 0
+
+            def diff(self, root, sha, path=""):
+                self.calls += 1
+                return DiffRead(state="ok", patch=f"{root}:{sha}:{path}")
+
+        backend = FakeBackend()
+        clear_diff_cache()
+        with mock.patch("lazyplan.source.detect_backend", return_value=(backend, "/repo")):
+            first = read_diff("/repo", "a" * 40)
+            again = read_diff("/repo", "a" * 40)
+            scoped = read_diff("/repo", "a" * 40, "a.txt")
+        self.assertEqual(backend.calls, 2)
+        self.assertIs(first, again)
+        self.assertIn("a.txt", scoped.patch)
+        clear_diff_cache()
+        with mock.patch("lazyplan.source.detect_backend", return_value=(backend, "/repo")):
+            read_diff("/repo", "a" * 40)
+        self.assertEqual(backend.calls, 3)
+        clear_diff_cache()
 
 
 @unittest.skipUnless(_git_available(), "git CLI required")

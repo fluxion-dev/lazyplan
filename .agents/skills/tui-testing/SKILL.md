@@ -24,7 +24,11 @@ https://textual.textualize.io/api/pilot/.
   `tests/test_screens_esc.py` (esc discards, dirty-prompt flow).
 - Source screen tests live in `tests/test_source_screen.py`: build a real
   temp repo, open `SourceScreen`, assert tree labels, then `select_node`
-  plus `y`/`o` with clipboard/browser mocked.
+  plus `y`/`o` with clipboard/browser mocked. Diff tests call
+  `screen._diff_block(repo, sha[, path])` and assert markup (green/red,
+  line numbers, `+N more lines`), or mock `source_screen.read_diff` for
+  binary/merge/missing states. Parser and cache tests live in
+  `tests/test_source.py`.
 - TUI tests skip on stdlib-only interpreters (`_TEXTUAL_OK` guard).
 - The suite uses stdlib `unittest.IsolatedAsyncioTestCase`, not
   pytest-asyncio; keep it that way. `pytest-textual-snapshot` is available

@@ -158,9 +158,14 @@ and leaves the link for you. `show` includes inherited commits, stale markers,
 and web URLs when the origin remote can be mapped.
 
 In the TUI, select a row and press `g` (or use **Open source trail**) to browse
-repo → commit → changed file plus linked PRs. `o` opens, `y` copies, `/`
-filters. Plans and milestones aggregate descendant work. `F` cycles source
-filters: all, linked, has PR, stale, unlinked.
+repo → commit → changed file plus linked PRs. Highlighting a commit or file
+renders a read-only unified diff with line numbers; large diffs stop at 20
+files / 300 lines with a `+N more` notice, and `o` opens the full commit.
+Binary, root, merge, empty, and missing states are explicit. Diffs are read
+live and never persisted. Rows with source details end in a single-cell `⎇`
+marker. `o` opens, `y` copies, `/` filters. Plans and milestones aggregate
+descendant work. `F` cycles source filters: all, linked, has PR, stale,
+unlinked.
 
 ## GitHub pull requests
 

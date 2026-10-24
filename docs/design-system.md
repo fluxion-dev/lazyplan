@@ -22,6 +22,8 @@ Plan and milestone rows show compact source counts (`2c · 1 PR · 1 stale`)
 and repo chips; task rows show up to two short SHAs plus `+N`, a stale `!`,
 and a PR chip. The preview expands those counts with the newest commit and
 changed-file count. Titles keep priority over chips via width truncation.
+Rows with commits, pull requests, or repo links end in a single-cell `⎇`
+marker (`SOURCE_MARKER`); unlinked rows are byte-identical to before.
 
 Empty states come from `EMPTY_NO_PLANS` / `EMPTY_FEED` (same in CLI and
 TUI).
@@ -88,10 +90,17 @@ cascade summary; `Esc` backs out. Delete focuses Cancel by default.
 `SourceScreen` is a plain `Screen` opened by `g` from the tree or detail.
 It groups cached provenance into repository → commit → changed file, with
 linked PRs under the repo, and keeps a Static preview for the highlighted
-node. `o` opens the selected commit/PR/file URL, `y` copies the SHA/path/
-URL, `/` filters, `r` rebuilds from cache, and `Esc` returns. The model is
-built by `source.build_source_trail`; opening the screen never calls the
-network, and live git reads are limited to selected repos.
+node. Every source row ends in `⎇`. Highlighting a commit or file reads a
+bounded unified diff through `source.read_diff` (LRU keyed by repo, sha,
+path) and renders file/hunk headers, old/new line numbers, and green/red
+add/remove lines. Preview caps are `DIFF_PREVIEW_LINES` and
+`DIFF_PREVIEW_FILES`, with `+N more` notices and `o` as the browser
+fallback. Binary, root, merge, empty, missing, and non-git states render
+explicit messages. `o` opens the selected commit/PR/file URL, `y` copies
+the SHA/path/URL, `/` filters, `r` rebuilds and clears the diff cache, and
+`Esc` returns. The model is built by `source.build_source_trail`; opening
+the screen never calls the network, and live git reads are limited to
+selected repos.
 
 ## Forms
 

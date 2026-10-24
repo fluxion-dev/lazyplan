@@ -9,13 +9,16 @@ updates all of them and `tests/test_version.py` fails on drift.
 1. Run `./tools/check.sh`. It must print `ALL GATES GREEN` on both
    interpreters.
 2. Run `python3 tools/gen-man.py --check`.
-3. Build a wheel and inspect the contents when the release changes packaging:
+3. Run `python3 tools/check-site.py` and, after `npm run build` in `site/`,
+   `python3 tools/check-site.py --dist site/dist`. The Pages workflow runs the
+   dist check before deploy; do not bypass it.
+4. Build a wheel and inspect the contents when the release changes packaging:
 
    ```bash
    python3 -m build --outdir /tmp/lazyplan-dist
    ```
 
-4. Confirm the version is already correct everywhere:
+5. Confirm the version is already correct everywhere:
 
    ```bash
    grep -n '^version = ' pyproject.toml
@@ -23,7 +26,7 @@ updates all of them and `tests/test_version.py` fails on drift.
    grep -n '"version"' site/index.html site/package.json
    ```
 
-5. Commit in reviewable slices, then push `main`. Do not tag a red commit.
+6. Commit in reviewable slices, then push `main`. Do not tag a red commit.
 
 ## Publish
 
@@ -62,6 +65,10 @@ working screenshots:
 ```bash
 curl -fsSL https://fluxion-dev.github.io/lazyplan/ | grep -E '0\.X\.Y|init --check|doctor'
 ```
+
+Run the discoverability post-deploy checklist in `docs/seo.md`: canonical,
+FAQ/JSON-LD, sitemap, robots, social preview, and version badges. Search engine
+submission is human-only; document what was submitted.
 
 ## If something fails
 

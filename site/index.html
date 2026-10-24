@@ -4,17 +4,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>lazyplan — a plan for you and your agent</title>
-<meta name="description" content="A terminal plan tracker for you and your coding agent. Keep the plan, the context, and the next step in one place.">
-<meta name="keywords" content="plan tracker, coding agent, ai agent, developer tools, terminal app">
+<meta name="description" content="A terminal plan tracker for you and your coding agent. Keep plans, git and PR proof, and the next step in one place.">
+<meta name="keywords" content="plan tracker, coding agent, ai agent, developer tools, terminal app, git provenance, pull request tracking, coding agent planning">
 <meta name="author" content="Brad Lindsay">
 <meta name="theme-color" content="#09090B">
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="https://fluxion-dev.github.io/lazyplan/">
+<link rel="preload" as="image" href="./screens/lpui-and-agent.webp" type="image/webp">
 <meta property="og:title" content="lazyplan — a plan for you and your agent">
-<meta property="og:description" content="A terminal plan tracker for you and your coding agent. Keep the plan, the context, and the next step in one place.">
+<meta property="og:description" content="A terminal plan tracker for you and your coding agent. Keep plans, git and PR proof, and the next step in one place.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://fluxion-dev.github.io/lazyplan/">
 <meta property="og:site_name" content="lazyplan">
+<meta property="og:locale" content="en_US">
 <!-- Stable logo URL (self-hosted SVG, copied from public/ at build time). -->
 <meta property="og:image" content="https://fluxion-dev.github.io/lazyplan/screens/og-lpui-and-agent.png">
 <meta property="og:image:alt" content="lazyplan beside a coding agent terminal">
@@ -22,7 +24,7 @@
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="lazyplan — a plan for you and your agent">
-<meta name="twitter:description" content="A terminal plan tracker for you and your coding agent. Keep the plan, the context, and the next step in one place.">
+<meta name="twitter:description" content="A terminal plan tracker for you and your coding agent. Keep plans, git and PR proof, and the next step in one place.">
 <meta name="twitter:image" content="https://fluxion-dev.github.io/lazyplan/screens/og-lpui-and-agent.png">
 <meta name="twitter:image:alt" content="lazyplan beside a coding agent terminal">
 <script type="application/ld+json">
@@ -30,14 +32,23 @@
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   "name": "lazyplan",
+  "applicationCategory": "DeveloperApplication",
   "version": "0.20.1",
+  "softwareVersion": "0.20.1",
   "url": "https://fluxion-dev.github.io/lazyplan/",
   "screenshot": "https://fluxion-dev.github.io/lazyplan/screens/og-lpui-and-agent.png",
+  "description": "A terminal plan tracker for you and your coding agent, with local plans and read-only git and pull request provenance.",
   "author": {
     "@type": "Person",
     "name": "Brad Lindsay"
   },
   "license": "MIT",
+  "isAccessibleForFree": true,
+  "keywords": "terminal plan tracker, coding agent, git provenance, pull request tracking",
+  "sameAs": [
+    "https://github.com/fluxion-dev/lazyplan",
+    "https://pypi.org/project/lazyplan-tui/"
+  ],
   "operatingSystem": ["Linux"],
   "downloadUrl": [
     "https://github.com/fluxion-dev/lazyplan/releases/latest/download/install.sh",
@@ -45,6 +56,62 @@
     "https://github.com/fluxion-dev/lazyplan/releases/download/v0.20.1/lazyplan_0.20.1-1_arm64.deb",
     "https://github.com/fluxion-dev/lazyplan/releases/download/v0.20.1/lazyplan-0.20.1-1.x86_64.rpm",
     "https://github.com/fluxion-dev/lazyplan/releases/download/v0.20.1/lazyplan-0.20.1-1.aarch64.rpm"
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is lazyplan?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "lazyplan is a terminal plan tracker for you and your coding agent. Plans, milestones, tasks, and acceptance criteria live in one local place so you can steer the work without losing context in chat."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does lazyplan work with coding agents?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Your agent uses the same local database through the lpui command line, so it can read the plan, add work, and move tasks forward while you keep the plan visible in the TUI."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does lazyplan create commits, push branches, or open pull requests?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. lazyplan is read-only on the VCS front. It records existing branches, links commits, and caches pull request proof, but other tools remain responsible for committing, pushing, reviewing, and merging."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How does git and pull request provenance work?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Link a commit to a task, or finish a task on a recorded branch. lazyplan can refresh linked commits into pull requests and cache checks and merge state. Press g in the TUI to browse repository, commit, changed file, and PR evidence for any plan, milestone, or task."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Where is my plan data stored?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Plans live in a local SQLite database, shared in your home by default or inside a repository with team scope. There is no account or cloud dependency, and you can back up or restore everything with lpui export and lpui import."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I install lazyplan?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Install with pipx install lazyplan-tui, use the Linux deb or rpm packages, or run the install script. Python 3.11 or newer is required."
+      }
+    }
   ]
 }
 </script>
@@ -60,8 +127,10 @@
     <a href="#top" class="mr-auto inline-flex items-center gap-2 text-xl font-extrabold tracking-wide text-white no-underline"><img src="./logo.svg" alt="" width="32" height="32" class="h-8 w-8" aria-hidden="true">lazyplan<span class="text-viking-gold">.</span></a>
     <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#features">Features</a>
     <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#screens">Screenshots</a>
+    <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#provenance">Provenance</a>
     <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#quickstart">Quickstart</a>
     <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#agents">For agents</a>
+    <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#faq">FAQ</a>
     <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#install">Install</a>
     <a class="inline-flex items-center gap-1.5 text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="https://github.com/fluxion-dev/lazyplan">
       <!-- lucide:github -->
@@ -151,7 +220,7 @@
   <figure class="m-0 overflow-hidden rounded-xl border border-plan-border bg-plan-surface/70 p-2 shadow-2xl shadow-black/40 md:p-3">
     <picture>
       <source srcset="./screens/lpui-and-agent.webp" type="image/webp">
-      <img src="./screens/lpui-and-agent.png" width="1600" height="760" loading="eager" decoding="async" alt="lpui plan tree and preview on the left, with a coding agent terminal on the right running lpui commands." class="block h-auto w-full rounded-lg">
+      <img src="./screens/lpui-and-agent.png" width="1600" height="760" loading="eager" fetchpriority="high" decoding="async" alt="lpui plan tree and preview on the left, with a coding agent terminal on the right running lpui commands." class="block h-auto w-full rounded-lg">
     </picture>
     <figcaption class="px-2 pb-1 pt-3 text-sm text-zinc-500">The whole plan, live, beside your agent.</figcaption>
   </figure>
@@ -160,17 +229,67 @@
     <figure class="m-0 overflow-hidden rounded-xl border border-plan-border bg-plan-surface/70 p-2 shadow-xl shadow-black/30">
       <picture>
         <source srcset="./screens/lpui-detail.webp" type="image/webp">
-        <img src="./screens/lpui-detail.png" width="1400" height="900" loading="eager" decoding="async" alt="lpui read-only detail page showing a plan's reason, what to build, acceptance criteria, and milestones." class="block h-auto w-full rounded-lg">
+        <img src="./screens/lpui-detail.png" width="1400" height="900" loading="lazy" decoding="async" alt="lpui read-only detail page showing a plan's reason, what to build, acceptance criteria, and milestones." class="block h-auto w-full rounded-lg">
       </picture>
       <figcaption class="px-2 pb-1 pt-3 text-sm text-zinc-500">The why, the what, and what done means.</figcaption>
     </figure>
     <figure class="m-0 overflow-hidden rounded-xl border border-plan-border bg-plan-surface/70 p-2 shadow-xl shadow-black/30">
       <picture>
         <source srcset="./screens/lpui-narrow.webp" type="image/webp">
-        <img src="./screens/lpui-narrow.png" width="900" height="600" loading="eager" decoding="async" alt="lpui at 80 by 24 columns, with the plan tree at full width and the key bar at the bottom." class="block h-auto w-full rounded-lg">
+        <img src="./screens/lpui-narrow.png" width="900" height="600" loading="lazy" decoding="async" alt="lpui at 80 by 24 columns, with the plan tree at full width and the key bar at the bottom." class="block h-auto w-full rounded-lg">
       </picture>
       <figcaption class="px-2 pb-1 pt-3 text-sm text-zinc-500">Fits the terminal you already have.</figcaption>
     </figure>
+  </div>
+</section>
+
+<section id="provenance" class="mx-auto max-w-7xl scroll-mt-20 px-6 py-20 md:py-28">
+  <div class="mb-10 max-w-3xl md:mb-14">
+    <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">Git + PR provenance</p>
+    <h2 class="mb-4 text-2xl font-bold text-white">See where the plan landed in the source.</h2>
+    <p class="text-lg text-zinc-400">Link commits to tasks, then press <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">g</code> to follow the evidence from plan element to repository, branch, commit, changed file, and pull request.</p>
+  </div>
+
+  <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
+      <h3 class="mb-2 text-lg font-semibold text-white">Source trail</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">A keyboard tree groups each checkout by repository, commit, and changed file. Plans and milestones roll descendant work up, so plan-level proof is one key away.</p>
+    </div>
+    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
+      <h3 class="mb-2 text-lg font-semibold text-white">Open or copy fast</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Open a commit, PR, or file in the browser. Copy a SHA, path, or URL without leaving the terminal. Filter the trail when a plan touches many files.</p>
+    </div>
+    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
+      <h3 class="mb-2 text-lg font-semibold text-white">Read-only by design</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">lazyplan records existing branches and commit proof. It never commits, pushes, opens PRs, or merges; your existing tools stay in charge of VCS actions.</p>
+    </div>
+  </div>
+
+  <div class="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+    <div class="terminal-window overflow-hidden">
+      <div class="flex items-center gap-1.5 border-b border-plan-border px-4 py-2.5" aria-hidden="true">
+        <span class="h-3 w-3 rounded-full bg-[#ff5f57]"></span>
+        <span class="h-3 w-3 rounded-full bg-[#febc2e]"></span>
+        <span class="h-3 w-3 rounded-full bg-[#28c840]"></span>
+        <span class="ml-2 font-mono text-xs text-zinc-500">lpui — source trail</span>
+      </div>
+      <pre class="m-0 overflow-x-auto p-4 font-mono text-[0.85rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono">source · 3 commits · 8 files · 1 PR
+  api · main · clean · 3c · 1PR
+    a1b2c3 Add source trail · 4 files
+    d4e5f6 Cache PR state · 2 files
+  web · main · clean · 0c · 0PR
+
+o open · y copy · / filter · r refresh</code></pre>
+    </div>
+    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8">
+      <h3 class="mb-3 text-lg font-semibold text-white">Works with the tools you already use</h3>
+      <ul class="m-0 space-y-3 p-0 text-[0.95rem] text-zinc-400 list-none">
+        <li><strong class="text-zinc-200">Commits:</strong> link a SHA, capture a task finish range, or scan Lazyplan trailers.</li>
+        <li><strong class="text-zinc-200">Branches:</strong> record an existing branch and base before the work starts.</li>
+        <li><strong class="text-zinc-200">Pull requests:</strong> refresh cached state, checks, reviews, and merge evidence from GitHub.</li>
+        <li><strong class="text-zinc-200">Filters:</strong> show only linked work, PRs, stale links, or unlinked rows.</li>
+      </ul>
+    </div>
   </div>
 </section>
 
@@ -223,6 +342,40 @@ lpui task move --id 1 --to done
 </div>
 </section>
 
+<section id="faq" class="mx-auto max-w-4xl scroll-mt-20 px-6 py-20 md:py-28">
+  <div class="mb-10 max-w-3xl md:mb-14">
+    <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">FAQ</p>
+    <h2 class="mb-4 text-2xl font-bold text-white">Questions, answered.</h2>
+    <p class="text-lg text-zinc-400">The short version of how lazyplan fits your terminal, your agent, and your git workflow.</p>
+  </div>
+  <div class="space-y-3">
+    <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
+      <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">What is lazyplan?</summary>
+      <p class="mt-3 text-zinc-400">lazyplan is a terminal plan tracker for you and your coding agent. Plans, milestones, tasks, and acceptance criteria live in one local place so you can steer the work without losing context in chat.</p>
+    </details>
+    <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
+      <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">Does lazyplan work with coding agents?</summary>
+      <p class="mt-3 text-zinc-400">Yes. Your agent uses the same local database through the <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui</code> command line, so it can read the plan, add work, and move tasks forward while you keep the plan visible in the TUI.</p>
+    </details>
+    <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
+      <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">Does lazyplan create commits, push branches, or open pull requests?</summary>
+      <p class="mt-3 text-zinc-400">No. lazyplan is read-only on the VCS front. It records existing branches, links commits, and caches pull request proof, but other tools remain responsible for committing, pushing, reviewing, and merging.</p>
+    </details>
+    <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
+      <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">How does git and pull request provenance work?</summary>
+      <p class="mt-3 text-zinc-400">Link a commit to a task, or finish a task on a recorded branch. lazyplan can refresh linked commits into pull requests and cache checks and merge state. Press <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">g</code> in the TUI to browse repository, commit, changed file, and PR evidence for any plan, milestone, or task.</p>
+    </details>
+    <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
+      <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">Where is my plan data stored?</summary>
+      <p class="mt-3 text-zinc-400">Plans live in a local SQLite database, shared in your home by default or inside a repository with team scope. There is no account or cloud dependency, and you can back up or restore everything with <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui export</code> and <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui import</code>.</p>
+    </details>
+    <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
+      <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">How do I install lazyplan?</summary>
+      <p class="mt-3 text-zinc-400">Install with <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">pipx install lazyplan-tui</code>, use the Linux deb or rpm packages, or run the install script. Python 3.11 or newer is required.</p>
+    </details>
+  </div>
+</section>
+
 <section id="install" class="mx-auto max-w-6xl scroll-mt-20 px-6 py-20 md:py-28">
   <h2 class="mb-4 text-2xl font-bold text-white"><span class="mr-1.5" aria-hidden="true">📦</span>Install</h2>
   <p class="mb-10 md:mb-14 text-lg text-zinc-400">One command, or grab a package for your system.</p>
@@ -273,6 +426,7 @@ sudo apt install ./lazyplan_0.20.1-1_amd64.deb
   <p class="m-0"><a class="text-cyber-cyan hover:underline" href="https://github.com/fluxion-dev/lazyplan">lazyplan</a> — one plan for you and your agent.</p>
   <ul class="mt-6 flex list-none flex-wrap items-center justify-center gap-x-6 gap-y-2 p-0">
     <li><a class="text-zinc-300 no-underline hover:text-white hover:underline" href="https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md">Usage</a></li>
+    <li><a class="text-zinc-300 no-underline hover:text-white hover:underline" href="#faq">FAQ</a></li>
     <li><a class="text-zinc-300 no-underline hover:text-white hover:underline" href="https://github.com/fluxion-dev/lazyplan">Repository</a></li>
     <li><a class="text-zinc-300 no-underline hover:text-white hover:underline" href="https://github.com/fluxion-dev/lazyplan/issues">Issues</a></li>
     <li><a class="text-zinc-300 no-underline hover:text-white hover:underline" href="https://github.com/fluxion-dev/lazyplan/releases">Releases</a></li>

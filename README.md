@@ -6,7 +6,7 @@
 
 Plan work with your coding agent, in the terminal.
 
-lazyplan is one shared plan for you and your agent. You get a fast keyboard screen. Your agent gets a simple command line. Plans, milestones, and tasks stay in one place instead of disappearing into chat.
+lazyplan is one shared plan for you and your agent. You get a fast keyboard screen. Your agent gets a simple command line. Plans, milestones, and tasks stay in one place instead of disappearing into chat. Read-only git and PR provenance shows where each one landed.
 
 **[See it in action →](https://fluxion-dev.github.io/lazyplan/#screens)**
 

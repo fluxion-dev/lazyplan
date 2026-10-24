@@ -13,16 +13,20 @@ keywords = [
     "ai agent",
     "developer tools",
     "terminal",
-    "roadmap",
-    "issue tracking",
+    "planning",
+    "git",
+    "pull requests",
+    "provenance",
+    "tui",
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Operating System :: OS Independent",
     "Environment :: Console",
+    "Intended Audience :: Developers",
     "Topic :: Software Development :: Bug Tracking",
-    "Topic :: Office/Business :: Scheduling",
+    "Topic :: Software Development :: Version Control :: Git",
 ]
 [project.urls]
 Homepage = "https://github.com/fluxion-dev/lazyplan"

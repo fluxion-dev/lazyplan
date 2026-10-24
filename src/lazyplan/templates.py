@@ -137,7 +137,7 @@ edge cases, non-goals, and assumptions. Vague scope is rejected, not recorded.
 
 Commit strategy: state the ordered slices of small commits in `what`, and the
 check that keeps each commit green. Do not plan one batch commit for the whole
-plan. Every task desc names the slice it advances.
+plan.
 
 Readability (enforced): write `why`/`what` for scanning — short paragraphs
 separated by blank lines, sections with headers or lists where needed
@@ -164,8 +164,7 @@ How `add-milestone` (and the TUI create command) uses this file:
   concrete values, never brackets). Each criterion must be exercisable by a
   named task.
 
-Commit order: map each task to the slice it advances. A milestone that only
-works as one batch commit is not ready to cut.
+Commit order: map each task to the slice it advances.
 
 Readability (enforced): structure `desc` in paragraphs and sections —
 narrative first, then inputs/prerequisites. Long single-blob text is
@@ -188,7 +187,7 @@ How `add-task` (and the TUI create command) uses this file:
   starters ship EMPTY on purpose: add DoD checklists per task, each one
   referencing the plan criterion it satisfies (never ship example text).
 
-Commit slice: one task lands as one or more small commits. Every commit is green — the relevant checks pass and the tree builds — and independently reviewable. Name what each commit proves and the verification that keeps it green. Never batch a whole milestone or plan into one commit.
+Commit slice: one task lands as one or more small commits. Every commit is green — the relevant checks pass and the tree builds — and independently reviewable. Name what each commit proves and the verification that keeps it green.
 
 Readability (enforced): structure `desc` in paragraphs and sections.
 Long single-blob text is rejected at creation; short descs stay legal.

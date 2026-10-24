@@ -90,7 +90,7 @@ class TestParseTemplate(unittest.TestCase):
             "milestone": (
                 "ordered commit slices",
                 "Commit order",
-                "one batch commit",
+                "map each task to the slice",
             ),
             "task": (
                 "Commit slice",

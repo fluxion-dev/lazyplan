@@ -163,6 +163,56 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
             self.assertIn(f"merge {'b' * 12}", body)
             self.assertIn(url, body)
 
+    async def test_detail_shows_source_trail_and_opens_screen(self):
+        from textual.widgets import Static
+
+        from lazyplan.source_screen import SourceScreen
+
+        repo = os.path.join(self.tmp.name, "source-repo")
+        os.makedirs(repo)
+        subprocess.run(["git", "init", "-q", "-b", "main", repo], check=True, timeout=10)
+        subprocess.run(["git", "-C", repo, "config", "user.email", "t@t.t"], check=True, timeout=10)
+        subprocess.run(["git", "-C", repo, "config", "user.name", "Tester"], check=True, timeout=10)
+        with open(os.path.join(repo, "a.py"), "w") as fh:
+            fh.write("a\n")
+        subprocess.run(["git", "-C", repo, "add", "."], check=True, timeout=10)
+        subprocess.run(["git", "-C", repo, "commit", "-qm", "source work"], check=True, timeout=10)
+        sha = subprocess.run(
+            ["git", "-C", repo, "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=True,
+        ).stdout.strip()
+        store = Store(self.db)
+        store.add_repo_link(
+            "task",
+            self.tid,
+            repo,
+            "git@github.com:org/repo.git",
+            branch="main",
+            base_sha=sha,
+        )
+        store.link_commit(
+            "task",
+            self.tid,
+            sha,
+            subject="source work",
+            author="Tester",
+            repo_root=repo,
+            files=("a.py", "src/b.py"),
+        )
+        async with self.app.run_test(size=(100, 30)) as pilot:
+            await pilot.pause()
+            await self._open(pilot, "task", self.tid)
+            body = str(self.app.screen.query_one("#detail-body", Static).render())
+            self.assertIn("source · 1 commits · 2 files", body)
+            self.assertIn("source work", body)
+            self.assertIn("g source trail", body)
+            await pilot.press("g")
+            await pilot.pause()
+            self.assertIsInstance(self.app.screen, SourceScreen)
+
     async def test_detail_rolls_up_pull_requests_for_plan_and_milestone(self):
         from textual.widgets import Static
 

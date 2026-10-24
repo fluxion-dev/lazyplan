@@ -37,15 +37,16 @@ class TestCommitChips(unittest.IsolatedAsyncioTestCase):
     async def asyncTearDown(self):
         self.tmp.cleanup()
 
-    async def test_linked_rows_stay_clean_and_preview_counts(self):
+    async def test_compact_row_chips_and_preview_counts(self):
         from textual.widgets import Static
 
         async with self.app.run_test() as pilot:
             await pilot.pause()
             task_label = str(self.app._row_nodes[("task", self.tid)].label)
-            self.assertNotIn(self.sha[:12], task_label)
+            self.assertIn(self.sha[:12], task_label)
             plan_label = str(self.app._row_nodes[("plan", self.pid)].label)
             self.assertNotIn("b" * 12, plan_label)
+            self.assertIn("2c", plan_label)
             self.app.selected = ("task", self.tid)
             self.app.update_preview()
             await pilot.pause()
@@ -83,6 +84,45 @@ class TestCommitChips(unittest.IsolatedAsyncioTestCase):
             bare = str(self.app._row_nodes[("task", self.bare_tid)].label)
             self.assertNotIn("PR", bare)
 
+    async def test_source_filters_cycle(self):
+        async with self.app.run_test() as pilot:
+            await pilot.pause()
+            self.app.action_filter_source()
+            await pilot.pause()
+            self.assertEqual(self.app.source_filter, "linked")
+            status = str(self.app.query_one("#status").render())
+            self.assertIn("source linked", status)
+            self.assertIn(("task", self.tid), self.app._row_nodes)
+            self.assertNotIn(("task", self.bare_tid), self.app._row_nodes)
+
+            self.app.action_filter_source()
+            await pilot.pause()
+            self.assertEqual(self.app.source_filter, "pr")
+            self.assertNotIn(("task", self.tid), self.app._row_nodes)
+
+            self.app.action_filter_source()
+            self.app.action_filter_source()
+            await pilot.pause()
+            self.assertEqual(self.app.source_filter, "unlinked")
+            self.assertIn(("task", self.bare_tid), self.app._row_nodes)
+            self.assertNotIn(("task", self.tid), self.app._row_nodes)
+
+            self.app.action_filter_source()
+            await pilot.pause()
+            self.assertEqual(self.app.source_filter, "all")
+            self.assertIn(("task", self.tid), self.app._row_nodes)
+            self.assertIn(("task", self.bare_tid), self.app._row_nodes)
+
+    async def test_g_opens_source_screen(self):
+        from lazyplan.source_screen import SourceScreen
+
+        async with self.app.run_test() as pilot:
+            await pilot.pause()
+            self.app.selected = ("task", self.tid)
+            await pilot.press("g")
+            await pilot.pause()
+            self.assertIsInstance(self.app.screen, SourceScreen)
+
     async def test_detail_hides_empty_commits(self):
         from textual.widgets import Static
 
@@ -95,7 +135,8 @@ class TestCommitChips(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             self.assertIsInstance(self.app.screen, DetailScreen)
             body = str(self.app.screen.query_one("#detail-body", Static).render())
-            self.assertNotIn("commits", body)
+            self.assertNotIn("commits:", body)
+            self.assertIn("no linked commits", body)
 
 
 if __name__ == "__main__":

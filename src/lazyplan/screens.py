@@ -31,6 +31,7 @@ from . import services
 from .commands import Command, matching
 from .design import HELP_TEXT, escape_markup, msg_error, repo_project_name, status_word
 from .render import render_commits, render_forge_links
+from .source import build_source_trail
 from .templates import load_template
 from .vcs import commit_url, detect_backend, origin_url
 
@@ -262,6 +263,7 @@ if _TEXTUAL_OK:
             Binding("a", "add_criterion", "Criterion"),
             Binding("n", "add_child", "New child"),
             Binding("d", "delete_row", "Delete"),
+            Binding("g", "open_source", "Source"),
             Binding("ctrl+s", "save", "Save", priority=True),
         ]
 
@@ -425,6 +427,45 @@ if _TEXTUAL_OK:
             for line in render_forge_links(links).splitlines():
                 lines.append(f"  {escape_markup(line)}")
 
+        def _read_source(self, lines: list[str]) -> None:
+            trail = build_source_trail(self._dstore, self.dkind, self.doid)
+            if trail.empty:
+                lines.extend(
+                    [
+                        "",
+                        "[dim]source[/]",
+                        "  [dim]no linked commits or PRs · link a commit or run task finish[/]",
+                    ]
+                )
+                return
+            summary = (
+                f"{trail.commit_count} commits · {trail.file_count} files · {trail.pull_count} PRs"
+            )
+            if trail.stale_count:
+                summary += f" · {trail.stale_count} stale"
+            lines.extend(["", f"[dim]source · {summary}[/]"])
+            for repo in trail.repos[:3]:
+                state = "dirty" if repo.dirty else "clean"
+                branch = repo.branch or ("detached" if repo.detached else "unknown")
+                lines.append(
+                    f"  [bold]{escape_markup(repo.name)}[/] · "
+                    f"{escape_markup(branch)} · {state} · "
+                    f"{len(repo.commits)}c · {len(repo.pulls)}PR"
+                )
+                for commit in repo.commits[:2]:
+                    files = f" · {len(commit.files)} files" if commit.files else ""
+                    stale = " · stale" if commit.stale else ""
+                    lines.append(
+                        f"    [dim]{commit.short}[/] "
+                        f"{escape_markup(commit.subject or '(no subject)')}"
+                        f"[dim]{files}{stale}[/]"
+                    )
+                if repo.error:
+                    lines.append(f"    [red]{escape_markup(repo.error)}[/]")
+            if len(trail.repos) > 3:
+                lines.append(f"  [dim]+{len(trail.repos) - 3} more repos[/]")
+            lines.append("  [dim]g source trail[/]")
+
         def _read_links(self, lines: list[str]) -> None:
             links = self._full.get("effective_links") or self._full.get("links") or []
             if links:
@@ -462,6 +503,7 @@ if _TEXTUAL_OK:
             self._read_criteria(lines)
             self._read_children(lines)
             self._read_forge(lines)
+            self._read_source(lines)
             self._read_git(lines)
             self._read_links(lines)
             self.query_one("#detail-body", Static).update("\n".join(lines))
@@ -484,7 +526,7 @@ if _TEXTUAL_OK:
             hints = (
                 "ctrl+s save · esc cancel"
                 if self._editing
-                else "e edit · s status · x tick · a criterion · n child · d delete · esc back"
+                else "e edit · s status · x tick · a criterion · g source · n child · d delete · esc back"
             )
             self.query_one("#detail-hints", Label).update(hints)
 
@@ -510,6 +552,12 @@ if _TEXTUAL_OK:
             self._snapshot = self._form_snapshot()
             self._show_mode()
             self.query_one("#d-title", Input).focus()
+
+        def action_open_source(self) -> None:
+            """Open the read-only source trail for this row."""
+            from .source_screen import SourceScreen
+
+            self.app.push_screen(SourceScreen(self._dstore, self.dkind, self.doid))
 
         def action_back(self) -> None:
             if self._editing and self._is_dirty():

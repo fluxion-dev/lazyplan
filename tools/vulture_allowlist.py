@@ -23,6 +23,7 @@ _.action_fold_left
 _.action_fold_right
 _.action_refresh
 _.action_filter_status
+_.action_filter_source
 _.action_filter_plan
 _.action_toggle_show_all
 _.action_help
@@ -87,6 +88,13 @@ _.action_advance_status
 _.action_tick_criterion
 _.action_add_child
 _.action_delete_row
+_.action_open_source
+_.action_open
+_.action_copy
+_.action_filter
+_._on_highlight
+_._on_filter_changed
+_._on_filter_submitted
 _._create
 _._cancel
 _._confirm

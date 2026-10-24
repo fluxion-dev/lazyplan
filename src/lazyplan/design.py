@@ -63,6 +63,13 @@ APP_CSS = f"""
 #detail-edit {{ height: 1fr; padding: 0 1; }}
 #detail-edit TextArea {{ height: 5; }}
 #detail-hints {{ height: 1; background: $panel; color: $text-muted; padding: 0 1; }}
+#source-page {{ height: 1fr; border: {BORDER}; padding: 0 1; }}
+#source-head {{ height: 3; background: $panel; padding: 0 1; }}
+#source-filter {{ height: 3; }}
+#source-main {{ height: 1fr; }}
+#source-tree-wrap {{ width: 1fr; min-width: 30; border-right: {BORDER}; }}
+#source-preview {{ width: 1fr; min-width: 30; padding: 0 1; }}
+#source-preview-body {{ height: auto; }}
 ModalScreen {{ align: center middle; }}
 #dlg Button, #help Button, #detail-page Button {{ min-width: 0; width: auto; height: 3; padding: 0 1; }}
 .btn-row {{ width: 1fr; height: auto; }}
@@ -141,11 +148,33 @@ def repos_chip(repos: Sequence[Mapping[str, object]] | None) -> str:
     return " ".join(f"[dim]{n}[/]" for n in names)
 
 
-def commits_chip(shas: Sequence[str] | None) -> str:
-    """Dim short-SHA chips, one per linked commit; empty when there are no links."""
+def commits_chip(
+    shas: Sequence[str] | None,
+    limit: int = 2,
+    stale: bool = False,
+) -> str:
+    """Dim short-SHA chips, capped, with an optional stale marker."""
     if not shas:
         return ""
-    return " ".join(f"[dim]{s[:12]}[/]" for s in shas)
+    shown = list(shas[: max(1, limit)])
+    text = " ".join(f"[dim]{s[:12]}[/]" for s in shown)
+    if len(shas) > len(shown):
+        text += f" [dim]+{len(shas) - len(shown)}[/]"
+    if stale:
+        text += " [red]![/]"
+    return text
+
+
+def source_chip(commit_count: int = 0, pull_count: int = 0, stale: int = 0) -> str:
+    """Compact provenance counts for plan and milestone rows."""
+    parts: list[str] = []
+    if commit_count:
+        parts.append(f"{commit_count}c")
+    if pull_count:
+        parts.append(f"{pull_count} PR")
+    if stale:
+        parts.append(f"{stale} stale")
+    return f"[dim]{' · '.join(parts)}[/]" if parts else ""
 
 
 _PR_STYLE = {
@@ -201,12 +230,17 @@ def _row(
     width: int | None = None,
     pr_state: str = "",
     pr_checks: str = "",
+    stale: bool = False,
+    source_counts: tuple[int, int, int] | None = None,
 ) -> str:
     """TUI row: Rich status glyph + dim id + bold title + progress/chips."""
     letter, title_attr = _CORE_SPEC[kind]
     id_part = f"{letter}{obj.id}"
     title = getattr(obj, title_attr)
-    chips = commits_chip(links)
+    if source_counts is not None:
+        chips = source_chip(*source_counts)
+    else:
+        chips = commits_chip(links, stale=stale)
     suffix = ""
     plain_suffix = ""
     if progress is not None:
@@ -215,7 +249,11 @@ def _row(
         plain_suffix += f" {progress_text(done, total)}"
     if chips:
         suffix += f" {chips}"
-        plain_suffix += " " + " ".join(sha[:12] for sha in (links or []))
+        if source_counts is not None:
+            commits, pulls, stale_count = source_counts
+            plain_suffix += f" {commits}c {pulls}PR {stale_count}stale"
+        else:
+            plain_suffix += " " + " ".join(sha[:12] for sha in (links or [])[:2])
     pr = pr_chip(pr_state, pr_checks)
     if pr:
         suffix += f" {pr}"
@@ -243,10 +281,11 @@ def plan_row(
     repos: Sequence[Mapping[str, object]] | None = None,
     progress: tuple[int, int] | None = None,
     width: int | None = None,
+    source_counts: tuple[int, int, int] | None = None,
 ) -> str:
     """TUI plan row (Rich markup): glyph + id + title + progress + chips."""
     id_part = f"P{p.id}"
-    chips = commits_chip(links)
+    chips = source_chip(*source_counts) if source_counts is not None else commits_chip(links)
     repo_chips = repos_chip(repos)
     all_chips = " ".join(chip for chip in (chips, repo_chips) if chip)
     suffix = ""
@@ -257,9 +296,14 @@ def plan_row(
         plain_suffix += f" {progress_text(done, total)}"
     if all_chips:
         suffix += f" {all_chips}"
-        plain_parts = [sha[:12] for sha in (links or [])]
-        plain_parts.extend(repo_project_name(r) for r in (repos or []))
-        plain_suffix += " " + " ".join(part for part in plain_parts if part)
+        if source_counts is not None:
+            commits, pulls, stale_count = source_counts
+            plain_suffix += f" {commits}c {pulls}PR {stale_count}stale"
+        else:
+            plain_suffix += " " + " ".join(sha[:12] for sha in (links or [])[:2])
+        plain_suffix += " " + " ".join(
+            part for part in (repo_project_name(r) for r in (repos or [])) if part
+        )
     prefix_plain = f"{status_word(p.status)} {id_part} "
     available = None if width is None else width - len(prefix_plain) - len(plain_suffix)
     title = truncate(p.name, available)
@@ -278,9 +322,17 @@ def milestone_row(
     links: Sequence[str] | None = None,
     progress: tuple[int, int] | None = None,
     width: int | None = None,
+    source_counts: tuple[int, int, int] | None = None,
 ) -> str:
     """TUI milestone row (Rich markup): glyph + id + title + progress + chips."""
-    return _row("milestone", s, links, progress, width)
+    return _row(
+        "milestone",
+        s,
+        links,
+        progress,
+        width,
+        source_counts=source_counts,
+    )
 
 
 def task_label(t: Task, store: Store | None = None, dot: str = "plain") -> str:
@@ -295,9 +347,10 @@ def task_row(
     width: int | None = None,
     pr_state: str = "",
     pr_checks: str = "",
+    stale: bool = False,
 ) -> str:
     """TUI task row (Rich markup): glyph + id + title + PR/commit chips."""
-    return _row("task", t, links, None, width, pr_state, pr_checks)
+    return _row("task", t, links, None, width, pr_state, pr_checks, stale)
 
 
 # -- empty states (identical wording everywhere) --------------------------

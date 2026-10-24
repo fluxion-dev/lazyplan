@@ -55,6 +55,7 @@ from .screens import (
     NewTaskScreen,
     PaletteScreen,
 )
+from .source_screen import SourceScreen
 from .store import Store
 from .templates import load_template
 from .upgrade import UpgradeError, detect, latest_version, notice_text
@@ -139,10 +140,12 @@ if _TEXTUAL_OK:
             Binding("x", "criteria", "Tick"),
             Binding("a", "add_criterion", "Criterion"),
             Binding("d", "delete", "Delete"),
+            Binding("g", "source_trail", "Source"),
             Binding("z", "fold", "Fold", show=False),
             Binding("Z", "fold_all", "Fold all", show=False),
             Binding("slash", "filter_text", "Filter"),
             Binding("f", "filter_status", "Status filter", show=False),
+            Binding("F", "filter_source", "Source filter", show=False),
             Binding("A", "toggle_show_all", "All plans", show=False),
             Binding("r", "refresh", "Refresh", show=False),
             Binding("question_mark", "help", "Help"),
@@ -156,6 +159,7 @@ if _TEXTUAL_OK:
             self.status_filter: Status | None = None
             self.show_all: bool = False
             self.filter_text: str = ""
+            self.source_filter: str = "all"
             self._row_nodes: dict[tuple[str, int], TreeNode] = {}
             self._collapsed: set[tuple[str, int]] = set()
             self._expanded: set[tuple[str, int]] = set()
@@ -327,27 +331,56 @@ if _TEXTUAL_OK:
                 bits.append(f"{name} {branch}{dirty}")
             return bits
 
-        def _preview_common(self, lines: list[str], full: dict[str, Any]) -> None:
-            crits = full.get("criteria", [])
-            if crits:
-                crit_done = sum(1 for crit in crits if crit.get("done"))
-                open_crits = [crit for crit in crits if not crit.get("done")]
-                tail = f" · {len(open_crits)} open" if open_crits else " · complete"
-                lines.extend(["", f"[dim]acceptance {crit_done}/{len(crits)}{tail}[/]"])
-                for crit in open_crits[:3]:
-                    lines.append(f"  · {escape_markup(str(crit.get('text', '')))}")
-            links = full.get("effective_links") or full.get("links", [])
-            repos = full.get("effective_repos") or full.get("repos") or []
-            if links or repos:
+        def _preview_acceptance(self, lines: list[str], crits: list[dict]) -> None:
+            if not crits:
+                return
+            crit_done = sum(1 for crit in crits if crit.get("done"))
+            open_crits = [crit for crit in crits if not crit.get("done")]
+            tail = f" · {len(open_crits)} open" if open_crits else " · complete"
+            lines.extend(["", f"[dim]acceptance {crit_done}/{len(crits)}{tail}[/]"])
+            for crit in open_crits[:3]:
+                lines.append(f"  · {escape_markup(str(crit.get('text', '')))}")
+
+        def _preview_source_summary(
+            self,
+            lines: list[str],
+            links: list[dict],
+            forge: list[dict],
+            repos: list[dict],
+        ) -> None:
+            if links or forge or repos:
                 bits = []
                 if links:
                     bits.append(f"{len(links)} commits")
+                if forge:
+                    bits.append(f"{len(forge)} PRs")
                 if repos:
                     names = [name for name in (repo_project_name(r) for r in repos) if name]
                     bits.append(
                         "repos: " + ", ".join(names[:3]) if names else f"{len(repos)} repos"
                     )
                 lines.append(f"[dim]{' · '.join(bits)}[/]")
+            if not links:
+                return
+            newest = max(links, key=lambda link: int(link.get("timestamp", 0) or 0))
+            files = len({path for link in links for path in link.get("files", [])})
+            stale = sum(1 for link in links if link.get("stale"))
+            last = (
+                f"last {str(newest.get('sha', ''))[:12]} "
+                f"{escape_markup(str(newest.get('subject', '') or '(no subject)'))}"
+            )
+            if files:
+                last += f" · {files} files"
+            if stale:
+                last += f" · {stale} stale"
+            lines.append(f"[dim]{last}[/]")
+
+        def _preview_common(self, lines: list[str], full: dict[str, Any]) -> None:
+            self._preview_acceptance(lines, full.get("criteria", []))
+            links = full.get("effective_links") or full.get("links", [])
+            forge = full.get("effective_forge_links") or full.get("forge_links", [])
+            repos = full.get("effective_repos") or full.get("repos") or []
+            self._preview_source_summary(lines, links, forge, repos)
             git_bits = self._git_preview_bits(repos)
             if git_bits:
                 lines.append(f"[dim]git: {' · '.join(git_bits)}[/]")
@@ -616,6 +649,71 @@ if _TEXTUAL_OK:
                 self.rev += 1
 
         # -- rendering ---------------------------------------------------
+        def _source_stats(self) -> dict[tuple[str, int], tuple[int, int, int]]:
+            """Direct plus descendant provenance counts per row, one store read each."""
+            vcs = self.store.vcs_links_map()
+            forge = self.store.forge_links_map()
+
+            def direct(kind: str, oid: int) -> tuple[int, int, int]:
+                links = vcs.get((kind, oid), [])
+                pulls = forge.get((kind, oid), [])
+                return (
+                    len(links),
+                    len(pulls),
+                    sum(1 for link in links if link.stale) + sum(1 for link in pulls if link.stale),
+                )
+
+            stats: dict[tuple[str, int], tuple[int, int, int]] = {}
+            for plan, milestones in services.tree(self.store, status=self.status_filter):
+                pc, pp, ps = direct("plan", plan.id)
+                for milestone, tasks in milestones:
+                    mc, mp, ms = direct("milestone", milestone.id)
+                    for task in tasks:
+                        tc, tp, ts = direct("task", task.id)
+                        stats[("task", task.id)] = (tc, tp, ts)
+                        mc, mp, ms = mc + tc, mp + tp, ms + ts
+                    stats[("milestone", milestone.id)] = (mc, mp, ms)
+                    pc, pp, ps = pc + mc, pp + mp, ps + ms
+                stats[("plan", plan.id)] = (pc, pp, ps)
+            return stats
+
+        def _source_match(self, stats: tuple[int, int, int]) -> bool:
+            commits, pulls, stale = stats
+            if self.source_filter == "linked":
+                return commits > 0 or pulls > 0
+            if self.source_filter == "pr":
+                return pulls > 0
+            if self.source_filter == "stale":
+                return stale > 0
+            if self.source_filter == "unlinked":
+                return commits == 0 and pulls == 0
+            return True
+
+        def _filter_source_tree(
+            self,
+            base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]],
+            stats: dict[tuple[str, int], tuple[int, int, int]],
+        ) -> list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]:
+            """Keep rows whose cached provenance matches the active source filter."""
+            if self.source_filter == "all":
+                return base
+            out: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]] = []
+            for plan, milestones in base:
+                kept_ms: list[tuple[Milestone, list[Task]]] = []
+                for milestone, tasks in milestones:
+                    kept_tasks = [
+                        task
+                        for task in tasks
+                        if self._source_match(stats.get(("task", task.id), (0, 0, 0)))
+                    ]
+                    if kept_tasks or self._source_match(
+                        stats.get(("milestone", milestone.id), (0, 0, 0))
+                    ):
+                        kept_ms.append((milestone, kept_tasks))
+                if kept_ms or self._source_match(stats.get(("plan", plan.id), (0, 0, 0))):
+                    out.append((plan, kept_ms))
+            return out
+
         def _filtered_tree(
             self,
         ) -> list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]:
@@ -625,6 +723,8 @@ if _TEXTUAL_OK:
                 base = services.tree(
                     self.store, status=self.status_filter, limit=services.DEFAULT_PLAN_LIMIT
                 )
+            if self.source_filter != "all":
+                base = self._filter_source_tree(base, self._source_stats())
             query = self.filter_text.strip().lower()
             if not query:
                 return base
@@ -687,6 +787,8 @@ if _TEXTUAL_OK:
             ]
             if self.status_filter is not None:
                 bits.append(f"status {self.status_filter.value}")
+            if self.source_filter != "all":
+                bits.append(f"source {self.source_filter}")
             if self.filter_text.strip():
                 bits.append(f'filter "{self.filter_text.strip()}"')
             if not self.show_all:
@@ -718,6 +820,8 @@ if _TEXTUAL_OK:
             filtered: list,
             progress: dict,
             forge_map: dict,
+            vcs_map: dict,
+            source_stats: dict,
         ) -> None:
             """Create plan/milestone/task nodes for one refresh."""
             for plan, milestones in filtered:
@@ -726,6 +830,7 @@ if _TEXTUAL_OK:
                         plan,
                         progress=progress.get(("plan", plan.id)),
                         width=self._row_width(tree, 3),
+                        source_counts=source_stats.get(("plan", plan.id)),
                     ),
                     data={"kind": "plan", "id": plan.id},
                     allow_expand=bool(milestones),
@@ -738,6 +843,7 @@ if _TEXTUAL_OK:
                             self.store,
                             progress=progress.get(("milestone", milestone.id)),
                             width=self._row_width(tree, 7),
+                            source_counts=source_stats.get(("milestone", milestone.id)),
                         ),
                         data={"kind": "milestone", "id": milestone.id},
                         allow_expand=bool(tasks),
@@ -746,13 +852,16 @@ if _TEXTUAL_OK:
                     for task in tasks:
                         prs = forge_map.get(("task", task.id), [])
                         pr = prs[0] if prs else None
+                        task_links = vcs_map.get(("task", task.id), [])
                         leaf = milestone_node.add_leaf(
                             task_row(
                                 task,
                                 self.store,
+                                links=[link.sha for link in task_links],
                                 width=self._row_width(tree, 11),
                                 pr_state=pr.state if pr else "",
                                 pr_checks=pr.checks if pr else "",
+                                stale=any(link.stale for link in task_links),
                             ),
                             data={"kind": "task", "id": task.id},
                         )
@@ -820,7 +929,15 @@ if _TEXTUAL_OK:
             progress = self._progress_map()
             filtered = self._filtered_tree()
             filtered.sort(key=lambda entry: entry[0].status == Status.DONE)
-            self._build_rows(tree.root, tree, filtered, progress, self.store.forge_links_map())
+            self._build_rows(
+                tree.root,
+                tree,
+                filtered,
+                progress,
+                self.store.forge_links_map(),
+                self.store.vcs_links_map(),
+                self._source_stats(),
+            )
             tree.root.expand()
             self._collapsed &= set(self._row_nodes)
             self._expanded &= set(self._row_nodes)
@@ -905,6 +1022,14 @@ if _TEXTUAL_OK:
             webbrowser.open(url)
             self.notify(f"opened {url}", timeout=4)
 
+        def action_source_trail(self) -> None:
+            """Open the read-only source trail for the selected row."""
+            selected = self._git_selection()
+            if selected is None:
+                return
+            kind, oid = selected
+            self.push_screen(SourceScreen(self.store, kind, oid))
+
         def _saved(self, note: str = "") -> None:
             """Local mutation path: bump reactive rev, watch refreshes."""
             self._pending_note = note
@@ -920,6 +1045,14 @@ if _TEXTUAL_OK:
             self.refresh_all(
                 f"status filter: {self.status_filter.value if self.status_filter else 'all'}"
             )
+
+        SOURCE_FILTERS = ("all", "linked", "pr", "stale", "unlinked")
+
+        def action_filter_source(self) -> None:
+            """Cycle cached provenance filters."""
+            index = self.SOURCE_FILTERS.index(self.source_filter)
+            self.source_filter = self.SOURCE_FILTERS[(index + 1) % len(self.SOURCE_FILTERS)]
+            self.refresh_all(f"source filter: {self.source_filter}")
 
         def action_toggle_show_all(self) -> None:
             self.show_all = not self.show_all
@@ -996,12 +1129,14 @@ if _TEXTUAL_OK:
                 "fold_all": self.action_fold_all,
                 "filter_text": self.action_filter_text,
                 "filter_status": self.action_filter_status,
+                "filter_source": self.action_filter_source,
                 "toggle_show_all": self.action_toggle_show_all,
                 "refresh": self.action_refresh,
                 "git_status": self.action_git_status,
                 "git_refresh": self.action_git_refresh,
                 "git_capture": self.action_git_capture,
                 "open_pr": self.action_open_pr,
+                "source_trail": self.action_source_trail,
                 "command_palette": self.action_command_palette,
                 "export_md": self.action_export_md,
                 "help": self.action_help,

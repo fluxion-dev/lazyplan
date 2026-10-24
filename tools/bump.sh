@@ -76,6 +76,7 @@ if [[ -f site/index.html ]]; then
   sed -i.bak -E "s/lazyplan_[0-9]+\.[0-9]+\.[0-9]+-1_/lazyplan_${NEXT}-1_/g" site/index.html && rm site/index.html.bak
   sed -i.bak -E "s/lazyplan-[0-9]+\.[0-9]+\.[0-9]+-1\./lazyplan-${NEXT}-1./g" site/index.html && rm site/index.html.bak
   sed -i.bak -E "s/\"version\": \"[0-9]+\.[0-9]+\.[0-9]+\"/\"version\": \"$NEXT\"/" site/index.html && rm site/index.html.bak
+  sed -i.bak -E "s/\"softwareVersion\": \"[0-9]+\.[0-9]+\.[0-9]+\"/\"softwareVersion\": \"$NEXT\"/" site/index.html && rm site/index.html.bak
 fi
 if [[ -f site/package.json ]]; then
   sed -i.bak -E "s/^  \"version\": \"[0-9]+\.[0-9]+\.[0-9]+\"(,?)$/  \"version\": \"$NEXT\"\1/" site/package.json && rm site/package.json.bak

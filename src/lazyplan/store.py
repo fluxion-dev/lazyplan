@@ -11,6 +11,7 @@ from .kinds import KIND_ERROR, check_parent_kind, table_for
 from .migrate import migrate
 from .models import (
     Criterion,
+    ForgeLink,
     Milestone,
     Plan,
     Status,
@@ -88,10 +89,14 @@ class Store:
             mc = conn.execute("SELECT COALESCE(MAX(id),0) m FROM criteria").fetchone()["m"]
             ml = conn.execute("SELECT COALESCE(MAX(id),0) m FROM vcs_links").fetchone()["m"]
             try:
+                mf = conn.execute("SELECT COALESCE(MAX(id),0) m FROM forge_links").fetchone()["m"]
+            except Exception:
+                mf = 0
+            try:
                 mr = conn.execute("SELECT COALESCE(MAX(id),0) m FROM entity_repos").fetchone()["m"]
             except Exception:
                 mr = 0
-        return (mtime, c["plans"], c["milestones"], c["tasks"], mp, ms, mt, me, mc, ml, mr)
+        return (mtime, c["plans"], c["milestones"], c["tasks"], mp, ms, mt, me, mc, ml, mr, mf)
 
     # -- plans ------------------------------------------------------
     def add_plan(
@@ -346,21 +351,30 @@ class Store:
                     "DELETE FROM vcs_links WHERE parent_kind='plan' AND parent_id=?",
                     (obj_id,),
                 )
+                conn.execute(
+                    "DELETE FROM forge_links WHERE parent_kind='plan' AND parent_id=?",
+                    (obj_id,),
+                )
                 self._delete_entity_repos(conn, "plan", obj_id)
                 for sid in sids:
                     self._delete_milestone_criteria(conn, sid)
                     self._delete_milestone_links(conn, sid)
                     self._delete_milestone_repos(conn, sid)
+                    self._delete_milestone_forge_links(conn, sid)
             elif kind == "milestone":
                 self._delete_milestone_criteria(conn, obj_id)
                 self._delete_milestone_links(conn, obj_id)
                 self._delete_milestone_repos(conn, obj_id)
+                self._delete_milestone_forge_links(conn, obj_id)
             else:
                 conn.execute(
                     "DELETE FROM criteria WHERE parent_kind='task' AND parent_id=?", (obj_id,)
                 )
                 conn.execute(
                     "DELETE FROM vcs_links WHERE parent_kind='task' AND parent_id=?", (obj_id,)
+                )
+                conn.execute(
+                    "DELETE FROM forge_links WHERE parent_kind='task' AND parent_id=?", (obj_id,)
                 )
                 self._delete_entity_repos(conn, "task", obj_id)
             cur = conn.execute(f"DELETE FROM {table} WHERE id=?", (obj_id,))
@@ -411,6 +425,22 @@ class Store:
         Store._delete_entity_repos(conn, "milestone", milestone_id)
         for tid in tids:
             Store._delete_entity_repos(conn, "task", tid)
+
+    @staticmethod
+    def _delete_milestone_forge_links(conn: sqlite3.Connection, milestone_id: int) -> None:
+        """Remove forge links under a milestone and its tasks."""
+        tids = [
+            r["id"]
+            for r in conn.execute(
+                "SELECT id FROM tasks WHERE milestone_id=?", (milestone_id,)
+            ).fetchall()
+        ]
+        conn.execute(
+            "DELETE FROM forge_links WHERE parent_kind='milestone' AND parent_id=?",
+            (milestone_id,),
+        )
+        for tid in tids:
+            conn.execute("DELETE FROM forge_links WHERE parent_kind='task' AND parent_id=?", (tid,))
 
     # -- criteria (acceptance checklists, advisory only) -----------------
     def _parent_exists(self, parent_kind: str, parent_id: int) -> bool:
@@ -503,6 +533,8 @@ class Store:
             author=r["author"] or "",
             timestamp=int(r["timestamp"] or 0),
             repo_root=r["repo_root"] or "",
+            stale=bool(r["stale"]) if "stale" in r.keys() else False,
+            checked_at=int(r["checked_at"] or 0) if "checked_at" in r.keys() else 0,
         )
 
     def link_commit(
@@ -553,6 +585,43 @@ class Store:
         self.log(actor, "vcs", "link", f"{parent_kind} #{parent_id}: {link.sha[:12]}")
         return link
 
+    def update_link(
+        self,
+        link_id: int,
+        *,
+        subject: str,
+        author: str,
+        timestamp: int,
+        repo_root: str,
+        stale: bool,
+        checked_at: int,
+        actor: str = "human",
+    ) -> VcsLink | None:
+        """Refresh one link's cached metadata and stale flag; None when gone."""
+        with self._connect() as conn:
+            cur = conn.execute(
+                "UPDATE vcs_links SET subject=?, author=?, timestamp=?, repo_root=?,"
+                " stale=?, checked_at=? WHERE id=?",
+                (
+                    subject,
+                    author,
+                    timestamp,
+                    repo_root,
+                    1 if stale else 0,
+                    checked_at,
+                    link_id,
+                ),
+            )
+            if (cur.rowcount or 0) == 0:
+                return None
+            r = conn.execute("SELECT * FROM vcs_links WHERE id=?", (link_id,)).fetchone()
+        if r is None:
+            return None
+        link = self._row_to_link(r)
+        state = "stale" if link.stale else "ok"
+        self.log(actor, "vcs", "refresh", f"link #{link_id}: {state}")
+        return link
+
     def unlink_commit(
         self, parent_kind: str, parent_id: int, sha: str, actor: str = "human"
     ) -> bool:
@@ -579,6 +648,306 @@ class Store:
             ).fetchall()
         return [self._row_to_link(r) for r in rows]
 
+    def links_for_sha(self, sha: str) -> list[VcsLink]:
+        """Every link pointing at one commit, oldest first."""
+        norm = sha.strip().lower()
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT * FROM vcs_links WHERE sha=? ORDER BY id",
+                (norm,),
+            ).fetchall()
+        return [self._row_to_link(r) for r in rows]
+
+    # -- forge links (pull requests and issues) ---------------------------
+    @staticmethod
+    def _row_to_forge_link(r: sqlite3.Row) -> ForgeLink:
+        """Row to ForgeLink."""
+        return ForgeLink(
+            id=r["id"],
+            parent_kind=r["parent_kind"],
+            parent_id=r["parent_id"],
+            provider=r["provider"] or "github",
+            kind=r["kind"] or "pull",
+            number=int(r["number"] or 0),
+            url=r["url"] or "",
+            title=r["title"] or "",
+            state=r["state"] or "",
+            checks=r["checks"] or "",
+            reviews=r["reviews"] or "",
+            author=r["author"] or "",
+            base_ref=r["base_ref"] or "",
+            head_ref=r["head_ref"] or "",
+            merged_at=r["merged_at"] or "",
+            merge_commit_sha=r["merge_commit_sha"] or "",
+            updated_at=int(r["updated_at"] or 0),
+            stale=bool(r["stale"]) if "stale" in r.keys() else False,
+            payload=r["payload"] or "",
+        )
+
+    def link_forge(
+        self,
+        parent_kind: str,
+        parent_id: int,
+        number: int,
+        *,
+        provider: str = "github",
+        kind: str = "pull",
+        url: str = "",
+        title: str = "",
+        state: str = "",
+        checks: str = "",
+        reviews: str = "",
+        author: str = "",
+        base_ref: str = "",
+        head_ref: str = "",
+        merged_at: str = "",
+        merge_commit_sha: str = "",
+        updated_at: int = 0,
+        stale: bool = False,
+        payload: str = "",
+        actor: str = "human",
+    ) -> ForgeLink:
+        """Attach a pull request/issue to a row, refreshing its cached fields."""
+        check_parent_kind(parent_kind)
+        if not self._parent_exists(parent_kind, parent_id):
+            raise KeyError(f"{parent_kind} #{parent_id} not found")
+        link = ForgeLink(
+            id=0,
+            parent_kind=parent_kind,
+            parent_id=parent_id,
+            provider=provider,
+            kind=kind,
+            number=int(number),
+            url=url,
+            title=title,
+            state=state,
+            checks=checks,
+            reviews=reviews,
+            author=author,
+            base_ref=base_ref,
+            head_ref=head_ref,
+            merged_at=merged_at,
+            merge_commit_sha=merge_commit_sha,
+            updated_at=updated_at,
+            stale=stale,
+            payload=payload,
+        )
+        existing_state = ""
+        existing_checks = ""
+        existing_reviews = ""
+        existing_merged = ""
+        existed = False
+        with self._connect() as conn:
+            existing = conn.execute(
+                "SELECT state, checks, reviews, merged_at FROM forge_links"
+                " WHERE parent_kind=? AND parent_id=?"
+                " AND provider=? AND kind=? AND number=?",
+                (
+                    link.parent_kind,
+                    link.parent_id,
+                    link.provider,
+                    link.kind,
+                    link.number,
+                ),
+            ).fetchone()
+            if existing is not None:
+                existed = True
+                existing_state = str(existing["state"] or "")
+                existing_checks = str(existing["checks"] or "")
+                existing_reviews = str(existing["reviews"] or "")
+                existing_merged = str(existing["merged_at"] or "")
+            conn.execute(
+                "INSERT INTO forge_links"
+                " (parent_kind, parent_id, provider, kind, number, url, title, state,"
+                " checks, reviews, author, base_ref, head_ref, merged_at,"
+                " merge_commit_sha, updated_at, stale, payload)"
+                " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+                " ON CONFLICT(parent_kind, parent_id, provider, kind, number)"
+                " DO UPDATE SET url=excluded.url, title=excluded.title,"
+                " state=excluded.state, checks=excluded.checks,"
+                " reviews=excluded.reviews, author=excluded.author,"
+                " base_ref=excluded.base_ref, head_ref=excluded.head_ref,"
+                " merged_at=excluded.merged_at,"
+                " merge_commit_sha=excluded.merge_commit_sha,"
+                " updated_at=excluded.updated_at, stale=excluded.stale,"
+                " payload=excluded.payload",
+                (
+                    link.parent_kind,
+                    link.parent_id,
+                    link.provider,
+                    link.kind,
+                    link.number,
+                    link.url,
+                    link.title,
+                    link.state,
+                    link.checks,
+                    link.reviews,
+                    link.author,
+                    link.base_ref,
+                    link.head_ref,
+                    link.merged_at,
+                    link.merge_commit_sha,
+                    link.updated_at,
+                    1 if link.stale else 0,
+                    link.payload,
+                ),
+            )
+            r = conn.execute(
+                "SELECT * FROM forge_links WHERE parent_kind=? AND parent_id=?"
+                " AND provider=? AND kind=? AND number=?",
+                (
+                    link.parent_kind,
+                    link.parent_id,
+                    link.provider,
+                    link.kind,
+                    link.number,
+                ),
+            ).fetchone()
+            assert r is not None
+            link = self._row_to_forge_link(r)
+        if not existed:
+            self.log(
+                actor,
+                "forge",
+                "link",
+                f"{link.kind} #{link.number} -> {parent_kind} #{parent_id}",
+            )
+        elif (
+            existing_state != link.state
+            or existing_checks != link.checks
+            or existing_reviews != link.reviews
+            or existing_merged != link.merged_at
+        ):
+            self.log(
+                actor,
+                "forge",
+                "state",
+                f"{link.kind} #{link.number}: {existing_state or 'unknown'} ->"
+                f" {link.state or 'unknown'}",
+            )
+        return link
+
+    def unlink_forge(
+        self,
+        parent_kind: str,
+        parent_id: int,
+        number: int,
+        *,
+        provider: str = "github",
+        kind: str = "pull",
+        actor: str = "human",
+    ) -> bool:
+        """Detach one forge link; True when a row was removed."""
+        check_parent_kind(parent_kind)
+        with self._connect() as conn:
+            cur = conn.execute(
+                "DELETE FROM forge_links WHERE parent_kind=? AND parent_id=?"
+                " AND provider=? AND kind=? AND number=?",
+                (parent_kind, parent_id, provider, kind, int(number)),
+            )
+            ok = (cur.rowcount or 0) > 0
+        if ok:
+            self.log(actor, "forge", "unlink", f"{kind} #{number} -> {parent_kind} #{parent_id}")
+        return ok
+
+    def list_forge_links(
+        self,
+        parent_kind: str,
+        parent_id: int,
+        kind: str = "",
+    ) -> list[ForgeLink]:
+        """Forge links on one row, oldest first (optionally one kind)."""
+        check_parent_kind(parent_kind)
+        sql = "SELECT * FROM forge_links WHERE parent_kind=? AND parent_id=?"
+        params: list[object] = [parent_kind, parent_id]
+        if kind:
+            sql += " AND kind=?"
+            params.append(kind)
+        sql += " ORDER BY id"
+        with self._connect() as conn:
+            rows = conn.execute(sql, params).fetchall()
+        return [self._row_to_forge_link(r) for r in rows]
+
+    def effective_forge_links(
+        self,
+        parent_kind: str,
+        parent_id: int,
+        kind: str = "",
+    ) -> list[ForgeLink]:
+        """Direct forge links plus descendant links, deduped by identity."""
+        check_parent_kind(parent_kind)
+        links = list(self.list_forge_links(parent_kind, parent_id, kind))
+        if parent_kind == "milestone":
+            for task in self.list_tasks(parent_id):
+                links.extend(self.list_forge_links("task", task.id, kind))
+        elif parent_kind == "plan":
+            for milestone in self.list_milestones(parent_id):
+                links.extend(self.list_forge_links("milestone", milestone.id, kind))
+                for task in self.list_tasks(milestone.id):
+                    links.extend(self.list_forge_links("task", task.id, kind))
+        seen: set[tuple[str, str, int]] = set()
+        out: list[ForgeLink] = []
+        for link in links:
+            key = (link.provider, link.kind, link.number)
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(link)
+        return out
+
+    def forge_links_map(self) -> dict[tuple[str, int], list[ForgeLink]]:
+        """Every forge link grouped by (parent_kind, parent_id), oldest first."""
+        with self._connect() as conn:
+            rows = conn.execute("SELECT * FROM forge_links ORDER BY id").fetchall()
+        out: dict[tuple[str, int], list[ForgeLink]] = {}
+        for row in rows:
+            link = self._row_to_forge_link(row)
+            out.setdefault((link.parent_kind, link.parent_id), []).append(link)
+        return out
+
+    def cache_get(self, key: str) -> dict | None:
+        """Cached HTTP entry by key, or None."""
+        with self._connect() as conn:
+            r = conn.execute("SELECT * FROM forge_cache WHERE key=?", (key,)).fetchone()
+        return dict(r) if r is not None else None
+
+    def cache_put(self, key: str, etag: str, fetched_at: int, payload: str) -> None:
+        """Store or replace one cached HTTP response."""
+        with self._connect() as conn:
+            conn.execute(
+                "INSERT INTO forge_cache (key, etag, fetched_at, payload)"
+                " VALUES (?,?,?,?)"
+                " ON CONFLICT(key) DO UPDATE SET etag=excluded.etag,"
+                " fetched_at=excluded.fetched_at, payload=excluded.payload",
+                (key, etag, int(fetched_at), payload),
+            )
+
+    def effective_links(self, parent_kind: str, parent_id: int) -> list[VcsLink]:
+        """Direct links plus descendants, deduped by SHA and checkout.
+
+        Plans include their milestones and tasks; milestones include their
+        tasks. Direct links stay first, then child links in creation order.
+        """
+        check_parent_kind(parent_kind)
+        links = list(self.list_links(parent_kind, parent_id))
+        if parent_kind == "milestone":
+            for task in self.list_tasks(parent_id):
+                links.extend(self.list_links("task", task.id))
+        elif parent_kind == "plan":
+            for milestone in self.list_milestones(parent_id):
+                links.extend(self.list_links("milestone", milestone.id))
+                for task in self.list_tasks(milestone.id):
+                    links.extend(self.list_links("task", task.id))
+        seen: set[tuple[str, str]] = set()
+        out: list[VcsLink] = []
+        for link in links:
+            key = (link.sha, link.repo_root)
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(link)
+        return out
+
     # -- linked repos (0..n checkouts per plan/milestone/task) ------------
     @staticmethod
     def _norm_repo_path(path: str | Path) -> str:
@@ -595,6 +964,8 @@ class Store:
         parent_id: int,
         repo_path: str,
         repo_remote: str = "",
+        branch: str = "",
+        base_sha: str = "",
         actor: str = "human",
     ) -> dict:
         """Link a repo checkout to a row (idempotent on re-link)."""
@@ -608,10 +979,23 @@ class Store:
         with self._connect() as conn:
             conn.execute(
                 "INSERT OR IGNORE INTO entity_repos"
-                " (parent_kind, parent_id, repo_path, repo_remote)"
-                " VALUES (?,?,?,?)",
-                (parent_kind, parent_id, norm_path, remote),
+                " (parent_kind, parent_id, repo_path, repo_remote, branch, base_sha)"
+                " VALUES (?,?,?,?,?,?)",
+                (parent_kind, parent_id, norm_path, remote, branch.strip(), base_sha.strip()),
             )
+            if branch or base_sha:
+                conn.execute(
+                    "UPDATE entity_repos SET branch=?, base_sha=?"
+                    " WHERE parent_kind=? AND parent_id=? AND repo_path=? AND repo_remote=?",
+                    (
+                        branch.strip(),
+                        base_sha.strip(),
+                        parent_kind,
+                        parent_id,
+                        norm_path,
+                        remote,
+                    ),
+                )
             r = conn.execute(
                 "SELECT * FROM entity_repos WHERE parent_kind=? AND parent_id=?"
                 " AND repo_path=? AND repo_remote=?",
@@ -681,7 +1065,7 @@ class Store:
         with self._connect() as conn:
             try:
                 rows = conn.execute(
-                    "SELECT parent_kind, parent_id, repo_path, repo_remote"
+                    "SELECT parent_kind, parent_id, repo_path, repo_remote, branch, base_sha"
                     " FROM entity_repos ORDER BY id"
                 ).fetchall()
             except Exception:
@@ -712,58 +1096,75 @@ class Store:
         raise ValueError(KIND_ERROR)
 
     # -- export / import (portability) -----------------------------------
+    def _task_show(self, t: Task) -> dict:
+        """Task show payload with direct links and inherited repos."""
+        return {
+            "task": _ser(vars(t)),
+            "criteria": [vars(c) for c in self.list_criteria("task", t.id)],
+            "links": [vars(c) for c in self.list_links("task", t.id)],
+            "effective_links": [vars(c) for c in self.effective_links("task", t.id)],
+            "forge_links": [vars(c) for c in self.list_forge_links("task", t.id)],
+            "effective_forge_links": [vars(c) for c in self.effective_forge_links("task", t.id)],
+            "repos": self.list_repos("task", t.id),
+            "effective_repos": self.effective_repos("task", t.id),
+        }
+
+    def _milestone_show(self, s: Milestone) -> dict:
+        """Milestone show payload with task summaries."""
+        return {
+            "milestone": _ser(vars(s)),
+            "criteria": [vars(c) for c in self.list_criteria("milestone", s.id)],
+            "links": [vars(c) for c in self.list_links("milestone", s.id)],
+            "effective_links": [vars(c) for c in self.effective_links("milestone", s.id)],
+            "forge_links": [vars(c) for c in self.list_forge_links("milestone", s.id)],
+            "effective_forge_links": [
+                vars(c) for c in self.effective_forge_links("milestone", s.id)
+            ],
+            "repos": self.list_repos("milestone", s.id),
+            "effective_repos": self.effective_repos("milestone", s.id),
+            "tasks": [
+                {
+                    "task": _ser(vars(t)),
+                    "criteria": [vars(c) for c in self.list_criteria("task", t.id)],
+                }
+                for t in self.list_tasks(s.id)
+            ],
+        }
+
+    def _plan_show(self, p: Plan) -> dict:
+        """Plan show payload with milestone summaries."""
+        return {
+            "plan": _ser(vars(p)),
+            "criteria": [vars(c) for c in self.list_criteria("plan", p.id)],
+            "links": [vars(c) for c in self.list_links("plan", p.id)],
+            "effective_links": [vars(c) for c in self.effective_links("plan", p.id)],
+            "forge_links": [vars(c) for c in self.list_forge_links("plan", p.id)],
+            "effective_forge_links": [vars(c) for c in self.effective_forge_links("plan", p.id)],
+            "repos": self.list_repos("plan", p.id),
+            "effective_repos": self.effective_repos("plan", p.id),
+            "milestones": [
+                {
+                    "milestone": _ser(vars(s)),
+                    "criteria": [vars(c) for c in self.list_criteria("milestone", s.id)],
+                    "repos": self.list_repos("milestone", s.id),
+                    "effective_repos": self.effective_repos("milestone", s.id),
+                    "tasks": [_ser(vars(t)) for t in self.list_tasks(s.id)],
+                }
+                for s in self.list_milestones(p.id)
+            ],
+        }
+
     def get_full(self, kind: str, obj_id: int) -> dict | None:
         """Full context record for `lpui show`: fields + criteria + links + repos + children."""
         if kind == "plan":
             p = self.get_plan(obj_id)
-            if p is None:
-                return None
-            return {
-                "plan": _ser(vars(p)),
-                "criteria": [vars(c) for c in self.list_criteria("plan", p.id)],
-                "links": [vars(c) for c in self.list_links("plan", p.id)],
-                "repos": self.list_repos("plan", p.id),
-                "effective_repos": self.effective_repos("plan", p.id),
-                "milestones": [
-                    {
-                        "milestone": _ser(vars(s)),
-                        "criteria": [vars(c) for c in self.list_criteria("milestone", s.id)],
-                        "repos": self.list_repos("milestone", s.id),
-                        "effective_repos": self.effective_repos("milestone", s.id),
-                        "tasks": [_ser(vars(t)) for t in self.list_tasks(s.id)],
-                    }
-                    for s in self.list_milestones(p.id)
-                ],
-            }
+            return None if p is None else self._plan_show(p)
         if kind == "milestone":
             s = self.get_milestone(obj_id)
-            if s is None:
-                return None
-            return {
-                "milestone": _ser(vars(s)),
-                "criteria": [vars(c) for c in self.list_criteria("milestone", s.id)],
-                "links": [vars(c) for c in self.list_links("milestone", s.id)],
-                "repos": self.list_repos("milestone", s.id),
-                "effective_repos": self.effective_repos("milestone", s.id),
-                "tasks": [
-                    {
-                        "task": _ser(vars(t)),
-                        "criteria": [vars(c) for c in self.list_criteria("task", t.id)],
-                    }
-                    for t in self.list_tasks(s.id)
-                ],
-            }
+            return None if s is None else self._milestone_show(s)
         if kind == "task":
             t = self.get_task(obj_id)
-            if t is None:
-                return None
-            return {
-                "task": _ser(vars(t)),
-                "criteria": [vars(c) for c in self.list_criteria("task", t.id)],
-                "links": [vars(c) for c in self.list_links("task", t.id)],
-                "repos": self.list_repos("task", t.id),
-                "effective_repos": self.effective_repos("task", t.id),
-            }
+            return None if t is None else self._task_show(t)
         raise ValueError(KIND_ERROR)
 
     def status_events(self, kind: str) -> list[tuple[float, str]]:

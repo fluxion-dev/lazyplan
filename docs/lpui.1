@@ -1,4 +1,4 @@
-.TH LPUI 1 "2026-10-22" "lazyplan-tui 0.20.1" "User Commands"
+.TH LPUI 1 "2026-10-24" "lazyplan-tui 0.20.1" "User Commands"
 .SH NAME
 lpui \- local plan journal for you and your coding agent
 .SH SYNOPSIS
@@ -268,7 +268,7 @@ who made this change (you see it in feed)
 .RS
 .TP
 .B  ACTION
-what to do with a task Choices: add, edit, show, list, move, delete\. Required\.
+what to do with a task Choices: add, edit, show, list, move, delete, start, finish\. Required\.
 .RE
 .TP
 .B lpui criterion
@@ -292,6 +292,52 @@ who made this change (you see it in feed)
 .TP
 .B  ACTION
 what to do with a criterion Choices: add, list, tick, untick, delete\. Required\.
+.RE
+.TP
+.B lpui git
+inspect the checkouts linked to a row (no network)
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B  ACTION
+what to do with a git Choices: status, scan\. Required\.
+.RE
+.TP
+.B lpui pr
+read\-only GitHub pull requests and auth
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B  ACTION
+what to do with a pr Choices: auth, status, list, show, link, unlink, refresh\. Required\.
 .RE
 .TP
 .B lpui add\-plan
@@ -653,6 +699,11 @@ id of the row Required\.
 .RE
 .RS
 .TP
+.B \-\-repo PATH
+checkout to read the commit from (default: the current directory)
+.RE
+.RS
+.TP
 .B \-\-sha SHA
 which commit to attach (default: the current HEAD commit)
 .RE
@@ -716,6 +767,11 @@ which kind of row to list Choices: plan, milestone, task\. Required\.
 .TP
 .B \-\-id ID
 id of the row Required\.
+.RE
+.RS
+.TP
+.B \-\-refresh
+re\-resolve cached commit metadata and mark missing commits stale
 .RE
 .TP
 .B lpui link\-repo

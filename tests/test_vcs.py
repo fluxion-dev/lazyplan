@@ -6,7 +6,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from lazyplan.vcs import GitBackend, backends, current_head, detect_backend
+from lazyplan.vcs import GitBackend, backends, commit_url, current_head, detect_backend, web_remote
 
 
 def _git_available() -> bool:
@@ -17,12 +17,60 @@ def _git_available() -> bool:
     return out.returncode == 0
 
 
+def _configure(repo: str) -> None:
+    """Set a deterministic identity for commits in a temp repo."""
+    subprocess.run(
+        ["git", "-C", repo, "config", "user.email", "t@t.t"],
+        check=True,
+        timeout=10,
+    )
+    subprocess.run(
+        ["git", "-C", repo, "config", "user.name", "Tester"],
+        check=True,
+        timeout=10,
+    )
+
+
+def _init_repo(repo: str) -> None:
+    """Create a repo with a deterministic main branch and identity."""
+    subprocess.run(["git", "init", "-q", "-b", "main", repo], check=True, timeout=10)
+    _configure(repo)
+
+
+def _commit(repo: str, name: str, body: str, subject: str) -> None:
+    """Write one file and commit it."""
+    with open(os.path.join(repo, name), "w") as fh:
+        fh.write(body)
+    subprocess.run(["git", "-C", repo, "add", "."], check=True, timeout=10)
+    subprocess.run(
+        ["git", "-C", repo, "commit", "-qm", subject],
+        check=True,
+        timeout=10,
+    )
+
+
 class TestVCS(unittest.TestCase):
     def setUp(self):
         self.backend = GitBackend()
 
     def test_registry_has_git(self):
         self.assertTrue(any(b.name == "git" for b in backends()))
+
+    def test_remote_and_commit_urls(self):
+        self.assertEqual(web_remote("git@github.com:org/repo.git"), "https://github.com/org/repo")
+        self.assertEqual(
+            web_remote("https://github.com/org/repo.git"), "https://github.com/org/repo"
+        )
+        self.assertEqual(
+            web_remote("ssh://git@github.com/org/repo.git"), "https://github.com/org/repo"
+        )
+        self.assertEqual(web_remote("/local/path"), "")
+        sha = "a" * 40
+        self.assertEqual(
+            commit_url("git@github.com:org/repo.git", sha),
+            f"https://github.com/org/repo/commit/{sha}",
+        )
+        self.assertEqual(commit_url("", sha), "")
 
     def test_non_repo_unavailable(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -91,6 +139,163 @@ class TestVCS(unittest.TestCase):
             # repo exists so detect passes, but no commits -> head None
             self.assertIsNotNone(self.backend.detect(tmp))
             self.assertIsNone(self.backend.head(tmp))
+
+    @unittest.skipUnless(_git_available(), "git CLI required")
+    def test_branch_status_and_remotes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            _init_repo(tmp)
+            _commit(tmp, "f.txt", "hi\n", "first")
+            status = self.backend.status(tmp)
+            self.assertEqual(status.branch, "main")
+            self.assertEqual(status.head, self.backend.head(tmp))
+            self.assertFalse(status.dirty)
+            self.assertFalse(status.detached)
+            self.assertEqual(status.ahead, 0)
+            self.assertEqual(status.behind, 0)
+
+            with open(os.path.join(tmp, "new.txt"), "w") as fh:
+                fh.write("dirty\n")
+            self.assertTrue(self.backend.status(tmp).dirty)
+
+            self.assertEqual(self.backend.remotes(tmp), [])
+            url = "https://github.com/org/repo.git"
+            subprocess.run(
+                ["git", "-C", tmp, "remote", "add", "origin", url],
+                check=True,
+                timeout=10,
+            )
+            scp = "git@github.com:org/repo.git"
+            subprocess.run(
+                ["git", "-C", tmp, "remote", "add", "upstream", scp],
+                check=True,
+                timeout=10,
+            )
+            remotes = self.backend.remotes(tmp)
+            self.assertEqual([r.name for r in remotes], ["origin", "upstream"])
+            self.assertEqual(remotes[0].fetch_url, url)
+            self.assertEqual(remotes[0].push_url, url)
+            self.assertEqual(remotes[1].fetch_url, scp)
+            self.assertEqual(remotes[1].push_url, scp)
+
+    @unittest.skipUnless(_git_available(), "git CLI required")
+    def test_log_range_and_limit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            _init_repo(tmp)
+            _commit(tmp, "f.txt", "one\n", "first")
+            base = self.backend.head(tmp)
+            assert base is not None
+            _commit(tmp, "f.txt", "two\n", "second")
+            _commit(tmp, "f.txt", "three\n", "third")
+
+            ranged = self.backend.log(tmp, f"{base}..HEAD")
+            self.assertEqual([c.subject for c in ranged], ["third", "second"])
+            limited = self.backend.log(tmp, limit=1)
+            self.assertEqual([c.subject for c in limited], ["third"])
+            self.assertEqual(self.backend.log(tmp, "does-not-exist..HEAD"), [])
+
+    @unittest.skipUnless(_git_available(), "git CLI required")
+    def test_detached_head_has_no_branch(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            _init_repo(tmp)
+            _commit(tmp, "f.txt", "hi\n", "first")
+            subprocess.run(
+                ["git", "-C", tmp, "checkout", "-q", "--detach"],
+                check=True,
+                timeout=10,
+            )
+            self.assertIsNone(self.backend.branch(tmp))
+            status = self.backend.status(tmp)
+            self.assertEqual(status.branch, "")
+            self.assertTrue(status.detached)
+
+    @unittest.skipUnless(_git_available(), "git CLI required")
+    def test_commit_metadata_includes_body_files_parents_and_branch(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            _init_repo(tmp)
+            _commit(tmp, "first.txt", "one\n", "first")
+            first = self.backend.head(tmp)
+            assert first is not None
+            with open(os.path.join(tmp, "second.txt"), "w") as fh:
+                fh.write("two\n")
+            subprocess.run(
+                ["git", "-C", tmp, "add", "."],
+                check=True,
+                timeout=10,
+            )
+            subprocess.run(
+                ["git", "-C", tmp, "commit", "-qm", "second\n\nbody line"],
+                check=True,
+                timeout=10,
+            )
+            head = self.backend.head(tmp)
+            assert head is not None
+            info = self.backend.show(tmp, head)
+            assert info is not None
+            self.assertEqual(info.subject, "second")
+            self.assertEqual(info.body, "body line")
+            self.assertEqual(info.files, ("second.txt",))
+            self.assertEqual(info.parents, (first,))
+            self.assertEqual(info.branch, "main")
+
+            root = self.backend.show(tmp, first)
+            assert root is not None
+            self.assertEqual(root.files, ("first.txt",))
+            self.assertEqual(root.parents, ())
+
+            logged = self.backend.log(tmp)
+            self.assertEqual(logged[0].body, "body line")
+            self.assertEqual(logged[0].parents, (first,))
+            self.assertEqual(logged[0].files, ())
+
+    @unittest.skipUnless(_git_available(), "git CLI required")
+    def test_ahead_and_behind_with_upstream(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            bare = os.path.join(tmp, "remote.git")
+            seed = os.path.join(tmp, "seed")
+            ahead = os.path.join(tmp, "ahead")
+            behind = os.path.join(tmp, "behind")
+            subprocess.run(
+                ["git", "init", "-q", "--bare", "-b", "main", bare],
+                check=True,
+                timeout=10,
+            )
+            _init_repo(seed)
+            _commit(seed, "f.txt", "one\n", "first")
+            subprocess.run(
+                ["git", "-C", seed, "remote", "add", "origin", bare],
+                check=True,
+                timeout=10,
+            )
+            subprocess.run(
+                ["git", "-C", seed, "push", "-q", "-u", "origin", "main"],
+                check=True,
+                timeout=10,
+            )
+            for clone in (ahead, behind):
+                subprocess.run(
+                    ["git", "clone", "-q", bare, clone],
+                    check=True,
+                    timeout=10,
+                )
+                _configure(clone)
+
+            _commit(behind, "other.txt", "other\n", "remote change")
+            subprocess.run(
+                ["git", "-C", behind, "push", "-q"],
+                check=True,
+                timeout=10,
+            )
+            subprocess.run(
+                ["git", "-C", ahead, "fetch", "-q"],
+                check=True,
+                timeout=10,
+            )
+            _commit(ahead, "local.txt", "local\n", "local change")
+
+            status = self.backend.status(ahead)
+            self.assertEqual(status.upstream, "origin/main")
+            self.assertEqual(status.ahead, 1)
+            self.assertEqual(status.behind, 1)
 
 
 if __name__ == "__main__":

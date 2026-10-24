@@ -148,6 +148,27 @@ def commits_chip(shas: Sequence[str] | None) -> str:
     return " ".join(f"[dim]{s[:12]}[/]" for s in shas)
 
 
+_PR_STYLE = {
+    "merged": ("green", "PR"),
+    "open": ("yellow", "PR"),
+    "draft": ("dim", "PR"),
+    "closed": ("red", "PR"),
+    "": ("dim", "PR"),
+}
+
+
+def pr_chip(state: str = "", checks: str = "") -> str:
+    """Compact cached-PR chip; empty when the task has no cached PR."""
+    if not state and not checks:
+        return ""
+    color, label = _PR_STYLE.get(state, ("dim", "PR"))
+    if checks == "fail":
+        color, label = "red", "PR!"
+    elif checks == "pending":
+        color, label = "yellow", "PR…"
+    return f"[{color}]{label}[/]"
+
+
 def _escape_markup(text: str) -> str:
     """Escape `[` so titles render literally in markup-parsed TUI rows."""
     return text.replace("[", "\\[")
@@ -178,6 +199,8 @@ def _row(
     links: Sequence[str] | None = None,
     progress: tuple[int, int] | None = None,
     width: int | None = None,
+    pr_state: str = "",
+    pr_checks: str = "",
 ) -> str:
     """TUI row: Rich status glyph + dim id + bold title + progress/chips."""
     letter, title_attr = _CORE_SPEC[kind]
@@ -193,6 +216,10 @@ def _row(
     if chips:
         suffix += f" {chips}"
         plain_suffix += " " + " ".join(sha[:12] for sha in (links or []))
+    pr = pr_chip(pr_state, pr_checks)
+    if pr:
+        suffix += f" {pr}"
+        plain_suffix += " PR"
     prefix_plain = f"{status_word(obj.status)} {id_part} "
     available = None if width is None else width - len(prefix_plain) - len(plain_suffix)
     title = truncate(title, available)
@@ -266,9 +293,11 @@ def task_row(
     store: Store | None = None,
     links: Sequence[str] | None = None,
     width: int | None = None,
+    pr_state: str = "",
+    pr_checks: str = "",
 ) -> str:
-    """TUI task row (Rich markup): glyph + id + title + chips."""
-    return _row("task", t, links, None, width)
+    """TUI task row (Rich markup): glyph + id + title + PR/commit chips."""
+    return _row("task", t, links, None, width, pr_state, pr_checks)
 
 
 # -- empty states (identical wording everywhere) --------------------------

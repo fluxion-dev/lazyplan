@@ -167,6 +167,19 @@ class TestDesignSystem(unittest.TestCase):
             "[dim]aaaaaaaaaaaa[/] [dim]bbbbbbbbbbbb[/]",
         )
 
+    def test_pr_chip_states(self):
+        self.assertEqual(design.pr_chip(), "")
+        self.assertIn("PR", design.pr_chip("open"))
+        self.assertIn("green", design.pr_chip("merged"))
+        self.assertIn("PR!", design.pr_chip("open", "fail"))
+        self.assertIn("PR…", design.pr_chip("open", "pending"))
+
+    def test_task_row_shows_pr_chip_only_when_cached(self):
+        t = Task(id=3, milestone_id=1, title="T")
+        self.assertNotIn("PR", design.task_row(t))
+        self.assertIn("PR", design.task_row(t, pr_state="open"))
+        self.assertIn("PR!", design.task_row(t, pr_state="open", pr_checks="fail"))
+
     def test_rows_show_chips_only_when_linked(self):
         p = Plan(id=1, name="N")
         self.assertEqual(design.plan_row(p), design.plan_row(p, links=None))

@@ -46,15 +46,48 @@ CREATE TABLE IF NOT EXISTS vcs_links (
     author TEXT NOT NULL DEFAULT '',
     timestamp INTEGER NOT NULL DEFAULT 0,
     repo_root TEXT NOT NULL DEFAULT '',
+    stale INTEGER NOT NULL DEFAULT 0,
+    checked_at INTEGER NOT NULL DEFAULT 0,
     UNIQUE(parent_kind, parent_id, sha)
 );
 CREATE INDEX IF NOT EXISTS idx_vcs_links_parent ON vcs_links(parent_kind, parent_id);
+CREATE TABLE IF NOT EXISTS forge_links (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    parent_kind TEXT NOT NULL CHECK (parent_kind IN ('plan', 'milestone', 'task')),
+    parent_id INTEGER NOT NULL,
+    provider TEXT NOT NULL DEFAULT 'github',
+    kind TEXT NOT NULL DEFAULT 'pull',
+    number INTEGER NOT NULL CHECK (number > 0),
+    url TEXT NOT NULL DEFAULT '',
+    title TEXT NOT NULL DEFAULT '',
+    state TEXT NOT NULL DEFAULT '',
+    checks TEXT NOT NULL DEFAULT '',
+    reviews TEXT NOT NULL DEFAULT '',
+    author TEXT NOT NULL DEFAULT '',
+    base_ref TEXT NOT NULL DEFAULT '',
+    head_ref TEXT NOT NULL DEFAULT '',
+    merged_at TEXT NOT NULL DEFAULT '',
+    merge_commit_sha TEXT NOT NULL DEFAULT '',
+    updated_at INTEGER NOT NULL DEFAULT 0,
+    stale INTEGER NOT NULL DEFAULT 0,
+    payload TEXT NOT NULL DEFAULT '',
+    UNIQUE(parent_kind, parent_id, provider, kind, number)
+);
+CREATE INDEX IF NOT EXISTS idx_forge_links_parent ON forge_links(parent_kind, parent_id);
+CREATE TABLE IF NOT EXISTS forge_cache (
+    key TEXT PRIMARY KEY,
+    etag TEXT NOT NULL DEFAULT '',
+    fetched_at INTEGER NOT NULL DEFAULT 0,
+    payload TEXT NOT NULL DEFAULT ''
+);
 CREATE TABLE IF NOT EXISTS entity_repos (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     parent_kind TEXT NOT NULL CHECK (parent_kind IN ('plan', 'milestone', 'task')),
     parent_id INTEGER NOT NULL,
     repo_path TEXT NOT NULL,
     repo_remote TEXT NOT NULL DEFAULT '',
+    branch TEXT NOT NULL DEFAULT '',
+    base_sha TEXT NOT NULL DEFAULT '',
     UNIQUE(parent_kind, parent_id, repo_path, repo_remote)
 );
 CREATE INDEX IF NOT EXISTS idx_entity_repos_parent ON entity_repos(parent_kind, parent_id);
@@ -165,6 +198,8 @@ def _migrate_elements(conn: sqlite3.Connection) -> None:
                 author TEXT NOT NULL DEFAULT '',
                 timestamp INTEGER NOT NULL DEFAULT 0,
                 repo_root TEXT NOT NULL DEFAULT '',
+                stale INTEGER NOT NULL DEFAULT 0,
+                checked_at INTEGER NOT NULL DEFAULT 0,
                 UNIQUE(parent_kind, parent_id, sha)
             )
             """
@@ -189,11 +224,44 @@ def _drop_priority_columns(conn: sqlite3.Connection) -> None:
             conn.execute(f"ALTER TABLE {table} DROP COLUMN priority")
 
 
+def _migrate_vcs_link_state(conn: sqlite3.Connection) -> None:
+    """Add refresh state columns to vcs_links when missing."""
+    existing = {r["name"] for r in conn.execute("PRAGMA table_info(vcs_links)").fetchall()}
+    if "stale" not in existing:
+        conn.execute("ALTER TABLE vcs_links ADD COLUMN stale INTEGER NOT NULL DEFAULT 0")
+    if "checked_at" not in existing:
+        conn.execute("ALTER TABLE vcs_links ADD COLUMN checked_at INTEGER NOT NULL DEFAULT 0")
+
+
+def _migrate_entity_repo_branch(conn: sqlite3.Connection) -> None:
+    """Add recorded branch/base columns to entity_repos when missing."""
+    existing = {r["name"] for r in conn.execute("PRAGMA table_info(entity_repos)").fetchall()}
+    if "branch" not in existing:
+        conn.execute("ALTER TABLE entity_repos ADD COLUMN branch TEXT NOT NULL DEFAULT ''")
+    if "base_sha" not in existing:
+        conn.execute("ALTER TABLE entity_repos ADD COLUMN base_sha TEXT NOT NULL DEFAULT ''")
+
+
+def _migrate_forge_link_fields(conn: sqlite3.Connection) -> None:
+    """Add review, merge, and stale columns to forge_links when missing."""
+    existing = {r["name"] for r in conn.execute("PRAGMA table_info(forge_links)").fetchall()}
+    if "reviews" not in existing:
+        conn.execute("ALTER TABLE forge_links ADD COLUMN reviews TEXT NOT NULL DEFAULT ''")
+    if "stale" not in existing:
+        conn.execute("ALTER TABLE forge_links ADD COLUMN stale INTEGER NOT NULL DEFAULT 0")
+    for col in ("base_ref", "head_ref", "merged_at", "merge_commit_sha"):
+        if col not in existing:
+            conn.execute(f"ALTER TABLE forge_links ADD COLUMN {col} TEXT NOT NULL DEFAULT ''")
+
+
 def migrate(conn: sqlite3.Connection) -> None:
     """Bring any DB to the current schema: migrate, create, backfill. Idempotent."""
     _migrate_elements(conn)
     conn.executescript(SCHEMA)
     _drop_priority_columns(conn)
+    _migrate_vcs_link_state(conn)
+    _migrate_entity_repo_branch(conn)
+    _migrate_forge_link_fields(conn)
     for table, cols in _MIGRATIONS.items():
         existing = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()}
         for col in cols:

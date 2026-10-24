@@ -127,6 +127,61 @@ lpui list --repo /path/to/checkout             # only matching rows
 `show` and `list --json` include `repos` plus `effective_repos`;
 `export --format json` carries explicit `repos` (import round-trip).
 
+## Git proof
+
+Rows can carry the exact commits that shipped them. `link` attaches HEAD, or
+a SHA, from the current checkout; `--repo PATH` reads a different linked
+checkout. `commits` lists direct and inherited commits, and `--refresh`
+re-resolves cached metadata, marking missing commits `[stale]`:
+
+```bash
+lpui --actor NAME link --kind task --id T [--sha SHA] [--repo PATH]
+lpui commits --kind task --id T [--refresh]
+lpui git status --kind task --id T [--json]
+lpui git scan --since 7.days [--dry-run] [--repo PATH]
+```
+
+`task start` sets a task doing and records an existing branch plus its base. It
+uses the current branch unless `--branch NAME` names another existing branch.
+lazyplan never creates or checks out branches and never creates worktrees; use
+your VCS tool for that first. `task finish` links `base..HEAD` and moves the
+task to done only when the tree is clean. lazyplan never commits, pushes,
+fetches, or merges. Commit messages can also carry a `Lazyplan: T12` trailer,
+and a `task/12-*` branch attributes commits in its base..HEAD range.
+
+Marking a row done links HEAD only when the tree is clean and HEAD is not
+already linked to another row. A task with a started branch must be on that
+branch and the commit must be on the task branch history; otherwise lpui warns
+and leaves the link for you. `show` includes inherited commits, stale markers,
+and web URLs when the origin remote can be mapped.
+
+## GitHub pull requests
+
+GitHub support is read-only and opt-in. lpui maps each linked checkout's origin
+remote to a `github.com` owner/repo and caches pull requests, checks, and reviews
+locally. `list`, `show`, and opening the screen never call GitHub; only
+`pr refresh` does.
+
+Auth precedence: `LAZYPLAN_GITHUB_TOKEN`, `GITHUB_TOKEN`, `GH_TOKEN`, then
+`gh auth token`. Tokens never enter the database, export, feed, or logs.
+
+```bash
+lpui --actor NAME pr auth
+lpui --actor NAME pr status --kind task --id T
+lpui --actor NAME pr refresh --kind task --id T
+lpui --actor NAME pr list --kind task --id T
+lpui --actor NAME pr link --kind task --id T --url https://github.com/org/repo/pull/7
+lpui --actor NAME pr unlink --kind task --id T --number 7
+```
+
+`pr refresh` links each PR to the task that owns its commit or branch and caches
+state, checks, reviews, base/head refs, and merge metadata. Requests reuse ETags
+and fall back to cached data offline; stale data is marked. `pr link` is offline
+and manual. `show` rolls PRs up from tasks to milestones and plans, task rows
+show a PR chip, and detail lists the PR URL. Scope is github.com only. lazyplan
+never creates branches, worktrees, commits, pushes, PRs, reviews, comments, or
+merges; other tools own those actions.
+
 ## Starting a plan: interview first
 
 Never invent a plan's definition. When the user asks to plan something,

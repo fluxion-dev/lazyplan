@@ -4,6 +4,7 @@ import os
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
@@ -44,6 +45,39 @@ class TestPalette(unittest.IsolatedAsyncioTestCase):
         context = self.app._palette_context()
         self.assertIsNone(context["create-task"])
         self.assertIsNone(context["create-milestone"])
+
+    def test_git_commands_are_palette_only_and_context_gated(self):
+        from lazyplan import commands
+
+        for command_id in ("git-status", "git-refresh", "git-capture"):
+            command = commands.by_id(command_id)
+            assert command is not None
+            self.assertTrue(command.tui_only)
+            self.assertTrue(command.handler)
+        self.app.selected = None
+        context = self.app._palette_context()
+        self.assertEqual(context["git-status"], "Select a row first")
+        self.assertEqual(context["git-capture"], "Select a row first")
+        self.app.selected = ("task", self.tid)
+        context = self.app._palette_context()
+        self.assertIsNone(context["git-status"])
+        self.assertIsNone(context["git-refresh"])
+        self.assertIsNone(context["git-capture"])
+        self.assertIsNone(context["open-pr"])
+
+    def test_open_pr_uses_the_first_linked_url(self):
+        url = "https://github.com/org/repo/pull/7"
+        self.store.link_forge("task", self.tid, 7, url=url, title="Fix login")
+        self.app.selected = ("task", self.tid)
+        with mock.patch("lazyplan.tui.webbrowser.open") as opener:
+            self.app.action_open_pr()
+        opener.assert_called_once_with(url)
+
+    def test_open_pr_without_a_link_notifies(self):
+        self.app.selected = ("task", self.tid)
+        with mock.patch("lazyplan.tui.webbrowser.open") as opener:
+            self.app.action_open_pr()
+        opener.assert_not_called()
 
     async def test_matching_and_count(self):
         from textual.widgets import Input, Label

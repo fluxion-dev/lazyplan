@@ -231,9 +231,20 @@ lpui criterion list --kind plan --id 1
 lpui criterion tick --id 4
 lpui criterion untick --id 4
 lpui criterion delete --id 4
-lpui link --kind task --id 1 [--sha HASH]
-lpui commits --kind task --id 1
+lpui link --kind task --id 1 [--sha HASH] [--repo PATH]
+lpui commits --kind task --id 1 [--refresh]
 lpui unlink --kind task --id 1 --sha HASH
+lpui git status --kind task --id 1 [--json]
+lpui git scan --since 7.days [--dry-run] [--repo PATH]
+lpui task start --id 3 [--branch NAME]
+lpui task finish --id 3 [--repo PATH]
+lpui pr auth
+lpui pr status --kind task --id 3
+lpui pr refresh --kind task --id 3
+lpui pr list --kind task --id 3
+lpui pr show --kind task --id 3 --number 7
+lpui pr link --kind task --id 3 --url URL
+lpui pr unlink --kind task --id 3 --number 7
 lpui link-repo --kind plan --id 1 --repo ~/checkouts/api [--remote URL]
 lpui unlink-repo --kind plan --id 1 --repo ~/checkouts/api
 lpui repos --kind task --id 1 [--effective]
@@ -248,6 +259,72 @@ lpui watch [--limit 20]
 Run `lpui <command> --help` for per-command flags. `man lpui` contains the full
 manual. Legacy flat verbs (`add-plan`, `add-task`, `update`, `status`, `delete`,
 `check`, `uncheck`, …) remain as aliases.
+
+## Git proof
+
+Rows can carry the exact commits that shipped them. `link` attaches HEAD, or a
+SHA, from the current checkout. Pass `--repo PATH` to read a different linked
+checkout without changing directory. `commits` lists direct and inherited
+commits; `--refresh` re-resolves their cached metadata and marks commits that
+no longer resolve as `[stale]`.
+
+`task start` sets a task doing and records an existing branch plus its base. It
+uses the current branch unless `--branch NAME` names another existing branch.
+lazyplan never creates or checks out branches and never creates worktrees; use
+your git tool for that first. `task finish` links `base..HEAD` and moves the
+task to done only when the tree is clean. lazyplan never commits, pushes,
+fetches, or merges. A commit can also be attributed with a `Lazyplan: T12`
+trailer or a `task/12-*` branch name:
+
+```bash
+lpui git scan --since 7.days --dry-run
+lpui git scan --since 7.days
+```
+
+`git status` reports branch, dirty state, and ahead/behind for each effective
+repo. `show` includes inherited commits, a stale marker, and a web URL when the
+repo has an origin remote.
+
+Marking a row done links HEAD only when the tree is clean and HEAD is not
+already linked to another row. A task with a started branch must be on that
+branch and the commit must be on the task branch history. Otherwise lpui prints
+one warning and leaves the link for you; the status move is not blocked.
+
+## GitHub pull requests
+
+GitHub support is read-only and opt-in. lpui reads the origin remote of each
+linked checkout, recognizes `github.com` owner/repo identities, and caches pull
+request state, checks, and reviews in the local database. `list`, `show`, and
+opening the screen never call GitHub; only `pr refresh` does.
+
+Auth precedence is:
+
+1. `LAZYPLAN_GITHUB_TOKEN`
+2. `GITHUB_TOKEN`
+3. `GH_TOKEN`
+4. `gh auth token`
+
+Tokens are never written to the database, export, feed, or logs. `pr auth`
+reports the active source; `pr status` reports repo identity, auth source, and
+cache state per linked checkout.
+
+```bash
+lpui pr auth
+lpui pr status --kind task --id 3
+lpui pr refresh --kind task --id 3
+lpui pr list --kind task --id 3
+lpui pr show --kind task --id 3 --number 7
+lpui pr link --kind task --id 3 --url https://github.com/org/repo/pull/7
+lpui pr unlink --kind task --id 3 --number 7
+```
+
+`pr refresh` links each PR to the task that owns its commit or branch, and
+caches state, checks, reviews, base/head refs, and merge metadata. Requests
+reuse ETags and fall back to cached data offline; stale data is marked.
+`pr link` is offline and manual. `show` and the detail screen roll PRs up from
+tasks to milestones and plans, and task rows show a PR chip. Scope is
+github.com only. lazyplan never creates branches, worktrees, commits, pushes,
+PRs, reviews, comments, or merges; other tools own those actions.
 
 ## Data and backup
 

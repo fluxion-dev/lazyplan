@@ -11,6 +11,7 @@ bump reactive rev, external DB changes arrive via fingerprint() poll + feed toas
 from __future__ import annotations
 
 import time
+import webbrowser
 from typing import Any, cast
 
 try:
@@ -42,6 +43,7 @@ from .design import (
 )
 from .messages import RowAction, SelectionChanged
 from .models import Milestone, Plan, Status, Task
+from .render import render_git_status
 from .repo import repo_label
 from .screens import (
     ConfirmScreen,
@@ -56,6 +58,7 @@ from .screens import (
 from .store import Store
 from .templates import load_template
 from .upgrade import UpgradeError, detect, latest_version, notice_text
+from .vcs import detect_backend
 
 STATUS_CYCLE: list[Status | None] = [None, Status.TODO, Status.DOING, Status.DONE]
 DOUBLE_CLICK_WINDOW = 0.5  # seconds between two clicks on one row
@@ -164,6 +167,7 @@ if _TEXTUAL_OK:
             self._pending_note: str = ""
             self._mounted: bool = False
             self._refreshing: bool = False
+            self._git_cache: dict[str, tuple[float, dict[str, Any]]] = {}
 
         # Reactive revision: local mutations bump rev; watch_rev refreshes.
         # External CLI writes still arrive via _poll fingerprint check.
@@ -277,6 +281,52 @@ if _TEXTUAL_OK:
                 lines.append(f"[dim]P{plan_id} › M{obj.get('milestone_id')} › T{oid}[/]")
             return lines
 
+        def _git_state(self, path: str) -> dict[str, Any]:
+            """Cached branch/dirty state for a checkout (5s TTL)."""
+            now = time.time()
+            cached = self._git_cache.get(path)
+            if cached is not None and now - cached[0] < 5.0:
+                return cached[1]
+            state: dict[str, Any] = {
+                "branch": "",
+                "dirty": False,
+                "ahead": 0,
+                "behind": 0,
+                "upstream": "",
+                "detached": False,
+            }
+            backend, root = detect_backend(path)
+            if backend is not None and root is not None:
+                status = backend.status(root)
+                state.update(
+                    {
+                        "branch": status.branch,
+                        "dirty": status.dirty,
+                        "ahead": status.ahead,
+                        "behind": status.behind,
+                        "upstream": status.upstream,
+                        "detached": status.detached,
+                    }
+                )
+            self._git_cache[path] = (now, state)
+            return state
+
+        def _git_preview_bits(self, repos: list[dict[str, Any]]) -> list[str]:
+            """Compact branch/dirty bits for the preview's linked checkouts."""
+            bits: list[str] = []
+            for repo in repos[:2]:
+                path = str(repo.get("repo_path", "") or "")
+                if not path:
+                    continue
+                state = self._git_state(path)
+                branch = state["branch"]
+                if not branch:
+                    branch = "detached" if state["detached"] else "unknown"
+                name = repo_project_name(repo) or path
+                dirty = " dirty" if state["dirty"] else " clean"
+                bits.append(f"{name} {branch}{dirty}")
+            return bits
+
         def _preview_common(self, lines: list[str], full: dict[str, Any]) -> None:
             crits = full.get("criteria", [])
             if crits:
@@ -286,7 +336,7 @@ if _TEXTUAL_OK:
                 lines.extend(["", f"[dim]acceptance {crit_done}/{len(crits)}{tail}[/]"])
                 for crit in open_crits[:3]:
                     lines.append(f"  · {escape_markup(str(crit.get('text', '')))}")
-            links = full.get("links", [])
+            links = full.get("effective_links") or full.get("links", [])
             repos = full.get("effective_repos") or full.get("repos") or []
             if links or repos:
                 bits = []
@@ -298,6 +348,9 @@ if _TEXTUAL_OK:
                         "repos: " + ", ".join(names[:3]) if names else f"{len(repos)} repos"
                     )
                 lines.append(f"[dim]{' · '.join(bits)}[/]")
+            git_bits = self._git_preview_bits(repos)
+            if git_bits:
+                lines.append(f"[dim]git: {' · '.join(git_bits)}[/]")
 
         def _preview_plan(self, full: dict[str, Any], oid: int) -> list[str]:
             obj = full.get("plan", {})
@@ -658,7 +711,14 @@ if _TEXTUAL_OK:
             )
             return max(10, base - 5 - depth)
 
-        def _build_rows(self, root: Any, tree: Tree, filtered: list, progress: dict) -> None:
+        def _build_rows(
+            self,
+            root: Any,
+            tree: Tree,
+            filtered: list,
+            progress: dict,
+            forge_map: dict,
+        ) -> None:
             """Create plan/milestone/task nodes for one refresh."""
             for plan, milestones in filtered:
                 plan_node = root.add(
@@ -684,8 +744,16 @@ if _TEXTUAL_OK:
                     )
                     self._row_nodes[("milestone", milestone.id)] = milestone_node
                     for task in tasks:
+                        prs = forge_map.get(("task", task.id), [])
+                        pr = prs[0] if prs else None
                         leaf = milestone_node.add_leaf(
-                            task_row(task, self.store, width=self._row_width(tree, 11)),
+                            task_row(
+                                task,
+                                self.store,
+                                width=self._row_width(tree, 11),
+                                pr_state=pr.state if pr else "",
+                                pr_checks=pr.checks if pr else "",
+                            ),
                             data={"kind": "task", "id": task.id},
                         )
                         self._row_nodes[("task", task.id)] = leaf
@@ -752,7 +820,7 @@ if _TEXTUAL_OK:
             progress = self._progress_map()
             filtered = self._filtered_tree()
             filtered.sort(key=lambda entry: entry[0].status == Status.DONE)
-            self._build_rows(tree.root, tree, filtered, progress)
+            self._build_rows(tree.root, tree, filtered, progress, self.store.forge_links_map())
             tree.root.expand()
             self._collapsed &= set(self._row_nodes)
             self._expanded &= set(self._row_nodes)
@@ -764,6 +832,78 @@ if _TEXTUAL_OK:
 
         def action_refresh(self) -> None:
             self._saved("manual refresh")
+
+        def _git_selection(self) -> tuple[str, int] | None:
+            """Selected row for a git action, or a notification when none."""
+            if self.selected is None:
+                self.notify("select a row first", timeout=3)
+                return None
+            return self.selected
+
+        def action_git_status(self) -> None:
+            """Show branch and dirty state for the selected row's checkouts."""
+            selected = self._git_selection()
+            if selected is None:
+                return
+            kind, oid = selected
+            try:
+                entries = services.repo_statuses(self.store, kind, oid)
+            except ValueError as exc:
+                self.notify(str(exc), severity="error", timeout=5)
+                return
+            if not entries:
+                self.notify("no linked repos", timeout=3)
+                return
+            self.notify(render_git_status(entries), timeout=8)
+            self._pending_note = "git status"
+
+        def action_git_refresh(self) -> None:
+            """Re-resolve cached commits and mark stale links."""
+            selected = self._git_selection()
+            if selected is None:
+                return
+            kind, oid = selected
+            result = services.refresh_links(self.store, kind, oid)
+            self.notify(
+                f"checked {result['checked']} links · "
+                f"{result['updated']} updated · {result['stale']} stale",
+                timeout=6,
+            )
+            self._saved("git links refreshed")
+
+        def action_git_capture(self) -> None:
+            """Link a safe current HEAD to the selected row."""
+            selected = self._git_selection()
+            if selected is None:
+                return
+            kind, oid = selected
+            before = {link.sha for link in self.store.list_links(kind, oid)}
+            repos = self.store.effective_repos(kind, oid)
+            cwd = str(repos[0]["repo_path"]) if repos else "."
+            reason = services.auto_capture_head(self.store, kind, oid, cwd=cwd)
+            after = {link.sha for link in self.store.list_links(kind, oid)}
+            if after - before:
+                self.notify("HEAD linked", timeout=4)
+                self._saved("commit linked")
+                return
+            if reason:
+                self.notify(f"not linked: {reason}", severity="warning", timeout=6)
+                return
+            self.notify("HEAD is already linked or unavailable", timeout=4)
+
+        def action_open_pr(self) -> None:
+            """Open the first linked pull request in the default browser."""
+            selected = self._git_selection()
+            if selected is None:
+                return
+            kind, oid = selected
+            links = self.store.effective_forge_links(kind, oid)
+            url = next((link.url for link in links if link.url), "")
+            if not url:
+                self.notify("no pull request linked", timeout=3)
+                return
+            webbrowser.open(url)
+            self.notify(f"opened {url}", timeout=4)
 
         def _saved(self, note: str = "") -> None:
             """Local mutation path: bump reactive rev, watch refreshes."""
@@ -858,6 +998,10 @@ if _TEXTUAL_OK:
                 "filter_status": self.action_filter_status,
                 "toggle_show_all": self.action_toggle_show_all,
                 "refresh": self.action_refresh,
+                "git_status": self.action_git_status,
+                "git_refresh": self.action_git_refresh,
+                "git_capture": self.action_git_capture,
+                "open_pr": self.action_open_pr,
                 "command_palette": self.action_command_palette,
                 "export_md": self.action_export_md,
                 "help": self.action_help,

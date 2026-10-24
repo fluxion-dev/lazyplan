@@ -1,6 +1,7 @@
 """Read-first detail: safe browsing, explicit edit mode, and row actions."""
 
 import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -20,6 +21,14 @@ try:
     )
 except ImportError:  # stdlib-only interpreter: no textual, no screens
     tui_mod = None  # type: ignore[assignment]
+
+
+def _git_available() -> bool:
+    try:
+        out = subprocess.run(["git", "--version"], capture_output=True, timeout=5)
+    except (FileNotFoundError, OSError):
+        return False
+    return out.returncode == 0
 
 
 @unittest.skipUnless(tui_mod is not None and tui_mod._TEXTUAL_OK, "textual not installed")
@@ -60,6 +69,120 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
             self.assertIn("Milestone title", body)
             self.assertFalse(screen.query_one("#detail-edit").display)
             self.assertTrue(screen.query_one("#detail-read").display)
+
+    @unittest.skipUnless(_git_available(), "git CLI required")
+    async def test_detail_shows_git_state_and_commit_url(self):
+        from textual.widgets import Static
+
+        repo = os.path.join(self.tmp.name, "repo")
+        os.makedirs(repo)
+        subprocess.run(["git", "init", "-q", "-b", "main", repo], check=True, timeout=10)
+        subprocess.run(["git", "-C", repo, "config", "user.email", "t@t.t"], check=True, timeout=10)
+        subprocess.run(["git", "-C", repo, "config", "user.name", "Tester"], check=True, timeout=10)
+        with open(os.path.join(repo, "f.txt"), "w") as fh:
+            fh.write("hi\n")
+        subprocess.run(["git", "-C", repo, "add", "."], check=True, timeout=10)
+        subprocess.run(["git", "-C", repo, "commit", "-qm", "detail work"], check=True, timeout=10)
+        sha = subprocess.run(
+            ["git", "-C", repo, "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=True,
+        ).stdout.strip()
+        subprocess.run(
+            ["git", "-C", repo, "remote", "add", "origin", "https://github.com/org/repo.git"],
+            check=True,
+            timeout=10,
+        )
+        store = Store(self.db)
+        store.add_repo_link(
+            "task",
+            self.tid,
+            repo,
+            "https://github.com/org/repo.git",
+            branch="main",
+            base_sha=sha,
+        )
+        store.link_commit("task", self.tid, sha, subject="detail work", repo_root=repo)
+        link = store.list_links("task", self.tid)[0]
+        store.update_link(
+            link.id,
+            subject="detail work",
+            author="Tester",
+            timestamp=0,
+            repo_root=repo,
+            stale=True,
+            checked_at=1,
+        )
+
+        async with self.app.run_test(size=(100, 30)) as pilot:
+            await pilot.pause()
+            preview_lines: list[str] = []
+            full = self.store.get_full("task", self.tid)
+            assert full is not None
+            self.app._preview_common(preview_lines, full)
+            preview = "\n".join(preview_lines)
+            self.assertIn("git:", preview)
+            self.assertIn("main", preview)
+            self.assertIn("clean", preview)
+            await self._open(pilot, "task", self.tid)
+            body = str(self.app.screen.query_one("#detail-body", Static).render())
+            self.assertIn("git", body)
+            self.assertIn("main", body)
+            self.assertIn("clean", body)
+            self.assertIn("detail work", body)
+            self.assertIn("[stale]", body)
+            self.assertIn(f"https://github.com/org/repo/commit/{sha}", body)
+
+    async def test_detail_shows_pull_requests(self):
+        from textual.widgets import Static
+
+        url = "https://github.com/org/repo/pull/7"
+        Store(self.db).link_forge(
+            "task",
+            self.tid,
+            7,
+            url=url,
+            title="Fix login",
+            state="merged",
+            checks="pass",
+            base_ref="main",
+            head_ref="task/7-fix",
+            merged_at="2026-10-01T00:00:00Z",
+            merge_commit_sha="b" * 40,
+        )
+        async with self.app.run_test(size=(100, 30)) as pilot:
+            await pilot.pause()
+            await self._open(pilot, "task", self.tid)
+            body = str(self.app.screen.query_one("#detail-body", Static).render())
+            self.assertIn("pull requests", body)
+            self.assertIn("PR #7 merged Fix login", body)
+            self.assertIn("checks pass", body)
+            self.assertIn("task/7-fix -> main", body)
+            self.assertIn(f"merge {'b' * 12}", body)
+            self.assertIn(url, body)
+
+    async def test_detail_rolls_up_pull_requests_for_plan_and_milestone(self):
+        from textual.widgets import Static
+
+        Store(self.db).link_forge(
+            "task",
+            self.tid,
+            7,
+            url="https://github.com/org/repo/pull/7",
+            title="Fix login",
+            state="open",
+        )
+        async with self.app.run_test(size=(100, 30)) as pilot:
+            await pilot.pause()
+            for kind, oid in (("milestone", self.sid), ("plan", self.pid)):
+                await self._open(pilot, kind, oid)
+                body = str(self.app.screen.query_one("#detail-body", Static).render())
+                self.assertIn("pull requests", body)
+                self.assertIn("PR #7 open Fix login", body)
+                self.app.pop_screen()
+                await pilot.pause()
 
     async def test_e_edits_and_saves(self):
         from textual.widgets import Input

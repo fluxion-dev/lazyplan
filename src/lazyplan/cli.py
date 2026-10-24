@@ -24,8 +24,18 @@ from .design import (
     msg_no_vcs,
     msg_not_found,
 )
+from .forge import parse_pull_url, resolve_auth
 from .models import Milestone, Plan, Status, Task
-from .render import render_commits, render_full, render_markdown, summary_lines, tree_lines
+from .render import (
+    render_commits,
+    render_forge_links,
+    render_forge_status,
+    render_full,
+    render_git_status,
+    render_markdown,
+    summary_lines,
+    tree_lines,
+)
 from .repo import (
     find_repo_root,
     repo_label,
@@ -50,7 +60,7 @@ from .upgrade import (
     parse_version,
     run_upgrade,
 )
-from .vcs import current_head, detect_backend
+from .vcs import detect_backend, origin_url
 
 
 def _emit(args: argparse.Namespace, payload: object) -> int:
@@ -72,35 +82,6 @@ def _resolve_title(args: argparse.Namespace) -> str:
     if getattr(args, "name", None):
         return str(args.name)
     return ""
-
-
-def _auto_link_head(store: Store, kind: str, obj_id: int, actor: str) -> None:
-    """Best-effort HEAD capture on status->done. Silent outside git or with no HEAD."""
-    try:
-        _backend, info = current_head(".")
-    except Exception:
-        return
-    if info is None:
-        return
-    try:
-        existing = store.list_links(kind, obj_id)
-    except (ValueError, KeyError):
-        return
-    if any(link.sha == info.sha for link in existing):
-        return
-    try:
-        store.link_commit(
-            kind,
-            obj_id,
-            info.sha,
-            subject=info.subject,
-            author=info.author,
-            timestamp=info.timestamp,
-            repo_root=info.repo_root,
-            actor=actor,
-        )
-    except (ValueError, KeyError):
-        return
 
 
 def _warn_stale_plan_dir(root: Path | None) -> None:
@@ -570,7 +551,13 @@ def _cmd_status(store: Store, args: argparse.Namespace, actor: str) -> int:
         print(msg_not_found(args.kind, args.id), file=sys.stderr)
         return 1
     if args.to == "done":
-        _auto_link_head(store, args.kind, args.id, actor)
+        reason = services.auto_capture_head(store, args.kind, args.id, actor=actor)
+        if reason:
+            print(
+                f"warning: {args.kind} #{args.id} done, but HEAD was not linked: {reason}. "
+                f"Commit, then run `lpui link --kind {args.kind} --id {args.id}`.",
+                file=sys.stderr,
+            )
     return _emit(args, {"ok": True, "kind": args.kind, "id": args.id, "to": args.to})
 
 
@@ -622,24 +609,177 @@ def _cmd_delete_criteria(store: Store, args: argparse.Namespace, actor: str) -> 
     return _emit(args, {"ok": True, "deleted": f"criteria #{args.id}"})
 
 
+def _cmd_git_scan(store: Store, args: argparse.Namespace, actor: str) -> int:
+    if args.id is not None and not args.kind:
+        print(msg_error(ValueError("--id needs --kind")), file=sys.stderr)
+        return 2
+    matches = services.scan_commits(
+        store,
+        repo_path=str(args.repo) if args.repo else ".",
+        since=str(args.since) if args.since else "",
+        limit=args.limit,
+        dry_run=bool(args.dry_run),
+        kind=str(args.kind) if args.kind else "",
+        obj_id=args.id or 0,
+        actor=actor,
+    )
+    if args.json:
+        return _emit(args, matches)
+    if not matches:
+        print("(no lazyplan references found)")
+        return 0
+    for match in matches:
+        print(f"{match['sha'][:12]} {match['subject']} -> {match['ref']} ({match['action']})")
+    return 0
+
+
+def _cmd_pr_auth(store: Store, args: argparse.Namespace, actor: str) -> int:
+    auth = resolve_auth()
+    payload = {
+        "provider": "github",
+        "source": auth.source,
+        "available": auth.available,
+    }
+    if args.json:
+        return _emit(args, payload)
+    if auth.available:
+        print(f"github auth: {auth.source}")
+    else:
+        print("github auth: none (set GITHUB_TOKEN or run `gh auth login`)")
+    return 0
+
+
+def _cmd_pr_status(store: Store, args: argparse.Namespace, actor: str) -> int:
+    if args.kind or args.id:
+        if not (args.kind and args.id):
+            print(msg_error(ValueError("--kind and --id go together")), file=sys.stderr)
+            return 2
+        if store.get_parent(args.kind, args.id) is None:
+            print(msg_not_found(args.kind, args.id), file=sys.stderr)
+            return 1
+    auth = resolve_auth()
+    entries = services.forge_statuses(
+        store,
+        kind=str(args.kind) if args.kind else "",
+        obj_id=args.id or 0,
+        repo_path=str(args.repo) if args.repo else "",
+        auth=auth,
+    )
+    if args.json:
+        return _emit(args, entries)
+    if not entries:
+        print("(no linked repos)")
+        return 0
+    print(render_forge_status(entries))
+    return 0
+
+
+def _cmd_pr_list(store: Store, args: argparse.Namespace, actor: str) -> int:
+    if store.get_parent(args.kind, args.id) is None:
+        print(msg_not_found(args.kind, args.id), file=sys.stderr)
+        return 1
+    links = store.list_forge_links(args.kind, args.id)
+    if args.json:
+        return _emit(args, [vars(link) for link in links])
+    if not links:
+        print("(no pull requests linked)")
+        return 0
+    print(render_forge_links([vars(link) for link in links]))
+    return 0
+
+
+def _cmd_pr_show(store: Store, args: argparse.Namespace, actor: str) -> int:
+    if store.get_parent(args.kind, args.id) is None:
+        print(msg_not_found(args.kind, args.id), file=sys.stderr)
+        return 1
+    links = [
+        link for link in store.list_forge_links(args.kind, args.id) if link.number == args.number
+    ]
+    if not links:
+        print(msg_not_found("pull request", args.number), file=sys.stderr)
+        return 1
+    if args.json:
+        return _emit(args, vars(links[0]))
+    print(render_forge_links([vars(links[0])]))
+    return 0
+
+
+def _cmd_pr_link(store: Store, args: argparse.Namespace, actor: str) -> int:
+    if store.get_parent(args.kind, args.id) is None:
+        print(msg_not_found(args.kind, args.id), file=sys.stderr)
+        return 1
+    parsed = parse_pull_url(str(args.url))
+    if parsed is None:
+        print(
+            msg_error(ValueError(f"not a GitHub pull request URL: {args.url!r}")), file=sys.stderr
+        )
+        return 2
+    ref, number = parsed
+    state = str(args.state) if args.state else ""
+    title = str(args.title) if args.title else f"PR #{number}"
+    link = store.link_forge(
+        args.kind,
+        args.id,
+        number,
+        provider="github",
+        kind="pull",
+        url=str(args.url),
+        title=title,
+        state=state,
+        payload=f'{{"repository": "{ref.owner}/{ref.repo}"}}',
+        actor=actor,
+    )
+    return _emit(args, {"link": vars(link)})
+
+
+def _cmd_pr_unlink(store: Store, args: argparse.Namespace, actor: str) -> int:
+    if store.get_parent(args.kind, args.id) is None:
+        print(msg_not_found(args.kind, args.id), file=sys.stderr)
+        return 1
+    ok = store.unlink_forge(args.kind, args.id, args.number, actor=actor)
+    if not ok:
+        print(msg_not_found("pull request", args.number), file=sys.stderr)
+        return 1
+    return _emit(args, {"ok": True, "unlinked": f"PR #{args.number}"})
+
+
+def _cmd_pr_refresh(store: Store, args: argparse.Namespace, actor: str) -> int:
+    if store.get_parent(args.kind, args.id) is None:
+        print(msg_not_found(args.kind, args.id), file=sys.stderr)
+        return 1
+    stats = services.refresh_forge(store, args.kind, args.id, actor=actor)
+    for error in stats["errors"]:
+        ref = str(error.get("sha") or error.get("branch") or error.get("merge_commit") or "refresh")
+        if error.get("sha"):
+            ref = ref[:12]
+        print(f"warning: {ref}: {error.get('error', '')}", file=sys.stderr)
+    if args.json:
+        return _emit(args, stats)
+    print(
+        f"linked {stats['linked']} PRs from {stats['commits']} commits and "
+        f"{stats['branches']} branches ({stats['merges']} merges, "
+        f"{stats['stale']} cached, {stats['skipped']} skipped)"
+    )
+    return 0 if stats["linked"] or not stats["errors"] else 1
+
+
 def _cmd_link(store: Store, args: argparse.Namespace, actor: str) -> int:
     if store.get_parent(args.kind, args.id) is None:
         print(msg_not_found(args.kind, args.id), file=sys.stderr)
         return 1
-    backend, root = detect_backend(".")
+    target = str(args.repo) if getattr(args, "repo", None) else "."
+    backend, root = detect_backend(target)
     if backend is None or root is None:
         print(msg_no_vcs(), file=sys.stderr)
         return 2
-    if getattr(args, "sha", None):
-        info = backend.show(root, str(args.sha))
-        if info is None:
-            print(msg_error(ValueError(f"unknown commit {args.sha!r}")), file=sys.stderr)
-            return 2
-    else:
-        _, info = current_head(".")
-        if info is None:
-            print(msg_no_head(), file=sys.stderr)
-            return 2
+    sha = str(args.sha) if getattr(args, "sha", None) else backend.head(root)
+    if sha is None:
+        print(msg_no_head(), file=sys.stderr)
+        return 2
+    info = backend.show(root, sha)
+    if info is None:
+        print(msg_error(ValueError(f"unknown commit {sha!r}")), file=sys.stderr)
+        return 2
     link = store.link_commit(
         args.kind,
         args.id,
@@ -672,8 +812,9 @@ def _cmd_commits(store: Store, args: argparse.Namespace, actor: str) -> int:
     if store.get_parent(args.kind, args.id) is None:
         print(msg_not_found(args.kind, args.id), file=sys.stderr)
         return 1
-    backend, _root = detect_backend(".")
-    links = [] if backend is None else store.list_links(args.kind, args.id)
+    if getattr(args, "refresh", False):
+        services.refresh_links(store, args.kind, args.id, actor=actor)
+    links = store.effective_links(args.kind, args.id)
     if args.json:
         return _emit(args, [vars(c) for c in links])
     if not links:
@@ -683,22 +824,76 @@ def _cmd_commits(store: Store, args: argparse.Namespace, actor: str) -> int:
     return 0
 
 
-def _repo_remote_default(repo_path: str) -> str:
-    """Best-effort remote URL for a checkout path (git remote get-url origin)."""
-    import subprocess
+def _cmd_task_start(store: Store, args: argparse.Namespace, actor: str) -> int:
+    if store.get_task(args.id) is None:
+        print(msg_not_found("task", args.id), file=sys.stderr)
+        return 1
+    result = services.start_task(
+        store,
+        args.id,
+        repo_path=str(args.repo) if args.repo else "",
+        branch=str(args.branch) if args.branch else "",
+        actor=actor,
+    )
+    if args.json:
+        return _emit(args, result)
+    print(f"started T{result['task']} on {result['branch']} (base {result['base_sha'][:12]})")
+    return 0
 
-    try:
-        out = subprocess.run(
-            ["git", "-C", repo_path, "remote", "get-url", "origin"],
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-    except (FileNotFoundError, subprocess.SubprocessError, OSError):
+
+def _cmd_task_finish(store: Store, args: argparse.Namespace, actor: str) -> int:
+    if store.get_task(args.id) is None:
+        print(msg_not_found("task", args.id), file=sys.stderr)
+        return 1
+    result = services.finish_task(
+        store,
+        args.id,
+        repo_path=str(args.repo) if args.repo else "",
+        actor=actor,
+    )
+    if args.json:
+        return _emit(args, result)
+    print(
+        f"linked {result['linked']} commit(s) on {result['branch']} from {result['base_sha'][:12]}"
+    )
+    if result["done"]:
+        print(f"T{result['task']} done")
+    else:
+        print(f"T{result['task']} left doing: working tree is dirty")
+    return 0
+
+
+def _cmd_git_status(store: Store, args: argparse.Namespace, actor: str) -> int:
+    if args.kind or args.id:
+        if not (args.kind and args.id):
+            print(msg_error(ValueError("--kind and --id go together")), file=sys.stderr)
+            return 2
+        if store.get_parent(args.kind, args.id) is None:
+            print(msg_not_found(args.kind, args.id), file=sys.stderr)
+            return 1
+    entries = services.repo_statuses(
+        store,
+        kind=str(args.kind) if args.kind else "",
+        obj_id=args.id or 0,
+        repo_path=str(args.repo) if args.repo else "",
+    )
+    if not entries:
+        if args.json:
+            return _emit(args, [])
+        print("(no linked repos)")
+        return 0
+    if args.json:
+        return _emit(args, entries)
+    print(render_git_status(entries))
+    return 0
+
+
+def _repo_remote_default(repo_path: str) -> str:
+    """Best-effort remote URL for a checkout path (origin fetch, else first)."""
+    backend, root = detect_backend(repo_path)
+    if backend is None or root is None:
         return ""
-    if out.returncode != 0:
-        return ""
-    return out.stdout.strip()
+    return origin_url(backend, root)
 
 
 def _cmd_link_repo(store: Store, args: argparse.Namespace, actor: str) -> int:
@@ -931,11 +1126,22 @@ _GROUP_CMDS: dict[tuple[str, str], str] = {
     ("task", "list"): "list",
     ("task", "move"): "status",
     ("task", "delete"): "delete",
+    ("task", "start"): "task-start",
+    ("task", "finish"): "task-finish",
     ("criterion", "add"): "add-criteria",
     ("criterion", "list"): "criteria",
     ("criterion", "tick"): "check",
     ("criterion", "untick"): "uncheck",
     ("criterion", "delete"): "delete-criteria",
+    ("git", "status"): "git-status",
+    ("git", "scan"): "git-scan",
+    ("pr", "auth"): "pr-auth",
+    ("pr", "status"): "pr-status",
+    ("pr", "list"): "pr-list",
+    ("pr", "show"): "pr-show",
+    ("pr", "link"): "pr-link",
+    ("pr", "unlink"): "pr-unlink",
+    ("pr", "refresh"): "pr-refresh",
 }
 
 
@@ -962,6 +1168,17 @@ _COMMANDS: dict[str, Callable[[Store, argparse.Namespace, str], int]] = {
     "link": _cmd_link,
     "unlink": _cmd_unlink,
     "commits": _cmd_commits,
+    "git-status": _cmd_git_status,
+    "git-scan": _cmd_git_scan,
+    "pr-auth": _cmd_pr_auth,
+    "pr-status": _cmd_pr_status,
+    "pr-list": _cmd_pr_list,
+    "pr-show": _cmd_pr_show,
+    "pr-link": _cmd_pr_link,
+    "pr-unlink": _cmd_pr_unlink,
+    "pr-refresh": _cmd_pr_refresh,
+    "task-start": _cmd_task_start,
+    "task-finish": _cmd_task_finish,
     "link-repo": _cmd_link_repo,
     "unlink-repo": _cmd_unlink_repo,
     "repos": _cmd_repos,

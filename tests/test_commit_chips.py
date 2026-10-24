@@ -38,7 +38,7 @@ class TestCommitChips(unittest.IsolatedAsyncioTestCase):
         self.tmp.cleanup()
 
     async def test_linked_rows_stay_clean_and_preview_counts(self):
-        from textual.widgets import Static, Tree
+        from textual.widgets import Static
 
         async with self.app.run_test() as pilot:
             await pilot.pause()
@@ -46,11 +46,16 @@ class TestCommitChips(unittest.IsolatedAsyncioTestCase):
             self.assertNotIn(self.sha[:12], task_label)
             plan_label = str(self.app._row_nodes[("plan", self.pid)].label)
             self.assertNotIn("b" * 12, plan_label)
-            tree = self.app.query_one("#tree", Tree)
-            tree.move_cursor(self.app._row_nodes[("task", self.tid)])
+            self.app.selected = ("task", self.tid)
+            self.app.update_preview()
             await pilot.pause()
             preview = str(self.app.query_one("#preview-body", Static).render())
             self.assertIn("1 commits", preview)
+            self.app.selected = ("plan", self.pid)
+            self.app.update_preview()
+            await pilot.pause()
+            plan_preview = str(self.app.query_one("#preview-body", Static).render())
+            self.assertIn("2 commits", plan_preview)
 
     async def test_detail_lists_commits(self):
         from textual.widgets import Static
@@ -66,6 +71,17 @@ class TestCommitChips(unittest.IsolatedAsyncioTestCase):
             body = str(self.app.screen.query_one("#detail-body", Static).render())
             self.assertIn(self.sha[:12], body)
             self.assertIn("work", body)
+
+    async def test_task_row_shows_pr_chip_only_when_cached(self):
+        Store(self.db).link_forge("task", self.tid, 7, state="merged", checks="pass")
+        async with self.app.run_test() as pilot:
+            await pilot.pause()
+            self.app.refresh_all()
+            await pilot.pause()
+            label = str(self.app._row_nodes[("task", self.tid)].label)
+            self.assertIn("PR", label)
+            bare = str(self.app._row_nodes[("task", self.bare_tid)].label)
+            self.assertNotIn("PR", bare)
 
     async def test_detail_hides_empty_commits(self):
         from textual.widgets import Static

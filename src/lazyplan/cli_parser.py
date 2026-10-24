@@ -36,8 +36,15 @@ examples:
   lpui --actor alice milestone add --plan 1 --title "Feature Y" --desc "value"
   lpui --actor alice task add --milestone 1 --title "Do X" --desc "approach"
   lpui task move --id 3 --to done
+  lpui task start --id 3                record an existing branch + base
+  lpui task finish --id 3               link base..HEAD, done when clean
   lpui link --kind task --id 3           attach the current commit (needs a git repo)
   lpui commits --kind task --id 3        list the attached commits
+  lpui git status --kind task --id 3     branch, dirty tree, and tracking per linked repo
+  lpui git scan --since 7.days --dry-run link commits by Lazyplan: T3 trailers or branch name
+  lpui pr auth                           show which GitHub token source is active
+  lpui pr status --kind task --id 3      GitHub identity and auth for linked repos
+  lpui pr refresh --kind task --id 3     resolve commits and branches to pull requests
   lpui link-repo --kind plan --id 1 --repo ~/checkouts/api
   lpui repos --kind task --id 3 --effective
   lpui list --repo ~/checkouts/api
@@ -46,13 +53,20 @@ examples:
   lpui export --format json > backup.json
   lpui import --file backup.json
 
-vcs: link, unlink, and commits need a git repo. Outside a repo, link and
-  unlink fail (exit 2) and commits shows nothing. Marking a row done with
-  status --to done attaches the current commit for you.
+vcs: link, unlink, git status, and git scan need a git repo. link accepts
+  --repo to read a different checkout. commits reads cached links anywhere;
+  --refresh re-resolves them and marks missing commits stale. Marking a row
+  done links HEAD only when the tree is clean and HEAD is not already linked;
+  task start records an existing branch and its base, and task finish links
+  base..HEAD. lazyplan never writes to git.
 
 repos: link-repo, unlink-repo, and repos work anywhere (no git needed).
   A task with no explicit links inherits its milestone's repos, and a
   milestone inherits its plan's. list --repo matches effective repos.
+
+github: pr verbs read cached pull requests; only pr refresh calls GitHub.
+  Auth order: LAZYPLAN_GITHUB_TOKEN, GITHUB_TOKEN, GH_TOKEN, then gh auth token.
+  Tokens never enter the database or export. github.com only, read-only.
 
 flags work before or after the command (`lpui list --json` means the same as
 `lpui --json list`). On commands that change data, `--actor NAME` records who
@@ -362,6 +376,30 @@ def build_parser() -> argparse.ArgumentParser:
     _a.add_argument("--to", choices=[v.value for v in Status], required=True, help="new status")
     _a = _actions.add_parser("delete", help="delete a task", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="task id")
+    _a = _actions.add_parser("start", help="record an existing branch on a task", parents=[common])
+    _a.add_argument("--id", type=int, required=True, metavar="ID", help="task id")
+    _a.add_argument(
+        "--repo",
+        default=None,
+        metavar="PATH",
+        help="checkout to use (default: the task's linked repo, else cwd)",
+    )
+    _a.add_argument(
+        "--branch",
+        default=None,
+        metavar="NAME",
+        help="existing branch to record (default: the current branch)",
+    )
+    _a = _actions.add_parser(
+        "finish", help="link branch commits and finish a task", parents=[common]
+    )
+    _a.add_argument("--id", type=int, required=True, metavar="ID", help="task id")
+    _a.add_argument(
+        "--repo",
+        default=None,
+        metavar="PATH",
+        help="checkout to read (default: the task's recorded branch)",
+    )
 
     _group, _actions = _noun_group(
         "criterion", "add, list, tick, untick, or delete an acceptance criterion"
@@ -379,6 +417,68 @@ def build_parser() -> argparse.ArgumentParser:
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="criterion id")
     _a = _actions.add_parser("delete", help="delete one criterion", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="criterion id")
+
+    _group, _actions = _noun_group("git", "inspect the checkouts linked to a row (no network)")
+    _a = _actions.add_parser(
+        "status", help="branch, dirty tree, and tracking state", parents=[common]
+    )
+    _a.add_argument("--kind", choices=list(KINDS), default=None, help="row kind")
+    _a.add_argument("--id", type=int, default=None, metavar="ID", help="row id")
+    _a.add_argument(
+        "--repo",
+        default=None,
+        metavar="PATH",
+        help="inspect one checkout instead of the row's effective repos",
+    )
+    _a = _actions.add_parser(
+        "scan", help="link commits by Lazyplan trailers or branch name", parents=[common]
+    )
+    _a.add_argument("--repo", default=None, metavar="PATH", help="checkout to scan (default: cwd)")
+    _a.add_argument("--since", default="", metavar="DATE", help="git --since value, e.g. 7.days")
+    _a.add_argument("--limit", type=int, default=50, metavar="N", help="scan at most N commits")
+    _a.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="show matches without writing links",
+    )
+    _a.add_argument("--kind", choices=list(KINDS), default=None, help="limit to one row kind")
+    _a.add_argument("--id", type=int, default=None, metavar="ID", help="limit to one row id")
+
+    _group, _actions = _noun_group("pr", "read-only GitHub pull requests and auth")
+    _a = _actions.add_parser(
+        "auth", help="show which GitHub token source is active", parents=[common]
+    )
+    _a = _actions.add_parser(
+        "status", help="GitHub identity and auth for linked repos", parents=[common]
+    )
+    _a.add_argument("--kind", choices=list(KINDS), default=None, help="row kind")
+    _a.add_argument("--id", type=int, default=None, metavar="ID", help="row id")
+    _a.add_argument(
+        "--repo",
+        default=None,
+        metavar="PATH",
+        help="inspect one checkout instead of the row's effective repos",
+    )
+    _a = _actions.add_parser("list", help="list linked pull requests", parents=[common])
+    _a.add_argument("--kind", choices=list(KINDS), required=True, help="row kind")
+    _a.add_argument("--id", type=int, required=True, metavar="ID", help="row id")
+    _a = _actions.add_parser("show", help="show one linked pull request", parents=[common])
+    _a.add_argument("--kind", choices=list(KINDS), required=True, help="row kind")
+    _a.add_argument("--id", type=int, required=True, metavar="ID", help="row id")
+    _a.add_argument("--number", type=int, required=True, metavar="N", help="pull request number")
+    _a = _actions.add_parser("link", help="link a pull request URL to a row", parents=[common])
+    _a.add_argument("--kind", choices=list(KINDS), required=True, help="row kind")
+    _a.add_argument("--id", type=int, required=True, metavar="ID", help="row id")
+    _a.add_argument("--url", required=True, metavar="URL", help="GitHub pull request URL")
+    _a.add_argument("--title", default=None, metavar="TEXT", help="optional PR title")
+    _a.add_argument("--state", default=None, metavar="STATE", help="optional PR state")
+    _a = _actions.add_parser("unlink", help="detach one pull request", parents=[common])
+    _a.add_argument("--kind", choices=list(KINDS), required=True, help="row kind")
+    _a.add_argument("--id", type=int, required=True, metavar="ID", help="row id")
+    _a.add_argument("--number", type=int, required=True, metavar="N", help="pull request number")
+    _a = _actions.add_parser("refresh", help="resolve commits to PRs", parents=[common])
+    _a.add_argument("--kind", choices=list(KINDS), required=True, help="row kind")
+    _a.add_argument("--id", type=int, required=True, metavar="ID", help="row id")
 
     a = sub.add_parser("add-plan", help="legacy alias for `plan add`", parents=[common])
     a.add_argument("--title", default=None, metavar="TEXT", help="title of the plan")
@@ -495,6 +595,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     lk.add_argument("--id", type=int, required=True, metavar="ID", help="id of the row")
     lk.add_argument(
+        "--repo",
+        default=None,
+        metavar="PATH",
+        help="checkout to read the commit from (default: the current directory)",
+    )
+    lk.add_argument(
         "--sha",
         default=None,
         metavar="SHA",
@@ -517,6 +623,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="which kind of row to list",
     )
     cm.add_argument("--id", type=int, required=True, metavar="ID", help="id of the row")
+    cm.add_argument(
+        "--refresh",
+        action="store_true",
+        help="re-resolve cached commit metadata and mark missing commits stale",
+    )
 
     lr = sub.add_parser("link-repo", help="attach a repo checkout to a row", parents=[common])
     lr.add_argument(

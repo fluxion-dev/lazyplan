@@ -6,6 +6,7 @@ only composes multi-line views for the CLI.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from .design import INDENT, milestone_label, plan_label, status_word, task_label
@@ -83,6 +84,12 @@ def tree_lines(
 
 def render_commits(links: list[dict]) -> str:
     """Human-readable commit list for `lpui commits` and `show` sections."""
+    roots = {
+        str(link.get("repo_root", "") or "")
+        for link in links
+        if str(link.get("repo_root", "") or "")
+    }
+    show_repo = len(roots) > 1
     lines = []
     for link in links:
         sha = str(link.get("sha", ""))
@@ -91,6 +98,106 @@ def render_commits(links: list[dict]) -> str:
         author = str(link.get("author", "") or "").strip()
         extra = f" ({author})" if author and subject else author
         line = f"{short} {subject}{extra}".rstrip() if (subject or extra) else short
+        if show_repo:
+            repo = str(link.get("repo_root", "") or "")
+            if repo:
+                line = f"{line} · {Path(repo).name}"
+        if link.get("stale"):
+            line = f"{line} [stale]"
+        lines.append(line)
+    return "\n".join(lines)
+
+
+def render_git_status(entries: list[dict]) -> str:
+    """Human-readable `lpui git status` output, one block per checkout."""
+    lines: list[str] = []
+    for entry in entries:
+        path = str(entry.get("repo_path", "") or "")
+        remote = str(entry.get("repo_remote", "") or "")
+        lines.append(f"{path}" + (f" ({remote})" if remote else ""))
+        if entry.get("error"):
+            lines.append(f"  error: {entry['error']}")
+            continue
+        branch = str(entry.get("branch", "") or "")
+        if not branch:
+            branch = "detached" if entry.get("detached") else "unknown"
+        state = "dirty" if entry.get("dirty") else "clean"
+        if entry.get("upstream"):
+            tracking = f"{entry.get('ahead', 0)} ahead, {entry.get('behind', 0)} behind"
+        else:
+            tracking = "no upstream"
+        lines.append(f"  branch {branch} · {state} · {tracking}")
+        sha = str(entry.get("head", "") or "")
+        if sha:
+            subject = str(entry.get("subject", "") or "").strip()
+            lines.append(f"  {sha[:12]} {subject}".rstrip())
+    return "\n".join(lines)
+
+
+def render_forge_status(entries: list[dict]) -> str:
+    """Human-readable `lpui pr status` output, one block per checkout."""
+    lines: list[str] = []
+    for entry in entries:
+        path = str(entry.get("repo_path", "") or "")
+        remote = str(entry.get("repo_remote", "") or "")
+        lines.append(f"{path}" + (f" ({remote})" if remote else ""))
+        if entry.get("error"):
+            lines.append(f"  error: {entry['error']}")
+            continue
+        source = str(entry.get("auth_source", "") or "none")
+        cache = str(entry.get("cache", "") or "none")
+        lines.append(
+            f"  {entry.get('provider', 'github')} {entry.get('slug', '')}"
+            f" · auth {source} · cache {cache}"
+        )
+    return "\n".join(lines)
+
+
+def _forge_refs(link: dict) -> str:
+    """Branch mapping for one PR, or an empty suffix."""
+    base_ref = str(link.get("base_ref", "") or "").strip()
+    head_ref = str(link.get("head_ref", "") or "").strip()
+    if not (base_ref or head_ref):
+        return ""
+    return f"· {head_ref or '?'} -> {base_ref or '?'}"
+
+
+def _forge_detail_parts(link: dict) -> list[str]:
+    """Optional display parts for one forge link, in a stable order."""
+    parts: list[str] = []
+    title = str(link.get("title", "") or "").strip()
+    if title:
+        parts.append(title)
+    for name in ("checks", "reviews"):
+        value = str(link.get(name, "") or "")
+        if value and value != "none":
+            parts.append(f"· {name} {value}")
+    refs = _forge_refs(link)
+    if refs:
+        parts.append(refs)
+    merge_sha = str(link.get("merge_commit_sha", "") or "").strip()
+    if merge_sha:
+        parts.append(f"· merge {merge_sha[:12]}")
+    for name in ("author", "url"):
+        value = str(link.get(name, "") or "").strip()
+        if value:
+            parts.append(f"· {value}")
+    if link.get("stale"):
+        parts.append("[stale]")
+    return parts
+
+
+def render_forge_links(links: list[dict]) -> str:
+    """Human-readable pull request/issue list for `pr list` and `show`."""
+    lines: list[str] = []
+    for link in links:
+        number = link.get("number", 0)
+        label = "PR" if str(link.get("kind", "pull")) == "pull" else "issue"
+        state = str(link.get("state", "") or "unknown")
+        parts = _forge_detail_parts(link)
+        line = f"{label} #{number} {state}"
+        if parts:
+            line += f" {' '.join(parts)}"
         lines.append(line)
     return "\n".join(lines)
 
@@ -120,13 +227,19 @@ def _append_repos(lines: list[str], full: dict) -> None:
 
 
 def _append_common(lines: list[str], full: dict) -> None:
-    """Shared show sections: acceptance + commits + repos."""
+    """Shared show sections: acceptance + commits + PRs + repos."""
     if full.get("criteria"):
         lines.append("\nacceptance:")
         _append_crit(lines, full["criteria"])
-    if full.get("links"):
+    links = full.get("effective_links") or full.get("links")
+    if links:
         lines.append("\ncommits:")
-        _append_commits(lines, full["links"])
+        _append_commits(lines, links)
+    forge_links = full.get("effective_forge_links") or full.get("forge_links")
+    if forge_links:
+        lines.append("\npull requests:")
+        for line in render_forge_links(forge_links).splitlines():
+            lines.append(f"  {line}")
     _append_repos(lines, full)
 
 

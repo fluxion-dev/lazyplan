@@ -29,9 +29,10 @@ except ImportError:  # pragma: no cover
 
 from . import services
 from .commands import Command, matching
-from .design import HELP_TEXT, escape_markup, msg_error, status_word
-from .render import render_commits
+from .design import HELP_TEXT, escape_markup, msg_error, repo_project_name, status_word
+from .render import render_commits, render_forge_links
 from .templates import load_template
+from .vcs import commit_url, detect_backend, origin_url
 
 if TYPE_CHECKING:
     from .store import Store
@@ -382,10 +383,61 @@ if _TEXTUAL_OK:
                     f"{escape_markup(str(task.get('title', '')))}"
                 )
 
+        def _remote_urls(self, links: list[dict[str, Any]]) -> dict[str, str]:
+            """Origin URL per linked repo, resolved once per render."""
+            cache: dict[str, str] = {}
+            for link in links:
+                repo = str(link.get("repo_root", "") or "")
+                if not repo or repo in cache:
+                    continue
+                cache[repo] = ""
+                backend, root = detect_backend(repo)
+                if backend is not None and root is not None:
+                    cache[repo] = origin_url(backend, root)
+            return cache
+
+        def _read_git(self, lines: list[str]) -> None:
+            repos = self._full.get("effective_repos") or self._full.get("repos") or []
+            rows: list[str] = []
+            for repo in repos:
+                path = str(repo.get("repo_path", "") or "")
+                backend, root = detect_backend(path)
+                if backend is None or root is None:
+                    continue
+                status = backend.status(root)
+                branch = status.branch or ("detached" if status.detached else "unknown")
+                state = "dirty" if status.dirty else "clean"
+                tracking = (
+                    f"{status.ahead} ahead, {status.behind} behind"
+                    if status.upstream
+                    else "no upstream"
+                )
+                name = repo_project_name(repo) or path
+                rows.append(f"  {escape_markup(name)} · {branch} · {state} · {tracking}")
+            if rows:
+                lines.extend(["", "[dim]git[/]", *rows])
+
+        def _read_forge(self, lines: list[str]) -> None:
+            links = self._full.get("effective_forge_links") or self._full.get("forge_links") or []
+            if not links:
+                return
+            lines.extend(["", "[dim]pull requests[/]"])
+            for line in render_forge_links(links).splitlines():
+                lines.append(f"  {escape_markup(line)}")
+
         def _read_links(self, lines: list[str]) -> None:
-            links = self._full.get("links", [])
+            links = self._full.get("effective_links") or self._full.get("links") or []
             if links:
-                lines.extend(["", "[dim]commits[/]", f"  {escape_markup(render_commits(links))}"])
+                remotes = self._remote_urls(links)
+                lines.extend(["", "[dim]commits[/]"])
+                for link in links:
+                    text = render_commits([link])
+                    url = commit_url(
+                        remotes.get(str(link.get("repo_root", "") or ""), ""),
+                        str(link.get("sha", "")),
+                    )
+                    suffix = f" [dim]{escape_markup(url)}[/]" if url else ""
+                    lines.append(f"  {escape_markup(text)}{suffix}")
             repos = self._full.get("effective_repos") or self._full.get("repos") or []
             if not repos:
                 return
@@ -393,7 +445,12 @@ if _TEXTUAL_OK:
             for repo in repos:
                 path = str(repo.get("repo_path", ""))
                 remote = str(repo.get("repo_remote", "") or "")
-                lines.append(f"  {path}" + (f" ({remote})" if remote else ""))
+                branch = str(repo.get("branch", "") or "")
+                lines.append(
+                    f"  {path}"
+                    + (f" ({remote})" if remote else "")
+                    + (f" · {branch}" if branch else "")
+                )
 
         def _render_read(self) -> None:
             obj = self._obj()
@@ -404,6 +461,8 @@ if _TEXTUAL_OK:
             self._read_text(lines, obj)
             self._read_criteria(lines)
             self._read_children(lines)
+            self._read_forge(lines)
+            self._read_git(lines)
             self._read_links(lines)
             self.query_one("#detail-body", Static).update("\n".join(lines))
 

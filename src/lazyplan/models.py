@@ -99,6 +99,8 @@ class VcsLink:
     author: str = ""
     timestamp: int = 0
     repo_root: str = ""
+    stale: bool = False
+    checked_at: int = 0
 
     def __post_init__(self) -> None:
         if self.parent_kind not in CRITERION_PARENTS:
@@ -107,3 +109,38 @@ class VcsLink:
         if len(sha) != 40 or any(c not in "0123456789abcdef" for c in sha):
             raise ValueError("sha must be a 40-char hex commit hash")
         self.sha = sha
+
+
+@dataclass
+class ForgeLink:
+    """One pull request or issue linked to a plan, milestone, or task."""
+
+    id: int
+    parent_kind: str  # "plan" | "milestone" | "task"
+    parent_id: int
+    provider: str = "github"
+    kind: str = "pull"
+    number: int = 0
+    url: str = ""
+    title: str = ""
+    state: str = ""
+    checks: str = ""
+    reviews: str = ""
+    author: str = ""
+    base_ref: str = ""
+    head_ref: str = ""
+    merged_at: str = ""
+    merge_commit_sha: str = ""
+    updated_at: int = 0
+    stale: bool = False
+    payload: str = ""
+
+    def __post_init__(self) -> None:
+        if self.parent_kind not in CRITERION_PARENTS:
+            raise ValueError(PARENT_KIND_ERROR)
+        if self.number <= 0:
+            raise ValueError("forge link number must be positive")
+        if not self.provider.strip():
+            raise ValueError("forge link provider must not be empty")
+        if not self.kind.strip():
+            raise ValueError("forge link kind must not be empty")

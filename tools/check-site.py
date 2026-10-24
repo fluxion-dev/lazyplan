@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import struct
 import sys
 import tomllib
 from html.parser import HTMLParser
@@ -131,6 +132,17 @@ def _asset_path(root: Path, value: str) -> Path | None:
     return public if public.is_file() else path
 
 
+def _png_size(path: Path) -> tuple[int, int] | None:
+    """Read the IHDR dimensions from a PNG, or None when it is not a PNG."""
+    try:
+        header = path.read_bytes()[:24]
+    except OSError:
+        return None
+    if len(header) < 24 or header[:8] != b"\x89PNG\r\n\x1a\n":
+        return None
+    return struct.unpack(">II", header[16:24])
+
+
 def _check_assets(page: PageParser, root: Path, errors: list[str]) -> None:
     for tag, attrs in page.tags:
         if tag == "img":
@@ -144,6 +156,16 @@ def _check_assets(page: PageParser, root: Path, errors: list[str]) -> None:
                         errors.append(f"local image missing {attr}: {src}")
                 if not path.is_file():
                     errors.append(f"missing image: {path.relative_to(ROOT)}")
+                elif path.suffix.lower() == ".png":
+                    size = _png_size(path)
+                    if size is not None:
+                        for attr, actual in zip(("width", "height"), size, strict=True):
+                            declared = attrs.get(attr, "")
+                            if declared and declared != str(actual):
+                                errors.append(
+                                    f"image {attr} mismatch: {src} declares "
+                                    f"{declared}, file is {actual}"
+                                )
         elif tag == "source":
             for candidate in attrs.get("srcset", "").split(","):
                 value = candidate.strip().split(" ")[0]

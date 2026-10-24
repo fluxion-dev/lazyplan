@@ -58,6 +58,20 @@ class TestSiteSEO(unittest.TestCase):
         )
         self.assertTrue(any("missing alt" in error for error in self._errors()))
 
+    def test_wrong_image_width_fails(self):
+        index = self.site / "index.html"
+        index.write_text(
+            index.read_text().replace('width="1604" height="904"', 'width="1600" height="904"')
+        )
+        self.assertTrue(any("width mismatch" in error for error in self._errors()))
+
+    def test_wrong_image_height_fails(self):
+        index = self.site / "index.html"
+        index.write_text(
+            index.read_text().replace('width="1604" height="904"', 'width="1604" height="900"')
+        )
+        self.assertTrue(any("height mismatch" in error for error in self._errors()))
+
     def test_malformed_json_ld_fails(self):
         index = self.site / "index.html"
         text = index.read_text()

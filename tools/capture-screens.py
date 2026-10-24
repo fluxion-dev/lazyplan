@@ -19,6 +19,7 @@ import argparse
 import asyncio
 import os
 import shutil
+import struct
 import subprocess
 import sys
 import tempfile
@@ -110,7 +111,7 @@ def commit(repo: Path, message: str, files: dict[str, str]) -> str:
     return git(repo, "rev-parse", "HEAD").strip()
 
 
-def build_fixture(tmp: Path) -> tuple[Path, Store, int]:
+def build_fixture(tmp: Path) -> tuple[Store, int]:
     repo = tmp / "web"
     repo.mkdir()
     git(repo, "init", "-q", "-b", "main")
@@ -149,7 +150,7 @@ def build_fixture(tmp: Path) -> tuple[Path, Store, int]:
             state=state,
             checks=checks,
         )
-    return repo, store, task.id
+    return store, task.id
 
 
 async def capture(store: Store, task_id: int, target: Path) -> None:
@@ -188,13 +189,12 @@ def convert(svg: Path, png: Path) -> None:
 
 
 def dimensions(png: Path) -> str:
-    proc = subprocess.run(
-        ["magick", "identify", "-format", "%wx%h", str(png)],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    return proc.stdout.strip()
+    """Read the PNG IHDR instead of spawning another process."""
+    header = png.read_bytes()[:24]
+    if header[:8] != b"\x89PNG\r\n\x1a\n":
+        raise SystemExit(f"error: {png} is not a PNG")
+    width, height = struct.unpack(">II", header[16:24])
+    return f"{width}x{height}"
 
 
 def shown(path: Path) -> str:
@@ -206,7 +206,7 @@ def shown(path: Path) -> str:
 
 def run(out_dir: Path, keep_svg: Path | None) -> None:
     with tempfile.TemporaryDirectory(prefix="lpui-shot-") as tmp:
-        repo, store, task_id = build_fixture(Path(tmp))
+        store, task_id = build_fixture(Path(tmp))
         svg = Path(tmp) / f"{NAME}.svg"
         asyncio.run(capture(store, task_id, svg))
         patch_svg(svg)
@@ -217,7 +217,6 @@ def run(out_dir: Path, keep_svg: Path | None) -> None:
             shutil.copyfile(svg, keep_svg)
         print(f"wrote {shown(png)} ({dimensions(png)})")
         print(f"wrote {shown(png.with_suffix('.webp'))}")
-        print(f"repo: {repo}")
 
 
 def main(argv: list[str] | None = None) -> int:

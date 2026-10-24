@@ -67,8 +67,12 @@ Also check that the deployed site shows the new version, the new copy, and
 working screenshots:
 
 ```bash
-curl -fsSL https://fluxion-dev.github.io/lazyplan/ | grep -E '0\.X\.Y|init --check|doctor'
+curl -fsSL https://fluxion-dev.github.io/lazyplan/ | grep -E '0\.X\.Y|lpui-source-trail'
+curl -fsI https://fluxion-dev.github.io/lazyplan/screens/lpui-source-trail.webp | head -1
 ```
+
+The second command catches a missing or unreadable source-trail image; regenerate
+it with `tools/capture-screens.py` rather than editing either format by hand.
 
 Run the discoverability post-deploy checklist in `docs/seo.md`: canonical,
 FAQ/JSON-LD, sitemap, robots, social preview, and version badges. Search engine

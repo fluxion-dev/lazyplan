@@ -203,11 +203,34 @@ class TestTemplateDirs(unittest.TestCase):
             Path("/r/.plan/templates"),
         )
 
-    def test_global_and_explicit_dirs_are_none(self):
-        self.assertIsNone(
-            templates.templates_dir_for_db("/home/u/.local/share/lazyplan/lazyplan.db")
+    def test_home_db_uses_its_templates_dir(self):
+        self.assertEqual(
+            templates.templates_dir_for_db("/home/u/.lazyplan/lazyplan.db"),
+            Path("/home/u/.lazyplan/templates"),
         )
         self.assertIsNone(templates.templates_dir_for_db("/tmp/x/t.db"))
+
+    def test_explicit_db_uses_a_sibling_templates_dir(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Path(tmp) / "custom.db"
+            (Path(tmp) / "templates").mkdir()
+            self.assertEqual(
+                templates.templates_dir_for_db(db),
+                Path(tmp) / "templates",
+            )
+
+    def test_home_template_changes_a_new_task(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / ".lazyplan"
+            home.mkdir()
+            tdir = home / "templates"
+            tdir.mkdir()
+            (tdir / "task.md").write_text(
+                '---\ndefaults:\n  desc: "from home"\nrequired: [title]\ncriteria: []\n---\n'
+            )
+            db = home / "lazyplan.db"
+            out = templates.apply_template("task", {"title": "T"}, db)
+            self.assertEqual(out["desc"], "from home")
 
     def test_ensure_is_idempotent(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -39,7 +39,7 @@ from pathlib import Path
 from typing import TextIO
 
 from .kinds import KIND_ERROR
-from .repo import LEGACY_PLAN_DIR, is_repo_plan_dir
+from .repo import LEGACY_PLAN_DIR, SHARED_DIR_NAME, SHARED_WINDOWS_DIR_NAME, is_repo_plan_dir
 
 TEMPLATE_DIRNAME = "templates"
 
@@ -252,11 +252,14 @@ class Template:
 
 
 def templates_dir_for_db(db_path: str | Path) -> Path | None:
-    """Templates dir for a DB path, or None (global/explicit DBs: no templates)."""
+    """Templates dir for a DB path, or None when no template location applies."""
     parent = Path(db_path).expanduser().parent
     if is_repo_plan_dir(parent) or parent.name == LEGACY_PLAN_DIR:
         return parent / TEMPLATE_DIRNAME
-    return None
+    if parent.name in (SHARED_DIR_NAME, SHARED_WINDOWS_DIR_NAME):
+        return parent / TEMPLATE_DIRNAME
+    sibling = parent / TEMPLATE_DIRNAME
+    return sibling if sibling.is_dir() else None
 
 
 def ensure_templates(plan_dir: str | Path, choices: TemplateChoices | None = None) -> list[str]:

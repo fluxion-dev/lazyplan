@@ -108,6 +108,22 @@ contains 0.22.0 and the diff copy, `sitemap.xml` is current, and
 Human-only follow-ups: submit the updated URL to search engines, record
 Lighthouse/mobile scores, and confirm the social card in a real client.
 
+### v0.23.0 pass (2026-10-25)
+
+After: version pins, release asset URLs, the JSON-LD `version` and
+`softwareVersion`, and the sitemap `lastmod` moved to 0.23.0. The setup copy
+was already live from the pre-release push, so this deploy only moved version
+data. Canonical, FAQPage/SoftwareApplication JSON-LD, robots, and the social
+preview asset are unchanged.
+
+Verified live: the page contains 0.23.0, `screens/lpui-source-trail.webp`
+returns 200, `sitemap.xml` carries `lastmod` 2026-10-25, and `robots.txt`
+points at the sitemap. Pages deployed from an explicit `workflow_dispatch`
+because the auto-merge push did not start push-event workflows.
+
+Human-only follow-ups: submit the updated URL to search engines, record
+Lighthouse/mobile scores, and confirm the social card in a real client.
+
 ## Post-deploy verification
 
 Run after Pages is green:

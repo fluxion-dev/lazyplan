@@ -59,6 +59,16 @@ class TestSpinner(unittest.IsolatedAsyncioTestCase):
             for key in keys:
                 self.assertEqual(self._text(key)[0], "◐", key)
 
+            self.app.selected = ("task", self.doing)
+            self.app.update_preview()
+            await pilot.pause()
+            from textual.widgets import Static
+
+            preview_before = str(self.app.query_one("#preview-body", Static).render())
+            selected_before = self.app.selected
+            folds_before = (set(self.app._expanded), set(self.app._collapsed))
+            rows_before = set(self.app._row_nodes)
+
             widths = {key: len(self._text(key)) for key in keys}
             tails = {key: self._text(key)[1:] for key in keys}
             frames = []
@@ -73,6 +83,11 @@ class TestSpinner(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(self._text(key)[1:], tails[key])
             self.assertEqual(self._text(("task", self.todo))[0], "○")
             self.assertEqual(self._text(("task", self.done))[0], "●")
+            self.assertEqual(set(self.app._row_nodes), rows_before)
+            self.assertEqual(self.app.selected, selected_before)
+            self.assertEqual((set(self.app._expanded), set(self.app._collapsed)), folds_before)
+            preview_after = str(self.app.query_one("#preview-body", Static).render())
+            self.assertEqual(preview_after, preview_before)
 
     async def test_idle_until_a_doing_row_appears(self):
         path = os.path.join(self.tmp.name, "idle.db")

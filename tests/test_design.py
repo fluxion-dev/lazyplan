@@ -122,6 +122,19 @@ class TestDesignSystem(unittest.TestCase):
         self.assertEqual(design.plan_row(p), "[dim]○[/] [dim]P1[/] [bold]Ray \\[old][/]")
         self.assertNotIn("TODO", design.plan_row(p))
 
+    def test_cli_doing_row_stays_static(self):
+        p = self.store.add_plan("P")
+        s = self.store.add_milestone(p.id, "S")
+        t = self.store.add_task(s.id, "T")
+        self.store.set_status_raw("task", t.id, Status.DOING)
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            self.assertEqual(lpui_main(["--db", self.db, "list", "--tree"]), 0)
+        out = buf.getvalue()
+        self.assertIn("◐ T", out)
+        for frame in design.SPINNER_FRAMES[1:]:
+            self.assertNotIn(frame, out)
+
     def test_cli_uses_design_labels(self):
         p = self.store.add_plan("P")
         s = self.store.add_milestone(p.id, "S")

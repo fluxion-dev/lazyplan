@@ -79,7 +79,7 @@ def banner(write: TextIO, color: bool, version: str = "") -> None:
     _line(
         write.write,
         _paint(
-            "  First run: pick where plans live, which agents get the skill, and their read-only plugins.",
+            "  Choose where plans live, which agents get the skill, and their read-only plugins.",
             "dim",
             color=color,
         ),
@@ -234,18 +234,14 @@ def render_review(
                 f"  {_paint(label.ljust(10), 'bold', color=color)} {host}  {path}",
             )
     else:
-        _line(
-            write.write,
-            f"  {_paint('plugins'.ljust(10), 'bold', color=color)} none "
-            "(no supported agents selected)",
-        )
+        _line(write.write, f"  {_paint('plugins'.ljust(10), 'bold', color=color)} none")
     _line(write.write, f"  {_paint('state'.ljust(10), 'bold', color=color)} {state_path}")
     _line(write.write)
 
 
 def confirm(write: TextIO, read: Callable[[], str], color: bool) -> bool:
     """Y/n review confirmation; empty means yes."""
-    answer = _ask(write, read, "  install these resources and plugins? [Y/n]: ").strip().lower()
+    answer = _ask(write, read, "  install these resources? [Y/n]: ").strip().lower()
     if answer in ("n", "no"):
         return False
     return True

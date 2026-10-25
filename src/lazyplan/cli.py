@@ -84,11 +84,6 @@ def _resolve_title(args: argparse.Namespace) -> str:
     return ""
 
 
-def _setup_hooks(home: Path, args: argparse.Namespace, agents: list[str] | None = None) -> dict:
-    """Install or remove managed hooks and remember the decision."""
-    return setup.install_hooks(home, agents, getattr(args, "hooks", None))
-
-
 def _setup_interactive(args: argparse.Namespace) -> bool:
     return (
         not getattr(args, "yes", False)
@@ -119,17 +114,6 @@ def _setup_review(args: argparse.Namespace, home: Path, interactive: bool) -> No
         color=setup_ui.color_enabled(sys.stderr, bool(getattr(args, "json", False))),
         allow_prompt=ask,
         json_mode=bool(getattr(args, "json", False)),
-    )
-
-
-def _setup_pointer(home: Path, args: argparse.Namespace, placement: str) -> dict:
-    """Add or remove the opt-in AGENTS.md section for home placement."""
-    return setup.install_pointer(
-        home,
-        placement,
-        find_repo_root(Path.cwd()),
-        Path(resolve_db_path(args.db)).expanduser(),
-        getattr(args, "agents_pointer", None),
     )
 
 
@@ -175,8 +159,14 @@ def _cmd_setup(store: Store | None, args: argparse.Namespace, actor: str) -> int
     else:
         choice = setup.choice_from_args(args, Path.cwd(), home, state)
         result = setup.apply_choice(choice, find_repo_root(Path.cwd()), home, version)
-    result["hooks"] = _setup_hooks(home, args, result.get("agents"))
-    result["agents_pointer"] = _setup_pointer(home, args, str(result.get("placement", "")))
+    root = find_repo_root(Path.cwd())
+    setup.install_integrations(
+        result,
+        home,
+        root,
+        getattr(args, "hooks", None),
+        getattr(args, "agents_pointer", None),
+    )
     if result.get("placement") == setup.HOME:
         _setup_review(args, home, interactive)
     if result.get("wizard") and not getattr(args, "json", False):

@@ -13,7 +13,7 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 
-from . import audit, brief, services, setup, setup_layout, setup_ui
+from . import audit, brief, hooks, services, setup, setup_layout, setup_ui
 from .cli_parser import build_parser, package_version
 from .design import (
     EMPTY_COMMITS,
@@ -263,6 +263,27 @@ def _cmd_brief(store: Store | None, args: argparse.Namespace, actor: str) -> int
         return _emit(args, payload)
     for line in brief.lines(payload):
         print(line)
+    return 0
+
+
+def _cmd_hook(store: Store | None, args: argparse.Namespace, actor: str) -> int:
+    """Read-only lifecycle reminder; always exits 0 so a host never blocks."""
+    del store, actor
+    payload = hooks.read_payload(sys.stdin)
+    host = hooks.detect_host(payload, args.host)
+    result = hooks.run(args.event, payload, host, Path.cwd())
+    if args.json:
+        _emit(
+            args,
+            {
+                "event": args.event,
+                "host": host,
+                "text": result.text,
+                "context": result.context,
+            },
+        )
+        return 0
+    hooks.write_plain(result)
     return 0
 
 
@@ -1190,6 +1211,7 @@ def _dispatch_storeless(args: argparse.Namespace, actor: str) -> int | None:
         "doctor": _cmd_doctor,
         "audit": _cmd_audit,
         "brief": _cmd_brief,
+        "hook": _cmd_hook,
         "completion": _cmd_completion,
     }
     handler = handlers.get(args.cmd)

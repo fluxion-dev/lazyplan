@@ -200,6 +200,34 @@ who made this change (you see it in feed)
 brief one plan
 .RE
 .TP
+.B lpui hook
+read a host lifecycle event and print a reminder
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B  {session\-start|prompt\-submit|post\-tool|stop|pre\-compact}
+which lifecycle event fired Choices: session\-start, prompt\-submit, post\-tool, stop, pre\-compact\. Required\.
+.RE
+.RS
+.TP
+.B \-\-host {opencode|claude|gemini|codex|cursor}
+host emitting the event (inferred from the payload when omitted) Choices: opencode, claude, gemini, codex, cursor\.
+.RE
+.TP
 .B lpui list
 show plans as summaries (add \-\-tree for the full tree)
 .RS

@@ -259,6 +259,22 @@ def build_parser() -> argparse.ArgumentParser:
         parents=[common],
     )
     br.add_argument("--plan", type=int, default=None, metavar="ID", help="brief one plan")
+    hk = sub.add_parser(
+        "hook",
+        help="read a host lifecycle event and print a reminder",
+        parents=[common],
+    )
+    hk.add_argument(
+        "event",
+        choices=["session-start", "prompt-submit", "post-tool", "stop", "pre-compact"],
+        help="which lifecycle event fired",
+    )
+    hk.add_argument(
+        "--host",
+        choices=["opencode", "claude", "gemini", "codex", "cursor"],
+        default="",
+        help="host emitting the event (inferred from the payload when omitted)",
+    )
     li = sub.add_parser(
         "list", help="show plans as summaries (add --tree for the full tree)", parents=[common]
     )

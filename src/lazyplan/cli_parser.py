@@ -215,6 +215,23 @@ def build_parser() -> argparse.ArgumentParser:
         help="read-only report of the resolved setup layout and findings",
         parents=[common],
     )
+    au = sub.add_parser(
+        "audit",
+        help="measure commit linkage, status lag, and criteria gaps",
+        parents=[common],
+    )
+    au.add_argument("--plan", type=int, default=None, metavar="ID", help="audit one plan")
+    au.add_argument(
+        "--since",
+        default=None,
+        metavar="DATE",
+        help="window start, e.g. 7.days or 2026-10-01 (default: plan creation)",
+    )
+    au.add_argument(
+        "--strict",
+        action="store_true",
+        help="exit 2 when coverage, lag, or criteria gaps breach the defaults",
+    )
     li = sub.add_parser(
         "list", help="show plans as summaries (add --tree for the full tree)", parents=[common]
     )

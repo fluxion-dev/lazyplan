@@ -12,7 +12,7 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 
-from . import services, setup, setup_layout, setup_ui
+from . import audit, services, setup, setup_layout, setup_ui
 from .cli_parser import build_parser, package_version
 from .design import (
     EMPTY_COMMITS,
@@ -36,7 +36,7 @@ from .render import (
     summary_lines,
     tree_lines,
 )
-from .repo import find_repo_root, repo_label
+from .repo import find_repo_root, repo_label, resolve_db_path
 from .seed import seed as seed_demo
 from .store import Store, _ser
 from .upgrade import (
@@ -163,6 +163,68 @@ def _cmd_doctor(store: Store | None, args: argparse.Namespace, actor: str) -> in
     for note in report["notes"]:
         print(f"note:      {note}")
     return code
+
+
+def _optional_store(args: argparse.Namespace) -> Store | None:
+    """Open an existing database without creating one."""
+    path = Path(resolve_db_path(args.db)).expanduser()
+    if not path.is_file():
+        return None
+    return Store(str(path))
+
+
+def _audit_lines(report: audit.Report) -> list[str]:
+    """Plain lines shared by the CLI and tests."""
+    window = (
+        "all history"
+        if not report.since
+        else time.strftime("%Y-%m-%d %H:%M", time.localtime(report.since))
+    )
+    lines = [
+        f"plans      {', '.join(f'P{plan}' for plan in report.plans) or '-'}",
+        f"window     since {window}",
+        f"repos      {len(report.repos)}",
+        f"commits    {report.commits_total} total · {report.commits_linked} linked "
+        f"· {report.coverage:.0%}",
+        f"lag        median {report.median_lag_commits:g} commits · "
+        f"{report.median_lag_minutes:g} min ({report.unresolved} unresolved)",
+        f"gaps       {len(report.gaps)} open criteria on done rows",
+    ]
+    for gap in report.gaps[:10]:
+        lines.append(f"  {gap.kind} #{gap.id}: {gap.text[:60]}")
+    return lines
+
+
+def _cmd_audit(store: Store | None, args: argparse.Namespace, actor: str) -> int:
+    """Read-only accuracy report; --strict exits 2 only on a breach."""
+    del actor
+    db = store or _optional_store(args)
+    if db is None:
+        result = audit.Report(plans=[] if args.plan is None else [args.plan])
+    else:
+        if args.plan is not None and db.get_plan(args.plan) is None:
+            print(msg_not_found("plan", args.plan), file=sys.stderr)
+            return 1
+        since = audit.parse_since(args.since) if args.since else None
+        result = audit.report(
+            db,
+            [args.plan] if args.plan is not None else None,
+            since,
+            Path.cwd(),
+        )
+    reasons = audit.Thresholds().breaches(result)
+    if args.json:
+        payload = result.to_dict()
+        payload["breaches"] = reasons
+        _emit(args, payload)
+        return 2 if args.strict and reasons else 0
+    for line in _audit_lines(result):
+        print(line)
+    if args.strict:
+        for reason in reasons:
+            print(f"strict: {reason}")
+        return 2 if reasons else 0
+    return 0
 
 
 def _cmd_info(store: Store, args: argparse.Namespace, actor: str) -> int:
@@ -1122,6 +1184,9 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_setup(None, args, actor)
     if args.cmd == "doctor":
         return _cmd_doctor(None, args, actor)
+    if args.cmd == "audit":
+        # Read-only metric: never create a database or consume first-run setup.
+        return _cmd_audit(None, args, actor)
     if args.cmd == "completion":
         # Install-time helper: never create or open a database.
         return _cmd_completion(None, args, actor)

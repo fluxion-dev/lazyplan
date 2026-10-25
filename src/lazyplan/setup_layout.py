@@ -88,16 +88,17 @@ def _gitignore_entries(
     repo_root: Path | None,
     plan_dir: Path,
     skill_files: list[Path],
+    db: Path | None = None,
 ) -> tuple[str, ...]:
     if repo_root is None:
         return ()
     entries: list[str] = []
     try:
-        rel = plan_dir.expanduser().relative_to(repo_root.expanduser())
+        ignored = (db or plan_dir).expanduser().relative_to(repo_root.expanduser())
     except ValueError:
-        rel = None
-    if rel is not None and str(rel) != ".":
-        entries.append(rel.as_posix() + "/")
+        ignored = None
+    if ignored is not None and str(ignored) != ".":
+        entries.append(ignored.as_posix())
     for path in skill_files:
         try:
             rel = path.expanduser().relative_to(repo_root.expanduser())
@@ -137,7 +138,7 @@ def resolve_choice(
         skill_plan=skill_plan,
         agents_md=skill_plan.agents_md,
         gitignore_entries=(
-            _gitignore_entries(repo_root, plan_dir, skill_plan.skill_files)
+            _gitignore_entries(repo_root, plan_dir, skill_plan.skill_files, db)
             if storage == STORAGE_REPO
             else ()
         ),

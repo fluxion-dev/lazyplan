@@ -4,8 +4,9 @@
 # README header (`# lazyplan (`lpui`) — vX.Y.Z`) and the version-pinned
 # asset URLs in README.md + site/index.html mirror it and are updated here.
 # Commits the change and tags `vX.Y.Z` (annotated). Push with --push.
+# Use --no-tag to commit without tagging, for a release pull request.
 #
-# Usage: ./tools/bump.sh patch [--push] | [--dry-run]
+# Usage: ./tools/bump.sh patch [--push] [--no-tag] | [--dry-run]
 #        ./tools/bump.sh minor --push
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -13,15 +14,17 @@ cd "$(dirname "$0")/.."
 PART="${1:-}"
 PUSH=0
 DRY=0
+NOTAG=0
 for arg in "$@"; do
   case "$arg" in
     --push) PUSH=1 ;;
+    --no-tag) NOTAG=1 ;;
     --dry-run) DRY=1 ;;
   esac
 done
 
 if [[ "$PART" != "major" && "$PART" != "minor" && "$PART" != "patch" ]]; then
-  echo "usage: ./tools/bump.sh (major|minor|patch) [--push] [--dry-run]" >&2
+  echo "usage: ./tools/bump.sh (major|minor|patch) [--push] [--no-tag] [--dry-run]" >&2
   exit 2
 fi
 if [[ $DRY -eq 0 ]] && [[ -n "$(git status --porcelain)" ]]; then
@@ -49,7 +52,7 @@ print(f"{major}.{minor}.{patch}")
 EOF
 )"
 
-if git rev-parse "v$NEXT" >/dev/null 2>&1; then
+if git rev-parse "v$NEXT" >/dev/null 2>&1 && [[ $NOTAG -eq 0 ]]; then
   echo "error: tag v$NEXT already exists" >&2
   exit 1
 fi
@@ -97,9 +100,15 @@ fi
 git add pyproject.toml README.md docs/
 if [[ -f site/index.html ]]; then git add site/index.html site/public/sitemap.xml site/package.json; fi
 git commit -m "release v$NEXT"
-git tag -a "v$NEXT" -m "lazyplan v$NEXT"
-echo "committed + tagged v$NEXT"
+if [[ $NOTAG -eq 0 ]]; then
+  git tag -a "v$NEXT" -m "lazyplan v$NEXT"
+  echo "committed + tagged v$NEXT"
+else
+  echo "committed v$NEXT (no tag)"
+fi
 if [[ $PUSH -eq 1 ]]; then
   git push origin HEAD
-  git push origin "v$NEXT"
+  if [[ $NOTAG -eq 0 ]]; then
+    git push origin "v$NEXT"
+  fi
 fi

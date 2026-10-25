@@ -1,7 +1,8 @@
 name: bump
 
-# One-click semver progression: bump pyproject + README, commit, tag.
-# The tag push triggers release.yml. Run from the Actions tab.
+# One-click semver progression: bump pyproject + README in a release PR.
+# main is protected, so the bump lands through the PR and `tag-release`
+# creates the tag after merge. Run from the Actions tab.
 on:
   workflow_dispatch:
     inputs:
@@ -14,6 +15,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   bump:
@@ -26,5 +28,22 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-      - name: Bump, commit, tag, push
-        run: ./tools/bump.sh "${{ inputs.part }}" --push
+      - name: Bump and commit without a tag
+        run: ./tools/bump.sh "${{ inputs.part }}" --no-tag
+      - name: Open the release pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          NEXT="$(sed -n 's/^version = "\(.*\)"$/\1/p' pyproject.toml)"
+          BRANCH="release/v${NEXT}"
+          git switch -c "$BRANCH"
+          git push -u origin "$BRANCH"
+          gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "Release v${NEXT}" \
+            --body "Version bump to v${NEXT} from the bump workflow.
+
+          Auto-merge is enabled. The \`gates\` check must pass; \`tag-release\`
+          creates the tag after this PR lands."
+          gh pr merge "$BRANCH" --auto --merge

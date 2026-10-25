@@ -74,6 +74,10 @@ lpui --actor helper task add --milestone 1 --title "Draft proposal"
 lpui --actor helper list --json
 ```
 
+Start with `lpui brief` to see the active task and the next step. After each
+commit, link it and move the task. `lpui audit --since 7.days --strict` turns
+the three accuracy metrics into a CI gate.
+
 The first run installs the agent skill. `lpui setup --placement repo` generates the full contract in the repo.
 
 ## Your data

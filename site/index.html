@@ -326,8 +326,10 @@ lpui
   <h2 class="mb-4 text-2xl font-bold text-white"><span class="mr-1.5" aria-hidden="true">🤖</span>For your coding agent</h2>
   <p class="mb-10 md:mb-14 text-lg text-zinc-400">Your agent gets the same plan through a simple command line. It can add work, move it forward, and keep you posted.</p>
 <div class="space-y-6">
-<pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-surface p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono">lpui task add --title "Ship the thing"
+<pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-surface p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono">lpui brief                       # what to work on, and what slipped
+lpui task add --title "Ship the thing"
 lpui task move --id 1 --to done
+lpui audit --since 7.days        # coverage, lag, and criteria gaps
 </code></pre>
   <p class="text-zinc-300">You set the direction. It does the busywork.</p>
 </div>

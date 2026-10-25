@@ -234,6 +234,34 @@ Your agent is expected to work from the plan, not invent it:
 `lpui setup --placement repo` writes the full contract into the repo; the
 default setup installs the skill into each detected agent's own folder.
 
+### Session brief and accuracy audit
+
+Start a session with the brief, update after each commit, and close with the
+audit:
+
+```bash
+lpui brief                        # active plan, doing task, next task, loose commits
+lpui brief --json                 # same facts for a hook or script
+lpui audit --plan 12              # see the three accuracy metrics for one plan
+lpui audit --since 7.days         # recent window across active plans
+lpui audit --since 7.days --strict  # exit 2 when a threshold is breached
+```
+
+The brief is read-only and never creates a database. It names the doing task,
+the next todo, open criteria, and commits that landed without a task link.
+
+The audit reports three numbers:
+
+- **Coverage** — linked implementation commits over non-merge commits in the
+  window.
+- **Status lag** — median commits and minutes between a linked commit and the
+  first `doing` or `done` move on its task.
+- **Criteria gaps** — open acceptance items on rows closed inside the window.
+
+Strict defaults are 80% coverage, one commit of median lag, and zero gaps.
+Override them with `--min-coverage`, `--max-lag`, and `--max-gaps`; legacy
+databases usually need a gap tolerance before they can gate CI.
+
 ## Reference
 
 ```bash

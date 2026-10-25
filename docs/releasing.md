@@ -39,10 +39,19 @@ creates `vX.Y.Z` and dispatches `release.yml` against that tag.
 Auto-merge merges with `GITHUB_TOKEN`, and GitHub does not start push-event
 workflows for those pushes. The bump workflow therefore has a `publish` job
 that waits for the release PR to merge, then dispatches `tag-release.yml` and
-`pages.yml` explicitly. Both are idempotent: `tag-release` exits when the tag
-already exists, and Pages redeploys the same source. A bot-created release PR
-can also leave its `ci` run in `action_required`; approve that run as an admin
-so `gates` can start.
+`pages.yml` explicitly. The job checks out the repository so `gh pr view` can
+resolve it. Both dispatched workflows are idempotent: `tag-release` exits when
+the tag already exists, and Pages redeploys the same source. A bot-created
+release PR can also leave its `ci` run in `action_required`; approve that run
+as an admin so `gates` can start.
+
+If the post-merge job still fails, dispatch both workflows by hand and record
+the failing run URL before the next release:
+
+```bash
+gh workflow run tag-release.yml --ref main
+gh workflow run pages.yml --ref main
+```
 
 ```bash
 gh run list --workflow bump.yml

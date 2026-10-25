@@ -202,6 +202,10 @@ Flags work before or after the command: `lpui list --json` is the same as
 Plans start collapsed. Press `right` or `z` to reveal milestones; tasks stay
 folded until you open their milestone. Completed plans are dimmed and sorted last.
 
+A doing row animates through `◐ ◓ ◑ ◒` while work is in progress. The CLI,
+export, preview, and detail views keep the static `◐`; set
+`LAZYPLAN_NO_SPINNER=1` to freeze the tree.
+
 | key | action |
 |---|---|
 | `j`/`k`, arrows, click | move and select |

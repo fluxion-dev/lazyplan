@@ -194,11 +194,9 @@ def _cmd_setup(store: Store | None, args: argparse.Namespace, actor: str) -> int
     return 0
 
 
-def _cmd_doctor(store: Store | None, args: argparse.Namespace, actor: str) -> int:
-    """Read-only setup report; never opens or writes a database."""
-    del store, actor
-    home = Path.home()
-    state = setup.load_state(home)
+def _doctor_data(
+    args: argparse.Namespace, home: Path, state: setup.SetupState
+) -> tuple[setup_layout.SetupLayout, list[Path], dict]:
     choice = setup.choice_from_args(args, Path.cwd(), home, state)
     root = find_repo_root(Path.cwd())
     layout, skill_files = setup.preview(choice, root, home)
@@ -219,10 +217,10 @@ def _cmd_doctor(store: Store | None, args: argparse.Namespace, actor: str) -> in
     issues = issues or (state.hooks and not state.hook_files)
     issues = issues or state.version != setup.SETUP_VERSION
     report["clean"] = bool(report["clean"] and not issues)
-    code = 0 if report["clean"] else 1
-    if getattr(args, "json", False):
-        _emit(args, report)
-        return code
+    return layout, skill_files, report
+
+
+def _print_doctor(layout: setup_layout.SetupLayout, skill_files: list[Path], report: dict) -> None:
     print(f"database:  {layout.db}")
     print(f"templates: {layout.templates_dir}")
     print(f"config:    {layout.config or '-'}")
@@ -243,6 +241,19 @@ def _cmd_doctor(store: Store | None, args: argparse.Namespace, actor: str) -> in
         print(f"finding:   {finding['kind']} {finding['path']} ({finding['state']})")
     for note in report["notes"]:
         print(f"note:      {note}")
+
+
+def _cmd_doctor(store: Store | None, args: argparse.Namespace, actor: str) -> int:
+    """Read-only setup report; never opens or writes a database."""
+    del store, actor
+    home = Path.home()
+    state = setup.load_state(home)
+    layout, skill_files, report = _doctor_data(args, home, state)
+    code = 0 if report["clean"] else 1
+    if getattr(args, "json", False):
+        _emit(args, report)
+        return code
+    _print_doctor(layout, skill_files, report)
     return code
 
 

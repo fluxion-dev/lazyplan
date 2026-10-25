@@ -723,6 +723,22 @@ def review_findings(
     return notes
 
 
+def _setup_skipped(cmd: str | None, args: Any) -> bool:
+    if os.environ.get(NO_SETUP_ENV, "").strip():
+        return True
+    return cmd in SKIP_COMMANDS or bool(getattr(args, "version", False))
+
+
+def _explicit_db(args: Any) -> str | None:
+    return str(getattr(args, "db", "") or os.environ.get("LAZYPLAN_DB", "") or "") or None
+
+
+def _prompt_allowed(args: Any, interactive: bool | None) -> bool:
+    if getattr(args, "json", False) or getattr(args, "yes", False):
+        return False
+    return setup_ui.stdin_tty() and sys.stderr.isatty() if interactive is None else interactive
+
+
 def ensure(
     cmd: str | None,
     args: Any,
@@ -732,77 +748,100 @@ def ensure(
     interactive: bool | None = None,
 ) -> dict[str, Any] | None:
     """First-run setup and upgrade review; never blocks agent commands."""
-    if os.environ.get(NO_SETUP_ENV, "").strip():
-        return None
-    if cmd in SKIP_COMMANDS or getattr(args, "version", False):
+    if _setup_skipped(cmd, args):
         return None
     home = home or Path.home()
     state = load_state(home)
-    explicit = str(getattr(args, "db", "") or os.environ.get("LAZYPLAN_DB", "") or "") or None
+    explicit = _explicit_db(args)
     findings = detect_findings(cwd, home, state, explicit)
     version_changed = state.last_version != (version or "")
     first = not state.last_version
     if not first and not version_changed and not findings:
         return None
-    human = cmd in HUMAN_COMMANDS
-    can_prompt = (
-        setup_ui.stdin_tty() and sys.stderr.isatty() if interactive is None else interactive
-    )
-    if getattr(args, "json", False) or getattr(args, "yes", False):
-        can_prompt = False
     if explicit:
         # An explicit database is a caller-owned context: never write layout,
         # skills, or state around it.
         return None
+    human = cmd in HUMAN_COMMANDS
+    can_prompt = _prompt_allowed(args, interactive)
     root = find_repo_root(cwd)
     result: dict[str, Any] | None = None
     if first or version_changed:
-        choice = choice_from_args(args, cwd, home, state)
-        if human and can_prompt and first:
-            result = run_wizard(
-                cwd,
-                home,
-                state,
-                version,
-                json_mode=bool(getattr(args, "json", False)),
-                initial=choice,
-                hooks_enabled=getattr(args, "hooks", None),
-            )
-            if result is None:
-                return None
-        else:
-            result = apply_choice(choice, root, home, version)
-        install_integrations(
-            result,
-            home,
-            root,
-            getattr(args, "hooks", None),
-            getattr(args, "agents_pointer", None),
-        )
-        if first and human and not getattr(args, "json", False):
-            plugins = [Path(path) for path in (result.get("hooks") or {}).get("installed") or []]
-            backups = [Path(path) for path in (result.get("hooks") or {}).get("backups") or []]
-            setup_ui.success(
-                sys.stderr,
-                Path(result["db"]),
-                [Path(path) for path in result["skills"]],
-                backups,
-                setup_ui.color_enabled(sys.stderr, False),
-                plugins,
-            )
+        result = _run_setup_once(args, cwd, home, state, version, root, human, can_prompt, first)
+        if result is None:
+            return None
     if human and findings:
-        fresh = load_state(home)
-        review_findings(
-            findings,
-            fresh,
-            home,
-            root,
-            write=sys.stderr,
-            color=setup_ui.color_enabled(sys.stderr, bool(getattr(args, "json", False))),
-            allow_prompt=can_prompt,
-            json_mode=bool(getattr(args, "json", False)),
-        )
+        _review_setup(args, findings, home, root, can_prompt)
     return result
+
+
+def _run_setup_once(
+    args: Any,
+    cwd: Path,
+    home: Path,
+    state: SetupState,
+    version: str,
+    root: Path | None,
+    human: bool,
+    can_prompt: bool,
+    first: bool,
+) -> dict[str, Any] | None:
+    choice = choice_from_args(args, cwd, home, state)
+    if human and can_prompt and first:
+        result = run_wizard(
+            cwd,
+            home,
+            state,
+            version,
+            json_mode=bool(getattr(args, "json", False)),
+            initial=choice,
+            hooks_enabled=getattr(args, "hooks", None),
+        )
+        if result is None:
+            return None
+    else:
+        result = apply_choice(choice, root, home, version)
+    install_integrations(
+        result,
+        home,
+        root,
+        getattr(args, "hooks", None),
+        getattr(args, "agents_pointer", None),
+    )
+    if first and human and not getattr(args, "json", False):
+        _announce_setup(result)
+    return result
+
+
+def _announce_setup(result: dict[str, Any]) -> None:
+    hooks = result.get("hooks") or {}
+    setup_ui.success(
+        sys.stderr,
+        Path(result["db"]),
+        [Path(path) for path in result["skills"]],
+        [Path(path) for path in hooks.get("backups") or []],
+        setup_ui.color_enabled(sys.stderr, False),
+        [Path(path) for path in hooks.get("installed") or []],
+    )
+
+
+def _review_setup(
+    args: Any,
+    findings: list[Finding],
+    home: Path,
+    root: Path | None,
+    can_prompt: bool,
+) -> None:
+    review_findings(
+        findings,
+        load_state(home),
+        home,
+        root,
+        write=sys.stderr,
+        color=setup_ui.color_enabled(sys.stderr, bool(getattr(args, "json", False))),
+        allow_prompt=can_prompt,
+        json_mode=bool(getattr(args, "json", False)),
+    )
 
 
 def detect_findings(

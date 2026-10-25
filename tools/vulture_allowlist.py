@@ -121,3 +121,8 @@ new_count
 ask_migration
 _skills_dir_override
 prompt_confirm
+# Docs metadata is read by tools/gen-man.py and the docs-truth test.
+ENVIRONMENT
+FILES
+# Compatibility helper kept for tests and callers outside the CLI.
+default_choice

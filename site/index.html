@@ -327,11 +327,12 @@ lpui
   <h2 class="mb-4 text-2xl font-bold text-white"><span class="mr-1.5" aria-hidden="true">🤖</span>For your coding agent</h2>
   <p class="mb-10 md:mb-14 text-lg text-zinc-400">Your agent gets the same plan through a simple command line. It can add work, move it forward, and keep you posted.</p>
 <div class="space-y-6">
-<pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-surface p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono">lpui brief                       # what to work on, and what slipped
-lpui task add --title "Ship the thing"
-lpui task move --id 1 --to done
-lpui audit --since 7.days        # coverage, lag, and criteria gaps
+<pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-surface p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono">lpui --porcelain brief        # what to work on, and what slipped
+lpui --porcelain task add --title "Ship the thing"
+lpui --porcelain task move --id 1 --to done
+lpui --porcelain audit --since 7.days   # coverage, lag, and criteria gaps
 </code></pre>
+  <p class="text-zinc-300">Porcelain mode answers each write with one tab-separated row and keeps overview reads glyph-free, so your agent spends context on the plan instead of decorations. The columns are <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">kind</code>, <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">id</code>, <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">status</code>, <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">title</code>, <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">parent</code>, and <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">extra</code>; <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">--json</code> is still there when you need full fidelity.</p>
   <p class="text-zinc-300">You set the direction. It does the busywork.</p>
   <p class="text-zinc-400">Setup installs read-only lifecycle hooks for detected agents, so a session starts with the active task and a commit reminds you to link it. Hooks never move work or write to the database; remove them with <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui setup --no-hooks</code>.</p>
 </div>

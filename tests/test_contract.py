@@ -77,6 +77,7 @@ class ContractCase(unittest.TestCase):
     def test_skill_teaches_the_same_loop(self):
         text = skills.render_skill()
         self.assertIn("lpui --porcelain brief", text)
+        self.assertIn("lpui --porcelain next", text)
         self.assertIn("lpui --porcelain audit --since 7.days", text)
         self.assertIn("LAZYPLAN_PORCELAIN", text)
         self.assertIn("kind<TAB>id<TAB>status", text)

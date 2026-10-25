@@ -32,6 +32,10 @@ examples:
   lpui plan list --tree                  show the full plan/milestone/task tree
   lpui plan list --status doing
   lpui --porcelain plan list --tree      stable tab-separated rows for an active agent
+  lpui --porcelain next                  claim the first eligible task
+  lpui --porcelain claim --id 3 --ttl 30m
+  lpui --porcelain note add --kind task --id 3 --text "Decision or handoff"
+  lpui --porcelain task block --id 3 --reason "waiting on design"
   lpui --porcelain task add --milestone 1 --title "Do X" --desc "approach"
   lpui plan show --id 1                  show one row with its why, what, checklist, and children
   lpui --actor alice plan add --title "API v2" --why ".." --what ".."
@@ -78,7 +82,9 @@ row per record for active agents; `--json` wins when both are set.
 
 workflow: starting a plan? Ask the human what to build, why it matters,
   and how to tell it is done. Save that as the plan. Then break it into
-  milestones, and each milestone into prioritized tasks.
+  milestones, and each milestone into prioritized tasks. Agents claim work
+  with `next` (a lease, not an owner), renew or release it, note handoffs,
+  and park blocked tasks with `task block --reason`.
 
 environment:
   LAZYPLAN_DB       which database file to use (same as --db)

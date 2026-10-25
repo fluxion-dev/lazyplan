@@ -26,17 +26,29 @@ updates all of them and `tests/test_version.py` fails on drift.
    grep -n '"version"' site/index.html site/package.json
    ```
 
-6. Commit in reviewable slices, then push `main`. Do not tag a red commit.
+6. Commit in reviewable slices and open a pull request against `main`.
+   Do not tag a red commit.
 
 ## Publish
 
+Run the **bump** workflow from the Actions tab and choose `patch`, `minor`, or
+`major`. It commits the version bump on `release/vX.Y.Z`, opens a pull request,
+and enables auto-merge. When `gates` passes, the PR merges; `tag-release` then
+creates `vX.Y.Z` and dispatches `release.yml` against that tag.
+
 ```bash
-git push origin main
-gh run watch            # ci + pages must be green
-git tag -a vX.Y.Z -m "lazyplan vX.Y.Z"
-git push origin vX.Y.Z
-gh run watch            # release.yml builds assets, GitHub release, PyPI
+gh run list --workflow bump.yml
+gh run watch
 ```
+
+Admins can still release locally through the ruleset bypass:
+
+```bash
+./tools/bump.sh patch --push
+```
+
+That pushes `main` and the tag directly, so prefer the workflow when the bump
+should be reviewed. Do not push a tag before its version commit is on `main`.
 
 `release.yml` builds sdist/wheel, `.deb` and `.rpm` for amd64/arm64, creates the
 GitHub release, and publishes to PyPI through trusted publishing. GitHub

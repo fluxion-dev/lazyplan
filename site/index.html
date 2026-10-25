@@ -332,6 +332,7 @@ lpui task move --id 1 --to done
 lpui audit --since 7.days        # coverage, lag, and criteria gaps
 </code></pre>
   <p class="text-zinc-300">You set the direction. It does the busywork.</p>
+  <p class="text-zinc-400">Setup installs read-only lifecycle hooks for detected agents, so a session starts with the active task and a commit reminds you to link it. Hooks never move work or write to the database; remove them with <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui setup --no-hooks</code>.</p>
 </div>
 </section>
 

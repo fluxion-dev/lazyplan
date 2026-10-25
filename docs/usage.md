@@ -262,6 +262,38 @@ Strict defaults are 80% coverage, one commit of median lag, and zero gaps.
 Override them with `--min-coverage`, `--max-lag`, and `--max-gaps`; legacy
 databases usually need a gap tolerance before they can gate CI.
 
+### Lifecycle hooks
+
+`lpui setup` installs read-only hooks for every detected agent host. They
+never write to the database, never move a task, and always exit 0, so a broken
+hook cannot block an agent. Remove them with `lpui setup --no-hooks`; every
+touched config file is backed up under `~/.lazyplan/backups/<timestamp>/`.
+
+| Host | Config | Events |
+|---|---|---|
+| OpenCode | `~/.config/opencode/plugins/lazyplan.js` | post-tool, pre-compact |
+| Claude Code | `~/.claude/settings.json` | SessionStart, UserPromptSubmit, PostToolUse, Stop, PreCompact |
+| Gemini CLI | `~/.gemini/settings.json` | SessionStart, BeforeAgent, AfterTool, AfterAgent, PreCompress |
+| Codex | `~/.codex/hooks.json` | SessionStart, UserPromptSubmit, PostToolUse, Stop, PreCompact |
+| Cursor | `~/.cursor/hooks.json` | sessionStart, beforeSubmitPrompt, postToolUse, stop, preCompact |
+
+Notes:
+
+- OpenCode receives plain reminders after a `git commit` and injects the brief
+  before compaction.
+- Codex asks you to review new hooks once with `/hooks` before it runs them.
+- Cursor can also import Claude Code hooks; with both enabled, the same
+  reminder may appear twice.
+- Set `LAZYPLAN_NO_HOOKS=1` to silence every host without uninstalling.
+
+If a hook does not fire, run it by hand with a payload on stdin, for example:
+
+```bash
+echo '{}' | lpui hook session-start --host claude
+```
+
+Then check the host's own hook log or trust screen.
+
 ## Reference
 
 ```bash

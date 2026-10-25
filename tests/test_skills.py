@@ -458,6 +458,7 @@ class TestInitCli(unittest.TestCase):
         self.old_home = os.environ.get("HOME")
         os.environ["HOME"] = os.path.join(self.tmp.name, "home")
         os.makedirs(os.environ["HOME"], exist_ok=True)
+        os.makedirs(os.path.join(os.environ["HOME"], ".config", "opencode"), exist_ok=True)
 
     def tearDown(self):
         os.chdir(self.old_cwd)

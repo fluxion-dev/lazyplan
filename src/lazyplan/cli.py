@@ -77,6 +77,24 @@ def _emit_record(args: argparse.Namespace, line: str, payload: object) -> int:
     return _emit(args, payload)
 
 
+def _emit_read(
+    args: argparse.Namespace,
+    payload: object,
+    porcelain_lines: list[str],
+    text: str,
+    empty: str = "",
+) -> int:
+    """Pick JSON, porcelain rows, or human text for one read command."""
+    if args.json:
+        return _emit(args, payload)
+    if porcelain.enabled(args):
+        for line in porcelain_lines:
+            print(line)
+        return 0
+    print(text if text else empty)
+    return 0
+
+
 def _progress(store: Store, plan_id: int | None = None, milestone_id: int | None = None) -> str:
     """Task progress for a plan or milestone as `done/total`."""
     if milestone_id is not None:
@@ -1104,18 +1122,17 @@ def _cmd_git_scan(store: Store, args: argparse.Namespace, actor: str) -> int:
         obj_id=args.id or 0,
         actor=actor,
     )
-    if args.json:
-        return _emit(args, matches)
-    if porcelain.enabled(args):
-        for match in matches:
-            print(_scan_row(match))
-        return 0
-    if not matches:
-        print("(no lazyplan references found)")
-        return 0
-    for match in matches:
-        print(f"{match['sha'][:12]} {match['subject']} -> {match['ref']} ({match['action']})")
-    return 0
+    text = "\n".join(
+        f"{match['sha'][:12]} {match['subject']} -> {match['ref']} ({match['action']})"
+        for match in matches
+    )
+    return _emit_read(
+        args,
+        matches,
+        [_scan_row(match) for match in matches],
+        text,
+        "(no lazyplan references found)",
+    )
 
 
 def _cmd_pr_auth(store: Store, args: argparse.Namespace, actor: str) -> int:
@@ -1150,18 +1167,14 @@ def _cmd_pr_status(store: Store, args: argparse.Namespace, actor: str) -> int:
         repo_path=str(args.repo) if args.repo else "",
         auth=auth,
     )
-    if args.json:
-        return _emit(args, entries)
-    if porcelain.enabled(args):
-        parent = f"{args.kind}:{args.id}" if args.kind and args.id else "-"
-        for line in _pr_status_rows(entries, parent):
-            print(line)
-        return 0
-    if not entries:
-        print("(no linked repos)")
-        return 0
-    print(render_forge_status(entries))
-    return 0
+    parent = f"{args.kind}:{args.id}" if args.kind and args.id else "-"
+    return _emit_read(
+        args,
+        entries,
+        _pr_status_rows(entries, parent),
+        render_forge_status(entries) if entries else "",
+        "(no linked repos)",
+    )
 
 
 def _cmd_pr_list(store: Store, args: argparse.Namespace, actor: str) -> int:
@@ -1169,18 +1182,14 @@ def _cmd_pr_list(store: Store, args: argparse.Namespace, actor: str) -> int:
         print(msg_not_found(args.kind, args.id), file=sys.stderr)
         return 1
     links = store.list_forge_links(args.kind, args.id)
-    if args.json:
-        return _emit(args, [vars(link) for link in links])
-    if porcelain.enabled(args):
-        parent = f"{args.kind}:{args.id}"
-        for link in links:
-            print(_pr_row(vars(link), parent))
-        return 0
-    if not links:
-        print("(no pull requests linked)")
-        return 0
-    print(render_forge_links([vars(link) for link in links]))
-    return 0
+    parent = f"{args.kind}:{args.id}"
+    return _emit_read(
+        args,
+        [vars(link) for link in links],
+        [_pr_row(vars(link), parent) for link in links],
+        render_forge_links([vars(link) for link in links]) if links else "",
+        "(no pull requests linked)",
+    )
 
 
 def _cmd_pr_show(store: Store, args: argparse.Namespace, actor: str) -> int:
@@ -1193,13 +1202,13 @@ def _cmd_pr_show(store: Store, args: argparse.Namespace, actor: str) -> int:
     if not links:
         print(msg_not_found("pull request", args.number), file=sys.stderr)
         return 1
-    if args.json:
-        return _emit(args, vars(links[0]))
-    if porcelain.enabled(args):
-        print(_pr_row(vars(links[0]), f"{args.kind}:{args.id}"))
-        return 0
-    print(render_forge_links([vars(links[0])]))
-    return 0
+    link = vars(links[0])
+    return _emit_read(
+        args,
+        link,
+        [_pr_row(link, f"{args.kind}:{args.id}")],
+        render_forge_links([link]),
+    )
 
 
 def _cmd_pr_link(store: Store, args: argparse.Namespace, actor: str) -> int:
@@ -1318,18 +1327,19 @@ def _cmd_commits(store: Store, args: argparse.Namespace, actor: str) -> int:
     if getattr(args, "refresh", False):
         services.refresh_links(store, args.kind, args.id, actor=actor)
     links = store.effective_links(args.kind, args.id)
-    if args.json:
-        return _emit(args, [vars(c) for c in links])
-    if porcelain.enabled(args):
-        parent = f"{args.kind}:{args.id}"
-        for link in links:
-            print(_commit_row(vars(link), parent))
-        return 0
-    if not links:
-        print(EMPTY_COMMITS)
-        return 0
-    print(render_commits([vars(c) for c in links], files=bool(getattr(args, "files", False))))
-    return 0
+    parent = f"{args.kind}:{args.id}"
+    text = (
+        render_commits([vars(c) for c in links], files=bool(getattr(args, "files", False)))
+        if links
+        else ""
+    )
+    return _emit_read(
+        args,
+        [vars(c) for c in links],
+        [_commit_row(vars(link), parent) for link in links],
+        text,
+        EMPTY_COMMITS,
+    )
 
 
 def _cmd_task_start(store: Store, args: argparse.Namespace, actor: str) -> int:
@@ -1393,18 +1403,14 @@ def _cmd_git_status(store: Store, args: argparse.Namespace, actor: str) -> int:
         obj_id=args.id or 0,
         repo_path=str(args.repo) if args.repo else "",
     )
-    if args.json:
-        return _emit(args, entries)
-    if porcelain.enabled(args):
-        parent = f"{args.kind}:{args.id}" if args.kind and args.id else "-"
-        for line in _git_status_rows(entries, parent):
-            print(line)
-        return 0
-    if not entries:
-        print("(no linked repos)")
-        return 0
-    print(render_git_status(entries))
-    return 0
+    parent = f"{args.kind}:{args.id}" if args.kind and args.id else "-"
+    return _emit_read(
+        args,
+        entries,
+        _git_status_rows(entries, parent),
+        render_git_status(entries) if entries else "",
+        "(no linked repos)",
+    )
 
 
 def _repo_remote_default(repo_path: str) -> str:
@@ -1459,21 +1465,19 @@ def _cmd_repos(store: Store, args: argparse.Namespace, actor: str) -> int:
         if getattr(args, "effective", False)
         else store.list_repos(args.kind, args.id)
     )
-    if args.json:
-        return _emit(args, rows)
-    if porcelain.enabled(args):
-        status = "effective" if getattr(args, "effective", False) else "explicit"
-        parent = f"{args.kind}:{args.id}"
-        for row in rows:
-            print(_repo_row(row, parent, status))
-        return 0
-    if not rows:
-        print(EMPTY_COMMITS)
-        return 0
-    for r in rows:
-        remote = f" ({r['repo_remote']})" if r.get("repo_remote") else ""
-        print(f"{r['repo_path']}{remote}")
-    return 0
+    status = "effective" if getattr(args, "effective", False) else "explicit"
+    parent = f"{args.kind}:{args.id}"
+    text = "\n".join(
+        f"{row['repo_path']}" + (f" ({row['repo_remote']})" if row.get("repo_remote") else "")
+        for row in rows
+    )
+    return _emit_read(
+        args,
+        rows,
+        [_repo_row(row, parent, status) for row in rows],
+        text,
+        EMPTY_COMMITS,
+    )
 
 
 def _cmd_export(store: Store, args: argparse.Namespace, actor: str) -> int:

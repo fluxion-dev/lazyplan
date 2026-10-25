@@ -308,6 +308,8 @@ def _render_milestone_full(full: dict, lines: list[str], files: bool = False) ->
     for entry in full["tasks"]:
         t = entry["task"]
         lines.append(f"\n  {status_word(t['status'])} T{t['id']} {t['title']}")
+        if t.get("blocked"):
+            lines.append(f"  blocked: {t.get('blocked_reason') or '-'}")
         _append_claim(lines, t.get("claim"), indent="  ")
         if t.get("description"):
             lines.append(f"  {t['description']}")
@@ -320,6 +322,8 @@ def _render_task_full(full: dict, lines: list[str], files: bool = False) -> None
 
     t = full["task"]
     lines.append(f"{status_word(t['status'])} T{t['id']} {t['title']} (M{t['milestone_id']})")
+    if t.get("blocked"):
+        lines.append(f"blocked: {t.get('blocked_reason') or '-'}")
     _append_claim(lines, t.get("claim"))
     _append_notes(lines, t.get("notes", []))
     if t.get("description"):

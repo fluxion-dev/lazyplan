@@ -27,7 +27,9 @@ CREATE TABLE IF NOT EXISTS tasks (
     milestone_id INTEGER NOT NULL REFERENCES milestones(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'todo',
-    description TEXT NOT NULL DEFAULT ''
+    description TEXT NOT NULL DEFAULT '',
+    blocked INTEGER NOT NULL DEFAULT 0,
+    blocked_reason TEXT NOT NULL DEFAULT ''
 );
 CREATE TABLE IF NOT EXISTS task_claims (
     task_id INTEGER PRIMARY KEY REFERENCES tasks(id) ON DELETE CASCADE,
@@ -275,10 +277,20 @@ def _migrate_forge_link_fields(conn: sqlite3.Connection) -> None:
             conn.execute(f"ALTER TABLE forge_links ADD COLUMN {col} TEXT NOT NULL DEFAULT ''")
 
 
+def _migrate_task_blocked(conn: sqlite3.Connection) -> None:
+    """Add the blocked flag to task tables created before it existed."""
+    existing = {r["name"] for r in conn.execute("PRAGMA table_info(tasks)").fetchall()}
+    if "blocked" not in existing:
+        conn.execute("ALTER TABLE tasks ADD COLUMN blocked INTEGER NOT NULL DEFAULT 0")
+    if "blocked_reason" not in existing:
+        conn.execute("ALTER TABLE tasks ADD COLUMN blocked_reason TEXT NOT NULL DEFAULT ''")
+
+
 def migrate(conn: sqlite3.Connection) -> None:
     """Bring any DB to the current schema: migrate, create, backfill. Idempotent."""
     _migrate_elements(conn)
     conn.executescript(SCHEMA)
+    _migrate_task_blocked(conn)
     _drop_priority_columns(conn)
     _migrate_vcs_link_state(conn)
     _migrate_entity_repo_branch(conn)

@@ -47,10 +47,14 @@ class ClaimMissing(ClaimError):
 
 
 def _ser(d: dict) -> dict:
-    """JSON/agent-safe: Status -> value."""
+    """JSON/agent-safe: Status -> value, omit empty blocked fields."""
     d = dict(d)
     if isinstance(d.get("status"), Status):
         d["status"] = d["status"].value
+    if not d.get("blocked"):
+        d.pop("blocked", None)
+    if not d.get("blocked_reason"):
+        d.pop("blocked_reason", None)
     return d
 
 
@@ -341,6 +345,8 @@ class Store:
             title=r["title"],
             status=Status(r["status"]) if "status" in keys else Status.TODO,
             description=self._opt(r, keys, "description"),
+            blocked=bool(r["blocked"]) if "blocked" in keys else False,
+            blocked_reason=self._opt(r, keys, "blocked_reason"),
         )
 
     def get_task(self, tid: int) -> Task | None:
@@ -391,11 +397,15 @@ class Store:
         stamp = time.time() if now is None else now
         with self._connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
-            task = conn.execute("SELECT id, status FROM tasks WHERE id=?", (task_id,)).fetchone()
+            task = conn.execute(
+                "SELECT id, status, blocked FROM tasks WHERE id=?", (task_id,)
+            ).fetchone()
             if task is None:
                 raise KeyError(f"task #{task_id} not found")
             if task["status"] == Status.DONE.value:
                 raise ValueError("cannot claim a done task")
+            if task["blocked"]:
+                raise ValueError("cannot claim a blocked task")
             row = conn.execute("SELECT * FROM task_claims WHERE task_id=?", (task_id,)).fetchone()
             previous = self._row_to_claim(row) if row is not None else None
             if (
@@ -556,6 +566,7 @@ class Store:
             " JOIN plans p ON p.id=m.plan_id"
             " LEFT JOIN task_claims c ON c.task_id=t.id AND c.expires_at > ?"
             " WHERE t.status = 'todo' AND c.task_id IS NULL AND p.status != 'done'"
+            " AND t.blocked = 0"
         )
         params: list[object] = [stamp]
         if plan_id is not None:
@@ -658,6 +669,26 @@ class Store:
                 (t.title, t.description, tid),
             )
         self.log(actor, "task", "edit", f"T#{tid} {t.title}")
+        return t
+
+    def set_blocked(
+        self, tid: int, blocked: bool, reason: str = "", actor: str = "human"
+    ) -> Task | None:
+        """Set or clear the blocked flag on a task."""
+        if blocked and not reason.strip():
+            raise ValueError("blocking a task needs a reason")
+        t = self.get_task(tid)
+        if t is None:
+            return None
+        text = reason.strip() if blocked else ""
+        with self._connect() as conn:
+            conn.execute(
+                "UPDATE tasks SET blocked=?, blocked_reason=? WHERE id=?",
+                (1 if blocked else 0, text, tid),
+            )
+        t.blocked = blocked
+        t.blocked_reason = text
+        self.log(actor, "task", "block" if blocked else "unblock", f"T#{tid} {text}".strip())
         return t
 
     def delete(self, kind: str, obj_id: int, actor: str = "human") -> bool:

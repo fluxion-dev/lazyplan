@@ -123,7 +123,13 @@ def _porcelain_row(store: Store, obj: Plan | Milestone | Task) -> str:
             obj.plan_id,
             _progress(store, milestone_id=obj.id),
         )
-    return porcelain.task_row(obj.id, obj.status.value, obj.title, obj.milestone_id)
+    return porcelain.task_row(
+        obj.id,
+        obj.status.value,
+        obj.title,
+        obj.milestone_id,
+        "blocked" if obj.blocked else "-",
+    )
 
 
 def _criterion_row(criteria: Criterion) -> str:
@@ -876,7 +882,11 @@ def _porcelain_show_lines(store: Store, kind: str, full: dict) -> list[str]:
             for task in entry.get("tasks", []):
                 lines.append(
                     porcelain.task_row(
-                        task["id"], task["status"], task["title"], task["milestone_id"]
+                        task["id"],
+                        task["status"],
+                        task["title"],
+                        task["milestone_id"],
+                        "blocked" if task.get("blocked") else "-",
                     )
                 )
                 claim_line = _claim_line(store, int(task["id"]), str(task["title"]))
@@ -901,7 +911,13 @@ def _porcelain_show_lines(store: Store, kind: str, full: dict) -> list[str]:
         for entry in full.get("tasks", []):
             task = entry["task"]
             lines.append(
-                porcelain.task_row(task["id"], task["status"], task["title"], task["milestone_id"])
+                porcelain.task_row(
+                    task["id"],
+                    task["status"],
+                    task["title"],
+                    task["milestone_id"],
+                    "blocked" if task.get("blocked") else "-",
+                )
             )
             claim_line = _claim_line(store, int(task["id"]), str(task["title"]))
             if claim_line is not None:
@@ -910,7 +926,13 @@ def _porcelain_show_lines(store: Store, kind: str, full: dict) -> list[str]:
         return lines
     task = full["task"]
     lines.append(
-        porcelain.task_row(task["id"], task["status"], task["title"], task["milestone_id"])
+        porcelain.task_row(
+            task["id"],
+            task["status"],
+            task["title"],
+            task["milestone_id"],
+            "blocked" if task.get("blocked") else "-",
+        )
     )
     claim_line = _claim_line(store, int(task["id"]), str(task["title"]))
     if claim_line is not None:
@@ -1602,6 +1624,45 @@ def _cmd_task_start(store: Store, args: argparse.Namespace, actor: str) -> int:
     return 0
 
 
+def _cmd_task_block(store: Store, args: argparse.Namespace, actor: str) -> int:
+    if store.get_task(args.id) is None:
+        print(msg_not_found("task", args.id), file=sys.stderr)
+        return 1
+    try:
+        task = services.block_task(store, args.id, args.reason, actor=actor)
+    except KeyError:
+        print(msg_not_found("task", args.id), file=sys.stderr)
+        return 1
+    except ValueError as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 2
+    if args.json:
+        return _emit(args, {"task": _ser(vars(task))})
+    if porcelain.enabled(args):
+        print(_porcelain_row(store, task))
+    else:
+        print(f"blocked T{task.id}: {task.blocked_reason}")
+    return 0
+
+
+def _cmd_task_unblock(store: Store, args: argparse.Namespace, actor: str) -> int:
+    if store.get_task(args.id) is None:
+        print(msg_not_found("task", args.id), file=sys.stderr)
+        return 1
+    try:
+        task = services.unblock_task(store, args.id, actor=actor)
+    except (KeyError, ValueError) as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 2
+    if args.json:
+        return _emit(args, {"task": _ser(vars(task))})
+    if porcelain.enabled(args):
+        print(_porcelain_row(store, task))
+    else:
+        print(f"unblocked T{task.id}")
+    return 0
+
+
 def _cmd_task_finish(store: Store, args: argparse.Namespace, actor: str) -> int:
     if store.get_task(args.id) is None:
         print(msg_not_found("task", args.id), file=sys.stderr)
@@ -1962,6 +2023,8 @@ _GROUP_CMDS: dict[tuple[str, str], str] = {
     ("task", "delete"): "delete",
     ("task", "start"): "task-start",
     ("task", "finish"): "task-finish",
+    ("task", "block"): "task-block",
+    ("task", "unblock"): "task-unblock",
     ("criterion", "add"): "add-criteria",
     ("criterion", "list"): "criteria",
     ("criterion", "tick"): "check",
@@ -2018,6 +2081,8 @@ _COMMANDS: dict[str, Callable[[Store, argparse.Namespace, str], int]] = {
     "pr-refresh": _cmd_pr_refresh,
     "task-start": _cmd_task_start,
     "task-finish": _cmd_task_finish,
+    "task-block": _cmd_task_block,
+    "task-unblock": _cmd_task_unblock,
     "link-repo": _cmd_link_repo,
     "unlink-repo": _cmd_unlink_repo,
     "repos": _cmd_repos,

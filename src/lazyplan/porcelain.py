@@ -118,9 +118,9 @@ def milestone_row(
     return row("milestone", milestone_id, status, title, f"plan:{field(plan_id)}", progress)
 
 
-def task_row(task_id: Any, status: Any, title: Any, milestone_id: Any) -> str:
-    """A task row: the owning milestone in parent."""
-    return row("task", task_id, status, title, f"milestone:{field(milestone_id)}", "-")
+def task_row(task_id: Any, status: Any, title: Any, milestone_id: Any, extra: Any = "-") -> str:
+    """A task row: the owning milestone in parent, blocked marker in extra."""
+    return row("task", task_id, status, title, f"milestone:{field(milestone_id)}", extra)
 
 
 def text_row(kind: Any, text: Any) -> str:

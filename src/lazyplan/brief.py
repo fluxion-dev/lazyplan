@@ -57,7 +57,9 @@ def _plan_brief(
 ) -> dict:
     tasks = _tasks(store, plan)
     doing = [task for task in tasks if task.status == Status.DOING]
-    next_task = next((task for task in tasks if task.status == Status.TODO), None)
+    next_task = next(
+        (task for task in tasks if task.status == Status.TODO and not task.blocked), None
+    )
     criteria = [
         {"kind": "plan", "id": plan.id, "text": item.text}
         for item in store.open_criteria("plan", plan.id)

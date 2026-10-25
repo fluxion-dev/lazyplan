@@ -522,6 +522,11 @@ def build_parser() -> argparse.ArgumentParser:
     _a.add_argument("--to", choices=[v.value for v in Status], required=True, help="new status")
     _a = _actions.add_parser("delete", help="delete a task", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="task id")
+    _a = _actions.add_parser("block", help="block a task and record the reason", parents=[common])
+    _a.add_argument("--id", type=int, required=True, metavar="ID", help="task id")
+    _a.add_argument("--reason", required=True, metavar="TEXT", help="why the task is blocked")
+    _a = _actions.add_parser("unblock", help="clear a task's blocked flag", parents=[common])
+    _a.add_argument("--id", type=int, required=True, metavar="ID", help="task id")
     _a = _actions.add_parser("start", help="record an existing branch on a task", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="task id")
     _a.add_argument(

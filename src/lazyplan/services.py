@@ -266,6 +266,39 @@ def claim_next(
     return start_claim(store, task.id, actor, ttl=ttl, note=note)
 
 
+def block_task(store: Store, task_id: int, reason: str, actor: str = "human") -> Task:
+    """Block a task, release its lease, and record the reason as a note."""
+    task = store.get_task(task_id)
+    if task is None:
+        raise KeyError(f"task #{task_id} not found")
+    if task.status == Status.DONE:
+        raise ValueError("cannot block a done task")
+    if not reason.strip():
+        raise ValueError("blocking a task needs a reason")
+    if store.get_claim(task_id) is not None:
+        store.release_claim(task_id, actor, force=True)
+    updated = store.set_blocked(task_id, True, reason, actor=actor)
+    if updated is None:
+        raise KeyError(f"task #{task_id} not found")
+    if task.status == Status.DOING:
+        set_status(store, "task", task_id, Status.TODO, actor=actor)
+        updated = store.get_task(task_id) or updated
+    store.add_note("task", task_id, f"Blocked: {reason.strip()}", actor=actor)
+    return updated
+
+
+def unblock_task(store: Store, task_id: int, actor: str = "human") -> Task:
+    """Clear the blocked flag and leave the task in the todo pool."""
+    task = store.get_task(task_id)
+    if task is None:
+        raise KeyError(f"task #{task_id} not found")
+    updated = store.set_blocked(task_id, False, "", actor=actor)
+    if updated is None:
+        raise KeyError(f"task #{task_id} not found")
+    store.add_note("task", task_id, "Unblocked", actor=actor)
+    return updated
+
+
 def _norm_path(path: str) -> str:
     """Absolute normalized path for repo comparisons."""
     try:
@@ -1600,6 +1633,13 @@ def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]
                     actor=actor,
                 )
                 _apply_status("task", nt.id, tp.get("status", ""))
+                if tp.get("blocked"):
+                    store.set_blocked(
+                        nt.id,
+                        True,
+                        str(tp.get("blocked_reason", "") or "blocked (imported)"),
+                        actor=actor,
+                    )
                 counts["tasks"] += 1
                 _import_criteria("task", nt.id, tentry.get("criteria", []))
                 _import_notes("task", nt.id, tentry.get("notes", []))

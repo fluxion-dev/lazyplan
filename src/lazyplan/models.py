@@ -49,6 +49,8 @@ class Task:
     title: str
     status: Status = Status.TODO
     description: str = ""  # details / context for whoever picks this up
+    blocked: bool = False
+    blocked_reason: str = ""
 
     def __post_init__(self) -> None:
         if not self.title.strip():

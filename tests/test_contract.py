@@ -76,15 +76,17 @@ class ContractCase(unittest.TestCase):
 
     def test_skill_teaches_the_same_loop(self):
         text = skills.render_skill()
-        self.assertIn("lpui brief", text)
-        self.assertIn("lpui audit --since 7.days", text)
+        self.assertIn("lpui --porcelain brief", text)
+        self.assertIn("lpui --porcelain audit --since 7.days", text)
+        self.assertIn("LAZYPLAN_PORCELAIN", text)
+        self.assertIn("kind<TAB>id<TAB>status", text)
         self.assertNotIn("lpui init", text)
 
     def test_home_pointer_names_the_resolved_database(self):
         db = self.home / ".lazyplan/lazyplan.db"
         snippet = skills.render_home_agents_snippet(db)
         self.assertIn(str(db), snippet)
-        self.assertIn("lpui brief", snippet)
+        self.assertIn("lpui --porcelain brief", snippet)
         self.assertNotIn(".agents/lazyplan/lazyplan.db", snippet)
 
     def test_every_host_gets_the_same_task_and_next_step(self):

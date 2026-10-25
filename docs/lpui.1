@@ -19,6 +19,9 @@ which database file to use (default: $LAZYPLAN_DB, else \./\.agents/lazyplan/ in
 .B \-\-json
 print output as JSON so scripts and agents can read it
 .TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.TP
 .B \-\-version
 print the installed version and exit
 .TP
@@ -33,6 +36,11 @@ re\-run setup: where plans live, which agents get the skill, and layout review
 .TP
 .B \-\-json
 print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
 .RE
 .RS
 .TP
@@ -99,6 +107,11 @@ print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
 .B \-\-version
 print the installed version and exit
 .RE
@@ -114,6 +127,11 @@ show which database file is in use, the repo root, and how many plans, milestone
 .TP
 .B \-\-json
 print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
 .RE
 .RS
 .TP
@@ -135,6 +153,11 @@ print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
 .B \-\-version
 print the installed version and exit
 .RE
@@ -150,6 +173,11 @@ measure commit linkage, status lag, and criteria gaps
 .TP
 .B \-\-json
 print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
 .RE
 .RS
 .TP
@@ -201,6 +229,11 @@ print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
 .B \-\-version
 print the installed version and exit
 .RE
@@ -221,6 +254,11 @@ read a host lifecycle event and print a reminder
 .TP
 .B \-\-json
 print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
 .RE
 .RS
 .TP
@@ -249,6 +287,11 @@ show plans as summaries (add \-\-tree for the full tree)
 .TP
 .B \-\-json
 print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
 .RE
 .RS
 .TP
@@ -310,6 +353,11 @@ print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
 .B \-\-version
 print the installed version and exit
 .RE
@@ -330,6 +378,11 @@ add, edit, show, list, move, or delete a milestone
 .TP
 .B \-\-json
 print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
 .RE
 .RS
 .TP
@@ -356,6 +409,11 @@ print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
 .B \-\-version
 print the installed version and exit
 .RE
@@ -376,6 +434,11 @@ add, list, tick, untick, or delete an acceptance criterion
 .TP
 .B \-\-json
 print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
 .RE
 .RS
 .TP
@@ -402,6 +465,11 @@ print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
 .B \-\-version
 print the installed version and exit
 .RE
@@ -425,6 +493,11 @@ print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
 .B \-\-version
 print the installed version and exit
 .RE
@@ -445,6 +518,11 @@ legacy alias for `plan add`
 .TP
 .B \-\-json
 print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
 .RE
 .RS
 .TP
@@ -496,6 +574,11 @@ print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
 .B \-\-version
 print the installed version and exit
 .RE
@@ -529,6 +612,11 @@ print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
 .B \-\-version
 print the installed version and exit
 .RE
@@ -559,6 +647,11 @@ legacy alias for `plan|milestone|task edit`
 .TP
 .B \-\-json
 print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
 .RE
 .RS
 .TP
@@ -620,6 +713,11 @@ print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
 .B \-\-version
 print the installed version and exit
 .RE
@@ -650,6 +748,11 @@ legacy alias for `criterion add`
 .TP
 .B \-\-json
 print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
 .RE
 .RS
 .TP
@@ -686,6 +789,11 @@ print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
 .B \-\-version
 print the installed version and exit
 .RE
@@ -714,6 +822,11 @@ print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
 .B \-\-version
 print the installed version and exit
 .RE
@@ -734,6 +847,11 @@ legacy alias for `criterion untick`
 .TP
 .B \-\-json
 print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
 .RE
 .RS
 .TP
@@ -760,6 +878,11 @@ print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
 .B \-\-version
 print the installed version and exit
 .RE
@@ -780,6 +903,11 @@ attach a git commit to a row
 .TP
 .B \-\-json
 print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
 .RE
 .RS
 .TP
@@ -821,6 +949,11 @@ print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
 .B \-\-version
 print the installed version and exit
 .RE
@@ -851,6 +984,11 @@ list the commits attached to a row
 .TP
 .B \-\-json
 print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
 .RE
 .RS
 .TP
@@ -892,6 +1030,11 @@ print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
 .B \-\-version
 print the installed version and exit
 .RE
@@ -927,6 +1070,11 @@ detach a repo checkout from a row
 .TP
 .B \-\-json
 print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
 .RE
 .RS
 .TP
@@ -968,6 +1116,11 @@ print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
 .B \-\-version
 print the installed version and exit
 .RE
@@ -998,6 +1151,11 @@ save everything (agents: use \-\-format json)
 .TP
 .B \-\-json
 print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
 .RE
 .RS
 .TP
@@ -1034,6 +1192,11 @@ print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
 .B \-\-version
 print the installed version and exit
 .RE
@@ -1054,6 +1217,11 @@ legacy alias for `<noun> move`
 .TP
 .B \-\-json
 print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
 .RE
 .RS
 .TP
@@ -1090,6 +1258,11 @@ print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
 .B \-\-version
 print the installed version and exit
 .RE
@@ -1105,6 +1278,11 @@ legacy alias for `<noun> delete`
 .TP
 .B \-\-json
 print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
 .RE
 .RS
 .TP
@@ -1133,6 +1311,11 @@ recent activity by you and your agents
 .TP
 .B \-\-json
 print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
 .RE
 .RS
 .TP
@@ -1169,6 +1352,11 @@ print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
 .B \-\-version
 print the installed version and exit
 .RE
@@ -1189,6 +1377,11 @@ print tab\-completions for your shell
 .TP
 .B \-\-json
 print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
 .RE
 .RS
 .TP
@@ -1215,6 +1408,11 @@ print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
 .B \-\-version
 print the installed version and exit
 .RE
@@ -1238,6 +1436,11 @@ print output as JSON so scripts and agents can read it
 .RE
 .RS
 .TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
 .B \-\-version
 print the installed version and exit
 .RE
@@ -1253,6 +1456,11 @@ open the keyboard\-driven screen (this runs when you give no command)
 .TP
 .B \-\-json
 print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
 .RE
 .RS
 .TP
@@ -1283,6 +1491,9 @@ lpui import --file backup.json
 .TP
 .B LAZYPLAN_DB
 Which database file to use (same as --db).
+.TP
+.B LAZYPLAN_PORCELAIN
+Print terse tab-separated rows for active agents; --json still wins.
 .TP
 .B LAZYPLAN_NO_SETUP
 Skip first-run setup and upgrade review when set.

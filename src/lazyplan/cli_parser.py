@@ -31,6 +31,8 @@ examples:
   lpui plan list                         show plans as summaries with progress
   lpui plan list --tree                  show the full plan/milestone/task tree
   lpui plan list --status doing
+  lpui --porcelain plan list --tree      stable tab-separated rows for an active agent
+  lpui --porcelain task add --milestone 1 --title "Do X" --desc "approach"
   lpui plan show --id 1                  show one row with its why, what, checklist, and children
   lpui --actor alice plan add --title "API v2" --why ".." --what ".."
   lpui --actor alice criterion add --kind plan --id 1 --text "Works offline"
@@ -71,7 +73,8 @@ github: pr verbs read cached pull requests; only pr refresh calls GitHub.
 
 flags work before or after the command (`lpui list --json` means the same as
 `lpui --json list`). On commands that change data, `--actor NAME` records who
-did it, and you can see it in `feed`.
+did it, and you can see it in `feed`. `--porcelain` prints one tab-separated
+row per record for active agents; `--json` wins when both are set.
 
 workflow: starting a plan? Ask the human what to build, why it matters,
   and how to tell it is done. Save that as the plan. Then break it into
@@ -79,6 +82,7 @@ workflow: starting a plan? Ask the human what to build, why it matters,
 
 environment:
   LAZYPLAN_DB       which database file to use (same as --db)
+  LAZYPLAN_PORCELAIN  print porcelain rows (1/true/yes/on)
   LAZYPLAN_NO_SETUP skip first-run setup and upgrade review
   LAZYPLAN_NO_SPINNER freeze the TUI doing spinner
   NO_COLOR          plain setup output (also CLICOLOR=0 and TERM=dumb)
@@ -132,6 +136,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--json", action="store_true", help="print output as JSON so scripts and agents can read it"
     )
+    p.add_argument(
+        "--porcelain",
+        action="store_true",
+        help="print terse tab-separated rows for active agents (--json still wins)",
+    )
     p.add_argument("--version", action="store_true", help="print the installed version and exit")
     p.add_argument(
         "--actor",
@@ -150,6 +159,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         default=argparse.SUPPRESS,
         help="print output as JSON so scripts and agents can read it",
+    )
+    common.add_argument(
+        "--porcelain",
+        action="store_true",
+        default=argparse.SUPPRESS,
+        help="print terse tab-separated rows for active agents (--json still wins)",
     )
     common.add_argument(
         "--version",

@@ -49,8 +49,11 @@ is the whole model — no dates, owners, labels, or estimates.
 
 Pass `--actor <name>` on every write so the human sees who did what in
 `lpui feed` (e.g. `lpui --actor opencode task add ...`). Reads don't need it.
-`--actor` and `--json` work before or after the verb
-(`lpui list --json` == `lpui --json list`).
+`--actor`, `--porcelain`, and `--json` work before or after the verb
+(`lpui list --json` == `lpui --json list`). In an active loop, pass
+`--porcelain`: writes answer with one tab-separated row and overview reads
+stay glyph-free. `--json` wins when both are present; use it only when you
+need fields porcelain does not carry.
 
 ## DB scoping (first match wins)
 
@@ -250,12 +253,17 @@ Walk the human through every milestone and task, make last edits on the spot, an
 Update the journal as you go, not at the end:
 
 ```bash
-lpui brief                              # active plan, doing task, next todo, loose commits
-lpui task move --id T --to doing        # before writing code
-lpui link --kind task --id T            # after each commit (or `task finish`)
-lpui task move --id T --to done         # when the task's slice is complete
-lpui audit --since 7.days               # coverage, lag, and criteria gaps at the end
+lpui --porcelain brief                        # active plan, doing task, next todo, loose commits
+lpui --actor T --porcelain task move --id T --to doing   # before writing code
+lpui --actor T --porcelain link --kind task --id T       # after each commit (or `task finish`)
+lpui --actor T --porcelain task move --id T --to done    # when the task's slice is complete
+lpui --porcelain audit --since 7.days                    # coverage, lag, and criteria gaps at the end
 ```
+
+Porcelain rows are `kind<TAB>id<TAB>status<TAB>title<TAB>parent<TAB>extra`.
+Parse them by splitting on tabs; never scrape the human text. Set
+`LAZYPLAN_PORCELAIN=1` for a whole agent session instead of passing the flag
+on every call. Reach for `--json` only when you need full-fidelity fields.
 
 - Never batch a whole plan or milestone into one commit; link each green commit to its task.
 - Tick task and plan criteria as they are proven, before closing the row.
@@ -265,18 +273,20 @@ lpui audit --since 7.days               # coverage, lag, and criteria gaps at th
 ## Read first
 
 ```bash
-lpui list [--status todo|doing|done|all] [--archived] [--plan ID]  # tree (default: all)
-lpui brief                                                       # active plan + next update
-lpui audit --since 7.days                                        # accuracy metrics
-lpui plan show --id N                                            # full context
-lpui feed --limit 20                                                 # recent activity
+lpui --porcelain list --tree [--status todo|doing|done|all]      # plan/milestone/task rows
+lpui --porcelain brief                                                       # active plan + next update
+lpui --porcelain audit --since 7.days                                        # accuracy metrics
+lpui --porcelain plan show --id N                                            # definition + criteria + children
+lpui --porcelain feed --limit 20                                                 # recent activity
 lpui export --format json                                            # full dump when you need everything
 lpui export --format markdown --plan ID [--file out.md]              # one full-fidelity plan doc
 lpui info                                                            # resolved db path + counts (scope debugging)
 lpui reconcile                                                       # recompute parent statuses from children
 ```
 
-Add `--json` for machine-parseable output (`lpui list --json`).
+Use `--porcelain` for the active loop: one tab-separated row per record with
+no glyphs or provenance noise. Use `--json` when you need full fidelity
+(`lpui list --json`).
 
 ## Templates (per-repo creation defaults)
 
@@ -396,9 +406,10 @@ Repo plan of record: plans > milestones > tasks in `.agents/lazyplan/lazyplan.db
 Human watches `lpui ui`; agents work via the CLI with `--actor <name>`.
 
 - New plan? Interview the human first: vision, scope in and out, deliverables, constraints, metrics, acceptance criteria. Scout the codebase during the interview.
-- Read: `lpui list`, `lpui brief`, `lpui plan show --id N`, `lpui audit --since 7.days`, `lpui feed --limit 20` (`--json` for parsing)
+- Read: `lpui --porcelain list --tree`, `lpui --porcelain brief`, `lpui --porcelain plan show --id N`, `lpui --porcelain audit --since 7.days`, `lpui --porcelain feed --limit 20` (`--json` for full fidelity)
+- Porcelain rows are `kind<TAB>id<TAB>status<TAB>title<TAB>parent<TAB>extra`; parse by tabs, not by scraping text. Set `LAZYPLAN_PORCELAIN=1` for a whole session.
 - Write (full CRUD): `lpui plan|milestone|task add`, `... edit`, `... move`, `... delete`; `lpui criterion add|tick|untick|delete` (all with `--actor <name>`)
-- During execution: mark the task doing before code; after each commit link it (`lpui link --kind task --id T` or `task finish`) and move the row; finish with `lpui audit --since 7.days` and tick criteria with evidence.
+- During execution: mark the task doing before code; after each commit link it with `lpui --porcelain link --kind task --id T` (or `task finish`) and move the row; finish with `lpui --porcelain audit --since 7.days` and tick criteria with evidence.
 - Lifecycle hooks are read-only; they remind, never move work or write to the database.
 - Milestones read As a/I want/so that with Given-When-Then criteria; tasks start with a verb and carry a DoD checklist; cut both from scouted ground only
 - Scout before creating anything — no row from unscouted ground; scope lists what is in and out explicitly
@@ -592,11 +603,13 @@ def render_home_agents_snippet(db: Path) -> str:
 Plan of record: `{db}` (shared home). Human watches `lpui ui`; agents work
 through the CLI with `--actor <name>`.
 
-- Start a session with `lpui brief`; it names the doing task and the next todo.
+- Start a session with `lpui --porcelain brief`; it names the doing task and the next todo.
+- Use `--porcelain` in the active loop: one tab-separated row per record with
+  no glyphs; `--json` wins when you need full fidelity.
 - Move the task doing before code; after each commit, link it with
-  `lpui link --kind task --id T` (or `lpui task finish`), then move it on.
-- Run `lpui audit --since 7.days` before closing a plan, and tick criteria only
-  with evidence.
+  `lpui --porcelain link --kind task --id T` (or `lpui task finish`), then move it on.
+- Run `lpui --porcelain audit --since 7.days` before closing a plan, and tick
+  criteria only with evidence.
 - Lifecycle hooks are read-only; they remind, never move work.
 """
     return body

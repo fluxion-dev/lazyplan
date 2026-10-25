@@ -59,9 +59,9 @@ class PointerCase(unittest.TestCase):
     def test_pointer_names_brief_and_the_home_database(self):
         self._setup("--agents-pointer")
         text = (self.repo / "AGENTS.md").read_text()
-        self.assertIn("lpui brief", text)
+        self.assertIn("lpui --porcelain brief", text)
         self.assertIn(str(self.home / ".lazyplan/lazyplan.db"), text)
-        self.assertIn("lpui audit --since 7.days", text)
+        self.assertIn("lpui --porcelain audit --since 7.days", text)
         self.assertFalse((self.repo / ".agents/lazyplan").exists())
         self.assertTrue(setup.load_state(self.home).agents_pointer)
 
@@ -70,7 +70,7 @@ class PointerCase(unittest.TestCase):
         agents.write_text("# Agent instructions\n\nUser rules.\n")
         self._setup("--agents-pointer")
         self.assertIn("User rules.", agents.read_text())
-        self.assertIn("lpui brief", agents.read_text())
+        self.assertIn("lpui --porcelain brief", agents.read_text())
         self._setup("--no-agents-pointer")
         self.assertIn("User rules.", agents.read_text())
         self.assertNotIn("lpui brief", agents.read_text())

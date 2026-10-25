@@ -106,9 +106,10 @@ TEMPLATE_EXAMPLE_ARGV = [
 TEMPLATE_FRAGMENTS = [
     "--actor",
     "--json",
-    "lpui list",
-    "lpui plan show --id N",
-    "lpui feed --limit 20",
+    "--porcelain",
+    "lpui --porcelain list",
+    "lpui --porcelain plan show --id N",
+    "lpui --porcelain feed --limit 20",
     "lpui export --format json",
     "lpui info",
     "plan add --title",
@@ -209,8 +210,8 @@ class TestTemplateParity(unittest.TestCase):
     def test_execution_loop_names_the_commands(self):
         text = skills.render_skill()
         self.assertIn("## During execution", text)
-        self.assertIn("lpui brief", text)
-        self.assertIn("lpui audit --since 7.days", text)
+        self.assertIn("lpui --porcelain brief", text)
+        self.assertIn("lpui --porcelain audit --since 7.days", text)
         self.assertIn("read-only", text)
 
     def test_snippet_teaches_nothing_the_skill_does_not(self):

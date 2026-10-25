@@ -67,16 +67,21 @@ lpui feed                         # recent activity
 
 ## For your agent
 
-The command line reads and writes the same plan, with JSON and clear exit codes:
+The command line reads and writes the same plan, with porcelain rows, JSON, and
+clear exit codes:
 
 ```bash
-lpui --actor helper task add --milestone 1 --title "Draft proposal"
+lpui --actor helper --porcelain task add --milestone 1 --title "Draft proposal"
+lpui --actor helper --porcelain list --tree
 lpui --actor helper list --json
 ```
 
-Start with `lpui brief` to see the active task and the next step. After each
-commit, link it and move the task. `lpui audit --since 7.days --strict` turns
-the three accuracy metrics into a CI gate. `lpui setup` installs read-only
+Use `--porcelain` in an active loop: writes answer with one tab-separated row
+and reads stay glyph-free. Use `--json` when you need full fidelity.
+
+Start with `lpui --porcelain brief` to see the active task and the next step.
+After each commit, link it and move the task. `lpui audit --since 7.days --strict`
+turns the three accuracy metrics into a CI gate. `lpui setup` installs read-only
 lifecycle hooks for detected agents; `lpui setup --no-hooks` removes them.
 
 The first run installs the agent skill. `lpui setup --placement repo` generates the full contract in the repo.

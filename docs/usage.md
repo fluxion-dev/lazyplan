@@ -195,7 +195,8 @@ lpui feed                         # recent activity
 ```
 
 Flags work before or after the command: `lpui list --json` is the same as
-`lpui --json list`.
+`lpui --json list`. `--porcelain` switches journal commands to stable
+tab-separated rows; `--json` wins when both are present.
 
 ## The screen
 
@@ -225,13 +226,14 @@ next criterion, Delete selection.
 
 ## Agents
 
-Every command accepts `--json`. Writes accept `--actor NAME`; the default is
-`$USER`. The activity feed shows who changed what.
+Every command accepts `--json`. Journal commands also accept `--porcelain` for
+the active loop. Writes accept `--actor NAME`; the default is `$USER`. The
+activity feed shows who changed what.
 
 ```bash
-lpui --actor helper list --json
+lpui --actor helper --porcelain task add --milestone 1 --title "Draft proposal"
+lpui --actor helper --porcelain list --tree
 lpui --actor helper plan show --id 1
-lpui --actor helper task add --milestone 1 --title "Draft proposal"
 lpui feed --json --follow
 ```
 
@@ -251,12 +253,54 @@ Your agent is expected to work from the plan, not invent it:
   trailer is required. These rules apply to new plans; existing plans are
   not rewritten.
 - Write rows for scanning: short paragraphs and sections, no placeholder text.
-- Start a session with `lpui brief`; update the journal after each commit, then
-  run `lpui audit --since 7.days` before closing a plan. Lifecycle hooks remind
-  you, but they are read-only.
+- Start a session with `lpui --porcelain brief`; update the journal after each
+  commit, then run `lpui --porcelain audit --since 7.days` before closing a
+  plan. Lifecycle hooks remind you, but they are read-only.
 
 `lpui setup --placement repo` writes the full contract into the repo; the
 default setup installs the skill into each detected agent's own folder.
+
+### Porcelain output
+
+`--porcelain` (or `LAZYPLAN_PORCELAIN=1` for a whole session) switches journal
+commands to stable tab-separated rows. Writes answer with one line; overview
+and `show` reads keep their facts without glyphs, indentation, repos, commits,
+or PR decoration. `--json` wins when both flags are present.
+
+Every row has the same six columns, in this order, with no header:
+
+| column | meaning |
+| --- | --- |
+| `kind` | record type: `plan`, `milestone`, `task`, `criterion`, `commit`, `repo`, `pr`, or a read record |
+| `id` | row id, SHA, path, PR number, or key |
+| `status` | lifecycle status, link state, or read-specific state |
+| `title` | human name, subject, path, or value |
+| `parent` | `-` or `kind:id` of the owning row |
+| `extra` | task progress `done/total` for plans and milestones, otherwise `-` or a documented detail |
+
+Tabs and newlines inside text become spaces, so one record always stays on one
+line. Fields are never truncated.
+
+```bash
+lpui --actor helper --porcelain plan add --title "API v2" --why ".." --what ".."
+lpui --actor helper --porcelain criterion add --kind plan --id 1 --text "Works offline"
+lpui --actor helper --porcelain milestone add --plan 1 --title "Feature Y" --desc ".."
+lpui --actor helper --porcelain task add --milestone 1 --title "Do X" --desc ".."
+lpui --actor helper --porcelain task move --id 2 --to doing
+lpui --porcelain list --tree
+lpui --porcelain plan show --id 1
+```
+
+```text
+plan	1	doing	API v2	-	0/1
+milestone	1	doing	Feature Y	plan:1	0/1
+task	2	doing	Do X	milestone:1	-
+```
+
+`show` keeps why, what, desc, criteria, and children; it omits linked repos,
+commits, and pull requests. Use `--json` when you need those full records.
+The record families for brief, audit, feed, info, commits, repos, git status,
+git scan, and PR reads are documented in `src/lazyplan/porcelain.py`.
 
 ### Session brief and accuracy audit
 
@@ -264,7 +308,7 @@ Start a session with the brief, update after each commit, and close with the
 audit:
 
 ```bash
-lpui brief                        # active plan, doing task, next task, loose commits
+lpui --porcelain brief            # active plan, doing task, next task, loose commits
 lpui brief --json                 # same facts for a hook or script
 lpui audit --plan 12              # see the three accuracy metrics for one plan
 lpui audit --since 7.days         # recent window across active plans
@@ -320,8 +364,13 @@ Then check the host's own hook log or trust screen.
 
 ## Reference
 
+Journal commands accept `--porcelain` for the rows shown above; the examples
+below omit it for readability except where the mode is the point.
+
 ```bash
 lpui seed
+lpui --porcelain list --tree          # stable rows for the active loop
+lpui --porcelain plan show --id 1
 lpui list [--tree] [--status todo|doing|done|all] [--archived] [--plan ID] [--all] [--limit N]
 lpui plan list
 lpui plan show --id 1

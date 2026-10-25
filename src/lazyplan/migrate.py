@@ -29,6 +29,15 @@ CREATE TABLE IF NOT EXISTS tasks (
     status TEXT NOT NULL DEFAULT 'todo',
     description TEXT NOT NULL DEFAULT ''
 );
+CREATE TABLE IF NOT EXISTS task_claims (
+    task_id INTEGER PRIMARY KEY REFERENCES tasks(id) ON DELETE CASCADE,
+    actor TEXT NOT NULL,
+    note TEXT NOT NULL DEFAULT '',
+    started_at REAL NOT NULL,
+    expires_at REAL NOT NULL,
+    renewed_at REAL NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_task_claims_expires ON task_claims(expires_at);
 CREATE TABLE IF NOT EXISTS criteria (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     parent_kind TEXT NOT NULL CHECK (parent_kind IN ('plan', 'milestone', 'task')),

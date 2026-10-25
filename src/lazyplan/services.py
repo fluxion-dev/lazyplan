@@ -1281,6 +1281,7 @@ def export_all(store: Store) -> dict:
         for s in store.list_milestones(p.id):
             tasks = []
             for t in store.list_tasks(s.id):
+                claim = store.get_claim(t.id)
                 tasks.append(
                     {
                         "task": _ser(vars(t)),
@@ -1288,6 +1289,7 @@ def export_all(store: Store) -> dict:
                         "links": [vars(c) for c in store.list_links("task", t.id)],
                         "forge_links": [vars(c) for c in store.list_forge_links("task", t.id)],
                         "repos": store.list_repos("task", t.id),
+                        "claim": vars(claim) if claim is not None else None,
                     }
                 )
             milestones.append(
@@ -1338,6 +1340,7 @@ def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]
         "links": 0,
         "repos": 0,
         "forge_links": 0,
+        "claims": 0,
     }
 
     def _apply_status(kind: str, obj_id: int, status: str) -> None:
@@ -1422,6 +1425,23 @@ def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]
                 continue
             counts["forge_links"] += 1
 
+    def _import_claim(task_id: int, item: object) -> None:
+        if not isinstance(item, dict):
+            return
+        try:
+            restored = store.restore_claim(
+                task_id,
+                str(item.get("actor", "") or "human"),
+                float(item.get("started_at", 0) or 0),
+                float(item.get("expires_at", 0) or 0),
+                float(item.get("renewed_at", 0) or 0),
+                str(item.get("note", "") or ""),
+            )
+        except (ValueError, TypeError):
+            return
+        if restored:
+            counts["claims"] += 1
+
     for entry in data.get("plans", []):
         p = entry["plan"]
         np = store.add_plan(
@@ -1464,6 +1484,7 @@ def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]
                 _import_links("task", nt.id, tentry.get("links", []))
                 _import_forge_links("task", nt.id, tentry.get("forge_links", []))
                 _import_repos("task", nt.id, tentry.get("repos", []))
+                _import_claim(nt.id, tentry.get("claim"))
         # Milestones landed after the plan's own status: recompute it.
         heal(store, "plan", np.id, actor)
     return counts

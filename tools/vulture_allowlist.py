@@ -74,6 +74,10 @@ _.files
 _.unlink_forge
 _.cache_get
 _.cache_put
+_.claim_task
+_.renew_claim
+_.release_claim
+_.list_claims
 GitHubClient
 _.pulls_for_commit
 _.pull

@@ -55,6 +55,22 @@ class Task:
             raise ValueError("task title must not be empty")
 
 
+@dataclass(frozen=True)
+class Claim:
+    """A time-limited lease on a task, held by one actor."""
+
+    task_id: int
+    actor: str
+    started_at: float
+    expires_at: float
+    renewed_at: float = 0.0
+    note: str = ""
+
+    def expired(self, now: float) -> bool:
+        """True when the lease is no longer active at `now`."""
+        return self.expires_at <= now
+
+
 @dataclass
 class Milestone:
     """A slice of a plan, broken into tasks."""

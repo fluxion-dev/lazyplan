@@ -17,7 +17,7 @@ from .forge import AuthStatus, Forge, RepoRef, detect_forge, parse_pull_url, res
 from .github import GitHubClient, GitHubError
 from .kinds import check_kind
 from .models import Claim, Milestone, Plan, Status, Task
-from .store import CLAIM_DEFAULT_TTL, Store, _ser
+from .store import CLAIM_DEFAULT_TTL, ClaimConflict, Store, _ser
 from .templates import apply_template, template_criteria
 from .vcs import CommitInfo, RepoStatus, VCSBackend, detect_backend, origin_url
 
@@ -257,13 +257,19 @@ def claim_next(
     note: str = "",
     suggest: bool = False,
 ) -> dict | None:
-    """Select and optionally claim the first eligible todo."""
-    task = store.next_claimable_task(plan_id)
-    if task is None:
-        return None
-    if suggest:
-        return {"claim": None, "task": _ser(vars(task)), "previous": None}
-    return start_claim(store, task.id, actor, ttl=ttl, note=note)
+    """Select and optionally claim the first eligible todo, retrying lost races."""
+    for _ in range(100):
+        task = store.next_claimable_task(plan_id)
+        if task is None:
+            return None
+        if suggest:
+            return {"claim": None, "task": _ser(vars(task)), "previous": None}
+        try:
+            return start_claim(store, task.id, actor, ttl=ttl, note=note)
+        except ClaimConflict:
+            # Another process claimed this task between selection and claim.
+            continue
+    return None
 
 
 def block_task(store: Store, task_id: int, reason: str, actor: str = "human") -> Task:

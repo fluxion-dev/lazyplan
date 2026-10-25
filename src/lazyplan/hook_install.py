@@ -10,48 +10,12 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import skills
+from . import hook_hosts, skills
 from .setup_layout import _backup_file, _new_backup_dir
 
 HOSTS = ("opencode", "claude", "gemini", "codex", "cursor")
 MARKER = "lpui hook"
 PLUGIN_NAME = "lazyplan.js"
-
-_NESTED = {
-    "claude": {
-        "SessionStart": "session-start",
-        "UserPromptSubmit": "prompt-submit",
-        "PostToolUse": "post-tool",
-        "Stop": "stop",
-        "PreCompact": "pre-compact",
-    },
-    "gemini": {
-        "SessionStart": "session-start",
-        "BeforeAgent": "prompt-submit",
-        "AfterTool": "post-tool",
-        "AfterAgent": "stop",
-        "PreCompress": "pre-compact",
-    },
-    "codex": {
-        "SessionStart": "session-start",
-        "UserPromptSubmit": "prompt-submit",
-        "PostToolUse": "post-tool",
-        "Stop": "stop",
-        "PreCompact": "pre-compact",
-    },
-}
-
-_FLAT = {
-    "cursor": {
-        "sessionStart": "session-start",
-        "beforeSubmitPrompt": "prompt-submit",
-        "postToolUse": "post-tool",
-        "stop": "stop",
-        "preCompact": "pre-compact",
-    },
-}
-
-_MATCHERS = {"PostToolUse": "Bash", "AfterTool": "run_shell_command"}
 
 
 @dataclass(frozen=True)
@@ -95,10 +59,10 @@ def _managed(entry: object, host: str) -> bool:
 
 def _nested_entries(host: str) -> dict[str, list[dict]]:
     out: dict[str, list[dict]] = {}
-    for native, event in _NESTED[host].items():
+    for event, native in hook_hosts.EVENTS[host].items():
         out[native] = [
             {
-                "matcher": _MATCHERS.get(native, "*"),
+                "matcher": hook_hosts.MATCHERS.get(native, "*"),
                 "hooks": [{"type": "command", "command": command(host, event)}],
             }
         ]
@@ -106,7 +70,10 @@ def _nested_entries(host: str) -> dict[str, list[dict]]:
 
 
 def _flat_entries(host: str) -> dict[str, list[dict]]:
-    return {native: [{"command": command(host, event)}] for native, event in _FLAT[host].items()}
+    return {
+        native: [{"command": command(host, event)}]
+        for event, native in hook_hosts.EVENTS[host].items()
+    }
 
 
 def _merge_nested(data: dict, host: str) -> dict:

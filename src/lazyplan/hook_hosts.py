@@ -10,7 +10,7 @@ import json
 
 from .hooks import HookResult
 
-_EVENTS: dict[str, dict[str, str]] = {
+EVENTS: dict[str, dict[str, str]] = {
     "claude": {
         "session-start": "SessionStart",
         "prompt-submit": "UserPromptSubmit",
@@ -49,9 +49,12 @@ _EVENTS: dict[str, dict[str, str]] = {
 }
 
 
+MATCHERS = {"PostToolUse": "Bash", "AfterTool": "run_shell_command"}
+
+
 def event_name(host: str, event: str) -> str:
     """Native event name for one host; canonical name when unknown."""
-    return _EVENTS.get(host, {}).get(event, event)
+    return EVENTS.get(host, {}).get(event, event)
 
 
 def payload(host: str, event: str, result: HookResult) -> dict:

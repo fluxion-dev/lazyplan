@@ -786,6 +786,7 @@ if _TEXTUAL_OK:
             forge_map: dict,
             vcs_map: dict,
             source_stats: dict,
+            claims_map: dict,
         ) -> None:
             """Create plan/milestone/task nodes for one refresh."""
             for plan, milestones in filtered:
@@ -847,6 +848,9 @@ if _TEXTUAL_OK:
                             pr_checks=pr.checks if pr else "",
                             stale=any(link.stale for link in task_links),
                             repo_count=task_stats[3] if task_stats else 0,
+                            claim_actor=(
+                                claims_map[task.id].actor if task.id in claims_map else ""
+                            ),
                         )
                         leaf = milestone_node.add_leaf(
                             task_text,
@@ -954,6 +958,7 @@ if _TEXTUAL_OK:
                 self.store.forge_links_map(),
                 self.store.vcs_links_map(),
                 self._source_stats(),
+                self.store.claims_map(),
             )
             tree.root.expand()
             self._collapsed &= set(self._row_nodes)

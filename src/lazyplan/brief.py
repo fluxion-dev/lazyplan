@@ -36,6 +36,15 @@ def _tasks(store: Store, plan: Plan) -> list[Task]:
     return out
 
 
+def _doing(store: Store, task: Task) -> dict:
+    """Doing-task brief entry with its claim when one exists."""
+    entry: dict = {"id": task.id, "title": task.title}
+    claim = store.get_claim(task.id)
+    if claim is not None:
+        entry["claim"] = vars(claim)
+    return entry
+
+
 def _plan_brief(
     store: Store,
     plan: Plan,
@@ -65,7 +74,7 @@ def _plan_brief(
         "id": plan.id,
         "title": plan.name,
         "status": plan.status.value,
-        "doing": [{"id": task.id, "title": task.title} for task in doing],
+        "doing": [_doing(store, task) for task in doing],
         "next": ({"id": next_task.id, "title": next_task.title} if next_task is not None else None),
         "criteria": criteria[:_MAX_GAPS],
         "unlinked": [
@@ -98,7 +107,9 @@ def lines(payload: dict) -> list[str]:
     for plan in plans:
         out.append(f"P{plan['id']} {plan['title']} ({plan['status']})")
         for task in plan["doing"]:
-            out.append(f"  doing    T{task['id']} {task['title']}")
+            claim = task.get("claim")
+            suffix = f" @{claim['actor']}" if claim else ""
+            out.append(f"  doing    T{task['id']} {task['title']}{suffix}")
         if not plan["doing"]:
             out.append("  doing    none")
         next_task = plan["next"]

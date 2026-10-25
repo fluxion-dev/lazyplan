@@ -481,6 +481,12 @@ class Store:
             row = conn.execute("SELECT * FROM task_claims WHERE task_id=?", (task_id,)).fetchone()
         return self._row_to_claim(row) if row is not None else None
 
+    def claims_map(self) -> dict[int, Claim]:
+        """All leases keyed by task id, for one-query tree rendering."""
+        with self._connect() as conn:
+            rows = conn.execute("SELECT * FROM task_claims").fetchall()
+        return {int(row["task_id"]): self._row_to_claim(row) for row in rows}
+
     def list_claims(
         self,
         include_expired: bool = False,
@@ -1373,10 +1379,18 @@ class Store:
         raise ValueError(KIND_ERROR)
 
     # -- export / import (portability) -----------------------------------
+    def _task_view(self, t: Task) -> dict:
+        """Task fields plus any active or expired claim."""
+        data = _ser(vars(t))
+        claim = self.get_claim(t.id)
+        if claim is not None:
+            data["claim"] = vars(claim)
+        return data
+
     def _task_show(self, t: Task) -> dict:
         """Task show payload with direct links and inherited repos."""
         return {
-            "task": _ser(vars(t)),
+            "task": self._task_view(t),
             "criteria": [vars(c) for c in self.list_criteria("task", t.id)],
             "links": [vars(c) for c in self.list_links("task", t.id)],
             "effective_links": [vars(c) for c in self.effective_links("task", t.id)],
@@ -1401,7 +1415,7 @@ class Store:
             "effective_repos": self.effective_repos("milestone", s.id),
             "tasks": [
                 {
-                    "task": _ser(vars(t)),
+                    "task": self._task_view(t),
                     "criteria": [vars(c) for c in self.list_criteria("task", t.id)],
                 }
                 for t in self.list_tasks(s.id)
@@ -1425,7 +1439,7 @@ class Store:
                     "criteria": [vars(c) for c in self.list_criteria("milestone", s.id)],
                     "repos": self.list_repos("milestone", s.id),
                     "effective_repos": self.effective_repos("milestone", s.id),
-                    "tasks": [_ser(vars(t)) for t in self.list_tasks(s.id)],
+                    "tasks": [self._task_view(t) for t in self.list_tasks(s.id)],
                 }
                 for s in self.list_milestones(p.id)
             ],

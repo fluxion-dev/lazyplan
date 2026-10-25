@@ -12,7 +12,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from lazyplan import services  # noqa: E402
+from lazyplan import design, services  # noqa: E402
 from lazyplan.cli import main as lpui_main  # noqa: E402
 from lazyplan.store import Store  # noqa: E402
 
@@ -138,6 +138,30 @@ class TestCoordinationCli(unittest.TestCase):
         self.assertEqual(code, 0, err)
         self.assertIn("T1", out)
         self.assertIn("@alice", out)
+
+    def test_claim_appears_in_show_brief_and_tree(self):
+        self._json("claim", "--id", "1")
+        code, out, err = self._run("--porcelain", "task", "show", "--id", "1")
+        self.assertEqual(code, 0, err)
+        rows = [line.split("\t") for line in out.rstrip("\n").splitlines()]
+        self.assertIn(["claim", "1", "alice", "T1", "task:1", rows[1][5]], rows)
+
+        code, out, err = self._run("--porcelain", "plan", "show", "--id", "1")
+        self.assertEqual(code, 0, err)
+        self.assertIn("claim\t1\talice\tT1\ttask:1\t", out)
+        code, out, err = self._run("--porcelain", "brief", "--plan", "1")
+        self.assertEqual(code, 0, err)
+        self.assertIn("claim\t1\talice\tT1\ttask:1\t", out)
+
+        payload = self._json("brief", "--plan", "1")
+        self.assertEqual(payload["plans"][0]["doing"][0]["claim"]["actor"], "alice")
+        code, out, err = self._run("task", "show", "--id", "1")
+        self.assertEqual(code, 0, err)
+        self.assertIn("claim: @alice", out)
+
+        store = Store(self.db)
+        self.assertIn("@alice", design.task_label(store.get_task(1), store))
+        self.assertIn("@alice", design.task_row(store.get_task(1), claim_actor="alice"))
 
     def test_ttl_parser(self):
         self.assertEqual(services.parse_ttl("30m"), 1800)

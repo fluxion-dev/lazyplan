@@ -784,6 +784,14 @@ def _porcelain_list_lines(
     return lines
 
 
+def _claim_line(store: Store, task_id: int, title: str) -> str | None:
+    """Claim row for a task, or None when it has no lease."""
+    claim = store.get_claim(task_id)
+    if claim is None:
+        return None
+    return porcelain.claim_row(task_id, claim.actor, title, claim.expires_at)
+
+
 def _porcelain_show_lines(store: Store, kind: str, full: dict) -> list[str]:
     """Plain definition rows plus criteria and children; no repo or commit noise."""
     lines: list[str] = []
@@ -809,10 +817,15 @@ def _porcelain_show_lines(store: Store, kind: str, full: dict) -> list[str]:
                 )
             )
             lines.extend(_criterion_dict_rows(entry.get("criteria", [])))
-            lines.extend(
-                porcelain.task_row(task["id"], task["status"], task["title"], task["milestone_id"])
-                for task in entry.get("tasks", [])
-            )
+            for task in entry.get("tasks", []):
+                lines.append(
+                    porcelain.task_row(
+                        task["id"], task["status"], task["title"], task["milestone_id"]
+                    )
+                )
+                claim_line = _claim_line(store, int(task["id"]), str(task["title"]))
+                if claim_line is not None:
+                    lines.append(claim_line)
         return lines
     if kind == "milestone":
         milestone = full["milestone"]
@@ -827,20 +840,22 @@ def _porcelain_show_lines(store: Store, kind: str, full: dict) -> list[str]:
         )
         lines.append(porcelain.text_row("desc", milestone.get("description")))
         lines.extend(_criterion_dict_rows(full.get("criteria", [])))
-        lines.extend(
-            porcelain.task_row(
-                entry["task"]["id"],
-                entry["task"]["status"],
-                entry["task"]["title"],
-                entry["task"]["milestone_id"],
+        for entry in full.get("tasks", []):
+            task = entry["task"]
+            lines.append(
+                porcelain.task_row(task["id"], task["status"], task["title"], task["milestone_id"])
             )
-            for entry in full.get("tasks", [])
-        )
+            claim_line = _claim_line(store, int(task["id"]), str(task["title"]))
+            if claim_line is not None:
+                lines.append(claim_line)
         return lines
     task = full["task"]
     lines.append(
         porcelain.task_row(task["id"], task["status"], task["title"], task["milestone_id"])
     )
+    claim_line = _claim_line(store, int(task["id"]), str(task["title"]))
+    if claim_line is not None:
+        lines.append(claim_line)
     lines.append(porcelain.text_row("desc", task.get("description")))
     lines.extend(_criterion_dict_rows(full.get("criteria", [])))
     return lines
@@ -951,6 +966,9 @@ def _brief_rows(store: Store, payload: dict) -> list[str]:
             model = store.get_task(int(task["id"]))
             if model is not None:
                 rows.append(_porcelain_row(store, model))
+                claim_line = _claim_line(store, int(task["id"]), str(task["title"]))
+                if claim_line is not None:
+                    rows.append(claim_line)
         next_task = entry.get("next")
         if next_task:
             parent = "-"

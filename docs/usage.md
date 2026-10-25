@@ -95,7 +95,9 @@ lpui plan add --title "my-plan" --why "reason" --what "scope"
 
 ## Setup and scope
 
-Setup writes one layout. Re-run it any time to change placement or agents:
+The full first-run, rerun, switch, and uninstall walkthrough lives in
+[setup](setup.md). Setup writes one layout. Re-run it any time to change
+placement or agents:
 
 ```bash
 lpui setup

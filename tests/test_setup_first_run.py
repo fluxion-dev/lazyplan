@@ -102,6 +102,34 @@ class FirstRunCase(unittest.TestCase):
             setup.ensure("ui", args, self.repo, self.home, "1.0")
         wizard.assert_not_called()
 
+    def test_first_run_matrix(self):
+        for placement in ("home", "repo"):
+            for no_skills in (False, True):
+                for json_mode in (False, True):
+                    with self.subTest(placement=placement, no_skills=no_skills, json=json_mode):
+                        case = Path(self.tmp.name) / f"{placement}-{no_skills}-{json_mode}"
+                        home = case / "home"
+                        repo = case / "repo"
+                        home.mkdir(parents=True)
+                        repo.mkdir()
+                        subprocess.run(["git", "init", "-q", repo], check=True)
+                        args = make_args(
+                            placement=placement,
+                            no_skills=no_skills,
+                            json=json_mode,
+                            agents="claude",
+                        )
+                        with redirect_stderr(io.StringIO()):
+                            setup.ensure("ui", args, repo, home, "1.0", interactive=False)
+                        home_db = home / ".lazyplan/lazyplan.db"
+                        repo_db = repo / ".agents/lazyplan/lazyplan.db"
+                        self.assertEqual(home_db.is_file(), placement == "home")
+                        self.assertEqual(repo_db.is_file(), placement == "repo")
+                        skill_root = repo if placement == "repo" else home
+                        skill = skill_root / ".claude/skills/lazyplan/SKILL.md"
+                        self.assertEqual(skill.is_file(), not no_skills)
+                        self.assertTrue((home / ".claude/settings.json").is_file())
+
 
 if __name__ == "__main__":
     unittest.main()

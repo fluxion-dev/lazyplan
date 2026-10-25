@@ -121,3 +121,8 @@ new_count
 ask_migration
 _skills_dir_override
 prompt_confirm
+# Audit surface is consumed by the `lpui audit` command in the next commit.
+parse_since
+Thresholds
+breaches
+to_dict

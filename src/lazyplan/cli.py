@@ -23,7 +23,6 @@ from . import (
     setup,
     setup_layout,
     setup_ui,
-    skills,
 )
 from .cli_parser import build_parser, package_version
 from .design import (
@@ -87,21 +86,7 @@ def _resolve_title(args: argparse.Namespace) -> str:
 
 def _setup_hooks(home: Path, args: argparse.Namespace, agents: list[str] | None = None) -> dict:
     """Install or remove managed hooks and remember the decision."""
-    enabled = getattr(args, "hooks", None)
-    if enabled is False:
-        report = hook_install.remove(home)
-    else:
-        hosts = None if agents is None else [host for host in agents if host in hook_install.HOSTS]
-        report = hook_install.install(home, hosts=hosts)
-    state = setup.load_state(home)
-    if enabled is False:
-        state.hook_files = []
-    else:
-        planned = None if agents is None else [h for h in agents if h in hook_install.HOSTS]
-        state.hook_files = [str(spec.path) for spec in hook_install.preview(home, planned)]
-    state.hooks = enabled is not False and bool(state.hook_files)
-    setup.save_state(state, home)
-    return report
+    return setup.install_hooks(home, agents, getattr(args, "hooks", None))
 
 
 def _setup_interactive(args: argparse.Namespace) -> bool:
@@ -139,31 +124,13 @@ def _setup_review(args: argparse.Namespace, home: Path, interactive: bool) -> No
 
 def _setup_pointer(home: Path, args: argparse.Namespace, placement: str) -> dict:
     """Add or remove the opt-in AGENTS.md section for home placement."""
-    state = setup.load_state(home)
-    enabled = getattr(args, "agents_pointer", None)
-    want = enabled if enabled is not None else state.agents_pointer
-    root = find_repo_root(Path.cwd())
-    if placement != setup.HOME or root is None or (not want and enabled is None):
-        state.agents_pointer = False
-        state.agents_file = ""
-        setup.save_state(state, home)
-        return {"enabled": False, "path": None, "status": "skipped"}
-    path = root / "AGENTS.md"
-    if not want:
-        changed, status = skills.remove_agents_md(root)
-        state.agents_pointer = False
-        state.agents_file = ""
-        setup.save_state(state, home)
-        return {"enabled": False, "path": str(path) if changed else None, "status": status}
-    if path.is_file():
-        backup = setup_layout._new_backup_dir(home)
-        setup_layout._backup_file(backup, path)
-    db = Path(resolve_db_path(args.db)).expanduser()
-    changed, status = skills.ensure_agents_md(root, skills.render_home_agents_snippet(db))
-    state.agents_pointer = True
-    state.agents_file = str(path)
-    setup.save_state(state, home)
-    return {"enabled": True, "path": str(path) if changed else None, "status": status}
+    return setup.install_pointer(
+        home,
+        placement,
+        find_repo_root(Path.cwd()),
+        Path(resolve_db_path(args.db)).expanduser(),
+        getattr(args, "agents_pointer", None),
+    )
 
 
 def _print_setup(result: dict) -> None:

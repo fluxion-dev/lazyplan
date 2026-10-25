@@ -19,6 +19,7 @@ from .repo import (
     CONFIG_NAME,
     DB_NAME,
     PLAN_DIR,
+    TEMPLATES_DIR_NAME,
     is_repo_plan_dir,
     legacy_plan_dir,
     move_legacy_plan_dir,
@@ -27,8 +28,12 @@ from .repo import (
     shared_home,
 )
 from .skills import (
+    AGENTS_DIR,
     AGENTS_MARK_BEGIN,
     AGENTS_MARK_END,
+    SKILL_NAME,
+    SKILLS_DIR,
+    TOOL_SKILL_DIRS,
     SkillPlan,
 )
 
@@ -128,7 +133,7 @@ def resolve_choice(
         db=db,
         plan_dir=plan_dir,
         config=config,
-        templates_dir=plan_dir / "templates",
+        templates_dir=plan_dir / TEMPLATES_DIR_NAME,
         skill_plan=skill_plan,
         agents_md=skill_plan.agents_md,
         gitignore_entries=(
@@ -149,13 +154,14 @@ def resolve_choice(
 
 
 def _repo_skill_dirs(repo_root: Path) -> list[Path]:
-    return [
-        repo_root / ".agents/skills/lazyplan",
-        repo_root / ".opencode/skills/lazyplan",
-        repo_root / ".claude/skills/lazyplan",
-        repo_root / ".gemini/skills/lazyplan",
-        repo_root / ".cursor/skills/lazyplan",
-    ]
+    dirs = [repo_root / AGENTS_DIR / SKILLS_DIR / SKILL_NAME]
+    for project_dir, _home_dir in TOOL_SKILL_DIRS.values():
+        if not project_dir:
+            continue
+        path = repo_root / project_dir / SKILL_NAME
+        if path not in dirs:
+            dirs.append(path)
+    return dirs
 
 
 def _agents_block(text: str) -> tuple[str, bool]:
@@ -177,8 +183,8 @@ def _lazyplan_gitignore_lines(path: Path) -> list[str]:
         for line in lines
         if line.strip()
         and (
-            line.strip().rstrip("/").startswith(".agents/lazyplan")
-            or line.strip().rstrip("/").endswith("/skills/lazyplan")
+            line.strip().rstrip("/").startswith(PLAN_DIR)
+            or line.strip().rstrip("/").endswith(f"/{SKILLS_DIR}/{SKILL_NAME}")
         )
     ]
 

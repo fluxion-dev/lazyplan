@@ -42,6 +42,7 @@ def stale_plan_dirs(root: str | Path) -> list[Path]:
 
 DB_NAME = "lazyplan.db"
 CONFIG_NAME = "config.json"
+TEMPLATES_DIR_NAME = "templates"
 SHARED_DIR_NAME = ".lazyplan"
 SHARED_WINDOWS_DIR_NAME = "lazyplan"
 

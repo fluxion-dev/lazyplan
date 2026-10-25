@@ -103,6 +103,17 @@ class ReviewCase(unittest.TestCase):
         self.assertTrue(self.repo_db.is_file())
         self.assertEqual(setup.load_state(self.home).decisions, {})
 
+    def test_move_does_not_strip_markers_from_a_non_plan_parent(self):
+        outer = Path(self.tmp.name) / "outer"
+        stray = outer / "nested" / "lazyplan"
+        stray.mkdir(parents=True)
+        Store(stray / "lazyplan.db").add_plan("P")
+        agents = outer / "AGENTS.md"
+        agents.write_text("keep\n<!-- lazyplan:start -->\nmanaged\n<!-- lazyplan:end -->\n")
+        ok, _ = setup.move_repo_db(stray / "lazyplan.db", self.home)
+        self.assertTrue(ok)
+        self.assertIn("managed", agents.read_text())
+
     def test_non_interactive_note_does_not_record(self):
         notes, out = self._review("", allow_prompt=False)
         self.assertTrue(self.repo_db.is_file())

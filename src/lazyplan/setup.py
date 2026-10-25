@@ -20,7 +20,11 @@ from typing import Any
 
 from . import hook_install, setup_layout, setup_ui, skills
 from .repo import (
+    CONFIG_NAME,
+    PLAN_DIR,
+    TEMPLATES_DIR_NAME,
     find_repo_root,
+    is_repo_plan_dir,
     legacy_plan_dir,
     repo_plan_db_path,
     shared_db_path,
@@ -282,7 +286,7 @@ def preview(
 
 
 def _installed_skill_files(home: Path) -> list[Path]:
-    targets = [home / ".agents" / "skills" / skills.SKILL_NAME / "SKILL.md"]
+    targets = [home / skills.AGENTS_DIR / skills.SKILLS_DIR / skills.SKILL_NAME / "SKILL.md"]
     for tool in skills.KNOWN_TOOLS:
         entry = skills.TOOL_SKILL_DIRS.get(tool)
         if entry is None or not entry[1]:
@@ -360,6 +364,79 @@ def apply_choice(
         "agents": list(choice.agents or []),
         "explicit": bool(choice.explicit_db),
     }
+
+
+def install_hooks(
+    home: Path,
+    agents: list[str] | None,
+    enabled: bool | None = None,
+) -> dict[str, Any]:
+    """Install or remove managed hooks and remember the decision."""
+    if enabled is False:
+        report = hook_install.remove(home)
+    else:
+        hosts = None if agents is None else [host for host in agents if host in hook_install.HOSTS]
+        report = hook_install.install(home, hosts=hosts)
+    state = load_state(home)
+    if enabled is False:
+        state.hook_files = []
+    else:
+        planned = None if agents is None else [h for h in agents if h in hook_install.HOSTS]
+        state.hook_files = [str(spec.path) for spec in hook_install.preview(home, planned)]
+    state.hooks = enabled is not False and bool(state.hook_files)
+    save_state(state, home)
+    return report
+
+
+def install_pointer(
+    home: Path,
+    placement: str,
+    root: Path | None,
+    db_path: Path,
+    enabled: bool | None = None,
+) -> dict[str, Any]:
+    """Add or remove the opt-in AGENTS.md section for home placement."""
+    state = load_state(home)
+    want = enabled if enabled is not None else state.agents_pointer
+    if placement != HOME or root is None or (not want and enabled is None):
+        state.agents_pointer = False
+        state.agents_file = ""
+        save_state(state, home)
+        return {"enabled": False, "path": None, "status": "skipped"}
+    path = root / "AGENTS.md"
+    if not want:
+        changed, status = skills.remove_agents_md(root)
+        state.agents_pointer = False
+        state.agents_file = ""
+        save_state(state, home)
+        return {"enabled": False, "path": str(path) if changed else None, "status": status}
+    if path.is_file():
+        backup = setup_layout._new_backup_dir(home)
+        setup_layout._backup_file(backup, path)
+    changed, status = skills.ensure_agents_md(root, skills.render_home_agents_snippet(db_path))
+    state.agents_pointer = True
+    state.agents_file = str(path)
+    save_state(state, home)
+    return {"enabled": True, "path": str(path) if changed else None, "status": status}
+
+
+def install_integrations(
+    result: dict[str, Any],
+    home: Path,
+    root: Path | None,
+    hook_mode: bool | None = None,
+    pointer_mode: bool | None = None,
+) -> dict[str, Any]:
+    """Install hooks and the optional pointer for a completed layout."""
+    result["hooks"] = install_hooks(home, result.get("agents"), hook_mode)
+    result["agents_pointer"] = install_pointer(
+        home,
+        str(result.get("placement", "")),
+        root,
+        Path(result["db"]),
+        pointer_mode,
+    )
+    return result
 
 
 def run_wizard(
@@ -446,8 +523,8 @@ def _record(state: SetupState, finding: Finding, decision: str) -> None:
 def _move_sources(repo_db: Path, root: Path | None) -> list[Path]:
     """Every file a move touches, in backup order."""
     sources = [repo_db]
-    config = repo_db.parent / "config.json"
-    templates = repo_db.parent / "templates"
+    config = repo_db.parent / CONFIG_NAME
+    templates = repo_db.parent / TEMPLATES_DIR_NAME
     if config.is_file():
         sources.append(config)
     if templates.is_dir():
@@ -504,9 +581,7 @@ def move_repo_db(
             False,
             "both databases contain plans; export one and import it before moving",
         )
-    root = repo_root or (
-        repo_db.parent.parent.parent if repo_db.parent.name == "lazyplan" else None
-    )
+    root = repo_root or (repo_db.parent.parent.parent if is_repo_plan_dir(repo_db.parent) else None)
     backups = setup_layout._new_backup_dir(home)
     for source in _move_sources(repo_db, root):
         setup_layout._backup_file(backups, source)
@@ -515,10 +590,10 @@ def move_repo_db(
         home_db.unlink()
     home_db.parent.mkdir(parents=True, exist_ok=True)
     shutil.move(str(repo_db), str(home_db))
-    templates = repo_db.parent / "templates"
-    config = repo_db.parent / "config.json"
+    templates = repo_db.parent / TEMPLATES_DIR_NAME
+    config = repo_db.parent / CONFIG_NAME
     if templates.is_dir():
-        _merge_templates(templates, home_db.parent / "templates")
+        _merge_templates(templates, home_db.parent / TEMPLATES_DIR_NAME)
     if config.is_file():
         config.unlink()
     if root is not None:
@@ -624,11 +699,32 @@ def ensure(
         # An explicit database is a caller-owned context: never write layout,
         # skills, or state around it.
         return None
-    if human and can_prompt and first:
-        return run_wizard(cwd, home, state, version, json_mode=bool(getattr(args, "json", False)))
-    choice = choice_from_args(args, cwd, home, state)
     root = find_repo_root(cwd)
-    result = apply_choice(choice, root, home, version)
+    if human and can_prompt and first:
+        result = run_wizard(cwd, home, state, version, json_mode=bool(getattr(args, "json", False)))
+        if result is None:
+            return None
+    else:
+        choice = choice_from_args(args, cwd, home, state)
+        result = apply_choice(choice, root, home, version)
+    install_integrations(
+        result,
+        home,
+        root,
+        getattr(args, "hooks", None),
+        getattr(args, "agents_pointer", None),
+    )
+    if first and human and not getattr(args, "json", False):
+        plugins = [Path(path) for path in (result.get("hooks") or {}).get("installed") or []]
+        backups = [Path(path) for path in (result.get("hooks") or {}).get("backups") or []]
+        setup_ui.success(
+            sys.stderr,
+            Path(result["db"]),
+            [Path(path) for path in result["skills"]],
+            backups,
+            setup_ui.color_enabled(sys.stderr, False),
+            plugins,
+        )
     if human and findings:
         fresh = load_state(home)
         review_findings(
@@ -710,8 +806,8 @@ def _repo_resource_findings(root: Path, state: SetupState) -> list[Finding]:
     """Repo templates/config/skills ignored while plans live at home."""
     if state.placement != HOME:
         return []
-    plan_dir = root / ".agents" / "lazyplan"
-    shared = plan_dir / "lazyplan.db"
+    plan_dir = root / PLAN_DIR
+    shared = repo_plan_db_path(root)
     if shared.is_file() or not plan_dir.is_dir():
         return []
     return [

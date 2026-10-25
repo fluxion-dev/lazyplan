@@ -96,7 +96,7 @@ def step(write: TextIO, index: int, total: int, title: str, color: bool) -> None
 
 def placement_choices(repo_root: Path | None, home: Path) -> list[tuple[str, str, Path, str]]:
     """(key, label, path, tradeoff) for the placement question."""
-    from .repo import PLAN_DIR, shared_db_path
+    from .repo import repo_plan_db_path, shared_db_path
 
     choices = [
         (
@@ -111,7 +111,7 @@ def placement_choices(repo_root: Path | None, home: Path) -> list[tuple[str, str
             (
                 "repo",
                 "This repo",
-                repo_root / PLAN_DIR / "lazyplan.db",
+                repo_plan_db_path(repo_root),
                 "Share with teammates. Config and templates are committed; the database is ignored.",
             )
         )

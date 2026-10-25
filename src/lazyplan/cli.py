@@ -161,7 +161,15 @@ def _cmd_setup(store: Store | None, args: argparse.Namespace, actor: str) -> int
     version = package_version()
     interactive = _setup_interactive(args)
     if interactive:
-        result = setup.run_wizard(Path.cwd(), home, state, version)
+        initial = setup.choice_from_args(args, Path.cwd(), home, state)
+        result = setup.run_wizard(
+            Path.cwd(),
+            home,
+            state,
+            version,
+            initial=initial,
+            hooks_enabled=getattr(args, "hooks", None),
+        )
         if result is None:
             return _emit(args, {"cancelled": True}) if getattr(args, "json", False) else 0
     else:

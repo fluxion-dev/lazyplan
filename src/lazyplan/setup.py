@@ -447,13 +447,15 @@ def run_wizard(
     read: Any = None,
     write: Any = None,
     json_mode: bool = False,
+    initial: SetupChoice | None = None,
+    hooks_enabled: bool | None = None,
 ) -> dict[str, Any] | None:
     """Ask placement and agents, review, then apply. None means cancelled."""
     read = read or (lambda: input(""))
     write = write or sys.stderr
     color = setup_ui.color_enabled(write, json_mode)
     try:
-        return _run_wizard(cwd, home, state, version, read, write, color)
+        return _run_wizard(cwd, home, state, version, read, write, color, initial, hooks_enabled)
     except (EOFError, KeyboardInterrupt):
         setup_ui.note(write, "Setup cancelled; nothing was written.", color, "warn")
         return None
@@ -467,18 +469,25 @@ def _run_wizard(
     read: Any,
     write: Any,
     color: bool,
+    initial: SetupChoice | None,
+    hooks_enabled: bool | None,
 ) -> dict[str, Any] | None:
     root = find_repo_root(cwd)
     setup_ui.banner(write, color, version)
     repo_db = repo_plan_db_path(root) if root is not None else None
-    default_placement = REPO if repo_db is not None and repo_db.is_file() else state.placement
+    seeded = initial or SetupChoice()
+    default_placement = seeded.placement
+    if default_placement not in (HOME, REPO):
+        default_placement = REPO if repo_db is not None and repo_db.is_file() else state.placement
     if default_placement not in (HOME, REPO):
         default_placement = HOME
     placement = setup_ui.ask_placement(write, read, root, home, default_placement, color)
+    base_agents = seeded.agents if seeded.agents is not None else state.agents
     choice = SetupChoice(
         placement=placement,
-        agents=state.agents or _parse_agents("", home),
-        skills_dir=state.skills_dir or None,
+        agents=base_agents or _parse_agents("", home),
+        skills_dir=seeded.skills_dir or state.skills_dir or None,
+        no_skills=seeded.no_skills,
     )
     hosts = skills.detect_agents(home)
     selected = setup_ui.ask_agents(write, read, hosts, list(choice.agents or []), color)
@@ -486,13 +495,18 @@ def _run_wizard(
         placement=placement,
         agents=selected,
         skills_dir=choice.skills_dir,
+        no_skills=choice.no_skills,
     )
     layout, skill_files = preview(choice, root, home)
     labels = {host.key: host.label for host in hosts}
-    plugins = [
-        (labels.get(spec.host, spec.host), spec.path)
-        for spec in hook_install.preview(home, selected)
-    ]
+    plugins = (
+        []
+        if hooks_enabled is False
+        else [
+            (labels.get(spec.host, spec.host), spec.path)
+            for spec in hook_install.preview(home, selected)
+        ]
+    )
     setup_ui.render_review(
         write,
         layout.db,
@@ -695,17 +709,27 @@ def ensure(
     can_prompt = (
         setup_ui.stdin_tty() and sys.stderr.isatty() if interactive is None else interactive
     )
+    if getattr(args, "json", False) or getattr(args, "yes", False):
+        can_prompt = False
     if explicit:
         # An explicit database is a caller-owned context: never write layout,
         # skills, or state around it.
         return None
     root = find_repo_root(cwd)
+    choice = choice_from_args(args, cwd, home, state)
     if human and can_prompt and first:
-        result = run_wizard(cwd, home, state, version, json_mode=bool(getattr(args, "json", False)))
+        result = run_wizard(
+            cwd,
+            home,
+            state,
+            version,
+            json_mode=bool(getattr(args, "json", False)),
+            initial=choice,
+            hooks_enabled=getattr(args, "hooks", None),
+        )
         if result is None:
             return None
     else:
-        choice = choice_from_args(args, cwd, home, state)
         result = apply_choice(choice, root, home, version)
     install_integrations(
         result,

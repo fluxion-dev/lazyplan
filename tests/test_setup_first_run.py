@@ -9,6 +9,7 @@ import tempfile
 import unittest
 from contextlib import redirect_stderr
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
@@ -77,6 +78,29 @@ class FirstRunCase(unittest.TestCase):
             setup.ensure("list", args, self.repo, self.home, "1.0", interactive=False)
         self.assertTrue(setup.load_state(self.home).hooks)
         self.assertNotIn("Setup complete", err.getvalue())
+
+    def test_json_first_run_never_prompts(self):
+        args = make_args(agents="claude", json=True)
+        with (
+            mock.patch.object(setup.setup_ui, "stdin_tty", return_value=True),
+            mock.patch.object(setup.sys.stderr, "isatty", return_value=True),
+            mock.patch.object(setup, "run_wizard") as wizard,
+            redirect_stderr(io.StringIO()),
+        ):
+            setup.ensure("ui", args, self.repo, self.home, "1.0")
+        wizard.assert_not_called()
+        self.assertTrue((self.home / ".claude/settings.json").is_file())
+
+    def test_yes_first_run_never_prompts(self):
+        args = make_args(agents="claude", yes=True)
+        with (
+            mock.patch.object(setup.setup_ui, "stdin_tty", return_value=True),
+            mock.patch.object(setup.sys.stderr, "isatty", return_value=True),
+            mock.patch.object(setup, "run_wizard") as wizard,
+            redirect_stderr(io.StringIO()),
+        ):
+            setup.ensure("ui", args, self.repo, self.home, "1.0")
+        wizard.assert_not_called()
 
 
 if __name__ == "__main__":

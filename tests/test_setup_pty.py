@@ -83,6 +83,39 @@ class TestSetupWizard(unittest.TestCase):
         self.assertFalse((self.home / ".lazyplan/lazyplan.db").exists())
         self.assertFalse((self.home / ".lazyplan/setup.json").exists())
 
+    def test_no_skills_flag_wins_in_the_wizard(self):
+        code, text = run_pty(
+            [str(LPUI), "setup", "--no-skills"],
+            ["\n", "\n", "y\n"],
+            self.env,
+            self.repo,
+        )
+        self.assertEqual(code, 0, text)
+        self.assertFalse((self.home / ".agents/skills/lazyplan/SKILL.md").exists())
+        self.assertFalse((self.home / ".config/opencode/skills/lazyplan/SKILL.md").exists())
+
+    def test_placement_flag_seeds_the_wizard(self):
+        code, text = run_pty(
+            [str(LPUI), "setup", "--placement", "repo"],
+            ["\n", "\n", "y\n"],
+            self.env,
+            self.repo,
+        )
+        self.assertEqual(code, 0, text)
+        self.assertTrue((self.repo / ".agents/lazyplan/lazyplan.db").is_file())
+        self.assertFalse((self.home / ".lazyplan/lazyplan.db").exists())
+
+    def test_no_hooks_flag_hides_plugins_and_installs_none(self):
+        code, text = run_pty(
+            [str(LPUI), "setup", "--no-hooks"],
+            ["\n", "\n", "y\n"],
+            self.env,
+            self.repo,
+        )
+        self.assertEqual(code, 0, text)
+        self.assertNotIn("lazyplan.js", text)
+        self.assertFalse((self.home / ".config/opencode/plugins/lazyplan.js").exists())
+
 
 if __name__ == "__main__":
     unittest.main()

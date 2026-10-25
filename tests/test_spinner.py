@@ -4,6 +4,7 @@ import os
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
@@ -72,3 +73,43 @@ class TestSpinner(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(self._text(key)[1:], tails[key])
             self.assertEqual(self._text(("task", self.todo))[0], "○")
             self.assertEqual(self._text(("task", self.done))[0], "●")
+
+    async def test_idle_until_a_doing_row_appears(self):
+        path = os.path.join(self.tmp.name, "idle.db")
+        store = Store(path)
+        pid = store.add_plan("Plan").id
+        sid = store.add_milestone(pid, "Milestone").id
+        tid = store.add_task(sid, "Todo task").id
+        app = tui_mod.create_app(path)
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            if app._spinner_timer is not None:
+                app._spinner_timer.pause()
+            self.assertEqual(app._spinner_rows, {})
+            before = {key: str(node.label) for key, node in app._row_nodes.items()}
+            app._spin()
+            self.assertEqual(app._spinner_tick, 0)
+            self.assertEqual(
+                {key: str(node.label) for key, node in app._row_nodes.items()},
+                before,
+            )
+
+            services.set_status(store, "task", tid, Status.DOING)
+            app.refresh_all()
+            await pilot.pause()
+            self.assertIn(("task", tid), app._spinner_rows)
+            app._spin()
+            self.assertEqual(str(app._row_nodes[("task", tid)].label)[0], "◓")
+
+    async def test_opt_out_keeps_the_static_glyph(self):
+        with mock.patch.dict(os.environ, {"LAZYPLAN_NO_SPINNER": "1"}):
+            app = tui_mod.create_app(self.db)
+            async with app.run_test() as pilot:
+                await pilot.pause()
+                self.assertFalse(app._spinner_enabled)
+                self.assertIsNone(app._spinner_timer)
+                label = str(app._row_nodes[("task", self.doing)].label)
+                self.assertEqual(label[0], "◐")
+                app._spin()
+                self.assertEqual(app._spinner_tick, 0)
+                self.assertEqual(str(app._row_nodes[("task", self.doing)].label), label)

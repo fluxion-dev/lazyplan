@@ -10,6 +10,7 @@ bump reactive rev, external DB changes arrive via fingerprint() poll + feed toas
 
 from __future__ import annotations
 
+import os
 import time
 import webbrowser
 from typing import Any, cast
@@ -179,6 +180,7 @@ if _TEXTUAL_OK:
             self._git_cache: dict[str, tuple[float, dict[str, Any]]] = {}
             self._spinner_tick: int = 0
             self._spinner_rows: dict[tuple[str, int], str] = {}
+            self._spinner_enabled: bool = True
             self._spinner_timer: Any = None
 
         # Reactive revision: local mutations bump rev; watch_rev refreshes.
@@ -226,7 +228,9 @@ if _TEXTUAL_OK:
             self.refresh_all("ready — ? for help")
             self.call_after_refresh(lambda: self.refresh_all())
             self.set_interval(1.0, self._poll)
-            self._spinner_timer = self.set_interval(SPINNER_INTERVAL, self._spin)
+            self._spinner_enabled = not os.environ.get("LAZYPLAN_NO_SPINNER", "").strip()
+            if self._spinner_enabled:
+                self._spinner_timer = self.set_interval(SPINNER_INTERVAL, self._spin)
             self.run_worker(self._check_update, thread=True, exclusive=True)
             self.query_one("#tree", Tree).focus()
 
@@ -868,7 +872,7 @@ if _TEXTUAL_OK:
 
         def _spin(self) -> None:
             """Advance one frame; idle when nothing is doing."""
-            if not self._spinner_rows:
+            if not self._spinner_enabled or not self._spinner_rows:
                 return
             self._spinner_tick = (self._spinner_tick + 1) % len(SPINNER_FRAMES)
             self._paint_spinner()

@@ -28,7 +28,7 @@ AGENTS_MARK_END = "<!-- lazyplan:end -->"
 
 SKILL_FRONTMATTER = """---
 name: lazyplan
-description: Plan and track work with lazyplan (lpui) — interview for a plan's why/what/acceptance criteria, then cut milestones and tasks. Use when the user asks to plan work, track progress, break down a feature, check status, or when repo instructions mention `lpui`.
+description: Plan and track work with lazyplan (lpui) — interview for a plan's why/what/acceptance criteria, cut milestones and tasks, and keep the journal accurate while implementing. Use when the user asks to plan work, track progress, break down a feature, check status, implement or continue planned work, resume a task, or when repo instructions mention `lpui`.
 license: MIT
 compatibility: opencode, claude-code, codex, gemini-cli, cursor
 ---
@@ -245,10 +245,29 @@ lpui plan show --id P        # why/what + criteria + children
 
 Walk the human through every milestone and task, make last edits on the spot, and start executing only on explicit check-off. Check that the plan names its commit strategy and that every task desc names its expected commit slice and verification; reject a plan that batches a whole milestone or plan into one commit. During execution the plan stays the truth: fold new findings into the plan before changing code, never around it.
 
+## During execution
+
+Update the journal as you go, not at the end:
+
+```bash
+lpui brief                              # active plan, doing task, next todo, loose commits
+lpui task move --id T --to doing        # before writing code
+lpui link --kind task --id T            # after each commit (or `task finish`)
+lpui task move --id T --to done         # when the task's slice is complete
+lpui audit --since 7.days               # coverage, lag, and criteria gaps at the end
+```
+
+- Never batch a whole plan or milestone into one commit; link each green commit to its task.
+- Tick task and plan criteria as they are proven, before closing the row.
+- Lifecycle hooks may remind you at session start, after a commit, and before compaction. Hooks are read-only: they never move a task or link a commit for you.
+- `lpui audit --strict` is the opt-in CI gate; it defaults to 80% coverage, one commit of lag, and zero criteria gaps.
+
 ## Read first
 
 ```bash
 lpui list [--status todo|doing|done|all] [--archived] [--plan ID]  # tree (default: all)
+lpui brief                                                       # active plan + next update
+lpui audit --since 7.days                                        # accuracy metrics
 lpui plan show --id N                                            # full context
 lpui feed --limit 20                                                 # recent activity
 lpui export --format json                                            # full dump when you need everything

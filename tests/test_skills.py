@@ -201,6 +201,18 @@ class TestTemplateParity(unittest.TestCase):
         self.assertIn("Never decide a plan's why/what", text)
         self.assertIn("belong to the human", text)
 
+    def test_description_triggers_on_implementation(self):
+        description = skills.render_skill().split("---", 2)[1]
+        self.assertIn("implement", description)
+        self.assertIn("continue planned work", description)
+
+    def test_execution_loop_names_the_commands(self):
+        text = skills.render_skill()
+        self.assertIn("## During execution", text)
+        self.assertIn("lpui brief", text)
+        self.assertIn("lpui audit --since 7.days", text)
+        self.assertIn("read-only", text)
+
     def test_snippet_teaches_nothing_the_skill_does_not(self):
         import re
 

@@ -1,4 +1,4 @@
-"""Skill-installer tests: `lpui init` wizard paths stay non-interactive-safe."""
+"""Skill-installer tests: setup paths stay non-interactive-safe."""
 
 import io
 import json
@@ -430,93 +430,6 @@ class TestInstall(unittest.TestCase):
         text = (self.repo / "AGENTS.md").read_text()
         self.assertIn("Custom rules.", text)
         self.assertIn("lazyplan", text)
-
-
-class TestWizard(unittest.TestCase):
-    def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
-        self.repo = Path(self.tmp.name) / "proj"
-        (self.repo / ".git").mkdir(parents=True)
-        self.home = Path(self.tmp.name) / "home"
-        self.home.mkdir()
-
-    def tearDown(self):
-        self.tmp.cleanup()
-
-    def test_wizard_skip(self):
-        err = io.StringIO()
-        res = skills.run_wizard(self.repo, self.home, read=_answers(["", "5"]), write=err)
-        self.assertEqual(res.scope, "none")
-        self.assertFalse((self.repo / ".agents").exists())
-
-    def test_wizard_custom_skills_dir(self):
-        err = io.StringIO()
-        custom = str(self.home / "custom-skills")
-        res = skills.run_wizard(
-            self.repo, self.home, read=_answers(["opencode", "4", custom]), write=err
-        )
-        self.assertEqual(res.scope, "global")
-        self.assertEqual(res.installed, [f"{custom}/lazyplan/SKILL.md (wrote)"])
-        self.assertTrue(Path(custom, "lazyplan", "SKILL.md").is_file())
-        self.assertTrue(Path(custom, "lazyplan", "lazyplan.db").parent.is_dir())
-        self.assertFalse((self.repo / ".agents").exists())
-
-    def test_wizard_project_with_agents_md_yes(self):
-        err = io.StringIO()
-        res = skills.run_wizard(self.repo, self.home, read=_answers(["", "2", "Y"]), write=err)
-        self.assertEqual(res.scope, "project")
-        self.assertTrue((self.repo / ".agents" / "skills" / "lazyplan" / "SKILL.md").is_file())
-        self.assertTrue((self.repo / "AGENTS.md").is_file())
-
-    def test_wizard_eof_defaults_to_skip_or_default(self):
-        err = io.StringIO()
-
-        def _eof():
-            raise EOFError
-
-        res = skills.run_wizard(self.repo, self.home, read=_eof, write=err)
-        # EOF takes defaults: tools fallback, local scope, no repo writes.
-        self.assertEqual(res.scope, "global")
-        self.assertFalse((self.repo / ".agents").exists())
-        # One dir per agent: opencode's canonical folder, no universal duplicate.
-        self.assertTrue(
-            (self.home / ".config" / "opencode" / "skills" / "lazyplan" / "SKILL.md").is_file()
-        )
-        self.assertFalse((self.home / ".agents" / "skills" / "lazyplan" / "SKILL.md").exists())
-
-    def test_wizard_tailors_fresh_templates(self):
-        err = io.StringIO()
-        res = skills.run_wizard(
-            self.repo,
-            self.home,
-            read=_answers(["", "2", "Y", "n"]),
-            write=err,
-        )
-        self.assertEqual(res.scope, "project")
-        summary = res.to_dict()["templates"]
-        self.assertEqual(len(summary["added"]), 3)
-        proj = (self.repo / ".agents/lazyplan" / "templates" / "plan.md").read_text()
-        self.assertIn("required: [title]", proj)
-        self.assertNotIn("edit or delete me", proj)
-        task = (self.repo / ".agents/lazyplan" / "templates" / "task.md").read_text()
-        self.assertNotIn("priority", task)
-
-    def test_wizard_rerun_keeps_edits_by_default(self):
-        tdir = self.repo / ".agents/lazyplan" / "templates"
-        tdir.mkdir(parents=True)
-        (tdir / "plan.md").write_text("edited")
-        err = io.StringIO()
-        res = skills.run_wizard(
-            self.repo,
-            self.home,
-            read=_answers(["", "2", "Y", "Y", "", "", "", "", "k"]),
-            write=err,
-        )
-        summary = res.to_dict()["templates"]
-        self.assertEqual((tdir / "plan.md").read_text(), "edited")
-        self.assertTrue((tdir / "milestone.md").is_file())
-        self.assertIn(str(tdir / "plan.md"), summary["kept"])
-        self.assertIn(str(tdir / "milestone.md"), summary["added"])
 
 
 class TestInitCli(unittest.TestCase):

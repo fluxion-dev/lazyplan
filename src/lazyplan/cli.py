@@ -23,7 +23,6 @@ from . import (
     setup,
     setup_layout,
     setup_ui,
-    skills,
 )
 from .cli_parser import build_parser, package_version
 from .design import (
@@ -85,25 +84,6 @@ def _resolve_title(args: argparse.Namespace) -> str:
     return ""
 
 
-def _setup_hooks(home: Path, args: argparse.Namespace, agents: list[str] | None = None) -> dict:
-    """Install or remove managed hooks and remember the decision."""
-    enabled = getattr(args, "hooks", None)
-    if enabled is False:
-        report = hook_install.remove(home)
-    else:
-        hosts = None if agents is None else [host for host in agents if host in hook_install.HOSTS]
-        report = hook_install.install(home, hosts=hosts)
-    state = setup.load_state(home)
-    if enabled is False:
-        state.hook_files = []
-    else:
-        planned = None if agents is None else [h for h in agents if h in hook_install.HOSTS]
-        state.hook_files = [str(spec.path) for spec in hook_install.preview(home, planned)]
-    state.hooks = enabled is not False and bool(state.hook_files)
-    setup.save_state(state, home)
-    return report
-
-
 def _setup_interactive(args: argparse.Namespace) -> bool:
     return (
         not getattr(args, "yes", False)
@@ -137,35 +117,6 @@ def _setup_review(args: argparse.Namespace, home: Path, interactive: bool) -> No
     )
 
 
-def _setup_pointer(home: Path, args: argparse.Namespace, placement: str) -> dict:
-    """Add or remove the opt-in AGENTS.md section for home placement."""
-    state = setup.load_state(home)
-    enabled = getattr(args, "agents_pointer", None)
-    want = enabled if enabled is not None else state.agents_pointer
-    root = find_repo_root(Path.cwd())
-    if placement != setup.HOME or root is None or (not want and enabled is None):
-        state.agents_pointer = False
-        state.agents_file = ""
-        setup.save_state(state, home)
-        return {"enabled": False, "path": None, "status": "skipped"}
-    path = root / "AGENTS.md"
-    if not want:
-        changed, status = skills.remove_agents_md(root)
-        state.agents_pointer = False
-        state.agents_file = ""
-        setup.save_state(state, home)
-        return {"enabled": False, "path": str(path) if changed else None, "status": status}
-    if path.is_file():
-        backup = setup_layout._new_backup_dir(home)
-        setup_layout._backup_file(backup, path)
-    db = Path(resolve_db_path(args.db)).expanduser()
-    changed, status = skills.ensure_agents_md(root, skills.render_home_agents_snippet(db))
-    state.agents_pointer = True
-    state.agents_file = str(path)
-    setup.save_state(state, home)
-    return {"enabled": True, "path": str(path) if changed else None, "status": status}
-
-
 def _print_setup(result: dict) -> None:
     print(f"database:  {result['db']}")
     print(f"templates: {result['templates']}")
@@ -175,6 +126,8 @@ def _print_setup(result: dict) -> None:
         print(f"skill:     {skill}")
     for path in result["refreshed"]:
         print(f"refreshed: {path}")
+    for path in result.get("backups") or []:
+        print(f"backup:    {path}")
     hooks = result.get("hooks") or {}
     for path in hooks.get("installed") or hooks.get("removed") or []:
         print(f"hooks:     {path}")
@@ -194,14 +147,28 @@ def _cmd_setup(store: Store | None, args: argparse.Namespace, actor: str) -> int
     version = package_version()
     interactive = _setup_interactive(args)
     if interactive:
-        result = setup.run_wizard(Path.cwd(), home, state, version)
+        initial = setup.choice_from_args(args, Path.cwd(), home, state)
+        result = setup.run_wizard(
+            Path.cwd(),
+            home,
+            state,
+            version,
+            initial=initial,
+            hooks_enabled=getattr(args, "hooks", None),
+        )
         if result is None:
             return _emit(args, {"cancelled": True}) if getattr(args, "json", False) else 0
     else:
         choice = setup.choice_from_args(args, Path.cwd(), home, state)
         result = setup.apply_choice(choice, find_repo_root(Path.cwd()), home, version)
-    result["hooks"] = _setup_hooks(home, args, result.get("agents"))
-    result["agents_pointer"] = _setup_pointer(home, args, str(result.get("placement", "")))
+    root = find_repo_root(Path.cwd())
+    setup.install_integrations(
+        result,
+        home,
+        root,
+        getattr(args, "hooks", None),
+        getattr(args, "agents_pointer", None),
+    )
     if result.get("placement") == setup.HOME:
         _setup_review(args, home, interactive)
     if result.get("wizard") and not getattr(args, "json", False):
@@ -227,12 +194,10 @@ def _cmd_setup(store: Store | None, args: argparse.Namespace, actor: str) -> int
     return 0
 
 
-def _cmd_doctor(store: Store | None, args: argparse.Namespace, actor: str) -> int:
-    """Read-only setup report; never opens or writes a database."""
-    del store, actor
-    home = Path.home()
-    state = setup.load_state(home)
-    choice = setup.default_choice(Path.cwd(), home, state)
+def _doctor_data(
+    args: argparse.Namespace, home: Path, state: setup.SetupState
+) -> tuple[setup_layout.SetupLayout, list[Path], dict]:
+    choice = setup.choice_from_args(args, Path.cwd(), home, state)
     root = find_repo_root(Path.cwd())
     layout, skill_files = setup.preview(choice, root, home)
     report = setup_layout.inventory(layout)
@@ -240,16 +205,33 @@ def _cmd_doctor(store: Store | None, args: argparse.Namespace, actor: str) -> in
         {"kind": f.kind, "path": str(f.path), "state": f.state, "detail": f.detail}
         for f in setup.detect_findings(Path.cwd(), home, state)
     ]
+    missing_hooks = [path for path in state.hook_files if not Path(path).is_file()]
+    report["hooks"] = {
+        "enabled": state.hooks,
+        "files": list(state.hook_files),
+        "missing": missing_hooks,
+    }
     report["state"] = state.to_dict()
     report["skills"] = [str(path) for path in skill_files]
-    code = 0 if report["clean"] else 1
-    if getattr(args, "json", False):
-        _emit(args, report)
-        return code
+    issues = bool(report["findings"]) or bool(missing_hooks)
+    issues = issues or (state.hooks and not state.hook_files)
+    issues = issues or state.version != setup.SETUP_VERSION
+    report["clean"] = bool(report["clean"] and not issues)
+    return layout, skill_files, report
+
+
+def _print_doctor(layout: setup_layout.SetupLayout, skill_files: list[Path], report: dict) -> None:
     print(f"database:  {layout.db}")
     print(f"templates: {layout.templates_dir}")
     print(f"config:    {layout.config or '-'}")
-    print(f"skills:    {len(skill_files)} planned")
+    for skill in skill_files:
+        print(f"skill:     {skill}")
+    hooks = report["hooks"]
+    print(f"hooks:     {'enabled' if hooks['enabled'] else 'none'}")
+    for path in hooks["files"]:
+        print(f"hook:      {path}")
+    for path in hooks["missing"]:
+        print(f"hook miss: {path}")
     print(f"clean:     {'yes' if report['clean'] else 'no'}")
     for item in report["misplaced"]:
         print(f"misplaced: {item}")
@@ -259,6 +241,19 @@ def _cmd_doctor(store: Store | None, args: argparse.Namespace, actor: str) -> in
         print(f"finding:   {finding['kind']} {finding['path']} ({finding['state']})")
     for note in report["notes"]:
         print(f"note:      {note}")
+
+
+def _cmd_doctor(store: Store | None, args: argparse.Namespace, actor: str) -> int:
+    """Read-only setup report; never opens or writes a database."""
+    del store, actor
+    home = Path.home()
+    state = setup.load_state(home)
+    layout, skill_files, report = _doctor_data(args, home, state)
+    code = 0 if report["clean"] else 1
+    if getattr(args, "json", False):
+        _emit(args, report)
+        return code
+    _print_doctor(layout, skill_files, report)
     return code
 
 
@@ -1223,29 +1218,25 @@ def _cmd_upgrade(store: Store | None, args: argparse.Namespace, actor: str) -> i
         print(msg_error(exc), file=sys.stderr)
         return 1
     payload["upgraded"] = True
+    if not args.json:
+        print(f"upgraded lpui v{installed} -> v{latest} ({info.method})")
+    _post_upgrade_review(bool(args.json))
     if args.json:
         return _emit(args, payload)
-    print(f"upgraded lpui v{installed} -> v{latest} ({info.method})")
-    _post_upgrade_review()
     return 0
 
 
-def _stderr_is_tty() -> bool:
-    try:
-        return sys.stderr.isatty()
-    except (AttributeError, ValueError):
-        return False
-
-
-def _post_upgrade_review() -> None:
-    """Run setup review with the just-installed binary; never break the upgrade."""
-    if not (setup_ui.stdin_tty() and _stderr_is_tty()):
-        return
+def _post_upgrade_review(json_mode: bool = False) -> None:
+    """Refresh setup with the just-installed package; never break the upgrade."""
+    argv = [sys.executable, "-m", "lazyplan", "setup", "--post-upgrade"]
+    if json_mode:
+        argv.append("--json")
     try:
         subprocess.run(
-            [sys.argv[0], "setup", "--post-upgrade"],
+            argv,
             check=False,
             timeout=300,
+            stdout=subprocess.DEVNULL if json_mode else None,
         )
     except (OSError, subprocess.SubprocessError):
         return

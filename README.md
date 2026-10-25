@@ -83,12 +83,13 @@ The first run installs the agent skill. `lpui setup --placement repo` generates 
 
 ## Your data
 
-Plans live in one local database: shared in your home by default, or inside a repo with `--team`. Back up with `lpui export --format json`; restore with `lpui import --file`. See [data and backup](https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md#data-and-backup).
+Plans live in one local database: shared in your home by default, or inside a repo with `lpui setup --placement repo`. Back up with `lpui export --format json`; restore with `lpui import --file`. See [data and backup](https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md#data-and-backup).
 
 ## Learn more
 
 - [Screenshots and quickstart](https://fluxion-dev.github.io/lazyplan/)
 - [Usage and CLI reference](https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md)
+- [Setup walkthrough](https://github.com/fluxion-dev/lazyplan/blob/main/docs/setup.md)
 - [Contributing](https://github.com/fluxion-dev/lazyplan/blob/main/CONTRIBUTING.md) (main is protected; open a PR)
 - [Releases](https://github.com/fluxion-dev/lazyplan/releases) · [Issues](https://github.com/fluxion-dev/lazyplan/issues)
 

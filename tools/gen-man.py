@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
 from lazyplan.cli_parser import build_parser  # noqa: E402
+from lazyplan.docs_meta import ENVIRONMENT, FILES  # noqa: E402
 
 
 def _version() -> str:
@@ -130,6 +131,8 @@ def render() -> str:
         for a in sp._actions:
             if a.dest in ("help",):
                 continue
+            if a.help == argparse.SUPPRESS:
+                continue
             if not a.option_strings and a.dest == "cmd":
                 continue
             # Skip suppressed globals already documented; document real flags only.
@@ -159,25 +162,15 @@ def render() -> str:
         out.append(line)
     out.append(".fi")
     out.append(".SH ENVIRONMENT")
-    out.append(".TP")
-    out.append(".B LAZYPLAN_DB")
-    out.append("Which database file to use (same as \\fB\\-\\-db\\fR).")
-    out.append(".TP")
-    out.append(".B USER")
-    out.append("Used for \\fB\\-\\-actor\\fR when you do not give one.")
+    for name, text in ENVIRONMENT:
+        out.append(".TP")
+        out.append(f".B {name}")
+        out.append(text)
     out.append(".SH FILES")
-    out.append(".TP")
-    out.append(".B ~/.lazyplan/lazyplan.db")
-    out.append("Your plans, shared by every agent and folder (default home).")
-    out.append(".TP")
-    out.append(".B .agents/lazyplan/lazyplan.db")
-    out.append(
-        "The repo database (only with \\fBlpui setup \\-\\-placement repo\\fR; commit "
-        "the config and templates, keep the database local)."
-    )
-    out.append(".TP")
-    out.append(".B ~/.lazyplan/setup.json")
-    out.append("Remembered setup choices and migration decisions.")
+    for name, text in FILES:
+        out.append(".TP")
+        out.append(f".B {_esc(name)}")
+        out.append(text)
     out.append(".SH EXIT STATUS")
     out.append(".TP")
     out.append(".B 0")

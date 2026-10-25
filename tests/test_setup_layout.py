@@ -67,7 +67,7 @@ class TestResolution(LayoutCase):
         self.assertEqual(layout.storage, "repo")
         self.assertEqual(layout.db, self.repo / PLAN_DIR / "lazyplan.db")
         self.assertIsNotNone(layout.config)
-        self.assertIn(".agents/lazyplan/", layout.gitignore_entries)
+        self.assertIn(".agents/lazyplan/lazyplan.db", layout.gitignore_entries)
 
     def test_explicit_db_wins(self):
         target = Path(self.tmp.name) / "custom.db"
@@ -111,7 +111,9 @@ class TestApply(LayoutCase):
         self.assertTrue((self.repo / PLAN_DIR / "templates/plan.md").is_file())
         self.assertTrue((self.repo / "AGENTS.md").is_file())
         gitignore = (self.repo / ".gitignore").read_text()
-        self.assertIn(".agents/lazyplan/", gitignore)
+        self.assertIn(".agents/lazyplan/lazyplan.db", gitignore)
+        self.assertNotIn(".agents/lazyplan/templates", gitignore)
+        self.assertNotIn(".agents/lazyplan/config.json", gitignore)
         self.assertEqual(setup.load_state(self.home).placement, "repo")
 
     def test_second_apply_is_idempotent(self):

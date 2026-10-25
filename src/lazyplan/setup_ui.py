@@ -79,7 +79,7 @@ def banner(write: TextIO, color: bool, version: str = "") -> None:
     _line(
         write.write,
         _paint(
-            "  First run: pick where plans live, which agents get the skill, and their read-only plugins.",
+            "  Choose where plans live, which agents get the skill, and their read-only plugins.",
             "dim",
             color=color,
         ),
@@ -96,7 +96,7 @@ def step(write: TextIO, index: int, total: int, title: str, color: bool) -> None
 
 def placement_choices(repo_root: Path | None, home: Path) -> list[tuple[str, str, Path, str]]:
     """(key, label, path, tradeoff) for the placement question."""
-    from .repo import PLAN_DIR, shared_db_path
+    from .repo import repo_plan_db_path, shared_db_path
 
     choices = [
         (
@@ -111,7 +111,7 @@ def placement_choices(repo_root: Path | None, home: Path) -> list[tuple[str, str
             (
                 "repo",
                 "This repo",
-                repo_root / PLAN_DIR / "lazyplan.db",
+                repo_plan_db_path(repo_root),
                 "Share with teammates. Config and templates are committed; the database is ignored.",
             )
         )
@@ -234,18 +234,14 @@ def render_review(
                 f"  {_paint(label.ljust(10), 'bold', color=color)} {host}  {path}",
             )
     else:
-        _line(
-            write.write,
-            f"  {_paint('plugins'.ljust(10), 'bold', color=color)} none "
-            "(no supported agents selected)",
-        )
+        _line(write.write, f"  {_paint('plugins'.ljust(10), 'bold', color=color)} none")
     _line(write.write, f"  {_paint('state'.ljust(10), 'bold', color=color)} {state_path}")
     _line(write.write)
 
 
 def confirm(write: TextIO, read: Callable[[], str], color: bool) -> bool:
     """Y/n review confirmation; empty means yes."""
-    answer = _ask(write, read, "  install these resources and plugins? [Y/n]: ").strip().lower()
+    answer = _ask(write, read, "  install these resources? [Y/n]: ").strip().lower()
     if answer in ("n", "no"):
         return False
     return True

@@ -537,11 +537,12 @@ class TestInitCli(unittest.TestCase):
         self._init_json(["setup", "--placement", "repo", "--yes"])
         gi = os.path.join(self.repo, ".gitignore")
         text = open(gi).read()
-        self.assertIn(".agents/lazyplan/", text)
+        self.assertIn(".agents/lazyplan/lazyplan.db", text)
+        self.assertNotIn(".agents/lazyplan/templates", text)
         self.assertIn(".agents/skills/lazyplan/", text)
         # second run adds nothing twice
         self._init_json(["setup", "--placement", "repo", "--yes"])
-        self.assertEqual(open(gi).read().count(".agents/lazyplan/"), 1)
+        self.assertEqual(open(gi).read().count(".agents/lazyplan/lazyplan.db"), 1)
 
 
 class TestAppendGitignore(unittest.TestCase):

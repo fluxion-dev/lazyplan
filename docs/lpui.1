@@ -89,11 +89,6 @@ remove the marked lazyplan section from AGENTS\.md
 .B \-\-yes
 apply the current choices without asking
 .RE
-.RS
-.TP
-.B \-\-post\-upgrade
-==SUPPRESS==
-.RE
 .TP
 .B lpui seed
 add demo data: one plan with milestones and tasks
@@ -1287,20 +1282,62 @@ lpui import --file backup.json
 .SH ENVIRONMENT
 .TP
 .B LAZYPLAN_DB
-Which database file to use (same as \fB\-\-db\fR).
+Which database file to use (same as --db).
+.TP
+.B LAZYPLAN_NO_SETUP
+Skip first-run setup and upgrade review when set.
+.TP
+.B LAZYPLAN_AGENTS
+Default agent list for setup; an explicit flag wins.
+.TP
+.B LAZYPLAN_SKILLS_DIR
+Default skill directory for setup; an explicit flag wins.
+.TP
+.B LAZYPLAN_NO_SKILLS
+Install no agent skill when set.
+.TP
+.B LAZYPLAN_NO_HOOKS
+Silence installed hooks at runtime; does not remove them.
+.TP
+.B LAZYPLAN_NO_COLOR
+Disable setup wizard color.
+.TP
+.B NO_COLOR, CLICOLOR=0, TERM=dumb
+Plain setup output.
 .TP
 .B USER
-Used for \fB\-\-actor\fR when you do not give one.
+Used for --actor when you do not give one.
 .SH FILES
 .TP
-.B ~/.lazyplan/lazyplan.db
+.B ~/\.lazyplan/lazyplan\.db
 Your plans, shared by every agent and folder (default home).
 .TP
-.B .agents/lazyplan/lazyplan.db
-The repo database (only with \fBlpui setup \-\-placement repo\fR; commit the config and templates, keep the database local).
+.B \.agents/lazyplan/lazyplan\.db
+The repo database (only with lpui setup --placement repo; keep it local).
 .TP
-.B ~/.lazyplan/setup.json
+.B \.agents/lazyplan/config\.json
+Repo marker; commit it with the plan.
+.TP
+.B \.agents/lazyplan/templates/{plan,milestone,task}\.md
+Repo creation templates; commit them to share defaults.
+.TP
+.B ~/\.lazyplan/templates/{plan,milestone,task}\.md
+Home creation templates.
+.TP
+.B ~/\.lazyplan/setup\.json
 Remembered setup choices and migration decisions.
+.TP
+.B ~/\.lazyplan/backups/<timestamp>/
+Tree-preserving backups of every touched file.
+.TP
+.B ~/\.agents/skills/lazyplan/SKILL\.md
+Universal agent skill; per-tool skill directories are written too.
+.TP
+.B ~/\.config/opencode/plugins/lazyplan\.js, ~/\.claude/settings\.json, ~/\.gemini/settings\.json, ~/\.codex/hooks\.json, ~/\.cursor/hooks\.json
+Managed read-only hook surfaces.
+.TP
+.B AGENTS\.md
+Optional marked lazyplan section in a repo.
 .SH EXIT STATUS
 .TP
 .B 0

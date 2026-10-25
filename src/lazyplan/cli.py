@@ -94,21 +94,18 @@ def _progress(store: Store, plan_id: int | None = None, milestone_id: int | None
 def _porcelain_row(store: Store, obj: Plan | Milestone | Task) -> str:
     """One row for a plan, milestone, or task using its inherited parent id."""
     if isinstance(obj, Plan):
-        return porcelain.row(
-            "plan", obj.id, obj.status.value, obj.name, "-", _progress(store, plan_id=obj.id)
+        return porcelain.plan_row(
+            obj.id, obj.status.value, obj.name, _progress(store, plan_id=obj.id)
         )
     if isinstance(obj, Milestone):
-        return porcelain.row(
-            "milestone",
+        return porcelain.milestone_row(
             obj.id,
             obj.status.value,
             obj.title,
-            f"plan:{obj.plan_id}",
+            obj.plan_id,
             _progress(store, milestone_id=obj.id),
         )
-    return porcelain.row(
-        "task", obj.id, obj.status.value, obj.title, f"milestone:{obj.milestone_id}", "-"
-    )
+    return porcelain.task_row(obj.id, obj.status.value, obj.title, obj.milestone_id)
 
 
 def _criterion_row(criteria: Criterion) -> str:
@@ -562,6 +559,113 @@ def _list_lines(
     )
 
 
+def _porcelain_list_lines(
+    store: Store,
+    status: Status | None,
+    plan_id: int | None,
+    archived: str,
+    limit: int | None,
+    repo: str | None,
+    milestone_id: int | None,
+    tree: bool,
+) -> list[str]:
+    """Plan rows for a summary; plan, milestone, and task rows for a tree."""
+    lines: list[str] = []
+    for plan, milestones in services.tree(
+        store,
+        status=status,
+        plan_id=plan_id,
+        archived=archived,
+        limit=limit,
+        repo=repo,
+        milestone_id=milestone_id,
+    ):
+        lines.append(_porcelain_row(store, plan))
+        if not tree:
+            continue
+        for milestone, tasks in milestones:
+            lines.append(_porcelain_row(store, milestone))
+            lines.extend(_porcelain_row(store, task) for task in tasks)
+    return lines
+
+
+def _porcelain_show_lines(store: Store, kind: str, full: dict) -> list[str]:
+    """Plain definition rows plus criteria and children; no repo or commit noise."""
+    lines: list[str] = []
+    if kind == "plan":
+        plan = full["plan"]
+        lines.append(
+            porcelain.plan_row(
+                plan["id"], plan["status"], plan["name"], _progress(store, plan_id=plan["id"])
+            )
+        )
+        lines.append(porcelain.text_row("why", plan.get("goal")))
+        lines.append(porcelain.text_row("what", plan.get("description")))
+        lines.extend(_criterion_dict_rows(full.get("criteria", [])))
+        for entry in full.get("milestones", []):
+            milestone = entry["milestone"]
+            lines.append(
+                porcelain.milestone_row(
+                    milestone["id"],
+                    milestone["status"],
+                    milestone["title"],
+                    milestone["plan_id"],
+                    _progress(store, milestone_id=milestone["id"]),
+                )
+            )
+            lines.extend(_criterion_dict_rows(entry.get("criteria", [])))
+            lines.extend(
+                porcelain.task_row(task["id"], task["status"], task["title"], task["milestone_id"])
+                for task in entry.get("tasks", [])
+            )
+        return lines
+    if kind == "milestone":
+        milestone = full["milestone"]
+        lines.append(
+            porcelain.milestone_row(
+                milestone["id"],
+                milestone["status"],
+                milestone["title"],
+                milestone["plan_id"],
+                _progress(store, milestone_id=milestone["id"]),
+            )
+        )
+        lines.append(porcelain.text_row("desc", milestone.get("description")))
+        lines.extend(_criterion_dict_rows(full.get("criteria", [])))
+        lines.extend(
+            porcelain.task_row(
+                entry["task"]["id"],
+                entry["task"]["status"],
+                entry["task"]["title"],
+                entry["task"]["milestone_id"],
+            )
+            for entry in full.get("tasks", [])
+        )
+        return lines
+    task = full["task"]
+    lines.append(
+        porcelain.task_row(task["id"], task["status"], task["title"], task["milestone_id"])
+    )
+    lines.append(porcelain.text_row("desc", task.get("description")))
+    lines.extend(_criterion_dict_rows(full.get("criteria", [])))
+    return lines
+
+
+def _criterion_dict_rows(items: list[dict]) -> list[str]:
+    """Criterion rows from `show` payload dicts."""
+    return [
+        porcelain.row(
+            "criterion",
+            item["id"],
+            "done" if item.get("done") else "open",
+            item.get("text"),
+            f"{item.get('parent_kind')}:{item.get('parent_id')}",
+            "-",
+        )
+        for item in items
+    ]
+
+
 def _cmd_list(store: Store, args: argparse.Namespace, actor: str) -> int:
     archived, status = _list_filters(args)
     limit = _list_limit(args)
@@ -580,6 +684,19 @@ def _cmd_list(store: Store, args: argparse.Namespace, actor: str) -> int:
                 args.plan,
             ),
         )
+    if porcelain.enabled(args):
+        for line in _porcelain_list_lines(
+            store,
+            status,
+            args.plan,
+            archived,
+            limit,
+            repo_filter,
+            milestone_filter,
+            bool(getattr(args, "tree", False)) or milestone_filter is not None,
+        ):
+            print(line)
+        return 0
     lines = _list_lines(store, args, status, archived, limit, repo_filter, milestone_filter)
     print("\n".join(lines) if lines else EMPTY_NO_PLANS)
     return 0
@@ -671,6 +788,10 @@ def _cmd_show(store: Store, args: argparse.Namespace, actor: str) -> int:
         return 1
     if args.json:
         return _emit(args, full)
+    if porcelain.enabled(args):
+        for line in _porcelain_show_lines(store, args.kind, full):
+            print(line)
+        return 0
     print(render_full(args.kind, full, files=bool(getattr(args, "files", False))))
     return 0
 

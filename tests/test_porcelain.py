@@ -206,6 +206,89 @@ def _git_available() -> bool:
     return out.returncode == 0
 
 
+class TestReadRows(unittest.TestCase):
+    """Plan, tree, and show reads are plain rows with no provenance noise."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.db = os.path.join(self.tmp.name, "g.db")
+        store = Store(self.db)
+        plan = store.add_plan("Website", "Marketing site", goal="Convert", actor="fixture")
+        milestone = store.add_milestone(plan.id, "Homepage", "Hero work", actor="fixture")
+        task = store.add_task(milestone.id, "Design hero", "Hero section", actor="fixture")
+        store.add_criteria("plan", plan.id, "Loads fast", actor="fixture")
+        store.add_criteria("milestone", milestone.id, "Hero works", actor="fixture")
+        store.add_criteria("task", task.id, "Ships", actor="fixture")
+        store.add_repo_link("task", task.id, self.tmp.name, "git@example.com:org/repo.git")
+        self.old_home = os.environ.get("HOME")
+        self.old_setup = os.environ.get("LAZYPLAN_NO_SETUP")
+        os.environ["HOME"] = self.tmp.name
+        os.environ["LAZYPLAN_NO_SETUP"] = "1"
+
+    def tearDown(self):
+        for key, value in (("HOME", self.old_home), ("LAZYPLAN_NO_SETUP", self.old_setup)):
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+        self.tmp.cleanup()
+
+    def _lines(self, *argv: str) -> list[list[str]]:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            code = lpui_main(["--db", self.db, "--actor", "fixture", "--porcelain", *argv])
+        self.assertEqual(code, 0, buf.getvalue())
+        self.assertNotIn("{", buf.getvalue())
+        lines = [line.split("\t") for line in buf.getvalue().rstrip("\n").splitlines()]
+        for line in lines:
+            self.assertEqual(len(line), 6, line)
+        return lines
+
+    def test_list_summary_is_plan_rows(self):
+        self.assertEqual(
+            self._lines("list"),
+            [["plan", "1", "todo", "Website", "-", "0/1"]],
+        )
+
+    def test_list_tree_adds_milestone_and_task_rows(self):
+        self.assertEqual(
+            self._lines("list", "--tree"),
+            [
+                ["plan", "1", "todo", "Website", "-", "0/1"],
+                ["milestone", "1", "todo", "Homepage", "plan:1", "0/1"],
+                ["task", "1", "todo", "Design hero", "milestone:1", "-"],
+            ],
+        )
+
+    def test_show_keeps_definition_and_children_without_repos(self):
+        lines = self._lines("plan", "show", "--id", "1")
+        self.assertEqual(
+            lines,
+            [
+                ["plan", "1", "todo", "Website", "-", "0/1"],
+                ["why", "-", "-", "Convert", "-", "-"],
+                ["what", "-", "-", "Marketing site", "-", "-"],
+                ["criterion", "1", "open", "Loads fast", "plan:1", "-"],
+                ["milestone", "1", "todo", "Homepage", "plan:1", "0/1"],
+                ["criterion", "2", "open", "Hero works", "milestone:1", "-"],
+                ["task", "1", "todo", "Design hero", "milestone:1", "-"],
+            ],
+        )
+        output = "\n".join("\t".join(line) for line in lines)
+        self.assertNotIn(self.tmp.name, output)
+        self.assertNotIn("git@example.com", output)
+
+    def test_task_show_keeps_desc_and_criteria(self):
+        self.assertEqual(
+            self._lines("task", "show", "--id", "1"),
+            [
+                ["task", "1", "todo", "Design hero", "milestone:1", "-"],
+                ["desc", "-", "-", "Hero section", "-", "-"],
+                ["criterion", "3", "open", "Ships", "task:1", "-"],
+            ],
+        )
+
+
 @unittest.skipUnless(_git_available(), "git CLI required")
 class TestLinkRows(unittest.TestCase):
     """Commit, repo, PR, and task-start confirmations stay one parseable row."""

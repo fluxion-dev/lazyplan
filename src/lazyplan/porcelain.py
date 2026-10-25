@@ -81,3 +81,25 @@ def row(
             field(extra),
         )
     )
+
+
+def plan_row(plan_id: Any, status: Any, title: Any, progress: Any = "-") -> str:
+    """A plan row: no parent, task progress in extra."""
+    return row("plan", plan_id, status, title, "-", progress)
+
+
+def milestone_row(
+    milestone_id: Any, status: Any, title: Any, plan_id: Any, progress: Any = "-"
+) -> str:
+    """A milestone row: the owning plan in parent, task progress in extra."""
+    return row("milestone", milestone_id, status, title, f"plan:{field(plan_id)}", progress)
+
+
+def task_row(task_id: Any, status: Any, title: Any, milestone_id: Any) -> str:
+    """A task row: the owning milestone in parent."""
+    return row("task", task_id, status, title, f"milestone:{field(milestone_id)}", "-")
+
+
+def text_row(kind: Any, text: Any) -> str:
+    """A labeled text row such as `why`, `what`, or `desc`."""
+    return row(kind, "-", "-", text)

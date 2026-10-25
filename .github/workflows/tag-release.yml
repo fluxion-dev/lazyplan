@@ -3,11 +3,14 @@ name: tag-release
 # main is protected, so the bump workflow lands through a PR without a tag.
 # Once a version change is on main, create the tag here and dispatch the
 # release workflow. GITHUB_TOKEN tag pushes do not trigger other workflows,
-# so release.yml is dispatched explicitly against the new tag.
+# so release.yml is dispatched explicitly against the new tag. The bump
+# workflow also dispatches this workflow after auto-merge, because those
+# pushes do not start push-event workflows.
 on:
   push:
     branches: [main]
     paths: [pyproject.toml]
+  workflow_dispatch:
 
 permissions:
   contents: write

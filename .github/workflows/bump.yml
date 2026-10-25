@@ -16,10 +16,13 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  actions: write
 
 jobs:
   bump:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -31,10 +34,12 @@ jobs:
       - name: Bump and commit without a tag
         run: ./tools/bump.sh "${{ inputs.part }}" --no-tag
       - name: Open the release pull request
+        id: version
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           NEXT="$(sed -n 's/^version = "\(.*\)"$/\1/p' pyproject.toml)"
+          echo "version=$NEXT" >> "$GITHUB_OUTPUT"
           BRANCH="release/v${NEXT}"
           git switch -c "$BRANCH"
           git push -u origin "$BRANCH"
@@ -47,3 +52,38 @@ jobs:
           Auto-merge is enabled. The \`gates\` check must pass; \`tag-release\`
           creates the tag after this PR lands."
           gh pr merge "$BRANCH" --auto --merge
+
+  # Auto-merge runs with GITHUB_TOKEN, and GitHub does not start push-event
+  # workflows for those pushes. Without this job the tag and the site deploy
+  # would wait for the next human push.
+  publish:
+    needs: bump
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for the release pull request to merge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEXT: ${{ needs.bump.outputs.version }}
+        run: |
+          for _ in $(seq 1 60); do
+            STATE="$(gh pr view "release/v${NEXT}" --json state --jq .state)"
+            if [[ "$STATE" == "MERGED" ]]; then
+              echo "release/v${NEXT} merged"
+              exit 0
+            fi
+            if [[ "$STATE" == "CLOSED" ]]; then
+              echo "error: release/v${NEXT} closed without merging" >&2
+              exit 1
+            fi
+            sleep 20
+          done
+          echo "error: timed out waiting for release/v${NEXT} to merge" >&2
+          exit 1
+      - name: Create the tag and dispatch the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run tag-release.yml --ref main
+      - name: Deploy the site for the new version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run pages.yml --ref main

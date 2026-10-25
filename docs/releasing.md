@@ -36,9 +36,17 @@ Run the **bump** workflow from the Actions tab and choose `patch`, `minor`, or
 and enables auto-merge. When `gates` passes, the PR merges; `tag-release` then
 creates `vX.Y.Z` and dispatches `release.yml` against that tag.
 
+Auto-merge merges with `GITHUB_TOKEN`, and GitHub does not start push-event
+workflows for those pushes. The bump workflow therefore has a `publish` job
+that waits for the release PR to merge, then dispatches `tag-release.yml` and
+`pages.yml` explicitly. Both are idempotent: `tag-release` exits when the tag
+already exists, and Pages redeploys the same source. A bot-created release PR
+can also leave its `ci` run in `action_required`; approve that run as an admin
+so `gates` can start.
+
 ```bash
 gh run list --workflow bump.yml
-gh run watch
+gh run watch <bump-run-id>   # stays open until the release PR merges
 ```
 
 Admins can still release locally through the ruleset bypass:
@@ -137,3 +145,33 @@ or the next plan row so the next release has the context.
   deployed site showing 0.22.0 and the diff copy, canonical/FAQ/JSON-LD,
   sitemap, robots, social preview asset, and the release badge.
 - No deviations from the runbook and no fix-forward commits.
+
+### v0.23.0 (2026-10-25)
+
+- Minor bump from 0.22.0 with the **bump** workflow (`part=minor`), 70 commits
+  after `v0.22.0`: [run](https://github.com/fluxion-dev/lazyplan/actions/runs/40199102285).
+- Release PR [#4](https://github.com/fluxion-dev/lazyplan/pull/4) changed only
+  the version mirrors. Its `gates` run was left in `action_required` by GitHub
+  because the PR came from `GITHUB_TOKEN`; an admin approved it, then it passed:
+  [run](https://github.com/fluxion-dev/lazyplan/actions/runs/40199121137).
+- Auto-merge produced merge commit `bd865ad` with the same tree as the gated
+  commit `d9f27a0`.
+- **Deviation:** the auto-merge push did not trigger `tag-release.yml`, `ci.yml`,
+  or `pages.yml`, because GitHub suppresses push-event workflows for
+  `GITHUB_TOKEN` pushes. The annotated tag was created locally on `bd865ad`
+  with `git tag -a v0.23.0 -m "lazyplan v0.23.0"` and pushed; that tag push
+  started the release. Pages was dispatched with
+  `gh workflow run pages.yml --ref main`
+  ([run](https://github.com/fluxion-dev/lazyplan/actions/runs/40199772230)).
+- `release.yml` green for the tag, with both `release` and `publish-pypi`
+  succeeding:
+  [run](https://github.com/fluxion-dev/lazyplan/actions/runs/40199626042).
+- PyPI JSON served 0.23.0 immediately, but the simple index lagged: the first
+  isolated install missed and a `--no-cache-dir` retry about two minutes later
+  printed `0.23.0`.
+- Verified: seven release assets including `install.sh`, the isolated install,
+  the deployed site showing 0.23.0, the source-trail WebP, canonical/FAQ/JSON-LD,
+  sitemap (lastmod 2026-10-25), and robots.
+- Fix forward in the same docs PR: `bump.yml` now has a `publish` job that waits
+  for the release PR and dispatches `tag-release.yml` and `pages.yml`, and
+  `tag-release.yml` accepts `workflow_dispatch`. The next release proves it.

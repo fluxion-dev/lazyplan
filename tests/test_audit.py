@@ -90,6 +90,17 @@ class AuditCase(unittest.TestCase):
         self.store.add_criteria("task", self.task.id, "not yet")
         self.assertEqual(audit.compute(self.store, [self.plan.id], []).gaps, [])
 
+    def test_gaps_ignore_rows_closed_before_the_window(self):
+        self.store.add_criteria("task", self.task.id, "old debt")
+        self._at(1000, lambda: services.set_status(self.store, "task", self.task.id, Status.DONE))
+        self._at(
+            1001,
+            lambda: services.set_status(self.store, "milestone", self.milestone.id, Status.DONE),
+        )
+        self._at(1002, lambda: services.set_status(self.store, "plan", self.plan.id, Status.DONE))
+        self.assertEqual(audit.compute(self.store, [self.plan.id], [], since=2000).gaps, [])
+        self.assertEqual(len(audit.compute(self.store, [self.plan.id], [], since=500).gaps), 1)
+
     def test_empty_store_scores_perfect_coverage(self):
         empty = Store(Path(self.tmp.name) / "empty.db")
         result = audit.compute(empty, [], [])
@@ -104,6 +115,22 @@ class AuditCase(unittest.TestCase):
 
     def test_plan_start_reads_the_add_event(self):
         self.assertIsNotNone(audit.plan_start(self.store, self.plan.id))
+
+    def test_since_scopes_plans_to_recent_or_doing(self):
+        store = Store(Path(self.tmp.name) / "window.db")
+        with mock.patch("lazyplan.store.time.time", return_value=1000):
+            old = store.add_plan("old")
+        with mock.patch("lazyplan.store.time.time", return_value=3000):
+            new = store.add_plan("new")
+        result = audit.report(store, since=2000, cwd=self.tmp.name)
+        self.assertEqual(result.plans, [new.id])
+        self.assertNotIn(old.id, result.plans)
+
+    def test_stale_link_does_not_break_the_sample(self):
+        self._link("f" * 40, 1000)
+        result = audit.compute(self.store, [self.plan.id], [])
+        self.assertEqual(result.commits_total, 0)
+        self.assertEqual(result.coverage, 1.0)
 
     def test_compute_does_not_write(self):
         before = self.store.path.read_bytes()

@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sqlite3
 import subprocess
 import sys
 import time
@@ -198,7 +199,11 @@ def _audit_lines(report: audit.Report) -> list[str]:
 def _cmd_audit(store: Store | None, args: argparse.Namespace, actor: str) -> int:
     """Read-only accuracy report; --strict exits 2 only on a breach."""
     del actor
-    db = store or _optional_store(args)
+    try:
+        db = store or _optional_store(args)
+    except (RuntimeError, OSError, sqlite3.Error) as exc:
+        print(f"error: cannot read the database: {exc}", file=sys.stderr)
+        return 2
     if db is None:
         result = audit.Report(plans=[] if args.plan is None else [args.plan])
     else:
@@ -206,13 +211,21 @@ def _cmd_audit(store: Store | None, args: argparse.Namespace, actor: str) -> int
             print(msg_not_found("plan", args.plan), file=sys.stderr)
             return 1
         since = audit.parse_since(args.since) if args.since else None
-        result = audit.report(
-            db,
-            [args.plan] if args.plan is not None else None,
-            since,
-            Path.cwd(),
-        )
-    reasons = audit.Thresholds().breaches(result)
+        try:
+            result = audit.report(
+                db,
+                [args.plan] if args.plan is not None else None,
+                since,
+                Path.cwd(),
+            )
+        except (RuntimeError, OSError, sqlite3.Error) as exc:
+            print(f"error: audit unavailable: {exc}", file=sys.stderr)
+            return 2
+    reasons = audit.Thresholds(
+        coverage=args.min_coverage,
+        lag_commits=args.max_lag,
+        gaps=args.max_gaps,
+    ).breaches(result)
     if args.json:
         payload = result.to_dict()
         payload["breaches"] = reasons
@@ -230,14 +243,22 @@ def _cmd_audit(store: Store | None, args: argparse.Namespace, actor: str) -> int
 def _cmd_brief(store: Store | None, args: argparse.Namespace, actor: str) -> int:
     """Read-only session brief; never creates a database."""
     del actor
-    db = store or _optional_store(args)
+    try:
+        db = store or _optional_store(args)
+    except (RuntimeError, OSError, sqlite3.Error) as exc:
+        print(f"error: cannot read the database: {exc}", file=sys.stderr)
+        return 2
     if db is None:
         payload: dict = {"plans": [], "active": 0}
     else:
         if args.plan is not None and db.get_plan(args.plan) is None:
             print(msg_not_found("plan", args.plan), file=sys.stderr)
             return 1
-        payload = brief.build(db, args.plan, cwd=Path.cwd())
+        try:
+            payload = brief.build(db, args.plan, cwd=Path.cwd())
+        except (RuntimeError, OSError, sqlite3.Error) as exc:
+            print(f"error: brief unavailable: {exc}", file=sys.stderr)
+            return 2
     if args.json:
         return _emit(args, payload)
     for line in brief.lines(payload):

@@ -230,7 +230,28 @@ def build_parser() -> argparse.ArgumentParser:
     au.add_argument(
         "--strict",
         action="store_true",
-        help="exit 2 when coverage, lag, or criteria gaps breach the defaults",
+        help="exit 2 when coverage, lag, or criteria gaps breach the thresholds",
+    )
+    au.add_argument(
+        "--min-coverage",
+        type=float,
+        default=0.8,
+        metavar="RATIO",
+        help="strict-mode minimum linked share (default: 0.8)",
+    )
+    au.add_argument(
+        "--max-lag",
+        type=float,
+        default=1.0,
+        metavar="N",
+        help="strict-mode maximum median status lag in commits (default: 1)",
+    )
+    au.add_argument(
+        "--max-gaps",
+        type=int,
+        default=0,
+        metavar="N",
+        help="strict-mode maximum open criteria on done rows (default: 0)",
     )
     br = sub.add_parser(
         "brief",

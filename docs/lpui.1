@@ -159,7 +159,22 @@ window start, e\.g\. 7\.days or 2026\-10\-01 (default: plan creation)
 .RS
 .TP
 .B \-\-strict
-exit 2 when coverage, lag, or criteria gaps breach the defaults
+exit 2 when coverage, lag, or criteria gaps breach the thresholds
+.RE
+.RS
+.TP
+.B \-\-min\-coverage RATIO
+strict\-mode minimum linked share (default: 0\.8)
+.RE
+.RS
+.TP
+.B \-\-max\-lag N
+strict\-mode maximum median status lag in commits (default: 1)
+.RE
+.RS
+.TP
+.B \-\-max\-gaps N
+strict\-mode maximum open criteria on done rows (default: 0)
 .RE
 .TP
 .B lpui brief

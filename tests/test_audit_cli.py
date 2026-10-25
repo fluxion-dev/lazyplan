@@ -96,11 +96,25 @@ class AuditCliCase(unittest.TestCase):
         code, _out, _err = self._run(["audit", "--strict"])
         self.assertEqual(code, 0)
 
+    def test_strict_thresholds_are_configurable(self):
+        self._seed_gap()
+        code, _out, _err = self._run(["audit", "--strict", "--max-gaps", "5"])
+        self.assertEqual(code, 0)
+
     def test_unknown_plan_is_an_error(self):
         Store(self.home / ".lazyplan/lazyplan.db")
         code, _out, err = self._run(["audit", "--plan", "999"])
         self.assertEqual(code, 1)
         self.assertIn("not found", err)
+
+    def test_corrupt_database_reports_without_traceback(self):
+        path = self.home / ".lazyplan/lazyplan.db"
+        path.parent.mkdir(parents=True)
+        path.write_text("not a database")
+        code, _out, err = self._run(["audit", "--json"])
+        self.assertEqual(code, 2)
+        self.assertIn("cannot read the database", err)
+        self.assertNotIn("Traceback", err)
 
 
 class ThresholdsTest(unittest.TestCase):

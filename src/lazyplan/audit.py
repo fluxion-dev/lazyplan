@@ -148,20 +148,29 @@ def parse_since(text: str) -> float | None:
     return parsed.timestamp()
 
 
+def plan_starts(store: Store) -> dict[int, float]:
+    """Plan id -> add-event timestamp, in one pass over the feed."""
+    out: dict[int, float] = {}
+    for event in reversed(store.feed(limit=100000)):
+        found = _ADDED.match(str(event.get("detail") or ""))
+        if found is None or found.group(1) != "P":
+            continue
+        out.setdefault(int(found.group(2)), float(event["ts"]))
+    return out
+
+
 def plan_start(store: Store, plan_id: int) -> float | None:
     """Timestamp of the plan add event, or the earliest event naming it."""
+    starts = plan_starts(store)
+    if plan_id in starts:
+        return starts[plan_id]
     earliest: float | None = None
     for event in store.feed(limit=100000):
-        kind = str(event.get("kind") or "")
-        detail = str(event.get("detail") or "")
-        marker = _ADDED.match(detail)
-        if marker is not None and marker.group(2) == str(plan_id):
-            if marker.group(1) == "P":
-                return float(event["ts"])
-            if earliest is None or float(event["ts"]) < earliest:
-                earliest = float(event["ts"])
-        if kind == "plan" and detail.startswith(f"P#{plan_id} "):
-            return float(event["ts"])
+        found = _ADDED.match(str(event.get("detail") or ""))
+        if found is not None and found.group(2) == str(plan_id):
+            stamp = float(event["ts"])
+            if earliest is None or stamp < earliest:
+                earliest = stamp
     return earliest
 
 
@@ -176,6 +185,19 @@ def _status_times(store: Store) -> dict[int, list[tuple[float, Status]]]:
             continue
         task_id = int(found.group(2))
         out.setdefault(task_id, []).append((float(event["ts"]), Status(found.group(3))))
+    return out
+
+
+def _done_times(store: Store) -> dict[tuple[str, int], float]:
+    """Latest done event per row, oldest-first scan so the last write wins."""
+    out: dict[tuple[str, int], float] = {}
+    for event in reversed(store.feed(limit=100000)):
+        if event.get("action") != "status":
+            continue
+        found = _STATUS.match(str(event.get("detail") or ""))
+        if found is None or found.group(3) != "done":
+            continue
+        out[(found.group(1), int(found.group(2)))] = float(event["ts"])
     return out
 
 
@@ -210,23 +232,29 @@ def _links(store: Store, plan_ids: list[int]) -> tuple[dict[str, set[int]], set[
     return by_sha, linked
 
 
-def _gaps(store: Store, plan_ids: list[int]) -> list[Gap]:
-    """Open criteria on plans, milestones, and tasks already marked done."""
+def _gaps(store: Store, plan_ids: list[int], since: float = 0.0) -> list[Gap]:
+    """Open criteria on rows done inside the window (all rows when since is 0)."""
+    done = _done_times(store)
+
+    def closed_in_window(kind: str, obj_id: int) -> bool:
+        when = done.get((kind, obj_id))
+        return since == 0.0 or (when is not None and when >= since)
+
     out: list[Gap] = []
     for plan_id in plan_ids:
         plan = store.get_plan(plan_id)
-        if plan is not None and plan.status == Status.DONE:
+        if plan is not None and plan.status == Status.DONE and closed_in_window("plan", plan.id):
             out.extend(
                 Gap("plan", plan.id, item.text) for item in store.open_criteria("plan", plan.id)
             )
         for milestone in store.list_milestones(plan_id):
-            if milestone.status == Status.DONE:
+            if milestone.status == Status.DONE and closed_in_window("milestone", milestone.id):
                 out.extend(
                     Gap("milestone", milestone.id, item.text)
                     for item in store.open_criteria("milestone", milestone.id)
                 )
             for task in store.list_tasks(milestone.id):
-                if task.status == Status.DONE:
+                if task.status == Status.DONE and closed_in_window("task", task.id):
                     out.extend(
                         Gap("task", task.id, item.text)
                         for item in store.open_criteria("task", task.id)
@@ -297,7 +325,7 @@ def compute(
         lag_commits=lag_commits,
         lag_minutes=lag_minutes,
         unresolved=unresolved,
-        gaps=_gaps(store, plan_ids),
+        gaps=_gaps(store, plan_ids, since),
     )
 
 
@@ -341,11 +369,21 @@ def report(
     cwd: str | Path = ".",
 ) -> Report:
     """Audit live: resolve the window, read git, then compute."""
-    plans = plan_ids or [plan.id for plan in store.list_plans()]
-    if since is None:
-        starts = [plan_start(store, plan_id) for plan_id in plans]
-        known = [start for start in starts if start is not None]
-        since = min(known) if known else 0.0
+    starts = plan_starts(store)
+    if plan_ids is None:
+        if since is None:
+            known = [start for start in starts.values() if start > 0]
+            since = min(known) if known else 0.0
+        plans = [
+            plan.id
+            for plan in store.list_plans()
+            if plan.status == Status.DOING or starts.get(plan.id, 0.0) >= since
+        ]
+    else:
+        plans = list(plan_ids)
+        if since is None:
+            known = [starts[plan_id] for plan_id in plans if plan_id in starts]
+            since = min(known) if known else 0.0
     commits, repos = gather_commits(store, plans, since, cwd)
     return compute(store, plans, commits, since=since, repos=repos)
 

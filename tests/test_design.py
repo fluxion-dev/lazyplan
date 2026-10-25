@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from lazyplan import commands, design
 from lazyplan.cli import main as lpui_main
-from lazyplan.models import Milestone, Plan, Task
+from lazyplan.models import Milestone, Plan, Status, Task
 from lazyplan.store import Store
 
 
@@ -85,6 +85,15 @@ class TestDesignSystem(unittest.TestCase):
         p = Plan(id=1, name="N")
         self.assertEqual(design.plan_row(p).count("○"), 1)
         self.assertNotIn("⬜", design.plan_row(p))
+
+    def test_rich_rows_use_the_status_prefix(self):
+        p = Plan(id=1, name="N", status=Status.DOING)
+        s = Milestone(id=2, plan_id=1, title="S", status=Status.DOING)
+        t = Task(id=3, milestone_id=2, title="T", status=Status.DOING)
+        for row in (design.plan_row(p), design.milestone_row(s), design.task_row(t)):
+            self.assertTrue(row.startswith(design.status_prefix("doing")))
+            self.assertTrue(row.startswith("[yellow]◐[/]"))
+        self.assertEqual(design.status_prefix("doing"), design.status_word("doing", "rich"))
 
     def test_progress_and_truncation(self):
         p = Plan(id=12, name="A very long plan title")

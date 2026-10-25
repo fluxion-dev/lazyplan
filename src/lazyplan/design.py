@@ -333,7 +333,9 @@ def _row(
     available = None if width is None else width - len(prefix_plain) - len(plain_suffix)
     title = truncate(title, available)
     style = "dim" if obj.status == Status.DONE else "bold"
-    return f"{status_word(obj.status, 'rich')} [dim]{id_part}[/] [{style}]{_escape_markup(title)}[/]{suffix}"
+    return (
+        f"{status_prefix(obj.status)} [dim]{id_part}[/] [{style}]{_escape_markup(title)}[/]{suffix}"
+    )
 
 
 def plan_label(p: Plan, store: Store | None = None, dot: str = "plain") -> str:
@@ -396,7 +398,9 @@ def plan_row(
     available = None if width is None else width - len(prefix_plain) - len(plain_suffix)
     title = truncate(p.name, available)
     style = "dim" if p.status == Status.DONE else "bold"
-    return f"{status_word(p.status, 'rich')} [dim]{id_part}[/] [{style}]{_escape_markup(title)}[/]{suffix}"
+    return (
+        f"{status_prefix(p.status)} [dim]{id_part}[/] [{style}]{_escape_markup(title)}[/]{suffix}"
+    )
 
 
 def milestone_label(s: Milestone, store: Store | None = None, dot: str = "plain") -> str:

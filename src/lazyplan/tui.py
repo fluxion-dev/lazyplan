@@ -10,6 +10,7 @@ bump reactive rev, external DB changes arrive via fingerprint() poll + feed toas
 
 from __future__ import annotations
 
+import os
 import time
 import webbrowser
 from typing import Any, cast
@@ -35,10 +36,13 @@ from .commands import COMMANDS, by_id, hint_bar
 from .design import (
     APP_CSS,
     EMPTY_NO_PLANS,
+    SPINNER_FRAMES,
+    SPINNER_INTERVAL,
     escape_markup,
     milestone_row,
     plan_row,
     repo_project_name,
+    status_prefix,
     status_word,
     task_row,
     truncate,
@@ -174,6 +178,10 @@ if _TEXTUAL_OK:
             self._mounted: bool = False
             self._refreshing: bool = False
             self._git_cache: dict[str, tuple[float, dict[str, Any]]] = {}
+            self._spinner_tick: int = 0
+            self._spinner_rows: dict[tuple[str, int], str] = {}
+            self._spinner_enabled: bool = True
+            self._spinner_timer: Any = None
 
         # Reactive revision: local mutations bump rev; watch_rev refreshes.
         # External CLI writes still arrive via _poll fingerprint check.
@@ -220,8 +228,17 @@ if _TEXTUAL_OK:
             self.refresh_all("ready — ? for help")
             self.call_after_refresh(lambda: self.refresh_all())
             self.set_interval(1.0, self._poll)
+            self._spinner_enabled = not os.environ.get("LAZYPLAN_NO_SPINNER", "").strip()
+            if self._spinner_enabled:
+                self._spinner_timer = self.set_interval(SPINNER_INTERVAL, self._spin)
             self.run_worker(self._check_update, thread=True, exclusive=True)
             self.query_one("#tree", Tree).focus()
+
+        def on_unmount(self) -> None:
+            """Stop the spinner timer with the app; it owns a repaint loop."""
+            if self._spinner_timer is not None:
+                self._spinner_timer.stop()
+                self._spinner_timer = None
 
         async def _on_resize(self, event: events.Resize) -> None:
             """Textual stops Resize at the App; re-apply the shell after it."""
@@ -773,62 +790,98 @@ if _TEXTUAL_OK:
             """Create plan/milestone/task nodes for one refresh."""
             for plan, milestones in filtered:
                 plan_stats = source_stats.get(("plan", plan.id))
-                plan_node = root.add(
-                    plan_row(
-                        plan,
-                        progress=progress.get(("plan", plan.id)),
-                        width=self._row_width(tree, 3),
-                        source_counts=(
-                            (plan_stats[0], plan_stats[1], plan_stats[2]) if plan_stats else None
-                        ),
-                        repo_count=plan_stats[3] if plan_stats else 0,
+                plan_text = plan_row(
+                    plan,
+                    progress=progress.get(("plan", plan.id)),
+                    width=self._row_width(tree, 3),
+                    source_counts=(
+                        (plan_stats[0], plan_stats[1], plan_stats[2]) if plan_stats else None
                     ),
+                    repo_count=plan_stats[3] if plan_stats else 0,
+                )
+                plan_node = root.add(
+                    plan_text,
                     data={"kind": "plan", "id": plan.id},
                     allow_expand=bool(milestones),
                 )
                 self._row_nodes[("plan", plan.id)] = plan_node
+                self._remember_spinner(("plan", plan.id), plan.status, plan_text)
                 for milestone, tasks in milestones:
                     milestone_stats = source_stats.get(("milestone", milestone.id))
-                    milestone_node = plan_node.add(
-                        milestone_row(
-                            milestone,
-                            self.store,
-                            progress=progress.get(("milestone", milestone.id)),
-                            width=self._row_width(tree, 7),
-                            source_counts=(
-                                (
-                                    milestone_stats[0],
-                                    milestone_stats[1],
-                                    milestone_stats[2],
-                                )
-                                if milestone_stats
-                                else None
-                            ),
-                            repo_count=milestone_stats[3] if milestone_stats else 0,
+                    milestone_text = milestone_row(
+                        milestone,
+                        self.store,
+                        progress=progress.get(("milestone", milestone.id)),
+                        width=self._row_width(tree, 7),
+                        source_counts=(
+                            (
+                                milestone_stats[0],
+                                milestone_stats[1],
+                                milestone_stats[2],
+                            )
+                            if milestone_stats
+                            else None
                         ),
+                        repo_count=milestone_stats[3] if milestone_stats else 0,
+                    )
+                    milestone_node = plan_node.add(
+                        milestone_text,
                         data={"kind": "milestone", "id": milestone.id},
                         allow_expand=bool(tasks),
                     )
                     self._row_nodes[("milestone", milestone.id)] = milestone_node
+                    self._remember_spinner(
+                        ("milestone", milestone.id), milestone.status, milestone_text
+                    )
                     for task in tasks:
                         prs = forge_map.get(("task", task.id), [])
                         pr = prs[0] if prs else None
                         task_links = vcs_map.get(("task", task.id), [])
                         task_stats = source_stats.get(("task", task.id))
+                        task_text = task_row(
+                            task,
+                            self.store,
+                            links=[link.sha for link in task_links],
+                            width=self._row_width(tree, 11),
+                            pr_state=pr.state if pr else "",
+                            pr_checks=pr.checks if pr else "",
+                            stale=any(link.stale for link in task_links),
+                            repo_count=task_stats[3] if task_stats else 0,
+                        )
                         leaf = milestone_node.add_leaf(
-                            task_row(
-                                task,
-                                self.store,
-                                links=[link.sha for link in task_links],
-                                width=self._row_width(tree, 11),
-                                pr_state=pr.state if pr else "",
-                                pr_checks=pr.checks if pr else "",
-                                stale=any(link.stale for link in task_links),
-                                repo_count=task_stats[3] if task_stats else 0,
-                            ),
+                            task_text,
                             data={"kind": "task", "id": task.id},
                         )
                         self._row_nodes[("task", task.id)] = leaf
+                        self._remember_spinner(("task", task.id), task.status, task_text)
+
+        def _remember_spinner(
+            self,
+            key: tuple[str, int],
+            status: Status,
+            label: str,
+        ) -> None:
+            """Keep the label after the status prefix for doing rows only."""
+            if status != Status.DOING:
+                return
+            prefix = status_prefix(Status.DOING)
+            if label.startswith(prefix):
+                self._spinner_rows[key] = label[len(prefix) :]
+
+        def _paint_spinner(self) -> None:
+            """Repaint doing rows at the current frame, without rebuilding."""
+            prefix = status_prefix(Status.DOING, self._spinner_tick)
+            for key, suffix in self._spinner_rows.items():
+                node = self._row_nodes.get(key)
+                if node is not None:
+                    node.set_label(prefix + suffix)
+
+        def _spin(self) -> None:
+            """Advance one frame; idle when nothing is doing."""
+            if not self._spinner_enabled or not self._spinner_rows:
+                return
+            self._spinner_tick = (self._spinner_tick + 1) % len(SPINNER_FRAMES)
+            self._paint_spinner()
 
         def _apply_folds(self) -> None:
             """Plans open to milestones, milestones to tasks, only when expanded."""
@@ -889,6 +942,7 @@ if _TEXTUAL_OK:
                 prev_cursor = None
             tree.clear()
             self._row_nodes = {}
+            self._spinner_rows = {}
             progress = self._progress_map()
             filtered = self._filtered_tree()
             filtered.sort(key=lambda entry: entry[0].status == Status.DONE)
@@ -905,6 +959,7 @@ if _TEXTUAL_OK:
             self._collapsed &= set(self._row_nodes)
             self._expanded &= set(self._row_nodes)
             self._apply_folds()
+            self._paint_spinner()
             self.query_one("#status", Label).update(self._status_text(self.store.counts(), note))
             self.query_one("#hints", Label).update(hint_bar(max(10, self.size.width - 2)))
             self._restore_selection(tree, prev_selected, prev_cursor)

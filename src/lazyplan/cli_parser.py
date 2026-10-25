@@ -80,6 +80,7 @@ workflow: starting a plan? Ask the human what to build, why it matters,
 environment:
   LAZYPLAN_DB       which database file to use (same as --db)
   LAZYPLAN_NO_SETUP skip first-run setup and upgrade review
+  LAZYPLAN_NO_SPINNER freeze the TUI doing spinner
   NO_COLOR          plain setup output (also CLICOLOR=0 and TERM=dumb)
 
 files: shared home by default (`lpui setup --placement repo` opts a repo in)

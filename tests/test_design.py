@@ -4,6 +4,7 @@ import io
 import os
 import sys
 import tempfile
+import unicodedata
 import unittest
 from contextlib import redirect_stdout
 
@@ -11,7 +12,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from lazyplan import commands, design
 from lazyplan.cli import main as lpui_main
-from lazyplan.models import Milestone, Plan, Task
+from lazyplan.models import Milestone, Plan, Status, Task
 from lazyplan.store import Store
 
 
@@ -48,6 +49,21 @@ class TestDesignSystem(unittest.TestCase):
         with self.assertRaises(ValueError):
             design.status_word("todo", "neon")
 
+    def test_spinner_frames_and_prefix(self):
+        self.assertEqual(design.SPINNER_FRAMES, ("◐", "◓", "◑", "◒"))
+        self.assertEqual(design.SPINNER_INTERVAL, 0.16)
+        for frame in design.SPINNER_FRAMES:
+            self.assertEqual(len(frame), 1)
+            self.assertNotIn(unicodedata.east_asian_width(frame), ("W", "F"))
+        self.assertEqual(design.spinner_glyph(1), "◓")
+        self.assertEqual(design.spinner_glyph(len(design.SPINNER_FRAMES)), "◐")
+        self.assertEqual(design.status_prefix("doing"), "[yellow]◐[/]")
+        self.assertEqual(design.status_prefix("doing", 1), "[yellow]◓[/]")
+        self.assertEqual(design.status_prefix("doing", 7), "[yellow]◒[/]")
+        self.assertEqual(design.status_prefix("todo", 2), "[dim]○[/]")
+        self.assertEqual(design.status_prefix("done", 3), "[green]●[/]")
+        self.assertEqual(design.status_word("doing", "rich"), "[yellow]◐[/]")
+
     def test_ansi_labels_colorize_the_word(self):
         p = Plan(id=1, name="N")
         self.assertIn("\x1b[90m○\x1b[0m P1", design.plan_label(p, dot="ansi"))
@@ -69,6 +85,15 @@ class TestDesignSystem(unittest.TestCase):
         p = Plan(id=1, name="N")
         self.assertEqual(design.plan_row(p).count("○"), 1)
         self.assertNotIn("⬜", design.plan_row(p))
+
+    def test_rich_rows_use_the_status_prefix(self):
+        p = Plan(id=1, name="N", status=Status.DOING)
+        s = Milestone(id=2, plan_id=1, title="S", status=Status.DOING)
+        t = Task(id=3, milestone_id=2, title="T", status=Status.DOING)
+        for row in (design.plan_row(p), design.milestone_row(s), design.task_row(t)):
+            self.assertTrue(row.startswith(design.status_prefix("doing")))
+            self.assertTrue(row.startswith("[yellow]◐[/]"))
+        self.assertEqual(design.status_prefix("doing"), design.status_word("doing", "rich"))
 
     def test_progress_and_truncation(self):
         p = Plan(id=12, name="A very long plan title")
@@ -96,6 +121,19 @@ class TestDesignSystem(unittest.TestCase):
         p = Plan(id=1, name="Ray [old]")
         self.assertEqual(design.plan_row(p), "[dim]○[/] [dim]P1[/] [bold]Ray \\[old][/]")
         self.assertNotIn("TODO", design.plan_row(p))
+
+    def test_cli_doing_row_stays_static(self):
+        p = self.store.add_plan("P")
+        s = self.store.add_milestone(p.id, "S")
+        t = self.store.add_task(s.id, "T")
+        self.store.set_status_raw("task", t.id, Status.DOING)
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            self.assertEqual(lpui_main(["--db", self.db, "list", "--tree"]), 0)
+        out = buf.getvalue()
+        self.assertIn("◐ T", out)
+        for frame in design.SPINNER_FRAMES[1:]:
+            self.assertNotIn(frame, out)
 
     def test_cli_uses_design_labels(self):
         p = self.store.add_plan("P")

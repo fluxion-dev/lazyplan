@@ -14,7 +14,9 @@ No `Header`, no `Footer`, no bottom input. Adaptive shell: `#main` holds
 `Static#preview-body`) side by side at >= 100 columns; below that
 `#main.narrow` hides the preview and the tree owns the width.
 Status glyphs are single-cell: `○ todo`, `◐ doing`, `● done`, with ANSI
-(CLI tty) and Rich (TUI) variants. Row grammar:
+(CLI tty) and Rich (TUI) variants. In the TUI a doing row animates through
+`◐ ◓ ◑ ◒` every 160ms. The CLI, export, preview, and detail screens keep the
+static `◐`; `LAZYPLAN_NO_SPINNER=1` freezes the tree too. Row grammar:
 `GLYPH KIND<id> title`, plus `done/total` progress on plan and milestone
 rows. Titles are bold, ids and progress are dim, done rows are dim.
 Long titles end in `…`; the full title lives in the preview/detail.

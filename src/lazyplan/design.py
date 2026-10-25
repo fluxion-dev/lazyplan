@@ -122,9 +122,19 @@ STATUS_GLYPH = {"todo": "○", "doing": "◐", "done": "●"}
 STATUS_ANSI = {"todo": "90", "doing": "33", "done": "32"}
 STATUS_RICH = {"todo": "dim", "doing": "yellow", "done": "green"}
 
+# The doing glyph is the first frame, so static output and frame 0 agree.
+# All four frames are one terminal cell; the TUI advances them on a timer.
+SPINNER_FRAMES = ("◐", "◓", "◑", "◒")
+SPINNER_INTERVAL = 0.16
+
 
 def _status(value: Status | str) -> str:
     return value.value if isinstance(value, Status) else str(value)
+
+
+def spinner_glyph(frame: int) -> str:
+    """One frame of the doing spinner; any integer wraps into the cycle."""
+    return SPINNER_FRAMES[frame % len(SPINNER_FRAMES)]
 
 
 def status_word(status: Status | str, dot: str = "plain") -> str:
@@ -138,6 +148,13 @@ def status_word(status: Status | str, dot: str = "plain") -> str:
     if dot != "plain":
         raise ValueError("dot must be plain|ansi|rich")
     return glyph
+
+
+def status_prefix(status: Status | str, frame: int = 0) -> str:
+    """Rich row prefix: spinner frame for doing, static glyph otherwise."""
+    if _status(status) == "doing" and frame:
+        return f"[{STATUS_RICH['doing']}]{spinner_glyph(frame)}[/]"
+    return status_word(status, "rich")
 
 
 def truncate(text: str, width: int | None) -> str:
@@ -316,7 +333,9 @@ def _row(
     available = None if width is None else width - len(prefix_plain) - len(plain_suffix)
     title = truncate(title, available)
     style = "dim" if obj.status == Status.DONE else "bold"
-    return f"{status_word(obj.status, 'rich')} [dim]{id_part}[/] [{style}]{_escape_markup(title)}[/]{suffix}"
+    return (
+        f"{status_prefix(obj.status)} [dim]{id_part}[/] [{style}]{_escape_markup(title)}[/]{suffix}"
+    )
 
 
 def plan_label(p: Plan, store: Store | None = None, dot: str = "plain") -> str:
@@ -379,7 +398,9 @@ def plan_row(
     available = None if width is None else width - len(prefix_plain) - len(plain_suffix)
     title = truncate(p.name, available)
     style = "dim" if p.status == Status.DONE else "bold"
-    return f"{status_word(p.status, 'rich')} [dim]{id_part}[/] [{style}]{_escape_markup(title)}[/]{suffix}"
+    return (
+        f"{status_prefix(p.status)} [dim]{id_part}[/] [{style}]{_escape_markup(title)}[/]{suffix}"
+    )
 
 
 def milestone_label(s: Milestone, store: Store | None = None, dot: str = "plain") -> str:

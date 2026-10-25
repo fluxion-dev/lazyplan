@@ -179,6 +179,7 @@ or `--no-skills` changes what the questions propose.
 
 `LAZYPLAN_NO_SETUP=1` skips first-run setup and upgrade review. `NO_COLOR`,
 `LAZYPLAN_NO_COLOR`, `CLICOLOR=0`, and `TERM=dumb` keep the wizard plain.
+`LAZYPLAN_NO_SPINNER=1` freezes the doing spinner in the TUI.
 `--placement repo` outside a git checkout falls back to home.
 
 ## Everyday commands

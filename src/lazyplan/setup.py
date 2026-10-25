@@ -842,7 +842,7 @@ def detect_findings(
     out: list[Finding] = []
     if root is not None:
         repo_db = repo_plan_db_path(root)
-        if repo_db.is_file():
+        if repo_db.is_file() and state.placement != REPO:
             gstate = git_state(root)
             out.append(
                 Finding(
@@ -853,6 +853,7 @@ def detect_findings(
                     state=gstate,
                 )
             )
+        if repo_db.is_file():
             home_db = shared_db_path(home)
             if home_db.is_file() and plans_in(repo_db) > 0 and plans_in(home_db) > 0:
                 out.append(

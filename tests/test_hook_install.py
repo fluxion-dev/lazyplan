@@ -118,6 +118,7 @@ class SetupCliCase(unittest.TestCase):
         self.repo = Path(self.tmp.name) / "repo"
         self.repo.mkdir()
         (self.home / ".claude").mkdir()
+        (self.home / ".config" / "opencode").mkdir(parents=True)
         self.old_home = os.environ.get("HOME")
         self.old_db = os.environ.pop("LAZYPLAN_DB", None)
         self.old_nosetup = os.environ.pop(setup.NO_SETUP_ENV, None)

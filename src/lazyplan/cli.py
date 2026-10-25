@@ -19,6 +19,7 @@ from . import (
     hook_hosts,
     hook_install,
     hooks,
+    porcelain,
     services,
     setup,
     setup_layout,
@@ -69,8 +70,8 @@ def _emit(args: argparse.Namespace, payload: object) -> int:
 
 
 def _tty_dot(args: argparse.Namespace) -> str:
-    """ANSI dots on a tty; plain otherwise (pipes and --json stay clean)."""
-    if getattr(args, "json", False):
+    """ANSI dots on a tty; plain for pipes, --json, and porcelain."""
+    if getattr(args, "json", False) or porcelain.enabled(args):
         return "plain"
     return "ansi" if sys.stdout.isatty() else "plain"
 

@@ -132,6 +132,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--json", action="store_true", help="print output as JSON so scripts and agents can read it"
     )
+    p.add_argument(
+        "--porcelain",
+        action="store_true",
+        help="print terse tab-separated rows for active agents (--json still wins)",
+    )
     p.add_argument("--version", action="store_true", help="print the installed version and exit")
     p.add_argument(
         "--actor",
@@ -150,6 +155,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         default=argparse.SUPPRESS,
         help="print output as JSON so scripts and agents can read it",
+    )
+    common.add_argument(
+        "--porcelain",
+        action="store_true",
+        default=argparse.SUPPRESS,
+        help="print terse tab-separated rows for active agents (--json still wins)",
     )
     common.add_argument(
         "--version",

@@ -184,3 +184,39 @@ or the next plan row so the next release has the context.
 - Fix forward in the same docs PR: `bump.yml` now has a `publish` job that waits
   for the release PR and dispatches `tag-release.yml` and `pages.yml`, and
   `tag-release.yml` accepts `workflow_dispatch`. The next release proves it.
+
+### v0.24.0 (2026-10-25)
+
+- Minor bump from 0.23.0 with the **bump** workflow (`part=minor`):
+  [run](https://github.com/fluxion-dev/lazyplan/actions/runs/40209172641). The
+  `bump` job created `release/v0.24.0` and enabled auto-merge.
+- Release PR [#9](https://github.com/fluxion-dev/lazyplan/pull/9) changed only
+  the version mirrors. Its `gates` run was left in `action_required` by GitHub;
+  an admin approved it, then it passed:
+  [run](https://github.com/fluxion-dev/lazyplan/actions/runs/40209185702).
+  Auto-merge produced merge commit `49a7a12`.
+- **Deviation:** the new post-merge `publish` job failed in three seconds with
+  `fatal: not a git repository`. It had no checkout, so `gh pr view` could not
+  resolve the PR before it ever waited. The documented fallback was used:
+  `gh workflow run tag-release.yml --ref main`
+  ([run](https://github.com/fluxion-dev/lazyplan/actions/runs/40209660006)) and
+  `gh workflow run pages.yml --ref main`
+  ([run](https://github.com/fluxion-dev/lazyplan/actions/runs/40209684224)).
+- `tag-release` created annotated tag `v0.24.0` on `49a7a12` and dispatched
+  `release.yml`; both the `release` and `publish-pypi` jobs succeeded:
+  [run](https://github.com/fluxion-dev/lazyplan/actions/runs/40209672733).
+- Fix forward before recording this entry: PR
+  [#10](https://github.com/fluxion-dev/lazyplan/pull/10) added the checkout to
+  the `publish` job, tolerated a transient `gh pr view` failure inside the
+  wait loop, and documented the manual fallback. `gates` passed
+  ([run](https://github.com/fluxion-dev/lazyplan/actions/runs/40210099506)) and
+  it merged as `1f3a45d`.
+- PyPI JSON lagged one poll of about 15 seconds; the simple index missed the
+  first isolated install, then `pip install --no-cache-dir lazyplan-tui==0.24.0`
+  printed `0.24.0`.
+- Verified: seven release assets including `install.sh`, the isolated install,
+  the deployed site showing 0.24.0 and the spinner copy, the source-trail WebP,
+  canonical/FAQ/JSON-LD, sitemap (lastmod 2026-10-25), robots, and the release
+  badge.
+- The next release must prove the repaired `publish` job dispatches the tag and
+  Pages without the manual fallback.

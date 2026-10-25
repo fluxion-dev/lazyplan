@@ -124,6 +124,24 @@ because the auto-merge push did not start push-event workflows.
 Human-only follow-ups: submit the updated URL to search engines, record
 Lighthouse/mobile scores, and confirm the social card in a real client.
 
+### v0.24.0 pass (2026-10-25)
+
+After: version pins, release asset URLs, JSON-LD `version`/`softwareVersion`,
+and the sitemap `lastmod` moved to 0.24.0. The screens section now names the
+animated doing row and the still todo and done rows; that copy deployed first
+on 0.23.0 and carried into this release. Canonical, FAQPage and
+SoftwareApplication JSON-LD, robots, and the social preview asset are
+unchanged.
+
+Verified live: the page contains 12 references to 0.24.0 and the spinner
+sentence, `screens/lpui-source-trail.webp` returns 200, `sitemap.xml` carries
+`lastmod` 2026-10-25, `robots.txt` points at the sitemap, and the release badge
+endpoint returns 200. Pages deployed from the manual fallback dispatch after
+the bump `publish` job failed; the workflow fix is in PR #10.
+
+Human-only follow-ups: submit the updated URL to search engines, record
+Lighthouse/mobile scores, and confirm the social card in a real client.
+
 ## Post-deploy verification
 
 Run after Pages is green:

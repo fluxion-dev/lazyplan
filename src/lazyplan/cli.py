@@ -199,7 +199,7 @@ def _cmd_doctor(store: Store | None, args: argparse.Namespace, actor: str) -> in
     del store, actor
     home = Path.home()
     state = setup.load_state(home)
-    choice = setup.default_choice(Path.cwd(), home, state)
+    choice = setup.choice_from_args(args, Path.cwd(), home, state)
     root = find_repo_root(Path.cwd())
     layout, skill_files = setup.preview(choice, root, home)
     report = setup_layout.inventory(layout)
@@ -207,8 +207,18 @@ def _cmd_doctor(store: Store | None, args: argparse.Namespace, actor: str) -> in
         {"kind": f.kind, "path": str(f.path), "state": f.state, "detail": f.detail}
         for f in setup.detect_findings(Path.cwd(), home, state)
     ]
+    missing_hooks = [path for path in state.hook_files if not Path(path).is_file()]
+    report["hooks"] = {
+        "enabled": state.hooks,
+        "files": list(state.hook_files),
+        "missing": missing_hooks,
+    }
     report["state"] = state.to_dict()
     report["skills"] = [str(path) for path in skill_files]
+    issues = bool(report["findings"]) or bool(missing_hooks)
+    issues = issues or (state.hooks and not state.hook_files)
+    issues = issues or state.version != setup.SETUP_VERSION
+    report["clean"] = bool(report["clean"] and not issues)
     code = 0 if report["clean"] else 1
     if getattr(args, "json", False):
         _emit(args, report)
@@ -216,7 +226,14 @@ def _cmd_doctor(store: Store | None, args: argparse.Namespace, actor: str) -> in
     print(f"database:  {layout.db}")
     print(f"templates: {layout.templates_dir}")
     print(f"config:    {layout.config or '-'}")
-    print(f"skills:    {len(skill_files)} planned")
+    for skill in skill_files:
+        print(f"skill:     {skill}")
+    hooks = report["hooks"]
+    print(f"hooks:     {'enabled' if hooks['enabled'] else 'none'}")
+    for path in hooks["files"]:
+        print(f"hook:      {path}")
+    for path in hooks["missing"]:
+        print(f"hook miss: {path}")
     print(f"clean:     {'yes' if report['clean'] else 'no'}")
     for item in report["misplaced"]:
         print(f"misplaced: {item}")

@@ -1282,16 +1282,16 @@ lpui import --file backup.json
 .SH ENVIRONMENT
 .TP
 .B LAZYPLAN_DB
-Which database file to use (same as \fB\-\-db\fR).
+Which database file to use (same as --db).
 .TP
 .B LAZYPLAN_NO_SETUP
 Skip first-run setup and upgrade review when set.
 .TP
 .B LAZYPLAN_AGENTS
-Default agent list for setup (flag wins).
+Default agent list for setup; an explicit flag wins.
 .TP
 .B LAZYPLAN_SKILLS_DIR
-Default skill directory for setup (flag wins).
+Default skill directory for setup; an explicit flag wins.
 .TP
 .B LAZYPLAN_NO_SKILLS
 Install no agent skill when set.
@@ -1306,14 +1306,14 @@ Disable setup wizard color.
 Plain setup output.
 .TP
 .B USER
-Used for \fB\-\-actor\fR when you do not give one.
+Used for --actor when you do not give one.
 .SH FILES
 .TP
 .B ~/\.lazyplan/lazyplan\.db
 Your plans, shared by every agent and folder (default home).
 .TP
 .B \.agents/lazyplan/lazyplan\.db
-The repo database (only with \fBlpui setup \-\-placement repo\fR; keep it local).
+The repo database (only with lpui setup --placement repo; keep it local).
 .TP
 .B \.agents/lazyplan/config\.json
 Repo marker; commit it with the plan.

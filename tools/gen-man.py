@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
 from lazyplan.cli_parser import build_parser  # noqa: E402
+from lazyplan.docs_meta import ENVIRONMENT, FILES  # noqa: E402
 
 
 def _version() -> str:
@@ -161,48 +162,12 @@ def render() -> str:
         out.append(line)
     out.append(".fi")
     out.append(".SH ENVIRONMENT")
-    for name, text in [
-        ("LAZYPLAN_DB", "Which database file to use (same as \\fB\\-\\-db\\fR)."),
-        ("LAZYPLAN_NO_SETUP", "Skip first-run setup and upgrade review when set."),
-        ("LAZYPLAN_AGENTS", "Default agent list for setup (flag wins)."),
-        ("LAZYPLAN_SKILLS_DIR", "Default skill directory for setup (flag wins)."),
-        ("LAZYPLAN_NO_SKILLS", "Install no agent skill when set."),
-        ("LAZYPLAN_NO_HOOKS", "Silence installed hooks at runtime; does not remove them."),
-        ("LAZYPLAN_NO_COLOR", "Disable setup wizard color."),
-        ("NO_COLOR, CLICOLOR=0, TERM=dumb", "Plain setup output."),
-        ("USER", "Used for \\fB\\-\\-actor\\fR when you do not give one."),
-    ]:
+    for name, text in ENVIRONMENT:
         out.append(".TP")
         out.append(f".B {name}")
         out.append(text)
     out.append(".SH FILES")
-    for name, text in [
-        ("~/.lazyplan/lazyplan.db", "Your plans, shared by every agent and folder (default home)."),
-        (
-            ".agents/lazyplan/lazyplan.db",
-            "The repo database (only with \\fBlpui setup \\-\\-placement repo\\fR; keep it local).",
-        ),
-        (
-            ".agents/lazyplan/config.json",
-            "Repo marker; commit it with the plan.",
-        ),
-        (
-            ".agents/lazyplan/templates/{plan,milestone,task}.md",
-            "Repo creation templates; commit them to share defaults.",
-        ),
-        ("~/.lazyplan/templates/{plan,milestone,task}.md", "Home creation templates."),
-        ("~/.lazyplan/setup.json", "Remembered setup choices and migration decisions."),
-        ("~/.lazyplan/backups/<timestamp>/", "Tree-preserving backups of every touched file."),
-        (
-            "~/.agents/skills/lazyplan/SKILL.md",
-            "Universal agent skill; per-tool skill directories are written too.",
-        ),
-        (
-            "~/.config/opencode/plugins/lazyplan.js, ~/.claude/settings.json, ~/.gemini/settings.json, ~/.codex/hooks.json, ~/.cursor/hooks.json",
-            "Managed read-only hook surfaces.",
-        ),
-        ("AGENTS.md", "Optional marked lazyplan section in a repo."),
-    ]:
+    for name, text in FILES:
         out.append(".TP")
         out.append(f".B {_esc(name)}")
         out.append(text)

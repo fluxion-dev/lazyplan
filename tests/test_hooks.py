@@ -11,7 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from lazyplan import hooks, services  # noqa: E402
+from lazyplan import audit, hooks, services  # noqa: E402
 from lazyplan.cli import main as lpui_main  # noqa: E402
 from lazyplan.models import Status  # noqa: E402
 from lazyplan.store import Store  # noqa: E402
@@ -112,6 +112,12 @@ class HookCase(unittest.TestCase):
         payload = json.loads(out.getvalue())
         self.assertEqual(payload["host"], "claude")
         self.assertIn("Doing task", payload["text"])
+
+    def test_stop_warns_about_unlinked_commits(self):
+        self._seed()
+        commits = [audit.Commit("a" * 40, 1000, self.repo.as_posix(), 1, "loose")]
+        result = hooks.build_result("stop", {}, self.repo, commits=commits)
+        self.assertIn("unlinked", result.text)
 
     def test_closed_plan_is_silent(self):
         store = Store(self.db)

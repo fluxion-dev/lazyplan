@@ -155,29 +155,6 @@ def _timestamp() -> str:
     return datetime.now(UTC).strftime("%Y%m%d-%H%M%S-%f")
 
 
-def backup_dir(home: Path | None = None) -> Path:
-    """Fresh backup directory under the shared home."""
-    path = shared_home(home) / "backups" / _timestamp()
-    path.mkdir(parents=True, exist_ok=True)
-    return path
-
-
-def backup_file(source: str | Path, home: Path | None = None) -> Path | None:
-    """Copy one file into a fresh backup dir, preserving its relative path."""
-    src = Path(source)
-    try:
-        if not src.is_file():
-            return None
-    except OSError:
-        return None
-    dest = backup_dir(home) / src.name
-    try:
-        shutil.copy2(src, dest)
-    except OSError:
-        return None
-    return dest
-
-
 def git_state(repo_root: Path) -> str:
     """Tracked, ignored, or untracked for the repo plan database."""
     db = repo_plan_db_path(repo_root)
@@ -306,6 +283,7 @@ def refresh_installed_skills(home: Path | None = None) -> tuple[list[Path], list
     home = home or Path.home()
     refreshed: list[Path] = []
     backups: list[Path] = []
+    backup_root: Path | None = None
     marker = "name: lazyplan"
     for path in _installed_skill_files(home):
         try:
@@ -316,9 +294,9 @@ def refresh_installed_skills(home: Path | None = None) -> tuple[list[Path], list
             continue
         if text == skills.render_skill() or marker not in text[:500]:
             continue
-        backup = backup_file(path, home)
-        if backup is not None:
-            backups.append(backup)
+        if backup_root is None:
+            backup_root = setup_layout._new_backup_dir(home)
+        backups.append(setup_layout._backup_file(backup_root, path))
         changed, _status = skills.write_skill_file(path)
         if changed:
             refreshed.append(path)

@@ -18,6 +18,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 from lazyplan import porcelain  # noqa: E402
 from lazyplan.cli import main as lpui_main  # noqa: E402
 from lazyplan.cli_parser import build_parser  # noqa: E402
+from lazyplan.models import Status  # noqa: E402
+from lazyplan.services import set_status  # noqa: E402
 from lazyplan.store import Store  # noqa: E402
 
 
@@ -397,6 +399,142 @@ class TestLinkRows(unittest.TestCase):
             self._row("task", "finish", "--id", "1"),
             ["task", "1", "done", "T", "milestone:1", "-"],
         )
+
+    def test_commit_read_rows(self):
+        sha = subprocess.run(
+            ["git", "-C", self.repo, "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        ).stdout.strip()
+        self._row("link", "--kind", "task", "--id", "1")
+        lines = self._lines("commits", "--kind", "task", "--id", "1")
+        self.assertEqual(
+            lines,
+            [["commit", sha, "linked", "cli commit", "task:1", self.repo]],
+        )
+
+    def test_repo_read_rows(self):
+        remote = "git@example.com:org/repo.git"
+        self._row(
+            "link-repo", "--kind", "task", "--id", "1", "--repo", self.repo, "--remote", remote
+        )
+        self.assertEqual(
+            self._lines("repos", "--kind", "task", "--id", "1"),
+            [["repo", self.repo, "explicit", remote, "task:1", "-"]],
+        )
+
+    def test_git_status_rows(self):
+        sha = subprocess.run(
+            ["git", "-C", self.repo, "rev-parse", "--short=12", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        ).stdout.strip()
+        self._row("link-repo", "--kind", "task", "--id", "1", "--repo", self.repo)
+        lines = self._lines("git", "status", "--kind", "task", "--id", "1")
+        self.assertEqual(len(lines), 1)
+        self.assertEqual(lines[0][:5], ["status", self.repo, "clean", "main", "task:1"])
+        self.assertEqual(lines[0][5], f"head={sha} ahead=0 behind=0 upstream=- subject=cli commit")
+
+    def test_pr_read_rows(self):
+        url = "https://github.com/org/repo/pull/7"
+        self._row("pr", "link", "--kind", "task", "--id", "1", "--url", url)
+        expected = [["pr", "7", "unknown", "PR #7", "task:1", url]]
+        self.assertEqual(self._lines("pr", "list", "--kind", "task", "--id", "1"), expected)
+        self.assertEqual(
+            self._lines("pr", "show", "--kind", "task", "--id", "1", "--number", "7"), expected
+        )
+
+    def _lines(self, *argv: str) -> list[list[str]]:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            code = lpui_main(["--db", self.db, "--actor", "fixture", "--porcelain", *argv])
+        self.assertEqual(code, 0, buf.getvalue())
+        self.assertNotIn("{", buf.getvalue())
+        lines = [line.split("\t") for line in buf.getvalue().rstrip("\n").splitlines()]
+        for line in lines:
+            self.assertEqual(len(line), 6, line)
+        return lines
+
+
+class TestSessionRows(unittest.TestCase):
+    """Brief, audit, feed, and info reads keep their facts in plain rows."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.db = os.path.join(self.tmp.name, "g.db")
+        store = Store(self.db)
+        plan = store.add_plan("Website", "Marketing site", goal="Convert", actor="fixture")
+        milestone = store.add_milestone(plan.id, "Homepage", "Hero work", actor="fixture")
+        task = store.add_task(milestone.id, "Design hero", "Hero section", actor="fixture")
+        store.add_criteria("plan", plan.id, "Loads fast", actor="fixture")
+        set_status(store, "plan", plan.id, Status.DOING, actor="fixture")
+        set_status(store, "milestone", milestone.id, Status.DOING, actor="fixture")
+        set_status(store, "task", task.id, Status.DOING, actor="fixture")
+        self.old_home = os.environ.get("HOME")
+        self.old_setup = os.environ.get("LAZYPLAN_NO_SETUP")
+        self.old_cwd = os.getcwd()
+        os.environ["HOME"] = self.tmp.name
+        os.environ["LAZYPLAN_NO_SETUP"] = "1"
+        work = os.path.join(self.tmp.name, "work")
+        os.makedirs(work, exist_ok=True)
+        os.chdir(work)
+
+    def tearDown(self):
+        os.chdir(self.old_cwd)
+        for key, value in (("HOME", self.old_home), ("LAZYPLAN_NO_SETUP", self.old_setup)):
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+        self.tmp.cleanup()
+
+    def _lines(self, *argv: str) -> list[list[str]]:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            code = lpui_main(["--db", self.db, "--actor", "fixture", "--porcelain", *argv])
+        self.assertEqual(code, 0, buf.getvalue())
+        self.assertNotIn("{", buf.getvalue())
+        lines = [line.split("\t") for line in buf.getvalue().rstrip("\n").splitlines()]
+        for line in lines:
+            self.assertEqual(len(line), 6, line)
+        return lines
+
+    def test_brief_rows(self):
+        self.assertEqual(
+            self._lines("brief", "--plan", "1"),
+            [
+                ["metric", "active", "-", "1", "-", "-"],
+                ["plan", "1", "doing", "Website", "-", "0/1"],
+                ["task", "1", "doing", "Design hero", "milestone:1", "-"],
+                ["criterion", "1", "open", "Loads fast", "plan:1", "-"],
+            ],
+        )
+
+    def test_audit_rows(self):
+        lines = self._lines("audit", "--plan", "1", "--since", "2026-01-01")
+        metrics = {line[1]: line[3] for line in lines if line[0] == "metric"}
+        self.assertEqual(metrics["plans"], "P1")
+        self.assertEqual(metrics["coverage"], "1.0")
+        self.assertEqual(metrics["gaps"], "0")
+        self.assertIn("commits_total", metrics)
+
+    def test_feed_rows(self):
+        lines = self._lines("feed", "--limit", "1")
+        self.assertEqual(len(lines), 1)
+        self.assertEqual(lines[0][0], "feed")
+        self.assertEqual(lines[0][2], "fixture")
+        self.assertIn("/", lines[0][4])
+
+    def test_info_rows(self):
+        lines = self._lines("info")
+        values = {line[1]: line[3] for line in lines}
+        self.assertEqual(values["db"], self.db)
+        self.assertEqual(values["plans"], "1")
+        self.assertEqual(values["tasks"], "1")
 
 
 if __name__ == "__main__":

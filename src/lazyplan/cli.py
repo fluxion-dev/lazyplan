@@ -339,6 +339,29 @@ def _audit_lines(report: audit.Report) -> list[str]:
     return lines
 
 
+def _audit_output(args: argparse.Namespace, result: audit.Report, reasons: list[str]) -> int:
+    """Print the audit in the requested format and apply the strict exit code."""
+    strict_fail = 2 if args.strict and reasons else 0
+    if args.json:
+        payload = result.to_dict()
+        payload["breaches"] = reasons
+        _emit(args, payload)
+        return strict_fail
+    if porcelain.enabled(args):
+        for line in _audit_rows(result):
+            print(line)
+        for reason in reasons:
+            print(porcelain.row("breach", "-", "-", reason))
+        return strict_fail
+    for line in _audit_lines(result):
+        print(line)
+    if args.strict:
+        for reason in reasons:
+            print(f"strict: {reason}")
+        return strict_fail
+    return 0
+
+
 def _cmd_audit(store: Store | None, args: argparse.Namespace, actor: str) -> int:
     """Read-only accuracy report; --strict exits 2 only on a breach."""
     del actor
@@ -369,18 +392,7 @@ def _cmd_audit(store: Store | None, args: argparse.Namespace, actor: str) -> int
         lag_commits=args.max_lag,
         gaps=args.max_gaps,
     ).breaches(result)
-    if args.json:
-        payload = result.to_dict()
-        payload["breaches"] = reasons
-        _emit(args, payload)
-        return 2 if args.strict and reasons else 0
-    for line in _audit_lines(result):
-        print(line)
-    if args.strict:
-        for reason in reasons:
-            print(f"strict: {reason}")
-        return 2 if reasons else 0
-    return 0
+    return _audit_output(args, result, reasons)
 
 
 def _cmd_brief(store: Store | None, args: argparse.Namespace, actor: str) -> int:
@@ -404,6 +416,10 @@ def _cmd_brief(store: Store | None, args: argparse.Namespace, actor: str) -> int
             return 2
     if args.json:
         return _emit(args, payload)
+    if porcelain.enabled(args):
+        for line in _brief_rows(db, payload) if db is not None else ():
+            print(line)
+        return 0
     for line in brief.lines(payload):
         print(line)
     return 0
@@ -439,16 +455,18 @@ def _cmd_info(store: Store, args: argparse.Namespace, actor: str) -> int:
         contents = sorted(f.name for f in plan_dir.iterdir()) if plan_dir.is_dir() else []
     except OSError:
         contents = []
-    return _emit(
-        args,
-        {
-            "db": str(store.path),
-            "repo": str(root) if root else None,
-            "scope": repo_label(store.path),
-            "plan_files": contents,
-            "counts": store.counts(),
-        },
-    )
+    payload = {
+        "db": str(store.path),
+        "repo": str(root) if root else None,
+        "scope": repo_label(store.path),
+        "plan_files": contents,
+        "counts": store.counts(),
+    }
+    if porcelain.enabled(args):
+        for line in _info_rows(payload):
+            print(line)
+        return 0
+    return _emit(args, payload)
 
 
 def _cmd_seed(store: Store, args: argparse.Namespace, actor: str) -> int:
@@ -652,18 +670,200 @@ def _porcelain_show_lines(store: Store, kind: str, full: dict) -> list[str]:
 
 
 def _criterion_dict_rows(items: list[dict]) -> list[str]:
-    """Criterion rows from `show` payload dicts."""
+    """Criterion rows from `show` or `brief` payload dicts."""
     return [
         porcelain.row(
             "criterion",
             item["id"],
             "done" if item.get("done") else "open",
             item.get("text"),
-            f"{item.get('parent_kind')}:{item.get('parent_id')}",
+            f"{item.get('parent_kind', item.get('kind'))}:{item.get('parent_id', item.get('id'))}",
             "-",
         )
         for item in items
     ]
+
+
+def _commit_row(link: dict, parent: str) -> str:
+    """One commit record; the full SHA stays the id."""
+    return porcelain.row(
+        "commit",
+        link.get("sha"),
+        "stale" if link.get("stale") else "linked",
+        link.get("subject"),
+        parent,
+        link.get("repo_root") or "-",
+    )
+
+
+def _repo_row(row: dict, parent: str, status: str) -> str:
+    """One repo link; title carries the remote and extra the branch."""
+    return porcelain.row(
+        "repo",
+        row.get("repo_path"),
+        status,
+        row.get("repo_remote") or "-",
+        parent,
+        row.get("branch") or "-",
+    )
+
+
+def _feed_row(event: dict) -> str:
+    """One feed event: id, actor, detail, event kind/action, and timestamp."""
+    return porcelain.row(
+        "feed",
+        event.get("id"),
+        event.get("actor"),
+        event.get("detail"),
+        f"{event.get('kind')}/{event.get('action')}",
+        int(float(event.get("ts") or 0)),
+    )
+
+
+def _info_rows(payload: dict) -> list[str]:
+    """`info` as key/value rows, including each count."""
+    rows = [
+        porcelain.row("info", "db", "-", payload.get("db"), "-", "-"),
+        porcelain.row("info", "repo", "-", payload.get("repo"), "-", "-"),
+        porcelain.row("info", "scope", "-", payload.get("scope"), "-", "-"),
+        porcelain.row(
+            "info",
+            "plan_files",
+            "-",
+            ",".join(str(name) for name in payload.get("plan_files", [])),
+            "-",
+            "-",
+        ),
+    ]
+    for key, value in (payload.get("counts") or {}).items():
+        rows.append(porcelain.row("info", key, "-", value, "-", "-"))
+    return rows
+
+
+def _audit_rows(report: audit.Report) -> list[str]:
+    """Audit metrics plus every open gap."""
+    window = (
+        "all history"
+        if not report.since
+        else time.strftime("%Y-%m-%d %H:%M", time.localtime(report.since))
+    )
+    rows = [
+        porcelain.row("metric", "plans", "-", ",".join(f"P{plan}" for plan in report.plans)),
+        porcelain.row("metric", "since", "-", window),
+        porcelain.row("metric", "repos", "-", len(report.repos)),
+        porcelain.row("metric", "commits_total", "-", report.commits_total),
+        porcelain.row("metric", "commits_linked", "-", report.commits_linked),
+        porcelain.row("metric", "coverage", "-", round(report.coverage, 4)),
+        porcelain.row("metric", "median_lag_commits", "-", report.median_lag_commits),
+        porcelain.row("metric", "median_lag_minutes", "-", report.median_lag_minutes),
+        porcelain.row("metric", "unresolved_lag", "-", report.unresolved),
+        porcelain.row("metric", "gaps", "-", len(report.gaps)),
+    ]
+    rows.extend(porcelain.row("gap", f"{gap.kind}:{gap.id}", "-", gap.text) for gap in report.gaps)
+    return rows
+
+
+def _brief_rows(store: Store, payload: dict) -> list[str]:
+    """Brief as plan, doing, next, criterion, and unlinked commit rows."""
+    rows = [porcelain.row("metric", "active", "-", payload.get("active", 0))]
+    for entry in payload.get("plans", []):
+        plan = store.get_plan(int(entry["id"]))
+        if plan is not None:
+            rows.append(_porcelain_row(store, plan))
+        for task in entry.get("doing", []):
+            model = store.get_task(int(task["id"]))
+            if model is not None:
+                rows.append(_porcelain_row(store, model))
+        next_task = entry.get("next")
+        if next_task:
+            parent = "-"
+            model = store.get_task(int(next_task["id"]))
+            if model is not None:
+                parent = f"milestone:{model.milestone_id}"
+            rows.append(
+                porcelain.row("next", next_task["id"], "-", next_task["title"], parent, "-")
+            )
+        rows.extend(_criterion_dict_rows(entry.get("criteria", [])))
+        for commit in entry.get("unlinked", []):
+            rows.append(
+                porcelain.row(
+                    "commit",
+                    commit.get("sha"),
+                    "unlinked",
+                    commit.get("subject"),
+                    f"plan:{entry['id']}",
+                    int(float(commit.get("timestamp") or 0)),
+                )
+            )
+    return rows
+
+
+def _git_status_rows(entries: list[dict], parent: str) -> list[str]:
+    """One row per checkout with branch, dirty state, and tracking facts."""
+    rows: list[str] = []
+    for entry in entries:
+        path = entry.get("repo_path")
+        if entry.get("error"):
+            rows.append(
+                porcelain.row(
+                    "status", path, "error", entry["error"], parent, entry.get("repo_remote")
+                )
+            )
+            continue
+        branch = entry.get("branch") or ("detached" if entry.get("detached") else "unknown")
+        head = str(entry.get("head") or "")[:12]
+        extra = (
+            f"head={head or '-'} ahead={entry.get('ahead', 0)} behind={entry.get('behind', 0)} "
+            f"upstream={entry.get('upstream') or '-'} subject={entry.get('subject') or '-'}"
+        )
+        rows.append(
+            porcelain.row(
+                "status",
+                path,
+                "dirty" if entry.get("dirty") else "clean",
+                branch,
+                parent,
+                extra,
+            )
+        )
+    return rows
+
+
+def _pr_row(link: dict, parent: str) -> str:
+    """One pull request; title is the PR title and extra is the URL."""
+    return porcelain.row(
+        "pr",
+        link.get("number"),
+        link.get("state") or "unknown",
+        link.get("title") or "-",
+        parent,
+        link.get("url") or "-",
+    )
+
+
+def _pr_status_rows(entries: list[dict], parent: str) -> list[str]:
+    """One row per checkout with provider, auth source, and cache state."""
+    rows: list[str] = []
+    for entry in entries:
+        path = entry.get("repo_path")
+        summary = (
+            f"{entry.get('provider', 'github')} auth={entry.get('auth_source') or 'none'} "
+            f"cache={entry.get('cache') or 'none'} remote={entry.get('repo_remote') or '-'}"
+        )
+        if entry.get("error"):
+            rows.append(porcelain.row("pr-status", path, "error", entry["error"], parent, summary))
+        else:
+            rows.append(
+                porcelain.row("pr-status", path, "ready", entry.get("slug") or "-", parent, summary)
+            )
+    return rows
+
+
+def _scan_row(match: dict) -> str:
+    """One git scan match: SHA, action, subject, and the matched row ref."""
+    return porcelain.row(
+        "scan", match.get("sha"), match.get("action"), match.get("subject"), match.get("ref"), "-"
+    )
 
 
 def _cmd_list(store: Store, args: argparse.Namespace, actor: str) -> int:
@@ -906,6 +1106,10 @@ def _cmd_git_scan(store: Store, args: argparse.Namespace, actor: str) -> int:
     )
     if args.json:
         return _emit(args, matches)
+    if porcelain.enabled(args):
+        for match in matches:
+            print(_scan_row(match))
+        return 0
     if not matches:
         print("(no lazyplan references found)")
         return 0
@@ -948,6 +1152,11 @@ def _cmd_pr_status(store: Store, args: argparse.Namespace, actor: str) -> int:
     )
     if args.json:
         return _emit(args, entries)
+    if porcelain.enabled(args):
+        parent = f"{args.kind}:{args.id}" if args.kind and args.id else "-"
+        for line in _pr_status_rows(entries, parent):
+            print(line)
+        return 0
     if not entries:
         print("(no linked repos)")
         return 0
@@ -962,6 +1171,11 @@ def _cmd_pr_list(store: Store, args: argparse.Namespace, actor: str) -> int:
     links = store.list_forge_links(args.kind, args.id)
     if args.json:
         return _emit(args, [vars(link) for link in links])
+    if porcelain.enabled(args):
+        parent = f"{args.kind}:{args.id}"
+        for link in links:
+            print(_pr_row(vars(link), parent))
+        return 0
     if not links:
         print("(no pull requests linked)")
         return 0
@@ -981,6 +1195,9 @@ def _cmd_pr_show(store: Store, args: argparse.Namespace, actor: str) -> int:
         return 1
     if args.json:
         return _emit(args, vars(links[0]))
+    if porcelain.enabled(args):
+        print(_pr_row(vars(links[0]), f"{args.kind}:{args.id}"))
+        return 0
     print(render_forge_links([vars(links[0])]))
     return 0
 
@@ -1103,6 +1320,11 @@ def _cmd_commits(store: Store, args: argparse.Namespace, actor: str) -> int:
     links = store.effective_links(args.kind, args.id)
     if args.json:
         return _emit(args, [vars(c) for c in links])
+    if porcelain.enabled(args):
+        parent = f"{args.kind}:{args.id}"
+        for link in links:
+            print(_commit_row(vars(link), parent))
+        return 0
     if not links:
         print(EMPTY_COMMITS)
         return 0
@@ -1171,13 +1393,16 @@ def _cmd_git_status(store: Store, args: argparse.Namespace, actor: str) -> int:
         obj_id=args.id or 0,
         repo_path=str(args.repo) if args.repo else "",
     )
-    if not entries:
-        if args.json:
-            return _emit(args, [])
-        print("(no linked repos)")
-        return 0
     if args.json:
         return _emit(args, entries)
+    if porcelain.enabled(args):
+        parent = f"{args.kind}:{args.id}" if args.kind and args.id else "-"
+        for line in _git_status_rows(entries, parent):
+            print(line)
+        return 0
+    if not entries:
+        print("(no linked repos)")
+        return 0
     print(render_git_status(entries))
     return 0
 
@@ -1236,6 +1461,12 @@ def _cmd_repos(store: Store, args: argparse.Namespace, actor: str) -> int:
     )
     if args.json:
         return _emit(args, rows)
+    if porcelain.enabled(args):
+        status = "effective" if getattr(args, "effective", False) else "explicit"
+        parent = f"{args.kind}:{args.id}"
+        for row in rows:
+            print(_repo_row(row, parent, status))
+        return 0
     if not rows:
         print(EMPTY_COMMITS)
         return 0
@@ -1285,38 +1516,43 @@ def _cmd_import(store: Store, args: argparse.Namespace, actor: str) -> int:
     return _emit(args, {"imported": counts})
 
 
+def _print_feed_events(
+    events: list[dict], terse: bool, *, reverse: bool = False, flush: bool = False
+) -> None:
+    """Print feed events in one format; callers choose order and buffering."""
+    items = reversed(events) if reverse else events
+    for event in items:
+        if terse:
+            print(_feed_row(event), flush=flush)
+        else:
+            print(
+                f"#{event['id']} [{event['actor']}] "
+                f"{event['kind']}/{event['action']}: {event['detail']}",
+                flush=flush,
+            )
+
+
 def _cmd_feed(store: Store, args: argparse.Namespace, actor: str) -> int:
     seen = -1
+    terse = porcelain.enabled(args)
     while True:
         events = store.feed(args.limit)
-        if args.json or not args.follow:
-            if args.follow and args.json:
-                fresh = [e for e in events if e["id"] > seen]
-                for e in reversed(fresh):
-                    print(json.dumps(e, default=str))
-                if fresh:
-                    seen = max(e["id"] for e in fresh)
+        if not args.follow:
+            if args.json:
+                print(json.dumps(events, indent=2, default=str))
             else:
-                if args.json:
-                    print(json.dumps(events, indent=2, default=str))
-                else:
-                    if not events:
-                        print(EMPTY_FEED)
-                    for e in reversed(events):
-                        print(f"#{e['id']} [{e['actor']}] {e['kind']}/{e['action']}: {e['detail']}")
-            if not args.follow:
-                return 0
-            time.sleep(args.interval)
-            continue
-        # plain follow: only print new rows
-        fresh = [e for e in events if e["id"] > seen]
-        for e in reversed(fresh):
-            print(
-                f"#{e['id']} [{e['actor']}] {e['kind']}/{e['action']}: {e['detail']}",
-                flush=True,
-            )
+                if not events and not terse:
+                    print(EMPTY_FEED)
+                _print_feed_events(events, terse, reverse=True)
+            return 0
+        fresh = [event for event in events if event["id"] > seen]
+        if args.json:
+            for event in reversed(fresh):
+                print(json.dumps(event, default=str))
+        else:
+            _print_feed_events(fresh, terse, reverse=True, flush=True)
         if fresh:
-            seen = max(e["id"] for e in fresh)
+            seen = max(event["id"] for event in fresh)
         time.sleep(args.interval)
 
 

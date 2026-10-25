@@ -14,6 +14,28 @@ Criterion rows use `kind=criterion`, status `open|done`, and parent
 - `pr`: id is the pull request number, title the URL.
 - `task start` and `task finish` reuse the task row with its current status.
 
+Reads reuse the same envelope:
+
+- `brief`: `plan`, `task`, `next`, `criterion`, and `commit` rows plus a
+  `metric` row for the active count.
+- `audit`: `metric` rows (id is the name, title the value), `gap` rows, and
+  `breach` rows in strict mode.
+- `feed`: id is the event id, status the actor, title the detail, parent the
+  `kind/action`, extra the timestamp.
+- `info`: id is the key and title the value, including every count.
+- `commits`: id is the full SHA, status `linked|stale`, title the subject,
+  parent `kind:id`, extra the repo root.
+- `repos`: id is the path, status `explicit|effective`, title the remote,
+  parent `kind:id`, extra the recorded branch.
+- `git status`: id is the path, status `clean|dirty|error`, title the branch,
+  parent `kind:id` or `-`, extra head/ahead/behind/upstream/subject.
+- `git scan`: id is the SHA, status the action, title the subject, parent the
+  matched ref.
+- `pr list|show`: id is the number, status the cached state, title the PR
+  title, parent `kind:id`, extra the URL.
+- `pr status`: id is the path, status `ready|error`, title the slug, parent
+  `kind:id` or `-`, extra provider/auth/cache/remote.
+
 Text fields never carry a tab or newline: separators become a
 single space, so every record stays parseable with `line.split("\\t")`.
 

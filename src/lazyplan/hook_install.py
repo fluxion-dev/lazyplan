@@ -173,6 +173,11 @@ const run = async ($, directory, event, extra = "") => {
 
 export const LazyplanPlugin = async ({ $, directory }) => {
   return {
+    event: async ({ event }) => {
+      if (event.type !== "session.created") return
+      const text = await run($, directory, "session-start")
+      if (text) console.log(text)
+    },
     "tool.execute.after": async (input) => {
       if (input.tool !== "bash") return
       const text = await run($, directory, "post-tool", input.args?.command ?? "")

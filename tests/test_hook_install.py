@@ -36,7 +36,9 @@ class InstallCase(unittest.TestCase):
     def test_installs_every_supported_host(self):
         report = hook_install.install(self.home, ALL)
         self.assertEqual(len(report["installed"]), 5)
-        self.assertTrue((self.home / ".config/opencode/plugins/lazyplan.js").is_file())
+        plugin = self.home / ".config/opencode/plugins/lazyplan.js"
+        self.assertTrue(plugin.is_file())
+        self.assertIn("session-start", plugin.read_text())
         for relative in (".claude/settings.json", ".gemini/settings.json", ".codex/hooks.json"):
             data = self._read(self.home / relative)
             self.assertTrue(data["hooks"])

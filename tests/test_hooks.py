@@ -113,6 +113,16 @@ class HookCase(unittest.TestCase):
         self.assertEqual(payload["host"], "claude")
         self.assertIn("Doing task", payload["text"])
 
+    def test_closed_plan_is_silent(self):
+        store = Store(self.db)
+        plan = store.add_plan("P", "what", goal="why")
+        milestone = store.add_milestone(plan.id, "M", "desc")
+        task = store.add_task(milestone.id, "T", "desc")
+        for kind, obj_id in (("task", task.id), ("milestone", milestone.id), ("plan", plan.id)):
+            services.set_status(store, kind, obj_id, Status.DONE, actor="t")
+        result = hooks.build_result("session-start", {}, self.repo, commits=[])
+        self.assertEqual(result.text, "")
+
     def test_cli_fresh_home_creates_nothing(self):
         out = io.StringIO()
         old_stdin = sys.stdin

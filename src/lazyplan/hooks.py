@@ -108,7 +108,10 @@ def _doing_task(store: Store) -> int | None:
 
 
 def _session_text(store: Store, cwd: Path, commits: list[audit.Commit] | None) -> str:
-    return "\n".join(_brief_lines(store, cwd, commits)).strip()
+    payload = brief.build(store, commits=commits, cwd=cwd)
+    if not payload.get("plans"):
+        return ""
+    return "\n".join(brief.lines(payload)).strip()
 
 
 def _stop_text(store: Store, cwd: Path, commits: list[audit.Commit] | None) -> str:

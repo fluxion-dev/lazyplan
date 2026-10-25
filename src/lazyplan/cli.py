@@ -504,75 +504,78 @@ def _cmd_next(store: Store, args: argparse.Namespace, actor: str) -> int:
     return 0
 
 
-def _cmd_claim(store: Store, args: argparse.Namespace, actor: str) -> int:
-    action = args.action or "take"
-    try:
-        if action == "renew":
-            claim = services.renew_task_claim(store, args.id, actor, ttl=args.ttl)
-            task = store.get_task(args.id)
-            payload: dict = {"claim": vars(claim)}
-            line = porcelain.claim_row(
+def _claim_failure(exc: Exception) -> int:
+    """Map a lease failure to the agent-readable exit code."""
+    if isinstance(exc, (ClaimConflict, ClaimMissing)):
+        print(msg_error(exc), file=sys.stderr)
+        return 1
+    if isinstance(exc, KeyError):
+        print(msg_error(ValueError(str(exc))), file=sys.stderr)
+        return 1
+    print(msg_error(exc), file=sys.stderr)
+    return 2
+
+
+def _claim_take(store: Store, args: argparse.Namespace, actor: str) -> int:
+    result = services.start_claim(
+        store, args.id, actor, ttl=args.ttl, note=args.note, force=bool(args.force)
+    )
+    claim = result["claim"]
+    task = result["task"]
+    if args.json:
+        return _emit(args, result)
+    if porcelain.enabled(args):
+        print(porcelain.claim_row(task["id"], claim["actor"], task["title"], claim["expires_at"]))
+    else:
+        print(
+            f"claimed T{task['id']} {task['title']} by {claim['actor']} "
+            f"{_expiry_text(claim['expires_at'])}"
+        )
+    return 0
+
+
+def _claim_renew(store: Store, args: argparse.Namespace, actor: str) -> int:
+    claim = services.renew_task_claim(store, args.id, actor, ttl=args.ttl)
+    task = store.get_task(args.id)
+    if args.json:
+        return _emit(args, {"claim": vars(claim)})
+    if porcelain.enabled(args):
+        print(
+            porcelain.claim_row(
                 claim.task_id,
                 claim.actor,
                 task.title if task is not None else "-",
                 claim.expires_at,
             )
-            if args.json:
-                return _emit(args, payload)
-            if porcelain.enabled(args):
-                print(line)
-            else:
-                print(f"renewed T{claim.task_id} until {_expiry_text(claim.expires_at)}")
-            return 0
-        if action == "release":
-            result = services.release_task_claim(store, args.id, actor, force=bool(args.force))
-            claim = result["claim"]
-            task = result["task"]
-            if args.json:
-                return _emit(args, result)
-            if claim is None:
-                if not porcelain.enabled(args):
-                    print(f"T{task['id']} was not claimed")
-                return 0
-            if porcelain.enabled(args):
-                print(porcelain.claim_row(task["id"], claim["actor"], task["title"], None))
-            else:
-                print(f"released T{task['id']} {task['title']} (was {claim['actor']})")
-            return 0
-        result = services.start_claim(
-            store,
-            args.id,
-            actor,
-            ttl=args.ttl,
-            note=args.note,
-            force=bool(args.force),
         )
-        claim = result["claim"]
-        task = result["task"]
-        if args.json:
-            return _emit(args, result)
-        if porcelain.enabled(args):
-            print(
-                porcelain.claim_row(task["id"], claim["actor"], task["title"], claim["expires_at"])
-            )
-        else:
-            print(
-                f"claimed T{task['id']} {task['title']} by {claim['actor']} "
-                f"{_expiry_text(claim['expires_at'])}"
-            )
+    else:
+        print(f"renewed T{claim.task_id} until {_expiry_text(claim.expires_at)}")
+    return 0
+
+
+def _claim_release(store: Store, args: argparse.Namespace, actor: str) -> int:
+    result = services.release_task_claim(store, args.id, actor, force=bool(args.force))
+    claim = result["claim"]
+    task = result["task"]
+    if args.json:
+        return _emit(args, result)
+    if claim is None:
+        if not porcelain.enabled(args):
+            print(f"T{task['id']} was not claimed")
         return 0
-    except ClaimConflict as exc:
-        print(msg_error(exc), file=sys.stderr)
-        return 1
-    except ClaimMissing as exc:
-        print(msg_error(exc), file=sys.stderr)
-        return 1
-    except KeyError as exc:
-        print(msg_error(ValueError(str(exc))), file=sys.stderr)
-        return 1
-    except (ValueError, TypeError) as exc:
-        print(msg_error(exc), file=sys.stderr)
-        return 2
+    if porcelain.enabled(args):
+        print(porcelain.claim_row(task["id"], claim["actor"], task["title"], None))
+    else:
+        print(f"released T{task['id']} {task['title']} (was {claim['actor']})")
+    return 0
+
+
+def _cmd_claim(store: Store, args: argparse.Namespace, actor: str) -> int:
+    actions = {"take": _claim_take, "renew": _claim_renew, "release": _claim_release}
+    try:
+        return actions[args.action or "take"](store, args, actor)
+    except (ClaimConflict, ClaimMissing, KeyError, ValueError, TypeError) as exc:
+        return _claim_failure(exc)
 
 
 def _cmd_claims(store: Store, args: argparse.Namespace, actor: str) -> int:

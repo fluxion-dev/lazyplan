@@ -118,6 +118,40 @@ class FirstRunCase(unittest.TestCase):
             setup.install_hooks(self.home, ["claude"])
         self.assertFalse(setup.load_state(self.home).hooks)
 
+    def test_wrong_typed_state_falls_back_to_defaults(self):
+        path = setup.state_path(self.home)
+        path.parent.mkdir(parents=True)
+        path.write_text('{"version": "not-a-number"}')
+        self.assertEqual(setup.load_state(self.home).version, setup.SETUP_VERSION)
+
+    def test_persistent_findings_do_not_rewrite_setup(self):
+        setup.save_state(setup.SetupState(last_version="1.0", placement="home"), self.home)
+        finding = setup.Finding(key="k", kind="legacy-dir", path=self.repo / ".plan", detail="x")
+        with (
+            mock.patch.object(setup, "detect_findings", return_value=[finding]),
+            mock.patch.object(setup, "apply_choice") as apply,
+        ):
+            setup.ensure("list", make_args(), self.repo, self.home, "1.0", interactive=False)
+        apply.assert_not_called()
+
+    def test_xdg_fallback_database_is_reported(self):
+        xdg = Path(self.tmp.name) / "xdg"
+        old = os.environ.get("XDG_DATA_HOME")
+        os.environ["XDG_DATA_HOME"] = str(xdg)
+        try:
+            db = xdg / "lazyplan/lazyplan.db"
+            db.parent.mkdir(parents=True)
+            from lazyplan.store import Store
+
+            Store(db).add_plan("old")
+            findings = setup._legacy_db_findings(self.home)
+        finally:
+            if old is None:
+                os.environ.pop("XDG_DATA_HOME", None)
+            else:
+                os.environ["XDG_DATA_HOME"] = old
+        self.assertTrue(any(f.path == db for f in findings))
+
     def test_first_run_matrix(self):
         for placement in ("home", "repo"):
             for no_skills in (False, True):

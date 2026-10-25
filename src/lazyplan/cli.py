@@ -126,6 +126,8 @@ def _print_setup(result: dict) -> None:
         print(f"skill:     {skill}")
     for path in result["refreshed"]:
         print(f"refreshed: {path}")
+    for path in result.get("backups") or []:
+        print(f"backup:    {path}")
     hooks = result.get("hooks") or {}
     for path in hooks.get("installed") or hooks.get("removed") or []:
         print(f"hooks:     {path}")

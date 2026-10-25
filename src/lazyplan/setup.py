@@ -1,7 +1,8 @@
 """First-run setup: remembered choices, placement, findings, and safe moves.
 
-Setup runs before the database opens, remembers what it installed in `~/.lazyplan/setup.json`, and reviews layout drift once per finding
-instead of nagging on every upgrade. Stdlib only.
+Setup runs before the database opens and remembers what it installed in
+`~/.lazyplan/setup.json`. Layout drift is reported on every run; only a
+repo-database move decision is remembered. Stdlib only.
 """
 
 from __future__ import annotations
@@ -24,6 +25,7 @@ from .repo import (
     PLAN_DIR,
     TEMPLATES_DIR_NAME,
     find_repo_root,
+    global_db_path,
     is_repo_plan_dir,
     legacy_plan_dir,
     repo_plan_db_path,
@@ -105,9 +107,9 @@ def load_state(home: Path | None = None) -> SetupState:
     path = state_path(home)
     try:
         raw = json.loads(path.read_text())
-    except (OSError, ValueError):
+        return SetupState.from_dict(raw)
+    except (OSError, ValueError, TypeError):
         return SetupState()
-    return SetupState.from_dict(raw)
 
 
 def save_state(state: SetupState, home: Path | None = None) -> Path:
@@ -723,39 +725,41 @@ def ensure(
         # skills, or state around it.
         return None
     root = find_repo_root(cwd)
-    choice = choice_from_args(args, cwd, home, state)
-    if human and can_prompt and first:
-        result = run_wizard(
-            cwd,
+    result: dict[str, Any] | None = None
+    if first or version_changed:
+        choice = choice_from_args(args, cwd, home, state)
+        if human and can_prompt and first:
+            result = run_wizard(
+                cwd,
+                home,
+                state,
+                version,
+                json_mode=bool(getattr(args, "json", False)),
+                initial=choice,
+                hooks_enabled=getattr(args, "hooks", None),
+            )
+            if result is None:
+                return None
+        else:
+            result = apply_choice(choice, root, home, version)
+        install_integrations(
+            result,
             home,
-            state,
-            version,
-            json_mode=bool(getattr(args, "json", False)),
-            initial=choice,
-            hooks_enabled=getattr(args, "hooks", None),
+            root,
+            getattr(args, "hooks", None),
+            getattr(args, "agents_pointer", None),
         )
-        if result is None:
-            return None
-    else:
-        result = apply_choice(choice, root, home, version)
-    install_integrations(
-        result,
-        home,
-        root,
-        getattr(args, "hooks", None),
-        getattr(args, "agents_pointer", None),
-    )
-    if first and human and not getattr(args, "json", False):
-        plugins = [Path(path) for path in (result.get("hooks") or {}).get("installed") or []]
-        backups = [Path(path) for path in (result.get("hooks") or {}).get("backups") or []]
-        setup_ui.success(
-            sys.stderr,
-            Path(result["db"]),
-            [Path(path) for path in result["skills"]],
-            backups,
-            setup_ui.color_enabled(sys.stderr, False),
-            plugins,
-        )
+        if first and human and not getattr(args, "json", False):
+            plugins = [Path(path) for path in (result.get("hooks") or {}).get("installed") or []]
+            backups = [Path(path) for path in (result.get("hooks") or {}).get("backups") or []]
+            setup_ui.success(
+                sys.stderr,
+                Path(result["db"]),
+                [Path(path) for path in result["skills"]],
+                backups,
+                setup_ui.color_enabled(sys.stderr, False),
+                plugins,
+            )
     if human and findings:
         fresh = load_state(home)
         review_findings(
@@ -855,7 +859,8 @@ def _legacy_db_findings(home: Path) -> list[Finding]:
     """Old per-agent databases that resolution no longer reads."""
     home_db = shared_db_path(home)
     out: list[Finding] = []
-    for path in skills.agent_local_db_candidates(home):
+    candidates = [*skills.agent_local_db_candidates(home), global_db_path()]
+    for path in candidates:
         if path == home_db or not path.is_file():
             continue
         out.append(

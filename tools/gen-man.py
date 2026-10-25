@@ -130,6 +130,8 @@ def render() -> str:
         for a in sp._actions:
             if a.dest in ("help",):
                 continue
+            if a.help == argparse.SUPPRESS:
+                continue
             if not a.option_strings and a.dest == "cmd":
                 continue
             # Skip suppressed globals already documented; document real flags only.
@@ -159,25 +161,51 @@ def render() -> str:
         out.append(line)
     out.append(".fi")
     out.append(".SH ENVIRONMENT")
-    out.append(".TP")
-    out.append(".B LAZYPLAN_DB")
-    out.append("Which database file to use (same as \\fB\\-\\-db\\fR).")
-    out.append(".TP")
-    out.append(".B USER")
-    out.append("Used for \\fB\\-\\-actor\\fR when you do not give one.")
+    for name, text in [
+        ("LAZYPLAN_DB", "Which database file to use (same as \\fB\\-\\-db\\fR)."),
+        ("LAZYPLAN_NO_SETUP", "Skip first-run setup and upgrade review when set."),
+        ("LAZYPLAN_AGENTS", "Default agent list for setup (flag wins)."),
+        ("LAZYPLAN_SKILLS_DIR", "Default skill directory for setup (flag wins)."),
+        ("LAZYPLAN_NO_SKILLS", "Install no agent skill when set."),
+        ("LAZYPLAN_NO_HOOKS", "Silence installed hooks at runtime; does not remove them."),
+        ("LAZYPLAN_NO_COLOR", "Disable setup wizard color."),
+        ("NO_COLOR, CLICOLOR=0, TERM=dumb", "Plain setup output."),
+        ("USER", "Used for \\fB\\-\\-actor\\fR when you do not give one."),
+    ]:
+        out.append(".TP")
+        out.append(f".B {name}")
+        out.append(text)
     out.append(".SH FILES")
-    out.append(".TP")
-    out.append(".B ~/.lazyplan/lazyplan.db")
-    out.append("Your plans, shared by every agent and folder (default home).")
-    out.append(".TP")
-    out.append(".B .agents/lazyplan/lazyplan.db")
-    out.append(
-        "The repo database (only with \\fBlpui setup \\-\\-placement repo\\fR; commit "
-        "the config and templates, keep the database local)."
-    )
-    out.append(".TP")
-    out.append(".B ~/.lazyplan/setup.json")
-    out.append("Remembered setup choices and migration decisions.")
+    for name, text in [
+        ("~/.lazyplan/lazyplan.db", "Your plans, shared by every agent and folder (default home)."),
+        (
+            ".agents/lazyplan/lazyplan.db",
+            "The repo database (only with \\fBlpui setup \\-\\-placement repo\\fR; keep it local).",
+        ),
+        (
+            ".agents/lazyplan/config.json",
+            "Repo marker; commit it with the plan.",
+        ),
+        (
+            ".agents/lazyplan/templates/{plan,milestone,task}.md",
+            "Repo creation templates; commit them to share defaults.",
+        ),
+        ("~/.lazyplan/templates/{plan,milestone,task}.md", "Home creation templates."),
+        ("~/.lazyplan/setup.json", "Remembered setup choices and migration decisions."),
+        ("~/.lazyplan/backups/<timestamp>/", "Tree-preserving backups of every touched file."),
+        (
+            "~/.agents/skills/lazyplan/SKILL.md",
+            "Universal agent skill; per-tool skill directories are written too.",
+        ),
+        (
+            "~/.config/opencode/plugins/lazyplan.js, ~/.claude/settings.json, ~/.gemini/settings.json, ~/.codex/hooks.json, ~/.cursor/hooks.json",
+            "Managed read-only hook surfaces.",
+        ),
+        ("AGENTS.md", "Optional marked lazyplan section in a repo."),
+    ]:
+        out.append(".TP")
+        out.append(f".B {_esc(name)}")
+        out.append(text)
     out.append(".SH EXIT STATUS")
     out.append(".TP")
     out.append(".B 0")

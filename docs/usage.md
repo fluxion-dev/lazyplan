@@ -162,14 +162,22 @@ local (gitignored) unless you force-add it.
 ```bash
 lpui setup --agents "opencode,claude"  # or all, or none; $LAZYPLAN_AGENTS
 lpui setup --skills-dir PATH           # or $LAZYPLAN_SKILLS_DIR
-lpui setup --no-skills                 # database only
+lpui setup --no-skills                 # database only; $LAZYPLAN_NO_SKILLS
+lpui setup --hooks                     # install lifecycle hooks (default)
+lpui setup --no-hooks                  # remove installed lifecycle hooks
+lpui setup --agents-pointer            # add the marked AGENTS.md section
+lpui setup --no-agents-pointer         # remove the marked AGENTS.md section
 lpui setup --yes                       # apply without prompts
 lpui setup --json                      # machine-readable, no prompts
 ```
 
+Precedence is explicit flag, then environment, then remembered state, then
+detection. The wizard uses the same defaults, so `lpui setup --placement repo`
+or `--no-skills` changes what the questions propose.
+
 `LAZYPLAN_NO_SETUP=1` skips first-run setup and upgrade review. `NO_COLOR`,
-`CLICOLOR=0`, and `TERM=dumb` keep the wizard plain. `--placement repo` outside
-a git checkout falls back to home.
+`LAZYPLAN_NO_COLOR`, `CLICOLOR=0`, and `TERM=dumb` keep the wizard plain.
+`--placement repo` outside a git checkout falls back to home.
 
 ## Everyday commands
 

@@ -248,6 +248,163 @@ who made this change (you see it in feed)
 brief one plan
 .RE
 .TP
+.B lpui next
+claim the next eligible task and move it doing
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B \-\-plan ID
+only this plan
+.RE
+.RS
+.TP
+.B \-\-ttl TIME
+lease length, e\.g\. 30m or 2\.hours
+.RE
+.RS
+.TP
+.B \-\-note TEXT
+note stored on the claim
+.RE
+.RS
+.TP
+.B \-\-suggest
+show the next task without claiming it
+.RE
+.TP
+.B lpui claim
+claim, renew, or release a task lease
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B  {take|renew|release}
+take a new lease (default), renew it, or release it Choices: take, renew, release\.
+.RE
+.RS
+.TP
+.B \-\-id ID
+task id Required\.
+.RE
+.RS
+.TP
+.B \-\-ttl TIME
+lease length, e\.g\. 30m
+.RE
+.RS
+.TP
+.B \-\-note TEXT
+note stored on the claim
+.RE
+.RS
+.TP
+.B \-\-force
+take over or release someone else's lease
+.RE
+.TP
+.B lpui claims
+list active task leases with holder and expiry
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B \-\-plan ID
+only this plan
+.RE
+.RS
+.TP
+.B \-\-all
+include expired claims
+.RE
+.TP
+.B lpui who
+alias for `claims`: active task leases
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B \-\-plan ID
+only this plan
+.RE
+.RS
+.TP
+.B \-\-all
+include expired claims
+.RE
+.TP
 .B lpui hook
 read a host lifecycle event and print a reminder
 .RS

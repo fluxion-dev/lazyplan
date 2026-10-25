@@ -301,6 +301,49 @@ def build_parser() -> argparse.ArgumentParser:
         parents=[common],
     )
     br.add_argument("--plan", type=int, default=None, metavar="ID", help="brief one plan")
+    nxt = sub.add_parser(
+        "next",
+        help="claim the next eligible task and move it doing",
+        parents=[common],
+    )
+    nxt.add_argument("--plan", type=int, default=None, metavar="ID", help="only this plan")
+    nxt.add_argument("--ttl", default="", metavar="TIME", help="lease length, e.g. 30m or 2.hours")
+    nxt.add_argument("--note", default="", metavar="TEXT", help="note stored on the claim")
+    nxt.add_argument(
+        "--suggest", action="store_true", help="show the next task without claiming it"
+    )
+    cl = sub.add_parser(
+        "claim",
+        help="claim, renew, or release a task lease",
+        parents=[common],
+    )
+    cl.add_argument(
+        "action",
+        nargs="?",
+        choices=["take", "renew", "release"],
+        default="take",
+        help="take a new lease (default), renew it, or release it",
+    )
+    cl.add_argument("--id", type=int, required=True, metavar="ID", help="task id")
+    cl.add_argument("--ttl", default="", metavar="TIME", help="lease length, e.g. 30m")
+    cl.add_argument("--note", default="", metavar="TEXT", help="note stored on the claim")
+    cl.add_argument(
+        "--force", action="store_true", help="take over or release someone else's lease"
+    )
+    cls = sub.add_parser(
+        "claims",
+        help="list active task leases with holder and expiry",
+        parents=[common],
+    )
+    cls.add_argument("--plan", type=int, default=None, metavar="ID", help="only this plan")
+    cls.add_argument("--all", action="store_true", help="include expired claims")
+    who = sub.add_parser(
+        "who",
+        help="alias for `claims`: active task leases",
+        parents=[common],
+    )
+    who.add_argument("--plan", type=int, default=None, metavar="ID", help="only this plan")
+    who.add_argument("--all", action="store_true", help="include expired claims")
     hk = sub.add_parser(
         "hook",
         help="read a host lifecycle event and print a reminder",

@@ -50,7 +50,7 @@ from .render import (
 )
 from .repo import find_repo_root, repo_label, resolve_db_path
 from .seed import seed as seed_demo
-from .store import Store, _ser
+from .store import ClaimConflict, ClaimMissing, Store, _ser
 from .upgrade import (
     NOTICE_TIMEOUT,
     UpgradeError,
@@ -440,6 +440,165 @@ def _cmd_brief(store: Store | None, args: argparse.Namespace, actor: str) -> int
         return 0
     for line in brief.lines(payload):
         print(line)
+    return 0
+
+
+def _expiry_text(expires_at: float, now: float | None = None) -> str:
+    """Short human lease state: in 12m, in 2.1h, or expired."""
+    stamp = time.time() if now is None else now
+    delta = float(expires_at) - stamp
+    if delta <= 0:
+        return "expired"
+    if delta < 3600:
+        return f"in {max(1, round(delta / 60))}m"
+    if delta < 86400:
+        return f"in {delta / 3600:.1f}h"
+    return f"in {delta / 86400:.1f}d"
+
+
+def _cmd_next(store: Store, args: argparse.Namespace, actor: str) -> int:
+    if args.plan is not None and store.get_plan(args.plan) is None:
+        print(msg_not_found("plan", args.plan), file=sys.stderr)
+        return 1
+    try:
+        result = services.claim_next(
+            store,
+            actor,
+            plan_id=args.plan,
+            ttl=args.ttl,
+            note=args.note,
+            suggest=bool(args.suggest),
+        )
+    except ClaimConflict as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 1
+    except (KeyError, ValueError) as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 2
+    if result is None:
+        if args.json:
+            return _emit(args, None)
+        if not porcelain.enabled(args):
+            print("(no claimable tasks)")
+        return 0
+    task = result["task"]
+    claim = result["claim"]
+    if args.json:
+        return _emit(args, result)
+    if porcelain.enabled(args):
+        print(porcelain.task_row(task["id"], task["status"], task["title"], task["milestone_id"]))
+        return 0
+    if claim is None:
+        print(f"next T{task['id']} {task['title']} ({task['status']}) - not claimed")
+    else:
+        print(
+            f"claimed T{task['id']} {task['title']} by {claim['actor']} "
+            f"{_expiry_text(claim['expires_at'])}"
+        )
+    return 0
+
+
+def _cmd_claim(store: Store, args: argparse.Namespace, actor: str) -> int:
+    action = args.action or "take"
+    try:
+        if action == "renew":
+            claim = services.renew_task_claim(store, args.id, actor, ttl=args.ttl)
+            task = store.get_task(args.id)
+            payload: dict = {"claim": vars(claim)}
+            line = porcelain.claim_row(
+                claim.task_id,
+                claim.actor,
+                task.title if task is not None else "-",
+                claim.expires_at,
+            )
+            if args.json:
+                return _emit(args, payload)
+            if porcelain.enabled(args):
+                print(line)
+            else:
+                print(f"renewed T{claim.task_id} until {_expiry_text(claim.expires_at)}")
+            return 0
+        if action == "release":
+            result = services.release_task_claim(store, args.id, actor, force=bool(args.force))
+            claim = result["claim"]
+            task = result["task"]
+            if args.json:
+                return _emit(args, result)
+            if claim is None:
+                if not porcelain.enabled(args):
+                    print(f"T{task['id']} was not claimed")
+                return 0
+            if porcelain.enabled(args):
+                print(porcelain.claim_row(task["id"], claim["actor"], task["title"], None))
+            else:
+                print(f"released T{task['id']} {task['title']} (was {claim['actor']})")
+            return 0
+        result = services.start_claim(
+            store,
+            args.id,
+            actor,
+            ttl=args.ttl,
+            note=args.note,
+            force=bool(args.force),
+        )
+        claim = result["claim"]
+        task = result["task"]
+        if args.json:
+            return _emit(args, result)
+        if porcelain.enabled(args):
+            print(
+                porcelain.claim_row(task["id"], claim["actor"], task["title"], claim["expires_at"])
+            )
+        else:
+            print(
+                f"claimed T{task['id']} {task['title']} by {claim['actor']} "
+                f"{_expiry_text(claim['expires_at'])}"
+            )
+        return 0
+    except ClaimConflict as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 1
+    except ClaimMissing as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 1
+    except KeyError as exc:
+        print(msg_error(ValueError(str(exc))), file=sys.stderr)
+        return 1
+    except (ValueError, TypeError) as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 2
+
+
+def _cmd_claims(store: Store, args: argparse.Namespace, actor: str) -> int:
+    del actor
+    if getattr(args, "plan", None) is not None and store.get_plan(args.plan) is None:
+        print(msg_not_found("plan", args.plan), file=sys.stderr)
+        return 1
+    rows = store.list_claims(
+        include_expired=bool(getattr(args, "all", False)),
+        plan_id=getattr(args, "plan", None),
+    )
+    if args.json:
+        return _emit(args, rows)
+    if porcelain.enabled(args):
+        for row in rows:
+            print(
+                porcelain.claim_row(
+                    row["task_id"],
+                    row["actor"],
+                    row["task_title"],
+                    row["expires_at"],
+                )
+            )
+        return 0
+    if not rows:
+        print("(no active claims)" if not getattr(args, "all", False) else "(no claims)")
+        return 0
+    for row in rows:
+        state = "expired" if row["expired"] else _expiry_text(float(row["expires_at"]))
+        print(
+            f"T{row['task_id']} {row['task_title']} @{row['actor']} {state} ({row['plan_title']})"
+        )
     return 0
 
 
@@ -1747,6 +1906,10 @@ _COMMANDS: dict[str, Callable[[Store, argparse.Namespace, str], int]] = {
     "seed": _cmd_seed,
     "list": _cmd_list,
     "help": _cmd_help,
+    "next": _cmd_next,
+    "claim": _cmd_claim,
+    "claims": _cmd_claims,
+    "who": _cmd_claims,
     "add-plan": _cmd_add_plan,
     "add-milestone": _cmd_add_milestone,
     "add-task": _cmd_add_task,

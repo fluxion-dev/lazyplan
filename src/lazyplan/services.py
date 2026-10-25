@@ -16,8 +16,8 @@ from pathlib import Path
 from .forge import AuthStatus, Forge, RepoRef, detect_forge, parse_pull_url, resolve_auth
 from .github import GitHubClient, GitHubError
 from .kinds import check_kind
-from .models import Milestone, Plan, Status, Task
-from .store import Store, _ser
+from .models import Claim, Milestone, Plan, Status, Task
+from .store import CLAIM_DEFAULT_TTL, Store, _ser
 from .templates import apply_template, template_criteria
 from .vcs import CommitInfo, RepoStatus, VCSBackend, detect_backend, origin_url
 
@@ -163,6 +163,107 @@ def set_status(store: Store, kind: str, obj_id: int, status: Status, actor: str 
         store.log(actor, kind, "status", f"{kind} #{obj_id} -> {status.value}")
         heal_parents(store, kind, obj_id, actor)
     return ok
+
+
+_TTL_UNITS = {
+    None: 1,
+    "s": 1,
+    "sec": 1,
+    "secs": 1,
+    "second": 1,
+    "seconds": 1,
+    "m": 60,
+    "min": 60,
+    "mins": 60,
+    "minute": 60,
+    "minutes": 60,
+    "h": 3600,
+    "hr": 3600,
+    "hrs": 3600,
+    "hour": 3600,
+    "hours": 3600,
+    "d": 86400,
+    "day": 86400,
+    "days": 86400,
+    "w": 604800,
+    "week": 604800,
+    "weeks": 604800,
+}
+_TTL_RE = re.compile(r"^\s*(\d+(?:\.\d+)?)\s*\.?\s*([a-z]+)?\s*$", re.IGNORECASE)
+
+
+def parse_ttl(text: str | None, default: float = CLAIM_DEFAULT_TTL) -> float:
+    """Parse a lease TTL such as `30m`, `2.hours`, `90s`, or `1.days`."""
+    if not text:
+        return float(default)
+    match = _TTL_RE.match(text)
+    if match is None:
+        raise ValueError(f"invalid ttl {text!r}; use 30m, 2.hours, or seconds")
+    unit = (match.group(2) or "s").lower()
+    if unit not in _TTL_UNITS:
+        raise ValueError(f"unknown ttl unit {unit!r}; use s, m, h, d, or w")
+    seconds = float(match.group(1)) * _TTL_UNITS[unit]
+    if seconds <= 0:
+        raise ValueError("claim ttl must be positive")
+    return seconds
+
+
+def start_claim(
+    store: Store,
+    task_id: int,
+    actor: str,
+    ttl: str | None = None,
+    note: str = "",
+    force: bool = False,
+) -> dict:
+    """Claim a task and move it doing; release the lease if the move fails."""
+    seconds = parse_ttl(ttl)
+    claim, previous = store.claim_task(task_id, actor, ttl_seconds=seconds, note=note, force=force)
+    try:
+        set_status(store, "task", task_id, Status.DOING, actor=actor)
+    except Exception:
+        store.release_claim(task_id, actor, force=True)
+        raise
+    task = store.get_task(task_id)
+    return {
+        "claim": vars(claim),
+        "task": _ser(vars(task)) if task is not None else None,
+        "previous": vars(previous) if previous is not None else None,
+    }
+
+
+def renew_task_claim(store: Store, task_id: int, actor: str, ttl: str | None = None) -> Claim:
+    """Extend a lease held by this actor."""
+    return store.renew_claim(task_id, actor, ttl_seconds=parse_ttl(ttl))
+
+
+def release_task_claim(store: Store, task_id: int, actor: str, force: bool = False) -> dict:
+    """Release a lease and return the released claim with task context."""
+    task = store.get_task(task_id)
+    if task is None:
+        raise KeyError(f"task #{task_id} not found")
+    claim = store.release_claim(task_id, actor, force=force)
+    return {
+        "claim": vars(claim) if claim is not None else None,
+        "task": _ser(vars(task)),
+    }
+
+
+def claim_next(
+    store: Store,
+    actor: str,
+    plan_id: int | None = None,
+    ttl: str | None = None,
+    note: str = "",
+    suggest: bool = False,
+) -> dict | None:
+    """Select and optionally claim the first eligible todo."""
+    task = store.next_claimable_task(plan_id)
+    if task is None:
+        return None
+    if suggest:
+        return {"claim": None, "task": _ser(vars(task)), "previous": None}
+    return start_claim(store, task.id, actor, ttl=ttl, note=note)
 
 
 def _norm_path(path: str) -> str:

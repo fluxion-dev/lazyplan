@@ -126,3 +126,8 @@ def task_row(task_id: Any, status: Any, title: Any, milestone_id: Any) -> str:
 def text_row(kind: Any, text: Any) -> str:
     """A labeled text row such as `why`, `what`, or `desc`."""
     return row(kind, "-", "-", text)
+
+
+def claim_row(task_id: Any, actor: Any, title: Any, expires_at: float | int | None = None) -> str:
+    """A lease record: id is the task, status the actor, extra the expiry epoch."""
+    return row("claim", task_id, actor, title, f"task:{field(task_id)}", expires_at or "-")

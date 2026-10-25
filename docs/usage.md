@@ -69,7 +69,9 @@ lpui upgrade --check
 
 `lpui upgrade` manages pipx and venv installs. System packages upgrade through
 `dnf` or `apt`. The TUI status bar and CLI stderr mention new versions; stdout
-stays clean for `--json`.
+stays clean for `--json`. A successful upgrade re-runs setup with the new
+binary, including under `--json`, so hooks and the AGENTS pointer refresh
+without prompting.
 
 ## Start
 
@@ -119,9 +121,11 @@ lpui doctor
 lpui doctor --json
 ```
 
-Read-only. Exit `0` means clean, `1` means misplaced resources. The report names
-the resolved database, config, templates, skills, state, and any migration
-findings.
+Read-only. Exit `0` means clean, `1` means any finding: misplaced resources,
+missing hook files, a state-version mismatch, or migration drift. The report
+names the resolved database, config, templates, skill paths, hook files, state,
+and every finding. It resolves the same database a normal run would open,
+including `--db` and `$LAZYPLAN_DB`.
 
 ### Upgrades and migration
 
@@ -133,7 +137,9 @@ finding; it does not ask on every command.
 - A database tracked by git is never offered a move; doctor reports it.
 - Keep/never is remembered in `~/.lazyplan/setup.json`; a changed state can
   re-arm the prompt.
-- Moves back up every touched file under `~/.lazyplan/backups/<timestamp>/`.
+- Every setup write keeps one tree-preserving backup per run under
+  `~/.lazyplan/backups/<timestamp>/`. Unchanged files are never rewritten and
+  never backed up.
 - If both databases contain plans, setup refuses to merge and prints
   export/import guidance instead.
 - Only `lpui`, `lpui setup`, and `lpui upgrade` prompt. Agent calls set up

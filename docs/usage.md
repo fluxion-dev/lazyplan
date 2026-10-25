@@ -253,9 +253,11 @@ Your agent is expected to work from the plan, not invent it:
   trailer is required. These rules apply to new plans; existing plans are
   not rewritten.
 - Write rows for scanning: short paragraphs and sections, no placeholder text.
-- Start a session with `lpui --porcelain brief`; update the journal after each
-  commit, then run `lpui --porcelain audit --since 7.days` before closing a
-  plan. Lifecycle hooks remind you, but they are read-only.
+- Start a session with `lpui --porcelain next` to claim work, or
+  `lpui --porcelain brief` for the whole picture. Renew the lease while you
+  work, note handoffs, and release it when you stop. Update the journal after
+  each commit, then run `lpui --porcelain audit --since 7.days` before closing
+  a plan. Lifecycle hooks remind you, but they are read-only.
 
 `lpui setup --placement repo` writes the full contract into the repo; the
 default setup installs the skill into each detected agent's own folder.
@@ -287,6 +289,10 @@ lpui --actor helper --porcelain criterion add --kind plan --id 1 --text "Works o
 lpui --actor helper --porcelain milestone add --plan 1 --title "Feature Y" --desc ".."
 lpui --actor helper --porcelain task add --milestone 1 --title "Do X" --desc ".."
 lpui --actor helper --porcelain task move --id 2 --to doing
+lpui --porcelain next
+lpui --porcelain claims
+lpui --porcelain note add --kind task --id 2 --text "Decision or handoff"
+lpui --porcelain task block --id 2 --reason "waiting"
 lpui --porcelain list --tree
 lpui --porcelain plan show --id 1
 ```
@@ -301,6 +307,34 @@ task	2	doing	Do X	milestone:1	-
 commits, and pull requests. Use `--json` when you need those full records.
 The record families for brief, audit, feed, info, commits, repos, git status,
 git scan, and PR reads are documented in `src/lazyplan/porcelain.py`.
+
+### Claims, notes, and blocked work
+
+An active agent can claim work atomically instead of racing for the same task:
+
+```bash
+lpui --porcelain next                        # claim the first eligible todo
+lpui --porcelain claim --id 3 --ttl 30m      # claim a specific task
+lpui --porcelain claim renew --id 3 --ttl 1.hours
+lpui --porcelain claim release --id 3
+lpui --porcelain claims                      # aliases: who
+lpui --porcelain note add --kind task --id 3 --text "Decision or handoff"
+lpui --porcelain note list --kind task --id 3
+lpui --porcelain task block --id 3 --reason "waiting on design"
+lpui --porcelain task unblock --id 3
+```
+
+A claim is a lease, not an owner. It carries the actor, start, expiry, and an
+optional note; the default TTL is 30 minutes. Expired leases are reclaimable,
+`claim renew` extends the holder's lease, and `claim --force` or
+`claim release --force` takes over with a recorded reason. `next` skips
+blocked, claimed, and done tasks. Blocking releases the claim and records the
+reason as a note; it does not add a fourth status, so the task returns to the
+todo pool and `next` still skips it until it is unblocked.
+
+Notes are append-only on plans, milestones, and tasks. `show` and `brief`
+include them; `task block` adds one automatically. Claims and notes travel in
+export/import.
 
 ### Session brief and accuracy audit
 

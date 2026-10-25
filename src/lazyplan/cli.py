@@ -50,7 +50,7 @@ from .render import (
 )
 from .repo import find_repo_root, repo_label, resolve_db_path
 from .seed import seed as seed_demo
-from .store import Store, _ser
+from .store import ClaimConflict, ClaimMissing, Store, _ser
 from .upgrade import (
     NOTICE_TIMEOUT,
     UpgradeError,
@@ -123,7 +123,13 @@ def _porcelain_row(store: Store, obj: Plan | Milestone | Task) -> str:
             obj.plan_id,
             _progress(store, milestone_id=obj.id),
         )
-    return porcelain.task_row(obj.id, obj.status.value, obj.title, obj.milestone_id)
+    return porcelain.task_row(
+        obj.id,
+        obj.status.value,
+        obj.title,
+        obj.milestone_id,
+        "blocked" if obj.blocked else "-",
+    )
 
 
 def _criterion_row(criteria: Criterion) -> str:
@@ -443,6 +449,208 @@ def _cmd_brief(store: Store | None, args: argparse.Namespace, actor: str) -> int
     return 0
 
 
+def _expiry_text(expires_at: float, now: float | None = None) -> str:
+    """Short human lease state: in 12m, in 2.1h, or expired."""
+    stamp = time.time() if now is None else now
+    delta = float(expires_at) - stamp
+    if delta <= 0:
+        return "expired"
+    if delta < 3600:
+        return f"in {max(1, round(delta / 60))}m"
+    if delta < 86400:
+        return f"in {delta / 3600:.1f}h"
+    return f"in {delta / 86400:.1f}d"
+
+
+def _cmd_next(store: Store, args: argparse.Namespace, actor: str) -> int:
+    if args.plan is not None and store.get_plan(args.plan) is None:
+        print(msg_not_found("plan", args.plan), file=sys.stderr)
+        return 1
+    try:
+        result = services.claim_next(
+            store,
+            actor,
+            plan_id=args.plan,
+            ttl=args.ttl,
+            note=args.note,
+            suggest=bool(args.suggest),
+        )
+    except ClaimConflict as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 1
+    except (KeyError, ValueError) as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 2
+    if result is None:
+        if args.json:
+            return _emit(args, None)
+        if not porcelain.enabled(args):
+            print("(no claimable tasks)")
+        return 0
+    task = result["task"]
+    claim = result["claim"]
+    if args.json:
+        return _emit(args, result)
+    if porcelain.enabled(args):
+        print(porcelain.task_row(task["id"], task["status"], task["title"], task["milestone_id"]))
+        return 0
+    if claim is None:
+        print(f"next T{task['id']} {task['title']} ({task['status']}) - not claimed")
+    else:
+        print(
+            f"claimed T{task['id']} {task['title']} by {claim['actor']} "
+            f"{_expiry_text(claim['expires_at'])}"
+        )
+    return 0
+
+
+def _claim_failure(exc: Exception) -> int:
+    """Map a lease failure to the agent-readable exit code."""
+    if isinstance(exc, (ClaimConflict, ClaimMissing)):
+        print(msg_error(exc), file=sys.stderr)
+        return 1
+    if isinstance(exc, KeyError):
+        print(msg_error(ValueError(str(exc))), file=sys.stderr)
+        return 1
+    print(msg_error(exc), file=sys.stderr)
+    return 2
+
+
+def _claim_take(store: Store, args: argparse.Namespace, actor: str) -> int:
+    result = services.start_claim(
+        store, args.id, actor, ttl=args.ttl, note=args.note, force=bool(args.force)
+    )
+    claim = result["claim"]
+    task = result["task"]
+    if args.json:
+        return _emit(args, result)
+    if porcelain.enabled(args):
+        print(porcelain.claim_row(task["id"], claim["actor"], task["title"], claim["expires_at"]))
+    else:
+        print(
+            f"claimed T{task['id']} {task['title']} by {claim['actor']} "
+            f"{_expiry_text(claim['expires_at'])}"
+        )
+    return 0
+
+
+def _claim_renew(store: Store, args: argparse.Namespace, actor: str) -> int:
+    claim = services.renew_task_claim(store, args.id, actor, ttl=args.ttl)
+    task = store.get_task(args.id)
+    if args.json:
+        return _emit(args, {"claim": vars(claim)})
+    if porcelain.enabled(args):
+        print(
+            porcelain.claim_row(
+                claim.task_id,
+                claim.actor,
+                task.title if task is not None else "-",
+                claim.expires_at,
+            )
+        )
+    else:
+        print(f"renewed T{claim.task_id} until {_expiry_text(claim.expires_at)}")
+    return 0
+
+
+def _claim_release(store: Store, args: argparse.Namespace, actor: str) -> int:
+    result = services.release_task_claim(store, args.id, actor, force=bool(args.force))
+    claim = result["claim"]
+    task = result["task"]
+    if args.json:
+        return _emit(args, result)
+    if claim is None:
+        if not porcelain.enabled(args):
+            print(f"T{task['id']} was not claimed")
+        return 0
+    if porcelain.enabled(args):
+        print(porcelain.claim_row(task["id"], claim["actor"], task["title"], None))
+    else:
+        print(f"released T{task['id']} {task['title']} (was {claim['actor']})")
+    return 0
+
+
+def _cmd_claim(store: Store, args: argparse.Namespace, actor: str) -> int:
+    actions = {"take": _claim_take, "renew": _claim_renew, "release": _claim_release}
+    try:
+        return actions[args.action or "take"](store, args, actor)
+    except (ClaimConflict, ClaimMissing, KeyError, ValueError, TypeError) as exc:
+        return _claim_failure(exc)
+
+
+def _cmd_claims(store: Store, args: argparse.Namespace, actor: str) -> int:
+    del actor
+    if getattr(args, "plan", None) is not None and store.get_plan(args.plan) is None:
+        print(msg_not_found("plan", args.plan), file=sys.stderr)
+        return 1
+    rows = store.list_claims(
+        include_expired=bool(getattr(args, "all", False)),
+        plan_id=getattr(args, "plan", None),
+    )
+    if args.json:
+        return _emit(args, rows)
+    if porcelain.enabled(args):
+        for row in rows:
+            print(
+                porcelain.claim_row(
+                    row["task_id"],
+                    row["actor"],
+                    row["task_title"],
+                    row["expires_at"],
+                )
+            )
+        return 0
+    if not rows:
+        print("(no active claims)" if not getattr(args, "all", False) else "(no claims)")
+        return 0
+    for row in rows:
+        state = "expired" if row["expired"] else _expiry_text(float(row["expires_at"]))
+        print(
+            f"T{row['task_id']} {row['task_title']} @{row['actor']} {state} ({row['plan_title']})"
+        )
+    return 0
+
+
+def _cmd_note(store: Store, args: argparse.Namespace, actor: str) -> int:
+    if store.get_parent(args.kind, args.id) is None:
+        print(msg_not_found(args.kind, args.id), file=sys.stderr)
+        return 1
+    if args.action == "add":
+        if args.text is None or not args.text.strip():
+            print("error: note add needs --text", file=sys.stderr)
+            return 2
+        note = store.add_note(args.kind, args.id, args.text, actor=actor)
+        if args.json:
+            return _emit(args, {"note": vars(note)})
+        if porcelain.enabled(args):
+            print(
+                porcelain.note_row(
+                    note.id, note.actor, note.text, note.parent_kind, note.parent_id, note.ts
+                )
+            )
+        else:
+            print(f"noted {args.kind} #{args.id}: {note.text}")
+        return 0
+    notes = store.list_notes(args.kind, args.id, limit=args.limit)
+    if args.json:
+        return _emit(args, [vars(n) for n in notes])
+    if porcelain.enabled(args):
+        for note in notes:
+            print(
+                porcelain.note_row(
+                    note.id, note.actor, note.text, note.parent_kind, note.parent_id, note.ts
+                )
+            )
+        return 0
+    if not notes:
+        print("(no notes)")
+        return 0
+    for note in notes:
+        when = time.strftime("%Y-%m-%d %H:%M", time.localtime(note.ts)) if note.ts else "unknown"
+        print(f"@{note.actor} {when}: {note.text}")
+    return 0
+
+
 def _cmd_hook(store: Store | None, args: argparse.Namespace, actor: str) -> int:
     """Read-only lifecycle reminder; always exits 0 so a host never blocks."""
     del store, actor
@@ -625,6 +833,29 @@ def _porcelain_list_lines(
     return lines
 
 
+def _note_dict_rows(items: list[dict]) -> list[str]:
+    """Note rows from show/brief payload dicts."""
+    return [
+        porcelain.note_row(
+            note["id"],
+            note.get("actor"),
+            note.get("text"),
+            note.get("parent_kind", "note"),
+            note.get("parent_id", "-"),
+            note.get("ts", 0),
+        )
+        for note in items
+    ]
+
+
+def _claim_line(store: Store, task_id: int, title: str) -> str | None:
+    """Claim row for a task, or None when it has no lease."""
+    claim = store.get_claim(task_id)
+    if claim is None:
+        return None
+    return porcelain.claim_row(task_id, claim.actor, title, claim.expires_at)
+
+
 def _porcelain_show_lines(store: Store, kind: str, full: dict) -> list[str]:
     """Plain definition rows plus criteria and children; no repo or commit noise."""
     lines: list[str] = []
@@ -638,6 +869,7 @@ def _porcelain_show_lines(store: Store, kind: str, full: dict) -> list[str]:
         lines.append(porcelain.text_row("why", plan.get("goal")))
         lines.append(porcelain.text_row("what", plan.get("description")))
         lines.extend(_criterion_dict_rows(full.get("criteria", [])))
+        lines.extend(_note_dict_rows(full.get("notes", [])))
         for entry in full.get("milestones", []):
             milestone = entry["milestone"]
             lines.append(
@@ -650,10 +882,20 @@ def _porcelain_show_lines(store: Store, kind: str, full: dict) -> list[str]:
                 )
             )
             lines.extend(_criterion_dict_rows(entry.get("criteria", [])))
-            lines.extend(
-                porcelain.task_row(task["id"], task["status"], task["title"], task["milestone_id"])
-                for task in entry.get("tasks", [])
-            )
+            for task in entry.get("tasks", []):
+                lines.append(
+                    porcelain.task_row(
+                        task["id"],
+                        task["status"],
+                        task["title"],
+                        task["milestone_id"],
+                        "blocked" if task.get("blocked") else "-",
+                    )
+                )
+                claim_line = _claim_line(store, int(task["id"]), str(task["title"]))
+                if claim_line is not None:
+                    lines.append(claim_line)
+                lines.extend(_note_dict_rows(task.get("notes", [])))
         return lines
     if kind == "milestone":
         milestone = full["milestone"]
@@ -668,22 +910,39 @@ def _porcelain_show_lines(store: Store, kind: str, full: dict) -> list[str]:
         )
         lines.append(porcelain.text_row("desc", milestone.get("description")))
         lines.extend(_criterion_dict_rows(full.get("criteria", [])))
-        lines.extend(
-            porcelain.task_row(
-                entry["task"]["id"],
-                entry["task"]["status"],
-                entry["task"]["title"],
-                entry["task"]["milestone_id"],
+        lines.extend(_note_dict_rows(full.get("notes", [])))
+        for entry in full.get("tasks", []):
+            task = entry["task"]
+            lines.append(
+                porcelain.task_row(
+                    task["id"],
+                    task["status"],
+                    task["title"],
+                    task["milestone_id"],
+                    "blocked" if task.get("blocked") else "-",
+                )
             )
-            for entry in full.get("tasks", [])
-        )
+            claim_line = _claim_line(store, int(task["id"]), str(task["title"]))
+            if claim_line is not None:
+                lines.append(claim_line)
+            lines.extend(_note_dict_rows(task.get("notes", [])))
         return lines
     task = full["task"]
     lines.append(
-        porcelain.task_row(task["id"], task["status"], task["title"], task["milestone_id"])
+        porcelain.task_row(
+            task["id"],
+            task["status"],
+            task["title"],
+            task["milestone_id"],
+            "blocked" if task.get("blocked") else "-",
+        )
     )
+    claim_line = _claim_line(store, int(task["id"]), str(task["title"]))
+    if claim_line is not None:
+        lines.append(claim_line)
     lines.append(porcelain.text_row("desc", task.get("description")))
     lines.extend(_criterion_dict_rows(full.get("criteria", [])))
+    lines.extend(_note_dict_rows(task.get("notes", [])))
     return lines
 
 
@@ -788,10 +1047,15 @@ def _brief_rows(store: Store, payload: dict) -> list[str]:
         plan = store.get_plan(int(entry["id"]))
         if plan is not None:
             rows.append(_porcelain_row(store, plan))
+        rows.extend(_note_dict_rows(entry.get("notes", [])))
         for task in entry.get("doing", []):
             model = store.get_task(int(task["id"]))
             if model is not None:
                 rows.append(_porcelain_row(store, model))
+                claim_line = _claim_line(store, int(task["id"]), str(task["title"]))
+                if claim_line is not None:
+                    rows.append(claim_line)
+                rows.extend(_note_dict_rows(task.get("notes", [])))
         next_task = entry.get("next")
         if next_task:
             parent = "-"
@@ -1363,6 +1627,45 @@ def _cmd_task_start(store: Store, args: argparse.Namespace, actor: str) -> int:
     return 0
 
 
+def _cmd_task_block(store: Store, args: argparse.Namespace, actor: str) -> int:
+    if store.get_task(args.id) is None:
+        print(msg_not_found("task", args.id), file=sys.stderr)
+        return 1
+    try:
+        task = services.block_task(store, args.id, args.reason, actor=actor)
+    except KeyError:
+        print(msg_not_found("task", args.id), file=sys.stderr)
+        return 1
+    except ValueError as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 2
+    if args.json:
+        return _emit(args, {"task": _ser(vars(task))})
+    if porcelain.enabled(args):
+        print(_porcelain_row(store, task))
+    else:
+        print(f"blocked T{task.id}: {task.blocked_reason}")
+    return 0
+
+
+def _cmd_task_unblock(store: Store, args: argparse.Namespace, actor: str) -> int:
+    if store.get_task(args.id) is None:
+        print(msg_not_found("task", args.id), file=sys.stderr)
+        return 1
+    try:
+        task = services.unblock_task(store, args.id, actor=actor)
+    except (KeyError, ValueError) as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 2
+    if args.json:
+        return _emit(args, {"task": _ser(vars(task))})
+    if porcelain.enabled(args):
+        print(_porcelain_row(store, task))
+    else:
+        print(f"unblocked T{task.id}")
+    return 0
+
+
 def _cmd_task_finish(store: Store, args: argparse.Namespace, actor: str) -> int:
     if store.get_task(args.id) is None:
         print(msg_not_found("task", args.id), file=sys.stderr)
@@ -1723,6 +2026,8 @@ _GROUP_CMDS: dict[tuple[str, str], str] = {
     ("task", "delete"): "delete",
     ("task", "start"): "task-start",
     ("task", "finish"): "task-finish",
+    ("task", "block"): "task-block",
+    ("task", "unblock"): "task-unblock",
     ("criterion", "add"): "add-criteria",
     ("criterion", "list"): "criteria",
     ("criterion", "tick"): "check",
@@ -1747,6 +2052,11 @@ _COMMANDS: dict[str, Callable[[Store, argparse.Namespace, str], int]] = {
     "seed": _cmd_seed,
     "list": _cmd_list,
     "help": _cmd_help,
+    "next": _cmd_next,
+    "claim": _cmd_claim,
+    "claims": _cmd_claims,
+    "who": _cmd_claims,
+    "note": _cmd_note,
     "add-plan": _cmd_add_plan,
     "add-milestone": _cmd_add_milestone,
     "add-task": _cmd_add_task,
@@ -1774,6 +2084,8 @@ _COMMANDS: dict[str, Callable[[Store, argparse.Namespace, str], int]] = {
     "pr-refresh": _cmd_pr_refresh,
     "task-start": _cmd_task_start,
     "task-finish": _cmd_task_finish,
+    "task-block": _cmd_task_block,
+    "task-unblock": _cmd_task_unblock,
     "link-repo": _cmd_link_repo,
     "unlink-repo": _cmd_unlink_repo,
     "repos": _cmd_repos,

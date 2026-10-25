@@ -53,6 +53,34 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
         await pilot.press("enter")
         await pilot.pause()
 
+    async def test_detail_shows_claim_blocked_and_notes(self):
+        from textual.widgets import Static
+
+        self.store.claim_task(self.tid, "alice", 300)
+        self.store.add_note("task", self.tid, "Use the small parser", actor="alice")
+        second = self.store.add_task(self.sid, "Blocked task", "Needs design")
+        self.store.set_blocked(second.id, True, "waiting on design", actor="alice")
+        async with self.app.run_test(size=(80, 24)) as pilot:
+            await pilot.pause()
+            await self._open(pilot, "task", self.tid)
+            body = str(self.app.screen.query_one("#detail-body", Static).render())
+            self.assertIn("@alice", body)
+            self.assertIn("Use the small parser", body)
+            await pilot.press("escape")
+            await self._open(pilot, "task", second.id)
+            body = str(self.app.screen.query_one("#detail-body", Static).render())
+            self.assertIn("blocked", body)
+            self.assertIn("waiting on design", body)
+            self.app.source_filter = "claims"
+            claimed = [
+                task.id
+                for _plan, milestones in self.app._filtered_tree()
+                for _milestone, tasks in milestones
+                for task in tasks
+            ]
+            self.assertIn(self.tid, claimed)
+            self.assertNotIn(second.id, claimed)
+
     async def test_read_mode_shows_context_without_inputs(self):
         from textual.widgets import Static
 

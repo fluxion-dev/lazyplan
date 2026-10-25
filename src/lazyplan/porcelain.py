@@ -5,15 +5,17 @@ Rows are one line, no header, no glyphs, no ANSI, and no blank lines:
     kind<TAB>id<TAB>status<TAB>title<TAB>parent<TAB>extra
 
 `parent` is `-` or `kind:id` (for example `plan:12`). `extra` is progress
-(`done/total`) for plans and milestones, a documented detail on some read
-rows, and `-` elsewhere. Criterion rows use `kind=criterion`, status
-`open|done`, and parent `kind:id`. Write confirmations reuse the same six
-columns:
+(`done/total`) for plans and milestones, `blocked` on a blocked task, a
+documented detail on some read rows, and `-` elsewhere. Criterion rows use
+`kind=criterion`, status `open|done`, and parent `kind:id`. Write
+confirmations reuse the same six columns:
 
 - `commit`: id is the full SHA, status `linked|unlinked`, title the subject.
 - `repo`: id is the checkout path, title the remote (or `-`).
 - `pr`: id is the pull request number, title the URL.
-- `task start` and `task finish` reuse the task row with its current status.
+- `claim`: id is the task, status the actor, title the task, extra the expiry.
+- `note`: id is the note, status the actor, title the text, extra the timestamp.
+- `task start`, `task finish`, `block`, and `unblock` reuse the task row.
 
 Reads reuse the same envelope:
 
@@ -118,11 +120,21 @@ def milestone_row(
     return row("milestone", milestone_id, status, title, f"plan:{field(plan_id)}", progress)
 
 
-def task_row(task_id: Any, status: Any, title: Any, milestone_id: Any) -> str:
-    """A task row: the owning milestone in parent."""
-    return row("task", task_id, status, title, f"milestone:{field(milestone_id)}", "-")
+def task_row(task_id: Any, status: Any, title: Any, milestone_id: Any, extra: Any = "-") -> str:
+    """A task row: the owning milestone in parent, blocked marker in extra."""
+    return row("task", task_id, status, title, f"milestone:{field(milestone_id)}", extra)
 
 
 def text_row(kind: Any, text: Any) -> str:
     """A labeled text row such as `why`, `what`, or `desc`."""
     return row(kind, "-", "-", text)
+
+
+def claim_row(task_id: Any, actor: Any, title: Any, expires_at: float | int | None = None) -> str:
+    """A lease record: id is the task, status the actor, extra the expiry epoch."""
+    return row("claim", task_id, actor, title, f"task:{field(task_id)}", expires_at or "-")
+
+
+def note_row(note_id: Any, actor: Any, text: Any, parent_kind: Any, parent_id: Any, ts: Any) -> str:
+    """A handoff note: status is the actor, parent is the owning row."""
+    return row("note", note_id, actor, text, f"{field(parent_kind)}:{field(parent_id)}", int(ts))

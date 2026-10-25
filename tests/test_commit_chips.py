@@ -125,6 +125,12 @@ class TestCommitChips(unittest.IsolatedAsyncioTestCase):
 
             self.app.action_filter_source()
             await pilot.pause()
+            self.assertEqual(self.app.source_filter, "claims")
+            self.app.action_filter_source()
+            await pilot.pause()
+            self.assertEqual(self.app.source_filter, "blocked")
+            self.app.action_filter_source()
+            await pilot.pause()
             self.assertEqual(self.app.source_filter, "all")
             self.assertIn(("task", self.tid), self.app._row_nodes)
             self.assertIn(("task", self.bare_tid), self.app._row_nodes)

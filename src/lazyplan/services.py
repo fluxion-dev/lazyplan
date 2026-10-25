@@ -16,8 +16,8 @@ from pathlib import Path
 from .forge import AuthStatus, Forge, RepoRef, detect_forge, parse_pull_url, resolve_auth
 from .github import GitHubClient, GitHubError
 from .kinds import check_kind
-from .models import Milestone, Plan, Status, Task
-from .store import Store, _ser
+from .models import Claim, Milestone, Plan, Status, Task
+from .store import CLAIM_DEFAULT_TTL, ClaimConflict, Store, _ser
 from .templates import apply_template, template_criteria
 from .vcs import CommitInfo, RepoStatus, VCSBackend, detect_backend, origin_url
 
@@ -163,6 +163,146 @@ def set_status(store: Store, kind: str, obj_id: int, status: Status, actor: str 
         store.log(actor, kind, "status", f"{kind} #{obj_id} -> {status.value}")
         heal_parents(store, kind, obj_id, actor)
     return ok
+
+
+_TTL_UNITS = {
+    None: 1,
+    "s": 1,
+    "sec": 1,
+    "secs": 1,
+    "second": 1,
+    "seconds": 1,
+    "m": 60,
+    "min": 60,
+    "mins": 60,
+    "minute": 60,
+    "minutes": 60,
+    "h": 3600,
+    "hr": 3600,
+    "hrs": 3600,
+    "hour": 3600,
+    "hours": 3600,
+    "d": 86400,
+    "day": 86400,
+    "days": 86400,
+    "w": 604800,
+    "week": 604800,
+    "weeks": 604800,
+}
+_TTL_RE = re.compile(r"^\s*(\d+(?:\.\d+)?)\s*\.?\s*([a-z]+)?\s*$", re.IGNORECASE)
+
+
+def parse_ttl(text: str | None, default: float = CLAIM_DEFAULT_TTL) -> float:
+    """Parse a lease TTL such as `30m`, `2.hours`, `90s`, or `1.days`."""
+    if not text:
+        return float(default)
+    match = _TTL_RE.match(text)
+    if match is None:
+        raise ValueError(f"invalid ttl {text!r}; use 30m, 2.hours, or seconds")
+    unit = (match.group(2) or "s").lower()
+    if unit not in _TTL_UNITS:
+        raise ValueError(f"unknown ttl unit {unit!r}; use s, m, h, d, or w")
+    seconds = float(match.group(1)) * _TTL_UNITS[unit]
+    if seconds <= 0:
+        raise ValueError("claim ttl must be positive")
+    return seconds
+
+
+def start_claim(
+    store: Store,
+    task_id: int,
+    actor: str,
+    ttl: str | None = None,
+    note: str = "",
+    force: bool = False,
+) -> dict:
+    """Claim a task and move it doing; release the lease if the move fails."""
+    seconds = parse_ttl(ttl)
+    claim, previous = store.claim_task(task_id, actor, ttl_seconds=seconds, note=note, force=force)
+    try:
+        set_status(store, "task", task_id, Status.DOING, actor=actor)
+    except Exception:
+        store.release_claim(task_id, actor, force=True)
+        raise
+    task = store.get_task(task_id)
+    return {
+        "claim": vars(claim),
+        "task": _ser(vars(task)) if task is not None else None,
+        "previous": vars(previous) if previous is not None else None,
+    }
+
+
+def renew_task_claim(store: Store, task_id: int, actor: str, ttl: str | None = None) -> Claim:
+    """Extend a lease held by this actor."""
+    return store.renew_claim(task_id, actor, ttl_seconds=parse_ttl(ttl))
+
+
+def release_task_claim(store: Store, task_id: int, actor: str, force: bool = False) -> dict:
+    """Release a lease and return the released claim with task context."""
+    task = store.get_task(task_id)
+    if task is None:
+        raise KeyError(f"task #{task_id} not found")
+    claim = store.release_claim(task_id, actor, force=force)
+    return {
+        "claim": vars(claim) if claim is not None else None,
+        "task": _ser(vars(task)),
+    }
+
+
+def claim_next(
+    store: Store,
+    actor: str,
+    plan_id: int | None = None,
+    ttl: str | None = None,
+    note: str = "",
+    suggest: bool = False,
+) -> dict | None:
+    """Select and optionally claim the first eligible todo, retrying lost races."""
+    for _ in range(100):
+        task = store.next_claimable_task(plan_id)
+        if task is None:
+            return None
+        if suggest:
+            return {"claim": None, "task": _ser(vars(task)), "previous": None}
+        try:
+            return start_claim(store, task.id, actor, ttl=ttl, note=note)
+        except ClaimConflict:
+            # Another process claimed this task between selection and claim.
+            continue
+    return None
+
+
+def block_task(store: Store, task_id: int, reason: str, actor: str = "human") -> Task:
+    """Block a task, release its lease, and record the reason as a note."""
+    task = store.get_task(task_id)
+    if task is None:
+        raise KeyError(f"task #{task_id} not found")
+    if task.status == Status.DONE:
+        raise ValueError("cannot block a done task")
+    if not reason.strip():
+        raise ValueError("blocking a task needs a reason")
+    if store.get_claim(task_id) is not None:
+        store.release_claim(task_id, actor, force=True)
+    updated = store.set_blocked(task_id, True, reason, actor=actor)
+    if updated is None:
+        raise KeyError(f"task #{task_id} not found")
+    if task.status == Status.DOING:
+        set_status(store, "task", task_id, Status.TODO, actor=actor)
+        updated = store.get_task(task_id) or updated
+    store.add_note("task", task_id, f"Blocked: {reason.strip()}", actor=actor)
+    return updated
+
+
+def unblock_task(store: Store, task_id: int, actor: str = "human") -> Task:
+    """Clear the blocked flag and leave the task in the todo pool."""
+    task = store.get_task(task_id)
+    if task is None:
+        raise KeyError(f"task #{task_id} not found")
+    updated = store.set_blocked(task_id, False, "", actor=actor)
+    if updated is None:
+        raise KeyError(f"task #{task_id} not found")
+    store.add_note("task", task_id, "Unblocked", actor=actor)
+    return updated
 
 
 def _norm_path(path: str) -> str:
@@ -1281,6 +1421,7 @@ def export_all(store: Store) -> dict:
         for s in store.list_milestones(p.id):
             tasks = []
             for t in store.list_tasks(s.id):
+                claim = store.get_claim(t.id)
                 tasks.append(
                     {
                         "task": _ser(vars(t)),
@@ -1288,6 +1429,8 @@ def export_all(store: Store) -> dict:
                         "links": [vars(c) for c in store.list_links("task", t.id)],
                         "forge_links": [vars(c) for c in store.list_forge_links("task", t.id)],
                         "repos": store.list_repos("task", t.id),
+                        "notes": [vars(n) for n in store.list_notes("task", t.id)],
+                        "claim": vars(claim) if claim is not None else None,
                     }
                 )
             milestones.append(
@@ -1297,6 +1440,7 @@ def export_all(store: Store) -> dict:
                     "links": [vars(c) for c in store.list_links("milestone", s.id)],
                     "forge_links": [vars(c) for c in store.list_forge_links("milestone", s.id)],
                     "repos": store.list_repos("milestone", s.id),
+                    "notes": [vars(n) for n in store.list_notes("milestone", s.id)],
                     "tasks": tasks,
                 }
             )
@@ -1307,6 +1451,7 @@ def export_all(store: Store) -> dict:
                 "links": [vars(c) for c in store.list_links("plan", p.id)],
                 "forge_links": [vars(c) for c in store.list_forge_links("plan", p.id)],
                 "repos": store.list_repos("plan", p.id),
+                "notes": [vars(n) for n in store.list_notes("plan", p.id)],
                 "milestones": milestones,
             }
         )
@@ -1338,6 +1483,8 @@ def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]
         "links": 0,
         "repos": 0,
         "forge_links": 0,
+        "claims": 0,
+        "notes": 0,
     }
 
     def _apply_status(kind: str, obj_id: int, status: str) -> None:
@@ -1422,6 +1569,37 @@ def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]
                 continue
             counts["forge_links"] += 1
 
+    def _import_notes(kind: str, obj_id: int, items: list) -> None:
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            restored = store.restore_note(
+                kind,
+                obj_id,
+                str(item.get("text", "") or ""),
+                str(item.get("actor", "") or "human"),
+                float(item.get("ts", 0) or 0),
+            )
+            if restored is not None:
+                counts["notes"] += 1
+
+    def _import_claim(task_id: int, item: object) -> None:
+        if not isinstance(item, dict):
+            return
+        try:
+            restored = store.restore_claim(
+                task_id,
+                str(item.get("actor", "") or "human"),
+                float(item.get("started_at", 0) or 0),
+                float(item.get("expires_at", 0) or 0),
+                float(item.get("renewed_at", 0) or 0),
+                str(item.get("note", "") or ""),
+            )
+        except (ValueError, TypeError):
+            return
+        if restored:
+            counts["claims"] += 1
+
     for entry in data.get("plans", []):
         p = entry["plan"]
         np = store.add_plan(
@@ -1433,6 +1611,7 @@ def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]
         _apply_status("plan", np.id, p.get("status", ""))
         counts["plans"] += 1
         _import_criteria("plan", np.id, entry.get("criteria", []))
+        _import_notes("plan", np.id, entry.get("notes", []))
         _import_links("plan", np.id, entry.get("links", []))
         _import_forge_links("plan", np.id, entry.get("forge_links", []))
         _import_repos("plan", np.id, entry.get("repos", []))
@@ -1447,6 +1626,7 @@ def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]
             _apply_status("milestone", ns.id, sp.get("status", ""))
             counts["milestones"] += 1
             _import_criteria("milestone", ns.id, sentry.get("criteria", []))
+            _import_notes("milestone", ns.id, sentry.get("notes", []))
             _import_links("milestone", ns.id, sentry.get("links", []))
             _import_forge_links("milestone", ns.id, sentry.get("forge_links", []))
             _import_repos("milestone", ns.id, sentry.get("repos", []))
@@ -1459,11 +1639,20 @@ def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]
                     actor=actor,
                 )
                 _apply_status("task", nt.id, tp.get("status", ""))
+                if tp.get("blocked"):
+                    store.set_blocked(
+                        nt.id,
+                        True,
+                        str(tp.get("blocked_reason", "") or "blocked (imported)"),
+                        actor=actor,
+                    )
                 counts["tasks"] += 1
                 _import_criteria("task", nt.id, tentry.get("criteria", []))
+                _import_notes("task", nt.id, tentry.get("notes", []))
                 _import_links("task", nt.id, tentry.get("links", []))
                 _import_forge_links("task", nt.id, tentry.get("forge_links", []))
                 _import_repos("task", nt.id, tentry.get("repos", []))
+                _import_claim(nt.id, tentry.get("claim"))
         # Milestones landed after the plan's own status: recompute it.
         heal(store, "plan", np.id, actor)
     return counts

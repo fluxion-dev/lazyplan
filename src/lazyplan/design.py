@@ -297,6 +297,9 @@ def _row(
     stale: bool = False,
     source_counts: tuple[int, int, int] | None = None,
     repo_count: int = 0,
+    claim_actor: str = "",
+    claim_expired: bool = False,
+    blocked: bool = False,
 ) -> str:
     """TUI row: Rich status glyph + dim id + bold title + progress/chips."""
     letter, title_attr = _CORE_SPEC[kind]
@@ -312,6 +315,13 @@ def _row(
         done, total = progress
         suffix += f" [dim]{progress_text(done, total)}[/]"
         plain_suffix += f" {progress_text(done, total)}"
+    if blocked:
+        suffix += " [red]blocked[/]"
+        plain_suffix += " blocked"
+    if claim_actor:
+        marker = "!" if claim_expired else ""
+        suffix += f" [dim]@{_escape_markup(claim_actor)}{marker}[/]"
+        plain_suffix += f" @{claim_actor}{marker}"
     if chips:
         suffix += f" {chips}"
         if source_counts is not None:
@@ -430,8 +440,14 @@ def milestone_row(
 
 
 def task_label(t: Task, store: Store | None = None, dot: str = "plain") -> str:
-    """Canonical row label for a task."""
-    return _label("task", t, store, dot)
+    """Canonical row label for a task, including blocked state and claim holder."""
+    base = _label("task", t, store, dot)
+    if t.blocked:
+        base += " [blocked]"
+    if store is None:
+        return base
+    claim = store.get_claim(t.id)
+    return f"{base} @{claim.actor}" if claim is not None else base
 
 
 def task_row(
@@ -443,9 +459,23 @@ def task_row(
     pr_checks: str = "",
     stale: bool = False,
     repo_count: int = 0,
+    claim_actor: str = "",
+    claim_expired: bool = False,
+    blocked: bool = False,
 ) -> str:
-    """TUI task row (Rich markup): glyph + id + title + PR/commit chips."""
-    return _row("task", t, links, None, width, pr_state, pr_checks, stale, repo_count=repo_count)
+    """TUI task row (Rich markup): glyph + id + title + claim/PR/commit chips."""
+    return _row(
+        "task",
+        t,
+        links,
+        None,
+        width,
+        pr_state,
+        pr_checks,
+        stale,
+        repo_count=repo_count,
+        claim_actor=claim_actor,
+    )
 
 
 # -- empty states (identical wording everywhere) --------------------------

@@ -55,6 +55,10 @@ Pass `--actor <name>` on every write so the human sees who did what in
 stay glyph-free. `--json` wins when both are present; use it only when you
 need fields porcelain does not carry.
 
+Start work with `lpui next --porcelain`: it claims the first eligible todo
+and moves it doing. A claim is a lease, not an owner. Renew it while you work,
+release it when you stop, and note handoffs with `lpui note add`.
+
 ## DB scoping (first match wins)
 
 `--db PATH` → `$LAZYPLAN_DB` → nearest repo-owned
@@ -253,10 +257,12 @@ Walk the human through every milestone and task, make last edits on the spot, an
 Update the journal as you go, not at the end:
 
 ```bash
-lpui --porcelain brief                        # active plan, doing task, next todo, loose commits
-lpui --actor T --porcelain task move --id T --to doing   # before writing code
+lpui --porcelain next                          # claim the first eligible todo
+lpui --porcelain claim renew --id T --ttl 30m  # lease heartbeat while working
+lpui --porcelain note add --kind task --id T --text "Decision or handoff"
 lpui --actor T --porcelain link --kind task --id T       # after each commit (or `task finish`)
 lpui --actor T --porcelain task move --id T --to done    # when the task's slice is complete
+lpui --porcelain task block --id T --reason "waiting"    # release the lease and park it
 lpui --porcelain audit --since 7.days                    # coverage, lag, and criteria gaps at the end
 ```
 
@@ -268,12 +274,15 @@ on every call. Reach for `--json` only when you need full-fidelity fields.
 - Never batch a whole plan or milestone into one commit; link each green commit to its task.
 - Tick task and plan criteria as they are proven, before closing the row.
 - Lifecycle hooks may remind you at session start, after a commit, and before compaction. Hooks are read-only: they never move a task or link a commit for you.
+- `lpui claims` / `lpui who` shows active leases. `claim release --force` and `claim --force` record a takeover; blocked work is skipped by `next`.
 - `lpui audit --strict` is the opt-in CI gate; it defaults to 80% coverage, one commit of lag, and zero criteria gaps.
 
 ## Read first
 
 ```bash
 lpui --porcelain list --tree [--status todo|doing|done|all]      # plan/milestone/task rows
+lpui --porcelain next                                                        # first todo, claimed
+lpui --porcelain claims                                                      # active leases
 lpui --porcelain brief                                                       # active plan + next update
 lpui --porcelain audit --since 7.days                                        # accuracy metrics
 lpui --porcelain plan show --id N                                            # definition + criteria + children
@@ -406,8 +415,9 @@ Repo plan of record: plans > milestones > tasks in `.agents/lazyplan/lazyplan.db
 Human watches `lpui ui`; agents work via the CLI with `--actor <name>`.
 
 - New plan? Interview the human first: vision, scope in and out, deliverables, constraints, metrics, acceptance criteria. Scout the codebase during the interview.
-- Read: `lpui --porcelain list --tree`, `lpui --porcelain brief`, `lpui --porcelain plan show --id N`, `lpui --porcelain audit --since 7.days`, `lpui --porcelain feed --limit 20` (`--json` for full fidelity)
+- Read: `lpui --porcelain list --tree`, `lpui --porcelain next`, `lpui --porcelain claims`, `lpui --porcelain plan show --id N`, `lpui --porcelain audit --since 7.days`, `lpui --porcelain feed --limit 20` (`--json` for full fidelity)
 - Porcelain rows are `kind<TAB>id<TAB>status<TAB>title<TAB>parent<TAB>extra`; parse by tabs, not by scraping text. Set `LAZYPLAN_PORCELAIN=1` for a whole session.
+- Coordinate: `next` claims atomically; `claim renew|release` manages the lease; `note add` hands off context; `task block --reason` parks blocked work without a fourth status.
 - Write (full CRUD): `lpui plan|milestone|task add`, `... edit`, `... move`, `... delete`; `lpui criterion add|tick|untick|delete` (all with `--actor <name>`)
 - During execution: mark the task doing before code; after each commit link it with `lpui --porcelain link --kind task --id T` (or `task finish`) and move the row; finish with `lpui --porcelain audit --since 7.days` and tick criteria with evidence.
 - Lifecycle hooks are read-only; they remind, never move work or write to the database.
@@ -603,9 +613,12 @@ def render_home_agents_snippet(db: Path) -> str:
 Plan of record: `{db}` (shared home). Human watches `lpui ui`; agents work
 through the CLI with `--actor <name>`.
 
-- Start a session with `lpui --porcelain brief`; it names the doing task and the next todo.
+- Start a session with `lpui --porcelain next`: it claims the first todo. Use
+  `lpui --porcelain brief` when you need the whole active picture.
 - Use `--porcelain` in the active loop: one tab-separated row per record with
   no glyphs; `--json` wins when you need full fidelity.
+- Renew the lease while you work (`claim renew`), note handoffs, and release it
+  when you stop. Block parked work with `task block --reason`.
 - Move the task doing before code; after each commit, link it with
   `lpui --porcelain link --kind task --id T` (or `lpui task finish`), then move it on.
 - Run `lpui --porcelain audit --since 7.days` before closing a plan, and tick

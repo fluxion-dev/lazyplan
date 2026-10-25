@@ -32,6 +32,10 @@ examples:
   lpui plan list --tree                  show the full plan/milestone/task tree
   lpui plan list --status doing
   lpui --porcelain plan list --tree      stable tab-separated rows for an active agent
+  lpui --porcelain next                  claim the first eligible task
+  lpui --porcelain claim --id 3 --ttl 30m
+  lpui --porcelain note add --kind task --id 3 --text "Decision or handoff"
+  lpui --porcelain task block --id 3 --reason "waiting on design"
   lpui --porcelain task add --milestone 1 --title "Do X" --desc "approach"
   lpui plan show --id 1                  show one row with its why, what, checklist, and children
   lpui --actor alice plan add --title "API v2" --why ".." --what ".."
@@ -78,7 +82,9 @@ row per record for active agents; `--json` wins when both are set.
 
 workflow: starting a plan? Ask the human what to build, why it matters,
   and how to tell it is done. Save that as the plan. Then break it into
-  milestones, and each milestone into prioritized tasks.
+  milestones, and each milestone into prioritized tasks. Agents claim work
+  with `next` (a lease, not an owner), renew or release it, note handoffs,
+  and park blocked tasks with `task block --reason`.
 
 environment:
   LAZYPLAN_DB       which database file to use (same as --db)
@@ -301,6 +307,61 @@ def build_parser() -> argparse.ArgumentParser:
         parents=[common],
     )
     br.add_argument("--plan", type=int, default=None, metavar="ID", help="brief one plan")
+    nxt = sub.add_parser(
+        "next",
+        help="claim the next eligible task and move it doing",
+        parents=[common],
+    )
+    nxt.add_argument("--plan", type=int, default=None, metavar="ID", help="only this plan")
+    nxt.add_argument("--ttl", default="", metavar="TIME", help="lease length, e.g. 30m or 2.hours")
+    nxt.add_argument("--note", default="", metavar="TEXT", help="note stored on the claim")
+    nxt.add_argument(
+        "--suggest", action="store_true", help="show the next task without claiming it"
+    )
+    cl = sub.add_parser(
+        "claim",
+        help="claim, renew, or release a task lease",
+        parents=[common],
+    )
+    cl.add_argument(
+        "action",
+        nargs="?",
+        choices=["take", "renew", "release"],
+        default="take",
+        help="take a new lease (default), renew it, or release it",
+    )
+    cl.add_argument("--id", type=int, required=True, metavar="ID", help="task id")
+    cl.add_argument("--ttl", default="", metavar="TIME", help="lease length, e.g. 30m")
+    cl.add_argument("--note", default="", metavar="TEXT", help="note stored on the claim")
+    cl.add_argument(
+        "--force", action="store_true", help="take over or release someone else's lease"
+    )
+    nt = sub.add_parser(
+        "note",
+        help="add or list append-only handoff notes",
+        parents=[common],
+    )
+    nt.add_argument("action", choices=["add", "list"], help="add a note or list them")
+    nt.add_argument(
+        "--kind", choices=list(KINDS), required=True, help="which row the note belongs to"
+    )
+    nt.add_argument("--id", type=int, required=True, metavar="ID", help="row id")
+    nt.add_argument("--text", default=None, metavar="TEXT", help="note text (add only)")
+    nt.add_argument("--limit", type=int, default=None, metavar="N", help="latest N notes")
+    cls = sub.add_parser(
+        "claims",
+        help="list active task leases with holder and expiry",
+        parents=[common],
+    )
+    cls.add_argument("--plan", type=int, default=None, metavar="ID", help="only this plan")
+    cls.add_argument("--all", action="store_true", help="include expired claims")
+    who = sub.add_parser(
+        "who",
+        help="alias for `claims`: active task leases",
+        parents=[common],
+    )
+    who.add_argument("--plan", type=int, default=None, metavar="ID", help="only this plan")
+    who.add_argument("--all", action="store_true", help="include expired claims")
     hk = sub.add_parser(
         "hook",
         help="read a host lifecycle event and print a reminder",
@@ -466,6 +527,11 @@ def build_parser() -> argparse.ArgumentParser:
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="task id")
     _a.add_argument("--to", choices=[v.value for v in Status], required=True, help="new status")
     _a = _actions.add_parser("delete", help="delete a task", parents=[common])
+    _a.add_argument("--id", type=int, required=True, metavar="ID", help="task id")
+    _a = _actions.add_parser("block", help="block a task and record the reason", parents=[common])
+    _a.add_argument("--id", type=int, required=True, metavar="ID", help="task id")
+    _a.add_argument("--reason", required=True, metavar="TEXT", help="why the task is blocked")
+    _a = _actions.add_parser("unblock", help="clear a task's blocked flag", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="task id")
     _a = _actions.add_parser("start", help="record an existing branch on a task", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="task id")

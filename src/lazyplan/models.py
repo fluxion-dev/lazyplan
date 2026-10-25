@@ -49,10 +49,46 @@ class Task:
     title: str
     status: Status = Status.TODO
     description: str = ""  # details / context for whoever picks this up
+    blocked: bool = False
+    blocked_reason: str = ""
 
     def __post_init__(self) -> None:
         if not self.title.strip():
             raise ValueError("task title must not be empty")
+
+
+@dataclass(frozen=True)
+class Claim:
+    """A time-limited lease on a task, held by one actor."""
+
+    task_id: int
+    actor: str
+    started_at: float
+    expires_at: float
+    renewed_at: float = 0.0
+    note: str = ""
+
+    def expired(self, now: float) -> bool:
+        """True when the lease is no longer active at `now`."""
+        return self.expires_at <= now
+
+
+@dataclass(frozen=True)
+class Note:
+    """An append-only handoff note on a plan, milestone, or task."""
+
+    id: int
+    parent_kind: str
+    parent_id: int
+    text: str
+    actor: str = "human"
+    ts: float = 0.0
+
+    def __post_init__(self) -> None:
+        if self.parent_kind not in CRITERION_PARENTS:
+            raise ValueError(PARENT_KIND_ERROR)
+        if not self.text.strip():
+            raise ValueError("note text must not be empty")
 
 
 @dataclass

@@ -160,3 +160,20 @@ PY
 
 Then check the live page in a private window and confirm the canonical URL,
 FAQ rich-result eligibility, social preview image, and version badges.
+
+### v0.25.0 pass (2026-10-25)
+
+After: version pins, release asset URLs, JSON-LD `version`/`softwareVersion`,
+and the sitemap `lastmod` moved to 0.25.0. The agents section now shows the
+porcelain loop and the six-column row contract, with `--json` named as the
+full-fidelity escape hatch. Canonical, FAQPage and SoftwareApplication JSON-LD,
+robots, and the social preview asset are unchanged.
+
+Verified live: the page contains 12 references to 0.25.0 plus "Porcelain mode",
+`screens/lpui-source-trail.webp` and `screens/og-lpui-and-agent.png` return 200,
+`sitemap.xml` carries `lastmod` 2026-10-25, `robots.txt` points at the sitemap,
+and the release badge endpoint returns 200. Pages deployed automatically from
+the bump `publish` job.
+
+Human-only follow-ups: submit the updated URL to search engines, record
+Lighthouse/mobile scores, and confirm the social card in a real client.

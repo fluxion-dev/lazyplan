@@ -253,9 +253,9 @@ Your agent is expected to work from the plan, not invent it:
   trailer is required. These rules apply to new plans; existing plans are
   not rewritten.
 - Write rows for scanning: short paragraphs and sections, no placeholder text.
-- Start a session with `lpui brief`; update the journal after each commit, then
-  run `lpui audit --since 7.days` before closing a plan. Lifecycle hooks remind
-  you, but they are read-only.
+- Start a session with `lpui --porcelain brief`; update the journal after each
+  commit, then run `lpui --porcelain audit --since 7.days` before closing a
+  plan. Lifecycle hooks remind you, but they are read-only.
 
 `lpui setup --placement repo` writes the full contract into the repo; the
 default setup installs the skill into each detected agent's own folder.
@@ -308,7 +308,7 @@ Start a session with the brief, update after each commit, and close with the
 audit:
 
 ```bash
-lpui brief                        # active plan, doing task, next task, loose commits
+lpui --porcelain brief            # active plan, doing task, next task, loose commits
 lpui brief --json                 # same facts for a hook or script
 lpui audit --plan 12              # see the three accuracy metrics for one plan
 lpui audit --since 7.days         # recent window across active plans
@@ -363,6 +363,9 @@ echo '{}' | lpui hook session-start --host claude
 Then check the host's own hook log or trust screen.
 
 ## Reference
+
+Journal commands accept `--porcelain` for the rows shown above; the examples
+below omit it for readability except where the mode is the point.
 
 ```bash
 lpui seed

@@ -5,9 +5,10 @@ Rows are one line, no header, no glyphs, no ANSI, and no blank lines:
     kind<TAB>id<TAB>status<TAB>title<TAB>parent<TAB>extra
 
 `parent` is `-` or `kind:id` (for example `plan:12`). `extra` is progress
-(`done/total`) for plans and milestones and `-` for every other row.
-Criterion rows use `kind=criterion`, status `open|done`, and parent
-`kind:id`. Write confirmations reuse the same six columns:
+(`done/total`) for plans and milestones, a documented detail on some read
+rows, and `-` elsewhere. Criterion rows use `kind=criterion`, status
+`open|done`, and parent `kind:id`. Write confirmations reuse the same six
+columns:
 
 - `commit`: id is the full SHA, status `linked|unlinked`, title the subject.
 - `repo`: id is the checkout path, title the remote (or `-`).

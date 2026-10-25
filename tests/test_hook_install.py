@@ -71,10 +71,12 @@ class InstallCase(unittest.TestCase):
     def test_second_install_is_idempotent(self):
         hook_install.install(self.home, ["claude"])
         before = (self.home / ".claude/settings.json").read_text()
-        hook_install.install(self.home, ["claude"])
+        result = hook_install.install(self.home, ["claude"])
         after = (self.home / ".claude/settings.json").read_text()
         self.assertEqual(before, after)
         self.assertEqual(after.count("lpui hook session-start"), 1)
+        self.assertEqual(result["installed"], [])
+        self.assertEqual(result["backups"], [])
 
     def test_remove_strips_only_managed_entries(self):
         settings = self.home / ".claude/settings.json"
@@ -106,7 +108,11 @@ class InstallCase(unittest.TestCase):
         settings.parent.mkdir(parents=True)
         settings.write_text(json.dumps({"theme": "dark"}))
         hook_install.install(self.home, ["claude"])
-        backup_dir = Path(hook_install.install(self.home, ["claude"])["backups"][0])
+        data = json.loads(settings.read_text())
+        data["hooks"] = {}
+        settings.write_text(json.dumps(data))
+        report = hook_install.install(self.home, ["claude"])
+        backup_dir = Path(report["backups"][0])
         self.assertTrue(list(backup_dir.rglob("settings.json")))
 
 

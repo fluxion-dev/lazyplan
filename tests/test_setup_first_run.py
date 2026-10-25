@@ -102,6 +102,22 @@ class FirstRunCase(unittest.TestCase):
             setup.ensure("ui", args, self.repo, self.home, "1.0")
         wizard.assert_not_called()
 
+    def test_pointer_rerun_is_idempotent(self):
+        db = self.home / ".lazyplan/lazyplan.db"
+        db.parent.mkdir(parents=True)
+        db.touch()
+        setup.install_pointer(self.home, "home", self.repo, db, True)
+        result = setup.install_pointer(self.home, "home", self.repo, db, True)
+        self.assertEqual(result["status"], "up-to-date")
+        self.assertIsNone(result["path"])
+        self.assertFalse((self.home / ".lazyplan/backups").exists())
+
+    def test_skipped_hook_write_is_not_recorded_as_installed(self):
+        skipped = {"installed": [], "backups": [], "skipped": [{"path": "x", "reason": "nope"}]}
+        with mock.patch.object(setup.hook_install, "install", return_value=skipped):
+            setup.install_hooks(self.home, ["claude"])
+        self.assertFalse(setup.load_state(self.home).hooks)
+
     def test_first_run_matrix(self):
         for placement in ("home", "repo"):
             for no_skills in (False, True):

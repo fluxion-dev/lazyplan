@@ -240,9 +240,12 @@ def _install_spec(spec: Spec, backup_dir: Path) -> bool:
         spec.path.write_text(_plugin_text())
         return True
     data = _read(spec.path)
+    before = json.dumps(data, sort_keys=True)
     merged = (
         _merge_nested(data, spec.host) if spec.kind == "nested" else _merge_flat(data, spec.host)
     )
+    if json.dumps(merged, sort_keys=True) == before:
+        return False
     if spec.path.is_file():
         _backup_file(backup_dir, spec.path)
     spec.path.parent.mkdir(parents=True, exist_ok=True)
@@ -253,14 +256,18 @@ def _install_spec(spec: Spec, backup_dir: Path) -> bool:
 def _remove_spec(spec: Spec, backup_dir: Path) -> bool:
     if not spec.path.is_file():
         return False
-    _backup_file(backup_dir, spec.path)
     if spec.kind == "plugin":
+        _backup_file(backup_dir, spec.path)
         spec.path.unlink()
         return True
     data = _read(spec.path)
+    before = json.dumps(data, sort_keys=True)
     stripped = (
         _strip_nested(data, spec.host) if spec.kind == "nested" else _strip_flat(data, spec.host)
     )
+    if json.dumps(stripped, sort_keys=True) == before:
+        return False
+    _backup_file(backup_dir, spec.path)
     spec.path.write_text(json.dumps(stripped, indent=2) + "\n")
     return True
 
@@ -277,7 +284,8 @@ def install(home: Path | None = None, hosts: list[str] | None = None) -> dict:
                 changed.append(str(spec.path))
         except (OSError, ValueError) as exc:
             skipped.append({"path": str(spec.path), "reason": str(exc)})
-    return {"installed": changed, "backups": [str(backup_dir)], "skipped": skipped}
+    backups = [str(backup_dir)] if backup_dir.exists() else []
+    return {"installed": changed, "backups": backups, "skipped": skipped}
 
 
 def remove(home: Path | None = None, hosts: list[str] | None = None) -> dict:
@@ -295,4 +303,5 @@ def remove(home: Path | None = None, hosts: list[str] | None = None) -> dict:
                 changed.append(str(spec.path))
         except (OSError, ValueError) as exc:
             skipped.append({"path": str(spec.path), "reason": str(exc)})
-    return {"removed": changed, "backups": [str(backup_dir)], "skipped": skipped}
+    backups = [str(backup_dir)] if backup_dir.exists() else []
+    return {"removed": changed, "backups": backups, "skipped": skipped}

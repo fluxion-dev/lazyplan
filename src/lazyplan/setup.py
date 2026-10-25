@@ -378,12 +378,13 @@ def install_hooks(
         hosts = None if agents is None else [host for host in agents if host in hook_install.HOSTS]
         report = hook_install.install(home, hosts=hosts)
     state = load_state(home)
-    if enabled is False:
-        state.hook_files = []
-    else:
-        planned = None if agents is None else [h for h in agents if h in hook_install.HOSTS]
-        state.hook_files = [str(spec.path) for spec in hook_install.preview(home, planned)]
-    state.hooks = enabled is not False and bool(state.hook_files)
+    planned = None if agents is None else [h for h in agents if h in hook_install.HOSTS]
+    state.hook_files = (
+        []
+        if enabled is False
+        else [str(spec.path) for spec in hook_install.preview(home, planned) if spec.path.is_file()]
+    )
+    state.hooks = bool(state.hook_files)
     save_state(state, home)
     return report
 
@@ -410,10 +411,16 @@ def install_pointer(
         state.agents_file = ""
         save_state(state, home)
         return {"enabled": False, "path": str(path) if changed else None, "status": status}
+    snippet = skills.render_home_agents_snippet(db_path)
     if path.is_file():
-        backup = setup_layout._new_backup_dir(home)
-        setup_layout._backup_file(backup, path)
-    changed, status = skills.ensure_agents_md(root, skills.render_home_agents_snippet(db_path))
+        try:
+            text = path.read_text()
+        except OSError:
+            text = ""
+        if not (skills.AGENTS_MARK_BEGIN in text and snippet.strip() in text):
+            backup = setup_layout._new_backup_dir(home)
+            setup_layout._backup_file(backup, path)
+    changed, status = skills.ensure_agents_md(root, snippet)
     state.agents_pointer = True
     state.agents_file = str(path)
     save_state(state, home)

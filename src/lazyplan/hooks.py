@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import json
 import os
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TextIO
@@ -169,15 +168,3 @@ def run(
         return build_result(event, payload, cwd, commits)
     except (RuntimeError, OSError, ValueError):
         return HookResult()
-
-
-def plain(result: HookResult) -> str:
-    """Plain fallback for unknown hosts and `--json`-less calls."""
-    return result.text
-
-
-def write_plain(result: HookResult, stream: TextIO | None = None) -> None:
-    if not result.text:
-        return
-    out = stream or sys.stdout
-    out.write(result.text + "\n")

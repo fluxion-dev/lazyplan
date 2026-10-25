@@ -13,7 +13,7 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 
-from . import audit, brief, hooks, services, setup, setup_layout, setup_ui
+from . import audit, brief, hook_hosts, hooks, services, setup, setup_layout, setup_ui
 from .cli_parser import build_parser, package_version
 from .design import (
     EMPTY_COMMITS,
@@ -283,7 +283,9 @@ def _cmd_hook(store: Store | None, args: argparse.Namespace, actor: str) -> int:
             },
         )
         return 0
-    hooks.write_plain(result)
+    rendered = hook_hosts.render(host, args.event, result)
+    if rendered:
+        print(rendered)
     return 0
 
 

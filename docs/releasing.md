@@ -36,9 +36,17 @@ Run the **bump** workflow from the Actions tab and choose `patch`, `minor`, or
 and enables auto-merge. When `gates` passes, the PR merges; `tag-release` then
 creates `vX.Y.Z` and dispatches `release.yml` against that tag.
 
+Auto-merge merges with `GITHUB_TOKEN`, and GitHub does not start push-event
+workflows for those pushes. The bump workflow therefore has a `publish` job
+that waits for the release PR to merge, then dispatches `tag-release.yml` and
+`pages.yml` explicitly. Both are idempotent: `tag-release` exits when the tag
+already exists, and Pages redeploys the same source. A bot-created release PR
+can also leave its `ci` run in `action_required`; approve that run as an admin
+so `gates` can start.
+
 ```bash
 gh run list --workflow bump.yml
-gh run watch
+gh run watch <bump-run-id>   # stays open until the release PR merges
 ```
 
 Admins can still release locally through the ruleset bypass:

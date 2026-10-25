@@ -118,3 +118,6 @@ old_start
 old_count
 new_start
 new_count
+ask_migration
+_skills_dir_override
+prompt_confirm

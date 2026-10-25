@@ -36,9 +36,11 @@ module, add tests and type annotations with it.
 ## Project layout
 
 ```text
-src/lazyplan/cli.py        command dispatch and init flow
+src/lazyplan/cli.py        command dispatch and setup entry
 src/lazyplan/cli_parser.py argparse surface
-src/lazyplan/init_layout.py resolved init resources and repairs
+src/lazyplan/setup.py     first-run setup state, findings, and moves
+src/lazyplan/setup_ui.py  setup wizard rendering and plain fallback
+src/lazyplan/setup_layout.py resolved setup resources and repairs
 src/lazyplan/store.py      SQLite persistence
 src/lazyplan/tui.py        Textual app
 src/lazyplan/tree_nav.py   shared tree gestures (j/k, left/right, click)
@@ -76,7 +78,7 @@ delete the intermediate SVG.
 - Plain words in user-facing text. Name the outcome, not the implementation.
 - Keep functions small enough for `xenon` C; extract helpers instead of nesting.
 - No dead code. `vulture` fails on it outside the allowlist.
-- Every public behavior gets a test, especially init layout and CLI parsing.
+- Every public behavior gets a test, especially setup layout and CLI parsing.
 - Do not add a second source of truth for the version. `pyproject.toml` wins;
   `tools/bump.sh` mirrors it into the README, site, and man page.
 

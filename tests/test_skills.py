@@ -1,4 +1,4 @@
-"""Skill-installer tests: `lpui init` wizard paths stay non-interactive-safe."""
+"""Skill-installer tests: setup paths stay non-interactive-safe."""
 
 import io
 import json
@@ -200,6 +200,18 @@ class TestTemplateParity(unittest.TestCase):
         self.assertIn("interview", text)
         self.assertIn("Never decide a plan's why/what", text)
         self.assertIn("belong to the human", text)
+
+    def test_description_triggers_on_implementation(self):
+        description = skills.render_skill().split("---", 2)[1]
+        self.assertIn("implement", description)
+        self.assertIn("continue planned work", description)
+
+    def test_execution_loop_names_the_commands(self):
+        text = skills.render_skill()
+        self.assertIn("## During execution", text)
+        self.assertIn("lpui brief", text)
+        self.assertIn("lpui audit --since 7.days", text)
+        self.assertIn("read-only", text)
 
     def test_snippet_teaches_nothing_the_skill_does_not(self):
         import re
@@ -432,93 +444,6 @@ class TestInstall(unittest.TestCase):
         self.assertIn("lazyplan", text)
 
 
-class TestWizard(unittest.TestCase):
-    def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
-        self.repo = Path(self.tmp.name) / "proj"
-        (self.repo / ".git").mkdir(parents=True)
-        self.home = Path(self.tmp.name) / "home"
-        self.home.mkdir()
-
-    def tearDown(self):
-        self.tmp.cleanup()
-
-    def test_wizard_skip(self):
-        err = io.StringIO()
-        res = skills.run_wizard(self.repo, self.home, read=_answers(["", "5"]), write=err)
-        self.assertEqual(res.scope, "none")
-        self.assertFalse((self.repo / ".agents").exists())
-
-    def test_wizard_custom_skills_dir(self):
-        err = io.StringIO()
-        custom = str(self.home / "custom-skills")
-        res = skills.run_wizard(
-            self.repo, self.home, read=_answers(["opencode", "4", custom]), write=err
-        )
-        self.assertEqual(res.scope, "global")
-        self.assertEqual(res.installed, [f"{custom}/lazyplan/SKILL.md (wrote)"])
-        self.assertTrue(Path(custom, "lazyplan", "SKILL.md").is_file())
-        self.assertTrue(Path(custom, "lazyplan", "lazyplan.db").parent.is_dir())
-        self.assertFalse((self.repo / ".agents").exists())
-
-    def test_wizard_project_with_agents_md_yes(self):
-        err = io.StringIO()
-        res = skills.run_wizard(self.repo, self.home, read=_answers(["", "2", "Y"]), write=err)
-        self.assertEqual(res.scope, "project")
-        self.assertTrue((self.repo / ".agents" / "skills" / "lazyplan" / "SKILL.md").is_file())
-        self.assertTrue((self.repo / "AGENTS.md").is_file())
-
-    def test_wizard_eof_defaults_to_skip_or_default(self):
-        err = io.StringIO()
-
-        def _eof():
-            raise EOFError
-
-        res = skills.run_wizard(self.repo, self.home, read=_eof, write=err)
-        # EOF takes defaults: tools fallback, local scope, no repo writes.
-        self.assertEqual(res.scope, "global")
-        self.assertFalse((self.repo / ".agents").exists())
-        # One dir per agent: opencode's canonical folder, no universal duplicate.
-        self.assertTrue(
-            (self.home / ".config" / "opencode" / "skills" / "lazyplan" / "SKILL.md").is_file()
-        )
-        self.assertFalse((self.home / ".agents" / "skills" / "lazyplan" / "SKILL.md").exists())
-
-    def test_wizard_tailors_fresh_templates(self):
-        err = io.StringIO()
-        res = skills.run_wizard(
-            self.repo,
-            self.home,
-            read=_answers(["", "2", "Y", "n"]),
-            write=err,
-        )
-        self.assertEqual(res.scope, "project")
-        summary = res.to_dict()["templates"]
-        self.assertEqual(len(summary["added"]), 3)
-        proj = (self.repo / ".agents/lazyplan" / "templates" / "plan.md").read_text()
-        self.assertIn("required: [title]", proj)
-        self.assertNotIn("edit or delete me", proj)
-        task = (self.repo / ".agents/lazyplan" / "templates" / "task.md").read_text()
-        self.assertNotIn("priority", task)
-
-    def test_wizard_rerun_keeps_edits_by_default(self):
-        tdir = self.repo / ".agents/lazyplan" / "templates"
-        tdir.mkdir(parents=True)
-        (tdir / "plan.md").write_text("edited")
-        err = io.StringIO()
-        res = skills.run_wizard(
-            self.repo,
-            self.home,
-            read=_answers(["", "2", "Y", "Y", "", "", "", "", "k"]),
-            write=err,
-        )
-        summary = res.to_dict()["templates"]
-        self.assertEqual((tdir / "plan.md").read_text(), "edited")
-        self.assertTrue((tdir / "milestone.md").is_file())
-        self.assertIn(str(tdir / "plan.md"), summary["kept"])
-        self.assertIn(str(tdir / "milestone.md"), summary["added"])
-
-
 class TestInitCli(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -533,10 +458,13 @@ class TestInitCli(unittest.TestCase):
         self.old_home = os.environ.get("HOME")
         os.environ["HOME"] = os.path.join(self.tmp.name, "home")
         os.makedirs(os.environ["HOME"], exist_ok=True)
+        os.makedirs(os.path.join(os.environ["HOME"], ".config", "opencode"), exist_ok=True)
 
     def tearDown(self):
         os.chdir(self.old_cwd)
-        if self.old_env is not None:
+        if self.old_env is None:
+            os.environ.pop("LAZYPLAN_DB", None)
+        else:
             os.environ["LAZYPLAN_DB"] = self.old_env
         if self.old_xdg is None:
             os.environ.pop("XDG_DATA_HOME", None)
@@ -555,36 +483,34 @@ class TestInitCli(unittest.TestCase):
     def _init_json(self, argv):
         buf = io.StringIO()
         with redirect_stdout(buf):
-            self.assertEqual(lpui_main(argv), 0)
+            self.assertEqual(lpui_main([*argv, "--json"]), 0)
         return json.loads(buf.getvalue())
 
-    def test_init_no_skills_flag(self):
+    def test_setup_no_skills_flag(self):
         os.chdir(self.repo)
-        payload = self._init_json(["init", "--no-skills"])
-        self.assertEqual(payload["skills"]["scope"], "none")
+        payload = self._init_json(["setup", "--yes", "--no-skills"])
+        self.assertEqual(payload["skills"], [])
         self.assertFalse(os.path.exists(os.path.join(self.repo, ".agents", "skills")))
 
-    def test_init_scope_project_writes_files(self):
+    def test_setup_repo_writes_files(self):
         os.chdir(self.repo)
-        payload = self._init_json(["init", "--skills-scope", "project"])
-        self.assertEqual(payload["skills"]["scope"], "project")
+        payload = self._init_json(["setup", "--placement", "repo", "--yes"])
         self.assertTrue(
             os.path.isfile(os.path.join(self.repo, ".agents", "skills", "lazyplan", "SKILL.md"))
         )
-        self.assertTrue(any("SKILL.md" in line for line in payload["skills"]["installed"]))
+        self.assertTrue(any("SKILL.md" in line for line in payload["installed"]))
 
-    def test_init_json_stays_machine_readable(self):
+    def test_setup_json_stays_machine_readable(self):
         # --json must not prompt even on a tty: stdout parses as JSON.
         os.chdir(self.repo)
-        payload = self._init_json(["init", "--json"])
+        payload = self._init_json(["setup", "--json"])
         self.assertIn("db", payload)
         self.assertIn("skills", payload)
 
-    def test_init_yes_installs_defaults(self):
+    def test_setup_yes_installs_defaults(self):
         os.chdir(self.repo)
-        payload = self._init_json(["init", "--yes"])
+        self._init_json(["setup", "--yes"])
         # Zero-touch default: local install, no repo writes, one dir per agent.
-        self.assertEqual(payload["skills"]["scope"], "global")
         self.assertFalse(os.path.exists(os.path.join(self.repo, ".agents")))
         self.assertTrue(
             os.path.isfile(
@@ -595,36 +521,27 @@ class TestInitCli(unittest.TestCase):
         )
         self.assertFalse(os.path.exists(os.path.join(os.environ["HOME"], ".agents", "skills")))
 
-    def test_init_team_yes_writes_repo_files(self):
+    def test_setup_repo_yes_writes_repo_files(self):
         os.chdir(self.repo)
-        payload = self._init_json(["init", "--team", "--yes"])
-        self.assertEqual(payload["skills"]["scope"], "project")
+        self._init_json(["setup", "--placement", "repo", "--yes"])
         self.assertTrue(
             os.path.isfile(os.path.join(self.repo, ".agents", "skills", "lazyplan", "SKILL.md"))
         )
 
-    def test_init_yes_adds_gitignore(self):
+    def test_setup_adds_gitignore_once(self):
         os.chdir(self.repo)
-        # Zero-touch --yes leaves the repo alone.
-        payload = self._init_json(["init", "--yes"])
+        # Zero-touch setup leaves the repo alone.
+        self._init_json(["setup", "--yes"])
         self.assertFalse(os.path.exists(os.path.join(self.repo, ".gitignore")))
-        self.assertEqual(payload["gitignore"]["added"], [])
-        # Team --yes offers repo gitignore entries.
-        payload = self._init_json(["init", "--team", "--yes"])
+        # Repo placement writes lazyplan entries.
+        self._init_json(["setup", "--placement", "repo", "--yes"])
         gi = os.path.join(self.repo, ".gitignore")
-        self.assertTrue(os.path.isfile(gi))
         text = open(gi).read()
         self.assertIn(".agents/lazyplan/", text)
         self.assertIn(".agents/skills/lazyplan/", text)
-        self.assertIn(".agents/lazyplan/", payload["gitignore"]["added"])
-        # second team run adds nothing twice
-        self._init_json(["init", "--team", "--yes"])
+        # second run adds nothing twice
+        self._init_json(["setup", "--placement", "repo", "--yes"])
         self.assertEqual(open(gi).read().count(".agents/lazyplan/"), 1)
-
-    def test_init_without_yes_leaves_gitignore_alone(self):
-        os.chdir(self.repo)
-        self._init_json(["init", "--skills-scope", "project"])
-        self.assertFalse(os.path.exists(os.path.join(self.repo, ".gitignore")))
 
 
 class TestAppendGitignore(unittest.TestCase):

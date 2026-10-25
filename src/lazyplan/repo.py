@@ -8,8 +8,8 @@ Resolution order for the DB path:
   4. shared home DB: `~/.lazyplan/lazyplan.db` on unix,
      `%LOCALAPPDATA%/lazyplan/lazyplan.db` on Windows
 
-`lpui init --team` marks a repo as planned: ensures `.agents/lazyplan/` +
-config + schema. Plain `lpui init` uses the shared home, in or out of a repo.
+`lpui setup --placement repo` marks a repo as planned: ensures
+`.agents/lazyplan/` + config + schema. The default placement is the shared home.
 Stdlib only.
 """
 
@@ -35,7 +35,7 @@ def is_repo_plan_dir(plan_dir: str | Path) -> bool:
 
 
 def stale_plan_dirs(root: str | Path) -> list[Path]:
-    """Pre-move plan dirs, if present: ignored by resolution, warned about at init."""
+    """Pre-move plan dirs, if present: ignored by resolution, reported by setup."""
     base = Path(root).expanduser()
     return [base / d for d in STALE_PLAN_DIRS if (base / d).is_dir()]
 
@@ -134,7 +134,7 @@ def repo_plan_db_path(root: str | Path) -> Path:
 
 
 def legacy_plan_dir(root: str | Path) -> Path:
-    """Legacy `.plan/` dir (never auto-resolved; `lpui init --team` migrates it)."""
+    """Legacy `.plan/` dir (never auto-resolved; setup offers a review)."""
     return Path(root).expanduser() / LEGACY_PLAN_DIR
 
 
@@ -201,7 +201,7 @@ def resolve_db_path(explicit: str | Path | None = None, cwd: str | Path = ".") -
 
     Home default: without a team-initialized `.agents/lazyplan/`
     above cwd, every agent resolves the same shared home DB. Legacy
-    `.plan/` dirs never resolve by themselves (`init` migrates them).
+    `.plan/` dirs never resolve by themselves (setup reports them).
     """
     if explicit:
         return Path(explicit).expanduser()

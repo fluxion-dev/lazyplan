@@ -1,4 +1,4 @@
-"""Agent-skill installer for `lpui init`.
+"""Agent-skill installer for first-run setup.
 
 One universal skill covers every modern agent host: OpenCode, Claude Code,
 Codex, Gemini CLI, and Cursor all discover skills under `.agents/skills/`
@@ -13,18 +13,10 @@ from __future__ import annotations
 
 import os
 import shutil
-from argparse import Namespace
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TextIO
-
-from .repo import PLAN_DIR
-from .templates import (
-    TEMPLATE_FILES,
-    TemplateChoices,
-    run_template_setup,
-)
 
 SKILL_NAME = "lazyplan"
 
@@ -34,37 +26,9 @@ SKILLS_DIR = "skills"
 AGENTS_MARK_BEGIN = "<!-- lazyplan:start -->"
 AGENTS_MARK_END = "<!-- lazyplan:end -->"
 
-# -- `lpui init` skill-wizard text (wizard prints these; keep wording stable) --
-INIT_SKILLS_TITLE = "== lpui init: agent skills =="
-INIT_SKILLS_EXPLAIN = "One universal skill teaches your agents to use `lpui` for planning."
-INIT_SKILLS_COVERAGE = (
-    "Writes one copy per selected agent into that agent's own skills folder "
-    "(e.g. `~/.config/opencode/skills/lazyplan/`). Tools without a known "
-    "folder share `~/.agents/skills/lazyplan/`."
-)
-INIT_SKILLS_DONE = "Done. Restart your agent session, then try `lpui list`."
-INIT_SKILLS_COMMIT_TIP = (
-    "Tip: commit `.agents/skills/lazyplan/`, `.claude/skills/` (if any), and AGENTS.md."
-)
-
-
-# -- `lpui init` template-setup text (wizard prints these; keep wording stable) --
-TEMPLATE_SETUP_TITLE = "== lpui init: creation templates =="
-TEMPLATE_SETUP_EXPLAIN = (
-    "`.agents/lazyplan/templates/` defines what new plans, milestones, and tasks look "
-    "like: defaults fill empty flags, required fields fail creation naming the "
-    "field, long single-blob text fails creation until it uses paragraphs and "
-    "sections. Answer three questions to tailor the "
-    "starters (silent runs use the opinionated defaults)."
-)
-TEMPLATE_REVIEW = "Review existing templates in .agents/lazyplan/templates/?"
-TEMPLATE_Q_WHYWHAT = "Require plan why and what on creation?"
-TEMPLATE_Q_DESC = "Require milestone/task details (desc)?"
-TEMPLATE_DONE = "Templates settled — edit `.agents/lazyplan/templates/*.md` any time."
-
 SKILL_FRONTMATTER = """---
 name: lazyplan
-description: Plan and track work with lazyplan (lpui) — interview for a plan's why/what/acceptance criteria, then cut milestones and tasks. Use when the user asks to plan work, track progress, break down a feature, check status, or when repo instructions mention `lpui`.
+description: Plan and track work with lazyplan (lpui) — interview for a plan's why/what/acceptance criteria, cut milestones and tasks, and keep the journal accurate while implementing. Use when the user asks to plan work, track progress, break down a feature, check status, implement or continue planned work, resume a task, or when repo instructions mention `lpui`.
 license: MIT
 compatibility: opencode, claude-code, codex, gemini-cli, cursor
 ---
@@ -90,24 +54,24 @@ Pass `--actor <name>` on every write so the human sees who did what in
 
 ## DB scoping (first match wins)
 
-`--db PATH` → `$LAZYPLAN_DB` → nearest team-initialized
-`.agents/lazyplan/lazyplan.db` walking up (only when `lpui init --team`
-created it) → shared `~/.lazyplan/lazyplan.db`
+`--db PATH` → `$LAZYPLAN_DB` → nearest repo-owned
+`.agents/lazyplan/lazyplan.db` walking up → shared `~/.lazyplan/lazyplan.db`
 (`%LOCALAPPDATA%/lazyplan/lazyplan.db` on Windows).
-`lpui init` defaults to the shared home: it creates no repo files on a clean
-repo, installs skills per agent, and shares one database. If an earlier
-scoped install left repo files, init reports and repairs them with backups
-after confirmation. Pass `--team` (or `--skills-scope project|both`) to opt a
-repo into shared storage (`.agents/lazyplan/`, repo skills, `AGENTS.md`
-pointer, templates).
-`--team --no-skills` still uses repo storage. `--db PATH` / `$LAZYPLAN_DB`
-always wins and is never moved.
-`lpui init --check` and `lpui doctor` report the expected versus actual
-layout without writing (exit 0 clean, 1 misplaced). Global init repairs
-repo leftovers safely, backs up every touched file under
-`~/.lazyplan/backups/<timestamp>/`, and stops with export/import guidance
-when both databases hold plans. Team init never moves home data.
-Don't override `--db` unless asked.
+
+Setup runs on first use. It detects agents, installs or refreshes their
+skills, and remembers the result in `~/.lazyplan/setup.json`. The default is
+the shared home database and no repo files. `lpui setup --placement repo`
+opts the current checkout into `.agents/lazyplan/` plus repo skills,
+templates, an `AGENTS.md` pointer, and gitignore entries. `--db` and
+`$LAZYPLAN_DB` always win and are never moved.
+
+`lpui doctor` reports the resolved layout and any findings without writing
+(exit 0 clean, 1 misplaced). On upgrade, setup offers once to move an
+untracked repo database home, remembers keep/never, never offers to move a
+tracked database, and refuses to merge two databases that both hold plans.
+Every touched file is backed up under `~/.lazyplan/backups/<timestamp>/`.
+Agent commands never prompt; only `lpui`, `lpui setup`, and `lpui upgrade`
+do. Don't override `--db` unless asked.
 
 ## Linked repos (central plan, many checkouts)
 
@@ -281,10 +245,29 @@ lpui plan show --id P        # why/what + criteria + children
 
 Walk the human through every milestone and task, make last edits on the spot, and start executing only on explicit check-off. Check that the plan names its commit strategy and that every task desc names its expected commit slice and verification; reject a plan that batches a whole milestone or plan into one commit. During execution the plan stays the truth: fold new findings into the plan before changing code, never around it.
 
+## During execution
+
+Update the journal as you go, not at the end:
+
+```bash
+lpui brief                              # active plan, doing task, next todo, loose commits
+lpui task move --id T --to doing        # before writing code
+lpui link --kind task --id T            # after each commit (or `task finish`)
+lpui task move --id T --to done         # when the task's slice is complete
+lpui audit --since 7.days               # coverage, lag, and criteria gaps at the end
+```
+
+- Never batch a whole plan or milestone into one commit; link each green commit to its task.
+- Tick task and plan criteria as they are proven, before closing the row.
+- Lifecycle hooks may remind you at session start, after a commit, and before compaction. Hooks are read-only: they never move a task or link a commit for you.
+- `lpui audit --strict` is the opt-in CI gate; it defaults to 80% coverage, one commit of lag, and zero criteria gaps.
+
 ## Read first
 
 ```bash
 lpui list [--status todo|doing|done|all] [--archived] [--plan ID]  # tree (default: all)
+lpui brief                                                       # active plan + next update
+lpui audit --since 7.days                                        # accuracy metrics
 lpui plan show --id N                                            # full context
 lpui feed --limit 20                                                 # recent activity
 lpui export --format json                                            # full dump when you need everything
@@ -297,9 +280,10 @@ Add `--json` for machine-parseable output (`lpui list --json`).
 
 ## Templates (per-repo creation defaults)
 
-`.agents/lazyplan/templates/{plan,milestone,task}.md` (scaffolded by `lpui init --team`,
-commit them to share) define what new rows look like. Team repos share them;
-otherwise templates live beside the shared home DB at `~/.lazyplan/templates/`.
+`.agents/lazyplan/templates/{plan,milestone,task}.md` (scaffolded by
+`lpui setup --placement repo`; commit them to share) define what new rows look
+like. Repo placement shares them; otherwise templates live beside the shared
+home DB at `~/.lazyplan/templates/`.
 Each file is Markdown
 with YAML frontmatter; the body is guidance and ignored:
 
@@ -315,12 +299,8 @@ Field names are per kind: plan `title/why/what`, milestone and task
 `title/desc`. Missing `required` entries fail with exit 2 naming the
 field; missing template files mean legacy behavior (tasks default `p1`).
 
-`lpui init` walks the user through template setup: on a TTY it asks three
-convention questions (require plan why/what, require milestone/task desc,
-and the details requirement) and writes tailored
-starters; `--yes`/`--json`/non-TTY writes the opinionated defaults silently.
-Rerunning `init` on a TTY offers per-file keep/edit/reset (default keep) —
-edits are never overwritten without an explicit reset.
+Setup writes the opinionated starters silently; edit the files to change what
+new rows require. Existing edits are never overwritten.
 
 ## Write: full CRUD
 
@@ -416,13 +396,15 @@ Repo plan of record: plans > milestones > tasks in `.agents/lazyplan/lazyplan.db
 Human watches `lpui ui`; agents work via the CLI with `--actor <name>`.
 
 - New plan? Interview the human first: vision, scope in and out, deliverables, constraints, metrics, acceptance criteria. Scout the codebase during the interview.
-- Read: `lpui list`, `lpui plan show --id N`, `lpui feed --limit 20` (`--json` for parsing)
+- Read: `lpui list`, `lpui brief`, `lpui plan show --id N`, `lpui audit --since 7.days`, `lpui feed --limit 20` (`--json` for parsing)
 - Write (full CRUD): `lpui plan|milestone|task add`, `... edit`, `... move`, `... delete`; `lpui criterion add|tick|untick|delete` (all with `--actor <name>`)
+- During execution: mark the task doing before code; after each commit link it (`lpui link --kind task --id T` or `task finish`) and move the row; finish with `lpui audit --since 7.days` and tick criteria with evidence.
+- Lifecycle hooks are read-only; they remind, never move work or write to the database.
 - Milestones read As a/I want/so that with Given-When-Then criteria; tasks start with a verb and carry a DoD checklist; cut both from scouted ground only
 - Scout before creating anything — no row from unscouted ground; scope lists what is in and out explicitly
 - Implementation requests get an ambiguity hunt first: touch-points, edge cases, non-goals, assumptions — never accept "implement X" at face value
 - Write every row for scanning: paragraphs and sections, no single-blob text, no placeholder content; starters ship empty, fill them with real words
-- Templates in `.agents/lazyplan/templates/` fill/enforce/auto-add criteria at creation; missing templates mean legacy defaults; `lpui init` walks through setup, reruns offer keep/edit/reset
+- Templates in `.agents/lazyplan/templates/` fill/enforce/auto-add criteria at creation; missing templates mean legacy defaults; setup scaffolds them, and edits are never overwritten
 - Plans include QA, refactoring, and documentation cleanup by default; ask about relevant testing in the interview, drop them only on explicit opt-out
 - Done means: `lpui criterion add --kind plan`, cut milestones, cut tasks, work in creation order
 - Unsure on scope or taste? Ask the human in conversation — never guess the definition
@@ -443,7 +425,7 @@ class AgentHost:
 
 @dataclass
 class InstallResult:
-    """Outcome of a skill install, serialized into `lpui init` JSON."""
+    """Outcome of a skill install, serialized into setup JSON."""
 
     scope: str
     installed: list[str] = field(default_factory=list)
@@ -465,18 +447,8 @@ class InstallResult:
 
 
 @dataclass
-class WizardAnswers:
-    """Choices collected by the interactive wizard before anything is written."""
-
-    picked: list[str]
-    scope: str
-    skills_dir: str | None
-    with_agents_md: bool
-
-
-@dataclass
 class SkillPlan:
-    """Where init intends to put skill files and the AGENTS.md pointer."""
+    """Where setup intends to put skill files and the AGENTS.md pointer."""
 
     scope: str
     tools: list[str] | None
@@ -495,16 +467,6 @@ class SkillPlan:
             "agents_md": str(self.agents_md) if self.agents_md else None,
             "skipped": self.skipped,
         }
-
-
-def _resolve_tools(args: Namespace, home: Path) -> list[str] | None:
-    """Explicit --agents/env, else detected native hosts, else the default."""
-    tools = _agents_override(args)
-    if tools is not None:
-        return tools
-    hosts = detect_agents(home)
-    native = [h.key for h in hosts if h.detected and h.key in KNOWN_TOOLS]
-    return native or ["opencode"]
 
 
 def skill_destinations(
@@ -572,60 +534,24 @@ def _plan_for(
     )
 
 
-def _wizard_plan(
-    answers: WizardAnswers,
-    repo_root: Path | None,
-    home: Path,
-) -> SkillPlan:
-    if answers.scope == "none":
-        return _empty_plan("user skipped skill setup")
-    return _plan_for(
-        answers.scope,
-        repo_root,
-        home,
-        answers.picked,
-        answers.skills_dir,
-        with_agents_md=answers.with_agents_md,
-    )
-
-
-def plan_init(
-    args: Namespace,
+def plan_choice(
+    choice: object,
     repo_root: Path | None,
     home: Path | None = None,
-    read: Callable[[], str] | None = None,
-    write: TextIO | None = None,
 ) -> SkillPlan:
-    """Resolve skill destinations without writing anything.
-
-    Interactive input is read here; every write happens later in
-    `apply_skill_plan`, so init can preflight the whole resource layout.
-    """
-    import sys
-
+    """Resolve skill destinations from a SetupChoice (no argparse, no prompts)."""
     home = home or Path.home()
-    out: TextIO = write if write is not None else sys.stderr
-    no_skills = bool(getattr(args, "no_skills", False))
-    scope_arg = str(getattr(args, "skills_scope", "") or "").strip()
-    if bool(getattr(args, "team", False)) and not scope_arg:
-        scope_arg = "project"
     if os.environ.get("LAZYPLAN_NO_SKILLS", "").strip():
         return _empty_plan("$LAZYPLAN_NO_SKILLS")
-    if no_skills or scope_arg == "none":
+    if getattr(choice, "explicit_db", None):
+        return _empty_plan("explicit database")
+    if bool(getattr(choice, "no_skills", False)):
         return _empty_plan("--no-skills")
-    tools = _resolve_tools(args, home)
-    skills_dir = _skills_dir_override(args)
-    if scope_arg in ("project", "global", "both"):
-        return _plan_for(scope_arg, repo_root, home, tools, skills_dir)
-    if (
-        bool(getattr(args, "yes", False))
-        or bool(getattr(args, "check", False))
-        or bool(getattr(args, "json", False))
-        or not should_prompt(args, bool(sys.stdin.isatty() and sys.stdout.isatty()))
-    ):
-        return _plan_for("global", repo_root, home, tools, skills_dir)
-    answers = _ask_wizard_answers(repo_root, home, read, out)
-    return _wizard_plan(answers, repo_root, home)
+    placement = str(getattr(choice, "placement", "home") or "home")
+    scope = "project" if placement == "repo" and repo_root is not None else "global"
+    tools = getattr(choice, "agents", None) or None
+    skills_dir = getattr(choice, "skills_dir", None)
+    return _plan_for(scope, repo_root, home, tools, skills_dir)
 
 
 def apply_skill_plan(
@@ -659,9 +585,21 @@ def render_skill() -> str:
     return SKILL_FRONTMATTER + SKILL_BODY
 
 
-def render_agents_snippet() -> str:
-    """AGENTS.md section, wrapped in idempotent markers."""
-    return f"{AGENTS_MARK_BEGIN}\n{AGENTS_SNIPPET}{AGENTS_MARK_END}\n"
+def render_home_agents_snippet(db: Path) -> str:
+    """AGENTS.md section for home placement; never claims a repo database."""
+    body = f"""## lazyplan (`lpui`)
+
+Plan of record: `{db}` (shared home). Human watches `lpui ui`; agents work
+through the CLI with `--actor <name>`.
+
+- Start a session with `lpui brief`; it names the doing task and the next todo.
+- Move the task doing before code; after each commit, link it with
+  `lpui link --kind task --id T` (or `lpui task finish`), then move it on.
+- Run `lpui audit --since 7.days` before closing a plan, and tick criteria only
+  with evidence.
+- Lifecycle hooks are read-only; they remind, never move work.
+"""
+    return body
 
 
 def detect_agents(home: Path | None = None) -> list[AgentHost]:
@@ -824,13 +762,14 @@ def write_skill_file(dest: Path) -> tuple[bool, str]:
     return True, "wrote"
 
 
-def ensure_agents_md(repo_root: Path) -> tuple[bool, str]:
+def ensure_agents_md(repo_root: Path, body: str | None = None) -> tuple[bool, str]:
     """Append the lazyplan section to repo AGENTS.md if missing. Idempotent."""
     dest = repo_root / "AGENTS.md"
-    snippet = render_agents_snippet()
+    snippet = f"{AGENTS_MARK_BEGIN}\n{body or AGENTS_SNIPPET}{AGENTS_MARK_END}\n"
+    wanted = (body or AGENTS_SNIPPET).strip()
     if dest.is_file():
         text = dest.read_text()
-        if AGENTS_MARK_BEGIN in text and AGENTS_SNIPPET.strip() in text:
+        if AGENTS_MARK_BEGIN in text and wanted in text:
             return False, "up-to-date"
         if AGENTS_MARK_BEGIN in text:
             # stale snippet: replace the marked block
@@ -842,6 +781,25 @@ def ensure_agents_md(repo_root: Path) -> tuple[bool, str]:
         return True, "appended"
     dest.write_text("# Agent instructions\n\n" + snippet)
     return True, "created"
+
+
+def remove_agents_md(repo_root: Path) -> tuple[bool, str]:
+    """Strip only the marked lazyplan block; keep the rest of AGENTS.md."""
+    dest = repo_root / "AGENTS.md"
+    try:
+        text = dest.read_text()
+    except OSError:
+        return False, "absent"
+    if AGENTS_MARK_BEGIN not in text:
+        return False, "absent"
+    before, _, rest = text.partition(AGENTS_MARK_BEGIN)
+    _, _, after = rest.partition(AGENTS_MARK_END)
+    cleaned = before.rstrip() + "\n\n" + after.lstrip()
+    if cleaned.strip() in ("", "# Agent instructions"):
+        dest.unlink()
+    else:
+        dest.write_text(cleaned.rstrip() + "\n")
+    return True, "removed"
 
 
 def _write_skill(seen: set[Path], installed: list[str], dest: Path) -> None:
@@ -984,262 +942,10 @@ def prompt_confirm(
     return ans.lower() != "n" if default_yes else ans.lower() == "y"
 
 
-def _ask_template_choices(read: Callable[[], str] | None, out: TextIO) -> TemplateChoices:
-    """Two convention questions (EOF/empty means the opinionated default)."""
-    require_why_what = prompt_confirm(TEMPLATE_Q_WHYWHAT, read=read, write=out)
-    require_desc = prompt_confirm(TEMPLATE_Q_DESC, read=read, write=out)
-    return TemplateChoices(
-        require_why_what=require_why_what,
-        require_desc=require_desc,
-    )
-
-
-def run_template_phase(
-    plan_dir: Path | None,
-    read: Callable[[], str] | None = None,
-    write: TextIO | None = None,
-) -> dict[str, list[str]] | None:
-    """Interactive template setup for the wizard; None when not repo-scoped."""
-    import sys
-
-    if plan_dir is None:
-        return None
-    out: TextIO = write if write is not None else sys.stderr
-    tdir = plan_dir / "templates"
-    existing = [k for k, f in TEMPLATE_FILES.items() if (tdir / f).is_file()]
-    print(f"\n{TEMPLATE_SETUP_TITLE}", file=out)
-    print(TEMPLATE_SETUP_EXPLAIN, file=out)
-    if existing:
-        if not prompt_confirm(TEMPLATE_REVIEW, default_yes=False, read=read, write=out):
-            return run_template_setup(plan_dir, interactive=False)
-    choices = _ask_template_choices(read, out)
-    summary = run_template_setup(plan_dir, interactive=True, choices=choices, read=read, write=out)
-    for key in ("added", "reset"):
-        for line in summary[key]:
-            print(f"  template: {line} ({key})", file=out)
-    print(TEMPLATE_DONE, file=out)
-    return summary
-
-
-def _report_detected(hosts: list[AgentHost], out: TextIO) -> None:
-    """Print which agent hosts were found on this machine (names only)."""
-    found = [h for h in hosts if h.detected]
-    if found:
-        print("Detected on this machine:", file=out)
-        for h in found:
-            print(f"  [x] {h.label}", file=out)
-        missing = [h.label for h in hosts if not h.detected]
-        if missing:
-            print(f"Not found (still covered): {', '.join(missing)}", file=out)
-    else:
-        print(
-            "No agent CLIs detected — the universal skill still works when you install one.",
-            file=out,
-        )
-
-
-def _ask_tools(
-    hosts: list[AgentHost],
-    read: Callable[[], str] | None,
-    out: TextIO,
-) -> list[str]:
-    """Ask which agents to install for; returns tool keys (names only, no paths)."""
-    valid = [h.key for h in hosts if h.key in KNOWN_TOOLS]
-    print("", file=out)
-    print("Which agents should get the skill?", file=out)
-    for i, key in enumerate(valid, start=1):
-        host = next(h for h in hosts if h.key == key)
-        mark = "x" if host.detected else " "
-        print(f"  {i}) [{mark}] {host.label}", file=out)
-    print("Pick numbers/keys separated by space, 'all', or Enter for detected.", file=out)
-    raw = _prompt(
-        "Agents [detected]: ",
-        valid=None,
-        default="",
-        read=read,
-        write=out,
-    )
-    return parse_tool_selection(raw, hosts)
-
-
-def _local_skill_dirs(picked: list[str], home: Path) -> list[Path]:
-    """Resolved local install dirs for picked tools (one per tool)."""
-    return [d.parent for d in global_skill_targets(picked, home)]
-
-
-def _ask_install_paths(
-    picked: list[str],
-    repo_root: Path | None,
-    home: Path,
-    read: Callable[[], str] | None,
-    out: TextIO,
-) -> tuple[str, str | None]:
-    """Dictate where skills land; returns (scope, custom skills-dir override)."""
-    print("", file=out)
-    print("Where should the skills be installed?", file=out)
-    print("  Local default (shared home):", file=out)
-    for d in _local_skill_dirs(picked, home):
-        print(f"    - {d}/", file=out)
-    print("  1) Local    (use these paths)", file=out)
-    if repo_root is not None:
-        print("  2) Team     (repo-shared dirs — commit them)", file=out)
-    else:
-        print("  2) Team     (unavailable — not inside a git repo)", file=out)
-    print("  3) Both     (local + team)", file=out)
-    print("  4) Custom   (type a folder below)", file=out)
-    print("  5) Skip     (DB only, no skill files)", file=out)
-    choice = _prompt(
-        "Pick [1/2/3/4/5] (default 1): ",
-        valid={"1", "2", "3", "4", "5"},
-        default="1",
-        read=read,
-        write=out,
-    )
-    if choice == "4":
-        custom = _prompt(
-            "Custom skills folder: ",
-            valid=None,
-            default="",
-            read=read,
-            write=out,
-        ).strip()
-        if not custom:
-            print("Empty — using local defaults.", file=out)
-            return "global", None
-        return "global", str(Path(custom).expanduser())
-    scope = {"1": "global", "2": "project", "3": "both", "5": "none"}[choice]
-    if scope == "project" and repo_root is None:
-        print("Not in a repo — installing locally instead.", file=out)
-        scope = "global"
-    return scope, None
-
-
-def _ask_agents_md(
-    scope: str,
-    repo_root: Path | None,
-    read: Callable[[], str] | None,
-    out: TextIO,
-) -> bool:
-    """Ask whether to patch repo AGENTS.md (project scopes only)."""
-    if scope in ("project", "both") and repo_root is not None:
-        ans = _prompt(
-            "Add the `## lazyplan` pointer to repo AGENTS.md? [Y/n]: ",
-            valid={"y", "n", "Y", "N", ""},
-            default="Y",
-            read=read,
-            write=out,
-        )
-        return ans.lower() != "n"
-    return False
-
-
-def _report_install(result: InstallResult, out: TextIO) -> None:
-    """Print what the install wrote."""
-    for line in result.installed:
-        print(f"  skill: {line}", file=out)
-    if result.updated_agents_md:
-        print(f"  agents-md: {result.updated_agents_md}", file=out)
-
-
-def _ask_wizard_answers(
-    repo_root: Path | None,
-    home: Path,
-    read: Callable[[], str] | None,
-    out: TextIO,
-) -> WizardAnswers:
-    """Ask every wizard question without writing files."""
-    hosts = detect_agents(home)
-    print(f"\n{INIT_SKILLS_TITLE}", file=out)
-    print(INIT_SKILLS_EXPLAIN, file=out)
-    _report_detected(hosts, out)
-    print(INIT_SKILLS_COVERAGE, file=out)
-    picked = _ask_tools(hosts, read, out)
-    scope, skills_override = _ask_install_paths(picked, repo_root, home, read, out)
-    if scope == "none":
-        print("Skipped skill setup — DB is ready.", file=out)
-        return WizardAnswers(picked=picked, scope=scope, skills_dir=None, with_agents_md=False)
-    with_claude = "claude" in picked
-    if with_claude and skills_override is None:
-        print("Also writing the `.claude/skills/` copy.", file=out)
-    with_md = _ask_agents_md(scope, repo_root, read, out)
-    return WizardAnswers(
-        picked=picked,
-        scope=scope,
-        skills_dir=skills_override,
-        with_agents_md=with_md,
-    )
-
-
-def run_wizard(
-    repo_root: Path | None,
-    home: Path | None = None,
-    read: Callable[[], str] | None = None,
-    write: TextIO | None = None,
-    plan_dir: Path | None = None,
-) -> InstallResult:
-    """Interactive `lpui init` wizard. All I/O on stderr/stdin; stdout stays JSON."""
-    import sys
-
-    home = home or Path.home()
-    out: TextIO = write if write is not None else sys.stderr
-    answers = _ask_wizard_answers(repo_root, home, read, out)
-    if answers.scope == "none":
-        return InstallResult(scope=answers.scope, skipped="user skipped skill setup")
-    result = install(
-        answers.scope,
-        repo_root,
-        home,
-        with_claude_copy=False,
-        tools=answers.picked,
-        with_agents_md=answers.with_agents_md,
-        skills_dir=answers.skills_dir,
-    )
-    for dest_line in list(result.installed):
-        dest = dest_line.rsplit(" (", 1)[0]
-        try:
-            ensure_skill_db(dest)
-        except OSError:
-            pass
-    _report_install(result, out)
-    if answers.scope in ("project", "both") and repo_root is not None:
-        resolved = plan_dir or (repo_root / PLAN_DIR)
-        result.templates = run_template_phase(resolved, read, out)
-    print(INIT_SKILLS_DONE, file=out)
-    if answers.scope in ("project", "both"):
-        print(INIT_SKILLS_COMMIT_TIP, file=out)
-    _ = sys
-    return result
-
-
-def should_prompt(args: Namespace, is_tty: bool) -> bool:
-    """True only for an interactive human `lpui init` with no scope overrides."""
-    no_skills = bool(getattr(args, "no_skills", False))
-    scope_arg = str(getattr(args, "skills_scope", "") or "").strip()
-    team = bool(getattr(args, "team", False))
-    agents = str(getattr(args, "agents", "") or "").strip()
-    yes = bool(getattr(args, "yes", False))
-    as_json = bool(getattr(args, "json", False))
-    if no_skills or scope_arg or team or agents or yes or as_json or not is_tty:
-        return False
-    return True
-
-
-def _skills_dir_override(args: Namespace) -> str | None:
+def _skills_dir_override(args: object) -> str | None:
     """Explicit skill dir: --skills-dir wins, then $LAZYPLAN_SKILLS_DIR."""
     flag = str(getattr(args, "skills_dir", "") or "").strip()
     if flag:
         return flag
     env = os.environ.get("LAZYPLAN_SKILLS_DIR", "").strip()
     return env or None
-
-
-def _agents_override(args: Namespace) -> list[str] | None:
-    """Explicit agent list: --agents wins, then $LAZYPLAN_AGENTS."""
-    flag = str(getattr(args, "agents", "") or "").strip()
-    if not flag:
-        flag = os.environ.get("LAZYPLAN_AGENTS", "").strip()
-    if not flag:
-        return None
-    if flag.lower() in ("all", "*"):
-        return list(KNOWN_TOOLS)
-    return [p.strip().lower() for p in flag.replace(",", " ").split() if p.strip()]

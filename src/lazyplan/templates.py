@@ -1,6 +1,6 @@
 """Per-repo creation templates: `.agents/lazyplan/templates/{plan,milestone,task}.md`.
 
-Users edit these files (scaffolded by `lpui init`) to define what new
+Users edit these files (scaffolded by setup) to define what new
 plans, milestones, and tasks look like: default field values, required
 fields, and criteria auto-added at creation. Stdlib only.
 

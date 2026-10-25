@@ -6,13 +6,25 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
+import sqlite3
+import subprocess
 import sys
 import time
 from collections.abc import Callable
 from pathlib import Path
 
-from . import init_layout, services
+from . import (
+    audit,
+    brief,
+    hook_hosts,
+    hook_install,
+    hooks,
+    services,
+    setup,
+    setup_layout,
+    setup_ui,
+    skills,
+)
 from .cli_parser import build_parser, package_version
 from .design import (
     EMPTY_COMMITS,
@@ -36,19 +48,8 @@ from .render import (
     summary_lines,
     tree_lines,
 )
-from .repo import (
-    find_repo_root,
-    repo_label,
-    stale_plan_dirs,
-)
+from .repo import find_repo_root, repo_label, resolve_db_path
 from .seed import seed as seed_demo
-from .skills import (
-    SkillPlan,
-    append_gitignore,
-    apply_skill_plan,
-    plan_init,
-    prompt_confirm,
-)
 from .store import Store, _ser
 from .upgrade import (
     NOTICE_TIMEOUT,
@@ -84,222 +85,308 @@ def _resolve_title(args: argparse.Namespace) -> str:
     return ""
 
 
-def _warn_stale_plan_dir(root: Path | None) -> None:
-    """Warn about pre-move plan dirs: ignored, never migrated."""
-    if root is None:
+def _setup_hooks(home: Path, args: argparse.Namespace, agents: list[str] | None = None) -> dict:
+    """Install or remove managed hooks and remember the decision."""
+    enabled = getattr(args, "hooks", None)
+    if enabled is False:
+        report = hook_install.remove(home)
+    else:
+        hosts = None if agents is None else [host for host in agents if host in hook_install.HOSTS]
+        report = hook_install.install(home, hosts=hosts)
+    state = setup.load_state(home)
+    if enabled is False:
+        state.hook_files = []
+    else:
+        planned = None if agents is None else [h for h in agents if h in hook_install.HOSTS]
+        state.hook_files = [str(spec.path) for spec in hook_install.preview(home, planned)]
+    state.hooks = enabled is not False and bool(state.hook_files)
+    setup.save_state(state, home)
+    return report
+
+
+def _setup_interactive(args: argparse.Namespace) -> bool:
+    return (
+        not getattr(args, "yes", False)
+        and not getattr(args, "json", False)
+        and not getattr(args, "post_upgrade", False)
+        and setup_ui.stdin_tty()
+        and sys.stderr.isatty()
+    )
+
+
+def _setup_review(args: argparse.Namespace, home: Path, interactive: bool) -> None:
+    findings = setup.detect_findings(Path.cwd(), home, setup.load_state(home))
+    if not findings:
         return
-    for stale in stale_plan_dirs(root):
-        print(
-            f"note: {stale}/ is from an older version and is ignored; "
-            "carry data over with `lpui export --format json` + `lpui import --file`.",
-            file=sys.stderr,
-        )
+    ask = (
+        not getattr(args, "json", False)
+        and setup_ui.stdin_tty()
+        and sys.stderr.isatty()
+        and (interactive or bool(getattr(args, "post_upgrade", False)))
+    )
+    setup.review_findings(
+        findings,
+        setup.load_state(home),
+        home,
+        find_repo_root(Path.cwd()),
+        read=input,
+        write=sys.stderr,
+        color=setup_ui.color_enabled(sys.stderr, bool(getattr(args, "json", False))),
+        allow_prompt=ask,
+        json_mode=bool(getattr(args, "json", False)),
+    )
 
 
-def _print_layout(layout: init_layout.InitLayout, repairs: init_layout.RepairPlan) -> None:
-    """Human preflight on stderr; stdout stays JSON."""
-    print("lpui init will use:", file=sys.stderr)
-    print(f"  database:  {layout.db}", file=sys.stderr)
-    print(f"  templates: {layout.templates_dir}", file=sys.stderr)
-    if layout.config:
-        print(f"  config:    {layout.config}", file=sys.stderr)
-    for path in layout.skill_plan.skill_files:
-        print(f"  skill:     {path}", file=sys.stderr)
-    if layout.agents_md:
-        print(f"  agents-md: {layout.agents_md}", file=sys.stderr)
-    for entry in layout.gitignore_entries:
-        print(f"  gitignore: {entry}", file=sys.stderr)
-    for note in init_layout.notes(layout):
-        print(f"  note:      {note}", file=sys.stderr)
-    if repairs.stop:
-        print(f"  stop:      {repairs.stop}", file=sys.stderr)
-    for action in repairs.actions:
-        print(f"  repair:    {action.action} {action.source}", file=sys.stderr)
+def _setup_pointer(home: Path, args: argparse.Namespace, placement: str) -> dict:
+    """Add or remove the opt-in AGENTS.md section for home placement."""
+    state = setup.load_state(home)
+    enabled = getattr(args, "agents_pointer", None)
+    want = enabled if enabled is not None else state.agents_pointer
+    root = find_repo_root(Path.cwd())
+    if placement != setup.HOME or root is None or (not want and enabled is None):
+        state.agents_pointer = False
+        state.agents_file = ""
+        setup.save_state(state, home)
+        return {"enabled": False, "path": None, "status": "skipped"}
+    path = root / "AGENTS.md"
+    if not want:
+        changed, status = skills.remove_agents_md(root)
+        state.agents_pointer = False
+        state.agents_file = ""
+        setup.save_state(state, home)
+        return {"enabled": False, "path": str(path) if changed else None, "status": status}
+    if path.is_file():
+        backup = setup_layout._new_backup_dir(home)
+        setup_layout._backup_file(backup, path)
+    db = Path(resolve_db_path(args.db)).expanduser()
+    changed, status = skills.ensure_agents_md(root, skills.render_home_agents_snippet(db))
+    state.agents_pointer = True
+    state.agents_file = str(path)
+    setup.save_state(state, home)
+    return {"enabled": True, "path": str(path) if changed else None, "status": status}
 
 
-def _init_context(
-    args: argparse.Namespace,
-) -> tuple[Path | None, Path, SkillPlan, init_layout.InitLayout, init_layout.RepairPlan]:
-    root = find_repo_root(os.getcwd())
-    _warn_stale_plan_dir(root)
+def _print_setup(result: dict) -> None:
+    print(f"database:  {result['db']}")
+    print(f"templates: {result['templates']}")
+    if result["config"]:
+        print(f"config:    {result['config']}")
+    for skill in result["skills"]:
+        print(f"skill:     {skill}")
+    for path in result["refreshed"]:
+        print(f"refreshed: {path}")
+    hooks = result.get("hooks") or {}
+    for path in hooks.get("installed") or hooks.get("removed") or []:
+        print(f"hooks:     {path}")
+    for item in hooks.get("skipped") or []:
+        print(f"hooks:     skipped {item['path']} ({item['reason']})")
+    pointer = result.get("agents_pointer") or {}
+    if pointer.get("path"):
+        print(f"pointer:   {pointer['path']} ({pointer['status']})")
+    print(f"state:     {result['state']}")
+
+
+def _cmd_setup(store: Store | None, args: argparse.Namespace, actor: str) -> int:
+    """Re-run setup, or apply remembered choices without prompts."""
+    del store, actor
     home = Path.home()
-    skill_plan = plan_init(args, root, home)
-    layout = init_layout.resolve(args, root, skill_plan, home)
-    repairs = init_layout.plan_repairs(layout)
-    return root, home, skill_plan, layout, repairs
+    state = setup.load_state(home)
+    version = package_version()
+    interactive = _setup_interactive(args)
+    if interactive:
+        result = setup.run_wizard(Path.cwd(), home, state, version)
+        if result is None:
+            return _emit(args, {"cancelled": True}) if getattr(args, "json", False) else 0
+    else:
+        choice = setup.choice_from_args(args, Path.cwd(), home, state)
+        result = setup.apply_choice(choice, find_repo_root(Path.cwd()), home, version)
+    result["hooks"] = _setup_hooks(home, args, result.get("agents"))
+    result["agents_pointer"] = _setup_pointer(home, args, str(result.get("placement", "")))
+    if result.get("placement") == setup.HOME:
+        _setup_review(args, home, interactive)
+    if result.get("wizard") and not getattr(args, "json", False):
+        selected = [h for h in (result.get("agents") or []) if h in hook_install.HOSTS]
+        plugins = (
+            [spec.path for spec in hook_install.preview(home, selected)]
+            if getattr(args, "hooks", None) is not False
+            else []
+        )
+        backups = [Path(path) for path in result.get("hooks", {}).get("backups") or []]
+        setup_ui.success(
+            sys.stderr,
+            Path(result["db"]),
+            [Path(path) for path in result["skills"]],
+            backups,
+            setup_ui.color_enabled(sys.stderr, False),
+            plugins,
+        )
+        return 0
+    if getattr(args, "json", False):
+        return _emit(args, result)
+    _print_setup(result)
+    return 0
 
 
-def _check_report(
-    args: argparse.Namespace,
-    layout: init_layout.InitLayout,
-    repairs: init_layout.RepairPlan,
-) -> int:
-    report = init_layout.inventory(layout)
-    report["repairs"] = repairs.to_dict()
+def _cmd_doctor(store: Store | None, args: argparse.Namespace, actor: str) -> int:
+    """Read-only setup report; never opens or writes a database."""
+    del store, actor
+    home = Path.home()
+    state = setup.load_state(home)
+    choice = setup.default_choice(Path.cwd(), home, state)
+    root = find_repo_root(Path.cwd())
+    layout, skill_files = setup.preview(choice, root, home)
+    report = setup_layout.inventory(layout)
+    report["findings"] = [
+        {"kind": f.kind, "path": str(f.path), "state": f.state, "detail": f.detail}
+        for f in setup.detect_findings(Path.cwd(), home, state)
+    ]
+    report["state"] = state.to_dict()
+    report["skills"] = [str(path) for path in skill_files]
     code = 0 if report["clean"] else 1
-    if args.json:
+    if getattr(args, "json", False):
         _emit(args, report)
         return code
     print(f"database:  {layout.db}")
     print(f"templates: {layout.templates_dir}")
     print(f"config:    {layout.config or '-'}")
-    print(f"skills:    {len(layout.skill_plan.skill_files)} planned")
+    print(f"skills:    {len(skill_files)} planned")
     print(f"clean:     {'yes' if report['clean'] else 'no'}")
     for item in report["misplaced"]:
         print(f"misplaced: {item}")
     for item in report["missing"]:
         print(f"missing:   {item}")
+    for finding in report["findings"]:
+        print(f"finding:   {finding['kind']} {finding['path']} ({finding['state']})")
     for note in report["notes"]:
         print(f"note:      {note}")
-    for action in repairs.actions:
-        print(f"repair:    {action.action} {action.source}")
-    if repairs.stop:
-        print(f"stop:      {repairs.stop}")
     return code
 
 
-def _confirm_init(
-    args: argparse.Namespace,
-    root: Path | None,
-    layout: init_layout.InitLayout,
-    repairs: init_layout.RepairPlan,
-    interactive: bool,
-) -> int | None:
-    if getattr(args, "yes", False) or getattr(args, "json", False) or not interactive:
+def _optional_store(args: argparse.Namespace) -> Store | None:
+    """Open an existing database without creating one."""
+    path = Path(resolve_db_path(args.db)).expanduser()
+    if not path.is_file():
         return None
-    _print_layout(layout, repairs)
-    if prompt_confirm("Write these resources?"):
-        return None
-    return _emit(
-        args,
-        {
-            "db": str(layout.db),
-            "repo": str(root) if root else None,
-            "plan_dir": str(layout.plan_dir),
-            "scope": repo_label(layout.db),
-            "cancelled": True,
-        },
+    return Store(str(path))
+
+
+def _audit_lines(report: audit.Report) -> list[str]:
+    """Plain lines shared by the CLI and tests."""
+    window = (
+        "all history"
+        if not report.since
+        else time.strftime("%Y-%m-%d %H:%M", time.localtime(report.since))
     )
+    lines = [
+        f"plans      {', '.join(f'P{plan}' for plan in report.plans) or '-'}",
+        f"window     since {window}",
+        f"repos      {len(report.repos)}",
+        f"commits    {report.commits_total} total · {report.commits_linked} linked "
+        f"· {report.coverage:.0%}",
+        f"lag        median {report.median_lag_commits:g} commits · "
+        f"{report.median_lag_minutes:g} min ({report.unresolved} unresolved)",
+        f"gaps       {len(report.gaps)} open criteria on done rows",
+    ]
+    for gap in report.gaps[:10]:
+        lines.append(f"  {gap.kind} #{gap.id}: {gap.text[:60]}")
+    return lines
 
 
-def _stop_init(
-    args: argparse.Namespace,
-    root: Path | None,
-    layout: init_layout.InitLayout,
-    repaired: dict,
-    stop: str,
-) -> int:
-    print(f"error: {stop}", file=sys.stderr)
-    _emit(
-        args,
-        {
-            "db": str(layout.db),
-            "repo": str(root) if root else None,
-            "plan_dir": str(layout.plan_dir),
-            "scope": repo_label(layout.db),
-            "repairs": repaired,
-            "error": stop,
-        },
-    )
-    return 1
-
-
-def _apply_init(
-    args: argparse.Namespace,
-    root: Path | None,
-    home: Path,
-    layout: init_layout.InitLayout,
-    skill_plan: SkillPlan,
-    interactive: bool,
-    repaired: dict,
-) -> int:
-    layout_summary = init_layout.apply_layout(
-        layout,
-        interactive=interactive,
-        read=None,
-        write=sys.stderr,
-    )
+def _cmd_audit(store: Store | None, args: argparse.Namespace, actor: str) -> int:
+    """Read-only accuracy report; --strict exits 2 only on a breach."""
+    del actor
     try:
-        store = Store(str(layout.db))
-    except (RuntimeError, OSError) as exc:
-        print(msg_error(exc), file=sys.stderr)
+        db = store or _optional_store(args)
+    except (RuntimeError, OSError, sqlite3.Error) as exc:
+        print(f"error: cannot read the database: {exc}", file=sys.stderr)
         return 2
-    skills_info = apply_skill_plan(skill_plan, root, home)
-    gitignored: list[str] = []
-    if (
-        root is not None
-        and layout.gitignore_entries
-        and (getattr(args, "yes", False) or interactive)
-    ):
-        gitignored = [entry for entry in layout.gitignore_entries if append_gitignore(root, entry)]
-    return _emit(
-        args,
-        {
-            "db": str(store.path),
-            "repo": str(root) if root else None,
-            "plan_dir": str(layout.plan_dir),
-            "scope": repo_label(store.path),
-            "counts": store.counts(),
-            "skills": skills_info.to_dict(),
-            "templates": layout_summary["templates"],
-            "legacy": layout_summary["legacy"],
-            "gitignore": {"added": gitignored},
-            "layout": layout.to_dict(),
-            "notes": init_layout.notes(layout),
-            "repairs": repaired,
-        },
-    )
+    if db is None:
+        result = audit.Report(plans=[] if args.plan is None else [args.plan])
+    else:
+        if args.plan is not None and db.get_plan(args.plan) is None:
+            print(msg_not_found("plan", args.plan), file=sys.stderr)
+            return 1
+        since = audit.parse_since(args.since) if args.since else None
+        try:
+            result = audit.report(
+                db,
+                [args.plan] if args.plan is not None else None,
+                since,
+                Path.cwd(),
+            )
+        except (RuntimeError, OSError, sqlite3.Error) as exc:
+            print(f"error: audit unavailable: {exc}", file=sys.stderr)
+            return 2
+    reasons = audit.Thresholds(
+        coverage=args.min_coverage,
+        lag_commits=args.max_lag,
+        gaps=args.max_gaps,
+    ).breaches(result)
+    if args.json:
+        payload = result.to_dict()
+        payload["breaches"] = reasons
+        _emit(args, payload)
+        return 2 if args.strict and reasons else 0
+    for line in _audit_lines(result):
+        print(line)
+    if args.strict:
+        for reason in reasons:
+            print(f"strict: {reason}")
+        return 2 if reasons else 0
+    return 0
 
 
-def _init_error(args: argparse.Namespace, message: str) -> int:
-    print(f"error: {message}", file=sys.stderr)
-    _emit(args, {"error": message})
-    return 2
+def _cmd_brief(store: Store | None, args: argparse.Namespace, actor: str) -> int:
+    """Read-only session brief; never creates a database."""
+    del actor
+    try:
+        db = store or _optional_store(args)
+    except (RuntimeError, OSError, sqlite3.Error) as exc:
+        print(f"error: cannot read the database: {exc}", file=sys.stderr)
+        return 2
+    if db is None:
+        payload: dict = {"plans": [], "active": 0}
+    else:
+        if args.plan is not None and db.get_plan(args.plan) is None:
+            print(msg_not_found("plan", args.plan), file=sys.stderr)
+            return 1
+        try:
+            payload = brief.build(db, args.plan, cwd=Path.cwd())
+        except (RuntimeError, OSError, sqlite3.Error) as exc:
+            print(f"error: brief unavailable: {exc}", file=sys.stderr)
+            return 2
+    if args.json:
+        return _emit(args, payload)
+    for line in brief.lines(payload):
+        print(line)
+    return 0
 
 
-def _check_init_args(args: argparse.Namespace, root: Path | None) -> str | None:
-    """Reject flag combinations that cannot honor the chosen scope."""
-    if root is not None:
-        return None
-    if bool(getattr(args, "team", False)):
-        return "`--team` needs a git repository"
-    scope = str(getattr(args, "skills_scope", "") or "").strip()
-    if scope == "project":
-        return "`--skills-scope project` needs a git repository"
-    return None
-
-
-def _cmd_init(store: Store | None, args: argparse.Namespace, actor: str) -> int:
-    root = find_repo_root(os.getcwd())
-    error = _check_init_args(args, root)
-    if error is not None:
-        return _init_error(args, error)
-    root, home, skill_plan, layout, repairs = _init_context(args)
-    if getattr(args, "check", False):
-        return _check_report(args, layout, repairs)
-    interactive = bool(sys.stdin.isatty() and sys.stdout.isatty())
-    cancelled = _confirm_init(args, root, layout, repairs, interactive)
-    if cancelled is not None:
-        return cancelled
-    repaired = init_layout.apply_repairs(repairs)
-    if repairs.stop:
-        return _stop_init(args, root, layout, repaired, repairs.stop)
-    return _apply_init(args, root, home, layout, skill_plan, interactive, repaired)
-
-
-def _cmd_doctor(store: Store | None, args: argparse.Namespace, actor: str) -> int:
-    """Read-only init layout report; never opens a database."""
-    root = find_repo_root(os.getcwd())
-    error = _check_init_args(args, root)
-    if error is not None:
-        return _init_error(args, error)
-    args.check = True
-    _, _, _, layout, repairs = _init_context(args)
-    return _check_report(args, layout, repairs)
+def _cmd_hook(store: Store | None, args: argparse.Namespace, actor: str) -> int:
+    """Read-only lifecycle reminder; always exits 0 so a host never blocks."""
+    del store, actor
+    payload = hooks.read_payload(sys.stdin)
+    host = hooks.detect_host(payload, args.host)
+    result = hooks.run(args.event, payload, host, Path.cwd())
+    if args.json:
+        _emit(
+            args,
+            {
+                "event": args.event,
+                "host": host,
+                "text": result.text,
+                "context": result.context,
+            },
+        )
+        return 0
+    rendered = hook_hosts.render(host, args.event, result)
+    if rendered:
+        print(rendered)
+    return 0
 
 
 def _cmd_info(store: Store, args: argparse.Namespace, actor: str) -> int:
-    root = find_repo_root(os.getcwd())
+    root = find_repo_root(Path.cwd())
     plan_dir = store.path.parent
     try:
         contents = sorted(f.name for f in plan_dir.iterdir()) if plan_dir.is_dir() else []
@@ -1018,7 +1105,7 @@ def _cmd_feed(store: Store, args: argparse.Namespace, actor: str) -> int:
         time.sleep(args.interval)
 
 
-def _cmd_completion(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_completion(store: Store | None, args: argparse.Namespace, actor: str) -> int:
     parser = build_parser()
     subs = next(a for a in parser._actions if isinstance(a, argparse._SubParsersAction))
     cmds = list(subs.choices)
@@ -1030,7 +1117,41 @@ def _cmd_completion(store: Store, args: argparse.Namespace, actor: str) -> int:
     return 0
 
 
+def _interactive_terminal() -> bool:
+    """True only when both ends are a terminal; piped runs get the summary."""
+    try:
+        return sys.stdin.isatty() and sys.stdout.isatty()
+    except (AttributeError, ValueError):
+        return False
+
+
+def _plain_overview(store: Store, args: argparse.Namespace) -> int:
+    """Non-TTY fallback: a readable summary instead of full-screen ANSI."""
+    if getattr(args, "json", False):
+        return _emit(
+            args,
+            _list_payload(store, None, "hide", None, None, None, None),
+        )
+    print(
+        "lpui: no interactive terminal; showing the plan summary (use `lpui list --tree` for detail)",
+        file=sys.stderr,
+    )
+    lines = summary_lines(
+        store,
+        None,
+        None,
+        dot="plain",
+        archived="hide",
+        limit=services.DEFAULT_PLAN_LIMIT,
+    )
+    print("\n".join(lines) if lines else EMPTY_NO_PLANS)
+    return 0
+
+
 def _cmd_ui(store: Store, args: argparse.Namespace, actor: str) -> int:
+    del actor
+    if not _interactive_terminal():
+        return _plain_overview(store, args)
     from .tui import run
 
     return run(db_path=args.db)
@@ -1105,7 +1226,29 @@ def _cmd_upgrade(store: Store | None, args: argparse.Namespace, actor: str) -> i
     if args.json:
         return _emit(args, payload)
     print(f"upgraded lpui v{installed} -> v{latest} ({info.method})")
+    _post_upgrade_review()
     return 0
+
+
+def _stderr_is_tty() -> bool:
+    try:
+        return sys.stderr.isatty()
+    except (AttributeError, ValueError):
+        return False
+
+
+def _post_upgrade_review() -> None:
+    """Run setup review with the just-installed binary; never break the upgrade."""
+    if not (setup_ui.stdin_tty() and _stderr_is_tty()):
+        return
+    try:
+        subprocess.run(
+            [sys.argv[0], "setup", "--post-upgrade"],
+            check=False,
+            timeout=300,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return
 
 
 _GROUP_CMDS: dict[tuple[str, str], str] = {
@@ -1147,7 +1290,7 @@ _GROUP_CMDS: dict[tuple[str, str], str] = {
 
 
 _COMMANDS: dict[str, Callable[[Store, argparse.Namespace, str], int]] = {
-    "init": _cmd_init,
+    "setup": _cmd_setup,
     "doctor": _cmd_doctor,
     "info": _cmd_info,
     "seed": _cmd_seed,
@@ -1192,6 +1335,21 @@ _COMMANDS: dict[str, Callable[[Store, argparse.Namespace, str], int]] = {
 }
 
 
+def _dispatch_storeless(args: argparse.Namespace, actor: str) -> int | None:
+    """Commands that must run before a database is opened; None means keep going."""
+    handlers = {
+        "upgrade": _cmd_upgrade,
+        "setup": _cmd_setup,
+        "doctor": _cmd_doctor,
+        "audit": _cmd_audit,
+        "brief": _cmd_brief,
+        "hook": _cmd_hook,
+        "completion": _cmd_completion,
+    }
+    handler = handlers.get(args.cmd)
+    return handler(None, args, actor) if handler is not None else None
+
+
 def main(argv: list[str] | None = None) -> int:
     """Dispatch one lpui invocation; exit codes are agent-readable."""
     args = build_parser().parse_args(argv)
@@ -1218,17 +1376,17 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     actor = getattr(args, "actor", "human")
     _maybe_notice_update(args)
-    if args.cmd == "upgrade":
-        # Self-upgrade manages the install, not plan data: no database.
-        return _cmd_upgrade(None, args, actor)
     if args.cmd is None:
         # Bare `lpui` (or global flags only) opens the standard TUI.
         args.cmd = "ui"
-    if args.cmd == "init":
-        # Init resolves its own layout; never open a DB before that.
-        return _cmd_init(None, args, actor)
-    if args.cmd == "doctor":
-        return _cmd_doctor(None, args, actor)
+    try:
+        setup.ensure(args.cmd, args, Path.cwd(), version=package_version())
+    except (OSError, RuntimeError, ValueError) as exc:
+        # Setup must never break an agent call; the database still opens.
+        print(f"warning: setup skipped: {exc}", file=sys.stderr)
+    early = _dispatch_storeless(args, actor)
+    if early is not None:
+        return early
     # `watch` is `feed --follow`
     if args.cmd == "watch":
         args.cmd = "feed"

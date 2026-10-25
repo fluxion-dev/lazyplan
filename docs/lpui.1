@@ -10,7 +10,7 @@ is the same program under its long name.
 .br
 With no COMMAND, \fBlpui\fR opens the keyboard\-driven screen (same as \fBlpui ui\fR).
 .SH DESCRIPTION
-lazyplan keeps your plans, milestones, and tasks in one SQLite database: shared in your home by default, or inside a repo after \fBlpui init \-\-team\fR. A plan is a title, a reason why it exists, a description of what to build, and a checklist that says when it is done; you break the plan into milestones and each milestone into tasks. You drive the keyboard\-driven screen; your coding agent drives the same database through this command line with \fB\-\-actor NAME\fR and \fB\-\-json\fR. Every change adds an entry to the feed; the running screen refreshes and tells you what arrived.
+lazyplan keeps your plans, milestones, and tasks in one SQLite database: shared in your home by default, or inside a repo after \fBlpui setup \-\-placement repo\fR. A plan is a title, a reason why it exists, a description of what to build, and a checklist that says when it is done; you break the plan into milestones and each milestone into tasks. You drive the keyboard\-driven screen; your coding agent drives the same database through this command line with \fB\-\-actor NAME\fR and \fB\-\-json\fR. Every change adds an entry to the feed; the running screen refreshes and tells you what arrived.
 .SH GLOBAL OPTIONS
 .TP
 .B \-\-db PATH
@@ -27,8 +27,8 @@ who is making this change (you see it in feed; default: $USER or 'human')
 .SH COMMANDS
 Flags work before or after the command: \fBlpui list \-\-json\fR means the same as \fBlpui \-\-json list\fR. Run \fBlpui COMMAND \-\-help\fR for details.
 .TP
-.B lpui init
-set up the plan store and agent skills; \-\-team shares them with the repo
+.B lpui setup
+re\-run setup: where plans live, which agents get the skill, and layout review
 .RS
 .TP
 .B \-\-json
@@ -46,18 +46,13 @@ who made this change (you see it in feed)
 .RE
 .RS
 .TP
-.B \-\-no\-skills
-skip the setup wizard that installs helper files for your coding agent
+.B \-\-placement {home|repo}
+store plans in your home or in this repo (repo needs a git checkout) Choices: home, repo\.
 .RE
 .RS
 .TP
-.B \-\-yes
-install the default agent helper files without asking first
-.RE
-.RS
-.TP
-.B \-\-skills\-scope SCOPE
-install agent helper files to one place without asking first (none = skip) Choices: project, global, both, none\.
+.B \-\-agents LIST
+which agents to install for (space/comma list, 'all', or 'none')
 .RE
 .RS
 .TP
@@ -66,18 +61,38 @@ put the skill in this folder instead of the detected ones
 .RE
 .RS
 .TP
-.B \-\-team
-write repo\-shared files (\.agents/lazyplan/, AGENTS\.md pointer, templates) for teams
+.B \-\-no\-skills
+skip installing agent helper files
 .RE
 .RS
 .TP
-.B \-\-check
-report the resolved resource layout without writing anything
+.B \-\-hooks
+install lifecycle hooks for detected agents (the default)
 .RE
 .RS
 .TP
-.B \-\-agents LIST
-which agents to install for (space/comma list, 'all', or detected by default)
+.B \-\-no\-hooks
+remove installed lifecycle hooks and leave agent configs alone
+.RE
+.RS
+.TP
+.B \-\-agents\-pointer
+add a marked lazyplan section to this repo's AGENTS\.md
+.RE
+.RS
+.TP
+.B \-\-no\-agents\-pointer
+remove the marked lazyplan section from AGENTS\.md
+.RE
+.RS
+.TP
+.B \-\-yes
+apply the current choices without asking
+.RE
+.RS
+.TP
+.B \-\-post\-upgrade
+==SUPPRESS==
 .RE
 .TP
 .B lpui seed
@@ -117,7 +132,25 @@ who made this change (you see it in feed)
 .RE
 .TP
 .B lpui doctor
-report the expected and actual init resource layout without writing
+read\-only report of the resolved setup layout and findings
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.TP
+.B lpui audit
+measure commit linkage, status lag, and criteria gaps
 .RS
 .TP
 .B \-\-json
@@ -135,13 +168,84 @@ who made this change (you see it in feed)
 .RE
 .RS
 .TP
-.B \-\-team
-check the repo\-owned layout instead of the global layout
+.B \-\-plan ID
+audit one plan
 .RE
 .RS
 .TP
-.B \-\-skills\-scope SCOPE
-check the layout this init scope would use Choices: project, global, both, none\.
+.B \-\-since DATE
+window start, e\.g\. 7\.days or 2026\-10\-01 (default: plan creation)
+.RE
+.RS
+.TP
+.B \-\-strict
+exit 2 when coverage, lag, or criteria gaps breach the thresholds
+.RE
+.RS
+.TP
+.B \-\-min\-coverage RATIO
+strict\-mode minimum linked share (default: 0\.8)
+.RE
+.RS
+.TP
+.B \-\-max\-lag N
+strict\-mode maximum median status lag in commits (default: 1)
+.RE
+.RS
+.TP
+.B \-\-max\-gaps N
+strict\-mode maximum open criteria on done rows (default: 0)
+.RE
+.TP
+.B lpui brief
+show the active plan, the next task, and unlinked commits
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B \-\-plan ID
+brief one plan
+.RE
+.TP
+.B lpui hook
+read a host lifecycle event and print a reminder
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B  {session\-start|prompt\-submit|post\-tool|stop|pre\-compact}
+which lifecycle event fired Choices: session\-start, prompt\-submit, post\-tool, stop, pre\-compact\. Required\.
+.RE
+.RS
+.TP
+.B \-\-host {opencode|claude|gemini|codex|cursor}
+host emitting the event (inferred from the payload when omitted) Choices: opencode, claude, gemini, codex, cursor\.
 .RE
 .TP
 .B lpui list
@@ -1193,7 +1297,10 @@ Used for \fB\-\-actor\fR when you do not give one.
 Your plans, shared by every agent and folder (default home).
 .TP
 .B .agents/lazyplan/lazyplan.db
-The team database for a repo (only with init \fB\-\-team\fR; commit it to share).
+The repo database (only with \fBlpui setup \-\-placement repo\fR; commit the config and templates, keep the database local).
+.TP
+.B ~/.lazyplan/setup.json
+Remembered setup choices and migration decisions.
 .SH EXIT STATUS
 .TP
 .B 0

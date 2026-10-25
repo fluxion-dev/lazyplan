@@ -101,7 +101,7 @@ def render() -> str:
     out.append(
         "lazyplan keeps your plans, milestones, and tasks in one SQLite database: "
         "shared in your home by default, or inside a repo after "
-        "\\fBlpui init \\-\\-team\\fR. A plan is a title, a reason why it "
+        "\\fBlpui setup \\-\\-placement repo\\fR. A plan is a title, a reason why it "
         "exists, a description of what to build, and a checklist that says when "
         "it is done; you break the plan into milestones and each milestone into "
         "tasks. You drive the keyboard\\-driven screen; your coding "
@@ -171,7 +171,13 @@ def render() -> str:
     out.append("Your plans, shared by every agent and folder (default home).")
     out.append(".TP")
     out.append(".B .agents/lazyplan/lazyplan.db")
-    out.append("The team database for a repo (only with init \\fB\\-\\-team\\fR; commit it to share).")
+    out.append(
+        "The repo database (only with \\fBlpui setup \\-\\-placement repo\\fR; commit "
+        "the config and templates, keep the database local)."
+    )
+    out.append(".TP")
+    out.append(".B ~/.lazyplan/setup.json")
+    out.append("Remembered setup choices and migration decisions.")
     out.append(".SH EXIT STATUS")
     out.append(".TP")
     out.append(".B 0")

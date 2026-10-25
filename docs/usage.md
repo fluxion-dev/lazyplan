@@ -1,7 +1,7 @@
 # lazyplan usage
 
 The short start lives in the [README](../README.md). This page keeps the detail:
-install options, init layout, everyday commands, the screen, agent use, and data.
+install options, setup and layout, everyday commands, the screen, agent use, and data.
 
 ## Install
 
@@ -9,10 +9,11 @@ The recommended path is pipx:
 
 ```bash
 pipx install lazyplan-tui
-lpui --help
+lpui
 ```
 
-On Windows, use the pip backend:
+The first `lpui` run finishes setup (agents, skills, database) and opens the
+screen. On Windows, use the pip backend:
 
 ```powershell
 pipx install --backend pip lazyplan-tui
@@ -41,7 +42,8 @@ Let the installer choose the right method for your machine:
 curl -fsSL https://github.com/fluxion-dev/lazyplan/releases/latest/download/install.sh | sh
 ```
 
-Pin a version or choose a method:
+The installer ends with the next step: run `lpui` to finish setup. Pin a
+version or choose a method:
 
 ```bash
 sh install.sh --version X.Y.Z --method rpm|deb|pipx|venv
@@ -73,53 +75,69 @@ stays clean for `--json`.
 
 ```bash
 cd ~/my-plan
-lpui init --yes
-lpui plan add --title "my-plan" --why "reason" --what "scope"
 lpui
+```
+
+The first run sets up lazyplan: it detects your coding agents, installs their
+skills, creates the database, and remembers the choices in
+`~/.lazyplan/setup.json`. On a terminal you get a short wizard; scripts, agents,
+and `--json` get the same defaults without prompts. No separate setup step to remember.
+
+Then create your first plan:
+
+```bash
+lpui plan add --title "my-plan" --why "reason" --what "scope"
 ```
 
 `lpui` with no command opens the screen. `lpui ui` does the same.
 
-## Init and scope
+## Setup and scope
 
-`lpui init` chooses one layout and applies it to everything: database, config,
-templates, skills, `AGENTS.md`, and `.gitignore` entries.
+Setup writes one layout. Re-run it any time to change placement or agents:
 
-| You run | Database and templates | Config | Skills | `AGENTS.md` |
+```bash
+lpui setup
+lpui setup --placement repo --yes
+lpui setup --json
+```
+
+| Choice | Database and templates | Config | Skills | `AGENTS.md` |
 | --- | --- | --- | --- | --- |
-| `lpui init` | `~/.lazyplan/` | not written | each agent's home skill dir | not written |
-| `lpui init --team` | `<repo>/.agents/lazyplan/` | `<repo>/.agents/lazyplan/config.json` | repo skill dirs | repo pointer |
-| `--skills-scope project` | `<repo>/.agents/lazyplan/` | repo config | repo skill dirs | repo pointer |
-| `--skills-scope both` | `<repo>/.agents/lazyplan/` | repo config | repo and home skill dirs | repo pointer |
-| `--no-skills` | same storage as the other flags | same | none | none |
-| `--db PATH` / `$LAZYPLAN_DB` | `PATH` and its sibling `templates/` | only for a repo plan dir | per scope flags | per scope flags |
+| Home (default) | `~/.lazyplan/` | not written | each agent's home skill dir | not written |
+| `--placement repo` | `<repo>/.agents/lazyplan/` | repo config | repo skill dirs | repo pointer |
+| `--db PATH` / `$LAZYPLAN_DB` | `PATH` and its sibling `templates/` | only for a repo plan dir | none | none |
 
-`--team --no-skills` still selects repo storage. An explicit `--db` or
-`$LAZYPLAN_DB` always wins and is never moved.
+The wizard asks two questions: where plans live (home or this repo when you are
+inside a git checkout) and which detected agents get the skill. Templates use
+the opinionated defaults and are written without extra questions. An explicit
+`--db` or `$LAZYPLAN_DB` always wins and is never moved.
 
 ### Inspect before writing
 
 ```bash
-lpui init --check
 lpui doctor
-lpui init --check --json
+lpui doctor --json
 ```
 
-Both are read-only. Exit `0` means clean, `1` means misplaced resources, `2`
-means bad flags. `lpui doctor --team` checks the repo-owned layout.
+Read-only. Exit `0` means clean, `1` means misplaced resources. The report names
+the resolved database, config, templates, skills, state, and any migration
+findings.
 
-### Safe repair
+### Upgrades and migration
 
-Global init repairs leftovers from an earlier scoped install:
+Setup runs again after a version change and reviews layout drift once per
+finding; it does not ask on every command.
 
-- A repo database moves to the home path when the home database is empty.
-- Repo config, templates, generated skills, the marked `AGENTS.md` block, and
-  lazyplan `.gitignore` entries are moved home or cleaned up.
-- Every touched file is backed up under `~/.lazyplan/backups/<timestamp>/`.
-- If both databases contain plans, init stops, backs up the repo database, and
-  prints export/import next steps. It never merges or deletes plans.
-
-Team init never moves home data.
+- An untracked or ignored repo database is offered once: move it to
+  `~/.lazyplan/lazyplan.db`, keep it here, or never ask for that path.
+- A database tracked by git is never offered a move; doctor reports it.
+- Keep/never is remembered in `~/.lazyplan/setup.json`; a changed state can
+  re-arm the prompt.
+- Moves back up every touched file under `~/.lazyplan/backups/<timestamp>/`.
+- If both databases contain plans, setup refuses to merge and prints
+  export/import guidance instead.
+- Only `lpui`, `lpui setup`, and `lpui upgrade` prompt. Agent calls set up
+  silently and never wait for input.
 
 ### Where the database resolves
 
@@ -133,15 +151,19 @@ The first match wins:
 Commit `.agents/lazyplan/config.json` to share a team plan. The `*.db` file stays
 local (gitignored) unless you force-add it.
 
-### Agent and skill flags
+### Setup flags and environment
 
 ```bash
-lpui init --agents "opencode,claude"   # or all
-lpui init --skills-dir PATH            # or $LAZYPLAN_SKILLS_DIR
-lpui init --json                       # same layout, no prompts
+lpui setup --agents "opencode,claude"  # or all, or none; $LAZYPLAN_AGENTS
+lpui setup --skills-dir PATH           # or $LAZYPLAN_SKILLS_DIR
+lpui setup --no-skills                 # database only
+lpui setup --yes                       # apply without prompts
+lpui setup --json                      # machine-readable, no prompts
 ```
 
-`--team` or `--skills-scope project` outside a git repo fails with exit `2`.
+`LAZYPLAN_NO_SETUP=1` skips first-run setup and upgrade review. `NO_COLOR`,
+`CLICOLOR=0`, and `TERM=dumb` keep the wizard plain. `--placement repo` outside
+a git checkout falls back to home.
 
 ## Everyday commands
 
@@ -208,9 +230,72 @@ Your agent is expected to work from the plan, not invent it:
   trailer is required. These rules apply to new plans; existing plans are
   not rewritten.
 - Write rows for scanning: short paragraphs and sections, no placeholder text.
+- Start a session with `lpui brief`; update the journal after each commit, then
+  run `lpui audit --since 7.days` before closing a plan. Lifecycle hooks remind
+  you, but they are read-only.
 
-`lpui init --team` writes the full contract into the repo. `lpui init` installs
-the skill into your agent's own folder.
+`lpui setup --placement repo` writes the full contract into the repo; the
+default setup installs the skill into each detected agent's own folder.
+
+### Session brief and accuracy audit
+
+Start a session with the brief, update after each commit, and close with the
+audit:
+
+```bash
+lpui brief                        # active plan, doing task, next task, loose commits
+lpui brief --json                 # same facts for a hook or script
+lpui audit --plan 12              # see the three accuracy metrics for one plan
+lpui audit --since 7.days         # recent window across active plans
+lpui audit --since 7.days --strict  # exit 2 when a threshold is breached
+```
+
+The brief is read-only and never creates a database. It names the doing task,
+the next todo, open criteria, and commits that landed without a task link.
+
+The audit reports three numbers:
+
+- **Coverage** — linked implementation commits over non-merge commits in the
+  window.
+- **Status lag** — median commits and minutes between a linked commit and the
+  first `doing` or `done` move on its task.
+- **Criteria gaps** — open acceptance items on rows closed inside the window.
+
+Strict defaults are 80% coverage, one commit of median lag, and zero gaps.
+Override them with `--min-coverage`, `--max-lag`, and `--max-gaps`; legacy
+databases usually need a gap tolerance before they can gate CI.
+
+### Lifecycle hooks
+
+`lpui setup` installs read-only hooks for every detected agent host. They
+never write to the database, never move a task, and always exit 0, so a broken
+hook cannot block an agent. Remove them with `lpui setup --no-hooks`; every
+touched config file is backed up under `~/.lazyplan/backups/<timestamp>/`.
+
+| Host | Config | Events |
+|---|---|---|
+| OpenCode | `~/.config/opencode/plugins/lazyplan.js` | session context, post-tool |
+| Claude Code | `~/.claude/settings.json` | SessionStart, UserPromptSubmit, PostToolUse, Stop, PreCompact |
+| Gemini CLI | `~/.gemini/settings.json` | SessionStart, BeforeAgent, AfterTool, AfterAgent, PreCompress |
+| Codex | `~/.codex/hooks.json` | SessionStart, UserPromptSubmit, PostToolUse, Stop, PreCompact |
+| Cursor | `~/.cursor/hooks.json` | sessionStart, beforeSubmitPrompt, postToolUse, stop, preCompact |
+
+Notes:
+
+- OpenCode injects the brief into the first model context of a session and
+  queues a commit reminder for the next context.
+- Codex asks you to review new hooks once with `/hooks` before it runs them.
+- Cursor can also import Claude Code hooks; with both enabled, the same
+  reminder may appear twice.
+- Set `LAZYPLAN_NO_HOOKS=1` to silence every host without uninstalling.
+
+If a hook does not fire, run it by hand with a payload on stdin, for example:
+
+```bash
+echo '{}' | lpui hook session-start --host claude
+```
+
+Then check the host's own hook log or trust screen.
 
 ## Reference
 
@@ -383,7 +468,7 @@ PRs, reviews, comments, or merges; other tools own those actions.
 - Demo data: `lpui seed`. Never run it in a repo with a real plan.
 - Completion: `eval "$(lpui completion --shell bash)"` (or `zsh`).
 
-Exit codes: `0` worked · `1` row not found or init layout misplaced · `2` flags
+Exit codes: `0` worked · `1` row not found or setup layout misplaced · `2` flags
 or input wrong · `3` screen cannot start because Textual is missing.
 
 Versions up to 0.7.0 shipped this tool as `lp`, renamed because that name

@@ -242,3 +242,6 @@ case "$METHOD" in
   rpm) do_rpm ;;
   deb) do_deb ;;
 esac
+
+log ""
+log "Next: run 'lpui' to finish setup (agents, skills, and the plan database)."

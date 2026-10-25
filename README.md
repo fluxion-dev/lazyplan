@@ -26,12 +26,12 @@ Prefer a system package or the one-line installer? See
 
 ```bash
 cd ~/my-plan
-lpui init --yes
+lpui                     # first run detects agents and creates the plan store
 lpui plan add --title "my-plan" --why "reason" --what "scope"
 lpui
 ```
 
-Working with a team? `lpui init --team` keeps the plan in the repo.
+Working with a team? `lpui setup --placement repo` keeps the plan in the repo.
 
 Want demo data first? Run `lpui seed`.
 
@@ -74,7 +74,7 @@ lpui --actor helper task add --milestone 1 --title "Draft proposal"
 lpui --actor helper list --json
 ```
 
-`lpui init` installs the agent skill. The full agent contract is generated per clone by `lpui init --team`.
+The first run installs the agent skill. `lpui setup --placement repo` generates the full contract in the repo.
 
 ## Your data
 

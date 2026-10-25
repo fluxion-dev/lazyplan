@@ -10,7 +10,7 @@ is the same program under its long name.
 .br
 With no COMMAND, \fBlpui\fR opens the keyboard\-driven screen (same as \fBlpui ui\fR).
 .SH DESCRIPTION
-lazyplan keeps your plans, milestones, and tasks in one SQLite database: shared in your home by default, or inside a repo after \fBlpui init \-\-team\fR. A plan is a title, a reason why it exists, a description of what to build, and a checklist that says when it is done; you break the plan into milestones and each milestone into tasks. You drive the keyboard\-driven screen; your coding agent drives the same database through this command line with \fB\-\-actor NAME\fR and \fB\-\-json\fR. Every change adds an entry to the feed; the running screen refreshes and tells you what arrived.
+lazyplan keeps your plans, milestones, and tasks in one SQLite database: shared in your home by default, or inside a repo after \fBlpui setup \-\-placement repo\fR. A plan is a title, a reason why it exists, a description of what to build, and a checklist that says when it is done; you break the plan into milestones and each milestone into tasks. You drive the keyboard\-driven screen; your coding agent drives the same database through this command line with \fB\-\-actor NAME\fR and \fB\-\-json\fR. Every change adds an entry to the feed; the running screen refreshes and tells you what arrived.
 .SH GLOBAL OPTIONS
 .TP
 .B \-\-db PATH
@@ -1178,7 +1178,10 @@ Used for \fB\-\-actor\fR when you do not give one.
 Your plans, shared by every agent and folder (default home).
 .TP
 .B .agents/lazyplan/lazyplan.db
-The team database for a repo (only with init \fB\-\-team\fR; commit it to share).
+The repo database (only with \fBlpui setup \-\-placement repo\fR; commit the config and templates, keep the database local).
+.TP
+.B ~/.lazyplan/setup.json
+Remembered setup choices and migration decisions.
 .SH EXIT STATUS
 .TP
 .B 0

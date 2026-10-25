@@ -5,15 +5,17 @@ Rows are one line, no header, no glyphs, no ANSI, and no blank lines:
     kind<TAB>id<TAB>status<TAB>title<TAB>parent<TAB>extra
 
 `parent` is `-` or `kind:id` (for example `plan:12`). `extra` is progress
-(`done/total`) for plans and milestones, a documented detail on some read
-rows, and `-` elsewhere. Criterion rows use `kind=criterion`, status
-`open|done`, and parent `kind:id`. Write confirmations reuse the same six
-columns:
+(`done/total`) for plans and milestones, `blocked` on a blocked task, a
+documented detail on some read rows, and `-` elsewhere. Criterion rows use
+`kind=criterion`, status `open|done`, and parent `kind:id`. Write
+confirmations reuse the same six columns:
 
 - `commit`: id is the full SHA, status `linked|unlinked`, title the subject.
 - `repo`: id is the checkout path, title the remote (or `-`).
 - `pr`: id is the pull request number, title the URL.
-- `task start` and `task finish` reuse the task row with its current status.
+- `claim`: id is the task, status the actor, title the task, extra the expiry.
+- `note`: id is the note, status the actor, title the text, extra the timestamp.
+- `task start`, `task finish`, `block`, and `unblock` reuse the task row.
 
 Reads reuse the same envelope:
 

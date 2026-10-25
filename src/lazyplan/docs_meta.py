@@ -14,6 +14,7 @@ ENVIRONMENT: tuple[tuple[str, str], ...] = (
     ("LAZYPLAN_SKILLS_DIR", "Default skill directory for setup; an explicit flag wins."),
     ("LAZYPLAN_NO_SKILLS", "Install no agent skill when set."),
     ("LAZYPLAN_NO_HOOKS", "Silence installed hooks at runtime; does not remove them."),
+    ("LAZYPLAN_NO_SPINNER", "Freeze the doing spinner in the TUI."),
     ("LAZYPLAN_NO_COLOR", "Disable setup wizard color."),
     ("NO_COLOR, CLICOLOR=0, TERM=dumb", "Plain setup output."),
     ("USER", "Used for --actor when you do not give one."),

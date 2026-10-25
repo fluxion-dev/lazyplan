@@ -884,6 +884,11 @@ if _TEXTUAL_OK:
                             claim_actor=(
                                 claims_map[task.id].actor if task.id in claims_map else ""
                             ),
+                            claim_expired=(
+                                claims_map[task.id].expired(time.time())
+                                if task.id in claims_map
+                                else False
+                            ),
                             blocked=task.blocked,
                         )
                         leaf = milestone_node.add_leaf(

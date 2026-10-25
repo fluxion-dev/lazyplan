@@ -5,6 +5,7 @@ The app shell (LazyplanApp) lives in tui.py; every overlay lives here.
 
 from __future__ import annotations
 
+import time
 from typing import TYPE_CHECKING, Any, Literal
 
 try:
@@ -355,7 +356,11 @@ if _TEXTUAL_OK:
                 )
             claim = obj.get("claim")
             if claim:
-                lines.append(f"\n[dim]claim[/] @{escape_markup(str(claim.get('actor', '')))}")
+                expires = int(float(claim.get("expires_at") or 0))
+                state = "expired" if expires and expires <= int(time.time()) else "active"
+                lines.append(
+                    f"\n[dim]claim[/] @{escape_markup(str(claim.get('actor', '')))} ({state})"
+                )
             notes = self._full.get("notes") or obj.get("notes") or []
             if notes:
                 lines.extend(["", f"[dim]notes {len(notes)}[/]"])

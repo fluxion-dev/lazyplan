@@ -298,6 +298,7 @@ def _row(
     source_counts: tuple[int, int, int] | None = None,
     repo_count: int = 0,
     claim_actor: str = "",
+    claim_expired: bool = False,
     blocked: bool = False,
 ) -> str:
     """TUI row: Rich status glyph + dim id + bold title + progress/chips."""
@@ -318,8 +319,9 @@ def _row(
         suffix += " [red]blocked[/]"
         plain_suffix += " blocked"
     if claim_actor:
-        suffix += f" [dim]@{_escape_markup(claim_actor)}[/]"
-        plain_suffix += f" @{claim_actor}"
+        marker = "!" if claim_expired else ""
+        suffix += f" [dim]@{_escape_markup(claim_actor)}{marker}[/]"
+        plain_suffix += f" @{claim_actor}{marker}"
     if chips:
         suffix += f" {chips}"
         if source_counts is not None:
@@ -458,6 +460,7 @@ def task_row(
     stale: bool = False,
     repo_count: int = 0,
     claim_actor: str = "",
+    claim_expired: bool = False,
     blocked: bool = False,
 ) -> str:
     """TUI task row (Rich markup): glyph + id + title + claim/PR/commit chips."""

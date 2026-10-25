@@ -274,7 +274,7 @@ touched config file is backed up under `~/.lazyplan/backups/<timestamp>/`.
 
 | Host | Config | Events |
 |---|---|---|
-| OpenCode | `~/.config/opencode/plugins/lazyplan.js` | post-tool, pre-compact |
+| OpenCode | `~/.config/opencode/plugins/lazyplan.js` | session context, post-tool |
 | Claude Code | `~/.claude/settings.json` | SessionStart, UserPromptSubmit, PostToolUse, Stop, PreCompact |
 | Gemini CLI | `~/.gemini/settings.json` | SessionStart, BeforeAgent, AfterTool, AfterAgent, PreCompress |
 | Codex | `~/.codex/hooks.json` | SessionStart, UserPromptSubmit, PostToolUse, Stop, PreCompact |
@@ -282,8 +282,8 @@ touched config file is backed up under `~/.lazyplan/backups/<timestamp>/`.
 
 Notes:
 
-- OpenCode receives plain reminders after a `git commit` and injects the brief
-  before compaction.
+- OpenCode injects the brief into the first model context of a session and
+  queues a commit reminder for the next context.
 - Codex asks you to review new hooks once with `/hooks` before it runs them.
 - Cursor can also import Claude Code hooks; with both enabled, the same
   reminder may appear twice.

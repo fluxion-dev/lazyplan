@@ -38,7 +38,11 @@ class InstallCase(unittest.TestCase):
         self.assertEqual(len(report["installed"]), 5)
         plugin = self.home / ".config/opencode/plugins/lazyplan.js"
         self.assertTrue(plugin.is_file())
-        self.assertIn("session-start", plugin.read_text())
+        text = plugin.read_text()
+        self.assertIn("export default", text)
+        self.assertIn('id: "lazyplan"', text)
+        self.assertIn("async setup(ctx)", text)
+        self.assertIn("session-start", text)
         for relative in (".claude/settings.json", ".gemini/settings.json", ".codex/hooks.json"):
             data = self._read(self.home / relative)
             self.assertTrue(data["hooks"])

@@ -161,33 +161,53 @@ def _strip_flat(data: dict, host: str) -> dict:
 
 def _plugin_text() -> str:
     return """// lazyplan lifecycle plugin (managed by lpui setup; remove with --no-hooks)
-const run = async ($, directory, event, extra = "") => {
-  const suffix = extra ? ` --command ${extra}` : ""
+import { execFile } from "node:child_process"
+import { promisify } from "node:util"
+
+const execFileAsync = promisify(execFile)
+
+const run = async (directory, event, extra = "") => {
+  const args = ["hook", event, "--host", "opencode"]
+  if (extra) args.push("--command", extra)
   try {
-    const text = await $`lpui hook ${event} --host opencode${suffix}`.cwd(directory).text()
-    return text.trim()
+    const { stdout } = await execFileAsync("lpui", args, {
+      cwd: directory,
+      timeout: 5000,
+    })
+    return stdout.trim()
   } catch {
     return ""
   }
 }
 
-export const LazyplanPlugin = async ({ $, directory }) => {
-  return {
-    event: async ({ event }) => {
-      if (event.type !== "session.created") return
-      const text = await run($, directory, "session-start")
-      if (text) console.log(text)
-    },
-    "tool.execute.after": async (input) => {
-      if (input.tool !== "bash") return
-      const text = await run($, directory, "post-tool", input.args?.command ?? "")
-      if (text) console.log(text)
-    },
-    "experimental.session.compacting": async (_input, output) => {
-      const text = await run($, directory, "pre-compact")
-      if (text) output.context.push(text)
-    },
-  }
+export default {
+  id: "lazyplan",
+  async setup(ctx) {
+    const directory = ctx.location?.directory ?? process.cwd()
+    const seen = new Set()
+    let pending = ""
+    await ctx.tool.hook("execute.after", async (event) => {
+      if (String(event.tool).toLowerCase() !== "bash") return
+      const command = event.input?.command ?? event.input?.args?.command ?? ""
+      if (!command.includes("git commit")) return
+      const text = await run(directory, "post-tool", command)
+      if (text) pending = text
+    })
+    await ctx.session.hook("context", async (event) => {
+      if (pending) {
+        event.system.push({ type: "text", text: pending })
+        pending = ""
+        return
+      }
+      const key = event.sessionID ?? event.session?.id ?? "default"
+      if (seen.has(key)) return
+      const text = await run(directory, "session-start")
+      if (text) {
+        event.system.push({ type: "text", text })
+        seen.add(key)
+      }
+    })
+  },
 }
 """
 

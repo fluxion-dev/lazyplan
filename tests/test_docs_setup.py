@@ -46,6 +46,10 @@ class DocsTruthCase(unittest.TestCase):
             with self.subTest(name=name):
                 self.assertIn(name.split(",")[0].strip(), MAN)
 
+    def test_man_documents_porcelain(self):
+        for needle in ("--porcelain", "LAZYPLAN_PORCELAIN", "--json still wins"):
+            self.assertIn(needle, MAN)
+
     def test_removed_flags_stay_removed(self):
         for text in (README, USAGE, SETUP_DOC, MAN):
             self.assertNotIn("--team", text)

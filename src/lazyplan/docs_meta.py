@@ -9,6 +9,10 @@ from __future__ import annotations
 
 ENVIRONMENT: tuple[tuple[str, str], ...] = (
     ("LAZYPLAN_DB", "Which database file to use (same as --db)."),
+    (
+        "LAZYPLAN_PORCELAIN",
+        "Print terse tab-separated rows for active agents; --json still wins.",
+    ),
     ("LAZYPLAN_NO_SETUP", "Skip first-run setup and upgrade review when set."),
     ("LAZYPLAN_AGENTS", "Default agent list for setup; an explicit flag wins."),
     ("LAZYPLAN_SKILLS_DIR", "Default skill directory for setup; an explicit flag wins."),

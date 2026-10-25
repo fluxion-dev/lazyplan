@@ -84,6 +84,7 @@ class TestParser(unittest.TestCase):
         text = build_parser().format_help()
         self.assertIn("--porcelain", text)
         self.assertIn("tab-separated", text)
+        self.assertIn("LAZYPLAN_PORCELAIN", text)
 
 
 class TestWriteRows(unittest.TestCase):

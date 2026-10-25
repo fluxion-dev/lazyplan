@@ -230,6 +230,9 @@ Your agent is expected to work from the plan, not invent it:
   trailer is required. These rules apply to new plans; existing plans are
   not rewritten.
 - Write rows for scanning: short paragraphs and sections, no placeholder text.
+- Start a session with `lpui brief`; update the journal after each commit, then
+  run `lpui audit --since 7.days` before closing a plan. Lifecycle hooks remind
+  you, but they are read-only.
 
 `lpui setup --placement repo` writes the full contract into the repo; the
 default setup installs the skill into each detected agent's own folder.

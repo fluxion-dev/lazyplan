@@ -396,8 +396,10 @@ Repo plan of record: plans > milestones > tasks in `.agents/lazyplan/lazyplan.db
 Human watches `lpui ui`; agents work via the CLI with `--actor <name>`.
 
 - New plan? Interview the human first: vision, scope in and out, deliverables, constraints, metrics, acceptance criteria. Scout the codebase during the interview.
-- Read: `lpui list`, `lpui plan show --id N`, `lpui feed --limit 20` (`--json` for parsing)
+- Read: `lpui list`, `lpui brief`, `lpui plan show --id N`, `lpui audit --since 7.days`, `lpui feed --limit 20` (`--json` for parsing)
 - Write (full CRUD): `lpui plan|milestone|task add`, `... edit`, `... move`, `... delete`; `lpui criterion add|tick|untick|delete` (all with `--actor <name>`)
+- During execution: mark the task doing before code; after each commit link it (`lpui link --kind task --id T` or `task finish`) and move the row; finish with `lpui audit --since 7.days` and tick criteria with evidence.
+- Lifecycle hooks are read-only; they remind, never move work or write to the database.
 - Milestones read As a/I want/so that with Given-When-Then criteria; tasks start with a verb and carry a DoD checklist; cut both from scouted ground only
 - Scout before creating anything — no row from unscouted ground; scope lists what is in and out explicitly
 - Implementation requests get an ambiguity hunt first: touch-points, edge cases, non-goals, assumptions — never accept "implement X" at face value

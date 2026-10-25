@@ -162,6 +162,29 @@ window start, e\.g\. 7\.days or 2026\-10\-01 (default: plan creation)
 exit 2 when coverage, lag, or criteria gaps breach the defaults
 .RE
 .TP
+.B lpui brief
+show the active plan, the next task, and unlinked commits
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B \-\-plan ID
+brief one plan
+.RE
+.TP
 .B lpui list
 show plans as summaries (add \-\-tree for the full tree)
 .RS

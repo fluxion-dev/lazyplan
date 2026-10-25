@@ -42,6 +42,7 @@ class Commit:
     timestamp: int
     repo: str = ""
     parents: int = 0
+    subject: str = ""
 
 
 @dataclass(frozen=True)
@@ -329,7 +330,7 @@ def gather_commits(
         for info in history:
             if len(info.parents) > 1:
                 continue
-            out.append(Commit(info.sha, info.timestamp, str(root), len(info.parents)))
+            out.append(Commit(info.sha, info.timestamp, str(root), len(info.parents), info.subject))
     return out, repos
 
 
@@ -347,3 +348,22 @@ def report(
         since = min(known) if known else 0.0
     commits, repos = gather_commits(store, plans, since, cwd)
     return compute(store, plans, commits, since=since, repos=repos)
+
+
+def linked_shas(store: Store, plan_ids: list[int]) -> set[str]:
+    """Every commit SHA already owned by a row in these plans."""
+    return _links(store, plan_ids)[1]
+
+
+def unlinked_commits(
+    store: Store,
+    plan_ids: list[int],
+    since: float,
+    cwd: str | Path = ".",
+) -> list[Commit]:
+    """Non-merge commits in the window that no row in scope owns, newest first."""
+    commits, _repos = gather_commits(store, plan_ids, since, cwd)
+    linked = linked_shas(store, plan_ids)
+    unique = {commit.sha: commit for commit in commits if commit.parents <= 1}
+    loose = [commit for sha, commit in unique.items() if sha not in linked]
+    return sorted(loose, key=lambda commit: commit.timestamp, reverse=True)

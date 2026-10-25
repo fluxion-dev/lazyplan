@@ -12,7 +12,7 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 
-from . import audit, services, setup, setup_layout, setup_ui
+from . import audit, brief, services, setup, setup_layout, setup_ui
 from .cli_parser import build_parser, package_version
 from .design import (
     EMPTY_COMMITS,
@@ -224,6 +224,24 @@ def _cmd_audit(store: Store | None, args: argparse.Namespace, actor: str) -> int
         for reason in reasons:
             print(f"strict: {reason}")
         return 2 if reasons else 0
+    return 0
+
+
+def _cmd_brief(store: Store | None, args: argparse.Namespace, actor: str) -> int:
+    """Read-only session brief; never creates a database."""
+    del actor
+    db = store or _optional_store(args)
+    if db is None:
+        payload: dict = {"plans": [], "active": 0}
+    else:
+        if args.plan is not None and db.get_plan(args.plan) is None:
+            print(msg_not_found("plan", args.plan), file=sys.stderr)
+            return 1
+        payload = brief.build(db, args.plan, cwd=Path.cwd())
+    if args.json:
+        return _emit(args, payload)
+    for line in brief.lines(payload):
+        print(line)
     return 0
 
 
@@ -1143,6 +1161,20 @@ _COMMANDS: dict[str, Callable[[Store, argparse.Namespace, str], int]] = {
 }
 
 
+def _dispatch_storeless(args: argparse.Namespace, actor: str) -> int | None:
+    """Commands that must run before a database is opened; None means keep going."""
+    handlers = {
+        "upgrade": _cmd_upgrade,
+        "setup": _cmd_setup,
+        "doctor": _cmd_doctor,
+        "audit": _cmd_audit,
+        "brief": _cmd_brief,
+        "completion": _cmd_completion,
+    }
+    handler = handlers.get(args.cmd)
+    return handler(None, args, actor) if handler is not None else None
+
+
 def main(argv: list[str] | None = None) -> int:
     """Dispatch one lpui invocation; exit codes are agent-readable."""
     args = build_parser().parse_args(argv)
@@ -1177,19 +1209,9 @@ def main(argv: list[str] | None = None) -> int:
     except (OSError, RuntimeError, ValueError) as exc:
         # Setup must never break an agent call; the database still opens.
         print(f"warning: setup skipped: {exc}", file=sys.stderr)
-    if args.cmd == "upgrade":
-        # Self-upgrade manages the install, not plan data: no database.
-        return _cmd_upgrade(None, args, actor)
-    if args.cmd == "setup":
-        return _cmd_setup(None, args, actor)
-    if args.cmd == "doctor":
-        return _cmd_doctor(None, args, actor)
-    if args.cmd == "audit":
-        # Read-only metric: never create a database or consume first-run setup.
-        return _cmd_audit(None, args, actor)
-    if args.cmd == "completion":
-        # Install-time helper: never create or open a database.
-        return _cmd_completion(None, args, actor)
+    early = _dispatch_storeless(args, actor)
+    if early is not None:
+        return early
     # `watch` is `feed --follow`
     if args.cmd == "watch":
         args.cmd = "feed"

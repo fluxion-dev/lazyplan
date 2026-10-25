@@ -232,6 +232,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="exit 2 when coverage, lag, or criteria gaps breach the defaults",
     )
+    br = sub.add_parser(
+        "brief",
+        help="show the active plan, the next task, and unlinked commits",
+        parents=[common],
+    )
+    br.add_argument("--plan", type=int, default=None, metavar="ID", help="brief one plan")
     li = sub.add_parser(
         "list", help="show plans as summaries (add --tree for the full tree)", parents=[common]
     )

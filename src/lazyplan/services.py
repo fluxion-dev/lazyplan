@@ -1390,6 +1390,7 @@ def export_all(store: Store) -> dict:
                         "links": [vars(c) for c in store.list_links("task", t.id)],
                         "forge_links": [vars(c) for c in store.list_forge_links("task", t.id)],
                         "repos": store.list_repos("task", t.id),
+                        "notes": [vars(n) for n in store.list_notes("task", t.id)],
                         "claim": vars(claim) if claim is not None else None,
                     }
                 )
@@ -1400,6 +1401,7 @@ def export_all(store: Store) -> dict:
                     "links": [vars(c) for c in store.list_links("milestone", s.id)],
                     "forge_links": [vars(c) for c in store.list_forge_links("milestone", s.id)],
                     "repos": store.list_repos("milestone", s.id),
+                    "notes": [vars(n) for n in store.list_notes("milestone", s.id)],
                     "tasks": tasks,
                 }
             )
@@ -1410,6 +1412,7 @@ def export_all(store: Store) -> dict:
                 "links": [vars(c) for c in store.list_links("plan", p.id)],
                 "forge_links": [vars(c) for c in store.list_forge_links("plan", p.id)],
                 "repos": store.list_repos("plan", p.id),
+                "notes": [vars(n) for n in store.list_notes("plan", p.id)],
                 "milestones": milestones,
             }
         )
@@ -1442,6 +1445,7 @@ def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]
         "repos": 0,
         "forge_links": 0,
         "claims": 0,
+        "notes": 0,
     }
 
     def _apply_status(kind: str, obj_id: int, status: str) -> None:
@@ -1526,6 +1530,20 @@ def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]
                 continue
             counts["forge_links"] += 1
 
+    def _import_notes(kind: str, obj_id: int, items: list) -> None:
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            restored = store.restore_note(
+                kind,
+                obj_id,
+                str(item.get("text", "") or ""),
+                str(item.get("actor", "") or "human"),
+                float(item.get("ts", 0) or 0),
+            )
+            if restored is not None:
+                counts["notes"] += 1
+
     def _import_claim(task_id: int, item: object) -> None:
         if not isinstance(item, dict):
             return
@@ -1554,6 +1572,7 @@ def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]
         _apply_status("plan", np.id, p.get("status", ""))
         counts["plans"] += 1
         _import_criteria("plan", np.id, entry.get("criteria", []))
+        _import_notes("plan", np.id, entry.get("notes", []))
         _import_links("plan", np.id, entry.get("links", []))
         _import_forge_links("plan", np.id, entry.get("forge_links", []))
         _import_repos("plan", np.id, entry.get("repos", []))
@@ -1568,6 +1587,7 @@ def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]
             _apply_status("milestone", ns.id, sp.get("status", ""))
             counts["milestones"] += 1
             _import_criteria("milestone", ns.id, sentry.get("criteria", []))
+            _import_notes("milestone", ns.id, sentry.get("notes", []))
             _import_links("milestone", ns.id, sentry.get("links", []))
             _import_forge_links("milestone", ns.id, sentry.get("forge_links", []))
             _import_repos("milestone", ns.id, sentry.get("repos", []))
@@ -1582,6 +1602,7 @@ def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]
                 _apply_status("task", nt.id, tp.get("status", ""))
                 counts["tasks"] += 1
                 _import_criteria("task", nt.id, tentry.get("criteria", []))
+                _import_notes("task", nt.id, tentry.get("notes", []))
                 _import_links("task", nt.id, tentry.get("links", []))
                 _import_forge_links("task", nt.id, tentry.get("forge_links", []))
                 _import_repos("task", nt.id, tentry.get("repos", []))

@@ -602,6 +602,46 @@ def _cmd_claims(store: Store, args: argparse.Namespace, actor: str) -> int:
     return 0
 
 
+def _cmd_note(store: Store, args: argparse.Namespace, actor: str) -> int:
+    if store.get_parent(args.kind, args.id) is None:
+        print(msg_not_found(args.kind, args.id), file=sys.stderr)
+        return 1
+    if args.action == "add":
+        if args.text is None or not args.text.strip():
+            print("error: note add needs --text", file=sys.stderr)
+            return 2
+        note = store.add_note(args.kind, args.id, args.text, actor=actor)
+        if args.json:
+            return _emit(args, {"note": vars(note)})
+        if porcelain.enabled(args):
+            print(
+                porcelain.note_row(
+                    note.id, note.actor, note.text, note.parent_kind, note.parent_id, note.ts
+                )
+            )
+        else:
+            print(f"noted {args.kind} #{args.id}: {note.text}")
+        return 0
+    notes = store.list_notes(args.kind, args.id, limit=args.limit)
+    if args.json:
+        return _emit(args, [vars(n) for n in notes])
+    if porcelain.enabled(args):
+        for note in notes:
+            print(
+                porcelain.note_row(
+                    note.id, note.actor, note.text, note.parent_kind, note.parent_id, note.ts
+                )
+            )
+        return 0
+    if not notes:
+        print("(no notes)")
+        return 0
+    for note in notes:
+        when = time.strftime("%Y-%m-%d %H:%M", time.localtime(note.ts)) if note.ts else "unknown"
+        print(f"@{note.actor} {when}: {note.text}")
+    return 0
+
+
 def _cmd_hook(store: Store | None, args: argparse.Namespace, actor: str) -> int:
     """Read-only lifecycle reminder; always exits 0 so a host never blocks."""
     del store, actor
@@ -784,6 +824,21 @@ def _porcelain_list_lines(
     return lines
 
 
+def _note_dict_rows(items: list[dict]) -> list[str]:
+    """Note rows from show/brief payload dicts."""
+    return [
+        porcelain.note_row(
+            note["id"],
+            note.get("actor"),
+            note.get("text"),
+            note.get("parent_kind", "note"),
+            note.get("parent_id", "-"),
+            note.get("ts", 0),
+        )
+        for note in items
+    ]
+
+
 def _claim_line(store: Store, task_id: int, title: str) -> str | None:
     """Claim row for a task, or None when it has no lease."""
     claim = store.get_claim(task_id)
@@ -805,6 +860,7 @@ def _porcelain_show_lines(store: Store, kind: str, full: dict) -> list[str]:
         lines.append(porcelain.text_row("why", plan.get("goal")))
         lines.append(porcelain.text_row("what", plan.get("description")))
         lines.extend(_criterion_dict_rows(full.get("criteria", [])))
+        lines.extend(_note_dict_rows(full.get("notes", [])))
         for entry in full.get("milestones", []):
             milestone = entry["milestone"]
             lines.append(
@@ -826,6 +882,7 @@ def _porcelain_show_lines(store: Store, kind: str, full: dict) -> list[str]:
                 claim_line = _claim_line(store, int(task["id"]), str(task["title"]))
                 if claim_line is not None:
                     lines.append(claim_line)
+                lines.extend(_note_dict_rows(task.get("notes", [])))
         return lines
     if kind == "milestone":
         milestone = full["milestone"]
@@ -840,6 +897,7 @@ def _porcelain_show_lines(store: Store, kind: str, full: dict) -> list[str]:
         )
         lines.append(porcelain.text_row("desc", milestone.get("description")))
         lines.extend(_criterion_dict_rows(full.get("criteria", [])))
+        lines.extend(_note_dict_rows(full.get("notes", [])))
         for entry in full.get("tasks", []):
             task = entry["task"]
             lines.append(
@@ -848,6 +906,7 @@ def _porcelain_show_lines(store: Store, kind: str, full: dict) -> list[str]:
             claim_line = _claim_line(store, int(task["id"]), str(task["title"]))
             if claim_line is not None:
                 lines.append(claim_line)
+            lines.extend(_note_dict_rows(task.get("notes", [])))
         return lines
     task = full["task"]
     lines.append(
@@ -858,6 +917,7 @@ def _porcelain_show_lines(store: Store, kind: str, full: dict) -> list[str]:
         lines.append(claim_line)
     lines.append(porcelain.text_row("desc", task.get("description")))
     lines.extend(_criterion_dict_rows(full.get("criteria", [])))
+    lines.extend(_note_dict_rows(task.get("notes", [])))
     return lines
 
 
@@ -962,6 +1022,7 @@ def _brief_rows(store: Store, payload: dict) -> list[str]:
         plan = store.get_plan(int(entry["id"]))
         if plan is not None:
             rows.append(_porcelain_row(store, plan))
+        rows.extend(_note_dict_rows(entry.get("notes", [])))
         for task in entry.get("doing", []):
             model = store.get_task(int(task["id"]))
             if model is not None:
@@ -969,6 +1030,7 @@ def _brief_rows(store: Store, payload: dict) -> list[str]:
                 claim_line = _claim_line(store, int(task["id"]), str(task["title"]))
                 if claim_line is not None:
                     rows.append(claim_line)
+                rows.extend(_note_dict_rows(task.get("notes", [])))
         next_task = entry.get("next")
         if next_task:
             parent = "-"
@@ -1928,6 +1990,7 @@ _COMMANDS: dict[str, Callable[[Store, argparse.Namespace, str], int]] = {
     "claim": _cmd_claim,
     "claims": _cmd_claims,
     "who": _cmd_claims,
+    "note": _cmd_note,
     "add-plan": _cmd_add_plan,
     "add-milestone": _cmd_add_milestone,
     "add-task": _cmd_add_task,

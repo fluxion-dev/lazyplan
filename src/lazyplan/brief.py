@@ -15,6 +15,7 @@ from .store import Store
 _MAX_PLANS = 3
 _MAX_LOOSE = 5
 _MAX_GAPS = 5
+_MAX_PLAN_NOTES = 5
 
 
 def _active_plans(store: Store, plan_id: int | None) -> list[Plan]:
@@ -42,6 +43,9 @@ def _doing(store: Store, task: Task) -> dict:
     claim = store.get_claim(task.id)
     if claim is not None:
         entry["claim"] = vars(claim)
+    notes = store.list_notes("task", task.id)
+    if notes:
+        entry["notes"] = [vars(n) for n in notes]
     return entry
 
 
@@ -70,7 +74,7 @@ def _plan_brief(
         linked = audit.linked_shas(store, [plan.id])
         loose = [commit for commit in commits if commit.sha not in linked]
         loose.sort(key=lambda commit: commit.timestamp, reverse=True)
-    return {
+    payload = {
         "id": plan.id,
         "title": plan.name,
         "status": plan.status.value,
@@ -82,6 +86,10 @@ def _plan_brief(
             for commit in loose[:_MAX_LOOSE]
         ],
     }
+    notes = store.list_notes("plan", plan.id)[:_MAX_PLAN_NOTES]
+    if notes:
+        payload["notes"] = [vars(n) for n in notes]
+    return payload
 
 
 def build(
@@ -106,10 +114,14 @@ def lines(payload: dict) -> list[str]:
     out: list[str] = []
     for plan in plans:
         out.append(f"P{plan['id']} {plan['title']} ({plan['status']})")
+        for note in plan.get("notes", []):
+            out.append(f"  note     @{note['actor']}: {note['text']}")
         for task in plan["doing"]:
             claim = task.get("claim")
             suffix = f" @{claim['actor']}" if claim else ""
             out.append(f"  doing    T{task['id']} {task['title']}{suffix}")
+            for note in task.get("notes", []):
+                out.append(f"    note   @{note['actor']}: {note['text']}")
         if not plan["doing"]:
             out.append("  doing    none")
         next_task = plan["next"]

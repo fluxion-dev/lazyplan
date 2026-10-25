@@ -339,6 +339,54 @@ note stored on the claim
 take over or release someone else's lease
 .RE
 .TP
+.B lpui note
+add or list append\-only handoff notes
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B  {add|list}
+add a note or list them Choices: add, list\. Required\.
+.RE
+.RS
+.TP
+.B \-\-kind {plan|milestone|task}
+which row the note belongs to Choices: plan, milestone, task\. Required\.
+.RE
+.RS
+.TP
+.B \-\-id ID
+row id Required\.
+.RE
+.RS
+.TP
+.B \-\-text TEXT
+note text (add only)
+.RE
+.RS
+.TP
+.B \-\-limit N
+latest N notes
+.RE
+.TP
 .B lpui claims
 list active task leases with holder and expiry
 .RS

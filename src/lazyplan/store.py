@@ -15,6 +15,7 @@ from .models import (
     Criterion,
     ForgeLink,
     Milestone,
+    Note,
     Plan,
     Status,
     Task,
@@ -565,6 +566,75 @@ class Store:
             row = conn.execute(sql, params).fetchone()
         return self._row_to_task(row) if row is not None else None
 
+    # -- handoff notes (append-only) -------------------------------------
+    @staticmethod
+    def _row_to_note(r: sqlite3.Row) -> Note:
+        """Row to Note."""
+        return Note(
+            id=int(r["id"]),
+            parent_kind=str(r["parent_kind"]),
+            parent_id=int(r["parent_id"]),
+            text=str(r["text"]),
+            actor=str(r["actor"]),
+            ts=float(r["ts"]),
+        )
+
+    def add_note(self, parent_kind: str, parent_id: int, text: str, actor: str = "human") -> Note:
+        """Append a handoff note and log it."""
+        check_parent_kind(parent_kind)
+        body = text.strip()
+        if not body:
+            raise ValueError("note text must not be empty")
+        if not self._parent_exists(parent_kind, parent_id):
+            raise KeyError(f"{parent_kind} #{parent_id} not found")
+        stamp = time.time()
+        with self._connect() as conn:
+            cur = conn.execute(
+                "INSERT INTO notes (parent_kind, parent_id, actor, ts, text) VALUES (?,?,?,?,?)",
+                (parent_kind, parent_id, actor, stamp, body),
+            )
+            note_id = cur.lastrowid or 0
+        self.log(actor, parent_kind, "note", f"{parent_kind} #{parent_id}: {body[:80]}")
+        return Note(
+            id=note_id,
+            parent_kind=parent_kind,
+            parent_id=parent_id,
+            text=body,
+            actor=actor,
+            ts=stamp,
+        )
+
+    def list_notes(self, parent_kind: str, parent_id: int, limit: int | None = None) -> list[Note]:
+        """Notes on one row, oldest first; limit keeps the latest N."""
+        check_parent_kind(parent_kind)
+        sql = "SELECT * FROM notes WHERE parent_kind=? AND parent_id=? ORDER BY id DESC"
+        params: list[object] = [parent_kind, parent_id]
+        if limit is not None:
+            sql += " LIMIT ?"
+            params.append(max(int(limit), 1))
+        with self._connect() as conn:
+            rows = conn.execute(sql, params).fetchall()
+        return [self._row_to_note(row) for row in reversed(rows)]
+
+    def restore_note(
+        self,
+        parent_kind: str,
+        parent_id: int,
+        text: str,
+        actor: str,
+        ts: float,
+    ) -> Note | None:
+        """Import a note with its original timestamp."""
+        if not text.strip():
+            return None
+        with self._connect() as conn:
+            cur = conn.execute(
+                "INSERT INTO notes (parent_kind, parent_id, actor, ts, text) VALUES (?,?,?,?,?)",
+                (parent_kind, parent_id, actor, ts, text.strip()),
+            )
+            note_id = cur.lastrowid or 0
+        return Note(note_id, parent_kind, parent_id, text.strip(), actor, ts)
+
     def update_task(
         self,
         tid: int,
@@ -613,16 +683,19 @@ class Store:
                     (obj_id,),
                 )
                 self._delete_entity_repos(conn, "plan", obj_id)
+                self._delete_notes(conn, "plan", obj_id)
                 for sid in sids:
                     self._delete_milestone_criteria(conn, sid)
                     self._delete_milestone_links(conn, sid)
                     self._delete_milestone_repos(conn, sid)
                     self._delete_milestone_forge_links(conn, sid)
+                    self._delete_milestone_notes(conn, sid)
             elif kind == "milestone":
                 self._delete_milestone_criteria(conn, obj_id)
                 self._delete_milestone_links(conn, obj_id)
                 self._delete_milestone_repos(conn, obj_id)
                 self._delete_milestone_forge_links(conn, obj_id)
+                self._delete_milestone_notes(conn, obj_id)
             else:
                 conn.execute(
                     "DELETE FROM criteria WHERE parent_kind='task' AND parent_id=?", (obj_id,)
@@ -634,6 +707,7 @@ class Store:
                     "DELETE FROM forge_links WHERE parent_kind='task' AND parent_id=?", (obj_id,)
                 )
                 self._delete_entity_repos(conn, "task", obj_id)
+                self._delete_notes(conn, "task", obj_id)
             cur = conn.execute(f"DELETE FROM {table} WHERE id=?", (obj_id,))
             ok = (cur.rowcount or 0) > 0
         if ok:
@@ -682,6 +756,26 @@ class Store:
         Store._delete_entity_repos(conn, "milestone", milestone_id)
         for tid in tids:
             Store._delete_entity_repos(conn, "task", tid)
+
+    @staticmethod
+    def _delete_notes(conn: sqlite3.Connection, parent_kind: str, parent_id: int) -> None:
+        """Remove notes on one row."""
+        conn.execute(
+            "DELETE FROM notes WHERE parent_kind=? AND parent_id=?", (parent_kind, parent_id)
+        )
+
+    @staticmethod
+    def _delete_milestone_notes(conn: sqlite3.Connection, milestone_id: int) -> None:
+        """Remove notes under a milestone and its tasks."""
+        tids = [
+            r["id"]
+            for r in conn.execute(
+                "SELECT id FROM tasks WHERE milestone_id=?", (milestone_id,)
+            ).fetchall()
+        ]
+        Store._delete_notes(conn, "milestone", milestone_id)
+        for tid in tids:
+            Store._delete_notes(conn, "task", tid)
 
     @staticmethod
     def _delete_milestone_forge_links(conn: sqlite3.Connection, milestone_id: int) -> None:
@@ -1385,6 +1479,9 @@ class Store:
         claim = self.get_claim(t.id)
         if claim is not None:
             data["claim"] = vars(claim)
+        notes = self.list_notes("task", t.id)
+        if notes:
+            data["notes"] = [vars(n) for n in notes]
         return data
 
     def _task_show(self, t: Task) -> dict:
@@ -1402,7 +1499,7 @@ class Store:
 
     def _milestone_show(self, s: Milestone) -> dict:
         """Milestone show payload with task summaries."""
-        return {
+        payload = {
             "milestone": _ser(vars(s)),
             "criteria": [vars(c) for c in self.list_criteria("milestone", s.id)],
             "links": [vars(c) for c in self.list_links("milestone", s.id)],
@@ -1421,10 +1518,14 @@ class Store:
                 for t in self.list_tasks(s.id)
             ],
         }
+        notes = self.list_notes("milestone", s.id)
+        if notes:
+            payload["notes"] = [vars(n) for n in notes]
+        return payload
 
     def _plan_show(self, p: Plan) -> dict:
         """Plan show payload with milestone summaries."""
-        return {
+        payload = {
             "plan": _ser(vars(p)),
             "criteria": [vars(c) for c in self.list_criteria("plan", p.id)],
             "links": [vars(c) for c in self.list_links("plan", p.id)],
@@ -1444,6 +1545,10 @@ class Store:
                 for s in self.list_milestones(p.id)
             ],
         }
+        notes = self.list_notes("plan", p.id)
+        if notes:
+            payload["notes"] = [vars(n) for n in notes]
+        return payload
 
     def get_full(self, kind: str, obj_id: int) -> dict | None:
         """Full context record for `lpui show`: fields + criteria + links + repos + children."""

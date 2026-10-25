@@ -71,6 +71,24 @@ class Claim:
         return self.expires_at <= now
 
 
+@dataclass(frozen=True)
+class Note:
+    """An append-only handoff note on a plan, milestone, or task."""
+
+    id: int
+    parent_kind: str
+    parent_id: int
+    text: str
+    actor: str = "human"
+    ts: float = 0.0
+
+    def __post_init__(self) -> None:
+        if self.parent_kind not in CRITERION_PARENTS:
+            raise ValueError(PARENT_KIND_ERROR)
+        if not self.text.strip():
+            raise ValueError("note text must not be empty")
+
+
 @dataclass
 class Milestone:
     """A slice of a plan, broken into tasks."""

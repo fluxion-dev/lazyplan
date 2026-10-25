@@ -227,6 +227,17 @@ def _append_claim(lines: list[str], claim: dict | None, indent: str = "") -> Non
     lines.append(f"{indent}claim: @{claim.get('actor')} until {when}")
 
 
+def _append_notes(lines: list[str], items: list[dict], indent: str = "") -> None:
+    """Append handoff notes with actor and local timestamp."""
+    if not items:
+        return
+    lines.append("\nnotes:" if not indent else f"{indent}notes:")
+    for note in items:
+        stamp = int(float(note.get("ts") or 0))
+        when = time.strftime("%Y-%m-%d %H:%M", time.localtime(stamp)) if stamp else "unknown"
+        lines.append(f"{indent}  @{note.get('actor')} {when}: {note.get('text')}")
+
+
 def _append_crit(lines: list[str], items: list[dict]) -> None:
     """Append checklist lines."""
     for c in items:
@@ -252,7 +263,8 @@ def _append_repos(lines: list[str], full: dict) -> None:
 
 
 def _append_common(lines: list[str], full: dict, files: bool = False) -> None:
-    """Shared show sections: acceptance + commits + PRs + repos."""
+    """Shared show sections: notes + acceptance + commits + PRs + repos."""
+    _append_notes(lines, full.get("notes", []))
     if full.get("criteria"):
         lines.append("\nacceptance:")
         _append_crit(lines, full["criteria"])
@@ -299,6 +311,7 @@ def _render_milestone_full(full: dict, lines: list[str], files: bool = False) ->
         _append_claim(lines, t.get("claim"), indent="  ")
         if t.get("description"):
             lines.append(f"  {t['description']}")
+        _append_notes(lines, t.get("notes", []), indent="  ")
 
 
 def _render_task_full(full: dict, lines: list[str], files: bool = False) -> None:
@@ -308,6 +321,7 @@ def _render_task_full(full: dict, lines: list[str], files: bool = False) -> None
     t = full["task"]
     lines.append(f"{status_word(t['status'])} T{t['id']} {t['title']} (M{t['milestone_id']})")
     _append_claim(lines, t.get("claim"))
+    _append_notes(lines, t.get("notes", []))
     if t.get("description"):
         lines.append(f"\ndetails: {t['description']}")
     _append_common(lines, full, files=files)

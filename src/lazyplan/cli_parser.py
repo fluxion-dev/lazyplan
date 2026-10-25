@@ -330,6 +330,18 @@ def build_parser() -> argparse.ArgumentParser:
     cl.add_argument(
         "--force", action="store_true", help="take over or release someone else's lease"
     )
+    nt = sub.add_parser(
+        "note",
+        help="add or list append-only handoff notes",
+        parents=[common],
+    )
+    nt.add_argument("action", choices=["add", "list"], help="add a note or list them")
+    nt.add_argument(
+        "--kind", choices=list(KINDS), required=True, help="which row the note belongs to"
+    )
+    nt.add_argument("--id", type=int, required=True, metavar="ID", help="row id")
+    nt.add_argument("--text", default=None, metavar="TEXT", help="note text (add only)")
+    nt.add_argument("--limit", type=int, default=None, metavar="N", help="latest N notes")
     cls = sub.add_parser(
         "claims",
         help="list active task leases with holder and expiry",

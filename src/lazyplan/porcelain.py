@@ -131,3 +131,8 @@ def text_row(kind: Any, text: Any) -> str:
 def claim_row(task_id: Any, actor: Any, title: Any, expires_at: float | int | None = None) -> str:
     """A lease record: id is the task, status the actor, extra the expiry epoch."""
     return row("claim", task_id, actor, title, f"task:{field(task_id)}", expires_at or "-")
+
+
+def note_row(note_id: Any, actor: Any, text: Any, parent_kind: Any, parent_id: Any, ts: Any) -> str:
+    """A handoff note: status is the actor, parent is the owning row."""
+    return row("note", note_id, actor, text, f"{field(parent_kind)}:{field(parent_id)}", int(ts))

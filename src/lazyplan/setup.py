@@ -19,7 +19,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from . import hook_install, setup_layout, setup_ui, skills
+from . import hook_install, setup_layout, setup_ui, skills, templates
 from .repo import (
     CONFIG_NAME,
     PLAN_DIR,
@@ -325,6 +325,50 @@ def refresh_installed_skills(home: Path | None = None) -> tuple[list[Path], list
     return refreshed, backups
 
 
+def cleanup_repo_artifacts(root: Path, home: Path) -> list[str]:
+    """Remove generated repo resources after a switch to home placement."""
+    plan_dir = root / PLAN_DIR
+    templates_dir = plan_dir / TEMPLATES_DIR_NAME
+    skill_files = [entry / "SKILL.md" for entry in setup_layout._repo_skill_dirs(root)]
+    touched = [
+        plan_dir / CONFIG_NAME,
+        *skill_files,
+        root / "AGENTS.md",
+        root / ".gitignore",
+    ]
+    touched.extend(templates_dir / name for name in templates.TEMPLATE_FILES.values())
+    backups = setup_layout._new_backup_dir(home)
+    for path in touched:
+        if path.is_file():
+            setup_layout._backup_file(backups, path)
+    if (root / "AGENTS.md").is_file():
+        setup_layout._strip_agents(root / "AGENTS.md")
+    if (root / ".gitignore").is_file():
+        setup_layout._strip_gitignore(root / ".gitignore")
+    for path in (root / "AGENTS.md", root / ".gitignore"):
+        if path.is_file() and not path.read_text().strip():
+            path.unlink()
+    for path in skill_files:
+        if path.is_file():
+            path.unlink()
+        try:
+            path.parent.rmdir()
+        except OSError:
+            pass
+    if (plan_dir / CONFIG_NAME).is_file():
+        (plan_dir / CONFIG_NAME).unlink()
+    for kind, name in templates.TEMPLATE_FILES.items():
+        path = templates_dir / name
+        if path.is_file() and path.read_text() == templates.STARTERS.get(kind):
+            path.unlink()
+    try:
+        templates_dir.rmdir()
+        plan_dir.rmdir()
+    except OSError:
+        pass
+    return [str(backups)] if backups.exists() else []
+
+
 def apply_choice(
     choice: SetupChoice,
     root: Path | None,
@@ -335,6 +379,14 @@ def apply_choice(
     """Write the database, templates, skills, and remembered state."""
     home = home or Path.home()
     out = write or sys.stderr
+    previous = load_state(home)
+    if (
+        not choice.explicit_db
+        and root is not None
+        and previous.placement == REPO
+        and choice.placement != REPO
+    ):
+        cleanup_repo_artifacts(root, home)
     skill_plan = skills.plan_choice(choice, root, home)
     layout = setup_layout.resolve_choice(choice, root, skill_plan, home)
     setup_layout.apply_layout(layout, interactive=False, read=None, write=out)

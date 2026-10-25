@@ -85,13 +85,21 @@ def _resolve_title(args: argparse.Namespace) -> str:
     return ""
 
 
-def _setup_hooks(home: Path, args: argparse.Namespace) -> dict:
+def _setup_hooks(home: Path, args: argparse.Namespace, agents: list[str] | None = None) -> dict:
     """Install or remove managed hooks and remember the decision."""
     enabled = getattr(args, "hooks", None)
-    report = hook_install.remove(home) if enabled is False else hook_install.install(home)
+    if enabled is False:
+        report = hook_install.remove(home)
+    else:
+        hosts = None if agents is None else [host for host in agents if host in hook_install.HOSTS]
+        report = hook_install.install(home, hosts=hosts)
     state = setup.load_state(home)
-    state.hooks = enabled is not False
-    state.hook_files = list(report.get("installed") or report.get("removed") or [])
+    if enabled is False:
+        state.hook_files = []
+    else:
+        planned = None if agents is None else [h for h in agents if h in hook_install.HOSTS]
+        state.hook_files = [str(spec.path) for spec in hook_install.preview(home, planned)]
+    state.hooks = enabled is not False and bool(state.hook_files)
     setup.save_state(state, home)
     return report
 
@@ -192,10 +200,27 @@ def _cmd_setup(store: Store | None, args: argparse.Namespace, actor: str) -> int
     else:
         choice = setup.choice_from_args(args, Path.cwd(), home, state)
         result = setup.apply_choice(choice, find_repo_root(Path.cwd()), home, version)
-    result["hooks"] = _setup_hooks(home, args)
+    result["hooks"] = _setup_hooks(home, args, result.get("agents"))
     result["agents_pointer"] = _setup_pointer(home, args, str(result.get("placement", "")))
     if result.get("placement") == setup.HOME:
         _setup_review(args, home, interactive)
+    if result.get("wizard") and not getattr(args, "json", False):
+        selected = [h for h in (result.get("agents") or []) if h in hook_install.HOSTS]
+        plugins = (
+            [spec.path for spec in hook_install.preview(home, selected)]
+            if getattr(args, "hooks", None) is not False
+            else []
+        )
+        backups = [Path(path) for path in result.get("hooks", {}).get("backups") or []]
+        setup_ui.success(
+            sys.stderr,
+            Path(result["db"]),
+            [Path(path) for path in result["skills"]],
+            backups,
+            setup_ui.color_enabled(sys.stderr, False),
+            plugins,
+        )
+        return 0
     if getattr(args, "json", False):
         return _emit(args, result)
     _print_setup(result)

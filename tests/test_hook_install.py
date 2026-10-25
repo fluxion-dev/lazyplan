@@ -156,6 +156,17 @@ class SetupCliCase(unittest.TestCase):
         self.assertFalse((self.home / ".config/opencode/plugins/lazyplan.js").exists())
         self.assertFalse(setup.load_state(self.home).hooks)
 
+    def test_selected_agents_limit_plugins(self):
+        self._setup("--agents", "claude")
+        self.assertIn("lpui hook", (self.home / ".claude/settings.json").read_text())
+        self.assertFalse((self.home / ".config/opencode/plugins/lazyplan.js").exists())
+
+    def test_no_agents_means_no_plugins(self):
+        self._setup("--agents", "none")
+        self.assertFalse((self.home / ".claude/settings.json").exists())
+        self.assertFalse((self.home / ".config/opencode/plugins/lazyplan.js").exists())
+        self.assertFalse(setup.load_state(self.home).hooks)
+
 
 if __name__ == "__main__":
     unittest.main()

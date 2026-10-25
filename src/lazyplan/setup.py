@@ -18,7 +18,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from . import setup_layout, setup_ui, skills
+from . import hook_install, setup_layout, setup_ui, skills
 from .repo import (
     find_repo_root,
     legacy_plan_dir,
@@ -357,6 +357,7 @@ def apply_choice(
         "backups": [str(path) for path in backups],
         "state": str(state_path(home)),
         "placement": state.placement,
+        "agents": list(choice.agents or []),
         "explicit": bool(choice.explicit_db),
     }
 
@@ -410,6 +411,11 @@ def _run_wizard(
         skills_dir=choice.skills_dir,
     )
     layout, skill_files = preview(choice, root, home)
+    labels = {host.key: host.label for host in hosts}
+    plugins = [
+        (labels.get(spec.host, spec.host), spec.path)
+        for spec in hook_install.preview(home, selected)
+    ]
     setup_ui.render_review(
         write,
         layout.db,
@@ -418,12 +424,13 @@ def _run_wizard(
         state_path(home),
         layout.config,
         color,
+        plugins,
     )
     if not setup_ui.confirm(write, read, color):
         setup_ui.note(write, "Setup cancelled; nothing was written.", color, "warn")
         return None
     result = apply_choice(choice, root, home, version, write)
-    setup_ui.success(write, Path(result["db"]), [Path(p) for p in result["skills"]], [], color)
+    result["wizard"] = True
     return result
 
 

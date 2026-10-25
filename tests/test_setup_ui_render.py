@@ -67,6 +67,25 @@ class RenderCase(unittest.TestCase):
         self.assertIn("3/3 Review", lines[0])
         self.assertTrue(any("database" in line for line in lines))
         self.assertTrue(any("state" in line for line in lines))
+        self.assertTrue(any("plugins" in line for line in lines))
+
+    def test_review_names_each_plugin(self):
+        text = self._text(
+            lambda out: setup_ui.render_review(
+                out,
+                self.home / "db.sqlite",
+                self.home / "templates",
+                [],
+                self.home / "setup.json",
+                None,
+                False,
+                [("OpenCode", self.home / "plugins" / "lazyplan.js")],
+            )
+        )
+        lines = self._lines(text)
+        plugin_line = next(line for line in lines if "plugins" in line)
+        self.assertIn("OpenCode", plugin_line)
+        self.assertIn("lazyplan.js", plugin_line)
 
     def test_success_and_note_are_line_broken(self):
         text = self._text(

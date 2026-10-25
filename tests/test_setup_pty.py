@@ -70,6 +70,8 @@ class TestSetupWizard(unittest.TestCase):
         self.assertEqual(code, 0, text)
         self.assertIn("lazyplan setup", text)
         self.assertIn("\x1b[36m", text)
+        self.assertIn("plugins", text)
+        self.assertIn("lazyplan.js", text)
         self.assertTrue((self.home / ".lazyplan/lazyplan.db").is_file())
         self.assertTrue((self.home / ".lazyplan/setup.json").is_file())
         self.assertIn("Setup complete", text)

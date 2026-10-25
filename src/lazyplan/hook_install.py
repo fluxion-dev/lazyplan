@@ -44,6 +44,13 @@ def specs(home: Path | None = None) -> list[Spec]:
     ]
 
 
+def preview(home: Path | None = None, hosts: list[str] | None = None) -> list[Spec]:
+    """Host hook surfaces that install would touch, without writing."""
+    home = home or Path.home()
+    wanted = set(hosts) if hosts is not None else set(detected(home))
+    return [spec for spec in specs(home) if spec.host in wanted]
+
+
 def detected(home: Path | None = None) -> list[str]:
     """Supported hosts that are actually present, in stable order."""
     found = {host.key for host in skills.detect_agents(home) if host.detected}
@@ -261,13 +268,10 @@ def _remove_spec(spec: Spec, backup_dir: Path) -> bool:
 def install(home: Path | None = None, hosts: list[str] | None = None) -> dict:
     """Write managed hook entries for the chosen hosts, backing up every file."""
     home = home or Path.home()
-    wanted = set(hosts) if hosts is not None else set(detected(home))
     backup_dir = _new_backup_dir(home)
     changed: list[str] = []
     skipped: list[dict] = []
-    for spec in specs(home):
-        if spec.host not in wanted:
-            continue
+    for spec in preview(home, hosts):
         try:
             if _install_spec(spec, backup_dir):
                 changed.append(str(spec.path))

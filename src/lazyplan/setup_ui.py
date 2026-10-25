@@ -79,7 +79,7 @@ def banner(write: TextIO, color: bool, version: str = "") -> None:
     _line(
         write.write,
         _paint(
-            "  First run: pick where plans live and which agents get the skill.",
+            "  First run: pick where plans live, which agents get the skill, and their read-only plugins.",
             "dim",
             color=color,
         ),
@@ -212,6 +212,7 @@ def render_review(
     state_path: Path,
     config: Path | None,
     color: bool,
+    plugins: list[tuple[str, Path]] | None = None,
 ) -> None:
     step(write, 3, 3, "Review", color)
     rows = [("database", str(db)), ("templates", str(templates))]
@@ -225,13 +226,26 @@ def render_review(
             _line(write.write, f"  {_paint(label.ljust(10), 'bold', color=color)} {skill}")
     else:
         _line(write.write, f"  {_paint('skills'.ljust(10), 'bold', color=color)} none")
+    if plugins:
+        for index, (host, path) in enumerate(plugins):
+            label = "plugins" if index == 0 else ""
+            _line(
+                write.write,
+                f"  {_paint(label.ljust(10), 'bold', color=color)} {host}  {path}",
+            )
+    else:
+        _line(
+            write.write,
+            f"  {_paint('plugins'.ljust(10), 'bold', color=color)} none "
+            "(no supported agents selected)",
+        )
     _line(write.write, f"  {_paint('state'.ljust(10), 'bold', color=color)} {state_path}")
     _line(write.write)
 
 
 def confirm(write: TextIO, read: Callable[[], str], color: bool) -> bool:
     """Y/n review confirmation; empty means yes."""
-    answer = _ask(write, read, "  write these resources? [Y/n]: ").strip().lower()
+    answer = _ask(write, read, "  install these resources and plugins? [Y/n]: ").strip().lower()
     if answer in ("n", "no"):
         return False
     return True
@@ -243,12 +257,15 @@ def success(
     skills: list[Path],
     backups: list[Path],
     color: bool,
+    plugins: list[Path] | None = None,
 ) -> None:
     mark = _paint(_icon("check", color), "green", color=color)
     _line(write.write, f"{mark} {_paint('Setup complete', 'bold', 'green', color=color)}")
     _line(write.write, f"  {_paint('database', 'bold', color=color)} {db}")
     for skill in skills:
         _line(write.write, f"  {_paint('skill', 'bold', color=color)}    {skill}")
+    for plugin in plugins or []:
+        _line(write.write, f"  {_paint('plugin', 'bold', color=color)}   {plugin}")
     for backup in backups:
         _line(
             write.write,

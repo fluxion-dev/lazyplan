@@ -1207,29 +1207,25 @@ def _cmd_upgrade(store: Store | None, args: argparse.Namespace, actor: str) -> i
         print(msg_error(exc), file=sys.stderr)
         return 1
     payload["upgraded"] = True
+    if not args.json:
+        print(f"upgraded lpui v{installed} -> v{latest} ({info.method})")
+    _post_upgrade_review(bool(args.json))
     if args.json:
         return _emit(args, payload)
-    print(f"upgraded lpui v{installed} -> v{latest} ({info.method})")
-    _post_upgrade_review()
     return 0
 
 
-def _stderr_is_tty() -> bool:
-    try:
-        return sys.stderr.isatty()
-    except (AttributeError, ValueError):
-        return False
-
-
-def _post_upgrade_review() -> None:
-    """Run setup review with the just-installed binary; never break the upgrade."""
-    if not (setup_ui.stdin_tty() and _stderr_is_tty()):
-        return
+def _post_upgrade_review(json_mode: bool = False) -> None:
+    """Refresh setup with the just-installed package; never break the upgrade."""
+    argv = [sys.executable, "-m", "lazyplan", "setup", "--post-upgrade"]
+    if json_mode:
+        argv.append("--json")
     try:
         subprocess.run(
-            [sys.argv[0], "setup", "--post-upgrade"],
+            argv,
             check=False,
             timeout=300,
+            stdout=subprocess.DEVNULL if json_mode else None,
         )
     except (OSError, subprocess.SubprocessError):
         return

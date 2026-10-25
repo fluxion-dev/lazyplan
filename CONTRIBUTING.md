@@ -33,6 +33,40 @@ The gate suite runs:
 Fix failures rather than editing the scripts around them. If you add a new
 module, add tests and type annotations with it.
 
+## Landing changes
+
+`main` is protected by the committed ruleset in
+`.github/rulesets/main.json`. Every change lands through a pull request:
+
+```bash
+git switch -c my-change
+# edit, then commit in small green slices
+git push -u origin my-change
+gh pr create --base main --fill
+```
+
+Wait for the `gates` check from `.github/workflows/ci.yml`, then merge with
+merge, squash, or rebase. A pull request does not need an approving review,
+but it cannot merge without `gates`.
+
+Two bypass actors exist:
+
+- **Repository admins** for emergencies and for the first apply.
+- **GitHub Actions** (integration id `15368`) so the `bump` workflow can push
+  its version commit and tag. Forks or enterprise hosts that use a different
+  integration id must change the payload before applying it.
+
+Manage the live ruleset with the committed payload:
+
+```bash
+tools/protect-main.sh --status   # what is applied now
+tools/protect-main.sh --dry-run  # print the payload, write nothing
+tools/protect-main.sh            # create or update; a second run is a no-op
+```
+
+Do not edit the ruleset in the GitHub settings page. Change the payload, run
+the script, and commit the result.
+
 ## Project layout
 
 ```text

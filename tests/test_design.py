@@ -4,6 +4,7 @@ import io
 import os
 import sys
 import tempfile
+import unicodedata
 import unittest
 from contextlib import redirect_stdout
 
@@ -47,6 +48,21 @@ class TestDesignSystem(unittest.TestCase):
         self.assertEqual(design.status_word("done", "rich"), "[green]●[/]")
         with self.assertRaises(ValueError):
             design.status_word("todo", "neon")
+
+    def test_spinner_frames_and_prefix(self):
+        self.assertEqual(design.SPINNER_FRAMES, ("◐", "◓", "◑", "◒"))
+        self.assertEqual(design.SPINNER_INTERVAL, 0.16)
+        for frame in design.SPINNER_FRAMES:
+            self.assertEqual(len(frame), 1)
+            self.assertNotIn(unicodedata.east_asian_width(frame), ("W", "F"))
+        self.assertEqual(design.spinner_glyph(1), "◓")
+        self.assertEqual(design.spinner_glyph(len(design.SPINNER_FRAMES)), "◐")
+        self.assertEqual(design.status_prefix("doing"), "[yellow]◐[/]")
+        self.assertEqual(design.status_prefix("doing", 1), "[yellow]◓[/]")
+        self.assertEqual(design.status_prefix("doing", 7), "[yellow]◒[/]")
+        self.assertEqual(design.status_prefix("todo", 2), "[dim]○[/]")
+        self.assertEqual(design.status_prefix("done", 3), "[green]●[/]")
+        self.assertEqual(design.status_word("doing", "rich"), "[yellow]◐[/]")
 
     def test_ansi_labels_colorize_the_word(self):
         p = Plan(id=1, name="N")

@@ -62,7 +62,7 @@ from .screens import (
     PaletteScreen,
 )
 from .source_screen import SourceScreen
-from .store import Store
+from .store import ClaimConflict, Store
 from .templates import load_template
 from .upgrade import UpgradeError, detect, latest_version, notice_text
 from .vcs import detect_backend
@@ -405,7 +405,19 @@ if _TEXTUAL_OK:
                 last += f" · {stale} stale"
             lines.append(f"[dim]{last}[/]")
 
+        def _preview_notes(self, lines: list[str], notes: list[dict[str, Any]]) -> None:
+            """Show the latest handoff notes."""
+            if not notes:
+                return
+            lines.extend(["", "[dim]notes[/]"])
+            for note in notes[-3:]:
+                lines.append(
+                    f"  [dim]@{escape_markup(str(note.get('actor', '')))}[/] "
+                    f"{escape_markup(str(note.get('text', '')))}"
+                )
+
         def _preview_common(self, lines: list[str], full: dict[str, Any]) -> None:
+            self._preview_notes(lines, full.get("notes", []))
             self._preview_acceptance(lines, full.get("criteria", []))
             links = full.get("effective_links") or full.get("links", [])
             forge = full.get("effective_forge_links") or full.get("forge_links", [])
@@ -464,9 +476,15 @@ if _TEXTUAL_OK:
         def _preview_task(self, full: dict[str, Any], oid: int) -> list[str]:
             obj = full.get("task", {})
             lines = self._preview_title("task", oid, obj)
+            if obj.get("blocked"):
+                lines.append(f"[red]blocked[/] {escape_markup(str(obj.get('blocked_reason', '')))}")
+            claim = obj.get("claim")
+            if claim:
+                lines.append(f"[dim]claim @{escape_markup(str(claim.get('actor', '')))}[/]")
             desc = str(obj.get("description", "") or "").strip()
             if desc:
                 lines.extend(["", "[dim]details[/]", desc])
+            self._preview_notes(lines, obj.get("notes", []))
             self._preview_common(lines, full)
             return lines
 
@@ -661,7 +679,22 @@ if _TEXTUAL_OK:
             """Keep rows whose cached provenance matches the active source filter."""
             if self.source_filter == "all":
                 return base
-            out: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]] = []
+            if self.source_filter in ("claims", "blocked"):
+                claims = self.store.claims_map()
+                out: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]] = []
+                for plan, milestones in base:
+                    kept_milestones: list[tuple[Milestone, list[Task]]] = []
+                    for milestone, tasks in milestones:
+                        if self.source_filter == "claims":
+                            kept = [task for task in tasks if task.id in claims]
+                        else:
+                            kept = [task for task in tasks if task.blocked]
+                        if kept:
+                            kept_milestones.append((milestone, kept))
+                    if kept_milestones:
+                        out.append((plan, kept_milestones))
+                return out
+            out = []
             for plan, milestones in base:
                 kept_ms: list[tuple[Milestone, list[Task]]] = []
                 for milestone, tasks in milestones:
@@ -1070,7 +1103,7 @@ if _TEXTUAL_OK:
                 f"status filter: {self.status_filter.value if self.status_filter else 'all'}"
             )
 
-        SOURCE_FILTERS = ("all", "linked", "pr", "stale", "unlinked")
+        SOURCE_FILTERS = ("all", "linked", "pr", "stale", "unlinked", "claims", "blocked")
 
         def action_filter_source(self) -> None:
             """Cycle cached provenance filters."""
@@ -1129,6 +1162,34 @@ if _TEXTUAL_OK:
 
             self.push_screen(FilterPromptScreen(), cb)
 
+        def _selected_task(self) -> int | None:
+            """Selected task id, or a notification when the selection is not a task."""
+            if self.selected is None or self.selected[0] != "task":
+                self.notify("select a task first", timeout=3)
+                return None
+            return self.selected[1]
+
+        def action_release_claim(self) -> None:
+            self._release_claim(False)
+
+        def action_force_release_claim(self) -> None:
+            self._release_claim(True)
+
+        def _release_claim(self, force: bool) -> None:
+            task_id = self._selected_task()
+            if task_id is None:
+                return
+            try:
+                claim = self.store.release_claim(task_id, "tui", force=force)
+            except ClaimConflict as exc:
+                self.notify(str(exc), severity="error", timeout=5)
+                return
+            if claim is None:
+                self.notify(f"T{task_id} has no claim", timeout=3)
+                return
+            self.notify(f"released T{task_id} from {claim.actor}", timeout=3)
+            self.refresh_all("claim released")
+
         def _run_palette_command(self, command_id: str | None) -> None:
             """Run one palette command id through the shared registry."""
             if not command_id:
@@ -1159,6 +1220,8 @@ if _TEXTUAL_OK:
                 "git_status": self.action_git_status,
                 "git_refresh": self.action_git_refresh,
                 "git_capture": self.action_git_capture,
+                "release_claim": self.action_release_claim,
+                "force_release_claim": self.action_force_release_claim,
                 "open_pr": self.action_open_pr,
                 "source_trail": self.action_source_trail,
                 "command_palette": self.action_command_palette,

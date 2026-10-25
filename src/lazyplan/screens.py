@@ -345,6 +345,26 @@ if _TEXTUAL_OK:
                 heading = "[dim]what[/]" if self.dkind == "plan" else "[dim]details[/]"
                 lines.extend(["", heading, desc])
 
+        def _read_coordination(self, lines: list[str]) -> None:
+            """Claim, blocked state, and recent handoff notes."""
+            obj = self._obj()
+            if obj.get("blocked"):
+                reason = str(obj.get("blocked_reason", "") or "").strip()
+                lines.append(
+                    f"\n[red]blocked[/] {escape_markup(reason) if reason else ''}".rstrip()
+                )
+            claim = obj.get("claim")
+            if claim:
+                lines.append(f"\n[dim]claim[/] @{escape_markup(str(claim.get('actor', '')))}")
+            notes = self._full.get("notes") or obj.get("notes") or []
+            if notes:
+                lines.extend(["", f"[dim]notes {len(notes)}[/]"])
+                for note in notes[-3:]:
+                    lines.append(
+                        f"  [dim]@{escape_markup(str(note.get('actor', '')))}[/] "
+                        f"{escape_markup(str(note.get('text', '')))}"
+                    )
+
         def _read_criteria(self, lines: list[str]) -> None:
             crits = self._full.get("criteria", [])
             if not crits:
@@ -500,6 +520,7 @@ if _TEXTUAL_OK:
             lines = [f"{status_word(status, 'rich')} [bold]{escape_markup(title)}[/]"]
             self.query_one("#detail-head", Static).update(f"[dim]{self._breadcrumb()}[/]")
             self._read_text(lines, obj)
+            self._read_coordination(lines)
             self._read_criteria(lines)
             self._read_children(lines)
             self._read_forge(lines)

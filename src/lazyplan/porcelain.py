@@ -7,7 +7,14 @@ Rows are one line, no header, no glyphs, no ANSI, and no blank lines:
 `parent` is `-` or `kind:id` (for example `plan:12`). `extra` is progress
 (`done/total`) for plans and milestones and `-` for every other row.
 Criterion rows use `kind=criterion`, status `open|done`, and parent
-`kind:id`. Text fields never carry a tab or newline: separators become a
+`kind:id`. Write confirmations reuse the same six columns:
+
+- `commit`: id is the full SHA, status `linked|unlinked`, title the subject.
+- `repo`: id is the checkout path, title the remote (or `-`).
+- `pr`: id is the pull request number, title the URL.
+- `task start` and `task finish` reuse the task row with its current status.
+
+Text fields never carry a tab or newline: separators become a
 single space, so every record stays parseable with `line.split("\\t")`.
 
 Enable with `--porcelain` (before or after the verb) or

@@ -889,7 +889,8 @@ def _cmd_pr_link(store: Store, args: argparse.Namespace, actor: str) -> int:
         payload=f'{{"repository": "{ref.owner}/{ref.repo}"}}',
         actor=actor,
     )
-    return _emit(args, {"link": vars(link)})
+    line = porcelain.row("pr", link.number, "linked", link.url, f"{args.kind}:{args.id}", "-")
+    return _emit_record(args, line, {"link": vars(link)})
 
 
 def _cmd_pr_unlink(store: Store, args: argparse.Namespace, actor: str) -> int:
@@ -900,7 +901,8 @@ def _cmd_pr_unlink(store: Store, args: argparse.Namespace, actor: str) -> int:
     if not ok:
         print(msg_not_found("pull request", args.number), file=sys.stderr)
         return 1
-    return _emit(args, {"ok": True, "unlinked": f"PR #{args.number}"})
+    line = porcelain.row("pr", args.number, "unlinked", "-", f"{args.kind}:{args.id}", "-")
+    return _emit_record(args, line, {"ok": True, "unlinked": f"PR #{args.number}"})
 
 
 def _cmd_pr_refresh(store: Store, args: argparse.Namespace, actor: str) -> int:
@@ -951,7 +953,8 @@ def _cmd_link(store: Store, args: argparse.Namespace, actor: str) -> int:
         files=info.files,
         actor=actor,
     )
-    return _emit(args, {"link": vars(link)})
+    line = porcelain.row("commit", link.sha, "linked", link.subject, f"{args.kind}:{args.id}", "-")
+    return _emit_record(args, line, {"link": vars(link)})
 
 
 def _cmd_unlink(store: Store, args: argparse.Namespace, actor: str) -> int:
@@ -966,7 +969,8 @@ def _cmd_unlink(store: Store, args: argparse.Namespace, actor: str) -> int:
     if not ok:
         print(msg_error(ValueError(f"no such link {args.sha!r}")), file=sys.stderr)
         return 1
-    return _emit(args, {"ok": True, "unlinked": str(args.sha)})
+    line = porcelain.row("commit", args.sha, "unlinked", "-", f"{args.kind}:{args.id}", "-")
+    return _emit_record(args, line, {"ok": True, "unlinked": str(args.sha)})
 
 
 def _cmd_commits(store: Store, args: argparse.Namespace, actor: str) -> int:
@@ -998,6 +1002,10 @@ def _cmd_task_start(store: Store, args: argparse.Namespace, actor: str) -> int:
     )
     if args.json:
         return _emit(args, result)
+    if porcelain.enabled(args):
+        task = store.get_task(args.id)
+        if task is not None:
+            return _emit_record(args, _porcelain_row(store, task), result)
     print(f"started T{result['task']} on {result['branch']} (base {result['base_sha'][:12]})")
     return 0
 
@@ -1014,6 +1022,10 @@ def _cmd_task_finish(store: Store, args: argparse.Namespace, actor: str) -> int:
     )
     if args.json:
         return _emit(args, result)
+    if porcelain.enabled(args):
+        task = store.get_task(args.id)
+        if task is not None:
+            return _emit_record(args, _porcelain_row(store, task), result)
     print(
         f"linked {result['linked']} commit(s) on {result['branch']} from {result['base_sha'][:12]}"
     )
@@ -1069,7 +1081,15 @@ def _cmd_link_repo(store: Store, args: argparse.Namespace, actor: str) -> int:
     except (ValueError, KeyError) as exc:
         print(msg_error(exc), file=sys.stderr)
         return 2
-    return _emit(args, {"repo": row})
+    line = porcelain.row(
+        "repo",
+        row["repo_path"],
+        "linked",
+        row.get("repo_remote") or "-",
+        f"{args.kind}:{args.id}",
+        "-",
+    )
+    return _emit_record(args, line, {"repo": row})
 
 
 def _cmd_unlink_repo(store: Store, args: argparse.Namespace, actor: str) -> int:
@@ -1080,7 +1100,8 @@ def _cmd_unlink_repo(store: Store, args: argparse.Namespace, actor: str) -> int:
     if not ok:
         print(msg_error(ValueError(f"no such repo link {args.repo!r}")), file=sys.stderr)
         return 1
-    return _emit(args, {"ok": True, "unlinked": str(args.repo)})
+    line = porcelain.row("repo", str(args.repo), "unlinked", "-", f"{args.kind}:{args.id}", "-")
+    return _emit_record(args, line, {"ok": True, "unlinked": str(args.repo)})
 
 
 def _cmd_repos(store: Store, args: argparse.Namespace, actor: str) -> int:

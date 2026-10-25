@@ -6,6 +6,7 @@ import contextlib
 import io
 import json
 import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -17,6 +18,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 from lazyplan import porcelain  # noqa: E402
 from lazyplan.cli import main as lpui_main  # noqa: E402
 from lazyplan.cli_parser import build_parser  # noqa: E402
+from lazyplan.store import Store  # noqa: E402
 
 
 class TestRows(unittest.TestCase):
@@ -194,6 +196,124 @@ class TestWriteRows(unittest.TestCase):
         )
         self.assertEqual(code, 0)
         self.assertEqual(json.loads(out)["plan"]["id"], 1)
+
+
+def _git_available() -> bool:
+    try:
+        out = subprocess.run(["git", "--version"], capture_output=True, timeout=5)
+    except (FileNotFoundError, OSError):
+        return False
+    return out.returncode == 0
+
+
+@unittest.skipUnless(_git_available(), "git CLI required")
+class TestLinkRows(unittest.TestCase):
+    """Commit, repo, PR, and task-start confirmations stay one parseable row."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.repo = os.path.join(self.tmp.name, "repo")
+        os.makedirs(self.repo)
+        subprocess.run(["git", "init", "-q", "-b", "main", self.repo], check=True, timeout=10)
+        subprocess.run(
+            ["git", "-C", self.repo, "config", "user.email", "t@t.t"], check=True, timeout=10
+        )
+        subprocess.run(
+            ["git", "-C", self.repo, "config", "user.name", "Tester"], check=True, timeout=10
+        )
+        with open(os.path.join(self.repo, "f.txt"), "w") as fh:
+            fh.write("hi\n")
+        subprocess.run(["git", "-C", self.repo, "add", "."], check=True, timeout=10)
+        subprocess.run(
+            ["git", "-C", self.repo, "commit", "-qm", "cli commit"], check=True, timeout=10
+        )
+        self.db = os.path.join(self.tmp.name, "g.db")
+        store = Store(self.db)
+        plan = store.add_plan("P", actor="fixture")
+        milestone = store.add_milestone(plan.id, "M", actor="fixture")
+        store.add_task(milestone.id, "T", actor="fixture")
+        self.old_cwd = os.getcwd()
+        self.old_home = os.environ.get("HOME")
+        self.old_setup = os.environ.get("LAZYPLAN_NO_SETUP")
+        os.environ["HOME"] = self.tmp.name
+        os.environ["LAZYPLAN_NO_SETUP"] = "1"
+        os.chdir(self.repo)
+
+    def tearDown(self):
+        os.chdir(self.old_cwd)
+        for key, value in (("HOME", self.old_home), ("LAZYPLAN_NO_SETUP", self.old_setup)):
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+        self.tmp.cleanup()
+
+    def _row(self, *argv: str) -> list[str]:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            code = lpui_main(["--db", self.db, "--actor", "fixture", "--porcelain", *argv])
+        self.assertEqual(code, 0, buf.getvalue())
+        self.assertNotIn("{", buf.getvalue())
+        self.assertEqual(buf.getvalue().count("\n"), 1, buf.getvalue())
+        return buf.getvalue().rstrip("\n").split("\t")
+
+    def test_commit_link_and_unlink(self):
+        sha = subprocess.run(
+            ["git", "-C", self.repo, "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        ).stdout.strip()
+        self.assertEqual(
+            self._row("link", "--kind", "task", "--id", "1"),
+            ["commit", sha, "linked", "cli commit", "task:1", "-"],
+        )
+        self.assertEqual(
+            self._row("unlink", "--kind", "task", "--id", "1", "--sha", sha),
+            ["commit", sha, "unlinked", "-", "task:1", "-"],
+        )
+
+    def test_repo_link_and_unlink(self):
+        self.assertEqual(
+            self._row(
+                "link-repo",
+                "--kind",
+                "task",
+                "--id",
+                "1",
+                "--repo",
+                self.repo,
+                "--remote",
+                "git@example.com:org/repo.git",
+            ),
+            ["repo", self.repo, "linked", "git@example.com:org/repo.git", "task:1", "-"],
+        )
+        self.assertEqual(
+            self._row("unlink-repo", "--kind", "task", "--id", "1", "--repo", self.repo),
+            ["repo", self.repo, "unlinked", "-", "task:1", "-"],
+        )
+
+    def test_pr_link_and_unlink(self):
+        url = "https://github.com/org/repo/pull/7"
+        self.assertEqual(
+            self._row("pr", "link", "--kind", "task", "--id", "1", "--url", url),
+            ["pr", "7", "linked", url, "task:1", "-"],
+        )
+        self.assertEqual(
+            self._row("pr", "unlink", "--kind", "task", "--id", "1", "--number", "7"),
+            ["pr", "7", "unlinked", "-", "task:1", "-"],
+        )
+
+    def test_task_start_and_finish_rows(self):
+        self.assertEqual(
+            self._row("task", "start", "--id", "1"),
+            ["task", "1", "doing", "T", "milestone:1", "-"],
+        )
+        self.assertEqual(
+            self._row("task", "finish", "--id", "1"),
+            ["task", "1", "done", "T", "milestone:1", "-"],
+        )
 
 
 if __name__ == "__main__":

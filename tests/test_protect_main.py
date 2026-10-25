@@ -80,6 +80,7 @@ class PayloadCase(unittest.TestCase):
         rule = self._rule("pull_request")
         params = rule["parameters"]
         self.assertEqual(params["required_approving_review_count"], 0)
+        self.assertFalse(params["require_extra_approval_for_unattributed_changes"])
         self.assertEqual(params["allowed_merge_methods"], ["merge", "squash", "rebase"])
 
     def test_requires_the_ci_gate(self):

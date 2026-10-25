@@ -118,6 +118,7 @@ def rules(doc):
                 (
                     kind,
                     params.get("required_approving_review_count", 0),
+                    params.get("require_extra_approval_for_unattributed_changes", True),
                     tuple(params.get("allowed_merge_methods", ["merge", "squash", "rebase"])),
                 )
             )

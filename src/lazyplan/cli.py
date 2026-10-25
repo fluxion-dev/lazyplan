@@ -13,7 +13,7 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 
-from . import audit, brief, hook_hosts, hooks, services, setup, setup_layout, setup_ui
+from . import audit, brief, hook_hosts, hook_install, hooks, services, setup, setup_layout, setup_ui
 from .cli_parser import build_parser, package_version
 from .design import (
     EMPTY_COMMITS,
@@ -74,51 +74,51 @@ def _resolve_title(args: argparse.Namespace) -> str:
     return ""
 
 
-def _cmd_setup(store: Store | None, args: argparse.Namespace, actor: str) -> int:
-    """Re-run setup, or apply remembered choices without prompts."""
-    del store, actor
-    home = Path.home()
+def _setup_hooks(home: Path, args: argparse.Namespace) -> dict:
+    """Install or remove managed hooks and remember the decision."""
+    enabled = getattr(args, "hooks", None)
+    report = hook_install.remove(home) if enabled is False else hook_install.install(home)
     state = setup.load_state(home)
-    version = package_version()
-    interactive = (
+    state.hooks = enabled is not False
+    state.hook_files = list(report.get("installed") or report.get("removed") or [])
+    setup.save_state(state, home)
+    return report
+
+
+def _setup_interactive(args: argparse.Namespace) -> bool:
+    return (
         not getattr(args, "yes", False)
         and not getattr(args, "json", False)
         and not getattr(args, "post_upgrade", False)
         and setup_ui.stdin_tty()
         and sys.stderr.isatty()
     )
-    if interactive:
-        result = setup.run_wizard(Path.cwd(), home, state, version)
-        if result is None:
-            if getattr(args, "json", False):
-                return _emit(args, {"cancelled": True})
-            return 0
-    else:
-        choice = setup.choice_from_args(args, Path.cwd(), home, state)
-        root = find_repo_root(Path.cwd())
-        result = setup.apply_choice(choice, root, home, version)
-    if result.get("placement") == setup.HOME:
-        findings = setup.detect_findings(Path.cwd(), home, setup.load_state(home))
-        if findings:
-            review_prompt = (
-                not getattr(args, "json", False)
-                and setup_ui.stdin_tty()
-                and sys.stderr.isatty()
-                and (interactive or bool(getattr(args, "post_upgrade", False)))
-            )
-            setup.review_findings(
-                findings,
-                setup.load_state(home),
-                home,
-                find_repo_root(Path.cwd()),
-                read=input,
-                write=sys.stderr,
-                color=setup_ui.color_enabled(sys.stderr, bool(getattr(args, "json", False))),
-                allow_prompt=review_prompt,
-                json_mode=bool(getattr(args, "json", False)),
-            )
-    if getattr(args, "json", False):
-        return _emit(args, result)
+
+
+def _setup_review(args: argparse.Namespace, home: Path, interactive: bool) -> None:
+    findings = setup.detect_findings(Path.cwd(), home, setup.load_state(home))
+    if not findings:
+        return
+    ask = (
+        not getattr(args, "json", False)
+        and setup_ui.stdin_tty()
+        and sys.stderr.isatty()
+        and (interactive or bool(getattr(args, "post_upgrade", False)))
+    )
+    setup.review_findings(
+        findings,
+        setup.load_state(home),
+        home,
+        find_repo_root(Path.cwd()),
+        read=input,
+        write=sys.stderr,
+        color=setup_ui.color_enabled(sys.stderr, bool(getattr(args, "json", False))),
+        allow_prompt=ask,
+        json_mode=bool(getattr(args, "json", False)),
+    )
+
+
+def _print_setup(result: dict) -> None:
     print(f"database:  {result['db']}")
     print(f"templates: {result['templates']}")
     if result["config"]:
@@ -127,7 +127,34 @@ def _cmd_setup(store: Store | None, args: argparse.Namespace, actor: str) -> int
         print(f"skill:     {skill}")
     for path in result["refreshed"]:
         print(f"refreshed: {path}")
+    hooks = result.get("hooks") or {}
+    for path in hooks.get("installed") or hooks.get("removed") or []:
+        print(f"hooks:     {path}")
+    for item in hooks.get("skipped") or []:
+        print(f"hooks:     skipped {item['path']} ({item['reason']})")
     print(f"state:     {result['state']}")
+
+
+def _cmd_setup(store: Store | None, args: argparse.Namespace, actor: str) -> int:
+    """Re-run setup, or apply remembered choices without prompts."""
+    del store, actor
+    home = Path.home()
+    state = setup.load_state(home)
+    version = package_version()
+    interactive = _setup_interactive(args)
+    if interactive:
+        result = setup.run_wizard(Path.cwd(), home, state, version)
+        if result is None:
+            return _emit(args, {"cancelled": True}) if getattr(args, "json", False) else 0
+    else:
+        choice = setup.choice_from_args(args, Path.cwd(), home, state)
+        result = setup.apply_choice(choice, find_repo_root(Path.cwd()), home, version)
+    result["hooks"] = _setup_hooks(home, args)
+    if result.get("placement") == setup.HOME:
+        _setup_review(args, home, interactive)
+    if getattr(args, "json", False):
+        return _emit(args, result)
+    _print_setup(result)
     return 0
 
 

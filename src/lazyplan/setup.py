@@ -50,6 +50,8 @@ class SetupState:
     skills_dir: str = ""
     explicit_db: bool = False
     last_version: str = ""
+    hooks: bool = False
+    hook_files: list[str] = field(default_factory=list)
     decisions: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -60,6 +62,8 @@ class SetupState:
             "skills_dir": self.skills_dir,
             "explicit_db": self.explicit_db,
             "last_version": self.last_version,
+            "hooks": self.hooks,
+            "hook_files": list(self.hook_files),
             "decisions": self.decisions,
         }
 
@@ -78,6 +82,10 @@ class SetupState:
             skills_dir=str(raw.get("skills_dir", "") or ""),
             explicit_db=bool(raw.get("explicit_db", False)),
             last_version=str(raw.get("last_version", "") or ""),
+            hooks=bool(raw.get("hooks", False)),
+            hook_files=[str(p) for p in raw.get("hook_files", [])]
+            if isinstance(raw.get("hook_files"), list)
+            else [],
             decisions=decisions if isinstance(decisions, dict) else {},
         )
 

@@ -193,6 +193,19 @@ def build_parser() -> argparse.ArgumentParser:
         help="skip installing agent helper files",
     )
     setup.add_argument(
+        "--hooks",
+        dest="hooks",
+        action="store_true",
+        default=None,
+        help="install lifecycle hooks for detected agents (the default)",
+    )
+    setup.add_argument(
+        "--no-hooks",
+        dest="hooks",
+        action="store_false",
+        help="remove installed lifecycle hooks and leave agent configs alone",
+    )
+    setup.add_argument(
         "--yes",
         action="store_true",
         help="apply the current choices without asking",

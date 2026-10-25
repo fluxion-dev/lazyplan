@@ -126,9 +126,9 @@ class ScriptCase(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
-    def run_script(self, *args, **extra_env):
+    def run_script(self, *args, repo="owner/repo", **extra_env):
         return subprocess.run(
-            ["bash", str(SCRIPT), "--repo", "owner/repo", *args],
+            ["bash", str(SCRIPT), "--repo", repo, *args],
             capture_output=True,
             text=True,
             env={**self.env, **extra_env},
@@ -186,6 +186,18 @@ class ScriptCase(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("needs admin", result.stderr)
         self.assertEqual(self.writes(), [])
+
+    def test_rejects_a_repo_without_an_owner(self):
+        result = self.run_script(repo="not-a-repo")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("OWNER/NAME", result.stderr)
+        self.assertEqual(self.writes(), [])
+
+    def test_help_names_every_mode(self):
+        result = self.run_script("--help")
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("--dry-run", result.stdout)
+        self.assertIn("--status", result.stdout)
 
 
 if __name__ == "__main__":

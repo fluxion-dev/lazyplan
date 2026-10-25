@@ -11,12 +11,23 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PAYLOAD="$ROOT/.github/rulesets/main.json"
+if [ ! -f "$PAYLOAD" ]; then
+  echo "error: missing ruleset payload at $PAYLOAD" >&2
+  exit 1
+fi
 NAME="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["name"])' "$PAYLOAD")"
 REPO=""
 MODE="apply"
 
 usage() {
-  sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'
+  cat <<'EOF'
+Usage:
+  tools/protect-main.sh [--repo OWNER/NAME]
+  tools/protect-main.sh --dry-run [--repo OWNER/NAME]
+  tools/protect-main.sh --status [--repo OWNER/NAME]
+
+Applies the payload in .github/rulesets/main.json when no mode is given.
+EOF
 }
 
 while [ "$#" -gt 0 ]; do
@@ -55,6 +66,14 @@ if [ -z "$REPO" ]; then
     exit 1
   fi
 fi
+
+case "$REPO" in
+  */*) ;;
+  *)
+    echo "error: --repo must be OWNER/NAME, got '$REPO'" >&2
+    exit 2
+    ;;
+esac
 
 ADMIN="$(gh api "repos/$REPO" --jq .permissions.admin 2>/dev/null || true)"
 if [ "$ADMIN" != "true" ]; then

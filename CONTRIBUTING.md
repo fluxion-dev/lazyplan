@@ -53,6 +53,11 @@ Only repository admins bypass the ruleset, for emergencies and for the first
 apply. Release automation does not: the `bump` workflow opens a release pull
 request, and `tag-release` creates the version tag after that PR merges.
 
+Write deploy keys bypass rulesets the same way an admin does. A temporary
+write deploy key fast-forwarded `main` during the first apply. Do not add
+write deploy keys to this repo; use a pull request, or a read-only deploy key
+for automation that only fetches.
+
 Manage the live ruleset with the committed payload:
 
 ```bash

@@ -87,11 +87,11 @@ class PayloadCase(unittest.TestCase):
         checks = rule["parameters"]["required_status_checks"]
         self.assertEqual([check["context"] for check in checks], ["gates"])
 
-    def test_bypass_is_admin_and_release_automation_only(self):
+    def test_bypass_is_admin_only(self):
         actors = {
             (actor["actor_type"], actor["actor_id"]) for actor in self.payload["bypass_actors"]
         }
-        self.assertEqual(actors, {("RepositoryRole", 5), ("Integration", 15368)})
+        self.assertEqual(actors, {("RepositoryRole", 5)})
         for actor in self.payload["bypass_actors"]:
             self.assertEqual(actor["bypass_mode"], "always")
 

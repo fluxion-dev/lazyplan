@@ -49,12 +49,9 @@ Wait for the `gates` check from `.github/workflows/ci.yml`, then merge with
 merge, squash, or rebase. A pull request does not need an approving review,
 but it cannot merge without `gates`.
 
-Two bypass actors exist:
-
-- **Repository admins** for emergencies and for the first apply.
-- **GitHub Actions** (integration id `15368`) so the `bump` workflow can push
-  its version commit and tag. Forks or enterprise hosts that use a different
-  integration id must change the payload before applying it.
+Only repository admins bypass the ruleset, for emergencies and for the first
+apply. Release automation does not: the `bump` workflow opens a release pull
+request, and `tag-release` creates the version tag after that PR merges.
 
 Manage the live ruleset with the committed payload:
 

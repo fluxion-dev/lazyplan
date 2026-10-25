@@ -159,7 +159,7 @@ class TestFindings(unittest.TestCase):
     def test_outdated_skill_copy_is_a_finding(self):
         skill = self.home / ".agents/skills/lazyplan/SKILL.md"
         skill.parent.mkdir(parents=True)
-        skill.write_text("---\nname: lazyplan\n---\nold init instructions\n")
+        skill.write_text("---\nname: lazyplan\n---\nold instructions\n")
         findings = [
             f for f in setup.detect_findings(self.repo, self.home) if f.kind == "stale-skill"
         ]

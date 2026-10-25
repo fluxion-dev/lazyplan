@@ -220,3 +220,31 @@ or the next plan row so the next release has the context.
   badge.
 - The next release must prove the repaired `publish` job dispatches the tag and
   Pages without the manual fallback.
+
+### v0.25.0 (2026-10-25)
+
+- Minor bump from 0.24.0 with the **bump** workflow (`part=minor`):
+  [run](https://github.com/fluxion-dev/lazyplan/actions/runs/40223852371).
+  Porcelain mode is a user-visible agent feature, so this is a minor release.
+- The release PR [#14](https://github.com/fluxion-dev/lazyplan/pull/14)
+  changed only the version mirrors. GitHub left its `gates` run in
+  `action_required`; the run was approved through the Actions API and passed:
+  [run](https://github.com/fluxion-dev/lazyplan/actions/runs/40223863850).
+  Auto-merge produced merge commit `e6dd3b9` and the `publish` job dispatched
+  both `tag-release` and Pages without a manual fallback.
+- `tag-release` created annotated tag `v0.25.0` on `e6dd3b9` and dispatched
+  `release.yml` with no manual action:
+  [tag-release](https://github.com/fluxion-dev/lazyplan/actions/runs/40225447378),
+  [pages](https://github.com/fluxion-dev/lazyplan/actions/runs/40225448792).
+  Both `release` and `publish-pypi` jobs succeeded:
+  [run](https://github.com/fluxion-dev/lazyplan/actions/runs/40225459158).
+- Local site verification used `bun install && bun run build` because this
+  machine has no `npm`; the Pages workflow used its normal npm build and passed.
+- PyPI JSON served 0.25.0 immediately, while the simple index missed two
+  isolated installs before `pip install --no-cache-dir lazyplan-tui==0.25.0`
+  printed `0.25.0` roughly two minutes after publish. That lag is expected.
+- Verified: seven release assets including `install.sh`, the isolated install,
+  the installed CLI exposing `--porcelain`, the deployed site showing 0.25.0
+  and the porcelain copy, the source-trail WebP, canonical/FAQ/JSON-LD,
+  sitemap (lastmod 2026-10-25), robots, and the social preview asset.
+- No deviations from the release flow and no fix-forward commits.

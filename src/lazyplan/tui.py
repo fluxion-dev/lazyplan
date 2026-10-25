@@ -234,6 +234,12 @@ if _TEXTUAL_OK:
             self.run_worker(self._check_update, thread=True, exclusive=True)
             self.query_one("#tree", Tree).focus()
 
+        def on_unmount(self) -> None:
+            """Stop the spinner timer with the app; it owns a repaint loop."""
+            if self._spinner_timer is not None:
+                self._spinner_timer.stop()
+                self._spinner_timer = None
+
         async def _on_resize(self, event: events.Resize) -> None:
             """Textual stops Resize at the App; re-apply the shell after it."""
             await super()._on_resize(event)

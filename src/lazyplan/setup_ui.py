@@ -45,7 +45,8 @@ def _icon(name: str, color: bool) -> str:
 
 
 def _line(write: Progress, text: str = "") -> None:
-    write(text)
+    """Write one full line; callers pass a raw stream write function."""
+    write(text + "\n")
 
 
 def _ask(write: TextIO, read: Callable[[], str], prompt: str) -> str:

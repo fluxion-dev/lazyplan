@@ -52,6 +52,8 @@ class SetupState:
     last_version: str = ""
     hooks: bool = False
     hook_files: list[str] = field(default_factory=list)
+    agents_pointer: bool = False
+    agents_file: str = ""
     decisions: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -64,6 +66,8 @@ class SetupState:
             "last_version": self.last_version,
             "hooks": self.hooks,
             "hook_files": list(self.hook_files),
+            "agents_pointer": self.agents_pointer,
+            "agents_file": self.agents_file,
             "decisions": self.decisions,
         }
 
@@ -86,6 +90,8 @@ class SetupState:
             hook_files=[str(p) for p in raw.get("hook_files", [])]
             if isinstance(raw.get("hook_files"), list)
             else [],
+            agents_pointer=bool(raw.get("agents_pointer", False)),
+            agents_file=str(raw.get("agents_file", "") or ""),
             decisions=decisions if isinstance(decisions, dict) else {},
         )
 

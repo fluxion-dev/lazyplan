@@ -13,7 +13,18 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 
-from . import audit, brief, hook_hosts, hook_install, hooks, services, setup, setup_layout, setup_ui
+from . import (
+    audit,
+    brief,
+    hook_hosts,
+    hook_install,
+    hooks,
+    services,
+    setup,
+    setup_layout,
+    setup_ui,
+    skills,
+)
 from .cli_parser import build_parser, package_version
 from .design import (
     EMPTY_COMMITS,
@@ -118,6 +129,35 @@ def _setup_review(args: argparse.Namespace, home: Path, interactive: bool) -> No
     )
 
 
+def _setup_pointer(home: Path, args: argparse.Namespace, placement: str) -> dict:
+    """Add or remove the opt-in AGENTS.md section for home placement."""
+    state = setup.load_state(home)
+    enabled = getattr(args, "agents_pointer", None)
+    want = enabled if enabled is not None else state.agents_pointer
+    root = find_repo_root(Path.cwd())
+    if placement != setup.HOME or root is None or (not want and enabled is None):
+        state.agents_pointer = False
+        state.agents_file = ""
+        setup.save_state(state, home)
+        return {"enabled": False, "path": None, "status": "skipped"}
+    path = root / "AGENTS.md"
+    if not want:
+        changed, status = skills.remove_agents_md(root)
+        state.agents_pointer = False
+        state.agents_file = ""
+        setup.save_state(state, home)
+        return {"enabled": False, "path": str(path) if changed else None, "status": status}
+    if path.is_file():
+        backup = setup_layout._new_backup_dir(home)
+        setup_layout._backup_file(backup, path)
+    db = Path(resolve_db_path(args.db)).expanduser()
+    changed, status = skills.ensure_agents_md(root, skills.render_home_agents_snippet(db))
+    state.agents_pointer = True
+    state.agents_file = str(path)
+    setup.save_state(state, home)
+    return {"enabled": True, "path": str(path) if changed else None, "status": status}
+
+
 def _print_setup(result: dict) -> None:
     print(f"database:  {result['db']}")
     print(f"templates: {result['templates']}")
@@ -132,6 +172,9 @@ def _print_setup(result: dict) -> None:
         print(f"hooks:     {path}")
     for item in hooks.get("skipped") or []:
         print(f"hooks:     skipped {item['path']} ({item['reason']})")
+    pointer = result.get("agents_pointer") or {}
+    if pointer.get("path"):
+        print(f"pointer:   {pointer['path']} ({pointer['status']})")
     print(f"state:     {result['state']}")
 
 
@@ -150,6 +193,7 @@ def _cmd_setup(store: Store | None, args: argparse.Namespace, actor: str) -> int
         choice = setup.choice_from_args(args, Path.cwd(), home, state)
         result = setup.apply_choice(choice, find_repo_root(Path.cwd()), home, version)
     result["hooks"] = _setup_hooks(home, args)
+    result["agents_pointer"] = _setup_pointer(home, args, str(result.get("placement", "")))
     if result.get("placement") == setup.HOME:
         _setup_review(args, home, interactive)
     if getattr(args, "json", False):

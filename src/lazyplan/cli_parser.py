@@ -206,6 +206,19 @@ def build_parser() -> argparse.ArgumentParser:
         help="remove installed lifecycle hooks and leave agent configs alone",
     )
     setup.add_argument(
+        "--agents-pointer",
+        dest="agents_pointer",
+        action="store_true",
+        default=None,
+        help="add a marked lazyplan section to this repo's AGENTS.md",
+    )
+    setup.add_argument(
+        "--no-agents-pointer",
+        dest="agents_pointer",
+        action="store_false",
+        help="remove the marked lazyplan section from AGENTS.md",
+    )
+    setup.add_argument(
         "--yes",
         action="store_true",
         help="apply the current choices without asking",

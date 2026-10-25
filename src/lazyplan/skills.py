@@ -583,9 +583,21 @@ def render_skill() -> str:
     return SKILL_FRONTMATTER + SKILL_BODY
 
 
-def render_agents_snippet() -> str:
-    """AGENTS.md section, wrapped in idempotent markers."""
-    return f"{AGENTS_MARK_BEGIN}\n{AGENTS_SNIPPET}{AGENTS_MARK_END}\n"
+def render_home_agents_snippet(db: Path) -> str:
+    """AGENTS.md section for home placement; never claims a repo database."""
+    body = f"""## lazyplan (`lpui`)
+
+Plan of record: `{db}` (shared home). Human watches `lpui ui`; agents work
+through the CLI with `--actor <name>`.
+
+- Start a session with `lpui brief`; it names the doing task and the next todo.
+- Move the task doing before code; after each commit, link it with
+  `lpui link --kind task --id T` (or `lpui task finish`), then move it on.
+- Run `lpui audit --since 7.days` before closing a plan, and tick criteria only
+  with evidence.
+- Lifecycle hooks are read-only; they remind, never move work.
+"""
+    return body
 
 
 def detect_agents(home: Path | None = None) -> list[AgentHost]:
@@ -748,13 +760,14 @@ def write_skill_file(dest: Path) -> tuple[bool, str]:
     return True, "wrote"
 
 
-def ensure_agents_md(repo_root: Path) -> tuple[bool, str]:
+def ensure_agents_md(repo_root: Path, body: str | None = None) -> tuple[bool, str]:
     """Append the lazyplan section to repo AGENTS.md if missing. Idempotent."""
     dest = repo_root / "AGENTS.md"
-    snippet = render_agents_snippet()
+    snippet = f"{AGENTS_MARK_BEGIN}\n{body or AGENTS_SNIPPET}{AGENTS_MARK_END}\n"
+    wanted = (body or AGENTS_SNIPPET).strip()
     if dest.is_file():
         text = dest.read_text()
-        if AGENTS_MARK_BEGIN in text and AGENTS_SNIPPET.strip() in text:
+        if AGENTS_MARK_BEGIN in text and wanted in text:
             return False, "up-to-date"
         if AGENTS_MARK_BEGIN in text:
             # stale snippet: replace the marked block
@@ -766,6 +779,25 @@ def ensure_agents_md(repo_root: Path) -> tuple[bool, str]:
         return True, "appended"
     dest.write_text("# Agent instructions\n\n" + snippet)
     return True, "created"
+
+
+def remove_agents_md(repo_root: Path) -> tuple[bool, str]:
+    """Strip only the marked lazyplan block; keep the rest of AGENTS.md."""
+    dest = repo_root / "AGENTS.md"
+    try:
+        text = dest.read_text()
+    except OSError:
+        return False, "absent"
+    if AGENTS_MARK_BEGIN not in text:
+        return False, "absent"
+    before, _, rest = text.partition(AGENTS_MARK_BEGIN)
+    _, _, after = rest.partition(AGENTS_MARK_END)
+    cleaned = before.rstrip() + "\n\n" + after.lstrip()
+    if cleaned.strip() in ("", "# Agent instructions"):
+        dest.unlink()
+    else:
+        dest.write_text(cleaned.rstrip() + "\n")
+    return True, "removed"
 
 
 def _write_skill(seen: set[Path], installed: list[str], dest: Path) -> None:

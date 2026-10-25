@@ -60,13 +60,16 @@ jobs:
     needs: bump
     runs-on: ubuntu-latest
     steps:
+      # gh reads the repository from the checkout; without this, `gh pr view`
+      # fails with "not a git repository" before it ever waits.
+      - uses: actions/checkout@v4
       - name: Wait for the release pull request to merge
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NEXT: ${{ needs.bump.outputs.version }}
         run: |
           for _ in $(seq 1 60); do
-            STATE="$(gh pr view "release/v${NEXT}" --json state --jq .state)"
+            STATE="$(gh pr view "release/v${NEXT}" --json state --jq .state 2>/dev/null || true)"
             if [[ "$STATE" == "MERGED" ]]; then
               echo "release/v${NEXT} merged"
               exit 0

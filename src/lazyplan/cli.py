@@ -37,7 +37,7 @@ from .design import (
     msg_not_found,
 )
 from .forge import parse_pull_url, resolve_auth
-from .models import Milestone, Plan, Status, Task
+from .models import Criterion, Milestone, Plan, Status, Task
 from .render import (
     render_commits,
     render_forge_links,
@@ -67,6 +67,60 @@ from .vcs import detect_backend, origin_url
 def _emit(args: argparse.Namespace, payload: object) -> int:
     print(json.dumps(payload, indent=2, default=str))
     return 0
+
+
+def _emit_record(args: argparse.Namespace, line: str, payload: object) -> int:
+    """Porcelain prints one record; every other mode keeps the existing emitter."""
+    if porcelain.enabled(args):
+        print(line)
+        return 0
+    return _emit(args, payload)
+
+
+def _progress(store: Store, plan_id: int | None = None, milestone_id: int | None = None) -> str:
+    """Task progress for a plan or milestone as `done/total`."""
+    if milestone_id is not None:
+        tasks = store.list_tasks(milestone_id)
+    else:
+        tasks = [
+            task
+            for milestone in store.list_milestones(plan_id or 0)
+            for task in store.list_tasks(milestone.id)
+        ]
+    done = sum(1 for task in tasks if task.status == Status.DONE)
+    return f"{done}/{len(tasks)}"
+
+
+def _porcelain_row(store: Store, obj: Plan | Milestone | Task) -> str:
+    """One row for a plan, milestone, or task using its inherited parent id."""
+    if isinstance(obj, Plan):
+        return porcelain.row(
+            "plan", obj.id, obj.status.value, obj.name, "-", _progress(store, plan_id=obj.id)
+        )
+    if isinstance(obj, Milestone):
+        return porcelain.row(
+            "milestone",
+            obj.id,
+            obj.status.value,
+            obj.title,
+            f"plan:{obj.plan_id}",
+            _progress(store, milestone_id=obj.id),
+        )
+    return porcelain.row(
+        "task", obj.id, obj.status.value, obj.title, f"milestone:{obj.milestone_id}", "-"
+    )
+
+
+def _criterion_row(criteria: Criterion) -> str:
+    """One criterion row with its parent kind and id."""
+    return porcelain.row(
+        "criterion",
+        criteria.id,
+        "done" if criteria.done else "open",
+        criteria.text,
+        f"{criteria.parent_kind}:{criteria.parent_id}",
+        "-",
+    )
 
 
 def _tty_dot(args: argparse.Namespace) -> str:
@@ -552,7 +606,7 @@ def _cmd_add_plan(store: Store, args: argparse.Namespace, actor: str) -> int:
         goal=goal,
         actor=actor,
     )
-    return _emit(args, {"plan": _ser(vars(p))})
+    return _emit_record(args, _porcelain_row(store, p), {"plan": _ser(vars(p))})
 
 
 def _cmd_add_milestone(store: Store, args: argparse.Namespace, actor: str) -> int:
@@ -563,7 +617,7 @@ def _cmd_add_milestone(store: Store, args: argparse.Namespace, actor: str) -> in
         args.desc,
         actor=actor,
     )
-    return _emit(args, {"milestone": _ser(vars(s))})
+    return _emit_record(args, _porcelain_row(store, s), {"milestone": _ser(vars(s))})
 
 
 def _cmd_add_task(store: Store, args: argparse.Namespace, actor: str) -> int:
@@ -574,7 +628,7 @@ def _cmd_add_task(store: Store, args: argparse.Namespace, actor: str) -> int:
         description=args.desc,
         actor=actor,
     )
-    return _emit(args, {"task": _ser(vars(t))})
+    return _emit_record(args, _porcelain_row(store, t), {"task": _ser(vars(t))})
 
 
 def _cmd_update(store: Store, args: argparse.Namespace, actor: str) -> int:
@@ -607,7 +661,7 @@ def _cmd_update(store: Store, args: argparse.Namespace, actor: str) -> int:
     if updated is None:
         print(msg_not_found(args.kind, args.id), file=sys.stderr)
         return 1
-    return _emit(args, {"updated": _ser(vars(updated))})
+    return _emit_record(args, _porcelain_row(store, updated), {"updated": _ser(vars(updated))})
 
 
 def _cmd_show(store: Store, args: argparse.Namespace, actor: str) -> int:
@@ -641,7 +695,12 @@ def _cmd_status(store: Store, args: argparse.Namespace, actor: str) -> int:
                 f"Commit, then run `lpui link --kind {args.kind} --id {args.id}`.",
                 file=sys.stderr,
             )
-    return _emit(args, {"ok": True, "kind": args.kind, "id": args.id, "to": args.to})
+    payload = {"ok": True, "kind": args.kind, "id": args.id, "to": args.to}
+    if porcelain.enabled(args):
+        moved = store.get_parent(args.kind, args.id)
+        if moved is not None:
+            return _emit_record(args, _porcelain_row(store, moved), payload)
+    return _emit(args, payload)
 
 
 def _cmd_reconcile(store: Store, args: argparse.Namespace, actor: str) -> int:
@@ -649,16 +708,28 @@ def _cmd_reconcile(store: Store, args: argparse.Namespace, actor: str) -> int:
 
 
 def _cmd_delete(store: Store, args: argparse.Namespace, actor: str) -> int:
+    before = store.get_parent(args.kind, args.id)
+    title = "-"
+    parent = "-"
+    if isinstance(before, Plan):
+        title = before.name
+    elif isinstance(before, Milestone):
+        title = before.title
+        parent = f"plan:{before.plan_id}"
+    elif isinstance(before, Task):
+        title = before.title
+        parent = f"milestone:{before.milestone_id}"
     ok = store.delete(args.kind, args.id, actor=actor)
     if not ok:
         print(msg_not_found(args.kind, args.id), file=sys.stderr)
         return 1
-    return _emit(args, {"ok": True, "deleted": f"{args.kind} #{args.id}"})
+    line = porcelain.row(args.kind, args.id, "deleted", title, parent, "-")
+    return _emit_record(args, line, {"ok": True, "deleted": f"{args.kind} #{args.id}"})
 
 
 def _cmd_add_criteria(store: Store, args: argparse.Namespace, actor: str) -> int:
     c = store.add_criteria(args.kind, args.id, args.text, actor=actor)
-    return _emit(args, {"criteria": vars(c)})
+    return _emit_record(args, _criterion_row(c), {"criteria": vars(c)})
 
 
 def _cmd_criteria(store: Store, args: argparse.Namespace, actor: str) -> int:
@@ -666,7 +737,12 @@ def _cmd_criteria(store: Store, args: argparse.Namespace, actor: str) -> int:
     if found is None:
         print(msg_not_found(args.kind, args.id), file=sys.stderr)
         return 1
-    return _emit(args, [vars(c) for c in store.list_criteria(args.kind, args.id)])
+    items = store.list_criteria(args.kind, args.id)
+    if porcelain.enabled(args):
+        for item in items:
+            print(_criterion_row(item))
+        return 0
+    return _emit(args, [vars(c) for c in items])
 
 
 def _check_uncheck(store: Store, args: argparse.Namespace, actor: str, done: bool) -> int:
@@ -674,7 +750,7 @@ def _check_uncheck(store: Store, args: argparse.Namespace, actor: str, done: boo
     if crit is None:
         print(msg_not_found("criteria", args.id), file=sys.stderr)
         return 1
-    return _emit(args, {"criteria": vars(crit)})
+    return _emit_record(args, _criterion_row(crit), {"criteria": vars(crit)})
 
 
 def _cmd_check(store: Store, args: argparse.Namespace, actor: str) -> int:
@@ -689,7 +765,8 @@ def _cmd_delete_criteria(store: Store, args: argparse.Namespace, actor: str) -> 
     if not store.delete_criteria(args.id, actor=actor):
         print(msg_not_found("criteria", args.id), file=sys.stderr)
         return 1
-    return _emit(args, {"ok": True, "deleted": f"criteria #{args.id}"})
+    line = porcelain.row("criterion", args.id, "deleted", "-", "-", "-")
+    return _emit_record(args, line, {"ok": True, "deleted": f"criteria #{args.id}"})
 
 
 def _cmd_git_scan(store: Store, args: argparse.Namespace, actor: str) -> int:

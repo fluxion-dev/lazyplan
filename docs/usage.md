@@ -195,7 +195,8 @@ lpui feed                         # recent activity
 ```
 
 Flags work before or after the command: `lpui list --json` is the same as
-`lpui --json list`.
+`lpui --json list`. `--porcelain` switches journal commands to stable
+tab-separated rows; `--json` wins when both are present.
 
 ## The screen
 

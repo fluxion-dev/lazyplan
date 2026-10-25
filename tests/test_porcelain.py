@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import contextlib
+import io
+import json
 import os
 import sys
+import tempfile
 import unittest
 from argparse import Namespace
 from unittest import mock
@@ -11,6 +15,7 @@ from unittest import mock
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from lazyplan import porcelain  # noqa: E402
+from lazyplan.cli import main as lpui_main  # noqa: E402
 from lazyplan.cli_parser import build_parser  # noqa: E402
 
 
@@ -75,6 +80,120 @@ class TestParser(unittest.TestCase):
         text = build_parser().format_help()
         self.assertIn("--porcelain", text)
         self.assertIn("tab-separated", text)
+
+
+class TestWriteRows(unittest.TestCase):
+    """One record per write, in the documented column order."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.db = os.path.join(self.tmp.name, "g.db")
+        self.old_home = os.environ.get("HOME")
+        self.old_setup = os.environ.get("LAZYPLAN_NO_SETUP")
+        os.environ["HOME"] = self.tmp.name
+        os.environ["LAZYPLAN_NO_SETUP"] = "1"
+
+    def tearDown(self):
+        for key, value in (("HOME", self.old_home), ("LAZYPLAN_NO_SETUP", self.old_setup)):
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+        self.tmp.cleanup()
+
+    def _run(self, *argv: str) -> tuple[int, str]:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            code = lpui_main(["--db", self.db, "--actor", "fixture", *argv])
+        return code, buf.getvalue()
+
+    def _row(self, *argv: str) -> list[str]:
+        code, out = self._run("--porcelain", *argv)
+        self.assertEqual(code, 0, out)
+        self.assertNotIn("{", out)
+        self.assertEqual(out.count("\n"), 1, out)
+        return out.rstrip("\n").split("\t")
+
+    def test_plan_milestone_and_task_lifecycle(self):
+        self.assertEqual(
+            self._row("plan", "add", "--title", "Website", "--why", "Convert", "--what", "Site"),
+            ["plan", "1", "todo", "Website", "-", "0/0"],
+        )
+        self.assertEqual(
+            self._row("milestone", "add", "--plan", "1", "--title", "Homepage", "--desc", "Hero"),
+            ["milestone", "1", "todo", "Homepage", "plan:1", "0/0"],
+        )
+        self.assertEqual(
+            self._row(
+                "task", "add", "--milestone", "1", "--title", "Design hero", "--desc", "Hero"
+            ),
+            ["task", "1", "todo", "Design hero", "milestone:1", "-"],
+        )
+        self.assertEqual(
+            self._row("task", "move", "--id", "1", "--to", "doing"),
+            ["task", "1", "doing", "Design hero", "milestone:1", "-"],
+        )
+        self.assertEqual(
+            self._row("task", "edit", "--id", "1", "--title", "Build hero", "--desc", "Hero"),
+            ["task", "1", "doing", "Build hero", "milestone:1", "-"],
+        )
+        self.assertEqual(
+            self._row("task", "delete", "--id", "1"),
+            ["task", "1", "deleted", "Build hero", "milestone:1", "-"],
+        )
+
+    def test_criteria_rows(self):
+        self._row("plan", "add", "--title", "Website", "--why", "Convert", "--what", "Site")
+        self.assertEqual(
+            self._row("criterion", "add", "--kind", "plan", "--id", "1", "--text", "Loads fast"),
+            ["criterion", "1", "open", "Loads fast", "plan:1", "-"],
+        )
+        code, out = self._run("--porcelain", "criterion", "list", "--kind", "plan", "--id", "1")
+        self.assertEqual(code, 0)
+        self.assertEqual(out, "criterion\t1\topen\tLoads fast\tplan:1\t-\n")
+        self.assertEqual(
+            self._row("criterion", "tick", "--id", "1"),
+            ["criterion", "1", "done", "Loads fast", "plan:1", "-"],
+        )
+        self.assertEqual(
+            self._row("criterion", "untick", "--id", "1"),
+            ["criterion", "1", "open", "Loads fast", "plan:1", "-"],
+        )
+        self.assertEqual(
+            self._row("criterion", "delete", "--id", "1"),
+            ["criterion", "1", "deleted", "-", "-", "-"],
+        )
+
+    def test_flag_after_the_verb(self):
+        code, out = self._run(
+            "plan", "add", "--title", "Website", "--why", "Convert", "--what", "Site", "--porcelain"
+        )
+        self.assertEqual(code, 0)
+        self.assertEqual(out, "plan\t1\ttodo\tWebsite\t-\t0/0\n")
+
+    def test_environment_switch_enables(self):
+        with mock.patch.dict(os.environ, {porcelain.ENV: "1"}):
+            code, out = self._run(
+                "plan", "add", "--title", "Website", "--why", "Convert", "--what", "Site"
+            )
+        self.assertEqual(code, 0)
+        self.assertEqual(out, "plan\t1\ttodo\tWebsite\t-\t0/0\n")
+
+    def test_json_wins_over_porcelain(self):
+        code, out = self._run(
+            "--porcelain",
+            "--json",
+            "plan",
+            "add",
+            "--title",
+            "Website",
+            "--why",
+            "Convert",
+            "--what",
+            "Site",
+        )
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(out)["plan"]["id"], 1)
 
 
 if __name__ == "__main__":

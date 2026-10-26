@@ -67,6 +67,21 @@ class TestSearchBulk(unittest.IsolatedAsyncioTestCase):
                     await pilot.pause()
                     self.assertEqual(self._ids(), expected)
 
+    async def test_marks_survive_refresh_and_clear(self):
+        async with self.app.run_test() as pilot:
+            await pilot.pause()
+            self.app.selected = ("task", self.t1)
+            await pilot.press("space")
+            await pilot.pause()
+            self.assertEqual(self.app.marked, {("task", self.t1)})
+            self.assertIn("marked 1", str(self.app.query_one("#status").render()))
+            self.app.refresh_all()
+            await pilot.pause()
+            self.assertEqual(self.app.marked, {("task", self.t1)})
+            self.app.action_clear_marks()
+            await pilot.pause()
+            self.assertEqual(self.app.marked, set())
+
     async def test_large_search_is_bounded(self):
         store = Store(self.db)
         for index in range(1000):

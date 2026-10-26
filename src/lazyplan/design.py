@@ -300,6 +300,7 @@ def _row(
     claim_actor: str = "",
     claim_expired: bool = False,
     blocked: bool = False,
+    marked: bool = False,
 ) -> str:
     """TUI row: Rich status glyph + dim id + bold title + progress/chips."""
     letter, title_attr = _CORE_SPEC[kind]
@@ -315,6 +316,9 @@ def _row(
         done, total = progress
         suffix += f" [dim]{progress_text(done, total)}[/]"
         plain_suffix += f" {progress_text(done, total)}"
+    if marked:
+        suffix += " [bold green]✓[/]"
+        plain_suffix += " ✓"
     if blocked:
         suffix += " [red]blocked[/]"
         plain_suffix += " blocked"
@@ -396,6 +400,7 @@ def plan_row(
     width: int | None = None,
     source_counts: tuple[int, int, int] | None = None,
     repo_count: int = 0,
+    marked: bool = False,
 ) -> str:
     """TUI plan row (Rich markup): glyph + id + title + progress + chips."""
     id_part = f"P{p.id}"
@@ -404,6 +409,9 @@ def plan_row(
         done, total = progress
         suffix = f" [dim]{progress_text(done, total)}[/]" + suffix
         plain_suffix = f" {progress_text(done, total)}" + plain_suffix
+    if marked:
+        suffix += " [bold green]✓[/]"
+        plain_suffix += " ✓"
     prefix_plain = f"{status_word(p.status)} {id_part} "
     available = None if width is None else width - len(prefix_plain) - len(plain_suffix)
     title = truncate(p.name, available)
@@ -426,6 +434,7 @@ def milestone_row(
     width: int | None = None,
     source_counts: tuple[int, int, int] | None = None,
     repo_count: int = 0,
+    marked: bool = False,
 ) -> str:
     """TUI milestone row (Rich markup): glyph + id + title + progress + chips."""
     return _row(
@@ -436,6 +445,7 @@ def milestone_row(
         width,
         source_counts=source_counts,
         repo_count=repo_count,
+        marked=marked,
     )
 
 
@@ -462,6 +472,7 @@ def task_row(
     claim_actor: str = "",
     claim_expired: bool = False,
     blocked: bool = False,
+    marked: bool = False,
 ) -> str:
     """TUI task row (Rich markup): glyph + id + title + claim/PR/commit chips."""
     return _row(

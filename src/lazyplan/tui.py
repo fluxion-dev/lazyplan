@@ -78,11 +78,14 @@ if _TEXTUAL_OK:
         """Plan/milestone tree: j/k + arrows move, left/right fold, enter opens.
 
         Every mutation runs through the modal palette (c). Native Tree
-        space/shift+space are parked here so they do nothing — status and
-        folding live in the palette and the shared tree gestures.
+        Space marks the selected row for bulk actions; shift+space stays parked.
+        Status and folding continue to live in the palette and shared gestures.
         """
 
-        BINDINGS = [Binding("enter", "open_detail", "Detail")]
+        BINDINGS = [
+            Binding("enter", "open_detail", "Detail"),
+            Binding("space", "toggle_mark", "Mark"),
+        ]
 
         def on_tree_node_highlighted(self, e: Tree.NodeHighlighted) -> None:
             """Bubble selection as a custom message (guide/events pattern)."""
@@ -90,9 +93,9 @@ if _TEXTUAL_OK:
             if key is not None:
                 self.post_message(SelectionChanged(kind=key[0], oid=key[1]))
 
-        def action_toggle_node(self) -> None:
-            """Space: parked — use the modal palette for status changes."""
-            return
+        def action_toggle_mark(self) -> None:
+            """Space: mark or unmark the selected row."""
+            cast("LazyplanApp", self.app).action_toggle_mark()
 
         def action_toggle_expand_all(self) -> None:
             """Shift+space: parked — use the modal palette for folding."""
@@ -140,6 +143,7 @@ if _TEXTUAL_OK:
         ENABLE_COMMAND_PALETTE = False
         BINDINGS = [
             Binding("enter", "open_detail", "Open"),
+            Binding("space", "toggle_mark", "Mark"),
             Binding("escape", "clear_filter", "Back", show=False),
             Binding("c", "command_palette", "Palette"),
             Binding("n", "new_context", "New"),
@@ -168,6 +172,7 @@ if _TEXTUAL_OK:
             self.show_all: bool = False
             self.filter_text: str = ""
             self.source_filter: str = "all"
+            self.marked: set[tuple[str, int]] = set()
             self._row_nodes: dict[tuple[str, int], TreeNode] = {}
             self._collapsed: set[tuple[str, int]] = set()
             self._expanded: set[tuple[str, int]] = set()
@@ -821,6 +826,8 @@ if _TEXTUAL_OK:
             attention = len(stats_mod.attention_ids(self.store))
             if attention:
                 bits.append(f"attention {attention}")
+            if self.marked:
+                bits.append(f"marked {len(self.marked)}")
             if self.status_filter is not None:
                 bits.append(f"status {self.status_filter.value}")
             if self.source_filter != "all":
@@ -871,6 +878,7 @@ if _TEXTUAL_OK:
                         (plan_stats[0], plan_stats[1], plan_stats[2]) if plan_stats else None
                     ),
                     repo_count=plan_stats[3] if plan_stats else 0,
+                    marked=("plan", plan.id) in self.marked,
                 )
                 plan_node = root.add(
                     plan_text,
@@ -896,6 +904,7 @@ if _TEXTUAL_OK:
                             else None
                         ),
                         repo_count=milestone_stats[3] if milestone_stats else 0,
+                        marked=("milestone", milestone.id) in self.marked,
                     )
                     milestone_node = plan_node.add(
                         milestone_text,
@@ -929,6 +938,7 @@ if _TEXTUAL_OK:
                                 else False
                             ),
                             blocked=task.blocked,
+                            marked=("task", task.id) in self.marked,
                         )
                         leaf = milestone_node.add_leaf(
                             task_text,
@@ -1215,6 +1225,21 @@ if _TEXTUAL_OK:
 
             self.push_screen(FilterPromptScreen(), cb)
 
+        def action_toggle_mark(self) -> None:
+            if self.selected is None:
+                self.notify("select a row first", timeout=3)
+                return
+            key = self.selected
+            if key in self.marked:
+                self.marked.remove(key)
+            else:
+                self.marked.add(key)
+            self.refresh_all(f"marked {len(self.marked)}")
+
+        def action_clear_marks(self) -> None:
+            self.marked.clear()
+            self.refresh_all("marks cleared")
+
         def _selected_task(self) -> int | None:
             """Selected task id, or a notification when the selection is not a task."""
             if self.selected is None or self.selected[0] != "task":
@@ -1273,6 +1298,8 @@ if _TEXTUAL_OK:
                 "git_status": self.action_git_status,
                 "git_refresh": self.action_git_refresh,
                 "git_capture": self.action_git_capture,
+                "toggle_mark": self.action_toggle_mark,
+                "clear_marks": self.action_clear_marks,
                 "release_claim": self.action_release_claim,
                 "force_release_claim": self.action_force_release_claim,
                 "open_pr": self.action_open_pr,

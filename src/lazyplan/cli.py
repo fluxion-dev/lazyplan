@@ -1148,6 +1148,22 @@ def _note_dict_rows(items: list[dict]) -> list[str]:
     ]
 
 
+def _comment_dict_rows(items: list[dict]) -> list[str]:
+    """Comment rows from show/brief payload dicts."""
+    return [
+        porcelain.comment_row(
+            item["id"],
+            item.get("actor"),
+            item.get("text"),
+            item.get("parent_kind", "comment"),
+            item.get("parent_id", "-"),
+            item.get("ts", 0),
+            bool(item.get("resolved")),
+        )
+        for item in items
+    ]
+
+
 def _claim_line(store: Store, task_id: int, title: str) -> str | None:
     """Claim row for a task, or None when it has no lease."""
     claim = store.get_claim(task_id)
@@ -1170,6 +1186,7 @@ def _porcelain_show_lines(store: Store, kind: str, full: dict) -> list[str]:
         lines.append(porcelain.text_row("what", plan.get("description")))
         lines.extend(_criterion_dict_rows(full.get("criteria", [])))
         lines.extend(_note_dict_rows(full.get("notes", [])))
+        lines.extend(_comment_dict_rows(full.get("comments", [])))
         for entry in full.get("milestones", []):
             milestone = entry["milestone"]
             lines.append(
@@ -1196,6 +1213,7 @@ def _porcelain_show_lines(store: Store, kind: str, full: dict) -> list[str]:
                 if claim_line is not None:
                     lines.append(claim_line)
                 lines.extend(_note_dict_rows(task.get("notes", [])))
+                lines.extend(_comment_dict_rows(task.get("comments", [])))
         return lines
     if kind == "milestone":
         milestone = full["milestone"]
@@ -1211,6 +1229,7 @@ def _porcelain_show_lines(store: Store, kind: str, full: dict) -> list[str]:
         lines.append(porcelain.text_row("desc", milestone.get("description")))
         lines.extend(_criterion_dict_rows(full.get("criteria", [])))
         lines.extend(_note_dict_rows(full.get("notes", [])))
+        lines.extend(_comment_dict_rows(full.get("comments", [])))
         for entry in full.get("tasks", []):
             task = entry["task"]
             lines.append(
@@ -1226,6 +1245,7 @@ def _porcelain_show_lines(store: Store, kind: str, full: dict) -> list[str]:
             if claim_line is not None:
                 lines.append(claim_line)
             lines.extend(_note_dict_rows(task.get("notes", [])))
+            lines.extend(_comment_dict_rows(task.get("comments", [])))
         return lines
     task = full["task"]
     lines.append(
@@ -1243,6 +1263,7 @@ def _porcelain_show_lines(store: Store, kind: str, full: dict) -> list[str]:
     lines.append(porcelain.text_row("desc", task.get("description")))
     lines.extend(_criterion_dict_rows(full.get("criteria", [])))
     lines.extend(_note_dict_rows(task.get("notes", [])))
+    lines.extend(_comment_dict_rows(task.get("comments", [])))
     return lines
 
 
@@ -1355,6 +1376,7 @@ def _brief_rows(store: Store, payload: dict) -> list[str]:
         if plan is not None:
             rows.append(_porcelain_row(store, plan))
         rows.extend(_note_dict_rows(entry.get("notes", [])))
+        rows.extend(_comment_dict_rows(entry.get("comments", [])))
         for task in entry.get("doing", []):
             model = store.get_task(int(task["id"]))
             if model is not None:
@@ -1363,6 +1385,7 @@ def _brief_rows(store: Store, payload: dict) -> list[str]:
                 if claim_line is not None:
                     rows.append(claim_line)
                 rows.extend(_note_dict_rows(task.get("notes", [])))
+                rows.extend(_comment_dict_rows(task.get("comments", [])))
         next_task = entry.get("next")
         if next_task:
             parent = "-"

@@ -1716,6 +1716,9 @@ class Store:
         notes = self.list_notes("task", t.id)
         if notes:
             data["notes"] = [vars(n) for n in notes]
+        comments = self.list_comments("task", t.id)
+        if comments:
+            data["comments"] = [vars(c) for c in comments]
         return data
 
     def _task_show(self, t: Task) -> dict:
@@ -1755,6 +1758,9 @@ class Store:
         notes = self.list_notes("milestone", s.id)
         if notes:
             payload["notes"] = [vars(n) for n in notes]
+        comments = self.list_comments("milestone", s.id)
+        if comments:
+            payload["comments"] = [vars(c) for c in comments]
         return payload
 
     def _plan_show(self, p: Plan) -> dict:
@@ -1782,6 +1788,9 @@ class Store:
         notes = self.list_notes("plan", p.id)
         if notes:
             payload["notes"] = [vars(n) for n in notes]
+        comments = self.list_comments("plan", p.id)
+        if comments:
+            payload["comments"] = [vars(c) for c in comments]
         return payload
 
     def get_full(self, kind: str, obj_id: int) -> dict | None:

@@ -12,6 +12,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from lazyplan import services  # noqa: E402
 from lazyplan.cli import main as lpui_main  # noqa: E402
 from lazyplan.store import Store  # noqa: E402
 
@@ -73,6 +74,25 @@ class TestComments(unittest.TestCase):
         code, out, err = self._run("--porcelain", "comment", "resolve", "--comment", "1")
         self.assertEqual(code, 0, err)
         self.assertEqual(out.rstrip("\n").split("\t")[:3], ["comment", "1", "resolved"])
+
+    def test_show_brief_and_export(self):
+        self._json("comment", "add", "--kind", "task", "--id", "1", "--text", "review this")
+        code, out, err = self._run("task", "show", "--id", "1")
+        self.assertEqual(code, 0, err)
+        self.assertIn("review this", out)
+        code, out, err = self._run("--porcelain", "task", "show", "--id", "1")
+        self.assertIn("comment\t1\topen\treview this\ttask:1\t", out)
+        self._json("claim", "--id", "1")
+        brief = self._json("brief", "--plan", "1")
+        self.assertEqual(brief["plans"][0]["doing"][0]["comments"][0]["text"], "review this")
+        data = services.export_all(Store(self.db))
+        self.assertEqual(
+            data["plans"][0]["milestones"][0]["tasks"][0]["comments"][0]["text"], "review this"
+        )
+        other = Store(os.path.join(self.tmp.name, "other.db"))
+        counts = services.import_all(other, data, actor="fixture")
+        self.assertEqual(counts["comments"], 1)
+        self.assertEqual(other.list_comments("task", 1)[0].text, "review this")
 
     def test_deleting_parent_removes_comments(self):
         store = Store(self.db)

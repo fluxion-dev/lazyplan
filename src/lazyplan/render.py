@@ -227,6 +227,13 @@ def _append_claim(lines: list[str], claim: dict | None, indent: str = "") -> Non
     lines.append(f"{indent}claim: @{claim.get('actor')} until {when}")
 
 
+def _append_issues(lines: list[str], items: list[dict], indent: str = "") -> None:
+    """Append provider issue source references."""
+    for issue in items:
+        url = f" {issue.get('url')}" if issue.get("url") else ""
+        lines.append(f"{indent}source: {issue.get('provider')} #{issue.get('number')}{url}")
+
+
 def _append_gate(lines: list[str], gate: dict | None, indent: str = "") -> None:
     """Append one PR/check gate summary."""
     if not gate:
@@ -288,6 +295,7 @@ def _append_common(lines: list[str], full: dict, files: bool = False) -> None:
     """Shared show sections: notes + acceptance + commits + PRs + repos."""
     _append_notes(lines, full.get("notes", []))
     _append_comments(lines, full.get("comments", []))
+    _append_issues(lines, full.get("issues", []))
     if full.get("criteria"):
         lines.append("\nacceptance:")
         _append_crit(lines, full["criteria"])
@@ -335,6 +343,7 @@ def _render_milestone_full(full: dict, lines: list[str], files: bool = False) ->
             lines.append(f"  blocked: {t.get('blocked_reason') or '-'}")
         _append_claim(lines, t.get("claim"), indent="  ")
         _append_gate(lines, t.get("gate"), indent="  ")
+        _append_issues(lines, t.get("issues", []), indent="  ")
         if t.get("description"):
             lines.append(f"  {t['description']}")
         _append_notes(lines, t.get("notes", []), indent="  ")
@@ -351,6 +360,7 @@ def _render_task_full(full: dict, lines: list[str], files: bool = False) -> None
         lines.append(f"blocked: {t.get('blocked_reason') or '-'}")
     _append_claim(lines, t.get("claim"))
     _append_gate(lines, t.get("gate"))
+    _append_issues(lines, t.get("issues", []))
     _append_notes(lines, t.get("notes", []))
     _append_comments(lines, t.get("comments", []))
     if t.get("description"):

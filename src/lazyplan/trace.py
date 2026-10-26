@@ -14,6 +14,7 @@ def _task_entry(store: Store, task: Task) -> dict:
     """One proving task with its effective commits and PRs."""
     return {
         "task": _ser(vars(task)),
+        "issues": store.list_issue_links("task", task.id),
         "commits": [vars(link) for link in store.effective_links("task", task.id)],
         "forge_links": [vars(link) for link in store.effective_forge_links("task", task.id)],
     }

@@ -92,7 +92,11 @@ filter surfaces the same risk categories. Review comments live on rows,
 `lpui share --plan 1` produces a read-only snapshot, and `lpui sync` merges
 plans by stable UID without overwriting conflicts. `task finish --require-pr
 --require-checks` gates done on cached evidence, and branch collisions are
-reported before work starts. `lpui audit --since 7.days --strict`
+reported before work starts. In the screen, space marks rows for bulk
+move/block/release with one undo, and `/` searches descriptions, notes,
+comments, claims, blocked reasons, and issue refs. `lpui issue import` brings GitHub issues (live)
+or Linear exports in as plans or tasks with source refs; imports are one-way
+and re-import only refreshes source metadata. `lpui audit --since 7.days --strict`
 turns the three accuracy metrics into a CI gate. `lpui setup` installs read-only
 lifecycle hooks for detected agents; `lpui setup --no-hooks` removes them.
 

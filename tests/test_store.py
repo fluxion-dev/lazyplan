@@ -212,6 +212,7 @@ class TestStore(unittest.TestCase):
                 "notes": 0,
                 "criterion_links": 0,
                 "comments": 0,
+                "issues": 0,
             },
         )
         self.assertEqual(s2.get_plan(1).status, Status.DONE)  # rolled up: only milestone done

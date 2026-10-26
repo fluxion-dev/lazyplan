@@ -1474,6 +1474,7 @@ def export_all(store: Store) -> dict:
                         "repos": store.list_repos("task", t.id),
                         "notes": [vars(n) for n in store.list_notes("task", t.id)],
                         "comments": [vars(c) for c in store.list_comments("task", t.id)],
+                        "issues": store.list_issue_links("task", t.id),
                         "claim": vars(claim) if claim is not None else None,
                     }
                 )
@@ -1486,6 +1487,7 @@ def export_all(store: Store) -> dict:
                     "repos": store.list_repos("milestone", s.id),
                     "notes": [vars(n) for n in store.list_notes("milestone", s.id)],
                     "comments": [vars(c) for c in store.list_comments("milestone", s.id)],
+                    "issues": store.list_issue_links("milestone", s.id),
                     "tasks": tasks,
                 }
             )
@@ -1498,6 +1500,7 @@ def export_all(store: Store) -> dict:
                 "repos": store.list_repos("plan", p.id),
                 "notes": [vars(n) for n in store.list_notes("plan", p.id)],
                 "comments": [vars(c) for c in store.list_comments("plan", p.id)],
+                "issues": store.list_issue_links("plan", p.id),
                 "milestones": milestones,
             }
         )
@@ -1537,6 +1540,7 @@ def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]
         "notes": 0,
         "criterion_links": 0,
         "comments": 0,
+        "issues": 0,
     }
     criteria_map: dict[int, int] = {}
     tasks_map: dict[int, int] = {}
@@ -1653,6 +1657,30 @@ def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]
             if comment is not None:
                 counts["comments"] += 1
 
+    def _import_issues(kind: str, obj_id: int, items: list) -> None:
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            provider = str(item.get("provider", "") or "")
+            external_id = str(item.get("external_id", "") or "")
+            if not provider or not external_id:
+                continue
+            try:
+                store.add_issue_link(
+                    provider,
+                    external_id,
+                    str(item.get("number", "") or ""),
+                    str(item.get("url", "") or ""),
+                    str(item.get("title", "") or ""),
+                    str(item.get("state", "") or ""),
+                    kind,
+                    obj_id,
+                    float(item.get("updated_at", 0) or 0),
+                )
+            except Exception:
+                continue
+            counts["issues"] += 1
+
     def _import_claim(task_id: int, item: object) -> None:
         if not isinstance(item, dict):
             return
@@ -1686,6 +1714,7 @@ def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]
         _import_criteria("plan", np.id, entry.get("criteria", []))
         _import_notes("plan", np.id, entry.get("notes", []))
         _import_comments("plan", np.id, entry.get("comments", []))
+        _import_issues("plan", np.id, entry.get("issues", []))
         _import_links("plan", np.id, entry.get("links", []))
         _import_forge_links("plan", np.id, entry.get("forge_links", []))
         _import_repos("plan", np.id, entry.get("repos", []))
@@ -1702,6 +1731,7 @@ def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]
             _import_criteria("milestone", ns.id, sentry.get("criteria", []))
             _import_notes("milestone", ns.id, sentry.get("notes", []))
             _import_comments("milestone", ns.id, sentry.get("comments", []))
+            _import_issues("milestone", ns.id, sentry.get("issues", []))
             _import_links("milestone", ns.id, sentry.get("links", []))
             _import_forge_links("milestone", ns.id, sentry.get("forge_links", []))
             _import_repos("milestone", ns.id, sentry.get("repos", []))
@@ -1726,6 +1756,7 @@ def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]
                 _import_criteria("task", nt.id, tentry.get("criteria", []))
                 _import_notes("task", nt.id, tentry.get("notes", []))
                 _import_comments("task", nt.id, tentry.get("comments", []))
+                _import_issues("task", nt.id, tentry.get("issues", []))
                 _import_links("task", nt.id, tentry.get("links", []))
                 _import_forge_links("task", nt.id, tentry.get("forge_links", []))
                 _import_repos("task", nt.id, tentry.get("repos", []))

@@ -78,11 +78,14 @@ if _TEXTUAL_OK:
         """Plan/milestone tree: j/k + arrows move, left/right fold, enter opens.
 
         Every mutation runs through the modal palette (c). Native Tree
-        space/shift+space are parked here so they do nothing — status and
-        folding live in the palette and the shared tree gestures.
+        Space marks the selected row for bulk actions; shift+space stays parked.
+        Status and folding continue to live in the palette and shared gestures.
         """
 
-        BINDINGS = [Binding("enter", "open_detail", "Detail")]
+        BINDINGS = [
+            Binding("enter", "open_detail", "Detail"),
+            Binding("space", "toggle_mark", "Mark"),
+        ]
 
         def on_tree_node_highlighted(self, e: Tree.NodeHighlighted) -> None:
             """Bubble selection as a custom message (guide/events pattern)."""
@@ -90,9 +93,9 @@ if _TEXTUAL_OK:
             if key is not None:
                 self.post_message(SelectionChanged(kind=key[0], oid=key[1]))
 
-        def action_toggle_node(self) -> None:
-            """Space: parked — use the modal palette for status changes."""
-            return
+        def action_toggle_mark(self) -> None:
+            """Space: mark or unmark the selected row."""
+            cast("LazyplanApp", self.app).action_toggle_mark()
 
         def action_toggle_expand_all(self) -> None:
             """Shift+space: parked — use the modal palette for folding."""
@@ -140,6 +143,7 @@ if _TEXTUAL_OK:
         ENABLE_COMMAND_PALETTE = False
         BINDINGS = [
             Binding("enter", "open_detail", "Open"),
+            Binding("space", "toggle_mark", "Mark"),
             Binding("escape", "clear_filter", "Back", show=False),
             Binding("c", "command_palette", "Palette"),
             Binding("n", "new_context", "New"),
@@ -168,6 +172,8 @@ if _TEXTUAL_OK:
             self.show_all: bool = False
             self.filter_text: str = ""
             self.source_filter: str = "all"
+            self.marked: set[tuple[str, int]] = set()
+            self._undo: list[dict] | None = None
             self._row_nodes: dict[tuple[str, int], TreeNode] = {}
             self._collapsed: set[tuple[str, int]] = set()
             self._expanded: set[tuple[str, int]] = set()
@@ -741,17 +747,37 @@ if _TEXTUAL_OK:
             query = self.filter_text.strip().lower()
             if not query:
                 return base
+            notes = self.store.notes_map()
+            comments = self.store.comments_map()
+            issues = self.store.issues_map()
+            claims = self.store.claims_map()
+
+            def blob(kind: str, obj: Plan | Milestone | Task) -> str:
+                if isinstance(obj, Plan):
+                    bits = [obj.name, obj.description, obj.goal]
+                elif isinstance(obj, Milestone):
+                    bits = [obj.title, obj.description]
+                else:
+                    bits = [obj.title, obj.description, obj.blocked_reason]
+                    claim = claims.get(obj.id)
+                    if claim is not None:
+                        bits.append(claim.actor)
+                bits.extend(notes.get((kind, obj.id), []))
+                bits.extend(comments.get((kind, obj.id), []))
+                bits.extend(issues.get((kind, obj.id), []))
+                return " ".join(str(bit) for bit in bits).lower()
+
             filtered: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]] = []
             for p, milestones in base:
-                if query in p.name.lower():
+                if query in blob("plan", p):
                     filtered.append((p, milestones))
                     continue
                 kept_ms: list[tuple[Milestone, list[Task]]] = []
                 for s, tasks in milestones:
-                    if query in s.title.lower():
+                    if query in blob("milestone", s):
                         kept_ms.append((s, list(tasks)))
                         continue
-                    hits = [t for t in tasks if query in t.title.lower()]
+                    hits = [t for t in tasks if query in blob("task", t)]
                     if hits:
                         kept_ms.append((s, hits))
                 if kept_ms:
@@ -801,6 +827,8 @@ if _TEXTUAL_OK:
             attention = len(stats_mod.attention_ids(self.store))
             if attention:
                 bits.append(f"attention {attention}")
+            if self.marked:
+                bits.append(f"marked {len(self.marked)}")
             if self.status_filter is not None:
                 bits.append(f"status {self.status_filter.value}")
             if self.source_filter != "all":
@@ -851,6 +879,7 @@ if _TEXTUAL_OK:
                         (plan_stats[0], plan_stats[1], plan_stats[2]) if plan_stats else None
                     ),
                     repo_count=plan_stats[3] if plan_stats else 0,
+                    marked=("plan", plan.id) in self.marked,
                 )
                 plan_node = root.add(
                     plan_text,
@@ -876,6 +905,7 @@ if _TEXTUAL_OK:
                             else None
                         ),
                         repo_count=milestone_stats[3] if milestone_stats else 0,
+                        marked=("milestone", milestone.id) in self.marked,
                     )
                     milestone_node = plan_node.add(
                         milestone_text,
@@ -909,6 +939,7 @@ if _TEXTUAL_OK:
                                 else False
                             ),
                             blocked=task.blocked,
+                            marked=("task", task.id) in self.marked,
                         )
                         leaf = milestone_node.add_leaf(
                             task_text,
@@ -1195,6 +1226,122 @@ if _TEXTUAL_OK:
 
             self.push_screen(FilterPromptScreen(), cb)
 
+        def action_toggle_mark(self) -> None:
+            if self.selected is None:
+                self.notify("select a row first", timeout=3)
+                return
+            key = self.selected
+            if key in self.marked:
+                self.marked.remove(key)
+            else:
+                self.marked.add(key)
+            self.refresh_all(f"marked {len(self.marked)}")
+
+        def _marked_tasks(self) -> list[Task]:
+            """Task rows in the mark set."""
+            return [
+                task
+                for kind, oid in self.marked
+                if kind == "task" and (task := self.store.get_task(oid)) is not None
+            ]
+
+        def _bulk_capture(self, tasks: list[Task]) -> None:
+            """Remember exact state for one undo."""
+            self._undo = [
+                {
+                    "id": task.id,
+                    "status": task.status,
+                    "blocked": task.blocked,
+                    "reason": task.blocked_reason,
+                }
+                for task in tasks
+            ]
+
+        def _bulk_status(self, status: Status) -> None:
+            tasks = self._marked_tasks()
+            if not tasks:
+                self.notify("mark at least one task first", timeout=3)
+                return
+
+            def cb(confirmed: bool | None) -> None:
+                if not confirmed:
+                    return
+                self._bulk_capture(tasks)
+                for task in tasks:
+                    services.set_status(self.store, "task", task.id, status, actor="tui")
+                self.marked.clear()
+                self._saved(f"moved {len(tasks)} tasks to {status.value}")
+
+            self.push_screen(
+                ConfirmScreen(f"Move {len(tasks)} marked tasks to {status.value}?"), cb
+            )
+
+        def action_bulk_doing(self) -> None:
+            self._bulk_status(Status.DOING)
+
+        def action_bulk_done(self) -> None:
+            self._bulk_status(Status.DONE)
+
+        def action_bulk_block(self) -> None:
+            tasks = self._marked_tasks()
+            if not tasks:
+                self.notify("mark at least one task first", timeout=3)
+                return
+
+            def reason_cb(reason: str | None) -> None:
+                if reason is None or not reason.strip():
+                    return
+
+                def cb(confirmed: bool | None) -> None:
+                    if not confirmed:
+                        return
+                    self._bulk_capture(tasks)
+                    for task in tasks:
+                        services.block_task(self.store, task.id, reason.strip(), actor="tui")
+                    self.marked.clear()
+                    self._saved(f"blocked {len(tasks)} tasks")
+
+                self.push_screen(ConfirmScreen(f"Block {len(tasks)} tasks: {reason.strip()}?"), cb)
+
+            self.push_screen(FilterPromptScreen(), reason_cb)
+
+        def action_bulk_release(self) -> None:
+            tasks = self._marked_tasks()
+            if not tasks:
+                self.notify("mark at least one task first", timeout=3)
+                return
+
+            def cb(confirmed: bool | None) -> None:
+                if not confirmed:
+                    return
+                released = 0
+                conflicts = 0
+                for task in tasks:
+                    try:
+                        if self.store.release_claim(task.id, "tui") is not None:
+                            released += 1
+                    except ClaimConflict:
+                        conflicts += 1
+                self.marked.clear()
+                self._saved(f"released {released}, conflicts {conflicts}")
+
+            self.push_screen(ConfirmScreen(f"Release claims on {len(tasks)} marked tasks?"), cb)
+
+        def action_undo_bulk(self) -> None:
+            if not self._undo:
+                self.notify("nothing to undo", timeout=3)
+                return
+            states = self._undo
+            for state in states:
+                services.set_status(self.store, "task", state["id"], state["status"], actor="tui")
+                self.store.set_blocked(state["id"], state["blocked"], state["reason"], actor="tui")
+            self._undo = None
+            self._saved(f"undid {len(states)} task changes")
+
+        def action_clear_marks(self) -> None:
+            self.marked.clear()
+            self.refresh_all("marks cleared")
+
         def _selected_task(self) -> int | None:
             """Selected task id, or a notification when the selection is not a task."""
             if self.selected is None or self.selected[0] != "task":
@@ -1253,6 +1400,13 @@ if _TEXTUAL_OK:
                 "git_status": self.action_git_status,
                 "git_refresh": self.action_git_refresh,
                 "git_capture": self.action_git_capture,
+                "toggle_mark": self.action_toggle_mark,
+                "clear_marks": self.action_clear_marks,
+                "bulk_doing": self.action_bulk_doing,
+                "bulk_done": self.action_bulk_done,
+                "bulk_block": self.action_bulk_block,
+                "bulk_release": self.action_bulk_release,
+                "undo_bulk": self.action_undo_bulk,
                 "release_claim": self.action_release_claim,
                 "force_release_claim": self.action_force_release_claim,
                 "open_pr": self.action_open_pr,

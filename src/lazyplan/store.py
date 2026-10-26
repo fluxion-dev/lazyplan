@@ -668,6 +668,72 @@ class Store:
             note_id = cur.lastrowid or 0
         return Note(note_id, parent_kind, parent_id, text.strip(), actor, ts)
 
+    # -- issue sources -------------------------------------------------
+    def add_issue_link(
+        self,
+        provider: str,
+        external_id: str,
+        number: str,
+        url: str,
+        title: str,
+        state: str,
+        row_kind: str,
+        row_id: int,
+        updated_at: float = 0,
+    ) -> dict:
+        """Record one imported issue source."""
+        check_parent_kind(row_kind)
+        with self._connect() as conn:
+            cur = conn.execute(
+                "INSERT INTO issue_links"
+                " (provider, external_id, number, url, title, state, row_kind, row_id, updated_at)"
+                " VALUES (?,?,?,?,?,?,?,?,?)",
+                (provider, external_id, number, url, title, state, row_kind, row_id, updated_at),
+            )
+            link_id = cur.lastrowid or 0
+        return {
+            "id": link_id,
+            "provider": provider,
+            "external_id": external_id,
+            "number": number,
+            "url": url,
+            "title": title,
+            "state": state,
+            "row_kind": row_kind,
+            "row_id": row_id,
+            "updated_at": updated_at,
+        }
+
+    def get_issue_link(self, provider: str, external_id: str) -> dict | None:
+        """Find a source link by provider and external id."""
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT * FROM issue_links WHERE provider=? AND external_id=?",
+                (provider, external_id),
+            ).fetchone()
+        return dict(row) if row is not None else None
+
+    def list_issue_links(self, row_kind: str, row_id: int) -> list[dict]:
+        """Issue sources attached to one row."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT * FROM issue_links WHERE row_kind=? AND row_id=? ORDER BY id",
+                (row_kind, row_id),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def update_issue_link(
+        self, provider: str, external_id: str, title: str, url: str, state: str, updated_at: float
+    ) -> bool:
+        """Refresh cached source metadata without touching the row."""
+        with self._connect() as conn:
+            cur = conn.execute(
+                "UPDATE issue_links SET title=?, url=?, state=?, updated_at=?"
+                " WHERE provider=? AND external_id=?",
+                (title, url, state, updated_at, provider, external_id),
+            )
+            return (cur.rowcount or 0) > 0
+
     # -- review comments ------------------------------------------------
     @staticmethod
     def _row_to_comment(r: sqlite3.Row) -> Comment:
@@ -759,6 +825,41 @@ class Store:
             )
             comment_id = cur.lastrowid or 0
         return Comment(comment_id, parent_kind, parent_id, text.strip(), actor, ts, resolved)
+
+    def notes_map(self) -> dict[tuple[str, int], list[str]]:
+        """All note text grouped by parent, for TUI search."""
+        with self._connect() as conn:
+            rows = conn.execute("SELECT parent_kind, parent_id, text FROM notes").fetchall()
+        out: dict[tuple[str, int], list[str]] = {}
+        for row in rows:
+            out.setdefault((str(row["parent_kind"]), int(row["parent_id"])), []).append(
+                str(row["text"])
+            )
+        return out
+
+    def comments_map(self) -> dict[tuple[str, int], list[str]]:
+        """All comment text grouped by parent, for TUI search."""
+        with self._connect() as conn:
+            rows = conn.execute("SELECT parent_kind, parent_id, text FROM comments").fetchall()
+        out: dict[tuple[str, int], list[str]] = {}
+        for row in rows:
+            out.setdefault((str(row["parent_kind"]), int(row["parent_id"])), []).append(
+                str(row["text"])
+            )
+        return out
+
+    def issues_map(self) -> dict[tuple[str, int], list[str]]:
+        """Issue source text grouped by row, for TUI search."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT row_kind, row_id, provider, number, title, url FROM issue_links"
+            ).fetchall()
+        out: dict[tuple[str, int], list[str]] = {}
+        for row in rows:
+            out.setdefault((str(row["row_kind"]), int(row["row_id"])), []).append(
+                " ".join(str(row[key]) for key in ("provider", "number", "title", "url"))
+            )
+        return out
 
     def update_task(
         self,
@@ -1783,6 +1884,9 @@ class Store:
         gate = self.gate_state(t.id)
         if gate["prs"]:
             data["gate"] = gate
+        issue_refs = self.list_issue_links("task", t.id)
+        if issue_refs:
+            data["issues"] = issue_refs
         return data
 
     def _task_show(self, t: Task) -> dict:
@@ -1825,6 +1929,9 @@ class Store:
         comments = self.list_comments("milestone", s.id)
         if comments:
             payload["comments"] = [vars(c) for c in comments]
+        issue_refs = self.list_issue_links("milestone", s.id)
+        if issue_refs:
+            payload["issues"] = issue_refs
         return payload
 
     def _plan_show(self, p: Plan) -> dict:
@@ -1855,6 +1962,9 @@ class Store:
         comments = self.list_comments("plan", p.id)
         if comments:
             payload["comments"] = [vars(c) for c in comments]
+        issue_refs = self.list_issue_links("plan", p.id)
+        if issue_refs:
+            payload["issues"] = issue_refs
         return payload
 
     def get_full(self, kind: str, obj_id: int) -> dict | None:

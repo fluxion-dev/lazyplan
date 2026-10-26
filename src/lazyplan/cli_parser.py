@@ -43,6 +43,8 @@ examples:
   lpui comment add --kind task --id 3 --text "Review @alice"
   lpui share --plan 1                     # read-only HTML snapshot
   lpui sync --file backup.json --dry-run  # plan-level merge report
+  lpui issue import --provider github --repo owner/repo
+  lpui issue import --provider linear --file export.json --dry-run
   lpui mcp                               # typed MCP server on stdio
   lpui --actor helper mcp --read-only    # read-only MCP for reviews
   lpui --porcelain task add --milestone 1 --title "Do X" --desc "approach"
@@ -680,6 +682,20 @@ def build_parser() -> argparse.ArgumentParser:
         help="record why a failed gate is being overridden",
     )
 
+    _group, _actions = _noun_group("issue", "import provider issues into the journal")
+    _a = _actions.add_parser("import", help="import GitHub or Linear issues", parents=[common])
+    _a.add_argument("--provider", choices=["github", "linear"], required=True)
+    _a.add_argument("--repo", default=None, metavar="OWNER/REPO", help="GitHub repository")
+    _a.add_argument("--file", default=None, metavar="PATH", help="Linear JSON export")
+    _a.add_argument(
+        "--as",
+        dest="as_kind",
+        choices=["plan", "task"],
+        default="plan",
+        help="import as plan or task",
+    )
+    _a.add_argument("--milestone", type=int, default=0, metavar="ID", help="task placement")
+    _a.add_argument("--dry-run", action="store_true", help="report without writing")
     _group, _actions = _noun_group(
         "criterion", "add, list, tick, untick, or delete an acceptance criterion"
     )

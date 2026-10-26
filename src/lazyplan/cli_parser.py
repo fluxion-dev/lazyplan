@@ -407,6 +407,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     li.add_argument("--plan", type=int, required=True, metavar="ID", help="plan to lint")
     li.add_argument("--strict", action="store_true", help="exit 2 when any finding exists")
+    sh = sub.add_parser(
+        "share",
+        help="write a read-only HTML or JSON plan snapshot",
+        parents=[common],
+    )
+    sh.add_argument("--plan", type=int, required=True, metavar="ID", help="plan to share")
+    sh.add_argument("--format", choices=["html", "json"], default="html", help="snapshot format")
+    sh.add_argument("--out", default=None, metavar="PATH", help="write to a file")
     co = sub.add_parser(
         "comment",
         help="add, list, resolve, or unresolve review comments",

@@ -1,4 +1,4 @@
-.TH LPUI 1 "2026-10-25" "lazyplan-tui 0.25.0" "User Commands"
+.TH LPUI 1 "2026-10-26" "lazyplan-tui 0.25.0" "User Commands"
 .SH NAME
 lpui \- local plan journal for you and your coding agent
 .SH SYNOPSIS
@@ -527,6 +527,44 @@ plan to lint Required\.
 .TP
 .B \-\-strict
 exit 2 when any finding exists
+.RE
+.TP
+.B lpui share
+write a read\-only HTML or JSON plan snapshot
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B \-\-plan ID
+plan to share Required\.
+.RE
+.RS
+.TP
+.B \-\-format {html|json}
+snapshot format Choices: html, json\. Default: html\.
+.RE
+.RS
+.TP
+.B \-\-out PATH
+write to a file
 .RE
 .TP
 .B lpui comment

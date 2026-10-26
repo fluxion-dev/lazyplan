@@ -27,6 +27,7 @@ from . import (
 )
 from . import lint as lint_mod
 from . import mcp as mcp_mod
+from . import share as share_mod
 from . import stats as stats_mod
 from . import trace as trace_mod
 from .cli_parser import build_parser, package_version
@@ -894,6 +895,24 @@ def _comment_list(store: Store, args: argparse.Namespace) -> int:
         )
         state = "resolved" if comment.resolved else "open"
         print(f"#{comment.id} [{state}] @{comment.actor} {when}: {comment.text}")
+    return 0
+
+
+def _cmd_share(store: Store, args: argparse.Namespace, actor: str) -> int:
+    del actor
+    if store.get_plan(args.plan) is None:
+        print(msg_not_found("plan", args.plan), file=sys.stderr)
+        return 1
+    text = share_mod.write(store, args.plan, args.format, args.out)
+    if text is None:
+        print(msg_not_found("plan", args.plan), file=sys.stderr)
+        return 1
+    if args.out:
+        if args.json:
+            return _emit(args, {"shared": args.out, "format": args.format})
+        print(f"shared P{args.plan} as {args.format}: {args.out}")
+        return 0
+    print(text, end="" if text.endswith("\n") else "\n")
     return 0
 
 
@@ -2440,6 +2459,7 @@ _COMMANDS: dict[str, Callable[[Store, argparse.Namespace, str], int]] = {
     "lint": _cmd_lint,
     "stats": _cmd_stats,
     "comment": _cmd_comment,
+    "share": _cmd_share,
     "next": _cmd_next,
     "claim": _cmd_claim,
     "claims": _cmd_claims,

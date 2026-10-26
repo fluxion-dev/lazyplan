@@ -9,6 +9,7 @@ import unittest
 from argparse import Namespace
 from contextlib import redirect_stdout
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
@@ -346,7 +347,7 @@ class TestNativeInstall(unittest.TestCase):
 
     def test_claude_deduped_across_flag_and_tools(self):
         res = skills.install("both", self.repo, self.home, with_claude_copy=True, tools=["claude"])
-        claude_lines = [line for line in res.installed if ".claude/skills/" in line]
+        claude_lines = [line for line in res.installed if os.path.join(".claude", "skills") in line]
         self.assertEqual(len(claude_lines), 2)
 
     def test_second_run_reports_up_to_date(self):
@@ -372,7 +373,7 @@ class TestNativeInstall(unittest.TestCase):
         res = skills.install("global", self.repo, self.home, tools=["copilot"])
         self.assertEqual(
             res.installed,
-            [f"{self.home}/.agents/skills/lazyplan/SKILL.md (wrote)"],
+            [f"{self.home / '.agents/skills/lazyplan/SKILL.md'} (wrote)"],
         )
 
 
@@ -395,7 +396,7 @@ class TestSkillsDirOverride(unittest.TestCase):
     def test_flag_redirects_all_skill_writes(self):
         custom = self.tmp.name + "/custom-skills"
         res = skills.install("both", self.repo, self.home, tools=["opencode"], skills_dir=custom)
-        self.assertEqual(res.installed, [f"{custom}/lazyplan/SKILL.md (wrote)"])
+        self.assertEqual(res.installed, [f"{Path(custom, 'lazyplan', 'SKILL.md')} (wrote)"])
         self.assertTrue(Path(custom, "lazyplan/SKILL.md").is_file())
         self.assertFalse((self.repo / ".agents").exists())
 
@@ -465,6 +466,9 @@ class TestInstall(unittest.TestCase):
 
 class TestInitCli(unittest.TestCase):
     def setUp(self):
+        which = mock.patch.object(skills.shutil, "which", return_value=None)
+        which.start()
+        self.addCleanup(which.stop)
         self.tmp = tempfile.TemporaryDirectory()
         self.repo = os.path.join(self.tmp.name, "myproj")
         os.makedirs(os.path.join(self.repo, ".git"))

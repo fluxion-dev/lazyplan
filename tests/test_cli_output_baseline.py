@@ -16,6 +16,7 @@ import sys
 import tempfile
 import time
 import unittest
+from datetime import datetime, timedelta
 from pathlib import Path
 from unittest import mock
 
@@ -99,6 +100,13 @@ def build_fixture(db: str) -> None:
     set_status(store, "task", task.id, Status.DOING, actor="fixture")
 
 
+LOCAL_TIME_CASES = {"audit_default"}
+
+
+def _clock_is_utc() -> bool:
+    return datetime.now().astimezone().utcoffset() == timedelta(0)
+
+
 class TestCliBaseline(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
@@ -141,7 +149,9 @@ class TestCliBaseline(unittest.TestCase):
         self.assertEqual(code, 0, name)
         out = buf.getvalue()
         out = re.sub(r'"ts": [0-9.]+', '"ts": <ts>', out)
-        return out.replace(self.tmp.name, "<tmp>")
+        for raw in (self.tmp.name, json.dumps(self.tmp.name)[1:-1]):
+            out = out.replace(raw, "<tmp>")
+        return re.sub(r'<tmp>[^\s"]*', lambda m: re.sub(r"\\+", "/", m.group(0)), out)
 
     def test_every_baseline_case_is_pinned(self):
         self.assertEqual(set(CASES), set(BASELINE))
@@ -149,6 +159,8 @@ class TestCliBaseline(unittest.TestCase):
     def test_default_output_is_unchanged(self):
         for name in sorted(n for n in CASES if n.endswith("_default")):
             with self.subTest(name=name):
+                if name in LOCAL_TIME_CASES and not _clock_is_utc():
+                    self.skipTest("prints local time, and this platform cannot pin TZ=UTC")
                 self.assertEqual(self._run(name), BASELINE[name])
 
     def test_json_output_is_unchanged(self):

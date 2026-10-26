@@ -99,9 +99,9 @@ def _intervention(home: Path, repo: Path) -> dict:
     store, plan_id, task_a, task_b = _seed(home, repo)
     commits = _commits(store, plan_id, repo)
     old_cwd = os.getcwd()
-    old_home = os.environ.get("HOME")
+    old_db = os.environ.get("LAZYPLAN_DB")
     os.chdir(repo)
-    os.environ["HOME"] = str(home)
+    os.environ["LAZYPLAN_DB"] = str(store.path)
     task = task_a
     try:
         _status(store, "task", task_a, Status.DOING, commits[0].timestamp + 60)
@@ -124,10 +124,10 @@ def _intervention(home: Path, repo: Path) -> dict:
                 _status(store, "task", task_b, Status.DONE, commit.timestamp + 120)
     finally:
         os.chdir(old_cwd)
-        if old_home is None:
-            os.environ.pop("HOME", None)
+        if old_db is None:
+            os.environ.pop("LAZYPLAN_DB", None)
         else:
-            os.environ["HOME"] = old_home
+            os.environ["LAZYPLAN_DB"] = old_db
     return audit.report(store, [plan_id], 0, repo).to_dict()
 
 

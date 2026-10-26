@@ -141,6 +141,26 @@ def claim_row(task_id: Any, actor: Any, title: Any, expires_at: float | int | No
     return row("claim", task_id, actor, title, f"task:{field(task_id)}", expires_at or "-")
 
 
+def comment_row(
+    comment_id: Any,
+    actor: Any,
+    text: Any,
+    parent_kind: Any,
+    parent_id: Any,
+    ts: Any,
+    resolved: bool,
+) -> str:
+    """A review comment: status is resolved|open."""
+    return row(
+        "comment",
+        comment_id,
+        "resolved" if resolved else "open",
+        text,
+        f"{field(parent_kind)}:{field(parent_id)}",
+        int(ts),
+    )
+
+
 def link_row(criterion_id: Any, status: Any, task_id: Any, title: Any) -> str:
     """A criterion-task proof relation."""
     return row(

@@ -91,6 +91,25 @@ class Note:
             raise ValueError("note text must not be empty")
 
 
+@dataclass(frozen=True)
+class Comment:
+    """A review comment on a plan, milestone, or task."""
+
+    id: int
+    parent_kind: str
+    parent_id: int
+    text: str
+    actor: str = "human"
+    ts: float = 0.0
+    resolved: bool = False
+
+    def __post_init__(self) -> None:
+        if self.parent_kind not in CRITERION_PARENTS:
+            raise ValueError(PARENT_KIND_ERROR)
+        if not self.text.strip():
+            raise ValueError("comment text must not be empty")
+
+
 @dataclass
 class Milestone:
     """A slice of a plan, broken into tasks."""

@@ -529,6 +529,59 @@ plan to lint Required\.
 exit 2 when any finding exists
 .RE
 .TP
+.B lpui comment
+add, list, resolve, or unresolve review comments
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B  {add|list|resolve|unresolve}
+comment action Choices: add, list, resolve, unresolve\. Required\.
+.RE
+.RS
+.TP
+.B \-\-kind {plan|milestone|task}
+which row the comment belongs to Choices: plan, milestone, task\.
+.RE
+.RS
+.TP
+.B \-\-id ID
+row id
+.RE
+.RS
+.TP
+.B \-\-comment ID
+comment id (resolve only)
+.RE
+.RS
+.TP
+.B \-\-text TEXT
+comment text (add only)
+.RE
+.RS
+.TP
+.B \-\-mentions NAME
+only comments that mention @NAME (list only)
+.RE
+.TP
 .B lpui mcp
 serve the plan over MCP on stdio for agent hosts
 .RS

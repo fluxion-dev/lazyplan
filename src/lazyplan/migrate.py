@@ -49,6 +49,16 @@ CREATE TABLE IF NOT EXISTS notes (
     text TEXT NOT NULL CHECK (trim(text) <> '')
 );
 CREATE INDEX IF NOT EXISTS idx_notes_parent ON notes(parent_kind, parent_id);
+CREATE TABLE IF NOT EXISTS comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    parent_kind TEXT NOT NULL CHECK (parent_kind IN ('plan', 'milestone', 'task')),
+    parent_id INTEGER NOT NULL,
+    actor TEXT NOT NULL DEFAULT 'human',
+    ts REAL NOT NULL,
+    text TEXT NOT NULL CHECK (trim(text) <> ''),
+    resolved INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_comments_parent ON comments(parent_kind, parent_id);
 CREATE TABLE IF NOT EXISTS criteria (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     parent_kind TEXT NOT NULL CHECK (parent_kind IN ('plan', 'milestone', 'task')),

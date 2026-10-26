@@ -12,6 +12,7 @@ from .kinds import KIND_ERROR, check_parent_kind, table_for
 from .migrate import migrate
 from .models import (
     Claim,
+    Comment,
     Criterion,
     ForgeLink,
     Milestone,
@@ -646,6 +647,98 @@ class Store:
             note_id = cur.lastrowid or 0
         return Note(note_id, parent_kind, parent_id, text.strip(), actor, ts)
 
+    # -- review comments ------------------------------------------------
+    @staticmethod
+    def _row_to_comment(r: sqlite3.Row) -> Comment:
+        """Row to Comment."""
+        return Comment(
+            id=int(r["id"]),
+            parent_kind=str(r["parent_kind"]),
+            parent_id=int(r["parent_id"]),
+            text=str(r["text"]),
+            actor=str(r["actor"]),
+            ts=float(r["ts"]),
+            resolved=bool(r["resolved"]),
+        )
+
+    def add_comment(
+        self, parent_kind: str, parent_id: int, text: str, actor: str = "human"
+    ) -> Comment:
+        """Append a review comment and log it."""
+        check_parent_kind(parent_kind)
+        body = text.strip()
+        if not body:
+            raise ValueError("comment text must not be empty")
+        if not self._parent_exists(parent_kind, parent_id):
+            raise KeyError(f"{parent_kind} #{parent_id} not found")
+        stamp = time.time()
+        with self._connect() as conn:
+            cur = conn.execute(
+                "INSERT INTO comments (parent_kind, parent_id, actor, ts, text) VALUES (?,?,?,?,?)",
+                (parent_kind, parent_id, actor, stamp, body),
+            )
+            comment_id = cur.lastrowid or 0
+        self.log(actor, parent_kind, "comment", f"{parent_kind} #{parent_id}: {body[:80]}")
+        return Comment(comment_id, parent_kind, parent_id, body, actor, stamp, False)
+
+    def list_comments(
+        self, parent_kind: str, parent_id: int, mentions: str | None = None
+    ) -> list[Comment]:
+        """Comments on one row, oldest first; optionally only @name mentions."""
+        check_parent_kind(parent_kind)
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT * FROM comments WHERE parent_kind=? AND parent_id=? ORDER BY id",
+                (parent_kind, parent_id),
+            ).fetchall()
+        items = [self._row_to_comment(row) for row in rows]
+        if mentions:
+            needle = f"@{mentions.lstrip('@').lower()}"
+            items = [item for item in items if needle in item.text.lower()]
+        return items
+
+    def resolve_comment(
+        self, cid: int, resolved: bool = True, actor: str = "human"
+    ) -> Comment | None:
+        """Set or clear a comment's resolved flag."""
+        with self._connect() as conn:
+            row = conn.execute("SELECT * FROM comments WHERE id=?", (cid,)).fetchone()
+            if row is None:
+                return None
+            conn.execute("UPDATE comments SET resolved=? WHERE id=?", (1 if resolved else 0, cid))
+        self.log(actor, "comment", "resolve" if resolved else "unresolve", f"comment #{cid}")
+        comment = self._row_to_comment(row)
+        return Comment(
+            comment.id,
+            comment.parent_kind,
+            comment.parent_id,
+            comment.text,
+            comment.actor,
+            comment.ts,
+            resolved,
+        )
+
+    def restore_comment(
+        self,
+        parent_kind: str,
+        parent_id: int,
+        text: str,
+        actor: str,
+        ts: float,
+        resolved: bool,
+    ) -> Comment | None:
+        """Import a comment with its timestamp and resolution state."""
+        if not text.strip():
+            return None
+        with self._connect() as conn:
+            cur = conn.execute(
+                "INSERT INTO comments (parent_kind, parent_id, actor, ts, text, resolved)"
+                " VALUES (?,?,?,?,?,?)",
+                (parent_kind, parent_id, actor, ts, text.strip(), 1 if resolved else 0),
+            )
+            comment_id = cur.lastrowid or 0
+        return Comment(comment_id, parent_kind, parent_id, text.strip(), actor, ts, resolved)
+
     def update_task(
         self,
         tid: int,
@@ -715,18 +808,21 @@ class Store:
                 )
                 self._delete_entity_repos(conn, "plan", obj_id)
                 self._delete_notes(conn, "plan", obj_id)
+                self._delete_comments(conn, "plan", obj_id)
                 for sid in sids:
                     self._delete_milestone_criteria(conn, sid)
                     self._delete_milestone_links(conn, sid)
                     self._delete_milestone_repos(conn, sid)
                     self._delete_milestone_forge_links(conn, sid)
                     self._delete_milestone_notes(conn, sid)
+                    self._delete_milestone_comments(conn, sid)
             elif kind == "milestone":
                 self._delete_milestone_criteria(conn, obj_id)
                 self._delete_milestone_links(conn, obj_id)
                 self._delete_milestone_repos(conn, obj_id)
                 self._delete_milestone_forge_links(conn, obj_id)
                 self._delete_milestone_notes(conn, obj_id)
+                self._delete_milestone_comments(conn, obj_id)
             else:
                 conn.execute(
                     "DELETE FROM criteria WHERE parent_kind='task' AND parent_id=?", (obj_id,)
@@ -739,6 +835,7 @@ class Store:
                 )
                 self._delete_entity_repos(conn, "task", obj_id)
                 self._delete_notes(conn, "task", obj_id)
+                self._delete_comments(conn, "task", obj_id)
             cur = conn.execute(f"DELETE FROM {table} WHERE id=?", (obj_id,))
             ok = (cur.rowcount or 0) > 0
         if ok:
@@ -794,6 +891,26 @@ class Store:
         conn.execute(
             "DELETE FROM notes WHERE parent_kind=? AND parent_id=?", (parent_kind, parent_id)
         )
+
+    @staticmethod
+    def _delete_comments(conn: sqlite3.Connection, parent_kind: str, parent_id: int) -> None:
+        """Remove comments on one row."""
+        conn.execute(
+            "DELETE FROM comments WHERE parent_kind=? AND parent_id=?", (parent_kind, parent_id)
+        )
+
+    @staticmethod
+    def _delete_milestone_comments(conn: sqlite3.Connection, milestone_id: int) -> None:
+        """Remove comments under a milestone and its tasks."""
+        tids = [
+            r["id"]
+            for r in conn.execute(
+                "SELECT id FROM tasks WHERE milestone_id=?", (milestone_id,)
+            ).fetchall()
+        ]
+        Store._delete_comments(conn, "milestone", milestone_id)
+        for tid in tids:
+            Store._delete_comments(conn, "task", tid)
 
     @staticmethod
     def _delete_milestone_notes(conn: sqlite3.Connection, milestone_id: int) -> None:

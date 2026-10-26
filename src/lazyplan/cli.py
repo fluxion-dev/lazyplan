@@ -41,7 +41,7 @@ from .design import (
     msg_not_found,
 )
 from .forge import parse_pull_url, resolve_auth
-from .models import Criterion, Milestone, Plan, Status, Task
+from .models import Comment, Criterion, Milestone, Plan, Status, Task
 from .render import (
     render_commits,
     render_forge_links,
@@ -798,6 +798,111 @@ def _cmd_claims(store: Store, args: argparse.Namespace, actor: str) -> int:
             f"T{row['task_id']} {row['task_title']} @{row['actor']} {state} ({row['plan_title']})"
         )
     return 0
+
+
+def _comment_result(args: argparse.Namespace, comment: Comment) -> int:
+    """Print one comment in JSON, porcelain, or text."""
+    if args.json:
+        return _emit(args, {"comment": vars(comment)})
+    if porcelain.enabled(args):
+        print(
+            porcelain.comment_row(
+                comment.id,
+                comment.actor,
+                comment.text,
+                comment.parent_kind,
+                comment.parent_id,
+                comment.ts,
+                comment.resolved,
+            )
+        )
+    else:
+        state = "resolved" if comment.resolved else "open"
+        print(f"comment #{comment.id} [{state}] {comment.text}")
+    return 0
+
+
+def _comment_resolve(store: Store, args: argparse.Namespace, actor: str, resolved: bool) -> int:
+    if args.comment is None:
+        print("error: comment resolve needs --comment ID", file=sys.stderr)
+        return 2
+    comment = store.resolve_comment(args.comment, resolved=resolved, actor=actor)
+    if comment is None:
+        print(msg_not_found("comment", args.comment), file=sys.stderr)
+        return 1
+    return _comment_result(args, comment)
+
+
+def _comment_scope(store: Store, args: argparse.Namespace) -> tuple[int, str, int] | None:
+    if args.kind is None or args.id is None:
+        print(f"error: comment {args.action} needs --kind and --id", file=sys.stderr)
+        return None
+    if store.get_parent(args.kind, args.id) is None:
+        print(msg_not_found(args.kind, args.id), file=sys.stderr)
+        return None
+    return 0, args.kind, args.id
+
+
+def _comment_add(store: Store, args: argparse.Namespace, actor: str) -> int:
+    scope = _comment_scope(store, args)
+    if scope is not None and scope[0] == 0:
+        pass
+    elif scope is None and (args.kind is None or args.id is None):
+        return 2
+    else:
+        return 1
+    if args.text is None or not args.text.strip():
+        print("error: comment add needs --text", file=sys.stderr)
+        return 2
+    assert args.kind is not None and args.id is not None
+    comment = store.add_comment(args.kind, args.id, args.text, actor=actor)
+    return _comment_result(args, comment)
+
+
+def _comment_list(store: Store, args: argparse.Namespace) -> int:
+    scope = _comment_scope(store, args)
+    if scope is not None and scope[0] == 0:
+        pass
+    elif scope is None and (args.kind is None or args.id is None):
+        return 2
+    else:
+        return 1
+    assert args.kind is not None and args.id is not None
+    comments = store.list_comments(args.kind, args.id, mentions=args.mentions)
+    if args.json:
+        return _emit(args, [vars(comment) for comment in comments])
+    if porcelain.enabled(args):
+        for comment in comments:
+            print(
+                porcelain.comment_row(
+                    comment.id,
+                    comment.actor,
+                    comment.text,
+                    comment.parent_kind,
+                    comment.parent_id,
+                    comment.ts,
+                    comment.resolved,
+                )
+            )
+        return 0
+    if not comments:
+        print("(no comments)")
+        return 0
+    for comment in comments:
+        when = (
+            time.strftime("%Y-%m-%d %H:%M", time.localtime(comment.ts)) if comment.ts else "unknown"
+        )
+        state = "resolved" if comment.resolved else "open"
+        print(f"#{comment.id} [{state}] @{comment.actor} {when}: {comment.text}")
+    return 0
+
+
+def _cmd_comment(store: Store, args: argparse.Namespace, actor: str) -> int:
+    if args.action == "add":
+        return _comment_add(store, args, actor)
+    if args.action == "list":
+        return _comment_list(store, args)
+    return _comment_resolve(store, args, actor, args.action == "resolve")
 
 
 def _cmd_note(store: Store, args: argparse.Namespace, actor: str) -> int:
@@ -2311,6 +2416,7 @@ _COMMANDS: dict[str, Callable[[Store, argparse.Namespace, str], int]] = {
     "trace": _cmd_trace,
     "lint": _cmd_lint,
     "stats": _cmd_stats,
+    "comment": _cmd_comment,
     "next": _cmd_next,
     "claim": _cmd_claim,
     "claims": _cmd_claims,

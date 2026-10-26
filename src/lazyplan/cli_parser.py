@@ -407,6 +407,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     li.add_argument("--plan", type=int, required=True, metavar="ID", help="plan to lint")
     li.add_argument("--strict", action="store_true", help="exit 2 when any finding exists")
+    sy = sub.add_parser(
+        "sync",
+        help="merge plans from a JSON dump by stable uid",
+        parents=[common],
+    )
+    sy.add_argument("--file", required=True, metavar="PATH", help="export dump to merge")
+    sy.add_argument("--dry-run", action="store_true", help="report without writing")
     sh = sub.add_parser(
         "share",
         help="write a read-only HTML or JSON plan snapshot",

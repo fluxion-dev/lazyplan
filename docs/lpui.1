@@ -529,6 +529,39 @@ plan to lint Required\.
 exit 2 when any finding exists
 .RE
 .TP
+.B lpui sync
+merge plans from a JSON dump by stable uid
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B \-\-file PATH
+export dump to merge Required\.
+.RE
+.RS
+.TP
+.B \-\-dry\-run
+report without writing
+.RE
+.TP
 .B lpui share
 write a read\-only HTML or JSON plan snapshot
 .RS

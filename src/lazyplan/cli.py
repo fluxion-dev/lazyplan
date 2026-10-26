@@ -29,6 +29,7 @@ from . import lint as lint_mod
 from . import mcp as mcp_mod
 from . import share as share_mod
 from . import stats as stats_mod
+from . import sync as sync_mod
 from . import trace as trace_mod
 from .cli_parser import build_parser, package_version
 from .design import (
@@ -896,6 +897,54 @@ def _comment_list(store: Store, args: argparse.Namespace) -> int:
         state = "resolved" if comment.resolved else "open"
         print(f"#{comment.id} [{state}] @{comment.actor} {when}: {comment.text}")
     return 0
+
+
+def _cmd_sync(store: Store, args: argparse.Namespace, actor: str) -> int:
+    try:
+        data = json.loads(Path(args.file).read_text())
+        report = sync_mod.sync(store, data, actor=actor, dry_run=bool(args.dry_run))
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 2
+    if args.json:
+        _emit(args, report)
+    elif porcelain.enabled(args):
+        for item in report["added"]:
+            print(porcelain.row("sync", item["uid"] or "-", "add", item["title"], "-", "added"))
+        for item in report["skipped"]:
+            print(
+                porcelain.row(
+                    "sync",
+                    item["uid"] or "-",
+                    "skip",
+                    item["title"],
+                    f"plan:{item['local_id']}",
+                    "identical",
+                )
+            )
+        for item in report["conflicts"]:
+            print(
+                porcelain.row(
+                    "sync",
+                    item["uid"] or "-",
+                    "conflict",
+                    item["title"],
+                    f"plan:{item['local_id']}" if item["local_id"] else "-",
+                    ",".join(item["differences"]),
+                )
+            )
+    else:
+        print(
+            f"{'dry-run: ' if report['dry_run'] else ''}"
+            f"{len(report['added'])} added · {len(report['skipped'])} skipped · "
+            f"{len(report['conflicts'])} conflicts"
+        )
+        for item in report["conflicts"]:
+            print(
+                f"  conflict {item['title']} ({item['uid'] or '-'}): "
+                f"{', '.join(item['differences'])}"
+            )
+    return 1 if report["conflicts"] else 0
 
 
 def _cmd_share(store: Store, args: argparse.Namespace, actor: str) -> int:
@@ -2460,6 +2509,7 @@ _COMMANDS: dict[str, Callable[[Store, argparse.Namespace, str], int]] = {
     "stats": _cmd_stats,
     "comment": _cmd_comment,
     "share": _cmd_share,
+    "sync": _cmd_sync,
     "next": _cmd_next,
     "claim": _cmd_claim,
     "claims": _cmd_claims,

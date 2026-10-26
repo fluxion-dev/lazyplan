@@ -90,7 +90,9 @@ Hosts that support MCP can use `lpui mcp` for typed tools and resources;
 WIP, cycle time, aging, stale work, and reopened rows, and the TUI Attention
 filter surfaces the same risk categories. Review comments live on rows,
 `lpui share --plan 1` produces a read-only snapshot, and `lpui sync` merges
-plans by stable UID without overwriting conflicts. `lpui audit --since 7.days --strict`
+plans by stable UID without overwriting conflicts. `task finish --require-pr
+--require-checks` gates done on cached evidence, and branch collisions are
+reported before work starts. `lpui audit --since 7.days --strict`
 turns the three accuracy metrics into a CI gate. `lpui setup` installs read-only
 lifecycle hooks for detected agents; `lpui setup --no-hooks` removes them.
 

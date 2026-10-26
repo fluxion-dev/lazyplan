@@ -256,6 +256,7 @@ Your agent is expected to work from the plan, not invent it:
 - If the host supports MCP, prefer `lpui mcp`; otherwise use `--porcelain`.
 - Check flow health with `lpui stats --since 7.days`; the human screen uses the Attention filter.
 - Leave review comments with `comment add` and share a read-only plan with `share`; sync is plan-granularity.
+- Use `task finish --require-pr --require-checks` when done must wait for evidence; overrides are recorded.
 - Relate every plan criterion to a proving task and run `lpui --porcelain
   lint --plan P` before check-off.
 - Start a session with `lpui --porcelain next` to claim work, or
@@ -482,6 +483,27 @@ and a changed plan with the same UID is a conflict. Sync never deletes or
 overwrites local plans, and dry-run reports the same adds/skips/conflicts
 without writing. Row-level merge is intentionally out of scope.
 
+### Completion gates
+
+`task finish` can require cached evidence before it moves a task done:
+
+```bash
+lpui --porcelain task finish --id 3 --require-pr
+lpui --porcelain task finish --id 3 --require-checks
+lpui --porcelain task finish --id 3 --require-checks --override "known flaky runner"
+```
+
+`--require-pr` needs at least one linked pull request. `--require-checks`
+needs every linked PR's cached checks to be `pass`, `neutral`, or `skipped`.
+Gates read the cache only; run `lpui pr refresh` to update it. A failure exits
+2 and leaves the task doing with no commits linked. `--override REASON`
+records the actor, reason, and gate state as a note and completes normally.
+
+`show`, `brief`, and porcelain include a gate summary (`state`, PR count, and
+checks) for tasks that have linked PRs. Starting a task records an existing
+branch; a second open task on the same checkout or remote branch is rejected
+and names the owner. lazyplan never creates branches or worktrees.
+
 ### Session brief and accuracy audit
 
 Start a session with the brief, update after each commit, and close with the
@@ -585,6 +607,7 @@ lpui comment add --kind task --id 1 --text "..." [--mentions NAME]
 lpui comment resolve --comment 1
 lpui share --plan 1 [--format html|json] [--out PATH]
 lpui sync --file dump.json [--dry-run]
+lpui task finish --id 3 [--require-pr] [--require-checks] [--override REASON]
 lpui link --kind task --id 1 [--sha HASH] [--repo PATH]
 lpui commits --kind task --id 1 [--refresh] [--files]
 lpui show --kind task --id 1 [--files]

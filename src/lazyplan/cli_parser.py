@@ -54,6 +54,7 @@ examples:
   lpui task move --id 3 --to done
   lpui task start --id 3                record an existing branch + base
   lpui task finish --id 3               link base..HEAD, done when clean
+  lpui task finish --id 3 --require-pr --require-checks
   lpui link --kind task --id 3           attach the current commit (needs a git repo)
   lpui commits --kind task --id 3        list the attached commits
   lpui git status --kind task --id 3     branch, dirty tree, and tracking per linked repo

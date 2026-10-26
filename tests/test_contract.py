@@ -85,6 +85,8 @@ class ContractCase(unittest.TestCase):
         self.assertIn("lpui stats --since", text)
         self.assertIn("share --plan", text)
         self.assertIn("sync --file", text)
+        self.assertIn("--require-pr", text)
+        self.assertIn("--require-checks", text)
         self.assertIn("LAZYPLAN_PORCELAIN", text)
         self.assertIn("kind<TAB>id<TAB>status", text)
         self.assertNotIn("lpui init", text)

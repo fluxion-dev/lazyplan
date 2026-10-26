@@ -1096,44 +1096,55 @@ def _list_payload(
     plan_id: int | None,
 ) -> list[dict]:
     """Full JSON tree; shape stays stable for scripts."""
-    return [
-        {
-            "plan": _ser(vars(plan)),
-            "criteria": [vars(c) for c in store.list_criteria("plan", plan.id)],
-            "links": [vars(c) for c in store.list_links("plan", plan.id)],
-            "repos": store.list_repos("plan", plan.id),
-            "effective_repos": store.effective_repos("plan", plan.id),
-            "milestones": [
+    criteria = store.criteria_map()
+    links = store.vcs_links_map()
+    repos = store.repos_map()
+    payload = []
+    for plan, milestones in services.tree(
+        store,
+        status=status,
+        plan_id=plan_id,
+        archived=archived,
+        limit=limit,
+        repo=repo,
+        milestone_id=milestone,
+    ):
+        plan_repos = repos.get(("plan", plan.id), [])
+        milestone_rows = []
+        for ms, tasks in milestones:
+            milestone_repos = repos.get(("milestone", ms.id), []) or plan_repos
+            task_rows = []
+            for task in tasks:
+                task_rows.append(
+                    {
+                        "task": _ser(vars(task)),
+                        "criteria": [vars(item) for item in criteria.get(("task", task.id), [])],
+                        "links": [vars(item) for item in links.get(("task", task.id), [])],
+                        "repos": repos.get(("task", task.id), []),
+                        "effective_repos": repos.get(("task", task.id), []) or milestone_repos,
+                    }
+                )
+            milestone_rows.append(
                 {
-                    "milestone": _ser(vars(s)),
-                    "criteria": [vars(c) for c in store.list_criteria("milestone", s.id)],
-                    "links": [vars(c) for c in store.list_links("milestone", s.id)],
-                    "repos": store.list_repos("milestone", s.id),
-                    "effective_repos": store.effective_repos("milestone", s.id),
-                    "tasks": [
-                        {
-                            "task": _ser(vars(t)),
-                            "criteria": [vars(c) for c in store.list_criteria("task", t.id)],
-                            "links": [vars(c) for c in store.list_links("task", t.id)],
-                            "repos": store.list_repos("task", t.id),
-                            "effective_repos": store.effective_repos("task", t.id),
-                        }
-                        for t in tasks
-                    ],
+                    "milestone": _ser(vars(ms)),
+                    "criteria": [vars(item) for item in criteria.get(("milestone", ms.id), [])],
+                    "links": [vars(item) for item in links.get(("milestone", ms.id), [])],
+                    "repos": repos.get(("milestone", ms.id), []),
+                    "effective_repos": milestone_repos,
+                    "tasks": task_rows,
                 }
-                for s, tasks in milestones
-            ],
-        }
-        for plan, milestones in services.tree(
-            store,
-            status=status,
-            plan_id=plan_id,
-            archived=archived,
-            limit=limit,
-            repo=repo,
-            milestone_id=milestone,
+            )
+        payload.append(
+            {
+                "plan": _ser(vars(plan)),
+                "criteria": [vars(item) for item in criteria.get(("plan", plan.id), [])],
+                "links": [vars(item) for item in links.get(("plan", plan.id), [])],
+                "repos": plan_repos,
+                "effective_repos": plan_repos,
+                "milestones": milestone_rows,
+            }
         )
-    ]
+    return payload
 
 
 def _list_lines(

@@ -33,12 +33,10 @@ def payload(store: Store, plan_id: int) -> dict | None:
     if full is None:
         return None
     data = dict(full)
-    data["links"] = _safe_links([vars(link) for link in store.list_links("plan", plan_id)])
-    data["forge_links"] = [
-        {key: value for key, value in vars(link).items() if key != "payload"}
-        for link in store.list_forge_links("plan", plan_id)
-    ]
-    data["comments"] = [vars(comment) for comment in store.list_comments("plan", plan_id)]
+    # Keep the share shape stable even when a section has no rows.
+    data["links"] = _safe_links(data.get("links", []))
+    data["forge_links"] = _safe_links(data.get("forge_links", []))
+    data["comments"] = _safe_links(data.get("comments", []))
     safe = _safe(data)
     assert isinstance(safe, dict)
     return safe

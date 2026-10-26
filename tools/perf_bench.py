@@ -115,12 +115,13 @@ BUDGETS: dict[str, Budget] = {
     "services.tree": Budget(15, 2_000),
     "services.tree_limit5": Budget(15, 2_000),
     "attention_ids": Budget(20, 2_000),
-    "list_text": Budget(1_900, 3_000),
-    "list_json": Budget(8_000, 6_000),
+    "list_text": Budget(40, 3_000),
+    "list_json": Budget(25, 6_000),
     "show_plan": Budget(200, 1_000),
+    "full_many": Budget(20, 1_500),
     "export_all": Budget(19_000, 15_000),
     "audit_report": Budget(4_900, 6_000),
-    "tui_refresh": Budget(5_300, 8_000),
+    "tui_refresh": Budget(200, 8_000),
     "git_status": Budget(0, 3_000),
     "git_show": Budget(0, 3_000),
 }
@@ -430,8 +431,10 @@ def measure(
 
 
 def _core_metrics(store: Store, fixture: Fixture, repeat: int) -> list[Measurement]:
+    from lazyplan import share
     from lazyplan.cli import _list_payload
 
+    plan_ids = [plan.id for plan in store.list_plans()]
     return [
         measure("services.tree", lambda: services.tree(store), repeat=repeat),
         measure("services.tree_limit5", lambda: services.tree(store, limit=5), repeat=repeat),
@@ -447,6 +450,10 @@ def _core_metrics(store: Store, fixture: Fixture, repeat: int) -> list[Measureme
             repeat=repeat,
         ),
         measure("show_plan", lambda: store.get_full("plan", fixture.first_plan_id), repeat=repeat),
+        measure("full_many", lambda: store.get_full_many("plan", plan_ids), repeat=repeat),
+        measure(
+            "share_payload", lambda: share.payload(store, fixture.first_plan_id), repeat=repeat
+        ),
         measure("export_all", lambda: services.export_all(store), repeat=repeat),
         measure(
             "audit_report",

@@ -423,14 +423,10 @@ class McpServer:
     def _tool_list(self, args: dict) -> object:
         store = self._need_store()
         limit = args.get("limit")
-        plans = []
-        for plan in store.list_plans():
-            full = store.get_full("plan", plan.id)
-            if full is not None:
-                plans.append(full)
-            if isinstance(limit, int) and len(plans) >= limit:
-                break
-        return plans
+        ids = [plan.id for plan in store.list_plans()]
+        if isinstance(limit, int):
+            ids = ids[: max(limit, 0)]
+        return store.get_full_many("plan", ids)
 
     def _tool_show(self, args: dict) -> object:
         store = self._need_store()

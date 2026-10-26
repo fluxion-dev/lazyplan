@@ -146,6 +146,64 @@ class TestStore(unittest.TestCase):
         )
         self.assertEqual(self.store.plan_status_events_map()[p.id][1], "done")
 
+    def test_get_full_many_matches_single_reads(self):
+        p = self.store.add_plan("P")
+        s = self.store.add_milestone(p.id, "S")
+        t1 = self.store.add_task(s.id, "T1")
+        t2 = self.store.add_task(s.id, "T2")
+        for kind, obj_id in (("plan", p.id), ("milestone", s.id), ("task", t1.id)):
+            self.store.add_criteria(kind, obj_id, "works")
+        self.store.add_note("task", t1.id, "handoff", actor="bench")
+        self.store.add_comment("task", t1.id, "review", actor="bench")
+        self.store.add_issue_link(
+            "github", "42", "42", "https://example.test/42", "Issue 42", "open", "task", t1.id
+        )
+        self.store.link_commit("task", t1.id, "a" * 40, subject="work", files=("a.py",))
+        self.store.link_forge("task", t2.id, 7, title="PR", state="open", checks="pass")
+        self.store.add_repo_link("plan", p.id, "/checkout/plan", "git@example.test:org/plan.git")
+        self.store.add_repo_link("task", t1.id, "/checkout/task", "git@example.test:org/task.git")
+        self.store.claim_task(t1.id, "agent")
+
+        for kind, ids in (
+            ("plan", [p.id]),
+            ("milestone", [s.id]),
+            ("task", [t1.id, t2.id]),
+        ):
+            with self.subTest(kind=kind):
+                self.assertEqual(
+                    self.store.get_full_many(kind, ids),
+                    [self.store.get_full(kind, obj_id) for obj_id in ids],
+                )
+
+    def test_cli_list_json_matches_store_reads(self):
+        from lazyplan.cli import _list_payload
+
+        p = self.store.add_plan("P")
+        s = self.store.add_milestone(p.id, "S")
+        t = self.store.add_task(s.id, "T")
+        criterion = self.store.add_criteria("task", t.id, "works")
+        self.store.link_commit("task", t.id, "a" * 40)
+        self.store.add_repo_link("plan", p.id, "/checkout/plan", "git@example.test:org/plan.git")
+        self.store.add_repo_link("task", t.id, "/checkout/task", "git@example.test:org/task.git")
+
+        payload = _list_payload(self.store, None, "show", None, None, None, None)
+        self.assertEqual(len(payload), 1)
+        entry = payload[0]
+        self.assertEqual(entry["criteria"], [])
+        self.assertEqual(entry["links"], [])
+        self.assertEqual(entry["repos"], self.store.list_repos("plan", p.id))
+        milestone = entry["milestones"][0]
+        task = milestone["tasks"][0]
+        self.assertEqual(task["criteria"], [vars(criterion)])
+        self.assertEqual(
+            task["links"], [vars(link) for link in self.store.list_links("task", t.id)]
+        )
+        self.assertEqual(task["repos"], self.store.list_repos("task", t.id))
+        self.assertEqual(task["effective_repos"], self.store.effective_repos("task", t.id))
+        self.assertEqual(
+            milestone["effective_repos"], self.store.effective_repos("milestone", s.id)
+        )
+
     def test_criteria_on_plan_milestone_task(self):
         p = self.store.add_plan("P")
         s = self.store.add_milestone(p.id, "S")

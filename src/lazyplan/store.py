@@ -902,6 +902,26 @@ class Store:
             )
         return out
 
+    def notes_full_map(self) -> dict[tuple[str, int], list[Note]]:
+        """Every note grouped by parent, oldest first, with full metadata."""
+        with self._connect() as conn:
+            rows = conn.execute("SELECT * FROM notes ORDER BY id").fetchall()
+        out: dict[tuple[str, int], list[Note]] = {}
+        for row in rows:
+            note = self._row_to_note(row)
+            out.setdefault((note.parent_kind, note.parent_id), []).append(note)
+        return out
+
+    def comments_full_map(self) -> dict[tuple[str, int], list[Comment]]:
+        """Every comment grouped by parent, oldest first, with full metadata."""
+        with self._connect() as conn:
+            rows = conn.execute("SELECT * FROM comments ORDER BY id").fetchall()
+        out: dict[tuple[str, int], list[Comment]] = {}
+        for row in rows:
+            comment = self._row_to_comment(row)
+            out.setdefault((comment.parent_kind, comment.parent_id), []).append(comment)
+        return out
+
     def issues_map(self) -> dict[tuple[str, int], list[str]]:
         """Issue source text grouped by row, for TUI search."""
         with self._connect() as conn:
@@ -1902,7 +1922,7 @@ class Store:
         with self._connect() as conn:
             try:
                 rows = conn.execute(
-                    "SELECT parent_kind, parent_id, repo_path, repo_remote, branch, base_sha"
+                    "SELECT id, parent_kind, parent_id, repo_path, repo_remote, branch, base_sha"
                     " FROM entity_repos ORDER BY id"
                 ).fetchall()
             except Exception:
@@ -2045,6 +2065,37 @@ class Store:
                 return None if t is None else self._task_show(t)
         raise ValueError(KIND_ERROR)
 
+    def get_full_many(self, kind: str, obj_ids: list[int]) -> list[dict]:
+        """Full context records for several rows, in the requested order."""
+        with self._connect():
+            reader = _FullReader(self)
+            if kind == "plan":
+                objects: dict[int, Plan | Milestone | Task] = {
+                    plan.id: plan for plan in self.list_plans()
+                }
+            elif kind == "milestone":
+                objects = {
+                    milestone.id: milestone
+                    for items in reader.milestones.values()
+                    for milestone in items
+                }
+            elif kind == "task":
+                objects = {task.id: task for items in reader.tasks.values() for task in items}
+            else:
+                raise ValueError(KIND_ERROR)
+            out: list[dict] = []
+            for obj_id in obj_ids:
+                obj = objects.get(obj_id)
+                if obj is None:
+                    continue
+                if isinstance(obj, Plan):
+                    out.append(reader.plan(obj))
+                elif isinstance(obj, Milestone):
+                    out.append(reader.milestone(obj))
+                else:
+                    out.append(reader.task(obj))
+            return out
+
     def status_events(self, kind: str) -> list[tuple[float, str]]:
         """(ts, detail) status moves for a kind, newest first (archive policy input)."""
         with self._connect() as conn:
@@ -2102,3 +2153,198 @@ class Store:
             "plans_doing": npd,
             "plans_done": npn,
         }
+
+
+class _FullReader:
+    """Build full show payloads from one set of bulk maps."""
+
+    def __init__(self, store: Store) -> None:
+        self.milestones = store.milestones_map()
+        self.tasks = store.tasks_map()
+        self.criteria = store.criteria_map()
+        self.links = store.vcs_links_map()
+        self.forge = store.forge_links_map()
+        self.repos = store.repos_map()
+        self.claims = store.claims_map()
+        self.notes = store.notes_full_map()
+        self.comments = store.comments_full_map()
+        self.issues = store.issue_links_map()
+        self.milestone_by_id = {
+            milestone.id: milestone for items in self.milestones.values() for milestone in items
+        }
+        self.task_by_id = {task.id: task for items in self.tasks.values() for task in items}
+
+    def _gate_state(self, task_id: int) -> dict:
+        links = self.forge.get(("task", task_id), [])
+        if not links:
+            return {"prs": 0, "checks": "none", "state": "missing"}
+        values = [str(link.checks or "none") for link in links]
+        if any(value == "fail" for value in values):
+            checks = "fail"
+        elif any(value == "pending" for value in values):
+            checks = "pending"
+        elif all(value in {"pass", "neutral", "skipped"} for value in values):
+            checks = "pass"
+        else:
+            checks = "none"
+        return {
+            "prs": len(links),
+            "checks": checks,
+            "state": "pass" if checks == "pass" else checks,
+        }
+
+    def _task_view(self, task: Task) -> dict:
+        data = _ser(vars(task))
+        claim = self.claims.get(task.id)
+        if claim is not None:
+            data["claim"] = vars(claim)
+        notes = self.notes.get(("task", task.id), [])
+        if notes:
+            data["notes"] = [vars(note) for note in notes]
+        comments = self.comments.get(("task", task.id), [])
+        if comments:
+            data["comments"] = [vars(comment) for comment in comments]
+        gate = self._gate_state(task.id)
+        if gate["prs"]:
+            data["gate"] = gate
+        issue_refs = self.issues.get(("task", task.id), [])
+        if issue_refs:
+            data["issues"] = issue_refs
+        return data
+
+    def _effective_links(self, kind: str, obj_id: int) -> list[VcsLink]:
+        links = list(self.links.get((kind, obj_id), []))
+        if kind == "milestone":
+            for task in self.tasks.get(obj_id, ()):
+                links.extend(self.links.get(("task", task.id), []))
+        elif kind == "plan":
+            for milestone in self.milestones.get(obj_id, ()):
+                links.extend(self.links.get(("milestone", milestone.id), []))
+                for task in self.tasks.get(milestone.id, ()):
+                    links.extend(self.links.get(("task", task.id), []))
+        seen: set[tuple[str, str]] = set()
+        out: list[VcsLink] = []
+        for link in links:
+            key = (link.sha, link.repo_root)
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(link)
+        return out
+
+    def _effective_forge(self, kind: str, obj_id: int) -> list[ForgeLink]:
+        links = list(self.forge.get((kind, obj_id), []))
+        if kind == "milestone":
+            for task in self.tasks.get(obj_id, ()):
+                links.extend(self.forge.get(("task", task.id), []))
+        elif kind == "plan":
+            for milestone in self.milestones.get(obj_id, ()):
+                links.extend(self.forge.get(("milestone", milestone.id), []))
+                for task in self.tasks.get(milestone.id, ()):
+                    links.extend(self.forge.get(("task", task.id), []))
+        seen: set[tuple[str, str, int]] = set()
+        out: list[ForgeLink] = []
+        for link in links:
+            key = (link.provider, link.kind, link.number)
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(link)
+        return out
+
+    def _effective_repos(self, kind: str, obj_id: int) -> list[dict]:
+        explicit = self.repos.get((kind, obj_id), [])
+        if explicit:
+            return explicit
+        if kind == "task":
+            task = self.task_by_id.get(obj_id)
+            if task is not None:
+                return self._effective_repos("milestone", task.milestone_id)
+        elif kind == "milestone":
+            milestone = self.milestone_by_id.get(obj_id)
+            if milestone is not None:
+                return self.repos.get(("plan", milestone.plan_id), [])
+        return []
+
+    def task(self, task: Task) -> dict:
+        return {
+            "task": self._task_view(task),
+            "criteria": [vars(item) for item in self.criteria.get(("task", task.id), [])],
+            "links": [vars(item) for item in self.links.get(("task", task.id), [])],
+            "effective_links": [vars(item) for item in self._effective_links("task", task.id)],
+            "forge_links": [vars(item) for item in self.forge.get(("task", task.id), [])],
+            "effective_forge_links": [
+                vars(item) for item in self._effective_forge("task", task.id)
+            ],
+            "repos": self.repos.get(("task", task.id), []),
+            "effective_repos": self._effective_repos("task", task.id),
+        }
+
+    def milestone(self, milestone: Milestone) -> dict:
+        payload = {
+            "milestone": _ser(vars(milestone)),
+            "criteria": [vars(item) for item in self.criteria.get(("milestone", milestone.id), [])],
+            "links": [vars(item) for item in self.links.get(("milestone", milestone.id), [])],
+            "effective_links": [
+                vars(item) for item in self._effective_links("milestone", milestone.id)
+            ],
+            "forge_links": [vars(item) for item in self.forge.get(("milestone", milestone.id), [])],
+            "effective_forge_links": [
+                vars(item) for item in self._effective_forge("milestone", milestone.id)
+            ],
+            "repos": self.repos.get(("milestone", milestone.id), []),
+            "effective_repos": self._effective_repos("milestone", milestone.id),
+            "tasks": [
+                {
+                    "task": self._task_view(task),
+                    "criteria": [vars(item) for item in self.criteria.get(("task", task.id), [])],
+                }
+                for task in self.tasks.get(milestone.id, ())
+            ],
+        }
+        notes = self.notes.get(("milestone", milestone.id), [])
+        if notes:
+            payload["notes"] = [vars(note) for note in notes]
+        comments = self.comments.get(("milestone", milestone.id), [])
+        if comments:
+            payload["comments"] = [vars(comment) for comment in comments]
+        issue_refs = self.issues.get(("milestone", milestone.id), [])
+        if issue_refs:
+            payload["issues"] = issue_refs
+        return payload
+
+    def plan(self, plan: Plan) -> dict:
+        payload = {
+            "plan": _ser(vars(plan)),
+            "criteria": [vars(item) for item in self.criteria.get(("plan", plan.id), [])],
+            "links": [vars(item) for item in self.links.get(("plan", plan.id), [])],
+            "effective_links": [vars(item) for item in self._effective_links("plan", plan.id)],
+            "forge_links": [vars(item) for item in self.forge.get(("plan", plan.id), [])],
+            "effective_forge_links": [
+                vars(item) for item in self._effective_forge("plan", plan.id)
+            ],
+            "repos": self.repos.get(("plan", plan.id), []),
+            "effective_repos": self._effective_repos("plan", plan.id),
+            "milestones": [
+                {
+                    "milestone": _ser(vars(milestone)),
+                    "criteria": [
+                        vars(item) for item in self.criteria.get(("milestone", milestone.id), [])
+                    ],
+                    "repos": self.repos.get(("milestone", milestone.id), []),
+                    "effective_repos": self._effective_repos("milestone", milestone.id),
+                    "tasks": [self._task_view(task) for task in self.tasks.get(milestone.id, ())],
+                }
+                for milestone in self.milestones.get(plan.id, ())
+            ],
+        }
+        notes = self.notes.get(("plan", plan.id), [])
+        if notes:
+            payload["notes"] = [vars(note) for note in notes]
+        comments = self.comments.get(("plan", plan.id), [])
+        if comments:
+            payload["comments"] = [vars(comment) for comment in comments]
+        issue_refs = self.issues.get(("plan", plan.id), [])
+        if issue_refs:
+            payload["issues"] = issue_refs
+        return payload

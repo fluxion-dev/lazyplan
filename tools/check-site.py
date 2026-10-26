@@ -236,14 +236,14 @@ def _check_sitemap(root: Path, errors: list[str]) -> None:
     if not sitemap.is_file():
         errors.append("missing sitemap.xml")
     else:
-        text = sitemap.read_text()
+        text = sitemap.read_text(encoding="utf-8")
         if BASE_URL not in text:
             errors.append("sitemap does not include the canonical URL")
         if not re.search(r"<lastmod>\d{4}-\d{2}-\d{2}</lastmod>", text):
             errors.append("sitemap needs an ISO lastmod")
     if not robots.is_file():
         errors.append("missing robots.txt")
-    elif "Sitemap:" not in robots.read_text():
+    elif "Sitemap:" not in robots.read_text(encoding="utf-8"):
         errors.append("robots.txt must advertise the sitemap")
 
 
@@ -252,7 +252,7 @@ def _check_page(root: Path, version: str) -> list[str]:
     index = root / "index.html"
     if not index.is_file():
         return [f"missing {index}"]
-    source = index.read_text()
+    source = index.read_text(encoding="utf-8")
     page = PageParser()
     page.feed(source)
     title_match = re.search(r"<title>(.*?)</title>", source, re.S | re.I)
@@ -272,7 +272,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dist", default="", metavar="PATH", help="also check a built site")
     args = parser.parse_args()
-    version = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]["version"]
+    version = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"][
+        "version"
+    ]
     failures: list[str] = []
     roots = [("site", ROOT / "site")]
     if args.dist:

@@ -80,7 +80,7 @@ class TestManPageInstalled(unittest.TestCase):
         self.assertTrue((ROOT / "docs" / "lazyplan.1").is_file(), "docs/lazyplan.1 missing")
 
     def test_man_covers_manual_sections(self):
-        text = (ROOT / "docs" / "lpui.1").read_text()
+        text = (ROOT / "docs" / "lpui.1").read_text(encoding="utf-8")
         plain = text.replace("\\-", "-")
         self.assertTrue(text.startswith(".TH LPUI 1"), "missing .TH header")
         for section in (
@@ -97,7 +97,7 @@ class TestManPageInstalled(unittest.TestCase):
         ):
             self.assertIn(section, text, f"man page missing {section}")
         # Version tracks pyproject.
-        pyproject = (ROOT / "pyproject.toml").read_text()
+        pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
         version = re.search(r'^version = "(.*)"$', pyproject, re.M).group(1)  # type: ignore[union-attr]
         self.assertIn(version, text, "man page version drift")
         # Every CLI verb is documented.
@@ -115,7 +115,7 @@ class TestManPageInstalled(unittest.TestCase):
         assert spec is not None and spec.loader is not None
         gen_man = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(gen_man)
-        current = (ROOT / "docs" / "lpui.1").read_text()
+        current = (ROOT / "docs" / "lpui.1").read_text(encoding="utf-8")
         fresh = gen_man.render()
 
         def _strip_date(s: str) -> str:
@@ -124,11 +124,15 @@ class TestManPageInstalled(unittest.TestCase):
         self.assertEqual(_strip_date(current), _strip_date(fresh), "run `python3 tools/gen-man.py`")
 
     def test_packaging_installs_man(self):
-        pyproject = (ROOT / "pyproject.toml").read_text()
+        pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
         self.assertIn("share/man/man1", pyproject, "pyproject must install man pages")
         self.assertIn("docs/lpui.1", pyproject)
         self.assertIn("docs/lazyplan.1", pyproject)
-        manifest = (ROOT / "MANIFEST.in").read_text() if (ROOT / "MANIFEST.in").exists() else ""
+        manifest = (
+            (ROOT / "MANIFEST.in").read_text(encoding="utf-8")
+            if (ROOT / "MANIFEST.in").exists()
+            else ""
+        )
         self.assertIn("docs/lpui.1", manifest, "MANIFEST.in must ship the man page")
 
     def test_man_renders_without_warnings(self):
@@ -140,7 +144,7 @@ class TestManPageInstalled(unittest.TestCase):
         proc = subprocess.run(
             ["man", "--warnings", "-E", "UTF-8", "-l", "-Tutf8", str(ROOT / "docs" / "lpui.1")],
             capture_output=True,
-            text=True,
+            encoding="utf-8",
         )
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertEqual(proc.stderr.strip(), "", f"man warnings: {proc.stderr}")

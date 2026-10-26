@@ -110,7 +110,7 @@ class TestApply(LayoutCase):
         self.assertTrue((self.repo / PLAN_DIR / "config.json").is_file())
         self.assertTrue((self.repo / PLAN_DIR / "templates/plan.md").is_file())
         self.assertTrue((self.repo / "AGENTS.md").is_file())
-        gitignore = (self.repo / ".gitignore").read_text()
+        gitignore = (self.repo / ".gitignore").read_text(encoding="utf-8")
         self.assertIn(".agents/lazyplan/lazyplan.db", gitignore)
         self.assertNotIn(".agents/lazyplan/templates", gitignore)
         self.assertNotIn(".agents/lazyplan/config.json", gitignore)
@@ -136,10 +136,12 @@ class TestApply(LayoutCase):
     def test_old_skill_copy_is_backed_up_and_refreshed(self):
         target = self.home / ".config/opencode/skills/lazyplan/SKILL.md"
         target.parent.mkdir(parents=True)
-        target.write_text("---\nname: lazyplan\ndescription: old\n---\nrun an old command\n")
+        target.write_text(
+            "---\nname: lazyplan\ndescription: old\n---\nrun an old command\n", encoding="utf-8"
+        )
         result = setup.apply_choice(self.choice("home"), self.repo, self.home, "0.23.0")
         self.assertIn(str(target), result["refreshed"])
-        self.assertEqual(target.read_text(), skills.render_skill())
+        self.assertEqual(target.read_text(encoding="utf-8"), skills.render_skill())
         self.assertTrue(any("SKILL.md" in path for path in result["backups"]))
 
 

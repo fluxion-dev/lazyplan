@@ -43,7 +43,7 @@ class TestState(unittest.TestCase):
     def _write_raw(self, text: str) -> None:
         path = setup.state_path(self.home)
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text)
+        path.write_text(text, encoding="utf-8")
 
     def test_corrupt_state_returns_defaults(self):
         self._write_raw("{not json")
@@ -99,7 +99,7 @@ class TestFindings(unittest.TestCase):
         subprocess.run(["git", "init", "-q", self.repo], check=True, timeout=10)
         subprocess.run(["git", "-C", self.repo, "config", "user.email", "t@t"], check=True)
         subprocess.run(["git", "-C", self.repo, "config", "user.name", "T"], check=True)
-        (self.repo / "README").write_text("x")
+        (self.repo / "README").write_text("x", encoding="utf-8")
         subprocess.run(["git", "-C", self.repo, "add", "."], check=True)
         subprocess.run(["git", "-C", self.repo, "commit", "-qm", "init"], check=True)
 
@@ -122,7 +122,7 @@ class TestFindings(unittest.TestCase):
         self.assertEqual(repo[0].state, "untracked")
 
     def test_ignored_repo_db_is_a_finding(self):
-        (self.repo / ".gitignore").write_text("*.db\n")
+        (self.repo / ".gitignore").write_text("*.db\n", encoding="utf-8")
         self._repo_db()
         repo = [f for f in setup.detect_findings(self.repo, self.home) if f.kind == "repo-db"]
         self.assertEqual(repo[0].state, "ignored")
@@ -159,7 +159,7 @@ class TestFindings(unittest.TestCase):
     def test_outdated_skill_copy_is_a_finding(self):
         skill = self.home / ".agents/skills/lazyplan/SKILL.md"
         skill.parent.mkdir(parents=True)
-        skill.write_text("---\nname: lazyplan\n---\nold instructions\n")
+        skill.write_text("---\nname: lazyplan\n---\nold instructions\n", encoding="utf-8")
         findings = [
             f for f in setup.detect_findings(self.repo, self.home) if f.kind == "stale-skill"
         ]

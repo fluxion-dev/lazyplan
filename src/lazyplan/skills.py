@@ -18,6 +18,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TextIO
 
+from . import textfile
+
 SKILL_NAME = "lazyplan"
 
 AGENTS_DIR = ".agents"
@@ -795,10 +797,10 @@ def global_skill_targets(tools: list[str] | None, home: Path) -> list[Path]:
 def write_skill_file(dest: Path) -> tuple[bool, str]:
     """Write SKILL.md; returns (changed, status string)."""
     content = render_skill()
-    if dest.is_file() and dest.read_text() == content:
+    if dest.is_file() and textfile.read(dest) == content:
         return False, "up-to-date"
     dest.parent.mkdir(parents=True, exist_ok=True)
-    dest.write_text(content)
+    textfile.write(dest, content)
     return True, "wrote"
 
 
@@ -808,18 +810,18 @@ def ensure_agents_md(repo_root: Path, body: str | None = None) -> tuple[bool, st
     snippet = f"{AGENTS_MARK_BEGIN}\n{body or AGENTS_SNIPPET}{AGENTS_MARK_END}\n"
     wanted = (body or AGENTS_SNIPPET).strip()
     if dest.is_file():
-        text = dest.read_text()
+        text = textfile.read(dest)
         if AGENTS_MARK_BEGIN in text and wanted in text:
             return False, "up-to-date"
         if AGENTS_MARK_BEGIN in text:
             # stale snippet: replace the marked block
             before, _, rest = text.partition(AGENTS_MARK_BEGIN)
             _, _, after = rest.partition(AGENTS_MARK_END)
-            dest.write_text(before.rstrip() + "\n\n" + snippet + after.lstrip())
+            textfile.write(dest, before.rstrip() + "\n\n" + snippet + after.lstrip())
             return True, "updated"
-        dest.write_text(text.rstrip() + "\n\n" + snippet)
+        textfile.write(dest, text.rstrip() + "\n\n" + snippet)
         return True, "appended"
-    dest.write_text("# Agent instructions\n\n" + snippet)
+    textfile.write(dest, "# Agent instructions\n\n" + snippet)
     return True, "created"
 
 
@@ -827,7 +829,7 @@ def remove_agents_md(repo_root: Path) -> tuple[bool, str]:
     """Strip only the marked lazyplan block; keep the rest of AGENTS.md."""
     dest = repo_root / "AGENTS.md"
     try:
-        text = dest.read_text()
+        text = textfile.read(dest)
     except OSError:
         return False, "absent"
     if AGENTS_MARK_BEGIN not in text:
@@ -838,7 +840,7 @@ def remove_agents_md(repo_root: Path) -> tuple[bool, str]:
     if cleaned.strip() in ("", "# Agent instructions"):
         dest.unlink()
     else:
-        dest.write_text(cleaned.rstrip() + "\n")
+        textfile.write(dest, cleaned.rstrip() + "\n")
     return True, "removed"
 
 
@@ -948,17 +950,14 @@ def append_gitignore(root: Path, entry: str) -> bool:
         return False
     gi = Path(root).expanduser() / ".gitignore"
     try:
-        raw = gi.read_text() if gi.is_file() else ""
+        raw = textfile.read(gi) if gi.is_file() else ""
     except OSError:
         return False
     lines = [ln.strip().rstrip("/") for ln in raw.splitlines()]
     if entry.rstrip("/") in lines:
         return False
     try:
-        with open(gi, "a") as fh:
-            if raw and not raw.endswith("\n"):
-                fh.write("\n")
-            fh.write(entry + "\n")
+        textfile.append(gi, ("\n" if raw and not raw.endswith("\n") else "") + entry + "\n")
     except OSError:
         return False
     return True

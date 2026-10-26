@@ -7,9 +7,9 @@ from __future__ import annotations
 
 import html
 import json
-from pathlib import Path
 from typing import Any
 
+from . import textfile
 from .store import Store
 
 
@@ -135,5 +135,5 @@ def write(store: Store, plan_id: int, fmt: str, dest: str | None) -> str | None:
     if text is None:
         return None
     if dest:
-        Path(dest).write_text(text + ("" if text.endswith("\n") else "\n"))
+        textfile.write(dest, text + ("" if text.endswith("\n") else "\n"))
     return text

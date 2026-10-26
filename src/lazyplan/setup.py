@@ -19,7 +19,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from . import hook_install, setup_layout, setup_ui, skills, templates
+from . import hook_install, setup_layout, setup_ui, skills, templates, textfile
 from .repo import (
     CONFIG_NAME,
     PLAN_DIR,
@@ -106,7 +106,7 @@ def load_state(home: Path | None = None) -> SetupState:
     """Read setup state; missing or corrupt files return defaults."""
     path = state_path(home)
     try:
-        raw = json.loads(path.read_text())
+        raw = json.loads(textfile.read(path))
         return SetupState.from_dict(raw)
     except (OSError, ValueError, TypeError):
         return SetupState()
@@ -117,7 +117,7 @@ def save_state(state: SetupState, home: Path | None = None) -> Path:
     path = state_path(home)
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps(state.to_dict(), indent=2) + "\n")
+    textfile.write(tmp, json.dumps(state.to_dict(), indent=2) + "\n")
     os.replace(tmp, path)
     return path
 
@@ -163,7 +163,8 @@ def git_state(repo_root: Path) -> str:
         tracked = subprocess.run(
             ["git", "-C", str(repo_root), "ls-files", "--error-unmatch", "--", rel],
             capture_output=True,
-            text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=5,
         )
     except (FileNotFoundError, subprocess.SubprocessError, OSError):
@@ -174,7 +175,8 @@ def git_state(repo_root: Path) -> str:
         ignored = subprocess.run(
             ["git", "-C", str(repo_root), "check-ignore", "-q", "--", rel],
             capture_output=True,
-            text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=5,
         )
     except (FileNotFoundError, subprocess.SubprocessError, OSError):
@@ -289,7 +291,7 @@ def refresh_installed_skills(home: Path | None = None) -> tuple[list[Path], list
         try:
             if not path.is_file():
                 continue
-            text = path.read_text()
+            text = textfile.read(path)
         except OSError:
             continue
         if text == skills.render_skill() or marker not in text[:500]:
@@ -324,7 +326,7 @@ def cleanup_repo_artifacts(root: Path, home: Path) -> list[str]:
     if (root / ".gitignore").is_file():
         setup_layout._strip_gitignore(root / ".gitignore")
     for path in (root / "AGENTS.md", root / ".gitignore"):
-        if path.is_file() and not path.read_text().strip():
+        if path.is_file() and not textfile.read(path).strip():
             path.unlink()
     for path in skill_files:
         if path.is_file():
@@ -337,7 +339,7 @@ def cleanup_repo_artifacts(root: Path, home: Path) -> list[str]:
         (plan_dir / CONFIG_NAME).unlink()
     for kind, name in templates.TEMPLATE_FILES.items():
         path = templates_dir / name
-        if path.is_file() and path.read_text() == templates.STARTERS.get(kind):
+        if path.is_file() and textfile.read(path) == templates.STARTERS.get(kind):
             path.unlink()
     try:
         templates_dir.rmdir()
@@ -446,7 +448,7 @@ def install_pointer(
     snippet = skills.render_home_agents_snippet(db_path)
     if path.is_file():
         try:
-            text = path.read_text()
+            text = textfile.read(path)
         except OSError:
             text = ""
         if not (skills.AGENTS_MARK_BEGIN in text and snippet.strip() in text):
@@ -952,7 +954,7 @@ def _stale_skill_findings(home: Path) -> list[Finding]:
         try:
             if not path.is_file():
                 continue
-            text = path.read_text()
+            text = textfile.read(path)
         except OSError:
             continue
         if text == current or "name: lazyplan" not in text[:500]:

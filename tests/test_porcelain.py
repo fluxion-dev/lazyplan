@@ -307,7 +307,7 @@ class TestLinkRows(unittest.TestCase):
         subprocess.run(
             ["git", "-C", self.repo, "config", "user.name", "Tester"], check=True, timeout=10
         )
-        with open(os.path.join(self.repo, "f.txt"), "w") as fh:
+        with open(os.path.join(self.repo, "f.txt"), "w", encoding="utf-8") as fh:
             fh.write("hi\n")
         subprocess.run(["git", "-C", self.repo, "add", "."], check=True, timeout=10)
         subprocess.run(
@@ -347,7 +347,7 @@ class TestLinkRows(unittest.TestCase):
             ["git", "-C", self.repo, "rev-parse", "HEAD"],
             check=True,
             capture_output=True,
-            text=True,
+            encoding="utf-8",
             timeout=10,
         ).stdout.strip()
         self.assertEqual(
@@ -405,7 +405,7 @@ class TestLinkRows(unittest.TestCase):
             ["git", "-C", self.repo, "rev-parse", "HEAD"],
             check=True,
             capture_output=True,
-            text=True,
+            encoding="utf-8",
             timeout=10,
         ).stdout.strip()
         self._row("link", "--kind", "task", "--id", "1")
@@ -430,7 +430,7 @@ class TestLinkRows(unittest.TestCase):
             ["git", "-C", self.repo, "rev-parse", "--short=12", "HEAD"],
             check=True,
             capture_output=True,
-            text=True,
+            encoding="utf-8",
             timeout=10,
         ).stdout.strip()
         self._row("link-repo", "--kind", "task", "--id", "1", "--repo", self.repo)

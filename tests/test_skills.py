@@ -258,7 +258,7 @@ class TestTemplateParity(unittest.TestCase):
             for dest in copies:
                 with self.subTest(dest=str(dest)):
                     self.assertTrue(dest.is_file())
-                    self.assertEqual(dest.read_text(), skills.render_skill())
+                    self.assertEqual(dest.read_text(encoding="utf-8"), skills.render_skill())
 
 
 class TestSkillContent(unittest.TestCase):
@@ -429,10 +429,10 @@ class TestInstall(unittest.TestCase):
         res = skills.install("project", self.repo, self.home)
         skill = self.repo / ".agents" / "skills" / "lazyplan" / "SKILL.md"
         self.assertTrue(skill.is_file())
-        self.assertIn("lazyplan", skill.read_text())
+        self.assertIn("lazyplan", skill.read_text(encoding="utf-8"))
         self.assertIsNotNone(res.updated_agents_md)
         self.assertTrue((self.repo / "AGENTS.md").is_file())
-        self.assertIn("lazyplan", (self.repo / "AGENTS.md").read_text())
+        self.assertIn("lazyplan", (self.repo / "AGENTS.md").read_text(encoding="utf-8"))
         self.assertIsNone(res.skipped)
 
     def test_global_install_stays_out_of_repo(self):
@@ -452,13 +452,13 @@ class TestInstall(unittest.TestCase):
         res = skills.install("project", self.repo, self.home)
         self.assertTrue(all("up-to-date" in line for line in res.installed))
         # AGENTS.md not duplicated
-        text = (self.repo / "AGENTS.md").read_text()
+        text = (self.repo / "AGENTS.md").read_text(encoding="utf-8")
         self.assertEqual(text.count(skills.AGENTS_MARK_BEGIN), 1)
 
     def test_agents_md_preserves_existing_content(self):
-        (self.repo / "AGENTS.md").write_text("# Mine\n\nCustom rules.\n")
+        (self.repo / "AGENTS.md").write_text("# Mine\n\nCustom rules.\n", encoding="utf-8")
         skills.install("project", self.repo, self.home)
-        text = (self.repo / "AGENTS.md").read_text()
+        text = (self.repo / "AGENTS.md").read_text(encoding="utf-8")
         self.assertIn("Custom rules.", text)
         self.assertIn("lazyplan", text)
 
@@ -550,13 +550,13 @@ class TestInitCli(unittest.TestCase):
         # Repo placement writes lazyplan entries.
         self._init_json(["setup", "--placement", "repo", "--yes"])
         gi = os.path.join(self.repo, ".gitignore")
-        text = open(gi).read()
+        text = open(gi, encoding="utf-8").read()
         self.assertIn(".agents/lazyplan/lazyplan.db", text)
         self.assertNotIn(".agents/lazyplan/templates", text)
         self.assertIn(".agents/skills/lazyplan/", text)
         # second run adds nothing twice
         self._init_json(["setup", "--placement", "repo", "--yes"])
-        self.assertEqual(open(gi).read().count(".agents/lazyplan/lazyplan.db"), 1)
+        self.assertEqual(open(gi, encoding="utf-8").read().count(".agents/lazyplan/lazyplan.db"), 1)
 
 
 class TestAppendGitignore(unittest.TestCase):
@@ -576,15 +576,17 @@ class TestAppendGitignore(unittest.TestCase):
         self.assertFalse(append_gitignore(root, ".agents/lazyplan/"))
         self.assertFalse(append_gitignore(root, ".agents/lazyplan"))
         self.assertFalse(append_gitignore(root, ""))
-        self.assertEqual(open(root / ".gitignore").read(), ".agents/lazyplan/\n")
+        self.assertEqual(open(root / ".gitignore", encoding="utf-8").read(), ".agents/lazyplan/\n")
 
     def test_missing_trailing_newline(self):
         from lazyplan.skills import append_gitignore
 
         root = Path(self.repo)
-        (root / ".gitignore").write_text("*.db")
+        (root / ".gitignore").write_text("*.db", encoding="utf-8")
         self.assertTrue(append_gitignore(root, ".agents/lazyplan/"))
-        self.assertEqual(open(root / ".gitignore").read(), "*.db\n.agents/lazyplan/\n")
+        self.assertEqual(
+            open(root / ".gitignore", encoding="utf-8").read(), "*.db\n.agents/lazyplan/\n"
+        )
 
 
 class TestPromptConfirm(unittest.TestCase):

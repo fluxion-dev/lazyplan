@@ -142,7 +142,8 @@ def _run_git(root: str | Path, *args: str) -> subprocess.CompletedProcess[str] |
         return subprocess.run(
             ["git", "-C", str(root), *args],
             capture_output=True,
-            text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=5,
         )
     except (FileNotFoundError, subprocess.SubprocessError, OSError):

@@ -135,7 +135,7 @@ class TestIssueCli(unittest.TestCase):
 
     def test_linear_file_import_and_source_refs(self):
         path = os.path.join(self.tmp.name, "linear.json")
-        with open(path, "w") as fh:
+        with open(path, "w", encoding="utf-8") as fh:
             json.dump(LINEAR, fh)
         code, out, err = self._run(
             "--json", "issue", "import", "--provider", "linear", "--file", path
@@ -152,7 +152,7 @@ class TestIssueCli(unittest.TestCase):
 
     def test_dry_run_and_bad_input(self):
         path = os.path.join(self.tmp.name, "linear.json")
-        with open(path, "w") as fh:
+        with open(path, "w", encoding="utf-8") as fh:
             json.dump(LINEAR, fh)
         code, out, err = self._run(
             "issue", "import", "--provider", "linear", "--file", path, "--dry-run"

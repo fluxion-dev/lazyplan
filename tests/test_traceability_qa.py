@@ -40,7 +40,7 @@ class TestTraceabilityQA(unittest.TestCase):
         subprocess.run(
             ["git", "-C", self.repo, "config", "user.name", "Tester"], check=True, timeout=10
         )
-        with open(os.path.join(self.repo, "f.txt"), "w") as fh:
+        with open(os.path.join(self.repo, "f.txt"), "w", encoding="utf-8") as fh:
             fh.write("hi\n")
         subprocess.run(["git", "-C", self.repo, "add", "."], check=True, timeout=10)
         subprocess.run(["git", "-C", self.repo, "commit", "-qm", "ship it"], check=True, timeout=10)

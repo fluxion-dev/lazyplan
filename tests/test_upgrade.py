@@ -64,7 +64,9 @@ class TestDetect(unittest.TestCase):
         import tempfile
 
         with tempfile.TemporaryDirectory() as tmp:
-            (Path(tmp) / "pyproject.toml").write_text('[project]\nname = "lazyplan-tui"\n')
+            (Path(tmp) / "pyproject.toml").write_text(
+                '[project]\nname = "lazyplan-tui"\n', encoding="utf-8"
+            )
             exe = str(Path(tmp) / "bin" / "python")
             with mock.patch.object(upgrade, "_probe", return_value=False):
                 info = upgrade.detect(exe=exe, prefix="/usr", base_prefix="/usr", cwd=tmp)

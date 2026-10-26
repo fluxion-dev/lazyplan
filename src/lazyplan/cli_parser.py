@@ -7,6 +7,7 @@ import os
 import re
 from pathlib import Path
 
+from . import textfile
 from .kinds import KINDS
 from .models import Status
 
@@ -125,7 +126,7 @@ more help:
 def package_version() -> str:
     """Version of the running code: pyproject next to the source tree, else installed dist metadata."""
     try:
-        text = (Path(__file__).resolve().parent.parent.parent / "pyproject.toml").read_text()
+        text = textfile.read(Path(__file__).resolve().parent.parent.parent / "pyproject.toml")
     except OSError:
         text = ""
     m = re.search(r'^version = "(.*)"$', text, re.M) if text else None

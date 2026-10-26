@@ -104,14 +104,14 @@ class TestSourceTrail(unittest.TestCase):
         subprocess.run(
             ["git", "-C", self.repo, "config", "user.name", "Tester"], check=True, timeout=10
         )
-        with open(os.path.join(self.repo, "a.py"), "w") as fh:
+        with open(os.path.join(self.repo, "a.py"), "w", encoding="utf-8") as fh:
             fh.write("a\n")
         subprocess.run(["git", "-C", self.repo, "add", "."], check=True, timeout=10)
         subprocess.run(["git", "-C", self.repo, "commit", "-qm", "first"], check=True, timeout=10)
         self.sha = subprocess.run(
             ["git", "-C", self.repo, "rev-parse", "HEAD"],
             capture_output=True,
-            text=True,
+            encoding="utf-8",
             timeout=10,
             check=True,
         ).stdout.strip()

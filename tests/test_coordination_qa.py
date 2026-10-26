@@ -75,7 +75,7 @@ class TestCoordinationQA(unittest.TestCase):
                 env=env,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                text=True,
+                encoding="utf-8",
             )
             for i in range(count)
         ]

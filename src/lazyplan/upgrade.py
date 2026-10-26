@@ -12,6 +12,8 @@ import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
+from . import textfile
+
 REPO = "fluxion-dev/lazyplan"
 PYPI_PKG = "lazyplan-tui"
 RELEASES_LATEST = f"https://github.com/{REPO}/releases/latest"
@@ -101,7 +103,7 @@ def _looks_like_source(exe: str, cwd: str) -> bool:
         for _ in range(6):
             marker = here / "pyproject.toml"
             try:
-                text = marker.read_text()
+                text = textfile.read(marker)
             except OSError:
                 pass
             else:
@@ -235,7 +237,9 @@ def upgrade_pipx(version: str, timeout: float = UPGRADE_TIMEOUT) -> None:
     last_lines: list[str] = []
     for cmd in cmds:
         try:
-            out = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+            out = subprocess.run(
+                cmd, capture_output=True, encoding="utf-8", errors="replace", timeout=timeout
+            )
         except OSError as exc:
             raise UpgradeError(f"cannot run {' '.join(cmd)}: {exc}") from exc
         if out.returncode == 0:
@@ -246,12 +250,11 @@ def upgrade_pipx(version: str, timeout: float = UPGRADE_TIMEOUT) -> None:
 
 def upgrade_venv(version: str, exe: str, timeout: float = UPGRADE_TIMEOUT) -> None:
     """Reinstall the running venv from PyPI (the install.sh do_venv layout)."""
-    pip = str(Path(exe).parent / "pip")
-    if not Path(pip).exists():
-        pip = str(Path(exe).parent / "pip3")
-    cmd = [pip, "install", f"{PYPI_PKG}=={version}"]
+    cmd = [exe, "-m", "pip", "install", f"{PYPI_PKG}=={version}"]
     try:
-        out = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        out = subprocess.run(
+            cmd, capture_output=True, encoding="utf-8", errors="replace", timeout=timeout
+        )
     except OSError as exc:
         raise UpgradeError(f"cannot run {' '.join(cmd)}: {exc}") from exc
     if out.returncode != 0:

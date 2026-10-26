@@ -134,7 +134,7 @@ class TestPorcelainAgentLoop(unittest.TestCase):
         subprocess.run(
             ["git", "-C", self.repo, "config", "user.name", "QA"], check=True, timeout=10
         )
-        with open(os.path.join(self.repo, "f.txt"), "w") as fh:
+        with open(os.path.join(self.repo, "f.txt"), "w", encoding="utf-8") as fh:
             fh.write("hi\n")
         subprocess.run(["git", "-C", self.repo, "add", "."], check=True, timeout=10)
         subprocess.run(["git", "-C", self.repo, "commit", "-qm", "first"], check=True, timeout=10)
@@ -202,7 +202,7 @@ class TestPorcelainAgentLoop(unittest.TestCase):
             self._run("task", "start", "--id", "1")[0],
             ["task", "1", "doing", "Build row", "milestone:1", "-"],
         )
-        with open(os.path.join(self.repo, "row.txt"), "w") as fh:
+        with open(os.path.join(self.repo, "row.txt"), "w", encoding="utf-8") as fh:
             fh.write("row\n")
         subprocess.run(["git", "-C", self.repo, "add", "."], check=True, timeout=10)
         subprocess.run(

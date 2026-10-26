@@ -10,7 +10,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import hook_hosts, skills
+from . import hook_hosts, skills, textfile
 from .setup_layout import _backup_file, _new_backup_dir
 
 HOSTS = ("opencode", "claude", "gemini", "codex", "cursor")
@@ -221,7 +221,7 @@ export default {
 
 def _read(path: Path) -> dict:
     try:
-        raw = path.read_text()
+        raw = textfile.read(path)
     except OSError:
         return {}
     if not raw.strip():
@@ -232,12 +232,12 @@ def _read(path: Path) -> dict:
 
 def _install_spec(spec: Spec, backup_dir: Path) -> bool:
     if spec.kind == "plugin":
-        if spec.path.is_file() and spec.path.read_text() == _plugin_text():
+        if spec.path.is_file() and textfile.read(spec.path) == _plugin_text():
             return False
         if spec.path.is_file():
             _backup_file(backup_dir, spec.path)
         spec.path.parent.mkdir(parents=True, exist_ok=True)
-        spec.path.write_text(_plugin_text())
+        textfile.write(spec.path, _plugin_text())
         return True
     data = _read(spec.path)
     before = json.dumps(data, sort_keys=True)
@@ -249,7 +249,7 @@ def _install_spec(spec: Spec, backup_dir: Path) -> bool:
     if spec.path.is_file():
         _backup_file(backup_dir, spec.path)
     spec.path.parent.mkdir(parents=True, exist_ok=True)
-    spec.path.write_text(json.dumps(merged, indent=2) + "\n")
+    textfile.write(spec.path, json.dumps(merged, indent=2) + "\n")
     return True
 
 
@@ -268,7 +268,7 @@ def _remove_spec(spec: Spec, backup_dir: Path) -> bool:
     if json.dumps(stripped, sort_keys=True) == before:
         return False
     _backup_file(backup_dir, spec.path)
-    spec.path.write_text(json.dumps(stripped, indent=2) + "\n")
+    textfile.write(spec.path, json.dumps(stripped, indent=2) + "\n")
     return True
 
 

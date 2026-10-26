@@ -128,7 +128,7 @@ class AuditCliCase(unittest.TestCase):
     def test_corrupt_database_reports_without_traceback(self):
         path = self.home / ".lazyplan/lazyplan.db"
         path.parent.mkdir(parents=True)
-        path.write_text("not a database")
+        path.write_text("not a database", encoding="utf-8")
         code, _out, err = self._run(["audit", "--json"])
         self.assertEqual(code, 2)
         self.assertIn("cannot read the database", err)

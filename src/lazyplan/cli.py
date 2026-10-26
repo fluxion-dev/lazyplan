@@ -25,6 +25,7 @@ from . import (
     setup,
     setup_layout,
     setup_ui,
+    textfile,
 )
 from . import issues as issues_mod
 from . import lint as lint_mod
@@ -898,7 +899,7 @@ def _comment_list(store: Store, args: argparse.Namespace) -> int:
 
 def _cmd_sync(store: Store, args: argparse.Namespace, actor: str) -> int:
     try:
-        data = json.loads(Path(args.file).read_text())
+        data = json.loads(textfile.read(args.file))
         report = sync_mod.sync(store, data, actor=actor, dry_run=bool(args.dry_run))
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         print(msg_error(exc), file=sys.stderr)
@@ -1825,7 +1826,7 @@ def _cmd_issue_import(store: Store, args: argparse.Namespace, actor: str) -> int
             if not args.file:
                 print("error: linear import needs --file PATH", file=sys.stderr)
                 return 2
-            parsed = issues_mod.parse_linear(json.loads(Path(args.file).read_text()))
+            parsed = issues_mod.parse_linear(json.loads(textfile.read(args.file)))
     except (OSError, ValueError, GitHubError) as exc:
         print(msg_error(exc), file=sys.stderr)
         return 1
@@ -2339,7 +2340,7 @@ def _cmd_export(store: Store, args: argparse.Namespace, actor: str) -> int:
             return _emit(args, data)
         text = render_markdown(data)
     if dest:
-        Path(dest).write_text(text + ("" if text.endswith("\n") else "\n"))
+        textfile.write(dest, text + ("" if text.endswith("\n") else "\n"))
         return _emit(args, {"exported": dest})
     print(text)
     return 0
@@ -2348,8 +2349,7 @@ def _cmd_export(store: Store, args: argparse.Namespace, actor: str) -> int:
 def _cmd_import(store: Store, args: argparse.Namespace, actor: str) -> int:
     import json as _json
 
-    with open(args.file) as fh:
-        data = _json.load(fh)
+    data = _json.loads(textfile.read(args.file))
     try:
         counts = services.import_all(store, data, actor=actor)
     except ValueError as exc:

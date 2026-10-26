@@ -22,6 +22,8 @@ import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 
+from . import textfile
+
 PLAN_DIR = ".agents/lazyplan"
 PLAN_DIR_NAME = Path(PLAN_DIR).name
 LEGACY_PLAN_DIR = ".plan"
@@ -100,7 +102,8 @@ def _git_toplevel(cwd: str | Path) -> Path | None:
             ["git", "rev-parse", "--show-toplevel"],
             cwd=str(cwd),
             capture_output=True,
-            text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=5,
         )
     except (FileNotFoundError, subprocess.SubprocessError, OSError):
@@ -245,7 +248,8 @@ def ensure_plan_dir(db_path: str | Path) -> Path:
     if is_repo_plan_dir(plan_dir):
         cfg = plan_dir / CONFIG_NAME
         if not cfg.exists():
-            cfg.write_text(
+            textfile.write(
+                cfg,
                 json.dumps(
                     {
                         "version": 1,
@@ -254,6 +258,6 @@ def ensure_plan_dir(db_path: str | Path) -> Path:
                     },
                     indent=2,
                 )
-                + "\n"
+                + "\n",
             )
     return plan_dir

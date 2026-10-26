@@ -57,7 +57,9 @@ class FirstRunCase(unittest.TestCase):
         err = io.StringIO()
         with redirect_stderr(err):
             setup.ensure("ui", args, self.repo, self.home, "1.0", interactive=False)
-        self.assertIn("lpui hook", (self.home / ".claude/settings.json").read_text())
+        self.assertIn(
+            "lpui hook", (self.home / ".claude/settings.json").read_text(encoding="utf-8")
+        )
         self.assertTrue(setup.load_state(self.home).hooks)
         self.assertIn("Setup complete", err.getvalue())
 
@@ -65,7 +67,7 @@ class FirstRunCase(unittest.TestCase):
         args = make_args(agents="claude", agents_pointer=True)
         with redirect_stderr(io.StringIO()):
             setup.ensure("ui", args, self.repo, self.home, "1.0", interactive=False)
-        self.assertIn("lazyplan", (self.repo / "AGENTS.md").read_text())
+        self.assertIn("lazyplan", (self.repo / "AGENTS.md").read_text(encoding="utf-8"))
         self.assertTrue(setup.load_state(self.home).agents_pointer)
 
     def test_agent_command_stays_quiet(self):
@@ -118,7 +120,7 @@ class FirstRunCase(unittest.TestCase):
     def test_wrong_typed_state_falls_back_to_defaults(self):
         path = setup.state_path(self.home)
         path.parent.mkdir(parents=True)
-        path.write_text('{"version": "not-a-number"}')
+        path.write_text('{"version": "not-a-number"}', encoding="utf-8")
         self.assertEqual(setup.load_state(self.home).version, setup.SETUP_VERSION)
 
     def test_persistent_findings_do_not_rewrite_setup(self):

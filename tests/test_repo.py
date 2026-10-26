@@ -75,7 +75,7 @@ class TestRepoScope(unittest.TestCase):
             pathlib.Path(self.tmp.name) / "home" / ".agents" / "skills" / "lazyplan" / "SKILL.md"
         )
         skill.parent.mkdir(parents=True, exist_ok=True)
-        skill.write_text("x")
+        skill.write_text("x", encoding="utf-8")
         db = skill_db_path(skill)
         db.touch()
         self.assertEqual(
@@ -106,7 +106,7 @@ class TestRepoScope(unittest.TestCase):
         self.assertTrue(os.path.isfile(team_db))
         cfg = os.path.join(self.repo, ".agents", "lazyplan", "config.json")
         self.assertTrue(os.path.isfile(cfg))
-        self.assertEqual(json.load(open(cfg))["db"], "lazyplan.db")
+        self.assertEqual(json.load(open(cfg, encoding="utf-8"))["db"], "lazyplan.db")
         self.assertEqual(repo_label(s.path), "myproj")
         p = s.add_plan("P", actor="t")
         self.assertEqual(p.id, 1)
@@ -118,7 +118,7 @@ class TestRepoScope(unittest.TestCase):
 
         stale = os.path.join(self.repo, ".lazyplan")
         os.makedirs(stale)
-        with open(os.path.join(stale, "lazyplan.db"), "w") as fh:
+        with open(os.path.join(stale, "lazyplan.db"), "w", encoding="utf-8") as fh:
             fh.write("data")
         also_stale = os.path.join(self.repo, ".agents", "plan")
         os.makedirs(also_stale)
@@ -134,7 +134,7 @@ class TestRepoScope(unittest.TestCase):
         self.assertEqual(stale_plan_dirs(os.path.join(self.tmp.name, "noroot")), [])
         # setup never migrates stale dirs on its own; it writes no repo DB
         self.assertEqual(lpui_main(["setup", "--yes", "--no-skills"]), 0)
-        self.assertEqual(open(os.path.join(stale, "lazyplan.db")).read(), "data")
+        self.assertEqual(open(os.path.join(stale, "lazyplan.db"), encoding="utf-8").read(), "data")
         self.assertFalse(
             os.path.exists(os.path.join(self.repo, ".agents", "lazyplan", "lazyplan.db"))
         )
@@ -216,7 +216,7 @@ class TestLegacyPlanDir(unittest.TestCase):
 
         legacy = os.path.join(self.repo, ".plan")
         os.makedirs(legacy)
-        with open(os.path.join(legacy, "lazyplan.db"), "w") as fh:
+        with open(os.path.join(legacy, "lazyplan.db"), "w", encoding="utf-8") as fh:
             fh.write("data")
         self.assertEqual(
             move_legacy_plan_dir(self.repo), pathlib.Path(self.repo) / ".agents/lazyplan"

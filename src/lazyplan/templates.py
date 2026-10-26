@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TextIO
 
+from . import textfile
 from .kinds import KIND_ERROR
 from .repo import LEGACY_PLAN_DIR, SHARED_DIR_NAME, SHARED_WINDOWS_DIR_NAME, is_repo_plan_dir
 
@@ -271,7 +272,7 @@ def ensure_templates(plan_dir: str | Path, choices: TemplateChoices | None = Non
     for kind, filename in TEMPLATE_FILES.items():
         dest = d / filename
         if not dest.exists():
-            dest.write_text(render_starter(kind, picks))
+            textfile.write(dest, render_starter(kind, picks))
             written.append(str(dest))
     return written
 
@@ -294,10 +295,10 @@ def edit_template(path: str | Path, kind: str, choices: TemplateChoices) -> bool
     """
     dest = Path(path)
     try:
-        current = parse_template(kind, dest.read_text())
+        current = parse_template(kind, textfile.read(dest))
     except (OSError, ValueError):
         return False
-    _, body = _split_body(dest.read_text())
+    _, body = _split_body(textfile.read(dest))
     if not body.strip():
         body = {"plan": PLAN_BODY, "milestone": MILESTONE_BODY, "task": TASK_BODY}[kind]
     if kind == "plan":
@@ -309,7 +310,7 @@ def edit_template(path: str | Path, kind: str, choices: TemplateChoices) -> bool
     else:
         required = ["title", "desc"] if choices.require_desc else ["title"]
         defaults = {"desc": ""}
-    dest.write_text(_frontmatter(defaults, required, current.criteria) + body)
+    textfile.write(dest, _frontmatter(defaults, required, current.criteria) + body)
     return True
 
 
@@ -336,7 +337,7 @@ def run_template_setup(
     for kind, filename in TEMPLATE_FILES.items():
         dest = d / filename
         if not dest.exists():
-            dest.write_text(render_starter(kind, picks))
+            textfile.write(dest, render_starter(kind, picks))
             summary["added"].append(str(dest))
             continue
         if not interactive:
@@ -346,7 +347,7 @@ def run_template_setup(
         if not decision:
             decision = _ask_file(str(dest), read, write)
         if decision == "reset":
-            dest.write_text(render_starter(kind, picks))
+            textfile.write(dest, render_starter(kind, picks))
             summary["reset"].append(str(dest))
         elif decision == "edit":
             if edit_template(dest, kind, picks):
@@ -562,7 +563,7 @@ def load_template(kind: str, db_path: str | Path) -> Template:
     if not dest.is_file():
         return Template(kind=kind)
     try:
-        text = dest.read_text()
+        text = textfile.read(dest)
     except OSError as exc:
         raise ValueError(f"template {kind}.md: cannot read ({exc})") from exc
     try:

@@ -65,7 +65,8 @@ def _gh_token() -> str | None:
         out = subprocess.run(
             ["gh", "auth", "token"],
             capture_output=True,
-            text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=5,
         )
     except (FileNotFoundError, subprocess.SubprocessError, OSError):

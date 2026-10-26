@@ -44,7 +44,7 @@ def _make_repo(path: Path) -> Path:
         env = dict(os.environ)
         env["GIT_AUTHOR_DATE"] = stamp.isoformat()
         env["GIT_COMMITTER_DATE"] = stamp.isoformat()
-        (path / "work.txt").write_text(f"step {index}\n")
+        (path / "work.txt").write_text(f"step {index}\n", encoding="utf-8", newline="\n")
         _git(path, "add", "work.txt")
         _git(path, "commit", "-qm", f"step {index}", env=env)
     return path

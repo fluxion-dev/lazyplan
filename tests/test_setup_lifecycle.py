@@ -52,20 +52,20 @@ class LifecycleCase(unittest.TestCase):
         code, _ = self.run_cli(["setup", "--yes", "--agents", "claude"])
         self.assertEqual(code, 0)
         hook = self.home / ".claude/settings.json"
-        first_hook = hook.read_text()
+        first_hook = hook.read_text(encoding="utf-8")
         backups = self.home / ".lazyplan/backups"
         before = sorted(p.name for p in backups.iterdir()) if backups.is_dir() else []
 
         code, _ = self.run_cli(["setup", "--yes", "--agents", "claude"])
         self.assertEqual(code, 0)
-        self.assertEqual(hook.read_text(), first_hook)
+        self.assertEqual(hook.read_text(encoding="utf-8"), first_hook)
         after = sorted(p.name for p in backups.iterdir()) if backups.is_dir() else []
         self.assertEqual(after, before)
 
         code, _ = self.run_cli(["setup", "--placement", "repo", "--yes", "--agents", "claude"])
         self.assertEqual(code, 0)
         self.assertTrue((self.repo / ".agents/lazyplan/lazyplan.db").is_file())
-        self.assertIn("lazyplan:start", (self.repo / "AGENTS.md").read_text())
+        self.assertIn("lazyplan:start", (self.repo / "AGENTS.md").read_text(encoding="utf-8"))
 
         code, _ = self.run_cli(["doctor"])
         self.assertEqual(code, 0)

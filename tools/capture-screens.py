@@ -87,7 +87,7 @@ def git(repo: Path, *args: str, env: dict[str, str] | None = None) -> str:
         ["git", "-C", str(repo), *args],
         check=True,
         capture_output=True,
-        text=True,
+        encoding="utf-8",
         env=env,
     )
     return proc.stdout
@@ -106,7 +106,7 @@ def write_files(repo: Path, files: dict[str, str]) -> None:
     for rel, text in files.items():
         path = repo / rel
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text)
+        path.write_text(text, encoding="utf-8", newline="\n")
 
 
 def commit(repo: Path, message: str, files: dict[str, str]) -> str:
@@ -574,9 +574,9 @@ SCENES: dict[str, Scene] = {
 
 def patch_svg(path: Path) -> None:
     """Preserve leading spaces: librsvg collapses them in Rich's text runs."""
-    text = path.read_text()
+    text = path.read_text(encoding="utf-8")
     text = text.replace("<text ", '<text xml:space="preserve" ')
-    path.write_text(text)
+    path.write_text(text, encoding="utf-8", newline="\n")
 
 
 def convert(svg: Path, png: Path) -> None:

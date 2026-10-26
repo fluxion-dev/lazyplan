@@ -354,6 +354,12 @@ if _TEXTUAL_OK:
                 lines.append(
                     f"\n[red]blocked[/] {escape_markup(reason) if reason else ''}".rstrip()
                 )
+            gate = obj.get("gate")
+            if gate:
+                lines.append(
+                    f"\n[dim]gate[/] {escape_markup(str(gate.get('state')))} · "
+                    f"{gate.get('prs', 0)} PRs"
+                )
             claim = obj.get("claim")
             if claim:
                 expires = int(float(claim.get("expires_at") or 0))

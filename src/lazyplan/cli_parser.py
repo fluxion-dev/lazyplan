@@ -662,6 +662,22 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="PATH",
         help="checkout to read (default: the task's recorded branch)",
     )
+    _a.add_argument(
+        "--require-pr",
+        action="store_true",
+        help="finish only when a pull request is linked",
+    )
+    _a.add_argument(
+        "--require-checks",
+        action="store_true",
+        help="finish only when every linked PR's checks pass",
+    )
+    _a.add_argument(
+        "--override",
+        default="",
+        metavar="REASON",
+        help="record why a failed gate is being overridden",
+    )
 
     _group, _actions = _noun_group(
         "criterion", "add, list, tick, untick, or delete an acceptance criterion"

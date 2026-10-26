@@ -805,6 +805,26 @@ class Store:
         self.log(actor, "task", "block" if blocked else "unblock", f"T#{tid} {text}".strip())
         return t
 
+    def gate_state(self, task_id: int) -> dict:
+        """Cached PR/check state for a task without network access."""
+        links = self.effective_forge_links("task", task_id)
+        if not links:
+            return {"prs": 0, "checks": "none", "state": "missing"}
+        values = [str(link.checks or "none") for link in links]
+        if any(value == "fail" for value in values):
+            checks = "fail"
+        elif any(value == "pending" for value in values):
+            checks = "pending"
+        elif all(value in {"pass", "neutral", "skipped"} for value in values):
+            checks = "pass"
+        else:
+            checks = "none"
+        return {
+            "prs": len(links),
+            "checks": checks,
+            "state": "pass" if checks == "pass" else checks,
+        }
+
     def delete(self, kind: str, obj_id: int, actor: str = "human") -> bool:
         """Delete a row and its subtree (criteria/links/repos purged; FK cascades rest)."""
         table = table_for(kind)
@@ -1740,6 +1760,9 @@ class Store:
         comments = self.list_comments("task", t.id)
         if comments:
             data["comments"] = [vars(c) for c in comments]
+        gate = self.gate_state(t.id)
+        if gate["prs"]:
+            data["gate"] = gate
         return data
 
     def _task_show(self, t: Task) -> dict:

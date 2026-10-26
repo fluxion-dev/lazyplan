@@ -39,6 +39,7 @@ examples:
   lpui --porcelain criterion relate --id 1 --task 3
   lpui --porcelain trace --plan 1        # criterion -> task -> commit/PR
   lpui --porcelain lint --plan 1         # plan-quality findings
+  lpui stats --since 30.days             # WIP, cycle time, aging, stale work
   lpui mcp                               # typed MCP server on stdio
   lpui --actor helper mcp --read-only    # read-only MCP for reviews
   lpui --porcelain task add --milestone 1 --title "Do X" --desc "approach"

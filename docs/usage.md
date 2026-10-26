@@ -254,6 +254,7 @@ Your agent is expected to work from the plan, not invent it:
   not rewritten.
 - Write rows for scanning: short paragraphs and sections, no placeholder text.
 - If the host supports MCP, prefer `lpui mcp`; otherwise use `--porcelain`.
+- Check flow health with `lpui stats --since 7.days`; the human screen uses the Attention filter.
 - Relate every plan criterion to a proving task and run `lpui --porcelain
   lint --plan P` before check-off.
 - Start a session with `lpui --porcelain next` to claim work, or
@@ -421,6 +422,29 @@ OpenCode-style local server:
 Use `--read-only` for a reviewer or dashboard host. Use `--porcelain` when the
 host does not support MCP; both surfaces read the same database.
 
+### Flow health
+
+`lpui stats` reads existing events and current rows; it never writes or calls
+the network:
+
+```bash
+lpui stats --since 30.days
+lpui stats --since 7.days --by alice
+lpui stats --since 30.days --stale-after 3.days
+lpui --porcelain stats --since 30.days
+```
+
+It reports WIP, median cycle time from first doing to done, throughput in the
+window, median and maximum aging for doing tasks, stale todos, reopened rows,
+active claims, and blocked tasks. `--by` filters completed/reopened activity
+and claims; WIP, aging, stale, and blocked counts are current state. Missing
+timestamps are omitted, not invented.
+
+The screen adds an **Attention** source filter to the existing cycle
+(`F`): expired claims, blocked tasks, doing work older than the stale
+threshold, done rows with open criteria, and red PR checks. It combines with
+the status filter, and the status line shows the current attention count.
+
 ### Session brief and accuracy audit
 
 Start a session with the brief, update after each commit, and close with the
@@ -519,6 +543,7 @@ lpui --porcelain lint --plan 1 [--strict]
 lpui audit --plan 1 [--min-trace 0.8]
 lpui mcp
 lpui mcp --read-only
+lpui stats --since 30.days [--by NAME] [--stale-after 1.days]
 lpui link --kind task --id 1 [--sha HASH] [--repo PATH]
 lpui commits --kind task --id 1 [--refresh] [--files]
 lpui show --kind task --id 1 [--files]

@@ -100,6 +100,38 @@ class Measurement:
     note: str = ""
 
 
+@dataclass(frozen=True)
+class Budget:
+    """Exact query ceiling plus a generous Linux wall ceiling."""
+
+    queries: int
+    ms: float
+
+
+# These are the pre-optimization ceilings. Tighten them as each milestone lands;
+# task 876 owns the final cross-platform table. Query counts are exact and
+# deterministic, so any accidental per-row query breaks the gate immediately.
+BUDGETS: dict[str, Budget] = {
+    "services.tree": Budget(950, 2_000),
+    "services.tree_limit5": Budget(950, 2_000),
+    "attention_ids": Budget(2_400, 2_000),
+    "list_text": Budget(1_900, 3_000),
+    "list_json": Budget(8_000, 6_000),
+    "show_plan": Budget(200, 1_000),
+    "export_all": Budget(19_000, 15_000),
+    "audit_report": Budget(4_900, 6_000),
+    "tui_refresh": Budget(5_300, 8_000),
+    "git_status": Budget(0, 3_000),
+    "git_show": Budget(0, 3_000),
+}
+
+# Wall time is noisy across hosted runners and Windows spawns are much dearer.
+# Query counts are the hard gate; these ceilings catch sleeps, network waits,
+# and accidental whole-database scans rather than small runner variance.
+WALL_MULTIPLIER = {"linux": 1.0, "darwin": 2.0, "win32": 4.0}
+OPTIONAL_METRICS = {"git_status", "git_show"}
+
+
 def _split(total: int, buckets: int) -> list[int]:
     """Distribute `total` rows across `buckets` as evenly as possible."""
     if buckets <= 0:
@@ -532,12 +564,46 @@ def summary(result: dict) -> list[str]:
     return lines
 
 
+def check(result: dict, budgets: dict[str, Budget] | None = None) -> list[str]:
+    """Return one message per budget breach; an empty list means all clear."""
+    budgets = BUDGETS if budgets is None else budgets
+    metrics = {metric["name"]: metric for metric in result["metrics"]}
+    multiplier = WALL_MULTIPLIER.get(sys.platform, 3.0)
+    failures: list[str] = []
+    for name, budget in budgets.items():
+        metric = metrics.get(name)
+        if metric is None:
+            failures.append(f"{name}: metric was not measured")
+            continue
+        if metric["queries"] is None:
+            if name in OPTIONAL_METRICS:
+                continue
+            failures.append(f"{name}: query count unavailable ({metric['note'] or 'untraced'})")
+            continue
+        if metric["queries"] > budget.queries:
+            failures.append(f"{name}: {metric['queries']} queries > {budget.queries}")
+        if metric["ms"] is None:
+            if name in OPTIONAL_METRICS:
+                continue
+            failures.append(f"{name}: wall time unavailable")
+            continue
+        ceiling = budget.ms * multiplier
+        if metric["ms"] > ceiling:
+            failures.append(f"{name}: {metric['ms']:.1f}ms > {ceiling:.1f}ms")
+    return failures
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--quick", action="store_true", help="use the small test fixture")
     parser.add_argument("--repeat", type=int, default=1, help="timed runs per metric")
     parser.add_argument("--no-tui", action="store_true", help="skip the headless TUI refresh")
     parser.add_argument("--json", action="store_true", help="print the full JSON report")
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="exit 1 when a query or wall budget regresses",
+    )
     args = parser.parse_args(argv)
     result = run(
         QUICK_COUNTS if args.quick else DEFAULT_COUNTS,
@@ -550,6 +616,15 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(result["fixture"], indent=2))
         print()
         print("\n".join(summary(result)))
+    if not args.check:
+        return 0
+    failures = check(result)
+    if failures:
+        print("\nperformance budget failures:", file=sys.stderr)
+        for failure in failures:
+            print(f"  {failure}", file=sys.stderr)
+        return 1
+    print("\nperformance budgets: OK")
     return 0
 
 

@@ -111,6 +111,30 @@ class PerfBenchCase(unittest.TestCase):
         self.assertIsNotNone(tui["ms"])
         self.assertGreater(tui["queries"] or 0, 0)
 
+    def test_budget_check_accepts_a_clean_run(self):
+        result = self.bench.run(self.bench.QUICK_COUNTS, repeat=1, include_tui=False)
+        budgets = {
+            "services.tree": self.bench.Budget(10_000, 10_000),
+            "attention_ids": self.bench.Budget(10_000, 10_000),
+        }
+        self.assertEqual(self.bench.check(result, budgets), [])
+
+    def test_budget_check_fails_on_query_and_wall_regressions(self):
+        result = self.bench.run(self.bench.QUICK_COUNTS, repeat=1, include_tui=False)
+        tree = next(metric for metric in result["metrics"] if metric["name"] == "services.tree")
+        tree["queries"] = 10_000
+        failures = self.bench.check(result, {"services.tree": self.bench.Budget(1, 10_000)})
+        self.assertTrue(any("queries >" in failure for failure in failures))
+        tree["queries"] = 1
+        tree["ms"] = 10_000
+        failures = self.bench.check(result, {"services.tree": self.bench.Budget(10_000, 1)})
+        self.assertTrue(any("ms >" in failure for failure in failures))
+
+    def test_budget_check_requires_the_tui_when_asked(self):
+        result = self.bench.run(self.bench.QUICK_COUNTS, repeat=1, include_tui=False)
+        failures = self.bench.check(result, {"tui_refresh": self.bench.Budget(1, 1)})
+        self.assertTrue(failures)
+
     def test_benchmark_leaves_the_real_home_alone(self):
         home = Path.home()
         before = set(home.glob(".lazyplan/*")) if (home / ".lazyplan").is_dir() else set()

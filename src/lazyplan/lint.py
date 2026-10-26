@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from .models import Task
 from .store import Store
 
 _PLACEHOLDER = re.compile(r"\b(TODO|TBD|FIXME)\b", re.IGNORECASE)
@@ -49,6 +50,46 @@ def _open_on_done(store: Store, kind: str, obj_id: int) -> list[Finding]:
     ]
 
 
+def _task_findings(store: Store, task: Task) -> list[Finding]:
+    """Rules that depend only on one task's description and status."""
+    findings: list[Finding] = []
+    desc = task.description.lower()
+    task_id = task.id
+    if "commit" not in desc:
+        findings.append(
+            Finding(
+                "missing-commit-slice",
+                "warn",
+                f"task #{task_id} has no commit slice in its description",
+                "task",
+                task_id,
+            )
+        )
+    if "verif" not in desc:
+        findings.append(
+            Finding(
+                "missing-verification",
+                "warn",
+                f"task #{task_id} has no verification in its description",
+                "task",
+                task_id,
+            )
+        )
+    if _PLACEHOLDER.search(task.description):
+        findings.append(
+            Finding(
+                "placeholder-text",
+                "warn",
+                f"task #{task_id} contains TODO/TBD/FIXME",
+                "task",
+                task_id,
+            )
+        )
+    if task.status.value == "done":
+        findings.extend(_open_on_done(store, "task", task_id))
+    return findings
+
+
 def lint_plan(store: Store, plan_id: int) -> list[Finding] | None:
     """Lint one plan; None when the plan does not exist."""
     plan = store.get_plan(plan_id)
@@ -66,44 +107,11 @@ def lint_plan(store: Store, plan_id: int) -> list[Finding] | None:
                     criterion.id,
                 )
             )
-    milestones = store.list_milestones(plan_id)
     if plan.status.value == "done":
         findings.extend(_open_on_done(store, "plan", plan_id))
-    for milestone in milestones:
+    for milestone in store.list_milestones(plan_id):
         if milestone.status.value == "done":
             findings.extend(_open_on_done(store, "milestone", milestone.id))
         for task in store.list_tasks(milestone.id):
-            desc = task.description.lower()
-            if "commit" not in desc:
-                findings.append(
-                    Finding(
-                        "missing-commit-slice",
-                        "warn",
-                        f"task #{task.id} has no commit slice in its description",
-                        "task",
-                        task.id,
-                    )
-                )
-            if "verif" not in desc:
-                findings.append(
-                    Finding(
-                        "missing-verification",
-                        "warn",
-                        f"task #{task.id} has no verification in its description",
-                        "task",
-                        task.id,
-                    )
-                )
-            if _PLACEHOLDER.search(task.description):
-                findings.append(
-                    Finding(
-                        "placeholder-text",
-                        "warn",
-                        f"task #{task.id} contains TODO/TBD/FIXME",
-                        "task",
-                        task.id,
-                    )
-                )
-            if task.status.value == "done":
-                findings.extend(_open_on_done(store, "task", task.id))
+            findings.extend(_task_findings(store, task))
     return findings

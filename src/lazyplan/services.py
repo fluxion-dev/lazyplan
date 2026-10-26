@@ -22,6 +22,12 @@ from .templates import apply_template, template_criteria
 from .vcs import CommitInfo, RepoStatus, VCSBackend, detect_backend, origin_url
 
 ARCHIVE_AFTER_SECS = 24 * 3600
+_GATE_PASS = {"pass", "neutral", "skipped"}
+
+
+class GateError(RuntimeError):
+    """A completion gate rejected the finish."""
+
 
 _LAZYPLAN_TRAILER = re.compile(r"(?i)^lazyplan:\s*(.+)$")
 _LAZYPLAN_REF = re.compile(r"(?i)^([ptm])\s*#?(\d+)$")
@@ -379,6 +385,14 @@ def start_task(
         None,
     )
     remote = target.get("repo_remote", "") if target else chosen.get("repo_remote", "")
+    owners = store.branch_owners(
+        resolved_root, name, remote=str(remote or ""), exclude_task=task_id
+    )
+    if owners:
+        raise ValueError(
+            f"branch {name!r} is already recorded on task #{owners[0].id}; "
+            "use another branch or finish that task first"
+        )
     store.add_repo_link(
         "task",
         task_id,
@@ -445,16 +459,37 @@ def _link_commits(
     return linked
 
 
+def gate_state(store: Store, task_id: int) -> dict:
+    """Cached PR/check gate state for one task."""
+    return store.gate_state(task_id)
+
+
+def _gate_failure(gate: dict, require_pr: bool, require_checks: bool) -> str:
+    """Human gate failure, or empty when the gates pass."""
+    if require_pr and gate["prs"] == 0:
+        return "completion gate: no linked pull request"
+    if require_checks and gate["checks"] != "pass":
+        return f"completion gate: checks are {gate['checks']}"
+    return ""
+
+
 def finish_task(
     store: Store,
     task_id: int,
     repo_path: str = "",
     actor: str = "human",
+    require_pr: bool = False,
+    require_checks: bool = False,
+    override: str = "",
 ) -> dict:
     """Link commits since the recorded base; move done only when the tree is clean."""
     task = store.get_task(task_id)
     if task is None:
         raise KeyError(f"task #{task_id} not found")
+    gate = gate_state(store, task_id)
+    failure = _gate_failure(gate, require_pr, require_checks)
+    if failure and not override:
+        raise GateError(failure)
     target = _finish_target(store, task_id, repo_path)
     branch = str(target.get("branch", "") or "")
     base = str(target.get("base_sha", "") or "")
@@ -467,6 +502,13 @@ def finish_task(
     if current != branch:
         raise ValueError(f"expected branch {branch!r}, found {current or 'detached HEAD'}")
     status = backend.status(root)
+    if override and (require_pr or require_checks):
+        store.add_note(
+            "task",
+            task_id,
+            f"Gate override by {actor}: {override} (prs={gate['prs']}, checks={gate['checks']})",
+            actor=actor,
+        )
     linked = _link_commits(store, task_id, backend, str(root), base, actor)
     done = False
     if not status.dirty:
@@ -480,6 +522,7 @@ def finish_task(
         "linked": linked,
         "dirty": status.dirty,
         "done": done,
+        "gate": gate,
     }
 
 

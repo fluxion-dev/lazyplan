@@ -1209,6 +1209,22 @@ def _note_dict_rows(items: list[dict]) -> list[str]:
     ]
 
 
+def _gate_row(gate: dict | None) -> list[str]:
+    """Porcelain gate row when a task has linked PRs."""
+    if not gate:
+        return []
+    return [
+        porcelain.row(
+            "gate",
+            gate.get("state"),
+            gate.get("checks"),
+            f"{gate.get('prs', 0)} PRs",
+            "-",
+            "-",
+        )
+    ]
+
+
 def _comment_dict_rows(items: list[dict]) -> list[str]:
     """Comment rows from show/brief payload dicts."""
     return [
@@ -1273,6 +1289,7 @@ def _porcelain_show_lines(store: Store, kind: str, full: dict) -> list[str]:
                 claim_line = _claim_line(store, int(task["id"]), str(task["title"]))
                 if claim_line is not None:
                     lines.append(claim_line)
+                lines.extend(_gate_row(task.get("gate")))
                 lines.extend(_note_dict_rows(task.get("notes", [])))
                 lines.extend(_comment_dict_rows(task.get("comments", [])))
         return lines
@@ -1305,6 +1322,7 @@ def _porcelain_show_lines(store: Store, kind: str, full: dict) -> list[str]:
             claim_line = _claim_line(store, int(task["id"]), str(task["title"]))
             if claim_line is not None:
                 lines.append(claim_line)
+            lines.extend(_gate_row(task.get("gate")))
             lines.extend(_note_dict_rows(task.get("notes", [])))
             lines.extend(_comment_dict_rows(task.get("comments", [])))
         return lines
@@ -1321,6 +1339,7 @@ def _porcelain_show_lines(store: Store, kind: str, full: dict) -> list[str]:
     claim_line = _claim_line(store, int(task["id"]), str(task["title"]))
     if claim_line is not None:
         lines.append(claim_line)
+    lines.extend(_gate_row(task.get("gate")))
     lines.append(porcelain.text_row("desc", task.get("description")))
     lines.extend(_criterion_dict_rows(full.get("criteria", [])))
     lines.extend(_note_dict_rows(task.get("notes", [])))
@@ -1445,6 +1464,7 @@ def _brief_rows(store: Store, payload: dict) -> list[str]:
                 claim_line = _claim_line(store, int(task["id"]), str(task["title"]))
                 if claim_line is not None:
                     rows.append(claim_line)
+                rows.extend(_gate_row(task.get("gate")))
                 rows.extend(_note_dict_rows(task.get("notes", [])))
                 rows.extend(_comment_dict_rows(task.get("comments", [])))
         next_task = entry.get("next")
@@ -2113,12 +2133,19 @@ def _cmd_task_finish(store: Store, args: argparse.Namespace, actor: str) -> int:
     if store.get_task(args.id) is None:
         print(msg_not_found("task", args.id), file=sys.stderr)
         return 1
-    result = services.finish_task(
-        store,
-        args.id,
-        repo_path=str(args.repo) if args.repo else "",
-        actor=actor,
-    )
+    try:
+        result = services.finish_task(
+            store,
+            args.id,
+            repo_path=str(args.repo) if args.repo else "",
+            actor=actor,
+            require_pr=bool(getattr(args, "require_pr", False)),
+            require_checks=bool(getattr(args, "require_checks", False)),
+            override=str(getattr(args, "override", "") or ""),
+        )
+    except services.GateError as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 2
     if args.json:
         return _emit(args, result)
     if porcelain.enabled(args):

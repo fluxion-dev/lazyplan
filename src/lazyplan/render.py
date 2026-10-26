@@ -227,6 +227,13 @@ def _append_claim(lines: list[str], claim: dict | None, indent: str = "") -> Non
     lines.append(f"{indent}claim: @{claim.get('actor')} until {when}")
 
 
+def _append_gate(lines: list[str], gate: dict | None, indent: str = "") -> None:
+    """Append one PR/check gate summary."""
+    if not gate:
+        return
+    lines.append(f"{indent}gate: {gate.get('state')} · {gate.get('prs', 0)} PRs")
+
+
 def _append_comments(lines: list[str], items: list[dict], indent: str = "") -> None:
     """Append review comments with state, actor, and local timestamp."""
     if not items:
@@ -327,6 +334,7 @@ def _render_milestone_full(full: dict, lines: list[str], files: bool = False) ->
         if t.get("blocked"):
             lines.append(f"  blocked: {t.get('blocked_reason') or '-'}")
         _append_claim(lines, t.get("claim"), indent="  ")
+        _append_gate(lines, t.get("gate"), indent="  ")
         if t.get("description"):
             lines.append(f"  {t['description']}")
         _append_notes(lines, t.get("notes", []), indent="  ")
@@ -342,6 +350,7 @@ def _render_task_full(full: dict, lines: list[str], files: bool = False) -> None
     if t.get("blocked"):
         lines.append(f"blocked: {t.get('blocked_reason') or '-'}")
     _append_claim(lines, t.get("claim"))
+    _append_gate(lines, t.get("gate"))
     _append_notes(lines, t.get("notes", []))
     _append_comments(lines, t.get("comments", []))
     if t.get("description"):

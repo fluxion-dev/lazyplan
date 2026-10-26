@@ -49,6 +49,9 @@ def _doing(store: Store, task: Task) -> dict:
     comments = store.list_comments("task", task.id)
     if comments:
         entry["comments"] = [vars(c) for c in comments]
+    gate = store.gate_state(task.id)
+    if gate["prs"]:
+        entry["gate"] = gate
     return entry
 
 
@@ -136,6 +139,9 @@ def lines(payload: dict) -> list[str]:
             for comment in task.get("comments", []):
                 if not comment.get("resolved"):
                     out.append(f"    comment @{comment['actor']}: {comment['text']}")
+            gate = task.get("gate")
+            if gate:
+                out.append(f"    gate     {gate['state']} · {gate['prs']} PRs")
         if not plan["doing"]:
             out.append("  doing    none")
         next_task = plan["next"]

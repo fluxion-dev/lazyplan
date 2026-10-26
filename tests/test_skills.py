@@ -120,6 +120,8 @@ TEMPLATE_FRAGMENTS = [
     "comment add",
     "share --plan",
     "sync --file",
+    "--require-pr",
+    "--require-checks",
     "lpui --porcelain plan show --id N",
     "lpui --porcelain feed --limit 20",
     "lpui export --format json",

@@ -24,7 +24,7 @@
   --color-plan-border: #27272A;
   --color-viking-gold: #F59E0B;
   --color-scanner-green: #10B981;
-  --color-viking-blue: #3B82F6;
+  --color-viking-blue: #2563EB;
   --color-cyber-cyan: #06B6D4;
   --color-strict-red: #EF4444;
   --color-plan-text-primary: #FAFAFA;
@@ -87,6 +87,18 @@
 }
 
 @layer components {
+  nav a.text-sm,
+  nav a.rounded-lg,
+  section#faq summary {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.5rem;
+  }
+
+  section#faq summary {
+    display: flex;
+  }
+
   .skip-link {
     position: absolute;
     left: -9999px;

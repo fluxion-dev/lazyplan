@@ -103,9 +103,8 @@ class TestMcpReadTools(unittest.TestCase):
                 "result"
             ]["tools"]
         }
-        self.assertEqual(
-            names,
-            {"brief", "list_plans", "show_row", "claims", "audit", "trace", "lint", "info"},
+        self.assertTrue(
+            {"brief", "list_plans", "show_row", "claims", "audit", "trace", "lint", "info"} <= names
         )
 
     def test_read_tools_return_json(self):
@@ -157,6 +156,54 @@ class TestMcpReadTools(unittest.TestCase):
         )
         assert response is not None
         self.assertEqual(response["error"]["code"], -32002)
+
+    def test_write_tools_are_listed_and_attributed(self):
+        names = {
+            tool["name"]
+            for tool in self.server.handle({"jsonrpc": "2.0", "id": 1, "method": "tools/list"})[
+                "result"
+            ]["tools"]
+        }
+        self.assertIn("create_plan", names)
+        self.assertIn("claim_task", names)
+        plan = self._tool("create_plan", {"title": "New", "why": "because", "what": "scope"})
+        self.assertFalse(plan.get("isError"))
+        new_id = json.loads(plan["content"][0]["text"])["id"]
+        moved = self._tool("move_row", {"kind": "plan", "id": new_id, "to": "doing"})
+        self.assertFalse(moved.get("isError"))
+        self.assertEqual(self.store.get_plan(new_id).status.value, "doing")
+        claimed = self._tool("claim_task", {"id": 1, "ttl": "30m", "force": True})
+        self.assertFalse(claimed.get("isError"))
+        self.assertEqual(json.loads(claimed["content"][0]["text"])["claim"]["actor"], "qa")
+        note = self._tool("note_add", {"kind": "task", "id": 1, "text": "handoff"})
+        self.assertFalse(note.get("isError"))
+        blocked = self._tool("block_task", {"id": 1, "reason": "waiting"})
+        self.assertFalse(blocked.get("isError"))
+        self.assertTrue(self.store.get_task(1).blocked)
+        unblocked = self._tool("unblock_task", {"id": 1})
+        self.assertFalse(unblocked.get("isError"))
+        self.assertFalse(self.store.get_task(1).blocked)
+        self.assertTrue(any(event["actor"] == "qa" for event in self.store.feed(20)))
+
+    def test_read_only_hides_and_rejects_writes(self):
+        server = mcp.McpServer(self.store, actor="qa", read_only=True)
+        names = {
+            tool["name"]
+            for tool in server.handle({"jsonrpc": "2.0", "id": 1, "method": "tools/list"})[
+                "result"
+            ]["tools"]
+        }
+        self.assertNotIn("create_plan", names)
+        response = server.handle(
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/call",
+                "params": {"name": "create_plan", "arguments": {"title": "Nope"}},
+            }
+        )
+        self.assertEqual(response["error"]["code"], -32601)
+        self.assertEqual(len(self.store.list_plans()), 1)
 
     def test_missing_database_read_is_an_error(self):
         server = mcp.McpServer(None)

@@ -36,6 +36,9 @@ examples:
   lpui --porcelain claim --id 3 --ttl 30m
   lpui --porcelain note add --kind task --id 3 --text "Decision or handoff"
   lpui --porcelain task block --id 3 --reason "waiting on design"
+  lpui --porcelain criterion relate --id 1 --task 3
+  lpui --porcelain trace --plan 1        # criterion -> task -> commit/PR
+  lpui --porcelain lint --plan 1         # plan-quality findings
   lpui --porcelain task add --milestone 1 --title "Do X" --desc "approach"
   lpui plan show --id 1                  show one row with its why, what, checklist, and children
   lpui --actor alice plan add --title "API v2" --why ".." --what ".."
@@ -84,7 +87,8 @@ workflow: starting a plan? Ask the human what to build, why it matters,
   and how to tell it is done. Save that as the plan. Then break it into
   milestones, and each milestone into prioritized tasks. Agents claim work
   with `next` (a lease, not an owner), renew or release it, note handoffs,
-  and park blocked tasks with `task block --reason`.
+  and park blocked tasks with `task block --reason`. Relate each criterion to
+  a proving task and run `lint` before check-off.
 
 environment:
   LAZYPLAN_DB       which database file to use (same as --db)

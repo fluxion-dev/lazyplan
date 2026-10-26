@@ -253,6 +253,8 @@ Your agent is expected to work from the plan, not invent it:
   trailer is required. These rules apply to new plans; existing plans are
   not rewritten.
 - Write rows for scanning: short paragraphs and sections, no placeholder text.
+- Relate every plan criterion to a proving task and run `lpui --porcelain
+  lint --plan P` before check-off.
 - Start a session with `lpui --porcelain next` to claim work, or
   `lpui --porcelain brief` for the whole picture. Renew the lease while you
   work, note handoffs, and release it when you stop. Update the journal after
@@ -293,6 +295,9 @@ lpui --porcelain next
 lpui --porcelain claims
 lpui --porcelain note add --kind task --id 2 --text "Decision or handoff"
 lpui --porcelain task block --id 2 --reason "waiting"
+lpui --porcelain criterion relate --id 1 --task 2
+lpui --porcelain trace --plan 1
+lpui --porcelain lint --plan 1
 lpui --porcelain list --tree
 lpui --porcelain plan show --id 1
 ```
@@ -335,6 +340,36 @@ todo pool and `next` still skips it until it is unblocked.
 Notes are append-only on plans, milestones, and tasks. `show` and `brief`
 include them; `task block` adds one automatically. Claims and notes travel in
 export/import.
+
+### Traceability and lint
+
+Relate each plan criterion to the tasks that prove it, then inspect the evidence:
+
+```bash
+lpui --porcelain criterion relate --id 4 --task 12
+lpui --porcelain criterion unrelate --id 4 --task 12
+lpui --porcelain trace --plan 1
+lpui --porcelain trace --criterion 4
+lpui --porcelain lint --plan 1
+lpui --porcelain lint --plan 1 --strict
+lpui audit --plan 1 --min-trace 0.8 --strict
+```
+
+`trace` walks criterion → proving tasks → effective commits → pull requests. A
+criterion with no proving task is reported as missing, not omitted. Relations
+are many-to-many and survive export/import.
+
+`lint` is read-only and advisory by default. It flags:
+
+- plan criteria with no proving task;
+- task descriptions with no commit-slice token;
+- task descriptions with no verification token;
+- `TODO`, `TBD`, or `FIXME` placeholder text;
+- done rows that still have open criteria.
+
+`--strict` exits 2 when any finding exists. `audit` always reports trace
+coverage and unproven criteria; `--min-trace` is opt-in and defaults to 0
+(disabled), so existing strict runs keep their current thresholds.
 
 ### Session brief and accuracy audit
 

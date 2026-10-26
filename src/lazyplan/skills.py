@@ -250,7 +250,7 @@ lpui list --status all                 # the whole tree
 lpui plan show --id P        # why/what + criteria + children
 ```
 
-Walk the human through every milestone and task, make last edits on the spot, and start executing only on explicit check-off. Check that the plan names its commit strategy and that every task desc names its expected commit slice and verification; reject a plan that batches a whole milestone or plan into one commit. During execution the plan stays the truth: fold new findings into the plan before changing code, never around it.
+Walk the human through every milestone and task, make last edits on the spot, and start executing only on explicit check-off. Relate every plan criterion to at least one proving task (`lpui criterion relate --id C --task T`) and run `lpui lint --plan P` before check-off. Check that the plan names its commit strategy and that every task desc names its expected commit slice and verification; reject a plan that batches a whole milestone or plan into one commit. During execution the plan stays the truth: fold new findings into the plan before changing code, never around it.
 
 ## During execution
 
@@ -275,7 +275,8 @@ on every call. Reach for `--json` only when you need full-fidelity fields.
 - Tick task and plan criteria as they are proven, before closing the row.
 - Lifecycle hooks may remind you at session start, after a commit, and before compaction. Hooks are read-only: they never move a task or link a commit for you.
 - `lpui claims` / `lpui who` shows active leases. `claim release --force` and `claim --force` record a takeover; blocked work is skipped by `next`.
-- `lpui audit --strict` is the opt-in CI gate; it defaults to 80% coverage, one commit of lag, and zero criteria gaps.
+- `lpui trace --plan P` walks each criterion to its proving task, commits, and PRs. `lpui lint --plan P --strict` rejects uncovered criteria, missing slices or verification, placeholders, and done rows with open criteria.
+- `lpui audit --strict` is the opt-in CI gate; it defaults to 80% coverage, one commit of lag, and zero criteria gaps. Add `--min-trace 0.8` to gate criterion coverage.
 
 ## Read first
 
@@ -286,6 +287,8 @@ lpui --porcelain claims                                                      # a
 lpui --porcelain brief                                                       # active plan + next update
 lpui --porcelain audit --since 7.days                                        # accuracy metrics
 lpui --porcelain plan show --id N                                            # definition + criteria + children
+lpui --porcelain trace --plan N                                              # criterion -> task -> commit/PR
+lpui --porcelain lint --plan N                                               # plan-quality findings
 lpui --porcelain feed --limit 20                                                 # recent activity
 lpui export --format json                                            # full dump when you need everything
 lpui export --format markdown --plan ID [--file out.md]              # one full-fidelity plan doc
@@ -418,6 +421,7 @@ Human watches `lpui ui`; agents work via the CLI with `--actor <name>`.
 - Read: `lpui --porcelain list --tree`, `lpui --porcelain next`, `lpui --porcelain claims`, `lpui --porcelain plan show --id N`, `lpui --porcelain audit --since 7.days`, `lpui --porcelain feed --limit 20` (`--json` for full fidelity)
 - Porcelain rows are `kind<TAB>id<TAB>status<TAB>title<TAB>parent<TAB>extra`; parse by tabs, not by scraping text. Set `LAZYPLAN_PORCELAIN=1` for a whole session.
 - Coordinate: `next` claims atomically; `claim renew|release` manages the lease; `note add` hands off context; `task block --reason` parks blocked work without a fourth status.
+- Trace: `criterion relate --id C --task T` records proof; `trace --plan P` shows evidence; `lint --plan P --strict` gates uncovered criteria and weak task descriptions.
 - Write (full CRUD): `lpui plan|milestone|task add`, `... edit`, `... move`, `... delete`; `lpui criterion add|tick|untick|delete` (all with `--actor <name>`)
 - During execution: mark the task doing before code; after each commit link it with `lpui --porcelain link --kind task --id T` (or `task finish`) and move the row; finish with `lpui --porcelain audit --since 7.days` and tick criteria with evidence.
 - Lifecycle hooks are read-only; they remind, never move work or write to the database.

@@ -6,6 +6,7 @@ Stdlib only.
 from __future__ import annotations
 
 import sqlite3
+import uuid
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS plans (
@@ -13,7 +14,8 @@ CREATE TABLE IF NOT EXISTS plans (
     name TEXT NOT NULL,
     description TEXT NOT NULL DEFAULT '',
     status TEXT NOT NULL DEFAULT 'todo',
-    goal TEXT NOT NULL DEFAULT ''
+    goal TEXT NOT NULL DEFAULT '',
+    uid TEXT NOT NULL DEFAULT ''
 );
 CREATE TABLE IF NOT EXISTS milestones (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -49,6 +51,16 @@ CREATE TABLE IF NOT EXISTS notes (
     text TEXT NOT NULL CHECK (trim(text) <> '')
 );
 CREATE INDEX IF NOT EXISTS idx_notes_parent ON notes(parent_kind, parent_id);
+CREATE TABLE IF NOT EXISTS comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    parent_kind TEXT NOT NULL CHECK (parent_kind IN ('plan', 'milestone', 'task')),
+    parent_id INTEGER NOT NULL,
+    actor TEXT NOT NULL DEFAULT 'human',
+    ts REAL NOT NULL,
+    text TEXT NOT NULL CHECK (trim(text) <> ''),
+    resolved INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_comments_parent ON comments(parent_kind, parent_id);
 CREATE TABLE IF NOT EXISTS criteria (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     parent_kind TEXT NOT NULL CHECK (parent_kind IN ('plan', 'milestone', 'task')),
@@ -283,6 +295,17 @@ def _migrate_forge_link_fields(conn: sqlite3.Connection) -> None:
             conn.execute(f"ALTER TABLE forge_links ADD COLUMN {col} TEXT NOT NULL DEFAULT ''")
 
 
+def _migrate_plan_uid(conn: sqlite3.Connection) -> None:
+    """Add stable plan uids and backfill existing rows."""
+    existing = {r["name"] for r in conn.execute("PRAGMA table_info(plans)").fetchall()}
+    if "uid" not in existing:
+        conn.execute("ALTER TABLE plans ADD COLUMN uid TEXT NOT NULL DEFAULT ''")
+    rows = conn.execute("SELECT id FROM plans WHERE uid = ''").fetchall()
+    for row in rows:
+        conn.execute("UPDATE plans SET uid=? WHERE id=?", (str(uuid.uuid4()), row["id"]))
+    conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_plans_uid ON plans(uid)")
+
+
 def _migrate_task_blocked(conn: sqlite3.Connection) -> None:
     """Add the blocked flag to task tables created before it existed."""
     existing = {r["name"] for r in conn.execute("PRAGMA table_info(tasks)").fetchall()}
@@ -296,6 +319,7 @@ def migrate(conn: sqlite3.Connection) -> None:
     """Bring any DB to the current schema: migrate, create, backfill. Idempotent."""
     _migrate_elements(conn)
     conn.executescript(SCHEMA)
+    _migrate_plan_uid(conn)
     _migrate_task_blocked(conn)
     _drop_priority_columns(conn)
     _migrate_vcs_link_state(conn)

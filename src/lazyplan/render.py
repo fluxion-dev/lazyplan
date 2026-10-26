@@ -227,6 +227,21 @@ def _append_claim(lines: list[str], claim: dict | None, indent: str = "") -> Non
     lines.append(f"{indent}claim: @{claim.get('actor')} until {when}")
 
 
+def _append_comments(lines: list[str], items: list[dict], indent: str = "") -> None:
+    """Append review comments with state, actor, and local timestamp."""
+    if not items:
+        return
+    lines.append("\ncomments:" if not indent else f"{indent}comments:")
+    for comment in items:
+        stamp = int(float(comment.get("ts") or 0))
+        when = time.strftime("%Y-%m-%d %H:%M", time.localtime(stamp)) if stamp else "unknown"
+        state = "resolved" if comment.get("resolved") else "open"
+        lines.append(
+            f"{indent}  #{comment.get('id')} [{state}] @{comment.get('actor')} "
+            f"{when}: {comment.get('text')}"
+        )
+
+
 def _append_notes(lines: list[str], items: list[dict], indent: str = "") -> None:
     """Append handoff notes with actor and local timestamp."""
     if not items:
@@ -265,6 +280,7 @@ def _append_repos(lines: list[str], full: dict) -> None:
 def _append_common(lines: list[str], full: dict, files: bool = False) -> None:
     """Shared show sections: notes + acceptance + commits + PRs + repos."""
     _append_notes(lines, full.get("notes", []))
+    _append_comments(lines, full.get("comments", []))
     if full.get("criteria"):
         lines.append("\nacceptance:")
         _append_crit(lines, full["criteria"])
@@ -314,6 +330,7 @@ def _render_milestone_full(full: dict, lines: list[str], files: bool = False) ->
         if t.get("description"):
             lines.append(f"  {t['description']}")
         _append_notes(lines, t.get("notes", []), indent="  ")
+        _append_comments(lines, t.get("comments", []), indent="  ")
 
 
 def _render_task_full(full: dict, lines: list[str], files: bool = False) -> None:
@@ -326,6 +343,7 @@ def _render_task_full(full: dict, lines: list[str], files: bool = False) -> None
         lines.append(f"blocked: {t.get('blocked_reason') or '-'}")
     _append_claim(lines, t.get("claim"))
     _append_notes(lines, t.get("notes", []))
+    _append_comments(lines, t.get("comments", []))
     if t.get("description"):
         lines.append(f"\ndetails: {t['description']}")
     _append_common(lines, full, files=files)

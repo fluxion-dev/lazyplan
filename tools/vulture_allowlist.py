@@ -81,6 +81,7 @@ _.list_claims
 _.unrelate_criterion
 _.criterion_tasks
 _.task_criteria
+_.restore_comment
 GitHubClient
 _.pulls_for_commit
 _.pull

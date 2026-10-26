@@ -279,6 +279,7 @@ on every call. Reach for `--json` only when you need full-fidelity fields.
 - `lpui claims` / `lpui who` shows active leases. `claim release --force` and `claim --force` record a takeover; blocked work is skipped by `next`.
 - `lpui trace --plan P` walks each criterion to its proving task, commits, and PRs. `lpui lint --plan P --strict` rejects uncovered criteria, missing slices or verification, placeholders, and done rows with open criteria.
 - `lpui stats --since 7.days` reports WIP, cycle time, throughput, aging, stale work, reopened rows, claims, and blocked tasks. The human screen's Attention filter surfaces the same risk categories.
+- Collaborate with `comment add/list/resolve`; use `share --plan P` for a read-only snapshot and `sync --file dump.json --dry-run` for a plan-level merge.
 - `lpui audit --strict` is the opt-in CI gate; it defaults to 80% coverage, one commit of lag, and zero criteria gaps. Add `--min-trace 0.8` to gate criterion coverage.
 
 ## Read first
@@ -426,6 +427,7 @@ Human watches `lpui ui`; agents work via the CLI with `--actor <name>`.
 - Porcelain rows are `kind<TAB>id<TAB>status<TAB>title<TAB>parent<TAB>extra`; parse by tabs, not by scraping text. Set `LAZYPLAN_PORCELAIN=1` for a whole session.
 - MCP: hosts that support it can call `lpui mcp` for typed tools/resources; `--read-only` hides writes.
 - Coordinate: `next` claims atomically; `claim renew|release` manages the lease; `note add` hands off context; `task block --reason` parks blocked work without a fourth status.
+- Collaborate: `comment add/list/resolve` for review, `share --plan P` for a read-only snapshot, and `sync --file dump.json --dry-run` for a plan-level merge (conflicts never overwrite).
 - Trace: `criterion relate --id C --task T` records proof; `trace --plan P` shows evidence; `lint --plan P --strict` gates uncovered criteria and weak task descriptions.
 - Write (full CRUD): `lpui plan|milestone|task add`, `... edit`, `... move`, `... delete`; `lpui criterion add|tick|untick|delete` (all with `--actor <name>`)
 - During execution: mark the task doing before code; after each commit link it with `lpui --porcelain link --kind task --id T` (or `task finish`) and move the row; finish with `lpui --porcelain audit --since 7.days` and tick criteria with evidence.

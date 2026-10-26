@@ -46,6 +46,9 @@ def _doing(store: Store, task: Task) -> dict:
     notes = store.list_notes("task", task.id)
     if notes:
         entry["notes"] = [vars(n) for n in notes]
+    comments = store.list_comments("task", task.id)
+    if comments:
+        entry["comments"] = [vars(c) for c in comments]
     return entry
 
 
@@ -91,6 +94,9 @@ def _plan_brief(
     notes = store.list_notes("plan", plan.id)[:_MAX_PLAN_NOTES]
     if notes:
         payload["notes"] = [vars(n) for n in notes]
+    comments = store.list_comments("plan", plan.id)
+    if comments:
+        payload["comments"] = [vars(c) for c in comments]
     return payload
 
 
@@ -118,12 +124,18 @@ def lines(payload: dict) -> list[str]:
         out.append(f"P{plan['id']} {plan['title']} ({plan['status']})")
         for note in plan.get("notes", []):
             out.append(f"  note     @{note['actor']}: {note['text']}")
+        for comment in plan.get("comments", []):
+            if not comment.get("resolved"):
+                out.append(f"  comment  @{comment['actor']}: {comment['text']}")
         for task in plan["doing"]:
             claim = task.get("claim")
             suffix = f" @{claim['actor']}" if claim else ""
             out.append(f"  doing    T{task['id']} {task['title']}{suffix}")
             for note in task.get("notes", []):
                 out.append(f"    note   @{note['actor']}: {note['text']}")
+            for comment in task.get("comments", []):
+                if not comment.get("resolved"):
+                    out.append(f"    comment @{comment['actor']}: {comment['text']}")
         if not plan["doing"]:
             out.append("  doing    none")
         next_task = plan["next"]

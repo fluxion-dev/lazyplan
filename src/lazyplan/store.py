@@ -6,12 +6,14 @@ import json
 import os
 import sqlite3
 import time
+import uuid
 from pathlib import Path
 
 from .kinds import KIND_ERROR, check_parent_kind, table_for
 from .migrate import migrate
 from .models import (
     Claim,
+    Comment,
     Criterion,
     ForgeLink,
     Milestone,
@@ -168,8 +170,8 @@ class Store:
         )
         with self._connect() as conn:
             cur = conn.execute(
-                "INSERT INTO plans (name, description, status, goal) VALUES (?,?,?,?)",
-                (p.name, p.description, p.status.value, p.goal),
+                "INSERT INTO plans (name, description, status, goal, uid) VALUES (?,?,?,?,?)",
+                (p.name, p.description, p.status.value, p.goal, str(uuid.uuid4())),
             )
             p.id = cur.lastrowid or 0
         self.log(actor, "plan", "add", f"P#{p.id} {p.name}")
@@ -190,6 +192,26 @@ class Store:
             status=Status(r["status"]) if "status" in keys else Status.TODO,
             goal=self._opt(r, keys, "goal"),
         )
+
+    def plan_uid(self, pid: int) -> str:
+        """Stable uid for one plan."""
+        with self._connect() as conn:
+            row = conn.execute("SELECT uid FROM plans WHERE id=?", (pid,)).fetchone()
+        return str(row["uid"]) if row is not None else ""
+
+    def set_plan_uid(self, pid: int, uid: str) -> bool:
+        """Set a plan uid, for import/sync."""
+        if not uid.strip():
+            raise ValueError("plan uid must not be empty")
+        with self._connect() as conn:
+            cur = conn.execute("UPDATE plans SET uid=? WHERE id=?", (uid.strip(), pid))
+            return (cur.rowcount or 0) > 0
+
+    def get_plan_by_uid(self, uid: str) -> Plan | None:
+        """Find a plan by its stable uid."""
+        with self._connect() as conn:
+            row = conn.execute("SELECT * FROM plans WHERE uid=?", (uid.strip(),)).fetchone()
+        return self._row_to_plan(row) if row is not None else None
 
     def get_plan(self, pid: int) -> Plan | None:
         """Fetch a plan by id."""
@@ -646,6 +668,98 @@ class Store:
             note_id = cur.lastrowid or 0
         return Note(note_id, parent_kind, parent_id, text.strip(), actor, ts)
 
+    # -- review comments ------------------------------------------------
+    @staticmethod
+    def _row_to_comment(r: sqlite3.Row) -> Comment:
+        """Row to Comment."""
+        return Comment(
+            id=int(r["id"]),
+            parent_kind=str(r["parent_kind"]),
+            parent_id=int(r["parent_id"]),
+            text=str(r["text"]),
+            actor=str(r["actor"]),
+            ts=float(r["ts"]),
+            resolved=bool(r["resolved"]),
+        )
+
+    def add_comment(
+        self, parent_kind: str, parent_id: int, text: str, actor: str = "human"
+    ) -> Comment:
+        """Append a review comment and log it."""
+        check_parent_kind(parent_kind)
+        body = text.strip()
+        if not body:
+            raise ValueError("comment text must not be empty")
+        if not self._parent_exists(parent_kind, parent_id):
+            raise KeyError(f"{parent_kind} #{parent_id} not found")
+        stamp = time.time()
+        with self._connect() as conn:
+            cur = conn.execute(
+                "INSERT INTO comments (parent_kind, parent_id, actor, ts, text) VALUES (?,?,?,?,?)",
+                (parent_kind, parent_id, actor, stamp, body),
+            )
+            comment_id = cur.lastrowid or 0
+        self.log(actor, parent_kind, "comment", f"{parent_kind} #{parent_id}: {body[:80]}")
+        return Comment(comment_id, parent_kind, parent_id, body, actor, stamp, False)
+
+    def list_comments(
+        self, parent_kind: str, parent_id: int, mentions: str | None = None
+    ) -> list[Comment]:
+        """Comments on one row, oldest first; optionally only @name mentions."""
+        check_parent_kind(parent_kind)
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT * FROM comments WHERE parent_kind=? AND parent_id=? ORDER BY id",
+                (parent_kind, parent_id),
+            ).fetchall()
+        items = [self._row_to_comment(row) for row in rows]
+        if mentions:
+            needle = f"@{mentions.lstrip('@').lower()}"
+            items = [item for item in items if needle in item.text.lower()]
+        return items
+
+    def resolve_comment(
+        self, cid: int, resolved: bool = True, actor: str = "human"
+    ) -> Comment | None:
+        """Set or clear a comment's resolved flag."""
+        with self._connect() as conn:
+            row = conn.execute("SELECT * FROM comments WHERE id=?", (cid,)).fetchone()
+            if row is None:
+                return None
+            conn.execute("UPDATE comments SET resolved=? WHERE id=?", (1 if resolved else 0, cid))
+        self.log(actor, "comment", "resolve" if resolved else "unresolve", f"comment #{cid}")
+        comment = self._row_to_comment(row)
+        return Comment(
+            comment.id,
+            comment.parent_kind,
+            comment.parent_id,
+            comment.text,
+            comment.actor,
+            comment.ts,
+            resolved,
+        )
+
+    def restore_comment(
+        self,
+        parent_kind: str,
+        parent_id: int,
+        text: str,
+        actor: str,
+        ts: float,
+        resolved: bool,
+    ) -> Comment | None:
+        """Import a comment with its timestamp and resolution state."""
+        if not text.strip():
+            return None
+        with self._connect() as conn:
+            cur = conn.execute(
+                "INSERT INTO comments (parent_kind, parent_id, actor, ts, text, resolved)"
+                " VALUES (?,?,?,?,?,?)",
+                (parent_kind, parent_id, actor, ts, text.strip(), 1 if resolved else 0),
+            )
+            comment_id = cur.lastrowid or 0
+        return Comment(comment_id, parent_kind, parent_id, text.strip(), actor, ts, resolved)
+
     def update_task(
         self,
         tid: int,
@@ -715,18 +829,21 @@ class Store:
                 )
                 self._delete_entity_repos(conn, "plan", obj_id)
                 self._delete_notes(conn, "plan", obj_id)
+                self._delete_comments(conn, "plan", obj_id)
                 for sid in sids:
                     self._delete_milestone_criteria(conn, sid)
                     self._delete_milestone_links(conn, sid)
                     self._delete_milestone_repos(conn, sid)
                     self._delete_milestone_forge_links(conn, sid)
                     self._delete_milestone_notes(conn, sid)
+                    self._delete_milestone_comments(conn, sid)
             elif kind == "milestone":
                 self._delete_milestone_criteria(conn, obj_id)
                 self._delete_milestone_links(conn, obj_id)
                 self._delete_milestone_repos(conn, obj_id)
                 self._delete_milestone_forge_links(conn, obj_id)
                 self._delete_milestone_notes(conn, obj_id)
+                self._delete_milestone_comments(conn, obj_id)
             else:
                 conn.execute(
                     "DELETE FROM criteria WHERE parent_kind='task' AND parent_id=?", (obj_id,)
@@ -739,6 +856,7 @@ class Store:
                 )
                 self._delete_entity_repos(conn, "task", obj_id)
                 self._delete_notes(conn, "task", obj_id)
+                self._delete_comments(conn, "task", obj_id)
             cur = conn.execute(f"DELETE FROM {table} WHERE id=?", (obj_id,))
             ok = (cur.rowcount or 0) > 0
         if ok:
@@ -794,6 +912,26 @@ class Store:
         conn.execute(
             "DELETE FROM notes WHERE parent_kind=? AND parent_id=?", (parent_kind, parent_id)
         )
+
+    @staticmethod
+    def _delete_comments(conn: sqlite3.Connection, parent_kind: str, parent_id: int) -> None:
+        """Remove comments on one row."""
+        conn.execute(
+            "DELETE FROM comments WHERE parent_kind=? AND parent_id=?", (parent_kind, parent_id)
+        )
+
+    @staticmethod
+    def _delete_milestone_comments(conn: sqlite3.Connection, milestone_id: int) -> None:
+        """Remove comments under a milestone and its tasks."""
+        tids = [
+            r["id"]
+            for r in conn.execute(
+                "SELECT id FROM tasks WHERE milestone_id=?", (milestone_id,)
+            ).fetchall()
+        ]
+        Store._delete_comments(conn, "milestone", milestone_id)
+        for tid in tids:
+            Store._delete_comments(conn, "task", tid)
 
     @staticmethod
     def _delete_milestone_notes(conn: sqlite3.Connection, milestone_id: int) -> None:
@@ -1599,6 +1737,9 @@ class Store:
         notes = self.list_notes("task", t.id)
         if notes:
             data["notes"] = [vars(n) for n in notes]
+        comments = self.list_comments("task", t.id)
+        if comments:
+            data["comments"] = [vars(c) for c in comments]
         return data
 
     def _task_show(self, t: Task) -> dict:
@@ -1638,6 +1779,9 @@ class Store:
         notes = self.list_notes("milestone", s.id)
         if notes:
             payload["notes"] = [vars(n) for n in notes]
+        comments = self.list_comments("milestone", s.id)
+        if comments:
+            payload["comments"] = [vars(c) for c in comments]
         return payload
 
     def _plan_show(self, p: Plan) -> dict:
@@ -1665,6 +1809,9 @@ class Store:
         notes = self.list_notes("plan", p.id)
         if notes:
             payload["notes"] = [vars(n) for n in notes]
+        comments = self.list_comments("plan", p.id)
+        if comments:
+            payload["comments"] = [vars(c) for c in comments]
         return payload
 
     def get_full(self, kind: str, obj_id: int) -> dict | None:

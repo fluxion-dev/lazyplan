@@ -40,6 +40,9 @@ examples:
   lpui --porcelain trace --plan 1        # criterion -> task -> commit/PR
   lpui --porcelain lint --plan 1         # plan-quality findings
   lpui stats --since 30.days             # WIP, cycle time, aging, stale work
+  lpui comment add --kind task --id 3 --text "Review @alice"
+  lpui share --plan 1                     # read-only HTML snapshot
+  lpui sync --file backup.json --dry-run  # plan-level merge report
   lpui mcp                               # typed MCP server on stdio
   lpui --actor helper mcp --read-only    # read-only MCP for reviews
   lpui --porcelain task add --milestone 1 --title "Do X" --desc "approach"
@@ -407,6 +410,45 @@ def build_parser() -> argparse.ArgumentParser:
     )
     li.add_argument("--plan", type=int, required=True, metavar="ID", help="plan to lint")
     li.add_argument("--strict", action="store_true", help="exit 2 when any finding exists")
+    sy = sub.add_parser(
+        "sync",
+        help="merge plans from a JSON dump by stable uid",
+        parents=[common],
+    )
+    sy.add_argument("--file", required=True, metavar="PATH", help="export dump to merge")
+    sy.add_argument("--dry-run", action="store_true", help="report without writing")
+    sh = sub.add_parser(
+        "share",
+        help="write a read-only HTML or JSON plan snapshot",
+        parents=[common],
+    )
+    sh.add_argument("--plan", type=int, required=True, metavar="ID", help="plan to share")
+    sh.add_argument("--format", choices=["html", "json"], default="html", help="snapshot format")
+    sh.add_argument("--out", default=None, metavar="PATH", help="write to a file")
+    co = sub.add_parser(
+        "comment",
+        help="add, list, resolve, or unresolve review comments",
+        parents=[common],
+    )
+    co.add_argument(
+        "action",
+        choices=["add", "list", "resolve", "unresolve"],
+        help="comment action",
+    )
+    co.add_argument(
+        "--kind", choices=list(KINDS), default=None, help="which row the comment belongs to"
+    )
+    co.add_argument("--id", type=int, default=None, metavar="ID", help="row id")
+    co.add_argument(
+        "--comment", type=int, default=None, metavar="ID", help="comment id (resolve only)"
+    )
+    co.add_argument("--text", default=None, metavar="TEXT", help="comment text (add only)")
+    co.add_argument(
+        "--mentions",
+        default=None,
+        metavar="NAME",
+        help="only comments that mention @NAME (list only)",
+    )
     mc = sub.add_parser(
         "mcp",
         help="serve the plan over MCP on stdio for agent hosts",

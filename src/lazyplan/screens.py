@@ -361,6 +361,18 @@ if _TEXTUAL_OK:
                 lines.append(
                     f"\n[dim]claim[/] @{escape_markup(str(claim.get('actor', '')))} ({state})"
                 )
+            comments = [
+                comment
+                for comment in (self._full.get("comments") or obj.get("comments") or [])
+                if not comment.get("resolved")
+            ]
+            if comments:
+                lines.extend(["", f"[dim]comments {len(comments)}[/]"])
+                for comment in comments[-3:]:
+                    lines.append(
+                        f"  [dim]@{escape_markup(str(comment.get('actor', '')))}[/] "
+                        f"{escape_markup(str(comment.get('text', '')))}"
+                    )
             notes = self._full.get("notes") or obj.get("notes") or []
             if notes:
                 lines.extend(["", f"[dim]notes {len(notes)}[/]"])

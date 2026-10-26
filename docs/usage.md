@@ -255,6 +255,7 @@ Your agent is expected to work from the plan, not invent it:
 - Write rows for scanning: short paragraphs and sections, no placeholder text.
 - If the host supports MCP, prefer `lpui mcp`; otherwise use `--porcelain`.
 - Check flow health with `lpui stats --since 7.days`; the human screen uses the Attention filter.
+- Leave review comments with `comment add` and share a read-only plan with `share`; sync is plan-granularity.
 - Relate every plan criterion to a proving task and run `lpui --porcelain
   lint --plan P` before check-off.
 - Start a session with `lpui --porcelain next` to claim work, or
@@ -445,6 +446,42 @@ The screen adds an **Attention** source filter to the existing cycle
 threshold, done rows with open criteria, and red PR checks. It combines with
 the status filter, and the status line shows the current attention count.
 
+### Comments, sharing, and sync
+
+Review comments live on plans, milestones, and tasks:
+
+```bash
+lpui --porcelain comment add --kind task --id 3 --text "Please cover @alice's case"
+lpui --porcelain comment list --kind task --id 3 [--mentions alice]
+lpui --porcelain comment resolve --comment 7
+lpui --porcelain comment unresolve --comment 7
+```
+
+`show`, `brief`, porcelain, and the TUI detail include comments; unresolved
+comments are called out. Deleting a parent removes its comments.
+
+Share a read-only snapshot when someone does not have the database:
+
+```bash
+lpui share --plan 1
+lpui share --plan 1 --format json --out /tmp/plan.json
+```
+
+HTML escapes every field; JSON omits tokens, auth state, cache payloads, and
+raw forge API records. Sharing never writes the database.
+
+Plans carry stable UIDs. Merge a dump from another machine with:
+
+```bash
+lpui sync --file backup.json --dry-run
+lpui sync --file backup.json
+```
+
+Sync is plan-granularity: unknown UIDs are added, identical plans are skipped,
+and a changed plan with the same UID is a conflict. Sync never deletes or
+overwrites local plans, and dry-run reports the same adds/skips/conflicts
+without writing. Row-level merge is intentionally out of scope.
+
 ### Session brief and accuracy audit
 
 Start a session with the brief, update after each commit, and close with the
@@ -544,6 +581,10 @@ lpui audit --plan 1 [--min-trace 0.8]
 lpui mcp
 lpui mcp --read-only
 lpui stats --since 30.days [--by NAME] [--stale-after 1.days]
+lpui comment add --kind task --id 1 --text "..." [--mentions NAME]
+lpui comment resolve --comment 1
+lpui share --plan 1 [--format html|json] [--out PATH]
+lpui sync --file dump.json [--dry-run]
 lpui link --kind task --id 1 [--sha HASH] [--repo PATH]
 lpui commits --kind task --id 1 [--refresh] [--files]
 lpui show --kind task --id 1 [--files]

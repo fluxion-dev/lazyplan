@@ -27,7 +27,9 @@ from . import (
 )
 from . import lint as lint_mod
 from . import mcp as mcp_mod
+from . import share as share_mod
 from . import stats as stats_mod
+from . import sync as sync_mod
 from . import trace as trace_mod
 from .cli_parser import build_parser, package_version
 from .design import (
@@ -41,7 +43,7 @@ from .design import (
     msg_not_found,
 )
 from .forge import parse_pull_url, resolve_auth
-from .models import Criterion, Milestone, Plan, Status, Task
+from .models import Comment, Criterion, Milestone, Plan, Status, Task
 from .render import (
     render_commits,
     render_forge_links,
@@ -800,6 +802,170 @@ def _cmd_claims(store: Store, args: argparse.Namespace, actor: str) -> int:
     return 0
 
 
+def _comment_result(args: argparse.Namespace, comment: Comment) -> int:
+    """Print one comment in JSON, porcelain, or text."""
+    if args.json:
+        return _emit(args, {"comment": vars(comment)})
+    if porcelain.enabled(args):
+        print(
+            porcelain.comment_row(
+                comment.id,
+                comment.actor,
+                comment.text,
+                comment.parent_kind,
+                comment.parent_id,
+                comment.ts,
+                comment.resolved,
+            )
+        )
+    else:
+        state = "resolved" if comment.resolved else "open"
+        print(f"comment #{comment.id} [{state}] {comment.text}")
+    return 0
+
+
+def _comment_resolve(store: Store, args: argparse.Namespace, actor: str, resolved: bool) -> int:
+    if args.comment is None:
+        print("error: comment resolve needs --comment ID", file=sys.stderr)
+        return 2
+    comment = store.resolve_comment(args.comment, resolved=resolved, actor=actor)
+    if comment is None:
+        print(msg_not_found("comment", args.comment), file=sys.stderr)
+        return 1
+    return _comment_result(args, comment)
+
+
+def _comment_scope(store: Store, args: argparse.Namespace) -> int | None:
+    """Return an exit code when the comment scope is invalid."""
+    if args.kind is None or args.id is None:
+        print(f"error: comment {args.action} needs --kind and --id", file=sys.stderr)
+        return 2
+    if store.get_parent(args.kind, args.id) is None:
+        print(msg_not_found(args.kind, args.id), file=sys.stderr)
+        return 1
+    return None
+
+
+def _comment_add(store: Store, args: argparse.Namespace, actor: str) -> int:
+    code = _comment_scope(store, args)
+    if code is not None:
+        return code
+    if args.text is None or not args.text.strip():
+        print("error: comment add needs --text", file=sys.stderr)
+        return 2
+    assert args.kind is not None and args.id is not None
+    comment = store.add_comment(args.kind, args.id, args.text, actor=actor)
+    return _comment_result(args, comment)
+
+
+def _comment_list(store: Store, args: argparse.Namespace) -> int:
+    code = _comment_scope(store, args)
+    if code is not None:
+        return code
+    assert args.kind is not None and args.id is not None
+    comments = store.list_comments(args.kind, args.id, mentions=args.mentions)
+    if args.json:
+        return _emit(args, [vars(comment) for comment in comments])
+    if porcelain.enabled(args):
+        for comment in comments:
+            print(
+                porcelain.comment_row(
+                    comment.id,
+                    comment.actor,
+                    comment.text,
+                    comment.parent_kind,
+                    comment.parent_id,
+                    comment.ts,
+                    comment.resolved,
+                )
+            )
+        return 0
+    if not comments:
+        print("(no comments)")
+        return 0
+    for comment in comments:
+        when = (
+            time.strftime("%Y-%m-%d %H:%M", time.localtime(comment.ts)) if comment.ts else "unknown"
+        )
+        state = "resolved" if comment.resolved else "open"
+        print(f"#{comment.id} [{state}] @{comment.actor} {when}: {comment.text}")
+    return 0
+
+
+def _cmd_sync(store: Store, args: argparse.Namespace, actor: str) -> int:
+    try:
+        data = json.loads(Path(args.file).read_text())
+        report = sync_mod.sync(store, data, actor=actor, dry_run=bool(args.dry_run))
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 2
+    if args.json:
+        _emit(args, report)
+    elif porcelain.enabled(args):
+        for item in report["added"]:
+            print(porcelain.row("sync", item["uid"] or "-", "add", item["title"], "-", "added"))
+        for item in report["skipped"]:
+            print(
+                porcelain.row(
+                    "sync",
+                    item["uid"] or "-",
+                    "skip",
+                    item["title"],
+                    f"plan:{item['local_id']}",
+                    "identical",
+                )
+            )
+        for item in report["conflicts"]:
+            print(
+                porcelain.row(
+                    "sync",
+                    item["uid"] or "-",
+                    "conflict",
+                    item["title"],
+                    f"plan:{item['local_id']}" if item["local_id"] else "-",
+                    ",".join(item["differences"]),
+                )
+            )
+    else:
+        print(
+            f"{'dry-run: ' if report['dry_run'] else ''}"
+            f"{len(report['added'])} added · {len(report['skipped'])} skipped · "
+            f"{len(report['conflicts'])} conflicts"
+        )
+        for item in report["conflicts"]:
+            print(
+                f"  conflict {item['title']} ({item['uid'] or '-'}): "
+                f"{', '.join(item['differences'])}"
+            )
+    return 1 if report["conflicts"] else 0
+
+
+def _cmd_share(store: Store, args: argparse.Namespace, actor: str) -> int:
+    del actor
+    if store.get_plan(args.plan) is None:
+        print(msg_not_found("plan", args.plan), file=sys.stderr)
+        return 1
+    text = share_mod.write(store, args.plan, args.format, args.out)
+    if text is None:
+        print(msg_not_found("plan", args.plan), file=sys.stderr)
+        return 1
+    if args.out:
+        if args.json:
+            return _emit(args, {"shared": args.out, "format": args.format})
+        print(f"shared P{args.plan} as {args.format}: {args.out}")
+        return 0
+    print(text, end="" if text.endswith("\n") else "\n")
+    return 0
+
+
+def _cmd_comment(store: Store, args: argparse.Namespace, actor: str) -> int:
+    if args.action == "add":
+        return _comment_add(store, args, actor)
+    if args.action == "list":
+        return _comment_list(store, args)
+    return _comment_resolve(store, args, actor, args.action == "resolve")
+
+
 def _cmd_note(store: Store, args: argparse.Namespace, actor: str) -> int:
     if store.get_parent(args.kind, args.id) is None:
         print(msg_not_found(args.kind, args.id), file=sys.stderr)
@@ -1043,6 +1209,22 @@ def _note_dict_rows(items: list[dict]) -> list[str]:
     ]
 
 
+def _comment_dict_rows(items: list[dict]) -> list[str]:
+    """Comment rows from show/brief payload dicts."""
+    return [
+        porcelain.comment_row(
+            item["id"],
+            item.get("actor"),
+            item.get("text"),
+            item.get("parent_kind", "comment"),
+            item.get("parent_id", "-"),
+            item.get("ts", 0),
+            bool(item.get("resolved")),
+        )
+        for item in items
+    ]
+
+
 def _claim_line(store: Store, task_id: int, title: str) -> str | None:
     """Claim row for a task, or None when it has no lease."""
     claim = store.get_claim(task_id)
@@ -1065,6 +1247,7 @@ def _porcelain_show_lines(store: Store, kind: str, full: dict) -> list[str]:
         lines.append(porcelain.text_row("what", plan.get("description")))
         lines.extend(_criterion_dict_rows(full.get("criteria", [])))
         lines.extend(_note_dict_rows(full.get("notes", [])))
+        lines.extend(_comment_dict_rows(full.get("comments", [])))
         for entry in full.get("milestones", []):
             milestone = entry["milestone"]
             lines.append(
@@ -1091,6 +1274,7 @@ def _porcelain_show_lines(store: Store, kind: str, full: dict) -> list[str]:
                 if claim_line is not None:
                     lines.append(claim_line)
                 lines.extend(_note_dict_rows(task.get("notes", [])))
+                lines.extend(_comment_dict_rows(task.get("comments", [])))
         return lines
     if kind == "milestone":
         milestone = full["milestone"]
@@ -1106,6 +1290,7 @@ def _porcelain_show_lines(store: Store, kind: str, full: dict) -> list[str]:
         lines.append(porcelain.text_row("desc", milestone.get("description")))
         lines.extend(_criterion_dict_rows(full.get("criteria", [])))
         lines.extend(_note_dict_rows(full.get("notes", [])))
+        lines.extend(_comment_dict_rows(full.get("comments", [])))
         for entry in full.get("tasks", []):
             task = entry["task"]
             lines.append(
@@ -1121,6 +1306,7 @@ def _porcelain_show_lines(store: Store, kind: str, full: dict) -> list[str]:
             if claim_line is not None:
                 lines.append(claim_line)
             lines.extend(_note_dict_rows(task.get("notes", [])))
+            lines.extend(_comment_dict_rows(task.get("comments", [])))
         return lines
     task = full["task"]
     lines.append(
@@ -1138,6 +1324,7 @@ def _porcelain_show_lines(store: Store, kind: str, full: dict) -> list[str]:
     lines.append(porcelain.text_row("desc", task.get("description")))
     lines.extend(_criterion_dict_rows(full.get("criteria", [])))
     lines.extend(_note_dict_rows(task.get("notes", [])))
+    lines.extend(_comment_dict_rows(task.get("comments", [])))
     return lines
 
 
@@ -1250,6 +1437,7 @@ def _brief_rows(store: Store, payload: dict) -> list[str]:
         if plan is not None:
             rows.append(_porcelain_row(store, plan))
         rows.extend(_note_dict_rows(entry.get("notes", [])))
+        rows.extend(_comment_dict_rows(entry.get("comments", [])))
         for task in entry.get("doing", []):
             model = store.get_task(int(task["id"]))
             if model is not None:
@@ -1258,6 +1446,7 @@ def _brief_rows(store: Store, payload: dict) -> list[str]:
                 if claim_line is not None:
                     rows.append(claim_line)
                 rows.extend(_note_dict_rows(task.get("notes", [])))
+                rows.extend(_comment_dict_rows(task.get("comments", [])))
         next_task = entry.get("next")
         if next_task:
             parent = "-"
@@ -2311,6 +2500,9 @@ _COMMANDS: dict[str, Callable[[Store, argparse.Namespace, str], int]] = {
     "trace": _cmd_trace,
     "lint": _cmd_lint,
     "stats": _cmd_stats,
+    "comment": _cmd_comment,
+    "share": _cmd_share,
+    "sync": _cmd_sync,
     "next": _cmd_next,
     "claim": _cmd_claim,
     "claims": _cmd_claims,

@@ -217,6 +217,8 @@ export, preview, and detail views keep the static `◐`; set
 | `n` | create by context (plan, milestone, or task) |
 | `/` | filter by text |
 | `f` | change status filter |
+| `F` | change source filter: all, linked, PR, stale, unlinked, claims, blocked, attention |
+| `g` | open the source trail for the selected row |
 | `A` | show all plans |
 | `?` | help |
 | `c` | command palette |

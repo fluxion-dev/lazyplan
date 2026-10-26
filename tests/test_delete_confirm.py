@@ -11,6 +11,8 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from pilot_settle import settle  # noqa: E402
+
 from lazyplan.store import Store
 
 try:
@@ -49,6 +51,7 @@ class TestDeleteConfirm(unittest.IsolatedAsyncioTestCase):
     async def test_d_key_delete_asks_first(self):
         async with self.app.run_test() as pilot:
             await pilot.pause()
+            await settle(pilot)
             self.app.selected = ("task", self.tid)
             await _palette(pilot, "delete")
             self.assertEqual(len(self.app.screen_stack), 2)
@@ -70,6 +73,7 @@ class TestDeleteConfirm(unittest.IsolatedAsyncioTestCase):
         cid = store.add_criteria("task", self.tid, "works").id
         async with self.app.run_test() as pilot:
             await pilot.pause()
+            await settle(pilot)
             self.app.selected = ("task", self.tid)
             await _palette(pilot, "tick criteria")
             self.assertTrue(Store(self.db).list_criteria("task", self.tid)[0].done)
@@ -81,6 +85,7 @@ class TestDeleteConfirm(unittest.IsolatedAsyncioTestCase):
     async def test_space_runs_without_confirm(self):
         async with self.app.run_test() as pilot:
             await pilot.pause()
+            await settle(pilot)
             self.app.selected = ("task", self.tid)
             await pilot.press("space")
             await pilot.pause()

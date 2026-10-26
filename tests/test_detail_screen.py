@@ -8,6 +8,8 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from pilot_settle import settle  # noqa: E402
+
 from lazyplan.store import Store
 
 try:
@@ -49,6 +51,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
         self.tmp.cleanup()
 
     async def _open(self, pilot, kind: str, oid: int) -> None:
+        await settle(pilot)
         self.app.selected = (kind, oid)
         await pilot.press("enter")
         await pilot.pause()

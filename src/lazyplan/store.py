@@ -86,11 +86,16 @@ def _files_tuple(payload: str) -> tuple[str, ...]:
     return tuple(str(item) for item in raw if isinstance(item, str) and item)
 
 
+def default_actor() -> str:
+    """$USER on posix, %USERNAME% on Windows, else human."""
+    return (os.environ.get("USER") or os.environ.get("USERNAME") or "human")[:64]
+
+
 def _actor(explicit: str = "") -> str:
-    """Normalize an actor name, defaulting to $USER or human."""
+    """Normalize an actor name, defaulting to the login name."""
     if explicit.strip():
         return explicit.strip()[:64]
-    return (os.environ.get("USER", "") or "human")[:64]
+    return default_actor()
 
 
 class Store:

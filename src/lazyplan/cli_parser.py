@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import argparse
-import os
 import re
 from pathlib import Path
 
 from . import textfile
 from .kinds import KINDS
 from .models import Status
+from .store import default_actor
 
 _PARSER_DESCRIPTION = (
     "lazyplan keeps your plans, milestones, and tasks in one SQLite database, "
@@ -164,9 +164,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--version", action="store_true", help="print the installed version and exit")
     p.add_argument(
         "--actor",
-        default=os.environ.get("USER", "human"),
+        default=default_actor(),
         metavar="NAME",
-        help="who is making this change (you see it in feed; default: $USER or 'human')",
+        help="who is making this change (you see it in feed; default: your login name or 'human')",
     )
     # repeat globals on every subcommand so `lpui list --json` works as well as
     # `lpui --json list`.

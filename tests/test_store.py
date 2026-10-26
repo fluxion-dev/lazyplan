@@ -3,13 +3,29 @@ import sys
 import tempfile
 import unittest
 from contextlib import closing
+from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from lazyplan import services
 from lazyplan.cli import main as lpui_main
 from lazyplan.models import Status
-from lazyplan.store import Store
+from lazyplan.store import Store, default_actor
+
+
+class TestDefaultActor(unittest.TestCase):
+    def test_login_name_on_posix_and_windows(self):
+        for env, want in (
+            ({"USER": "ana"}, "ana"),
+            ({"USERNAME": "bo"}, "bo"),
+            ({"USER": "ana", "USERNAME": "bo"}, "ana"),
+            ({}, "human"),
+        ):
+            with self.subTest(env=env), mock.patch.dict(os.environ, clear=False):
+                os.environ.pop("USER", None)
+                os.environ.pop("USERNAME", None)
+                os.environ.update(env)
+                self.assertEqual(default_actor(), want)
 
 
 class TestStore(unittest.TestCase):

@@ -236,7 +236,8 @@ blocked reasons, and issue refs. Marks are session-only and survive refreshes.
 ## Agents
 
 Every command accepts `--json`. Journal commands also accept `--porcelain` for
-the active loop. Writes accept `--actor NAME`; the default is `$USER`. The
+the active loop. Writes accept `--actor NAME`; the default is `$USER`
+(`%USERNAME%` on Windows). The
 activity feed shows who changed what.
 
 ```bash

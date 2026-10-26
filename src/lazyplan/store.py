@@ -328,6 +328,16 @@ class Store:
             ).fetchall()
         return [self._row_to_milestone(r) for r in rows]
 
+    def milestones_map(self) -> dict[int, list[Milestone]]:
+        """Every milestone grouped by plan id, in creation order."""
+        with self._connect() as conn:
+            rows = conn.execute("SELECT * FROM milestones ORDER BY id").fetchall()
+        out: dict[int, list[Milestone]] = {}
+        for row in rows:
+            milestone = self._row_to_milestone(row)
+            out.setdefault(milestone.plan_id, []).append(milestone)
+        return out
+
     def update_milestone(
         self,
         sid: int,
@@ -408,6 +418,16 @@ class Store:
                 "SELECT * FROM tasks WHERE milestone_id=? ORDER BY id", (milestone_id,)
             ).fetchall()
         return [self._row_to_task(r) for r in rows]
+
+    def tasks_map(self) -> dict[int, list[Task]]:
+        """Every task grouped by milestone id, in creation order."""
+        with self._connect() as conn:
+            rows = conn.execute("SELECT * FROM tasks ORDER BY id").fetchall()
+        out: dict[int, list[Task]] = {}
+        for row in rows:
+            task = self._row_to_task(row)
+            out.setdefault(task.milestone_id, []).append(task)
+        return out
 
     # -- task claims (leases) --------------------------------------------
     @staticmethod
@@ -745,6 +765,16 @@ class Store:
                 (row_kind, row_id),
             ).fetchall()
         return [dict(row) for row in rows]
+
+    def issue_links_map(self) -> dict[tuple[str, int], list[dict]]:
+        """Every issue source grouped by (row_kind, row_id), oldest first."""
+        with self._connect() as conn:
+            rows = conn.execute("SELECT * FROM issue_links ORDER BY id").fetchall()
+        out: dict[tuple[str, int], list[dict]] = {}
+        for row in rows:
+            item = dict(row)
+            out.setdefault((str(item["row_kind"]), int(item["row_id"])), []).append(item)
+        return out
 
     def update_issue_link(
         self, provider: str, external_id: str, title: str, url: str, state: str, updated_at: float
@@ -1246,16 +1276,26 @@ class Store:
                 "SELECT * FROM criteria WHERE parent_kind=? AND parent_id=? ORDER BY id",
                 (parent_kind, parent_id),
             ).fetchall()
-        return [
-            Criterion(
-                id=r["id"],
-                parent_kind=r["parent_kind"],
-                parent_id=r["parent_id"],
-                text=r["text"],
-                done=bool(r["done"]),
-            )
-            for r in rows
-        ]
+        return [self._row_to_criterion(r) for r in rows]
+
+    def criteria_map(self) -> dict[tuple[str, int], list[Criterion]]:
+        """Every checklist item grouped by (parent_kind, parent_id), in id order."""
+        with self._connect() as conn:
+            rows = conn.execute("SELECT * FROM criteria ORDER BY id").fetchall()
+        out: dict[tuple[str, int], list[Criterion]] = {}
+        for row in rows:
+            criterion = self._row_to_criterion(row)
+            out.setdefault((criterion.parent_kind, criterion.parent_id), []).append(criterion)
+        return out
+
+    def open_task_criteria_ids(self) -> set[int]:
+        """Task ids that still have at least one open criterion."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT DISTINCT parent_id FROM criteria"
+                " WHERE parent_kind='task' AND done=0 ORDER BY parent_id"
+            ).fetchall()
+        return {int(row["parent_id"]) for row in rows}
 
     def set_criteria(self, cid: int, done: bool, actor: str = "human") -> Criterion | None:
         """Tick or untick a checklist item and log."""
@@ -2013,6 +2053,27 @@ class Store:
                 (kind,),
             ).fetchall()
         return [(r["ts"], r["detail"]) for r in rows]
+
+    def plan_status_events_map(self) -> dict[int, tuple[float, str]]:
+        """Latest 'plan #id -> status' event per plan, keyed by plan id."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT ts, detail FROM events WHERE kind='plan' AND action='status'"
+                " ORDER BY id DESC"
+            ).fetchall()
+        out: dict[int, tuple[float, str]] = {}
+        for row in rows:
+            detail = str(row["detail"] or "").removesuffix(" (rollup)")
+            if not detail.startswith("plan #"):
+                continue
+            body = detail[len("plan #") :]
+            try:
+                plan_text, target = body.split(" -> ", 1)
+                plan_id = int(plan_text)
+            except ValueError:
+                continue
+            out.setdefault(plan_id, (float(row["ts"]), target))
+        return out
 
     # -- status --------------------------------------------------------
     def set_status_raw(self, kind: str, obj_id: int, status: Status) -> bool:

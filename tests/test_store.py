@@ -110,6 +110,42 @@ class TestStore(unittest.TestCase):
         self.store.add_task(s.id, "B")
         self.assertEqual([t.title for t in self.store.list_tasks(s.id)], ["A", "B"])
 
+    def test_bulk_maps_match_per_id_reads(self):
+        p = self.store.add_plan("P")
+        s = self.store.add_milestone(p.id, "S")
+        t1 = self.store.add_task(s.id, "T1")
+        t2 = self.store.add_task(s.id, "T2")
+        self.store.add_criteria("plan", p.id, "plan criterion")
+        self.store.add_criteria("milestone", s.id, "milestone criterion")
+        self.store.add_criteria("task", t1.id, "open task criterion")
+        done = self.store.add_criteria("task", t2.id, "done task criterion")
+        self.store.set_criteria(done.id, True)
+        self.store.link_commit("task", t1.id, "a" * 40)
+        issue = self.store.add_issue_link(
+            "github", "42", "42", "https://example.test/42", "Issue 42", "open", "task", t1.id
+        )
+        self.store.log("bench", "plan", "status", f"plan #{p.id} -> doing")
+        self.store.log("bench", "plan", "status", f"plan #{p.id} -> done (rollup)")
+
+        self.assertEqual(self.store.milestones_map(), {p.id: self.store.list_milestones(p.id)})
+        self.assertEqual(
+            self.store.tasks_map(),
+            {s.id: self.store.list_tasks(s.id)},
+        )
+        expected_criteria = {
+            ("plan", p.id): self.store.list_criteria("plan", p.id),
+            ("milestone", s.id): self.store.list_criteria("milestone", s.id),
+            ("task", t1.id): self.store.list_criteria("task", t1.id),
+            ("task", t2.id): self.store.list_criteria("task", t2.id),
+        }
+        self.assertEqual(self.store.criteria_map(), expected_criteria)
+        self.assertEqual(self.store.open_task_criteria_ids(), {t1.id})
+        self.assertEqual(
+            self.store.issue_links_map(),
+            {("task", t1.id): [issue]},
+        )
+        self.assertEqual(self.store.plan_status_events_map()[p.id][1], "done")
+
     def test_criteria_on_plan_milestone_task(self):
         p = self.store.add_plan("P")
         s = self.store.add_milestone(p.id, "S")

@@ -32,8 +32,6 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
-os.environ.setdefault("LAZYPLAN_NO_SPINNER", "1")
-
 from rich.text import Text  # noqa: E402
 from textual.app import App, ComposeResult  # noqa: E402
 from textual.widgets import Static, Tree  # noqa: E402
@@ -760,6 +758,7 @@ def build_hero(coordination: Path, mcp: Path, gates: Path, target: Path) -> None
 
 
 def run(out_dir: Path, only: list[str], keep_svg: Path | None, make_og: bool) -> None:
+    os.environ.setdefault("LAZYPLAN_NO_SPINNER", "1")
     names = only or list(SCENES)
     unknown = [name for name in names if name not in SCENES]
     if unknown:

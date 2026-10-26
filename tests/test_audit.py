@@ -76,6 +76,24 @@ class AuditCase(unittest.TestCase):
         self.assertEqual(result.unresolved, 1)
         self.assertEqual(result.lag_commits, [])
 
+    def test_trace_coverage_tracks_plan_criteria(self):
+        covered = self.store.add_criteria("plan", self.plan.id, "covered")
+        self.store.add_criteria("plan", self.plan.id, "uncovered")
+        self.store.relate_criterion(covered.id, self.task.id)
+        result = audit.compute(self.store, [self.plan.id], [])
+        self.assertEqual(result.criteria_total, 2)
+        self.assertEqual(result.criteria_linked, 1)
+        self.assertAlmostEqual(result.trace_coverage, 0.5)
+        self.assertEqual([gap.id for gap in result.trace_gaps], [2])
+
+    def test_min_trace_threshold_is_opt_in(self):
+        self.store.add_criteria("plan", self.plan.id, "uncovered")
+        result = audit.compute(self.store, [self.plan.id], [])
+        self.assertEqual(audit.Thresholds().breaches(result), [])
+        breaches = audit.Thresholds(trace=0.8).breaches(result)
+        self.assertEqual(len(breaches), 1)
+        self.assertIn("trace 0% < 80%", breaches[0])
+
     def test_gaps_only_on_done_rows(self):
         self.store.add_criteria("plan", self.plan.id, "plan gap")
         self.store.add_criteria("task", self.task.id, "task gap")

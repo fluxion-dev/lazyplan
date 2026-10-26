@@ -359,9 +359,13 @@ def _audit_lines(report: audit.Report) -> list[str]:
         f"lag        median {report.median_lag_commits:g} commits · "
         f"{report.median_lag_minutes:g} min ({report.unresolved} unresolved)",
         f"gaps       {len(report.gaps)} open criteria on done rows",
+        f"trace      {report.criteria_linked}/{report.criteria_total} criteria "
+        f"· {report.trace_coverage:.0%} ({len(report.trace_gaps)} unproven)",
     ]
     for gap in report.gaps[:10]:
         lines.append(f"  {gap.kind} #{gap.id}: {gap.text[:60]}")
+    for gap in report.trace_gaps[:10]:
+        lines.append(f"  unproven criterion #{gap.id}: {gap.text[:60]}")
     return lines
 
 
@@ -417,6 +421,7 @@ def _cmd_audit(store: Store | None, args: argparse.Namespace, actor: str) -> int
         coverage=args.min_coverage,
         lag_commits=args.max_lag,
         gaps=args.max_gaps,
+        trace=args.min_trace,
     ).breaches(result)
     return _audit_output(args, result, reasons)
 
@@ -1177,8 +1182,15 @@ def _audit_rows(report: audit.Report) -> list[str]:
         porcelain.row("metric", "median_lag_minutes", "-", report.median_lag_minutes),
         porcelain.row("metric", "unresolved_lag", "-", report.unresolved),
         porcelain.row("metric", "gaps", "-", len(report.gaps)),
+        porcelain.row("metric", "criteria_total", "-", report.criteria_total),
+        porcelain.row("metric", "criteria_linked", "-", report.criteria_linked),
+        porcelain.row("metric", "trace_coverage", "-", round(report.trace_coverage, 4)),
+        porcelain.row("metric", "trace_gaps", "-", len(report.trace_gaps)),
     ]
     rows.extend(porcelain.row("gap", f"{gap.kind}:{gap.id}", "-", gap.text) for gap in report.gaps)
+    rows.extend(
+        porcelain.row("gap", f"{gap.kind}:{gap.id}", "-", gap.text) for gap in report.trace_gaps
+    )
     return rows
 
 

@@ -301,6 +301,13 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="N",
         help="strict-mode maximum open criteria on done rows (default: 0)",
     )
+    au.add_argument(
+        "--min-trace",
+        type=float,
+        default=0.0,
+        metavar="RATIO",
+        help="strict-mode minimum criteria with a proving task; 0 disables (default: 0)",
+    )
     br = sub.add_parser(
         "brief",
         help="show the active plan, the next task, and unlinked commits",

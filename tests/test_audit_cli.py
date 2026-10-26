@@ -60,6 +60,24 @@ class AuditCliCase(unittest.TestCase):
         services.set_status(store, "milestone", milestone.id, Status.DONE, actor="t")
         services.set_status(store, "plan", plan.id, Status.DONE, actor="t")
 
+    def test_min_trace_gates_strict_mode(self):
+        store = Store(self.home / ".lazyplan/lazyplan.db")
+        plan = store.add_plan("P", "what", goal="why")
+        store.add_criteria("plan", plan.id, "unproven")
+        code, _out, _err = self._run(
+            [
+                "--db",
+                str(store.path),
+                "audit",
+                "--plan",
+                str(plan.id),
+                "--strict",
+                "--min-trace",
+                "0.8",
+            ]
+        )
+        self.assertEqual(code, 2)
+
     def test_missing_database_reports_empty_without_creating_files(self):
         code, out, _err = self._run(["audit", "--json"])
         self.assertEqual(code, 0)

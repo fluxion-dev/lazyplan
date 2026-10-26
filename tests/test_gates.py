@@ -132,6 +132,25 @@ class TestCompletionGates(unittest.TestCase):
         self.assertIn(f"task #{self.task.id}", str(caught.exception))
         services.start_task(self.store, self.task.id, actor="fixture")
 
+    def test_cli_require_pr_failure_and_override(self):
+        code, out, err = self._run("task", "finish", "--id", str(self.task.id), "--require-pr")
+        self.assertEqual(code, 2)
+        self.assertIn("no linked pull request", err)
+        self.assertEqual(self.store.get_task(self.task.id).status, Status.DOING)
+        self._pr("fail")
+        code, out, err = self._run(
+            "task",
+            "finish",
+            "--id",
+            str(self.task.id),
+            "--require-checks",
+            "--override",
+            "known flaky",
+        )
+        self.assertEqual(code, 0, err)
+        self.assertEqual(self.store.get_task(self.task.id).status, Status.DONE)
+        self.assertIn("known flaky", self.store.list_notes("task", self.task.id)[-1].text)
+
     def test_gate_state(self):
         self.assertEqual(services.gate_state(self.store, self.task.id)["state"], "missing")
         self._pr("pass")

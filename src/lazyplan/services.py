@@ -464,6 +464,15 @@ def gate_state(store: Store, task_id: int) -> dict:
     return store.gate_state(task_id)
 
 
+def _gate_failure(gate: dict, require_pr: bool, require_checks: bool) -> str:
+    """Human gate failure, or empty when the gates pass."""
+    if require_pr and gate["prs"] == 0:
+        return "completion gate: no linked pull request"
+    if require_checks and gate["checks"] != "pass":
+        return f"completion gate: checks are {gate['checks']}"
+    return ""
+
+
 def finish_task(
     store: Store,
     task_id: int,
@@ -478,10 +487,9 @@ def finish_task(
     if task is None:
         raise KeyError(f"task #{task_id} not found")
     gate = gate_state(store, task_id)
-    if require_pr and gate["prs"] == 0 and not override:
-        raise GateError("completion gate: no linked pull request")
-    if require_checks and gate["checks"] != "pass" and not override:
-        raise GateError(f"completion gate: checks are {gate['checks']}")
+    failure = _gate_failure(gate, require_pr, require_checks)
+    if failure and not override:
+        raise GateError(failure)
     target = _finish_target(store, task_id, repo_path)
     branch = str(target.get("branch", "") or "")
     base = str(target.get("base_sha", "") or "")

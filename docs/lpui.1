@@ -453,6 +453,39 @@ only this plan
 include expired claims
 .RE
 .TP
+.B lpui trace
+trace acceptance criteria to tasks, commits, and pull requests
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B \-\-plan ID
+trace a whole plan's criteria
+.RE
+.RS
+.TP
+.B \-\-criterion ID
+trace one criterion
+.RE
+.TP
 .B lpui hook
 read a host lifecycle event and print a reminder
 .RS

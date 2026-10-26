@@ -25,6 +25,7 @@ from . import (
     setup_layout,
     setup_ui,
 )
+from . import trace as trace_mod
 from .cli_parser import build_parser, package_version
 from .design import (
     EMPTY_COMMITS,
@@ -445,6 +446,114 @@ def _cmd_brief(store: Store | None, args: argparse.Namespace, actor: str) -> int
             print(line)
         return 0
     for line in brief.lines(payload):
+        print(line)
+    return 0
+
+
+def _trace_entries(payload: dict) -> list[dict]:
+    """Normalize a plan or criterion trace payload to criterion entries."""
+    if "criteria" in payload:
+        return list(payload["criteria"])
+    return [{"criterion": payload["criterion"], "tasks": payload.get("tasks", [])}]
+
+
+def _trace_text(payload: dict) -> list[str]:
+    """Human trace: criterion, proving tasks, commits, and PRs."""
+    lines: list[str] = []
+    if "plan" in payload:
+        plan = payload["plan"]
+        lines.append(f"P{plan['id']} {plan['name']} ({plan['status']})")
+    for entry in _trace_entries(payload):
+        crit = entry["criterion"]
+        state = "done" if crit.get("done") else "open"
+        lines.append(
+            f"criterion #{crit['id']} [{state}] {crit['text']} "
+            f"({crit['parent_kind']} #{crit['parent_id']})"
+        )
+        tasks = entry.get("tasks", [])
+        if not tasks:
+            lines.append("  (no proving task)")
+            continue
+        for item in tasks:
+            task = item["task"]
+            lines.append(f"  T{task['id']} {task['title']} (M{task['milestone_id']})")
+            for commit in item.get("commits", []):
+                lines.append(f"    {str(commit.get('sha', ''))[:12]} {commit.get('subject', '')}")
+            for pull in item.get("forge_links", []):
+                lines.append(
+                    f"    PR #{pull.get('number')} {pull.get('state') or 'unknown'} "
+                    f"{pull.get('title', '')}"
+                )
+    return lines
+
+
+def _trace_rows(payload: dict) -> list[str]:
+    """Porcelain trace rows: criteria, criterion-task edges, commits, and PRs."""
+    rows: list[str] = []
+    if "plan" in payload:
+        plan = payload["plan"]
+        rows.append(porcelain.plan_row(plan["id"], plan["status"], plan["name"]))
+    for entry in _trace_entries(payload):
+        crit = entry["criterion"]
+        rows.append(
+            porcelain.row(
+                "criterion",
+                crit["id"],
+                "done" if crit.get("done") else "open",
+                crit.get("text"),
+                f"{crit['parent_kind']}:{crit['parent_id']}",
+                "-",
+            )
+        )
+        tasks = entry.get("tasks", [])
+        if not tasks:
+            rows.append(
+                porcelain.row(
+                    "trace",
+                    crit["id"],
+                    "missing",
+                    "-",
+                    f"criterion:{crit['id']}",
+                    "-",
+                )
+            )
+        for item in tasks:
+            task = item["task"]
+            rows.append(
+                porcelain.row(
+                    "trace",
+                    crit["id"],
+                    "proves",
+                    task.get("title"),
+                    f"criterion:{crit['id']}",
+                    f"task:{task['id']}",
+                )
+            )
+            for commit in item.get("commits", []):
+                rows.append(_commit_row(commit, f"task:{task['id']}"))
+            for pull in item.get("forge_links", []):
+                rows.append(_pr_row(pull, f"task:{task['id']}"))
+    return rows
+
+
+def _cmd_trace(store: Store, args: argparse.Namespace, actor: str) -> int:
+    del actor
+    if args.plan is not None:
+        payload = trace_mod.trace_plan(store, args.plan)
+    else:
+        payload = trace_mod.trace_criterion(store, args.criterion)
+    if payload is None:
+        kind = "plan" if args.plan is not None else "criterion"
+        obj_id = args.plan if args.plan is not None else args.criterion
+        print(msg_not_found(kind, obj_id), file=sys.stderr)
+        return 1
+    if args.json:
+        return _emit(args, payload)
+    if porcelain.enabled(args):
+        for line in _trace_rows(payload):
+            print(line)
+        return 0
+    for line in _trace_text(payload):
         print(line)
     return 0
 
@@ -2106,6 +2215,7 @@ _COMMANDS: dict[str, Callable[[Store, argparse.Namespace, str], int]] = {
     "seed": _cmd_seed,
     "list": _cmd_list,
     "help": _cmd_help,
+    "trace": _cmd_trace,
     "next": _cmd_next,
     "claim": _cmd_claim,
     "claims": _cmd_claims,

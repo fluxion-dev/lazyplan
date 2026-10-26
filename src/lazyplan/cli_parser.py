@@ -362,6 +362,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     who.add_argument("--plan", type=int, default=None, metavar="ID", help="only this plan")
     who.add_argument("--all", action="store_true", help="include expired claims")
+    tr = sub.add_parser(
+        "trace",
+        help="trace acceptance criteria to tasks, commits, and pull requests",
+        parents=[common],
+    )
+    group = tr.add_mutually_exclusive_group(required=True)
+    group.add_argument("--plan", type=int, metavar="ID", help="trace a whole plan's criteria")
+    group.add_argument("--criterion", type=int, metavar="ID", help="trace one criterion")
     hk = sub.add_parser(
         "hook",
         help="read a host lifecycle event and print a reminder",

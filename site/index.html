@@ -179,6 +179,8 @@
     <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#coordination">Coordination</a>
     <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#provenance">Provenance</a>
     <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#collaboration">Collaboration</a>
+    <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#search-bulk">Bulk edit</a>
+    <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#imports">Imports</a>
     <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#quickstart">Quickstart</a>
     <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#agents">For agents</a>
     <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#faq">FAQ</a>
@@ -310,9 +312,9 @@
   <figure class="m-0 overflow-hidden rounded-xl border border-plan-border bg-plan-surface/70 p-2 shadow-2xl shadow-black/40 md:p-3">
     <picture>
       <source srcset="./screens/lpui-and-agent.webp" type="image/webp">
-      <img src="./screens/lpui-and-agent.png" width="1600" height="760" loading="eager" fetchpriority="high" decoding="async" alt="lpui plan tree and preview on the left, with a coding agent terminal on the right running lpui commands." class="block h-auto w-full rounded-lg">
+      <img src="./screens/lpui-and-agent.png" width="1600" height="760" loading="eager" fetchpriority="high" decoding="async" alt="lazyplan coordination view on the left with an active claim, an expired claim, a blocked task, aging work, a done row with an open criterion, and a red PR check, beside MCP and completion-gate terminal transcripts." class="block h-auto w-full rounded-lg">
     </picture>
-    <figcaption class="px-2 pb-1 pt-3 text-sm text-zinc-500">The whole plan, live, beside your agent.</figcaption>
+    <figcaption class="px-2 pb-1 pt-3 text-sm text-zinc-500">The whole plan, live, beside the agent surfaces that move it.</figcaption>
   </figure>
 
   <div class="mt-6 grid grid-cols-1 items-start gap-6 md:grid-cols-2">
@@ -353,6 +355,20 @@
       <p class="m-0 text-[0.95rem] text-zinc-400">The Attention source filter surfaces expired claims, blocked tasks, aging doing work, done rows with open criteria, and red PR checks. The status line reports the count.</p>
     </div>
   </div>
+  <figure class="m-0 mt-10 overflow-hidden rounded-xl border border-plan-border bg-plan-surface/70 p-2 shadow-2xl shadow-black/40 md:p-3">
+    <picture>
+      <source srcset="./screens/lpui-coordination.webp" type="image/webp">
+      <img src="./screens/lpui-coordination.png" width="1604" height="904" loading="lazy" decoding="async" alt="lazyplan plan tree filtered to Attention, showing an active claim, an expired claim, a blocked task, aging work, a done row with an open criterion, and a red PR check." class="block h-auto w-full rounded-lg">
+    </picture>
+    <figcaption class="px-2 pb-1 pt-3 text-sm text-zinc-500">Attention view: one active claim, one expired claim, a blocked task, aging work, a done gap, and a red check.</figcaption>
+  </figure>
+  <figure class="m-0 mt-6 overflow-hidden rounded-xl border border-plan-border bg-plan-surface/70 p-2 shadow-xl shadow-black/30 md:p-3">
+    <picture>
+      <source srcset="./screens/lpui-flow-health.webp" type="image/webp">
+      <img src="./screens/lpui-flow-health.png" width="1482" height="587" loading="lazy" decoding="async" alt="Terminal transcript of lpui stats showing WIP, cycle time, throughput, aging, stale todos, reopened work, claims, blocked tasks, and porcelain metric rows." class="block h-auto w-full rounded-lg">
+    </picture>
+    <figcaption class="px-2 pb-1 pt-3 text-sm text-zinc-500">Flow health from the journal: WIP, cycle time, throughput, aging, stale work, and reopened rows.</figcaption>
+  </figure>
 </section>
 
 <section id="provenance" class="mx-auto max-w-7xl scroll-mt-20 px-6 py-20 md:py-28">
@@ -400,6 +416,23 @@
     </div>
   </div>
 
+  <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+    <figure class="m-0 overflow-hidden rounded-xl border border-plan-border bg-plan-surface/70 p-2 shadow-xl shadow-black/30 md:p-3">
+      <picture>
+        <source srcset="./screens/lpui-trace.webp" type="image/webp">
+        <img src="./screens/lpui-trace.png" width="1482" height="587" loading="lazy" decoding="async" alt="Terminal transcript of lpui trace and lpui lint --strict showing criterion-to-task-to-commit-to-PR evidence and a missing proving task finding." class="block h-auto w-full rounded-lg">
+      </picture>
+      <figcaption class="px-2 pb-1 pt-3 text-sm text-zinc-500">Trace the criterion to the task, commit, and PR; lint names the gap.</figcaption>
+    </figure>
+    <figure class="m-0 overflow-hidden rounded-xl border border-plan-border bg-plan-surface/70 p-2 shadow-xl shadow-black/30 md:p-3">
+      <picture>
+        <source srcset="./screens/lpui-gates.webp" type="image/webp">
+        <img src="./screens/lpui-gates.png" width="1482" height="587" loading="lazy" decoding="async" alt="Terminal transcript showing task finish blocked by failing checks, then completed with an override note and gate state." class="block h-auto w-full rounded-lg">
+      </picture>
+      <figcaption class="px-2 pb-1 pt-3 text-sm text-zinc-500">Done waits for cached PR and CI evidence; an override records why.</figcaption>
+    </figure>
+  </div>
+
   <div class="mt-8 rounded-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8">
     <h3 class="mb-3 text-lg font-semibold text-white">Works with the tools you already use</h3>
     <ul class="m-0 grid grid-cols-1 gap-3 p-0 text-[0.95rem] text-zinc-400 list-none sm:grid-cols-2">
@@ -431,6 +464,61 @@
       <p class="m-0 text-[0.95rem] text-zinc-400">Every plan has a stable UID. <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">sync --file dump.json</code> adds unknown plans, skips identical ones, and reports conflicts without overwriting.</p>
     </div>
   </div>
+  <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+    <figure class="m-0 overflow-hidden rounded-xl border border-plan-border bg-plan-surface/70 p-2 shadow-xl shadow-black/30 md:p-3">
+      <picture>
+        <source srcset="./screens/lpui-collaboration.webp" type="image/webp">
+        <img src="./screens/lpui-collaboration.png" width="1604" height="904" loading="lazy" decoding="async" alt="lazyplan task detail page showing an active claim, two review comments, and a handoff note." class="block h-auto w-full rounded-lg">
+      </picture>
+      <figcaption class="px-2 pb-1 pt-3 text-sm text-zinc-500">Comments, mentions, claims, and handoff notes stay on the task.</figcaption>
+    </figure>
+    <figure class="m-0 overflow-hidden rounded-xl border border-plan-border bg-plan-surface/70 p-2 shadow-xl shadow-black/30 md:p-3">
+      <picture>
+        <source srcset="./screens/lpui-share-sync.webp" type="image/webp">
+        <img src="./screens/lpui-share-sync.png" width="1482" height="587" loading="lazy" decoding="async" alt="Terminal transcript showing a comment with an @mention, a read-only HTML share, and a dry-run sync with a conflict." class="block h-auto w-full rounded-lg">
+      </picture>
+      <figcaption class="px-2 pb-1 pt-3 text-sm text-zinc-500">Share a safe snapshot and merge plans by stable UID without overwriting.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="search-bulk" class="mx-auto max-w-7xl scroll-mt-20 px-6 py-20 md:py-28">
+  <div class="mb-10 max-w-3xl md:mb-14">
+    <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">Search and bulk edit</p>
+    <h2 class="mb-4 text-2xl font-bold text-white">Find the row, mark the set, edit once.</h2>
+    <p class="text-lg text-zinc-400"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">/</code> searches descriptions, why/what, notes, comments, claims, blocked reasons, and issue refs. Space marks rows for the session, and the palette handles the set.</p>
+  </div>
+  <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+    <figure class="m-0 overflow-hidden rounded-xl border border-plan-border bg-plan-surface/70 p-2 shadow-xl shadow-black/30 md:p-3">
+      <picture>
+        <source srcset="./screens/lpui-search-bulk.webp" type="image/webp">
+        <img src="./screens/lpui-search-bulk.png" width="1604" height="904" loading="lazy" decoding="async" alt="lazyplan plan tree with three marked tasks showing checkmarks and a marked 3 count in the status line." class="block h-auto w-full rounded-lg">
+      </picture>
+      <figcaption class="px-2 pb-1 pt-3 text-sm text-zinc-500">Marks survive refresh and the status line keeps the count.</figcaption>
+    </figure>
+    <figure class="m-0 overflow-hidden rounded-xl border border-plan-border bg-plan-surface/70 p-2 shadow-xl shadow-black/30 md:p-3">
+      <picture>
+        <source srcset="./screens/lpui-bulk-palette.webp" type="image/webp">
+        <img src="./screens/lpui-bulk-palette.png" width="1604" height="904" loading="lazy" decoding="async" alt="lazyplan command palette filtered to bulk commands: mark, move to doing, move to done, block, release claims, and undo." class="block h-auto w-full rounded-lg">
+      </picture>
+      <figcaption class="px-2 pb-1 pt-3 text-sm text-zinc-500">Bulk move, block, release, clear, and one undo. Delete and archive stay single-row.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="imports" class="mx-auto max-w-6xl scroll-mt-20 px-6 py-20 md:py-28">
+  <div class="mb-10 max-w-3xl md:mb-14">
+    <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">Issue imports</p>
+    <h2 class="mb-4 text-2xl font-bold text-white">Bring the issue in. Keep where it came from.</h2>
+    <p class="text-lg text-zinc-400">GitHub issues arrive live; Linear issues come from a JSON export. Both become plans or tasks with a provider, number, URL, and state that survive export/import.</p>
+  </div>
+  <figure class="m-0 overflow-hidden rounded-xl border border-plan-border bg-plan-surface/70 p-2 shadow-2xl shadow-black/40 md:p-3">
+    <picture>
+      <source srcset="./screens/lpui-imports.webp" type="image/webp">
+      <img src="./screens/lpui-imports.png" width="1482" height="587" loading="lazy" decoding="async" alt="Terminal transcript showing a GitHub issue import dry-run and a Linear import with source refs in plan show." class="block h-auto w-full rounded-lg">
+    </picture>
+    <figcaption class="px-2 pb-1 pt-3 text-sm text-zinc-500">Dry-run first; re-import refreshes source metadata only and never writes back.</figcaption>
+  </figure>
 </section>
 
 <section id="features" class="mx-auto max-w-7xl scroll-mt-20 px-6 py-20 md:py-28">
@@ -507,6 +595,13 @@ lpui --porcelain task finish --id 3 --require-pr --require-checks
 lpui --porcelain issue import --provider github --repo owner/repo
 </code></pre>
   <p class="text-zinc-300">MCP exposes read tools for the brief, plans, rows, claims, audit, trace, lint, and info, plus writes for the journal, criteria, claims, notes, blocked work, and commit links. <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">--read-only</code> hides writes for reviewers and never creates a missing database.</p>
+  <figure class="m-0 overflow-hidden rounded-xl border border-plan-border bg-plan-surface/70 p-2 shadow-xl shadow-black/30 md:p-3">
+    <picture>
+      <source srcset="./screens/lpui-mcp.webp" type="image/webp">
+      <img src="./screens/lpui-mcp.png" width="1482" height="587" loading="lazy" decoding="async" alt="Terminal transcript of an lpui mcp stdio session showing initialize, tools/list, and a brief tools/call response." class="block h-auto w-full rounded-lg">
+    </picture>
+    <figcaption class="px-2 pb-1 pt-3 text-sm text-zinc-500">Typed reads and writes over stdio; <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">--read-only</code> for review hosts.</figcaption>
+  </figure>
   <p class="text-zinc-300">Without MCP, porcelain mode answers each write with one tab-separated row and keeps overview reads glyph-free, so your agent spends context on the plan instead of decorations. The columns are <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">kind</code>, <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">id</code>, <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">status</code>, <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">title</code>, <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">parent</code>, and <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">extra</code>; <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">--json</code> is still there when you need full fidelity.</p>
   <p class="text-zinc-300">You set the direction. It does the busywork.</p>
   <p class="text-zinc-400">Setup installs read-only lifecycle hooks for detected agents, so a session starts with the active task and a commit reminds you to link it. Hooks never move work or write to the database; remove them with <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui setup --no-hooks</code>.</p>

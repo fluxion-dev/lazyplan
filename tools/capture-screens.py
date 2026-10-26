@@ -46,7 +46,7 @@ from lazyplan.store import Store  # noqa: E402
 from lazyplan.tui import create_app  # noqa: E402
 
 SIZE = (130, 35)
-TRANSCRIPT_SIZE = (120, 30)
+TRANSCRIPT_SIZE = (120, 22)
 DEFAULT_OUT = ROOT / "site" / "public" / "screens"
 DATE = "2026-10-01T09:00:00+00:00"
 AUTHOR = "Ada Lovelace"
@@ -242,9 +242,10 @@ class TranscriptApp(App[None]):
     #term { padding: 1 2; }
     """
 
-    def __init__(self, body: Text) -> None:
+    def __init__(self, body: Text, title: str) -> None:
         super().__init__()
         self._body = body
+        self.title = title
 
     def compose(self) -> ComposeResult:
         yield Static(self._body, id="term")
@@ -478,10 +479,10 @@ def _imports_text() -> Text:
 
 
 def _transcript_capture(
-    text: Text, size: tuple[int, int]
+    text: Text, size: tuple[int, int], title: str
 ) -> Callable[[Store | None, Path], Awaitable[None]]:
     async def capture(_store: Store | None, target: Path) -> None:
-        app = TranscriptApp(text)
+        app = TranscriptApp(text, title)
         async with app.run_test(size=size) as pilot:
             await pilot.pause()
             app.save_screenshot(str(target))
@@ -496,6 +497,7 @@ class Scene:
     size: tuple[int, int]
     build: Callable[[Path], Store | None]
     capture: Callable[[Store | None, Path], Awaitable[None]]
+    alt: str
 
 
 def _no_fixture(_tmp: Path) -> Store | None:
@@ -503,28 +505,71 @@ def _no_fixture(_tmp: Path) -> Store | None:
 
 
 SCENES: dict[str, Scene] = {
-    "lpui-source-trail": Scene(SIZE, build_source_fixture, capture_source),
-    "lpui-coordination": Scene(SIZE, build_coordination_fixture, capture_coordination),
-    "lpui-collaboration": Scene(SIZE, build_coordination_fixture, capture_collaboration),
-    "lpui-search-bulk": Scene(SIZE, build_search_fixture, capture_search),
-    "lpui-bulk-palette": Scene(SIZE, build_search_fixture, capture_palette),
+    "lpui-source-trail": Scene(
+        SIZE,
+        build_source_fixture,
+        capture_source,
+        "lazyplan source trail for a task showing a repository, commits, changed files, a merged pull request, and a unified diff.",
+    ),
+    "lpui-coordination": Scene(
+        SIZE,
+        build_coordination_fixture,
+        capture_coordination,
+        "lazyplan plan tree filtered to Attention, showing an active claim, an expired claim, a blocked task, aging work, a done row with an open criterion, and a red PR check.",
+    ),
+    "lpui-collaboration": Scene(
+        SIZE,
+        build_coordination_fixture,
+        capture_collaboration,
+        "lazyplan task detail page showing an active claim, two review comments, and a handoff note.",
+    ),
+    "lpui-search-bulk": Scene(
+        SIZE,
+        build_search_fixture,
+        capture_search,
+        "lazyplan plan tree with three marked tasks showing checkmarks and a marked 3 count in the status line.",
+    ),
+    "lpui-bulk-palette": Scene(
+        SIZE,
+        build_search_fixture,
+        capture_palette,
+        "lazyplan command palette filtered to bulk commands: mark, move to doing, move to done, block, release claims, and undo.",
+    ),
     "lpui-flow-health": Scene(
-        TRANSCRIPT_SIZE, _no_fixture, _transcript_capture(_flow_health_text(), TRANSCRIPT_SIZE)
+        TRANSCRIPT_SIZE,
+        _no_fixture,
+        _transcript_capture(_flow_health_text(), TRANSCRIPT_SIZE, "lpui stats — flow health"),
+        "Terminal transcript of lpui stats showing WIP, cycle time, throughput, aging, stale todos, reopened work, claims, blocked tasks, and porcelain metric rows.",
     ),
     "lpui-trace": Scene(
-        TRANSCRIPT_SIZE, _no_fixture, _transcript_capture(_trace_text(), TRANSCRIPT_SIZE)
+        TRANSCRIPT_SIZE,
+        _no_fixture,
+        _transcript_capture(_trace_text(), TRANSCRIPT_SIZE, "lpui trace + lint"),
+        "Terminal transcript of lpui trace and lpui lint --strict showing criterion-to-task-to-commit-to-PR evidence and a missing proving task finding.",
     ),
     "lpui-mcp": Scene(
-        TRANSCRIPT_SIZE, _no_fixture, _transcript_capture(_mcp_text(), TRANSCRIPT_SIZE)
+        TRANSCRIPT_SIZE,
+        _no_fixture,
+        _transcript_capture(_mcp_text(), TRANSCRIPT_SIZE, "lpui mcp — stdio session"),
+        "Terminal transcript of an lpui mcp stdio session showing initialize, tools/list, and a brief tools/call response.",
     ),
     "lpui-share-sync": Scene(
-        TRANSCRIPT_SIZE, _no_fixture, _transcript_capture(_share_sync_text(), TRANSCRIPT_SIZE)
+        TRANSCRIPT_SIZE,
+        _no_fixture,
+        _transcript_capture(_share_sync_text(), TRANSCRIPT_SIZE, "lpui comment + share + sync"),
+        "Terminal transcript showing a comment with an @mention, a read-only HTML share, and a dry-run sync with a conflict.",
     ),
     "lpui-gates": Scene(
-        TRANSCRIPT_SIZE, _no_fixture, _transcript_capture(_gates_text(), TRANSCRIPT_SIZE)
+        TRANSCRIPT_SIZE,
+        _no_fixture,
+        _transcript_capture(_gates_text(), TRANSCRIPT_SIZE, "lpui task finish — completion gates"),
+        "Terminal transcript showing task finish blocked by failing checks, then completed with an override note and gate state.",
     ),
     "lpui-imports": Scene(
-        TRANSCRIPT_SIZE, _no_fixture, _transcript_capture(_imports_text(), TRANSCRIPT_SIZE)
+        TRANSCRIPT_SIZE,
+        _no_fixture,
+        _transcript_capture(_imports_text(), TRANSCRIPT_SIZE, "lpui issue import"),
+        "Terminal transcript showing a GitHub issue import dry-run and a Linear import with source refs in plan show.",
     ),
 }
 
@@ -644,12 +689,74 @@ def build_og(screenshot: Path, target: Path) -> None:
                 "+420+170",
                 "-composite",
                 "-strip",
+                "-depth",
+                "8",
                 str(target),
             ],
             check=True,
         )
     finally:
         base.unlink(missing_ok=True)
+
+
+def build_hero(coordination: Path, mcp: Path, gates: Path, target: Path) -> None:
+    """Compose the 1600x760 hero: plan on the left, agent surfaces on the right."""
+    for path in (coordination, mcp, gates):
+        if not path.is_file():
+            raise SystemExit(f"error: missing hero source {path}")
+    subprocess.run(
+        [
+            "magick",
+            "-size",
+            "1600x760",
+            "xc:#09090b",
+            "(",
+            str(coordination),
+            "-resize",
+            "980x",
+            "-bordercolor",
+            "#27272a",
+            "-border",
+            "2",
+            ")",
+            "-geometry",
+            "+20+102",
+            "-composite",
+            "(",
+            str(mcp),
+            "-resize",
+            "560x",
+            "-bordercolor",
+            "#27272a",
+            "-border",
+            "2",
+            ")",
+            "-geometry",
+            "+1020+104",
+            "-composite",
+            "(",
+            str(gates),
+            "-resize",
+            "560x",
+            "-bordercolor",
+            "#27272a",
+            "-border",
+            "2",
+            ")",
+            "-geometry",
+            "+1020+430",
+            "-composite",
+            "-strip",
+            "-depth",
+            "8",
+            str(target),
+        ],
+        check=True,
+    )
+    subprocess.run(
+        ["magick", str(target), "-quality", "82", str(target.with_suffix(".webp"))],
+        check=True,
+    )
 
 
 def run(out_dir: Path, only: list[str], keep_svg: Path | None, make_og: bool) -> None:
@@ -676,7 +783,16 @@ def run(out_dir: Path, only: list[str], keep_svg: Path | None, make_og: bool) ->
                 shutil.copyfile(svg, keep_svg)
             print(f"wrote {shown(png)} ({dimensions(png)})")
             print(f"wrote {shown(png.with_suffix('.webp'))}")
-        if make_og and "lpui-coordination" in names:
+        if make_og and {"lpui-coordination", "lpui-mcp", "lpui-gates"} <= set(names):
+            hero = out_dir / "lpui-and-agent.png"
+            build_hero(
+                out_dir / "lpui-coordination.png",
+                out_dir / "lpui-mcp.png",
+                out_dir / "lpui-gates.png",
+                hero,
+            )
+            print(f"wrote {shown(hero)} ({dimensions(hero)})")
+            print(f"wrote {shown(hero.with_suffix('.webp'))}")
             og = out_dir / "og-lpui-and-agent.png"
             build_og(out_dir / "lpui-coordination.png", og)
             print(f"wrote {shown(og)} ({dimensions(og)})")

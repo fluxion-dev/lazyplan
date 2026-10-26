@@ -46,6 +46,8 @@ class TestSceneRegistry(unittest.TestCase):
                 self.assertGreater(scene.size[1], 0)
                 self.assertTrue(callable(scene.build))
                 self.assertTrue(callable(scene.capture))
+                self.assertGreater(len(scene.alt), 30)
+                self.assertNotIn("lorem", scene.alt.lower())
 
     def test_output_names_are_stable(self):
         for name in capture.SCENES:

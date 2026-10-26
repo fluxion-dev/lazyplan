@@ -1,6 +1,8 @@
 import os
+import sqlite3
 import sys
 import tempfile
+import threading
 import unittest
 from contextlib import closing
 from unittest import mock
@@ -42,6 +44,24 @@ class TestStore(unittest.TestCase):
         self.store.list_plans()
         os.replace(self.db, self.db + ".moved")
         self.assertTrue(os.path.isfile(self.db + ".moved"))
+
+    def test_show_reads_through_one_connection(self):
+        plan = self.store.add_plan("Site")
+        milestone = self.store.add_milestone(plan.id, "Home")
+        for index in range(5):
+            self.store.add_task(milestone.id, f"T{index}")
+        with mock.patch("lazyplan.store.sqlite3.connect", wraps=sqlite3.connect) as connect:
+            self.assertIsNotNone(self.store.get_full("plan", plan.id))
+        self.assertEqual(connect.call_count, 1)
+
+    def test_other_threads_never_share_the_open_connection(self):
+        self.store.add_plan("Site")
+        seen: list[int] = []
+        with self.store._connect():
+            worker = threading.Thread(target=lambda: seen.append(len(self.store.list_plans())))
+            worker.start()
+            worker.join()
+        self.assertEqual(seen, [1])
 
     def test_hierarchy(self):
         p = self.store.add_plan("Site", goal="why")

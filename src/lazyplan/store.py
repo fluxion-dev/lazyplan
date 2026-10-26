@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import sqlite3
+import threading
 import time
 import uuid
 from collections.abc import Iterator
@@ -103,6 +104,7 @@ class Store:
 
     def __init__(self, path: str | Path | None = None) -> None:
         self.path = resolve_db_path(path)
+        self._local = threading.local()
         try:
             if Path(self.path).expanduser() == shared_db_path():
                 seed_shared_db(self.path)
@@ -114,14 +116,24 @@ class Store:
 
     @contextmanager
     def _connect(self) -> Iterator[sqlite3.Connection]:
-        """One transaction on a row-factory connection, closed on exit."""
+        """One transaction on a row-factory connection, closed on exit.
+
+        A call nested inside another on the same thread joins the outer
+        transaction on the outer connection.
+        """
+        active = getattr(self._local, "conn", None)
+        if active is not None:
+            yield active
+            return
         conn = sqlite3.connect(str(self.path))
+        self._local.conn = conn
         try:
             conn.row_factory = sqlite3.Row
             conn.execute("PRAGMA foreign_keys = ON")
             with conn:
                 yield conn
         finally:
+            self._local.conn = None
             conn.close()
 
     # -- events (agent feed) -------------------------------------------
@@ -1981,15 +1993,16 @@ class Store:
 
     def get_full(self, kind: str, obj_id: int) -> dict | None:
         """Full context record for `lpui show`: fields + criteria + links + repos + children."""
-        if kind == "plan":
-            p = self.get_plan(obj_id)
-            return None if p is None else self._plan_show(p)
-        if kind == "milestone":
-            s = self.get_milestone(obj_id)
-            return None if s is None else self._milestone_show(s)
-        if kind == "task":
-            t = self.get_task(obj_id)
-            return None if t is None else self._task_show(t)
+        with self._connect():
+            if kind == "plan":
+                p = self.get_plan(obj_id)
+                return None if p is None else self._plan_show(p)
+            if kind == "milestone":
+                s = self.get_milestone(obj_id)
+                return None if s is None else self._milestone_show(s)
+            if kind == "task":
+                t = self.get_task(obj_id)
+                return None if t is None else self._task_show(t)
         raise ValueError(KIND_ERROR)
 
     def status_events(self, kind: str) -> list[tuple[float, str]]:

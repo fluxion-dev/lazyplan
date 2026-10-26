@@ -94,6 +94,57 @@ Doctor is read-only. It resolves the database a real run would open, including
 paths, hook files, state, and every finding. Exit `0` is clean; exit `1` means
 at least one finding, including missing hook files and a stale state version.
 
+## MCP host configuration
+
+`lpui mcp` serves the same database over the Model Context Protocol on stdio,
+with no extra dependency. Writes use the server's `--actor`; `--read-only`
+hides write tools, rejects direct writes, and never creates a missing database.
+
+Claude-style `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "lazyplan": {
+      "command": "lpui",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+OpenCode-style local server:
+
+```json
+{
+  "mcp": {
+    "lazyplan": {
+      "type": "local",
+      "command": ["lpui", "mcp"]
+    }
+  }
+}
+```
+
+Use a reviewer-only host with `["lpui", "mcp", "--read-only"]`. Hosts that do
+not support MCP can keep using `--porcelain`; both surfaces read the same
+database.
+
+## Provider credentials
+
+Only explicit GitHub actions call the network: `pr refresh`, `pr link`, and
+`issue import --provider github`. They use the first token found:
+
+1. `LAZYPLAN_GITHUB_TOKEN`
+2. `GITHUB_TOKEN`
+3. `GH_TOKEN`
+4. `gh auth token`
+
+Tokens are never written to the database, export, feed, or docs. Linear issue
+import reads a JSON export file and needs no credential. See the
+[usage guide](usage.md#issue-imports) for import placement, dry-run, and dedupe
+behavior.
+
 ## Hooks and the pointer
 
 Hooks are read-only. They never write to the database, never move a task, and

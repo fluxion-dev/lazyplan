@@ -41,11 +41,21 @@ Want demo data first? Run `lpui seed`.
 - **Made for focus.** Plans stay as one-line summaries until you open them. Detail is there when you need it.
 - **Yours to keep.** Local-first by default. Export or import any time. No account, no cloud, no lock-in.
 
+## New in 0.26
+
+- **Agent coordination.** `next` claims work with a renewable lease; notes, blocked reasons, and claim badges live in the screen.
+- **Flow health.** `stats` reports WIP, cycle time, aging, stale work, and reopened rows; the TUI Attention filter surfaces the same risks.
+- **Proof and gates.** Trace criteria to tasks, commits, and PRs, lint the gaps, and require a PR or green checks before done.
+- **Collaboration.** Comments and mentions on rows, read-only HTML/JSON share, stable plan UIDs, and plan-level sync.
+- **Typed agent access.** A local MCP server exposes reads and writes, with `--read-only` for reviewers.
+- **Imports and bulk edit.** Bring GitHub issues or Linear exports in as plans or tasks; search every field, mark rows, and bulk move/block/release with one undo.
+
 ## What you get
 
 - A plan tree with progress at a glance, plus milestones and tasks underneath.
 - A preview of the reason, the next tasks, and what done means.
 - A read-only detail page for careful reading, with quick keys to edit and move work.
+- Claim, blocked, gate, and attention state on the rows that need it.
 - One place your agent can update while you keep the big picture.
 
 ## How it works
@@ -80,27 +90,37 @@ lpui --actor helper list --json
 Use `--porcelain` in an active loop: writes answer with one tab-separated row
 and reads stay glyph-free. Use `--json` when you need full fidelity.
 
-`next` claims the first eligible task with a renewable lease, so two agents do
-not take the same work. Renew or release the claim, note handoffs, and block
-parked work with a reason. Relate each plan criterion to a proving task; then
-`lpui trace --plan 1` shows the evidence and `lpui lint --plan 1 --strict`
-gates the gaps. After each commit, link it and move the task.
-Hosts that support MCP can use `lpui mcp` for typed tools and resources;
-`--read-only` is available for reviewers. `lpui stats --since 7.days` shows
-WIP, cycle time, aging, stale work, and reopened rows, and the TUI Attention
-filter surfaces the same risk categories. Review comments live on rows,
-`lpui share --plan 1` produces a read-only snapshot, and `lpui sync` merges
-plans by stable UID without overwriting conflicts. `task finish --require-pr
---require-checks` gates done on cached evidence, and branch collisions are
-reported before work starts. In the screen, space marks rows for bulk
-move/block/release with one undo, and `/` searches descriptions, notes,
-comments, claims, blocked reasons, and issue refs. `lpui issue import` brings GitHub issues (live)
-or Linear exports in as plans or tasks with source refs; imports are one-way
-and re-import only refreshes source metadata. `lpui audit --since 7.days --strict`
-turns the three accuracy metrics into a CI gate. `lpui setup` installs read-only
-lifecycle hooks for detected agents; `lpui setup --no-hooks` removes them.
+- **Coordinate.** `next` claims the first eligible task with a renewable
+  lease, so two agents do not take the same work. Renew or release the claim,
+  note handoffs, and block parked work with a reason.
+- **Prove.** Relate each plan criterion to a proving task; `lpui trace --plan 1`
+  shows the evidence and `lpui lint --plan 1 --strict` gates the gaps.
+- **Collaborate.** Comments and mentions live on plans, milestones, and tasks.
+  `lpui share --plan 1` produces a read-only HTML or JSON snapshot; `lpui sync`
+  merges plans by stable UID without overwriting conflicts.
+- **Gate completion.** `task finish --require-pr --require-checks` reads cached
+  PR and CI evidence before done; `--override REASON` records an exception.
+  A branch already recorded on another open task is rejected.
+- **Import work.** `lpui issue import` brings GitHub issues (live) or Linear
+  exports in as plans or tasks with source refs. Imports are one-way and
+  re-import only refreshes source metadata.
+- **Use MCP.** Hosts that support the Model Context Protocol can call
+  `lpui mcp` for typed tools and resources; `--read-only` is available for
+  reviewers.
+- **Watch flow.** `lpui stats --since 7.days` shows WIP, cycle time, aging,
+  stale work, and reopened rows. The TUI Attention filter surfaces the same
+  risks, and `/` searches titles, descriptions, notes, comments, claims,
+  blocked reasons, and issue refs.
 
-The first run installs the agent skill. `lpui setup --placement repo` generates the full contract in the repo.
+In the screen, `space` marks rows for bulk move/block/release with one undo.
+After each commit, link it and move the task. `lpui audit --since 7.days
+--strict` turns the three accuracy metrics into a CI gate. `lpui setup`
+installs read-only lifecycle hooks for detected agents; `lpui setup --no-hooks`
+removes them.
+
+The first run installs the agent skill. `lpui setup --placement repo` generates
+the full contract in the repo. See the [usage guide](https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md)
+for every command and limit.
 
 ## Your data
 

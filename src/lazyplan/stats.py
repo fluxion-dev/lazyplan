@@ -10,6 +10,7 @@ import re
 import statistics
 import time
 
+from .models import Task
 from .store import Store
 
 _ADDED = re.compile(r"^T#(\d+) ")
@@ -19,6 +20,11 @@ _STATUS = re.compile(r"^task #(\d+) -> (todo|doing|done)$")
 def _events(store: Store) -> list[dict]:
     """All events oldest first."""
     return list(reversed(store.feed(limit=1_000_000)))
+
+
+def _all_tasks(store: Store) -> list[Task]:
+    """Every task in one query, in creation order."""
+    return [task for tasks in store.tasks_map().values() for task in tasks]
 
 
 def _event_maps(
@@ -43,7 +49,7 @@ def _event_maps(
 
 
 def _current_metrics(
-    tasks: list, added: dict[int, float], stale_before: float, now: float
+    tasks: list[Task], added: dict[int, float], stale_before: float, now: float
 ) -> tuple[int, int, int]:
     """WIP, blocked, stale todo count, and aging doing minutes."""
     wip = sum(1 for task in tasks if task.status.value == "doing")
@@ -98,28 +104,25 @@ def attention_ids(
     _added, transitions = _event_maps(_events(store))
     claims = store.claims_map()
     forge = store.forge_links_map()
+    open_criteria = store.open_task_criteria_ids()
     ids: set[int] = set()
-    for plan in store.list_plans():
-        for milestone in store.list_milestones(plan.id):
-            for task in store.list_tasks(milestone.id):
-                claim = claims.get(task.id)
-                if claim is not None and claim.expired(stamp):
-                    ids.add(task.id)
-                if task.blocked:
-                    ids.add(task.id)
-                if task.status.value == "doing":
-                    starts = [
-                        when
-                        for when, status, _actor in transitions.get(task.id, [])
-                        if status == "doing"
-                    ]
-                    if starts and stamp - starts[-1] > stale_after:
-                        ids.add(task.id)
-                if task.status.value == "done" and store.open_criteria("task", task.id):
-                    ids.add(task.id)
-                links = forge.get(("task", task.id), [])
-                if any(str(link.checks or "") == "fail" for link in links):
-                    ids.add(task.id)
+    for task in _all_tasks(store):
+        claim = claims.get(task.id)
+        if claim is not None and claim.expired(stamp):
+            ids.add(task.id)
+        if task.blocked:
+            ids.add(task.id)
+        if task.status.value == "doing":
+            starts = [
+                when for when, status, _actor in transitions.get(task.id, []) if status == "doing"
+            ]
+            if starts and stamp - starts[-1] > stale_after:
+                ids.add(task.id)
+        if task.status.value == "done" and task.id in open_criteria:
+            ids.add(task.id)
+        links = forge.get(("task", task.id), [])
+        if any(str(link.checks or "") == "fail" for link in links):
+            ids.add(task.id)
     return ids
 
 
@@ -133,12 +136,7 @@ def compute(
     """Compute current flow metrics plus actor-filtered completion metrics."""
     stamp = time.time() if now is None else now
     added, transitions = _event_maps(_events(store))
-    tasks = [
-        task
-        for plan in store.list_plans()
-        for milestone in store.list_milestones(plan.id)
-        for task in store.list_tasks(milestone.id)
-    ]
+    tasks = _all_tasks(store)
     wip, blocked, stale = _current_metrics(tasks, added, stale_before, stamp)
     aging: list[float] = []
     for task in tasks:

@@ -112,9 +112,9 @@ class Budget:
 # task 876 owns the final cross-platform table. Query counts are exact and
 # deterministic, so any accidental per-row query breaks the gate immediately.
 BUDGETS: dict[str, Budget] = {
-    "services.tree": Budget(950, 2_000),
-    "services.tree_limit5": Budget(950, 2_000),
-    "attention_ids": Budget(2_400, 2_000),
+    "services.tree": Budget(15, 2_000),
+    "services.tree_limit5": Budget(15, 2_000),
+    "attention_ids": Budget(20, 2_000),
     "list_text": Budget(1_900, 3_000),
     "list_json": Budget(8_000, 6_000),
     "show_plan": Budget(200, 1_000),

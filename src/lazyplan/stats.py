@@ -44,7 +44,7 @@ def _event_maps(
 
 def _current_metrics(
     tasks: list, added: dict[int, float], stale_before: float, now: float
-) -> tuple[int, int, int, list[float]]:
+) -> tuple[int, int, int]:
     """WIP, blocked, stale todo count, and aging doing minutes."""
     wip = sum(1 for task in tasks if task.status.value == "doing")
     blocked = sum(1 for task in tasks if task.blocked)
@@ -53,7 +53,7 @@ def _current_metrics(
         for task in tasks
         if task.status.value == "todo" and added.get(task.id, now) < stale_before
     )
-    return wip, blocked, stale, []
+    return wip, blocked, stale
 
 
 def _activity_metrics(
@@ -61,7 +61,6 @@ def _activity_metrics(
     added: dict[int, float],
     since: float,
     actor: str | None,
-    now: float,
 ) -> tuple[list[float], list[float], int]:
     """Done times, cycle minutes, and reopened count for the window/actor."""
     done_times: list[float] = []
@@ -85,7 +84,6 @@ def _activity_metrics(
             elif seen_done and status == "doing":
                 reopened += 1
                 seen_done = False
-    _ = now
     return done_times, cycles, reopened
 
 
@@ -97,7 +95,7 @@ def attention_ids(
 ) -> set[int]:
     """Task ids the TUI should surface as needing attention."""
     stamp = time.time() if now is None else now
-    added, transitions = _event_maps(_events(store))
+    _added, transitions = _event_maps(_events(store))
     claims = store.claims_map()
     forge = store.forge_links_map()
     ids: set[int] = set()
@@ -122,7 +120,6 @@ def attention_ids(
                 links = forge.get(("task", task.id), [])
                 if any(str(link.checks or "") == "fail" for link in links):
                     ids.add(task.id)
-    _ = added
     return ids
 
 
@@ -142,7 +139,7 @@ def compute(
         for milestone in store.list_milestones(plan.id)
         for task in store.list_tasks(milestone.id)
     ]
-    wip, blocked, stale, _ = _current_metrics(tasks, added, stale_before, stamp)
+    wip, blocked, stale = _current_metrics(tasks, added, stale_before, stamp)
     aging: list[float] = []
     for task in tasks:
         if task.status.value != "doing":
@@ -152,7 +149,7 @@ def compute(
         ]
         if starts:
             aging.append(max(0.0, (stamp - starts[-1]) / 60))
-    done_times, cycles, reopened = _activity_metrics(transitions, added, since, actor, stamp)
+    done_times, cycles, reopened = _activity_metrics(transitions, added, since, actor)
     claims = store.list_claims(now=stamp)
     if actor is not None:
         claims = [claim for claim in claims if claim["actor"] == actor]

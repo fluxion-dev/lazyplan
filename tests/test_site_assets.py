@@ -11,13 +11,16 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
-SPEC = importlib.util.spec_from_file_location(
-    "capture_screens", ROOT / "tools" / "capture-screens.py"
-)
-assert SPEC is not None and SPEC.loader is not None
-capture = importlib.util.module_from_spec(SPEC)
-sys.modules["capture_screens"] = capture
-SPEC.loader.exec_module(capture)
+if importlib.util.find_spec("rich") is None or importlib.util.find_spec("textual") is None:
+    capture = None  # type: ignore[assignment]
+else:
+    SPEC = importlib.util.spec_from_file_location(
+        "capture_screens", ROOT / "tools" / "capture-screens.py"
+    )
+    assert SPEC is not None and SPEC.loader is not None
+    capture = importlib.util.module_from_spec(SPEC)
+    sys.modules["capture_screens"] = capture
+    SPEC.loader.exec_module(capture)
 
 EXPECTED = {
     "lpui-source-trail",
@@ -34,6 +37,7 @@ EXPECTED = {
 }
 
 
+@unittest.skipUnless(capture is not None, "rich and textual required")
 class TestSceneRegistry(unittest.TestCase):
     def test_every_capability_scene_is_registered(self):
         self.assertEqual(set(capture.SCENES), EXPECTED)

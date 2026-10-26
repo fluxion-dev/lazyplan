@@ -212,6 +212,7 @@ export, preview, and detail views keep the static `◐`; set
 | `j`/`k`, arrows, click | move and select |
 | `left`/`right`, click arrow | collapse/expand, or walk to parent / first child |
 | `enter` | open the read-only detail page |
+| `space` | mark or unmark the selected row for bulk actions |
 | `e` / `s` / `x` / `a` / `d` | edit · advance status · tick next criterion · add criterion · delete |
 | `n` | create by context (plan, milestone, or task) |
 | `/` | filter by text |
@@ -222,7 +223,13 @@ export, preview, and detail views keep the static `◐`; set
 | `q` | quit |
 
 The palette and the CLI use the same names: Create plan, Move to doing, Tick
-next criterion, Delete selection.
+next criterion, Delete selection. The palette also has Bulk move to doing/done,
+Bulk block tasks, Bulk release claims, Clear marks, and Undo bulk change. Bulk
+status and block confirm first; undo restores the exact prior status/blocked
+state once. Bulk delete and archive stay single-row.
+
+`/` searches titles, descriptions, why/what, notes, comments, claim actors,
+blocked reasons, and issue refs. Marks are session-only and survive refreshes.
 
 ## Agents
 

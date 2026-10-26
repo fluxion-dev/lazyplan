@@ -123,6 +123,7 @@ TEMPLATE_FRAGMENTS = [
     "--require-pr",
     "--require-checks",
     "issue import",
+    "bulk move",
     "lpui --porcelain plan show --id N",
     "lpui --porcelain feed --limit 20",
     "lpui export --format json",

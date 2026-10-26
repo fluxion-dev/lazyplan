@@ -26,6 +26,7 @@ ENVIRONMENT: tuple[tuple[str, str], ...] = (
 
 FILES: tuple[tuple[str, str], ...] = (
     ("~/.lazyplan/lazyplan.db", "Your plans, shared by every agent and folder (default home)."),
+    ("%LOCALAPPDATA%/lazyplan/", "The shared home on Windows, in place of ~/.lazyplan/."),
     (
         ".agents/lazyplan/lazyplan.db",
         "The repo database (only with lpui setup --placement repo; keep it local).",

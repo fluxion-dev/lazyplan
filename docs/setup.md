@@ -15,7 +15,8 @@ On a terminal you get three questions: where plans live, which agents get the
 skill, and whether to install the reviewed resources. Scripts, agents, and
 `lpui --json` get the defaults without prompts.
 
-The first run writes:
+The first run writes the files below. On Windows, `~/.lazyplan/` is
+`%LOCALAPPDATA%\lazyplan\` throughout this page.
 
 | Item | Home placement (default) | Repo placement |
 | --- | --- | --- |
@@ -100,7 +101,13 @@ at least one finding, including missing hook files and a stale state version.
 with no extra dependency. Writes use the server's `--actor`; `--read-only`
 hides write tools, rejects direct writes, and never creates a missing database.
 
-Claude-style `.mcp.json`:
+Claude Code, user-wide:
+
+```bash
+claude mcp add --scope user --transport stdio lazyplan -- lpui mcp
+```
+
+Or commit a project `.mcp.json`:
 
 ```json
 {
@@ -153,7 +160,8 @@ is backed up. `LAZYPLAN_NO_HOOKS=1` silences installed hooks without removing
 them.
 
 `--agents-pointer` adds a marked section to the repo `AGENTS.md` when plans
-live at home. It is off by default. `--no-agents-pointer` removes only the
+live at home. Claude Code reads `AGENTS.md` only when the repo has no
+`CLAUDE.md`; if yours has one, add a line with `@AGENTS.md` to it. It is off by default. `--no-agents-pointer` removes only the
 marked section and keeps the rest of the file.
 
 ## Uninstall leftovers

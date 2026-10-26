@@ -66,8 +66,9 @@ release it when you stop, and note handoffs with `lpui note add`.
 ## DB scoping (first match wins)
 
 `--db PATH` → `$LAZYPLAN_DB` → nearest repo-owned
-`.agents/lazyplan/lazyplan.db` walking up → shared `~/.lazyplan/lazyplan.db`
-(`%LOCALAPPDATA%/lazyplan/lazyplan.db` on Windows).
+`.agents/lazyplan/lazyplan.db` walking up → shared `~/.lazyplan/lazyplan.db`.
+On Windows the shared home `~/.lazyplan/` is `%LOCALAPPDATA%/lazyplan/`
+everywhere below.
 
 Setup runs on first use. It detects agents, installs or refreshes their
 skills, and remembers the result in `~/.lazyplan/setup.json`. The default is

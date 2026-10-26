@@ -19,6 +19,9 @@ screen. On Windows, use the pip backend:
 pipx install --backend pip lazyplan-tui
 ```
 
+On Windows the shared home `~/.lazyplan/` is `%LOCALAPPDATA%\lazyplan\`
+everywhere in this guide, and the default `--actor` is `%USERNAME%`.
+
 ### Linux packages
 
 System packages include the CLI, man pages, and shell completions. Grab the
@@ -59,6 +62,9 @@ cd lazyplan
 python3 -m venv .venv && source .venv/bin/activate
 python -m pip install -e ".[dev]"
 ```
+
+On Windows PowerShell, create the venv with `py -m venv .venv` and activate it
+with `.venv\Scripts\Activate.ps1`.
 
 ### Upgrade
 
@@ -406,7 +412,13 @@ Read tools: `brief`, `list_plans`, `show_row`, `claims`, `audit`, `trace`,
 block/unblock, and commit linking. Resources: `lazyplan://brief` and
 `lazyplan://plan/{id}`.
 
-Claude-style `.mcp.json`:
+Claude Code, user-wide:
+
+```bash
+claude mcp add --scope user --transport stdio lazyplan -- lpui mcp
+```
+
+Or commit a project `.mcp.json`:
 
 ```json
 {

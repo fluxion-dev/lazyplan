@@ -8,6 +8,8 @@ from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from pilot_settle import settle  # noqa: E402
+
 from lazyplan import design, services
 from lazyplan.models import Status
 from lazyplan.store import Store
@@ -59,6 +61,7 @@ class TestSpinner(unittest.IsolatedAsyncioTestCase):
             for key in keys:
                 self.assertEqual(self._text(key)[0], "◐", key)
 
+            await settle(pilot)
             self.app.selected = ("task", self.doing)
             self.app.update_preview()
             await pilot.pause()

@@ -9,8 +9,11 @@ import unittest
 from argparse import Namespace
 from contextlib import redirect_stdout
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+
+from home_sandbox import sandbox_home  # noqa: E402
 
 from lazyplan import skills
 from lazyplan.cli import main as lpui_main
@@ -256,7 +259,7 @@ class TestTemplateParity(unittest.TestCase):
             for dest in copies:
                 with self.subTest(dest=str(dest)):
                     self.assertTrue(dest.is_file())
-                    self.assertEqual(dest.read_text(), skills.render_skill())
+                    self.assertEqual(dest.read_text(encoding="utf-8"), skills.render_skill())
 
 
 class TestSkillContent(unittest.TestCase):
@@ -344,7 +347,7 @@ class TestNativeInstall(unittest.TestCase):
 
     def test_claude_deduped_across_flag_and_tools(self):
         res = skills.install("both", self.repo, self.home, with_claude_copy=True, tools=["claude"])
-        claude_lines = [line for line in res.installed if ".claude/skills/" in line]
+        claude_lines = [line for line in res.installed if os.path.join(".claude", "skills") in line]
         self.assertEqual(len(claude_lines), 2)
 
     def test_second_run_reports_up_to_date(self):
@@ -370,7 +373,7 @@ class TestNativeInstall(unittest.TestCase):
         res = skills.install("global", self.repo, self.home, tools=["copilot"])
         self.assertEqual(
             res.installed,
-            [f"{self.home}/.agents/skills/lazyplan/SKILL.md (wrote)"],
+            [f"{self.home / '.agents/skills/lazyplan/SKILL.md'} (wrote)"],
         )
 
 
@@ -393,7 +396,7 @@ class TestSkillsDirOverride(unittest.TestCase):
     def test_flag_redirects_all_skill_writes(self):
         custom = self.tmp.name + "/custom-skills"
         res = skills.install("both", self.repo, self.home, tools=["opencode"], skills_dir=custom)
-        self.assertEqual(res.installed, [f"{custom}/lazyplan/SKILL.md (wrote)"])
+        self.assertEqual(res.installed, [f"{Path(custom, 'lazyplan', 'SKILL.md')} (wrote)"])
         self.assertTrue(Path(custom, "lazyplan/SKILL.md").is_file())
         self.assertFalse((self.repo / ".agents").exists())
 
@@ -427,10 +430,10 @@ class TestInstall(unittest.TestCase):
         res = skills.install("project", self.repo, self.home)
         skill = self.repo / ".agents" / "skills" / "lazyplan" / "SKILL.md"
         self.assertTrue(skill.is_file())
-        self.assertIn("lazyplan", skill.read_text())
+        self.assertIn("lazyplan", skill.read_text(encoding="utf-8"))
         self.assertIsNotNone(res.updated_agents_md)
         self.assertTrue((self.repo / "AGENTS.md").is_file())
-        self.assertIn("lazyplan", (self.repo / "AGENTS.md").read_text())
+        self.assertIn("lazyplan", (self.repo / "AGENTS.md").read_text(encoding="utf-8"))
         self.assertIsNone(res.skipped)
 
     def test_global_install_stays_out_of_repo(self):
@@ -450,19 +453,22 @@ class TestInstall(unittest.TestCase):
         res = skills.install("project", self.repo, self.home)
         self.assertTrue(all("up-to-date" in line for line in res.installed))
         # AGENTS.md not duplicated
-        text = (self.repo / "AGENTS.md").read_text()
+        text = (self.repo / "AGENTS.md").read_text(encoding="utf-8")
         self.assertEqual(text.count(skills.AGENTS_MARK_BEGIN), 1)
 
     def test_agents_md_preserves_existing_content(self):
-        (self.repo / "AGENTS.md").write_text("# Mine\n\nCustom rules.\n")
+        (self.repo / "AGENTS.md").write_text("# Mine\n\nCustom rules.\n", encoding="utf-8")
         skills.install("project", self.repo, self.home)
-        text = (self.repo / "AGENTS.md").read_text()
+        text = (self.repo / "AGENTS.md").read_text(encoding="utf-8")
         self.assertIn("Custom rules.", text)
         self.assertIn("lazyplan", text)
 
 
 class TestInitCli(unittest.TestCase):
     def setUp(self):
+        which = mock.patch.object(skills.shutil, "which", return_value=None)
+        which.start()
+        self.addCleanup(which.stop)
         self.tmp = tempfile.TemporaryDirectory()
         self.repo = os.path.join(self.tmp.name, "myproj")
         os.makedirs(os.path.join(self.repo, ".git"))
@@ -472,8 +478,7 @@ class TestInitCli(unittest.TestCase):
         self.old_noskills = os.environ.get("LAZYPLAN_NO_SKILLS")
         os.environ["XDG_DATA_HOME"] = os.path.join(self.tmp.name, "xdg")
         os.environ.pop("LAZYPLAN_NO_SKILLS", None)
-        self.old_home = os.environ.get("HOME")
-        os.environ["HOME"] = os.path.join(self.tmp.name, "home")
+        sandbox_home(self, os.path.join(self.tmp.name, "home"))
         os.makedirs(os.environ["HOME"], exist_ok=True)
         os.makedirs(os.path.join(os.environ["HOME"], ".config", "opencode"), exist_ok=True)
 
@@ -491,10 +496,6 @@ class TestInitCli(unittest.TestCase):
             os.environ.pop("LAZYPLAN_NO_SKILLS", None)
         else:
             os.environ["LAZYPLAN_NO_SKILLS"] = self.old_noskills
-        if self.old_home is None:
-            os.environ.pop("HOME", None)
-        else:
-            os.environ["HOME"] = self.old_home
         self.tmp.cleanup()
 
     def _init_json(self, argv):
@@ -553,13 +554,13 @@ class TestInitCli(unittest.TestCase):
         # Repo placement writes lazyplan entries.
         self._init_json(["setup", "--placement", "repo", "--yes"])
         gi = os.path.join(self.repo, ".gitignore")
-        text = open(gi).read()
+        text = open(gi, encoding="utf-8").read()
         self.assertIn(".agents/lazyplan/lazyplan.db", text)
         self.assertNotIn(".agents/lazyplan/templates", text)
         self.assertIn(".agents/skills/lazyplan/", text)
         # second run adds nothing twice
         self._init_json(["setup", "--placement", "repo", "--yes"])
-        self.assertEqual(open(gi).read().count(".agents/lazyplan/lazyplan.db"), 1)
+        self.assertEqual(open(gi, encoding="utf-8").read().count(".agents/lazyplan/lazyplan.db"), 1)
 
 
 class TestAppendGitignore(unittest.TestCase):
@@ -579,15 +580,17 @@ class TestAppendGitignore(unittest.TestCase):
         self.assertFalse(append_gitignore(root, ".agents/lazyplan/"))
         self.assertFalse(append_gitignore(root, ".agents/lazyplan"))
         self.assertFalse(append_gitignore(root, ""))
-        self.assertEqual(open(root / ".gitignore").read(), ".agents/lazyplan/\n")
+        self.assertEqual(open(root / ".gitignore", encoding="utf-8").read(), ".agents/lazyplan/\n")
 
     def test_missing_trailing_newline(self):
         from lazyplan.skills import append_gitignore
 
         root = Path(self.repo)
-        (root / ".gitignore").write_text("*.db")
+        (root / ".gitignore").write_text("*.db", encoding="utf-8")
         self.assertTrue(append_gitignore(root, ".agents/lazyplan/"))
-        self.assertEqual(open(root / ".gitignore").read(), "*.db\n.agents/lazyplan/\n")
+        self.assertEqual(
+            open(root / ".gitignore", encoding="utf-8").read(), "*.db\n.agents/lazyplan/\n"
+        )
 
 
 class TestPromptConfirm(unittest.TestCase):

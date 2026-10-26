@@ -24,6 +24,12 @@ class TestDetect(unittest.TestCase):
         self.assertEqual(info.method, upgrade.PIPX)
         self.assertTrue(info.upgradeable)
 
+    def test_pipx_venv_path_on_windows_keeps_the_drive(self):
+        exe = "C:/Users/u/pipx/venvs/lazyplan-tui/Scripts/python.exe"
+        self.assertEqual(
+            upgrade._looks_like_pipx(exe).lower(), "c:/users/u/pipx/venvs/lazyplan-tui"
+        )
+
     def test_plain_venv_is_upgradeable(self):
         with (
             mock.patch.object(upgrade, "_is_editable_install", return_value=False),
@@ -64,7 +70,9 @@ class TestDetect(unittest.TestCase):
         import tempfile
 
         with tempfile.TemporaryDirectory() as tmp:
-            (Path(tmp) / "pyproject.toml").write_text('[project]\nname = "lazyplan-tui"\n')
+            (Path(tmp) / "pyproject.toml").write_text(
+                '[project]\nname = "lazyplan-tui"\n', encoding="utf-8"
+            )
             exe = str(Path(tmp) / "bin" / "python")
             with mock.patch.object(upgrade, "_probe", return_value=False):
                 info = upgrade.detect(exe=exe, prefix="/usr", base_prefix="/usr", cwd=tmp)
@@ -162,17 +170,24 @@ class TestRunners(unittest.TestCase):
     def test_venv_reinstall_runs_venv_pip(self):
         ok = mock.Mock(returncode=0)
         with mock.patch.object(upgrade.subprocess, "run", return_value=ok) as run:
-            with mock.patch.object(upgrade.Path, "exists", return_value=True):
-                upgrade.upgrade_venv("0.16.0", "/home/u/.local/share/lazyplan-venv/bin/python")
+            upgrade.upgrade_venv("0.16.0", "/home/u/.local/share/lazyplan-venv/bin/python")
         cmd = run.call_args[0][0]
-        self.assertIn("lazyplan-tui==0.16.0", cmd)
+        self.assertEqual(
+            cmd,
+            [
+                "/home/u/.local/share/lazyplan-venv/bin/python",
+                "-m",
+                "pip",
+                "install",
+                "lazyplan-tui==0.16.0",
+            ],
+        )
 
     def test_venv_reinstall_failure_raises(self):
         bad = mock.Mock(returncode=1, stderr="boom", stdout="")
         with mock.patch.object(upgrade.subprocess, "run", return_value=bad):
-            with mock.patch.object(upgrade.Path, "exists", return_value=True):
-                with self.assertRaises(upgrade.UpgradeError):
-                    upgrade.upgrade_venv("0.16.0", "/home/u/.local/share/lazyplan-venv/bin/python")
+            with self.assertRaises(upgrade.UpgradeError):
+                upgrade.upgrade_venv("0.16.0", "/home/u/.local/share/lazyplan-venv/bin/python")
 
 
 PIPX_INFO = upgrade.InstallInfo(upgrade.PIPX, True, "/home/u/.local/share/pipx/venvs/lazyplan-tui")
@@ -195,8 +210,15 @@ class TestGuards(unittest.TestCase):
         self.assertIn("git pull", msg)
 
     def test_unknown_message_points_at_installer(self):
-        msg = upgrade.guard_message(upgrade.InstallInfo(upgrade.UNKNOWN, False))
+        with mock.patch.object(upgrade.os, "name", "posix"):
+            msg = upgrade.guard_message(upgrade.InstallInfo(upgrade.UNKNOWN, False))
         self.assertIn("install.sh", msg)
+
+    def test_unknown_message_on_windows_points_at_pipx(self):
+        with mock.patch.object(upgrade.os, "name", "nt"):
+            msg = upgrade.guard_message(upgrade.InstallInfo(upgrade.UNKNOWN, False))
+        self.assertIn("pipx install --backend pip lazyplan-tui", msg)
+        self.assertNotIn("install.sh", msg)
 
 
 class TestUpgradeCommand(unittest.TestCase):

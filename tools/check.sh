@@ -1,9 +1,17 @@
 #!/usr/bin/env bash
 # lazyplan gates: lint + format + types + tests (both interpreters).
-# Usage: ./tools/check.sh
+# Usage: ./tools/check.sh   (Linux, macOS, or Git Bash on Windows)
 set -euo pipefail
 cd "$(dirname "$0")/.."
-VENV_BIN="${VENV_BIN:-.venv/bin}"
+if [[ -z "${VENV_BIN:-}" ]]; then
+  if [[ -d .venv/Scripts ]]; then VENV_BIN=.venv/Scripts; else VENV_BIN=.venv/bin; fi
+fi
+if [[ -z "${SYS_PY:-}" ]]; then
+  for candidate in python3 python; do
+    if "$candidate" -c "import sys" >/dev/null 2>&1; then SYS_PY="$candidate"; break; fi
+  done
+fi
+: "${SYS_PY:?no working python3 or python on PATH}"
 echo "== ruff check =="
 "$VENV_BIN"/ruff check src tests
 echo "== ruff format --check =="
@@ -17,9 +25,9 @@ echo "== xenon (no block worse than C) =="
 echo "== man page in sync =="
 "$VENV_BIN"/python tools/gen-man.py --check
 echo "== site discoverability =="
-python3 tools/check-site.py
+"$SYS_PY" tools/check-site.py
 echo "== unittest (system python, stdlib only) =="
-PYTHONPATH=src python3 -m unittest discover -s tests
+PYTHONPATH=src "$SYS_PY" -m unittest discover -s tests
 echo "== unittest (venv python, with textual) =="
 "$VENV_BIN"/python -m unittest discover -s tests
 echo "ALL GATES GREEN"

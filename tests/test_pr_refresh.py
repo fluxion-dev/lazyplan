@@ -75,7 +75,7 @@ CHECKS = {
 class TestPrRefresh(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.repo = os.path.join(self.tmp.name, "repo")
+        self.repo = os.path.realpath(os.path.join(self.tmp.name, "repo"))
         os.makedirs(self.repo)
         subprocess.run(["git", "init", "-q", "-b", "main", self.repo], check=True, timeout=10)
         subprocess.run(
@@ -88,7 +88,7 @@ class TestPrRefresh(unittest.TestCase):
             check=True,
             timeout=10,
         )
-        with open(os.path.join(self.repo, "f.txt"), "w") as fh:
+        with open(os.path.join(self.repo, "f.txt"), "w", encoding="utf-8") as fh:
             fh.write("hi\n")
         subprocess.run(["git", "-C", self.repo, "add", "."], check=True, timeout=10)
         subprocess.run(
@@ -112,7 +112,7 @@ class TestPrRefresh(unittest.TestCase):
         self.sha = subprocess.run(
             ["git", "-C", self.repo, "rev-parse", "HEAD"],
             capture_output=True,
-            text=True,
+            encoding="utf-8",
             timeout=10,
             check=True,
         ).stdout.strip()

@@ -102,7 +102,7 @@ class NavParser(HTMLParser):
 class TestPrimaryNavigation(unittest.TestCase):
     def setUp(self):
         parser = NavParser()
-        parser.feed((ROOT / "site/index.html").read_text())
+        parser.feed((ROOT / "site/index.html").read_text(encoding="utf-8"))
         self.parser = parser
         self.desktop = [
             item
@@ -158,7 +158,7 @@ class TestPrimaryNavigation(unittest.TestCase):
         )
 
     def test_no_wrapping_flat_nav(self):
-        html = (ROOT / "site/index.html").read_text()
+        html = (ROOT / "site/index.html").read_text(encoding="utf-8")
         nav = html.split('<nav aria-label="Primary"', 1)[1].split("</nav>", 1)[0]
         self.assertNotIn("flex-wrap", nav)
         self.assertIn("md:flex", nav)

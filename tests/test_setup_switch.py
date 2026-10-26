@@ -9,6 +9,8 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from home_sandbox import sandbox_home  # noqa: E402
+
 from lazyplan import setup, templates  # noqa: E402
 from lazyplan.repo import PLAN_DIR, repo_plan_db_path  # noqa: E402
 from lazyplan.setup_layout import SetupChoice  # noqa: E402
@@ -23,31 +25,27 @@ class SwitchCase(unittest.TestCase):
         self.repo = Path(self.tmp.name) / "repo"
         self.repo.mkdir()
         subprocess.run(["git", "init", "-q", self.repo], check=True)
-        self.old_home = os.environ.get("HOME")
-        os.environ["HOME"] = str(self.home)
+        sandbox_home(self, str(self.home))
 
     def tearDown(self):
-        if self.old_home is None:
-            os.environ.pop("HOME", None)
-        else:
-            os.environ["HOME"] = self.old_home
         self.tmp.cleanup()
 
     def seed_repo_layout(self):
         plan_dir = self.repo / PLAN_DIR
         plan_dir.mkdir(parents=True)
         Store(repo_plan_db_path(self.repo)).add_plan("P")
-        (plan_dir / "config.json").write_text('{"db": "lazyplan.db"}\n')
+        (plan_dir / "config.json").write_text('{"db": "lazyplan.db"}\n', encoding="utf-8")
         template = plan_dir / "templates"
         template.mkdir()
-        (template / "plan.md").write_text(templates.STARTERS["plan"])
+        (template / "plan.md").write_text(templates.STARTERS["plan"], encoding="utf-8")
         skill = self.repo / ".agents/skills/lazyplan/SKILL.md"
         skill.parent.mkdir(parents=True)
-        skill.write_text("old skill\n")
+        skill.write_text("old skill\n", encoding="utf-8")
         (self.repo / "AGENTS.md").write_text(
-            "# Mine\n\n<!-- lazyplan:start -->\nold block\n<!-- lazyplan:end -->\n"
+            "# Mine\n\n<!-- lazyplan:start -->\nold block\n<!-- lazyplan:end -->\n",
+            encoding="utf-8",
         )
-        (self.repo / ".gitignore").write_text("*.db\n.agents/lazyplan/\n")
+        (self.repo / ".gitignore").write_text("*.db\n.agents/lazyplan/\n", encoding="utf-8")
         setup.save_state(
             setup.SetupState(placement="repo", agents=["claude"], last_version="1.0"),
             self.home,
@@ -62,9 +60,9 @@ class SwitchCase(unittest.TestCase):
         self.assertFalse((plan_dir / "config.json").exists())
         self.assertFalse((plan_dir / "templates/plan.md").exists())
         self.assertFalse((self.repo / ".agents/skills/lazyplan/SKILL.md").exists())
-        self.assertNotIn("lazyplan:start", (self.repo / "AGENTS.md").read_text())
-        self.assertIn("# Mine", (self.repo / "AGENTS.md").read_text())
-        self.assertNotIn(".agents/lazyplan", (self.repo / ".gitignore").read_text())
+        self.assertNotIn("lazyplan:start", (self.repo / "AGENTS.md").read_text(encoding="utf-8"))
+        self.assertIn("# Mine", (self.repo / "AGENTS.md").read_text(encoding="utf-8"))
+        self.assertNotIn(".agents/lazyplan", (self.repo / ".gitignore").read_text(encoding="utf-8"))
         self.assertTrue((self.home / ".lazyplan/lazyplan.db").is_file())
         self.assertTrue(list((self.home / ".lazyplan/backups").iterdir()))
 
@@ -79,7 +77,7 @@ class SwitchCase(unittest.TestCase):
         self.assertTrue((self.repo / ".agents/lazyplan/lazyplan.db").is_file())
         self.assertTrue((self.repo / ".agents/lazyplan/config.json").is_file())
         self.assertTrue((self.repo / ".agents/lazyplan/templates/plan.md").is_file())
-        self.assertIn("lazyplan:start", (self.repo / "AGENTS.md").read_text())
+        self.assertIn("lazyplan:start", (self.repo / "AGENTS.md").read_text(encoding="utf-8"))
         self.assertEqual(setup.load_state(self.home).placement, "repo")
 
 

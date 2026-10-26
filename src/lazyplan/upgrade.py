@@ -12,6 +12,8 @@ import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
+from . import textfile
+
 REPO = "fluxion-dev/lazyplan"
 PYPI_PKG = "lazyplan-tui"
 RELEASES_LATEST = f"https://github.com/{REPO}/releases/latest"
@@ -40,19 +42,14 @@ class InstallInfo:
     detail: str = ""
 
 
-def _exe_parts(exe: str) -> list[str]:
-    return Path(exe).as_posix().split("/")
-
-
 def _looks_like_pipx(exe: str) -> str | None:
     """The pipx venv dir for this package, else None."""
-    parts = _exe_parts(exe)
-    if "pipx" in parts and "venvs" in parts and PYPI_PKG in parts:
-        try:
-            idx = parts.index(PYPI_PKG)
-        except ValueError:
-            return None
-        return "/" + "/".join(parts[1 : idx + 1])
+    path = Path(exe)
+    if "pipx" not in path.parts or "venvs" not in path.parts:
+        return None
+    for parent in path.parents:
+        if parent.name == PYPI_PKG:
+            return parent.as_posix()
     return None
 
 
@@ -101,7 +98,7 @@ def _looks_like_source(exe: str, cwd: str) -> bool:
         for _ in range(6):
             marker = here / "pyproject.toml"
             try:
-                text = marker.read_text()
+                text = textfile.read(marker)
             except OSError:
                 pass
             else:
@@ -139,7 +136,7 @@ def detect(
         return InstallInfo(DEB, False, "system deb install")
     if _looks_like_source(exe, cwd):
         return InstallInfo(SOURCE, False, "source checkout; pull git instead")
-    return InstallInfo(UNKNOWN, False, "unrecognized layout; reinstall via install.sh")
+    return InstallInfo(UNKNOWN, False, "unrecognized layout")
 
 
 def parse_version(text: str) -> tuple[int, int, int]:
@@ -174,6 +171,12 @@ def latest_version(timeout: float = RESOLVE_TIMEOUT) -> str:
 INSTALL_SH = (
     "curl -fsSL https://github.com/fluxion-dev/lazyplan/releases/latest/download/install.sh | sh"
 )
+PIPX_INSTALL = f"pipx install --backend pip {PYPI_PKG}"
+
+
+def reinstall_hint() -> str:
+    """The supported fresh-install command for this platform."""
+    return PIPX_INSTALL if os.name == "nt" else INSTALL_SH
 
 
 def guard_message(info: InstallInfo) -> str:
@@ -191,7 +194,7 @@ def guard_message(info: InstallInfo) -> str:
         )
     if info.method == SOURCE:
         return f"source checkout ({info.detail}): update with `git pull`; {upgradeable}"
-    return f"unrecognized install layout ({info.detail}); reinstall with {INSTALL_SH}"
+    return f"unrecognized install layout ({info.detail}); reinstall with {reinstall_hint()}"
 
 
 def notice_text(info: InstallInfo, installed: str, latest: str) -> str | None:
@@ -235,7 +238,9 @@ def upgrade_pipx(version: str, timeout: float = UPGRADE_TIMEOUT) -> None:
     last_lines: list[str] = []
     for cmd in cmds:
         try:
-            out = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+            out = subprocess.run(
+                cmd, capture_output=True, encoding="utf-8", errors="replace", timeout=timeout
+            )
         except OSError as exc:
             raise UpgradeError(f"cannot run {' '.join(cmd)}: {exc}") from exc
         if out.returncode == 0:
@@ -246,12 +251,11 @@ def upgrade_pipx(version: str, timeout: float = UPGRADE_TIMEOUT) -> None:
 
 def upgrade_venv(version: str, exe: str, timeout: float = UPGRADE_TIMEOUT) -> None:
     """Reinstall the running venv from PyPI (the install.sh do_venv layout)."""
-    pip = str(Path(exe).parent / "pip")
-    if not Path(pip).exists():
-        pip = str(Path(exe).parent / "pip3")
-    cmd = [pip, "install", f"{PYPI_PKG}=={version}"]
+    cmd = [exe, "-m", "pip", "install", f"{PYPI_PKG}=={version}"]
     try:
-        out = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        out = subprocess.run(
+            cmd, capture_output=True, encoding="utf-8", errors="replace", timeout=timeout
+        )
     except OSError as exc:
         raise UpgradeError(f"cannot run {' '.join(cmd)}: {exc}") from exc
     if out.returncode != 0:

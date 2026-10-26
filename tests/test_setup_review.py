@@ -24,7 +24,7 @@ class ReviewCase(unittest.TestCase):
         subprocess.run(["git", "init", "-q", self.repo], check=True)
         subprocess.run(["git", "-C", self.repo, "config", "user.email", "t@t"], check=True)
         subprocess.run(["git", "-C", self.repo, "config", "user.name", "T"], check=True)
-        (self.repo / "README").write_text("x")
+        (self.repo / "README").write_text("x", encoding="utf-8")
         subprocess.run(["git", "-C", self.repo, "add", "."], check=True)
         subprocess.run(["git", "-C", self.repo, "commit", "-qm", "init"], check=True)
         self.repo_db = self._make_repo_db(1)
@@ -109,10 +109,12 @@ class ReviewCase(unittest.TestCase):
         stray.mkdir(parents=True)
         Store(stray / "lazyplan.db").add_plan("P")
         agents = outer / "AGENTS.md"
-        agents.write_text("keep\n<!-- lazyplan:start -->\nmanaged\n<!-- lazyplan:end -->\n")
+        agents.write_text(
+            "keep\n<!-- lazyplan:start -->\nmanaged\n<!-- lazyplan:end -->\n", encoding="utf-8"
+        )
         ok, _ = setup.move_repo_db(stray / "lazyplan.db", self.home)
         self.assertTrue(ok)
-        self.assertIn("managed", agents.read_text())
+        self.assertIn("managed", agents.read_text(encoding="utf-8"))
 
     def test_non_interactive_note_does_not_record(self):
         notes, out = self._review("", allow_prompt=False)

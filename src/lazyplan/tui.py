@@ -16,6 +16,8 @@ import webbrowser
 from collections.abc import Callable
 from typing import Any, cast
 
+from . import textfile
+
 try:
     from textual import events, on
     from textual.app import App, ComposeResult
@@ -1711,8 +1713,7 @@ if _TEXTUAL_OK:
             from .render import render_plan_markdown
 
             path = f"plan-P{pid}.md"
-            with open(path, "w") as fh:
-                fh.write(render_plan_markdown(entry) + "\n")
+            textfile.write(path, render_plan_markdown(entry) + "\n")
             self._saved(f"exported {path}")
 
         def action_open_detail(self) -> None:

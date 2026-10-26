@@ -13,6 +13,8 @@ from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from home_sandbox import sandbox_home  # noqa: E402
+
 from lazyplan import services, stats  # noqa: E402
 from lazyplan.cli import main as lpui_main  # noqa: E402
 from lazyplan.models import Status  # noqa: E402
@@ -47,13 +49,12 @@ class TestStats(unittest.TestCase):
         self._status(self.t4.id, 1300, Status.DOING, "alice")
         with mock.patch("lazyplan.store.time.time", return_value=1900):
             self.store.claim_task(self.t2.id, "alice", ttl_seconds=600, now=1900)
-        self.old_home = os.environ.get("HOME")
         self.old_setup = os.environ.get("LAZYPLAN_NO_SETUP")
-        os.environ["HOME"] = self.tmp.name
+        sandbox_home(self, self.tmp.name)
         os.environ["LAZYPLAN_NO_SETUP"] = "1"
 
     def tearDown(self):
-        for key, value in (("HOME", self.old_home), ("LAZYPLAN_NO_SETUP", self.old_setup)):
+        for key, value in (("LAZYPLAN_NO_SETUP", self.old_setup),):
             if value is None:
                 os.environ.pop(key, None)
             else:

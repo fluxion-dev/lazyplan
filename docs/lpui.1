@@ -26,7 +26,7 @@ print terse tab\-separated rows for active agents (\-\-json still wins)
 print the installed version and exit
 .TP
 .B \-\-actor NAME
-who is making this change (you see it in feed; default: $USER or 'human')
+who is making this change (you see it in feed; default: your login name or 'human')
 .SH COMMANDS
 Flags work before or after the command: \fBlpui list \-\-json\fR means the same as \fBlpui \-\-json list\fR. Run \fBlpui COMMAND \-\-help\fR for details.
 .TP
@@ -2013,12 +2013,15 @@ Disable setup wizard color.
 .B NO_COLOR, CLICOLOR=0, TERM=dumb
 Plain setup output.
 .TP
-.B USER
-Used for --actor when you do not give one.
+.B USER, USERNAME
+Used for --actor when you do not give one (USERNAME on Windows).
 .SH FILES
 .TP
 .B ~/\.lazyplan/lazyplan\.db
 Your plans, shared by every agent and folder (default home).
+.TP
+.B %LOCALAPPDATA%/lazyplan/
+The shared home on Windows, in place of ~/.lazyplan/.
 .TP
 .B \.agents/lazyplan/lazyplan\.db
 The repo database (only with lpui setup --placement repo; keep it local).

@@ -48,7 +48,7 @@ class TestVcsCLI(unittest.TestCase):
             check=True,
             timeout=10,
         )
-        with open(os.path.join(self.repo, "f.txt"), "w") as fh:
+        with open(os.path.join(self.repo, "f.txt"), "w", encoding="utf-8") as fh:
             fh.write("hi\n")
         subprocess.run(["git", "-C", self.repo, "add", "."], check=True, timeout=10)
         subprocess.run(
@@ -171,7 +171,7 @@ class TestVcsCLI(unittest.TestCase):
         subprocess.run(
             ["git", "-C", other, "config", "user.name", "Tester"], check=True, timeout=10
         )
-        with open(os.path.join(other, "g.txt"), "w") as fh:
+        with open(os.path.join(other, "g.txt"), "w", encoding="utf-8") as fh:
             fh.write("other\n")
         subprocess.run(["git", "-C", other, "add", "."], check=True, timeout=10)
         subprocess.run(
@@ -210,7 +210,7 @@ class TestVcsCLI(unittest.TestCase):
         self.assertEqual(entries[0]["subject"], "cli commit")
         self.assertFalse(entries[0]["dirty"])
 
-        with open(os.path.join(self.repo, "dirty.txt"), "w") as fh:
+        with open(os.path.join(self.repo, "dirty.txt"), "w", encoding="utf-8") as fh:
             fh.write("x\n")
         rc, out, _ = _run(["--db", self.db, "git", "status", "--repo", self.repo])
         self.assertEqual(rc, 0)
@@ -222,7 +222,7 @@ class TestVcsCLI(unittest.TestCase):
         head = subprocess.run(
             ["git", "-C", self.repo, "rev-parse", "HEAD"],
             capture_output=True,
-            text=True,
+            encoding="utf-8",
             timeout=10,
             check=True,
         ).stdout.strip()
@@ -237,7 +237,7 @@ class TestVcsCLI(unittest.TestCase):
             subprocess.run(
                 ["git", "-C", self.repo, "symbolic-ref", "--short", "HEAD"],
                 capture_output=True,
-                text=True,
+                encoding="utf-8",
                 timeout=10,
                 check=True,
             ).stdout.strip(),
@@ -247,7 +247,7 @@ class TestVcsCLI(unittest.TestCase):
             subprocess.run(
                 ["git", "-C", self.repo, "rev-parse", "HEAD"],
                 capture_output=True,
-                text=True,
+                encoding="utf-8",
                 timeout=10,
                 check=True,
             ).stdout.strip(),
@@ -271,7 +271,7 @@ class TestVcsCLI(unittest.TestCase):
             subprocess.run(
                 ["git", "-C", self.repo, "symbolic-ref", "--short", "HEAD"],
                 capture_output=True,
-                text=True,
+                encoding="utf-8",
                 timeout=10,
                 check=True,
             ).stdout.strip(),
@@ -330,7 +330,7 @@ class TestVcsCLI(unittest.TestCase):
         base = subprocess.run(
             ["git", "-C", self.repo, "rev-parse", "HEAD"],
             capture_output=True,
-            text=True,
+            encoding="utf-8",
             timeout=10,
             check=True,
         ).stdout.strip()
@@ -344,7 +344,7 @@ class TestVcsCLI(unittest.TestCase):
             subprocess.run(
                 ["git", "-C", self.repo, "symbolic-ref", "--short", "HEAD"],
                 capture_output=True,
-                text=True,
+                encoding="utf-8",
                 timeout=10,
                 check=True,
             ).stdout.strip(),
@@ -352,7 +352,7 @@ class TestVcsCLI(unittest.TestCase):
         )
         self.assertEqual(Store(self.db).get_task(1).status, Status.DOING)
 
-        with open(os.path.join(self.repo, "work.txt"), "w") as fh:
+        with open(os.path.join(self.repo, "work.txt"), "w", encoding="utf-8") as fh:
             fh.write("work\n")
         subprocess.run(["git", "-C", self.repo, "add", "."], check=True, timeout=10)
         subprocess.run(
@@ -379,7 +379,7 @@ class TestVcsCLI(unittest.TestCase):
         rc, out, _ = _run(["--db", self.db, "task", "start", "--id", "2", "--json"])
         self.assertEqual(rc, 0)
         self.assertEqual(json.loads(out)["branch"], "task/2-second-task")
-        with open(os.path.join(self.repo, "second.txt"), "w") as fh:
+        with open(os.path.join(self.repo, "second.txt"), "w", encoding="utf-8") as fh:
             fh.write("second\n")
         subprocess.run(["git", "-C", self.repo, "add", "."], check=True, timeout=10)
         subprocess.run(
@@ -387,7 +387,7 @@ class TestVcsCLI(unittest.TestCase):
             check=True,
             timeout=10,
         )
-        with open(os.path.join(self.repo, "dirty.txt"), "w") as fh:
+        with open(os.path.join(self.repo, "dirty.txt"), "w", encoding="utf-8") as fh:
             fh.write("dirty\n")
         rc, out, _ = _run(["--db", self.db, "task", "finish", "--id", "2", "--json"])
         self.assertEqual(rc, 0)
@@ -399,7 +399,7 @@ class TestVcsCLI(unittest.TestCase):
 
     def test_status_done_skips_dirty_tree(self):
         os.chdir(self.repo)
-        with open(os.path.join(self.repo, "dirty.txt"), "w") as fh:
+        with open(os.path.join(self.repo, "dirty.txt"), "w", encoding="utf-8") as fh:
             fh.write("dirty\n")
         rc, _, err = _run(
             ["--db", self.db, "status", "--kind", "task", "--id", "1", "--to", "done"]
@@ -430,7 +430,7 @@ class TestVcsCLI(unittest.TestCase):
         )
         _run(["--db", self.db, "task", "start", "--id", "2"])
         subprocess.run(["git", "-C", self.repo, "checkout", "-q", "main"], check=True, timeout=10)
-        with open(os.path.join(self.repo, "main.txt"), "w") as fh:
+        with open(os.path.join(self.repo, "main.txt"), "w", encoding="utf-8") as fh:
             fh.write("main\n")
         subprocess.run(["git", "-C", self.repo, "add", "."], check=True, timeout=10)
         subprocess.run(
@@ -463,7 +463,7 @@ class TestVcsCLI(unittest.TestCase):
     def test_finish_never_commits_pushes_or_merges(self):
         os.chdir(self.repo)
         _run(["--db", self.db, "task", "start", "--id", "1"])
-        with open(os.path.join(self.repo, "work.txt"), "w") as fh:
+        with open(os.path.join(self.repo, "work.txt"), "w", encoding="utf-8") as fh:
             fh.write("work\n")
         subprocess.run(["git", "-C", self.repo, "add", "."], check=True, timeout=10)
         subprocess.run(
@@ -491,7 +491,7 @@ class TestVcsCLI(unittest.TestCase):
         os.chdir(self.repo)
         store = Store(self.db)
         store.add_task(1, "Second task")
-        with open(os.path.join(self.repo, "trailer.txt"), "w") as fh:
+        with open(os.path.join(self.repo, "trailer.txt"), "w", encoding="utf-8") as fh:
             fh.write("trailer\n")
         subprocess.run(["git", "-C", self.repo, "add", "."], check=True, timeout=10)
         subprocess.run(
@@ -521,7 +521,7 @@ class TestVcsCLI(unittest.TestCase):
         )
         rc, _, _ = _run(["--db", self.db, "task", "start", "--id", "2"])
         self.assertEqual(rc, 0)
-        with open(os.path.join(self.repo, "branch.txt"), "w") as fh:
+        with open(os.path.join(self.repo, "branch.txt"), "w", encoding="utf-8") as fh:
             fh.write("branch\n")
         subprocess.run(["git", "-C", self.repo, "add", "."], check=True, timeout=10)
         subprocess.run(
@@ -748,7 +748,7 @@ class TestVcsCLI(unittest.TestCase):
             check=True,
             timeout=10,
         )
-        with open(os.path.join(other, "g.txt"), "w") as fh:
+        with open(os.path.join(other, "g.txt"), "w", encoding="utf-8") as fh:
             fh.write("other\n")
         subprocess.run(["git", "-C", other, "add", "."], check=True, timeout=10)
         subprocess.run(

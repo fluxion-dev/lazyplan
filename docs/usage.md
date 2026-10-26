@@ -19,6 +19,9 @@ screen. On Windows, use the pip backend:
 pipx install --backend pip lazyplan-tui
 ```
 
+On Windows the shared home `~/.lazyplan/` is `%LOCALAPPDATA%\lazyplan\`
+everywhere in this guide, and the default `--actor` is `%USERNAME%`.
+
 ### Linux packages
 
 System packages include the CLI, man pages, and shell completions. Grab the
@@ -59,6 +62,9 @@ cd lazyplan
 python3 -m venv .venv && source .venv/bin/activate
 python -m pip install -e ".[dev]"
 ```
+
+On Windows PowerShell, create the venv with `py -m venv .venv` and activate it
+with `.venv\Scripts\Activate.ps1`.
 
 ### Upgrade
 
@@ -236,7 +242,8 @@ blocked reasons, and issue refs. Marks are session-only and survive refreshes.
 ## Agents
 
 Every command accepts `--json`. Journal commands also accept `--porcelain` for
-the active loop. Writes accept `--actor NAME`; the default is `$USER`. The
+the active loop. Writes accept `--actor NAME`; the default is `$USER`
+(`%USERNAME%` on Windows). The
 activity feed shows who changed what.
 
 ```bash
@@ -405,7 +412,13 @@ Read tools: `brief`, `list_plans`, `show_row`, `claims`, `audit`, `trace`,
 block/unblock, and commit linking. Resources: `lazyplan://brief` and
 `lazyplan://plan/{id}`.
 
-Claude-style `.mcp.json`:
+Claude Code, user-wide:
+
+```bash
+claude mcp add --scope user --transport stdio lazyplan -- lpui mcp
+```
+
+Or commit a project `.mcp.json`:
 
 ```json
 {
@@ -578,7 +591,7 @@ touched config file is backed up under `~/.lazyplan/backups/<timestamp>/`.
 | Host | Config | Events |
 |---|---|---|
 | OpenCode | `~/.config/opencode/plugins/lazyplan.js` | session context, post-tool |
-| Claude Code | `~/.claude/settings.json` | SessionStart, UserPromptSubmit, PostToolUse, Stop, PreCompact |
+| Claude Code | `~/.claude/settings.json` | SessionStart, UserPromptSubmit, PostToolUse (Bash and PowerShell), Stop |
 | Gemini CLI | `~/.gemini/settings.json` | SessionStart, BeforeAgent, AfterTool, AfterAgent, PreCompress |
 | Codex | `~/.codex/hooks.json` | SessionStart, UserPromptSubmit, PostToolUse, Stop, PreCompact |
 | Cursor | `~/.cursor/hooks.json` | sessionStart, beforeSubmitPrompt, postToolUse, stop, preCompact |
@@ -587,6 +600,10 @@ Notes:
 
 - OpenCode injects the brief into the first model context of a session and
   queues a commit reminder for the next context.
+- Claude Code accepts no added context on PreCompact, so lazyplan skips it
+  there; SessionStart fires again after compaction and re-injects the brief.
+- On Windows, Claude Code runs hook commands in Git Bash, or in PowerShell
+  when Git Bash is missing. Both find `lpui` on `PATH`.
 - Codex asks you to review new hooks once with `/hooks` before it runs them.
 - Cursor can also import Claude Code hooks; with both enabled, the same
   reminder may appear twice.

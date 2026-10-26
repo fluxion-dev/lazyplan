@@ -63,7 +63,7 @@ exit 9
 
 class PayloadCase(unittest.TestCase):
     def setUp(self):
-        self.payload = json.loads(PAYLOAD.read_text())
+        self.payload = json.loads(PAYLOAD.read_text(encoding="utf-8"))
 
     def test_targets_the_main_branch(self):
         self.assertEqual(self.payload["name"], "main-protection")
@@ -103,6 +103,7 @@ class PayloadCase(unittest.TestCase):
         self.fail(f"missing rule {rule_type}")
 
 
+@unittest.skipIf(os.name == "nt", "drives a POSIX shell script with a fake gh on PATH")
 class ScriptCase(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -110,13 +111,13 @@ class ScriptCase(unittest.TestCase):
         self.bin = self.root / "bin"
         self.bin.mkdir()
         gh = self.bin / "gh"
-        gh.write_text(FAKE_GH_SCRIPT)
+        gh.write_text(FAKE_GH_SCRIPT, encoding="utf-8")
         gh.chmod(gh.stat().st_mode | stat.S_IXUSR)
         self.state = self.root / "state"
         self.state.mkdir()
         self.log = self.root / "calls"
         self.log.touch()
-        self.payload = json.loads(PAYLOAD.read_text())
+        self.payload = json.loads(PAYLOAD.read_text(encoding="utf-8"))
         self.env = {
             **os.environ,
             "PATH": f"{self.bin}:{os.environ['PATH']}",
@@ -131,19 +132,19 @@ class ScriptCase(unittest.TestCase):
         return subprocess.run(
             ["bash", str(SCRIPT), "--repo", repo, *args],
             capture_output=True,
-            text=True,
+            encoding="utf-8",
             env={**self.env, **extra_env},
             cwd=ROOT,
         )
 
     def writes(self):
         path = self.state / "writes"
-        return path.read_text().splitlines() if path.exists() else []
+        return path.read_text(encoding="utf-8").splitlines() if path.exists() else []
 
     def seed(self, *, existing, current):
         if existing:
-            (self.state / "existing").write_text(str(existing))
-        (self.state / "current").write_text(json.dumps(current))
+            (self.state / "existing").write_text(str(existing), encoding="utf-8")
+        (self.state / "current").write_text(json.dumps(current), encoding="utf-8")
 
     def test_script_is_executable(self):
         self.assertTrue(SCRIPT.is_file())

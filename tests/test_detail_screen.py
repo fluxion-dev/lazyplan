@@ -8,6 +8,8 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from pilot_settle import settle  # noqa: E402
+
 from lazyplan.store import Store
 
 try:
@@ -49,6 +51,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
         self.tmp.cleanup()
 
     async def _open(self, pilot, kind: str, oid: int) -> None:
+        await settle(pilot)
         self.app.selected = (kind, oid)
         await pilot.press("enter")
         await pilot.pause()
@@ -102,19 +105,19 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
     async def test_detail_shows_git_state_and_commit_url(self):
         from textual.widgets import Static
 
-        repo = os.path.join(self.tmp.name, "repo")
+        repo = os.path.realpath(os.path.join(self.tmp.name, "repo"))
         os.makedirs(repo)
         subprocess.run(["git", "init", "-q", "-b", "main", repo], check=True, timeout=10)
         subprocess.run(["git", "-C", repo, "config", "user.email", "t@t.t"], check=True, timeout=10)
         subprocess.run(["git", "-C", repo, "config", "user.name", "Tester"], check=True, timeout=10)
-        with open(os.path.join(repo, "f.txt"), "w") as fh:
+        with open(os.path.join(repo, "f.txt"), "w", encoding="utf-8") as fh:
             fh.write("hi\n")
         subprocess.run(["git", "-C", repo, "add", "."], check=True, timeout=10)
         subprocess.run(["git", "-C", repo, "commit", "-qm", "detail work"], check=True, timeout=10)
         sha = subprocess.run(
             ["git", "-C", repo, "rev-parse", "HEAD"],
             capture_output=True,
-            text=True,
+            encoding="utf-8",
             timeout=10,
             check=True,
         ).stdout.strip()
@@ -196,19 +199,19 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
 
         from lazyplan.source_screen import SourceScreen
 
-        repo = os.path.join(self.tmp.name, "source-repo")
+        repo = os.path.realpath(os.path.join(self.tmp.name, "source-repo"))
         os.makedirs(repo)
         subprocess.run(["git", "init", "-q", "-b", "main", repo], check=True, timeout=10)
         subprocess.run(["git", "-C", repo, "config", "user.email", "t@t.t"], check=True, timeout=10)
         subprocess.run(["git", "-C", repo, "config", "user.name", "Tester"], check=True, timeout=10)
-        with open(os.path.join(repo, "a.py"), "w") as fh:
+        with open(os.path.join(repo, "a.py"), "w", encoding="utf-8") as fh:
             fh.write("a\n")
         subprocess.run(["git", "-C", repo, "add", "."], check=True, timeout=10)
         subprocess.run(["git", "-C", repo, "commit", "-qm", "source work"], check=True, timeout=10)
         sha = subprocess.run(
             ["git", "-C", repo, "rev-parse", "HEAD"],
             capture_output=True,
-            text=True,
+            encoding="utf-8",
             timeout=10,
             check=True,
         ).stdout.strip()

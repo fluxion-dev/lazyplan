@@ -31,17 +31,17 @@ class TestVersion(unittest.TestCase):
 
     def test_readme_header_matches_pyproject(self):
         version = self._version()
-        header = (ROOT / "README.md").read_text().splitlines()[0]
+        header = (ROOT / "README.md").read_text(encoding="utf-8").splitlines()[0]
         self.assertEqual(header, f"# lazyplan (`lpui`) — v{version}")
 
     def test_site_version_matches_pyproject(self):
         import json
 
         version = self._version()
-        html = (ROOT / "site/index.html").read_text()
+        html = (ROOT / "site/index.html").read_text(encoding="utf-8")
         self.assertIn(f'"version": "{version}"', html)
         self.assertIn(f"/releases/download/v{version}/", html)
-        package = json.loads((ROOT / "site/package.json").read_text())
+        package = json.loads((ROOT / "site/package.json").read_text(encoding="utf-8"))
         self.assertEqual(package["version"], version)
 
 

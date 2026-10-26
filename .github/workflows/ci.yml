@@ -6,8 +6,16 @@ on:
   pull_request:
 
 jobs:
-  gates:
-    runs-on: ubuntu-latest
+  platform:
+    name: gates (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -15,7 +23,17 @@ jobs:
           python-version: "3.11"
       - name: Install (editable + dev extras)
         run: |
-          python3 -m venv .venv
-          .venv/bin/pip install -e ".[dev]"
+          python -m venv .venv
+          if [[ -d .venv/Scripts ]]; then VENV_BIN=.venv/Scripts; else VENV_BIN=.venv/bin; fi
+          "$VENV_BIN"/python -m pip install -e ".[dev]"
       - name: Gates (ruff + mypy + unittest x2)
         run: ./tools/check.sh
+
+  # The ruleset requires one check named `gates`; it passes only when every
+  # platform passes.
+  gates:
+    needs: platform
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: test "${{ needs.platform.result }}" = success

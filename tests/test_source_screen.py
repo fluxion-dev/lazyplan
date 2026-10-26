@@ -37,7 +37,7 @@ def _git_available() -> bool:
 class TestSourceScreen(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.repo = os.path.join(self.tmp.name, "repo")
+        self.repo = os.path.realpath(os.path.join(self.tmp.name, "repo"))
         os.makedirs(self.repo)
         subprocess.run(["git", "init", "-q", "-b", "main", self.repo], check=True, timeout=10)
         subprocess.run(
@@ -46,7 +46,7 @@ class TestSourceScreen(unittest.IsolatedAsyncioTestCase):
         subprocess.run(
             ["git", "-C", self.repo, "config", "user.name", "Tester"], check=True, timeout=10
         )
-        with open(os.path.join(self.repo, "a.py"), "w") as fh:
+        with open(os.path.join(self.repo, "a.py"), "w", encoding="utf-8") as fh:
             fh.write("a\n")
         subprocess.run(["git", "-C", self.repo, "add", "."], check=True, timeout=10)
         subprocess.run(
@@ -55,7 +55,7 @@ class TestSourceScreen(unittest.IsolatedAsyncioTestCase):
         self.sha = subprocess.run(
             ["git", "-C", self.repo, "rev-parse", "HEAD"],
             capture_output=True,
-            text=True,
+            encoding="utf-8",
             timeout=10,
             check=True,
         ).stdout.strip()
@@ -313,7 +313,7 @@ class TestSourceScreen(unittest.IsolatedAsyncioTestCase):
             self.assertIn("+a", file_body)
 
     async def test_large_diff_is_capped_with_remainder(self):
-        with open(os.path.join(self.repo, "big.txt"), "w") as fh:
+        with open(os.path.join(self.repo, "big.txt"), "w", encoding="utf-8") as fh:
             fh.write("".join(f"line {i}\n" for i in range(20)))
         subprocess.run(["git", "-C", self.repo, "add", "."], check=True, timeout=10)
         subprocess.run(
@@ -322,7 +322,7 @@ class TestSourceScreen(unittest.IsolatedAsyncioTestCase):
         big = subprocess.run(
             ["git", "-C", self.repo, "rev-parse", "HEAD"],
             capture_output=True,
-            text=True,
+            encoding="utf-8",
             timeout=10,
             check=True,
         ).stdout.strip()

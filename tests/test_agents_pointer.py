@@ -11,6 +11,8 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from home_sandbox import sandbox_home  # noqa: E402
+
 from lazyplan import setup  # noqa: E402
 from lazyplan.cli import main as lpui_main  # noqa: E402
 
@@ -23,17 +25,15 @@ class PointerCase(unittest.TestCase):
         self.repo = Path(self.tmp.name) / "repo"
         self.repo.mkdir()
         subprocess.run(["git", "init", "-q", str(self.repo)], check=True)
-        self.old_home = os.environ.get("HOME")
         self.old_db = os.environ.pop("LAZYPLAN_DB", None)
         self.old_nosetup = os.environ.pop(setup.NO_SETUP_ENV, None)
         self.old_cwd = os.getcwd()
-        os.environ["HOME"] = str(self.home)
+        sandbox_home(self, str(self.home))
         os.chdir(self.repo)
 
     def tearDown(self):
         os.chdir(self.old_cwd)
         for key, value in (
-            ("HOME", self.old_home),
             ("LAZYPLAN_DB", self.old_db),
             (setup.NO_SETUP_ENV, self.old_nosetup),
         ):
@@ -58,7 +58,7 @@ class PointerCase(unittest.TestCase):
 
     def test_pointer_names_brief_and_the_home_database(self):
         self._setup("--agents-pointer")
-        text = (self.repo / "AGENTS.md").read_text()
+        text = (self.repo / "AGENTS.md").read_text(encoding="utf-8")
         self.assertIn("lpui --porcelain brief", text)
         self.assertIn(str(self.home / ".lazyplan/lazyplan.db"), text)
         self.assertIn("lpui --porcelain audit --since 7.days", text)
@@ -67,22 +67,22 @@ class PointerCase(unittest.TestCase):
 
     def test_removal_preserves_user_text(self):
         agents = self.repo / "AGENTS.md"
-        agents.write_text("# Agent instructions\n\nUser rules.\n")
+        agents.write_text("# Agent instructions\n\nUser rules.\n", encoding="utf-8")
         self._setup("--agents-pointer")
-        self.assertIn("User rules.", agents.read_text())
-        self.assertIn("lpui --porcelain brief", agents.read_text())
+        self.assertIn("User rules.", agents.read_text(encoding="utf-8"))
+        self.assertIn("lpui --porcelain brief", agents.read_text(encoding="utf-8"))
         self._setup("--no-agents-pointer")
-        self.assertIn("User rules.", agents.read_text())
-        self.assertNotIn("lpui brief", agents.read_text())
+        self.assertIn("User rules.", agents.read_text(encoding="utf-8"))
+        self.assertNotIn("lpui brief", agents.read_text(encoding="utf-8"))
         self.assertFalse(setup.load_state(self.home).agents_pointer)
 
     def test_pointer_change_is_backed_up(self):
         agents = self.repo / "AGENTS.md"
-        agents.write_text("# Agent instructions\n\nUser rules.\n")
+        agents.write_text("# Agent instructions\n\nUser rules.\n", encoding="utf-8")
         self._setup("--agents-pointer")
         backups = list((self.home / ".lazyplan/backups").rglob("AGENTS.md"))
         self.assertTrue(backups)
-        self.assertIn("User rules.", backups[0].read_text())
+        self.assertIn("User rules.", backups[0].read_text(encoding="utf-8"))
 
     def test_state_round_trips_pointer_fields(self):
         state = setup.SetupState(agents_pointer=True, agents_file="/tmp/AGENTS.md")

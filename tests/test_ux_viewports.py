@@ -7,6 +7,8 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from pilot_settle import settle  # noqa: E402
+
 from lazyplan.store import Store
 
 try:
@@ -56,6 +58,7 @@ class TestViewports(unittest.IsolatedAsyncioTestCase):
                 async with app.run_test(size=(width, height)) as pilot:
                     await pilot.pause()
                     self.assertTrue(_within(app.query_one("#panel").region, width, height))
+                    await settle(pilot)
                     app.selected = ("plan", self.pid)
                     await pilot.press("enter")
                     await pilot.pause()

@@ -11,6 +11,8 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from home_sandbox import sandbox_home  # noqa: E402
+
 from lazyplan import setup  # noqa: E402
 from lazyplan.cli import main as lpui_main  # noqa: E402
 
@@ -23,17 +25,15 @@ class LifecycleCase(unittest.TestCase):
         self.repo = Path(self.tmp.name) / "repo"
         self.repo.mkdir()
         subprocess.run(["git", "init", "-q", self.repo], check=True)
-        self.old_home = os.environ.get("HOME")
         self.old_db = os.environ.pop("LAZYPLAN_DB", None)
         self.old_xdg = os.environ.get("XDG_DATA_HOME")
-        os.environ["HOME"] = str(self.home)
+        sandbox_home(self, str(self.home))
         os.environ["XDG_DATA_HOME"] = str(Path(self.tmp.name) / "xdg")
         self.old_cwd = os.getcwd()
         os.chdir(self.repo)
 
     def tearDown(self):
         os.chdir(self.old_cwd)
-        os.environ["HOME"] = self.old_home or ""
         if self.old_db is not None:
             os.environ["LAZYPLAN_DB"] = self.old_db
         if self.old_xdg is None:
@@ -52,20 +52,20 @@ class LifecycleCase(unittest.TestCase):
         code, _ = self.run_cli(["setup", "--yes", "--agents", "claude"])
         self.assertEqual(code, 0)
         hook = self.home / ".claude/settings.json"
-        first_hook = hook.read_text()
+        first_hook = hook.read_text(encoding="utf-8")
         backups = self.home / ".lazyplan/backups"
         before = sorted(p.name for p in backups.iterdir()) if backups.is_dir() else []
 
         code, _ = self.run_cli(["setup", "--yes", "--agents", "claude"])
         self.assertEqual(code, 0)
-        self.assertEqual(hook.read_text(), first_hook)
+        self.assertEqual(hook.read_text(encoding="utf-8"), first_hook)
         after = sorted(p.name for p in backups.iterdir()) if backups.is_dir() else []
         self.assertEqual(after, before)
 
         code, _ = self.run_cli(["setup", "--placement", "repo", "--yes", "--agents", "claude"])
         self.assertEqual(code, 0)
         self.assertTrue((self.repo / ".agents/lazyplan/lazyplan.db").is_file())
-        self.assertIn("lazyplan:start", (self.repo / "AGENTS.md").read_text())
+        self.assertIn("lazyplan:start", (self.repo / "AGENTS.md").read_text(encoding="utf-8"))
 
         code, _ = self.run_cli(["doctor"])
         self.assertEqual(code, 0)

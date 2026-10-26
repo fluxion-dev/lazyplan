@@ -10,6 +10,13 @@ python3 -m venv .venv && source .venv/bin/activate
 python -m pip install -e ".[dev]"
 ```
 
+On Windows PowerShell:
+
+```powershell
+py -m venv .venv; .venv\Scripts\Activate.ps1
+python -m pip install -e ".[dev]"
+```
+
 Run the app from the working tree:
 
 ```bash
@@ -21,6 +28,9 @@ lpui
 ```bash
 ./tools/check.sh
 ```
+
+On Windows, run it from Git Bash. CI runs the same gates on Linux, macOS, and
+Windows; the required `gates` check passes only when all three pass.
 
 The gate suite runs:
 
@@ -115,6 +125,9 @@ delete the intermediate SVG.
 - Keep functions small enough for `xenon` C; extract helpers instead of nesting.
 - No dead code. `vulture` fails on it outside the allowlist.
 - Every public behavior gets a test, especially setup layout and CLI parsing.
+- Read and write text through `lazyplan.textfile`; a test fails on any call that
+  falls back to the platform encoding.
+- Tests that touch a home directory call `sandbox_home` from `tests/home_sandbox.py`.
 - Do not add a second source of truth for the version. `pyproject.toml` wins;
   `tools/bump.sh` mirrors it into the README, site, and man page.
 

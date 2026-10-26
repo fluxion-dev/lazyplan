@@ -21,11 +21,12 @@ ENVIRONMENT: tuple[tuple[str, str], ...] = (
     ("LAZYPLAN_NO_SPINNER", "Freeze the doing spinner in the TUI."),
     ("LAZYPLAN_NO_COLOR", "Disable setup wizard color."),
     ("NO_COLOR, CLICOLOR=0, TERM=dumb", "Plain setup output."),
-    ("USER", "Used for --actor when you do not give one."),
+    ("USER, USERNAME", "Used for --actor when you do not give one (USERNAME on Windows)."),
 )
 
 FILES: tuple[tuple[str, str], ...] = (
     ("~/.lazyplan/lazyplan.db", "Your plans, shared by every agent and folder (default home)."),
+    ("%LOCALAPPDATA%/lazyplan/", "The shared home on Windows, in place of ~/.lazyplan/."),
     (
         ".agents/lazyplan/lazyplan.db",
         "The repo database (only with lpui setup --placement repo; keep it local).",

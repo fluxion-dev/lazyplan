@@ -20,7 +20,7 @@ from lazyplan.vcs import (
 
 def _git_available() -> bool:
     try:
-        out = subprocess.run(["git", "--version"], capture_output=True, text=True, timeout=5)
+        out = subprocess.run(["git", "--version"], capture_output=True, encoding="utf-8", timeout=5)
     except (FileNotFoundError, OSError):
         return False
     return out.returncode == 0
@@ -48,7 +48,7 @@ def _init_repo(repo: str) -> None:
 
 def _commit(repo: str, name: str, body: str, subject: str) -> None:
     """Write one file and commit it."""
-    with open(os.path.join(repo, name), "w") as fh:
+    with open(os.path.join(repo, name), "w", encoding="utf-8") as fh:
         fh.write(body)
     subprocess.run(["git", "-C", repo, "add", "."], check=True, timeout=10)
     subprocess.run(
@@ -112,7 +112,7 @@ class TestVCS(unittest.TestCase):
                 check=True,
                 timeout=10,
             )
-            with open(os.path.join(tmp, "f.txt"), "w") as fh:
+            with open(os.path.join(tmp, "f.txt"), "w", encoding="utf-8") as fh:
                 fh.write("hi\n")
             subprocess.run(["git", "-C", tmp, "add", "."], check=True, timeout=10)
             subprocess.run(
@@ -168,7 +168,7 @@ class TestVCS(unittest.TestCase):
             self.assertEqual(status.ahead, 0)
             self.assertEqual(status.behind, 0)
 
-            with open(os.path.join(tmp, "new.txt"), "w") as fh:
+            with open(os.path.join(tmp, "new.txt"), "w", encoding="utf-8") as fh:
                 fh.write("dirty\n")
             self.assertTrue(self.backend.status(tmp).dirty)
 
@@ -230,7 +230,7 @@ class TestVCS(unittest.TestCase):
             _commit(tmp, "first.txt", "one\n", "first")
             first = self.backend.head(tmp)
             assert first is not None
-            with open(os.path.join(tmp, "second.txt"), "w") as fh:
+            with open(os.path.join(tmp, "second.txt"), "w", encoding="utf-8") as fh:
                 fh.write("two\n")
             subprocess.run(
                 ["git", "-C", tmp, "add", "."],

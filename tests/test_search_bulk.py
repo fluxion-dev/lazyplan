@@ -10,6 +10,8 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from pilot_settle import settle  # noqa: E402
+
 from lazyplan.commands import COMMANDS
 from lazyplan.store import Store
 
@@ -71,6 +73,7 @@ class TestSearchBulk(unittest.IsolatedAsyncioTestCase):
     async def test_marks_survive_refresh_and_clear(self):
         async with self.app.run_test() as pilot:
             await pilot.pause()
+            await settle(pilot)
             self.app.selected = ("task", self.t1)
             await pilot.press("space")
             await pilot.pause()

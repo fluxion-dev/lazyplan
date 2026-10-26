@@ -22,7 +22,7 @@ from lazyplan.docs_meta import ENVIRONMENT, FILES  # noqa: E402
 
 
 def _version() -> str:
-    text = (ROOT / "pyproject.toml").read_text()
+    text = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
     m = re.search(r'^version = "(.*)"$', text, re.M)
     if not m:
         raise RuntimeError("version not found in pyproject.toml")
@@ -201,7 +201,7 @@ def main(argv: list[str] | None = None) -> int:
     docs = ROOT / "docs"
     target = docs / "lpui.1"
     if check:
-        current = target.read_text() if target.exists() else ""
+        current = target.read_text(encoding="utf-8") if target.exists() else ""
 
         # Ignore the quoted date line: compare everything else.
         def _strip_date(s: str) -> str:
@@ -212,8 +212,8 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         return 0
     docs.mkdir(parents=True, exist_ok=True)
-    target.write_text(text)
-    (docs / "lazyplan.1").write_text(".so lpui.1\n")
+    target.write_text(text, encoding="utf-8", newline="\n")
+    (docs / "lazyplan.1").write_text(".so lpui.1\n", encoding="utf-8", newline="\n")
     print(f"wrote {target} (+ lazyplan.1 stub)")
     return 0
 

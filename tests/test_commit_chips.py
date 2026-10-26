@@ -10,6 +10,8 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from pilot_settle import settle  # noqa: E402
+
 from lazyplan.store import Store
 
 try:
@@ -49,11 +51,13 @@ class TestCommitChips(unittest.IsolatedAsyncioTestCase):
             plan_label = str(self.app._row_nodes[("plan", self.pid)].label)
             self.assertNotIn("b" * 12, plan_label)
             self.assertIn("2c", plan_label)
+            await settle(pilot)
             self.app.selected = ("task", self.tid)
             self.app.update_preview()
             await pilot.pause()
             preview = str(self.app.query_one("#preview-body", Static).render())
             self.assertIn("1 commits", preview)
+            await settle(pilot)
             self.app.selected = ("plan", self.pid)
             self.app.update_preview()
             await pilot.pause()
@@ -81,6 +85,7 @@ class TestCommitChips(unittest.IsolatedAsyncioTestCase):
 
         async with self.app.run_test() as pilot:
             await pilot.pause()
+            await settle(pilot)
             self.app.selected = ("task", self.tid)
             await pilot.press("enter")
             await pilot.pause()
@@ -143,6 +148,7 @@ class TestCommitChips(unittest.IsolatedAsyncioTestCase):
 
         async with self.app.run_test() as pilot:
             await pilot.pause()
+            await settle(pilot)
             self.app.selected = ("task", self.tid)
             await pilot.press("g")
             await pilot.pause()
@@ -155,6 +161,7 @@ class TestCommitChips(unittest.IsolatedAsyncioTestCase):
 
         async with self.app.run_test() as pilot:
             await pilot.pause()
+            await settle(pilot)
             self.app.selected = ("task", self.bare_tid)
             await pilot.press("enter")
             await pilot.pause()

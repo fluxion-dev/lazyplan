@@ -5,6 +5,7 @@ every mutation writes SQLite; the running TUI auto-refreshes. Stdlib only
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import sqlite3
 import subprocess
@@ -24,6 +25,7 @@ from . import (
     setup,
     setup_layout,
     setup_ui,
+    textfile,
 )
 from . import issues as issues_mod
 from . import lint as lint_mod
@@ -897,7 +899,7 @@ def _comment_list(store: Store, args: argparse.Namespace) -> int:
 
 def _cmd_sync(store: Store, args: argparse.Namespace, actor: str) -> int:
     try:
-        data = json.loads(Path(args.file).read_text())
+        data = json.loads(textfile.read(args.file))
         report = sync_mod.sync(store, data, actor=actor, dry_run=bool(args.dry_run))
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         print(msg_error(exc), file=sys.stderr)
@@ -1824,7 +1826,7 @@ def _cmd_issue_import(store: Store, args: argparse.Namespace, actor: str) -> int
             if not args.file:
                 print("error: linear import needs --file PATH", file=sys.stderr)
                 return 2
-            parsed = issues_mod.parse_linear(json.loads(Path(args.file).read_text()))
+            parsed = issues_mod.parse_linear(json.loads(textfile.read(args.file)))
     except (OSError, ValueError, GitHubError) as exc:
         print(msg_error(exc), file=sys.stderr)
         return 1
@@ -2338,7 +2340,7 @@ def _cmd_export(store: Store, args: argparse.Namespace, actor: str) -> int:
             return _emit(args, data)
         text = render_markdown(data)
     if dest:
-        Path(dest).write_text(text + ("" if text.endswith("\n") else "\n"))
+        textfile.write(dest, text + ("" if text.endswith("\n") else "\n"))
         return _emit(args, {"exported": dest})
     print(text)
     return 0
@@ -2347,8 +2349,7 @@ def _cmd_export(store: Store, args: argparse.Namespace, actor: str) -> int:
 def _cmd_import(store: Store, args: argparse.Namespace, actor: str) -> int:
     import json as _json
 
-    with open(args.file) as fh:
-        data = _json.load(fh)
+    data = _json.loads(textfile.read(args.file))
     try:
         counts = services.import_all(store, data, actor=actor)
     except ValueError as exc:
@@ -2450,10 +2451,13 @@ def _cmd_ui(store: Store, args: argparse.Namespace, actor: str) -> int:
 
 
 def _maybe_notice_update(args: argparse.Namespace) -> None:
-    """One stderr notice per process when a newer release exists; never breaks."""
-    if args.cmd in (None, "ui", "upgrade"):
+    """One stderr notice per process when a newer release exists; never breaks.
+
+    Agent-facing calls (hooks, MCP, porcelain, JSON) skip the network check.
+    """
+    if args.cmd in (None, "ui", "upgrade", "hook", "mcp"):
         return
-    if getattr(args, "json", False) or getattr(args, "version", False):
+    if getattr(args, "json", False) or getattr(args, "version", False) or porcelain.enabled(args):
         return
     try:
         latest = latest_version(timeout=NOTICE_TIMEOUT)
@@ -2660,8 +2664,19 @@ def _dispatch_storeless(args: argparse.Namespace, actor: str) -> int | None:
     return handler(None, args, actor) if handler is not None else None
 
 
+def _utf8_stdio() -> None:
+    """Speak UTF-8 on every pipe; Windows otherwise uses the ANSI code page."""
+    for stream in (sys.stdin, sys.stdout, sys.stderr):
+        if isinstance(stream, io.TextIOWrapper) and stream.encoding.lower() not in (
+            "utf-8",
+            "utf8",
+        ):
+            stream.reconfigure(encoding="utf-8", errors="replace")
+
+
 def main(argv: list[str] | None = None) -> int:
     """Dispatch one lpui invocation; exit codes are agent-readable."""
+    _utf8_stdio()
     args = build_parser().parse_args(argv)
     noun_group = getattr(args, "noun_group", None)
     if noun_group:

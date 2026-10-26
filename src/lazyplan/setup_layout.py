@@ -15,6 +15,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TextIO
 
+from . import textfile
 from .repo import (
     CONFIG_NAME,
     DB_NAME,
@@ -176,7 +177,7 @@ def _agents_block(text: str) -> tuple[str, bool]:
 
 def _lazyplan_gitignore_lines(path: Path) -> list[str]:
     try:
-        lines = path.read_text().splitlines()
+        lines = textfile.read(path).splitlines()
     except OSError:
         return []
     return [
@@ -220,7 +221,7 @@ def _repo_resources(repo: Path) -> list[str]:
     agents = repo / "AGENTS.md"
     if agents.is_file():
         try:
-            if AGENTS_MARK_BEGIN in agents.read_text():
+            if AGENTS_MARK_BEGIN in textfile.read(agents):
                 resources.append(str(agents))
         except OSError:
             pass
@@ -297,21 +298,21 @@ def _backup_file(backup_dir: Path, source: Path) -> Path:
 
 def _strip_agents(source: Path) -> bool:
     """Remove only the marked lazyplan block; delete a file left with just the heading."""
-    cleaned, found = _agents_block(source.read_text())
+    cleaned, found = _agents_block(textfile.read(source))
     if not found:
         return False
     if cleaned.strip() in ("", "# Agent instructions"):
         source.unlink()
     else:
-        source.write_text(cleaned)
+        textfile.write(source, cleaned)
     return True
 
 
 def _strip_gitignore(source: Path) -> None:
     drop = set(_lazyplan_gitignore_lines(source))
-    lines = [line for line in source.read_text().splitlines() if line.strip() not in drop]
+    lines = [line for line in textfile.read(source).splitlines() if line.strip() not in drop]
     if lines:
-        source.write_text("\n".join(lines) + "\n")
+        textfile.write(source, "\n".join(lines) + "\n")
     else:
         source.unlink()
 
@@ -338,12 +339,13 @@ def apply_layout(
     if layout.config is not None:
         layout.config.parent.mkdir(parents=True, exist_ok=True)
         if not layout.config.exists():
-            layout.config.write_text(
+            textfile.write(
+                layout.config,
                 json.dumps(
                     {"version": 1, "db": DB_NAME, "created": datetime.now(UTC).isoformat()},
                     indent=2,
                 )
-                + "\n"
+                + "\n",
             )
     summary = run_template_setup(
         layout.plan_dir,

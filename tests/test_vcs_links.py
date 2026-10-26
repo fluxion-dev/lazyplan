@@ -13,7 +13,7 @@ from lazyplan.store import Store
 
 def _git_available() -> bool:
     try:
-        out = subprocess.run(["git", "--version"], capture_output=True, text=True, timeout=5)
+        out = subprocess.run(["git", "--version"], capture_output=True, encoding="utf-8", timeout=5)
     except (FileNotFoundError, OSError):
         return False
     return out.returncode == 0
@@ -152,7 +152,7 @@ class TestVcsLinks(unittest.TestCase):
         subprocess.run(["git", "init", "-q", repo], check=True, timeout=10)
         subprocess.run(["git", "-C", repo, "config", "user.email", "t@t.t"], check=True, timeout=10)
         subprocess.run(["git", "-C", repo, "config", "user.name", "Tester"], check=True, timeout=10)
-        with open(os.path.join(repo, "f.txt"), "w") as fh:
+        with open(os.path.join(repo, "f.txt"), "w", encoding="utf-8") as fh:
             fh.write("hi\n")
         subprocess.run(["git", "-C", repo, "add", "."], check=True, timeout=10)
         subprocess.run(
@@ -163,7 +163,7 @@ class TestVcsLinks(unittest.TestCase):
         sha = subprocess.run(
             ["git", "-C", repo, "rev-parse", "HEAD"],
             capture_output=True,
-            text=True,
+            encoding="utf-8",
             timeout=10,
             check=True,
         ).stdout.strip()
@@ -192,14 +192,14 @@ class TestVcsLinks(unittest.TestCase):
         subprocess.run(["git", "init", "-q", "-b", "main", repo], check=True, timeout=10)
         subprocess.run(["git", "-C", repo, "config", "user.email", "t@t.t"], check=True, timeout=10)
         subprocess.run(["git", "-C", repo, "config", "user.name", "Tester"], check=True, timeout=10)
-        with open(os.path.join(repo, "f.txt"), "w") as fh:
+        with open(os.path.join(repo, "f.txt"), "w", encoding="utf-8") as fh:
             fh.write("hi\n")
         subprocess.run(["git", "-C", repo, "add", "."], check=True, timeout=10)
         subprocess.run(["git", "-C", repo, "commit", "-qm", "old subject"], check=True, timeout=10)
         old = subprocess.run(
             ["git", "-C", repo, "rev-parse", "HEAD"],
             capture_output=True,
-            text=True,
+            encoding="utf-8",
             timeout=10,
             check=True,
         ).stdout.strip()

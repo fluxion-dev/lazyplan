@@ -11,6 +11,8 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from pilot_settle import settle  # noqa: E402
+
 from lazyplan import design
 from lazyplan.store import Store
 
@@ -322,6 +324,7 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
     async def test_arrows_follow_the_tree_cursor(self):
         async with self.app.run_test() as pilot:
             await pilot.pause()
+            await settle(pilot)
             self.app.selected = None
             await pilot.pause()
             await pilot.press("right")

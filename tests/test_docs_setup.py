@@ -12,10 +12,10 @@ from lazyplan.cli_parser import build_parser  # noqa: E402
 from lazyplan.docs_meta import ENVIRONMENT, FILES  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
-USAGE = (ROOT / "docs/usage.md").read_text()
-SETUP_DOC = (ROOT / "docs/setup.md").read_text()
-MAN = (ROOT / "docs/lpui.1").read_text().replace("\\-", "-").replace("\\.", ".")
-README = (ROOT / "README.md").read_text()
+USAGE = (ROOT / "docs/usage.md").read_text(encoding="utf-8")
+SETUP_DOC = (ROOT / "docs/setup.md").read_text(encoding="utf-8")
+MAN = (ROOT / "docs/lpui.1").read_text(encoding="utf-8").replace("\\-", "-").replace("\\.", ".")
+README = (ROOT / "README.md").read_text(encoding="utf-8")
 
 
 class DocsTruthCase(unittest.TestCase):

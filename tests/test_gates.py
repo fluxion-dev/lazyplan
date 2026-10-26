@@ -32,7 +32,7 @@ class TestCompletionGates(unittest.TestCase):
         subprocess.run(["git", "init", "-q", "-b", "main", self.repo], check=True)
         subprocess.run(["git", "-C", self.repo, "config", "user.email", "t@t.t"], check=True)
         subprocess.run(["git", "-C", self.repo, "config", "user.name", "T"], check=True)
-        with open(os.path.join(self.repo, "f"), "w") as fh:
+        with open(os.path.join(self.repo, "f"), "w", encoding="utf-8") as fh:
             fh.write("x")
         subprocess.run(["git", "-C", self.repo, "add", "."], check=True)
         subprocess.run(["git", "-C", self.repo, "commit", "-qm", "one"], check=True)

@@ -6,6 +6,8 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from home_sandbox import sandbox_home  # noqa: E402
+
 from lazyplan.cli import main as lpui_main
 from lazyplan.repo import find_repo_root, repo_label, resolve_db_path
 from lazyplan.store import Store
@@ -14,15 +16,15 @@ from lazyplan.store import Store
 class TestRepoScope(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.repo = os.path.join(self.tmp.name, "myproj")
+        # Resolution code realpath()s its input; /var is a symlink on macOS.
+        self.repo = os.path.realpath(os.path.join(self.tmp.name, "myproj"))
         os.makedirs(os.path.join(self.repo, ".git"))  # fake repo root (fallback walk)
         os.makedirs(os.path.join(self.repo, "sub"))
         self.old_cwd = os.getcwd()
         self.old_env = os.environ.pop("LAZYPLAN_DB", None)
         self.old_xdg = os.environ.get("XDG_DATA_HOME")
         os.environ["XDG_DATA_HOME"] = os.path.join(self.tmp.name, "xdg")
-        self.old_home = os.environ.get("HOME")
-        os.environ["HOME"] = os.path.join(self.tmp.name, "home")
+        sandbox_home(self, os.path.join(self.tmp.name, "home"))
         os.makedirs(os.environ["HOME"], exist_ok=True)
 
     def tearDown(self):
@@ -35,10 +37,6 @@ class TestRepoScope(unittest.TestCase):
             os.environ.pop("XDG_DATA_HOME", None)
         else:
             os.environ["XDG_DATA_HOME"] = self.old_xdg
-        if self.old_home is None:
-            os.environ.pop("HOME", None)
-        else:
-            os.environ["HOME"] = self.old_home
         self.tmp.cleanup()
 
     def test_find_root_via_git_dir(self):
@@ -78,7 +76,7 @@ class TestRepoScope(unittest.TestCase):
             pathlib.Path(self.tmp.name) / "home" / ".agents" / "skills" / "lazyplan" / "SKILL.md"
         )
         skill.parent.mkdir(parents=True, exist_ok=True)
-        skill.write_text("x")
+        skill.write_text("x", encoding="utf-8")
         db = skill_db_path(skill)
         db.touch()
         self.assertEqual(
@@ -109,7 +107,7 @@ class TestRepoScope(unittest.TestCase):
         self.assertTrue(os.path.isfile(team_db))
         cfg = os.path.join(self.repo, ".agents", "lazyplan", "config.json")
         self.assertTrue(os.path.isfile(cfg))
-        self.assertEqual(json.load(open(cfg))["db"], "lazyplan.db")
+        self.assertEqual(json.load(open(cfg, encoding="utf-8"))["db"], "lazyplan.db")
         self.assertEqual(repo_label(s.path), "myproj")
         p = s.add_plan("P", actor="t")
         self.assertEqual(p.id, 1)
@@ -121,7 +119,7 @@ class TestRepoScope(unittest.TestCase):
 
         stale = os.path.join(self.repo, ".lazyplan")
         os.makedirs(stale)
-        with open(os.path.join(stale, "lazyplan.db"), "w") as fh:
+        with open(os.path.join(stale, "lazyplan.db"), "w", encoding="utf-8") as fh:
             fh.write("data")
         also_stale = os.path.join(self.repo, ".agents", "plan")
         os.makedirs(also_stale)
@@ -137,7 +135,7 @@ class TestRepoScope(unittest.TestCase):
         self.assertEqual(stale_plan_dirs(os.path.join(self.tmp.name, "noroot")), [])
         # setup never migrates stale dirs on its own; it writes no repo DB
         self.assertEqual(lpui_main(["setup", "--yes", "--no-skills"]), 0)
-        self.assertEqual(open(os.path.join(stale, "lazyplan.db")).read(), "data")
+        self.assertEqual(open(os.path.join(stale, "lazyplan.db"), encoding="utf-8").read(), "data")
         self.assertFalse(
             os.path.exists(os.path.join(self.repo, ".agents", "lazyplan", "lazyplan.db"))
         )
@@ -168,14 +166,13 @@ class TestRepoScope(unittest.TestCase):
 class TestLegacyPlanDir(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.repo = os.path.join(self.tmp.name, "myproj")
+        self.repo = os.path.realpath(os.path.join(self.tmp.name, "myproj"))
         os.makedirs(os.path.join(self.repo, ".git"))  # fake repo root (fallback walk)
         self.old_cwd = os.getcwd()
         self.old_env = os.environ.pop("LAZYPLAN_DB", None)
         self.old_xdg = os.environ.get("XDG_DATA_HOME")
         os.environ["XDG_DATA_HOME"] = os.path.join(self.tmp.name, "xdg")
-        self.old_home = os.environ.get("HOME")
-        os.environ["HOME"] = os.path.join(self.tmp.name, "home")
+        sandbox_home(self, os.path.join(self.tmp.name, "home"))
         os.makedirs(os.environ["HOME"], exist_ok=True)
 
     def tearDown(self):
@@ -188,10 +185,6 @@ class TestLegacyPlanDir(unittest.TestCase):
             os.environ.pop("XDG_DATA_HOME", None)
         else:
             os.environ["XDG_DATA_HOME"] = self.old_xdg
-        if self.old_home is None:
-            os.environ.pop("HOME", None)
-        else:
-            os.environ["HOME"] = self.old_home
         self.tmp.cleanup()
 
     def test_legacy_ignored_in_resolution(self):
@@ -224,7 +217,7 @@ class TestLegacyPlanDir(unittest.TestCase):
 
         legacy = os.path.join(self.repo, ".plan")
         os.makedirs(legacy)
-        with open(os.path.join(legacy, "lazyplan.db"), "w") as fh:
+        with open(os.path.join(legacy, "lazyplan.db"), "w", encoding="utf-8") as fh:
             fh.write("data")
         self.assertEqual(
             move_legacy_plan_dir(self.repo), pathlib.Path(self.repo) / ".agents/lazyplan"
@@ -247,20 +240,10 @@ class TestLegacyPlanDir(unittest.TestCase):
 class TestSharedHome(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.old_home = os.environ.get("HOME")
-        os.environ["HOME"] = os.path.join(self.tmp.name, "home")
+        sandbox_home(self, os.path.join(self.tmp.name, "home"))
         os.makedirs(os.environ["HOME"], exist_ok=True)
-        self.old_localappdata = os.environ.get("LOCALAPPDATA")
 
     def tearDown(self):
-        if self.old_home is None:
-            os.environ.pop("HOME", None)
-        else:
-            os.environ["HOME"] = self.old_home
-        if self.old_localappdata is None:
-            os.environ.pop("LOCALAPPDATA", None)
-        else:
-            os.environ["LOCALAPPDATA"] = self.old_localappdata
         self.tmp.cleanup()
 
     def test_shared_home_unix(self):
@@ -291,6 +274,31 @@ class TestSharedHome(unittest.TestCase):
                 pathlib.Path(self.tmp.name) / "local" / "lazyplan",
             )
 
+    def test_shared_home_windows_real_home_matches_no_home(self):
+        import pathlib
+        from unittest import mock
+
+        from lazyplan import repo as repo_mod
+
+        os.environ["LOCALAPPDATA"] = os.path.join(self.tmp.name, "local")
+        with mock.patch.object(repo_mod, "_os_name", return_value="nt"):
+            self.assertEqual(repo_mod.shared_home(pathlib.Path.home()), repo_mod.shared_home())
+            sandbox = pathlib.Path(self.tmp.name) / "other"
+            self.assertEqual(repo_mod.shared_home(sandbox), sandbox / ".lazyplan")
+
+    def test_windows_reports_the_stray_home_database(self):
+        import pathlib
+        from unittest import mock
+
+        from lazyplan import repo as repo_mod
+
+        os.environ["LOCALAPPDATA"] = os.path.join(self.tmp.name, "local")
+        stray = pathlib.Path.home() / ".lazyplan" / "lazyplan.db"
+        with mock.patch.object(repo_mod, "_os_name", return_value="nt"):
+            self.assertIn(stray, repo_mod.legacy_db_candidates())
+        with mock.patch.object(repo_mod, "_os_name", return_value="posix"):
+            self.assertNotIn(stray, repo_mod.legacy_db_candidates())
+
     def test_shared_home_windows_falls_back(self):
         import pathlib
         from unittest import mock
@@ -309,7 +317,7 @@ class TestSharedHome(unittest.TestCase):
 
         from lazyplan.repo import walk_up_team_db
 
-        outer = os.path.join(self.tmp.name, "outer")
+        outer = os.path.realpath(os.path.join(self.tmp.name, "outer"))
         inner = os.path.join(outer, "inner", "deep")
         os.makedirs(os.path.join(outer, ".agents", "lazyplan"))
         os.makedirs(inner)
@@ -323,7 +331,7 @@ class TestSharedHome(unittest.TestCase):
 
         from lazyplan.repo import walk_up_team_db
 
-        outer = os.path.join(self.tmp.name, "outer")
+        outer = os.path.realpath(os.path.join(self.tmp.name, "outer"))
         inner = os.path.join(outer, "inner")
         os.makedirs(os.path.join(outer, ".agents", "lazyplan"))
         os.makedirs(os.path.join(inner, ".agents", "lazyplan"))
@@ -347,8 +355,7 @@ class TestSharedSeed(unittest.TestCase):
         self.old_env = os.environ.pop("LAZYPLAN_DB", None)
         self.old_xdg = os.environ.get("XDG_DATA_HOME")
         os.environ["XDG_DATA_HOME"] = os.path.join(self.tmp.name, "xdg")
-        self.old_home = os.environ.get("HOME")
-        os.environ["HOME"] = os.path.join(self.tmp.name, "home")
+        sandbox_home(self, os.path.join(self.tmp.name, "home"))
         os.makedirs(os.environ["HOME"], exist_ok=True)
         os.chdir(self.tmp.name)
 
@@ -362,10 +369,6 @@ class TestSharedSeed(unittest.TestCase):
             os.environ.pop("XDG_DATA_HOME", None)
         else:
             os.environ["XDG_DATA_HOME"] = self.old_xdg
-        if self.old_home is None:
-            os.environ.pop("HOME", None)
-        else:
-            os.environ["HOME"] = self.old_home
         self.tmp.cleanup()
 
     def _old_db(self, rel: str, title: str, mtime: float) -> str:
@@ -420,14 +423,13 @@ class TestSharedSeed(unittest.TestCase):
 class TestInitParity(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.repo = os.path.join(self.tmp.name, "myproj")
+        self.repo = os.path.realpath(os.path.join(self.tmp.name, "myproj"))
         os.makedirs(os.path.join(self.repo, ".git"))
         self.bare = os.path.join(self.tmp.name, "bare")
         os.makedirs(self.bare)
         self.old_cwd = os.getcwd()
         self.old_env = os.environ.pop("LAZYPLAN_DB", None)
-        self.old_home = os.environ.get("HOME")
-        os.environ["HOME"] = os.path.join(self.tmp.name, "home")
+        sandbox_home(self, os.path.join(self.tmp.name, "home"))
         os.makedirs(os.environ["HOME"], exist_ok=True)
         self.old_xdg = os.environ.get("XDG_DATA_HOME")
         os.environ["XDG_DATA_HOME"] = os.path.join(self.tmp.name, "xdg")
@@ -438,10 +440,6 @@ class TestInitParity(unittest.TestCase):
             os.environ.pop("LAZYPLAN_DB", None)
         else:
             os.environ["LAZYPLAN_DB"] = self.old_env
-        if self.old_home is None:
-            os.environ.pop("HOME", None)
-        else:
-            os.environ["HOME"] = self.old_home
         if self.old_xdg is None:
             os.environ.pop("XDG_DATA_HOME", None)
         else:

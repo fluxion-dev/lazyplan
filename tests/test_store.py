@@ -1,14 +1,33 @@
 import os
+import sqlite3
 import sys
 import tempfile
+import threading
 import unittest
+from contextlib import closing
+from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from lazyplan import services
 from lazyplan.cli import main as lpui_main
 from lazyplan.models import Status
-from lazyplan.store import Store
+from lazyplan.store import Store, default_actor
+
+
+class TestDefaultActor(unittest.TestCase):
+    def test_login_name_on_posix_and_windows(self):
+        for env, want in (
+            ({"USER": "ana"}, "ana"),
+            ({"USERNAME": "bo"}, "bo"),
+            ({"USER": "ana", "USERNAME": "bo"}, "ana"),
+            ({}, "human"),
+        ):
+            with self.subTest(env=env), mock.patch.dict(os.environ, clear=False):
+                os.environ.pop("USER", None)
+                os.environ.pop("USERNAME", None)
+                os.environ.update(env)
+                self.assertEqual(default_actor(), want)
 
 
 class TestStore(unittest.TestCase):
@@ -19,6 +38,30 @@ class TestStore(unittest.TestCase):
 
     def tearDown(self):
         self.tmp.cleanup()
+
+    def test_writes_release_the_database_file(self):
+        self.store.add_plan("Site")
+        self.store.list_plans()
+        os.replace(self.db, self.db + ".moved")
+        self.assertTrue(os.path.isfile(self.db + ".moved"))
+
+    def test_show_reads_through_one_connection(self):
+        plan = self.store.add_plan("Site")
+        milestone = self.store.add_milestone(plan.id, "Home")
+        for index in range(5):
+            self.store.add_task(milestone.id, f"T{index}")
+        with mock.patch("lazyplan.store.sqlite3.connect", wraps=sqlite3.connect) as connect:
+            self.assertIsNotNone(self.store.get_full("plan", plan.id))
+        self.assertEqual(connect.call_count, 1)
+
+    def test_other_threads_never_share_the_open_connection(self):
+        self.store.add_plan("Site")
+        seen: list[int] = []
+        with self.store._connect():
+            worker = threading.Thread(target=lambda: seen.append(len(self.store.list_plans())))
+            worker.start()
+            worker.join()
+        self.assertEqual(seen, [1])
 
     def test_hierarchy(self):
         p = self.store.add_plan("Site", goal="why")
@@ -133,9 +176,8 @@ class TestStore(unittest.TestCase):
         s = Store(legacy)  # must migrate, not crash
         self.assertEqual(s.get_plan(1).name, "Old")
         self.assertEqual(s.get_plan(1).goal, "old-why")
-        legacy_cols = {
-            row[1] for row in sqlite3.connect(legacy).execute("PRAGMA table_info(plans)")
-        }
+        with closing(sqlite3.connect(legacy)) as conn:
+            legacy_cols = {row[1] for row in conn.execute("PRAGMA table_info(plans)")}
         self.assertNotIn("priority", legacy_cols)
         self.assertEqual(s.get_task(1).description, "")
         self.assertEqual(s.get_milestone(1).plan_id, 1)
@@ -161,10 +203,8 @@ class TestStore(unittest.TestCase):
         conn.close()
         s = Store(legacy)
         self.assertEqual([p.name for p in s.list_plans()], ["Old"])
-        cols = {
-            r[1]
-            for r in sqlite3.connect(legacy).execute("PRAGMA table_info(milestones)").fetchall()
-        }
+        with closing(sqlite3.connect(legacy)) as conn:
+            cols = {r[1] for r in conn.execute("PRAGMA table_info(milestones)").fetchall()}
         self.assertIn("plan_id", cols)
         self.assertNotIn("project_id", cols)
 

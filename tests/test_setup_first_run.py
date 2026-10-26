@@ -13,6 +13,8 @@ from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from home_sandbox import sandbox_home  # noqa: E402
+
 from lazyplan import setup  # noqa: E402
 
 
@@ -42,15 +44,10 @@ class FirstRunCase(unittest.TestCase):
         self.repo = Path(self.tmp.name) / "repo"
         self.repo.mkdir()
         subprocess.run(["git", "init", "-q", self.repo], check=True)
-        self.old_home = os.environ.get("HOME")
         self.old_db = os.environ.pop("LAZYPLAN_DB", None)
-        os.environ["HOME"] = str(self.home)
+        sandbox_home(self, str(self.home))
 
     def tearDown(self):
-        if self.old_home is None:
-            os.environ.pop("HOME", None)
-        else:
-            os.environ["HOME"] = self.old_home
         if self.old_db is not None:
             os.environ["LAZYPLAN_DB"] = self.old_db
         self.tmp.cleanup()
@@ -60,7 +57,9 @@ class FirstRunCase(unittest.TestCase):
         err = io.StringIO()
         with redirect_stderr(err):
             setup.ensure("ui", args, self.repo, self.home, "1.0", interactive=False)
-        self.assertIn("lpui hook", (self.home / ".claude/settings.json").read_text())
+        self.assertIn(
+            "lpui hook", (self.home / ".claude/settings.json").read_text(encoding="utf-8")
+        )
         self.assertTrue(setup.load_state(self.home).hooks)
         self.assertIn("Setup complete", err.getvalue())
 
@@ -68,7 +67,7 @@ class FirstRunCase(unittest.TestCase):
         args = make_args(agents="claude", agents_pointer=True)
         with redirect_stderr(io.StringIO()):
             setup.ensure("ui", args, self.repo, self.home, "1.0", interactive=False)
-        self.assertIn("lazyplan", (self.repo / "AGENTS.md").read_text())
+        self.assertIn("lazyplan", (self.repo / "AGENTS.md").read_text(encoding="utf-8"))
         self.assertTrue(setup.load_state(self.home).agents_pointer)
 
     def test_agent_command_stays_quiet(self):
@@ -121,7 +120,7 @@ class FirstRunCase(unittest.TestCase):
     def test_wrong_typed_state_falls_back_to_defaults(self):
         path = setup.state_path(self.home)
         path.parent.mkdir(parents=True)
-        path.write_text('{"version": "not-a-number"}')
+        path.write_text('{"version": "not-a-number"}', encoding="utf-8")
         self.assertEqual(setup.load_state(self.home).version, setup.SETUP_VERSION)
 
     def test_persistent_findings_do_not_rewrite_setup(self):

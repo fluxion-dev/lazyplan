@@ -10,7 +10,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import hook_hosts, skills
+from . import hook_hosts, skills, textfile
 from .setup_layout import _backup_file, _new_backup_dir
 
 HOSTS = ("opencode", "claude", "gemini", "codex", "cursor")
@@ -69,7 +69,7 @@ def _nested_entries(host: str) -> dict[str, list[dict]]:
     for event, native in hook_hosts.EVENTS[host].items():
         out[native] = [
             {
-                "matcher": hook_hosts.MATCHERS.get(native, "*"),
+                "matcher": hook_hosts.matcher(host, native),
                 "hooks": [{"type": "command", "command": command(host, event)}],
             }
         ]
@@ -83,43 +83,23 @@ def _flat_entries(host: str) -> dict[str, list[dict]]:
     }
 
 
-def _merge_nested(data: dict, host: str) -> dict:
+def _add_entries(data: dict, entries: dict[str, list[dict]]) -> dict:
     hooks = data.get("hooks")
     if not isinstance(hooks, dict):
         hooks = {}
-    for native, entries in _nested_entries(host).items():
+    for native, managed in entries.items():
         existing = hooks.get(native)
-        kept = []
-        if isinstance(existing, list):
-            for group in existing:
-                if not isinstance(group, dict):
-                    kept.append(group)
-                    continue
-                handlers = group.get("hooks")
-                if isinstance(handlers, list):
-                    group["hooks"] = [h for h in handlers if not _managed(h, host)]
-                    if not group["hooks"]:
-                        continue
-                if not _managed(group, host):
-                    kept.append(group)
-        hooks[native] = kept + entries
+        hooks[native] = (existing if isinstance(existing, list) else []) + managed
     data["hooks"] = hooks
     return data
 
 
+def _merge_nested(data: dict, host: str) -> dict:
+    return _add_entries(_strip_nested(data, host), _nested_entries(host))
+
+
 def _merge_flat(data: dict, host: str) -> dict:
-    hooks = data.get("hooks")
-    if not isinstance(hooks, dict):
-        hooks = {}
-    for native, entries in _flat_entries(host).items():
-        existing = hooks.get(native)
-        kept = (
-            [item for item in existing if not _managed(item, host)]
-            if isinstance(existing, list)
-            else []
-        )
-        hooks[native] = kept + entries
-    data["hooks"] = hooks
+    data = _add_entries(_strip_flat(data, host), _flat_entries(host))
     data.setdefault("version", 1)
     return data
 
@@ -221,7 +201,7 @@ export default {
 
 def _read(path: Path) -> dict:
     try:
-        raw = path.read_text()
+        raw = textfile.read(path)
     except OSError:
         return {}
     if not raw.strip():
@@ -232,12 +212,12 @@ def _read(path: Path) -> dict:
 
 def _install_spec(spec: Spec, backup_dir: Path) -> bool:
     if spec.kind == "plugin":
-        if spec.path.is_file() and spec.path.read_text() == _plugin_text():
+        if spec.path.is_file() and textfile.read(spec.path) == _plugin_text():
             return False
         if spec.path.is_file():
             _backup_file(backup_dir, spec.path)
         spec.path.parent.mkdir(parents=True, exist_ok=True)
-        spec.path.write_text(_plugin_text())
+        textfile.write(spec.path, _plugin_text())
         return True
     data = _read(spec.path)
     before = json.dumps(data, sort_keys=True)
@@ -249,7 +229,7 @@ def _install_spec(spec: Spec, backup_dir: Path) -> bool:
     if spec.path.is_file():
         _backup_file(backup_dir, spec.path)
     spec.path.parent.mkdir(parents=True, exist_ok=True)
-    spec.path.write_text(json.dumps(merged, indent=2) + "\n")
+    textfile.write(spec.path, json.dumps(merged, indent=2) + "\n")
     return True
 
 
@@ -268,7 +248,7 @@ def _remove_spec(spec: Spec, backup_dir: Path) -> bool:
     if json.dumps(stripped, sort_keys=True) == before:
         return False
     _backup_file(backup_dir, spec.path)
-    spec.path.write_text(json.dumps(stripped, indent=2) + "\n")
+    textfile.write(spec.path, json.dumps(stripped, indent=2) + "\n")
     return True
 
 

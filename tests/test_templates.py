@@ -10,6 +10,8 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from home_sandbox import sandbox_home  # noqa: E402
+
 from lazyplan import services, templates
 from lazyplan.cli import main as lpui_main
 from lazyplan.store import Store
@@ -17,7 +19,7 @@ from lazyplan.store import Store
 
 def _write(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text)
+    path.write_text(text, encoding="utf-8")
 
 
 class TestParseTemplate(unittest.TestCase):
@@ -110,7 +112,9 @@ class TestParseTemplate(unittest.TestCase):
             self.skipTest("repo templates are local-only (gitignored)")
         for kind, starter in templates.STARTERS.items():
             with self.subTest(kind=kind):
-                self.assertEqual((repo_templates / f"{kind}.md").read_text(), starter)
+                self.assertEqual(
+                    (repo_templates / f"{kind}.md").read_text(encoding="utf-8"), starter
+                )
 
     def test_render_starter_choices(self):
         lean = templates.TemplateChoices(
@@ -226,7 +230,8 @@ class TestTemplateDirs(unittest.TestCase):
             tdir = home / "templates"
             tdir.mkdir()
             (tdir / "task.md").write_text(
-                '---\ndefaults:\n  desc: "from home"\nrequired: [title]\ncriteria: []\n---\n'
+                '---\ndefaults:\n  desc: "from home"\nrequired: [title]\ncriteria: []\n---\n',
+                encoding="utf-8",
             )
             db = home / "lazyplan.db"
             out = templates.apply_template("task", {"title": "T"}, db)
@@ -238,10 +243,10 @@ class TestTemplateDirs(unittest.TestCase):
             first = templates.ensure_templates(plan)
             self.assertEqual(len(first), 3)
             self.assertTrue((plan / "templates" / "plan.md").is_file())
-            (plan / "templates" / "plan.md").write_text("edited")
+            (plan / "templates" / "plan.md").write_text("edited", encoding="utf-8")
             second = templates.ensure_templates(plan)
             self.assertEqual(second, [])
-            self.assertEqual((plan / "templates" / "plan.md").read_text(), "edited")
+            self.assertEqual((plan / "templates" / "plan.md").read_text(encoding="utf-8"), "edited")
 
 
 class TestStoreTemplates(unittest.TestCase):
@@ -266,7 +271,8 @@ class TestStoreTemplates(unittest.TestCase):
     def test_fill_and_auto_criteria(self):
         templates.ensure_templates(self.db.parent)
         (self.db.parent / "templates" / "plan.md").write_text(
-            "---\ndefaults:\n  why: W\nrequired: [title]\ncriteria:\n  - C1\n  - C2\n---\nbody\n"
+            "---\ndefaults:\n  why: W\nrequired: [title]\ncriteria:\n  - C1\n  - C2\n---\nbody\n",
+            encoding="utf-8",
         )
         store = Store(self.db)
         p = services.create_plan(store, "P")
@@ -275,9 +281,11 @@ class TestStoreTemplates(unittest.TestCase):
 
     def test_enforce_names_field(self):
         templates.ensure_templates(self.db.parent)
-        (self.db.parent / "templates" / "plan.md").write_text("---\nrequired: [title]\n---\n")
+        (self.db.parent / "templates" / "plan.md").write_text(
+            "---\nrequired: [title]\n---\n", encoding="utf-8"
+        )
         (self.db.parent / "templates" / "milestone.md").write_text(
-            "---\nrequired:\n  - title\n  - desc\n---\n"
+            "---\nrequired:\n  - title\n  - desc\n---\n", encoding="utf-8"
         )
         store = Store(self.db)
         p = services.create_plan(store, "P")
@@ -293,7 +301,7 @@ class TestStoreTemplates(unittest.TestCase):
         self.assertFalse(hasattr(t, "priority"))
         templates.ensure_templates(self.db.parent)
         (self.db.parent / "templates" / "task.md").write_text(
-            "---\ndefaults:\n  priority: p2\nrequired: [title]\n---\n"
+            "---\ndefaults:\n  priority: p2\nrequired: [title]\n---\n", encoding="utf-8"
         )
         store = Store(self.db)
         t2 = services.create_task(store, s.id, "B")
@@ -301,7 +309,9 @@ class TestStoreTemplates(unittest.TestCase):
 
     def test_malformed_template_raises(self):
         templates.ensure_templates(self.db.parent)
-        (self.db.parent / "templates" / "plan.md").write_text("---\ndefaults:\n  nope: x\n---\n")
+        (self.db.parent / "templates" / "plan.md").write_text(
+            "---\ndefaults:\n  nope: x\n---\n", encoding="utf-8"
+        )
         store = Store(self.db)
         with self.assertRaises(ValueError):
             services.create_plan(store, "P")
@@ -319,7 +329,9 @@ class TestTemplateSetup(unittest.TestCase):
             )
             self.assertEqual(len(summary["added"]), 3)
             self.assertEqual((summary["kept"], summary["reset"]), ([], []))
-            proj = templates.parse_template("plan", (plan / "templates" / "plan.md").read_text())
+            proj = templates.parse_template(
+                "plan", (plan / "templates" / "plan.md").read_text(encoding="utf-8")
+            )
             self.assertEqual(proj.required, ["title", "why", "what"])
             # Opinionated starters ship empty: criteria come from the interview.
             self.assertEqual(proj.criteria, [])
@@ -329,18 +341,18 @@ class TestTemplateSetup(unittest.TestCase):
             plan = Path(tmp) / ".agents/lazyplan"
             templates.run_template_setup(plan, interactive=False)
             dest = plan / "templates" / "plan.md"
-            dest.write_text("edited")
+            dest.write_text("edited", encoding="utf-8")
             summary = templates.run_template_setup(plan, interactive=False)
             self.assertEqual((summary["added"], summary["reset"]), ([], []))
             self.assertEqual(len(summary["kept"]), 3)
-            self.assertEqual(dest.read_text(), "edited")
+            self.assertEqual(dest.read_text(encoding="utf-8"), "edited")
 
     def test_interactive_keep_edit_reset(self):
         with tempfile.TemporaryDirectory() as tmp:
             plan = Path(tmp) / ".agents/lazyplan"
             templates.run_template_setup(plan, interactive=False)
             dest = plan / "templates" / "plan.md"
-            dest.write_text(dest.read_text() + "\n# mine\n")
+            dest.write_text(dest.read_text(encoding="utf-8") + "\n# mine\n", encoding="utf-8")
             lean = templates.TemplateChoices(
                 require_why_what=False,
                 require_desc=False,
@@ -353,12 +365,14 @@ class TestTemplateSetup(unittest.TestCase):
                 decisions={"plan": "keep", "milestone": "reset", "task": "edit"},
             )
             self.assertEqual(summary["kept"], [str(plan / "templates" / "plan.md")])
-            self.assertIn("# mine", dest.read_text())
+            self.assertIn("# mine", dest.read_text(encoding="utf-8"))
             milestone = templates.parse_template(
-                "milestone", (plan / "templates" / "milestone.md").read_text()
+                "milestone", (plan / "templates" / "milestone.md").read_text(encoding="utf-8")
             )
             self.assertEqual((milestone.required, milestone.criteria), (["title"], []))
-            task = templates.parse_template("task", (plan / "templates" / "task.md").read_text())
+            task = templates.parse_template(
+                "task", (plan / "templates" / "task.md").read_text(encoding="utf-8")
+            )
             self.assertEqual(task.required, ["title"])
             self.assertNotIn("priority", task.defaults)
             # edit preserves the file's own criteria lines (starters ship empty)
@@ -369,14 +383,14 @@ class TestTemplateSetup(unittest.TestCase):
             plan = Path(tmp) / ".agents/lazyplan"
             templates.run_template_setup(plan, interactive=False)
             dest = plan / "templates" / "task.md"
-            dest.write_text("---\ndefaults:\n  nope: x\n---\n")
+            dest.write_text("---\ndefaults:\n  nope: x\n---\n", encoding="utf-8")
             summary = templates.run_template_setup(
                 plan,
                 interactive=True,
                 decisions={"plan": "keep", "milestone": "keep", "task": "edit"},
             )
             self.assertIn(str(dest), summary["kept"])
-            self.assertEqual(dest.read_text(), "---\ndefaults:\n  nope: x\n---\n")
+            self.assertEqual(dest.read_text(encoding="utf-8"), "---\ndefaults:\n  nope: x\n---\n")
 
 
 class TestTemplateCli(unittest.TestCase):
@@ -388,8 +402,7 @@ class TestTemplateCli(unittest.TestCase):
         self.old_cwd = os.getcwd()
         os.chdir(self.repo)
         self.old_env = os.environ.pop("LAZYPLAN_DB", None)
-        self.old_home = os.environ.get("HOME")
-        os.environ["HOME"] = os.path.join(self.tmp.name, "home")
+        sandbox_home(self, os.path.join(self.tmp.name, "home"))
         os.makedirs(os.environ["HOME"], exist_ok=True)
         self.old_xdg = os.environ.get("XDG_DATA_HOME")
         os.environ["XDG_DATA_HOME"] = os.path.join(self.tmp.name, "xdg")
@@ -400,10 +413,6 @@ class TestTemplateCli(unittest.TestCase):
             os.environ.pop("LAZYPLAN_DB", None)
         else:
             os.environ["LAZYPLAN_DB"] = self.old_env
-        if self.old_home is None:
-            os.environ.pop("HOME", None)
-        else:
-            os.environ["HOME"] = self.old_home
         if self.old_xdg is None:
             os.environ.pop("XDG_DATA_HOME", None)
         else:
@@ -435,13 +444,13 @@ class TestTemplateCli(unittest.TestCase):
     def test_cli_required_error_is_exit_2(self):
         self._run(["setup", "--placement", "repo", "--yes", "--no-skills"])
         (self.repo / ".agents/lazyplan" / "templates" / "plan.md").write_text(
-            "---\nrequired: [title]\n---\n"
+            "---\nrequired: [title]\n---\n", encoding="utf-8"
         )
         (self.repo / ".agents/lazyplan" / "templates" / "milestone.md").write_text(
-            "---\nrequired: [title]\n---\n"
+            "---\nrequired: [title]\n---\n", encoding="utf-8"
         )
         (self.repo / ".agents/lazyplan" / "templates" / "task.md").write_text(
-            "---\nrequired:\n  - title\n  - desc\n---\n"
+            "---\nrequired:\n  - title\n  - desc\n---\n", encoding="utf-8"
         )
         rc, _, _ = self._run(["add-plan", "--title", "P"])
         self.assertEqual(rc, 0)

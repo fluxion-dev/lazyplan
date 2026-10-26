@@ -15,6 +15,12 @@ confirmations reuse the same six columns:
 - `pr`: id is the pull request number, title the URL.
 - `claim`: id is the task, status the actor, title the task, extra the expiry.
 - `note`: id is the note, status the actor, title the text, extra the timestamp.
+- `link`: id is the criterion, status `linked|unlinked`, title the task, parent
+  `criterion:<id>`, extra `task:<id>`.
+- `trace`: id is the criterion, status `proves|missing`, title the task, parent
+  `criterion:<id>`, extra `task:<id>`.
+- `lint`: id is the rule, status `error|warn`, title the message, parent
+  `kind:id`.
 - `task start`, `task finish`, `block`, and `unblock` reuse the task row.
 
 Reads reuse the same envelope:

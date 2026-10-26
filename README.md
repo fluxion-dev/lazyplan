@@ -131,6 +131,7 @@ Plans live in one local database: shared in your home by default, or inside a re
 - [Screenshots and quickstart](https://fluxion-dev.github.io/lazyplan/)
 - [Usage and CLI reference](https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md)
 - [Setup walkthrough](https://github.com/fluxion-dev/lazyplan/blob/main/docs/setup.md)
+- [Changelog](https://github.com/fluxion-dev/lazyplan/blob/main/CHANGELOG.md)
 - [Contributing](https://github.com/fluxion-dev/lazyplan/blob/main/CONTRIBUTING.md) (main is protected; open a PR)
 - [Releases](https://github.com/fluxion-dev/lazyplan/releases) · [Issues](https://github.com/fluxion-dev/lazyplan/issues)
 

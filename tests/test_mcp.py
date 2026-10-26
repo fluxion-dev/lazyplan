@@ -12,6 +12,8 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from home_sandbox import sandbox_env  # noqa: E402
+
 from lazyplan import mcp  # noqa: E402
 from lazyplan.store import Store  # noqa: E402
 
@@ -226,7 +228,7 @@ class TestMcpCli(unittest.TestCase):
             env = dict(os.environ)
             env["PYTHONPATH"] = os.path.join(ROOT, "src")
             env["LAZYPLAN_NO_SETUP"] = "1"
-            env["HOME"] = tmp
+            sandbox_env(env, tmp)
             proc = subprocess.Popen(
                 [
                     sys.executable,

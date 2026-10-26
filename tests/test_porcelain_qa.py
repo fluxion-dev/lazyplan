@@ -12,6 +12,8 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from home_sandbox import sandbox_home  # noqa: E402
+
 from lazyplan.cli import main as lpui_main  # noqa: E402
 from lazyplan.models import Status  # noqa: E402
 from lazyplan.services import set_status  # noqa: E402
@@ -43,15 +45,14 @@ class TestHotLoopReduction(unittest.TestCase):
         self.work = os.path.join(self.tmp.name, "work")
         os.makedirs(self.work)
         self.old_cwd = os.getcwd()
-        self.old_home = os.environ.get("HOME")
         self.old_setup = os.environ.get("LAZYPLAN_NO_SETUP")
-        os.environ["HOME"] = self.tmp.name
+        sandbox_home(self, self.tmp.name)
         os.environ["LAZYPLAN_NO_SETUP"] = "1"
         os.chdir(self.work)
 
     def tearDown(self):
         os.chdir(self.old_cwd)
-        for key, value in (("HOME", self.old_home), ("LAZYPLAN_NO_SETUP", self.old_setup)):
+        for key, value in (("LAZYPLAN_NO_SETUP", self.old_setup),):
             if value is None:
                 os.environ.pop(key, None)
             else:
@@ -139,15 +140,14 @@ class TestPorcelainAgentLoop(unittest.TestCase):
         subprocess.run(["git", "-C", self.repo, "commit", "-qm", "first"], check=True, timeout=10)
         self.db = os.path.join(self.tmp.name, "qa.db")
         self.old_cwd = os.getcwd()
-        self.old_home = os.environ.get("HOME")
         self.old_setup = os.environ.get("LAZYPLAN_NO_SETUP")
-        os.environ["HOME"] = self.tmp.name
+        sandbox_home(self, self.tmp.name)
         os.environ["LAZYPLAN_NO_SETUP"] = "1"
         os.chdir(self.repo)
 
     def tearDown(self):
         os.chdir(self.old_cwd)
-        for key, value in (("HOME", self.old_home), ("LAZYPLAN_NO_SETUP", self.old_setup)):
+        for key, value in (("LAZYPLAN_NO_SETUP", self.old_setup),):
             if value is None:
                 os.environ.pop(key, None)
             else:

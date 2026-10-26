@@ -12,6 +12,8 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from home_sandbox import sandbox_home  # noqa: E402
+
 from lazyplan import share  # noqa: E402
 from lazyplan.cli import main as lpui_main  # noqa: E402
 from lazyplan.store import Store  # noqa: E402
@@ -30,13 +32,12 @@ class TestShare(unittest.TestCase):
         store.add_comment("plan", plan.id, "comment <i>", actor="fixture")
         store.link_forge("task", 1, 7, title="PR", payload='{"token":"secret"}', actor="fixture")
         self.store = store
-        self.old_home = os.environ.get("HOME")
         self.old_setup = os.environ.get("LAZYPLAN_NO_SETUP")
-        os.environ["HOME"] = self.tmp.name
+        sandbox_home(self, self.tmp.name)
         os.environ["LAZYPLAN_NO_SETUP"] = "1"
 
     def tearDown(self):
-        for key, value in (("HOME", self.old_home), ("LAZYPLAN_NO_SETUP", self.old_setup)):
+        for key, value in (("LAZYPLAN_NO_SETUP", self.old_setup),):
             if value is None:
                 os.environ.pop(key, None)
             else:

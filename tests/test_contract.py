@@ -12,6 +12,8 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from home_sandbox import sandbox_home  # noqa: E402
+
 from lazyplan import hooks, services, setup, skills  # noqa: E402
 from lazyplan.cli import main as lpui_main  # noqa: E402
 from lazyplan.models import Status  # noqa: E402
@@ -28,11 +30,10 @@ class ContractCase(unittest.TestCase):
         self.repo = Path(self.tmp.name) / "repo"
         self.repo.mkdir()
         subprocess.run(["git", "init", "-q", str(self.repo)], check=True)
-        self.old_home = os.environ.get("HOME")
         self.old_db = os.environ.pop("LAZYPLAN_DB", None)
         self.old_nohooks = os.environ.pop(hooks.NO_HOOKS_ENV, None)
         self.old_cwd = os.getcwd()
-        os.environ["HOME"] = str(self.home)
+        sandbox_home(self, str(self.home))
         os.chdir(self.repo)
         store = Store(self.home / ".lazyplan/lazyplan.db")
         plan = store.add_plan("P", "what", goal="why")
@@ -44,7 +45,6 @@ class ContractCase(unittest.TestCase):
     def tearDown(self):
         os.chdir(self.old_cwd)
         for key, value in (
-            ("HOME", self.old_home),
             ("LAZYPLAN_DB", self.old_db),
             (hooks.NO_HOOKS_ENV, self.old_nohooks),
         ):

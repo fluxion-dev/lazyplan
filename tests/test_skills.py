@@ -12,6 +12,8 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from home_sandbox import sandbox_home  # noqa: E402
+
 from lazyplan import skills
 from lazyplan.cli import main as lpui_main
 from lazyplan.cli_parser import build_parser
@@ -472,8 +474,7 @@ class TestInitCli(unittest.TestCase):
         self.old_noskills = os.environ.get("LAZYPLAN_NO_SKILLS")
         os.environ["XDG_DATA_HOME"] = os.path.join(self.tmp.name, "xdg")
         os.environ.pop("LAZYPLAN_NO_SKILLS", None)
-        self.old_home = os.environ.get("HOME")
-        os.environ["HOME"] = os.path.join(self.tmp.name, "home")
+        sandbox_home(self, os.path.join(self.tmp.name, "home"))
         os.makedirs(os.environ["HOME"], exist_ok=True)
         os.makedirs(os.path.join(os.environ["HOME"], ".config", "opencode"), exist_ok=True)
 
@@ -491,10 +492,6 @@ class TestInitCli(unittest.TestCase):
             os.environ.pop("LAZYPLAN_NO_SKILLS", None)
         else:
             os.environ["LAZYPLAN_NO_SKILLS"] = self.old_noskills
-        if self.old_home is None:
-            os.environ.pop("HOME", None)
-        else:
-            os.environ["HOME"] = self.old_home
         self.tmp.cleanup()
 
     def _init_json(self, argv):

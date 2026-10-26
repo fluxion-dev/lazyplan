@@ -10,6 +10,8 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from home_sandbox import sandbox_home  # noqa: E402
+
 from lazyplan import services, templates
 from lazyplan.cli import main as lpui_main
 from lazyplan.store import Store
@@ -388,8 +390,7 @@ class TestTemplateCli(unittest.TestCase):
         self.old_cwd = os.getcwd()
         os.chdir(self.repo)
         self.old_env = os.environ.pop("LAZYPLAN_DB", None)
-        self.old_home = os.environ.get("HOME")
-        os.environ["HOME"] = os.path.join(self.tmp.name, "home")
+        sandbox_home(self, os.path.join(self.tmp.name, "home"))
         os.makedirs(os.environ["HOME"], exist_ok=True)
         self.old_xdg = os.environ.get("XDG_DATA_HOME")
         os.environ["XDG_DATA_HOME"] = os.path.join(self.tmp.name, "xdg")
@@ -400,10 +401,6 @@ class TestTemplateCli(unittest.TestCase):
             os.environ.pop("LAZYPLAN_DB", None)
         else:
             os.environ["LAZYPLAN_DB"] = self.old_env
-        if self.old_home is None:
-            os.environ.pop("HOME", None)
-        else:
-            os.environ["HOME"] = self.old_home
         if self.old_xdg is None:
             os.environ.pop("XDG_DATA_HOME", None)
         else:

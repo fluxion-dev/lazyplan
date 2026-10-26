@@ -9,6 +9,8 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from home_sandbox import sandbox_home  # noqa: E402
+
 from lazyplan import setup, templates  # noqa: E402
 from lazyplan.repo import PLAN_DIR, repo_plan_db_path  # noqa: E402
 from lazyplan.setup_layout import SetupChoice  # noqa: E402
@@ -23,14 +25,9 @@ class SwitchCase(unittest.TestCase):
         self.repo = Path(self.tmp.name) / "repo"
         self.repo.mkdir()
         subprocess.run(["git", "init", "-q", self.repo], check=True)
-        self.old_home = os.environ.get("HOME")
-        os.environ["HOME"] = str(self.home)
+        sandbox_home(self, str(self.home))
 
     def tearDown(self):
-        if self.old_home is None:
-            os.environ.pop("HOME", None)
-        else:
-            os.environ["HOME"] = self.old_home
         self.tmp.cleanup()
 
     def seed_repo_layout(self):

@@ -7,6 +7,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from home_sandbox import sandbox_env  # noqa: E402
+
 ROOT = Path(__file__).resolve().parent.parent
 LPUI = ROOT / ".venv" / "bin" / "lpui"
 
@@ -50,7 +52,7 @@ class TestSetupWizard(unittest.TestCase):
         subprocess.run(["git", "init", "-q", repo], check=True)
         self.repo = repo
         self.env = dict(os.environ)
-        self.env["HOME"] = str(self.home)
+        sandbox_env(self.env, str(self.home))
         self.env.pop("LAZYPLAN_DB", None)
         self.env.pop("LAZYPLAN_NO_SETUP", None)
         self.env["TERM"] = "xterm-256color"

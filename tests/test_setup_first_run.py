@@ -13,6 +13,8 @@ from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from home_sandbox import sandbox_home  # noqa: E402
+
 from lazyplan import setup  # noqa: E402
 
 
@@ -42,15 +44,10 @@ class FirstRunCase(unittest.TestCase):
         self.repo = Path(self.tmp.name) / "repo"
         self.repo.mkdir()
         subprocess.run(["git", "init", "-q", self.repo], check=True)
-        self.old_home = os.environ.get("HOME")
         self.old_db = os.environ.pop("LAZYPLAN_DB", None)
-        os.environ["HOME"] = str(self.home)
+        sandbox_home(self, str(self.home))
 
     def tearDown(self):
-        if self.old_home is None:
-            os.environ.pop("HOME", None)
-        else:
-            os.environ["HOME"] = self.old_home
         if self.old_db is not None:
             os.environ["LAZYPLAN_DB"] = self.old_db
         self.tmp.cleanup()

@@ -6,6 +6,8 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from home_sandbox import sandbox_home  # noqa: E402
+
 from lazyplan.cli import main as lpui_main
 from lazyplan.repo import find_repo_root, repo_label, resolve_db_path
 from lazyplan.store import Store
@@ -21,8 +23,7 @@ class TestRepoScope(unittest.TestCase):
         self.old_env = os.environ.pop("LAZYPLAN_DB", None)
         self.old_xdg = os.environ.get("XDG_DATA_HOME")
         os.environ["XDG_DATA_HOME"] = os.path.join(self.tmp.name, "xdg")
-        self.old_home = os.environ.get("HOME")
-        os.environ["HOME"] = os.path.join(self.tmp.name, "home")
+        sandbox_home(self, os.path.join(self.tmp.name, "home"))
         os.makedirs(os.environ["HOME"], exist_ok=True)
 
     def tearDown(self):
@@ -35,10 +36,6 @@ class TestRepoScope(unittest.TestCase):
             os.environ.pop("XDG_DATA_HOME", None)
         else:
             os.environ["XDG_DATA_HOME"] = self.old_xdg
-        if self.old_home is None:
-            os.environ.pop("HOME", None)
-        else:
-            os.environ["HOME"] = self.old_home
         self.tmp.cleanup()
 
     def test_find_root_via_git_dir(self):
@@ -174,8 +171,7 @@ class TestLegacyPlanDir(unittest.TestCase):
         self.old_env = os.environ.pop("LAZYPLAN_DB", None)
         self.old_xdg = os.environ.get("XDG_DATA_HOME")
         os.environ["XDG_DATA_HOME"] = os.path.join(self.tmp.name, "xdg")
-        self.old_home = os.environ.get("HOME")
-        os.environ["HOME"] = os.path.join(self.tmp.name, "home")
+        sandbox_home(self, os.path.join(self.tmp.name, "home"))
         os.makedirs(os.environ["HOME"], exist_ok=True)
 
     def tearDown(self):
@@ -188,10 +184,6 @@ class TestLegacyPlanDir(unittest.TestCase):
             os.environ.pop("XDG_DATA_HOME", None)
         else:
             os.environ["XDG_DATA_HOME"] = self.old_xdg
-        if self.old_home is None:
-            os.environ.pop("HOME", None)
-        else:
-            os.environ["HOME"] = self.old_home
         self.tmp.cleanup()
 
     def test_legacy_ignored_in_resolution(self):
@@ -247,20 +239,10 @@ class TestLegacyPlanDir(unittest.TestCase):
 class TestSharedHome(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.old_home = os.environ.get("HOME")
-        os.environ["HOME"] = os.path.join(self.tmp.name, "home")
+        sandbox_home(self, os.path.join(self.tmp.name, "home"))
         os.makedirs(os.environ["HOME"], exist_ok=True)
-        self.old_localappdata = os.environ.get("LOCALAPPDATA")
 
     def tearDown(self):
-        if self.old_home is None:
-            os.environ.pop("HOME", None)
-        else:
-            os.environ["HOME"] = self.old_home
-        if self.old_localappdata is None:
-            os.environ.pop("LOCALAPPDATA", None)
-        else:
-            os.environ["LOCALAPPDATA"] = self.old_localappdata
         self.tmp.cleanup()
 
     def test_shared_home_unix(self):
@@ -347,8 +329,7 @@ class TestSharedSeed(unittest.TestCase):
         self.old_env = os.environ.pop("LAZYPLAN_DB", None)
         self.old_xdg = os.environ.get("XDG_DATA_HOME")
         os.environ["XDG_DATA_HOME"] = os.path.join(self.tmp.name, "xdg")
-        self.old_home = os.environ.get("HOME")
-        os.environ["HOME"] = os.path.join(self.tmp.name, "home")
+        sandbox_home(self, os.path.join(self.tmp.name, "home"))
         os.makedirs(os.environ["HOME"], exist_ok=True)
         os.chdir(self.tmp.name)
 
@@ -362,10 +343,6 @@ class TestSharedSeed(unittest.TestCase):
             os.environ.pop("XDG_DATA_HOME", None)
         else:
             os.environ["XDG_DATA_HOME"] = self.old_xdg
-        if self.old_home is None:
-            os.environ.pop("HOME", None)
-        else:
-            os.environ["HOME"] = self.old_home
         self.tmp.cleanup()
 
     def _old_db(self, rel: str, title: str, mtime: float) -> str:
@@ -426,8 +403,7 @@ class TestInitParity(unittest.TestCase):
         os.makedirs(self.bare)
         self.old_cwd = os.getcwd()
         self.old_env = os.environ.pop("LAZYPLAN_DB", None)
-        self.old_home = os.environ.get("HOME")
-        os.environ["HOME"] = os.path.join(self.tmp.name, "home")
+        sandbox_home(self, os.path.join(self.tmp.name, "home"))
         os.makedirs(os.environ["HOME"], exist_ok=True)
         self.old_xdg = os.environ.get("XDG_DATA_HOME")
         os.environ["XDG_DATA_HOME"] = os.path.join(self.tmp.name, "xdg")
@@ -438,10 +414,6 @@ class TestInitParity(unittest.TestCase):
             os.environ.pop("LAZYPLAN_DB", None)
         else:
             os.environ["LAZYPLAN_DB"] = self.old_env
-        if self.old_home is None:
-            os.environ.pop("HOME", None)
-        else:
-            os.environ["HOME"] = self.old_home
         if self.old_xdg is None:
             os.environ.pop("XDG_DATA_HOME", None)
         else:

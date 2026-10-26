@@ -15,6 +15,8 @@ from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from home_sandbox import sandbox_home  # noqa: E402
+
 from lazyplan import porcelain  # noqa: E402
 from lazyplan.cli import main as lpui_main  # noqa: E402
 from lazyplan.cli_parser import build_parser  # noqa: E402
@@ -93,13 +95,12 @@ class TestWriteRows(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.db = os.path.join(self.tmp.name, "g.db")
-        self.old_home = os.environ.get("HOME")
         self.old_setup = os.environ.get("LAZYPLAN_NO_SETUP")
-        os.environ["HOME"] = self.tmp.name
+        sandbox_home(self, self.tmp.name)
         os.environ["LAZYPLAN_NO_SETUP"] = "1"
 
     def tearDown(self):
-        for key, value in (("HOME", self.old_home), ("LAZYPLAN_NO_SETUP", self.old_setup)):
+        for key, value in (("LAZYPLAN_NO_SETUP", self.old_setup),):
             if value is None:
                 os.environ.pop(key, None)
             else:
@@ -223,13 +224,12 @@ class TestReadRows(unittest.TestCase):
         store.add_criteria("milestone", milestone.id, "Hero works", actor="fixture")
         store.add_criteria("task", task.id, "Ships", actor="fixture")
         store.add_repo_link("task", task.id, self.tmp.name, "git@example.com:org/repo.git")
-        self.old_home = os.environ.get("HOME")
         self.old_setup = os.environ.get("LAZYPLAN_NO_SETUP")
-        os.environ["HOME"] = self.tmp.name
+        sandbox_home(self, self.tmp.name)
         os.environ["LAZYPLAN_NO_SETUP"] = "1"
 
     def tearDown(self):
-        for key, value in (("HOME", self.old_home), ("LAZYPLAN_NO_SETUP", self.old_setup)):
+        for key, value in (("LAZYPLAN_NO_SETUP", self.old_setup),):
             if value is None:
                 os.environ.pop(key, None)
             else:
@@ -319,15 +319,14 @@ class TestLinkRows(unittest.TestCase):
         milestone = store.add_milestone(plan.id, "M", actor="fixture")
         store.add_task(milestone.id, "T", actor="fixture")
         self.old_cwd = os.getcwd()
-        self.old_home = os.environ.get("HOME")
         self.old_setup = os.environ.get("LAZYPLAN_NO_SETUP")
-        os.environ["HOME"] = self.tmp.name
+        sandbox_home(self, self.tmp.name)
         os.environ["LAZYPLAN_NO_SETUP"] = "1"
         os.chdir(self.repo)
 
     def tearDown(self):
         os.chdir(self.old_cwd)
-        for key, value in (("HOME", self.old_home), ("LAZYPLAN_NO_SETUP", self.old_setup)):
+        for key, value in (("LAZYPLAN_NO_SETUP", self.old_setup),):
             if value is None:
                 os.environ.pop(key, None)
             else:
@@ -475,10 +474,9 @@ class TestSessionRows(unittest.TestCase):
         set_status(store, "plan", plan.id, Status.DOING, actor="fixture")
         set_status(store, "milestone", milestone.id, Status.DOING, actor="fixture")
         set_status(store, "task", task.id, Status.DOING, actor="fixture")
-        self.old_home = os.environ.get("HOME")
         self.old_setup = os.environ.get("LAZYPLAN_NO_SETUP")
         self.old_cwd = os.getcwd()
-        os.environ["HOME"] = self.tmp.name
+        sandbox_home(self, self.tmp.name)
         os.environ["LAZYPLAN_NO_SETUP"] = "1"
         work = os.path.join(self.tmp.name, "work")
         os.makedirs(work, exist_ok=True)
@@ -486,7 +484,7 @@ class TestSessionRows(unittest.TestCase):
 
     def tearDown(self):
         os.chdir(self.old_cwd)
-        for key, value in (("HOME", self.old_home), ("LAZYPLAN_NO_SETUP", self.old_setup)):
+        for key, value in (("LAZYPLAN_NO_SETUP", self.old_setup),):
             if value is None:
                 os.environ.pop(key, None)
             else:

@@ -120,6 +120,18 @@ class TestCompletionGates(unittest.TestCase):
         tasks = payload["plans"][0]["doing"]
         self.assertEqual(tasks[0]["gate"]["state"], "pass")
 
+    def test_branch_collision_and_restart(self):
+        second = self.store.add_task(
+            self.store.get_task(self.task.id).milestone_id,
+            "T2",
+            "Commit slice. Verification.",
+            actor="fixture",
+        )
+        with self.assertRaises(ValueError) as caught:
+            services.start_task(self.store, second.id, actor="fixture")
+        self.assertIn(f"task #{self.task.id}", str(caught.exception))
+        services.start_task(self.store, self.task.id, actor="fixture")
+
     def test_gate_state(self):
         self.assertEqual(services.gate_state(self.store, self.task.id)["state"], "missing")
         self._pr("pass")

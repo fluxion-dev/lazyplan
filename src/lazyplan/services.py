@@ -385,6 +385,14 @@ def start_task(
         None,
     )
     remote = target.get("repo_remote", "") if target else chosen.get("repo_remote", "")
+    owners = store.branch_owners(
+        resolved_root, name, remote=str(remote or ""), exclude_task=task_id
+    )
+    if owners:
+        raise ValueError(
+            f"branch {name!r} is already recorded on task #{owners[0].id}; "
+            "use another branch or finish that task first"
+        )
     store.add_repo_link(
         "task",
         task_id,

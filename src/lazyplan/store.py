@@ -825,6 +825,26 @@ class Store:
             "state": "pass" if checks == "pass" else checks,
         }
 
+    def branch_owners(
+        self,
+        repo_path: str,
+        branch: str,
+        remote: str = "",
+        exclude_task: int = 0,
+    ) -> list[Task]:
+        """Open tasks that already record this branch in the checkout or a shared remote."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT DISTINCT t.* FROM entity_repos r"
+                " JOIN tasks t ON t.id=r.parent_id"
+                " WHERE r.parent_kind='task' AND r.branch=?"
+                " AND t.status != 'done' AND t.id != ?"
+                " AND (r.repo_path=? OR (? != '' AND r.repo_remote=?))"
+                " ORDER BY t.id",
+                (branch, exclude_task, repo_path, remote, remote),
+            ).fetchall()
+        return [self._row_to_task(row) for row in rows]
+
     def delete(self, kind: str, obj_id: int, actor: str = "human") -> bool:
         """Delete a row and its subtree (criteria/links/repos purged; FK cascades rest)."""
         table = table_for(kind)

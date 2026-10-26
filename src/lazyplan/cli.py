@@ -5,6 +5,7 @@ every mutation writes SQLite; the running TUI auto-refreshes. Stdlib only
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import sqlite3
 import subprocess
@@ -2660,8 +2661,19 @@ def _dispatch_storeless(args: argparse.Namespace, actor: str) -> int | None:
     return handler(None, args, actor) if handler is not None else None
 
 
+def _utf8_stdio() -> None:
+    """Speak UTF-8 on every pipe; Windows otherwise uses the ANSI code page."""
+    for stream in (sys.stdin, sys.stdout, sys.stderr):
+        if isinstance(stream, io.TextIOWrapper) and stream.encoding.lower() not in (
+            "utf-8",
+            "utf8",
+        ):
+            stream.reconfigure(encoding="utf-8", errors="replace")
+
+
 def main(argv: list[str] | None = None) -> int:
     """Dispatch one lpui invocation; exit codes are agent-readable."""
+    _utf8_stdio()
     args = build_parser().parse_args(argv)
     noun_group = getattr(args, "noun_group", None)
     if noun_group:

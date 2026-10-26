@@ -42,19 +42,14 @@ class InstallInfo:
     detail: str = ""
 
 
-def _exe_parts(exe: str) -> list[str]:
-    return Path(exe).as_posix().split("/")
-
-
 def _looks_like_pipx(exe: str) -> str | None:
     """The pipx venv dir for this package, else None."""
-    parts = _exe_parts(exe)
-    if "pipx" in parts and "venvs" in parts and PYPI_PKG in parts:
-        try:
-            idx = parts.index(PYPI_PKG)
-        except ValueError:
-            return None
-        return "/" + "/".join(parts[1 : idx + 1])
+    path = Path(exe)
+    if "pipx" not in path.parts or "venvs" not in path.parts:
+        return None
+    for parent in path.parents:
+        if parent.name == PYPI_PKG:
+            return parent.as_posix()
     return None
 
 
@@ -141,7 +136,7 @@ def detect(
         return InstallInfo(DEB, False, "system deb install")
     if _looks_like_source(exe, cwd):
         return InstallInfo(SOURCE, False, "source checkout; pull git instead")
-    return InstallInfo(UNKNOWN, False, "unrecognized layout; reinstall via install.sh")
+    return InstallInfo(UNKNOWN, False, "unrecognized layout")
 
 
 def parse_version(text: str) -> tuple[int, int, int]:
@@ -176,6 +171,12 @@ def latest_version(timeout: float = RESOLVE_TIMEOUT) -> str:
 INSTALL_SH = (
     "curl -fsSL https://github.com/fluxion-dev/lazyplan/releases/latest/download/install.sh | sh"
 )
+PIPX_INSTALL = f"pipx install --backend pip {PYPI_PKG}"
+
+
+def reinstall_hint() -> str:
+    """The supported fresh-install command for this platform."""
+    return PIPX_INSTALL if os.name == "nt" else INSTALL_SH
 
 
 def guard_message(info: InstallInfo) -> str:
@@ -193,7 +194,7 @@ def guard_message(info: InstallInfo) -> str:
         )
     if info.method == SOURCE:
         return f"source checkout ({info.detail}): update with `git pull`; {upgradeable}"
-    return f"unrecognized install layout ({info.detail}); reinstall with {INSTALL_SH}"
+    return f"unrecognized install layout ({info.detail}); reinstall with {reinstall_hint()}"
 
 
 def notice_text(info: InstallInfo, installed: str, latest: str) -> str | None:

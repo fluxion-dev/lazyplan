@@ -89,7 +89,14 @@ def render_html(store: Store, plan_id: int) -> str | None:
         if milestone.get("description"):
             out.append(f"<pre>{html.escape(str(milestone.get('description')))}</pre>")
         out.append("<ul>")
-        out.extend(_task_line(task) for task in entry.get("tasks", []))
+        for task in entry.get("tasks", []):
+            out.append(_task_line(task))
+            for comment in task.get("comments", []):
+                state = "resolved" if comment.get("resolved") else "open"
+                out.append(
+                    f"<li>[{state}] @{html.escape(str(comment.get('actor')))}: "
+                    f"{html.escape(str(comment.get('text')))}</li>"
+                )
         out.append("</ul>")
     notes = data.get("notes", [])
     if notes:

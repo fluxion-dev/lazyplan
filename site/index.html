@@ -4,29 +4,29 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>lazyplan — a plan for you and your agent</title>
-<meta name="description" content="A terminal plan tracker for you and your coding agent. Keep plans, git and PR proof, and the next step in one place.">
-<meta name="keywords" content="plan tracker, coding agent, ai agent, developer tools, terminal app, git provenance, pull request tracking, coding agent planning">
+<meta name="description" content="A terminal plan tracker for you and your coding agent. Keep plans, atomic claims, flow health, review comments, completion gates, and git and PR proof in one local place.">
+<meta name="keywords" content="plan tracker, coding agent, ai agent, developer tools, terminal app, agent coordination, MCP server, flow metrics, completion gates, issue import, git provenance, pull request tracking">
 <meta name="author" content="Brad Lindsay">
 <meta name="theme-color" content="#09090B">
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="https://fluxion-dev.github.io/lazyplan/">
 <link rel="preload" as="image" href="./screens/lpui-and-agent.webp" type="image/webp">
 <meta property="og:title" content="lazyplan — a plan for you and your agent">
-<meta property="og:description" content="A terminal plan tracker for you and your coding agent. Keep plans, git and PR proof, and the next step in one place.">
+<meta property="og:description" content="A terminal plan tracker for you and your coding agent. Keep plans, atomic claims, flow health, review comments, completion gates, and git and PR proof in one local place.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://fluxion-dev.github.io/lazyplan/">
 <meta property="og:site_name" content="lazyplan">
 <meta property="og:locale" content="en_US">
 <!-- Stable logo URL (self-hosted SVG, copied from public/ at build time). -->
 <meta property="og:image" content="https://fluxion-dev.github.io/lazyplan/screens/og-lpui-and-agent.png">
-<meta property="og:image:alt" content="lazyplan beside a coding agent terminal">
+<meta property="og:image:alt" content="lazyplan coordination view with claims, blocked work, and red checks beside MCP and completion-gate terminal transcripts">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="lazyplan — a plan for you and your agent">
-<meta name="twitter:description" content="A terminal plan tracker for you and your coding agent. Keep plans, git and PR proof, and the next step in one place.">
+<meta name="twitter:description" content="A terminal plan tracker for you and your coding agent. Keep plans, atomic claims, flow health, review comments, completion gates, and git and PR proof in one local place.">
 <meta name="twitter:image" content="https://fluxion-dev.github.io/lazyplan/screens/og-lpui-and-agent.png">
-<meta name="twitter:image:alt" content="lazyplan beside a coding agent terminal">
+<meta name="twitter:image:alt" content="lazyplan coordination view with claims, blocked work, and red checks beside MCP and completion-gate terminal transcripts">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -45,6 +45,18 @@
   "license": "MIT",
   "isAccessibleForFree": true,
   "keywords": "terminal plan tracker, coding agent, agent coordination, MCP server, git provenance, pull request tracking, flow metrics, issue import",
+  "featureList": [
+    "Atomic task claims with renewable leases",
+    "Blocked work and handoff notes",
+    "Flow stats and the Attention filter",
+    "Criterion traceability and plan lint",
+    "Local MCP server with read-only mode",
+    "Comments, mentions, and read-only shares",
+    "Plan-level sync by stable UID",
+    "Completion gates for PR and CI evidence",
+    "GitHub and Linear issue imports",
+    "Search, marks, bulk edit, and undo"
+  ],
   "sameAs": [
     "https://github.com/fluxion-dev/lazyplan",
     "https://pypi.org/project/lazyplan-tui/"

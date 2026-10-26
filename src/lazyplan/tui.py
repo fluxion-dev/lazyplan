@@ -173,6 +173,7 @@ if _TEXTUAL_OK:
             self.filter_text: str = ""
             self.source_filter: str = "all"
             self.marked: set[tuple[str, int]] = set()
+            self._undo: list[dict] | None = None
             self._row_nodes: dict[tuple[str, int], TreeNode] = {}
             self._collapsed: set[tuple[str, int]] = set()
             self._expanded: set[tuple[str, int]] = set()
@@ -1236,6 +1237,107 @@ if _TEXTUAL_OK:
                 self.marked.add(key)
             self.refresh_all(f"marked {len(self.marked)}")
 
+        def _marked_tasks(self) -> list[Task]:
+            """Task rows in the mark set."""
+            return [
+                task
+                for kind, oid in self.marked
+                if kind == "task" and (task := self.store.get_task(oid)) is not None
+            ]
+
+        def _bulk_capture(self, tasks: list[Task]) -> None:
+            """Remember exact state for one undo."""
+            self._undo = [
+                {
+                    "id": task.id,
+                    "status": task.status,
+                    "blocked": task.blocked,
+                    "reason": task.blocked_reason,
+                }
+                for task in tasks
+            ]
+
+        def _bulk_status(self, status: Status) -> None:
+            tasks = self._marked_tasks()
+            if not tasks:
+                self.notify("mark at least one task first", timeout=3)
+                return
+
+            def cb(confirmed: bool | None) -> None:
+                if not confirmed:
+                    return
+                self._bulk_capture(tasks)
+                for task in tasks:
+                    services.set_status(self.store, "task", task.id, status, actor="tui")
+                self.marked.clear()
+                self._saved(f"moved {len(tasks)} tasks to {status.value}")
+
+            self.push_screen(
+                ConfirmScreen(f"Move {len(tasks)} marked tasks to {status.value}?"), cb
+            )
+
+        def action_bulk_doing(self) -> None:
+            self._bulk_status(Status.DOING)
+
+        def action_bulk_done(self) -> None:
+            self._bulk_status(Status.DONE)
+
+        def action_bulk_block(self) -> None:
+            tasks = self._marked_tasks()
+            if not tasks:
+                self.notify("mark at least one task first", timeout=3)
+                return
+
+            def reason_cb(reason: str | None) -> None:
+                if reason is None or not reason.strip():
+                    return
+
+                def cb(confirmed: bool | None) -> None:
+                    if not confirmed:
+                        return
+                    self._bulk_capture(tasks)
+                    for task in tasks:
+                        services.block_task(self.store, task.id, reason.strip(), actor="tui")
+                    self.marked.clear()
+                    self._saved(f"blocked {len(tasks)} tasks")
+
+                self.push_screen(ConfirmScreen(f"Block {len(tasks)} tasks: {reason.strip()}?"), cb)
+
+            self.push_screen(FilterPromptScreen(), reason_cb)
+
+        def action_bulk_release(self) -> None:
+            tasks = self._marked_tasks()
+            if not tasks:
+                self.notify("mark at least one task first", timeout=3)
+                return
+
+            def cb(confirmed: bool | None) -> None:
+                if not confirmed:
+                    return
+                released = 0
+                conflicts = 0
+                for task in tasks:
+                    try:
+                        if self.store.release_claim(task.id, "tui") is not None:
+                            released += 1
+                    except ClaimConflict:
+                        conflicts += 1
+                self.marked.clear()
+                self._saved(f"released {released}, conflicts {conflicts}")
+
+            self.push_screen(ConfirmScreen(f"Release claims on {len(tasks)} marked tasks?"), cb)
+
+        def action_undo_bulk(self) -> None:
+            if not self._undo:
+                self.notify("nothing to undo", timeout=3)
+                return
+            states = self._undo
+            for state in states:
+                services.set_status(self.store, "task", state["id"], state["status"], actor="tui")
+                self.store.set_blocked(state["id"], state["blocked"], state["reason"], actor="tui")
+            self._undo = None
+            self._saved(f"undid {len(states)} task changes")
+
         def action_clear_marks(self) -> None:
             self.marked.clear()
             self.refresh_all("marks cleared")
@@ -1300,6 +1402,11 @@ if _TEXTUAL_OK:
                 "git_capture": self.action_git_capture,
                 "toggle_mark": self.action_toggle_mark,
                 "clear_marks": self.action_clear_marks,
+                "bulk_doing": self.action_bulk_doing,
+                "bulk_done": self.action_bulk_done,
+                "bulk_block": self.action_bulk_block,
+                "bulk_release": self.action_bulk_release,
+                "undo_bulk": self.action_undo_bulk,
                 "release_claim": self.action_release_claim,
                 "force_release_claim": self.action_force_release_claim,
                 "open_pr": self.action_open_pr,

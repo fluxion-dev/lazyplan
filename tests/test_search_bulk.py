@@ -82,6 +82,53 @@ class TestSearchBulk(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             self.assertEqual(self.app.marked, set())
 
+    async def test_bulk_done_and_undo(self):
+        async with self.app.run_test() as pilot:
+            await pilot.pause()
+            self.app.marked = {("task", self.t1), ("task", self.t2)}
+            self.app.action_bulk_done()
+            await pilot.pause()
+            await pilot.click("#ok")
+            await pilot.pause()
+            self.assertEqual(self.store.get_task(self.t1).status.value, "done")
+            self.assertEqual(self.store.get_task(self.t2).status.value, "done")
+            self.app.action_undo_bulk()
+            await pilot.pause()
+            self.assertEqual(self.store.get_task(self.t1).status.value, "todo")
+            self.assertEqual(self.store.get_task(self.t2).status.value, "todo")
+
+    async def test_bulk_block_prompts_and_undoes(self):
+        async with self.app.run_test() as pilot:
+            await pilot.pause()
+            self.app.marked = {("task", self.t1)}
+            self.app.action_bulk_block()
+            await pilot.pause()
+            from textual.widgets import Input
+
+            self.app.screen.query_one("#filter-input", Input).value = "waiting"
+            await pilot.click("#ok")
+            await pilot.pause()
+            await pilot.click("#ok")
+            await pilot.pause()
+            self.assertTrue(self.store.get_task(self.t1).blocked)
+            self.assertEqual(self.store.get_task(self.t1).blocked_reason, "waiting")
+            self.app.action_undo_bulk()
+            await pilot.pause()
+            self.assertFalse(self.store.get_task(self.t1).blocked)
+
+    async def test_bulk_release_reports_conflicts(self):
+        self.store.set_blocked(self.t2, False, actor="f")
+        self.store.claim_task(self.t2, "other", 300)
+        async with self.app.run_test() as pilot:
+            await pilot.pause()
+            self.app.marked = {("task", self.t1), ("task", self.t2)}
+            self.app.action_bulk_release()
+            await pilot.pause()
+            await pilot.click("#ok")
+            await pilot.pause()
+            self.assertIsNotNone(self.store.get_claim(self.t1))
+            self.assertIsNotNone(self.store.get_claim(self.t2))
+
     async def test_large_search_is_bounded(self):
         store = Store(self.db)
         for index in range(1000):

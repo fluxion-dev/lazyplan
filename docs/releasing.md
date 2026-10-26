@@ -43,7 +43,10 @@ that waits for the release PR to merge, then dispatches `tag-release.yml` and
 resolve it. Both dispatched workflows are idempotent: `tag-release` exits when
 the tag already exists, and Pages redeploys the same source. A bot-created
 release PR can also leave its `ci` run in `action_required`; approve that run
-as an admin so `gates` can start.
+as an admin so `gates` can start. Approve promptly: the `publish` job waits 20
+minutes for the release PR to merge. If approval runs past that window, the
+job times out and auto-merge may not fire; merge the PR by hand, then dispatch
+the tag and Pages workflows and record the outcome.
 
 If the post-merge job still fails, dispatch both workflows by hand and record
 the failing run URL before the next release:
@@ -248,3 +251,41 @@ or the next plan row so the next release has the context.
   and the porcelain copy, the source-trail WebP, canonical/FAQ/JSON-LD,
   sitemap (lastmod 2026-10-25), robots, and the social preview asset.
 - No deviations from the release flow and no fix-forward commits.
+
+### v0.26.0 (2026-10-26)
+
+- Minor bump from 0.25.0 with the **bump** workflow (`part=minor`):
+  [run](https://github.com/fluxion-dev/lazyplan/actions/runs/40345429021).
+  This release shipped P87-P94: coordination, trace/lint, MCP, flow health,
+  collaboration, gates, issue imports, and TUI search/bulk.
+- The release PR [#27](https://github.com/fluxion-dev/lazyplan/pull/27)
+  changed only the version mirrors. GitHub left its `ci` run in
+  `action_required`; it was approved through the Actions API and `gates`
+  passed: [run](https://github.com/fluxion-dev/lazyplan/actions/runs/40345466711).
+- **Deviation:** auto-merge did not merge after approval, and the `publish` job
+  timed out at 15:23:42 waiting for the PR
+  ([run](https://github.com/fluxion-dev/lazyplan/actions/runs/40345429021)).
+  The manual fallback merged PR #27 as `b1d92ee`. That human merge push started
+  `tag-release` ([run](https://github.com/fluxion-dev/lazyplan/actions/runs/40350692192))
+  and Pages ([run](https://github.com/fluxion-dev/lazyplan/actions/runs/40350692422));
+  both succeeded. Duplicate manual dispatches of `tag-release`
+  ([run](https://github.com/fluxion-dev/lazyplan/actions/runs/40350756178)) and
+  Pages ([run](https://github.com/fluxion-dev/lazyplan/actions/runs/40350761134))
+  were idempotent.
+- `tag-release` created annotated tag `v0.26.0` on `b1d92ee` and dispatched
+  `release.yml`; both `release` and `publish-pypi` jobs succeeded:
+  [run](https://github.com/fluxion-dev/lazyplan/actions/runs/40350712250).
+- PyPI JSON served 0.26.0 immediately. An isolated
+  `pip install --no-cache-dir lazyplan-tui==0.26.0` printed `0.26.0`; smoke
+  tests covered `next`, `stats`, an MCP initialize/tools-list session,
+  `share`, `sync --help`, and `issue import --help`.
+- Verified: seven release assets including `install.sh`, the isolated install,
+  the deployed site showing 0.26.0, the new What's new and capability sections,
+  all 11 new screenshots plus the refreshed hero and social card, canonical,
+  FAQ/JSON-LD, sitemap (lastmod 2026-10-26), robots, and the curated release
+  notes. Lighthouse on the built site scored 99 performance and 100 for
+  accessibility, best practices, and SEO; Playwright confirmed no horizontal
+  overflow at 360, 768, and 1440 widths.
+- Follow-up for the next release: approve the release PR within the 20-minute
+  publish window, or expect to merge and dispatch manually. No other
+  deviations and no fix-forward commits.

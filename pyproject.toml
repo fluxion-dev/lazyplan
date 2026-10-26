@@ -34,7 +34,7 @@ Documentation = "https://fluxion-dev.github.io/lazyplan/"
 Usage = "https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md"
 Repository = "https://github.com/fluxion-dev/lazyplan"
 Issues = "https://github.com/fluxion-dev/lazyplan/issues"
-Changelog = "https://github.com/fluxion-dev/lazyplan/releases"
+Changelog = "https://github.com/fluxion-dev/lazyplan/blob/main/CHANGELOG.md"
 [project.scripts]
 lazyplan = "lazyplan.cli:main"
 lpui = "lazyplan.cli:main"

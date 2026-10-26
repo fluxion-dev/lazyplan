@@ -579,7 +579,7 @@ touched config file is backed up under `~/.lazyplan/backups/<timestamp>/`.
 | Host | Config | Events |
 |---|---|---|
 | OpenCode | `~/.config/opencode/plugins/lazyplan.js` | session context, post-tool |
-| Claude Code | `~/.claude/settings.json` | SessionStart, UserPromptSubmit, PostToolUse, Stop, PreCompact |
+| Claude Code | `~/.claude/settings.json` | SessionStart, UserPromptSubmit, PostToolUse (Bash and PowerShell), Stop |
 | Gemini CLI | `~/.gemini/settings.json` | SessionStart, BeforeAgent, AfterTool, AfterAgent, PreCompress |
 | Codex | `~/.codex/hooks.json` | SessionStart, UserPromptSubmit, PostToolUse, Stop, PreCompact |
 | Cursor | `~/.cursor/hooks.json` | sessionStart, beforeSubmitPrompt, postToolUse, stop, preCompact |
@@ -588,6 +588,10 @@ Notes:
 
 - OpenCode injects the brief into the first model context of a session and
   queues a commit reminder for the next context.
+- Claude Code accepts no added context on PreCompact, so lazyplan skips it
+  there; SessionStart fires again after compaction and re-injects the brief.
+- On Windows, Claude Code runs hook commands in Git Bash, or in PowerShell
+  when Git Bash is missing. Both find `lpui` on `PATH`.
 - Codex asks you to review new hooks once with `/hooks` before it runs them.
 - Cursor can also import Claude Code hooks; with both enabled, the same
   reminder may appear twice.

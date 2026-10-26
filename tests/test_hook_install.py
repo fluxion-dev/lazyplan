@@ -107,6 +107,51 @@ class InstallCase(unittest.TestCase):
         self.assertEqual(report["skipped"][0]["path"], str(settings))
         self.assertEqual(settings.read_text(encoding="utf-8"), "{not json")
 
+    def test_claude_post_tool_matches_bash_and_powershell(self):
+        hook_install.install(self.home, ["claude"])
+        hooks = self._read(self.home / ".claude/settings.json")["hooks"]
+        self.assertEqual(hooks["PostToolUse"][0]["matcher"], "Bash|PowerShell")
+        self.assertEqual(hooks["SessionStart"][0]["matcher"], "*")
+        self.assertNotIn("PreCompact", hooks)
+
+    def test_reinstall_replaces_stale_managed_entries(self):
+        settings = self.home / ".claude/settings.json"
+        settings.parent.mkdir(parents=True)
+        stale = [{"type": "command", "command": "lpui hook pre-compact --host claude"}]
+        old_post = [{"type": "command", "command": "lpui hook post-tool --host claude"}]
+        user = [{"type": "command", "command": "echo user"}]
+        settings.write_text(
+            json.dumps(
+                {
+                    "hooks": {
+                        "PreCompact": [{"matcher": "*", "hooks": stale}],
+                        "PostToolUse": [
+                            {"matcher": "Bash", "hooks": old_post},
+                            {"matcher": "Edit", "hooks": user},
+                        ],
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+        hook_install.install(self.home, ["claude"])
+        hooks = self._read(settings)["hooks"]
+        self.assertNotIn("PreCompact", hooks)
+        self.assertEqual(
+            [(group["matcher"], group["hooks"]) for group in hooks["PostToolUse"]],
+            [("Edit", user), ("Bash|PowerShell", old_post)],
+        )
+
+    def test_reads_settings_with_a_byte_order_mark(self):
+        settings = self.home / ".claude/settings.json"
+        settings.parent.mkdir(parents=True)
+        settings.write_bytes(b"\xef\xbb\xbf" + json.dumps({"theme": "dark"}).encode())
+        report = hook_install.install(self.home, ["claude"])
+        self.assertEqual(report["skipped"], [])
+        data = self._read(settings)
+        self.assertEqual(data["theme"], "dark")
+        self.assertTrue(data["hooks"])
+
     def test_each_change_has_a_backup(self):
         settings = self.home / ".claude/settings.json"
         settings.parent.mkdir(parents=True)

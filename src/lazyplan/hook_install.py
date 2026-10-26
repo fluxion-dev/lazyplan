@@ -69,7 +69,7 @@ def _nested_entries(host: str) -> dict[str, list[dict]]:
     for event, native in hook_hosts.EVENTS[host].items():
         out[native] = [
             {
-                "matcher": hook_hosts.MATCHERS.get(native, "*"),
+                "matcher": hook_hosts.matcher(host, native),
                 "hooks": [{"type": "command", "command": command(host, event)}],
             }
         ]
@@ -83,43 +83,23 @@ def _flat_entries(host: str) -> dict[str, list[dict]]:
     }
 
 
-def _merge_nested(data: dict, host: str) -> dict:
+def _add_entries(data: dict, entries: dict[str, list[dict]]) -> dict:
     hooks = data.get("hooks")
     if not isinstance(hooks, dict):
         hooks = {}
-    for native, entries in _nested_entries(host).items():
+    for native, managed in entries.items():
         existing = hooks.get(native)
-        kept = []
-        if isinstance(existing, list):
-            for group in existing:
-                if not isinstance(group, dict):
-                    kept.append(group)
-                    continue
-                handlers = group.get("hooks")
-                if isinstance(handlers, list):
-                    group["hooks"] = [h for h in handlers if not _managed(h, host)]
-                    if not group["hooks"]:
-                        continue
-                if not _managed(group, host):
-                    kept.append(group)
-        hooks[native] = kept + entries
+        hooks[native] = (existing if isinstance(existing, list) else []) + managed
     data["hooks"] = hooks
     return data
 
 
+def _merge_nested(data: dict, host: str) -> dict:
+    return _add_entries(_strip_nested(data, host), _nested_entries(host))
+
+
 def _merge_flat(data: dict, host: str) -> dict:
-    hooks = data.get("hooks")
-    if not isinstance(hooks, dict):
-        hooks = {}
-    for native, entries in _flat_entries(host).items():
-        existing = hooks.get(native)
-        kept = (
-            [item for item in existing if not _managed(item, host)]
-            if isinstance(existing, list)
-            else []
-        )
-        hooks[native] = kept + entries
-    data["hooks"] = hooks
+    data = _add_entries(_strip_flat(data, host), _flat_entries(host))
     data.setdefault("version", 1)
     return data
 

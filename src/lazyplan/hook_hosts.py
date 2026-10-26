@@ -1,7 +1,9 @@
 """Host-specific hook output shapes.
 
 The canonical reminder is plain text; each host expects its own JSON
-envelope. OpenCode receives the text directly from its plugin.
+envelope. OpenCode receives the text directly from its plugin. A host with
+no native name for an event never gets that event: Claude Code rejects
+context on PreCompact and re-runs SessionStart after compaction instead.
 """
 
 from __future__ import annotations
@@ -16,7 +18,6 @@ EVENTS: dict[str, dict[str, str]] = {
         "prompt-submit": "UserPromptSubmit",
         "post-tool": "PostToolUse",
         "stop": "Stop",
-        "pre-compact": "PreCompact",
     },
     "gemini": {
         "session-start": "SessionStart",
@@ -49,7 +50,16 @@ EVENTS: dict[str, dict[str, str]] = {
 }
 
 
-MATCHERS = {"PostToolUse": "Bash", "AfterTool": "run_shell_command"}
+MATCHERS: dict[str, dict[str, str]] = {
+    "claude": {"PostToolUse": "Bash|PowerShell"},
+    "codex": {"PostToolUse": "Bash"},
+    "gemini": {"AfterTool": "run_shell_command"},
+}
+
+
+def matcher(host: str, native: str) -> str:
+    """Tool matcher for one host event; every tool when the event has none."""
+    return MATCHERS.get(host, {}).get(native, "*")
 
 
 def event_name(host: str, event: str) -> str:
@@ -59,7 +69,7 @@ def event_name(host: str, event: str) -> str:
 
 def payload(host: str, event: str, result: HookResult) -> dict:
     """JSON body a host expects, or an empty object when the hook is silent."""
-    if not result.text:
+    if not result.text or event not in EVENTS.get(host, {}):
         return {}
     if host in ("claude", "gemini", "codex"):
         if result.context:

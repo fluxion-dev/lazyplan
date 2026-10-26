@@ -44,6 +44,17 @@ class HostCase(unittest.TestCase):
             for event in ("session-start", "prompt-submit", "post-tool", "stop", "pre-compact"):
                 self.assertTrue(hook_hosts.event_name(host, event))
 
+    def test_shell_matchers_follow_each_host_tool_name(self):
+        self.assertEqual(hook_hosts.matcher("claude", "PostToolUse"), "Bash|PowerShell")
+        self.assertEqual(hook_hosts.matcher("codex", "PostToolUse"), "Bash")
+        self.assertEqual(hook_hosts.matcher("gemini", "AfterTool"), "run_shell_command")
+        self.assertEqual(hook_hosts.matcher("claude", "SessionStart"), "*")
+
+    def test_claude_has_no_pre_compact_output(self):
+        self.assertEqual(hook_hosts.render("claude", "pre-compact", HookResult("hi", True)), "")
+        body = json.loads(hook_hosts.render("codex", "pre-compact", HookResult("hi", True)))
+        self.assertEqual(body["hookSpecificOutput"]["hookEventName"], "PreCompact")
+
     def test_output_has_no_ansi(self):
         for host in ("claude", "gemini", "codex", "cursor", "opencode"):
             text = hook_hosts.render(host, "session-start", HookResult("hello", True))

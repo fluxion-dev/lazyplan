@@ -491,6 +491,34 @@ plan to lint Required\.
 exit 2 when any finding exists
 .RE
 .TP
+.B lpui mcp
+serve the plan over MCP on stdio for agent hosts
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B \-\-read\-only
+expose read tools only and never create the database
+.RE
+.TP
 .B lpui trace
 trace acceptance criteria to tasks, commits, and pull requests
 .RS

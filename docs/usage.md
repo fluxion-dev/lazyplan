@@ -253,6 +253,7 @@ Your agent is expected to work from the plan, not invent it:
   trailer is required. These rules apply to new plans; existing plans are
   not rewritten.
 - Write rows for scanning: short paragraphs and sections, no placeholder text.
+- If the host supports MCP, prefer `lpui mcp`; otherwise use `--porcelain`.
 - Relate every plan criterion to a proving task and run `lpui --porcelain
   lint --plan P` before check-off.
 - Start a session with `lpui --porcelain next` to claim work, or
@@ -371,6 +372,55 @@ are many-to-many and survive export/import.
 coverage and unproven criteria; `--min-trace` is opt-in and defaults to 0
 (disabled), so existing strict runs keep their current thresholds.
 
+### MCP server
+
+Hosts that speak the Model Context Protocol can use a typed local server
+instead of shelling out:
+
+```bash
+lpui --actor helper mcp
+lpui --actor helper mcp --read-only
+```
+
+The server uses stdio and JSON-RPC 2.0 with no extra dependency. stdout carries
+protocol frames only; diagnostics go to stderr. Write calls are attributed to
+the server `--actor`; `--read-only` hides write tools, rejects direct writes,
+and never creates a missing database.
+
+Read tools: `brief`, `list_plans`, `show_row`, `claims`, `audit`, `trace`,
+`lint`, `info`. Write tools: create/edit/move, criteria, claims, notes,
+block/unblock, and commit linking. Resources: `lazyplan://brief` and
+`lazyplan://plan/{id}`.
+
+Claude-style `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "lazyplan": {
+      "command": "lpui",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+OpenCode-style local server:
+
+```json
+{
+  "mcp": {
+    "lazyplan": {
+      "type": "local",
+      "command": ["lpui", "mcp"]
+    }
+  }
+}
+```
+
+Use `--read-only` for a reviewer or dashboard host. Use `--porcelain` when the
+host does not support MCP; both surfaces read the same database.
+
 ### Session brief and accuracy audit
 
 Start a session with the brief, update after each commit, and close with the
@@ -467,6 +517,8 @@ lpui criterion unrelate --id 4 --task 3
 lpui --porcelain trace --plan 1
 lpui --porcelain lint --plan 1 [--strict]
 lpui audit --plan 1 [--min-trace 0.8]
+lpui mcp
+lpui mcp --read-only
 lpui link --kind task --id 1 [--sha HASH] [--repo PATH]
 lpui commits --kind task --id 1 [--refresh] [--files]
 lpui show --kind task --id 1 [--files]

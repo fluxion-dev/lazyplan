@@ -55,7 +55,9 @@ Pass `--actor <name>` on every write so the human sees who did what in
 stay glyph-free. `--json` wins when both are present; use it only when you
 need fields porcelain does not carry.
 
-Start work with `lpui next --porcelain`: it claims the first eligible todo
+If your host supports MCP, use the local `lpui mcp` server (or
+`lpui mcp --read-only` for reviews); otherwise use `--porcelain` on every
+call. Start work with `lpui next --porcelain`: it claims the first eligible todo
 and moves it doing. A claim is a lease, not an owner. Renew it while you work,
 release it when you stop, and note handoffs with `lpui note add`.
 
@@ -420,6 +422,7 @@ Human watches `lpui ui`; agents work via the CLI with `--actor <name>`.
 - New plan? Interview the human first: vision, scope in and out, deliverables, constraints, metrics, acceptance criteria. Scout the codebase during the interview.
 - Read: `lpui --porcelain list --tree`, `lpui --porcelain next`, `lpui --porcelain claims`, `lpui --porcelain plan show --id N`, `lpui --porcelain audit --since 7.days`, `lpui --porcelain feed --limit 20` (`--json` for full fidelity)
 - Porcelain rows are `kind<TAB>id<TAB>status<TAB>title<TAB>parent<TAB>extra`; parse by tabs, not by scraping text. Set `LAZYPLAN_PORCELAIN=1` for a whole session.
+- MCP: hosts that support it can call `lpui mcp` for typed tools/resources; `--read-only` hides writes.
 - Coordinate: `next` claims atomically; `claim renew|release` manages the lease; `note add` hands off context; `task block --reason` parks blocked work without a fourth status.
 - Trace: `criterion relate --id C --task T` records proof; `trace --plan P` shows evidence; `lint --plan P --strict` gates uncovered criteria and weak task descriptions.
 - Write (full CRUD): `lpui plan|milestone|task add`, `... edit`, `... move`, `... delete`; `lpui criterion add|tick|untick|delete` (all with `--actor <name>`)

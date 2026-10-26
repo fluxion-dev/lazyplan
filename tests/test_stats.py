@@ -73,6 +73,24 @@ class TestStats(unittest.TestCase):
             code = lpui_main(["--db", self.db, "--actor", "alice", *argv])
         return code, out.getvalue(), err.getvalue()
 
+    def test_golden_metrics(self):
+        self.assertEqual(
+            self._compute(),
+            {
+                "since": 0,
+                "actor": None,
+                "wip": 2,
+                "cycle_median_minutes": 1.7,
+                "throughput": 2,
+                "aging_median_minutes": 6.7,
+                "aging_max_minutes": 11.7,
+                "stale_todos": 1,
+                "reopened": 1,
+                "claims": 1,
+                "blocked": 0,
+            },
+        )
+
     def test_metrics(self):
         result = self._compute()
         self.assertEqual(result["wip"], 2)

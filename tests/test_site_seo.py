@@ -52,7 +52,7 @@ class TestSiteSEO(unittest.TestCase):
         index = self.site / "index.html"
         index.write_text(
             index.read_text().replace(
-                'alt="lpui plan tree and preview on the left, with a coding agent terminal on the right running lpui commands."',
+                'alt="lazyplan coordination view on the left with an active claim, an expired claim, a blocked task, aging work, a done row with an open criterion, and a red PR check, beside MCP and completion-gate terminal transcripts."',
                 "",
             )
         )

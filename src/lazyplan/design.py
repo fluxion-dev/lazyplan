@@ -486,6 +486,9 @@ def task_row(
         stale,
         repo_count=repo_count,
         claim_actor=claim_actor,
+        claim_expired=claim_expired,
+        blocked=blocked,
+        marked=marked,
     )
 
 

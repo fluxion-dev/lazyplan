@@ -25,6 +25,7 @@ from . import (
     setup_layout,
     setup_ui,
 )
+from . import lint as lint_mod
 from . import trace as trace_mod
 from .cli_parser import build_parser, package_version
 from .design import (
@@ -448,6 +449,38 @@ def _cmd_brief(store: Store | None, args: argparse.Namespace, actor: str) -> int
     for line in brief.lines(payload):
         print(line)
     return 0
+
+
+def _cmd_lint(store: Store, args: argparse.Namespace, actor: str) -> int:
+    del actor
+    findings = lint_mod.lint_plan(store, args.plan)
+    if findings is None:
+        print(msg_not_found("plan", args.plan), file=sys.stderr)
+        return 1
+    payload = [finding.to_dict() for finding in findings]
+    if args.json:
+        _emit(args, payload)
+    elif porcelain.enabled(args):
+        for finding in findings:
+            print(
+                porcelain.row(
+                    "lint",
+                    finding.rule,
+                    finding.severity,
+                    finding.message,
+                    f"{finding.kind}:{finding.obj_id}",
+                    "-",
+                )
+            )
+    elif findings:
+        for finding in findings:
+            print(
+                f"{finding.severity} {finding.rule} "
+                f"{finding.kind} #{finding.obj_id}: {finding.message}"
+            )
+    else:
+        print(f"P{args.plan} lint clean")
+    return 2 if args.strict and findings else 0
 
 
 def _trace_entries(payload: dict) -> list[dict]:
@@ -2216,6 +2249,7 @@ _COMMANDS: dict[str, Callable[[Store, argparse.Namespace, str], int]] = {
     "list": _cmd_list,
     "help": _cmd_help,
     "trace": _cmd_trace,
+    "lint": _cmd_lint,
     "next": _cmd_next,
     "claim": _cmd_claim,
     "claims": _cmd_claims,

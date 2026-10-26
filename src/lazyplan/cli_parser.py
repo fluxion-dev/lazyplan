@@ -362,6 +362,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     who.add_argument("--plan", type=int, default=None, metavar="ID", help="only this plan")
     who.add_argument("--all", action="store_true", help="include expired claims")
+    li = sub.add_parser(
+        "lint",
+        help="lint a plan for traceability and task-quality gaps",
+        parents=[common],
+    )
+    li.add_argument("--plan", type=int, required=True, metavar="ID", help="plan to lint")
+    li.add_argument("--strict", action="store_true", help="exit 2 when any finding exists")
     tr = sub.add_parser(
         "trace",
         help="trace acceptance criteria to tasks, commits, and pull requests",

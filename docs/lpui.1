@@ -453,6 +453,39 @@ only this plan
 include expired claims
 .RE
 .TP
+.B lpui lint
+lint a plan for traceability and task\-quality gaps
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B \-\-plan ID
+plan to lint Required\.
+.RE
+.RS
+.TP
+.B \-\-strict
+exit 2 when any finding exists
+.RE
+.TP
 .B lpui trace
 trace acceptance criteria to tasks, commits, and pull requests
 .RS

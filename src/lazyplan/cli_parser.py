@@ -40,6 +40,9 @@ examples:
   lpui --porcelain trace --plan 1        # criterion -> task -> commit/PR
   lpui --porcelain lint --plan 1         # plan-quality findings
   lpui stats --since 30.days             # WIP, cycle time, aging, stale work
+  lpui comment add --kind task --id 3 --text "Review @alice"
+  lpui share --plan 1                     # read-only HTML snapshot
+  lpui sync --file backup.json --dry-run  # plan-level merge report
   lpui mcp                               # typed MCP server on stdio
   lpui --actor helper mcp --read-only    # read-only MCP for reviews
   lpui --porcelain task add --milestone 1 --title "Do X" --desc "approach"

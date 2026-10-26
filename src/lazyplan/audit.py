@@ -67,6 +67,9 @@ class Report:
     lag_minutes: list[float] = field(default_factory=list)
     unresolved: int = 0
     gaps: list[Gap] = field(default_factory=list)
+    criteria_total: int = 0
+    criteria_linked: int = 0
+    trace_gaps: list[Gap] = field(default_factory=list)
 
     @property
     def coverage(self) -> float:
@@ -83,6 +86,13 @@ class Report:
     def median_lag_minutes(self) -> float:
         return round(statistics.median(self.lag_minutes), 1) if self.lag_minutes else 0.0
 
+    @property
+    def trace_coverage(self) -> float:
+        """Plan criteria with at least one proving task."""
+        if self.criteria_total == 0:
+            return 1.0
+        return self.criteria_linked / self.criteria_total
+
     def to_dict(self) -> dict:
         """JSON-safe report for agents and scripts."""
         return {
@@ -98,6 +108,12 @@ class Report:
             "criteria_gaps": [
                 {"kind": gap.kind, "id": gap.id, "text": gap.text} for gap in self.gaps
             ],
+            "criteria_total": self.criteria_total,
+            "criteria_linked": self.criteria_linked,
+            "trace_coverage": round(self.trace_coverage, 4),
+            "trace_gaps": [
+                {"kind": gap.kind, "id": gap.id, "text": gap.text} for gap in self.trace_gaps
+            ],
         }
 
 
@@ -108,6 +124,7 @@ class Thresholds:
     coverage: float = _DEFAULT_COVERAGE
     lag_commits: float = _DEFAULT_LAG
     gaps: int = _DEFAULT_GAPS
+    trace: float = 0.0
 
     def breaches(self, report: Report) -> list[str]:
         """Human-readable reasons the report fails strict mode."""
@@ -121,6 +138,11 @@ class Thresholds:
             out.append(f"median lag {report.median_lag_commits:g} commits > {self.lag_commits:g}")
         if len(report.gaps) > self.gaps:
             out.append(f"{len(report.gaps)} open criteria on done rows > {self.gaps}")
+        if self.trace and report.criteria_total and report.trace_coverage < self.trace:
+            out.append(
+                f"trace {report.trace_coverage:.0%} < {self.trace:.0%} "
+                f"({report.criteria_linked}/{report.criteria_total} criteria)"
+            )
         return out
 
 
@@ -316,6 +338,14 @@ def compute(
     lag_commits, lag_minutes, unresolved = _lag(
         ordered, linked_commits, owners, _status_times(store)
     )
+    criteria = [
+        criterion for plan_id in plan_ids for criterion in store.list_criteria("plan", plan_id)
+    ]
+    trace_gaps = [
+        Gap("criterion", criterion.id, criterion.text)
+        for criterion in criteria
+        if not store.criterion_tasks(criterion.id)
+    ]
     return Report(
         plans=list(plan_ids),
         since=since,
@@ -326,6 +356,9 @@ def compute(
         lag_minutes=lag_minutes,
         unresolved=unresolved,
         gaps=_gaps(store, plan_ids, since),
+        criteria_total=len(criteria),
+        criteria_linked=len(criteria) - len(trace_gaps),
+        trace_gaps=trace_gaps,
     )
 
 

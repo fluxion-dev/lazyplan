@@ -82,7 +82,9 @@ and reads stay glyph-free. Use `--json` when you need full fidelity.
 
 `next` claims the first eligible task with a renewable lease, so two agents do
 not take the same work. Renew or release the claim, note handoffs, and block
-parked work with a reason. After each commit, link it and move the task.
+parked work with a reason. Relate each plan criterion to a proving task; then
+`lpui trace --plan 1` shows the evidence and `lpui lint --plan 1 --strict`
+gates the gaps. After each commit, link it and move the task.
 `lpui audit --since 7.days --strict` turns the three accuracy metrics into a CI gate. `lpui setup` installs read-only
 lifecycle hooks for detected agents; `lpui setup --no-hooks` removes them.
 

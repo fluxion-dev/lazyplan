@@ -25,6 +25,8 @@ from . import (
     setup_layout,
     setup_ui,
 )
+from . import lint as lint_mod
+from . import trace as trace_mod
 from .cli_parser import build_parser, package_version
 from .design import (
     EMPTY_COMMITS,
@@ -357,9 +359,13 @@ def _audit_lines(report: audit.Report) -> list[str]:
         f"lag        median {report.median_lag_commits:g} commits · "
         f"{report.median_lag_minutes:g} min ({report.unresolved} unresolved)",
         f"gaps       {len(report.gaps)} open criteria on done rows",
+        f"trace      {report.criteria_linked}/{report.criteria_total} criteria "
+        f"· {report.trace_coverage:.0%} ({len(report.trace_gaps)} unproven)",
     ]
     for gap in report.gaps[:10]:
         lines.append(f"  {gap.kind} #{gap.id}: {gap.text[:60]}")
+    for gap in report.trace_gaps[:10]:
+        lines.append(f"  unproven criterion #{gap.id}: {gap.text[:60]}")
     return lines
 
 
@@ -415,6 +421,7 @@ def _cmd_audit(store: Store | None, args: argparse.Namespace, actor: str) -> int
         coverage=args.min_coverage,
         lag_commits=args.max_lag,
         gaps=args.max_gaps,
+        trace=args.min_trace,
     ).breaches(result)
     return _audit_output(args, result, reasons)
 
@@ -445,6 +452,146 @@ def _cmd_brief(store: Store | None, args: argparse.Namespace, actor: str) -> int
             print(line)
         return 0
     for line in brief.lines(payload):
+        print(line)
+    return 0
+
+
+def _cmd_lint(store: Store, args: argparse.Namespace, actor: str) -> int:
+    del actor
+    findings = lint_mod.lint_plan(store, args.plan)
+    if findings is None:
+        print(msg_not_found("plan", args.plan), file=sys.stderr)
+        return 1
+    payload = [finding.to_dict() for finding in findings]
+    if args.json:
+        _emit(args, payload)
+    elif porcelain.enabled(args):
+        for finding in findings:
+            print(
+                porcelain.row(
+                    "lint",
+                    finding.rule,
+                    finding.severity,
+                    finding.message,
+                    f"{finding.kind}:{finding.obj_id}",
+                    "-",
+                )
+            )
+    elif findings:
+        for finding in findings:
+            print(
+                f"{finding.severity} {finding.rule} "
+                f"{finding.kind} #{finding.obj_id}: {finding.message}"
+            )
+    else:
+        print(f"P{args.plan} lint clean")
+    return 2 if args.strict and findings else 0
+
+
+def _trace_entries(payload: dict) -> list[dict]:
+    """Normalize a plan or criterion trace payload to criterion entries."""
+    if "criteria" in payload:
+        return list(payload["criteria"])
+    return [{"criterion": payload["criterion"], "tasks": payload.get("tasks", [])}]
+
+
+def _trace_text(payload: dict) -> list[str]:
+    """Human trace: criterion, proving tasks, commits, and PRs."""
+    lines: list[str] = []
+    if "plan" in payload:
+        plan = payload["plan"]
+        lines.append(f"P{plan['id']} {plan['name']} ({plan['status']})")
+    for entry in _trace_entries(payload):
+        crit = entry["criterion"]
+        state = "done" if crit.get("done") else "open"
+        lines.append(
+            f"criterion #{crit['id']} [{state}] {crit['text']} "
+            f"({crit['parent_kind']} #{crit['parent_id']})"
+        )
+        tasks = entry.get("tasks", [])
+        if not tasks:
+            lines.append("  (no proving task)")
+            continue
+        for item in tasks:
+            task = item["task"]
+            lines.append(f"  T{task['id']} {task['title']} (M{task['milestone_id']})")
+            for commit in item.get("commits", []):
+                lines.append(f"    {str(commit.get('sha', ''))[:12]} {commit.get('subject', '')}")
+            for pull in item.get("forge_links", []):
+                lines.append(
+                    f"    PR #{pull.get('number')} {pull.get('state') or 'unknown'} "
+                    f"{pull.get('title', '')}"
+                )
+    return lines
+
+
+def _trace_rows(payload: dict) -> list[str]:
+    """Porcelain trace rows: criteria, criterion-task edges, commits, and PRs."""
+    rows: list[str] = []
+    if "plan" in payload:
+        plan = payload["plan"]
+        rows.append(porcelain.plan_row(plan["id"], plan["status"], plan["name"]))
+    for entry in _trace_entries(payload):
+        crit = entry["criterion"]
+        rows.append(
+            porcelain.row(
+                "criterion",
+                crit["id"],
+                "done" if crit.get("done") else "open",
+                crit.get("text"),
+                f"{crit['parent_kind']}:{crit['parent_id']}",
+                "-",
+            )
+        )
+        tasks = entry.get("tasks", [])
+        if not tasks:
+            rows.append(
+                porcelain.row(
+                    "trace",
+                    crit["id"],
+                    "missing",
+                    "-",
+                    f"criterion:{crit['id']}",
+                    "-",
+                )
+            )
+        for item in tasks:
+            task = item["task"]
+            rows.append(
+                porcelain.row(
+                    "trace",
+                    crit["id"],
+                    "proves",
+                    task.get("title"),
+                    f"criterion:{crit['id']}",
+                    f"task:{task['id']}",
+                )
+            )
+            for commit in item.get("commits", []):
+                rows.append(_commit_row(commit, f"task:{task['id']}"))
+            for pull in item.get("forge_links", []):
+                rows.append(_pr_row(pull, f"task:{task['id']}"))
+    return rows
+
+
+def _cmd_trace(store: Store, args: argparse.Namespace, actor: str) -> int:
+    del actor
+    if args.plan is not None:
+        payload = trace_mod.trace_plan(store, args.plan)
+    else:
+        payload = trace_mod.trace_criterion(store, args.criterion)
+    if payload is None:
+        kind = "plan" if args.plan is not None else "criterion"
+        obj_id = args.plan if args.plan is not None else args.criterion
+        print(msg_not_found(kind, obj_id), file=sys.stderr)
+        return 1
+    if args.json:
+        return _emit(args, payload)
+    if porcelain.enabled(args):
+        for line in _trace_rows(payload):
+            print(line)
+        return 0
+    for line in _trace_text(payload):
         print(line)
     return 0
 
@@ -1035,8 +1182,15 @@ def _audit_rows(report: audit.Report) -> list[str]:
         porcelain.row("metric", "median_lag_minutes", "-", report.median_lag_minutes),
         porcelain.row("metric", "unresolved_lag", "-", report.unresolved),
         porcelain.row("metric", "gaps", "-", len(report.gaps)),
+        porcelain.row("metric", "criteria_total", "-", report.criteria_total),
+        porcelain.row("metric", "criteria_linked", "-", report.criteria_linked),
+        porcelain.row("metric", "trace_coverage", "-", round(report.trace_coverage, 4)),
+        porcelain.row("metric", "trace_gaps", "-", len(report.trace_gaps)),
     ]
     rows.extend(porcelain.row("gap", f"{gap.kind}:{gap.id}", "-", gap.text) for gap in report.gaps)
+    rows.extend(
+        porcelain.row("gap", f"{gap.kind}:{gap.id}", "-", gap.text) for gap in report.trace_gaps
+    )
     return rows
 
 
@@ -1370,6 +1524,58 @@ def _cmd_delete_criteria(store: Store, args: argparse.Namespace, actor: str) -> 
         return 1
     line = porcelain.row("criterion", args.id, "deleted", "-", "-", "-")
     return _emit_record(args, line, {"ok": True, "deleted": f"criteria #{args.id}"})
+
+
+def _criterion_link(store: Store, args: argparse.Namespace, actor: str, relate: bool) -> int:
+    criterion = store.get_criterion(args.id)
+    if criterion is None:
+        print(msg_not_found("criterion", args.id), file=sys.stderr)
+        return 1
+    task = store.get_task(args.task)
+    if task is None:
+        print(msg_not_found("task", args.task), file=sys.stderr)
+        return 1
+    try:
+        if relate:
+            store.relate_criterion(args.id, args.task, actor=actor)
+        else:
+            if not store.unrelate_criterion(args.id, args.task, actor=actor):
+                print(
+                    msg_error(
+                        ValueError(f"criterion #{args.id} is not linked to task #{args.task}")
+                    ),
+                    file=sys.stderr,
+                )
+                return 1
+    except (KeyError, ValueError) as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 1
+    payload = {
+        "link": {
+            "criterion_id": args.id,
+            "task_id": args.task,
+            "task": task.title,
+            "linked": relate,
+        }
+    }
+    if args.json:
+        return _emit(args, payload)
+    if porcelain.enabled(args):
+        print(
+            porcelain.link_row(args.id, "linked" if relate else "unlinked", args.task, task.title)
+        )
+    else:
+        verb = "linked" if relate else "unlinked"
+        print(f"{verb} criterion #{args.id} {'to' if relate else 'from'} T{args.task} {task.title}")
+    return 0
+
+
+def _cmd_criterion_relate(store: Store, args: argparse.Namespace, actor: str) -> int:
+    return _criterion_link(store, args, actor, True)
+
+
+def _cmd_criterion_unrelate(store: Store, args: argparse.Namespace, actor: str) -> int:
+    return _criterion_link(store, args, actor, False)
 
 
 def _cmd_git_scan(store: Store, args: argparse.Namespace, actor: str) -> int:
@@ -2033,6 +2239,8 @@ _GROUP_CMDS: dict[tuple[str, str], str] = {
     ("criterion", "tick"): "check",
     ("criterion", "untick"): "uncheck",
     ("criterion", "delete"): "delete-criteria",
+    ("criterion", "relate"): "criterion-relate",
+    ("criterion", "unrelate"): "criterion-unrelate",
     ("git", "status"): "git-status",
     ("git", "scan"): "git-scan",
     ("pr", "auth"): "pr-auth",
@@ -2052,6 +2260,8 @@ _COMMANDS: dict[str, Callable[[Store, argparse.Namespace, str], int]] = {
     "seed": _cmd_seed,
     "list": _cmd_list,
     "help": _cmd_help,
+    "trace": _cmd_trace,
+    "lint": _cmd_lint,
     "next": _cmd_next,
     "claim": _cmd_claim,
     "claims": _cmd_claims,
@@ -2070,6 +2280,8 @@ _COMMANDS: dict[str, Callable[[Store, argparse.Namespace, str], int]] = {
     "check": _cmd_check,
     "uncheck": _cmd_uncheck,
     "delete-criteria": _cmd_delete_criteria,
+    "criterion-relate": _cmd_criterion_relate,
+    "criterion-unrelate": _cmd_criterion_unrelate,
     "link": _cmd_link,
     "unlink": _cmd_unlink,
     "commits": _cmd_commits,

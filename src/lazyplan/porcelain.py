@@ -15,6 +15,12 @@ confirmations reuse the same six columns:
 - `pr`: id is the pull request number, title the URL.
 - `claim`: id is the task, status the actor, title the task, extra the expiry.
 - `note`: id is the note, status the actor, title the text, extra the timestamp.
+- `link`: id is the criterion, status `linked|unlinked`, title the task, parent
+  `criterion:<id>`, extra `task:<id>`.
+- `trace`: id is the criterion, status `proves|missing`, title the task, parent
+  `criterion:<id>`, extra `task:<id>`.
+- `lint`: id is the rule, status `error|warn`, title the message, parent
+  `kind:id`.
 - `task start`, `task finish`, `block`, and `unblock` reuse the task row.
 
 Reads reuse the same envelope:
@@ -133,6 +139,18 @@ def text_row(kind: Any, text: Any) -> str:
 def claim_row(task_id: Any, actor: Any, title: Any, expires_at: float | int | None = None) -> str:
     """A lease record: id is the task, status the actor, extra the expiry epoch."""
     return row("claim", task_id, actor, title, f"task:{field(task_id)}", expires_at or "-")
+
+
+def link_row(criterion_id: Any, status: Any, task_id: Any, title: Any) -> str:
+    """A criterion-task proof relation."""
+    return row(
+        "link",
+        criterion_id,
+        status,
+        title,
+        f"criterion:{field(criterion_id)}",
+        f"task:{field(task_id)}",
+    )
 
 
 def note_row(note_id: Any, actor: Any, text: Any, parent_kind: Any, parent_id: Any, ts: Any) -> str:

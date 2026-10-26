@@ -36,6 +36,9 @@ examples:
   lpui --porcelain claim --id 3 --ttl 30m
   lpui --porcelain note add --kind task --id 3 --text "Decision or handoff"
   lpui --porcelain task block --id 3 --reason "waiting on design"
+  lpui --porcelain criterion relate --id 1 --task 3
+  lpui --porcelain trace --plan 1        # criterion -> task -> commit/PR
+  lpui --porcelain lint --plan 1         # plan-quality findings
   lpui --porcelain task add --milestone 1 --title "Do X" --desc "approach"
   lpui plan show --id 1                  show one row with its why, what, checklist, and children
   lpui --actor alice plan add --title "API v2" --why ".." --what ".."
@@ -84,7 +87,8 @@ workflow: starting a plan? Ask the human what to build, why it matters,
   and how to tell it is done. Save that as the plan. Then break it into
   milestones, and each milestone into prioritized tasks. Agents claim work
   with `next` (a lease, not an owner), renew or release it, note handoffs,
-  and park blocked tasks with `task block --reason`.
+  and park blocked tasks with `task block --reason`. Relate each criterion to
+  a proving task and run `lint` before check-off.
 
 environment:
   LAZYPLAN_DB       which database file to use (same as --db)
@@ -301,6 +305,13 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="N",
         help="strict-mode maximum open criteria on done rows (default: 0)",
     )
+    au.add_argument(
+        "--min-trace",
+        type=float,
+        default=0.0,
+        metavar="RATIO",
+        help="strict-mode minimum criteria with a proving task; 0 disables (default: 0)",
+    )
     br = sub.add_parser(
         "brief",
         help="show the active plan, the next task, and unlinked commits",
@@ -362,6 +373,21 @@ def build_parser() -> argparse.ArgumentParser:
     )
     who.add_argument("--plan", type=int, default=None, metavar="ID", help="only this plan")
     who.add_argument("--all", action="store_true", help="include expired claims")
+    li = sub.add_parser(
+        "lint",
+        help="lint a plan for traceability and task-quality gaps",
+        parents=[common],
+    )
+    li.add_argument("--plan", type=int, required=True, metavar="ID", help="plan to lint")
+    li.add_argument("--strict", action="store_true", help="exit 2 when any finding exists")
+    tr = sub.add_parser(
+        "trace",
+        help="trace acceptance criteria to tasks, commits, and pull requests",
+        parents=[common],
+    )
+    group = tr.add_mutually_exclusive_group(required=True)
+    group.add_argument("--plan", type=int, metavar="ID", help="trace a whole plan's criteria")
+    group.add_argument("--criterion", type=int, metavar="ID", help="trace one criterion")
     hk = sub.add_parser(
         "hook",
         help="read a host lifecycle event and print a reminder",
@@ -574,6 +600,16 @@ def build_parser() -> argparse.ArgumentParser:
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="criterion id")
     _a = _actions.add_parser("delete", help="delete one criterion", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="criterion id")
+    _a = _actions.add_parser(
+        "relate", help="record that a task proves a criterion", parents=[common]
+    )
+    _a.add_argument("--id", type=int, required=True, metavar="ID", help="criterion id")
+    _a.add_argument("--task", type=int, required=True, metavar="ID", help="proving task id")
+    _a = _actions.add_parser(
+        "unrelate", help="remove a criterion-task proof relation", parents=[common]
+    )
+    _a.add_argument("--id", type=int, required=True, metavar="ID", help="criterion id")
+    _a.add_argument("--task", type=int, required=True, metavar="ID", help="proving task id")
 
     _group, _actions = _noun_group("git", "inspect the checkouts linked to a row (no network)")
     _a = _actions.add_parser(

@@ -882,5 +882,79 @@ sudo apt install ./lazyplan_0.26.0-1_amd64.deb
 </script>
 
 
+<script>
+(function () {
+  'use strict';
+  var nav = document.querySelector('nav[aria-label="Primary"]');
+  if (!nav) {
+    return;
+  }
+  var menus = Array.prototype.slice.call(
+    nav.querySelectorAll('details.nav-menu, details.nav-mobile')
+  );
+  function sync(details) {
+    var summary = details.querySelector('summary');
+    if (summary) {
+      summary.setAttribute('aria-expanded', details.open ? 'true' : 'false');
+    }
+  }
+  function closeAll(except) {
+    menus.forEach(function (details) {
+      if (details !== except) {
+        details.open = false;
+      }
+      sync(details);
+    });
+  }
+  menus.forEach(function (details) {
+    var summary = details.querySelector('summary');
+    if (summary) {
+      summary.addEventListener('click', function () {
+        var willOpen = !details.open;
+        if (willOpen) {
+          closeAll(details);
+        }
+        summary.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+      });
+    }
+    sync(details);
+    details.addEventListener('toggle', function () {
+      sync(details);
+      if (details.open) {
+        closeAll(details);
+      }
+    });
+  });
+  document.addEventListener('click', function (event) {
+    if (!nav.contains(event.target)) {
+      closeAll(null);
+    }
+  });
+  document.addEventListener('keydown', function (event) {
+    if (event.key !== 'Escape') {
+      return;
+    }
+    var open = menus.filter(function (details) {
+      return details.open;
+    })[0];
+    if (!open) {
+      return;
+    }
+    event.preventDefault();
+    open.open = false;
+    sync(open);
+    var summary = open.querySelector('summary');
+    if (summary) {
+      summary.focus();
+    }
+  });
+  nav.querySelectorAll('a').forEach(function (link) {
+    link.addEventListener('click', function () {
+      closeAll(null);
+    });
+  });
+})();
+</script>
+
 </body>
 </html>

@@ -826,6 +826,41 @@ class Store:
             comment_id = cur.lastrowid or 0
         return Comment(comment_id, parent_kind, parent_id, text.strip(), actor, ts, resolved)
 
+    def notes_map(self) -> dict[tuple[str, int], list[str]]:
+        """All note text grouped by parent, for TUI search."""
+        with self._connect() as conn:
+            rows = conn.execute("SELECT parent_kind, parent_id, text FROM notes").fetchall()
+        out: dict[tuple[str, int], list[str]] = {}
+        for row in rows:
+            out.setdefault((str(row["parent_kind"]), int(row["parent_id"])), []).append(
+                str(row["text"])
+            )
+        return out
+
+    def comments_map(self) -> dict[tuple[str, int], list[str]]:
+        """All comment text grouped by parent, for TUI search."""
+        with self._connect() as conn:
+            rows = conn.execute("SELECT parent_kind, parent_id, text FROM comments").fetchall()
+        out: dict[tuple[str, int], list[str]] = {}
+        for row in rows:
+            out.setdefault((str(row["parent_kind"]), int(row["parent_id"])), []).append(
+                str(row["text"])
+            )
+        return out
+
+    def issues_map(self) -> dict[tuple[str, int], list[str]]:
+        """Issue source text grouped by row, for TUI search."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT row_kind, row_id, provider, number, title, url FROM issue_links"
+            ).fetchall()
+        out: dict[tuple[str, int], list[str]] = {}
+        for row in rows:
+            out.setdefault((str(row["row_kind"]), int(row["row_id"])), []).append(
+                " ".join(str(row[key]) for key in ("provider", "number", "title", "url"))
+            )
+        return out
+
     def update_task(
         self,
         tid: int,

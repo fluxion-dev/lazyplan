@@ -741,17 +741,37 @@ if _TEXTUAL_OK:
             query = self.filter_text.strip().lower()
             if not query:
                 return base
+            notes = self.store.notes_map()
+            comments = self.store.comments_map()
+            issues = self.store.issues_map()
+            claims = self.store.claims_map()
+
+            def blob(kind: str, obj: Plan | Milestone | Task) -> str:
+                if isinstance(obj, Plan):
+                    bits = [obj.name, obj.description, obj.goal]
+                elif isinstance(obj, Milestone):
+                    bits = [obj.title, obj.description]
+                else:
+                    bits = [obj.title, obj.description, obj.blocked_reason]
+                    claim = claims.get(obj.id)
+                    if claim is not None:
+                        bits.append(claim.actor)
+                bits.extend(notes.get((kind, obj.id), []))
+                bits.extend(comments.get((kind, obj.id), []))
+                bits.extend(issues.get((kind, obj.id), []))
+                return " ".join(str(bit) for bit in bits).lower()
+
             filtered: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]] = []
             for p, milestones in base:
-                if query in p.name.lower():
+                if query in blob("plan", p):
                     filtered.append((p, milestones))
                     continue
                 kept_ms: list[tuple[Milestone, list[Task]]] = []
                 for s, tasks in milestones:
-                    if query in s.title.lower():
+                    if query in blob("milestone", s):
                         kept_ms.append((s, list(tasks)))
                         continue
-                    hits = [t for t in tasks if query in t.title.lower()]
+                    hits = [t for t in tasks if query in blob("task", t)]
                     if hits:
                         kept_ms.append((s, hits))
                 if kept_ms:

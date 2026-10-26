@@ -1448,7 +1448,7 @@ def export_all(store: Store) -> dict:
             )
         plans.append(
             {
-                "plan": _ser(vars(p)),
+                "plan": {**_ser(vars(p)), "uid": store.plan_uid(p.id)},
                 "criteria": [vars(c) for c in store.list_criteria("plan", p.id)],
                 "links": [vars(c) for c in store.list_links("plan", p.id)],
                 "forge_links": [vars(c) for c in store.list_forge_links("plan", p.id)],
@@ -1636,6 +1636,9 @@ def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]
             actor=actor,
         )
         _apply_status("plan", np.id, p.get("status", ""))
+        uid = str(p.get("uid", "") or "").strip()
+        if uid and store.get_plan_by_uid(uid) is None:
+            store.set_plan_uid(np.id, uid)
         counts["plans"] += 1
         _import_criteria("plan", np.id, entry.get("criteria", []))
         _import_notes("plan", np.id, entry.get("notes", []))

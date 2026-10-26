@@ -6,6 +6,7 @@ import json
 import os
 import sqlite3
 import time
+import uuid
 from pathlib import Path
 
 from .kinds import KIND_ERROR, check_parent_kind, table_for
@@ -169,8 +170,8 @@ class Store:
         )
         with self._connect() as conn:
             cur = conn.execute(
-                "INSERT INTO plans (name, description, status, goal) VALUES (?,?,?,?)",
-                (p.name, p.description, p.status.value, p.goal),
+                "INSERT INTO plans (name, description, status, goal, uid) VALUES (?,?,?,?,?)",
+                (p.name, p.description, p.status.value, p.goal, str(uuid.uuid4())),
             )
             p.id = cur.lastrowid or 0
         self.log(actor, "plan", "add", f"P#{p.id} {p.name}")
@@ -191,6 +192,26 @@ class Store:
             status=Status(r["status"]) if "status" in keys else Status.TODO,
             goal=self._opt(r, keys, "goal"),
         )
+
+    def plan_uid(self, pid: int) -> str:
+        """Stable uid for one plan."""
+        with self._connect() as conn:
+            row = conn.execute("SELECT uid FROM plans WHERE id=?", (pid,)).fetchone()
+        return str(row["uid"]) if row is not None else ""
+
+    def set_plan_uid(self, pid: int, uid: str) -> bool:
+        """Set a plan uid, for import/sync."""
+        if not uid.strip():
+            raise ValueError("plan uid must not be empty")
+        with self._connect() as conn:
+            cur = conn.execute("UPDATE plans SET uid=? WHERE id=?", (uid.strip(), pid))
+            return (cur.rowcount or 0) > 0
+
+    def get_plan_by_uid(self, uid: str) -> Plan | None:
+        """Find a plan by its stable uid."""
+        with self._connect() as conn:
+            row = conn.execute("SELECT * FROM plans WHERE uid=?", (uid.strip(),)).fetchone()
+        return self._row_to_plan(row) if row is not None else None
 
     def get_plan(self, pid: int) -> Plan | None:
         """Fetch a plan by id."""

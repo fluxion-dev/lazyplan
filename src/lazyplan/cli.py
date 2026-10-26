@@ -27,6 +27,7 @@ from . import (
 )
 from . import lint as lint_mod
 from . import mcp as mcp_mod
+from . import stats as stats_mod
 from . import trace as trace_mod
 from .cli_parser import build_parser, package_version
 from .design import (
@@ -454,6 +455,46 @@ def _cmd_brief(store: Store | None, args: argparse.Namespace, actor: str) -> int
         return 0
     for line in brief.lines(payload):
         print(line)
+    return 0
+
+
+def _cmd_stats(store: Store, args: argparse.Namespace, actor: str) -> int:
+    del actor
+    since = audit.parse_since(args.since)
+    stale_before = audit.parse_since(args.stale_after)
+    if since is None or stale_before is None:
+        print(msg_error(ValueError("invalid --since or --stale-after")), file=sys.stderr)
+        return 2
+    payload = stats_mod.compute(
+        store, since, stale_before, actor=getattr(args, "filter_actor", None)
+    )
+    if args.json:
+        return _emit(args, payload)
+    if porcelain.enabled(args):
+        for key in (
+            "wip",
+            "cycle_median_minutes",
+            "throughput",
+            "aging_median_minutes",
+            "aging_max_minutes",
+            "stale_todos",
+            "reopened",
+            "claims",
+            "blocked",
+        ):
+            print(porcelain.row("metric", key, "-", payload[key]))
+        return 0
+    print(f"wip        {payload['wip']} doing")
+    print(f"cycle      median {payload['cycle_median_minutes']:g} min")
+    print(f"throughput {payload['throughput']} done in window")
+    print(
+        f"aging      median {payload['aging_median_minutes']:g} min · "
+        f"max {payload['aging_max_minutes']:g} min"
+    )
+    print(f"stale      {payload['stale_todos']} todo past threshold")
+    print(f"reopened   {payload['reopened']}")
+    print(f"claims     {payload['claims']} active")
+    print(f"blocked    {payload['blocked']}")
     return 0
 
 
@@ -2269,6 +2310,7 @@ _COMMANDS: dict[str, Callable[[Store, argparse.Namespace, str], int]] = {
     "help": _cmd_help,
     "trace": _cmd_trace,
     "lint": _cmd_lint,
+    "stats": _cmd_stats,
     "next": _cmd_next,
     "claim": _cmd_claim,
     "claims": _cmd_claims,

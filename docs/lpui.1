@@ -458,6 +458,44 @@ only this plan
 include expired claims
 .RE
 .TP
+.B lpui stats
+show flow metrics: WIP, cycle time, throughput, aging, stale work
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B \-\-since DATE
+activity window, e\.g\. 30\.days or 2026\-01\-01 (default: 30\.days)
+.RE
+.RS
+.TP
+.B \-\-stale\-after TIME
+todo age that counts as stale (default: 1\.days)
+.RE
+.RS
+.TP
+.B \-\-by NAME
+only completed/reopened activity by this actor
+.RE
+.TP
 .B lpui lint
 lint a plan for traceability and task\-quality gaps
 .RS

@@ -375,6 +375,30 @@ def build_parser() -> argparse.ArgumentParser:
     )
     who.add_argument("--plan", type=int, default=None, metavar="ID", help="only this plan")
     who.add_argument("--all", action="store_true", help="include expired claims")
+    st = sub.add_parser(
+        "stats",
+        help="show flow metrics: WIP, cycle time, throughput, aging, stale work",
+        parents=[common],
+    )
+    st.add_argument(
+        "--since",
+        default="30.days",
+        metavar="DATE",
+        help="activity window, e.g. 30.days or 2026-01-01 (default: 30.days)",
+    )
+    st.add_argument(
+        "--stale-after",
+        default="1.days",
+        metavar="TIME",
+        help="todo age that counts as stale (default: 1.days)",
+    )
+    st.add_argument(
+        "--by",
+        dest="filter_actor",
+        default=None,
+        metavar="NAME",
+        help="only completed/reopened activity by this actor",
+    )
     li = sub.add_parser(
         "lint",
         help="lint a plan for traceability and task-quality gaps",

@@ -455,6 +455,26 @@ class TestStore(unittest.TestCase):
         pinned = services.tree(self.store, plan_id=ids[0], limit=1)
         self.assertEqual([p.id for p, _ in pinned], [ids[0]])
 
+    def test_tree_repo_filter_uses_inherited_links(self):
+        p1 = self.store.add_plan("P1")
+        p2 = self.store.add_plan("P2")
+        s1 = self.store.add_milestone(p1.id, "S1")
+        s2 = self.store.add_milestone(p2.id, "S2")
+        self.store.add_task(s1.id, "T1")
+        t2 = self.store.add_task(s2.id, "T2")
+        self.store.add_repo_link("plan", p1.id, "/checkout/one", "git@example.com:org/one.git")
+        self.store.add_repo_link("task", t2.id, "/checkout/two", "git@example.com:org/two.git")
+
+        self.assertEqual(
+            [plan.id for plan, _ in services.tree(self.store, repo="/checkout/one")],
+            [p1.id],
+        )
+        self.assertEqual(
+            [plan.id for plan, _ in services.tree(self.store, repo="org/two")],
+            [p2.id],
+        )
+        self.assertEqual(len(services.tree(self.store, repo="/checkout/three")), 0)
+
     def test_filters(self):
         p1 = self.store.add_plan("P1")
         p2 = self.store.add_plan("P2")

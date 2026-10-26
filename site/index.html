@@ -37,14 +37,14 @@
   "softwareVersion": "0.25.0",
   "url": "https://fluxion-dev.github.io/lazyplan/",
   "screenshot": "https://fluxion-dev.github.io/lazyplan/screens/og-lpui-and-agent.png",
-  "description": "A terminal plan tracker for you and your coding agent, with local plans and read-only git and pull request provenance.",
+  "description": "A terminal plan tracker for you and your coding agent, with local plans, atomic claims, flow health, review comments, completion gates, and read-only git and pull request provenance.",
   "author": {
     "@type": "Person",
     "name": "Brad Lindsay"
   },
   "license": "MIT",
   "isAccessibleForFree": true,
-  "keywords": "terminal plan tracker, coding agent, git provenance, pull request tracking",
+  "keywords": "terminal plan tracker, coding agent, agent coordination, MCP server, git provenance, pull request tracking, flow metrics, issue import",
   "sameAs": [
     "https://github.com/fluxion-dev/lazyplan",
     "https://pypi.org/project/lazyplan-tui/"
@@ -77,7 +77,23 @@
       "name": "Does lazyplan work with coding agents?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Yes. Your agent uses the same local database through the lpui command line, so it can read the plan, add work, and move tasks forward while you keep the plan visible in the TUI."
+        "text": "Yes. Your agent uses the same local database through the lpui command line or the local MCP server, so it can read the plan, claim work, add proof, and move tasks forward while you keep the plan visible in the TUI."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do claims stop two agents from taking the same task?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "lpui next atomically claims the first eligible todo with a renewable lease. A claim carries the actor, start, expiry, and an optional note. Expired leases are reclaimable; renew or release while you work. Blocking a task releases its claim and records the reason, so next skips it until it is unblocked."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does lazyplan expose an MCP server?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. lpui mcp serves JSON-RPC over stdio with no extra dependency. It exposes read tools, write tools, and brief/plan resources. --read-only hides and rejects writes, and never creates a missing database."
       }
     },
     {
@@ -94,6 +110,38 @@
       "acceptedAnswer": {
         "@type": "Answer",
         "text": "Link a commit to a task, or finish a task on a recorded branch. lazyplan can refresh linked commits into pull requests and cache checks and merge state. Press g in the TUI to browse repository, commit, changed file, and PR evidence for any plan, milestone, or task. Highlight a commit or file to read its unified diff in place, bounded to keep the pane readable; o opens the full commit."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can lazyplan gate a task on a PR or CI?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes, opt in with task finish --require-pr or --require-checks. Gates read cached PR and check state, so run pr refresh first. A failure exits 2 and leaves the task doing with no commits linked. --override REASON records the exception and completes normally."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does lazyplan write back to GitHub or Linear?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. issue import is one-way: GitHub issues come from the live API, Linear from a JSON export, and both become plans or tasks with a source ref. Re-import refreshes only cached source metadata. lazyplan never edits, closes, or comments on provider issues and never stores tokens or raw payloads."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How does sharing and sync work without a server?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "lpui share --plan 1 writes a standalone escaped HTML or safe JSON snapshot. Plans also carry stable UIDs, so lpui sync --file dump.json can add unknown plans, skip identical ones, and report conflicts without deleting or overwriting local work. Merge is plan-granularity, not row-level."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do marks and bulk edits work?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Press space to mark rows for the session. The palette can bulk move to doing or done, block with a reason, release claims, clear marks, and undo the last status or block change once. Bulk delete and archive stay single-row because undo cannot safely recreate subtrees."
       }
     },
     {
@@ -125,9 +173,12 @@
 <nav aria-label="Primary" class="sticky top-0 z-40 border-b border-plan-border/80 bg-plan-canvas/85 backdrop-blur-md">
   <div class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-5 gap-y-2 px-6 py-3">
     <a href="#top" class="mr-auto inline-flex items-center gap-2 text-xl font-extrabold tracking-wide text-white no-underline"><img src="./logo.svg" alt="" width="32" height="32" class="h-8 w-8" aria-hidden="true">lazyplan<span class="text-viking-gold">.</span></a>
+    <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#whats-new">What's new</a>
     <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#features">Features</a>
     <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#screens">Screenshots</a>
+    <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#coordination">Coordination</a>
     <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#provenance">Provenance</a>
+    <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#collaboration">Collaboration</a>
     <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#quickstart">Quickstart</a>
     <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#agents">For agents</a>
     <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#faq">FAQ</a>
@@ -152,6 +203,10 @@
     <p class="mx-auto mt-8 max-w-3xl text-lg text-zinc-300">A terminal plan tracker for you and your coding agent. Keep the plan, the context, and the next step in one place.</p>
     <p class="mx-auto mt-2 max-w-3xl text-2xl font-bold tracking-tight text-white">One plan. You steer. Your agent helps.</p>
     <p class="mx-auto mt-2 max-w-3xl text-base text-zinc-400">No lost context. No duplicated work. Just the plan.</p>
+    <a class="mt-6 inline-flex flex-wrap items-center justify-center gap-2 rounded-full border border-cyber-cyan/40 bg-cyber-cyan/10 px-4 py-1.5 text-sm font-semibold text-cyber-cyan no-underline transition hover:border-cyber-cyan/70 hover:bg-cyber-cyan/15" href="#whats-new">
+      <span class="inline-block h-2 w-2 rounded-full bg-scanner-green" aria-hidden="true"></span>
+      New in 0.26: coordination, flow health, and collaboration
+    </a>
 
     <div class="mx-auto mt-8 flex max-w-xl items-center gap-2 rounded-xl border border-plan-border bg-plan-surface/80 p-2 pl-4 text-left shadow-lg shadow-viking-blue/25 backdrop-blur">
       <!-- lucide:terminal -->
@@ -210,6 +265,40 @@
 
 <main id="main">
 
+<section id="whats-new" class="mx-auto max-w-7xl scroll-mt-20 px-6 py-20 md:py-28">
+  <div class="mb-10 max-w-3xl md:mb-14">
+    <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">New in 0.26</p>
+    <h2 class="mb-4 text-2xl font-bold text-white">The plan now coordinates, proves, and explains the work.</h2>
+    <p class="text-lg text-zinc-400">The tree is still the center. Around it, lazyplan now handles the parts that used to leak into chat, CI tabs, and issue trackers.</p>
+  </div>
+  <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
+      <h3 class="mb-2 text-lg font-semibold text-white">Leases, not owners</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">next</code> claims the first eligible task with a renewable lease. Notes, blocked reasons, and claim badges stay on the row.</p>
+    </div>
+    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
+      <h3 class="mb-2 text-lg font-semibold text-white">Flow health, not guesswork</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">stats</code> reports WIP, cycle time, aging, stale work, and reopened rows. The Attention filter puts the risks at the top.</p>
+    </div>
+    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
+      <h3 class="mb-2 text-lg font-semibold text-white">Proof you can follow</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Relate criteria to proving tasks, then walk criterion to task to commit to PR. <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lint</code> names the gaps before you close.</p>
+    </div>
+    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
+      <h3 class="mb-2 text-lg font-semibold text-white">Review where the work lives</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Comments and <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">@mentions</code> sit on plans, milestones, and tasks. Share a read-only snapshot or sync plans by stable UID.</p>
+    </div>
+    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
+      <h3 class="mb-2 text-lg font-semibold text-white">Done means evidence</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">task finish --require-pr --require-checks</code> reads cached PR and CI state. Overrides record why. Branch collisions surface before work starts.</p>
+    </div>
+    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
+      <h3 class="mb-2 text-lg font-semibold text-white">Imports and bulk edit</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Bring GitHub issues or Linear exports in with source refs. Mark rows, bulk move, block, or release claims, and undo once.</p>
+    </div>
+  </div>
+</section>
+
 <section id="screens" class="mx-auto max-w-[1400px] scroll-mt-20 px-6 py-20 md:py-28">
   <div class="mb-10 max-w-3xl md:mb-14">
     <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">See it in action</p>
@@ -244,6 +333,28 @@
   </div>
 </section>
 
+<section id="coordination" class="mx-auto max-w-7xl scroll-mt-20 px-6 py-20 md:py-28">
+  <div class="mb-10 max-w-3xl md:mb-14">
+    <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">Agent coordination</p>
+    <h2 class="mb-4 text-2xl font-bold text-white">Two agents, one plan, no collisions.</h2>
+    <p class="text-lg text-zinc-400">Claims are short leases with an expiry, not permanent owners. Work stays visible, handoffs stay on the row, and blocked work stops looking available.</p>
+  </div>
+  <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
+      <h3 class="mb-2 text-lg font-semibold text-white">Claim atomically</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui next</code> takes the first eligible todo and moves it doing. Renew the lease while you work; release it when you stop. Expired leases are reclaimable.</p>
+    </div>
+    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
+      <h3 class="mb-2 text-lg font-semibold text-white">Hand off in place</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Notes are append-only on plans, milestones, and tasks. Blocking releases the claim, records the reason, and keeps status honest without a fourth state.</p>
+    </div>
+    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
+      <h3 class="mb-2 text-lg font-semibold text-white">See what needs attention</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">The Attention source filter surfaces expired claims, blocked tasks, aging doing work, done rows with open criteria, and red PR checks. The status line reports the count.</p>
+    </div>
+  </div>
+</section>
+
 <section id="provenance" class="mx-auto max-w-7xl scroll-mt-20 px-6 py-20 md:py-28">
   <div class="mb-10 max-w-3xl md:mb-14">
     <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">Git + PR provenance</p>
@@ -274,6 +385,21 @@
     </div>
   </div>
 
+  <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
+    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
+      <h3 class="mb-2 text-lg font-semibold text-white">Trace the proof</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">criterion relate</code> links an acceptance item to the task that proves it. <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">trace</code> walks to commits and PRs; <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lint --strict</code> fails on uncovered criteria and weak task descriptions.</p>
+    </div>
+    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
+      <h3 class="mb-2 text-lg font-semibold text-white">Gate done on evidence</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">task finish --require-pr --require-checks</code> reads cached PR and CI state. A missing or red check keeps the task doing; an override records why.</p>
+    </div>
+    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
+      <h3 class="mb-2 text-lg font-semibold text-white">One checkout, one branch</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Starting a task records an existing branch. A second open task on the same checkout or remote branch is rejected with the owner named, so agents do not race the same working tree.</p>
+    </div>
+  </div>
+
   <div class="mt-8 rounded-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8">
     <h3 class="mb-3 text-lg font-semibold text-white">Works with the tools you already use</h3>
     <ul class="m-0 grid grid-cols-1 gap-3 p-0 text-[0.95rem] text-zinc-400 list-none sm:grid-cols-2">
@@ -282,6 +408,28 @@
       <li><strong class="text-zinc-200">Pull requests:</strong> refresh cached state, checks, reviews, and merge evidence from GitHub.</li>
       <li><strong class="text-zinc-200">Filters:</strong> show only linked work, PRs, stale links, or unlinked rows.</li>
     </ul>
+  </div>
+</section>
+
+<section id="collaboration" class="mx-auto max-w-7xl scroll-mt-20 px-6 py-20 md:py-28">
+  <div class="mb-10 max-w-3xl md:mb-14">
+    <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">Collaboration</p>
+    <h2 class="mb-4 text-2xl font-bold text-white">Keep the review with the plan.</h2>
+    <p class="text-lg text-zinc-400">Comments, mentions, read-only snapshots, and plan-level sync use the same local journal. No hosted account, no real-time service, no writeback.</p>
+  </div>
+  <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
+      <h3 class="mb-2 text-lg font-semibold text-white">Comments and mentions</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Add, list, resolve, and unresolve comments on any row. <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">@name</code> filters the list and unresolved comments appear in the detail pane.</p>
+    </div>
+    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
+      <h3 class="mb-2 text-lg font-semibold text-white">Share a read-only snapshot</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui share --plan 1</code> writes escaped HTML or safe JSON with the plan, criteria, milestones, tasks, notes, comments, and proof. Tokens and raw payloads stay out.</p>
+    </div>
+    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
+      <h3 class="mb-2 text-lg font-semibold text-white">Sync without duplicates</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Every plan has a stable UID. <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">sync --file dump.json</code> adds unknown plans, skips identical ones, and reports conflicts without overwriting.</p>
+    </div>
   </div>
 </section>
 
@@ -307,6 +455,30 @@
       <h3 class="mb-1.5 text-lg font-semibold text-white">Yours to keep</h3>
       <p class="m-0 text-[0.95rem] text-zinc-400">Private by default. Simple to back up. No account, no cloud, no lock-in.</p>
     </div>
+    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8 shadow-lg shadow-black/30 backdrop-blur transition hover:border-viking-blue/50">
+      <h3 class="mb-1.5 text-lg font-semibold text-white">Built for a loop</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Atomic claims, renewable leases, notes, and blocked reasons give multiple agents a safe shared queue.</p>
+    </div>
+    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8 shadow-lg shadow-black/30 backdrop-blur transition hover:border-viking-blue/50">
+      <h3 class="mb-1.5 text-lg font-semibold text-white">Flow, not vibes</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">WIP, cycle time, throughput, aging, stale todos, and reopened work are computed from the journal, not estimated.</p>
+    </div>
+    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8 shadow-lg shadow-black/30 backdrop-blur transition hover:border-viking-blue/50">
+      <h3 class="mb-1.5 text-lg font-semibold text-white">Proof, not promises</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Trace criteria to tasks, commits, and PRs. Gate done on cached CI and record an override when you deliberately break the rule.</p>
+    </div>
+    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8 shadow-lg shadow-black/30 backdrop-blur transition hover:border-viking-blue/50">
+      <h3 class="mb-1.5 text-lg font-semibold text-white">Review in place</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Comments, mentions, read-only shares, and plan-level sync keep feedback with the work instead of in another tool.</p>
+    </div>
+    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8 shadow-lg shadow-black/30 backdrop-blur transition hover:border-viking-blue/50">
+      <h3 class="mb-1.5 text-lg font-semibold text-white">Imported work keeps its source</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">GitHub issues and Linear exports arrive as plans or tasks with a provider, number, URL, and state that survive export/import.</p>
+    </div>
+    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8 shadow-lg shadow-black/30 backdrop-blur transition hover:border-viking-blue/50">
+      <h3 class="mb-1.5 text-lg font-semibold text-white">Search every field</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Find rows by descriptions, why/what, notes, comments, claims, blocked reasons, or issue refs. Mark several and edit in bulk with one undo.</p>
+    </div>
   </div>
 </section>
 
@@ -325,14 +497,17 @@ lpui
 
 <section id="agents" class="mx-auto max-w-6xl scroll-mt-20 px-6 py-20 md:py-28">
   <h2 class="mb-4 text-2xl font-bold text-white"><span class="mr-1.5" aria-hidden="true">🤖</span>For your coding agent</h2>
-  <p class="mb-10 md:mb-14 text-lg text-zinc-400">Your agent gets the same plan through a simple command line. It can add work, move it forward, and keep you posted.</p>
+  <p class="mb-10 md:mb-14 text-lg text-zinc-400">Your agent gets the same plan through a typed MCP server or a simple command line. It can claim work, add proof, leave a note, and keep you posted.</p>
 <div class="space-y-6">
-<pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-surface p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono">lpui --porcelain brief        # what to work on, and what slipped
-lpui --porcelain task add --title "Ship the thing"
-lpui --porcelain task move --id 1 --to done
-lpui --porcelain audit --since 7.days   # coverage, lag, and criteria gaps
+<pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-surface p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono">lpui mcp                              # typed tools + resources on stdio
+lpui --porcelain next                 # claim the first eligible task
+lpui --porcelain stats --since 7.days # WIP, cycle time, aging, stale work
+lpui --porcelain note add --kind task --id 3 --text "Handoff"
+lpui --porcelain task finish --id 3 --require-pr --require-checks
+lpui --porcelain issue import --provider github --repo owner/repo
 </code></pre>
-  <p class="text-zinc-300">Porcelain mode answers each write with one tab-separated row and keeps overview reads glyph-free, so your agent spends context on the plan instead of decorations. The columns are <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">kind</code>, <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">id</code>, <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">status</code>, <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">title</code>, <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">parent</code>, and <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">extra</code>; <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">--json</code> is still there when you need full fidelity.</p>
+  <p class="text-zinc-300">MCP exposes read tools for the brief, plans, rows, claims, audit, trace, lint, and info, plus writes for the journal, criteria, claims, notes, blocked work, and commit links. <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">--read-only</code> hides writes for reviewers and never creates a missing database.</p>
+  <p class="text-zinc-300">Without MCP, porcelain mode answers each write with one tab-separated row and keeps overview reads glyph-free, so your agent spends context on the plan instead of decorations. The columns are <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">kind</code>, <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">id</code>, <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">status</code>, <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">title</code>, <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">parent</code>, and <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">extra</code>; <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">--json</code> is still there when you need full fidelity.</p>
   <p class="text-zinc-300">You set the direction. It does the busywork.</p>
   <p class="text-zinc-400">Setup installs read-only lifecycle hooks for detected agents, so a session starts with the active task and a commit reminds you to link it. Hooks never move work or write to the database; remove them with <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui setup --no-hooks</code>.</p>
 </div>
@@ -347,11 +522,19 @@ lpui --porcelain audit --since 7.days   # coverage, lag, and criteria gaps
   <div class="space-y-3">
     <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
       <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">What is lazyplan?</summary>
-      <p class="mt-3 text-zinc-400">lazyplan is a terminal plan tracker for you and your coding agent. Plans, milestones, tasks, and acceptance criteria live in one local place so you can steer the work without losing context in chat.</p>
+      <p class="mt-3 text-zinc-400">lazyplan is a terminal plan tracker for you and your coding agent. Plans, milestones, tasks, and acceptance criteria live in one local place, with claims, notes, proof, and flow health alongside them, so you can steer the work without losing context in chat.</p>
     </details>
     <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
       <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">Does lazyplan work with coding agents?</summary>
-      <p class="mt-3 text-zinc-400">Yes. Your agent uses the same local database through the <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui</code> command line, so it can read the plan, add work, and move tasks forward while you keep the plan visible in the TUI.</p>
+      <p class="mt-3 text-zinc-400">Yes. Your agent uses the same local database through the <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui</code> command line or the local MCP server, so it can read the plan, claim work, add proof, and move tasks forward while you keep the plan visible in the TUI.</p>
+    </details>
+    <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
+      <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">How do claims stop two agents from taking the same task?</summary>
+      <p class="mt-3 text-zinc-400"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui next</code> atomically claims the first eligible todo with a renewable lease. A claim carries the actor, start, expiry, and an optional note. Expired leases are reclaimable; renew or release while you work. Blocking a task releases its claim and records the reason, so <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">next</code> skips it until it is unblocked.</p>
+    </details>
+    <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
+      <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">Does lazyplan expose an MCP server?</summary>
+      <p class="mt-3 text-zinc-400">Yes. <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui mcp</code> serves JSON-RPC over stdio with no extra dependency. It exposes read tools, write tools, and brief/plan resources. <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">--read-only</code> hides and rejects writes, and never creates a missing database.</p>
     </details>
     <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
       <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">Does lazyplan create commits, push branches, or open pull requests?</summary>
@@ -360,6 +543,22 @@ lpui --porcelain audit --since 7.days   # coverage, lag, and criteria gaps
     <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
       <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">How does git and pull request provenance work?</summary>
       <p class="mt-3 text-zinc-400">Link a commit to a task, or finish a task on a recorded branch. lazyplan can refresh linked commits into pull requests and cache checks and merge state. Press <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">g</code> in the TUI to browse repository, commit, changed file, and PR evidence for any plan, milestone, or task. Highlight a commit or file to read its unified diff in place, bounded to keep the pane readable; <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">o</code> opens the full commit.</p>
+    </details>
+    <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
+      <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">Can lazyplan gate a task on a PR or CI?</summary>
+      <p class="mt-3 text-zinc-400">Yes, opt in with <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">task finish --require-pr</code> or <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">--require-checks</code>. Gates read cached PR and check state, so run <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">pr refresh</code> first. A failure exits 2 and leaves the task doing with no commits linked. <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">--override REASON</code> records the exception and completes normally.</p>
+    </details>
+    <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
+      <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">Does lazyplan write back to GitHub or Linear?</summary>
+      <p class="mt-3 text-zinc-400">No. <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">issue import</code> is one-way: GitHub issues come from the live API, Linear from a JSON export, and both become plans or tasks with a source ref. Re-import refreshes only cached source metadata. lazyplan never edits, closes, or comments on provider issues and never stores tokens or raw payloads.</p>
+    </details>
+    <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
+      <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">How does sharing and sync work without a server?</summary>
+      <p class="mt-3 text-zinc-400"><code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui share --plan 1</code> writes a standalone escaped HTML or safe JSON snapshot. Plans also carry stable UIDs, so <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">lpui sync --file dump.json</code> can add unknown plans, skip identical ones, and report conflicts without deleting or overwriting local work. Merge is plan-granularity, not row-level.</p>
+    </details>
+    <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
+      <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">How do marks and bulk edits work?</summary>
+      <p class="mt-3 text-zinc-400">Press <code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.9em] text-zinc-100">space</code> to mark rows for the session. The palette can bulk move to doing or done, block with a reason, release claims, clear marks, and undo the last status or block change once. Bulk delete and archive stay single-row because undo cannot safely recreate subtrees.</p>
     </details>
     <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
       <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">Where is my plan data stored?</summary>

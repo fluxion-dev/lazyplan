@@ -116,6 +116,7 @@ TEMPLATE_FRAGMENTS = [
     "trace --plan",
     "lint --plan",
     "lpui mcp",
+    "stats --since",
     "lpui --porcelain plan show --id N",
     "lpui --porcelain feed --limit 20",
     "lpui export --format json",

@@ -82,6 +82,7 @@ class ContractCase(unittest.TestCase):
         self.assertIn("lpui trace --plan P", text)
         self.assertIn("lpui lint --plan P --strict", text)
         self.assertIn("lpui mcp", text)
+        self.assertIn("lpui stats --since", text)
         self.assertIn("LAZYPLAN_PORCELAIN", text)
         self.assertIn("kind<TAB>id<TAB>status", text)
         self.assertNotIn("lpui init", text)

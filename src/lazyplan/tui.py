@@ -13,6 +13,7 @@ from __future__ import annotations
 import os
 import time
 import webbrowser
+from collections.abc import Callable
 from typing import Any, cast
 
 try:
@@ -31,6 +32,7 @@ except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
 from . import services
+from . import stats as stats_mod
 from .cli_parser import package_version
 from .commands import COMMANDS, by_id, hint_bar
 from .design import (
@@ -671,6 +673,23 @@ if _TEXTUAL_OK:
                 return commits == 0 and pulls == 0 and repos == 0
             return True
 
+        def _filter_tasks(
+            self,
+            base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]],
+            keep: Callable[[Task], bool],
+        ) -> list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]:
+            """Keep tasks matching a predicate plus their parent context."""
+            out: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]] = []
+            for plan, milestones in base:
+                kept_milestones: list[tuple[Milestone, list[Task]]] = []
+                for milestone, tasks in milestones:
+                    kept = [task for task in tasks if keep(task)]
+                    if kept:
+                        kept_milestones.append((milestone, kept))
+                if kept_milestones:
+                    out.append((plan, kept_milestones))
+            return out
+
         def _filter_source_tree(
             self,
             base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]],
@@ -679,21 +698,18 @@ if _TEXTUAL_OK:
             """Keep rows whose cached provenance matches the active source filter."""
             if self.source_filter == "all":
                 return base
-            if self.source_filter in ("claims", "blocked"):
+            if self.source_filter in ("claims", "blocked", "attention"):
                 claims = self.store.claims_map()
-                out: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]] = []
-                for plan, milestones in base:
-                    kept_milestones: list[tuple[Milestone, list[Task]]] = []
-                    for milestone, tasks in milestones:
-                        if self.source_filter == "claims":
-                            kept = [task for task in tasks if task.id in claims]
-                        else:
-                            kept = [task for task in tasks if task.blocked]
-                        if kept:
-                            kept_milestones.append((milestone, kept))
-                    if kept_milestones:
-                        out.append((plan, kept_milestones))
-                return out
+                attention = (
+                    stats_mod.attention_ids(self.store)
+                    if self.source_filter == "attention"
+                    else set()
+                )
+                if self.source_filter == "claims":
+                    return self._filter_tasks(base, lambda task: task.id in claims)
+                if self.source_filter == "blocked":
+                    return self._filter_tasks(base, lambda task: task.blocked)
+                return self._filter_tasks(base, lambda task: task.id in attention)
             out = []
             for plan, milestones in base:
                 kept_ms: list[tuple[Milestone, list[Task]]] = []
@@ -782,6 +798,9 @@ if _TEXTUAL_OK:
                 f"{open_tasks} open",
                 f"{counts['plans_doing']} doing",
             ]
+            attention = len(stats_mod.attention_ids(self.store))
+            if attention:
+                bits.append(f"attention {attention}")
             if self.status_filter is not None:
                 bits.append(f"status {self.status_filter.value}")
             if self.source_filter != "all":
@@ -1108,7 +1127,16 @@ if _TEXTUAL_OK:
                 f"status filter: {self.status_filter.value if self.status_filter else 'all'}"
             )
 
-        SOURCE_FILTERS = ("all", "linked", "pr", "stale", "unlinked", "claims", "blocked")
+        SOURCE_FILTERS = (
+            "all",
+            "linked",
+            "pr",
+            "stale",
+            "unlinked",
+            "claims",
+            "blocked",
+            "attention",
+        )
 
         def action_filter_source(self) -> None:
             """Cycle cached provenance filters."""

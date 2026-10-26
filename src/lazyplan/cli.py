@@ -1372,6 +1372,58 @@ def _cmd_delete_criteria(store: Store, args: argparse.Namespace, actor: str) -> 
     return _emit_record(args, line, {"ok": True, "deleted": f"criteria #{args.id}"})
 
 
+def _criterion_link(store: Store, args: argparse.Namespace, actor: str, relate: bool) -> int:
+    criterion = store.get_criterion(args.id)
+    if criterion is None:
+        print(msg_not_found("criterion", args.id), file=sys.stderr)
+        return 1
+    task = store.get_task(args.task)
+    if task is None:
+        print(msg_not_found("task", args.task), file=sys.stderr)
+        return 1
+    try:
+        if relate:
+            store.relate_criterion(args.id, args.task, actor=actor)
+        else:
+            if not store.unrelate_criterion(args.id, args.task, actor=actor):
+                print(
+                    msg_error(
+                        ValueError(f"criterion #{args.id} is not linked to task #{args.task}")
+                    ),
+                    file=sys.stderr,
+                )
+                return 1
+    except (KeyError, ValueError) as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 1
+    payload = {
+        "link": {
+            "criterion_id": args.id,
+            "task_id": args.task,
+            "task": task.title,
+            "linked": relate,
+        }
+    }
+    if args.json:
+        return _emit(args, payload)
+    if porcelain.enabled(args):
+        print(
+            porcelain.link_row(args.id, "linked" if relate else "unlinked", args.task, task.title)
+        )
+    else:
+        verb = "linked" if relate else "unlinked"
+        print(f"{verb} criterion #{args.id} {'to' if relate else 'from'} T{args.task} {task.title}")
+    return 0
+
+
+def _cmd_criterion_relate(store: Store, args: argparse.Namespace, actor: str) -> int:
+    return _criterion_link(store, args, actor, True)
+
+
+def _cmd_criterion_unrelate(store: Store, args: argparse.Namespace, actor: str) -> int:
+    return _criterion_link(store, args, actor, False)
+
+
 def _cmd_git_scan(store: Store, args: argparse.Namespace, actor: str) -> int:
     if args.id is not None and not args.kind:
         print(msg_error(ValueError("--id needs --kind")), file=sys.stderr)
@@ -2033,6 +2085,8 @@ _GROUP_CMDS: dict[tuple[str, str], str] = {
     ("criterion", "tick"): "check",
     ("criterion", "untick"): "uncheck",
     ("criterion", "delete"): "delete-criteria",
+    ("criterion", "relate"): "criterion-relate",
+    ("criterion", "unrelate"): "criterion-unrelate",
     ("git", "status"): "git-status",
     ("git", "scan"): "git-scan",
     ("pr", "auth"): "pr-auth",
@@ -2070,6 +2124,8 @@ _COMMANDS: dict[str, Callable[[Store, argparse.Namespace, str], int]] = {
     "check": _cmd_check,
     "uncheck": _cmd_uncheck,
     "delete-criteria": _cmd_delete_criteria,
+    "criterion-relate": _cmd_criterion_relate,
+    "criterion-unrelate": _cmd_criterion_unrelate,
     "link": _cmd_link,
     "unlink": _cmd_unlink,
     "commits": _cmd_commits,

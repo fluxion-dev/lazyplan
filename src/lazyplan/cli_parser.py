@@ -574,6 +574,16 @@ def build_parser() -> argparse.ArgumentParser:
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="criterion id")
     _a = _actions.add_parser("delete", help="delete one criterion", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="criterion id")
+    _a = _actions.add_parser(
+        "relate", help="record that a task proves a criterion", parents=[common]
+    )
+    _a.add_argument("--id", type=int, required=True, metavar="ID", help="criterion id")
+    _a.add_argument("--task", type=int, required=True, metavar="ID", help="proving task id")
+    _a = _actions.add_parser(
+        "unrelate", help="remove a criterion-task proof relation", parents=[common]
+    )
+    _a.add_argument("--id", type=int, required=True, metavar="ID", help="criterion id")
+    _a.add_argument("--task", type=int, required=True, metavar="ID", help="proving task id")
 
     _group, _actions = _noun_group("git", "inspect the checkouts linked to a row (no network)")
     _a = _actions.add_parser(

@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import contextlib
+import io
+import json
 import os
 import sys
 import tempfile
@@ -10,6 +13,7 @@ import unittest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from lazyplan import services  # noqa: E402
+from lazyplan.cli import main as lpui_main  # noqa: E402
 from lazyplan.store import Store  # noqa: E402
 
 
@@ -85,6 +89,64 @@ class TestCriterionLinks(unittest.TestCase):
             self.store.all_criterion_links(),
             [{"criterion_id": self.criterion.id, "task_id": self.task.id}],
         )
+
+
+class TestCriterionLinkCli(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.db = os.path.join(self.tmp.name, "cli.db")
+        store = Store(self.db)
+        plan = store.add_plan("P", actor="fixture")
+        milestone = store.add_milestone(plan.id, "M", actor="fixture")
+        store.add_task(milestone.id, "T", actor="fixture")
+        store.add_criteria("plan", plan.id, "Works", actor="fixture")
+        self.old_home = os.environ.get("HOME")
+        self.old_setup = os.environ.get("LAZYPLAN_NO_SETUP")
+        os.environ["HOME"] = self.tmp.name
+        os.environ["LAZYPLAN_NO_SETUP"] = "1"
+
+    def tearDown(self):
+        for key, value in (("HOME", self.old_home), ("LAZYPLAN_NO_SETUP", self.old_setup)):
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+        self.tmp.cleanup()
+
+    def _run(self, *argv: str) -> tuple[int, str, str]:
+        out = io.StringIO()
+        err = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = lpui_main(["--db", self.db, "--actor", "alice", *argv])
+        return code, out.getvalue(), err.getvalue()
+
+    def test_relate_and_unrelate_json(self):
+        code, out, err = self._run("--json", "criterion", "relate", "--id", "1", "--task", "1")
+        self.assertEqual(code, 0, err)
+        self.assertEqual(json.loads(out)["link"]["task"], "T")
+        self.assertEqual(Store(self.db).criterion_tasks(1)[0].id, 1)
+
+        code, out, err = self._run("--json", "criterion", "unrelate", "--id", "1", "--task", "1")
+        self.assertEqual(code, 0, err)
+        self.assertFalse(json.loads(out)["link"]["linked"])
+        self.assertEqual(Store(self.db).criterion_tasks(1), [])
+
+    def test_relate_porcelain(self):
+        code, out, err = self._run("--porcelain", "criterion", "relate", "--id", "1", "--task", "1")
+        self.assertEqual(code, 0, err)
+        self.assertEqual(
+            out.rstrip("\n").split("\t"),
+            ["link", "1", "linked", "T", "criterion:1", "task:1"],
+        )
+
+    def test_duplicate_and_missing_exit_one(self):
+        self.assertEqual(self._run("criterion", "relate", "--id", "1", "--task", "1")[0], 0)
+        code, out, err = self._run("criterion", "relate", "--id", "1", "--task", "1")
+        self.assertEqual(code, 1)
+        self.assertIn("already linked", err)
+        code, out, err = self._run("criterion", "relate", "--id", "99", "--task", "1")
+        self.assertEqual(code, 1)
+        self.assertIn("criterion 99", err)
 
 
 if __name__ == "__main__":

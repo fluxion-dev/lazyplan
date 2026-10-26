@@ -22,10 +22,12 @@ fix the page.
 ## Current content targets
 
 - Primary phrase: terminal plan tracker.
-- Secondary: plan tracker for coding agents, agent planning, local plan
-  database, git provenance, pull request tracking.
-- The provenance section and FAQ exist to cover those intents without keyword
-  stuffing. Keep answers specific and matched to shipped behavior.
+- Secondary: plan tracker for coding agents, agent planning, agent
+  coordination, MCP server, flow metrics, completion gates, issue import,
+  local plan database, git provenance, pull request tracking.
+- The coordination, provenance, collaboration, imports, and FAQ sections exist
+  to cover those intents without keyword stuffing. Keep answers specific and
+  matched to shipped behavior.
 
 ## Google Search Console
 
@@ -177,3 +179,25 @@ the bump `publish` job.
 
 Human-only follow-ups: submit the updated URL to search engines, record
 Lighthouse/mobile scores, and confirm the social card in a real client.
+
+### v0.26.0 pass (2026-10-26)
+
+After: version pins, release asset URLs, JSON-LD `version`/`softwareVersion`,
+and the sitemap `lastmod` moved to 0.26.0. The page gained a What's new band
+plus coordination, collaboration, search/bulk, and imports sections, and the
+agent section now leads with MCP, claims, stats, gates, and imports. Eleven new
+deterministic screenshots cover coordination, flow health, trace/lint, MCP,
+comments, share/sync, gates, imports, search/bulk, and the bulk palette; the
+hero collage and 1200x630 social card were refreshed.
+
+Also fixed from the Lighthouse pass: darker brand blue for white-text contrast,
+lighter captions, underlined in-text links, sized release badges, and 24px
+minimum nav/FAQ targets. Built-site Lighthouse: 99 performance, 100
+accessibility, 100 best practices, 100 SEO. Playwright at 360, 768, and 1440
+widths reported `scrollWidth == viewport`, so there is no horizontal overflow.
+
+Verified live: the page contains 0.26.0 plus the new copy, every new WebP
+returns 200, `screens/og-lpui-and-agent.png` is 1200x630, `sitemap.xml` carries
+`lastmod` 2026-10-26, `robots.txt` points at the sitemap, and the curated
+release notes are live. Human-only follow-ups: resubmit the URL to search
+engines and confirm the social card in a real client.

@@ -89,6 +89,43 @@ def _activity_metrics(
     return done_times, cycles, reopened
 
 
+ATTENTION_STALE_SECS = 24 * 3600
+
+
+def attention_ids(
+    store: Store, stale_after: float = ATTENTION_STALE_SECS, now: float | None = None
+) -> set[int]:
+    """Task ids the TUI should surface as needing attention."""
+    stamp = time.time() if now is None else now
+    added, transitions = _event_maps(_events(store))
+    claims = store.claims_map()
+    forge = store.forge_links_map()
+    ids: set[int] = set()
+    for plan in store.list_plans():
+        for milestone in store.list_milestones(plan.id):
+            for task in store.list_tasks(milestone.id):
+                claim = claims.get(task.id)
+                if claim is not None and claim.expired(stamp):
+                    ids.add(task.id)
+                if task.blocked:
+                    ids.add(task.id)
+                if task.status.value == "doing":
+                    starts = [
+                        when
+                        for when, status, _actor in transitions.get(task.id, [])
+                        if status == "doing"
+                    ]
+                    if starts and stamp - starts[-1] > stale_after:
+                        ids.add(task.id)
+                if task.status.value == "done" and store.open_criteria("task", task.id):
+                    ids.add(task.id)
+                links = forge.get(("task", task.id), [])
+                if any(str(link.checks or "") == "fail" for link in links):
+                    ids.add(task.id)
+    _ = added
+    return ids
+
+
 def compute(
     store: Store,
     since: float,

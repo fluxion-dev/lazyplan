@@ -328,7 +328,7 @@ COMMANDS: tuple[Command, ...] = (
         handler="filter_source",
         aliases=("cycle source filter", "source filter", "unlinked", "stale"),
         help_group="FIND",
-        help_hint="cycle all / linked / PR / stale / unlinked / claims / blocked",
+        help_hint="cycle all / linked / PR / stale / unlinked / claims / blocked / attention",
     ),
     Command(
         id="toggle-done",

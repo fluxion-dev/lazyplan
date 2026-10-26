@@ -39,6 +39,8 @@ examples:
   lpui --porcelain criterion relate --id 1 --task 3
   lpui --porcelain trace --plan 1        # criterion -> task -> commit/PR
   lpui --porcelain lint --plan 1         # plan-quality findings
+  lpui mcp                               # typed MCP server on stdio
+  lpui --actor helper mcp --read-only    # read-only MCP for reviews
   lpui --porcelain task add --milestone 1 --title "Do X" --desc "approach"
   lpui plan show --id 1                  show one row with its why, what, checklist, and children
   lpui --actor alice plan add --title "API v2" --why ".." --what ".."

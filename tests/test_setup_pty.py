@@ -1,13 +1,17 @@
 """Drive the real setup wizard through a pseudo-terminal."""
 
 import os
-import pty
 import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 
-from home_sandbox import sandbox_env  # noqa: E402
+from home_sandbox import sandbox_env
+
+try:
+    import pty
+except ImportError:
+    pty = None  # type: ignore[assignment]
 
 ROOT = Path(__file__).resolve().parent.parent
 LPUI = ROOT / ".venv" / "bin" / "lpui"
@@ -41,7 +45,9 @@ def run_pty(argv: list[str], inputs: list[str], env: dict[str, str], cwd: Path) 
     return proc.returncode, b"".join(chunks).decode(errors="replace")
 
 
-@unittest.skipUnless(LPUI.is_file(), "venv lpui entry point missing")
+@unittest.skipUnless(
+    pty is not None and LPUI.is_file(), "needs a pseudo-terminal and the venv lpui"
+)
 class TestSetupWizard(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

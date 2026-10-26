@@ -103,6 +103,7 @@ class PayloadCase(unittest.TestCase):
         self.fail(f"missing rule {rule_type}")
 
 
+@unittest.skipIf(os.name == "nt", "drives a POSIX shell script with a fake gh on PATH")
 class ScriptCase(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

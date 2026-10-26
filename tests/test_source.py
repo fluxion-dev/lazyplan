@@ -95,7 +95,8 @@ class TestDiffParsing(unittest.TestCase):
 class TestSourceTrail(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.repo = os.path.join(self.tmp.name, "repo")
+        # The store and git report resolved paths; /var is a symlink on macOS.
+        self.repo = os.path.realpath(os.path.join(self.tmp.name, "repo"))
         os.makedirs(self.repo)
         subprocess.run(["git", "init", "-q", "-b", "main", self.repo], check=True, timeout=10)
         subprocess.run(

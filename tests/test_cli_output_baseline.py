@@ -149,8 +149,12 @@ class TestCliBaseline(unittest.TestCase):
         self.assertEqual(code, 0, name)
         out = buf.getvalue()
         out = re.sub(r'"ts": [0-9.]+', '"ts": <ts>', out)
-        for raw in (self.tmp.name, json.dumps(self.tmp.name)[1:-1]):
+        # Some commands report the resolved cwd; /var is a symlink to
+        # /private/var on macOS, so normalize both spellings.
+        roots = {self.tmp.name, os.path.realpath(self.tmp.name)}
+        for raw in sorted(roots, key=len, reverse=True):
             out = out.replace(raw, "<tmp>")
+            out = out.replace(json.dumps(raw)[1:-1], "<tmp>")
         return re.sub(r'<tmp>[^\s"]*', lambda m: re.sub(r"\\+", "/", m.group(0)), out)
 
     def test_every_baseline_case_is_pinned(self):

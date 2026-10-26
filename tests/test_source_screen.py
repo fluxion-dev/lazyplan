@@ -37,7 +37,7 @@ def _git_available() -> bool:
 class TestSourceScreen(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.repo = os.path.join(self.tmp.name, "repo")
+        self.repo = os.path.realpath(os.path.join(self.tmp.name, "repo"))
         os.makedirs(self.repo)
         subprocess.run(["git", "init", "-q", "-b", "main", self.repo], check=True, timeout=10)
         subprocess.run(

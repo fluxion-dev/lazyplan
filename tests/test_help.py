@@ -145,7 +145,10 @@ class TestManPageInstalled(unittest.TestCase):
             ["man", "--warnings", "-E", "UTF-8", "-l", "-Tutf8", str(ROOT / "docs" / "lpui.1")],
             capture_output=True,
             encoding="utf-8",
+            errors="replace",
         )
+        if proc.returncode != 0 and "illegal option" in proc.stderr:
+            self.skipTest("man(1) lacks GNU --warnings/-E/-T options")
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertEqual(proc.stderr.strip(), "", f"man warnings: {proc.stderr}")
         self.assertIn("LPUI", proc.stdout)

@@ -16,7 +16,8 @@ from lazyplan.store import Store
 class TestRepoScope(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.repo = os.path.join(self.tmp.name, "myproj")
+        # Resolution code realpath()s its input; /var is a symlink on macOS.
+        self.repo = os.path.realpath(os.path.join(self.tmp.name, "myproj"))
         os.makedirs(os.path.join(self.repo, ".git"))  # fake repo root (fallback walk)
         os.makedirs(os.path.join(self.repo, "sub"))
         self.old_cwd = os.getcwd()
@@ -165,7 +166,7 @@ class TestRepoScope(unittest.TestCase):
 class TestLegacyPlanDir(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.repo = os.path.join(self.tmp.name, "myproj")
+        self.repo = os.path.realpath(os.path.join(self.tmp.name, "myproj"))
         os.makedirs(os.path.join(self.repo, ".git"))  # fake repo root (fallback walk)
         self.old_cwd = os.getcwd()
         self.old_env = os.environ.pop("LAZYPLAN_DB", None)
@@ -316,7 +317,7 @@ class TestSharedHome(unittest.TestCase):
 
         from lazyplan.repo import walk_up_team_db
 
-        outer = os.path.join(self.tmp.name, "outer")
+        outer = os.path.realpath(os.path.join(self.tmp.name, "outer"))
         inner = os.path.join(outer, "inner", "deep")
         os.makedirs(os.path.join(outer, ".agents", "lazyplan"))
         os.makedirs(inner)
@@ -330,7 +331,7 @@ class TestSharedHome(unittest.TestCase):
 
         from lazyplan.repo import walk_up_team_db
 
-        outer = os.path.join(self.tmp.name, "outer")
+        outer = os.path.realpath(os.path.join(self.tmp.name, "outer"))
         inner = os.path.join(outer, "inner")
         os.makedirs(os.path.join(outer, ".agents", "lazyplan"))
         os.makedirs(os.path.join(inner, ".agents", "lazyplan"))
@@ -422,7 +423,7 @@ class TestSharedSeed(unittest.TestCase):
 class TestInitParity(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.repo = os.path.join(self.tmp.name, "myproj")
+        self.repo = os.path.realpath(os.path.join(self.tmp.name, "myproj"))
         os.makedirs(os.path.join(self.repo, ".git"))
         self.bare = os.path.join(self.tmp.name, "bare")
         os.makedirs(self.bare)

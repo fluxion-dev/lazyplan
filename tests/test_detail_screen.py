@@ -105,7 +105,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
     async def test_detail_shows_git_state_and_commit_url(self):
         from textual.widgets import Static
 
-        repo = os.path.join(self.tmp.name, "repo")
+        repo = os.path.realpath(os.path.join(self.tmp.name, "repo"))
         os.makedirs(repo)
         subprocess.run(["git", "init", "-q", "-b", "main", repo], check=True, timeout=10)
         subprocess.run(["git", "-C", repo, "config", "user.email", "t@t.t"], check=True, timeout=10)
@@ -199,7 +199,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
 
         from lazyplan.source_screen import SourceScreen
 
-        repo = os.path.join(self.tmp.name, "source-repo")
+        repo = os.path.realpath(os.path.join(self.tmp.name, "source-repo"))
         os.makedirs(repo)
         subprocess.run(["git", "init", "-q", "-b", "main", repo], check=True, timeout=10)
         subprocess.run(["git", "-C", repo, "config", "user.email", "t@t.t"], check=True, timeout=10)

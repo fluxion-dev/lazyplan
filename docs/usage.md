@@ -257,6 +257,7 @@ Your agent is expected to work from the plan, not invent it:
 - Check flow health with `lpui stats --since 7.days`; the human screen uses the Attention filter.
 - Leave review comments with `comment add` and share a read-only plan with `share`; sync is plan-granularity.
 - Use `task finish --require-pr --require-checks` when done must wait for evidence; overrides are recorded.
+- Import provider issues with `issue import`; re-import refreshes source metadata only and never writes back.
 - Relate every plan criterion to a proving task and run `lpui --porcelain
   lint --plan P` before check-off.
 - Start a session with `lpui --porcelain next` to claim work, or
@@ -504,6 +505,32 @@ checks) for tasks that have linked PRs. Starting a task records an existing
 branch; a second open task on the same checkout or remote branch is rejected
 and names the owner. lazyplan never creates branches or worktrees.
 
+### Issue imports
+
+Bring provider issues into the journal as plans or tasks:
+
+```bash
+lpui issue import --provider github --repo owner/repo
+lpui issue import --provider github --repo owner/repo --as task --milestone 1
+lpui issue import --provider linear --file linear-export.json
+lpui issue import --provider linear --file linear-export.json --dry-run
+```
+
+GitHub uses the same token precedence as PR refresh
+(`LAZYPLAN_GITHUB_TOKEN`, `GITHUB_TOKEN`, `GH_TOKEN`, then `gh auth token`).
+Linear reads a JSON export file. GitHub pull requests mixed into an issues
+response are skipped.
+
+Imports are one-way and cached: the row carries provider, number, URL, and
+state; re-importing the same provider + external id refreshes only that cached
+metadata and never overwrites the row's title or description. `--dry-run`
+reports creates and updates without writing. `show`, `trace`, and porcelain
+list the source refs, and export/import preserves them.
+
+Only `issue import --repo` calls a provider; all reads stay offline. lazyplan
+never writes back to GitHub or Linear, stores raw provider payloads, or
+stores tokens.
+
 ### Session brief and accuracy audit
 
 Start a session with the brief, update after each commit, and close with the
@@ -608,6 +635,8 @@ lpui comment resolve --comment 1
 lpui share --plan 1 [--format html|json] [--out PATH]
 lpui sync --file dump.json [--dry-run]
 lpui task finish --id 3 [--require-pr] [--require-checks] [--override REASON]
+lpui issue import --provider github --repo owner/repo [--as plan|task] [--dry-run]
+lpui issue import --provider linear --file export.json [--as plan|task] [--dry-run]
 lpui link --kind task --id 1 [--sha HASH] [--repo PATH]
 lpui commits --kind task --id 1 [--refresh] [--files]
 lpui show --kind task --id 1 [--files]

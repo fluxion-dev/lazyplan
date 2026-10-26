@@ -43,6 +43,8 @@ examples:
   lpui comment add --kind task --id 3 --text "Review @alice"
   lpui share --plan 1                     # read-only HTML snapshot
   lpui sync --file backup.json --dry-run  # plan-level merge report
+  lpui issue import --provider github --repo owner/repo
+  lpui issue import --provider linear --file export.json --dry-run
   lpui mcp                               # typed MCP server on stdio
   lpui --actor helper mcp --read-only    # read-only MCP for reviews
   lpui --porcelain task add --milestone 1 --title "Do X" --desc "approach"

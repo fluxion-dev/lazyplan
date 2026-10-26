@@ -26,6 +26,7 @@ from . import (
     setup_ui,
 )
 from . import lint as lint_mod
+from . import mcp as mcp_mod
 from . import trace as trace_mod
 from .cli_parser import build_parser, package_version
 from .design import (
@@ -796,6 +797,12 @@ def _cmd_note(store: Store, args: argparse.Namespace, actor: str) -> int:
         when = time.strftime("%Y-%m-%d %H:%M", time.localtime(note.ts)) if note.ts else "unknown"
         print(f"@{note.actor} {when}: {note.text}")
     return 0
+
+
+def _cmd_mcp(store: Store | None, args: argparse.Namespace, actor: str) -> int:
+    del store
+    path = resolve_db_path(args.db)
+    return mcp_mod.run(str(path), actor=actor, read_only=bool(args.read_only))
 
 
 def _cmd_hook(store: Store | None, args: argparse.Namespace, actor: str) -> int:
@@ -2318,6 +2325,7 @@ def _dispatch_storeless(args: argparse.Namespace, actor: str) -> int | None:
         "doctor": _cmd_doctor,
         "audit": _cmd_audit,
         "brief": _cmd_brief,
+        "mcp": _cmd_mcp,
         "hook": _cmd_hook,
         "completion": _cmd_completion,
     }

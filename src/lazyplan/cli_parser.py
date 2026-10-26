@@ -380,6 +380,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
     li.add_argument("--plan", type=int, required=True, metavar="ID", help="plan to lint")
     li.add_argument("--strict", action="store_true", help="exit 2 when any finding exists")
+    mc = sub.add_parser(
+        "mcp",
+        help="serve the plan over MCP on stdio for agent hosts",
+        parents=[common],
+    )
+    mc.add_argument(
+        "--read-only",
+        action="store_true",
+        help="expose read tools only and never create the database",
+    )
     tr = sub.add_parser(
         "trace",
         help="trace acceptance criteria to tasks, commits, and pull requests",

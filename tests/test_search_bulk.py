@@ -10,6 +10,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from lazyplan.commands import COMMANDS
 from lazyplan.store import Store
 
 try:
@@ -128,6 +129,11 @@ class TestSearchBulk(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             self.assertIsNotNone(self.store.get_claim(self.t1))
             self.assertIsNotNone(self.store.get_claim(self.t2))
+
+    def test_no_bulk_delete_or_archive(self):
+        ids = {command.id for command in COMMANDS}
+        self.assertNotIn("bulk-delete", ids)
+        self.assertNotIn("bulk-archive", ids)
 
     async def test_large_search_is_bounded(self):
         store = Store(self.db)

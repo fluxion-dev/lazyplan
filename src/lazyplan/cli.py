@@ -835,24 +835,21 @@ def _comment_resolve(store: Store, args: argparse.Namespace, actor: str, resolve
     return _comment_result(args, comment)
 
 
-def _comment_scope(store: Store, args: argparse.Namespace) -> tuple[int, str, int] | None:
+def _comment_scope(store: Store, args: argparse.Namespace) -> int | None:
+    """Return an exit code when the comment scope is invalid."""
     if args.kind is None or args.id is None:
         print(f"error: comment {args.action} needs --kind and --id", file=sys.stderr)
-        return None
+        return 2
     if store.get_parent(args.kind, args.id) is None:
         print(msg_not_found(args.kind, args.id), file=sys.stderr)
-        return None
-    return 0, args.kind, args.id
+        return 1
+    return None
 
 
 def _comment_add(store: Store, args: argparse.Namespace, actor: str) -> int:
-    scope = _comment_scope(store, args)
-    if scope is not None and scope[0] == 0:
-        pass
-    elif scope is None and (args.kind is None or args.id is None):
-        return 2
-    else:
-        return 1
+    code = _comment_scope(store, args)
+    if code is not None:
+        return code
     if args.text is None or not args.text.strip():
         print("error: comment add needs --text", file=sys.stderr)
         return 2
@@ -862,13 +859,9 @@ def _comment_add(store: Store, args: argparse.Namespace, actor: str) -> int:
 
 
 def _comment_list(store: Store, args: argparse.Namespace) -> int:
-    scope = _comment_scope(store, args)
-    if scope is not None and scope[0] == 0:
-        pass
-    elif scope is None and (args.kind is None or args.id is None):
-        return 2
-    else:
-        return 1
+    code = _comment_scope(store, args)
+    if code is not None:
+        return code
     assert args.kind is not None and args.id is not None
     comments = store.list_comments(args.kind, args.id, mentions=args.mentions)
     if args.json:

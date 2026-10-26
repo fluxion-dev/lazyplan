@@ -517,6 +517,8 @@ lpui criterion unrelate --id 4 --task 3
 lpui --porcelain trace --plan 1
 lpui --porcelain lint --plan 1 [--strict]
 lpui audit --plan 1 [--min-trace 0.8]
+lpui mcp
+lpui mcp --read-only
 lpui link --kind task --id 1 [--sha HASH] [--repo PATH]
 lpui commits --kind task --id 1 [--refresh] [--files]
 lpui show --kind task --id 1 [--files]

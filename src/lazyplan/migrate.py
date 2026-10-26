@@ -61,6 +61,19 @@ CREATE TABLE IF NOT EXISTS comments (
     resolved INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_comments_parent ON comments(parent_kind, parent_id);
+CREATE TABLE IF NOT EXISTS issue_links (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    provider TEXT NOT NULL,
+    external_id TEXT NOT NULL,
+    number TEXT NOT NULL DEFAULT '',
+    url TEXT NOT NULL DEFAULT '',
+    title TEXT NOT NULL DEFAULT '',
+    state TEXT NOT NULL DEFAULT '',
+    row_kind TEXT NOT NULL CHECK (row_kind IN ('plan', 'milestone', 'task')),
+    row_id INTEGER NOT NULL,
+    updated_at REAL NOT NULL DEFAULT 0,
+    UNIQUE(provider, external_id)
+);
 CREATE TABLE IF NOT EXISTS criteria (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     parent_kind TEXT NOT NULL CHECK (parent_kind IN ('plan', 'milestone', 'task')),

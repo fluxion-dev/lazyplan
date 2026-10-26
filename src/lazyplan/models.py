@@ -92,6 +92,20 @@ class Note:
 
 
 @dataclass(frozen=True)
+class Issue:
+    """A provider issue normalized for import."""
+
+    provider: str
+    external_id: str
+    number: str
+    url: str
+    title: str
+    body: str = ""
+    state: str = ""
+    updated_at: float = 0.0
+
+
+@dataclass(frozen=True)
 class Comment:
     """A review comment on a plan, milestone, or task."""
 

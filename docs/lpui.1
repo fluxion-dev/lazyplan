@@ -894,6 +894,34 @@ who made this change (you see it in feed)
 what to do with a task Choices: add, edit, show, list, move, delete, block, unblock, start, finish\. Required\.
 .RE
 .TP
+.B lpui issue
+import provider issues into the journal
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B  ACTION
+what to do with a issue Choices: import\. Required\.
+.RE
+.TP
 .B lpui criterion
 add, list, tick, untick, or delete an acceptance criterion
 .RS

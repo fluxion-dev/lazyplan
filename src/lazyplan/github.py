@@ -84,6 +84,11 @@ class GitHubClient:
         """Pull requests associated with one merge commit."""
         return self.pulls_for_commit(ref, sha, force=force)
 
+    def issues(self, ref: RepoRef, state: str = "all", force: bool = False) -> FetchResult:
+        """Repository issues, excluding pull requests is the caller's job."""
+        path = f"/repos/{ref.owner}/{ref.repo}/issues?state={state}&per_page=100"
+        return self.get_json(path, force=force)
+
     def pull(self, ref: RepoRef, number: int, force: bool = False) -> FetchResult:
         """One pull request by number."""
         path = f"/repos/{ref.owner}/{ref.repo}/pulls/{number}"

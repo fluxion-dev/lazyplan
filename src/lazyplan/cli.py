@@ -25,6 +25,7 @@ from . import (
     setup_layout,
     setup_ui,
 )
+from . import issues as issues_mod
 from . import lint as lint_mod
 from . import mcp as mcp_mod
 from . import share as share_mod
@@ -42,7 +43,8 @@ from .design import (
     msg_no_vcs,
     msg_not_found,
 )
-from .forge import parse_pull_url, resolve_auth
+from .forge import RepoRef, parse_pull_url, resolve_auth
+from .github import GitHubClient, GitHubError
 from .models import Comment, Criterion, Milestone, Plan, Status, Task
 from .render import (
     render_commits,
@@ -611,6 +613,7 @@ def _trace_rows(payload: dict) -> list[str]:
                     f"task:{task['id']}",
                 )
             )
+            rows.extend(_issue_dict_rows(item.get("issues", [])))
             for commit in item.get("commits", []):
                 rows.append(_commit_row(commit, f"task:{task['id']}"))
             for pull in item.get("forge_links", []):
@@ -1225,6 +1228,21 @@ def _gate_row(gate: dict | None) -> list[str]:
     ]
 
 
+def _issue_dict_rows(items: list[dict]) -> list[str]:
+    """Porcelain issue-source rows."""
+    return [
+        porcelain.row(
+            "issue",
+            item.get("number") or item.get("external_id"),
+            item.get("state"),
+            item.get("title"),
+            f"{item.get('provider')}:{item.get('external_id')}",
+            item.get("url") or "-",
+        )
+        for item in items
+    ]
+
+
 def _comment_dict_rows(items: list[dict]) -> list[str]:
     """Comment rows from show/brief payload dicts."""
     return [
@@ -1264,6 +1282,7 @@ def _porcelain_show_lines(store: Store, kind: str, full: dict) -> list[str]:
         lines.extend(_criterion_dict_rows(full.get("criteria", [])))
         lines.extend(_note_dict_rows(full.get("notes", [])))
         lines.extend(_comment_dict_rows(full.get("comments", [])))
+        lines.extend(_issue_dict_rows(full.get("issues", [])))
         for entry in full.get("milestones", []):
             milestone = entry["milestone"]
             lines.append(
@@ -1292,6 +1311,7 @@ def _porcelain_show_lines(store: Store, kind: str, full: dict) -> list[str]:
                 lines.extend(_gate_row(task.get("gate")))
                 lines.extend(_note_dict_rows(task.get("notes", [])))
                 lines.extend(_comment_dict_rows(task.get("comments", [])))
+                lines.extend(_issue_dict_rows(task.get("issues", [])))
         return lines
     if kind == "milestone":
         milestone = full["milestone"]
@@ -1308,6 +1328,7 @@ def _porcelain_show_lines(store: Store, kind: str, full: dict) -> list[str]:
         lines.extend(_criterion_dict_rows(full.get("criteria", [])))
         lines.extend(_note_dict_rows(full.get("notes", [])))
         lines.extend(_comment_dict_rows(full.get("comments", [])))
+        lines.extend(_issue_dict_rows(full.get("issues", [])))
         for entry in full.get("tasks", []):
             task = entry["task"]
             lines.append(
@@ -1325,6 +1346,7 @@ def _porcelain_show_lines(store: Store, kind: str, full: dict) -> list[str]:
             lines.extend(_gate_row(task.get("gate")))
             lines.extend(_note_dict_rows(task.get("notes", [])))
             lines.extend(_comment_dict_rows(task.get("comments", [])))
+            lines.extend(_issue_dict_rows(task.get("issues", [])))
         return lines
     task = full["task"]
     lines.append(
@@ -1344,6 +1366,7 @@ def _porcelain_show_lines(store: Store, kind: str, full: dict) -> list[str]:
     lines.extend(_criterion_dict_rows(full.get("criteria", [])))
     lines.extend(_note_dict_rows(task.get("notes", [])))
     lines.extend(_comment_dict_rows(task.get("comments", [])))
+    lines.extend(_issue_dict_rows(task.get("issues", [])))
     return lines
 
 
@@ -1781,6 +1804,47 @@ def _cmd_delete_criteria(store: Store, args: argparse.Namespace, actor: str) -> 
         return 1
     line = porcelain.row("criterion", args.id, "deleted", "-", "-", "-")
     return _emit_record(args, line, {"ok": True, "deleted": f"criteria #{args.id}"})
+
+
+def _cmd_issue_import(store: Store, args: argparse.Namespace, actor: str) -> int:
+    if args.as_kind == "task":
+        if not args.milestone or store.get_milestone(args.milestone) is None:
+            print(msg_error(ValueError("--as task needs a valid --milestone")), file=sys.stderr)
+            return 2
+    try:
+        if args.provider == "github":
+            if not args.repo or "/" not in args.repo:
+                print("error: github import needs --repo OWNER/REPO", file=sys.stderr)
+                return 2
+            owner, repo = args.repo.split("/", 1)
+            client = GitHubClient(auth=resolve_auth(), store=store)
+            fetched = client.issues(RepoRef("github", "github.com", owner, repo))
+            parsed = issues_mod.parse_github(fetched.data)
+        else:
+            if not args.file:
+                print("error: linear import needs --file PATH", file=sys.stderr)
+                return 2
+            parsed = issues_mod.parse_linear(json.loads(Path(args.file).read_text()))
+    except (OSError, ValueError, GitHubError) as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 1
+    report = issues_mod.import_issues(
+        store,
+        parsed,
+        actor=actor,
+        as_kind=args.as_kind,
+        milestone=args.milestone,
+        dry_run=bool(args.dry_run),
+    )
+    if args.json:
+        return _emit(args, report)
+    print(
+        f"{'dry-run: ' if report['dry_run'] else ''}"
+        f"{len(report['created'])} created · {len(report['updated'])} updated"
+    )
+    for item in report["created"]:
+        print(f"  {item['provider']} {item['id']} -> {item['row_kind']} {item['row_id']}")
+    return 0
 
 
 def _criterion_link(store: Store, args: argparse.Namespace, actor: str, relate: bool) -> int:
@@ -2503,6 +2567,7 @@ _GROUP_CMDS: dict[tuple[str, str], str] = {
     ("criterion", "tick"): "check",
     ("criterion", "untick"): "uncheck",
     ("criterion", "delete"): "delete-criteria",
+    ("issue", "import"): "issue-import",
     ("criterion", "relate"): "criterion-relate",
     ("criterion", "unrelate"): "criterion-unrelate",
     ("git", "status"): "git-status",
@@ -2548,6 +2613,7 @@ _COMMANDS: dict[str, Callable[[Store, argparse.Namespace, str], int]] = {
     "check": _cmd_check,
     "uncheck": _cmd_uncheck,
     "delete-criteria": _cmd_delete_criteria,
+    "issue-import": _cmd_issue_import,
     "criterion-relate": _cmd_criterion_relate,
     "criterion-unrelate": _cmd_criterion_unrelate,
     "link": _cmd_link,

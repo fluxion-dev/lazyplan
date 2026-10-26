@@ -57,6 +57,12 @@ CREATE TABLE IF NOT EXISTS criteria (
     done INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_criteria_parent ON criteria(parent_kind, parent_id);
+CREATE TABLE IF NOT EXISTS criterion_links (
+    criterion_id INTEGER NOT NULL REFERENCES criteria(id) ON DELETE CASCADE,
+    task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    PRIMARY KEY (criterion_id, task_id)
+);
+CREATE INDEX IF NOT EXISTS idx_criterion_links_task ON criterion_links(task_id);
 CREATE TABLE IF NOT EXISTS vcs_links (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     parent_kind TEXT NOT NULL CHECK (parent_kind IN ('plan', 'milestone', 'task')),

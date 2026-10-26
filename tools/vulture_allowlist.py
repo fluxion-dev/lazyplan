@@ -78,6 +78,9 @@ _.claim_task
 _.renew_claim
 _.release_claim
 _.list_claims
+_.unrelate_criterion
+_.criterion_tasks
+_.task_criteria
 GitHubClient
 _.pulls_for_commit
 _.pull

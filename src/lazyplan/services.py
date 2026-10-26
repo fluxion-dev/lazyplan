@@ -1455,7 +1455,11 @@ def export_all(store: Store) -> dict:
                 "milestones": milestones,
             }
         )
-    return {"lazyplan": 1, "plans": plans}
+    return {
+        "lazyplan": 1,
+        "plans": plans,
+        "criterion_links": store.all_criterion_links(),
+    }
 
 
 def export_plan(store: Store, plan_id: int) -> dict | None:
@@ -1485,7 +1489,10 @@ def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]
         "forge_links": 0,
         "claims": 0,
         "notes": 0,
+        "criterion_links": 0,
     }
+    criteria_map: dict[int, int] = {}
+    tasks_map: dict[int, int] = {}
 
     def _apply_status(kind: str, obj_id: int, status: str) -> None:
         if status and status != Status.TODO.value:
@@ -1496,6 +1503,7 @@ def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]
             nc = store.add_criteria(kind, obj_id, c.get("text", ""), actor=actor)
             if c.get("done"):
                 store.set_criteria(nc.id, True, actor=actor)
+            criteria_map[int(c.get("id", 0) or 0)] = nc.id
             counts["criteria"] += 1
 
     def _import_links(kind: str, obj_id: int, items: list) -> None:
@@ -1647,6 +1655,7 @@ def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]
                         actor=actor,
                     )
                 counts["tasks"] += 1
+                tasks_map[int(tp.get("id", 0) or 0)] = nt.id
                 _import_criteria("task", nt.id, tentry.get("criteria", []))
                 _import_notes("task", nt.id, tentry.get("notes", []))
                 _import_links("task", nt.id, tentry.get("links", []))
@@ -1655,4 +1664,16 @@ def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]
                 _import_claim(nt.id, tentry.get("claim"))
         # Milestones landed after the plan's own status: recompute it.
         heal(store, "plan", np.id, actor)
+    for link in data.get("criterion_links", []):
+        if not isinstance(link, dict):
+            continue
+        cid = criteria_map.get(int(link.get("criterion_id", 0) or 0))
+        tid = tasks_map.get(int(link.get("task_id", 0) or 0))
+        if cid is None or tid is None:
+            continue
+        try:
+            store.relate_criterion(cid, tid, actor=actor)
+        except (KeyError, ValueError):
+            continue
+        counts["criterion_links"] += 1
     return counts

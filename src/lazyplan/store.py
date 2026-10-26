@@ -849,6 +849,92 @@ class Store:
         self.log(actor, "criteria", "add", f"{parent_kind} #{parent_id}: {c.text[:80]}")
         return c
 
+    @staticmethod
+    def _row_to_criterion(r: sqlite3.Row) -> Criterion:
+        """Row to Criterion."""
+        return Criterion(
+            id=int(r["id"]),
+            parent_kind=str(r["parent_kind"]),
+            parent_id=int(r["parent_id"]),
+            text=str(r["text"]),
+            done=bool(r["done"]),
+        )
+
+    def get_criterion(self, cid: int) -> Criterion | None:
+        """Fetch one checklist item by id."""
+        with self._connect() as conn:
+            r = conn.execute("SELECT * FROM criteria WHERE id=?", (cid,)).fetchone()
+        return self._row_to_criterion(r) if r is not None else None
+
+    def relate_criterion(self, criterion_id: int, task_id: int, actor: str = "human") -> bool:
+        """Record that a task proves a criterion."""
+        if self.get_criterion(criterion_id) is None:
+            raise KeyError(f"criterion #{criterion_id} not found")
+        if self.get_task(task_id) is None:
+            raise KeyError(f"task #{task_id} not found")
+        with self._connect() as conn:
+            cur = conn.execute(
+                "INSERT OR IGNORE INTO criterion_links (criterion_id, task_id) VALUES (?,?)",
+                (criterion_id, task_id),
+            )
+            inserted = (cur.rowcount or 0) > 0
+        if not inserted:
+            raise ValueError(f"criterion #{criterion_id} is already linked to task #{task_id}")
+        self.log(
+            actor,
+            "criterion",
+            "relate",
+            f"criterion #{criterion_id} <- task #{task_id}",
+        )
+        return True
+
+    def unrelate_criterion(self, criterion_id: int, task_id: int, actor: str = "human") -> bool:
+        """Remove a criterion-task proof relation."""
+        with self._connect() as conn:
+            cur = conn.execute(
+                "DELETE FROM criterion_links WHERE criterion_id=? AND task_id=?",
+                (criterion_id, task_id),
+            )
+            removed = (cur.rowcount or 0) > 0
+        if removed:
+            self.log(
+                actor,
+                "criterion",
+                "unrelate",
+                f"criterion #{criterion_id} -/-> task #{task_id}",
+            )
+        return removed
+
+    def criterion_tasks(self, criterion_id: int) -> list[Task]:
+        """Tasks that prove one criterion, in task id order."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT t.* FROM tasks t"
+                " JOIN criterion_links l ON l.task_id=t.id"
+                " WHERE l.criterion_id=? ORDER BY t.id",
+                (criterion_id,),
+            ).fetchall()
+        return [self._row_to_task(r) for r in rows]
+
+    def task_criteria(self, task_id: int) -> list[Criterion]:
+        """Criteria proved by one task, in criterion id order."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT c.* FROM criteria c"
+                " JOIN criterion_links l ON l.criterion_id=c.id"
+                " WHERE l.task_id=? ORDER BY c.id",
+                (task_id,),
+            ).fetchall()
+        return [self._row_to_criterion(r) for r in rows]
+
+    def all_criterion_links(self) -> list[dict]:
+        """Every criterion-task relation, for export."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT criterion_id, task_id FROM criterion_links ORDER BY criterion_id, task_id"
+            ).fetchall()
+        return [dict(row) for row in rows]
+
     def list_criteria(self, parent_kind: str, parent_id: int) -> list[Criterion]:
         """Checklist items of a plan, milestone, or task."""
         check_parent_kind(parent_kind)

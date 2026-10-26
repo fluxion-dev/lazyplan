@@ -2451,10 +2451,13 @@ def _cmd_ui(store: Store, args: argparse.Namespace, actor: str) -> int:
 
 
 def _maybe_notice_update(args: argparse.Namespace) -> None:
-    """One stderr notice per process when a newer release exists; never breaks."""
-    if args.cmd in (None, "ui", "upgrade"):
+    """One stderr notice per process when a newer release exists; never breaks.
+
+    Agent-facing calls (hooks, MCP, porcelain, JSON) skip the network check.
+    """
+    if args.cmd in (None, "ui", "upgrade", "hook", "mcp"):
         return
-    if getattr(args, "json", False) or getattr(args, "version", False):
+    if getattr(args, "json", False) or getattr(args, "version", False) or porcelain.enabled(args):
         return
     try:
         latest = latest_version(timeout=NOTICE_TIMEOUT)

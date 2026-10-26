@@ -1,5 +1,6 @@
 """Update-availability notice: text builder plus TUI surface (mocked network)."""
 
+import argparse
 import os
 import sys
 import tempfile
@@ -48,6 +49,25 @@ class TestNoticeText(unittest.TestCase):
             text = upgrade.notice_text(info, "0.15.0", "0.16.0")
             assert text is not None
             self.assertIn("package manager", text)
+
+
+class TestNoticeSkipsAgentCalls(unittest.TestCase):
+    def _checked(self, **fields: object) -> bool:
+        args = argparse.Namespace(**{"json": False, "version": False, "porcelain": False, **fields})
+        with (
+            mock.patch.object(cli_mod, "latest_version", return_value="0.0.1") as latest,
+            mock.patch.dict(os.environ, {"LAZYPLAN_PORCELAIN": ""}),
+        ):
+            cli_mod._maybe_notice_update(args)
+        return latest.called
+
+    def test_agent_facing_calls_never_reach_the_network(self):
+        for fields in ({"cmd": "hook"}, {"cmd": "mcp"}, {"cmd": "list", "porcelain": True}):
+            with self.subTest(fields=fields):
+                self.assertFalse(self._checked(**fields))
+
+    def test_human_commands_still_check(self):
+        self.assertTrue(self._checked(cmd="list"))
 
 
 @unittest.skipUnless(tui_mod is not None and tui_mod._TEXTUAL_OK, "textual not installed")

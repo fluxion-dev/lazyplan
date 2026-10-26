@@ -183,26 +183,72 @@
 <a class="skip-link" href="#main">Skip to content</a>
 
 <nav aria-label="Primary" class="sticky top-0 z-40 border-b border-plan-border/80 bg-plan-canvas/85 backdrop-blur-md">
-  <div class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-5 gap-y-2 px-6 py-3">
+  <div class="relative mx-auto flex max-w-6xl items-center gap-x-4 px-6 py-2">
     <a href="#top" class="mr-auto inline-flex items-center gap-2 text-xl font-extrabold tracking-wide text-white no-underline"><img src="./logo.svg" alt="" width="32" height="32" class="h-8 w-8" aria-hidden="true">lazyplan<span class="text-viking-gold">.</span></a>
-    <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#whats-new">What's new</a>
-    <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#features">Features</a>
-    <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#screens">Screenshots</a>
-    <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#coordination">Coordination</a>
-    <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#provenance">Provenance</a>
-    <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#collaboration">Collaboration</a>
-    <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#search-bulk">Bulk edit</a>
-    <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#imports">Imports</a>
-    <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#quickstart">Quickstart</a>
-    <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#agents">For agents</a>
-    <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#faq">FAQ</a>
-    <a class="text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="#install">Install</a>
-    <a class="inline-flex items-center gap-1.5 text-sm text-zinc-300 no-underline hover:text-white hover:underline" href="https://github.com/fluxion-dev/lazyplan">
-      <!-- lucide:github -->
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-4 w-4"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
-      GitHub
-    </a>
-    <a class="rounded-lg bg-viking-blue px-3.5 py-1.5 text-sm font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="#install">Quick Install</a>
+
+    <div class="hidden items-center gap-x-5 md:flex">
+      <details class="nav-menu relative">
+        <summary class="nav-summary" aria-controls="nav-product" aria-expanded="false">Product</summary>
+        <div id="nav-product" class="nav-panel absolute left-0 top-full z-50 mt-2 w-60 rounded-xl border border-plan-border bg-plan-surface p-2 shadow-2xl shadow-black/50">
+          <a class="nav-link" href="#whats-new">What's new</a>
+          <a class="nav-link" href="#features">Features</a>
+          <a class="nav-link" href="#screens">Screenshots</a>
+          <a class="nav-link" href="#agents">For agents</a>
+        </div>
+      </details>
+
+      <details class="nav-menu relative">
+        <summary class="nav-summary" aria-controls="nav-capabilities" aria-expanded="false">Capabilities</summary>
+        <div id="nav-capabilities" class="nav-panel absolute left-0 top-full z-50 mt-2 w-60 rounded-xl border border-plan-border bg-plan-surface p-2 shadow-2xl shadow-black/50">
+          <a class="nav-link" href="#coordination">Coordination</a>
+          <a class="nav-link" href="#provenance">Provenance</a>
+          <a class="nav-link" href="#collaboration">Collaboration</a>
+          <a class="nav-link" href="#search-bulk">Bulk edit</a>
+          <a class="nav-link" href="#imports">Imports</a>
+        </div>
+      </details>
+
+      <details class="nav-menu nav-menu-right relative">
+        <summary class="nav-summary" aria-controls="nav-learn" aria-expanded="false">Learn</summary>
+        <div id="nav-learn" class="nav-panel absolute left-0 top-full z-50 mt-2 w-52 rounded-xl border border-plan-border bg-plan-surface p-2 shadow-2xl shadow-black/50">
+          <a class="nav-link" href="#quickstart">Quickstart</a>
+          <a class="nav-link" href="#faq">FAQ</a>
+        </div>
+      </details>
+
+      <a class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-zinc-300 no-underline transition hover:bg-white/5 hover:text-white" href="https://github.com/fluxion-dev/lazyplan" aria-label="lazyplan on GitHub" title="GitHub">
+        <!-- lucide:github -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-5 w-5"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+      </a>
+      <a class="rounded-lg bg-viking-blue px-3.5 py-1.5 text-sm font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="#install">Install</a>
+    </div>
+
+    <details class="nav-mobile md:hidden">
+      <summary class="nav-summary" aria-controls="nav-mobile" aria-expanded="false">Menu</summary>
+      <div id="nav-mobile" class="absolute left-0 right-0 top-full z-50 max-h-[calc(100vh-4rem)] overflow-y-auto border-b border-plan-border bg-plan-canvas px-6 pb-6 pt-3 shadow-2xl shadow-black/60">
+        <p class="nav-group-label">Product</p>
+        <a class="nav-mobile-link" href="#whats-new">What's new</a>
+        <a class="nav-mobile-link" href="#features">Features</a>
+        <a class="nav-mobile-link" href="#screens">Screenshots</a>
+        <a class="nav-mobile-link" href="#agents">For agents</a>
+        <p class="nav-group-label">Capabilities</p>
+        <a class="nav-mobile-link" href="#coordination">Coordination</a>
+        <a class="nav-mobile-link" href="#provenance">Provenance</a>
+        <a class="nav-mobile-link" href="#collaboration">Collaboration</a>
+        <a class="nav-mobile-link" href="#search-bulk">Bulk edit</a>
+        <a class="nav-mobile-link" href="#imports">Imports</a>
+        <p class="nav-group-label">Learn</p>
+        <a class="nav-mobile-link" href="#quickstart">Quickstart</a>
+        <a class="nav-mobile-link" href="#faq">FAQ</a>
+        <div class="mt-4 flex items-center gap-3 border-t border-plan-border pt-4">
+          <a class="rounded-lg bg-viking-blue px-3.5 py-2 text-sm font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="#install">Install</a>
+          <a class="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-zinc-300 no-underline transition hover:bg-white/5 hover:text-white" href="https://github.com/fluxion-dev/lazyplan">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-4 w-4"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+            GitHub
+          </a>
+        </div>
+      </div>
+    </details>
   </div>
 </nav>
 
@@ -832,6 +878,81 @@ sudo apt install ./lazyplan_0.26.0-1_amd64.deb
       }
     });
   }
+})();
+</script>
+
+
+<script>
+(function () {
+  'use strict';
+  var nav = document.querySelector('nav[aria-label="Primary"]');
+  if (!nav) {
+    return;
+  }
+  var menus = Array.prototype.slice.call(
+    nav.querySelectorAll('details.nav-menu, details.nav-mobile')
+  );
+  function sync(details) {
+    var summary = details.querySelector('summary');
+    if (summary) {
+      summary.setAttribute('aria-expanded', details.open ? 'true' : 'false');
+    }
+  }
+  function closeAll(except) {
+    menus.forEach(function (details) {
+      if (details !== except) {
+        details.open = false;
+      }
+      sync(details);
+    });
+  }
+  menus.forEach(function (details) {
+    var summary = details.querySelector('summary');
+    if (summary) {
+      summary.addEventListener('click', function () {
+        var willOpen = !details.open;
+        if (willOpen) {
+          closeAll(details);
+        }
+        summary.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+      });
+    }
+    sync(details);
+    details.addEventListener('toggle', function () {
+      sync(details);
+      if (details.open) {
+        closeAll(details);
+      }
+    });
+  });
+  document.addEventListener('click', function (event) {
+    if (!nav.contains(event.target)) {
+      closeAll(null);
+    }
+  });
+  document.addEventListener('keydown', function (event) {
+    if (event.key !== 'Escape') {
+      return;
+    }
+    var open = menus.filter(function (details) {
+      return details.open;
+    })[0];
+    if (!open) {
+      return;
+    }
+    event.preventDefault();
+    open.open = false;
+    sync(open);
+    var summary = open.querySelector('summary');
+    if (summary) {
+      summary.focus();
+    }
+  });
+  nav.querySelectorAll('a').forEach(function (link) {
+    link.addEventListener('click', function () {
+      closeAll(null);
+    });
+  });
 })();
 </script>
 

@@ -158,3 +158,23 @@ tests enforce the match.
   used by tree filter and add-criterion.
 - `ConfirmScreen(text, confirm_label, variant)`: one destructive confirm,
   Cancel focused by default.
+
+## Site navigation
+
+The marketing site keeps a compact primary bar. Desktop (768px and up) shows
+the logo, three disclosure menus, an icon-only GitHub link, and Install; mobile
+shows the logo and a Menu disclosure.
+
+- **Product:** What's new, Features, Screenshots, For agents.
+- **Capabilities:** Coordination, Provenance, Collaboration, Bulk edit, Imports.
+- **Learn:** Quickstart, FAQ.
+
+Use native `<details>`/`<summary>` so the menus work without JavaScript. A small
+enhancement closes other menus on open, closes on outside click and Escape,
+returns focus to the summary, keeps `aria-expanded` in sync, and closes after an
+anchor is chosen. Panels are absolute, the last desktop panel aligns right, and
+the mobile panel scrolls inside `calc(100vh - 4rem)`.
+
+A new destination joins an existing group; do not add another flat link beside
+the menus. Keep the bar one row at 64px or less, preserve 24px targets, and
+verify 360/768/1024/1440/1920 widths plus Lighthouse accessibility.

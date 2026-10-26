@@ -2,6 +2,7 @@ import os
 import sys
 import tempfile
 import unittest
+from contextlib import closing
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
@@ -19,6 +20,12 @@ class TestStore(unittest.TestCase):
 
     def tearDown(self):
         self.tmp.cleanup()
+
+    def test_writes_release_the_database_file(self):
+        self.store.add_plan("Site")
+        self.store.list_plans()
+        os.replace(self.db, self.db + ".moved")
+        self.assertTrue(os.path.isfile(self.db + ".moved"))
 
     def test_hierarchy(self):
         p = self.store.add_plan("Site", goal="why")
@@ -133,9 +140,8 @@ class TestStore(unittest.TestCase):
         s = Store(legacy)  # must migrate, not crash
         self.assertEqual(s.get_plan(1).name, "Old")
         self.assertEqual(s.get_plan(1).goal, "old-why")
-        legacy_cols = {
-            row[1] for row in sqlite3.connect(legacy).execute("PRAGMA table_info(plans)")
-        }
+        with closing(sqlite3.connect(legacy)) as conn:
+            legacy_cols = {row[1] for row in conn.execute("PRAGMA table_info(plans)")}
         self.assertNotIn("priority", legacy_cols)
         self.assertEqual(s.get_task(1).description, "")
         self.assertEqual(s.get_milestone(1).plan_id, 1)
@@ -161,10 +167,8 @@ class TestStore(unittest.TestCase):
         conn.close()
         s = Store(legacy)
         self.assertEqual([p.name for p in s.list_plans()], ["Old"])
-        cols = {
-            r[1]
-            for r in sqlite3.connect(legacy).execute("PRAGMA table_info(milestones)").fetchall()
-        }
+        with closing(sqlite3.connect(legacy)) as conn:
+            cols = {r[1] for r in conn.execute("PRAGMA table_info(milestones)").fetchall()}
         self.assertIn("plan_id", cols)
         self.assertNotIn("project_id", cols)
 

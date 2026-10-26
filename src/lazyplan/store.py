@@ -7,6 +7,8 @@ import os
 import sqlite3
 import time
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 from .kinds import KIND_ERROR, check_parent_kind, table_for
@@ -105,12 +107,17 @@ class Store:
         with self._connect() as conn:
             migrate(conn)
 
-    def _connect(self) -> sqlite3.Connection:
-        """Open a row-factory connection with foreign keys on."""
+    @contextmanager
+    def _connect(self) -> Iterator[sqlite3.Connection]:
+        """One transaction on a row-factory connection, closed on exit."""
         conn = sqlite3.connect(str(self.path))
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA foreign_keys = ON")
-        return conn
+        try:
+            conn.row_factory = sqlite3.Row
+            conn.execute("PRAGMA foreign_keys = ON")
+            with conn:
+                yield conn
+        finally:
+            conn.close()
 
     # -- events (agent feed) -------------------------------------------
     def log(self, actor: str, kind: str, action: str, detail: str = "") -> None:

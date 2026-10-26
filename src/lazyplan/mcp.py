@@ -141,9 +141,9 @@ class McpServer:
         """Tool definitions; write tools appear only outside read-only mode."""
         return [definition for definition, _handler in self._registry().values()]
 
-    def _registry(self) -> dict[str, tuple[dict, Any]]:
-        """Name -> (definition, handler); reads first, writes outside read-only."""
-        tools: dict[str, tuple[dict, Any]] = {
+    def _read_registry(self) -> dict[str, tuple[dict, Any]]:
+        """Read tools, always available."""
+        return {
             "brief": (
                 _tool(
                     "brief", "Session brief: active plan, doing task, next, gaps.", {"plan": _id()}
@@ -197,176 +197,179 @@ class McpServer:
             ),
             "info": (_tool("info", "Resolved database, scope, and counts.", {}), self._tool_info),
         }
-        if self.read_only:
-            return tools
-        tools.update(
-            {
-                "create_plan": (
-                    _tool(
-                        "create_plan",
-                        "Create a plan.",
-                        {"title": _str(), "why": _str(), "what": _str()},
-                        ["title"],
-                        False,
-                    ),
-                    self._tool_create_plan,
+
+    def _write_registry(self) -> dict[str, tuple[dict, Any]]:
+        """Write tools, omitted in read-only mode."""
+        return {
+            "create_plan": (
+                _tool(
+                    "create_plan",
+                    "Create a plan.",
+                    {"title": _str(), "why": _str(), "what": _str()},
+                    ["title"],
+                    False,
                 ),
-                "create_milestone": (
-                    _tool(
-                        "create_milestone",
-                        "Create a milestone.",
-                        {"plan": _id(), "title": _str(), "desc": _str()},
-                        ["plan", "title"],
-                        False,
-                    ),
-                    self._tool_create_milestone,
+                self._tool_create_plan,
+            ),
+            "create_milestone": (
+                _tool(
+                    "create_milestone",
+                    "Create a milestone.",
+                    {"plan": _id(), "title": _str(), "desc": _str()},
+                    ["plan", "title"],
+                    False,
                 ),
-                "create_task": (
-                    _tool(
-                        "create_task",
-                        "Create a task.",
-                        {"milestone": _id(), "title": _str(), "desc": _str()},
-                        ["milestone", "title"],
-                        False,
-                    ),
-                    self._tool_create_task,
+                self._tool_create_milestone,
+            ),
+            "create_task": (
+                _tool(
+                    "create_task",
+                    "Create a task.",
+                    {"milestone": _id(), "title": _str(), "desc": _str()},
+                    ["milestone", "title"],
+                    False,
                 ),
-                "edit_row": (
-                    _tool(
-                        "edit_row",
-                        "Edit a plan, milestone, or task.",
-                        {
-                            "kind": _kind(),
-                            "id": _id(),
-                            "title": _str(),
-                            "desc": _str(),
-                            "why": _str(),
-                        },
-                        ["kind", "id"],
-                        False,
-                    ),
-                    self._tool_edit,
+                self._tool_create_task,
+            ),
+            "edit_row": (
+                _tool(
+                    "edit_row",
+                    "Edit a plan, milestone, or task.",
+                    {
+                        "kind": _kind(),
+                        "id": _id(),
+                        "title": _str(),
+                        "desc": _str(),
+                        "why": _str(),
+                    },
+                    ["kind", "id"],
+                    False,
                 ),
-                "move_row": (
-                    _tool(
-                        "move_row",
-                        "Move a row to todo, doing, or done.",
-                        {
-                            "kind": _kind(),
-                            "id": _id(),
-                            "to": {"type": "string", "enum": ["todo", "doing", "done"]},
-                        },
-                        ["kind", "id", "to"],
-                        False,
-                    ),
-                    self._tool_move,
+                self._tool_edit,
+            ),
+            "move_row": (
+                _tool(
+                    "move_row",
+                    "Move a row to todo, doing, or done.",
+                    {
+                        "kind": _kind(),
+                        "id": _id(),
+                        "to": {"type": "string", "enum": ["todo", "doing", "done"]},
+                    },
+                    ["kind", "id", "to"],
+                    False,
                 ),
-                "criterion_add": (
-                    _tool(
-                        "criterion_add",
-                        "Add an acceptance criterion.",
-                        {"kind": _kind(), "id": _id(), "text": _str()},
-                        ["kind", "id", "text"],
-                        False,
-                    ),
-                    self._tool_criterion_add,
+                self._tool_move,
+            ),
+            "criterion_add": (
+                _tool(
+                    "criterion_add",
+                    "Add an acceptance criterion.",
+                    {"kind": _kind(), "id": _id(), "text": _str()},
+                    ["kind", "id", "text"],
+                    False,
                 ),
-                "criterion_tick": (
-                    _tool("criterion_tick", "Tick a criterion.", {"id": _id()}, ["id"], False),
-                    self._tool_criterion_tick,
+                self._tool_criterion_add,
+            ),
+            "criterion_tick": (
+                _tool("criterion_tick", "Tick a criterion.", {"id": _id()}, ["id"], False),
+                self._tool_criterion_tick,
+            ),
+            "criterion_untick": (
+                _tool("criterion_untick", "Untick a criterion.", {"id": _id()}, ["id"], False),
+                self._tool_criterion_untick,
+            ),
+            "criterion_relate": (
+                _tool(
+                    "criterion_relate",
+                    "Relate a criterion to a proving task.",
+                    {"id": _id(), "task": _id()},
+                    ["id", "task"],
+                    False,
                 ),
-                "criterion_untick": (
-                    _tool("criterion_untick", "Untick a criterion.", {"id": _id()}, ["id"], False),
-                    self._tool_criterion_untick,
+                self._tool_criterion_relate,
+            ),
+            "criterion_unrelate": (
+                _tool(
+                    "criterion_unrelate",
+                    "Remove a criterion proof relation.",
+                    {"id": _id(), "task": _id()},
+                    ["id", "task"],
+                    False,
                 ),
-                "criterion_relate": (
-                    _tool(
-                        "criterion_relate",
-                        "Relate a criterion to a proving task.",
-                        {"id": _id(), "task": _id()},
-                        ["id", "task"],
-                        False,
-                    ),
-                    self._tool_criterion_relate,
+                self._tool_criterion_unrelate,
+            ),
+            "claim_task": (
+                _tool(
+                    "claim_task",
+                    "Claim a task lease.",
+                    {"id": _id(), "ttl": _str(), "note": _str(), "force": {"type": "boolean"}},
+                    ["id"],
+                    False,
                 ),
-                "criterion_unrelate": (
-                    _tool(
-                        "criterion_unrelate",
-                        "Remove a criterion proof relation.",
-                        {"id": _id(), "task": _id()},
-                        ["id", "task"],
-                        False,
-                    ),
-                    self._tool_criterion_unrelate,
+                self._tool_claim,
+            ),
+            "claim_renew": (
+                _tool(
+                    "claim_renew",
+                    "Renew a task lease.",
+                    {"id": _id(), "ttl": _str()},
+                    ["id"],
+                    False,
                 ),
-                "claim_task": (
-                    _tool(
-                        "claim_task",
-                        "Claim a task lease.",
-                        {"id": _id(), "ttl": _str(), "note": _str(), "force": {"type": "boolean"}},
-                        ["id"],
-                        False,
-                    ),
-                    self._tool_claim,
+                self._tool_claim_renew,
+            ),
+            "claim_release": (
+                _tool(
+                    "claim_release",
+                    "Release a task lease.",
+                    {"id": _id(), "force": {"type": "boolean"}},
+                    ["id"],
+                    False,
                 ),
-                "claim_renew": (
-                    _tool(
-                        "claim_renew",
-                        "Renew a task lease.",
-                        {"id": _id(), "ttl": _str()},
-                        ["id"],
-                        False,
-                    ),
-                    self._tool_claim_renew,
+                self._tool_claim_release,
+            ),
+            "note_add": (
+                _tool(
+                    "note_add",
+                    "Add a handoff note.",
+                    {"kind": _kind(), "id": _id(), "text": _str()},
+                    ["kind", "id", "text"],
+                    False,
                 ),
-                "claim_release": (
-                    _tool(
-                        "claim_release",
-                        "Release a task lease.",
-                        {"id": _id(), "force": {"type": "boolean"}},
-                        ["id"],
-                        False,
-                    ),
-                    self._tool_claim_release,
+                self._tool_note_add,
+            ),
+            "block_task": (
+                _tool(
+                    "block_task",
+                    "Block a task with a reason.",
+                    {"id": _id(), "reason": _str()},
+                    ["id", "reason"],
+                    False,
                 ),
-                "note_add": (
-                    _tool(
-                        "note_add",
-                        "Add a handoff note.",
-                        {"kind": _kind(), "id": _id(), "text": _str()},
-                        ["kind", "id", "text"],
-                        False,
-                    ),
-                    self._tool_note_add,
+                self._tool_block,
+            ),
+            "unblock_task": (
+                _tool("unblock_task", "Clear a task's blocked flag.", {"id": _id()}, ["id"], False),
+                self._tool_unblock,
+            ),
+            "link_commit": (
+                _tool(
+                    "link_commit",
+                    "Link a commit to a row.",
+                    {"kind": _kind(), "id": _id(), "sha": _str(), "repo": _str()},
+                    ["kind", "id"],
+                    False,
                 ),
-                "block_task": (
-                    _tool(
-                        "block_task",
-                        "Block a task with a reason.",
-                        {"id": _id(), "reason": _str()},
-                        ["id", "reason"],
-                        False,
-                    ),
-                    self._tool_block,
-                ),
-                "unblock_task": (
-                    _tool(
-                        "unblock_task", "Clear a task's blocked flag.", {"id": _id()}, ["id"], False
-                    ),
-                    self._tool_unblock,
-                ),
-                "link_commit": (
-                    _tool(
-                        "link_commit",
-                        "Link a commit to a row.",
-                        {"kind": _kind(), "id": _id(), "sha": _str(), "repo": _str()},
-                        ["kind", "id"],
-                        False,
-                    ),
-                    self._tool_link,
-                ),
-            }
-        )
+                self._tool_link,
+            ),
+        }
+
+    def _registry(self) -> dict[str, tuple[dict, Any]]:
+        """Merge read and write tools for the current mode."""
+        tools = self._read_registry()
+        if not self.read_only:
+            tools.update(self._write_registry())
         return tools
 
     def resources(self) -> list[dict]:

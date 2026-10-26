@@ -58,17 +58,15 @@ def shared_home(home: str | Path | None = None) -> Path:
     """Shared home dir for the DB, config, and templates (no side effects).
 
     `%LOCALAPPDATA%/lazyplan` on Windows, `~/.lazyplan` elsewhere; falls
-    back to `~/.lazyplan` when LOCALAPPDATA is missing or unreadable.
+    back to `~/.lazyplan` when LOCALAPPDATA is missing. Passing the real home
+    is the same as passing none; any other `home` is a sandbox and always
+    gets `<home>/.lazyplan`.
     """
     base_home = Path(home).expanduser() if home is not None else Path.home()
-    if _os_name() == "nt" and home is None:
+    if _os_name() == "nt" and base_home == Path.home():
         base = os.environ.get("LOCALAPPDATA", "").strip()
         if base:
-            try:
-                return Path(base).expanduser() / SHARED_WINDOWS_DIR_NAME
-            except (OSError, RuntimeError):
-                pass
-        return base_home / SHARED_DIR_NAME
+            return Path(base) / SHARED_WINDOWS_DIR_NAME
     return base_home / SHARED_DIR_NAME
 
 
@@ -143,17 +141,24 @@ def legacy_plan_dir(root: str | Path) -> Path:
 
 
 def legacy_db_candidates(home: str | Path | None = None) -> list[Path]:
-    """Old-location DBs eligible for one-time import into the shared home."""
+    """Old-location DBs eligible for one-time import into the shared home.
+
+    On Windows this includes `~/.lazyplan/lazyplan.db`, which older setup
+    runs wrote while the CLI read `%LOCALAPPDATA%`.
+    """
+    base = Path(home).expanduser() if home is not None else Path.home()
     try:
         from .skills import agent_local_db_candidates
     except ImportError:
         candidates: list[Path] = []
     else:
         try:
-            base = Path(home).expanduser() if home is not None else Path.home()
             candidates = agent_local_db_candidates(base)
         except OSError:
             candidates = []
+    stray = base / SHARED_DIR_NAME / DB_NAME
+    if stray != shared_db_path(home):
+        candidates.append(stray)
     try:
         candidates.append(global_db_path())
     except OSError:

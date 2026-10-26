@@ -273,6 +273,31 @@ class TestSharedHome(unittest.TestCase):
                 pathlib.Path(self.tmp.name) / "local" / "lazyplan",
             )
 
+    def test_shared_home_windows_real_home_matches_no_home(self):
+        import pathlib
+        from unittest import mock
+
+        from lazyplan import repo as repo_mod
+
+        os.environ["LOCALAPPDATA"] = os.path.join(self.tmp.name, "local")
+        with mock.patch.object(repo_mod, "_os_name", return_value="nt"):
+            self.assertEqual(repo_mod.shared_home(pathlib.Path.home()), repo_mod.shared_home())
+            sandbox = pathlib.Path(self.tmp.name) / "other"
+            self.assertEqual(repo_mod.shared_home(sandbox), sandbox / ".lazyplan")
+
+    def test_windows_reports_the_stray_home_database(self):
+        import pathlib
+        from unittest import mock
+
+        from lazyplan import repo as repo_mod
+
+        os.environ["LOCALAPPDATA"] = os.path.join(self.tmp.name, "local")
+        stray = pathlib.Path.home() / ".lazyplan" / "lazyplan.db"
+        with mock.patch.object(repo_mod, "_os_name", return_value="nt"):
+            self.assertIn(stray, repo_mod.legacy_db_candidates())
+        with mock.patch.object(repo_mod, "_os_name", return_value="posix"):
+            self.assertNotIn(stray, repo_mod.legacy_db_candidates())
+
     def test_shared_home_windows_falls_back(self):
         import pathlib
         from unittest import mock

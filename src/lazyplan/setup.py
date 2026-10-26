@@ -25,8 +25,8 @@ from .repo import (
     PLAN_DIR,
     TEMPLATES_DIR_NAME,
     find_repo_root,
-    global_db_path,
     is_repo_plan_dir,
+    legacy_db_candidates,
     legacy_plan_dir,
     repo_plan_db_path,
     shared_db_path,
@@ -931,8 +931,7 @@ def _legacy_db_findings(home: Path) -> list[Finding]:
     """Old per-agent databases that resolution no longer reads."""
     home_db = shared_db_path(home)
     out: list[Finding] = []
-    candidates = [*skills.agent_local_db_candidates(home), global_db_path()]
-    for path in candidates:
+    for path in legacy_db_candidates(home):
         if path == home_db or not path.is_file():
             continue
         out.append(

@@ -26,6 +26,9 @@ updates all of them and `tests/test_version.py` fails on drift.
    grep -n '"version"' site/index.html site/package.json
    ```
 
+   The version badges carry `?v=X.Y.Z`; `tools/bump.sh` updates both so
+   shields.io cannot serve the previous version from its six-hour cache.
+
 6. Commit in reviewable slices and open a pull request against `main`.
    Do not tag a red commit.
 

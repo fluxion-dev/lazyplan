@@ -68,7 +68,8 @@ release it when you stop, and note handoffs with `lpui note add`.
 `--db PATH` → `$LAZYPLAN_DB` → nearest repo-owned
 `.agents/lazyplan/lazyplan.db` walking up → shared `~/.lazyplan/lazyplan.db`.
 On Windows the shared home `~/.lazyplan/` is `%LOCALAPPDATA%/lazyplan/`
-everywhere below.
+everywhere below, and the default actor is `%USERNAME%` (`$USER` elsewhere).
+Plan text is read as UTF-8 or UTF-16 with a BOM and written as UTF-8.
 
 Setup runs on first use. It detects agents, installs or refreshes their
 skills, and remembers the result in `~/.lazyplan/setup.json`. The default is
@@ -143,7 +144,7 @@ Binary, root, merge, empty, and missing states are explicit. Diffs are read
 live and never persisted. Rows with source details end in a single-cell `⎇`
 marker. `o` opens, `y` copies, `/` filters. Plans and milestones aggregate
 descendant work. `F` cycles source filters: all, linked, has PR, stale,
-unlinked.
+unlinked, claims, blocked, attention.
 
 ## GitHub pull requests
 
@@ -437,7 +438,8 @@ Human watches `lpui ui`; agents work via the CLI with `--actor <name>`.
 - Trace: `criterion relate --id C --task T` records proof; `trace --plan P` shows evidence; `lint --plan P --strict` gates uncovered criteria and weak task descriptions.
 - Write (full CRUD): `lpui plan|milestone|task add`, `... edit`, `... move`, `... delete`; `lpui criterion add|tick|untick|delete` (all with `--actor <name>`)
 - During execution: mark the task doing before code; after each commit link it with `lpui --porcelain link --kind task --id T` (or `task finish`) and move the row; finish with `lpui --porcelain audit --since 7.days` and tick criteria with evidence.
-- Lifecycle hooks are read-only; they remind, never move work or write to the database.
+- Lifecycle hooks are read-only; they remind, never move work, and never write to the database. On Windows, Claude Code runs them in Git Bash or PowerShell; both find `lpui` on `PATH`.
+- Read paths are batched and query-budgeted (`tools/perf_bench.py --check`); do not add per-row queries to tree, list, export, audit, MCP, or TUI refresh.
 - Milestones read As a/I want/so that with Given-When-Then criteria; tasks start with a verb and carry a DoD checklist; cut both from scouted ground only
 - Scout before creating anything — no row from unscouted ground; scope lists what is in and out explicitly
 - Implementation requests get an ambiguity hunt first: touch-points, edge cases, non-goals, assumptions — never accept "implement X" at face value

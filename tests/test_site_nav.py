@@ -11,6 +11,8 @@ ROOT = Path(__file__).resolve().parent.parent
 EXPECTED_HREFS = {
     "#top",
     "#whats-new",
+    "#windows",
+    "#performance",
     "#features",
     "#screens",
     "#agents",
@@ -25,7 +27,7 @@ EXPECTED_HREFS = {
     "https://github.com/fluxion-dev/lazyplan",
 }
 GROUP_LINKS = {
-    "Product": {"#whats-new", "#features", "#screens", "#agents"},
+    "Product": {"#whats-new", "#windows", "#performance", "#features", "#screens", "#agents"},
     "Capabilities": {
         "#coordination",
         "#provenance",

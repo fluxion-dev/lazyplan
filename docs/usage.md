@@ -79,6 +79,10 @@ stays clean for `--json`. A successful upgrade re-runs setup with the new
 binary, including under `--json`, so hooks and the AGENTS pointer refresh
 without prompting.
 
+On Windows the same command manages pipx and venv installs. If the automatic
+upgrade cannot run, reinstall with `pipx install --backend pip lazyplan-tui`.
+A source checkout updates with `git pull`.
+
 ## Start
 
 ```bash
@@ -238,6 +242,21 @@ state once. Bulk delete and archive stay single-row.
 
 `/` searches titles, descriptions, why/what, notes, comments, claim actors,
 blocked reasons, and issue refs. Marks are session-only and survive refreshes.
+
+## Performance
+
+lazyplan reads in bulk. The tree, lists, export, audit, MCP, and the TUI
+refresh each load their rows in a bounded number of queries instead of one per
+row. On the 88-plan, 789-task fixture the tree falls from 909 queries to 12,
+`list --json` from 7,853 to 18, export from 18,612 to 26, and TUI refresh from
+5,148 to 139.
+
+`tools/perf_bench.py --check` is part of the gate suite and runs on Linux,
+macOS, and Windows. The method, before and after table, and query budgets live
+in [performance](performance.md).
+
+CLI reads use a cached update notice, so list, show, next, hooks, MCP, and
+porcelain calls make no network request.
 
 ## Agents
 
@@ -756,7 +775,8 @@ Keys:
 The detail page shows a compact source summary and hints at `g`. The main tree
 shows compact commit/PR chips and a single-cell `⎇` marker on rows that have
 commits, pull requests, or repo links. Rows without provenance stay unchanged.
-`F` cycles source filters: all, linked, has PR, stale, unlinked. Dirty state is
+`F` cycles source filters: all, linked, has PR, stale, unlinked, claims,
+blocked, attention. Dirty state is
 shown per selected checkout; it is not a whole-tree filter because it requires
 live git reads.
 
@@ -806,6 +826,8 @@ PRs, reviews, comments, or merges; other tools own those actions.
 - Export: `lpui export --format json > backup.json`.
 - Import: `lpui import --file backup.json` (ids change on import).
 - Demo data: `lpui seed`. Never run it in a repo with a real plan.
+- Files: plan text is read as UTF-8 or UTF-16 (PowerShell 5 writes a BOM) and
+  written as UTF-8. Existing CRLF line endings are preserved on write.
 - Completion: `eval "$(lpui completion --shell bash)"` (or `zsh`).
 
 Exit codes: `0` worked · `1` row not found or setup layout misplaced · `2` flags

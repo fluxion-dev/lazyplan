@@ -59,7 +59,7 @@ only the fixture path-normalization test fix applied.
 | `git_show` | — | 5 ms | 52 ms | 80 ms |
 | `tui_refresh` | 5,148 | 557 ms | 778 ms | 1,303 ms |
 
-## After this sweep
+## After the fast-at-scale sweep
 
 Linux numbers from the final benchmark run. Cross-platform CI repeats the same
 query budgets with platform-specific wall ceilings.
@@ -78,6 +78,12 @@ query budgets with platform-specific wall ceilings.
 `lpui list` is ~197 ms end to end, including Python startup and imports.
 `lpui export --format json` is ~187 ms. CLI reads no longer make network
 requests for update notices.
+
+Treat these as fixture results. Query counts are exact; wall times move with
+disk, CPU, and Python startup. The gate enforces the query counts and a
+generous per-platform ceiling, so a regression fails before normal wall-time
+variance does. For the user-facing summary, see
+[performance in the usage guide](usage.md#performance).
 
 ## Budgets
 

@@ -24,10 +24,11 @@ fix the page.
 - Primary phrase: terminal plan tracker.
 - Secondary: plan tracker for coding agents, agent planning, agent
   coordination, MCP server, flow metrics, completion gates, issue import,
-  local plan database, git provenance, pull request tracking.
-- The coordination, provenance, collaboration, imports, and FAQ sections exist
-  to cover those intents without keyword stuffing. Keep answers specific and
-  matched to shipped behavior.
+  local plan database, git provenance, pull request tracking, Windows terminal,
+  terminal UI performance.
+- The coordination, provenance, collaboration, imports, Windows, performance,
+  and FAQ sections exist to cover those intents without keyword stuffing. Keep
+  answers specific and matched to shipped behavior.
 
 ## Google Search Console
 

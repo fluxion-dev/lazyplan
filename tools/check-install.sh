@@ -18,12 +18,9 @@ WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
 echo "== build wheel =="
-BUILD_ISOLATION=()
-if "$VENV_BIN/python" -c "import setuptools" >/dev/null 2>&1; then
-  BUILD_ISOLATION=(--no-build-isolation)
-fi
-"$VENV_BIN/python" -m pip wheel . --no-deps --quiet \
-  "${BUILD_ISOLATION[@]}" --wheel-dir "$WORK/wheel"
+# Let pip honor pyproject's build requires; the gate venv may carry an older
+# setuptools than the PEP 639 metadata needs.
+"$VENV_BIN/python" -m pip wheel . --no-deps --quiet --wheel-dir "$WORK/wheel"
 
 echo "== install wheel =="
 "$SYS_PY" -m venv "$WORK/venv"

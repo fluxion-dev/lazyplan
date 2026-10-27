@@ -23,12 +23,13 @@ fix the page.
 
 - Primary phrase: terminal plan tracker.
 - Secondary: plan tracker for coding agents, one plan for you and your agent,
-  local-first developer tools, keyboard-first terminal UI, Windows terminal,
-  agent planning.
-- The hero, benefits, screenshots, three steps, install, and FAQ carry those
-  intents without keyword stuffing. Technical how-to lives in docs/usage.md and
-  docs/setup.md; the landing page links there once rather than repeating it.
-  Keep answers specific and matched to shipped behavior.
+  planner agent and executor agent workflow, multi-agent planning, user control
+  over every plan row, local-first developer tools, keyboard-first terminal UI,
+  Windows terminal, agent planning.
+- The hero, benefits, ways-to-work examples, screenshots, three steps, install,
+  and FAQ carry those intents without keyword stuffing. Technical how-to lives
+  in docs/usage.md and docs/setup.md; the landing page links there once rather
+  than repeating it. Keep answers specific and matched to shipped behavior.
 
 ## Google Search Console
 

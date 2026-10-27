@@ -9,6 +9,7 @@ from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from lazyplan import migrate as migrate_mod
 from lazyplan import services
 from lazyplan.cli import main as lpui_main
 from lazyplan.models import Status
@@ -38,6 +39,29 @@ class TestStore(unittest.TestCase):
 
     def tearDown(self):
         self.tmp.cleanup()
+
+    def test_schema_version_and_indexes(self):
+        with sqlite3.connect(self.db) as conn:
+            self.assertEqual(
+                int(conn.execute("PRAGMA user_version").fetchone()[0]),
+                migrate_mod.SCHEMA_VERSION,
+            )
+            names = {
+                str(row[0])
+                for row in conn.execute("SELECT name FROM sqlite_master WHERE type='index'")
+            }
+        for name in (
+            "idx_events_action",
+            "idx_vcs_links_sha",
+            "idx_issue_links_row",
+            "idx_entity_repos_branch",
+        ):
+            self.assertIn(name, names)
+        with sqlite3.connect(self.db) as conn:
+            conn.row_factory = sqlite3.Row
+            with mock.patch.object(migrate_mod, "_migrate_elements") as legacy:
+                migrate_mod.migrate(conn)
+        legacy.assert_not_called()
 
     def test_writes_release_the_database_file(self):
         self.store.add_plan("Site")

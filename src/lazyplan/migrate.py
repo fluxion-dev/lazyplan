@@ -8,6 +8,8 @@ from __future__ import annotations
 import sqlite3
 import uuid
 
+SCHEMA_VERSION = 1
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS plans (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -74,6 +76,7 @@ CREATE TABLE IF NOT EXISTS issue_links (
     updated_at REAL NOT NULL DEFAULT 0,
     UNIQUE(provider, external_id)
 );
+CREATE INDEX IF NOT EXISTS idx_issue_links_row ON issue_links(row_kind, row_id);
 CREATE TABLE IF NOT EXISTS criteria (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     parent_kind TEXT NOT NULL CHECK (parent_kind IN ('plan', 'milestone', 'task')),
@@ -103,6 +106,7 @@ CREATE TABLE IF NOT EXISTS vcs_links (
     UNIQUE(parent_kind, parent_id, sha)
 );
 CREATE INDEX IF NOT EXISTS idx_vcs_links_parent ON vcs_links(parent_kind, parent_id);
+CREATE INDEX IF NOT EXISTS idx_vcs_links_sha ON vcs_links(sha);
 CREATE TABLE IF NOT EXISTS forge_links (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     parent_kind TEXT NOT NULL CHECK (parent_kind IN ('plan', 'milestone', 'task')),
@@ -143,6 +147,7 @@ CREATE TABLE IF NOT EXISTS entity_repos (
     UNIQUE(parent_kind, parent_id, repo_path, repo_remote)
 );
 CREATE INDEX IF NOT EXISTS idx_entity_repos_parent ON entity_repos(parent_kind, parent_id);
+CREATE INDEX IF NOT EXISTS idx_entity_repos_branch ON entity_repos(branch, repo_path, repo_remote);
 CREATE TABLE IF NOT EXISTS events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     ts REAL NOT NULL,
@@ -154,6 +159,7 @@ CREATE TABLE IF NOT EXISTS events (
 CREATE INDEX IF NOT EXISTS idx_milestones_plan ON milestones(plan_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_milestone ON tasks(milestone_id);
 CREATE INDEX IF NOT EXISTS idx_events_id ON events(id);
+CREATE INDEX IF NOT EXISTS idx_events_action ON events(action, id);
 """
 
 # Idempotent migrations for DBs created by older versions.
@@ -330,6 +336,9 @@ def _migrate_task_blocked(conn: sqlite3.Connection) -> None:
 
 def migrate(conn: sqlite3.Connection) -> None:
     """Bring any DB to the current schema: migrate, create, backfill. Idempotent."""
+    current = int(conn.execute("PRAGMA user_version").fetchone()[0])
+    if current == SCHEMA_VERSION:
+        return
     _migrate_elements(conn)
     conn.executescript(SCHEMA)
     _migrate_plan_uid(conn)
@@ -343,3 +352,4 @@ def migrate(conn: sqlite3.Connection) -> None:
         for col in cols:
             if col not in existing:
                 conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} TEXT NOT NULL DEFAULT ''")
+    conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")

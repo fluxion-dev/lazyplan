@@ -153,6 +153,9 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
             full = self.store.get_full("task", self.tid)
             assert full is not None
             self.app._preview_common(preview_lines, full)
+            await settle(pilot)
+            preview_lines = []
+            self.app._preview_common(preview_lines, full)
             preview = "\n".join(preview_lines)
             self.assertIn("git:", preview)
             self.assertIn("main", preview)

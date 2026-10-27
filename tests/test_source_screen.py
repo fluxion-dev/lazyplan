@@ -348,6 +348,7 @@ class TestSourceScreen(unittest.IsolatedAsyncioTestCase):
                     "lazyplan.source_screen.read_diff",
                     return_value=DiffRead(state=state, detail=detail),
                 ):
+                    screen._diff_cache.clear()
                     block = screen._diff_block(self.repo, self.sha)
                 self.assertTrue(any(needle in row.lower() for row in block), state)
 

@@ -8,6 +8,7 @@ import os
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
@@ -84,6 +85,44 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
             proj, milestone = self._nodes()
             self.assertTrue(proj.is_expanded)
             self.assertFalse(milestone.is_expanded)
+
+    async def test_mount_refreshes_the_tree_once(self):
+        calls: list[str] = []
+        original = self.app.refresh_all
+
+        def counted(note: str = "") -> None:
+            calls.append(note)
+            original(note)
+
+        self.app.refresh_all = counted
+        async with self.app.run_test() as pilot:
+            await pilot.pause()
+        self.assertEqual(len(calls), 1)
+
+    async def test_fold_and_mark_do_not_rebuild_the_tree(self):
+        async with self.app.run_test() as pilot:
+            await pilot.pause()
+            await self._expand(pilot, "plan", self.pid)
+            with mock.patch.object(self.app, "refresh_all") as refresh:
+                await pilot.press("z")
+                await pilot.pause()
+                self.assertFalse(refresh.called)
+                await pilot.press("space")
+                await pilot.pause()
+                self.assertFalse(refresh.called)
+            self.assertIn(("plan", self.pid), self.app.marked)
+            self.assertIn("✓", str(self.app._row_nodes[("plan", self.pid)].label))
+
+    async def test_resize_within_a_breakpoint_does_not_rebuild(self):
+        async with self.app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            with mock.patch.object(self.app, "refresh_all") as refresh:
+                await pilot.resize_terminal(110, 40)
+                await pilot.pause()
+                self.assertFalse(refresh.called)
+                await pilot.resize_terminal(90, 40)
+                await pilot.pause()
+                self.assertTrue(refresh.called)
 
     async def test_narrow_hides_preview_and_resize_keeps_selection(self):
         from textual.containers import Horizontal

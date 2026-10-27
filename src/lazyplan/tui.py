@@ -68,7 +68,16 @@ from .screens import (
 from .source_screen import SourceScreen
 from .store import ClaimConflict, Store
 from .templates import load_template
-from .upgrade import UpgradeError, detect, latest_version, notice_text
+from .upgrade import (
+    UPDATE_CACHE_TTL,
+    UpgradeError,
+    cached_latest,
+    detect,
+    latest_version,
+    notice_text,
+    remember_latest,
+    update_check_enabled,
+)
 from .vcs import detect_backend
 
 STATUS_CYCLE: list[Status | None] = [None, Status.TODO, Status.DOING, Status.DONE]
@@ -177,6 +186,7 @@ if _TEXTUAL_OK:
             self.marked: set[tuple[str, int]] = set()
             self._undo: list[dict] | None = None
             self._row_nodes: dict[tuple[str, int], TreeNode] = {}
+            self._row_labels: dict[tuple[str, int], str] = {}
             self._collapsed: set[tuple[str, int]] = set()
             self._expanded: set[tuple[str, int]] = set()
             self._last_click_key: tuple[str, int] | None = None
@@ -187,7 +197,11 @@ if _TEXTUAL_OK:
             self._pending_note: str = ""
             self._mounted: bool = False
             self._refreshing: bool = False
+            self._preview_key: tuple[str, int] | None = None
+            self._dirty_external: bool = False
+            self._narrow: bool | None = None
             self._git_cache: dict[str, tuple[float, dict[str, Any]]] = {}
+            self._git_pending: set[str] = set()
             self._spinner_tick: int = 0
             self._spinner_rows: dict[tuple[str, int], str] = {}
             self._spinner_enabled: bool = True
@@ -236,7 +250,6 @@ if _TEXTUAL_OK:
             self._mounted = True
             self._apply_layout()
             self.refresh_all("ready — ? for help")
-            self.call_after_refresh(lambda: self.refresh_all())
             self.set_interval(1.0, self._poll)
             self._spinner_enabled = not os.environ.get("LAZYPLAN_NO_SPINNER", "").strip()
             if self._spinner_enabled:
@@ -253,25 +266,40 @@ if _TEXTUAL_OK:
         async def _on_resize(self, event: events.Resize) -> None:
             """Textual stops Resize at the App; re-apply the shell after it."""
             await super()._on_resize(event)
-            self._apply_layout(event.size.width)
-            if self._mounted:
+            changed = self._apply_layout(event.size.width)
+            if self._mounted and changed:
                 self.call_after_refresh(self.refresh_all)
 
-        def _apply_layout(self, width: int | None = None) -> None:
+        def _apply_layout(self, width: int | None = None) -> bool:
             """Two panes when there is room; one pane on narrow terminals."""
             try:
                 main = self.query_one("#main", Horizontal)
             except Exception:
-                return
+                return False
             available = self.size.width if width is None else width
-            main.set_class(available < 100, "narrow")
+            narrow = available < 100
+            changed = self._narrow is not narrow
+            self._narrow = narrow
+            main.set_class(narrow, "narrow")
+            return changed
 
         def _check_update(self) -> None:
-            """One background latest-version check per session; silent on failure."""
-            try:
-                latest = latest_version()
-            except UpgradeError:
+            """One background latest-version check per session; cache first."""
+            if not update_check_enabled():
                 return
+            latest = cached_latest(max_age=UPDATE_CACHE_TTL)
+            if latest is None:
+                try:
+                    latest = latest_version()
+                except UpgradeError:
+                    latest = cached_latest()
+                    if latest is None:
+                        return
+                else:
+                    try:
+                        remember_latest(latest)
+                    except OSError:
+                        pass
             notice = notice_text(detect(), package_version(), latest)
             if notice is not None:
                 self.call_from_thread(self._announce_update, notice)
@@ -281,7 +309,7 @@ if _TEXTUAL_OK:
             if not self._update_toasted:
                 self._update_toasted = True
                 self.notify(notice, timeout=8)
-            self.refresh_all()
+            self._refresh_status()
 
         # -- selection --------------------------------------------------
         def _track(self, node: TreeNode) -> None:
@@ -326,12 +354,19 @@ if _TEXTUAL_OK:
             return lines
 
         def _git_state(self, path: str) -> dict[str, Any]:
-            """Cached branch/dirty state for a checkout (5s TTL)."""
+            """Cached branch/dirty state; refresh in a worker when stale (30s TTL)."""
             now = time.time()
             cached = self._git_cache.get(path)
-            if cached is not None and now - cached[0] < 5.0:
+            if cached is not None and now - cached[0] < 30.0:
                 return cached[1]
-            state: dict[str, Any] = {
+            if path not in self._git_pending:
+                self._git_pending.add(path)
+                self.run_worker(lambda: self._load_git_state(path), thread=True, exclusive=False)
+            return cached[1] if cached is not None else self._empty_git_state()
+
+        @staticmethod
+        def _empty_git_state() -> dict[str, Any]:
+            return {
                 "branch": "",
                 "dirty": False,
                 "ahead": 0,
@@ -339,6 +374,10 @@ if _TEXTUAL_OK:
                 "upstream": "",
                 "detached": False,
             }
+
+        def _load_git_state(self, path: str) -> None:
+            """Worker: probe one checkout without blocking the UI thread."""
+            state = self._empty_git_state()
             backend, root = detect_backend(path)
             if backend is not None and root is not None:
                 status = backend.status(root)
@@ -352,8 +391,13 @@ if _TEXTUAL_OK:
                         "detached": status.detached,
                     }
                 )
-            self._git_cache[path] = (now, state)
-            return state
+            self.call_from_thread(self._store_git_state, path, state)
+
+        def _store_git_state(self, path: str, state: dict[str, Any]) -> None:
+            self._git_pending.discard(path)
+            self._git_cache[path] = (time.time(), state)
+            if self._mounted and not self._refreshing:
+                self.update_preview(force=True)
 
         def _git_preview_bits(self, repos: list[dict[str, Any]]) -> list[str]:
             """Compact branch/dirty bits for the preview's linked checkouts."""
@@ -498,12 +542,15 @@ if _TEXTUAL_OK:
             self._preview_common(lines, full)
             return lines
 
-        def update_preview(self) -> None:
+        def update_preview(self, force: bool = False) -> None:
             """Selection preview: a bounded summary, never the full plan."""
             try:
                 body = self.query_one("#preview-body", Static)
             except Exception:
                 return
+            if not force and self.selected == self._preview_key:
+                return
+            self._preview_key = self.selected
             try:
                 total_plans = self.store.counts()["plans"]
             except Exception:
@@ -587,12 +634,12 @@ if _TEXTUAL_OK:
                 node.collapse()
                 self._expanded.discard(key)
                 self._collapsed.add(key)
-                self.refresh_all(f"{key[0]} {key[1]} folded")
+                self._refresh_status(f"{key[0]} {key[1]} folded")
             else:
                 node.expand()
                 self._expanded.add(key)
                 self._collapsed.discard(key)
-                self.refresh_all(f"{key[0]} {key[1]} unfolded")
+                self._refresh_status(f"{key[0]} {key[1]} unfolded")
 
         def action_fold_all(self) -> None:
             """Collapse every plan/milestone, or re-open all when fully expanded (Z)."""
@@ -605,22 +652,27 @@ if _TEXTUAL_OK:
                     self._row_nodes[k].collapse()
                 self._expanded.clear()
                 self._collapsed.update(keys)
-                self.refresh_all(f"folded {len(keys)} rows")
+                self._refresh_status(f"folded {len(keys)} rows")
             else:
                 for k in keys:
                     self._row_nodes[k].expand()
                 self._expanded.update(keys)
                 self._collapsed.difference_update(keys)
-                self.refresh_all("unfolded all")
+                self._refresh_status("unfolded all")
 
         # -- polling (fingerprint, not just mtime) ----------------------
         def _poll(self) -> None:
             """External-change detector; local edits go through rev."""
+            if self._dirty_external and len(self.screen_stack) <= 1:
+                self._dirty_external = False
+                self.rev += 1
+                return
             try:
                 fp = self.store.fingerprint()
             except Exception:
                 return
             if fp != self._fp:
+                self._fp = fp
                 events_ = self.store.feed(1)
                 note = "db changed — refreshed"
                 if events_:
@@ -631,11 +683,16 @@ if _TEXTUAL_OK:
                     except Exception:
                         pass
                 self._pending_note = note
+                if len(self.screen_stack) > 1:
+                    self._dirty_external = True
+                    return
                 self.rev += 1
 
         # -- rendering ---------------------------------------------------
-        def _source_stats(self) -> dict[tuple[str, int], tuple[int, int, int, int]]:
-            """Direct plus descendant provenance counts per row, one store read each."""
+        def _source_stats(
+            self, base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]
+        ) -> dict[tuple[str, int], tuple[int, int, int, int]]:
+            """Direct plus descendant provenance counts per visible row."""
             vcs = self.store.vcs_links_map()
             forge = self.store.forge_links_map()
             repos = self.store.repos_map()
@@ -651,7 +708,7 @@ if _TEXTUAL_OK:
                 )
 
             stats: dict[tuple[str, int], tuple[int, int, int, int]] = {}
-            for plan, milestones in services.tree(self.store, status=self.status_filter):
+            for plan, milestones in base:
                 pc, pp, ps, pr = direct("plan", plan.id)
                 plan_repos = pr
                 for milestone, tasks in milestones:
@@ -735,17 +792,37 @@ if _TEXTUAL_OK:
                     out.append((plan, kept_ms))
             return out
 
+        def _status_tree(
+            self,
+            base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]],
+            status: Status | None,
+        ) -> list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]:
+            """Apply the status filter in memory to one unfiltered snapshot."""
+            if status is None:
+                return base
+            out: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]] = []
+            for plan, milestones in base:
+                kept_ms: list[tuple[Milestone, list[Task]]] = []
+                for milestone, tasks in milestones:
+                    kept = [task for task in tasks if task.status == status]
+                    if milestone.status != status and not kept:
+                        continue
+                    kept_ms.append((milestone, kept))
+                if plan.status == status or kept_ms:
+                    out.append((plan, kept_ms))
+            return out
+
         def _filtered_tree(
             self,
+            base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]] | None = None,
         ) -> list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]:
-            if self.show_all or self.filter_text.strip():
-                base = services.tree(self.store, status=self.status_filter)
-            else:
-                base = services.tree(
-                    self.store, status=self.status_filter, limit=services.DEFAULT_PLAN_LIMIT
-                )
+            if base is None:
+                base = services.tree(self.store, status=None, archived="hide")
+                base = self._status_tree(base, self.status_filter)
+                if not (self.show_all or self.filter_text.strip()):
+                    base = base[: services.DEFAULT_PLAN_LIMIT]
             if self.source_filter != "all":
-                base = self._filter_source_tree(base, self._source_stats())
+                base = self._filter_source_tree(base, self._source_stats(base))
             query = self.filter_text.strip().lower()
             if not query:
                 return base
@@ -801,10 +878,12 @@ if _TEXTUAL_OK:
                 except Exception:
                     pass
 
-        def _progress_map(self) -> dict[tuple[str, int], tuple[int, int]]:
-            """Task progress per plan and milestone, independent of filters."""
+        def _progress_map(
+            self, base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]
+        ) -> dict[tuple[str, int], tuple[int, int]]:
+            """Task progress per plan and milestone from one unfiltered snapshot."""
             out: dict[tuple[str, int], tuple[int, int]] = {}
-            for plan, milestones in services.tree(self.store, status=None, archived="show"):
+            for plan, milestones in base:
                 all_tasks = [task for _, tasks in milestones for task in tasks]
                 out[("plan", plan.id)] = (
                     sum(1 for task in all_tasks if task.status == Status.DONE),
@@ -850,6 +929,26 @@ if _TEXTUAL_OK:
                 text += f" · last: {event['actor']} {event['kind']}/{event['action']}: {event['detail']}"
             return truncate(text, max(10, self.size.width - 2))
 
+        def _refresh_status(self, note: str = "") -> None:
+            """Update only the statusbar, without rebuilding the tree."""
+            try:
+                self.query_one("#status", Label).update(
+                    self._status_text(self.store.counts(), note)
+                )
+            except Exception:
+                pass
+
+        def _paint_mark(self, key: tuple[str, int]) -> None:
+            """Add or remove the mark glyph on one existing row."""
+            label = self._row_labels.get(key)
+            node = self._row_nodes.get(key)
+            if label is None or node is None:
+                return
+            if key in self._spinner_rows:
+                label = status_prefix(Status.DOING, self._spinner_tick) + self._spinner_rows[key]
+            suffix = " [bold green]✓[/]" if key in self.marked else ""
+            node.set_label(label + suffix)
+
         def _row_width(self, tree: Tree, depth: int) -> int:
             """Usable label width for a row at `depth`, excluding tree guides."""
             base = tree.size.width or (
@@ -889,6 +988,7 @@ if _TEXTUAL_OK:
                     allow_expand=bool(milestones),
                 )
                 self._row_nodes[("plan", plan.id)] = plan_node
+                self._row_labels[("plan", plan.id)] = plan_text
                 self._remember_spinner(("plan", plan.id), plan.status, plan_text)
                 for milestone, tasks in milestones:
                     milestone_stats = source_stats.get(("milestone", milestone.id))
@@ -915,6 +1015,7 @@ if _TEXTUAL_OK:
                         allow_expand=bool(tasks),
                     )
                     self._row_nodes[("milestone", milestone.id)] = milestone_node
+                    self._row_labels[("milestone", milestone.id)] = milestone_text
                     self._remember_spinner(
                         ("milestone", milestone.id), milestone.status, milestone_text
                     )
@@ -948,6 +1049,7 @@ if _TEXTUAL_OK:
                             data={"kind": "task", "id": task.id},
                         )
                         self._row_nodes[("task", task.id)] = leaf
+                        self._row_labels[("task", task.id)] = task_text
                         self._remember_spinner(("task", task.id), task.status, task_text)
 
         def _remember_spinner(
@@ -969,7 +1071,8 @@ if _TEXTUAL_OK:
             for key, suffix in self._spinner_rows.items():
                 node = self._row_nodes.get(key)
                 if node is not None:
-                    node.set_label(prefix + suffix)
+                    mark = " [bold green]✓[/]" if key in self.marked else ""
+                    node.set_label(prefix + suffix + mark)
 
         def _spin(self) -> None:
             """Advance one frame; idle when nothing is doing."""
@@ -1037,9 +1140,14 @@ if _TEXTUAL_OK:
                 prev_cursor = None
             tree.clear()
             self._row_nodes = {}
+            self._row_labels = {}
             self._spinner_rows = {}
-            progress = self._progress_map()
-            filtered = self._filtered_tree()
+            base = services.tree(self.store, status=None, archived="hide")
+            progress = self._progress_map(base)
+            visible = self._status_tree(base, self.status_filter)
+            if not (self.show_all or self.filter_text.strip()):
+                visible = visible[: services.DEFAULT_PLAN_LIMIT]
+            filtered = self._filtered_tree(visible)
             filtered.sort(key=lambda entry: entry[0].status == Status.DONE)
             self._build_rows(
                 tree.root,
@@ -1048,7 +1156,7 @@ if _TEXTUAL_OK:
                 progress,
                 self.store.forge_links_map(),
                 self.store.vcs_links_map(),
-                self._source_stats(),
+                self._source_stats(filtered),
                 self.store.claims_map(),
             )
             tree.root.expand()
@@ -1059,7 +1167,8 @@ if _TEXTUAL_OK:
             self.query_one("#status", Label).update(self._status_text(self.store.counts(), note))
             self.query_one("#hints", Label).update(hint_bar(max(10, self.size.width - 2)))
             self._restore_selection(tree, prev_selected, prev_cursor)
-            self.update_preview()
+            self._preview_key = None
+            self.update_preview(force=True)
 
         def action_refresh(self) -> None:
             self._saved("manual refresh")
@@ -1077,11 +1186,22 @@ if _TEXTUAL_OK:
             if selected is None:
                 return
             kind, oid = selected
+            self.notify("reading git status…", timeout=2)
+            self.run_worker(
+                lambda: self._git_status_worker(kind, oid),
+                thread=True,
+                exclusive=True,
+            )
+
+        def _git_status_worker(self, kind: str, oid: int) -> None:
             try:
                 entries = services.repo_statuses(self.store, kind, oid)
             except ValueError as exc:
-                self.notify(str(exc), severity="error", timeout=5)
+                self.call_from_thread(self.notify, str(exc), severity="error", timeout=5)
                 return
+            self.call_from_thread(self._git_status_done, entries)
+
+        def _git_status_done(self, entries: list[dict[str, Any]]) -> None:
             if not entries:
                 self.notify("no linked repos", timeout=3)
                 return
@@ -1094,7 +1214,24 @@ if _TEXTUAL_OK:
             if selected is None:
                 return
             kind, oid = selected
-            result = services.refresh_links(self.store, kind, oid)
+            self.notify("refreshing commit links…", timeout=2)
+            self.run_worker(
+                lambda: self._git_refresh_worker(kind, oid),
+                thread=True,
+                exclusive=True,
+            )
+
+        def _git_refresh_worker(self, kind: str, oid: int) -> None:
+            try:
+                result = services.refresh_links(self.store, kind, oid)
+            except Exception as exc:
+                self.call_from_thread(
+                    self.notify, f"refresh failed: {exc}", severity="error", timeout=5
+                )
+                return
+            self.call_from_thread(self._git_refresh_done, result)
+
+        def _git_refresh_done(self, result: dict[str, Any]) -> None:
             self.notify(
                 f"checked {result['checked']} links · "
                 f"{result['updated']} updated · {result['stale']} stale",
@@ -1237,7 +1374,8 @@ if _TEXTUAL_OK:
                 self.marked.remove(key)
             else:
                 self.marked.add(key)
-            self.refresh_all(f"marked {len(self.marked)}")
+            self._paint_mark(key)
+            self._refresh_status(f"marked {len(self.marked)}")
 
         def _marked_tasks(self) -> list[Task]:
             """Task rows in the mark set."""
@@ -1341,8 +1479,10 @@ if _TEXTUAL_OK:
             self._saved(f"undid {len(states)} task changes")
 
         def action_clear_marks(self) -> None:
-            self.marked.clear()
-            self.refresh_all("marks cleared")
+            for key in list(self.marked):
+                self.marked.discard(key)
+                self._paint_mark(key)
+            self._refresh_status("marks cleared")
 
         def _selected_task(self) -> int | None:
             """Selected task id, or a notification when the selection is not a task."""

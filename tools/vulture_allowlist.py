@@ -135,3 +135,7 @@ ENVIRONMENT
 FILES
 # Compatibility helper kept for tests and callers outside the CLI.
 default_choice
+# Public read helpers kept for tests and callers outside the tree path.
+is_archived
+plan_activity
+_.plan_uid

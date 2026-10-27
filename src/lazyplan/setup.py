@@ -755,16 +755,16 @@ def ensure(
     home = home or Path.home()
     state = load_state(home)
     explicit = _explicit_db(args)
-    findings = detect_findings(cwd, home, state, explicit)
-    version_changed = state.last_version != (version or "")
-    first = not state.last_version
-    if not first and not version_changed and not findings:
-        return None
     if explicit:
         # An explicit database is a caller-owned context: never write layout,
         # skills, or state around it.
         return None
+    version_changed = state.last_version != (version or "")
+    first = not state.last_version
     human = cmd in HUMAN_COMMANDS
+    findings = detect_findings(cwd, home, state, None) if human else []
+    if not first and not version_changed and not findings:
+        return None
     can_prompt = _prompt_allowed(args, interactive)
     root = find_repo_root(cwd)
     result: dict[str, Any] | None = None

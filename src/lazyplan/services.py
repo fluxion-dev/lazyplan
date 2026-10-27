@@ -12,11 +12,12 @@ import json
 import re
 import time
 from pathlib import Path
+from typing import Any
 
 from .forge import AuthStatus, Forge, RepoRef, detect_forge, parse_pull_url, resolve_auth
 from .github import GitHubClient, GitHubError
 from .kinds import check_kind
-from .models import Claim, Milestone, Plan, Status, Task
+from .models import Claim, Criterion, Milestone, Plan, Status, Task
 from .store import CLAIM_DEFAULT_TTL, ClaimConflict, Store, _ser
 from .templates import apply_template, template_criteria
 from .vcs import CommitInfo, RepoStatus, VCSBackend, detect_backend, origin_url
@@ -1275,34 +1276,40 @@ def reconcile(store: Store, actor: str = "human") -> list[dict]:
 # -- archive (day-old done hides; computed from status history) ------------
 def is_archived(store: Store, plan: Plan) -> bool:
     """Done longer than a day, with history to prove it. No proof: never hide."""
+    return _is_archived(plan, store.plan_status_events_map(), time.time())
+
+
+def _is_archived(plan: Plan, events: dict[int, tuple[float, str]], now: float) -> bool:
+    """Archive decision from a preloaded latest-status map."""
     if plan.status != Status.DONE:
         return False
-    last = None
-    for ts, detail in store.status_events("plan"):
-        cleaned = detail.removesuffix(" (rollup)")
-        if cleaned.startswith(f"plan #{plan.id} -> "):
-            last = (ts, cleaned[len(f"plan #{plan.id} -> ") :])
-            break
+    last = events.get(plan.id)
     if last is None:
         return False
     ts, target = last
-    return target == Status.DONE.value and (time.time() - ts) > ARCHIVE_AFTER_SECS
+    return target == Status.DONE.value and (now - ts) > ARCHIVE_AFTER_SECS
 
 
 DEFAULT_PLAN_LIMIT = 5
 
 
 # -- tree (shared list query, composed here) -------------------------------------------------
-def plan_activity(store: Store) -> dict[int, float]:
-    """Latest event timestamp per plan (whole subtree), for recent-first ordering."""
-    with store._connect() as conn:
-        mrows = conn.execute("SELECT id, plan_id FROM milestones").fetchall()
-        trows = conn.execute("SELECT id, milestone_id FROM tasks").fetchall()
-        crows = conn.execute("SELECT id, parent_kind, parent_id FROM criteria").fetchall()
-        events = conn.execute("SELECT ts, kind, detail FROM events").fetchall()
-    mplan: dict[int, int] = {r["id"]: r["plan_id"] for r in mrows}
-    tms: dict[int, int] = {r["id"]: r["milestone_id"] for r in trows}
-    crit: dict[int, tuple[str, int]] = {r["id"]: (r["parent_kind"], r["parent_id"]) for r in crows}
+def _plan_activity(
+    milestones: dict[int, list[Milestone]],
+    tasks: dict[int, list[Task]],
+    criteria: dict[tuple[str, int], list[Criterion]],
+    events: list[dict],
+) -> dict[int, float]:
+    """Latest event timestamp per plan from preloaded maps and events."""
+    mplan: dict[int, int] = {
+        milestone.id: milestone.plan_id for items in milestones.values() for milestone in items
+    }
+    tms: dict[int, int] = {task.id: task.milestone_id for items in tasks.values() for task in items}
+    crit: dict[int, tuple[str, int]] = {
+        criterion.id: (criterion.parent_kind, criterion.parent_id)
+        for items in criteria.values()
+        for criterion in items
+    }
 
     def resolve(kind: str, detail: str) -> int | None:
         m = re.match(r"([PMT])#(\d+)", detail)
@@ -1338,28 +1345,39 @@ def plan_activity(store: Store) -> dict[int, float]:
         return None
 
     out: dict[int, float] = {}
-    for e in events:
-        pid = resolve(e["kind"], e["detail"] or "")
-        if pid is not None and e["ts"] > out.get(pid, 0.0):
-            out[pid] = e["ts"]
+    for event in events:
+        pid = resolve(str(event["kind"]), str(event["detail"] or ""))
+        if pid is not None and event["ts"] > out.get(pid, 0.0):
+            out[pid] = event["ts"]
     return out
 
 
+def plan_activity(store: Store) -> dict[int, float]:
+    """Latest event timestamp per plan (whole subtree), for recent-first ordering."""
+    return _plan_activity(
+        store.milestones_map(),
+        store.tasks_map(),
+        store.criteria_map(),
+        store.feed(limit=1_000_000),
+    )
+
+
 def _filtered_milestones(
-    store: Store,
+    milestones: dict[int, list[Milestone]],
+    tasks: dict[int, list[Task]],
     plan_id: int,
     status: Status | None,
 ) -> list[tuple[Milestone, list[Task]]]:
     """Milestone/task pairs of one plan honoring the status filter."""
-    milestones = []
-    for s in store.list_milestones(plan_id):
-        tasks = store.list_tasks(s.id)
+    out = []
+    for milestone in milestones.get(plan_id, ()):
+        items = tasks.get(milestone.id, [])
         if status is not None:
-            tasks = [t for t in tasks if t.status == status]
-            if s.status != status and not tasks:
+            items = [task for task in items if task.status == status]
+            if milestone.status != status and not items:
                 continue
-        milestones.append((s, tasks))
-    return milestones
+        out.append((milestone, items))
+    return out
 
 
 def _repo_match(want: str, repos: list[dict]) -> bool:
@@ -1374,9 +1392,9 @@ def _repo_match(want: str, repos: list[dict]) -> bool:
     except OSError:
         norm = str(Path(needle).expanduser().absolute())
     lowered = needle.lower()
-    for r in repos:
-        path = str(r.get("repo_path", "") or "")
-        remote = str(r.get("repo_remote", "") or "")
+    for repo in repos:
+        path = str(repo.get("repo_path", "") or "")
+        remote = str(repo.get("repo_remote", "") or "")
         if path and (path == norm or path == needle):
             return True
         if remote and (remote == needle or lowered in remote.lower()):
@@ -1386,33 +1404,41 @@ def _repo_match(want: str, repos: list[dict]) -> bool:
     return False
 
 
-def _plan_matches_repo(store: Store, plan_id: int, want: str) -> bool:
+def _plan_matches_repo(
+    plan_id: int,
+    milestones: dict[int, list[Milestone]],
+    tasks: dict[int, list[Task]],
+    repos: dict[tuple[str, int], list[dict]],
+    want: str,
+) -> bool:
     """True when a plan or any descendant effectively links the wanted repo."""
-    if _repo_match(want, store.effective_repos("plan", plan_id)):
+    plan_repos = repos.get(("plan", plan_id), [])
+    if _repo_match(want, plan_repos):
         return True
-    for s in store.list_milestones(plan_id):
-        if _repo_match(want, store.effective_repos("milestone", s.id)):
+    for milestone in milestones.get(plan_id, ()):
+        milestone_repos = repos.get(("milestone", milestone.id), []) or plan_repos
+        if _repo_match(want, milestone_repos):
             return True
-        for t in store.list_tasks(s.id):
-            if _repo_match(want, store.effective_repos("task", t.id)):
+        for task in tasks.get(milestone.id, ()):
+            task_repos = repos.get(("task", task.id), []) or milestone_repos
+            if _repo_match(want, task_repos):
                 return True
     return False
 
 
 def _visible_plan(
-    store: Store,
-    p: Plan,
+    plan: Plan,
     milestones: list[tuple[Milestone, list[Task]]],
     status: Status | None,
     archived: str,
+    archived_now: bool,
 ) -> bool:
     """Whether a plan survives status/archive filters."""
-    arch = is_archived(store, p)
-    if archived == "only" and not arch:
+    if archived == "only" and not archived_now:
         return False
-    if archived == "hide" and arch:
+    if archived == "hide" and archived_now:
         return False
-    if status is not None and p.status != status and not milestones:
+    if status is not None and plan.status != status and not milestones:
         return False
     return True
 
@@ -1436,92 +1462,138 @@ def tree(
     """
     if archived not in ("hide", "only", "show"):
         raise ValueError("archived must be hide|only|show")
+    plans = store.list_plans()
+    milestones = store.milestones_map()
+    tasks = store.tasks_map()
+    status_events = store.plan_status_events_map() if archived != "show" else {}
+    repos = store.repos_map() if repo else {}
+    now = time.time()
     out = []
-    for p in store.list_plans():
-        if plan_id is not None and p.id != plan_id:
+    for plan in plans:
+        if plan_id is not None and plan.id != plan_id:
             continue
-        if repo and not _plan_matches_repo(store, p.id, repo):
+        if repo and not _plan_matches_repo(plan.id, milestones, tasks, repos, repo):
             continue
-        milestones = _filtered_milestones(store, p.id, status)
+        items = _filtered_milestones(milestones, tasks, plan.id, status)
         if milestone_id is not None:
-            milestones = [(s, tasks) for s, tasks in milestones if s.id == milestone_id]
-        if _visible_plan(store, p, milestones, status, archived):
-            out.append((p, milestones))
+            items = [(item, task_list) for item, task_list in items if item.id == milestone_id]
+        if _visible_plan(
+            plan,
+            items,
+            status,
+            archived,
+            _is_archived(plan, status_events, now),
+        ):
+            out.append((plan, items))
     if plan_id is None and milestone_id is None:
-        activity = plan_activity(store)
-        out.sort(key=lambda e: (activity.get(e[0].id, 0.0), e[0].id), reverse=True)
+        activity = _plan_activity(
+            milestones,
+            tasks,
+            store.criteria_map(),
+            store.feed(limit=1_000_000),
+        )
+        out.sort(key=lambda entry: (activity.get(entry[0].id, 0.0), entry[0].id), reverse=True)
         if limit is not None:
             out = out[: max(limit, 0)]
     return out
 
 
 # -- export / import (portability) ------------------------------------------
-def export_all(store: Store) -> dict:
-    """Full dump: plans (with criteria + links + repos) holding milestones and tasks."""
-    plans = []
-    for p in store.list_plans():
-        milestones = []
-        for s in store.list_milestones(p.id):
-            tasks = []
-            for t in store.list_tasks(s.id):
-                claim = store.get_claim(t.id)
-                tasks.append(
-                    {
-                        "task": _ser(vars(t)),
-                        "criteria": [vars(c) for c in store.list_criteria("task", t.id)],
-                        "links": [vars(c) for c in store.list_links("task", t.id)],
-                        "forge_links": [vars(c) for c in store.list_forge_links("task", t.id)],
-                        "repos": store.list_repos("task", t.id),
-                        "notes": [vars(n) for n in store.list_notes("task", t.id)],
-                        "comments": [vars(c) for c in store.list_comments("task", t.id)],
-                        "issues": store.list_issue_links("task", t.id),
-                        "claim": vars(claim) if claim is not None else None,
-                    }
-                )
-            milestones.append(
-                {
-                    "milestone": _ser(vars(s)),
-                    "criteria": [vars(c) for c in store.list_criteria("milestone", s.id)],
-                    "links": [vars(c) for c in store.list_links("milestone", s.id)],
-                    "forge_links": [vars(c) for c in store.list_forge_links("milestone", s.id)],
-                    "repos": store.list_repos("milestone", s.id),
-                    "notes": [vars(n) for n in store.list_notes("milestone", s.id)],
-                    "comments": [vars(c) for c in store.list_comments("milestone", s.id)],
-                    "issues": store.list_issue_links("milestone", s.id),
-                    "tasks": tasks,
-                }
-            )
-        plans.append(
+def _export_maps(store: Store) -> dict[str, Any]:
+    """Every child table loaded once for an export."""
+    return {
+        "milestones": store.milestones_map(),
+        "tasks": store.tasks_map(),
+        "criteria": store.criteria_map(),
+        "links": store.vcs_links_map(),
+        "forge": store.forge_links_map(),
+        "repos": store.repos_map(),
+        "notes": store.notes_full_map(),
+        "comments": store.comments_full_map(),
+        "issues": store.issue_links_map(),
+        "claims": store.claims_map(),
+        "uids": store.plan_uids_map(),
+    }
+
+
+def _export_entry(plan: Plan, maps: dict[str, Any]) -> dict:
+    """One plan entry in export_all() shape from preloaded maps."""
+    criteria = maps["criteria"]
+    links = maps["links"]
+    forge = maps["forge"]
+    repos = maps["repos"]
+    notes = maps["notes"]
+    comments = maps["comments"]
+    issues = maps["issues"]
+    claims = maps["claims"]
+
+    def task_entry(task: Task) -> dict:
+        claim = claims.get(task.id)
+        return {
+            "task": _ser(vars(task)),
+            "criteria": [vars(item) for item in criteria.get(("task", task.id), [])],
+            "links": [vars(item) for item in links.get(("task", task.id), [])],
+            "forge_links": [vars(item) for item in forge.get(("task", task.id), [])],
+            "repos": repos.get(("task", task.id), []),
+            "notes": [vars(item) for item in notes.get(("task", task.id), [])],
+            "comments": [vars(item) for item in comments.get(("task", task.id), [])],
+            "issues": issues.get(("task", task.id), []),
+            "claim": vars(claim) if claim is not None else None,
+        }
+
+    milestone_entries = []
+    for milestone in maps["milestones"].get(plan.id, ()):
+        milestone_entries.append(
             {
-                "plan": {**_ser(vars(p)), "uid": store.plan_uid(p.id)},
-                "criteria": [vars(c) for c in store.list_criteria("plan", p.id)],
-                "links": [vars(c) for c in store.list_links("plan", p.id)],
-                "forge_links": [vars(c) for c in store.list_forge_links("plan", p.id)],
-                "repos": store.list_repos("plan", p.id),
-                "notes": [vars(n) for n in store.list_notes("plan", p.id)],
-                "comments": [vars(c) for c in store.list_comments("plan", p.id)],
-                "issues": store.list_issue_links("plan", p.id),
-                "milestones": milestones,
+                "milestone": _ser(vars(milestone)),
+                "criteria": [vars(item) for item in criteria.get(("milestone", milestone.id), [])],
+                "links": [vars(item) for item in links.get(("milestone", milestone.id), [])],
+                "forge_links": [vars(item) for item in forge.get(("milestone", milestone.id), [])],
+                "repos": repos.get(("milestone", milestone.id), []),
+                "notes": [vars(item) for item in notes.get(("milestone", milestone.id), [])],
+                "comments": [vars(item) for item in comments.get(("milestone", milestone.id), [])],
+                "issues": issues.get(("milestone", milestone.id), []),
+                "tasks": [task_entry(task) for task in maps["tasks"].get(milestone.id, ())],
             }
         )
     return {
+        "plan": {**_ser(vars(plan)), "uid": maps["uids"].get(plan.id, "")},
+        "criteria": [vars(item) for item in criteria.get(("plan", plan.id), [])],
+        "links": [vars(item) for item in links.get(("plan", plan.id), [])],
+        "forge_links": [vars(item) for item in forge.get(("plan", plan.id), [])],
+        "repos": repos.get(("plan", plan.id), []),
+        "notes": [vars(item) for item in notes.get(("plan", plan.id), [])],
+        "comments": [vars(item) for item in comments.get(("plan", plan.id), [])],
+        "issues": issues.get(("plan", plan.id), []),
+        "milestones": milestone_entries,
+    }
+
+
+def export_all(store: Store) -> dict:
+    """Full dump: plans (with criteria + links + repos) holding milestones and tasks."""
+    maps = _export_maps(store)
+    return {
         "lazyplan": 1,
-        "plans": plans,
+        "plans": [_export_entry(plan, maps) for plan in store.list_plans()],
         "criterion_links": store.all_criterion_links(),
     }
 
 
 def export_plan(store: Store, plan_id: int) -> dict | None:
     """Single-plan entry in export_all() shape (or None when missing)."""
-    plans: list[dict] = export_all(store)["plans"]
-    for entry in plans:
-        plan: dict = entry["plan"]
-        if plan["id"] == plan_id:
-            return entry
-    return None
+    plan = store.get_plan(plan_id)
+    if plan is None:
+        return None
+    return _export_entry(plan, _export_maps(store))
 
 
 def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]:
+    """Load an export_all() dump atomically; returns counts."""
+    with store._connect():
+        return _import_all(store, data, actor)
+
+
+def _import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]:
     """Load an export_all() dump. Returns counts.
 
     Template fill is skipped on import: the dump carries final values.

@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import shutil
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -18,8 +20,10 @@ REPO = "fluxion-dev/lazyplan"
 PYPI_PKG = "lazyplan-tui"
 RELEASES_LATEST = f"https://github.com/{REPO}/releases/latest"
 RESOLVE_TIMEOUT = 10.0
-NOTICE_TIMEOUT = 3.0
 UPGRADE_TIMEOUT = 300.0
+UPDATE_CACHE_NAME = "update.json"
+UPDATE_CACHE_TTL = 24 * 3600
+NO_UPDATE_ENV = "LAZYPLAN_NO_UPDATE_CHECK"
 
 PIPX = "pipx"
 VENV = "venv"
@@ -148,6 +152,64 @@ def parse_version(text: str) -> tuple[int, int, int]:
 
 def version_text(version: tuple[int, int, int]) -> str:
     return ".".join(str(n) for n in version)
+
+
+def update_check_enabled() -> bool:
+    """True unless the environment explicitly disables update checks."""
+    return not os.environ.get(NO_UPDATE_ENV, "").strip()
+
+
+def update_cache_path(home: str | Path | None = None) -> Path:
+    """Cache file path in the shared lazyplan home."""
+    from .repo import shared_home
+
+    return shared_home(home) / UPDATE_CACHE_NAME
+
+
+def _read_update_cache(home: str | Path | None = None) -> tuple[float, str] | None:
+    try:
+        data = json.loads(textfile.read(update_cache_path(home)))
+        checked_at = float(data["checked_at"])
+        latest = str(data["latest"])
+        parse_version(latest)
+    except (OSError, ValueError, KeyError, TypeError, UpgradeError):
+        return None
+    return checked_at, latest
+
+
+def cached_latest(
+    home: str | Path | None = None,
+    max_age: float | None = None,
+    now: float | None = None,
+) -> str | None:
+    """Last known release version, optionally only when younger than max_age."""
+    data = _read_update_cache(home)
+    if data is None:
+        return None
+    checked_at, latest = data
+    if max_age is not None:
+        stamp = time.time() if now is None else now
+        if stamp - checked_at > max_age:
+            return None
+    return latest
+
+
+def remember_latest(
+    latest: str,
+    home: str | Path | None = None,
+    now: float | None = None,
+) -> None:
+    """Atomically remember the latest known release version."""
+    parse_version(latest)
+    path = update_cache_path(home)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp = path.with_name(f"{path.name}.tmp")
+    payload = json.dumps(
+        {"checked_at": time.time() if now is None else now, "latest": latest},
+        indent=2,
+    )
+    textfile.write(temp, payload + "\n")
+    os.replace(temp, path)
 
 
 def latest_version(timeout: float = RESOLVE_TIMEOUT) -> str:

@@ -16,10 +16,6 @@ from pathlib import Path
 
 from . import (
     audit,
-    brief,
-    hook_hosts,
-    hook_install,
-    hooks,
     porcelain,
     services,
     setup,
@@ -27,13 +23,6 @@ from . import (
     setup_ui,
     textfile,
 )
-from . import issues as issues_mod
-from . import lint as lint_mod
-from . import mcp as mcp_mod
-from . import share as share_mod
-from . import stats as stats_mod
-from . import sync as sync_mod
-from . import trace as trace_mod
 from .cli_parser import build_parser, package_version
 from .design import (
     EMPTY_COMMITS,
@@ -62,14 +51,15 @@ from .repo import find_repo_root, repo_label, resolve_db_path
 from .seed import seed as seed_demo
 from .store import ClaimConflict, ClaimMissing, Store, _ser
 from .upgrade import (
-    NOTICE_TIMEOUT,
     UpgradeError,
+    cached_latest,
     detect,
     guard_message,
     latest_version,
     notice_text,
     parse_version,
     run_upgrade,
+    update_check_enabled,
 )
 from .vcs import detect_backend, origin_url
 
@@ -227,6 +217,8 @@ def _print_setup(result: dict) -> None:
 
 def _cmd_setup(store: Store | None, args: argparse.Namespace, actor: str) -> int:
     """Re-run setup, or apply remembered choices without prompts."""
+    from . import hook_install
+
     del store, actor
     home = Path.home()
     state = setup.load_state(home)
@@ -436,6 +428,8 @@ def _cmd_audit(store: Store | None, args: argparse.Namespace, actor: str) -> int
 
 def _cmd_brief(store: Store | None, args: argparse.Namespace, actor: str) -> int:
     """Read-only session brief; never creates a database."""
+    from . import brief
+
     del actor
     try:
         db = store or _optional_store(args)
@@ -465,6 +459,8 @@ def _cmd_brief(store: Store | None, args: argparse.Namespace, actor: str) -> int
 
 
 def _cmd_stats(store: Store, args: argparse.Namespace, actor: str) -> int:
+    from . import stats as stats_mod
+
     del actor
     since = audit.parse_since(args.since)
     stale_before = audit.parse_since(args.stale_after)
@@ -505,6 +501,8 @@ def _cmd_stats(store: Store, args: argparse.Namespace, actor: str) -> int:
 
 
 def _cmd_lint(store: Store, args: argparse.Namespace, actor: str) -> int:
+    from . import lint as lint_mod
+
     del actor
     findings = lint_mod.lint_plan(store, args.plan)
     if findings is None:
@@ -624,6 +622,8 @@ def _trace_rows(payload: dict) -> list[str]:
 
 
 def _cmd_trace(store: Store, args: argparse.Namespace, actor: str) -> int:
+    from . import trace as trace_mod
+
     del actor
     if args.plan is not None:
         payload = trace_mod.trace_plan(store, args.plan)
@@ -898,6 +898,8 @@ def _comment_list(store: Store, args: argparse.Namespace) -> int:
 
 
 def _cmd_sync(store: Store, args: argparse.Namespace, actor: str) -> int:
+    from . import sync as sync_mod
+
     try:
         data = json.loads(textfile.read(args.file))
         report = sync_mod.sync(store, data, actor=actor, dry_run=bool(args.dry_run))
@@ -946,6 +948,8 @@ def _cmd_sync(store: Store, args: argparse.Namespace, actor: str) -> int:
 
 
 def _cmd_share(store: Store, args: argparse.Namespace, actor: str) -> int:
+    from . import share as share_mod
+
     del actor
     if store.get_plan(args.plan) is None:
         print(msg_not_found("plan", args.plan), file=sys.stderr)
@@ -1012,6 +1016,8 @@ def _cmd_note(store: Store, args: argparse.Namespace, actor: str) -> int:
 
 
 def _cmd_mcp(store: Store | None, args: argparse.Namespace, actor: str) -> int:
+    from . import mcp as mcp_mod
+
     del store
     path = resolve_db_path(args.db)
     return mcp_mod.run(str(path), actor=actor, read_only=bool(args.read_only))
@@ -1019,6 +1025,8 @@ def _cmd_mcp(store: Store | None, args: argparse.Namespace, actor: str) -> int:
 
 def _cmd_hook(store: Store | None, args: argparse.Namespace, actor: str) -> int:
     """Read-only lifecycle reminder; always exits 0 so a host never blocks."""
+    from . import hook_hosts, hooks
+
     del store, actor
     payload = hooks.read_payload(sys.stdin)
     host = hooks.detect_host(payload, args.host)
@@ -1096,44 +1104,55 @@ def _list_payload(
     plan_id: int | None,
 ) -> list[dict]:
     """Full JSON tree; shape stays stable for scripts."""
-    return [
-        {
-            "plan": _ser(vars(plan)),
-            "criteria": [vars(c) for c in store.list_criteria("plan", plan.id)],
-            "links": [vars(c) for c in store.list_links("plan", plan.id)],
-            "repos": store.list_repos("plan", plan.id),
-            "effective_repos": store.effective_repos("plan", plan.id),
-            "milestones": [
+    criteria = store.criteria_map()
+    links = store.vcs_links_map()
+    repos = store.repos_map()
+    payload = []
+    for plan, milestones in services.tree(
+        store,
+        status=status,
+        plan_id=plan_id,
+        archived=archived,
+        limit=limit,
+        repo=repo,
+        milestone_id=milestone,
+    ):
+        plan_repos = repos.get(("plan", plan.id), [])
+        milestone_rows = []
+        for ms, tasks in milestones:
+            milestone_repos = repos.get(("milestone", ms.id), []) or plan_repos
+            task_rows = []
+            for task in tasks:
+                task_rows.append(
+                    {
+                        "task": _ser(vars(task)),
+                        "criteria": [vars(item) for item in criteria.get(("task", task.id), [])],
+                        "links": [vars(item) for item in links.get(("task", task.id), [])],
+                        "repos": repos.get(("task", task.id), []),
+                        "effective_repos": repos.get(("task", task.id), []) or milestone_repos,
+                    }
+                )
+            milestone_rows.append(
                 {
-                    "milestone": _ser(vars(s)),
-                    "criteria": [vars(c) for c in store.list_criteria("milestone", s.id)],
-                    "links": [vars(c) for c in store.list_links("milestone", s.id)],
-                    "repos": store.list_repos("milestone", s.id),
-                    "effective_repos": store.effective_repos("milestone", s.id),
-                    "tasks": [
-                        {
-                            "task": _ser(vars(t)),
-                            "criteria": [vars(c) for c in store.list_criteria("task", t.id)],
-                            "links": [vars(c) for c in store.list_links("task", t.id)],
-                            "repos": store.list_repos("task", t.id),
-                            "effective_repos": store.effective_repos("task", t.id),
-                        }
-                        for t in tasks
-                    ],
+                    "milestone": _ser(vars(ms)),
+                    "criteria": [vars(item) for item in criteria.get(("milestone", ms.id), [])],
+                    "links": [vars(item) for item in links.get(("milestone", ms.id), [])],
+                    "repos": repos.get(("milestone", ms.id), []),
+                    "effective_repos": milestone_repos,
+                    "tasks": task_rows,
                 }
-                for s, tasks in milestones
-            ],
-        }
-        for plan, milestones in services.tree(
-            store,
-            status=status,
-            plan_id=plan_id,
-            archived=archived,
-            limit=limit,
-            repo=repo,
-            milestone_id=milestone,
+            )
+        payload.append(
+            {
+                "plan": _ser(vars(plan)),
+                "criteria": [vars(item) for item in criteria.get(("plan", plan.id), [])],
+                "links": [vars(item) for item in links.get(("plan", plan.id), [])],
+                "repos": plan_repos,
+                "effective_repos": plan_repos,
+                "milestones": milestone_rows,
+            }
         )
-    ]
+    return payload
 
 
 def _list_lines(
@@ -1809,6 +1828,8 @@ def _cmd_delete_criteria(store: Store, args: argparse.Namespace, actor: str) -> 
 
 
 def _cmd_issue_import(store: Store, args: argparse.Namespace, actor: str) -> int:
+    from . import issues as issues_mod
+
     if args.as_kind == "task":
         if not args.milestone or store.get_milestone(args.milestone) is None:
             print(msg_error(ValueError("--as task needs a valid --milestone")), file=sys.stderr)
@@ -2451,17 +2472,20 @@ def _cmd_ui(store: Store, args: argparse.Namespace, actor: str) -> int:
 
 
 def _maybe_notice_update(args: argparse.Namespace) -> None:
-    """One stderr notice per process when a newer release exists; never breaks.
+    """One stderr notice from the shared cache; never touches the network.
 
-    Agent-facing calls (hooks, MCP, porcelain, JSON) skip the network check.
+    Agent-facing calls (hooks, MCP, porcelain, JSON) stay silent. The TUI
+    refreshes the cache in its background update worker.
     """
     if args.cmd in (None, "ui", "upgrade", "hook", "mcp"):
         return
     if getattr(args, "json", False) or getattr(args, "version", False) or porcelain.enabled(args):
         return
+    if not update_check_enabled():
+        return
     try:
-        latest = latest_version(timeout=NOTICE_TIMEOUT)
-        notice = notice_text(detect(), package_version(), latest)
+        latest = cached_latest()
+        notice = notice_text(detect(), package_version(), latest or "")
     except Exception:
         return
     if notice is not None:

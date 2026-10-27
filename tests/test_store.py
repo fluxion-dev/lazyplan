@@ -9,6 +9,7 @@ from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from lazyplan import migrate as migrate_mod
 from lazyplan import services
 from lazyplan.cli import main as lpui_main
 from lazyplan.models import Status
@@ -38,6 +39,29 @@ class TestStore(unittest.TestCase):
 
     def tearDown(self):
         self.tmp.cleanup()
+
+    def test_schema_version_and_indexes(self):
+        with closing(sqlite3.connect(self.db)) as conn:
+            self.assertEqual(
+                int(conn.execute("PRAGMA user_version").fetchone()[0]),
+                migrate_mod.SCHEMA_VERSION,
+            )
+            names = {
+                str(row[0])
+                for row in conn.execute("SELECT name FROM sqlite_master WHERE type='index'")
+            }
+        for name in (
+            "idx_events_action",
+            "idx_vcs_links_sha",
+            "idx_issue_links_row",
+            "idx_entity_repos_branch",
+        ):
+            self.assertIn(name, names)
+        with closing(sqlite3.connect(self.db)) as conn:
+            conn.row_factory = sqlite3.Row
+            with mock.patch.object(migrate_mod, "_migrate_elements") as legacy:
+                migrate_mod.migrate(conn)
+        legacy.assert_not_called()
 
     def test_writes_release_the_database_file(self):
         self.store.add_plan("Site")
@@ -109,6 +133,120 @@ class TestStore(unittest.TestCase):
         self.store.add_task(s.id, "A")
         self.store.add_task(s.id, "B")
         self.assertEqual([t.title for t in self.store.list_tasks(s.id)], ["A", "B"])
+
+    def test_bulk_maps_match_per_id_reads(self):
+        p = self.store.add_plan("P")
+        s = self.store.add_milestone(p.id, "S")
+        t1 = self.store.add_task(s.id, "T1")
+        t2 = self.store.add_task(s.id, "T2")
+        self.store.add_criteria("plan", p.id, "plan criterion")
+        self.store.add_criteria("milestone", s.id, "milestone criterion")
+        self.store.add_criteria("task", t1.id, "open task criterion")
+        done = self.store.add_criteria("task", t2.id, "done task criterion")
+        self.store.set_criteria(done.id, True)
+        self.store.link_commit("task", t1.id, "a" * 40)
+        issue = self.store.add_issue_link(
+            "github", "42", "42", "https://example.test/42", "Issue 42", "open", "task", t1.id
+        )
+        self.store.log("bench", "plan", "status", f"plan #{p.id} -> doing")
+        self.store.log("bench", "plan", "status", f"plan #{p.id} -> done (rollup)")
+
+        self.assertEqual(self.store.milestones_map(), {p.id: self.store.list_milestones(p.id)})
+        self.assertEqual(
+            self.store.tasks_map(),
+            {s.id: self.store.list_tasks(s.id)},
+        )
+        expected_criteria = {
+            ("plan", p.id): self.store.list_criteria("plan", p.id),
+            ("milestone", s.id): self.store.list_criteria("milestone", s.id),
+            ("task", t1.id): self.store.list_criteria("task", t1.id),
+            ("task", t2.id): self.store.list_criteria("task", t2.id),
+        }
+        self.assertEqual(self.store.criteria_map(), expected_criteria)
+        self.assertEqual(self.store.open_task_criteria_ids(), {t1.id})
+        self.assertEqual(
+            self.store.issue_links_map(),
+            {("task", t1.id): [issue]},
+        )
+        self.assertEqual(self.store.plan_status_events_map()[p.id][1], "done")
+
+    def test_get_full_many_matches_single_reads(self):
+        p = self.store.add_plan("P")
+        s = self.store.add_milestone(p.id, "S")
+        t1 = self.store.add_task(s.id, "T1")
+        t2 = self.store.add_task(s.id, "T2")
+        for kind, obj_id in (("plan", p.id), ("milestone", s.id), ("task", t1.id)):
+            self.store.add_criteria(kind, obj_id, "works")
+        self.store.add_note("task", t1.id, "handoff", actor="bench")
+        self.store.add_comment("task", t1.id, "review", actor="bench")
+        self.store.add_issue_link(
+            "github", "42", "42", "https://example.test/42", "Issue 42", "open", "task", t1.id
+        )
+        self.store.link_commit("task", t1.id, "a" * 40, subject="work", files=("a.py",))
+        self.store.link_forge("task", t2.id, 7, title="PR", state="open", checks="pass")
+        self.store.add_repo_link("plan", p.id, "/checkout/plan", "git@example.test:org/plan.git")
+        self.store.add_repo_link("task", t1.id, "/checkout/task", "git@example.test:org/task.git")
+        self.store.claim_task(t1.id, "agent")
+
+        for kind, ids in (
+            ("plan", [p.id]),
+            ("milestone", [s.id]),
+            ("task", [t1.id, t2.id]),
+        ):
+            with self.subTest(kind=kind):
+                self.assertEqual(
+                    self.store.get_full_many(kind, ids),
+                    [self.store.get_full(kind, obj_id) for obj_id in ids],
+                )
+
+    def test_cli_list_json_matches_store_reads(self):
+        from lazyplan.cli import _list_payload
+
+        p = self.store.add_plan("P")
+        s = self.store.add_milestone(p.id, "S")
+        t = self.store.add_task(s.id, "T")
+        criterion = self.store.add_criteria("task", t.id, "works")
+        self.store.link_commit("task", t.id, "a" * 40)
+        self.store.add_repo_link("plan", p.id, "/checkout/plan", "git@example.test:org/plan.git")
+        self.store.add_repo_link("task", t.id, "/checkout/task", "git@example.test:org/task.git")
+
+        payload = _list_payload(self.store, None, "show", None, None, None, None)
+        self.assertEqual(len(payload), 1)
+        entry = payload[0]
+        self.assertEqual(entry["criteria"], [])
+        self.assertEqual(entry["links"], [])
+        self.assertEqual(entry["repos"], self.store.list_repos("plan", p.id))
+        milestone = entry["milestones"][0]
+        task = milestone["tasks"][0]
+        self.assertEqual(task["criteria"], [vars(criterion)])
+        self.assertEqual(
+            task["links"], [vars(link) for link in self.store.list_links("task", t.id)]
+        )
+        self.assertEqual(task["repos"], self.store.list_repos("task", t.id))
+        self.assertEqual(task["effective_repos"], self.store.effective_repos("task", t.id))
+        self.assertEqual(
+            milestone["effective_repos"], self.store.effective_repos("milestone", s.id)
+        )
+
+    def test_import_is_atomic_on_failure(self):
+        data = {
+            "lazyplan": 1,
+            "plans": [
+                {"plan": {"name": "Good"}},
+                {"not_a_plan": True},
+            ],
+        }
+        with self.assertRaises(KeyError):
+            services.import_all(self.store, data)
+        self.assertEqual(self.store.counts()["plans"], 0)
+
+    def test_export_plan_does_not_export_everything(self):
+        p = self.store.add_plan("P")
+        with mock.patch.object(services, "export_all", side_effect=AssertionError("full export")):
+            entry = services.export_plan(self.store, p.id)
+        self.assertIsNotNone(entry)
+        assert entry is not None
+        self.assertEqual(entry["plan"]["id"], p.id)
 
     def test_criteria_on_plan_milestone_task(self):
         p = self.store.add_plan("P")
@@ -418,6 +556,26 @@ class TestStore(unittest.TestCase):
         self.assertEqual(len(services.tree(self.store, limit=0)), 0)
         pinned = services.tree(self.store, plan_id=ids[0], limit=1)
         self.assertEqual([p.id for p, _ in pinned], [ids[0]])
+
+    def test_tree_repo_filter_uses_inherited_links(self):
+        p1 = self.store.add_plan("P1")
+        p2 = self.store.add_plan("P2")
+        s1 = self.store.add_milestone(p1.id, "S1")
+        s2 = self.store.add_milestone(p2.id, "S2")
+        self.store.add_task(s1.id, "T1")
+        t2 = self.store.add_task(s2.id, "T2")
+        self.store.add_repo_link("plan", p1.id, "/checkout/one", "git@example.com:org/one.git")
+        self.store.add_repo_link("task", t2.id, "/checkout/two", "git@example.com:org/two.git")
+
+        self.assertEqual(
+            [plan.id for plan, _ in services.tree(self.store, repo="/checkout/one")],
+            [p1.id],
+        )
+        self.assertEqual(
+            [plan.id for plan, _ in services.tree(self.store, repo="org/two")],
+            [p2.id],
+        )
+        self.assertEqual(len(services.tree(self.store, repo="/checkout/three")), 0)
 
     def test_filters(self):
         p1 = self.store.add_plan("P1")

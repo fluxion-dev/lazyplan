@@ -9,6 +9,8 @@ from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from pilot_settle import settle  # noqa: E402
+
 from lazyplan.design import SOURCE_MARKER
 from lazyplan.store import Store
 from lazyplan.vcs import DiffRead
@@ -105,6 +107,8 @@ class TestSourceScreen(unittest.IsolatedAsyncioTestCase):
     async def _open(self, pilot) -> SourceScreen:
         self.app.push_screen(SourceScreen(self.store, "task", self.tid))
         await pilot.pause()
+        await self.app.workers.wait_for_complete()
+        await settle(pilot)
         return self.app.screen
 
     async def test_tree_groups_repo_commit_files_and_pr(self):
@@ -169,6 +173,8 @@ class TestSourceScreen(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             self.app.push_screen(SourceScreen(self.store, "plan", self.pid))
             await pilot.pause()
+            await self.app.workers.wait_for_complete()
+            await settle(pilot)
             tree = self.app.screen.query_one("#source-tree", Tree)
             self.assertEqual(len(tree.root.children), 1)
             repo = tree.root.children[0]
@@ -365,6 +371,8 @@ class TestSourceScreen(unittest.IsolatedAsyncioTestCase):
             empty = self.store.add_task(self.sid, "No source")
             self.app.push_screen(SourceScreen(self.store, "task", empty.id))
             await pilot.pause()
+            await self.app.workers.wait_for_complete()
+            await settle(pilot)
             empty_tree = self.app.screen.query_one("#source-tree", Tree)
             self.assertNotIn(SOURCE_MARKER, str(empty_tree.root.children[0].label))
 
@@ -374,5 +382,7 @@ class TestSourceScreen(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             self.app.push_screen(SourceScreen(self.store, "task", empty.id))
             await pilot.pause()
+            await self.app.workers.wait_for_complete()
+            await settle(pilot)
             tree = self.app.screen.query_one("#source-tree", Tree)
             self.assertIn("No source linked", str(tree.root.children[0].label))

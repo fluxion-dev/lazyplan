@@ -289,3 +289,43 @@ or the next plan row so the next release has the context.
 - Follow-up for the next release: approve the release PR within the 20-minute
   publish window, or expect to merge and dispatch manually. No other
   deviations and no fix-forward commits.
+
+### v0.27.0 (2026-10-27)
+
+- Minor bump from 0.26.0 with the **bump** workflow (`part=minor`):
+  [run](https://github.com/fluxion-dev/lazyplan/actions/runs/40511544591).
+  Windows parity and fast-at-scale are user-visible, so this is a minor release.
+- Prep PR [#33](https://github.com/fluxion-dev/lazyplan/pull/33) carried the
+  0.27 docs, site, changelog, and tests and merged as `9d53e27` after all three
+  gates passed; Windows took 42m17s
+  ([run](https://github.com/fluxion-dev/lazyplan/actions/runs/40505520153)).
+- Release PR [#34](https://github.com/fluxion-dev/lazyplan/pull/34) changed only
+  the version mirrors. GitHub left its `ci` run in `action_required`; it was
+  approved through the Actions API and macOS plus Ubuntu passed. Windows failed
+  after 25m20s on `test_commit_chips.TestCommitChips.test_detail_hides_empty_commits`
+  (an empty detail body, a Textual timing race). The failed jobs were rerun and
+  Windows passed in 35m17s
+  ([run](https://github.com/fluxion-dev/lazyplan/actions/runs/40511575670)).
+- **Deviation:** the bump `publish` job failed because its 20-minute wait ended
+  before the Windows gate finished. The documented manual fallback merged PR #34
+  as `5a79b83`; that human merge push started
+  [tag-release](https://github.com/fluxion-dev/lazyplan/actions/runs/40521221923)
+  and [Pages](https://github.com/fluxion-dev/lazyplan/actions/runs/40521221552),
+  both successful. `tag-release` created annotated tag `v0.27.0` on `5a79b83`
+  and dispatched [release.yml](https://github.com/fluxion-dev/lazyplan/actions/runs/40521246877);
+  both the `release` and `publish-pypi` jobs succeeded.
+- PyPI JSON still served 0.26.0 right after publish; the first isolated
+  `pip install --no-cache-dir lazyplan-tui==0.27.0` missed, and the second one
+  about 15 seconds later installed 0.27.0.
+- Verified: seven assets including `install.sh`, the isolated install, plan,
+  milestone, and task creation, porcelain `next`, `stats`, export, share, and an
+  MCP initialize plus tools-list session with 25 tools. The deployed site shows
+  0.27.0, New in 0.27, the Windows and performance sections, and the PowerShell
+  quickstart; all 28 referenced image assets return 200, OG is 1200x630, sitemap
+  `lastmod` is 2026-10-27, robots points at it, and the curated notes are live.
+  Built-site Lighthouse: 96 performance, 100 accessibility, 100 best practices,
+  100 SEO. Widths 360, 768, and 1440 report no horizontal overflow.
+- Follow-up fixed in the release-log PR: the Windows detail-body test now waits
+  for the screen with `settle(pilot)` before reading `#detail-body`.
+- Follow-up for the next release: Windows gates now exceed the 20-minute
+  publish window, so approve and merge manually or lengthen the wait.

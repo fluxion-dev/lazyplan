@@ -202,3 +202,28 @@ returns 200, `screens/og-lpui-and-agent.png` is 1200x630, `sitemap.xml` carries
 `lastmod` 2026-10-26, `robots.txt` points at the sitemap, and the curated
 release notes are live. Human-only follow-ups: resubmit the URL to search
 engines and confirm the social card in a real client.
+
+### v0.27.0 pass (2026-10-27)
+
+After: version pins, release asset URLs, JSON-LD `version`/`softwareVersion`,
+and the sitemap `lastmod` moved to 0.27.0. The page gained a New in 0.27 band,
+a Windows section with a PowerShell quickstart, and a performance section with
+the fixture table. FAQPage and the visible FAQ gained Windows and large-plan
+answers, `operatingSystem` now lists Linux, macOS, and Windows, and the keyword
+set adds Windows terminal and terminal UI performance.
+
+The hero collage and 1200x630 social card were regenerated from deterministic
+fixtures; because the TUI did not change, the bytes are identical and the alt
+text now names 0.27. One `.inline-code` component replaced 57 repeated class
+strings, and the performance-doc link gained an underline for the
+link-in-text-block check.
+
+Built-site Lighthouse: 96 performance, 100 accessibility, 100 best practices,
+100 SEO. A headless Chromium probe at 360, 768, and 1440 widths reported
+`scrollWidth == clientWidth`, so there is no horizontal overflow.
+
+Verified live: the page contains 0.27.0 plus the new copy, all 28 referenced
+PNG and WebP assets return 200, OG is 1200x630, `sitemap.xml` carries `lastmod`
+2026-10-27, `robots.txt` points at the sitemap, and the curated release notes
+are live. Human-only follow-ups: resubmit the URL to search engines and confirm
+the social card in a real client.

@@ -103,7 +103,7 @@ class TestFetchAndWrite(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / "downloads.json"
             downloads.write_snapshot(out, {"available": True})
-            self.assertEqual(json.loads(out.read_text()), {"available": True})
+            self.assertEqual(json.loads(out.read_text(encoding="utf-8")), {"available": True})
             self.assertEqual([p.name for p in out.parent.iterdir()], ["downloads.json"])
 
     def test_network_failure_writes_unavailable(self):
@@ -115,7 +115,7 @@ class TestFetchAndWrite(unittest.TestCase):
             snapshot = downloads.run(out=out, opener=broken, now=FIXED)
             self.assertFalse(snapshot["available"])
             self.assertEqual(snapshot["generated_at"], "2026-10-27T12:00:00Z")
-            self.assertFalse(json.loads(out.read_text())["available"])
+            self.assertFalse(json.loads(out.read_text(encoding="utf-8"))["available"])
 
     def test_success_writes_snapshot(self):
         body = json.dumps(payload()).encode()
@@ -123,7 +123,7 @@ class TestFetchAndWrite(unittest.TestCase):
             out = Path(tmp) / "downloads.json"
             snapshot = downloads.run(out=out, opener=opener(body), now=FIXED)
             self.assertTrue(snapshot["available"])
-            self.assertEqual(json.loads(out.read_text())["total"], 3600)
+            self.assertEqual(json.loads(out.read_text(encoding="utf-8"))["total"], 3600)
 
 
 if __name__ == "__main__":

@@ -115,7 +115,7 @@ BUDGETS: dict[str, Budget] = {
     "services.tree": Budget(15, 2_000),
     "services.tree_limit5": Budget(15, 2_000),
     "attention_ids": Budget(20, 2_000),
-    "list_text": Budget(40, 3_000),
+    "list_text": Budget(30, 3_000),
     "list_json": Budget(25, 6_000),
     "show_plan": Budget(200, 1_000),
     "full_many": Budget(20, 1_500),

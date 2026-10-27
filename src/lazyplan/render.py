@@ -46,7 +46,16 @@ def summary_lines(
         repo=repo,
     )
     entries.sort(key=lambda entry: entry[0].status.value == "done")
-    progress = _progress_map(store)
+    if status is None:
+        progress = {}
+        for plan, milestones in entries:
+            tasks = [task for _, items in milestones for task in items]
+            progress[plan.id] = (
+                sum(1 for task in tasks if task.status.value == "done"),
+                len(tasks),
+            )
+    else:
+        progress = _progress_map(store)
     lines = []
     for plan, _milestones in entries:
         done, total = progress.get(plan.id, (0, 0))

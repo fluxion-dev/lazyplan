@@ -62,14 +62,15 @@ from .repo import find_repo_root, repo_label, resolve_db_path
 from .seed import seed as seed_demo
 from .store import ClaimConflict, ClaimMissing, Store, _ser
 from .upgrade import (
-    NOTICE_TIMEOUT,
     UpgradeError,
+    cached_latest,
     detect,
     guard_message,
     latest_version,
     notice_text,
     parse_version,
     run_upgrade,
+    update_check_enabled,
 )
 from .vcs import detect_backend, origin_url
 
@@ -2462,17 +2463,20 @@ def _cmd_ui(store: Store, args: argparse.Namespace, actor: str) -> int:
 
 
 def _maybe_notice_update(args: argparse.Namespace) -> None:
-    """One stderr notice per process when a newer release exists; never breaks.
+    """One stderr notice from the shared cache; never touches the network.
 
-    Agent-facing calls (hooks, MCP, porcelain, JSON) skip the network check.
+    Agent-facing calls (hooks, MCP, porcelain, JSON) stay silent. The TUI
+    refreshes the cache in its background update worker.
     """
     if args.cmd in (None, "ui", "upgrade", "hook", "mcp"):
         return
     if getattr(args, "json", False) or getattr(args, "version", False) or porcelain.enabled(args):
         return
+    if not update_check_enabled():
+        return
     try:
-        latest = latest_version(timeout=NOTICE_TIMEOUT)
-        notice = notice_text(detect(), package_version(), latest)
+        latest = cached_latest()
+        notice = notice_text(detect(), package_version(), latest or "")
     except Exception:
         return
     if notice is not None:

@@ -68,7 +68,16 @@ from .screens import (
 from .source_screen import SourceScreen
 from .store import ClaimConflict, Store
 from .templates import load_template
-from .upgrade import UpgradeError, detect, latest_version, notice_text
+from .upgrade import (
+    UPDATE_CACHE_TTL,
+    UpgradeError,
+    cached_latest,
+    detect,
+    latest_version,
+    notice_text,
+    remember_latest,
+    update_check_enabled,
+)
 from .vcs import detect_backend
 
 STATUS_CYCLE: list[Status | None] = [None, Status.TODO, Status.DOING, Status.DONE]
@@ -275,11 +284,22 @@ if _TEXTUAL_OK:
             return changed
 
         def _check_update(self) -> None:
-            """One background latest-version check per session; silent on failure."""
-            try:
-                latest = latest_version()
-            except UpgradeError:
+            """One background latest-version check per session; cache first."""
+            if not update_check_enabled():
                 return
+            latest = cached_latest(max_age=UPDATE_CACHE_TTL)
+            if latest is None:
+                try:
+                    latest = latest_version()
+                except UpgradeError:
+                    latest = cached_latest()
+                    if latest is None:
+                        return
+                else:
+                    try:
+                        remember_latest(latest)
+                    except OSError:
+                        pass
             notice = notice_text(detect(), package_version(), latest)
             if notice is not None:
                 self.call_from_thread(self._announce_update, notice)

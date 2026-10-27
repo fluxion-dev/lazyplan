@@ -227,3 +227,18 @@ PNG and WebP assets return 200, OG is 1200x630, `sitemap.xml` carries `lastmod`
 2026-10-27, `robots.txt` points at the sitemap, and the curated release notes
 are live. Human-only follow-ups: resubmit the URL to search engines and confirm
 the social card in a real client.
+
+### Marketing landing cleanup (2026-10-27)
+
+After: the page became a single marketing landing instead of a technical tour.
+Visible copy dropped from 2,670 to 457 words, figures from 15 to 5, inline code
+from 66 to 4, and FAQs from 15 to 5. The flat nav is Features, Screenshots,
+FAQ, Docs, and Install. Provenance, MCP, gates, imports, performance tables,
+Windows internals, and the agent CLI block were removed; one docs cluster
+remains in the footer.
+
+Nine unreferenced screenshot pairs were deleted and an orphan-image guard now
+checks that every published file is referenced. Built-site Lighthouse: 96
+performance, 100 accessibility, 100 best practices, 100 SEO. Widths 360, 768,
+and 1440 report no horizontal overflow. Verified live: 457 words, five figures,
+five FAQs, no removed technical phrases, and every published image returns 200.

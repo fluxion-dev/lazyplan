@@ -144,7 +144,7 @@ Binary, root, merge, empty, and missing states are explicit. Diffs are read
 live and never persisted. Rows with source details end in a single-cell `⎇`
 marker. `o` opens, `y` copies, `/` filters. Plans and milestones aggregate
 descendant work. `F` cycles source filters: all, linked, has PR, stale,
-unlinked.
+unlinked, claims, blocked, attention.
 
 ## GitHub pull requests
 

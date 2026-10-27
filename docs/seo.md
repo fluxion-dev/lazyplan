@@ -259,3 +259,18 @@ and the planner/executor split. Built-site Lighthouse: 98 performance, 100
 accessibility, 100 best practices, 100 SEO; widths 360, 768, and 1440 show no
 overflow. Verified live: both examples, the section heading, and the sixth FAQ
 are present, with six matching JSON-LD questions.
+
+### PyPI download proof (2026-10-27)
+
+After: a slim strip under the hero shows 2,831 total PyPI downloads and 1,857
+in the last seven days, excluding mirrors, with the caveat "Includes CI and
+repeat installs" and an updated date. The strip is hidden until a same-origin
+`downloads.json` loads and stays hidden for unavailable, malformed, or
+seven-day-old data.
+
+`tools/fetch-downloads.py` builds the snapshot from pypistats `overall`, the
+Pages workflow runs it before every build plus a daily schedule, and the JSON is
+gitignored. Built-site Lighthouse: 97 performance, 100 accessibility, 100 best
+practices, 100 SEO; widths 360, 768, and 1440 show no overflow. Verified live:
+the JSON returns 2,831 and 1,857, and the rendered strip shows both numbers and
+the Oct 27, 2026 date.

@@ -102,7 +102,7 @@
       "name": "Does it run on Windows, macOS, and Linux?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Yes. Install with pipx on all three. Your plan is stored locally on your machine."
+        "text": "Yes. It runs on Linux, macOS, and Windows, and your plan stays local on your machine."
       }
     },
     {
@@ -169,17 +169,7 @@
     <h1 class="m-0 text-5xl font-extrabold tracking-tight text-white md:text-6xl">One plan for you and your agent.</h1>
     <p class="mx-auto mt-6 max-w-2xl text-lg text-zinc-300">The plan, the context, and the next step in one terminal screen. Drive it yourself, or let one agent plan while another builds.</p>
 
-    <div class="mx-auto mt-8 flex max-w-md items-center gap-2 rounded-xl border border-plan-border bg-plan-surface/80 p-2 pl-4 text-left shadow-lg shadow-viking-blue/25 backdrop-blur">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-5 w-5 shrink-0 text-cyber-cyan"><path d="m4 17 6-6-6-6"/><path d="M12 19h8"/></svg>
-      <code id="hero-cmd" class="min-w-0 flex-1 truncate font-mono text-sm text-zinc-100">pipx install lazyplan-tui</code>
-      <button id="hero-copy" type="button" class="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-viking-blue px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-viking-blue/80">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-4 w-4"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-        Copy
-      </button>
-    </div>
-    <span id="copy-status" role="status" aria-live="polite" class="mt-2 block min-h-5 text-sm text-cyber-cyan"></span>
-
-    <div class="mt-6 flex flex-col items-center justify-center gap-2.5 sm:flex-row">
+    <div class="mt-8 flex flex-col items-center justify-center gap-2.5 sm:flex-row">
       <a class="inline-flex items-center gap-2 rounded-xl bg-viking-blue px-5 py-2.5 font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="#install">Install</a>
       <a class="inline-flex items-center gap-2 rounded-xl border border-plan-border bg-white/5 px-5 py-2.5 font-semibold text-white no-underline backdrop-blur transition hover:border-zinc-500 hover:bg-white/10" href="#screens">See it in action</a>
     </div>
@@ -327,26 +317,37 @@ Task · Add the token model        done</pre>
   <ol class="grid list-none grid-cols-1 gap-6 p-0 md:grid-cols-3">
     <li class="rounded-xl border border-plan-border bg-plan-surface/70 p-6">
       <span class="text-sm font-bold text-viking-gold">01</span>
-      <h3 class="mb-2 mt-3 text-lg font-semibold text-white">Install</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400">One command with pipx. Python 3.11 or newer.</p>
-    </li>
-    <li class="rounded-xl border border-plan-border bg-plan-surface/70 p-6">
-      <span class="text-sm font-bold text-viking-gold">02</span>
-      <h3 class="mb-2 mt-3 text-lg font-semibold text-white">Make a plan</h3>
+      <h3 class="mb-2 mt-3 text-lg font-semibold text-white">Create a plan</h3>
       <p class="m-0 text-[0.95rem] text-zinc-400">Give it a title, a reason, and a scope.</p>
     </li>
     <li class="rounded-xl border border-plan-border bg-plan-surface/70 p-6">
+      <span class="text-sm font-bold text-viking-gold">02</span>
+      <h3 class="mb-2 mt-3 text-lg font-semibold text-white">Bring in your agent</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Your agent reads and updates the same plan.</p>
+    </li>
+    <li class="rounded-xl border border-plan-border bg-plan-surface/70 p-6">
       <span class="text-sm font-bold text-viking-gold">03</span>
-      <h3 class="mb-2 mt-3 text-lg font-semibold text-white">Work together</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400">Run <code class="inline-code">lpui</code> and let your agent update the same plan.</p>
+      <h3 class="mb-2 mt-3 text-lg font-semibold text-white">Keep work moving</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Review progress, clear blockers, and finish.</p>
     </li>
   </ol>
 </section>
 
 <section id="install" class="mx-auto max-w-4xl scroll-mt-20 px-6 py-20 text-center md:py-28">
-  <h2 class="mb-4 text-2xl font-bold text-white md:text-3xl">Install in one command.</h2>
+  <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">Install</p>
+  <h2 class="mb-4 text-2xl font-bold text-white md:text-3xl">Get lazyplan in one command.</h2>
   <p class="mb-8 text-lg text-zinc-400">Python 3.11 or newer. Linux, macOS, and Windows.</p>
-  <pre class="mx-auto max-w-xl overflow-x-auto rounded-xl border border-plan-border bg-plan-surface p-4 text-left text-[0.95rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono">pipx install lazyplan-tui</code></pre>
+
+  <div class="mx-auto flex max-w-md items-center gap-2 rounded-xl border border-plan-border bg-plan-surface p-2 pl-4 text-left shadow-lg shadow-viking-blue/25">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-5 w-5 shrink-0 text-cyber-cyan"><path d="m4 17 6-6-6-6"/><path d="M12 19h8"/></svg>
+    <code id="install-cmd" class="min-w-0 flex-1 truncate font-mono text-sm text-zinc-100">pipx install lazyplan-tui</code>
+    <button id="install-copy" type="button" class="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-viking-blue px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-viking-blue/80">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-4 w-4"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+      Copy
+    </button>
+  </div>
+  <span id="install-copy-status" role="status" aria-live="polite" class="mt-2 block min-h-5 text-sm text-cyber-cyan"></span>
+
   <p class="mt-4 text-[0.95rem] text-zinc-400">On Windows: <code class="inline-code">pipx install --backend pip lazyplan-tui</code></p>
   <p class="mt-6 text-[0.95rem] text-zinc-400"><a class="text-cyber-cyan underline hover:text-white" href="https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md#install">Other install options</a></p>
 </section>
@@ -371,7 +372,7 @@ Task · Add the token model        done</pre>
     </details>
     <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
       <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">Does it run on Windows, macOS, and Linux?</summary>
-      <p class="mt-3 text-zinc-400">Yes. Install with pipx on all three. Your plan is stored locally on your machine.</p>
+      <p class="mt-3 text-zinc-400">Yes. It runs on Linux, macOS, and Windows, and your plan stays local on your machine.</p>
     </details>
     <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
       <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">Where is my data stored?</summary>
@@ -412,9 +413,9 @@ Task · Add the token model        done</pre>
 <script>
 (function () {
   'use strict';
-  var copyBtn = document.getElementById('hero-copy');
-  var copySrc = document.getElementById('hero-cmd');
-  var copyStatus = document.getElementById('copy-status');
+  var copyBtn = document.getElementById('install-copy');
+  var copySrc = document.getElementById('install-cmd');
+  var copyStatus = document.getElementById('install-copy-status');
   function announce(message) {
     if (!copyStatus) {
       return;

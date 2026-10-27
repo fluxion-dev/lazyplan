@@ -156,6 +156,19 @@ class TestVCS(unittest.TestCase):
             self.assertIsNone(self.backend.head(tmp))
 
     @unittest.skipUnless(_git_available(), "git CLI required")
+    def test_status_uses_one_git_call(self):
+        import lazyplan.vcs as vcs_mod
+
+        with tempfile.TemporaryDirectory() as tmp:
+            _init_repo(tmp)
+            _commit(tmp, "f.txt", "hi\n", "first")
+            with mock.patch("lazyplan.vcs._run_git", wraps=vcs_mod._run_git) as run:
+                status = self.backend.status(tmp)
+            self.assertEqual(run.call_count, 1)
+            self.assertEqual(status.branch, "main")
+            self.assertFalse(status.dirty)
+
+    @unittest.skipUnless(_git_available(), "git CLI required")
     def test_branch_status_and_remotes(self):
         with tempfile.TemporaryDirectory() as tmp:
             _init_repo(tmp)

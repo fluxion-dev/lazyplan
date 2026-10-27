@@ -178,13 +178,7 @@ class GitBackend(VCSBackend):
         """Enclosing git root, or None. Requires a working git CLI."""
         from .repo import find_repo_root
 
-        root = find_repo_root(cwd)
-        if root is None:
-            return None
-        out = _run_git(root, "rev-parse", "--git-dir")
-        if out is None or out.returncode != 0:
-            return None
-        return root
+        return find_repo_root(cwd)
 
     def head(self, root: str | Path) -> str | None:
         """HEAD SHA, or None when there is no commit yet."""
@@ -203,19 +197,45 @@ class GitBackend(VCSBackend):
         return name or None
 
     def status(self, root: str | Path) -> RepoStatus:
-        """Branch, dirty tree, and ahead/behind counts for one checkout."""
-        head = self.head(root) or ""
-        branch = self.branch(root)
-        dirty = self._dirty(root)
-        upstream, ahead, behind = self._tracking(root)
+        """Branch, dirty tree, and ahead/behind counts in one git call."""
+        out = _run_git(root, "status", "--porcelain=v2", "--branch")
+        if out is None or out.returncode != 0:
+            return RepoStatus()
+        head = ""
+        branch = ""
+        upstream = ""
+        ahead = behind = 0
+        dirty = False
+        for line in out.stdout.splitlines():
+            if line.startswith("# branch.oid "):
+                head = line.removeprefix("# branch.oid ").strip()
+            elif line.startswith("# branch.head "):
+                branch = line.removeprefix("# branch.head ").strip()
+            elif line.startswith("# branch.upstream "):
+                upstream = line.removeprefix("# branch.upstream ").strip()
+            elif line.startswith("# branch.ab "):
+                parts = line.removeprefix("# branch.ab ").split()
+                if len(parts) == 2:
+                    try:
+                        ahead = int(parts[0].lstrip("+"))
+                        behind = int(parts[1].lstrip("-"))
+                    except ValueError:
+                        ahead = behind = 0
+            elif line and not line.startswith("#"):
+                dirty = True
+        if head == "(initial)":
+            head = ""
+        detached = branch == "(detached)"
+        if detached:
+            branch = ""
         return RepoStatus(
-            branch=branch or "",
+            branch=branch,
             head=head,
             dirty=dirty,
             ahead=ahead,
             behind=behind,
             upstream=upstream,
-            detached=branch is None and bool(head),
+            detached=detached and bool(head),
         )
 
     def log(
@@ -236,8 +256,7 @@ class GitBackend(VCSBackend):
         out = _run_git(root, *args)
         if out is None or out.returncode != 0:
             return []
-        branch = self.branch(root) or ""
-        return self._parse_log(out.stdout, root, branch=branch)
+        return self._parse_log(out.stdout, root)
 
     def remotes(self, root: str | Path) -> list[RemoteInfo]:
         """Named remotes with fetch and push URLs, sorted by name."""
@@ -314,44 +333,12 @@ class GitBackend(VCSBackend):
         state = "root" if parent_count == 0 else "ok"
         return DiffRead(state=state, patch=patch, truncated=truncated)
 
-    @staticmethod
-    def _dirty(root: str | Path) -> bool:
-        """True when tracked or untracked files differ from HEAD."""
-        out = _run_git(root, "status", "--porcelain")
-        return bool(out is not None and out.returncode == 0 and out.stdout.strip())
-
-    def _tracking(self, root: str | Path) -> tuple[str, int, int]:
-        """Upstream name plus (ahead, behind); empty/zero when untracked."""
-        ref = _run_git(root, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}")
-        if ref is None or ref.returncode != 0:
-            return "", 0, 0
-        upstream = ref.stdout.strip()
-        if not upstream:
-            return "", 0, 0
-        counts = _run_git(root, "rev-list", "--left-right", "--count", f"{upstream}...HEAD")
-        if counts is None or counts.returncode != 0:
-            return upstream, 0, 0
-        parts = counts.stdout.split()
-        if len(parts) != 2:
-            return upstream, 0, 0
-        try:
-            behind, ahead = int(parts[0]), int(parts[1])
-        except ValueError:
-            return upstream, 0, 0
-        return upstream, ahead, behind
-
     def show(self, root: str | Path, sha: str) -> CommitInfo | None:
         """Resolve sha to full CommitInfo; None when unknown."""
         ref = sha.strip()
         if not ref:
             return None
-        full = _run_git(root, "rev-parse", "--verify", f"{ref}^{{commit}}")
-        if full is None or full.returncode != 0:
-            return None
-        resolved = full.stdout.strip()
-        if not resolved:
-            return None
-        out = _run_git(root, "log", "-1", f"--format={self._LOG_FORMAT}", resolved)
+        out = _run_git(root, "log", "-1", f"--format={self._LOG_FORMAT}", ref)
         if out is None or out.returncode != 0:
             return None
         branch = self.branch(root) or ""

@@ -165,7 +165,7 @@ The marketing site keeps a compact primary bar. Desktop (768px and up) shows
 the logo, three disclosure menus, an icon-only GitHub link, and Install; mobile
 shows the logo and a Menu disclosure.
 
-- **Product:** What's new, Features, Screenshots, For agents.
+- **Product:** What's new, Windows, Performance, Features, Screenshots, For agents.
 - **Capabilities:** Coordination, Provenance, Collaboration, Bulk edit, Imports.
 - **Learn:** Quickstart, FAQ.
 

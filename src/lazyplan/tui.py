@@ -177,6 +177,7 @@ if _TEXTUAL_OK:
             self.marked: set[tuple[str, int]] = set()
             self._undo: list[dict] | None = None
             self._row_nodes: dict[tuple[str, int], TreeNode] = {}
+            self._row_labels: dict[tuple[str, int], str] = {}
             self._collapsed: set[tuple[str, int]] = set()
             self._expanded: set[tuple[str, int]] = set()
             self._last_click_key: tuple[str, int] | None = None
@@ -187,6 +188,9 @@ if _TEXTUAL_OK:
             self._pending_note: str = ""
             self._mounted: bool = False
             self._refreshing: bool = False
+            self._preview_key: tuple[str, int] | None = None
+            self._dirty_external: bool = False
+            self._narrow: bool | None = None
             self._git_cache: dict[str, tuple[float, dict[str, Any]]] = {}
             self._spinner_tick: int = 0
             self._spinner_rows: dict[tuple[str, int], str] = {}
@@ -236,7 +240,6 @@ if _TEXTUAL_OK:
             self._mounted = True
             self._apply_layout()
             self.refresh_all("ready — ? for help")
-            self.call_after_refresh(lambda: self.refresh_all())
             self.set_interval(1.0, self._poll)
             self._spinner_enabled = not os.environ.get("LAZYPLAN_NO_SPINNER", "").strip()
             if self._spinner_enabled:
@@ -253,18 +256,22 @@ if _TEXTUAL_OK:
         async def _on_resize(self, event: events.Resize) -> None:
             """Textual stops Resize at the App; re-apply the shell after it."""
             await super()._on_resize(event)
-            self._apply_layout(event.size.width)
-            if self._mounted:
+            changed = self._apply_layout(event.size.width)
+            if self._mounted and changed:
                 self.call_after_refresh(self.refresh_all)
 
-        def _apply_layout(self, width: int | None = None) -> None:
+        def _apply_layout(self, width: int | None = None) -> bool:
             """Two panes when there is room; one pane on narrow terminals."""
             try:
                 main = self.query_one("#main", Horizontal)
             except Exception:
-                return
+                return False
             available = self.size.width if width is None else width
-            main.set_class(available < 100, "narrow")
+            narrow = available < 100
+            changed = self._narrow is not narrow
+            self._narrow = narrow
+            main.set_class(narrow, "narrow")
+            return changed
 
         def _check_update(self) -> None:
             """One background latest-version check per session; silent on failure."""
@@ -281,7 +288,7 @@ if _TEXTUAL_OK:
             if not self._update_toasted:
                 self._update_toasted = True
                 self.notify(notice, timeout=8)
-            self.refresh_all()
+            self._refresh_status()
 
         # -- selection --------------------------------------------------
         def _track(self, node: TreeNode) -> None:
@@ -498,12 +505,15 @@ if _TEXTUAL_OK:
             self._preview_common(lines, full)
             return lines
 
-        def update_preview(self) -> None:
+        def update_preview(self, force: bool = False) -> None:
             """Selection preview: a bounded summary, never the full plan."""
             try:
                 body = self.query_one("#preview-body", Static)
             except Exception:
                 return
+            if not force and self.selected == self._preview_key:
+                return
+            self._preview_key = self.selected
             try:
                 total_plans = self.store.counts()["plans"]
             except Exception:
@@ -587,12 +597,12 @@ if _TEXTUAL_OK:
                 node.collapse()
                 self._expanded.discard(key)
                 self._collapsed.add(key)
-                self.refresh_all(f"{key[0]} {key[1]} folded")
+                self._refresh_status(f"{key[0]} {key[1]} folded")
             else:
                 node.expand()
                 self._expanded.add(key)
                 self._collapsed.discard(key)
-                self.refresh_all(f"{key[0]} {key[1]} unfolded")
+                self._refresh_status(f"{key[0]} {key[1]} unfolded")
 
         def action_fold_all(self) -> None:
             """Collapse every plan/milestone, or re-open all when fully expanded (Z)."""
@@ -605,22 +615,27 @@ if _TEXTUAL_OK:
                     self._row_nodes[k].collapse()
                 self._expanded.clear()
                 self._collapsed.update(keys)
-                self.refresh_all(f"folded {len(keys)} rows")
+                self._refresh_status(f"folded {len(keys)} rows")
             else:
                 for k in keys:
                     self._row_nodes[k].expand()
                 self._expanded.update(keys)
                 self._collapsed.difference_update(keys)
-                self.refresh_all("unfolded all")
+                self._refresh_status("unfolded all")
 
         # -- polling (fingerprint, not just mtime) ----------------------
         def _poll(self) -> None:
             """External-change detector; local edits go through rev."""
+            if self._dirty_external and len(self.screen_stack) <= 1:
+                self._dirty_external = False
+                self.rev += 1
+                return
             try:
                 fp = self.store.fingerprint()
             except Exception:
                 return
             if fp != self._fp:
+                self._fp = fp
                 events_ = self.store.feed(1)
                 note = "db changed — refreshed"
                 if events_:
@@ -631,6 +646,9 @@ if _TEXTUAL_OK:
                     except Exception:
                         pass
                 self._pending_note = note
+                if len(self.screen_stack) > 1:
+                    self._dirty_external = True
+                    return
                 self.rev += 1
 
         # -- rendering ---------------------------------------------------
@@ -876,6 +894,26 @@ if _TEXTUAL_OK:
                 text += f" · last: {event['actor']} {event['kind']}/{event['action']}: {event['detail']}"
             return truncate(text, max(10, self.size.width - 2))
 
+        def _refresh_status(self, note: str = "") -> None:
+            """Update only the statusbar, without rebuilding the tree."""
+            try:
+                self.query_one("#status", Label).update(
+                    self._status_text(self.store.counts(), note)
+                )
+            except Exception:
+                pass
+
+        def _paint_mark(self, key: tuple[str, int]) -> None:
+            """Add or remove the mark glyph on one existing row."""
+            label = self._row_labels.get(key)
+            node = self._row_nodes.get(key)
+            if label is None or node is None:
+                return
+            if key in self._spinner_rows:
+                label = status_prefix(Status.DOING, self._spinner_tick) + self._spinner_rows[key]
+            suffix = " [bold green]✓[/]" if key in self.marked else ""
+            node.set_label(label + suffix)
+
         def _row_width(self, tree: Tree, depth: int) -> int:
             """Usable label width for a row at `depth`, excluding tree guides."""
             base = tree.size.width or (
@@ -915,6 +953,7 @@ if _TEXTUAL_OK:
                     allow_expand=bool(milestones),
                 )
                 self._row_nodes[("plan", plan.id)] = plan_node
+                self._row_labels[("plan", plan.id)] = plan_text
                 self._remember_spinner(("plan", plan.id), plan.status, plan_text)
                 for milestone, tasks in milestones:
                     milestone_stats = source_stats.get(("milestone", milestone.id))
@@ -941,6 +980,7 @@ if _TEXTUAL_OK:
                         allow_expand=bool(tasks),
                     )
                     self._row_nodes[("milestone", milestone.id)] = milestone_node
+                    self._row_labels[("milestone", milestone.id)] = milestone_text
                     self._remember_spinner(
                         ("milestone", milestone.id), milestone.status, milestone_text
                     )
@@ -974,6 +1014,7 @@ if _TEXTUAL_OK:
                             data={"kind": "task", "id": task.id},
                         )
                         self._row_nodes[("task", task.id)] = leaf
+                        self._row_labels[("task", task.id)] = task_text
                         self._remember_spinner(("task", task.id), task.status, task_text)
 
         def _remember_spinner(
@@ -995,7 +1036,8 @@ if _TEXTUAL_OK:
             for key, suffix in self._spinner_rows.items():
                 node = self._row_nodes.get(key)
                 if node is not None:
-                    node.set_label(prefix + suffix)
+                    mark = " [bold green]✓[/]" if key in self.marked else ""
+                    node.set_label(prefix + suffix + mark)
 
         def _spin(self) -> None:
             """Advance one frame; idle when nothing is doing."""
@@ -1063,6 +1105,7 @@ if _TEXTUAL_OK:
                 prev_cursor = None
             tree.clear()
             self._row_nodes = {}
+            self._row_labels = {}
             self._spinner_rows = {}
             base = services.tree(self.store, status=None, archived="hide")
             progress = self._progress_map(base)
@@ -1089,7 +1132,8 @@ if _TEXTUAL_OK:
             self.query_one("#status", Label).update(self._status_text(self.store.counts(), note))
             self.query_one("#hints", Label).update(hint_bar(max(10, self.size.width - 2)))
             self._restore_selection(tree, prev_selected, prev_cursor)
-            self.update_preview()
+            self._preview_key = None
+            self.update_preview(force=True)
 
         def action_refresh(self) -> None:
             self._saved("manual refresh")
@@ -1267,7 +1311,8 @@ if _TEXTUAL_OK:
                 self.marked.remove(key)
             else:
                 self.marked.add(key)
-            self.refresh_all(f"marked {len(self.marked)}")
+            self._paint_mark(key)
+            self._refresh_status(f"marked {len(self.marked)}")
 
         def _marked_tasks(self) -> list[Task]:
             """Task rows in the mark set."""
@@ -1371,8 +1416,10 @@ if _TEXTUAL_OK:
             self._saved(f"undid {len(states)} task changes")
 
         def action_clear_marks(self) -> None:
-            self.marked.clear()
-            self.refresh_all("marks cleared")
+            for key in list(self.marked):
+                self.marked.discard(key)
+                self._paint_mark(key)
+            self._refresh_status("marks cleared")
 
         def _selected_task(self) -> int | None:
             """Selected task id, or a notification when the selection is not a task."""

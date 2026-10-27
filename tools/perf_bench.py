@@ -121,7 +121,7 @@ BUDGETS: dict[str, Budget] = {
     "full_many": Budget(20, 1_500),
     "export_all": Budget(19_000, 15_000),
     "audit_report": Budget(4_900, 6_000),
-    "tui_refresh": Budget(200, 8_000),
+    "tui_refresh": Budget(150, 8_000),
     "git_status": Budget(0, 3_000),
     "git_show": Budget(0, 3_000),
 }

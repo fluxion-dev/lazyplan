@@ -634,8 +634,10 @@ if _TEXTUAL_OK:
                 self.rev += 1
 
         # -- rendering ---------------------------------------------------
-        def _source_stats(self) -> dict[tuple[str, int], tuple[int, int, int, int]]:
-            """Direct plus descendant provenance counts per row, one store read each."""
+        def _source_stats(
+            self, base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]
+        ) -> dict[tuple[str, int], tuple[int, int, int, int]]:
+            """Direct plus descendant provenance counts per visible row."""
             vcs = self.store.vcs_links_map()
             forge = self.store.forge_links_map()
             repos = self.store.repos_map()
@@ -651,7 +653,7 @@ if _TEXTUAL_OK:
                 )
 
             stats: dict[tuple[str, int], tuple[int, int, int, int]] = {}
-            for plan, milestones in services.tree(self.store, status=self.status_filter):
+            for plan, milestones in base:
                 pc, pp, ps, pr = direct("plan", plan.id)
                 plan_repos = pr
                 for milestone, tasks in milestones:
@@ -735,17 +737,39 @@ if _TEXTUAL_OK:
                     out.append((plan, kept_ms))
             return out
 
+        def _status_tree(
+            self,
+            base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]],
+            status: Status | None,
+        ) -> list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]:
+            """Apply the status filter in memory to one unfiltered snapshot."""
+            if status is None:
+                return base
+            out: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]] = []
+            for plan, milestones in base:
+                kept_ms: list[tuple[Milestone, list[Task]]] = []
+                for milestone, tasks in milestones:
+                    kept = [task for task in tasks if task.status == status]
+                    if milestone.status != status and not kept:
+                        continue
+                    kept_ms.append((milestone, kept))
+                if plan.status == status or kept_ms:
+                    out.append((plan, kept_ms))
+            return out
+
         def _filtered_tree(
             self,
+            base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]] | None = None,
+            *,
+            prepared: bool = False,
         ) -> list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]:
-            if self.show_all or self.filter_text.strip():
-                base = services.tree(self.store, status=self.status_filter)
-            else:
-                base = services.tree(
-                    self.store, status=self.status_filter, limit=services.DEFAULT_PLAN_LIMIT
-                )
+            if base is None:
+                base = services.tree(self.store, status=None, archived="hide")
+                base = self._status_tree(base, self.status_filter)
+                if not (self.show_all or self.filter_text.strip()):
+                    base = base[: services.DEFAULT_PLAN_LIMIT]
             if self.source_filter != "all":
-                base = self._filter_source_tree(base, self._source_stats())
+                base = self._filter_source_tree(base, self._source_stats(base))
             query = self.filter_text.strip().lower()
             if not query:
                 return base
@@ -801,10 +825,12 @@ if _TEXTUAL_OK:
                 except Exception:
                     pass
 
-        def _progress_map(self) -> dict[tuple[str, int], tuple[int, int]]:
-            """Task progress per plan and milestone, independent of filters."""
+        def _progress_map(
+            self, base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]
+        ) -> dict[tuple[str, int], tuple[int, int]]:
+            """Task progress per plan and milestone from one unfiltered snapshot."""
             out: dict[tuple[str, int], tuple[int, int]] = {}
-            for plan, milestones in services.tree(self.store, status=None, archived="show"):
+            for plan, milestones in base:
                 all_tasks = [task for _, tasks in milestones for task in tasks]
                 out[("plan", plan.id)] = (
                     sum(1 for task in all_tasks if task.status == Status.DONE),
@@ -1038,8 +1064,12 @@ if _TEXTUAL_OK:
             tree.clear()
             self._row_nodes = {}
             self._spinner_rows = {}
-            progress = self._progress_map()
-            filtered = self._filtered_tree()
+            base = services.tree(self.store, status=None, archived="hide")
+            progress = self._progress_map(base)
+            visible = self._status_tree(base, self.status_filter)
+            if not (self.show_all or self.filter_text.strip()):
+                visible = visible[: services.DEFAULT_PLAN_LIMIT]
+            filtered = self._filtered_tree(visible, prepared=True)
             filtered.sort(key=lambda entry: entry[0].status == Status.DONE)
             self._build_rows(
                 tree.root,
@@ -1048,7 +1078,7 @@ if _TEXTUAL_OK:
                 progress,
                 self.store.forge_links_map(),
                 self.store.vcs_links_map(),
-                self._source_stats(),
+                self._source_stats(filtered),
                 self.store.claims_map(),
             )
             tree.root.expand()

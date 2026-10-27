@@ -26,6 +26,8 @@ echo "== man page in sync =="
 "$VENV_BIN"/python tools/gen-man.py --check
 echo "== site discoverability =="
 "$SYS_PY" tools/check-site.py
+echo "== clean install smoke =="
+./tools/check-install.sh
 echo "== unittest (system python, stdlib only) =="
 PYTHONPATH=src "$SYS_PY" -m unittest discover -s tests
 echo "== unittest (venv python, with textual) =="

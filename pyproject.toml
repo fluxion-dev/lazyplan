@@ -4,9 +4,10 @@ version = "0.27.0"
 description = "Plan work with your coding agent, in the terminal."
 readme = "README.md"
 license = "MIT"
+license-files = ["LICENSE"]
 authors = [{name = "Brad Lindsay"}]
 requires-python = ">=3.11"
-dependencies = ["textual>=3"]
+dependencies = ["textual>=8.2.8,<9"]
 keywords = [
     "plan tracker",
     "coding agent",
@@ -42,10 +43,13 @@ lpui = "lazyplan.cli:main"
 dev = ["ruff>=0.8", "mypy>=1.13", "vulture>=2.14", "xenon>=0.9"]
 test = ["pytest>=8"]
 [build-system]
-requires = ["setuptools>=61"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+lazyplan = ["data/*.md"]
 
 [tool.setuptools.data-files]
 "share/man/man1" = ["docs/lpui.1", "docs/lazyplan.1"]

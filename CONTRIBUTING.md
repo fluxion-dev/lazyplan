@@ -38,6 +38,8 @@ The gate suite runs:
 - `mypy` in strict mode
 - `vulture` for dead code and `xenon` for complexity
 - the man page sync check (`tools/gen-man.py --check`)
+- a clean-install smoke that builds a wheel, installs it into a throwaway
+  venv, and checks both console scripts (`tools/check-install.sh`)
 - the unittest suite on both system Python and the venv Python
 - the performance budget check (`tools/perf_bench.py --check`; see
   `docs/performance.md`)
@@ -83,25 +85,71 @@ the script, and commit the result.
 
 ## Project layout
 
+This is the target tree for P103. Entries marked `planned` do not exist yet;
+the milestone that creates them removes the marker.
+
 ```text
-src/lazyplan/cli.py        command dispatch and setup entry
-src/lazyplan/cli_parser.py argparse surface
-src/lazyplan/setup.py     first-run setup state, findings, and moves
-src/lazyplan/setup_ui.py  setup wizard rendering and plain fallback
-src/lazyplan/setup_layout.py resolved setup resources and repairs
-src/lazyplan/store.py      SQLite persistence
-src/lazyplan/tui.py        Textual app
-src/lazyplan/tree_nav.py   shared tree gestures (j/k, left/right, click)
-src/lazyplan/screens.py    detail and form screens
-src/lazyplan/design.py     one source of truth for TUI styling
-src/lazyplan/skills.py     agent skill text and install
-tests/                     unittest suite (stdlib + venv)
-docs/                      usage, release, and design notes
-site/                      marketing site (Vite)
+src/lazyplan/
+  kinds.py models.py messages.py textfile.py
+  porcelain.py docs_meta.py              leaf helpers and data types
+  repo.py vcs.py forge.py github.py      infrastructure adapters
+  templates.py
+  migrate.py                             schema migrations
+  store/                                 SQLite persistence (planned)
+    base.py plans.py claims.py annotations.py links.py views.py
+  services/                              use-case orchestration (planned)
+    plans.py claims.py tasks.py vcs.py forge.py tree.py transfer.py
+  audit.py brief.py hooks.py issues.py   domain reports and hooks
+  seed.py share.py source.py stats.py trace.py lint.py
+  cli/                                   agent and human ingress (planned)
+    main.py emit.py rows.py
+    parser/                              argparse by noun (planned)
+    commands/                            handlers by noun (planned)
+  setup/                                 first-run flow (planned)
+    state.py findings.py apply.py moves.py wizard.py ui.py layout.py
+  tui/                                   Textual app (planned)
+    app.py tree.py preview.py git_state.py filters.py rows.py updates.py
+    screens/                             forms, detail, help, palette, source
+  mcp/                                   MCP server, tools, resources (planned)
+  palette.py                             shared command metadata (planned rename)
+  design.py render.py skills.py
+  data/                                  packaged skill and AGENTS text (planned)
+tests/
+  support/                               shared home and pilot helpers (planned)
+  store/ services/ cli/ setup/ tui/      domain suites (planned)
+  vcs/ skills/ site/ fixtures/
+docs/                                    usage, release, and design notes
+site/                                    marketing site (Vite)
+tools/                                   gates, benchmarks, and release scripts
 ```
 
 Keep the CLI and the TUI on the same data model. The plan is the design: write
 the row before the code, and keep the row current when the code changes.
+
+## Architecture
+
+Dependencies point one way:
+
+```text
+leaf -> infrastructure -> store -> domain -> services -> presentation -> entry point
+```
+
+- `models`, `kinds`, `textfile`, `messages`, `porcelain`, and the palette
+  metadata are leaves. They import no store, service, or UI code.
+- `repo`, `vcs`, `forge`, `github`, and `templates` are infrastructure. They
+  may use leaves.
+- `store` owns SQLite and may use leaves, infrastructure, and `migrate`.
+- Domain modules (`audit`, `brief`, `hooks`, `issues`, `share`, `source`,
+  `stats`, `trace`, `lint`) may use the layers below them.
+- `services` may use domain, store, infrastructure, and leaves.
+- `cli`, `tui`, `setup`, `mcp`, `design`, `render`, and `skills` are
+  presentation. They may use everything below them.
+- `__main__` is the only entry point and may import any package.
+
+A new top-level module needs a layer entry in `tests/test_architecture.py`.
+`tests/test_module_budget.py` enforces the 600-line budget and records temporary
+exceptions in `tests/architecture_baseline.json`. Shrink an exception in the
+commit that splits the file, and delete it once the file is under budget.
 
 ## Screenshots
 

@@ -51,7 +51,7 @@
     background-color: var(--color-plan-canvas);
   }
 
-  :where(a, button, [role="tab"], summary):focus-visible {
+  :where(a, button, summary):focus-visible {
     outline: 2px solid var(--color-cyber-cyan);
     outline-offset: 2px;
     border-radius: 6px;
@@ -71,19 +71,6 @@
       transition: none !important;
     }
   }
-}
-
-/* Radial-gradient brand glows. */
-@utility glow-gold {
-  background: radial-gradient(closest-side, rgb(245 158 11 / 0.25), transparent);
-}
-
-@utility glow-green {
-  background: radial-gradient(closest-side, rgb(16 185 129 / 0.22), transparent);
-}
-
-@utility glow-cyan {
-  background: radial-gradient(closest-side, rgb(6 182 212 / 0.2), transparent);
 }
 
 @layer components {
@@ -111,7 +98,6 @@
   .nav-summary {
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
     min-height: 2.25rem;
     padding: 0 0.15rem;
     font-size: 0.875rem;
@@ -126,52 +112,8 @@
     display: none;
   }
 
-  .nav-summary::after {
-    content: "";
-    width: 0.4rem;
-    height: 0.4rem;
-    border-right: 1.5px solid currentColor;
-    border-bottom: 1.5px solid currentColor;
-    transform: rotate(45deg) translateY(-1px);
-    transition: transform 0.15s ease;
-  }
-
-  .nav-summary:hover,
-  .nav-menu[open] > .nav-summary {
+  .nav-summary:hover {
     color: #fff;
-  }
-
-  .nav-menu[open] > .nav-summary::after {
-    transform: rotate(225deg) translateY(-1px);
-  }
-
-  .nav-menu-right .nav-panel {
-    left: auto;
-    right: 0;
-  }
-
-  .nav-link {
-    display: block;
-    border-radius: 0.5rem;
-    padding: 0.5rem 0.75rem;
-    font-size: 0.875rem;
-    line-height: 1.25rem;
-    color: var(--color-plan-text-secondary);
-    text-decoration: none;
-  }
-
-  .nav-link:hover {
-    background: rgb(255 255 255 / 0.06);
-    color: #fff;
-  }
-
-  .nav-group-label {
-    margin: 0.75rem 0 0.25rem;
-    font-size: 0.7rem;
-    font-weight: 700;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--color-plan-text-secondary);
   }
 
   .nav-mobile-link {
@@ -188,12 +130,6 @@
   .nav-mobile-link:hover {
     background: rgb(255 255 255 / 0.06);
     color: #fff;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .nav-summary::after {
-      transition: none;
-    }
   }
 
   .skip-link {
@@ -213,73 +149,5 @@
   .skip-link:focus {
     left: 1rem;
     top: 1rem;
-  }
-
-  /* Dark terminal panel: surface + border + amber glow shadow. */
-  .terminal-window {
-    border-radius: 0.75rem;
-    border: 1px solid var(--color-plan-border);
-    background-color: var(--color-plan-surface);
-    box-shadow: var(--shadow-terminal);
-  }
-
-  /* Status pill: done. */
-  .badge-resolved {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    border-radius: 9999px;
-    border: 1px solid rgb(16 185 129 / 0.4);
-    background-color: rgb(16 185 129 / 0.12);
-    color: var(--color-scanner-green);
-    padding: 0.25rem 0.75rem;
-    font-size: 0.8125rem;
-    font-weight: 600;
-  }
-
-  /* Status pill: doing. */
-  .badge-unknown {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    border-radius: 9999px;
-    border: 1px solid rgb(6 182 212 / 0.4);
-    background-color: rgb(6 182 212 / 0.12);
-    color: var(--color-cyber-cyan);
-    padding: 0.25rem 0.75rem;
-    font-size: 0.8125rem;
-    font-weight: 600;
-  }
-
-  /* Status pill: todo. */
-  .badge-todo {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    border-radius: 9999px;
-    border: 1px solid rgb(161 161 170 / 0.4);
-    background-color: rgb(161 161 170 / 0.12);
-    color: var(--color-plan-text-secondary);
-    padding: 0.25rem 0.75rem;
-    font-size: 0.8125rem;
-    font-weight: 600;
-  }
-
-  /* Solid gold accent badge (calls to action, NEW markers). */
-  .badge-gold {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    border-radius: 9999px;
-    background-color: var(--color-viking-gold);
-    color: var(--color-plan-canvas);
-    padding: 0.25rem 0.75rem;
-    font-size: 0.8125rem;
-    font-weight: 700;
-  }
-
-  /* Amber outer glow for accent elements. */
-  .scanner-glow {
-    box-shadow: 0 0 24px rgb(245 158 11 / 0.35), 0 0 64px rgb(245 158 11 / 0.12);
   }
 }

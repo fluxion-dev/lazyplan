@@ -243,3 +243,19 @@ checks that every published file is referenced. Built-site Lighthouse: 96
 performance, 100 accessibility, 100 best practices, 100 SEO. Widths 360, 768,
 and 1440 report no horizontal overflow. Verified live: 457 words, five figures,
 five FAQs, no removed technical phrases, and every published image returns 200.
+
+### Planner and executor story (2026-10-27)
+
+After: a new "Ways to work" section sits between the benefits and the
+screenshots. It states that plans, milestones, tasks, and criteria are
+user-editable, and shows two examples: a natural-language planning request with
+a plan excerpt, and an executor subagent claiming, implementing, linking a
+commit, and completing one task. A sixth FAQ covers using one agent to plan and
+another to execute.
+
+The page is 698 visible words with five figures, four code tags, and six FAQs.
+The hero subhead, meta description, keywords, and featureList name user control
+and the planner/executor split. Built-site Lighthouse: 98 performance, 100
+accessibility, 100 best practices, 100 SEO; widths 360, 768, and 1440 show no
+overflow. Verified live: both examples, the section heading, and the sixth FAQ
+are present, with six matching JSON-LD questions.

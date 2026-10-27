@@ -38,6 +38,8 @@ The gate suite runs:
 - `mypy` in strict mode
 - `vulture` for dead code and `xenon` for complexity
 - the man page sync check (`tools/gen-man.py --check`)
+- a clean-install smoke that builds a wheel, installs it into a throwaway
+  venv, and checks both console scripts (`tools/check-install.sh`)
 - the unittest suite on both system Python and the venv Python
 - the performance budget check (`tools/perf_bench.py --check`; see
   `docs/performance.md`)

@@ -201,6 +201,10 @@ class TestForgeStore(unittest.TestCase):
             conn.execute(f"ALTER TABLE forge_links DROP COLUMN {col}")
             conn.commit()
             conn.close()
+        conn = sqlite3.connect(self.db)
+        conn.execute("PRAGMA user_version = 0")
+        conn.commit()
+        conn.close()
         migrated = Store(self.db)
         link = migrated.link_forge(
             "task",

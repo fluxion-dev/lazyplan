@@ -24,8 +24,8 @@ fix the page.
 - Primary phrase: terminal plan tracker.
 - Secondary: plan tracker for coding agents, one plan for you and your agent,
   planner agent and executor agent workflow, multi-agent planning, user control
-  over every plan row, local-first developer tools, keyboard-first terminal UI,
-  Windows terminal, agent planning.
+  over every plan row, PyPI download proof, local-first developer tools,
+  keyboard-first terminal UI, Windows terminal, agent planning.
 - The hero, benefits, ways-to-work examples, screenshots, three steps, install,
   and FAQ carry those intents without keyword stuffing. Technical how-to lives
   in docs/usage.md and docs/setup.md; the landing page links there once rather

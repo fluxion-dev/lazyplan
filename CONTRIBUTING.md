@@ -121,6 +121,21 @@ so a diff of the committed images shows exactly what changed. Add new content
 by extending `COMMITS` and `PRS` in the tool, then commit both formats and
 delete the intermediate SVG.
 
+## Download stats
+
+The landing page shows PyPI downloads from a same-origin snapshot:
+
+```bash
+python3 tools/fetch-downloads.py
+```
+
+It reads pypistats `overall`, sums the `without_mirrors` series, and writes
+`site/public/downloads.json` atomically. A network or validation failure writes
+`{"available": false}` and exits 0, so a deploy is never blocked; the page hides
+the strip in that case or when the snapshot is older than seven days. The JSON
+is gitignored, and the Pages workflow refreshes it before every build on a
+daily schedule.
+
 ## Style
 
 - Plain words in user-facing text. Name the outcome, not the implementation.

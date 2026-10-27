@@ -144,7 +144,7 @@ class TestSiteSEO(unittest.TestCase):
         text = html.unescape(
             re.sub(r"<[^>]+>", " ", re.sub(r"<script.*?</script>", "", page, flags=re.S))
         )
-        self.assertLessEqual(len(text.split()), 700)
+        self.assertLessEqual(len(text.split()), 750)
         self.assertLessEqual(page.count("<code"), 8)
         self.assertEqual(page.count("<figure"), 5)
         self.assertIn('id="ways-to-work"', page)

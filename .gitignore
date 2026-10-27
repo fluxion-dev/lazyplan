@@ -18,3 +18,5 @@ site/node_modules/
 
 # Vite site build output (CI rebuilds it via pages.yml; never committed)
 site/dist/
+# Generated daily by tools/fetch-downloads.py before the Pages build
+site/public/downloads.json

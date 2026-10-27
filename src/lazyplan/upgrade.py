@@ -20,7 +20,6 @@ REPO = "fluxion-dev/lazyplan"
 PYPI_PKG = "lazyplan-tui"
 RELEASES_LATEST = f"https://github.com/{REPO}/releases/latest"
 RESOLVE_TIMEOUT = 10.0
-NOTICE_TIMEOUT = 3.0
 UPGRADE_TIMEOUT = 300.0
 UPDATE_CACHE_NAME = "update.json"
 UPDATE_CACHE_TTL = 24 * 3600

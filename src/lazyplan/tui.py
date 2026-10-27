@@ -815,8 +815,6 @@ if _TEXTUAL_OK:
         def _filtered_tree(
             self,
             base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]] | None = None,
-            *,
-            prepared: bool = False,
         ) -> list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]:
             if base is None:
                 base = services.tree(self.store, status=None, archived="hide")
@@ -1149,7 +1147,7 @@ if _TEXTUAL_OK:
             visible = self._status_tree(base, self.status_filter)
             if not (self.show_all or self.filter_text.strip()):
                 visible = visible[: services.DEFAULT_PLAN_LIMIT]
-            filtered = self._filtered_tree(visible, prepared=True)
+            filtered = self._filtered_tree(visible)
             filtered.sort(key=lambda entry: entry[0].status == Status.DONE)
             self._build_rows(
                 tree.root,

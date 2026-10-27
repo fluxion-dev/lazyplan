@@ -78,6 +78,13 @@ class FirstRunCase(unittest.TestCase):
         self.assertTrue(setup.load_state(self.home).hooks)
         self.assertNotIn("Setup complete", err.getvalue())
 
+    def test_current_agent_command_skips_the_finding_scan(self):
+        args = make_args(agents="claude")
+        setup.ensure("list", args, self.repo, self.home, "1.0", interactive=False)
+        with mock.patch.object(setup, "detect_findings") as findings:
+            setup.ensure("list", args, self.repo, self.home, "1.0", interactive=False)
+        findings.assert_not_called()
+
     def test_json_first_run_never_prompts(self):
         args = make_args(agents="claude", json=True)
         with (

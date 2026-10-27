@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import re
+from functools import lru_cache
 from pathlib import Path
 
 from . import textfile
@@ -123,6 +124,7 @@ more help:
 """
 
 
+@lru_cache(maxsize=1)
 def package_version() -> str:
     """Version of the running code: pyproject next to the source tree, else installed dist metadata."""
     try:

@@ -16,10 +16,6 @@ from pathlib import Path
 
 from . import (
     audit,
-    brief,
-    hook_hosts,
-    hook_install,
-    hooks,
     porcelain,
     services,
     setup,
@@ -27,13 +23,6 @@ from . import (
     setup_ui,
     textfile,
 )
-from . import issues as issues_mod
-from . import lint as lint_mod
-from . import mcp as mcp_mod
-from . import share as share_mod
-from . import stats as stats_mod
-from . import sync as sync_mod
-from . import trace as trace_mod
 from .cli_parser import build_parser, package_version
 from .design import (
     EMPTY_COMMITS,
@@ -228,6 +217,8 @@ def _print_setup(result: dict) -> None:
 
 def _cmd_setup(store: Store | None, args: argparse.Namespace, actor: str) -> int:
     """Re-run setup, or apply remembered choices without prompts."""
+    from . import hook_install
+
     del store, actor
     home = Path.home()
     state = setup.load_state(home)
@@ -437,6 +428,8 @@ def _cmd_audit(store: Store | None, args: argparse.Namespace, actor: str) -> int
 
 def _cmd_brief(store: Store | None, args: argparse.Namespace, actor: str) -> int:
     """Read-only session brief; never creates a database."""
+    from . import brief
+
     del actor
     try:
         db = store or _optional_store(args)
@@ -466,6 +459,8 @@ def _cmd_brief(store: Store | None, args: argparse.Namespace, actor: str) -> int
 
 
 def _cmd_stats(store: Store, args: argparse.Namespace, actor: str) -> int:
+    from . import stats as stats_mod
+
     del actor
     since = audit.parse_since(args.since)
     stale_before = audit.parse_since(args.stale_after)
@@ -506,6 +501,8 @@ def _cmd_stats(store: Store, args: argparse.Namespace, actor: str) -> int:
 
 
 def _cmd_lint(store: Store, args: argparse.Namespace, actor: str) -> int:
+    from . import lint as lint_mod
+
     del actor
     findings = lint_mod.lint_plan(store, args.plan)
     if findings is None:
@@ -625,6 +622,8 @@ def _trace_rows(payload: dict) -> list[str]:
 
 
 def _cmd_trace(store: Store, args: argparse.Namespace, actor: str) -> int:
+    from . import trace as trace_mod
+
     del actor
     if args.plan is not None:
         payload = trace_mod.trace_plan(store, args.plan)
@@ -899,6 +898,8 @@ def _comment_list(store: Store, args: argparse.Namespace) -> int:
 
 
 def _cmd_sync(store: Store, args: argparse.Namespace, actor: str) -> int:
+    from . import sync as sync_mod
+
     try:
         data = json.loads(textfile.read(args.file))
         report = sync_mod.sync(store, data, actor=actor, dry_run=bool(args.dry_run))
@@ -947,6 +948,8 @@ def _cmd_sync(store: Store, args: argparse.Namespace, actor: str) -> int:
 
 
 def _cmd_share(store: Store, args: argparse.Namespace, actor: str) -> int:
+    from . import share as share_mod
+
     del actor
     if store.get_plan(args.plan) is None:
         print(msg_not_found("plan", args.plan), file=sys.stderr)
@@ -1013,6 +1016,8 @@ def _cmd_note(store: Store, args: argparse.Namespace, actor: str) -> int:
 
 
 def _cmd_mcp(store: Store | None, args: argparse.Namespace, actor: str) -> int:
+    from . import mcp as mcp_mod
+
     del store
     path = resolve_db_path(args.db)
     return mcp_mod.run(str(path), actor=actor, read_only=bool(args.read_only))
@@ -1020,6 +1025,8 @@ def _cmd_mcp(store: Store | None, args: argparse.Namespace, actor: str) -> int:
 
 def _cmd_hook(store: Store | None, args: argparse.Namespace, actor: str) -> int:
     """Read-only lifecycle reminder; always exits 0 so a host never blocks."""
+    from . import hook_hosts, hooks
+
     del store, actor
     payload = hooks.read_payload(sys.stdin)
     host = hooks.detect_host(payload, args.host)
@@ -1821,6 +1828,8 @@ def _cmd_delete_criteria(store: Store, args: argparse.Namespace, actor: str) -> 
 
 
 def _cmd_issue_import(store: Store, args: argparse.Namespace, actor: str) -> int:
+    from . import issues as issues_mod
+
     if args.as_kind == "task":
         if not args.milestone or store.get_milestone(args.milestone) is None:
             print(msg_error(ValueError("--as task needs a valid --milestone")), file=sys.stderr)

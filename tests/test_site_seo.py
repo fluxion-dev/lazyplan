@@ -1,6 +1,8 @@
 """Site discoverability gate: metadata, structured data, links, and assets."""
 
+import html
 import importlib.util
+import json
 import re
 import shutil
 import sys
@@ -94,8 +96,8 @@ class TestSiteSEO(unittest.TestCase):
         self.assertTrue(any("invalid JSON-LD" in error for error in self._errors()))
 
     def test_every_published_screen_is_referenced(self):
-        html = (ROOT / "site/index.html").read_text(encoding="utf-8")
-        referenced = set(re.findall(r"screens/([A-Za-z0-9._-]+)", html))
+        page = (ROOT / "site/index.html").read_text(encoding="utf-8")
+        referenced = set(re.findall(r"screens/([A-Za-z0-9._-]+)", page))
         published = {
             path.name for path in (ROOT / "site/public/screens").iterdir() if path.is_file()
         }
@@ -103,6 +105,49 @@ class TestSiteSEO(unittest.TestCase):
         for name in published:
             if name.endswith(".png") and not name.startswith("og-"):
                 self.assertIn(name.removesuffix(".png") + ".webp", published)
+
+    def test_faq_json_ld_matches_visible_answers(self):
+        page = (ROOT / "site/index.html").read_text(encoding="utf-8")
+        blocks = re.findall(r'<script type="application/ld\+json">(.*?)</script>', page, re.S)
+        faq = next(json.loads(block) for block in blocks if '"FAQPage"' in block)
+        faq_section = page.split('<section id="faq"', 1)[1].split("</section>", 1)[0]
+        visible = {
+            html.unescape(re.sub(r"<[^>]+>", "", question)).strip(): html.unescape(
+                re.sub(r"<[^>]+>", "", answer)
+            ).strip()
+            for question, answer in re.findall(
+                r"<summary[^>]*>(.*?)</summary>\s*<p[^>]*>(.*?)</p>", faq_section, re.S
+            )
+        }
+        self.assertEqual(len(faq["mainEntity"]), 6)
+        for item in faq["mainEntity"]:
+            name = item["name"]
+            self.assertIn(name, visible)
+            self.assertEqual(item["acceptedAnswer"]["text"], visible[name])
+
+    def test_planner_executor_story_is_present(self):
+        page = (ROOT / "site/index.html").read_text(encoding="utf-8")
+        self.assertIn('id="ways-to-work"', page)
+        for phrase in (
+            "One agent plans. Another builds. You stay in control.",
+            "Add work, edit a task, reorder, block, or complete any row yourself",
+            "Ask for a plan.",
+            "Hand off one task.",
+            "Add the token model",
+            "Executor subagent:",
+            "Claimed by executor",
+        ):
+            self.assertIn(phrase, page)
+
+    def test_page_stays_within_marketing_budget(self):
+        page = (ROOT / "site/index.html").read_text(encoding="utf-8")
+        text = html.unescape(
+            re.sub(r"<[^>]+>", " ", re.sub(r"<script.*?</script>", "", page, flags=re.S))
+        )
+        self.assertLessEqual(len(text.split()), 700)
+        self.assertLessEqual(page.count("<code"), 8)
+        self.assertEqual(page.count("<figure"), 5)
+        self.assertIn('id="ways-to-work"', page)
 
 
 if __name__ == "__main__":

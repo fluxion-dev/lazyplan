@@ -153,6 +153,19 @@ class Store:
             ).fetchall()
         return [dict(r) for r in rows]
 
+    def events_by_action(self, *actions: str) -> list[dict]:
+        """All events with one of these actions, oldest first."""
+        wanted = [action for action in actions if action]
+        if not wanted:
+            return []
+        marks = ",".join("?" for _ in wanted)
+        with self._connect() as conn:
+            rows = conn.execute(
+                f"SELECT * FROM events WHERE action IN ({marks}) ORDER BY id",
+                wanted,
+            ).fetchall()
+        return [dict(row) for row in rows]
+
     def fingerprint(self) -> tuple:
         """Conflict-safe poll key: mtime + row counts + max ids."""
         try:
@@ -248,6 +261,12 @@ class Store:
         with self._connect() as conn:
             rows = conn.execute("SELECT * FROM plans ORDER BY id DESC").fetchall()
         return [self._row_to_plan(r) for r in rows]
+
+    def plan_uids_map(self) -> dict[int, str]:
+        """Stable plan uid keyed by plan id, in one query."""
+        with self._connect() as conn:
+            rows = conn.execute("SELECT id, uid FROM plans ORDER BY id").fetchall()
+        return {int(row["id"]): str(row["uid"] or "") for row in rows}
 
     def update_plan(
         self,

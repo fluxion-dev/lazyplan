@@ -173,7 +173,7 @@ def parse_since(text: str) -> float | None:
 def plan_starts(store: Store) -> dict[int, float]:
     """Plan id -> add-event timestamp, in one pass over the feed."""
     out: dict[int, float] = {}
-    for event in reversed(store.feed(limit=100000)):
+    for event in store.events_by_action("add"):
         found = _ADDED.match(str(event.get("detail") or ""))
         if found is None or found.group(1) != "P":
             continue
@@ -187,7 +187,7 @@ def plan_start(store: Store, plan_id: int) -> float | None:
     if plan_id in starts:
         return starts[plan_id]
     earliest: float | None = None
-    for event in store.feed(limit=100000):
+    for event in store.events_by_action("add"):
         found = _ADDED.match(str(event.get("detail") or ""))
         if found is not None and found.group(2) == str(plan_id):
             stamp = float(event["ts"])
@@ -199,9 +199,7 @@ def plan_start(store: Store, plan_id: int) -> float | None:
 def _status_times(store: Store) -> dict[int, list[tuple[float, Status]]]:
     """Per-task status events, oldest first."""
     out: dict[int, list[tuple[float, Status]]] = {}
-    for event in reversed(store.feed(limit=100000)):
-        if event.get("action") != "status":
-            continue
+    for event in store.events_by_action("status"):
         found = _STATUS.match(str(event.get("detail") or ""))
         if found is None or found.group(1) != "task":
             continue
@@ -213,9 +211,7 @@ def _status_times(store: Store) -> dict[int, list[tuple[float, Status]]]:
 def _done_times(store: Store) -> dict[tuple[str, int], float]:
     """Latest done event per row, oldest-first scan so the last write wins."""
     out: dict[tuple[str, int], float] = {}
-    for event in reversed(store.feed(limit=100000)):
-        if event.get("action") != "status":
-            continue
+    for event in store.events_by_action("status"):
         found = _STATUS.match(str(event.get("detail") or ""))
         if found is None or found.group(3) != "done":
             continue
@@ -225,10 +221,12 @@ def _done_times(store: Store) -> dict[tuple[str, int], float]:
 
 def _plan_tasks(store: Store, plan_ids: list[int]) -> dict[int, int]:
     """Task id -> milestone id for the plans in scope."""
+    milestones = store.milestones_map()
+    tasks = store.tasks_map()
     out: dict[int, int] = {}
     for plan_id in plan_ids:
-        for milestone in store.list_milestones(plan_id):
-            for task in store.list_tasks(milestone.id):
+        for milestone in milestones.get(plan_id, ()):
+            for task in tasks.get(milestone.id, ()):
                 out[task.id] = milestone.id
     return out
 
@@ -236,11 +234,12 @@ def _plan_tasks(store: Store, plan_ids: list[int]) -> dict[int, int]:
 def _links(store: Store, plan_ids: list[int]) -> tuple[dict[str, set[int]], set[str]]:
     """Commit SHA -> owning task ids, plus every linked SHA for coverage."""
     tasks = _plan_tasks(store, plan_ids)
+    links = store.vcs_links_map()
     by_sha: dict[str, set[int]] = {}
     linked: set[str] = set()
 
     def absorb(kind: str, obj_id: int, owners: set[int]) -> None:
-        for link in store.list_links(kind, obj_id):
+        for link in links.get((kind, obj_id), ()):
             linked.add(link.sha)
             by_sha.setdefault(link.sha, set()).update(owners)
 
@@ -257,29 +256,33 @@ def _links(store: Store, plan_ids: list[int]) -> tuple[dict[str, set[int]], set[
 def _gaps(store: Store, plan_ids: list[int], since: float = 0.0) -> list[Gap]:
     """Open criteria on rows done inside the window (all rows when since is 0)."""
     done = _done_times(store)
+    plans = {plan.id: plan for plan in store.list_plans()}
+    milestones = store.milestones_map()
+    tasks = store.tasks_map()
+    criteria = store.criteria_map()
 
     def closed_in_window(kind: str, obj_id: int) -> bool:
         when = done.get((kind, obj_id))
         return since == 0.0 or (when is not None and when >= since)
 
+    def open_items(kind: str, obj_id: int) -> list:
+        return [item for item in criteria.get((kind, obj_id), ()) if not item.done]
+
     out: list[Gap] = []
     for plan_id in plan_ids:
-        plan = store.get_plan(plan_id)
+        plan = plans.get(plan_id)
         if plan is not None and plan.status == Status.DONE and closed_in_window("plan", plan.id):
-            out.extend(
-                Gap("plan", plan.id, item.text) for item in store.open_criteria("plan", plan.id)
-            )
-        for milestone in store.list_milestones(plan_id):
+            out.extend(Gap("plan", plan.id, item.text) for item in open_items("plan", plan.id))
+        for milestone in milestones.get(plan_id, ()):
             if milestone.status == Status.DONE and closed_in_window("milestone", milestone.id):
                 out.extend(
                     Gap("milestone", milestone.id, item.text)
-                    for item in store.open_criteria("milestone", milestone.id)
+                    for item in open_items("milestone", milestone.id)
                 )
-            for task in store.list_tasks(milestone.id):
+            for task in tasks.get(milestone.id, ()):
                 if task.status == Status.DONE and closed_in_window("task", task.id):
                     out.extend(
-                        Gap("task", task.id, item.text)
-                        for item in store.open_criteria("task", task.id)
+                        Gap("task", task.id, item.text) for item in open_items("task", task.id)
                     )
     return out
 
@@ -339,12 +342,19 @@ def compute(
         ordered, linked_commits, owners, _status_times(store)
     )
     criteria = [
-        criterion for plan_id in plan_ids for criterion in store.list_criteria("plan", plan_id)
+        criterion
+        for plan_id in plan_ids
+        for criterion in store.criteria_map().get(("plan", plan_id), ())
     ]
+    linked_criteria = {
+        int(link["criterion_id"])
+        for link in store.all_criterion_links()
+        if link.get("criterion_id")
+    }
     trace_gaps = [
         Gap("criterion", criterion.id, criterion.text)
         for criterion in criteria
-        if not store.criterion_tasks(criterion.id)
+        if criterion.id not in linked_criteria
     ]
     return Report(
         plans=list(plan_ids),
@@ -365,8 +375,9 @@ def compute(
 def _repo_paths(store: Store, plan_ids: list[int], cwd: str | Path) -> list[str]:
     """Linked checkout paths, or cwd when the plans have no repo links."""
     seen: list[str] = []
+    repos = store.repos_map()
     for plan_id in plan_ids:
-        for repo in store.effective_repos("plan", plan_id):
+        for repo in repos.get(("plan", plan_id), ()):
             path = str(repo.get("repo_path") or "")
             if path and path not in seen:
                 seen.append(path)

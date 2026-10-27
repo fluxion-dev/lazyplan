@@ -12,6 +12,7 @@ import json
 import re
 import time
 from pathlib import Path
+from typing import Any
 
 from .forge import AuthStatus, Forge, RepoRef, detect_forge, parse_pull_url, resolve_auth
 from .github import GitHubClient, GitHubError
@@ -1498,72 +1499,101 @@ def tree(
 
 
 # -- export / import (portability) ------------------------------------------
-def export_all(store: Store) -> dict:
-    """Full dump: plans (with criteria + links + repos) holding milestones and tasks."""
-    plans = []
-    for p in store.list_plans():
-        milestones = []
-        for s in store.list_milestones(p.id):
-            tasks = []
-            for t in store.list_tasks(s.id):
-                claim = store.get_claim(t.id)
-                tasks.append(
-                    {
-                        "task": _ser(vars(t)),
-                        "criteria": [vars(c) for c in store.list_criteria("task", t.id)],
-                        "links": [vars(c) for c in store.list_links("task", t.id)],
-                        "forge_links": [vars(c) for c in store.list_forge_links("task", t.id)],
-                        "repos": store.list_repos("task", t.id),
-                        "notes": [vars(n) for n in store.list_notes("task", t.id)],
-                        "comments": [vars(c) for c in store.list_comments("task", t.id)],
-                        "issues": store.list_issue_links("task", t.id),
-                        "claim": vars(claim) if claim is not None else None,
-                    }
-                )
-            milestones.append(
-                {
-                    "milestone": _ser(vars(s)),
-                    "criteria": [vars(c) for c in store.list_criteria("milestone", s.id)],
-                    "links": [vars(c) for c in store.list_links("milestone", s.id)],
-                    "forge_links": [vars(c) for c in store.list_forge_links("milestone", s.id)],
-                    "repos": store.list_repos("milestone", s.id),
-                    "notes": [vars(n) for n in store.list_notes("milestone", s.id)],
-                    "comments": [vars(c) for c in store.list_comments("milestone", s.id)],
-                    "issues": store.list_issue_links("milestone", s.id),
-                    "tasks": tasks,
-                }
-            )
-        plans.append(
+def _export_maps(store: Store) -> dict[str, Any]:
+    """Every child table loaded once for an export."""
+    return {
+        "milestones": store.milestones_map(),
+        "tasks": store.tasks_map(),
+        "criteria": store.criteria_map(),
+        "links": store.vcs_links_map(),
+        "forge": store.forge_links_map(),
+        "repos": store.repos_map(),
+        "notes": store.notes_full_map(),
+        "comments": store.comments_full_map(),
+        "issues": store.issue_links_map(),
+        "claims": store.claims_map(),
+        "uids": store.plan_uids_map(),
+    }
+
+
+def _export_entry(plan: Plan, maps: dict[str, Any]) -> dict:
+    """One plan entry in export_all() shape from preloaded maps."""
+    criteria = maps["criteria"]
+    links = maps["links"]
+    forge = maps["forge"]
+    repos = maps["repos"]
+    notes = maps["notes"]
+    comments = maps["comments"]
+    issues = maps["issues"]
+    claims = maps["claims"]
+
+    def task_entry(task: Task) -> dict:
+        claim = claims.get(task.id)
+        return {
+            "task": _ser(vars(task)),
+            "criteria": [vars(item) for item in criteria.get(("task", task.id), [])],
+            "links": [vars(item) for item in links.get(("task", task.id), [])],
+            "forge_links": [vars(item) for item in forge.get(("task", task.id), [])],
+            "repos": repos.get(("task", task.id), []),
+            "notes": [vars(item) for item in notes.get(("task", task.id), [])],
+            "comments": [vars(item) for item in comments.get(("task", task.id), [])],
+            "issues": issues.get(("task", task.id), []),
+            "claim": vars(claim) if claim is not None else None,
+        }
+
+    milestone_entries = []
+    for milestone in maps["milestones"].get(plan.id, ()):
+        milestone_entries.append(
             {
-                "plan": {**_ser(vars(p)), "uid": store.plan_uid(p.id)},
-                "criteria": [vars(c) for c in store.list_criteria("plan", p.id)],
-                "links": [vars(c) for c in store.list_links("plan", p.id)],
-                "forge_links": [vars(c) for c in store.list_forge_links("plan", p.id)],
-                "repos": store.list_repos("plan", p.id),
-                "notes": [vars(n) for n in store.list_notes("plan", p.id)],
-                "comments": [vars(c) for c in store.list_comments("plan", p.id)],
-                "issues": store.list_issue_links("plan", p.id),
-                "milestones": milestones,
+                "milestone": _ser(vars(milestone)),
+                "criteria": [vars(item) for item in criteria.get(("milestone", milestone.id), [])],
+                "links": [vars(item) for item in links.get(("milestone", milestone.id), [])],
+                "forge_links": [vars(item) for item in forge.get(("milestone", milestone.id), [])],
+                "repos": repos.get(("milestone", milestone.id), []),
+                "notes": [vars(item) for item in notes.get(("milestone", milestone.id), [])],
+                "comments": [vars(item) for item in comments.get(("milestone", milestone.id), [])],
+                "issues": issues.get(("milestone", milestone.id), []),
+                "tasks": [task_entry(task) for task in maps["tasks"].get(milestone.id, ())],
             }
         )
     return {
+        "plan": {**_ser(vars(plan)), "uid": maps["uids"].get(plan.id, "")},
+        "criteria": [vars(item) for item in criteria.get(("plan", plan.id), [])],
+        "links": [vars(item) for item in links.get(("plan", plan.id), [])],
+        "forge_links": [vars(item) for item in forge.get(("plan", plan.id), [])],
+        "repos": repos.get(("plan", plan.id), []),
+        "notes": [vars(item) for item in notes.get(("plan", plan.id), [])],
+        "comments": [vars(item) for item in comments.get(("plan", plan.id), [])],
+        "issues": issues.get(("plan", plan.id), []),
+        "milestones": milestone_entries,
+    }
+
+
+def export_all(store: Store) -> dict:
+    """Full dump: plans (with criteria + links + repos) holding milestones and tasks."""
+    maps = _export_maps(store)
+    return {
         "lazyplan": 1,
-        "plans": plans,
+        "plans": [_export_entry(plan, maps) for plan in store.list_plans()],
         "criterion_links": store.all_criterion_links(),
     }
 
 
 def export_plan(store: Store, plan_id: int) -> dict | None:
     """Single-plan entry in export_all() shape (or None when missing)."""
-    plans: list[dict] = export_all(store)["plans"]
-    for entry in plans:
-        plan: dict = entry["plan"]
-        if plan["id"] == plan_id:
-            return entry
-    return None
+    plan = store.get_plan(plan_id)
+    if plan is None:
+        return None
+    return _export_entry(plan, _export_maps(store))
 
 
 def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]:
+    """Load an export_all() dump atomically; returns counts."""
+    with store._connect():
+        return _import_all(store, data, actor)
+
+
+def _import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]:
     """Load an export_all() dump. Returns counts.
 
     Template fill is skipped on import: the dump carries final values.

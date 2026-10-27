@@ -204,6 +204,26 @@ class TestStore(unittest.TestCase):
             milestone["effective_repos"], self.store.effective_repos("milestone", s.id)
         )
 
+    def test_import_is_atomic_on_failure(self):
+        data = {
+            "lazyplan": 1,
+            "plans": [
+                {"plan": {"name": "Good"}},
+                {"not_a_plan": True},
+            ],
+        }
+        with self.assertRaises(KeyError):
+            services.import_all(self.store, data)
+        self.assertEqual(self.store.counts()["plans"], 0)
+
+    def test_export_plan_does_not_export_everything(self):
+        p = self.store.add_plan("P")
+        with mock.patch.object(services, "export_all", side_effect=AssertionError("full export")):
+            entry = services.export_plan(self.store, p.id)
+        self.assertIsNotNone(entry)
+        assert entry is not None
+        self.assertEqual(entry["plan"]["id"], p.id)
+
     def test_criteria_on_plan_milestone_task(self):
         p = self.store.add_plan("P")
         s = self.store.add_milestone(p.id, "S")

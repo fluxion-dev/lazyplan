@@ -41,7 +41,7 @@ class TestStore(unittest.TestCase):
         self.tmp.cleanup()
 
     def test_schema_version_and_indexes(self):
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn:
             self.assertEqual(
                 int(conn.execute("PRAGMA user_version").fetchone()[0]),
                 migrate_mod.SCHEMA_VERSION,
@@ -57,7 +57,7 @@ class TestStore(unittest.TestCase):
             "idx_entity_repos_branch",
         ):
             self.assertIn(name, names)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn:
             conn.row_factory = sqlite3.Row
             with mock.patch.object(migrate_mod, "_migrate_elements") as legacy:
                 migrate_mod.migrate(conn)

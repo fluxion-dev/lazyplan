@@ -16,7 +16,9 @@ skill, and whether to install the reviewed resources. Scripts, agents, and
 `lpui --json` get the defaults without prompts.
 
 The first run writes the files below. On Windows, `~/.lazyplan/` is
-`%LOCALAPPDATA%\lazyplan\` throughout this page.
+`%LOCALAPPDATA%\lazyplan\` throughout this page, `~/.agents/` is
+`%USERPROFILE%\.agents\`, and host configs live under `%USERPROFILE%\`.
+Repo-relative paths do not change.
 
 | Item | Home placement (default) | Repo placement |
 | --- | --- | --- |
@@ -81,7 +83,8 @@ lpui upgrade --json
 A successful upgrade re-runs setup with the new package, including under
 `--json`, so hooks and the pointer pick up new content. Upgrade never prompts
 in JSON mode. If the upgrade cannot run, lazyplan prints one warning and keeps
-working.
+working. On Windows the same pipx and venv paths apply; the reinstall fallback
+is `pipx install --backend pip lazyplan-tui`.
 
 ## Doctor
 
@@ -137,6 +140,11 @@ Use a reviewer-only host with `["lpui", "mcp", "--read-only"]`. Hosts that do
 not support MCP can keep using `--porcelain`; both surfaces read the same
 database.
 
+On Windows, run the same `claude mcp add` command from PowerShell. pipx installs
+the console script under `%USERPROFILE%\.local\bin`; keep that on `PATH`, or put
+the full `lpui.exe` path in `command` for a committed config. No extra runtime
+or MCP package is installed.
+
 ## Provider credentials
 
 Only explicit GitHub actions call the network: `pr refresh`, `pr link`, and
@@ -159,6 +167,11 @@ always exit `0`. Remove them with `lpui setup --no-hooks`; every touched file
 is backed up. `LAZYPLAN_NO_HOOKS=1` silences installed hooks without removing
 them.
 
+Claude Code on Windows runs hook commands in Git Bash, or in PowerShell when
+Git Bash is missing; both find `lpui` on `PATH`. Claude Code accepts no added
+context on `PreCompact`, so lazyplan does not install that hook there;
+`SessionStart` fires again after compaction and re-injects the brief.
+
 `--agents-pointer` adds a marked section to the repo `AGENTS.md` when plans
 live at home. Claude Code reads `AGENTS.md` only when the repo has no
 `CLAUDE.md`; if yours has one, add a line with `@AGENTS.md` to it. It is off by default. `--no-agents-pointer` removes only the
@@ -168,8 +181,8 @@ marked section and keeps the rest of the file.
 
 Removing the package leaves your data and agent files behind on purpose:
 
-- `~/.lazyplan/` (database, state, templates, backups)
-- `~/.agents/skills/lazyplan/` and the per-agent skill directories
+- `~/.lazyplan/` (database, state, templates, backups) — `%LOCALAPPDATA%\lazyplan\` on Windows
+- `~/.agents/skills/lazyplan/` and the per-agent skill directories — under `%USERPROFILE%` on Windows
 - hook entries in the host configs listed above
 - `AGENTS.md` markers in repos where you enabled the pointer
 

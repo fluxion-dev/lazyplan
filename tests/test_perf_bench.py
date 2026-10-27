@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import sys
 import tempfile
 import unittest
@@ -22,6 +23,12 @@ def _load():
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module
+
+
+def _scrub(text: str, bases: set[str]) -> str:
+    for base in sorted(bases, key=len, reverse=True):
+        text = text.replace(base, "<tmp>")
+    return text
 
 
 class PerfBenchCase(unittest.TestCase):
@@ -50,7 +57,7 @@ class PerfBenchCase(unittest.TestCase):
     def test_fixture_is_deterministic(self):
         def signature(fixture):
             store = Store(fixture.db)
-            base = str(fixture.db.parent)
+            bases = {str(fixture.db.parent), os.path.realpath(str(fixture.db.parent))}
             plans = store.list_plans()
             milestones = [m for plan in plans for m in store.list_milestones(plan.id)]
             tasks = [t for milestone in milestones for t in store.list_tasks(milestone.id)]
@@ -65,7 +72,7 @@ class PerfBenchCase(unittest.TestCase):
                         row["actor"],
                         row["kind"],
                         row["action"],
-                        row["detail"].replace(base, "<tmp>"),
+                        _scrub(row["detail"], bases),
                     )
                     for row in events
                 ),

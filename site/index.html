@@ -3,30 +3,29 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>lazyplan — a plan for you and your agent</title>
-<meta name="description" content="A terminal plan tracker for you and your coding agent, now on Windows and fast at scale. Plans, claims, proof, and flow health in one local place.">
-<meta name="keywords" content="plan tracker, coding agent, ai agent, developer tools, terminal app, windows terminal, agent coordination, MCP server, flow metrics, completion gates, issue import, git provenance, pull request tracking, fast terminal ui">
+<title>lazyplan — one plan for you and your agent</title>
+<meta name="description" content="A calm terminal plan for you and your coding agent. Keep plans, progress, and proof in one local place, on Linux, macOS, and Windows.">
+<meta name="keywords" content="terminal plan tracker, coding agent, plan tracker, developer tools, local-first, keyboard-first">
 <meta name="author" content="Brad Lindsay">
 <meta name="theme-color" content="#09090B">
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="https://fluxion-dev.github.io/lazyplan/">
 <link rel="preload" as="image" href="./screens/lpui-and-agent.webp" type="image/webp">
-<meta property="og:title" content="lazyplan — a plan for you and your agent">
-<meta property="og:description" content="A terminal plan tracker for you and your coding agent, now on Windows and fast at scale. Plans, claims, proof, and flow health in one local place.">
+<meta property="og:title" content="lazyplan — one plan for you and your agent">
+<meta property="og:description" content="A calm terminal plan for you and your coding agent. Keep plans, progress, and proof in one local place, on Linux, macOS, and Windows.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://fluxion-dev.github.io/lazyplan/">
 <meta property="og:site_name" content="lazyplan">
 <meta property="og:locale" content="en_US">
-<!-- Stable logo URL (self-hosted SVG, copied from public/ at build time). -->
 <meta property="og:image" content="https://fluxion-dev.github.io/lazyplan/screens/og-lpui-and-agent.png">
-<meta property="og:image:alt" content="lazyplan 0.27 coordination view with claims, blocked work, and red checks beside MCP and completion-gate terminal transcripts">
+<meta property="og:image:alt" content="lazyplan plan tree beside terminal panes where a coding agent updates the same plan.">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="lazyplan — a plan for you and your agent">
-<meta name="twitter:description" content="A terminal plan tracker for you and your coding agent, now on Windows and fast at scale. Plans, claims, proof, and flow health in one local place.">
+<meta name="twitter:title" content="lazyplan — one plan for you and your agent">
+<meta name="twitter:description" content="A calm terminal plan for you and your coding agent. Keep plans, progress, and proof in one local place, on Linux, macOS, and Windows.">
 <meta name="twitter:image" content="https://fluxion-dev.github.io/lazyplan/screens/og-lpui-and-agent.png">
-<meta name="twitter:image:alt" content="lazyplan 0.27 coordination view with claims, blocked work, and red checks beside MCP and completion-gate terminal transcripts">
+<meta name="twitter:image:alt" content="lazyplan plan tree beside terminal panes where a coding agent updates the same plan.">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -37,27 +36,21 @@
   "softwareVersion": "0.27.0",
   "url": "https://fluxion-dev.github.io/lazyplan/",
   "screenshot": "https://fluxion-dev.github.io/lazyplan/screens/og-lpui-and-agent.png",
-  "description": "A terminal plan tracker for you and your coding agent on Linux, macOS, and Windows, with local plans, batched reads, atomic claims, flow health, review comments, completion gates, and read-only git and pull request provenance.",
+  "description": "A terminal plan tracker for you and your coding agent, with one shared plan, keyboard-first focus, and local-first storage on Linux, macOS, and Windows.",
   "author": {
     "@type": "Person",
     "name": "Brad Lindsay"
   },
   "license": "MIT",
   "isAccessibleForFree": true,
-  "keywords": "terminal plan tracker, coding agent, agent coordination, MCP server, git provenance, pull request tracking, flow metrics, issue import, Windows terminal",
+  "keywords": "terminal plan tracker, coding agent, plan tracker, developer tools, local-first, keyboard-first",
   "featureList": [
-    "Windows support with PowerShell hooks",
-    "Batched reads with exact query budgets",
-    "Atomic task claims with renewable leases",
-    "Blocked work and handoff notes",
-    "Flow stats and the Attention filter",
-    "Criterion traceability and plan lint",
-    "Local MCP server with read-only mode",
-    "Comments, mentions, and read-only shares",
-    "Plan-level sync by stable UID",
-    "Completion gates for PR and CI evidence",
-    "GitHub and Linear issue imports",
-    "Search, marks, bulk edit, and undo"
+    "One shared plan for you and your agent",
+    "Keyboard-first terminal screen",
+    "Read-only git and pull request proof",
+    "Local-first SQLite database",
+    "Windows, macOS, and Linux",
+    "Export and import any time"
   ],
   "sameAs": [
     "https://github.com/fluxion-dev/lazyplan",
@@ -83,111 +76,39 @@
       "name": "What is lazyplan?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "lazyplan is a terminal plan tracker for you and your coding agent. Plans, milestones, tasks, and acceptance criteria live in one local place, with claims, notes, proof, and flow health alongside them, so you can steer the work without losing context in chat."
+        "text": "A terminal plan for you and your coding agent. Plans, milestones, tasks, and acceptance criteria live in one place, so the work stays visible instead of disappearing into chat."
       }
     },
     {
       "@type": "Question",
-      "name": "Does lazyplan run on Windows?",
+      "name": "Who is it for?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Yes. Install with pipx install --backend pip lazyplan-tui. The shared home is %LOCALAPPDATA%\\lazyplan, the default actor is %USERNAME%, and Claude Code hooks match both Git Bash and PowerShell. Plan text is read as UTF-8 or UTF-16 with a BOM and written as UTF-8."
+        "text": "Developers and small teams who use coding agents and want one plan everyone can see."
       }
     },
     {
       "@type": "Question",
-      "name": "Does lazyplan work with coding agents?",
+      "name": "Does it work with my coding agent?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Yes. Your agent uses the same local database through the lpui command line or the local MCP server, so it can read the plan, claim work, add proof, and move tasks forward while you keep the plan visible in the TUI."
+        "text": "Yes. It works with OpenCode, Claude Code, Cursor, Codex, Gemini CLI, and any agent that can run a command."
       }
     },
     {
       "@type": "Question",
-      "name": "How do claims stop two agents from taking the same task?",
+      "name": "Does it run on Windows, macOS, and Linux?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "lpui next atomically claims the first eligible todo with a renewable lease. A claim carries the actor, start, expiry, and an optional note. Expired leases are reclaimable; renew or release while you work. Blocking a task releases its claim and records the reason, so next skips it until it is unblocked."
+        "text": "Yes. Install with pipx on all three. Your plan is stored locally on your machine."
       }
     },
     {
       "@type": "Question",
-      "name": "Does lazyplan expose an MCP server?",
+      "name": "Where is my data stored?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Yes. lpui mcp serves JSON-RPC over stdio with no extra dependency. It exposes read tools, write tools, and brief/plan resources. --read-only hides and rejects writes, and never creates a missing database."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Does lazyplan create commits, push branches, or open pull requests?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "No. lazyplan is read-only on the VCS front. It records existing branches, links commits, and caches pull request proof, but other tools remain responsible for committing, pushing, reviewing, and merging."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "How does git and pull request provenance work?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Link a commit to a task, or finish a task on a recorded branch. lazyplan can refresh linked commits into pull requests and cache checks and merge state. Press g in the TUI to browse repository, commit, changed file, and PR evidence for any plan, milestone, or task. Highlight a commit or file to read its unified diff in place, bounded to keep the pane readable; o opens the full commit."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Can lazyplan gate a task on a PR or CI?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Yes, opt in with task finish --require-pr or --require-checks. Gates read cached PR and check state, so run pr refresh first. A failure exits 2 and leaves the task doing with no commits linked. --override REASON records the exception and completes normally."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Does lazyplan write back to GitHub or Linear?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "No. issue import is one-way: GitHub issues come from the live API, Linear from a JSON export, and both become plans or tasks with a source ref. Re-import refreshes only cached source metadata. lazyplan never edits, closes, or comments on provider issues and never stores tokens or raw payloads."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "How does sharing and sync work without a server?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "lpui share --plan 1 writes a standalone escaped HTML or safe JSON snapshot. Plans also carry stable UIDs, so lpui sync --file dump.json can add unknown plans, skip identical ones, and report conflicts without deleting or overwriting local work. Merge is plan-granularity, not row-level."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "How do marks and bulk edits work?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Press space to mark rows for the session. The palette can bulk move to doing or done, block with a reason, release claims, clear marks, and undo the last status or block change once. Bulk delete and archive stay single-row because undo cannot safely recreate subtrees."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Where is my plan data stored?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Plans live in a local SQLite database, shared in your home by default or inside a repository with team scope. There is no account or cloud dependency, and you can back up or restore everything with lpui export and lpui import."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Is lazyplan fast with large plans?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Reads are batched. On an 88-plan, 789-task benchmark the tree dropped from 909 queries to 12, list --json from 7,853 to 18, export from 18,612 to 26, and TUI refresh from 5,148 to 139. Query budgets gate CI on Linux, macOS, and Windows."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "How do I install lazyplan?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Install with pipx install lazyplan-tui, or use pipx install --backend pip lazyplan-tui on Windows. Linux deb and rpm packages and the install script are also available. Python 3.11 or newer is required."
+        "text": "In a local SQLite database on your machine. There is no account and no cloud dependency, and you can export or back up everything at any time."
       }
     }
   ]
@@ -204,115 +125,53 @@
   <div class="relative mx-auto flex max-w-6xl items-center gap-x-4 px-6 py-2">
     <a href="#top" class="mr-auto inline-flex items-center gap-2 text-xl font-extrabold tracking-wide text-white no-underline"><img src="./logo.svg" alt="" width="32" height="32" class="h-8 w-8" aria-hidden="true">lazyplan<span class="text-viking-gold">.</span></a>
 
-    <div class="hidden items-center gap-x-5 md:flex">
-      <details class="nav-menu relative">
-        <summary class="nav-summary" aria-controls="nav-product" aria-expanded="false">Product</summary>
-        <div id="nav-product" class="nav-panel absolute left-0 top-full z-50 mt-2 w-60 rounded-xl border border-plan-border bg-plan-surface p-2 shadow-2xl shadow-black/50">
-          <a class="nav-link" href="#whats-new">What's new</a>
-          <a class="nav-link" href="#windows">Windows</a>
-          <a class="nav-link" href="#performance">Performance</a>
-          <a class="nav-link" href="#features">Features</a>
-          <a class="nav-link" href="#screens">Screenshots</a>
-          <a class="nav-link" href="#agents">For agents</a>
-        </div>
-      </details>
-
-      <details class="nav-menu relative">
-        <summary class="nav-summary" aria-controls="nav-capabilities" aria-expanded="false">Capabilities</summary>
-        <div id="nav-capabilities" class="nav-panel absolute left-0 top-full z-50 mt-2 w-60 rounded-xl border border-plan-border bg-plan-surface p-2 shadow-2xl shadow-black/50">
-          <a class="nav-link" href="#coordination">Coordination</a>
-          <a class="nav-link" href="#provenance">Provenance</a>
-          <a class="nav-link" href="#collaboration">Collaboration</a>
-          <a class="nav-link" href="#search-bulk">Bulk edit</a>
-          <a class="nav-link" href="#imports">Imports</a>
-        </div>
-      </details>
-
-      <details class="nav-menu nav-menu-right relative">
-        <summary class="nav-summary" aria-controls="nav-learn" aria-expanded="false">Learn</summary>
-        <div id="nav-learn" class="nav-panel absolute left-0 top-full z-50 mt-2 w-52 rounded-xl border border-plan-border bg-plan-surface p-2 shadow-2xl shadow-black/50">
-          <a class="nav-link" href="#quickstart">Quickstart</a>
-          <a class="nav-link" href="#faq">FAQ</a>
-        </div>
-      </details>
-
-      <a class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-zinc-300 no-underline transition hover:bg-white/5 hover:text-white" href="https://github.com/fluxion-dev/lazyplan" aria-label="lazyplan on GitHub" title="GitHub">
-        <!-- lucide:github -->
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-5 w-5"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
-      </a>
+    <div class="hidden items-center gap-x-6 md:flex">
+      <a class="text-sm text-zinc-300 no-underline transition hover:text-white" href="#features">Features</a>
+      <a class="text-sm text-zinc-300 no-underline transition hover:text-white" href="#screens">Screenshots</a>
+      <a class="text-sm text-zinc-300 no-underline transition hover:text-white" href="#faq">FAQ</a>
+      <a class="text-sm text-zinc-300 no-underline transition hover:text-white" href="https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md">Docs</a>
       <a class="rounded-lg bg-viking-blue px-3.5 py-1.5 text-sm font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="#install">Install</a>
     </div>
 
     <details class="nav-mobile md:hidden">
       <summary class="nav-summary" aria-controls="nav-mobile" aria-expanded="false">Menu</summary>
       <div id="nav-mobile" class="absolute left-0 right-0 top-full z-50 max-h-[calc(100vh-4rem)] overflow-y-auto border-b border-plan-border bg-plan-canvas px-6 pb-6 pt-3 shadow-2xl shadow-black/60">
-        <p class="nav-group-label">Product</p>
-        <a class="nav-mobile-link" href="#whats-new">What's new</a>
-        <a class="nav-mobile-link" href="#windows">Windows</a>
-        <a class="nav-mobile-link" href="#performance">Performance</a>
         <a class="nav-mobile-link" href="#features">Features</a>
         <a class="nav-mobile-link" href="#screens">Screenshots</a>
-        <a class="nav-mobile-link" href="#agents">For agents</a>
-        <p class="nav-group-label">Capabilities</p>
-        <a class="nav-mobile-link" href="#coordination">Coordination</a>
-        <a class="nav-mobile-link" href="#provenance">Provenance</a>
-        <a class="nav-mobile-link" href="#collaboration">Collaboration</a>
-        <a class="nav-mobile-link" href="#search-bulk">Bulk edit</a>
-        <a class="nav-mobile-link" href="#imports">Imports</a>
-        <p class="nav-group-label">Learn</p>
-        <a class="nav-mobile-link" href="#quickstart">Quickstart</a>
         <a class="nav-mobile-link" href="#faq">FAQ</a>
-        <div class="mt-4 flex items-center gap-3 border-t border-plan-border pt-4">
-          <a class="rounded-lg bg-viking-blue px-3.5 py-2 text-sm font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="#install">Install</a>
-          <a class="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-zinc-300 no-underline transition hover:bg-white/5 hover:text-white" href="https://github.com/fluxion-dev/lazyplan">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-4 w-4"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
-            GitHub
-          </a>
+        <a class="nav-mobile-link" href="https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md">Docs</a>
+        <div class="mt-4 border-t border-plan-border pt-4">
+          <a class="inline-flex min-h-9 items-center rounded-lg bg-viking-blue px-3.5 py-2 text-sm font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="#install">Install</a>
         </div>
       </div>
     </details>
   </div>
 </nav>
 
-<header class="relative overflow-hidden px-6 pt-24 md:pt-32 pb-20 md:pb-28 text-center">
+<header class="relative overflow-hidden px-6 pt-24 pb-20 text-center md:pt-32 md:pb-28">
   <div aria-hidden="true" class="pointer-events-none absolute inset-0">
     <div class="absolute -top-32 left-1/2 h-80 w-[42rem] -translate-x-1/2 rounded-full bg-viking-blue/25 blur-3xl"></div>
     <div class="absolute top-20 -left-24 h-64 w-64 rounded-full bg-cyber-cyan/15 blur-3xl"></div>
     <div class="absolute top-24 -right-24 h-64 w-64 rounded-full bg-viking-gold/20 blur-3xl"></div>
   </div>
-  <div class="relative mx-auto max-w-6xl">
-    <h1 class="m-0 text-6xl font-extrabold tracking-tight text-white">lazyplan<span class="text-viking-gold">.</span></h1>
-    <p class="mx-auto mt-8 max-w-3xl text-lg text-zinc-300">A terminal plan tracker for you and your coding agent. Keep the plan, the context, and the next step in one place.</p>
-    <p class="mx-auto mt-2 max-w-3xl text-2xl font-bold tracking-tight text-white">One plan. You steer. Your agent helps.</p>
-    <p class="mx-auto mt-2 max-w-3xl text-base text-zinc-400">No lost context. No duplicated work. Just the plan.</p>
-    <a class="mt-6 inline-flex flex-wrap items-center justify-center gap-2 rounded-full border border-cyber-cyan/40 bg-cyber-cyan/10 px-4 py-1.5 text-sm font-semibold text-cyber-cyan no-underline transition hover:border-cyber-cyan/70 hover:bg-cyber-cyan/15" href="#whats-new">
-      <span class="inline-block h-2 w-2 rounded-full bg-scanner-green" aria-hidden="true"></span>
-      New in 0.27: Windows support and fast-at-scale
-    </a>
+  <div class="relative mx-auto max-w-4xl">
+    <p class="mb-4 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">A terminal plan for you and your agent</p>
+    <h1 class="m-0 text-5xl font-extrabold tracking-tight text-white md:text-6xl">One plan for you and your agent.</h1>
+    <p class="mx-auto mt-6 max-w-2xl text-lg text-zinc-300">lazyplan keeps the plan, the context, and the next step in one terminal screen, so you can steer the work while your agent does it.</p>
 
-    <div class="mx-auto mt-8 flex max-w-xl items-center gap-2 rounded-xl border border-plan-border bg-plan-surface/80 p-2 pl-4 text-left shadow-lg shadow-viking-blue/25 backdrop-blur">
-      <!-- lucide:terminal -->
+    <div class="mx-auto mt-8 flex max-w-md items-center gap-2 rounded-xl border border-plan-border bg-plan-surface/80 p-2 pl-4 text-left shadow-lg shadow-viking-blue/25 backdrop-blur">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-5 w-5 shrink-0 text-cyber-cyan"><path d="m4 17 6-6-6-6"/><path d="M12 19h8"/></svg>
       <code id="hero-cmd" class="min-w-0 flex-1 truncate font-mono text-sm text-zinc-100">pipx install lazyplan-tui</code>
       <button id="hero-copy" type="button" class="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-viking-blue px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-viking-blue/80">
-        <!-- lucide:copy -->
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-4 w-4"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
         Copy
       </button>
     </div>
     <span id="copy-status" role="status" aria-live="polite" class="mt-2 block min-h-5 text-sm text-cyber-cyan"></span>
 
-    <div class="mt-8 flex flex-col items-center justify-center gap-2.5 sm:flex-row sm:flex-wrap">
-      <a class="inline-flex items-center gap-2 rounded-xl bg-viking-blue px-5 py-2.5 font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="#install">
-        <!-- lucide:download -->
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-4 w-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-        Install
-      </a>
-      <a class="inline-flex items-center gap-2 rounded-xl border border-plan-border bg-white/5 px-5 py-2.5 font-semibold text-white no-underline backdrop-blur transition hover:border-zinc-500 hover:bg-white/10" href="https://github.com/fluxion-dev/lazyplan/releases">
-        <!-- lucide:tags -->
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-4 w-4"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></svg>
-        View releases
-      </a>
+    <div class="mt-6 flex flex-col items-center justify-center gap-2.5 sm:flex-row">
+      <a class="inline-flex items-center gap-2 rounded-xl bg-viking-blue px-5 py-2.5 font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="#install">Install</a>
+      <a class="inline-flex items-center gap-2 rounded-xl border border-plan-border bg-white/5 px-5 py-2.5 font-semibold text-white no-underline backdrop-blur transition hover:border-zinc-500 hover:bg-white/10" href="#screens">See it in action</a>
     </div>
 
     <div class="mt-8 flex flex-wrap items-center justify-center gap-x-2 gap-y-2">
@@ -321,545 +180,163 @@
       <a class="no-underline" href="https://github.com/fluxion-dev/lazyplan"><img class="inline h-5 align-middle" src="https://img.shields.io/github/license/fluxion-dev/lazyplan" alt="License" width="78" height="20"></a>
     </div>
 
-    <figure class="mx-auto mt-12 max-w-2xl text-left">
-      <div class="terminal-window overflow-hidden backdrop-blur">
-        <div class="flex items-center gap-1.5 border-b border-plan-border px-4 py-2.5" aria-hidden="true">
-          <span class="h-3 w-3 rounded-full bg-[#ff5f57]"></span>
-          <span class="h-3 w-3 rounded-full bg-[#febc2e]"></span>
-          <span class="h-3 w-3 rounded-full bg-[#28c840]"></span>
-          <span class="ml-2 font-mono text-xs text-zinc-400">lpui plan list — plans at a glance</span>
-        </div>
-        <div class="space-y-2 p-4 font-mono text-[0.85rem] leading-relaxed">
-          <p class="m-0 text-zinc-400"><span class="mr-2 text-cyber-cyan">$</span>lpui plan list</p>
-          <pre class="m-0 overflow-x-auto text-zinc-200">◐ P1 Website relaunch 1/3
-○ P2 API v2 0/4</pre>
-          <ul class="m-0 flex list-none flex-wrap gap-2 p-0">
-            <li class="badge-todo">todo</li>
-            <li class="badge-unknown">doing</li>
-            <li class="badge-resolved">done</li>
-          </ul>
-        </div>
-      </div>
-      <figcaption class="mt-2 text-center text-sm text-zinc-400">Plans at a glance.</figcaption>
+    <figure class="mx-auto mt-12 max-w-3xl text-left">
+      <picture>
+        <source srcset="./screens/lpui-and-agent.webp" type="image/webp">
+        <img src="./screens/lpui-and-agent.png" width="1600" height="760" loading="eager" decoding="async" alt="lazyplan plan tree with claims and blocked work beside terminal panes where a coding agent updates the same plan." class="block h-auto w-full rounded-xl border border-plan-border shadow-terminal">
+      </picture>
+      <figcaption class="mt-2 text-center text-sm text-zinc-400">Your plan beside your agent.</figcaption>
     </figure>
   </div>
 </header>
 
 <main id="main">
 
-<section id="whats-new" class="mx-auto max-w-7xl scroll-mt-20 px-6 py-20 md:py-28">
-  <div class="mb-10 max-w-3xl md:mb-14">
-    <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">New in 0.27</p>
-    <h2 class="mb-4 text-2xl font-bold text-white">The same plan, on Windows, with a much smaller read cost.</h2>
-    <p class="text-lg text-zinc-400">Parity for Windows desktops and a performance sweep through every read path. The coordination and review features from 0.26 are still here.</p>
+<section id="features" class="mx-auto max-w-7xl scroll-mt-20 px-6 py-20 md:py-28">
+  <div class="mb-10 max-w-2xl md:mb-14">
+    <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">Why lazyplan</p>
+    <h2 class="mb-4 text-2xl font-bold text-white md:text-3xl">Less chat. More done.</h2>
+    <p class="text-lg text-zinc-400">Keep the plan where you and your agent can both see it.</p>
   </div>
-  <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
-      <h3 class="mb-2 text-lg font-semibold text-white">Windows, first-class</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400">Install with <code class="inline-code">pipx install --backend pip</code>. The shared home follows <code class="inline-code">%LOCALAPPDATA%</code>, the actor defaults to <code class="inline-code">%USERNAME%</code>, and Claude Code hooks match Git Bash and PowerShell.</p>
+  <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30">
+      <h3 class="mb-2 text-lg font-semibold text-white">One source of truth</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Plans, milestones, and tasks live in one place. You and your agent always read the same plan.</p>
     </div>
-    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
-      <h3 class="mb-2 text-lg font-semibold text-white">Queries, not rows</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400">Tree, lists, export, audit, MCP, and TUI refresh now read in bulk. On the 88-plan fixture the tree falls from 909 queries to 12, export from 18,612 to 26, and TUI refresh from 5,148 to 139.</p>
+    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30">
+      <h3 class="mb-2 text-lg font-semibold text-white">Built for focus</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">A fast keyboard screen keeps plans short until you open them. Detail is there when you need it.</p>
     </div>
-    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
-      <h3 class="mb-2 text-lg font-semibold text-white">Quieter reads</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400">Update notices are cache-only. <code class="inline-code">list</code>, <code class="inline-code">show</code>, <code class="inline-code">next</code>, hooks, MCP, and porcelain calls make no network request.</p>
+    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30">
+      <h3 class="mb-2 text-lg font-semibold text-white">Proof you can see</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Follow work from plan to commit to pull request without leaving the terminal.</p>
     </div>
-  </div>
-  <p class="mt-8 text-[0.95rem] text-zinc-400">Also from 0.26: <a class="text-cyber-cyan hover:underline" href="#coordination">atomic claims</a>, <a class="text-cyber-cyan hover:underline" href="#provenance">source proof</a>, <a class="text-cyber-cyan hover:underline" href="#collaboration">comments and shares</a>, <a class="text-cyber-cyan hover:underline" href="#search-bulk">search and bulk edit</a>, and <a class="text-cyber-cyan hover:underline" href="#imports">issue imports</a>.</p>
-</section>
-
-<section id="windows" class="mx-auto max-w-6xl scroll-mt-20 px-6 py-20 md:py-28">
-  <div class="grid gap-10 md:grid-cols-2 md:items-center">
-    <div>
-      <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">Windows</p>
-      <h2 class="mb-4 text-2xl font-bold text-white">Your plan runs on Windows too.</h2>
-      <p class="text-lg text-zinc-400">Install from PowerShell and keep the same screen, commands, and local database. Plan files are read as UTF-8 or UTF-16 and written as UTF-8, so files from PowerShell 5 round-trip.</p>
-      <ul class="mt-5 space-y-2 text-[0.95rem] text-zinc-300">
-        <li>Shared home: <code class="inline-code">%LOCALAPPDATA%\lazyplan</code></li>
-        <li>Default actor: <code class="inline-code">%USERNAME%</code></li>
-        <li>Claude Code hooks: Git Bash or PowerShell, no PreCompact hook</li>
-        <li>Upgrade: <code class="inline-code">lpui upgrade</code> manages pipx and venv installs</li>
-      </ul>
+    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30">
+      <h3 class="mb-2 text-lg font-semibold text-white">Yours to keep</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Local-first and private by default. Export any time. No account, no cloud, no lock-in.</p>
     </div>
-    <pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-surface p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono"><span class="text-zinc-400">PS&gt;</span> pipx install --backend pip lazyplan-tui
-<span class="text-zinc-400">PS&gt;</span> cd $HOME\my-plan
-<span class="text-zinc-400">PS&gt;</span> lpui
-<span class="text-zinc-400">PS&gt;</span> lpui plan add --title "my-plan" --why "reason" --what "scope"
-<span class="text-zinc-400">PS&gt;</span> lpui
-</code></pre>
   </div>
 </section>
 
-<section id="performance" class="mx-auto max-w-6xl scroll-mt-20 px-6 py-20 md:py-28">
-  <div class="mb-10 max-w-3xl md:mb-14">
-    <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">Performance</p>
-    <h2 class="mb-4 text-2xl font-bold text-white">Fast when the plan gets big.</h2>
-    <p class="text-lg text-zinc-400">Read paths load their rows in bulk instead of one query per row. The fixture holds 88 plans, 275 milestones, and 789 tasks; query counts are exact and gated in CI.</p>
+<section id="screens" class="mx-auto max-w-6xl scroll-mt-20 px-6 py-20 md:py-28">
+  <div class="mb-10 max-w-2xl md:mb-14">
+    <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">Screenshots</p>
+    <h2 class="mb-4 text-2xl font-bold text-white md:text-3xl">See it in action.</h2>
+    <p class="text-lg text-zinc-400">One shared plan. You stay in control. Your agent does the busywork.</p>
   </div>
-  <div class="overflow-x-auto">
-    <table class="w-full min-w-[34rem] border-collapse text-left text-[0.95rem]">
-      <caption class="sr-only">Before and after read costs on the 88-plan benchmark fixture</caption>
-      <thead>
-        <tr class="border-b border-plan-border text-sm uppercase tracking-wide text-zinc-400">
-          <th scope="col" class="py-3 pr-4 font-semibold">Path</th>
-          <th scope="col" class="py-3 pr-4 font-semibold">Before</th>
-          <th scope="col" class="py-3 pr-4 font-semibold">After</th>
-          <th scope="col" class="py-3 font-semibold">Queries</th>
-        </tr>
-      </thead>
-      <tbody class="text-zinc-300">
-        <tr class="border-b border-plan-border/60"><th scope="row" class="py-3 pr-4 font-mono text-[0.9em] font-normal text-zinc-200">tree</th><td class="py-3 pr-4">120 ms</td><td class="py-3 pr-4 text-white">48 ms</td><td class="py-3">909 → 12</td></tr>
-        <tr class="border-b border-plan-border/60"><th scope="row" class="py-3 pr-4 font-mono text-[0.9em] font-normal text-zinc-200">list --json</th><td class="py-3 pr-4">560 ms</td><td class="py-3 pr-4 text-white">62 ms</td><td class="py-3">7,853 → 18</td></tr>
-        <tr class="border-b border-plan-border/60"><th scope="row" class="py-3 pr-4 font-mono text-[0.9em] font-normal text-zinc-200">export</th><td class="py-3 pr-4">1,222 ms</td><td class="py-3 pr-4 text-white">27 ms</td><td class="py-3">18,612 → 26</td></tr>
-        <tr><th scope="row" class="py-3 pr-4 font-mono text-[0.9em] font-normal text-zinc-200">TUI refresh</th><td class="py-3 pr-4">557 ms</td><td class="py-3 pr-4 text-white">112 ms</td><td class="py-3">5,148 → 139</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <p class="mt-6 text-[0.95rem] text-zinc-400">Linux timings from the final sweep; wall ceilings are per platform. Read the <a class="text-cyber-cyan underline hover:text-white" href="https://github.com/fluxion-dev/lazyplan/blob/main/docs/performance.md">method and budgets</a>.</p>
-</section>
-
-<section id="screens" class="mx-auto max-w-[1400px] scroll-mt-20 px-6 py-20 md:py-28">
-  <div class="mb-10 max-w-3xl md:mb-14">
-    <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">See it in action</p>
-    <h2 class="mb-4 text-2xl font-bold text-white">Your plan on the left. Your agent on the right.</h2>
-    <p class="text-lg text-zinc-400">One shared plan. You steer. Your agent does the work.</p>
-    <p class="mt-3 text-[0.95rem] text-zinc-400">Doing rows spin in place while work is in progress, so active plans stand out at a glance. Todo and done rows stay still.</p>
-  </div>
-
-  <figure class="m-0 overflow-hidden rounded-xl border border-plan-border bg-plan-surface/70 p-2 shadow-2xl shadow-black/40 md:p-3">
-    <picture>
-      <source srcset="./screens/lpui-and-agent.webp" type="image/webp">
-      <img src="./screens/lpui-and-agent.png" width="1600" height="760" loading="eager" fetchpriority="high" decoding="async" alt="lazyplan coordination view on the left with an active claim, an expired claim, a blocked task, aging work, a done row with an open criterion, and a red PR check, beside MCP and completion-gate terminal transcripts." class="block h-auto w-full rounded-lg">
-    </picture>
-    <figcaption class="px-2 pb-1 pt-3 text-sm text-zinc-400">The whole plan, live, beside the agent surfaces that move it.</figcaption>
-  </figure>
-
-  <div class="mt-6 grid grid-cols-1 items-start gap-6 md:grid-cols-2">
-    <figure class="m-0 overflow-hidden rounded-xl border border-plan-border bg-plan-surface/70 p-2 shadow-xl shadow-black/30">
+  <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
+    <figure class="m-0">
       <picture>
         <source srcset="./screens/lpui-detail.webp" type="image/webp">
-        <img src="./screens/lpui-detail.png" width="1400" height="900" loading="lazy" decoding="async" alt="lpui read-only detail page showing a plan's reason, what to build, acceptance criteria, and milestones." class="block h-auto w-full rounded-lg">
+        <img src="./screens/lpui-detail.png" width="1400" height="900" loading="lazy" decoding="async" alt="Read-only detail page showing a plan's reason, scope, acceptance criteria, and milestones." class="block h-auto w-full rounded-xl border border-plan-border">
       </picture>
-      <figcaption class="px-2 pb-1 pt-3 text-sm text-zinc-400">The why, the what, and what done means.</figcaption>
+      <figcaption class="mt-2 text-sm text-zinc-400">The why, the what, and what done means.</figcaption>
     </figure>
-    <figure class="m-0 overflow-hidden rounded-xl border border-plan-border bg-plan-surface/70 p-2 shadow-xl shadow-black/30">
+    <figure class="m-0">
       <picture>
-        <source srcset="./screens/lpui-narrow.webp" type="image/webp">
-        <img src="./screens/lpui-narrow.png" width="900" height="600" loading="lazy" decoding="async" alt="lpui at 80 by 24 columns, with the plan tree at full width and the key bar at the bottom." class="block h-auto w-full rounded-lg">
+        <source srcset="./screens/lpui-coordination.webp" type="image/webp">
+        <img src="./screens/lpui-coordination.png" width="1604" height="904" loading="lazy" decoding="async" alt="Plan tree filtered to attention, showing active and expired claims, blocked work, aging tasks, and a red check." class="block h-auto w-full rounded-xl border border-plan-border">
       </picture>
-      <figcaption class="px-2 pb-1 pt-3 text-sm text-zinc-400">Fits the terminal you already have.</figcaption>
+      <figcaption class="mt-2 text-sm text-zinc-400">Active work, blocked work, and attention at a glance.</figcaption>
     </figure>
-  </div>
-</section>
-
-<section id="coordination" class="mx-auto max-w-7xl scroll-mt-20 px-6 py-20 md:py-28">
-  <div class="mb-10 max-w-3xl md:mb-14">
-    <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">Agent coordination</p>
-    <h2 class="mb-4 text-2xl font-bold text-white">Two agents, one plan, no collisions.</h2>
-    <p class="text-lg text-zinc-400">Claims are short leases with an expiry, not permanent owners. Work stays visible, handoffs stay on the row, and blocked work stops looking available.</p>
-  </div>
-  <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
-      <h3 class="mb-2 text-lg font-semibold text-white">Claim atomically</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400"><code class="inline-code">lpui next</code> takes the first eligible todo and moves it doing. Renew the lease while you work; release it when you stop. Expired leases are reclaimable.</p>
-    </div>
-    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
-      <h3 class="mb-2 text-lg font-semibold text-white">Hand off in place</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400">Notes are append-only on plans, milestones, and tasks. Blocking releases the claim, records the reason, and keeps status honest without a fourth state.</p>
-    </div>
-    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
-      <h3 class="mb-2 text-lg font-semibold text-white">See what needs attention</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400">The Attention source filter surfaces expired claims, blocked tasks, aging doing work, done rows with open criteria, and red PR checks. The status line reports the count.</p>
-    </div>
-  </div>
-  <figure class="m-0 mt-10 overflow-hidden rounded-xl border border-plan-border bg-plan-surface/70 p-2 shadow-2xl shadow-black/40 md:p-3">
-    <picture>
-      <source srcset="./screens/lpui-coordination.webp" type="image/webp">
-      <img src="./screens/lpui-coordination.png" width="1604" height="904" loading="lazy" decoding="async" alt="lazyplan plan tree filtered to Attention, showing an active claim, an expired claim, a blocked task, aging work, a done row with an open criterion, and a red PR check." class="block h-auto w-full rounded-lg">
-    </picture>
-    <figcaption class="px-2 pb-1 pt-3 text-sm text-zinc-400">Attention view: one active claim, one expired claim, a blocked task, aging work, a done gap, and a red check.</figcaption>
-  </figure>
-  <figure class="m-0 mt-6 overflow-hidden rounded-xl border border-plan-border bg-plan-surface/70 p-2 shadow-xl shadow-black/30 md:p-3">
-    <picture>
-      <source srcset="./screens/lpui-flow-health.webp" type="image/webp">
-      <img src="./screens/lpui-flow-health.png" width="1482" height="587" loading="lazy" decoding="async" alt="Terminal transcript of lpui stats showing WIP, cycle time, throughput, aging, stale todos, reopened work, claims, blocked tasks, and porcelain metric rows." class="block h-auto w-full rounded-lg">
-    </picture>
-    <figcaption class="px-2 pb-1 pt-3 text-sm text-zinc-400">Flow health from the journal: WIP, cycle time, throughput, aging, stale work, and reopened rows.</figcaption>
-  </figure>
-</section>
-
-<section id="provenance" class="mx-auto max-w-7xl scroll-mt-20 px-6 py-20 md:py-28">
-  <div class="mb-10 max-w-3xl md:mb-14">
-    <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">Git + PR provenance</p>
-    <h2 class="mb-4 text-2xl font-bold text-white">See where the plan landed in the source.</h2>
-    <p class="text-lg text-zinc-400">Link commits to tasks, then press <code class="inline-code">g</code> to follow the evidence from plan element to repository, branch, commit, changed file, and pull request.</p>
-  </div>
-
-  <figure class="m-0 mb-10 overflow-hidden rounded-xl border border-plan-border bg-plan-surface/70 p-2 shadow-2xl shadow-black/40 md:mb-14 md:p-3">
-    <picture>
-      <source srcset="./screens/lpui-source-trail.webp" type="image/webp">
-      <img src="./screens/lpui-source-trail.png" width="1604" height="904" loading="lazy" decoding="async" alt="lazyplan source trail for a task: an expanded web repository with commits, changed files, merged and open pull requests, and a selected file showing its unified diff with old and new line numbers." class="block h-auto w-full rounded-lg">
-    </picture>
-    <figcaption class="px-2 pb-1 pt-3 text-sm text-zinc-400">Press g to follow the plan into the repo, then highlight a file to read its diff.</figcaption>
-  </figure>
-
-  <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
-      <h3 class="mb-2 text-lg font-semibold text-white">Source trail</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400">A keyboard tree groups each checkout by repository, commit, and changed file. Plans and milestones roll descendant work up, so plan-level proof is one key away. Highlight a commit or file to read its unified diff in place, with old and new line numbers and explicit binary, root, merge, empty, and missing states.</p>
-    </div>
-    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
-      <h3 class="mb-2 text-lg font-semibold text-white">Open or copy fast</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400">Open a commit, PR, or file in the browser. Copy a SHA, path, or URL without leaving the terminal. Filter the trail when a plan touches many files.</p>
-    </div>
-    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
-      <h3 class="mb-2 text-lg font-semibold text-white">Read-only by design</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400">lazyplan records existing branches and commit proof. It never commits, pushes, opens PRs, or merges; your existing tools stay in charge of VCS actions.</p>
-    </div>
-  </div>
-
-  <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
-    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
-      <h3 class="mb-2 text-lg font-semibold text-white">Trace the proof</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400"><code class="inline-code">criterion relate</code> links an acceptance item to the task that proves it. <code class="inline-code">trace</code> walks to commits and PRs; <code class="inline-code">lint --strict</code> fails on uncovered criteria and weak task descriptions.</p>
-    </div>
-    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
-      <h3 class="mb-2 text-lg font-semibold text-white">Gate done on evidence</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400"><code class="inline-code">task finish --require-pr --require-checks</code> reads cached PR and CI state. A missing or red check keeps the task doing; an override records why.</p>
-    </div>
-    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
-      <h3 class="mb-2 text-lg font-semibold text-white">One checkout, one branch</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400">Starting a task records an existing branch. A second open task on the same checkout or remote branch is rejected with the owner named, so agents do not race the same working tree.</p>
-    </div>
-  </div>
-
-  <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-    <figure class="m-0 overflow-hidden rounded-xl border border-plan-border bg-plan-surface/70 p-2 shadow-xl shadow-black/30 md:p-3">
+    <figure class="m-0">
       <picture>
-        <source srcset="./screens/lpui-trace.webp" type="image/webp">
-        <img src="./screens/lpui-trace.png" width="1482" height="587" loading="lazy" decoding="async" alt="Terminal transcript of lpui trace and lpui lint --strict showing criterion-to-task-to-commit-to-PR evidence and a missing proving task finding." class="block h-auto w-full rounded-lg">
+        <source srcset="./screens/lpui-source-trail.webp" type="image/webp">
+        <img src="./screens/lpui-source-trail.png" width="1604" height="904" loading="lazy" decoding="async" alt="Source trail for a task with a repository, commits, changed files, pull requests, and a selected file diff." class="block h-auto w-full rounded-xl border border-plan-border">
       </picture>
-      <figcaption class="px-2 pb-1 pt-3 text-sm text-zinc-400">Trace the criterion to the task, commit, and PR; lint names the gap.</figcaption>
+      <figcaption class="mt-2 text-sm text-zinc-400">Follow the plan into the code.</figcaption>
     </figure>
-    <figure class="m-0 overflow-hidden rounded-xl border border-plan-border bg-plan-surface/70 p-2 shadow-xl shadow-black/30 md:p-3">
-      <picture>
-        <source srcset="./screens/lpui-gates.webp" type="image/webp">
-        <img src="./screens/lpui-gates.png" width="1482" height="587" loading="lazy" decoding="async" alt="Terminal transcript showing task finish blocked by failing checks, then completed with an override note and gate state." class="block h-auto w-full rounded-lg">
-      </picture>
-      <figcaption class="px-2 pb-1 pt-3 text-sm text-zinc-400">Done waits for cached PR and CI evidence; an override records why.</figcaption>
-    </figure>
-  </div>
-
-  <div class="mt-8 rounded-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8">
-    <h3 class="mb-3 text-lg font-semibold text-white">Works with the tools you already use</h3>
-    <ul class="m-0 grid grid-cols-1 gap-3 p-0 text-[0.95rem] text-zinc-400 list-none sm:grid-cols-2">
-      <li><strong class="text-zinc-200">Commits:</strong> link a SHA, capture a task finish range, or scan Lazyplan trailers.</li>
-      <li><strong class="text-zinc-200">Branches:</strong> record an existing branch and base before the work starts.</li>
-      <li><strong class="text-zinc-200">Pull requests:</strong> refresh cached state, checks, reviews, and merge evidence from GitHub.</li>
-      <li><strong class="text-zinc-200">Filters:</strong> show only linked work, PRs, stale links, or unlinked rows.</li>
-    </ul>
-  </div>
-</section>
-
-<section id="collaboration" class="mx-auto max-w-7xl scroll-mt-20 px-6 py-20 md:py-28">
-  <div class="mb-10 max-w-3xl md:mb-14">
-    <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">Collaboration</p>
-    <h2 class="mb-4 text-2xl font-bold text-white">Keep the review with the plan.</h2>
-    <p class="text-lg text-zinc-400">Comments, mentions, read-only snapshots, and plan-level sync use the same local journal. No hosted account, no real-time service, no writeback.</p>
-  </div>
-  <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
-      <h3 class="mb-2 text-lg font-semibold text-white">Comments and mentions</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400">Add, list, resolve, and unresolve comments on any row. <code class="inline-code">@name</code> filters the list and unresolved comments appear in the detail pane.</p>
-    </div>
-    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
-      <h3 class="mb-2 text-lg font-semibold text-white">Share a read-only snapshot</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400"><code class="inline-code">lpui share --plan 1</code> writes escaped HTML or safe JSON with the plan, criteria, milestones, tasks, notes, comments, and proof. Tokens and raw payloads stay out.</p>
-    </div>
-    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
-      <h3 class="mb-2 text-lg font-semibold text-white">Sync without duplicates</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400">Every plan has a stable UID. <code class="inline-code">sync --file dump.json</code> adds unknown plans, skips identical ones, and reports conflicts without overwriting.</p>
-    </div>
-  </div>
-  <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-    <figure class="m-0 overflow-hidden rounded-xl border border-plan-border bg-plan-surface/70 p-2 shadow-xl shadow-black/30 md:p-3">
-      <picture>
-        <source srcset="./screens/lpui-collaboration.webp" type="image/webp">
-        <img src="./screens/lpui-collaboration.png" width="1604" height="904" loading="lazy" decoding="async" alt="lazyplan task detail page showing an active claim, two review comments, and a handoff note." class="block h-auto w-full rounded-lg">
-      </picture>
-      <figcaption class="px-2 pb-1 pt-3 text-sm text-zinc-400">Comments, mentions, claims, and handoff notes stay on the task.</figcaption>
-    </figure>
-    <figure class="m-0 overflow-hidden rounded-xl border border-plan-border bg-plan-surface/70 p-2 shadow-xl shadow-black/30 md:p-3">
-      <picture>
-        <source srcset="./screens/lpui-share-sync.webp" type="image/webp">
-        <img src="./screens/lpui-share-sync.png" width="1482" height="587" loading="lazy" decoding="async" alt="Terminal transcript showing a comment with an @mention, a read-only HTML share, and a dry-run sync with a conflict." class="block h-auto w-full rounded-lg">
-      </picture>
-      <figcaption class="px-2 pb-1 pt-3 text-sm text-zinc-400">Share a safe snapshot and merge plans by stable UID without overwriting.</figcaption>
-    </figure>
-  </div>
-</section>
-
-<section id="search-bulk" class="mx-auto max-w-7xl scroll-mt-20 px-6 py-20 md:py-28">
-  <div class="mb-10 max-w-3xl md:mb-14">
-    <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">Search and bulk edit</p>
-    <h2 class="mb-4 text-2xl font-bold text-white">Find the row, mark the set, edit once.</h2>
-    <p class="text-lg text-zinc-400"><code class="inline-code">/</code> searches descriptions, why/what, notes, comments, claims, blocked reasons, and issue refs. Space marks rows for the session, and the palette handles the set.</p>
-  </div>
-  <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-    <figure class="m-0 overflow-hidden rounded-xl border border-plan-border bg-plan-surface/70 p-2 shadow-xl shadow-black/30 md:p-3">
+    <figure class="m-0">
       <picture>
         <source srcset="./screens/lpui-search-bulk.webp" type="image/webp">
-        <img src="./screens/lpui-search-bulk.png" width="1604" height="904" loading="lazy" decoding="async" alt="lazyplan plan tree with three marked tasks showing checkmarks and a marked 3 count in the status line." class="block h-auto w-full rounded-lg">
+        <img src="./screens/lpui-search-bulk.png" width="1604" height="904" loading="lazy" decoding="async" alt="Plan tree with three marked tasks, checkmarks on each row, and a marked count in the status line." class="block h-auto w-full rounded-xl border border-plan-border">
       </picture>
-      <figcaption class="px-2 pb-1 pt-3 text-sm text-zinc-400">Marks survive refresh and the status line keeps the count.</figcaption>
-    </figure>
-    <figure class="m-0 overflow-hidden rounded-xl border border-plan-border bg-plan-surface/70 p-2 shadow-xl shadow-black/30 md:p-3">
-      <picture>
-        <source srcset="./screens/lpui-bulk-palette.webp" type="image/webp">
-        <img src="./screens/lpui-bulk-palette.png" width="1604" height="904" loading="lazy" decoding="async" alt="lazyplan command palette filtered to bulk commands: mark, move to doing, move to done, block, release claims, and undo." class="block h-auto w-full rounded-lg">
-      </picture>
-      <figcaption class="px-2 pb-1 pt-3 text-sm text-zinc-400">Bulk move, block, release, clear, and one undo. Delete and archive stay single-row.</figcaption>
+      <figcaption class="mt-2 text-sm text-zinc-400">Find the row, mark the set, edit once.</figcaption>
     </figure>
   </div>
 </section>
 
-<section id="imports" class="mx-auto max-w-6xl scroll-mt-20 px-6 py-20 md:py-28">
-  <div class="mb-10 max-w-3xl md:mb-14">
-    <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">Issue imports</p>
-    <h2 class="mb-4 text-2xl font-bold text-white">Bring the issue in. Keep where it came from.</h2>
-    <p class="text-lg text-zinc-400">GitHub issues arrive live; Linear issues come from a JSON export. Both become plans or tasks with a provider, number, URL, and state that survive export/import.</p>
+<section id="how" class="mx-auto max-w-5xl scroll-mt-20 px-6 py-20 md:py-28">
+  <div class="mb-10 max-w-2xl md:mb-14">
+    <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">How it works</p>
+    <h2 class="mb-4 text-2xl font-bold text-white md:text-3xl">Start in three steps.</h2>
   </div>
-  <figure class="m-0 overflow-hidden rounded-xl border border-plan-border bg-plan-surface/70 p-2 shadow-2xl shadow-black/40 md:p-3">
-    <picture>
-      <source srcset="./screens/lpui-imports.webp" type="image/webp">
-      <img src="./screens/lpui-imports.png" width="1482" height="587" loading="lazy" decoding="async" alt="Terminal transcript showing a GitHub issue import dry-run and a Linear import with source refs in plan show." class="block h-auto w-full rounded-lg">
-    </picture>
-    <figcaption class="px-2 pb-1 pt-3 text-sm text-zinc-400">Dry-run first; re-import refreshes source metadata only and never writes back.</figcaption>
-  </figure>
+  <ol class="grid list-none grid-cols-1 gap-6 p-0 md:grid-cols-3">
+    <li class="rounded-xl border border-plan-border bg-plan-surface/70 p-6">
+      <span class="text-sm font-bold text-viking-gold">01</span>
+      <h3 class="mb-2 mt-3 text-lg font-semibold text-white">Install</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">One command with pipx. Python 3.11 or newer.</p>
+    </li>
+    <li class="rounded-xl border border-plan-border bg-plan-surface/70 p-6">
+      <span class="text-sm font-bold text-viking-gold">02</span>
+      <h3 class="mb-2 mt-3 text-lg font-semibold text-white">Make a plan</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Give it a title, a reason, and a scope.</p>
+    </li>
+    <li class="rounded-xl border border-plan-border bg-plan-surface/70 p-6">
+      <span class="text-sm font-bold text-viking-gold">03</span>
+      <h3 class="mb-2 mt-3 text-lg font-semibold text-white">Work together</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Run <code class="inline-code">lpui</code> and let your agent update the same plan.</p>
+    </li>
+  </ol>
 </section>
 
-<section id="features" class="mx-auto max-w-7xl scroll-mt-20 px-6 py-20 md:py-28">
-  <h2 class="mb-4 text-2xl font-bold text-white"><span class="mr-1.5" aria-hidden="true">🧭</span>Why lazyplan</h2>
-  <p class="mb-10 md:mb-14 text-lg text-zinc-400">Keep the plan where you and your agent can both see it.</p>
-  <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8 shadow-lg shadow-black/30 backdrop-blur transition hover:border-viking-blue/50">
-      <!-- lucide:layout-list -->
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="mb-2 h-6 w-6 text-cyber-cyan"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
-      <h3 class="mb-1.5 text-lg font-semibold text-white">A plan everyone can see</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400">Plans, milestones, and tasks in one place. The context stays out of chat and in the work.</p>
-    </div>
-    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8 shadow-lg shadow-black/30 backdrop-blur transition hover:border-viking-blue/50">
-      <!-- lucide:bot -->
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="mb-2 h-6 w-6 text-viking-blue"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
-      <h3 class="mb-1.5 text-lg font-semibold text-white">Made for coding agents</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400">Your agent reads the plan, adds work, and updates progress. You stay in control.</p>
-    </div>
-    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8 shadow-lg shadow-black/30 backdrop-blur transition hover:border-viking-blue/50">
-      <!-- lucide:database -->
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="mb-2 h-6 w-6 text-scanner-green"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>
-      <h3 class="mb-1.5 text-lg font-semibold text-white">Yours to keep</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400">Private by default. Simple to back up. No account, no cloud, no lock-in.</p>
-    </div>
-    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8 shadow-lg shadow-black/30 backdrop-blur transition hover:border-viking-blue/50">
-      <h3 class="mb-1.5 text-lg font-semibold text-white">Built for a loop</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400">Atomic claims, renewable leases, notes, and blocked reasons give multiple agents a safe shared queue.</p>
-    </div>
-    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8 shadow-lg shadow-black/30 backdrop-blur transition hover:border-viking-blue/50">
-      <h3 class="mb-1.5 text-lg font-semibold text-white">Flow, not vibes</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400">WIP, cycle time, throughput, aging, stale todos, and reopened work are computed from the journal, not estimated.</p>
-    </div>
-    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8 shadow-lg shadow-black/30 backdrop-blur transition hover:border-viking-blue/50">
-      <h3 class="mb-1.5 text-lg font-semibold text-white">Proof, not promises</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400">Trace criteria to tasks, commits, and PRs. Gate done on cached CI and record an override when you deliberately break the rule.</p>
-    </div>
-    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8 shadow-lg shadow-black/30 backdrop-blur transition hover:border-viking-blue/50">
-      <h3 class="mb-1.5 text-lg font-semibold text-white">Review in place</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400">Comments, mentions, read-only shares, and plan-level sync keep feedback with the work instead of in another tool.</p>
-    </div>
-    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8 shadow-lg shadow-black/30 backdrop-blur transition hover:border-viking-blue/50">
-      <h3 class="mb-1.5 text-lg font-semibold text-white">Imported work keeps its source</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400">GitHub issues and Linear exports arrive as plans or tasks with a provider, number, URL, and state that survive export/import.</p>
-    </div>
-    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8 shadow-lg shadow-black/30 backdrop-blur transition hover:border-viking-blue/50">
-      <h3 class="mb-1.5 text-lg font-semibold text-white">Search every field</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400">Find rows by descriptions, why/what, notes, comments, claims, blocked reasons, or issue refs. Mark several and edit in bulk with one undo.</p>
-    </div>
-  </div>
+<section id="install" class="mx-auto max-w-4xl scroll-mt-20 px-6 py-20 text-center md:py-28">
+  <h2 class="mb-4 text-2xl font-bold text-white md:text-3xl">Install in one command.</h2>
+  <p class="mb-8 text-lg text-zinc-400">Python 3.11 or newer. Linux, macOS, and Windows.</p>
+  <pre class="mx-auto max-w-xl overflow-x-auto rounded-xl border border-plan-border bg-plan-surface p-4 text-left text-[0.95rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono">pipx install lazyplan-tui</code></pre>
+  <p class="mt-4 text-[0.95rem] text-zinc-400">On Windows: <code class="inline-code">pipx install --backend pip lazyplan-tui</code></p>
+  <p class="mt-6 text-[0.95rem] text-zinc-400"><a class="text-cyber-cyan underline hover:text-white" href="https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md#install">Other install options</a></p>
 </section>
 
-<section id="quickstart" class="mx-auto max-w-6xl scroll-mt-20 px-6 py-20 md:py-28">
-  <h2 class="mb-4 text-2xl font-bold text-white"><span class="mr-1.5" aria-hidden="true">🚀</span>Quickstart</h2>
-  <p class="mb-10 md:mb-14 text-lg text-zinc-400">Three commands. One plan.</p>
-<div class="space-y-6">
-<div>
-<p class="mb-2 text-sm font-semibold uppercase tracking-wide text-zinc-400">Linux and macOS</p>
-<pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-surface p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono">cd ~/my-plan
-lpui                     # first run sets up agents, skills, hooks, and the plan store
-lpui plan add --title "my-plan" --why "reason" --what "scope"
-lpui
-</code></pre>
-</div>
-<div>
-<p class="mb-2 text-sm font-semibold uppercase tracking-wide text-zinc-400">Windows PowerShell</p>
-<pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-surface p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono"><span class="text-zinc-400">PS&gt;</span> cd $HOME\my-plan
-<span class="text-zinc-400">PS&gt;</span> lpui                     # first run sets up agents, skills, hooks, and the plan store
-<span class="text-zinc-400">PS&gt;</span> lpui plan add --title "my-plan" --why "reason" --what "scope"
-<span class="text-zinc-400">PS&gt;</span> lpui
-</code></pre>
-</div>
-  <p class="text-zinc-400">Working with a team? <code class="inline-code">lpui setup --placement repo</code> shares the plan in the repo. Check what setup resolved with <code class="inline-code">lpui doctor</code>.</p>
-</div>
-</section>
-
-<section id="agents" class="mx-auto max-w-6xl scroll-mt-20 px-6 py-20 md:py-28">
-  <h2 class="mb-4 text-2xl font-bold text-white"><span class="mr-1.5" aria-hidden="true">🤖</span>For your coding agent</h2>
-  <p class="mb-10 md:mb-14 text-lg text-zinc-400">Your agent gets the same plan through a typed MCP server or a simple command line. It can claim work, add proof, leave a note, and keep you posted.</p>
-<div class="space-y-6">
-<pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-surface p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono">lpui mcp                              # typed tools + resources on stdio
-lpui --porcelain next                 # claim the first eligible task
-lpui --porcelain stats --since 7.days # WIP, cycle time, aging, stale work
-lpui --porcelain note add --kind task --id 3 --text "Handoff"
-lpui --porcelain task finish --id 3 --require-pr --require-checks
-lpui --porcelain issue import --provider github --repo owner/repo
-</code></pre>
-  <p class="text-zinc-300">MCP exposes read tools for the brief, plans, rows, claims, audit, trace, lint, and info, plus writes for the journal, criteria, claims, notes, blocked work, and commit links. <code class="inline-code">--read-only</code> hides writes for reviewers and never creates a missing database.</p>
-  <figure class="m-0 overflow-hidden rounded-xl border border-plan-border bg-plan-surface/70 p-2 shadow-xl shadow-black/30 md:p-3">
-    <picture>
-      <source srcset="./screens/lpui-mcp.webp" type="image/webp">
-      <img src="./screens/lpui-mcp.png" width="1482" height="587" loading="lazy" decoding="async" alt="Terminal transcript of an lpui mcp stdio session showing initialize, tools/list, and a brief tools/call response." class="block h-auto w-full rounded-lg">
-    </picture>
-    <figcaption class="px-2 pb-1 pt-3 text-sm text-zinc-400">Typed reads and writes over stdio; <code class="inline-code">--read-only</code> for review hosts.</figcaption>
-  </figure>
-  <p class="text-zinc-300">Without MCP, porcelain mode answers each write with one tab-separated row and keeps overview reads glyph-free, so your agent spends context on the plan instead of decorations. The columns are <code class="inline-code">kind</code>, <code class="inline-code">id</code>, <code class="inline-code">status</code>, <code class="inline-code">title</code>, <code class="inline-code">parent</code>, and <code class="inline-code">extra</code>; <code class="inline-code">--json</code> is still there when you need full fidelity.</p>
-  <p class="text-zinc-300">You set the direction. It does the busywork.</p>
-  <p class="text-zinc-400">Setup installs read-only lifecycle hooks for detected agents, so a session starts with the active task and a commit reminds you to link it. Hooks never move work or write to the database; remove them with <code class="inline-code">lpui setup --no-hooks</code>. On Windows they run in Git Bash or PowerShell, and both find <code class="inline-code">lpui</code> on <code class="inline-code">PATH</code>.</p>
-</div>
-</section>
-
-<section id="faq" class="mx-auto max-w-4xl scroll-mt-20 px-6 py-20 md:py-28">
-  <div class="mb-10 max-w-3xl md:mb-14">
+<section id="faq" class="mx-auto max-w-3xl scroll-mt-20 px-6 py-20 md:py-28">
+  <div class="mb-10 max-w-2xl md:mb-14">
     <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">FAQ</p>
-    <h2 class="mb-4 text-2xl font-bold text-white">Questions, answered.</h2>
-    <p class="text-lg text-zinc-400">The short version of how lazyplan fits your terminal, your agent, and your git workflow.</p>
+    <h2 class="mb-4 text-2xl font-bold text-white md:text-3xl">Questions, answered.</h2>
   </div>
   <div class="space-y-3">
     <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
       <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">What is lazyplan?</summary>
-      <p class="mt-3 text-zinc-400">lazyplan is a terminal plan tracker for you and your coding agent. Plans, milestones, tasks, and acceptance criteria live in one local place, with claims, notes, proof, and flow health alongside them, so you can steer the work without losing context in chat.</p>
+      <p class="mt-3 text-zinc-400">A terminal plan for you and your coding agent. Plans, milestones, tasks, and acceptance criteria live in one place, so the work stays visible instead of disappearing into chat.</p>
     </details>
     <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
-      <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">Does lazyplan run on Windows?</summary>
-      <p class="mt-3 text-zinc-400">Yes. Install with <code class="inline-code">pipx install --backend pip lazyplan-tui</code>. The shared home is <code class="inline-code">%LOCALAPPDATA%\lazyplan</code>, the default actor is <code class="inline-code">%USERNAME%</code>, and Claude Code hooks match both Git Bash and PowerShell. Plan text is read as UTF-8 or UTF-16 with a BOM and written as UTF-8.</p>
+      <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">Who is it for?</summary>
+      <p class="mt-3 text-zinc-400">Developers and small teams who use coding agents and want one plan everyone can see.</p>
     </details>
     <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
-      <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">Does lazyplan work with coding agents?</summary>
-      <p class="mt-3 text-zinc-400">Yes. Your agent uses the same local database through the <code class="inline-code">lpui</code> command line or the local MCP server, so it can read the plan, claim work, add proof, and move tasks forward while you keep the plan visible in the TUI.</p>
+      <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">Does it work with my coding agent?</summary>
+      <p class="mt-3 text-zinc-400">Yes. It works with OpenCode, Claude Code, Cursor, Codex, Gemini CLI, and any agent that can run a command.</p>
     </details>
     <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
-      <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">How do claims stop two agents from taking the same task?</summary>
-      <p class="mt-3 text-zinc-400"><code class="inline-code">lpui next</code> atomically claims the first eligible todo with a renewable lease. A claim carries the actor, start, expiry, and an optional note. Expired leases are reclaimable; renew or release while you work. Blocking a task releases its claim and records the reason, so <code class="inline-code">next</code> skips it until it is unblocked.</p>
+      <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">Does it run on Windows, macOS, and Linux?</summary>
+      <p class="mt-3 text-zinc-400">Yes. Install with pipx on all three. Your plan is stored locally on your machine.</p>
     </details>
     <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
-      <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">Does lazyplan expose an MCP server?</summary>
-      <p class="mt-3 text-zinc-400">Yes. <code class="inline-code">lpui mcp</code> serves JSON-RPC over stdio with no extra dependency. It exposes read tools, write tools, and brief/plan resources. <code class="inline-code">--read-only</code> hides and rejects writes, and never creates a missing database.</p>
-    </details>
-    <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
-      <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">Does lazyplan create commits, push branches, or open pull requests?</summary>
-      <p class="mt-3 text-zinc-400">No. lazyplan is read-only on the VCS front. It records existing branches, links commits, and caches pull request proof, but other tools remain responsible for committing, pushing, reviewing, and merging.</p>
-    </details>
-    <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
-      <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">How does git and pull request provenance work?</summary>
-      <p class="mt-3 text-zinc-400">Link a commit to a task, or finish a task on a recorded branch. lazyplan can refresh linked commits into pull requests and cache checks and merge state. Press <code class="inline-code">g</code> in the TUI to browse repository, commit, changed file, and PR evidence for any plan, milestone, or task. Highlight a commit or file to read its unified diff in place, bounded to keep the pane readable; <code class="inline-code">o</code> opens the full commit.</p>
-    </details>
-    <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
-      <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">Can lazyplan gate a task on a PR or CI?</summary>
-      <p class="mt-3 text-zinc-400">Yes, opt in with <code class="inline-code">task finish --require-pr</code> or <code class="inline-code">--require-checks</code>. Gates read cached PR and check state, so run <code class="inline-code">pr refresh</code> first. A failure exits 2 and leaves the task doing with no commits linked. <code class="inline-code">--override REASON</code> records the exception and completes normally.</p>
-    </details>
-    <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
-      <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">Does lazyplan write back to GitHub or Linear?</summary>
-      <p class="mt-3 text-zinc-400">No. <code class="inline-code">issue import</code> is one-way: GitHub issues come from the live API, Linear from a JSON export, and both become plans or tasks with a source ref. Re-import refreshes only cached source metadata. lazyplan never edits, closes, or comments on provider issues and never stores tokens or raw payloads.</p>
-    </details>
-    <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
-      <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">How does sharing and sync work without a server?</summary>
-      <p class="mt-3 text-zinc-400"><code class="inline-code">lpui share --plan 1</code> writes a standalone escaped HTML or safe JSON snapshot. Plans also carry stable UIDs, so <code class="inline-code">lpui sync --file dump.json</code> can add unknown plans, skip identical ones, and report conflicts without deleting or overwriting local work. Merge is plan-granularity, not row-level.</p>
-    </details>
-    <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
-      <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">How do marks and bulk edits work?</summary>
-      <p class="mt-3 text-zinc-400">Press <code class="inline-code">space</code> to mark rows for the session. The palette can bulk move to doing or done, block with a reason, release claims, clear marks, and undo the last status or block change once. Bulk delete and archive stay single-row because undo cannot safely recreate subtrees.</p>
-    </details>
-    <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
-      <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">Where is my plan data stored?</summary>
-      <p class="mt-3 text-zinc-400">Plans live in a local SQLite database, shared in your home by default or inside a repository with team scope. There is no account or cloud dependency, and you can back up or restore everything with <code class="inline-code">lpui export</code> and <code class="inline-code">lpui import</code>.</p>
-    </details>
-    <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
-      <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">Is lazyplan fast with large plans?</summary>
-      <p class="mt-3 text-zinc-400">Reads are batched. On an 88-plan, 789-task benchmark the tree dropped from 909 queries to 12, <code class="inline-code">list --json</code> from 7,853 to 18, export from 18,612 to 26, and TUI refresh from 5,148 to 139. Query budgets gate CI on Linux, macOS, and Windows.</p>
-    </details>
-    <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
-      <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">How do I install lazyplan?</summary>
-      <p class="mt-3 text-zinc-400">Install with <code class="inline-code">pipx install lazyplan-tui</code>, or use <code class="inline-code">pipx install --backend pip lazyplan-tui</code> on Windows. Linux deb and rpm packages and the install script are also available. Python 3.11 or newer is required.</p>
+      <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">Where is my data stored?</summary>
+      <p class="mt-3 text-zinc-400">In a local SQLite database on your machine. There is no account and no cloud dependency, and you can export or back up everything at any time.</p>
     </details>
   </div>
 </section>
 
-<section id="install" class="mx-auto max-w-6xl scroll-mt-20 px-6 py-20 md:py-28">
-  <h2 class="mb-4 text-2xl font-bold text-white"><span class="mr-1.5" aria-hidden="true">📦</span>Install</h2>
-  <p class="mb-10 md:mb-14 text-lg text-zinc-400">One command, or grab a package for your system.</p>
-<div class="space-y-6">
-
-  <div role="tablist" aria-label="Install methods" class="mb-0 flex flex-wrap gap-2 border-b border-plan-border pb-0">
-    <button id="tab-pipx" type="button" role="tab" aria-selected="true" aria-controls="panel-pipx" class="rounded-t-lg border border-b-0 border-plan-border bg-plan-surface px-4 py-2 text-sm font-semibold text-white aria-selected:border-viking-blue/60 aria-selected:bg-viking-blue/15 aria-selected:text-white">pipx (recommended)</button>
-    <button id="tab-system" type="button" role="tab" aria-selected="false" aria-controls="panel-system" tabindex="-1" class="rounded-t-lg border border-b-0 border-plan-border bg-transparent px-4 py-2 text-sm font-semibold text-zinc-400 aria-selected:border-viking-blue/60 aria-selected:bg-viking-blue/15 aria-selected:text-white">
-      System packages
-    </button>
-    <button id="tab-oneliner" type="button" role="tab" aria-selected="false" aria-controls="panel-oneliner" tabindex="-1" class="rounded-t-lg border border-b-0 border-plan-border bg-transparent px-4 py-2 text-sm font-semibold text-zinc-400 aria-selected:border-viking-blue/60 aria-selected:bg-viking-blue/15 aria-selected:text-white">
-      One-liner
-    </button>
+<section id="get-started" class="mx-auto max-w-5xl scroll-mt-20 px-6 pb-20 md:pb-28">
+  <div class="rounded-2xl border border-plan-border bg-plan-surface/70 px-6 py-12 text-center shadow-xl shadow-black/30 md:px-12">
+    <h2 class="mb-3 text-2xl font-bold text-white md:text-3xl">Bring your plan into focus.</h2>
+    <p class="mx-auto mb-8 max-w-xl text-lg text-zinc-400">Install lazyplan and give your agent the same plan you see.</p>
+    <div class="flex flex-col items-center justify-center gap-2.5 sm:flex-row">
+      <a class="inline-flex items-center gap-2 rounded-xl bg-viking-blue px-5 py-2.5 font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="#install">Install</a>
+      <a class="inline-flex items-center gap-2 rounded-xl border border-plan-border bg-white/5 px-5 py-2.5 font-semibold text-white no-underline backdrop-blur transition hover:border-zinc-500 hover:bg-white/10" href="https://github.com/fluxion-dev/lazyplan">GitHub</a>
+    </div>
   </div>
-
-  <div id="panel-pipx" role="tabpanel" aria-labelledby="tab-pipx" class="rounded-b-xl rounded-tr-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8 space-y-6 backdrop-blur">
-    <h3 class="mb-2 mt-1 text-xl font-semibold text-white">Install with pipx</h3>
-    <p class="text-zinc-300">The recommended path. One command, no clutter.</p>
-<pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-canvas p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono">pipx install lazyplan-tui
-lpui --help
-</code></pre>
-    <p class="text-zinc-400">On Windows, use the pip backend. The shared home is <code class="inline-code">%LOCALAPPDATA%\lazyplan</code>.</p>
-<pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-canvas p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono"><span class="text-zinc-400">PS&gt;</span> pipx install --backend pip lazyplan-tui
-<span class="text-zinc-400">PS&gt;</span> lpui --help
-</code></pre>
-  </div>
-  <div id="panel-system" role="tabpanel" aria-labelledby="tab-system" hidden class="rounded-b-xl rounded-tr-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8 space-y-6 backdrop-blur">
-    <h3 class="mb-2 mt-1 text-xl font-semibold text-white">Linux packages</h3>
-    <p class="text-zinc-300">For Fedora, RHEL, openSUSE, Debian, and Ubuntu.</p>
-<pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-canvas p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono"><span class="text-zinc-400"># Fedora / RHEL / openSUSE</span>
-sudo dnf install ./lazyplan-0.27.0-1.x86_64.rpm
-<span class="text-zinc-400"># Debian / Ubuntu</span>
-sudo apt install ./lazyplan_0.27.0-1_amd64.deb
-</code></pre>
-  </div>
-  <div id="panel-oneliner" role="tabpanel" aria-labelledby="tab-oneliner" hidden class="rounded-b-xl rounded-tr-xl border border-plan-border bg-plan-surface/70 p-6 md:p-8 space-y-6 backdrop-blur">
-    <h3 class="mb-2 mt-1 text-xl font-semibold text-white">Let the script choose</h3>
-    <p class="text-zinc-300">It picks the right install for your machine.</p>
-<pre class="overflow-x-auto rounded-xl border border-plan-border bg-plan-canvas p-4 text-[0.88rem] leading-relaxed text-zinc-200"><code class="bg-transparent p-0 font-mono">curl -fsSL https://github.com/fluxion-dev/lazyplan/releases/latest/download/install.sh | sh
-</code></pre>
-  </div>
-  <p class="text-[0.95rem] text-zinc-400">Prefer a package? <a class="text-cyber-cyan hover:underline" href="https://github.com/fluxion-dev/lazyplan/releases">Download the latest release</a>.</p>
-</div>
 </section>
-
-
 
 </main>
 
 <footer class="border-t border-plan-border bg-plan-surface/60 px-6 py-12 text-center text-[0.92rem] text-zinc-400 backdrop-blur">
   <p class="m-0"><a class="text-cyber-cyan underline hover:text-white" href="https://github.com/fluxion-dev/lazyplan">lazyplan</a> — one plan for you and your agent.</p>
   <ul class="mt-6 flex list-none flex-wrap items-center justify-center gap-x-6 gap-y-2 p-0">
-    <li><a class="text-zinc-300 no-underline hover:text-white hover:underline" href="https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md">Usage</a></li>
-    <li><a class="text-zinc-300 no-underline hover:text-white hover:underline" href="#faq">FAQ</a></li>
-    <li><a class="text-zinc-300 no-underline hover:text-white hover:underline" href="https://github.com/fluxion-dev/lazyplan">Repository</a></li>
-    <li><a class="text-zinc-300 no-underline hover:text-white hover:underline" href="https://github.com/fluxion-dev/lazyplan/issues">Issues</a></li>
+    <li><a class="text-zinc-300 no-underline hover:text-white hover:underline" href="https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md">Docs</a></li>
+    <li><a class="text-zinc-300 no-underline hover:text-white hover:underline" href="https://github.com/fluxion-dev/lazyplan/blob/main/docs/setup.md">Setup</a></li>
+    <li><a class="text-zinc-300 no-underline hover:text-white hover:underline" href="https://github.com/fluxion-dev/lazyplan/blob/main/docs/performance.md">Performance</a></li>
+    <li><a class="text-zinc-300 no-underline hover:text-white hover:underline" href="https://github.com/fluxion-dev/lazyplan">GitHub</a></li>
     <li><a class="text-zinc-300 no-underline hover:text-white hover:underline" href="https://github.com/fluxion-dev/lazyplan/releases">Releases</a></li>
     <li><a class="text-zinc-300 no-underline hover:text-white hover:underline" href="https://github.com/fluxion-dev/lazyplan/blob/main/LICENSE">License</a></li>
   </ul>
@@ -868,46 +345,6 @@ sudo apt install ./lazyplan_0.27.0-1_amd64.deb
 <script>
 (function () {
   'use strict';
-  function selectTab(tab, tabs) {
-    tabs.forEach(function (t) {
-      var selected = t === tab;
-      t.setAttribute('aria-selected', selected ? 'true' : 'false');
-      t.tabIndex = selected ? 0 : -1;
-      var panel = document.getElementById(t.getAttribute('aria-controls'));
-      if (panel) {
-        if (selected) {
-          panel.removeAttribute('hidden');
-        } else {
-          panel.setAttribute('hidden', '');
-        }
-      }
-    });
-  }
-  document.querySelectorAll('[role="tablist"]').forEach(function (list) {
-    var tabs = Array.prototype.slice.call(list.querySelectorAll('[role="tab"]'));
-    tabs.forEach(function (tab, index) {
-      tab.addEventListener('click', function () {
-        selectTab(tab, tabs);
-      });
-      tab.addEventListener('keydown', function (event) {
-        var next = null;
-        if (event.key === 'ArrowRight') {
-          next = (index + 1) % tabs.length;
-        } else if (event.key === 'ArrowLeft') {
-          next = (index - 1 + tabs.length) % tabs.length;
-        } else if (event.key === 'Home') {
-          next = 0;
-        } else if (event.key === 'End') {
-          next = tabs.length - 1;
-        }
-        if (next !== null) {
-          event.preventDefault();
-          tabs[next].focus();
-          selectTab(tabs[next], tabs);
-        }
-      });
-    });
-  });
   var copyBtn = document.getElementById('hero-copy');
   var copySrc = document.getElementById('hero-cmd');
   var copyStatus = document.getElementById('copy-status');
@@ -941,21 +378,14 @@ sudo apt install ./lazyplan_0.27.0-1_amd64.deb
     copyBtn.addEventListener('click', function () {
       var text = copySrc.textContent;
       function done(ok) {
-        if (ok) {
-          announce('Copied to clipboard.');
-        } else {
-          announce('Copy failed — select the command and copy it manually.');
-        }
+        announce(ok ? 'Copied to clipboard.' : 'Copy failed — select the command and copy it manually.');
       }
       if (window.isSecureContext && navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(
-          function () {
-            done(true);
-          },
-          function () {
-            done(legacyCopy(text));
-          }
-        );
+        navigator.clipboard.writeText(text).then(function () {
+          done(true);
+        }, function () {
+          done(legacyCopy(text));
+        });
       } else {
         done(legacyCopy(text));
       }
@@ -964,7 +394,6 @@ sudo apt install ./lazyplan_0.27.0-1_amd64.deb
 })();
 </script>
 
-
 <script>
 (function () {
   'use strict';
@@ -972,70 +401,41 @@ sudo apt install ./lazyplan_0.27.0-1_amd64.deb
   if (!nav) {
     return;
   }
-  var menus = Array.prototype.slice.call(
-    nav.querySelectorAll('details.nav-menu, details.nav-mobile')
-  );
-  function sync(details) {
-    var summary = details.querySelector('summary');
+  var menu = nav.querySelector('details.nav-mobile');
+  if (!menu) {
+    return;
+  }
+  var summary = menu.querySelector('summary');
+  function sync() {
     if (summary) {
-      summary.setAttribute('aria-expanded', details.open ? 'true' : 'false');
+      summary.setAttribute('aria-expanded', menu.open ? 'true' : 'false');
     }
   }
-  function closeAll(except) {
-    menus.forEach(function (details) {
-      if (details !== except) {
-        details.open = false;
-      }
-      sync(details);
-    });
-  }
-  menus.forEach(function (details) {
-    var summary = details.querySelector('summary');
-    if (summary) {
-      summary.addEventListener('click', function () {
-        var willOpen = !details.open;
-        if (willOpen) {
-          closeAll(details);
-        }
-        summary.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
-      });
-    }
-    sync(details);
-    details.addEventListener('toggle', function () {
-      sync(details);
-      if (details.open) {
-        closeAll(details);
-      }
-    });
-  });
+  menu.addEventListener('toggle', sync);
   document.addEventListener('click', function (event) {
-    if (!nav.contains(event.target)) {
-      closeAll(null);
+    if (menu.open && !nav.contains(event.target)) {
+      menu.open = false;
+      sync();
     }
   });
   document.addEventListener('keydown', function (event) {
-    if (event.key !== 'Escape') {
-      return;
-    }
-    var open = menus.filter(function (details) {
-      return details.open;
-    })[0];
-    if (!open) {
+    if (event.key !== 'Escape' || !menu.open) {
       return;
     }
     event.preventDefault();
-    open.open = false;
-    sync(open);
-    var summary = open.querySelector('summary');
+    menu.open = false;
+    sync();
     if (summary) {
       summary.focus();
     }
   });
-  nav.querySelectorAll('a').forEach(function (link) {
+  menu.querySelectorAll('a').forEach(function (link) {
     link.addEventListener('click', function () {
-      closeAll(null);
+      menu.open = false;
+      sync();
     });
   });
+  sync();
 })();
 </script>
 

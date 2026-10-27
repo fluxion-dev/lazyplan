@@ -1,4 +1,4 @@
-"""Static contract for the collapsed primary navigation."""
+"""Static contract for the marketing landing page navigation."""
 
 from __future__ import annotations
 
@@ -8,39 +8,20 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
+DOCS = "https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md"
 EXPECTED_HREFS = {
     "#top",
-    "#whats-new",
-    "#windows",
-    "#performance",
     "#features",
     "#screens",
-    "#agents",
-    "#coordination",
-    "#provenance",
-    "#collaboration",
-    "#search-bulk",
-    "#imports",
-    "#quickstart",
     "#faq",
     "#install",
-    "https://github.com/fluxion-dev/lazyplan",
+    DOCS,
 }
-GROUP_LINKS = {
-    "Product": {"#whats-new", "#windows", "#performance", "#features", "#screens", "#agents"},
-    "Capabilities": {
-        "#coordination",
-        "#provenance",
-        "#collaboration",
-        "#search-bulk",
-        "#imports",
-    },
-    "Learn": {"#quickstart", "#faq"},
-}
+DESKTOP_LINKS = {"#features", "#screens", "#faq", DOCS, "#install"}
 
 
 class NavParser(HTMLParser):
-    """Collect nav details, summaries, panels, links, and ids."""
+    """Collect nav links, details, summaries, and ids."""
 
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
@@ -106,32 +87,24 @@ class TestPrimaryNavigation(unittest.TestCase):
         parser = NavParser()
         parser.feed((ROOT / "site/index.html").read_text(encoding="utf-8"))
         self.parser = parser
-        self.desktop = [
-            item
-            for item in parser.details
-            if "nav-menu" in str(item["class"]) and "nav-mobile" not in str(item["class"])
-        ]
         self.mobile = [item for item in parser.details if "nav-mobile" in str(item["class"])]
 
-    def test_three_desktop_groups(self):
-        self.assertEqual(
-            [item["summary"] for item in self.desktop],
-            ["Product", "Capabilities", "Learn"],
-        )
+    def test_desktop_links_are_exact(self):
+        html = (ROOT / "site/index.html").read_text(encoding="utf-8")
+        desktop = html.split('class="hidden items-center gap-x-6 md:flex"', 1)[1].split(
+            "</div>", 1
+        )[0]
+        parser = NavParser()
+        parser.in_nav = True
+        parser.feed(desktop)
+        self.assertEqual(set(parser.links), DESKTOP_LINKS)
 
-    def test_group_links_are_exact(self):
-        for item in self.desktop:
-            links = item["links"]
-            assert isinstance(links, list)
-            self.assertEqual(set(links), GROUP_LINKS[str(item["summary"])])
-
-    def test_mobile_menu_exists_and_keeps_every_destination(self):
+    def test_mobile_menu_keeps_every_destination(self):
         self.assertEqual(len(self.mobile), 1)
         self.assertEqual(self.mobile[0]["summary"], "Menu")
-        self.assertIn("md:hidden", str(self.mobile[0]["class"]))
         links = self.mobile[0]["links"]
         assert isinstance(links, list)
-        self.assertTrue(EXPECTED_HREFS - {"#top"} <= set(links))
+        self.assertEqual(set(links), {"#features", "#screens", "#faq", DOCS, "#install"})
 
     def test_every_destination_is_preserved(self):
         self.assertTrue(
@@ -139,25 +112,20 @@ class TestPrimaryNavigation(unittest.TestCase):
             f"missing destinations: {sorted(EXPECTED_HREFS - set(self.parser.links))}",
         )
 
-    def test_summaries_control_existing_panels(self):
-        summaries = [*self.desktop, *self.mobile]
-        self.assertTrue(summaries)
-        for item in summaries:
-            attrs = item["summary_attrs"]
-            assert isinstance(attrs, dict)
-            controls = str(attrs.get("aria-controls", ""))
-            self.assertIn(controls, self.parser.ids)
-            self.assertEqual(attrs.get("aria-expanded"), "false")
-            self.assertFalse(item["open"])
+    def test_summary_controls_existing_panel(self):
+        item = self.mobile[0]
+        attrs = item["summary_attrs"]
+        assert isinstance(attrs, dict)
+        controls = str(attrs.get("aria-controls", ""))
+        self.assertIn(controls, self.parser.ids)
+        self.assertEqual(attrs.get("aria-expanded"), "false")
+        self.assertFalse(item["open"])
 
     def test_ids_are_unique(self):
         self.assertEqual(len(self.parser.ids), len(set(self.parser.ids)))
 
-    def test_install_and_github_are_actions(self):
+    def test_install_is_an_action(self):
         self.assertGreaterEqual(self.parser.links.count("#install"), 2)
-        self.assertGreaterEqual(
-            self.parser.links.count("https://github.com/fluxion-dev/lazyplan"), 2
-        )
 
     def test_no_wrapping_flat_nav(self):
         html = (ROOT / "site/index.html").read_text(encoding="utf-8")

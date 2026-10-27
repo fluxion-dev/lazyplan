@@ -1,6 +1,7 @@
 """Site discoverability gate: metadata, structured data, links, and assets."""
 
 import importlib.util
+import re
 import shutil
 import sys
 import tempfile
@@ -58,7 +59,7 @@ class TestSiteSEO(unittest.TestCase):
         index = self.site / "index.html"
         index.write_text(
             index.read_text(encoding="utf-8").replace(
-                'alt="lazyplan coordination view on the left with an active claim, an expired claim, a blocked task, aging work, a done row with an open criterion, and a red PR check, beside MCP and completion-gate terminal transcripts."',
+                'alt="Plan tree filtered to attention, showing active and expired claims, blocked work, aging tasks, and a red check."',
                 "",
             ),
             encoding="utf-8",
@@ -91,6 +92,17 @@ class TestSiteSEO(unittest.TestCase):
         text = text.replace('"@type": "FAQPage"', '"@type": "FAQPage",,')
         index.write_text(text, encoding="utf-8")
         self.assertTrue(any("invalid JSON-LD" in error for error in self._errors()))
+
+    def test_every_published_screen_is_referenced(self):
+        html = (ROOT / "site/index.html").read_text(encoding="utf-8")
+        referenced = set(re.findall(r"screens/([A-Za-z0-9._-]+)", html))
+        published = {
+            path.name for path in (ROOT / "site/public/screens").iterdir() if path.is_file()
+        }
+        self.assertEqual(published - referenced, set())
+        for name in published:
+            if name.endswith(".png") and not name.startswith("og-"):
+                self.assertIn(name.removesuffix(".png") + ".webp", published)
 
 
 if __name__ == "__main__":

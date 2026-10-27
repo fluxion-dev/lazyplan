@@ -17,7 +17,16 @@ pipx install lazyplan-tui
 lpui --help
 ```
 
-On Windows: `pipx install --backend pip lazyplan-tui`.
+On Windows, use the pip backend:
+
+```powershell
+pipx install --backend pip lazyplan-tui
+lpui --version
+```
+
+The shared home is `%LOCALAPPDATA%\lazyplan\` and the default `--actor` is
+`%USERNAME%`. Plan text is read as UTF-8 or UTF-16 and written as UTF-8, so
+PowerShell 5 exports round-trip.
 
 Prefer a system package or the one-line installer? See
 [install options](https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md#install).
@@ -41,14 +50,18 @@ Want demo data first? Run `lpui seed`.
 - **Made for focus.** Plans stay as one-line summaries until you open them. Detail is there when you need it.
 - **Yours to keep.** Local-first by default. Export or import any time. No account, no cloud, no lock-in.
 
-## New in 0.26
+## New in 0.27
 
-- **Agent coordination.** `next` claims work with a renewable lease; notes, blocked reasons, and claim badges live in the screen.
-- **Flow health.** `stats` reports WIP, cycle time, aging, stale work, and reopened rows; the TUI Attention filter surfaces the same risks.
-- **Proof and gates.** Trace criteria to tasks, commits, and PRs, lint the gaps, and require a PR or green checks before done.
-- **Collaboration.** Comments and mentions on rows, read-only HTML/JSON share, stable plan UIDs, and plan-level sync.
-- **Typed agent access.** A local MCP server exposes reads and writes, with `--read-only` for reviewers.
-- **Imports and bulk edit.** Bring GitHub issues or Linear exports in as plans or tasks; search every field, mark rows, and bulk move/block/release with one undo.
+- **Windows parity.** Install, agent hooks, upgrades, and UTF-8 plan files now
+  work on Windows. Claude Code hooks match both Git Bash and PowerShell, the
+  shared home follows `%LOCALAPPDATA%`, and the gates run on Linux, macOS, and
+  Windows.
+- **Fast at scale.** Reads are batched end to end. On the 88-plan fixture the
+  tree dropped from 909 queries to 12, `list --json` from 7,853 to 18, export
+  from 18,612 to 26, and TUI refresh from 5,148 to 139. Query budgets are now a
+  release gate.
+- **Quieter CLI reads.** Update notices are cache-only, so list, show, hooks,
+  MCP, and porcelain calls make no network request.
 
 ## What you get
 
@@ -57,6 +70,21 @@ Want demo data first? Run `lpui seed`.
 - A read-only detail page for careful reading, with quick keys to edit and move work.
 - Claim, blocked, gate, and attention state on the rows that need it.
 - One place your agent can update while you keep the big picture.
+
+## Built to scale
+
+The benchmark fixture holds 88 plans, 275 milestones, and 789 tasks. Query
+counts are deterministic and gated on Linux, macOS, and Windows:
+
+| Path | Before | After |
+|---|---:|---:|
+| Tree load | 909 queries / 120 ms | 12 / 48 ms |
+| `list --json` | 7,853 / 560 ms | 18 / 62 ms |
+| `export --format json` | 18,612 / 1,222 ms | 26 / 27 ms |
+| TUI refresh | 5,148 / 557 ms | 139 / 112 ms |
+
+Linux timings from the final sweep. See [performance](docs/performance.md) for
+the method, budgets, and per-platform ceilings.
 
 ## How it works
 
@@ -130,6 +158,7 @@ Plans live in one local database: shared in your home by default, or inside a re
 
 - [Screenshots and quickstart](https://fluxion-dev.github.io/lazyplan/)
 - [Usage and CLI reference](https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md)
+- [Performance and benchmarks](https://github.com/fluxion-dev/lazyplan/blob/main/docs/performance.md)
 - [Setup walkthrough](https://github.com/fluxion-dev/lazyplan/blob/main/docs/setup.md)
 - [Changelog](https://github.com/fluxion-dev/lazyplan/blob/main/CHANGELOG.md)
 - [Contributing](https://github.com/fluxion-dev/lazyplan/blob/main/CONTRIBUTING.md) (main is protected; open a PR)

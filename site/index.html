@@ -190,6 +190,20 @@
       <a class="no-underline" href="https://github.com/fluxion-dev/lazyplan"><img class="inline h-5 align-middle" src="https://img.shields.io/github/license/fluxion-dev/lazyplan" alt="License" width="78" height="20"></a>
     </div>
 
+    <div id="download-stats" aria-label="PyPI download stats" class="mx-auto mt-8 hidden max-w-xl rounded-xl border border-plan-border bg-plan-surface/60 px-5 py-4">
+      <dl class="m-0 flex flex-wrap items-center justify-center gap-x-10 gap-y-3 text-center">
+        <div>
+          <dt class="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400">PyPI downloads</dt>
+          <dd class="m-0 text-2xl font-bold text-white"><span id="stats-total">—</span></dd>
+        </div>
+        <div>
+          <dt class="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400">Last 7 days</dt>
+          <dd class="m-0 text-2xl font-bold text-white"><span id="stats-week">—</span></dd>
+        </div>
+      </dl>
+      <p class="mb-0 mt-3 text-xs text-zinc-400">Excluding mirrors. Includes CI and repeat installs. Updated <span id="stats-updated">—</span>.</p>
+    </div>
+
     <figure class="mx-auto mt-12 max-w-3xl text-left">
       <picture>
         <source srcset="./screens/lpui-and-agent.webp" type="image/webp">
@@ -489,6 +503,58 @@ Task · Add the token model        done</pre>
     });
   });
   sync();
+})();
+</script>
+
+<script>
+(function () {
+  'use strict';
+  var MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+  var strip = document.getElementById('download-stats');
+  if (!strip) {
+    return;
+  }
+  function hide() {
+    strip.classList.add('hidden');
+    strip.setAttribute('aria-hidden', 'true');
+  }
+  function show(data) {
+    if (!data || data.available !== true) {
+      return hide();
+    }
+    var stamp = Date.parse(data.generated_at);
+    if (!isFinite(stamp)) {
+      return hide();
+    }
+    var age = Date.now() - stamp;
+    if (age < 0 || age > MAX_AGE_MS) {
+      return hide();
+    }
+    var total = data.total;
+    var week = data.last_7_days;
+    if (!Number.isInteger(total) || !Number.isInteger(week) || total < 0 || week < 0 || week > total) {
+      return hide();
+    }
+    var format = new Intl.NumberFormat('en-US');
+    document.getElementById('stats-total').textContent = format.format(total);
+    document.getElementById('stats-week').textContent = format.format(week);
+    document.getElementById('stats-updated').textContent = new Date(stamp).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+    strip.classList.remove('hidden');
+    strip.removeAttribute('aria-hidden');
+  }
+  fetch('downloads.json', { cache: 'no-store' })
+    .then(function (response) {
+      if (!response.ok) {
+        throw new Error('missing downloads snapshot');
+      }
+      return response.json();
+    })
+    .then(show)
+    .catch(hide);
 })();
 </script>
 

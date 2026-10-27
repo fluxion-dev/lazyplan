@@ -39,6 +39,8 @@ The gate suite runs:
 - `vulture` for dead code and `xenon` for complexity
 - the man page sync check (`tools/gen-man.py --check`)
 - the unittest suite on both system Python and the venv Python
+- the performance budget check (`tools/perf_bench.py --check`; see
+  `docs/performance.md`)
 
 Fix failures rather than editing the scripts around them. If you add a new
 module, add tests and type annotations with it.

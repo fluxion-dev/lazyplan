@@ -59,6 +59,26 @@ only the fixture path-normalization test fix applied.
 | `git_show` | — | 5 ms | 52 ms | 80 ms |
 | `tui_refresh` | 5,148 | 557 ms | 778 ms | 1,303 ms |
 
+## After this sweep
+
+Linux numbers from the final benchmark run. Cross-platform CI repeats the same
+query budgets with platform-specific wall ceilings.
+
+| Metric | Before | After | Queries before → after |
+|---|---:|---:|---:|
+| `services.tree` | 120 ms | 48 ms | 909 → 12 |
+| `attention_ids` | 162 ms | 33 ms | 2,304 → 10 |
+| `list_text` | 240 ms | 50 ms | 1,828 → 22 |
+| `list_json` | 560 ms | 62 ms | 7,853 → 18 |
+| `export_all` | 1,222 ms | 27 ms | 18,612 → 26 |
+| `audit_report` | 357 ms | 475 ms | 4,740 → 202 |
+| `tui_refresh` | 557 ms | 112 ms | 5,148 → 139 |
+| `git_status` | 5 ms | 1 ms | — |
+
+`lpui list` is ~197 ms end to end, including Python startup and imports.
+`lpui export --format json` is ~187 ms. CLI reads no longer make network
+requests for update notices.
+
 ## Budgets
 
 Query counts are exact and deterministic. Wall ceilings are deliberately

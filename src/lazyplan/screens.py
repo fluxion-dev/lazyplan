@@ -30,9 +30,9 @@ except ImportError:  # pragma: no cover
 
 from . import services
 from .commands import Command, matching
-from .design import HELP_TEXT, escape_markup, msg_error, repo_project_name, status_word
+from .design import HELP_TEXT, escape_markup, msg_error, status_word
 from .render import render_commits, render_forge_links
-from .source import build_source_trail
+from .source import SourceTrail, build_source_trail
 from .templates import load_template
 from .vcs import commit_url, detect_backend, origin_url
 
@@ -275,6 +275,7 @@ if _TEXTUAL_OK:
             self._editing = edit
             self._snapshot: tuple[str, ...] | None = None
             self._full: dict[str, Any] = {}
+            self._trail: SourceTrail | None = None
 
         def compose(self) -> ComposeResult:
             with Vertical(id="detail-page"):
@@ -313,6 +314,7 @@ if _TEXTUAL_OK:
                 self.dismiss(None)
                 return False
             self._full = full
+            self._trail = build_source_trail(self._dstore, self.dkind, self.doid)
             obj = self._obj()
             title = str(obj.get("title", obj.get("name", "")))
             desc = str(obj.get("description", "") or "")
@@ -429,36 +431,35 @@ if _TEXTUAL_OK:
                 )
 
         def _remote_urls(self, links: list[dict[str, Any]]) -> dict[str, str]:
-            """Origin URL per linked repo, resolved once per render."""
+            """Origin URL per linked repo, using stored remotes before git."""
+            stored = {
+                str(repo.get("repo_path", "") or ""): str(repo.get("repo_remote", "") or "")
+                for repo in self._full.get("effective_repos") or self._full.get("repos") or []
+            }
             cache: dict[str, str] = {}
             for link in links:
                 repo = str(link.get("repo_root", "") or "")
                 if not repo or repo in cache:
                     continue
-                cache[repo] = ""
-                backend, root = detect_backend(repo)
-                if backend is not None and root is not None:
-                    cache[repo] = origin_url(backend, root)
+                remote = stored.get(repo, "")
+                if not remote:
+                    backend, root = detect_backend(repo)
+                    if backend is not None and root is not None:
+                        remote = origin_url(backend, root)
+                cache[repo] = remote
             return cache
 
         def _read_git(self, lines: list[str]) -> None:
-            repos = self._full.get("effective_repos") or self._full.get("repos") or []
             rows: list[str] = []
-            for repo in repos:
-                path = str(repo.get("repo_path", "") or "")
-                backend, root = detect_backend(path)
-                if backend is None or root is None:
-                    continue
-                status = backend.status(root)
-                branch = status.branch or ("detached" if status.detached else "unknown")
-                state = "dirty" if status.dirty else "clean"
+            for repo in self._trail.repos if self._trail is not None else ():
+                branch = repo.branch or ("detached" if repo.detached else "unknown")
+                state = "dirty" if repo.dirty else "clean"
                 tracking = (
-                    f"{status.ahead} ahead, {status.behind} behind"
-                    if status.upstream
-                    else "no upstream"
+                    f"{repo.ahead} ahead, {repo.behind} behind" if repo.branch else "no upstream"
                 )
-                name = repo_project_name(repo) or path
-                rows.append(f"  {escape_markup(name)} · {branch} · {state} · {tracking}")
+                rows.append(
+                    f"  {escape_markup(repo.name or repo.path)} · {branch} · {state} · {tracking}"
+                )
             if rows:
                 lines.extend(["", "[dim]git[/]", *rows])
 
@@ -471,7 +472,7 @@ if _TEXTUAL_OK:
                 lines.append(f"  {escape_markup(line)}")
 
         def _read_source(self, lines: list[str]) -> None:
-            trail = build_source_trail(self._dstore, self.dkind, self.doid)
+            trail = self._trail or build_source_trail(self._dstore, self.dkind, self.doid)
             if trail.empty:
                 lines.extend(
                     [

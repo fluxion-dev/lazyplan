@@ -121,6 +121,7 @@ class SourceRepo:
     dirty: bool = False
     ahead: int = 0
     behind: int = 0
+    upstream: bool = False
     detached: bool = False
     commits: tuple[SourceCommit, ...] = ()
     pulls: tuple[SourcePull, ...] = ()
@@ -302,6 +303,7 @@ def _repo_status(path: str, remote: str) -> tuple[dict[str, object], str]:
         "dirty": False,
         "ahead": 0,
         "behind": 0,
+        "upstream": "",
         "detached": False,
         "remote": remote,
         "error": "",
@@ -321,6 +323,7 @@ def _repo_status(path: str, remote: str) -> tuple[dict[str, object], str]:
             "dirty": status.dirty,
             "ahead": status.ahead,
             "behind": status.behind,
+            "upstream": status.upstream,
             "detached": status.detached,
             "remote": resolved_remote,
         }
@@ -367,6 +370,7 @@ def _build_repo(
         dirty=bool(state["dirty"]),
         ahead=int(str(state["ahead"] or 0)),
         behind=int(str(state["behind"] or 0)),
+        upstream=bool(state.get("upstream")),
         detached=bool(state["detached"]),
         commits=tuple(commits),
         pulls=tuple(repo_pulls),
@@ -392,6 +396,7 @@ def _attach_unmatched_pulls(
         dirty=first.dirty,
         ahead=first.ahead,
         behind=first.behind,
+        upstream=first.upstream,
         detached=first.detached,
         commits=first.commits,
         pulls=first.pulls + extra,

@@ -192,6 +192,7 @@ if _TEXTUAL_OK:
             self._dirty_external: bool = False
             self._narrow: bool | None = None
             self._git_cache: dict[str, tuple[float, dict[str, Any]]] = {}
+            self._git_pending: set[str] = set()
             self._spinner_tick: int = 0
             self._spinner_rows: dict[tuple[str, int], str] = {}
             self._spinner_enabled: bool = True
@@ -333,12 +334,19 @@ if _TEXTUAL_OK:
             return lines
 
         def _git_state(self, path: str) -> dict[str, Any]:
-            """Cached branch/dirty state for a checkout (5s TTL)."""
+            """Cached branch/dirty state; refresh in a worker when stale (30s TTL)."""
             now = time.time()
             cached = self._git_cache.get(path)
-            if cached is not None and now - cached[0] < 5.0:
+            if cached is not None and now - cached[0] < 30.0:
                 return cached[1]
-            state: dict[str, Any] = {
+            if path not in self._git_pending:
+                self._git_pending.add(path)
+                self.run_worker(lambda: self._load_git_state(path), thread=True, exclusive=False)
+            return cached[1] if cached is not None else self._empty_git_state()
+
+        @staticmethod
+        def _empty_git_state() -> dict[str, Any]:
+            return {
                 "branch": "",
                 "dirty": False,
                 "ahead": 0,
@@ -346,6 +354,10 @@ if _TEXTUAL_OK:
                 "upstream": "",
                 "detached": False,
             }
+
+        def _load_git_state(self, path: str) -> None:
+            """Worker: probe one checkout without blocking the UI thread."""
+            state = self._empty_git_state()
             backend, root = detect_backend(path)
             if backend is not None and root is not None:
                 status = backend.status(root)
@@ -359,8 +371,13 @@ if _TEXTUAL_OK:
                         "detached": status.detached,
                     }
                 )
-            self._git_cache[path] = (now, state)
-            return state
+            self.call_from_thread(self._store_git_state, path, state)
+
+        def _store_git_state(self, path: str, state: dict[str, Any]) -> None:
+            self._git_pending.discard(path)
+            self._git_cache[path] = (time.time(), state)
+            if self._mounted and not self._refreshing:
+                self.update_preview(force=True)
 
         def _git_preview_bits(self, repos: list[dict[str, Any]]) -> list[str]:
             """Compact branch/dirty bits for the preview's linked checkouts."""
@@ -1151,11 +1168,22 @@ if _TEXTUAL_OK:
             if selected is None:
                 return
             kind, oid = selected
+            self.notify("reading git status…", timeout=2)
+            self.run_worker(
+                lambda: self._git_status_worker(kind, oid),
+                thread=True,
+                exclusive=True,
+            )
+
+        def _git_status_worker(self, kind: str, oid: int) -> None:
             try:
                 entries = services.repo_statuses(self.store, kind, oid)
             except ValueError as exc:
-                self.notify(str(exc), severity="error", timeout=5)
+                self.call_from_thread(self.notify, str(exc), severity="error", timeout=5)
                 return
+            self.call_from_thread(self._git_status_done, entries)
+
+        def _git_status_done(self, entries: list[dict[str, Any]]) -> None:
             if not entries:
                 self.notify("no linked repos", timeout=3)
                 return
@@ -1168,7 +1196,24 @@ if _TEXTUAL_OK:
             if selected is None:
                 return
             kind, oid = selected
-            result = services.refresh_links(self.store, kind, oid)
+            self.notify("refreshing commit links…", timeout=2)
+            self.run_worker(
+                lambda: self._git_refresh_worker(kind, oid),
+                thread=True,
+                exclusive=True,
+            )
+
+        def _git_refresh_worker(self, kind: str, oid: int) -> None:
+            try:
+                result = services.refresh_links(self.store, kind, oid)
+            except Exception as exc:
+                self.call_from_thread(
+                    self.notify, f"refresh failed: {exc}", severity="error", timeout=5
+                )
+                return
+            self.call_from_thread(self._git_refresh_done, result)
+
+        def _git_refresh_done(self, result: dict[str, Any]) -> None:
             self.notify(
                 f"checked {result['checked']} links · "
                 f"{result['updated']} updated · {result['stale']} stale",

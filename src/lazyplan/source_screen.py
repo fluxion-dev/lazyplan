@@ -130,6 +130,7 @@ if _TEXTUAL_OK:
             self._oid = oid
             self._trail = SourceTrail(kind=kind, oid=oid, title="")
             self._filter = ""
+            self._diff_cache: dict[tuple[str, str, str], list[str]] = {}
 
         def compose(self) -> ComposeResult:
             with Vertical(id="source-page"):
@@ -148,7 +149,20 @@ if _TEXTUAL_OK:
             self.query_one("#source-tree", NavTree).focus()
 
         def _load(self) -> None:
-            self._trail = build_source_trail(self._store, self._kind, self._oid)
+            """Start one background trail load; never block the UI thread."""
+            head = f"{self._kind.capitalize()} #{self._oid}"
+            self.query_one("#source-head", Static).update(f"{head}\n[dim]loading source…[/]")
+            self.run_worker(self._load_worker, thread=True, exclusive=True)
+
+        def _load_worker(self) -> None:
+            trail = build_source_trail(self._store, self._kind, self._oid)
+            try:
+                self.app.call_from_thread(self._apply_trail, trail)
+            except Exception:
+                return
+
+        def _apply_trail(self, trail: SourceTrail) -> None:
+            self._trail = trail
             head = f"{self._kind.capitalize()} #{self._oid}"
             if self._trail.title:
                 head += f" · {escape_markup(self._trail.title)}"
@@ -346,7 +360,16 @@ if _TEXTUAL_OK:
             return "\n".join(lines)
 
         def _diff_block(self, repo: str, sha: str, path: str = "") -> list[str]:
-            """Read and render a bounded diff preview, or an explicit state."""
+            """Read and render a bounded diff preview, cached per row."""
+            key = (repo, sha, path)
+            cached = self._diff_cache.get(key)
+            if cached is not None:
+                return list(cached)
+            rows = self._render_diff(repo, sha, path)
+            self._diff_cache[key] = rows
+            return list(rows)
+
+        def _render_diff(self, repo: str, sha: str, path: str = "") -> list[str]:
             read = read_diff(repo, sha, path)
             if read.state == "missing":
                 return [f"[red]{escape_markup(read.detail or 'commit not available')}[/]"]
@@ -447,5 +470,6 @@ if _TEXTUAL_OK:
         def action_refresh(self) -> None:
             """Rebuild from cached data and drop in-memory diff bodies."""
             clear_diff_cache()
+            self._diff_cache.clear()
             self._load()
             self.notify("source refreshed", timeout=3)

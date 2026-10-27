@@ -78,6 +78,14 @@ if [[ -f site/index.html ]]; then
   sed -i.bak -E "s|/releases/download/v[0-9]+\.[0-9]+\.[0-9]+/|/releases/download/v${NEXT}/|g" site/index.html && rm site/index.html.bak
   sed -i.bak -E "s/lazyplan_[0-9]+\.[0-9]+\.[0-9]+-1_/lazyplan_${NEXT}-1_/g" site/index.html && rm site/index.html.bak
   sed -i.bak -E "s/lazyplan-[0-9]+\.[0-9]+\.[0-9]+-1\./lazyplan-${NEXT}-1./g" site/index.html && rm site/index.html.bak
+  # Version badges use a per-release cache key so shields never serves the
+  # previous version from its 6-hour cache.
+  sed -i.bak -E "s|(img\.shields\.io/github/v/release/fluxion-dev/lazyplan\?v=)[0-9]+\.[0-9]+\.[0-9]+|\1${NEXT}|g" site/index.html && rm site/index.html.bak
+  sed -i.bak -E "s|(img\.shields\.io/pypi/v/lazyplan-tui\?v=)[0-9]+\.[0-9]+\.[0-9]+|\1${NEXT}|g" site/index.html && rm site/index.html.bak
+  if ! grep -q "pypi/v/lazyplan-tui?v=${NEXT}" site/index.html; then
+    echo "error: site badge update failed" >&2
+    exit 1
+  fi
   sed -i.bak -E "s/\"version\": \"[0-9]+\.[0-9]+\.[0-9]+\"/\"version\": \"$NEXT\"/" site/index.html && rm site/index.html.bak
   sed -i.bak -E "s/\"softwareVersion\": \"[0-9]+\.[0-9]+\.[0-9]+\"/\"softwareVersion\": \"$NEXT\"/" site/index.html && rm site/index.html.bak
 fi

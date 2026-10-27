@@ -162,19 +162,18 @@ tests enforce the match.
 ## Site navigation
 
 The marketing site keeps a compact primary bar. Desktop (768px and up) shows
-the logo, three disclosure menus, an icon-only GitHub link, and Install; mobile
-shows the logo and a Menu disclosure.
+the logo, Features, Screenshots, FAQ, Docs, and one Install button; mobile shows
+the logo and a Menu disclosure with the same destinations.
 
-- **Product:** What's new, Windows, Performance, Features, Screenshots, For agents.
-- **Capabilities:** Coordination, Provenance, Collaboration, Bulk edit, Imports.
-- **Learn:** Quickstart, FAQ.
+- **Desktop:** Features, Screenshots, FAQ, Docs, Install.
+- **Mobile:** the same links inside one Menu panel.
 
-Use native `<details>`/`<summary>` so the menus work without JavaScript. A small
-enhancement closes other menus on open, closes on outside click and Escape,
-returns focus to the summary, keeps `aria-expanded` in sync, and closes after an
-anchor is chosen. Panels are absolute, the last desktop panel aligns right, and
-the mobile panel scrolls inside `calc(100vh - 4rem)`.
+Use native `<details>`/`<summary>` for the mobile panel so it works without
+JavaScript. A small enhancement closes it on outside click and Escape, returns
+focus to the summary, keeps `aria-expanded` in sync, and closes after a link is
+chosen. The panel scrolls inside `calc(100vh - 4rem)`.
 
-A new destination joins an existing group; do not add another flat link beside
-the menus. Keep the bar one row at 64px or less, preserve 24px targets, and
-verify 360/768/1024/1440/1920 widths plus Lighthouse accessibility.
+The page is a marketing landing only: hero, four benefits, five screenshots,
+three start steps, install, five FAQs, and a closing CTA. Keep the bar one row
+at 64px or less, preserve 24px targets, and verify 360/768/1024/1440/1920
+widths plus Lighthouse accessibility.

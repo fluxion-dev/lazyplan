@@ -22,13 +22,13 @@ fix the page.
 ## Current content targets
 
 - Primary phrase: terminal plan tracker.
-- Secondary: plan tracker for coding agents, agent planning, agent
-  coordination, MCP server, flow metrics, completion gates, issue import,
-  local plan database, git provenance, pull request tracking, Windows terminal,
-  terminal UI performance.
-- The coordination, provenance, collaboration, imports, Windows, performance,
-  and FAQ sections exist to cover those intents without keyword stuffing. Keep
-  answers specific and matched to shipped behavior.
+- Secondary: plan tracker for coding agents, one plan for you and your agent,
+  local-first developer tools, keyboard-first terminal UI, Windows terminal,
+  agent planning.
+- The hero, benefits, screenshots, three steps, install, and FAQ carry those
+  intents without keyword stuffing. Technical how-to lives in docs/usage.md and
+  docs/setup.md; the landing page links there once rather than repeating it.
+  Keep answers specific and matched to shipped behavior.
 
 ## Google Search Console
 

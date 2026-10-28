@@ -11,7 +11,8 @@ import urllib.error
 from datetime import UTC, datetime
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+from tests.support.paths import ROOT
+
 SPEC = importlib.util.spec_from_file_location(
     "fetch_downloads", ROOT / "tools" / "fetch-downloads.py"
 )

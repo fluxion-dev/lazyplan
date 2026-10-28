@@ -24,8 +24,9 @@ from lazyplan.models import Status
 from lazyplan.services import set_status
 from lazyplan.store import Store
 from tests.support.home import sandbox_home
+from tests.support.paths import ROOT
 
-FIXTURE = Path(__file__).resolve().parent / "fixtures" / "cli" / "baseline.json"
+FIXTURE = ROOT / "tests" / "fixtures" / "cli" / "baseline.json"
 BASELINE: dict[str, str] = json.loads(FIXTURE.read_text(encoding="utf-8"))
 
 CASES: dict[str, list[str]] = {

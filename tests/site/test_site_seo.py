@@ -11,7 +11,8 @@ import tomllib
 import unittest
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+from tests.support.paths import ROOT
+
 SPEC = importlib.util.spec_from_file_location("check_site", ROOT / "tools/check-site.py")
 assert SPEC is not None and SPEC.loader is not None
 check_site = importlib.util.module_from_spec(SPEC)

@@ -4,9 +4,8 @@ from __future__ import annotations
 
 import unittest
 from html.parser import HTMLParser
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+from tests.support.paths import ROOT
 
 DOCS = "https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md"
 EXPECTED_HREFS = {

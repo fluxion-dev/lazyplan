@@ -11,8 +11,7 @@ from pathlib import Path
 from unittest import mock
 
 from lazyplan.store import Store
-
-ROOT = Path(__file__).resolve().parent.parent
+from tests.support.paths import ROOT
 
 
 def _load():

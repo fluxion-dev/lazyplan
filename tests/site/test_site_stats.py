@@ -5,9 +5,8 @@ from __future__ import annotations
 import html
 import re
 import unittest
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+from tests.support.paths import ROOT
 
 
 class TestDownloadStats(unittest.TestCase):

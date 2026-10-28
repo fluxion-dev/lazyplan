@@ -13,7 +13,8 @@ try:
 except ImportError:
     pty = None  # type: ignore[assignment]
 
-ROOT = Path(__file__).resolve().parent.parent
+from tests.support.paths import ROOT
+
 LPUI = ROOT / ".venv" / "bin" / "lpui"
 
 

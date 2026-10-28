@@ -11,8 +11,7 @@ import unittest
 
 from lazyplan.store import Store
 from tests.support.home import sandbox_env
-
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from tests.support.paths import ROOT
 
 
 class McpClient:

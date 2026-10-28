@@ -6,9 +6,8 @@ import importlib.util
 import os
 import sys
 import unittest
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+from tests.support.paths import ROOT
 
 if importlib.util.find_spec("rich") is None or importlib.util.find_spec("textual") is None:
     capture = None  # type: ignore[assignment]

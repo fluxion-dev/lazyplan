@@ -5,11 +5,9 @@ import io
 import re
 import unittest
 from contextlib import redirect_stdout
-from pathlib import Path
 
 from lazyplan.cli_parser import build_parser
-
-ROOT = Path(__file__).resolve().parent.parent
+from tests.support.paths import ROOT
 
 
 class TestComprehensiveHelp(unittest.TestCase):

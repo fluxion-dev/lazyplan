@@ -13,8 +13,7 @@ import unittest
 from lazyplan import mcp
 from lazyplan.store import Store
 from tests.support.home import sandbox_env
-
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from tests.support.paths import ROOT
 
 
 def _call(server: mcp.McpServer, method: str, params: dict | None = None, id_: int = 1) -> dict:

@@ -14,6 +14,7 @@ from lazyplan import skills
 from lazyplan.cli import main as lpui_main
 from lazyplan.cli_parser import build_parser
 from tests.support.home import sandbox_home
+from tests.support.paths import ROOT
 
 
 def _answers(items):
@@ -209,7 +210,7 @@ class TestTemplateParity(unittest.TestCase):
         self.assertTrue(text.startswith("---\n"))
         # License claim must match the repo: LICENSE exists, so MIT is honest.
         self.assertIn("license: MIT", text.split("---", 2)[1])
-        self.assertTrue((Path(__file__).parent.parent / "LICENSE").is_file())
+        self.assertTrue((ROOT / "LICENSE").is_file())
 
     def test_human_in_loop_flagged(self):
         text = skills.render_skill()

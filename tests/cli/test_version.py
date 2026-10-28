@@ -13,8 +13,8 @@ from pathlib import Path
 
 from lazyplan.cli import main
 from lazyplan.cli_parser import package_version
+from tests.support.paths import ROOT
 
-ROOT = Path(__file__).parent.parent
 SEMVER = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
 
 

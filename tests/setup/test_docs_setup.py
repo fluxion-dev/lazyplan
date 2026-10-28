@@ -2,12 +2,11 @@
 
 import argparse
 import unittest
-from pathlib import Path
 
 from lazyplan.cli_parser import build_parser
 from lazyplan.docs_meta import ENVIRONMENT, FILES
+from tests.support.paths import ROOT
 
-ROOT = Path(__file__).resolve().parent.parent
 USAGE = (ROOT / "docs/usage.md").read_text(encoding="utf-8")
 SETUP_DOC = (ROOT / "docs/setup.md").read_text(encoding="utf-8")
 MAN = (ROOT / "docs/lpui.1").read_text(encoding="utf-8").replace("\\-", "-").replace("\\.", ".")

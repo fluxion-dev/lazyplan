@@ -12,6 +12,7 @@ from lazyplan import services, templates
 from lazyplan.cli import main as lpui_main
 from lazyplan.store import Store
 from tests.support.home import sandbox_home
+from tests.support.paths import ROOT
 
 
 def _write(path: Path, text: str) -> None:
@@ -104,7 +105,7 @@ class TestParseTemplate(unittest.TestCase):
                     self.assertIn(fragment, body)
 
     def test_local_repo_templates_match_starters_when_present(self):
-        repo_templates = Path(__file__).parent.parent / ".agents/lazyplan/templates"
+        repo_templates = ROOT / ".agents/lazyplan/templates"
         if not repo_templates.is_dir():
             self.skipTest("repo templates are local-only (gitignored)")
         for kind, starter in templates.STARTERS.items():

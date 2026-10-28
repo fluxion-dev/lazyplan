@@ -13,8 +13,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import TextIO
 
-from .design import ANSI, ASCII_ICONS, ICONS
-from .skills import AgentHost
+from ..design import ANSI, ASCII_ICONS, ICONS
+from ..skills import AgentHost
 
 Progress = Callable[[str], object]
 
@@ -96,7 +96,7 @@ def step(write: TextIO, index: int, total: int, title: str, color: bool) -> None
 
 def placement_choices(repo_root: Path | None, home: Path) -> list[tuple[str, str, Path, str]]:
     """(key, label, path, tradeoff) for the placement question."""
-    from .repo import repo_plan_db_path, shared_db_path
+    from ..repo import repo_plan_db_path, shared_db_path
 
     choices = [
         (
@@ -182,7 +182,7 @@ def ask_agents(
     color: bool,
 ) -> list[str]:
     """Ask which agents get the skill; accepts numbers, keys, all, or none."""
-    from .skills import parse_tool_selection
+    from ..skills import parse_tool_selection
 
     detected = [host.key for host in hosts if host.detected]
     default = selected or detected or [host.key for host in hosts[:1]]

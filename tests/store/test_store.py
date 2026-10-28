@@ -71,7 +71,7 @@ class TestStore(unittest.TestCase):
         milestone = self.store.add_milestone(plan.id, "Home")
         for index in range(5):
             self.store.add_task(milestone.id, f"T{index}")
-        with mock.patch("lazyplan.store.sqlite3.connect", wraps=sqlite3.connect) as connect:
+        with mock.patch("lazyplan.store.base.sqlite3.connect", wraps=sqlite3.connect) as connect:
             self.assertIsNotNone(self.store.get_full("plan", plan.id))
         self.assertEqual(connect.call_count, 1)
 
@@ -197,7 +197,7 @@ class TestStore(unittest.TestCase):
                 )
 
     def test_cli_list_json_matches_store_reads(self):
-        from lazyplan.cli import _list_payload
+        from lazyplan.cli.rows import _list_payload
 
         p = self.store.add_plan("P")
         s = self.store.add_milestone(p.id, "S")

@@ -1,21 +1,23 @@
 """Update-availability notice: text builder plus TUI surface (mocked network)."""
 
 import argparse
+import importlib
 import os
 import tempfile
 import time
 import unittest
 from unittest import mock
 
-from lazyplan import cli as cli_mod
 from lazyplan import upgrade
 from lazyplan.store import Store
 from tests.support.home import sandbox_home
 
 try:
-    from lazyplan import tui as tui_mod
+    tui_mod = importlib.import_module("lazyplan.tui.app")
 except ImportError:  # stdlib-only interpreter: no textual, no screens
     tui_mod = None  # type: ignore[assignment]
+
+cli_mod = importlib.import_module("lazyplan.cli.main")
 
 
 class TestNoticeText(unittest.TestCase):

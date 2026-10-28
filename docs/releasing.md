@@ -107,7 +107,7 @@ curl -fsI https://fluxion-dev.github.io/lazyplan/screens/lpui-source-trail.webp 
 ```
 
 The second command catches a missing or unreadable source-trail image; regenerate
-it with `tools/capture-screens.py` rather than editing either format by hand.
+it with `tools/capture-tui/screens/` rather than editing either format by hand.
 
 Run the discoverability post-deploy checklist in `docs/seo.md`: canonical,
 FAQ/JSON-LD, sitemap, robots, social preview, and version badges. Search engine

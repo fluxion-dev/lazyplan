@@ -1,15 +1,4 @@
 {
     "layer_exceptions": [],
-    "budgets": {
-        "cli.py": 2761,
-        "cli_parser.py": 1094,
-        "commands.py": 659,
-        "mcp.py": 723,
-        "screens.py": 921,
-        "services.py": 1850,
-        "setup.py": 970,
-        "skills.py": 993,
-        "store.py": 2369,
-        "tui.py": 1879
-    }
+    "budgets": {}
 }

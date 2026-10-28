@@ -12,7 +12,7 @@ from unittest import mock
 
 from lazyplan import skills
 from lazyplan.cli import main as lpui_main
-from lazyplan.cli_parser import build_parser
+from lazyplan.cli.parser import build_parser
 from tests.support.home import sandbox_home
 from tests.support.paths import ROOT
 

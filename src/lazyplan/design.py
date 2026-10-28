@@ -23,14 +23,12 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING
 
-from .commands import (  # noqa: F401  (re-exported for existing importers)
-    HELP_TEXT,
-    KEYMAP,
-    PALETTE_COMMANDS,
-    PALETTE_SECTIONS,
-)
+from .help import HELP_TEXT as HELP_TEXT
+from .help import KEYMAP as KEYMAP
 from .kinds import LABEL_LETTERS, MILESTONE, PLAN, TASK
 from .models import Status
+from .palette import PALETTE_COMMANDS as PALETTE_COMMANDS
+from .palette import PALETTE_SECTIONS as PALETTE_SECTIONS
 
 if TYPE_CHECKING:
     from .models import Milestone, Plan, Task

@@ -11,7 +11,7 @@ from lazyplan.store import Store
 
 try:
     from lazyplan import tui as tui_mod
-    from lazyplan.screens import (
+    from lazyplan.tui.screens import (
         ConfirmScreen,
         DetailScreen,
         HelpScreen,

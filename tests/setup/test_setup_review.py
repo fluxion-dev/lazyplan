@@ -112,7 +112,7 @@ class ReviewCase(unittest.TestCase):
         self.assertTrue(ok)
         self.assertIn("managed", agents.read_text(encoding="utf-8"))
 
-    def test_non_interactive_note_does_not_record(self):
+    def test_non_interactive_note_does_notrecord_finding(self):
         notes, out = self._review("", allow_prompt=False)
         self.assertTrue(self.repo_db.is_file())
         self.assertIn("lpui setup", " ".join(notes))

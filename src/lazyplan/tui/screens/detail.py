@@ -6,15 +6,15 @@ The app shell (LazyplanApp) lives in tui.py; every overlay lives here.
 from __future__ import annotations
 
 import time
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any
 
 try:
-    from textual import on
-    from textual.app import ComposeResult
-    from textual.binding import Binding
-    from textual.containers import Horizontal, Vertical, VerticalScroll
-    from textual.screen import ModalScreen, Screen
-    from textual.widgets import (
+    from textual import on  # noqa: F401
+    from textual.app import ComposeResult  # noqa: F401
+    from textual.binding import Binding  # noqa: F401
+    from textual.containers import Horizontal, Vertical, VerticalScroll  # noqa: F401
+    from textual.screen import ModalScreen, Screen  # noqa: F401
+    from textual.widgets import (  # noqa: F401
         Button,
         Input,
         Label,
@@ -22,236 +22,25 @@ try:
         Static,
         TextArea,
     )
-    from textual.widgets.option_list import Option
+    from textual.widgets.option_list import Option  # noqa: F401
 
     _TEXTUAL_OK = True
 except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
-from . import services
-from .commands import Command, matching
-from .design import HELP_TEXT, escape_markup, msg_error, status_word
-from .render import render_commits, render_forge_links
-from .source import SourceTrail, build_source_trail
-from .templates import load_template
-from .vcs import commit_url, detect_backend, origin_url
+from ... import services
+from ...design import escape_markup, msg_error, status_word
+from ...render import render_commits, render_forge_links
+from ...source import SourceTrail, build_source_trail
+from ...templates import load_template
+from ...vcs import commit_url, detect_backend, origin_url
 
 if TYPE_CHECKING:
-    from .store import Store
+    from ...store import Store
+from .base import _row
+from .forms import ConfirmScreen, FilterPromptScreen, NewMilestoneScreen, NewTaskScreen
 
 if _TEXTUAL_OK:
-
-    def _row(*buttons: Button) -> Horizontal:
-        """One compact action row (`.btn-row`): every modal row."""
-        return Horizontal(*buttons, classes="btn-row")
-
-    class _Form(ModalScreen):
-        """Modal form base: Esc cancels, dirty drafts confirm first."""
-
-        BINDINGS = [Binding("escape", "cancel", "Cancel")]
-
-        def __init__(self) -> None:
-            super().__init__()
-            self._initial: tuple[str, ...] | None = None
-
-        def on_mount(self) -> None:
-            """Snapshot the starting values so Esc can tell a draft from a no-op."""
-            self._initial = self._snapshot()
-
-        def _snapshot(self) -> tuple[str, ...]:
-            values: list[str] = []
-            for widget in self.query(Input):
-                values.append(widget.value)
-            for area in self.query(TextArea):
-                values.append(area.text)
-            return tuple(values)
-
-        def action_cancel(self) -> None:
-            """Close cleanly, or ask before throwing away a draft."""
-            if self._initial is not None and self._snapshot() != self._initial:
-
-                def cb(confirmed: bool | None) -> None:
-                    if confirmed:
-                        self.dismiss(None)
-
-                self.app.push_screen(
-                    ConfirmScreen(
-                        "Discard this draft?",
-                        confirm_label="Discard",
-                        variant="warning",
-                    ),
-                    cb,
-                )
-                return
-            self.dismiss(None)
-
-    class NewPlanScreen(_Form):
-        """Create-plan form: title + why + what, all labeled."""
-
-        def __init__(self, defaults: dict[str, str] | None = None) -> None:
-            super().__init__()
-            self._defaults = defaults or {}
-
-        def compose(self) -> ComposeResult:
-            with Vertical(id="dlg"):
-                yield Label("New plan")
-                yield Label("Title")
-                yield Input(
-                    value=self._defaults.get("title", ""), placeholder="title", id="f-title"
-                )
-                yield Label("Why")
-                yield TextArea(
-                    self._defaults.get("why", ""),
-                    placeholder="why does this exist?",
-                    id="f-why",
-                )
-                yield Label("What")
-                yield TextArea(
-                    self._defaults.get("what", ""),
-                    placeholder="what gets built?",
-                    id="f-what",
-                )
-                with _row():
-                    yield Button("Create", id="ok", variant="primary")
-                    yield Button("Cancel", id="cancel")
-
-        @on(Button.Pressed, "#ok")
-        def _create(self) -> None:
-            self.dismiss(
-                {
-                    "title": self.query_one("#f-title", Input).value.strip(),
-                    "why": self.query_one("#f-why", TextArea).text.strip(),
-                    "what": self.query_one("#f-what", TextArea).text.strip(),
-                }
-            )
-
-        @on(Button.Pressed, "#cancel")
-        def _cancel(self) -> None:
-            self.action_cancel()
-
-    class NewMilestoneScreen(_Form):
-        """Create-milestone form for one plan."""
-
-        def __init__(
-            self,
-            plan_id: int,
-            defaults: dict[str, str] | None = None,
-            context: str = "",
-        ) -> None:
-            super().__init__()
-            self.plan_id = plan_id
-            self._defaults = defaults or {}
-            self._where = context or f"P{plan_id}"
-
-        def compose(self) -> ComposeResult:
-            with Vertical(id="dlg"):
-                yield Label(f"New milestone in {self._where}")
-                yield Label("Title")
-                yield Input(
-                    value=self._defaults.get("title", ""), placeholder="title", id="f-title"
-                )
-                yield Label("Details")
-                yield TextArea(
-                    self._defaults.get("desc", ""),
-                    placeholder="what user value does this slice deliver?",
-                    id="f-desc",
-                )
-                with _row():
-                    yield Button("Create", id="ok", variant="primary")
-                    yield Button("Cancel", id="cancel")
-
-        @on(Button.Pressed, "#ok")
-        def _create(self) -> None:
-            self.dismiss(
-                {
-                    "title": self.query_one("#f-title", Input).value.strip(),
-                    "desc": self.query_one("#f-desc", TextArea).text.strip(),
-                }
-            )
-
-        @on(Button.Pressed, "#cancel")
-        def _cancel(self) -> None:
-            self.action_cancel()
-
-    class NewTaskScreen(_Form):
-        """Create-task form for one milestone."""
-
-        def __init__(
-            self,
-            milestone_id: int,
-            defaults: dict[str, str] | None = None,
-            context: str = "",
-        ) -> None:
-            super().__init__()
-            self.milestone_id = milestone_id
-            self._defaults = defaults or {}
-            self._where = context or f"M{milestone_id}"
-
-        def compose(self) -> ComposeResult:
-            with Vertical(id="dlg"):
-                yield Label(f"New task in {self._where}")
-                yield Label("Title")
-                yield Input(
-                    value=self._defaults.get("title", ""), placeholder="title", id="f-title"
-                )
-                yield Label("Details")
-                yield TextArea(
-                    self._defaults.get("desc", ""),
-                    placeholder="approach, inputs, prerequisites",
-                    id="f-desc",
-                )
-                with _row():
-                    yield Button("Create", id="ok", variant="primary")
-                    yield Button("Cancel", id="cancel")
-
-        @on(Button.Pressed, "#ok")
-        def _create(self) -> None:
-            self.dismiss(
-                {
-                    "title": self.query_one("#f-title", Input).value.strip(),
-                    "desc": self.query_one("#f-desc", TextArea).text.strip(),
-                }
-            )
-
-        @on(Button.Pressed, "#cancel")
-        def _cancel(self) -> None:
-            self.action_cancel()
-
-    class ConfirmScreen(_Form):
-        """One destructive confirmation; dismisses True on the confirm button."""
-
-        def __init__(
-            self,
-            text: str,
-            confirm_label: str = "Delete",
-            variant: Literal["default", "primary", "success", "warning", "error"] = "error",
-        ) -> None:
-            super().__init__()
-            self.text = text
-            self.confirm_label = confirm_label
-            self.variant = variant
-
-        def compose(self) -> ComposeResult:
-            with Vertical(id="dlg"):
-                yield Static(self.text, markup=False)
-                with _row():
-                    yield Button(self.confirm_label, id="ok", variant=self.variant)
-                    yield Button("Cancel", id="cancel")
-
-        def on_mount(self) -> None:
-            """Default to the safe choice: Enter cancels, it does not delete."""
-            try:
-                self.query_one("#cancel", Button).focus()
-            except Exception:
-                pass
-
-        @on(Button.Pressed, "#ok")
-        def _confirm(self) -> None:
-            self.dismiss(True)
-
-        @on(Button.Pressed, "#cancel")
-        def _cancel(self) -> None:
-            self.dismiss(False)
 
     class DetailScreen(Screen):
         """Read-first detail page; `e` switches to an in-place edit form."""
@@ -600,7 +389,7 @@ if _TEXTUAL_OK:
 
         def action_open_source(self) -> None:
             """Open the read-only source trail for this row."""
-            from .source_screen import SourceScreen
+            from .source import SourceScreen
 
             self.app.push_screen(SourceScreen(self._dstore, self.dkind, self.doid))
 
@@ -648,7 +437,7 @@ if _TEXTUAL_OK:
             except ValueError as exc:
                 self.notify(msg_error(exc))
                 return
-            from .messages import RowAction
+            from ...messages import RowAction  # noqa: F401
 
             self.post_message(RowAction("detail-saved", self.dkind, self.doid))
             self._reload()
@@ -778,144 +567,3 @@ if _TEXTUAL_OK:
                 self.dismiss(True)
 
             self.app.push_screen(ConfirmScreen("\n".join(lines)), cb)
-
-    class HelpScreen(_Form):
-        """Shared help text overlay; same source as `lpui help`."""
-
-        HELP = HELP_TEXT
-
-        def compose(self) -> ComposeResult:
-            with Vertical(id="help"):
-                with VerticalScroll(id="help-scroll"):
-                    yield Static(self.HELP, markup=False)
-                with _row():
-                    yield Button("Close", id="cancel")
-
-        @on(Button.Pressed, "#cancel")
-        def _close(self) -> None:
-            self.dismiss(None)
-
-    class PaletteScreen(_Form):
-        """Modal command palette: grouped sections, live filter, context rules."""
-
-        def __init__(self, context: dict[str, str | None] | None = None) -> None:
-            super().__init__()
-            self._ctx = context or {}
-
-        @staticmethod
-        def _matching(query: str) -> list[tuple[str, list[Command]]]:
-            """Non-empty sections for a query; headers never match."""
-            return matching(query)
-
-        def _section_options(self, sections: list[tuple[str, list[Command]]]) -> list[Option]:
-            opts: list[Option] = []
-            for header, cmds in sections:
-                opts.append(Option(f"── {header} ──", disabled=True))
-                for cmd in cmds:
-                    reason = self._ctx.get(cmd.id)
-                    label = f"{cmd.label}  ({cmd.key})" if cmd.key else cmd.label
-                    if reason:
-                        label += f" — {reason}"
-                    opts.append(Option(label, id=cmd.id, disabled=bool(reason)))
-            if not opts:
-                opts.append(Option("No matching commands", disabled=True))
-            return opts
-
-        def _title(self, sections: list[tuple[str, list[Command]]], query: str) -> str:
-            if not query.strip():
-                return "Commands — type to search, enter to run, esc cancels"
-            count = sum(len(cmds) for _, cmds in sections)
-            noun = "command" if count == 1 else "commands"
-            return f"Commands — {count} {noun}"
-
-        def compose(self) -> ComposeResult:
-            with Vertical(id="dlg"):
-                yield Label(
-                    self._title(self._matching(""), ""),
-                    id="palette-title",
-                )
-                yield Input(placeholder="search commands…", id="palette-input")
-                with VerticalScroll(id="palette-scroll"):
-                    yield OptionList(*self._section_options(self._matching("")), id="palette-list")
-
-        def on_mount(self) -> None:
-            try:
-                self.query_one("#palette-input", Input).focus()
-            except Exception:
-                pass
-
-        @on(Input.Changed, "#palette-input")
-        def _filter(self, e: Input.Changed) -> None:
-            try:
-                lst = self.query_one("#palette-list", OptionList)
-                title = self.query_one("#palette-title", Label)
-            except Exception:
-                return
-            sections = self._matching(e.value)
-            lst.clear_options()
-            for opt in self._section_options(sections):
-                lst.add_option(opt)
-            title.update(self._title(sections, e.value))
-            e.stop()
-
-        @on(Input.Submitted, "#palette-input")
-        def _run_first(self, e: Input.Submitted) -> None:
-            for _, cmds in self._matching(e.value):
-                for cmd in cmds:
-                    if not self._ctx.get(cmd.id):
-                        self.dismiss(cmd.id)
-                        return
-            self.dismiss(None)
-
-        @on(OptionList.OptionSelected, "#palette-list")
-        def _pick(self, e: OptionList.OptionSelected) -> None:
-            opt_id = getattr(getattr(e, "option", None), "id", None)
-            if opt_id:
-                self.dismiss(str(opt_id))
-            e.stop()
-
-    class FilterPromptScreen(_Form):
-        """Prompt for one line of text; empty clears the filter."""
-
-        def __init__(
-            self,
-            title: str = "Filter tree by text (empty clears)",
-            placeholder: str = "filter text…",
-            submit_label: str = "Apply",
-            initial: str = "",
-        ) -> None:
-            super().__init__()
-            self._title = title
-            self._placeholder = placeholder
-            self._submit_label = submit_label
-            self._initial_text = initial
-
-        def compose(self) -> ComposeResult:
-            with Vertical(id="dlg"):
-                yield Label(self._title)
-                yield Input(
-                    value=self._initial_text,
-                    placeholder=self._placeholder,
-                    id="filter-input",
-                )
-                with _row():
-                    yield Button(self._submit_label, id="ok", variant="primary")
-                    yield Button("Cancel", id="cancel")
-
-        def on_mount(self) -> None:
-            try:
-                self.query_one("#filter-input", Input).focus()
-            except Exception:
-                pass
-
-        @on(Button.Pressed, "#ok")
-        def _apply(self) -> None:
-            self.dismiss(self.query_one("#filter-input", Input).value.strip())
-
-        @on(Button.Pressed, "#cancel")
-        def _cancel(self) -> None:
-            self.dismiss(None)
-
-        @on(Input.Submitted, "#filter-input")
-        def _submit(self) -> None:
-            self.dismiss(self.query_one("#filter-input", Input).value.strip())

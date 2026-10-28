@@ -92,9 +92,6 @@ the script, and commit the result.
 
 ## Project layout
 
-This is the target tree for P103. Entries marked `planned` do not exist yet;
-the milestone that creates them removes the marker.
-
 ```text
 src/lazyplan/
   kinds.py models.py messages.py textfile.py
@@ -102,29 +99,30 @@ src/lazyplan/
   repo.py vcs.py forge.py github.py      infrastructure adapters
   templates.py
   migrate.py                             schema migrations
-  store/                                 SQLite persistence (planned)
-    base.py plans.py claims.py annotations.py links.py views.py
-  services/                              use-case orchestration (planned)
+  store/                                 SQLite persistence
+    base.py plans.py tasks.py claims.py annotations.py links.py repos.py views.py
+    stubs.py stubs_links.py              cross-domain declarations
+  services/                              use-case orchestration
     plans.py claims.py tasks.py vcs.py forge.py tree.py transfer.py
   audit.py brief.py hooks.py issues.py   domain reports and hooks
   seed.py share.py source.py stats.py trace.py lint.py
-  cli/                                   agent and human ingress (planned)
-    main.py emit.py rows.py
-    parser/                              argparse by noun (planned)
-    commands/                            handlers by noun (planned)
-  setup/                                 first-run flow (planned)
+  cli/                                   agent and human ingress
+    main.py emit.py rows.py rows_proof.py
+    parser/                              argparse by role group
+    commands/                            handlers by noun group
+  setup/                                 first-run flow
     state.py findings.py apply.py moves.py wizard.py ui.py layout.py
-  tui/                                   Textual app (planned)
-    app.py tree.py preview.py git_state.py filters.py rows.py updates.py
-    screens/                             forms, detail, help, palette, source
-  mcp/                                   MCP server, tools, resources (planned)
-  palette.py                             shared command metadata (planned rename)
+  tui/                                   Textual app
+    app.py tree.py preview.py filters.py bulk.py actions.py base.py
+    screens/                             forms, detail, help, source
+  mcp/                                   MCP server, tools, resources
+  palette.py help.py                     command metadata and help text
   design.py render.py skills.py
-  data/                                  packaged skill and AGENTS text (planned)
+  data/                                  packaged skill and AGENTS text
 tests/
-  support/                               shared home and pilot helpers (planned)
-  store/ services/ cli/ setup/ tui/      domain suites (planned)
-  vcs/ skills/ site/ fixtures/
+  support/                               shared home and pilot helpers
+  store/ services/ cli/ setup/ tui/      domain suites
+  vcs/ skills/ site/ tools/ mcp/ core/ architecture/
 docs/                                    usage, release, and design notes
 site/                                    marketing site (Vite)
 tools/                                   gates, benchmarks, and release scripts

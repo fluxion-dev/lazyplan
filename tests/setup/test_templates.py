@@ -212,7 +212,7 @@ class TestTemplateDirs(unittest.TestCase):
         )
         self.assertIsNone(templates.templates_dir_for_db("/tmp/x/t.db"))
 
-    def test_explicit_db_uses_a_sibling_templates_dir(self):
+    def testexplicit_db_uses_a_sibling_templates_dir(self):
         with tempfile.TemporaryDirectory() as tmp:
             db = Path(tmp) / "custom.db"
             (Path(tmp) / "templates").mkdir()

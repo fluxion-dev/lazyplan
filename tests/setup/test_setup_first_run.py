@@ -114,7 +114,7 @@ class FirstRunCase(unittest.TestCase):
         self.assertIsNone(result["path"])
         self.assertFalse((self.home / ".lazyplan/backups").exists())
 
-    def test_skipped_hook_write_is_not_recorded_as_installed(self):
+    def test_skipped_hook_write_is_notrecord_findinged_as_installed(self):
         skipped = {"installed": [], "backups": [], "skipped": [{"path": "x", "reason": "nope"}]}
         with mock.patch.object(setup.hook_install, "install", return_value=skipped):
             setup.install_hooks(self.home, ["claude"])
@@ -146,7 +146,7 @@ class FirstRunCase(unittest.TestCase):
             from lazyplan.store import Store
 
             Store(db).add_plan("old")
-            findings = setup._legacy_db_findings(self.home)
+            findings = setup.legacy_db_findings(self.home)
         finally:
             if old is None:
                 os.environ.pop("XDG_DATA_HOME", None)

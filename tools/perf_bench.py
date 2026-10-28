@@ -36,7 +36,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-import lazyplan.store as store_mod  # noqa: E402
+import lazyplan.store.base as store_mod  # noqa: E402
 from lazyplan import audit, render, services, stats  # noqa: E402
 from lazyplan.store import Store  # noqa: E402
 
@@ -269,7 +269,7 @@ def build_fixture(
         raise ValueError("fixture needs at least one plan, milestone, and task")
     db = Path(db_path)
     db.parent.mkdir(parents=True, exist_ok=True)
-    with mock.patch("lazyplan.store.time.time", return_value=STAMP):
+    with mock.patch("lazyplan.store.base.time.time", return_value=STAMP):
         store = Store(db)
         plans = [
             store.add_plan(
@@ -432,7 +432,7 @@ def measure(
 
 def _core_metrics(store: Store, fixture: Fixture, repeat: int) -> list[Measurement]:
     from lazyplan import share
-    from lazyplan.cli import _list_payload
+    from lazyplan.cli.rows import _list_payload
 
     plan_ids = [plan.id for plan in store.list_plans()]
     return [
@@ -495,6 +495,7 @@ def _git_metrics(repo: Path | None, repeat: int) -> list[Measurement]:
 def _tui_measurement(db: Path, repeat: int) -> Measurement:
     try:
         from lazyplan import tui
+        from lazyplan.tui import app as tui_app
         from lazyplan.upgrade import UpgradeError
     except ImportError:
         return Measurement("tui_refresh", None, None, None, "textual not installed")
@@ -506,7 +507,7 @@ def _tui_measurement(db: Path, repeat: int) -> Measurement:
         async def run() -> Measurement:
             app = tui.create_app(str(db))
             with mock.patch.object(
-                tui, "latest_version", side_effect=UpgradeError("benchmark offline")
+                tui_app, "latest_version", side_effect=UpgradeError("benchmark offline")
             ):
                 async with app.run_test(size=(120, 40)) as pilot:
                     await pilot.pause()

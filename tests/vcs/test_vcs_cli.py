@@ -214,7 +214,7 @@ class TestVcsCLI(unittest.TestCase):
         self.assertIn("branch main", out)
         self.assertIn("dirty", out)
 
-    def test_task_start_records_current_branch_without_touching_git(self):
+    def test_task_startrecord_findings_current_branch_without_touching_git(self):
         os.chdir(self.repo)
         head = subprocess.run(
             ["git", "-C", self.repo, "rev-parse", "HEAD"],
@@ -252,7 +252,7 @@ class TestVcsCLI(unittest.TestCase):
         )
         self.assertEqual(Store(self.db).get_task(1).status, Status.DOING)
 
-    def test_task_start_records_existing_branch_without_checkout(self):
+    def test_task_startrecord_findings_existing_branch_without_checkout(self):
         os.chdir(self.repo)
         subprocess.run(
             ["git", "-C", self.repo, "branch", "feature"],
@@ -560,7 +560,7 @@ class TestVcsCLI(unittest.TestCase):
             "stale": 0,
             "errors": [{"branch": "task/7-fix", "error": "boom"}],
         }
-        with mock.patch("lazyplan.cli.services.refresh_forge", return_value=stats):
+        with mock.patch("lazyplan.services.refresh_forge", return_value=stats):
             rc, out, err = _run(["--db", self.db, "pr", "refresh", "--kind", "task", "--id", "1"])
         self.assertEqual(rc, 0)
         self.assertIn("1 commits and 2 branches", out)

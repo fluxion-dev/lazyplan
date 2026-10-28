@@ -6,7 +6,6 @@
         "commands.py": 659,
         "mcp.py": 723,
         "screens.py": 921,
-        "services.py": 1850,
         "setup.py": 970,
         "skills.py": 993,
         "tui.py": 1879

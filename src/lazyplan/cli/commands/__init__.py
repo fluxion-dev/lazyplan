@@ -31,6 +31,15 @@ from .comment import (
     _cmd_comment,
     _cmd_note,
 )
+from .forge import (
+    _cmd_pr_auth,
+    _cmd_pr_link,
+    _cmd_pr_list,
+    _cmd_pr_refresh,
+    _cmd_pr_show,
+    _cmd_pr_status,
+    _cmd_pr_unlink,
+)
 from .plan import (
     _cmd_add_criteria,
     _cmd_add_milestone,
@@ -58,13 +67,6 @@ from .proof import (
     _cmd_issue_import,
     _cmd_link,
     _cmd_link_repo,
-    _cmd_pr_auth,
-    _cmd_pr_link,
-    _cmd_pr_list,
-    _cmd_pr_refresh,
-    _cmd_pr_show,
-    _cmd_pr_status,
-    _cmd_pr_unlink,
     _cmd_repos,
     _cmd_task_block,
     _cmd_task_finish,

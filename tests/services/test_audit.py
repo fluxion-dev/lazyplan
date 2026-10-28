@@ -22,7 +22,7 @@ class AuditCase(unittest.TestCase):
         self.tmp.cleanup()
 
     def _at(self, when: float, action):
-        with mock.patch("lazyplan.store.time.time", return_value=when):
+        with mock.patch("lazyplan.store.base.time.time", return_value=when):
             action()
 
     def _status(self, when: float, status: Status) -> None:
@@ -132,9 +132,9 @@ class AuditCase(unittest.TestCase):
 
     def test_since_scopes_plans_to_recent_or_doing(self):
         store = Store(Path(self.tmp.name) / "window.db")
-        with mock.patch("lazyplan.store.time.time", return_value=1000):
+        with mock.patch("lazyplan.store.base.time.time", return_value=1000):
             old = store.add_plan("old")
-        with mock.patch("lazyplan.store.time.time", return_value=3000):
+        with mock.patch("lazyplan.store.base.time.time", return_value=3000):
             new = store.add_plan("new")
         result = audit.report(store, since=2000, cwd=self.tmp.name)
         self.assertEqual(result.plans, [new.id])

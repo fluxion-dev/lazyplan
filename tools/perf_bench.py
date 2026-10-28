@@ -36,7 +36,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-import lazyplan.store as store_mod  # noqa: E402
+import lazyplan.store.base as store_mod  # noqa: E402
 from lazyplan import audit, render, services, stats  # noqa: E402
 from lazyplan.store import Store  # noqa: E402
 
@@ -269,7 +269,7 @@ def build_fixture(
         raise ValueError("fixture needs at least one plan, milestone, and task")
     db = Path(db_path)
     db.parent.mkdir(parents=True, exist_ok=True)
-    with mock.patch("lazyplan.store.time.time", return_value=STAMP):
+    with mock.patch("lazyplan.store.base.time.time", return_value=STAMP):
         store = Store(db)
         plans = [
             store.add_plan(

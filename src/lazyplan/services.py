@@ -18,7 +18,7 @@ from .forge import AuthStatus, Forge, RepoRef, detect_forge, parse_pull_url, res
 from .github import GitHubClient, GitHubError
 from .kinds import check_kind
 from .models import Claim, Criterion, Milestone, Plan, Status, Task
-from .store import CLAIM_DEFAULT_TTL, ClaimConflict, Store, _ser
+from .store import CLAIM_DEFAULT_TTL, ClaimConflict, Store, to_payload
 from .templates import apply_template, template_criteria
 from .vcs import CommitInfo, RepoStatus, VCSBackend, detect_backend, origin_url
 
@@ -234,7 +234,7 @@ def start_claim(
     task = store.get_task(task_id)
     return {
         "claim": vars(claim),
-        "task": _ser(vars(task)) if task is not None else None,
+        "task": to_payload(vars(task)) if task is not None else None,
         "previous": vars(previous) if previous is not None else None,
     }
 
@@ -252,7 +252,7 @@ def release_task_claim(store: Store, task_id: int, actor: str, force: bool = Fal
     claim = store.release_claim(task_id, actor, force=force)
     return {
         "claim": vars(claim) if claim is not None else None,
-        "task": _ser(vars(task)),
+        "task": to_payload(vars(task)),
     }
 
 
@@ -270,7 +270,7 @@ def claim_next(
         if task is None:
             return None
         if suggest:
-            return {"claim": None, "task": _ser(vars(task)), "previous": None}
+            return {"claim": None, "task": to_payload(vars(task)), "previous": None}
         try:
             return start_claim(store, task.id, actor, ttl=ttl, note=note)
         except ClaimConflict:
@@ -1530,7 +1530,7 @@ def _export_entry(plan: Plan, maps: dict[str, Any]) -> dict:
     def task_entry(task: Task) -> dict:
         claim = claims.get(task.id)
         return {
-            "task": _ser(vars(task)),
+            "task": to_payload(vars(task)),
             "criteria": [vars(item) for item in criteria.get(("task", task.id), [])],
             "links": [vars(item) for item in links.get(("task", task.id), [])],
             "forge_links": [vars(item) for item in forge.get(("task", task.id), [])],
@@ -1545,7 +1545,7 @@ def _export_entry(plan: Plan, maps: dict[str, Any]) -> dict:
     for milestone in maps["milestones"].get(plan.id, ()):
         milestone_entries.append(
             {
-                "milestone": _ser(vars(milestone)),
+                "milestone": to_payload(vars(milestone)),
                 "criteria": [vars(item) for item in criteria.get(("milestone", milestone.id), [])],
                 "links": [vars(item) for item in links.get(("milestone", milestone.id), [])],
                 "forge_links": [vars(item) for item in forge.get(("milestone", milestone.id), [])],
@@ -1557,7 +1557,7 @@ def _export_entry(plan: Plan, maps: dict[str, Any]) -> dict:
             }
         )
     return {
-        "plan": {**_ser(vars(plan)), "uid": maps["uids"].get(plan.id, "")},
+        "plan": {**to_payload(vars(plan)), "uid": maps["uids"].get(plan.id, "")},
         "criteria": [vars(item) for item in criteria.get(("plan", plan.id), [])],
         "links": [vars(item) for item in links.get(("plan", plan.id), [])],
         "forge_links": [vars(item) for item in forge.get(("plan", plan.id), [])],

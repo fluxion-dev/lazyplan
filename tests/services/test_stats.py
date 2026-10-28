@@ -22,7 +22,7 @@ class TestStats(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.db = os.path.join(self.tmp.name, "stats.db")
         self.store = Store(self.db)
-        with mock.patch("lazyplan.store.time.time", return_value=1000):
+        with mock.patch("lazyplan.store.base.time.time", return_value=1000):
             plan = self.store.add_plan("P", actor="alice")
             milestone = self.store.add_milestone(plan.id, "M", actor="alice")
             self.t1 = self.store.add_task(
@@ -43,7 +43,7 @@ class TestStats(unittest.TestCase):
         self._status(self.t4.id, 1100, Status.DOING, "alice")
         self._status(self.t4.id, 1200, Status.DONE, "alice")
         self._status(self.t4.id, 1300, Status.DOING, "alice")
-        with mock.patch("lazyplan.store.time.time", return_value=1900):
+        with mock.patch("lazyplan.store.base.time.time", return_value=1900):
             self.store.claim_task(self.t2.id, "alice", ttl_seconds=600, now=1900)
         self.old_setup = os.environ.get("LAZYPLAN_NO_SETUP")
         sandbox_home(self, self.tmp.name)
@@ -58,7 +58,7 @@ class TestStats(unittest.TestCase):
         self.tmp.cleanup()
 
     def _status(self, tid: int, when: float, status: Status, actor: str) -> None:
-        with mock.patch("lazyplan.store.time.time", return_value=when):
+        with mock.patch("lazyplan.store.base.time.time", return_value=when):
             services.set_status(self.store, "task", tid, status, actor=actor)
 
     def _compute(self) -> dict:

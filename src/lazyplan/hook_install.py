@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from . import hook_hosts, skills, textfile
-from .setup_layout import backup_file, new_backup_dir
+from .setup.layout import backup_file, new_backup_dir
 
 HOSTS = ("opencode", "claude", "gemini", "codex", "cursor")
 MARKER = "lpui hook"

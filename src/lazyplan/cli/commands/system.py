@@ -12,14 +12,14 @@ from ... import (
     audit,
     porcelain,
     setup,
-    setup_layout,
-    setup_ui,
 )
 from ...design import (
     msg_error,
     msg_not_found,
 )
 from ...repo import find_repo_root, resolve_db_path
+from ...setup import layout as setup_layout
+from ...setup import ui as setup_ui
 from ...store import Store
 from ..emit import (
     _emit,

@@ -5,7 +5,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from lazyplan import setup_ui, skills
+from lazyplan import skills
+from lazyplan.setup import ui as setup_ui
 
 
 class RenderCase(unittest.TestCase):

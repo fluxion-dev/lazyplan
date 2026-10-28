@@ -7,7 +7,7 @@ from pathlib import Path
 
 from lazyplan import setup, templates
 from lazyplan.repo import PLAN_DIR, repo_plan_db_path
-from lazyplan.setup_layout import SetupChoice
+from lazyplan.setup.layout import SetupChoice
 from lazyplan.store import Store
 from tests.support.home import sandbox_home
 

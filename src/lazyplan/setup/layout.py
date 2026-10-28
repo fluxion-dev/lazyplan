@@ -15,8 +15,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TextIO
 
-from . import textfile
-from .repo import (
+from .. import textfile
+from ..repo import (
     CONFIG_NAME,
     DB_NAME,
     PLAN_DIR,
@@ -28,7 +28,7 @@ from .repo import (
     shared_db_path,
     shared_home,
 )
-from .skills import (
+from ..skills import (
     AGENTS_DIR,
     AGENTS_MARK_BEGIN,
     AGENTS_MARK_END,
@@ -325,7 +325,7 @@ def apply_layout(
     write: TextIO | None = None,
 ) -> dict:
     """Create only the resources in the resolved layout."""
-    from .templates import run_template_setup
+    from ..templates import run_template_setup
 
     legacy: dict | None = None
     if (

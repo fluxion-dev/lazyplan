@@ -3,7 +3,6 @@
     "budgets": {
         "mcp.py": 723,
         "screens.py": 921,
-        "setup.py": 970,
         "skills.py": 993,
         "tui.py": 1879,
         "palette.py": 659

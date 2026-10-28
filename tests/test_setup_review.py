@@ -1,17 +1,13 @@
 """Upgrade review: untracked repo databases, remembered decisions, safe moves."""
 
-import os
 import subprocess
-import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
-from lazyplan import setup  # noqa: E402
-from lazyplan.repo import PLAN_DIR, repo_plan_db_path  # noqa: E402
-from lazyplan.store import Store  # noqa: E402
+from lazyplan import setup
+from lazyplan.repo import PLAN_DIR, repo_plan_db_path
+from lazyplan.store import Store
 
 
 class ReviewCase(unittest.TestCase):

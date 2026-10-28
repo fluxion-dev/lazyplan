@@ -1,13 +1,10 @@
 import os
 import sqlite3
-import sys
 import tempfile
 import threading
 import unittest
 from contextlib import closing
 from unittest import mock
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from lazyplan import migrate as migrate_mod
 from lazyplan import services

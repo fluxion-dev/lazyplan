@@ -4,19 +4,15 @@ import io
 import json
 import os
 import subprocess
-import sys
 import tempfile
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
-from support.home import sandbox_home  # noqa: E402
-
-from lazyplan import setup, setup_layout, skills  # noqa: E402
-from lazyplan.cli import main as lpui_main  # noqa: E402
-from lazyplan.repo import PLAN_DIR  # noqa: E402
+from lazyplan import setup, setup_layout, skills
+from lazyplan.cli import main as lpui_main
+from lazyplan.repo import PLAN_DIR
+from tests.support.home import sandbox_home
 
 
 class LayoutCase(unittest.TestCase):

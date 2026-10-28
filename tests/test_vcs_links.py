@@ -1,11 +1,8 @@
 import os
 import sqlite3
 import subprocess
-import sys
 import tempfile
 import unittest
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from lazyplan import services
 from lazyplan.store import Store

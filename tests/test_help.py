@@ -2,14 +2,10 @@
 
 import argparse
 import io
-import os
 import re
-import sys
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from lazyplan.cli_parser import build_parser
 

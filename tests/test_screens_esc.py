@@ -4,11 +4,8 @@ Headless Textual pilot tests (skipped on stdlib-only interpreters).
 """
 
 import os
-import sys
 import tempfile
 import unittest
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from lazyplan.store import Store
 

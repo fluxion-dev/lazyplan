@@ -3,13 +3,10 @@
 import io
 import json
 import os
-import sys
 import tempfile
 import unittest
 import urllib.error
 from unittest import mock
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from lazyplan.forge import AuthStatus, RepoRef
 from lazyplan.github import GitHubClient, GitHubError, GitHubRateLimit

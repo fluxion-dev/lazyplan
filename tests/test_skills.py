@@ -3,7 +3,6 @@
 import io
 import json
 import os
-import sys
 import tempfile
 import unittest
 from argparse import Namespace
@@ -11,13 +10,10 @@ from contextlib import redirect_stdout
 from pathlib import Path
 from unittest import mock
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
-from support.home import sandbox_home  # noqa: E402
-
 from lazyplan import skills
 from lazyplan.cli import main as lpui_main
 from lazyplan.cli_parser import build_parser
+from tests.support.home import sandbox_home
 
 
 def _answers(items):

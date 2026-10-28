@@ -1,11 +1,7 @@
 """One command registry: palette, keymap, help, and CLI aliases agree."""
 
 import argparse
-import os
-import sys
 import unittest
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from lazyplan import commands
 from lazyplan.cli_parser import build_parser

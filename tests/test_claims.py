@@ -3,15 +3,12 @@
 from __future__ import annotations
 
 import os
-import sys
 import tempfile
 import unittest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
-from lazyplan import services  # noqa: E402
-from lazyplan.models import Status  # noqa: E402
-from lazyplan.store import ClaimConflict, ClaimMissing, Store  # noqa: E402
+from lazyplan import services
+from lazyplan.models import Status
+from lazyplan.store import ClaimConflict, ClaimMissing, Store
 
 
 class TestClaims(unittest.TestCase):

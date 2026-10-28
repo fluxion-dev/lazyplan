@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from support.home import sandbox_env
+from tests.support.home import sandbox_env
 
 try:
     import pty

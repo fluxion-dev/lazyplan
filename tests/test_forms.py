@@ -1,11 +1,8 @@
 """Create/edit forms: labeled fields, explicit targets, and a dirty guard."""
 
 import os
-import sys
 import tempfile
 import unittest
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from lazyplan.store import Store
 

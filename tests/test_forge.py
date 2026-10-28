@@ -1,10 +1,6 @@
 """Forge identity: GitHub remote parsing and provider detection."""
 
-import os
-import sys
 import unittest
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from lazyplan.forge import (
     AuthStatus,

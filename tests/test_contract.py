@@ -10,14 +10,11 @@ import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
-from support.home import sandbox_home  # noqa: E402
-
-from lazyplan import hooks, services, setup, skills  # noqa: E402
-from lazyplan.cli import main as lpui_main  # noqa: E402
-from lazyplan.models import Status  # noqa: E402
-from lazyplan.store import Store  # noqa: E402
+from lazyplan import hooks, services, setup, skills
+from lazyplan.cli import main as lpui_main
+from lazyplan.models import Status
+from lazyplan.store import Store
+from tests.support.home import sandbox_home
 
 HOSTS = ("claude", "gemini", "codex", "cursor", "opencode")
 

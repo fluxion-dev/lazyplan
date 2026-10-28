@@ -1,17 +1,13 @@
 """Audit metric model: coverage, status lag, and criteria gaps."""
 
-import os
-import sys
 import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
-from lazyplan import audit, services  # noqa: E402
-from lazyplan.models import Status  # noqa: E402
-from lazyplan.store import Store  # noqa: E402
+from lazyplan import audit, services
+from lazyplan.models import Status
+from lazyplan.store import Store
 
 
 class AuditCase(unittest.TestCase):

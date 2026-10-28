@@ -4,7 +4,6 @@ Runs inside the normal gate suite, so version drift fails the build."""
 
 import os
 import re
-import sys
 import tempfile
 import tomllib
 import unittest
@@ -12,10 +11,8 @@ from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
-from lazyplan.cli import main  # noqa: E402
-from lazyplan.cli_parser import package_version  # noqa: E402
+from lazyplan.cli import main
+from lazyplan.cli_parser import package_version
 
 ROOT = Path(__file__).parent.parent
 SEMVER = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")

@@ -2,13 +2,10 @@ import io
 import json
 import os
 import subprocess
-import sys
 import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from unittest import mock
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from lazyplan.cli import main as lpui_main
 from lazyplan.models import Status

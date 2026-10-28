@@ -1,20 +1,15 @@
 """Switching placement removes the generated resources of the old layout."""
 
-import os
 import subprocess
-import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
-from support.home import sandbox_home  # noqa: E402
-
-from lazyplan import setup, templates  # noqa: E402
-from lazyplan.repo import PLAN_DIR, repo_plan_db_path  # noqa: E402
-from lazyplan.setup_layout import SetupChoice  # noqa: E402
-from lazyplan.store import Store  # noqa: E402
+from lazyplan import setup, templates
+from lazyplan.repo import PLAN_DIR, repo_plan_db_path
+from lazyplan.setup_layout import SetupChoice
+from lazyplan.store import Store
+from tests.support.home import sandbox_home
 
 
 class SwitchCase(unittest.TestCase):

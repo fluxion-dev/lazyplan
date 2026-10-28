@@ -6,18 +6,14 @@ import contextlib
 import io
 import os
 import subprocess
-import sys
 import tempfile
 import unittest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
-from support.home import sandbox_home  # noqa: E402
-
-from lazyplan.cli import main as lpui_main  # noqa: E402
-from lazyplan.models import Status  # noqa: E402
-from lazyplan.services import set_status  # noqa: E402
-from lazyplan.store import Store  # noqa: E402
+from lazyplan.cli import main as lpui_main
+from lazyplan.models import Status
+from lazyplan.services import set_status
+from lazyplan.store import Store
+from tests.support.home import sandbox_home
 
 GLYPHS = ("○", "◐", "●", "◓", "◑", "◒")
 

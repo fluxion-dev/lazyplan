@@ -3,18 +3,14 @@
 import io
 import json
 import os
-import sys
 import tempfile
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
-from support.home import sandbox_home  # noqa: E402
-
-from lazyplan import hook_install, setup  # noqa: E402
-from lazyplan.cli import main as lpui_main  # noqa: E402
+from lazyplan import hook_install, setup
+from lazyplan.cli import main as lpui_main
+from tests.support.home import sandbox_home
 
 ALL = list(hook_install.HOSTS)
 

@@ -3,17 +3,14 @@
 from __future__ import annotations
 
 import os
-import sys
 import tempfile
 import time
 import unittest
 from unittest import mock
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
-from lazyplan import services, stats  # noqa: E402
-from lazyplan.models import Status  # noqa: E402
-from lazyplan.store import Store  # noqa: E402
+from lazyplan import services, stats
+from lazyplan.models import Status
+from lazyplan.store import Store
 
 
 class TestFlowQA(unittest.TestCase):

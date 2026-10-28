@@ -11,11 +11,9 @@ from io import StringIO
 from pathlib import Path
 from unittest import mock
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
-from lazyplan import cli as cli_mod  # noqa: E402
-from lazyplan import upgrade  # noqa: E402
-from lazyplan.cli import main  # noqa: E402
+from lazyplan import cli as cli_mod
+from lazyplan import upgrade
+from lazyplan.cli import main
 
 
 class TestDetect(unittest.TestCase):

@@ -4,18 +4,14 @@ import argparse
 import io
 import os
 import subprocess
-import sys
 import tempfile
 import unittest
 from contextlib import redirect_stderr
 from pathlib import Path
 from unittest import mock
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
-from support.home import sandbox_home  # noqa: E402
-
-from lazyplan import setup  # noqa: E402
+from lazyplan import setup
+from tests.support.home import sandbox_home
 
 
 def make_args(**overrides: object) -> argparse.Namespace:

@@ -2,13 +2,10 @@
 
 import io
 import os
-import sys
 import tempfile
 import unicodedata
 import unittest
 from contextlib import redirect_stdout
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from lazyplan import commands, design
 from lazyplan.cli import main as lpui_main

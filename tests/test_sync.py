@@ -4,14 +4,11 @@ from __future__ import annotations
 
 import json
 import os
-import sys
 import tempfile
 import unittest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
-from lazyplan import services, sync  # noqa: E402
-from lazyplan.store import Store  # noqa: E402
+from lazyplan import services, sync
+from lazyplan.store import Store
 
 
 class TestPlanUids(unittest.TestCase):

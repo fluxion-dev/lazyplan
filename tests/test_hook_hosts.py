@@ -1,14 +1,10 @@
 """Host-specific hook envelopes for all five supported agents."""
 
 import json
-import os
-import sys
 import unittest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
-from lazyplan import hook_hosts  # noqa: E402
-from lazyplan.hooks import HookResult  # noqa: E402
+from lazyplan import hook_hosts
+from lazyplan.hooks import HookResult
 
 
 class HostCase(unittest.TestCase):

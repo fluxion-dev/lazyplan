@@ -2,11 +2,8 @@
 
 import os
 import sqlite3
-import sys
 import tempfile
 import unittest
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from lazyplan import services
 from lazyplan.render import render_full

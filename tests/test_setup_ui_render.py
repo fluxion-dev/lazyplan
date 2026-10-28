@@ -1,15 +1,11 @@
 """Setup wizard rendering ends every line with a newline."""
 
 import io
-import os
-import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
-from lazyplan import setup_ui, skills  # noqa: E402
+from lazyplan import setup_ui, skills
 
 
 class RenderCase(unittest.TestCase):

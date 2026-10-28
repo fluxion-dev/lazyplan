@@ -2,12 +2,9 @@
 
 import os
 import subprocess
-import sys
 import tempfile
 import unittest
 from unittest import mock
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from lazyplan.source import (
     build_source_trail,

@@ -2,15 +2,11 @@
 
 import ast
 import codecs
-import os
-import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
-from lazyplan import textfile  # noqa: E402
+from lazyplan import textfile
 
 ROOT = Path(__file__).resolve().parent.parent
 SCANNED = (ROOT / "src" / "lazyplan", ROOT / "tests", ROOT / "tools")

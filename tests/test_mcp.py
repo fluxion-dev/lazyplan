@@ -10,12 +10,9 @@ import sys
 import tempfile
 import unittest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
-from support.home import sandbox_env  # noqa: E402
-
-from lazyplan import mcp  # noqa: E402
-from lazyplan.store import Store  # noqa: E402
+from lazyplan import mcp
+from lazyplan.store import Store
+from tests.support.home import sandbox_env
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 

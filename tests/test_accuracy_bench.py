@@ -1,12 +1,10 @@
 """The synthetic benchmark is deterministic and shows the improvement."""
 
 import importlib.util
-import sys
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT / "src"))
 
 
 def _load():

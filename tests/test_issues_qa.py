@@ -6,19 +6,15 @@ import contextlib
 import io
 import json
 import os
-import sys
 import tempfile
 import unittest
 from types import SimpleNamespace
 from unittest import mock
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
-from support.home import sandbox_home  # noqa: E402
-
-from lazyplan import services  # noqa: E402
-from lazyplan.cli import main as lpui_main  # noqa: E402
-from lazyplan.store import Store  # noqa: E402
+from lazyplan import services
+from lazyplan.cli import main as lpui_main
+from lazyplan.store import Store
+from tests.support.home import sandbox_home
 
 GITHUB = [
     {

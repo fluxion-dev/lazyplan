@@ -1,15 +1,11 @@
 """Setup flags, environment, and files stay consistent across every surface."""
 
 import argparse
-import os
-import sys
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
-from lazyplan.cli_parser import build_parser  # noqa: E402
-from lazyplan.docs_meta import ENVIRONMENT, FILES  # noqa: E402
+from lazyplan.cli_parser import build_parser
+from lazyplan.docs_meta import ENVIRONMENT, FILES
 
 ROOT = Path(__file__).resolve().parent.parent
 USAGE = (ROOT / "docs/usage.md").read_text(encoding="utf-8")

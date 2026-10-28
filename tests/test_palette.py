@@ -1,12 +1,9 @@
 """Palette: context rules, match count, viewport fit, and scrolling."""
 
 import os
-import sys
 import tempfile
 import unittest
 from unittest import mock
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from lazyplan.store import Store
 

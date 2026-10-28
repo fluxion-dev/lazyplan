@@ -5,17 +5,13 @@ Plans start collapsed; right/`z` reveals milestones, then tasks.
 """
 
 import os
-import sys
 import tempfile
 import unittest
 from unittest import mock
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
-from support.pilot import settle  # noqa: E402
-
 from lazyplan import design
 from lazyplan.store import Store
+from tests.support.pilot import settle
 
 try:
     from lazyplan import tui as tui_mod

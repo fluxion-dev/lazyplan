@@ -2,15 +2,11 @@
 
 import os
 import subprocess
-import sys
 import tempfile
 import unittest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
-from support.pilot import settle  # noqa: E402
-
 from lazyplan.store import Store
+from tests.support.pilot import settle
 
 try:
     from lazyplan import tui as tui_mod

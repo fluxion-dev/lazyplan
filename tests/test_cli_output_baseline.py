@@ -12,7 +12,6 @@ import io
 import json
 import os
 import re
-import sys
 import tempfile
 import time
 import unittest
@@ -20,14 +19,11 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from unittest import mock
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
-from support.home import sandbox_home  # noqa: E402
-
-from lazyplan.cli import main as lpui_main  # noqa: E402
-from lazyplan.models import Status  # noqa: E402
-from lazyplan.services import set_status  # noqa: E402
-from lazyplan.store import Store  # noqa: E402
+from lazyplan.cli import main as lpui_main
+from lazyplan.models import Status
+from lazyplan.services import set_status
+from lazyplan.store import Store
+from tests.support.home import sandbox_home
 
 FIXTURE = Path(__file__).resolve().parent / "fixtures" / "cli" / "baseline.json"
 BASELINE: dict[str, str] = json.loads(FIXTURE.read_text(encoding="utf-8"))

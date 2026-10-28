@@ -2,18 +2,14 @@
 
 import os
 import subprocess
-import sys
 import tempfile
 import unittest
 from unittest import mock
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
-from support.pilot import settle  # noqa: E402
-
 from lazyplan.design import SOURCE_MARKER
 from lazyplan.store import Store
 from lazyplan.vcs import DiffRead
+from tests.support.pilot import settle
 
 try:
     from textual.widgets import Input, Tree

@@ -9,7 +9,6 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT / "src"))
 
 if importlib.util.find_spec("rich") is None or importlib.util.find_spec("textual") is None:
     capture = None  # type: ignore[assignment]

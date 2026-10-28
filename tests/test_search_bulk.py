@@ -3,17 +3,13 @@
 from __future__ import annotations
 
 import os
-import sys
 import tempfile
 import time
 import unittest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
-from support.pilot import settle  # noqa: E402
-
 from lazyplan.commands import COMMANDS
 from lazyplan.store import Store
+from tests.support.pilot import settle
 
 try:
     from lazyplan import tui as tui_mod

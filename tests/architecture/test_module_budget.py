@@ -61,7 +61,7 @@ class ModuleBudgetTest(unittest.TestCase):
             failures = over_budget([path], {}, root=root)
         self.assertEqual(failures, [f"big.py: {DEFAULT_BUDGET + 1} lines, budget {DEFAULT_BUDGET}"])
 
-    def test_recorded_budgets_match_existing_files(self) -> None:
+    def testrecord_findinged_budgets_match_existing_files(self) -> None:
         files = {path.relative_to(SRC).as_posix() for path in source_files()}
         stale = sorted(set(budgets()) - files)
         self.assertEqual(stale, [], f"remove stale budget entries: {stale}")

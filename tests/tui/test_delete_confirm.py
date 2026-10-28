@@ -13,7 +13,7 @@ from tests.support.pilot import settle
 
 try:
     from lazyplan import tui as tui_mod
-    from lazyplan.screens import ConfirmScreen
+    from lazyplan.tui.screens import ConfirmScreen
 except ImportError:  # stdlib-only interpreter: no textual, no screens
     tui_mod = None  # type: ignore[assignment]
 

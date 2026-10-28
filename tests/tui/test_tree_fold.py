@@ -195,11 +195,11 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
     async def test_double_click_opens_detail(self):
         from unittest import mock
 
-        from lazyplan.screens import DetailScreen
+        from lazyplan.tui.screens import DetailScreen
 
         async with self.app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
-            with mock.patch.object(tui_mod, "DOUBLE_CLICK_WINDOW", 30.0):
+            with mock.patch("lazyplan.tui.actions.DOUBLE_CLICK_WINDOW", 30.0):
                 await pilot.click("#tree", offset=(10, 1))
                 await pilot.pause()
                 await pilot.click("#tree", offset=(10, 1))
@@ -220,7 +220,7 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(len(self.app.screen_stack), 1)
 
     async def test_enter_opens_detail(self):
-        from lazyplan.screens import DetailScreen
+        from lazyplan.tui.screens import DetailScreen
 
         async with self.app.run_test() as pilot:
             await pilot.pause()
@@ -238,7 +238,7 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(self.app.note_click(("task", 2)))
 
     async def test_e_opens_edit_mode(self):
-        from lazyplan.screens import DetailScreen
+        from lazyplan.tui.screens import DetailScreen
 
         async with self.app.run_test() as pilot:
             await pilot.pause()
@@ -250,7 +250,7 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(self.app.screen.query_one("#detail-edit").display)
 
     async def test_n_on_plan_creates_a_milestone(self):
-        from lazyplan.screens import NewMilestoneScreen
+        from lazyplan.tui.screens import NewMilestoneScreen
 
         async with self.app.run_test() as pilot:
             await pilot.pause()

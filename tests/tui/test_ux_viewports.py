@@ -9,7 +9,7 @@ from tests.support.pilot import settle
 
 try:
     from lazyplan import tui as tui_mod
-    from lazyplan.screens import (
+    from lazyplan.tui.screens import (
         ConfirmScreen,
         HelpScreen,
         NewMilestoneScreen,

@@ -27,8 +27,8 @@ from .findings import (
     review_findings,
 )
 from .layout import SetupChoice
-from .state import SetupState, _timestamp, load_state, save_state, state_path
-from .wizard import _explicit_db, _prompt_allowed, _setup_skipped, run_wizard
+from .state import SetupState, load_state, save_state, state_path, timestamp
+from .wizard import explicit_db, prompt_allowed, run_wizard, setup_skipped
 
 
 def apply_choice(
@@ -162,10 +162,10 @@ def install_integrations(
     return result
 
 
-def _record(state: SetupState, finding: Finding, decision: str) -> None:
+def record_finding(state: SetupState, finding: Finding, decision: str) -> None:
     state.decisions[finding.fingerprint] = {
         "decision": decision,
-        "seen_at": _timestamp(),
+        "seen_at": timestamp(),
         "path": str(finding.path),
         "state": finding.state,
     }
@@ -180,11 +180,11 @@ def ensure(
     interactive: bool | None = None,
 ) -> dict[str, Any] | None:
     """First-run setup and upgrade review; never blocks agent commands."""
-    if _setup_skipped(cmd, args):
+    if setup_skipped(cmd, args):
         return None
     home = home or Path.home()
     state = load_state(home)
-    explicit = _explicit_db(args)
+    explicit = explicit_db(args)
     if explicit:
         # An explicit database is a caller-owned context: never write layout,
         # skills, or state around it.
@@ -195,7 +195,7 @@ def ensure(
     findings = detect_findings(cwd, home, state, None) if human else []
     if not first and not version_changed and not findings:
         return None
-    can_prompt = _prompt_allowed(args, interactive)
+    can_prompt = prompt_allowed(args, interactive)
     root = find_repo_root(cwd)
     result: dict[str, Any] | None = None
     if first or version_changed:

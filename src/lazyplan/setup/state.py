@@ -116,7 +116,7 @@ def plans_in(path: str | Path) -> int:
     return int(row[0]) if row else 0
 
 
-def _timestamp() -> str:
+def timestamp() -> str:
     return datetime.now(UTC).strftime("%Y%m%d-%H%M%S-%f")
 
 

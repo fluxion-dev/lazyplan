@@ -34,7 +34,7 @@ from .findings import (
     review_findings,
 )
 from .findings import (
-    _legacy_db_findings as _legacy_db_findings,
+    legacy_db_findings as legacy_db_findings,
 )
 from .layout import SetupChoice, SetupLayout
 from .moves import move_repo_db
@@ -45,7 +45,7 @@ setup_layout = layout
 setup_ui = ui
 
 __all__ = [
-    "_legacy_db_findings",
+    "legacy_db_findings",
     "shared_db_path",
     "hook_install",
     "sys",

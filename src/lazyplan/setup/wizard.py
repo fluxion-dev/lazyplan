@@ -19,7 +19,7 @@ from .constants import (
     REPO,
     SKIP_COMMANDS,
 )
-from .findings import _parse_agents, preview
+from .findings import parse_agents, preview
 from .layout import SetupChoice
 from .state import SetupState, state_path
 
@@ -40,13 +40,15 @@ def run_wizard(
     write = write or sys.stderr
     color = ui.color_enabled(write, json_mode)
     try:
-        return _run_wizard(cwd, home, state, version, read, write, color, initial, hooks_enabled)
+        return run_wizard_flow(
+            cwd, home, state, version, read, write, color, initial, hooks_enabled
+        )
     except (EOFError, KeyboardInterrupt):
         ui.note(write, "Setup cancelled; nothing was written.", color, "warn")
         return None
 
 
-def _run_wizard(
+def run_wizard_flow(
     cwd: Path,
     home: Path,
     state: SetupState,
@@ -70,7 +72,7 @@ def _run_wizard(
     base_agents = seeded.agents if seeded.agents is not None else state.agents
     choice = SetupChoice(
         placement=placement,
-        agents=base_agents or _parse_agents("", home),
+        agents=base_agents or parse_agents("", home),
         skills_dir=seeded.skills_dir or state.skills_dir or None,
         no_skills=seeded.no_skills,
     )
@@ -112,17 +114,17 @@ def _run_wizard(
     return result
 
 
-def _setup_skipped(cmd: str | None, args: Any) -> bool:
+def setup_skipped(cmd: str | None, args: Any) -> bool:
     if os.environ.get(NO_SETUP_ENV, "").strip():
         return True
     return cmd in SKIP_COMMANDS or bool(getattr(args, "version", False))
 
 
-def _explicit_db(args: Any) -> str | None:
+def explicit_db(args: Any) -> str | None:
     return str(getattr(args, "db", "") or os.environ.get("LAZYPLAN_DB", "") or "") or None
 
 
-def _prompt_allowed(args: Any, interactive: bool | None) -> bool:
+def prompt_allowed(args: Any, interactive: bool | None) -> bool:
     if getattr(args, "json", False) or getattr(args, "yes", False):
         return False
     return ui.stdin_tty() and sys.stderr.isatty() if interactive is None else interactive

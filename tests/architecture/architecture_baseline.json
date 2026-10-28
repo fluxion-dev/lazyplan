@@ -2,9 +2,7 @@
     "layer_exceptions": [],
     "budgets": {
         "mcp.py": 723,
-        "screens.py": 921,
         "skills.py": 993,
-        "tui.py": 1879,
         "palette.py": 659
     }
 }

@@ -63,7 +63,7 @@ def default_choice(
     )
 
 
-def _parse_agents(raw: str, home: Path) -> list[str]:
+def parse_agents(raw: str, home: Path) -> list[str]:
     from ..skills import detect_agents, parse_tool_selection
 
     hosts = detect_agents(home)
@@ -96,9 +96,9 @@ def choice_from_args(
         placement = HOME
     raw_agents = str(getattr(args, "agents", "") or os.environ.get("LAZYPLAN_AGENTS", "")).strip()
     if raw_agents:
-        agents = _parse_agents(raw_agents, home)
+        agents = parse_agents(raw_agents, home)
     else:
-        agents = state.agents or _parse_agents("", home)
+        agents = state.agents or parse_agents("", home)
     skills_dir = (
         str(getattr(args, "skills_dir", "") or "").strip()
         or os.environ.get("LAZYPLAN_SKILLS_DIR", "").strip()
@@ -271,9 +271,9 @@ def review_findings(
                 # A refused move must stay armed for the next human run.
                 continue
             state.placement = HOME
-        from .apply import _record
+        from .apply import record_finding
 
-        _record(state, finding, action)
+        record_finding(state, finding, action)
         save_state(state, home)
     return notes
 
@@ -336,7 +336,7 @@ def detect_findings(
                 )
             )
         out.extend(_repo_resource_findings(root, state))
-    out.extend(_legacy_db_findings(home))
+    out.extend(legacy_db_findings(home))
     out.extend(_stale_skill_findings(home))
     return out
 
@@ -359,7 +359,7 @@ def _repo_resource_findings(root: Path, state: SetupState) -> list[Finding]:
     ]
 
 
-def _legacy_db_findings(home: Path) -> list[Finding]:
+def legacy_db_findings(home: Path) -> list[Finding]:
     """Old per-agent databases that resolution no longer reads."""
     home_db = shared_db_path(home)
     out: list[Finding] = []

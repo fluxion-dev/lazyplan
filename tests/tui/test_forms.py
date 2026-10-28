@@ -7,7 +7,7 @@ import unittest
 from lazyplan.store import Store
 
 try:
-    from lazyplan.screens import (
+    from lazyplan.tui.screens import (
         ConfirmScreen,
         NewMilestoneScreen,
         NewPlanScreen,

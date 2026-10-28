@@ -13,7 +13,7 @@ from lazyplan.store import Store
 from tests.support.home import sandbox_home
 
 try:
-    from lazyplan import tui as tui_mod
+    tui_mod = importlib.import_module("lazyplan.tui.app")
 except ImportError:  # stdlib-only interpreter: no textual, no screens
     tui_mod = None  # type: ignore[assignment]
 

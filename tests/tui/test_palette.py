@@ -10,7 +10,7 @@ from lazyplan.store import Store
 
 try:
     from lazyplan import tui as tui_mod
-    from lazyplan.screens import PaletteScreen
+    from lazyplan.tui.screens import PaletteScreen
 except ImportError:  # stdlib-only interpreter: no textual, no screens
     tui_mod = None  # type: ignore[assignment]
 
@@ -66,13 +66,13 @@ class TestPalette(unittest.IsolatedAsyncioTestCase):
         url = "https://github.com/org/repo/pull/7"
         self.store.link_forge("task", self.tid, 7, url=url, title="Fix login")
         self.app.selected = ("task", self.tid)
-        with mock.patch("lazyplan.tui.webbrowser.open") as opener:
+        with mock.patch("lazyplan.tui.actions.webbrowser.open") as opener:
             self.app.action_open_pr()
         opener.assert_called_once_with(url)
 
     def test_open_pr_without_a_link_notifies(self):
         self.app.selected = ("task", self.tid)
-        with mock.patch("lazyplan.tui.webbrowser.open") as opener:
+        with mock.patch("lazyplan.tui.actions.webbrowser.open") as opener:
             self.app.action_open_pr()
         opener.assert_not_called()
 
@@ -114,7 +114,7 @@ class TestPalette(unittest.IsolatedAsyncioTestCase):
     async def test_help_fits_and_scrolls_at_80x24(self):
         from textual.containers import VerticalScroll
 
-        from lazyplan.screens import HelpScreen
+        from lazyplan.tui.screens import HelpScreen
 
         async with self.app.run_test(size=(80, 24)) as pilot:
             self.app.push_screen(HelpScreen())

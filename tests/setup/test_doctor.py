@@ -47,7 +47,7 @@ class DoctorCase(unittest.TestCase):
             code = lpui_main(argv)
         return code, json.loads(out.getvalue())
 
-    def test_explicit_db_is_the_reported_database(self):
+    def testexplicit_db_is_the_reported_database(self):
         db = Path(self.tmp.name) / "elsewhere/lazyplan.db"
         db.parent.mkdir(parents=True)
         Store(db).add_plan("P")

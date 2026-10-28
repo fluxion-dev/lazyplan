@@ -135,7 +135,7 @@ class TestFindings(unittest.TestCase):
         kinds = [f.kind for f in setup.detect_findings(self.repo, self.home)]
         self.assertIn("db-conflict", kinds)
 
-    def test_explicit_db_skips_findings(self):
+    def testexplicit_db_skips_findings(self):
         self._repo_db()
         self.assertEqual(setup.detect_findings(self.repo, self.home, explicit_db="/tmp/x.db"), [])
 

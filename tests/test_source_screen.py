@@ -9,7 +9,7 @@ from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from pilot_settle import settle  # noqa: E402
+from support.pilot import settle  # noqa: E402
 
 from lazyplan.design import SOURCE_MARKER
 from lazyplan.store import Store

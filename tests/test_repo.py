@@ -6,7 +6,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from home_sandbox import sandbox_home  # noqa: E402
+from support.home import sandbox_home  # noqa: E402
 
 from lazyplan.cli import main as lpui_main
 from lazyplan.repo import find_repo_root, repo_label, resolve_db_path

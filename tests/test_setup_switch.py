@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from home_sandbox import sandbox_home  # noqa: E402
+from support.home import sandbox_home  # noqa: E402
 
 from lazyplan import setup, templates  # noqa: E402
 from lazyplan.repo import PLAN_DIR, repo_plan_db_path  # noqa: E402

@@ -10,7 +10,7 @@ from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from home_sandbox import sandbox_home  # noqa: E402
+from support.home import sandbox_home  # noqa: E402
 
 from lazyplan import cli as cli_mod  # noqa: E402
 from lazyplan import upgrade  # noqa: E402

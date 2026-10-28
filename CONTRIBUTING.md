@@ -192,7 +192,7 @@ daily schedule.
 - Every public behavior gets a test, especially setup layout and CLI parsing.
 - Read and write text through `lazyplan.textfile`; a test fails on any call that
   falls back to the platform encoding.
-- Tests that touch a home directory call `sandbox_home` from `tests/home_sandbox.py`.
+- Tests that touch a home directory call `sandbox_home` from `tests/support/home.py`.
 - Do not add a second source of truth for the version. `pyproject.toml` wins;
   `tools/bump.sh` mirrors it into the README, site, and man page.
 

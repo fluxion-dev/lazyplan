@@ -29,7 +29,14 @@ lpui
 ./tools/check.sh
 ```
 
-On Windows, run it from Git Bash. CI runs the same gates on Linux, macOS, and
+The suite is a package. Run it from the repository root so discovery sees
+`tests.*` and `tests/support`:
+
+```bash
+python -m unittest discover -s tests -t .
+```
+
+On Windows, run the gate script from Git Bash. CI runs the same gates on Linux, macOS, and
 Windows; the required `gates` check passes only when all three pass.
 
 The gate suite runs:

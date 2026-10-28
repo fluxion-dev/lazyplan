@@ -49,7 +49,7 @@ from .render import (
 )
 from .repo import find_repo_root, repo_label, resolve_db_path
 from .seed import seed as seed_demo
-from .store import ClaimConflict, ClaimMissing, Store, _ser
+from .store import ClaimConflict, ClaimMissing, Store, to_payload
 from .upgrade import (
     UpgradeError,
     cached_latest,
@@ -1125,7 +1125,7 @@ def _list_payload(
             for task in tasks:
                 task_rows.append(
                     {
-                        "task": _ser(vars(task)),
+                        "task": to_payload(vars(task)),
                         "criteria": [vars(item) for item in criteria.get(("task", task.id), [])],
                         "links": [vars(item) for item in links.get(("task", task.id), [])],
                         "repos": repos.get(("task", task.id), []),
@@ -1134,7 +1134,7 @@ def _list_payload(
                 )
             milestone_rows.append(
                 {
-                    "milestone": _ser(vars(ms)),
+                    "milestone": to_payload(vars(ms)),
                     "criteria": [vars(item) for item in criteria.get(("milestone", ms.id), [])],
                     "links": [vars(item) for item in links.get(("milestone", ms.id), [])],
                     "repos": repos.get(("milestone", ms.id), []),
@@ -1144,7 +1144,7 @@ def _list_payload(
             )
         payload.append(
             {
-                "plan": _ser(vars(plan)),
+                "plan": to_payload(vars(plan)),
                 "criteria": [vars(item) for item in criteria.get(("plan", plan.id), [])],
                 "links": [vars(item) for item in links.get(("plan", plan.id), [])],
                 "repos": plan_repos,
@@ -1660,7 +1660,7 @@ def _cmd_add_plan(store: Store, args: argparse.Namespace, actor: str) -> int:
         goal=goal,
         actor=actor,
     )
-    return _emit_record(args, _porcelain_row(store, p), {"plan": _ser(vars(p))})
+    return _emit_record(args, _porcelain_row(store, p), {"plan": to_payload(vars(p))})
 
 
 def _cmd_add_milestone(store: Store, args: argparse.Namespace, actor: str) -> int:
@@ -1671,7 +1671,7 @@ def _cmd_add_milestone(store: Store, args: argparse.Namespace, actor: str) -> in
         args.desc,
         actor=actor,
     )
-    return _emit_record(args, _porcelain_row(store, s), {"milestone": _ser(vars(s))})
+    return _emit_record(args, _porcelain_row(store, s), {"milestone": to_payload(vars(s))})
 
 
 def _cmd_add_task(store: Store, args: argparse.Namespace, actor: str) -> int:
@@ -1682,7 +1682,7 @@ def _cmd_add_task(store: Store, args: argparse.Namespace, actor: str) -> int:
         description=args.desc,
         actor=actor,
     )
-    return _emit_record(args, _porcelain_row(store, t), {"task": _ser(vars(t))})
+    return _emit_record(args, _porcelain_row(store, t), {"task": to_payload(vars(t))})
 
 
 def _cmd_update(store: Store, args: argparse.Namespace, actor: str) -> int:
@@ -1715,7 +1715,9 @@ def _cmd_update(store: Store, args: argparse.Namespace, actor: str) -> int:
     if updated is None:
         print(msg_not_found(args.kind, args.id), file=sys.stderr)
         return 1
-    return _emit_record(args, _porcelain_row(store, updated), {"updated": _ser(vars(updated))})
+    return _emit_record(
+        args, _porcelain_row(store, updated), {"updated": to_payload(vars(updated))}
+    )
 
 
 def _cmd_show(store: Store, args: argparse.Namespace, actor: str) -> int:
@@ -2190,7 +2192,7 @@ def _cmd_task_block(store: Store, args: argparse.Namespace, actor: str) -> int:
         print(msg_error(exc), file=sys.stderr)
         return 2
     if args.json:
-        return _emit(args, {"task": _ser(vars(task))})
+        return _emit(args, {"task": to_payload(vars(task))})
     if porcelain.enabled(args):
         print(_porcelain_row(store, task))
     else:
@@ -2208,7 +2210,7 @@ def _cmd_task_unblock(store: Store, args: argparse.Namespace, actor: str) -> int
         print(msg_error(exc), file=sys.stderr)
         return 2
     if args.json:
-        return _emit(args, {"task": _ser(vars(task))})
+        return _emit(args, {"task": to_payload(vars(task))})
     if porcelain.enabled(args):
         print(_porcelain_row(store, task))
     else:

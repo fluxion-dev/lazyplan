@@ -14,7 +14,7 @@ from typing import Any, TextIO
 from . import audit, brief, lint, services, trace
 from .models import Milestone, Plan, Status, Task
 from .repo import find_repo_root, repo_label
-from .store import Store, _ser
+from .store import Store, to_payload
 from .vcs import detect_backend
 
 PROTOCOL_VERSION = "2024-11-05"
@@ -493,7 +493,7 @@ class McpServer:
             goal=str(args.get("why") or ""),
             actor=self.actor,
         )
-        return _ser(vars(plan))
+        return to_payload(vars(plan))
 
     def _tool_create_milestone(self, args: dict) -> object:
         milestone = services.create_milestone(
@@ -503,7 +503,7 @@ class McpServer:
             str(args.get("desc") or ""),
             actor=self.actor,
         )
-        return _ser(vars(milestone))
+        return to_payload(vars(milestone))
 
     def _tool_create_task(self, args: dict) -> object:
         task = services.create_task(
@@ -513,7 +513,7 @@ class McpServer:
             description=str(args.get("desc") or ""),
             actor=self.actor,
         )
-        return _ser(vars(task))
+        return to_payload(vars(task))
 
     def _tool_edit(self, args: dict) -> object:
         store = self._need_store()
@@ -540,7 +540,7 @@ class McpServer:
             raise ValueError("kind must be plan, milestone, or task")
         if updated is None:
             raise KeyError(f"{kind} {obj_id} not found")
-        return _ser(vars(updated))
+        return to_payload(vars(updated))
 
     def _tool_move(self, args: dict) -> object:
         kind = str(args["kind"])
@@ -615,11 +615,11 @@ class McpServer:
         task = services.block_task(
             self._need_store(), int(args["id"]), str(args["reason"]), actor=self.actor
         )
-        return _ser(vars(task))
+        return to_payload(vars(task))
 
     def _tool_unblock(self, args: dict) -> object:
         task = services.unblock_task(self._need_store(), int(args["id"]), actor=self.actor)
-        return _ser(vars(task))
+        return to_payload(vars(task))
 
     def _tool_link(self, args: dict) -> object:
         store = self._need_store()

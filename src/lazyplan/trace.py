@@ -7,13 +7,13 @@ porcelain, or JSON; no network calls happen here.
 from __future__ import annotations
 
 from .models import Criterion, Task
-from .store import Store, _ser
+from .store import Store, to_payload
 
 
 def _task_entry(store: Store, task: Task) -> dict:
     """One proving task with its effective commits and PRs."""
     return {
-        "task": _ser(vars(task)),
+        "task": to_payload(vars(task)),
         "issues": store.list_issue_links("task", task.id),
         "commits": [vars(link) for link in store.effective_links("task", task.id)],
         "forge_links": [vars(link) for link in store.effective_forge_links("task", task.id)],
@@ -43,7 +43,7 @@ def trace_plan(store: Store, plan_id: int) -> dict | None:
     if plan is None:
         return None
     return {
-        "plan": _ser(vars(plan)),
+        "plan": to_payload(vars(plan)),
         "criteria": [
             _criterion_entry(store, criterion) for criterion in store.list_criteria("plan", plan_id)
         ],

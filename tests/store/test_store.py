@@ -71,7 +71,7 @@ class TestStore(unittest.TestCase):
         milestone = self.store.add_milestone(plan.id, "Home")
         for index in range(5):
             self.store.add_task(milestone.id, f"T{index}")
-        with mock.patch("lazyplan.store.sqlite3.connect", wraps=sqlite3.connect) as connect:
+        with mock.patch("lazyplan.store.base.sqlite3.connect", wraps=sqlite3.connect) as connect:
             self.assertIsNotNone(self.store.get_full("plan", plan.id))
         self.assertEqual(connect.call_count, 1)
 

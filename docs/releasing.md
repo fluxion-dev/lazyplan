@@ -332,3 +332,44 @@ or the next plan row so the next release has the context.
   for the screen with `settle(pilot)` before reading `#detail-body`.
 - Follow-up for the next release: Windows gates now exceed the 20-minute
   publish window, so approve and merge manually or lengthen the wait.
+
+### v0.27.1 (2026-10-28)
+
+- Patch bump from 0.27.0. This was a maintenance release for the layered
+  package restructure; CLI, TUI, and database behavior did not change.
+- Prep PR [#53](https://github.com/fluxion-dev/lazyplan/pull/53) moved
+  `Unreleased` into a dated v0.27.1 section, documented the restructure, and
+  reordered the older release sections. It merged as `3d56d43` with all three
+  gates green
+  ([run](https://github.com/fluxion-dev/lazyplan/actions/runs/40636200424));
+  Windows took 38m25s.
+- The **bump** workflow (`part=patch`) created
+  [run](https://github.com/fluxion-dev/lazyplan/actions/runs/40640046604) and
+  release PR [#54](https://github.com/fluxion-dev/lazyplan/pull/54). The bump
+  job succeeded; the post-merge `publish` job failed on its documented
+  20-minute wait.
+- The bot `ci` run started in `action_required`; it was approved through the
+  Actions API and passed as
+  [run](https://github.com/fluxion-dev/lazyplan/actions/runs/40642185840).
+  Windows took 43m02s. The release PR merged as `01bc89b`; it also carried
+  `0c9b553` to correct the changelog date to 2026-10-28.
+- **Deviation:** because the publish job timed out, the documented manual
+  fallback was used: `tag-release.yml` was dispatched
+  ([run](https://github.com/fluxion-dev/lazyplan/actions/runs/40646647316))
+  and `pages.yml` was dispatched
+  ([run](https://github.com/fluxion-dev/lazyplan/actions/runs/40646692771)).
+  Both succeeded and were idempotent.
+- `tag-release` created annotated tag `v0.27.1` on `01bc89b` and dispatched
+  [release.yml](https://github.com/fluxion-dev/lazyplan/actions/runs/40646660232);
+  both the `release` and `publish-pypi` jobs succeeded. The release has all
+  seven assets, including `install.sh`, wheel, sdist, and both deb/rpm arches.
+- PyPI JSON served 0.27.1 quickly, but the simple index lagged: the first
+  isolated `pip install --no-cache-dir` missed and the next attempt installed
+  0.27.1. `pipx run --spec lazyplan-tui==0.27.1 lpui --version` printed
+  0.27.1, and `lpui doctor` reported a clean layout.
+- Curated notes replaced the generated release notes. The deployed site shows
+  0.27.1 in the page and JSON-LD, sitemap `lastmod` is 2026-10-28, and the
+  source-trail, agent, and social-preview images return 200.
+- Follow-up for the next release: Windows now takes 43 minutes, more than twice
+  the bump `publish` wait. Either raise the wait in `bump.yml` or treat the
+  manual merge plus tag/Pages dispatch as the normal path.

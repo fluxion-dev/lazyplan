@@ -62,7 +62,7 @@ def _seed(home: Path, repo: Path) -> tuple[Store, int, int, int]:
 
 
 def _status(store: Store, kind: str, obj_id: int, status: Status, when: float) -> None:
-    with mock.patch("lazyplan.store.time.time", return_value=when):
+    with mock.patch("lazyplan.store.base.time.time", return_value=when):
         services.set_status(store, kind, obj_id, status, actor="bench")
 
 

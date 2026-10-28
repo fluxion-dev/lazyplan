@@ -25,7 +25,7 @@ class TestFlowQA(unittest.TestCase):
             self.ids[name] = self.store.add_task(milestone.id, name, "desc", actor="fixture").id
         self.store.set_blocked(self.ids["blocked"], True, "waiting", actor="fixture")
         self.store.claim_task(self.ids["expired"], "alice", 1, now=1)
-        with mock.patch("lazyplan.store.time.time", return_value=1):
+        with mock.patch("lazyplan.store.base.time.time", return_value=1):
             services.set_status(
                 self.store, "task", self.ids["aging"], Status.DOING, actor="fixture"
             )

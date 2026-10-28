@@ -177,7 +177,7 @@ def build_coordination_fixture(tmp: Path) -> Store:
     red = store.add_task(milestone.id, "Gate on the red checks", "Commit slice: gate.")
     store.add_task(milestone.id, "Unclaimed follow-up", "Commit slice: follow-up.")
 
-    with mock.patch("lazyplan.store.time.time", return_value=STAMP):
+    with mock.patch("lazyplan.store.base.time.time", return_value=STAMP):
         services.set_status(store, "task", claimed.id, Status.DOING, actor="Ada")
         services.set_status(store, "task", aging.id, Status.DOING, actor="Ada")
         services.set_status(store, "task", gap.id, Status.DONE, actor="Ada")
@@ -225,7 +225,7 @@ def build_search_fixture(tmp: Path) -> Store:
     )
     for title, desc in rows:
         store.add_task(milestone.id, title, desc)
-    with mock.patch("lazyplan.store.time.time", return_value=STAMP):
+    with mock.patch("lazyplan.store.base.time.time", return_value=STAMP):
         services.set_status(store, "task", 1, Status.DOING, actor="Ada")
         services.set_status(store, "task", 2, Status.DOING, actor="Ada")
     store.add_note("task", 1, "Search covers descriptions, notes, and comments.", actor="Ada")

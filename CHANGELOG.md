@@ -3,7 +3,7 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
-## v0.27.1 — 2026-10-27
+## v0.27.1 — 2026-10-28
 
 Maintenance release for the layered package restructure. CLI commands, TUI
 behavior, and the SQLite schema are unchanged; this release is about making the

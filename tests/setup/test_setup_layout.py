@@ -66,7 +66,7 @@ class TestResolution(LayoutCase):
         self.assertIsNotNone(layout.config)
         self.assertIn(".agents/lazyplan/lazyplan.db", layout.gitignore_entries)
 
-    def test_explicit_db_wins(self):
+    def testexplicit_db_wins(self):
         target = Path(self.tmp.name) / "custom.db"
         choice = self.choice("repo", explicit_db=str(target))
         layout = self.preview(choice)
@@ -121,7 +121,7 @@ class TestApply(LayoutCase):
         self.assertTrue(all("up-to-date" in line for line in second["installed"]))
         self.assertTrue(setup.state_path(self.home).is_file())
 
-    def test_explicit_db_writes_no_layout_files(self):
+    def testexplicit_db_writes_no_layout_files(self):
         target = Path(self.tmp.name) / "custom.db"
         result = setup.apply_choice(
             self.choice("home", explicit_db=str(target)), self.repo, self.home, "0.23.0"

@@ -38,10 +38,10 @@ from textual.widgets import Static, Tree  # noqa: E402
 
 from lazyplan import services  # noqa: E402
 from lazyplan.models import Status  # noqa: E402
-from lazyplan.screens import DetailScreen, PaletteScreen  # noqa: E402
-from lazyplan.source_screen import SourceScreen  # noqa: E402
 from lazyplan.store import Store  # noqa: E402
 from lazyplan.tui import create_app  # noqa: E402
+from lazyplan.tui.screens import DetailScreen, PaletteScreen  # noqa: E402
+from lazyplan.tui.screens.source import SourceScreen  # noqa: E402
 
 SIZE = (130, 35)
 TRANSCRIPT_SIZE = (120, 22)

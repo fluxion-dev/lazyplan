@@ -7,22 +7,22 @@ from datetime import datetime
 from typing import Any
 
 try:
-    from textual import on
-    from textual.app import ComposeResult
-    from textual.binding import Binding
-    from textual.containers import Horizontal, Vertical, VerticalScroll
-    from textual.screen import Screen
-    from textual.widgets import Footer, Input, Static, Tree
-    from textual.widgets.tree import TreeNode
+    from textual import on  # noqa: F401
+    from textual.app import ComposeResult  # noqa: F401
+    from textual.binding import Binding  # noqa: F401
+    from textual.containers import Horizontal, Vertical, VerticalScroll  # noqa: F401
+    from textual.screen import Screen  # noqa: F401
+    from textual.widgets import Footer, Input, Static, Tree  # noqa: F401
+    from textual.widgets.tree import TreeNode  # noqa: F401
 
-    from .tree_nav import NavTree
+    from ...tree_nav import NavTree  # noqa: F401
 
     _TEXTUAL_OK = True
 except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
-from .design import SOURCE_MARKER_RICH, escape_markup
-from .source import (
+from ...design import SOURCE_MARKER_RICH, escape_markup
+from ...source import (
     DiffFile,
     DiffLine,
     SourceCommit,
@@ -35,7 +35,7 @@ from .source import (
     parse_patch,
     read_diff,
 )
-from .store import Store
+from ...store import Store
 
 DIFF_PREVIEW_LINES = 300
 DIFF_PREVIEW_FILES = 20

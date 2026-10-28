@@ -63,7 +63,7 @@ class TestCoordinationCli(unittest.TestCase):
         self.assertIn("alice", err)
         self.assertIn("claimed", err)
 
-    def test_force_takeover_records_the_previous_holder(self):
+    def test_force_takeoverrecord_findings_the_previous_holder(self):
         self._json("claim", "--id", "1")
         result = self._json("claim", "--id", "1", "--force", actor="bob")
         self.assertEqual(result["claim"]["actor"], "bob")

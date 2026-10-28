@@ -86,7 +86,7 @@ class TestCompletionGates(unittest.TestCase):
         self.assertEqual(result["gate"]["state"], "pass")
         self.assertEqual(self.store.get_task(self.task.id).status, Status.DONE)
 
-    def test_override_records_reason(self):
+    def test_overriderecord_findings_reason(self):
         self._pr("fail")
         result = services.finish_task(
             self.store,

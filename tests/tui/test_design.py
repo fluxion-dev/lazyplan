@@ -157,7 +157,7 @@ class TestDesignSystem(unittest.TestCase):
             self.assertEqual(lpui_main(["--db", self.db, "help"]), 0)
         self.assertEqual(buf.getvalue().strip(), palette.HELP_TEXT.strip())
         try:
-            from lazyplan.screens import HelpScreen  # needs textual installed
+            from lazyplan.tui.screens import HelpScreen  # needs textual installed
         except ImportError:
             HelpScreen = None
         if HelpScreen is not None:

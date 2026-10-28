@@ -10,7 +10,7 @@ from tests.support.pilot import settle
 
 try:
     from lazyplan import tui as tui_mod
-    from lazyplan.screens import (
+    from lazyplan.tui.screens import (
         ConfirmScreen,
         DetailScreen,
         FilterPromptScreen,
@@ -196,7 +196,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
     async def test_detail_shows_source_trail_and_opens_screen(self):
         from textual.widgets import Static
 
-        from lazyplan.source_screen import SourceScreen
+        from lazyplan.tui.screens.source import SourceScreen
 
         repo = os.path.realpath(os.path.join(self.tmp.name, "source-repo"))
         os.makedirs(repo)

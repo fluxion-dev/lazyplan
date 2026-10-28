@@ -1,7 +1,6 @@
 {
     "layer_exceptions": [],
     "budgets": {
-        "mcp.py": 723,
         "skills.py": 993,
         "palette.py": 659
     }

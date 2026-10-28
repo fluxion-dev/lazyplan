@@ -27,9 +27,9 @@ from ..design import (
     status_prefix,
     task_row,
 )
+from ..help import hint_bar
 from ..messages import RowAction, SelectionChanged
 from ..models import Milestone, Plan, Status, Task
-from ..palette import hint_bar
 from .base import AppBase
 
 if TYPE_CHECKING:

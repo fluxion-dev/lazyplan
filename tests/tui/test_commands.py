@@ -3,6 +3,7 @@
 import argparse
 import unittest
 
+from lazyplan import help as help_mod
 from lazyplan import palette
 from lazyplan.cli.parser import build_parser
 
@@ -73,18 +74,18 @@ class TestCommandRegistry(unittest.TestCase):
         self.assertEqual(ids("zzz-no-such-command"), [])
 
     def test_help_shows_every_keymap_key(self):
-        table = " ".join(key for key, _action, _surface in palette.KEYMAP)
-        for key, _hint, _surface in palette.KEYMAP:
+        table = " ".join(key for key, _action, _surface in help_mod.KEYMAP)
+        for key, _hint, _surface in help_mod.KEYMAP:
             first = key.split(",")[0].split()[0]
-            self.assertIn(first, palette.HELP_TEXT, key)
+            self.assertIn(first, help_mod.HELP_TEXT, key)
             self.assertIn(first, table, key)
 
     def test_help_has_no_stale_claims(self):
-        self.assertNotIn("press n to seed", palette.HELP_TEXT)
-        self.assertNotIn("c ticks", palette.HELP_TEXT)
-        self.assertIn("n", palette.HELP_TEXT)
-        self.assertIn("s", palette.HELP_TEXT)
-        self.assertIn("?", palette.HELP_TEXT)
+        self.assertNotIn("press n to seed", help_mod.HELP_TEXT)
+        self.assertNotIn("c ticks", help_mod.HELP_TEXT)
+        self.assertIn("n", help_mod.HELP_TEXT)
+        self.assertIn("s", help_mod.HELP_TEXT)
+        self.assertIn("?", help_mod.HELP_TEXT)
 
     def test_labels_avoid_mechanism_jargon(self):
         banned = ("with confirm", "capped", "create…", "cycle status", "show all /")
@@ -98,7 +99,7 @@ class TestCommandRegistry(unittest.TestCase):
             source = fh.read().lower()
         self.assertNotIn("import textual", source)
         self.assertNotIn("from textual", source)
-        self.assertTrue(palette.HELP_TEXT)
+        self.assertTrue(help_mod.HELP_TEXT)
 
 
 if __name__ == "__main__":

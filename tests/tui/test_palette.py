@@ -5,6 +5,7 @@ import tempfile
 import unittest
 from unittest import mock
 
+from lazyplan import help as help_mod
 from lazyplan import palette
 from lazyplan.store import Store
 
@@ -108,8 +109,8 @@ class TestPalette(unittest.IsolatedAsyncioTestCase):
     def test_help_text_is_task_grouped(self):
 
         for group in ("MOVE", "CHANGE", "FIND", "APP"):
-            self.assertIn(group, palette.HELP_TEXT)
-        self.assertIn("lpui help", palette.HELP_TEXT)
+            self.assertIn(group, help_mod.HELP_TEXT)
+        self.assertIn("lpui help", help_mod.HELP_TEXT)
 
     async def test_help_fits_and_scrolls_at_80x24(self):
         from textual.containers import VerticalScroll

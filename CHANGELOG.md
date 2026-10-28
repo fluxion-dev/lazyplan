@@ -3,14 +3,106 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
-## Unreleased
+## v0.27.1 — 2026-10-27
 
-### Internal
+Maintenance release for the layered package restructure. CLI commands, TUI
+behavior, and the SQLite schema are unchanged; this release is about making the
+codebase easier to review, package, and verify.
 
-- Restructured the source tree into layered packages: focused `store/`,
-  `services/`, `cli/`, `setup/`, `tui/`, and `mcp/` modules, packaged agent
-  data, domain-grouped tests, and architecture and module-size guards. No CLI,
-  TUI, or database behavior changed.
+### Under the hood
+
+- Split the 2,369-line store into focused persistence mixins: plans, tasks,
+  claims, annotations, links, repos, views, and shared declarations.
+- Split services into plans, claims, tasks, VCS, forge, tree, and transfer
+  modules behind the unchanged `lazyplan.services` API.
+- Split the CLI into `cli/`, noun-grouped `cli/commands/`, and role-grouped
+  `cli/parser/`; renamed the palette registry and published the payload
+  serializer.
+- Split first-run setup into stage modules and the Textual app into feature
+  mixins with a `tui/screens/` package. `design.py` remains the styling source
+  of truth.
+- Moved the bundled skill and AGENTS text into packaged `lazyplan/data/` and
+  split the MCP server into protocol, tool, and resource modules.
+- Grouped tests by domain, removed every test `sys.path` edit, and added
+  shared `tests/support/` helpers.
+- Added architecture guards for import cycles, layer inversions, and a
+  600-line module budget.
+- Fixed the PEP 639 license metadata, required `setuptools>=77`, pinned
+  `textual>=8.2.8,<9`, and added a clean-install smoke gate to `tools/check.sh`.
+- Fixed a platform-encoding regression in the download snapshot tests.
+
+### Upgrade
+
+```bash
+pipx upgrade lazyplan-tui
+# or
+pipx install --force lazyplan-tui
+```
+
+No manual migration is required. The database schema is unchanged. Back up
+first with `lpui export --format json` if you want a restore point.
+
+### Documentation
+
+- [Usage guide](https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md)
+- [Contributor layout](https://github.com/fluxion-dev/lazyplan/blob/main/CONTRIBUTING.md#project-layout)
+- [Site and screenshots](https://fluxion-dev.github.io/lazyplan/)
+
+## v0.27.0 — 2026-10-27
+
+Windows parity and a performance sweep through the read paths. The coordination,
+review, and provenance features from 0.26 are unchanged.
+
+### Windows support
+
+- Install with `pipx install --backend pip lazyplan-tui`; the shared home is
+  `%LOCALAPPDATA%\lazyplan` and the default actor is `%USERNAME%`.
+- Standard input, output, error, and plan files use UTF-8. Reads accept UTF-8 or
+  UTF-16 with a BOM, and writes preserve existing CRLF line endings.
+- Claude Code hooks match both `Bash` and `PowerShell` and drop the unsupported
+  `PreCompact` event; `SessionStart` re-injects the brief after compaction.
+- `lpui upgrade` manages pipx and venv installs on Windows.
+- CI runs the full gate suite on Linux, macOS, and Windows.
+
+### Performance
+
+- `tools/perf_bench.py` builds an 88-plan, 789-task fixture and gates exact query
+  counts plus generous wall ceilings from `tools/check.sh` on all three platforms.
+- On the fixture, tree load falls from 909 queries to 12, `list --json` from
+  7,853 to 18, export from 18,612 to 26, audit from 4,740 to 202, and TUI refresh
+  from 5,148 to 139.
+- Reads batch through bulk maps; the TUI refreshes from one tree snapshot, moves
+  git and diff work to workers, and stops rebuilding on view-only changes.
+- Read indexes and a schema-version fast path make repeat opens cheaper.
+- Update notices are cache-only, so list, show, next, hooks, MCP, and porcelain
+  calls make no network request.
+
+### Documentation and site
+
+- README, usage, setup, performance, the bundled agent skill, and the man page
+  cover Windows paths, encoding, hooks, upgrades, and the benchmark.
+- The homepage has a 0.27 band, a Windows section, a performance section with the
+  fixture results, and a PowerShell quickstart. The top navigation collapses into
+  Product, Capabilities, and Learn menus, with a mobile panel.
+
+### Upgrade
+
+```bash
+pipx upgrade lazyplan-tui
+# or
+pipx install --force lazyplan-tui
+```
+
+No manual migration is required. An existing database picks up the new read
+indexes and schema version the first time the CLI opens it. Back up first with
+`lpui export --format json` if you want a restore point.
+
+### Documentation
+
+- [Usage guide](https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md)
+- [Setup walkthrough](https://github.com/fluxion-dev/lazyplan/blob/main/docs/setup.md)
+- [Performance and benchmarks](https://github.com/fluxion-dev/lazyplan/blob/main/docs/performance.md)
+- [Site and screenshots](https://fluxion-dev.github.io/lazyplan/)
 
 ## v0.26.0 — 2026-10-26
 
@@ -114,62 +206,6 @@ if you want a restore point.
 
 - [Usage guide](https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md)
 - [Setup walkthrough](https://github.com/fluxion-dev/lazyplan/blob/main/docs/setup.md)
-- [Site and screenshots](https://fluxion-dev.github.io/lazyplan/)
-
-## v0.27.0 — 2026-10-27
-
-Windows parity and a performance sweep through the read paths. The coordination,
-review, and provenance features from 0.26 are unchanged.
-
-### Windows support
-
-- Install with `pipx install --backend pip lazyplan-tui`; the shared home is
-  `%LOCALAPPDATA%\lazyplan` and the default actor is `%USERNAME%`.
-- Standard input, output, error, and plan files use UTF-8. Reads accept UTF-8 or
-  UTF-16 with a BOM, and writes preserve existing CRLF line endings.
-- Claude Code hooks match both `Bash` and `PowerShell` and drop the unsupported
-  `PreCompact` event; `SessionStart` re-injects the brief after compaction.
-- `lpui upgrade` manages pipx and venv installs on Windows.
-- CI runs the full gate suite on Linux, macOS, and Windows.
-
-### Performance
-
-- `tools/perf_bench.py` builds an 88-plan, 789-task fixture and gates exact query
-  counts plus generous wall ceilings from `tools/check.sh` on all three platforms.
-- On the fixture, tree load falls from 909 queries to 12, `list --json` from
-  7,853 to 18, export from 18,612 to 26, audit from 4,740 to 202, and TUI refresh
-  from 5,148 to 139.
-- Reads batch through bulk maps; the TUI refreshes from one tree snapshot, moves
-  git and diff work to workers, and stops rebuilding on view-only changes.
-- Read indexes and a schema-version fast path make repeat opens cheaper.
-- Update notices are cache-only, so list, show, next, hooks, MCP, and porcelain
-  calls make no network request.
-
-### Documentation and site
-
-- README, usage, setup, performance, the bundled agent skill, and the man page
-  cover Windows paths, encoding, hooks, upgrades, and the benchmark.
-- The homepage has a 0.27 band, a Windows section, a performance section with the
-  fixture results, and a PowerShell quickstart. The top navigation collapses into
-  Product, Capabilities, and Learn menus, with a mobile panel.
-
-### Upgrade
-
-```bash
-pipx upgrade lazyplan-tui
-# or
-pipx install --force lazyplan-tui
-```
-
-No manual migration is required. An existing database picks up the new read
-indexes and schema version the first time the CLI opens it. Back up first with
-`lpui export --format json` if you want a restore point.
-
-### Documentation
-
-- [Usage guide](https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md)
-- [Setup walkthrough](https://github.com/fluxion-dev/lazyplan/blob/main/docs/setup.md)
-- [Performance and benchmarks](https://github.com/fluxion-dev/lazyplan/blob/main/docs/performance.md)
 - [Site and screenshots](https://fluxion-dev.github.io/lazyplan/)
 
 ## Earlier releases

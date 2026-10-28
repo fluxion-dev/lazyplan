@@ -32,7 +32,7 @@ LAYERS: dict[str, int] = {
     "messages": LEAF,
     "textfile": LEAF,
     "porcelain": LEAF,
-    "commands": LEAF,
+    "palette": LEAF,
     "docs_meta": LEAF,
     "repo": INFRA,
     "vcs": INFRA,

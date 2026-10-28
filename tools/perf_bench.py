@@ -432,7 +432,7 @@ def measure(
 
 def _core_metrics(store: Store, fixture: Fixture, repeat: int) -> list[Measurement]:
     from lazyplan import share
-    from lazyplan.cli import _list_payload
+    from lazyplan.cli.rows import _list_payload
 
     plan_ids = [plan.id for plan in store.list_plans()]
     return [

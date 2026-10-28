@@ -197,7 +197,7 @@ class TestStore(unittest.TestCase):
                 )
 
     def test_cli_list_json_matches_store_reads(self):
-        from lazyplan.cli import _list_payload
+        from lazyplan.cli.rows import _list_payload
 
         p = self.store.add_plan("P")
         s = self.store.add_milestone(p.id, "S")

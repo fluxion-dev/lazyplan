@@ -35,8 +35,7 @@ except ImportError:  # pragma: no cover
 
 from . import services
 from . import stats as stats_mod
-from .cli_parser import package_version
-from .commands import COMMANDS, by_id, hint_bar
+from .cli.parser import package_version
 from .design import (
     APP_CSS,
     EMPTY_NO_PLANS,
@@ -53,6 +52,7 @@ from .design import (
 )
 from .messages import RowAction, SelectionChanged
 from .models import Milestone, Plan, Status, Task
+from .palette import COMMANDS, by_id, hint_bar
 from .render import render_git_status
 from .repo import repo_label
 from .screens import (

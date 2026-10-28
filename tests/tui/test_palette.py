@@ -5,6 +5,7 @@ import tempfile
 import unittest
 from unittest import mock
 
+from lazyplan import palette
 from lazyplan.store import Store
 
 try:
@@ -44,10 +45,9 @@ class TestPalette(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(context["create-milestone"])
 
     def test_git_commands_are_palette_only_and_context_gated(self):
-        from lazyplan import commands
 
         for command_id in ("git-status", "git-refresh", "git-capture"):
-            command = commands.by_id(command_id)
+            command = palette.by_id(command_id)
             assert command is not None
             self.assertTrue(command.tui_only)
             self.assertTrue(command.handler)
@@ -106,11 +106,10 @@ class TestPalette(unittest.IsolatedAsyncioTestCase):
             self.assertGreater(options.virtual_size.height, options.size.height)
 
     def test_help_text_is_task_grouped(self):
-        from lazyplan import commands
 
         for group in ("MOVE", "CHANGE", "FIND", "APP"):
-            self.assertIn(group, commands.HELP_TEXT)
-        self.assertIn("lpui help", commands.HELP_TEXT)
+            self.assertIn(group, palette.HELP_TEXT)
+        self.assertIn("lpui help", palette.HELP_TEXT)
 
     async def test_help_fits_and_scrolls_at_80x24(self):
         from textual.containers import VerticalScroll

@@ -297,8 +297,8 @@ def refresh_installed_skills(home: Path | None = None) -> tuple[list[Path], list
         if text == skills.render_skill() or marker not in text[:500]:
             continue
         if backup_root is None:
-            backup_root = setup_layout._new_backup_dir(home)
-        backups.append(setup_layout._backup_file(backup_root, path))
+            backup_root = setup_layout.new_backup_dir(home)
+        backups.append(setup_layout.backup_file(backup_root, path))
         changed, _status = skills.write_skill_file(path)
         if changed:
             refreshed.append(path)
@@ -317,10 +317,10 @@ def cleanup_repo_artifacts(root: Path, home: Path) -> list[str]:
         root / ".gitignore",
     ]
     touched.extend(templates_dir / name for name in templates.TEMPLATE_FILES.values())
-    backups = setup_layout._new_backup_dir(home)
+    backups = setup_layout.new_backup_dir(home)
     for path in touched:
         if path.is_file():
-            setup_layout._backup_file(backups, path)
+            setup_layout.backup_file(backups, path)
     if (root / "AGENTS.md").is_file():
         setup_layout._strip_agents(root / "AGENTS.md")
     if (root / ".gitignore").is_file():
@@ -452,8 +452,8 @@ def install_pointer(
         except OSError:
             text = ""
         if not (skills.AGENTS_MARK_BEGIN in text and snippet.strip() in text):
-            backup = setup_layout._new_backup_dir(home)
-            setup_layout._backup_file(backup, path)
+            backup = setup_layout.new_backup_dir(home)
+            setup_layout.backup_file(backup, path)
     changed, status = skills.ensure_agents_md(root, snippet)
     state.agents_pointer = True
     state.agents_file = str(path)
@@ -637,11 +637,11 @@ def move_repo_db(
             "both databases contain plans; export one and import it before moving",
         )
     root = repo_root or (repo_db.parent.parent.parent if is_repo_plan_dir(repo_db.parent) else None)
-    backups = setup_layout._new_backup_dir(home)
+    backups = setup_layout.new_backup_dir(home)
     for source in _move_sources(repo_db, root):
-        setup_layout._backup_file(backups, source)
+        setup_layout.backup_file(backups, source)
     if home_db.is_file():
-        setup_layout._backup_file(backups, home_db)
+        setup_layout.backup_file(backups, home_db)
         home_db.unlink()
     home_db.parent.mkdir(parents=True, exist_ok=True)
     shutil.move(str(repo_db), str(home_db))

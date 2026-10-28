@@ -191,7 +191,7 @@ def _lazyplan_gitignore_lines(path: Path) -> list[str]:
     ]
 
 
-def _new_backup_dir(home: Path) -> Path:
+def new_backup_dir(home: Path) -> Path:
     """Fresh timestamped backup dir under the shared home."""
     stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S-%f")
     return shared_home(home) / "backups" / stamp
@@ -285,7 +285,7 @@ def _backup_path(backup_dir: Path, source: Path) -> Path:
     return backup_dir / rel
 
 
-def _backup_file(backup_dir: Path, source: Path) -> Path:
+def backup_file(backup_dir: Path, source: Path) -> Path:
     """Copy one file or directory into the backup tree and return its path."""
     backup = _backup_path(backup_dir, source)
     backup.parent.mkdir(parents=True, exist_ok=True)
@@ -333,7 +333,7 @@ def apply_layout(
         and layout.legacy_dir.is_dir()
         and not layout.plan_dir.exists()
     ):
-        backup = _backup_file(_new_backup_dir(layout.home), layout.legacy_dir)
+        backup = backup_file(new_backup_dir(layout.home), layout.legacy_dir)
         moved = move_legacy_plan_dir(layout.repo_root) if layout.repo_root else None
         legacy = {"moved": str(moved) if moved is not None else None, "backup": str(backup)}
     if layout.config is not None:

@@ -7,7 +7,7 @@ import tempfile
 import time
 import unittest
 
-from lazyplan.commands import COMMANDS
+from lazyplan.palette import COMMANDS
 from lazyplan.store import Store
 from tests.support.pilot import settle
 

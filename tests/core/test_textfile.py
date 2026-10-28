@@ -7,8 +7,8 @@ import unittest
 from pathlib import Path
 
 from lazyplan import textfile
+from tests.support.paths import ROOT
 
-ROOT = Path(__file__).resolve().parent.parent
 SCANNED = (ROOT / "src" / "lazyplan", ROOT / "tests", ROOT / "tools")
 
 

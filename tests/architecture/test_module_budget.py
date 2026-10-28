@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-SRC = Path(__file__).resolve().parents[1] / "src" / "lazyplan"
+SRC = Path(__file__).resolve().parents[2] / "src" / "lazyplan"
 BASELINE = Path(__file__).with_name("architecture_baseline.json")
 DEFAULT_BUDGET = 600
 

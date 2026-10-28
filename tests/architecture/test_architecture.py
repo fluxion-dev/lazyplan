@@ -194,6 +194,23 @@ def find_cycles(graph: dict[str, set[str]]) -> list[list[str]]:
     return cycles
 
 
+def layer_violations(
+    graph: dict[str, set[str]],
+    exceptions: set[tuple[str, str]],
+) -> list[str]:
+    """Return every edge that points at a higher layer without an exception."""
+    violations: list[str] = []
+    for source, dependencies in sorted(graph.items()):
+        source_key = layer_key(source)
+        for target in sorted(dependencies):
+            target_key = layer_key(target)
+            if (source_key, target_key) in exceptions:
+                continue
+            if LAYERS[target_key] > LAYERS[source_key]:
+                violations.append(f"{source_key} -> {target_key} ({source} -> {target})")
+    return violations
+
+
 class ArchitectureTest(unittest.TestCase):
     """Every internal edge points down a layer and no cycle exists."""
 
@@ -218,16 +235,12 @@ class ArchitectureTest(unittest.TestCase):
         self.assertEqual(unknown, [], f"classify new modules in LAYERS: {unknown}")
 
     def test_no_layer_inversion(self) -> None:
-        violations: list[str] = []
-        for source, dependencies in sorted(self.graph.items()):
-            source_key = layer_key(source)
-            for target in sorted(dependencies):
-                target_key = layer_key(target)
-                if (source_key, target_key) in self.exceptions:
-                    continue
-                if LAYERS[target_key] > LAYERS[source_key]:
-                    violations.append(f"{source_key} -> {target_key} ({source} -> {target})")
+        violations = layer_violations(self.graph, self.exceptions)
         self.assertEqual(violations, [], "layer inversions: " + "; ".join(violations))
+
+    def test_layer_inversion_is_reported(self) -> None:
+        violations = layer_violations({"lazyplan.store": {"lazyplan.cli"}}, set())
+        self.assertEqual(violations, ["store -> cli (lazyplan.store -> lazyplan.cli)"])
 
 
 if __name__ == "__main__":

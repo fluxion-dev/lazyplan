@@ -1,6 +1,6 @@
 ---
 name: tui-screens
-description: Screen and modality rules for the lazyplan TUI — detail pages, modals, stack guards, and dismiss payloads. Use when adding screens, changing open/close flows, or touching push_screen/dismiss paths in tui.py or screens.py.
+description: Screen and modality rules for the lazyplan TUI — detail pages, modals, stack guards, and dismiss payloads. Use when adding screens, changing open/close flows, or touching push_screen/dismiss paths in tui/app.py or tui/screens/.
 license: MIT
 compatibility: opencode, claude-code, codex, gemini-cli, cursor
 ---

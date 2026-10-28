@@ -1,6 +1,6 @@
 ---
 name: tui-layout
-description: Layout discipline for the lazyplan TUI — containers, scroll, and compact rows. Use when changing screen structure, scroll behavior, card layouts, or button rows in src/lazyplan/screens.py, tui.py, or design.py.
+description: Layout discipline for the lazyplan TUI — containers, scroll, and compact rows. Use when changing screen structure, scroll behavior, card layouts, or button rows in src/lazyplan/tui/screens/, tui/app.py, or design.py.
 license: MIT
 compatibility: opencode, claude-code, codex, gemini-cli, cursor
 ---

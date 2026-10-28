@@ -171,7 +171,7 @@ lazyplan: pilot patterns in `tests/test_screens_esc.py`; state asserts on
   https://textual.textualize.io/guide/reactivity/
 - Palette/discovery: built-in `CommandPalette` stays disabled
   (`ENABLE_COMMAND_PALETTE = False`) so no hidden second palette owns a
-  key. The centered `PaletteScreen` modal renders `commands.py` sections
+  key. The centered `PaletteScreen` modal renders `palette.py and help.py` sections
   (Create/Edit/View/App) with live `@on(Changed)` filtering, a match
   count, a no-match row, and context-disabled options that name the
   reason. The list scrolls inside a max-height `#dlg`, so every command is

@@ -3,6 +3,15 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## Unreleased
+
+### Internal
+
+- Restructured the source tree into layered packages: focused `store/`,
+  `services/`, `cli/`, `setup/`, `tui/`, and `mcp/` modules, packaged agent
+  data, domain-grouped tests, and architecture and module-size guards. No CLI,
+  TUI, or database behavior changed.
+
 ## v0.26.0 — 2026-10-26
 
 This release turns the plan into a coordination surface: agents claim work

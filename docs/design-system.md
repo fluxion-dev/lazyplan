@@ -1,7 +1,7 @@
 # lazyplan design system
 
 Single source of truth: `src/lazyplan/design.py` for rows, glyphs, chips,
-empty states, and CSS; `src/lazyplan/commands.py` for command names,
+empty states, and CSS; `src/lazyplan/palette.py and help.py` for command names,
 sections, context rules, key hints, and help text. If you add a view,
 command, or message, add it there first. Research:
 `docs/textual-research.md`. Local skills: `.agents/skills/tui-*`.
@@ -30,7 +30,7 @@ marker (`SOURCE_MARKER`); unlinked rows are byte-identical to before.
 Empty states come from `EMPTY_NO_PLANS` / `EMPTY_FEED` (same in CLI and
 TUI).
 
-## Shell (`tui.py`)
+## Shell (`tui/app.py`)
 
 - `FoldTree` extends the shared `NavTree` (`tree_nav.py`) and posts
   `SelectionChanged` / `RowAction` (see `messages.py`); `NodeHighlighted`
@@ -57,7 +57,7 @@ TUI).
 - Native Tree space/shift+space stay parked no-ops; direct keys own
   status, folding, and creation.
 
-## Command registry (`commands.py`)
+## Command registry (`palette.py and help.py`)
 
 `Command` carries id, label, section, canonical verb/nouns, direct key,
 help key/hint, context, handler, and search aliases. The palette, keymap,
@@ -79,7 +79,7 @@ the registry handler map.
 `lpui help` as the same text at the shell. `?` and F1 open `HelpScreen`
 inside a scrolling `#help` panel. `lpui help` prints the same string.
 
-## Detail (`screens.py`)
+## Detail (`tui/screens/`)
 
 `DetailScreen` is a plain `Screen` with two modes.
 Read mode: breadcrumb (`P2 › M3 › T4`), title/status, why/what (or
@@ -121,7 +121,7 @@ has a visible `Label`; required inputs are validated inline. `#dlg` is
 
 ## Keymap
 
-Canonical table in `commands.py` as `KEYMAP`; `HELP_TEXT` mirrors it and
+Canonical table in `palette.py and help.py` as `KEYMAP`; `HELP_TEXT` mirrors it and
 tests enforce the match.
 
 | Key | Action | Surface |

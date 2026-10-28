@@ -1,6 +1,6 @@
 ---
 name: tui-widgets
-description: Widget catalog for the lazyplan TUI — which widget to use for what, with pinned-version flags. Use when adding or changing any Tree, Input, TextArea, Checkbox, Button, Collapsible, Header, Footer, Screen, or modal in src/lazyplan/tui.py or screens.py.
+description: Widget catalog for the lazyplan TUI — which widget to use for what, with pinned-version flags. Use when adding or changing any Tree, Input, TextArea, Checkbox, Button, Collapsible, Header, Footer, Screen, or modal in src/lazyplan/tui/app.py or tui/screens/.
 license: MIT
 compatibility: opencode, claude-code, codex, gemini-cli, cursor
 ---

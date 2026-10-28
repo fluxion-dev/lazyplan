@@ -1,7 +1,7 @@
 """Shared documentation metadata for the man page and documentation tests.
 
 Keep this list aligned with the environment reads in `setup.py`, `skills.py`,
-`hooks.py`, and `setup_ui.py`. The man generator and the docs-truth test both
+`hooks.py`, and `setup/ui.py`. The man generator and the docs-truth test both
 read it, so a new variable has one place to land.
 """
 

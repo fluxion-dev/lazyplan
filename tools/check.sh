@@ -29,9 +29,9 @@ echo "== site discoverability =="
 echo "== clean install smoke =="
 ./tools/check-install.sh
 echo "== unittest (system python, stdlib only) =="
-PYTHONPATH=src "$SYS_PY" -m unittest discover -s tests
+PYTHONPATH=src "$SYS_PY" -m unittest discover -s tests -t .
 echo "== unittest (venv python, with textual) =="
-"$VENV_BIN"/python -m unittest discover -s tests
+"$VENV_BIN"/python -m unittest discover -s tests -t .
 echo "== performance budgets =="
 "$VENV_BIN"/python tools/perf_bench.py --check
 echo "ALL GATES GREEN"

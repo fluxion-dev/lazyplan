@@ -3,7 +3,7 @@
 import argparse
 import unittest
 
-from lazyplan.cli_parser import build_parser
+from lazyplan.cli.parser import build_parser
 from lazyplan.docs_meta import ENVIRONMENT, FILES
 from tests.support.paths import ROOT
 

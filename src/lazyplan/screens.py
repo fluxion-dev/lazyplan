@@ -29,8 +29,8 @@ except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
 from . import services
-from .commands import Command, matching
 from .design import HELP_TEXT, escape_markup, msg_error, status_word
+from .palette import Command, matching
 from .render import render_commits, render_forge_links
 from .source import SourceTrail, build_source_trail
 from .templates import load_template

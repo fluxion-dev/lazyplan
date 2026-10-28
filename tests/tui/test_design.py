@@ -7,7 +7,7 @@ import unicodedata
 import unittest
 from contextlib import redirect_stdout
 
-from lazyplan import commands, design
+from lazyplan import design, palette
 from lazyplan.cli import main as lpui_main
 from lazyplan.models import Milestone, Plan, Status, Task
 from lazyplan.store import Store
@@ -155,18 +155,18 @@ class TestDesignSystem(unittest.TestCase):
         buf = io.StringIO()
         with redirect_stdout(buf):
             self.assertEqual(lpui_main(["--db", self.db, "help"]), 0)
-        self.assertEqual(buf.getvalue().strip(), commands.HELP_TEXT.strip())
+        self.assertEqual(buf.getvalue().strip(), palette.HELP_TEXT.strip())
         try:
             from lazyplan.screens import HelpScreen  # needs textual installed
         except ImportError:
             HelpScreen = None
         if HelpScreen is not None:
-            self.assertEqual(HelpScreen.HELP.strip(), commands.HELP_TEXT.strip())
+            self.assertEqual(HelpScreen.HELP.strip(), palette.HELP_TEXT.strip())
 
     def test_keymap_mirrors_help(self):
-        for key, _action, _surface in commands.KEYMAP:
+        for key, _action, _surface in palette.KEYMAP:
             parts = [p.strip().split()[0] for p in key.split(",")]
-            self.assertTrue(any(p and p in commands.HELP_TEXT for p in parts), key)
+            self.assertTrue(any(p and p in palette.HELP_TEXT for p in parts), key)
 
     def test_bindings_match_keymap(self):
         try:
@@ -178,7 +178,7 @@ class TestDesignSystem(unittest.TestCase):
         keys = set()
         for b in LazyplanApp.BINDINGS:
             keys.update(aliases.get(k.strip(), k.strip()) for k in b.key.split(","))
-        table = " ".join(k for k, _a, _s in commands.KEYMAP)
+        table = " ".join(k for k, _a, _s in palette.KEYMAP)
         for key in keys:
             self.assertIn(key, table, key)
         self.assertIn("?", table)

@@ -560,7 +560,7 @@ class TestVcsCLI(unittest.TestCase):
             "stale": 0,
             "errors": [{"branch": "task/7-fix", "error": "boom"}],
         }
-        with mock.patch("lazyplan.cli.services.refresh_forge", return_value=stats):
+        with mock.patch("lazyplan.services.refresh_forge", return_value=stats):
             rc, out, err = _run(["--db", self.db, "pr", "refresh", "--kind", "task", "--id", "1"])
         self.assertEqual(rc, 0)
         self.assertIn("1 commits and 2 branches", out)

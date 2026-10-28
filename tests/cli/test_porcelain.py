@@ -14,7 +14,7 @@ from unittest import mock
 
 from lazyplan import porcelain
 from lazyplan.cli import main as lpui_main
-from lazyplan.cli_parser import build_parser
+from lazyplan.cli.parser import build_parser
 from lazyplan.models import Status
 from lazyplan.services import set_status
 from lazyplan.store import Store

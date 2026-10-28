@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from . import hook_hosts, skills, textfile
-from .setup_layout import _backup_file, _new_backup_dir
+from .setup_layout import backup_file, new_backup_dir
 
 HOSTS = ("opencode", "claude", "gemini", "codex", "cursor")
 MARKER = "lpui hook"
@@ -215,7 +215,7 @@ def _install_spec(spec: Spec, backup_dir: Path) -> bool:
         if spec.path.is_file() and textfile.read(spec.path) == _plugin_text():
             return False
         if spec.path.is_file():
-            _backup_file(backup_dir, spec.path)
+            backup_file(backup_dir, spec.path)
         spec.path.parent.mkdir(parents=True, exist_ok=True)
         textfile.write(spec.path, _plugin_text())
         return True
@@ -227,7 +227,7 @@ def _install_spec(spec: Spec, backup_dir: Path) -> bool:
     if json.dumps(merged, sort_keys=True) == before:
         return False
     if spec.path.is_file():
-        _backup_file(backup_dir, spec.path)
+        backup_file(backup_dir, spec.path)
     spec.path.parent.mkdir(parents=True, exist_ok=True)
     textfile.write(spec.path, json.dumps(merged, indent=2) + "\n")
     return True
@@ -237,7 +237,7 @@ def _remove_spec(spec: Spec, backup_dir: Path) -> bool:
     if not spec.path.is_file():
         return False
     if spec.kind == "plugin":
-        _backup_file(backup_dir, spec.path)
+        backup_file(backup_dir, spec.path)
         spec.path.unlink()
         return True
     data = _read(spec.path)
@@ -247,7 +247,7 @@ def _remove_spec(spec: Spec, backup_dir: Path) -> bool:
     )
     if json.dumps(stripped, sort_keys=True) == before:
         return False
-    _backup_file(backup_dir, spec.path)
+    backup_file(backup_dir, spec.path)
     textfile.write(spec.path, json.dumps(stripped, indent=2) + "\n")
     return True
 
@@ -255,7 +255,7 @@ def _remove_spec(spec: Spec, backup_dir: Path) -> bool:
 def install(home: Path | None = None, hosts: list[str] | None = None) -> dict:
     """Write managed hook entries for the chosen hosts, backing up every file."""
     home = home or Path.home()
-    backup_dir = _new_backup_dir(home)
+    backup_dir = new_backup_dir(home)
     changed: list[str] = []
     skipped: list[dict] = []
     for spec in preview(home, hosts):
@@ -272,7 +272,7 @@ def remove(home: Path | None = None, hosts: list[str] | None = None) -> dict:
     """Remove only managed entries, backing up every touched file."""
     home = home or Path.home()
     wanted = set(hosts) if hosts is not None else set(HOSTS)
-    backup_dir = _new_backup_dir(home)
+    backup_dir = new_backup_dir(home)
     changed: list[str] = []
     skipped: list[dict] = []
     for spec in specs(home):

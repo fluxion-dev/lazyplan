@@ -3,6 +3,52 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## v0.28.0 — 2026-10-31
+
+Staged updates in the TUI. When a newer release exists, the status bar shows
+`update vX.Y.Z` and `U` opens an Update screen. Download verifies the PyPI wheel
+and caches it; the next TUI launch applies it and re-execs into the new version.
+
+### New
+
+- The update notice now names the latest version, and `U` or the **Update lpui**
+  palette command opens a dedicated Update screen.
+- The screen shows installed and latest versions plus the install method, with
+  **Download** and **Later** for pipx and venv installs.
+- Download fetches the exact PyPI wheel, verifies its SHA256, and keeps one
+  staged slot under the shared home.
+- The next TUI launch installs the cached wheel and re-execs before the
+  interface opens. Agent and `--json` calls never download or apply.
+- rpm, deb, and source installs keep their package-manager or `git pull`
+  guidance. A failed download leaves no stage; a failed apply keeps the old
+  version runnable and reports one retryable notice.
+
+### Under the hood
+
+- Added `update_stage` with atomic claim, digest re-verification, and pipx/venv
+  installers.
+- Added headless TUI and cache tests, registered the module with the
+  architecture layer guard, and extended the vulture allowlist for Textual
+  dispatch.
+- Documented the flow, cache paths, recovery, and screen in the usage guide and
+  design system.
+
+### Upgrade
+
+```bash
+pipx upgrade lazyplan-tui
+# or
+pipx install --force lazyplan-tui
+```
+
+No manual migration is required. The database schema is unchanged.
+
+### Documentation
+
+- [Usage guide](https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md#staged-updates-in-the-tui)
+- [Design system](https://github.com/fluxion-dev/lazyplan/blob/main/docs/design-system.md)
+- [Site](https://fluxion-dev.github.io/lazyplan/)
+
 ## v0.27.2 — 2026-10-31
 
 Removes the redundant source marker from every row. Git integration, commit and

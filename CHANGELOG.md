@@ -3,6 +3,41 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## v0.27.2 — 2026-10-31
+
+Removes the redundant source marker from every row. Git integration, commit and
+PR links, the source trail, and the database schema are unchanged.
+
+### Changed
+
+- Plan, milestone, task, and source-trail rows no longer end in a marker glyph.
+  Commit and PR chips, the preview, and the detail page still show provenance.
+- Plain CLI row output drops the same suffix; scripts that parsed it should
+  read the chips or `lpui show --files` instead.
+
+### Under the hood
+
+- Deleted the unused marker helpers and branch icon entries, plus the
+  row-builder plumbing that only fed them.
+- Updated TUI, CLI, and docs tests to assert the remaining chips.
+
+### Upgrade
+
+```bash
+pipx upgrade lazyplan-tui
+# or
+pipx install --force lazyplan-tui
+```
+
+No manual migration is required. The database schema is unchanged, and every
+existing commit, pull request, and repo link is preserved.
+
+### Documentation
+
+- [Usage guide](https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md)
+- [Design system](https://github.com/fluxion-dev/lazyplan/blob/main/docs/design-system.md)
+- [Site](https://fluxion-dev.github.io/lazyplan/)
+
 ## v0.27.1 — 2026-10-28
 
 Maintenance release for the layered package restructure. CLI commands, TUI

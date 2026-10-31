@@ -11,7 +11,7 @@ import math
 import re
 import time
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 
 from .models import Status, Task
 from .store import Store
@@ -58,6 +58,7 @@ class OverallProgress:
     elapsed_seconds: float | None = None
     daily_rate: float = 0.0
     eta_days: int | None = None
+    eta_date: date | None = None
     complete: bool = False
     milestones: tuple[MilestoneProgress, ...] = ()
 
@@ -191,12 +192,16 @@ def overall_progress(store: Store, now: float | None = None) -> OverallProgress:
     eta_days = None
     if not complete and remaining > 0 and rate > 0:
         eta_days = math.ceil(remaining / rate)
+    eta_date = None
+    if eta_days is not None:
+        eta_date = date.fromtimestamp(stamp) + timedelta(days=eta_days)
     return OverallProgress(
         done=done,
         total=len(tasks),
         elapsed_seconds=elapsed,
         daily_rate=rate,
         eta_days=eta_days,
+        eta_date=eta_date,
         complete=complete,
         milestones=_top_milestones(store, _latest_task_events(events)),
     )

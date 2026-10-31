@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
-from .section import MetricCard, MetricsSection
+from .base import MetricCard
+from .section import MetricsSection
 
 __all__ = ["MetricCard", "MetricsSection"]

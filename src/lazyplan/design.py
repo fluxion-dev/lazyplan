@@ -123,6 +123,17 @@ STATUS_GLYPH = {"todo": "○", "doing": "◐", "done": "●"}
 STATUS_ANSI = {"todo": "90", "doing": "33", "done": "32"}
 STATUS_RICH = {"todo": "dim", "doing": "yellow", "done": "green"}
 
+METRIC_BAR_WIDTH = 10
+
+
+def metric_bar(value: int, maximum: int, width: int = METRIC_BAR_WIDTH) -> str:
+    """Rich-markup micro-bar scaled to *maximum*."""
+    if maximum <= 0:
+        return "[dim]" + "░" * width + "[/]"
+    filled = min(width, max(0, round(value * width / maximum)))
+    return f"[green]{'█' * filled}[/][dim]{'░' * (width - filled)}[/]"
+
+
 # The doing glyph is the first frame, so static output and frame 0 agree.
 # All four frames are one terminal cell; the TUI advances them on a timer.
 SPINNER_FRAMES = ("◐", "◓", "◑", "◒")

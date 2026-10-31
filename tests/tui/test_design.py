@@ -47,6 +47,16 @@ class TestDesignSystem(unittest.TestCase):
         with self.assertRaises(ValueError):
             design.status_word("todo", "neon")
 
+    def test_metric_bar_scales_to_the_maximum(self):
+        empty = design.metric_bar(0, 10)
+        half = design.metric_bar(5, 10)
+        full = design.metric_bar(10, 10)
+        self.assertEqual(empty.count("░"), design.METRIC_BAR_WIDTH)
+        self.assertEqual(half.count("█"), 5)
+        self.assertEqual(full.count("█"), design.METRIC_BAR_WIDTH)
+        self.assertEqual(design.metric_bar(5, 0).count("░"), design.METRIC_BAR_WIDTH)
+        self.assertEqual(design.metric_bar(99, 10).count("█"), design.METRIC_BAR_WIDTH)
+
     def test_spinner_frames_and_prefix(self):
         self.assertEqual(design.SPINNER_FRAMES, ("◐", "◓", "◑", "◒"))
         self.assertEqual(design.SPINNER_INTERVAL, 0.16)

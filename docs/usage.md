@@ -101,6 +101,11 @@ there is not enough velocity to forecast.
 shares, and micro-bars. Blocked is an overlay: a blocked task still counts in
 its lifecycle row, so only the three lifecycle shares add up to 100%.
 
+**Activity** is a 12-week grid of daily completions ending today. Each cell
+counts `done` transitions for that local day, including a task that was
+reopened and finished again. Four green shades scale to the busiest day, and
+the legend names the range.
+
 ### Staged updates in the TUI
 
 When a newer release exists, the status bar shows `update vX.Y.Z` and a toast

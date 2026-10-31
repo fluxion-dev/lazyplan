@@ -86,6 +86,12 @@ TUI).
   can add up to more than 100%. Bars scale to the largest row and are 10
   cells wide (`design.metric_bar`). With no tasks the card shows its empty
   state.
+- The Activity card is a 12-week by 7-day grid ending today (84 local
+  days). Counts come only from `task #N -> done` events, so a reopened task
+  that finishes again counts again. `design.heatmap_color` maps each day to
+  one of four green shades scaled to the busiest day, plus the empty token;
+  the final row carries the date range and the less-to-more legend. With no
+  completions the card shows its empty state.
 
 ## Command registry (`palette.py and help.py`)
 

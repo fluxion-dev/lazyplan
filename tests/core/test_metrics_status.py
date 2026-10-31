@@ -40,6 +40,15 @@ class StatusDistributionTest(unittest.TestCase):
         self.assertEqual(status.blocked, 1)
         self.assertEqual(status.total, 4)
 
+    def test_blocking_does_not_change_status_shares(self) -> None:
+        before = metrics.status_distribution(self.store)
+        self.store.set_blocked(self.tasks[0].id, True, "waiting", actor="qa")
+        after = metrics.status_distribution(self.store)
+        self.assertEqual(after.blocked, 1)
+        self.assertEqual(after.todo, before.todo)
+        self.assertEqual(after.total, before.total)
+        self.assertEqual(after.share(after.todo), before.share(before.todo))
+
     def test_shares_use_all_tasks(self) -> None:
         self._move(1, Status.DOING)
         self._move(2, Status.DONE)

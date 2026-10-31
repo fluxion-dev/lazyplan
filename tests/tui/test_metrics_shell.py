@@ -80,7 +80,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             section = app.query_one("#metrics", MetricsSection)
             activity = str(section.query_one("#metric-heatmap-empty").render())
-            progress = str(section.query_one("#metric-progress-body").render())
+            progress = str(section.query_one("#metric-progress-head").render())
             status = str(section.query_one("#metric-status-body").render())
             self.assertIn("no completions yet", activity)
             self.assertIn("0% 0/1", progress)
@@ -109,11 +109,11 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
             card = app.query_one("#metric-progress")
-            before = str(card.query_one(".metric-body").render())
+            before = str(card.query_one(".metric-head").render())
             services.set_status(self.store, "task", self.task_id, Status.DONE, actor="qa")
             app.refresh_all()
             await pilot.pause()
-            after = str(card.query_one(".metric-body").render())
+            after = str(card.query_one(".metric-head").render())
         self.assertIn("0% 0/1", before)
         self.assertIn("100% 1/1 · complete", after)
 
@@ -165,11 +165,11 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
             card = app.query_one("#metric-progress")
-            before = str(card.query_one(".metric-body").render())
+            before = str(card.query_one(".metric-head").render())
             app.selected = ("plan", other.id)
             app.update_preview()
             await pilot.pause()
-            after = str(card.query_one(".metric-body").render())
+            after = str(card.query_one(".metric-head").render())
         self.assertEqual(before, after)
 
     async def test_section_hides_below_100_columns(self) -> None:

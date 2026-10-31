@@ -52,6 +52,7 @@ APP_CSS = f"""
 .metric-title {{ height: 1; color: $text-muted; text-style: bold; }}
 .metric-body {{ height: 1fr; }}
 .metric-empty {{ height: 1fr; }}
+.metric-head {{ height: 1; }}
 #metrics PlotextPlot {{ height: 1fr; }}
 #preview-body {{ height: auto; }}
 #status {{ height: {BAR_HEIGHT}; background: $primary; }}

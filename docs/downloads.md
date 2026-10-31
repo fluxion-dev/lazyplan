@@ -48,7 +48,7 @@ page, then writes a versioned JSON snapshot:
   "channels": {
     "pypi_with_mirrors": {"available": true, "total": 10004, "last_7_days": 3777, "source": "pypistats.org", "metric": "with_mirrors"},
     "pypi_direct": {"available": true, "total": 3252, "last_7_days": 1244, "source": "pypistats.org", "metric": "without_mirrors"},
-    "github_assets": {"available": true, "total": 40, "artifacts": {}, "source": "api.github.com", "metric": "release_assets"}
+    "github_assets": {"available": true, "total": 43, "artifacts": {}, "source": "api.github.com", "metric": "release_assets"}
   }
 }
 ```

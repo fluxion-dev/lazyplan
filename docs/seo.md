@@ -263,7 +263,7 @@ are present, with six matching JSON-LD questions.
 ### Download proof and mirrors (2026-10-31)
 
 After: the strip under the hero headlines 10,004 PyPI downloads including
-mirrors, then shows 3,252 direct PyPI downloads, 40 GitHub release asset
+mirrors, then shows 3,252 direct PyPI downloads, 43 GitHub release asset
 downloads, and 3,777 in the last seven days. Each channel is labeled and
 rendered on its own; PyPI and GitHub counts are never added together. The caveat
 stays visible: "PyPI counts include mirrors, CI, and repeat installs; GitHub
@@ -278,4 +278,7 @@ Lighthouse: 97 performance, 100 accessibility, 100 best practices, 100 SEO;
 widths 360, 768, and 1440 show no overflow.
 
 Verified live: the snapshot carries the three channels, the strip shows the
-numbers above, and the method link resolves.
+numbers above, and the method link resolves. The Pages deploy
+[41219878364](https://github.com/fluxion-dev/lazyplan/actions/runs/41219878364)
+built and published it on 2026-10-31; the live `downloads.json` reports
+10,004 / 3,252 / 43 with schema 2.

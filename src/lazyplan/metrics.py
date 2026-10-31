@@ -94,12 +94,47 @@ class StatusBreakdown:
 
 
 @dataclass(frozen=True)
+class ChartRow:
+    """One labelled value ready for a dashboard chart."""
+
+    label: str
+    value: int
+
+
+@dataclass(frozen=True)
 class MetricsSnapshot:
     """Everything the three dashboard cards render."""
 
     activity: tuple[DayActivity, ...] = ()
     progress: OverallProgress | None = None
     status: StatusBreakdown | None = None
+
+
+def activity_weeks(activity: tuple[DayActivity, ...]) -> tuple[ChartRow, ...]:
+    """Sum the daily series into 12 weekly rows."""
+    rows: list[ChartRow] = []
+    for offset in range(0, len(activity), 7):
+        week = activity[offset : offset + 7]
+        if not week:
+            continue
+        rows.append(ChartRow(week[0].day.strftime("%m-%d"), sum(day.done for day in week)))
+    return tuple(rows)
+
+
+def milestone_bars(progress: OverallProgress) -> tuple[ChartRow, ...]:
+    """One percentage row per ranked milestone."""
+    return tuple(ChartRow(item.title, item.percent) for item in progress.milestones)
+
+
+def status_bars(status: StatusBreakdown) -> tuple[ChartRow, ...]:
+    """One row per lifecycle state plus the blocked overlay."""
+    rows = (
+        ("todo", status.todo),
+        ("doing", status.doing),
+        ("done", status.done),
+        ("blocked", status.blocked),
+    )
+    return tuple(ChartRow(f"{label} {status.share(count)}%", count) for label, count in rows)
 
 
 def _events(store: Store) -> list[dict]:

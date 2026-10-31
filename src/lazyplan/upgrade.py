@@ -279,18 +279,50 @@ def notice_text(info: InstallInfo, installed: str, latest: str) -> str | None:
     return f"update v{latest} available (installed v{installed})"
 
 
-def run_upgrade(info: InstallInfo, version: str, exe: str | None = None) -> None:
+def installed_version() -> str:
+    """Version of the installed distribution, or 0.0.0 when metadata is absent."""
+    try:
+        from importlib.metadata import PackageNotFoundError, version
+
+        return version(PYPI_PKG)
+    except (PackageNotFoundError, ValueError):
+        return "0.0.0"
+
+
+def require_newer(version: str, installed: str | None = None) -> None:
+    """Refuse an older or equal target before any download or install."""
+    current = installed or installed_version()
+    target = parse_version(version)
+    running = parse_version(current)
+    if target < running:
+        raise UpgradeError(f"refusing to downgrade lpui from v{current} to v{version}")
+    if target == running:
+        raise UpgradeError(f"lpui v{current} is already installed")
+
+
+def run_upgrade(
+    info: InstallInfo,
+    version: str,
+    exe: str | None = None,
+    installed: str | None = None,
+) -> None:
     """Dispatch to the per-method runner; UPGRADEABLE is the source of truth."""
     if info.method not in UPGRADEABLE:
         raise UpgradeError(f"no upgrade path for a {info.method} install")
+    require_newer(version, installed)
     if info.method == PIPX:
-        upgrade_pipx(version)
+        upgrade_pipx(version, installed=installed)
     else:
-        upgrade_venv(version, exe or sys.executable)
+        upgrade_venv(version, exe or sys.executable, installed=installed)
 
 
-def upgrade_pipx(version: str, timeout: float = UPGRADE_TIMEOUT) -> None:
+def upgrade_pipx(
+    version: str,
+    timeout: float = UPGRADE_TIMEOUT,
+    installed: str | None = None,
+) -> None:
     """Mirror install.sh do_pipx: upgrade, falling back to a forced install."""
+    require_newer(version, installed)
     if shutil.which("pipx") is None:
         raise UpgradeError("pipx is not on PATH")
     cmds = [
@@ -311,8 +343,14 @@ def upgrade_pipx(version: str, timeout: float = UPGRADE_TIMEOUT) -> None:
     raise UpgradeError(f"pipx upgrade failed: {'; '.join(last_lines)}")
 
 
-def upgrade_venv(version: str, exe: str, timeout: float = UPGRADE_TIMEOUT) -> None:
+def upgrade_venv(
+    version: str,
+    exe: str,
+    timeout: float = UPGRADE_TIMEOUT,
+    installed: str | None = None,
+) -> None:
     """Reinstall the running venv from PyPI (the install.sh do_venv layout)."""
+    require_newer(version, installed)
     cmd = [exe, "-m", "pip", "install", f"{PYPI_PKG}=={version}"]
     try:
         out = subprocess.run(

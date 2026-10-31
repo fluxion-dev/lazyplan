@@ -77,7 +77,7 @@ class TestPayload(unittest.TestCase):
 
     def test_roundtrip_and_malformed(self):
         update = update_stage.stage_update(
-            VERSION, PIPX, home=self.home, opener=api_opener(), now=1000.0
+            VERSION, PIPX, home=self.home, opener=api_opener(), installed="0.27.0", now=1000.0
         )
         self.assertEqual(update_stage.read_stage(home=self.home), update)
         update_stage._state_path(update_stage.STAGED, self.home).write_text("{bad")
@@ -142,23 +142,42 @@ class TestStage(unittest.TestCase):
 
     def test_stage_writes_marker_and_wheel(self):
         update = update_stage.stage_update(
-            VERSION, PIPX, home=self.home, opener=api_opener(), now=1000.0
+            VERSION, PIPX, home=self.home, opener=api_opener(), installed="0.27.0", now=1000.0
         )
         self.assertTrue(update_stage.wheel_path(update, self.home).is_file())
         self.assertEqual(update_stage.read_stage(home=self.home), update)
 
     def test_rejects_non_upgradeable_method(self):
         with self.assertRaises(update_stage.StageError):
-            update_stage.stage_update(VERSION, "rpm", home=self.home, opener=api_opener())
+            update_stage.stage_update(
+                VERSION, "rpm", home=self.home, opener=api_opener(), installed="0.27.0"
+            )
+
+    def test_rejects_downgrade_and_equal_before_fetch(self):
+        calls: list[object] = []
+
+        def opener(request, timeout=0):
+            calls.append(request)
+            raise AssertionError("network should not run")
+
+        for version, installed in (("0.27.0", "0.27.1"), ("0.27.1", "0.27.1")):
+            with self.subTest(version=version):
+                with self.assertRaises(update_stage.StageError):
+                    update_stage.stage_update(
+                        version, PIPX, home=self.home, opener=opener, installed=installed
+                    )
+        self.assertEqual(calls, [])
 
     def test_new_stage_replaces_an_older_wheel(self):
         first = update_stage.stage_update(
-            VERSION, PIPX, home=self.home, opener=api_opener(), now=1.0
+            VERSION, PIPX, home=self.home, opener=api_opener(), installed="0.27.0", now=1.0
         )
         orphan = update_stage.update_dir(self.home) / "old.whl"
         orphan.write_bytes(b"old")
         self.assertTrue(update_stage.wheel_path(first, self.home).is_file())
-        update_stage.stage_update(VERSION, PIPX, home=self.home, opener=api_opener(), now=2.0)
+        update_stage.stage_update(
+            VERSION, PIPX, home=self.home, opener=api_opener(), installed="0.27.0", now=2.0
+        )
         self.assertFalse(orphan.exists())
 
 
@@ -170,7 +189,7 @@ class TestApply(unittest.TestCase):
 
     def _stage(self) -> update_stage.StagedUpdate:
         return update_stage.stage_update(
-            VERSION, PIPX, home=self.home, opener=api_opener(), now=1000.0
+            VERSION, PIPX, home=self.home, opener=api_opener(), installed="0.27.0", now=1000.0
         )
 
     def test_claim_is_single_slot(self):
@@ -183,7 +202,7 @@ class TestApply(unittest.TestCase):
         update = self._stage()
         pipx_runner = runner()
         with mock.patch.object(update_stage.shutil, "which", return_value="/usr/bin/pipx"):
-            update_stage.apply_update(update, self.home, runner=pipx_runner)
+            update_stage.apply_update(update, self.home, runner=pipx_runner, installed="0.27.0")
         command = pipx_runner.call_args[0][0]
         self.assertEqual(
             command[:3],
@@ -192,18 +211,22 @@ class TestApply(unittest.TestCase):
         self.assertEqual(command[-1], "--force")
         venv = update_stage.StagedUpdate(VERSION, VENV, FILENAME, URL, SHA, len(WHEEL), 1000.0)
         venv_runner = runner()
-        update_stage.apply_update(venv, self.home, exe="/venv/bin/python", runner=venv_runner)
+        update_stage.apply_update(
+            venv, self.home, exe="/venv/bin/python", runner=venv_runner, installed="0.27.0"
+        )
         self.assertEqual(venv_runner.call_args[0][0][0], "/venv/bin/python")
 
     def test_install_failure_raises(self):
         update = self._stage()
         with mock.patch.object(update_stage.shutil, "which", return_value="/usr/bin/pipx"):
             with self.assertRaises(update_stage.StageError):
-                update_stage.apply_update(update, self.home, runner=runner(1, "boom"))
+                update_stage.apply_update(
+                    update, self.home, runner=runner(1, "boom"), installed="0.27.0"
+                )
 
     def test_applies_and_clears(self):
         update = update_stage.stage_update(
-            VERSION, VENV, home=self.home, opener=api_opener(), now=1000.0
+            VERSION, VENV, home=self.home, opener=api_opener(), installed="0.27.0", now=1000.0
         )
         self.assertTrue(update_stage.wheel_path(update, self.home).is_file())
         ok = runner()
@@ -239,6 +262,38 @@ class TestApply(unittest.TestCase):
         self.assertEqual(update_stage.read_failure(self.home), detail)
         update_stage.clear_failure(self.home)
         self.assertIsNone(update_stage.read_failure(self.home))
+
+    def test_apply_update_rejects_downgrade_without_a_runner(self):
+        older = update_stage.StagedUpdate(
+            "0.27.0",
+            PIPX,
+            "lazyplan_tui-0.27.0-py3-none-any.whl",
+            URL,
+            SHA,
+            len(WHEEL),
+            1000.0,
+        )
+        run = runner()
+        with self.assertRaises(update_stage.StageError):
+            update_stage.apply_update(older, self.home, runner=run, installed="0.28.0")
+        run.assert_not_called()
+
+    def test_planted_downgrade_is_cleared_without_install(self):
+        older = update_stage.StagedUpdate(
+            "0.27.0",
+            PIPX,
+            "lazyplan_tui-0.27.0-py3-none-any.whl",
+            URL,
+            SHA,
+            len(WHEEL),
+            1000.0,
+        )
+        update_stage.write_stage(older, home=self.home)
+        run = runner()
+        state, detail = update_stage.apply_on_launch("0.28.0", self.home, runner=run)
+        self.assertEqual((state, detail), ("downgrade", "0.27.0"))
+        run.assert_not_called()
+        self.assertIsNone(update_stage.read_stage(home=self.home))
 
 
 if __name__ == "__main__":

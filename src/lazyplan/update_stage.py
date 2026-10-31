@@ -27,7 +27,15 @@ from typing import Any
 
 from . import textfile
 from .repo import shared_home
-from .upgrade import PIPX, PYPI_PKG, UPGRADEABLE, VENV, UpgradeError, parse_version
+from .upgrade import (
+    PIPX,
+    PYPI_PKG,
+    UPGRADEABLE,
+    VENV,
+    UpgradeError,
+    parse_version,
+    require_newer,
+)
 
 UPDATE_DIR = "updates"
 STAGED = "staged.json"
@@ -257,10 +265,15 @@ def stage_update(
     timeout: float = DOWNLOAD_TIMEOUT,
     opener: Callable[..., Any] = urllib.request.urlopen,
     now: float | None = None,
+    installed: str | None = None,
 ) -> StagedUpdate:
-    """Download and verify one wheel, replacing any older stage."""
+    """Download and verify one newer wheel, replacing any older stage."""
     if method not in UPGRADEABLE:
         raise StageError(f"no download path for a {method} install")
+    try:
+        require_newer(version, installed)
+    except UpgradeError as exc:
+        raise StageError(str(exc)) from exc
     metadata = fetch_metadata(version, timeout, opener)
     destination = update_dir(home) / str(metadata["filename"])
     size = download_wheel(metadata, destination, timeout, opener)
@@ -326,8 +339,13 @@ def apply_update(
     exe: str | None = None,
     timeout: float = APPLY_TIMEOUT,
     runner: Callable[..., Any] = subprocess.run,
+    installed: str | None = None,
 ) -> None:
     """Install the cached wheel; raise StageError with a short detail on failure."""
+    try:
+        require_newer(update.version, installed)
+    except UpgradeError as exc:
+        raise StageError(str(exc)) from exc
     command = _install_command(update, home, exe or sys.executable)
     try:
         result = runner(command, capture_output=True, text=True, timeout=timeout)
@@ -387,11 +405,15 @@ def apply_on_launch(
     if update is None:
         return ("none", "")
     try:
-        current = parse_version(update.version) <= parse_version(installed)
+        target = parse_version(update.version)
+        running = parse_version(installed)
     except UpgradeError as exc:
         mark_failed(update, str(exc), home)
         return ("error", str(exc))
-    if current:
+    if target < running:
+        clear_stage(update, home)
+        return ("downgrade", update.version)
+    if target == running:
         clear_stage(update, home)
         return ("skipped", update.version)
     if not verify_wheel(update, home):
@@ -399,7 +421,7 @@ def apply_on_launch(
         mark_failed(update, error, home)
         return ("error", error)
     try:
-        apply_update(update, home, exe, runner=runner)
+        apply_update(update, home, exe, runner=runner, installed=installed)
     except StageError as exc:
         mark_failed(update, str(exc), home)
         return ("error", str(exc))

@@ -46,7 +46,7 @@ class ProgressCard(MetricCard):
     """Overall completion and forecast card."""
 
     def __init__(self) -> None:
-        super().__init__("metric-progress", "Progress", "no plans yet")
+        super().__init__("metric-progress", "Project progress", "no plans yet")
 
     def refresh_progress(self, progress: OverallProgress | None) -> None:
         """Render *progress*, or the empty state when there is no work."""

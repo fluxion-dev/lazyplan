@@ -4,7 +4,7 @@ from __future__ import annotations
 
 try:
     from textual.app import ComposeResult
-    from textual.containers import Vertical
+    from textual.containers import Horizontal
 
     _TEXTUAL_OK = True
 except ImportError:  # pragma: no cover
@@ -19,8 +19,8 @@ __all__ = ["MetricsSection"]
 
 if _TEXTUAL_OK:
 
-    class MetricsSection(Vertical):
-        """Always-on bottom section that hosts the read-only metric cards."""
+    class MetricsSection(Horizontal):
+        """Always-on bottom row that hosts the read-only metric cards."""
 
         def __init__(self) -> None:
             super().__init__(id="metrics", classes="metrics-section")

@@ -36,7 +36,7 @@ class StatusCard(MetricCard):
     """Task status distribution card."""
 
     def __init__(self) -> None:
-        super().__init__("metric-status", "Status", "no tasks yet")
+        super().__init__("metric-status", "Task status", "no tasks yet")
 
     def refresh_status(self, status: StatusBreakdown | None) -> None:
         """Render *status*, or the empty state when there are no tasks."""

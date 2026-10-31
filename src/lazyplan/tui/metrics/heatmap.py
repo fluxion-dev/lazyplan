@@ -39,7 +39,7 @@ class HeatmapCard(MetricCard):
     """Daily completion heatmap card."""
 
     def __init__(self) -> None:
-        super().__init__("metric-heatmap", "Activity", "no completions yet")
+        super().__init__("metric-heatmap", "Daily activity", "no completions yet")
 
     def refresh_activity(self, activity: tuple[DayActivity, ...]) -> None:
         """Render *activity*, or the empty state when nothing completed."""

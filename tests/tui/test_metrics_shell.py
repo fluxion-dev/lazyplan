@@ -19,7 +19,7 @@ except ImportError:  # stdlib-only interpreter: no textual
     MetricsSection = None  # type: ignore[assignment,misc]
 
 CARD_IDS = ("metric-heatmap", "metric-progress", "metric-status")
-CARD_TITLES = ("Activity", "Progress", "Status")
+CARD_TITLES = ("Daily activity", "Project progress", "Task status")
 
 
 def _within(region, width: int, height: int) -> bool:
@@ -63,6 +63,17 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
                 card = section.query_one(f"#{card_id}")
                 self.assertIn(title, str(card.query_one(".metric-title").content))
 
+    async def test_cards_are_side_by_side(self) -> None:
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            regions = [app.query_one(f"#{card_id}").region for card_id in CARD_IDS]
+        self.assertEqual(len({region.y for region in regions}), 1)
+        self.assertLess(regions[0].x, regions[1].x)
+        self.assertLess(regions[1].x, regions[2].x)
+        for region in regions:
+            self.assertGreater(region.width, 20)
+
     async def test_cards_show_data_and_the_remaining_empty_state(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
@@ -74,11 +85,11 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
             self.assertIn("todo", bodies[2])
             self.assertIn("done", bodies[2])
 
-    async def test_section_is_ten_rows(self) -> None:
+    async def test_section_is_eleven_rows(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
-            self.assertEqual(app.query_one("#metrics", MetricsSection).region.height, 10)
+            self.assertEqual(app.query_one("#metrics", MetricsSection).region.height, 11)
 
     async def test_status_edit_reaches_the_host_on_refresh(self) -> None:
         app = tui_mod.create_app(self.db)

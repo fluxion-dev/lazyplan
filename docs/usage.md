@@ -103,6 +103,10 @@ button. A failed download leaves no stage behind. A failed apply keeps the old
 version runnable, parks the stage, and shows one notice on the next launch; the
 Update screen offers a retry after the next download.
 
+Downgrades are disabled. Staging, apply, and `lpui upgrade` all refuse a target
+older than or equal to the installed version, and there is no rollback flag.
+The Update screen hides Download when the latest release is not newer.
+
 ## Start
 
 ```bash

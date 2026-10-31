@@ -3,6 +3,40 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## v0.28.1 — 2026-10-31
+
+Refuses downgrades in every update path. The staged-update flow and `lpui
+upgrade` reject a target older than or equal to the installed version before
+any download or installer runs.
+
+### Fixed
+
+- `stage_update` refuses a non-newer target before fetching a wheel.
+- `apply_update` and apply-on-launch refuse an older or equal staged version
+  without running pipx or pip. A planted older stage is cleared.
+- `run_upgrade`, `upgrade_pipx`, and `upgrade_venv` refuse a downgrade before
+  building a command.
+- The Update screen hides Download when the latest release is not newer, and a
+  stale cached notice no longer opens it.
+- Tests cover staging, apply, both runners, the screen, and the cached notice.
+
+### Upgrade
+
+```bash
+pipx upgrade lazyplan-tui
+# or
+pipx install --force lazyplan-tui
+```
+
+No manual migration is required. Downgrades are intentionally unsupported;
+there is no rollback flag.
+
+### Documentation
+
+- [Usage guide](https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md#staged-updates-in-the-tui)
+- [Design system](https://github.com/fluxion-dev/lazyplan/blob/main/docs/design-system.md)
+- [Site](https://fluxion-dev.github.io/lazyplan/)
+
 ## v0.28.0 — 2026-10-31
 
 Staged updates in the TUI. When a newer release exists, the status bar shows

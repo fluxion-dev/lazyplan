@@ -278,7 +278,6 @@ def _row(
     pr_checks: str = "",
     stale: bool = False,
     source_counts: tuple[int, int, int] | None = None,
-    repo_count: int = 0,
     claim_actor: str = "",
     claim_expired: bool = False,
     blocked: bool = False,
@@ -341,7 +340,6 @@ def _plan_source_suffix(
     links: Sequence[str] | None,
     repos: Sequence[Mapping[str, object]] | None,
     source_counts: tuple[int, int, int] | None,
-    repo_count: int,
 ) -> tuple[str, str]:
     """Rich and plain source suffix (counts and repo chips) for a plan row."""
     chips = source_chip(*source_counts) if source_counts is not None else commits_chip(links)
@@ -368,12 +366,11 @@ def plan_row(
     progress: tuple[int, int] | None = None,
     width: int | None = None,
     source_counts: tuple[int, int, int] | None = None,
-    repo_count: int = 0,
     marked: bool = False,
 ) -> str:
     """TUI plan row (Rich markup): glyph + id + title + progress + chips."""
     id_part = f"P{p.id}"
-    suffix, plain_suffix = _plan_source_suffix(links, repos, source_counts, repo_count)
+    suffix, plain_suffix = _plan_source_suffix(links, repos, source_counts)
     if progress is not None:
         done, total = progress
         suffix = f" [dim]{progress_text(done, total)}[/]" + suffix
@@ -402,7 +399,6 @@ def milestone_row(
     progress: tuple[int, int] | None = None,
     width: int | None = None,
     source_counts: tuple[int, int, int] | None = None,
-    repo_count: int = 0,
     marked: bool = False,
 ) -> str:
     """TUI milestone row (Rich markup): glyph + id + title + progress + chips."""
@@ -413,7 +409,6 @@ def milestone_row(
         progress,
         width,
         source_counts=source_counts,
-        repo_count=repo_count,
         marked=marked,
     )
 
@@ -437,7 +432,6 @@ def task_row(
     pr_state: str = "",
     pr_checks: str = "",
     stale: bool = False,
-    repo_count: int = 0,
     claim_actor: str = "",
     claim_expired: bool = False,
     blocked: bool = False,
@@ -453,7 +447,6 @@ def task_row(
         pr_state,
         pr_checks,
         stale,
-        repo_count=repo_count,
         claim_actor=claim_actor,
         claim_expired=claim_expired,
         blocked=blocked,

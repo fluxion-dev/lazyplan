@@ -213,7 +213,7 @@ class TestDesignSystem(unittest.TestCase):
     def test_source_rows_show_chips_not_a_marker(self):
         p = Plan(id=1, name="N")
         bare = design.plan_row(p)
-        linked = design.plan_row(p, source_counts=(1, 0, 0), repo_count=1)
+        linked = design.plan_row(p, source_counts=(1, 0, 0))
         self.assertNotIn("⎇", bare)
         self.assertNotIn("⎇", linked)
         self.assertIn("1c", linked)

@@ -163,7 +163,7 @@ class TestGitHubAssets(unittest.TestCase):
             downloads.summarize_github([{"assets": [{"name": "x", "download_count": -1}]}])
 
     def test_paginates_until_a_short_page(self):
-        with mock.patch.object(downloads, "PAGE_SIZE", 2):
+        with mock.patch.object(downloads, "GITHUB_PAGE_SIZE", 2):
             releases = downloads.fetch_releases(REPO, opener=github_opener())
         self.assertEqual(len(releases), 3)
 
@@ -196,7 +196,7 @@ class TestFetchAndWrite(unittest.TestCase):
     def test_partial_failure_keeps_the_working_channel(self):
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / "downloads.json"
-            with mock.patch.object(downloads, "PAGE_SIZE", 2):
+            with mock.patch.object(downloads, "GITHUB_PAGE_SIZE", 2):
                 snapshot = downloads.run(
                     out=out,
                     opener=broken,
@@ -211,7 +211,7 @@ class TestFetchAndWrite(unittest.TestCase):
     def test_success_writes_both_channels(self):
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / "downloads.json"
-            with mock.patch.object(downloads, "PAGE_SIZE", 2):
+            with mock.patch.object(downloads, "GITHUB_PAGE_SIZE", 2):
                 snapshot = downloads.run(
                     out=out,
                     opener=pypi_opener(),

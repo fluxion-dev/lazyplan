@@ -42,7 +42,7 @@ URL = "https://pypistats.org/api/packages/{package}/overall"
 GITHUB_URL = "https://api.github.com/repos/{repo}/releases?per_page=100&page={page}"
 USER_AGENT = "lazyplan-site/1.0 (+https://github.com/fluxion-dev/lazyplan)"
 TIMEOUT = 20.0
-PAGE_SIZE = 100
+GITHUB_PAGE_SIZE = 100
 MAX_PAGES = 10
 
 
@@ -91,7 +91,7 @@ def fetch_releases(
         if not isinstance(payload, list):
             raise StatsError("release payload is not a list")
         releases.extend(item for item in payload if isinstance(item, dict))
-        if len(payload) < PAGE_SIZE:
+        if len(payload) < GITHUB_PAGE_SIZE:
             return releases
     raise StatsError("release pagination did not finish")
 

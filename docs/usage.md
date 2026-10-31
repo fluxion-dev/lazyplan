@@ -91,6 +91,12 @@ data or write to the database. The section is 8 rows tall and hides on
 terminals narrower than 100 columns, so an 80x24 terminal keeps the tree and
 preview unchanged.
 
+**Progress** covers every plan, not just the focused one. It shows overall
+completion, the five milestones with the newest task activity (then the most
+open work), time since the earliest recorded event, and an ETA. The ETA uses
+completions from the last 14 days and shows a date, `complete`, or `—` when
+there is not enough velocity to forecast.
+
 ### Staged updates in the TUI
 
 When a newer release exists, the status bar shows `update vX.Y.Z` and a toast

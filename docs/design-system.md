@@ -73,6 +73,13 @@ TUI).
 - Card styling lives in `design.py` (`#metrics`, `.metric-card`,
   `.metric-title`, `.metric-body`). Panel plans replace one card body
   without touching the section.
+- The Progress card is global: it rolls up every plan and does not follow
+  tree focus. It shows done/total and a percentage, the top five
+  milestones by newest task event (then open tasks, then id), elapsed time
+  from the earliest add event, and an ETA. The ETA is
+  `ceil(remaining / (completions in the last 14 days / 14))`; it reads
+  `complete` when nothing remains and `—` when there is no velocity. No
+  estimates or invented timestamps are used.
 
 ## Command registry (`palette.py and help.py`)
 

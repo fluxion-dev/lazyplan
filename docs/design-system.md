@@ -47,11 +47,13 @@ TUI).
   own expand/collapse events during rebuilds. Done plans are dimmed and
   sorted last.
 - Reactive `rev` drives local refreshes; `_poll` handles external
-  `fingerprint()` diffs plus a `feed` toast. Background upgrade check runs
-  in `run_worker`.
+  `fingerprint()` diffs plus a `feed` toast. A separate update timer polls
+  the shared cache every 60s; one guarded worker calls `refresh_update`, and
+  the shared gate limits network refreshes to once per 5 minutes.
 - `#status` is human: `3 plans · 12 open · 1 doing`, active filters,
-  update notice, and a truncated last event. `#hints` is the current
-  key bar from `commands.hint_bar()`.
+  the update chip, and a truncated last event. The chip clears when the
+  installed version catches up, and each version toasts once. `#hints` is
+  the current key bar from `commands.hint_bar()`.
 - `_on_resize` re-applies the narrow/wide class and refreshes widths.
 - Native Tree space/shift+space stay parked no-ops; direct keys own
   status, folding, and creation.

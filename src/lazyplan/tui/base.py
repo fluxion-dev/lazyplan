@@ -110,6 +110,9 @@ class AppBase(App):
         def update_preview(self, force: bool = False) -> None:
             raise NotImplementedError
 
+        def action_update_prompt(self) -> None:
+            raise NotImplementedError
+
         def _on_row_action(self, e: RowAction) -> None:
             raise NotImplementedError
 

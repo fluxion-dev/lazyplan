@@ -16,7 +16,7 @@ except ImportError:  # pragma: no cover
 
 from ...design import escape_markup
 from ...update_stage import stage_update
-from ...upgrade import InstallInfo, guard_message
+from ...upgrade import InstallInfo, UpgradeError, guard_message, parse_version
 
 if _TEXTUAL_OK:
 
@@ -31,13 +31,20 @@ if _TEXTUAL_OK:
             self.latest = latest
             self.info = info
             self._done = False
+            self._newer = self._is_newer()
+
+        def _is_newer(self) -> bool:
+            try:
+                return parse_version(self.latest) > parse_version(self.installed)
+            except UpgradeError:
+                return False
 
         def compose(self) -> ComposeResult:
             with Vertical(id="dlg"):
                 yield Label("Update lpui")
                 yield Static(self._body(), id="update-body")
                 with Horizontal(classes="btn-row"):
-                    if self.info.upgradeable:
+                    if self.info.upgradeable and self._newer:
                         yield Button(
                             f"Download v{self.latest}",
                             id="update-download",
@@ -52,15 +59,26 @@ if _TEXTUAL_OK:
                 f"method     {escape_markup(self.info.method)}",
                 "",
             ]
-            if self.info.upgradeable:
-                lines.append("Download now and it applies the next time lpui starts.")
-            else:
+            if not self.info.upgradeable:
                 lines.append(escape_markup(guard_message(self.info)))
+            elif not self._newer:
+                try:
+                    same = parse_version(self.latest) == parse_version(self.installed)
+                except UpgradeError:
+                    same = False
+                if same:
+                    lines.append("You are already on the latest release.")
+                else:
+                    lines.append(
+                        "Downgrades are disabled. This build is newer than the latest release."
+                    )
+            else:
+                lines.append("Download now and it applies the next time lpui starts.")
             return "\n".join(lines)
 
         @on(Button.Pressed, "#update-download")
         def _download(self) -> None:
-            if self._done:
+            if self._done or not self._newer or not self.info.upgradeable:
                 return
             button = self.query_one("#update-download", Button)
             button.disabled = True
@@ -70,7 +88,7 @@ if _TEXTUAL_OK:
 
         def _download_worker(self) -> None:
             try:
-                staged = stage_update(self.latest, self.info.method)
+                staged = stage_update(self.latest, self.info.method, installed=self.installed)
             except Exception as exc:  # noqa: BLE001 - show the user the failure
                 self.app.call_from_thread(self._failed, str(exc))
             else:

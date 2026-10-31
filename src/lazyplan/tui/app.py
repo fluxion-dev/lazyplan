@@ -46,6 +46,7 @@ from ..upgrade import (
     detect,
     latest_version,
     notice_text,
+    parse_version,
     remember_latest,
     update_check_enabled,
 )
@@ -54,6 +55,7 @@ from .base import AppBase
 from .bulk import BulkMixin
 from .filters import FilterMixin
 from .preview import PreviewMixin
+from .screens.update import UpdateScreen
 from .tree import FoldTree, TreeMixin
 
 STATUS_CYCLE: list[Status | None] = [None, Status.TODO, Status.DOING, Status.DONE]
@@ -161,6 +163,23 @@ if _TEXTUAL_OK:
             self._spinner_rows: dict[tuple[str, int], str] = {}
             self._spinner_enabled: bool = True
             self._spinner_timer: Any = None
+
+        def action_update_prompt(self) -> None:
+            """Open the update screen for a known or cached newer release."""
+            latest = self._update_latest or (cached_latest(max_age=UPDATE_CACHE_TTL) or "")
+            if not latest:
+                self.notify("no update available")
+                return
+            installed = package_version()
+            try:
+                if parse_version(latest) <= parse_version(installed):
+                    self.notify(f"lpui v{installed} is up to date")
+                    return
+            except UpgradeError:
+                self.notify("cannot compare the update versions")
+                return
+            info = self._update_info or detect()
+            self.push_screen(UpdateScreen(installed, latest, info))
 
         def _check_update(self) -> None:
             """One background latest-version check per session; cache first."""
@@ -291,6 +310,8 @@ def run(db_path: str | None = None) -> int:
             startup_notice = f"update v{detail} installed — restart lpui ({exc})"
     elif state == "error":
         startup_notice = f"update failed: {detail}"
+    elif state == "downgrade":
+        startup_notice = f"refused to downgrade to v{detail}"
     else:
         failure = read_failure()
         if failure:

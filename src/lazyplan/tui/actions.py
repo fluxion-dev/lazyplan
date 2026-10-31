@@ -24,13 +24,11 @@ except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
 from .. import services
-from ..cli.parser import package_version
 from ..models import Status
 from ..palette import COMMANDS, by_id
 from ..render import render_git_status
 from ..store import ClaimConflict
 from ..templates import load_template
-from ..upgrade import UPDATE_CACHE_TTL, cached_latest, detect
 from .base import AppBase
 from .screens import (
     ConfirmScreen,
@@ -41,7 +39,6 @@ from .screens import (
     NewPlanScreen,
     NewTaskScreen,
     PaletteScreen,
-    UpdateScreen,
 )
 from .screens.source import SourceScreen
 
@@ -206,15 +203,6 @@ if _TEXTUAL_OK:
 
         def action_help(self) -> None:
             self.push_screen(HelpScreen())
-
-        def action_update_prompt(self) -> None:
-            """Open the update screen for the known or cached release."""
-            latest = self._update_latest or (cached_latest(max_age=UPDATE_CACHE_TTL) or "")
-            if not latest:
-                self.notify("no update available")
-                return
-            info = self._update_info or detect()
-            self.push_screen(UpdateScreen(package_version(), latest, info))
 
         def action_add_criterion(self) -> None:
             """Prompt for a new criterion on the selected row."""

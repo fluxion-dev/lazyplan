@@ -85,7 +85,7 @@ class TestUpdateScreen(unittest.IsolatedAsyncioTestCase):
                 screen.query_one("#update-download", Button).press()
                 await self.app.workers.wait_for_complete()
                 await pilot.pause()
-            stage.assert_called_once_with("9.9.9", PIPX)
+            stage.assert_called_once_with("9.9.9", PIPX, installed="0.27.2")
             self.assertIn(
                 "Downloaded v9.9.9", str(screen.query_one("#update-body", Static).render())
             )
@@ -129,6 +129,39 @@ class TestUpdateScreen(unittest.IsolatedAsyncioTestCase):
             screen = await self._open(InstallInfo(SOURCE, False, "checkout"))
             await pilot.pause()
             self.assertIn("git pull", str(screen.query_one("#update-body").render()))
+
+    async def test_equal_latest_hides_download(self):
+        from lazyplan.tui.screens.update import UpdateScreen
+
+        async with self.app.run_test() as pilot:
+            screen = UpdateScreen("0.27.2", "0.27.2", InstallInfo(PIPX, True))
+            self.app.push_screen(screen)
+            await pilot.pause()
+            self.assertEqual(len(screen.query("#update-download")), 0)
+            self.assertIn("already on the latest", str(screen.query_one("#update-body").render()))
+
+    async def test_older_latest_hides_download(self):
+        from lazyplan.tui.screens.update import UpdateScreen
+
+        async with self.app.run_test() as pilot:
+            screen = UpdateScreen("0.28.0", "0.27.2", InstallInfo(PIPX, True))
+            self.app.push_screen(screen)
+            await pilot.pause()
+            self.assertEqual(len(screen.query("#update-download")), 0)
+            self.assertIn("Downgrades are disabled", str(screen.query_one("#update-body").render()))
+
+    async def test_cached_older_notice_does_not_open_the_screen(self):
+        async with self.app.run_test() as pilot:
+            self.app._update_latest = ""
+            with (
+                mock.patch.object(tui_mod, "cached_latest", return_value="0.27.1"),
+                mock.patch.object(tui_mod, "package_version", return_value="0.28.0"),
+                mock.patch.object(self.app, "notify") as toast,
+            ):
+                self.app.action_update_prompt()
+                await pilot.pause()
+            toast.assert_called_once()
+            self.assertNotEqual(self.app.screen.__class__.__name__, "UpdateScreen")
 
 
 @unittest.skipUnless(tui_mod is not None and tui_mod._TEXTUAL_OK, "textual not installed")

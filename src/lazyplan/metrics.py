@@ -21,6 +21,8 @@ _DONE = re.compile(r"^task #(\d+) -> done$")
 _TASK_REF = re.compile(r"^(?:T#|task #)(\d+)\b")
 ETA_WINDOW_DAYS = 14
 MILESTONE_LIMIT = 5
+ACTIVITY_WEEKS = 12
+ACTIVITY_DAYS = ACTIVITY_WEEKS * 7
 
 
 @dataclass(frozen=True)
@@ -167,6 +169,22 @@ def _top_milestones(
     return tuple(row for _newest, row in rows[:limit])
 
 
+def _activity(events: list[dict], now: float) -> tuple[DayActivity, ...]:
+    """Daily completions for the 12 weeks ending on the local today."""
+    today = date.fromtimestamp(now)
+    start = today - timedelta(days=ACTIVITY_DAYS - 1)
+    counts: dict[date, int] = {}
+    for when in _done_times(events):
+        day = date.fromtimestamp(when)
+        if start <= day <= today:
+            counts[day] = counts.get(day, 0) + 1
+    days: list[DayActivity] = []
+    for offset in range(ACTIVITY_DAYS):
+        day = start + timedelta(days=offset)
+        days.append(DayActivity(day=day, done=counts.get(day, 0)))
+    return tuple(days)
+
+
 def _progress(
     store: Store,
     tasks_by_milestone: dict[int, list[Task]],
@@ -218,7 +236,9 @@ def snapshot(store: Store, now: float | None = None) -> MetricsSnapshot:
     """Build the dashboard snapshot from one task and event read."""
     tasks_by_milestone = store.tasks_map()
     events = _events(store)
+    stamp = time.time() if now is None else now
     return MetricsSnapshot(
-        progress=_progress(store, tasks_by_milestone, events, now),
+        activity=_activity(events, stamp),
+        progress=_progress(store, tasks_by_milestone, events, stamp),
         status=_status(_flatten(tasks_by_milestone)),
     )

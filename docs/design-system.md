@@ -24,8 +24,7 @@ Plan and milestone rows show compact source counts (`2c · 1 PR · 1 stale`)
 and repo chips; task rows show up to two short SHAs plus `+N`, a stale `!`,
 and a PR chip. The preview expands those counts with the newest commit and
 changed-file count. Titles keep priority over chips via width truncation.
-Rows with commits, pull requests, or repo links end in a single-cell `⎇`
-marker (`SOURCE_MARKER`); unlinked rows are byte-identical to before.
+Provenance stays in the chips; rows do not append a separate marker glyph.
 
 Empty states come from `EMPTY_NO_PLANS` / `EMPTY_FEED` (same in CLI and
 TUI).
@@ -98,8 +97,9 @@ cascade summary; `Esc` backs out. Delete focuses Cancel by default.
 Its tree is the same `NavTree`, so `j`/`k`, `left`/`right`, click-select,
 and click-arrow folding behave exactly like the main tree. It groups cached
 provenance into repository → commit → changed file, with linked PRs under
-the repo, and keeps a Static preview for the highlighted node. Every source
-row ends in `⎇`. Highlighting a commit or file reads a
+the repo, and keeps a Static preview for the highlighted node. Rows rely on
+their labels and counts; no marker glyph is appended. Highlighting a commit or
+file reads a
 bounded unified diff through `source.read_diff` (LRU keyed by repo, sha,
 path) and renders file/hunk headers, old/new line numbers, and green/red
 add/remove lines. Preview caps are `DIFF_PREVIEW_LINES` and

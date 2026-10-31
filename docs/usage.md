@@ -773,8 +773,8 @@ Keys:
 - `r` rebuilds from cached data and clears the diff cache; `esc` returns.
 
 The detail page shows a compact source summary and hints at `g`. The main tree
-shows compact commit/PR chips and a single-cell `⎇` marker on rows that have
-commits, pull requests, or repo links. Rows without provenance stay unchanged.
+shows compact commit/PR chips on rows that have commits or pull requests.
+Rows without provenance stay unchanged.
 `F` cycles source filters: all, linked, has PR, stale, unlinked, claims,
 blocked, attention. Dirty state is
 shown per selected checkout; it is not a whole-tree filter because it requires

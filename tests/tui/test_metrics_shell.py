@@ -31,6 +31,13 @@ def _within(region, width: int, height: int) -> bool:
     )
 
 
+def _row_text(body: str, name: str) -> str:
+    for line in body.splitlines():
+        if name in line:
+            return line
+    return ""
+
+
 @unittest.skipUnless(tui_mod is not None and tui_mod._TEXTUAL_OK, "textual not installed")
 class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:
@@ -56,7 +63,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
                 card = section.query_one(f"#{card_id}")
                 self.assertIn(title, str(card.query_one(".metric-title").content))
 
-    async def test_cards_start_with_empty_states(self) -> None:
+    async def test_cards_show_data_and_the_remaining_empty_state(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
@@ -64,7 +71,8 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
             bodies = [str(card.query_one(".metric-body").render()) for card in section.children]
             self.assertIn("no completions yet", bodies[0])
             self.assertIn("0% 0/1", bodies[1])
-            self.assertIn("no tasks yet", bodies[2])
+            self.assertIn("todo", bodies[2])
+            self.assertIn("done", bodies[2])
 
     async def test_section_is_eight_rows(self) -> None:
         app = tui_mod.create_app(self.db)
@@ -95,6 +103,30 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
             after = str(card.query_one(".metric-body").render())
         self.assertIn("0% 0/1", before)
         self.assertIn("100% 1/1 · complete", after)
+
+    async def test_status_card_updates_after_a_status_edit(self) -> None:
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            card = app.query_one("#metric-status")
+            before = str(card.query_one(".metric-body").render())
+            services.set_status(self.store, "task", self.task_id, Status.DONE, actor="qa")
+            app.refresh_all()
+            await pilot.pause()
+            after = str(card.query_one(".metric-body").render())
+        self.assertTrue(_row_text(before, "todo").endswith("100%"))
+        self.assertTrue(_row_text(after, "done").endswith("100%"))
+
+    async def test_blocked_edit_updates_the_status_card(self) -> None:
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            card = app.query_one("#metric-status")
+            self.store.set_blocked(self.task_id, True, "waiting", actor="qa")
+            app.refresh_all()
+            await pilot.pause()
+            body = str(card.query_one(".metric-body").render())
+        self.assertIn(" 1 ", _row_text(body, "blocked"))
 
     async def test_focus_changes_leave_progress_alone(self) -> None:
         other = self.store.add_plan("Other plan")

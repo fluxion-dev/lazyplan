@@ -21,6 +21,11 @@ class StatusDistributionTest(unittest.TestCase):
         self.milestone = self.store.add_milestone(self.plan.id, "M")
         self.tasks = [self.store.add_task(self.milestone.id, f"T{n}") for n in range(4)]
 
+    def _status(self, store: Store | None = None) -> metrics.StatusBreakdown:
+        result = metrics.snapshot(store or self.store).status
+        self.assertIsNotNone(result)
+        return result  # type: ignore[return-value]
+
     def _move(self, index: int, status: Status) -> None:
         services.set_status(self.store, "task", self.tasks[index].id, status, actor="qa")
 
@@ -28,22 +33,22 @@ class StatusDistributionTest(unittest.TestCase):
         self._move(1, Status.DOING)
         self._move(2, Status.DONE)
         self._move(3, Status.DONE)
-        status = metrics.status_distribution(self.store)
+        status = self._status()
         self.assertEqual((status.todo, status.doing, status.done), (1, 1, 2))
         self.assertEqual(status.total, 4)
 
     def test_blocked_is_an_overlay(self) -> None:
         self._move(0, Status.DOING)
         self.store.set_blocked(self.tasks[0].id, True, "waiting", actor="qa")
-        status = metrics.status_distribution(self.store)
+        status = self._status()
         self.assertEqual(status.doing, 1)
         self.assertEqual(status.blocked, 1)
         self.assertEqual(status.total, 4)
 
     def test_blocking_does_not_change_status_shares(self) -> None:
-        before = metrics.status_distribution(self.store)
+        before = self._status()
         self.store.set_blocked(self.tasks[0].id, True, "waiting", actor="qa")
-        after = metrics.status_distribution(self.store)
+        after = self._status()
         self.assertEqual(after.blocked, 1)
         self.assertEqual(after.todo, before.todo)
         self.assertEqual(after.total, before.total)
@@ -52,14 +57,14 @@ class StatusDistributionTest(unittest.TestCase):
     def test_shares_use_all_tasks(self) -> None:
         self._move(1, Status.DOING)
         self._move(2, Status.DONE)
-        status = metrics.status_distribution(self.store)
+        status = self._status()
         shares = [status.share(status.todo), status.share(status.doing), status.share(status.done)]
         self.assertEqual(shares, [50, 25, 25])
         self.assertEqual(sum(shares), 100)
 
     def test_empty_store_has_zero_rows(self) -> None:
         empty = Store(os.path.join(self.tmp.name, "empty.db"))
-        status = metrics.status_distribution(empty)
+        status = self._status(empty)
         self.assertEqual(status.total, 0)
         self.assertEqual(status.share(0), 0)
 

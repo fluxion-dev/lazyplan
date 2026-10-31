@@ -105,9 +105,9 @@ def _events(store: Store) -> list[dict]:
     return list(reversed(store.feed(limit=1_000_000)))
 
 
-def _all_tasks(store: Store) -> list[Task]:
-    """Every task in one query, in creation order."""
-    return [task for tasks in store.tasks_map().values() for task in tasks]
+def _flatten(tasks_by_milestone: dict[int, list[Task]]) -> list[Task]:
+    """Every task in one snapshot, in creation order."""
+    return [task for tasks in tasks_by_milestone.values() for task in tasks]
 
 
 def _add_times(events: list[dict]) -> list[float]:
@@ -132,15 +132,14 @@ def _done_times(events: list[dict]) -> list[float]:
 
 def _top_milestones(
     store: Store,
+    tasks_by_milestone: dict[int, list[Task]],
     latest: dict[int, float],
     limit: int = MILESTONE_LIMIT,
 ) -> tuple[MilestoneProgress, ...]:
     """The busiest milestones, newest activity first."""
     rows: list[tuple[float, MilestoneProgress]] = []
-    tasks_by_milestone = store.tasks_map()
-    milestones_by_plan = store.milestones_map()
-    for plan in store.list_plans():
-        for milestone in milestones_by_plan.get(plan.id, []):
+    for milestones in store.milestones_map().values():
+        for milestone in milestones:
             tasks = tasks_by_milestone.get(milestone.id, [])
             if not tasks:
                 continue
@@ -151,7 +150,7 @@ def _top_milestones(
                     newest,
                     MilestoneProgress(
                         milestone_id=milestone.id,
-                        plan_id=plan.id,
+                        plan_id=milestone.plan_id,
                         title=milestone.title,
                         done=done,
                         total=len(tasks),
@@ -168,11 +167,15 @@ def _top_milestones(
     return tuple(row for _newest, row in rows[:limit])
 
 
-def overall_progress(store: Store, now: float | None = None) -> OverallProgress:
-    """Done/total tasks across every plan, the elapsed time, and the ETA."""
-    tasks = _all_tasks(store)
+def _progress(
+    store: Store,
+    tasks_by_milestone: dict[int, list[Task]],
+    events: list[dict],
+    now: float | None,
+) -> OverallProgress:
+    """Completion, elapsed time, and ETA from one task and event snapshot."""
+    tasks = _flatten(tasks_by_milestone)
     done = sum(1 for task in tasks if task.status == Status.DONE)
-    events = _events(store)
     starts = _add_times(events)
     stamp = time.time() if now is None else now
     elapsed = None
@@ -198,13 +201,11 @@ def overall_progress(store: Store, now: float | None = None) -> OverallProgress:
         eta_days=eta_days,
         eta_date=eta_date,
         complete=complete,
-        milestones=_top_milestones(store, _latest_task_events(events)),
+        milestones=_top_milestones(store, tasks_by_milestone, _latest_task_events(events)),
     )
 
 
-def status_distribution(store: Store) -> StatusBreakdown:
-    """Task counts by lifecycle state plus the blocked overlay."""
-    tasks = _all_tasks(store)
+def _status(tasks: list[Task]) -> StatusBreakdown:
     return StatusBreakdown(
         todo=sum(1 for task in tasks if task.status == Status.TODO),
         doing=sum(1 for task in tasks if task.status == Status.DOING),
@@ -214,12 +215,10 @@ def status_distribution(store: Store) -> StatusBreakdown:
 
 
 def snapshot(store: Store, now: float | None = None) -> MetricsSnapshot:
-    """Build the dashboard snapshot.
-
-    Each panel plan fills its own section without changing the host.
-    """
-    stamp = time.time() if now is None else now
+    """Build the dashboard snapshot from one task and event read."""
+    tasks_by_milestone = store.tasks_map()
+    events = _events(store)
     return MetricsSnapshot(
-        progress=overall_progress(store, now=stamp),
-        status=status_distribution(store),
+        progress=_progress(store, tasks_by_milestone, events, now),
+        status=_status(_flatten(tasks_by_milestone)),
     )

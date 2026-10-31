@@ -25,6 +25,11 @@ class ProgressAggregationTest(unittest.TestCase):
         self.store.add_task(milestone.id, "Second")
         return plan.id, milestone.id
 
+    def _progress(self, now: float | None = None) -> metrics.OverallProgress:
+        result = metrics.snapshot(self.store, now=now).progress
+        self.assertIsNotNone(result)
+        return result  # type: ignore[return-value]
+
     def _earliest_add(self) -> float:
         return min(metrics._add_times(metrics._events(self.store)))
 
@@ -33,7 +38,7 @@ class ProgressAggregationTest(unittest.TestCase):
         second_plan = self.store.add_plan("Second plan")
         milestone = self.store.add_milestone(second_plan.id, "Other")
         self.store.add_task(milestone.id, "Third")
-        progress = metrics.overall_progress(self.store)
+        progress = self._progress()
         self.assertEqual(progress.total, 3)
         self.assertEqual(progress.done, 0)
         self.assertEqual(progress.percent, 0)
@@ -42,18 +47,18 @@ class ProgressAggregationTest(unittest.TestCase):
         self._seed()
         all_tasks = [task for tasks in self.store.tasks_map().values() for task in tasks]
         services.set_status(self.store, "task", all_tasks[0].id, Status.DONE, actor="qa")
-        progress = metrics.overall_progress(self.store)
+        progress = self._progress()
         self.assertEqual((progress.done, progress.total), (1, 2))
         self.assertEqual(progress.percent, 50)
 
     def test_elapsed_uses_the_earliest_add_event(self) -> None:
         self._seed()
         start = self._earliest_add()
-        progress = metrics.overall_progress(self.store, now=start + 3_600)
+        progress = self._progress(now=start + 3_600)
         self.assertEqual(progress.elapsed_seconds, 3_600)
 
     def test_no_events_means_no_elapsed_time(self) -> None:
-        self.assertEqual(metrics.overall_progress(self.store).elapsed_seconds, None)
+        self.assertEqual(self._progress().elapsed_seconds, None)
 
     def test_snapshot_carries_progress(self) -> None:
         self._seed()
@@ -79,7 +84,7 @@ class ProgressAggregationTest(unittest.TestCase):
         for index, (milestone_id, task_id) in enumerate(created, start=1):
             self._set_event_time(f"M#{milestone_id} %", 1_000 + index)
             self._set_event_time(f"T#{task_id} %", 1_000 + index)
-        progress = metrics.overall_progress(self.store, now=2_000)
+        progress = self._progress(now=2_000)
         self.assertEqual(len(progress.milestones), 5)
         self.assertEqual(
             [item.title for item in progress.milestones],
@@ -93,7 +98,7 @@ class ProgressAggregationTest(unittest.TestCase):
             self._set_event_time(f"T#{task_id} %", 1_000 + index)
         first_task = created[0][1]
         services.set_status(self.store, "task", first_task, Status.DONE, actor="qa")
-        progress = metrics.overall_progress(self.store)
+        progress = self._progress()
         self.assertEqual(progress.milestones[0].title, "M1")
         self.assertEqual(progress.milestones[0].done, 1)
 
@@ -110,7 +115,7 @@ class ProgressAggregationTest(unittest.TestCase):
         ]
         for task in tasks:
             self._set_event_time(f"T#{task.id} %", 1_000)
-        titles = [item.title for item in metrics.overall_progress(self.store, now=2_000).milestones]
+        titles = [item.title for item in self._progress(now=2_000).milestones]
         self.assertEqual(titles, ["Second", "First", "Third"])
 
     def test_eta_uses_the_fourteen_day_rate(self) -> None:
@@ -119,13 +124,13 @@ class ProgressAggregationTest(unittest.TestCase):
         tasks = [self.store.add_task(milestone.id, f"T{n}") for n in range(4)]
         for task in tasks[:2]:
             services.set_status(self.store, "task", task.id, Status.DONE, actor="qa")
-        progress = metrics.overall_progress(self.store)
+        progress = self._progress()
         self.assertAlmostEqual(progress.daily_rate, 2 / 14)
         self.assertEqual(progress.eta_days, 14)
 
     def test_zero_velocity_has_no_eta(self) -> None:
         self._seed()
-        progress = metrics.overall_progress(self.store)
+        progress = self._progress()
         self.assertEqual(progress.daily_rate, 0)
         self.assertIsNone(progress.eta_days)
         self.assertFalse(progress.complete)
@@ -134,7 +139,7 @@ class ProgressAggregationTest(unittest.TestCase):
         _plan, _milestone = self._seed()
         for task in [task for tasks in self.store.tasks_map().values() for task in tasks]:
             services.set_status(self.store, "task", task.id, Status.DONE, actor="qa")
-        progress = metrics.overall_progress(self.store)
+        progress = self._progress()
         self.assertTrue(progress.complete)
         self.assertIsNone(progress.eta_days)
 
@@ -146,7 +151,7 @@ class ProgressAggregationTest(unittest.TestCase):
         services.set_status(self.store, "task", tasks[1].id, Status.DONE, actor="qa")
         self._set_event_time(f"task #{tasks[0].id} -> done", 0)
         self._set_event_time(f"task #{tasks[1].id} -> done", 2_000_000)
-        progress = metrics.overall_progress(self.store, now=2_000_000)
+        progress = self._progress(now=2_000_000)
         self.assertAlmostEqual(progress.daily_rate, 1 / 14)
         self.assertEqual(progress.eta_days, 14)
 

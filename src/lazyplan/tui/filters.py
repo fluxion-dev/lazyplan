@@ -194,7 +194,9 @@ if _TEXTUAL_OK:
             if not self.show_all:
                 bits.append(f"recent {services.DEFAULT_PLAN_LIMIT}")
             if self._update_notice is not None:
-                bits.append("update available")
+                bits.append(
+                    f"update v{self._update_latest}" if self._update_latest else "update available"
+                )
             text = " · ".join(bits)
             if note:
                 text += f" — {note}"

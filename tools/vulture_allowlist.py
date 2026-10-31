@@ -119,6 +119,10 @@ _.watch_rev
 _._on_selection_changed
 _._on_row_action
 _.action_clear_filter
+# Textual widget state and screen handlers dispatched by decorator.
+disabled
+_._later
+_._download
 bubble
 rev
 run_wizard

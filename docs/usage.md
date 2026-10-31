@@ -83,6 +83,26 @@ On Windows the same command manages pipx and venv installs. If the automatic
 upgrade cannot run, reinstall with `pipx install --backend pip lazyplan-tui`.
 A source checkout updates with `git pull`.
 
+### Staged updates in the TUI
+
+When a newer release exists, the status bar shows `update vX.Y.Z` and the
+one-time toast still appears. Press `U` (or run **Update lpui** from the
+palette) to open the Update screen. It shows the installed and latest versions,
+the detected install method, and two actions: **Download** and **Later**.
+
+Download fetches the exact wheel from PyPI, checks its SHA256 against the PyPI
+JSON, and caches it under the shared home (`~/.lazyplan/updates/`, or
+`%LOCALAPPDATA%\lazyplan\updates\` on Windows). The next time the TUI starts,
+lpui claims the stage, installs the cached wheel, and re-execs into the new
+version before the interface opens. Agent and machine-readable CLI calls never
+download or apply anything.
+
+The feature covers pipx and venv installs. rpm, deb, and source checkouts show
+their existing package-manager or `git pull` guidance instead of a Download
+button. A failed download leaves no stage behind. A failed apply keeps the old
+version runnable, parks the stage, and shows one notice on the next launch; the
+Update screen offers a retry after the next download.
+
 ## Start
 
 ```bash

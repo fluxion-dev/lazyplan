@@ -503,6 +503,18 @@ COMMANDS: tuple[Command, ...] = (
         help_hint="export the selected plan to Markdown",
     ),
     Command(
+        id="update-lpui",
+        label="Update lpui",
+        section=APP,
+        key="U",
+        context="always",
+        handler="update_prompt",
+        aliases=("update", "upgrade", "new version"),
+        help_group="APP",
+        help_hint="download a newer release for the next launch",
+        tui_only=True,
+    ),
+    Command(
         id="help",
         label="Help",
         section=APP,

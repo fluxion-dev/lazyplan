@@ -11,6 +11,7 @@ bump reactive rev, external DB changes arrive via fingerprint() poll + feed toas
 from __future__ import annotations
 
 import os
+import sys
 from typing import Any
 
 try:
@@ -37,6 +38,7 @@ from ..design import (
 )
 from ..models import Status
 from ..store import Store
+from ..update_stage import apply_on_launch, clear_failure, read_failure
 from ..upgrade import (
     UPDATE_CACHE_TTL,
     UpgradeError,
@@ -92,6 +94,7 @@ if _TEXTUAL_OK:
             Binding("F", "filter_source", "Source filter", show=False),
             Binding("A", "toggle_show_all", "All plans", show=False),
             Binding("r", "refresh", "Refresh", show=False),
+            Binding("U", "update_prompt", "Update"),
             Binding("question_mark", "help", "Help"),
             Binding("q", "quit", "Quit"),
         ]
@@ -142,6 +145,9 @@ if _TEXTUAL_OK:
             self._last_click_at: float = 0.0
             self._fp: Any = store.fingerprint()
             self._update_notice: str | None = None
+            self._update_latest: str = ""
+            self._update_info: Any = None
+            self._startup_notice: str = ""
             self._update_toasted: bool = False
             self._pending_note: str = ""
             self._mounted: bool = False
@@ -173,9 +179,10 @@ if _TEXTUAL_OK:
                         remember_latest(latest)
                     except OSError:
                         pass
-            notice = notice_text(detect(), package_version(), latest)
+            info = detect()
+            notice = notice_text(info, package_version(), latest)
             if notice is not None:
-                self.call_from_thread(self._announce_update, notice)
+                self.call_from_thread(self._announce_update, notice, latest, info)
 
         def compose(self) -> ComposeResult:
             with Vertical(id="panel"):
@@ -220,6 +227,8 @@ if _TEXTUAL_OK:
             if self._spinner_enabled:
                 self._spinner_timer = self.set_interval(SPINNER_INTERVAL, self._spin)
             self.run_worker(self._check_update, thread=True, exclusive=True)
+            if self._startup_notice:
+                self.notify(self._startup_notice, timeout=10)
             self.query_one("#tree", Tree).focus()
 
         def _remember_spinner(
@@ -251,16 +260,20 @@ if _TEXTUAL_OK:
                     mark = " [bold green]✓[/]" if key in self.marked else ""
                     node.set_label(prefix + suffix + mark)
 
-        def _announce_update(self, notice: str) -> None:
+        def _announce_update(self, notice: str, latest: str = "", info: Any = None) -> None:
             self._update_notice = notice
+            self._update_latest = latest
+            self._update_info = info
             if not self._update_toasted:
                 self._update_toasted = True
                 self.notify(notice, timeout=8)
             self._refresh_status()
 
-    def create_app(db_path: str | None = None) -> LazyplanApp:
+    def create_app(db_path: str | None = None, startup_notice: str = "") -> LazyplanApp:
         """Build the app bound to a store."""
-        return LazyplanApp(Store(db_path))
+        app = LazyplanApp(Store(db_path))
+        app._startup_notice = startup_notice
+        return app
 
 
 def run(db_path: str | None = None) -> int:
@@ -269,5 +282,19 @@ def run(db_path: str | None = None) -> int:
         print("Textual not installed. Run: pip install -e . then: lpui ui")
         print("Fallback (no TUI): lpui list")
         return 3
-    create_app(db_path).run()
+    startup_notice = ""
+    state, detail = apply_on_launch(package_version())
+    if state == "applied":
+        try:
+            os.execv(sys.executable, [sys.executable, "-m", "lazyplan", *sys.argv[1:]])
+        except OSError as exc:
+            startup_notice = f"update v{detail} installed — restart lpui ({exc})"
+    elif state == "error":
+        startup_notice = f"update failed: {detail}"
+    else:
+        failure = read_failure()
+        if failure:
+            startup_notice = f"update failed: {failure}"
+            clear_failure()
+    create_app(db_path, startup_notice).run()
     return 0

@@ -10,6 +10,7 @@ from .forms import (
 )
 from .help import HelpScreen, PaletteScreen
 from .source import SourceScreen
+from .update import UpdateScreen
 
 __all__ = [
     "ConfirmScreen",
@@ -21,4 +22,5 @@ __all__ = [
     "NewTaskScreen",
     "PaletteScreen",
     "SourceScreen",
+    "UpdateScreen",
 ]

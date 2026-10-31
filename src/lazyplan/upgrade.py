@@ -267,6 +267,80 @@ def remember_latest(
     os.replace(temp, path)
 
 
+def update_gate_path(home: str | Path | None = None) -> Path:
+    """Shared refresh-gate file path in the lazyplan home."""
+    from .repo import shared_home
+
+    return shared_home(home) / UPDATE_GATE_NAME
+
+
+def _read_gate(path: Path) -> float | None:
+    try:
+        data = json.loads(textfile.read(path))
+        return float(data["next_at"])
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
+def claim_refresh(
+    home: str | Path | None = None,
+    now: float | None = None,
+    interval: float | None = None,
+) -> bool:
+    """Claim the shared network-refresh slot; True only for the winner.
+
+    The file records the next allowed refresh. An expired gate is removed
+    before an exclusive create, so two instances racing for the same slot
+    produce one winner and one ``FileExistsError``.
+    """
+    stamp = time.time() if now is None else now
+    step = network_interval() if interval is None else interval
+    path = update_gate_path(home)
+    next_at = _read_gate(path)
+    if next_at is not None:
+        if stamp < next_at:
+            return False
+    elif path.exists():
+        # A claim may be mid-write; steal it only once it looks abandoned.
+        try:
+            age = stamp - path.stat().st_mtime
+        except OSError:
+            return False
+        if age < UPDATE_GATE_STALE:
+            return False
+    try:
+        path.unlink()
+    except FileNotFoundError:
+        pass
+    except OSError:
+        return False
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    except FileExistsError:
+        return False
+    except OSError:
+        return False
+    with os.fdopen(fd, "w", encoding="utf-8") as handle:
+        handle.write(json.dumps({"next_at": stamp + step}) + "\n")
+    return True
+
+
+def defer_refresh(
+    home: str | Path | None = None,
+    now: float | None = None,
+    delay: float | None = None,
+) -> None:
+    """Push the next shared refresh out after a failed check."""
+    stamp = time.time() if now is None else now
+    wait = UPDATE_BACKOFF if delay is None else delay
+    path = update_gate_path(home)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp = path.with_name(f"{path.name}.tmp")
+    textfile.write(temp, json.dumps({"next_at": stamp + wait}) + "\n")
+    os.replace(temp, path)
+
+
 def latest_version(timeout: float = RESOLVE_TIMEOUT) -> str:
     """Latest release version from the GitHub /releases/latest redirect."""
     req = urllib.request.Request(RELEASES_LATEST, headers={"User-Agent": "lpui-upgrade"})

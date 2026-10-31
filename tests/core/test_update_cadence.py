@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import os
+import tempfile
 import unittest
+from pathlib import Path
 
 from lazyplan import upgrade
 
@@ -57,6 +60,50 @@ class NetworkIntervalTest(unittest.TestCase):
         }
         self.assertEqual(upgrade.poll_interval(env), 20.0)
         self.assertEqual(upgrade.network_interval(env), 600.0)
+
+
+class RefreshGateTest(unittest.TestCase):
+    """One shared slot gates the network across every open instance."""
+
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.home = Path(self.tmp.name) / "home"
+
+    def _claim(self, now: float, interval: float = 300.0) -> bool:
+        return upgrade.claim_refresh(self.home, now=now, interval=interval)
+
+    def _gate(self) -> Path:
+        return upgrade.update_gate_path(self.home)
+
+    def test_one_winner_per_interval(self) -> None:
+        self.assertTrue(self._claim(1_000))
+        self.assertFalse(self._claim(1_001))
+        self.assertFalse(self._claim(1_299))
+        self.assertTrue(self._claim(1_300))
+
+    def test_backoff_is_honored_by_every_instance(self) -> None:
+        self.assertTrue(self._claim(1_000))
+        upgrade.defer_refresh(self.home, now=1_000, delay=900)
+        self.assertFalse(self._claim(1_899))
+        self.assertTrue(self._claim(1_900))
+
+    def test_abandoned_partial_gate_is_stolen(self) -> None:
+        gate = self._gate()
+        gate.parent.mkdir(parents=True, exist_ok=True)
+        gate.write_text("", encoding="utf-8")
+        os.utime(gate, (800, 800))
+        self.assertTrue(self._claim(1_000))
+
+    def test_fresh_partial_gate_stays_locked(self) -> None:
+        gate = self._gate()
+        gate.parent.mkdir(parents=True, exist_ok=True)
+        gate.write_text("", encoding="utf-8")
+        os.utime(gate, (990, 990))
+        self.assertFalse(self._claim(1_000))
+
+    def test_gate_lives_in_the_shared_home(self) -> None:
+        self.assertEqual(self._gate(), self.home / ".lazyplan" / upgrade.UPDATE_GATE_NAME)
 
 
 if __name__ == "__main__":

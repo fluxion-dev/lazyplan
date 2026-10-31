@@ -82,7 +82,8 @@ class ProgressCardRenderTest(unittest.IsolatedAsyncioTestCase):
         progress = metrics.snapshot(self.store).progress
         assert progress is not None
         headline = _headline(progress)
-        self.assertIn("100% 3/3 · complete", headline)
+        self.assertIn("100% 3/3", headline)
+        self.assertIn("complete", headline)
         self.assertNotIn("ETA", headline)
 
 

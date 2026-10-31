@@ -61,7 +61,7 @@ TUI).
 ## Metrics dashboard (`tui/metrics/`)
 
 - `#metrics` is a third always-on section inside `#panel`, below `#main`.
-  It is 12 rows tall, holds three bordered cards in a `Horizontal` row,
+  It is 13 rows tall, holds three bordered cards in a `Horizontal` row,
   and hides below 100 columns; `_apply_layout` toggles `#metrics.narrow`
   with the same breakpoint as the preview.
 - `MetricsSection` hosts `metric-heatmap` (Daily activity),

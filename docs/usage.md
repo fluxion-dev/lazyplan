@@ -87,7 +87,7 @@ A source checkout updates with `git pull`.
 
 The bottom of the TUI keeps three read-only chart cards: **Daily activity**,
 **Project progress**, and **Task status**. They summarize what the tree already
-tracks and never change data or write to the database. The section is 12 rows
+tracks and never change data or write to the database. The section is 13 rows
 tall and hides on terminals narrower than 100 columns, so an 80x24 terminal
 keeps the tree and preview unchanged. The charts are drawn with
 `textual-plotext` and follow the app theme.

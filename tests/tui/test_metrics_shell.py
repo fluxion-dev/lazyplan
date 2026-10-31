@@ -79,11 +79,11 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
             self.assertIn("0% 0/1", progress)
             self.assertTrue(status_plot.display)
 
-    async def test_section_is_twelve_rows(self) -> None:
+    async def test_section_is_thirteen_rows(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
-            self.assertEqual(app.query_one("#metrics", MetricsSection).region.height, 12)
+            self.assertEqual(app.query_one("#metrics", MetricsSection).region.height, 13)
 
     async def test_status_edit_reaches_the_host_on_refresh(self) -> None:
         app = tui_mod.create_app(self.db)
@@ -107,7 +107,8 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             after = str(card.query_one(".metric-head").render())
         self.assertIn("0% 0/1", before)
-        self.assertIn("100% 1/1 · complete", after)
+        self.assertIn("100% 1/1", after)
+        self.assertIn("complete", after)
 
     async def test_status_card_updates_after_a_status_edit(self) -> None:
         app = tui_mod.create_app(self.db)

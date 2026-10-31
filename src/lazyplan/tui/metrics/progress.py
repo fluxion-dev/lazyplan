@@ -27,9 +27,9 @@ def _elapsed_text(seconds: float | None) -> str:
 def _headline(progress: OverallProgress) -> str:
     head = f"{progress.percent}% {progress.done}/{progress.total}"
     if progress.complete:
-        return head + " · complete"
+        return head + "\ncomplete"
     eta = progress.eta_date.isoformat() if progress.eta_date is not None else "—"
-    return f"{head} · {_elapsed_text(progress.elapsed_seconds)} · ETA {eta}"
+    return f"{head}\n{_elapsed_text(progress.elapsed_seconds)} · ETA {eta}"
 
 
 class ProgressCard(MetricCard):

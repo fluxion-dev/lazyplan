@@ -158,6 +158,31 @@ A new top-level module needs a layer entry in `tests/test_architecture.py`.
 exceptions in `tests/architecture_baseline.json`. Shrink an exception in the
 commit that splits the file, and delete it once the file is under budget.
 
+## Textual skill suite
+
+The repo-local Textual skills live under `.agents/skills/textual*`. The suite is
+pinned to Textual 8.2.8 and generated from the curated catalogs in
+`tools/textual_catalog_*.py`:
+
+- `textual` — router and coverage manifest.
+- `textual-widgets`, `textual-styles`, `textual-events`, `textual-css-types` —
+  the reference surface.
+- `textual-layout` — containers, screens, and composition.
+- `textual-guides` — every page under the Textual guide.
+
+Regenerate after changing a catalog or the pin:
+
+```bash
+.venv/bin/python tools/gen_textual_skills.py
+.venv/bin/python tools/gen_textual_skills.py --check
+```
+
+`--check` verifies the manifest, required headings, official URLs, dead local
+links, the installed Textual version, and the pyproject lower bound. It runs in
+`./tools/check.sh`. When bumping Textual, update `PIN` in the generator, refresh
+the catalogs against the new reference, regenerate, and review the diff. Do not
+copy official pages verbatim; summarize and link them.
+
 ## Screenshots
 
 Site screenshots come from the real TUI, never hand-drawn. `tools/capture-screens.py`

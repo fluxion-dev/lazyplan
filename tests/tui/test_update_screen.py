@@ -151,17 +151,18 @@ class TestUpdateScreen(unittest.IsolatedAsyncioTestCase):
             self.assertIn("Downgrades are disabled", str(screen.query_one("#update-body").render()))
 
     async def test_cached_older_notice_does_not_open_the_screen(self):
-        async with self.app.run_test() as pilot:
-            self.app._update_latest = ""
-            with (
-                mock.patch.object(tui_mod, "cached_latest", return_value="0.27.1"),
-                mock.patch.object(tui_mod, "package_version", return_value="0.28.0"),
-                mock.patch.object(self.app, "notify") as toast,
-            ):
-                self.app.action_update_prompt()
-                await pilot.pause()
-            toast.assert_called_once()
-            self.assertNotEqual(self.app.screen.__class__.__name__, "UpdateScreen")
+        with mock.patch.object(self.app, "_check_update"):
+            async with self.app.run_test() as pilot:
+                self.app._update_latest = ""
+                with (
+                    mock.patch.object(tui_mod, "cached_latest", return_value="0.27.1"),
+                    mock.patch.object(tui_mod, "package_version", return_value="0.28.0"),
+                    mock.patch.object(self.app, "notify") as toast,
+                ):
+                    self.app.action_update_prompt()
+                    await pilot.pause()
+                toast.assert_called_once()
+                self.assertNotEqual(self.app.screen.__class__.__name__, "UpdateScreen")
 
 
 @unittest.skipUnless(tui_mod is not None and tui_mod._TEXTUAL_OK, "textual not installed")

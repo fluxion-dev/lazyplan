@@ -20,6 +20,8 @@ echo "== mypy (strict incl. untyped defs) =="
 "$VENV_BIN"/mypy src
 echo "== vulture (no dead code outside the allowlist) =="
 "$VENV_BIN"/python -m vulture src/ tools/vulture_allowlist.py
+echo "== textual skills =="
+"$VENV_BIN"/python tools/gen_textual_skills.py --check
 echo "== xenon (no block worse than C) =="
 "$VENV_BIN"/python -m xenon --max-absolute C src
 echo "== man page in sync =="

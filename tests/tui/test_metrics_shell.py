@@ -165,6 +165,23 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
             after = str(card.query_one(".metric-head").render())
         self.assertEqual(before, after)
 
+    async def test_plots_fit_at_100_columns(self) -> None:
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(100, 40)) as pilot:
+            await pilot.pause()
+            section = app.query_one("#metrics", MetricsSection)
+            self.assertTrue(section.display)
+            for card_id in CARD_IDS:
+                card = app.query_one(f"#{card_id}")
+                self.assertTrue(_within(card.region, 100, 40))
+                plot = card.query_one("PlotextPlot")
+                if plot.display:
+                    self.assertTrue(_within(plot.region, 100, 40))
+                    self.assertLessEqual(
+                        plot.region.x + plot.region.width,
+                        card.region.x + card.region.width,
+                    )
+
     async def test_section_hides_below_100_columns(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(80, 24)) as pilot:

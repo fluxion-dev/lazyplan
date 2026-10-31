@@ -500,3 +500,35 @@ or the next plan row so the next release has the context.
   site shows 0.28.1.
 - Follow-up: make `tag-release` tolerant of an existing tag so the duplicate
   dispatch cannot fail the run.
+
+### v0.29.0 (2026-10-31)
+
+- Minor bump from 0.28.1. The TUI now polls the shared update cache every 60
+  seconds and refreshes the network at most every 5 minutes through a shared
+  gate, with a 15-minute failure backoff, a live chip, and one toast per
+  version.
+- Feature and prep shipped together in PR
+  [#71](https://github.com/fluxion-dev/lazyplan/pull/71), merged as `829b291`.
+  Local `./tools/check.sh` printed ALL GATES GREEN. Its CI run
+  [41242739250](https://github.com/fluxion-dev/lazyplan/actions/runs/41242739250)
+  passed Ubuntu (3m44s) and macOS (6m53s).
+- The **bump** workflow (`part=minor`) created
+  [41243358689](https://github.com/fluxion-dev/lazyplan/actions/runs/41243358689)
+  and release PR [#72](https://github.com/fluxion-dev/lazyplan/pull/72).
+- The bot CI run started in `action_required`; it was approved as
+  [41243373354](https://github.com/fluxion-dev/lazyplan/actions/runs/41243373354).
+  Ubuntu passed in 3m44s and macOS in 7m15s. The release PR merged as
+  `3e52aad`.
+- The bump `publish` job succeeded and dispatched `tag-release`
+  ([41244064568](https://github.com/fluxion-dev/lazyplan/actions/runs/41244064568))
+  and Pages
+  ([41244066449](https://github.com/fluxion-dev/lazyplan/actions/runs/41244066449))
+  without the manual fallback. `tag-release` created annotated tag `v0.29.0`
+  and dispatched
+  [release.yml](https://github.com/fluxion-dev/lazyplan/actions/runs/41244078013);
+  the release and PyPI jobs succeeded.
+- Verified: seven release assets including `install.sh`, PyPI 0.29.0, an
+  isolated `pip install --no-cache-dir lazyplan-tui==0.29.0` that printed
+  0.29.0 and imported `poll_interval`, `network_interval`, and
+  `refresh_update`, curated release notes, and the live site showing 0.29.0.
+- No deviations from the release flow and no fix-forward commits.

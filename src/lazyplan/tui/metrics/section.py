@@ -30,6 +30,6 @@ if _TEXTUAL_OK:
         def refresh_snapshot(self, snapshot: MetricsSnapshot) -> None:
             """Push one snapshot into the cards.
 
-            The shell renders empty states; each panel plan replaces its
-            card body without changing the host.
+            Each card owns its body; the section never computes metrics.
             """
+            self.query_one("#metric-progress", ProgressCard).refresh_progress(snapshot.progress)

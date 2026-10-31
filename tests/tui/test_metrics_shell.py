@@ -63,7 +63,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
             section = app.query_one("#metrics", MetricsSection)
             bodies = [str(card.query_one(".metric-body").render()) for card in section.children]
             self.assertIn("no completions yet", bodies[0])
-            self.assertIn("no plans yet", bodies[1])
+            self.assertIn("0% 0/1", bodies[1])
             self.assertIn("no tasks yet", bodies[2])
 
     async def test_section_is_eight_rows(self) -> None:
@@ -82,6 +82,32 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
                 app.refresh_all()
                 await pilot.pause()
         self.assertEqual(refresh.call_count, 1)
+
+    async def test_progress_card_updates_after_a_status_edit(self) -> None:
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            card = app.query_one("#metric-progress")
+            before = str(card.query_one(".metric-body").render())
+            services.set_status(self.store, "task", self.task_id, Status.DONE, actor="qa")
+            app.refresh_all()
+            await pilot.pause()
+            after = str(card.query_one(".metric-body").render())
+        self.assertIn("0% 0/1", before)
+        self.assertIn("100% 1/1 · complete", after)
+
+    async def test_focus_changes_leave_progress_alone(self) -> None:
+        other = self.store.add_plan("Other plan")
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            card = app.query_one("#metric-progress")
+            before = str(card.query_one(".metric-body").render())
+            app.selected = ("plan", other.id)
+            app.update_preview()
+            await pilot.pause()
+            after = str(card.query_one(".metric-body").render())
+        self.assertEqual(before, after)
 
     async def test_section_hides_below_100_columns(self) -> None:
         app = tui_mod.create_app(self.db)

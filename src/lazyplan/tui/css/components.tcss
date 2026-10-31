@@ -1,0 +1,35 @@
+/* Reusable card and action-row pieces. */
+
+.metric-card {
+    width: 1fr;
+    height: 1fr;
+    min-width: 18;
+    padding: 0 1;
+    margin: 0 1 0 0;
+    border: solid $lp-border;
+    background: $lp-surface;
+}
+
+.metric-title {
+    height: 1;
+    color: $lp-text-muted;
+    text-style: bold;
+}
+
+.metric-empty {
+    height: 1fr;
+    color: $lp-text-muted;
+}
+
+.metric-head {
+    height: 2;
+}
+
+#metrics PlotextPlot {
+    height: 1fr;
+}
+
+.btn-row {
+    width: 1fr;
+    height: auto;
+}

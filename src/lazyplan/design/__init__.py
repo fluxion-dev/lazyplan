@@ -57,20 +57,13 @@ from .text import status_prefix as status_prefix
 from .text import status_word as status_word
 from .text import truncate as truncate
 from .tokens import ANSI as ANSI
-from .tokens import APP_CSS as APP_CSS
 from .tokens import ASCII_ICONS as ASCII_ICONS
-from .tokens import BAR_HEIGHT as BAR_HEIGHT
-from .tokens import BORDER as BORDER
 from .tokens import ICONS as ICONS
 from .tokens import INDENT as INDENT
-from .tokens import PANEL_HEIGHT as PANEL_HEIGHT
 
 __all__ = [
     "ANSI",
-    "APP_CSS",
     "ASCII_ICONS",
-    "BAR_HEIGHT",
-    "BORDER",
     "EMPTY_COMMITS",
     "EMPTY_FEED",
     "EMPTY_NO_PLANS",
@@ -80,7 +73,6 @@ __all__ = [
     "KEYMAP",
     "LABEL_LETTERS",
     "MILESTONE",
-    "PANEL_HEIGHT",
     "PALETTE_COMMANDS",
     "PALETTE_SECTIONS",
     "PLAN",

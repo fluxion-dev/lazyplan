@@ -1,0 +1,55 @@
+/* Shell layout: the top-level regions and the responsive breakpoint. */
+
+#panel {
+    height: 1fr;
+    border: solid $lp-border;
+}
+
+#main {
+    height: 1fr;
+}
+
+#nav {
+    width: 1fr;
+    min-width: 30;
+    border-right: solid $lp-border;
+}
+
+#preview {
+    width: 1fr;
+    min-width: 30;
+    padding: 0 1;
+}
+
+#main.narrow #preview {
+    display: none;
+}
+
+#main.narrow #nav {
+    border-right: none;
+}
+
+#metrics {
+    height: 13;
+    padding: 0 1;
+}
+
+#metrics.narrow {
+    display: none;
+}
+
+#preview-body {
+    height: auto;
+}
+
+#status {
+    height: 1;
+    background: $primary;
+}
+
+#hints {
+    height: 1;
+    background: $panel;
+    color: $lp-text-muted;
+    padding: 0 1;
+}

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import os
 import sys
+from pathlib import Path
 from typing import Any
 
 try:
@@ -31,7 +32,6 @@ except ImportError:  # pragma: no cover
 
 from ..cli.parser import package_version
 from ..design import (
-    APP_CSS,
     SPINNER_FRAMES,
     SPINNER_INTERVAL,
     status_prefix,
@@ -62,6 +62,7 @@ from .tree import FoldTree, TreeMixin
 
 STATUS_CYCLE: list[Status | None] = [None, Status.TODO, Status.DOING, Status.DONE]
 DOUBLE_CLICK_WINDOW = 0.5  # seconds between two clicks on one row
+CSS_DIR = Path(__file__).parent / "css"
 
 
 if _TEXTUAL_OK:
@@ -77,7 +78,11 @@ if _TEXTUAL_OK:
         """Single-panel TUI: the plan tree."""
 
         TITLE = "lazyplan"
-        CSS = APP_CSS
+        CSS_PATH = [
+            CSS_DIR / "app.tcss",
+            CSS_DIR / "components.tcss",
+            CSS_DIR / "screens.tcss",
+        ]
         ENABLE_COMMAND_PALETTE = False
         BINDINGS = [
             Binding("enter", "open_detail", "Open"),

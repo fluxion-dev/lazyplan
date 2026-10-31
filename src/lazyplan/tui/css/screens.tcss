@@ -1,0 +1,115 @@
+/* Screen and modal chrome. Scope everything to a screen id. */
+
+ModalScreen {
+    align: center middle;
+}
+
+#dlg {
+    width: 90%;
+    max-width: 72;
+    height: auto;
+    border: solid $lp-border;
+    background: $lp-surface;
+    padding: 1;
+}
+
+#dlg TextArea {
+    height: 4;
+}
+
+#f-why, #f-what {
+    height: 3;
+}
+
+#dlg #palette-scroll {
+    height: auto;
+    max-height: 16;
+}
+
+#help {
+    width: 90%;
+    height: 90%;
+    border: solid $lp-border;
+    background: $lp-surface;
+    padding: 1;
+}
+
+#help-scroll {
+    height: 1fr;
+}
+
+#detail-page {
+    height: 1fr;
+    border: solid $lp-border;
+    padding: 0 1;
+}
+
+#detail-head {
+    height: 1;
+    background: $panel;
+    padding: 0 1;
+}
+
+#detail-read {
+    height: 1fr;
+    padding: 0 1;
+}
+
+#detail-edit {
+    height: 1fr;
+    padding: 0 1;
+}
+
+#detail-edit TextArea {
+    height: 5;
+}
+
+#detail-hints {
+    height: 1;
+    background: $panel;
+    color: $lp-text-muted;
+    padding: 0 1;
+}
+
+#source-page {
+    height: 1fr;
+    border: solid $lp-border;
+    padding: 0 1;
+}
+
+#source-head {
+    height: 3;
+    background: $panel;
+    padding: 0 1;
+}
+
+#source-filter {
+    height: 3;
+}
+
+#source-main {
+    height: 1fr;
+}
+
+#source-tree-wrap {
+    width: 1fr;
+    min-width: 30;
+    border-right: solid $lp-border;
+}
+
+#source-preview {
+    width: 1fr;
+    min-width: 30;
+    padding: 0 1;
+}
+
+#source-preview-body {
+    height: auto;
+}
+
+#dlg Button, #help Button, #detail-page Button {
+    min-width: 0;
+    width: auto;
+    height: 3;
+    padding: 0 1;
+}

@@ -1,57 +1,13 @@
-"""Visual tokens shared by the CLI and the TUI.
+"""Shared non-colour design tokens.
 
-Keep colours, heights, borders, indentation, and icon maps here. Row text
-lives in ``text``, labels and rows in ``rows``, and empty/message wording in
-``empty``. The package ``__init__`` re-exports the public names.
+Colours and layout live in the Textual theme and ``tui/css``. This module
+keeps the plain-text indentation, ANSI codes, and icon maps that the CLI
+and setup wizard reuse. Row text lives in ``text``, labels and rows in
+``rows``, and empty/message wording in ``empty``. The package ``__init__``
+re-exports the public names.
 """
 
 from __future__ import annotations
-
-# -- visual tokens -------------------------------------------------------
-BORDER = "solid green"
-PANEL_HEIGHT = "1fr"
-BAR_HEIGHT = "1"  # activity line + statusbar: exactly one row each
-
-APP_CSS = f"""
-#panel {{ height: {PANEL_HEIGHT}; border: {BORDER}; }}
-#main {{ height: {PANEL_HEIGHT}; }}
-#nav {{ width: 1fr; min-width: 30; border-right: {BORDER}; }}
-#preview {{ width: 1fr; min-width: 30; padding: 0 1; }}
-#main.narrow #preview {{ display: none; }}
-#main.narrow #nav {{ border-right: none; }}
-#metrics {{ height: 13; padding: 0 1; }}
-#metrics.narrow {{ display: none; }}
-.metric-card {{ width: 1fr; height: 1fr; min-width: 18; padding: 0 1; margin: 0 1 0 0; border: {BORDER}; }}
-.metric-title {{ height: 1; color: $text-muted; text-style: bold; }}
-.metric-empty {{ height: 1fr; }}
-.metric-head {{ height: 2; }}
-#metrics PlotextPlot {{ height: 1fr; }}
-#preview-body {{ height: auto; }}
-#status {{ height: {BAR_HEIGHT}; background: $primary; }}
-#hints {{ height: {BAR_HEIGHT}; background: $panel; color: $text-muted; padding: 0 1; }}
-#dlg {{ width: 90%; max-width: 72; height: auto; border: {BORDER}; padding: 1; }}
-#dlg TextArea {{ height: 4; }}
-#f-why, #f-what {{ height: 3; }}
-#dlg #palette-scroll {{ height: auto; max-height: 16; }}
-#help {{ width: 90%; height: 90%; border: {BORDER}; padding: 1; }}
-#help-scroll {{ height: 1fr; }}
-#detail-page {{ height: 1fr; border: {BORDER}; padding: 0 1; }}
-#detail-head {{ height: 1; background: $panel; padding: 0 1; }}
-#detail-read {{ height: 1fr; padding: 0 1; }}
-#detail-edit {{ height: 1fr; padding: 0 1; }}
-#detail-edit TextArea {{ height: 5; }}
-#detail-hints {{ height: 1; background: $panel; color: $text-muted; padding: 0 1; }}
-#source-page {{ height: 1fr; border: {BORDER}; padding: 0 1; }}
-#source-head {{ height: 3; background: $panel; padding: 0 1; }}
-#source-filter {{ height: 3; }}
-#source-main {{ height: 1fr; }}
-#source-tree-wrap {{ width: 1fr; min-width: 30; border-right: {BORDER}; }}
-#source-preview {{ width: 1fr; min-width: 30; padding: 0 1; }}
-#source-preview-body {{ height: auto; }}
-ModalScreen {{ align: center middle; }}
-#dlg Button, #help Button, #detail-page Button {{ min-width: 0; width: auto; height: 3; padding: 0 1; }}
-.btn-row {{ width: 1fr; height: auto; }}
-"""
 
 # -- label language ---------------------------------------------------------
 # Canonical row grammar (plain text: `lpui list`, tests):

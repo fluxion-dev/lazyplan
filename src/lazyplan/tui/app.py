@@ -57,6 +57,7 @@ from .filters import FilterMixin
 from .metrics import MetricsSection
 from .preview import PreviewMixin
 from .screens.update import UpdateScreen
+from .theme import register_themes
 from .tree import FoldTree, TreeMixin
 
 STATUS_CYCLE: list[Status | None] = [None, Status.TODO, Status.DOING, Status.DONE]
@@ -138,6 +139,7 @@ if _TEXTUAL_OK:
 
         def __init__(self, store: Store) -> None:
             super().__init__()
+            self._theme = register_themes(self)
             self.store = store
             self.selected: tuple[str, int] | None = None
             self.status_filter: Status | None = None

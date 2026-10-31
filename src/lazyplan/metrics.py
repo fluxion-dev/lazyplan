@@ -202,10 +202,24 @@ def overall_progress(store: Store, now: float | None = None) -> OverallProgress:
     )
 
 
+def status_distribution(store: Store) -> StatusBreakdown:
+    """Task counts by lifecycle state plus the blocked overlay."""
+    tasks = _all_tasks(store)
+    return StatusBreakdown(
+        todo=sum(1 for task in tasks if task.status == Status.TODO),
+        doing=sum(1 for task in tasks if task.status == Status.DOING),
+        done=sum(1 for task in tasks if task.status == Status.DONE),
+        blocked=sum(1 for task in tasks if task.blocked),
+    )
+
+
 def snapshot(store: Store, now: float | None = None) -> MetricsSnapshot:
     """Build the dashboard snapshot.
 
     Each panel plan fills its own section without changing the host.
     """
     stamp = time.time() if now is None else now
-    return MetricsSnapshot(progress=overall_progress(store, now=stamp))
+    return MetricsSnapshot(
+        progress=overall_progress(store, now=stamp),
+        status=status_distribution(store),
+    )

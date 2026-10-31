@@ -35,5 +35,6 @@ if _TEXTUAL_OK:
 
             Each card owns its body; the section never computes metrics.
             """
+            self.query_one("#metric-heatmap", HeatmapCard).refresh_activity(snapshot.activity)
             self.query_one("#metric-progress", ProgressCard).refresh_progress(snapshot.progress)
             self.query_one("#metric-status", StatusCard).refresh_status(snapshot.status)

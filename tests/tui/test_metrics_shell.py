@@ -128,6 +128,22 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
             body = str(card.query_one(".metric-body").render())
         self.assertIn(" 1 ", _row_text(body, "blocked"))
 
+    async def test_heatmap_updates_after_a_done_toggle(self) -> None:
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            card = app.query_one("#metric-heatmap")
+            before = str(card.query_one(".metric-body").render())
+            services.set_status(self.store, "task", self.task_id, Status.DONE, actor="qa")
+            app.refresh_all()
+            await pilot.pause()
+            after = str(card.query_one(".metric-body").render())
+            titles = [app.query_one(f"#{card_id}") for card_id in CARD_IDS]
+        self.assertIn("no completions yet", before)
+        self.assertNotIn("no completions yet", after)
+        self.assertIn("█", after)
+        self.assertEqual(len(titles), 3)
+
     async def test_focus_changes_leave_progress_alone(self) -> None:
         other = self.store.add_plan("Other plan")
         app = tui_mod.create_app(self.db)

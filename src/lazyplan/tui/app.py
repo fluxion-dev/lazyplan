@@ -128,6 +128,12 @@ if _TEXTUAL_OK:
             changed = self._narrow is not narrow
             self._narrow = narrow
             main.set_class(narrow, "narrow")
+            try:
+                metrics = self.query_one("#metrics", MetricsSection)
+            except Exception:
+                pass
+            else:
+                metrics.set_class(narrow, "narrow")
             return changed
 
         def __init__(self, store: Store) -> None:

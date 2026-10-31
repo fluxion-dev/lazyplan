@@ -61,6 +61,15 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
             self.assertIn("no plans yet", bodies[1])
             self.assertIn("no tasks yet", bodies[2])
 
+    async def test_section_hides_below_100_columns(self) -> None:
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(80, 24)) as pilot:
+            await pilot.pause()
+            section = app.query_one("#metrics", MetricsSection)
+            self.assertFalse(section.display)
+            main = app.query_one("#main")
+            self.assertTrue(_within(main.region, 80, 24))
+
     async def test_refresh_pushes_a_snapshot_without_writing(self) -> None:
         app = tui_mod.create_app(self.db)
         events_before = len(self.store.feed(limit=10_000))

@@ -57,6 +57,18 @@ class TestDesignSystem(unittest.TestCase):
         self.assertEqual(design.metric_bar(5, 0).count("░"), design.METRIC_BAR_WIDTH)
         self.assertEqual(design.metric_bar(99, 10).count("█"), design.METRIC_BAR_WIDTH)
 
+    def test_heatmap_tokens_scale_to_the_busiest_day(self):
+        self.assertEqual(design.heatmap_color(0, 8), design.HEATMAP_EMPTY)
+        self.assertEqual(design.heatmap_color(1, 8), design.HEATMAP_SHADES[0])
+        self.assertEqual(design.heatmap_color(2, 8), design.HEATMAP_SHADES[1])
+        self.assertEqual(design.heatmap_color(4, 8), design.HEATMAP_SHADES[2])
+        self.assertEqual(design.heatmap_color(8, 8), design.HEATMAP_SHADES[3])
+        self.assertEqual(design.heatmap_color(9, 0), design.HEATMAP_EMPTY)
+        self.assertEqual(len(set(design.HEATMAP_SHADES)), 4)
+        for token in (design.HEATMAP_EMPTY, *design.HEATMAP_SHADES):
+            self.assertTrue(token.startswith("#"))
+        self.assertEqual(design.HEATMAP_CELL, "█")
+
     def test_spinner_frames_and_prefix(self):
         self.assertEqual(design.SPINNER_FRAMES, ("◐", "◓", "◑", "◒"))
         self.assertEqual(design.SPINNER_INTERVAL, 0.16)

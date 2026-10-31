@@ -126,6 +126,10 @@ BLOCKED_RICH = "red"
 
 METRIC_BAR_WIDTH = 10
 
+HEATMAP_CELL = "█"
+HEATMAP_EMPTY = "#30363d"
+HEATMAP_SHADES = ("#0e4429", "#006d32", "#26a641", "#39d353")
+
 
 def metric_bar(value: int, maximum: int, width: int = METRIC_BAR_WIDTH) -> str:
     """Rich-markup micro-bar scaled to *maximum*."""
@@ -133,6 +137,19 @@ def metric_bar(value: int, maximum: int, width: int = METRIC_BAR_WIDTH) -> str:
         return "[dim]" + "░" * width + "[/]"
     filled = min(width, max(0, round(value * width / maximum)))
     return f"[green]{'█' * filled}[/][dim]{'░' * (width - filled)}[/]"
+
+
+def heatmap_color(count: int, peak: int) -> str:
+    """Palette color for a daily count, scaled to the busiest day."""
+    if peak <= 0 or count <= 0:
+        return HEATMAP_EMPTY
+    if count >= peak:
+        return HEATMAP_SHADES[3]
+    if count * 2 >= peak:
+        return HEATMAP_SHADES[2]
+    if count * 4 >= peak:
+        return HEATMAP_SHADES[1]
+    return HEATMAP_SHADES[0]
 
 
 # The doing glyph is the first frame, so static output and frame 0 agree.

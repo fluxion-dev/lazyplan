@@ -67,6 +67,7 @@ LAYERS: dict[str, int] = {
     "tree_nav": PRESENTATION,
     "tui": PRESENTATION,
     "upgrade": PRESENTATION,
+    "update_stage": PRESENTATION,
     "__main__": ENTRY,
 }
 

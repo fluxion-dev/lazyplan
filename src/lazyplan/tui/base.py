@@ -33,6 +33,9 @@ class AppBase(App):
     _last_click_at: float
     _fp: Any
     _update_notice: str | None
+    _update_latest: str
+    _update_info: Any
+    _startup_notice: str
     _update_toasted: bool
     _pending_note: str
     _mounted: bool

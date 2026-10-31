@@ -158,6 +158,8 @@ tests enforce the match.
   used by tree filter and add-criterion.
 - `ConfirmScreen(text, confirm_label, variant)`: one destructive confirm,
   Cancel focused by default.
+- `UpdateScreen(installed, latest, info)`: one staged download with Download,
+  Later, a retryable error, and method-specific guard text; `U` opens it.
 
 ## Site navigation
 

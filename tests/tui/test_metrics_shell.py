@@ -85,6 +85,23 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             self.assertEqual(app.query_one("#metrics", MetricsSection).region.height, 13)
 
+    async def test_p117_chart_contract_is_pinned(self) -> None:
+        """Guard the merged P117 shape before the modernization refactor."""
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            section = app.query_one("#metrics", MetricsSection)
+            self.assertEqual(section.region.height, 13)
+            cards = [section.query_one(f"#{card_id}") for card_id in CARD_IDS]
+            self.assertEqual(len(cards), 3)
+            for card in cards:
+                self.assertIsNotNone(card.query_one("PlotextPlot"))
+                self.assertIsNotNone(card.query_one(".metric-empty"))
+            self.assertIsNotNone(section.query_one("#metric-progress-head"))
+            self.assertEqual(
+                str(section.query_one("#metric-heatmap-empty").render()), "no completions yet"
+            )
+
     async def test_status_edit_reaches_the_host_on_refresh(self) -> None:
         app = tui_mod.create_app(self.db)
         with mock.patch.object(MetricsSection, "refresh_snapshot") as refresh:

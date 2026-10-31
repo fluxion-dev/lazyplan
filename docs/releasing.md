@@ -420,3 +420,42 @@ or the next plan row so the next release has the context.
 - Follow-up for the next release: raise the bump `publish` wait above the
   Windows gate time, or treat the manual merge plus tag/Pages dispatch as the
   normal path. Keep an eye on `test_manual_expand_survives_refresh` on Windows.
+
+### v0.28.0 (2026-10-31)
+
+- Minor bump from 0.27.2. Added staged updates: a version chip, `U` and an
+  Update lpui palette command, a Download/Later screen, SHA256-verified wheel
+  caching, and apply-before-next-TUI-launch with re-exec for pipx and venv
+  installs. rpm, deb, and source installs keep their guard messages.
+- Feature and prep shipped together in PR
+  [#63](https://github.com/fluxion-dev/lazyplan/pull/63), merged as `94f03a7`.
+  Local `./tools/check.sh` printed ALL GATES GREEN, including a real 0.27.2
+  wheel staged and verified in a temp home.
+- PR [#63](https://github.com/fluxion-dev/lazyplan/pull/63) CI run
+  [41227980895](https://github.com/fluxion-dev/lazyplan/actions/runs/41227980895)
+  passed macOS and Ubuntu; Windows was still running 5 minutes after both, so
+  the merge proceeded under the agreed gate policy.
+- The **bump** workflow (`part=minor`) created
+  [run](https://github.com/fluxion-dev/lazyplan/actions/runs/41228869785) and
+  release PR [#64](https://github.com/fluxion-dev/lazyplan/pull/64). The bump
+  job succeeded.
+- The bot `ci` run started in `action_required`; it was approved through the
+  Actions API as
+  [41228888191](https://github.com/fluxion-dev/lazyplan/actions/runs/41228888191).
+  macOS and Ubuntu passed. Windows was still running at the 5-minute cutoff and
+  was skipped under the policy
+  ([job](https://github.com/fluxion-dev/lazyplan/actions/runs/41228888191/job/124618934471)).
+  The release PR merged as `1d9ffc3`.
+- `tag-release`
+  ([run](https://github.com/fluxion-dev/lazyplan/actions/runs/41229912004))
+  created annotated tag `v0.28.0` and dispatched
+  [release.yml](https://github.com/fluxion-dev/lazyplan/actions/runs/41229920552);
+  the release and PyPI jobs succeeded. Pages deployed on merge
+  ([41229912033](https://github.com/fluxion-dev/lazyplan/actions/runs/41229912033))
+  and again after the record commit.
+- PyPI served 0.28.0 after the simple-index lag; an isolated
+  `pip install --no-cache-dir lazyplan-tui==0.28.0` printed 0.28.0 and imported
+  `update_stage`. Curated notes replaced the generated release body. The live
+  site shows 0.28.0.
+- Follow-up: decide whether the Windows skip is temporary release policy or
+  whether `bump.yml` should gate only macOS and Ubuntu for release PRs.

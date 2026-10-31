@@ -160,6 +160,26 @@ class TestTuiNotice(unittest.IsolatedAsyncioTestCase):
                 await pilot.pause()
                 self.assertIsNone(self.app._update_notice)
 
+    async def test_chip_clears_when_current(self):
+        from textual.widgets import Label
+
+        info = upgrade.InstallInfo(upgrade.PIPX, True)
+        with mock.patch.object(tui_mod, "refresh_update", return_value=None):
+            async with self.app.run_test() as pilot:
+                await pilot.pause()
+                self.app._announce_update("update v9.9.9 available", "9.9.9", info)
+                await pilot.pause()
+                self.assertIn("update v9.9.9", str(self.app.query_one("#status", Label).content))
+                with (
+                    mock.patch.object(tui_mod, "package_version", return_value="9.9.9"),
+                    mock.patch.object(tui_mod, "detect", return_value=info),
+                ):
+                    self.app._apply_update("9.9.9")
+                await pilot.pause()
+                self.assertIsNone(self.app._update_notice)
+                self.assertEqual(self.app._update_latest, "")
+                self.assertNotIn("update v9.9.9", str(self.app.query_one("#status", Label).content))
+
     async def test_update_timer_stops_on_unmount(self):
         with mock.patch.object(tui_mod, "refresh_update", return_value=None):
             async with self.app.run_test() as pilot:

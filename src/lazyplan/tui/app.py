@@ -204,14 +204,25 @@ if _TEXTUAL_OK:
                 pass
 
         def _apply_update(self, latest: str | None) -> None:
-            """Show the chip after one update poll."""
+            """Show or clear the chip after one update poll."""
             self._update_checking = False
             if latest is None:
                 return
             info = detect()
             notice = notice_text(info, package_version(), latest)
-            if notice is not None:
+            if notice is None:
+                self._clear_update()
+            else:
                 self._announce_update(notice, latest, info)
+
+        def _clear_update(self) -> None:
+            """Drop the chip once the installed version catches up."""
+            if self._update_notice is None and not self._update_latest:
+                return
+            self._update_notice = None
+            self._update_latest = ""
+            self._update_info = None
+            self._refresh_status()
 
         def compose(self) -> ComposeResult:
             with Vertical(id="panel"):

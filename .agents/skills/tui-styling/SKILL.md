@@ -35,5 +35,5 @@ https://textual.textualize.io/guide/design/.
   `1fr/1fr` tree and preview, `#source-filter` is a hidden Input revealed by
   `/`. Keep the tree scroller and preview scroller independent.
 - Diff previews use Rich markup only: `[green]+` / `[red]-`, dim line-number
-  gutters, bold file headers, cyan hunk headers. `SOURCE_MARKER` (`⎇`) is a
-  single-cell dim suffix from `design.py`; never bake it into a title.
+  gutters, bold file headers, cyan hunk headers. Provenance lives in the row
+  chips from `design.py`; never bake a glyph into a title.

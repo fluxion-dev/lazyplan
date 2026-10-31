@@ -122,6 +122,7 @@ ASCII_ICONS = {
 STATUS_GLYPH = {"todo": "○", "doing": "◐", "done": "●"}
 STATUS_ANSI = {"todo": "90", "doing": "33", "done": "32"}
 STATUS_RICH = {"todo": "dim", "doing": "yellow", "done": "green"}
+BLOCKED_RICH = "red"
 
 METRIC_BAR_WIDTH = 10
 

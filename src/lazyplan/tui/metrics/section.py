@@ -13,6 +13,7 @@ except ImportError:  # pragma: no cover
 from ...metrics import MetricsSnapshot
 from .base import MetricCard
 from .progress import ProgressCard
+from .status import StatusCard
 
 if _TEXTUAL_OK:
 
@@ -25,7 +26,7 @@ if _TEXTUAL_OK:
         def compose(self) -> ComposeResult:
             yield MetricCard("metric-heatmap", "Activity", "no completions yet")
             yield ProgressCard()
-            yield MetricCard("metric-status", "Status", "no tasks yet")
+            yield StatusCard()
 
         def refresh_snapshot(self, snapshot: MetricsSnapshot) -> None:
             """Push one snapshot into the cards.

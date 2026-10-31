@@ -1,8 +1,9 @@
 # Download counts
 
-The landing page shows real download counts from two owners: PyPI and GitHub
-releases. Each channel is labeled and rendered on its own. Nothing is estimated,
-adjusted, or added across channels.
+The landing page shows one **Downloads** number: the mirror-inclusive PyPI
+total. The snapshot still carries the direct PyPI and GitHub release channels,
+and this page explains each one. Nothing is estimated, adjusted, or added across
+channels.
 
 ## Channels
 
@@ -12,10 +13,11 @@ adjusted, or added across channels.
 | Direct from PyPI | pypistats `without_mirrors` | Downloads served directly by PyPI |
 | GitHub release assets | GitHub releases API | Downloads of `install.sh`, deb, rpm, wheel, and sdist assets |
 
-The headline is the mirror-inclusive PyPI total because it is the broadest real
-number we can source. The direct figure is shown beside it so the mirror share
-is visible. GitHub asset downloads are a separate distribution channel and are
-not added to either PyPI figure.
+The Downloads value is the mirror-inclusive PyPI total because it is the
+broadest real number we can source. The direct and GitHub figures stay in the
+snapshot and are documented here; the strip does not display them. GitHub asset
+downloads are a separate distribution channel and are never added to either
+PyPI figure.
 
 ## Why the channels are not summed
 
@@ -32,8 +34,8 @@ with no honest meaning, so the page keeps them separate.
 - GitHub asset counts include every asset type, including the wheel and sdist,
   not just `install.sh`.
 
-These limits stay visible next to the strip and are the reason the page does not
-print a single combined "installs" figure.
+These limits live on this page, linked from the strip, and are the reason the
+page does not print a single combined "installs" figure.
 
 ## How the snapshot is built
 

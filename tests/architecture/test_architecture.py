@@ -52,6 +52,7 @@ LAYERS: dict[str, int] = {
     "stats": DOMAIN,
     "trace": DOMAIN,
     "lint": DOMAIN,
+    "metrics": DOMAIN,
     "services": SERVICES,
     "cli": PRESENTATION,
     "design": PRESENTATION,

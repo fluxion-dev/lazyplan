@@ -54,6 +54,7 @@ from .actions import ActionMixin
 from .base import AppBase
 from .bulk import BulkMixin
 from .filters import FilterMixin
+from .metrics import MetricsSection
 from .preview import PreviewMixin
 from .screens.update import UpdateScreen
 from .tree import FoldTree, TreeMixin
@@ -127,6 +128,12 @@ if _TEXTUAL_OK:
             changed = self._narrow is not narrow
             self._narrow = narrow
             main.set_class(narrow, "narrow")
+            try:
+                metrics = self.query_one("#metrics", MetricsSection)
+            except Exception:
+                pass
+            else:
+                metrics.set_class(narrow, "narrow")
             return changed
 
         def __init__(self, store: Store) -> None:
@@ -231,6 +238,7 @@ if _TEXTUAL_OK:
                         yield FoldTree("plans", id="tree")
                     with VerticalScroll(id="preview"):
                         yield Static("", id="preview-body")
+                yield MetricsSection()
             yield Label("", id="hints")
             yield Label("", id="status")
 

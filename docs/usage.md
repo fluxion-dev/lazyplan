@@ -83,6 +83,31 @@ On Windows the same command manages pipx and venv installs. If the automatic
 upgrade cannot run, reinstall with `pipx install --backend pip lazyplan-tui`.
 A source checkout updates with `git pull`.
 
+### Metrics dashboard
+
+The bottom of the TUI keeps three read-only chart cards: **Daily activity**,
+**Project progress**, and **Task status**. They summarize what the tree already
+tracks and never change data or write to the database. The section is 13 rows
+tall and hides on terminals narrower than 100 columns, so an 80x24 terminal
+keeps the tree and preview unchanged. The charts are drawn with
+`textual-plotext` and follow the app theme.
+
+**Daily activity** sums completions into 12 weekly bars, labelled with the
+week start dates. Each bar counts `done` transitions for that local week,
+including a task that was reopened and finished again.
+
+**Project progress** covers every plan, not just the focused one. The headline
+shows overall completion, time since the earliest recorded event, and an ETA;
+the bars show the five milestones with the newest task activity (then the most
+open work) on a 0/50/100% scale. The ETA uses completions from the last 14 days
+and shows a date, `complete`, or `—` when there is not enough velocity to
+forecast.
+
+**Task status** plots `todo`, `doing`, `done`, and `blocked` as horizontal
+bars, labelled with each share. Blocked is an overlay: a blocked task still
+counts in its lifecycle row, so only the three lifecycle shares add up to
+100%.
+
 ### Staged updates in the TUI
 
 When a newer release exists, the status bar shows `update vX.Y.Z` and a toast

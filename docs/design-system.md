@@ -58,6 +58,41 @@ TUI).
 - Native Tree space/shift+space stay parked no-ops; direct keys own
   status, folding, and creation.
 
+## Metrics dashboard (`tui/metrics/`)
+
+- `#metrics` is a third always-on section inside `#panel`, below `#main`.
+  It is 13 rows tall, holds three bordered cards in a `Horizontal` row,
+  and hides below 100 columns; `_apply_layout` toggles `#metrics.narrow`
+  with the same breakpoint as the preview.
+- `MetricsSection` hosts `metric-heatmap` (Daily activity),
+  `metric-progress` (Project progress), and `metric-status` (Task status).
+  Every card has a one-row title, a `PlotextPlot`, and an explicit empty
+  label that replaces the plot when there is no data.
+- Charts use `textual-plotext` (`PlotextPlot`) with the app's auto theme
+  and green bars. Plotext owns the axes, ticks, scaling, and resize
+  behavior; cards only configure the data and refresh the widget.
+- `refresh_all` builds one read-only `metrics.snapshot(store)` and calls
+  `MetricsSection.refresh_snapshot`. `metrics.py` holds frozen dataclasses
+  and chart-row helpers (`activity_weeks`, `milestone_bars`,
+  `status_bars`); it never writes, caches, or calls the network.
+- The Daily activity card sums the 84 local daily completions into 12
+  weekly bars. It labels every few weeks and uses two integer y ticks.
+  Counts come only from `task #N -> done` events, so a reopened task that
+  finishes again counts again.
+- The Project progress card is global: it rolls up every plan and does not
+  follow tree focus. A headline shows done/total and a percentage, the top
+  five milestones by newest task event (then open tasks, then id), elapsed
+  time from the earliest add event, and an ETA. The ETA is
+  `ceil(remaining / (completions in the last 14 days / 14))`; it reads
+  `complete` when nothing remains and `—` when there is no velocity. The
+  plot shows those five milestones as horizontal bars on a 0/50/100% axis.
+  No estimates or invented timestamps are used.
+- The Task status card shows `todo`, `doing`, `done`, and `blocked` as
+  horizontal bars labelled with their share. Status shares use all tasks
+  and sum to 100%. `blocked` is an overlay count from `Task.blocked`: a
+  blocked task stays in its status row, so the four rows can add up to more
+  than 100%. With no tasks the card shows its empty state.
+
 ## Command registry (`palette.py and help.py`)
 
 `Command` carries id, label, section, canonical verb/nouns, direct key,

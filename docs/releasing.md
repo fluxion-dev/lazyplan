@@ -459,3 +459,37 @@ or the next plan row so the next release has the context.
   site shows 0.28.0.
 - Follow-up: decide whether the Windows skip is temporary release policy or
   whether `bump.yml` should gate only macOS and Ubuntu for release PRs.
+
+### v0.28.1 (2026-10-31)
+
+- Patch bump from 0.28.0. Refuses downgrades at staging, apply, the pipx/venv
+  runners, and the Update screen. Older and equal targets are rejected before
+  any fetch or subprocess; a planted older stage is cleared. There is no
+  rollback flag.
+- Fix PR [#66](https://github.com/fluxion-dev/lazyplan/pull/66) merged as
+  `e961c94`. Local `./tools/check.sh` printed ALL GATES GREEN. Its CI run
+  [41233388241](https://github.com/fluxion-dev/lazyplan/actions/runs/41233388241)
+  passed macOS and Ubuntu; Windows was past the then-current 5-minute window,
+  so the merge proceeded under the gate policy.
+- The **bump** workflow (`part=patch`) created
+  [run](https://github.com/fluxion-dev/lazyplan/actions/runs/41234262668) and
+  release PR [#67](https://github.com/fluxion-dev/lazyplan/pull/67). The bump
+  job succeeded.
+- The bot `ci` run was approved as
+  [41234279514](https://github.com/fluxion-dev/lazyplan/actions/runs/41234279514).
+  macOS and Ubuntu passed. The gate policy changed to **3 minutes** before this
+  merge; Windows was still running at the cutoff and was skipped
+  ([job](https://github.com/fluxion-dev/lazyplan/actions/runs/41234279514/job/124634870226)).
+  The release PR merged as `e092772`.
+- **Deviation:** the merge push and the bump `publish` job both dispatched
+  `tag-release`. One run created annotated tag `v0.28.1`; the other
+  ([41234991313](https://github.com/fluxion-dev/lazyplan/actions/runs/41234991313))
+  failed trying to push a tag that already existed. The tag and
+  [release.yml](https://github.com/fluxion-dev/lazyplan/actions/runs/41235001343)
+  both succeeded, and PyPI serves 0.28.1.
+- PyPI's simple index lagged the JSON API; the first isolated install missed and
+  a later `pip install --no-cache-dir lazyplan-tui==0.28.1` printed 0.28.1 with
+  `require_newer` present. Curated notes replaced the generated body. The live
+  site shows 0.28.1.
+- Follow-up: make `tag-release` tolerant of an existing tag so the duplicate
+  dispatch cannot fail the run.

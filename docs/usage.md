@@ -83,6 +83,14 @@ On Windows the same command manages pipx and venv installs. If the automatic
 upgrade cannot run, reinstall with `pipx install --backend pip lazyplan-tui`.
 A source checkout updates with `git pull`.
 
+### Metrics dashboard
+
+The bottom of the TUI keeps three read-only cards: **Activity**, **Progress**,
+and **Status**. They summarize what the tree already tracks and never change
+data or write to the database. The section is 8 rows tall and hides on
+terminals narrower than 100 columns, so an 80x24 terminal keeps the tree and
+preview unchanged.
+
 ### Staged updates in the TUI
 
 When a newer release exists, the status bar shows `update vX.Y.Z` and a toast

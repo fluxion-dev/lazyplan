@@ -58,6 +58,22 @@ TUI).
 - Native Tree space/shift+space stay parked no-ops; direct keys own
   status, folding, and creation.
 
+## Metrics dashboard (`tui/metrics/`)
+
+- `#metrics` is a third always-on section inside `#panel`, below `#main`.
+  It is 8 rows tall and hidden below 100 columns; `_apply_layout` toggles
+  `#metrics.narrow` with the same breakpoint as the preview.
+- `MetricsSection` hosts three equal `MetricCard`s: `metric-heatmap`
+  (Activity), `metric-progress` (Progress), and `metric-status` (Status).
+  Every card has a one-row title and a body, and starts with an explicit
+  empty state.
+- `refresh_all` builds one read-only `metrics.snapshot(store)` and calls
+  `MetricsSection.refresh_snapshot`. `metrics.py` holds frozen dataclasses
+  only; it never writes, caches, or calls the network.
+- Card styling lives in `design.py` (`#metrics`, `.metric-card`,
+  `.metric-title`, `.metric-body`). Panel plans replace one card body
+  without touching the section.
+
 ## Command registry (`palette.py and help.py`)
 
 `Command` carries id, label, section, canonical verb/nouns, direct key,

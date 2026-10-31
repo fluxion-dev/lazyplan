@@ -373,3 +373,50 @@ or the next plan row so the next release has the context.
 - Follow-up for the next release: Windows now takes 43 minutes, more than twice
   the bump `publish` wait. Either raise the wait in `bump.yml` or treat the
   manual merge plus tag/Pages dispatch as the normal path.
+
+### v0.27.2 (2026-10-31)
+
+- Patch bump from 0.27.1. Removed the redundant source marker from TUI rows,
+  the source screen, and plain CLI output. Git integration, commit and PR
+  links, and the database schema did not change.
+- Prep PR [#56](https://github.com/fluxion-dev/lazyplan/pull/56) removed the
+  glyph and its helpers, updated tests and docs, regenerated the site
+  screenshots, and added the changelog entry. All three gates passed
+  ([run](https://github.com/fluxion-dev/lazyplan/actions/runs/41211315496));
+  Windows took 27m45s.
+- The **bump** workflow (`part=patch`) created
+  [run](https://github.com/fluxion-dev/lazyplan/actions/runs/41213605058) and
+  release PR [#57](https://github.com/fluxion-dev/lazyplan/pull/57). The bump
+  job succeeded; the post-merge `publish` job failed on its documented
+  20-minute wait.
+- The bot `ci` run started in `action_required`; it was approved through the
+  Actions API and passed as
+  [run](https://github.com/fluxion-dev/lazyplan/actions/runs/41213622344).
+  Windows took 40m20s. The release PR merged as `9f9c93d`.
+- The post-merge CI run on `main`
+  ([41213551634](https://github.com/fluxion-dev/lazyplan/actions/runs/41213551634))
+  failed one Windows TUI timing test,
+  `test_manual_expand_survives_refresh`; the release PR's own Windows gate
+  passed. The failed job was rerun and recorded as a known flake, not a release
+  blocker.
+- **Deviation:** because the publish job timed out, the documented manual
+  fallback was used. The merge push started
+  [tag-release](https://github.com/fluxion-dev/lazyplan/actions/runs/41218670132)
+  and [Pages](https://github.com/fluxion-dev/lazyplan/actions/runs/41218670127);
+  `tag-release` was also dispatched
+  ([run](https://github.com/fluxion-dev/lazyplan/actions/runs/41218694462))
+  and Pages again
+  ([run](https://github.com/fluxion-dev/lazyplan/actions/runs/41218723428)).
+  All succeeded and were idempotent.
+- `tag-release` created annotated tag `v0.27.2` and dispatched
+  [release.yml](https://github.com/fluxion-dev/lazyplan/actions/runs/41218680016);
+  the `release` and `publish-pypi` jobs succeeded. PyPI serves 0.27.2 with two
+  files, and an isolated `pip install --no-cache-dir lazyplan-tui==0.27.2`
+  reported 0.27.2 with the marker helpers absent.
+- Curated notes replaced the generated release notes. The deployed site shows
+  0.27.2 and the regenerated source-trail image returns 200. The local dist
+  check was skipped because npm is absent in this environment; the Pages
+  workflow built and deployed the site successfully.
+- Follow-up for the next release: raise the bump `publish` wait above the
+  Windows gate time, or treat the manual merge plus tag/Pages dispatch as the
+  normal path. Keep an eye on `test_manual_expand_survives_refresh` on Windows.

@@ -151,7 +151,7 @@ class TestUpdateScreen(unittest.IsolatedAsyncioTestCase):
             self.assertIn("Downgrades are disabled", str(screen.query_one("#update-body").render()))
 
     async def test_cached_older_notice_does_not_open_the_screen(self):
-        with mock.patch.object(self.app, "_check_update"):
+        with mock.patch.object(self.app, "_update_tick"):
             async with self.app.run_test() as pilot:
                 self.app._update_latest = ""
                 with (

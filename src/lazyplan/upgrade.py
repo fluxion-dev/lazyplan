@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import re
 import shutil
@@ -11,6 +12,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -24,6 +26,17 @@ UPGRADE_TIMEOUT = 300.0
 UPDATE_CACHE_NAME = "update.json"
 UPDATE_CACHE_TTL = 24 * 3600
 NO_UPDATE_ENV = "LAZYPLAN_NO_UPDATE_CHECK"
+UPDATE_POLL_ENV = "LAZYPLAN_UPDATE_INTERVAL"
+UPDATE_NETWORK_ENV = "LAZYPLAN_UPDATE_NETWORK_INTERVAL"
+UPDATE_POLL_INTERVAL = 60.0
+UPDATE_NETWORK_INTERVAL = 5 * 60.0
+UPDATE_BACKOFF = 15 * 60.0
+UPDATE_MIN_POLL = 5.0
+UPDATE_MAX_POLL = 3600.0
+UPDATE_MIN_NETWORK = 60.0
+UPDATE_MAX_NETWORK = 24 * 3600.0
+UPDATE_GATE_NAME = "update-gate.json"
+UPDATE_GATE_STALE = 120.0
 
 PIPX = "pipx"
 VENV = "venv"
@@ -159,6 +172,48 @@ def update_check_enabled() -> bool:
     return not os.environ.get(NO_UPDATE_ENV, "").strip()
 
 
+def _env_interval(
+    name: str,
+    default: float,
+    minimum: float,
+    maximum: float,
+    env: Mapping[str, str] | None,
+) -> float:
+    """Parse a seconds override, falling back to *default* and clamping."""
+    raw = (os.environ if env is None else env).get(name, "")
+    if not raw.strip():
+        return default
+    try:
+        value = float(raw)
+    except ValueError:
+        return default
+    if not math.isfinite(value):
+        return default
+    return min(max(value, minimum), maximum)
+
+
+def poll_interval(env: Mapping[str, str] | None = None) -> float:
+    """Seconds between TUI cache polls, from ``LAZYPLAN_UPDATE_INTERVAL``."""
+    return _env_interval(
+        UPDATE_POLL_ENV,
+        UPDATE_POLL_INTERVAL,
+        UPDATE_MIN_POLL,
+        UPDATE_MAX_POLL,
+        env,
+    )
+
+
+def network_interval(env: Mapping[str, str] | None = None) -> float:
+    """Seconds between shared network refreshes, from its env override."""
+    return _env_interval(
+        UPDATE_NETWORK_ENV,
+        UPDATE_NETWORK_INTERVAL,
+        UPDATE_MIN_NETWORK,
+        UPDATE_MAX_NETWORK,
+        env,
+    )
+
+
 def update_cache_path(home: str | Path | None = None) -> Path:
     """Cache file path in the shared lazyplan home."""
     from .repo import shared_home
@@ -212,6 +267,80 @@ def remember_latest(
     os.replace(temp, path)
 
 
+def update_gate_path(home: str | Path | None = None) -> Path:
+    """Shared refresh-gate file path in the lazyplan home."""
+    from .repo import shared_home
+
+    return shared_home(home) / UPDATE_GATE_NAME
+
+
+def _read_gate(path: Path) -> float | None:
+    try:
+        data = json.loads(textfile.read(path))
+        return float(data["next_at"])
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
+def claim_refresh(
+    home: str | Path | None = None,
+    now: float | None = None,
+    interval: float | None = None,
+) -> bool:
+    """Claim the shared network-refresh slot; True only for the winner.
+
+    The file records the next allowed refresh. An expired gate is removed
+    before an exclusive create, so two instances racing for the same slot
+    produce one winner and one ``FileExistsError``.
+    """
+    stamp = time.time() if now is None else now
+    step = network_interval() if interval is None else interval
+    path = update_gate_path(home)
+    next_at = _read_gate(path)
+    if next_at is not None:
+        if stamp < next_at:
+            return False
+    elif path.exists():
+        # A claim may be mid-write; steal it only once it looks abandoned.
+        try:
+            age = stamp - path.stat().st_mtime
+        except OSError:
+            return False
+        if age < UPDATE_GATE_STALE:
+            return False
+    try:
+        path.unlink()
+    except FileNotFoundError:
+        pass
+    except OSError:
+        return False
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    except FileExistsError:
+        return False
+    except OSError:
+        return False
+    with os.fdopen(fd, "w", encoding="utf-8") as handle:
+        handle.write(json.dumps({"next_at": stamp + step}) + "\n")
+    return True
+
+
+def defer_refresh(
+    home: str | Path | None = None,
+    now: float | None = None,
+    delay: float | None = None,
+) -> None:
+    """Push the next shared refresh out after a failed check."""
+    stamp = time.time() if now is None else now
+    wait = UPDATE_BACKOFF if delay is None else delay
+    path = update_gate_path(home)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp = path.with_name(f"{path.name}.tmp")
+    textfile.write(temp, json.dumps({"next_at": stamp + wait}) + "\n")
+    os.replace(temp, path)
+
+
 def latest_version(timeout: float = RESOLVE_TIMEOUT) -> str:
     """Latest release version from the GitHub /releases/latest redirect."""
     req = urllib.request.Request(RELEASES_LATEST, headers={"User-Agent": "lpui-upgrade"})
@@ -228,6 +357,36 @@ def latest_version(timeout: float = RESOLVE_TIMEOUT) -> str:
     except UpgradeError as exc:
         raise UpgradeError(f"cannot parse latest version from {final_url!r}") from exc
     return version_text(parsed)
+
+
+def refresh_update(
+    home: str | Path | None = None,
+    now: float | None = None,
+) -> str | None:
+    """Return the latest version, refreshing the network when the gate allows.
+
+    Every caller reads the shared cache. Only the instance that wins the
+    shared gate calls GitHub; a failure records a backoff in the same gate
+    so no instance retries before the retry time.
+    """
+    if not update_check_enabled():
+        return cached_latest(home)
+    stamp = time.time() if now is None else now
+    if not claim_refresh(home, now=stamp):
+        return cached_latest(home)
+    try:
+        latest = latest_version()
+    except UpgradeError:
+        try:
+            defer_refresh(home, now=stamp)
+        except OSError:
+            pass
+        return cached_latest(home)
+    try:
+        remember_latest(latest, home=home, now=stamp)
+    except OSError:
+        pass
+    return latest
 
 
 INSTALL_SH = (

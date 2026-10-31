@@ -85,10 +85,26 @@ A source checkout updates with `git pull`.
 
 ### Staged updates in the TUI
 
-When a newer release exists, the status bar shows `update vX.Y.Z` and the
-one-time toast still appears. Press `U` (or run **Update lpui** from the
+When a newer release exists, the status bar shows `update vX.Y.Z` and a toast
+appears once for that version. Press `U` (or run **Update lpui** from the
 palette) to open the Update screen. It shows the installed and latest versions,
 the detected install method, and two actions: **Download** and **Later**.
+
+The TUI re-reads the shared update cache every 60 seconds, so a release
+published while the app is open appears without a restart. The network check
+runs at most once every 5 minutes through a shared gate under the lazyplan
+home, so several open instances still make one request. A failed check records
+a 15-minute backoff and keeps using the cached version instead of retrying
+every minute. When the installed version catches up, the chip clears.
+
+```bash
+LAZYPLAN_UPDATE_INTERVAL=30 lpui        # cache poll in seconds (default 60)
+LAZYPLAN_UPDATE_NETWORK_INTERVAL=600 lpui  # network refresh (default 300)
+LAZYPLAN_NO_UPDATE_CHECK=1 lpui        # disable both
+```
+
+Both values are clamped to safe bounds, and an invalid value falls back to its
+default. The CLI notice stays cache-only and never refreshes the network.
 
 Download fetches the exact wheel from PyPI, checks its SHA256 against the PyPI
 JSON, and caches it under the shared home (`~/.lazyplan/updates/`, or

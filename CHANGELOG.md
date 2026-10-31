@@ -3,6 +3,51 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## v0.29.0 — 2026-10-31
+
+Live update checks in an open TUI. The status bar keeps the update chip current,
+and a release published while the app is open appears within minutes instead of
+waiting for the next launch.
+
+### New
+
+- The TUI re-reads the shared update cache every 60 seconds.
+- The network check runs at most once every 5 minutes through a shared gate in
+  the lazyplan home, so several open instances still make one request.
+- A failed check records a 15-minute backoff and keeps using the cached version
+  instead of retrying every minute.
+- The status chip updates when a newer version appears and clears when the
+  installed version catches up. Each version toasts once; a newer version
+  toasts again.
+
+### Under the hood
+
+- Added `poll_interval`, `network_interval`, `claim_refresh`, `defer_refresh`,
+  and `refresh_update` to `upgrade`.
+- `LAZYPLAN_UPDATE_INTERVAL` and `LAZYPLAN_UPDATE_NETWORK_INTERVAL` override the
+  cadence; values are clamped, and invalid values fall back to the defaults.
+  `LAZYPLAN_NO_UPDATE_CHECK` still disables both checks.
+- The update timer stops on unmount, and one guarded worker prevents overlapping
+  checks. The CLI notice stays cache-only.
+- Tests cover defaults, overrides, clamping, gate contention, backoff, chip
+  clearing, and toast semantics.
+
+### Upgrade
+
+```bash
+pipx upgrade lazyplan-tui
+# or
+pipx install --force lazyplan-tui
+```
+
+No manual migration is required. The database schema is unchanged.
+
+### Documentation
+
+- [Usage guide](https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md#staged-updates-in-the-tui)
+- [Design system](https://github.com/fluxion-dev/lazyplan/blob/main/docs/design-system.md)
+- [Site](https://fluxion-dev.github.io/lazyplan/)
+
 ## v0.28.1 — 2026-10-31
 
 Refuses downgrades in every update path. The staged-update flow and `lpui

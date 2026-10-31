@@ -44,10 +44,10 @@ from ..upgrade import (
     UpgradeError,
     cached_latest,
     detect,
-    latest_version,
     notice_text,
     parse_version,
-    remember_latest,
+    poll_interval,
+    refresh_update,
     update_check_enabled,
 )
 from .actions import ActionMixin
@@ -150,7 +150,9 @@ if _TEXTUAL_OK:
             self._update_latest: str = ""
             self._update_info: Any = None
             self._startup_notice: str = ""
-            self._update_toasted: bool = False
+            self._toasted_version: str = ""
+            self._update_timer: Any = None
+            self._update_checking: bool = False
             self._pending_note: str = ""
             self._mounted: bool = False
             self._refreshing: bool = False
@@ -181,27 +183,46 @@ if _TEXTUAL_OK:
             info = self._update_info or detect()
             self.push_screen(UpdateScreen(installed, latest, info))
 
-        def _check_update(self) -> None:
-            """One background latest-version check per session; cache first."""
+        def _update_tick(self) -> None:
+            """Poll the shared cache; one update worker runs at a time."""
+            if not self._mounted or self._update_checking:
+                return
             if not update_check_enabled():
                 return
-            latest = cached_latest(max_age=UPDATE_CACHE_TTL)
+            self._update_checking = True
+            self.run_worker(self._refresh_update_worker, thread=True, group="update")
+
+        def _refresh_update_worker(self) -> None:
+            """Read the cache and refresh the network when the gate allows."""
+            try:
+                latest = refresh_update()
+            except Exception:
+                latest = None
+            try:
+                self.call_from_thread(self._apply_update, latest)
+            except Exception:
+                pass
+
+        def _apply_update(self, latest: str | None) -> None:
+            """Show or clear the chip after one update poll."""
+            self._update_checking = False
             if latest is None:
-                try:
-                    latest = latest_version()
-                except UpgradeError:
-                    latest = cached_latest()
-                    if latest is None:
-                        return
-                else:
-                    try:
-                        remember_latest(latest)
-                    except OSError:
-                        pass
+                return
             info = detect()
             notice = notice_text(info, package_version(), latest)
-            if notice is not None:
-                self.call_from_thread(self._announce_update, notice, latest, info)
+            if notice is None:
+                self._clear_update()
+            else:
+                self._announce_update(notice, latest, info)
+
+        def _clear_update(self) -> None:
+            """Drop the chip once the installed version catches up."""
+            if self._update_notice is None and not self._update_latest:
+                return
+            self._update_notice = None
+            self._update_latest = ""
+            self._update_info = None
+            self._refresh_status()
 
         def compose(self) -> ComposeResult:
             with Vertical(id="panel"):
@@ -221,7 +242,10 @@ if _TEXTUAL_OK:
                 self.call_after_refresh(self.refresh_all)
 
         def on_unmount(self) -> None:
-            """Stop the spinner timer with the app; it owns a repaint loop."""
+            """Stop app-owned timers; both drive periodic work."""
+            if self._update_timer is not None:
+                self._update_timer.stop()
+                self._update_timer = None
             if self._spinner_timer is not None:
                 self._spinner_timer.stop()
                 self._spinner_timer = None
@@ -245,7 +269,8 @@ if _TEXTUAL_OK:
             self._spinner_enabled = not os.environ.get("LAZYPLAN_NO_SPINNER", "").strip()
             if self._spinner_enabled:
                 self._spinner_timer = self.set_interval(SPINNER_INTERVAL, self._spin)
-            self.run_worker(self._check_update, thread=True, exclusive=True)
+            self._update_timer = self.set_interval(poll_interval(), self._update_tick)
+            self._update_tick()
             if self._startup_notice:
                 self.notify(self._startup_notice, timeout=10)
             self.query_one("#tree", Tree).focus()
@@ -283,8 +308,8 @@ if _TEXTUAL_OK:
             self._update_notice = notice
             self._update_latest = latest
             self._update_info = info
-            if not self._update_toasted:
-                self._update_toasted = True
+            if latest and latest != self._toasted_version:
+                self._toasted_version = latest
                 self.notify(notice, timeout=8)
             self._refresh_status()
 

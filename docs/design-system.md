@@ -61,37 +61,37 @@ TUI).
 ## Metrics dashboard (`tui/metrics/`)
 
 - `#metrics` is a third always-on section inside `#panel`, below `#main`.
-  It is 11 rows tall and hidden below 100 columns; `_apply_layout` toggles
-  `#metrics.narrow` with the same breakpoint as the preview.
-- `MetricsSection` hosts three equal `MetricCard`s: `metric-heatmap`
-  (Activity), `metric-progress` (Progress), and `metric-status` (Status).
-  Every card has a one-row title and a body, and starts with an explicit
-  empty state.
+  It is 12 rows tall, holds three bordered cards in a `Horizontal` row,
+  and hides below 100 columns; `_apply_layout` toggles `#metrics.narrow`
+  with the same breakpoint as the preview.
+- `MetricsSection` hosts `metric-heatmap` (Daily activity),
+  `metric-progress` (Project progress), and `metric-status` (Task status).
+  Every card has a one-row title, a `PlotextPlot`, and an explicit empty
+  label that replaces the plot when there is no data.
+- Charts use `textual-plotext` (`PlotextPlot`) with the app's auto theme
+  and green bars. Plotext owns the axes, ticks, scaling, and resize
+  behavior; cards only configure the data and refresh the widget.
 - `refresh_all` builds one read-only `metrics.snapshot(store)` and calls
   `MetricsSection.refresh_snapshot`. `metrics.py` holds frozen dataclasses
-  only; it never writes, caches, or calls the network.
-- Card styling lives in `design.py` (`#metrics`, `.metric-card`,
-  `.metric-title`, `.metric-body`). Panel plans replace one card body
-  without touching the section.
-- The Progress card is global: it rolls up every plan and does not follow
-  tree focus. It shows done/total and a percentage, the top five
-  milestones by newest task event (then open tasks, then id), elapsed time
-  from the earliest add event, and an ETA. The ETA is
+  and chart-row helpers (`activity_weeks`, `milestone_bars`,
+  `status_bars`); it never writes, caches, or calls the network.
+- The Daily activity card sums the 84 local daily completions into 12
+  weekly bars. It labels every few weeks and uses two integer y ticks.
+  Counts come only from `task #N -> done` events, so a reopened task that
+  finishes again counts again.
+- The Project progress card is global: it rolls up every plan and does not
+  follow tree focus. A headline shows done/total and a percentage, the top
+  five milestones by newest task event (then open tasks, then id), elapsed
+  time from the earliest add event, and an ETA. The ETA is
   `ceil(remaining / (completions in the last 14 days / 14))`; it reads
-  `complete` when nothing remains and `—` when there is no velocity. No
-  estimates or invented timestamps are used.
-- The Status card shows `todo`, `doing`, `done`, then `blocked`. Status
-  shares use all tasks and sum to 100%. `blocked` is an overlay count from
-  `Task.blocked`: a blocked task stays in its status row, so the four rows
-  can add up to more than 100%. Bars scale to the largest row and are 10
-  cells wide (`design.metric_bar`). With no tasks the card shows its empty
-  state.
-- The Activity card is a 12-week by 7-day grid ending today (84 local
-  days). Counts come only from `task #N -> done` events, so a reopened task
-  that finishes again counts again. `design.heatmap_color` maps each day to
-  one of four green shades scaled to the busiest day, plus the empty token;
-  the final row carries the date range and the less-to-more legend. With no
-  completions the card shows its empty state.
+  `complete` when nothing remains and `—` when there is no velocity. The
+  plot shows those five milestones as horizontal bars on a 0/50/100% axis.
+  No estimates or invented timestamps are used.
+- The Task status card shows `todo`, `doing`, `done`, and `blocked` as
+  horizontal bars labelled with their share. Status shares use all tasks
+  and sum to 100%. `blocked` is an overlay count from `Task.blocked`: a
+  blocked task stays in its status row, so the four rows can add up to more
+  than 100%. With no tasks the card shows its empty state.
 
 ## Command registry (`palette.py and help.py`)
 

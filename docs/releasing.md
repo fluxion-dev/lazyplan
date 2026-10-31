@@ -4,6 +4,13 @@
 page, `site/index.html`, and `site/package.json` mirror it; `tools/bump.sh`
 updates all of them and `tests/test_version.py` fails on drift.
 
+## CI policy
+
+Pull-request and release gates run on Ubuntu and macOS. Windows runs the same
+suite in `.github/workflows/ci-windows.yml` on a nightly schedule and on manual
+dispatch; it is not part of the required `gates` check. Treat a red nightly as
+a bug to fix before the next release, not a merge blocker.
+
 ## Before tagging
 
 1. Run `./tools/check.sh`. It must print `ALL GATES GREEN` on both

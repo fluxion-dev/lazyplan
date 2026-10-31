@@ -276,8 +276,9 @@ hidden for unavailable, malformed, stale, or schema-mismatched data. Built-site
 Lighthouse: 97 performance, 100 accessibility, 100 best practices, 100 SEO;
 widths 360, 768, and 1440 show no overflow.
 
-Verified live: the snapshot carries all three channels, the strip shows 10,004,
-and the method link resolves. The Pages deploy
-[41219878364](https://github.com/fluxion-dev/lazyplan/actions/runs/41219878364)
+Verified live: the snapshot carries all three channels, the rendered strip shows
+10,004 with the Oct 31, 2026 date, and the method link resolves. The Pages
+deploy
+[41221639219](https://github.com/fluxion-dev/lazyplan/actions/runs/41221639219)
 built and published the simplified strip on 2026-10-31; the live
 `downloads.json` reports 10,004 / 3,252 / 43 with schema 2.

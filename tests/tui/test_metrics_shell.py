@@ -7,6 +7,8 @@ import tempfile
 import unittest
 from unittest import mock
 
+from lazyplan import services
+from lazyplan.models import Status
 from lazyplan.store import Store
 
 try:
@@ -35,7 +37,10 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.db = os.path.join(self.tmp.name, "t.db")
         store = Store(self.db)
-        store.add_plan("Plan title")
+        plan = store.add_plan("Plan title")
+        milestone = store.add_milestone(plan.id, "Milestone title")
+        task = store.add_task(milestone.id, "Task title")
+        self.task_id = task.id
         self.store = Store(self.db)
 
     async def asyncTearDown(self) -> None:
@@ -60,6 +65,23 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
             self.assertIn("no completions yet", bodies[0])
             self.assertIn("no plans yet", bodies[1])
             self.assertIn("no tasks yet", bodies[2])
+
+    async def test_section_is_eight_rows(self) -> None:
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            self.assertEqual(app.query_one("#metrics", MetricsSection).region.height, 8)
+
+    async def test_status_edit_reaches_the_host_on_refresh(self) -> None:
+        app = tui_mod.create_app(self.db)
+        with mock.patch.object(MetricsSection, "refresh_snapshot") as refresh:
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                services.set_status(self.store, "task", self.task_id, Status.DONE, actor="qa")
+                refresh.reset_mock()
+                app.refresh_all()
+                await pilot.pause()
+        self.assertEqual(refresh.call_count, 1)
 
     async def test_section_hides_below_100_columns(self) -> None:
         app = tui_mod.create_app(self.db)

@@ -74,7 +74,8 @@ Want demo data first? Run `lpui seed`.
 ## Built to scale
 
 The benchmark fixture holds 88 plans, 275 milestones, and 789 tasks. Query
-counts are deterministic and gated on Linux, macOS, and Windows:
+counts are deterministic and gated on Linux and macOS per change, with the
+same suite running on Windows nightly:
 
 | Path | Before | After |
 |---|---:|---:|

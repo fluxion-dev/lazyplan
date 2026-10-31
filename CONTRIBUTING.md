@@ -36,8 +36,10 @@ The suite is a package. Run it from the repository root so discovery sees
 python -m unittest discover -s tests -t .
 ```
 
-On Windows, run the gate script from Git Bash. CI runs the same gates on Linux, macOS, and
-Windows; the required `gates` check passes only when all three pass.
+On Windows, run the gate script from Git Bash. CI runs the same gates on Linux
+and macOS for every change; Windows runs the suite nightly in
+`.github/workflows/ci-windows.yml` and can be dispatched on demand. The required
+`gates` check passes when Ubuntu and macOS pass.
 
 The gate suite runs:
 

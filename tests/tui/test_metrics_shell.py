@@ -79,17 +79,19 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
             section = app.query_one("#metrics", MetricsSection)
-            bodies = [str(card.query_one(".metric-body").render()) for card in section.children]
-            self.assertIn("no completions yet", bodies[0])
-            self.assertIn("0% 0/1", bodies[1])
-            self.assertIn("todo", bodies[2])
-            self.assertIn("done", bodies[2])
+            activity = str(section.query_one("#metric-heatmap-empty").render())
+            progress = str(section.query_one("#metric-progress-body").render())
+            status = str(section.query_one("#metric-status-body").render())
+            self.assertIn("no completions yet", activity)
+            self.assertIn("0% 0/1", progress)
+            self.assertIn("todo", status)
+            self.assertIn("done", status)
 
-    async def test_section_is_eleven_rows(self) -> None:
+    async def test_section_is_twelve_rows(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
-            self.assertEqual(app.query_one("#metrics", MetricsSection).region.height, 11)
+            self.assertEqual(app.query_one("#metrics", MetricsSection).region.height, 12)
 
     async def test_status_edit_reaches_the_host_on_refresh(self) -> None:
         app = tui_mod.create_app(self.db)
@@ -144,15 +146,17 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
             card = app.query_one("#metric-heatmap")
-            before = str(card.query_one(".metric-body").render())
+            empty = card.query_one(".metric-empty")
+            before = str(empty.render())
             services.set_status(self.store, "task", self.task_id, Status.DONE, actor="qa")
             app.refresh_all()
             await pilot.pause()
-            after = str(card.query_one(".metric-body").render())
+            plot_visible = card.query_one("PlotextPlot").display
+            empty_visible = empty.display
             titles = [app.query_one(f"#{card_id}") for card_id in CARD_IDS]
         self.assertIn("no completions yet", before)
-        self.assertNotIn("no completions yet", after)
-        self.assertIn("█", after)
+        self.assertTrue(plot_visible)
+        self.assertFalse(empty_visible)
         self.assertEqual(len(titles), 3)
 
     async def test_focus_changes_leave_progress_alone(self) -> None:

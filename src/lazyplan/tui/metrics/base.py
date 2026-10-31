@@ -19,11 +19,11 @@ if _TEXTUAL_OK:
         def __init__(self, card_id: str, title: str, empty: str) -> None:
             super().__init__(id=card_id, classes="metric-card")
             self.card_title = title
-            self._empty = empty
+            self.empty = empty
 
         def compose(self) -> ComposeResult:
             yield Label(self.card_title, classes="metric-title")
-            yield Static(self._empty, id=f"{self.id}-body", classes="metric-body")
+            yield Static(self.empty, id=f"{self.id}-body", classes="metric-body")
 
         def show(self, markup: str) -> None:
             """Replace the card body with *markup*."""
@@ -31,4 +31,4 @@ if _TEXTUAL_OK:
 
         def show_empty(self) -> None:
             """Restore the card's empty state."""
-            self.show(self._empty)
+            self.show(self.empty)

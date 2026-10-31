@@ -46,11 +46,13 @@ APP_CSS = f"""
 #preview {{ width: 1fr; min-width: 30; padding: 0 1; }}
 #main.narrow #preview {{ display: none; }}
 #main.narrow #nav {{ border-right: none; }}
-#metrics {{ height: 11; padding: 0 1; }}
+#metrics {{ height: 12; padding: 0 1; }}
 #metrics.narrow {{ display: none; }}
 .metric-card {{ width: 1fr; height: 1fr; min-width: 18; padding: 0 1; margin: 0 1 0 0; border: {BORDER}; }}
 .metric-title {{ height: 1; color: $text-muted; text-style: bold; }}
 .metric-body {{ height: 1fr; }}
+.metric-empty {{ height: 1fr; }}
+#metrics PlotextPlot {{ height: 1fr; }}
 #preview-body {{ height: auto; }}
 #status {{ height: {BAR_HEIGHT}; background: $primary; }}
 #hints {{ height: {BAR_HEIGHT}; background: $panel; color: $text-muted; padding: 0 1; }}

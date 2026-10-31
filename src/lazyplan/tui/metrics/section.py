@@ -11,7 +11,7 @@ except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
 from ...metrics import MetricsSnapshot
-from .heatmap import HeatmapCard
+from .activity import ActivityCard
 from .progress import ProgressCard
 from .status import StatusCard
 
@@ -26,7 +26,7 @@ if _TEXTUAL_OK:
             super().__init__(id="metrics", classes="metrics-section")
 
         def compose(self) -> ComposeResult:
-            yield HeatmapCard()
+            yield ActivityCard()
             yield ProgressCard()
             yield StatusCard()
 
@@ -35,6 +35,6 @@ if _TEXTUAL_OK:
 
             Each card owns its body; the section never computes metrics.
             """
-            self.query_one("#metric-heatmap", HeatmapCard).refresh_activity(snapshot.activity)
+            self.query_one("#metric-heatmap", ActivityCard).refresh_activity(snapshot.activity)
             self.query_one("#metric-progress", ProgressCard).refresh_progress(snapshot.progress)
             self.query_one("#metric-status", StatusCard).refresh_status(snapshot.status)

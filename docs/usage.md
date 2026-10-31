@@ -97,6 +97,10 @@ open work), time since the earliest recorded event, and an ETA. The ETA uses
 completions from the last 14 days and shows a date, `complete`, or `—` when
 there is not enough velocity to forecast.
 
+**Status** shows `todo`, `doing`, `done`, and `blocked` rows with counts,
+shares, and micro-bars. Blocked is an overlay: a blocked task still counts in
+its lifecycle row, so only the three lifecycle shares add up to 100%.
+
 ### Staged updates in the TUI
 
 When a newer release exists, the status bar shows `update vX.Y.Z` and a toast

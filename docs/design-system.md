@@ -80,6 +80,12 @@ TUI).
   `ceil(remaining / (completions in the last 14 days / 14))`; it reads
   `complete` when nothing remains and `—` when there is no velocity. No
   estimates or invented timestamps are used.
+- The Status card shows `todo`, `doing`, `done`, then `blocked`. Status
+  shares use all tasks and sum to 100%. `blocked` is an overlay count from
+  `Task.blocked`: a blocked task stays in its status row, so the four rows
+  can add up to more than 100%. Bars scale to the largest row and are 10
+  cells wide (`design.metric_bar`). With no tasks the card shows its empty
+  state.
 
 ## Command registry (`palette.py and help.py`)
 

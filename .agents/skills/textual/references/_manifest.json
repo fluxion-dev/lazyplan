@@ -1,0 +1,1297 @@
+{
+  "categories": {
+    "css-types": {
+      "count": 16,
+      "skill": "textual-css-types",
+      "title": "Textual CSS types"
+    },
+    "events": {
+      "count": 27,
+      "skill": "textual-events",
+      "title": "Textual events"
+    },
+    "guides": {
+      "count": 18,
+      "skill": "textual-guides",
+      "title": "Textual guides"
+    },
+    "layout": {
+      "count": 14,
+      "skill": "textual-layout",
+      "title": "Textual layout, containers, and screens"
+    },
+    "styles": {
+      "count": 68,
+      "skill": "textual-styles",
+      "title": "Textual styles"
+    },
+    "widgets": {
+      "count": 37,
+      "skill": "textual-widgets",
+      "title": "Textual widgets"
+    }
+  },
+  "items": [
+    {
+      "category": "widgets",
+      "file": ".agents/skills/textual-widgets/references/button.md",
+      "id": "button",
+      "name": "Button",
+      "source": "https://textual.textualize.io/widgets/button/"
+    },
+    {
+      "category": "widgets",
+      "file": ".agents/skills/textual-widgets/references/checkbox.md",
+      "id": "checkbox",
+      "name": "Checkbox",
+      "source": "https://textual.textualize.io/widgets/checkbox/"
+    },
+    {
+      "category": "widgets",
+      "file": ".agents/skills/textual-widgets/references/collapsible.md",
+      "id": "collapsible",
+      "name": "Collapsible",
+      "source": "https://textual.textualize.io/widgets/collapsible/"
+    },
+    {
+      "category": "widgets",
+      "file": ".agents/skills/textual-widgets/references/contentswitcher.md",
+      "id": "contentswitcher",
+      "name": "ContentSwitcher",
+      "source": "https://textual.textualize.io/widgets/contentswitcher/"
+    },
+    {
+      "category": "widgets",
+      "file": ".agents/skills/textual-widgets/references/datatable.md",
+      "id": "datatable",
+      "name": "DataTable",
+      "source": "https://textual.textualize.io/widgets/datatable/"
+    },
+    {
+      "category": "widgets",
+      "file": ".agents/skills/textual-widgets/references/digits.md",
+      "id": "digits",
+      "name": "Digits",
+      "source": "https://textual.textualize.io/widgets/digits/"
+    },
+    {
+      "category": "widgets",
+      "file": ".agents/skills/textual-widgets/references/directorytree.md",
+      "id": "directorytree",
+      "name": "DirectoryTree",
+      "source": "https://textual.textualize.io/widgets/directorytree/"
+    },
+    {
+      "category": "widgets",
+      "file": ".agents/skills/textual-widgets/references/footer.md",
+      "id": "footer",
+      "name": "Footer",
+      "source": "https://textual.textualize.io/widgets/footer/"
+    },
+    {
+      "category": "widgets",
+      "file": ".agents/skills/textual-widgets/references/header.md",
+      "id": "header",
+      "name": "Header",
+      "source": "https://textual.textualize.io/widgets/header/"
+    },
+    {
+      "category": "widgets",
+      "file": ".agents/skills/textual-widgets/references/input.md",
+      "id": "input",
+      "name": "Input",
+      "source": "https://textual.textualize.io/widgets/input/"
+    },
+    {
+      "category": "widgets",
+      "file": ".agents/skills/textual-widgets/references/label.md",
+      "id": "label",
+      "name": "Label",
+      "source": "https://textual.textualize.io/widgets/label/"
+    },
+    {
+      "category": "widgets",
+      "file": ".agents/skills/textual-widgets/references/link.md",
+      "id": "link",
+      "name": "Link",
+      "source": "https://textual.textualize.io/widgets/link/"
+    },
+    {
+      "category": "widgets",
+      "file": ".agents/skills/textual-widgets/references/listitem.md",
+      "id": "listitem",
+      "name": "ListItem",
+      "source": "https://textual.textualize.io/widgets/listitem/"
+    },
+    {
+      "category": "widgets",
+      "file": ".agents/skills/textual-widgets/references/listview.md",
+      "id": "listview",
+      "name": "ListView",
+      "source": "https://textual.textualize.io/widgets/listview/"
+    },
+    {
+      "category": "widgets",
+      "file": ".agents/skills/textual-widgets/references/loadingindicator.md",
+      "id": "loadingindicator",
+      "name": "LoadingIndicator",
+      "source": "https://textual.textualize.io/widgets/loadingindicator/"
+    },
+    {
+      "category": "widgets",
+      "file": ".agents/skills/textual-widgets/references/log.md",
+      "id": "log",
+      "name": "Log",
+      "source": "https://textual.textualize.io/widgets/log/"
+    },
+    {
+      "category": "widgets",
+      "file": ".agents/skills/textual-widgets/references/markdownviewer.md",
+      "id": "markdownviewer",
+      "name": "MarkdownViewer",
+      "source": "https://textual.textualize.io/widgets/markdownviewer/"
+    },
+    {
+      "category": "widgets",
+      "file": ".agents/skills/textual-widgets/references/markdown.md",
+      "id": "markdown",
+      "name": "Markdown",
+      "source": "https://textual.textualize.io/widgets/markdown/"
+    },
+    {
+      "category": "widgets",
+      "file": ".agents/skills/textual-widgets/references/maskedinput.md",
+      "id": "maskedinput",
+      "name": "MaskedInput",
+      "source": "https://textual.textualize.io/widgets/maskedinput/"
+    },
+    {
+      "category": "widgets",
+      "file": ".agents/skills/textual-widgets/references/optionlist.md",
+      "id": "optionlist",
+      "name": "OptionList",
+      "source": "https://textual.textualize.io/widgets/optionlist/"
+    },
+    {
+      "category": "widgets",
+      "file": ".agents/skills/textual-widgets/references/placeholder.md",
+      "id": "placeholder",
+      "name": "Placeholder",
+      "source": "https://textual.textualize.io/widgets/placeholder/"
+    },
+    {
+      "category": "widgets",
+      "file": ".agents/skills/textual-widgets/references/pretty.md",
+      "id": "pretty",
+      "name": "Pretty",
+      "source": "https://textual.textualize.io/widgets/pretty/"
+    },
+    {
+      "category": "widgets",
+      "file": ".agents/skills/textual-widgets/references/progressbar.md",
+      "id": "progressbar",
+      "name": "ProgressBar",
+      "source": "https://textual.textualize.io/widgets/progressbar/"
+    },
+    {
+      "category": "widgets",
+      "file": ".agents/skills/textual-widgets/references/radiobutton.md",
+      "id": "radiobutton",
+      "name": "RadioButton",
+      "source": "https://textual.textualize.io/widgets/radiobutton/"
+    },
+    {
+      "category": "widgets",
+      "file": ".agents/skills/textual-widgets/references/radioset.md",
+      "id": "radioset",
+      "name": "RadioSet",
+      "source": "https://textual.textualize.io/widgets/radioset/"
+    },
+    {
+      "category": "widgets",
+      "file": ".agents/skills/textual-widgets/references/richlog.md",
+      "id": "richlog",
+      "name": "RichLog",
+      "source": "https://textual.textualize.io/widgets/richlog/"
+    },
+    {
+      "category": "widgets",
+      "file": ".agents/skills/textual-widgets/references/rule.md",
+      "id": "rule",
+      "name": "Rule",
+      "source": "https://textual.textualize.io/widgets/rule/"
+    },
+    {
+      "category": "widgets",
+      "file": ".agents/skills/textual-widgets/references/select.md",
+      "id": "select",
+      "name": "Select",
+      "source": "https://textual.textualize.io/widgets/select/"
+    },
+    {
+      "category": "widgets",
+      "file": ".agents/skills/textual-widgets/references/selectionlist.md",
+      "id": "selectionlist",
+      "name": "SelectionList",
+      "source": "https://textual.textualize.io/widgets/selectionlist/"
+    },
+    {
+      "category": "widgets",
+      "file": ".agents/skills/textual-widgets/references/sparkline.md",
+      "id": "sparkline",
+      "name": "Sparkline",
+      "source": "https://textual.textualize.io/widgets/sparkline/"
+    },
+    {
+      "category": "widgets",
+      "file": ".agents/skills/textual-widgets/references/static.md",
+      "id": "static",
+      "name": "Static",
+      "source": "https://textual.textualize.io/widgets/static/"
+    },
+    {
+      "category": "widgets",
+      "file": ".agents/skills/textual-widgets/references/switch.md",
+      "id": "switch",
+      "name": "Switch",
+      "source": "https://textual.textualize.io/widgets/switch/"
+    },
+    {
+      "category": "widgets",
+      "file": ".agents/skills/textual-widgets/references/tabbedcontent.md",
+      "id": "tabbedcontent",
+      "name": "TabbedContent",
+      "source": "https://textual.textualize.io/widgets/tabbedcontent/"
+    },
+    {
+      "category": "widgets",
+      "file": ".agents/skills/textual-widgets/references/tabs.md",
+      "id": "tabs",
+      "name": "Tabs",
+      "source": "https://textual.textualize.io/widgets/tabs/"
+    },
+    {
+      "category": "widgets",
+      "file": ".agents/skills/textual-widgets/references/text_area.md",
+      "id": "text_area",
+      "name": "TextArea",
+      "source": "https://textual.textualize.io/widgets/text_area/"
+    },
+    {
+      "category": "widgets",
+      "file": ".agents/skills/textual-widgets/references/toast.md",
+      "id": "toast",
+      "name": "Toast",
+      "source": "https://textual.textualize.io/widgets/toast/"
+    },
+    {
+      "category": "widgets",
+      "file": ".agents/skills/textual-widgets/references/tree.md",
+      "id": "tree",
+      "name": "Tree",
+      "source": "https://textual.textualize.io/widgets/tree/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/align.md",
+      "id": "align",
+      "name": "align",
+      "source": "https://textual.textualize.io/styles/align/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/background.md",
+      "id": "background",
+      "name": "background",
+      "source": "https://textual.textualize.io/styles/background/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/background_tint.md",
+      "id": "background_tint",
+      "name": "background-tint",
+      "source": "https://textual.textualize.io/styles/background_tint/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/border.md",
+      "id": "border",
+      "name": "border",
+      "source": "https://textual.textualize.io/styles/border/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/border_subtitle_align.md",
+      "id": "border_subtitle_align",
+      "name": "border-subtitle-align",
+      "source": "https://textual.textualize.io/styles/border_subtitle_align/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/border_subtitle_background.md",
+      "id": "border_subtitle_background",
+      "name": "border-subtitle-background",
+      "source": "https://textual.textualize.io/styles/border_subtitle_background/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/border_subtitle_color.md",
+      "id": "border_subtitle_color",
+      "name": "border-subtitle-color",
+      "source": "https://textual.textualize.io/styles/border_subtitle_color/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/border_subtitle_style.md",
+      "id": "border_subtitle_style",
+      "name": "border-subtitle-style",
+      "source": "https://textual.textualize.io/styles/border_subtitle_style/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/border_title_align.md",
+      "id": "border_title_align",
+      "name": "border-title-align",
+      "source": "https://textual.textualize.io/styles/border_title_align/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/border_title_background.md",
+      "id": "border_title_background",
+      "name": "border-title-background",
+      "source": "https://textual.textualize.io/styles/border_title_background/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/border_title_color.md",
+      "id": "border_title_color",
+      "name": "border-title-color",
+      "source": "https://textual.textualize.io/styles/border_title_color/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/border_title_style.md",
+      "id": "border_title_style",
+      "name": "border-title-style",
+      "source": "https://textual.textualize.io/styles/border_title_style/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/box_sizing.md",
+      "id": "box_sizing",
+      "name": "box-sizing",
+      "source": "https://textual.textualize.io/styles/box_sizing/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/color.md",
+      "id": "color",
+      "name": "color",
+      "source": "https://textual.textualize.io/styles/color/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/content_align.md",
+      "id": "content_align",
+      "name": "content-align",
+      "source": "https://textual.textualize.io/styles/content_align/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/display.md",
+      "id": "display",
+      "name": "display",
+      "source": "https://textual.textualize.io/styles/display/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/dock.md",
+      "id": "dock",
+      "name": "dock",
+      "source": "https://textual.textualize.io/styles/dock/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/grid.md",
+      "id": "grid",
+      "name": "Grid",
+      "source": "https://textual.textualize.io/styles/grid/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/column_span.md",
+      "id": "column_span",
+      "name": "column-span",
+      "source": "https://textual.textualize.io/styles/grid/column_span/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/grid_columns.md",
+      "id": "grid_columns",
+      "name": "grid-columns",
+      "source": "https://textual.textualize.io/styles/grid/grid_columns/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/grid_gutter.md",
+      "id": "grid_gutter",
+      "name": "grid-gutter",
+      "source": "https://textual.textualize.io/styles/grid/grid_gutter/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/grid_rows.md",
+      "id": "grid_rows",
+      "name": "grid-rows",
+      "source": "https://textual.textualize.io/styles/grid/grid_rows/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/grid_size.md",
+      "id": "grid_size",
+      "name": "grid-size",
+      "source": "https://textual.textualize.io/styles/grid/grid_size/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/row_span.md",
+      "id": "row_span",
+      "name": "row-span",
+      "source": "https://textual.textualize.io/styles/grid/row_span/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/hatch.md",
+      "id": "hatch",
+      "name": "hatch",
+      "source": "https://textual.textualize.io/styles/hatch/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/height.md",
+      "id": "height",
+      "name": "height",
+      "source": "https://textual.textualize.io/styles/height/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/keyline.md",
+      "id": "keyline",
+      "name": "keyline",
+      "source": "https://textual.textualize.io/styles/keyline/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/layer.md",
+      "id": "layer",
+      "name": "layer",
+      "source": "https://textual.textualize.io/styles/layer/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/layers.md",
+      "id": "layers",
+      "name": "layers",
+      "source": "https://textual.textualize.io/styles/layers/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/layout.md",
+      "id": "layout",
+      "name": "layout",
+      "source": "https://textual.textualize.io/styles/layout/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/links.md",
+      "id": "links",
+      "name": "Links",
+      "source": "https://textual.textualize.io/styles/links/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/link_background.md",
+      "id": "link_background",
+      "name": "link-background",
+      "source": "https://textual.textualize.io/styles/links/link_background/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/link_background_hover.md",
+      "id": "link_background_hover",
+      "name": "link-background-hover",
+      "source": "https://textual.textualize.io/styles/links/link_background_hover/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/link_color.md",
+      "id": "link_color",
+      "name": "link-color",
+      "source": "https://textual.textualize.io/styles/links/link_color/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/link_color_hover.md",
+      "id": "link_color_hover",
+      "name": "link-color-hover",
+      "source": "https://textual.textualize.io/styles/links/link_color_hover/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/link_style.md",
+      "id": "link_style",
+      "name": "link-style",
+      "source": "https://textual.textualize.io/styles/links/link_style/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/link_style_hover.md",
+      "id": "link_style_hover",
+      "name": "link-style-hover",
+      "source": "https://textual.textualize.io/styles/links/link_style_hover/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/margin.md",
+      "id": "margin",
+      "name": "margin",
+      "source": "https://textual.textualize.io/styles/margin/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/max_height.md",
+      "id": "max_height",
+      "name": "max-height",
+      "source": "https://textual.textualize.io/styles/max_height/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/max_width.md",
+      "id": "max_width",
+      "name": "max-width",
+      "source": "https://textual.textualize.io/styles/max_width/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/min_height.md",
+      "id": "min_height",
+      "name": "min-height",
+      "source": "https://textual.textualize.io/styles/min_height/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/min_width.md",
+      "id": "min_width",
+      "name": "min-width",
+      "source": "https://textual.textualize.io/styles/min_width/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/offset.md",
+      "id": "offset",
+      "name": "offset",
+      "source": "https://textual.textualize.io/styles/offset/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/opacity.md",
+      "id": "opacity",
+      "name": "opacity",
+      "source": "https://textual.textualize.io/styles/opacity/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/outline.md",
+      "id": "outline",
+      "name": "outline",
+      "source": "https://textual.textualize.io/styles/outline/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/overflow.md",
+      "id": "overflow",
+      "name": "overflow",
+      "source": "https://textual.textualize.io/styles/overflow/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/padding.md",
+      "id": "padding",
+      "name": "padding",
+      "source": "https://textual.textualize.io/styles/padding/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/pointer.md",
+      "id": "pointer",
+      "name": "pointer",
+      "source": "https://textual.textualize.io/styles/pointer/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/position.md",
+      "id": "position",
+      "name": "position",
+      "source": "https://textual.textualize.io/styles/position/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/scrollbar_colors.md",
+      "id": "scrollbar_colors",
+      "name": "Scrollbar colors",
+      "source": "https://textual.textualize.io/styles/scrollbar_colors/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/scrollbar_background.md",
+      "id": "scrollbar_background",
+      "name": "scrollbar-background",
+      "source": "https://textual.textualize.io/styles/scrollbar_colors/scrollbar_background/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/scrollbar_background_active.md",
+      "id": "scrollbar_background_active",
+      "name": "scrollbar-background-active",
+      "source": "https://textual.textualize.io/styles/scrollbar_colors/scrollbar_background_active/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/scrollbar_background_hover.md",
+      "id": "scrollbar_background_hover",
+      "name": "scrollbar-background-hover",
+      "source": "https://textual.textualize.io/styles/scrollbar_colors/scrollbar_background_hover/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/scrollbar_color.md",
+      "id": "scrollbar_color",
+      "name": "scrollbar-color",
+      "source": "https://textual.textualize.io/styles/scrollbar_colors/scrollbar_color/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/scrollbar_color_active.md",
+      "id": "scrollbar_color_active",
+      "name": "scrollbar-color-active",
+      "source": "https://textual.textualize.io/styles/scrollbar_colors/scrollbar_color_active/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/scrollbar_color_hover.md",
+      "id": "scrollbar_color_hover",
+      "name": "scrollbar-color-hover",
+      "source": "https://textual.textualize.io/styles/scrollbar_colors/scrollbar_color_hover/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/scrollbar_corner_color.md",
+      "id": "scrollbar_corner_color",
+      "name": "scrollbar-corner-color",
+      "source": "https://textual.textualize.io/styles/scrollbar_colors/scrollbar_corner_color/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/scrollbar_gutter.md",
+      "id": "scrollbar_gutter",
+      "name": "scrollbar-gutter",
+      "source": "https://textual.textualize.io/styles/scrollbar_gutter/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/scrollbar_size.md",
+      "id": "scrollbar_size",
+      "name": "scrollbar-size",
+      "source": "https://textual.textualize.io/styles/scrollbar_size/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/scrollbar_visibility.md",
+      "id": "scrollbar_visibility",
+      "name": "scrollbar-visibility",
+      "source": "https://textual.textualize.io/styles/scrollbar_visibility/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/text_align.md",
+      "id": "text_align",
+      "name": "text-align",
+      "source": "https://textual.textualize.io/styles/text_align/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/text_opacity.md",
+      "id": "text_opacity",
+      "name": "text-opacity",
+      "source": "https://textual.textualize.io/styles/text_opacity/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/text_overflow.md",
+      "id": "text_overflow",
+      "name": "text-overflow",
+      "source": "https://textual.textualize.io/styles/text_overflow/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/text_wrap.md",
+      "id": "text_wrap",
+      "name": "text-wrap",
+      "source": "https://textual.textualize.io/styles/text_wrap/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/text_style.md",
+      "id": "text_style",
+      "name": "text-style",
+      "source": "https://textual.textualize.io/styles/text_style/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/tint.md",
+      "id": "tint",
+      "name": "tint",
+      "source": "https://textual.textualize.io/styles/tint/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/visibility.md",
+      "id": "visibility",
+      "name": "visibility",
+      "source": "https://textual.textualize.io/styles/visibility/"
+    },
+    {
+      "category": "styles",
+      "file": ".agents/skills/textual-styles/references/width.md",
+      "id": "width",
+      "name": "width",
+      "source": "https://textual.textualize.io/styles/width/"
+    },
+    {
+      "category": "events",
+      "file": ".agents/skills/textual-events/references/app_blur.md",
+      "id": "app_blur",
+      "name": "AppBlur",
+      "source": "https://textual.textualize.io/events/app_blur/"
+    },
+    {
+      "category": "events",
+      "file": ".agents/skills/textual-events/references/app_focus.md",
+      "id": "app_focus",
+      "name": "AppFocus",
+      "source": "https://textual.textualize.io/events/app_focus/"
+    },
+    {
+      "category": "events",
+      "file": ".agents/skills/textual-events/references/blur.md",
+      "id": "blur",
+      "name": "Blur",
+      "source": "https://textual.textualize.io/events/blur/"
+    },
+    {
+      "category": "events",
+      "file": ".agents/skills/textual-events/references/click.md",
+      "id": "click",
+      "name": "Click",
+      "source": "https://textual.textualize.io/events/click/"
+    },
+    {
+      "category": "events",
+      "file": ".agents/skills/textual-events/references/descendant_blur.md",
+      "id": "descendant_blur",
+      "name": "DescendantBlur",
+      "source": "https://textual.textualize.io/events/descendant_blur/"
+    },
+    {
+      "category": "events",
+      "file": ".agents/skills/textual-events/references/descendant_focus.md",
+      "id": "descendant_focus",
+      "name": "DescendantFocus",
+      "source": "https://textual.textualize.io/events/descendant_focus/"
+    },
+    {
+      "category": "events",
+      "file": ".agents/skills/textual-events/references/enter.md",
+      "id": "enter",
+      "name": "Enter",
+      "source": "https://textual.textualize.io/events/enter/"
+    },
+    {
+      "category": "events",
+      "file": ".agents/skills/textual-events/references/focus.md",
+      "id": "focus",
+      "name": "Focus",
+      "source": "https://textual.textualize.io/events/focus/"
+    },
+    {
+      "category": "events",
+      "file": ".agents/skills/textual-events/references/hide.md",
+      "id": "hide",
+      "name": "Hide",
+      "source": "https://textual.textualize.io/events/hide/"
+    },
+    {
+      "category": "events",
+      "file": ".agents/skills/textual-events/references/key.md",
+      "id": "key",
+      "name": "Key",
+      "source": "https://textual.textualize.io/events/key/"
+    },
+    {
+      "category": "events",
+      "file": ".agents/skills/textual-events/references/leave.md",
+      "id": "leave",
+      "name": "Leave",
+      "source": "https://textual.textualize.io/events/leave/"
+    },
+    {
+      "category": "events",
+      "file": ".agents/skills/textual-events/references/load.md",
+      "id": "load",
+      "name": "Load",
+      "source": "https://textual.textualize.io/events/load/"
+    },
+    {
+      "category": "events",
+      "file": ".agents/skills/textual-events/references/mount.md",
+      "id": "mount",
+      "name": "Mount",
+      "source": "https://textual.textualize.io/events/mount/"
+    },
+    {
+      "category": "events",
+      "file": ".agents/skills/textual-events/references/mouse_capture.md",
+      "id": "mouse_capture",
+      "name": "MouseCapture",
+      "source": "https://textual.textualize.io/events/mouse_capture/"
+    },
+    {
+      "category": "events",
+      "file": ".agents/skills/textual-events/references/mouse_down.md",
+      "id": "mouse_down",
+      "name": "MouseDown",
+      "source": "https://textual.textualize.io/events/mouse_down/"
+    },
+    {
+      "category": "events",
+      "file": ".agents/skills/textual-events/references/mouse_move.md",
+      "id": "mouse_move",
+      "name": "MouseMove",
+      "source": "https://textual.textualize.io/events/mouse_move/"
+    },
+    {
+      "category": "events",
+      "file": ".agents/skills/textual-events/references/mouse_release.md",
+      "id": "mouse_release",
+      "name": "MouseRelease",
+      "source": "https://textual.textualize.io/events/mouse_release/"
+    },
+    {
+      "category": "events",
+      "file": ".agents/skills/textual-events/references/mouse_scroll_down.md",
+      "id": "mouse_scroll_down",
+      "name": "MouseScrollDown",
+      "source": "https://textual.textualize.io/events/mouse_scroll_down/"
+    },
+    {
+      "category": "events",
+      "file": ".agents/skills/textual-events/references/mouse_scroll_up.md",
+      "id": "mouse_scroll_up",
+      "name": "MouseScrollUp",
+      "source": "https://textual.textualize.io/events/mouse_scroll_up/"
+    },
+    {
+      "category": "events",
+      "file": ".agents/skills/textual-events/references/mouse_up.md",
+      "id": "mouse_up",
+      "name": "MouseUp",
+      "source": "https://textual.textualize.io/events/mouse_up/"
+    },
+    {
+      "category": "events",
+      "file": ".agents/skills/textual-events/references/paste.md",
+      "id": "paste",
+      "name": "Paste",
+      "source": "https://textual.textualize.io/events/paste/"
+    },
+    {
+      "category": "events",
+      "file": ".agents/skills/textual-events/references/print.md",
+      "id": "print",
+      "name": "Print",
+      "source": "https://textual.textualize.io/events/print/"
+    },
+    {
+      "category": "events",
+      "file": ".agents/skills/textual-events/references/resize.md",
+      "id": "resize",
+      "name": "Resize",
+      "source": "https://textual.textualize.io/events/resize/"
+    },
+    {
+      "category": "events",
+      "file": ".agents/skills/textual-events/references/screen_resume.md",
+      "id": "screen_resume",
+      "name": "ScreenResume",
+      "source": "https://textual.textualize.io/events/screen_resume/"
+    },
+    {
+      "category": "events",
+      "file": ".agents/skills/textual-events/references/screen_suspend.md",
+      "id": "screen_suspend",
+      "name": "ScreenSuspend",
+      "source": "https://textual.textualize.io/events/screen_suspend/"
+    },
+    {
+      "category": "events",
+      "file": ".agents/skills/textual-events/references/show.md",
+      "id": "show",
+      "name": "Show",
+      "source": "https://textual.textualize.io/events/show/"
+    },
+    {
+      "category": "events",
+      "file": ".agents/skills/textual-events/references/unmount.md",
+      "id": "unmount",
+      "name": "Unmount",
+      "source": "https://textual.textualize.io/events/unmount/"
+    },
+    {
+      "category": "css-types",
+      "file": ".agents/skills/textual-css-types/references/border.md",
+      "id": "border",
+      "name": "<border>",
+      "source": "https://textual.textualize.io/css_types/border/"
+    },
+    {
+      "category": "css-types",
+      "file": ".agents/skills/textual-css-types/references/color.md",
+      "id": "color",
+      "name": "<color>",
+      "source": "https://textual.textualize.io/css_types/color/"
+    },
+    {
+      "category": "css-types",
+      "file": ".agents/skills/textual-css-types/references/hatch.md",
+      "id": "hatch",
+      "name": "<hatch>",
+      "source": "https://textual.textualize.io/css_types/hatch/"
+    },
+    {
+      "category": "css-types",
+      "file": ".agents/skills/textual-css-types/references/horizontal.md",
+      "id": "horizontal",
+      "name": "<horizontal>",
+      "source": "https://textual.textualize.io/css_types/horizontal/"
+    },
+    {
+      "category": "css-types",
+      "file": ".agents/skills/textual-css-types/references/integer.md",
+      "id": "integer",
+      "name": "<integer>",
+      "source": "https://textual.textualize.io/css_types/integer/"
+    },
+    {
+      "category": "css-types",
+      "file": ".agents/skills/textual-css-types/references/keyline.md",
+      "id": "keyline",
+      "name": "<keyline>",
+      "source": "https://textual.textualize.io/css_types/keyline/"
+    },
+    {
+      "category": "css-types",
+      "file": ".agents/skills/textual-css-types/references/name.md",
+      "id": "name",
+      "name": "<name>",
+      "source": "https://textual.textualize.io/css_types/name/"
+    },
+    {
+      "category": "css-types",
+      "file": ".agents/skills/textual-css-types/references/number.md",
+      "id": "number",
+      "name": "<number>",
+      "source": "https://textual.textualize.io/css_types/number/"
+    },
+    {
+      "category": "css-types",
+      "file": ".agents/skills/textual-css-types/references/overflow.md",
+      "id": "overflow",
+      "name": "<overflow>",
+      "source": "https://textual.textualize.io/css_types/overflow/"
+    },
+    {
+      "category": "css-types",
+      "file": ".agents/skills/textual-css-types/references/pointer.md",
+      "id": "pointer",
+      "name": "<pointer>",
+      "source": "https://textual.textualize.io/css_types/pointer/"
+    },
+    {
+      "category": "css-types",
+      "file": ".agents/skills/textual-css-types/references/position.md",
+      "id": "position",
+      "name": "<position>",
+      "source": "https://textual.textualize.io/css_types/position/"
+    },
+    {
+      "category": "css-types",
+      "file": ".agents/skills/textual-css-types/references/percentage.md",
+      "id": "percentage",
+      "name": "<percentage>",
+      "source": "https://textual.textualize.io/css_types/percentage/"
+    },
+    {
+      "category": "css-types",
+      "file": ".agents/skills/textual-css-types/references/scalar.md",
+      "id": "scalar",
+      "name": "<scalar>",
+      "source": "https://textual.textualize.io/css_types/scalar/"
+    },
+    {
+      "category": "css-types",
+      "file": ".agents/skills/textual-css-types/references/text_align.md",
+      "id": "text_align",
+      "name": "<text-align>",
+      "source": "https://textual.textualize.io/css_types/text_align/"
+    },
+    {
+      "category": "css-types",
+      "file": ".agents/skills/textual-css-types/references/text_style.md",
+      "id": "text_style",
+      "name": "<text-style>",
+      "source": "https://textual.textualize.io/css_types/text_style/"
+    },
+    {
+      "category": "css-types",
+      "file": ".agents/skills/textual-css-types/references/vertical.md",
+      "id": "vertical",
+      "name": "<vertical>",
+      "source": "https://textual.textualize.io/css_types/vertical/"
+    },
+    {
+      "category": "layout",
+      "file": ".agents/skills/textual-layout/references/container.md",
+      "id": "container",
+      "name": "Container",
+      "source": "https://textual.textualize.io/guide/layout/"
+    },
+    {
+      "category": "layout",
+      "file": ".agents/skills/textual-layout/references/horizontal.md",
+      "id": "horizontal",
+      "name": "Horizontal",
+      "source": "https://textual.textualize.io/guide/layout/"
+    },
+    {
+      "category": "layout",
+      "file": ".agents/skills/textual-layout/references/vertical.md",
+      "id": "vertical",
+      "name": "Vertical",
+      "source": "https://textual.textualize.io/guide/layout/"
+    },
+    {
+      "category": "layout",
+      "file": ".agents/skills/textual-layout/references/grid.md",
+      "id": "grid",
+      "name": "Grid",
+      "source": "https://textual.textualize.io/guide/layout/"
+    },
+    {
+      "category": "layout",
+      "file": ".agents/skills/textual-layout/references/horizontalscroll.md",
+      "id": "horizontalscroll",
+      "name": "HorizontalScroll",
+      "source": "https://textual.textualize.io/guide/layout/"
+    },
+    {
+      "category": "layout",
+      "file": ".agents/skills/textual-layout/references/verticalscroll.md",
+      "id": "verticalscroll",
+      "name": "VerticalScroll",
+      "source": "https://textual.textualize.io/guide/layout/"
+    },
+    {
+      "category": "layout",
+      "file": ".agents/skills/textual-layout/references/center.md",
+      "id": "center",
+      "name": "Center",
+      "source": "https://textual.textualize.io/guide/layout/"
+    },
+    {
+      "category": "layout",
+      "file": ".agents/skills/textual-layout/references/middle.md",
+      "id": "middle",
+      "name": "Middle",
+      "source": "https://textual.textualize.io/guide/layout/"
+    },
+    {
+      "category": "layout",
+      "file": ".agents/skills/textual-layout/references/center_middle.md",
+      "id": "center_middle",
+      "name": "CenterMiddle",
+      "source": "https://textual.textualize.io/guide/layout/"
+    },
+    {
+      "category": "layout",
+      "file": ".agents/skills/textual-layout/references/scrollable_container.md",
+      "id": "scrollable_container",
+      "name": "ScrollableContainer",
+      "source": "https://textual.textualize.io/guide/layout/"
+    },
+    {
+      "category": "layout",
+      "file": ".agents/skills/textual-layout/references/item_grid.md",
+      "id": "item_grid",
+      "name": "ItemGrid",
+      "source": "https://textual.textualize.io/guide/layout/"
+    },
+    {
+      "category": "layout",
+      "file": ".agents/skills/textual-layout/references/screen.md",
+      "id": "screen",
+      "name": "Screen",
+      "source": "https://textual.textualize.io/guide/screens/"
+    },
+    {
+      "category": "layout",
+      "file": ".agents/skills/textual-layout/references/modal_screen.md",
+      "id": "modal_screen",
+      "name": "ModalScreen",
+      "source": "https://textual.textualize.io/guide/screens/"
+    },
+    {
+      "category": "layout",
+      "file": ".agents/skills/textual-layout/references/composition.md",
+      "id": "composition",
+      "name": "Composition and lifecycle",
+      "source": "https://textual.textualize.io/guide/screens/"
+    },
+    {
+      "category": "guides",
+      "file": ".agents/skills/textual-guides/references/devtools.md",
+      "id": "devtools",
+      "name": "Devtools",
+      "source": "https://textual.textualize.io/guide/devtools/"
+    },
+    {
+      "category": "guides",
+      "file": ".agents/skills/textual-guides/references/app.md",
+      "id": "app",
+      "name": "App Basics",
+      "source": "https://textual.textualize.io/guide/app/"
+    },
+    {
+      "category": "guides",
+      "file": ".agents/skills/textual-guides/references/styles.md",
+      "id": "styles",
+      "name": "Styles",
+      "source": "https://textual.textualize.io/guide/styles/"
+    },
+    {
+      "category": "guides",
+      "file": ".agents/skills/textual-guides/references/css.md",
+      "id": "css",
+      "name": "Textual CSS",
+      "source": "https://textual.textualize.io/guide/CSS/"
+    },
+    {
+      "category": "guides",
+      "file": ".agents/skills/textual-guides/references/queries.md",
+      "id": "queries",
+      "name": "DOM Queries",
+      "source": "https://textual.textualize.io/guide/queries/"
+    },
+    {
+      "category": "guides",
+      "file": ".agents/skills/textual-guides/references/layout.md",
+      "id": "layout",
+      "name": "Layout",
+      "source": "https://textual.textualize.io/guide/layout/"
+    },
+    {
+      "category": "guides",
+      "file": ".agents/skills/textual-guides/references/events.md",
+      "id": "events",
+      "name": "Events and Messages",
+      "source": "https://textual.textualize.io/guide/events/"
+    },
+    {
+      "category": "guides",
+      "file": ".agents/skills/textual-guides/references/input.md",
+      "id": "input",
+      "name": "Input",
+      "source": "https://textual.textualize.io/guide/input/"
+    },
+    {
+      "category": "guides",
+      "file": ".agents/skills/textual-guides/references/actions.md",
+      "id": "actions",
+      "name": "Actions",
+      "source": "https://textual.textualize.io/guide/actions/"
+    },
+    {
+      "category": "guides",
+      "file": ".agents/skills/textual-guides/references/reactivity.md",
+      "id": "reactivity",
+      "name": "Reactivity",
+      "source": "https://textual.textualize.io/guide/reactivity/"
+    },
+    {
+      "category": "guides",
+      "file": ".agents/skills/textual-guides/references/design.md",
+      "id": "design",
+      "name": "Themes",
+      "source": "https://textual.textualize.io/guide/design/"
+    },
+    {
+      "category": "guides",
+      "file": ".agents/skills/textual-guides/references/widgets.md",
+      "id": "widgets",
+      "name": "Widgets",
+      "source": "https://textual.textualize.io/guide/widgets/"
+    },
+    {
+      "category": "guides",
+      "file": ".agents/skills/textual-guides/references/content.md",
+      "id": "content",
+      "name": "Content",
+      "source": "https://textual.textualize.io/guide/content/"
+    },
+    {
+      "category": "guides",
+      "file": ".agents/skills/textual-guides/references/animation.md",
+      "id": "animation",
+      "name": "Animation",
+      "source": "https://textual.textualize.io/guide/animation/"
+    },
+    {
+      "category": "guides",
+      "file": ".agents/skills/textual-guides/references/screens.md",
+      "id": "screens",
+      "name": "Screens",
+      "source": "https://textual.textualize.io/guide/screens/"
+    },
+    {
+      "category": "guides",
+      "file": ".agents/skills/textual-guides/references/workers.md",
+      "id": "workers",
+      "name": "Workers",
+      "source": "https://textual.textualize.io/guide/workers/"
+    },
+    {
+      "category": "guides",
+      "file": ".agents/skills/textual-guides/references/command_palette.md",
+      "id": "command_palette",
+      "name": "Command Palette",
+      "source": "https://textual.textualize.io/guide/command_palette/"
+    },
+    {
+      "category": "guides",
+      "file": ".agents/skills/textual-guides/references/testing.md",
+      "id": "testing",
+      "name": "Testing",
+      "source": "https://textual.textualize.io/guide/testing/"
+    }
+  ],
+  "version": "8.2.8"
+}

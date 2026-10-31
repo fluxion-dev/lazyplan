@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import re
 import shutil
@@ -11,6 +12,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -24,6 +26,17 @@ UPGRADE_TIMEOUT = 300.0
 UPDATE_CACHE_NAME = "update.json"
 UPDATE_CACHE_TTL = 24 * 3600
 NO_UPDATE_ENV = "LAZYPLAN_NO_UPDATE_CHECK"
+UPDATE_POLL_ENV = "LAZYPLAN_UPDATE_INTERVAL"
+UPDATE_NETWORK_ENV = "LAZYPLAN_UPDATE_NETWORK_INTERVAL"
+UPDATE_POLL_INTERVAL = 60.0
+UPDATE_NETWORK_INTERVAL = 5 * 60.0
+UPDATE_BACKOFF = 15 * 60.0
+UPDATE_MIN_POLL = 5.0
+UPDATE_MAX_POLL = 3600.0
+UPDATE_MIN_NETWORK = 60.0
+UPDATE_MAX_NETWORK = 24 * 3600.0
+UPDATE_GATE_NAME = "update-gate.json"
+UPDATE_GATE_STALE = 120.0
 
 PIPX = "pipx"
 VENV = "venv"
@@ -157,6 +170,48 @@ def version_text(version: tuple[int, int, int]) -> str:
 def update_check_enabled() -> bool:
     """True unless the environment explicitly disables update checks."""
     return not os.environ.get(NO_UPDATE_ENV, "").strip()
+
+
+def _env_interval(
+    name: str,
+    default: float,
+    minimum: float,
+    maximum: float,
+    env: Mapping[str, str] | None,
+) -> float:
+    """Parse a seconds override, falling back to *default* and clamping."""
+    raw = (os.environ if env is None else env).get(name, "")
+    if not raw.strip():
+        return default
+    try:
+        value = float(raw)
+    except ValueError:
+        return default
+    if not math.isfinite(value):
+        return default
+    return min(max(value, minimum), maximum)
+
+
+def poll_interval(env: Mapping[str, str] | None = None) -> float:
+    """Seconds between TUI cache polls, from ``LAZYPLAN_UPDATE_INTERVAL``."""
+    return _env_interval(
+        UPDATE_POLL_ENV,
+        UPDATE_POLL_INTERVAL,
+        UPDATE_MIN_POLL,
+        UPDATE_MAX_POLL,
+        env,
+    )
+
+
+def network_interval(env: Mapping[str, str] | None = None) -> float:
+    """Seconds between shared network refreshes, from its env override."""
+    return _env_interval(
+        UPDATE_NETWORK_ENV,
+        UPDATE_NETWORK_INTERVAL,
+        UPDATE_MIN_NETWORK,
+        UPDATE_MAX_NETWORK,
+        env,
+    )
 
 
 def update_cache_path(home: str | Path | None = None) -> Path:

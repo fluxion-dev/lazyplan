@@ -180,18 +180,27 @@
       <a class="no-underline" href="https://github.com/fluxion-dev/lazyplan"><img class="inline h-5 align-middle" src="https://img.shields.io/github/license/fluxion-dev/lazyplan" alt="License" width="78" height="20"></a>
     </div>
 
-    <div id="download-stats" aria-label="PyPI download stats" class="mx-auto mt-8 hidden max-w-xl rounded-xl border border-plan-border bg-plan-surface/60 px-5 py-4">
+    <div id="download-stats" aria-label="Download stats" class="mx-auto mt-8 hidden max-w-2xl rounded-xl border border-plan-border bg-plan-surface/60 px-5 py-4">
       <dl class="m-0 flex flex-wrap items-center justify-center gap-x-10 gap-y-3 text-center">
-        <div>
+        <div id="stats-pypi">
           <dt class="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400">PyPI downloads</dt>
-          <dd class="m-0 text-2xl font-bold text-white"><span id="stats-total">—</span></dd>
+          <dd class="m-0 text-2xl font-bold text-white"><span id="stats-with-mirrors">—</span></dd>
+          <dd class="m-0 mt-0.5 text-[0.7rem] text-zinc-500">including mirrors</dd>
         </div>
-        <div>
+        <div id="stats-direct">
+          <dt class="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400">Direct from PyPI</dt>
+          <dd class="m-0 text-2xl font-bold text-white"><span id="stats-direct-count">—</span></dd>
+        </div>
+        <div id="stats-github">
+          <dt class="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400">GitHub release assets</dt>
+          <dd class="m-0 text-2xl font-bold text-white"><span id="stats-github-count">—</span></dd>
+        </div>
+        <div id="stats-week-row">
           <dt class="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400">Last 7 days</dt>
           <dd class="m-0 text-2xl font-bold text-white"><span id="stats-week">—</span></dd>
         </div>
       </dl>
-      <p class="mb-0 mt-3 text-xs text-zinc-400">Excluding mirrors. Includes CI and repeat installs. Updated <span id="stats-updated">—</span>.</p>
+      <p class="mb-0 mt-3 text-xs text-zinc-400">PyPI counts include mirrors, CI, and repeat installs; GitHub asset downloads are separate. Not unique users. Updated <span id="stats-updated">—</span>. <a class="text-cyber-cyan underline hover:text-white" href="https://github.com/fluxion-dev/lazyplan/blob/main/docs/downloads.md">How we count</a>.</p>
     </div>
 
     <figure class="mx-auto mt-12 max-w-3xl text-left">
@@ -519,8 +528,30 @@ Task · Add the token model        done</pre>
     strip.classList.add('hidden');
     strip.setAttribute('aria-hidden', 'true');
   }
+  function channel(data, key) {
+    var channels = data.channels || {};
+    var entry = channels[key];
+    if (!entry || entry.available !== true) {
+      return null;
+    }
+    if (!Number.isInteger(entry.total) || entry.total < 0) {
+      return null;
+    }
+    return entry;
+  }
+  function setText(id, value) {
+    document.getElementById(id).textContent = value;
+  }
+  function toggle(id, shown) {
+    var node = document.getElementById(id);
+    if (shown) {
+      node.classList.remove('hidden');
+    } else {
+      node.classList.add('hidden');
+    }
+  }
   function show(data) {
-    if (!data || data.available !== true) {
+    if (!data || data.available !== true || data.schema !== 2) {
       return hide();
     }
     var stamp = Date.parse(data.generated_at);
@@ -531,19 +562,33 @@ Task · Add the token model        done</pre>
     if (age < 0 || age > MAX_AGE_MS) {
       return hide();
     }
-    var total = data.total;
-    var week = data.last_7_days;
-    if (!Number.isInteger(total) || !Number.isInteger(week) || total < 0 || week < 0 || week > total) {
+    var pypi = channel(data, 'pypi_with_mirrors');
+    if (!pypi) {
       return hide();
     }
+    var direct = channel(data, 'pypi_direct');
+    var github = channel(data, 'github_assets');
+    var week = pypi.last_7_days;
+    if (!Number.isInteger(week) || week < 0 || week > pypi.total) {
+      week = null;
+    }
     var format = new Intl.NumberFormat('en-US');
-    document.getElementById('stats-total').textContent = format.format(total);
-    document.getElementById('stats-week').textContent = format.format(week);
-    document.getElementById('stats-updated').textContent = new Date(stamp).toLocaleDateString('en-US', {
+    setText('stats-with-mirrors', format.format(pypi.total));
+    setText('stats-week', week === null ? '—' : format.format(week));
+    toggle('stats-week-row', week !== null);
+    if (direct) {
+      setText('stats-direct-count', format.format(direct.total));
+    }
+    toggle('stats-direct', Boolean(direct));
+    if (github) {
+      setText('stats-github-count', format.format(github.total));
+    }
+    toggle('stats-github', Boolean(github));
+    setText('stats-updated', new Date(stamp).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric'
-    });
+    }));
     strip.classList.remove('hidden');
     strip.removeAttribute('aria-hidden');
   }

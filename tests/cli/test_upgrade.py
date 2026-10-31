@@ -122,14 +122,40 @@ class TestRunners(unittest.TestCase):
     def test_run_upgrade_routes_pipx(self):
         with mock.patch.object(upgrade, "upgrade_pipx") as run:
             with mock.patch.object(upgrade, "upgrade_venv") as venv_run:
-                upgrade.run_upgrade(PIPX_INFO, "0.16.0")
-        run.assert_called_once_with("0.16.0")
+                upgrade.run_upgrade(PIPX_INFO, "0.16.0", installed="0.15.0")
+        run.assert_called_once_with("0.16.0", installed="0.15.0")
         venv_run.assert_not_called()
 
     def test_run_upgrade_routes_venv(self):
         with mock.patch.object(upgrade, "upgrade_venv") as run:
-            upgrade.run_upgrade(VENV_INFO, "0.16.0", "/some/venv/bin/python")
-        run.assert_called_once_with("0.16.0", "/some/venv/bin/python")
+            upgrade.run_upgrade(VENV_INFO, "0.16.0", "/some/venv/bin/python", installed="0.15.0")
+        run.assert_called_once_with("0.16.0", "/some/venv/bin/python", installed="0.15.0")
+
+    def test_run_upgrade_rejects_a_downgrade_before_dispatch(self):
+        with (
+            mock.patch.object(upgrade, "upgrade_pipx") as pipx_run,
+            mock.patch.object(upgrade, "upgrade_venv") as venv_run,
+        ):
+            with self.assertRaises(upgrade.UpgradeError):
+                upgrade.run_upgrade(PIPX_INFO, "0.15.0", installed="0.16.0")
+        pipx_run.assert_not_called()
+        venv_run.assert_not_called()
+
+    def test_pipx_rejects_a_downgrade_without_a_subprocess(self):
+        with mock.patch.object(upgrade.subprocess, "run") as run:
+            with self.assertRaises(upgrade.UpgradeError):
+                upgrade.upgrade_pipx("0.15.0", installed="0.16.0")
+        run.assert_not_called()
+
+    def test_venv_rejects_a_downgrade_without_a_subprocess(self):
+        with mock.patch.object(upgrade.subprocess, "run") as run:
+            with self.assertRaises(upgrade.UpgradeError):
+                upgrade.upgrade_venv("0.15.0", "/venv/bin/python", installed="0.16.0")
+        run.assert_not_called()
+
+    def test_equal_version_is_refused(self):
+        with self.assertRaises(upgrade.UpgradeError):
+            upgrade.require_newer("0.16.0", installed="0.16.0")
 
     def test_pipx_upgrade_first_try_wins(self):
         ok = mock.Mock(returncode=0)
@@ -137,7 +163,7 @@ class TestRunners(unittest.TestCase):
             mock.patch.object(upgrade.shutil, "which", return_value="/usr/bin/pipx"),
             mock.patch.object(upgrade.subprocess, "run", return_value=ok) as run,
         ):
-            upgrade.upgrade_pipx("0.16.0")
+            upgrade.upgrade_pipx("0.16.0", installed="0.15.0")
         self.assertEqual(run.call_count, 1)
 
     def test_pipx_upgrade_falls_back_to_force_install(self):
@@ -147,7 +173,7 @@ class TestRunners(unittest.TestCase):
             mock.patch.object(upgrade.shutil, "which", return_value="/usr/bin/pipx"),
             mock.patch.object(upgrade.subprocess, "run", side_effect=[bad, good]) as run,
         ):
-            upgrade.upgrade_pipx("0.16.0")
+            upgrade.upgrade_pipx("0.16.0", installed="0.15.0")
         self.assertEqual(run.call_count, 2)
         self.assertIn("--force", run.call_args[0][0])
 
@@ -158,17 +184,19 @@ class TestRunners(unittest.TestCase):
             mock.patch.object(upgrade.subprocess, "run", return_value=bad),
         ):
             with self.assertRaises(upgrade.UpgradeError):
-                upgrade.upgrade_pipx("0.16.0")
+                upgrade.upgrade_pipx("0.16.0", installed="0.15.0")
 
     def test_pipx_missing_raises(self):
         with mock.patch.object(upgrade.shutil, "which", return_value=None):
             with self.assertRaises(upgrade.UpgradeError):
-                upgrade.upgrade_pipx("0.16.0")
+                upgrade.upgrade_pipx("0.16.0", installed="0.15.0")
 
     def test_venv_reinstall_runs_venv_pip(self):
         ok = mock.Mock(returncode=0)
         with mock.patch.object(upgrade.subprocess, "run", return_value=ok) as run:
-            upgrade.upgrade_venv("0.16.0", "/home/u/.local/share/lazyplan-venv/bin/python")
+            upgrade.upgrade_venv(
+                "0.16.0", "/home/u/.local/share/lazyplan-venv/bin/python", installed="0.15.0"
+            )
         cmd = run.call_args[0][0]
         self.assertEqual(
             cmd,
@@ -185,7 +213,9 @@ class TestRunners(unittest.TestCase):
         bad = mock.Mock(returncode=1, stderr="boom", stdout="")
         with mock.patch.object(upgrade.subprocess, "run", return_value=bad):
             with self.assertRaises(upgrade.UpgradeError):
-                upgrade.upgrade_venv("0.16.0", "/home/u/.local/share/lazyplan-venv/bin/python")
+                upgrade.upgrade_venv(
+                    "0.16.0", "/home/u/.local/share/lazyplan-venv/bin/python", installed="0.15.0"
+                )
 
 
 PIPX_INFO = upgrade.InstallInfo(upgrade.PIPX, True, "/home/u/.local/share/pipx/venvs/lazyplan-tui")

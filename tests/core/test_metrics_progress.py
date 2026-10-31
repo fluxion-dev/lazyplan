@@ -97,6 +97,22 @@ class ProgressAggregationTest(unittest.TestCase):
         self.assertEqual(progress.milestones[0].title, "M1")
         self.assertEqual(progress.milestones[0].done, 1)
 
+    def test_ties_break_by_open_tasks_then_id(self) -> None:
+        plan = self.store.add_plan("Plan")
+        first = self.store.add_milestone(plan.id, "First")
+        second = self.store.add_milestone(plan.id, "Second")
+        third = self.store.add_milestone(plan.id, "Third")
+        tasks = [
+            self.store.add_task(first.id, "A"),
+            self.store.add_task(second.id, "B"),
+            self.store.add_task(second.id, "C"),
+            self.store.add_task(third.id, "D"),
+        ]
+        for task in tasks:
+            self._set_event_time(f"T#{task.id} %", 1_000)
+        titles = [item.title for item in metrics.overall_progress(self.store, now=2_000).milestones]
+        self.assertEqual(titles, ["Second", "First", "Third"])
+
     def test_eta_uses_the_fourteen_day_rate(self) -> None:
         plan = self.store.add_plan("Plan")
         milestone = self.store.add_milestone(plan.id, "M")

@@ -69,6 +69,18 @@ class ThemeTest(unittest.IsolatedAsyncioTestCase):
             self.assertFalse(app.current_theme.dark)
             self.assertEqual(app.theme_variables["lp-accent"], LIGHT_TOKENS["lp-accent"])
 
+    async def test_every_token_resolves_in_both_themes(self) -> None:
+        with mock.patch.dict(os.environ, {"LAZYPLAN_THEME": "dark"}):
+            app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(100, 30)) as pilot:
+            await pilot.pause()
+            for name in TOKEN_NAMES:
+                self.assertEqual(app.theme_variables[name], DARK_TOKENS[name])
+            app.theme = LIGHT_NAME
+            await pilot.pause()
+            for name in TOKEN_NAMES:
+                self.assertEqual(app.theme_variables[name], LIGHT_TOKENS[name])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -28,7 +28,7 @@ def render_heatmap(activity: tuple[DayActivity, ...]) -> str:
         lines.append(" ".join(cells))
     first = activity[0].day.strftime("%m-%d")
     last = activity[-1].day.strftime("%m-%d")
-    legend = f"{first} → {last} · less "
+    legend = f"{first}→{last} less "
     for token in (HEATMAP_EMPTY, *HEATMAP_SHADES):
         legend += f"[{token}]{HEATMAP_CELL}[/]"
     lines.append(legend + " more")

@@ -6,7 +6,8 @@ from ...design import escape_markup, metric_bar, truncate
 from ...metrics import OverallProgress
 from .base import MetricCard
 
-TITLE_WIDTH = 20
+TITLE_WIDTH = 16
+BAR_WIDTH = 8
 
 
 def _elapsed_text(seconds: float | None) -> str:
@@ -35,7 +36,9 @@ def render_progress(progress: OverallProgress | None) -> str:
     lines = [_headline(progress)]
     for item in progress.milestones:
         label = truncate(escape_markup(item.title), TITLE_WIDTH)
-        lines.append(f"{metric_bar(item.done, item.total)} {item.done}/{item.total} {label}")
+        lines.append(
+            f"{metric_bar(item.done, item.total, BAR_WIDTH)} {item.done}/{item.total} {label}"
+        )
     return "\n".join(lines)
 
 

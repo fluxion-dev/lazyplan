@@ -262,13 +262,12 @@ are present, with six matching JSON-LD questions.
 
 ### Download proof and mirrors (2026-10-31)
 
-After: the strip under the hero headlines 10,004 PyPI downloads including
-mirrors, then shows 3,252 direct PyPI downloads, 43 GitHub release asset
-downloads, and 3,777 in the last seven days. Each channel is labeled and
-rendered on its own; PyPI and GitHub counts are never added together. The caveat
-stays visible: "PyPI counts include mirrors, CI, and repeat installs; GitHub
-asset downloads are separate. Not unique users." A "How we count" link points
-at `docs/downloads.md`.
+After: the strip under the hero shows one centered **Downloads** value,
+10,004, sourced from the pypistats mirror-inclusive PyPI series. A compact
+footer keeps the updated date and a "How we count" link to
+`docs/downloads.md`. The long caveat line is gone from the hero; the method
+page still explains mirrors, CI and repeat installs, non-unique users, and why
+the channels are never summed.
 
 `tools/fetch-downloads.py` builds a versioned snapshot from both pypistats
 `overall` series and the GitHub releases API, the Pages workflow runs it before
@@ -277,8 +276,8 @@ hidden for unavailable, malformed, stale, or schema-mismatched data. Built-site
 Lighthouse: 97 performance, 100 accessibility, 100 best practices, 100 SEO;
 widths 360, 768, and 1440 show no overflow.
 
-Verified live: the snapshot carries the three channels, the strip shows the
-numbers above, and the method link resolves. The Pages deploy
+Verified live: the snapshot carries all three channels, the strip shows 10,004,
+and the method link resolves. The Pages deploy
 [41219878364](https://github.com/fluxion-dev/lazyplan/actions/runs/41219878364)
-built and published it on 2026-10-31; the live `downloads.json` reports
-10,004 / 3,252 / 43 with schema 2.
+built and published the simplified strip on 2026-10-31; the live
+`downloads.json` reports 10,004 / 3,252 / 43 with schema 2.

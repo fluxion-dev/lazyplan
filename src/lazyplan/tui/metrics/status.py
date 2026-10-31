@@ -1,35 +1,13 @@
-"""Status card: lifecycle counts, shares, and the blocked overlay."""
+"""Status card: a Plotext bar chart of lifecycle states and the blocked overlay."""
 
 from __future__ import annotations
 
-from ...design import BLOCKED_RICH, STATUS_RICH, metric_bar
-from ...metrics import StatusBreakdown
+from textual.app import ComposeResult
+from textual.widgets import Label, Static
+from textual_plotext import PlotextPlot
+
+from ...metrics import StatusBreakdown, status_bars
 from .base import MetricCard
-
-ROWS = ("todo", "doing", "done", "blocked")
-
-
-def _color(row: str) -> str:
-    return BLOCKED_RICH if row == "blocked" else STATUS_RICH[row]
-
-
-def render_status(status: StatusBreakdown | None) -> str:
-    """Render the four rows; the caller handles the empty state."""
-    if status is None or status.total <= 0:
-        return ""
-    counts = {
-        "todo": status.todo,
-        "doing": status.doing,
-        "done": status.done,
-        "blocked": status.blocked,
-    }
-    peak = max(counts.values())
-    lines = []
-    for row in ROWS:
-        count = counts[row]
-        share = status.share(count)
-        lines.append(f"[{_color(row)}]{row:<7}[/] {metric_bar(count, peak)} {count:>2} {share:>3}%")
-    return "\n".join(lines)
 
 
 class StatusCard(MetricCard):
@@ -38,9 +16,26 @@ class StatusCard(MetricCard):
     def __init__(self) -> None:
         super().__init__("metric-status", "Task status", "no tasks yet")
 
+    def compose(self) -> ComposeResult:
+        yield Label(self.card_title, classes="metric-title")
+        yield Static(self.empty, id=f"{self.id}-empty", classes="metric-empty")
+        yield PlotextPlot(id=f"{self.id}-plot")
+
     def refresh_status(self, status: StatusBreakdown | None) -> None:
-        """Render *status*, or the empty state when there are no tasks."""
-        if status is None or status.total <= 0:
-            self.show_empty()
+        """Plot *status*, or show the empty state when there are no tasks."""
+        has_data = status is not None and status.total > 0
+        self.query_one(f"#{self.id}-empty", Static).display = not has_data
+        plot = self.query_one(f"#{self.id}-plot", PlotextPlot)
+        plot.display = has_data
+        if status is None or not has_data:
             return
-        self.show(render_status(status))
+        rows = status_bars(status)
+        labels = [row.label for row in rows]
+        values = [row.value for row in rows]
+        peak = max(values)
+        plt = plot.plt
+        plt.clear_figure()
+        plt.bar(labels, values, orientation="horizontal", color="green")
+        plt.xlim(0, peak)
+        plt.xticks([0, peak], ["0", str(peak)])
+        plot.refresh()

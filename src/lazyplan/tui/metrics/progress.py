@@ -46,13 +46,18 @@ class ProgressCard(MetricCard):
 
     def refresh_progress(self, progress: OverallProgress | None) -> None:
         """Render *progress*, or the empty state when there is no work."""
-        has_work = progress is not None and progress.total > 0
-        rows = milestone_bars(progress) if has_work else ()
-        self.query_one(f"#{self.id}-empty", Static).display = not has_work
         head = self.query_one(f"#{self.id}-head", Static)
-        head.display = has_work
-        head.update(_headline(progress) if has_work else "")
         plot = self.query_one(f"#{self.id}-plot", PlotextPlot)
+        if progress is None or progress.total <= 0:
+            self.query_one(f"#{self.id}-empty", Static).display = True
+            head.display = False
+            head.update("")
+            plot.display = False
+            return
+        rows = milestone_bars(progress)
+        self.query_one(f"#{self.id}-empty", Static).display = False
+        head.display = True
+        head.update(_headline(progress))
         plot.display = bool(rows)
         if not rows:
             return

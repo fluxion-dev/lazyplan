@@ -39,7 +39,7 @@ class ActivityCard(MetricCard):
         ticks = list(range(0, len(labels), step))
         if ticks[-1] != len(labels) - 1:
             ticks.append(len(labels) - 1)
-        plt.xticks(ticks, [labels[index] for index in ticks])
+        plt.xticks([float(index) for index in ticks], [labels[index] for index in ticks])
         peak = max(values)
         plt.ylim(0, peak)
         plt.yticks([0, peak], ["0", str(peak)])

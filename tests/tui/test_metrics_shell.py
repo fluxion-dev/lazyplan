@@ -31,13 +31,6 @@ def _within(region, width: int, height: int) -> bool:
     )
 
 
-def _row_text(body: str, name: str) -> str:
-    for line in body.splitlines():
-        if name in line:
-            return line
-    return ""
-
-
 @unittest.skipUnless(tui_mod is not None and tui_mod._TEXTUAL_OK, "textual not installed")
 class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:
@@ -81,11 +74,10 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
             section = app.query_one("#metrics", MetricsSection)
             activity = str(section.query_one("#metric-heatmap-empty").render())
             progress = str(section.query_one("#metric-progress-head").render())
-            status = str(section.query_one("#metric-status-body").render())
+            status_plot = section.query_one("#metric-status").query_one("PlotextPlot")
             self.assertIn("no completions yet", activity)
             self.assertIn("0% 0/1", progress)
-            self.assertIn("todo", status)
-            self.assertIn("done", status)
+            self.assertTrue(status_plot.display)
 
     async def test_section_is_twelve_rows(self) -> None:
         app = tui_mod.create_app(self.db)
@@ -122,13 +114,14 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
             card = app.query_one("#metric-status")
-            before = str(card.query_one(".metric-body").render())
+            plot = card.query_one("PlotextPlot")
+            before = plot.plt.build()
             services.set_status(self.store, "task", self.task_id, Status.DONE, actor="qa")
             app.refresh_all()
             await pilot.pause()
-            after = str(card.query_one(".metric-body").render())
-        self.assertTrue(_row_text(before, "todo").endswith("100%"))
-        self.assertTrue(_row_text(after, "done").endswith("100%"))
+            after = plot.plt.build()
+        self.assertIn("todo 100%", before)
+        self.assertIn("done 100%", after)
 
     async def test_blocked_edit_updates_the_status_card(self) -> None:
         app = tui_mod.create_app(self.db)
@@ -138,8 +131,8 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
             self.store.set_blocked(self.task_id, True, "waiting", actor="qa")
             app.refresh_all()
             await pilot.pause()
-            body = str(card.query_one(".metric-body").render())
-        self.assertIn(" 1 ", _row_text(body, "blocked"))
+            chart = card.query_one("PlotextPlot").plt.build()
+        self.assertIn("blocked 100%", chart)
 
     async def test_heatmap_updates_after_a_done_toggle(self) -> None:
         app = tui_mod.create_app(self.db)

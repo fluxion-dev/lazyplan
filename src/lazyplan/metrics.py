@@ -7,10 +7,16 @@ at a time.
 
 from __future__ import annotations
 
+import re
+import time
 from dataclasses import dataclass
 from datetime import date
 
+from .models import Status, Task
 from .store import Store
+
+_ADDED = re.compile(r"^([PMT])#(\d+) ")
+_DONE = re.compile(r"^task #(\d+) -> done$")
 
 
 @dataclass(frozen=True)
@@ -90,14 +96,41 @@ class MetricsSnapshot:
 
 
 def empty_snapshot() -> MetricsSnapshot:
-    """A snapshot with no computed sections, used before panels land."""
+    """A snapshot with no computed sections."""
     return MetricsSnapshot()
+
+
+def _events(store: Store) -> list[dict]:
+    """Every event, oldest first."""
+    return list(reversed(store.feed(limit=1_000_000)))
+
+
+def _all_tasks(store: Store) -> list[Task]:
+    """Every task in one query, in creation order."""
+    return [task for tasks in store.tasks_map().values() for task in tasks]
+
+
+def _add_times(events: list[dict]) -> list[float]:
+    """Timestamps of plan, milestone, and task creation events."""
+    return [float(event["ts"]) for event in events if _ADDED.match(str(event.get("detail") or ""))]
+
+
+def overall_progress(store: Store, now: float | None = None) -> OverallProgress:
+    """Done/total tasks across every plan plus the elapsed time."""
+    tasks = _all_tasks(store)
+    done = sum(1 for task in tasks if task.status == Status.DONE)
+    starts = _add_times(_events(store))
+    stamp = time.time() if now is None else now
+    elapsed = None
+    if starts:
+        elapsed = max(0.0, stamp - min(starts))
+    return OverallProgress(done=done, total=len(tasks), elapsed_seconds=elapsed)
 
 
 def snapshot(store: Store, now: float | None = None) -> MetricsSnapshot:
     """Build the dashboard snapshot.
 
-    The shell returns the empty contract; each panel plan fills its own
-    section without changing the host.
+    Each panel plan fills its own section without changing the host.
     """
-    return empty_snapshot()
+    stamp = time.time() if now is None else now
+    return MetricsSnapshot(progress=overall_progress(store, now=stamp))

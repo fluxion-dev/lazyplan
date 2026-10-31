@@ -1,4 +1,4 @@
-"""Static contract for the PyPI download stat strip."""
+"""Static contract for the download stat strip."""
 
 from __future__ import annotations
 
@@ -17,22 +17,42 @@ class TestDownloadStats(unittest.TestCase):
         self.assertIn('id="download-stats"', self.page)
         strip = self.page.split('id="download-stats"', 1)[1].split(">", 1)[0]
         self.assertIn("hidden", strip)
-        self.assertIn('aria-label="PyPI download stats"', self.page)
-        for field in ("stats-total", "stats-week", "stats-updated"):
+        self.assertIn('aria-label="Download stats"', self.page)
+        for field in (
+            "stats-with-mirrors",
+            "stats-direct-count",
+            "stats-github-count",
+            "stats-week",
+            "stats-updated",
+        ):
             self.assertIn(f'id="{field}"', self.page)
 
-    def test_caveat_and_labels_are_explicit(self):
+    def test_labels_and_method_are_explicit(self):
         self.assertIn("PyPI downloads", self.page)
+        self.assertIn("including mirrors", self.page)
+        self.assertIn("Direct from PyPI", self.page)
+        self.assertIn("GitHub release assets", self.page)
         self.assertIn("Last 7 days", self.page)
-        self.assertIn("Excluding mirrors", self.page)
-        self.assertIn("Includes CI and repeat installs", self.page)
+        self.assertIn("include mirrors, CI, and repeat installs", self.page)
+        self.assertIn("Not unique users", self.page)
+        self.assertIn("docs/downloads.md", self.page)
+        self.assertNotIn("Excluding mirrors", self.page)
 
     def test_renderer_is_same_origin_and_stale_safe(self):
         self.assertIn("fetch('downloads.json'", self.page)
         self.assertIn("var MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;", self.page)
         self.assertIn("data.available !== true", self.page)
+        self.assertIn("data.schema !== 2", self.page)
+        self.assertIn("channel(data, 'pypi_with_mirrors')", self.page)
+        self.assertIn("channel(data, 'pypi_direct')", self.page)
+        self.assertIn("channel(data, 'github_assets')", self.page)
         self.assertNotIn("pypistats.org", self.page)
         self.assertNotIn("https://img.shields.io/pypi/d", self.page)
+
+    def test_no_cross_channel_total_is_rendered(self):
+        self.assertNotIn('id="stats-total"', self.page)
+        self.assertNotIn("var total = data.total", self.page)
+        self.assertNotIn("with_mirrors +", self.page)
 
     def test_pages_refreshes_daily_and_json_is_generated(self):
         workflow = (ROOT / ".github/workflows/pages.yml").read_text(encoding="utf-8")

@@ -7,6 +7,7 @@ at a time.
 
 from __future__ import annotations
 
+import math
 import re
 import time
 from dataclasses import dataclass
@@ -17,6 +18,9 @@ from .store import Store
 
 _ADDED = re.compile(r"^([PMT])#(\d+) ")
 _DONE = re.compile(r"^task #(\d+) -> done$")
+_TASK_REF = re.compile(r"^(?:T#|task #)(\d+)\b")
+ETA_WINDOW_DAYS = 14
+MILESTONE_LIMIT = 5
 
 
 @dataclass(frozen=True)
@@ -115,16 +119,87 @@ def _add_times(events: list[dict]) -> list[float]:
     return [float(event["ts"]) for event in events if _ADDED.match(str(event.get("detail") or ""))]
 
 
+def _latest_task_events(events: list[dict]) -> dict[int, float]:
+    """Newest event timestamp for every task id."""
+    latest: dict[int, float] = {}
+    for event in events:
+        found = _TASK_REF.match(str(event.get("detail") or ""))
+        if found is not None:
+            latest[int(found.group(1))] = float(event["ts"])
+    return latest
+
+
+def _done_times(events: list[dict]) -> list[float]:
+    """Timestamps of every completion transition."""
+    return [float(event["ts"]) for event in events if _DONE.match(str(event.get("detail") or ""))]
+
+
+def _top_milestones(
+    store: Store,
+    latest: dict[int, float],
+    limit: int = MILESTONE_LIMIT,
+) -> tuple[MilestoneProgress, ...]:
+    """The busiest milestones, newest activity first."""
+    rows: list[tuple[float, MilestoneProgress]] = []
+    tasks_by_milestone = store.tasks_map()
+    milestones_by_plan = store.milestones_map()
+    for plan in store.list_plans():
+        for milestone in milestones_by_plan.get(plan.id, []):
+            tasks = tasks_by_milestone.get(milestone.id, [])
+            if not tasks:
+                continue
+            done = sum(1 for task in tasks if task.status == Status.DONE)
+            newest = max((latest.get(task.id, 0.0) for task in tasks), default=0.0)
+            rows.append(
+                (
+                    newest,
+                    MilestoneProgress(
+                        milestone_id=milestone.id,
+                        plan_id=plan.id,
+                        title=milestone.title,
+                        done=done,
+                        total=len(tasks),
+                    ),
+                )
+            )
+    rows.sort(
+        key=lambda item: (
+            -item[0],
+            -(item[1].total - item[1].done),
+            item[1].milestone_id,
+        )
+    )
+    return tuple(row for _newest, row in rows[:limit])
+
+
 def overall_progress(store: Store, now: float | None = None) -> OverallProgress:
-    """Done/total tasks across every plan plus the elapsed time."""
+    """Done/total tasks across every plan, the elapsed time, and the ETA."""
     tasks = _all_tasks(store)
     done = sum(1 for task in tasks if task.status == Status.DONE)
-    starts = _add_times(_events(store))
+    events = _events(store)
+    starts = _add_times(events)
     stamp = time.time() if now is None else now
     elapsed = None
     if starts:
         elapsed = max(0.0, stamp - min(starts))
-    return OverallProgress(done=done, total=len(tasks), elapsed_seconds=elapsed)
+    recent = [
+        when for when in _done_times(events) if stamp - ETA_WINDOW_DAYS * 86_400 <= when <= stamp
+    ]
+    rate = len(recent) / ETA_WINDOW_DAYS
+    remaining = len(tasks) - done
+    complete = bool(tasks) and remaining == 0
+    eta_days = None
+    if not complete and remaining > 0 and rate > 0:
+        eta_days = math.ceil(remaining / rate)
+    return OverallProgress(
+        done=done,
+        total=len(tasks),
+        elapsed_seconds=elapsed,
+        daily_rate=rate,
+        eta_days=eta_days,
+        complete=complete,
+        milestones=_top_milestones(store, _latest_task_events(events)),
+    )
 
 
 def snapshot(store: Store, now: float | None = None) -> MetricsSnapshot:

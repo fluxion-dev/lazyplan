@@ -21,7 +21,7 @@ try:
 except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
-from ...design import SOURCE_MARKER_RICH, escape_markup
+from ...design import escape_markup
 from ...source import (
     DiffFile,
     DiffLine,
@@ -55,7 +55,7 @@ def _commit_label(commit: SourceCommit) -> str:
     subject = escape_markup(commit.subject or "(no subject)")
     count = f" · {len(commit.files)} files" if commit.files else ""
     stale = " [red]stale[/]" if commit.stale else ""
-    return f"[dim]{commit.short}[/] {subject}[dim]{count}[/]{stale} {SOURCE_MARKER_RICH}"
+    return f"[dim]{commit.short}[/] {subject}[dim]{count}[/]{stale}"
 
 
 def _repo_label(repo: SourceRepo) -> str:
@@ -64,14 +64,14 @@ def _repo_label(repo: SourceRepo) -> str:
     return (
         f"[bold]{escape_markup(repo.name)}[/] "
         f"[dim]{escape_markup(branch)} · {state} · {len(repo.commits)} commits"
-        f" · {len(repo.pulls)} PRs[/] {SOURCE_MARKER_RICH}"
+        f" · {len(repo.pulls)} PRs[/]"
     )
 
 
 def _pull_label(pull: SourcePull) -> str:
     title = escape_markup(pull.title or "")
     state = pull.state or "unknown"
-    return f"[dim]PR #{pull.number}[/] {state} {title} {SOURCE_MARKER_RICH}".rstrip()
+    return f"[dim]PR #{pull.number}[/] {state} {title}".rstrip()
 
 
 def _diff_gutter(line: DiffLine) -> str:
@@ -202,7 +202,7 @@ if _TEXTUAL_OK:
                         if needle and needle not in item.path.lower():
                             continue
                         commit_node.add_leaf(
-                            f"[dim]{escape_markup(item.path)}[/] {SOURCE_MARKER_RICH}",
+                            f"[dim]{escape_markup(item.path)}[/]",
                             data=self._file_data(repo, commit, item),
                         )
                 for pull in repo.pulls:

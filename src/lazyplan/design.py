@@ -103,7 +103,6 @@ ICONS = {
     "circle": "○",
     "arrow": "→",
     "warn": "⚠",
-    "branch": "⎇",
     "dot": "·",
 }
 ASCII_ICONS = {
@@ -112,7 +111,6 @@ ASCII_ICONS = {
     "circle": "[ ]",
     "arrow": "->",
     "warn": "!",
-    "branch": "Y",
     "dot": "-",
 }
 
@@ -225,20 +223,6 @@ def source_chip(commit_count: int = 0, pull_count: int = 0, stale: int = 0) -> s
     return f"[dim]{' · '.join(parts)}[/]" if parts else ""
 
 
-SOURCE_MARKER = "⎇"
-SOURCE_MARKER_RICH = f"[dim]{SOURCE_MARKER}[/]"
-
-
-def has_source(commits: int = 0, pulls: int = 0, repos: int = 0) -> bool:
-    """True when a row carries any commit, pull request, or repo link."""
-    return commits > 0 or pulls > 0 or repos > 0
-
-
-def source_marker(commits: int = 0, pulls: int = 0, repos: int = 0) -> str:
-    """Single-cell `⎇` marker for rows with source details; empty otherwise."""
-    return SOURCE_MARKER_RICH if has_source(commits, pulls, repos) else ""
-
-
 _PR_STYLE = {
     "merged": ("green", "PR"),
     "open": ("yellow", "PR"),
@@ -335,12 +319,6 @@ def _row(
     if pr:
         suffix += f" {pr}"
         plain_suffix += " PR"
-    commits = source_counts[0] if source_counts is not None else len(links or ())
-    pulls = source_counts[1] if source_counts is not None else int(bool(pr_state or pr_checks))
-    marker = source_marker(commits, pulls, repo_count)
-    if marker:
-        suffix += f" {marker}"
-        plain_suffix += f" {SOURCE_MARKER}"
     prefix_plain = f"{status_word(obj.status)} {id_part} "
     available = None if width is None else width - len(prefix_plain) - len(plain_suffix)
     title = truncate(title, available)
@@ -365,8 +343,7 @@ def _plan_source_suffix(
     source_counts: tuple[int, int, int] | None,
     repo_count: int,
 ) -> tuple[str, str]:
-    """Rich and plain source suffix (counts, repo chips, `⎇`) for a plan row."""
-    repo_count = repo_count or len(repos or ())
+    """Rich and plain source suffix (counts and repo chips) for a plan row."""
     chips = source_chip(*source_counts) if source_counts is not None else commits_chip(links)
     all_chips = " ".join(chip for chip in (chips, repos_chip(repos)) if chip)
     rich = f" {all_chips}" if all_chips else ""
@@ -380,12 +357,6 @@ def _plan_source_suffix(
         plain += " " + " ".join(
             part for part in (repo_project_name(r) for r in (repos or [])) if part
         )
-    commits = source_counts[0] if source_counts is not None else len(links or ())
-    pulls = source_counts[1] if source_counts is not None else 0
-    marker = source_marker(commits, pulls, repo_count)
-    if marker:
-        rich += f" {marker}"
-        plain += f" {SOURCE_MARKER}"
     return rich, plain
 
 

@@ -210,22 +210,13 @@ class TestDesignSystem(unittest.TestCase):
             "[dim]aaaaaaaaaaaa[/] [dim]bbbbbbbbbbbb[/]",
         )
 
-    def test_source_marker(self):
-        self.assertEqual(design.SOURCE_MARKER, "⎇")
-        self.assertEqual(len(design.SOURCE_MARKER), 1)
-        self.assertEqual(design.source_marker(), "")
-        self.assertIn(design.SOURCE_MARKER, design.source_marker(1))
-        self.assertIn(design.SOURCE_MARKER, design.source_marker(0, 1))
-        self.assertIn(design.SOURCE_MARKER, design.source_marker(0, 0, 1))
-        self.assertFalse(design.has_source())
-        self.assertTrue(design.has_source(0, 0, 1))
+    def test_source_rows_show_chips_not_a_marker(self):
         p = Plan(id=1, name="N")
-        self.assertNotIn(design.SOURCE_MARKER, design.plan_row(p))
-        self.assertIn(design.SOURCE_MARKER, design.plan_row(p, source_counts=(1, 0, 0)))
-        self.assertIn(
-            design.SOURCE_MARKER,
-            design.plan_row(p, source_counts=(0, 0, 0), repo_count=1),
-        )
+        bare = design.plan_row(p)
+        linked = design.plan_row(p, source_counts=(1, 0, 0), repo_count=1)
+        self.assertNotIn("⎇", bare)
+        self.assertNotIn("⎇", linked)
+        self.assertIn("1c", linked)
 
     def test_pr_chip_states(self):
         self.assertEqual(design.pr_chip(), "")

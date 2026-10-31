@@ -818,6 +818,13 @@ tasks to milestones and plans, and task rows show a PR chip. Scope is
 github.com only. lazyplan never creates branches, worktrees, commits, pushes,
 PRs, reviews, comments, or merges; other tools own those actions.
 
+## Download counts
+
+The site reports PyPI downloads including mirrors, direct PyPI downloads, and
+GitHub release asset downloads as separate channels. Each figure is a real count
+from pypistats or the GitHub releases API; they are never added together. See
+[Download counts](downloads.md) for the method, limits, and refresh schedule.
+
 ## Data and backup
 
 - Default: one `~/.lazyplan/lazyplan.db` shared by every agent and folder.

@@ -123,7 +123,7 @@ class TestTuiNotice(unittest.IsolatedAsyncioTestCase):
 
         info = upgrade.InstallInfo(upgrade.PIPX, True)
         with (
-            mock.patch.object(tui_mod, "latest_version", return_value="9.9.9") as latest,
+            mock.patch.object(tui_mod, "refresh_update", return_value="9.9.9") as refresh,
             mock.patch.object(tui_mod, "detect", return_value=info),
             mock.patch.object(tui_mod, "package_version", return_value="0.16.0"),
             mock.patch.object(self.app, "notify") as toast,
@@ -133,7 +133,7 @@ class TestTuiNotice(unittest.IsolatedAsyncioTestCase):
                 await pilot.pause()
                 bar = self.app.query_one("#status", Label)
                 self.assertIn("update v9.9.9", str(bar.content))
-                self.assertEqual(latest.call_count, 1)
+                self.assertEqual(refresh.call_count, 1)
                 self.app._announce_update(self.app._update_notice or "")
                 self.app._announce_update(self.app._update_notice or "")
                 self.assertEqual(toast.call_count, 1)
@@ -142,9 +142,7 @@ class TestTuiNotice(unittest.IsolatedAsyncioTestCase):
                 self.assertIn("lpui upgrade", notice)
 
     async def test_offline_stays_silent(self):
-        with mock.patch.object(
-            tui_mod, "latest_version", side_effect=upgrade.UpgradeError("no network")
-        ):
+        with mock.patch.object(tui_mod, "refresh_update", return_value=None):
             async with self.app.run_test() as pilot:
                 await pilot.pause()
                 await pilot.pause()
@@ -154,13 +152,38 @@ class TestTuiNotice(unittest.IsolatedAsyncioTestCase):
     async def test_current_stays_silent(self):
         info = upgrade.InstallInfo(upgrade.PIPX, True)
         with (
-            mock.patch.object(tui_mod, "latest_version", return_value=tui_mod.package_version()),
+            mock.patch.object(tui_mod, "refresh_update", return_value=tui_mod.package_version()),
             mock.patch.object(tui_mod, "detect", return_value=info),
         ):
             async with self.app.run_test() as pilot:
                 await pilot.pause()
                 await pilot.pause()
                 self.assertIsNone(self.app._update_notice)
+
+    async def test_update_timer_stops_on_unmount(self):
+        with mock.patch.object(tui_mod, "refresh_update", return_value=None):
+            async with self.app.run_test() as pilot:
+                await pilot.pause()
+                self.assertIsNotNone(self.app._update_timer)
+        self.assertIsNone(self.app._update_timer)
+
+    async def test_update_checks_never_stack(self):
+        with mock.patch.object(tui_mod, "refresh_update", return_value=None):
+            async with self.app.run_test() as pilot:
+                await pilot.pause()
+                self.app._update_checking = True
+                with mock.patch.object(self.app, "run_worker") as worker:
+                    self.app._update_tick()
+                worker.assert_not_called()
+
+    async def test_idle_tick_starts_one_worker(self):
+        with mock.patch.object(tui_mod, "refresh_update", return_value=None):
+            async with self.app.run_test() as pilot:
+                await pilot.pause()
+                self.app._update_checking = False
+                with mock.patch.object(self.app, "run_worker") as worker:
+                    self.app._update_tick()
+                worker.assert_called_once()
 
 
 class TestCliNotice(unittest.TestCase):

@@ -37,6 +37,8 @@ class AppBase(App):
     _update_info: Any
     _startup_notice: str
     _update_toasted: bool
+    _update_timer: Any
+    _update_checking: bool
     _pending_note: str
     _mounted: bool
     _refreshing: bool

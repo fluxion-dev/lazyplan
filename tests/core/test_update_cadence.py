@@ -6,6 +6,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from lazyplan import upgrade
 
@@ -104,6 +105,52 @@ class RefreshGateTest(unittest.TestCase):
 
     def test_gate_lives_in_the_shared_home(self) -> None:
         self.assertEqual(self._gate(), self.home / ".lazyplan" / upgrade.UPDATE_GATE_NAME)
+
+
+class RefreshUpdateTest(unittest.TestCase):
+    """The one refresh function combines cache, gate, network, and backoff."""
+
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.home = Path(self.tmp.name) / "home"
+
+    def test_winner_refreshes_even_with_a_fresh_cache(self) -> None:
+        upgrade.remember_latest("0.28.1", home=self.home, now=1_000)
+        with mock.patch.object(upgrade, "latest_version", return_value="0.29.0") as latest:
+            found = upgrade.refresh_update(self.home, now=1_000)
+        self.assertEqual(found, "0.29.0")
+        latest.assert_called_once()
+        self.assertEqual(upgrade.cached_latest(self.home), "0.29.0")
+
+    def test_loser_reads_the_cache_without_a_network_call(self) -> None:
+        upgrade.remember_latest("0.28.1", home=self.home, now=1_000)
+        self.assertTrue(upgrade.claim_refresh(self.home, now=1_000, interval=300))
+        with mock.patch.object(upgrade, "latest_version", side_effect=AssertionError("network")):
+            found = upgrade.refresh_update(self.home, now=1_060)
+        self.assertEqual(found, "0.28.1")
+
+    def test_failure_keeps_the_cache_and_records_backoff(self) -> None:
+        upgrade.remember_latest("0.28.1", home=self.home, now=1_000)
+        with mock.patch.object(
+            upgrade,
+            "latest_version",
+            side_effect=upgrade.UpgradeError("offline"),
+        ):
+            found = upgrade.refresh_update(self.home, now=1_000)
+        self.assertEqual(found, "0.28.1")
+        self.assertFalse(upgrade.claim_refresh(self.home, now=1_001))
+        self.assertTrue(upgrade.claim_refresh(self.home, now=1_000 + upgrade.UPDATE_BACKOFF))
+
+    def test_disabled_checks_only_read_the_cache(self) -> None:
+        upgrade.remember_latest("0.28.1", home=self.home, now=1_000)
+        with (
+            mock.patch.dict(os.environ, {upgrade.NO_UPDATE_ENV: "1"}),
+            mock.patch.object(upgrade, "latest_version", side_effect=AssertionError("network")),
+        ):
+            found = upgrade.refresh_update(self.home, now=2_000)
+        self.assertEqual(found, "0.28.1")
+        self.assertFalse(upgrade.update_gate_path(self.home).exists())
 
 
 if __name__ == "__main__":

@@ -359,6 +359,36 @@ def latest_version(timeout: float = RESOLVE_TIMEOUT) -> str:
     return version_text(parsed)
 
 
+def refresh_update(
+    home: str | Path | None = None,
+    now: float | None = None,
+) -> str | None:
+    """Return the latest version, refreshing the network when the gate allows.
+
+    Every caller reads the shared cache. Only the instance that wins the
+    shared gate calls GitHub; a failure records a backoff in the same gate
+    so no instance retries before the retry time.
+    """
+    if not update_check_enabled():
+        return cached_latest(home)
+    stamp = time.time() if now is None else now
+    if not claim_refresh(home, now=stamp):
+        return cached_latest(home)
+    try:
+        latest = latest_version()
+    except UpgradeError:
+        try:
+            defer_refresh(home, now=stamp)
+        except OSError:
+            pass
+        return cached_latest(home)
+    try:
+        remember_latest(latest, home=home, now=stamp)
+    except OSError:
+        pass
+    return latest
+
+
 INSTALL_SH = (
     "curl -fsSL https://github.com/fluxion-dev/lazyplan/releases/latest/download/install.sh | sh"
 )

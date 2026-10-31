@@ -60,19 +60,17 @@ class TestCommitChips(unittest.IsolatedAsyncioTestCase):
             plan_preview = str(self.app.query_one("#preview-body", Static).render())
             self.assertIn("2 commits", plan_preview)
 
-    async def test_marker_only_on_rows_with_source(self):
-        from lazyplan.design import SOURCE_MARKER
-
+    async def test_rows_show_chips_without_a_marker(self):
         async with self.app.run_test() as pilot:
             await pilot.pause()
             linked = str(self.app._row_nodes[("task", self.tid)].label)
             repo_only = str(self.app._row_nodes[("task", self.repo_tid)].label)
             bare = str(self.app._row_nodes[("task", self.bare_tid)].label)
             plan = str(self.app._row_nodes[("plan", self.pid)].label)
-            self.assertIn(SOURCE_MARKER, linked)
-            self.assertIn(SOURCE_MARKER, repo_only)
-            self.assertIn(SOURCE_MARKER, plan)
-            self.assertNotIn(SOURCE_MARKER, bare)
+            for label in (linked, repo_only, bare, plan):
+                self.assertNotIn("⎇", label)
+            self.assertIn(self.sha[:12], linked)
+            self.assertIn("2c", plan)
 
     async def test_detail_lists_commits(self):
         from textual.widgets import Static

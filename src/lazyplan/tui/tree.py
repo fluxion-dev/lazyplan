@@ -348,7 +348,6 @@ if _TEXTUAL_OK:
                     source_counts=(
                         (plan_stats[0], plan_stats[1], plan_stats[2]) if plan_stats else None
                     ),
-                    repo_count=plan_stats[3] if plan_stats else 0,
                     marked=("plan", plan.id) in self.marked,
                 )
                 plan_node = root.add(
@@ -375,7 +374,6 @@ if _TEXTUAL_OK:
                             if milestone_stats
                             else None
                         ),
-                        repo_count=milestone_stats[3] if milestone_stats else 0,
                         marked=("milestone", milestone.id) in self.marked,
                     )
                     milestone_node = plan_node.add(
@@ -392,7 +390,6 @@ if _TEXTUAL_OK:
                         prs = forge_map.get(("task", task.id), [])
                         pr = prs[0] if prs else None
                         task_links = vcs_map.get(("task", task.id), [])
-                        task_stats = source_stats.get(("task", task.id))
                         task_text = task_row(
                             task,
                             self.store,
@@ -401,7 +398,6 @@ if _TEXTUAL_OK:
                             pr_state=pr.state if pr else "",
                             pr_checks=pr.checks if pr else "",
                             stale=any(link.stale for link in task_links),
-                            repo_count=task_stats[3] if task_stats else 0,
                             claim_actor=(
                                 claims_map[task.id].actor if task.id in claims_map else ""
                             ),

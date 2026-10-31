@@ -103,7 +103,6 @@ ICONS = {
     "circle": "○",
     "arrow": "→",
     "warn": "⚠",
-    "branch": "⎇",
     "dot": "·",
 }
 ASCII_ICONS = {
@@ -112,7 +111,6 @@ ASCII_ICONS = {
     "circle": "[ ]",
     "arrow": "->",
     "warn": "!",
-    "branch": "Y",
     "dot": "-",
 }
 
@@ -225,20 +223,6 @@ def source_chip(commit_count: int = 0, pull_count: int = 0, stale: int = 0) -> s
     return f"[dim]{' · '.join(parts)}[/]" if parts else ""
 
 
-SOURCE_MARKER = "⎇"
-SOURCE_MARKER_RICH = f"[dim]{SOURCE_MARKER}[/]"
-
-
-def has_source(commits: int = 0, pulls: int = 0, repos: int = 0) -> bool:
-    """True when a row carries any commit, pull request, or repo link."""
-    return commits > 0 or pulls > 0 or repos > 0
-
-
-def source_marker(commits: int = 0, pulls: int = 0, repos: int = 0) -> str:
-    """Single-cell `⎇` marker for rows with source details; empty otherwise."""
-    return SOURCE_MARKER_RICH if has_source(commits, pulls, repos) else ""
-
-
 _PR_STYLE = {
     "merged": ("green", "PR"),
     "open": ("yellow", "PR"),
@@ -294,7 +278,6 @@ def _row(
     pr_checks: str = "",
     stale: bool = False,
     source_counts: tuple[int, int, int] | None = None,
-    repo_count: int = 0,
     claim_actor: str = "",
     claim_expired: bool = False,
     blocked: bool = False,
@@ -335,12 +318,6 @@ def _row(
     if pr:
         suffix += f" {pr}"
         plain_suffix += " PR"
-    commits = source_counts[0] if source_counts is not None else len(links or ())
-    pulls = source_counts[1] if source_counts is not None else int(bool(pr_state or pr_checks))
-    marker = source_marker(commits, pulls, repo_count)
-    if marker:
-        suffix += f" {marker}"
-        plain_suffix += f" {SOURCE_MARKER}"
     prefix_plain = f"{status_word(obj.status)} {id_part} "
     available = None if width is None else width - len(prefix_plain) - len(plain_suffix)
     title = truncate(title, available)
@@ -363,10 +340,8 @@ def _plan_source_suffix(
     links: Sequence[str] | None,
     repos: Sequence[Mapping[str, object]] | None,
     source_counts: tuple[int, int, int] | None,
-    repo_count: int,
 ) -> tuple[str, str]:
-    """Rich and plain source suffix (counts, repo chips, `⎇`) for a plan row."""
-    repo_count = repo_count or len(repos or ())
+    """Rich and plain source suffix (counts and repo chips) for a plan row."""
     chips = source_chip(*source_counts) if source_counts is not None else commits_chip(links)
     all_chips = " ".join(chip for chip in (chips, repos_chip(repos)) if chip)
     rich = f" {all_chips}" if all_chips else ""
@@ -380,12 +355,6 @@ def _plan_source_suffix(
         plain += " " + " ".join(
             part for part in (repo_project_name(r) for r in (repos or [])) if part
         )
-    commits = source_counts[0] if source_counts is not None else len(links or ())
-    pulls = source_counts[1] if source_counts is not None else 0
-    marker = source_marker(commits, pulls, repo_count)
-    if marker:
-        rich += f" {marker}"
-        plain += f" {SOURCE_MARKER}"
     return rich, plain
 
 
@@ -397,12 +366,11 @@ def plan_row(
     progress: tuple[int, int] | None = None,
     width: int | None = None,
     source_counts: tuple[int, int, int] | None = None,
-    repo_count: int = 0,
     marked: bool = False,
 ) -> str:
     """TUI plan row (Rich markup): glyph + id + title + progress + chips."""
     id_part = f"P{p.id}"
-    suffix, plain_suffix = _plan_source_suffix(links, repos, source_counts, repo_count)
+    suffix, plain_suffix = _plan_source_suffix(links, repos, source_counts)
     if progress is not None:
         done, total = progress
         suffix = f" [dim]{progress_text(done, total)}[/]" + suffix
@@ -431,7 +399,6 @@ def milestone_row(
     progress: tuple[int, int] | None = None,
     width: int | None = None,
     source_counts: tuple[int, int, int] | None = None,
-    repo_count: int = 0,
     marked: bool = False,
 ) -> str:
     """TUI milestone row (Rich markup): glyph + id + title + progress + chips."""
@@ -442,7 +409,6 @@ def milestone_row(
         progress,
         width,
         source_counts=source_counts,
-        repo_count=repo_count,
         marked=marked,
     )
 
@@ -466,7 +432,6 @@ def task_row(
     pr_state: str = "",
     pr_checks: str = "",
     stale: bool = False,
-    repo_count: int = 0,
     claim_actor: str = "",
     claim_expired: bool = False,
     blocked: bool = False,
@@ -482,7 +447,6 @@ def task_row(
         pr_state,
         pr_checks,
         stale,
-        repo_count=repo_count,
         claim_actor=claim_actor,
         claim_expired=claim_expired,
         blocked=blocked,

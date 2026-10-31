@@ -109,8 +109,8 @@ Highlighting a commit or file renders a read-only unified diff with line
 numbers; large diffs stop at 20
 files / 300 lines with a `+N more` notice, and `o` opens the full commit.
 Binary, root, merge, empty, and missing states are explicit. Diffs are read
-live and never persisted. Rows with source details end in a single-cell `⎇`
-marker. `o` opens, `y` copies, `/` filters. Plans and milestones aggregate
+live and never persisted. Rows with source details show commit and PR counts
+in their labels. `o` opens, `y` copies, `/` filters. Plans and milestones aggregate
 descendant work. `F` cycles source filters: all, linked, has PR, stale,
 unlinked, claims, blocked, attention.
 

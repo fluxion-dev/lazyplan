@@ -100,11 +100,6 @@ class MetricsSnapshot:
     status: StatusBreakdown | None = None
 
 
-def empty_snapshot() -> MetricsSnapshot:
-    """A snapshot with no computed sections."""
-    return MetricsSnapshot()
-
-
 def _events(store: Store) -> list[dict]:
     """Every event, oldest first."""
     return list(reversed(store.feed(limit=1_000_000)))

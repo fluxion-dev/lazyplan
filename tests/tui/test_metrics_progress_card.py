@@ -72,6 +72,7 @@ class ProgressCardRenderTest(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("ETA", body)
 
 
+@unittest.skipUnless(tui_mod is not None and tui_mod._TEXTUAL_OK, "textual not installed")
 class ProgressBodyTest(unittest.TestCase):
     def test_elapsed_dash_when_no_events(self) -> None:
         body = render_progress(metrics.OverallProgress(done=1, total=2))

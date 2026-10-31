@@ -21,18 +21,20 @@ class SnapshotContractTest(unittest.TestCase):
         self.db = os.path.join(self.tmp.name, "t.db")
         self.store = Store(self.db)
 
-    def test_empty_snapshot_has_no_sections(self) -> None:
-        snap = metrics.empty_snapshot()
+    def test_default_snapshot_has_no_sections(self) -> None:
+        snap = metrics.MetricsSnapshot()
         self.assertEqual(snap.activity, ())
         self.assertIsNone(snap.progress)
         self.assertIsNone(snap.status)
 
-    def test_shell_snapshot_is_empty_for_any_store(self) -> None:
+    def test_snapshot_carries_progress_for_any_store(self) -> None:
         self.store.add_plan("P")
-        self.assertEqual(metrics.snapshot(self.store, now=1_000), metrics.empty_snapshot())
+        snap = metrics.snapshot(self.store, now=1_000)
+        self.assertIsNotNone(snap.progress)
+        self.assertEqual(snap.progress.total, 0)  # type: ignore[union-attr]
 
     def test_values_are_frozen(self) -> None:
-        snap = metrics.empty_snapshot()
+        snap = metrics.MetricsSnapshot()
         with self.assertRaises(FrozenInstanceError):
             snap.status = metrics.StatusBreakdown()  # type: ignore[misc]
 

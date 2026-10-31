@@ -54,6 +54,7 @@ from .actions import ActionMixin
 from .base import AppBase
 from .bulk import BulkMixin
 from .filters import FilterMixin
+from .metrics import MetricsSection
 from .preview import PreviewMixin
 from .screens.update import UpdateScreen
 from .tree import FoldTree, TreeMixin
@@ -231,6 +232,7 @@ if _TEXTUAL_OK:
                         yield FoldTree("plans", id="tree")
                     with VerticalScroll(id="preview"):
                         yield Static("", id="preview-body")
+                yield MetricsSection()
             yield Label("", id="hints")
             yield Label("", id="status")
 

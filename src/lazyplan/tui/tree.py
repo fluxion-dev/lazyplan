@@ -20,6 +20,7 @@ try:
 except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
+from .. import metrics as metrics_mod
 from .. import services
 from ..design import (
     milestone_row,
@@ -31,6 +32,7 @@ from ..help import hint_bar
 from ..messages import RowAction, SelectionChanged
 from ..models import Milestone, Plan, Status, Task
 from .base import AppBase
+from .metrics import MetricsSection
 
 if TYPE_CHECKING:
     from .app import LazyplanApp
@@ -314,6 +316,12 @@ if _TEXTUAL_OK:
             self._paint_spinner()
             self.query_one("#status", Label).update(self._status_text(self.store.counts(), note))
             self.query_one("#hints", Label).update(hint_bar(max(10, self.size.width - 2)))
+            try:
+                section = self.query_one("#metrics", MetricsSection)
+            except Exception:
+                pass
+            else:
+                section.refresh_snapshot(metrics_mod.snapshot(self.store))
             self._restore_selection(tree, prev_selected, prev_cursor)
             self._preview_key = None
             self.update_preview(force=True)

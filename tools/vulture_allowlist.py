@@ -5,6 +5,8 @@
   direct reference. Listed per method so genuinely dead actions still fail.
 - Tested API kept deliberately: criteria_progress (P#32 contract),
   STARTERS/ensure_templates (template scaffold seams), vcs registry.
+- Metrics dashboard contract: snapshot fields and show_empty are consumed
+  by the panel plans that follow the P113 shell.
 - sqlite3 API noise: row_factory.
 """
 
@@ -60,6 +62,13 @@ tui_only
 _.display
 _.row_factory
 _.criteria_progress
+_.show_empty
+_.day
+_.percent
+_.elapsed_seconds
+_.daily_rate
+_.eta_days
+_.complete
 STARTERS
 KEYMAP
 ensure_templates

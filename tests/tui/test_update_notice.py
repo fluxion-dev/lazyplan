@@ -147,7 +147,20 @@ class TestTuiNotice(unittest.IsolatedAsyncioTestCase):
                 await pilot.pause()
                 await pilot.pause()
                 self.assertIsNone(self.app._update_notice)
-                self.assertFalse(self.app._update_toasted)
+                self.assertEqual(self.app._toasted_version, "")
+
+    async def test_toast_is_once_per_version(self):
+        info = upgrade.InstallInfo(upgrade.PIPX, True)
+        with mock.patch.object(tui_mod, "refresh_update", return_value=None):
+            async with self.app.run_test() as pilot:
+                await pilot.pause()
+                with mock.patch.object(self.app, "notify") as toast:
+                    for _ in range(3):
+                        self.app._announce_update("update v9.9.9 available", "9.9.9", info)
+                    self.assertEqual(toast.call_count, 1)
+                    self.app._announce_update("update v9.9.10 available", "9.9.10", info)
+                    self.assertEqual(toast.call_count, 2)
+                    self.assertEqual(self.app._toasted_version, "9.9.10")
 
     async def test_current_stays_silent(self):
         info = upgrade.InstallInfo(upgrade.PIPX, True)

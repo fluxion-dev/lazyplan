@@ -150,7 +150,7 @@ if _TEXTUAL_OK:
             self._update_latest: str = ""
             self._update_info: Any = None
             self._startup_notice: str = ""
-            self._update_toasted: bool = False
+            self._toasted_version: str = ""
             self._update_timer: Any = None
             self._update_checking: bool = False
             self._pending_note: str = ""
@@ -308,8 +308,8 @@ if _TEXTUAL_OK:
             self._update_notice = notice
             self._update_latest = latest
             self._update_info = info
-            if not self._update_toasted:
-                self._update_toasted = True
+            if latest and latest != self._toasted_version:
+                self._toasted_version = latest
                 self.notify(notice, timeout=8)
             self._refresh_status()
 

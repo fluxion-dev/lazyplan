@@ -1,0 +1,38 @@
+name: ci-windows
+
+# Windows gates take 27-40 minutes, so they run nightly instead of on every
+# pull request. Dispatch this workflow when a Windows change needs an
+# on-demand gate.
+
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-windows
+  cancel-in-progress: false
+
+jobs:
+  gates-windows:
+    name: gates (windows-latest, nightly)
+    runs-on: windows-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install (editable + dev extras)
+        run: |
+          python -m venv .venv
+          if [[ -d .venv/Scripts ]]; then VENV_BIN=.venv/Scripts; else VENV_BIN=.venv/bin; fi
+          "$VENV_BIN"/python -m pip install -e ".[dev]"
+      - name: Gates (ruff + mypy + unittest x2)
+        run: ./tools/check.sh

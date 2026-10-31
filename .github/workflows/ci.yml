@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -29,8 +29,8 @@ jobs:
       - name: Gates (ruff + mypy + unittest x2)
         run: ./tools/check.sh
 
-  # The ruleset requires one check named `gates`; it passes only when every
-  # platform passes.
+  # The ruleset requires one check named `gates`; it passes only when Ubuntu
+  # and macOS pass. Windows runs in ci-windows.yml on a nightly schedule.
   gates:
     needs: platform
     if: always()

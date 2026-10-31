@@ -11,9 +11,11 @@ except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
 from ...metrics import MetricsSnapshot
-from .base import MetricCard
+from .heatmap import HeatmapCard
 from .progress import ProgressCard
 from .status import StatusCard
+
+__all__ = ["MetricsSection"]
 
 if _TEXTUAL_OK:
 
@@ -24,7 +26,7 @@ if _TEXTUAL_OK:
             super().__init__(id="metrics", classes="metrics-section")
 
         def compose(self) -> ComposeResult:
-            yield MetricCard("metric-heatmap", "Activity", "no completions yet")
+            yield HeatmapCard()
             yield ProgressCard()
             yield StatusCard()
 

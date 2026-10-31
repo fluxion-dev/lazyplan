@@ -46,7 +46,7 @@ APP_CSS = f"""
 #preview {{ width: 1fr; min-width: 30; padding: 0 1; }}
 #main.narrow #preview {{ display: none; }}
 #main.narrow #nav {{ border-right: none; }}
-#metrics {{ height: 8; border-top: {BORDER}; }}
+#metrics {{ height: 10; border-top: {BORDER}; }}
 #metrics.narrow {{ display: none; }}
 .metric-card {{ width: 1fr; min-width: 18; padding: 0 1; border-left: {BORDER}; }}
 .metric-title {{ height: 1; background: $panel; color: $text-muted; }}

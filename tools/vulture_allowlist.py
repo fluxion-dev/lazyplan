@@ -50,6 +50,7 @@ _.export_plan
 _.render_plan_markdown
 BINDINGS
 CSS
+CSS_PATH
 TITLE
 ENABLE_COMMAND_PALETTE
 VERBS

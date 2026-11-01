@@ -144,7 +144,7 @@ if _TEXTUAL_OK:
 
         def __init__(self, store: Store) -> None:
             super().__init__()
-            self._theme = register_themes(self)
+            register_themes(self)
             self.store = store
             self.selected: tuple[str, int] | None = None
             self.status_filter: Status | None = None

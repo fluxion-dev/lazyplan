@@ -122,35 +122,48 @@ def acceptance_block(criteria: list[dict[str, Any]]) -> PreviewBlock | None:
     )
 
 
+def _source_bits(
+    links: list[dict[str, Any]],
+    forge: list[dict[str, Any]],
+    repos: list[dict[str, Any]],
+) -> str:
+    bits: list[str] = []
+    if links:
+        bits.append(f"{len(links)} commits")
+    if forge:
+        bits.append(f"{len(forge)} PRs")
+    if repos:
+        names = [name for name in (repo_project_name(repo) for repo in repos) if name]
+        bits.append("repos: " + ", ".join(names[:3]) if names else f"{len(repos)} repos")
+    return " · ".join(bits)
+
+
+def _newest_source_line(links: list[dict[str, Any]]) -> str:
+    newest = max(links, key=lambda link: int(link.get("timestamp", 0) or 0))
+    files = len({path for link in links for path in link.get("files", [])})
+    stale = sum(1 for link in links if link.get("stale"))
+    line = (
+        f"last {str(newest.get('sha', ''))[:12]} "
+        f"{escape_markup(str(newest.get('subject', '') or '(no subject)'))}"
+    )
+    if files:
+        line += f" · {files} files"
+    if stale:
+        line += f" · {stale} stale"
+    return f"[dim]{line}[/]"
+
+
 def _source_summary(
     links: list[dict[str, Any]],
     forge: list[dict[str, Any]],
     repos: list[dict[str, Any]],
 ) -> PreviewBlock | None:
     lines: list[str] = []
-    if links or forge or repos:
-        bits = []
-        if links:
-            bits.append(f"{len(links)} commits")
-        if forge:
-            bits.append(f"{len(forge)} PRs")
-        if repos:
-            names = [name for name in (repo_project_name(repo) for repo in repos) if name]
-            bits.append("repos: " + ", ".join(names[:3]) if names else f"{len(repos)} repos")
-        lines.append(f"[dim]{' · '.join(bits)}[/]")
+    bits = _source_bits(links, forge, repos)
+    if bits:
+        lines.append(f"[dim]{bits}[/]")
     if links:
-        newest = max(links, key=lambda link: int(link.get("timestamp", 0) or 0))
-        files = len({path for link in links for path in link.get("files", [])})
-        stale = sum(1 for link in links if link.get("stale"))
-        last = (
-            f"last {str(newest.get('sha', ''))[:12]} "
-            f"{escape_markup(str(newest.get('subject', '') or '(no subject)'))}"
-        )
-        if files:
-            last += f" · {files} files"
-        if stale:
-            last += f" · {stale} stale"
-        lines.append(f"[dim]{last}[/]")
+        lines.append(_newest_source_line(links))
     return PreviewBlock("", tuple(lines)) if lines else None
 
 

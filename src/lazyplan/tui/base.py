@@ -12,23 +12,17 @@ from textual.widgets.tree import TreeNode
 from ..messages import RowAction, SelectionChanged
 from ..models import Milestone, Plan, Status, Task
 from ..store import Store
+from .state import AppState
 
 
 class AppBase(App):
     """App attributes and cross-mixin declarations."""
 
     store: Store
-    selected: tuple[str, int] | None
-    status_filter: Status | None
-    show_all: bool
-    filter_text: str
-    source_filter: str
-    marked: set[tuple[str, int]]
+    state: AppState
     _undo: list[dict] | None
     _row_nodes: dict[tuple[str, int], Any]
     _row_labels: dict[tuple[str, int], str]
-    _collapsed: set[tuple[str, int]]
-    _expanded: set[tuple[str, int]]
     _last_click_key: tuple[str, int] | None
     _last_click_at: float
     _fp: Any
@@ -39,12 +33,6 @@ class AppBase(App):
     _toasted_version: str
     _update_timer: Any
     _update_checking: bool
-    _pending_note: str
-    _mounted: bool
-    _refreshing: bool
-    _preview_key: tuple[str, int] | None
-    _dirty_external: bool
-    _narrow: bool | None
     _git_cache: dict[str, tuple[float, dict[str, Any]]]
     _git_pending: set[str]
     _spinner_tick: int
@@ -52,6 +40,118 @@ class AppBase(App):
     _spinner_enabled: bool
     _spinner_timer: Any
     rev: Any
+
+    @property
+    def selected(self) -> tuple[str, int] | None:
+        return self.state.selected
+
+    @selected.setter
+    def selected(self, value: tuple[str, int] | None) -> None:
+        self.state.selected = value
+
+    @property
+    def status_filter(self) -> Status | None:
+        return self.state.status_filter
+
+    @status_filter.setter
+    def status_filter(self, value: Status | None) -> None:
+        self.state.status_filter = value
+
+    @property
+    def show_all(self) -> bool:
+        return self.state.show_all
+
+    @show_all.setter
+    def show_all(self, value: bool) -> None:
+        self.state.show_all = value
+
+    @property
+    def filter_text(self) -> str:
+        return self.state.filter_text
+
+    @filter_text.setter
+    def filter_text(self, value: str) -> None:
+        self.state.filter_text = value
+
+    @property
+    def source_filter(self) -> str:
+        return self.state.source_filter
+
+    @source_filter.setter
+    def source_filter(self, value: str) -> None:
+        self.state.source_filter = value
+
+    @property
+    def marked(self) -> set[tuple[str, int]]:
+        return self.state.marked
+
+    @marked.setter
+    def marked(self, value: set[tuple[str, int]]) -> None:
+        self.state.marked = value
+
+    @property
+    def _collapsed(self) -> set[tuple[str, int]]:
+        return self.state.collapsed
+
+    @_collapsed.setter
+    def _collapsed(self, value: set[tuple[str, int]]) -> None:
+        self.state.collapsed = value
+
+    @property
+    def _expanded(self) -> set[tuple[str, int]]:
+        return self.state.expanded
+
+    @_expanded.setter
+    def _expanded(self, value: set[tuple[str, int]]) -> None:
+        self.state.expanded = value
+
+    @property
+    def _pending_note(self) -> str:
+        return self.state.pending_note
+
+    @_pending_note.setter
+    def _pending_note(self, value: str) -> None:
+        self.state.pending_note = value
+
+    @property
+    def _mounted(self) -> bool:
+        return self.state.mounted
+
+    @_mounted.setter
+    def _mounted(self, value: bool) -> None:
+        self.state.mounted = value
+
+    @property
+    def _refreshing(self) -> bool:
+        return self.state.refreshing
+
+    @_refreshing.setter
+    def _refreshing(self, value: bool) -> None:
+        self.state.refreshing = value
+
+    @property
+    def _preview_key(self) -> tuple[str, int] | None:
+        return self.state.preview_key
+
+    @_preview_key.setter
+    def _preview_key(self, value: tuple[str, int] | None) -> None:
+        self.state.preview_key = value
+
+    @property
+    def _dirty_external(self) -> bool:
+        return self.state.dirty_external
+
+    @_dirty_external.setter
+    def _dirty_external(self, value: bool) -> None:
+        self.state.dirty_external = value
+
+    @property
+    def _narrow(self) -> bool | None:
+        return self.state.narrow
+
+    @_narrow.setter
+    def _narrow(self, value: bool | None) -> None:
+        self.state.narrow = value
 
     if TYPE_CHECKING:
 

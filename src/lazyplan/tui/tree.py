@@ -15,6 +15,7 @@ try:
     from textual.widgets.tree import TreeNode  # noqa: F401
 
     from ..tree_nav import NavTree  # noqa: F401
+    from .query import query_one_opt
 
     _TEXTUAL_OK = True
 except ImportError:  # pragma: no cover
@@ -316,11 +317,8 @@ if _TEXTUAL_OK:
             self._paint_spinner()
             self.query_one("#status", Label).update(self._status_text(self.store.counts(), note))
             self.query_one("#hints", Label).update(hint_bar(max(10, self.size.width - 2)))
-            try:
-                section = self.query_one("#metrics", MetricsSection)
-            except Exception:
-                pass
-            else:
+            section = query_one_opt(self, "#metrics", MetricsSection)
+            if section is not None:
                 section.refresh_snapshot(metrics_mod.snapshot(self.store))
             self._restore_selection(tree, prev_selected, prev_cursor)
             self._preview_key = None

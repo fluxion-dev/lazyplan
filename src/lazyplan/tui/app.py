@@ -25,6 +25,7 @@ try:
     from textual.widgets.tree import TreeNode  # noqa: F401
 
     from ..tree_nav import NavTree  # noqa: F401
+    from .query import query_one_opt
 
     _TEXTUAL_OK = True
 except ImportError:  # pragma: no cover
@@ -57,6 +58,7 @@ from .filters import FilterMixin
 from .metrics import MetricsSection
 from .preview import PreviewMixin
 from .screens.update import UpdateScreen
+from .state import AppState
 from .theme import register_themes
 from .tree import FoldTree, TreeMixin
 
@@ -125,20 +127,16 @@ if _TEXTUAL_OK:
 
         def _apply_layout(self, width: int | None = None) -> bool:
             """Two panes when there is room; one pane on narrow terminals."""
-            try:
-                main = self.query_one("#main", Horizontal)
-            except Exception:
+            main = query_one_opt(self, "#main", Horizontal)
+            if main is None:
                 return False
             available = self.size.width if width is None else width
             narrow = available < 100
             changed = self._narrow is not narrow
             self._narrow = narrow
             main.set_class(narrow, "narrow")
-            try:
-                metrics = self.query_one("#metrics", MetricsSection)
-            except Exception:
-                pass
-            else:
+            metrics = query_one_opt(self, "#metrics", MetricsSection)
+            if metrics is not None:
                 metrics.set_class(narrow, "narrow")
             return changed
 
@@ -146,17 +144,10 @@ if _TEXTUAL_OK:
             super().__init__()
             register_themes(self)
             self.store = store
-            self.selected: tuple[str, int] | None = None
-            self.status_filter: Status | None = None
-            self.show_all: bool = False
-            self.filter_text: str = ""
-            self.source_filter: str = "all"
-            self.marked: set[tuple[str, int]] = set()
+            self.state = AppState()
             self._undo: list[dict] | None = None
             self._row_nodes: dict[tuple[str, int], TreeNode] = {}
             self._row_labels: dict[tuple[str, int], str] = {}
-            self._collapsed: set[tuple[str, int]] = set()
-            self._expanded: set[tuple[str, int]] = set()
             self._last_click_key: tuple[str, int] | None = None
             self._last_click_at: float = 0.0
             self._fp: Any = store.fingerprint()
@@ -167,12 +158,6 @@ if _TEXTUAL_OK:
             self._toasted_version: str = ""
             self._update_timer: Any = None
             self._update_checking: bool = False
-            self._pending_note: str = ""
-            self._mounted: bool = False
-            self._refreshing: bool = False
-            self._preview_key: tuple[str, int] | None = None
-            self._dirty_external: bool = False
-            self._narrow: bool | None = None
             self._git_cache: dict[str, tuple[float, dict[str, Any]]] = {}
             self._git_pending: set[str] = set()
             self._spinner_tick: int = 0

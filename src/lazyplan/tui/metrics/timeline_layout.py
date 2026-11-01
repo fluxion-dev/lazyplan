@@ -82,18 +82,28 @@ def axis_ticks(left: float, right: float, span: float) -> tuple[list[float], lis
     return ticks, labels
 
 
-def active_segments(
-    lane: TimelineLane, left: float, right: float, min_visible: float
+def _clip_segments(
+    intervals: tuple[tuple[float, float], ...],
+    left: float,
+    right: float,
+    min_visible: float,
 ) -> list[tuple[float, float]]:
-    """Visible trace segments for one lane's doing intervals."""
+    """Clip intervals to the visible window, enforcing a minimum width."""
     segments: list[tuple[float, float]] = []
-    for start, end in lane.active:
+    for start, end in intervals:
         if end < left or start > right:
             continue
         start = max(start, left)
         end = min(right, max(end, start + min_visible))
         segments.append((start, end))
     return segments
+
+
+def active_segments(
+    lane: TimelineLane, left: float, right: float, min_visible: float
+) -> list[tuple[float, float]]:
+    """Visible trace segments for one lane's doing intervals."""
+    return _clip_segments(lane.active, left, right, min_visible)
 
 
 def trace_points(start: float, end: float, left: float, right: float, width: int) -> list[float]:
@@ -107,14 +117,7 @@ def trace_segments(
     lane: TimelineLane, left: float, right: float, min_visible: float
 ) -> list[tuple[float, float]]:
     """Visible segments for one lane's rendered trace intervals."""
-    segments: list[tuple[float, float]] = []
-    for start, end in lane.trace:
-        if end < left or start > right:
-            continue
-        start = max(start, left)
-        end = min(right, max(end, start + min_visible))
-        segments.append((start, end))
-    return segments
+    return _clip_segments(lane.trace, left, right, min_visible)
 
 
 def lane_window(rows: int, count: int, legend_rows: int) -> tuple[float, float, float]:

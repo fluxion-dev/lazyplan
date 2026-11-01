@@ -14,8 +14,13 @@ try:
 except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
-from ....update_stage import stage_update
-from ....upgrade import InstallInfo, UpgradeError, guard_message, parse_version
+from ....services.environment import (
+    InstallInfo,
+    UpgradeError,
+    guard_message,
+    parse_version,
+    stage_update,
+)
 from ...shared.design import escape_markup
 
 if _TEXTUAL_OK:

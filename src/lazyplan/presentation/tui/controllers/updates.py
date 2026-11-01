@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from ....upgrade import (
+from ....services.environment import (
     UPDATE_CACHE_TTL,
     UpgradeError,
     cached_latest,

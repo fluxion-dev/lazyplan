@@ -31,8 +31,8 @@ try:
 except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
+from ...services.environment import apply_on_launch, clear_failure, read_failure
 from ...store import Store
-from ...update_stage import apply_on_launch, clear_failure, read_failure
 from ..cli.parser import package_version
 from .actions import ActionMixin
 from .base import AppBase

@@ -7,16 +7,16 @@ import io
 import sys
 from pathlib import Path
 
-from ...store import Store
-from ...upgrade import (
+from ...services.environment import (
     cached_latest,
     detect,
     notice_text,
     update_check_enabled,
 )
-from ...upgrade import (
+from ...services.environment import (
     latest_version as latest_version,
 )
+from ...store import Store
 from .. import (
     setup,
 )

@@ -13,8 +13,7 @@ from .... import (
     textfile,
 )
 from ....repo import find_repo_root, repo_label, resolve_db_path
-from ....store import Store
-from ....upgrade import (
+from ....services.environment import (
     UpgradeError,
     detect,
     guard_message,
@@ -22,6 +21,7 @@ from ....upgrade import (
     parse_version,
     run_upgrade,
 )
+from ....store import Store
 from ...shared import (
     porcelain,
 )

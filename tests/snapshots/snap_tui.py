@@ -75,6 +75,14 @@ def test_palette_screen(snap_compare, data_app) -> None:
         pilot.app.selected = ("plan", pid)
         pilot.app.push_screen(PaletteScreen(pilot.app._palette_context()))
         await pilot.pause()
+        from textual.widgets import OptionList
+
+        options = pilot.app.screen.query_one("#palette-list", OptionList)
+        for index in range(options.option_count):
+            if not options.get_option_at_index(index).disabled:
+                options.highlighted = index
+                break
+        await pilot.pause()
 
     assert snap_compare(app, run_before=run_before, terminal_size=(100, 30))
 

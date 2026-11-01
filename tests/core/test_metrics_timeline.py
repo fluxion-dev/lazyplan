@@ -23,7 +23,7 @@ class TimelineSnapshotTest(unittest.TestCase):
         with mock.patch("lazyplan.store.base.time.time", return_value=stamp):
             return action()
 
-    def test_scoped_timeline_covers_the_project_and_its_milestones(self) -> None:
+    def test_scoped_timeline_keeps_lanes_for_direct_completions(self) -> None:
         plan = self._at(1_000, lambda: self.store.add_plan("Plan"))
         first = self._at(1_100, lambda: self.store.add_milestone(plan.id, "First"))
         second = self._at(1_200, lambda: self.store.add_milestone(plan.id, "Second"))
@@ -54,10 +54,7 @@ class TimelineSnapshotTest(unittest.TestCase):
             ],
         )
         self.assertEqual([lane.active for lane in snap.timeline.lanes], [(), (), ()])
-        self.assertEqual(
-            [lane.trace for lane in snap.timeline.lanes],
-            [((1_000, 1_500),), ((1_100, 1_300),), ((1_200, 1_500),)],
-        )
+        self.assertEqual([lane.trace for lane in snap.timeline.lanes], [(), (), ()])
         self.assertEqual((snap.timeline.start, snap.timeline.end), (1_000, 1_500))
 
     def test_active_intervals_pause_and_resume(self) -> None:
@@ -109,7 +106,7 @@ class TimelineSnapshotTest(unittest.TestCase):
             [((1_200, 1_400), (1_600, 1_800))] * 2,
         )
 
-    def test_paused_project_and_milestone_traces_stay_continuous(self) -> None:
+    def test_paused_project_and_milestone_traces_split(self) -> None:
         plan = self._at(1_000, lambda: self.store.add_plan("Plan"))
         milestone = self._at(1_100, lambda: self.store.add_milestone(plan.id, "Milestone"))
         self._at(
@@ -137,8 +134,8 @@ class TimelineSnapshotTest(unittest.TestCase):
         plan_lane, milestone_lane = snap.timeline.lanes
         self.assertEqual(plan_lane.active, ((1_200, 1_300), (1_400, 1_500)))
         self.assertEqual(milestone_lane.active, ((1_200, 1_300), (1_400, 1_500)))
-        self.assertEqual(plan_lane.trace, ((1_000, 1_500),))
-        self.assertEqual(milestone_lane.trace, ((1_100, 1_500),))
+        self.assertEqual(plan_lane.trace, ((1_200, 1_300), (1_400, 1_500)))
+        self.assertEqual(milestone_lane.trace, ((1_200, 1_300), (1_400, 1_500)))
 
     def test_task_trace_keeps_doing_segments(self) -> None:
         plan = self._at(1_000, lambda: self.store.add_plan("Plan"))

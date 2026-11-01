@@ -10,6 +10,7 @@ from textual_plotext import PlotextPlot
 
 from ...design import truncate
 from ...metrics import Timeline, TimelineLane
+from ..query import query_one_opt
 from ..theme import apply_chart_theme, chart_color, lane_rgb, token_rgb
 from .base import MetricCard
 
@@ -121,7 +122,9 @@ class TimelineCard(MetricCard):
 
     def refresh_timeline(self, timeline: Timeline | None) -> None:
         """Render the wall-clock lanes, or the empty state when there are none."""
-        plot = self.query_one(f"#{self.id}-plot", PlotextPlot)
+        plot = query_one_opt(self, f"#{self.id}-plot", PlotextPlot)
+        if plot is None:
+            return
         lanes = timeline.lanes if timeline is not None else ()
         if timeline is None or not lanes:
             self._draw_empty(plot, timeline.empty if timeline is not None else "")

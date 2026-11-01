@@ -180,6 +180,7 @@ if _TEXTUAL_OK:
 
         def on_unmount(self) -> None:
             """Stop app-owned timers; each drives deferred or periodic work."""
+            self._mounted = False
             self.update_controller.stop()
             self.spinner_controller.stop()
             self.metrics_controller.stop()
@@ -202,6 +203,7 @@ if _TEXTUAL_OK:
             self.set_interval(1.0, self._poll)
             self.spinner_controller.start()
             self.update_controller.start()
+            self.metrics_controller.start()
             self.query_one("#nav").border_title = "PLANS"
             if self._startup_notice:
                 self.notify(self._startup_notice, timeout=10)

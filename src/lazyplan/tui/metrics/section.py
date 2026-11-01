@@ -11,6 +11,7 @@ except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
 from ...metrics import MetricsSnapshot
+from ..query import query_one_opt
 from .timeline import TimelineCard
 
 __all__ = ["MetricsSection"]
@@ -29,4 +30,6 @@ if _TEXTUAL_OK:
 
         def refresh_snapshot(self, snapshot: MetricsSnapshot) -> None:
             """Push one snapshot into the card; the section never computes metrics."""
-            self.query_one("#metric-timeline", TimelineCard).refresh_timeline(snapshot.timeline)
+            card = query_one_opt(self, "#metric-timeline", TimelineCard)
+            if card is not None:
+                card.refresh_timeline(snapshot.timeline)

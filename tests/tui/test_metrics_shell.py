@@ -14,9 +14,11 @@ from lazyplan.store import Store
 try:
     from lazyplan import tui as tui_mod
     from lazyplan.tui.metrics import MetricsSection
+    from lazyplan.tui.screens import PaletteScreen
 except ImportError:  # stdlib-only interpreter: no textual
     tui_mod = None  # type: ignore[assignment]
     MetricsSection = None  # type: ignore[assignment,misc]
+    PaletteScreen = None  # type: ignore[assignment,misc]
 
 CARD_ID = "metric-timeline"
 
@@ -190,6 +192,36 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
             after = self._chart(app.query_one(f"#{CARD_ID}"))
         self.assertNotIn("now", before)
         self.assertIn("now", after)
+
+    async def test_now_tick_refreshes_the_timeline(self) -> None:
+        with mock.patch("lazyplan.tui.controllers.metrics.NOW_TICK_SECONDS", 0.05):
+            app = tui_mod.create_app(self.db)
+            with mock.patch.object(MetricsSection, "refresh_snapshot") as refresh:
+                async with app.run_test(size=(120, 40)) as pilot:
+                    await pilot.pause()
+                    refresh.reset_mock()
+                    await pilot.pause(0.2)
+                    self.assertGreaterEqual(refresh.call_count, 1)
+
+    async def test_now_tick_skips_modal_screens(self) -> None:
+        with mock.patch("lazyplan.tui.controllers.metrics.NOW_TICK_SECONDS", 0.05):
+            app = tui_mod.create_app(self.db)
+            with mock.patch.object(MetricsSection, "refresh_snapshot") as refresh:
+                async with app.run_test(size=(120, 40)) as pilot:
+                    await pilot.pause()
+                    app.push_screen(PaletteScreen(app._palette_context()))
+                    await pilot.pause()
+                    refresh.reset_mock()
+                    await pilot.pause(0.2)
+                    self.assertEqual(refresh.call_count, 0)
+
+    async def test_unmount_stops_the_now_tick(self) -> None:
+        with mock.patch("lazyplan.tui.controllers.metrics.NOW_TICK_SECONDS", 0.05):
+            app = tui_mod.create_app(self.db)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                self.assertIsNotNone(app.metrics_controller.now_timer)
+            self.assertIsNone(app.metrics_controller.now_timer)
 
     async def test_no_selection_falls_back_to_all_plans(self) -> None:
         self._other_plan()

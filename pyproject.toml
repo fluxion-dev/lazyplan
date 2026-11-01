@@ -40,8 +40,8 @@ Changelog = "https://github.com/fluxion-dev/lazyplan/blob/main/CHANGELOG.md"
 lazyplan = "lazyplan.cli:main"
 lpui = "lazyplan.cli:main"
 [project.optional-dependencies]
-dev = ["ruff>=0.8", "mypy>=1.13", "vulture>=2.14", "xenon>=0.9"]
-test = ["pytest>=8"]
+dev = ["ruff>=0.8", "mypy>=1.13", "vulture>=2.14", "xenon>=0.9", "pytest>=8", "pytest-textual-snapshot>=1.0"]
+test = ["pytest>=8", "pytest-textual-snapshot>=1.0"]
 [build-system]
 requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
@@ -67,6 +67,9 @@ known-first-party = ["lazyplan"]
 
 [tool.ruff.format]
 quote-style = "double"
+
+[tool.pytest.ini_options]
+python_files = ["test_*.py", "snap_*.py"]
 
 [tool.mypy]
 python_version = "3.11"

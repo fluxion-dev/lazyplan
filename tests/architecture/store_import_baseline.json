@@ -2,7 +2,6 @@
   "modules": [
     "lazyplan.presentation.cli.commands",
     "lazyplan.presentation.cli.commands.admin",
-    "lazyplan.presentation.cli.commands.comment",
     "lazyplan.presentation.cli.commands.forge",
     "lazyplan.presentation.cli.commands.plan",
     "lazyplan.presentation.cli.commands.proof",

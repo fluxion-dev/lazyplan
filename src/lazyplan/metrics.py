@@ -171,6 +171,44 @@ def _plan_title(store: Store, plan_id: int | None) -> str:
     return plan.name if plan is not None else ""
 
 
+def _event_in_scope(
+    detail: str,
+    plan_id: int,
+    milestone_ids: set[int],
+    task_ids: set[int],
+) -> bool:
+    """Whether one event detail names the scoped plan or its descendants."""
+    added = _ADDED.match(detail)
+    if added is not None:
+        letter, oid = added.group(1), int(added.group(2))
+        if letter == "P":
+            return oid == plan_id
+        if letter == "M":
+            return oid in milestone_ids
+        return oid in task_ids
+    task_ref = _TASK_REF.match(detail)
+    if task_ref is not None:
+        return int(task_ref.group(1)) in task_ids
+    return False
+
+
+def _scope_events(
+    events: list[dict],
+    plan_id: int | None,
+    tasks_by_milestone: dict[int, list[Task]],
+) -> list[dict]:
+    """Events that belong to the scoped plan, or every event for None."""
+    if plan_id is None:
+        return events
+    milestone_ids = set(tasks_by_milestone)
+    task_ids = {task.id for task in _flatten(tasks_by_milestone)}
+    return [
+        event
+        for event in events
+        if _event_in_scope(str(event.get("detail") or ""), plan_id, milestone_ids, task_ids)
+    ]
+
+
 def _add_times(events: list[dict]) -> list[float]:
     """Timestamps of plan, milestone, and task creation events."""
     return [float(event["ts"]) for event in events if _ADDED.match(str(event.get("detail") or ""))]
@@ -298,11 +336,11 @@ def snapshot(
 ) -> MetricsSnapshot:
     """Build the dashboard snapshot from one task and event read.
 
-    plan_id limits task counts, status shares, and milestone bars to that
-    plan. None keeps the all-plans view.
+    plan_id limits task counts, status shares, milestone bars, activity,
+    elapsed time, and the ETA to that plan. None keeps the all-plans view.
     """
     tasks_by_milestone = _scoped_tasks(store, store.tasks_map(), plan_id)
-    events = _events(store)
+    events = _scope_events(_events(store), plan_id, tasks_by_milestone)
     stamp = time.time() if now is None else now
     title = _plan_title(store, plan_id)
     return MetricsSnapshot(

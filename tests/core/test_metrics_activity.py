@@ -20,6 +20,7 @@ class ActivityBucketsTest(unittest.TestCase):
         self.db = os.path.join(self.tmp.name, "t.db")
         self.store = Store(self.db)
         plan = self.store.add_plan("Plan")
+        self.plan_id = plan.id
         milestone = self.store.add_milestone(plan.id, "M")
         self.tasks = [self.store.add_task(milestone.id, f"T{n}") for n in range(3)]
 
@@ -53,6 +54,15 @@ class ActivityBucketsTest(unittest.TestCase):
         self._done(0)
         activity = self._activity()
         self.assertEqual(activity[-1].done, 2)
+
+    def test_plan_scope_ignores_other_plan_completions(self) -> None:
+        other = self.store.add_plan("Other plan")
+        milestone = self.store.add_milestone(other.id, "Other")
+        task = self.store.add_task(milestone.id, "Other task")
+        services.set_status(self.store, "task", task.id, Status.DONE, actor="qa")
+        self._done(0)
+        activity = metrics.snapshot(self.store, plan_id=self.plan_id).activity
+        self.assertEqual(sum(day.done for day in activity), 1)
 
     def test_the_oldest_day_is_included_and_older_is_not(self) -> None:
         self._done(0)

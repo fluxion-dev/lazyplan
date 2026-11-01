@@ -78,6 +78,26 @@ class ProgressAggregationTest(unittest.TestCase):
         progress = self._progress(now=start + 3_600)
         self.assertEqual(progress.elapsed_seconds, 3_600)
 
+    def test_plan_scope_elapsed_ignores_other_plans(self) -> None:
+        other = self.store.add_plan("Other plan")
+        self._set_event_time(f"P#{other.id} %", 0)
+        plan_id, _milestone_id = self._seed()
+        self._set_event_time(f"P#{plan_id} %", 1_000)
+        progress = metrics.snapshot(self.store, plan_id=plan_id, now=2_000).progress
+        self.assertIsNotNone(progress)
+        self.assertEqual(progress.elapsed_seconds, 1_000)  # type: ignore[union-attr]
+
+    def test_plan_scope_eta_ignores_other_plan_completions(self) -> None:
+        plan_id, _milestone_id = self._seed()
+        other = self.store.add_plan("Other plan")
+        milestone = self.store.add_milestone(other.id, "Other")
+        task = self.store.add_task(milestone.id, "Other task")
+        services.set_status(self.store, "task", task.id, Status.DONE, actor="qa")
+        progress = metrics.snapshot(self.store, plan_id=plan_id).progress
+        self.assertIsNotNone(progress)
+        self.assertEqual(progress.daily_rate, 0)  # type: ignore[union-attr]
+        self.assertIsNone(progress.eta_days)  # type: ignore[union-attr]
+
     def test_no_events_means_no_elapsed_time(self) -> None:
         self.assertEqual(self._progress().elapsed_seconds, None)
 

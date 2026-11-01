@@ -255,6 +255,8 @@ or `--no-skills` changes what the questions propose.
 `LAZYPLAN_NO_SETUP=1` skips first-run setup and upgrade review. `NO_COLOR`,
 `LAZYPLAN_NO_COLOR`, `CLICOLOR=0`, and `TERM=dumb` keep the wizard plain.
 `LAZYPLAN_NO_SPINNER=1` freezes the doing spinner in the TUI.
+`LAZYPLAN_THEME=light` switches the TUI to the light theme; unset or any other
+value uses the dark theme.
 `--placement repo` outside a git checkout falls back to home.
 
 ## Everyday commands
@@ -281,6 +283,9 @@ folded until you open their milestone. Completed plans are dimmed and sorted las
 A doing row animates through `◐ ◓ ◑ ◒` while work is in progress. The CLI,
 export, preview, and detail views keep the static `◐`; set
 `LAZYPLAN_NO_SPINNER=1` to freeze the tree.
+
+The TUI uses the `lazyplan-dark` theme by default. Set `LAZYPLAN_THEME=light`
+to use the light palette.
 
 | key | action |
 |---|---|

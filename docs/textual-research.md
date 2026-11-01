@@ -33,6 +33,23 @@ what it means for lazyplan (keyboard-only Tree + modal forms).
   `move_cursor()`, and `set_label()` for programmatic rebuilds without
   reaching into node internals.
 
+## Theming and CSS modules
+
+- `Theme` carries the named colours plus a `variables` mapping. Registered
+  variables resolve as `$name` in CSS, and `App.theme_variables` exposes the
+  current values. Call `App.register_theme` before assigning `App.theme`.
+- `App.CSS_PATH` accepts a list of paths, so shell, component, and screen CSS
+  can stay in separate `.tcss` files. Installed packages must declare the
+  `.tcss` files in package data.
+- App CSS still beats widget `DEFAULT_CSS`; custom variables resolve per
+  theme, so a light theme can change layout colours without a second rule set.
+- https://textual.textualize.io/guide/design/ · https://textual.textualize.io/guide/CSS/
+
+lazyplan: `tui/theme/` owns `lazyplan-dark` and `lazyplan-light` plus the
+`lp-*` semantic variables; `tui/css/` owns `app.tcss`, `components.tcss`, and
+`screens.tcss`; `LAZYPLAN_THEME=light` selects the light theme. Add a token to
+both themes before using it in CSS.
+
 ## Mental model
 
 - App is the controller: `compose()` yields the static skeleton; runtime
@@ -73,8 +90,9 @@ editor-area scroll; button rows are `Horizontal` with compact CSS.
   `$foreground`, `$success`, `$error`.
 - https://textual.textualize.io/guide/CSS/ · https://textual.textualize.io/guide/styles/ · https://textual.textualize.io/guide/design/
 
-lazyplan: all row grammar and tokens live in `design.py` (`APP_CSS`); app CSS
-wins over widget defaults — scope dialog rules under `#dlg`.
+lazyplan: all row grammar lives in the `design/` package; shell CSS lives in
+`tui/css/*.tcss`, and colour tokens come from `tui/theme/`; app CSS wins over
+widget defaults — scope dialog rules under `#dlg`.
 
 ## Widgets in use
 

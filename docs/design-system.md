@@ -1,18 +1,50 @@
 # lazyplan design system
 
-Single source of truth: `src/lazyplan/design.py` for rows, glyphs, chips,
-empty states, and CSS; `src/lazyplan/palette.py and help.py` for command names,
-sections, context rules, key hints, and help text. If you add a view,
-command, or message, add it there first. Research:
-`docs/textual-research.md`. Local skills: `.agents/skills/tui-*`.
+Single source of truth: `src/lazyplan/design/` for rows, glyphs, chips,
+empty states, and messages; `src/lazyplan/tui/theme/` for colour tokens and
+Textual themes; `src/lazyplan/tui/css/` for layout and component CSS;
+`src/lazyplan/palette.py` and `help.py` for command names, sections, context
+rules, key hints, and help text. If you add a view, command, or message, add
+it to the narrowest module first. Research: `docs/textual-research.md`.
+Local skills: `.agents/skills/tui-*`.
 
 ## Tokens
 
-Visual: `BORDER = "solid green"`, one-row `#status` and `#hints`.
-No `Header`, no `Footer`, no bottom input. Adaptive shell: `#main` holds
-`#nav` (focused `FoldTree`) and `#preview` (`VerticalScroll` +
-`Static#preview-body`) side by side at >= 100 columns; below that
-`#main.narrow` hides the preview and the tree owns the width.
+`design/tokens.py` keeps non-colour tokens: `INDENT`, the setup-wizard `ANSI`
+codes, and `ICONS` / `ASCII_ICONS`. `design/text.py` owns status glyphs,
+truncation, progress text, and provenance chips; `design/rows.py` owns the
+canonical labels and Rich rows; `design/empty.py` owns empty states and
+standard messages. `design/__init__.py` is the stable façade, so callers keep
+using `from lazyplan.design import plan_row`.
+
+## Themes and colour tokens
+
+`tui/theme/tokens.py` defines `DARK_TOKENS` and `LIGHT_TOKENS`;
+`tui/theme/themes.py` registers `lazyplan-dark` and `lazyplan-light`.
+`LAZYPLAN_THEME=light` (or `lazyplan-light`) selects the light theme; any
+other value falls back to dark. Both themes carry the same semantic keys:
+
+`lp-surface`, `lp-surface-alt`, `lp-surface-raised`, `lp-border`,
+`lp-border-muted`, `lp-text-muted`, `lp-text-faint`, `lp-accent`,
+`lp-accent-muted`, `lp-focus`, `lp-status-todo`, `lp-status-doing`,
+`lp-status-done`, `lp-status-blocked`, `lp-chip-bg`, `lp-chip-fg`,
+`lp-chart-bar`, `lp-chart-axis`, `lp-chart-label`, `lp-diff-add`,
+`lp-diff-remove`.
+
+Use these as `$lp-*` variables in CSS. Do not put hex, `rgb()`, or named
+colours in `.tcss`; add the semantic key to both themes first. The same rule
+applies to chart configuration once the metrics band is themed.
+
+## CSS modules
+
+`tui/app.py` loads `tui/css/app.tcss` (shell regions and breakpoints),
+`components.tcss` (cards and action rows), and `screens.tcss` (dialogs,
+detail, source). Put a new selector in the narrowest module that owns it, and
+add `.tcss` files to `[tool.setuptools.package-data]` so installed wheels keep
+them.
+
+## Row language
+
 Status glyphs are single-cell: `○ todo`, `◐ doing`, `● done`, with ANSI
 (CLI tty) and Rich (TUI) variants. In the TUI a doing row animates through
 `◐ ◓ ◑ ◒` every 160ms. The CLI, export, preview, and detail screens keep the
@@ -30,6 +62,12 @@ Empty states come from `EMPTY_NO_PLANS` / `EMPTY_FEED` (same in CLI and
 TUI).
 
 ## Shell (`tui/app.py`)
+
+Visual: one-row `#status` and `#hints`, bordered `#panel`. No `Header`, no
+`Footer`, no bottom input. Adaptive shell: `#main` holds `#nav` (focused
+`FoldTree`) and `#preview` (`VerticalScroll` + `Static#preview-body`) side
+by side at >= 100 columns; below that `#main.narrow` hides the preview and
+the tree owns the width.
 
 - `FoldTree` extends the shared `NavTree` (`tree_nav.py`) and posts
   `SelectionChanged` / `RowAction` (see `messages.py`); `NodeHighlighted`
@@ -68,9 +106,12 @@ TUI).
   `metric-progress` (Project progress), and `metric-status` (Task status).
   Every card has a one-row title, a `PlotextPlot`, and an explicit empty
   label that replaces the plot when there is no data.
-- Charts use `textual-plotext` (`PlotextPlot`) with the app's auto theme
-  and green bars. Plotext owns the axes, ticks, scaling, and resize
-  behavior; cards only configure the data and refresh the widget.
+- Charts use `textual-plotext` (`PlotextPlot`) with the app theme and green
+  bars. Plotext owns the axes, ticks, scaling, and resize
+  behavior; cards only configure the data and refresh the widget. The
+  chart-colour tokens (`lp-chart-bar`, `lp-chart-axis`, `lp-chart-label`)
+  are defined now; the main-shell slice will replace the literal green in
+  the three card modules.
 - `refresh_all` builds one read-only `metrics.snapshot(store)` and calls
   `MetricsSection.refresh_snapshot`. `metrics.py` holds frozen dataclasses
   and chart-row helpers (`activity_weeks`, `milestone_bars`,

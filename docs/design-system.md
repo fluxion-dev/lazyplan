@@ -91,6 +91,22 @@ Visual: one-row `#status` and `#hints`, bordered `#panel`. No `Header`, no
 `FoldTree`) and `#preview` (`PreviewPanel`) side by side at >= 100 columns;
 below that `#main.narrow` hides the preview and the tree owns the width.
 
+Three layout tiers share one breakpoint:
+- compact (< 80): `#panel.compact` drops its outer border, `#nav` loses its
+  minimum width, and `#status` / `#hints` lose their padding.
+- standard (80–99): the narrow shell hides preview and metrics; tree rows
+  own the width.
+- wide (>= 120): `#main.wide` gives the tree three fifths and the preview
+  two fifths, with more preview padding. The 100-column visibility
+  breakpoint stays the single responsive rule; only crossing it rebuilds
+  the tree.
+
+The preview is a rounded card with a `PREVIEW` border title. Its
+`PreviewDocument` supplies a status pill, breadcrumb, section headings,
+acceptance `○` rows, next tasks, provenance, and a key legend. `#tree` uses
+Rich `Text` row labels; the component classes draw a muted guide, a raised
+cursor, and an accent cursor when the tree has focus.
+
 - `FoldTree` (`widgets/plan_tree.py`) extends the shared `NavTree`
   (`tree_nav.py`) and posts `SelectionChanged` / `RowAction` (see
   `messages.py`); `NodeHighlighted` also tracks for compatibility. `NavTree`
@@ -111,30 +127,33 @@ below that `#main.narrow` hides the preview and the tree owns the width.
   polls the shared cache every 60s; one guarded worker calls
   `refresh_update`, and the shared gate limits network refreshes to once per
   5 minutes.
-- `#status` is human: `3 plans · 12 open · 1 doing`, active filters,
-  the update chip, and a truncated last event. The chip clears when the
-  installed version catches up, and each version toasts once. `#hints` is
-  the current key bar from `commands.hint_bar()`.
-- `_on_resize` re-applies the narrow/wide class and refreshes widths.
+- `#status` is a chip row: repo, plans, open, doing, attention, marks,
+  active filters, update, note, and the latest event. `views/bars.py`
+  builds it as Rich `Text` and truncates to the terminal width. The update
+  chip clears when the installed version catches up, and each version
+  toasts once. `#hints` is the key bar from `help.hint_bar(markup=True)`,
+  with reverse-video keycaps and a width-based drop order.
+- `_on_resize` re-applies the compact/narrow/wide classes and refreshes
+  widths when the 100-column breakpoint changes.
 - Native Tree space/shift+space stay parked no-ops; direct keys own
   status, folding, and creation.
 
 ## Metrics dashboard (`tui/metrics/`)
 
 - `#metrics` is a third always-on section inside `#panel`, below `#main`.
-  It is 13 rows tall, holds three bordered cards in a `Horizontal` row,
-  and hides below 100 columns; `_apply_layout` toggles `#metrics.narrow`
-  with the same breakpoint as the preview.
+  It is 13 rows tall: one `METRICS` label plus a `#metric-cards`
+  `Horizontal` row, and hides below 100 columns; `_apply_layout` toggles
+  `#metrics.narrow` with the same breakpoint as the preview.
 - `MetricsSection` hosts `metric-heatmap` (Daily activity),
   `metric-progress` (Project progress), and `metric-status` (Task status).
   Every card has a one-row title, a `PlotextPlot`, and an explicit empty
   label that replaces the plot when there is no data.
-- Charts use `textual-plotext` (`PlotextPlot`) with the app theme and green
-  bars. Plotext owns the axes, ticks, scaling, and resize
-  behavior; cards only configure the data and refresh the widget. The
-  chart-colour tokens (`lp-chart-bar`, `lp-chart-axis`, `lp-chart-label`)
-  are defined now; the main-shell slice will replace the literal green in
-  the three card modules.
+- Charts use `textual-plotext` (`PlotextPlot`) through
+  `theme/charts.py`: `apply_chart_theme` sets canvas, axes, and tick colours
+  from the active theme, and `chart_color` maps the bar token to `green+`
+  in dark and `green` in light. The three card modules contain no literal
+  chart colours. Plotext owns the axes, ticks, scaling, and resize behavior;
+  cards only configure the data and refresh the widget.
 - `refresh_all` builds one read-only `metrics.snapshot(store)` and calls
   `MetricsSection.refresh_snapshot`. `metrics.py` holds frozen dataclasses
   and chart-row helpers (`activity_weeks`, `milestone_bars`,

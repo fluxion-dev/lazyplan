@@ -216,7 +216,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         for chart in (plan_chart, milestone_chart, task_chart, cleared_chart):
             self.assertNotIn(" *", chart)
 
-    async def test_selected_plan_draws_a_dim_baseline(self) -> None:
+    async def test_plan_draws_a_dim_baseline(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()

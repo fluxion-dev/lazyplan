@@ -103,17 +103,6 @@ def trace_points(start: float, end: float, left: float, right: float, width: int
     return [start + (end - start) * index / (count - 1) for index in range(count)]
 
 
-def visible_span(
-    lane: TimelineLane, left: float, right: float, min_visible: float
-) -> tuple[float, float] | None:
-    """Visible full-span baseline for one lane, or None when it is off-screen."""
-    if lane.end < left or lane.start > right:
-        return None
-    start = max(lane.start, left)
-    end = min(right, max(lane.end, start + min_visible))
-    return (start, end)
-
-
 def lane_window(rows: int, count: int, legend_rows: int) -> tuple[float, float, float]:
     """Y scale, top, and spare bottom rows for one-row lane spacing."""
     content = count + legend_rows

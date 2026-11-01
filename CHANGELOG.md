@@ -25,10 +25,11 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
   overflow into `+N more`.
 - Selecting a milestone or task adds the focused milestone's task lanes and
   marks the selected task. Large lane sets scroll vertically at one row each.
-- The lane under the cursor renders bold with a heavier glyph (`╍` project,
-  `━` milestone, `●` task), and its legend entry is bold without the old `*`
-  suffix. A selected lane with no doing interval keeps a dim start-to-end
-  baseline so the current focus stays visible even when paused.
+- Every project, milestone, and task lane keeps a dim full-width baseline so
+  each swimlane stays visible even when it is not doing. The lane under the
+  cursor renders bold with a heavier glyph (`╍` project, `━` milestone,
+  `●` task), and its legend entry is bold without the old `*` suffix. The
+  baseline itself is identical for selected and unselected lanes.
 - The Gantt refreshes within the one-second database poll and advances open
   lanes and the now marker every 15 seconds. The Daily activity, Task status,
   and Project progress cards are removed.

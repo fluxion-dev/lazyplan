@@ -114,12 +114,14 @@ seconds. Charts are drawn with `textual-plotext`; `theme/charts.py` maps the
 `lp-chart-lane-*`, `lp-chart-axis`, and `lp-chart-label` tokens to Plotext
 colours for the active dark or light theme.
 
-The lane under the cursor is emphasized: its active segments render bold with
-a heavier glyph (`╍` project, `━` milestone, `●` task), and its legend entry is
-bold without a trailing `*`. A selected lane with no `doing` interval keeps a
-dim start-to-end baseline so the row remains visible; unselected inactive lanes
-stay blank. Emphasis follows the cursor only, so ancestors, siblings, and
-space-marked rows keep their normal trace.
+Every lane keeps a dim full-width baseline from the chart's left edge to its
+right edge, so each project, milestone, and task row stays visible even when it
+is not doing. Active `doing` segments draw on top of that baseline. The lane
+under the cursor is emphasized: its active segments render bold with a heavier
+glyph (`╍` project, `━` milestone, `●` task), and its legend entry is bold
+without a trailing `*`. The baseline itself is the same for every lane, so
+selection never changes it. Emphasis follows the cursor only, so ancestors,
+siblings, and space-marked rows keep their normal trace.
 
 ### Staged updates in the TUI
 

@@ -180,15 +180,14 @@ cursor, and an accent cursor when the tree has focus.
 - `tui/metrics/timeline_layout.py` holds the pure helpers: adaptive
   `axis_ticks`, one-row `lane_window` spacing, `legend_layout` wrapping and
   overflow, kind `trace_glyph`s (`═` project, `─` milestone, `·` task; bold
-  `╍`/`━`/`●`), `active_segments` clipping, `trace_points` density for bold
-  traces, and `visible_span` for selected-lane baselines. `TimelineCard` stays
-  a thin renderer.
-- Selection emphasis is data-driven: `TimelineLane.selected` marks only the
-  cursor row, and `TimelineCard` renders selected active segments with ANSI
-  bold and the heavy glyph. The selected legend entry is bold and has no `*`
-  suffix. A selected lane with no `doing` interval gets a dim full-span
-  baseline from `lane_baseline_rgb`, while unselected inactive lanes stay
-  blank.
+  `╍`/`━`/`●`), `active_segments` clipping, and `trace_points` density for
+  bold traces. `TimelineCard` stays a thin renderer.
+- Every lane draws a dim full-width baseline from the chart's left x-limit to
+  its right x-limit using `lane_baseline_rgb`; active `doing` segments draw on
+  top. Selection is data-driven: `TimelineLane.selected` marks only the cursor
+  row, and `TimelineCard` renders its active segments with ANSI bold and the
+  heavy glyph. The selected legend entry is bold and has no `*` suffix. The
+  baseline is identical for selected and unselected lanes.
 - The horizontal legend sits at the chart top, truncates titles with an
   ellipsis, and folds overflow into `+N more`. Active segments get start and
   finish dots; open work gets a dim vertical `now` marker. No estimates or

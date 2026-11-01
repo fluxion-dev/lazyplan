@@ -28,7 +28,6 @@ from .timeline_layout import (
     legend_layout,
     trace_glyph,
     trace_points,
-    visible_span,
 )
 
 
@@ -105,7 +104,7 @@ class TimelineCard(MetricCard):
         for index, lane in enumerate(lanes):
             color = lane_rgb(self.app, index)
             y = positions[index]
-            self._draw_baseline(plt, lane, index, y, left, right, min_visible)
+            self._draw_baseline(plt, index, y, left, right)
             self._draw_trace(plt, lane, y, color, left, right, min_visible, width)
         ticks, labels = axis_ticks(left, right, span)
         legend_rows = len(legend_data)
@@ -142,21 +141,14 @@ class TimelineCard(MetricCard):
     def _draw_baseline(
         self,
         plt: Any,
-        lane: TimelineLane,
         index: int,
         y: float,
         left: float,
         right: float,
-        min_visible: float,
     ) -> None:
-        """Draw the dim full-span baseline for a selected lane."""
-        if not lane.selected:
-            return
-        baseline = visible_span(lane, left, right, min_visible)
-        if baseline is None:
-            return
+        """Draw the dim full-width baseline for one lane."""
         plt.plot(
-            list(baseline),
+            [left, right],
             [y, y],
             marker="─",
             color=lane_baseline_rgb(self.app, index),

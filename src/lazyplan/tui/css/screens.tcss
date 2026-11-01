@@ -60,11 +60,34 @@ ModalScreen {
 
 #detail-edit {
     height: 1fr;
-    padding: 0 1;
+    padding: 1 2;
+}
+
+#detail-edit .form-title {
+    height: 1;
+    color: $lp-accent;
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+#detail-edit .field-label {
+    height: 1;
+    color: $lp-text-muted;
+    margin-top: 1;
+}
+
+#detail-edit Input {
+    border: tall $lp-border;
 }
 
 #detail-edit TextArea {
     height: 5;
+    border: tall $lp-border;
+}
+
+#detail-edit .btn-row {
+    height: auto;
+    margin-top: 1;
 }
 
 #detail-hints {

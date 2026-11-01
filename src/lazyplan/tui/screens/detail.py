@@ -72,14 +72,15 @@ if _TEXTUAL_OK:
                 with VerticalScroll(id="detail-read"):
                     yield Static("", id="detail-body")
                 with VerticalScroll(id="detail-edit"):
-                    yield Label("Title")
+                    yield Label("Edit details", classes="form-title")
+                    yield Label("Title [dim](required)[/]", classes="field-label")
                     yield Input(placeholder="title", id="d-title")
                     if self.dkind == "plan":
-                        yield Label("Why")
+                        yield Label("Why", classes="field-label")
                         yield Input(placeholder="why does this exist?", id="d-why")
-                        yield Label("What")
+                        yield Label("What", classes="field-label")
                     else:
-                        yield Label("Details")
+                        yield Label("Details", classes="field-label")
                     yield TextArea(id="d-desc")
                     with _row():
                         yield Button("Save", id="ok", variant="primary")

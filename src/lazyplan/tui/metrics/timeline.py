@@ -21,6 +21,7 @@ from .timeline_layout import (
     legend_entry,
     legend_layout,
     trace_glyph,
+    trace_points,
 )
 
 
@@ -96,19 +97,37 @@ class TimelineCard(MetricCard):
         plt.clear_figure()
         for index, lane in enumerate(lanes):
             color = lane_rgb(self.app, index)
+            y = positions[index]
             for start, end in active_segments(lane, left, right, min_visible):
-                plt.plot(
-                    [start, end],
-                    [positions[index], positions[index]],
-                    marker=trace_glyph(lane.kind),
-                    color=color,
-                )
-                plt.scatter(
-                    [start, end],
-                    [positions[index], positions[index]],
-                    marker="dot",
-                    color=color,
-                )
+                if lane.selected:
+                    points = trace_points(start, end, left, right, width)
+                    plt.scatter(
+                        points,
+                        [y] * len(points),
+                        marker=trace_glyph(lane.kind, bold=True),
+                        color=color,
+                        style="bold",
+                    )
+                    plt.scatter(
+                        [start, end],
+                        [y, y],
+                        marker=trace_glyph(lane.kind),
+                        color=color,
+                        style="bold",
+                    )
+                else:
+                    plt.plot(
+                        [start, end],
+                        [y, y],
+                        marker=trace_glyph(lane.kind),
+                        color=color,
+                    )
+                    plt.scatter(
+                        [start, end],
+                        [y, y],
+                        marker="dot",
+                        color=color,
+                    )
         ticks, labels = axis_ticks(left, right, span)
         legend_rows = len(legend_data)
         row_unit, top, bottom = lane_window(rows, count, legend_rows)
@@ -167,6 +186,7 @@ class TimelineCard(MetricCard):
                     top - row_unit * (row_index + 0.5),
                     color=lane_rgb(self.app, index),
                     background=surface,
+                    style="bold" if lane.selected else None,
                     alignment="left",
                 )
                 column += len(text) + 2

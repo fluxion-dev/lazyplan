@@ -22,6 +22,7 @@ try:
         legend_entry,
         legend_layout,
         trace_glyph,
+        trace_points,
     )
 except ImportError:  # stdlib-only interpreter: no textual
     tui_mod = None  # type: ignore[assignment]
@@ -33,6 +34,7 @@ except ImportError:  # stdlib-only interpreter: no textual
     legend_entry = None  # type: ignore[assignment]
     legend_layout = None  # type: ignore[assignment]
     trace_glyph = None  # type: ignore[assignment]
+    trace_points = None  # type: ignore[assignment]
 
 
 def _at(stamp: float, action):
@@ -128,6 +130,55 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
             chart = card.query_one("PlotextPlot").plt.build()
         self.assertIn("now", chart)
 
+    async def test_selected_task_trace_renders_bold(self) -> None:
+        plan = _at(1_000, lambda: self.store.add_plan("Bold plan"))
+        milestone = _at(1_100, lambda: self.store.add_milestone(plan.id, "Bold milestone"))
+        task = _at(1_150, lambda: self.store.add_task(milestone.id, "Bold task"))
+        _at(
+            1_200,
+            lambda: services.set_status(self.store, "task", task.id, Status.DOING, actor="qa"),
+        )
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.selected = ("task", task.id)
+            app.metrics_controller.stop()
+            card = app.query_one("#metric-timeline", TimelineCard)
+            card.refresh_timeline(
+                metrics.snapshot(
+                    self.store,
+                    now=2_000,
+                    plan_id=plan.id,
+                    scope_kind="task",
+                    scope_id=task.id,
+                ).timeline
+            )
+            await pilot.pause()
+            chart = card.query_one("PlotextPlot").plt.build()
+        self.assertIn("\x1b[1m", chart)
+        self.assertIn("●", chart)
+        self.assertIn("Bold task", chart)
+
+    async def test_unselected_trace_is_not_bold(self) -> None:
+        plan = _at(1_000, lambda: self.store.add_plan("Plain plan"))
+        milestone = _at(1_100, lambda: self.store.add_milestone(plan.id, "Plain milestone"))
+        task = _at(1_150, lambda: self.store.add_task(milestone.id, "Plain task"))
+        _at(
+            1_200,
+            lambda: services.set_status(self.store, "task", task.id, Status.DOING, actor="qa"),
+        )
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.selected = None
+            app.metrics_controller.stop()
+            card = app.query_one("#metric-timeline", TimelineCard)
+            card.refresh_timeline(metrics.snapshot(self.store, now=2_000, plan_id=plan.id).timeline)
+            await pilot.pause()
+            chart = card.query_one("PlotextPlot").plt.build()
+        self.assertNotIn("\x1b[1m", chart)
+        self.assertIn("═", chart)
+
     async def test_inactive_lane_has_no_endpoint_markers(self) -> None:
         plan = _at(1_000, lambda: self.store.add_plan("Idle plan"))
         _at(1_100, lambda: self.store.add_milestone(plan.id, "Idle milestone"))
@@ -184,6 +235,14 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(active_segments(idle, 0, 100, 1), [])
         self.assertEqual(active_segments(active, 0, 100, 1), [(10, 20), (30, 40)])
+
+    def testtrace_points_cover_a_segment_evenly(self) -> None:
+        points = trace_points(10, 20, 0, 100, 50)
+
+        self.assertGreaterEqual(len(points), 2)
+        self.assertEqual(points[0], 10)
+        self.assertEqual(points[-1], 20)
+        self.assertEqual(points, sorted(points))
 
     def testlane_window_keeps_one_row_per_lane_and_spare_space_below(self) -> None:
         unit, top, bottom = lane_window(12, 3, 3)

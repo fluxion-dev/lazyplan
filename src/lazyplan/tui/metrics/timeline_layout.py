@@ -96,6 +96,13 @@ def active_segments(
     return segments
 
 
+def trace_points(start: float, end: float, left: float, right: float, width: int) -> list[float]:
+    """Evenly spaced x points so a heavy marker draws a continuous trace."""
+    span = max(right - left, 1e-9)
+    count = max(2, int((end - start) / span * max(1, width) * 2) + 1)
+    return [start + (end - start) * index / (count - 1) for index in range(count)]
+
+
 def lane_window(rows: int, count: int, legend_rows: int) -> tuple[float, float, float]:
     """Y scale, top, and spare bottom rows for one-row lane spacing."""
     content = count + legend_rows

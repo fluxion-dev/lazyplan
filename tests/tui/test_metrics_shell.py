@@ -65,7 +65,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             self.assertIsNone(app.query_one("#metrics", MetricsSection).border_title)
 
-    async def test_empty_plan_still_gets_a_project_lane(self) -> None:
+    async def test_empty_plan_shows_the_no_milestones_copy(self) -> None:
         empty = self.store.add_plan("Empty plan")
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
@@ -74,7 +74,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
             await pilot.pause(0.2)
             section = app.query_one("#metrics", MetricsSection)
             chart = self._chart(section.query_one(f"#{CARD_ID}"))
-        self.assertIn("Empty plan", chart)
+        self.assertIn("no milestones yet", chart)
 
     async def test_timeline_card_spans_the_section(self) -> None:
         app = tui_mod.create_app(self.db)

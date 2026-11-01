@@ -124,6 +124,7 @@ class Timeline:
     start: float = 0.0
     end: float = 0.0
     now: float = 0.0
+    empty: str = ""
 
 
 @dataclass(frozen=True)
@@ -450,18 +451,20 @@ def _timeline(
     else:
         plan = next((item for item in plans if item.id == plan_id), None)
         if plan is None:
-            return Timeline()
-        lanes.append(lane("plan", plan.id, plan.name, plan.status))
+            return Timeline(empty="no plans yet", now=now)
         milestones = sorted(
             milestones_by_plan.get(plan_id, []),
             key=lambda item: starts.get(("milestone", item.id), fallback),
         )
+        if not milestones:
+            return Timeline(empty="no milestones yet", now=now)
+        lanes.append(lane("plan", plan.id, plan.name, plan.status))
         lanes.extend(
             lane("milestone", milestone.id, milestone.title, milestone.status)
             for milestone in milestones
         )
     if not lanes:
-        return Timeline()
+        return Timeline(empty="no plans yet", now=now)
     return Timeline(
         lanes=tuple(lanes),
         start=min(item.start for item in lanes),

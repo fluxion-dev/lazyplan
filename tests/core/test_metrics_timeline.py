@@ -175,6 +175,23 @@ class TimelineSnapshotTest(unittest.TestCase):
 
         assert snap.timeline is not None
         self.assertEqual(snap.timeline.lanes, ())
+        self.assertEqual(snap.timeline.empty, "no plans yet")
+
+    def test_empty_store_reports_no_plans(self) -> None:
+        snap = metrics.snapshot(self.store, now=2_000)
+
+        assert snap.timeline is not None
+        self.assertEqual(snap.timeline.lanes, ())
+        self.assertEqual(snap.timeline.empty, "no plans yet")
+
+    def test_scoped_plan_without_milestones_reports_no_milestones(self) -> None:
+        plan = self._at(1_000, lambda: self.store.add_plan("Plan"))
+
+        snap = metrics.snapshot(self.store, now=2_000, plan_id=plan.id)
+
+        assert snap.timeline is not None
+        self.assertEqual(snap.timeline.lanes, ())
+        self.assertEqual(snap.timeline.empty, "no milestones yet")
 
 
 if __name__ == "__main__":

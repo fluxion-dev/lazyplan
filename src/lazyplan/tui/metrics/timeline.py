@@ -123,11 +123,11 @@ class TimelineCard(MetricCard):
         plot = self.query_one(f"#{self.id}-plot", PlotextPlot)
         lanes = timeline.lanes if timeline is not None else ()
         if timeline is None or not lanes:
-            self._draw_empty(plot)
+            self._draw_empty(plot, timeline.empty if timeline is not None else "")
             return
         self._draw(plot, timeline)
 
-    def _draw_empty(self, plot: PlotextPlot) -> None:
+    def _draw_empty(self, plot: PlotextPlot, reason: str = "") -> None:
         """Centered empty copy drawn by Plotext, with no axes or ticks."""
         plt = plot.plt
         plt.clear_figure()
@@ -137,7 +137,7 @@ class TimelineCard(MetricCard):
         plt.xticks([], [])
         plt.yticks([], [])
         plt.text(
-            self.empty,
+            reason or self.empty,
             0.5,
             0.5,
             color=chart_color(self.app, "lp-chart-label"),

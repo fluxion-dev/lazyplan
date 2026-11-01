@@ -111,6 +111,7 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_inactive_lane_has_no_endpoint_markers(self) -> None:
         plan = _at(1_000, lambda: self.store.add_plan("Idle plan"))
+        _at(1_100, lambda: self.store.add_milestone(plan.id, "Idle milestone"))
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
@@ -119,6 +120,7 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             chart = card.query_one("PlotextPlot").plt.build()
         self.assertIn("Idle plan", chart)
+        self.assertIn("Idle milestone", chart)
         self.assertNotIn("•", chart)
         self.assertNotIn("now", chart)
 
@@ -134,8 +136,20 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(plot.display)
         self.assertIn("no plans yet", chart)
 
+    async def test_scoped_plan_without_milestones_shows_its_own_empty_copy(self) -> None:
+        plan = _at(1_000, lambda: self.store.add_plan("Empty plan"))
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            card = app.query_one("#metric-timeline", TimelineCard)
+            card.refresh_timeline(metrics.snapshot(self.store, now=2_000, plan_id=plan.id).timeline)
+            await pilot.pause()
+            chart = card.query_one("PlotextPlot").plt.build()
+        self.assertIn("no milestones yet", chart)
+
     async def test_legend_truncates_long_titles(self) -> None:
         plan = _at(1_000, lambda: self.store.add_plan("A project title that will not fit"))
+        _at(1_100, lambda: self.store.add_milestone(plan.id, "Milestone"))
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()

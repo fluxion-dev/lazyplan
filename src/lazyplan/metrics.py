@@ -422,6 +422,18 @@ def _doing_intervals(
     return tuple(intervals)
 
 
+def _work_span(
+    active: tuple[tuple[float, float], ...],
+    added: float,
+    finished: float | None,
+    now: float,
+) -> tuple[float, float]:
+    """Span from the first doing start to the last doing end, or the add fallback."""
+    if active:
+        return min(interval[0] for interval in active), max(interval[1] for interval in active)
+    return added, max(added, finished if finished is not None else now)
+
+
 def _focused_milestone(
     tasks_by_milestone: dict[int, list[Task]], scope_kind: str | None, scope_id: int | None
 ) -> int | None:
@@ -467,13 +479,7 @@ def _timeline(
     ) -> TimelineLane:
         added = starts.get((kind, oid), fallback)
         active = _doing_intervals(kind, oid, status, events, added, now)
-        if active:
-            start = min(interval[0] for interval in active)
-            lane_end = max(interval[1] for interval in active)
-        else:
-            start = added
-            finished = ends.get((kind, oid))
-            lane_end = max(start, finished if finished is not None else now)
+        start, lane_end = _work_span(active, added, ends.get((kind, oid)), now)
         return TimelineLane(kind, title, start, lane_end, active, selected, active)
 
     lanes: list[TimelineLane] = []

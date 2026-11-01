@@ -141,9 +141,10 @@ cursor, and an accent cursor when the tree has focus.
 ## Metrics dashboard (`tui/metrics/`)
 
 - `#metrics` is a third always-on section inside `#panel`, below `#main`.
-  It is 14 rows tall: a rounded `METRICS` border around the
-  `#metric-cards` row, and hides below 100 columns; `_apply_layout` toggles
-  `#metrics.narrow` with the same breakpoint as the preview.
+  It is 14 rows tall: a rounded border around the `#metric-cards` row, and
+  hides below 100 columns; `_apply_layout` toggles `#metrics.narrow` with the
+  same breakpoint as the preview. The border title is `METRICS` for the
+  all-plans view and `METRICS · Plan title` while a row's plan is scoped.
 - `MetricsSection` hosts `metric-heatmap` (Daily activity),
   `metric-progress` (Project progress), and `metric-status` (Task status).
   Every card has a one-row title, a `PlotextPlot`, and an explicit empty
@@ -154,27 +155,36 @@ cursor, and an accent cursor when the tree has focus.
   in dark and `green` in light. The three card modules contain no literal
   chart colours. Plotext owns the axes, ticks, scaling, and resize behavior;
   cards only configure the data and refresh the widget.
-- `refresh_all` builds one read-only `metrics.snapshot(store)` and calls
-  `MetricsSection.refresh_snapshot`. `metrics.py` holds frozen dataclasses
-  and chart-row helpers (`activity_weeks`, `milestone_bars`,
-  `status_bars`); it never writes, caches, or calls the network.
+- `MetricsController` owns a 120 ms debounce. `TreeController.track` requests
+  a refresh on cursor changes, and `refresh_all` refreshes immediately after
+  restoring the selection. The controller resolves the selected row's parent
+  plan through `_plan_ctx` and builds one read-only
+  `metrics.snapshot(store, plan_id=...)` for `MetricsSection.refresh_snapshot`.
+  Tree filters, the plan limit, and space-marks never change the scope.
+- `metrics.py` holds frozen dataclasses and chart-row helpers
+  (`activity_weeks`, `milestone_bars`, `status_bars`); it never writes,
+  caches, or calls the network. A snapshot carries its `plan_id` and
+  `plan_title`, and `plan_id=None` keeps the all-plans view.
 - The Daily activity card sums the 84 local daily completions into 12
   weekly bars. It labels every few weeks and uses two integer y ticks.
-  Counts come only from `task #N -> done` events, so a reopened task that
-  finishes again counts again.
-- The Project progress card is global: it rolls up every plan and does not
-  follow tree focus. A headline shows done/total and a percentage, the top
-  five milestones by newest task event (then open tasks, then id), elapsed
-  time from the earliest add event, and an ETA. The ETA is
+  Counts come only from `task #N -> done` events for the scoped plan's
+  tasks (every task in the all-plans view), so a reopened task that finishes
+  again counts again.
+- The Project progress card is selection-scoped: a plan, milestone, or task
+  row scopes it to that row's parent plan, and no selection rolls up every
+  plan. A headline shows done/total and a percentage, the top five milestones
+  by newest task event (then open tasks, then id), elapsed time from the
+  scoped plan's earliest add event, and an ETA. The ETA is
   `ceil(remaining / (completions in the last 14 days / 14))`; it reads
   `complete` when nothing remains and `—` when there is no velocity. The
   plot shows those five milestones as horizontal bars on a 0/50/100% axis.
   No estimates or invented timestamps are used.
 - The Task status card shows `todo`, `doing`, `done`, and `blocked` as
-  horizontal bars labelled with their share. Status shares use all tasks
-  and sum to 100%. `blocked` is an overlay count from `Task.blocked`: a
-  blocked task stays in its status row, so the four rows can add up to more
-  than 100%. With no tasks the card shows its empty state.
+  horizontal bars labelled with their share. Status shares use the scoped
+  plan's tasks (every task in the all-plans view) and sum to 100%. `blocked`
+  is an overlay count from `Task.blocked`: a blocked task stays in its status
+  row, so the four rows can add up to more than 100%. With no tasks the card
+  shows its empty state; a scoped plan with no tasks says so explicitly.
 
 ## Command registry (`palette.py and help.py`)
 

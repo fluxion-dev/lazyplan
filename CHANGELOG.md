@@ -3,6 +3,28 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## Unreleased
+
+### New
+
+- The TUI metrics dashboard follows the selected row's plan. Daily activity,
+  Project progress, and Task status scope to the plan under the cursor, refresh
+  after a short debounce, and name the plan in the `METRICS` border title.
+- With no selection or an empty tree, the cards fall back to the all-plans
+  view. Filters, the plan limit, and space-marks never change metric scope.
+
+### Under the hood
+
+- `metrics.snapshot(store, plan_id=...)` scopes task counts, status shares,
+  milestone bars, activity, elapsed time, and ETA in one read-only pass.
+- `MetricsController` owns the TUI debounce and refreshes immediately after a
+  tree rebuild.
+
+### Documentation
+
+- Updated the metrics dashboard sections in `docs/usage.md` and
+  `docs/design-system.md`.
+
 ## v0.29.0 — 2026-10-31
 
 Live update checks in an open TUI. The status bar keeps the update chip current,

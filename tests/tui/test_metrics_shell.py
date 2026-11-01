@@ -57,6 +57,36 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
                 card = section.query_one(f"#{card_id}")
                 self.assertIn(title, str(card.query_one(".metric-title").content))
 
+    async def test_metrics_title_names_the_selected_plan(self) -> None:
+        other_id, _milestone_id, _task_ids = self._other_plan()
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            section = app.query_one("#metrics", MetricsSection)
+            app.tree_controller.track(app._row_nodes[("plan", other_id)])
+            await pilot.pause(0.2)
+            scoped = section.border_title
+            app.selected = None
+            app.metrics_controller.stop()
+            app.metrics_controller.refresh()
+            await pilot.pause()
+            global_title = section.border_title
+        self.assertEqual(scoped, "METRICS · Other plan")
+        self.assertEqual(global_title, "METRICS")
+
+    async def test_empty_selected_plan_shows_scoped_empty_copy(self) -> None:
+        empty = self.store.add_plan("Empty plan")
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.tree_controller.track(app._row_nodes[("plan", empty.id)])
+            await pilot.pause(0.2)
+            section = app.query_one("#metrics", MetricsSection)
+            text = str(section.query_one("#metric-progress-empty").render())
+            title = section.border_title
+        self.assertEqual(text, "no tasks in this plan")
+        self.assertEqual(title, "METRICS · Empty plan")
+
     async def test_cards_are_side_by_side(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:

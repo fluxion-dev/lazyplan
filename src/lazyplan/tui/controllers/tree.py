@@ -238,8 +238,8 @@ class TreeController:
         self.apply_folds()
         app.spinner_controller.paint()
         app.query_one("#hints", Label).update(hint_bar(max(10, app.size.width - 2), markup=True))
-        app.metrics_controller.refresh()
         self.restore_selection(tree, prev_selected, prev_cursor)
+        app.metrics_controller.refresh()
         app._preview_key = None
         app.update_preview(force=True)
 

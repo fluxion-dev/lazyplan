@@ -45,18 +45,20 @@ class ProgressCard(MetricCard):
         yield Static("", id=f"{self.id}-head", classes="metric-head")
         yield PlotextPlot(id=f"{self.id}-plot")
 
-    def refresh_progress(self, progress: OverallProgress | None) -> None:
+    def refresh_progress(self, progress: OverallProgress | None, scoped: bool = False) -> None:
         """Render *progress*, or the empty state when there is no work."""
         head = self.query_one(f"#{self.id}-head", Static)
         plot = self.query_one(f"#{self.id}-plot", PlotextPlot)
+        empty = self.query_one(f"#{self.id}-empty", Static)
         if progress is None or progress.total <= 0:
-            self.query_one(f"#{self.id}-empty", Static).display = True
+            empty.update("no tasks in this plan" if scoped else self.empty)
+            empty.display = True
             head.display = False
             head.update("")
             plot.display = False
             return
         rows = milestone_bars(progress)
-        self.query_one(f"#{self.id}-empty", Static).display = False
+        empty.display = False
         head.display = True
         head.update(_headline(progress))
         plot.display = bool(rows)

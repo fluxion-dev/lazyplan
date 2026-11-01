@@ -119,7 +119,7 @@ class TestViewports(unittest.IsolatedAsyncioTestCase):
                         self.assertEqual(preview.border_title, "PREVIEW")
                         self.assertTrue(_within(metrics.region, width, height))
                         self.assertEqual(metrics.region.height, 14)
-                        self.assertEqual(metrics.border_title, "METRICS")
+                        self.assertEqual(metrics.border_title, "METRICS · Plan title")
                     else:
                         self.assertFalse(preview.display)
                         self.assertFalse(metrics.display)

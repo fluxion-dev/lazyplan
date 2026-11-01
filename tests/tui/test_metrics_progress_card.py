@@ -74,6 +74,19 @@ class ProgressCardRenderTest(unittest.IsolatedAsyncioTestCase):
             self.assertFalse(plot_visible)
         self.assertIn("no plans yet", text)
 
+    async def test_scoped_empty_state_names_the_plan(self) -> None:
+        plan = self.store.add_plan("Empty plan")
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            card = app.query_one("#metric-progress", ProgressCard)
+            card.refresh_progress(
+                metrics.snapshot(self.store, plan_id=plan.id).progress, scoped=True
+            )
+            await pilot.pause()
+            text = str(card.query_one(".metric-empty").render())
+        self.assertIn("no tasks in this plan", text)
+
     async def test_complete_headline_skips_the_eta(self) -> None:
         _seed(self.store)
         for tasks in self.store.tasks_map().values():

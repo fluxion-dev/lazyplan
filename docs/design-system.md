@@ -61,33 +61,56 @@ Provenance stays in the chips; rows do not append a separate marker glyph.
 Empty states come from `EMPTY_NO_PLANS` / `EMPTY_FEED` (same in CLI and
 TUI).
 
+## TUI module map
+
+- `app.py` is the shell: composition, global bindings, layout, lifecycle, and
+  wiring. It is kept under 250 lines.
+- `state.py` holds `AppState` (selection, filters, marks, folds, preview key,
+  and transient flags). `base.py` exposes it through properties and defines
+  the small `TuiHost` contract used by the mixins.
+- `controllers/tree.py` owns tree loading, filtering, folds, selection
+  restoration, source counts, and row building.
+- `controllers/updates.py` owns the update timer, cache read, chip, and toast.
+- `controllers/spinner.py` owns frame timing and doing-row repaint.
+- `controllers/git_state.py` owns the preview's git probe and TTL cache.
+- `views/preview.py` returns a structured `PreviewDocument`; it never touches
+  widgets. `widgets/preview_panel.py` renders that document inside
+  `#preview-body`.
+- `widgets/plan_tree.py` is the `FoldTree`; `tree.py` keeps the event
+  handlers and delegates behaviour to the tree controller.
+- `theme/` owns the dark and light themes and semantic `lp-*` tokens; `css/`
+  owns the shell, component, and screen stylesheets.
+- Data flows down through controllers and state; intents flow up as
+  `SelectionChanged` / `RowAction` messages. Local writes bump `rev`; external
+  writes arrive through the fingerprint poll.
+
 ## Shell (`tui/app.py`)
 
 Visual: one-row `#status` and `#hints`, bordered `#panel`. No `Header`, no
 `Footer`, no bottom input. Adaptive shell: `#main` holds `#nav` (focused
-`FoldTree`) and `#preview` (`VerticalScroll` + `Static#preview-body`) side
-by side at >= 100 columns; below that `#main.narrow` hides the preview and
-the tree owns the width.
+`FoldTree`) and `#preview` (`PreviewPanel`) side by side at >= 100 columns;
+below that `#main.narrow` hides the preview and the tree owns the width.
 
-- `FoldTree` extends the shared `NavTree` (`tree_nav.py`) and posts
-  `SelectionChanged` / `RowAction` (see `messages.py`); `NodeHighlighted`
-  also tracks for compatibility. `NavTree` owns the unified gestures:
-  `j`/`k` move, `left` collapses or walks to the parent, `right` expands or
-  walks to the first child, and clicking a row arrow toggles it. Textual
-  dispatches `_on_click` for every class in the MRO, so `FoldTree` must not
-  call `super()._on_click` or an arrow click toggles twice. `update_preview()`
-  renders a bounded card from `store.get_full`: title, progress, why/what,
-  three next open tasks, acceptance progress, commit/PR/file counts, newest
-  commit, repos, and `enter open · e edit`.
+- `FoldTree` (`widgets/plan_tree.py`) extends the shared `NavTree`
+  (`tree_nav.py`) and posts `SelectionChanged` / `RowAction` (see
+  `messages.py`); `NodeHighlighted` also tracks for compatibility. `NavTree`
+  owns the unified gestures: `j`/`k` move, `left` collapses or walks to the
+  parent, `right` expands or walks to the first child, and clicking a row
+  arrow toggles it. Textual dispatches `_on_click` for every class in the
+  MRO, so `FoldTree` must not call `super()._on_click` or an arrow click
+  toggles twice. `PreviewMixin.update_preview()` asks
+  `views/preview.py` for a `PreviewDocument` and hands it to
+  `PreviewPanel`.
 - Progressive disclosure: plans start collapsed. Right/`z` reveals
   milestones; tasks appear only when their milestone is expanded.
-  `_expanded` is the source of truth; `_refreshing` suppresses the Tree's
-  own expand/collapse events during rebuilds. Done plans are dimmed and
-  sorted last.
-- Reactive `rev` drives local refreshes; `_poll` handles external
-  `fingerprint()` diffs plus a `feed` toast. A separate update timer polls
-  the shared cache every 60s; one guarded worker calls `refresh_update`, and
-  the shared gate limits network refreshes to once per 5 minutes.
+  `AppState.expanded` is the source of truth; `AppState.refreshing`
+  suppresses the Tree's own expand/collapse events during rebuilds. Done
+  plans are dimmed and sorted last.
+- Reactive `rev` drives local refreshes; `TreeController.poll()` handles
+  external `fingerprint()` diffs plus a `feed` toast. `UpdateController`
+  polls the shared cache every 60s; one guarded worker calls
+  `refresh_update`, and the shared gate limits network refreshes to once per
+  5 minutes.
 - `#status` is human: `3 plans · 12 open · 1 doing`, active filters,
   the update chip, and a truncated last event. The chip clears when the
   installed version catches up, and each version toasts once. `#hints` is

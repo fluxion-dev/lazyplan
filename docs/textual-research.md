@@ -48,7 +48,9 @@ what it means for lazyplan (keyboard-only Tree + modal forms).
 lazyplan: `tui/theme/` owns `lazyplan-dark` and `lazyplan-light` plus the
 `lp-*` semantic variables; `tui/css/` owns `app.tcss`, `components.tcss`, and
 `screens.tcss`; `LAZYPLAN_THEME=light` selects the light theme. Add a token to
-both themes before using it in CSS.
+both themes before using it in CSS. The shell keeps controllers in
+`tui/controllers/`, pure documents in `tui/views/`, and widgets in
+`tui/widgets/`; `App` only composes and wires them.
 
 ## Mental model
 

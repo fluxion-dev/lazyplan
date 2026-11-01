@@ -135,6 +135,9 @@ the row before the code, and keep the row current when the code changes.
 
 ## Architecture
 
+The slice map, ports, and composition-root rule live in
+[docs/architecture.md](docs/architecture.md).
+
 Dependencies point one way:
 
 ```text
@@ -153,9 +156,13 @@ leaf -> infrastructure -> store -> domain -> services -> presentation -> entry p
   presentation. They may use everything below them.
 - `__main__` is the only entry point and may import any package.
 
-A new top-level module needs a layer entry in `tests/test_architecture.py`.
-`tests/test_module_budget.py` enforces the 600-line budget and records temporary
-exceptions in `tests/architecture_baseline.json`. Shrink an exception in the
+A new top-level module needs a layer entry in
+`tests/architecture/test_architecture.py`. The same suite enforces core purity
+and the shrinking Store-import allowlist in
+`tests/architecture/store_import_baseline.json`.
+`tests/architecture/test_module_budget.py` enforces the 600-line budget and
+records temporary exceptions in
+`tests/architecture/architecture_baseline.json`. Shrink an exception in the
 commit that splits the file, and delete it once the file is under budget.
 
 ## Textual skill suite

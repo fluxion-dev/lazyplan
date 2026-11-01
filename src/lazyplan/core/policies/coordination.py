@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from ..entities import Claim, Status, Task
+from ..entities import Status, Task
 
 #: Default lease length in seconds.
 CLAIM_DEFAULT_TTL = 30 * 60
@@ -50,11 +50,6 @@ def parse_ttl(text: str | None, default: float = CLAIM_DEFAULT_TTL) -> float:
     if seconds <= 0:
         raise ValueError("claim ttl must be positive")
     return seconds
-
-
-def is_expired(claim: Claim | None, now: float) -> bool:
-    """True when a lease is absent or no longer active at `now`."""
-    return claim is None or claim.expired(now)
 
 
 def validate_block(task: Task, reason: str) -> None:

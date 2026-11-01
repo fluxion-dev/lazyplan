@@ -4,10 +4,9 @@ from __future__ import annotations
 
 import unittest
 
-from lazyplan.core.entities import Claim, Status, Task
+from lazyplan.core.entities import Status, Task
 from lazyplan.core.policies.coordination import (
     CLAIM_DEFAULT_TTL,
-    is_expired,
     parse_ttl,
     validate_block,
 )
@@ -28,19 +27,6 @@ class TestTtl(unittest.TestCase):
             parse_ttl("soon")
         with self.assertRaises(ValueError):
             parse_ttl("3.fortnights")
-
-
-class TestExpiry(unittest.TestCase):
-    def test_missing_claim_is_expired(self) -> None:
-        self.assertTrue(is_expired(None, 100.0))
-
-    def test_past_expiry(self) -> None:
-        claim = Claim(task_id=1, actor="a", started_at=0.0, expires_at=100.0)
-        self.assertTrue(is_expired(claim, 100.0))
-
-    def test_active(self) -> None:
-        claim = Claim(task_id=1, actor="a", started_at=0.0, expires_at=100.0)
-        self.assertFalse(is_expired(claim, 99.0))
 
 
 class TestBlockValidation(unittest.TestCase):

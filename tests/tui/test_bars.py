@@ -5,9 +5,14 @@ from __future__ import annotations
 import unittest
 
 from lazyplan.help import hint_bar
-from lazyplan.tui.views.bars import status_bar
+
+try:
+    from lazyplan.tui.views.bars import status_bar
+except ImportError:  # pragma: no cover - stdlib-only interpreter
+    status_bar = None  # type: ignore[assignment]
 
 
+@unittest.skipUnless(status_bar is not None, "rich not installed")
 class BarTest(unittest.TestCase):
     def test_status_bar_carries_the_core_counts(self) -> None:
         bar = status_bar(repo="repo", plans=3, open_tasks=9, doing=1, width=120)

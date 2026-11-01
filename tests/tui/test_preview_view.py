@@ -7,9 +7,14 @@ import tempfile
 import unittest
 
 from lazyplan.store import Store
-from lazyplan.tui.views.preview import PreviewBlock, PreviewDocument, build_preview
+
+try:
+    from lazyplan.tui.views.preview import PreviewBlock, PreviewDocument, build_preview
+except ImportError:  # pragma: no cover - stdlib-only interpreter
+    PreviewBlock = PreviewDocument = build_preview = None  # type: ignore[assignment]
 
 
+@unittest.skipUnless(build_preview is not None, "textual/rich not installed")
 class PreviewDocumentTest(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()

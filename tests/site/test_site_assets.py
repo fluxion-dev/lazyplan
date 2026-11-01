@@ -21,6 +21,7 @@ else:
     SPEC.loader.exec_module(capture)
 
 EXPECTED = {
+    "lpui-detail",
     "lpui-source-trail",
     "lpui-coordination",
     "lpui-collaboration",

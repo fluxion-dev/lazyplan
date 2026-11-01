@@ -495,7 +495,7 @@ def _git_metrics(repo: Path | None, repeat: int) -> list[Measurement]:
 def _tui_measurement(db: Path, repeat: int) -> Measurement:
     try:
         from lazyplan import tui
-        from lazyplan.tui import app as tui_app
+        from lazyplan.tui.controllers import updates as update_mod
     except ImportError:
         return Measurement("tui_refresh", None, None, None, "textual not installed")
 
@@ -505,7 +505,7 @@ def _tui_measurement(db: Path, repeat: int) -> Measurement:
 
         async def run() -> Measurement:
             app = tui.create_app(str(db))
-            with mock.patch.object(tui_app, "refresh_update", return_value=None):
+            with mock.patch.object(update_mod, "refresh_update", return_value=None):
                 async with app.run_test(size=(120, 40)) as pilot:
                     await pilot.pause()
                     for _ in range(max(1, repeat)):

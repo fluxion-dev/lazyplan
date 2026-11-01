@@ -23,7 +23,6 @@
     "lazyplan.presentation.tui.bulk",
     "lazyplan.presentation.tui.screens.source",
     "lazyplan.presentation.tui.views.detail",
-    "lazyplan.services.claims",
     "lazyplan.services.forge",
     "lazyplan.services.plans",
     "lazyplan.services.tasks",

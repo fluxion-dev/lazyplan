@@ -14,13 +14,19 @@ from lazyplan.store import Store
 try:
     from lazyplan import tui as tui_mod
     from lazyplan.metrics import TimelineLane
-    from lazyplan.tui.metrics.timeline import TimelineCard, _active_segments, _lane_window
+    from lazyplan.tui.metrics.timeline import (
+        TimelineCard,
+        _active_segments,
+        _lane_window,
+        _trace_glyph,
+    )
 except ImportError:  # stdlib-only interpreter: no textual
     tui_mod = None  # type: ignore[assignment]
     TimelineLane = None  # type: ignore[assignment,misc]
     TimelineCard = None  # type: ignore[assignment,misc]
     _active_segments = None  # type: ignore[assignment]
     _lane_window = None  # type: ignore[assignment]
+    _trace_glyph = None  # type: ignore[assignment]
 
 
 def _at(stamp: float, action):
@@ -46,10 +52,6 @@ def _seed(store: Store) -> int:
     return plan.id
 
 
-def _braille(text: str) -> bool:
-    return any("\u2800" <= char <= "\u28ff" for char in text)
-
-
 @unittest.skipUnless(tui_mod is not None and tui_mod._TEXTUAL_OK, "textual not installed")
 class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:
@@ -60,7 +62,7 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
     async def asyncTearDown(self) -> None:
         self.tmp.cleanup()
 
-    async def test_card_renders_braille_lanes_and_inside_labels(self) -> None:
+    async def test_card_renders_glyph_lanes_and_inside_labels(self) -> None:
         plan_id = _seed(self.store)
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
@@ -74,8 +76,9 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Plan title", chart)
         self.assertIn("First milestone", chart)
         self.assertIn("Second milestone", chart)
-        self.assertTrue(_braille(chart))
         self.assertIn("•", chart)
+        self.assertIn("═", chart)
+        self.assertNotIn("⠒", chart)
         self.assertNotIn("now", chart)
 
     async def test_now_marker_appears_for_open_work(self) -> None:
@@ -152,6 +155,11 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
         self.assertGreater(unit, 1.0)
         self.assertGreater(top, 10.0)
         self.assertEqual(bottom, 0.0)
+
+    def test_trace_glyphs_distinguish_kinds(self) -> None:
+        self.assertEqual(_trace_glyph("plan"), "═")
+        self.assertEqual(_trace_glyph("milestone"), "─")
+        self.assertEqual(_trace_glyph("task"), "·")
 
 
 if __name__ == "__main__":

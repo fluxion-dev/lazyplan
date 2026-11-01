@@ -17,6 +17,12 @@ LEGEND_LABEL_WIDTH = 16
 MAX_LEGEND_ROWS = 6
 X_TICKS = 5
 MIN_SPAN_SECONDS = 60.0
+TRACE_GLYPHS = {"plan": "═", "milestone": "─", "task": "·"}
+
+
+def _trace_glyph(kind: str) -> str:
+    """Line glyph for one lane kind."""
+    return TRACE_GLYPHS.get(kind, "─")
 
 
 def _tick_label(stamp: float, span: float) -> str:
@@ -107,7 +113,7 @@ class TimelineCard(MetricCard):
                 plt.plot(
                     [start, end],
                     [positions[index], positions[index]],
-                    marker="braille",
+                    marker=_trace_glyph(lane.kind),
                     color=color,
                 )
                 plt.scatter(
@@ -155,7 +161,7 @@ class TimelineCard(MetricCard):
         for index in range(shown):
             lane = lanes[index]
             plt.text(
-                f"⠒ {truncate(lane.title, LEGEND_LABEL_WIDTH)}",
+                f"{_trace_glyph(lane.kind)} {truncate(lane.title, LEGEND_LABEL_WIDTH)}",
                 left,
                 top - row_unit * (index + 0.5),
                 color=lane_rgb(self.app, index),

@@ -309,6 +309,70 @@ async def capture_source(store: Store, target: Path) -> None:
         app.save_screenshot(str(target))
 
 
+async def _capture_task_shell(store: Store, target: Path, theme: str | None = None) -> None:
+    """Capture the main shell with a linked task selected and expanded."""
+    patch = (
+        mock.patch.dict(os.environ, {"LAZYPLAN_THEME": theme})
+        if theme is not None
+        else mock.patch.dict(os.environ, {}, clear=False)
+    )
+    task_id = _task_id(store, "Render unified diffs")
+    with patch:
+        app = create_app(str(store.path))
+        async with app.run_test(size=SIZE) as pilot:
+            await pilot.pause()
+            tree = app.query_one("#tree", Tree)
+            _expand_all(tree)
+            tree.focus()
+            selected = next(
+                (
+                    node
+                    for node in _nodes(tree, "task")
+                    if getattr(node, "data", {}).get("id") == task_id
+                ),
+                None,
+            )
+            if selected is not None:
+                tree.select_node(selected)
+            await pilot.pause(0.5)
+            app.save_screenshot(str(target))
+
+
+async def capture_git_pane(store: Store, target: Path) -> None:
+    await _capture_task_shell(store, target)
+
+
+async def capture_theme_void(store: Store, target: Path) -> None:
+    await _capture_task_shell(store, target, "void")
+
+
+async def capture_theme_latte(store: Store, target: Path) -> None:
+    await _capture_task_shell(store, target, "latte")
+
+
+async def capture_timeline(store: Store, target: Path) -> None:
+    """Capture the shell with a task selected so the timeline shows its lanes."""
+    task_id = _task_id(store, "Render unified diffs")
+    app = create_app(str(store.path))
+    async with app.run_test(size=SIZE) as pilot:
+        await pilot.pause()
+        tree = app.query_one("#tree", Tree)
+        _expand_all(tree)
+        tree.focus()
+        selected = next(
+            (
+                node
+                for node in _nodes(tree, "task")
+                if getattr(node, "data", {}).get("id") == task_id
+            ),
+            None,
+        )
+        if selected is not None:
+            tree.select_node(selected)
+        await pilot.pause(0.5)
+        app.save_screenshot(str(target))
+
+
 async def capture_coordination(store: Store, target: Path) -> None:
     app = create_app(str(store.path))
     async with app.run_test(size=SIZE) as pilot:
@@ -517,6 +581,30 @@ SCENES: dict[str, Scene] = {
         build_source_fixture,
         capture_source,
         "lazyplan source trail for a task showing a repository, commits, changed files, a merged pull request, and a unified diff.",
+    ),
+    "lpui-git-pane": Scene(
+        SIZE,
+        build_source_fixture,
+        capture_git_pane,
+        "lazyplan main shell with a linked task selected, showing the sticky preview above a GIT pane with the checkout, branch, clean state, commits, and pull requests.",
+    ),
+    "lpui-theme-void": Scene(
+        SIZE,
+        build_source_fixture,
+        capture_theme_void,
+        "lazyplan main shell in the OLED-black void theme, with the plan tree, sticky preview, GIT pane, and timeline.",
+    ),
+    "lpui-theme-latte": Scene(
+        SIZE,
+        build_source_fixture,
+        capture_theme_latte,
+        "lazyplan main shell in the light Latte theme, with the plan tree, sticky preview, GIT pane, and timeline.",
+    ),
+    "lpui-timeline": Scene(
+        SIZE,
+        build_source_fixture,
+        capture_timeline,
+        "lazyplan main shell with a plan selected, showing the timeline card's project, milestone, and task lanes with the scoped plan name in its border.",
     ),
     "lpui-detail": Scene(
         SIZE,

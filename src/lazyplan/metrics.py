@@ -446,11 +446,16 @@ def _timeline(
     A lane starts at its add event and ends at its latest completion event
     when the row is done; open work runs to `now`. With no plan scope every
     plan gets a lane; a scoped plan adds one lane per milestone. A milestone
-    or task selection adds the focused milestone's task lanes.
+    or task selection adds the focused milestone's task lanes. The lane that
+    matches `scope_kind`/`scope_id` is marked selected; ancestors and siblings
+    are not.
     """
     starts = _timeline_starts(events)
     ends = _timeline_ends(events)
     fallback = min((float(event["ts"]) for event in events), default=now)
+
+    def is_selected(kind: str, oid: int) -> bool:
+        return scope_kind == kind and scope_id == oid
 
     def lane(
         kind: str, oid: int, title: str, status: Status, selected: bool = False
@@ -469,7 +474,10 @@ def _timeline(
     lanes: list[TimelineLane] = []
     if plan_id is None:
         ordered = sorted(plans, key=lambda item: starts.get(("plan", item.id), fallback))
-        lanes = [lane("plan", plan.id, plan.name, plan.status) for plan in ordered]
+        lanes = [
+            lane("plan", plan.id, plan.name, plan.status, is_selected("plan", plan.id))
+            for plan in ordered
+        ]
     else:
         plan = next((item for item in plans if item.id == plan_id), None)
         if plan is None:
@@ -480,9 +488,15 @@ def _timeline(
         )
         if not milestones:
             return Timeline(empty="no milestones yet", now=now)
-        lanes.append(lane("plan", plan.id, plan.name, plan.status))
+        lanes.append(lane("plan", plan.id, plan.name, plan.status, is_selected("plan", plan.id)))
         lanes.extend(
-            lane("milestone", milestone.id, milestone.title, milestone.status)
+            lane(
+                "milestone",
+                milestone.id,
+                milestone.title,
+                milestone.status,
+                is_selected("milestone", milestone.id),
+            )
             for milestone in milestones
         )
         focused_milestone = _focused_milestone(tasks_by_milestone, scope_kind, scope_id)
@@ -493,7 +507,7 @@ def _timeline(
                     task.id,
                     task.title,
                     task.status,
-                    scope_kind == "task" and task.id == scope_id,
+                    is_selected("task", task.id),
                 )
                 for task in tasks_by_milestone.get(focused_milestone, [])
             )
@@ -526,9 +540,9 @@ def snapshot(
     """Build the dashboard snapshot from one task and event read.
 
     plan_id limits task counts, status shares, milestone bars, activity,
-    elapsed time, and the ETA to that plan. scope_kind/scope_id add the
-    focused milestone's task lanes when a milestone or task is selected.
-    None keeps the all-plans view.
+    elapsed time, and the ETA to that plan. scope_kind/scope_id mark the
+    selected lane and add the focused milestone's task lanes when a milestone
+    or task is selected. None keeps the all-plans view.
     """
     milestones_by_plan = store.milestones_map()
     tasks_by_milestone = _scoped_tasks(milestones_by_plan, store.tasks_map(), plan_id)

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from .charts import apply_chart_theme, chart_color
 from .themes import (
     DARK_NAME,
     ENV_VAR,
@@ -24,6 +25,8 @@ __all__ = [
     "LIGHT_TOKENS",
     "THEMES",
     "TOKEN_NAMES",
+    "apply_chart_theme",
+    "chart_color",
     "choose_theme",
     "register_themes",
 ]

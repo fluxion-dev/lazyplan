@@ -7,6 +7,7 @@ from textual.widgets import Label, Static
 from textual_plotext import PlotextPlot
 
 from ...metrics import DayActivity, activity_weeks
+from ..theme import apply_chart_theme, chart_color
 from .base import MetricCard
 
 
@@ -33,8 +34,9 @@ class ActivityCard(MetricCard):
         labels = [row.label for row in rows]
         values = [row.value for row in rows]
         plt = plot.plt
+        apply_chart_theme(plt, self.app)
         plt.clear_figure()
-        plt.bar(labels, values, color="green")
+        plt.bar(labels, values, color=chart_color(self.app))
         step = max(1, len(labels) // 5)
         ticks = list(range(0, len(labels), step))
         if ticks[-1] != len(labels) - 1:

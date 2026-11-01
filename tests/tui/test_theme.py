@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import tempfile
 import unittest
+from pathlib import Path
 from unittest import mock
 
 from lazyplan.store import Store
@@ -19,6 +20,7 @@ try:
         LIGHT_NAME,
         LIGHT_TOKENS,
         TOKEN_NAMES,
+        chart_color,
         choose_theme,
     )
 except ImportError:  # pragma: no cover - stdlib-only interpreter
@@ -68,6 +70,23 @@ class ThemeTest(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(app.theme, LIGHT_NAME)
             self.assertFalse(app.current_theme.dark)
             self.assertEqual(app.theme_variables["lp-accent"], LIGHT_TOKENS["lp-accent"])
+
+    async def test_chart_colors_follow_the_theme(self) -> None:
+        with mock.patch.dict(os.environ, {"LAZYPLAN_THEME": "dark"}):
+            app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(100, 30)) as pilot:
+            await pilot.pause()
+            self.assertEqual(chart_color(app), "green+")
+            app.theme = LIGHT_NAME
+            await pilot.pause()
+            self.assertEqual(chart_color(app), "green")
+            self.assertEqual(chart_color(app, "lp-chart-axis"), "gray")
+
+    def test_chart_modules_do_not_hardcode_green(self) -> None:
+        root = Path(__file__).resolve().parents[2] / "src" / "lazyplan" / "tui" / "metrics"
+        for name in ("activity.py", "progress.py", "status.py"):
+            text = (root / name).read_text(encoding="utf-8")
+            self.assertNotIn('color="green"', text)
 
     async def test_every_token_resolves_in_both_themes(self) -> None:
         with mock.patch.dict(os.environ, {"LAZYPLAN_THEME": "dark"}):

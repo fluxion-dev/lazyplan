@@ -1,5 +1,16 @@
 /* Reusable card and action-row pieces. */
 
+#metric-cards {
+    height: 1fr;
+}
+
+.metrics-title {
+    height: 1;
+    color: $lp-text-muted;
+    text-style: bold;
+    padding: 0 1;
+}
+
 .metric-card {
     width: 1fr;
     height: 1fr;

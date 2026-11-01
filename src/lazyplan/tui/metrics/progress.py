@@ -8,6 +8,7 @@ from textual_plotext import PlotextPlot
 
 from ...design import escape_markup, truncate
 from ...metrics import OverallProgress, milestone_bars
+from ..theme import apply_chart_theme, chart_color
 from .base import MetricCard
 
 TITLE_WIDTH = 16
@@ -64,8 +65,14 @@ class ProgressCard(MetricCard):
         labels = [truncate(escape_markup(row.label), TITLE_WIDTH) for row in rows]
         values = [row.value for row in rows]
         plt = plot.plt
+        apply_chart_theme(plt, self.app)
         plt.clear_figure()
-        plt.bar(labels, values, orientation="horizontal", color="green")
+        plt.bar(
+            labels,
+            values,
+            orientation="horizontal",
+            color=chart_color(self.app),
+        )
         plt.xlim(0, 100)
         plt.xticks([0, 50, 100], ["0%", "50%", "100%"])
         plot.refresh()

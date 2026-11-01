@@ -7,6 +7,7 @@ from textual.widgets import Label, Static
 from textual_plotext import PlotextPlot
 
 from ...metrics import StatusBreakdown, status_bars
+from ..theme import apply_chart_theme, chart_color
 from .base import MetricCard
 
 
@@ -34,8 +35,14 @@ class StatusCard(MetricCard):
         values = [row.value for row in rows]
         peak = max(values)
         plt = plot.plt
+        apply_chart_theme(plt, self.app)
         plt.clear_figure()
-        plt.bar(labels, values, orientation="horizontal", color="green")
+        plt.bar(
+            labels,
+            values,
+            orientation="horizontal",
+            color=chart_color(self.app),
+        )
         plt.xlim(0, peak)
         plt.xticks([0, peak], ["0", str(peak)])
         plot.refresh()

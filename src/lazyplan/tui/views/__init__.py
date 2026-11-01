@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from .bars import status_bar
 from .preview import (
     PreviewBlock,
     PreviewDocument,
@@ -14,7 +15,6 @@ from .preview import (
     render_blocks,
 )
 from .rows import row_text
-from .bars import status_bar
 
 __all__ = [
     "PreviewBlock",

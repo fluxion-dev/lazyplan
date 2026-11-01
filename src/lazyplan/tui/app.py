@@ -38,6 +38,7 @@ from .actions import ActionMixin
 from .base import AppBase
 from .bulk import BulkMixin
 from .controllers.git_state import GitStateController
+from .controllers.metrics import MetricsController
 from .controllers.spinner import SpinnerController
 from .controllers.tree import TreeController
 from .controllers.updates import UpdateController
@@ -150,6 +151,7 @@ if _TEXTUAL_OK:
             self.update_controller = UpdateController(self)
             self.spinner_controller = SpinnerController(self)
             self.git_state_controller = GitStateController(self)
+            self.metrics_controller = MetricsController(self)
             self._last_click_key: tuple[str, int] | None = None
             self._last_click_at: float = 0.0
             self._fp: Any = store.fingerprint()
@@ -176,9 +178,10 @@ if _TEXTUAL_OK:
                 self.call_after_refresh(self.refresh_all)
 
         def on_unmount(self) -> None:
-            """Stop app-owned timers; both drive periodic work."""
+            """Stop app-owned timers; each drives deferred or periodic work."""
             self.update_controller.stop()
             self.spinner_controller.stop()
+            self.metrics_controller.stop()
 
         def check_action(self, action: str, _parameters: tuple[object, ...]) -> bool | None:
             """Keep app-level row actions on the main tree screen.

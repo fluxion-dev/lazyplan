@@ -10,6 +10,7 @@ from textual.widgets.tree import TreeNode
 from ..models import Status
 from ..store import Store
 from .controllers.git_state import GitStateController
+from .controllers.metrics import MetricsController
 from .controllers.spinner import SpinnerController
 from .controllers.tree import TreeController
 from .controllers.updates import UpdateController
@@ -51,6 +52,7 @@ class AppBase(App, TuiHost):
     spinner_controller: SpinnerController
     git_state_controller: GitStateController
     update_controller: UpdateController
+    metrics_controller: MetricsController
     _undo: list[dict] | None
     _row_nodes: dict[tuple[str, int], Any]
     _row_labels: dict[tuple[str, int], str]

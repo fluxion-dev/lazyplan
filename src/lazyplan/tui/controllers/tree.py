@@ -8,13 +8,10 @@ from typing import TYPE_CHECKING, Any
 from textual.widgets import Label, Tree
 from textual.widgets.tree import TreeNode
 
-from ... import metrics as metrics_mod
 from ... import services
 from ...design import milestone_row, plan_row, status_prefix, task_row
 from ...help import hint_bar
 from ...models import Milestone, Plan, Status, Task
-from ..metrics import MetricsSection
-from ..query import query_one_opt
 from ..views.rows import row_text
 from .filtering import TreeFilter
 
@@ -41,6 +38,7 @@ class TreeController:
         if isinstance(data, dict) and "kind" in data and "id" in data:
             self.app.selected = (data["kind"], int(data["id"]))
             self.app.update_preview()
+            self.app.metrics_controller.request()
 
     def apply_folds(self) -> None:
         """Plans open to milestones, milestones to tasks, only when expanded."""
@@ -240,9 +238,7 @@ class TreeController:
         self.apply_folds()
         app.spinner_controller.paint()
         app.query_one("#hints", Label).update(hint_bar(max(10, app.size.width - 2), markup=True))
-        section = query_one_opt(app, "#metrics", MetricsSection)
-        if section is not None:
-            section.refresh_snapshot(metrics_mod.snapshot(app.store))
+        app.metrics_controller.refresh()
         self.restore_selection(tree, prev_selected, prev_cursor)
         app._preview_key = None
         app.update_preview(force=True)

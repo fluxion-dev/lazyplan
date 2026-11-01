@@ -38,6 +38,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         self.db = os.path.join(self.tmp.name, "t.db")
         store = Store(self.db)
         plan = store.add_plan("Plan title")
+        self.plan_id = plan.id
         milestone = store.add_milestone(plan.id, "Milestone title")
         task = store.add_task(milestone.id, "Task title")
         self.task_id = task.id
@@ -170,18 +171,69 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(empty_visible)
         self.assertEqual(len(titles), 3)
 
-    async def test_focus_changes_leave_progress_alone(self) -> None:
+    def _other_plan(self, tasks: int = 2) -> tuple[int, int, list[int]]:
         other = self.store.add_plan("Other plan")
+        milestone = self.store.add_milestone(other.id, "Other milestone")
+        task_ids = [
+            self.store.add_task(milestone.id, f"Other task {number}").id for number in range(tasks)
+        ]
+        return other.id, milestone.id, task_ids
+
+    async def test_focus_changes_follow_the_selected_plan(self) -> None:
+        other_id, _milestone_id, _task_ids = self._other_plan()
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
             card = app.query_one("#metric-progress")
+            app.tree_controller.track(app._row_nodes[("plan", self.plan_id)])
+            await pilot.pause(0.2)
             before = str(card.query_one(".metric-head").render())
-            app.selected = ("plan", other.id)
-            app.update_preview()
-            await pilot.pause()
+            app.tree_controller.track(app._row_nodes[("plan", other_id)])
+            await pilot.pause(0.2)
             after = str(card.query_one(".metric-head").render())
-        self.assertEqual(before, after)
+        self.assertIn("0% 0/1", before)
+        self.assertIn("0% 0/2", after)
+
+    async def test_milestone_and_task_rows_scope_to_their_plan(self) -> None:
+        _other_id, milestone_id, task_ids = self._other_plan()
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            card = app.query_one("#metric-progress")
+            heads = []
+            for key in (("milestone", milestone_id), ("task", task_ids[0])):
+                app.tree_controller.track(app._row_nodes[key])
+                await pilot.pause(0.2)
+                heads.append(str(card.query_one(".metric-head").render()))
+        for head in heads:
+            self.assertIn("0% 0/2", head)
+
+    async def test_no_selection_falls_back_to_all_plans(self) -> None:
+        self._other_plan()
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            card = app.query_one("#metric-progress")
+            app.selected = None
+            app.metrics_controller.stop()
+            app.metrics_controller.refresh()
+            await pilot.pause()
+            head = str(card.query_one(".metric-head").render())
+        self.assertIn("0% 0/3", head)
+
+    async def test_tree_filters_and_marks_leave_scope_alone(self) -> None:
+        other_id, _milestone_id, _task_ids = self._other_plan()
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.tree_controller.track(app._row_nodes[("plan", other_id)])
+            await pilot.pause(0.2)
+            app.filter_text = "Other"
+            app.marked.add(("plan", other_id))
+            app.refresh_all()
+            await pilot.pause()
+            head = str(app.query_one("#metric-progress").query_one(".metric-head").render())
+        self.assertIn("0% 0/2", head)
 
     async def test_plots_fit_at_100_columns(self) -> None:
         app = tui_mod.create_app(self.db)

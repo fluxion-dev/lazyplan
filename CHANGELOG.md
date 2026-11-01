@@ -3,20 +3,51 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
-## Unreleased
+## v0.30.0 — 2026-11-01
+
+A visual overhaul for the TUI. The default palette is Catppuccin Mocha, with
+Latte and an OLED-black void alongside it; the preview keeps its header fixed
+over a real GIT pane; one icon family labels structure; and the timeline card
+reads the scoped plan at a glance.
 
 ### New
 
-- The plan tree no longer renders its non-selectable `plans` root row; plans
+- **Theme overhaul.** The default `lazyplan-dark` theme now draws the
+  Catppuccin Mocha palette, `lazyplan-light` draws Latte, and a new OLED-black
+  `lazyplan-void` theme is available. `t` cycles mocha → void → latte, and
+  `LAZYPLAN_THEME` accepts `mocha`, `void`, `latte`, and the original
+  `dark`/`light` names.
+- **A real GIT pane.** Under the preview, a compact card shows the selected
+  row's linked checkouts, branch, clean/dirty state, ahead/behind counts, the
+  newest commits, and pull-request state. It grows with its content and yields
+  room back to the preview when nothing is linked.
+- **A sticky preview header.** The status/title/breadcrumb stays fixed while
+  the reason, scope, next tasks, acceptance, and notes scroll beneath it.
+- **Icon language.** Plans, milestones, tasks, sections, checkouts, commits,
+  and pull requests now use one consistent single-cell icon family in previews,
+  details, and the source trail. Rows keep the canonical
+  `GLYPH KIND<id> title` grammar.
+- Plan and milestone rows show a compact `▰▰▰▱▱` progress bar beside the
+  numeric count. Blocked tasks carry a red `⚑`, and claims a `◉ @actor` chip.
+- The plans panel takes 45% of the shell width, leaving 55% for the
+  preview/GIT column; the preview keeps the larger share.
+- The bottom Gantt is now a rounded `timeline` card at 40% of the shell height
+  (11-row minimum, 16-row maximum) with the scoped plan name in its border
+  subtitle. Projects, milestones, and focused tasks each get one compact
+  swimlane.
+- The `plans`, `preview`, `git`, `timeline`, `detail`, `source`, `trail`, and
+  `diff` pane titles are lowercase with breathing room, matching the tracker-TUI
+  conventions the app borrows from.
+- Preview documents no longer repeat the bottom key legend inside the body;
+  the preview border carries the `enter open · e edit` hint instead.
+- Detail read mode merges the checkout state, commits, files, and pull
+  requests into one `git · source` section instead of repeating them across
+  separate `git`, `commits`, and `repos` blocks.
+- The plans panel no longer renders its non-selectable `plans` root row; plans
   are the top-level rows.
-- The plans panel takes 35% of the shell width, leaving 65% for the preview.
-- The PLANS and PREVIEW border headings are left-aligned.
-- The bottom dashboard is now a wall-clock Gantt card spanning the full width
-  and 45% of the shell height (14-row minimum), with no `METRICS` border title.
-  Projects, milestones, and focused tasks each get one compact swimlane.
-- Traces cover only `doing` intervals. Todo, paused, and done gaps render no
-  line, but the lane and its legend label remain; resumed work shows separate
-  segments with start and finish dots.
+- Task traces cover only `doing` intervals. Todo, paused, and done gaps render
+  no line, but the lane and its legend label remain; resumed work shows
+  separate segments with start and finish dots.
 - Open work shows a `now` marker. The time axis adapts its tick count and
   date/time format to the span, and no-plan or no-milestone states render
   centered copy inside the chart.
@@ -47,6 +78,15 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
 
 ### Under the hood
 
+- `tui/theme/tokens.py` defines `DARK_TOKENS`, `LIGHT_TOKENS`, and
+  `VOID_TOKENS`; `tui/theme/themes.py` registers all three and resolves the
+  `LAZYPLAN_THEME` aliases.
+- `views/git.py` builds a pure `GitDocument`; `widgets/git_panel.py` renders it
+  under the preview, and `controllers/git_state.py` owns the cached
+  branch/dirty snapshot.
+- `PreviewDocument` splits `render_head()` from `render_body()` so the panel
+  can keep the header fixed while the body scrolls.
+- `design/tokens.py` owns `KIND_ICON`, `SECTION_ICON`, and `STATE_ICON`.
 - `metrics.snapshot(store, plan_id=..., scope_kind=..., scope_id=...)` derives
   doing intervals from status events, adds focused task lanes, and keeps the
   existing read-only aggregate fields.
@@ -55,10 +95,21 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
 - `tui/metrics/timeline_layout.py` holds the pure axis, lane, legend, glyph,
   and segment helpers so `TimelineCard` stays a thin Plotext renderer.
 
+### Upgrade
+
+```bash
+pipx upgrade lazyplan-tui
+# or
+pipx install --force lazyplan-tui
+```
+
+No manual migration is required. The database schema is unchanged.
+
 ### Documentation
 
-- Updated the metrics dashboard sections in `docs/usage.md` and
-  `docs/design-system.md`.
+- [Usage guide](https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md)
+- [Design system](https://github.com/fluxion-dev/lazyplan/blob/main/docs/design-system.md)
+- [Site](https://fluxion-dev.github.io/lazyplan/)
 
 ## v0.29.0 — 2026-10-31
 

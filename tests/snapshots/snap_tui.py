@@ -29,11 +29,6 @@ def empty_app():
 @pytest.fixture()
 def data_app():
     real_snapshot = metrics.snapshot
-    clock = {"now": FIXED_START}
-
-    def tick() -> float:
-        clock["now"] += 3_600
-        return clock["now"]
 
     def frozen_snapshot(store, now=None, plan_id=None, scope_kind=None, scope_id=None):
         return real_snapshot(
@@ -46,7 +41,7 @@ def data_app():
 
     with tempfile.TemporaryDirectory() as tmp:
         db = os.path.join(tmp, "data.db")
-        with mock.patch("lazyplan.store.base.time.time", side_effect=tick):
+        with mock.patch("lazyplan.store.base.time.time", return_value=FIXED_START):
             store = Store(db)
             plan = store.add_plan("Plan title", "What we build", goal="Why we build")
             milestone = store.add_milestone(plan.id, "Milestone title", "Milestone details")

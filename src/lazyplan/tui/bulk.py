@@ -3,15 +3,7 @@
 from __future__ import annotations
 
 try:
-    from textual import events, on  # noqa: F401
-    from textual.app import App, ComposeResult  # noqa: F401
-    from textual.binding import Binding  # noqa: F401
-    from textual.containers import Horizontal, Vertical, VerticalScroll  # noqa: F401
-    from textual.reactive import reactive  # noqa: F401
-    from textual.widgets import Label, Static, Tree  # noqa: F401
-    from textual.widgets.tree import TreeNode  # noqa: F401
-
-    from ..tree_nav import NavTree  # noqa: F401
+    from .base import AppBase
 
     _TEXTUAL_OK = True
 except ImportError:  # pragma: no cover
@@ -20,15 +12,10 @@ except ImportError:  # pragma: no cover
 from .. import services
 from ..models import Status, Task
 from ..store import ClaimConflict
-from .base import AppBase
 from .screens import (
     ConfirmScreen,
     FilterPromptScreen,
 )
-
-STATUS_CYCLE: list[Status | None] = [None, Status.TODO, Status.DOING, Status.DONE]
-DOUBLE_CLICK_WINDOW = 0.5  # seconds between two clicks on one row
-
 
 if _TEXTUAL_OK:
 

@@ -9,15 +9,7 @@ from typing import Any
 from .. import textfile
 
 try:
-    from textual import events, on  # noqa: F401
-    from textual.app import App, ComposeResult  # noqa: F401
-    from textual.binding import Binding  # noqa: F401
-    from textual.containers import Horizontal, Vertical, VerticalScroll  # noqa: F401
-    from textual.reactive import reactive  # noqa: F401
-    from textual.widgets import Label, Static, Tree  # noqa: F401
-    from textual.widgets.tree import TreeNode  # noqa: F401
-
-    from ..tree_nav import NavTree  # noqa: F401
+    from textual.widgets import Tree
 
     _TEXTUAL_OK = True
 except ImportError:  # pragma: no cover
@@ -30,6 +22,7 @@ from ..render import render_git_status
 from ..store import ClaimConflict
 from ..templates import load_template
 from .base import AppBase
+from .constants import DOUBLE_CLICK_WINDOW
 from .screens import (
     ConfirmScreen,
     DetailScreen,
@@ -41,10 +34,6 @@ from .screens import (
     PaletteScreen,
 )
 from .screens.source import SourceScreen
-
-STATUS_CYCLE: list[Status | None] = [None, Status.TODO, Status.DOING, Status.DONE]
-DOUBLE_CLICK_WINDOW = 0.5  # seconds between two clicks on one row
-
 
 if _TEXTUAL_OK:
 

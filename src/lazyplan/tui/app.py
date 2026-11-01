@@ -16,13 +16,13 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from textual import events, on  # noqa: F401
-    from textual.app import App, ComposeResult  # noqa: F401
-    from textual.binding import Binding  # noqa: F401
-    from textual.containers import Horizontal, Vertical, VerticalScroll  # noqa: F401
-    from textual.reactive import reactive  # noqa: F401
-    from textual.widgets import Label, Static, Tree  # noqa: F401
-    from textual.widgets.tree import TreeNode  # noqa: F401
+    from textual import events
+    from textual.app import ComposeResult
+    from textual.binding import Binding
+    from textual.containers import Horizontal, Vertical
+    from textual.reactive import reactive
+    from textual.widgets import Label, Tree
+    from textual.widgets.tree import TreeNode
 
     from ..tree_nav import NavTree  # noqa: F401
     from .query import query_one_opt
@@ -32,7 +32,6 @@ except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
 from ..cli.parser import package_version
-from ..models import Status
 from ..store import Store
 from ..update_stage import apply_on_launch, clear_failure, read_failure
 from .actions import ActionMixin
@@ -51,8 +50,6 @@ from .tree import TreeMixin
 from .widgets.plan_tree import FoldTree
 from .widgets.preview_panel import PreviewPanel
 
-STATUS_CYCLE: list[Status | None] = [None, Status.TODO, Status.DOING, Status.DONE]
-DOUBLE_CLICK_WINDOW = 0.5  # seconds between two clicks on one row
 CSS_DIR = Path(__file__).parent / "css"
 
 

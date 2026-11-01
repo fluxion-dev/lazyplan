@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 try:
-    from textual.widgets import Static  # noqa: F401
-
     from .query import query_one_opt
     from .widgets.preview_panel import PreviewPanel
 

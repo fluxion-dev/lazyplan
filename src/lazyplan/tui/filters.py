@@ -3,15 +3,7 @@
 from __future__ import annotations
 
 try:
-    from textual import events, on  # noqa: F401
-    from textual.app import App, ComposeResult  # noqa: F401
-    from textual.binding import Binding  # noqa: F401
-    from textual.containers import Horizontal, Vertical, VerticalScroll  # noqa: F401
-    from textual.reactive import reactive  # noqa: F401
-    from textual.widgets import Label, Static, Tree  # noqa: F401
-    from textual.widgets.tree import TreeNode  # noqa: F401
-
-    from ..tree_nav import NavTree  # noqa: F401
+    from textual.widgets import Label, Tree
 
     _TEXTUAL_OK = True
 except ImportError:  # pragma: no cover
@@ -22,16 +14,12 @@ from .. import stats as stats_mod
 from ..design import (
     truncate,
 )
-from ..models import Status
 from ..repo import repo_label
 from .base import AppBase
+from .constants import STATUS_CYCLE
 from .screens import (
     FilterPromptScreen,
 )
-
-STATUS_CYCLE: list[Status | None] = [None, Status.TODO, Status.DOING, Status.DONE]
-DOUBLE_CLICK_WINDOW = 0.5  # seconds between two clicks on one row
-
 
 if _TEXTUAL_OK:
 

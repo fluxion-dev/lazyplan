@@ -144,6 +144,13 @@ if _TEXTUAL_OK:
                 yield Footer(compact=True)
 
         def on_mount(self) -> None:
+            width = self.app.size.width
+            self.set_class(width < 80, "compact")
+            self.set_class(width >= 120, "wide")
+            page = self.query_one("#source-page")
+            page.border_title = "SOURCE"
+            self.query_one("#source-tree-wrap").border_title = "TRAIL"
+            self.query_one("#source-preview").border_title = "DETAIL"
             self.query_one("#source-filter", Input).display = False
             self._load()
             self.query_one("#source-tree", NavTree).focus()

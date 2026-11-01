@@ -111,13 +111,16 @@ ModalScreen {
 
 #source-page {
     height: 1fr;
-    border: solid $lp-border;
+    border: round $lp-border-muted;
+    border-title-color: $lp-accent;
+    background: $lp-surface-alt;
     padding: 0 1;
 }
 
 #source-head {
     height: 3;
-    background: $panel;
+    background: $lp-surface;
+    color: $lp-accent;
     padding: 0 1;
 }
 
@@ -132,12 +135,16 @@ ModalScreen {
 #source-tree-wrap {
     width: 1fr;
     min-width: 30;
-    border-right: solid $lp-border;
+    border: round $lp-border-muted;
+    border-title-color: $lp-accent;
+    padding: 0 1;
 }
 
 #source-preview {
     width: 1fr;
     min-width: 30;
+    border: round $lp-border-muted;
+    border-title-color: $lp-accent;
     padding: 0 1;
 }
 

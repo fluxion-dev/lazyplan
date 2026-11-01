@@ -281,3 +281,24 @@ deploy
 [41221639219](https://github.com/fluxion-dev/lazyplan/actions/runs/41221639219)
 built and published the simplified strip on 2026-10-31; the live
 `downloads.json` reports 10,004 / 3,252 / 43 with schema 2.
+
+### v0.30.0 pass (2026-11-01)
+
+After: version pins, release asset URLs, JSON-LD `version`/`softwareVersion`,
+and the sitemap `lastmod` moved to 0.30.0. The page gained a compact New in 0.30
+band for the three themes, the GIT pane, the sticky preview, and the timeline,
+plus four new screenshots: the GIT pane, the timeline, and the void and Latte
+themes. The hero collage and 1200x630 social card were regenerated from
+deterministic fixtures.
+
+The marketing budget now allows nine figures and five code tags in 748 visible
+words, and the navigation gained a New destination. `tools/check-site.py`
+passes on both the source page and the built dist.
+
+Verified live: the page contains 0.30.0 and New in 0.30, every new WebP and PNG
+returns 200, `screens/og-lpui-and-agent.png` is 1200x630, the sitemap carries
+`lastmod` 2026-11-01, robots points at it, and canonical/FAQ/JSON-LD are intact.
+Playwright-equivalent Chromium checks at 360, 768, and 1440 widths reported
+`scrollWidth == clientWidth`. Lighthouse: 90 performance, 96 accessibility, 100
+best practices, 100 SEO; the accessibility dip is the download strip's
+updated-date contrast, not the new feature copy.

@@ -532,3 +532,41 @@ or the next plan row so the next release has the context.
   0.29.0 and imported `poll_interval`, `network_interval`, and
   `refresh_update`, curated release notes, and the live site showing 0.29.0.
 - No deviations from the release flow and no fix-forward commits.
+
+### v0.30.0 (2026-11-01)
+
+- Minor bump from 0.29.0. This release shipped the theme overhaul, the GIT
+  pane, the sticky preview, the icon language and fixed tree stats, and the
+  timeline card refresh.
+- The feature, docs, site, and screenshot work landed on `main` in reviewable
+  slices; `./tools/check.sh` printed ALL GATES GREEN before the release.
+- The **bump** workflow (`part=minor`) created
+  [41340159976](https://github.com/fluxion-dev/lazyplan/actions/runs/41340159976)
+  and release PR [#75](https://github.com/fluxion-dev/lazyplan/pull/75).
+- **Deviation:** the release CI failed on `test_palette_screen` because the
+  palette snapshot included timeline labels formatted in the runner's local
+  timezone (`Nov 22` in UTC versus `Nov 21` locally). Three fix-forward commits
+  pinned the fixture `TZ` to UTC, disabled the palette cursor blink, and uploaded
+  the snapshot report on failure. They were cherry-picked onto
+  `release/v0.30.0`; the release PR therefore carried the version mirrors plus
+  those test/CI fixes.
+- The successful release-branch CI run was
+  [41344303794](https://github.com/fluxion-dev/lazyplan/actions/runs/41344303794).
+  Auto-merge landed PR #75 as `9d5128a`; the bump `publish` job had already
+  timed out, so the documented manual fallback dispatched `tag-release`
+  ([41344919035](https://github.com/fluxion-dev/lazyplan/actions/runs/41344919035))
+  and Pages
+  ([41344921733](https://github.com/fluxion-dev/lazyplan/actions/runs/41344921733)).
+- `tag-release` created annotated tag `v0.30.0` and dispatched
+  [release.yml](https://github.com/fluxion-dev/lazyplan/actions/runs/41344931320);
+  both the `release` and `publish-pypi` jobs succeeded. PyPI served 0.30.0 on
+  the first check, and `pipx run --spec lazyplan-tui==0.30.0 lpui --version`
+  printed 0.30.0.
+- Verified: seven assets including `install.sh`, the curated release notes, the
+  live site showing 0.30.0 and New in 0.30, every new screenshot returning 200,
+  OG at 1200x630, sitemap `lastmod` 2026-11-01, robots, canonical, and
+  FAQ/JSON-LD intact. Lighthouse on the live site: 90 performance, 96
+  accessibility, 100 best practices, 100 SEO; widths 360, 768, and 1440 showed
+  `scrollWidth == clientWidth`.
+- Follow-up: the accessibility score dropped to 96 on the download strip's
+  updated-date contrast, which is unrelated to the 0.30 feature copy.

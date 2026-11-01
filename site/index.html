@@ -4,15 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>lazyplan — one plan for you and your agent</title>
-<meta name="description" content="A calm terminal plan for you and your coding agent. Edit every plan row yourself, or let one agent plan while another builds. Local-first on Linux, macOS, and Windows.">
-<meta name="keywords" content="terminal plan tracker, coding agent, plan tracker, planner agent, executor agent, multi-agent planning, developer tools, local-first, keyboard-first">
+<meta name="description" content="A terminal plan for you and your coding agent. Sticky preview, GIT context, three themes, and local-first storage on Linux, macOS, and Windows.">
+<meta name="keywords" content="terminal plan tracker, coding agent, plan tracker, planner agent, executor agent, multi-agent planning, developer tools, local-first, keyboard-first, terminal themes, git pane">
 <meta name="author" content="Brad Lindsay">
 <meta name="theme-color" content="#09090B">
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="https://fluxion-dev.github.io/lazyplan/">
 <link rel="preload" as="image" href="./screens/lpui-and-agent.webp" type="image/webp">
 <meta property="og:title" content="lazyplan — one plan for you and your agent">
-<meta property="og:description" content="A calm terminal plan for you and your coding agent. Edit every plan row yourself, or let one agent plan while another builds. Local-first on Linux, macOS, and Windows.">
+<meta property="og:description" content="A terminal plan for you and your coding agent. Sticky preview, GIT context, three themes, and local-first storage on Linux, macOS, and Windows.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://fluxion-dev.github.io/lazyplan/">
 <meta property="og:site_name" content="lazyplan">
@@ -23,7 +23,7 @@
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="lazyplan — one plan for you and your agent">
-<meta name="twitter:description" content="A calm terminal plan for you and your coding agent. Edit every plan row yourself, or let one agent plan while another builds. Local-first on Linux, macOS, and Windows.">
+<meta name="twitter:description" content="A terminal plan for you and your coding agent. Sticky preview, GIT context, three themes, and local-first storage on Linux, macOS, and Windows.">
 <meta name="twitter:image" content="https://fluxion-dev.github.io/lazyplan/screens/og-lpui-and-agent.png">
 <meta name="twitter:image:alt" content="lazyplan plan tree beside terminal panes where a coding agent updates the same plan.">
 <script type="application/ld+json">
@@ -43,12 +43,14 @@
   },
   "license": "MIT",
   "isAccessibleForFree": true,
-  "keywords": "terminal plan tracker, coding agent, plan tracker, planner agent, executor agent, multi-agent planning, developer tools, local-first, keyboard-first",
+  "keywords": "terminal plan tracker, coding agent, plan tracker, planner agent, executor agent, multi-agent planning, developer tools, local-first, keyboard-first, terminal themes, git pane",
   "featureList": [
     "One shared plan for you and your agent",
     "User control over every plan, milestone, task, and criterion",
     "Planner agent and executor subagent workflow",
     "Keyboard-first terminal screen",
+    "Three TUI themes: mocha, void, and latte",
+    "GIT pane with checkout, commit, and pull-request context",
     "Read-only git and pull request proof",
     "Local-first SQLite database",
     "Windows, macOS, and Linux",
@@ -119,6 +121,14 @@
       "acceptedAnswer": {
         "@type": "Answer",
         "text": "Yes. A planner agent can write the plan while an executor or subagent claims and completes individual tasks. You can change roles, run both at once, or do the work yourself; everyone reads the same plan."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I change how the screen looks?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Press t to cycle Catppuccin Mocha, an OLED-black void theme, and Latte, or set LAZYPLAN_THEME to launch in one. The detail, source, palette, help, and form screens follow the same theme."
       }
     }
   ]
@@ -405,6 +415,10 @@ Task · Add the token model        done</pre>
     <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
       <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">Can I use one agent to plan and another to execute?</summary>
       <p class="mt-3 text-zinc-400">Yes. A planner agent can write the plan while an executor or subagent claims and completes individual tasks. You can change roles, run both at once, or do the work yourself; everyone reads the same plan.</p>
+    </details>
+    <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
+      <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">Can I change how the screen looks?</summary>
+      <p class="mt-3 text-zinc-400">Yes. Press <code class="inline-code">t</code> to cycle Catppuccin Mocha, an OLED-black <code class="inline-code">void</code> theme, and Latte, or set <code class="inline-code">LAZYPLAN_THEME</code> to launch in one. The detail, source, palette, help, and form screens follow the same theme.</p>
     </details>
   </div>
 </section>

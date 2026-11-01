@@ -3,20 +3,25 @@
 import os
 import tempfile
 import unittest
+from unittest import mock
 
 from lazyplan.store import Store
+from lazyplan.upgrade import PIPX, InstallInfo
 from tests.support.pilot import settle
 
 try:
     from lazyplan import tui as tui_mod
     from lazyplan.tui.screens import (
         ConfirmScreen,
+        DetailScreen,
         HelpScreen,
         NewMilestoneScreen,
         NewPlanScreen,
         NewTaskScreen,
         PaletteScreen,
+        UpdateScreen,
     )
+    from lazyplan.tui.screens.source import SourceScreen
 except ImportError:  # stdlib-only interpreter: no textual, no screens
     tui_mod = None  # type: ignore[assignment]
 
@@ -116,6 +121,33 @@ class TestViewports(unittest.IsolatedAsyncioTestCase):
                     else:
                         self.assertFalse(preview.display)
                         self.assertFalse(metrics.display)
+
+    async def test_screens_fit_in_both_themes(self):
+        screens = (
+            (DetailScreen(self.store, "plan", self.pid), "#detail-page"),
+            (SourceScreen(self.store, "plan", self.pid), "#source-page"),
+            (PaletteScreen({"create-plan": None}), "#dlg"),
+            (HelpScreen(), "#help"),
+            (ConfirmScreen("Delete plan?"), "#dlg"),
+            (UpdateScreen("0.1.0", "0.2.0", InstallInfo(PIPX, True)), "#dlg"),
+        )
+        for theme in ("dark", "light"):
+            for width, height in SIZES:
+                with self.subTest(theme=theme, size=(width, height)):
+                    with mock.patch.dict(os.environ, {"LAZYPLAN_THEME": theme}):
+                        app = tui_mod.create_app(self.db)
+                    async with app.run_test(size=(width, height)) as pilot:
+                        await pilot.pause()
+                        self.assertEqual(app.current_theme.dark, theme == "dark")
+                        for screen, selector in screens:
+                            app.push_screen(screen)
+                            await pilot.pause(0.4)
+                            self.assertTrue(
+                                _within(app.screen.query_one(selector).region, width, height),
+                                selector,
+                            )
+                            app.pop_screen()
+                            await pilot.pause()
 
     async def test_forms_palette_help_and_confirm_at_both_sizes(self):
         for width, height in SIZES:

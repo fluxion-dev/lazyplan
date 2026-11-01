@@ -66,6 +66,15 @@ class ControllerTest(unittest.IsolatedAsyncioTestCase):
             self.assertIsNone(controller.notice)
             self.assertEqual(controller.latest, "")
 
+    async def test_tree_rows_are_rich_text(self) -> None:
+        from rich.text import Text
+
+        async with self.app.run_test(size=(100, 30)) as pilot:
+            await pilot.pause()
+            label = self.app._row_nodes[("task", self.task_id)].label
+            self.assertIsInstance(label, Text)
+            self.assertIn("Task", str(label))
+
     async def test_refresh_keeps_the_selected_row(self) -> None:
         async with self.app.run_test(size=(100, 30)) as pilot:
             await pilot.pause()

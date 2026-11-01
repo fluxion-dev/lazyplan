@@ -33,3 +33,36 @@
     width: 1fr;
     height: auto;
 }
+
+#tree {
+    background: $lp-surface-alt;
+    color: $foreground;
+}
+
+#tree > .tree--guides {
+    color: $lp-border-muted;
+}
+
+#tree > .tree--guides-hover {
+    color: $lp-accent-muted;
+}
+
+#tree > .tree--guides-selected {
+    color: $lp-accent-muted;
+}
+
+#tree > .tree--highlight-line {
+    background: $lp-surface-raised;
+}
+
+#tree > .tree--cursor {
+    background: $lp-surface-raised;
+    color: $foreground;
+    text-style: bold;
+}
+
+#tree:focus > .tree--cursor {
+    background: $lp-accent-muted;
+    color: $lp-surface-alt;
+    text-style: bold;
+}

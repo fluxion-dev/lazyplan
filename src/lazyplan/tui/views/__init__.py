@@ -13,6 +13,7 @@ from .preview import (
     common_lines,
     render_blocks,
 )
+from .rows import row_text
 
 __all__ = [
     "PreviewBlock",
@@ -24,4 +25,5 @@ __all__ = [
     "common_blocks",
     "common_lines",
     "render_blocks",
+    "row_text",
 ]

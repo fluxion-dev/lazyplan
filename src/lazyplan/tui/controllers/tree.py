@@ -16,6 +16,7 @@ from ...help import hint_bar
 from ...models import Milestone, Plan, Status, Task
 from ..metrics import MetricsSection
 from ..query import query_one_opt
+from ..views.rows import row_text
 
 if TYPE_CHECKING:
     from ..app import LazyplanApp
@@ -195,7 +196,7 @@ class TreeController:
                 + app.spinner_controller.rows[key]
             )
         suffix = " [bold green]✓[/]" if key in app.marked else ""
-        node.set_label(label + suffix)
+        node.set_label(row_text(label + suffix))
 
     def row_width(self, tree: Tree, depth: int) -> int:
         """Usable label width for a row at `depth`, excluding tree guides."""
@@ -292,7 +293,7 @@ class TreeController:
                 marked=("plan", plan.id) in app.marked,
             )
             plan_node = root.add(
-                plan_text,
+                row_text(plan_text),
                 data={"kind": "plan", "id": plan.id},
                 allow_expand=bool(milestones),
             )
@@ -318,7 +319,7 @@ class TreeController:
                     marked=("milestone", milestone.id) in app.marked,
                 )
                 milestone_node = plan_node.add(
-                    milestone_text,
+                    row_text(milestone_text),
                     data={"kind": "milestone", "id": milestone.id},
                     allow_expand=bool(tasks),
                 )
@@ -349,7 +350,7 @@ class TreeController:
                         marked=("task", task.id) in app.marked,
                     )
                     leaf = milestone_node.add_leaf(
-                        task_text,
+                        row_text(task_text),
                         data={"kind": "task", "id": task.id},
                     )
                     app._row_nodes[("task", task.id)] = leaf

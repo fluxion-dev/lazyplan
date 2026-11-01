@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from ...design import SPINNER_FRAMES, SPINNER_INTERVAL, status_prefix
 from ...models import Status
+from ..views.rows import row_text
 
 if TYPE_CHECKING:
     from ..app import LazyplanApp
@@ -55,4 +56,4 @@ class SpinnerController:
             node = self.app._row_nodes.get(key)
             if node is not None:
                 mark = " [bold green]✓[/]" if key in self.app.marked else ""
-                node.set_label(prefix + suffix + mark)
+                node.set_label(row_text(prefix + suffix + mark))

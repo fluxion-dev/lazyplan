@@ -87,6 +87,11 @@ if _TEXTUAL_OK:
                 yield Label("", id="detail-hints")
 
         def on_mount(self) -> None:
+            page = self.query_one("#detail-page")
+            page.border_title = "DETAIL"
+            width = self.app.size.width
+            self.set_class(width < 80, "compact")
+            self.set_class(width >= 120, "wide")
             if not self._load():
                 return
             self._show_mode()
@@ -132,9 +137,9 @@ if _TEXTUAL_OK:
             desc = str(obj.get("description", "") or "").strip()
             goal = str(obj.get("goal", "") or "").strip() if self.dkind == "plan" else ""
             if goal:
-                lines.extend(["", "[dim]why[/]", goal])
+                lines.extend(["", "[bold dim]why[/]", goal])
             if desc:
-                heading = "[dim]what[/]" if self.dkind == "plan" else "[dim]details[/]"
+                heading = "[bold dim]what[/]" if self.dkind == "plan" else "[bold dim]details[/]"
                 lines.extend(["", heading, desc])
 
         def _read_coordination(self, lines: list[str]) -> None:
@@ -184,7 +189,7 @@ if _TEXTUAL_OK:
             if not crits:
                 return
             done = sum(1 for crit in crits if crit.get("done"))
-            lines.extend(["", f"[dim]acceptance {done}/{len(crits)}[/]"])
+            lines.extend(["", f"[bold dim]acceptance {done}/{len(crits)}[/]"])
             for crit in crits:
                 mark = "●" if crit.get("done") else "○"
                 lines.append(f"  {mark} {escape_markup(str(crit.get('text', '')))}")
@@ -194,7 +199,7 @@ if _TEXTUAL_OK:
                 milestones = self._full.get("milestones", [])
                 if not milestones:
                     return
-                lines.extend(["", f"[dim]milestones {len(milestones)}[/]"])
+                lines.extend(["", f"[bold dim]milestones {len(milestones)}[/]"])
                 for entry in milestones:
                     milestone = entry["milestone"]
                     tasks = entry.get("tasks", [])
@@ -211,7 +216,7 @@ if _TEXTUAL_OK:
             tasks = [entry.get("task", {}) for entry in self._full.get("tasks", [])]
             if not tasks:
                 return
-            lines.extend(["", f"[dim]tasks {len(tasks)}[/]"])
+            lines.extend(["", f"[bold dim]tasks {len(tasks)}[/]"])
             for task in tasks:
                 lines.append(
                     f"  {status_word(str(task.get('status', '')), 'rich')} "
@@ -256,7 +261,7 @@ if _TEXTUAL_OK:
             links = self._full.get("effective_forge_links") or self._full.get("forge_links") or []
             if not links:
                 return
-            lines.extend(["", "[dim]pull requests[/]"])
+            lines.extend(["", "[bold dim]pull requests[/]"])
             for line in render_forge_links(links).splitlines():
                 lines.append(f"  {escape_markup(line)}")
 
@@ -276,7 +281,7 @@ if _TEXTUAL_OK:
             )
             if trail.stale_count:
                 summary += f" · {trail.stale_count} stale"
-            lines.extend(["", f"[dim]source · {summary}[/]"])
+            lines.extend(["", f"[bold dim]source · {summary}[/]"])
             for repo in trail.repos[:3]:
                 state = "dirty" if repo.dirty else "clean"
                 branch = repo.branch or ("detached" if repo.detached else "unknown")
@@ -303,7 +308,7 @@ if _TEXTUAL_OK:
             links = self._full.get("effective_links") or self._full.get("links") or []
             if links:
                 remotes = self._remote_urls(links)
-                lines.extend(["", "[dim]commits[/]"])
+                lines.extend(["", "[bold dim]commits[/]"])
                 for link in links:
                     text = render_commits([link])
                     url = commit_url(
@@ -315,7 +320,7 @@ if _TEXTUAL_OK:
             repos = self._full.get("effective_repos") or self._full.get("repos") or []
             if not repos:
                 return
-            lines.extend(["", "[dim]repos[/]"])
+            lines.extend(["", "[bold dim]repos[/]"])
             for repo in repos:
                 path = str(repo.get("repo_path", ""))
                 remote = str(repo.get("repo_remote", "") or "")
@@ -330,8 +335,11 @@ if _TEXTUAL_OK:
             obj = self._obj()
             title = str(obj.get("title", obj.get("name", "")))
             status = str(obj.get("status", ""))
-            lines = [f"{status_word(status, 'rich')} [bold]{escape_markup(title)}[/]"]
-            self.query_one("#detail-head", Static).update(f"[dim]{self._breadcrumb()}[/]")
+            pill = f" [reverse] {status.upper()} [/]" if status else ""
+            lines = [f"{status_word(status, 'rich')} [bold]{escape_markup(title)}[/]{pill}"]
+            self.query_one("#detail-head", Static).update(
+                f"[bold]DETAIL[/] [dim]· {self._breadcrumb()}[/]"
+            )
             self._read_text(lines, obj)
             self._read_coordination(lines)
             self._read_criteria(lines)

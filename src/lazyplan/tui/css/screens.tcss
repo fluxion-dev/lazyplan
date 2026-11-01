@@ -40,13 +40,16 @@ ModalScreen {
 
 #detail-page {
     height: 1fr;
-    border: solid $lp-border;
+    border: round $lp-border-muted;
+    border-title-color: $lp-accent;
+    background: $lp-surface-alt;
     padding: 0 1;
 }
 
 #detail-head {
     height: 1;
-    background: $panel;
+    background: $lp-surface;
+    color: $lp-accent;
     padding: 0 1;
 }
 

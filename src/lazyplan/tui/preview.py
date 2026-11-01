@@ -10,7 +10,6 @@ try:
 except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
-from ..design import EMPTY_NO_PLANS
 from ..messages import RowAction, SelectionChanged
 from .base import AppBase
 from .views.preview import build_preview
@@ -33,19 +32,19 @@ if _TEXTUAL_OK:
             except Exception:
                 total_plans = 1
             if total_plans == 0:
-                panel.show_text(EMPTY_NO_PLANS)
+                panel.show_empty("No plans yet", "press n to create one, or run: lpui plan add")
                 return
             if self.selected is None:
-                panel.show_text("select a plan (j/k or click) — enter opens it")
+                panel.show_empty("Nothing selected", "j/k or click a row — enter opens it")
                 return
             kind, oid = self.selected
             try:
                 full = self.store.get_full(kind, oid)
-            except Exception:
-                panel.show_text(f"{kind} {oid} — gone, press r")
+            except Exception as exc:
+                panel.show_error(f"could not load {kind} {oid}: {exc}")
                 return
             if full is None:
-                panel.show_text(f"{kind} {oid} — gone, press r")
+                panel.show_empty(f"{kind} {oid} is gone", "press r to refresh the tree")
                 return
             repos = full.get("effective_repos") or full.get("repos") or []
             git_bits = self.git_state_controller.preview_bits(repos)

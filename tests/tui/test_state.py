@@ -67,6 +67,31 @@ class StateTest(unittest.IsolatedAsyncioTestCase):
         self.assertLessEqual(app_lines, 250)
         self.assertNotIn("raise NotImplementedError", base)
 
+    async def test_empty_preview_says_what_to_do(self) -> None:
+        from textual.widgets import Static
+
+        empty_db = os.path.join(self.tmp.name, "empty.db")
+        Store(empty_db)
+        app = tui_mod.create_app(empty_db)
+        async with app.run_test(size=(100, 30)) as pilot:
+            await pilot.pause()
+            body = str(app.query_one("#preview-body", Static).render())
+            self.assertIn("No plans yet", body)
+            self.assertIn("press n", body)
+
+    async def test_missing_selection_shows_a_visible_error(self) -> None:
+        from textual.widgets import Static
+
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(100, 30)) as pilot:
+            await pilot.pause()
+            app.selected = ("plan", 9999)
+            app.update_preview(force=True)
+            await pilot.pause()
+            body = str(app.query_one("#preview-body", Static).render())
+            self.assertIn("is gone", body)
+            self.assertIn("press r", body)
+
     async def test_query_one_opt_handles_absent_and_wrong_type(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(100, 30)) as pilot:

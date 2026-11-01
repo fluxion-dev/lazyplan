@@ -6,6 +6,8 @@ try:
     from rich.text import Text
     from textual.widgets import Label, Tree
 
+    from .query import query_one_opt
+
     _TEXTUAL_OK = True
 except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
@@ -63,12 +65,9 @@ if _TEXTUAL_OK:
 
         def _refresh_status(self, note: str = "") -> None:
             """Update only the statusbar, without rebuilding the tree."""
-            try:
-                self.query_one("#status", Label).update(
-                    self._status_text(self.store.counts(), note)
-                )
-            except Exception:
-                pass
+            label = query_one_opt(self, "#status", Label)
+            if label is not None:
+                label.update(self._status_text(self.store.counts(), note))
 
         def _status_text(self, counts: dict[str, int], note: str) -> Text:
             """Human counts, filter state, update notice, and the latest event."""
@@ -120,7 +119,6 @@ if _TEXTUAL_OK:
                     self.rev += 1
                 except Exception:
                     self.refresh_all("filter cleared")
-                try:
-                    self.query_one("#tree", Tree).focus()
-                except Exception:
-                    pass
+                tree = query_one_opt(self, "#tree", Tree)
+                if tree is not None:
+                    tree.focus()

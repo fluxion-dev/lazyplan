@@ -77,3 +77,13 @@
     color: $lp-surface-alt;
     text-style: bold;
 }
+
+.preview-empty {
+    color: $lp-text-muted;
+    padding: 1 2;
+}
+
+.preview-error {
+    color: $lp-status-blocked;
+    padding: 1 2;
+}

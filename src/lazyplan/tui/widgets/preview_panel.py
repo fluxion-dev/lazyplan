@@ -20,7 +20,20 @@ class PreviewPanel(VerticalScroll):
         yield Static("", id="preview-body")
 
     def show(self, document: PreviewDocument) -> None:
-        self.query_one("#preview-body", Static).update(document.render())
+        body = self.query_one("#preview-body", Static)
+        body.remove_class("preview-empty", "preview-error")
+        body.update(document.render())
 
-    def show_text(self, text: str) -> None:
-        self.query_one("#preview-body", Static).update(text)
+    def show_empty(self, title: str, hint: str) -> None:
+        """A two-line empty state with a clear next action."""
+        body = self.query_one("#preview-body", Static)
+        body.remove_class("preview-error")
+        body.add_class("preview-empty")
+        body.update(f"[bold]{title}[/]\n\n[dim]{hint}[/]")
+
+    def show_error(self, text: str) -> None:
+        """A visible load failure instead of a blank pane."""
+        body = self.query_one("#preview-body", Static)
+        body.remove_class("preview-empty")
+        body.add_class("preview-error")
+        body.update(f"[bold red]preview unavailable[/]\n\n[dim]{text}[/]")

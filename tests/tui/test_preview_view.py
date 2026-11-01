@@ -46,7 +46,8 @@ class PreviewDocumentTest(unittest.TestCase):
         self.assertIn("Why we build", text)
         self.assertIn("[dim]what[/]", text)
         self.assertIn("[dim]next[/]", text)
-        self.assertIn("enter open", text)
+        self.assertIn("open", text)
+        self.assertIn("help", text)
 
     def test_task_preview_includes_breadcrumb_and_details(self) -> None:
         full = self.store.get_full("task", self.task.id)

@@ -508,8 +508,12 @@ class ToolsMixin(McpBase):
 
     def _tool_note_add(self, args: dict) -> object:
         return vars(
-            self._need_store().add_note(
-                str(args["kind"]), int(args["id"]), str(args["text"]), actor=self.actor
+            services.add_note(
+                self._need_store(),
+                str(args["kind"]),
+                int(args["id"]),
+                str(args["text"]),
+                actor=self.actor,
             )
         )
 

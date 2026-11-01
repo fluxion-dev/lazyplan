@@ -160,8 +160,8 @@ class TreeFilter:
         query = app.filter_text.strip().lower()
         if not query:
             return base
-        notes = app.store.notes_map()
-        comments = app.store.comments_map()
+        notes = services.notes_map(app.store)
+        comments = services.comments_map(app.store)
         issues = app.store.issues_map()
         claims = app.store.claims_map()
 

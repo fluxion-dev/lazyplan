@@ -6,8 +6,9 @@ import argparse
 import sys
 import time
 
+from .... import services
+from ....core.ports.collaboration import CollaborationPort
 from ....models import Comment
-from ....store import Store
 from ...shared import (
     porcelain,
 )
@@ -41,18 +42,20 @@ def _comment_result(args: argparse.Namespace, comment: Comment) -> int:
     return 0
 
 
-def _comment_resolve(store: Store, args: argparse.Namespace, actor: str, resolved: bool) -> int:
+def _comment_resolve(
+    store: CollaborationPort, args: argparse.Namespace, actor: str, resolved: bool
+) -> int:
     if args.comment is None:
         print("error: comment resolve needs --comment ID", file=sys.stderr)
         return 2
-    comment = store.resolve_comment(args.comment, resolved=resolved, actor=actor)
+    comment = services.resolve_comment(store, args.comment, resolved=resolved, actor=actor)
     if comment is None:
         print(msg_not_found("comment", args.comment), file=sys.stderr)
         return 1
     return _comment_result(args, comment)
 
 
-def _comment_scope(store: Store, args: argparse.Namespace) -> int | None:
+def _comment_scope(store: CollaborationPort, args: argparse.Namespace) -> int | None:
     """Return an exit code when the comment scope is invalid."""
     if args.kind is None or args.id is None:
         print(f"error: comment {args.action} needs --kind and --id", file=sys.stderr)
@@ -63,7 +66,7 @@ def _comment_scope(store: Store, args: argparse.Namespace) -> int | None:
     return None
 
 
-def _comment_add(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _comment_add(store: CollaborationPort, args: argparse.Namespace, actor: str) -> int:
     code = _comment_scope(store, args)
     if code is not None:
         return code
@@ -71,16 +74,16 @@ def _comment_add(store: Store, args: argparse.Namespace, actor: str) -> int:
         print("error: comment add needs --text", file=sys.stderr)
         return 2
     assert args.kind is not None and args.id is not None
-    comment = store.add_comment(args.kind, args.id, args.text, actor=actor)
+    comment = services.add_comment(store, args.kind, args.id, args.text, actor=actor)
     return _comment_result(args, comment)
 
 
-def _comment_list(store: Store, args: argparse.Namespace) -> int:
+def _comment_list(store: CollaborationPort, args: argparse.Namespace) -> int:
     code = _comment_scope(store, args)
     if code is not None:
         return code
     assert args.kind is not None and args.id is not None
-    comments = store.list_comments(args.kind, args.id, mentions=args.mentions)
+    comments = services.list_comments(store, args.kind, args.id, mentions=args.mentions)
     if args.json:
         return _emit(args, [vars(comment) for comment in comments])
     if porcelain.enabled(args):
@@ -109,7 +112,7 @@ def _comment_list(store: Store, args: argparse.Namespace) -> int:
     return 0
 
 
-def _cmd_comment(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_comment(store: CollaborationPort, args: argparse.Namespace, actor: str) -> int:
     if args.action == "add":
         return _comment_add(store, args, actor)
     if args.action == "list":
@@ -117,7 +120,7 @@ def _cmd_comment(store: Store, args: argparse.Namespace, actor: str) -> int:
     return _comment_resolve(store, args, actor, args.action == "resolve")
 
 
-def _cmd_note(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_note(store: CollaborationPort, args: argparse.Namespace, actor: str) -> int:
     if store.get_parent(args.kind, args.id) is None:
         print(msg_not_found(args.kind, args.id), file=sys.stderr)
         return 1
@@ -125,7 +128,7 @@ def _cmd_note(store: Store, args: argparse.Namespace, actor: str) -> int:
         if args.text is None or not args.text.strip():
             print("error: note add needs --text", file=sys.stderr)
             return 2
-        note = store.add_note(args.kind, args.id, args.text, actor=actor)
+        note = services.add_note(store, args.kind, args.id, args.text, actor=actor)
         if args.json:
             return _emit(args, {"note": vars(note)})
         if porcelain.enabled(args):
@@ -137,7 +140,7 @@ def _cmd_note(store: Store, args: argparse.Namespace, actor: str) -> int:
         else:
             print(f"noted {args.kind} #{args.id}: {note.text}")
         return 0
-    notes = store.list_notes(args.kind, args.id, limit=args.limit)
+    notes = services.list_notes(store, args.kind, args.id, limit=args.limit)
     if args.json:
         return _emit(args, [vars(n) for n in notes])
     if porcelain.enabled(args):

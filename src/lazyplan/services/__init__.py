@@ -3,6 +3,17 @@
 from __future__ import annotations
 
 from .base import GateError
+from .collaboration import (
+    add_comment,
+    add_note,
+    comments_full_map,
+    comments_map,
+    list_comments,
+    list_notes,
+    notes_full_map,
+    notes_map,
+    resolve_comment,
+)
 from .coordination import (
     block_task,
     claim_next,
@@ -85,6 +96,15 @@ from .vcs import (
 )
 
 __all__ = [
+    "add_note",
+    "list_notes",
+    "notes_map",
+    "notes_full_map",
+    "add_comment",
+    "list_comments",
+    "comments_map",
+    "comments_full_map",
+    "resolve_comment",
     "create_plan",
     "create_milestone",
     "create_task",

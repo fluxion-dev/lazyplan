@@ -5,9 +5,10 @@ from __future__ import annotations
 from typing import Protocol
 
 from ..entities import Comment, Note
+from .planning import PlanningPort
 
 
-class CollaborationPort(Protocol):
+class CollaborationPort(PlanningPort, Protocol):
     """Annotation surface used by notes, comments, and search."""
 
     def add_note(

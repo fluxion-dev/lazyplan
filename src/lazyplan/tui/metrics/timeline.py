@@ -31,6 +31,48 @@ def _trace_glyph(kind: str) -> str:
     return TRACE_GLYPHS.get(kind, "─")
 
 
+def _legend_entry(lane: TimelineLane) -> str:
+    """One legend label with its kind glyph and truncated title."""
+    return f"{_trace_glyph(lane.kind)} {truncate(lane.title, LEGEND_LABEL_WIDTH)}"
+
+
+def _legend_layout(
+    lanes: tuple[TimelineLane, ...], width: int, max_rows: int
+) -> tuple[list[list[int]], int]:
+    """Group lane indexes into horizontal legend rows, trimming overflow."""
+    if not lanes or max_rows <= 0:
+        return [], len(lanes)
+    rows: list[list[int]] = []
+    current: list[int] = []
+    used = 0
+    for index, lane in enumerate(lanes):
+        entry_width = len(_legend_entry(lane)) + 2
+        if current and used + entry_width > width:
+            rows.append(current)
+            current = []
+            used = 0
+        current.append(index)
+        used += entry_width
+    if current:
+        rows.append(current)
+    if len(rows) <= max_rows:
+        return rows, 0
+    rows = rows[:max_rows]
+    hidden = len(lanes) - sum(len(row) for row in rows)
+    while rows:
+        last = rows[-1]
+        overflow = f"+{hidden} more"
+        last_width = sum(len(_legend_entry(lanes[index])) + 2 for index in last)
+        if last_width + len(overflow) + 2 <= width:
+            break
+        if last:
+            hidden += 1
+            last.pop()
+        else:
+            break
+    return rows, hidden
+
+
 def _axis_ticks(left: float, right: float, span: float) -> tuple[list[float], list[str]]:
     """Tick positions and unique labels chosen from the timeline span."""
     for limit, fmt, count in AXIS_FORMATS:
@@ -133,7 +175,10 @@ class TimelineCard(MetricCard):
                 )
         ticks, labels = _axis_ticks(left, right, span)
         rows = max(2, (plot.size.height or 12) - 3)
-        legend_rows = min(count, MAX_LEGEND_ROWS, max(1, rows - 1))
+        width = max(20, (plot.size.width or 80) - 2)
+        max_rows = max(1, min(MAX_LEGEND_ROWS, rows - 1))
+        legend_data, hidden = _legend_layout(lanes, width, max_rows)
+        legend_rows = len(legend_data)
         row_unit, top, bottom = _lane_window(rows, count, legend_rows)
         plt.xlim(left, right)
         plt.ylim(-0.5 - bottom, top)
@@ -150,39 +195,55 @@ class TimelineCard(MetricCard):
                 background=surface,
                 alignment="center",
             )
-        self._legend(plt, lanes, left, top, row_unit, legend_rows, surface)
+        self._legend(
+            plt,
+            lanes,
+            legend_data,
+            hidden,
+            left,
+            right,
+            top,
+            row_unit,
+            width,
+            surface,
+        )
         plot.refresh()
 
     def _legend(
         self,
         plt: Any,
         lanes: tuple[TimelineLane, ...],
+        rows: list[list[int]],
+        hidden: int,
         left: float,
+        right: float,
         top: float,
         row_unit: float,
-        legend_rows: int,
+        width: int,
         surface: tuple[int, int, int],
     ) -> None:
-        """Stack colour-keyed labels in the chart's top-left corner."""
-        shown = min(len(lanes), legend_rows)
-        if shown < len(lanes) and legend_rows >= 2:
-            shown -= 1
-        for index in range(shown):
-            lane = lanes[index]
-            plt.text(
-                f"{_trace_glyph(lane.kind)} {truncate(lane.title, LEGEND_LABEL_WIDTH)}",
-                left,
-                top - row_unit * (index + 0.5),
-                color=lane_rgb(self.app, index),
-                background=surface,
-                alignment="left",
-            )
-        if shown < len(lanes):
-            plt.text(
-                f"+{len(lanes) - shown} more",
-                left,
-                top - row_unit * (shown + 0.5),
-                color=token_rgb(self.app, "lp-chart-label"),
-                background=surface,
-                alignment="left",
-            )
+        """Draw a horizontal colour-keyed legend across the chart's top rows."""
+        char_unit = (right - left) / max(1, width)
+        for row_index, row in enumerate(rows):
+            column = 0
+            for index in row:
+                lane = lanes[index]
+                text = _legend_entry(lane)
+                plt.text(
+                    text,
+                    left + column * char_unit,
+                    top - row_unit * (row_index + 0.5),
+                    color=lane_rgb(self.app, index),
+                    background=surface,
+                    alignment="left",
+                )
+                column += len(text) + 2
+            if hidden and row_index == len(rows) - 1:
+                plt.text(
+                    f"+{hidden} more",
+                    left + column * char_unit,
+                    top - row_unit * (row_index + 0.5),
+                    color=token_rgb(self.app, "lp-chart-label"),
+                    background=surface,
+                    alignment="left",
+                )

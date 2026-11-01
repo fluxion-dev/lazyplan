@@ -19,6 +19,7 @@ try:
         _active_segments,
         _axis_ticks,
         _lane_window,
+        _legend_layout,
         _trace_glyph,
     )
 except ImportError:  # stdlib-only interpreter: no textual
@@ -28,6 +29,7 @@ except ImportError:  # stdlib-only interpreter: no textual
     _active_segments = None  # type: ignore[assignment]
     _axis_ticks = None  # type: ignore[assignment]
     _lane_window = None  # type: ignore[assignment]
+    _legend_layout = None  # type: ignore[assignment]
     _trace_glyph = None  # type: ignore[assignment]
 
 
@@ -82,6 +84,12 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn("═", chart)
         self.assertNotIn("⠒", chart)
         self.assertNotIn("now", chart)
+        self.assertTrue(
+            any(
+                "Plan title" in line and "First milestone" in line and "Second milestone" in line
+                for line in chart.splitlines()
+            )
+        )
 
     async def test_now_marker_appears_for_open_work(self) -> None:
         plan = _at(1_000, lambda: self.store.add_plan("Open plan"))
@@ -177,6 +185,23 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(len(ticks), len(labels))
                 self.assertEqual(len(set(labels)), len(labels))
                 self.assertEqual(len(labels[0]), width)
+
+    def test_legend_layout_wraps_and_trims_overflow(self) -> None:
+        lanes = tuple(TimelineLane("plan", f"Lane {index}", 0, 100) for index in range(30))
+
+        rows, hidden = _legend_layout(lanes, 40, 6)
+
+        self.assertLessEqual(len(rows), 6)
+        self.assertGreater(hidden, 0)
+        self.assertTrue(rows)
+
+    def test_legend_layout_keeps_short_lists_on_one_row(self) -> None:
+        lanes = tuple(TimelineLane("plan", f"Lane {index}", 0, 100) for index in range(3))
+
+        rows, hidden = _legend_layout(lanes, 80, 6)
+
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(hidden, 0)
 
 
 if __name__ == "__main__":

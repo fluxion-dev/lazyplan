@@ -62,6 +62,9 @@ from .tokens import ANSI as ANSI
 from .tokens import ASCII_ICONS as ASCII_ICONS
 from .tokens import ICONS as ICONS
 from .tokens import INDENT as INDENT
+from .tokens import KIND_ICON as KIND_ICON
+from .tokens import SECTION_ICON as SECTION_ICON
+from .tokens import STATE_ICON as STATE_ICON
 
 __all__ = [
     "ANSI",
@@ -73,17 +76,20 @@ __all__ = [
     "ICONS",
     "INDENT",
     "KEYMAP",
+    "KIND_ICON",
     "LABEL_LETTERS",
     "MILESTONE",
     "PALETTE_COMMANDS",
     "PALETTE_SECTIONS",
     "PLAN",
     "RowStats",
+    "SECTION_ICON",
     "SPINNER_FRAMES",
     "SPINNER_INTERVAL",
     "STATUS_ANSI",
     "STATUS_GLYPH",
     "STATUS_RICH",
+    "STATE_ICON",
     "TASK",
     "apply_mark",
     "escape_markup",

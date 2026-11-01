@@ -22,8 +22,10 @@
 }
 
 #tree {
-    background: $lp-surface-alt;
+    background: transparent;
     color: $foreground;
+    padding: 0 1;
+    scrollbar-size-vertical: 1;
 }
 
 #tree-empty {
@@ -52,23 +54,25 @@
 }
 
 #tree > .tree--cursor {
-    background: $lp-surface-raised;
+    background: $lp-cursor;
     color: $foreground;
     text-style: bold;
 }
 
 #tree:focus > .tree--cursor {
-    background: $lp-accent-muted;
-    color: $lp-surface-alt;
+    background: $lp-cursor;
+    color: $lp-accent;
     text-style: bold;
 }
 
-.preview-empty {
+.preview-empty,
+.git-empty {
     color: $lp-text-muted;
     padding: 1 2;
 }
 
-.preview-error {
+.preview-error,
+.git-error {
     color: $lp-status-blocked;
     padding: 1 2;
 }

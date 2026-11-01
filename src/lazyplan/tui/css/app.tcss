@@ -1,4 +1,4 @@
-/* Shell layout: the top-level regions and the responsive breakpoint. */
+/* Shell layout: the plan tree, the preview/GIT column, and the timeline. */
 
 #panel {
     height: 1fr;
@@ -6,51 +6,75 @@
 
 #main {
     height: 1fr;
+    padding: 0 0 0 1;
 }
 
 #nav {
-    width: 35%;
-    min-width: 30;
+    width: 45%;
+    min-width: 28;
     border: round $lp-border-muted;
-    border-title-color: $lp-accent;
-    border-title-background: $lp-surface-alt;
+    border-title-color: $lp-text-muted;
     border-title-style: bold;
     border-title-align: left;
+}
+
+#side {
+    width: 1fr;
+    min-width: 34;
 }
 
 #preview {
     width: 1fr;
-    min-width: 30;
+    height: 1fr;
+    min-height: 8;
     padding: 0 1;
     border: round $lp-border-muted;
-    border-title-color: $lp-accent;
-    border-title-background: $lp-surface-alt;
+    border-title-color: $lp-text-muted;
     border-title-style: bold;
     border-title-align: left;
 }
 
-#main.narrow #preview {
-    display: none;
+#preview-scroll {
+    height: 1fr;
 }
 
-#main.narrow #nav {
-    width: 100%;
-    border: round $lp-border-muted;
-}
-
-#metrics {
-    height: 45%;
-    min-height: 14;
-    padding: 0;
-    border: round $lp-border-muted;
-}
-
-#metrics.narrow {
-    display: none;
+#preview-head {
+    height: auto;
+    max-height: 4;
+    padding: 0 1;
+    background: $lp-surface-alt;
 }
 
 #preview-body {
     height: auto;
+    padding: 0 1;
+}
+
+#git {
+    width: 1fr;
+    height: auto;
+    min-height: 3;
+    max-height: 10;
+    padding: 0 1;
+    border: round $lp-border-muted;
+    border-title-color: $lp-text-muted;
+    border-title-style: bold;
+    border-title-align: left;
+}
+
+#git-body {
+    height: auto;
+    padding: 0 1;
+}
+
+#metrics {
+    height: 40%;
+    min-height: 11;
+    max-height: 16;
+    padding: 0;
+    border: round $lp-border-muted;
+    border-title-color: $lp-text-muted;
+    border-title-style: bold;
 }
 
 #hints {
@@ -58,7 +82,25 @@
     height: 1;
     background: $lp-surface-alt;
     color: $lp-text-muted;
-    padding: 0 1;
+    padding: 0 2;
+}
+
+#main.narrow #side,
+#main.narrow #preview,
+#main.narrow #git {
+    display: none;
+}
+
+#main.narrow #nav {
+    width: 100%;
+}
+
+#metrics.narrow {
+    display: none;
+}
+
+#main.compact {
+    padding: 0;
 }
 
 #main.compact #nav {
@@ -66,17 +108,19 @@
     border: none;
 }
 
-#main.wide #preview {
+#main.wide #preview,
+#main.wide #git {
     padding: 0 2;
 }
 
-#nav:focus-within, #preview:focus-within {
-    border: round $lp-accent;
-    border-title-color: $lp-accent;
+#nav:focus-within,
+#preview:focus-within {
+    border: round $lp-border-focus;
+    border-title-color: $lp-border-focus;
 }
 
 Screen.compact #hints {
-    padding: 0;
+    padding: 0 1;
 }
 
 Screen.compact #dlg {

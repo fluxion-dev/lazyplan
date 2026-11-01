@@ -48,6 +48,7 @@ from .preview import PreviewMixin
 from .state import AppState
 from .theme import register_themes
 from .tree import TreeMixin
+from .widgets.git_panel import GitPanel
 from .widgets.plan_tree import FoldTree
 from .widgets.preview_panel import PreviewPanel
 
@@ -168,7 +169,9 @@ if _TEXTUAL_OK:
                     with Vertical(id="nav"):
                         yield FoldTree("plans", id="tree")
                         yield Static("nothing planned... yet", id="tree-empty")
-                    yield PreviewPanel()
+                    with Vertical(id="side"):
+                        yield PreviewPanel()
+                        yield GitPanel()
                 yield MetricsSection()
             yield Label("", id="hints")
 

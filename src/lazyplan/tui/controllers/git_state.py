@@ -66,20 +66,18 @@ class GitStateController:
         self.pending.discard(path)
         self.cache[path] = (time.time(), state)
         if self.app._mounted and not self.app._refreshing:
-            self.app.update_preview(force=True)
+            self.app.update_git()
 
-    def preview_bits(self, repos: list[dict[str, Any]]) -> list[str]:
-        """Compact branch/dirty bits for the preview's linked checkouts."""
-        bits: list[str] = []
-        for repo in repos[:2]:
+    def snapshot(self, repos: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Named branch/dirty state for the GIT pane, at most three rows."""
+        rows: list[dict[str, Any]] = []
+        for repo in repos[:3]:
             path = str(repo.get("repo_path", "") or "")
             if not path:
                 continue
-            state = self.state(path)
-            branch = state["branch"]
-            if not branch:
-                branch = "detached" if state["detached"] else "unknown"
-            name = repo_project_name(repo) or path
-            dirty = " dirty" if state["dirty"] else " clean"
-            bits.append(f"{name} {branch}{dirty}")
-        return bits
+            state = dict(self.state(path))
+            state["name"] = repo_project_name(repo) or path
+            state["path"] = path
+            state["remote"] = str(repo.get("repo_remote", "") or "")
+            rows.append(state)
+        return rows

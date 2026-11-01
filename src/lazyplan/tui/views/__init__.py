@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from .detail import DetailDocument, build_detail, detail_breadcrumb, detail_object
+from .git import GitDocument, build_git
 from .preview import (
     PreviewBlock,
     PreviewDocument,
@@ -28,8 +29,10 @@ from .source import (
 
 __all__ = [
     "DetailDocument",
+    "GitDocument",
     "PreviewBlock",
     "PreviewDocument",
+    "build_git",
     "build_milestone",
     "build_plan",
     "build_preview",

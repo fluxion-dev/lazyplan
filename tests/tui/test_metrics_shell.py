@@ -15,10 +15,12 @@ try:
     from lazyplan import tui as tui_mod
     from lazyplan.tui.metrics import MetricsSection
     from lazyplan.tui.screens import PaletteScreen
+    from lazyplan.tui.theme import lane_baseline_rgb
 except ImportError:  # stdlib-only interpreter: no textual
     tui_mod = None  # type: ignore[assignment]
     MetricsSection = None  # type: ignore[assignment,misc]
     PaletteScreen = None  # type: ignore[assignment,misc]
+    lane_baseline_rgb = None  # type: ignore[assignment]
 
 CARD_ID = "metric-timeline"
 
@@ -42,6 +44,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         self.plan_id = plan.id
         milestone = store.add_milestone(plan.id, "Milestone title")
         task = store.add_task(milestone.id, "Task title")
+        self.milestone_id = milestone.id
         self.task_id = task.id
         self.store = Store(self.db)
 
@@ -177,6 +180,66 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Task title", chart)
         self.assertNotIn("Task title *", chart)
         self.assertIn("●", chart)
+
+    async def test_selection_emphasis_follows_the_cursor(self) -> None:
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            card = app.query_one(f"#{CARD_ID}")
+
+            app.tree_controller.track(app._row_nodes[("plan", self.plan_id)])
+            await pilot.pause(0.2)
+            plan_chart = self._chart(card)
+
+            app.tree_controller.track(app._row_nodes[("milestone", self.milestone_id)])
+            await pilot.pause(0.2)
+            milestone_chart = self._chart(card)
+
+            app.tree_controller.track(app._row_nodes[("task", self.task_id)])
+            await pilot.pause(0.2)
+            task_chart = self._chart(card)
+
+            app.tree_controller.track(app._row_nodes[("plan", self.plan_id)])
+            await pilot.pause(0.2)
+            cleared_chart = self._chart(card)
+        self.assertIn("█ Plan title", plan_chart)
+        self.assertIn("─ Milestone title", plan_chart)
+        self.assertNotIn("━ Milestone title", plan_chart)
+        self.assertIn("═ Plan title", milestone_chart)
+        self.assertIn("━ Milestone title", milestone_chart)
+        self.assertIn("· Task title", milestone_chart)
+        self.assertIn("═ Plan title", task_chart)
+        self.assertIn("─ Milestone title", task_chart)
+        self.assertIn("● Task title", task_chart)
+        self.assertNotIn("● Task title", cleared_chart)
+        self.assertIn("█ Plan title", cleared_chart)
+        for chart in (plan_chart, milestone_chart, task_chart, cleared_chart):
+            self.assertNotIn(" *", chart)
+
+    async def test_selected_plan_draws_a_dim_baseline(self) -> None:
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.tree_controller.track(app._row_nodes[("plan", self.plan_id)])
+            await pilot.pause(0.2)
+            chart = self._chart(app.query_one(f"#{CARD_ID}"))
+            baseline = lane_baseline_rgb(app, 0)
+        code = f"\x1b[38;2;{baseline[0]};{baseline[1]};{baseline[2]}m"
+        self.assertIn(code, chart)
+
+    async def test_selection_emphasis_writes_nothing(self) -> None:
+        events_before = len(self.store.feed(limit=10_000))
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            for key in (
+                ("plan", self.plan_id),
+                ("milestone", self.milestone_id),
+                ("task", self.task_id),
+            ):
+                app.tree_controller.track(app._row_nodes[key])
+                await pilot.pause(0.2)
+        self.assertEqual(len(self.store.feed(limit=10_000)), events_before)
 
     async def test_external_status_change_refreshes_the_gantt(self) -> None:
         milestone_id = self.store.list_milestones(self.plan_id)[0].id

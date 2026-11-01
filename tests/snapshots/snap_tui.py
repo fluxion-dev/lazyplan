@@ -71,12 +71,14 @@ def test_palette_screen(snap_compare, data_app) -> None:
     app, _store, pid, _tid = data_app
 
     async def run_before(pilot) -> None:
+        from textual.widgets import Input, OptionList
+
         await pilot.pause()
         pilot.app.selected = ("plan", pid)
         pilot.app.push_screen(PaletteScreen(pilot.app._palette_context()))
         await pilot.pause()
-        from textual.widgets import OptionList
-
+        pilot.app.screen.query_one("#palette-input", Input).value = "theme"
+        await pilot.pause()
         options = pilot.app.screen.query_one("#palette-list", OptionList)
         for index in range(options.option_count):
             if not options.get_option_at_index(index).disabled:

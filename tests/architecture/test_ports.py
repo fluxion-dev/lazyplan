@@ -9,6 +9,7 @@ import unittest
 from lazyplan.core.ports.collaboration import CollaborationPort
 from lazyplan.core.ports.coordination import CoordinationPort
 from lazyplan.core.ports.planning import PlanningPort
+from lazyplan.core.ports.provenance import ProvenancePort
 from lazyplan.store import Store
 
 
@@ -23,6 +24,11 @@ def _accepts_coordination(port: CoordinationPort) -> None:
 
 
 def _accepts_collaboration(port: CollaborationPort) -> None:
+    """Compile-time structural check; runtime is a no-op."""
+    assert port is not None
+
+
+def _accepts_provenance(port: ProvenancePort) -> None:
     """Compile-time structural check; runtime is a no-op."""
     assert port is not None
 
@@ -42,6 +48,11 @@ class TestStorePorts(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             store = Store(os.path.join(tmp, "collaboration.db"))
             _accepts_collaboration(store)
+
+    def test_store_satisfies_provenance_port(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Store(os.path.join(tmp, "provenance.db"))
+            _accepts_provenance(store)
 
 
 if __name__ == "__main__":

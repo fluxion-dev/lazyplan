@@ -5,17 +5,18 @@ from __future__ import annotations
 import json
 import time
 
+from ..core.policies.provenance import checks_state, pr_state
+from ..core.ports.provenance import ProvenancePort
 from ..forge import AuthStatus, Forge, RepoRef, detect_forge, parse_pull_url, resolve_auth
 from ..github import GitHubClient, GitHubError
 from ..kinds import check_kind
 from ..models import Task
-from ..store import Store
 from ..vcs import detect_backend, origin_url
 from .vcs import _repo_targets
 
 
 def forge_statuses(
-    store: Store,
+    store: ProvenancePort,
     kind: str = "",
     obj_id: int = 0,
     repo_path: str = "",
@@ -72,35 +73,8 @@ def forge_statuses(
     return entries
 
 
-def _pr_state(pr: dict) -> str:
-    """Normalize a pull request to open/draft/merged/closed."""
-    if pr.get("merged_at"):
-        return "merged"
-    state = str(pr.get("state", "") or "")
-    if state == "open" and pr.get("draft"):
-        return "draft"
-    return state
-
-
-def _checks_state(data: object) -> str:
-    """Aggregate check runs to pass/fail/pending/none."""
-    if not isinstance(data, dict):
-        return "none"
-    runs = data.get("check_runs", [])
-    if not isinstance(runs, list) or not runs:
-        return "none"
-    statuses = [str(run.get("status", "") or "") for run in runs if isinstance(run, dict)]
-    conclusions = [str(run.get("conclusion", "") or "") for run in runs if isinstance(run, dict)]
-    if any(status != "completed" for status in statuses):
-        return "pending"
-    if any(
-        conclusion in {"failure", "cancelled", "timed_out", "action_required"}
-        for conclusion in conclusions
-    ):
-        return "fail"
-    if all(conclusion in {"success", "neutral", "skipped"} for conclusion in conclusions):
-        return "pass"
-    return "none"
+_pr_state = pr_state
+_checks_state = checks_state
 
 
 def _forge_target(path: str) -> tuple[Forge, RepoRef] | None:
@@ -180,7 +154,7 @@ def _pr_reviews(
 
 
 def _store_pr(
-    store: Store,
+    store: ProvenancePort,
     gh: GitHubClient,
     forge: Forge,
     ref: RepoRef,
@@ -228,7 +202,7 @@ def _store_pr(
 
 
 def _store_pulls(
-    store: Store,
+    store: ProvenancePort,
     gh: GitHubClient,
     forge: Forge,
     ref: RepoRef,
@@ -268,7 +242,7 @@ def _store_pulls(
         )
 
 
-def _tasks_in_scope(store: Store, kind: str, obj_id: int) -> list[Task]:
+def _tasks_in_scope(store: ProvenancePort, kind: str, obj_id: int) -> list[Task]:
     """Tasks covered by a refresh: the row itself or its descendants."""
     if kind == "task":
         task = store.get_task(obj_id)
@@ -282,7 +256,7 @@ def _tasks_in_scope(store: Store, kind: str, obj_id: int) -> list[Task]:
 
 
 def refresh_forge(
-    store: Store,
+    store: ProvenancePort,
     kind: str,
     obj_id: int,
     client: GitHubClient | None = None,

@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Any
 from .forge import AuthStatus, RepoRef, redact, resolve_auth
 
 if TYPE_CHECKING:
-    from .store import Store
+    from .core.ports.provenance import CachePort
 
 API_BASE = "https://api.github.com"
 API_VERSION = "2022-11-28"
@@ -60,7 +60,7 @@ class GitHubClient:
     def __init__(
         self,
         auth: AuthStatus | None = None,
-        store: Store | None = None,
+        store: CachePort | None = None,
         base_url: str = API_BASE,
         timeout: float = DEFAULT_TIMEOUT,
     ) -> None:

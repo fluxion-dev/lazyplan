@@ -19,11 +19,8 @@
     "lazyplan.presentation.tui.base",
     "lazyplan.presentation.tui.screens.source",
     "lazyplan.presentation.tui.views.detail",
-    "lazyplan.services.forge",
     "lazyplan.services.plans",
-    "lazyplan.services.tasks",
     "lazyplan.services.transfer",
-    "lazyplan.services.vcs",
     "lazyplan.sync"
   ]
 }

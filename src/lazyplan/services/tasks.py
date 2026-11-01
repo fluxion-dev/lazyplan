@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from ..core.ports.provenance import ProvenancePort
 from ..models import Status
-from ..store import Store
 from ..vcs import VCSBackend, detect_backend
 from .base import (
     GateError,
@@ -13,7 +13,7 @@ from .vcs import _ensure_task_repo_links, _norm_path, _repo_for_task
 
 
 def start_task(
-    store: Store,
+    store: ProvenancePort,
     task_id: int,
     repo_path: str = "",
     branch: str = "",
@@ -70,7 +70,7 @@ def start_task(
     }
 
 
-def _finish_target(store: Store, task_id: int, repo_path: str) -> dict:
+def _finish_target(store: ProvenancePort, task_id: int, repo_path: str) -> dict:
     """Repo link for finishing a task, honoring an explicit checkout."""
     if repo_path:
         want = _norm_path(repo_path)
@@ -88,7 +88,7 @@ def _finish_target(store: Store, task_id: int, repo_path: str) -> dict:
 
 
 def _link_commits(
-    store: Store,
+    store: ProvenancePort,
     task_id: int,
     backend: VCSBackend,
     root: str,
@@ -118,7 +118,7 @@ def _link_commits(
     return linked
 
 
-def gate_state(store: Store, task_id: int) -> dict:
+def gate_state(store: ProvenancePort, task_id: int) -> dict:
     """Cached PR/check gate state for one task."""
     return store.gate_state(task_id)
 
@@ -133,7 +133,7 @@ def _gate_failure(gate: dict, require_pr: bool, require_checks: bool) -> str:
 
 
 def finish_task(
-    store: Store,
+    store: ProvenancePort,
     task_id: int,
     repo_path: str = "",
     actor: str = "human",

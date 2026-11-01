@@ -50,23 +50,26 @@ Want demo data first? Run `lpui seed`.
 - **Made for focus.** Plans stay as one-line summaries until you open them. Detail is there when you need it.
 - **Yours to keep.** Local-first by default. Export or import any time. No account, no cloud, no lock-in.
 
-## New in 0.27
+## New in 0.30
 
-- **Windows parity.** Install, agent hooks, upgrades, and UTF-8 plan files now
-  work on Windows. Claude Code hooks match both Git Bash and PowerShell, the
-  shared home follows `%LOCALAPPDATA%`, and the gates run on Linux, macOS, and
-  Windows.
-- **Fast at scale.** Reads are batched end to end. On the 88-plan fixture the
-  tree dropped from 909 queries to 12, `list --json` from 7,853 to 18, export
-  from 18,612 to 26, and TUI refresh from 5,148 to 139. Query budgets are now a
-  release gate.
-- **Quieter CLI reads.** Update notices are cache-only, so list, show, hooks,
-  MCP, and porcelain calls make no network request.
+- **Three themes, one key.** `t` cycles Catppuccin Mocha, an OLED-black `void`,
+  and Latte. `LAZYPLAN_THEME` picks one at launch, and every screen and chart
+  follows it.
+- **A real GIT pane.** Under the preview, the selected row shows its linked
+  checkouts, branch and dirty state, ahead/behind counts, newest commits, and
+  pull-request state.
+- **A preview that stays put.** The status, title, and breadcrumb stay fixed
+  while the reason, scope, next tasks, acceptance, and notes scroll beneath.
+- **One icon language and a calmer timeline.** Plans, milestones, tasks,
+  checkouts, commits, and pull requests share single-cell icons. The timeline
+  card names the scoped plan, keeps every swimlane visible, and emphasizes the
+  row under the cursor.
 
 ## What you get
 
 - A plan tree with progress at a glance, plus milestones and tasks underneath.
-- A preview of the reason, the next tasks, and what done means.
+- A sticky preview of the reason, the next tasks, and what done means.
+- A GIT pane with the checkout, commit, and pull-request context for the row.
 - A read-only detail page for careful reading, with quick keys to edit and move work.
 - Claim, blocked, gate, and attention state on the rows that need it.
 - One place your agent can update while you keep the big picture.
@@ -90,8 +93,9 @@ the method, budgets, and per-platform ceilings.
 ## How it works
 
 - Plans start as one-line summaries with progress. Open one to reveal milestones, then tasks.
-- The right pane previews the selected row: why, what, next tasks, and acceptance progress.
-- The bottom line shows the keys that work right now. `?` opens help; `c` opens the command palette.
+- The side column previews the selected row: why, what, next tasks, and acceptance progress, with a GIT card for the linked checkout and commits.
+- The timeline card at the bottom shows project, milestone, and task spans, with the scoped plan in its border.
+- The bottom line shows the keys that work right now. `?` opens help; `c` opens the command palette; `t` cycles themes.
 - Your agent writes through the same command line. The screen updates as it works.
 
 ## Everyday commands

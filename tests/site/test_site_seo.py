@@ -147,7 +147,7 @@ class TestSiteSEO(unittest.TestCase):
         )
         self.assertLessEqual(len(text.split()), 750)
         self.assertLessEqual(page.count("<code"), 8)
-        self.assertEqual(page.count("<figure"), 5)
+        self.assertEqual(page.count("<figure"), 9)
         self.assertIn('id="ways-to-work"', page)
 
 

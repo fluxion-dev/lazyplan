@@ -10,13 +10,14 @@ from tests.support.paths import ROOT
 DOCS = "https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md"
 EXPECTED_HREFS = {
     "#top",
+    "#new",
     "#features",
     "#screens",
     "#faq",
     "#install",
     DOCS,
 }
-DESKTOP_LINKS = {"#features", "#screens", "#faq", DOCS, "#install"}
+DESKTOP_LINKS = {"#new", "#features", "#screens", "#faq", DOCS, "#install"}
 
 
 class NavParser(HTMLParser):
@@ -103,7 +104,9 @@ class TestPrimaryNavigation(unittest.TestCase):
         self.assertEqual(self.mobile[0]["summary"], "Menu")
         links = self.mobile[0]["links"]
         assert isinstance(links, list)
-        self.assertEqual(set(links), {"#features", "#screens", "#faq", DOCS, "#install"})
+        self.assertEqual(
+            set(links), {"#new", "#features", "#screens", "#faq", DOCS, "#install"}
+        )
 
     def test_every_destination_is_preserved(self):
         self.assertTrue(

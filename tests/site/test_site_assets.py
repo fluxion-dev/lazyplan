@@ -23,6 +23,10 @@ else:
 EXPECTED = {
     "lpui-detail",
     "lpui-source-trail",
+    "lpui-git-pane",
+    "lpui-theme-void",
+    "lpui-theme-latte",
+    "lpui-timeline",
     "lpui-coordination",
     "lpui-collaboration",
     "lpui-search-bulk",

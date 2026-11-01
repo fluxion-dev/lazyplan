@@ -120,15 +120,7 @@
       "name": "Can I use one agent to plan and another to execute?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Yes. A planner agent can write the plan while an executor or subagent claims and completes individual tasks. You can change roles, run both at once, or do the work yourself; everyone reads the same plan."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Can I change how the screen looks?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Yes. Press t to cycle Catppuccin Mocha, an OLED-black void theme, and Latte, or set LAZYPLAN_THEME to launch in one. The detail, source, palette, help, and form screens follow the same theme."
+        "text": "Yes. A planner agent can write the plan while an executor or subagent claims and completes individual tasks. You can change roles or run both at once; everyone reads the same plan."
       }
     }
   ]
@@ -212,28 +204,28 @@
 
 <section id="new" class="mx-auto max-w-6xl scroll-mt-20 px-6 pt-16 md:pt-20">
   <div class="overflow-hidden rounded-2xl border border-plan-border bg-plan-surface/70 shadow-xl shadow-black/30">
-    <div class="grid gap-8 p-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.7fr)] md:p-10">
+    <div class="grid gap-6 p-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.7fr)] md:p-8">
       <div>
         <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">New in 0.30</p>
-        <h2 class="mb-4 text-2xl font-bold text-white md:text-3xl">A screen that keeps up with the plan.</h2>
-        <p class="m-0 text-[0.95rem] text-zinc-400">The preview holds its place, the GIT pane shows the checkout, and three themes let the terminal fit the room.</p>
+        <h2 class="mb-3 text-2xl font-bold text-white md:text-3xl">A sharper screen.</h2>
+        <p class="m-0 text-[0.95rem] text-zinc-400">Themes, checkout, and timeline.</p>
       </div>
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div class="rounded-xl border border-plan-border bg-plan-canvas/60 p-5">
-          <h3 class="mb-2 text-base font-semibold text-white">Three themes</h3>
-          <p class="m-0 text-[0.92rem] text-zinc-400">Cycle Catppuccin Mocha, OLED-black <code class="inline-code">void</code>, and Latte with <code class="inline-code">t</code>. Set <code class="inline-code">LAZYPLAN_THEME</code> to launch in one.</p>
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div class="rounded-lg border border-plan-border bg-plan-canvas/60 p-4">
+          <h3 class="mb-1 text-base font-semibold text-white">Three themes</h3>
+          <p class="m-0 text-[0.9rem] text-zinc-400">Mocha, OLED void, and Latte. Press <code class="inline-code">t</code>.</p>
         </div>
-        <div class="rounded-xl border border-plan-border bg-plan-canvas/60 p-5">
-          <h3 class="mb-2 text-base font-semibold text-white">A real GIT pane</h3>
-          <p class="m-0 text-[0.92rem] text-zinc-400">The linked checkout, branch, newest commits, and pull-request state sit under the preview.</p>
+        <div class="rounded-lg border border-plan-border bg-plan-canvas/60 p-4">
+          <h3 class="mb-1 text-base font-semibold text-white">GIT pane</h3>
+          <p class="m-0 text-[0.9rem] text-zinc-400">Checkout, commits, pull requests.</p>
         </div>
-        <div class="rounded-xl border border-plan-border bg-plan-canvas/60 p-5">
-          <h3 class="mb-2 text-base font-semibold text-white">A preview that stays put</h3>
-          <p class="m-0 text-[0.92rem] text-zinc-400">The status and title stay fixed while the reason, next tasks, acceptance, and notes scroll.</p>
+        <div class="rounded-lg border border-plan-border bg-plan-canvas/60 p-4">
+          <h3 class="mb-1 text-base font-semibold text-white">Sticky preview</h3>
+          <p class="m-0 text-[0.9rem] text-zinc-400">The title stays while the details scroll.</p>
         </div>
-        <div class="rounded-xl border border-plan-border bg-plan-canvas/60 p-5">
-          <h3 class="mb-2 text-base font-semibold text-white">A calmer timeline</h3>
-          <p class="m-0 text-[0.92rem] text-zinc-400">Every swimlane stays visible, the scoped plan names the card, and the row under the cursor stands out.</p>
+        <div class="rounded-lg border border-plan-border bg-plan-canvas/60 p-4">
+          <h3 class="mb-1 text-base font-semibold text-white">Timeline</h3>
+          <p class="m-0 text-[0.9rem] text-zinc-400">Every lane stays visible.</p>
         </div>
       </div>
     </div>
@@ -249,19 +241,19 @@
   <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
     <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30">
       <h3 class="mb-2 text-lg font-semibold text-white">One source of truth</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400">Plans, milestones, and tasks live in one place. You and your agent always read the same plan.</p>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Plans, milestones, and tasks live in one place. You and your agent read the same plan.</p>
     </div>
     <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30">
       <h3 class="mb-2 text-lg font-semibold text-white">Built for focus</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400">A sticky preview keeps the reason and next step in place while the details scroll. Pick the theme that fits the room.</p>
+      <p class="m-0 text-[0.95rem] text-zinc-400">A fast keyboard screen keeps plans short until you open them. Detail is there when you need it.</p>
     </div>
     <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30">
       <h3 class="mb-2 text-lg font-semibold text-white">Proof you can see</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400">The GIT pane follows work from plan to checkout to commit to pull request without leaving the terminal.</p>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Follow work from plan to commit to pull request without leaving the terminal.</p>
     </div>
     <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30">
       <h3 class="mb-2 text-lg font-semibold text-white">Yours to keep</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400">Local-first and private by default. Export any time. No account, no cloud, no lock-in.</p>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Local-first and private. Export any time. No account, no cloud, no lock-in.</p>
     </div>
   </div>
 </section>
@@ -270,14 +262,14 @@
   <div class="mb-10 max-w-3xl md:mb-14">
     <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">Ways to work</p>
     <h2 class="mb-4 text-2xl font-bold text-white md:text-3xl">One agent plans. Another builds. You stay in control.</h2>
-    <p class="text-lg text-zinc-400">Every plan, milestone, task, and acceptance criterion lives in lazyplan. Add work, edit a task, reorder, block, or complete any row yourself in the screen. Your agents see every change.</p>
+    <p class="text-lg text-zinc-400">Every plan, milestone, task, and criterion lives in lazyplan. Add work, edit a task, reorder, block, or complete any row yourself in the screen. Your agents see every change.</p>
   </div>
   <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
     <article class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
       <p class="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-cyber-cyan">Planning</p>
       <h3 class="mb-4 text-lg font-semibold text-white">Ask for a plan.</h3>
       <blockquote class="m-0 rounded-lg border-l-2 border-viking-gold/70 bg-white/5 px-4 py-3 text-[0.95rem] text-zinc-300">
-        <span class="font-semibold text-white">You:</span> Add a plan for passwordless sign-in. Cover magic links, passkeys, and the migration. Break it into reviewable tasks with acceptance criteria.
+        <span class="font-semibold text-white">You:</span> Add a plan for passwordless sign-in. Cover magic links, passkeys, and the migration. Break it into reviewable tasks.
       </blockquote>
       <pre class="mt-4 overflow-x-auto rounded-lg border border-plan-border bg-plan-canvas p-4 font-mono text-[0.82rem] leading-relaxed text-zinc-200">Plan · Passwordless sign-in
   Milestone · Magic links
@@ -293,7 +285,7 @@
       <p class="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-cyber-cyan">Execution</p>
       <h3 class="mb-4 text-lg font-semibold text-white">Hand off one task.</h3>
       <blockquote class="m-0 rounded-lg border-l-2 border-scanner-green/70 bg-white/5 px-4 py-3 text-[0.95rem] text-zinc-300">
-        <span class="font-semibold text-white">Executor subagent:</span> Claiming “Add the token model”. I’ll add the model, migration, and tests, link the commit, and mark it done.
+        <span class="font-semibold text-white">Executor subagent:</span> Claiming “Add the token model”. I’ll add the model, migration, and tests, and link the commit.
       </blockquote>
       <pre class="mt-4 overflow-x-auto rounded-lg border border-plan-border bg-plan-canvas p-4 font-mono text-[0.82rem] leading-relaxed text-zinc-200">Task · Add the token model        doing
   Claimed by executor · expires in 30m
@@ -302,14 +294,14 @@ Task · Add the token model        done</pre>
       <p class="mb-0 mt-4 text-[0.95rem] text-zinc-400">The executor works one task at a time. Take over or do it yourself.</p>
     </article>
   </div>
-  <p class="mx-auto mt-8 max-w-2xl text-center text-[0.95rem] text-zinc-400">Swap roles or do the work yourself. The plan stays the same.</p>
+  <p class="mx-auto mt-8 max-w-2xl text-center text-[0.95rem] text-zinc-400">Swap roles or do the work yourself.</p>
 </section>
 
 <section id="screens" class="mx-auto max-w-6xl scroll-mt-20 px-6 py-20 md:py-28">
   <div class="mb-10 max-w-2xl md:mb-14">
     <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">Screenshots</p>
     <h2 class="mb-4 text-2xl font-bold text-white md:text-3xl">See it in action.</h2>
-    <p class="text-lg text-zinc-400">One shared plan, three themes, and the git context for every row. You stay in control; your agent does the busywork.</p>
+    <p class="text-lg text-zinc-400">Three themes, git context, and one plan.</p>
   </div>
   <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
     <figure class="m-0">
@@ -359,14 +351,14 @@ Task · Add the token model        done</pre>
         <source srcset="./screens/lpui-theme-void.webp" type="image/webp">
         <img src="./screens/lpui-theme-void.png" width="1604" height="904" loading="lazy" decoding="async" alt="lazyplan main shell in the OLED-black void theme, with the plan tree, sticky preview, GIT pane, and timeline." class="block h-auto w-full rounded-xl border border-plan-border">
       </picture>
-      <figcaption class="mt-2 text-sm text-zinc-400">OLED-black <code class="inline-code">void</code> for dark rooms.</figcaption>
+      <figcaption class="mt-2 text-sm text-zinc-400"><code class="inline-code">void</code></figcaption>
     </figure>
     <figure class="m-0">
       <picture>
         <source srcset="./screens/lpui-theme-latte.webp" type="image/webp">
         <img src="./screens/lpui-theme-latte.png" width="1604" height="904" loading="lazy" decoding="async" alt="lazyplan main shell in the light Latte theme, with the plan tree, sticky preview, GIT pane, and timeline." class="block h-auto w-full rounded-xl border border-plan-border">
       </picture>
-      <figcaption class="mt-2 text-sm text-zinc-400">Latte when the room is bright. Press <code class="inline-code">t</code> to cycle.</figcaption>
+      <figcaption class="mt-2 text-sm text-zinc-400"><code class="inline-code">latte</code></figcaption>
     </figure>
   </div>
 </section>
@@ -442,11 +434,7 @@ Task · Add the token model        done</pre>
     </details>
     <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
       <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">Can I use one agent to plan and another to execute?</summary>
-      <p class="mt-3 text-zinc-400">Yes. A planner agent can write the plan while an executor or subagent claims and completes individual tasks. You can change roles, run both at once, or do the work yourself; everyone reads the same plan.</p>
-    </details>
-    <details class="group rounded-xl border border-plan-border bg-plan-surface/70 px-6 py-4 open:border-viking-blue/50">
-      <summary class="cursor-pointer list-none pr-6 font-semibold text-white marker:content-none">Can I change how the screen looks?</summary>
-      <p class="mt-3 text-zinc-400">Yes. Press <code class="inline-code">t</code> to cycle Catppuccin Mocha, an OLED-black <code class="inline-code">void</code> theme, and Latte, or set <code class="inline-code">LAZYPLAN_THEME</code> to launch in one. The detail, source, palette, help, and form screens follow the same theme.</p>
+      <p class="mt-3 text-zinc-400">Yes. A planner agent can write the plan while an executor or subagent claims and completes individual tasks. You can change roles or run both at once; everyone reads the same plan.</p>
     </details>
   </div>
 </section>

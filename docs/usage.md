@@ -97,12 +97,13 @@ terminal keeps the tree and preview unchanged.
 
 Each project, milestone, and task gets one compact swimlane. A lane exists from
 its `add` event to its latest completion event, or to the current time while
-open, but its trace is drawn only during `doing` intervals. Todo, paused, and
-done gaps render no line, so a resumed item shows separate segments. Every
-active segment gets start and finish dots, and open work gets a dim vertical
-`now` marker. The x-axis picks its tick count and date/time format from the
-timeline span, with unique labels from seconds through years. No-plan and
-no-milestone states render centered copy inside the chart.
+open. Project and milestone traces cover that whole span, so a brief pause does
+not break the line. Task traces still cover only `doing` intervals, so
+task-level pauses stay visible as separate segments. Every span or segment gets
+start and finish dots, and any open lane gets a dim vertical `now` marker. The
+x-axis picks its tick count and date/time format from the timeline span, with
+unique labels from seconds through years. No-plan and no-milestone states render
+centered copy inside the chart.
 
 The horizontal legend sits at the top of the chart, wraps when the terminal is
 narrow, truncates titles with an ellipsis, and folds overflow into `+N more`.
@@ -116,12 +117,13 @@ colours for the active dark or light theme.
 
 Every lane keeps a dim full-width baseline from the chart's left edge to its
 right edge, so each project, milestone, and task row stays visible even when it
-is not doing. Active `doing` segments draw on top of that baseline. The lane
-under the cursor is emphasized: its active segments render bold with a heavier
-glyph (`╍` project, `━` milestone, `●` task), and its legend entry is bold
-without a trailing `*`. The baseline itself is the same for every lane, so
-selection never changes it. Emphasis follows the cursor only, so ancestors,
-siblings, and space-marked rows keep their normal trace.
+is not doing. Project and milestone span lines, and task `doing` segments, draw
+on top of that baseline. The lane under the cursor is emphasized: its span or
+segments render bold with a heavier glyph (`╍` project, `━` milestone, `●`
+task), and its legend entry is bold without a trailing `*`. The baseline itself
+is the same for every lane, so selection never changes it. Emphasis follows the
+cursor only, so ancestors, siblings, and space-marked rows keep their normal
+trace.
 
 ### Staged updates in the TUI
 

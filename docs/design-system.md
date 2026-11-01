@@ -173,25 +173,28 @@ cursor, and an accent cursor when the tree has focus.
   to that row's parent plan, and no selection gives every plan a lane. A
   scoped plan gets a project lane plus one lane per milestone; a milestone or
   task selection adds the focused milestone's task lanes and marks the
-  selected task. Each lane keeps its wall-clock `start`/`end`, while `active`
-  holds only the `doing` intervals parsed from status events. Todo, paused,
-  and done gaps therefore draw no trace, but the lane and its legend entry
-  remain. Resumed work renders multiple segments.
+  selected task. Each lane keeps its wall-clock `start`/`end` and its `active`
+  doing intervals. Project and milestone lanes set `trace` to the whole
+  start→end span, so pauses do not break their line. Task lanes set `trace`
+  to the `active` intervals, so task pauses remain visible. A lane and its
+  legend entry remain even when a task has no active intervals.
 - `tui/metrics/timeline_layout.py` holds the pure helpers: adaptive
   `axis_ticks`, one-row `lane_window` spacing, `legend_layout` wrapping and
   overflow, kind `trace_glyph`s (`═` project, `─` milestone, `·` task; bold
-  `╍`/`━`/`●`), `active_segments` clipping, and `trace_points` density for
-  bold traces. `TimelineCard` stays a thin renderer.
+  `╍`/`━`/`●`), shared `active_segments`/`trace_segments` clipping, and
+  `trace_points` density for bold traces. `TimelineCard` stays a thin
+  renderer.
 - Every lane draws a dim full-width baseline from the chart's left x-limit to
-  its right x-limit using `lane_baseline_rgb`; active `doing` segments draw on
-  top. Selection is data-driven: `TimelineLane.selected` marks only the cursor
-  row, and `TimelineCard` renders its active segments with ANSI bold and the
-  heavy glyph. The selected legend entry is bold and has no `*` suffix. The
-  baseline is identical for selected and unselected lanes.
+  its right x-limit using `lane_baseline_rgb`; project/milestone span lines
+  and task `doing` segments draw on top. Selection is data-driven:
+  `TimelineLane.selected` marks only the cursor row, and `TimelineCard`
+  renders its span or segments with ANSI bold and the heavy glyph. The
+  selected legend entry is bold and has no `*` suffix. The baseline is
+  identical for selected and unselected lanes.
 - The horizontal legend sits at the chart top, truncates titles with an
-  ellipsis, and folds overflow into `+N more`. Active segments get start and
-  finish dots; open work gets a dim vertical `now` marker. No estimates or
-  invented timestamps are used.
+  ellipsis, and folds overflow into `+N more`. Every span or segment gets start
+  and finish dots; any open lane gets a dim vertical `now` marker. No estimates
+  or invented timestamps are used.
 
 ## Command registry (`palette.py and help.py`)
 

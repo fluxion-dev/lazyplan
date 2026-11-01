@@ -2,7 +2,6 @@
   "modules": [
     "lazyplan.presentation.cli.commands",
     "lazyplan.presentation.cli.commands.admin",
-    "lazyplan.presentation.cli.commands.forge",
     "lazyplan.presentation.cli.commands.plan",
     "lazyplan.presentation.cli.commands.proof",
     "lazyplan.presentation.cli.commands.system",
@@ -17,8 +16,6 @@
     "lazyplan.presentation.setup.apply",
     "lazyplan.presentation.tui.app",
     "lazyplan.presentation.tui.base",
-    "lazyplan.presentation.tui.screens.source",
-    "lazyplan.presentation.tui.views.detail",
     "lazyplan.services.transfer",
     "lazyplan.sync"
   ]

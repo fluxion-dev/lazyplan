@@ -8,8 +8,8 @@ import sys
 from .... import (
     services,
 )
+from ....core.ports.provenance import ProvenancePort
 from ....forge import parse_pull_url, resolve_auth
-from ....store import Store
 from ...shared import (
     porcelain,
 )
@@ -32,7 +32,7 @@ from ..rows_proof import (
 )
 
 
-def _cmd_pr_auth(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_pr_auth(store: ProvenancePort, args: argparse.Namespace, actor: str) -> int:
     auth = resolve_auth()
     payload = {
         "provider": "github",
@@ -48,7 +48,7 @@ def _cmd_pr_auth(store: Store, args: argparse.Namespace, actor: str) -> int:
     return 0
 
 
-def _cmd_pr_status(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_pr_status(store: ProvenancePort, args: argparse.Namespace, actor: str) -> int:
     if args.kind or args.id:
         if not (args.kind and args.id):
             print(msg_error(ValueError("--kind and --id go together")), file=sys.stderr)
@@ -74,7 +74,7 @@ def _cmd_pr_status(store: Store, args: argparse.Namespace, actor: str) -> int:
     )
 
 
-def _cmd_pr_list(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_pr_list(store: ProvenancePort, args: argparse.Namespace, actor: str) -> int:
     if store.get_parent(args.kind, args.id) is None:
         print(msg_not_found(args.kind, args.id), file=sys.stderr)
         return 1
@@ -89,7 +89,7 @@ def _cmd_pr_list(store: Store, args: argparse.Namespace, actor: str) -> int:
     )
 
 
-def _cmd_pr_show(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_pr_show(store: ProvenancePort, args: argparse.Namespace, actor: str) -> int:
     if store.get_parent(args.kind, args.id) is None:
         print(msg_not_found(args.kind, args.id), file=sys.stderr)
         return 1
@@ -108,7 +108,7 @@ def _cmd_pr_show(store: Store, args: argparse.Namespace, actor: str) -> int:
     )
 
 
-def _cmd_pr_link(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_pr_link(store: ProvenancePort, args: argparse.Namespace, actor: str) -> int:
     if store.get_parent(args.kind, args.id) is None:
         print(msg_not_found(args.kind, args.id), file=sys.stderr)
         return 1
@@ -137,7 +137,7 @@ def _cmd_pr_link(store: Store, args: argparse.Namespace, actor: str) -> int:
     return _emit_record(args, line, {"link": vars(link)})
 
 
-def _cmd_pr_unlink(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_pr_unlink(store: ProvenancePort, args: argparse.Namespace, actor: str) -> int:
     if store.get_parent(args.kind, args.id) is None:
         print(msg_not_found(args.kind, args.id), file=sys.stderr)
         return 1
@@ -149,7 +149,7 @@ def _cmd_pr_unlink(store: Store, args: argparse.Namespace, actor: str) -> int:
     return _emit_record(args, line, {"ok": True, "unlinked": f"PR #{args.number}"})
 
 
-def _cmd_pr_refresh(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_pr_refresh(store: ProvenancePort, args: argparse.Namespace, actor: str) -> int:
     if store.get_parent(args.kind, args.id) is None:
         print(msg_not_found(args.kind, args.id), file=sys.stderr)
         return 1

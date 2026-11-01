@@ -34,7 +34,7 @@ from ...shared.design import msg_error
 from ..views.detail import build_detail, detail_breadcrumb
 
 if TYPE_CHECKING:
-    from ....store import Store
+    from ....core.ports.provenance import ProvenancePort
 from .base import _row
 from .forms import ConfirmScreen, FilterPromptScreen, NewMilestoneScreen, NewTaskScreen
 
@@ -55,7 +55,7 @@ if _TEXTUAL_OK:
             Binding("ctrl+s", "save", "Save", priority=True),
         ]
 
-        def __init__(self, store: Store, kind: str, oid: int, edit: bool = False) -> None:
+        def __init__(self, store: ProvenancePort, kind: str, oid: int, edit: bool = False) -> None:
             super().__init__()
             self._dstore = store
             self.dkind, self.doid = kind, oid
@@ -301,7 +301,7 @@ if _TEXTUAL_OK:
                 self.app.push_screen(
                     NewMilestoneScreen(
                         plan_id,
-                        defaults=load_template("milestone", self._dstore.path).defaults,
+                        defaults=load_template("milestone", self._dstore.db_path).defaults,
                         context=f"P{plan_id}",
                     ),
                     add_milestone,
@@ -325,7 +325,7 @@ if _TEXTUAL_OK:
                 self.app.push_screen(
                     NewTaskScreen(
                         milestone_id,
-                        defaults=load_template("task", self._dstore.path).defaults,
+                        defaults=load_template("task", self._dstore.db_path).defaults,
                         context=str(self._breadcrumb()),
                     ),
                     add_task,

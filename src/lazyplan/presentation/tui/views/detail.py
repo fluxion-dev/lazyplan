@@ -6,8 +6,8 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
+from ....core.ports.provenance import ProvenancePort
 from ....source import SourceTrail, build_source_trail
-from ....store import Store
 from ...shared.design import SECTION_ICON, escape_markup, status_word
 from ...shared.render import render_forge_links
 
@@ -32,7 +32,7 @@ def detail_object(full: dict[str, Any], kind: str) -> dict[str, Any]:
     return dict(full.get(KIND_KEYS[kind], {}))
 
 
-def detail_breadcrumb(store: Store, kind: str, oid: int, obj: dict[str, Any]) -> str:
+def detail_breadcrumb(store: ProvenancePort, kind: str, oid: int, obj: dict[str, Any]) -> str:
     if kind == "plan":
         return f"P{oid}"
     if kind == "milestone":
@@ -201,7 +201,7 @@ def _source_lines(trail: SourceTrail, links: list[dict[str, Any]]) -> list[str]:
 
 def _read_source(
     lines: list[str],
-    store: Store,
+    store: ProvenancePort,
     kind: str,
     oid: int,
     full: dict[str, Any],
@@ -213,7 +213,7 @@ def _read_source(
 
 
 def build_detail(
-    store: Store,
+    store: ProvenancePort,
     kind: str,
     oid: int,
     full: dict[str, Any],

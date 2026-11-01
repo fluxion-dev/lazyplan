@@ -20,6 +20,7 @@ try:
 except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
+from ....core.ports.provenance import ProvenancePort
 from ....source import (
     SourceCommit,
     SourceFile,
@@ -29,7 +30,6 @@ from ....source import (
     build_source_trail,
     clear_diff_cache,
 )
-from ....store import Store
 from ...shared.design import KIND_ICON, escape_markup
 from ..views.source import (
     commit_label,
@@ -59,7 +59,7 @@ if _TEXTUAL_OK:
             Binding("r", "refresh", "Refresh", show=False),
         ]
 
-        def __init__(self, store: Store, kind: str, oid: int) -> None:
+        def __init__(self, store: ProvenancePort, kind: str, oid: int) -> None:
             super().__init__()
             self._store = store
             self._kind = kind

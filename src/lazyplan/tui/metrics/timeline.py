@@ -105,45 +105,8 @@ class TimelineCard(MetricCard):
         for index, lane in enumerate(lanes):
             color = lane_rgb(self.app, index)
             y = positions[index]
-            if lane.selected:
-                baseline = visible_span(lane, left, right, min_visible)
-                if baseline is not None:
-                    plt.plot(
-                        list(baseline),
-                        [y, y],
-                        marker="─",
-                        color=lane_baseline_rgb(self.app, index),
-                    )
-            for start, end in active_segments(lane, left, right, min_visible):
-                if lane.selected:
-                    points = trace_points(start, end, left, right, width)
-                    plt.scatter(
-                        points,
-                        [y] * len(points),
-                        marker=trace_glyph(lane.kind, bold=True),
-                        color=color,
-                        style="bold",
-                    )
-                    plt.scatter(
-                        [start, end],
-                        [y, y],
-                        marker=trace_glyph(lane.kind),
-                        color=color,
-                        style="bold",
-                    )
-                else:
-                    plt.plot(
-                        [start, end],
-                        [y, y],
-                        marker=trace_glyph(lane.kind),
-                        color=color,
-                    )
-                    plt.scatter(
-                        [start, end],
-                        [y, y],
-                        marker="dot",
-                        color=color,
-                    )
+            self._draw_baseline(plt, lane, index, y, left, right, min_visible)
+            self._draw_trace(plt, lane, y, color, left, right, min_visible, width)
         ticks, labels = axis_ticks(left, right, span)
         legend_rows = len(legend_data)
         row_unit, top, bottom = lane_window(rows, count, legend_rows)
@@ -175,6 +138,72 @@ class TimelineCard(MetricCard):
             surface,
         )
         plot.refresh()
+
+    def _draw_baseline(
+        self,
+        plt: Any,
+        lane: TimelineLane,
+        index: int,
+        y: float,
+        left: float,
+        right: float,
+        min_visible: float,
+    ) -> None:
+        """Draw the dim full-span baseline for a selected lane."""
+        if not lane.selected:
+            return
+        baseline = visible_span(lane, left, right, min_visible)
+        if baseline is None:
+            return
+        plt.plot(
+            list(baseline),
+            [y, y],
+            marker="─",
+            color=lane_baseline_rgb(self.app, index),
+        )
+
+    def _draw_trace(
+        self,
+        plt: Any,
+        lane: TimelineLane,
+        y: float,
+        color: tuple[int, int, int],
+        left: float,
+        right: float,
+        min_visible: float,
+        width: int,
+    ) -> None:
+        """Draw one lane's active segments, bold when the lane is selected."""
+        for start, end in active_segments(lane, left, right, min_visible):
+            if lane.selected:
+                points = trace_points(start, end, left, right, width)
+                plt.scatter(
+                    points,
+                    [y] * len(points),
+                    marker=trace_glyph(lane.kind, bold=True),
+                    color=color,
+                    style="bold",
+                )
+                plt.scatter(
+                    [start, end],
+                    [y, y],
+                    marker=trace_glyph(lane.kind),
+                    color=color,
+                    style="bold",
+                )
+                continue
+            plt.plot(
+                [start, end],
+                [y, y],
+                marker=trace_glyph(lane.kind),
+                color=color,
+            )
+            plt.scatter(
+                [start, end],
+                [y, y],
+                marker="dot",
+                color=color,
+            )
 
     def _legend(
         self,

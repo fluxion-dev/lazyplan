@@ -25,7 +25,7 @@ try:
         trace_glyph,
         trace_points,
     )
-    from lazyplan.tui.theme import lane_baseline_rgb
+    from lazyplan.tui.theme import lane_baseline_rgb, lane_rgb
 except ImportError:  # stdlib-only interpreter: no textual
     tui_mod = None  # type: ignore[assignment]
     TimelineLane = None  # type: ignore[assignment,misc]
@@ -38,6 +38,7 @@ except ImportError:  # stdlib-only interpreter: no textual
     trace_glyph = None  # type: ignore[assignment]
     trace_points = None  # type: ignore[assignment]
     lane_baseline_rgb = None  # type: ignore[assignment]
+    lane_rgb = None  # type: ignore[assignment]
 
 
 def _at(stamp: float, action):
@@ -76,6 +77,13 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
     @staticmethod
     def _rgb_code(rgb: tuple[int, int, int]) -> str:
         return f"\x1b[38;2;{rgb[0]};{rgb[1]};{rgb[2]}m"
+
+    @classmethod
+    def _colored_line(cls, chart: str, rgb: tuple[int, int, int], glyph: str) -> str:
+        code = cls._rgb_code(rgb)
+        lines = [line for line in chart.splitlines() if code in line]
+        plain = [re.sub(r"\x1b\[[0-9;]*m", "", line) for line in lines]
+        return max(plain, key=lambda line: line.count(glyph))
 
     async def test_card_renders_glyph_lanes_and_inside_labels(self) -> None:
         plan_id = _seed(self.store)
@@ -195,6 +203,56 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
         line = next(line for line in chart.splitlines() if code in line)
         plain = re.sub(r"\x1b\[[0-9;]*m", "", line)
         self.assertGreaterEqual(plain.count("─"), 40)
+
+    async def test_paused_project_and_milestone_span_but_task_segments(self) -> None:
+        plan = _at(1_000, lambda: self.store.add_plan("Paused plan"))
+        milestone = _at(1_100, lambda: self.store.add_milestone(plan.id, "Paused milestone"))
+        task = _at(1_150, lambda: self.store.add_task(milestone.id, "Paused task"))
+        for kind, oid in (("milestone", milestone.id), ("task", task.id)):
+            _at(
+                1_200,
+                lambda kind=kind, oid=oid: services.set_status(
+                    self.store, kind, oid, Status.DOING, actor="qa"
+                ),
+            )
+            _at(
+                1_300,
+                lambda kind=kind, oid=oid: services.set_status(
+                    self.store, kind, oid, Status.TODO, actor="qa"
+                ),
+            )
+            _at(
+                1_400,
+                lambda kind=kind, oid=oid: services.set_status(
+                    self.store, kind, oid, Status.DOING, actor="qa"
+                ),
+            )
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.selected = None
+            app.metrics_controller.stop()
+            card = app.query_one("#metric-timeline", TimelineCard)
+            card.refresh_timeline(
+                metrics.snapshot(
+                    self.store,
+                    now=1_500,
+                    plan_id=plan.id,
+                    scope_kind="task",
+                    scope_id=task.id,
+                ).timeline
+            )
+            await pilot.pause()
+            chart = card.query_one("PlotextPlot").plt.build()
+            plan_rgb = lane_rgb(app, 0)
+            milestone_rgb = lane_rgb(app, 1)
+            task_rgb = lane_rgb(app, 2)
+        plan_line = self._colored_line(chart, plan_rgb, "═")
+        milestone_line = self._colored_line(chart, milestone_rgb, "─")
+        task_line = self._colored_line(chart, task_rgb, "·")
+        self.assertGreaterEqual(plan_line.count("═"), 20)
+        self.assertGreaterEqual(milestone_line.count("─"), 20)
+        self.assertGreaterEqual(len(re.findall("·+", task_line)), 2)
 
     async def test_unselected_trace_is_not_bold(self) -> None:
         plan = _at(1_000, lambda: self.store.add_plan("Plain plan"))

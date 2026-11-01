@@ -334,7 +334,7 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("\x1b[1m", chart)
         self.assertIn("═", chart)
 
-    async def test_inactive_open_lane_draws_span_and_now(self) -> None:
+    async def test_inactive_open_lane_draws_no_trace(self) -> None:
         plan = _at(1_000, lambda: self.store.add_plan("Idle plan"))
         _at(1_100, lambda: self.store.add_milestone(plan.id, "Idle milestone"))
         app = tui_mod.create_app(self.db)
@@ -349,7 +349,7 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Idle plan", chart)
         self.assertIn("Idle milestone", chart)
         self.assertIn("═", chart)
-        self.assertIn("•", chart)
+        self.assertNotIn("•", chart)
         self.assertIn("now", chart)
 
     async def test_card_uses_the_empty_state(self) -> None:

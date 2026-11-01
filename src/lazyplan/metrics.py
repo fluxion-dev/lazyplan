@@ -465,20 +465,16 @@ def _timeline(
     def lane(
         kind: str, oid: int, title: str, status: Status, selected: bool = False
     ) -> TimelineLane:
-        start = starts.get((kind, oid), fallback)
-        end = ends.get((kind, oid), now) if status == Status.DONE else now
-        lane_end = max(start, end)
-        active = _doing_intervals(kind, oid, status, events, start, now)
-        span = ((start, lane_end),)
-        return TimelineLane(
-            kind,
-            title,
-            start,
-            lane_end,
-            active,
-            selected,
-            span if kind in ("plan", "milestone") else active,
-        )
+        added = starts.get((kind, oid), fallback)
+        active = _doing_intervals(kind, oid, status, events, added, now)
+        if active:
+            start = min(interval[0] for interval in active)
+            lane_end = max(interval[1] for interval in active)
+        else:
+            start = added
+            finished = ends.get((kind, oid))
+            lane_end = max(start, finished if finished is not None else now)
+        return TimelineLane(kind, title, start, lane_end, active, selected, active)
 
     lanes: list[TimelineLane] = []
     if plan_id is None:

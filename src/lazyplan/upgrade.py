@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import json
-import math
 import os
-import re
 import shutil
 import subprocess
 import sys
@@ -17,6 +15,24 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from . import textfile
+from .core.policies.environment import (
+    is_newer as _is_newer,
+)
+from .core.policies.environment import (
+    network_interval as _network_interval,
+)
+from .core.policies.environment import (
+    parse_version as _parse_version,
+)
+from .core.policies.environment import (
+    poll_interval as _poll_interval,
+)
+from .core.policies.environment import (
+    update_check_enabled as _update_check_enabled,
+)
+from .core.policies.environment import (
+    version_text as _version_text,
+)
 
 REPO = "fluxion-dev/lazyplan"
 PYPI_PKG = "lazyplan-tui"
@@ -157,61 +173,29 @@ def detect(
 
 
 def parse_version(text: str) -> tuple[int, int, int]:
-    m = re.search(r"(\d+)\.(\d+)\.(\d+)", text)
-    if not m:
-        raise UpgradeError(f"cannot parse a version from {text!r}")
-    return (int(m.group(1)), int(m.group(2)), int(m.group(3)))
+    try:
+        return _parse_version(text)
+    except ValueError as exc:
+        raise UpgradeError(str(exc)) from exc
 
 
 def version_text(version: tuple[int, int, int]) -> str:
-    return ".".join(str(n) for n in version)
+    return _version_text(version)
 
 
 def update_check_enabled() -> bool:
     """True unless the environment explicitly disables update checks."""
-    return not os.environ.get(NO_UPDATE_ENV, "").strip()
-
-
-def _env_interval(
-    name: str,
-    default: float,
-    minimum: float,
-    maximum: float,
-    env: Mapping[str, str] | None,
-) -> float:
-    """Parse a seconds override, falling back to *default* and clamping."""
-    raw = (os.environ if env is None else env).get(name, "")
-    if not raw.strip():
-        return default
-    try:
-        value = float(raw)
-    except ValueError:
-        return default
-    if not math.isfinite(value):
-        return default
-    return min(max(value, minimum), maximum)
+    return _update_check_enabled(os.environ)
 
 
 def poll_interval(env: Mapping[str, str] | None = None) -> float:
-    """Seconds between TUI cache polls, from ``LAZYPLAN_UPDATE_INTERVAL``."""
-    return _env_interval(
-        UPDATE_POLL_ENV,
-        UPDATE_POLL_INTERVAL,
-        UPDATE_MIN_POLL,
-        UPDATE_MAX_POLL,
-        env,
-    )
+    """Seconds between TUI cache polls."""
+    return _poll_interval(os.environ if env is None else env)
 
 
 def network_interval(env: Mapping[str, str] | None = None) -> float:
-    """Seconds between shared network refreshes, from its env override."""
-    return _env_interval(
-        UPDATE_NETWORK_ENV,
-        UPDATE_NETWORK_INTERVAL,
-        UPDATE_MIN_NETWORK,
-        UPDATE_MAX_NETWORK,
-        env,
-    )
+    """Seconds between shared network refreshes."""
+    return _network_interval(os.environ if env is None else env)
 
 
 def update_cache_path(home: str | Path | None = None) -> Path:
@@ -455,7 +439,7 @@ def require_newer(version: str, installed: str | None = None) -> None:
     running = parse_version(current)
     if target < running:
         raise UpgradeError(f"refusing to downgrade lpui from v{current} to v{version}")
-    if target == running:
+    if not _is_newer(target, running):
         raise UpgradeError(f"lpui v{current} is already installed")
 
 

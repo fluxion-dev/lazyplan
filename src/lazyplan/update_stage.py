@@ -26,6 +26,15 @@ from pathlib import Path
 from typing import Any
 
 from . import textfile
+from .core.policies.environment import (
+    valid_filename as _valid_filename,
+)
+from .core.policies.environment import (
+    valid_sha as _valid_sha,
+)
+from .core.policies.environment import (
+    valid_url as _valid_url_policy,
+)
 from .repo import shared_home
 from .upgrade import (
     PIPX,
@@ -99,25 +108,8 @@ def wheel_path(update: StagedUpdate, home: str | Path | None = None) -> Path:
     return path
 
 
-def _valid_sha(value: object) -> bool:
-    return (
-        isinstance(value, str) and len(value) == 64 and all(c in "0123456789abcdef" for c in value)
-    )
-
-
-def _valid_filename(value: object) -> bool:
-    if not isinstance(value, str) or not value.endswith(".whl"):
-        return False
-    if not value.startswith("lazyplan_tui-"):
-        return False
-    return value == Path(value).name and ".." not in value
-
-
 def _valid_url(value: object) -> bool:
-    if not isinstance(value, str):
-        return False
-    parsed = urllib.parse.urlparse(value)
-    return parsed.scheme == "https" and parsed.hostname == WHEEL_HOST
+    return _valid_url_policy(value, WHEEL_HOST)
 
 
 def stage_from_payload(data: object) -> StagedUpdate | None:

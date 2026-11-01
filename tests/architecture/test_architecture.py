@@ -9,13 +9,28 @@ from __future__ import annotations
 
 import ast
 import json
+import tempfile
 import unittest
 from collections.abc import Iterator
 from pathlib import Path
 
 SRC = Path(__file__).resolve().parents[2] / "src" / "lazyplan"
 BASELINE = Path(__file__).with_name("architecture_baseline.json")
+STORE_IMPORT_BASELINE = Path(__file__).with_name("store_import_baseline.json")
 PACKAGE = "lazyplan"
+
+#: Core is pure: it may not reach for these external roots.
+CORE_FORBIDDEN_EXTERNAL = frozenset({"sqlite3", "os", "pathlib"})
+
+#: Core may not reach up into any other lazyplan layer.
+CORE_FORBIDDEN_INTERNAL = frozenset(
+    {
+        f"{PACKAGE}.store",
+        f"{PACKAGE}.infrastructure",
+        f"{PACKAGE}.services",
+        f"{PACKAGE}.presentation",
+    }
+)
 
 LEAF = 0
 INFRA = 1
@@ -27,6 +42,8 @@ ENTRY = 6
 
 LAYERS: dict[str, int] = {
     "lazyplan": LEAF,
+    "core": LEAF,
+    "infrastructure": INFRA,
     "kinds": LEAF,
     "models": LEAF,
     "messages": LEAF,
@@ -54,6 +71,7 @@ LAYERS: dict[str, int] = {
     "lint": DOMAIN,
     "metrics": DOMAIN,
     "services": SERVICES,
+    "presentation": PRESENTATION,
     "cli": PRESENTATION,
     "design": PRESENTATION,
     "hook_hosts": PRESENTATION,
@@ -213,6 +231,54 @@ def layer_violations(
     return violations
 
 
+def core_import_violations(graph: dict[str, set[str]], root: Path | None = None) -> list[str]:
+    """Return every core import that reaches outside the pure kernel."""
+    root = root or (SRC / "core")
+    if not root.exists():
+        return []
+    known = set(graph)
+    violations: list[str] = []
+    for path in sorted(root.rglob("*.py")):
+        parts = list(path.relative_to(root).with_suffix("").parts)
+        if parts[-1] == "__init__":
+            parts.pop()
+        module = ".".join((PACKAGE, "core", *parts))
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in module_imports(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    external = alias.name.split(".")[0]
+                    if external in CORE_FORBIDDEN_EXTERNAL:
+                        violations.append(f"{module} imports {alias.name}")
+            if isinstance(node, ast.ImportFrom) and not node.level and node.module:
+                external = node.module.split(".")[0]
+                if external in CORE_FORBIDDEN_EXTERNAL:
+                    violations.append(f"{module} imports {node.module}")
+            for target in resolve(path, module, node):
+                resolved = nearest_module(target, known)
+                if resolved in CORE_FORBIDDEN_INTERNAL:
+                    violations.append(f"{module} imports {resolved}")
+    return sorted(set(violations))
+
+
+def store_import_violations(graph: dict[str, set[str]]) -> list[str]:
+    """Return service and presentation modules that import Store directly."""
+    found: list[str] = []
+    for source, dependencies in sorted(graph.items()):
+        layer = LAYERS.get(layer_key(source))
+        if layer not in (SERVICES, PRESENTATION):
+            continue
+        if f"{PACKAGE}.store" in dependencies:
+            found.append(source)
+    return found
+
+
+def store_import_allowlist() -> set[str]:
+    """Return the recorded Store-import exceptions."""
+    data = json.loads(STORE_IMPORT_BASELINE.read_text(encoding="utf-8"))
+    return set(data["modules"])
+
+
 class ArchitectureTest(unittest.TestCase):
     """Every internal edge points down a layer and no cycle exists."""
 
@@ -243,6 +309,32 @@ class ArchitectureTest(unittest.TestCase):
     def test_layer_inversion_is_reported(self) -> None:
         violations = layer_violations({"lazyplan.store": {"lazyplan.cli"}}, set())
         self.assertEqual(violations, ["store -> cli (lazyplan.store -> lazyplan.cli)"])
+
+    def test_core_imports_only_core(self) -> None:
+        violations = core_import_violations(self.graph)
+        self.assertEqual(violations, [], "core purity violations: " + "; ".join(violations))
+
+    def test_core_purity_is_reported(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            core = Path(tmp) / "core"
+            core.mkdir()
+            (core / "__init__.py").write_text("", encoding="utf-8")
+            (core / "bad.py").write_text("import sqlite3\n", encoding="utf-8")
+            violations = core_import_violations({"bad": set()}, root=core)
+        self.assertEqual(violations, ["lazyplan.core.bad imports sqlite3"])
+
+    def test_store_imports_match_the_shrinking_allowlist(self) -> None:
+        allowed = store_import_allowlist()
+        violations = set(store_import_violations(self.graph))
+        self.assertEqual(
+            violations,
+            allowed,
+            "update store_import_baseline.json when a slice removes a direct Store import",
+        )
+
+    def test_store_import_allowlist_names_existing_modules(self) -> None:
+        stale = sorted(store_import_allowlist() - set(self.graph))
+        self.assertEqual(stale, [], f"remove stale Store-import entries: {stale}")
 
 
 if __name__ == "__main__":

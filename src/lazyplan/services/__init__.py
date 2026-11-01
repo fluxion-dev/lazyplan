@@ -6,9 +6,12 @@ from .base import GateError
 from .coordination import (
     block_task,
     claim_next,
+    list_claims,
     parse_ttl,
+    release_claim,
     release_task_claim,
     renew_task_claim,
+    set_blocked,
     start_claim,
     unblock_task,
 )
@@ -96,6 +99,9 @@ __all__ = [
     "start_claim",
     "renew_task_claim",
     "release_task_claim",
+    "release_claim",
+    "set_blocked",
+    "list_claims",
     "claim_next",
     "block_task",
     "unblock_task",

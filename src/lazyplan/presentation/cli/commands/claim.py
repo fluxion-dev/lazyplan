@@ -9,7 +9,8 @@ import time
 from .... import (
     services,
 )
-from ....store import ClaimConflict, ClaimMissing, Store
+from ....core.errors import ClaimConflict, ClaimMissing
+from ....core.ports.coordination import CoordinationPort
 from ...shared import (
     porcelain,
 )
@@ -35,7 +36,7 @@ def _expiry_text(expires_at: float, now: float | None = None) -> str:
     return f"in {delta / 86400:.1f}d"
 
 
-def _cmd_next(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_next(store: CoordinationPort, args: argparse.Namespace, actor: str) -> int:
     if args.plan is not None and store.get_plan(args.plan) is None:
         print(msg_not_found("plan", args.plan), file=sys.stderr)
         return 1
@@ -89,7 +90,7 @@ def _claim_failure(exc: Exception) -> int:
     return 2
 
 
-def _claim_take(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _claim_take(store: CoordinationPort, args: argparse.Namespace, actor: str) -> int:
     result = services.start_claim(
         store, args.id, actor, ttl=args.ttl, note=args.note, force=bool(args.force)
     )
@@ -107,7 +108,7 @@ def _claim_take(store: Store, args: argparse.Namespace, actor: str) -> int:
     return 0
 
 
-def _claim_renew(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _claim_renew(store: CoordinationPort, args: argparse.Namespace, actor: str) -> int:
     claim = services.renew_task_claim(store, args.id, actor, ttl=args.ttl)
     task = store.get_task(args.id)
     if args.json:
@@ -126,7 +127,7 @@ def _claim_renew(store: Store, args: argparse.Namespace, actor: str) -> int:
     return 0
 
 
-def _claim_release(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _claim_release(store: CoordinationPort, args: argparse.Namespace, actor: str) -> int:
     result = services.release_task_claim(store, args.id, actor, force=bool(args.force))
     claim = result["claim"]
     task = result["task"]
@@ -143,7 +144,7 @@ def _claim_release(store: Store, args: argparse.Namespace, actor: str) -> int:
     return 0
 
 
-def _cmd_claim(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_claim(store: CoordinationPort, args: argparse.Namespace, actor: str) -> int:
     actions = {"take": _claim_take, "renew": _claim_renew, "release": _claim_release}
     try:
         return actions[args.action or "take"](store, args, actor)
@@ -151,12 +152,13 @@ def _cmd_claim(store: Store, args: argparse.Namespace, actor: str) -> int:
         return _claim_failure(exc)
 
 
-def _cmd_claims(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_claims(store: CoordinationPort, args: argparse.Namespace, actor: str) -> int:
     del actor
     if getattr(args, "plan", None) is not None and store.get_plan(args.plan) is None:
         print(msg_not_found("plan", args.plan), file=sys.stderr)
         return 1
-    rows = store.list_claims(
+    rows = services.list_claims(
+        store,
         include_expired=bool(getattr(args, "all", False)),
         plan_id=getattr(args, "plan", None),
     )

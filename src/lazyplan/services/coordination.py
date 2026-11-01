@@ -108,12 +108,42 @@ def unblock_task(port: CoordinationPort, task_id: int, actor: str = "human") -> 
     return updated
 
 
+def list_claims(
+    port: CoordinationPort,
+    include_expired: bool = False,
+    plan_id: int | None = None,
+) -> list[dict]:
+    """Lease rows with task and plan context."""
+    return port.list_claims(include_expired=include_expired, plan_id=plan_id)
+
+
+def release_claim(
+    port: CoordinationPort, task_id: int, actor: str, force: bool = False
+) -> Claim | None:
+    """Release a raw lease, preserving bulk undo semantics."""
+    return port.release_claim(task_id, actor, force=force)
+
+
+def set_blocked(
+    port: CoordinationPort,
+    task_id: int,
+    blocked: bool,
+    reason: str = "",
+    actor: str = "human",
+) -> Task | None:
+    """Set the blocked flag without the note and status side effects."""
+    return port.set_blocked(task_id, blocked, reason, actor=actor)
+
+
 __all__ = [
     "block_task",
     "claim_next",
+    "list_claims",
     "parse_ttl",
+    "release_claim",
     "release_task_claim",
     "renew_task_claim",
+    "set_blocked",
     "start_claim",
     "unblock_task",
 ]

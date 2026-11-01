@@ -10,8 +10,8 @@ except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
 from ... import services
+from ...core.errors import ClaimConflict
 from ...models import Status, Task
-from ...store import ClaimConflict
 from .screens import (
     ConfirmScreen,
     FilterPromptScreen,
@@ -72,7 +72,7 @@ if _TEXTUAL_OK:
                 conflicts = 0
                 for task in tasks:
                     try:
-                        if self.store.release_claim(task.id, "tui") is not None:
+                        if services.release_claim(self.store, task.id, "tui") is not None:
                             released += 1
                     except ClaimConflict:
                         conflicts += 1
@@ -88,7 +88,9 @@ if _TEXTUAL_OK:
             states = self._undo
             for state in states:
                 services.set_status(self.store, "task", state["id"], state["status"], actor="tui")
-                self.store.set_blocked(state["id"], state["blocked"], state["reason"], actor="tui")
+                services.set_blocked(
+                    self.store, state["id"], state["blocked"], state["reason"], actor="tui"
+                )
             self._undo = None
             self._saved(f"undid {len(states)} task changes")
 

@@ -15,8 +15,8 @@ except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
 from ... import services
+from ...core.errors import ClaimConflict
 from ...models import Status
-from ...store import ClaimConflict
 from ...templates import load_template
 from ..shared.palette import by_id
 from .constants import DOUBLE_CLICK_WINDOW
@@ -381,7 +381,7 @@ if _TEXTUAL_OK:
             if task_id is None:
                 return
             try:
-                claim = self.store.release_claim(task_id, "tui", force=force)
+                claim = services.release_claim(self.store, task_id, "tui", force=force)
             except ClaimConflict as exc:
                 self.notify(str(exc), severity="error", timeout=5)
                 return

@@ -305,7 +305,8 @@ class ToolsMixin(McpBase):
         return {"ok": True, "criterion": args["id"], "task": args["task"], "linked": True}
 
     def _tool_claims(self, args: dict) -> object:
-        return self._need_store().list_claims(
+        return services.list_claims(
+            self._need_store(),
             include_expired=bool(args.get("all")),
             plan_id=int(args["plan"]) if args.get("plan") else None,
         )

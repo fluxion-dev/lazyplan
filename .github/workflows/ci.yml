@@ -28,6 +28,15 @@ jobs:
           "$VENV_BIN"/python -m pip install -e ".[dev]"
       - name: Gates (ruff + mypy + unittest x2)
         run: ./tools/check.sh
+      - name: Upload snapshot failure report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: snapshot-report-${{ matrix.os }}
+          path: |
+            snapshot_report.html
+            tests/snapshots/__snapshots__/**/*.svg
+          if-no-files-found: ignore
 
   # The ruleset requires one check named `gates`; it passes only when Ubuntu
   # and macOS pass. Windows runs in ci-windows.yml on a nightly schedule.

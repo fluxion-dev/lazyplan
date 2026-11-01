@@ -15,7 +15,7 @@ codes, and `ICONS` / `ASCII_ICONS`. `design/text.py` owns status glyphs,
 truncation, progress text, and provenance chips; `design/rows.py` owns the
 canonical labels and Rich rows; `design/empty.py` owns empty states and
 standard messages. `design/__init__.py` is the stable façade, so callers keep
-using `from lazyplan.design import plan_row`.
+using `from lazyplan.presentation.shared.design import plan_row`.
 
 ## Themes and colour tokens
 

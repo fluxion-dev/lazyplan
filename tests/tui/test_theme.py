@@ -11,8 +11,8 @@ from unittest import mock
 from lazyplan.store import Store
 
 try:
-    from lazyplan import tui as tui_mod
-    from lazyplan.tui.theme import (
+    from lazyplan.presentation import tui as tui_mod
+    from lazyplan.presentation.tui.theme import (
         DARK_NAME,
         DARK_TOKENS,
         LAZYPLAN_DARK,

@@ -19,8 +19,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from unittest import mock
 
-from lazyplan.cli import main as lpui_main
 from lazyplan.models import Status
+from lazyplan.presentation.cli import main as lpui_main
 from lazyplan.services import set_status
 from lazyplan.store import Store
 from tests.support.home import sandbox_home

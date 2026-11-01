@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 
 try:
-    from lazyplan import tui as tui_mod
+    from lazyplan.presentation import tui as tui_mod
 except ImportError:  # pragma: no cover - stdlib-only interpreter
     tui_mod = None  # type: ignore[assignment]
 

@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import unittest
 
-from lazyplan.design.row_stats import (
+from lazyplan.presentation.shared.design.row_stats import (
     SLOTS,
     TITLE_MIN,
     RowStats,
     render_stats,
     stats_layout,
 )
-from lazyplan.design.text import pr_label
+from lazyplan.presentation.shared.design.text import pr_label
 
 try:
     from rich.text import Text
@@ -148,7 +148,7 @@ class StatsRenderTest(unittest.TestCase):
         self.assertEqual(len(plain), 8)
 
     def test_pr_label_matches_pr_chip_text(self) -> None:
-        from lazyplan.design.text import pr_chip
+        from lazyplan.presentation.shared.design.text import pr_chip
 
         for state, checks in (
             ("", ""),

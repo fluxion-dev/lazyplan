@@ -8,8 +8,9 @@ import os
 import tempfile
 import unittest
 
-from lazyplan import render, services
+from lazyplan import services
 from lazyplan.models import Status
+from lazyplan.presentation.shared import render
 from lazyplan.store import Store
 
 

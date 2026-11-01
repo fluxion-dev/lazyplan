@@ -6,7 +6,7 @@ import json
 import unittest
 from typing import Any
 
-from lazyplan import mcp
+from lazyplan.presentation import mcp
 from tests.support.paths import ROOT
 
 FIXTURE = ROOT / "tests" / "fixtures" / "mcp" / "schema.json"

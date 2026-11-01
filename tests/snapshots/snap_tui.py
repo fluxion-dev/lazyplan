@@ -11,10 +11,10 @@ from unittest import mock
 import pytest
 
 from lazyplan import metrics
+from lazyplan.presentation.tui import create_app
+from lazyplan.presentation.tui.screens import DetailScreen, PaletteScreen
+from lazyplan.presentation.tui.screens.source import SourceScreen
 from lazyplan.store import Store
-from lazyplan.tui import create_app
-from lazyplan.tui.screens import DetailScreen, PaletteScreen
-from lazyplan.tui.screens.source import SourceScreen
 
 FIXED_START = 1_700_000_000.0
 FIXED_NOW = FIXED_START + 30 * 86_400

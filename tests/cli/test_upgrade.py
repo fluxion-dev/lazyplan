@@ -12,8 +12,8 @@ from pathlib import Path
 from unittest import mock
 
 from lazyplan import upgrade
-from lazyplan.cli import main
-from lazyplan.cli.commands import admin as cli_mod
+from lazyplan.presentation.cli import main
+from lazyplan.presentation.cli.commands import admin as cli_mod
 
 
 class TestDetect(unittest.TestCase):

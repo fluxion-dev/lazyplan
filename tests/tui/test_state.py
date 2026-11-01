@@ -12,10 +12,10 @@ from lazyplan.store import Store
 try:
     from textual.widgets import Label, Tree
 
-    from lazyplan import tui as tui_mod
     from lazyplan.models import Status
-    from lazyplan.tui.query import query_one_opt
-    from lazyplan.tui.state import AppState
+    from lazyplan.presentation import tui as tui_mod
+    from lazyplan.presentation.tui.query import query_one_opt
+    from lazyplan.presentation.tui.state import AppState
 except ImportError:  # pragma: no cover - stdlib-only interpreter
     tui_mod = None  # type: ignore[assignment]
 

@@ -10,8 +10,8 @@ from contextlib import redirect_stdout
 from pathlib import Path
 
 from lazyplan import audit, hooks, services
-from lazyplan.cli import main as lpui_main
 from lazyplan.models import Status
+from lazyplan.presentation.cli import main as lpui_main
 from lazyplan.store import Store
 from tests.support.home import sandbox_home
 

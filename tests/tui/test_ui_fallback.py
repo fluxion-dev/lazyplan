@@ -9,8 +9,8 @@ from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest import mock
 
-from lazyplan import setup
-from lazyplan.cli import main as lpui_main
+from lazyplan.presentation import setup
+from lazyplan.presentation.cli import main as lpui_main
 from lazyplan.store import Store
 from tests.support.home import sandbox_home
 
@@ -47,7 +47,9 @@ class UiFallbackCase(unittest.TestCase):
     def _run(self, argv: list[str]) -> tuple[int, str, str]:
         out, err = io.StringIO(), io.StringIO()
         with (
-            mock.patch("lazyplan.cli.commands.ui._interactive_terminal", return_value=False),
+            mock.patch(
+                "lazyplan.presentation.cli.commands.ui._interactive_terminal", return_value=False
+            ),
             redirect_stdout(out),
             redirect_stderr(err),
         ):
@@ -71,13 +73,17 @@ class UiFallbackCase(unittest.TestCase):
         self.assertNotIn("no interactive terminal", err)
 
     def test_empty_database_prints_the_empty_line(self):
-        with mock.patch("lazyplan.cli.commands.ui._interactive_terminal", return_value=False):
+        with mock.patch(
+            "lazyplan.presentation.cli.commands.ui._interactive_terminal", return_value=False
+        ):
             Store(self.home / ".lazyplan/lazyplan.db")
             # remove the seeded plan tree by using a fresh DB below
         fresh = Path(self.tmp.name) / "fresh.db"
         out = io.StringIO()
         with (
-            mock.patch("lazyplan.cli.commands.ui._interactive_terminal", return_value=False),
+            mock.patch(
+                "lazyplan.presentation.cli.commands.ui._interactive_terminal", return_value=False
+            ),
             redirect_stdout(out),
         ):
             code = lpui_main(["--db", str(fresh)])

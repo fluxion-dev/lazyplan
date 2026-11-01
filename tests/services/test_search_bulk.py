@@ -7,12 +7,12 @@ import tempfile
 import time
 import unittest
 
-from lazyplan.palette import COMMANDS
+from lazyplan.presentation.shared.palette import COMMANDS
 from lazyplan.store import Store
 from tests.support.pilot import settle
 
 try:
-    from lazyplan import tui as tui_mod
+    from lazyplan.presentation import tui as tui_mod
 except ImportError:  # pragma: no cover
     tui_mod = None  # type: ignore[assignment]
 

@@ -3,8 +3,8 @@
 import argparse
 import unittest
 
-from lazyplan.cli.parser import build_parser
 from lazyplan.docs_meta import ENVIRONMENT, FILES
+from lazyplan.presentation.cli.parser import build_parser
 from tests.support.paths import ROOT
 
 USAGE = (ROOT / "docs/usage.md").read_text(encoding="utf-8")

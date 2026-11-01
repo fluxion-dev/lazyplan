@@ -11,8 +11,8 @@ import unittest
 from unittest import mock
 
 from lazyplan import services, stats
-from lazyplan.cli import main as lpui_main
 from lazyplan.models import Status
+from lazyplan.presentation.cli import main as lpui_main
 from lazyplan.store import Store
 from tests.support.home import sandbox_home
 

@@ -307,8 +307,10 @@ class ArchitectureTest(unittest.TestCase):
         self.assertEqual(violations, [], "layer inversions: " + "; ".join(violations))
 
     def test_layer_inversion_is_reported(self) -> None:
-        violations = layer_violations({"lazyplan.store": {"lazyplan.cli"}}, set())
-        self.assertEqual(violations, ["store -> cli (lazyplan.store -> lazyplan.cli)"])
+        violations = layer_violations({"lazyplan.store": {"lazyplan.presentation.cli"}}, set())
+        self.assertEqual(
+            violations, ["store -> presentation (lazyplan.store -> lazyplan.presentation.cli)"]
+        )
 
     def test_core_imports_only_core(self) -> None:
         violations = core_import_violations(self.graph)

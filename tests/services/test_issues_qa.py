@@ -12,7 +12,7 @@ from types import SimpleNamespace
 from unittest import mock
 
 from lazyplan import services
-from lazyplan.cli import main as lpui_main
+from lazyplan.presentation.cli import main as lpui_main
 from lazyplan.store import Store
 from tests.support.home import sandbox_home
 

@@ -13,9 +13,9 @@ from lazyplan.models import Milestone, Plan, Status, Task
 from lazyplan.store import Store
 
 try:
-    from lazyplan import tui as tui_mod
-    from lazyplan.tui.controllers.git_state import GitStateController
-    from lazyplan.tui.controllers.tree import TreeController
+    from lazyplan.presentation import tui as tui_mod
+    from lazyplan.presentation.tui.controllers.git_state import GitStateController
+    from lazyplan.presentation.tui.controllers.tree import TreeController
 except ImportError:  # pragma: no cover - stdlib-only interpreter
     tui_mod = None  # type: ignore[assignment]
 

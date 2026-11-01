@@ -4,10 +4,9 @@ from __future__ import annotations
 
 import unittest
 
-from lazyplan.core.entities import Criterion, Plan, Status
+from lazyplan.core.entities import Plan, Status
 from lazyplan.core.policies.planning import (
     ARCHIVE_AFTER_SECS,
-    criterion_progress,
     is_archived,
     next_status,
     rollup_target,
@@ -54,18 +53,6 @@ class TestArchive(unittest.TestCase):
         self.plan.status = Status.DOING
         events = {1: (100.0, Status.DOING.value)}
         self.assertFalse(is_archived(self.plan, events, 10_000.0))
-
-
-class TestCriterionProgress(unittest.TestCase):
-    def test_counts_done_and_total(self) -> None:
-        items = [
-            Criterion(id=1, parent_kind="plan", parent_id=1, text="a", done=True),
-            Criterion(id=2, parent_kind="plan", parent_id=1, text="b"),
-        ]
-        self.assertEqual(criterion_progress(items), (1, 2))
-
-    def test_empty_checklist(self) -> None:
-        self.assertEqual(criterion_progress([]), (0, 0))
 
 
 if __name__ == "__main__":

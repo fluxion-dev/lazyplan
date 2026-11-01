@@ -11,7 +11,7 @@ from lazyplan.store import Store
 from tests.support.pilot import settle
 
 try:
-    from lazyplan import tui as tui_mod
+    from lazyplan.presentation import tui as tui_mod
 except ImportError:  # stdlib-only interpreter: no textual, no screens
     tui_mod = None  # type: ignore[assignment]
 
@@ -77,7 +77,7 @@ class TestCommitChips(unittest.IsolatedAsyncioTestCase):
     async def test_detail_lists_commits(self):
         from textual.widgets import Static
 
-        from lazyplan.tui.screens import DetailScreen
+        from lazyplan.presentation.tui.screens import DetailScreen
 
         async with self.app.run_test() as pilot:
             await pilot.pause()
@@ -139,7 +139,7 @@ class TestCommitChips(unittest.IsolatedAsyncioTestCase):
             self.assertIn(("task", self.bare_tid), self.app._row_nodes)
 
     async def test_g_opens_source_screen(self):
-        from lazyplan.tui.screens.source import SourceScreen
+        from lazyplan.presentation.tui.screens.source import SourceScreen
 
         async with self.app.run_test() as pilot:
             await pilot.pause()
@@ -152,7 +152,7 @@ class TestCommitChips(unittest.IsolatedAsyncioTestCase):
     async def test_detail_hides_empty_commits(self):
         from textual.widgets import Static
 
-        from lazyplan.tui.screens import DetailScreen
+        from lazyplan.presentation.tui.screens import DetailScreen
 
         async with self.app.run_test() as pilot:
             await pilot.pause()

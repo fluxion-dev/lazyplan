@@ -12,7 +12,7 @@ from lazyplan.models import Status
 from lazyplan.store import Store
 
 try:
-    from lazyplan import tui as tui_mod
+    from lazyplan.presentation import tui as tui_mod
 except ImportError:  # pragma: no cover
     tui_mod = None  # type: ignore[assignment]
 

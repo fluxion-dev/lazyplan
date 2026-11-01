@@ -37,8 +37,8 @@ Repository = "https://github.com/fluxion-dev/lazyplan"
 Issues = "https://github.com/fluxion-dev/lazyplan/issues"
 Changelog = "https://github.com/fluxion-dev/lazyplan/blob/main/CHANGELOG.md"
 [project.scripts]
-lazyplan = "lazyplan.cli:main"
-lpui = "lazyplan.cli:main"
+lazyplan = "lazyplan.presentation.cli:main"
+lpui = "lazyplan.presentation.cli:main"
 [project.optional-dependencies]
 dev = ["ruff>=0.8", "mypy>=1.13", "vulture>=2.14", "xenon>=0.9", "pytest>=8", "pytest-textual-snapshot>=1.0"]
 test = ["pytest>=8", "pytest-textual-snapshot>=1.0"]
@@ -49,7 +49,7 @@ build-backend = "setuptools.build_meta"
 where = ["src"]
 
 [tool.setuptools.package-data]
-lazyplan = ["data/*.md", "tui/css/*.tcss"]
+lazyplan = ["data/*.md", "presentation/tui/css/*.tcss"]
 
 [tool.setuptools.data-files]
 "share/man/man1" = ["docs/lpui.1", "docs/lazyplan.1"]

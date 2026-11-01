@@ -7,7 +7,7 @@ import unittest
 from lazyplan.store import Store
 
 try:
-    from lazyplan.tui.screens import (
+    from lazyplan.presentation.tui.screens import (
         ConfirmScreen,
         NewMilestoneScreen,
         NewPlanScreen,
@@ -30,7 +30,7 @@ class TestForms(unittest.IsolatedAsyncioTestCase):
         self.tmp.cleanup()
 
     def _app(self):
-        from lazyplan.tui import create_app
+        from lazyplan.presentation.tui import create_app
 
         return create_app(self.db)
 

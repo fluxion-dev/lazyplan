@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 
-from ..entities import Criterion, Plan, Status
+from ..entities import Plan, Status
 
 #: A finished plan leaves the default view after this idle window.
 ARCHIVE_AFTER_SECS = 24 * 3600
@@ -37,9 +37,3 @@ def is_archived(plan: Plan, events: Mapping[int, tuple[float, str]], now: float)
         return False
     timestamp, target = last
     return target == Status.DONE.value and (now - timestamp) > ARCHIVE_AFTER_SECS
-
-
-def criterion_progress(criteria: Iterable[Criterion]) -> tuple[int, int]:
-    """Return (done, total) for a checklist."""
-    items = list(criteria)
-    return sum(1 for item in items if item.done), len(items)

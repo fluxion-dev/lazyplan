@@ -5,9 +5,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from lazyplan import setup, templates
+from lazyplan import templates
+from lazyplan.presentation import setup
+from lazyplan.presentation.setup.layout import SetupChoice
 from lazyplan.repo import PLAN_DIR, repo_plan_db_path
-from lazyplan.setup.layout import SetupChoice
 from lazyplan.store import Store
 from tests.support.home import sandbox_home
 

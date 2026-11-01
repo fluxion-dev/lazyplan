@@ -6,7 +6,7 @@ import re
 import unittest
 from contextlib import redirect_stdout
 
-from lazyplan.cli.parser import build_parser
+from lazyplan.presentation.cli.parser import build_parser
 from tests.support.paths import ROOT
 
 

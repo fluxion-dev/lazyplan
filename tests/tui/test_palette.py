@@ -5,13 +5,13 @@ import tempfile
 import unittest
 from unittest import mock
 
-from lazyplan import help as help_mod
-from lazyplan import palette
+from lazyplan.presentation.shared import help as help_mod
+from lazyplan.presentation.shared import palette
 from lazyplan.store import Store
 
 try:
-    from lazyplan import tui as tui_mod
-    from lazyplan.tui.screens import PaletteScreen
+    from lazyplan.presentation import tui as tui_mod
+    from lazyplan.presentation.tui.screens import PaletteScreen
 except ImportError:  # stdlib-only interpreter: no textual, no screens
     tui_mod = None  # type: ignore[assignment]
 
@@ -67,13 +67,13 @@ class TestPalette(unittest.IsolatedAsyncioTestCase):
         url = "https://github.com/org/repo/pull/7"
         self.store.link_forge("task", self.tid, 7, url=url, title="Fix login")
         self.app.selected = ("task", self.tid)
-        with mock.patch("lazyplan.tui.git_actions.webbrowser.open") as opener:
+        with mock.patch("lazyplan.presentation.tui.git_actions.webbrowser.open") as opener:
             self.app.action_open_pr()
         opener.assert_called_once_with(url)
 
     def test_open_pr_without_a_link_notifies(self):
         self.app.selected = ("task", self.tid)
-        with mock.patch("lazyplan.tui.git_actions.webbrowser.open") as opener:
+        with mock.patch("lazyplan.presentation.tui.git_actions.webbrowser.open") as opener:
             self.app.action_open_pr()
         opener.assert_not_called()
 
@@ -133,7 +133,7 @@ class TestPalette(unittest.IsolatedAsyncioTestCase):
     async def test_help_fits_and_scrolls_at_80x24(self):
         from textual.containers import VerticalScroll
 
-        from lazyplan.tui.screens import HelpScreen
+        from lazyplan.presentation.tui.screens import HelpScreen
 
         async with self.app.run_test(size=(80, 24)) as pilot:
             self.app.push_screen(HelpScreen())

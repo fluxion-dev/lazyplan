@@ -3,7 +3,7 @@ import os
 import tempfile
 import unittest
 
-from lazyplan.cli import main as lpui_main
+from lazyplan.presentation.cli import main as lpui_main
 from lazyplan.repo import find_repo_root, repo_label, resolve_db_path
 from lazyplan.store import Store
 from tests.support.home import sandbox_home

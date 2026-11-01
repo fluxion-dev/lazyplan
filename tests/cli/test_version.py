@@ -11,8 +11,8 @@ from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
 
-from lazyplan.cli import main
-from lazyplan.cli.parser import package_version
+from lazyplan.presentation.cli import main
+from lazyplan.presentation.cli.parser import package_version
 from tests.support.paths import ROOT
 
 SEMVER = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")

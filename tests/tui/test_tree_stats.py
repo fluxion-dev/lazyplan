@@ -8,14 +8,14 @@ import unittest
 from typing import Any
 
 from lazyplan import services
-from lazyplan.design import RowStats, render_stats, stats_layout
+from lazyplan.presentation.shared.design import RowStats, render_stats, stats_layout
 from lazyplan.store import Store
 
 try:
     from rich.text import Text
     from textual.widgets import Tree
 
-    from lazyplan import tui as tui_mod
+    from lazyplan.presentation import tui as tui_mod
 except ImportError:  # stdlib-only interpreter
     Text = None  # type: ignore[assignment,misc]
     Tree = None  # type: ignore[assignment,misc]

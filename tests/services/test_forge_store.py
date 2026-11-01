@@ -6,7 +6,7 @@ import tempfile
 import unittest
 
 from lazyplan import services
-from lazyplan.render import render_full
+from lazyplan.presentation.shared.render import render_full
 from lazyplan.store import Store
 
 

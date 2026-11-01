@@ -7,8 +7,8 @@ import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from unittest import mock
 
-from lazyplan.cli import main as lpui_main
 from lazyplan.models import Status
+from lazyplan.presentation.cli import main as lpui_main
 from lazyplan.store import Store
 
 

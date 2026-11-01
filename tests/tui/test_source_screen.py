@@ -13,8 +13,8 @@ from tests.support.pilot import settle
 try:
     from textual.widgets import Input, Tree
 
-    from lazyplan import tui as tui_mod
-    from lazyplan.tui.screens.source import SourceScreen
+    from lazyplan.presentation import tui as tui_mod
+    from lazyplan.presentation.tui.screens.source import SourceScreen
 except ImportError:  # stdlib-only interpreter: no textual, no screens
     tui_mod = None  # type: ignore[assignment]
     SourceScreen = None  # type: ignore[assignment]
@@ -157,7 +157,7 @@ class TestSourceScreen(unittest.IsolatedAsyncioTestCase):
                 await pilot.press("y")
                 await pilot.pause()
                 copied.assert_called_once_with("a.py")
-            with mock.patch("lazyplan.tui.screens.source.webbrowser.open") as opened:
+            with mock.patch("lazyplan.presentation.tui.screens.source.webbrowser.open") as opened:
                 await pilot.press("o")
                 await pilot.pause()
                 opened.assert_called_once()
@@ -330,7 +330,7 @@ class TestSourceScreen(unittest.IsolatedAsyncioTestCase):
         async with self.app.run_test(size=(120, 30)) as pilot:
             await pilot.pause()
             screen = await self._open(pilot)
-            with mock.patch("lazyplan.tui.screens.source.DIFF_PREVIEW_LINES", 3):
+            with mock.patch("lazyplan.presentation.tui.screens.source.DIFF_PREVIEW_LINES", 3):
                 block = screen._diff_block(self.repo, big)
             self.assertTrue(any("more lines" in row for row in block))
 
@@ -346,7 +346,7 @@ class TestSourceScreen(unittest.IsolatedAsyncioTestCase):
                 ("error", "diff unavailable", "unavailable"),
             ):
                 with mock.patch(
-                    "lazyplan.tui.views.source.read_diff",
+                    "lazyplan.presentation.tui.views.source.read_diff",
                     return_value=DiffRead(state=state, detail=detail),
                 ):
                     screen._diff_cache.clear()

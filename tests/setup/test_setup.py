@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from lazyplan import setup
+from lazyplan.presentation import setup
 from lazyplan.repo import PLAN_DIR, repo_plan_db_path
 from lazyplan.store import Store
 

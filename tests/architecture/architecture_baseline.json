@@ -1,6 +1,6 @@
 {
     "layer_exceptions": [],
     "budgets": {
-        "palette.py": 615
+        "presentation/shared/palette.py": 615
     }
 }

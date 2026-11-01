@@ -11,11 +11,9 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
+from ..core.serialization import to_payload
 from ..migrate import migrate
-from ..models import (
-    Claim,
-    Status,
-)
+from ..models import Claim
 from ..repo import ensure_plan_dir, resolve_db_path, seed_shared_db, shared_db_path
 from .stubs import StoreStubs
 
@@ -38,18 +36,6 @@ class ClaimConflict(ClaimError):
 
 class ClaimMissing(ClaimError):
     """No lease exists for the task."""
-
-
-def to_payload(d: dict) -> dict:
-    """JSON/agent-safe: Status -> value, omit empty blocked fields."""
-    d = dict(d)
-    if isinstance(d.get("status"), Status):
-        d["status"] = d["status"].value
-    if not d.get("blocked"):
-        d.pop("blocked", None)
-    if not d.get("blocked_reason"):
-        d.pop("blocked_reason", None)
-    return d
 
 
 def _files_json(files: tuple[str, ...] | list[str]) -> str:

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from .base import GateError
-from .claims import (
+from .coordination import (
     block_task,
     claim_next,
     parse_ttl,

@@ -14,12 +14,13 @@ from lazyplan.store import Store
 try:
     from lazyplan import tui as tui_mod
     from lazyplan.metrics import TimelineLane
-    from lazyplan.tui.metrics.timeline import TimelineCard, _active_segments
+    from lazyplan.tui.metrics.timeline import TimelineCard, _active_segments, _lane_window
 except ImportError:  # stdlib-only interpreter: no textual
     tui_mod = None  # type: ignore[assignment]
     TimelineLane = None  # type: ignore[assignment,misc]
     TimelineCard = None  # type: ignore[assignment,misc]
     _active_segments = None  # type: ignore[assignment]
+    _lane_window = None  # type: ignore[assignment]
 
 
 def _at(stamp: float, action):
@@ -104,6 +105,20 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(_active_segments(idle, 0, 100, 1), [])
         self.assertEqual(_active_segments(active, 0, 100, 1), [(10, 20), (30, 40)])
+
+    def test_lane_window_keeps_one_row_per_lane_and_spare_space_below(self) -> None:
+        unit, top, bottom = _lane_window(12, 3, 3)
+
+        self.assertEqual(unit, 1.0)
+        self.assertEqual(top, 5.5)
+        self.assertEqual(bottom, 6.0)
+
+    def test_lane_window_compresses_only_when_lanes_overflow(self) -> None:
+        unit, top, bottom = _lane_window(12, 10, 6)
+
+        self.assertGreater(unit, 1.0)
+        self.assertGreater(top, 10.0)
+        self.assertEqual(bottom, 0.0)
 
 
 if __name__ == "__main__":

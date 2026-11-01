@@ -43,6 +43,15 @@ def _active_segments(
     return segments
 
 
+def _lane_window(rows: int, count: int, legend_rows: int) -> tuple[float, float, float]:
+    """Y scale, top, and spare bottom rows for one-row lane spacing."""
+    content = count + legend_rows
+    if content <= rows:
+        return 1.0, count - 0.5 + legend_rows, float(rows - content)
+    unit = content / rows
+    return unit, count - 0.5 + legend_rows * unit, 0.0
+
+
 class TimelineCard(MetricCard):
     """One swimlane per project or milestone from its start to its finish."""
 
@@ -103,11 +112,9 @@ class TimelineCard(MetricCard):
         ticks = [left + (right - left) * index / (X_TICKS - 1) for index in range(X_TICKS)]
         rows = max(2, (plot.size.height or 12) - 3)
         legend_rows = min(count, MAX_LEGEND_ROWS, max(1, rows - 1))
-        lane_rows = max(1, rows - legend_rows)
-        row_unit = count / lane_rows
-        top = count - 0.5 + legend_rows * row_unit
+        row_unit, top, bottom = _lane_window(rows, count, legend_rows)
         plt.xlim(left, right)
-        plt.ylim(-0.5, top)
+        plt.ylim(-0.5 - bottom, top)
         plt.xticks(ticks, [_tick_label(stamp, span) for stamp in ticks])
         plt.yticks(positions, ["" for _ in positions])
         self._legend(plt, lanes, left, top, row_unit, legend_rows, surface)

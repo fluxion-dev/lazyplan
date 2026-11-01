@@ -43,7 +43,7 @@ class TestSearchBulk(unittest.IsolatedAsyncioTestCase):
     def _ids(self) -> set[int]:
         return {
             task.id
-            for _plan, milestones in self.app.tree_controller.filtered_tree()
+            for _plan, milestones in self.app.tree_controller.filters.filtered_tree()
             for _milestone, tasks in milestones
             for task in tasks
         }

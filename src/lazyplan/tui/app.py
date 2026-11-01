@@ -120,11 +120,7 @@ if _TEXTUAL_OK:
             narrow = available < 100
             compact = available < 80
             wide = available >= 120
-            changed = (
-                self._narrow is not narrow
-                or self.state.compact is not compact
-                or self.state.wide is not wide
-            )
+            changed = self._narrow is not narrow
             self._narrow = narrow
             self.state.compact = compact
             self.state.wide = wide

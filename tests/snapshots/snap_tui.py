@@ -35,8 +35,14 @@ def data_app():
         clock["now"] += 3_600
         return clock["now"]
 
-    def frozen_snapshot(store, now=None, plan_id=None):
-        return real_snapshot(store, now=FIXED_NOW, plan_id=plan_id)
+    def frozen_snapshot(store, now=None, plan_id=None, scope_kind=None, scope_id=None):
+        return real_snapshot(
+            store,
+            now=FIXED_NOW,
+            plan_id=plan_id,
+            scope_kind=scope_kind,
+            scope_id=scope_id,
+        )
 
     with tempfile.TemporaryDirectory() as tmp:
         db = os.path.join(tmp, "data.db")

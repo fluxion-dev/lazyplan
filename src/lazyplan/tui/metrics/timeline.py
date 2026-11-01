@@ -10,7 +10,13 @@ from textual_plotext import PlotextPlot
 
 from ...metrics import Timeline, TimelineLane
 from ..query import query_one_opt
-from ..theme import apply_chart_theme, chart_color, lane_rgb, token_rgb
+from ..theme import (
+    apply_chart_theme,
+    chart_color,
+    lane_baseline_rgb,
+    lane_rgb,
+    token_rgb,
+)
 from .base import MetricCard
 from .timeline_layout import (
     MAX_LEGEND_ROWS,
@@ -22,6 +28,7 @@ from .timeline_layout import (
     legend_layout,
     trace_glyph,
     trace_points,
+    visible_span,
 )
 
 
@@ -98,6 +105,15 @@ class TimelineCard(MetricCard):
         for index, lane in enumerate(lanes):
             color = lane_rgb(self.app, index)
             y = positions[index]
+            if lane.selected:
+                baseline = visible_span(lane, left, right, min_visible)
+                if baseline is not None:
+                    plt.plot(
+                        list(baseline),
+                        [y, y],
+                        marker="─",
+                        color=lane_baseline_rgb(self.app, index),
+                    )
             for start, end in active_segments(lane, left, right, min_visible):
                 if lane.selected:
                     points = trace_points(start, end, left, right, width)

@@ -23,7 +23,9 @@ try:
         legend_layout,
         trace_glyph,
         trace_points,
+        visible_span,
     )
+    from lazyplan.tui.theme import lane_baseline_rgb
 except ImportError:  # stdlib-only interpreter: no textual
     tui_mod = None  # type: ignore[assignment]
     TimelineLane = None  # type: ignore[assignment,misc]
@@ -35,6 +37,8 @@ except ImportError:  # stdlib-only interpreter: no textual
     legend_layout = None  # type: ignore[assignment]
     trace_glyph = None  # type: ignore[assignment]
     trace_points = None  # type: ignore[assignment]
+    visible_span = None  # type: ignore[assignment]
+    lane_baseline_rgb = None  # type: ignore[assignment]
 
 
 def _at(stamp: float, action):
@@ -69,6 +73,10 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
 
     async def asyncTearDown(self) -> None:
         self.tmp.cleanup()
+
+    @staticmethod
+    def _rgb_code(rgb: tuple[int, int, int]) -> str:
+        return f"\x1b[38;2;{rgb[0]};{rgb[1]};{rgb[2]}m"
 
     async def test_card_renders_glyph_lanes_and_inside_labels(self) -> None:
         plan_id = _seed(self.store)
@@ -155,9 +163,49 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
             )
             await pilot.pause()
             chart = card.query_one("PlotextPlot").plt.build()
+            baseline = lane_baseline_rgb(app, 2)
         self.assertIn("\x1b[1m", chart)
         self.assertIn("●", chart)
         self.assertIn("Bold task", chart)
+        self.assertIn(self._rgb_code(baseline), chart)
+
+    async def test_selected_inactive_lane_draws_a_dim_baseline(self) -> None:
+        plan = _at(1_000, lambda: self.store.add_plan("Idle plan"))
+        _at(1_100, lambda: self.store.add_milestone(plan.id, "Idle milestone"))
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.selected = ("plan", plan.id)
+            app.metrics_controller.stop()
+            card = app.query_one("#metric-timeline", TimelineCard)
+            card.refresh_timeline(
+                metrics.snapshot(
+                    self.store,
+                    now=2_000,
+                    plan_id=plan.id,
+                    scope_kind="plan",
+                    scope_id=plan.id,
+                ).timeline
+            )
+            await pilot.pause()
+            chart = card.query_one("PlotextPlot").plt.build()
+            baseline = lane_baseline_rgb(app, 0)
+        self.assertIn(self._rgb_code(baseline), chart)
+
+    async def test_unselected_inactive_lane_has_no_baseline(self) -> None:
+        plan = _at(1_000, lambda: self.store.add_plan("Idle plan"))
+        _at(1_100, lambda: self.store.add_milestone(plan.id, "Idle milestone"))
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.selected = None
+            app.metrics_controller.stop()
+            card = app.query_one("#metric-timeline", TimelineCard)
+            card.refresh_timeline(metrics.snapshot(self.store, now=2_000, plan_id=plan.id).timeline)
+            await pilot.pause()
+            chart = card.query_one("PlotextPlot").plt.build()
+            baseline = lane_baseline_rgb(app, 0)
+        self.assertNotIn(self._rgb_code(baseline), chart)
 
     async def test_unselected_trace_is_not_bold(self) -> None:
         plan = _at(1_000, lambda: self.store.add_plan("Plain plan"))
@@ -243,6 +291,14 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(points[0], 10)
         self.assertEqual(points[-1], 20)
         self.assertEqual(points, sorted(points))
+
+    def testvisible_span_clips_to_the_window(self) -> None:
+        lane = TimelineLane("plan", "Lane", 10, 20, ())
+
+        self.assertEqual(visible_span(lane, 0, 100, 1), (10, 20))
+        self.assertEqual(visible_span(lane, 15, 100, 1), (15, 20))
+        self.assertEqual(visible_span(lane, 0, 15, 1), (10, 15))
+        self.assertIsNone(visible_span(lane, 30, 40, 1))
 
     def testlane_window_keeps_one_row_per_lane_and_spare_space_below(self) -> None:
         unit, top, bottom = lane_window(12, 3, 3)

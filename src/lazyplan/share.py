@@ -7,37 +7,23 @@ from __future__ import annotations
 
 import html
 import json
-from typing import Any
 
 from . import textfile
-from .store import Store
+from .core.policies.transfer import safe_payload
+from .core.ports.transfer import TransferPort
 
 
-def _safe(value: Any) -> Any:
-    """Recursively drop cached API payloads before sharing."""
-    if isinstance(value, dict):
-        return {key: _safe(item) for key, item in value.items() if key != "payload"}
-    if isinstance(value, list):
-        return [_safe(item) for item in value]
-    return value
-
-
-def _safe_links(items: list[dict]) -> list[dict]:
-    """Drop cached API payloads before sharing."""
-    return [item for item in _safe(items) if isinstance(item, dict)]
-
-
-def payload(store: Store, plan_id: int) -> dict | None:
+def payload(store: TransferPort, plan_id: int) -> dict | None:
     """Plan payload for a share, without secrets or raw cache records."""
     full = store.get_full("plan", plan_id)
     if full is None:
         return None
     data = dict(full)
     # Keep the share shape stable even when a section has no rows.
-    data["links"] = _safe_links(data.get("links", []))
-    data["forge_links"] = _safe_links(data.get("forge_links", []))
-    data["comments"] = _safe_links(data.get("comments", []))
-    safe = _safe(data)
+    data["links"] = safe_payload(data.get("links", []))
+    data["forge_links"] = safe_payload(data.get("forge_links", []))
+    data["comments"] = safe_payload(data.get("comments", []))
+    safe = safe_payload(data)
     assert isinstance(safe, dict)
     return safe
 
@@ -51,7 +37,7 @@ def _task_line(task: dict) -> str:
     )
 
 
-def render_html(store: Store, plan_id: int) -> str | None:
+def render_html(store: TransferPort, plan_id: int) -> str | None:
     """Standalone escaped HTML plan document."""
     data = payload(store, plan_id)
     if data is None:
@@ -119,7 +105,7 @@ def render_html(store: Store, plan_id: int) -> str | None:
     return "\n".join(out)
 
 
-def render_json(store: Store, plan_id: int) -> str | None:
+def render_json(store: TransferPort, plan_id: int) -> str | None:
     """Safe JSON payload for a share."""
     data = payload(store, plan_id)
     if data is None:
@@ -127,7 +113,7 @@ def render_json(store: Store, plan_id: int) -> str | None:
     return json.dumps(data, indent=2, default=str)
 
 
-def write(store: Store, plan_id: int, fmt: str, dest: str | None) -> str | None:
+def write(store: TransferPort, plan_id: int, fmt: str, dest: str | None) -> str | None:
     """Render a share and optionally write it to a file."""
     text = render_html(store, plan_id) if fmt == "html" else render_json(store, plan_id)
     if text is None:

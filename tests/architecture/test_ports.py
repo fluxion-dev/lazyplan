@@ -11,6 +11,7 @@ from lazyplan.core.ports.coordination import CoordinationPort
 from lazyplan.core.ports.insights import InsightsPort
 from lazyplan.core.ports.planning import PlanningPort
 from lazyplan.core.ports.provenance import ProvenancePort
+from lazyplan.core.ports.transfer import TransferPort
 from lazyplan.store import Store
 
 
@@ -35,6 +36,11 @@ def _accepts_provenance(port: ProvenancePort) -> None:
 
 
 def _accepts_insights(port: InsightsPort) -> None:
+    """Compile-time structural check; runtime is a no-op."""
+    assert port is not None
+
+
+def _accepts_transfer(port: TransferPort) -> None:
     """Compile-time structural check; runtime is a no-op."""
     assert port is not None
 
@@ -64,6 +70,11 @@ class TestStorePorts(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             store = Store(os.path.join(tmp, "insights.db"))
             _accepts_insights(store)
+
+    def test_store_satisfies_transfer_port(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Store(os.path.join(tmp, "transfer.db"))
+            _accepts_transfer(store)
 
 
 if __name__ == "__main__":

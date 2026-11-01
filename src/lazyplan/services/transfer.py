@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..core.ports.transfer import TransferPort
+from ..core.serialization import to_payload
 from ..models import Plan, Status, Task
-from ..store import Store, to_payload
 from .plans import heal, set_status
 
 
-def _export_maps(store: Store) -> dict[str, Any]:
+def _export_maps(store: TransferPort) -> dict[str, Any]:
     """Every child table loaded once for an export."""
     return {
         "milestones": store.milestones_map(),
@@ -79,7 +80,7 @@ def _export_entry(plan: Plan, maps: dict[str, Any]) -> dict:
     }
 
 
-def export_all(store: Store) -> dict:
+def export_all(store: TransferPort) -> dict:
     """Full dump: plans (with criteria + links + repos) holding milestones and tasks."""
     maps = _export_maps(store)
     return {
@@ -89,7 +90,7 @@ def export_all(store: Store) -> dict:
     }
 
 
-def export_plan(store: Store, plan_id: int) -> dict | None:
+def export_plan(store: TransferPort, plan_id: int) -> dict | None:
     """Single-plan entry in export_all() shape (or None when missing)."""
     plan = store.get_plan(plan_id)
     if plan is None:
@@ -97,13 +98,13 @@ def export_plan(store: Store, plan_id: int) -> dict | None:
     return _export_entry(plan, _export_maps(store))
 
 
-def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]:
+def import_all(store: TransferPort, data: dict, actor: str = "human") -> dict[str, int]:
     """Load an export_all() dump atomically; returns counts."""
-    with store._connect():
+    with store.transaction():
         return _import_all(store, data, actor)
 
 
-def _import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]:
+def _import_all(store: TransferPort, data: dict, actor: str = "human") -> dict[str, int]:
     """Load an export_all() dump. Returns counts.
 
     Template fill is skipped on import: the dump carries final values.

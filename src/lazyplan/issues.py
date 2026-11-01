@@ -5,20 +5,9 @@ No writeback. No raw provider payloads or tokens are stored.
 
 from __future__ import annotations
 
-from datetime import datetime
-
+from .core.policies.transfer import issue_stamp
+from .core.ports.transfer import TransferPort
 from .models import Issue
-from .store import Store
-
-
-def _stamp(text: object) -> float:
-    raw = str(text or "").strip()
-    if not raw:
-        return 0.0
-    try:
-        return datetime.fromisoformat(raw.replace("Z", "+00:00")).timestamp()
-    except ValueError:
-        return 0.0
 
 
 def parse_github(data: object) -> list[Issue]:
@@ -42,7 +31,7 @@ def parse_github(data: object) -> list[Issue]:
                 title=str(item.get("title") or ""),
                 body=str(item.get("body") or ""),
                 state=str(item.get("state") or ""),
-                updated_at=_stamp(item.get("updated_at")),
+                updated_at=issue_stamp(item.get("updated_at")),
             )
         )
     return issues
@@ -74,14 +63,14 @@ def parse_linear(data: object) -> list[Issue]:
                 title=str(item.get("title") or ""),
                 body=str(item.get("description") or ""),
                 state=str(state or ""),
-                updated_at=_stamp(item.get("updatedAt") or item.get("updated_at")),
+                updated_at=issue_stamp(item.get("updatedAt") or item.get("updated_at")),
             )
         )
     return issues
 
 
 def import_issues(
-    store: Store,
+    store: TransferPort,
     issues: list[Issue],
     actor: str = "human",
     as_kind: str = "plan",

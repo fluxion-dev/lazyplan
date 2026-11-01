@@ -75,6 +75,12 @@ class StoreBase(StoreStubs):
         return str(self.path)
 
     @contextmanager
+    def transaction(self) -> Iterator[None]:
+        """One transactional connection for an atomic service operation."""
+        with self._connect():
+            yield
+
+    @contextmanager
     def _connect(self) -> Iterator[sqlite3.Connection]:
         """One transaction on a row-factory connection, closed on exit.
 

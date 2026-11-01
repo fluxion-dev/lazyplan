@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from .store import Store
+from .core.ports.transfer import TransferPort
 
 
-def seed(store: Store) -> None:
+def seed(store: TransferPort) -> None:
     """Insert the demo plan, milestones, and tasks into an empty store."""
     if store.list_plans():
         print("db already has plans, skipping seed")

@@ -255,7 +255,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             await pilot.pause()
             after = self._chart(app.query_one(f"#{CARD_ID}"))
-        self.assertNotIn("now", before)
+        self.assertNotEqual(before, after)
         self.assertIn("now", after)
 
     async def test_now_tick_refreshes_the_timeline(self) -> None:

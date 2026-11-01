@@ -168,25 +168,33 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Bold task", chart)
         self.assertIn(self._rgb_code(baseline), chart)
 
-    async def test_every_inactive_lane_draws_a_full_width_baseline(self) -> None:
+    async def test_inactive_task_draws_a_full_width_baseline(self) -> None:
         plan = _at(1_000, lambda: self.store.add_plan("Idle plan"))
-        _at(1_100, lambda: self.store.add_milestone(plan.id, "Idle milestone"))
+        milestone = _at(1_100, lambda: self.store.add_milestone(plan.id, "Idle milestone"))
+        _at(1_150, lambda: self.store.add_task(milestone.id, "Idle task"))
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
             app.selected = None
             app.metrics_controller.stop()
             card = app.query_one("#metric-timeline", TimelineCard)
-            card.refresh_timeline(metrics.snapshot(self.store, now=2_000, plan_id=plan.id).timeline)
+            card.refresh_timeline(
+                metrics.snapshot(
+                    self.store,
+                    now=2_000,
+                    plan_id=plan.id,
+                    scope_kind="milestone",
+                    scope_id=milestone.id,
+                ).timeline
+            )
             await pilot.pause()
             chart = card.query_one("PlotextPlot").plt.build()
-            baselines = (lane_baseline_rgb(app, 0), lane_baseline_rgb(app, 1))
-        for baseline in baselines:
-            code = self._rgb_code(baseline)
-            self.assertIn(code, chart)
-            line = next(line for line in chart.splitlines() if code in line)
-            plain = re.sub(r"\x1b\[[0-9;]*m", "", line)
-            self.assertGreaterEqual(plain.count("─"), 40)
+            baseline = lane_baseline_rgb(app, 2)
+        code = self._rgb_code(baseline)
+        self.assertIn(code, chart)
+        line = next(line for line in chart.splitlines() if code in line)
+        plain = re.sub(r"\x1b\[[0-9;]*m", "", line)
+        self.assertGreaterEqual(plain.count("─"), 40)
 
     async def test_unselected_trace_is_not_bold(self) -> None:
         plan = _at(1_000, lambda: self.store.add_plan("Plain plan"))
@@ -208,20 +216,23 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("\x1b[1m", chart)
         self.assertIn("═", chart)
 
-    async def test_inactive_lane_has_no_endpoint_markers(self) -> None:
+    async def test_inactive_open_lane_draws_span_and_now(self) -> None:
         plan = _at(1_000, lambda: self.store.add_plan("Idle plan"))
         _at(1_100, lambda: self.store.add_milestone(plan.id, "Idle milestone"))
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
+            app.selected = None
+            app.metrics_controller.stop()
             card = app.query_one("#metric-timeline", TimelineCard)
             card.refresh_timeline(metrics.snapshot(self.store, now=2_000, plan_id=plan.id).timeline)
             await pilot.pause()
             chart = card.query_one("PlotextPlot").plt.build()
         self.assertIn("Idle plan", chart)
         self.assertIn("Idle milestone", chart)
-        self.assertNotIn("•", chart)
-        self.assertNotIn("now", chart)
+        self.assertIn("═", chart)
+        self.assertIn("•", chart)
+        self.assertIn("now", chart)
 
     async def test_card_uses_the_empty_state(self) -> None:
         app = tui_mod.create_app(self.db)

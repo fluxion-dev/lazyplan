@@ -21,13 +21,13 @@ from .base import MetricCard
 from .timeline_layout import (
     MAX_LEGEND_ROWS,
     MIN_SPAN_SECONDS,
-    active_segments,
     axis_ticks,
     lane_window,
     legend_entry,
     legend_layout,
     trace_glyph,
     trace_points,
+    trace_segments,
 )
 
 
@@ -113,7 +113,7 @@ class TimelineCard(MetricCard):
         plt.ylim(-0.5 - bottom, top)
         plt.xticks(ticks, labels)
         plt.yticks(positions, ["" for _ in positions])
-        if any(lane.active and lane.active[-1][1] >= timeline.now for lane in lanes):
+        if any(lane.end >= timeline.now for lane in lanes):
             axis = token_rgb(self.app, "lp-chart-axis")
             plt.vline(timeline.end, color=axis)
             plt.text(
@@ -165,8 +165,8 @@ class TimelineCard(MetricCard):
         min_visible: float,
         width: int,
     ) -> None:
-        """Draw one lane's active segments, bold when the lane is selected."""
-        for start, end in active_segments(lane, left, right, min_visible):
+        """Draw one lane's rendered trace segments, bold when selected."""
+        for start, end in trace_segments(lane, left, right, min_visible):
             if lane.selected:
                 points = trace_points(start, end, left, right, width)
                 plt.scatter(

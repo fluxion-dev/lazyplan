@@ -103,6 +103,20 @@ def trace_points(start: float, end: float, left: float, right: float, width: int
     return [start + (end - start) * index / (count - 1) for index in range(count)]
 
 
+def trace_segments(
+    lane: TimelineLane, left: float, right: float, min_visible: float
+) -> list[tuple[float, float]]:
+    """Visible segments for one lane's rendered trace intervals."""
+    segments: list[tuple[float, float]] = []
+    for start, end in lane.trace:
+        if end < left or start > right:
+            continue
+        start = max(start, left)
+        end = min(right, max(end, start + min_visible))
+        segments.append((start, end))
+    return segments
+
+
 def lane_window(rows: int, count: int, legend_rows: int) -> tuple[float, float, float]:
     """Y scale, top, and spare bottom rows for one-row lane spacing."""
     content = count + legend_rows

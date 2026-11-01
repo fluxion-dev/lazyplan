@@ -10,7 +10,8 @@ from ..entities import Criterion, Milestone, Plan, Status, Task
 class PlanningPort(Protocol):
     """Persistence surface the planning use cases need."""
 
-    path: str
+    @property
+    def db_path(self) -> str: ...
 
     def add_plan(
         self,

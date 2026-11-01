@@ -22,7 +22,6 @@
     "lazyplan.services.plans",
     "lazyplan.services.tasks",
     "lazyplan.services.transfer",
-    "lazyplan.services.tree",
     "lazyplan.services.vcs",
     "lazyplan.setup.apply",
     "lazyplan.sync",

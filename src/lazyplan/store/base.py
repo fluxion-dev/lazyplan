@@ -101,6 +101,11 @@ class StoreBase(StoreStubs):
         with self._connect() as conn:
             migrate(conn)
 
+    @property
+    def db_path(self) -> str:
+        """Database path as text for ports and template lookups."""
+        return str(self.path)
+
     @contextmanager
     def _connect(self) -> Iterator[sqlite3.Connection]:
         """One transaction on a row-factory connection, closed on exit.

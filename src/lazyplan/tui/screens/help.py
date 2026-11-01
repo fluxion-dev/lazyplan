@@ -92,6 +92,14 @@ if _TEXTUAL_OK:
             noun = "command" if count == 1 else "commands"
             return f"Commands — {count} {noun}"
 
+        @staticmethod
+        def _highlight_first(lst: OptionList) -> None:
+            """Skip disabled section headers so Enter runs a real command."""
+            for index in range(lst.option_count):
+                if not lst.get_option_at_index(index).disabled:
+                    lst.highlighted = index
+                    return
+
         def compose(self) -> ComposeResult:
             with Vertical(id="dlg"):
                 yield Label(
@@ -105,6 +113,7 @@ if _TEXTUAL_OK:
         def on_mount(self) -> None:
             try:
                 self.query_one("#palette-input", Input).focus()
+                self._highlight_first(self.query_one("#palette-list", OptionList))
             except Exception:
                 pass
 
@@ -120,6 +129,7 @@ if _TEXTUAL_OK:
             for opt in self._section_options(sections):
                 lst.add_option(opt)
             title.update(self._title(sections, e.value))
+            self._highlight_first(lst)
             e.stop()
 
         @on(Input.Submitted, "#palette-input")

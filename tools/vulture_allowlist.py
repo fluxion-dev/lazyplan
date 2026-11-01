@@ -130,6 +130,8 @@ _._on_selection_changed
 _._on_row_action
 _.action_clear_filter
 # Textual widget state and screen handlers dispatched by decorator.
+border_subtitle
+highlighted
 disabled
 _._later
 _._download

@@ -106,6 +106,24 @@ class TestPalette(unittest.IsolatedAsyncioTestCase):
             options = self.app.screen.query_one("#palette-list", OptionList)
             self.assertGreater(options.virtual_size.height, options.size.height)
 
+    async def test_palette_highlights_the_first_runnable_command(self):
+        from textual.widgets import Input, OptionList
+
+        async with self.app.run_test(size=(100, 30)) as pilot:
+            self.app.push_screen(PaletteScreen(self.app._palette_context()))
+            await pilot.pause()
+            options = self.app.screen.query_one("#palette-list", OptionList)
+            highlighted = options.highlighted
+            self.assertIsNotNone(highlighted)
+            assert highlighted is not None
+            self.assertFalse(options.get_option_at_index(highlighted).disabled)
+            self.app.screen.query_one("#palette-input", Input).value = "bulk"
+            await pilot.pause()
+            highlighted = options.highlighted
+            self.assertIsNotNone(highlighted)
+            assert highlighted is not None
+            self.assertFalse(options.get_option_at_index(highlighted).disabled)
+
     def test_help_text_is_task_grouped(self):
 
         for group in ("MOVE", "CHANGE", "FIND", "APP"):

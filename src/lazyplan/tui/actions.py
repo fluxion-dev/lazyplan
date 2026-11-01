@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 import time
-import webbrowser
 from typing import Any
 
 from .. import textfile
 
 try:
-    from textual.widgets import Tree
+    from textual.widgets import Tree  # noqa: F401
 
     _TEXTUAL_OK = True
 except ImportError:  # pragma: no cover
@@ -17,12 +16,12 @@ except ImportError:  # pragma: no cover
 
 from .. import services
 from ..models import Status
-from ..palette import COMMANDS, by_id
-from ..render import render_git_status
+from ..palette import by_id
 from ..store import ClaimConflict
 from ..templates import load_template
-from .base import AppBase
 from .constants import DOUBLE_CLICK_WINDOW
+from .context import ContextMixin
+from .git_actions import GitActionMixin
 from .screens import (
     ConfirmScreen,
     DetailScreen,
@@ -33,11 +32,10 @@ from .screens import (
     NewTaskScreen,
     PaletteScreen,
 )
-from .screens.source import SourceScreen
 
 if _TEXTUAL_OK:
 
-    class ActionMixin(AppBase):
+    class ActionMixin(ContextMixin, GitActionMixin):
         """Actions behavior."""
 
         def action_new_milestone(self) -> None:
@@ -114,14 +112,6 @@ if _TEXTUAL_OK:
 
             self.push_screen(ConfirmScreen(f"Delete {kind} #{oid}?\n(children go too.)"), cb)
 
-        def _git_refresh_done(self, result: dict[str, Any]) -> None:
-            self.notify(
-                f"checked {result['checked']} links · "
-                f"{result['updated']} updated · {result['stale']} stale",
-                timeout=6,
-            )
-            self._saved("git links refreshed")
-
         def action_export_md(self) -> None:
             pid = self._plan_ctx()
             if pid is None:
@@ -141,34 +131,8 @@ if _TEXTUAL_OK:
         def action_force_release_claim(self) -> None:
             self._release_claim(True)
 
-        def action_git_status(self) -> None:
-            """Show branch and dirty state for the selected row's checkouts."""
-            selected = self._git_selection()
-            if selected is None:
-                return
-            kind, oid = selected
-            self.notify("reading git status…", timeout=2)
-            self.run_worker(
-                lambda: self._git_status_worker(kind, oid),
-                thread=True,
-                exclusive=True,
-            )
-
         def action_refresh(self) -> None:
             self._saved("manual refresh")
-
-        def action_git_refresh(self) -> None:
-            """Re-resolve cached commits and mark stale links."""
-            selected = self._git_selection()
-            if selected is None:
-                return
-            kind, oid = selected
-            self.notify("refreshing commit links…", timeout=2)
-            self.run_worker(
-                lambda: self._git_refresh_worker(kind, oid),
-                thread=True,
-                exclusive=True,
-            )
 
         def action_command_palette(self) -> None:
             """Open the modal command palette (c)."""
@@ -219,28 +183,6 @@ if _TEXTUAL_OK:
                 cb,
             )
 
-        def _git_status_worker(self, kind: str, oid: int) -> None:
-            try:
-                entries = services.repo_statuses(self.store, kind, oid)
-            except ValueError as exc:
-                self.call_from_thread(self.notify, str(exc), severity="error", timeout=5)
-                return
-            self.call_from_thread(self._git_status_done, entries)
-
-        def action_open_pr(self) -> None:
-            """Open the first linked pull request in the default browser."""
-            selected = self._git_selection()
-            if selected is None:
-                return
-            kind, oid = selected
-            links = self.store.effective_forge_links(kind, oid)
-            url = next((link.url for link in links if link.url), "")
-            if not url:
-                self.notify("no pull request linked", timeout=3)
-                return
-            webbrowser.open(url)
-            self.notify(f"opened {url}", timeout=4)
-
         def action_toggle_status(self) -> None:
             if self.selected is None:
                 self.notify("select a row first (s advances status)")
@@ -255,48 +197,6 @@ if _TEXTUAL_OK:
             if nxt is None:
                 self.notify("selected row no longer exists")
             self._saved(f"{kind} {oid} -> {nxt.value if nxt else '?'}")
-
-        def _git_refresh_worker(self, kind: str, oid: int) -> None:
-            try:
-                result = services.refresh_links(self.store, kind, oid)
-            except Exception as exc:
-                self.call_from_thread(
-                    self.notify, f"refresh failed: {exc}", severity="error", timeout=5
-                )
-                return
-            self.call_from_thread(self._git_refresh_done, result)
-
-        def action_source_trail(self) -> None:
-            """Open the read-only source trail for the selected row."""
-            selected = self._git_selection()
-            if selected is None:
-                return
-            kind, oid = selected
-            self.push_screen(SourceScreen(self.store, kind, oid))
-
-        def _plan_ctx(self) -> int | None:
-            if self.selected is None:
-                return None
-            kind, oid = self.selected
-            if kind == "plan":
-                return oid
-            if kind == "milestone":
-                s = self.store.get_milestone(oid)
-                return s.plan_id if s else None
-            if kind == "task":
-                t = self.store.get_task(oid)
-                if t is None:
-                    return None
-                s = self.store.get_milestone(t.milestone_id)
-                return s.plan_id if s else None
-            return None
-
-        def _selected_task(self) -> int | None:
-            """Selected task id, or a notification when the selection is not a task."""
-            if self.selected is None or self.selected[0] != "task":
-                self.notify("select a task first", timeout=3)
-                return None
-            return self.selected[1]
 
         def action_open_detail(self) -> None:
             if len(self.screen_stack) > 1:
@@ -314,56 +214,6 @@ if _TEXTUAL_OK:
             except Exception:
                 self._fp = self.store.fingerprint()
                 self.refresh_all(note)
-
-        def action_git_capture(self) -> None:
-            """Link a safe current HEAD to the selected row."""
-            selected = self._git_selection()
-            if selected is None:
-                return
-            kind, oid = selected
-            before = {link.sha for link in self.store.list_links(kind, oid)}
-            repos = self.store.effective_repos(kind, oid)
-            cwd = str(repos[0]["repo_path"]) if repos else "."
-            reason = services.auto_capture_head(self.store, kind, oid, cwd=cwd)
-            after = {link.sha for link in self.store.list_links(kind, oid)}
-            if after - before:
-                self.notify("HEAD linked", timeout=4)
-                self._saved("commit linked")
-                return
-            if reason:
-                self.notify(f"not linked: {reason}", severity="warning", timeout=6)
-                return
-            self.notify("HEAD is already linked or unavailable", timeout=4)
-
-        def _palette_context(self) -> dict[str, str | None]:
-            """Disable commands that cannot run for the current selection."""
-            selected = self.selected is not None
-            plan_id = self._plan_ctx()
-            milestone_id = self._milestone_for_task_ctx()
-            context: dict[str, str | None] = {cmd.id: None for cmd in COMMANDS}
-            if not selected:
-                for cmd in COMMANDS:
-                    if cmd.context == "selection":
-                        context[cmd.id] = "Select a row first"
-            if plan_id is None:
-                context["create-milestone"] = "Select a plan first"
-                context["export-plan"] = "Select a plan first"
-            if milestone_id is None:
-                context["create-task"] = "Select a milestone first"
-            if self.selected is not None and self.selected[0] == "task":
-                context["fold-one"] = "Nothing to fold"
-            return context
-
-        def _milestone_for_task_ctx(self) -> int | None:
-            if self.selected is None:
-                return None
-            kind, oid = self.selected
-            if kind == "milestone":
-                return oid
-            if kind == "task":
-                t = self.store.get_task(oid)
-                return t.milestone_id if t else None
-            return None
 
         def action_new_plan(self) -> None:
             def cb(data: dict | None) -> None:
@@ -437,13 +287,6 @@ if _TEXTUAL_OK:
                 return
             fn()
             self._pending_note = command.label.lower()
-
-        def _git_status_done(self, entries: list[dict[str, Any]]) -> None:
-            if not entries:
-                self.notify("no linked repos", timeout=3)
-                return
-            self.notify(render_git_status(entries), timeout=8)
-            self._pending_note = "git status"
 
         def action_new_task(self) -> None:
             sid = self._milestone_for_task_ctx()
@@ -523,27 +366,6 @@ if _TEXTUAL_OK:
                 self.notify("selected row no longer exists")
                 return
             self._saved(f"{kind} {oid} -> {status.value}")
-
-        def _cursor_is_root(self) -> bool:
-            """True when the cursor sits on the dataless plans root or empty tree."""
-            try:
-                tree = self.query_one("#tree", Tree)
-            except Exception:
-                return True
-            try:
-                cur = tree.cursor_node
-            except Exception:
-                return True
-            if cur is None:
-                return True
-            return self._node_key(cur) is None
-
-        def _git_selection(self) -> tuple[str, int] | None:
-            """Selected row for a git action, or a notification when none."""
-            if self.selected is None:
-                self.notify("select a row first", timeout=3)
-                return None
-            return self.selected
 
         def _release_claim(self, force: bool) -> None:
             task_id = self._selected_task()

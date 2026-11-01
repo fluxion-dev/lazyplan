@@ -67,13 +67,13 @@ class TestPalette(unittest.IsolatedAsyncioTestCase):
         url = "https://github.com/org/repo/pull/7"
         self.store.link_forge("task", self.tid, 7, url=url, title="Fix login")
         self.app.selected = ("task", self.tid)
-        with mock.patch("lazyplan.tui.actions.webbrowser.open") as opener:
+        with mock.patch("lazyplan.tui.git_actions.webbrowser.open") as opener:
             self.app.action_open_pr()
         opener.assert_called_once_with(url)
 
     def test_open_pr_without_a_link_notifies(self):
         self.app.selected = ("task", self.tid)
-        with mock.patch("lazyplan.tui.actions.webbrowser.open") as opener:
+        with mock.patch("lazyplan.tui.git_actions.webbrowser.open") as opener:
             self.app.action_open_pr()
         opener.assert_not_called()
 

@@ -92,6 +92,15 @@ class StateTest(unittest.IsolatedAsyncioTestCase):
             self.assertIn("is gone", body)
             self.assertIn("press r", body)
 
+    def test_tui_modules_stay_under_the_target_budget(self) -> None:
+        root = Path(__file__).resolve().parents[2] / "src" / "lazyplan" / "tui"
+        over = []
+        for path in root.rglob("*.py"):
+            lines = len(path.read_text(encoding="utf-8").splitlines())
+            if lines > 400:
+                over.append(f"{path.relative_to(root)}: {lines}")
+        self.assertEqual(over, [])
+
     async def test_query_one_opt_handles_absent_and_wrong_type(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(100, 30)) as pilot:

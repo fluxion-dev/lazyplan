@@ -8,6 +8,7 @@ from the row width and kind; it never depends on state.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from itertools import product
 
@@ -112,45 +113,72 @@ def _align(text: str, width: int, align: str) -> str:
     return text.rjust(width) if align == "right" else text.ljust(width)
 
 
+def _progress_slot(stats: RowStats, compact: bool) -> tuple[str, str]:
+    bar_width = 3 if compact else 5
+    count_width = 4 if compact else 5
+    done, total = stats.progress or (0, 0)
+    bar = progress_bar(done, total, width=bar_width).ljust(bar_width)
+    count = truncate(progress_text(done, total), count_width).rjust(count_width)
+    text = f"{bar} {count}"
+    return f"[dim]{text}[/]", text
+
+
+def _commits_slot(stats: RowStats, compact: bool) -> tuple[str, str]:
+    text = truncate(f"{stats.commits}c", _slot_width("commits", compact)) if stats.commits else ""
+    return (f"[dim]{text}[/]" if text else ""), text
+
+
+def _pulls_slot(stats: RowStats, compact: bool) -> tuple[str, str]:
+    if stats.kind == "task":
+        return (
+            pr_chip(stats.pr_state, stats.pr_checks),
+            pr_label(stats.pr_state, stats.pr_checks),
+        )
+    text = truncate(f"{stats.pulls}PR", _slot_width("pulls", compact)) if stats.pulls else ""
+    return (f"[dim]{text}[/]" if text else ""), text
+
+
+def _stale_slot(stats: RowStats, compact: bool) -> tuple[str, str]:
+    if stats.kind == "task":
+        text = "!" if stats.stale else ""
+    else:
+        text = truncate(f"{stats.stale}!", _slot_width("stale", compact)) if stats.stale else ""
+    return (f"[dim]{text}[/]" if text else ""), text
+
+
+def _marked_slot(stats: RowStats, compact: bool) -> tuple[str, str]:
+    text = "✓" if stats.marked else ""
+    return (f"[bold green]{text}[/]" if text else ""), text
+
+
+def _blocked_slot(stats: RowStats, compact: bool) -> tuple[str, str]:
+    text = ("⚑" if compact else "⚑ blocked") if stats.blocked else ""
+    return (f"[red]{text}[/]" if text else ""), text
+
+
+def _claim_slot(stats: RowStats, compact: bool) -> tuple[str, str]:
+    if not stats.claim_actor:
+        return "", ""
+    marker = "!" if stats.claim_expired else ""
+    width = _slot_width("claim", compact) - len(marker)
+    text = f"{truncate(f'◉ @{stats.claim_actor}', width)}{marker}"
+    return (f"[dim]{text}[/]" if text else ""), text
+
+
+_SLOT_RENDERERS: dict[str, Callable[[RowStats, bool], tuple[str, str]]] = {
+    "progress": _progress_slot,
+    "commits": _commits_slot,
+    "pulls": _pulls_slot,
+    "stale": _stale_slot,
+    "marked": _marked_slot,
+    "blocked": _blocked_slot,
+    "claim": _claim_slot,
+}
+
+
 def _slot_text(stats: RowStats, key: str, compact: bool) -> tuple[str, str]:
-    width = _slot_width(key, compact)
-    if key == "progress":
-        done, total = stats.progress or (0, 0)
-        bar_width = 3 if compact else 5
-        count_width = 4 if compact else 5
-        bar = progress_bar(done, total, width=bar_width).ljust(bar_width)
-        count = truncate(progress_text(done, total), count_width).rjust(count_width)
-        text = f"{bar} {count}"
-        return f"[dim]{text}[/]", text
-    if key == "commits":
-        text = truncate(f"{stats.commits}c", width) if stats.commits else ""
-        return (f"[dim]{text}[/]" if text else ""), text
-    if key == "pulls":
-        if stats.kind == "task":
-            text = pr_label(stats.pr_state, stats.pr_checks)
-            return pr_chip(stats.pr_state, stats.pr_checks), text
-        text = truncate(f"{stats.pulls}PR", width) if stats.pulls else ""
-        return (f"[dim]{text}[/]" if text else ""), text
-    if key == "stale":
-        if stats.kind == "task":
-            text = "!" if stats.stale else ""
-        else:
-            text = truncate(f"{stats.stale}!", width) if stats.stale else ""
-        return (f"[dim]{text}[/]" if text else ""), text
-    if key == "marked":
-        text = "✓" if stats.marked else ""
-        return (f"[bold green]{text}[/]" if text else ""), text
-    if key == "blocked":
-        text = ("⚑" if compact else "⚑ blocked") if stats.blocked else ""
-        return (f"[red]{text}[/]" if text else ""), text
-    if key == "claim":
-        if not stats.claim_actor:
-            return "", ""
-        marker = "!" if stats.claim_expired else ""
-        base = truncate(f"◉ @{stats.claim_actor}", width - len(marker))
-        text = f"{base}{marker}"
-        return (f"[dim]{text}[/]" if text else ""), text
-    return "", ""
+    renderer = _SLOT_RENDERERS.get(key)
+    return renderer(stats, compact) if renderer is not None else ("", "")
 
 
 def render_stats(stats: RowStats, layout: tuple[tuple[str, bool], ...]) -> tuple[str, str]:

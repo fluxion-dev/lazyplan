@@ -161,5 +161,7 @@ milestone_bars
 status_bars
 # Snapshot scope fields kept for callers and tests outside the timeline card.
 plan_title
+# Trace helper kept for the timeline card tests.
+active_segments
 # Textual Tree reactive read by the framework, set as a subclass default.
 show_root

@@ -102,12 +102,19 @@ class TimelineCard(MetricCard):
         apply_chart_theme(plt, self.app)
         plt.clear_figure()
         for index, lane in enumerate(lanes):
+            color = lane_rgb(self.app, index)
             for start, end in _active_segments(lane, left, right, min_visible):
                 plt.plot(
                     [start, end],
                     [positions[index], positions[index]],
                     marker="braille",
-                    color=lane_rgb(self.app, index),
+                    color=color,
+                )
+                plt.scatter(
+                    [start, end],
+                    [positions[index], positions[index]],
+                    marker="dot",
+                    color=color,
                 )
         ticks = [left + (right - left) * index / (X_TICKS - 1) for index in range(X_TICKS)]
         rows = max(2, (plot.size.height or 12) - 3)

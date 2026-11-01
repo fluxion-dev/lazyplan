@@ -4,9 +4,13 @@ from __future__ import annotations
 
 import unittest
 
-from lazyplan.tui.views.git import build_git
+try:
+    from lazyplan.tui.views.git import build_git
+except ImportError:  # pragma: no cover - stdlib-only interpreter
+    build_git = None  # type: ignore[assignment]
 
 
+@unittest.skipUnless(build_git is not None, "textual/rich not installed")
 class GitDocumentTest(unittest.TestCase):
     def test_empty_selection_offers_the_source_trail(self) -> None:
         document = build_git({})

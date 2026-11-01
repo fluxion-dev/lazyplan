@@ -32,17 +32,14 @@ except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
 from ..cli.parser import package_version
-from ..design import (
-    SPINNER_FRAMES,
-    SPINNER_INTERVAL,
-    status_prefix,
-)
 from ..models import Status
 from ..store import Store
 from ..update_stage import apply_on_launch, clear_failure, read_failure
 from .actions import ActionMixin
 from .base import AppBase
 from .bulk import BulkMixin
+from .controllers.git_state import GitStateController
+from .controllers.spinner import SpinnerController
 from .controllers.tree import TreeController
 from .controllers.updates import UpdateController
 from .filters import FilterMixin
@@ -141,16 +138,12 @@ if _TEXTUAL_OK:
             self._row_labels: dict[tuple[str, int], str] = {}
             self.tree_controller = TreeController(self)
             self.update_controller = UpdateController(self)
+            self.spinner_controller = SpinnerController(self)
+            self.git_state_controller = GitStateController(self)
             self._last_click_key: tuple[str, int] | None = None
             self._last_click_at: float = 0.0
             self._fp: Any = store.fingerprint()
             self._startup_notice: str = ""
-            self._git_cache: dict[str, tuple[float, dict[str, Any]]] = {}
-            self._git_pending: set[str] = set()
-            self._spinner_tick: int = 0
-            self._spinner_rows: dict[tuple[str, int], str] = {}
-            self._spinner_enabled: bool = True
-            self._spinner_timer: Any = None
 
         def action_update_prompt(self) -> None:
             """Open the update screen for a known or cached newer release."""
@@ -177,9 +170,7 @@ if _TEXTUAL_OK:
         def on_unmount(self) -> None:
             """Stop app-owned timers; both drive periodic work."""
             self.update_controller.stop()
-            if self._spinner_timer is not None:
-                self._spinner_timer.stop()
-                self._spinner_timer = None
+            self.spinner_controller.stop()
 
         def check_action(self, action: str, _parameters: tuple[object, ...]) -> bool | None:
             """Keep app-level row actions on the main tree screen.
@@ -197,42 +188,11 @@ if _TEXTUAL_OK:
             self._apply_layout()
             self.refresh_all("ready — ? for help")
             self.set_interval(1.0, self._poll)
-            self._spinner_enabled = not os.environ.get("LAZYPLAN_NO_SPINNER", "").strip()
-            if self._spinner_enabled:
-                self._spinner_timer = self.set_interval(SPINNER_INTERVAL, self._spin)
+            self.spinner_controller.start()
             self.update_controller.start()
             if self._startup_notice:
                 self.notify(self._startup_notice, timeout=10)
             self.query_one("#tree", Tree).focus()
-
-        def _remember_spinner(
-            self,
-            key: tuple[str, int],
-            status: Status,
-            label: str,
-        ) -> None:
-            """Keep the label after the status prefix for doing rows only."""
-            if status != Status.DOING:
-                return
-            prefix = status_prefix(Status.DOING)
-            if label.startswith(prefix):
-                self._spinner_rows[key] = label[len(prefix) :]
-
-        def _spin(self) -> None:
-            """Advance one frame; idle when nothing is doing."""
-            if not self._spinner_enabled or not self._spinner_rows:
-                return
-            self._spinner_tick = (self._spinner_tick + 1) % len(SPINNER_FRAMES)
-            self._paint_spinner()
-
-        def _paint_spinner(self) -> None:
-            """Repaint doing rows at the current frame, without rebuilding."""
-            prefix = status_prefix(Status.DOING, self._spinner_tick)
-            for key, suffix in self._spinner_rows.items():
-                node = self._row_nodes.get(key)
-                if node is not None:
-                    mark = " [bold green]✓[/]" if key in self.marked else ""
-                    node.set_label(prefix + suffix + mark)
 
     def create_app(db_path: str | None = None, startup_notice: str = "") -> LazyplanApp:
         """Build the app bound to a store."""

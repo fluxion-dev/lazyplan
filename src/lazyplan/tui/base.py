@@ -11,6 +11,8 @@ from textual.widgets.tree import TreeNode
 from ..messages import RowAction, SelectionChanged
 from ..models import Status, Task
 from ..store import Store
+from .controllers.git_state import GitStateController
+from .controllers.spinner import SpinnerController
 from .controllers.tree import TreeController
 from .controllers.updates import UpdateController
 from .state import AppState
@@ -22,6 +24,8 @@ class AppBase(App):
     store: Store
     state: AppState
     tree_controller: TreeController
+    spinner_controller: SpinnerController
+    git_state_controller: GitStateController
     update_controller: UpdateController
     _undo: list[dict] | None
     _row_nodes: dict[tuple[str, int], Any]
@@ -30,12 +34,6 @@ class AppBase(App):
     _last_click_at: float
     _fp: Any
     _startup_notice: str
-    _git_cache: dict[str, tuple[float, dict[str, Any]]]
-    _git_pending: set[str]
-    _spinner_tick: int
-    _spinner_rows: dict[tuple[str, int], str]
-    _spinner_enabled: bool
-    _spinner_timer: Any
     rev: Any
 
     @property
@@ -198,6 +196,38 @@ class AppBase(App):
     def _update_checking(self, value: bool) -> None:
         self.update_controller.checking = value
 
+    @property
+    def _spinner_tick(self) -> int:
+        return self.spinner_controller.tick
+
+    @_spinner_tick.setter
+    def _spinner_tick(self, value: int) -> None:
+        self.spinner_controller.tick = value
+
+    @property
+    def _spinner_rows(self) -> dict[tuple[str, int], str]:
+        return self.spinner_controller.rows
+
+    @_spinner_rows.setter
+    def _spinner_rows(self, value: dict[tuple[str, int], str]) -> None:
+        self.spinner_controller.rows = value
+
+    @property
+    def _spinner_enabled(self) -> bool:
+        return self.spinner_controller.enabled
+
+    @_spinner_enabled.setter
+    def _spinner_enabled(self, value: bool) -> None:
+        self.spinner_controller.enabled = value
+
+    @property
+    def _spinner_timer(self) -> Any:
+        return self.spinner_controller.timer
+
+    @_spinner_timer.setter
+    def _spinner_timer(self, value: Any) -> None:
+        self.spinner_controller.timer = value
+
     if TYPE_CHECKING:
 
         def on_tree_node_highlighted(self, e: Tree.NodeHighlighted) -> None:
@@ -210,22 +240,6 @@ class AppBase(App):
             raise NotImplementedError
 
         def _preview_title(self, kind: str, oid: int, obj: dict[str, Any]) -> list[str]:
-            raise NotImplementedError
-
-        def _git_state(self, path: str) -> dict[str, Any]:
-            raise NotImplementedError
-
-        @staticmethod
-        def _empty_git_state() -> dict[str, Any]:
-            raise NotImplementedError
-
-        def _load_git_state(self, path: str) -> None:
-            raise NotImplementedError
-
-        def _store_git_state(self, path: str, state: dict[str, Any]) -> None:
-            raise NotImplementedError
-
-        def _git_preview_bits(self, repos: list[dict[str, Any]]) -> list[str]:
             raise NotImplementedError
 
         def _preview_acceptance(self, lines: list[str], crits: list[dict]) -> None:
@@ -456,8 +470,3 @@ class AppBase(App):
         def action_open_detail(self) -> None:
             raise NotImplementedError
 
-        def _remember_spinner(self, key: tuple[str, int], status: Status, label: str) -> None:
-            raise NotImplementedError
-
-        def _paint_spinner(self) -> None:
-            raise NotImplementedError

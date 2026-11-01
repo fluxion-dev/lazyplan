@@ -42,7 +42,7 @@ class TestSpinner(unittest.IsolatedAsyncioTestCase):
         if self.app._spinner_timer is not None:
             self.app._spinner_timer.pause()
         self.app._spinner_tick = 0
-        self.app._paint_spinner()
+        self.app.spinner_controller.paint()
 
     async def test_doing_rows_cycle_without_rebuilding(self):
         async with self.app.run_test() as pilot:
@@ -72,7 +72,7 @@ class TestSpinner(unittest.IsolatedAsyncioTestCase):
             tails = {key: self._text(key)[1:] for key in keys}
             frames = []
             for _ in range(len(design.SPINNER_FRAMES)):
-                self.app._spin()
+                self.app.spinner_controller.spin()
                 frames.append(self._text(("task", self.doing))[0])
             self.assertEqual(frames, ["◓", "◑", "◒", "◐"])
 
@@ -101,7 +101,7 @@ class TestSpinner(unittest.IsolatedAsyncioTestCase):
                 app._spinner_timer.pause()
             self.assertEqual(app._spinner_rows, {})
             before = {key: str(node.label) for key, node in app._row_nodes.items()}
-            app._spin()
+            app.spinner_controller.spin()
             self.assertEqual(app._spinner_tick, 0)
             self.assertEqual(
                 {key: str(node.label) for key, node in app._row_nodes.items()},
@@ -112,7 +112,7 @@ class TestSpinner(unittest.IsolatedAsyncioTestCase):
             app.refresh_all()
             await pilot.pause()
             self.assertIn(("task", tid), app._spinner_rows)
-            app._spin()
+            app.spinner_controller.spin()
             self.assertEqual(str(app._row_nodes[("task", tid)].label)[0], "◓")
 
     async def test_opt_out_keeps_the_static_glyph(self):
@@ -124,6 +124,6 @@ class TestSpinner(unittest.IsolatedAsyncioTestCase):
                 self.assertIsNone(app._spinner_timer)
                 label = str(app._row_nodes[("task", self.doing)].label)
                 self.assertEqual(label[0], "◐")
-                app._spin()
+                app.spinner_controller.spin()
                 self.assertEqual(app._spinner_tick, 0)
                 self.assertEqual(str(app._row_nodes[("task", self.doing)].label), label)

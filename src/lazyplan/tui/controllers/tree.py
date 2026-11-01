@@ -56,9 +56,7 @@ class TreeController:
     def fold_all(self) -> None:
         """Collapse every expandable row, or re-open all when fully expanded."""
         keys = [
-            key
-            for key, node in self.app._row_nodes.items()
-            if node.allow_expand and node.children
+            key for key, node in self.app._row_nodes.items() if node.allow_expand and node.children
         ]
         if not keys:
             self.app.notify("nothing to fold")
@@ -191,8 +189,11 @@ class TreeController:
         node = app._row_nodes.get(key)
         if label is None or node is None:
             return
-        if key in app._spinner_rows:
-            label = status_prefix(Status.DOING, app._spinner_tick) + app._spinner_rows[key]
+        if key in app.spinner_controller.rows:
+            label = (
+                status_prefix(Status.DOING, app.spinner_controller.tick)
+                + app.spinner_controller.rows[key]
+            )
         suffix = " [bold green]✓[/]" if key in app.marked else ""
         node.set_label(label + suffix)
 
@@ -217,7 +218,7 @@ class TreeController:
         tree.clear()
         app._row_nodes = {}
         app._row_labels = {}
-        app._spinner_rows = {}
+        app.spinner_controller.rows = {}
         base = services.tree(app.store, status=None, archived="hide")
         progress = self.progress_map(base)
         visible = self.status_tree(base, app.status_filter)
@@ -239,7 +240,7 @@ class TreeController:
         app._collapsed &= set(app._row_nodes)
         app._expanded &= set(app._row_nodes)
         self.apply_folds()
-        app._paint_spinner()
+        app.spinner_controller.paint()
         app.query_one("#status", Label).update(app._status_text(app.store.counts(), note))
         app.query_one("#hints", Label).update(hint_bar(max(10, app.size.width - 2)))
         section = query_one_opt(app, "#metrics", MetricsSection)
@@ -297,7 +298,7 @@ class TreeController:
             )
             app._row_nodes[("plan", plan.id)] = plan_node
             app._row_labels[("plan", plan.id)] = plan_text
-            app._remember_spinner(("plan", plan.id), plan.status, plan_text)
+            app.spinner_controller.remember(("plan", plan.id), plan.status, plan_text)
             for milestone, tasks in milestones:
                 milestone_stats = source_stats.get(("milestone", milestone.id))
                 milestone_text = milestone_row(
@@ -323,7 +324,7 @@ class TreeController:
                 )
                 app._row_nodes[("milestone", milestone.id)] = milestone_node
                 app._row_labels[("milestone", milestone.id)] = milestone_text
-                app._remember_spinner(
+                app.spinner_controller.remember(
                     ("milestone", milestone.id), milestone.status, milestone_text
                 )
                 for task in tasks:
@@ -353,7 +354,7 @@ class TreeController:
                     )
                     app._row_nodes[("task", task.id)] = leaf
                     app._row_labels[("task", task.id)] = task_text
-                    app._remember_spinner(("task", task.id), task.status, task_text)
+                    app.spinner_controller.remember(("task", task.id), task.status, task_text)
 
     # -- filtering ---------------------------------------------------------
     def status_tree(

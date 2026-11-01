@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import time
 from typing import Any
 
 try:
@@ -28,7 +27,6 @@ from ..design import (
 )
 from ..messages import RowAction, SelectionChanged
 from ..models import Status
-from ..vcs import detect_backend
 from .base import AppBase
 
 STATUS_CYCLE: list[Status | None] = [None, Status.TODO, Status.DOING, Status.DONE]
@@ -60,12 +58,6 @@ if _TEXTUAL_OK:
                     )
             self._preview_common(lines, full)
             return lines
-
-        def _store_git_state(self, path: str, state: dict[str, Any]) -> None:
-            self._git_pending.discard(path)
-            self._git_cache[path] = (time.time(), state)
-            if self._mounted and not self._refreshing:
-                self.update_preview(force=True)
 
         def update_preview(self, force: bool = False) -> None:
             """Selection preview: a bounded summary, never the full plan."""
@@ -170,27 +162,9 @@ if _TEXTUAL_OK:
             forge = full.get("effective_forge_links") or full.get("forge_links", [])
             repos = full.get("effective_repos") or full.get("repos") or []
             self._preview_source_summary(lines, links, forge, repos)
-            git_bits = self._git_preview_bits(repos)
+            git_bits = self.git_state_controller.preview_bits(repos)
             if git_bits:
                 lines.append(f"[dim]git: {' · '.join(git_bits)}[/]")
-
-        def _load_git_state(self, path: str) -> None:
-            """Worker: probe one checkout without blocking the UI thread."""
-            state = self._empty_git_state()
-            backend, root = detect_backend(path)
-            if backend is not None and root is not None:
-                status = backend.status(root)
-                state.update(
-                    {
-                        "branch": status.branch,
-                        "dirty": status.dirty,
-                        "ahead": status.ahead,
-                        "behind": status.behind,
-                        "upstream": status.upstream,
-                        "detached": status.detached,
-                    }
-                )
-            self.call_from_thread(self._store_git_state, path, state)
 
         def _preview_title(self, kind: str, oid: int, obj: dict[str, Any]) -> list[str]:
             title = str(obj.get("title", obj.get("name", "")))
@@ -218,32 +192,10 @@ if _TEXTUAL_OK:
                 return [entry.get("task", {}) for entry in full.get("tasks", [])]
             return [full.get("task", {})]
 
-        def _git_state(self, path: str) -> dict[str, Any]:
-            """Cached branch/dirty state; refresh in a worker when stale (30s TTL)."""
-            now = time.time()
-            cached = self._git_cache.get(path)
-            if cached is not None and now - cached[0] < 30.0:
-                return cached[1]
-            if path not in self._git_pending:
-                self._git_pending.add(path)
-                self.run_worker(lambda: self._load_git_state(path), thread=True, exclusive=False)
-            return cached[1] if cached is not None else self._empty_git_state()
-
         def _on_selection_changed(self, e: SelectionChanged) -> None:
             """Custom message (bubbles FoldTree -> App): track cursor."""
             self.selected = (e.kind, e.oid)
             self.update_preview()
-
-        @staticmethod
-        def _empty_git_state() -> dict[str, Any]:
-            return {
-                "branch": "",
-                "dirty": False,
-                "ahead": 0,
-                "behind": 0,
-                "upstream": "",
-                "detached": False,
-            }
 
         def _preview_notes(self, lines: list[str], notes: list[dict[str, Any]]) -> None:
             """Show the latest handoff notes."""
@@ -295,19 +247,3 @@ if _TEXTUAL_OK:
             self._preview_notes(lines, obj.get("notes", []))
             self._preview_common(lines, full)
             return lines
-
-        def _git_preview_bits(self, repos: list[dict[str, Any]]) -> list[str]:
-            """Compact branch/dirty bits for the preview's linked checkouts."""
-            bits: list[str] = []
-            for repo in repos[:2]:
-                path = str(repo.get("repo_path", "") or "")
-                if not path:
-                    continue
-                state = self._git_state(path)
-                branch = state["branch"]
-                if not branch:
-                    branch = "detached" if state["detached"] else "unknown"
-                name = repo_project_name(repo) or path
-                dirty = " dirty" if state["dirty"] else " clean"
-                bits.append(f"{name} {branch}{dirty}")
-            return bits

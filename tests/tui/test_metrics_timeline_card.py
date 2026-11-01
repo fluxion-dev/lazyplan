@@ -14,23 +14,23 @@ from lazyplan.store import Store
 try:
     from lazyplan import tui as tui_mod
     from lazyplan.metrics import TimelineLane
-    from lazyplan.tui.metrics.timeline import (
-        TimelineCard,
-        _active_segments,
-        _axis_ticks,
-        _lane_window,
-        _legend_layout,
-        _trace_glyph,
+    from lazyplan.tui.metrics.timeline import TimelineCard
+    from lazyplan.tui.metrics.timeline_layout import (
+        active_segments,
+        axis_ticks,
+        lane_window,
+        legend_layout,
+        trace_glyph,
     )
 except ImportError:  # stdlib-only interpreter: no textual
     tui_mod = None  # type: ignore[assignment]
     TimelineLane = None  # type: ignore[assignment,misc]
     TimelineCard = None  # type: ignore[assignment,misc]
-    _active_segments = None  # type: ignore[assignment]
-    _axis_ticks = None  # type: ignore[assignment]
-    _lane_window = None  # type: ignore[assignment]
-    _legend_layout = None  # type: ignore[assignment]
-    _trace_glyph = None  # type: ignore[assignment]
+    active_segments = None  # type: ignore[assignment]
+    axis_ticks = None  # type: ignore[assignment]
+    lane_window = None  # type: ignore[assignment]
+    legend_layout = None  # type: ignore[assignment]
+    trace_glyph = None  # type: ignore[assignment]
 
 
 def _at(stamp: float, action):
@@ -180,27 +180,27 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
         idle = TimelineLane("plan", "Idle", 0, 100, ())
         active = TimelineLane("plan", "Active", 0, 100, ((10, 20), (30, 40)))
 
-        self.assertEqual(_active_segments(idle, 0, 100, 1), [])
-        self.assertEqual(_active_segments(active, 0, 100, 1), [(10, 20), (30, 40)])
+        self.assertEqual(active_segments(idle, 0, 100, 1), [])
+        self.assertEqual(active_segments(active, 0, 100, 1), [(10, 20), (30, 40)])
 
-    def test_lane_window_keeps_one_row_per_lane_and_spare_space_below(self) -> None:
-        unit, top, bottom = _lane_window(12, 3, 3)
+    def testlane_window_keeps_one_row_per_lane_and_spare_space_below(self) -> None:
+        unit, top, bottom = lane_window(12, 3, 3)
 
         self.assertEqual(unit, 1.0)
         self.assertEqual(top, 5.5)
         self.assertEqual(bottom, 6.0)
 
-    def test_lane_window_compresses_only_when_lanes_overflow(self) -> None:
-        unit, top, bottom = _lane_window(12, 10, 6)
+    def testlane_window_compresses_only_when_lanes_overflow(self) -> None:
+        unit, top, bottom = lane_window(12, 10, 6)
 
         self.assertGreater(unit, 1.0)
         self.assertGreater(top, 10.0)
         self.assertEqual(bottom, 0.0)
 
-    def test_trace_glyphs_distinguish_kinds(self) -> None:
-        self.assertEqual(_trace_glyph("plan"), "═")
-        self.assertEqual(_trace_glyph("milestone"), "─")
-        self.assertEqual(_trace_glyph("task"), "·")
+    def testtrace_glyphs_distinguish_kinds(self) -> None:
+        self.assertEqual(trace_glyph("plan"), "═")
+        self.assertEqual(trace_glyph("milestone"), "─")
+        self.assertEqual(trace_glyph("task"), "·")
 
     def test_axis_labels_adapt_to_the_span_and_stay_unique(self) -> None:
         cases = (
@@ -212,24 +212,24 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
         )
         for span, width in cases:
             with self.subTest(span=span):
-                ticks, labels = _axis_ticks(0, span, span)
+                ticks, labels = axis_ticks(0, span, span)
                 self.assertEqual(len(ticks), len(labels))
                 self.assertEqual(len(set(labels)), len(labels))
                 self.assertEqual(len(labels[0]), width)
 
-    def test_legend_layout_wraps_and_trims_overflow(self) -> None:
+    def testlegend_layout_wraps_and_trims_overflow(self) -> None:
         lanes = tuple(TimelineLane("plan", f"Lane {index}", 0, 100) for index in range(30))
 
-        rows, hidden = _legend_layout(lanes, 40, 6)
+        rows, hidden = legend_layout(lanes, 40, 6)
 
         self.assertLessEqual(len(rows), 6)
         self.assertGreater(hidden, 0)
         self.assertTrue(rows)
 
-    def test_legend_layout_keeps_short_lists_on_one_row(self) -> None:
+    def testlegend_layout_keeps_short_lists_on_one_row(self) -> None:
         lanes = tuple(TimelineLane("plan", f"Lane {index}", 0, 100) for index in range(3))
 
-        rows, hidden = _legend_layout(lanes, 80, 6)
+        rows, hidden = legend_layout(lanes, 80, 6)
 
         self.assertEqual(len(rows), 1)
         self.assertEqual(hidden, 0)

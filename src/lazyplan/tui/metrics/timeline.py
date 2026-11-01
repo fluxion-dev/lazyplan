@@ -2,114 +2,26 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Any
 
 from textual.app import ComposeResult
 from textual.containers import VerticalScroll
 from textual_plotext import PlotextPlot
 
-from ...design import truncate
 from ...metrics import Timeline, TimelineLane
 from ..query import query_one_opt
 from ..theme import apply_chart_theme, chart_color, lane_rgb, token_rgb
 from .base import MetricCard
-
-LEGEND_LABEL_WIDTH = 16
-MAX_LEGEND_ROWS = 6
-MIN_SPAN_SECONDS = 60.0
-TRACE_GLYPHS = {"plan": "═", "milestone": "─", "task": "·"}
-AXIS_FORMATS = (
-    (10 * 60, "%H:%M:%S", 4),
-    (2 * 86_400, "%H:%M", 5),
-    (10 * 86_400, "%b %d %H:%M", 4),
-    (120 * 86_400, "%b %d", 5),
-    (float("inf"), "%b %Y", 5),
+from .timeline_layout import (
+    MAX_LEGEND_ROWS,
+    MIN_SPAN_SECONDS,
+    active_segments,
+    axis_ticks,
+    lane_window,
+    legend_entry,
+    legend_layout,
+    trace_glyph,
 )
-
-
-def _trace_glyph(kind: str) -> str:
-    """Line glyph for one lane kind."""
-    return TRACE_GLYPHS.get(kind, "─")
-
-
-def _legend_entry(lane: TimelineLane) -> str:
-    """One legend label with its kind glyph and truncated title."""
-    suffix = " *" if lane.selected else ""
-    return f"{_trace_glyph(lane.kind)} {truncate(lane.title, LEGEND_LABEL_WIDTH)}{suffix}"
-
-
-def _legend_layout(
-    lanes: tuple[TimelineLane, ...], width: int, max_rows: int
-) -> tuple[list[list[int]], int]:
-    """Group lane indexes into horizontal legend rows, trimming overflow."""
-    if not lanes or max_rows <= 0:
-        return [], len(lanes)
-    rows: list[list[int]] = []
-    current: list[int] = []
-    used = 0
-    for index, lane in enumerate(lanes):
-        entry_width = len(_legend_entry(lane)) + 2
-        if current and used + entry_width > width:
-            rows.append(current)
-            current = []
-            used = 0
-        current.append(index)
-        used += entry_width
-    if current:
-        rows.append(current)
-    if len(rows) <= max_rows:
-        return rows, 0
-    rows = rows[:max_rows]
-    hidden = len(lanes) - sum(len(row) for row in rows)
-    while rows:
-        last = rows[-1]
-        overflow = f"+{hidden} more"
-        last_width = sum(len(_legend_entry(lanes[index])) + 2 for index in last)
-        if last_width + len(overflow) + 2 <= width:
-            break
-        if last:
-            hidden += 1
-            last.pop()
-        else:
-            break
-    return rows, hidden
-
-
-def _axis_ticks(left: float, right: float, span: float) -> tuple[list[float], list[str]]:
-    """Tick positions and unique labels chosen from the timeline span."""
-    for limit, fmt, count in AXIS_FORMATS:
-        if span < limit:
-            ticks = [left + (right - left) * index / (count - 1) for index in range(count)]
-            labels = [datetime.fromtimestamp(stamp).strftime(fmt) for stamp in ticks]
-            if len(set(labels)) == len(labels):
-                return ticks, labels
-    ticks = [left + (right - left) * index / 4 for index in range(5)]
-    labels = [datetime.fromtimestamp(stamp).strftime("%Y-%m-%d %H:%M:%S") for stamp in ticks]
-    return ticks, labels
-
-
-def _active_segments(
-    lane: TimelineLane, left: float, right: float, min_visible: float
-) -> list[tuple[float, float]]:
-    """Visible trace segments for one lane's doing intervals."""
-    segments: list[tuple[float, float]] = []
-    for start, end in lane.active:
-        if end < left or start > right:
-            continue
-        start = max(start, left)
-        end = min(right, max(end, start + min_visible))
-        segments.append((start, end))
-    return segments
-
-
-def _lane_window(rows: int, count: int, legend_rows: int) -> tuple[float, float, float]:
-    """Y scale, top, and spare bottom rows for one-row lane spacing."""
-    content = count + legend_rows
-    if content <= rows:
-        return 1.0, count - 0.5 + legend_rows, float(rows - content)
-    unit = content / rows
-    return unit, count - 0.5 + legend_rows * unit, 0.0
 
 
 class TimelineCard(MetricCard):
@@ -138,7 +50,7 @@ class TimelineCard(MetricCard):
             2, ((scroll.size.height if scroll is not None else plot.size.height) or 12) - 3
         )
         max_rows = max(1, min(MAX_LEGEND_ROWS, available - 1))
-        legend_data, hidden = _legend_layout(lanes, width, max_rows)
+        legend_data, hidden = legend_layout(lanes, width, max_rows)
         rows = max(available, len(legend_data) + len(lanes))
         plot.styles.height = rows + 3
         self._draw(plot, timeline, rows, width, legend_data, hidden)
@@ -184,11 +96,11 @@ class TimelineCard(MetricCard):
         plt.clear_figure()
         for index, lane in enumerate(lanes):
             color = lane_rgb(self.app, index)
-            for start, end in _active_segments(lane, left, right, min_visible):
+            for start, end in active_segments(lane, left, right, min_visible):
                 plt.plot(
                     [start, end],
                     [positions[index], positions[index]],
-                    marker=_trace_glyph(lane.kind),
+                    marker=trace_glyph(lane.kind),
                     color=color,
                 )
                 plt.scatter(
@@ -197,9 +109,9 @@ class TimelineCard(MetricCard):
                     marker="dot",
                     color=color,
                 )
-        ticks, labels = _axis_ticks(left, right, span)
+        ticks, labels = axis_ticks(left, right, span)
         legend_rows = len(legend_data)
-        row_unit, top, bottom = _lane_window(rows, count, legend_rows)
+        row_unit, top, bottom = lane_window(rows, count, legend_rows)
         plt.xlim(left, right)
         plt.ylim(-0.5 - bottom, top)
         plt.xticks(ticks, labels)
@@ -248,7 +160,7 @@ class TimelineCard(MetricCard):
             column = 0
             for index in row:
                 lane = lanes[index]
-                text = _legend_entry(lane)
+                text = legend_entry(lane)
                 plt.text(
                     text,
                     left + column * char_unit,

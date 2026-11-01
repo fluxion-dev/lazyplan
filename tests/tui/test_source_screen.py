@@ -348,7 +348,7 @@ class TestSourceScreen(unittest.IsolatedAsyncioTestCase):
                 ("error", "diff unavailable", "unavailable"),
             ):
                 with mock.patch(
-                    "lazyplan.tui.screens.source.read_diff",
+                    "lazyplan.tui.views.source.read_diff",
                     return_value=DiffRead(state=state, detail=detail),
                 ):
                     screen._diff_cache.clear()

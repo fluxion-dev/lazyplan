@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import webbrowser
-from datetime import datetime
 from typing import Any
 
 try:
@@ -23,8 +22,6 @@ except ImportError:  # pragma: no cover
 
 from ...design import escape_markup
 from ...source import (
-    DiffFile,
-    DiffLine,
     SourceCommit,
     SourceFile,
     SourcePull,
@@ -32,82 +29,21 @@ from ...source import (
     SourceTrail,
     build_source_trail,
     clear_diff_cache,
-    parse_patch,
-    read_diff,
 )
 from ...store import Store
+from ..views.source import (
+    commit_label,
+    commit_preview,
+    file_preview,
+    pull_label,
+    pull_preview,
+    render_diff,
+    repo_label,
+    repo_preview,
+)
 
 DIFF_PREVIEW_LINES = 300
 DIFF_PREVIEW_FILES = 20
-
-
-def _when(timestamp: int) -> str:
-    """Short local date for a commit timestamp."""
-    if timestamp <= 0:
-        return ""
-    try:
-        return datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d")
-    except (OverflowError, OSError, ValueError):
-        return ""
-
-
-def _commit_label(commit: SourceCommit) -> str:
-    subject = escape_markup(commit.subject or "(no subject)")
-    count = f" · {len(commit.files)} files" if commit.files else ""
-    stale = " [red]stale[/]" if commit.stale else ""
-    return f"[dim]{commit.short}[/] {subject}[dim]{count}[/]{stale}"
-
-
-def _repo_label(repo: SourceRepo) -> str:
-    state = "dirty" if repo.dirty else "clean"
-    branch = repo.branch or ("detached" if repo.detached else "unknown")
-    return (
-        f"[bold]{escape_markup(repo.name)}[/] "
-        f"[dim]{escape_markup(branch)} · {state} · {len(repo.commits)} commits"
-        f" · {len(repo.pulls)} PRs[/]"
-    )
-
-
-def _pull_label(pull: SourcePull) -> str:
-    title = escape_markup(pull.title or "")
-    state = pull.state or "unknown"
-    return f"[dim]PR #{pull.number}[/] {state} {title}".rstrip()
-
-
-def _diff_gutter(line: DiffLine) -> str:
-    """Aligned old/new line-number gutter for one diff line."""
-    old = f"{line.old_no:>4}" if line.old_no is not None else "    "
-    new = f"{line.new_no:>4}" if line.new_no is not None else "    "
-    return f"[dim]{old} {new}[/]"
-
-
-def _diff_row(line: DiffLine) -> str:
-    """One diff line: colored add/remove, dim context, plain meta."""
-    text = escape_markup(line.text)
-    gutter = _diff_gutter(line)
-    if line.kind == "add":
-        return f"{gutter} [green]+{text}[/]"
-    if line.kind == "remove":
-        return f"{gutter} [red]-{text}[/]"
-    if line.kind == "meta":
-        return f"[dim]{text}[/]"
-    return f"{gutter} {text}"
-
-
-def _diff_rows(files: tuple[DiffFile, ...], max_files: int) -> list[str]:
-    """Render file headers, hunk headers, and numbered lines up to a file cap."""
-    rows: list[str] = []
-    for index, item in enumerate(files):
-        if index >= max_files:
-            break
-        if item.binary:
-            rows.append(f"[yellow]binary[/] {escape_markup(item.path)}")
-            continue
-        rows.append(f"[bold]{escape_markup(item.path)}[/]")
-        for hunk in item.hunks:
-            rows.append(f"[cyan]{escape_markup(hunk.header)}[/]")
-            rows.extend(_diff_row(line) for line in hunk.lines)
-    return rows
 
 
 if _TEXTUAL_OK:
@@ -198,12 +134,12 @@ if _TEXTUAL_OK:
             for repo in self._trail.repos:
                 if needle and not self._repo_matches(repo, needle):
                     continue
-                repo_node = tree.root.add(_repo_label(repo), data=self._repo_data(repo))
+                repo_node = tree.root.add(repo_label(repo), data=self._repo_data(repo))
                 for commit in repo.commits:
                     if needle and not self._commit_matches(commit, needle):
                         continue
                     commit_node = repo_node.add(
-                        _commit_label(commit), data=self._commit_data(repo, commit)
+                        commit_label(commit), data=self._commit_data(repo, commit)
                     )
                     for item in commit.files:
                         if needle and needle not in item.path.lower():
@@ -215,7 +151,7 @@ if _TEXTUAL_OK:
                 for pull in repo.pulls:
                     if needle and needle not in f"pr {pull.number} {pull.title}".lower():
                         continue
-                    repo_node.add_leaf(_pull_label(pull), data=self._pull_data(repo, pull))
+                    repo_node.add_leaf(pull_label(pull), data=self._pull_data(repo, pull))
                 repo_node.expand()
             if not tree.root.children:
                 tree.root.add_leaf(
@@ -296,13 +232,13 @@ if _TEXTUAL_OK:
                 repo = str(data.get("repo", "") or "")
                 sha = str(data.get("sha", "") or "")
                 if kind == "repo" and isinstance(obj, SourceRepo):
-                    text = self._repo_preview(obj)
+                    text = repo_preview(obj)
                 elif kind == "commit" and isinstance(obj, SourceCommit):
-                    text = self._commit_preview(obj, repo)
+                    text = commit_preview(obj, repo, self._diff_block(repo, sha))
                 elif kind == "file" and isinstance(obj, SourceFile):
-                    text = self._file_preview(obj, repo, sha)
+                    text = file_preview(obj, repo, sha, self._diff_block(repo, sha, str(obj.path)))
                 elif kind == "pull" and isinstance(obj, SourcePull):
-                    text = self._pull_preview(obj)
+                    text = pull_preview(obj)
                 else:
                     text = "No source linked for this row."
             body.update(text)
@@ -311,121 +247,15 @@ if _TEXTUAL_OK:
             except Exception:
                 pass
 
-        def _repo_preview(self, repo: SourceRepo) -> str:
-            lines = [
-                f"[bold]{escape_markup(repo.name)}[/]",
-                f"[dim]{escape_markup(repo.path)}[/]",
-            ]
-            if repo.remote:
-                lines.append(f"[dim]{escape_markup(repo.remote)}[/]")
-            state = "dirty" if repo.dirty else "clean"
-            track = f"{repo.ahead} ahead, {repo.behind} behind"
-            lines.append(f"branch {escape_markup(repo.branch or 'unknown')} · {state} · {track}")
-            if repo.error:
-                lines.append(f"[red]{escape_markup(repo.error)}[/]")
-            lines.append(
-                f"{len(repo.commits)} commits · {repo.file_count} files · {len(repo.pulls)} PRs"
-            )
-            return "\n".join(lines)
-
-        def _commit_preview(self, commit: SourceCommit, repo: str = "") -> str:
-            lines = [
-                f"[bold]{commit.short}[/] {escape_markup(commit.subject or '(no subject)')}",
-                f"[dim]{escape_markup(commit.sha)}[/]",
-            ]
-            meta = " · ".join(
-                part
-                for part in (
-                    escape_markup(commit.author),
-                    _when(commit.timestamp),
-                    ", ".join(commit.owners),
-                )
-                if part
-            )
-            if meta:
-                lines.append(f"[dim]{meta}[/]")
-            if commit.stale:
-                lines.append("[red]stale: commit no longer resolves[/]")
-            if commit.url:
-                lines.append(commit.url)
-            if commit.files:
-                lines.extend(["", f"[dim]files {len(commit.files)}[/]"])
-                for item in commit.files:
-                    lines.append(f"  {escape_markup(item.path)}")
-            if repo:
-                lines.extend(["", *self._diff_block(repo, commit.sha)])
-            return "\n".join(lines)
-
-        def _file_preview(self, item: SourceFile, repo: str = "", sha: str = "") -> str:
-            lines = [f"[bold]{escape_markup(item.path)}[/]"]
-            if item.url:
-                lines.append(item.url)
-            else:
-                lines.append("[dim]no web URL for this remote[/]")
-            if repo and sha:
-                lines.extend(["", *self._diff_block(repo, sha, item.path)])
-            return "\n".join(lines)
-
         def _diff_block(self, repo: str, sha: str, path: str = "") -> list[str]:
             """Read and render a bounded diff preview, cached per row."""
             key = (repo, sha, path)
             cached = self._diff_cache.get(key)
             if cached is not None:
                 return list(cached)
-            rows = self._render_diff(repo, sha, path)
+            rows = render_diff(repo, sha, path, DIFF_PREVIEW_LINES, DIFF_PREVIEW_FILES)
             self._diff_cache[key] = rows
             return list(rows)
-
-        def _render_diff(self, repo: str, sha: str, path: str = "") -> list[str]:
-            read = read_diff(repo, sha, path)
-            if read.state == "missing":
-                return [f"[red]{escape_markup(read.detail or 'commit not available')}[/]"]
-            if read.state == "merge":
-                return [
-                    f"[yellow]{escape_markup(read.detail or 'merge commit')}[/]",
-                    "[dim]combined merge diffs are not rendered; press o to open it[/]",
-                ]
-            if read.state == "binary":
-                return [f"[yellow]{escape_markup(read.detail or 'binary file')}[/]"]
-            if read.state == "empty":
-                return [f"[dim]{escape_markup(read.detail or 'no textual changes')}[/]"]
-            if read.state == "error":
-                return [f"[red]{escape_markup(read.detail or 'diff unavailable')}[/]"]
-            files = parse_patch(read.patch)
-            if not files:
-                return ["[dim]no textual changes[/]"]
-            prefix = ["[dim]root commit · full tree diff[/]"] if read.state == "root" else []
-            diff_rows = _diff_rows(files, DIFF_PREVIEW_FILES)
-            budget = max(1, DIFF_PREVIEW_LINES - len(prefix))
-            shown = prefix + diff_rows[:budget]
-            remainder = len(diff_rows) - budget
-            if remainder > 0:
-                shown.append(f"[dim]+{remainder} more lines — o opens the full diff[/]")
-            extra_files = len(files) - DIFF_PREVIEW_FILES
-            if extra_files > 0:
-                shown.append(f"[dim]+{extra_files} more files[/]")
-            if read.truncated:
-                shown.append("[dim]diff truncated — o opens the full commit[/]")
-            return shown
-
-        def _pull_preview(self, pull: SourcePull) -> str:
-            lines = [
-                f"[bold]PR #{pull.number}[/] {escape_markup(pull.title or '')}",
-                f"state {pull.state or 'unknown'}",
-            ]
-            if pull.checks and pull.checks != "none":
-                lines.append(f"checks {pull.checks}")
-            if pull.reviews and pull.reviews != "none":
-                lines.append(f"reviews {pull.reviews}")
-            if pull.merge_commit_sha:
-                lines.append(f"merge {pull.merge_commit_sha[:12]}")
-            if pull.owners:
-                lines.append(f"[dim]{escape_markup(', '.join(pull.owners))}[/]")
-            if pull.stale:
-                lines.append("[red]stale: cached PR data[/]")
-            if pull.url:
-                lines.append(pull.url)
-            return "\n".join(lines)
 
         def _selected(self) -> dict[str, Any] | None:
             node = self.query_one("#source-tree", NavTree).cursor_node

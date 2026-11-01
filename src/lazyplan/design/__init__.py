@@ -34,6 +34,9 @@ from .empty import msg_error as msg_error
 from .empty import msg_no_head as msg_no_head
 from .empty import msg_no_vcs as msg_no_vcs
 from .empty import msg_not_found as msg_not_found
+from .row_stats import RowStats as RowStats
+from .row_stats import render_stats as render_stats
+from .row_stats import stats_layout as stats_layout
 from .rows import milestone_label as milestone_label
 from .rows import milestone_row as milestone_row
 from .rows import plan_label as plan_label
@@ -76,6 +79,7 @@ __all__ = [
     "PALETTE_COMMANDS",
     "PALETTE_SECTIONS",
     "PLAN",
+    "RowStats",
     "SPINNER_FRAMES",
     "SPINNER_INTERVAL",
     "STATUS_ANSI",
@@ -95,9 +99,11 @@ __all__ = [
     "pr_chip",
     "progress_text",
     "repo_project_name",
+    "render_stats",
     "repos_chip",
     "source_chip",
     "spinner_glyph",
+    "stats_layout",
     "status_prefix",
     "status_word",
     "task_label",

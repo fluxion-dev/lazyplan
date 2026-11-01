@@ -60,6 +60,7 @@ class TestViewports(unittest.IsolatedAsyncioTestCase):
                     await pilot.pause()
                     page = app.screen.query_one("#detail-page")
                     self.assertTrue(_within(page.region, width, height))
+                    self.assertEqual(page.border_title, "DETAIL")
                     await pilot.press("e")
                     await pilot.pause()
                     edit = app.screen.query_one("#detail-edit")
@@ -124,6 +125,7 @@ class TestViewports(unittest.IsolatedAsyncioTestCase):
                     app.push_screen(NewPlanScreen())
                     await pilot.pause()
                     self.assertTrue(_within(app.screen.query_one("#dlg").region, width, height))
+                    self.assertEqual(app.screen.query_one("#dlg").border_title, "CREATE")
                     await pilot.press("escape")
                     await pilot.pause()
 
@@ -142,18 +144,21 @@ class TestViewports(unittest.IsolatedAsyncioTestCase):
                     app.push_screen(PaletteScreen(app._palette_context()))
                     await pilot.pause()
                     self.assertTrue(_within(app.screen.query_one("#dlg").region, width, height))
+                    self.assertEqual(app.screen.query_one("#dlg").border_title, "COMMANDS")
                     await pilot.press("escape")
                     await pilot.pause()
 
                     app.push_screen(HelpScreen())
                     await pilot.pause()
                     self.assertTrue(_within(app.screen.query_one("#help").region, width, height))
+                    self.assertEqual(app.screen.query_one("#help").border_title, "HELP")
                     await pilot.press("escape")
                     await pilot.pause()
 
                     app.push_screen(ConfirmScreen("Delete plan?", confirm_label="Delete"))
                     await pilot.pause()
                     self.assertTrue(_within(app.screen.query_one("#dlg").region, width, height))
+                    self.assertEqual(app.screen.query_one("#dlg").border_title, "CONFIRM")
                     await pilot.press("escape")
                     await pilot.pause()
 

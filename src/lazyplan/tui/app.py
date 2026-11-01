@@ -199,7 +199,7 @@ if _TEXTUAL_OK:
         def on_mount(self) -> None:
             self._mounted = True
             self._apply_layout()
-            self.refresh_all("ready — ? for help")
+            self.call_after_refresh(lambda: self.refresh_all("ready — ? for help"))
             self.set_interval(1.0, self._poll)
             self.spinner_controller.start()
             self.update_controller.start()

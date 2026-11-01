@@ -36,7 +36,7 @@ from rich.text import Text  # noqa: E402
 from textual.app import App, ComposeResult  # noqa: E402
 from textual.widgets import Static, Tree  # noqa: E402
 
-from lazyplan import services  # noqa: E402
+from lazyplan import metrics, services  # noqa: E402
 from lazyplan.models import Status  # noqa: E402
 from lazyplan.store import Store  # noqa: E402
 from lazyplan.tui import create_app  # noqa: E402
@@ -51,6 +51,7 @@ AUTHOR = "Ada Lovelace"
 EMAIL = "ada@acme.dev"
 REMOTE = "git@github.com:acme/web.git"
 STAMP = 1767261600.0  # 2026-01-01 09:00 UTC, safely older than the attention window
+FIXED_NOW = STAMP + 120.0  # two minutes after the fixture events
 
 BASE_FILES = {
     "app/source.py": "def trail():\n    return []\n",
@@ -869,7 +870,16 @@ def run(out_dir: Path, only: list[str], keep_svg: Path | None, make_og: bool) ->
     if keep_svg is not None and len(names) != 1:
         raise SystemExit("error: --keep-svg needs exactly one --only scene")
 
-    with tempfile.TemporaryDirectory(prefix="lpui-shot-") as tmp:
+    real_snapshot = metrics.snapshot
+
+    def frozen_snapshot(store: Store, now: float | None = None, **kwargs: object):
+        return real_snapshot(store, now=FIXED_NOW, **kwargs)
+
+    with (
+        mock.patch("lazyplan.store.base.time.time", return_value=STAMP),
+        mock.patch("lazyplan.metrics.snapshot", side_effect=frozen_snapshot),
+        tempfile.TemporaryDirectory(prefix="lpui-shot-") as tmp,
+    ):
         for name in names:
             scene = SCENES[name]
             scene_dir = Path(tmp) / name

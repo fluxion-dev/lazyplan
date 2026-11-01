@@ -54,13 +54,15 @@ from ..upgrade import (
 from .actions import ActionMixin
 from .base import AppBase
 from .bulk import BulkMixin
+from .controllers.tree import TreeController
 from .filters import FilterMixin
 from .metrics import MetricsSection
 from .preview import PreviewMixin
 from .screens.update import UpdateScreen
 from .state import AppState
 from .theme import register_themes
-from .tree import FoldTree, TreeMixin
+from .tree import TreeMixin
+from .widgets.plan_tree import FoldTree
 
 STATUS_CYCLE: list[Status | None] = [None, Status.TODO, Status.DOING, Status.DONE]
 DOUBLE_CLICK_WINDOW = 0.5  # seconds between two clicks on one row
@@ -148,6 +150,7 @@ if _TEXTUAL_OK:
             self._undo: list[dict] | None = None
             self._row_nodes: dict[tuple[str, int], TreeNode] = {}
             self._row_labels: dict[tuple[str, int], str] = {}
+            self.tree_controller = TreeController(self)
             self._last_click_key: tuple[str, int] | None = None
             self._last_click_at: float = 0.0
             self._fp: Any = store.fingerprint()

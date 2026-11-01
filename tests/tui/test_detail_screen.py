@@ -73,7 +73,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
             self.app.source_filter = "claims"
             claimed = [
                 task.id
-                for _plan, milestones in self.app._filtered_tree()
+                for _plan, milestones in self.app.tree_controller.filtered_tree()
                 for _milestone, tasks in milestones
                 for task in tasks
             ]

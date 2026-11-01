@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 from textual.app import App
@@ -10,8 +9,9 @@ from textual.widgets import Tree
 from textual.widgets.tree import TreeNode
 
 from ..messages import RowAction, SelectionChanged
-from ..models import Milestone, Plan, Status, Task
+from ..models import Status, Task
 from ..store import Store
+from .controllers.tree import TreeController
 from .state import AppState
 
 
@@ -20,6 +20,7 @@ class AppBase(App):
 
     store: Store
     state: AppState
+    tree_controller: TreeController
     _undo: list[dict] | None
     _row_nodes: dict[tuple[str, int], Any]
     _row_labels: dict[tuple[str, int], str]
@@ -155,9 +156,6 @@ class AppBase(App):
 
     if TYPE_CHECKING:
 
-        def _track(self, node: TreeNode) -> None:
-            raise NotImplementedError
-
         def on_tree_node_highlighted(self, e: Tree.NodeHighlighted) -> None:
             raise NotImplementedError
 
@@ -237,44 +235,7 @@ class AppBase(App):
         def _poll(self) -> None:
             raise NotImplementedError
 
-        def _source_stats(
-            self, base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]
-        ) -> dict[tuple[str, int], tuple[int, int, int, int]]:
-            raise NotImplementedError
-
-        def _source_match(self, stats: tuple[int, int, int, int]) -> bool:
-            raise NotImplementedError
-
-        def _filter_tasks(
-            self,
-            base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]],
-            keep: Callable[[Task], bool],
-        ) -> list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]:
-            raise NotImplementedError
-
-        def _filter_source_tree(
-            self,
-            base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]],
-            stats: dict[tuple[str, int], tuple[int, int, int, int]],
-        ) -> list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]:
-            raise NotImplementedError
-
-        def _status_tree(
-            self, base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]], status: Status | None
-        ) -> list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]:
-            raise NotImplementedError
-
-        def _filtered_tree(
-            self, base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]] | None = None
-        ) -> list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]:
-            raise NotImplementedError
-
         def action_clear_filter(self) -> None:
-            raise NotImplementedError
-
-        def _progress_map(
-            self, base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]
-        ) -> dict[tuple[str, int], tuple[int, int]]:
             raise NotImplementedError
 
         def _status_text(self, counts: dict[str, int], note: str) -> str:
@@ -284,30 +245,6 @@ class AppBase(App):
             raise NotImplementedError
 
         def _paint_mark(self, key: tuple[str, int]) -> None:
-            raise NotImplementedError
-
-        def _row_width(self, tree: Tree, depth: int) -> int:
-            raise NotImplementedError
-
-        def _build_rows(
-            self,
-            root: Any,
-            tree: Tree,
-            filtered: list,
-            progress: dict,
-            forge_map: dict,
-            vcs_map: dict,
-            source_stats: dict,
-            claims_map: dict,
-        ) -> None:
-            raise NotImplementedError
-
-        def _apply_folds(self) -> None:
-            raise NotImplementedError
-
-        def _restore_selection(
-            self, tree: Tree, prev_selected: tuple[str, int] | None, prev_cursor: Any
-        ) -> None:
             raise NotImplementedError
 
         def refresh_all(self, note: str = "") -> None:

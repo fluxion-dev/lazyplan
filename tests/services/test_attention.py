@@ -54,7 +54,7 @@ class TestAttention(unittest.IsolatedAsyncioTestCase):
     def _visible_ids(self) -> set[int]:
         return {
             task.id
-            for _plan, milestones in self.app._filtered_tree()
+            for _plan, milestones in self.app.tree_controller.filtered_tree()
             for _milestone, tasks in milestones
             for task in tasks
         }

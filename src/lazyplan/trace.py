@@ -6,11 +6,12 @@ porcelain, or JSON; no network calls happen here.
 
 from __future__ import annotations
 
+from .core.ports.provenance import ProvenancePort
+from .core.serialization import to_payload
 from .models import Criterion, Task
-from .store import Store, to_payload
 
 
-def _task_entry(store: Store, task: Task) -> dict:
+def _task_entry(store: ProvenancePort, task: Task) -> dict:
     """One proving task with its effective commits and PRs."""
     return {
         "task": to_payload(vars(task)),
@@ -20,7 +21,7 @@ def _task_entry(store: Store, task: Task) -> dict:
     }
 
 
-def _criterion_entry(store: Store, criterion: Criterion) -> dict:
+def _criterion_entry(store: ProvenancePort, criterion: Criterion) -> dict:
     """One criterion with every proving task."""
     return {
         "criterion": vars(criterion),
@@ -28,7 +29,7 @@ def _criterion_entry(store: Store, criterion: Criterion) -> dict:
     }
 
 
-def trace_criterion(store: Store, criterion_id: int) -> dict | None:
+def trace_criterion(store: ProvenancePort, criterion_id: int) -> dict | None:
     """Trace one criterion to its tasks, commits, and PRs."""
     criterion = store.get_criterion(criterion_id)
     if criterion is None:
@@ -37,7 +38,7 @@ def trace_criterion(store: Store, criterion_id: int) -> dict | None:
     return {"criterion": entry["criterion"], "tasks": entry["tasks"]}
 
 
-def trace_plan(store: Store, plan_id: int) -> dict | None:
+def trace_plan(store: ProvenancePort, plan_id: int) -> dict | None:
     """Trace every plan-level criterion to its tasks, commits, and PRs."""
     plan = store.get_plan(plan_id)
     if plan is None:

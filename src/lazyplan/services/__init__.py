@@ -26,20 +26,6 @@ from .coordination import (
     start_claim,
     unblock_task,
 )
-from .forge import (
-    _checks_state,
-    _forge_target,
-    _link_forge_target,
-    _pr_checks,
-    _pr_number,
-    _pr_reviews,
-    _pr_state,
-    _store_pr,
-    _store_pulls,
-    _tasks_in_scope,
-    forge_statuses,
-    refresh_forge,
-)
 from .planning import (
     DEFAULT_PLAN_LIMIT,
     _filtered_milestones,
@@ -61,13 +47,39 @@ from .planning import (
     set_status,
     tree,
 )
-from .plans import refresh_links
-from .tasks import (
+from .provenance import (
+    _branch_ref,
+    _branch_scan,
+    _capture_block,
+    _checks_state,
+    _ensure_task_repo_links,
     _finish_target,
+    _forge_target,
     _gate_failure,
     _link_commits,
+    _link_forge_target,
+    _norm_path,
+    _pr_checks,
+    _pr_number,
+    _pr_reviews,
+    _pr_state,
+    _repo_for_task,
+    _repo_targets,
+    _scan_ref_action,
+    _scan_wanted,
+    _store_pr,
+    _store_pulls,
+    _task_capture_block,
+    _tasks_in_scope,
+    _trailer_refs,
+    auto_capture_head,
     finish_task,
+    forge_statuses,
     gate_state,
+    refresh_forge,
+    refresh_links,
+    repo_statuses,
+    scan_commits,
     start_task,
 )
 from .transfer import (
@@ -77,22 +89,6 @@ from .transfer import (
     export_all,
     export_plan,
     import_all,
-)
-from .vcs import (
-    _branch_ref,
-    _branch_scan,
-    _capture_block,
-    _ensure_task_repo_links,
-    _norm_path,
-    _repo_for_task,
-    _repo_targets,
-    _scan_ref_action,
-    _scan_wanted,
-    _task_capture_block,
-    _trailer_refs,
-    auto_capture_head,
-    repo_statuses,
-    scan_commits,
 )
 
 __all__ = [

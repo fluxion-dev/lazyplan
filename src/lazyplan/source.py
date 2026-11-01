@@ -16,7 +16,7 @@ from .forge import RepoRef, detect_forge, parse_pull_url
 from .vcs import DiffRead, commit_url, detect_backend, file_url, origin_url
 
 if TYPE_CHECKING:
-    from .store import Store
+    from .core.ports.provenance import ProvenancePort
 
 
 DIFF_CACHE_LIMIT = 16
@@ -165,7 +165,7 @@ def _repo_name(path: str, remote: str = "") -> str:
     return name or "unknown"
 
 
-def _owner_label(store: Store, parent_kind: str, parent_id: int) -> str:
+def _owner_label(store: ProvenancePort, parent_kind: str, parent_id: int) -> str:
     """Short, human owner label for one link parent."""
     if parent_kind == "task":
         task = store.get_task(parent_id)
@@ -190,7 +190,7 @@ def _add_unique(values: list[str], value: str) -> None:
         values.append(value)
 
 
-def _scope_parents(store: Store, kind: str, obj_id: int) -> list[tuple[str, int]]:
+def _scope_parents(store: ProvenancePort, kind: str, obj_id: int) -> list[tuple[str, int]]:
     """Direct row plus descendant rows, without link deduplication."""
     out: list[tuple[str, int]] = [(kind, obj_id)]
     if kind == "milestone":
@@ -203,7 +203,7 @@ def _scope_parents(store: Store, kind: str, obj_id: int) -> list[tuple[str, int]
 
 
 def _commit_groups(
-    store: Store, kind: str, obj_id: int
+    store: ProvenancePort, kind: str, obj_id: int
 ) -> dict[str, list[tuple[object, list[str]]]]:
     """Cached links grouped by repo root with owner labels."""
     groups: dict[str, list[tuple[object, list[str]]]] = {}
@@ -217,7 +217,7 @@ def _commit_groups(
 
 
 def _commit_rows(
-    store: Store,
+    store: ProvenancePort,
     kind: str,
     obj_id: int,
     remote_by_path: dict[str, str],
@@ -253,7 +253,7 @@ def _commit_rows(
     return out
 
 
-def _pull_rows(store: Store, kind: str, obj_id: int) -> list[tuple[SourcePull, str]]:
+def _pull_rows(store: ProvenancePort, kind: str, obj_id: int) -> list[tuple[SourcePull, str]]:
     """Merged forge links with owners and the repo slug parsed from their URL."""
     by_number: dict[tuple[str, int], tuple[SourcePull, str]] = {}
     for parent_kind, parent_id in _scope_parents(store, kind, obj_id):
@@ -286,7 +286,7 @@ def _pull_rows(store: Store, kind: str, obj_id: int) -> list[tuple[SourcePull, s
     return list(by_number.values())
 
 
-def _repo_meta(store: Store, kind: str, obj_id: int) -> dict[str, dict[str, object]]:
+def _repo_meta(store: ProvenancePort, kind: str, obj_id: int) -> dict[str, dict[str, object]]:
     """Explicit or inherited repo metadata keyed by normalized path."""
     out: dict[str, dict[str, object]] = {}
     for repo in store.effective_repos(kind, obj_id):
@@ -331,7 +331,7 @@ def _repo_status(path: str, remote: str) -> tuple[dict[str, object], str]:
     return state, resolved_remote
 
 
-def _row_title(store: Store, kind: str, obj_id: int) -> str:
+def _row_title(store: ProvenancePort, kind: str, obj_id: int) -> str:
     parent = store.get_parent(kind, obj_id)
     if parent is None:
         return ""
@@ -414,7 +414,7 @@ def _trail_counts(repos: list[SourceRepo]) -> tuple[int, int, int, int]:
     return commit_count, len(files), pull_count, stale
 
 
-def build_source_trail(store: Store, kind: str, obj_id: int) -> SourceTrail:
+def build_source_trail(store: ProvenancePort, kind: str, obj_id: int) -> SourceTrail:
     """Build the grouped source trail for one row without network access."""
     meta = _repo_meta(store, kind, obj_id)
     groups = _commit_groups(store, kind, obj_id)

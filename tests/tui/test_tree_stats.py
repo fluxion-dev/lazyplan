@@ -97,9 +97,11 @@ class TreeStatsTest(unittest.IsolatedAsyncioTestCase):
                         },
                         "task": {oid: self._plain(app, ("task", oid)) for oid in expected["task"]},
                     }
+                    layouts: dict[str, tuple[tuple[str, bool], ...]] = {}
                     for kind, row_width in row_widths.items():
                         prefix = f"○ {kind[0].upper()}1 "
                         layout = stats_layout(kind, row_width, len(prefix))
+                        layouts[kind] = layout
                         for oid, stats in expected[kind].items():
                             with self.subTest(width=width, kind=kind, id=oid):
                                 block = render_stats(stats, layout)[1]
@@ -110,17 +112,23 @@ class TreeStatsTest(unittest.IsolatedAsyncioTestCase):
                     plan_b = labels["plan"][self.plan_b.id]
                     task_b = labels["task"][self.task_b.id]
                     task_c = labels["task"][self.task_c.id]
-                    if width == 100:
-                        self.assertNotIn("1c", plan_b)
-                        self.assertNotIn("@alice", task_b)
-                        self.assertIn("⚑", task_c)
-                    elif width == 120:
+                    plan_keys = {key for key, _compact in layouts["plan"]}
+                    task_slots = dict(layouts["task"])
+                    if "commits" in plan_keys:
                         self.assertIn("1c", plan_b)
+                    else:
+                        self.assertNotIn("1c", plan_b)
+                    if "claim" in task_slots:
                         self.assertIn("@alice", task_b)
+                    else:
+                        self.assertNotIn("@alice", task_b)
+                    blocked_compact = task_slots.get("blocked")
+                    if blocked_compact is None:
+                        self.assertNotIn("⚑", task_c)
+                    elif blocked_compact:
+                        self.assertIn("⚑", task_c)
                         self.assertNotIn("⚑ blocked", task_c)
                     else:
-                        self.assertIn("1c", task_b)
-                        self.assertIn("@alice", task_b)
                         self.assertIn("⚑ blocked", task_c)
 
                     for key in (("plan", self.plan_a.id), ("task", self.task_a.id)):

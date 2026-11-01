@@ -19,6 +19,7 @@ try:
         active_segments,
         axis_ticks,
         lane_window,
+        legend_entry,
         legend_layout,
         trace_glyph,
     )
@@ -29,6 +30,7 @@ except ImportError:  # stdlib-only interpreter: no textual
     active_segments = None  # type: ignore[assignment]
     axis_ticks = None  # type: ignore[assignment]
     lane_window = None  # type: ignore[assignment]
+    legend_entry = None  # type: ignore[assignment]
     legend_layout = None  # type: ignore[assignment]
     trace_glyph = None  # type: ignore[assignment]
 
@@ -201,6 +203,16 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(trace_glyph("plan"), "═")
         self.assertEqual(trace_glyph("milestone"), "─")
         self.assertEqual(trace_glyph("task"), "·")
+        self.assertEqual(trace_glyph("plan", bold=True), "█")
+        self.assertEqual(trace_glyph("milestone", bold=True), "━")
+        self.assertEqual(trace_glyph("task", bold=True), "●")
+
+    def testlegend_entry_drops_the_star_and_uses_the_bold_glyph(self) -> None:
+        selected = TimelineLane("task", "Task title", 0, 100, selected=True)
+        plain = TimelineLane("task", "Task title", 0, 100)
+
+        self.assertEqual(legend_entry(selected), "● Task title")
+        self.assertEqual(legend_entry(plain), "· Task title")
 
     def test_axis_labels_adapt_to_the_span_and_stay_unique(self) -> None:
         cases = (

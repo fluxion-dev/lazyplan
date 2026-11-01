@@ -11,6 +11,7 @@ LEGEND_LABEL_WIDTH = 16
 MAX_LEGEND_ROWS = 6
 MIN_SPAN_SECONDS = 60.0
 TRACE_GLYPHS = {"plan": "═", "milestone": "─", "task": "·"}
+BOLD_TRACE_GLYPHS = {"plan": "█", "milestone": "━", "task": "●"}
 AXIS_FORMATS = (
     (10 * 60, "%H:%M:%S", 4),
     (2 * 86_400, "%H:%M", 5),
@@ -20,15 +21,15 @@ AXIS_FORMATS = (
 )
 
 
-def trace_glyph(kind: str) -> str:
-    """Line glyph for one lane kind."""
-    return TRACE_GLYPHS.get(kind, "─")
+def trace_glyph(kind: str, bold: bool = False) -> str:
+    """Line glyph for one lane kind, heavy when bold."""
+    glyphs = BOLD_TRACE_GLYPHS if bold else TRACE_GLYPHS
+    return glyphs.get(kind, "━" if bold else "─")
 
 
 def legend_entry(lane: TimelineLane) -> str:
     """One legend label with its kind glyph and truncated title."""
-    suffix = " *" if lane.selected else ""
-    return f"{trace_glyph(lane.kind)} {truncate(lane.title, LEGEND_LABEL_WIDTH)}{suffix}"
+    return f"{trace_glyph(lane.kind, lane.selected)} {truncate(lane.title, LEGEND_LABEL_WIDTH)}"
 
 
 def legend_layout(

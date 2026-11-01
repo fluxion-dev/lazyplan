@@ -164,7 +164,8 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
             self.assertIn("Other plan", chart)
             self.assertIn("Other milestone", chart)
         self.assertNotIn("Other task 0 *", charts[0])
-        self.assertIn("Other task 0 *", charts[1])
+        self.assertIn("Other task 0", charts[1])
+        self.assertNotIn("Other task 0 *", charts[1])
 
     async def test_task_selection_adds_sibling_task_lanes(self) -> None:
         app = tui_mod.create_app(self.db)
@@ -173,8 +174,9 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
             app.tree_controller.track(app._row_nodes[("task", self.task_id)])
             await pilot.pause(0.2)
             chart = self._chart(app.query_one(f"#{CARD_ID}"))
-        self.assertIn("Task title *", chart)
-        self.assertIn("·", chart)
+        self.assertIn("Task title", chart)
+        self.assertNotIn("Task title *", chart)
+        self.assertIn("●", chart)
 
     async def test_external_status_change_refreshes_the_gantt(self) -> None:
         milestone_id = self.store.list_milestones(self.plan_id)[0].id

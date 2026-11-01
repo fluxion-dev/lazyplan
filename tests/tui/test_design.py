@@ -231,16 +231,6 @@ class TestDesignSystem(unittest.TestCase):
         self.assertEqual(len(sectioned), len(set(sectioned)))
         self.assertEqual(len(design.PALETTE_SECTIONS), 4)
 
-    def test_commits_chip(self):
-        self.assertEqual(design.commits_chip(None), "")
-        self.assertEqual(design.commits_chip([]), "")
-        sha = "a" * 40
-        self.assertEqual(design.commits_chip([sha]), "[dim]aaaaaaaaaaaa[/]")
-        self.assertEqual(
-            design.commits_chip([sha, "b" * 40]),
-            "[dim]aaaaaaaaaaaa[/] [dim]bbbbbbbbbbbb[/]",
-        )
-
     def test_source_rows_show_chips_not_a_marker(self):
         p = Plan(id=1, name="N")
         bare = design.plan_row(p)
@@ -269,6 +259,16 @@ class TestDesignSystem(unittest.TestCase):
         linked = design.plan_row(p, links=["a" * 40])
         self.assertIn("1c", linked)
         self.assertNotIn("a" * 12, linked)
+        s = Milestone(id=2, plan_id=1, title="S")
+        self.assertEqual(design.milestone_row(s), design.milestone_row(s, links=[]))
+        milestone = design.milestone_row(s, links=["b" * 40])
+        self.assertIn("1c", milestone)
+        self.assertNotIn("b" * 12, milestone)
+        t = Task(id=3, milestone_id=2, title="T")
+        self.assertEqual(design.task_row(t), design.task_row(t, links=None))
+        task = design.task_row(t, links=["c" * 40])
+        self.assertIn("1c", task)
+        self.assertNotIn("c" * 12, task)
 
     def test_repo_project_name_prefers_remote(self):
         self.assertEqual(
@@ -293,14 +293,6 @@ class TestDesignSystem(unittest.TestCase):
         self.assertEqual(design.repo_project_name({}), "")
         self.assertEqual(design.repo_project_name(None), "")
 
-    def test_repos_chip(self):
-        self.assertEqual(design.repos_chip(None), "")
-        self.assertEqual(design.repos_chip([]), "")
-        self.assertEqual(
-            design.repos_chip([{"repo_path": "/x/api", "repo_remote": ""}]),
-            "[dim]api[/]",
-        )
-
     def test_plan_label_shows_linked_project(self):
         p = self.store.add_plan("P")
         self.assertEqual(design.plan_label(p, self.store), "○ P1 P")
@@ -308,23 +300,6 @@ class TestDesignSystem(unittest.TestCase):
             "plan", p.id, "/home/u/checkouts/api", "git@github.com:org/api.git"
         )
         self.assertEqual(design.plan_label(p, self.store), "○ P1 P [api]")
-
-    def test_plan_row_omits_repo_chip(self):
-        p = Plan(id=1, name="N")
-        self.assertEqual(design.plan_row(p), design.plan_row(p, repos=None))
-        self.assertEqual(design.plan_row(p), design.plan_row(p, repos=[]))
-        row = design.plan_row(p, repos=[{"repo_path": "/x/api", "repo_remote": ""}])
-        self.assertNotIn("api", row)
-        s = Milestone(id=2, plan_id=1, title="S")
-        self.assertEqual(design.milestone_row(s), design.milestone_row(s, links=[]))
-        milestone = design.milestone_row(s, links=["b" * 40])
-        self.assertIn("1c", milestone)
-        self.assertNotIn("b" * 12, milestone)
-        t = Task(id=3, milestone_id=2, title="T")
-        self.assertEqual(design.task_row(t), design.task_row(t, links=None))
-        task = design.task_row(t, links=["c" * 40])
-        self.assertIn("1c", task)
-        self.assertNotIn("c" * 12, task)
 
 
 if __name__ == "__main__":

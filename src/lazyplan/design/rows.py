@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
 from ..kinds import LABEL_LETTERS, MILESTONE, PLAN, TASK
@@ -76,14 +76,12 @@ def plan_row(
     p: Plan,
     store: Store | None = None,
     links: Sequence[str] | None = None,
-    repos: Sequence[Mapping[str, object]] | None = None,
     progress: tuple[int, int] | None = None,
     width: int | None = None,
     source_counts: tuple[int, int, int] | None = None,
     marked: bool = False,
 ) -> str:
     """TUI plan row (Rich markup): glyph + id + title + fixed stats."""
-    del repos  # Repo detail stays in the preview and GIT pane.
     if source_counts is None:
         commits, pulls, stale = len(links or []), 0, 0
     else:

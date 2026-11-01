@@ -49,14 +49,11 @@ from .text import SPINNER_INTERVAL as SPINNER_INTERVAL
 from .text import STATUS_ANSI as STATUS_ANSI
 from .text import STATUS_GLYPH as STATUS_GLYPH
 from .text import STATUS_RICH as STATUS_RICH
-from .text import commits_chip as commits_chip
 from .text import escape_markup as escape_markup
 from .text import pr_chip as pr_chip
 from .text import progress_bar as progress_bar
 from .text import progress_text as progress_text
 from .text import repo_project_name as repo_project_name
-from .text import repos_chip as repos_chip
-from .text import source_chip as source_chip
 from .text import spinner_glyph as spinner_glyph
 from .text import status_prefix as status_prefix
 from .text import status_word as status_word
@@ -89,7 +86,6 @@ __all__ = [
     "STATUS_RICH",
     "TASK",
     "apply_mark",
-    "commits_chip",
     "escape_markup",
     "milestone_label",
     "milestone_row",
@@ -104,8 +100,6 @@ __all__ = [
     "progress_text",
     "repo_project_name",
     "render_stats",
-    "repos_chip",
-    "source_chip",
     "spinner_glyph",
     "stats_layout",
     "status_prefix",

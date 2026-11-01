@@ -1,8 +1,8 @@
-"""Glyphs, status words, truncation, and compact provenance chips."""
+"""Glyphs, status words, progress, truncation, and PR chips."""
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 
 from ..models import Status
 
@@ -86,43 +86,6 @@ def repo_project_name(repo: Mapping[str, object] | None) -> str:
     if path:
         return path.rsplit("/", 1)[-1] or path
     return ""
-
-
-def repos_chip(repos: Sequence[Mapping[str, object]] | None) -> str:
-    """Dim chips, one per linked repo project; empty when there are no links."""
-    names = [n for n in (repo_project_name(r) for r in repos or []) if n]
-    if not names:
-        return ""
-    return " ".join(f"[dim]{n}[/]" for n in names)
-
-
-def commits_chip(
-    shas: Sequence[str] | None,
-    limit: int = 2,
-    stale: bool = False,
-) -> str:
-    """Dim short-SHA chips, capped, with an optional stale marker."""
-    if not shas:
-        return ""
-    shown = list(shas[: max(1, limit)])
-    text = " ".join(f"[dim]{s[:12]}[/]" for s in shown)
-    if len(shas) > len(shown):
-        text += f" [dim]+{len(shas) - len(shown)}[/]"
-    if stale:
-        text += " [red]![/]"
-    return text
-
-
-def source_chip(commit_count: int = 0, pull_count: int = 0, stale: int = 0) -> str:
-    """Compact provenance counts for plan and milestone rows."""
-    parts: list[str] = []
-    if commit_count:
-        parts.append(f"{commit_count}c")
-    if pull_count:
-        parts.append(f"{pull_count} PR")
-    if stale:
-        parts.append(f"{stale} stale")
-    return f"[dim]{' · '.join(parts)}[/]" if parts else ""
 
 
 _PR_STYLE = {

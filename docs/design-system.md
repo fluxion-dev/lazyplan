@@ -201,28 +201,33 @@ inside a scrolling `#help` panel. `lpui help` prints the same string.
 ## Detail (`tui/screens/`)
 
 `DetailScreen` is a plain `Screen` with two modes.
-Read mode: breadcrumb (`P2 › M3 › T4`), title/status, why/what (or
-details), acceptance checklist, child milestones/tasks with progress,
-pull requests, source summary (repos, branch/dirty, commit/file/PR counts,
-latest commits), commits, and repos. No editable widgets.
-Edit mode (`e`): labeled Title/Why/What or Details fields, a multi-line
-TextArea, Save/Cancel, `ctrl+s`, and a dirty guard that confirms before
-discarding. Row actions: `s` status, `x` tick next criterion, `a` add
-criterion, `g` source trail, `n` add child, `d` delete with an exact
-cascade summary; `Esc` backs out. Delete focuses Cancel by default.
+Read mode: a rounded `DETAIL` card with a breadcrumb/status header and a
+sectioned body. `views/detail.py` builds a `DetailDocument` containing the
+title, status pill, why/what (or details), acceptance checklist, child
+milestones/tasks with progress, pull requests, source summary (repos,
+branch/dirty, commit/file/PR counts, latest commits), commits, and repos.
+No editable widgets.
+Edit mode (`e`): a labeled Title/Why/What or Details form with visible
+field labels, a multi-line TextArea, a footer action row, `ctrl+s`, and a
+dirty guard that confirms before discarding. Row actions: `s` status,
+`x` tick next criterion, `a` add criterion, `g` source trail, `n` add
+child, `d` delete with an exact cascade summary; `Esc` backs out. Delete
+focuses Cancel by default.
 
-## Source screen (`source_screen.py`)
+## Source screen (`tui/screens/source.py`)
 
 `SourceScreen` is a plain `Screen` opened by `g` from the tree or detail.
+It is a rounded `SOURCE` card with `TRAIL` and `DETAIL` pane titles.
 Its tree is the same `NavTree`, so `j`/`k`, `left`/`right`, click-select,
 and click-arrow folding behave exactly like the main tree. It groups cached
 provenance into repository → commit → changed file, with linked PRs under
-the repo, and keeps a Static preview for the highlighted node. Rows rely on
-their labels and counts; no marker glyph is appended. Highlighting a commit or
-file reads a
-bounded unified diff through `source.read_diff` (LRU keyed by repo, sha,
-path) and renders file/hunk headers, old/new line numbers, and green/red
-add/remove lines. Preview caps are `DIFF_PREVIEW_LINES` and
+the repo, and keeps a Static preview for the highlighted node. Row labels,
+preview bodies, and diff rendering live in `views/source.py`; the screen
+only builds the tree data and handles actions. Rows rely on their labels
+and counts; no marker glyph is appended. Highlighting a commit or file
+reads a bounded unified diff through `source.read_diff` (LRU keyed by repo,
+sha, path) and renders file/hunk headers, old/new line numbers, and
+green/red add/remove lines. Preview caps are `DIFF_PREVIEW_LINES` and
 `DIFF_PREVIEW_FILES`, with `+N more` notices and `o` as the browser
 fallback. Binary, root, merge, empty, missing, and non-git states render
 explicit messages. `o` opens the selected commit/PR/file URL, `y` copies
@@ -234,10 +239,14 @@ selected repos.
 ## Forms
 
 `_Form(ModalScreen)` is the shared base: Esc cancels, a starting-value
-snapshot detects real drafts, and a dirty cancel asks first. Every field
-has a visible `Label`; required inputs are validated inline. `#dlg` is
-90% wide (max 72) so forms fit 80x24. Button rows use `.btn-row` with
-3-row buttons (height 1 clips the label in Textual 8.2.8).
+snapshot detects real drafts, and a dirty cancel asks first. It also sets
+the compact/wide screen classes and writes `dialog_title` into the `#dlg`
+border title. `EntityForm` drives New plan, New milestone, and New task
+from one `FormField` spec: heading, labeled fields, Input or TextArea, and a
+compact Create/Cancel row. Every field has a visible label; required inputs
+validate inline. `#dlg` is a rounded card at 90% width (max 72) so forms fit
+80x24; compact screens use 96% and wide screens allow 84. Button rows use
+`.btn-row` with 3-row buttons (height 1 clips the label in Textual 8.2.8).
 
 ## Keymap
 
@@ -272,7 +281,8 @@ tests enforce the match.
 
 ## Reusable bases
 
-- `_Form(ModalScreen)`: Esc cancel, dirty snapshot, centered `#dlg`.
+- `_Form(ModalScreen)`: Esc cancel, dirty snapshot, centered `#dlg`, dialog title.
+- `EntityForm(_Form)`: one field-spec-driven create form for all three entities.
 - `_row(*buttons) -> Horizontal` (`.btn-row`): every action row.
 - `FilterPromptScreen(title, placeholder, submit_label)`: one-line prompts
   used by tree filter and add-criterion.

@@ -64,11 +64,13 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
             card = section.query_one(f"#{CARD_ID}")
             self.assertIsNotNone(card.query_one("PlotextPlot"))
 
-    async def test_section_has_no_border_title(self) -> None:
+    async def test_section_has_a_timeline_title(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
-            self.assertIsNone(app.query_one("#metrics", MetricsSection).border_title)
+            section = app.query_one("#metrics", MetricsSection)
+            self.assertEqual(section.border_title, " timeline ")
+            self.assertEqual(section.border_subtitle, " Plan title ")
 
     async def test_empty_plan_shows_the_no_milestones_copy(self) -> None:
         empty = self.store.add_plan("Empty plan")

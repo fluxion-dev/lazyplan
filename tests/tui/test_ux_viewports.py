@@ -65,7 +65,7 @@ class TestViewports(unittest.IsolatedAsyncioTestCase):
                     await pilot.pause()
                     page = app.screen.query_one("#detail-page")
                     self.assertTrue(_within(page.region, width, height))
-                    self.assertEqual(page.border_title, "DETAIL")
+                    self.assertEqual(page.border_title, " detail ")
                     await pilot.press("e")
                     await pilot.pause()
                     edit = app.screen.query_one("#detail-edit")
@@ -97,7 +97,7 @@ class TestViewports(unittest.IsolatedAsyncioTestCase):
                     if width >= 100:
                         self.assertAlmostEqual(
                             app.query_one("#nav").region.width,
-                            width * 0.35,
+                            width * 0.45,
                             delta=2,
                         )
                         self.assertLess(
@@ -116,19 +116,24 @@ class TestViewports(unittest.IsolatedAsyncioTestCase):
                             _within(app.query_one(selector).region, width, height),
                             selector,
                         )
-                    self.assertEqual(app.query_one("#nav").border_title, "PLANS")
+                    self.assertEqual(app.query_one("#nav").border_title, " plans ")
                     preview = app.query_one("#preview")
+                    git = app.query_one("#git")
                     metrics = app.query_one("#metrics")
                     if width >= 100:
                         self.assertTrue(_within(preview.region, width, height))
-                        self.assertEqual(preview.border_title, "PREVIEW")
+                        self.assertEqual(preview.border_title, " preview ")
+                        self.assertTrue(_within(git.region, width, height))
+                        self.assertEqual(git.border_title, " git ")
+                        self.assertGreater(preview.region.height, git.region.height)
                         self.assertTrue(_within(metrics.region, width, height))
-                        self.assertGreaterEqual(metrics.region.height, 14)
+                        self.assertGreaterEqual(metrics.region.height, 11)
                         if height >= 40:
                             self.assertGreater(metrics.region.height, 14)
-                        self.assertIsNone(metrics.border_title)
+                        self.assertEqual(metrics.border_title, " timeline ")
                     else:
                         self.assertFalse(preview.display)
+                        self.assertFalse(git.display)
                         self.assertFalse(metrics.display)
 
     async def test_screens_fit_in_both_themes(self):

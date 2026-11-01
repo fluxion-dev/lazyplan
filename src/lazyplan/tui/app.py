@@ -208,7 +208,7 @@ if _TEXTUAL_OK:
             self.spinner_controller.start()
             self.update_controller.start()
             self.metrics_controller.start()
-            self.query_one("#nav").border_title = "PLANS"
+            self.query_one("#nav").border_title = " plans "
             if self._startup_notice:
                 self.notify(self._startup_notice, timeout=10)
             tree = self.query_one("#tree", Tree)

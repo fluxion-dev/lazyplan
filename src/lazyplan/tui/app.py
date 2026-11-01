@@ -198,6 +198,7 @@ if _TEXTUAL_OK:
             self.set_interval(1.0, self._poll)
             self.spinner_controller.start()
             self.update_controller.start()
+            self.query_one("#nav").border_title = "PLANS"
             if self._startup_notice:
                 self.notify(self._startup_notice, timeout=10)
             self.query_one("#tree", Tree).focus()

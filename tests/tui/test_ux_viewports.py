@@ -111,13 +111,15 @@ class TestViewports(unittest.IsolatedAsyncioTestCase):
                             _within(app.query_one(selector).region, width, height),
                             selector,
                         )
+                    self.assertEqual(app.query_one("#nav").border_title, "PLANS")
                     preview = app.query_one("#preview")
                     metrics = app.query_one("#metrics")
                     if width >= 100:
                         self.assertTrue(_within(preview.region, width, height))
                         self.assertEqual(preview.border_title, "PREVIEW")
                         self.assertTrue(_within(metrics.region, width, height))
-                        self.assertEqual(metrics.region.height, 13)
+                        self.assertEqual(metrics.region.height, 14)
+                        self.assertEqual(metrics.border_title, "METRICS")
                     else:
                         self.assertFalse(preview.display)
                         self.assertFalse(metrics.display)

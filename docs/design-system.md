@@ -86,14 +86,17 @@ TUI).
 
 ## Shell (`tui/app.py`)
 
-Visual: one-row `#hints` command bar, bordered `#panel`. No `Header`, no
-`Footer`, no status bar, no bottom input. Adaptive shell: `#main` holds `#nav` (focused
+Visual: one-row `#hints` command bar. No `Header`, no `Footer`, no status
+bar, no bottom input. Each main section is a rounded card
+with a right-aligned title label, following Posting's pane treatment: `#nav`
+is `PLANS`, `#preview` is `PREVIEW`, and `#metrics` is `METRICS`. The focused
+pane gets the accent border. Adaptive shell: `#main` holds `#nav` (focused
 `FoldTree`) and `#preview` (`PreviewPanel`) side by side at >= 100 columns;
 below that `#main.narrow` hides the preview and the tree owns the width.
 
 Three layout tiers share one breakpoint:
-- compact (< 80): `#panel.compact` drops its outer border, `#nav` loses its
-  minimum width, and `#hints` loses its padding.
+- compact (< 80): `#nav` drops its border, loses its minimum width, and
+  `#hints` loses its padding.
 - standard (80–99): the narrow shell hides preview and metrics; tree rows
   own the width.
 - wide (>= 120): `#main.wide` gives the tree three fifths and the preview
@@ -101,9 +104,8 @@ Three layout tiers share one breakpoint:
   breakpoint stays the single responsive rule; only crossing it rebuilds
   the tree.
 
-The preview is a rounded card with a `PREVIEW` border title. Its
-`PreviewDocument` supplies a status pill, breadcrumb, section headings,
-acceptance `○` rows, next tasks, provenance, and a key legend. `#tree` uses
+The preview's `PreviewDocument` supplies a status pill, breadcrumb, section
+headings, acceptance `○` rows, next tasks, provenance, and a key legend. `#tree` uses
 Rich `Text` row labels; the component classes draw a muted guide, a raised
 cursor, and an accent cursor when the tree has focus.
 
@@ -139,8 +141,8 @@ cursor, and an accent cursor when the tree has focus.
 ## Metrics dashboard (`tui/metrics/`)
 
 - `#metrics` is a third always-on section inside `#panel`, below `#main`.
-  It is 13 rows tall: one `METRICS` label plus a `#metric-cards`
-  `Horizontal` row, and hides below 100 columns; `_apply_layout` toggles
+  It is 14 rows tall: a rounded `METRICS` border around the
+  `#metric-cards` row, and hides below 100 columns; `_apply_layout` toggles
   `#metrics.narrow` with the same breakpoint as the preview.
 - `MetricsSection` hosts `metric-heatmap` (Daily activity),
   `metric-progress` (Project progress), and `metric-status` (Task status).

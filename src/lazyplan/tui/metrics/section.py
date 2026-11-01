@@ -5,7 +5,6 @@ from __future__ import annotations
 try:
     from textual.app import ComposeResult
     from textual.containers import Horizontal, Vertical
-    from textual.widgets import Label
 
     _TEXTUAL_OK = True
 except ImportError:  # pragma: no cover
@@ -25,9 +24,9 @@ if _TEXTUAL_OK:
 
         def __init__(self) -> None:
             super().__init__(id="metrics", classes="metrics-section")
+            self.border_title = "METRICS"
 
         def compose(self) -> ComposeResult:
-            yield Label("METRICS", classes="metrics-title")
             with Horizontal(id="metric-cards"):
                 yield ActivityCard()
                 yield ProgressCard()

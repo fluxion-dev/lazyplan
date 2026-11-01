@@ -2,7 +2,6 @@
 
 #panel {
     height: 1fr;
-    border: solid $lp-border;
 }
 
 #main {
@@ -12,7 +11,11 @@
 #nav {
     width: 1fr;
     min-width: 30;
-    border-right: solid $lp-border;
+    border: round $lp-border-muted;
+    border-title-color: $lp-accent;
+    border-title-background: $lp-surface-alt;
+    border-title-style: bold;
+    border-title-align: right;
 }
 
 #preview {
@@ -21,6 +24,9 @@
     padding: 0 1;
     border: round $lp-border-muted;
     border-title-color: $lp-accent;
+    border-title-background: $lp-surface-alt;
+    border-title-style: bold;
+    border-title-align: right;
 }
 
 #main.narrow #preview {
@@ -28,12 +34,17 @@
 }
 
 #main.narrow #nav {
-    border-right: none;
+    border: round $lp-border-muted;
 }
 
 #metrics {
-    height: 13;
+    height: 14;
     padding: 0 1;
+    border: round $lp-border-muted;
+    border-title-color: $lp-accent;
+    border-title-background: $lp-surface-alt;
+    border-title-style: bold;
+    border-title-align: right;
 }
 
 #metrics.narrow {
@@ -52,12 +63,9 @@
     padding: 0 1;
 }
 
-#panel.compact {
-    border: none;
-}
-
 #main.compact #nav {
     min-width: 0;
+    border: none;
 }
 
 #main.wide #nav {
@@ -67,6 +75,11 @@
 #main.wide #preview {
     width: 2fr;
     padding: 0 2;
+}
+
+#nav:focus-within, #preview:focus-within {
+    border: round $lp-accent;
+    border-title-color: $lp-accent;
 }
 
 Screen.compact #hints {

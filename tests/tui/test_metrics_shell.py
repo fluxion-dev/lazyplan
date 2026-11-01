@@ -79,11 +79,11 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
             self.assertIn("0% 0/1", progress)
             self.assertTrue(status_plot.display)
 
-    async def test_section_is_thirteen_rows(self) -> None:
+    async def test_section_is_fourteen_rows(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
-            self.assertEqual(app.query_one("#metrics", MetricsSection).region.height, 13)
+            self.assertEqual(app.query_one("#metrics", MetricsSection).region.height, 14)
 
     async def test_p117_chart_contract_is_pinned(self) -> None:
         """Guard the merged P117 shape before the modernization refactor."""
@@ -91,7 +91,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
             section = app.query_one("#metrics", MetricsSection)
-            self.assertEqual(section.region.height, 13)
+            self.assertEqual(section.region.height, 14)
             cards = [section.query_one(f"#{card_id}") for card_id in CARD_IDS]
             self.assertEqual(len(cards), 3)
             for card in cards:

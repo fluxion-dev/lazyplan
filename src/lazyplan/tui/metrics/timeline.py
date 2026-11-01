@@ -29,6 +29,20 @@ def _tick_label(stamp: float, span: float) -> str:
     return moment.strftime("%Y-%m-%d")
 
 
+def _active_segments(
+    lane: TimelineLane, left: float, right: float, min_visible: float
+) -> list[tuple[float, float]]:
+    """Visible trace segments for one lane's doing intervals."""
+    segments: list[tuple[float, float]] = []
+    for start, end in lane.active:
+        if end < left or start > right:
+            continue
+        start = max(start, left)
+        end = min(right, max(end, start + min_visible))
+        segments.append((start, end))
+    return segments
+
+
 class TimelineCard(MetricCard):
     """One swimlane per project or milestone from its start to its finish."""
 
@@ -79,13 +93,13 @@ class TimelineCard(MetricCard):
         apply_chart_theme(plt, self.app)
         plt.clear_figure()
         for index, lane in enumerate(lanes):
-            end = min(right, max(lane.end, lane.start + min_visible))
-            plt.plot(
-                [lane.start, end],
-                [positions[index], positions[index]],
-                marker="braille",
-                color=lane_rgb(self.app, index),
-            )
+            for start, end in _active_segments(lane, left, right, min_visible):
+                plt.plot(
+                    [start, end],
+                    [positions[index], positions[index]],
+                    marker="braille",
+                    color=lane_rgb(self.app, index),
+                )
         ticks = [left + (right - left) * index / (X_TICKS - 1) for index in range(X_TICKS)]
         rows = max(2, (plot.size.height or 12) - 3)
         legend_rows = min(count, MAX_LEGEND_ROWS, max(1, rows - 1))

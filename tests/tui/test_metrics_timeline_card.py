@@ -13,10 +13,13 @@ from lazyplan.store import Store
 
 try:
     from lazyplan import tui as tui_mod
-    from lazyplan.tui.metrics.timeline import TimelineCard
+    from lazyplan.metrics import TimelineLane
+    from lazyplan.tui.metrics.timeline import TimelineCard, _active_segments
 except ImportError:  # stdlib-only interpreter: no textual
     tui_mod = None  # type: ignore[assignment]
+    TimelineLane = None  # type: ignore[assignment,misc]
     TimelineCard = None  # type: ignore[assignment,misc]
+    _active_segments = None  # type: ignore[assignment]
 
 
 def _at(stamp: float, action):
@@ -29,7 +32,12 @@ def _seed(store: Store) -> int:
     first = _at(1_100, lambda: store.add_milestone(plan.id, "First milestone"))
     second = _at(1_200, lambda: store.add_milestone(plan.id, "Second milestone"))
     task = _at(1_150, lambda: store.add_task(first.id, "Task"))
+    _at(1_200, lambda: services.set_status(store, "task", task.id, Status.DOING, actor="qa"))
     _at(1_300, lambda: services.set_status(store, "task", task.id, Status.DONE, actor="qa"))
+    _at(
+        1_400,
+        lambda: services.set_status(store, "milestone", second.id, Status.DOING, actor="qa"),
+    )
     _at(
         1_500,
         lambda: services.set_status(store, "milestone", second.id, Status.DONE, actor="qa"),
@@ -89,6 +97,13 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             chart = card.query_one("PlotextPlot").plt.build()
         self.assertIn("A project title…", chart)
+
+    def test_inactive_lanes_have_no_segments(self) -> None:
+        idle = TimelineLane("plan", "Idle", 0, 100, ())
+        active = TimelineLane("plan", "Active", 0, 100, ((10, 20), (30, 40)))
+
+        self.assertEqual(_active_segments(idle, 0, 100, 1), [])
+        self.assertEqual(_active_segments(active, 0, 100, 1), [(10, 20), (30, 40)])
 
 
 if __name__ == "__main__":

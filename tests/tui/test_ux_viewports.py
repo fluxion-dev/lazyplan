@@ -94,8 +94,13 @@ class TestViewports(unittest.IsolatedAsyncioTestCase):
                         self.assertTrue(metrics.display)
                     self.assertEqual(main.has_class("compact"), width < 80)
                     self.assertEqual(main.has_class("wide"), width >= 120)
-                    if width >= 120:
-                        self.assertGreater(
+                    if width >= 100:
+                        self.assertAlmostEqual(
+                            app.query_one("#nav").region.width,
+                            width * 0.35,
+                            delta=2,
+                        )
+                        self.assertLess(
                             app.query_one("#nav").region.width,
                             preview.region.width,
                         )
@@ -118,8 +123,10 @@ class TestViewports(unittest.IsolatedAsyncioTestCase):
                         self.assertTrue(_within(preview.region, width, height))
                         self.assertEqual(preview.border_title, "PREVIEW")
                         self.assertTrue(_within(metrics.region, width, height))
-                        self.assertEqual(metrics.region.height, 14)
-                        self.assertEqual(metrics.border_title, "METRICS · Plan title")
+                        self.assertGreaterEqual(metrics.region.height, 14)
+                        if height >= 40:
+                            self.assertGreater(metrics.region.height, 14)
+                        self.assertIsNone(metrics.border_title)
                     else:
                         self.assertFalse(preview.display)
                         self.assertFalse(metrics.display)

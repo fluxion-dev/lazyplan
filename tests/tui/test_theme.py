@@ -84,7 +84,7 @@ class ThemeTest(unittest.IsolatedAsyncioTestCase):
 
     def test_chart_modules_do_not_hardcode_green(self) -> None:
         root = Path(__file__).resolve().parents[2] / "src" / "lazyplan" / "tui" / "metrics"
-        for name in ("activity.py", "progress.py", "status.py"):
+        for name in ("timeline.py",):
             text = (root / name).read_text(encoding="utf-8")
             self.assertNotIn('color="green"', text)
 

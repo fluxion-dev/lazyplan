@@ -4,13 +4,18 @@ from __future__ import annotations
 
 import os
 import tempfile
+from unittest import mock
 
 import pytest
 
+from lazyplan import metrics
 from lazyplan.store import Store
 from lazyplan.tui import create_app
 from lazyplan.tui.screens import DetailScreen, PaletteScreen
 from lazyplan.tui.screens.source import SourceScreen
+
+FIXED_START = 1_700_000_000.0
+FIXED_NOW = FIXED_START + 30 * 86_400
 
 
 @pytest.fixture()
@@ -23,16 +28,28 @@ def empty_app():
 
 @pytest.fixture()
 def data_app():
+    real_snapshot = metrics.snapshot
+    clock = {"now": FIXED_START}
+
+    def tick() -> float:
+        clock["now"] += 3_600
+        return clock["now"]
+
+    def frozen_snapshot(store, now=None, plan_id=None):
+        return real_snapshot(store, now=FIXED_NOW, plan_id=plan_id)
+
     with tempfile.TemporaryDirectory() as tmp:
         db = os.path.join(tmp, "data.db")
+        with mock.patch("lazyplan.store.base.time.time", side_effect=tick):
+            store = Store(db)
+            plan = store.add_plan("Plan title", "What we build", goal="Why we build")
+            milestone = store.add_milestone(plan.id, "Milestone title", "Milestone details")
+            task = store.add_task(milestone.id, "Task title", "Task details")
+            store.add_criteria("plan", plan.id, "The plan is readable")
+            store.add_criteria("task", task.id, "The task is proven")
         store = Store(db)
-        plan = store.add_plan("Plan title", "What we build", goal="Why we build")
-        milestone = store.add_milestone(plan.id, "Milestone title", "Milestone details")
-        task = store.add_task(milestone.id, "Task title", "Task details")
-        store.add_criteria("plan", plan.id, "The plan is readable")
-        store.add_criteria("task", task.id, "The task is proven")
-        store = Store(db)
-        yield create_app(db), store, plan.id, task.id
+        with mock.patch("lazyplan.metrics.snapshot", side_effect=frozen_snapshot):
+            yield create_app(db), store, plan.id, task.id
 
 
 def test_main_shell_empty(snap_compare, empty_app) -> None:

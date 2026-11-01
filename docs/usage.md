@@ -85,36 +85,26 @@ A source checkout updates with `git pull`.
 
 ### Metrics dashboard
 
-The bottom of the TUI keeps three read-only chart cards: **Daily activity**,
-**Project progress**, and **Task status**. They follow the row under the
-cursor: a selected plan, milestone, or task scopes every card to that row's
-plan, and the border title names it (`METRICS · Plan title`). With no
-selection, or an empty tree, the cards fall back to the all-plans view and a
-plain `METRICS` title. Cursor changes refresh after a short debounce; status,
-text, and source filters, the plan limit, and space-marks never change metric
-scope. The cards never change data or write to the database. The section is 14
-rows tall and hides on terminals narrower than 100 columns, so an 80x24
-terminal keeps the tree and preview unchanged. The charts are drawn with
-`textual-plotext`; `theme/charts.py` maps `lp-chart-bar`, `lp-chart-axis`, and
-`lp-chart-label` to Plotext colours for the active dark or light theme.
+The bottom of the TUI keeps one read-only timeline card. It follows the row
+under the cursor: a selected plan, milestone, or task scopes the card to that
+row's plan. With no selection, or an empty tree, every plan gets a lane.
+Cursor changes refresh after a short debounce; status, text, and source
+filters, the plan limit, and space-marks never change metric scope. The card
+never changes data or writes to the database. The section takes 45% of the
+shell height with a 14-row minimum, has no border title, and hides on terminals
+narrower than 100 columns, so an 80x24 terminal keeps the tree and preview
+unchanged.
 
-**Daily activity** sums completions into 12 weekly bars, labelled with the
-week start dates. Each bar counts `done` transitions for that local week among
-the scoped plan's tasks, including a task that was reopened and finished
-again. The all-plans view counts every task.
-
-**Project progress** counts the scoped plan's tasks. The headline shows
-completion, time since the plan's earliest recorded add event, and an ETA; the
-bars show the plan's five milestones with the newest task activity (then the
-most open work) on a 0/50/100% scale. The ETA uses completions from the last 14
-days and shows a date, `complete`, or `—` when there is not enough velocity to
-forecast. The all-plans view rolls up every plan.
-
-**Task status** plots `todo`, `doing`, `done`, and `blocked` as horizontal
-bars, labelled with each share. Shares use the scoped plan's tasks; the
-all-plans view uses every task. Blocked is an overlay: a blocked task still
-counts in its lifecycle row, so only the three lifecycle shares add up to
-100%.
+The chart is a wall-clock Gantt view. A scoped plan gets one lane for the
+project and one for each milestone; the all-plans view gives every plan a
+lane. A lane starts at its `add` event and ends at its latest completion
+event, or at the current time while the work is open. Lanes use fine braille
+lines rather than block bars and share one time axis. The legend is overlaid
+in the chart's top-left corner as a stacked colour key, with each title
+truncated with an ellipsis; the y axis reserves a band for it so the swimlanes
+stay fully visible. Charts are drawn with `textual-plotext`;
+`theme/charts.py` maps the `lp-chart-lane-*`, `lp-chart-axis`, and
+`lp-chart-label` tokens to Plotext colours for the active dark or light theme.
 
 ### Staged updates in the TUI
 

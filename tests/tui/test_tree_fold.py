@@ -74,6 +74,15 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
             self.assertFalse(milestone.is_expanded)
             self.assertEqual(self.app._expanded, set())
 
+    async def test_root_row_is_hidden(self):
+        from textual.widgets import Tree
+
+        async with self.app.run_test() as pilot:
+            await pilot.pause()
+            tree = self.app.query_one("#tree", Tree)
+            self.assertFalse(tree.show_root)
+            self.assertEqual(tree.root.children[0], self.app._row_nodes[("plan", self.pid)])
+
     async def test_expanding_plan_shows_milestones_not_tasks(self):
         async with self.app.run_test() as pilot:
             await pilot.pause()
@@ -187,7 +196,7 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
     async def test_single_click_selects_without_dialog(self):
         async with self.app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
-            await pilot.click("#tree", offset=(10, 1))
+            await pilot.click("#tree", offset=(10, 0))
             await pilot.pause()
             self.assertEqual(len(self.app.screen_stack), 1)
             self.assertEqual(self.app.selected, ("plan", self.pid))
@@ -200,9 +209,9 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
         async with self.app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
             with mock.patch("lazyplan.tui.actions.DOUBLE_CLICK_WINDOW", 30.0):
-                await pilot.click("#tree", offset=(10, 1))
+                await pilot.click("#tree", offset=(10, 0))
                 await pilot.pause()
-                await pilot.click("#tree", offset=(10, 1))
+                await pilot.click("#tree", offset=(10, 0))
                 await pilot.pause()
             self.assertEqual(len(self.app.screen_stack), 2)
             self.assertIsInstance(self.app.screen, DetailScreen)
@@ -212,10 +221,10 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
 
         async with self.app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
-            await pilot.click("#tree", offset=(10, 1))
+            await pilot.click("#tree", offset=(10, 0))
             await pilot.pause()
             await asyncio.sleep(0.6)
-            await pilot.click("#tree", offset=(10, 1))
+            await pilot.click("#tree", offset=(10, 0))
             await pilot.pause()
             self.assertEqual(len(self.app.screen_stack), 1)
 
@@ -395,12 +404,12 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             proj, _ = self._nodes()
             self.assertFalse(proj.is_expanded)
-            clicked = await pilot.click("#tree", offset=(4, 1))
+            clicked = await pilot.click("#tree", offset=(0, 0))
             await pilot.pause()
             self.assertTrue(clicked)
             self.assertTrue(proj.is_expanded)
             self.assertEqual(len(self.app.screen_stack), 1)
-            await pilot.click("#tree", offset=(4, 1))
+            await pilot.click("#tree", offset=(0, 0))
             await pilot.pause()
             self.assertFalse(proj.is_expanded)
             self.assertEqual(len(self.app.screen_stack), 1)
@@ -506,6 +515,37 @@ class TestShowAllToggle(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(len(self._plan_rows()), 7)
             await _palette(pilot, "show all")
             self.assertEqual(len(self._plan_rows()), 5)
+
+
+@unittest.skipUnless(tui_mod is not None and tui_mod._TEXTUAL_OK, "textual not installed")
+class TestEmptyState(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        from textual.widgets import Static, Tree
+
+        self.tmp = tempfile.TemporaryDirectory()
+        self.db = os.path.join(self.tmp.name, "t.db")
+        Store(self.db)
+        self.app = tui_mod.create_app(self.db)
+        self.static = Static
+        self.tree = Tree
+
+    async def asyncTearDown(self):
+        self.tmp.cleanup()
+
+    async def test_empty_store_shows_centered_message(self):
+        async with self.app.run_test(size=(100, 30)) as pilot:
+            await pilot.pause()
+            empty = self.app.query_one("#tree-empty", self.static)
+            self.assertTrue(empty.display)
+            self.assertIn("nothing planned... yet", str(empty.render()))
+            self.assertFalse(self.app.query_one("#tree", self.tree).display)
+
+    async def test_tree_returns_when_a_plan_exists(self):
+        self.app.store.add_plan("P")
+        async with self.app.run_test(size=(100, 30)) as pilot:
+            await pilot.pause()
+            self.assertFalse(self.app.query_one("#tree-empty", self.static).display)
+            self.assertTrue(self.app.query_one("#tree", self.tree).display)
 
 
 if __name__ == "__main__":

@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 from typing import TYPE_CHECKING, Any
 
-from textual.widgets import Label, Tree
+from textual.widgets import Label, Static, Tree
 from textual.widgets.tree import TreeNode
 
 from ... import services
@@ -201,6 +201,15 @@ class TreeController:
         )
         return max(10, base - 5 - depth)
 
+    def show_empty(self, empty: bool) -> None:
+        """Swap the tree for the centered empty state when no rows are visible."""
+        tree = self.app.query_one("#tree", Tree)
+        was_empty = not tree.display
+        tree.display = not empty
+        self.app.query_one("#tree-empty", Static).display = empty
+        if was_empty and not empty and len(self.app.screen_stack) <= 1:
+            tree.focus()
+
     def refresh_all(self, note: str = "") -> None:
         app = self.app
         tree = app.query_one("#tree", Tree)
@@ -236,6 +245,7 @@ class TreeController:
         app._collapsed &= set(app._row_nodes)
         app._expanded &= set(app._row_nodes)
         self.apply_folds()
+        self.show_empty(not app._row_nodes)
         app.spinner_controller.paint()
         app.query_one("#hints", Label).update(hint_bar(max(10, app.size.width - 2), markup=True))
         self.restore_selection(tree, prev_selected, prev_cursor)

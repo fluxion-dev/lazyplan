@@ -21,7 +21,10 @@ class FoldTree(NavTree):
 
     Every mutation runs through the modal palette (c). Native Tree Space
     marks the selected row for bulk actions; shift+space stays parked.
+    The root is a container only; plans render as the top-level rows.
     """
+
+    show_root = False
 
     BINDINGS = [
         Binding("enter", "open_detail", "Detail"),

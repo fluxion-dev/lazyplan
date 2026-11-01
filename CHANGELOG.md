@@ -7,6 +7,19 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
 
 ### New
 
+- The plan tree no longer renders its non-selectable `plans` root row; plans
+  are the top-level rows.
+- The plans panel takes 35% of the shell width, leaving 65% for the preview.
+- The PLANS and PREVIEW border headings are left-aligned.
+- The bottom metrics dashboard is now one wall-clock timeline card spanning the
+  full width and 45% of the shell height (14-row minimum). Each project and
+  milestone gets a braille swimlane from its start event to its finish, or to
+  now while work is open. The legend is overlaid in the chart's top-left
+  corner, with titles truncated with an ellipsis and a reserved band keeping
+  the lanes fully visible. The `METRICS` border title is gone.
+  The Daily activity, Task status, and Project progress cards are removed.
+- An empty plans panel shows a centered `nothing planned... yet` message
+  instead of a blank tree.
 - The TUI metrics dashboard follows the selected row's plan. Daily activity,
   Project progress, and Task status scope to the plan under the cursor, refresh
   after a short debounce, and name the plan in the `METRICS` border title.

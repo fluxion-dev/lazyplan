@@ -1,4 +1,4 @@
-"""The bottom metrics section, its card slots, and the responsive hide."""
+"""The bottom metrics section, its timeline card, and the responsive hide."""
 
 from __future__ import annotations
 
@@ -18,8 +18,7 @@ except ImportError:  # stdlib-only interpreter: no textual
     tui_mod = None  # type: ignore[assignment]
     MetricsSection = None  # type: ignore[assignment,misc]
 
-CARD_IDS = ("metric-heatmap", "metric-progress", "metric-status")
-CARD_TITLES = ("Daily activity", "Project progress", "Task status")
+CARD_ID = "metric-timeline"
 
 
 def _within(region, width: int, height: int) -> bool:
@@ -47,34 +46,26 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
     async def asyncTearDown(self) -> None:
         self.tmp.cleanup()
 
-    async def test_section_renders_three_titled_cards(self) -> None:
+    @staticmethod
+    def _chart(card) -> str:
+        return card.query_one("PlotextPlot").plt.build()
+
+    async def test_section_renders_the_timeline_card(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
             section = app.query_one("#metrics", MetricsSection)
             self.assertTrue(section.display)
-            for card_id, title in zip(CARD_IDS, CARD_TITLES, strict=True):
-                card = section.query_one(f"#{card_id}")
-                self.assertIn(title, str(card.query_one(".metric-title").content))
+            card = section.query_one(f"#{CARD_ID}")
+            self.assertIsNotNone(card.query_one("PlotextPlot"))
 
-    async def test_metrics_title_names_the_selected_plan(self) -> None:
-        other_id, _milestone_id, _task_ids = self._other_plan()
+    async def test_section_has_no_border_title(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
-            section = app.query_one("#metrics", MetricsSection)
-            app.tree_controller.track(app._row_nodes[("plan", other_id)])
-            await pilot.pause(0.2)
-            scoped = section.border_title
-            app.selected = None
-            app.metrics_controller.stop()
-            app.metrics_controller.refresh()
-            await pilot.pause()
-            global_title = section.border_title
-        self.assertEqual(scoped, "METRICS · Other plan")
-        self.assertEqual(global_title, "METRICS")
+            self.assertIsNone(app.query_one("#metrics", MetricsSection).border_title)
 
-    async def test_empty_selected_plan_shows_scoped_empty_copy(self) -> None:
+    async def test_empty_plan_still_gets_a_project_lane(self) -> None:
         empty = self.store.add_plan("Empty plan")
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
@@ -82,39 +73,34 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
             app.tree_controller.track(app._row_nodes[("plan", empty.id)])
             await pilot.pause(0.2)
             section = app.query_one("#metrics", MetricsSection)
-            text = str(section.query_one("#metric-progress-empty").render())
-            title = section.border_title
-        self.assertEqual(text, "no tasks in this plan")
-        self.assertEqual(title, "METRICS · Empty plan")
+            chart = self._chart(section.query_one(f"#{CARD_ID}"))
+        self.assertIn("Empty plan", chart)
 
-    async def test_cards_are_side_by_side(self) -> None:
-        app = tui_mod.create_app(self.db)
-        async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
-            regions = [app.query_one(f"#{card_id}").region for card_id in CARD_IDS]
-        self.assertEqual(len({region.y for region in regions}), 1)
-        self.assertLess(regions[0].x, regions[1].x)
-        self.assertLess(regions[1].x, regions[2].x)
-        for region in regions:
-            self.assertGreater(region.width, 20)
-
-    async def test_cards_show_data_and_the_remaining_empty_state(self) -> None:
+    async def test_timeline_card_spans_the_section(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
             section = app.query_one("#metrics", MetricsSection)
-            activity = str(section.query_one("#metric-heatmap-empty").render())
-            progress = str(section.query_one("#metric-progress-head").render())
-            status_plot = section.query_one("#metric-status").query_one("PlotextPlot")
-            self.assertIn("no completions yet", activity)
-            self.assertIn("0% 0/1", progress)
-            self.assertTrue(status_plot.display)
+            cards = section.query_one("#metric-cards")
+            card = app.query_one(f"#{CARD_ID}")
+            self.assertEqual(card.region.width, cards.region.width)
+            self.assertGreater(card.region.width, 20)
 
-    async def test_section_is_fourteen_rows(self) -> None:
+    async def test_timeline_card_shows_the_project_lane(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
-            self.assertEqual(app.query_one("#metrics", MetricsSection).region.height, 14)
+            app.tree_controller.track(app._row_nodes[("plan", self.plan_id)])
+            await pilot.pause(0.2)
+            chart = self._chart(app.query_one(f"#{CARD_ID}"))
+        self.assertIn("Plan title", chart)
+        self.assertIn("Milestone title", chart)
+
+    async def test_section_grows_beyond_fourteen_rows(self) -> None:
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            self.assertGreater(app.query_one("#metrics", MetricsSection).region.height, 14)
 
     async def test_p117_chart_contract_is_pinned(self) -> None:
         """Guard the merged P117 shape before the modernization refactor."""
@@ -122,16 +108,9 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
             section = app.query_one("#metrics", MetricsSection)
-            self.assertEqual(section.region.height, 14)
-            cards = [section.query_one(f"#{card_id}") for card_id in CARD_IDS]
-            self.assertEqual(len(cards), 3)
-            for card in cards:
-                self.assertIsNotNone(card.query_one("PlotextPlot"))
-                self.assertIsNotNone(card.query_one(".metric-empty"))
-            self.assertIsNotNone(section.query_one("#metric-progress-head"))
-            self.assertEqual(
-                str(section.query_one("#metric-heatmap-empty").render()), "no completions yet"
-            )
+            card = section.query_one(f"#{CARD_ID}")
+            self.assertIsNotNone(card.query_one("PlotextPlot"))
+            self.assertGreaterEqual(section.region.height, 14)
 
     async def test_status_edit_reaches_the_host_on_refresh(self) -> None:
         app = tui_mod.create_app(self.db)
@@ -143,63 +122,6 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
                 app.refresh_all()
                 await pilot.pause()
         self.assertGreaterEqual(refresh.call_count, 1)
-
-    async def test_progress_card_updates_after_a_status_edit(self) -> None:
-        app = tui_mod.create_app(self.db)
-        async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
-            card = app.query_one("#metric-progress")
-            before = str(card.query_one(".metric-head").render())
-            services.set_status(self.store, "task", self.task_id, Status.DONE, actor="qa")
-            app.refresh_all()
-            await pilot.pause()
-            after = str(card.query_one(".metric-head").render())
-        self.assertIn("0% 0/1", before)
-        self.assertIn("100% 1/1", after)
-        self.assertIn("complete", after)
-
-    async def test_status_card_updates_after_a_status_edit(self) -> None:
-        app = tui_mod.create_app(self.db)
-        async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
-            card = app.query_one("#metric-status")
-            plot = card.query_one("PlotextPlot")
-            before = plot.plt.build()
-            services.set_status(self.store, "task", self.task_id, Status.DONE, actor="qa")
-            app.refresh_all()
-            await pilot.pause()
-            after = plot.plt.build()
-        self.assertIn("todo 100%", before)
-        self.assertIn("done 100%", after)
-
-    async def test_blocked_edit_updates_the_status_card(self) -> None:
-        app = tui_mod.create_app(self.db)
-        async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
-            card = app.query_one("#metric-status")
-            self.store.set_blocked(self.task_id, True, "waiting", actor="qa")
-            app.refresh_all()
-            await pilot.pause()
-            chart = card.query_one("PlotextPlot").plt.build()
-        self.assertIn("blocked 100%", chart)
-
-    async def test_heatmap_updates_after_a_done_toggle(self) -> None:
-        app = tui_mod.create_app(self.db)
-        async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
-            card = app.query_one("#metric-heatmap")
-            empty = card.query_one(".metric-empty")
-            before = str(empty.render())
-            services.set_status(self.store, "task", self.task_id, Status.DONE, actor="qa")
-            app.refresh_all()
-            await pilot.pause()
-            plot_visible = card.query_one("PlotextPlot").display
-            empty_visible = empty.display
-            titles = [app.query_one(f"#{card_id}") for card_id in CARD_IDS]
-        self.assertIn("no completions yet", before)
-        self.assertTrue(plot_visible)
-        self.assertFalse(empty_visible)
-        self.assertEqual(len(titles), 3)
 
     def _other_plan(self, tasks: int = 2) -> tuple[int, int, list[int]]:
         other = self.store.add_plan("Other plan")
@@ -214,42 +136,45 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
-            card = app.query_one("#metric-progress")
+            card = app.query_one(f"#{CARD_ID}")
             app.tree_controller.track(app._row_nodes[("plan", self.plan_id)])
             await pilot.pause(0.2)
-            before = str(card.query_one(".metric-head").render())
+            before = self._chart(card)
             app.tree_controller.track(app._row_nodes[("plan", other_id)])
             await pilot.pause(0.2)
-            after = str(card.query_one(".metric-head").render())
-        self.assertIn("0% 0/1", before)
-        self.assertIn("0% 0/2", after)
+            after = self._chart(card)
+        self.assertIn("Plan title", before)
+        self.assertIn("Other plan", after)
+        self.assertNotIn("Plan title", after)
 
     async def test_milestone_and_task_rows_scope_to_their_plan(self) -> None:
         _other_id, milestone_id, task_ids = self._other_plan()
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
-            card = app.query_one("#metric-progress")
-            heads = []
+            card = app.query_one(f"#{CARD_ID}")
+            charts = []
             for key in (("milestone", milestone_id), ("task", task_ids[0])):
                 app.tree_controller.track(app._row_nodes[key])
                 await pilot.pause(0.2)
-                heads.append(str(card.query_one(".metric-head").render()))
-        for head in heads:
-            self.assertIn("0% 0/2", head)
+                charts.append(self._chart(card))
+        for chart in charts:
+            self.assertIn("Other plan", chart)
+            self.assertIn("Other milestone", chart)
 
     async def test_no_selection_falls_back_to_all_plans(self) -> None:
         self._other_plan()
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
-            card = app.query_one("#metric-progress")
+            card = app.query_one(f"#{CARD_ID}")
             app.selected = None
             app.metrics_controller.stop()
             app.metrics_controller.refresh()
             await pilot.pause()
-            head = str(card.query_one(".metric-head").render())
-        self.assertIn("0% 0/3", head)
+            chart = self._chart(card)
+        self.assertIn("Plan title", chart)
+        self.assertIn("Other plan", chart)
 
     async def test_tree_filters_and_marks_leave_scope_alone(self) -> None:
         other_id, _milestone_id, _task_ids = self._other_plan()
@@ -262,8 +187,8 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
             app.marked.add(("plan", other_id))
             app.refresh_all()
             await pilot.pause()
-            head = str(app.query_one("#metric-progress").query_one(".metric-head").render())
-        self.assertIn("0% 0/2", head)
+            chart = self._chart(app.query_one(f"#{CARD_ID}"))
+        self.assertIn("Other plan", chart)
 
     async def test_plots_fit_at_100_columns(self) -> None:
         app = tui_mod.create_app(self.db)
@@ -271,16 +196,15 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             section = app.query_one("#metrics", MetricsSection)
             self.assertTrue(section.display)
-            for card_id in CARD_IDS:
-                card = app.query_one(f"#{card_id}")
-                self.assertTrue(_within(card.region, 100, 40))
-                plot = card.query_one("PlotextPlot")
-                if plot.display:
-                    self.assertTrue(_within(plot.region, 100, 40))
-                    self.assertLessEqual(
-                        plot.region.x + plot.region.width,
-                        card.region.x + card.region.width,
-                    )
+            card = app.query_one(f"#{CARD_ID}")
+            self.assertTrue(_within(card.region, 100, 40))
+            plot = card.query_one("PlotextPlot")
+            self.assertTrue(plot.display)
+            self.assertTrue(_within(plot.region, 100, 40))
+            self.assertLessEqual(
+                plot.region.x + plot.region.width,
+                card.region.x + card.region.width,
+            )
 
     async def test_section_hides_below_100_columns(self) -> None:
         app = tui_mod.create_app(self.db)

@@ -26,6 +26,7 @@ class SnapshotContractTest(unittest.TestCase):
         self.assertEqual(snap.activity, ())
         self.assertIsNone(snap.progress)
         self.assertIsNone(snap.status)
+        self.assertIsNone(snap.timeline)
 
     def test_snapshot_carries_progress_for_any_store(self) -> None:
         self.store.add_plan("P")

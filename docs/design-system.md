@@ -88,21 +88,21 @@ TUI).
 
 Visual: one-row `#hints` command bar. No `Header`, no `Footer`, no status
 bar, no bottom input. Each main section is a rounded card
-with a right-aligned title label, following Posting's pane treatment: `#nav`
+with a left-aligned title label, following Posting's pane treatment: `#nav`
 is `PLANS`, `#preview` is `PREVIEW`, and `#metrics` is `METRICS`. The focused
 pane gets the accent border. Adaptive shell: `#main` holds `#nav` (focused
 `FoldTree`) and `#preview` (`PreviewPanel`) side by side at >= 100 columns;
 below that `#main.narrow` hides the preview and the tree owns the width.
+Above the breakpoint the tree takes 35% of the width and the preview 65%.
 
 Three layout tiers share one breakpoint:
 - compact (< 80): `#nav` drops its border, loses its minimum width, and
   `#hints` loses its padding.
 - standard (80–99): the narrow shell hides preview and metrics; tree rows
   own the width.
-- wide (>= 120): `#main.wide` gives the tree three fifths and the preview
-  two fifths, with more preview padding. The 100-column visibility
-  breakpoint stays the single responsive rule; only crossing it rebuilds
-  the tree.
+- wide (>= 120): `#main.wide` adds more preview padding. The 100-column
+  visibility breakpoint stays the single responsive rule; only crossing it
+  rebuilds the tree.
 
 The preview's `PreviewDocument` supplies a status pill, breadcrumb, section
 headings, acceptance `○` rows, next tasks, provenance, and a key legend. `#tree` uses
@@ -141,20 +141,20 @@ cursor, and an accent cursor when the tree has focus.
 ## Metrics dashboard (`tui/metrics/`)
 
 - `#metrics` is a third always-on section inside `#panel`, below `#main`.
-  It is 14 rows tall: a rounded border around the `#metric-cards` row, and
-  hides below 100 columns; `_apply_layout` toggles `#metrics.narrow` with the
-  same breakpoint as the preview. The border title is `METRICS` for the
-  all-plans view and `METRICS · Plan title` while a row's plan is scoped.
-- `MetricsSection` hosts `metric-heatmap` (Daily activity),
-  `metric-progress` (Project progress), and `metric-status` (Task status).
-  Every card has a one-row title, a `PlotextPlot`, and an explicit empty
-  label that replaces the plot when there is no data.
+  It takes 45% of the shell height with a 14-row minimum, has no border
+  title, and hides below 100 columns; `_apply_layout` toggles
+  `#metrics.narrow` with the same breakpoint as the preview.
+- `MetricsSection` hosts `metric-timeline` (Project timeline), which spans
+  the full `#metric-cards` row. The card is a single `PlotextPlot`; both the
+  empty copy and the legend are drawn inside the chart with Plotext `text`,
+  so no secondary widget or border competes with the plot.
 - Charts use `textual-plotext` (`PlotextPlot`) through
   `theme/charts.py`: `apply_chart_theme` sets canvas, axes, and tick colours
   from the active theme, and `chart_color` maps the bar token to `green+`
-  in dark and `green` in light. The three card modules contain no literal
-  chart colours. Plotext owns the axes, ticks, scaling, and resize behavior;
-  cards only configure the data and refresh the widget.
+  in dark and `green` in light. `lane_color` and `lane_rgb` cycle the
+  `lp-chart-lane-*` theme tokens for timeline lanes. The card module contains
+  no literal chart colours. Plotext owns the axes, ticks, scaling, and resize
+  behavior; the card only configures the data and refreshes the widget.
 - `MetricsController` owns a 120 ms debounce. `TreeController.track` requests
   a refresh on cursor changes, and `refresh_all` refreshes immediately after
   restoring the selection. The controller resolves the selected row's parent
@@ -163,28 +163,17 @@ cursor, and an accent cursor when the tree has focus.
   Tree filters, the plan limit, and space-marks never change the scope.
 - `metrics.py` holds frozen dataclasses and chart-row helpers
   (`activity_weeks`, `milestone_bars`, `status_bars`); it never writes,
-  caches, or calls the network. A snapshot carries its `plan_id` and
-  `plan_title`, and `plan_id=None` keeps the all-plans view.
-- The Daily activity card sums the 84 local daily completions into 12
-  weekly bars. It labels every few weeks and uses two integer y ticks.
-  Counts come only from `task #N -> done` events for the scoped plan's
-  tasks (every task in the all-plans view), so a reopened task that finishes
-  again counts again.
-- The Project progress card is selection-scoped: a plan, milestone, or task
-  row scopes it to that row's parent plan, and no selection rolls up every
-  plan. A headline shows done/total and a percentage, the top five milestones
-  by newest task event (then open tasks, then id), elapsed time from the
-  scoped plan's earliest add event, and an ETA. The ETA is
-  `ceil(remaining / (completions in the last 14 days / 14))`; it reads
-  `complete` when nothing remains and `—` when there is no velocity. The
-  plot shows those five milestones as horizontal bars on a 0/50/100% axis.
-  No estimates or invented timestamps are used.
-- The Task status card shows `todo`, `doing`, `done`, and `blocked` as
-  horizontal bars labelled with their share. Status shares use the scoped
-  plan's tasks (every task in the all-plans view) and sum to 100%. `blocked`
-  is an overlay count from `Task.blocked`: a blocked task stays in its status
-  row, so the four rows can add up to more than 100%. With no tasks the card
-  shows its empty state; a scoped plan with no tasks says so explicitly.
+  caches, or calls the network. A snapshot carries its `plan_id`,
+  `plan_title`, and a `timeline`, and `plan_id=None` keeps the all-plans view.
+- The timeline is selection-scoped: a plan, milestone, or task row scopes it
+  to that row's parent plan, and no selection gives every plan a lane. A
+  scoped plan gets a project lane plus one lane per milestone. Each lane runs
+  from its `add` event to its latest `-> done` event, or to the snapshot clock
+  while open. Lanes are drawn with Plotext's `braille` marker on a shared
+  wall-clock x axis. The legend is overlaid in the chart's top-left corner as
+  a stacked colour key; its titles are truncated with an ellipsis. The y axis
+  reserves a legend band so the swimlanes stay fully visible beneath it. No
+  estimates or invented timestamps are used.
 
 ## Command registry (`palette.py and help.py`)
 

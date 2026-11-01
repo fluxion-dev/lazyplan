@@ -13,7 +13,7 @@ import time
 from dataclasses import dataclass
 from datetime import date, timedelta
 
-from .models import Milestone, Status, Task
+from .models import Milestone, Plan, Status, Task
 from .store import Store
 
 MilestonesByPlan = dict[int, list[Milestone]]
@@ -21,6 +21,8 @@ MilestonesByPlan = dict[int, list[Milestone]]
 _ADDED = re.compile(r"^([PMT])#(\d+) ")
 _DONE = re.compile(r"^task #(\d+) -> done$")
 _TASK_REF = re.compile(r"^(?:T#|task #)(\d+)\b")
+_TIMELINE_ADD = re.compile(r"^([PM])#(\d+) ")
+_TIMELINE_DONE = re.compile(r"^(plan|milestone) #(\d+) -> done\b")
 ETA_WINDOW_DAYS = 14
 MILESTONE_LIMIT = 5
 ACTIVITY_WEEKS = 12
@@ -104,12 +106,32 @@ class ChartRow:
 
 
 @dataclass(frozen=True)
+class TimelineLane:
+    """One project or milestone swimlane on the wall-clock timeline."""
+
+    kind: str
+    title: str
+    start: float
+    end: float
+
+
+@dataclass(frozen=True)
+class Timeline:
+    """Wall-clock spans for the project and its milestones."""
+
+    lanes: tuple[TimelineLane, ...] = ()
+    start: float = 0.0
+    end: float = 0.0
+
+
+@dataclass(frozen=True)
 class MetricsSnapshot:
-    """Everything the three dashboard cards render."""
+    """Everything the dashboard renders."""
 
     activity: tuple[DayActivity, ...] = ()
     progress: OverallProgress | None = None
     status: StatusBreakdown | None = None
+    timeline: Timeline | None = None
     plan_id: int | None = None
     plan_title: str = ""
 
@@ -188,6 +210,12 @@ def _event_in_scope(
         if letter == "M":
             return oid in milestone_ids
         return oid in task_ids
+    finished = _TIMELINE_DONE.match(detail)
+    if finished is not None:
+        kind, oid = finished.group(1), int(finished.group(2))
+        if kind == "plan":
+            return oid == plan_id
+        return oid in milestone_ids
     task_ref = _TASK_REF.match(detail)
     if task_ref is not None:
         return int(task_ref.group(1)) in task_ids
@@ -326,6 +354,81 @@ def _progress(
     )
 
 
+def _timeline_starts(events: list[dict]) -> dict[tuple[str, int], float]:
+    """Earliest add timestamp for every plan and milestone."""
+    starts: dict[tuple[str, int], float] = {}
+    for event in events:
+        found = _TIMELINE_ADD.match(str(event.get("detail") or ""))
+        if found is None:
+            continue
+        kind = "plan" if found.group(1) == "P" else "milestone"
+        key = (kind, int(found.group(2)))
+        stamp = float(event["ts"])
+        starts[key] = min(stamp, starts.get(key, stamp))
+    return starts
+
+
+def _timeline_ends(events: list[dict]) -> dict[tuple[str, int], float]:
+    """Newest completion timestamp for every plan and milestone."""
+    ends: dict[tuple[str, int], float] = {}
+    for event in events:
+        found = _TIMELINE_DONE.match(str(event.get("detail") or ""))
+        if found is None:
+            continue
+        key = (found.group(1), int(found.group(2)))
+        stamp = float(event["ts"])
+        ends[key] = max(stamp, ends.get(key, stamp))
+    return ends
+
+
+def _timeline(
+    plans: list[Plan],
+    milestones_by_plan: MilestonesByPlan,
+    events: list[dict],
+    plan_id: int | None,
+    now: float,
+) -> Timeline:
+    """Wall-clock spans for one plan and its milestones, or every plan.
+
+    A lane starts at its add event and ends at its latest completion event
+    when the row is done; open work runs to `now`. With no plan scope every
+    plan gets a lane; a scoped plan adds one lane per milestone.
+    """
+    starts = _timeline_starts(events)
+    ends = _timeline_ends(events)
+    fallback = min((float(event["ts"]) for event in events), default=now)
+
+    def lane(kind: str, oid: int, title: str, status: Status) -> TimelineLane:
+        start = starts.get((kind, oid), fallback)
+        end = ends.get((kind, oid), now) if status == Status.DONE else now
+        return TimelineLane(kind, title, start, max(start, end))
+
+    lanes: list[TimelineLane] = []
+    if plan_id is None:
+        ordered = sorted(plans, key=lambda item: starts.get(("plan", item.id), fallback))
+        lanes = [lane("plan", plan.id, plan.name, plan.status) for plan in ordered]
+    else:
+        plan = next((item for item in plans if item.id == plan_id), None)
+        if plan is None:
+            return Timeline()
+        lanes.append(lane("plan", plan.id, plan.name, plan.status))
+        milestones = sorted(
+            milestones_by_plan.get(plan_id, []),
+            key=lambda item: starts.get(("milestone", item.id), fallback),
+        )
+        lanes.extend(
+            lane("milestone", milestone.id, milestone.title, milestone.status)
+            for milestone in milestones
+        )
+    if not lanes:
+        return Timeline()
+    return Timeline(
+        lanes=tuple(lanes),
+        start=min(item.start for item in lanes),
+        end=max(item.end for item in lanes),
+    )
+
+
 def _status(tasks: list[Task]) -> StatusBreakdown:
     return StatusBreakdown(
         todo=sum(1 for task in tasks if task.status == Status.TODO),
@@ -354,6 +457,7 @@ def snapshot(
         activity=_activity(events, stamp),
         progress=_progress(milestones_by_plan, tasks_by_milestone, events, stamp),
         status=_status(_flatten(tasks_by_milestone)),
+        timeline=_timeline(store.list_plans(), milestones_by_plan, events, plan_id, stamp),
         plan_id=plan_id if title else None,
         plan_title=title,
     )

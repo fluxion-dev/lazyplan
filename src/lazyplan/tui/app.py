@@ -21,7 +21,7 @@ try:
     from textual.binding import Binding
     from textual.containers import Horizontal, Vertical
     from textual.reactive import reactive
-    from textual.widgets import Label, Tree
+    from textual.widgets import Label, Static, Tree
     from textual.widgets.tree import TreeNode
 
     from ..tree_nav import NavTree  # noqa: F401
@@ -166,6 +166,7 @@ if _TEXTUAL_OK:
                 with Horizontal(id="main"):
                     with Vertical(id="nav"):
                         yield FoldTree("plans", id="tree")
+                        yield Static("nothing planned... yet", id="tree-empty")
                     yield PreviewPanel()
                 yield MetricsSection()
             yield Label("", id="hints")
@@ -204,7 +205,9 @@ if _TEXTUAL_OK:
             self.query_one("#nav").border_title = "PLANS"
             if self._startup_notice:
                 self.notify(self._startup_notice, timeout=10)
-            self.query_one("#tree", Tree).focus()
+            tree = self.query_one("#tree", Tree)
+            if tree.display:
+                tree.focus()
 
     def create_app(db_path: str | None = None, startup_notice: str = "") -> LazyplanApp:
         """Build the app bound to a store."""

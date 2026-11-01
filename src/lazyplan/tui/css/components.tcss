@@ -7,26 +7,9 @@
 .metric-card {
     width: 1fr;
     height: 1fr;
-    min-width: 18;
-    padding: 0 1;
-    margin: 0 1 0 0;
-    border: solid $lp-border;
+    padding: 0;
+    margin: 0;
     background: $lp-surface;
-}
-
-.metric-title {
-    height: 1;
-    color: $lp-text-muted;
-    text-style: bold;
-}
-
-.metric-empty {
-    height: 1fr;
-    color: $lp-text-muted;
-}
-
-.metric-head {
-    height: 2;
 }
 
 #metrics PlotextPlot {
@@ -41,6 +24,15 @@
 #tree {
     background: $lp-surface-alt;
     color: $foreground;
+}
+
+#tree-empty {
+    width: 1fr;
+    height: 1fr;
+    display: none;
+    content-align: center middle;
+    text-align: center;
+    color: $lp-text-muted;
 }
 
 #tree > .tree--guides {

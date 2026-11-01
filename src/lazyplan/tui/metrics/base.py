@@ -12,9 +12,8 @@ except ImportError:  # pragma: no cover
 if _TEXTUAL_OK:
 
     class MetricCard(Vertical):
-        """One titled metrics card with an explicit empty state."""
+        """One metrics card with an explicit empty state."""
 
-        def __init__(self, card_id: str, title: str, empty: str) -> None:
+        def __init__(self, card_id: str, empty: str) -> None:
             super().__init__(id=card_id, classes="metric-card")
-            self.card_title = title
             self.empty = empty

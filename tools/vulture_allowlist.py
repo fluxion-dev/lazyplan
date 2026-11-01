@@ -153,3 +153,11 @@ default_choice
 is_archived
 plan_activity
 _.plan_uid
+# Metrics chart-row helpers kept for the core metrics API and its tests.
+activity_weeks
+milestone_bars
+status_bars
+# Snapshot scope fields kept for callers and tests outside the timeline card.
+plan_title
+# Textual Tree reactive read by the framework, set as a subclass default.
+show_root

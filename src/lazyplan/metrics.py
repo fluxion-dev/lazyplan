@@ -107,7 +107,11 @@ class ChartRow:
 
 @dataclass(frozen=True)
 class TimelineLane:
-    """One project, milestone, or task swimlane on the wall-clock timeline."""
+    """One project, milestone, or task swimlane on the wall-clock timeline.
+
+    `active` holds the doing intervals. `trace` holds the intervals the chart
+    draws: the whole span for projects and milestones, and `active` for tasks.
+    """
 
     kind: str
     title: str
@@ -115,6 +119,7 @@ class TimelineLane:
     end: float
     active: tuple[tuple[float, float], ...] = ()
     selected: bool = False
+    trace: tuple[tuple[float, float], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -462,13 +467,17 @@ def _timeline(
     ) -> TimelineLane:
         start = starts.get((kind, oid), fallback)
         end = ends.get((kind, oid), now) if status == Status.DONE else now
+        lane_end = max(start, end)
+        active = _doing_intervals(kind, oid, status, events, start, now)
+        span = ((start, lane_end),)
         return TimelineLane(
             kind,
             title,
             start,
-            max(start, end),
-            _doing_intervals(kind, oid, status, events, start, now),
+            lane_end,
+            active,
             selected,
+            span if kind in ("plan", "milestone") else active,
         )
 
     lanes: list[TimelineLane] = []

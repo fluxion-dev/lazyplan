@@ -54,6 +54,10 @@ class TimelineSnapshotTest(unittest.TestCase):
             ],
         )
         self.assertEqual([lane.active for lane in snap.timeline.lanes], [(), (), ()])
+        self.assertEqual(
+            [lane.trace for lane in snap.timeline.lanes],
+            [((1_000, 1_500),), ((1_100, 1_300),), ((1_200, 1_500),)],
+        )
         self.assertEqual((snap.timeline.start, snap.timeline.end), (1_000, 1_500))
 
     def test_active_intervals_pause_and_resume(self) -> None:
@@ -104,6 +108,67 @@ class TimelineSnapshotTest(unittest.TestCase):
             [lane.active for lane in snap.timeline.lanes],
             [((1_200, 1_400), (1_600, 1_800))] * 2,
         )
+
+    def test_paused_project_and_milestone_traces_stay_continuous(self) -> None:
+        plan = self._at(1_000, lambda: self.store.add_plan("Plan"))
+        milestone = self._at(1_100, lambda: self.store.add_milestone(plan.id, "Milestone"))
+        self._at(
+            1_200,
+            lambda: services.set_status(
+                self.store, "milestone", milestone.id, Status.DOING, actor="qa"
+            ),
+        )
+        self._at(
+            1_300,
+            lambda: services.set_status(
+                self.store, "milestone", milestone.id, Status.TODO, actor="qa"
+            ),
+        )
+        self._at(
+            1_400,
+            lambda: services.set_status(
+                self.store, "milestone", milestone.id, Status.DOING, actor="qa"
+            ),
+        )
+
+        snap = metrics.snapshot(self.store, now=1_500, plan_id=plan.id)
+
+        assert snap.timeline is not None
+        plan_lane, milestone_lane = snap.timeline.lanes
+        self.assertEqual(plan_lane.active, ((1_200, 1_300), (1_400, 1_500)))
+        self.assertEqual(milestone_lane.active, ((1_200, 1_300), (1_400, 1_500)))
+        self.assertEqual(plan_lane.trace, ((1_000, 1_500),))
+        self.assertEqual(milestone_lane.trace, ((1_100, 1_500),))
+
+    def test_task_trace_keeps_doing_segments(self) -> None:
+        plan = self._at(1_000, lambda: self.store.add_plan("Plan"))
+        milestone = self._at(1_100, lambda: self.store.add_milestone(plan.id, "Milestone"))
+        task = self._at(1_150, lambda: self.store.add_task(milestone.id, "Task"))
+        self._at(
+            1_200,
+            lambda: services.set_status(self.store, "task", task.id, Status.DOING, actor="qa"),
+        )
+        self._at(
+            1_300,
+            lambda: services.set_status(self.store, "task", task.id, Status.TODO, actor="qa"),
+        )
+        self._at(
+            1_400,
+            lambda: services.set_status(self.store, "task", task.id, Status.DOING, actor="qa"),
+        )
+
+        snap = metrics.snapshot(
+            self.store,
+            now=1_500,
+            plan_id=plan.id,
+            scope_kind="task",
+            scope_id=task.id,
+        )
+
+        assert snap.timeline is not None
+        task_lane = next(lane for lane in snap.timeline.lanes if lane.kind == "task")
+        self.assertEqual(task_lane.active, ((1_200, 1_300), (1_400, 1_500)))
+        self.assertEqual(task_lane.trace, task_lane.active)
 
     def test_unstarted_and_direct_done_lanes_have_no_active_interval(self) -> None:
         plan = self._at(1_000, lambda: self.store.add_plan("Plan"))

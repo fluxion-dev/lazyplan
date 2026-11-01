@@ -94,6 +94,28 @@ class TestViewports(unittest.IsolatedAsyncioTestCase):
                             preview.region.width,
                         )
 
+    async def test_main_shell_regions_at_four_sizes(self):
+        for width, height in ((80, 24), (100, 30), (120, 40), (160, 50)):
+            with self.subTest(size=(width, height)):
+                app = tui_mod.create_app(self.db)
+                async with app.run_test(size=(width, height)) as pilot:
+                    await pilot.pause()
+                    for selector in ("#panel", "#main", "#nav", "#status", "#hints"):
+                        self.assertTrue(
+                            _within(app.query_one(selector).region, width, height),
+                            selector,
+                        )
+                    preview = app.query_one("#preview")
+                    metrics = app.query_one("#metrics")
+                    if width >= 100:
+                        self.assertTrue(_within(preview.region, width, height))
+                        self.assertEqual(preview.border_title, "PREVIEW")
+                        self.assertTrue(_within(metrics.region, width, height))
+                        self.assertEqual(metrics.region.height, 13)
+                    else:
+                        self.assertFalse(preview.display)
+                        self.assertFalse(metrics.display)
+
     async def test_forms_palette_help_and_confirm_at_both_sizes(self):
         for width, height in SIZES:
             with self.subTest(size=(width, height)):

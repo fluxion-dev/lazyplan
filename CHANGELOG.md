@@ -3,6 +3,38 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## v0.30.1 — 2026-11-01
+
+Fixes the timeline's false shared start. Project and milestone traces now begin
+when the row enters doing, so sequential milestones show distinct start times
+and a pause leaves a visible gap.
+
+### Fixed
+
+- Project and milestone traces start at their first `-> doing` event instead of
+  the row's add event.
+- A pause splits a project or milestone trace into separate segments; resumed
+  work starts a new segment with its own start and finish dots.
+- A milestone or plan that never entered doing keeps its lane and legend entry
+  but draws no trace.
+- Lane start and end follow the first and last doing interval; a never-doing
+  lane keeps its add position.
+
+### Upgrade
+
+```bash
+pipx upgrade lazyplan-tui
+# or
+pipx install --force lazyplan-tui
+```
+
+No manual migration is required. The database schema is unchanged.
+
+### Documentation
+
+- Updated the timeline sections in `docs/usage.md` and
+  `docs/design-system.md`.
+
 ## v0.30.0 — 2026-11-01
 
 A visual overhaul for the TUI. The default palette is Catppuccin Mocha, with

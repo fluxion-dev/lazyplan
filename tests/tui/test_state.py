@@ -61,7 +61,7 @@ class StateTest(unittest.IsolatedAsyncioTestCase):
             self.assertIn(("plan", 1), app.state.expanded)
 
     def test_app_shell_is_small_and_base_has_no_forwarding_stubs(self) -> None:
-        root = Path(__file__).resolve().parents[2] / "src" / "lazyplan" / "tui"
+        root = Path(__file__).resolve().parents[2] / "src" / "lazyplan" / "presentation" / "tui"
         app_lines = len((root / "app.py").read_text(encoding="utf-8").splitlines())
         base = (root / "base.py").read_text(encoding="utf-8")
         self.assertLessEqual(app_lines, 250)
@@ -113,7 +113,7 @@ class StateTest(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(scroll.scroll_y, 0)
 
     def test_tui_modules_stay_under_the_target_budget(self) -> None:
-        root = Path(__file__).resolve().parents[2] / "src" / "lazyplan" / "tui"
+        root = Path(__file__).resolve().parents[2] / "src" / "lazyplan" / "presentation" / "tui"
         over = []
         for path in root.rglob("*.py"):
             lines = len(path.read_text(encoding="utf-8").splitlines())

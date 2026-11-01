@@ -26,18 +26,28 @@ from .forge import (
     forge_statuses,
     refresh_forge,
 )
-from .plans import (
+from .planning import (
+    DEFAULT_PLAN_LIMIT,
+    _filtered_milestones,
+    _is_archived,
+    _plan_activity,
+    _plan_matches_repo,
+    _repo_match,
     _rollup_target,
+    _visible_plan,
     create_milestone,
     create_plan,
     create_task,
     cycle_status,
     heal,
     heal_parents,
+    is_archived,
+    plan_activity,
     reconcile,
-    refresh_links,
     set_status,
+    tree,
 )
+from .plans import refresh_links
 from .tasks import (
     _finish_target,
     _gate_failure,
@@ -53,18 +63,6 @@ from .transfer import (
     export_all,
     export_plan,
     import_all,
-)
-from .tree import (
-    DEFAULT_PLAN_LIMIT,
-    _filtered_milestones,
-    _is_archived,
-    _plan_activity,
-    _plan_matches_repo,
-    _repo_match,
-    _visible_plan,
-    is_archived,
-    plan_activity,
-    tree,
 )
 from .vcs import (
     _branch_ref,

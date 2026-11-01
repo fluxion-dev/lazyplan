@@ -7,8 +7,8 @@ import time
 from pathlib import Path
 
 from ..core.entities import Criterion, Milestone, Plan, Status, Task
-from ..core.policies.planning import ARCHIVE_AFTER_SECS, next_status, rollup_target
 from ..core.policies.planning import is_archived as _is_archived_policy
+from ..core.policies.planning import next_status, rollup_target
 from ..core.ports.planning import PlanningPort
 from ..kinds import check_kind
 from ..templates import apply_template, template_criteria
@@ -391,7 +391,6 @@ def tree(
 
 
 __all__ = [
-    "ARCHIVE_AFTER_SECS",
     "DEFAULT_PLAN_LIMIT",
     "_filtered_milestones",
     "_is_archived",

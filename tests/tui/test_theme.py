@@ -139,7 +139,14 @@ class ThemeTest(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(app.theme_variables["lp-surface"], VOID_TOKENS["lp-surface"])
 
     def test_chart_modules_do_not_hardcode_green(self) -> None:
-        root = Path(__file__).resolve().parents[2] / "src" / "lazyplan" / "tui" / "metrics"
+        root = (
+            Path(__file__).resolve().parents[2]
+            / "src"
+            / "lazyplan"
+            / "presentation"
+            / "tui"
+            / "metrics"
+        )
         for name in ("timeline.py",):
             text = (root / name).read_text(encoding="utf-8")
             self.assertNotIn('color="green"', text)

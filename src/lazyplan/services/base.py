@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import re
 
-ARCHIVE_AFTER_SECS = 24 * 3600
 _GATE_PASS = {"pass", "neutral", "skipped"}
 
 

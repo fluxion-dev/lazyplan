@@ -11,7 +11,7 @@ try:
 except ImportError:  # pragma: no cover - stdlib-only interpreter
     tui_mod = None  # type: ignore[assignment]
 
-CSS_DIR = Path(__file__).resolve().parents[2] / "src" / "lazyplan" / "tui" / "css"
+CSS_DIR = Path(__file__).resolve().parents[2] / "src" / "lazyplan" / "presentation" / "tui" / "css"
 COLOUR_LITERAL = re.compile(r"#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(")
 
 

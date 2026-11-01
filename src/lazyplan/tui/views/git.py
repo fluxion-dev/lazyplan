@@ -71,7 +71,9 @@ def _commit_line(link: Mapping[str, Any]) -> str:
     files = link.get("files") or ()
     count = f" [dim]· {len(files)} files[/]" if files else ""
     stale = " [red]· stale[/]" if link.get("stale") else ""
-    return f"[dim]{SECTION_ICON['commits']} {short}[/] {truncate(subject, 44)}{count}{stale}"
+    return (
+        f"[dim]{SECTION_ICON['commits']} {short}[/] [dim]·[/] {truncate(subject, 44)}{count}{stale}"
+    )
 
 
 def _pull_line(link: Mapping[str, Any]) -> str:

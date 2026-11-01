@@ -302,3 +302,15 @@ Playwright-equivalent Chromium checks at 360, 768, and 1440 widths reported
 `scrollWidth == clientWidth`. Lighthouse: 90 performance, 96 accessibility, 100
 best practices, 100 SEO; the accessibility dip is the download strip's
 updated-date contrast, not the new feature copy.
+
+### v0.30.1 pass (2026-11-01)
+
+After: version pins, release asset URLs, JSON-LD `version`/`softwareVersion`,
+and the sitemap `lastmod` moved to 0.30.1. The timeline screenshot was
+regenerated so the site shows doing-only traces: sequential milestones at
+distinct start positions and one never-started lane with no trace. The visible
+copy and marketing budget did not change.
+
+Verified live: the page contains 0.30.1, `screens/lpui-timeline.webp` and its
+PNG return 200, the sitemap carries `lastmod` 2026-11-01, and canonical,
+FAQ/JSON-LD, and robots are intact. An isolated 0.30.1 install printed 0.30.1.

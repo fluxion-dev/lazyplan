@@ -570,3 +570,32 @@ or the next plan row so the next release has the context.
   `scrollWidth == clientWidth`.
 - Follow-up: the accessibility score dropped to 96 on the download strip's
   updated-date contrast, which is unrelated to the 0.30 feature copy.
+
+### v0.30.1 (2026-11-01)
+
+- Patch bump from 0.30.0. Project and milestone timeline traces now start at
+  their first `-> doing` event, split at pauses, and stay empty for rows that
+  never entered doing. Lane start/end follow the doing span.
+- The fix and its regression tests merged on `main`; `./tools/check.sh` printed
+  ALL GATES GREEN before the release.
+- The **bump** workflow (`part=patch`) created
+  [41346951618](https://github.com/fluxion-dev/lazyplan/actions/runs/41346951618)
+  and release PR [#76](https://github.com/fluxion-dev/lazyplan/pull/76). Its CI
+  run [41346967699](https://github.com/fluxion-dev/lazyplan/actions/runs/41346967699)
+  passed Ubuntu and macOS after admin approval, and auto-merge produced
+  `2f88f22`.
+- The `publish` job succeeded this time and dispatched `tag-release`
+  ([41347512703](https://github.com/fluxion-dev/lazyplan/actions/runs/41347512703))
+  and Pages
+  ([41347514923](https://github.com/fluxion-dev/lazyplan/actions/runs/41347514923))
+  without the manual fallback. `tag-release` created annotated tag `v0.30.1`
+  and dispatched
+  [release.yml](https://github.com/fluxion-dev/lazyplan/actions/runs/41347525443);
+  the release and PyPI jobs succeeded.
+- PyPI JSON served 0.30.1 immediately while the simple index lagged; an
+  isolated `python -m venv` install with `--no-cache-dir` then printed 0.30.1.
+  Seven assets are attached, including `install.sh`.
+- Verified: the live site shows 0.30.1, the refreshed timeline screenshot
+  returns 200 in both formats, sitemap `lastmod` is 2026-11-01, and the curated
+  release notes are live.
+- No deviations beyond the expected PyPI simple-index lag.

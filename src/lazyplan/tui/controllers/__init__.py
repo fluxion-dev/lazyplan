@@ -3,5 +3,6 @@
 from __future__ import annotations
 
 from .tree import TreeController
+from .updates import UpdateController
 
-__all__ = ["TreeController"]
+__all__ = ["TreeController", "UpdateController"]

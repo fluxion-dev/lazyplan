@@ -16,9 +16,11 @@ from tests.support.home import sandbox_home
 try:
     tui_mod = importlib.import_module("lazyplan.tui.app")
     screen_mod = importlib.import_module("lazyplan.tui.screens.update")
+    updates_mod = importlib.import_module("lazyplan.tui.controllers.updates")
 except ImportError:  # stdlib-only interpreter
     tui_mod = None  # type: ignore[assignment]
     screen_mod = None  # type: ignore[assignment]
+    updates_mod = None  # type: ignore[assignment]
 
 
 STAGED = update_stage.StagedUpdate(
@@ -151,12 +153,12 @@ class TestUpdateScreen(unittest.IsolatedAsyncioTestCase):
             self.assertIn("Downgrades are disabled", str(screen.query_one("#update-body").render()))
 
     async def test_cached_older_notice_does_not_open_the_screen(self):
-        with mock.patch.object(self.app, "_update_tick"):
+        with mock.patch.object(self.app.update_controller, "tick"):
             async with self.app.run_test() as pilot:
                 self.app._update_latest = ""
                 with (
-                    mock.patch.object(tui_mod, "cached_latest", return_value="0.27.1"),
-                    mock.patch.object(tui_mod, "package_version", return_value="0.28.0"),
+                    mock.patch.object(updates_mod, "cached_latest", return_value="0.27.1"),
+                    mock.patch.object(updates_mod, "package_version", return_value="0.28.0"),
                     mock.patch.object(self.app, "notify") as toast,
                 ):
                     self.app.action_update_prompt()

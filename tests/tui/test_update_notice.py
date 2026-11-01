@@ -14,8 +14,10 @@ from tests.support.home import sandbox_home
 
 try:
     tui_mod = importlib.import_module("lazyplan.tui.app")
+    updates_mod = importlib.import_module("lazyplan.tui.controllers.updates")
 except ImportError:  # stdlib-only interpreter: no textual, no screens
     tui_mod = None  # type: ignore[assignment]
+    updates_mod = None  # type: ignore[assignment]
 
 cli_mod = importlib.import_module("lazyplan.cli.main")
 
@@ -123,9 +125,9 @@ class TestTuiNotice(unittest.IsolatedAsyncioTestCase):
 
         info = upgrade.InstallInfo(upgrade.PIPX, True)
         with (
-            mock.patch.object(tui_mod, "refresh_update", return_value="9.9.9") as refresh,
-            mock.patch.object(tui_mod, "detect", return_value=info),
-            mock.patch.object(tui_mod, "package_version", return_value="0.16.0"),
+            mock.patch.object(updates_mod, "refresh_update", return_value="9.9.9") as refresh,
+            mock.patch.object(updates_mod, "detect", return_value=info),
+            mock.patch.object(updates_mod, "package_version", return_value="0.16.0"),
             mock.patch.object(self.app, "notify") as toast,
         ):
             async with self.app.run_test() as pilot:
@@ -134,15 +136,15 @@ class TestTuiNotice(unittest.IsolatedAsyncioTestCase):
                 bar = self.app.query_one("#status", Label)
                 self.assertIn("update v9.9.9", str(bar.content))
                 self.assertEqual(refresh.call_count, 1)
-                self.app._announce_update(self.app._update_notice or "")
-                self.app._announce_update(self.app._update_notice or "")
+                self.app.update_controller.announce(self.app._update_notice or "")
+                self.app.update_controller.announce(self.app._update_notice or "")
                 self.assertEqual(toast.call_count, 1)
                 notice = toast.call_args[0][0]
                 self.assertIn("9.9.9", notice)
                 self.assertIn("lpui upgrade", notice)
 
     async def test_offline_stays_silent(self):
-        with mock.patch.object(tui_mod, "refresh_update", return_value=None):
+        with mock.patch.object(updates_mod, "refresh_update", return_value=None):
             async with self.app.run_test() as pilot:
                 await pilot.pause()
                 await pilot.pause()
@@ -151,22 +153,26 @@ class TestTuiNotice(unittest.IsolatedAsyncioTestCase):
 
     async def test_toast_is_once_per_version(self):
         info = upgrade.InstallInfo(upgrade.PIPX, True)
-        with mock.patch.object(tui_mod, "refresh_update", return_value=None):
+        with mock.patch.object(updates_mod, "refresh_update", return_value=None):
             async with self.app.run_test() as pilot:
                 await pilot.pause()
                 with mock.patch.object(self.app, "notify") as toast:
                     for _ in range(3):
-                        self.app._announce_update("update v9.9.9 available", "9.9.9", info)
+                        self.app.update_controller.announce(
+                            "update v9.9.9 available", "9.9.9", info
+                        )
                     self.assertEqual(toast.call_count, 1)
-                    self.app._announce_update("update v9.9.10 available", "9.9.10", info)
+                    self.app.update_controller.announce("update v9.9.10 available", "9.9.10", info)
                     self.assertEqual(toast.call_count, 2)
                     self.assertEqual(self.app._toasted_version, "9.9.10")
 
     async def test_current_stays_silent(self):
         info = upgrade.InstallInfo(upgrade.PIPX, True)
         with (
-            mock.patch.object(tui_mod, "refresh_update", return_value=tui_mod.package_version()),
-            mock.patch.object(tui_mod, "detect", return_value=info),
+            mock.patch.object(
+                updates_mod, "refresh_update", return_value=tui_mod.package_version()
+            ),
+            mock.patch.object(updates_mod, "detect", return_value=info),
         ):
             async with self.app.run_test() as pilot:
                 await pilot.pause()
@@ -177,17 +183,17 @@ class TestTuiNotice(unittest.IsolatedAsyncioTestCase):
         from textual.widgets import Label
 
         info = upgrade.InstallInfo(upgrade.PIPX, True)
-        with mock.patch.object(tui_mod, "refresh_update", return_value=None):
+        with mock.patch.object(updates_mod, "refresh_update", return_value=None):
             async with self.app.run_test() as pilot:
                 await pilot.pause()
-                self.app._announce_update("update v9.9.9 available", "9.9.9", info)
+                self.app.update_controller.announce("update v9.9.9 available", "9.9.9", info)
                 await pilot.pause()
                 self.assertIn("update v9.9.9", str(self.app.query_one("#status", Label).content))
                 with (
-                    mock.patch.object(tui_mod, "package_version", return_value="9.9.9"),
-                    mock.patch.object(tui_mod, "detect", return_value=info),
+                    mock.patch.object(updates_mod, "package_version", return_value="9.9.9"),
+                    mock.patch.object(updates_mod, "detect", return_value=info),
                 ):
-                    self.app._apply_update("9.9.9")
+                    self.app.update_controller.apply_update("9.9.9")
                 await pilot.pause()
                 self.assertIsNone(self.app._update_notice)
                 self.assertEqual(self.app._update_latest, "")
@@ -197,53 +203,53 @@ class TestTuiNotice(unittest.IsolatedAsyncioTestCase):
         from textual.widgets import Label
 
         info = upgrade.InstallInfo(upgrade.PIPX, True)
-        with mock.patch.object(tui_mod, "refresh_update", return_value=None):
+        with mock.patch.object(updates_mod, "refresh_update", return_value=None):
             async with self.app.run_test() as pilot:
                 await pilot.pause()
-                self.app._announce_update("update v9.9.9 available", "9.9.9", info)
+                self.app.update_controller.announce("update v9.9.9 available", "9.9.9", info)
                 with (
-                    mock.patch.object(tui_mod, "package_version", return_value="0.16.0"),
-                    mock.patch.object(tui_mod, "detect", return_value=info),
+                    mock.patch.object(updates_mod, "package_version", return_value="0.16.0"),
+                    mock.patch.object(updates_mod, "detect", return_value=info),
                     mock.patch.object(self.app, "notify"),
                 ):
-                    self.app._apply_update("9.9.10")
+                    self.app.update_controller.apply_update("9.9.10")
                 await pilot.pause()
                 self.assertEqual(self.app._update_latest, "9.9.10")
                 self.assertIn("update v9.9.10", str(self.app.query_one("#status", Label).content))
 
     async def test_failed_poll_keeps_the_chip(self):
         info = upgrade.InstallInfo(upgrade.PIPX, True)
-        with mock.patch.object(tui_mod, "refresh_update", return_value=None):
+        with mock.patch.object(updates_mod, "refresh_update", return_value=None):
             async with self.app.run_test() as pilot:
                 await pilot.pause()
-                self.app._announce_update("update v9.9.9 available", "9.9.9", info)
-                self.app._apply_update(None)
+                self.app.update_controller.announce("update v9.9.9 available", "9.9.9", info)
+                self.app.update_controller.apply_update(None)
                 self.assertEqual(self.app._update_latest, "9.9.9")
                 self.assertIsNotNone(self.app._update_notice)
 
     async def test_update_timer_stops_on_unmount(self):
-        with mock.patch.object(tui_mod, "refresh_update", return_value=None):
+        with mock.patch.object(updates_mod, "refresh_update", return_value=None):
             async with self.app.run_test() as pilot:
                 await pilot.pause()
                 self.assertIsNotNone(self.app._update_timer)
         self.assertIsNone(self.app._update_timer)
 
     async def test_update_checks_never_stack(self):
-        with mock.patch.object(tui_mod, "refresh_update", return_value=None):
+        with mock.patch.object(updates_mod, "refresh_update", return_value=None):
             async with self.app.run_test() as pilot:
                 await pilot.pause()
                 self.app._update_checking = True
                 with mock.patch.object(self.app, "run_worker") as worker:
-                    self.app._update_tick()
+                    self.app.update_controller.tick()
                 worker.assert_not_called()
 
     async def test_idle_tick_starts_one_worker(self):
-        with mock.patch.object(tui_mod, "refresh_update", return_value=None):
+        with mock.patch.object(updates_mod, "refresh_update", return_value=None):
             async with self.app.run_test() as pilot:
                 await pilot.pause()
                 self.app._update_checking = False
                 with mock.patch.object(self.app, "run_worker") as worker:
-                    self.app._update_tick()
+                    self.app.update_controller.tick()
                 worker.assert_called_once()
 
 

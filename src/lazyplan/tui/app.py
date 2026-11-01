@@ -40,25 +40,14 @@ from ..design import (
 from ..models import Status
 from ..store import Store
 from ..update_stage import apply_on_launch, clear_failure, read_failure
-from ..upgrade import (
-    UPDATE_CACHE_TTL,
-    UpgradeError,
-    cached_latest,
-    detect,
-    notice_text,
-    parse_version,
-    poll_interval,
-    refresh_update,
-    update_check_enabled,
-)
 from .actions import ActionMixin
 from .base import AppBase
 from .bulk import BulkMixin
 from .controllers.tree import TreeController
+from .controllers.updates import UpdateController
 from .filters import FilterMixin
 from .metrics import MetricsSection
 from .preview import PreviewMixin
-from .screens.update import UpdateScreen
 from .state import AppState
 from .theme import register_themes
 from .tree import TreeMixin
@@ -151,16 +140,11 @@ if _TEXTUAL_OK:
             self._row_nodes: dict[tuple[str, int], TreeNode] = {}
             self._row_labels: dict[tuple[str, int], str] = {}
             self.tree_controller = TreeController(self)
+            self.update_controller = UpdateController(self)
             self._last_click_key: tuple[str, int] | None = None
             self._last_click_at: float = 0.0
             self._fp: Any = store.fingerprint()
-            self._update_notice: str | None = None
-            self._update_latest: str = ""
-            self._update_info: Any = None
             self._startup_notice: str = ""
-            self._toasted_version: str = ""
-            self._update_timer: Any = None
-            self._update_checking: bool = False
             self._git_cache: dict[str, tuple[float, dict[str, Any]]] = {}
             self._git_pending: set[str] = set()
             self._spinner_tick: int = 0
@@ -170,61 +154,7 @@ if _TEXTUAL_OK:
 
         def action_update_prompt(self) -> None:
             """Open the update screen for a known or cached newer release."""
-            latest = self._update_latest or (cached_latest(max_age=UPDATE_CACHE_TTL) or "")
-            if not latest:
-                self.notify("no update available")
-                return
-            installed = package_version()
-            try:
-                if parse_version(latest) <= parse_version(installed):
-                    self.notify(f"lpui v{installed} is up to date")
-                    return
-            except UpgradeError:
-                self.notify("cannot compare the update versions")
-                return
-            info = self._update_info or detect()
-            self.push_screen(UpdateScreen(installed, latest, info))
-
-        def _update_tick(self) -> None:
-            """Poll the shared cache; one update worker runs at a time."""
-            if not self._mounted or self._update_checking:
-                return
-            if not update_check_enabled():
-                return
-            self._update_checking = True
-            self.run_worker(self._refresh_update_worker, thread=True, group="update")
-
-        def _refresh_update_worker(self) -> None:
-            """Read the cache and refresh the network when the gate allows."""
-            try:
-                latest = refresh_update()
-            except Exception:
-                latest = None
-            try:
-                self.call_from_thread(self._apply_update, latest)
-            except Exception:
-                pass
-
-        def _apply_update(self, latest: str | None) -> None:
-            """Show or clear the chip after one update poll."""
-            self._update_checking = False
-            if latest is None:
-                return
-            info = detect()
-            notice = notice_text(info, package_version(), latest)
-            if notice is None:
-                self._clear_update()
-            else:
-                self._announce_update(notice, latest, info)
-
-        def _clear_update(self) -> None:
-            """Drop the chip once the installed version catches up."""
-            if self._update_notice is None and not self._update_latest:
-                return
-            self._update_notice = None
-            self._update_latest = ""
-            self._update_info = None
-            self._refresh_status()
+            self.update_controller.prompt()
 
         def compose(self) -> ComposeResult:
             with Vertical(id="panel"):
@@ -246,9 +176,7 @@ if _TEXTUAL_OK:
 
         def on_unmount(self) -> None:
             """Stop app-owned timers; both drive periodic work."""
-            if self._update_timer is not None:
-                self._update_timer.stop()
-                self._update_timer = None
+            self.update_controller.stop()
             if self._spinner_timer is not None:
                 self._spinner_timer.stop()
                 self._spinner_timer = None
@@ -272,8 +200,7 @@ if _TEXTUAL_OK:
             self._spinner_enabled = not os.environ.get("LAZYPLAN_NO_SPINNER", "").strip()
             if self._spinner_enabled:
                 self._spinner_timer = self.set_interval(SPINNER_INTERVAL, self._spin)
-            self._update_timer = self.set_interval(poll_interval(), self._update_tick)
-            self._update_tick()
+            self.update_controller.start()
             if self._startup_notice:
                 self.notify(self._startup_notice, timeout=10)
             self.query_one("#tree", Tree).focus()
@@ -306,15 +233,6 @@ if _TEXTUAL_OK:
                 if node is not None:
                     mark = " [bold green]✓[/]" if key in self.marked else ""
                     node.set_label(prefix + suffix + mark)
-
-        def _announce_update(self, notice: str, latest: str = "", info: Any = None) -> None:
-            self._update_notice = notice
-            self._update_latest = latest
-            self._update_info = info
-            if latest and latest != self._toasted_version:
-                self._toasted_version = latest
-                self.notify(notice, timeout=8)
-            self._refresh_status()
 
     def create_app(db_path: str | None = None, startup_notice: str = "") -> LazyplanApp:
         """Build the app bound to a store."""

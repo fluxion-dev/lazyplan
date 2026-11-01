@@ -12,6 +12,7 @@ from ..messages import RowAction, SelectionChanged
 from ..models import Status, Task
 from ..store import Store
 from .controllers.tree import TreeController
+from .controllers.updates import UpdateController
 from .state import AppState
 
 
@@ -21,19 +22,14 @@ class AppBase(App):
     store: Store
     state: AppState
     tree_controller: TreeController
+    update_controller: UpdateController
     _undo: list[dict] | None
     _row_nodes: dict[tuple[str, int], Any]
     _row_labels: dict[tuple[str, int], str]
     _last_click_key: tuple[str, int] | None
     _last_click_at: float
     _fp: Any
-    _update_notice: str | None
-    _update_latest: str
-    _update_info: Any
     _startup_notice: str
-    _toasted_version: str
-    _update_timer: Any
-    _update_checking: bool
     _git_cache: dict[str, tuple[float, dict[str, Any]]]
     _git_pending: set[str]
     _spinner_tick: int
@@ -153,6 +149,54 @@ class AppBase(App):
     @_narrow.setter
     def _narrow(self, value: bool | None) -> None:
         self.state.narrow = value
+
+    @property
+    def _update_notice(self) -> str | None:
+        return self.update_controller.notice
+
+    @_update_notice.setter
+    def _update_notice(self, value: str | None) -> None:
+        self.update_controller.notice = value
+
+    @property
+    def _update_latest(self) -> str:
+        return self.update_controller.latest
+
+    @_update_latest.setter
+    def _update_latest(self, value: str) -> None:
+        self.update_controller.latest = value
+
+    @property
+    def _update_info(self) -> Any:
+        return self.update_controller.info
+
+    @_update_info.setter
+    def _update_info(self, value: Any) -> None:
+        self.update_controller.info = value
+
+    @property
+    def _toasted_version(self) -> str:
+        return self.update_controller.toasted_version
+
+    @_toasted_version.setter
+    def _toasted_version(self, value: str) -> None:
+        self.update_controller.toasted_version = value
+
+    @property
+    def _update_timer(self) -> Any:
+        return self.update_controller.timer
+
+    @_update_timer.setter
+    def _update_timer(self, value: Any) -> None:
+        self.update_controller.timer = value
+
+    @property
+    def _update_checking(self) -> bool:
+        return self.update_controller.checking
+
+    @_update_checking.setter
+    def _update_checking(self, value: bool) -> None:
+        self.update_controller.checking = value
 
     if TYPE_CHECKING:
 

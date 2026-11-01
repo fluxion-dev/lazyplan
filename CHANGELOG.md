@@ -25,7 +25,7 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
   overflow into `+N more`.
 - Selecting a milestone or task adds the focused milestone's task lanes and
   marks the selected task. Large lane sets scroll vertically at one row each.
-- The lane under the cursor renders bold with a heavier glyph (`█` project,
+- The lane under the cursor renders bold with a heavier glyph (`╍` project,
   `━` milestone, `●` task), and its legend entry is bold without the old `*`
   suffix. A selected lane with no doing interval keeps a dim start-to-end
   baseline so the current focus stays visible even when paused.

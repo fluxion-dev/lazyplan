@@ -180,7 +180,7 @@ cursor, and an accent cursor when the tree has focus.
 - `tui/metrics/timeline_layout.py` holds the pure helpers: adaptive
   `axis_ticks`, one-row `lane_window` spacing, `legend_layout` wrapping and
   overflow, kind `trace_glyph`s (`═` project, `─` milestone, `·` task; bold
-  `█`/`━`/`●`), `active_segments` clipping, `trace_points` density for bold
+  `╍`/`━`/`●`), `active_segments` clipping, `trace_points` density for bold
   traces, and `visible_span` for selected-lane baselines. `TimelineCard` stays
   a thin renderer.
 - Selection emphasis is data-driven: `TimelineLane.selected` marks only the

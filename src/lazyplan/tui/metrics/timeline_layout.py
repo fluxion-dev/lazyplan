@@ -11,7 +11,7 @@ LEGEND_LABEL_WIDTH = 16
 MAX_LEGEND_ROWS = 6
 MIN_SPAN_SECONDS = 60.0
 TRACE_GLYPHS = {"plan": "═", "milestone": "─", "task": "·"}
-BOLD_TRACE_GLYPHS = {"plan": "█", "milestone": "━", "task": "●"}
+BOLD_TRACE_GLYPHS = {"plan": "╍", "milestone": "━", "task": "●"}
 AXIS_FORMATS = (
     (10 * 60, "%H:%M:%S", 4),
     (2 * 86_400, "%H:%M", 5),

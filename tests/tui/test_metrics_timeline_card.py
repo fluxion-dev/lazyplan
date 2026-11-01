@@ -318,7 +318,7 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(trace_glyph("plan"), "═")
         self.assertEqual(trace_glyph("milestone"), "─")
         self.assertEqual(trace_glyph("task"), "·")
-        self.assertEqual(trace_glyph("plan", bold=True), "█")
+        self.assertEqual(trace_glyph("plan", bold=True), "╍")
         self.assertEqual(trace_glyph("milestone", bold=True), "━")
         self.assertEqual(trace_glyph("task", bold=True), "●")
 

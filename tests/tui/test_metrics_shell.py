@@ -202,7 +202,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
             app.tree_controller.track(app._row_nodes[("plan", self.plan_id)])
             await pilot.pause(0.2)
             cleared_chart = self._chart(card)
-        self.assertIn("█ Plan title", plan_chart)
+        self.assertIn("╍ Plan title", plan_chart)
         self.assertIn("─ Milestone title", plan_chart)
         self.assertNotIn("━ Milestone title", plan_chart)
         self.assertIn("═ Plan title", milestone_chart)
@@ -212,7 +212,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn("─ Milestone title", task_chart)
         self.assertIn("● Task title", task_chart)
         self.assertNotIn("● Task title", cleared_chart)
-        self.assertIn("█ Plan title", cleared_chart)
+        self.assertIn("╍ Plan title", cleared_chart)
         for chart in (plan_chart, milestone_chart, task_chart, cleared_chart):
             self.assertNotIn(" *", chart)
 

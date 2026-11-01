@@ -115,7 +115,7 @@ seconds. Charts are drawn with `textual-plotext`; `theme/charts.py` maps the
 colours for the active dark or light theme.
 
 The lane under the cursor is emphasized: its active segments render bold with
-a heavier glyph (`█` project, `━` milestone, `●` task), and its legend entry is
+a heavier glyph (`╍` project, `━` milestone, `●` task), and its legend entry is
 bold without a trailing `*`. A selected lane with no `doing` interval keeps a
 dim start-to-end baseline so the row remains visible; unselected inactive lanes
 stay blank. Emphasis follows the cursor only, so ancestors, siblings, and

@@ -76,6 +76,25 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Second milestone", chart)
         self.assertTrue(_braille(chart))
         self.assertIn("•", chart)
+        self.assertNotIn("now", chart)
+
+    async def test_now_marker_appears_for_open_work(self) -> None:
+        plan = _at(1_000, lambda: self.store.add_plan("Open plan"))
+        milestone = _at(1_100, lambda: self.store.add_milestone(plan.id, "Open milestone"))
+        _at(
+            1_200,
+            lambda: services.set_status(
+                self.store, "milestone", milestone.id, Status.DOING, actor="qa"
+            ),
+        )
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            card = app.query_one("#metric-timeline", TimelineCard)
+            card.refresh_timeline(metrics.snapshot(self.store, now=2_000, plan_id=plan.id).timeline)
+            await pilot.pause()
+            chart = card.query_one("PlotextPlot").plt.build()
+        self.assertIn("now", chart)
 
     async def test_inactive_lane_has_no_endpoint_markers(self) -> None:
         plan = _at(1_000, lambda: self.store.add_plan("Idle plan"))
@@ -88,6 +107,7 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
             chart = card.query_one("PlotextPlot").plt.build()
         self.assertIn("Idle plan", chart)
         self.assertNotIn("•", chart)
+        self.assertNotIn("now", chart)
 
     async def test_card_uses_the_empty_state(self) -> None:
         app = tui_mod.create_app(self.db)

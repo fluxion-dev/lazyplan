@@ -124,6 +124,17 @@ class TimelineCard(MetricCard):
         plt.ylim(-0.5 - bottom, top)
         plt.xticks(ticks, [_tick_label(stamp, span) for stamp in ticks])
         plt.yticks(positions, ["" for _ in positions])
+        if any(lane.active and lane.active[-1][1] >= timeline.now for lane in lanes):
+            axis = token_rgb(self.app, "lp-chart-axis")
+            plt.vline(timeline.end, color=axis)
+            plt.text(
+                "now",
+                timeline.end,
+                top - 0.5,
+                color=axis,
+                background=surface,
+                alignment="center",
+            )
         self._legend(plt, lanes, left, top, row_unit, legend_rows, surface)
         plot.refresh()
 

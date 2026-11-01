@@ -123,6 +123,7 @@ class Timeline:
     lanes: tuple[TimelineLane, ...] = ()
     start: float = 0.0
     end: float = 0.0
+    now: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -465,6 +466,7 @@ def _timeline(
         lanes=tuple(lanes),
         start=min(item.start for item in lanes),
         end=max(item.end for item in lanes),
+        now=now,
     )
 
 

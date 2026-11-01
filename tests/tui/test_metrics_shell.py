@@ -161,6 +161,18 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         for chart in charts:
             self.assertIn("Other plan", chart)
             self.assertIn("Other milestone", chart)
+        self.assertNotIn("Other task 0 *", charts[0])
+        self.assertIn("Other task 0 *", charts[1])
+
+    async def test_task_selection_adds_sibling_task_lanes(self) -> None:
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.tree_controller.track(app._row_nodes[("task", self.task_id)])
+            await pilot.pause(0.2)
+            chart = self._chart(app.query_one(f"#{CARD_ID}"))
+        self.assertIn("Task title *", chart)
+        self.assertIn("·", chart)
 
     async def test_no_selection_falls_back_to_all_plans(self) -> None:
         self._other_plan()

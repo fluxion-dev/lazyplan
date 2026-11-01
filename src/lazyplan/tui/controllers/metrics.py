@@ -32,7 +32,13 @@ class MetricsController:
         section = query_one_opt(self.app, "#metrics", MetricsSection)
         if section is None:
             return
-        snapshot = metrics_mod.snapshot(self.app.store, plan_id=self.app._plan_ctx())
+        selected = self.app.selected
+        snapshot = metrics_mod.snapshot(
+            self.app.store,
+            plan_id=self.app._plan_ctx(),
+            scope_kind=selected[0] if selected is not None else None,
+            scope_id=selected[1] if selected is not None else None,
+        )
         section.refresh_snapshot(snapshot)
 
     def stop(self) -> None:

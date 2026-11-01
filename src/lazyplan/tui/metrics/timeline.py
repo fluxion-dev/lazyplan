@@ -33,7 +33,8 @@ def _trace_glyph(kind: str) -> str:
 
 def _legend_entry(lane: TimelineLane) -> str:
     """One legend label with its kind glyph and truncated title."""
-    return f"{_trace_glyph(lane.kind)} {truncate(lane.title, LEGEND_LABEL_WIDTH)}"
+    suffix = " *" if lane.selected else ""
+    return f"{_trace_glyph(lane.kind)} {truncate(lane.title, LEGEND_LABEL_WIDTH)}{suffix}"
 
 
 def _legend_layout(

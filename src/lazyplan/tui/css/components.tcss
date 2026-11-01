@@ -12,7 +12,7 @@
     background: $lp-surface;
 }
 
-#metrics PlotextPlot {
+#metric-timeline-scroll {
     height: 1fr;
 }
 

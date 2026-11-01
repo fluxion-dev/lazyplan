@@ -91,6 +91,23 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
             )
         )
 
+    async def test_many_lanes_scroll_vertically(self) -> None:
+        from textual.containers import VerticalScroll
+
+        plan = self.store.add_plan("Big plan")
+        for index in range(30):
+            self.store.add_milestone(plan.id, f"Milestone {index}")
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.tree_controller.track(app._row_nodes[("plan", plan.id)])
+            await pilot.pause(0.2)
+            scroll = app.query_one("#metric-timeline-scroll", VerticalScroll)
+            self.assertGreater(scroll.max_scroll_y, 0)
+            scroll.scroll_end(animate=False)
+            await pilot.pause()
+            self.assertGreater(scroll.scroll_y, 0)
+
     async def test_now_marker_appears_for_open_work(self) -> None:
         plan = _at(1_000, lambda: self.store.add_plan("Open plan"))
         milestone = _at(1_100, lambda: self.store.add_milestone(plan.id, "Open milestone"))

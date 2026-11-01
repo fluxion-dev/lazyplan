@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Any
 
 from textual.app import ComposeResult
+from textual.containers import VerticalScroll
 from textual_plotext import PlotextPlot
 
 from ...design import truncate
@@ -118,18 +119,29 @@ class TimelineCard(MetricCard):
         super().__init__("metric-timeline", "no plans yet")
 
     def compose(self) -> ComposeResult:
-        yield PlotextPlot(id=f"{self.id}-plot")
+        with VerticalScroll(id=f"{self.id}-scroll"):
+            yield PlotextPlot(id=f"{self.id}-plot")
 
     def refresh_timeline(self, timeline: Timeline | None) -> None:
         """Render the wall-clock lanes, or the empty state when there are none."""
         plot = query_one_opt(self, f"#{self.id}-plot", PlotextPlot)
+        scroll = query_one_opt(self, f"#{self.id}-scroll", VerticalScroll)
         if plot is None:
             return
         lanes = timeline.lanes if timeline is not None else ()
         if timeline is None or not lanes:
+            plot.styles.height = max(1, scroll.size.height if scroll is not None else 12)
             self._draw_empty(plot, timeline.empty if timeline is not None else "")
             return
-        self._draw(plot, timeline)
+        width = max(20, ((scroll.size.width if scroll is not None else plot.size.width) or 80) - 2)
+        available = max(
+            2, ((scroll.size.height if scroll is not None else plot.size.height) or 12) - 3
+        )
+        max_rows = max(1, min(MAX_LEGEND_ROWS, available - 1))
+        legend_data, hidden = _legend_layout(lanes, width, max_rows)
+        rows = max(available, len(legend_data) + len(lanes))
+        plot.styles.height = rows + 3
+        self._draw(plot, timeline, rows, width, legend_data, hidden)
 
     def _draw_empty(self, plot: PlotextPlot, reason: str = "") -> None:
         """Centered empty copy drawn by Plotext, with no axes or ticks."""
@@ -149,8 +161,16 @@ class TimelineCard(MetricCard):
         )
         plot.refresh()
 
-    def _draw(self, plot: PlotextPlot, timeline: Timeline) -> None:
-        """Plot one braille line per lane with a legend overlaid at top left."""
+    def _draw(
+        self,
+        plot: PlotextPlot,
+        timeline: Timeline,
+        rows: int,
+        width: int,
+        legend_data: list[list[int]],
+        hidden: int,
+    ) -> None:
+        """Plot one glyph line per lane with a legend overlaid at the top."""
         lanes = timeline.lanes
         count = len(lanes)
         positions = [float(count - 1 - index) for index in range(count)]
@@ -178,10 +198,6 @@ class TimelineCard(MetricCard):
                     color=color,
                 )
         ticks, labels = _axis_ticks(left, right, span)
-        rows = max(2, (plot.size.height or 12) - 3)
-        width = max(20, (plot.size.width or 80) - 2)
-        max_rows = max(1, min(MAX_LEGEND_ROWS, rows - 1))
-        legend_data, hidden = _legend_layout(lanes, width, max_rows)
         legend_rows = len(legend_data)
         row_unit, top, bottom = _lane_window(rows, count, legend_rows)
         plt.xlim(left, right)

@@ -91,7 +91,7 @@ class TestDesignSystem(unittest.TestCase):
 
     def test_task_row_shows_blocked_and_marked(self):
         t = Task(id=3, milestone_id=2, title="T")
-        self.assertIn("[red]blocked[/]", design.task_row(t, blocked=True))
+        self.assertIn("[red]⚑ blocked[/]", design.task_row(t, blocked=True))
         self.assertNotIn("blocked", design.task_row(t))
         self.assertIn("✓", design.task_row(t, marked=True))
         self.assertNotIn("✓", design.task_row(t))

@@ -157,6 +157,32 @@ def build_source_fixture(tmp: Path) -> Store:
     return store
 
 
+def build_timeline_fixture(tmp: Path) -> Store:
+    """Sequential milestones with doing intervals, a pause, and untouched work."""
+    store = Store(str(tmp / "plan.db"))
+    plan = store.add_plan(
+        "Ship the timeline patch",
+        "Start traces at doing and keep every lane readable.",
+        goal="Make the timeline answer when work really started.",
+    )
+    first = store.add_milestone(plan.id, "Scope the trace fix")
+    second = store.add_milestone(plan.id, "Render doing segments")
+    third = store.add_milestone(plan.id, "Publish the patch")
+    store.add_task(first.id, "Write the regression test")
+    store.add_task(second.id, "Trace project and milestone doing intervals")
+    store.add_task(third.id, "Cut 0.30.1")
+
+    def at(stamp: float, action: Callable[[], object]) -> object:
+        with mock.patch("lazyplan.store.base.time.time", return_value=stamp):
+            return action()
+
+    at(STAMP + 300, lambda: services.set_status(store, "milestone", first.id, Status.DOING))
+    at(STAMP + 600, lambda: services.set_status(store, "milestone", first.id, Status.DONE))
+    at(STAMP + 900, lambda: services.set_status(store, "milestone", second.id, Status.DOING))
+    at(STAMP + 1_200, lambda: services.set_status(store, "milestone", second.id, Status.DONE))
+    return store
+
+
 def build_coordination_fixture(tmp: Path) -> Store:
     """A journal with active and expired claims, a block, aging, gaps, and red checks."""
     store = Store(str(tmp / "plan.db"))
@@ -352,24 +378,22 @@ async def capture_theme_latte(store: Store, target: Path) -> None:
 
 
 async def capture_timeline(store: Store, target: Path) -> None:
-    """Capture the shell with a task selected so the timeline shows its lanes."""
-    task_id = _task_id(store, "Render unified diffs")
+    """Capture the shell with a plan selected so every milestone lane is visible."""
     app = create_app(str(store.path))
     async with app.run_test(size=SIZE) as pilot:
         await pilot.pause()
         tree = app.query_one("#tree", Tree)
         _expand_all(tree)
         tree.focus()
-        selected = next(
-            (
-                node
-                for node in _nodes(tree, "task")
-                if getattr(node, "data", {}).get("id") == task_id
-            ),
-            None,
-        )
-        if selected is not None:
-            tree.select_node(selected)
+        plans = _nodes(tree, "plan")
+        if plans:
+            tree.select_node(plans[0])
+            await pilot.pause()
+            plans = _nodes(tree, "plan")
+            if plans:
+                plans[0].expand()
+                for milestone in plans[0].children:
+                    milestone.expand()
         await pilot.pause(0.5)
         app.save_screenshot(str(target))
 
@@ -603,9 +627,9 @@ SCENES: dict[str, Scene] = {
     ),
     "lpui-timeline": Scene(
         SIZE,
-        build_source_fixture,
+        build_timeline_fixture,
         capture_timeline,
-        "lazyplan main shell with a plan selected, showing the timeline card's project, milestone, and task lanes with the scoped plan name in its border.",
+        "lazyplan main shell with sequential milestones selected, showing doing-only timeline traces at distinct start positions and one never-started lane.",
     ),
     "lpui-detail": Scene(
         SIZE,

@@ -11,27 +11,35 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
   are the top-level rows.
 - The plans panel takes 35% of the shell width, leaving 65% for the preview.
 - The PLANS and PREVIEW border headings are left-aligned.
-- The bottom metrics dashboard is now one wall-clock timeline card spanning the
-  full width and 45% of the shell height (14-row minimum). Each project and
-  milestone gets a braille swimlane from its start event to its finish, or to
-  now while work is open. The legend is overlaid in the chart's top-left
-  corner, with titles truncated with an ellipsis and a reserved band keeping
-  the lanes fully visible. The `METRICS` border title is gone.
-  The Daily activity, Task status, and Project progress cards are removed.
+- The bottom dashboard is now a wall-clock Gantt card spanning the full width
+  and 45% of the shell height (14-row minimum), with no `METRICS` border title.
+  Projects, milestones, and focused tasks each get one compact swimlane.
+- Traces cover only `doing` intervals. Todo, paused, and done gaps render no
+  line, but the lane and its legend label remain; resumed work shows separate
+  segments with start and finish dots.
+- Open work shows a `now` marker. The time axis adapts its tick count and
+  date/time format to the span, and no-plan or no-milestone states render
+  centered copy inside the chart.
+- The legend is horizontal at the top, uses `═` for projects, `─` for
+  milestones, and `·` for tasks, truncates titles with an ellipsis, and folds
+  overflow into `+N more`.
+- Selecting a milestone or task adds the focused milestone's task lanes and
+  marks the selected task. Large lane sets scroll vertically at one row each.
+- The Gantt refreshes within the one-second database poll and advances open
+  lanes and the now marker every 15 seconds. The Daily activity, Task status,
+  and Project progress cards are removed.
 - An empty plans panel shows a centered `nothing planned... yet` message
   instead of a blank tree.
-- The TUI metrics dashboard follows the selected row's plan. Daily activity,
-  Project progress, and Task status scope to the plan under the cursor, refresh
-  after a short debounce, and name the plan in the `METRICS` border title.
-- With no selection or an empty tree, the cards fall back to the all-plans
-  view. Filters, the plan limit, and space-marks never change metric scope.
 
 ### Under the hood
 
-- `metrics.snapshot(store, plan_id=...)` scopes task counts, status shares,
-  milestone bars, activity, elapsed time, and ETA in one read-only pass.
-- `MetricsController` owns the TUI debounce and refreshes immediately after a
-  tree rebuild.
+- `metrics.snapshot(store, plan_id=..., scope_kind=..., scope_id=...)` derives
+  doing intervals from status events, adds focused task lanes, and keeps the
+  existing read-only aggregate fields.
+- `MetricsController` owns the 120 ms selection debounce, the 15-second now
+  tick, and refresh after a tree rebuild.
+- `tui/metrics/timeline_layout.py` holds the pure axis, lane, legend, glyph,
+  and segment helpers so `TimelineCard` stays a thin Plotext renderer.
 
 ### Documentation
 

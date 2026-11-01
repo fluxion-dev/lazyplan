@@ -85,26 +85,34 @@ A source checkout updates with `git pull`.
 
 ### Metrics dashboard
 
-The bottom of the TUI keeps one read-only timeline card. It follows the row
-under the cursor: a selected plan, milestone, or task scopes the card to that
-row's plan. With no selection, or an empty tree, every plan gets a lane.
-Cursor changes refresh after a short debounce; status, text, and source
-filters, the plan limit, and space-marks never change metric scope. The card
-never changes data or writes to the database. The section takes 45% of the
-shell height with a 14-row minimum, has no border title, and hides on terminals
-narrower than 100 columns, so an 80x24 terminal keeps the tree and preview
-unchanged.
+The bottom of the TUI keeps one read-only Gantt card. It follows the row under
+the cursor: a selected plan scopes the card to that plan, and a selected
+milestone or task adds the focused milestone's task lanes and marks the
+selected task. With no selection, every plan gets a lane. Cursor changes
+refresh after a short debounce; status, text, and source filters, the plan
+limit, and space-marks never change scope. The card never writes to the
+database. The section takes 45% of the shell height with a 14-row minimum, has
+no border title, and hides on terminals narrower than 100 columns, so an 80x24
+terminal keeps the tree and preview unchanged.
 
-The chart is a wall-clock Gantt view. A scoped plan gets one lane for the
-project and one for each milestone; the all-plans view gives every plan a
-lane. A lane starts at its `add` event and ends at its latest completion
-event, or at the current time while the work is open. Lanes use fine braille
-lines rather than block bars and share one time axis. The legend is overlaid
-in the chart's top-left corner as a stacked colour key, with each title
-truncated with an ellipsis; the y axis reserves a band for it so the swimlanes
-stay fully visible. Charts are drawn with `textual-plotext`;
-`theme/charts.py` maps the `lp-chart-lane-*`, `lp-chart-axis`, and
-`lp-chart-label` tokens to Plotext colours for the active dark or light theme.
+Each project, milestone, and task gets one compact swimlane. A lane exists from
+its `add` event to its latest completion event, or to the current time while
+open, but its trace is drawn only during `doing` intervals. Todo, paused, and
+done gaps render no line, so a resumed item shows separate segments. Every
+active segment gets start and finish dots, and open work gets a dim vertical
+`now` marker. The x-axis picks its tick count and date/time format from the
+timeline span, with unique labels from seconds through years. No-plan and
+no-milestone states render centered copy inside the chart.
+
+The horizontal legend sits at the top of the chart, wraps when the terminal is
+narrow, truncates titles with an ellipsis, and folds overflow into `+N more`.
+Projects use `═`, milestones use `─`, and tasks use `·`; lane colours are a
+secondary cue. When lanes outgrow the panel, the chart scrolls vertically so
+every lane remains reachable at one row each. The chart refreshes within the
+one-second database poll and advances open lanes and the `now` marker every 15
+seconds. Charts are drawn with `textual-plotext`; `theme/charts.py` maps the
+`lp-chart-lane-*`, `lp-chart-axis`, and `lp-chart-label` tokens to Plotext
+colours for the active dark or light theme.
 
 ### Staged updates in the TUI
 

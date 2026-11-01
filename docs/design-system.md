@@ -145,9 +145,10 @@ cursor, and an accent cursor when the tree has focus.
   title, and hides below 100 columns; `_apply_layout` toggles
   `#metrics.narrow` with the same breakpoint as the preview.
 - `MetricsSection` hosts `metric-timeline` (Project timeline), which spans
-  the full `#metric-cards` row. The card is a single `PlotextPlot`; both the
-  empty copy and the legend are drawn inside the chart with Plotext `text`,
-  so no secondary widget or border competes with the plot.
+  the full `#metric-cards` row. The card is a `VerticalScroll` around a
+  `PlotextPlot`; the plot grows with the lane count and scrolls when lanes
+  outgrow the panel. Empty copy, the legend, markers, and traces are all drawn
+  by Plotext, so no secondary widget or border competes with the chart.
 - Charts use `textual-plotext` (`PlotextPlot`) through
   `theme/charts.py`: `apply_chart_theme` sets canvas, axes, and tick colours
   from the active theme, and `chart_color` maps the bar token to `green+`
@@ -155,25 +156,35 @@ cursor, and an accent cursor when the tree has focus.
   `lp-chart-lane-*` theme tokens for timeline lanes. The card module contains
   no literal chart colours. Plotext owns the axes, ticks, scaling, and resize
   behavior; the card only configures the data and refreshes the widget.
-- `MetricsController` owns a 120 ms debounce. `TreeController.track` requests
-  a refresh on cursor changes, and `refresh_all` refreshes immediately after
-  restoring the selection. The controller resolves the selected row's parent
-  plan through `_plan_ctx` and builds one read-only
-  `metrics.snapshot(store, plan_id=...)` for `MetricsSection.refresh_snapshot`.
-  Tree filters, the plan limit, and space-marks never change the scope.
+- `MetricsController` owns a 120 ms selection debounce and a 15-second now
+  tick. `TreeController.track` requests a refresh on cursor changes, and
+  `refresh_all` refreshes immediately after restoring the selection. The
+  controller resolves the selected row's parent plan through `_plan_ctx`,
+  passes the selected kind/id as the timeline scope, and builds one read-only
+  `metrics.snapshot(store, plan_id=..., scope_kind=..., scope_id=...)` for
+  `MetricsSection.refresh_snapshot`. The now tick is silent, skips modal
+  screens, and stops on unmount. Tree filters, the plan limit, and space-marks
+  never change the scope.
 - `metrics.py` holds frozen dataclasses and chart-row helpers
   (`activity_weeks`, `milestone_bars`, `status_bars`); it never writes,
   caches, or calls the network. A snapshot carries its `plan_id`,
   `plan_title`, and a `timeline`, and `plan_id=None` keeps the all-plans view.
 - The timeline is selection-scoped: a plan, milestone, or task row scopes it
   to that row's parent plan, and no selection gives every plan a lane. A
-  scoped plan gets a project lane plus one lane per milestone. Each lane runs
-  from its `add` event to its latest `-> done` event, or to the snapshot clock
-  while open. Lanes are drawn with Plotext's `braille` marker on a shared
-  wall-clock x axis. The legend is overlaid in the chart's top-left corner as
-  a stacked colour key; its titles are truncated with an ellipsis. The y axis
-  reserves a legend band so the swimlanes stay fully visible beneath it. No
-  estimates or invented timestamps are used.
+  scoped plan gets a project lane plus one lane per milestone; a milestone or
+  task selection adds the focused milestone's task lanes and marks the
+  selected task. Each lane keeps its wall-clock `start`/`end`, while `active`
+  holds only the `doing` intervals parsed from status events. Todo, paused,
+  and done gaps therefore draw no trace, but the lane and its legend entry
+  remain. Resumed work renders multiple segments.
+- `tui/metrics/timeline_layout.py` holds the pure helpers: adaptive
+  `axis_ticks`, one-row `lane_window` spacing, `legend_layout` wrapping and
+  overflow, kind `trace_glyph`s (`═` project, `─` milestone, `·` task), and
+  `active_segments` clipping. `TimelineCard` stays a thin renderer.
+- The horizontal legend sits at the chart top, truncates titles with an
+  ellipsis, and folds overflow into `+N more`. Active segments get start and
+  finish dots; open work gets a dim vertical `now` marker. No estimates or
+  invented timestamps are used.
 
 ## Command registry (`palette.py and help.py`)
 

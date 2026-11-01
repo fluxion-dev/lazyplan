@@ -20,7 +20,7 @@ try:
 except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
-from ...design import escape_markup
+from ...design import KIND_ICON, escape_markup
 from ...source import (
     SourceCommit,
     SourceFile,
@@ -84,16 +84,16 @@ if _TEXTUAL_OK:
             self.set_class(width < 80, "compact")
             self.set_class(width >= 120, "wide")
             page = self.query_one("#source-page")
-            page.border_title = "SOURCE"
-            self.query_one("#source-tree-wrap").border_title = "TRAIL"
-            self.query_one("#source-preview").border_title = "DETAIL"
+            page.border_title = " source "
+            self.query_one("#source-tree-wrap").border_title = " trail "
+            self.query_one("#source-preview").border_title = " diff "
             self.query_one("#source-filter", Input).display = False
             self._load()
             self.query_one("#source-tree", NavTree).focus()
 
         def _load(self) -> None:
             """Start one background trail load; never block the UI thread."""
-            head = f"{self._kind.capitalize()} #{self._oid}"
+            head = f"{KIND_ICON.get(self._kind, '')} {self._kind.capitalize()} #{self._oid}"
             self.query_one("#source-head", Static).update(f"{head}\n[dim]loading source…[/]")
             self.run_worker(self._load_worker, thread=True, exclusive=True)
 
@@ -106,11 +106,13 @@ if _TEXTUAL_OK:
 
         def _apply_trail(self, trail: SourceTrail) -> None:
             self._trail = trail
-            head = f"{self._kind.capitalize()} #{self._oid}"
+            head = (
+                f"[bold]{KIND_ICON.get(self._kind, '')} {self._kind.capitalize()} #{self._oid}[/]"
+            )
             if self._trail.title:
-                head += f" · {escape_markup(self._trail.title)}"
+                head += f" [dim]·[/] {escape_markup(self._trail.title)}"
             summary = (
-                f"[dim]{self._trail.commit_count} commits · "
+                f"[dim]⌁ {self._trail.commit_count} commits · "
                 f"{self._trail.file_count} files · "
                 f"{self._trail.pull_count} PRs"
                 + (f" · {self._trail.stale_count} stale" if self._trail.stale_count else "")
@@ -145,7 +147,7 @@ if _TEXTUAL_OK:
                         if needle and needle not in item.path.lower():
                             continue
                         commit_node.add_leaf(
-                            f"[dim]{escape_markup(item.path)}[/]",
+                            f"[dim]▪ {escape_markup(item.path)}[/]",
                             data=self._file_data(repo, commit, item),
                         )
                 for pull in repo.pulls:

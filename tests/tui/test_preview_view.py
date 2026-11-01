@@ -38,7 +38,7 @@ class PreviewDocumentTest(unittest.TestCase):
         )
         self.assertEqual(
             document.render(),
-            "header\nbreadcrumb\nmeta\n\n[dim]why[/]\nbecause\n\nfooter",
+            "header\nbreadcrumb\nmeta\n\n[bold cyan]◎[/] [bold]why[/]\nbecause\n\nfooter",
         )
 
     def test_plan_preview_keeps_order_and_sections(self) -> None:
@@ -47,12 +47,11 @@ class PreviewDocumentTest(unittest.TestCase):
         document = build_preview(self.store, "plan", self.plan.id, full, [])
         text = document.render()
         self.assertIn("P1", text)
-        self.assertIn("[dim]why[/]", text)
+        self.assertIn("[bold]why[/]", text)
         self.assertIn("Why we build", text)
-        self.assertIn("[dim]what[/]", text)
-        self.assertIn("[dim]next[/]", text)
-        self.assertIn("open", text)
-        self.assertIn("help", text)
+        self.assertIn("[bold]what[/]", text)
+        self.assertIn("[bold]next[/]", text)
+        self.assertIn("Task title", text)
 
     def test_task_preview_includes_breadcrumb_and_details(self) -> None:
         full = self.store.get_full("task", self.task.id)
@@ -60,11 +59,11 @@ class PreviewDocumentTest(unittest.TestCase):
         document = build_preview(self.store, "task", self.task.id, full, [])
         text = document.render()
         task = full["task"]
-        self.assertIn(
-            f"P{self.plan.id} › M{task['milestone_id']} › T{self.task.id}",
-            text,
-        )
-        self.assertIn("[dim]details[/]", text)
+        self.assertIn(f"P{self.plan.id}", text)
+        self.assertIn(f"M{task['milestone_id']}", text)
+        self.assertIn(f"T{self.task.id}", text)
+        self.assertIn(f"▹ T{self.task.id}", text)
+        self.assertIn("[bold]details[/]", text)
         self.assertIn("Task details", text)
 
 

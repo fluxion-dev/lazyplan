@@ -87,7 +87,7 @@ if _TEXTUAL_OK:
 
         def on_mount(self) -> None:
             page = self.query_one("#detail-page")
-            page.border_title = "DETAIL"
+            page.border_title = " detail "
             width = self.app.size.width
             self.set_class(width < 80, "compact")
             self.set_class(width >= 120, "wide")

@@ -10,8 +10,6 @@ from lazyplan.store import Store
 from lazyplan.vcs import DiffRead
 from tests.support.pilot import settle
 
-REMOVED_MARKER = "⎇"
-
 try:
     from textual.widgets import Input, Tree
 
@@ -355,7 +353,7 @@ class TestSourceScreen(unittest.IsolatedAsyncioTestCase):
                     block = screen._diff_block(self.repo, self.sha)
                 self.assertTrue(any(needle in row.lower() for row in block), state)
 
-    async def test_source_rows_carry_no_marker(self):
+    async def test_source_rows_carry_a_kind_icon(self):
         async with self.app.run_test(size=(120, 30)) as pilot:
             await pilot.pause()
             screen = await self._open(pilot)
@@ -363,8 +361,11 @@ class TestSourceScreen(unittest.IsolatedAsyncioTestCase):
             repo_node = tree.root.children[0]
             commit_node = repo_node.children[0]
             pull_node = repo_node.children[1]
+            self.assertIn("⎇", str(repo_node.label))
+            self.assertIn("◆", str(commit_node.label))
+            self.assertIn("▪", str(commit_node.children[0].label))
+            self.assertIn("⇄", str(pull_node.label))
             for node in (repo_node, commit_node, commit_node.children[0], pull_node):
-                self.assertNotIn(REMOVED_MARKER, str(node.label))
                 self.assertTrue(str(node.label).strip())
             empty = self.store.add_task(self.sid, "No source")
             self.app.push_screen(SourceScreen(self.store, "task", empty.id))
@@ -372,7 +373,7 @@ class TestSourceScreen(unittest.IsolatedAsyncioTestCase):
             await self.app.workers.wait_for_complete()
             await settle(pilot)
             empty_tree = self.app.screen.query_one("#source-tree", Tree)
-            self.assertNotIn(REMOVED_MARKER, str(empty_tree.root.children[0].label))
+            self.assertNotIn("◆", str(empty_tree.root.children[0].label))
 
     async def test_empty_state(self):
         empty = self.store.add_task(self.sid, "No source")

@@ -5,7 +5,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from ...design import escape_markup, repo_project_name, status_word
+from ...design import (
+    KIND_ICON,
+    SECTION_ICON,
+    escape_markup,
+    repo_project_name,
+    status_word,
+)
 
 if TYPE_CHECKING:
     from ...store import Store
@@ -27,17 +33,28 @@ class PreviewDocument:
     breadcrumb: str = ""
     meta: tuple[str, ...] = ()
     blocks: tuple[PreviewBlock, ...] = ()
-    footer: str = "[dim]enter[/] open · [dim]e[/] edit · [dim]g[/] source · [dim]?[/] help"
+    footer: str = ""
 
-    def render(self) -> str:
+    def render_head(self) -> str:
+        """The sticky top: status, title, and breadcrumb."""
         lines = [self.header]
         if self.breadcrumb:
             lines.append(self.breadcrumb)
-        lines.extend(self.meta)
+        return "\n".join(lines)
+
+    def render_body(self) -> str:
+        """The scrollable body: meta chips, sections, and optional footer."""
+        lines = list(self.meta)
         lines.extend(render_blocks(self.blocks))
         if self.footer:
             lines.extend(["", self.footer])
-        return "\n".join(lines)
+        return "\n".join(lines).lstrip("\n")
+
+    def render(self) -> str:
+        """Render the whole document (head then body)."""
+        head = self.render_head()
+        body = self.render_body()
+        return f"{head}\n{body}" if body else head
 
 
 def render_blocks(blocks: tuple[PreviewBlock, ...]) -> list[str]:
@@ -46,7 +63,10 @@ def render_blocks(blocks: tuple[PreviewBlock, ...]) -> list[str]:
     for block in blocks:
         lines.append("")
         if block.heading:
-            lines.append(f"[dim]{block.heading}[/]")
+            key = block.heading.split(" ", 1)[0]
+            icon = SECTION_ICON.get(key, "")
+            prefix = f"[bold cyan]{icon}[/] " if icon else ""
+            lines.append(f"{prefix}[bold]{escape_markup(block.heading)}[/]")
         lines.extend(block.lines)
     return lines
 
@@ -60,14 +80,18 @@ def _title(
     title = str(obj.get("title", obj.get("name", "")))
     status = str(obj.get("status", ""))
     label = {"plan": "P", "milestone": "M", "task": "T"}[kind]
-    header = f"{status_word(status, 'rich')} [dim]{label}{oid}[/] [bold]{escape_markup(title)}[/]"
+    icon = KIND_ICON[kind]
+    header = (
+        f"{status_word(status, 'rich')} "
+        f"[bold cyan]{icon} {label}{oid}[/] [bold]{escape_markup(title)}[/]"
+    )
     breadcrumb = ""
     if kind == "milestone":
-        breadcrumb = f"[dim]P{obj.get('plan_id')} › M{oid}[/]"
+        breadcrumb = f"[dim]◈ P{obj.get('plan_id')} › ◇ M{oid}[/]"
     elif kind == "task":
         milestone = store.get_milestone(int(obj.get("milestone_id", 0)))
         plan_id = milestone.plan_id if milestone else "?"
-        breadcrumb = f"[dim]P{plan_id} › M{obj.get('milestone_id')} › T{oid}[/]"
+        breadcrumb = f"[dim]◈ P{plan_id} › ◇ M{obj.get('milestone_id')} › ▹ T{oid}[/]"
     return header, breadcrumb
 
 
@@ -89,7 +113,7 @@ def next_block(tasks: list[dict[str, Any]]) -> PreviewBlock | None:
         "next",
         tuple(
             f"  {status_word(str(task.get('status', '')), 'rich')} "
-            f"[dim]T{task.get('id')}[/] {escape_markup(str(task.get('title', '')))}"
+            f"[dim]▹ T{task.get('id')}[/] {escape_markup(str(task.get('title', '')))}"
             for task in open_tasks[:3]
         ),
     )
@@ -117,7 +141,8 @@ def acceptance_block(criteria: list[dict[str, Any]]) -> PreviewBlock | None:
     return PreviewBlock(
         f"acceptance {done}/{len(criteria)}{tail}",
         tuple(
-            f"  ○ {escape_markup(str(criterion.get('text', '')))}" for criterion in open_items[:3]
+            f"  [dim]○[/] {escape_markup(str(criterion.get('text', '')))}"
+            for criterion in open_items[:3]
         ),
     )
 
@@ -134,23 +159,9 @@ def _source_bits(
         bits.append(f"{len(forge)} PRs")
     if repos:
         names = [name for name in (repo_project_name(repo) for repo in repos) if name]
-        bits.append("repos: " + ", ".join(names[:3]) if names else f"{len(repos)} repos")
+        rendered = ", ".join(escape_markup(name) for name in names[:3])
+        bits.append("repos: " + rendered if names else f"{len(repos)} repos")
     return " · ".join(bits)
-
-
-def _newest_source_line(links: list[dict[str, Any]]) -> str:
-    newest = max(links, key=lambda link: int(link.get("timestamp", 0) or 0))
-    files = len({path for link in links for path in link.get("files", [])})
-    stale = sum(1 for link in links if link.get("stale"))
-    line = (
-        f"last {str(newest.get('sha', ''))[:12]} "
-        f"{escape_markup(str(newest.get('subject', '') or '(no subject)'))}"
-    )
-    if files:
-        line += f" · {files} files"
-    if stale:
-        line += f" · {stale} stale"
-    return f"[dim]{line}[/]"
 
 
 def _source_summary(
@@ -158,20 +169,17 @@ def _source_summary(
     forge: list[dict[str, Any]],
     repos: list[dict[str, Any]],
 ) -> PreviewBlock | None:
-    lines: list[str] = []
     bits = _source_bits(links, forge, repos)
-    if bits:
-        lines.append(f"[dim]{bits}[/]")
-    if links:
-        lines.append(_newest_source_line(links))
-    return PreviewBlock("", tuple(lines)) if lines else None
+    if not bits:
+        return None
+    return PreviewBlock("source", (f"[dim]{bits}[/]",))
 
 
 def common_blocks(
     full: dict[str, Any],
     git_bits: list[str],
 ) -> tuple[PreviewBlock, ...]:
-    """Coordination, acceptance, provenance, and git blocks."""
+    """Coordination, acceptance, and provenance blocks for a preview."""
     blocks: list[PreviewBlock] = []
     notes = notes_block(full.get("notes", []))
     if notes is not None:
@@ -185,14 +193,25 @@ def common_blocks(
     source = _source_summary(links, forge, repos)
     if source is not None:
         blocks.append(source)
-    if git_bits:
-        blocks.append(PreviewBlock("", (f"[dim]git: {' · '.join(git_bits)}[/]",)))
     return tuple(blocks)
 
 
 def common_lines(full: dict[str, Any], git_bits: list[str]) -> list[str]:
     """Render the common blocks for callers that still need plain lines."""
-    return render_blocks(common_blocks(full, git_bits))
+    lines = render_blocks(common_blocks(full, git_bits))
+    if git_bits:
+        lines.extend(["", f"[dim]{SECTION_ICON['git']} git: {' · '.join(git_bits)}[/]"])
+    return lines
+
+
+def _meta_counts(kind: str, full: dict[str, Any]) -> list[str]:
+    tasks = _tasks(kind, full)
+    if not tasks:
+        return []
+    done = sum(1 for task in tasks if task.get("status") == "done")
+    milestones = len(full.get("milestones", []))
+    suffix = f" · {milestones} milestones" if kind == "plan" and milestones else ""
+    return [f"[dim]{done}/{len(tasks)} tasks{suffix}[/]"]
 
 
 def build_plan(
@@ -203,12 +222,6 @@ def build_plan(
 ) -> PreviewDocument:
     obj = full.get("plan", {})
     header, breadcrumb = _title(store, "plan", oid, obj)
-    tasks = _tasks("plan", full)
-    milestones = full.get("milestones", [])
-    meta: list[str] = []
-    if tasks:
-        done = sum(1 for task in tasks if task.get("status") == "done")
-        meta.append(f"[dim]{done}/{len(tasks)} tasks · {len(milestones)} milestones[/]")
     blocks: list[PreviewBlock] = []
     goal = str(obj.get("goal", "") or "").strip()
     desc = str(obj.get("description", "") or "").strip()
@@ -216,11 +229,11 @@ def build_plan(
         blocks.append(PreviewBlock("why", (goal,)))
     if desc:
         blocks.append(PreviewBlock("what", (desc,)))
-    next_tasks = next_block(tasks)
+    next_tasks = next_block(_tasks("plan", full))
     if next_tasks is not None:
         blocks.append(next_tasks)
     blocks.extend(common_blocks(full, git_bits))
-    return PreviewDocument(header, breadcrumb, tuple(meta), tuple(blocks))
+    return PreviewDocument(header, breadcrumb, tuple(_meta_counts("plan", full)), tuple(blocks))
 
 
 def build_milestone(
@@ -231,20 +244,17 @@ def build_milestone(
 ) -> PreviewDocument:
     obj = full.get("milestone", {})
     header, breadcrumb = _title(store, "milestone", oid, obj)
-    tasks = _tasks("milestone", full)
-    meta: list[str] = []
-    if tasks:
-        done = sum(1 for task in tasks if task.get("status") == "done")
-        meta.append(f"[dim]{done}/{len(tasks)} tasks[/]")
     blocks: list[PreviewBlock] = []
     desc = str(obj.get("description", "") or "").strip()
     if desc:
         blocks.append(PreviewBlock("details", (desc,)))
-    next_tasks = next_block(tasks)
+    next_tasks = next_block(_tasks("milestone", full))
     if next_tasks is not None:
         blocks.append(next_tasks)
     blocks.extend(common_blocks(full, git_bits))
-    return PreviewDocument(header, breadcrumb, tuple(meta), tuple(blocks))
+    return PreviewDocument(
+        header, breadcrumb, tuple(_meta_counts("milestone", full)), tuple(blocks)
+    )
 
 
 def build_task(
@@ -257,10 +267,10 @@ def build_task(
     header, breadcrumb = _title(store, "task", oid, obj)
     meta: list[str] = []
     if obj.get("blocked"):
-        meta.append(f"[red]blocked[/] {escape_markup(str(obj.get('blocked_reason', '')))}")
+        meta.append(f"[red]⚑ blocked[/] {escape_markup(str(obj.get('blocked_reason', '')))}")
     claim = obj.get("claim")
     if claim:
-        meta.append(f"[dim]claim @{escape_markup(str(claim.get('actor', '')))}[/]")
+        meta.append(f"[dim]◉ claim @{escape_markup(str(claim.get('actor', '')))}[/]")
     blocks: list[PreviewBlock] = []
     desc = str(obj.get("description", "") or "").strip()
     if desc:

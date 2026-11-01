@@ -149,11 +149,18 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
             full = self.store.get_full("task", self.tid)
             assert full is not None
             repos = full.get("effective_repos") or full.get("repos") or []
-            common_lines(full, self.app.git_state_controller.preview_bits(repos))
+
+            def git_bits() -> list[str]:
+                states = self.app.git_state_controller.snapshot(repos)
+                return [
+                    f"{state['name']} {state['branch'] or 'unknown'}"
+                    f"{' dirty' if state['dirty'] else ' clean'}"
+                    for state in states
+                ]
+
+            common_lines(full, git_bits())
             await settle(pilot)
-            preview = "\n".join(
-                common_lines(full, self.app.git_state_controller.preview_bits(repos))
-            )
+            preview = "\n".join(common_lines(full, git_bits()))
             self.assertIn("git:", preview)
             self.assertIn("main", preview)
             self.assertIn("clean", preview)

@@ -31,15 +31,16 @@ def commit_label(commit: SourceCommit) -> str:
     subject = escape_markup(commit.subject or "(no subject)")
     count = f" · {len(commit.files)} files" if commit.files else ""
     stale = " [red]stale[/]" if commit.stale else ""
-    return f"[dim]{commit.short}[/] {subject}[dim]{count}[/]{stale}"
+    return f"[dim]◆ {commit.short}[/] {subject}[dim]{count}[/]{stale}"
 
 
 def repo_label(repo: SourceRepo) -> str:
     state = "dirty" if repo.dirty else "clean"
+    icon = "●" if repo.dirty else "○"
     branch = repo.branch or ("detached" if repo.detached else "unknown")
     return (
-        f"[bold]{escape_markup(repo.name)}[/] "
-        f"[dim]{escape_markup(branch)} · {state} · {len(repo.commits)} commits"
+        f"[bold]⎇ {escape_markup(repo.name)}[/] "
+        f"[dim]{escape_markup(branch)} · {icon} {state} · {len(repo.commits)} commits"
         f" · {len(repo.pulls)} PRs[/]"
     )
 
@@ -47,7 +48,7 @@ def repo_label(repo: SourceRepo) -> str:
 def pull_label(pull: SourcePull) -> str:
     title = escape_markup(pull.title or "")
     state = pull.state or "unknown"
-    return f"[dim]PR #{pull.number}[/] {state} {title}".rstrip()
+    return f"[dim]⇄ PR #{pull.number}[/] {state} {title}".rstrip()
 
 
 def diff_gutter(line: DiffLine) -> str:
@@ -76,7 +77,7 @@ def diff_rows(files: tuple[DiffFile, ...], max_files: int) -> list[str]:
         if item.binary:
             rows.append(f"[yellow]binary[/] {escape_markup(item.path)}")
             continue
-        rows.append(f"[bold]{escape_markup(item.path)}[/]")
+        rows.append(f"[bold cyan]▪[/] [bold]{escape_markup(item.path)}[/]")
         for hunk in item.hunks:
             rows.append(f"[cyan]{escape_markup(hunk.header)}[/]")
             rows.extend(diff_row(line) for line in hunk.lines)
@@ -84,24 +85,27 @@ def diff_rows(files: tuple[DiffFile, ...], max_files: int) -> list[str]:
 
 
 def repo_preview(repo: SourceRepo) -> str:
+    state = "dirty" if repo.dirty else "clean"
+    icon = "●" if repo.dirty else "○"
+    track = f"{repo.ahead} ahead, {repo.behind} behind"
     lines = [
-        f"[bold]{escape_markup(repo.name)}[/]",
+        f"[bold]⎇ {escape_markup(repo.name)}[/] [dim]{escape_markup(repo.branch or 'unknown')}[/]",
         f"[dim]{escape_markup(repo.path)}[/]",
     ]
     if repo.remote:
         lines.append(f"[dim]{escape_markup(repo.remote)}[/]")
-    state = "dirty" if repo.dirty else "clean"
-    track = f"{repo.ahead} ahead, {repo.behind} behind"
-    lines.append(f"branch {escape_markup(repo.branch or 'unknown')} · {state} · {track}")
+    lines.append(f"[dim]{icon} {state} · {track}[/]")
     if repo.error:
         lines.append(f"[red]{escape_markup(repo.error)}[/]")
-    lines.append(f"{len(repo.commits)} commits · {repo.file_count} files · {len(repo.pulls)} PRs")
+    lines.append(
+        f"[dim]⌁ {len(repo.commits)} commits · {repo.file_count} files · {len(repo.pulls)} PRs[/]"
+    )
     return "\n".join(lines)
 
 
 def commit_preview(commit: SourceCommit, repo: str, diff_lines: list[str]) -> str:
     lines = [
-        f"[bold]{commit.short}[/] {escape_markup(commit.subject or '(no subject)')}",
+        f"[bold]◆ {commit.short}[/] {escape_markup(commit.subject or '(no subject)')}",
         f"[dim]{escape_markup(commit.sha)}[/]",
     ]
     meta = " · ".join(
@@ -120,16 +124,16 @@ def commit_preview(commit: SourceCommit, repo: str, diff_lines: list[str]) -> st
     if commit.url:
         lines.append(commit.url)
     if commit.files:
-        lines.extend(["", f"[dim]files {len(commit.files)}[/]"])
+        lines.extend(["", f"[bold cyan]▪[/] [bold]files {len(commit.files)}[/]"])
         for item in commit.files:
-            lines.append(f"  {escape_markup(item.path)}")
+            lines.append(f"  [dim]▪[/] {escape_markup(item.path)}")
     if repo:
         lines.extend(["", *diff_lines])
     return "\n".join(lines)
 
 
 def file_preview(item: SourceFile, repo: str, sha: str, diff_lines: list[str]) -> str:
-    lines = [f"[bold]{escape_markup(item.path)}[/]"]
+    lines = [f"[bold cyan]▪[/] [bold]{escape_markup(item.path)}[/]"]
     if item.url:
         lines.append(item.url)
     else:
@@ -141,15 +145,15 @@ def file_preview(item: SourceFile, repo: str, sha: str, diff_lines: list[str]) -
 
 def pull_preview(pull: SourcePull) -> str:
     lines = [
-        f"[bold]PR #{pull.number}[/] {escape_markup(pull.title or '')}",
-        f"state {pull.state or 'unknown'}",
+        f"[bold]⇄ PR #{pull.number}[/] {escape_markup(pull.title or '')}",
+        f"[dim]state[/] {pull.state or 'unknown'}",
     ]
     if pull.checks and pull.checks != "none":
-        lines.append(f"checks {pull.checks}")
+        lines.append(f"[dim]checks[/] {pull.checks}")
     if pull.reviews and pull.reviews != "none":
-        lines.append(f"reviews {pull.reviews}")
+        lines.append(f"[dim]reviews[/] {pull.reviews}")
     if pull.merge_commit_sha:
-        lines.append(f"merge {pull.merge_commit_sha[:12]}")
+        lines.append(f"[dim]merge[/] {pull.merge_commit_sha[:12]}")
     if pull.owners:
         lines.append(f"[dim]{escape_markup(', '.join(pull.owners))}[/]")
     if pull.stale:

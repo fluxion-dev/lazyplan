@@ -2,16 +2,21 @@
 
 ModalScreen {
     align: center middle;
+    background: $lp-overlay;
 }
 
 #dlg {
     width: 90%;
     max-width: 72;
     height: auto;
-    border: round $lp-border-muted;
+    border: round $lp-border;
     border-title-color: $lp-accent;
-    background: $lp-surface;
+    background: $lp-modal-bg;
     padding: 1 2;
+}
+
+#dlg:focus-within {
+    border: round $lp-border-focus;
 }
 
 #dlg .form-title {
@@ -42,9 +47,9 @@ ModalScreen {
 #help {
     width: 90%;
     height: 90%;
-    border: round $lp-border-muted;
+    border: round $lp-border;
     border-title-color: $lp-accent;
-    background: $lp-surface;
+    background: $lp-modal-bg;
     padding: 1 2;
 }
 
@@ -54,17 +59,19 @@ ModalScreen {
 
 #detail-page {
     height: 1fr;
-    border: round $lp-border-muted;
+    border: round $lp-border;
     border-title-color: $lp-accent;
     background: $lp-surface-alt;
     padding: 0 1;
 }
 
 #detail-head {
-    height: 1;
+    height: auto;
+    min-height: 1;
     background: $lp-surface;
     color: $lp-accent;
     padding: 0 1;
+    margin-bottom: 1;
 }
 
 #detail-read {
@@ -106,24 +113,26 @@ ModalScreen {
 
 #detail-hints {
     height: 1;
-    background: $panel;
+    background: $lp-surface;
     color: $lp-text-muted;
     padding: 0 1;
 }
 
 #source-page {
     height: 1fr;
-    border: round $lp-border-muted;
+    border: round $lp-border;
     border-title-color: $lp-accent;
     background: $lp-surface-alt;
     padding: 0 1;
 }
 
 #source-head {
-    height: 3;
+    height: auto;
+    min-height: 2;
     background: $lp-surface;
     color: $lp-accent;
     padding: 0 1;
+    margin-bottom: 1;
 }
 
 #source-filter {
@@ -138,7 +147,7 @@ ModalScreen {
     width: 1fr;
     min-width: 30;
     border: round $lp-border-muted;
-    border-title-color: $lp-accent;
+    border-title-color: $lp-text-muted;
     padding: 0 1;
 }
 
@@ -146,12 +155,17 @@ ModalScreen {
     width: 1fr;
     min-width: 30;
     border: round $lp-border-muted;
-    border-title-color: $lp-accent;
+    border-title-color: $lp-text-muted;
     padding: 0 1;
 }
 
 #source-preview-body {
     height: auto;
+}
+
+#source-tree-wrap:focus-within,
+#source-preview:focus-within {
+    border: round $lp-border-focus;
 }
 
 #dlg Button, #help Button, #detail-page Button {
@@ -171,8 +185,8 @@ ModalScreen {
 }
 
 #palette-list > .option-list--option-highlighted {
-    background: $lp-accent-muted;
-    color: $lp-surface-alt;
+    background: $lp-cursor;
+    color: $lp-accent;
     text-style: bold;
 }
 

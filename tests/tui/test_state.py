@@ -92,6 +92,26 @@ class StateTest(unittest.IsolatedAsyncioTestCase):
             self.assertIn("is gone", body)
             self.assertIn("press r", body)
 
+    async def test_preview_scrolls_home_when_the_selection_changes(self) -> None:
+        from textual.containers import VerticalScroll
+
+        long_text = "\n".join(f"line {number}" for number in range(60))
+        second = Store(self.db).add_plan("Long plan", long_text, goal=long_text)
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(100, 30)) as pilot:
+            await pilot.pause()
+            app.selected = ("plan", second.id)
+            app.update_preview(force=True)
+            await pilot.pause()
+            scroll = app.query_one("#preview-scroll", VerticalScroll)
+            scroll.scroll_end(animate=False)
+            await pilot.pause()
+            self.assertGreater(scroll.scroll_y, 0)
+            app.selected = ("plan", 1)
+            app.update_preview(force=True)
+            await pilot.pause()
+            self.assertEqual(scroll.scroll_y, 0)
+
     def test_tui_modules_stay_under_the_target_budget(self) -> None:
         root = Path(__file__).resolve().parents[2] / "src" / "lazyplan" / "tui"
         over = []

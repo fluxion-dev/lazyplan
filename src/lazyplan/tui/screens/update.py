@@ -39,6 +39,9 @@ if _TEXTUAL_OK:
             except UpgradeError:
                 return False
 
+        def on_mount(self) -> None:
+            self.query_one("#dlg").border_title = "UPDATE"
+
         def compose(self) -> ComposeResult:
             with Vertical(id="dlg"):
                 yield Label("Update lpui")

@@ -8,9 +8,10 @@ ModalScreen {
     width: 90%;
     max-width: 72;
     height: auto;
-    border: solid $lp-border;
+    border: round $lp-border-muted;
+    border-title-color: $lp-accent;
     background: $lp-surface;
-    padding: 1;
+    padding: 1 2;
 }
 
 #dlg .form-title {
@@ -41,9 +42,10 @@ ModalScreen {
 #help {
     width: 90%;
     height: 90%;
-    border: solid $lp-border;
+    border: round $lp-border-muted;
+    border-title-color: $lp-accent;
     background: $lp-surface;
-    padding: 1;
+    padding: 1 2;
 }
 
 #help-scroll {
@@ -157,4 +159,27 @@ ModalScreen {
     width: auto;
     height: 3;
     padding: 0 1;
+}
+
+#palette-title {
+    color: $lp-accent;
+    text-style: bold;
+}
+
+#palette-list > .option-list--option {
+    padding: 0 1;
+}
+
+#palette-list > .option-list--option-highlighted {
+    background: $lp-accent-muted;
+    color: $lp-surface-alt;
+    text-style: bold;
+}
+
+#palette-list > .option-list--option-disabled {
+    color: $lp-text-faint;
+}
+
+#update-body {
+    padding: 1 0;
 }

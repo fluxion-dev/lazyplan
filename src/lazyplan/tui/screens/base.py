@@ -23,6 +23,8 @@ try:
     )
     from textual.widgets.option_list import Option  # noqa: F401
 
+    from ..query import query_one_opt
+
     _TEXTUAL_OK = True
 except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
@@ -41,6 +43,7 @@ if _TEXTUAL_OK:
         """Modal form base: Esc cancels, dirty drafts confirm first."""
 
         BINDINGS = [Binding("escape", "cancel", "Cancel")]
+        dialog_title = "ACTION"
 
         def __init__(self) -> None:
             super().__init__()
@@ -51,6 +54,9 @@ if _TEXTUAL_OK:
             width = self.app.size.width
             self.set_class(width < 80, "compact")
             self.set_class(width >= 120, "wide")
+            dialog = query_one_opt(self, "#dlg")
+            if dialog is not None:
+                dialog.border_title = self.dialog_title
             self._initial = self._snapshot()
 
         def _snapshot(self) -> tuple[str, ...]:
@@ -64,12 +70,11 @@ if _TEXTUAL_OK:
         def action_cancel(self) -> None:
             """Close cleanly, or ask before throwing away a draft."""
             if self._initial is not None and self._snapshot() != self._initial:
+                from .forms import ConfirmScreen
 
                 def cb(confirmed: bool | None) -> None:
                     if confirmed:
                         self.dismiss(None)
-
-                from .forms import ConfirmScreen
 
                 self.app.push_screen(
                     ConfirmScreen(

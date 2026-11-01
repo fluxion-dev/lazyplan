@@ -48,6 +48,7 @@ if _TEXTUAL_OK:
     class EntityForm(_Form):
         """One labeled create form driven by a field spec."""
 
+        dialog_title = "CREATE"
         heading = ""
         fields: tuple[FormField, ...] = ()
         submit_label = "Create"
@@ -148,6 +149,8 @@ if _TEXTUAL_OK:
     class ConfirmScreen(_Form):
         """One destructive confirmation; dismisses True on the confirm button."""
 
+        dialog_title = "CONFIRM"
+
         def __init__(
             self,
             text: str,
@@ -183,6 +186,8 @@ if _TEXTUAL_OK:
 
     class FilterPromptScreen(_Form):
         """Prompt for one line of text; empty clears the filter."""
+
+        dialog_title = "FILTER"
 
         def __init__(
             self,

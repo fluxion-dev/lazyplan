@@ -39,6 +39,12 @@ if _TEXTUAL_OK:
         """Shared help text overlay; same source as `lpui help`."""
 
         HELP = HELP_TEXT
+        dialog_title = "HELP"
+
+        def on_mount(self) -> None:
+            super().on_mount()
+            help_panel = self.query_one("#help")
+            help_panel.border_title = self.dialog_title
 
         def compose(self) -> ComposeResult:
             with Vertical(id="help"):
@@ -53,6 +59,8 @@ if _TEXTUAL_OK:
 
     class PaletteScreen(_Form):
         """Modal command palette: grouped sections, live filter, context rules."""
+
+        dialog_title = "COMMANDS"
 
         def __init__(self, context: dict[str, str | None] | None = None) -> None:
             super().__init__()

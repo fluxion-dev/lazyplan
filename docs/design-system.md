@@ -49,14 +49,34 @@ Status glyphs are single-cell: `○ todo`, `◐ doing`, `● done`, with ANSI
 (CLI tty) and Rich (TUI) variants. In the TUI a doing row animates through
 `◐ ◓ ◑ ◒` every 160ms. The CLI, export, preview, and detail screens keep the
 static `◐`; `LAZYPLAN_NO_SPINNER=1` freezes the tree too. Row grammar:
-`GLYPH KIND<id> title`, plus `done/total` progress on plan and milestone
-rows. Titles are bold, ids and progress are dim, done rows are dim.
-Long titles end in `…`; the full title lives in the preview/detail.
-Plan and milestone rows show compact source counts (`2c · 1 PR · 1 stale`)
-and repo chips; task rows show up to two short SHAs plus `+N`, a stale `!`,
-and a PR chip. The preview expands those counts with the newest commit and
-changed-file count. Titles keep priority over chips via width truncation.
-Provenance stays in the chips; rows do not append a separate marker glyph.
+`GLYPH KIND<id> title`, followed by a fixed stats grid. The title is the only
+flexible cell; it is bold and truncates with `…`. Ids and stats are dim, and
+done rows are dim. The full title lives in the preview/detail.
+
+The stats grid uses fixed-width slots. Source stats come first: `progress`
+(plan and milestone), `commits` (`2c`), `pulls` (`1PR`, `PR`, `PR!`, `PR…`),
+and `stale` (`1!`). State markers follow: `blocked` (`⚑ blocked`), `claim`
+(`◉ @actor`), and `marked` (`✓`). Missing stats reserve blanks, so the block
+start and right edge do not move when a row changes state. A one-space gap
+separates visible slots, and the whole block is right-aligned.
+
+| slot | full | compact |
+|---|---|---|
+| progress | 11 | 8 |
+| commits | 4 | 4 |
+| pulls | 4 | 4 |
+| stale | 2 | 2 |
+| blocked | 9 | 2 |
+| claim | 12 | 8 |
+| marked | 2 | 2 |
+
+At narrow widths the renderer uses compact forms (`▰▰▱ 3/7`, `⚑`, `◉ @a…`) and
+drops provenance slots first, then the larger state slots, while keeping
+progress and PR longest. Task rows show a commit count (`2c`) instead of SHAs.
+Plan rows no longer show repo chips; the preview keeps aggregate counts and the
+GIT pane lists the linked checkouts, newest commits, changed-file counts, and
+pull requests. Rows reserve a fixed trailing mark slot, so marking a row never
+shifts the stats.
 
 Empty states come from `EMPTY_NO_PLANS` / `EMPTY_FEED` (same in CLI and
 TUI).

@@ -34,6 +34,11 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
   brief pause no longer breaks the line. Task traces still show `doing`
   intervals, so task-level pauses remain visible. The `now` marker appears for
   any open lane, even when it is paused.
+- **Stable tree stats.** Plan, milestone, and task rows keep their stats in
+  fixed columns, with blank slots for missing values, so the right-hand block
+  no longer shifts when a row changes state. Narrow terminals use compact
+  forms and drop provenance slots first; task rows show a commit count (`2c`)
+  instead of SHAs, and repo detail stays in the preview and GIT pane.
 - The Gantt refreshes within the one-second database poll and advances open
   lanes and the now marker every 15 seconds. The Daily activity, Task status,
   and Project progress cards are removed.

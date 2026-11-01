@@ -306,6 +306,13 @@ to use the light palette. The main screen is a rounded preview card beside the
 tree, a status chip row, and reverse-video keycaps in the hint bar; the same
 tokens drive the detail, source, palette, help, and form screens.
 
+Plan, milestone, and task rows keep their stats in fixed columns. Source stats
+come first (progress, commit count, PR, stale), then state markers (blocked,
+claim, marked). Missing stats leave blank columns, so the stats block does not
+shift when a row changes state. Narrow terminals use compact forms and drop
+provenance slots first; task rows show a commit count (`2c`) rather than SHAs,
+and repo detail stays in the preview/GIT pane.
+
 | key | action |
 |---|---|
 | `j`/`k`, arrows, click | move and select |

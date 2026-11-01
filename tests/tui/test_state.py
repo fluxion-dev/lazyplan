@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import tempfile
 import unittest
+from pathlib import Path
 
 from lazyplan.store import Store
 
@@ -58,6 +59,13 @@ class StateTest(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(app.state.source_filter, "claims")
             self.assertIn(("plan", 1), app.state.marked)
             self.assertIn(("plan", 1), app.state.expanded)
+
+    def test_app_shell_is_small_and_base_has_no_forwarding_stubs(self) -> None:
+        root = Path(__file__).resolve().parents[2] / "src" / "lazyplan" / "tui"
+        app_lines = len((root / "app.py").read_text(encoding="utf-8").splitlines())
+        base = (root / "base.py").read_text(encoding="utf-8")
+        self.assertLessEqual(app_lines, 250)
+        self.assertNotIn("raise NotImplementedError", base)
 
     async def test_query_one_opt_handles_absent_and_wrong_type(self) -> None:
         app = tui_mod.create_app(self.db)

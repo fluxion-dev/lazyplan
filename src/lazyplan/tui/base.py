@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from textual.app import App
-from textual.widgets import Tree
 from textual.widgets.tree import TreeNode
 
-from ..messages import RowAction, SelectionChanged
-from ..models import Status, Task
+from ..models import Status
 from ..store import Store
 from .controllers.git_state import GitStateController
 from .controllers.spinner import SpinnerController
@@ -18,7 +16,34 @@ from .controllers.updates import UpdateController
 from .state import AppState
 
 
-class AppBase(App):
+class TuiHost:
+    """The cross-mixin methods the shell calls on itself."""
+
+    def refresh_all(self, note: str = "") -> None: ...
+    def _saved(self, note: str = "") -> None: ...
+    def _refresh_status(self, note: str = "") -> None: ...
+    def _paint_mark(self, key: tuple[str, int]) -> None: ...
+    def _node_key(self, node: TreeNode) -> tuple[str, int] | None: ...
+    def action_toggle_status(self) -> None: ...
+    def _open_detail(self, kind: str, oid: int, edit: bool = False) -> None: ...
+    def action_open_detail(self) -> None: ...
+    def action_fold(self) -> None: ...
+    def action_fold_all(self) -> None: ...
+    def action_filter_text(self) -> None: ...
+    def action_filter_status(self) -> None: ...
+    def action_filter_source(self) -> None: ...
+    def action_toggle_show_all(self) -> None: ...
+    def action_toggle_mark(self) -> None: ...
+    def action_clear_marks(self) -> None: ...
+    def action_bulk_doing(self) -> None: ...
+    def action_bulk_done(self) -> None: ...
+    def action_bulk_block(self) -> None: ...
+    def action_bulk_release(self) -> None: ...
+    def action_undo_bulk(self) -> None: ...
+    def action_update_prompt(self) -> None: ...
+
+
+class AppBase(App, TuiHost):
     """App attributes and cross-mixin declarations."""
 
     store: Store
@@ -227,217 +252,3 @@ class AppBase(App):
     @_spinner_timer.setter
     def _spinner_timer(self, value: Any) -> None:
         self.spinner_controller.timer = value
-
-    if TYPE_CHECKING:
-
-        def on_tree_node_highlighted(self, e: Tree.NodeHighlighted) -> None:
-            raise NotImplementedError
-
-        def _on_selection_changed(self, e: SelectionChanged) -> None:
-            raise NotImplementedError
-
-        def update_preview(self, force: bool = False) -> None:
-            raise NotImplementedError
-
-        def action_update_prompt(self) -> None:
-            raise NotImplementedError
-
-        def _on_row_action(self, e: RowAction) -> None:
-            raise NotImplementedError
-
-        @staticmethod
-        def _node_key(node: TreeNode) -> tuple[str, int] | None:
-            raise NotImplementedError
-
-        def on_tree_node_collapsed(self, e: Tree.NodeCollapsed) -> None:
-            raise NotImplementedError
-
-        def on_tree_node_expanded(self, e: Tree.NodeExpanded) -> None:
-            raise NotImplementedError
-
-        def action_fold(self) -> None:
-            raise NotImplementedError
-
-        def action_fold_all(self) -> None:
-            raise NotImplementedError
-
-        def _poll(self) -> None:
-            raise NotImplementedError
-
-        def action_clear_filter(self) -> None:
-            raise NotImplementedError
-
-        def _status_text(self, counts: dict[str, int], note: str) -> str:
-            raise NotImplementedError
-
-        def _refresh_status(self, note: str = "") -> None:
-            raise NotImplementedError
-
-        def _paint_mark(self, key: tuple[str, int]) -> None:
-            raise NotImplementedError
-
-        def refresh_all(self, note: str = "") -> None:
-            raise NotImplementedError
-
-        def action_refresh(self) -> None:
-            raise NotImplementedError
-
-        def _git_selection(self) -> tuple[str, int] | None:
-            raise NotImplementedError
-
-        def action_git_status(self) -> None:
-            raise NotImplementedError
-
-        def _git_status_worker(self, kind: str, oid: int) -> None:
-            raise NotImplementedError
-
-        def _git_status_done(self, entries: list[dict[str, Any]]) -> None:
-            raise NotImplementedError
-
-        def action_git_refresh(self) -> None:
-            raise NotImplementedError
-
-        def _git_refresh_worker(self, kind: str, oid: int) -> None:
-            raise NotImplementedError
-
-        def _git_refresh_done(self, result: dict[str, Any]) -> None:
-            raise NotImplementedError
-
-        def action_git_capture(self) -> None:
-            raise NotImplementedError
-
-        def action_open_pr(self) -> None:
-            raise NotImplementedError
-
-        def action_source_trail(self) -> None:
-            raise NotImplementedError
-
-        def _saved(self, note: str = "") -> None:
-            raise NotImplementedError
-
-        def action_filter_status(self) -> None:
-            raise NotImplementedError
-
-        def action_filter_source(self) -> None:
-            raise NotImplementedError
-
-        def action_toggle_show_all(self) -> None:
-            raise NotImplementedError
-
-        def action_help(self) -> None:
-            raise NotImplementedError
-
-        def _palette_context(self) -> dict[str, str | None]:
-            raise NotImplementedError
-
-        def action_command_palette(self) -> None:
-            raise NotImplementedError
-
-        def action_filter_text(self) -> None:
-            raise NotImplementedError
-
-        def _open_filter_prompt(self) -> None:
-            raise NotImplementedError
-
-        def action_toggle_mark(self) -> None:
-            raise NotImplementedError
-
-        def _marked_tasks(self) -> list[Task]:
-            raise NotImplementedError
-
-        def _bulk_capture(self, tasks: list[Task]) -> None:
-            raise NotImplementedError
-
-        def _bulk_status(self, status: Status) -> None:
-            raise NotImplementedError
-
-        def action_bulk_doing(self) -> None:
-            raise NotImplementedError
-
-        def action_bulk_done(self) -> None:
-            raise NotImplementedError
-
-        def action_bulk_block(self) -> None:
-            raise NotImplementedError
-
-        def action_bulk_release(self) -> None:
-            raise NotImplementedError
-
-        def action_undo_bulk(self) -> None:
-            raise NotImplementedError
-
-        def action_clear_marks(self) -> None:
-            raise NotImplementedError
-
-        def _selected_task(self) -> int | None:
-            raise NotImplementedError
-
-        def action_release_claim(self) -> None:
-            raise NotImplementedError
-
-        def action_force_release_claim(self) -> None:
-            raise NotImplementedError
-
-        def _release_claim(self, force: bool) -> None:
-            raise NotImplementedError
-
-        def _run_palette_command(self, command_id: str | None) -> None:
-            raise NotImplementedError
-
-        def _milestone_for_task_ctx(self) -> int | None:
-            raise NotImplementedError
-
-        def _plan_ctx(self) -> int | None:
-            raise NotImplementedError
-
-        def _cursor_is_root(self) -> bool:
-            raise NotImplementedError
-
-        def action_new_context(self) -> None:
-            raise NotImplementedError
-
-        def action_new_plan(self) -> None:
-            raise NotImplementedError
-
-        def action_new_milestone(self) -> None:
-            raise NotImplementedError
-
-        def action_new_task(self) -> None:
-            raise NotImplementedError
-
-        def action_toggle_status(self) -> None:
-            raise NotImplementedError
-
-        def action_move(self, status: Status) -> None:
-            raise NotImplementedError
-
-        def action_add_criterion(self) -> None:
-            raise NotImplementedError
-
-        def action_untick_criterion(self) -> None:
-            raise NotImplementedError
-
-        def action_edit_selection(self) -> None:
-            raise NotImplementedError
-
-        def action_criteria(self) -> None:
-            raise NotImplementedError
-
-        def action_delete(self) -> None:
-            raise NotImplementedError
-
-        def on_tree_node_selected(self, e: Tree.NodeSelected) -> None:
-            raise NotImplementedError
-
-        def note_click(self, key: tuple[str, int]) -> bool:
-            raise NotImplementedError
-
-        def _open_detail(self, kind: str, oid: int, edit: bool = False) -> None:
-            raise NotImplementedError
-
-        def action_export_md(self) -> None:
-            raise NotImplementedError
-
-        def action_open_detail(self) -> None:
-            raise NotImplementedError
-

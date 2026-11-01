@@ -83,7 +83,6 @@ class UpdateController:
         self.notice = None
         self.latest = ""
         self.info = None
-        self.app._refresh_status()
 
     def announce(self, notice: str, latest: str = "", info: Any = None) -> None:
         """Store the chip and toast once per version."""
@@ -93,7 +92,6 @@ class UpdateController:
         if latest and latest != self.toasted_version:
             self.toasted_version = latest
             self.app.notify(notice, timeout=8)
-        self.app._refresh_status()
 
     def prompt(self) -> None:
         """Open the update screen for a known or cached newer release."""

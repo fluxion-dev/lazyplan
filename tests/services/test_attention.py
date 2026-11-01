@@ -70,8 +70,6 @@ class TestAttention(unittest.IsolatedAsyncioTestCase):
                 self.assertIn(self.tasks[name], visible, name)
             for name in ("fresh", "plain"):
                 self.assertNotIn(self.tasks[name], visible, name)
-            status = str(self.app.query_one("#status").render())
-            self.assertIn("attention 5", status)
 
     async def test_attention_composes_with_status_filter(self):
         async with self.app.run_test() as pilot:

@@ -120,9 +120,7 @@ class TestTuiNotice(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
         self.fail("update notice never landed")
 
-    async def test_outdated_shows_statusbar_and_toast_once(self):
-        from textual.widgets import Label
-
+    async def test_outdated_toasts_once(self):
         info = upgrade.InstallInfo(upgrade.PIPX, True)
         with (
             mock.patch.object(updates_mod, "refresh_update", return_value="9.9.9") as refresh,
@@ -133,9 +131,8 @@ class TestTuiNotice(unittest.IsolatedAsyncioTestCase):
             async with self.app.run_test() as pilot:
                 await self._wait_for_notice(pilot, self.app)
                 await pilot.pause()
-                bar = self.app.query_one("#status", Label)
-                self.assertIn("update v9.9.9", str(bar.content))
                 self.assertEqual(refresh.call_count, 1)
+                self.assertIsNotNone(self.app._update_notice)
                 self.app.update_controller.announce(self.app._update_notice or "")
                 self.app.update_controller.announce(self.app._update_notice or "")
                 self.assertEqual(toast.call_count, 1)
@@ -180,15 +177,13 @@ class TestTuiNotice(unittest.IsolatedAsyncioTestCase):
                 self.assertIsNone(self.app._update_notice)
 
     async def test_chip_clears_when_current(self):
-        from textual.widgets import Label
-
         info = upgrade.InstallInfo(upgrade.PIPX, True)
         with mock.patch.object(updates_mod, "refresh_update", return_value=None):
             async with self.app.run_test() as pilot:
                 await pilot.pause()
                 self.app.update_controller.announce("update v9.9.9 available", "9.9.9", info)
                 await pilot.pause()
-                self.assertIn("update v9.9.9", str(self.app.query_one("#status", Label).content))
+                self.assertIsNotNone(self.app._update_notice)
                 with (
                     mock.patch.object(updates_mod, "package_version", return_value="9.9.9"),
                     mock.patch.object(updates_mod, "detect", return_value=info),
@@ -197,11 +192,8 @@ class TestTuiNotice(unittest.IsolatedAsyncioTestCase):
                 await pilot.pause()
                 self.assertIsNone(self.app._update_notice)
                 self.assertEqual(self.app._update_latest, "")
-                self.assertNotIn("update v9.9.9", str(self.app.query_one("#status", Label).content))
 
     async def test_chip_changes_with_a_newer_version(self):
-        from textual.widgets import Label
-
         info = upgrade.InstallInfo(upgrade.PIPX, True)
         with mock.patch.object(updates_mod, "refresh_update", return_value=None):
             async with self.app.run_test() as pilot:
@@ -215,7 +207,7 @@ class TestTuiNotice(unittest.IsolatedAsyncioTestCase):
                     self.app.update_controller.apply_update("9.9.10")
                 await pilot.pause()
                 self.assertEqual(self.app._update_latest, "9.9.10")
-                self.assertIn("update v9.9.10", str(self.app.query_one("#status", Label).content))
+                self.assertIn("9.9.10", self.app._update_notice or "")
 
     async def test_failed_poll_keeps_the_chip(self):
         info = upgrade.InstallInfo(upgrade.PIPX, True)

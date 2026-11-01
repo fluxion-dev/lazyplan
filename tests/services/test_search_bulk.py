@@ -74,7 +74,6 @@ class TestSearchBulk(unittest.IsolatedAsyncioTestCase):
             await pilot.press("space")
             await pilot.pause()
             self.assertEqual(self.app.marked, {("task", self.t1)})
-            self.assertIn("marked 1", str(self.app.query_one("#status").render()))
             self.app.refresh_all()
             await pilot.pause()
             self.assertEqual(self.app.marked, {("task", self.t1)})

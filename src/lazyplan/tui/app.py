@@ -167,7 +167,6 @@ if _TEXTUAL_OK:
                     yield PreviewPanel()
                 yield MetricsSection()
             yield Label("", id="hints")
-            yield Label("", id="status")
 
         async def _on_resize(self, event: events.Resize) -> None:
             """Textual stops Resize at the App; re-apply the shell after it."""

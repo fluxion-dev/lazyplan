@@ -32,7 +32,6 @@ if _TEXTUAL_OK:
             else:
                 self.marked.add(key)
             self._paint_mark(key)
-            self._refresh_status(f"marked {len(self.marked)}")
 
         def action_bulk_done(self) -> None:
             self._bulk_status(Status.DONE)
@@ -116,7 +115,6 @@ if _TEXTUAL_OK:
             for key in list(self.marked):
                 self.marked.discard(key)
                 self._paint_mark(key)
-            self._refresh_status("marks cleared")
 
         def action_bulk_block(self) -> None:
             tasks = self._marked_tasks()

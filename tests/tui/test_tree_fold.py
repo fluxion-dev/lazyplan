@@ -405,18 +405,6 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
             self.assertFalse(proj.is_expanded)
             self.assertEqual(len(self.app.screen_stack), 1)
 
-    async def test_statusbar_shows_human_counts(self):
-        from textual.widgets import Label
-
-        async with self.app.run_test() as pilot:
-            await pilot.pause()
-            bar = self.app.query_one("#status", Label)
-            text = str(bar.content)
-            self.assertIn("1 plans", text)
-            self.assertIn("2 open", text)
-            self.assertIn("0 doing", text)
-            self.assertNotIn("Q:", text)
-
     async def test_hint_bar_lists_common_keys(self):
         from textual.widgets import Label
 

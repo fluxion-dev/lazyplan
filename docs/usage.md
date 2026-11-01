@@ -74,7 +74,7 @@ lpui upgrade --check
 ```
 
 `lpui upgrade` manages pipx and venv installs. System packages upgrade through
-`dnf` or `apt`. The TUI status bar and CLI stderr mention new versions; stdout
+`dnf` or `apt`. The TUI notifies and CLI stderr mentions new versions; stdout
 stays clean for `--json`. A successful upgrade re-runs setup with the new
 binary, including under `--json`, so hooks and the AGENTS pointer refresh
 without prompting.
@@ -111,8 +111,8 @@ counts in its lifecycle row, so only the three lifecycle shares add up to
 
 ### Staged updates in the TUI
 
-When a newer release exists, the status bar shows `update vX.Y.Z` and a toast
-appears once for that version. Press `U` (or run **Update lpui** from the
+When a newer release exists, a toast appears once for that version. Press `U`
+(or run **Update lpui** from the
 palette) to open the Update screen. It shows the installed and latest versions,
 the detected install method, and two actions: **Download** and **Later**.
 
@@ -560,7 +560,7 @@ timestamps are omitted, not invented.
 The screen adds an **Attention** source filter to the existing cycle
 (`F`): expired claims, blocked tasks, doing work older than the stale
 threshold, done rows with open criteria, and red PR checks. It combines with
-the status filter, and the status line shows the current attention count.
+the status filter; the tree keeps only rows that match the active filters.
 
 ### Comments, sharing, and sync
 

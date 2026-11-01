@@ -106,7 +106,7 @@ class TestViewports(unittest.IsolatedAsyncioTestCase):
                 app = tui_mod.create_app(self.db)
                 async with app.run_test(size=(width, height)) as pilot:
                     await pilot.pause()
-                    for selector in ("#panel", "#main", "#nav", "#status", "#hints"):
+                    for selector in ("#panel", "#main", "#nav", "#hints"):
                         self.assertTrue(
                             _within(app.query_one(selector).region, width, height),
                             selector,

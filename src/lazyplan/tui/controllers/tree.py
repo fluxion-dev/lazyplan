@@ -68,13 +68,11 @@ class TreeController:
                 self.app._row_nodes[key].collapse()
             self.app._expanded.clear()
             self.app._collapsed.update(keys)
-            self.app._refresh_status(f"folded {len(keys)} rows")
             return
         for key in keys:
             self.app._row_nodes[key].expand()
         self.app._expanded.update(keys)
         self.app._collapsed.difference_update(keys)
-        self.app._refresh_status("unfolded all")
 
     def fold_one(self) -> None:
         """Toggle the selected plan or milestone (z)."""
@@ -90,12 +88,10 @@ class TreeController:
             node.collapse()
             self.app._expanded.discard(key)
             self.app._collapsed.add(key)
-            self.app._refresh_status(f"{key[0]} {key[1]} folded")
             return
         node.expand()
         self.app._expanded.add(key)
         self.app._collapsed.discard(key)
-        self.app._refresh_status(f"{key[0]} {key[1]} unfolded")
 
     def poll(self) -> None:
         """External-change detector; local edits go through the reactive rev."""
@@ -243,7 +239,6 @@ class TreeController:
         app._expanded &= set(app._row_nodes)
         self.apply_folds()
         app.spinner_controller.paint()
-        app.query_one("#status", Label).update(app._status_text(app.store.counts(), note))
         app.query_one("#hints", Label).update(hint_bar(max(10, app.size.width - 2), markup=True))
         section = query_one_opt(app, "#metrics", MetricsSection)
         if section is not None:

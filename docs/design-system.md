@@ -86,14 +86,14 @@ TUI).
 
 ## Shell (`tui/app.py`)
 
-Visual: one-row `#status` and `#hints`, bordered `#panel`. No `Header`, no
-`Footer`, no bottom input. Adaptive shell: `#main` holds `#nav` (focused
+Visual: one-row `#hints` command bar, bordered `#panel`. No `Header`, no
+`Footer`, no status bar, no bottom input. Adaptive shell: `#main` holds `#nav` (focused
 `FoldTree`) and `#preview` (`PreviewPanel`) side by side at >= 100 columns;
 below that `#main.narrow` hides the preview and the tree owns the width.
 
 Three layout tiers share one breakpoint:
 - compact (< 80): `#panel.compact` drops its outer border, `#nav` loses its
-  minimum width, and `#status` / `#hints` lose their padding.
+  minimum width, and `#hints` loses its padding.
 - standard (80–99): the narrow shell hides preview and metrics; tree rows
   own the width.
 - wide (>= 120): `#main.wide` gives the tree three fifths and the preview
@@ -127,12 +127,10 @@ cursor, and an accent cursor when the tree has focus.
   polls the shared cache every 60s; one guarded worker calls
   `refresh_update`, and the shared gate limits network refreshes to once per
   5 minutes.
-- `#status` is a chip row: repo, plans, open, doing, attention, marks,
-  active filters, update, note, and the latest event. `views/bars.py`
-  builds it as Rich `Text` and truncates to the terminal width. The update
-  chip clears when the installed version catches up, and each version
-  toasts once. `#hints` is the key bar from `help.hint_bar(markup=True)`,
-  with reverse-video keycaps and a width-based drop order.
+- `#hints` is the command bar and the only bottom row. `help.hint_bar()`
+  builds it with reverse-video keycaps and a width-based drop order. Counts,
+  active filters, marks, and update notices are not shown in a persistent
+  bar; actions report through toasts, and each new version toasts once.
 - `_on_resize` re-applies the compact/narrow/wide classes and refreshes
   widths when the 100-column breakpoint changes.
 - Native Tree space/shift+space stay parked no-ops; direct keys own

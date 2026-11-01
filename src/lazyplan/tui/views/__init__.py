@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from .bars import status_bar
 from .detail import DetailDocument, build_detail, detail_breadcrumb, detail_object
 from .preview import (
     PreviewBlock,
@@ -50,5 +49,4 @@ __all__ = [
     "repo_label",
     "repo_preview",
     "row_text",
-    "status_bar",
 ]

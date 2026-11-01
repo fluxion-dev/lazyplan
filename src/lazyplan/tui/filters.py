@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 try:
-    from rich.text import Text
-    from textual.widgets import Label, Tree
+    from textual.widgets import Tree
 
     from .query import query_one_opt
 
@@ -12,15 +11,11 @@ try:
 except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
-from .. import services
-from .. import stats as stats_mod
-from ..repo import repo_label
 from .base import AppBase
 from .constants import STATUS_CYCLE
 from .screens import (
     FilterPromptScreen,
 )
-from .views.bars import status_bar
 
 if _TEXTUAL_OK:
 
@@ -62,42 +57,6 @@ if _TEXTUAL_OK:
         def action_toggle_show_all(self) -> None:
             self.show_all = not self.show_all
             self.refresh_all("showing all plans" if self.show_all else "showing recent plans")
-
-        def _refresh_status(self, note: str = "") -> None:
-            """Update only the statusbar, without rebuilding the tree."""
-            label = query_one_opt(self, "#status", Label)
-            if label is not None:
-                label.update(self._status_text(self.store.counts(), note))
-
-        def _status_text(self, counts: dict[str, int], note: str) -> Text:
-            """Human counts, filter state, update notice, and the latest event."""
-            open_tasks = counts["tasks"] - counts["tasks_done"]
-            update = ""
-            if self._update_notice is not None:
-                update = (
-                    f"update v{self._update_latest}" if self._update_latest else "update available"
-                )
-            events = self.store.feed(1)
-            event = ""
-            if events:
-                latest = events[0]
-                event = f"{latest['actor']} {latest['kind']}/{latest['action']}: {latest['detail']}"
-            return status_bar(
-                repo=repo_label(self.store.path),
-                plans=counts["plans"],
-                open_tasks=open_tasks,
-                doing=counts["plans_doing"],
-                attention=len(stats_mod.attention_ids(self.store)),
-                marked=len(self.marked),
-                status=self.status_filter.value if self.status_filter is not None else "",
-                source=self.source_filter if self.source_filter != "all" else "",
-                filter_text=self.filter_text.strip(),
-                recent=None if self.show_all else services.DEFAULT_PLAN_LIMIT,
-                update=update,
-                note=note,
-                event=event,
-                width=max(10, self.size.width - 2),
-            )
 
         def action_filter_text(self) -> None:
             """Prompt for filter text (slash)."""

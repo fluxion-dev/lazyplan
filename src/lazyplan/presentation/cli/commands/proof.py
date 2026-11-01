@@ -71,7 +71,7 @@ def _cmd_git_scan(store: Store, args: argparse.Namespace, actor: str) -> int:
 
 
 def _cmd_issue_import(store: Store, args: argparse.Namespace, actor: str) -> int:
-    from .... import issues as issues_mod
+    from ....services.transfer import import_issues, parse_github_issues, parse_linear_issues
 
     if args.as_kind == "task":
         if not args.milestone or store.get_milestone(args.milestone) is None:
@@ -85,16 +85,16 @@ def _cmd_issue_import(store: Store, args: argparse.Namespace, actor: str) -> int
             owner, repo = args.repo.split("/", 1)
             client = GitHubClient(auth=resolve_auth(), store=store)
             fetched = client.issues(RepoRef("github", "github.com", owner, repo))
-            parsed = issues_mod.parse_github(fetched.data)
+            parsed = parse_github_issues(fetched.data)
         else:
             if not args.file:
                 print("error: linear import needs --file PATH", file=sys.stderr)
                 return 2
-            parsed = issues_mod.parse_linear(json.loads(textfile.read(args.file)))
+            parsed = parse_linear_issues(json.loads(textfile.read(args.file)))
     except (OSError, ValueError, GitHubError) as exc:
         print(msg_error(exc), file=sys.stderr)
         return 1
-    report = issues_mod.import_issues(
+    report = import_issues(
         store,
         parsed,
         actor=actor,

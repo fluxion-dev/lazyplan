@@ -13,7 +13,6 @@ from .... import (
     textfile,
 )
 from ....repo import find_repo_root, repo_label, resolve_db_path
-from ....seed import seed as seed_demo
 from ....store import Store
 from ....upgrade import (
     UpgradeError,
@@ -43,11 +42,11 @@ from ..rows_proof import (
 
 
 def _cmd_sync(store: Store, args: argparse.Namespace, actor: str) -> int:
-    from .... import sync as sync_mod
+    from ....services.transfer import sync_plans
 
     try:
         data = json.loads(textfile.read(args.file))
-        report = sync_mod.sync(store, data, actor=actor, dry_run=bool(args.dry_run))
+        report = sync_plans(store, data, actor=actor, dry_run=bool(args.dry_run))
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         print(msg_error(exc), file=sys.stderr)
         return 2
@@ -93,13 +92,13 @@ def _cmd_sync(store: Store, args: argparse.Namespace, actor: str) -> int:
 
 
 def _cmd_share(store: Store, args: argparse.Namespace, actor: str) -> int:
-    from .... import share as share_mod
+    from ....services.transfer import share_render
 
     del actor
     if store.get_plan(args.plan) is None:
         print(msg_not_found("plan", args.plan), file=sys.stderr)
         return 1
-    text = share_mod.write(store, args.plan, args.format, args.out)
+    text = share_render(store, args.plan, args.format, args.out)
     if text is None:
         print(msg_not_found("plan", args.plan), file=sys.stderr)
         return 1
@@ -167,6 +166,8 @@ def _cmd_info(store: Store, args: argparse.Namespace, actor: str) -> int:
 
 
 def _cmd_seed(store: Store, args: argparse.Namespace, actor: str) -> int:
+    from ....services.transfer import seed_demo
+
     seed_demo(store)
     return _emit(args, {"db": str(store.path), "counts": store.counts()})
 

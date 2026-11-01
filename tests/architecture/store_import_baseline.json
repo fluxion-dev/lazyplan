@@ -15,7 +15,6 @@
     "lazyplan.presentation.mcp.tools",
     "lazyplan.presentation.setup.apply",
     "lazyplan.presentation.tui.app",
-    "lazyplan.presentation.tui.base",
-    "lazyplan.sync"
+    "lazyplan.presentation.tui.base"
   ]
 }

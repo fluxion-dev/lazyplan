@@ -7,10 +7,10 @@ from __future__ import annotations
 
 from . import services
 from .core.policies.transfer import differences, is_export
-from .store import Store
+from .core.ports.transfer import TransferPort
 
 
-def sync(store: Store, data: dict, actor: str = "human", dry_run: bool = False) -> dict:
+def sync(store: TransferPort, data: dict, actor: str = "human", dry_run: bool = False) -> dict:
     """Merge a dump by plan uid; returns adds, skips, and conflicts."""
     if not is_export(data):
         raise ValueError("not a lazyplan export (missing lazyplan: 1)")

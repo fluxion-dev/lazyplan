@@ -7,172 +7,57 @@ at a time.
 
 from __future__ import annotations
 
-import math
 import re
 import time
-from dataclasses import dataclass
-from datetime import date, timedelta
 
-from .models import Milestone, Plan, Status, Task
-from .store import Store
-
-MilestonesByPlan = dict[int, list[Milestone]]
+from .core.policies.insights import ACTIVITY_DAYS as ACTIVITY_DAYS
+from .core.policies.insights import ACTIVITY_WEEKS as ACTIVITY_WEEKS
+from .core.policies.insights import ETA_WINDOW_DAYS as ETA_WINDOW_DAYS
+from .core.policies.insights import MILESTONE_LIMIT as MILESTONE_LIMIT
+from .core.policies.insights import ChartRow as ChartRow
+from .core.policies.insights import DayActivity as DayActivity
+from .core.policies.insights import (
+    MetricsSnapshot,
+    MilestonesByPlan,
+    Timeline,
+    TimelineLane,
+)
+from .core.policies.insights import MilestoneProgress as MilestoneProgress
+from .core.policies.insights import OverallProgress as OverallProgress
+from .core.policies.insights import StatusBreakdown as StatusBreakdown
+from .core.policies.insights import (
+    activity as _activity,
+)
+from .core.policies.insights import activity_weeks as activity_weeks
+from .core.policies.insights import (
+    doing_intervals as _doing_intervals,
+)
+from .core.policies.insights import milestone_bars as milestone_bars
+from .core.policies.insights import (
+    progress as _progress,
+)
+from .core.policies.insights import status_bars as status_bars
+from .core.policies.insights import (
+    status_breakdown as _status,
+)
+from .core.policies.insights import (
+    timeline_ends as _timeline_ends,
+)
+from .core.policies.insights import (
+    timeline_starts as _timeline_starts,
+)
+from .core.policies.insights import (
+    work_span as _work_span,
+)
+from .core.ports.insights import InsightsPort
+from .models import Plan, Status, Task
 
 _ADDED = re.compile(r"^([PMT])#(\d+) ")
-_DONE = re.compile(r"^task #(\d+) -> done$")
 _TASK_REF = re.compile(r"^(?:T#|task #)(\d+)\b")
-_TIMELINE_ADD = re.compile(r"^([PMT])#(\d+) ")
 _STATUS_MOVE = re.compile(r"^(plan|milestone|task) #(\d+) -> (todo|doing|done)\b")
-ETA_WINDOW_DAYS = 14
-MILESTONE_LIMIT = 5
-ACTIVITY_WEEKS = 12
-ACTIVITY_DAYS = ACTIVITY_WEEKS * 7
 
 
-@dataclass(frozen=True)
-class DayActivity:
-    """Task completions recorded on one local calendar day."""
-
-    day: date
-    done: int = 0
-
-
-@dataclass(frozen=True)
-class MilestoneProgress:
-    """Done and total task counts for one milestone."""
-
-    milestone_id: int
-    plan_id: int
-    title: str
-    done: int
-    total: int
-
-    @property
-    def percent(self) -> int:
-        """Whole-percent completion, or 0 when the milestone has no tasks."""
-        if self.total <= 0:
-            return 0
-        return round(self.done * 100 / self.total)
-
-
-@dataclass(frozen=True)
-class OverallProgress:
-    """Global completion, elapsed time, and the current ETA."""
-
-    done: int = 0
-    total: int = 0
-    elapsed_seconds: float | None = None
-    daily_rate: float = 0.0
-    eta_days: int | None = None
-    eta_date: date | None = None
-    complete: bool = False
-    milestones: tuple[MilestoneProgress, ...] = ()
-
-    @property
-    def percent(self) -> int:
-        """Whole-percent completion, or 0 when there is no work."""
-        if self.total <= 0:
-            return 0
-        return round(self.done * 100 / self.total)
-
-
-@dataclass(frozen=True)
-class StatusBreakdown:
-    """Task counts by lifecycle state plus the blocked overlay."""
-
-    todo: int = 0
-    doing: int = 0
-    done: int = 0
-    blocked: int = 0
-
-    @property
-    def total(self) -> int:
-        """Every task, counted once by its lifecycle state."""
-        return self.todo + self.doing + self.done
-
-    def share(self, count: int) -> int:
-        """Whole-percent share of all tasks, or 0 when there are none."""
-        if self.total <= 0:
-            return 0
-        return round(count * 100 / self.total)
-
-
-@dataclass(frozen=True)
-class ChartRow:
-    """One labelled value ready for a dashboard chart."""
-
-    label: str
-    value: int
-
-
-@dataclass(frozen=True)
-class TimelineLane:
-    """One project, milestone, or task swimlane on the wall-clock timeline.
-
-    `active` holds the doing intervals. `trace` holds the intervals the chart
-    draws: the whole span for projects and milestones, and `active` for tasks.
-    """
-
-    kind: str
-    title: str
-    start: float
-    end: float
-    active: tuple[tuple[float, float], ...] = ()
-    selected: bool = False
-    trace: tuple[tuple[float, float], ...] = ()
-
-
-@dataclass(frozen=True)
-class Timeline:
-    """Wall-clock spans for the project and its milestones."""
-
-    lanes: tuple[TimelineLane, ...] = ()
-    start: float = 0.0
-    end: float = 0.0
-    now: float = 0.0
-    empty: str = ""
-
-
-@dataclass(frozen=True)
-class MetricsSnapshot:
-    """Everything the dashboard renders."""
-
-    activity: tuple[DayActivity, ...] = ()
-    progress: OverallProgress | None = None
-    status: StatusBreakdown | None = None
-    timeline: Timeline | None = None
-    plan_id: int | None = None
-    plan_title: str = ""
-
-
-def activity_weeks(activity: tuple[DayActivity, ...]) -> tuple[ChartRow, ...]:
-    """Sum the daily series into 12 weekly rows."""
-    rows: list[ChartRow] = []
-    for offset in range(0, len(activity), 7):
-        week = activity[offset : offset + 7]
-        if not week:
-            continue
-        rows.append(ChartRow(week[0].day.strftime("%m-%d"), sum(day.done for day in week)))
-    return tuple(rows)
-
-
-def milestone_bars(progress: OverallProgress) -> tuple[ChartRow, ...]:
-    """One percentage row per ranked milestone."""
-    return tuple(ChartRow(item.title, item.percent) for item in progress.milestones)
-
-
-def status_bars(status: StatusBreakdown) -> tuple[ChartRow, ...]:
-    """One row per lifecycle state plus the blocked overlay."""
-    rows = (
-        ("todo", status.todo),
-        ("doing", status.doing),
-        ("done", status.done),
-        ("blocked", status.blocked),
-    )
-    return tuple(ChartRow(f"{label} {status.share(count)}%", count) for label, count in rows)
-
-
-def _events(store: Store) -> list[dict]:
+def _events(store: InsightsPort) -> list[dict]:
     """Every event, oldest first."""
     return list(reversed(store.feed(limit=1_000_000)))
 
@@ -196,7 +81,7 @@ def _scoped_tasks(
     }
 
 
-def _plan_title(store: Store, plan_id: int | None) -> str:
+def _plan_title(store: InsightsPort, plan_id: int | None) -> str:
     """The scoped plan's title, or an empty string for the global view."""
     if plan_id is None:
         return ""
@@ -248,190 +133,6 @@ def _scoped_events(
         for event in events
         if _event_in_scope(str(event.get("detail") or ""), plan_id, milestone_ids, task_ids)
     ]
-
-
-def _add_times(events: list[dict]) -> list[float]:
-    """Timestamps of plan, milestone, and task creation events."""
-    return [float(event["ts"]) for event in events if _ADDED.match(str(event.get("detail") or ""))]
-
-
-def _latest_task_events(events: list[dict]) -> dict[int, float]:
-    """Newest event timestamp for every task id."""
-    latest: dict[int, float] = {}
-    for event in events:
-        found = _TASK_REF.match(str(event.get("detail") or ""))
-        if found is not None:
-            latest[int(found.group(1))] = float(event["ts"])
-    return latest
-
-
-def _done_times(events: list[dict]) -> list[float]:
-    """Timestamps of every completion transition."""
-    return [float(event["ts"]) for event in events if _DONE.match(str(event.get("detail") or ""))]
-
-
-def _top_milestones(
-    milestones_by_plan: MilestonesByPlan,
-    tasks_by_milestone: dict[int, list[Task]],
-    latest: dict[int, float],
-    limit: int = MILESTONE_LIMIT,
-) -> tuple[MilestoneProgress, ...]:
-    """The busiest milestones, newest activity first."""
-    rows: list[tuple[float, MilestoneProgress]] = []
-    for milestones in milestones_by_plan.values():
-        for milestone in milestones:
-            tasks = tasks_by_milestone.get(milestone.id, [])
-            if not tasks:
-                continue
-            done = sum(1 for task in tasks if task.status == Status.DONE)
-            newest = max((latest.get(task.id, 0.0) for task in tasks), default=0.0)
-            rows.append(
-                (
-                    newest,
-                    MilestoneProgress(
-                        milestone_id=milestone.id,
-                        plan_id=milestone.plan_id,
-                        title=milestone.title,
-                        done=done,
-                        total=len(tasks),
-                    ),
-                )
-            )
-    rows.sort(
-        key=lambda item: (
-            -item[0],
-            -(item[1].total - item[1].done),
-            item[1].milestone_id,
-        )
-    )
-    return tuple(row for _newest, row in rows[:limit])
-
-
-def _activity(events: list[dict], now: float) -> tuple[DayActivity, ...]:
-    """Daily completions for the 12 weeks ending on the local today."""
-    today = date.fromtimestamp(now)
-    start = today - timedelta(days=ACTIVITY_DAYS - 1)
-    counts: dict[date, int] = {}
-    for when in _done_times(events):
-        day = date.fromtimestamp(when)
-        if start <= day <= today:
-            counts[day] = counts.get(day, 0) + 1
-    days: list[DayActivity] = []
-    for offset in range(ACTIVITY_DAYS):
-        day = start + timedelta(days=offset)
-        days.append(DayActivity(day=day, done=counts.get(day, 0)))
-    return tuple(days)
-
-
-def _progress(
-    milestones_by_plan: MilestonesByPlan,
-    tasks_by_milestone: dict[int, list[Task]],
-    events: list[dict],
-    now: float | None,
-) -> OverallProgress:
-    """Completion, elapsed time, and ETA from one task and event snapshot."""
-    tasks = _flatten(tasks_by_milestone)
-    done = sum(1 for task in tasks if task.status == Status.DONE)
-    starts = _add_times(events)
-    stamp = time.time() if now is None else now
-    elapsed = None
-    if starts:
-        elapsed = max(0.0, stamp - min(starts))
-    recent = [
-        when for when in _done_times(events) if stamp - ETA_WINDOW_DAYS * 86_400 <= when <= stamp
-    ]
-    rate = len(recent) / ETA_WINDOW_DAYS
-    remaining = len(tasks) - done
-    complete = bool(tasks) and remaining == 0
-    eta_days = None
-    if not complete and remaining > 0 and rate > 0:
-        eta_days = math.ceil(remaining / rate)
-    eta_date = None
-    if eta_days is not None:
-        eta_date = date.fromtimestamp(stamp) + timedelta(days=eta_days)
-    return OverallProgress(
-        done=done,
-        total=len(tasks),
-        elapsed_seconds=elapsed,
-        daily_rate=rate,
-        eta_days=eta_days,
-        eta_date=eta_date,
-        complete=complete,
-        milestones=_top_milestones(
-            milestones_by_plan,
-            tasks_by_milestone,
-            _latest_task_events(events),
-        ),
-    )
-
-
-def _timeline_starts(events: list[dict]) -> dict[tuple[str, int], float]:
-    """Earliest add timestamp for every plan, milestone, and task."""
-    starts: dict[tuple[str, int], float] = {}
-    for event in events:
-        found = _TIMELINE_ADD.match(str(event.get("detail") or ""))
-        if found is None:
-            continue
-        kind = {"P": "plan", "M": "milestone", "T": "task"}[found.group(1)]
-        key = (kind, int(found.group(2)))
-        stamp = float(event["ts"])
-        starts[key] = min(stamp, starts.get(key, stamp))
-    return starts
-
-
-def _timeline_ends(events: list[dict]) -> dict[tuple[str, int], float]:
-    """Newest completion timestamp for every plan and milestone."""
-    ends: dict[tuple[str, int], float] = {}
-    for event in events:
-        found = _STATUS_MOVE.match(str(event.get("detail") or ""))
-        if found is None or found.group(3) != "done":
-            continue
-        key = (found.group(1), int(found.group(2)))
-        stamp = float(event["ts"])
-        ends[key] = max(stamp, ends.get(key, stamp))
-    return ends
-
-
-def _doing_intervals(
-    kind: str,
-    oid: int,
-    status: Status,
-    events: list[dict],
-    fallback_start: float,
-    now: float,
-) -> tuple[tuple[float, float], ...]:
-    """Periods when one row's status was doing, with gaps for pauses."""
-    intervals: list[tuple[float, float]] = []
-    opened: float | None = None
-    for event in events:
-        found = _STATUS_MOVE.match(str(event.get("detail") or ""))
-        if found is None or found.group(1) != kind or int(found.group(2)) != oid:
-            continue
-        stamp = float(event["ts"])
-        target = found.group(3)
-        if target == "doing":
-            if opened is None:
-                opened = stamp
-        elif opened is not None:
-            intervals.append((opened, max(opened, stamp)))
-            opened = None
-    if opened is not None:
-        intervals.append((opened, max(opened, now)))
-    elif status == Status.DOING and not intervals:
-        intervals.append((fallback_start, max(fallback_start, now)))
-    return tuple(intervals)
-
-
-def _work_span(
-    active: tuple[tuple[float, float], ...],
-    added: float,
-    finished: float | None,
-    now: float,
-) -> tuple[float, float]:
-    """Span from the first doing start to the last doing end, or the add fallback."""
-    if active:
-        return min(interval[0] for interval in active), max(interval[1] for interval in active)
-    return added, max(added, finished if finished is not None else now)
 
 
 def _focused_milestone(
@@ -532,17 +233,8 @@ def _timeline(
     )
 
 
-def _status(tasks: list[Task]) -> StatusBreakdown:
-    return StatusBreakdown(
-        todo=sum(1 for task in tasks if task.status == Status.TODO),
-        doing=sum(1 for task in tasks if task.status == Status.DOING),
-        done=sum(1 for task in tasks if task.status == Status.DONE),
-        blocked=sum(1 for task in tasks if task.blocked),
-    )
-
-
 def snapshot(
-    store: Store,
+    store: InsightsPort,
     now: float | None = None,
     plan_id: int | None = None,
     scope_kind: str | None = None,

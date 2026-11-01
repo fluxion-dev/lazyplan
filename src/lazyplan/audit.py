@@ -10,28 +10,20 @@ from __future__ import annotations
 import re
 import statistics
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from pathlib import Path
 
 from . import vcs
+from .core.policies.insights import parse_since as parse_since
+from .core.policies.insights import status_after
+from .core.ports.insights import InsightsPort
 from .models import Status
-from .store import Store
 
 _STATUS = re.compile(r"^(plan|milestone|task) #(\d+) -> (todo|doing|done)")
 _ADDED = re.compile(r"^([PST])#(\d+) ")
 _DEFAULT_COVERAGE = 0.8
 _DEFAULT_LAG = 1.0
 _DEFAULT_GAPS = 0
-_UNITS = {
-    "minute": "minutes",
-    "minutes": "minutes",
-    "hour": "hours",
-    "hours": "hours",
-    "day": "days",
-    "days": "days",
-    "week": "weeks",
-    "weeks": "weeks",
-}
 
 
 @dataclass(frozen=True)
@@ -146,31 +138,7 @@ class Thresholds:
         return out
 
 
-def parse_since(text: str) -> float | None:
-    """Parse `7.days`, `2.hours`, or an ISO date into an epoch; None stays None."""
-    raw = (text or "").strip().lower()
-    if not raw:
-        return None
-    if "." in raw:
-        amount, _, unit = raw.partition(".")
-        unit_name = _UNITS.get(unit)
-        if unit_name is not None:
-            try:
-                value = float(amount)
-            except ValueError:
-                return None
-            delta = timedelta(**{unit_name: value})
-            return (datetime.now(UTC) - delta).timestamp()
-    try:
-        parsed = datetime.fromisoformat(raw)
-    except ValueError:
-        return None
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=UTC)
-    return parsed.timestamp()
-
-
-def plan_starts(store: Store) -> dict[int, float]:
+def plan_starts(store: InsightsPort) -> dict[int, float]:
     """Plan id -> add-event timestamp, in one pass over the feed."""
     out: dict[int, float] = {}
     for event in store.events_by_action("add"):
@@ -181,7 +149,7 @@ def plan_starts(store: Store) -> dict[int, float]:
     return out
 
 
-def plan_start(store: Store, plan_id: int) -> float | None:
+def plan_start(store: InsightsPort, plan_id: int) -> float | None:
     """Timestamp of the plan add event, or the earliest event naming it."""
     starts = plan_starts(store)
     if plan_id in starts:
@@ -196,7 +164,7 @@ def plan_start(store: Store, plan_id: int) -> float | None:
     return earliest
 
 
-def _status_times(store: Store) -> dict[int, list[tuple[float, Status]]]:
+def _status_times(store: InsightsPort) -> dict[int, list[tuple[float, Status]]]:
     """Per-task status events, oldest first."""
     out: dict[int, list[tuple[float, Status]]] = {}
     for event in store.events_by_action("status"):
@@ -208,7 +176,7 @@ def _status_times(store: Store) -> dict[int, list[tuple[float, Status]]]:
     return out
 
 
-def _done_times(store: Store) -> dict[tuple[str, int], float]:
+def _done_times(store: InsightsPort) -> dict[tuple[str, int], float]:
     """Latest done event per row, oldest-first scan so the last write wins."""
     out: dict[tuple[str, int], float] = {}
     for event in store.events_by_action("status"):
@@ -219,7 +187,7 @@ def _done_times(store: Store) -> dict[tuple[str, int], float]:
     return out
 
 
-def _plan_tasks(store: Store, plan_ids: list[int]) -> dict[int, int]:
+def _plan_tasks(store: InsightsPort, plan_ids: list[int]) -> dict[int, int]:
     """Task id -> milestone id for the plans in scope."""
     milestones = store.milestones_map()
     tasks = store.tasks_map()
@@ -231,7 +199,7 @@ def _plan_tasks(store: Store, plan_ids: list[int]) -> dict[int, int]:
     return out
 
 
-def _links(store: Store, plan_ids: list[int]) -> tuple[dict[str, set[int]], set[str]]:
+def _links(store: InsightsPort, plan_ids: list[int]) -> tuple[dict[str, set[int]], set[str]]:
     """Commit SHA -> owning task ids, plus every linked SHA for coverage."""
     tasks = _plan_tasks(store, plan_ids)
     links = store.vcs_links_map()
@@ -253,7 +221,7 @@ def _links(store: Store, plan_ids: list[int]) -> tuple[dict[str, set[int]], set[
     return by_sha, linked
 
 
-def _gaps(store: Store, plan_ids: list[int], since: float = 0.0) -> list[Gap]:
+def _gaps(store: InsightsPort, plan_ids: list[int], since: float = 0.0) -> list[Gap]:
     """Open criteria on rows done inside the window (all rows when since is 0)."""
     done = _done_times(store)
     plans = {plan.id: plan for plan in store.list_plans()}
@@ -287,14 +255,7 @@ def _gaps(store: Store, plan_ids: list[int], since: float = 0.0) -> list[Gap]:
     return out
 
 
-def _status_after(
-    times: dict[int, list[tuple[float, Status]]], task_id: int, after: int
-) -> float | None:
-    """Earliest doing/done event at or after one commit."""
-    candidates = [
-        ts for ts, status in times.get(task_id, []) if ts >= after and status != Status.TODO
-    ]
-    return min(candidates) if candidates else None
+_status_after = status_after
 
 
 def _lag(
@@ -327,7 +288,7 @@ def _lag(
 
 
 def compute(
-    store: Store,
+    store: InsightsPort,
     plan_ids: list[int],
     commits: list[Commit],
     since: float = 0.0,
@@ -372,7 +333,7 @@ def compute(
     )
 
 
-def _repo_paths(store: Store, plan_ids: list[int], cwd: str | Path) -> list[str]:
+def _repo_paths(store: InsightsPort, plan_ids: list[int], cwd: str | Path) -> list[str]:
     """Linked checkout paths, or cwd when the plans have no repo links."""
     seen: list[str] = []
     repos = store.repos_map()
@@ -385,7 +346,7 @@ def _repo_paths(store: Store, plan_ids: list[int], cwd: str | Path) -> list[str]
 
 
 def gather_commits(
-    store: Store, plan_ids: list[int], since: float, cwd: str | Path = "."
+    store: InsightsPort, plan_ids: list[int], since: float, cwd: str | Path = "."
 ) -> tuple[list[Commit], list[str]]:
     """Read non-merge commits from every effective repo after `since`."""
     repos = _repo_paths(store, plan_ids, cwd)
@@ -407,7 +368,7 @@ def gather_commits(
 
 
 def report(
-    store: Store,
+    store: InsightsPort,
     plan_ids: list[int] | None = None,
     since: float | None = None,
     cwd: str | Path = ".",
@@ -432,13 +393,13 @@ def report(
     return compute(store, plans, commits, since=since, repos=repos)
 
 
-def linked_shas(store: Store, plan_ids: list[int]) -> set[str]:
+def linked_shas(store: InsightsPort, plan_ids: list[int]) -> set[str]:
     """Every commit SHA already owned by a row in these plans."""
     return _links(store, plan_ids)[1]
 
 
 def unlinked_commits(
-    store: Store,
+    store: InsightsPort,
     plan_ids: list[int],
     since: float,
     cwd: str | Path = ".",

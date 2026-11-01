@@ -17,6 +17,7 @@ try:
         NewMilestoneScreen,
         NewTaskScreen,
     )
+    from lazyplan.tui.views.preview import common_lines
 except ImportError:  # stdlib-only interpreter: no textual, no screens
     tui_mod = None  # type: ignore[assignment]
 
@@ -145,14 +146,14 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
 
         async with self.app.run_test(size=(100, 30)) as pilot:
             await pilot.pause()
-            preview_lines: list[str] = []
             full = self.store.get_full("task", self.tid)
             assert full is not None
-            self.app._preview_common(preview_lines, full)
+            repos = full.get("effective_repos") or full.get("repos") or []
+            common_lines(full, self.app.git_state_controller.preview_bits(repos))
             await settle(pilot)
-            preview_lines = []
-            self.app._preview_common(preview_lines, full)
-            preview = "\n".join(preview_lines)
+            preview = "\n".join(
+                common_lines(full, self.app.git_state_controller.preview_bits(repos))
+            )
             self.assertIn("git:", preview)
             self.assertIn("main", preview)
             self.assertIn("clean", preview)

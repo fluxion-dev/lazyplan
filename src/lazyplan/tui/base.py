@@ -236,35 +236,6 @@ class AppBase(App):
         def _on_selection_changed(self, e: SelectionChanged) -> None:
             raise NotImplementedError
 
-        def _preview_tasks(self, kind: str, full: dict[str, Any]) -> list[dict[str, Any]]:
-            raise NotImplementedError
-
-        def _preview_title(self, kind: str, oid: int, obj: dict[str, Any]) -> list[str]:
-            raise NotImplementedError
-
-        def _preview_acceptance(self, lines: list[str], crits: list[dict]) -> None:
-            raise NotImplementedError
-
-        def _preview_source_summary(
-            self, lines: list[str], links: list[dict], forge: list[dict], repos: list[dict]
-        ) -> None:
-            raise NotImplementedError
-
-        def _preview_notes(self, lines: list[str], notes: list[dict[str, Any]]) -> None:
-            raise NotImplementedError
-
-        def _preview_common(self, lines: list[str], full: dict[str, Any]) -> None:
-            raise NotImplementedError
-
-        def _preview_plan(self, full: dict[str, Any], oid: int) -> list[str]:
-            raise NotImplementedError
-
-        def _preview_milestone(self, full: dict[str, Any], oid: int) -> list[str]:
-            raise NotImplementedError
-
-        def _preview_task(self, full: dict[str, Any], oid: int) -> list[str]:
-            raise NotImplementedError
-
         def update_preview(self, force: bool = False) -> None:
             raise NotImplementedError
 

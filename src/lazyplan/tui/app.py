@@ -49,6 +49,7 @@ from .state import AppState
 from .theme import register_themes
 from .tree import TreeMixin
 from .widgets.plan_tree import FoldTree
+from .widgets.preview_panel import PreviewPanel
 
 STATUS_CYCLE: list[Status | None] = [None, Status.TODO, Status.DOING, Status.DONE]
 DOUBLE_CLICK_WINDOW = 0.5  # seconds between two clicks on one row
@@ -154,8 +155,7 @@ if _TEXTUAL_OK:
                 with Horizontal(id="main"):
                     with Vertical(id="nav"):
                         yield FoldTree("plans", id="tree")
-                    with VerticalScroll(id="preview"):
-                        yield Static("", id="preview-body")
+                    yield PreviewPanel()
                 yield MetricsSection()
             yield Label("", id="hints")
             yield Label("", id="status")

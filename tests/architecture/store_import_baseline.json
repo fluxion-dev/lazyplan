@@ -16,7 +16,6 @@
     "lazyplan.presentation.setup.apply",
     "lazyplan.presentation.tui.app",
     "lazyplan.presentation.tui.base",
-    "lazyplan.services.transfer",
     "lazyplan.sync"
   ]
 }

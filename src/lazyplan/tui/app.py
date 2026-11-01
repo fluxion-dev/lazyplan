@@ -112,18 +112,34 @@ if _TEXTUAL_OK:
                 pass
 
         def _apply_layout(self, width: int | None = None) -> bool:
-            """Two panes when there is room; one pane on narrow terminals."""
+            """Apply the compact, narrow, and wide shell tiers."""
             main = query_one_opt(self, "#main", Horizontal)
             if main is None:
                 return False
             available = self.size.width if width is None else width
             narrow = available < 100
-            changed = self._narrow is not narrow
+            compact = available < 80
+            wide = available >= 120
+            changed = (
+                self._narrow is not narrow
+                or self.state.compact is not compact
+                or self.state.wide is not wide
+            )
             self._narrow = narrow
+            self.state.compact = compact
+            self.state.wide = wide
             main.set_class(narrow, "narrow")
+            main.set_class(compact, "compact")
+            main.set_class(wide, "wide")
+            panel = query_one_opt(self, "#panel", Vertical)
+            if panel is not None:
+                panel.set_class(compact, "compact")
             metrics = query_one_opt(self, "#metrics", MetricsSection)
             if metrics is not None:
                 metrics.set_class(narrow, "narrow")
+            screen = self.screen
+            screen.set_class(compact, "compact")
+            screen.set_class(wide, "wide")
             return changed
 
         def __init__(self, store: Store) -> None:

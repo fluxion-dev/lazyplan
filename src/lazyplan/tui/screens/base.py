@@ -48,6 +48,9 @@ if _TEXTUAL_OK:
 
         def on_mount(self) -> None:
             """Snapshot the starting values so Esc can tell a draft from a no-op."""
+            width = self.app.size.width
+            self.set_class(width < 80, "compact")
+            self.set_class(width >= 120, "wide")
             self._initial = self._snapshot()
 
         def _snapshot(self) -> tuple[str, ...]:

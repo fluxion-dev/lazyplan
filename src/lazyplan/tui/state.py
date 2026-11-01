@@ -30,3 +30,5 @@ class AppState:
     mounted: bool = False
     refreshing: bool = False
     narrow: bool | None = None
+    compact: bool = False
+    wide: bool = False

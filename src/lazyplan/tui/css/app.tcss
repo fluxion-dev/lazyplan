@@ -57,3 +57,33 @@
     color: $lp-text-muted;
     padding: 0 1;
 }
+
+#panel.compact {
+    border: none;
+}
+
+#main.compact #nav {
+    min-width: 0;
+}
+
+#main.wide #nav {
+    width: 3fr;
+}
+
+#main.wide #preview {
+    width: 2fr;
+    padding: 0 2;
+}
+
+Screen.compact #status, Screen.compact #hints {
+    padding: 0;
+}
+
+Screen.compact #dlg {
+    width: 96%;
+    padding: 0 1;
+}
+
+Screen.wide #dlg {
+    max-width: 84;
+}

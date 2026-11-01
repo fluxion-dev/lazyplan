@@ -69,6 +69,31 @@ class TestViewports(unittest.IsolatedAsyncioTestCase):
                     await pilot.press("escape")
                     await pilot.pause()
 
+    async def test_layout_tiers_and_breakpoints(self):
+        for width in (70, 80, 100, 120, 160):
+            with self.subTest(width=width):
+                app = tui_mod.create_app(self.db)
+                async with app.run_test(size=(width, 30)) as pilot:
+                    await pilot.pause()
+                    main = app.query_one("#main")
+                    preview = app.query_one("#preview")
+                    metrics = app.query_one("#metrics")
+                    if width < 100:
+                        self.assertTrue(main.has_class("narrow"))
+                        self.assertFalse(preview.display)
+                        self.assertFalse(metrics.display)
+                    else:
+                        self.assertFalse(main.has_class("narrow"))
+                        self.assertTrue(preview.display)
+                        self.assertTrue(metrics.display)
+                    self.assertEqual(main.has_class("compact"), width < 80)
+                    self.assertEqual(main.has_class("wide"), width >= 120)
+                    if width >= 120:
+                        self.assertGreater(
+                            app.query_one("#nav").region.width,
+                            preview.region.width,
+                        )
+
     async def test_forms_palette_help_and_confirm_at_both_sizes(self):
         for width, height in SIZES:
             with self.subTest(size=(width, height)):

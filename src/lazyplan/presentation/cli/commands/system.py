@@ -336,7 +336,7 @@ def _cmd_brief(store: Store | None, args: argparse.Namespace, actor: str) -> int
 
 
 def _cmd_stats(store: Store, args: argparse.Namespace, actor: str) -> int:
-    from .... import stats as stats_mod
+    from ....services import insights
 
     del actor
     since = audit.parse_since(args.since)
@@ -344,7 +344,7 @@ def _cmd_stats(store: Store, args: argparse.Namespace, actor: str) -> int:
     if since is None or stale_before is None:
         print(msg_error(ValueError("invalid --since or --stale-after")), file=sys.stderr)
         return 2
-    payload = stats_mod.compute(
+    payload = insights.stats.compute(
         store, since, stale_before, actor=getattr(args, "filter_actor", None)
     )
     if args.json:
@@ -378,10 +378,10 @@ def _cmd_stats(store: Store, args: argparse.Namespace, actor: str) -> int:
 
 
 def _cmd_lint(store: Store, args: argparse.Namespace, actor: str) -> int:
-    from .... import lint as lint_mod
+    from ....services import insights
 
     del actor
-    findings = lint_mod.lint_plan(store, args.plan)
+    findings = insights.lint.lint_plan(store, args.plan)
     if findings is None:
         print(msg_not_found("plan", args.plan), file=sys.stderr)
         return 1

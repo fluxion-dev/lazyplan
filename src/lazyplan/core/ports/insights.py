@@ -17,6 +17,8 @@ class InsightsPort(ProvenancePort, Protocol):
 
     def claims_map(self) -> dict[int, Claim]: ...
 
+    def get_claim(self, task_id: int) -> Claim | None: ...
+
     def list_claims(
         self,
         include_expired: bool = False,

@@ -10,19 +10,19 @@ import re
 import statistics
 import time
 
+from .core.ports.insights import InsightsPort
 from .models import Task
-from .store import Store
 
 _ADDED = re.compile(r"^T#(\d+) ")
 _STATUS = re.compile(r"^task #(\d+) -> (todo|doing|done)$")
 
 
-def _events(store: Store) -> list[dict]:
+def _events(store: InsightsPort) -> list[dict]:
     """All events oldest first."""
     return list(reversed(store.feed(limit=1_000_000)))
 
 
-def _all_tasks(store: Store) -> list[Task]:
+def _all_tasks(store: InsightsPort) -> list[Task]:
     """Every task in one query, in creation order."""
     return [task for tasks in store.tasks_map().values() for task in tasks]
 
@@ -97,7 +97,7 @@ ATTENTION_STALE_SECS = 24 * 3600
 
 
 def attention_ids(
-    store: Store, stale_after: float = ATTENTION_STALE_SECS, now: float | None = None
+    store: InsightsPort, stale_after: float = ATTENTION_STALE_SECS, now: float | None = None
 ) -> set[int]:
     """Task ids the TUI should surface as needing attention."""
     stamp = time.time() if now is None else now
@@ -127,7 +127,7 @@ def attention_ids(
 
 
 def compute(
-    store: Store,
+    store: InsightsPort,
     since: float,
     stale_before: float,
     actor: str | None = None,

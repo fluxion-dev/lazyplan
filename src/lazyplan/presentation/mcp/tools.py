@@ -10,9 +10,10 @@ import json
 from pathlib import Path
 from typing import Any
 
-from ... import audit, brief, lint, services, trace
+from ... import services, trace
 from ...models import Milestone, Plan, Status, Task
 from ...repo import find_repo_root, repo_label
+from ...services import insights
 from ...store import to_payload
 from ...vcs import detect_backend
 from .base import McpBase
@@ -389,22 +390,22 @@ class ToolsMixin(McpBase):
         return to_payload(vars(task))
 
     def _tool_lint(self, args: dict) -> object:
-        findings = lint.lint_plan(self._need_store(), int(args["plan"]))
+        findings = insights.lint.lint_plan(self._need_store(), int(args["plan"]))
         if findings is None:
             raise KeyError(f"plan {args['plan']} not found")
         return [finding.to_dict() for finding in findings]
 
     def _tool_audit(self, args: dict) -> object:
         store = self._need_store()
-        since = audit.parse_since(str(args["since"])) if args.get("since") else None
-        report = audit.report(
+        since = insights.audit.parse_since(str(args["since"])) if args.get("since") else None
+        report = insights.audit.report(
             store,
             [int(args["plan"])] if args.get("plan") else None,
             since,
             Path.cwd(),
         )
         payload = report.to_dict()
-        payload["breaches"] = audit.Thresholds().breaches(report)
+        payload["breaches"] = insights.audit.Thresholds().breaches(report)
         return payload
 
     def _tool_create_task(self, args: dict) -> object:
@@ -490,7 +491,7 @@ class ToolsMixin(McpBase):
 
     def _tool_brief(self, args: dict) -> object:
         plan_id = args.get("plan")
-        return brief.build(self._need_store(), plan_id)
+        return insights.brief.build(self._need_store(), plan_id)
 
     def _tool_criterion_tick(self, args: dict) -> object:
         criterion = self._need_store().set_criteria(int(args["id"]), True, actor=self.actor)

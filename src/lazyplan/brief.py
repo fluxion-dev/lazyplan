@@ -9,8 +9,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from . import audit
+from .core.ports.insights import InsightsPort
 from .models import Plan, Status, Task
-from .store import Store
 
 _MAX_PLANS = 3
 _MAX_LOOSE = 5
@@ -18,7 +18,7 @@ _MAX_GAPS = 5
 _MAX_PLAN_NOTES = 5
 
 
-def _active_plans(store: Store, plan_id: int | None) -> list[Plan]:
+def _active_plans(store: InsightsPort, plan_id: int | None) -> list[Plan]:
     if plan_id is not None:
         plan = store.get_plan(plan_id)
         return [plan] if plan is not None else []
@@ -30,14 +30,14 @@ def _active_plans(store: Store, plan_id: int | None) -> list[Plan]:
     return todo[:1]
 
 
-def _tasks(store: Store, plan: Plan) -> list[Task]:
+def _tasks(store: InsightsPort, plan: Plan) -> list[Task]:
     out: list[Task] = []
     for milestone in store.list_milestones(plan.id):
         out.extend(store.list_tasks(milestone.id))
     return out
 
 
-def _doing(store: Store, task: Task) -> dict:
+def _doing(store: InsightsPort, task: Task) -> dict:
     """Doing-task brief entry with its claim when one exists."""
     entry: dict = {"id": task.id, "title": task.title}
     claim = store.get_claim(task.id)
@@ -56,7 +56,7 @@ def _doing(store: Store, task: Task) -> dict:
 
 
 def _plan_brief(
-    store: Store,
+    store: InsightsPort,
     plan: Plan,
     commits: list[audit.Commit] | None,
     cwd: str | Path,
@@ -104,7 +104,7 @@ def _plan_brief(
 
 
 def build(
-    store: Store,
+    store: InsightsPort,
     plan_id: int | None = None,
     commits: list[audit.Commit] | None = None,
     cwd: str | Path = ".",

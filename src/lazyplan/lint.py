@@ -9,8 +9,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from .core.ports.insights import InsightsPort
 from .models import Task
-from .store import Store
 
 _PLACEHOLDER = re.compile(r"\b(TODO|TBD|FIXME)\b", re.IGNORECASE)
 
@@ -35,7 +35,7 @@ class Finding:
         }
 
 
-def _open_on_done(store: Store, kind: str, obj_id: int) -> list[Finding]:
+def _open_on_done(store: InsightsPort, kind: str, obj_id: int) -> list[Finding]:
     """Findings for a done row that still has open acceptance criteria."""
     if not store.open_criteria(kind, obj_id):
         return []
@@ -50,7 +50,7 @@ def _open_on_done(store: Store, kind: str, obj_id: int) -> list[Finding]:
     ]
 
 
-def _task_findings(store: Store, task: Task) -> list[Finding]:
+def _task_findings(store: InsightsPort, task: Task) -> list[Finding]:
     """Rules that depend only on one task's description and status."""
     findings: list[Finding] = []
     desc = task.description.lower()
@@ -90,7 +90,7 @@ def _task_findings(store: Store, task: Task) -> list[Finding]:
     return findings
 
 
-def lint_plan(store: Store, plan_id: int) -> list[Finding] | None:
+def lint_plan(store: InsightsPort, plan_id: int) -> list[Finding] | None:
     """Lint one plan; None when the plan does not exist."""
     plan = store.get_plan(plan_id)
     if plan is None:

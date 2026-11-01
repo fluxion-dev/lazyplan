@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import time
 
-from ... import audit
+from ...services import insights
 from ...store import Store
 from ..shared import porcelain
 from .emit import _porcelain_row
@@ -74,7 +74,7 @@ def _info_rows(payload: dict) -> list[str]:
     return rows
 
 
-def _audit_rows(report: audit.Report) -> list[str]:
+def _audit_rows(report: insights.audit.Report) -> list[str]:
     """Audit metrics plus every open gap."""
     window = (
         "all history"

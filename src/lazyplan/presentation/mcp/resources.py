@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 
-from ... import brief
+from ...services import insights
 from .base import McpBase
 
 
@@ -22,7 +22,7 @@ class ResourcesMixin(McpBase):
         try:
             store = self._need_store()
             if uri == "lazyplan://brief":
-                payload: object = brief.build(store)
+                payload: object = insights.brief.build(store)
             elif uri.startswith("lazyplan://plan/"):
                 plan_id = int(uri.rsplit("/", 1)[-1])
                 payload = store.get_full("plan", plan_id)

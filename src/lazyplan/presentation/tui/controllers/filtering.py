@@ -6,8 +6,8 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from .... import services
-from .... import stats as stats_mod
 from ....models import Milestone, Plan, Status, Task
+from ....services import insights
 
 if TYPE_CHECKING:
     from ..app import LazyplanApp
@@ -121,7 +121,9 @@ class TreeFilter:
         if source_filter in ("claims", "blocked", "attention"):
             claims = self.app.store.claims_map()
             attention = (
-                stats_mod.attention_ids(self.app.store) if source_filter == "attention" else set()
+                insights.stats.attention_ids(self.app.store)
+                if source_filter == "attention"
+                else set()
             )
             if source_filter == "claims":
                 return self.filter_tasks(base, lambda task: task.id in claims)

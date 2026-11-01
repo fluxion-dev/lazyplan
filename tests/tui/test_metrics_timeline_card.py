@@ -17,6 +17,7 @@ try:
     from lazyplan.tui.metrics.timeline import (
         TimelineCard,
         _active_segments,
+        _axis_ticks,
         _lane_window,
         _trace_glyph,
     )
@@ -25,6 +26,7 @@ except ImportError:  # stdlib-only interpreter: no textual
     TimelineLane = None  # type: ignore[assignment,misc]
     TimelineCard = None  # type: ignore[assignment,misc]
     _active_segments = None  # type: ignore[assignment]
+    _axis_ticks = None  # type: ignore[assignment]
     _lane_window = None  # type: ignore[assignment]
     _trace_glyph = None  # type: ignore[assignment]
 
@@ -160,6 +162,21 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(_trace_glyph("plan"), "═")
         self.assertEqual(_trace_glyph("milestone"), "─")
         self.assertEqual(_trace_glyph("task"), "·")
+
+    def test_axis_labels_adapt_to_the_span_and_stay_unique(self) -> None:
+        cases = (
+            (60, 8),
+            (6 * 3_600, 5),
+            (3 * 86_400, 12),
+            (30 * 86_400, 6),
+            (365 * 86_400, 8),
+        )
+        for span, width in cases:
+            with self.subTest(span=span):
+                ticks, labels = _axis_ticks(0, span, span)
+                self.assertEqual(len(ticks), len(labels))
+                self.assertEqual(len(set(labels)), len(labels))
+                self.assertEqual(len(labels[0]), width)
 
 
 if __name__ == "__main__":

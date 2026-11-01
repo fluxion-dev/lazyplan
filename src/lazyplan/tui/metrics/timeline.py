@@ -15,9 +15,15 @@ from .base import MetricCard
 
 LEGEND_LABEL_WIDTH = 16
 MAX_LEGEND_ROWS = 6
-X_TICKS = 5
 MIN_SPAN_SECONDS = 60.0
 TRACE_GLYPHS = {"plan": "═", "milestone": "─", "task": "·"}
+AXIS_FORMATS = (
+    (10 * 60, "%H:%M:%S", 4),
+    (2 * 86_400, "%H:%M", 5),
+    (10 * 86_400, "%b %d %H:%M", 4),
+    (120 * 86_400, "%b %d", 5),
+    (float("inf"), "%b %Y", 5),
+)
 
 
 def _trace_glyph(kind: str) -> str:
@@ -25,14 +31,17 @@ def _trace_glyph(kind: str) -> str:
     return TRACE_GLYPHS.get(kind, "─")
 
 
-def _tick_label(stamp: float, span: float) -> str:
-    """Compact wall-clock label for one x-axis tick."""
-    moment = datetime.fromtimestamp(stamp)
-    if span < 2 * 86_400:
-        return moment.strftime("%H:%M")
-    if span < 60 * 86_400:
-        return moment.strftime("%b %d")
-    return moment.strftime("%Y-%m-%d")
+def _axis_ticks(left: float, right: float, span: float) -> tuple[list[float], list[str]]:
+    """Tick positions and unique labels chosen from the timeline span."""
+    for limit, fmt, count in AXIS_FORMATS:
+        if span < limit:
+            ticks = [left + (right - left) * index / (count - 1) for index in range(count)]
+            labels = [datetime.fromtimestamp(stamp).strftime(fmt) for stamp in ticks]
+            if len(set(labels)) == len(labels):
+                return ticks, labels
+    ticks = [left + (right - left) * index / 4 for index in range(5)]
+    labels = [datetime.fromtimestamp(stamp).strftime("%Y-%m-%d %H:%M:%S") for stamp in ticks]
+    return ticks, labels
 
 
 def _active_segments(
@@ -122,13 +131,13 @@ class TimelineCard(MetricCard):
                     marker="dot",
                     color=color,
                 )
-        ticks = [left + (right - left) * index / (X_TICKS - 1) for index in range(X_TICKS)]
+        ticks, labels = _axis_ticks(left, right, span)
         rows = max(2, (plot.size.height or 12) - 3)
         legend_rows = min(count, MAX_LEGEND_ROWS, max(1, rows - 1))
         row_unit, top, bottom = _lane_window(rows, count, legend_rows)
         plt.xlim(left, right)
         plt.ylim(-0.5 - bottom, top)
-        plt.xticks(ticks, [_tick_label(stamp, span) for stamp in ticks])
+        plt.xticks(ticks, labels)
         plt.yticks(positions, ["" for _ in positions])
         if any(lane.active and lane.active[-1][1] >= timeline.now for lane in lanes):
             axis = token_rgb(self.app, "lp-chart-axis")

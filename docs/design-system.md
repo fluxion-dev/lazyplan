@@ -19,20 +19,23 @@ using `from lazyplan.design import plan_row`.
 
 ## Themes and colour tokens
 
-`tui/theme/tokens.py` defines `DARK_TOKENS` and `LIGHT_TOKENS`;
-`tui/theme/themes.py` registers `lazyplan-dark` and `lazyplan-light`.
-`LAZYPLAN_THEME=light` (or `lazyplan-light`) selects the light theme; any
-other value falls back to dark. Both themes carry the same semantic keys:
+`tui/theme/tokens.py` defines `DARK_TOKENS` (Catppuccin Mocha),
+`LIGHT_TOKENS` (Latte), and `VOID_TOKENS` (OLED black); `tui/theme/themes.py`
+registers `lazyplan-dark`, `lazyplan-void`, and `lazyplan-light`. `t` cycles
+them in that order and the metrics chart redraws after the CSS. `LAZYPLAN_THEME`
+accepts `mocha`/`dark`, `void`/`oled`, and `latte`/`light`; anything else falls
+back to mocha. All three themes carry the same semantic keys:
 
-`lp-surface`, `lp-surface-alt`, `lp-surface-raised`, `lp-border`,
-`lp-border-muted`, `lp-text-muted`, `lp-text-faint`, `lp-accent`,
-`lp-accent-muted`, `lp-focus`, `lp-status-todo`, `lp-status-doing`,
+`lp-surface`, `lp-surface-alt`, `lp-surface-raised`, `lp-surface-overlay`,
+`lp-border`, `lp-border-muted`, `lp-border-focus`, `lp-text-muted`,
+`lp-text-faint`, `lp-accent`, `lp-accent-muted`, `lp-focus`, `lp-cursor`,
+`lp-modal-bg`, `lp-overlay`, `lp-status-todo`, `lp-status-doing`,
 `lp-status-done`, `lp-status-blocked`, `lp-chip-bg`, `lp-chip-fg`,
-`lp-chart-bar`, `lp-chart-axis`, `lp-chart-label`, `lp-diff-add`,
-`lp-diff-remove`.
+`lp-git-clean`, `lp-git-dirty`, `lp-chart-bar`, `lp-chart-axis`,
+`lp-chart-label`, `lp-chart-lane-*`, `lp-diff-add`, `lp-diff-remove`.
 
 Use these as `$lp-*` variables in CSS. Do not put hex, `rgb()`, or named
-colours in `.tcss`; add the semantic key to both themes first. The same rule
+colours in `.tcss`; add the semantic key to every theme first. The same rule
 applies to chart configuration once the metrics band is themed.
 
 ## CSS modules
@@ -43,7 +46,7 @@ detail, source). Put a new selector in the narrowest module that owns it, and
 add `.tcss` files to `[tool.setuptools.package-data]` so installed wheels keep
 them.
 
-## Row language
+## Row language and icons
 
 Status glyphs are single-cell: `○ todo`, `◐ doing`, `● done`, with ANSI
 (CLI tty) and Rich (TUI) variants. In the TUI a doing row animates through
@@ -52,6 +55,14 @@ static `◐`; `LAZYPLAN_NO_SPINNER=1` freezes the tree too. Row grammar:
 `GLYPH KIND<id> title`, followed by a fixed stats grid. The title is the only
 flexible cell; it is bold and truncates with `…`. Ids and stats are dim, and
 done rows are dim. The full title lives in the preview/detail.
+
+A second icon family labels structure without competing with the status
+glyph: `◈` plan, `◇` milestone, `▹` task, `⎇` git/checkout, `◆` commit,
+`⇄` pull request, `⌁` source, `◎` why, `▸` next, `✓` acceptance, and `✎`
+notes. `design/tokens.py` owns `KIND_ICON`, `SECTION_ICON`, and `STATE_ICON`;
+views and screens read them instead of spelling glyphs locally. Rows keep the
+canonical grammar; the structural icons live in preview headings, breadcrumbs,
+the GIT pane, and the source trail.
 
 The stats grid uses fixed-width slots. Source stats come first: `progress`
 (plan and milestone), `commits` (`2c`), `pulls` (`1PR`, `PR`, `PR!`, `PR…`),
@@ -94,12 +105,15 @@ TUI).
 - `controllers/spinner.py` owns frame timing and doing-row repaint.
 - `controllers/git_state.py` owns the preview's git probe and TTL cache.
 - `views/preview.py` returns a structured `PreviewDocument`; it never touches
-  widgets. `widgets/preview_panel.py` renders that document inside
-  `#preview-body`.
+  widgets. `widgets/preview_panel.py` renders that document with a sticky
+  header above a scrolling body.
+- `views/git.py` builds the pure GIT document; `widgets/git_panel.py` renders
+  it under the preview. `controllers/git_state.py` supplies the cached
+  branch/dirty snapshot.
 - `widgets/plan_tree.py` is the `FoldTree`; `tree.py` keeps the event
   handlers and delegates behaviour to the tree controller.
-- `theme/` owns the dark and light themes and semantic `lp-*` tokens; `css/`
-  owns the shell, component, and screen stylesheets.
+- `theme/` owns the mocha, void, and latte themes and semantic `lp-*` tokens;
+  `css/` owns the shell, component, and screen stylesheets.
 - Data flows down through controllers and state; intents flow up as
   `SelectionChanged` / `RowAction` messages. Local writes bump `rev`; external
   writes arrive through the fingerprint poll.
@@ -107,27 +121,32 @@ TUI).
 ## Shell (`tui/app.py`)
 
 Visual: one-row `#hints` command bar. No `Header`, no `Footer`, no status
-bar, no bottom input. Each main section is a rounded card
-with a left-aligned title label, following Posting's pane treatment: `#nav`
-is `PLANS`, `#preview` is `PREVIEW`, and `#metrics` is `METRICS`. The focused
+bar, no bottom input. Each main section is a rounded card with a left-aligned
+lowercase title label: `plans`, `preview`, `git`, and `timeline`. The focused
 pane gets the accent border. Adaptive shell: `#main` holds `#nav` (focused
-`FoldTree`) and `#preview` (`PreviewPanel`) side by side at >= 100 columns;
-below that `#main.narrow` hides the preview and the tree owns the width.
-Above the breakpoint the tree takes 35% of the width and the preview 65%.
+`FoldTree`) and a `#side` column. `#side` stacks the preview above the GIT
+pane. At >= 100 columns the tree takes 45% and the side column 55%; below
+that `#main.narrow` hides the whole side column and the tree owns the width.
+The tree rows keep their canonical labels; the side column is the reading
+surface.
 
 Three layout tiers share one breakpoint:
-- compact (< 80): `#nav` drops its border, loses its minimum width, and
-  `#hints` loses its padding.
-- standard (80–99): the narrow shell hides preview and metrics; tree rows
-  own the width.
-- wide (>= 120): `#main.wide` adds more preview padding. The 100-column
+- compact (< 80): `#nav` drops its border and minimum width, `#main` loses its
+  gutter, and `#hints` loses a padding cell.
+- standard (80–99): the narrow shell hides preview, GIT, and timeline; tree
+  rows own the width.
+- wide (>= 120): `#main.wide` adds more preview/GIT padding. The 100-column
   visibility breakpoint stays the single responsive rule; only crossing it
   rebuilds the tree.
 
-The preview's `PreviewDocument` supplies a status pill, breadcrumb, section
-headings, acceptance `○` rows, next tasks, provenance, and a key legend. `#tree` uses
-Rich `Text` row labels; the component classes draw a muted guide, a raised
-cursor, and an accent cursor when the tree has focus.
+The preview's `PreviewDocument` supplies a status pill, breadcrumb, meta
+counts, section headings, acceptance `○` rows, next tasks, and provenance
+counts. `PreviewPanel` fixes the header while the body scrolls. `GitDocument`
+supplies checkout state, commits, PRs, and a border subtitle with counts.
+The GIT pane's height follows its content between 3 and 10 rows, so an empty
+selection gives the room back to the preview. `#tree` uses Rich `Text` row
+labels; the component classes draw muted guides, a raised cursor, and an
+accent cursor when the tree has focus.
 
 - `FoldTree` (`widgets/plan_tree.py`) extends the shared `NavTree`
   (`tree_nav.py`) and posts `SelectionChanged` / `RowAction` (see
@@ -160,10 +179,11 @@ cursor, and an accent cursor when the tree has focus.
 
 ## Metrics dashboard (`tui/metrics/`)
 
-- `#metrics` is a third always-on section inside `#panel`, below `#main`.
-  It takes 45% of the shell height with a 14-row minimum, has no border
-  title, and hides below 100 columns; `_apply_layout` toggles
-  `#metrics.narrow` with the same breakpoint as the preview.
+- `#metrics` is the third always-on section inside `#panel`, below `#main`.
+  It takes 40% of the shell height with an 11-row minimum and a 16-row
+  maximum, carries a `timeline` border title and the scoped plan name as its
+  border subtitle, and hides below 100 columns; `_apply_layout` toggles
+  `#metrics.narrow` with the same breakpoint as the side column.
 - `MetricsSection` hosts `metric-timeline` (Project timeline), which spans
   the full `#metric-cards` row. The card is a `VerticalScroll` around a
   `PlotextPlot`; the plot grows with the lane count and scrolls when lanes
@@ -241,12 +261,13 @@ inside a scrolling `#help` panel. `lpui help` prints the same string.
 ## Detail (`tui/screens/`)
 
 `DetailScreen` is a plain `Screen` with two modes.
-Read mode: a rounded `DETAIL` card with a breadcrumb/status header and a
-sectioned body. `views/detail.py` builds a `DetailDocument` containing the
-title, status pill, why/what (or details), acceptance checklist, child
-milestones/tasks with progress, pull requests, source summary (repos,
-branch/dirty, commit/file/PR counts, latest commits), commits, and repos.
-No editable widgets.
+Read mode: a rounded `detail` card with a sticky title/status/breadcrumb
+header and a sectioned body. `views/detail.py` builds a `DetailDocument`
+containing the title, status pill, why/what (or details), acceptance
+checklist, child milestones/tasks with progress, pull requests, and one
+merged `git · source` block with each checkout's branch/dirty state, commits
+(short SHA, subject, file count, URL, stale marker), and the `g source trail`
+entry point. No editable widgets.
 Edit mode (`e`): a labeled Title/Why/What or Details form with visible
 field labels, a multi-line TextArea, a footer action row, `ctrl+s`, and a
 dirty guard that confirms before discarding. Row actions: `s` status,
@@ -257,14 +278,15 @@ focuses Cancel by default.
 ## Source screen (`tui/screens/source.py`)
 
 `SourceScreen` is a plain `Screen` opened by `g` from the tree or detail.
-It is a rounded `SOURCE` card with `TRAIL` and `DETAIL` pane titles.
+It is a rounded `source` card with `trail` and `diff` pane titles. Rows carry
+one kind icon: `⎇` repository, `◆` commit, `▪` file, `⇄` pull request.
 Its tree is the same `NavTree`, so `j`/`k`, `left`/`right`, click-select,
 and click-arrow folding behave exactly like the main tree. It groups cached
 provenance into repository → commit → changed file, with linked PRs under
 the repo, and keeps a Static preview for the highlighted node. Row labels,
 preview bodies, and diff rendering live in `views/source.py`; the screen
-only builds the tree data and handles actions. Rows rely on their labels
-and counts; no marker glyph is appended. Highlighting a commit or file
+only builds the tree data and handles actions. Rows carry a kind icon and
+their counts. Highlighting a commit or file
 reads a bounded unified diff through `source.read_diff` (LRU keyed by repo,
 sha, path) and renders file/hunk headers, old/new line numbers, and
 green/red add/remove lines. Preview caps are `DIFF_PREVIEW_LINES` and
@@ -312,6 +334,7 @@ tests enforce the match.
 | z / Z | fold one / fold all | tree |
 | ? / F1 | help | tree |
 | c | command palette | tree |
+| t | cycle theme (mocha / void / latte) | tree |
 | q | quit | tree |
 | esc | back / cancel / clear filter | all |
 | o | open selected source item | source |

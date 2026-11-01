@@ -45,12 +45,13 @@ what it means for lazyplan (keyboard-only Tree + modal forms).
   theme, so a light theme can change layout colours without a second rule set.
 - https://textual.textualize.io/guide/design/ · https://textual.textualize.io/guide/CSS/
 
-lazyplan: `tui/theme/` owns `lazyplan-dark` and `lazyplan-light` plus the
-`lp-*` semantic variables; `tui/css/` owns `app.tcss`, `components.tcss`, and
-`screens.tcss`; `LAZYPLAN_THEME=light` selects the light theme. Add a token to
-both themes before using it in CSS. The shell keeps controllers in
-`tui/controllers/`, pure documents in `tui/views/`, and widgets in
-`tui/widgets/`; `App` only composes and wires them.
+lazyplan: `tui/theme/` owns `lazyplan-dark`, `lazyplan-void`, and
+`lazyplan-light` plus the `lp-*` semantic variables; `tui/css/` owns
+`app.tcss`, `components.tcss`, and `screens.tcss`; `LAZYPLAN_THEME` selects a
+palette at launch and `t` cycles them. Add a token to every theme before using
+it in CSS. The shell keeps controllers in `tui/controllers/`, pure documents in
+`tui/views/`, and widgets in `tui/widgets/`; `App` only composes and wires
+them.
 
 ## Mental model
 

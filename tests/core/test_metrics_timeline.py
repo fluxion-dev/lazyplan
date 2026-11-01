@@ -53,7 +53,99 @@ class TimelineSnapshotTest(unittest.TestCase):
                 ("Second", 1_200, 1_500),
             ],
         )
+        self.assertEqual([lane.active for lane in snap.timeline.lanes], [(), (), ()])
         self.assertEqual((snap.timeline.start, snap.timeline.end), (1_000, 1_500))
+
+    def test_active_intervals_pause_and_resume(self) -> None:
+        plan = self._at(1_000, lambda: self.store.add_plan("Plan"))
+        milestone = self._at(1_100, lambda: self.store.add_milestone(plan.id, "Milestone"))
+        self._at(
+            1_200,
+            lambda: services.set_status(
+                self.store, "milestone", milestone.id, Status.DOING, actor="qa"
+            ),
+        )
+        snap = metrics.snapshot(self.store, now=1_300, plan_id=plan.id)
+        assert snap.timeline is not None
+        self.assertEqual([lane.active for lane in snap.timeline.lanes], [((1_200, 1_300),)] * 2)
+
+        self._at(
+            1_400,
+            lambda: services.set_status(
+                self.store, "milestone", milestone.id, Status.TODO, actor="qa"
+            ),
+        )
+        snap = metrics.snapshot(self.store, now=1_500, plan_id=plan.id)
+        assert snap.timeline is not None
+        self.assertEqual([lane.active for lane in snap.timeline.lanes], [((1_200, 1_400),)] * 2)
+
+        self._at(
+            1_600,
+            lambda: services.set_status(
+                self.store, "milestone", milestone.id, Status.DOING, actor="qa"
+            ),
+        )
+        snap = metrics.snapshot(self.store, now=1_700, plan_id=plan.id)
+        assert snap.timeline is not None
+        self.assertEqual(
+            [lane.active for lane in snap.timeline.lanes],
+            [((1_200, 1_400), (1_600, 1_700))] * 2,
+        )
+
+        self._at(
+            1_800,
+            lambda: services.set_status(
+                self.store, "milestone", milestone.id, Status.DONE, actor="qa"
+            ),
+        )
+        snap = metrics.snapshot(self.store, now=1_900, plan_id=plan.id)
+        assert snap.timeline is not None
+        self.assertEqual(
+            [lane.active for lane in snap.timeline.lanes],
+            [((1_200, 1_400), (1_600, 1_800))] * 2,
+        )
+
+    def test_unstarted_and_direct_done_lanes_have_no_active_interval(self) -> None:
+        plan = self._at(1_000, lambda: self.store.add_plan("Plan"))
+        milestone = self._at(1_100, lambda: self.store.add_milestone(plan.id, "Milestone"))
+        task = self._at(1_150, lambda: self.store.add_task(milestone.id, "Task"))
+        self._at(
+            1_200,
+            lambda: services.set_status(self.store, "task", task.id, Status.DONE, actor="qa"),
+        )
+
+        snap = metrics.snapshot(self.store, now=2_000, plan_id=plan.id)
+
+        assert snap.timeline is not None
+        self.assertEqual([lane.active for lane in snap.timeline.lanes], [(), ()])
+
+    def test_doing_status_without_a_status_event_falls_back_to_the_start(self) -> None:
+        plan = self._at(1_000, lambda: self.store.add_plan("Plan"))
+        milestone = self._at(1_100, lambda: self.store.add_milestone(plan.id, "Milestone"))
+        self.store.set_status_raw("milestone", milestone.id, Status.DOING)
+
+        snap = metrics.snapshot(self.store, now=2_000, plan_id=plan.id)
+
+        assert snap.timeline is not None
+        self.assertEqual(snap.timeline.lanes[1].active, ((1_100, 2_000),))
+
+    def test_task_doing_intervals_are_parsed(self) -> None:
+        plan = self._at(1_000, lambda: self.store.add_plan("Plan"))
+        milestone = self._at(1_100, lambda: self.store.add_milestone(plan.id, "Milestone"))
+        task = self._at(1_150, lambda: self.store.add_task(milestone.id, "Task"))
+        self._at(
+            1_200,
+            lambda: services.set_status(self.store, "task", task.id, Status.DOING, actor="qa"),
+        )
+        self._at(
+            1_400,
+            lambda: services.set_status(self.store, "task", task.id, Status.DONE, actor="qa"),
+        )
+
+        events = metrics._events(self.store)
+        intervals = metrics._doing_intervals("task", task.id, Status.DONE, events, 1_150, 2_000)
+
+        self.assertEqual(intervals, ((1_200, 1_400),))
 
     def test_open_work_ends_at_now(self) -> None:
         plan = self._at(1_000, lambda: self.store.add_plan("Plan"))

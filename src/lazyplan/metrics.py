@@ -22,7 +22,7 @@ _ADDED = re.compile(r"^([PMT])#(\d+) ")
 _DONE = re.compile(r"^task #(\d+) -> done$")
 _TASK_REF = re.compile(r"^(?:T#|task #)(\d+)\b")
 _TIMELINE_ADD = re.compile(r"^([PM])#(\d+) ")
-_TIMELINE_DONE = re.compile(r"^(plan|milestone) #(\d+) -> done\b")
+_STATUS_MOVE = re.compile(r"^(plan|milestone|task) #(\d+) -> (todo|doing|done)\b")
 ETA_WINDOW_DAYS = 14
 MILESTONE_LIMIT = 5
 ACTIVITY_WEEKS = 12
@@ -113,6 +113,7 @@ class TimelineLane:
     title: str
     start: float
     end: float
+    active: tuple[tuple[float, float], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -210,12 +211,14 @@ def _event_in_scope(
         if letter == "M":
             return oid in milestone_ids
         return oid in task_ids
-    finished = _TIMELINE_DONE.match(detail)
+    finished = _STATUS_MOVE.match(detail)
     if finished is not None:
         kind, oid = finished.group(1), int(finished.group(2))
         if kind == "plan":
             return oid == plan_id
-        return oid in milestone_ids
+        if kind == "milestone":
+            return oid in milestone_ids
+        return oid in task_ids
     task_ref = _TASK_REF.match(detail)
     if task_ref is not None:
         return int(task_ref.group(1)) in task_ids
@@ -372,13 +375,43 @@ def _timeline_ends(events: list[dict]) -> dict[tuple[str, int], float]:
     """Newest completion timestamp for every plan and milestone."""
     ends: dict[tuple[str, int], float] = {}
     for event in events:
-        found = _TIMELINE_DONE.match(str(event.get("detail") or ""))
-        if found is None:
+        found = _STATUS_MOVE.match(str(event.get("detail") or ""))
+        if found is None or found.group(3) != "done":
             continue
         key = (found.group(1), int(found.group(2)))
         stamp = float(event["ts"])
         ends[key] = max(stamp, ends.get(key, stamp))
     return ends
+
+
+def _doing_intervals(
+    kind: str,
+    oid: int,
+    status: Status,
+    events: list[dict],
+    fallback_start: float,
+    now: float,
+) -> tuple[tuple[float, float], ...]:
+    """Periods when one row's status was doing, with gaps for pauses."""
+    intervals: list[tuple[float, float]] = []
+    opened: float | None = None
+    for event in events:
+        found = _STATUS_MOVE.match(str(event.get("detail") or ""))
+        if found is None or found.group(1) != kind or int(found.group(2)) != oid:
+            continue
+        stamp = float(event["ts"])
+        target = found.group(3)
+        if target == "doing":
+            if opened is None:
+                opened = stamp
+        elif opened is not None:
+            intervals.append((opened, max(opened, stamp)))
+            opened = None
+    if opened is not None:
+        intervals.append((opened, max(opened, now)))
+    elif status == Status.DOING and not intervals:
+        intervals.append((fallback_start, max(fallback_start, now)))
+    return tuple(intervals)
 
 
 def _timeline(
@@ -401,7 +434,13 @@ def _timeline(
     def lane(kind: str, oid: int, title: str, status: Status) -> TimelineLane:
         start = starts.get((kind, oid), fallback)
         end = ends.get((kind, oid), now) if status == Status.DONE else now
-        return TimelineLane(kind, title, start, max(start, end))
+        return TimelineLane(
+            kind,
+            title,
+            start,
+            max(start, end),
+            _doing_intervals(kind, oid, status, events, start, now),
+        )
 
     lanes: list[TimelineLane] = []
     if plan_id is None:

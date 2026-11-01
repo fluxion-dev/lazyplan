@@ -14,6 +14,7 @@ class PreviewPanel(VerticalScroll):
 
     def __init__(self) -> None:
         super().__init__(id="preview")
+        self.border_title = "PREVIEW"
 
     def compose(self) -> ComposeResult:
         yield Static("", id="preview-body")

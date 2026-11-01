@@ -27,7 +27,7 @@ class PreviewDocument:
     breadcrumb: str = ""
     meta: tuple[str, ...] = ()
     blocks: tuple[PreviewBlock, ...] = ()
-    footer: str = "enter open · e edit"
+    footer: str = "[dim]enter[/] open · [dim]e[/] edit · [dim]g[/] source · [dim]?[/] help"
 
     def render(self) -> str:
         lines = [self.header]
@@ -117,7 +117,7 @@ def acceptance_block(criteria: list[dict[str, Any]]) -> PreviewBlock | None:
     return PreviewBlock(
         f"acceptance {done}/{len(criteria)}{tail}",
         tuple(
-            f"  · {escape_markup(str(criterion.get('text', '')))}" for criterion in open_items[:3]
+            f"  ○ {escape_markup(str(criterion.get('text', '')))}" for criterion in open_items[:3]
         ),
     )
 

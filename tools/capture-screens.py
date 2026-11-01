@@ -326,6 +326,15 @@ async def capture_coordination(store: Store, target: Path) -> None:
         app.save_screenshot(str(target))
 
 
+async def capture_plan_detail(store: Store, target: Path) -> None:
+    plan_id = next(plan.id for plan in store.list_plans() if plan.name == "Ship the source trail")
+    app = create_app(str(store.path))
+    async with app.run_test(size=SIZE) as pilot:
+        app.push_screen(DetailScreen(store, "plan", plan_id))
+        await pilot.pause()
+        app.save_screenshot(str(target))
+
+
 async def capture_collaboration(store: Store, target: Path) -> None:
     task_id = _task_id(store, "Claim the release queue")
     app = create_app(str(store.path))
@@ -508,6 +517,12 @@ SCENES: dict[str, Scene] = {
         build_source_fixture,
         capture_source,
         "lazyplan source trail for a task showing a repository, commits, changed files, a merged pull request, and a unified diff.",
+    ),
+    "lpui-detail": Scene(
+        SIZE,
+        build_source_fixture,
+        capture_plan_detail,
+        "Read-only plan detail showing the reason, scope, acceptance criteria, milestones, and linked source.",
     ),
     "lpui-coordination": Scene(
         SIZE,

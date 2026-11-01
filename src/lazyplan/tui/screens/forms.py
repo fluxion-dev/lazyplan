@@ -5,6 +5,7 @@ The app shell (LazyplanApp) lives in tui.py; every overlay lives here.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
 
 try:
@@ -34,52 +35,86 @@ from .base import _Form, _row
 
 if _TEXTUAL_OK:
 
-    class NewPlanScreen(_Form):
-        """Create-plan form: title + why + what, all labeled."""
+    @dataclass(frozen=True)
+    class FormField:
+        """One labeled create-form field."""
 
-        def __init__(self, defaults: dict[str, str] | None = None) -> None:
+        key: str
+        label: str
+        placeholder: str
+        field_id: str
+        multiline: bool = False
+
+    class EntityForm(_Form):
+        """One labeled create form driven by a field spec."""
+
+        heading = ""
+        fields: tuple[FormField, ...] = ()
+        submit_label = "Create"
+
+        def __init__(self, defaults: dict[str, str] | None = None, context: str = "") -> None:
             super().__init__()
             self._defaults = defaults or {}
+            self._where = context
+
+        def _title(self) -> str:
+            return f"{self.heading} in {self._where}" if self._where else self.heading
 
         def compose(self) -> ComposeResult:
             with Vertical(id="dlg"):
-                yield Label("New plan")
-                yield Label("Title")
-                yield Input(
-                    value=self._defaults.get("title", ""), placeholder="title", id="f-title"
-                )
-                yield Label("Why")
-                yield TextArea(
-                    self._defaults.get("why", ""),
-                    placeholder="why does this exist?",
-                    id="f-why",
-                )
-                yield Label("What")
-                yield TextArea(
-                    self._defaults.get("what", ""),
-                    placeholder="what gets built?",
-                    id="f-what",
-                )
+                yield Label(self._title(), classes="form-title")
+                for field in self.fields:
+                    yield Label(field.label, classes="field-label")
+                    value = self._defaults.get(field.key, "")
+                    if field.multiline:
+                        yield TextArea(value, placeholder=field.placeholder, id=field.field_id)
+                    else:
+                        yield Input(value=value, placeholder=field.placeholder, id=field.field_id)
                 with _row():
-                    yield Button("Create", id="ok", variant="primary")
+                    yield Button(self.submit_label, id="ok", variant="primary")
                     yield Button("Cancel", id="cancel")
+
+        def _values(self) -> dict[str, str]:
+            values: dict[str, str] = {}
+            for field in self.fields:
+                if field.multiline:
+                    values[field.key] = self.query_one(f"#{field.field_id}", TextArea).text.strip()
+                else:
+                    values[field.key] = self.query_one(f"#{field.field_id}", Input).value.strip()
+            return values
 
         @on(Button.Pressed, "#ok")
         def _create(self) -> None:
-            self.dismiss(
-                {
-                    "title": self.query_one("#f-title", Input).value.strip(),
-                    "why": self.query_one("#f-why", TextArea).text.strip(),
-                    "what": self.query_one("#f-what", TextArea).text.strip(),
-                }
-            )
+            self.dismiss(self._values())
 
         @on(Button.Pressed, "#cancel")
         def _cancel(self) -> None:
             self.action_cancel()
 
-    class NewMilestoneScreen(_Form):
+    class NewPlanScreen(EntityForm):
+        """Create-plan form: title, why, and what."""
+
+        heading = "New plan"
+        fields = (
+            FormField("title", "Title", "title", "f-title"),
+            FormField("why", "Why", "why does this exist?", "f-why", multiline=True),
+            FormField("what", "What", "what gets built?", "f-what", multiline=True),
+        )
+
+    class NewMilestoneScreen(EntityForm):
         """Create-milestone form for one plan."""
+
+        heading = "New milestone"
+        fields = (
+            FormField("title", "Title", "title", "f-title"),
+            FormField(
+                "desc",
+                "Details",
+                "what user value does this slice deliver?",
+                "f-desc",
+                multiline=True,
+            ),
+        )
 
         def __init__(
             self,
@@ -87,43 +122,19 @@ if _TEXTUAL_OK:
             defaults: dict[str, str] | None = None,
             context: str = "",
         ) -> None:
-            super().__init__()
+            super().__init__(defaults, context or f"P{plan_id}")
             self.plan_id = plan_id
-            self._defaults = defaults or {}
-            self._where = context or f"P{plan_id}"
 
-        def compose(self) -> ComposeResult:
-            with Vertical(id="dlg"):
-                yield Label(f"New milestone in {self._where}")
-                yield Label("Title")
-                yield Input(
-                    value=self._defaults.get("title", ""), placeholder="title", id="f-title"
-                )
-                yield Label("Details")
-                yield TextArea(
-                    self._defaults.get("desc", ""),
-                    placeholder="what user value does this slice deliver?",
-                    id="f-desc",
-                )
-                with _row():
-                    yield Button("Create", id="ok", variant="primary")
-                    yield Button("Cancel", id="cancel")
-
-        @on(Button.Pressed, "#ok")
-        def _create(self) -> None:
-            self.dismiss(
-                {
-                    "title": self.query_one("#f-title", Input).value.strip(),
-                    "desc": self.query_one("#f-desc", TextArea).text.strip(),
-                }
-            )
-
-        @on(Button.Pressed, "#cancel")
-        def _cancel(self) -> None:
-            self.action_cancel()
-
-    class NewTaskScreen(_Form):
+    class NewTaskScreen(EntityForm):
         """Create-task form for one milestone."""
+
+        heading = "New task"
+        fields = (
+            FormField("title", "Title", "title", "f-title"),
+            FormField(
+                "desc", "Details", "approach, inputs, prerequisites", "f-desc", multiline=True
+            ),
+        )
 
         def __init__(
             self,
@@ -131,40 +142,8 @@ if _TEXTUAL_OK:
             defaults: dict[str, str] | None = None,
             context: str = "",
         ) -> None:
-            super().__init__()
+            super().__init__(defaults, context or f"M{milestone_id}")
             self.milestone_id = milestone_id
-            self._defaults = defaults or {}
-            self._where = context or f"M{milestone_id}"
-
-        def compose(self) -> ComposeResult:
-            with Vertical(id="dlg"):
-                yield Label(f"New task in {self._where}")
-                yield Label("Title")
-                yield Input(
-                    value=self._defaults.get("title", ""), placeholder="title", id="f-title"
-                )
-                yield Label("Details")
-                yield TextArea(
-                    self._defaults.get("desc", ""),
-                    placeholder="approach, inputs, prerequisites",
-                    id="f-desc",
-                )
-                with _row():
-                    yield Button("Create", id="ok", variant="primary")
-                    yield Button("Cancel", id="cancel")
-
-        @on(Button.Pressed, "#ok")
-        def _create(self) -> None:
-            self.dismiss(
-                {
-                    "title": self.query_one("#f-title", Input).value.strip(),
-                    "desc": self.query_one("#f-desc", TextArea).text.strip(),
-                }
-            )
-
-        @on(Button.Pressed, "#cancel")
-        def _cancel(self) -> None:
-            self.action_cancel()
 
     class ConfirmScreen(_Form):
         """One destructive confirmation; dismisses True on the confirm button."""

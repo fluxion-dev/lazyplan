@@ -32,6 +32,7 @@ from .screens import (
     NewTaskScreen,
     PaletteScreen,
 )
+from .theme import next_theme
 
 if _TEXTUAL_OK:
 
@@ -133,6 +134,13 @@ if _TEXTUAL_OK:
 
         def action_refresh(self) -> None:
             self._saved("manual refresh")
+
+        def action_cycle_theme(self) -> None:
+            """Cycle mocha, void, and latte; the chart redraws after the CSS."""
+            selected = next_theme(self.theme)
+            self.theme = selected
+            self.notify(f"theme: {selected.removeprefix('lazyplan-')}", timeout=2)
+            self.call_after_refresh(self.metrics_controller.refresh)
 
         def action_command_palette(self) -> None:
             """Open the modal command palette (c)."""
@@ -277,6 +285,7 @@ if _TEXTUAL_OK:
                 "open_pr": self.action_open_pr,
                 "source_trail": self.action_source_trail,
                 "command_palette": self.action_command_palette,
+                "cycle_theme": self.action_cycle_theme,
                 "export_md": self.action_export_md,
                 "help": self.action_help,
                 "update_prompt": self.action_update_prompt,

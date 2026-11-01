@@ -479,6 +479,18 @@ COMMANDS: tuple[Command, ...] = (
     ),
     # -- app -------------------------------------------------------------
     Command(
+        id="cycle-theme",
+        label="Cycle theme",
+        section=APP,
+        key="t",
+        context="always",
+        handler="cycle_theme",
+        aliases=("theme", "dark", "light", "void", "mocha", "latte", "appearance"),
+        help_group="APP",
+        help_hint="cycle mocha / void / latte",
+        tui_only=True,
+    ),
+    Command(
         id="command-palette",
         label="Command palette",
         section=APP,

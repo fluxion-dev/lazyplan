@@ -17,13 +17,18 @@ try:
         DARK_TOKENS,
         LAZYPLAN_DARK,
         LAZYPLAN_LIGHT,
+        LAZYPLAN_VOID,
         LIGHT_NAME,
         LIGHT_TOKENS,
+        THEME_NAMES,
         TOKEN_NAMES,
+        VOID_NAME,
+        VOID_TOKENS,
         chart_color,
         choose_theme,
         lane_baseline_rgb,
         lane_rgb,
+        next_theme,
         token_rgb,
     )
 except ImportError:  # pragma: no cover - stdlib-only interpreter
@@ -40,19 +45,33 @@ class ThemeTest(unittest.IsolatedAsyncioTestCase):
     async def asyncTearDown(self) -> None:
         self.tmp.cleanup()
 
-    def test_both_themes_share_the_semantic_token_set(self) -> None:
+    def test_all_themes_share_the_semantic_token_set(self) -> None:
         self.assertEqual(tuple(LAZYPLAN_DARK.variables), TOKEN_NAMES)
         self.assertEqual(tuple(LAZYPLAN_LIGHT.variables), TOKEN_NAMES)
+        self.assertEqual(tuple(LAZYPLAN_VOID.variables), TOKEN_NAMES)
         self.assertEqual(set(DARK_TOKENS), set(LIGHT_TOKENS))
+        self.assertEqual(set(DARK_TOKENS), set(VOID_TOKENS))
         self.assertEqual(LAZYPLAN_DARK.dark, True)
         self.assertEqual(LAZYPLAN_LIGHT.dark, False)
+        self.assertEqual(LAZYPLAN_VOID.dark, True)
 
     def test_choose_theme_accepts_short_names_and_falls_back_to_dark(self) -> None:
         self.assertEqual(choose_theme("dark"), DARK_NAME)
+        self.assertEqual(choose_theme("mocha"), DARK_NAME)
         self.assertEqual(choose_theme("lazyplan-dark"), DARK_NAME)
+        self.assertEqual(choose_theme("void"), VOID_NAME)
+        self.assertEqual(choose_theme("oled"), VOID_NAME)
         self.assertEqual(choose_theme("light"), LIGHT_NAME)
+        self.assertEqual(choose_theme("latte"), LIGHT_NAME)
         self.assertEqual(choose_theme("lazyplan-light"), LIGHT_NAME)
         self.assertEqual(choose_theme("nonsense"), DARK_NAME)
+
+    def test_next_theme_cycles_and_wraps(self) -> None:
+        self.assertEqual(THEME_NAMES, (DARK_NAME, VOID_NAME, LIGHT_NAME))
+        self.assertEqual(next_theme(DARK_NAME), VOID_NAME)
+        self.assertEqual(next_theme(VOID_NAME), LIGHT_NAME)
+        self.assertEqual(next_theme(LIGHT_NAME), DARK_NAME)
+        self.assertEqual(next_theme("unknown"), DARK_NAME)
 
     async def test_app_registers_both_themes_and_defaults_to_dark(self) -> None:
         with mock.patch.dict(os.environ, {}, clear=False):
@@ -99,6 +118,25 @@ class ThemeTest(unittest.IsolatedAsyncioTestCase):
                 low, high = sorted((first, second))
                 self.assertGreaterEqual(got, low)
                 self.assertLessEqual(got, high)
+
+    async def test_t_cycles_through_the_three_themes(self) -> None:
+        with mock.patch.dict(os.environ, {"LAZYPLAN_THEME": "dark"}):
+            app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(100, 30)) as pilot:
+            await pilot.pause()
+            self.assertEqual(app.theme, DARK_NAME)
+            for expected in (VOID_NAME, LIGHT_NAME, DARK_NAME):
+                await pilot.press("t")
+                await pilot.pause()
+                self.assertEqual(app.theme, expected)
+
+    async def test_void_theme_registers_and_resolves(self) -> None:
+        with mock.patch.dict(os.environ, {"LAZYPLAN_THEME": "void"}):
+            app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(100, 30)) as pilot:
+            await pilot.pause()
+            self.assertEqual(app.theme, VOID_NAME)
+            self.assertEqual(app.theme_variables["lp-surface"], VOID_TOKENS["lp-surface"])
 
     def test_chart_modules_do_not_hardcode_green(self) -> None:
         root = Path(__file__).resolve().parents[2] / "src" / "lazyplan" / "tui" / "metrics"

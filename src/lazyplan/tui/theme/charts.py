@@ -1,4 +1,4 @@
-"""Plotext colour adapters for the two lazyplan themes."""
+"""Plotext colour adapters for the lazyplan themes."""
 
 from __future__ import annotations
 

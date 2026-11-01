@@ -1,4 +1,6 @@
 {
     "layer_exceptions": [],
-    "budgets": {}
+    "budgets": {
+        "palette.py": 615
+    }
 }

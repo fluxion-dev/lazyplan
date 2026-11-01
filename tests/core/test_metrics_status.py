@@ -37,6 +37,15 @@ class StatusDistributionTest(unittest.TestCase):
         self.assertEqual((status.todo, status.doing, status.done), (1, 1, 2))
         self.assertEqual(status.total, 4)
 
+    def test_plan_id_counts_only_that_plans_tasks(self) -> None:
+        other = self.store.add_plan("Other plan")
+        other_milestone = self.store.add_milestone(other.id, "Other")
+        other_task = self.store.add_task(other_milestone.id, "Other task")
+        services.set_status(self.store, "task", other_task.id, Status.DONE, actor="qa")
+        status = metrics.snapshot(self.store, plan_id=self.plan.id).status
+        self.assertIsNotNone(status)
+        self.assertEqual((status.todo, status.done, status.total), (4, 0, 4))  # type: ignore[union-attr]
+
     def test_blocked_is_an_overlay(self) -> None:
         self._move(0, Status.DOING)
         self.store.set_blocked(self.tasks[0].id, True, "waiting", actor="qa")

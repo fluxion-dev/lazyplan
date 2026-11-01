@@ -43,6 +43,27 @@ class ProgressAggregationTest(unittest.TestCase):
         self.assertEqual(progress.done, 0)
         self.assertEqual(progress.percent, 0)
 
+    def test_plan_id_counts_only_that_plans_tasks(self) -> None:
+        plan_id, _milestone_id = self._seed()
+        other = self.store.add_plan("Other plan")
+        other_milestone = self.store.add_milestone(other.id, "Other")
+        self.store.add_task(other_milestone.id, "Other task")
+        progress = metrics.snapshot(self.store, plan_id=plan_id).progress
+        self.assertIsNotNone(progress)
+        self.assertEqual(progress.total, 2)  # type: ignore[union-attr]
+
+    def test_plan_id_ranks_only_that_plans_milestones(self) -> None:
+        plan_id, _milestone_id = self._seed()
+        other = self.store.add_plan("Other plan")
+        other_milestone = self.store.add_milestone(other.id, "Other milestone")
+        self.store.add_task(other_milestone.id, "Other task")
+        progress = metrics.snapshot(self.store, plan_id=plan_id).progress
+        self.assertIsNotNone(progress)
+        self.assertEqual(
+            [item.title for item in progress.milestones],  # type: ignore[union-attr]
+            ["Milestone"],
+        )
+
     def test_done_count_and_percentage(self) -> None:
         self._seed()
         all_tasks = [task for tasks in self.store.tasks_map().values() for task in tasks]

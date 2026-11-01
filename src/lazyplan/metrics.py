@@ -108,6 +108,8 @@ class MetricsSnapshot:
     activity: tuple[DayActivity, ...] = ()
     progress: OverallProgress | None = None
     status: StatusBreakdown | None = None
+    plan_id: int | None = None
+    plan_title: str = ""
 
 
 def activity_weeks(activity: tuple[DayActivity, ...]) -> tuple[ChartRow, ...]:
@@ -145,6 +147,28 @@ def _events(store: Store) -> list[dict]:
 def _flatten(tasks_by_milestone: dict[int, list[Task]]) -> list[Task]:
     """Every task in one snapshot, in creation order."""
     return [task for tasks in tasks_by_milestone.values() for task in tasks]
+
+
+def _scoped_tasks(
+    store: Store,
+    tasks_by_milestone: dict[int, list[Task]],
+    plan_id: int | None,
+) -> dict[int, list[Task]]:
+    """Task map limited to one plan's milestones, or all plans for None."""
+    if plan_id is None:
+        return tasks_by_milestone
+    return {
+        milestone.id: tasks_by_milestone.get(milestone.id, [])
+        for milestone in store.milestones_map().get(plan_id, ())
+    }
+
+
+def _plan_title(store: Store, plan_id: int | None) -> str:
+    """The scoped plan's title, or an empty string for the global view."""
+    if plan_id is None:
+        return ""
+    plan = store.get_plan(plan_id)
+    return plan.name if plan is not None else ""
 
 
 def _add_times(events: list[dict]) -> list[float]:
@@ -267,13 +291,24 @@ def _status(tasks: list[Task]) -> StatusBreakdown:
     )
 
 
-def snapshot(store: Store, now: float | None = None) -> MetricsSnapshot:
-    """Build the dashboard snapshot from one task and event read."""
-    tasks_by_milestone = store.tasks_map()
+def snapshot(
+    store: Store,
+    now: float | None = None,
+    plan_id: int | None = None,
+) -> MetricsSnapshot:
+    """Build the dashboard snapshot from one task and event read.
+
+    plan_id limits task counts, status shares, and milestone bars to that
+    plan. None keeps the all-plans view.
+    """
+    tasks_by_milestone = _scoped_tasks(store, store.tasks_map(), plan_id)
     events = _events(store)
     stamp = time.time() if now is None else now
+    title = _plan_title(store, plan_id)
     return MetricsSnapshot(
         activity=_activity(events, stamp),
         progress=_progress(store, tasks_by_milestone, events, stamp),
         status=_status(_flatten(tasks_by_milestone)),
+        plan_id=plan_id if title else None,
+        plan_title=title,
     )

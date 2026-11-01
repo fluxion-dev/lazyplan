@@ -33,6 +33,18 @@ class SnapshotContractTest(unittest.TestCase):
         self.assertIsNotNone(snap.progress)
         self.assertEqual(snap.progress.total, 0)  # type: ignore[union-attr]
 
+    def test_snapshot_reports_its_plan_scope(self) -> None:
+        plan = self.store.add_plan("Scoped plan")
+        snap = metrics.snapshot(self.store, plan_id=plan.id)
+        self.assertEqual((snap.plan_id, snap.plan_title), (plan.id, "Scoped plan"))
+
+    def test_unknown_plan_scope_is_empty(self) -> None:
+        snap = metrics.snapshot(self.store, plan_id=999)
+        self.assertIsNone(snap.plan_id)
+        self.assertEqual(snap.plan_title, "")
+        self.assertIsNotNone(snap.status)
+        self.assertEqual(snap.status.total, 0)  # type: ignore[union-attr]
+
     def test_values_are_frozen(self) -> None:
         snap = metrics.MetricsSnapshot()
         with self.assertRaises(FrozenInstanceError):

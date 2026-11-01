@@ -46,12 +46,14 @@
 
 #status {
     height: 1;
-    background: $primary;
+    background: $lp-surface;
+    color: $text;
+    padding: 0 1;
 }
 
 #hints {
     height: 1;
-    background: $panel;
+    background: $lp-surface-alt;
     color: $lp-text-muted;
     padding: 0 1;
 }

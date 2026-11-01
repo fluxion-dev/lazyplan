@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 try:
+    from rich.text import Text
     from textual.widgets import Label, Tree
 
     _TEXTUAL_OK = True
@@ -11,15 +12,13 @@ except ImportError:  # pragma: no cover
 
 from .. import services
 from .. import stats as stats_mod
-from ..design import (
-    truncate,
-)
 from ..repo import repo_label
 from .base import AppBase
 from .constants import STATUS_CYCLE
 from .screens import (
     FilterPromptScreen,
 )
+from .views.bars import status_bar
 
 if _TEXTUAL_OK:
 
@@ -71,40 +70,35 @@ if _TEXTUAL_OK:
             except Exception:
                 pass
 
-        def _status_text(self, counts: dict[str, int], note: str) -> str:
+        def _status_text(self, counts: dict[str, int], note: str) -> Text:
             """Human counts, filter state, update notice, and the latest event."""
             open_tasks = counts["tasks"] - counts["tasks_done"]
-            bits = [
-                repo_label(self.store.path),
-                f"{counts['plans']} plans",
-                f"{open_tasks} open",
-                f"{counts['plans_doing']} doing",
-            ]
-            attention = len(stats_mod.attention_ids(self.store))
-            if attention:
-                bits.append(f"attention {attention}")
-            if self.marked:
-                bits.append(f"marked {len(self.marked)}")
-            if self.status_filter is not None:
-                bits.append(f"status {self.status_filter.value}")
-            if self.source_filter != "all":
-                bits.append(f"source {self.source_filter}")
-            if self.filter_text.strip():
-                bits.append(f'filter "{self.filter_text.strip()}"')
-            if not self.show_all:
-                bits.append(f"recent {services.DEFAULT_PLAN_LIMIT}")
+            update = ""
             if self._update_notice is not None:
-                bits.append(
+                update = (
                     f"update v{self._update_latest}" if self._update_latest else "update available"
                 )
-            text = " · ".join(bits)
-            if note:
-                text += f" — {note}"
             events = self.store.feed(1)
+            event = ""
             if events:
-                event = events[0]
-                text += f" · last: {event['actor']} {event['kind']}/{event['action']}: {event['detail']}"
-            return truncate(text, max(10, self.size.width - 2))
+                latest = events[0]
+                event = f"{latest['actor']} {latest['kind']}/{latest['action']}: {latest['detail']}"
+            return status_bar(
+                repo=repo_label(self.store.path),
+                plans=counts["plans"],
+                open_tasks=open_tasks,
+                doing=counts["plans_doing"],
+                attention=len(stats_mod.attention_ids(self.store)),
+                marked=len(self.marked),
+                status=self.status_filter.value if self.status_filter is not None else "",
+                source=self.source_filter if self.source_filter != "all" else "",
+                filter_text=self.filter_text.strip(),
+                recent=None if self.show_all else services.DEFAULT_PLAN_LIMIT,
+                update=update,
+                note=note,
+                event=event,
+                width=max(10, self.size.width - 2),
+            )
 
         def action_filter_text(self) -> None:
             """Prompt for filter text (slash)."""

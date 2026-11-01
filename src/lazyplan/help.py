@@ -64,7 +64,7 @@ def help_text() -> str:
     return "\n".join(lines).rstrip()
 
 
-def hint_bar(width: int | None = None) -> str:
+def hint_bar(width: int | None = None, markup: bool = False) -> str:
     """One-line key hints; drops the least important items on narrow screens."""
     items = list(HINT_ITEMS)
     text = " · ".join(f"{key} {label}" for key, label in items)
@@ -73,6 +73,8 @@ def hint_bar(width: int | None = None) -> str:
             break
         items = [item for item in items if item[0] != key]
         text = " · ".join(f"{key_} {label}" for key_, label in items)
+    if markup:
+        return " · ".join(f"[reverse] {key} [/]{label}" for key, label in items)
     return text
 
 

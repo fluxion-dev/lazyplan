@@ -14,6 +14,7 @@ from .preview import (
     render_blocks,
 )
 from .rows import row_text
+from .bars import status_bar
 
 __all__ = [
     "PreviewBlock",
@@ -26,4 +27,5 @@ __all__ = [
     "common_lines",
     "render_blocks",
     "row_text",
+    "status_bar",
 ]

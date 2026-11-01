@@ -243,7 +243,7 @@ class TreeController:
         self.apply_folds()
         app.spinner_controller.paint()
         app.query_one("#status", Label).update(app._status_text(app.store.counts(), note))
-        app.query_one("#hints", Label).update(hint_bar(max(10, app.size.width - 2)))
+        app.query_one("#hints", Label).update(hint_bar(max(10, app.size.width - 2), markup=True))
         section = query_one_opt(app, "#metrics", MetricsSection)
         if section is not None:
             section.refresh_snapshot(metrics_mod.snapshot(app.store))

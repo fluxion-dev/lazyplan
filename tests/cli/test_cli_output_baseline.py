@@ -85,6 +85,13 @@ CASES: dict[str, list[str]] = {
     "audit_json": ["--json", "audit", "--plan", "1", "--since", "2026-01-01"],
     "feed_default": ["feed", "--limit", "3"],
     "feed_json": ["--json", "feed", "--limit", "3"],
+    "list_porcelain": ["--porcelain", "list"],
+    "list_tree_porcelain": ["--porcelain", "list", "--tree"],
+    "plan_show_porcelain": ["--porcelain", "plan", "show", "--id", "1"],
+    "export_json": ["export", "--format", "json"],
+    "export_markdown": ["export", "--format", "markdown"],
+    "share_html": ["share", "--plan", "1"],
+    "share_json": ["share", "--plan", "1", "--format", "json"],
 }
 
 
@@ -146,6 +153,11 @@ class TestCliBaseline(unittest.TestCase):
         self.assertEqual(code, 0, name)
         out = buf.getvalue()
         out = re.sub(r'"ts": [0-9.]+', '"ts": <ts>', out)
+        out = re.sub(
+            r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
+            "<uid>",
+            out,
+        )
         # Some commands report the resolved cwd; /var is a symlink to
         # /private/var on macOS, so normalize both spellings.
         roots = {self.tmp.name, os.path.realpath(self.tmp.name)}
@@ -166,6 +178,11 @@ class TestCliBaseline(unittest.TestCase):
 
     def test_json_output_is_unchanged(self):
         for name in sorted(n for n in CASES if n.endswith("_json")):
+            with self.subTest(name=name):
+                self.assertEqual(self._run(name), BASELINE[name])
+
+    def test_porcelain_export_and_share_output_is_unchanged(self):
+        for name in sorted(n for n in CASES if not n.endswith(("_default", "_json"))):
             with self.subTest(name=name):
                 self.assertEqual(self._run(name), BASELINE[name])
 

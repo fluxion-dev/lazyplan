@@ -90,7 +90,8 @@ The bottom of the TUI keeps three read-only chart cards: **Daily activity**,
 tracks and never change data or write to the database. The section is 13 rows
 tall and hides on terminals narrower than 100 columns, so an 80x24 terminal
 keeps the tree and preview unchanged. The charts are drawn with
-`textual-plotext` and follow the app theme.
+`textual-plotext`; `theme/charts.py` maps `lp-chart-bar`, `lp-chart-axis`, and
+`lp-chart-label` to Plotext colours for the active dark or light theme.
 
 **Daily activity** sums completions into 12 weekly bars, labelled with the
 week start dates. Each bar counts `done` transitions for that local week,
@@ -285,7 +286,9 @@ export, preview, and detail views keep the static `◐`; set
 `LAZYPLAN_NO_SPINNER=1` to freeze the tree.
 
 The TUI uses the `lazyplan-dark` theme by default. Set `LAZYPLAN_THEME=light`
-to use the light palette.
+to use the light palette. The main screen is a rounded preview card beside the
+tree, a status chip row, and reverse-video keycaps in the hint bar; the same
+tokens drive the detail, source, palette, help, and form screens.
 
 | key | action |
 |---|---|

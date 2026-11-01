@@ -64,6 +64,66 @@ def _seed(store: Store) -> int:
     return plan.id
 
 
+class TimelineTraceSemanticsTest(unittest.TestCase):
+    """Project and milestone traces start at doing, not at add."""
+
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.db = os.path.join(self.tmp.name, "traces.db")
+        self.store = Store(self.db)
+        self.plan = _at(1_000, lambda: self.store.add_plan("Plan title"))
+        self.first = _at(1_100, lambda: self.store.add_milestone(self.plan.id, "First"))
+        self.second = _at(1_200, lambda: self.store.add_milestone(self.plan.id, "Second"))
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    def _lanes(self) -> dict[str, object]:
+        timeline = metrics.snapshot(self.store, now=2_000, plan_id=self.plan.id).timeline
+        return {lane.title: lane for lane in timeline.lanes}
+
+    def test_milestone_traces_start_at_their_own_doing_event(self) -> None:
+        _at(
+            1_300, lambda: services.set_status(self.store, "milestone", self.first.id, Status.DOING)
+        )
+        _at(1_400, lambda: services.set_status(self.store, "milestone", self.first.id, Status.DONE))
+        _at(
+            1_500,
+            lambda: services.set_status(self.store, "milestone", self.second.id, Status.DOING),
+        )
+        _at(
+            1_600, lambda: services.set_status(self.store, "milestone", self.second.id, Status.DONE)
+        )
+
+        lanes = self._lanes()
+        first = lanes["First"]
+        second = lanes["Second"]
+        assert hasattr(first, "trace") and hasattr(second, "trace")
+        self.assertEqual(first.trace, ((1_300, 1_400),))
+        self.assertEqual(second.trace, ((1_500, 1_600),))
+        self.assertEqual(first.start, 1_300)
+        self.assertEqual(second.start, 1_500)
+        self.assertNotEqual(first.start, second.start)
+
+    def test_pause_splits_a_milestone_trace(self) -> None:
+        _at(
+            1_300, lambda: services.set_status(self.store, "milestone", self.first.id, Status.DOING)
+        )
+        _at(1_400, lambda: services.set_status(self.store, "milestone", self.first.id, Status.TODO))
+        _at(
+            1_500, lambda: services.set_status(self.store, "milestone", self.first.id, Status.DOING)
+        )
+        _at(1_600, lambda: services.set_status(self.store, "milestone", self.first.id, Status.DONE))
+
+        lane = self._lanes()["First"]
+        self.assertEqual(lane.trace, ((1_300, 1_400), (1_500, 1_600)))
+
+    def test_never_doing_milestone_keeps_a_lane_without_a_trace(self) -> None:
+        lane = self._lanes()["Second"]
+        self.assertEqual(lane.trace, ())
+        self.assertEqual(lane.start, 1_200)
+
+
 @unittest.skipUnless(tui_mod is not None and tui_mod._TEXTUAL_OK, "textual not installed")
 class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:

@@ -72,7 +72,9 @@ def test_palette_screen(snap_compare, data_app) -> None:
         pilot.app.selected = ("plan", pid)
         pilot.app.push_screen(PaletteScreen(pilot.app._palette_context()))
         await pilot.pause()
-        pilot.app.screen.query_one("#palette-input", Input).value = "theme"
+        palette_input = pilot.app.screen.query_one("#palette-input", Input)
+        palette_input.cursor_blink = False
+        palette_input.value = "theme"
         await pilot.pause()
         options = pilot.app.screen.query_one("#palette-list", OptionList)
         for index in range(options.option_count):

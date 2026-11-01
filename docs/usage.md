@@ -85,15 +85,16 @@ A source checkout updates with `git pull`.
 
 ### Metrics dashboard
 
-The bottom of the TUI keeps one read-only Gantt card. It follows the row under
-the cursor: a selected plan scopes the card to that plan, and a selected
+The bottom of the TUI keeps one read-only timeline card. It follows the row
+under the cursor: a selected plan scopes the card to that plan, and a selected
 milestone or task adds the focused milestone's task lanes and marks the
 selected task. With no selection, every plan gets a lane. Cursor changes
 refresh after a short debounce; status, text, and source filters, the plan
 limit, and space-marks never change scope. The card never writes to the
-database. The section takes 45% of the shell height with a 14-row minimum, has
-no border title, and hides on terminals narrower than 100 columns, so an 80x24
-terminal keeps the tree and preview unchanged.
+database. The section takes 40% of the shell height (11-row minimum, 16-row
+maximum), carries a `timeline` border title and the scoped plan name in its
+border subtitle, and hides on terminals narrower than 100 columns, so an 80x24
+terminal keeps the tree and hides the side column and timeline.
 
 Each project, milestone, and task gets one compact swimlane. A lane exists from
 its `add` event to its latest completion event, or to the current time while
@@ -113,7 +114,7 @@ every lane remains reachable at one row each. The chart refreshes within the
 one-second database poll and advances open lanes and the `now` marker every 15
 seconds. Charts are drawn with `textual-plotext`; `theme/charts.py` maps the
 `lp-chart-lane-*`, `lp-chart-axis`, and `lp-chart-label` tokens to Plotext
-colours for the active dark or light theme.
+colours for the active theme.
 
 Every lane keeps a dim full-width baseline from the chart's left edge to its
 right edge, so each project, milestone, and task row stays visible even when it
@@ -272,8 +273,10 @@ or `--no-skills` changes what the questions propose.
 `LAZYPLAN_NO_SETUP=1` skips first-run setup and upgrade review. `NO_COLOR`,
 `LAZYPLAN_NO_COLOR`, `CLICOLOR=0`, and `TERM=dumb` keep the wizard plain.
 `LAZYPLAN_NO_SPINNER=1` freezes the doing spinner in the TUI.
-`LAZYPLAN_THEME=light` switches the TUI to the light theme; unset or any other
-value uses the dark theme.
+`LAZYPLAN_THEME` selects a TUI palette: `dark` or `mocha` (the default),
+`void` for an OLED-black variant, and `light` or `latte` for the light theme.
+Unset or any other value uses mocha. Press `t` in the TUI to cycle the three
+palettes without restarting.
 `--placement repo` outside a git checkout falls back to home.
 
 ## Everyday commands
@@ -301,10 +304,20 @@ A doing row animates through `◐ ◓ ◑ ◒` while work is in progress. The CL
 export, preview, and detail views keep the static `◐`; set
 `LAZYPLAN_NO_SPINNER=1` to freeze the tree.
 
-The TUI uses the `lazyplan-dark` theme by default. Set `LAZYPLAN_THEME=light`
-to use the light palette. The main screen is a rounded preview card beside the
-tree, a status chip row, and reverse-video keycaps in the hint bar; the same
-tokens drive the detail, source, palette, help, and form screens.
+The TUI uses the Catppuccin-based `lazyplan-dark` theme by default. `t` cycles
+mocha, OLED-black `void`, and `latte`; `LAZYPLAN_THEME` selects one at launch.
+The main screen pairs the plan tree with a preview column: a sticky title and
+scrolling reason/scope/next/acceptance body sits above a `git` card for the
+linked checkouts, branch state, commits, and pull requests. The `git` card
+grows with its content between 3 and 10 rows and gives the room back to the
+preview when the selection has no linked checkout. A `timeline` card closes the
+bottom of the screen. Reverse-video keycaps fill the hint bar; the same tokens
+drive the detail, source, palette, help, and form screens.
+
+Previews, details, and the source trail share one single-cell icon family:
+`◈` plan, `◇` milestone, `▹` task, `⎇` checkout, `◆` commit, `⇄` pull request,
+and `⌁` source. Rows keep the canonical status glyph and `KIND<id> title`
+grammar; the structural icons head sections and breadcrumbs.
 
 Plan, milestone, and task rows keep their stats in fixed columns. Source stats
 come first (progress, commit count, PR, stale), then state markers (blocked,
@@ -328,6 +341,7 @@ and repo detail stays in the preview/GIT pane.
 | `A` | show all plans |
 | `?` | help |
 | `c` | command palette |
+| `t` | cycle theme: mocha, void, latte |
 | `q` | quit |
 
 The palette and the CLI use the same names: Create plan, Move to doing, Tick

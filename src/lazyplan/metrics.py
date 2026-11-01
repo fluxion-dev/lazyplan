@@ -13,8 +13,10 @@ import time
 from dataclasses import dataclass
 from datetime import date, timedelta
 
-from .models import Status, Task
+from .models import Milestone, Status, Task
 from .store import Store
+
+MilestonesByPlan = dict[int, list[Milestone]]
 
 _ADDED = re.compile(r"^([PMT])#(\d+) ")
 _DONE = re.compile(r"^task #(\d+) -> done$")
@@ -150,7 +152,7 @@ def _flatten(tasks_by_milestone: dict[int, list[Task]]) -> list[Task]:
 
 
 def _scoped_tasks(
-    store: Store,
+    milestones_by_plan: MilestonesByPlan,
     tasks_by_milestone: dict[int, list[Task]],
     plan_id: int | None,
 ) -> dict[int, list[Task]]:
@@ -159,7 +161,7 @@ def _scoped_tasks(
         return tasks_by_milestone
     return {
         milestone.id: tasks_by_milestone.get(milestone.id, [])
-        for milestone in store.milestones_map().get(plan_id, ())
+        for milestone in milestones_by_plan.get(plan_id, ())
     }
 
 
@@ -192,7 +194,7 @@ def _event_in_scope(
     return False
 
 
-def _scope_events(
+def _scoped_events(
     events: list[dict],
     plan_id: int | None,
     tasks_by_milestone: dict[int, list[Task]],
@@ -230,14 +232,14 @@ def _done_times(events: list[dict]) -> list[float]:
 
 
 def _top_milestones(
-    store: Store,
+    milestones_by_plan: MilestonesByPlan,
     tasks_by_milestone: dict[int, list[Task]],
     latest: dict[int, float],
     limit: int = MILESTONE_LIMIT,
 ) -> tuple[MilestoneProgress, ...]:
     """The busiest milestones, newest activity first."""
     rows: list[tuple[float, MilestoneProgress]] = []
-    for milestones in store.milestones_map().values():
+    for milestones in milestones_by_plan.values():
         for milestone in milestones:
             tasks = tasks_by_milestone.get(milestone.id, [])
             if not tasks:
@@ -283,7 +285,7 @@ def _activity(events: list[dict], now: float) -> tuple[DayActivity, ...]:
 
 
 def _progress(
-    store: Store,
+    milestones_by_plan: MilestonesByPlan,
     tasks_by_milestone: dict[int, list[Task]],
     events: list[dict],
     now: float | None,
@@ -316,7 +318,11 @@ def _progress(
         eta_days=eta_days,
         eta_date=eta_date,
         complete=complete,
-        milestones=_top_milestones(store, tasks_by_milestone, _latest_task_events(events)),
+        milestones=_top_milestones(
+            milestones_by_plan,
+            tasks_by_milestone,
+            _latest_task_events(events),
+        ),
     )
 
 
@@ -339,13 +345,14 @@ def snapshot(
     plan_id limits task counts, status shares, milestone bars, activity,
     elapsed time, and the ETA to that plan. None keeps the all-plans view.
     """
-    tasks_by_milestone = _scoped_tasks(store, store.tasks_map(), plan_id)
-    events = _scope_events(_events(store), plan_id, tasks_by_milestone)
+    milestones_by_plan = store.milestones_map()
+    tasks_by_milestone = _scoped_tasks(milestones_by_plan, store.tasks_map(), plan_id)
+    events = _scoped_events(_events(store), plan_id, tasks_by_milestone)
     stamp = time.time() if now is None else now
     title = _plan_title(store, plan_id)
     return MetricsSnapshot(
         activity=_activity(events, stamp),
-        progress=_progress(store, tasks_by_milestone, events, stamp),
+        progress=_progress(milestones_by_plan, tasks_by_milestone, events, stamp),
         status=_status(_flatten(tasks_by_milestone)),
         plan_id=plan_id if title else None,
         plan_title=title,

@@ -174,6 +174,23 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Task title *", chart)
         self.assertIn("·", chart)
 
+    async def test_external_status_change_refreshes_the_gantt(self) -> None:
+        milestone_id = self.store.list_milestones(self.plan_id)[0].id
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.tree_controller.track(app._row_nodes[("milestone", milestone_id)])
+            await pilot.pause(0.2)
+            before = self._chart(app.query_one(f"#{CARD_ID}"))
+            external = Store(self.db)
+            services.set_status(external, "task", self.task_id, Status.DOING, actor="qa")
+            app._poll()
+            await pilot.pause()
+            await pilot.pause()
+            after = self._chart(app.query_one(f"#{CARD_ID}"))
+        self.assertNotIn("now", before)
+        self.assertIn("now", after)
+
     async def test_no_selection_falls_back_to_all_plans(self) -> None:
         self._other_plan()
         app = tui_mod.create_app(self.db)

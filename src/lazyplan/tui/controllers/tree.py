@@ -9,7 +9,7 @@ from textual.widgets import Label, Static, Tree
 from textual.widgets.tree import TreeNode
 
 from ... import services
-from ...design import milestone_row, plan_row, status_prefix, task_row
+from ...design import apply_mark, milestone_row, plan_row, status_prefix, task_row
 from ...help import hint_bar
 from ...models import Milestone, Plan, Status, Task
 from ..views.rows import row_text
@@ -179,19 +179,20 @@ class TreeController:
         return out
 
     def paint_mark(self, key: tuple[str, int]) -> None:
-        """Add or remove the mark glyph on one existing row."""
+        """Update the fixed mark slot on one existing row."""
         app = self.app
-        label = app._row_labels.get(key)
+        base = app._row_labels.get(key)
         node = app._row_nodes.get(key)
-        if label is None or node is None:
+        if base is None or node is None:
             return
+        marked = key in app.marked
         if key in app.spinner_controller.rows:
-            label = (
-                status_prefix(Status.DOING, app.spinner_controller.tick)
-                + app.spinner_controller.rows[key]
+            label = status_prefix(Status.DOING, app.spinner_controller.tick) + apply_mark(
+                app.spinner_controller.rows[key], marked
             )
-        suffix = " [bold green]✓[/]" if key in app.marked else ""
-        node.set_label(row_text(label + suffix))
+        else:
+            label = apply_mark(base, marked)
+        node.set_label(row_text(label))
 
     def row_width(self, tree: Tree, depth: int) -> int:
         """Usable label width for a row at `depth`, excluding tree guides."""
@@ -292,10 +293,10 @@ class TreeController:
                 source_counts=(
                     (plan_stats[0], plan_stats[1], plan_stats[2]) if plan_stats else None
                 ),
-                marked=("plan", plan.id) in app.marked,
             )
+            plan_label = apply_mark(plan_text, ("plan", plan.id) in app.marked)
             plan_node = root.add(
-                row_text(plan_text),
+                row_text(plan_label),
                 data={"kind": "plan", "id": plan.id},
                 allow_expand=bool(milestones),
             )
@@ -318,10 +319,12 @@ class TreeController:
                         if milestone_stats
                         else None
                     ),
-                    marked=("milestone", milestone.id) in app.marked,
+                )
+                milestone_label = apply_mark(
+                    milestone_text, ("milestone", milestone.id) in app.marked
                 )
                 milestone_node = plan_node.add(
-                    row_text(milestone_text),
+                    row_text(milestone_label),
                     data={"kind": "milestone", "id": milestone.id},
                     allow_expand=bool(tasks),
                 )
@@ -349,10 +352,10 @@ class TreeController:
                             else False
                         ),
                         blocked=task.blocked,
-                        marked=("task", task.id) in app.marked,
                     )
+                    task_label = apply_mark(task_text, ("task", task.id) in app.marked)
                     leaf = milestone_node.add_leaf(
-                        row_text(task_text),
+                        row_text(task_label),
                         data={"kind": "task", "id": task.id},
                     )
                     app._row_nodes[("task", task.id)] = leaf

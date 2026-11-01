@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING, Any
 
-from ...design import SPINNER_FRAMES, SPINNER_INTERVAL, status_prefix
+from ...design import SPINNER_FRAMES, SPINNER_INTERVAL, apply_mark, status_prefix
 from ...models import Status
 from ..views.rows import row_text
 
@@ -55,5 +55,4 @@ class SpinnerController:
         for key, suffix in self.rows.items():
             node = self.app._row_nodes.get(key)
             if node is not None:
-                mark = " [bold green]✓[/]" if key in self.app.marked else ""
-                node.set_label(row_text(prefix + suffix + mark))
+                node.set_label(row_text(prefix + apply_mark(suffix, key in self.app.marked)))

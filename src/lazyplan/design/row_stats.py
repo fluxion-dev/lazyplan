@@ -36,15 +36,15 @@ SLOTS: dict[str, StatSlot] = {
     "commits": StatSlot("commits", 4, 4, 30, 1, "right"),
     "pulls": StatSlot("pulls", 4, 4, 500, 2, "right"),
     "stale": StatSlot("stale", 2, 2, 10, 3, "right"),
-    "marked": StatSlot("marked", 2, 2, 60, 4, "left"),
-    "blocked": StatSlot("blocked", 9, 2, 250, 5, "left"),
-    "claim": StatSlot("claim", 12, 8, 125, 6, "left"),
+    "blocked": StatSlot("blocked", 9, 2, 250, 4, "left"),
+    "claim": StatSlot("claim", 12, 8, 125, 5, "left"),
+    "marked": StatSlot("marked", 2, 2, 60, 6, "left"),
 }
 
 KIND_SLOTS: dict[str, tuple[str, ...]] = {
     "plan": ("progress", "commits", "pulls", "stale", "marked"),
     "milestone": ("progress", "commits", "pulls", "stale", "marked"),
-    "task": ("commits", "pulls", "stale", "marked", "blocked", "claim"),
+    "task": ("commits", "pulls", "stale", "blocked", "claim", "marked"),
 }
 
 

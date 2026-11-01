@@ -42,11 +42,11 @@ class StatsLayoutTest(unittest.TestCase):
 
         self.assertEqual(
             [key for key, _compact in layout],
-            ["pulls", "marked", "blocked", "claim"],
+            ["pulls", "blocked", "claim", "marked"],
         )
         self.assertEqual(
             [compact for _key, compact in layout],
-            [False, False, True, True],
+            [False, True, True, False],
         )
 
     def test_milestone_layout_drops_stale_before_progress(self) -> None:

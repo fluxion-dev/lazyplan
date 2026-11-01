@@ -43,7 +43,8 @@ class TestCommitChips(unittest.IsolatedAsyncioTestCase):
         async with self.app.run_test() as pilot:
             await pilot.pause()
             task_label = str(self.app._row_nodes[("task", self.tid)].label)
-            self.assertIn(self.sha[:12], task_label)
+            self.assertIn("1c", task_label)
+            self.assertNotIn(self.sha[:12], task_label)
             plan_label = str(self.app._row_nodes[("plan", self.pid)].label)
             self.assertNotIn("b" * 12, plan_label)
             self.assertIn("2c", plan_label)
@@ -69,7 +70,8 @@ class TestCommitChips(unittest.IsolatedAsyncioTestCase):
             plan = str(self.app._row_nodes[("plan", self.pid)].label)
             for label in (linked, repo_only, bare, plan):
                 self.assertNotIn("⎇", label)
-            self.assertIn(self.sha[:12], linked)
+            self.assertIn("1c", linked)
+            self.assertNotIn(self.sha[:12], linked)
             self.assertIn("2c", plan)
 
     async def test_detail_lists_commits(self):

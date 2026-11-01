@@ -37,6 +37,7 @@ from .empty import msg_not_found as msg_not_found
 from .row_stats import RowStats as RowStats
 from .row_stats import render_stats as render_stats
 from .row_stats import stats_layout as stats_layout
+from .rows import apply_mark as apply_mark
 from .rows import milestone_label as milestone_label
 from .rows import milestone_row as milestone_row
 from .rows import plan_label as plan_label
@@ -51,6 +52,7 @@ from .text import STATUS_RICH as STATUS_RICH
 from .text import commits_chip as commits_chip
 from .text import escape_markup as escape_markup
 from .text import pr_chip as pr_chip
+from .text import progress_bar as progress_bar
 from .text import progress_text as progress_text
 from .text import repo_project_name as repo_project_name
 from .text import repos_chip as repos_chip
@@ -86,6 +88,7 @@ __all__ = [
     "STATUS_GLYPH",
     "STATUS_RICH",
     "TASK",
+    "apply_mark",
     "commits_chip",
     "escape_markup",
     "milestone_label",
@@ -97,6 +100,7 @@ __all__ = [
     "plan_label",
     "plan_row",
     "pr_chip",
+    "progress_bar",
     "progress_text",
     "repo_project_name",
     "render_stats",

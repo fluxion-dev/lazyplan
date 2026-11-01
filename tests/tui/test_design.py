@@ -13,6 +13,11 @@ from lazyplan.cli import main as lpui_main
 from lazyplan.models import Milestone, Plan, Status, Task
 from lazyplan.store import Store
 
+try:
+    from rich.text import Text
+except ImportError:  # pragma: no cover - stdlib-only interpreter
+    Text = None  # type: ignore[assignment,misc]
+
 
 class TestDesignSystem(unittest.TestCase):
     def setUp(self):
@@ -104,13 +109,38 @@ class TestDesignSystem(unittest.TestCase):
         p = Plan(id=12, name="A very long plan title")
         row = design.plan_row(p, progress=(3, 7), width=24)
         self.assertIn("3/7", row)
+        self.assertIn("▰", row)
         self.assertIn("…", row)
         self.assertNotIn("title", row)  # truncated before the last word
         full = design.plan_row(p, progress=(3, 7), width=80)
         self.assertIn("A very long plan title", full)
+        self.assertIn("▰▰", full)
         self.assertNotIn("…", full)
         self.assertEqual(design.truncate("short", 10), "short")
         self.assertEqual(design.truncate("abcdef", 3), "ab…")
+        self.assertEqual(design.progress_bar(0, 0), "")
+        self.assertEqual(design.progress_bar(0, 5), "▱▱▱▱▱")
+        self.assertEqual(design.progress_bar(5, 5), "▰▰▰▰▰")
+        self.assertEqual(design.progress_bar(1, 5), "▰▱▱▱▱")
+
+    @unittest.skipUnless(Text is not None, "rich not installed")
+    def test_plan_rows_keep_the_stats_block_start(self):
+        p = Plan(id=1, name="Plan")
+        width = 80
+        first = Text.from_markup(design.plan_row(p, progress=(3, 7), width=width)).plain
+        second = Text.from_markup(
+            design.plan_row(
+                p,
+                progress=(3, 7),
+                source_counts=(2, 1, 1),
+                marked=True,
+                width=width,
+            )
+        ).plain
+
+        self.assertEqual(len(first), width)
+        self.assertEqual(len(second), width)
+        self.assertEqual(first.index("3/7"), second.index("3/7"))
 
     def test_no_criteria_progress_in_labels(self):
         p = self.store.add_plan("P")
@@ -124,8 +154,9 @@ class TestDesignSystem(unittest.TestCase):
 
     def test_plan_row_escapes_title(self):
         p = Plan(id=1, name="Ray [old]")
-        self.assertEqual(design.plan_row(p), "[dim]○[/] [dim]P1[/] [bold]Ray \\[old][/]")
-        self.assertNotIn("TODO", design.plan_row(p))
+        row = design.plan_row(p, width=80)
+        self.assertIn(r"[bold]Ray \[old][/]", row)
+        self.assertNotIn("TODO", row)
 
     def test_cli_doing_row_stays_static(self):
         p = self.store.add_plan("P")
@@ -235,7 +266,9 @@ class TestDesignSystem(unittest.TestCase):
         p = Plan(id=1, name="N")
         self.assertEqual(design.plan_row(p), design.plan_row(p, links=None))
         self.assertEqual(design.plan_row(p), design.plan_row(p, links=[]))
-        self.assertIn("a" * 12, design.plan_row(p, links=["a" * 40]))
+        linked = design.plan_row(p, links=["a" * 40])
+        self.assertIn("1c", linked)
+        self.assertNotIn("a" * 12, linked)
 
     def test_repo_project_name_prefers_remote(self):
         self.assertEqual(
@@ -276,18 +309,22 @@ class TestDesignSystem(unittest.TestCase):
         )
         self.assertEqual(design.plan_label(p, self.store), "○ P1 P [api]")
 
-    def test_plan_row_shows_repo_chip(self):
+    def test_plan_row_omits_repo_chip(self):
         p = Plan(id=1, name="N")
         self.assertEqual(design.plan_row(p), design.plan_row(p, repos=None))
         self.assertEqual(design.plan_row(p), design.plan_row(p, repos=[]))
         row = design.plan_row(p, repos=[{"repo_path": "/x/api", "repo_remote": ""}])
-        self.assertIn("[dim]api[/]", row)
+        self.assertNotIn("api", row)
         s = Milestone(id=2, plan_id=1, title="S")
         self.assertEqual(design.milestone_row(s), design.milestone_row(s, links=[]))
-        self.assertIn("b" * 12, design.milestone_row(s, links=["b" * 40]))
+        milestone = design.milestone_row(s, links=["b" * 40])
+        self.assertIn("1c", milestone)
+        self.assertNotIn("b" * 12, milestone)
         t = Task(id=3, milestone_id=2, title="T")
         self.assertEqual(design.task_row(t), design.task_row(t, links=None))
-        self.assertIn("c" * 12, design.task_row(t, links=["c" * 40]))
+        task = design.task_row(t, links=["c" * 40])
+        self.assertIn("1c", task)
+        self.assertNotIn("c" * 12, task)
 
 
 if __name__ == "__main__":

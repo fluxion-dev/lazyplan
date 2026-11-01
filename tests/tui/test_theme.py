@@ -22,6 +22,9 @@ try:
         TOKEN_NAMES,
         chart_color,
         choose_theme,
+        lane_baseline_rgb,
+        lane_rgb,
+        token_rgb,
     )
 except ImportError:  # pragma: no cover - stdlib-only interpreter
     tui_mod = None  # type: ignore[assignment]
@@ -81,6 +84,21 @@ class ThemeTest(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             self.assertEqual(chart_color(app), "green")
             self.assertEqual(chart_color(app, "lp-chart-axis"), "gray")
+
+    async def test_lane_baseline_rgb_blends_toward_the_surface(self) -> None:
+        with mock.patch.dict(os.environ, {"LAZYPLAN_THEME": "dark"}):
+            app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(100, 30)) as pilot:
+            await pilot.pause()
+            lane = lane_rgb(app, 0)
+            surface = token_rgb(app, "lp-surface")
+            baseline = lane_baseline_rgb(app, 0)
+            self.assertNotEqual(baseline, lane)
+            self.assertNotEqual(baseline, surface)
+            for got, first, second in zip(baseline, lane, surface, strict=True):
+                low, high = sorted((first, second))
+                self.assertGreaterEqual(got, low)
+                self.assertLessEqual(got, high)
 
     def test_chart_modules_do_not_hardcode_green(self) -> None:
         root = Path(__file__).resolve().parents[2] / "src" / "lazyplan" / "tui" / "metrics"

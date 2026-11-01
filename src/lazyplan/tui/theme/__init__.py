@@ -2,7 +2,14 @@
 
 from __future__ import annotations
 
-from .charts import apply_chart_theme, chart_color, lane_color, lane_rgb, token_rgb
+from .charts import (
+    apply_chart_theme,
+    chart_color,
+    lane_baseline_rgb,
+    lane_color,
+    lane_rgb,
+    token_rgb,
+)
 from .themes import (
     DARK_NAME,
     ENV_VAR,
@@ -28,6 +35,7 @@ __all__ = [
     "apply_chart_theme",
     "chart_color",
     "choose_theme",
+    "lane_baseline_rgb",
     "lane_color",
     "lane_rgb",
     "register_themes",

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import os
 import tempfile
+import time
+from contextlib import contextmanager
 from unittest import mock
 
 import pytest
@@ -16,6 +18,24 @@ from lazyplan.tui.screens.source import SourceScreen
 
 FIXED_START = 1_700_000_000.0
 FIXED_NOW = FIXED_START + 30 * 86_400
+
+
+@contextmanager
+def utc_timezone():
+    """Pin local-time formatting so timeline labels match every runner."""
+    previous = os.environ.get("TZ")
+    os.environ["TZ"] = "UTC"
+    if hasattr(time, "tzset"):
+        time.tzset()
+    try:
+        yield
+    finally:
+        if previous is None:
+            os.environ.pop("TZ", None)
+        else:
+            os.environ["TZ"] = previous
+        if hasattr(time, "tzset"):
+            time.tzset()
 
 
 @pytest.fixture()
@@ -39,7 +59,7 @@ def data_app():
             scope_id=scope_id,
         )
 
-    with tempfile.TemporaryDirectory() as tmp:
+    with utc_timezone(), tempfile.TemporaryDirectory() as tmp:
         db = os.path.join(tmp, "data.db")
         with mock.patch("lazyplan.store.base.time.time", return_value=FIXED_START):
             store = Store(db)

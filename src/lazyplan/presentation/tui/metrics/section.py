@@ -34,7 +34,9 @@ if _TEXTUAL_OK:
 
         def refresh_snapshot(self, snapshot: MetricsSnapshot) -> None:
             """Push one snapshot into the card; the section never computes metrics."""
-            self.border_subtitle = f" {truncate(snapshot.plan_title or 'all plans', 28)} "
+            empty = snapshot.timeline.empty if snapshot.timeline is not None else ""
+            label = snapshot.plan_title or empty or "select a row"
+            self.border_subtitle = f" {truncate(label, 28)} "
             card = query_one_opt(self, "#metric-timeline", TimelineCard)
             if card is not None:
                 card.refresh_timeline(snapshot.timeline)

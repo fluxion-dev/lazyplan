@@ -86,6 +86,22 @@ in JSON mode. If the upgrade cannot run, lazyplan prints one warning and keeps
 working. On Windows the same pipx and venv paths apply; the reinstall fallback
 is `pipx install --backend pip lazyplan-tui`.
 
+### Before 0.30.2
+
+The 0.30.2 refactor changed the package layout and the console-script entry
+points. If you are on 0.30.1 or earlier, do a forced reinstall instead of
+`lpui upgrade`:
+
+```bash
+pipx install --force lazyplan-tui
+# or, in the venv that owns lpui
+python -m pip install --force-reinstall lazyplan-tui
+```
+
+On Windows, use `pipx install --force --backend pip lazyplan-tui`. Your plan
+data and setup state stay in place; the reinstall replaces only the program
+files. See the [usage upgrade notes](usage.md#upgrade) for the full commands.
+
 ## Doctor
 
 ```bash

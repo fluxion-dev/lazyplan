@@ -50,8 +50,9 @@ them.
 
 Status glyphs are single-cell: `○ todo`, `◐ doing`, `● done`, with ANSI
 (CLI tty) and Rich (TUI) variants. In the TUI a doing row animates through
-`◐ ◓ ◑ ◒` every 160ms. The CLI, export, preview, and detail screens keep the
-static `◐`; `LAZYPLAN_NO_SPINNER=1` freezes the tree too. Row grammar:
+`⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏` every 160ms. The CLI, export, preview, and detail
+screens keep the static `◐`; `LAZYPLAN_NO_SPINNER=1` freezes the tree too.
+Row grammar:
 `GLYPH KIND<id> title`, followed by a fixed stats grid. The title is the only
 flexible cell; it is bold and truncates with `…`. Ids and stats are dim, and
 done rows are dim. The full title lives in the preview/detail.

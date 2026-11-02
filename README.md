@@ -28,6 +28,11 @@ The shared home is `%LOCALAPPDATA%\lazyplan\` and the default `--actor` is
 `%USERNAME%`. Plan text is read as UTF-8 or UTF-16 and written as UTF-8, so
 PowerShell 5 exports round-trip.
 
+Upgrading from 0.30.1 or earlier? The 0.30.2 refactor changed the package layout
+and entry points, so reinstall with force: `pipx install --force lazyplan-tui`
+(or `python -m pip install --force-reinstall lazyplan-tui`). See the
+[upgrade notes](docs/usage.md#upgrade).
+
 Prefer a system package or the one-line installer? See
 [install options](https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md#install).
 

@@ -1,4 +1,4 @@
-"""Timeline card: wall-clock swimlanes for the project and its milestones."""
+"""Timeline card: wall-clock swimlanes for the selected row and its children."""
 
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ from .timeline_layout import (
 
 
 class TimelineCard(MetricCard):
-    """One swimlane per project or milestone from its start to its finish."""
+    """One swimlane per visible row from its start to its finish."""
 
     def __init__(self) -> None:
         super().__init__("metric-timeline", "no plans yet")

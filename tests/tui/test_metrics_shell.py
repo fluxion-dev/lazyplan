@@ -72,7 +72,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(section.border_title, " timeline ")
             self.assertEqual(section.border_subtitle, " Plan title ")
 
-    async def test_empty_plan_shows_the_no_milestones_copy(self) -> None:
+    async def test_empty_plan_draws_its_own_lane(self) -> None:
         empty = self.store.add_plan("Empty plan")
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
@@ -81,7 +81,8 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
             await pilot.pause(0.2)
             section = app.query_one("#metrics", MetricsSection)
             chart = self._chart(section.query_one(f"#{CARD_ID}"))
-        self.assertIn("no milestones yet", chart)
+        self.assertIn("Empty plan", chart)
+        self.assertNotIn("no milestones yet", chart)
 
     async def test_timeline_card_spans_the_section(self) -> None:
         app = tui_mod.create_app(self.db)
@@ -154,7 +155,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Other plan", after)
         self.assertNotIn("Plan title", after)
 
-    async def test_milestone_and_task_rows_scope_to_their_plan(self) -> None:
+    async def test_milestone_and_task_rows_scope_to_their_own_children(self) -> None:
         _other_id, milestone_id, task_ids = self._other_plan()
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
@@ -165,14 +166,14 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
                 app.tree_controller.track(app._row_nodes[key])
                 await pilot.pause(0.2)
                 charts.append(self._chart(card))
-        for chart in charts:
-            self.assertIn("Other plan", chart)
-            self.assertIn("Other milestone", chart)
-        self.assertNotIn("Other task 0 *", charts[0])
+        self.assertIn("Other milestone", charts[0])
+        self.assertIn("Other task 0", charts[0])
+        self.assertNotIn("Other plan", charts[0])
         self.assertIn("Other task 0", charts[1])
-        self.assertNotIn("Other task 0 *", charts[1])
+        self.assertNotIn("Other milestone", charts[1])
+        self.assertNotIn("Other plan", charts[1])
 
-    async def test_task_selection_adds_sibling_task_lanes(self) -> None:
+    async def test_task_selection_shows_only_the_task_lane(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
@@ -180,8 +181,9 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
             await pilot.pause(0.2)
             chart = self._chart(app.query_one(f"#{CARD_ID}"))
         self.assertIn("Task title", chart)
-        self.assertNotIn("Task title *", chart)
         self.assertIn("●", chart)
+        self.assertNotIn("Milestone title", chart)
+        self.assertNotIn("Plan title", chart)
 
     async def test_selection_emphasis_follows_the_cursor(self) -> None:
         app = tui_mod.create_app(self.db)
@@ -207,16 +209,30 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn("╍ Plan title", plan_chart)
         self.assertIn("─ Milestone title", plan_chart)
         self.assertNotIn("━ Milestone title", plan_chart)
-        self.assertIn("═ Plan title", milestone_chart)
+        self.assertNotIn("· Task title", plan_chart)
+        self.assertNotIn("═ Plan title", milestone_chart)
         self.assertIn("━ Milestone title", milestone_chart)
         self.assertIn("· Task title", milestone_chart)
-        self.assertIn("═ Plan title", task_chart)
-        self.assertIn("─ Milestone title", task_chart)
+        self.assertNotIn("═ Plan title", task_chart)
+        self.assertNotIn("─ Milestone title", task_chart)
         self.assertIn("● Task title", task_chart)
         self.assertNotIn("● Task title", cleared_chart)
         self.assertIn("╍ Plan title", cleared_chart)
         for chart in (plan_chart, milestone_chart, task_chart, cleared_chart):
             self.assertNotIn(" *", chart)
+
+    async def test_no_selection_shows_the_select_a_row_subtitle(self) -> None:
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.metrics_controller.stop()
+            app.selected = None
+            app.metrics_controller.refresh()
+            await pilot.pause()
+            section = app.query_one("#metrics", MetricsSection)
+            chart = self._chart(section.query_one(f"#{CARD_ID}"))
+        self.assertEqual(section.border_subtitle, " select a row ")
+        self.assertIn("select a row", chart)
 
     async def test_plan_draws_a_dim_baseline(self) -> None:
         app = tui_mod.create_app(self.db)
@@ -290,7 +306,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
                 self.assertIsNotNone(app.metrics_controller.now_timer)
             self.assertIsNone(app.metrics_controller.now_timer)
 
-    async def test_no_selection_falls_back_to_all_plans(self) -> None:
+    async def test_no_selection_shows_the_empty_state(self) -> None:
         self._other_plan()
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
@@ -301,8 +317,9 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
             app.metrics_controller.refresh()
             await pilot.pause()
             chart = self._chart(card)
-        self.assertIn("Plan title", chart)
-        self.assertIn("Other plan", chart)
+        self.assertIn("select a row", chart)
+        self.assertNotIn("Plan title", chart)
+        self.assertNotIn("Other plan", chart)
 
     async def test_tree_filters_and_marks_leave_scope_alone(self) -> None:
         other_id, _milestone_id, _task_ids = self._other_plan()

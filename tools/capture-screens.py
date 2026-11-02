@@ -41,7 +41,7 @@ from lazyplan.core.entities import Status  # noqa: E402
 from lazyplan.presentation.tui import create_app  # noqa: E402
 from lazyplan.presentation.tui.screens import DetailScreen, PaletteScreen  # noqa: E402
 from lazyplan.presentation.tui.screens.source import SourceScreen  # noqa: E402
-from lazyplan.services import metrics
+from lazyplan.services import metrics  # noqa: E402
 from lazyplan.store import Store  # noqa: E402
 
 SIZE = (130, 35)
@@ -159,28 +159,35 @@ def build_source_fixture(tmp: Path) -> Store:
 
 
 def build_timeline_fixture(tmp: Path) -> Store:
-    """Sequential milestones with doing intervals, a pause, and untouched work."""
+    """A plan with sequential milestones and tasks for the scoped timeline shot."""
     store = Store(str(tmp / "plan.db"))
     plan = store.add_plan(
-        "Ship the timeline patch",
-        "Start traces at doing and keep every lane readable.",
-        goal="Make the timeline answer when work really started.",
+        "Ship the scoped timeline",
+        "Show only the clicked row and its immediate children.",
+        goal="Keep the timeline focused on the work in front of you.",
     )
-    first = store.add_milestone(plan.id, "Scope the trace fix")
-    second = store.add_milestone(plan.id, "Render doing segments")
+    first = store.add_milestone(plan.id, "Scope the lane filter")
+    second = store.add_milestone(plan.id, "Render one row at a time")
     third = store.add_milestone(plan.id, "Publish the patch")
-    store.add_task(first.id, "Write the regression test")
-    store.add_task(second.id, "Trace project and milestone doing intervals")
-    store.add_task(third.id, "Cut 0.30.1")
+    regression = store.add_task(first.id, "Write the regression test")
+    drop = store.add_task(first.id, "Drop ancestor lanes")
+    bold = store.add_task(first.id, "Keep the clicked lane bold")
+    store.add_task(second.id, "Update the empty copy")
+    store.add_task(second.id, "Refresh the screenshot")
+    store.add_task(third.id, "Cut 0.30.3")
 
     def at(stamp: float, action: Callable[[], object]) -> object:
         with mock.patch("lazyplan.store.base.time.time", return_value=stamp):
             return action()
 
-    at(STAMP + 300, lambda: services.set_status(store, "milestone", first.id, Status.DOING))
-    at(STAMP + 600, lambda: services.set_status(store, "milestone", first.id, Status.DONE))
-    at(STAMP + 900, lambda: services.set_status(store, "milestone", second.id, Status.DOING))
-    at(STAMP + 1_200, lambda: services.set_status(store, "milestone", second.id, Status.DONE))
+    at(STAMP + 20, lambda: services.set_status(store, "task", regression.id, Status.DOING))
+    at(STAMP + 40, lambda: services.set_status(store, "task", regression.id, Status.DONE))
+    at(STAMP + 20, lambda: services.set_status(store, "milestone", first.id, Status.DOING))
+    at(STAMP + 40, lambda: services.set_status(store, "task", drop.id, Status.DOING))
+    at(STAMP + 65, lambda: services.set_status(store, "task", drop.id, Status.DONE))
+    at(STAMP + 65, lambda: services.set_status(store, "task", bold.id, Status.DOING))
+    at(STAMP + 100, lambda: services.set_status(store, "milestone", first.id, Status.DONE))
+    at(STAMP + 100, lambda: services.set_status(store, "task", bold.id, Status.DONE))
     return store
 
 
@@ -379,22 +386,20 @@ async def capture_theme_latte(store: Store, target: Path) -> None:
 
 
 async def capture_timeline(store: Store, target: Path) -> None:
-    """Capture the shell with a plan selected so every milestone lane is visible."""
+    """Capture the shell with a milestone selected so only its task lanes show."""
     app = create_app(str(store.path))
     async with app.run_test(size=SIZE) as pilot:
         await pilot.pause()
         tree = app.query_one("#tree", Tree)
         _expand_all(tree)
         tree.focus()
-        plans = _nodes(tree, "plan")
-        if plans:
-            tree.select_node(plans[0])
+        milestones = _nodes(tree, "milestone")
+        if milestones:
+            tree.select_node(milestones[0])
             await pilot.pause()
-            plans = _nodes(tree, "plan")
-            if plans:
-                plans[0].expand()
-                for milestone in plans[0].children:
-                    milestone.expand()
+            milestones = _nodes(tree, "milestone")
+            if milestones:
+                milestones[0].expand()
         await pilot.pause(0.5)
         app.save_screenshot(str(target))
 
@@ -630,7 +635,7 @@ SCENES: dict[str, Scene] = {
         SIZE,
         build_timeline_fixture,
         capture_timeline,
-        "lazyplan main shell with sequential milestones selected, showing doing-only timeline traces at distinct start positions and one never-started lane.",
+        "lazyplan main shell with a milestone selected, showing only that milestone and its task lanes on the timeline.",
     ),
     "lpui-detail": Scene(
         SIZE,

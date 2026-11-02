@@ -125,7 +125,7 @@ class TimelineLane:
 
 @dataclass(frozen=True)
 class Timeline:
-    """Wall-clock spans for the project and its milestones."""
+    """Wall-clock spans for the selected row and its immediate children."""
 
     lanes: tuple[TimelineLane, ...] = ()
     start: float = 0.0

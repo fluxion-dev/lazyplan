@@ -9,8 +9,9 @@ from __future__ import annotations
 
 import re
 import time
+from dataclasses import dataclass
 
-from ..core.entities import Plan, Status, Task
+from ..core.entities import Milestone, Plan, Status, Task
 from ..core.policies.insights import ACTIVITY_DAYS as ACTIVITY_DAYS
 from ..core.policies.insights import ACTIVITY_WEEKS as ACTIVITY_WEEKS
 from ..core.policies.insights import ETA_WINDOW_DAYS as ETA_WINDOW_DAYS
@@ -135,18 +136,81 @@ def _scoped_events(
     ]
 
 
-def _focused_milestone(
-    tasks_by_milestone: dict[int, list[Task]], scope_kind: str | None, scope_id: int | None
-) -> int | None:
-    """Milestone whose tasks should appear for the current selection."""
-    if scope_kind == "milestone":
-        return scope_id
+@dataclass
+class _LaneBuilder:
+    """Build timeline lanes for one snapshot's event map and scope."""
+
+    events: list[dict]
+    starts: dict[tuple[str, int], float]
+    ends: dict[tuple[str, int], float]
+    fallback: float
+    scope_kind: str | None
+    scope_id: int | None
+    now: float
+
+    def lane(self, kind: str, oid: int, title: str, status: Status) -> TimelineLane:
+        """One lane with its doing intervals and selected flag."""
+        selected = self.scope_kind == kind and self.scope_id == oid
+        added = self.starts.get((kind, oid), self.fallback)
+        active = _doing_intervals(kind, oid, status, self.events, added, self.now)
+        start, lane_end = _work_span(active, added, self.ends.get((kind, oid)), self.now)
+        return TimelineLane(kind, title, start, lane_end, active, selected, active)
+
+    def task(self, task: Task) -> TimelineLane:
+        """One task lane."""
+        return self.lane("task", task.id, task.title, task.status)
+
+    def milestone(self, milestone: Milestone) -> TimelineLane:
+        """One milestone lane."""
+        return self.lane("milestone", milestone.id, milestone.title, milestone.status)
+
+    def milestone_start(self, milestone: Milestone) -> float:
+        """Sort key for milestone lanes."""
+        return self.starts.get(("milestone", milestone.id), self.fallback)
+
+
+def _scoped_task(
+    tasks_by_id: dict[int, Task], scope_kind: str | None, scope_id: int | None
+) -> Task | None:
+    """The clicked task, when the selection is a task."""
     if scope_kind != "task" or scope_id is None:
         return None
-    for milestone_id, tasks in tasks_by_milestone.items():
-        if any(task.id == scope_id for task in tasks):
-            return milestone_id
-    return None
+    return tasks_by_id.get(scope_id)
+
+
+def _scoped_milestone(
+    milestones_by_id: dict[int, Milestone], scope_kind: str | None, scope_id: int | None
+) -> Milestone | None:
+    """The clicked milestone, when the selection is a milestone."""
+    if scope_kind != "milestone" or scope_id is None:
+        return None
+    return milestones_by_id.get(scope_id)
+
+
+def _selected_plan_id(
+    plan_id: int | None, scope_kind: str | None, scope_id: int | None
+) -> int | None:
+    """The clicked plan, falling back to the snapshot's plan scope."""
+    if scope_kind == "plan" and scope_id is not None:
+        return scope_id
+    return plan_id
+
+
+def _empty_reason(plans: list[Plan], selected_plan: int | None) -> str:
+    """Empty copy for a missing plan or a snapshot with no selection."""
+    if not plans or selected_plan is not None:
+        return "no plans yet"
+    return "select a row"
+
+
+def _pack(lanes: list[TimelineLane], now: float) -> Timeline:
+    """Assemble a timeline window from its visible lanes."""
+    return Timeline(
+        lanes=tuple(lanes),
+        start=min(lane.start for lane in lanes),
+        end=max(lane.end for lane in lanes),
+        now=now,
+    )
 
 
 def _timeline(
@@ -159,78 +223,46 @@ def _timeline(
     scope_id: int | None,
     now: float,
 ) -> Timeline:
-    """Wall-clock spans for one plan, its milestones, and focused tasks.
+    """Wall-clock spans for the selected row and its immediate children.
 
-    A lane starts at its add event and ends at its latest completion event
-    when the row is done; open work runs to `now`. With no plan scope every
-    plan gets a lane; a scoped plan adds one lane per milestone. A milestone
-    or task selection adds the focused milestone's task lanes. The lane that
-    matches `scope_kind`/`scope_id` is marked selected; ancestors and siblings
-    are not.
+    The clicked row decides the lane set: a plan keeps its own lane plus its
+    milestones, a milestone keeps its own lane plus its tasks, and a task
+    keeps only its own lane. With no selection the card renders the empty
+    state. A lane starts at its add event and ends at its latest completion
+    event when the row is done; open work runs to `now`. The lane that
+    matches `scope_kind`/`scope_id` is marked selected; ancestors and
+    siblings are never added.
     """
     starts = _timeline_starts(events)
     ends = _timeline_ends(events)
     fallback = min((float(event["ts"]) for event in events), default=now)
-
-    def is_selected(kind: str, oid: int) -> bool:
-        return scope_kind == kind and scope_id == oid
-
-    def lane(
-        kind: str, oid: int, title: str, status: Status, selected: bool = False
-    ) -> TimelineLane:
-        added = starts.get((kind, oid), fallback)
-        active = _doing_intervals(kind, oid, status, events, added, now)
-        start, lane_end = _work_span(active, added, ends.get((kind, oid)), now)
-        return TimelineLane(kind, title, start, lane_end, active, selected, active)
-
-    lanes: list[TimelineLane] = []
-    if plan_id is None:
-        ordered = sorted(plans, key=lambda item: starts.get(("plan", item.id), fallback))
-        lanes = [
-            lane("plan", plan.id, plan.name, plan.status, is_selected("plan", plan.id))
-            for plan in ordered
-        ]
-    else:
-        plan = next((item for item in plans if item.id == plan_id), None)
-        if plan is None:
-            return Timeline(empty="no plans yet", now=now)
-        milestones = sorted(
-            milestones_by_plan.get(plan_id, []),
-            key=lambda item: starts.get(("milestone", item.id), fallback),
-        )
-        if not milestones:
-            return Timeline(empty="no milestones yet", now=now)
-        lanes.append(lane("plan", plan.id, plan.name, plan.status, is_selected("plan", plan.id)))
-        lanes.extend(
-            lane(
-                "milestone",
-                milestone.id,
-                milestone.title,
-                milestone.status,
-                is_selected("milestone", milestone.id),
-            )
-            for milestone in milestones
-        )
-        focused_milestone = _focused_milestone(tasks_by_milestone, scope_kind, scope_id)
-        if focused_milestone is not None:
-            lanes.extend(
-                lane(
-                    "task",
-                    task.id,
-                    task.title,
-                    task.status,
-                    is_selected("task", task.id),
-                )
-                for task in tasks_by_milestone.get(focused_milestone, [])
-            )
-    if not lanes:
-        return Timeline(empty="no plans yet", now=now)
-    return Timeline(
-        lanes=tuple(lanes),
-        start=min(item.start for item in lanes),
-        end=max(item.end for item in lanes),
-        now=now,
+    builder = _LaneBuilder(events, starts, ends, fallback, scope_kind, scope_id, now)
+    tasks_by_id = {
+        task.id: task for milestone_tasks in tasks_by_milestone.values() for task in milestone_tasks
+    }
+    task = _scoped_task(tasks_by_id, scope_kind, scope_id)
+    if task is not None:
+        return _pack([builder.task(task)], now)
+    milestones_by_id = {
+        milestone.id: milestone
+        for plan_milestones in milestones_by_plan.values()
+        for milestone in plan_milestones
+    }
+    milestone = _scoped_milestone(milestones_by_id, scope_kind, scope_id)
+    if milestone is not None:
+        lanes = [builder.milestone(milestone)]
+        lanes.extend(builder.task(item) for item in tasks_by_milestone.get(milestone.id, []))
+        return _pack(lanes, now)
+    selected_plan = _selected_plan_id(plan_id, scope_kind, scope_id)
+    plan = next((item for item in plans if item.id == selected_plan), None)
+    if plan is None:
+        return Timeline(empty=_empty_reason(plans, selected_plan), now=now)
+    lanes = [builder.lane("plan", plan.id, plan.name, plan.status)]
+    lanes.extend(
+        builder.milestone(item)
+        for item in sorted(milestones_by_plan.get(plan.id, []), key=builder.milestone_start)
     )
+    return _pack(lanes, now)
 
 
 def snapshot(
@@ -243,9 +275,9 @@ def snapshot(
     """Build the dashboard snapshot from one task and event read.
 
     plan_id limits task counts, status shares, milestone bars, activity,
-    elapsed time, and the ETA to that plan. scope_kind/scope_id mark the
-    selected lane and add the focused milestone's task lanes when a milestone
-    or task is selected. None keeps the all-plans view.
+    elapsed time, and the ETA to that plan. scope_kind/scope_id select the
+    timeline lanes: a plan keeps its milestones, a milestone keeps its tasks,
+    and a task keeps only itself. None keeps the empty state.
     """
     milestones_by_plan = store.milestones_map()
     tasks_by_milestone = _scoped_tasks(milestones_by_plan, store.tasks_map(), plan_id)

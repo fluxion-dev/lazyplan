@@ -62,8 +62,8 @@ Want demo data first? Run `lpui seed`.
   while the reason, scope, next tasks, acceptance, and notes scroll beneath.
 - **One icon language and a calmer timeline.** Plans, milestones, tasks,
   checkouts, commits, and pull requests share single-cell icons. The timeline
-  card names the scoped plan, keeps every swimlane visible, and emphasizes the
-  row under the cursor.
+  card shows only the row under the cursor and its immediate children, names
+  the scoped plan, and emphasizes the clicked lane.
 
 ## What you get
 
@@ -94,7 +94,7 @@ the method, budgets, and per-platform ceilings.
 
 - Plans start as one-line summaries with progress. Open one to reveal milestones, then tasks.
 - The side column previews the selected row: why, what, next tasks, and acceptance progress, with a GIT card for the linked checkout and commits.
-- The timeline card at the bottom shows project, milestone, and task spans, with the scoped plan in its border.
+- The timeline card at the bottom shows the selected row and its immediate children, with the scoped plan in its border.
 - The bottom line shows the keys that work right now. `?` opens help; `c` opens the command palette; `t` cycles themes.
 - Your agent writes through the same command line. The screen updates as it works.
 

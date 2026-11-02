@@ -3,6 +3,40 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## v0.30.3 — 2026-11-01
+
+The timeline now follows the row under the cursor and shows only that row
+plus its immediate children. Clicking a plan shows the plan and its
+milestones, clicking a milestone shows the milestone and its tasks, and
+clicking a task shows only the task. Ancestors and siblings no longer
+appear.
+
+### Changed
+
+- A plan selection renders the plan lane and its milestone lanes.
+- A milestone selection renders that milestone and its immediate task lanes.
+- A task selection renders only the task lane.
+- With no selection the card shows `select a row`; an empty database shows
+  `no plans yet`.
+- A plan without milestones and a milestone without tasks keep their own
+  lane instead of an empty chart.
+- The section subtitle follows the scoped plan or the empty state.
+
+### Upgrade
+
+```bash
+pipx upgrade lazyplan-tui
+# or
+pipx install --force lazyplan-tui
+```
+
+No manual migration is required. The database schema is unchanged.
+
+### Documentation
+
+- Updated the timeline sections in `docs/usage.md` and
+  `docs/design-system.md`.
+
 ## v0.30.2 — 2026-11-01
 
 Internal architecture refactor with no user-facing behavior change. The

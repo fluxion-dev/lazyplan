@@ -599,3 +599,37 @@ or the next plan row so the next release has the context.
   returns 200 in both formats, sitemap `lastmod` is 2026-11-01, and the curated
   release notes are live.
 - No deviations beyond the expected PyPI simple-index lag.
+
+### v0.30.2 (2026-11-01)
+
+- Patch bump from 0.30.1. This release is an internal vertical-slice
+  refactor: core, infrastructure, store, services, and presentation. CLI text,
+  porcelain, JSON, MCP schemas, share HTML, export output, TUI snapshots, and
+  the database schema are unchanged.
+- The refactor merged as
+  [#77](https://github.com/fluxion-dev/lazyplan/pull/77) after gates
+  [41366769195](https://github.com/fluxion-dev/lazyplan/actions/runs/41366769195)
+  passed on Ubuntu and macOS.
+- The **bump** workflow (`part=patch`) ran
+  [41367349646](https://github.com/fluxion-dev/lazyplan/actions/runs/41367349646);
+  its `bump` job opened release PR
+  [#78](https://github.com/fluxion-dev/lazyplan/pull/78). The release-branch CI
+  [41367365813](https://github.com/fluxion-dev/lazyplan/actions/runs/41367365813)
+  passed Ubuntu and macOS after admin approval.
+- **Deviation:** the bump `publish` job waited the full 20 minutes and failed
+  at 00:49:22, seconds after PR #78 merged. The documented manual fallback
+  dispatched `tag-release`
+  ([41369786036](https://github.com/fluxion-dev/lazyplan/actions/runs/41369786036))
+  and Pages
+  ([41369785987](https://github.com/fluxion-dev/lazyplan/actions/runs/41369785987)).
+  `tag-release` created annotated tag `v0.30.2` and dispatched
+  [release.yml](https://github.com/fluxion-dev/lazyplan/actions/runs/41369798225);
+  the `release` and `publish-pypi` jobs succeeded.
+- PyPI JSON served 0.30.2 while the simple index lagged; an isolated
+  `pipx install --backend pip --pip-args='--no-cache-dir'
+  lazyplan-tui==0.30.2` then printed 0.30.2.
+- Verified: seven release assets including `install.sh`, the wheel, sdist, two
+  RPMs, and two DEBs; the live site shows 0.30.2; the sitemap is live; and the
+  main CI run
+  [41369785989](https://github.com/fluxion-dev/lazyplan/actions/runs/41369785989)
+  is recorded for the merge commit.

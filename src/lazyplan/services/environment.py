@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from ..update_stage import (
+from ..infrastructure.update_stage import (
     apply_on_launch,
     clear_failure,
     read_failure,
     stage_update,
 )
-from ..upgrade import (
+from ..infrastructure.upgrade import (
     UPDATE_CACHE_TTL,
     InstallInfo,
     UpgradeError,

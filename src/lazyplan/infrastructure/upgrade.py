@@ -14,23 +14,23 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import textfile
-from .core.policies.environment import (
+from .. import textfile
+from ..core.policies.environment import (
     is_newer as _is_newer,
 )
-from .core.policies.environment import (
+from ..core.policies.environment import (
     network_interval as _network_interval,
 )
-from .core.policies.environment import (
+from ..core.policies.environment import (
     parse_version as _parse_version,
 )
-from .core.policies.environment import (
+from ..core.policies.environment import (
     poll_interval as _poll_interval,
 )
-from .core.policies.environment import (
+from ..core.policies.environment import (
     update_check_enabled as _update_check_enabled,
 )
-from .core.policies.environment import (
+from ..core.policies.environment import (
     version_text as _version_text,
 )
 
@@ -200,7 +200,7 @@ def network_interval(env: Mapping[str, str] | None = None) -> float:
 
 def update_cache_path(home: str | Path | None = None) -> Path:
     """Cache file path in the shared lazyplan home."""
-    from .repo import shared_home
+    from ..repo import shared_home
 
     return shared_home(home) / UPDATE_CACHE_NAME
 
@@ -253,7 +253,7 @@ def remember_latest(
 
 def update_gate_path(home: str | Path | None = None) -> Path:
     """Shared refresh-gate file path in the lazyplan home."""
-    from .repo import shared_home
+    from ..repo import shared_home
 
     return shared_home(home) / UPDATE_GATE_NAME
 

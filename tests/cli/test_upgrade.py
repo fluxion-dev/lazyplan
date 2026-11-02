@@ -11,7 +11,7 @@ from io import StringIO
 from pathlib import Path
 from unittest import mock
 
-from lazyplan import upgrade
+from lazyplan.infrastructure import upgrade
 from lazyplan.presentation.cli import main
 from lazyplan.presentation.cli.commands import admin as cli_mod
 

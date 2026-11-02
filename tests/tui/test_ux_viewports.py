@@ -5,8 +5,8 @@ import tempfile
 import unittest
 from unittest import mock
 
+from lazyplan.infrastructure.upgrade import PIPX, InstallInfo
 from lazyplan.store import Store
-from lazyplan.upgrade import PIPX, InstallInfo
 from tests.support.pilot import settle
 
 try:

@@ -8,9 +8,9 @@ import tempfile
 import unittest
 from unittest import mock
 
-from lazyplan import update_stage
+from lazyplan.infrastructure import update_stage
+from lazyplan.infrastructure.upgrade import PIPX, RPM, SOURCE, InstallInfo
 from lazyplan.store import Store
-from lazyplan.upgrade import PIPX, RPM, SOURCE, InstallInfo
 from tests.support.home import sandbox_home
 
 try:

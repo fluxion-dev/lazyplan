@@ -8,7 +8,7 @@ import time
 import unittest
 from unittest import mock
 
-from lazyplan import upgrade
+from lazyplan.infrastructure import upgrade
 from lazyplan.store import Store
 from tests.support.home import sandbox_home
 

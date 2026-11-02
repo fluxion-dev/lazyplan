@@ -306,7 +306,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
                 self.assertIsNotNone(app.metrics_controller.now_timer)
             self.assertIsNone(app.metrics_controller.now_timer)
 
-    async def test_no_selection_falls_back_to_all_plans(self) -> None:
+    async def test_no_selection_shows_the_empty_state(self) -> None:
         self._other_plan()
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
@@ -317,8 +317,9 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
             app.metrics_controller.refresh()
             await pilot.pause()
             chart = self._chart(card)
-        self.assertIn("Plan title", chart)
-        self.assertIn("Other plan", chart)
+        self.assertIn("select a row", chart)
+        self.assertNotIn("Plan title", chart)
+        self.assertNotIn("Other plan", chart)
 
     async def test_tree_filters_and_marks_leave_scope_alone(self) -> None:
         other_id, _milestone_id, _task_ids = self._other_plan()

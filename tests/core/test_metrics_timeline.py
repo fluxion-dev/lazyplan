@@ -351,7 +351,7 @@ class TimelineSnapshotTest(unittest.TestCase):
     def test_unknown_scope_without_a_plan_falls_back_to_the_empty_state(self) -> None:
         self._task_plan()
 
-        snap = metrics.snapshot(self.store, now=2_000, scope_kind="milestone", scope_id=1)
+        snap = metrics.snapshot(self.store, now=2_000, scope_kind="milestone", scope_id=999)
 
         assert snap.timeline is not None
         self.assertEqual(snap.timeline.lanes, ())

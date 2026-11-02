@@ -26,7 +26,7 @@ if _TEXTUAL_OK:
         def __init__(self) -> None:
             super().__init__(id="metrics", classes="metrics-section")
             self.border_title = " timeline "
-            self.border_subtitle = " all plans "
+            self.border_subtitle = " select a row "
 
         def compose(self) -> ComposeResult:
             with Horizontal(id="metric-cards"):

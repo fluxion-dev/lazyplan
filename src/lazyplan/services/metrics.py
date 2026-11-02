@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 import time
 
-from ..core.entities import Plan, Status, Task
+from ..core.entities import Milestone, Plan, Status, Task
 from ..core.policies.insights import ACTIVITY_DAYS as ACTIVITY_DAYS
 from ..core.policies.insights import ACTIVITY_WEEKS as ACTIVITY_WEEKS
 from ..core.policies.insights import ETA_WINDOW_DAYS as ETA_WINDOW_DAYS
@@ -170,57 +170,54 @@ def _timeline(
         start, lane_end = _work_span(active, added, ends.get((kind, oid)), now)
         return TimelineLane(kind, title, start, lane_end, active, selected, active)
 
+    def task_lane(task: Task) -> TimelineLane:
+        return lane("task", task.id, task.title, task.status, is_selected("task", task.id))
+
+    def milestone_lane(milestone: Milestone) -> TimelineLane:
+        return lane(
+            "milestone",
+            milestone.id,
+            milestone.title,
+            milestone.status,
+            is_selected("milestone", milestone.id),
+        )
+
+    def milestone_start(milestone: Milestone) -> float:
+        return starts.get(("milestone", milestone.id), fallback)
+
     plans_by_id = {plan.id: plan for plan in plans}
-    milestones = {
+    milestones_by_id = {
         milestone.id: milestone
         for plan_milestones in milestones_by_plan.values()
         for milestone in plan_milestones
     }
-    tasks = {
+    tasks_by_id = {
         task.id: task for milestone_tasks in tasks_by_milestone.values() for task in milestone_tasks
     }
 
-    lanes: list[TimelineLane] = []
-    task = tasks.get(scope_id) if scope_kind == "task" and scope_id is not None else None
-    milestone = (
-        milestones.get(scope_id) if scope_kind == "milestone" and scope_id is not None else None
+    scoped_task = (
+        tasks_by_id.get(scope_id) if scope_kind == "task" and scope_id is not None else None
     )
-    if task is not None:
-        lanes.append(lane("task", task.id, task.title, task.status, is_selected("task", task.id)))
-    elif milestone is not None:
-        lanes.append(
-            lane(
-                "milestone",
-                milestone.id,
-                milestone.title,
-                milestone.status,
-                is_selected("milestone", milestone.id),
-            )
-        )
-        lanes.extend(
-            lane("task", item.id, item.title, item.status, is_selected("task", item.id))
-            for item in tasks_by_milestone.get(milestone.id, [])
-        )
+    scoped_milestone = (
+        milestones_by_id.get(scope_id)
+        if scope_kind == "milestone" and scope_id is not None
+        else None
+    )
+    if scoped_task is not None:
+        lanes = [task_lane(scoped_task)]
+    elif scoped_milestone is not None:
+        lanes = [milestone_lane(scoped_milestone)]
+        lanes.extend(task_lane(item) for item in tasks_by_milestone.get(scoped_milestone.id, []))
     else:
-        if scope_kind == "plan" and scope_id is not None:
-            plan_id = scope_id
-        plan = plans_by_id.get(plan_id) if plan_id is not None else None
+        selected_plan = scope_id if scope_kind == "plan" and scope_id is not None else plan_id
+        plan = plans_by_id.get(selected_plan) if selected_plan is not None else None
         if plan is None:
-            empty = "no plans yet" if not plans or plan_id is not None else "select a row"
+            empty = "no plans yet" if not plans or selected_plan is not None else "select a row"
             return Timeline(empty=empty, now=now)
-        lanes.append(lane("plan", plan.id, plan.name, plan.status, is_selected("plan", plan.id)))
+        lanes = [lane("plan", plan.id, plan.name, plan.status, is_selected("plan", plan.id))]
         lanes.extend(
-            lane(
-                "milestone",
-                item.id,
-                item.title,
-                item.status,
-                is_selected("milestone", item.id),
-            )
-            for item in sorted(
-                milestones_by_plan.get(plan.id, []),
-                key=lambda item: starts.get(("milestone", item.id), fallback),
-            )
+            milestone_lane(item)
+            for item in sorted(milestones_by_plan.get(plan.id, []), key=milestone_start)
         )
     return Timeline(
         lanes=tuple(lanes),

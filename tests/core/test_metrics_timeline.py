@@ -1,4 +1,4 @@
-"""Timeline lanes: wall-clock starts and finishes for plans and milestones."""
+"""Timeline lanes: wall-clock starts and finishes for the selected row."""
 
 from __future__ import annotations
 

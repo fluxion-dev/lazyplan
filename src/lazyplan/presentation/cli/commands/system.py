@@ -8,14 +8,15 @@ import sys
 import time
 from pathlib import Path
 
-from .... import (
-    audit,
-)
-from ....repo import find_repo_root, resolve_db_path
-from ....store import Store
-from ... import (
+from lazyplan.infrastructure.repo import find_repo_root, resolve_db_path
+from lazyplan.presentation import (
     setup,
 )
+from lazyplan.services import (
+    audit,
+)
+
+from ....store import Store
 from ...setup import layout as setup_layout
 from ...setup import ui as setup_ui
 from ...shared import (
@@ -94,7 +95,7 @@ def _print_setup(result: dict) -> None:
 
 def _cmd_setup(store: Store | None, args: argparse.Namespace, actor: str) -> int:
     """Re-run setup, or apply remembered choices without prompts."""
-    from .... import hook_install
+    from lazyplan.infrastructure import hook_install
 
     del store, actor
     home = Path.home()
@@ -305,7 +306,7 @@ def _cmd_audit(store: Store | None, args: argparse.Namespace, actor: str) -> int
 
 def _cmd_brief(store: Store | None, args: argparse.Namespace, actor: str) -> int:
     """Read-only session brief; never creates a database."""
-    from .... import brief
+    from lazyplan.services import brief
 
     del actor
     try:
@@ -412,7 +413,7 @@ def _cmd_lint(store: Store, args: argparse.Namespace, actor: str) -> int:
 
 
 def _cmd_trace(store: Store, args: argparse.Namespace, actor: str) -> int:
-    from .... import trace as trace_mod
+    from ....services import trace as trace_mod
 
     del actor
     if args.plan is not None:

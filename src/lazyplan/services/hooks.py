@@ -9,30 +9,18 @@ from __future__ import annotations
 
 import json
 import os
-from dataclasses import dataclass
 from pathlib import Path
 from typing import TextIO
 
+from ..core.entities import HookResult
+from ..core.ports.insights import InsightsPort
+from ..infrastructure.repo import resolve_db_path
+from ..store import Store
 from . import audit, brief
-from .repo import resolve_db_path
-from .store import Store
 
 EVENTS = ("session-start", "prompt-submit", "post-tool", "stop", "pre-compact")
 HOSTS = ("opencode", "claude", "gemini", "codex", "cursor")
 NO_HOOKS_ENV = "LAZYPLAN_NO_HOOKS"
-MAX_TEXT = 2000
-
-
-@dataclass
-class HookResult:
-    """What a hook wants the host to show; empty text means stay quiet."""
-
-    text: str = ""
-    context: bool = False
-
-    def capped(self) -> HookResult:
-        """Keep injected context inside the host's patience."""
-        return HookResult(self.text[:MAX_TEXT], self.context)
 
 
 def read_payload(stream: TextIO) -> dict:
@@ -93,12 +81,12 @@ def _command(payload: dict) -> str:
     return command if isinstance(command, str) else ""
 
 
-def _brief_lines(store: Store, cwd: Path, commits: list[audit.Commit] | None) -> list[str]:
+def _brief_lines(store: InsightsPort, cwd: Path, commits: list[audit.Commit] | None) -> list[str]:
     payload = brief.build(store, commits=commits, cwd=cwd)
     return brief.lines(payload)
 
 
-def _doing_task(store: Store) -> int | None:
+def _doing_task(store: InsightsPort) -> int | None:
     for plan in store.list_plans():
         for milestone in store.list_milestones(plan.id):
             for task in store.list_tasks(milestone.id):
@@ -107,14 +95,14 @@ def _doing_task(store: Store) -> int | None:
     return None
 
 
-def _session_text(store: Store, cwd: Path, commits: list[audit.Commit] | None) -> str:
+def _session_text(store: InsightsPort, cwd: Path, commits: list[audit.Commit] | None) -> str:
     payload = brief.build(store, commits=commits, cwd=cwd)
     if not payload.get("plans"):
         return ""
     return "\n".join(brief.lines(payload)).strip()
 
 
-def _stop_text(store: Store, cwd: Path, commits: list[audit.Commit] | None) -> str:
+def _stop_text(store: InsightsPort, cwd: Path, commits: list[audit.Commit] | None) -> str:
     lines = _brief_lines(store, cwd, commits)
     loose = [line for line in lines if line.strip().startswith("unlinked")]
     if not loose:
@@ -122,7 +110,7 @@ def _stop_text(store: Store, cwd: Path, commits: list[audit.Commit] | None) -> s
     return "lazyplan: " + "; ".join(line.strip() for line in loose)
 
 
-def _post_tool_text(store: Store, payload: dict) -> str:
+def _post_tool_text(store: InsightsPort, payload: dict) -> str:
     command = _command(payload)
     if "git commit" not in command:
         return ""

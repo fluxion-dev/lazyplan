@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from ..kinds import KIND_ERROR, table_for
-from ..models import (
+from ..core.entities import (
     ForgeLink,
     Milestone,
     Plan,
@@ -11,6 +10,7 @@ from ..models import (
     Task,
     VcsLink,
 )
+from ..core.kinds import KIND_ERROR, table_for
 from .base import StoreBase, to_payload
 
 

@@ -7,7 +7,7 @@ import unicodedata
 import unittest
 from contextlib import redirect_stdout
 
-from lazyplan.models import Milestone, Plan, Status, Task
+from lazyplan.core.entities import Milestone, Plan, Status, Task
 from lazyplan.presentation.cli import main as lpui_main
 from lazyplan.presentation.shared import design
 from lazyplan.presentation.shared import help as help_mod

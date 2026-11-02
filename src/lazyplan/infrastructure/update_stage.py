@@ -25,7 +25,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .. import textfile
+from lazyplan.infrastructure import textfile
+from lazyplan.infrastructure.repo import shared_home
+
 from ..core.policies.environment import (
     valid_filename as _valid_filename,
 )
@@ -35,7 +37,6 @@ from ..core.policies.environment import (
 from ..core.policies.environment import (
     valid_url as _valid_url_policy,
 )
-from ..repo import shared_home
 from .upgrade import (
     PIPX,
     PYPI_PKG,

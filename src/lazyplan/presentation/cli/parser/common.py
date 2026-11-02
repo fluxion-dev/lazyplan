@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from .... import textfile
+from lazyplan.infrastructure import textfile
 
 _PARSER_DESCRIPTION = (
     "lazyplan keeps your plans, milestones, and tasks in one SQLite database, "

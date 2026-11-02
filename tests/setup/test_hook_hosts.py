@@ -3,8 +3,8 @@
 import json
 import unittest
 
-from lazyplan import hook_hosts
-from lazyplan.hooks import HookResult
+from lazyplan.infrastructure import hook_hosts
+from lazyplan.services.hooks import HookResult
 
 
 class HostCase(unittest.TestCase):

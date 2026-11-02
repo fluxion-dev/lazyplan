@@ -2,6 +2,6 @@
 
 from __future__ import annotations
 
-from .. import audit, brief, lint, metrics, stats, trace
+from . import audit, brief, lint, metrics, stats, trace
 
 __all__ = ["audit", "brief", "lint", "metrics", "stats", "trace"]

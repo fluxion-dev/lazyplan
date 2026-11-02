@@ -12,7 +12,7 @@ from lazyplan.store import Store
 try:
     from textual.widgets import Label, Tree
 
-    from lazyplan.models import Status
+    from lazyplan.core.entities import Status
     from lazyplan.presentation import tui as tui_mod
     from lazyplan.presentation.tui.query import query_one_opt
     from lazyplan.presentation.tui.state import AppState

@@ -438,7 +438,7 @@ class TestDoneCollapsed(unittest.IsolatedAsyncioTestCase):
         dsid = store.add_milestone(self.did, "DS").id
         dtid = store.add_task(dsid, "DT").id
         from lazyplan import services
-        from lazyplan.models import Status
+        from lazyplan.core.entities import Status
 
         services.set_status(store, "task", dtid, Status.DONE)
         self.oid = store.add_plan("Open").id

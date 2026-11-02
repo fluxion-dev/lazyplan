@@ -6,10 +6,11 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from ... import hook_install, skills, textfile
-from ...repo import (
+from lazyplan.infrastructure import hook_install, skills, textfile
+from lazyplan.infrastructure.repo import (
     find_repo_root,
 )
+
 from ...store import Store
 from . import layout, ui
 from .constants import (

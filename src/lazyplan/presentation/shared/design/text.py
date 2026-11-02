@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from ....models import Status
+from ....core.entities import Status
 
 STATUS_GLYPH = {"todo": "○", "doing": "◐", "done": "●"}
 STATUS_ANSI = {"todo": "90", "doing": "33", "done": "32"}

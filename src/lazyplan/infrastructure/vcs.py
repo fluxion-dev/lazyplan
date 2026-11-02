@@ -176,7 +176,7 @@ class GitBackend(VCSBackend):
 
     def detect(self, cwd: str | Path = ".") -> Path | None:
         """Enclosing git root, or None. Requires a working git CLI."""
-        from .repo import find_repo_root
+        from lazyplan.infrastructure.repo import find_repo_root
 
         return find_repo_root(cwd)
 

@@ -10,47 +10,47 @@ from __future__ import annotations
 import re
 import time
 
-from .core.policies.insights import ACTIVITY_DAYS as ACTIVITY_DAYS
-from .core.policies.insights import ACTIVITY_WEEKS as ACTIVITY_WEEKS
-from .core.policies.insights import ETA_WINDOW_DAYS as ETA_WINDOW_DAYS
-from .core.policies.insights import MILESTONE_LIMIT as MILESTONE_LIMIT
-from .core.policies.insights import ChartRow as ChartRow
-from .core.policies.insights import DayActivity as DayActivity
-from .core.policies.insights import (
+from ..core.entities import Plan, Status, Task
+from ..core.policies.insights import ACTIVITY_DAYS as ACTIVITY_DAYS
+from ..core.policies.insights import ACTIVITY_WEEKS as ACTIVITY_WEEKS
+from ..core.policies.insights import ETA_WINDOW_DAYS as ETA_WINDOW_DAYS
+from ..core.policies.insights import MILESTONE_LIMIT as MILESTONE_LIMIT
+from ..core.policies.insights import ChartRow as ChartRow
+from ..core.policies.insights import DayActivity as DayActivity
+from ..core.policies.insights import (
     MetricsSnapshot,
     MilestonesByPlan,
     Timeline,
     TimelineLane,
 )
-from .core.policies.insights import MilestoneProgress as MilestoneProgress
-from .core.policies.insights import OverallProgress as OverallProgress
-from .core.policies.insights import StatusBreakdown as StatusBreakdown
-from .core.policies.insights import (
+from ..core.policies.insights import MilestoneProgress as MilestoneProgress
+from ..core.policies.insights import OverallProgress as OverallProgress
+from ..core.policies.insights import StatusBreakdown as StatusBreakdown
+from ..core.policies.insights import (
     activity as _activity,
 )
-from .core.policies.insights import activity_weeks as activity_weeks
-from .core.policies.insights import (
+from ..core.policies.insights import activity_weeks as activity_weeks
+from ..core.policies.insights import (
     doing_intervals as _doing_intervals,
 )
-from .core.policies.insights import milestone_bars as milestone_bars
-from .core.policies.insights import (
+from ..core.policies.insights import milestone_bars as milestone_bars
+from ..core.policies.insights import (
     progress as _progress,
 )
-from .core.policies.insights import status_bars as status_bars
-from .core.policies.insights import (
+from ..core.policies.insights import status_bars as status_bars
+from ..core.policies.insights import (
     status_breakdown as _status,
 )
-from .core.policies.insights import (
+from ..core.policies.insights import (
     timeline_ends as _timeline_ends,
 )
-from .core.policies.insights import (
+from ..core.policies.insights import (
     timeline_starts as _timeline_starts,
 )
-from .core.policies.insights import (
+from ..core.policies.insights import (
     work_span as _work_span,
 )
-from .core.ports.insights import InsightsPort
-from .models import Plan, Status, Task
+from ..core.ports.insights import InsightsPort
 
 _ADDED = re.compile(r"^([PMT])#(\d+) ")
 _TASK_REF = re.compile(r"^(?:T#|task #)(\d+)\b")

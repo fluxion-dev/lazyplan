@@ -11,11 +11,12 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from ... import textfile
-from ...repo import (
+from lazyplan.infrastructure import textfile
+from lazyplan.infrastructure.repo import (
     repo_plan_db_path,
     shared_home,
 )
+
 from .constants import (
     HOME,
     REPO,

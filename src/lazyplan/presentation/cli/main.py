@@ -7,6 +7,10 @@ import io
 import sys
 from pathlib import Path
 
+from lazyplan.presentation import (
+    setup,
+)
+
 from ...services.environment import (
     cached_latest,
     detect,
@@ -17,9 +21,6 @@ from ...services.environment import (
     latest_version as latest_version,
 )
 from ...store import Store
-from .. import (
-    setup,
-)
 from ..shared import (
     porcelain,
 )

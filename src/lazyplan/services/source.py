@@ -12,11 +12,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from .forge import RepoRef, detect_forge, parse_pull_url
-from .vcs import DiffRead, commit_url, detect_backend, file_url, origin_url
+from lazyplan.infrastructure.forge import RepoRef, detect_forge, parse_pull_url
+from lazyplan.infrastructure.vcs import DiffRead, commit_url, detect_backend, file_url, origin_url
 
 if TYPE_CHECKING:
-    from .core.ports.provenance import ProvenancePort
+    from ..core.ports.provenance import ProvenancePort
 
 
 DIFF_CACHE_LIMIT = 16

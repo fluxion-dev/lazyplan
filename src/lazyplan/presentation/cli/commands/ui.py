@@ -5,9 +5,10 @@ from __future__ import annotations
 import argparse
 import sys
 
-from .... import (
+from lazyplan import (
     services,
 )
+
 from ....store import Store
 from ...shared.design import (
     EMPTY_NO_PLANS,

@@ -5,12 +5,13 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
-from ...repo import (
+from lazyplan.infrastructure.repo import (
     CONFIG_NAME,
     TEMPLATES_DIR_NAME,
     is_repo_plan_dir,
     shared_db_path,
 )
+
 from . import layout
 from .state import plans_in
 

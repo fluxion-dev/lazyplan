@@ -6,7 +6,7 @@ import unittest
 from unittest import mock
 
 from lazyplan import services
-from lazyplan.models import Status
+from lazyplan.core.entities import Status
 from lazyplan.presentation.shared import design
 from lazyplan.store import Store
 from tests.support.pilot import settle

@@ -5,13 +5,21 @@ from __future__ import annotations
 import json
 import time
 
+from lazyplan.infrastructure.forge import (
+    AuthStatus,
+    Forge,
+    RepoRef,
+    detect_forge,
+    parse_pull_url,
+    resolve_auth,
+)
+from lazyplan.infrastructure.github import GitHubClient, GitHubError
+from lazyplan.infrastructure.vcs import detect_backend, origin_url
+
+from ..core.entities import Task
+from ..core.kinds import check_kind
 from ..core.policies.provenance import checks_state, pr_state
 from ..core.ports.provenance import ProvenancePort
-from ..forge import AuthStatus, Forge, RepoRef, detect_forge, parse_pull_url, resolve_auth
-from ..github import GitHubClient, GitHubError
-from ..kinds import check_kind
-from ..models import Task
-from ..vcs import detect_backend, origin_url
 from .vcs import _repo_targets
 
 

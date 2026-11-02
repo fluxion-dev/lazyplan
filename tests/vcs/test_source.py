@@ -6,14 +6,14 @@ import tempfile
 import unittest
 from unittest import mock
 
-from lazyplan.source import (
+from lazyplan.infrastructure.vcs import DiffRead
+from lazyplan.services.source import (
     build_source_trail,
     clear_diff_cache,
     parse_patch,
     read_diff,
 )
 from lazyplan.store import Store
-from lazyplan.vcs import DiffRead
 
 
 def _git_available() -> bool:
@@ -74,7 +74,7 @@ class TestDiffParsing(unittest.TestCase):
 
         backend = FakeBackend()
         clear_diff_cache()
-        with mock.patch("lazyplan.source.detect_backend", return_value=(backend, "/repo")):
+        with mock.patch("lazyplan.services.source.detect_backend", return_value=(backend, "/repo")):
             first = read_diff("/repo", "a" * 40)
             again = read_diff("/repo", "a" * 40)
             scoped = read_diff("/repo", "a" * 40, "a.txt")
@@ -82,7 +82,7 @@ class TestDiffParsing(unittest.TestCase):
         self.assertIs(first, again)
         self.assertIn("a.txt", scoped.patch)
         clear_diff_cache()
-        with mock.patch("lazyplan.source.detect_backend", return_value=(backend, "/repo")):
+        with mock.patch("lazyplan.services.source.detect_backend", return_value=(backend, "/repo")):
             read_diff("/repo", "a" * 40)
         self.assertEqual(backend.calls, 3)
         clear_diff_cache()

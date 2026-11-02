@@ -27,9 +27,10 @@ try:
 except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
+from lazyplan.infrastructure.templates import load_template
+from lazyplan.services.source import SourceTrail, build_source_trail
+
 from .... import services
-from ....source import SourceTrail, build_source_trail
-from ....templates import load_template
 from ...shared.design import msg_error
 from ..views.detail import build_detail, detail_breadcrumb
 

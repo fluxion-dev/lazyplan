@@ -6,14 +6,13 @@ import argparse
 import json
 import sys
 
-from .... import (
-    services,
-    textfile,
-)
-from ....forge import RepoRef, resolve_auth
-from ....github import GitHubClient, GitHubError
+from lazyplan.infrastructure.forge import RepoRef, resolve_auth
+from lazyplan.infrastructure.github import GitHubClient, GitHubError
+from lazyplan.infrastructure.vcs import detect_backend, origin_url
+
+from .... import services
+from ....infrastructure import textfile
 from ....store import Store, to_payload
-from ....vcs import detect_backend, origin_url
 from ...shared import (
     porcelain,
 )

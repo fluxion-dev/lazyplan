@@ -6,9 +6,10 @@ import argparse
 import sys
 import time
 
-from .... import (
+from lazyplan import (
     services,
 )
+
 from ....core.errors import ClaimConflict, ClaimMissing
 from ....core.ports.coordination import CoordinationPort
 from ...shared import (

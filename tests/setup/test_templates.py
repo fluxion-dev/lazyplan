@@ -8,7 +8,8 @@ import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 
-from lazyplan import services, templates
+from lazyplan import services
+from lazyplan.infrastructure import templates
 from lazyplan.presentation.cli import main as lpui_main
 from lazyplan.store import Store
 from tests.support.home import sandbox_home

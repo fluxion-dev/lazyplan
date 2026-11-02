@@ -9,9 +9,9 @@ import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 
+from lazyplan.infrastructure.repo import PLAN_DIR, repo_plan_db_path
 from lazyplan.presentation import setup
 from lazyplan.presentation.cli import main as lpui_main
-from lazyplan.repo import PLAN_DIR, repo_plan_db_path
 from lazyplan.store import Store
 from tests.support.home import sandbox_home
 

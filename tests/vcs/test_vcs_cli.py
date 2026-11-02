@@ -7,7 +7,7 @@ import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from unittest import mock
 
-from lazyplan.models import Status
+from lazyplan.core.entities import Status
 from lazyplan.presentation.cli import main as lpui_main
 from lazyplan.store import Store
 
@@ -299,7 +299,7 @@ class TestVcsCLI(unittest.TestCase):
 
     def test_task_start_never_invokes_mutating_git(self):
         os.chdir(self.repo)
-        with mock.patch("lazyplan.vcs.subprocess.run", wraps=subprocess.run) as run:
+        with mock.patch("lazyplan.infrastructure.vcs.subprocess.run", wraps=subprocess.run) as run:
             rc, _, _ = _run(["--db", self.db, "task", "start", "--id", "1"])
         self.assertEqual(rc, 0)
 
@@ -468,7 +468,7 @@ class TestVcsCLI(unittest.TestCase):
             check=True,
             timeout=10,
         )
-        with mock.patch("lazyplan.vcs.subprocess.run", wraps=subprocess.run) as run:
+        with mock.patch("lazyplan.infrastructure.vcs.subprocess.run", wraps=subprocess.run) as run:
             rc, _, _ = _run(["--db", self.db, "task", "finish", "--id", "1"])
         self.assertEqual(rc, 0)
 
@@ -693,7 +693,7 @@ class TestVcsCLI(unittest.TestCase):
             self.assertEqual(json.loads(out)[0]["slug"], "org/repo")
 
     def test_pr_auth_without_token(self):
-        with mock.patch("lazyplan.forge._gh_token", return_value=None):
+        with mock.patch("lazyplan.infrastructure.forge._gh_token", return_value=None):
             with mock.patch.dict(
                 os.environ,
                 {

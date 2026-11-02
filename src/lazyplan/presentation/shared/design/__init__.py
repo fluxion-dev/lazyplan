@@ -19,10 +19,10 @@ Rule: if you add a view, command, or message, add it here or in
 
 from __future__ import annotations
 
-from ....kinds import LABEL_LETTERS as LABEL_LETTERS
-from ....kinds import MILESTONE as MILESTONE
-from ....kinds import PLAN as PLAN
-from ....kinds import TASK as TASK
+from ....core.kinds import LABEL_LETTERS as LABEL_LETTERS
+from ....core.kinds import MILESTONE as MILESTONE
+from ....core.kinds import PLAN as PLAN
+from ....core.kinds import TASK as TASK
 from ..help import HELP_TEXT as HELP_TEXT
 from ..help import KEYMAP as KEYMAP
 from ..palette import PALETTE_COMMANDS as PALETTE_COMMANDS

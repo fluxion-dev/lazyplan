@@ -21,14 +21,9 @@ Canonical field names per kind:
   milestone: title, desc
   task:      title, desc
 
-Behavior:
-  fill     — empty creation flags fall back to template defaults.
-  enforce  — required fields still empty after fill raise ValueError naming
-             the field (CLI surfaces exit 2).
-  criteria — template criteria rows are added after a successful create.
-Missing files mean legacy behavior (no defaults, no enforcement, no
-auto-criteria). Only repo-scoped DBs (`.agents/lazyplan/` or legacy `.plan/`)
-read templates; global/explicit DBs elsewhere never do.
+Behavior: fill empty flags from defaults, enforce required fields, and add
+template criteria after a create. Missing files mean legacy behavior. Only
+repo-scoped DBs read templates; global and explicit DBs never do.
 """
 
 from __future__ import annotations
@@ -38,9 +33,15 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TextIO
 
+from lazyplan.infrastructure.repo import (
+    LEGACY_PLAN_DIR,
+    SHARED_DIR_NAME,
+    SHARED_WINDOWS_DIR_NAME,
+    is_repo_plan_dir,
+)
+
+from ..core.kinds import KIND_ERROR
 from . import textfile
-from .kinds import KIND_ERROR
-from .repo import LEGACY_PLAN_DIR, SHARED_DIR_NAME, SHARED_WINDOWS_DIR_NAME, is_repo_plan_dir
 
 TEMPLATE_DIRNAME = "templates"
 

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 
-from .hooks import HookResult
+from ..core.entities import HookResult
 
 EVENTS: dict[str, dict[str, str]] = {
     "claude": {

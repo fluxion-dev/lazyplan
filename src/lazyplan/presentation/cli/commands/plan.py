@@ -5,10 +5,11 @@ from __future__ import annotations
 import argparse
 import sys
 
-from .... import (
+from lazyplan import (
     services,
 )
-from ....models import Milestone, Plan, Status, Task
+
+from ....core.entities import Milestone, Plan, Status, Task
 from ....store import Store, to_payload
 from ...shared import (
     porcelain,

@@ -9,8 +9,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from .core.ports.insights import InsightsPort
-from .models import Task
+from ..core.entities import Task
+from ..core.ports.insights import InsightsPort
 
 _PLACEHOLDER = re.compile(r"\b(TODO|TBD|FIXME)\b", re.IGNORECASE)
 

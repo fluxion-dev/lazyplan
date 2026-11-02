@@ -13,11 +13,12 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
-from . import vcs
-from .core.policies.insights import parse_since as parse_since
-from .core.policies.insights import status_after
-from .core.ports.insights import InsightsPort
-from .models import Status
+from lazyplan.infrastructure import vcs
+
+from ..core.entities import Status
+from ..core.policies.insights import parse_since as parse_since
+from ..core.policies.insights import status_after
+from ..core.ports.insights import InsightsPort
 
 _STATUS = re.compile(r"^(plan|milestone|task) #(\d+) -> (todo|doing|done)")
 _ADDED = re.compile(r"^([PST])#(\d+) ")

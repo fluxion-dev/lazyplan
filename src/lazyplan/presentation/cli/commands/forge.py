@@ -5,11 +5,12 @@ from __future__ import annotations
 import argparse
 import sys
 
-from .... import (
+from lazyplan import (
     services,
 )
+from lazyplan.infrastructure.forge import parse_pull_url, resolve_auth
+
 from ....core.ports.provenance import ProvenancePort
-from ....forge import parse_pull_url, resolve_auth
 from ...shared import (
     porcelain,
 )

@@ -20,8 +20,9 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from lazyplan import audit, hooks, services  # noqa: E402
-from lazyplan.models import Status  # noqa: E402
+from lazyplan import services  # noqa: E402
+from lazyplan.core.entities import Status  # noqa: E402
+from lazyplan.services import audit, hooks
 from lazyplan.store import Store  # noqa: E402
 
 COMMITS = 8

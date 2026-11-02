@@ -8,7 +8,7 @@ import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 
-from lazyplan import hook_install
+from lazyplan.infrastructure import hook_install
 from lazyplan.presentation import setup
 from lazyplan.presentation.cli import main as lpui_main
 from tests.support.home import sandbox_home

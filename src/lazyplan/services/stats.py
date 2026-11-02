@@ -10,8 +10,8 @@ import re
 import statistics
 import time
 
-from .core.ports.insights import InsightsPort
-from .models import Task
+from ..core.entities import Task
+from ..core.ports.insights import InsightsPort
 
 _ADDED = re.compile(r"^T#(\d+) ")
 _STATUS = re.compile(r"^task #(\d+) -> (todo|doing|done)$")

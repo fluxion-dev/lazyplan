@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING, Any
 
-from ....models import Status
+from ....core.entities import Status
 from ...shared.design import SPINNER_FRAMES, SPINNER_INTERVAL, apply_mark, status_prefix
 from ..views.rows import row_text
 

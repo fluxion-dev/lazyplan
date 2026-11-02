@@ -9,7 +9,7 @@ from textual.widgets import Label, Static, Tree
 from textual.widgets.tree import TreeNode
 
 from .... import services
-from ....models import Milestone, Plan, Status, Task
+from ....core.entities import Milestone, Plan, Status, Task
 from ...shared.design import apply_mark, milestone_row, plan_row, status_prefix, task_row
 from ...shared.help import hint_bar
 from ..views.rows import row_text

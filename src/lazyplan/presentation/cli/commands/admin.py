@@ -9,10 +9,9 @@ import sys
 import time
 from pathlib import Path
 
-from .... import (
-    textfile,
-)
-from ....repo import find_repo_root, repo_label, resolve_db_path
+from lazyplan.infrastructure.repo import find_repo_root, repo_label, resolve_db_path
+
+from ....infrastructure import textfile
 from ....services.environment import (
     UpgradeError,
     detect,
@@ -121,7 +120,8 @@ def _cmd_mcp(store: Store | None, args: argparse.Namespace, actor: str) -> int:
 
 def _cmd_hook(store: Store | None, args: argparse.Namespace, actor: str) -> int:
     """Read-only lifecycle reminder; always exits 0 so a host never blocks."""
-    from .... import hook_hosts, hooks
+    from lazyplan.infrastructure import hook_hosts
+    from lazyplan.services import hooks
 
     del store, actor
     payload = hooks.read_payload(sys.stdin)

@@ -8,9 +8,10 @@ from __future__ import annotations
 import html
 import json
 
-from . import textfile
-from .core.policies.transfer import safe_payload
-from .core.ports.transfer import TransferPort
+from lazyplan.infrastructure import textfile
+
+from ..core.policies.transfer import safe_payload
+from ..core.ports.transfer import TransferPort
 
 
 def payload(store: TransferPort, plan_id: int) -> dict | None:

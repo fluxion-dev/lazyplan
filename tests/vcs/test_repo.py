@@ -3,8 +3,8 @@ import os
 import tempfile
 import unittest
 
+from lazyplan.infrastructure.repo import find_repo_root, repo_label, resolve_db_path
 from lazyplan.presentation.cli import main as lpui_main
-from lazyplan.repo import find_repo_root, repo_label, resolve_db_path
 from lazyplan.store import Store
 from tests.support.home import sandbox_home
 
@@ -64,7 +64,7 @@ class TestRepoScope(unittest.TestCase):
     def test_resolve_ignores_agent_local_db(self):
         import pathlib
 
-        from lazyplan.skills import skill_db_path
+        from lazyplan.infrastructure.skills import skill_db_path
 
         # Per-tool skill DBs are legacy import sources, not resolution targets.
         os.chdir(self.repo)
@@ -111,7 +111,7 @@ class TestRepoScope(unittest.TestCase):
     def test_stale_lazyplan_warns_and_ignored(self):
         import pathlib
 
-        from lazyplan.repo import stale_plan_dirs
+        from lazyplan.infrastructure.repo import stale_plan_dirs
 
         stale = os.path.join(self.repo, ".lazyplan")
         os.makedirs(stale)
@@ -209,7 +209,7 @@ class TestLegacyPlanDir(unittest.TestCase):
     def test_move_legacy(self):
         import pathlib
 
-        from lazyplan.repo import move_legacy_plan_dir
+        from lazyplan.infrastructure.repo import move_legacy_plan_dir
 
         legacy = os.path.join(self.repo, ".plan")
         os.makedirs(legacy)
@@ -245,14 +245,14 @@ class TestSharedHome(unittest.TestCase):
     def test_shared_home_unix(self):
         import pathlib
 
-        from lazyplan import repo as repo_mod
+        from lazyplan.infrastructure import repo as repo_mod
 
         self.assertEqual(repo_mod.shared_home(), pathlib.Path(os.environ["HOME"]) / ".lazyplan")
 
     def test_shared_db_lives_beside_home(self):
         import pathlib
 
-        from lazyplan import repo as repo_mod
+        from lazyplan.infrastructure import repo as repo_mod
 
         base = pathlib.Path(os.environ["HOME"]) / ".lazyplan"
         self.assertEqual(repo_mod.shared_db_path(), base / "lazyplan.db")
@@ -261,7 +261,7 @@ class TestSharedHome(unittest.TestCase):
         import pathlib
         from unittest import mock
 
-        from lazyplan import repo as repo_mod
+        from lazyplan.infrastructure import repo as repo_mod
 
         os.environ["LOCALAPPDATA"] = os.path.join(self.tmp.name, "local")
         with mock.patch.object(repo_mod, "_os_name", return_value="nt"):
@@ -274,7 +274,7 @@ class TestSharedHome(unittest.TestCase):
         import pathlib
         from unittest import mock
 
-        from lazyplan import repo as repo_mod
+        from lazyplan.infrastructure import repo as repo_mod
 
         os.environ["LOCALAPPDATA"] = os.path.join(self.tmp.name, "local")
         with mock.patch.object(repo_mod, "_os_name", return_value="nt"):
@@ -286,7 +286,7 @@ class TestSharedHome(unittest.TestCase):
         import pathlib
         from unittest import mock
 
-        from lazyplan import repo as repo_mod
+        from lazyplan.infrastructure import repo as repo_mod
 
         os.environ["LOCALAPPDATA"] = os.path.join(self.tmp.name, "local")
         stray = pathlib.Path.home() / ".lazyplan" / "lazyplan.db"
@@ -299,7 +299,7 @@ class TestSharedHome(unittest.TestCase):
         import pathlib
         from unittest import mock
 
-        from lazyplan import repo as repo_mod
+        from lazyplan.infrastructure import repo as repo_mod
 
         os.environ.pop("LOCALAPPDATA", None)
         with (
@@ -311,7 +311,7 @@ class TestSharedHome(unittest.TestCase):
     def test_walk_up_finds_nested_team_dir_without_git(self):
         import pathlib
 
-        from lazyplan.repo import walk_up_team_db
+        from lazyplan.infrastructure.repo import walk_up_team_db
 
         outer = os.path.realpath(os.path.join(self.tmp.name, "outer"))
         inner = os.path.join(outer, "inner", "deep")
@@ -325,7 +325,7 @@ class TestSharedHome(unittest.TestCase):
     def test_walk_up_prefers_nearest(self):
         import pathlib
 
-        from lazyplan.repo import walk_up_team_db
+        from lazyplan.infrastructure.repo import walk_up_team_db
 
         outer = os.path.realpath(os.path.join(self.tmp.name, "outer"))
         inner = os.path.join(outer, "inner")
@@ -337,7 +337,7 @@ class TestSharedHome(unittest.TestCase):
         )
 
     def test_walk_up_none_when_absent(self):
-        from lazyplan.repo import walk_up_team_db
+        from lazyplan.infrastructure.repo import walk_up_team_db
 
         plain = os.path.join(self.tmp.name, "plain", "sub")
         os.makedirs(plain)
@@ -380,7 +380,7 @@ class TestSharedSeed(unittest.TestCase):
 
     def test_seed_imports_newest_old_db_once(self):
 
-        from lazyplan.repo import shared_db_path
+        from lazyplan.infrastructure.repo import shared_db_path
         from lazyplan.store import Store
 
         old = self._old_db(".local/share/lazyplan/lazyplan.db", "Old plans", 1000.0)
@@ -397,7 +397,7 @@ class TestSharedSeed(unittest.TestCase):
         )
 
     def test_seed_never_overwrites_shared(self):
-        from lazyplan.repo import shared_db_path
+        from lazyplan.infrastructure.repo import shared_db_path
         from lazyplan.store import Store
 
         self._old_db(".local/share/lazyplan/lazyplan.db", "Old plans", 1000.0)
@@ -408,7 +408,7 @@ class TestSharedSeed(unittest.TestCase):
         self.assertTrue(shared_db_path().is_file())
 
     def test_seed_empty_without_old_dbs(self):
-        from lazyplan.repo import shared_db_path
+        from lazyplan.infrastructure.repo import shared_db_path
         from lazyplan.store import Store
 
         seeded = Store(None)

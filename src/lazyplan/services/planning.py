@@ -6,12 +6,13 @@ import re
 import time
 from pathlib import Path
 
+from lazyplan.infrastructure.templates import apply_template, template_criteria
+
 from ..core.entities import Criterion, Milestone, Plan, Status, Task
+from ..core.kinds import check_kind
 from ..core.policies.planning import is_archived as _is_archived_policy
 from ..core.policies.planning import next_status, rollup_target
 from ..core.ports.planning import PlanningPort
-from ..kinds import check_kind
-from ..templates import apply_template, template_criteria
 
 DEFAULT_PLAN_LIMIT = 5
 

@@ -5,14 +5,14 @@ from __future__ import annotations
 import sqlite3
 import time
 
-from ..core.policies.collaboration import mention_needle, validate_comment, validate_note
-from ..kinds import check_parent_kind
-from ..models import (
+from ..core.entities import (
     Comment,
     Criterion,
     Note,
     Task,
 )
+from ..core.kinds import check_parent_kind
+from ..core.policies.collaboration import mention_needle, validate_comment, validate_note
 from .base import (
     StoreBase,
 )

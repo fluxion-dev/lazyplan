@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from ...models import Status
+from ...core.entities import Status
 
 
 @dataclass

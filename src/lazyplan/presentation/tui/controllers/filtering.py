@@ -6,7 +6,7 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from .... import services
-from ....models import Milestone, Plan, Status, Task
+from ....core.entities import Milestone, Plan, Status, Task
 from ....services import insights
 
 if TYPE_CHECKING:

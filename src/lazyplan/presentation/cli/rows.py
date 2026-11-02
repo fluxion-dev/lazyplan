@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import argparse
 
-from ... import (
+from lazyplan import (
     services,
 )
-from ...models import Status
+
+from ...core.entities import Status
 from ...store import Store, to_payload
 from ..shared import (
     porcelain,

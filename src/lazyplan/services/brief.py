@@ -8,9 +8,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from . import audit
-from .core.ports.insights import InsightsPort
-from .models import Plan, Status, Task
+from lazyplan.services import audit
+
+from ..core.entities import Plan, Status, Task
+from ..core.ports.insights import InsightsPort
 
 _MAX_PLANS = 3
 _MAX_LOOSE = 5

@@ -17,7 +17,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
-from lazyplan.docs_meta import ENVIRONMENT, FILES  # noqa: E402
+from lazyplan.infrastructure.docs_meta import ENVIRONMENT, FILES  # noqa: E402
 from lazyplan.presentation.cli.parser import build_parser  # noqa: E402
 
 

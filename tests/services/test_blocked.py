@@ -10,7 +10,7 @@ import tempfile
 import unittest
 
 from lazyplan import services
-from lazyplan.models import Status
+from lazyplan.core.entities import Status
 from lazyplan.presentation.cli import main as lpui_main
 from lazyplan.store import Store
 from tests.support.home import sandbox_home

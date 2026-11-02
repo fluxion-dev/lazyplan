@@ -7,7 +7,8 @@ import os
 import tempfile
 import unittest
 
-from lazyplan import services, sync
+from lazyplan import services
+from lazyplan.services import sync
 from lazyplan.store import Store
 
 

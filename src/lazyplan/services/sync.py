@@ -5,9 +5,9 @@ No deletes and no overwrites. Row-level merge is intentionally out of scope.
 
 from __future__ import annotations
 
-from . import services
-from .core.policies.transfer import differences, is_export
-from .core.ports.transfer import TransferPort
+from .. import services
+from ..core.policies.transfer import differences, is_export
+from ..core.ports.transfer import TransferPort
 
 
 def sync(store: TransferPort, data: dict, actor: str = "human", dry_run: bool = False) -> dict:

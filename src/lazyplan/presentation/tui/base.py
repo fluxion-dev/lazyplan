@@ -7,7 +7,7 @@ from typing import Any
 from textual.app import App
 from textual.widgets.tree import TreeNode
 
-from ...models import Status
+from ...core.entities import Status
 from ...store import Store
 from .controllers.git_state import GitStateController
 from .controllers.metrics import MetricsController

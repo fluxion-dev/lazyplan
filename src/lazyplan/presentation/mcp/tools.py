@@ -10,12 +10,14 @@ import json
 from pathlib import Path
 from typing import Any
 
-from ... import services, trace
-from ...models import Milestone, Plan, Status, Task
-from ...repo import find_repo_root, repo_label
+from lazyplan import services
+from lazyplan.infrastructure.repo import find_repo_root, repo_label
+from lazyplan.infrastructure.vcs import detect_backend
+from lazyplan.services import trace
+
+from ...core.entities import Milestone, Plan, Status, Task
 from ...services import insights
 from ...store import to_payload
-from ...vcs import detect_backend
 from .base import McpBase
 
 PROTOCOL_VERSION = "2024-11-05"

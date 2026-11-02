@@ -8,8 +8,9 @@ import time
 import unittest
 from unittest import mock
 
-from lazyplan import services, stats
-from lazyplan.models import Status
+from lazyplan import services
+from lazyplan.core.entities import Status
+from lazyplan.services import stats
 from lazyplan.store import Store
 
 

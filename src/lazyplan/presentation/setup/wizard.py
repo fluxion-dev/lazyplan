@@ -7,11 +7,12 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from ... import hook_install, skills
-from ...repo import (
+from lazyplan.infrastructure import hook_install, skills
+from lazyplan.infrastructure.repo import (
     find_repo_root,
     repo_plan_db_path,
 )
+
 from . import ui
 from .constants import (
     HOME,

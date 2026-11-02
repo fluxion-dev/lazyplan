@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import sys
 
-from ... import hook_install as hook_install
-from ...repo import shared_db_path as shared_db_path
+from lazyplan.infrastructure import hook_install
+from lazyplan.infrastructure.repo import shared_db_path as shared_db_path
+
 from . import layout, ui
 from .apply import (
     apply_choice,

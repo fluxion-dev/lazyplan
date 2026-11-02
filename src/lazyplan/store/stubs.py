@@ -7,8 +7,7 @@ from __future__ import annotations
 
 import sqlite3
 
-from ..core.policies.coordination import CLAIM_DEFAULT_TTL
-from ..models import (
+from ..core.entities import (
     Claim,
     Comment,
     Criterion,
@@ -17,6 +16,7 @@ from ..models import (
     Plan,
     Task,
 )
+from ..core.policies.coordination import CLAIM_DEFAULT_TTL
 from .stubs_links import StoreStubsLinks
 
 

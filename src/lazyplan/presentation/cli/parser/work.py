@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import argparse
 
-from ....kinds import KINDS
-from ....models import Status
+from ....core.entities import Status
+from ....core.kinds import KINDS
 
 
 def add_list(

@@ -9,7 +9,7 @@ import subprocess
 import tempfile
 import unittest
 
-from lazyplan.models import Status
+from lazyplan.core.entities import Status
 from lazyplan.presentation.cli import main as lpui_main
 from lazyplan.services import set_status
 from lazyplan.store import Store

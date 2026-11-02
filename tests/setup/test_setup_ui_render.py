@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from lazyplan import skills
+from lazyplan.infrastructure import skills
 from lazyplan.presentation.setup import ui as setup_ui
 
 

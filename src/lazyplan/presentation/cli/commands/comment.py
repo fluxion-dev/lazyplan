@@ -7,8 +7,8 @@ import sys
 import time
 
 from .... import services
+from ....core.entities import Comment
 from ....core.ports.collaboration import CollaborationPort
-from ....models import Comment
 from ...shared import (
     porcelain,
 )

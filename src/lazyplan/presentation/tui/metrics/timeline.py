@@ -8,7 +8,8 @@ from textual.app import ComposeResult
 from textual.containers import VerticalScroll
 from textual_plotext import PlotextPlot
 
-from ....metrics import Timeline, TimelineLane
+from lazyplan.services.metrics import Timeline, TimelineLane
+
 from ..query import query_one_opt
 from ..theme import (
     apply_chart_theme,

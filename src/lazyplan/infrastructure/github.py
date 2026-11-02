@@ -13,10 +13,10 @@ import urllib.request
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from .forge import AuthStatus, RepoRef, redact, resolve_auth
+from lazyplan.infrastructure.forge import AuthStatus, RepoRef, redact, resolve_auth
 
 if TYPE_CHECKING:
-    from .core.ports.provenance import CachePort
+    from ..core.ports.provenance import CachePort
 
 API_BASE = "https://api.github.com"
 API_VERSION = "2022-11-28"

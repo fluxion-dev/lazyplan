@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from ....metrics import TimelineLane
+from lazyplan.services.metrics import TimelineLane
+
 from ...shared.design import truncate
 
 LEGEND_LABEL_WIDTH = 16

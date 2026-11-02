@@ -6,8 +6,8 @@ import argparse
 import json
 import sys
 
+from ...core.entities import Criterion, Milestone, Plan, Status, Task
 from ...core.ports.planning import PlanningPort
-from ...models import Criterion, Milestone, Plan, Status, Task
 from ..shared import (
     porcelain,
 )

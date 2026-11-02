@@ -6,9 +6,9 @@ porcelain, or JSON; no network calls happen here.
 
 from __future__ import annotations
 
-from .core.ports.provenance import ProvenancePort
-from .core.serialization import to_payload
-from .models import Criterion, Task
+from ..core.entities import Criterion, Task
+from ..core.ports.provenance import ProvenancePort
+from ..core.serialization import to_payload
 
 
 def _task_entry(store: ProvenancePort, task: Task) -> dict:

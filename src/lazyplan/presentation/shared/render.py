@@ -14,7 +14,7 @@ from ...services import tree as service_tree
 from .design import INDENT, milestone_label, plan_label, status_word, task_label
 
 if TYPE_CHECKING:
-    from ...models import Status
+    from ...core.entities import Status
     from ...store import Store
 
 

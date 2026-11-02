@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from ....source import (
+from lazyplan.services.source import (
     DiffFile,
     DiffLine,
     SourceCommit,
@@ -14,6 +14,7 @@ from ....source import (
     parse_patch,
     read_diff,
 )
+
 from ...shared.design import escape_markup
 
 

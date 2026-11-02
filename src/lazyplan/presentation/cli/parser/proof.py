@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import argparse
 
-from ....kinds import KINDS
+from ....core.kinds import KINDS
 
 
 def add_link(

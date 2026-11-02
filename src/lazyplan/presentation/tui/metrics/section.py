@@ -10,7 +10,8 @@ try:
 except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
-from ....metrics import MetricsSnapshot
+from lazyplan.services.metrics import MetricsSnapshot
+
 from ...shared.design import truncate
 from ..query import query_one_opt
 from .timeline import TimelineCard

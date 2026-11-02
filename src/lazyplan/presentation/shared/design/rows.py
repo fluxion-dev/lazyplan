@@ -5,13 +5,13 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
-from ....kinds import LABEL_LETTERS, MILESTONE, PLAN, TASK
-from ....models import Status
+from ....core.entities import Status
+from ....core.kinds import LABEL_LETTERS, MILESTONE, PLAN, TASK
 from .row_stats import SLOTS, RowStats, render_stats, stats_layout
 from .text import _escape_markup, repo_project_name, status_prefix, status_word, truncate
 
 if TYPE_CHECKING:
-    from ....models import Milestone, Plan, Task
+    from ....core.entities import Milestone, Plan, Task
     from ....store import Store
 
 DEFAULT_ROW_WIDTH = 80

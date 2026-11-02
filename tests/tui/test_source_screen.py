@@ -6,8 +6,8 @@ import tempfile
 import unittest
 from unittest import mock
 
+from lazyplan.infrastructure.vcs import DiffRead
 from lazyplan.store import Store
-from lazyplan.vcs import DiffRead
 from tests.support.pilot import settle
 
 try:

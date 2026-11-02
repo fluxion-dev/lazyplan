@@ -6,8 +6,9 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
+from lazyplan.services.source import SourceTrail, build_source_trail
+
 from ....core.ports.provenance import ProvenancePort
-from ....source import SourceTrail, build_source_trail
 from ...shared.design import SECTION_ICON, escape_markup, status_word
 from ...shared.render import render_forge_links
 

@@ -12,7 +12,7 @@ import unittest
 from argparse import Namespace
 from unittest import mock
 
-from lazyplan.models import Status
+from lazyplan.core.entities import Status
 from lazyplan.presentation.cli import main as lpui_main
 from lazyplan.presentation.cli.parser import build_parser
 from lazyplan.presentation.shared import porcelain

@@ -5,9 +5,10 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
+from lazyplan.infrastructure.vcs import detect_backend
+
+from ..core.kinds import check_kind
 from ..core.ports.provenance import ProvenancePort
-from ..kinds import check_kind
-from ..vcs import detect_backend
 from .forge import (
     _checks_state,
     _forge_target,

@@ -5,7 +5,8 @@ from __future__ import annotations
 import time
 from typing import TYPE_CHECKING, Any
 
-from ....vcs import detect_backend
+from lazyplan.infrastructure.vcs import detect_backend
+
 from ...shared.design import repo_project_name
 
 if TYPE_CHECKING:

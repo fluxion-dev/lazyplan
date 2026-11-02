@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from lazyplan.infrastructure.vcs import CommitInfo, RepoStatus, VCSBackend, detect_backend
+
+from ..core.kinds import check_kind
 from ..core.policies.provenance import branch_ref, letter_for_kind, trailer_refs
 from ..core.ports.provenance import ProvenancePort
-from ..kinds import check_kind
-from ..vcs import CommitInfo, RepoStatus, VCSBackend, detect_backend
 
 
 def _norm_path(path: str) -> str:

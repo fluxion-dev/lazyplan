@@ -11,12 +11,18 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
+from lazyplan.infrastructure.repo import (
+    ensure_plan_dir,
+    resolve_db_path,
+    seed_shared_db,
+    shared_db_path,
+)
+
 from ..core.errors import ClaimConflict as ClaimConflict
 from ..core.errors import ClaimError as ClaimError
 from ..core.errors import ClaimMissing as ClaimMissing
 from ..core.serialization import to_payload
-from ..migrate import migrate
-from ..repo import ensure_plan_dir, resolve_db_path, seed_shared_db, shared_db_path
+from .migrate import migrate
 from .stubs import StoreStubs
 
 

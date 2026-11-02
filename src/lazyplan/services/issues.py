@@ -5,9 +5,9 @@ No writeback. No raw provider payloads or tokens are stored.
 
 from __future__ import annotations
 
-from .core.policies.transfer import issue_stamp
-from .core.ports.transfer import TransferPort
-from .models import Issue
+from ..core.entities import Issue
+from ..core.policies.transfer import issue_stamp
+from ..core.ports.transfer import TransferPort
 
 
 def parse_github(data: object) -> list[Issue]:

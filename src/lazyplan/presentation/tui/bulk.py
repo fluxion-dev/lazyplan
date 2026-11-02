@@ -10,8 +10,8 @@ except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
 from ... import services
+from ...core.entities import Status, Task
 from ...core.errors import ClaimConflict
-from ...models import Status, Task
 from .screens import (
     ConfirmScreen,
     FilterPromptScreen,

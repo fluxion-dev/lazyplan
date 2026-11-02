@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from .... import metrics as metrics_mod
 from ..metrics import MetricsSection
 from ..query import query_one_opt
 
@@ -35,6 +34,8 @@ class MetricsController:
 
     def refresh(self) -> None:
         """Push one snapshot for the current selection into the section."""
+        from ....services import metrics as metrics_mod
+
         self._stop_debounce()
         section = query_one_opt(self.app, "#metrics", MetricsSection)
         if section is None:

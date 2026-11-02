@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+from lazyplan.infrastructure.vcs import VCSBackend, detect_backend
+
+from ..core.entities import Status
 from ..core.ports.provenance import ProvenancePort
-from ..models import Status
-from ..vcs import VCSBackend, detect_backend
 from .base import (
     GateError,
 )
-from .plans import set_status
+from .planning import set_status
 from .vcs import _ensure_task_repo_links, _norm_path, _repo_for_task
 
 

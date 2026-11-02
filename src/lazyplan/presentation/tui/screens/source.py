@@ -20,8 +20,7 @@ try:
 except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
-from ....core.ports.provenance import ProvenancePort
-from ....source import (
+from lazyplan.services.source import (
     SourceCommit,
     SourceFile,
     SourcePull,
@@ -30,6 +29,8 @@ from ....source import (
     build_source_trail,
     clear_diff_cache,
 )
+
+from ....core.ports.provenance import ProvenancePort
 from ...shared.design import KIND_ICON, escape_markup
 from ..views.source import (
     commit_label,

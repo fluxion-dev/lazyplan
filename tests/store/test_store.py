@@ -6,11 +6,11 @@ import unittest
 from contextlib import closing
 from unittest import mock
 
-from lazyplan import migrate as migrate_mod
 from lazyplan import services
-from lazyplan.models import Status
+from lazyplan.core.entities import Status
 from lazyplan.presentation.cli import main as lpui_main
 from lazyplan.store import Store, default_actor
+from lazyplan.store import migrate as migrate_mod
 
 
 class TestDefaultActor(unittest.TestCase):

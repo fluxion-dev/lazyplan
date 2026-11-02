@@ -10,7 +10,7 @@ from contextlib import redirect_stdout
 from pathlib import Path
 from unittest import mock
 
-from lazyplan import skills
+from lazyplan.infrastructure import skills
 from lazyplan.presentation.cli import main as lpui_main
 from lazyplan.presentation.cli.parser import build_parser
 from tests.support.home import sandbox_home
@@ -570,7 +570,7 @@ class TestAppendGitignore(unittest.TestCase):
         self.tmp.cleanup()
 
     def test_adds_and_dedupes(self):
-        from lazyplan.skills import append_gitignore
+        from lazyplan.infrastructure.skills import append_gitignore
 
         root = Path(self.repo)
         self.assertTrue(append_gitignore(root, ".agents/lazyplan/"))
@@ -580,7 +580,7 @@ class TestAppendGitignore(unittest.TestCase):
         self.assertEqual(open(root / ".gitignore", encoding="utf-8").read(), ".agents/lazyplan/\n")
 
     def test_missing_trailing_newline(self):
-        from lazyplan.skills import append_gitignore
+        from lazyplan.infrastructure.skills import append_gitignore
 
         root = Path(self.repo)
         (root / ".gitignore").write_text("*.db", encoding="utf-8")

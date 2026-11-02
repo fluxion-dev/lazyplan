@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..core.entities import Plan, Status, Task
 from ..core.ports.transfer import TransferPort
 from ..core.serialization import to_payload
-from ..models import Plan, Status, Task
-from .plans import heal, set_status
+from .planning import heal, set_status
 
 
 def _export_maps(store: TransferPort) -> dict[str, Any]:
@@ -363,35 +363,35 @@ def _import_all(store: TransferPort, data: dict, actor: str = "human") -> dict[s
 
 def share_render(port: TransferPort, plan_id: int, fmt: str, dest: str | None) -> str | None:
     """Render a read-only share document."""
-    from ..share import write
+    from lazyplan.services.share import write
 
     return write(port, plan_id, fmt, dest)
 
 
 def sync_plans(port: TransferPort, data: dict, actor: str = "human", dry_run: bool = False) -> dict:
     """Merge a plan dump by stable uid."""
-    from ..sync import sync
+    from lazyplan.services.sync import sync
 
     return sync(port, data, actor=actor, dry_run=dry_run)
 
 
 def seed_demo(port: TransferPort) -> None:
     """Insert the demo plan when the store is empty."""
-    from ..seed import seed
+    from lazyplan.services.seed import seed
 
     seed(port)
 
 
 def parse_github_issues(data: object) -> list:
     """Normalize a GitHub issue response."""
-    from ..issues import parse_github
+    from lazyplan.services.issues import parse_github
 
     return parse_github(data)
 
 
 def parse_linear_issues(data: object) -> list:
     """Normalize a Linear issue export."""
-    from ..issues import parse_linear
+    from lazyplan.services.issues import parse_linear
 
     return parse_linear(data)
 
@@ -405,7 +405,7 @@ def import_issues(
     dry_run: bool = False,
 ) -> dict:
     """Create rows from normalized issues or refresh source metadata."""
-    from ..issues import import_issues as _import_issues
+    from lazyplan.services.issues import import_issues as _import_issues
 
     return _import_issues(
         port, issues, actor=actor, as_kind=as_kind, milestone=milestone, dry_run=dry_run

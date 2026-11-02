@@ -8,15 +8,15 @@ unless `apply_layout` is called.
 from __future__ import annotations
 
 import json
-import shutil
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TextIO
 
-from ... import textfile
-from ...repo import (
+from lazyplan.infrastructure import textfile
+from lazyplan.infrastructure.backup import backup_file, new_backup_dir
+from lazyplan.infrastructure.repo import (
     CONFIG_NAME,
     DB_NAME,
     PLAN_DIR,
@@ -26,9 +26,8 @@ from ...repo import (
     move_legacy_plan_dir,
     repo_plan_db_path,
     shared_db_path,
-    shared_home,
 )
-from ...skills import (
+from lazyplan.infrastructure.skills import (
     AGENTS_DIR,
     AGENTS_MARK_BEGIN,
     AGENTS_MARK_END,
@@ -191,12 +190,6 @@ def _lazyplan_gitignore_lines(path: Path) -> list[str]:
     ]
 
 
-def new_backup_dir(home: Path) -> Path:
-    """Fresh timestamped backup dir under the shared home."""
-    stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S-%f")
-    return shared_home(home) / "backups" / stamp
-
-
 def _existing_files(path: Path) -> list[str]:
     """Files represented by a file or directory path; read-only."""
     try:
@@ -277,25 +270,6 @@ def inventory(layout: SetupLayout) -> dict:
     }
 
 
-def _backup_path(backup_dir: Path, source: Path) -> Path:
-    try:
-        rel = source.relative_to(source.anchor)
-    except ValueError:
-        rel = Path(source.name)
-    return backup_dir / rel
-
-
-def backup_file(backup_dir: Path, source: Path) -> Path:
-    """Copy one file or directory into the backup tree and return its path."""
-    backup = _backup_path(backup_dir, source)
-    backup.parent.mkdir(parents=True, exist_ok=True)
-    if source.is_dir():
-        shutil.copytree(source, backup)
-    else:
-        shutil.copy2(source, backup)
-    return backup
-
-
 def _strip_agents(source: Path) -> bool:
     """Remove only the marked lazyplan block; delete a file left with just the heading."""
     cleaned, found = _agents_block(textfile.read(source))
@@ -325,7 +299,7 @@ def apply_layout(
     write: TextIO | None = None,
 ) -> dict:
     """Create only the resources in the resolved layout."""
-    from ...templates import run_template_setup
+    from lazyplan.infrastructure.templates import run_template_setup
 
     legacy: dict | None = None
     if (

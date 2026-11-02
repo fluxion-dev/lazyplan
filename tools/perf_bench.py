@@ -37,8 +37,9 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 import lazyplan.store.base as store_mod  # noqa: E402
-from lazyplan import audit, services, stats  # noqa: E402
+from lazyplan import services
 from lazyplan.presentation.shared import render
+from lazyplan.services import audit, stats  # noqa: E402
 from lazyplan.store import Store  # noqa: E402
 
 STAMP = 1_700_000_000.0
@@ -432,8 +433,8 @@ def measure(
 
 
 def _core_metrics(store: Store, fixture: Fixture, repeat: int) -> list[Measurement]:
-    from lazyplan import share
     from lazyplan.presentation.cli.rows import _list_payload
+    from lazyplan.services import share
 
     plan_ids = [plan.id for plan in store.list_plans()]
     return [
@@ -471,7 +472,7 @@ def _git_metrics(repo: Path | None, repeat: int) -> list[Measurement]:
             Measurement("git_status", None, None, None, note),
             Measurement("git_show", None, None, None, note),
         ]
-    from lazyplan.vcs import detect_backend
+    from lazyplan.infrastructure.vcs import detect_backend
 
     backend, root = detect_backend(repo)
     if backend is None or root is None:

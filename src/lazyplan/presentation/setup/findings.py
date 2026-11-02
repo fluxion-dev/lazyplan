@@ -9,8 +9,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ... import skills, templates, textfile
-from ...repo import (
+from lazyplan.infrastructure import skills, templates, textfile
+from lazyplan.infrastructure.repo import (
     CONFIG_NAME,
     PLAN_DIR,
     TEMPLATES_DIR_NAME,
@@ -22,6 +22,7 @@ from ...repo import (
     stale_plan_dirs,
     walk_up_team_db,
 )
+
 from . import layout, ui
 from .constants import (
     HOME,
@@ -64,7 +65,7 @@ def default_choice(
 
 
 def parse_agents(raw: str, home: Path) -> list[str]:
-    from ...skills import detect_agents, parse_tool_selection
+    from lazyplan.infrastructure.skills import detect_agents, parse_tool_selection
 
     hosts = detect_agents(home)
     text = (raw or "").strip()

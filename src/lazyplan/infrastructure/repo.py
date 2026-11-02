@@ -148,7 +148,7 @@ def legacy_db_candidates(home: str | Path | None = None) -> list[Path]:
     """
     base = Path(home).expanduser() if home is not None else Path.home()
     try:
-        from .skills import agent_local_db_candidates
+        from lazyplan.infrastructure.skills import agent_local_db_candidates
     except ImportError:
         candidates: list[Path] = []
     else:

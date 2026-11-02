@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from ... import textfile
+from lazyplan.infrastructure import textfile
 
 try:
     from textual.widgets import Tree  # noqa: F401
@@ -14,10 +14,11 @@ try:
 except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
+from lazyplan.infrastructure.templates import load_template
+
 from ... import services
+from ...core.entities import Status
 from ...core.errors import ClaimConflict
-from ...models import Status
-from ...templates import load_template
 from ..shared.palette import by_id
 from .constants import DOUBLE_CLICK_WINDOW
 from .context import ContextMixin

@@ -8,7 +8,7 @@ import unittest
 from unittest import mock
 
 from lazyplan import services
-from lazyplan.models import Status
+from lazyplan.core.entities import Status
 from lazyplan.store import Store
 
 try:

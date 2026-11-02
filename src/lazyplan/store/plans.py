@@ -5,12 +5,12 @@ from __future__ import annotations
 import sqlite3
 import uuid
 
-from ..kinds import table_for
-from ..models import (
+from ..core.entities import (
     Milestone,
     Plan,
     Status,
 )
+from ..core.kinds import table_for
 from .base import (
     StoreBase,
 )

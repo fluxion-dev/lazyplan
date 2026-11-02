@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-from lazyplan.vcs import (
+from lazyplan.infrastructure.vcs import (
     GitBackend,
     backends,
     commit_url,
@@ -154,12 +154,12 @@ class TestVCS(unittest.TestCase):
 
     @unittest.skipUnless(_git_available(), "git CLI required")
     def test_status_uses_one_git_call(self):
-        import lazyplan.vcs as vcs_mod
+        import lazyplan.infrastructure.vcs as vcs_mod
 
         with tempfile.TemporaryDirectory() as tmp:
             _init_repo(tmp)
             _commit(tmp, "f.txt", "hi\n", "first")
-            with mock.patch("lazyplan.vcs._run_git", wraps=vcs_mod._run_git) as run:
+            with mock.patch("lazyplan.infrastructure.vcs._run_git", wraps=vcs_mod._run_git) as run:
                 status = self.backend.status(tmp)
             self.assertEqual(run.call_count, 1)
             self.assertEqual(status.branch, "main")
@@ -331,7 +331,7 @@ class TestVCS(unittest.TestCase):
             _commit(tmp, "a.txt", body, "many lines")
             sha = self.backend.head(tmp)
             assert sha is not None
-            with mock.patch("lazyplan.vcs.DIFF_MAX_LINES", 3):
+            with mock.patch("lazyplan.infrastructure.vcs.DIFF_MAX_LINES", 3):
                 read = self.backend.diff(tmp, sha)
             self.assertTrue(read.truncated)
             self.assertLessEqual(len(read.patch.splitlines()), 3)
@@ -350,7 +350,7 @@ class TestVCS(unittest.TestCase):
                 calls.append(list(args[0]))
                 return real_run(*args, **kwargs)
 
-            with mock.patch("lazyplan.vcs.subprocess.run", side_effect=record):
+            with mock.patch("lazyplan.infrastructure.vcs.subprocess.run", side_effect=record):
                 self.backend.diff(tmp, sha)
             verbs = {call[3] for call in calls}
             self.assertLessEqual(verbs, {"rev-parse", "rev-list", "show"})

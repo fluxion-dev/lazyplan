@@ -214,3 +214,15 @@ class ForgeLink:
             raise ValueError("forge link provider must not be empty")
         if not self.kind.strip():
             raise ValueError("forge link kind must not be empty")
+
+
+@dataclass(frozen=True)
+class HookResult:
+    """What a lifecycle hook wants the host to show."""
+
+    text: str = ""
+    context: bool = False
+
+    def capped(self) -> HookResult:
+        """Keep injected context inside the host's patience."""
+        return HookResult(self.text[:2000], self.context)

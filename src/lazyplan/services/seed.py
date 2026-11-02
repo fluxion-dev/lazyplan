@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .core.ports.transfer import TransferPort
+from ..core.ports.transfer import TransferPort
 
 
 def seed(store: TransferPort) -> None:

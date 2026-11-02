@@ -3,6 +3,26 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## v0.30.2 — 2026-11-01
+
+Internal architecture refactor with no user-facing behavior change. The
+package is now organized as a pure core, a services layer, an SQLite store
+adapter, infrastructure adapters, and a presentation layer for the TUI, CLI,
+MCP server, and setup flow.
+
+CLI text, `--porcelain`, `--json`, MCP schemas, share HTML, export output, and
+TUI snapshots are unchanged. The database schema is unchanged.
+
+### Upgrade
+
+```bash
+pipx upgrade lazyplan-tui
+# or
+pipx install --force lazyplan-tui
+```
+
+No manual migration is required.
+
 ## v0.30.1 — 2026-11-01
 
 Fixes the timeline's false shared start. Project and milestone traces now begin

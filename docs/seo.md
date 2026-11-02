@@ -314,3 +314,14 @@ copy and marketing budget did not change.
 Verified live: the page contains 0.30.1, `screens/lpui-timeline.webp` and its
 PNG return 200, the sitemap carries `lastmod` 2026-11-01, and canonical,
 FAQ/JSON-LD, and robots are intact. An isolated 0.30.1 install printed 0.30.1.
+
+### v0.30.2 pass (2026-11-01)
+
+After: version pins, release asset URLs, JSON-LD `version`/`softwareVersion`,
+and the sitemap `lastmod` moved to 0.30.2. This is an internal refactor, so the
+visible copy and screenshots did not change.
+
+Verified live: the page contains 0.30.2, the canonical URL, FAQ/JSON-LD, and
+robots are intact, the sitemap is served, and the Pages deploy
+[41369785987](https://github.com/fluxion-dev/lazyplan/actions/runs/41369785987)
+succeeded. An isolated 0.30.2 install printed 0.30.2.

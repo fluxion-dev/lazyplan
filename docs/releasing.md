@@ -633,3 +633,39 @@ or the next plan row so the next release has the context.
   main CI run
   [41369785989](https://github.com/fluxion-dev/lazyplan/actions/runs/41369785989)
   is recorded for the merge commit.
+
+### v0.30.3 (2026-11-02)
+
+- Patch bump from 0.30.2. The timeline card now shows only the row under the
+  cursor and its immediate children: a plan keeps its milestones, a milestone
+  keeps its tasks, and a task keeps only itself. With no selection the card
+  shows `select a row`; an empty database keeps `no plans yet`. A childless
+  row keeps its own lane, and the clicked lane stays bold.
+- The change and its regression tests merged as
+  [#80](https://github.com/fluxion-dev/lazyplan/pull/80) after gates
+  [41376228607](https://github.com/fluxion-dev/lazyplan/actions/runs/41376228607)
+  passed on Ubuntu and macOS. `./tools/check.sh` printed ALL GATES GREEN before
+  the merge.
+- The **bump** workflow (`part=patch`) ran
+  [41376900215](https://github.com/fluxion-dev/lazyplan/actions/runs/41376900215);
+  its `bump` job opened release PR
+  [#81](https://github.com/fluxion-dev/lazyplan/pull/81). The release-branch CI
+  run [41376917208](https://github.com/fluxion-dev/lazyplan/actions/runs/41376917208)
+  parked in `action_required` and passed Ubuntu and macOS after admin approval.
+  Auto-merge produced `6bc45d1`.
+- **Deviation:** the bump `publish` job waited the full 20 minutes and failed
+  at 02:37:58 before PR #81 merged. The documented manual fallback dispatched
+  `tag-release`
+  ([41379514362](https://github.com/fluxion-dev/lazyplan/actions/runs/41379514362))
+  and Pages
+  ([41379517126](https://github.com/fluxion-dev/lazyplan/actions/runs/41379517126)).
+  `tag-release` created annotated tag `v0.30.3` and dispatched
+  [release.yml](https://github.com/fluxion-dev/lazyplan/actions/runs/41379525539);
+  the `release` and `publish-pypi` jobs succeeded.
+- PyPI JSON served 0.30.3 while the simple index lagged; an isolated
+  `PIPX_HOME=/tmp/... pipx install lazyplan-tui==0.30.3` with
+  `PIP_NO_CACHE_DIR=1` then printed 0.30.3.
+- Verified: seven release assets including `install.sh`, the wheel, sdist, two
+  RPMs, and two DEBs; the curated release body is live; the live site shows
+  0.30.3; the refreshed `lpui-timeline` screenshot returns 200 in both formats;
+  and the sitemap `lastmod` is 2026-11-02.

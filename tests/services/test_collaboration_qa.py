@@ -7,7 +7,8 @@ import os
 import tempfile
 import unittest
 
-from lazyplan import services, share, sync
+from lazyplan import services
+from lazyplan.services import share, sync
 from lazyplan.store import Store
 
 

@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import sqlite3
 
-from ..kinds import check_parent_kind
-from ..models import (
+from ..core.entities import (
     ForgeLink,
     VcsLink,
 )
+from ..core.kinds import check_parent_kind
 from .base import (
     StoreBase,
     _files_json,

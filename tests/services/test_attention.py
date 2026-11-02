@@ -8,11 +8,11 @@ import unittest
 from unittest import mock
 
 from lazyplan import services
-from lazyplan.models import Status
+from lazyplan.core.entities import Status
 from lazyplan.store import Store
 
 try:
-    from lazyplan import tui as tui_mod
+    from lazyplan.presentation import tui as tui_mod
 except ImportError:  # pragma: no cover
     tui_mod = None  # type: ignore[assignment]
 

@@ -3,9 +3,9 @@
 import argparse
 import unittest
 
-from lazyplan import help as help_mod
-from lazyplan import palette
-from lazyplan.cli.parser import build_parser
+from lazyplan.presentation.cli.parser import build_parser
+from lazyplan.presentation.shared import help as help_mod
+from lazyplan.presentation.shared import palette
 
 
 def _subcommands() -> dict[str, argparse.ArgumentParser]:

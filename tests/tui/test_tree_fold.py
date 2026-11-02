@@ -9,12 +9,12 @@ import tempfile
 import unittest
 from unittest import mock
 
-from lazyplan import design
+from lazyplan.presentation.shared import design
 from lazyplan.store import Store
 from tests.support.pilot import settle
 
 try:
-    from lazyplan import tui as tui_mod
+    from lazyplan.presentation import tui as tui_mod
 except ImportError:  # stdlib-only interpreter: no textual, no screens
     tui_mod = None  # type: ignore[assignment]
 
@@ -204,11 +204,11 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
     async def test_double_click_opens_detail(self):
         from unittest import mock
 
-        from lazyplan.tui.screens import DetailScreen
+        from lazyplan.presentation.tui.screens import DetailScreen
 
         async with self.app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
-            with mock.patch("lazyplan.tui.actions.DOUBLE_CLICK_WINDOW", 30.0):
+            with mock.patch("lazyplan.presentation.tui.actions.DOUBLE_CLICK_WINDOW", 30.0):
                 await pilot.click("#tree", offset=(10, 0))
                 await pilot.pause()
                 await pilot.click("#tree", offset=(10, 0))
@@ -229,7 +229,7 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(len(self.app.screen_stack), 1)
 
     async def test_enter_opens_detail(self):
-        from lazyplan.tui.screens import DetailScreen
+        from lazyplan.presentation.tui.screens import DetailScreen
 
         async with self.app.run_test() as pilot:
             await pilot.pause()
@@ -247,7 +247,7 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(self.app.note_click(("task", 2)))
 
     async def test_e_opens_edit_mode(self):
-        from lazyplan.tui.screens import DetailScreen
+        from lazyplan.presentation.tui.screens import DetailScreen
 
         async with self.app.run_test() as pilot:
             await pilot.pause()
@@ -259,7 +259,7 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(self.app.screen.query_one("#detail-edit").display)
 
     async def test_n_on_plan_creates_a_milestone(self):
-        from lazyplan.tui.screens import NewMilestoneScreen
+        from lazyplan.presentation.tui.screens import NewMilestoneScreen
 
         async with self.app.run_test() as pilot:
             await pilot.pause()
@@ -438,7 +438,7 @@ class TestDoneCollapsed(unittest.IsolatedAsyncioTestCase):
         dsid = store.add_milestone(self.did, "DS").id
         dtid = store.add_task(dsid, "DT").id
         from lazyplan import services
-        from lazyplan.models import Status
+        from lazyplan.core.entities import Status
 
         services.set_status(store, "task", dtid, Status.DONE)
         self.oid = store.add_plan("Open").id

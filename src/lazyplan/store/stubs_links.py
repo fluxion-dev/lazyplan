@@ -5,7 +5,7 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-from ..models import ForgeLink, Milestone, Plan, Status, Task, VcsLink
+from ..core.entities import ForgeLink, Milestone, Plan, Status, Task, VcsLink
 
 
 class StoreStubsLinks:

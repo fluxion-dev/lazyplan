@@ -6,7 +6,7 @@ import tempfile
 import unittest
 
 from lazyplan import services
-from lazyplan.github import FetchResult
+from lazyplan.infrastructure.github import FetchResult
 from lazyplan.store import Store
 
 

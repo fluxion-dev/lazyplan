@@ -10,7 +10,7 @@ from contextlib import redirect_stderr
 from pathlib import Path
 from unittest import mock
 
-from lazyplan import setup
+from lazyplan.presentation import setup
 from tests.support.home import sandbox_home
 
 

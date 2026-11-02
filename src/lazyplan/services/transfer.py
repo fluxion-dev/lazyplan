@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..models import Plan, Status, Task
-from ..store import Store, to_payload
-from .plans import heal, set_status
+from ..core.entities import Plan, Status, Task
+from ..core.ports.transfer import TransferPort
+from ..core.serialization import to_payload
+from .planning import heal, set_status
 
 
-def _export_maps(store: Store) -> dict[str, Any]:
+def _export_maps(store: TransferPort) -> dict[str, Any]:
     """Every child table loaded once for an export."""
     return {
         "milestones": store.milestones_map(),
@@ -79,7 +80,7 @@ def _export_entry(plan: Plan, maps: dict[str, Any]) -> dict:
     }
 
 
-def export_all(store: Store) -> dict:
+def export_all(store: TransferPort) -> dict:
     """Full dump: plans (with criteria + links + repos) holding milestones and tasks."""
     maps = _export_maps(store)
     return {
@@ -89,7 +90,7 @@ def export_all(store: Store) -> dict:
     }
 
 
-def export_plan(store: Store, plan_id: int) -> dict | None:
+def export_plan(store: TransferPort, plan_id: int) -> dict | None:
     """Single-plan entry in export_all() shape (or None when missing)."""
     plan = store.get_plan(plan_id)
     if plan is None:
@@ -97,13 +98,13 @@ def export_plan(store: Store, plan_id: int) -> dict | None:
     return _export_entry(plan, _export_maps(store))
 
 
-def import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]:
+def import_all(store: TransferPort, data: dict, actor: str = "human") -> dict[str, int]:
     """Load an export_all() dump atomically; returns counts."""
-    with store._connect():
+    with store.transaction():
         return _import_all(store, data, actor)
 
 
-def _import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int]:
+def _import_all(store: TransferPort, data: dict, actor: str = "human") -> dict[str, int]:
     """Load an export_all() dump. Returns counts.
 
     Template fill is skipped on import: the dump carries final values.
@@ -358,3 +359,54 @@ def _import_all(store: Store, data: dict, actor: str = "human") -> dict[str, int
             continue
         counts["criterion_links"] += 1
     return counts
+
+
+def share_render(port: TransferPort, plan_id: int, fmt: str, dest: str | None) -> str | None:
+    """Render a read-only share document."""
+    from lazyplan.services.share import write
+
+    return write(port, plan_id, fmt, dest)
+
+
+def sync_plans(port: TransferPort, data: dict, actor: str = "human", dry_run: bool = False) -> dict:
+    """Merge a plan dump by stable uid."""
+    from lazyplan.services.sync import sync
+
+    return sync(port, data, actor=actor, dry_run=dry_run)
+
+
+def seed_demo(port: TransferPort) -> None:
+    """Insert the demo plan when the store is empty."""
+    from lazyplan.services.seed import seed
+
+    seed(port)
+
+
+def parse_github_issues(data: object) -> list:
+    """Normalize a GitHub issue response."""
+    from lazyplan.services.issues import parse_github
+
+    return parse_github(data)
+
+
+def parse_linear_issues(data: object) -> list:
+    """Normalize a Linear issue export."""
+    from lazyplan.services.issues import parse_linear
+
+    return parse_linear(data)
+
+
+def import_issues(
+    port: TransferPort,
+    issues: list,
+    actor: str = "human",
+    as_kind: str = "plan",
+    milestone: int = 0,
+    dry_run: bool = False,
+) -> dict:
+    """Create rows from normalized issues or refresh source metadata."""
+    from lazyplan.services.issues import import_issues as _import_issues
+
+    return _import_issues(
+        port, issues, actor=actor, as_kind=as_kind, milestone=milestone, dry_run=dry_run
+    )

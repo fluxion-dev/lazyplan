@@ -10,9 +10,12 @@ import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 
-from lazyplan import hooks, services, setup, skills
-from lazyplan.cli import main as lpui_main
-from lazyplan.models import Status
+from lazyplan import services
+from lazyplan.core.entities import Status
+from lazyplan.infrastructure import skills
+from lazyplan.presentation import setup
+from lazyplan.presentation.cli import main as lpui_main
+from lazyplan.services import hooks
 from lazyplan.store import Store
 from tests.support.home import sandbox_home
 

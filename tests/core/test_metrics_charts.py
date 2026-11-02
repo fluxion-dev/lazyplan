@@ -5,7 +5,7 @@ from __future__ import annotations
 import unittest
 from datetime import date, timedelta
 
-from lazyplan import metrics
+from lazyplan.services import metrics
 
 
 def _activity(counts: dict[int, int] | None = None) -> tuple[metrics.DayActivity, ...]:

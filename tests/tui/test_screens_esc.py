@@ -10,8 +10,8 @@ import unittest
 from lazyplan.store import Store
 
 try:
-    from lazyplan import tui as tui_mod
-    from lazyplan.tui.screens import (
+    from lazyplan.presentation import tui as tui_mod
+    from lazyplan.presentation.tui.screens import (
         ConfirmScreen,
         DetailScreen,
         HelpScreen,

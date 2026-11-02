@@ -1,0 +1,21 @@
+{
+  "modules": [
+    "lazyplan.presentation.cli.commands",
+    "lazyplan.presentation.cli.commands.admin",
+    "lazyplan.presentation.cli.commands.plan",
+    "lazyplan.presentation.cli.commands.proof",
+    "lazyplan.presentation.cli.commands.system",
+    "lazyplan.presentation.cli.commands.ui",
+    "lazyplan.presentation.cli.main",
+    "lazyplan.presentation.cli.parser.builder",
+    "lazyplan.presentation.cli.rows",
+    "lazyplan.presentation.cli.rows_proof",
+    "lazyplan.presentation.mcp.base",
+    "lazyplan.presentation.mcp.server",
+    "lazyplan.presentation.mcp.tools",
+    "lazyplan.presentation.setup.apply",
+    "lazyplan.presentation.tui.app",
+    "lazyplan.presentation.tui.base",
+    "lazyplan.services.hooks"
+  ]
+}

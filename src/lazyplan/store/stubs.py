@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import sqlite3
 
-from ..models import (
+from ..core.entities import (
     Claim,
     Comment,
     Criterion,
@@ -16,9 +16,8 @@ from ..models import (
     Plan,
     Task,
 )
+from ..core.policies.coordination import CLAIM_DEFAULT_TTL
 from .stubs_links import StoreStubsLinks
-
-CLAIM_DEFAULT_TTL = 30 * 60
 
 
 class StoreStubs(StoreStubsLinks):

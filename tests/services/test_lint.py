@@ -9,9 +9,10 @@ import os
 import tempfile
 import unittest
 
-from lazyplan import lint, services
-from lazyplan.cli import main as lpui_main
-from lazyplan.models import Status
+from lazyplan import services
+from lazyplan.core.entities import Status
+from lazyplan.presentation.cli import main as lpui_main
+from lazyplan.services import lint
 from lazyplan.store import Store
 from tests.support.home import sandbox_home
 

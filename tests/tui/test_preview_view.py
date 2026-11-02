@@ -9,7 +9,7 @@ import unittest
 from lazyplan.store import Store
 
 try:
-    from lazyplan.tui.views.preview import PreviewBlock, PreviewDocument, build_preview
+    from lazyplan.presentation.tui.views.preview import PreviewBlock, PreviewDocument, build_preview
 except ImportError:  # pragma: no cover - stdlib-only interpreter
     PreviewBlock = PreviewDocument = build_preview = None  # type: ignore[assignment]
 

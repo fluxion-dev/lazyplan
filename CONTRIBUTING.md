@@ -96,30 +96,30 @@ the script, and commit the result.
 
 ```text
 src/lazyplan/
-  kinds.py models.py messages.py textfile.py
-  porcelain.py docs_meta.py              leaf helpers and data types
-  repo.py vcs.py forge.py github.py      infrastructure adapters
-  templates.py
-  migrate.py                             schema migrations
+  core/                                  pure domain kernel
+    entities.py kinds.py messages.py
+    errors.py serialization.py
+    policies/                            planning, coordination, collaboration,
+                                         provenance, insights, transfer, environment
+    ports/                               Protocol definitions for every slice
+  infrastructure/                        external adapters
+    backup.py docs_meta.py forge.py github.py repo.py templates.py textfile.py
+    vcs.py skills.py hooks.py hook_hosts.py hook_install.py
+    upgrade.py update_stage.py
   store/                                 SQLite persistence
     base.py plans.py tasks.py claims.py annotations.py links.py repos.py views.py
-    stubs.py stubs_links.py              cross-domain declarations
-  services/                              use-case orchestration
-    plans.py claims.py tasks.py vcs.py forge.py tree.py transfer.py
-  audit.py brief.py hooks.py issues.py   domain reports and hooks
-  seed.py share.py source.py stats.py trace.py lint.py
-  cli/                                   agent and human ingress
-    main.py emit.py rows.py rows_proof.py
-    parser/                              argparse by role group
-    commands/                            handlers by noun group
-  setup/                                 first-run flow
-    state.py findings.py apply.py moves.py wizard.py ui.py layout.py
-  tui/                                   Textual app
-    app.py tree.py preview.py filters.py bulk.py actions.py base.py
-    screens/                             forms, detail, help, source
-  mcp/                                   MCP server, tools, resources
-  palette.py help.py                     command metadata and help text
-  design.py render.py skills.py
+    migrate.py stubs.py stubs_links.py   schema and cross-domain declarations
+  services/                              use-case orchestration by slice
+    planning.py coordination.py collaboration.py provenance.py
+    insights.py audit.py brief.py lint.py metrics.py stats.py
+    transfer.py share.py sync.py issues.py seed.py
+    environment.py hooks.py source.py trace.py
+  presentation/                          every surface
+    tui/                                 Textual app and screens
+    cli/                                 agent and human ingress
+    mcp/                                 MCP server, tools, resources
+    setup/                               first-run flow
+    shared/                              palette, help, design, render, porcelain
   data/                                  packaged skill and AGENTS text
 tests/
   support/                               shared home and pilot helpers
@@ -135,27 +135,32 @@ the row before the code, and keep the row current when the code changes.
 
 ## Architecture
 
+The slice map, ports, and composition-root rule live in
+[docs/architecture.md](docs/architecture.md).
+
 Dependencies point one way:
 
 ```text
-leaf -> infrastructure -> store -> domain -> services -> presentation -> entry point
+core -> infrastructure -> store -> services -> presentation -> entry point
 ```
 
-- `models`, `kinds`, `textfile`, `messages`, `porcelain`, and the palette
-  metadata are leaves. They import no store, service, or UI code.
-- `repo`, `vcs`, `forge`, `github`, and `templates` are infrastructure. They
-  may use leaves.
-- `store` owns SQLite and may use leaves, infrastructure, and `migrate`.
-- Domain modules (`audit`, `brief`, `hooks`, `issues`, `share`, `source`,
-  `stats`, `trace`, `lint`) may use the layers below them.
-- `services` may use domain, store, infrastructure, and leaves.
-- `cli`, `tui`, `setup`, `mcp`, `design`, `render`, and `skills` are
-  presentation. They may use everything below them.
+- `core` is the pure kernel: entities, policies, ports, errors, and
+  serialization. It imports only the standard library and `lazyplan.core`.
+- `infrastructure` holds external adapters such as git, forge, GitHub, files,
+  templates, backups, skills, hooks, upgrade, and update staging.
+- `store` owns SQLite and implements the core ports structurally.
+- `services` holds one use-case module per slice and types against core ports.
+- `presentation` holds the TUI, CLI, MCP server, setup flow, and shared
+  rendering. Only its composition roots construct `Store`.
 - `__main__` is the only entry point and may import any package.
 
-A new top-level module needs a layer entry in `tests/test_architecture.py`.
-`tests/test_module_budget.py` enforces the 600-line budget and records temporary
-exceptions in `tests/architecture_baseline.json`. Shrink an exception in the
+A new top-level module needs a layer entry in
+`tests/architecture/test_architecture.py`. The same suite enforces core purity
+and the shrinking Store-import allowlist in
+`tests/architecture/store_import_baseline.json`.
+`tests/architecture/test_module_budget.py` enforces the 600-line budget and
+records temporary exceptions in
+`tests/architecture/architecture_baseline.json`. Shrink an exception in the
 commit that splits the file, and delete it once the file is under budget.
 
 ## Textual skill suite

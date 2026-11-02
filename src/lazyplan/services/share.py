@@ -1,0 +1,124 @@
+"""Read-only plan share: escaped HTML or safe JSON.
+
+No tokens, auth state, cache payloads, or raw forge API records are included.
+"""
+
+from __future__ import annotations
+
+import html
+import json
+
+from lazyplan.infrastructure import textfile
+
+from ..core.policies.transfer import safe_payload
+from ..core.ports.transfer import TransferPort
+
+
+def payload(store: TransferPort, plan_id: int) -> dict | None:
+    """Plan payload for a share, without secrets or raw cache records."""
+    full = store.get_full("plan", plan_id)
+    if full is None:
+        return None
+    data = dict(full)
+    # Keep the share shape stable even when a section has no rows.
+    data["links"] = safe_payload(data.get("links", []))
+    data["forge_links"] = safe_payload(data.get("forge_links", []))
+    data["comments"] = safe_payload(data.get("comments", []))
+    safe = safe_payload(data)
+    assert isinstance(safe, dict)
+    return safe
+
+
+def _task_line(task: dict) -> str:
+    suffix = " [blocked]" if task.get("blocked") else ""
+    return (
+        f"<li><strong>T{html.escape(str(task.get('id')))}</strong> "
+        f"{html.escape(str(task.get('title')))} "
+        f"<em>{html.escape(str(task.get('status')))}</em>{suffix}</li>"
+    )
+
+
+def render_html(store: TransferPort, plan_id: int) -> str | None:
+    """Standalone escaped HTML plan document."""
+    data = payload(store, plan_id)
+    if data is None:
+        return None
+    plan = data["plan"]
+    out = [
+        "<!doctype html>",
+        '<html lang="en"><head><meta charset="utf-8">',
+        f"<title>{html.escape(str(plan.get('name')))} — lazyplan</title>",
+        "<style>body{font:16px/1.5 system-ui,sans-serif;max-width:52rem;margin:2rem auto;padding:0 1rem}"
+        "code{background:#eee;padding:.1rem .3rem}h2{margin-top:2rem}</style></head><body>",
+        f"<h1>{html.escape(str(plan.get('name')))}</h1>",
+        f"<p><strong>{html.escape(str(plan.get('status')))}</strong> · "
+        f"P{html.escape(str(plan.get('id')))}</p>",
+    ]
+    if plan.get("goal"):
+        out.append(f"<h2>Why</h2><p>{html.escape(str(plan.get('goal')))}</p>")
+    if plan.get("description"):
+        out.append(f"<h2>What</h2><pre>{html.escape(str(plan.get('description')))}</pre>")
+    criteria = data.get("criteria", [])
+    if criteria:
+        out.append("<h2>Acceptance</h2><ul>")
+        for criterion in criteria:
+            mark = "x" if criterion.get("done") else " "
+            out.append(f"<li>[{mark}] {html.escape(str(criterion.get('text')))}</li>")
+        out.append("</ul>")
+    for entry in data.get("milestones", []):
+        milestone = entry["milestone"]
+        out.append(
+            f"<h2>M{html.escape(str(milestone.get('id')))} "
+            f"{html.escape(str(milestone.get('title')))}</h2>"
+        )
+        if milestone.get("description"):
+            out.append(f"<pre>{html.escape(str(milestone.get('description')))}</pre>")
+        out.append("<ul>")
+        for task in entry.get("tasks", []):
+            out.append(_task_line(task))
+            for comment in task.get("comments", []):
+                state = "resolved" if comment.get("resolved") else "open"
+                out.append(
+                    f"<li>[{state}] @{html.escape(str(comment.get('actor')))}: "
+                    f"{html.escape(str(comment.get('text')))}</li>"
+                )
+        out.append("</ul>")
+    notes = data.get("notes", [])
+    if notes:
+        out.append("<h2>Notes</h2><ul>")
+        for note in notes:
+            out.append(
+                f"<li>@{html.escape(str(note.get('actor')))}: "
+                f"{html.escape(str(note.get('text')))}</li>"
+            )
+        out.append("</ul>")
+    comments = data.get("comments", [])
+    if comments:
+        out.append("<h2>Comments</h2><ul>")
+        for comment in comments:
+            state = "resolved" if comment.get("resolved") else "open"
+            out.append(
+                f"<li>[{state}] @{html.escape(str(comment.get('actor')))}: "
+                f"{html.escape(str(comment.get('text')))}</li>"
+            )
+        out.append("</ul>")
+    out.append("</body></html>")
+    return "\n".join(out)
+
+
+def render_json(store: TransferPort, plan_id: int) -> str | None:
+    """Safe JSON payload for a share."""
+    data = payload(store, plan_id)
+    if data is None:
+        return None
+    return json.dumps(data, indent=2, default=str)
+
+
+def write(store: TransferPort, plan_id: int, fmt: str, dest: str | None) -> str | None:
+    """Render a share and optionally write it to a file."""
+    text = render_html(store, plan_id) if fmt == "html" else render_json(store, plan_id)
+    if text is None:
+        return None
+    if dest:
+        textfile.write(dest, text + ("" if text.endswith("\n") else "\n"))
+    return text

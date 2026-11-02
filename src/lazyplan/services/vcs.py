@@ -2,19 +2,13 @@
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
-from ..kinds import check_kind
-from ..store import Store
-from ..vcs import CommitInfo, RepoStatus, VCSBackend, detect_backend
-from .base import (
-    _KIND_BY_LETTER,
-    _LAZYPLAN_BRANCH,
-    _LAZYPLAN_REF,
-    _LAZYPLAN_TRAILER,
-    _LETTER_BY_KIND,
-)
+from lazyplan.infrastructure.vcs import CommitInfo, RepoStatus, VCSBackend, detect_backend
+
+from ..core.kinds import check_kind
+from ..core.policies.provenance import branch_ref, letter_for_kind, trailer_refs
+from ..core.ports.provenance import ProvenancePort
 
 
 def _norm_path(path: str) -> str:
@@ -25,7 +19,7 @@ def _norm_path(path: str) -> str:
         return str(Path(path).expanduser().absolute())
 
 
-def _repo_for_task(store: Store, task_id: int, repo_path: str = "") -> dict:
+def _repo_for_task(store: ProvenancePort, task_id: int, repo_path: str = "") -> dict:
     """Effective repo link for a task, honoring an explicit path."""
     repos = store.effective_repos("task", task_id)
     if repo_path:
@@ -45,7 +39,7 @@ def _repo_for_task(store: Store, task_id: int, repo_path: str = "") -> dict:
     raise ValueError("task has no linked repo; run link-repo first")
 
 
-def _ensure_task_repo_links(store: Store, task_id: int, actor: str) -> None:
+def _ensure_task_repo_links(store: ProvenancePort, task_id: int, actor: str) -> None:
     """Copy inherited repos to explicit task links before recording a branch."""
     if store.list_repos("task", task_id):
         return
@@ -59,30 +53,12 @@ def _ensure_task_repo_links(store: Store, task_id: int, actor: str) -> None:
         )
 
 
-def _trailer_refs(message: str) -> list[tuple[str, int]]:
-    """Explicit Lazyplan trailer refs in one commit message."""
-    found: set[tuple[str, int]] = set()
-    for line in message.splitlines():
-        match = _LAZYPLAN_TRAILER.match(line.strip())
-        if not match:
-            continue
-        for token in re.split(r"[,\s]+", match.group(1)):
-            ref = _LAZYPLAN_REF.match(token.strip())
-            if ref:
-                found.add((_KIND_BY_LETTER[ref.group(1).lower()], int(ref.group(2))))
-    return sorted(found, key=lambda item: (item[0], item[1]))
-
-
-def _branch_ref(branch: str) -> tuple[str, int] | None:
-    """Plan/milestone/task ref encoded in a branch name."""
-    match = _LAZYPLAN_BRANCH.match(branch)
-    if not match:
-        return None
-    return match.group(1), int(match.group(2))
+_trailer_refs = trailer_refs
+_branch_ref = branch_ref
 
 
 def _branch_scan(
-    store: Store,
+    store: ProvenancePort,
     backend: VCSBackend,
     root: str,
     branch: str,
@@ -111,7 +87,7 @@ def _scan_wanted(ref_kind: str, ref_id: int, kind: str, obj_id: int) -> bool:
 
 
 def _scan_ref_action(
-    store: Store,
+    store: ProvenancePort,
     commit: CommitInfo,
     ref_kind: str,
     ref_id: int,
@@ -140,7 +116,7 @@ def _scan_ref_action(
 
 
 def scan_commits(
-    store: Store,
+    store: ProvenancePort,
     repo_path: str = ".",
     since: str = "",
     limit: int = 50,
@@ -178,7 +154,7 @@ def scan_commits(
                     "subject": commit.subject,
                     "kind": ref_kind,
                     "id": ref_id,
-                    "ref": f"{_LETTER_BY_KIND[ref_kind]}{ref_id}",
+                    "ref": f"{letter_for_kind(ref_kind)}{ref_id}",
                     "action": action,
                 }
             )
@@ -186,7 +162,7 @@ def scan_commits(
 
 
 def _task_capture_block(
-    store: Store,
+    store: ProvenancePort,
     task_id: int,
     backend: VCSBackend,
     root: str,
@@ -211,7 +187,7 @@ def _task_capture_block(
 
 
 def _capture_block(
-    store: Store,
+    store: ProvenancePort,
     kind: str,
     obj_id: int,
     backend: VCSBackend,
@@ -238,7 +214,7 @@ def _capture_block(
 
 
 def auto_capture_head(
-    store: Store,
+    store: ProvenancePort,
     kind: str,
     obj_id: int,
     cwd: str = ".",
@@ -273,7 +249,7 @@ def auto_capture_head(
 
 
 def _repo_targets(
-    store: Store,
+    store: ProvenancePort,
     kind: str = "",
     obj_id: int = 0,
     repo_path: str = "",
@@ -294,7 +270,7 @@ def _repo_targets(
 
 
 def repo_statuses(
-    store: Store,
+    store: ProvenancePort,
     kind: str = "",
     obj_id: int = 0,
     repo_path: str = "",

@@ -9,15 +9,15 @@ from lazyplan.store import Store
 from tests.support.pilot import settle
 
 try:
-    from lazyplan import tui as tui_mod
-    from lazyplan.tui.screens import (
+    from lazyplan.presentation import tui as tui_mod
+    from lazyplan.presentation.tui.screens import (
         ConfirmScreen,
         DetailScreen,
         FilterPromptScreen,
         NewMilestoneScreen,
         NewTaskScreen,
     )
-    from lazyplan.tui.views.preview import common_lines
+    from lazyplan.presentation.tui.views.preview import common_lines
 except ImportError:  # stdlib-only interpreter: no textual, no screens
     tui_mod = None  # type: ignore[assignment]
 
@@ -204,7 +204,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
     async def test_detail_shows_source_trail_and_opens_screen(self):
         from textual.widgets import Static
 
-        from lazyplan.tui.screens.source import SourceScreen
+        from lazyplan.presentation.tui.screens.source import SourceScreen
 
         repo = os.path.realpath(os.path.join(self.tmp.name, "source-repo"))
         os.makedirs(repo)

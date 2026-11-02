@@ -10,7 +10,7 @@ import sys
 import tempfile
 import unittest
 
-from lazyplan import mcp
+from lazyplan.presentation import mcp
 from lazyplan.store import Store
 from tests.support.home import sandbox_env
 from tests.support.paths import ROOT

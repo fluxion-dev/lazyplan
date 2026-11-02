@@ -8,15 +8,15 @@ import tempfile
 import unittest
 from unittest import mock
 
-from lazyplan import update_stage
+from lazyplan.infrastructure import update_stage
+from lazyplan.infrastructure.upgrade import PIPX, RPM, SOURCE, InstallInfo
 from lazyplan.store import Store
-from lazyplan.upgrade import PIPX, RPM, SOURCE, InstallInfo
 from tests.support.home import sandbox_home
 
 try:
-    tui_mod = importlib.import_module("lazyplan.tui.app")
-    screen_mod = importlib.import_module("lazyplan.tui.screens.update")
-    updates_mod = importlib.import_module("lazyplan.tui.controllers.updates")
+    tui_mod = importlib.import_module("lazyplan.presentation.tui.app")
+    screen_mod = importlib.import_module("lazyplan.presentation.tui.screens.update")
+    updates_mod = importlib.import_module("lazyplan.presentation.tui.controllers.updates")
 except ImportError:  # stdlib-only interpreter
     tui_mod = None  # type: ignore[assignment]
     screen_mod = None  # type: ignore[assignment]
@@ -49,7 +49,7 @@ class TestUpdateScreen(unittest.IsolatedAsyncioTestCase):
 
     async def _open(self, info: InstallInfo):
 
-        from lazyplan.tui.screens.update import UpdateScreen
+        from lazyplan.presentation.tui.screens.update import UpdateScreen
 
         screen = UpdateScreen("0.27.2", "9.9.9", info)
         self.app.push_screen(screen)
@@ -65,7 +65,7 @@ class TestUpdateScreen(unittest.IsolatedAsyncioTestCase):
             self.assertIn("Download now", str(screen.query_one("#update-body").render()))
 
     async def test_later_dismisses_without_staging(self):
-        from lazyplan.tui.screens.update import UpdateScreen
+        from lazyplan.presentation.tui.screens.update import UpdateScreen
 
         async with self.app.run_test() as pilot:
             screen = UpdateScreen("0.27.2", "9.9.9", InstallInfo(PIPX, True))
@@ -133,7 +133,7 @@ class TestUpdateScreen(unittest.IsolatedAsyncioTestCase):
             self.assertIn("git pull", str(screen.query_one("#update-body").render()))
 
     async def test_equal_latest_hides_download(self):
-        from lazyplan.tui.screens.update import UpdateScreen
+        from lazyplan.presentation.tui.screens.update import UpdateScreen
 
         async with self.app.run_test() as pilot:
             screen = UpdateScreen("0.27.2", "0.27.2", InstallInfo(PIPX, True))
@@ -143,7 +143,7 @@ class TestUpdateScreen(unittest.IsolatedAsyncioTestCase):
             self.assertIn("already on the latest", str(screen.query_one("#update-body").render()))
 
     async def test_older_latest_hides_download(self):
-        from lazyplan.tui.screens.update import UpdateScreen
+        from lazyplan.presentation.tui.screens.update import UpdateScreen
 
         async with self.app.run_test() as pilot:
             screen = UpdateScreen("0.28.0", "0.27.2", InstallInfo(PIPX, True))

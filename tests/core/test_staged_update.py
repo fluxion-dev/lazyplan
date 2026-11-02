@@ -9,8 +9,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from lazyplan import update_stage
-from lazyplan.upgrade import PIPX, VENV
+from lazyplan.infrastructure import update_stage
+from lazyplan.infrastructure.upgrade import PIPX, VENV
 
 WHEEL = b"fake wheel bytes"
 VERSION = "0.28.0"

@@ -5,13 +5,14 @@ from __future__ import annotations
 import sqlite3
 import time
 
-from ..kinds import check_parent_kind
-from ..models import (
+from ..core.entities import (
     Comment,
     Criterion,
     Note,
     Task,
 )
+from ..core.kinds import check_parent_kind
+from ..core.policies.collaboration import mention_needle, validate_comment, validate_note
 from .base import (
     StoreBase,
 )
@@ -35,9 +36,7 @@ class AnnotationsMixin(StoreBase):
     def add_note(self, parent_kind: str, parent_id: int, text: str, actor: str = "human") -> Note:
         """Append a handoff note and log it."""
         check_parent_kind(parent_kind)
-        body = text.strip()
-        if not body:
-            raise ValueError("note text must not be empty")
+        body = validate_note(text)
         if not self._parent_exists(parent_kind, parent_id):
             raise KeyError(f"{parent_kind} #{parent_id} not found")
         stamp = time.time()
@@ -181,9 +180,7 @@ class AnnotationsMixin(StoreBase):
     ) -> Comment:
         """Append a review comment and log it."""
         check_parent_kind(parent_kind)
-        body = text.strip()
-        if not body:
-            raise ValueError("comment text must not be empty")
+        body = validate_comment(text)
         if not self._parent_exists(parent_kind, parent_id):
             raise KeyError(f"{parent_kind} #{parent_id} not found")
         stamp = time.time()
@@ -208,7 +205,7 @@ class AnnotationsMixin(StoreBase):
             ).fetchall()
         items = [self._row_to_comment(row) for row in rows]
         if mentions:
-            needle = f"@{mentions.lstrip('@').lower()}"
+            needle = mention_needle(mentions)
             items = [item for item in items if needle in item.text.lower()]
         return items
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 import unittest
 
 try:
-    from lazyplan.tui.views.git import build_git
+    from lazyplan.presentation.tui.views.git import build_git
 except ImportError:  # pragma: no cover - stdlib-only interpreter
     build_git = None  # type: ignore[assignment]
 

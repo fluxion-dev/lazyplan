@@ -8,15 +8,15 @@ import tempfile
 import unittest
 from unittest import mock
 
-from lazyplan import metrics, services
-from lazyplan.models import Status
+from lazyplan import services
+from lazyplan.core.entities import Status
+from lazyplan.services import metrics
 from lazyplan.store import Store
 
 try:
-    from lazyplan import tui as tui_mod
-    from lazyplan.metrics import TimelineLane
-    from lazyplan.tui.metrics.timeline import TimelineCard
-    from lazyplan.tui.metrics.timeline_layout import (
+    from lazyplan.presentation import tui as tui_mod
+    from lazyplan.presentation.tui.metrics.timeline import TimelineCard
+    from lazyplan.presentation.tui.metrics.timeline_layout import (
         active_segments,
         axis_ticks,
         lane_window,
@@ -25,7 +25,8 @@ try:
         trace_glyph,
         trace_points,
     )
-    from lazyplan.tui.theme import lane_baseline_rgb, lane_rgb
+    from lazyplan.presentation.tui.theme import lane_baseline_rgb, lane_rgb
+    from lazyplan.services.metrics import TimelineLane
 except ImportError:  # stdlib-only interpreter: no textual
     tui_mod = None  # type: ignore[assignment]
     TimelineLane = None  # type: ignore[assignment,misc]

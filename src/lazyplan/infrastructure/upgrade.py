@@ -1,0 +1,507 @@
+"""Detect how `lpui` was installed and upgrade user-space installs. Stdlib only."""
+
+from __future__ import annotations
+
+import json
+import os
+import shutil
+import subprocess
+import sys
+import time
+import urllib.error
+import urllib.request
+from collections.abc import Mapping
+from dataclasses import dataclass
+from pathlib import Path
+
+from lazyplan.infrastructure import textfile
+
+from ..core.policies.environment import (
+    is_newer as _is_newer,
+)
+from ..core.policies.environment import (
+    network_interval as _network_interval,
+)
+from ..core.policies.environment import (
+    parse_version as _parse_version,
+)
+from ..core.policies.environment import (
+    poll_interval as _poll_interval,
+)
+from ..core.policies.environment import (
+    update_check_enabled as _update_check_enabled,
+)
+from ..core.policies.environment import (
+    version_text as _version_text,
+)
+
+REPO = "fluxion-dev/lazyplan"
+PYPI_PKG = "lazyplan-tui"
+RELEASES_LATEST = f"https://github.com/{REPO}/releases/latest"
+RESOLVE_TIMEOUT = 10.0
+UPGRADE_TIMEOUT = 300.0
+UPDATE_CACHE_NAME = "update.json"
+UPDATE_CACHE_TTL = 24 * 3600
+NO_UPDATE_ENV = "LAZYPLAN_NO_UPDATE_CHECK"
+UPDATE_POLL_ENV = "LAZYPLAN_UPDATE_INTERVAL"
+UPDATE_NETWORK_ENV = "LAZYPLAN_UPDATE_NETWORK_INTERVAL"
+UPDATE_POLL_INTERVAL = 60.0
+UPDATE_NETWORK_INTERVAL = 5 * 60.0
+UPDATE_BACKOFF = 15 * 60.0
+UPDATE_MIN_POLL = 5.0
+UPDATE_MAX_POLL = 3600.0
+UPDATE_MIN_NETWORK = 60.0
+UPDATE_MAX_NETWORK = 24 * 3600.0
+UPDATE_GATE_NAME = "update-gate.json"
+UPDATE_GATE_STALE = 120.0
+
+PIPX = "pipx"
+VENV = "venv"
+RPM = "rpm"
+DEB = "deb"
+SOURCE = "source"
+UNKNOWN = "unknown"
+
+UPGRADEABLE = {PIPX, VENV}
+
+
+class UpgradeError(Exception):
+    """The latest version could not be resolved, or the upgrade itself failed."""
+
+
+@dataclass
+class InstallInfo:
+    method: str
+    upgradeable: bool
+    detail: str = ""
+
+
+def _looks_like_pipx(exe: str) -> str | None:
+    """The pipx venv dir for this package, else None."""
+    path = Path(exe)
+    if "pipx" not in path.parts or "venvs" not in path.parts:
+        return None
+    for parent in path.parents:
+        if parent.name == PYPI_PKG:
+            return parent.as_posix()
+    return None
+
+
+def _in_venv(prefix: str, base_prefix: str) -> bool:
+    return os.path.normpath(prefix) != os.path.normpath(base_prefix)
+
+
+def _dist_direct_url() -> str | None:
+    """Raw direct_url.json for the installed dist, else None (not pip-installed)."""
+    try:
+        from importlib.metadata import distribution
+    except ImportError:  # pragma: no cover - python >=3.11 always has it
+        return None
+    try:
+        dist = distribution(PYPI_PKG)
+    except Exception:
+        return None
+    try:
+        text = dist.read_text("direct_url.json")
+    except Exception:
+        return None
+    return text
+
+
+def _is_editable_install() -> bool:
+    text = _dist_direct_url()
+    if text is None:
+        return False
+    return '"editable":true' in text.replace(" ", "")
+
+
+def _probe(cmd: list[str]) -> bool:
+    if shutil.which(cmd[0]) is None:
+        return False
+    try:
+        out = subprocess.run(cmd, capture_output=True, timeout=10)
+    except OSError:
+        return False
+    return out.returncode == 0
+
+
+def _looks_like_source(exe: str, cwd: str) -> bool:
+    """A checkout of this repo (pyproject naming lazyplan-tui) near exe or cwd."""
+    for start in (str(Path(exe).parent), cwd):
+        here = Path(start)
+        for _ in range(6):
+            marker = here / "pyproject.toml"
+            try:
+                text = textfile.read(marker)
+            except OSError:
+                pass
+            else:
+                if 'name = "lazyplan-tui"' in text:
+                    return True
+            parent = here.parent
+            if parent == here:
+                break
+            here = parent
+    return False
+
+
+def detect(
+    exe: str | None = None,
+    prefix: str | None = None,
+    base_prefix: str | None = None,
+    cwd: str | None = None,
+) -> InstallInfo:
+    """Classify this install; mirrors the install.sh method probes."""
+    exe = exe if exe is not None else sys.executable
+    prefix = prefix if prefix is not None else sys.prefix
+    base_prefix = base_prefix if base_prefix is not None else sys.base_prefix
+    cwd = cwd if cwd is not None else os.getcwd()
+
+    pipx_dir = _looks_like_pipx(exe)
+    if pipx_dir is not None:
+        return InstallInfo(PIPX, True, pipx_dir)
+    if _in_venv(prefix, base_prefix):
+        if _is_editable_install() or _looks_like_source(exe, cwd):
+            return InstallInfo(SOURCE, False, "editable or source checkout; pull git instead")
+        return InstallInfo(VENV, True, prefix)
+    if _probe(["rpm", "-q", "lazyplan"]):
+        return InstallInfo(RPM, False, "system rpm install")
+    if _probe(["dpkg", "-s", "lazyplan"]):
+        return InstallInfo(DEB, False, "system deb install")
+    if _looks_like_source(exe, cwd):
+        return InstallInfo(SOURCE, False, "source checkout; pull git instead")
+    return InstallInfo(UNKNOWN, False, "unrecognized layout")
+
+
+def parse_version(text: str) -> tuple[int, int, int]:
+    try:
+        return _parse_version(text)
+    except ValueError as exc:
+        raise UpgradeError(str(exc)) from exc
+
+
+def version_text(version: tuple[int, int, int]) -> str:
+    return _version_text(version)
+
+
+def update_check_enabled() -> bool:
+    """True unless the environment explicitly disables update checks."""
+    return _update_check_enabled(os.environ)
+
+
+def poll_interval(env: Mapping[str, str] | None = None) -> float:
+    """Seconds between TUI cache polls."""
+    return _poll_interval(os.environ if env is None else env)
+
+
+def network_interval(env: Mapping[str, str] | None = None) -> float:
+    """Seconds between shared network refreshes."""
+    return _network_interval(os.environ if env is None else env)
+
+
+def update_cache_path(home: str | Path | None = None) -> Path:
+    """Cache file path in the shared lazyplan home."""
+    from lazyplan.infrastructure.repo import shared_home
+
+    return shared_home(home) / UPDATE_CACHE_NAME
+
+
+def _read_update_cache(home: str | Path | None = None) -> tuple[float, str] | None:
+    try:
+        data = json.loads(textfile.read(update_cache_path(home)))
+        checked_at = float(data["checked_at"])
+        latest = str(data["latest"])
+        parse_version(latest)
+    except (OSError, ValueError, KeyError, TypeError, UpgradeError):
+        return None
+    return checked_at, latest
+
+
+def cached_latest(
+    home: str | Path | None = None,
+    max_age: float | None = None,
+    now: float | None = None,
+) -> str | None:
+    """Last known release version, optionally only when younger than max_age."""
+    data = _read_update_cache(home)
+    if data is None:
+        return None
+    checked_at, latest = data
+    if max_age is not None:
+        stamp = time.time() if now is None else now
+        if stamp - checked_at > max_age:
+            return None
+    return latest
+
+
+def remember_latest(
+    latest: str,
+    home: str | Path | None = None,
+    now: float | None = None,
+) -> None:
+    """Atomically remember the latest known release version."""
+    parse_version(latest)
+    path = update_cache_path(home)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp = path.with_name(f"{path.name}.tmp")
+    payload = json.dumps(
+        {"checked_at": time.time() if now is None else now, "latest": latest},
+        indent=2,
+    )
+    textfile.write(temp, payload + "\n")
+    os.replace(temp, path)
+
+
+def update_gate_path(home: str | Path | None = None) -> Path:
+    """Shared refresh-gate file path in the lazyplan home."""
+    from lazyplan.infrastructure.repo import shared_home
+
+    return shared_home(home) / UPDATE_GATE_NAME
+
+
+def _read_gate(path: Path) -> float | None:
+    try:
+        data = json.loads(textfile.read(path))
+        return float(data["next_at"])
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
+def claim_refresh(
+    home: str | Path | None = None,
+    now: float | None = None,
+    interval: float | None = None,
+) -> bool:
+    """Claim the shared network-refresh slot; True only for the winner.
+
+    The file records the next allowed refresh. An expired gate is removed
+    before an exclusive create, so two instances racing for the same slot
+    produce one winner and one ``FileExistsError``.
+    """
+    stamp = time.time() if now is None else now
+    step = network_interval() if interval is None else interval
+    path = update_gate_path(home)
+    next_at = _read_gate(path)
+    if next_at is not None:
+        if stamp < next_at:
+            return False
+    elif path.exists():
+        # A claim may be mid-write; steal it only once it looks abandoned.
+        try:
+            age = stamp - path.stat().st_mtime
+        except OSError:
+            return False
+        if age < UPDATE_GATE_STALE:
+            return False
+    try:
+        path.unlink()
+    except FileNotFoundError:
+        pass
+    except OSError:
+        return False
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    except FileExistsError:
+        return False
+    except OSError:
+        return False
+    with os.fdopen(fd, "w", encoding="utf-8") as handle:
+        handle.write(json.dumps({"next_at": stamp + step}) + "\n")
+    return True
+
+
+def defer_refresh(
+    home: str | Path | None = None,
+    now: float | None = None,
+    delay: float | None = None,
+) -> None:
+    """Push the next shared refresh out after a failed check."""
+    stamp = time.time() if now is None else now
+    wait = UPDATE_BACKOFF if delay is None else delay
+    path = update_gate_path(home)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp = path.with_name(f"{path.name}.tmp")
+    textfile.write(temp, json.dumps({"next_at": stamp + wait}) + "\n")
+    os.replace(temp, path)
+
+
+def latest_version(timeout: float = RESOLVE_TIMEOUT) -> str:
+    """Latest release version from the GitHub /releases/latest redirect."""
+    req = urllib.request.Request(RELEASES_LATEST, headers={"User-Agent": "lpui-upgrade"})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310
+            final_url = resp.geturl()
+    except (urllib.error.URLError, OSError, ValueError) as exc:
+        raise UpgradeError(f"cannot reach {RELEASES_LATEST}: {exc}") from exc
+    tag = final_url.rstrip("/").rsplit("/", 1)[-1]
+    if tag.startswith("v"):
+        tag = tag[1:]
+    try:
+        parsed = parse_version(tag)
+    except UpgradeError as exc:
+        raise UpgradeError(f"cannot parse latest version from {final_url!r}") from exc
+    return version_text(parsed)
+
+
+def refresh_update(
+    home: str | Path | None = None,
+    now: float | None = None,
+) -> str | None:
+    """Return the latest version, refreshing the network when the gate allows.
+
+    Every caller reads the shared cache. Only the instance that wins the
+    shared gate calls GitHub; a failure records a backoff in the same gate
+    so no instance retries before the retry time.
+    """
+    if not update_check_enabled():
+        return cached_latest(home)
+    stamp = time.time() if now is None else now
+    if not claim_refresh(home, now=stamp):
+        return cached_latest(home)
+    try:
+        latest = latest_version()
+    except UpgradeError:
+        try:
+            defer_refresh(home, now=stamp)
+        except OSError:
+            pass
+        return cached_latest(home)
+    try:
+        remember_latest(latest, home=home, now=stamp)
+    except OSError:
+        pass
+    return latest
+
+
+INSTALL_SH = (
+    "curl -fsSL https://github.com/fluxion-dev/lazyplan/releases/latest/download/install.sh | sh"
+)
+PIPX_INSTALL = f"pipx install --backend pip {PYPI_PKG}"
+
+
+def reinstall_hint() -> str:
+    """The supported fresh-install command for this platform."""
+    return PIPX_INSTALL if os.name == "nt" else INSTALL_SH
+
+
+def guard_message(info: InstallInfo) -> str:
+    """Why this install cannot self-upgrade, and what to run instead."""
+    upgradeable = "`lpui upgrade` only manages pipx and venv installs"
+    if info.method == RPM:
+        return (
+            f"system rpm install: upgrade with your package manager "
+            f"(e.g. `sudo dnf upgrade lazyplan`); {upgradeable}"
+        )
+    if info.method == DEB:
+        return (
+            "system deb install: run `sudo apt update && "
+            f"sudo apt install --only-upgrade lazyplan`; {upgradeable}"
+        )
+    if info.method == SOURCE:
+        return f"source checkout ({info.detail}): update with `git pull`; {upgradeable}"
+    return f"unrecognized install layout ({info.detail}); reinstall with {reinstall_hint()}"
+
+
+def notice_text(info: InstallInfo, installed: str, latest: str) -> str | None:
+    """Short update notice for the TUI statusbar and toast; None when current."""
+    try:
+        current = parse_version(latest) <= parse_version(installed)
+    except UpgradeError:
+        return None
+    if current:
+        return None
+    if info.method in UPGRADEABLE:
+        return f"update v{latest} available (installed v{installed}) — run `lpui upgrade`"
+    if info.method == SOURCE:
+        return f"update v{latest} available (installed v{installed}) — update with `git pull`"
+    if info.method in (RPM, DEB):
+        return (
+            f"update v{latest} available (installed v{installed}) "
+            "— upgrade with your package manager"
+        )
+    return f"update v{latest} available (installed v{installed})"
+
+
+def installed_version() -> str:
+    """Version of the installed distribution, or 0.0.0 when metadata is absent."""
+    try:
+        from importlib.metadata import PackageNotFoundError, version
+
+        return version(PYPI_PKG)
+    except (PackageNotFoundError, ValueError):
+        return "0.0.0"
+
+
+def require_newer(version: str, installed: str | None = None) -> None:
+    """Refuse an older or equal target before any download or install."""
+    current = installed or installed_version()
+    target = parse_version(version)
+    running = parse_version(current)
+    if target < running:
+        raise UpgradeError(f"refusing to downgrade lpui from v{current} to v{version}")
+    if not _is_newer(target, running):
+        raise UpgradeError(f"lpui v{current} is already installed")
+
+
+def run_upgrade(
+    info: InstallInfo,
+    version: str,
+    exe: str | None = None,
+    installed: str | None = None,
+) -> None:
+    """Dispatch to the per-method runner; UPGRADEABLE is the source of truth."""
+    if info.method not in UPGRADEABLE:
+        raise UpgradeError(f"no upgrade path for a {info.method} install")
+    require_newer(version, installed)
+    if info.method == PIPX:
+        upgrade_pipx(version, installed=installed)
+    else:
+        upgrade_venv(version, exe or sys.executable, installed=installed)
+
+
+def upgrade_pipx(
+    version: str,
+    timeout: float = UPGRADE_TIMEOUT,
+    installed: str | None = None,
+) -> None:
+    """Mirror install.sh do_pipx: upgrade, falling back to a forced install."""
+    require_newer(version, installed)
+    if shutil.which("pipx") is None:
+        raise UpgradeError("pipx is not on PATH")
+    cmds = [
+        ["pipx", "upgrade", PYPI_PKG, "--pip-args", f"=={version}"],
+        ["pipx", "install", f"{PYPI_PKG}=={version}", "--force"],
+    ]
+    last_lines: list[str] = []
+    for cmd in cmds:
+        try:
+            out = subprocess.run(
+                cmd, capture_output=True, encoding="utf-8", errors="replace", timeout=timeout
+            )
+        except OSError as exc:
+            raise UpgradeError(f"cannot run {' '.join(cmd)}: {exc}") from exc
+        if out.returncode == 0:
+            return
+        last_lines = (out.stderr or out.stdout or "").strip().splitlines()[:3]
+    raise UpgradeError(f"pipx upgrade failed: {'; '.join(last_lines)}")
+
+
+def upgrade_venv(
+    version: str,
+    exe: str,
+    timeout: float = UPGRADE_TIMEOUT,
+    installed: str | None = None,
+) -> None:
+    """Reinstall the running venv from PyPI (the install.sh do_venv layout)."""
+    require_newer(version, installed)
+    cmd = [exe, "-m", "pip", "install", f"{PYPI_PKG}=={version}"]
+    try:
+        out = subprocess.run(
+            cmd, capture_output=True, encoding="utf-8", errors="replace", timeout=timeout
+        )
+    except OSError as exc:
+        raise UpgradeError(f"cannot run {' '.join(cmd)}: {exc}") from exc
+    if out.returncode != 0:
+        detail = "; ".join((out.stderr or out.stdout or "").strip().splitlines()[:3])
+        raise UpgradeError(f"venv reinstall failed: {detail}")

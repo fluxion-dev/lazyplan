@@ -8,14 +8,14 @@ import unittest
 from unittest import mock
 
 from lazyplan import services
-from lazyplan.models import Status
+from lazyplan.core.entities import Status
 from lazyplan.store import Store
 
 try:
-    from lazyplan import tui as tui_mod
-    from lazyplan.tui.metrics import MetricsSection
-    from lazyplan.tui.screens import PaletteScreen
-    from lazyplan.tui.theme import lane_baseline_rgb
+    from lazyplan.presentation import tui as tui_mod
+    from lazyplan.presentation.tui.metrics import MetricsSection
+    from lazyplan.presentation.tui.screens import PaletteScreen
+    from lazyplan.presentation.tui.theme import lane_baseline_rgb
 except ImportError:  # stdlib-only interpreter: no textual
     tui_mod = None  # type: ignore[assignment]
     MetricsSection = None  # type: ignore[assignment,misc]
@@ -261,7 +261,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn("now", after)
 
     async def test_now_tick_refreshes_the_timeline(self) -> None:
-        with mock.patch("lazyplan.tui.controllers.metrics.NOW_TICK_SECONDS", 0.05):
+        with mock.patch("lazyplan.presentation.tui.controllers.metrics.NOW_TICK_SECONDS", 0.05):
             app = tui_mod.create_app(self.db)
             with mock.patch.object(MetricsSection, "refresh_snapshot") as refresh:
                 async with app.run_test(size=(120, 40)) as pilot:
@@ -271,7 +271,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
                     self.assertGreaterEqual(refresh.call_count, 1)
 
     async def test_now_tick_skips_modal_screens(self) -> None:
-        with mock.patch("lazyplan.tui.controllers.metrics.NOW_TICK_SECONDS", 0.05):
+        with mock.patch("lazyplan.presentation.tui.controllers.metrics.NOW_TICK_SECONDS", 0.05):
             app = tui_mod.create_app(self.db)
             with mock.patch.object(MetricsSection, "refresh_snapshot") as refresh:
                 async with app.run_test(size=(120, 40)) as pilot:
@@ -283,7 +283,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
                     self.assertEqual(refresh.call_count, 0)
 
     async def test_unmount_stops_the_now_tick(self) -> None:
-        with mock.patch("lazyplan.tui.controllers.metrics.NOW_TICK_SECONDS", 0.05):
+        with mock.patch("lazyplan.presentation.tui.controllers.metrics.NOW_TICK_SECONDS", 0.05):
             app = tui_mod.create_app(self.db)
             async with app.run_test(size=(120, 40)) as pilot:
                 await pilot.pause()

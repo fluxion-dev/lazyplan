@@ -2,7 +2,7 @@
 
 import unittest
 
-from lazyplan.forge import (
+from lazyplan.infrastructure.forge import (
     AuthStatus,
     GitHubForge,
     RepoRef,

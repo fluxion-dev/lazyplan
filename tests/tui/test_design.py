@@ -7,10 +7,10 @@ import unicodedata
 import unittest
 from contextlib import redirect_stdout
 
-from lazyplan import design
-from lazyplan import help as help_mod
-from lazyplan.cli import main as lpui_main
-from lazyplan.models import Milestone, Plan, Status, Task
+from lazyplan.core.entities import Milestone, Plan, Status, Task
+from lazyplan.presentation.cli import main as lpui_main
+from lazyplan.presentation.shared import design
+from lazyplan.presentation.shared import help as help_mod
 from lazyplan.store import Store
 
 try:
@@ -189,7 +189,7 @@ class TestDesignSystem(unittest.TestCase):
             self.assertEqual(lpui_main(["--db", self.db, "help"]), 0)
         self.assertEqual(buf.getvalue().strip(), help_mod.HELP_TEXT.strip())
         try:
-            from lazyplan.tui.screens import HelpScreen  # needs textual installed
+            from lazyplan.presentation.tui.screens import HelpScreen  # needs textual installed
         except ImportError:
             HelpScreen = None
         if HelpScreen is not None:
@@ -202,7 +202,7 @@ class TestDesignSystem(unittest.TestCase):
 
     def test_bindings_match_keymap(self):
         try:
-            from lazyplan.tui import LazyplanApp  # needs textual installed
+            from lazyplan.presentation.tui import LazyplanApp  # needs textual installed
         except ImportError:
             self.skipTest("textual not installed")
             return

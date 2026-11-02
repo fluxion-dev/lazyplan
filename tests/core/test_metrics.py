@@ -8,7 +8,7 @@ import unittest
 from dataclasses import FrozenInstanceError
 from datetime import date
 
-from lazyplan import metrics
+from lazyplan.services import metrics
 from lazyplan.store import Store
 
 

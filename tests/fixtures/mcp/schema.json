@@ -1,0 +1,592 @@
+{
+  "resources": [
+    {
+      "mimeType": "application/json",
+      "name": "Session brief",
+      "uri": "lazyplan://brief"
+    },
+    {
+      "mimeType": "application/json",
+      "name": "Plan document",
+      "uri": "lazyplan://plan/1"
+    }
+  ],
+  "tools": [
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Session brief: active plan, doing task, next, gaps.",
+      "inputSchema": {
+        "properties": {
+          "plan": {
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "name": "brief"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "All plans with milestones, tasks, and criteria.",
+      "inputSchema": {
+        "properties": {
+          "limit": {
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "name": "list_plans"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "One plan, milestone, or task with full context.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "plan",
+              "milestone",
+              "task"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "show_row"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Active task leases, or all including expired.",
+      "inputSchema": {
+        "properties": {
+          "all": {
+            "type": "boolean"
+          },
+          "plan": {
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "name": "claims"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Coverage, lag, gaps, and trace coverage.",
+      "inputSchema": {
+        "properties": {
+          "plan": {
+            "type": "integer"
+          },
+          "since": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "name": "audit"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Criterion to task, commit, and PR evidence.",
+      "inputSchema": {
+        "properties": {
+          "criterion": {
+            "type": "integer"
+          },
+          "plan": {
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "name": "trace"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Plan-quality findings for a plan.",
+      "inputSchema": {
+        "properties": {
+          "plan": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "plan"
+        ],
+        "type": "object"
+      },
+      "name": "lint"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Resolved database, scope, and counts.",
+      "inputSchema": {
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "name": "info"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Create a plan.",
+      "inputSchema": {
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "what": {
+            "type": "string"
+          },
+          "why": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "type": "object"
+      },
+      "name": "create_plan"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Create a milestone.",
+      "inputSchema": {
+        "properties": {
+          "desc": {
+            "type": "string"
+          },
+          "plan": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan",
+          "title"
+        ],
+        "type": "object"
+      },
+      "name": "create_milestone"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Create a task.",
+      "inputSchema": {
+        "properties": {
+          "desc": {
+            "type": "string"
+          },
+          "milestone": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "milestone",
+          "title"
+        ],
+        "type": "object"
+      },
+      "name": "create_task"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Edit a plan, milestone, or task.",
+      "inputSchema": {
+        "properties": {
+          "desc": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "plan",
+              "milestone",
+              "task"
+            ],
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "why": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "edit_row"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Move a row to todo, doing, or done.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "plan",
+              "milestone",
+              "task"
+            ],
+            "type": "string"
+          },
+          "to": {
+            "enum": [
+              "todo",
+              "doing",
+              "done"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "to"
+        ],
+        "type": "object"
+      },
+      "name": "move_row"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Add an acceptance criterion.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "plan",
+              "milestone",
+              "task"
+            ],
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "text"
+        ],
+        "type": "object"
+      },
+      "name": "criterion_add"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Tick a criterion.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "criterion_tick"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Untick a criterion.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "criterion_untick"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Relate a criterion to a proving task.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "task": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "task"
+        ],
+        "type": "object"
+      },
+      "name": "criterion_relate"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Remove a criterion proof relation.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "task": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "task"
+        ],
+        "type": "object"
+      },
+      "name": "criterion_unrelate"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Claim a task lease.",
+      "inputSchema": {
+        "properties": {
+          "force": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "note": {
+            "type": "string"
+          },
+          "ttl": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "claim_task"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Renew a task lease.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "ttl": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "claim_renew"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Release a task lease.",
+      "inputSchema": {
+        "properties": {
+          "force": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "claim_release"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Add a handoff note.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "plan",
+              "milestone",
+              "task"
+            ],
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "text"
+        ],
+        "type": "object"
+      },
+      "name": "note_add"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Block a task with a reason.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "name": "block_task"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Clear a task's blocked flag.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "unblock_task"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Link a commit to a row.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "plan",
+              "milestone",
+              "task"
+            ],
+            "type": "string"
+          },
+          "repo": {
+            "type": "string"
+          },
+          "sha": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "link_commit"
+    }
+  ]
+}

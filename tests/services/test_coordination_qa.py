@@ -11,7 +11,7 @@ import sys
 import tempfile
 import unittest
 
-from lazyplan.cli import main as lpui_main
+from lazyplan.presentation.cli import main as lpui_main
 from lazyplan.store import Store
 from tests.support.home import sandbox_home
 from tests.support.paths import ROOT

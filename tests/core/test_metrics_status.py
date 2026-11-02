@@ -6,8 +6,9 @@ import os
 import tempfile
 import unittest
 
-from lazyplan import metrics, services
-from lazyplan.models import Status
+from lazyplan import services
+from lazyplan.core.entities import Status
+from lazyplan.services import metrics
 from lazyplan.store import Store
 
 

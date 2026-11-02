@@ -12,10 +12,10 @@ import unittest
 from argparse import Namespace
 from unittest import mock
 
-from lazyplan import porcelain
-from lazyplan.cli import main as lpui_main
-from lazyplan.cli.parser import build_parser
-from lazyplan.models import Status
+from lazyplan.core.entities import Status
+from lazyplan.presentation.cli import main as lpui_main
+from lazyplan.presentation.cli.parser import build_parser
+from lazyplan.presentation.shared import porcelain
 from lazyplan.services import set_status
 from lazyplan.store import Store
 from tests.support.home import sandbox_home

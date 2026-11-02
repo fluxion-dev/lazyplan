@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from contextlib import redirect_stdout
 
-from lazyplan.cli import main as lpui_main
+from lazyplan.presentation.cli import main as lpui_main
 from lazyplan.store import Store
 
 

@@ -8,8 +8,8 @@ import unittest
 import urllib.error
 from unittest import mock
 
-from lazyplan.forge import AuthStatus, RepoRef
-from lazyplan.github import GitHubClient, GitHubError, GitHubRateLimit
+from lazyplan.infrastructure.forge import AuthStatus, RepoRef
+from lazyplan.infrastructure.github import GitHubClient, GitHubError, GitHubRateLimit
 from lazyplan.store import Store
 
 REF = RepoRef("github", "github.com", "org", "repo")
@@ -58,7 +58,9 @@ class TestGitHubClient(unittest.TestCase):
             calls.append(request)
             return FakeResponse([{"number": 1}])
 
-        with mock.patch("lazyplan.github.urllib.request.urlopen", side_effect=opener):
+        with mock.patch(
+            "lazyplan.infrastructure.github.urllib.request.urlopen", side_effect=opener
+        ):
             branch = self.client.pulls_for_branch(REF, "task/7-fix")
             merge = self.client.pulls_for_merge(REF, "a" * 40)
         self.assertEqual(branch.data, [{"number": 1}])
@@ -74,7 +76,9 @@ class TestGitHubClient(unittest.TestCase):
             calls.append(request)
             return FakeResponse([{"number": 1}], headers={"ETag": 'W/"1"'})
 
-        with mock.patch("lazyplan.github.urllib.request.urlopen", side_effect=opener):
+        with mock.patch(
+            "lazyplan.infrastructure.github.urllib.request.urlopen", side_effect=opener
+        ):
             first = self.client.get_json("/repos/org/repo/pulls/1")
             second = self.client.get_json("/repos/org/repo/pulls/1")
         self.assertEqual(first.data, [{"number": 1}])
@@ -86,7 +90,7 @@ class TestGitHubClient(unittest.TestCase):
         self.assertEqual(cached["etag"], 'W/"1"')
 
         with mock.patch(
-            "lazyplan.github.urllib.request.urlopen",
+            "lazyplan.infrastructure.github.urllib.request.urlopen",
             side_effect=http_error(304),
         ) as urlopen:
             third = self.client.get_json("/repos/org/repo/pulls/1", force=True)
@@ -101,13 +105,15 @@ class TestGitHubClient(unittest.TestCase):
             seen.update(request.headers)
             return FakeResponse({"ok": True})
 
-        with mock.patch("lazyplan.github.urllib.request.urlopen", side_effect=opener):
+        with mock.patch(
+            "lazyplan.infrastructure.github.urllib.request.urlopen", side_effect=opener
+        ):
             self.client.get_json("/x")
         self.assertEqual(seen.get("Authorization"), "Bearer secret-token")
 
     def test_rate_limit_errors_are_typed_and_redacted(self):
         with mock.patch(
-            "lazyplan.github.urllib.request.urlopen",
+            "lazyplan.infrastructure.github.urllib.request.urlopen",
             side_effect=http_error(
                 403,
                 headers={"X-RateLimit-Remaining": "0", "X-RateLimit-Reset": "123"},
@@ -120,7 +126,7 @@ class TestGitHubClient(unittest.TestCase):
         self.assertNotIn("secret-token", str(caught.exception))
 
         with mock.patch(
-            "lazyplan.github.urllib.request.urlopen",
+            "lazyplan.infrastructure.github.urllib.request.urlopen",
             side_effect=http_error(429, headers={"Retry-After": "30"}),
         ):
             with self.assertRaises(GitHubRateLimit) as caught:
@@ -131,7 +137,7 @@ class TestGitHubClient(unittest.TestCase):
     def test_error_body_is_redacted(self):
         body = b'{"message": "bad token secret-token"}'
         with mock.patch(
-            "lazyplan.github.urllib.request.urlopen",
+            "lazyplan.infrastructure.github.urllib.request.urlopen",
             side_effect=http_error(500, body=body),
         ):
             with self.assertRaises(GitHubError) as caught:
@@ -142,7 +148,7 @@ class TestGitHubClient(unittest.TestCase):
     def test_network_failure_falls_back_to_stale_cache(self):
         self.store.cache_put("github:/x", 'W/"1"', 1, '{"cached": true}')
         with mock.patch(
-            "lazyplan.github.urllib.request.urlopen",
+            "lazyplan.infrastructure.github.urllib.request.urlopen",
             side_effect=urllib.error.URLError("offline"),
         ):
             result = self.client.get_json("/x", force=True)
@@ -157,7 +163,9 @@ class TestGitHubClient(unittest.TestCase):
             paths.append(request.full_url)
             return FakeResponse([])
 
-        with mock.patch("lazyplan.github.urllib.request.urlopen", side_effect=opener):
+        with mock.patch(
+            "lazyplan.infrastructure.github.urllib.request.urlopen", side_effect=opener
+        ):
             self.client.pulls_for_commit(REF, "abc")
             self.client.pull(REF, 7)
             self.client.checks(REF, "abc")

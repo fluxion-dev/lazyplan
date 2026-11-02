@@ -11,45 +11,19 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
-from ..migrate import migrate
-from ..models import (
-    Claim,
-    Status,
+from lazyplan.infrastructure.repo import (
+    ensure_plan_dir,
+    resolve_db_path,
+    seed_shared_db,
+    shared_db_path,
 )
-from ..repo import ensure_plan_dir, resolve_db_path, seed_shared_db, shared_db_path
+
+from ..core.errors import ClaimConflict as ClaimConflict
+from ..core.errors import ClaimError as ClaimError
+from ..core.errors import ClaimMissing as ClaimMissing
+from ..core.serialization import to_payload
+from .migrate import migrate
 from .stubs import StoreStubs
-
-
-class ClaimError(RuntimeError):
-    """Base error for lease operations."""
-
-
-class ClaimConflict(ClaimError):
-    """A task is held by another actor, or a lease cannot be changed."""
-
-    def __init__(self, claim: Claim, reason: str = "held") -> None:
-        self.claim = claim
-        self.reason = reason
-        super().__init__(
-            f"task #{claim.task_id} is claimed by {claim.actor} "
-            f"until {int(claim.expires_at)} ({reason})"
-        )
-
-
-class ClaimMissing(ClaimError):
-    """No lease exists for the task."""
-
-
-def to_payload(d: dict) -> dict:
-    """JSON/agent-safe: Status -> value, omit empty blocked fields."""
-    d = dict(d)
-    if isinstance(d.get("status"), Status):
-        d["status"] = d["status"].value
-    if not d.get("blocked"):
-        d.pop("blocked", None)
-    if not d.get("blocked_reason"):
-        d.pop("blocked_reason", None)
-    return d
 
 
 def _files_json(files: tuple[str, ...] | list[str]) -> str:
@@ -100,6 +74,17 @@ class StoreBase(StoreStubs):
         ensure_plan_dir(self.path)
         with self._connect() as conn:
             migrate(conn)
+
+    @property
+    def db_path(self) -> str:
+        """Database path as text for ports and template lookups."""
+        return str(self.path)
+
+    @contextmanager
+    def transaction(self) -> Iterator[None]:
+        """One transactional connection for an atomic service operation."""
+        with self._connect():
+            yield
 
     @contextmanager
     def _connect(self) -> Iterator[sqlite3.Connection]:

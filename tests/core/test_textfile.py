@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from lazyplan import textfile
+from lazyplan.infrastructure import textfile
 from tests.support.paths import ROOT
 
 SCANNED = (ROOT / "src" / "lazyplan", ROOT / "tests", ROOT / "tools")
@@ -97,7 +97,9 @@ class PlatformEncodingGuard(unittest.TestCase):
                     continue
                 tree = ast.parse(path.read_text(encoding="utf-8"))
                 offenders += [f"{path.name}:{line}" for line in _platform_text_calls(tree)]
-        self.assertEqual(offenders, [], "use lazyplan.textfile or an explicit encoding")
+        self.assertEqual(
+            offenders, [], "use lazyplan.infrastructure.textfile or an explicit encoding"
+        )
 
 
 if __name__ == "__main__":

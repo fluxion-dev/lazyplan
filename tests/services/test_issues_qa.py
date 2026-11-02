@@ -12,7 +12,7 @@ from types import SimpleNamespace
 from unittest import mock
 
 from lazyplan import services
-from lazyplan.cli import main as lpui_main
+from lazyplan.presentation.cli import main as lpui_main
 from lazyplan.store import Store
 from tests.support.home import sandbox_home
 
@@ -54,7 +54,8 @@ class TestIssueQA(unittest.TestCase):
 
     def test_github_live_import_is_explicit_and_dedupes(self):
         with mock.patch(
-            "lazyplan.github.GitHubClient.issues", return_value=SimpleNamespace(data=GITHUB)
+            "lazyplan.infrastructure.github.GitHubClient.issues",
+            return_value=SimpleNamespace(data=GITHUB),
         ) as fetched:
             code, out, err = self._run(
                 "--json", "issue", "import", "--provider", "github", "--repo", "o/r"

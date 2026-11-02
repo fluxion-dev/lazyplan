@@ -36,12 +36,13 @@ from rich.text import Text  # noqa: E402
 from textual.app import App, ComposeResult  # noqa: E402
 from textual.widgets import Static, Tree  # noqa: E402
 
-from lazyplan import metrics, services  # noqa: E402
-from lazyplan.models import Status  # noqa: E402
+from lazyplan import services  # noqa: E402
+from lazyplan.core.entities import Status  # noqa: E402
+from lazyplan.presentation.tui import create_app  # noqa: E402
+from lazyplan.presentation.tui.screens import DetailScreen, PaletteScreen  # noqa: E402
+from lazyplan.presentation.tui.screens.source import SourceScreen  # noqa: E402
+from lazyplan.services import metrics
 from lazyplan.store import Store  # noqa: E402
-from lazyplan.tui import create_app  # noqa: E402
-from lazyplan.tui.screens import DetailScreen, PaletteScreen  # noqa: E402
-from lazyplan.tui.screens.source import SourceScreen  # noqa: E402
 
 SIZE = (130, 35)
 TRANSCRIPT_SIZE = (120, 22)
@@ -901,7 +902,7 @@ def run(out_dir: Path, only: list[str], keep_svg: Path | None, make_og: bool) ->
 
     with (
         mock.patch("lazyplan.store.base.time.time", return_value=STAMP),
-        mock.patch("lazyplan.metrics.snapshot", side_effect=frozen_snapshot),
+        mock.patch("lazyplan.services.metrics.snapshot", side_effect=frozen_snapshot),
         tempfile.TemporaryDirectory(prefix="lpui-shot-") as tmp,
     ):
         for name in names:

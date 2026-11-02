@@ -8,18 +8,18 @@ import time
 import unittest
 from unittest import mock
 
-from lazyplan import upgrade
+from lazyplan.infrastructure import upgrade
 from lazyplan.store import Store
 from tests.support.home import sandbox_home
 
 try:
-    tui_mod = importlib.import_module("lazyplan.tui.app")
-    updates_mod = importlib.import_module("lazyplan.tui.controllers.updates")
+    tui_mod = importlib.import_module("lazyplan.presentation.tui.app")
+    updates_mod = importlib.import_module("lazyplan.presentation.tui.controllers.updates")
 except ImportError:  # stdlib-only interpreter: no textual, no screens
     tui_mod = None  # type: ignore[assignment]
     updates_mod = None  # type: ignore[assignment]
 
-cli_mod = importlib.import_module("lazyplan.cli.main")
+cli_mod = importlib.import_module("lazyplan.presentation.cli.main")
 
 
 class TestNoticeText(unittest.TestCase):
@@ -258,7 +258,7 @@ class TestCliNotice(unittest.TestCase):
         import warnings
         from contextlib import redirect_stderr, redirect_stdout
 
-        from lazyplan.cli import main
+        from lazyplan.presentation.cli import main
 
         out, err = io.StringIO(), io.StringIO()
         with warnings.catch_warnings():

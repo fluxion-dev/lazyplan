@@ -5,13 +5,13 @@ import tempfile
 import unittest
 from unittest import mock
 
+from lazyplan.infrastructure.upgrade import PIPX, InstallInfo
 from lazyplan.store import Store
-from lazyplan.upgrade import PIPX, InstallInfo
 from tests.support.pilot import settle
 
 try:
-    from lazyplan import tui as tui_mod
-    from lazyplan.tui.screens import (
+    from lazyplan.presentation import tui as tui_mod
+    from lazyplan.presentation.tui.screens import (
         ConfirmScreen,
         DetailScreen,
         HelpScreen,
@@ -21,7 +21,7 @@ try:
         PaletteScreen,
         UpdateScreen,
     )
-    from lazyplan.tui.screens.source import SourceScreen
+    from lazyplan.presentation.tui.screens.source import SourceScreen
 except ImportError:  # stdlib-only interpreter: no textual, no screens
     tui_mod = None  # type: ignore[assignment]
 

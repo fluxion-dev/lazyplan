@@ -46,10 +46,20 @@ WIDGETS = {
         "name": "DataTable",
         "summary": "A scrollable, cursor-driven table with columns, rows, and cell keys.",
         "props": ["cursor_type", "zebra_stripes", "show_header", "fixed_columns", "fixed_rows"],
-        "messages": ["RowSelected — emitted when a row is activated.", "CellSelected — emitted for cell selection.", "HeaderSelected — emitted for header selection."],
-        "css": ["DataTable — grid.", "datatable--header, datatable--cursor, datatable--hover — parts."],
+        "messages": [
+            "RowSelected — emitted when a row is activated.",
+            "CellSelected — emitted for cell selection.",
+            "HeaderSelected — emitted for header selection.",
+        ],
+        "css": [
+            "DataTable — grid.",
+            "datatable--header, datatable--cursor, datatable--hover — parts.",
+        ],
         "example": 'table = DataTable(); table.add_columns("Plan", "Tasks"); table.add_row("P1", 3)',
-        "pitfalls": ["Add columns before rows; row keys must be unique.", "Large tables should update cells instead of rebuilding."],
+        "pitfalls": [
+            "Add columns before rows; row keys must be unique.",
+            "Large tables should update cells instead of rebuilding.",
+        ],
     },
     "digits": {
         "name": "Digits",
@@ -64,7 +74,10 @@ WIDGETS = {
         "name": "DirectoryTree",
         "summary": "A Tree subclass that lazily lists a filesystem directory.",
         "props": ["path", "show_root", "dir_excluded"],
-        "messages": ["FileSelected — emitted when a file is activated.", "DirectorySelected — emitted for directories."],
+        "messages": [
+            "FileSelected — emitted when a file is activated.",
+            "DirectorySelected — emitted for directories.",
+        ],
         "css": ["DirectoryTree — inherits Tree parts; tree--cursor and tree--guides apply."],
         "example": 'yield DirectoryTree("./src", id="files")',
         "pitfalls": ["Large directories are lazy; do not assume all nodes are loaded."],
@@ -75,8 +88,10 @@ WIDGETS = {
         "props": ["compact", "show_command_palette"],
         "messages": [],
         "css": ["Footer — bar.", "footer--key, footer--description — parts."],
-        "example": 'yield Footer(compact=True)',
-        "pitfalls": ["Bindings come from the screen/app; hide the palette hint when the app disables it."],
+        "example": "yield Footer(compact=True)",
+        "pitfalls": [
+            "Bindings come from the screen/app; hide the palette hint when the app disables it."
+        ],
     },
     "header": {
         "name": "Header",
@@ -84,17 +99,23 @@ WIDGETS = {
         "props": ["show_clock"],
         "messages": [],
         "css": ["Header — bar.", "header--title, header--clock — parts."],
-        "example": 'yield Header(show_clock=True)',
+        "example": "yield Header(show_clock=True)",
         "pitfalls": ["Use Screen.TITLE / SUB_TITLE for per-screen titles."],
     },
     "input": {
         "name": "Input",
         "summary": "A single-line text field with validation, suggestions, and submit.",
         "props": ["value", "placeholder", "password", "type", "validators", "suggester", "compact"],
-        "messages": ["Changed — emitted on each edit.", "Submitted — emitted on Enter.", "Blurred — emitted when focus leaves."],
+        "messages": [
+            "Changed — emitted on each edit.",
+            "Submitted — emitted on Enter.",
+            "Blurred — emitted when focus leaves.",
+        ],
         "css": ["Input — field.", "input--cursor, input--placeholder, input--suggestion — parts."],
         "example": 'yield Input(placeholder="Filter…", id="filter")',
-        "pitfalls": ["Use type='integer'/'number' for numeric hints; validate explicitly when correctness matters."],
+        "pitfalls": [
+            "Use type='integer'/'number' for numeric hints; validate explicitly when correctness matters."
+        ],
     },
     "label": {
         "name": "Label",
@@ -127,7 +148,10 @@ WIDGETS = {
         "name": "ListView",
         "summary": "A vertical list of ListItem children with a highlight cursor.",
         "props": ["index", "initial_index"],
-        "messages": ["Highlighted — emitted when the cursor moves.", "Selected — emitted when an item is activated."],
+        "messages": [
+            "Highlighted — emitted when the cursor moves.",
+            "Selected — emitted when an item is activated.",
+        ],
         "css": ["ListView — list.", "listview--item, listview--highlight — parts."],
         "example": 'yield ListView(ListItem(Label("One")), ListItem(Label("Two")))',
         "pitfalls": ["Children must be ListItem; use append/extend for dynamic rows."],
@@ -138,7 +162,7 @@ WIDGETS = {
         "props": ["speed"],
         "messages": [],
         "css": ["LoadingIndicator — spinner area."],
-        "example": 'yield LoadingIndicator()',
+        "example": "yield LoadingIndicator()",
         "pitfalls": ["Remove or hide it when the work completes; it does not manage the task."],
     },
     "log": {
@@ -155,7 +179,10 @@ WIDGETS = {
         "summary": "A Markdown document with a table-of-contents pane.",
         "props": ["show_table_of_contents", "markdown"],
         "messages": [],
-        "css": ["MarkdownViewer — split view.", "MarkdownViewer--contents, MarkdownViewer--document — parts."],
+        "css": [
+            "MarkdownViewer — split view.",
+            "MarkdownViewer--contents, MarkdownViewer--document — parts.",
+        ],
         "example": 'yield MarkdownViewer("# Title\\n\\nBody", show_table_of_contents=True)',
         "pitfalls": ["The document pane is a Markdown widget; style it through the viewer."],
     },
@@ -164,7 +191,10 @@ WIDGETS = {
         "summary": "A scrollable Markdown renderer with links and headings.",
         "props": ["markdown"],
         "messages": ["LinkClicked — emitted when a link is followed."],
-        "css": ["Markdown — document.", "markdown--heading, markdown--code, markdown--link — parts."],
+        "css": [
+            "Markdown — document.",
+            "markdown--heading, markdown--code, markdown--link — parts.",
+        ],
         "example": 'yield Markdown("# Release notes\\n\\n- fixed")',
         "pitfalls": ["Markdown is read-only; use MarkdownViewer for a TOC."],
     },
@@ -181,10 +211,18 @@ WIDGETS = {
         "name": "OptionList",
         "summary": "A compact single-choice list of Option entries with filtering support.",
         "props": ["highlighted", "compact", "option_count"],
-        "messages": ["OptionHighlighted — emitted on cursor movement.", "OptionSelected — emitted on activation."],
-        "css": ["OptionList — list.", "option-list--option, option-list--option-highlighted — parts."],
+        "messages": [
+            "OptionHighlighted — emitted on cursor movement.",
+            "OptionSelected — emitted on activation.",
+        ],
+        "css": [
+            "OptionList — list.",
+            "option-list--option, option-list--option-highlighted — parts.",
+        ],
         "example": 'yield OptionList(Option("Open", id="open"), Option("Quit", id="quit"))',
-        "pitfalls": ["Option ids are the stable handle; use clear_options/add_options for dynamic lists."],
+        "pitfalls": [
+            "Option ids are the stable handle; use clear_options/add_options for dynamic lists."
+        ],
     },
     "placeholder": {
         "name": "Placeholder",
@@ -210,7 +248,7 @@ WIDGETS = {
         "props": ["total", "progress", "show_percentage", "show_eta"],
         "messages": [],
         "css": ["ProgressBar — track.", "progress-bar--bar, progress-bar--percentage — parts."],
-        "example": 'yield ProgressBar(total=100, progress=40)',
+        "example": "yield ProgressBar(total=100, progress=40)",
         "pitfalls": ["Set total before progress; use advance() for incremental updates."],
     },
     "radiobutton": {
@@ -273,7 +311,7 @@ WIDGETS = {
         "props": ["data", "summary_function"],
         "messages": [],
         "css": ["Sparkline — inline chart."],
-        "example": 'yield Sparkline([1, 3, 2, 5, 4])',
+        "example": "yield Sparkline([1, 3, 2, 5, 4])",
         "pitfalls": ["The series is rendered as bars; normalize or summarize large ranges."],
     },
     "static": {
@@ -299,7 +337,10 @@ WIDGETS = {
         "summary": "A Tabs header paired with a ContentSwitcher body.",
         "props": ["active", "initial"],
         "messages": ["TabActivated — emitted when a tab becomes active."],
-        "css": ["TabbedContent — frame.", "TabbedContent Tabs, TabbedContent ContentSwitcher — children."],
+        "css": [
+            "TabbedContent — frame.",
+            "TabbedContent Tabs, TabbedContent ContentSwitcher — children.",
+        ],
         "example": 'with TabbedContent("One", "Two"):\\n    with TabPane("One", id="one"):\\n        yield Static("A")',
         "pitfalls": ["Use TabPane children; ids tie tabs to panes."],
     },
@@ -315,9 +356,23 @@ WIDGETS = {
     "text_area": {
         "name": "TextArea",
         "summary": "A multi-line editor with syntax highlighting, selections, and undo.",
-        "props": ["text", "language", "theme", "soft_wrap", "read_only", "show_line_numbers", "tab_behavior"],
-        "messages": ["Changed — emitted on edit.", "SelectionChanged — emitted on selection change."],
-        "css": ["TextArea — editor.", "text-area--gutter, text-area--cursor, text-area--selection — parts."],
+        "props": [
+            "text",
+            "language",
+            "theme",
+            "soft_wrap",
+            "read_only",
+            "show_line_numbers",
+            "tab_behavior",
+        ],
+        "messages": [
+            "Changed — emitted on edit.",
+            "SelectionChanged — emitted on selection change.",
+        ],
+        "css": [
+            "TextArea — editor.",
+            "text-area--gutter, text-area--cursor, text-area--selection — parts.",
+        ],
         "example": 'yield TextArea("hello", language="python", show_line_numbers=True)',
         "pitfalls": ["Many TextAreas are heavy; prefer one editor pane over a list of editors."],
     },
@@ -334,9 +389,16 @@ WIDGETS = {
         "name": "Tree",
         "summary": "A hierarchical outline with cursors, folding, and node data.",
         "props": ["root", "show_root", "guides", "auto_expand"],
-        "messages": ["NodeHighlighted — emitted on cursor movement.", "NodeSelected — emitted on activation.", "NodeCollapsed / NodeExpanded — emitted on fold changes."],
+        "messages": [
+            "NodeHighlighted — emitted on cursor movement.",
+            "NodeSelected — emitted on activation.",
+            "NodeCollapsed / NodeExpanded — emitted on fold changes.",
+        ],
         "css": ["Tree — outline.", "tree--cursor, tree--guides, tree--highlight — parts."],
         "example": 'tree = Tree("root"); node = tree.root.add("child", data={"id": 1}); tree.root.expand()',
-        "pitfalls": ["Store model ids in TreeNode.data; never parse labels.", "Use select_node/scroll_to_node for programmatic movement."],
+        "pitfalls": [
+            "Store model ids in TreeNode.data; never parse labels.",
+            "Use select_node/scroll_to_node for programmatic movement.",
+        ],
     },
 }

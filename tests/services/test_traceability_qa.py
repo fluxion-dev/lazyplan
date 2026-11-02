@@ -10,8 +10,9 @@ import subprocess
 import tempfile
 import unittest
 
-from lazyplan import services, trace
-from lazyplan.cli import main as lpui_main
+from lazyplan import services
+from lazyplan.presentation.cli import main as lpui_main
+from lazyplan.services import trace
 from lazyplan.store import Store
 from tests.support.home import sandbox_home
 

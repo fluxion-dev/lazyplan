@@ -6,11 +6,11 @@ import unittest
 from contextlib import closing
 from unittest import mock
 
-from lazyplan import migrate as migrate_mod
 from lazyplan import services
-from lazyplan.cli import main as lpui_main
-from lazyplan.models import Status
+from lazyplan.core.entities import Status
+from lazyplan.presentation.cli import main as lpui_main
 from lazyplan.store import Store, default_actor
+from lazyplan.store import migrate as migrate_mod
 
 
 class TestDefaultActor(unittest.TestCase):
@@ -197,7 +197,7 @@ class TestStore(unittest.TestCase):
                 )
 
     def test_cli_list_json_matches_store_reads(self):
-        from lazyplan.cli.rows import _list_payload
+        from lazyplan.presentation.cli.rows import _list_payload
 
         p = self.store.add_plan("P")
         s = self.store.add_milestone(p.id, "S")

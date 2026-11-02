@@ -84,12 +84,32 @@ CATEGORIES: dict[str, dict[str, Any]] = {
 }
 
 HEADINGS = {
-    "widget": ("## Constructor", "## Key properties and methods", "## Messages", "## CSS", "## Example", "## Pitfalls"),
-    "style": ("## Values", "## Default and inheritance", "## Applies to", "## Example", "## Related"),
+    "widget": (
+        "## Constructor",
+        "## Key properties and methods",
+        "## Messages",
+        "## CSS",
+        "## Example",
+        "## Pitfalls",
+    ),
+    "style": (
+        "## Values",
+        "## Default and inheritance",
+        "## Applies to",
+        "## Example",
+        "## Related",
+    ),
     "event": ("## Handler", "## Bubbling and cancelability", "## Attributes", "## Example"),
     "type": ("## Grammar", "## Consumers", "## Example"),
     "layout": ("## Constructor and usage", "## Key behavior", "## Example", "## Pitfalls"),
-    "guide": ("## What it covers", "## Core concepts", "## APIs", "## Related references", "## Example", "## Pitfalls"),
+    "guide": (
+        "## What it covers",
+        "## Core concepts",
+        "## APIs",
+        "## Related references",
+        "## Example",
+        "## Pitfalls",
+    ),
 }
 
 
@@ -580,9 +600,7 @@ def write_tree() -> None:
         (skill_dir / "SKILL.md").write_text(skill_md(category, config), encoding="utf-8")
         renderer = RENDERERS[config["kind"]]
         for item_id, data in config["items"].items():
-            (refs / reference_name(item_id)).write_text(
-                renderer(item_id, data), encoding="utf-8"
-            )
+            (refs / reference_name(item_id)).write_text(renderer(item_id, data), encoding="utf-8")
     router = SKILLS / "textual"
     (router / "references").mkdir(parents=True, exist_ok=True)
     (router / "SKILL.md").write_text(router_md(), encoding="utf-8")
@@ -602,7 +620,7 @@ def check() -> int:
     if textual_version != PIN:
         problems.append(f"installed Textual {textual_version or 'missing'} != pin {PIN}")
     text = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
-    m = re.search(r'textual\s*>=\s*([0-9.]+)', text)
+    m = re.search(r"textual\s*>=\s*([0-9.]+)", text)
     if not m or m.group(1) != PIN:
         problems.append(f"pyproject Textual lower bound {m.group(1) if m else 'missing'} != {PIN}")
 

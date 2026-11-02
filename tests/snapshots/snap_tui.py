@@ -10,11 +10,11 @@ from unittest import mock
 
 import pytest
 
-from lazyplan import metrics
+from lazyplan.presentation.tui import create_app
+from lazyplan.presentation.tui.screens import DetailScreen, PaletteScreen
+from lazyplan.presentation.tui.screens.source import SourceScreen
+from lazyplan.services import metrics
 from lazyplan.store import Store
-from lazyplan.tui import create_app
-from lazyplan.tui.screens import DetailScreen, PaletteScreen
-from lazyplan.tui.screens.source import SourceScreen
 
 FIXED_START = 1_700_000_000.0
 FIXED_NOW = FIXED_START + 30 * 86_400
@@ -69,7 +69,7 @@ def data_app():
             store.add_criteria("plan", plan.id, "The plan is readable")
             store.add_criteria("task", task.id, "The task is proven")
         store = Store(db)
-        with mock.patch("lazyplan.metrics.snapshot", side_effect=frozen_snapshot):
+        with mock.patch("lazyplan.services.metrics.snapshot", side_effect=frozen_snapshot):
             yield create_app(db), store, plan.id, task.id
 
 

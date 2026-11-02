@@ -9,8 +9,9 @@ import os
 import tempfile
 import unittest
 
-from lazyplan import design, services
-from lazyplan.cli import main as lpui_main
+from lazyplan import services
+from lazyplan.presentation.cli import main as lpui_main
+from lazyplan.presentation.shared import design
 from lazyplan.store import Store
 from tests.support.home import sandbox_home
 

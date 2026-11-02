@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 
-from ..models import (
+from ..core.entities import (
     Status,
     Task,
 )

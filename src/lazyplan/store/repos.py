@@ -5,7 +5,7 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-from ..kinds import check_parent_kind
+from ..core.kinds import check_parent_kind
 from .base import (
     StoreBase,
 )

@@ -6,8 +6,10 @@ import os
 import tempfile
 import unittest
 
-from lazyplan import metrics, services
-from lazyplan.models import Status
+from lazyplan import services
+from lazyplan.core.entities import Status
+from lazyplan.core.policies.insights import add_times
+from lazyplan.services import metrics
 from lazyplan.store import Store
 
 
@@ -31,7 +33,7 @@ class ProgressAggregationTest(unittest.TestCase):
         return result  # type: ignore[return-value]
 
     def _earliest_add(self) -> float:
-        return min(metrics._add_times(metrics._events(self.store)))
+        return min(add_times(metrics._events(self.store)))
 
     def test_counts_tasks_across_every_plan(self) -> None:
         self._seed()

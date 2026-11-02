@@ -5,13 +5,14 @@ import tempfile
 import unittest
 from unittest import mock
 
-from lazyplan import design, services
-from lazyplan.models import Status
+from lazyplan import services
+from lazyplan.core.entities import Status
+from lazyplan.presentation.shared import design
 from lazyplan.store import Store
 from tests.support.pilot import settle
 
 try:
-    from lazyplan import tui as tui_mod
+    from lazyplan.presentation import tui as tui_mod
 except ImportError:  # stdlib-only interpreter: no textual, no TUI
     tui_mod = None  # type: ignore[assignment]
 

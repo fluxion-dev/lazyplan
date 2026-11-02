@@ -9,10 +9,11 @@ import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 
-from lazyplan import setup, skills
-from lazyplan.cli import main as lpui_main
-from lazyplan.repo import PLAN_DIR
-from lazyplan.setup import layout as setup_layout
+from lazyplan.infrastructure import skills
+from lazyplan.infrastructure.repo import PLAN_DIR
+from lazyplan.presentation import setup
+from lazyplan.presentation.cli import main as lpui_main
+from lazyplan.presentation.setup import layout as setup_layout
 from tests.support.home import sandbox_home
 
 

@@ -1,0 +1,130 @@
+"""Pure layout helpers for the Gantt timeline card."""
+
+from __future__ import annotations
+
+from datetime import datetime
+
+from lazyplan.services.metrics import TimelineLane
+
+from ...shared.design import truncate
+
+LEGEND_LABEL_WIDTH = 16
+MAX_LEGEND_ROWS = 6
+MIN_SPAN_SECONDS = 60.0
+TRACE_GLYPHS = {"plan": "═", "milestone": "─", "task": "·"}
+BOLD_TRACE_GLYPHS = {"plan": "╍", "milestone": "━", "task": "●"}
+AXIS_FORMATS = (
+    (10 * 60, "%H:%M:%S", 4),
+    (2 * 86_400, "%H:%M", 5),
+    (10 * 86_400, "%b %d %H:%M", 4),
+    (120 * 86_400, "%b %d", 5),
+    (float("inf"), "%b %Y", 5),
+)
+
+
+def trace_glyph(kind: str, bold: bool = False) -> str:
+    """Line glyph for one lane kind, heavy when bold."""
+    glyphs = BOLD_TRACE_GLYPHS if bold else TRACE_GLYPHS
+    return glyphs.get(kind, "━" if bold else "─")
+
+
+def legend_entry(lane: TimelineLane) -> str:
+    """One legend label with its kind glyph and truncated title."""
+    return f"{trace_glyph(lane.kind, lane.selected)} {truncate(lane.title, LEGEND_LABEL_WIDTH)}"
+
+
+def legend_layout(
+    lanes: tuple[TimelineLane, ...], width: int, max_rows: int
+) -> tuple[list[list[int]], int]:
+    """Group lane indexes into horizontal legend rows, trimming overflow."""
+    if not lanes or max_rows <= 0:
+        return [], len(lanes)
+    rows: list[list[int]] = []
+    current: list[int] = []
+    used = 0
+    for index, lane in enumerate(lanes):
+        entry_width = len(legend_entry(lane)) + 2
+        if current and used + entry_width > width:
+            rows.append(current)
+            current = []
+            used = 0
+        current.append(index)
+        used += entry_width
+    if current:
+        rows.append(current)
+    if len(rows) <= max_rows:
+        return rows, 0
+    rows = rows[:max_rows]
+    hidden = len(lanes) - sum(len(row) for row in rows)
+    while rows:
+        last = rows[-1]
+        overflow = f"+{hidden} more"
+        last_width = sum(len(legend_entry(lanes[index])) + 2 for index in last)
+        if last_width + len(overflow) + 2 <= width:
+            break
+        if last:
+            hidden += 1
+            last.pop()
+        else:
+            break
+    return rows, hidden
+
+
+def axis_ticks(left: float, right: float, span: float) -> tuple[list[float], list[str]]:
+    """Tick positions and unique labels chosen from the timeline span."""
+    for limit, fmt, count in AXIS_FORMATS:
+        if span < limit:
+            ticks = [left + (right - left) * index / (count - 1) for index in range(count)]
+            labels = [datetime.fromtimestamp(stamp).strftime(fmt) for stamp in ticks]
+            if len(set(labels)) == len(labels):
+                return ticks, labels
+    ticks = [left + (right - left) * index / 4 for index in range(5)]
+    labels = [datetime.fromtimestamp(stamp).strftime("%Y-%m-%d %H:%M:%S") for stamp in ticks]
+    return ticks, labels
+
+
+def _clip_segments(
+    intervals: tuple[tuple[float, float], ...],
+    left: float,
+    right: float,
+    min_visible: float,
+) -> list[tuple[float, float]]:
+    """Clip intervals to the visible window, enforcing a minimum width."""
+    segments: list[tuple[float, float]] = []
+    for start, end in intervals:
+        if end < left or start > right:
+            continue
+        start = max(start, left)
+        end = min(right, max(end, start + min_visible))
+        segments.append((start, end))
+    return segments
+
+
+def active_segments(
+    lane: TimelineLane, left: float, right: float, min_visible: float
+) -> list[tuple[float, float]]:
+    """Visible trace segments for one lane's doing intervals."""
+    return _clip_segments(lane.active, left, right, min_visible)
+
+
+def trace_points(start: float, end: float, left: float, right: float, width: int) -> list[float]:
+    """Evenly spaced x points so a heavy marker draws a continuous trace."""
+    span = max(right - left, 1e-9)
+    count = max(2, int((end - start) / span * max(1, width) * 2) + 1)
+    return [start + (end - start) * index / (count - 1) for index in range(count)]
+
+
+def trace_segments(
+    lane: TimelineLane, left: float, right: float, min_visible: float
+) -> list[tuple[float, float]]:
+    """Visible segments for one lane's rendered trace intervals."""
+    return _clip_segments(lane.trace, left, right, min_visible)
+
+
+def lane_window(rows: int, count: int, legend_rows: int) -> tuple[float, float, float]:
+    """Y scale, top, and spare bottom rows for one-row lane spacing."""
+    content = count + legend_rows
+    if content <= rows:
+        return 1.0, count - 0.5 + legend_rows, float(rows - content)
+    unit = content / rows
+    return unit, count - 0.5 + legend_rows * unit, 0.0

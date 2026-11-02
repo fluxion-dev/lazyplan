@@ -181,9 +181,10 @@ accent cursor when the tree has focus.
 
 - `#metrics` is the third always-on section inside `#panel`, below `#main`.
   It takes 40% of the shell height with an 11-row minimum and a 16-row
-  maximum, carries a `timeline` border title and the scoped plan name as its
-  border subtitle, and hides below 100 columns; `_apply_layout` toggles
-  `#metrics.narrow` with the same breakpoint as the side column.
+  maximum, carries a `timeline` border title and the scoped plan name (or
+  `select a row`) as its border subtitle, and hides below 100 columns;
+  `_apply_layout` toggles `#metrics.narrow` with the same breakpoint as the
+  side column.
 - `MetricsSection` hosts `metric-timeline` (Project timeline), which spans
   the full `#metric-cards` row. The card is a `VerticalScroll` around a
   `PlotextPlot`; the plot grows with the lane count and scrolls when lanes
@@ -208,16 +209,19 @@ accent cursor when the tree has focus.
 - `metrics.py` holds frozen dataclasses and chart-row helpers
   (`activity_weeks`, `milestone_bars`, `status_bars`); it never writes,
   caches, or calls the network. A snapshot carries its `plan_id`,
-  `plan_title`, and a `timeline`, and `plan_id=None` keeps the all-plans view.
-- The timeline is selection-scoped: a plan, milestone, or task row scopes it
-  to that row's parent plan, and no selection gives every plan a lane. A
-  scoped plan gets a project lane plus one lane per milestone; a milestone or
-  task selection adds the focused milestone's task lanes and marks the
-  selected task. Each lane keeps its wall-clock `start`/`end` and its `active`
-  doing intervals. Project, milestone, and task lanes set `trace` to the
-  `active` intervals, so a pause leaves a gap and resumed work starts a new
-  segment. A lane that never entered doing keeps its `add` start and legend
-  entry but has an empty trace.
+  `plan_title`, and a `timeline`; with no scope and no plan it keeps the
+  empty state.
+- The timeline is row-scoped: the clicked plan keeps its own lane plus one
+  lane per milestone, the clicked milestone keeps its own lane plus one lane
+  per immediate task, and the clicked task keeps only its own lane.
+  Ancestors and siblings are never added. With no selection the card shows
+  `select a row`, and an empty database shows `no plans yet`. A plan without
+  milestones and a milestone without tasks keep their own lane. Each lane
+  keeps its wall-clock `start`/`end` and its `active` doing intervals.
+  Project, milestone, and task lanes set `trace` to the `active` intervals,
+  so a pause leaves a gap and resumed work starts a new segment. A lane that
+  never entered doing keeps its `add` start and legend entry but has an empty
+  trace.
 - `tui/metrics/timeline_layout.py` holds the pure helpers: adaptive
   `axis_ticks`, one-row `lane_window` spacing, `legend_layout` wrapping and
   overflow, kind `trace_glyph`s (`═` project, `─` milestone, `·` task; bold

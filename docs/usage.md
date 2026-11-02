@@ -86,26 +86,29 @@ A source checkout updates with `git pull`.
 ### Metrics dashboard
 
 The bottom of the TUI keeps one read-only timeline card. It follows the row
-under the cursor: a selected plan scopes the card to that plan, and a selected
-milestone or task adds the focused milestone's task lanes and marks the
-selected task. With no selection, every plan gets a lane. Cursor changes
+under the cursor and shows only that row plus its immediate children: a
+selected plan shows the plan lane and its milestones, a selected milestone
+shows that milestone and its tasks, and a selected task shows only the task
+lane. Ancestors and siblings never appear. With no selection the card shows
+`select a row`; an empty database shows `no plans yet`. Cursor changes
 refresh after a short debounce; status, text, and source filters, the plan
 limit, and space-marks never change scope. The card never writes to the
 database. The section takes 40% of the shell height (11-row minimum, 16-row
-maximum), carries a `timeline` border title and the scoped plan name in its
-border subtitle, and hides on terminals narrower than 100 columns, so an 80x24
-terminal keeps the tree and hides the side column and timeline.
+maximum), carries a `timeline` border title and the scoped plan name (or
+`select a row`) in its border subtitle, and hides on terminals narrower than
+100 columns, so an 80x24 terminal keeps the tree and hides the side column
+and timeline.
 
-Each project, milestone, and task gets one compact swimlane. A lane starts at
-its first `doing` event and ends at its last `doing` event, or at the current
-time while the work is open. A lane that has never entered doing keeps its
-`add` position and legend entry but draws no trace. Project, milestone, and task
-traces cover only `doing` intervals, so a pause leaves a gap and resumed work
-starts a new segment. Every segment gets start and finish dots, and any open
-lane gets a dim vertical `now` marker. The x-axis picks its tick count and
-date/time format from the timeline span, with unique labels from seconds
-through years. No-plan and no-milestone states render centered copy inside the
-chart.
+Each visible plan, milestone, and task gets one compact swimlane. A lane
+starts at its first `doing` event and ends at its last `doing` event, or at
+the current time while the work is open. A lane that has never entered doing
+keeps its `add` position and legend entry but draws no trace. Project,
+milestone, and task traces cover only `doing` intervals, so a pause leaves a
+gap and resumed work starts a new segment. Every segment gets start and
+finish dots, and any open lane gets a dim vertical `now` marker. The x-axis
+picks its tick count and date/time format from the visible timeline span, with
+unique labels from seconds through years. The empty state renders centered
+copy inside the chart.
 
 The horizontal legend sits at the top of the chart, wraps when the terminal is
 narrow, truncates titles with an ellipsis, and folds overflow into `+N more`.

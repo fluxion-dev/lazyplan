@@ -61,6 +61,8 @@ def _setup_review(plan: ApplyPlan) -> subprocess.CompletedProcess[str]:
         [plan.python, "-m", "lazyplan", "setup", "--post-upgrade"],
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         timeout=HELPER_TIMEOUT,
     )
 
@@ -83,6 +85,8 @@ def run(plan: ApplyPlan, parent_pid: int) -> int:
             plan.command,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=HELPER_TIMEOUT,
         )
     except (OSError, subprocess.TimeoutExpired) as exc:

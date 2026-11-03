@@ -126,10 +126,10 @@ bar, no bottom input. Each main section is a rounded card with a left-aligned
 lowercase title label: `plans`, `preview`, `git`, and `timeline`. The focused
 pane gets the accent border. Adaptive shell: `#main` holds `#nav` (focused
 `FoldTree`) and a `#side` column. `#side` stacks the preview above the GIT
-pane. At >= 100 columns the tree takes 45% and the side column 55%; below
-that `#main.narrow` hides the whole side column and the tree owns the width.
-The tree rows keep their canonical labels; the side column is the reading
-surface.
+pane. At >= 100 columns the tree and the side column each take half of
+`#main`; below that `#main.narrow` hides the whole side column and the tree
+owns the width. The tree rows keep their canonical labels; the side column is
+the reading surface.
 
 Three layout tiers share one breakpoint:
 - compact (< 80): `#nav` drops its border and minimum width, `#main` loses its

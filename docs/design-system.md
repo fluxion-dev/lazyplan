@@ -101,7 +101,8 @@ TUI).
   and transient flags). `base.py` exposes it through properties and defines
   the small `TuiHost` contract used by the mixins.
 - `controllers/tree.py` owns tree loading, filtering, folds, selection
-  restoration, source counts, and row building.
+  restoration, source counts, row building, width-independent row specs, and
+  the live reflow pass.
 - `controllers/updates.py` owns the update timer, cache read, chip, and toast.
 - `controllers/spinner.py` owns frame timing and doing-row repaint.
 - `controllers/git_state.py` owns the preview's git probe and TTL cache.
@@ -136,9 +137,14 @@ Three layout tiers share one breakpoint:
   gutter, and `#hints` loses a padding cell.
 - standard (80–99): the narrow shell hides preview, GIT, and timeline; tree
   rows own the width.
-- wide (>= 120): `#main.wide` adds more preview/GIT padding. The 100-column
-  visibility breakpoint stays the single responsive rule; only crossing it
-  rebuilds the tree.
+- wide (>= 120): `#main.wide` adds more preview/GIT padding.
+
+The tree reflows live. Each row keeps a width-independent `RowSpec` in
+`app._row_specs`; when the tree's own width changes, `FoldTree` requests one
+coalesced pass that re-renders labels, marks, and spinner suffixes, then
+invalidates Textual's line cache so the virtual width follows. Crossing the
+100-column visibility breakpoint still runs the full refresh; inside a tier
+there is no database read.
 
 The preview's `PreviewDocument` supplies a status pill, breadcrumb, meta
 counts, section headings, acceptance `○` rows, next tasks, and provenance

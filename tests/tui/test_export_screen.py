@@ -153,13 +153,16 @@ class TestExportScreen(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(results, [None])
             self.assertFalse((self.downloads / f"plan-P{self.pid}.md").exists())
 
-    async def test_dialog_fits_80x24(self) -> None:
-        async with self.app.run_test(size=(80, 24)) as pilot:
-            self.app.push_screen(self._screen())
-            await pilot.pause()
-            region = self.app.screen.query_one("#dlg").region
-            self.assertLessEqual(region.x + region.width, 80)
-            self.assertLessEqual(region.y + region.height, 24)
+    async def test_dialog_fits_80x24_and_120x40(self) -> None:
+        for width, height in ((80, 24), (120, 40)):
+            with self.subTest(size=(width, height)):
+                app = tui_mod.create_app(self.db)
+                async with app.run_test(size=(width, height)) as pilot:
+                    app.push_screen(self._screen())
+                    await pilot.pause()
+                    region = app.screen.query_one("#dlg").region
+                    self.assertLessEqual(region.x + region.width, width)
+                    self.assertLessEqual(region.y + region.height, height)
 
 
 if __name__ == "__main__":

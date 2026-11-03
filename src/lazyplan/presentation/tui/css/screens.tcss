@@ -39,6 +39,31 @@ ModalScreen {
     height: 3;
 }
 
+#dlg.export-dialog {
+    max-width: 84;
+}
+
+#export-path {
+    border: tall $lp-border;
+}
+
+#export-tree-scroll {
+    height: 9;
+    padding: 0 1;
+    border: round $lp-border-muted;
+}
+
+#export-tree {
+    background: transparent;
+    padding: 0;
+}
+
+#export-error {
+    height: auto;
+    min-height: 1;
+    color: $lp-status-blocked;
+}
+
 #dlg #palette-scroll {
     height: auto;
     max-height: 16;

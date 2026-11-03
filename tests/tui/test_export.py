@@ -79,7 +79,10 @@ class ExportPathTest(unittest.TestCase):
         self.assertEqual(path, (self.downloads / "plan-P7.md").resolve())
 
     def test_tilde_is_expanded(self) -> None:
-        with mock.patch.dict(os.environ, {"HOME": str(self.home)}):
+        with mock.patch.dict(
+            os.environ,
+            {"HOME": str(self.home), "USERPROFILE": str(self.home)},
+        ):
             path = resolve_export_path("~/notes/plan.md", 7, default_dir=self.downloads)
         self.assertEqual(path, (self.home / "notes" / "plan.md").resolve())
 

@@ -245,7 +245,7 @@ class TestApply(unittest.TestCase):
         self.assertTrue(update_stage.wheel_path(update, self.home).is_file())
         ok = runner()
         state, detail = update_stage.apply_on_launch(
-            "0.27.2", self.home, exe="/venv/bin/python", runner=ok
+            "0.27.2", self.home, exe="/venv/bin/python", runner=ok, windows=False
         )
         self.assertEqual((state, detail), ("applied", VERSION))
         self.assertIsNone(update_stage.read_stage(home=self.home))
@@ -295,7 +295,7 @@ class TestApply(unittest.TestCase):
         self._stage()
         with mock.patch.object(update_stage.shutil, "which", return_value="/usr/bin/pipx"):
             state, detail = update_stage.apply_on_launch(
-                "0.27.2", self.home, runner=runner(1, "boom")
+                "0.27.2", self.home, runner=runner(1, "boom"), windows=False
             )
         self.assertEqual(state, "error")
         self.assertIn("boom", detail)

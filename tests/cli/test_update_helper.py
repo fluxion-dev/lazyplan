@@ -53,11 +53,12 @@ class TestApplyPlan(unittest.TestCase):
                 argv=("ui",),
             )
         wheel = str(update_stage.wheel_path(update, self.home))
-        self.assertEqual(plan.python, "C:/Users/u/pipx/venvs/lazyplan-tui/Scripts/python.exe")
+        python = str(Path("C:/Users/u/pipx/venvs/lazyplan-tui/Scripts/python.exe"))
+        self.assertEqual(Path(plan.python), Path(python))
         self.assertEqual(
             plan.command,
             (
-                "C:/Users/u/pipx/venvs/lazyplan-tui/Scripts/python.exe",
+                python,
                 "-m",
                 "pip",
                 "install",
@@ -66,8 +67,9 @@ class TestApplyPlan(unittest.TestCase):
                 wheel,
             ),
         )
-        self.assertEqual(plan.scripts, Path("C:/Users/u/pipx/bin"))
-        self.assertEqual(plan.restart, ("C:/Users/u/pipx/bin/lpui.exe", "ui"))
+        self.assertEqual(Path(plan.scripts), Path("C:/Users/u/pipx/bin"))
+        self.assertEqual(Path(plan.restart[0]), Path("C:/Users/u/pipx/bin/lpui.exe"))
+        self.assertEqual(plan.restart[1:], ("ui",))
         self.assertEqual(plan.log_path.parent, update_apply.update_log.logs_dir(self.home))
 
     def test_venv_windows_plan_uses_the_owning_pip(self) -> None:

@@ -269,6 +269,11 @@ class TestGuards(unittest.TestCase):
 
 
 class TestUpgradeCommand(unittest.TestCase):
+    def setUp(self):
+        patcher = mock.patch.object(cli_mod, "_is_windows", return_value=False)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     def _run(self, argv: list[str]) -> tuple[int, str, str]:
         out, err = StringIO(), StringIO()
         with redirect_stdout(out), redirect_stderr(err):

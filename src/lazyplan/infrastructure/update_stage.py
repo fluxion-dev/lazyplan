@@ -58,6 +58,7 @@ PYPI_JSON = "https://pypi.org/pypi/{package}/{version}/json"
 USER_AGENT = "lazyplan-update/1.0 (+https://github.com/fluxion-dev/lazyplan)"
 DOWNLOAD_TIMEOUT = 60.0
 APPLY_TIMEOUT = 300.0
+STALE_APPLY = 120.0
 CHUNK = 64 * 1024
 
 
@@ -298,6 +299,29 @@ def claim_stage(home: str | Path | None = None) -> StagedUpdate | None:
     if update is None:
         applying.unlink(missing_ok=True)
     return update
+
+
+def recover_stale_apply(
+    home: str | Path | None = None,
+    now: float | None = None,
+    stale_after: float = STALE_APPLY,
+) -> str | None:
+    """Park an abandoned applying marker and return the failure text."""
+    applying = _state_path(APPLYING, home)
+    try:
+        age = (time.time() if now is None else now) - applying.stat().st_mtime
+    except OSError:
+        return None
+    if age <= stale_after:
+        return None
+    error = "previous update helper did not finish; see the update log"
+    target = _state_path(FAILED, home)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temp = target.with_name(f"{target.name}.tmp")
+    textfile.write(temp, json.dumps({"error": error}, indent=2) + "\n")
+    os.replace(temp, target)
+    applying.unlink(missing_ok=True)
+    return error
 
 
 def verify_wheel(update: StagedUpdate, home: str | Path | None = None) -> bool:

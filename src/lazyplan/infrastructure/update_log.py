@@ -25,6 +25,18 @@ def _label(kind: str) -> str:
     return safe or "update"
 
 
+def log_path(
+    kind: str,
+    home: str | Path | None = None,
+    now: float | None = None,
+    pid: int | None = None,
+) -> Path:
+    """Return the deterministic log path for one update attempt."""
+    stamp = int(time.time() if now is None else now)
+    process = os.getpid() if pid is None else pid
+    return logs_dir(home) / f"update-{_label(kind)}-{stamp}-{process}.log"
+
+
 def record_update(
     kind: str,
     *,
@@ -41,10 +53,7 @@ def record_update(
     pid: int | None = None,
 ) -> Path:
     """Write one update attempt and return its log path."""
-    stamp = int(time.time() if now is None else now)
-    target = (
-        logs_dir(home) / f"update-{_label(kind)}-{stamp}-{os.getpid() if pid is None else pid}.log"
-    )
+    target = log_path(kind, home, now, pid)
     target.parent.mkdir(parents=True, exist_ok=True)
     lines = [
         f"method: {method}",

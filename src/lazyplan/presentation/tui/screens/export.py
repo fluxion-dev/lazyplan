@@ -56,11 +56,7 @@ if _TEXTUAL_OK:
 
         def compose(self) -> ComposeResult:
             with Vertical(id="dlg", classes="export-dialog"):
-                yield Label(
-                    f"Export P{self.plan_id} · {self.plan_title}".rstrip(" ·"),
-                    classes="form-title",
-                    markup=False,
-                )
+                yield Label(self._title(), classes="form-title", markup=False)
                 yield Label("Destination", classes="field-label")
                 yield Input(value=display_path(self._default_path), id="export-path")
                 yield Label("Folders", classes="field-label")
@@ -77,6 +73,10 @@ if _TEXTUAL_OK:
             self.set_class(width < 80, "compact")
             self.set_class(width >= 120, "wide")
             self.query_one("#export-path", Input).focus()
+
+        def _title(self) -> str:
+            base = f"Export P{self.plan_id}"
+            return f"{base} · {self.plan_title}" if self.plan_title else base
 
         def _path_input(self) -> Input:
             return self.query_one("#export-path", Input)
@@ -119,16 +119,16 @@ if _TEXTUAL_OK:
             self._attempt_export()
 
         def _attempt_export(self) -> None:
+            entry = services.export_plan(self.store, self.plan_id)
+            if entry is None:
+                self._show_error(f"plan P{self.plan_id} no longer exists")
+                return
             raw = self._path_input().value.strip()
             target = resolve_export_path(
                 raw,
                 self.plan_id,
                 default_dir=self._default_dir,
             )
-            entry = services.export_plan(self.store, self.plan_id)
-            if entry is None:
-                self._show_error(f"plan P{self.plan_id} no longer exists")
-                return
             text = render_plan_markdown(entry) + "\n"
             if target.exists() and target.is_file():
                 self._confirm_overwrite(target, text)

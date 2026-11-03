@@ -353,3 +353,18 @@ carries `lastmod` 2026-11-03, and the Pages deploy
 [41559604544](https://github.com/fluxion-dev/lazyplan/actions/runs/41559604544)
 succeeded. An isolated 0.30.4 install printed 0.30.4 once the simple index
 caught up.
+
+### v0.30.5 pass (2026-11-03)
+
+After: version pins, release asset URLs, JSON-LD `version`/`softwareVersion`,
+and the sitemap `lastmod` moved to 0.30.5. The site copy now names the balanced
+split and live row reflow, and every TUI screenshot was regenerated from the
+50/50 shell. The page stayed inside the 750-word marketing budget.
+
+Verified live: the page contains 0.30.5 and the Balanced split copy, the
+canonical URL, FAQ/JSON-LD, and robots are intact,
+`screens/lpui-git-pane.webp` returns 200, the sitemap carries `lastmod`
+2026-11-03, and the Pages deploys
+[41683914533](https://github.com/fluxion-dev/lazyplan/actions/runs/41683914533)
+and [41683951742](https://github.com/fluxion-dev/lazyplan/actions/runs/41683951742)
+succeeded.

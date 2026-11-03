@@ -705,3 +705,46 @@ or the next plan row so the next release has the context.
   2026-11-03, and canonical/FAQ/JSON-LD are intact.
 - No fix-forward commits; the only deviation was the unrelated macOS flake,
   which passed on rerun.
+
+### v0.30.5 (2026-11-03)
+
+- Patch bump from 0.30.4. The main screen now gives the plan tree and preview
+  column equal halves at 100+ columns; tree rows reflow live during resize
+  without a database reload or a stale horizontal scrollbar. README, usage
+  docs, site copy, and screenshots were refreshed before the bump.
+- Prep commits landed on `main` in `85e8b5f`. Local `./tools/check.sh` printed
+  ALL GATES GREEN. The push CI run
+  [41678156847](https://github.com/fluxion-dev/lazyplan/actions/runs/41678156847)
+  passed Ubuntu but its macOS job was cancelled; the `--failed` rerun recovered
+  the macOS job. Node/npm is not installed on the local host, so `npm run build`
+  and the dist check could not run locally; the Pages workflow ran
+  `check-site.py --dist` and deployed successfully.
+- The **bump** workflow (`part=patch`) ran
+  [41678178581](https://github.com/fluxion-dev/lazyplan/actions/runs/41678178581);
+  its `bump` job opened release PR
+  [#85](https://github.com/fluxion-dev/lazyplan/pull/85) with only version
+  mirrors. The release-branch gates run
+  [41678233730](https://github.com/fluxion-dev/lazyplan/actions/runs/41678233730)
+  parked in `action_required`; admin approval let Ubuntu and macOS pass. The
+  `publish` job timed out waiting for the PR, so the documented fallback was
+  used: PR #85 was merged by hand as `69fff02`.
+- Manual `tag-release` and Pages dispatches raced the push-triggered runs. The
+  push-triggered `tag-release`
+  [41683914422](https://github.com/fluxion-dev/lazyplan/actions/runs/41683914422)
+  created annotated tag `v0.30.5`; the manual dispatch
+  [41683946121](https://github.com/fluxion-dev/lazyplan/actions/runs/41683946121)
+  failed on the existing tag. The push-triggered Pages
+  [41683914533](https://github.com/fluxion-dev/lazyplan/actions/runs/41683914533)
+  and manual Pages
+  [41683951742](https://github.com/fluxion-dev/lazyplan/actions/runs/41683951742)
+  both succeeded. `release.yml` was
+  [41683970671](https://github.com/fluxion-dev/lazyplan/actions/runs/41683970671);
+  both `release` and `publish-pypi` succeeded.
+- PyPI JSON served 0.30.5 immediately. The simple index lagged; once it caught
+  up, `PIP_NO_CACHE_DIR=1 pipx run --spec lazyplan-tui==0.30.5 lpui --version`
+  printed `0.30.5`.
+- Verified: seven release assets including `install.sh`, the wheel, sdist, two
+  RPMs, and two DEBs; the curated release body is live; the live site shows
+  0.30.5 with the Balanced split copy, `screens/lpui-git-pane.webp` returns
+  200, the sitemap `lastmod` is 2026-11-03, and canonical/FAQ/JSON-LD are
+  intact.

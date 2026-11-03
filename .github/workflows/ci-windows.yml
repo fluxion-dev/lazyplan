@@ -37,6 +37,30 @@ jobs:
       - name: Gates (ruff + mypy + unittest x2)
         run: ./tools/check.sh
 
+  update-tests:
+    name: windows update tests
+    runs-on: windows-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: python -m pip install -e ".[dev]"
+      - name: Run update suites
+        run: >-
+          python -m unittest
+          tests.cli.test_update_helper
+          tests.cli.test_upgrade
+          tests.core.test_staged_update
+          tests.core.test_update_log
+          tests.tui.test_update_screen
+          tests.tui.test_update_notice
+
   update-smoke:
     name: windows update smoke
     runs-on: windows-latest

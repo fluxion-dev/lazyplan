@@ -13,6 +13,7 @@
 _.compose
 _.on_mount
 _.on_unmount
+_.on_resize
 _.on_button_pressed
 _.on_tree_node_highlighted
 _.on_tree_node_collapsed

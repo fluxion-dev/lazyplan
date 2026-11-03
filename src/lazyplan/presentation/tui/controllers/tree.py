@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import time
-from functools import partial
 from typing import TYPE_CHECKING, Any, cast
 
 from textual.widgets import Label, Static, Tree
@@ -11,9 +9,9 @@ from textual.widgets.tree import TreeNode
 
 from .... import services
 from ....core.entities import Milestone, Plan, Status, Task
-from ...shared.design import apply_mark, milestone_row, plan_row, status_prefix, task_row
+from ...shared.design import apply_mark, status_prefix
 from ...shared.help import hint_bar
-from ..views.rows import RowSpec, row_text
+from ..views.rows import RowSpec, milestone_spec, plan_spec, row_text, task_spec
 from .filtering import TreeFilter
 
 if TYPE_CHECKING:
@@ -189,10 +187,10 @@ class TreeController:
         if base is None or node is None:
             return
         marked = key in app.marked
-        if key in app.spinner_controller.rows:
-            label = status_prefix(Status.DOING, app.spinner_controller.tick) + apply_mark(
-                app.spinner_controller.rows[key], marked
-            )
+        spinner = app.spinner_controller
+        if key in spinner.rows:
+            frame = spinner.tick if spinner.enabled else None
+            label = status_prefix(Status.DOING, frame) + apply_mark(spinner.rows[key], marked)
         else:
             label = apply_mark(base, marked)
         node.set_label(row_text(label))
@@ -307,58 +305,6 @@ class TreeController:
         self.app.spinner_controller.remember(key, spec.status, text)
         return text
 
-    def plan_spec(self, plan: Plan, progress: dict, source_stats: dict) -> RowSpec:
-        """Build the width-independent renderer for one plan row."""
-        stats = source_stats.get(("plan", plan.id))
-        return RowSpec(
-            render=partial(
-                plan_row,
-                plan,
-                progress=progress.get(("plan", plan.id)),
-                source_counts=(stats[0], stats[1], stats[2]) if stats else None,
-            ),
-            depth=3,
-            status=plan.status,
-        )
-
-    def milestone_spec(self, milestone: Milestone, progress: dict, source_stats: dict) -> RowSpec:
-        """Build the width-independent renderer for one milestone row."""
-        stats = source_stats.get(("milestone", milestone.id))
-        return RowSpec(
-            render=partial(
-                milestone_row,
-                milestone,
-                self.app.store,
-                progress=progress.get(("milestone", milestone.id)),
-                source_counts=(stats[0], stats[1], stats[2]) if stats else None,
-            ),
-            depth=7,
-            status=milestone.status,
-        )
-
-    def task_spec(self, task: Task, forge_map: dict, vcs_map: dict, claims_map: dict) -> RowSpec:
-        """Build the width-independent renderer for one task row."""
-        prs = forge_map.get(("task", task.id), [])
-        pr = prs[0] if prs else None
-        links = vcs_map.get(("task", task.id), [])
-        claim = claims_map.get(task.id)
-        return RowSpec(
-            render=partial(
-                task_row,
-                task,
-                self.app.store,
-                links=[link.sha for link in links],
-                pr_state=pr.state if pr else "",
-                pr_checks=pr.checks if pr else "",
-                stale=any(link.stale for link in links),
-                claim_actor=claim.actor if claim else "",
-                claim_expired=claim.expired(time.time()) if claim else False,
-                blocked=task.blocked,
-            ),
-            depth=11,
-            status=task.status,
-        )
-
     def build_rows(
         self,
         root: Any,
@@ -374,9 +320,9 @@ class TreeController:
         app = self.app
         for plan, milestones in filtered:
             plan_key = ("plan", plan.id)
-            plan_spec = self.plan_spec(plan, progress, source_stats)
-            app._row_specs[plan_key] = plan_spec
-            plan_text = self.render_row(plan_key, plan_spec, tree)
+            plan_row_spec = plan_spec(plan, progress, source_stats)
+            app._row_specs[plan_key] = plan_row_spec
+            plan_text = self.render_row(plan_key, plan_row_spec, tree)
             plan_node = root.add(
                 row_text(apply_mark(plan_text, plan_key in app.marked)),
                 data={"kind": "plan", "id": plan.id},
@@ -385,9 +331,9 @@ class TreeController:
             app._row_nodes[plan_key] = plan_node
             for milestone, tasks in milestones:
                 milestone_key = ("milestone", milestone.id)
-                milestone_spec = self.milestone_spec(milestone, progress, source_stats)
-                app._row_specs[milestone_key] = milestone_spec
-                milestone_text = self.render_row(milestone_key, milestone_spec, tree)
+                milestone_row_spec = milestone_spec(milestone, app.store, progress, source_stats)
+                app._row_specs[milestone_key] = milestone_row_spec
+                milestone_text = self.render_row(milestone_key, milestone_row_spec, tree)
                 milestone_node = plan_node.add(
                     row_text(apply_mark(milestone_text, milestone_key in app.marked)),
                     data={"kind": "milestone", "id": milestone.id},
@@ -396,9 +342,9 @@ class TreeController:
                 app._row_nodes[milestone_key] = milestone_node
                 for task in tasks:
                     task_key = ("task", task.id)
-                    task_spec = self.task_spec(task, forge_map, vcs_map, claims_map)
-                    app._row_specs[task_key] = task_spec
-                    task_text = self.render_row(task_key, task_spec, tree)
+                    task_row_spec = task_spec(task, app.store, forge_map, vcs_map, claims_map)
+                    app._row_specs[task_key] = task_row_spec
+                    task_text = self.render_row(task_key, task_row_spec, tree)
                     leaf = milestone_node.add_leaf(
                         row_text(apply_mark(task_text, task_key in app.marked)),
                         data={"kind": "task", "id": task.id},

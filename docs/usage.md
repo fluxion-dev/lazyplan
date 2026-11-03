@@ -79,9 +79,17 @@ stays clean for `--json`. A successful upgrade re-runs setup with the new
 binary, including under `--json`, so hooks and the AGENTS pointer refresh
 without prompting.
 
-On Windows the same command manages pipx and venv installs. If the automatic
-upgrade cannot run, reinstall with `pipx install --backend pip lazyplan-tui`.
-A source checkout updates with `git pull`.
+On Windows the command and the TUI Update screen use a detached helper. lpui
+closes first, then the helper waits for the process to exit, updates the
+existing pipx venv with that venv's own `python -m pip` (or a plain venv's
+pip), writes the full command and output under
+`%LOCALAPPDATA%\lazyplan\logs\`, runs the post-upgrade setup review, and
+relaunches the TUI. A failed install leaves the old version runnable and the
+next launch shows the log path. `lpui upgrade --diagnose` prints the detected
+method, owning Python, pipx and shim paths, and log directory without changing
+anything. If the helper cannot start, close lpui and repair with
+`pipx install --force --backend pip lazyplan-tui`. A source checkout updates
+with `git pull`.
 
 #### Upgrading from 0.30.1 or earlier
 
@@ -156,7 +164,11 @@ trace.
 When a newer release exists, a toast appears once for that version. Press `U`
 (or run **Update lpui** from the
 palette) to open the Update screen. It shows the installed and latest versions,
-the detected install method, and two actions: **Download** and **Later**.
+the detected install method, and **Download** and **Later**. On Windows a
+successful download also offers **Restart now**: lpui exits, the detached
+helper applies the wheel after the process is gone, writes a full log under
+`%LOCALAPPDATA%\lazyplan\logs\`, and relaunches. Choosing **Later** leaves the
+stage for the next launch, which hands off the same way.
 
 The TUI re-reads the shared update cache every 60 seconds, so a release
 published while the app is open appears without a restart. The network check
@@ -849,7 +861,7 @@ lpui repos --kind task --id 1 [--effective]
 lpui list --repo ~/checkouts/api
 lpui export [--format json|markdown] [--plan ID] [--file PATH] [--force]
 lpui import --file dump.json
-lpui upgrade [--check]
+lpui upgrade [--check|--diagnose]
 lpui feed [--limit 20]
 lpui watch [--limit 20]
 ```

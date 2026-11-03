@@ -109,6 +109,10 @@ TUI).
   restoration, source counts, row building, width-independent row specs, and
   the live reflow pass.
 - `controllers/updates.py` owns the update timer, cache read, chip, and toast.
+- `launch.py` owns launch-time update handling: synchronous apply on posix,
+  detached handoff on Windows, and the applying/restart exit.
+- `infrastructure/update_apply.py` builds the Windows ApplyPlan; `_update_helper.py`
+  is the stdlib-only detached process; `update_log.py` writes the full log.
 - `controllers/spinner.py` owns frame timing and doing-row repaint.
 - `controllers/git_state.py` owns the preview's git probe and TTL cache.
 - `views/preview.py` returns a structured `PreviewDocument`; it never touches
@@ -289,6 +293,18 @@ dirty guard that confirms before discarding. Row actions: `s` status,
 `x` tick next criterion, `a` add criterion, `g` source trail, `n` add
 child, `d` delete with an exact cascade summary; `Esc` backs out. Delete
 focuses Cancel by default.
+
+## Windows updates (`_update_helper.py`)
+
+On Windows, `apply_on_launch` never runs pip inside the process being
+replaced. It builds an `ApplyPlan` and spawns `python -m lazyplan._update_helper`
+with the parent PID. The helper waits for that PID to exit, updates the
+existing pipx venv with that venv's own `python -m pip` (or a plain venv's
+pip), writes stdout/stderr to `logs/update-apply-*.log`, runs
+`setup --post-upgrade`, clears the stage, and optionally relaunches. Failures
+park `failed.json` and leave the old version runnable; a stale `applying.json`
+is recovered on the next launch. `lpui upgrade --diagnose` prints the method,
+owning Python, pipx/shim paths, and log directory.
 
 ## Export (`tui/screens/export.py`)
 

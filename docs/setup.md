@@ -83,8 +83,12 @@ lpui upgrade --json
 A successful upgrade re-runs setup with the new package, including under
 `--json`, so hooks and the pointer pick up new content. Upgrade never prompts
 in JSON mode. If the upgrade cannot run, lazyplan prints one warning and keeps
-working. On Windows the same pipx and venv paths apply; the reinstall fallback
-is `pipx install --backend pip lazyplan-tui`.
+working. On Windows, lpui closes and a detached helper updates the existing
+pipx venv or plain venv after the process exits, logs the full command under
+`%LOCALAPPDATA%\lazyplan\logs\`, and relaunches. `lpui upgrade --diagnose`
+prints the method, owning Python, and log path without changing anything. If
+the helper cannot start, close lpui and reinstall with
+`pipx install --force --backend pip lazyplan-tui`.
 
 ### Before 0.30.2
 

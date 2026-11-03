@@ -277,6 +277,7 @@ lpui --porcelain stats --since 7.days                                        # f
 lpui --porcelain feed --limit 20                                                 # recent activity
 lpui export --format json                                            # full dump when you need everything
 lpui export --format markdown --plan ID [--file out.md] [--force]    # one full-fidelity plan doc
+lpui upgrade --check|--diagnose                                      # update status and install paths
 lpui info                                                            # resolved db path + counts (scope debugging)
 lpui reconcile                                                       # recompute parent statuses from children
 ```
@@ -287,6 +288,12 @@ no glyphs or provenance noise. Use `--json` when you need full fidelity
 
 Markdown plan export creates missing parent folders and refuses to replace an
 existing file unless `--force` is passed.
+
+On Windows, `lpui upgrade` stages and hands off to a detached helper after
+lpui exits, then relaunches the TUI. The full command and output are logged
+under `%LOCALAPPDATA%\lazyplan\logs\`; `lpui upgrade --diagnose` prints the
+detected method, owning Python, and log path. A failed apply leaves the old
+version runnable and the next launch shows the log path.
 
 ## Templates (per-repo creation defaults)
 

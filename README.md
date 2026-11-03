@@ -57,6 +57,9 @@ Want demo data first? Run `lpui seed`.
 
 ## New in 0.31
 
+- **Windows updates that close cleanly.** lpui hands the install to a detached
+  helper, writes the full command and output to a log, and relaunches. Run
+  `lpui upgrade --diagnose` to see the detected method and log path.
 - **Export where you want.** The palette's **Export plan as Markdown** opens a
   folder browser with the filename ready. It starts in Downloads, asks before
   overwriting, and keeps errors inside the picker.

@@ -30,6 +30,7 @@ ROOT = Path(__file__).resolve().parent.parent
 PACKAGE = "lazyplan-tui"
 PRIOR = "9.9.8"
 TARGET = "9.9.9"
+BAD = "9.9.10"
 TIMEOUT = 120.0
 
 
@@ -135,16 +136,16 @@ def main(argv: list[str] | None = None) -> int:
 
         bad = root / "bad.whl"
         bad.write_text("not a wheel\n", encoding="utf-8")
-        repro.stage_wheel(env, bad, TARGET)
+        repro.stage_wheel(env, bad, BAD)
         apply_child(repro, python, env)
         failed = repro.shared_home(env) / "updates" / "failed.json"
         wait_for(repro, failed.exists, "failure record")
         error = json.loads(failed.read_text(encoding="utf-8")).get("error", "")
         if "install" not in str(error).lower() and "wheel" not in str(error).lower():
             raise SystemExit(f"failure record is not useful: {error!r}")
-        if installed_version(repro, python, env) != PRIOR:
+        if installed_version(repro, python, env) != TARGET:
             raise SystemExit("failed apply changed the installed version")
-        print(f"failure: old version v{PRIOR} still runs")
+        print(f"failure: old version v{TARGET} still runs")
         return 0
     finally:
         if env is not None:

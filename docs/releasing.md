@@ -748,3 +748,43 @@ or the next plan row so the next release has the context.
   0.30.5 with the Balanced split copy, `screens/lpui-git-pane.webp` returns
   200, the sitemap `lastmod` is 2026-11-03, and canonical/FAQ/JSON-LD are
   intact.
+
+### v0.31.0 (2026-11-03)
+
+- Minor bump from 0.30.5. Markdown export now opens a destination picker in
+  the TUI, defaults to Downloads, protects existing files, and shares path and
+  atomic-write rules with `lpui export --file [--force]`. README, usage docs,
+  the design system, the agent SKILL, the man page, site copy, and screenshots
+  were updated.
+- Prep landed on `main` in `e291f79`. Local `./tools/check.sh` printed ALL
+  GATES GREEN. Node/npm is not installed locally, so `npm run build` and the
+  dist check remained delegated to the Pages workflow; the source site check
+  passed.
+- The **bump** workflow (`part=minor`) ran
+  [41700386353](https://github.com/fluxion-dev/lazyplan/actions/runs/41700386353);
+  its `bump` job opened release PR
+  [#86](https://github.com/fluxion-dev/lazyplan/pull/86) with only version
+  mirrors. The `publish` job timed out waiting for the PR.
+- The first release gates
+  [41700422164](https://github.com/fluxion-dev/lazyplan/actions/runs/41700422164)
+  passed Ubuntu and failed macOS because temp export paths resolve through
+  `/var` to `/private/var`. Fix commit `99dfb54` normalized the tests; the PR
+  branch was updated to `ef19e2c`. The rerun
+  [41702006283](https://github.com/fluxion-dev/lazyplan/actions/runs/41702006283)
+  passed Ubuntu, but its macOS job was cancelled. Per the operator's explicit
+  instruction to skip the macOS job, PR #86 was admin-merged as `c0ec746`.
+- The merge push started `tag-release`
+  [41704056798](https://github.com/fluxion-dev/lazyplan/actions/runs/41704056798),
+  which created annotated tag `v0.31.0` and dispatched `release.yml`
+  [41704129037](https://github.com/fluxion-dev/lazyplan/actions/runs/41704129037);
+  both `release` and `publish-pypi` succeeded. Pages
+  [41704056536](https://github.com/fluxion-dev/lazyplan/actions/runs/41704056536)
+  deployed.
+- PyPI JSON served 0.31.0. The simple index lagged; once it caught up,
+  `PIP_NO_CACHE_DIR=1 pipx run --spec lazyplan-tui==0.31.0 lpui --version`
+  printed `0.31.0`.
+- Verified: seven release assets including `install.sh`, the wheel, sdist, two
+  RPMs, and two DEBs; the curated release body is live; the live site shows
+  0.31.0 with the Markdown export copy and `screens/lpui-export.webp` returns
+  200; the sitemap `lastmod` is 2026-11-03 and canonical/FAQ/JSON-LD are
+  intact.

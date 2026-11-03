@@ -368,3 +368,18 @@ canonical URL, FAQ/JSON-LD, and robots are intact,
 [41683914533](https://github.com/fluxion-dev/lazyplan/actions/runs/41683914533)
 and [41683951742](https://github.com/fluxion-dev/lazyplan/actions/runs/41683951742)
 succeeded.
+
+### v0.31.0 pass (2026-11-03)
+
+After: version pins, release asset URLs, JSON-LD `version`/`softwareVersion`,
+and the sitemap `lastmod` moved to 0.31.0. The site adds a Markdown export
+card and a new export-picker screenshot showing the Downloads path, folder
+tree, filename, and Export/Cancel actions. The page remains at 748 words with
+10 figures, inside the 750-word and figure-count budgets.
+
+Verified live: the page contains 0.31.0, the Markdown export copy, the
+canonical URL, FAQ/JSON-LD, and robots; `screens/lpui-export.webp` returns 200;
+the sitemap carries `lastmod` 2026-11-03; and the Pages deploy
+[41704056536](https://github.com/fluxion-dev/lazyplan/actions/runs/41704056536)
+succeeded. An isolated 0.31.0 install printed 0.31.0 once the simple index
+caught up.

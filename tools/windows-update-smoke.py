@@ -119,12 +119,17 @@ def main(argv: list[str] | None = None) -> int:
             lambda: installed_version(repro, python, env) == TARGET,
             f"installed version {TARGET}",
         )
+        updates = repro.shared_home(env) / "updates"
         logs = repro.shared_home(env) / "logs"
-        if not any(
-            "returncode: 0" in path.read_text(encoding="utf-8") for path in logs.glob("*.log")
-        ):
-            raise SystemExit("success log did not record the install")
-        if (repro.shared_home(env) / "updates" / "staged.json").exists():
+        wait_for(repro, lambda: not (updates / "applying.json").exists(), "helper completion")
+        wait_for(
+            repro,
+            lambda: any(
+                "returncode: 0" in path.read_text(encoding="utf-8") for path in logs.glob("*.log")
+            ),
+            "success log",
+        )
+        if (updates / "staged.json").exists():
             raise SystemExit("success left the staged marker behind")
         print(f"success: {PRIOR} -> {TARGET}")
 

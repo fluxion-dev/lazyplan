@@ -11,7 +11,7 @@ from io import StringIO
 from pathlib import Path
 from unittest import mock
 
-from lazyplan.infrastructure import upgrade
+from lazyplan.infrastructure import update_log, upgrade
 from lazyplan.presentation.cli import main
 from lazyplan.presentation.cli.commands import admin as cli_mod
 
@@ -186,6 +186,19 @@ class TestRunners(unittest.TestCase):
             with self.assertRaises(upgrade.UpgradeError):
                 upgrade.upgrade_pipx("0.16.0", installed="0.15.0")
 
+    def test_pipx_failure_names_the_log(self):
+        bad = mock.Mock(returncode=1, stderr="permission denied", stdout="")
+        log_path = Path("/tmp/update-pipx.log")
+        with (
+            mock.patch.object(upgrade.shutil, "which", return_value="/usr/bin/pipx"),
+            mock.patch.object(upgrade.subprocess, "run", return_value=bad),
+            mock.patch.object(update_log, "record_update", return_value=log_path) as record,
+        ):
+            with self.assertRaises(upgrade.UpgradeError) as caught:
+                upgrade.upgrade_pipx("0.16.0", installed="0.15.0")
+        self.assertIn(str(log_path), str(caught.exception))
+        record.assert_called()
+
     def test_pipx_missing_raises(self):
         with mock.patch.object(upgrade.shutil, "which", return_value=None):
             with self.assertRaises(upgrade.UpgradeError):
@@ -266,6 +279,36 @@ class TestUpgradeCommand(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("9.9.9", out)
         run.assert_not_called()
+
+    def test_diagnose_json_reports_the_environment_without_network(self):
+        payload = {
+            "method": upgrade.PIPX,
+            "exe": "C:/venv/Scripts/python.exe",
+            "pipx": "C:/pipx/bin/pipx.exe",
+            "log_dir": "C:/Users/u/AppData/Local/lazyplan/logs",
+        }
+        with (
+            mock.patch.object(cli_mod, "diagnostics", return_value=payload) as diag,
+            mock.patch.object(cli_mod, "latest_version") as latest,
+        ):
+            code, out, _ = self._run(["upgrade", "--diagnose", "--json"])
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(out), payload)
+        diag.assert_called_once()
+        latest.assert_not_called()
+
+    def test_diagnose_human_output_names_paths(self):
+        payload = {
+            "method": upgrade.PIPX,
+            "exe": "C:/venv/Scripts/python.exe",
+            "log_dir": "C:/Users/u/AppData/Local/lazyplan/logs",
+        }
+        with mock.patch.object(cli_mod, "diagnostics", return_value=payload):
+            code, out, _ = self._run(["upgrade", "--diagnose"])
+        self.assertEqual(code, 0)
+        self.assertIn("pipx", out)
+        self.assertIn("C:/venv/Scripts/python.exe", out)
+        self.assertIn("log_dir", out)
 
     def test_check_json_shape(self):
         with (

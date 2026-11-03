@@ -9,7 +9,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from lazyplan.infrastructure import update_stage
+from lazyplan.infrastructure import update_log, update_stage
 from lazyplan.infrastructure.upgrade import PIPX, VENV
 
 WHEEL = b"fake wheel bytes"
@@ -223,6 +223,20 @@ class TestApply(unittest.TestCase):
                 update_stage.apply_update(
                     update, self.home, runner=runner(1, "boom"), installed="0.27.0"
                 )
+
+    def test_install_failure_names_the_log(self):
+        update = self._stage()
+        log_path = Path("/tmp/update-apply.log")
+        with (
+            mock.patch.object(update_stage.shutil, "which", return_value="/usr/bin/pipx"),
+            mock.patch.object(update_log, "record_update", return_value=log_path) as record,
+        ):
+            with self.assertRaises(update_stage.StageError) as caught:
+                update_stage.apply_update(
+                    update, self.home, runner=runner(1, "permission denied"), installed="0.27.0"
+                )
+        self.assertIn(str(log_path), str(caught.exception))
+        record.assert_called()
 
     def test_applies_and_clears(self):
         update = update_stage.stage_update(

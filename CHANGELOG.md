@@ -3,6 +3,49 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## v0.32.0 — 2026-11-03
+
+Windows updates now close lpui before touching the install, apply the wheel
+from a detached helper after the process exits, write the full command and
+output to a log, and relaunch. This avoids the locked-file failures that could
+leave both `lpui upgrade` and the TUI staged apply unable to finish.
+
+### Fixed
+
+- Windows pipx updates use the existing pipx venv's own `python -m pip`
+  instead of asking pipx to recreate the venv, so the running interpreter and
+  shim are never replaced.
+- Windows venv updates use the owning venv's pip through the same detached
+  helper.
+- The TUI Update screen offers **Restart now** after a download; **Later**
+  keeps the stage for the next launch.
+- Failed applies leave the old version runnable, park the error, and show the
+  full log path on the next launch.
+- Stale `applying.json` state is recovered automatically.
+
+### Added
+
+- Full update logs under `%LOCALAPPDATA%\lazyplan\logs\` on Windows.
+- `lpui upgrade --diagnose` prints the detected method, owning Python, pipx
+  and shim paths, update directory, log directory, and repair command.
+- A real Windows smoke job covers pipx and venv success plus a forced
+  install failure in isolated homes.
+
+### Upgrade
+
+```bash
+pipx upgrade lazyplan-tui
+# or
+pipx install --force lazyplan-tui
+```
+
+No manual migration is required. The database schema is unchanged.
+
+### Documentation
+
+- Updated `README.md`, `docs/usage.md`, `docs/setup.md`,
+  `docs/design-system.md`, `src/lazyplan/data/SKILL.md`, and the site.
+
 ## v0.31.0 — 2026-11-03
 
 Markdown export is now a deliberate save instead of a fire-and-forget write.

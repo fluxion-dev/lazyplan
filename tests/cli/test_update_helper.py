@@ -56,7 +56,15 @@ class TestApplyPlan(unittest.TestCase):
         self.assertEqual(plan.python, "C:/Users/u/pipx/venvs/lazyplan-tui/Scripts/python.exe")
         self.assertEqual(
             plan.command,
-            ("C:/Users/u/pipx/bin/pipx.exe", "install", "--backend", "pip", wheel, "--force"),
+            (
+                "C:/Users/u/pipx/venvs/lazyplan-tui/Scripts/python.exe",
+                "-m",
+                "pip",
+                "install",
+                "--force-reinstall",
+                "--no-input",
+                wheel,
+            ),
         )
         self.assertEqual(plan.scripts, Path("C:/Users/u/pipx/bin"))
         self.assertEqual(plan.restart, ("C:/Users/u/pipx/bin/lpui.exe", "ui"))

@@ -327,6 +327,7 @@ def park_failure(error: str, home: str | Path | None = None) -> None:
     temp = target.with_name(f"{target.name}.tmp")
     textfile.write(temp, json.dumps({"error": error}, indent=2) + "\n")
     os.replace(temp, target)
+    _state_path(APPLYING, home).unlink(missing_ok=True)
 
 
 def clear_apply(home: str | Path | None = None, wheel: Path | None = None) -> None:
@@ -469,6 +470,7 @@ def apply_on_launch(
     exe: str | None = None,
     runner: Callable[..., Any] = subprocess.run,
     windows: bool | None = None,
+    restart: bool = True,
 ) -> tuple[str, str]:
     """Claim and apply one stage; return (state, detail)."""
     update = claim_stage(home)
@@ -494,7 +496,13 @@ def apply_on_launch(
         try:
             from .update_apply import build_apply_plan, spawn_windows_apply
 
-            plan = build_apply_plan(update, home=home, exe=exe, windows=True)
+            plan = build_apply_plan(
+                update,
+                home=home,
+                exe=exe,
+                windows=True,
+                restart=restart,
+            )
             log = spawn_windows_apply(plan, parent_pid=os.getpid())
         except (OSError, StageError) as exc:
             mark_failed(update, str(exc), home)

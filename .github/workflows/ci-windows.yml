@@ -36,3 +36,27 @@ jobs:
           "$VENV_BIN"/python -m pip install -e ".[dev]"
       - name: Gates (ruff + mypy + unittest x2)
         run: ./tools/check.sh
+
+  update-smoke:
+    name: windows update smoke
+    runs-on: windows-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install pipx
+        run: python -m pip install --upgrade pipx
+      - name: Run update smoke
+        run: python tools/windows-update-smoke.py --artifacts windows-update-smoke-logs
+      - name: Upload update logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-update-smoke-logs
+          path: windows-update-smoke-logs
+          if-no-files-found: ignore

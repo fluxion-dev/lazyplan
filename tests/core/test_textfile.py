@@ -5,6 +5,7 @@ import codecs
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from lazyplan.infrastructure import textfile
 from tests.support.paths import ROOT
@@ -57,6 +58,22 @@ class TextFileCase(unittest.TestCase):
     def test_append_creates_lf_file(self):
         textfile.append(self.path, "a\n")
         self.assertEqual(self.path.read_bytes(), b"a\n")
+
+    def test_write_atomic_replaces_existing_and_keeps_crlf(self):
+        self.path.write_bytes(b"old\r\n")
+        textfile.write_atomic(self.path, "new\n")
+        self.assertEqual(self.path.read_bytes(), b"new\r\n")
+
+    def test_write_atomic_failure_preserves_existing_and_cleans_up(self):
+        self.path.write_bytes(b"old\n")
+        with mock.patch(
+            "lazyplan.infrastructure.textfile.os.replace",
+            side_effect=OSError("boom"),
+        ):
+            with self.assertRaises(OSError):
+                textfile.write_atomic(self.path, "new\n")
+        self.assertEqual(self.path.read_bytes(), b"old\n")
+        self.assertEqual(list(self.path.parent.glob("*.tmp")), [])
 
 
 def _open_mode(node: ast.Call) -> str:

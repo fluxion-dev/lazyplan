@@ -8,6 +8,8 @@ existing file's CRLF line endings; new files get LF.
 from __future__ import annotations
 
 import codecs
+import os
+import tempfile
 from pathlib import Path
 
 _UTF16_BOMS = (codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)
@@ -44,3 +46,29 @@ def append(path: str | Path, text: str) -> None:
     newline = "\r\n" if _uses_crlf(target) else "\n"
     with target.open("a", encoding="utf-8", newline=newline) as fh:
         fh.write(text)
+
+
+def write_atomic(path: str | Path, text: str) -> None:
+    """Replace *path* from a sibling temporary file, preserving line endings."""
+    target = Path(path)
+    newline = "\r\n" if _uses_crlf(target) else "\n"
+    temporary = ""
+    try:
+        with tempfile.NamedTemporaryFile(
+            "w",
+            encoding="utf-8",
+            newline=newline,
+            dir=target.parent,
+            prefix=f".{target.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as handle:
+            temporary = handle.name
+            handle.write(text)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, target)
+    except Exception:
+        if temporary:
+            Path(temporary).unlink(missing_ok=True)
+        raise

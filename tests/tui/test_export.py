@@ -76,24 +76,24 @@ class ExportPathTest(unittest.TestCase):
 
     def test_empty_destination_uses_the_default(self) -> None:
         path = resolve_export_path("", 7, default_dir=self.downloads)
-        self.assertEqual(path, self.downloads / "plan-P7.md")
+        self.assertEqual(path, (self.downloads / "plan-P7.md").resolve())
 
     def test_tilde_is_expanded(self) -> None:
         with mock.patch.dict(os.environ, {"HOME": str(self.home)}):
             path = resolve_export_path("~/notes/plan.md", 7, default_dir=self.downloads)
-        self.assertEqual(path, self.home / "notes" / "plan.md")
+        self.assertEqual(path, (self.home / "notes" / "plan.md").resolve())
 
     def test_existing_directory_receives_the_default_filename(self) -> None:
         path = resolve_export_path(self.downloads, 7, default_dir=self.downloads)
-        self.assertEqual(path, self.downloads / "plan-P7.md")
+        self.assertEqual(path, (self.downloads / "plan-P7.md").resolve())
 
     def test_missing_suffix_gets_markdown(self) -> None:
         path = resolve_export_path(self.root / "notes", 7, default_dir=self.downloads)
-        self.assertEqual(path, self.root / "notes.md")
+        self.assertEqual(path, (self.root / "notes.md").resolve())
 
     def test_existing_markdown_suffix_is_kept(self) -> None:
         path = resolve_export_path(self.root / "notes.markdown", 7, default_dir=self.downloads)
-        self.assertEqual(path, self.root / "notes.markdown")
+        self.assertEqual(path, (self.root / "notes.markdown").resolve())
 
     def test_display_path_shortens_home(self) -> None:
         with mock.patch("pathlib.Path.home", return_value=self.home):
@@ -113,7 +113,7 @@ class WriteExportTest(unittest.TestCase):
 
     def test_creates_missing_parents_and_writes_markdown(self) -> None:
         written = write_export(self.path, "# Plan\n")
-        self.assertEqual(written, self.path)
+        self.assertEqual(written, self.path.resolve())
         self.assertEqual(self.path.read_text(encoding="utf-8"), "# Plan\n")
 
     def test_existing_file_is_refused_without_force(self) -> None:

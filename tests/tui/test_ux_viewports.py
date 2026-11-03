@@ -95,15 +95,14 @@ class TestViewports(unittest.IsolatedAsyncioTestCase):
                     self.assertEqual(main.has_class("compact"), width < 80)
                     self.assertEqual(main.has_class("wide"), width >= 120)
                     if width >= 100:
-                        self.assertAlmostEqual(
-                            app.query_one("#nav").region.width,
-                            width * 0.45,
-                            delta=2,
+                        nav = app.query_one("#nav")
+                        side = app.query_one("#side")
+                        self.assertLessEqual(
+                            abs(nav.region.width - side.region.width),
+                            1,
                         )
-                        self.assertLess(
-                            app.query_one("#nav").region.width,
-                            preview.region.width,
-                        )
+                        self.assertTrue(_within(nav.region, width, 30))
+                        self.assertTrue(_within(side.region, width, 30))
 
     async def test_main_shell_regions_at_four_sizes(self):
         for width, height in ((80, 24), (100, 30), (120, 40), (160, 50)):

@@ -25,17 +25,33 @@ class FoldTree(NavTree):
     """
 
     show_root = False
+    _reflow_width: int = 0
 
     BINDINGS = [
         Binding("enter", "open_detail", "Detail"),
         Binding("space", "toggle_mark", "Mark"),
     ]
 
+    def on_resize(self, event: events.Resize) -> None:
+        """Reflow rows when the tree's own width changes."""
+        if event.size.width == self._reflow_width:
+            return
+        self._reflow_width = event.size.width
+        app = cast("LazyplanApp", self.app)
+        if app._mounted:
+            app.tree_controller.request_reflow()
+
     def on_tree_node_highlighted(self, e: Tree.NodeHighlighted) -> None:
         """Bubble selection as a custom message (guide/events pattern)."""
         key = TreeController.node_key(e.node)
         if key is not None:
             self.post_message(SelectionChanged(kind=key[0], oid=key[1]))
+
+    def reflow(self) -> None:
+        """Rebuild Textual's line and virtual-size caches after relabeling."""
+        # set_label does not clear these caches, so a shrink would keep the
+        # old virtual width and an unnecessary horizontal scrollbar.
+        self._invalidate()
 
     def action_toggle_mark(self) -> None:
         """Space: mark or unmark the selected row."""

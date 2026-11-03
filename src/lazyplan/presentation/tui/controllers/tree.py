@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import time
 from functools import partial
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from textual.widgets import Label, Static, Tree
 from textual.widgets.tree import TreeNode
@@ -18,6 +18,7 @@ from .filtering import TreeFilter
 
 if TYPE_CHECKING:
     from ..app import LazyplanApp
+    from ..widgets.plan_tree import FoldTree
 
 
 class TreeController:
@@ -26,6 +27,7 @@ class TreeController:
     def __init__(self, app: LazyplanApp) -> None:
         self.app = app
         self.filters = TreeFilter(app)
+        self._reflow_pending = False
 
     @staticmethod
     def node_key(node: TreeNode) -> tuple[str, int] | None:
@@ -202,6 +204,34 @@ class TreeController:
             max(20, app.size.width // 2) if app.size.width >= 100 else max(20, app.size.width)
         )
         return max(10, base - 5 - depth)
+
+    def request_reflow(self) -> None:
+        """Schedule one reflow after the next layout pass."""
+        if self._reflow_pending:
+            return
+        self._reflow_pending = True
+        self.app.call_after_refresh(lambda: self.app.call_after_refresh(self._run_reflow))
+
+    def _run_reflow(self) -> None:
+        self._reflow_pending = False
+        if self.app._mounted:
+            self.reflow()
+
+    def reflow(self) -> None:
+        """Rewrite existing rows at the current tree width without reloading."""
+        app = self.app
+        tree = cast("FoldTree", app.query_one("#tree", Tree))
+        if not app._row_specs:
+            return
+        spinner = app.spinner_controller
+        spinner.rows = {}
+        for key, spec in app._row_specs.items():
+            text = spec.markup(self.row_width(tree, spec.depth))
+            app._row_labels[key] = text
+            spinner.remember(key, spec.status, text)
+        for key in app._row_specs:
+            self.paint_mark(key)
+        tree.reflow()
 
     def show_empty(self, empty: bool) -> None:
         """Swap the tree for the centered empty state when no rows are visible."""

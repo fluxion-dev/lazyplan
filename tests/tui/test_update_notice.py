@@ -167,7 +167,7 @@ class TestTuiNotice(unittest.IsolatedAsyncioTestCase):
         info = upgrade.InstallInfo(upgrade.PIPX, True)
         with (
             mock.patch.object(
-                updates_mod, "refresh_update", return_value=tui_mod.package_version()
+                updates_mod, "refresh_update", return_value=updates_mod.package_version()
             ),
             mock.patch.object(updates_mod, "detect", return_value=info),
         ):

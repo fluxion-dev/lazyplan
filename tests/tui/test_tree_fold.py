@@ -129,6 +129,65 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
                 await pilot.pause()
                 self.assertTrue(refresh.called)
 
+    async def test_resize_within_a_breakpoint_reflows_rows(self):
+        from rich.text import Text
+        from textual.widgets import Tree
+
+        async with self.app.run_test(size=(160, 40)) as pilot:
+            await pilot.pause()
+            await pilot.pause()
+            tree = self.app.query_one("#tree", Tree)
+            key = ("plan", self.pid)
+            wide = self.app.tree_controller.row_width(tree, 3)
+            self.assertEqual(len(Text.from_markup(self.app._row_labels[key]).plain), wide)
+            with mock.patch.object(self.app, "refresh_all") as refresh:
+                await pilot.resize_terminal(140, 40)
+                await pilot.pause()
+                await pilot.pause()
+                self.assertFalse(refresh.called)
+            narrow = self.app.tree_controller.row_width(tree, 3)
+            self.assertLess(narrow, wide)
+            self.assertEqual(
+                len(Text.from_markup(self.app._row_labels[key]).plain),
+                narrow,
+            )
+            self.assertLessEqual(tree.virtual_size.width, tree.size.width)
+            await pilot.resize_terminal(160, 40)
+            await pilot.pause()
+            await pilot.pause()
+            grown = self.app.tree_controller.row_width(tree, 3)
+            self.assertGreater(grown, narrow)
+            self.assertEqual(
+                len(Text.from_markup(self.app._row_labels[key]).plain),
+                grown,
+            )
+            self.assertLessEqual(tree.virtual_size.width, tree.size.width)
+
+    async def test_resize_keeps_selection_folds_and_marks(self):
+        from rich.text import Text
+        from textual.widgets import Tree
+
+        async with self.app.run_test(size=(160, 40)) as pilot:
+            await pilot.pause()
+            await pilot.pause()
+            await self._expand(pilot, "plan", self.pid)
+            await self._select(pilot, "plan", self.pid)
+            await pilot.press("space")
+            await pilot.pause()
+            await self._select(pilot, "milestone", self.sid)
+            tree = self.app.query_one("#tree", Tree)
+            with mock.patch.object(self.app, "refresh_all") as refresh:
+                await pilot.resize_terminal(140, 40)
+                await pilot.pause()
+                await pilot.pause()
+                self.assertFalse(refresh.called)
+            self.assertEqual(self.app.selected, ("milestone", self.sid))
+            self.assertIn(("plan", self.pid), self.app._expanded)
+            self.assertIn(("plan", self.pid), self.app.marked)
+            label = Text.from_markup(str(self.app._row_nodes[("plan", self.pid)].label))
+            self.assertIn("✓", label.plain)
+            self.assertEqual(len(label.plain), self.app.tree_controller.row_width(tree, 3))
+
     async def test_narrow_hides_preview_and_resize_keeps_selection(self):
         from textual.containers import Horizontal
 

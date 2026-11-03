@@ -136,6 +136,27 @@ class TreeStatsTest(unittest.IsolatedAsyncioTestCase):
                         self.assertEqual(len(marked), row_widths[key[0]])
                         self.assertIn("✓", marked)
 
+    async def test_resize_reflows_a_marked_doing_row(self) -> None:
+        from lazyplan.core.entities import Status
+
+        services.set_status(self.store, "task", self.task_a.id, Status.DOING)
+        app = tui_mod.create_app(self.db)
+        app.marked.add(("task", self.task_a.id))
+        async with app.run_test(size=(160, 40)) as pilot:
+            await pilot.pause()
+            await pilot.pause()
+            tree = app.query_one("#tree", Tree)
+            key = ("task", self.task_a.id)
+            self.assertIn(key, app.spinner_controller.rows)
+            await pilot.resize_terminal(140, 40)
+            await pilot.pause()
+            await pilot.pause()
+            width = app.tree_controller.row_width(tree, 11)
+            label = Text.from_markup(str(app._row_nodes[key].label)).plain
+            self.assertEqual(len(label), width)
+            self.assertIn("✓", label)
+            self.assertLessEqual(tree.virtual_size.width, tree.size.width)
+
     async def test_row_specs_render_the_stored_labels(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:

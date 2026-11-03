@@ -333,7 +333,10 @@ The TUI uses the Catppuccin-based `lazyplan-dark` theme by default. `t` cycles
 mocha, OLED-black `void`, and `latte`; `LAZYPLAN_THEME` selects one at launch.
 The main screen pairs the plan tree with a preview column: a sticky title and
 scrolling reason/scope/next/acceptance body sits above a `git` card for the
-linked checkouts, branch state, commits, and pull requests. The `git` card
+linked checkouts, branch state, commits, and pull requests. At 100 columns and
+wider the tree and the side column share the width evenly. Rows reflow as you
+resize the terminal, so titles expand or truncate in place without a refresh.
+The `git` card
 grows with its content between 3 and 10 rows and gives the room back to the
 preview when the selection has no linked checkout. A `timeline` card closes the
 bottom of the screen. Reverse-video keycaps fill the hint bar; the same tokens

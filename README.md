@@ -65,6 +65,9 @@ Want demo data first? Run `lpui seed`.
   pull-request state.
 - **A preview that stays put.** The status, title, and breadcrumb stay fixed
   while the reason, scope, next tasks, acceptance, and notes scroll beneath.
+- **An even split that keeps up.** The plan tree and preview column now share
+  the main row evenly, and rows reflow live as you resize the terminal instead
+  of keeping stale padding or a horizontal scrollbar.
 - **One icon language and a calmer timeline.** Plans, milestones, tasks,
   checkouts, commits, and pull requests share single-cell icons. The timeline
   card shows only the row under the cursor and its immediate children, names
@@ -73,6 +76,7 @@ Want demo data first? Run `lpui seed`.
 ## What you get
 
 - A plan tree with progress at a glance, plus milestones and tasks underneath.
+- A balanced tree and preview that reflow at every terminal width.
 - A sticky preview of the reason, the next tasks, and what done means.
 - A GIT pane with the checkout, commit, and pull-request context for the row.
 - A read-only detail page for careful reading, with quick keys to edit and move work.
@@ -98,7 +102,7 @@ the method, budgets, and per-platform ceilings.
 ## How it works
 
 - Plans start as one-line summaries with progress. Open one to reveal milestones, then tasks.
-- The side column previews the selected row: why, what, next tasks, and acceptance progress, with a GIT card for the linked checkout and commits.
+- The side column takes an equal half of the screen and previews the selected row: why, what, next tasks, and acceptance progress, with a GIT card for the linked checkout and commits.
 - The timeline card at the bottom shows the selected row and its immediate children, with the scoped plan in its border.
 - The bottom line shows the keys that work right now. `?` opens help; `c` opens the command palette; `t` cycles themes.
 - Your agent writes through the same command line. The screen updates as it works.

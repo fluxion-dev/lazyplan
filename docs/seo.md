@@ -383,3 +383,18 @@ the sitemap carries `lastmod` 2026-11-03; and the Pages deploy
 [41704056536](https://github.com/fluxion-dev/lazyplan/actions/runs/41704056536)
 succeeded. An isolated 0.31.0 install printed 0.31.0 once the simple index
 caught up.
+
+### v0.32.0 pass (2026-11-03)
+
+After: version pins, release asset URLs, JSON-LD `version`/`softwareVersion`,
+and the sitemap `lastmod` moved to 0.32.0. The site's Windows install note now
+explains the close/apply/relaunch handoff, the log location, and
+`lpui upgrade --diagnose`. The page remains within the 750-word budget, with
+the existing screenshots and 10 figures.
+
+Verified live: the page contains 0.32.0, the Windows update copy,
+`--diagnose`, and `%LOCALAPPDATA%`; canonical/FAQ/JSON-LD and robots are
+intact; the sitemap carries `lastmod` 2026-11-03; and the Pages deploy
+[41725017497](https://github.com/fluxion-dev/lazyplan/actions/runs/41725017497)
+succeeded. An isolated 0.32.0 install printed 0.32.0 once the simple index
+caught up.

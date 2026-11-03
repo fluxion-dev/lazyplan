@@ -788,3 +788,47 @@ or the next plan row so the next release has the context.
   0.31.0 with the Markdown export copy and `screens/lpui-export.webp` returns
   200; the sitemap `lastmod` is 2026-11-03 and canonical/FAQ/JSON-LD are
   intact.
+
+### v0.32.0 (2026-11-03)
+
+- Minor bump from 0.31.0. Windows updates now close lpui before the install,
+  hand off to a detached helper, log the full command and output, and
+  relaunch. pipx-owned installs update the existing pipx venv with its own
+  `python -m pip` so pipx never recreates the running environment; venv
+  installs use the owning pip. The TUI offers Restart now; Later applies on
+  the next launch. `lpui upgrade --diagnose` reports paths.
+- Prep landed on `main` in `1eb7218`. Local `./tools/check.sh` printed ALL
+  GATES GREEN. Node/npm is not installed locally, so the dist site check
+  remained delegated to the Pages workflow.
+- The Windows smoke job exposed and fixed three real defects before release:
+  pipx recreating the venv, waiting for the helper log too early, and an
+  invalid staged wheel filename. Final smoke
+  [41720715455](https://github.com/fluxion-dev/lazyplan/actions/runs/41720715455)
+  passed pipx and venv success/failure.
+- The **bump** workflow (`part=minor`) ran
+  [41722392082](https://github.com/fluxion-dev/lazyplan/actions/runs/41722392082);
+  its `bump` job opened release PR
+  [#87](https://github.com/fluxion-dev/lazyplan/pull/87) with only version
+  mirrors. Its gates
+  [41722476789](https://github.com/fluxion-dev/lazyplan/actions/runs/41722476789)
+  passed Ubuntu and macOS after admin approval; auto-merge produced
+  `f1fd8ad`.
+- `tag-release` [41725012277](https://github.com/fluxion-dev/lazyplan/actions/runs/41725012277)
+  created annotated tag `v0.32.0`. `release.yml`
+  [41725074123](https://github.com/fluxion-dev/lazyplan/actions/runs/41725074123)
+  finished both `release` and `publish-pypi`; Pages
+  [41725017497](https://github.com/fluxion-dev/lazyplan/actions/runs/41725017497)
+  deployed.
+- PyPI JSON served 0.32.0. Once the simple index caught up,
+  `PIP_NO_CACHE_DIR=1 pipx run --spec lazyplan-tui==0.32.0 lpui --version`
+  printed `0.32.0`.
+- **Fix forward:** the full Windows nightly gates found eight
+  platform-portability failures in the new and existing update tests (path
+  separators, Windows taking the new branch in legacy tests, USERPROFILE
+  expansion). They were fixed in `ea4faf7`, and the re-dispatched Windows
+  smoke [41726466506](https://github.com/fluxion-dev/lazyplan/actions/runs/41726466506)
+  passed.
+- Verified: seven release assets including `install.sh`, the wheel, sdist, two
+  RPMs, and two DEBs; the curated release body is live; the live site shows
+  0.32.0 with the Windows restart/log/diagnose copy; the sitemap `lastmod` is
+  2026-11-03 and canonical/FAQ/JSON-LD are intact.

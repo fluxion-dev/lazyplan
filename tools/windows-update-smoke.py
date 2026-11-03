@@ -134,7 +134,7 @@ def main(argv: list[str] | None = None) -> int:
             raise SystemExit("success left the staged marker behind")
         print(f"success: {PRIOR} -> {TARGET}")
 
-        bad = root / "bad.whl"
+        bad = root / f"lazyplan_tui-{BAD}-py3-none-any.whl"
         bad.write_text("not a wheel\n", encoding="utf-8")
         repro.stage_wheel(env, bad, BAD)
         apply_child(repro, python, env)

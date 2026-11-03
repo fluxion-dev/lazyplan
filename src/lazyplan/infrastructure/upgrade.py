@@ -191,6 +191,12 @@ def diagnostics(
         cwd=cwd,
     )
     root = shared_home(home)
+    if info.method == PIPX:
+        repair = f"pipx install --force --backend pip {PYPI_PKG}"
+    elif info.method == VENV:
+        repair = f"{executable} -m pip install --force-reinstall {PYPI_PKG}"
+    else:
+        repair = reinstall_hint()
     return {
         "platform": sys.platform,
         "os_name": os.name,
@@ -207,6 +213,7 @@ def diagnostics(
         "home": str(root),
         "update_dir": str(root / "updates"),
         "log_dir": str(update_log.logs_dir(home)),
+        "repair": repair,
     }
 
 

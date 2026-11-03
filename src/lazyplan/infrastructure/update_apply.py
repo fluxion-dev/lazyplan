@@ -70,6 +70,7 @@ def build_apply_plan(
     info: InstallInfo | None = None,
     argv: tuple[str, ...] = (),
     windows: bool | None = None,
+    restart: bool = True,
     now: float | None = None,
     pid: int | None = None,
 ) -> ApplyPlan:
@@ -98,11 +99,15 @@ def build_apply_plan(
         command += (str(wheel),)
     else:
         raise StageError(f"no apply path for a {update.method} install")
-    restart = _restart_command(
-        python=python,
-        scripts=scripts,
-        argv=argv,
-        use_path=update.method == PIPX,
+    restart_command = (
+        _restart_command(
+            python=python,
+            scripts=scripts,
+            argv=argv,
+            use_path=update.method == PIPX,
+        )
+        if restart
+        else ()
     )
     log = update_log.log_path("apply", home, now, pid)
     return ApplyPlan(
@@ -111,7 +116,7 @@ def build_apply_plan(
         python=python,
         pipx=pipx,
         command=command,
-        restart=restart,
+        restart=restart_command,
         scripts=scripts,
         log_path=log,
         home=Path(home) if home is not None else None,

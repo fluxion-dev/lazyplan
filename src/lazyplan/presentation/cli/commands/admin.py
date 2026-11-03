@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import time
@@ -12,6 +13,8 @@ from pathlib import Path
 from lazyplan.infrastructure.repo import find_repo_root, repo_label, resolve_db_path
 
 from ....infrastructure import textfile
+from ....infrastructure.update_apply import build_apply_plan, spawn_windows_apply
+from ....infrastructure.update_stage import StageError
 from ....services.environment import (
     UpgradeError,
     detect,
@@ -20,6 +23,7 @@ from ....services.environment import (
     latest_version,
     parse_version,
     run_upgrade,
+    stage_update,
 )
 from ....store import Store
 from ...shared import (
@@ -241,6 +245,10 @@ def _post_upgrade_review(json_mode: bool = False) -> None:
         return
 
 
+def _is_windows() -> bool:
+    return os.name == "nt"
+
+
 def _cmd_upgrade(store: Store | None, args: argparse.Namespace, actor: str) -> int:
     """Upgrade this install to the latest release; needs no database."""
     del store, actor
@@ -292,6 +300,24 @@ def _cmd_upgrade(store: Store | None, args: argparse.Namespace, actor: str) -> i
             print(f"lpui v{installed} is the latest release ({info.method})")
         else:
             print(f"lpui v{installed} -> v{latest} available ({info.method}); run `lpui upgrade`")
+        return 0
+    if _is_windows() and info.upgradeable:
+        try:
+            update = stage_update(latest, info.method, installed=installed)
+            plan = build_apply_plan(
+                update,
+                exe=sys.executable,
+                windows=True,
+                restart=False,
+            )
+            log = spawn_windows_apply(plan, parent_pid=os.getpid())
+        except (OSError, StageError, UpgradeError) as exc:
+            print(msg_error(exc), file=sys.stderr)
+            return 1
+        payload.update({"started": True, "restart": False, "log": str(log)})
+        if args.json:
+            return _emit(args, payload)
+        print(f"update v{latest} applying in the background; log: {log}")
         return 0
     try:
         run_upgrade(info, latest, sys.executable)

@@ -11,7 +11,7 @@ from io import StringIO
 from pathlib import Path
 from unittest import mock
 
-from lazyplan.infrastructure import update_log, upgrade
+from lazyplan.infrastructure import update_log, update_stage, upgrade
 from lazyplan.presentation.cli import main
 from lazyplan.presentation.cli.commands import admin as cli_mod
 from tests.support.home import sandbox_home
@@ -382,6 +382,45 @@ class TestUpgradeCommand(unittest.TestCase):
         self.assertEqual(code, 0)
         run.assert_called_once_with(PIPX_INFO, "9.9.9", sys.executable)
         self.assertIn("9.9.9", out)
+
+    def test_windows_upgrade_stages_and_spawns_the_helper(self):
+        staged = mock.Mock()
+        plan = mock.Mock()
+        log = Path("/logs/update-apply.log")
+        with (
+            mock.patch.object(cli_mod, "detect", return_value=PIPX_INFO),
+            mock.patch.object(cli_mod, "latest_version", return_value="9.9.9"),
+            mock.patch.object(cli_mod, "_is_windows", return_value=True),
+            mock.patch.object(cli_mod, "stage_update", return_value=staged) as stage,
+            mock.patch.object(cli_mod, "build_apply_plan", return_value=plan) as build,
+            mock.patch.object(cli_mod, "spawn_windows_apply", return_value=log) as spawn,
+            mock.patch.object(cli_mod, "run_upgrade") as run,
+        ):
+            code, out, _ = self._run(["upgrade", "--json"])
+        self.assertEqual(code, 0)
+        payload = json.loads(out)
+        self.assertTrue(payload["started"])
+        self.assertFalse(payload["restart"])
+        self.assertEqual(payload["log"], str(log))
+        stage.assert_called_once()
+        build.assert_called_once_with(staged, exe=sys.executable, windows=True, restart=False)
+        spawn.assert_called_once_with(plan, parent_pid=os.getpid())
+        run.assert_not_called()
+
+    def test_windows_stage_failure_is_reported(self):
+        with (
+            mock.patch.object(cli_mod, "detect", return_value=PIPX_INFO),
+            mock.patch.object(cli_mod, "latest_version", return_value="9.9.9"),
+            mock.patch.object(cli_mod, "_is_windows", return_value=True),
+            mock.patch.object(
+                cli_mod,
+                "stage_update",
+                side_effect=update_stage.StageError("no verified wheel"),
+            ),
+        ):
+            code, _out, err = self._run(["upgrade"])
+        self.assertEqual(code, 1)
+        self.assertIn("no verified wheel", err)
 
     def test_upgrade_runner_failure_exits_1(self):
         with (

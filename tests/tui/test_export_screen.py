@@ -53,9 +53,9 @@ class TestExportScreen(unittest.IsolatedAsyncioTestCase):
             screen = self.app.screen
             value = screen.query_one("#export-path", Input).value
             self.assertTrue(value.endswith(f"plan-P{self.pid}.md"))
-            self.assertEqual(Path(value).parent, self.downloads)
+            self.assertEqual(Path(value).parent.resolve(), self.downloads.resolve())
             tree = screen.query_one("#export-tree", DirectoryTree)
-            self.assertEqual(Path(tree.path), self.downloads)
+            self.assertEqual(Path(tree.path).resolve(), self.downloads.resolve())
             labels = " ".join(str(label.content) for label in screen.query(Label))
             self.assertIn("Website", labels)
 
@@ -70,7 +70,7 @@ class TestExportScreen(unittest.IsolatedAsyncioTestCase):
             sub.mkdir()
             screen._set_folder(sub)
             value = Path(screen.query_one("#export-path", Input).value)
-            self.assertEqual(value.parent, sub)
+            self.assertEqual(value.parent.resolve(), sub.resolve())
             self.assertEqual(value.name, f"plan-P{self.pid}.md")
 
     async def test_real_directory_selection_updates_the_path(self) -> None:
@@ -89,7 +89,7 @@ class TestExportScreen(unittest.IsolatedAsyncioTestCase):
             tree.select_node(node)
             await pilot.pause()
             value = Path(screen.query_one("#export-path", Input).value).expanduser()
-            self.assertEqual(value.parent, sub)
+            self.assertEqual(value.parent.resolve(), sub.resolve())
 
     async def test_missing_downloads_falls_back_to_the_current_directory(self) -> None:
         from textual.widgets import Input
@@ -112,7 +112,7 @@ class TestExportScreen(unittest.IsolatedAsyncioTestCase):
             self.app.push_screen(screen)
             await pilot.pause()
             value = Path(screen.query_one("#export-path", Input).value)
-            self.assertEqual(value.parent, self.root)
+            self.assertEqual(value.parent.resolve(), self.root.resolve())
             self.assertEqual(value.name, f"plan-P{self.pid}.md")
 
     async def test_export_writes_and_dismisses_with_the_path(self) -> None:

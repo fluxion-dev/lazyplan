@@ -339,3 +339,17 @@ robots are intact, `screens/lpui-timeline.webp` and its PNG return 200, the
 sitemap carries `lastmod` 2026-11-02, and the Pages deploy
 [41379517126](https://github.com/fluxion-dev/lazyplan/actions/runs/41379517126)
 succeeded. An isolated 0.30.3 install printed 0.30.3.
+
+### v0.30.4 pass (2026-11-03)
+
+After: version pins, release asset URLs, JSON-LD `version`/`softwareVersion`,
+and the sitemap `lastmod` moved to 0.30.4. The spinner change is animated and
+does not alter screenshots; the visible copy addition is the forced-reinstall
+note for 0.30.1 and earlier on the install section.
+
+Verified live: the page contains 0.30.4, the canonical URL, FAQ/JSON-LD, and
+robots are intact, `screens/lpui-source-trail.webp` returns 200, the sitemap
+carries `lastmod` 2026-11-03, and the Pages deploy
+[41559604544](https://github.com/fluxion-dev/lazyplan/actions/runs/41559604544)
+succeeded. An isolated 0.30.4 install printed 0.30.4 once the simple index
+caught up.

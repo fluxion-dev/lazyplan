@@ -669,3 +669,39 @@ or the next plan row so the next release has the context.
   RPMs, and two DEBs; the curated release body is live; the live site shows
   0.30.3; the refreshed `lpui-timeline` screenshot returns 200 in both formats;
   and the sitemap `lastmod` is 2026-11-02.
+
+### v0.30.4 (2026-11-03)
+
+- Patch bump from 0.30.3. The plan tree's doing spinner now uses the braille
+  dots cycle (`⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏`) at the existing 160ms cadence; static
+  CLI, export, preview, detail, and `LAZYPLAN_NO_SPINNER=1` output keep `◐`.
+  The same prep shipped the 0.30.2 forced-reinstall notes and a few site copy
+  edits.
+- Prep PR [#83](https://github.com/fluxion-dev/lazyplan/pull/83) merged as
+  `cb079bc`. Local `./tools/check.sh` printed ALL GATES GREEN. Its CI run
+  [41547740898](https://github.com/fluxion-dev/lazyplan/actions/runs/41547740898)
+  passed Ubuntu in 5m25s; macOS failed the unrelated timeline timing test
+  `test_no_selection_shows_the_select_a_row_copy`, and the rerun passed in 7m26s
+  with no code change.
+- The **bump** workflow (`part=patch`) ran
+  [41558619627](https://github.com/fluxion-dev/lazyplan/actions/runs/41558619627);
+  its `bump` job opened release PR
+  [#84](https://github.com/fluxion-dev/lazyplan/pull/84) with only version
+  mirrors. The release-branch CI run
+  [41558642728](https://github.com/fluxion-dev/lazyplan/actions/runs/41558642728)
+  parked in `action_required`, passed Ubuntu (5m1s) and macOS (6m49s) after
+  admin approval, and auto-merge produced `29f0de3`.
+- The `publish` job succeeded and dispatched `tag-release` and Pages without the
+  manual fallback. `tag-release` created annotated tag `v0.30.4` and dispatched
+  [release.yml](https://github.com/fluxion-dev/lazyplan/actions/runs/41559617307);
+  the `release` job finished in 1m2s and `publish-pypi` in 39s. Pages deployed
+  from [41559604544](https://github.com/fluxion-dev/lazyplan/actions/runs/41559604544).
+- PyPI JSON served 0.30.4 immediately while the simple index lagged; an isolated
+  `PIP_NO_CACHE_DIR=1 pipx run --spec lazyplan-tui==0.30.4 lpui --version`
+  printed 0.30.4 once the index caught up.
+- Verified: seven release assets including `install.sh`, the wheel, sdist, two
+  RPMs, and two DEBs; the curated release body is live; the live site shows
+  0.30.4, the source-trail WebP returns 200, the sitemap `lastmod` is
+  2026-11-03, and canonical/FAQ/JSON-LD are intact.
+- No fix-forward commits; the only deviation was the unrelated macOS flake,
+  which passed on rerun.

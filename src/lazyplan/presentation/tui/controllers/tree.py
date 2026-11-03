@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from functools import partial
 from typing import TYPE_CHECKING, Any
 
 from textual.widgets import Label, Static, Tree
@@ -12,7 +13,7 @@ from .... import services
 from ....core.entities import Milestone, Plan, Status, Task
 from ...shared.design import apply_mark, milestone_row, plan_row, status_prefix, task_row
 from ...shared.help import hint_bar
-from ..views.rows import row_text
+from ..views.rows import RowSpec, row_text
 from .filtering import TreeFilter
 
 if TYPE_CHECKING:
@@ -224,6 +225,7 @@ class TreeController:
         tree.clear()
         app._row_nodes = {}
         app._row_labels = {}
+        app._row_specs = {}
         app.spinner_controller.rows = {}
         base = services.tree(app.store, status=None, archived="hide")
         progress = self.progress_map(base)
@@ -286,14 +288,20 @@ class TreeController:
         app = self.app
         for plan, milestones in filtered:
             plan_stats = source_stats.get(("plan", plan.id))
-            plan_text = plan_row(
-                plan,
-                progress=progress.get(("plan", plan.id)),
-                width=self.row_width(tree, 3),
-                source_counts=(
-                    (plan_stats[0], plan_stats[1], plan_stats[2]) if plan_stats else None
+            plan_spec = RowSpec(
+                render=partial(
+                    plan_row,
+                    plan,
+                    progress=progress.get(("plan", plan.id)),
+                    source_counts=(
+                        (plan_stats[0], plan_stats[1], plan_stats[2]) if plan_stats else None
+                    ),
                 ),
+                depth=3,
+                status=plan.status,
             )
+            app._row_specs[("plan", plan.id)] = plan_spec
+            plan_text = plan_spec.markup(self.row_width(tree, plan_spec.depth))
             plan_label = apply_mark(plan_text, ("plan", plan.id) in app.marked)
             plan_node = root.add(
                 row_text(plan_label),
@@ -305,21 +313,27 @@ class TreeController:
             app.spinner_controller.remember(("plan", plan.id), plan.status, plan_text)
             for milestone, tasks in milestones:
                 milestone_stats = source_stats.get(("milestone", milestone.id))
-                milestone_text = milestone_row(
-                    milestone,
-                    app.store,
-                    progress=progress.get(("milestone", milestone.id)),
-                    width=self.row_width(tree, 7),
-                    source_counts=(
-                        (
-                            milestone_stats[0],
-                            milestone_stats[1],
-                            milestone_stats[2],
-                        )
-                        if milestone_stats
-                        else None
+                milestone_spec = RowSpec(
+                    render=partial(
+                        milestone_row,
+                        milestone,
+                        app.store,
+                        progress=progress.get(("milestone", milestone.id)),
+                        source_counts=(
+                            (
+                                milestone_stats[0],
+                                milestone_stats[1],
+                                milestone_stats[2],
+                            )
+                            if milestone_stats
+                            else None
+                        ),
                     ),
+                    depth=7,
+                    status=milestone.status,
                 )
+                app._row_specs[("milestone", milestone.id)] = milestone_spec
+                milestone_text = milestone_spec.markup(self.row_width(tree, milestone_spec.depth))
                 milestone_label = apply_mark(
                     milestone_text, ("milestone", milestone.id) in app.marked
                 )
@@ -337,22 +351,30 @@ class TreeController:
                     prs = forge_map.get(("task", task.id), [])
                     pr = prs[0] if prs else None
                     task_links = vcs_map.get(("task", task.id), [])
-                    task_text = task_row(
-                        task,
-                        app.store,
-                        links=[link.sha for link in task_links],
-                        width=self.row_width(tree, 11),
-                        pr_state=pr.state if pr else "",
-                        pr_checks=pr.checks if pr else "",
-                        stale=any(link.stale for link in task_links),
-                        claim_actor=(claims_map[task.id].actor if task.id in claims_map else ""),
-                        claim_expired=(
-                            claims_map[task.id].expired(time.time())
-                            if task.id in claims_map
-                            else False
+                    task_spec = RowSpec(
+                        render=partial(
+                            task_row,
+                            task,
+                            app.store,
+                            links=[link.sha for link in task_links],
+                            pr_state=pr.state if pr else "",
+                            pr_checks=pr.checks if pr else "",
+                            stale=any(link.stale for link in task_links),
+                            claim_actor=(
+                                claims_map[task.id].actor if task.id in claims_map else ""
+                            ),
+                            claim_expired=(
+                                claims_map[task.id].expired(time.time())
+                                if task.id in claims_map
+                                else False
+                            ),
+                            blocked=task.blocked,
                         ),
-                        blocked=task.blocked,
+                        depth=11,
+                        status=task.status,
                     )
+                    app._row_specs[("task", task.id)] = task_spec
+                    task_text = task_spec.markup(self.row_width(tree, task_spec.depth))
                     task_label = apply_mark(task_text, ("task", task.id) in app.marked)
                     leaf = milestone_node.add_leaf(
                         row_text(task_label),

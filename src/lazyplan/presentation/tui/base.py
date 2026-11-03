@@ -15,6 +15,7 @@ from .controllers.spinner import SpinnerController
 from .controllers.tree import TreeController
 from .controllers.updates import UpdateController
 from .state import AppState
+from .views.rows import RowSpec
 
 
 class TuiHost:
@@ -57,6 +58,7 @@ class AppBase(App, TuiHost):
     _undo: list[dict] | None
     _row_nodes: dict[tuple[str, int], Any]
     _row_labels: dict[tuple[str, int], str]
+    _row_specs: dict[tuple[str, int], RowSpec]
     _last_click_key: tuple[str, int] | None
     _last_click_at: float
     _fp: Any

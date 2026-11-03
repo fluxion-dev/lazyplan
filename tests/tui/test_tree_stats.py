@@ -136,6 +136,18 @@ class TreeStatsTest(unittest.IsolatedAsyncioTestCase):
                         self.assertEqual(len(marked), row_widths[key[0]])
                         self.assertIn("✓", marked)
 
+    async def test_row_specs_render_the_stored_labels(self) -> None:
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            await pilot.pause()
+            tree = app.query_one("#tree", Tree)
+            self.assertTrue(app._row_specs)
+            for key, spec in app._row_specs.items():
+                with self.subTest(key=key):
+                    width = app.tree_controller.row_width(tree, spec.depth)
+                    self.assertEqual(spec.markup(width), app._row_labels[key])
+
 
 if __name__ == "__main__":
     unittest.main()

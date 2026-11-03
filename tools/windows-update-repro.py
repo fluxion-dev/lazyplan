@@ -119,7 +119,12 @@ def shared_home(env: dict[str, str]) -> Path:
     return base
 
 
-def stage_wheel(env: dict[str, str], wheel: Path, version: str = TEST_VERSION) -> Path:
+def stage_wheel(
+    env: dict[str, str],
+    wheel: Path,
+    version: str = TEST_VERSION,
+    method: str = "pipx",
+) -> Path:
     update_dir = shared_home(env) / "updates"
     update_dir.mkdir(parents=True, exist_ok=True)
     target = update_dir / wheel.name
@@ -128,7 +133,7 @@ def stage_wheel(env: dict[str, str], wheel: Path, version: str = TEST_VERSION) -
     payload = {
         "schema": 1,
         "version": version,
-        "method": "pipx",
+        "method": method,
         "filename": target.name,
         "url": TEST_URL,
         "sha256": hashlib.sha256(raw).hexdigest(),

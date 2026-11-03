@@ -86,6 +86,53 @@ def copy_artifacts(repro, env: dict[str, str], artifacts: Path | None) -> None:
             shutil.copytree(folder, artifacts / name, dirs_exist_ok=True)
 
 
+def reset_scenario(repro, env: dict[str, str], clear_logs: bool) -> None:
+    home = repro.shared_home(env)
+    shutil.rmtree(home / "updates", ignore_errors=True)
+    if clear_logs:
+        shutil.rmtree(home / "logs", ignore_errors=True)
+
+
+def run_success(repro, env: dict[str, str], python: Path, target_wheel: Path, method: str) -> None:
+    reset_scenario(repro, env, clear_logs=True)
+    repro.stage_wheel(env, target_wheel, TARGET, method)
+    apply_child(repro, python, env)
+    wait_for(
+        repro,
+        lambda: installed_version(repro, python, env) == TARGET,
+        f"{method} installed version {TARGET}",
+    )
+    updates = repro.shared_home(env) / "updates"
+    logs = repro.shared_home(env) / "logs"
+    wait_for(repro, lambda: not (updates / "applying.json").exists(), f"{method} helper")
+    wait_for(
+        repro,
+        lambda: any(
+            "returncode: 0" in path.read_text(encoding="utf-8") for path in logs.glob("*.log")
+        ),
+        f"{method} success log",
+    )
+    if (updates / "staged.json").exists():
+        raise SystemExit(f"{method} success left the staged marker behind")
+    print(f"{method} success: {PRIOR} -> {TARGET}")
+
+
+def run_failure(repro, env: dict[str, str], python: Path, root: Path, method: str) -> None:
+    reset_scenario(repro, env, clear_logs=False)
+    bad = root / f"lazyplan_tui-{BAD}-py3-none-any.whl"
+    bad.write_text("not a wheel\n", encoding="utf-8")
+    repro.stage_wheel(env, bad, BAD, method)
+    apply_child(repro, python, env)
+    failed = repro.shared_home(env) / "updates" / "failed.json"
+    wait_for(repro, failed.exists, f"{method} failure record")
+    error = json.loads(failed.read_text(encoding="utf-8")).get("error", "")
+    if "install" not in str(error).lower() and "wheel" not in str(error).lower():
+        raise SystemExit(f"{method} failure record is not useful: {error!r}")
+    if installed_version(repro, python, env) != TARGET:
+        raise SystemExit(f"{method} failed apply changed the installed version")
+    print(f"{method} failure: old version v{TARGET} still runs")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--python", default=sys.executable)
@@ -112,40 +159,20 @@ def main(argv: list[str] | None = None) -> int:
             raise SystemExit(f"cannot find the pipx venv python: {python}")
         if installed_version(repro, python, env) != PRIOR:
             raise SystemExit("prior wheel did not install")
+        run_success(repro, env, python, target_wheel, "pipx")
+        run_failure(repro, env, python, root, "pipx")
 
-        repro.stage_wheel(env, target_wheel, TARGET)
-        apply_child(repro, python, env)
-        wait_for(
-            repro,
-            lambda: installed_version(repro, python, env) == TARGET,
-            f"installed version {TARGET}",
+        venv_root = root / "venv"
+        repro.run([args.python, "-m", "venv", str(venv_root)], env=env)
+        venv_python = venv_root / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+        repro.run(
+            [str(venv_python), "-m", "pip", "install", str(prior_wheel)],
+            env=env,
         )
-        updates = repro.shared_home(env) / "updates"
-        logs = repro.shared_home(env) / "logs"
-        wait_for(repro, lambda: not (updates / "applying.json").exists(), "helper completion")
-        wait_for(
-            repro,
-            lambda: any(
-                "returncode: 0" in path.read_text(encoding="utf-8") for path in logs.glob("*.log")
-            ),
-            "success log",
-        )
-        if (updates / "staged.json").exists():
-            raise SystemExit("success left the staged marker behind")
-        print(f"success: {PRIOR} -> {TARGET}")
-
-        bad = root / f"lazyplan_tui-{BAD}-py3-none-any.whl"
-        bad.write_text("not a wheel\n", encoding="utf-8")
-        repro.stage_wheel(env, bad, BAD)
-        apply_child(repro, python, env)
-        failed = repro.shared_home(env) / "updates" / "failed.json"
-        wait_for(repro, failed.exists, "failure record")
-        error = json.loads(failed.read_text(encoding="utf-8")).get("error", "")
-        if "install" not in str(error).lower() and "wheel" not in str(error).lower():
-            raise SystemExit(f"failure record is not useful: {error!r}")
-        if installed_version(repro, python, env) != TARGET:
-            raise SystemExit("failed apply changed the installed version")
-        print(f"failure: old version v{TARGET} still runs")
+        if installed_version(repro, venv_python, env) != PRIOR:
+            raise SystemExit("prior wheel did not install in the venv")
+        run_success(repro, env, venv_python, target_wheel, "venv")
+        run_failure(repro, env, venv_python, root, "venv")
         return 0
     finally:
         if env is not None:

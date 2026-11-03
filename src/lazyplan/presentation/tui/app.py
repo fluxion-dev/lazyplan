@@ -31,7 +31,12 @@ try:
 except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
-from ...services.environment import apply_on_launch, clear_failure, read_failure
+from ...services.environment import (
+    apply_on_launch,
+    clear_failure,
+    read_failure,
+    recover_stale_apply,
+)
 from ...store import Store
 from ..cli.parser import package_version
 from .actions import ActionMixin
@@ -230,6 +235,7 @@ def run(db_path: str | None = None) -> int:
         print("Fallback (no TUI): lpui list")
         return 3
     startup_notice = ""
+    recover_stale_apply()
     state, detail = apply_on_launch(package_version())
     if state == "applying":
         print(f"update applying in the background; log: {detail}", file=sys.stderr)

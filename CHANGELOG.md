@@ -3,6 +3,36 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## v0.30.4 — 2026-11-02
+
+The TUI doing spinner now uses the braille dots cycle that most terminal
+applications use, so an active plan, milestone, or task shows the familiar
+`⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏` animation. Static output keeps the `◐` glyph.
+
+### Changed
+
+- Doing rows in the plan tree animate through the braille dots frames at the
+  existing 160ms cadence.
+- `LAZYPLAN_NO_SPINNER=1` still freezes the tree on the static `◐`.
+- CLI, export, preview, and detail views are unchanged.
+
+### Upgrade
+
+```bash
+pipx upgrade lazyplan-tui
+# or
+pipx install --force lazyplan-tui
+```
+
+No manual migration is required. The database schema is unchanged.
+
+### Documentation
+
+- Updated the spinner sections in `docs/usage.md` and
+  `docs/design-system.md`.
+- Clarified the forced reinstall needed when upgrading from 0.30.1 or
+  earlier in `README.md`, `docs/usage.md`, `docs/setup.md`, and the site.
+
 ## v0.30.3 — 2026-11-01
 
 The timeline now follows the row under the cursor and shows only that row
@@ -24,6 +54,9 @@ appear.
 
 ### Upgrade
 
+If you are upgrading from 0.30.1 or earlier, use the forced reinstall in the
+v0.30.2 notes instead of a plain `pipx upgrade`. Otherwise:
+
 ```bash
 pipx upgrade lazyplan-tui
 # or
@@ -39,23 +72,30 @@ No manual migration is required. The database schema is unchanged.
 
 ## v0.30.2 — 2026-11-01
 
-Internal architecture refactor with no user-facing behavior change. The
-package is now organized as a pure core, a services layer, an SQLite store
-adapter, infrastructure adapters, and a presentation layer for the TUI, CLI,
-MCP server, and setup flow.
+Internal architecture refactor. Runtime behavior is unchanged, but the package
+layout and console entry points moved, so upgrades from 0.30.1 or earlier need
+a forced reinstall. The package is now organized as a pure core, a services
+layer, an SQLite store adapter, infrastructure adapters, and a presentation
+layer for the TUI, CLI, MCP server, and setup flow.
 
 CLI text, `--porcelain`, `--json`, MCP schemas, share HTML, export output, and
 TUI snapshots are unchanged. The database schema is unchanged.
 
 ### Upgrade
 
+The refactor changed the package layout and the `lpui`/`lazyplan` console-script
+entry points. Upgrading in place from 0.30.1 or earlier is not supported; do a
+forced reinstall in the environment that owns `lpui`:
+
 ```bash
-pipx upgrade lazyplan-tui
-# or
 pipx install --force lazyplan-tui
+# or, in a venv
+python -m pip install --force-reinstall lazyplan-tui
 ```
 
-No manual migration is required.
+On Windows, add `--backend pip` to the pipx command. `lpui upgrade` and a plain
+`pipx upgrade` are safe once you are on 0.30.2 or newer. The database schema
+and your data are unchanged.
 
 ## v0.30.1 — 2026-11-01
 

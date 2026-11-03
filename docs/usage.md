@@ -83,6 +83,27 @@ On Windows the same command manages pipx and venv installs. If the automatic
 upgrade cannot run, reinstall with `pipx install --backend pip lazyplan-tui`.
 A source checkout updates with `git pull`.
 
+#### Upgrading from 0.30.1 or earlier
+
+The 0.30.2 refactor moved the package into `core`, `services`,
+`infrastructure`, and `presentation`, and changed the `lpui`/`lazyplan`
+console-script entry points. Upgrading in place across that change is not
+supported. Use a forced reinstall in the environment that owns `lpui`:
+
+```bash
+# pipx
+pipx install --force lazyplan-tui
+
+# pip, including the install.sh venv
+python -m pip install --force-reinstall lazyplan-tui
+```
+
+On Windows, add `--backend pip` to the pipx command. Do not use `lpui upgrade`
+or a plain `pipx upgrade` for this jump. The reinstall replaces only the
+program files; your database, templates, skills, hooks, and `~/.lazyplan` state
+are left in place. A forced reinstall is not needed once you are on 0.30.2 or
+newer.
+
 ### Metrics dashboard
 
 The bottom of the TUI keeps one read-only timeline card. It follows the row
@@ -304,8 +325,8 @@ tab-separated rows; `--json` wins when both are present.
 Plans start collapsed. Press `right` or `z` to reveal milestones; tasks stay
 folded until you open their milestone. Completed plans are dimmed and sorted last.
 
-A doing row animates through `◐ ◓ ◑ ◒` while work is in progress. The CLI,
-export, preview, and detail views keep the static `◐`; set
+A doing row animates through `⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏` while work is in progress.
+The CLI, export, preview, and detail views keep the static `◐`; set
 `LAZYPLAN_NO_SPINNER=1` to freeze the tree.
 
 The TUI uses the Catppuccin-based `lazyplan-dark` theme by default. `t` cycles

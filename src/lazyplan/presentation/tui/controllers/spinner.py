@@ -51,7 +51,8 @@ class SpinnerController:
 
     def paint(self) -> None:
         """Repaint doing rows at the current frame, without rebuilding."""
-        prefix = status_prefix(Status.DOING, self.tick)
+        frame = self.tick if self.enabled else None
+        prefix = status_prefix(Status.DOING, frame)
         for key, suffix in self.rows.items():
             node = self.app._row_nodes.get(key)
             if node is not None:

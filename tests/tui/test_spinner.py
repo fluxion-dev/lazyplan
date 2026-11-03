@@ -56,7 +56,7 @@ class TestSpinner(unittest.IsolatedAsyncioTestCase):
             ]
             nodes = {key: self.app._row_nodes[key] for key in keys}
             for key in keys:
-                self.assertEqual(self._text(key)[0], "◐", key)
+                self.assertEqual(self._text(key)[0], "⠋", key)
 
             await settle(pilot)
             self.app.selected = ("task", self.doing)
@@ -75,7 +75,10 @@ class TestSpinner(unittest.IsolatedAsyncioTestCase):
             for _ in range(len(design.SPINNER_FRAMES)):
                 self.app.spinner_controller.spin()
                 frames.append(self._text(("task", self.doing))[0])
-            self.assertEqual(frames, ["◓", "◑", "◒", "◐"])
+            self.assertEqual(
+                frames,
+                ["⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏", "⠋"],
+            )
 
             for key in keys:
                 self.assertIs(self.app._row_nodes[key], nodes[key])
@@ -114,7 +117,7 @@ class TestSpinner(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             self.assertIn(("task", tid), app._spinner_rows)
             app.spinner_controller.spin()
-            self.assertEqual(str(app._row_nodes[("task", tid)].label)[0], "◓")
+            self.assertEqual(str(app._row_nodes[("task", tid)].label)[0], "⠙")
 
     async def test_opt_out_keeps_the_static_glyph(self):
         with mock.patch.dict(os.environ, {"LAZYPLAN_NO_SPINNER": "1"}):

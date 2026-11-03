@@ -53,16 +53,20 @@ class TestDesignSystem(unittest.TestCase):
             design.status_word("todo", "neon")
 
     def test_spinner_frames_and_prefix(self):
-        self.assertEqual(design.SPINNER_FRAMES, ("◐", "◓", "◑", "◒"))
+        self.assertEqual(
+            design.SPINNER_FRAMES,
+            ("⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"),
+        )
         self.assertEqual(design.SPINNER_INTERVAL, 0.16)
         for frame in design.SPINNER_FRAMES:
             self.assertEqual(len(frame), 1)
             self.assertNotIn(unicodedata.east_asian_width(frame), ("W", "F"))
-        self.assertEqual(design.spinner_glyph(1), "◓")
-        self.assertEqual(design.spinner_glyph(len(design.SPINNER_FRAMES)), "◐")
+        self.assertEqual(design.spinner_glyph(1), "⠙")
+        self.assertEqual(design.spinner_glyph(len(design.SPINNER_FRAMES)), "⠋")
         self.assertEqual(design.status_prefix("doing"), "[yellow]◐[/]")
-        self.assertEqual(design.status_prefix("doing", 1), "[yellow]◓[/]")
-        self.assertEqual(design.status_prefix("doing", 7), "[yellow]◒[/]")
+        self.assertEqual(design.status_prefix("doing", 0), "[yellow]⠋[/]")
+        self.assertEqual(design.status_prefix("doing", 1), "[yellow]⠙[/]")
+        self.assertEqual(design.status_prefix("doing", 7), "[yellow]⠧[/]")
         self.assertEqual(design.status_prefix("todo", 2), "[dim]○[/]")
         self.assertEqual(design.status_prefix("done", 3), "[green]●[/]")
         self.assertEqual(design.status_word("doing", "rich"), "[yellow]◐[/]")
@@ -168,7 +172,7 @@ class TestDesignSystem(unittest.TestCase):
             self.assertEqual(lpui_main(["--db", self.db, "list", "--tree"]), 0)
         out = buf.getvalue()
         self.assertIn("◐ T", out)
-        for frame in design.SPINNER_FRAMES[1:]:
+        for frame in design.SPINNER_FRAMES:
             self.assertNotIn(frame, out)
 
     def test_cli_uses_design_labels(self):

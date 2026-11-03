@@ -10,9 +10,9 @@ STATUS_GLYPH = {"todo": "○", "doing": "◐", "done": "●"}
 STATUS_ANSI = {"todo": "90", "doing": "33", "done": "32"}
 STATUS_RICH = {"todo": "dim", "doing": "yellow", "done": "green"}
 
-# The doing glyph is the first frame, so static output and frame 0 agree.
-# All four frames are one terminal cell; the TUI advances them on a timer.
-SPINNER_FRAMES = ("◐", "◓", "◑", "◒")
+# The TUI advances one single-cell frame per tick. Static surfaces keep the
+# doing glyph above, so only the animated prefix uses these frames.
+SPINNER_FRAMES = ("⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏")
 SPINNER_INTERVAL = 0.16
 
 
@@ -38,9 +38,9 @@ def status_word(status: Status | str, dot: str = "plain") -> str:
     return glyph
 
 
-def status_prefix(status: Status | str, frame: int = 0) -> str:
-    """Rich row prefix: spinner frame for doing, static glyph otherwise."""
-    if _status(status) == "doing" and frame:
+def status_prefix(status: Status | str, frame: int | None = None) -> str:
+    """Rich row prefix: a spinner frame when animated, a static glyph otherwise."""
+    if _status(status) == "doing" and frame is not None:
         return f"[{STATUS_RICH['doing']}]{spinner_glyph(frame)}[/]"
     return status_word(status, "rich")
 

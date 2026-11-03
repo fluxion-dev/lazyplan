@@ -44,7 +44,7 @@ def display_path(path: Path) -> str:
     return "~" if not relative.parts else f"~/{relative.as_posix()}"
 
 
-def write_export(path: Path, text: str, *, force: bool = False) -> Path:
+def write_export(path: str | Path, text: str, *, force: bool = False) -> Path:
     """Create parents and atomically write *text*, respecting overwrite rules."""
     target = Path(path).expanduser()
     shown = display_path(target)

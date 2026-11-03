@@ -23,6 +23,7 @@ from ...shared.design import (
     msg_no_vcs,
     msg_not_found,
 )
+from ...shared.export import ExportError, resolve_export_path, write_export
 from ...shared.render import (
     render_commits,
     render_git_status,
@@ -387,8 +388,17 @@ def _cmd_export(store: Store, args: argparse.Namespace, actor: str) -> int:
             return _emit(args, data)
         text = render_markdown(data)
     if dest:
-        textfile.write(dest, text + ("" if text.endswith("\n") else "\n"))
-        return _emit(args, {"exported": dest})
+        target = resolve_export_path(dest, plan_id) if plan_id is not None else dest
+        try:
+            written = write_export(
+                target,
+                text + ("" if text.endswith("\n") else "\n"),
+                force=getattr(args, "force", False),
+            )
+        except ExportError as exc:
+            print(msg_error(exc), file=sys.stderr)
+            return 2
+        return _emit(args, {"exported": str(written)})
     print(text)
     return 0
 

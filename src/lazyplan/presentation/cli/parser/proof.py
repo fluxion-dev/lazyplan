@@ -160,6 +160,11 @@ def add_export(
         metavar="PATH",
         help="write to a file instead of stdout",
     )
+    ex.add_argument(
+        "--force",
+        action="store_true",
+        help="replace an existing file (default: refuse to overwrite)",
+    )
 
 
 def add_import(

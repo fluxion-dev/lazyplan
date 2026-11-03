@@ -10,8 +10,6 @@ bump reactive rev, external DB changes arrive via fingerprint() poll + feed toas
 
 from __future__ import annotations
 
-import os
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -31,14 +29,7 @@ try:
 except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
-from ...services.environment import (
-    apply_on_launch,
-    clear_failure,
-    read_failure,
-    recover_stale_apply,
-)
 from ...store import Store
-from ..cli.parser import package_version
 from .actions import ActionMixin
 from .base import AppBase
 from .bulk import BulkMixin
@@ -48,6 +39,7 @@ from .controllers.spinner import SpinnerController
 from .controllers.tree import TreeController
 from .controllers.updates import UpdateController
 from .filters import FilterMixin
+from .launch import launch_update
 from .metrics import MetricsSection
 from .preview import PreviewMixin
 from .state import AppState
@@ -234,25 +226,8 @@ def run(db_path: str | None = None) -> int:
         print("Textual not installed. Run: pip install -e . then: lpui ui")
         print("Fallback (no TUI): lpui list")
         return 3
-    startup_notice = ""
-    recover_stale_apply()
-    state, detail = apply_on_launch(package_version())
-    if state == "applying":
-        print(f"update applying in the background; log: {detail}", file=sys.stderr)
+    startup_notice, exit_now = launch_update()
+    if exit_now:
         return 0
-    if state == "applied":
-        try:
-            os.execv(sys.executable, [sys.executable, "-m", "lazyplan", *sys.argv[1:]])
-        except OSError as exc:
-            startup_notice = f"update v{detail} installed — restart lpui ({exc})"
-    elif state == "error":
-        startup_notice = f"update failed: {detail}"
-    elif state == "downgrade":
-        startup_notice = f"refused to downgrade to v{detail}"
-    else:
-        failure = read_failure()
-        if failure:
-            startup_notice = f"update failed: {failure}"
-            clear_failure()
     create_app(db_path, startup_notice).run()
     return 0

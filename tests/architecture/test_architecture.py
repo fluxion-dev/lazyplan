@@ -48,6 +48,7 @@ LAYERS: dict[str, int] = {
     "services": SERVICES,
     "presentation": PRESENTATION,
     "__main__": ENTRY,
+    "_update_helper": ENTRY,
 }
 
 

@@ -15,10 +15,12 @@ from tests.support.home import sandbox_home
 
 try:
     tui_mod = importlib.import_module("lazyplan.presentation.tui.app")
+    launch_mod = importlib.import_module("lazyplan.presentation.tui.launch")
     screen_mod = importlib.import_module("lazyplan.presentation.tui.screens.update")
     updates_mod = importlib.import_module("lazyplan.presentation.tui.controllers.updates")
 except ImportError:  # stdlib-only interpreter
     tui_mod = None  # type: ignore[assignment]
+    launch_mod = None  # type: ignore[assignment]
     screen_mod = None  # type: ignore[assignment]
     updates_mod = None  # type: ignore[assignment]
 
@@ -216,8 +218,8 @@ class TestUpdateScreen(unittest.IsolatedAsyncioTestCase):
 class TestLaunchApply(unittest.TestCase):
     def test_applied_reexecs_or_warns(self):
         with (
-            mock.patch.object(tui_mod, "apply_on_launch", return_value=("applied", "9.9.9")),
-            mock.patch.object(tui_mod.os, "execv", side_effect=OSError("no exec")),
+            mock.patch.object(launch_mod, "apply_on_launch", return_value=("applied", "9.9.9")),
+            mock.patch.object(launch_mod.os, "execv", side_effect=OSError("no exec")),
             mock.patch.object(tui_mod, "create_app") as create,
         ):
             tui_mod.run("t.db")
@@ -225,7 +227,7 @@ class TestLaunchApply(unittest.TestCase):
 
     def test_apply_error_reaches_the_app(self):
         with (
-            mock.patch.object(tui_mod, "apply_on_launch", return_value=("error", "boom")),
+            mock.patch.object(launch_mod, "apply_on_launch", return_value=("error", "boom")),
             mock.patch.object(tui_mod, "create_app") as create,
         ):
             tui_mod.run("t.db")
@@ -233,27 +235,18 @@ class TestLaunchApply(unittest.TestCase):
 
     def test_applying_launch_exits_without_starting_the_app(self):
         with (
-            mock.patch.object(tui_mod, "apply_on_launch", return_value=("applying", "/logs/x")),
+            mock.patch.object(launch_mod, "apply_on_launch", return_value=("applying", "/logs/x")),
             mock.patch.object(tui_mod, "create_app") as create,
         ):
             code = tui_mod.run("t.db")
         self.assertEqual(code, 0)
         create.assert_not_called()
 
-    def test_stale_apply_is_recovered_before_launch(self):
-        with (
-            mock.patch.object(tui_mod, "recover_stale_apply") as recover,
-            mock.patch.object(tui_mod, "apply_on_launch", return_value=("none", "")),
-            mock.patch.object(tui_mod, "create_app"),
-        ):
-            tui_mod.run("t.db")
-        recover.assert_called_once()
-
     def test_prior_failure_is_shown_once(self):
         with (
-            mock.patch.object(tui_mod, "apply_on_launch", return_value=("none", "")),
-            mock.patch.object(tui_mod, "read_failure", return_value="old failure"),
-            mock.patch.object(tui_mod, "clear_failure") as clear,
+            mock.patch.object(launch_mod, "apply_on_launch", return_value=("none", "")),
+            mock.patch.object(launch_mod, "read_failure", return_value="old failure"),
+            mock.patch.object(launch_mod, "clear_failure") as clear,
             mock.patch.object(tui_mod, "create_app") as create,
         ):
             tui_mod.run("t.db")

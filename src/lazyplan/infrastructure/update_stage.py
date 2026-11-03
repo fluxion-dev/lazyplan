@@ -473,6 +473,7 @@ def apply_on_launch(
     restart: bool = True,
 ) -> tuple[str, str]:
     """Claim and apply one stage; return (state, detail)."""
+    recover_stale_apply(home)
     update = claim_stage(home)
     if update is None:
         return ("none", "")

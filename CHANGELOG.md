@@ -3,6 +3,39 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## v0.30.5 — 2026-11-03
+
+The main screen now gives the plan tree and the preview column an equal half
+of the width. Tree rows reflow live as the terminal resizes, so long titles
+expand or truncate in place instead of keeping stale padding, and shrinking no
+longer leaves a horizontal scrollbar behind.
+
+### Changed
+
+- At 100 columns and wider, the plan tree and the side column each take half
+  of the main row. Below 100 columns the tree keeps the full width.
+- Resizing inside a layout tier re-renders every visible row from cached row
+  specs without reloading the database or rebuilding the tree.
+- Selection, expanded folds, marks, the doing-row spinner, and the active
+  screen survive a resize.
+- Crossing the 100-column visibility breakpoint still performs the normal tree
+  refresh.
+
+### Upgrade
+
+```bash
+pipx upgrade lazyplan-tui
+# or
+pipx install --force lazyplan-tui
+```
+
+No manual migration is required. The database schema is unchanged.
+
+### Documentation
+
+- Updated `README.md`, `docs/usage.md`, `docs/design-system.md`, and the site
+  copy and screenshots.
+
 ## v0.30.4 — 2026-11-02
 
 The TUI doing spinner now uses the braille dots cycle that most terminal

@@ -64,8 +64,8 @@ def run(
     return result
 
 
-def build_wheel(python: str, destination: Path) -> Path:
-    """Build the current committed tree as a 9.9.9 wheel."""
+def build_wheel(python: str, destination: Path, version: str = TEST_VERSION) -> Path:
+    """Build the current committed tree at *version*."""
     log("$ git archive HEAD")
     archive = subprocess.run(
         ["git", "-C", str(ROOT), "archive", "--format=tar", "HEAD"],
@@ -80,7 +80,7 @@ def build_wheel(python: str, destination: Path) -> Path:
     text = pyproject.read_text(encoding="utf-8")
     text = re.sub(
         r'^version = ".*"$',
-        f'version = "{TEST_VERSION}"',
+        f'version = "{version}"',
         text,
         count=1,
         flags=re.MULTILINE,
@@ -119,7 +119,7 @@ def shared_home(env: dict[str, str]) -> Path:
     return base
 
 
-def stage_wheel(env: dict[str, str], wheel: Path) -> Path:
+def stage_wheel(env: dict[str, str], wheel: Path, version: str = TEST_VERSION) -> Path:
     update_dir = shared_home(env) / "updates"
     update_dir.mkdir(parents=True, exist_ok=True)
     target = update_dir / wheel.name
@@ -127,7 +127,7 @@ def stage_wheel(env: dict[str, str], wheel: Path) -> Path:
     raw = target.read_bytes()
     payload = {
         "schema": 1,
-        "version": TEST_VERSION,
+        "version": version,
         "method": "pipx",
         "filename": target.name,
         "url": TEST_URL,

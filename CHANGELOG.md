@@ -3,6 +3,44 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## v0.31.0 — 2026-11-03
+
+Markdown export is now a deliberate save instead of a fire-and-forget write.
+The palette opens a folder picker with the filename ready, starts in your
+Downloads folder, and asks before replacing an existing file. The CLI keeps
+`--file` and refuses accidental overwrites unless you pass `--force`.
+
+### Added
+
+- **Export plan as Markdown** opens a destination picker with a browsable
+  folder tree, editable path, inline errors, and Export/Cancel actions.
+- The picker starts in the platform Downloads folder, falls back to the launch
+  directory, and prefills `plan-P<id>.md`.
+- Existing destinations ask before overwrite; cancel keeps the file, confirm
+  replaces it.
+- `lpui export --file PATH` creates missing parent folders, resolves `~`, and
+  accepts directory targets by writing the default plan filename inside.
+- `--force` opts into replacing an existing file. Without it, the command
+  exits 2 with the path and the overwrite guidance.
+- Exports write through a sibling temporary file, so a failed write never
+  truncates an existing export.
+
+### Upgrade
+
+```bash
+pipx upgrade lazyplan-tui
+# or
+pipx install --force lazyplan-tui
+```
+
+No manual migration is required. The database schema is unchanged.
+
+### Documentation
+
+- Updated `README.md`, `docs/usage.md`, `docs/design-system.md`,
+  `src/lazyplan/data/SKILL.md`, the man page, and the site copy and
+  screenshots.
+
 ## v0.30.5 — 2026-11-03
 
 The main screen now gives the plan tree and the preview column an equal half

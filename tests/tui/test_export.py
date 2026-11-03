@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -78,7 +79,7 @@ class ExportPathTest(unittest.TestCase):
         self.assertEqual(path, self.downloads / "plan-P7.md")
 
     def test_tilde_is_expanded(self) -> None:
-        with mock.patch("pathlib.Path.home", return_value=self.home):
+        with mock.patch.dict(os.environ, {"HOME": str(self.home)}):
             path = resolve_export_path("~/notes/plan.md", 7, default_dir=self.downloads)
         self.assertEqual(path, self.home / "notes" / "plan.md")
 

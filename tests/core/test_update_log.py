@@ -19,7 +19,7 @@ class TestUpdateLog(unittest.TestCase):
         self.tmp.cleanup()
 
     def test_logs_dir_lives_under_the_shared_home(self) -> None:
-        self.assertEqual(update_log.logs_dir(self.home), self.home / "logs")
+        self.assertEqual(update_log.logs_dir(self.home), self.home / ".lazyplan" / "logs")
 
     def test_record_writes_the_command_and_output(self) -> None:
         path = update_log.record_update(
@@ -35,7 +35,7 @@ class TestUpdateLog(unittest.TestCase):
             now=1000.0,
             pid=42,
         )
-        self.assertEqual(path.parent, self.home / "logs")
+        self.assertEqual(path.parent, self.home / ".lazyplan" / "logs")
         self.assertTrue(path.name.startswith("update-apply-"))
         text = path.read_text(encoding="utf-8")
         self.assertIn("pipx install wheel.whl --force", text)

@@ -101,10 +101,10 @@ def isolated_env(root: Path, pipx: str) -> dict[str, str]:
     env["HOME"] = str(root / "home")
     env["USERPROFILE"] = str(root / "home")
     env["LOCALAPPDATA"] = str(root / "localappdata")
-    env["PIPX_HOME"] = str(root / "pipx-home")
-    env["PIPX_BIN_DIR"] = str(root / "pipx-bin")
+    env["PIPX_HOME"] = str(root / "pipx")
+    env["PIPX_BIN_DIR"] = str(root / "pipx" / "bin")
     env["PIPX_DEFAULT_PYTHON"] = sys.executable
-    env["PATH"] = os.pathsep.join([str(root / "pipx-bin"), env.get("PATH", "")])
+    env["PATH"] = os.pathsep.join([str(root / "pipx" / "bin"), env.get("PATH", "")])
     env["PIPX"] = pipx
     for key in ("HOME", "USERPROFILE", "LOCALAPPDATA"):
         Path(env[key]).mkdir(parents=True, exist_ok=True)

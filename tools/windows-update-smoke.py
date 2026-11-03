@@ -96,6 +96,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     repro = load_repro()
     root = Path(tempfile.mkdtemp(prefix="lazyplan-update-smoke-"))
+    env = None
     try:
         env = repro.isolated_env(root, args.pipx)
         prior_wheel = repro.build_wheel(args.python, root / "prior", PRIOR)
@@ -125,7 +126,6 @@ def main(argv: list[str] | None = None) -> int:
             raise SystemExit("success log did not record the install")
         if (repro.shared_home(env) / "updates" / "staged.json").exists():
             raise SystemExit("success left the staged marker behind")
-        copy_artifacts(repro, env, args.artifacts)
         print(f"success: {PRIOR} -> {TARGET}")
 
         bad = root / "bad.whl"
@@ -140,9 +140,10 @@ def main(argv: list[str] | None = None) -> int:
         if installed_version(repro, python, env) != PRIOR:
             raise SystemExit("failed apply changed the installed version")
         print(f"failure: old version v{PRIOR} still runs")
-        copy_artifacts(repro, env, args.artifacts)
         return 0
     finally:
+        if env is not None:
+            copy_artifacts(repro, env, args.artifacts)
         if args.artifacts is None:
             shutil.rmtree(root, ignore_errors=True)
         else:

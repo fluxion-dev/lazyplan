@@ -493,6 +493,7 @@ def apply_on_launch(
         mark_failed(update, error, home)
         return ("error", error)
     if os.name == "nt" if windows is None else windows:
+        plan = None
         try:
             from .update_apply import build_apply_plan, spawn_windows_apply
 
@@ -505,8 +506,11 @@ def apply_on_launch(
             )
             log = spawn_windows_apply(plan, parent_pid=os.getpid())
         except (OSError, StageError) as exc:
-            mark_failed(update, str(exc), home)
-            return ("error", str(exc))
+            detail = str(exc)
+            if plan is not None:
+                detail += f" (helper: {plan.python})"
+            mark_failed(update, detail, home)
+            return ("error", detail)
         return ("applying", str(log))
     try:
         apply_update(update, home, exe, runner=runner, installed=installed)

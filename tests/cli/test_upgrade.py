@@ -14,6 +14,7 @@ from unittest import mock
 from lazyplan.infrastructure import update_log, upgrade
 from lazyplan.presentation.cli import main
 from lazyplan.presentation.cli.commands import admin as cli_mod
+from tests.support.home import sandbox_home
 
 
 class TestDetect(unittest.TestCase):
@@ -115,6 +116,11 @@ class TestVersions(unittest.TestCase):
 
 
 class TestRunners(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        sandbox_home(self, self.tmp.name)
+
     def test_run_upgrade_rejects_unknown_method(self):
         with self.assertRaises(upgrade.UpgradeError):
             upgrade.run_upgrade(upgrade.InstallInfo(upgrade.RPM, False), "0.16.0")

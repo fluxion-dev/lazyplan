@@ -25,7 +25,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from lazyplan.infrastructure import textfile
+from lazyplan.infrastructure import textfile, update_log
 from lazyplan.infrastructure.repo import shared_home
 
 from ..core.policies.environment import (
@@ -326,6 +326,36 @@ def _install_command(update: StagedUpdate, home: str | Path | None, exe: str) ->
     raise StageError(f"no apply path for a {update.method} install")
 
 
+def _text(value: object) -> str:
+    return value if isinstance(value, str) else ""
+
+
+def _apply_log(
+    update: StagedUpdate,
+    command: list[str],
+    returncode: int | None,
+    stdout: str = "",
+    stderr: str = "",
+    home: str | Path | None = None,
+) -> str:
+    """Write one apply log; return the log suffix for an error message."""
+    try:
+        path = update_log.record_update(
+            "apply",
+            method=update.method,
+            command=command,
+            cwd=os.getcwd(),
+            exe=sys.executable,
+            returncode=returncode,
+            stdout=_text(stdout),
+            stderr=_text(stderr),
+            home=home,
+        )
+    except OSError:
+        return ""
+    return f"; log: {path}"
+
+
 def apply_update(
     update: StagedUpdate,
     home: str | Path | None = None,
@@ -343,10 +373,19 @@ def apply_update(
     try:
         result = runner(command, capture_output=True, text=True, timeout=timeout)
     except OSError as exc:
-        raise StageError(f"cannot run {command[0]}: {exc}") from exc
+        log = _apply_log(update, command, None, stderr=str(exc), home=home)
+        raise StageError(f"cannot run {command[0]}: {exc}{log}") from exc
+    log = _apply_log(
+        update,
+        command,
+        result.returncode,
+        result.stdout or "",
+        result.stderr or "",
+        home=home,
+    )
     if result.returncode != 0:
         detail = "; ".join((result.stderr or result.stdout or "").strip().splitlines()[:3])
-        raise StageError(f"install failed: {detail}")
+        raise StageError(f"install failed: {detail}{log}")
 
 
 def clear_stage(update: StagedUpdate, home: str | Path | None = None) -> None:

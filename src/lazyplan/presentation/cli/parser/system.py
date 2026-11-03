@@ -130,6 +130,11 @@ def add_upgrade(
         action="store_true",
         help="only report the installed and latest versions, change nothing",
     )
+    up.add_argument(
+        "--diagnose",
+        action="store_true",
+        help="print install and update paths, change nothing",
+    )
 
 
 def add_help(

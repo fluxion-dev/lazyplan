@@ -14,7 +14,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
-from lazyplan.infrastructure import textfile
+from lazyplan.infrastructure import textfile, update_log
 
 from ..core.policies.environment import (
     is_newer as _is_newer,
@@ -171,6 +171,72 @@ def detect(
     if _looks_like_source(exe, cwd):
         return InstallInfo(SOURCE, False, "source checkout; pull git instead")
     return InstallInfo(UNKNOWN, False, "unrecognized layout")
+
+
+def diagnostics(
+    home: str | Path | None = None,
+    exe: str | None = None,
+    prefix: str | None = None,
+    base_prefix: str | None = None,
+    cwd: str | None = None,
+) -> dict[str, object]:
+    """Describe the install and its update paths without changing anything."""
+    from lazyplan.infrastructure.repo import shared_home
+
+    executable = exe if exe is not None else sys.executable
+    info = detect(
+        exe=executable,
+        prefix=prefix,
+        base_prefix=base_prefix,
+        cwd=cwd,
+    )
+    root = shared_home(home)
+    return {
+        "platform": sys.platform,
+        "os_name": os.name,
+        "method": info.method,
+        "upgradeable": info.upgradeable,
+        "detail": info.detail,
+        "installed": installed_version(),
+        "exe": executable,
+        "prefix": prefix if prefix is not None else sys.prefix,
+        "base_prefix": base_prefix if base_prefix is not None else sys.base_prefix,
+        "scripts": str(Path(executable).parent),
+        "pipx": shutil.which("pipx") or "",
+        "pipx_venv": info.detail if info.method == PIPX else "",
+        "home": str(root),
+        "update_dir": str(root / "updates"),
+        "log_dir": str(update_log.logs_dir(home)),
+    }
+
+
+def _text(value: object) -> str:
+    return value if isinstance(value, str) else ""
+
+
+def _command_log(
+    kind: str,
+    method: str,
+    command: list[str],
+    returncode: int | None,
+    stdout: str = "",
+    stderr: str = "",
+) -> str:
+    """Write one command log; return the log suffix for an error message."""
+    try:
+        path = update_log.record_update(
+            kind,
+            method=method,
+            command=command,
+            cwd=os.getcwd(),
+            exe=sys.executable,
+            returncode=returncode,
+            stdout=_text(stdout),
+            stderr=_text(stderr),
+        )
+    except OSError:
+        return ""
+    return f"; log: {path}"
 
 
 def parse_version(text: str) -> tuple[int, int, int]:
@@ -474,17 +540,27 @@ def upgrade_pipx(
         ["pipx", "install", f"{PYPI_PKG}=={version}", "--force"],
     ]
     last_lines: list[str] = []
+    last_log = ""
     for cmd in cmds:
         try:
             out = subprocess.run(
                 cmd, capture_output=True, encoding="utf-8", errors="replace", timeout=timeout
             )
         except OSError as exc:
-            raise UpgradeError(f"cannot run {' '.join(cmd)}: {exc}") from exc
+            log = _command_log("upgrade", PIPX, cmd, None, stderr=str(exc))
+            raise UpgradeError(f"cannot run {' '.join(cmd)}: {exc}{log}") from exc
+        last_log = _command_log(
+            "upgrade",
+            PIPX,
+            cmd,
+            out.returncode,
+            out.stdout or "",
+            out.stderr or "",
+        )
         if out.returncode == 0:
             return
         last_lines = (out.stderr or out.stdout or "").strip().splitlines()[:3]
-    raise UpgradeError(f"pipx upgrade failed: {'; '.join(last_lines)}")
+    raise UpgradeError(f"pipx upgrade failed: {'; '.join(last_lines)}{last_log}")
 
 
 def upgrade_venv(
@@ -501,7 +577,9 @@ def upgrade_venv(
             cmd, capture_output=True, encoding="utf-8", errors="replace", timeout=timeout
         )
     except OSError as exc:
-        raise UpgradeError(f"cannot run {' '.join(cmd)}: {exc}") from exc
+        log = _command_log("upgrade", VENV, cmd, None, stderr=str(exc))
+        raise UpgradeError(f"cannot run {' '.join(cmd)}: {exc}{log}") from exc
+    log = _command_log("upgrade", VENV, cmd, out.returncode, out.stdout or "", out.stderr or "")
     if out.returncode != 0:
         detail = "; ".join((out.stderr or out.stdout or "").strip().splitlines()[:3])
-        raise UpgradeError(f"venv reinstall failed: {detail}")
+        raise UpgradeError(f"venv reinstall failed: {detail}{log}")

@@ -15,6 +15,7 @@ from ....infrastructure import textfile
 from ....services.environment import (
     UpgradeError,
     detect,
+    diagnostics,
     guard_message,
     latest_version,
     parse_version,
@@ -243,6 +244,13 @@ def _post_upgrade_review(json_mode: bool = False) -> None:
 def _cmd_upgrade(store: Store | None, args: argparse.Namespace, actor: str) -> int:
     """Upgrade this install to the latest release; needs no database."""
     del store, actor
+    if getattr(args, "diagnose", False):
+        payload = diagnostics()
+        if args.json:
+            return _emit(args, payload)
+        for key, value in payload.items():
+            print(f"{key}: {value}")
+        return 0
     info = detect()
     installed = package_version()
     try:

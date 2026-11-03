@@ -10,7 +10,7 @@
 }
 
 #nav {
-    width: 45%;
+    width: 1fr;
     min-width: 28;
     border: round $lp-border-muted;
     border-title-color: $lp-text-muted;

@@ -825,9 +825,12 @@ or the next plan row so the next release has the context.
 - **Fix forward:** the full Windows nightly gates found eight
   platform-portability failures in the new and existing update tests (path
   separators, Windows taking the new branch in legacy tests, USERPROFILE
-  expansion). They were fixed in `ea4faf7`, and the re-dispatched Windows
-  smoke [41726466506](https://github.com/fluxion-dev/lazyplan/actions/runs/41726466506)
-  passed.
+  expansion). They were fixed in `ea4faf7`; the focused Windows update suites
+  and smoke passed in
+  [41732918042](https://github.com/fluxion-dev/lazyplan/actions/runs/41732918042).
+  The earlier smoke rerun
+  [41726466506](https://github.com/fluxion-dev/lazyplan/actions/runs/41726466506)
+  also passed.
 - Verified: seven release assets including `install.sh`, the wheel, sdist, two
   RPMs, and two DEBs; the curated release body is live; the live site shows
   0.32.0 with the Windows restart/log/diagnose copy; the sitemap `lastmod` is

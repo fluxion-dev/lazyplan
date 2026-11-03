@@ -100,6 +100,11 @@ TUI).
 - `state.py` holds `AppState` (selection, filters, marks, folds, preview key,
   and transient flags). `base.py` exposes it through properties and defines
   the small `TuiHost` contract used by the mixins.
+- `shared/export.py` owns destination defaults, path resolution, overwrite
+  rules, and atomic Markdown writes for both the TUI and CLI. It never imports
+  Textual.
+- `infrastructure/paths.py` detects the platform Downloads folder;
+  `infrastructure/textfile.py` owns the atomic write primitive.
 - `controllers/tree.py` owns tree loading, filtering, folds, selection
   restoration, source counts, row building, width-independent row specs, and
   the live reflow pass.
@@ -284,6 +289,18 @@ dirty guard that confirms before discarding. Row actions: `s` status,
 `x` tick next criterion, `a` add criterion, `g` source trail, `n` add
 child, `d` delete with an exact cascade summary; `Esc` backs out. Delete
 focuses Cancel by default.
+
+## Export (`tui/screens/export.py`)
+
+`ExportScreen` is a `ModalScreen[Path | None]` opened by the palette's
+**Export plan as Markdown** command. It resolves plan, milestone, or task
+selections to the parent plan, then shows a destination `Input` above a
+bounded `DirectoryTree` of folders. The path starts at
+`Downloads/plan-P<id>.md`; selecting a folder keeps the filename, and
+selecting a file fills the full path. Export resolves the path through
+`shared/export.py`, asks with `ConfirmScreen` before replacing an existing
+file, and writes atomically. Errors render inline in `#export-error` and keep
+the picker open; `Esc` cancels. The dialog fits 80x24 and 120x40.
 
 ## Source screen (`tui/screens/source.py`)
 

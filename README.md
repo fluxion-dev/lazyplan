@@ -55,8 +55,11 @@ Want demo data first? Run `lpui seed`.
 - **Made for focus.** Plans stay as one-line summaries until you open them. Detail is there when you need it.
 - **Yours to keep.** Local-first by default. Export or import any time. No account, no cloud, no lock-in.
 
-## New in 0.30
+## New in 0.31
 
+- **Export where you want.** The palette's **Export plan as Markdown** opens a
+  folder browser with the filename ready. It starts in Downloads, asks before
+  overwriting, and keeps errors inside the picker.
 - **Three themes, one key.** `t` cycles Catppuccin Mocha, an OLED-black `void`,
   and Latte. `LAZYPLAN_THEME` picks one at launch, and every screen and chart
   follows it.
@@ -77,6 +80,7 @@ Want demo data first? Run `lpui seed`.
 
 - A plan tree with progress at a glance, plus milestones and tasks underneath.
 - A balanced tree and preview that reflow at every terminal width.
+- A Markdown export picker that starts in Downloads and never overwrites by accident.
 - A sticky preview of the reason, the next tasks, and what done means.
 - A GIT pane with the checkout, commit, and pull-request context for the row.
 - A read-only detail page for careful reading, with quick keys to edit and move work.

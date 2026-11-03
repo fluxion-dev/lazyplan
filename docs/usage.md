@@ -340,7 +340,15 @@ The `git` card
 grows with its content between 3 and 10 rows and gives the room back to the
 preview when the selection has no linked checkout. A `timeline` card closes the
 bottom of the screen. Reverse-video keycaps fill the hint bar; the same tokens
-drive the detail, source, palette, help, and form screens.
+drive the detail, source, export, palette, help, and form screens.
+
+Run **Export plan as Markdown** from the palette (`c`, then `export`) to open a
+destination picker. It starts in your Downloads folder with
+`plan-P<id>.md` ready, browses folders, and lets you edit the filename. An
+existing file asks before it is replaced; a write error stays inside the
+picker so you can correct the path. `Esc` cancels without writing. The CLI
+equivalent is `lpui export --format markdown --plan ID --file PATH`; add
+`--force` to replace an existing file.
 
 Previews, details, and the source trail share one single-cell icon family:
 `◈` plan, `◇` milestone, `▹` task, `⎇` checkout, `◆` commit, `⇄` pull request,

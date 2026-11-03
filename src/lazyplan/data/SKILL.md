@@ -102,6 +102,11 @@ branch and the commit must be on the task branch history; otherwise lpui warns
 and leaves the link for you. `show` includes inherited commits, stale markers,
 and web URLs when the origin remote can be mapped.
 
+In the TUI, **Export plan as Markdown** in the palette opens a destination
+picker. It starts in Downloads, keeps `plan-P<id>.md` ready, and asks before
+overwriting. The CLI equivalent is
+`lpui export --format markdown --plan ID --file PATH [--force]`.
+
 In the TUI, select a row and press `g` (or use **Open source trail**) to browse
 repo → commit → changed file plus linked PRs. The tree uses the same `j`/`k`,
 `left`/`right`, click-select, and click-arrow gestures as the main tree.

@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import time
+from pathlib import Path
 from typing import Any
-
-from lazyplan.infrastructure import textfile
 
 try:
     from textual.widgets import Tree  # noqa: F401
@@ -19,6 +18,7 @@ from lazyplan.infrastructure.templates import load_template
 from ... import services
 from ...core.entities import Status
 from ...core.errors import ClaimConflict
+from ..shared.export import display_path
 from ..shared.palette import by_id
 from .constants import DOUBLE_CLICK_WINDOW
 from .context import ContextMixin
@@ -26,6 +26,7 @@ from .git_actions import GitActionMixin
 from .screens import (
     ConfirmScreen,
     DetailScreen,
+    ExportScreen,
     FilterPromptScreen,
     HelpScreen,
     NewMilestoneScreen,
@@ -119,16 +120,17 @@ if _TEXTUAL_OK:
             if pid is None:
                 self.notify("select a row first, then export")
                 return
-            entry = services.export_plan(self.store, pid)
-            if entry is None:
+            plan = self.store.get_plan(pid)
+            if plan is None:
                 self.notify("selected plan no longer exists — refreshing")
                 self.refresh_all("")
                 return
-            from ..shared.render import render_plan_markdown  # noqa: F401
 
-            path = f"plan-P{pid}.md"
-            textfile.write(path, render_plan_markdown(entry) + "\n")
-            self._saved(f"exported {path}")
+            def cb(path: Path | None) -> None:
+                if path is not None:
+                    self.notify(f"exported {display_path(path)}", timeout=4)
+
+            self.push_screen(ExportScreen(self.store, pid, plan.name), cb)
 
         def action_force_release_claim(self) -> None:
             self._release_claim(True)

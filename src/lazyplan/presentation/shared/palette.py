@@ -479,14 +479,14 @@ COMMANDS: tuple[Command, ...] = (
     ),
     Command(
         id="export-plan",
-        label="Export plan as Markdown",
+        label="Export plan as Markdown…",
         section=APP,
         verb="export",
         context="selection",
         handler="export_md",
         aliases=("export plan .md", "export md", "markdown"),
         help_group="APP",
-        help_hint="export the selected plan to Markdown",
+        help_hint="choose a folder and filename for the Markdown export",
     ),
     Command(
         id="update-lpui",

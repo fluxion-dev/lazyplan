@@ -24,6 +24,8 @@ class TestExportScreen(unittest.IsolatedAsyncioTestCase):
         self.db = str(self.root / "t.db")
         store = Store(self.db)
         self.pid = store.add_plan("Website", "Marketing site", goal="Convert").id
+        self.sid = store.add_milestone(self.pid, "Homepage", "Hero work").id
+        self.tid = store.add_task(self.sid, "Design hero", "Hero section").id
         self.store = Store(self.db)
         self.app = tui_mod.create_app(self.db)
 
@@ -152,6 +154,51 @@ class TestExportScreen(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             self.assertEqual(results, [None])
             self.assertFalse((self.downloads / f"plan-P{self.pid}.md").exists())
+
+    async def test_action_opens_the_picker_for_plan_milestone_and_task(self) -> None:
+        from unittest import mock
+
+        from lazyplan.presentation.tui.screens.export import ExportScreen
+
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(80, 24)) as pilot:
+            await pilot.pause()
+            pushed: list[tuple[ExportScreen, object]] = []
+            app.push_screen = lambda screen, callback=None: pushed.append(  # type: ignore[method-assign]
+                (screen, callback)
+            )
+            for selected in (
+                ("plan", self.pid),
+                ("milestone", self.sid),
+                ("task", self.tid),
+            ):
+                with self.subTest(selected=selected):
+                    pushed.clear()
+                    app.selected = selected
+                    app.action_export_md()
+                    self.assertEqual(len(pushed), 1)
+                    screen, callback = pushed[0]
+                    self.assertIsInstance(screen, ExportScreen)
+                    self.assertEqual(screen.plan_id, self.pid)
+                    self.assertEqual(screen.plan_title, "Website")
+            with mock.patch.object(app, "notify") as notify:
+                callback(Path("/tmp/plan.md"))  # type: ignore[operator]
+                notify.assert_called_once()
+
+    async def test_action_without_selection_does_not_open_the_picker(self) -> None:
+        from unittest import mock
+
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(80, 24)) as pilot:
+            await pilot.pause()
+            app.selected = None
+            with (
+                mock.patch.object(app, "push_screen") as push,
+                mock.patch.object(app, "notify") as notify,
+            ):
+                app.action_export_md()
+            push.assert_not_called()
+            notify.assert_called_once()
 
     async def test_dialog_fits_80x24_and_120x40(self) -> None:
         for width, height in ((80, 24), (120, 40)):

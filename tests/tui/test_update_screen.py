@@ -240,6 +240,15 @@ class TestLaunchApply(unittest.TestCase):
         self.assertEqual(code, 0)
         create.assert_not_called()
 
+    def test_stale_apply_is_recovered_before_launch(self):
+        with (
+            mock.patch.object(tui_mod, "recover_stale_apply") as recover,
+            mock.patch.object(tui_mod, "apply_on_launch", return_value=("none", "")),
+            mock.patch.object(tui_mod, "create_app"),
+        ):
+            tui_mod.run("t.db")
+        recover.assert_called_once()
+
     def test_prior_failure_is_shown_once(self):
         with (
             mock.patch.object(tui_mod, "apply_on_launch", return_value=("none", "")),

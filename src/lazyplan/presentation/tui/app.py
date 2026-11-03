@@ -48,7 +48,6 @@ from .preview import PreviewMixin
 from .state import AppState
 from .theme import register_themes
 from .tree import TreeMixin
-from .views.rows import RowSpec
 from .widgets.git_panel import GitPanel
 from .widgets.plan_tree import FoldTree
 from .widgets.preview_panel import PreviewPanel
@@ -150,7 +149,7 @@ if _TEXTUAL_OK:
             self._undo: list[dict] | None = None
             self._row_nodes: dict[tuple[str, int], TreeNode] = {}
             self._row_labels: dict[tuple[str, int], str] = {}
-            self._row_specs: dict[tuple[str, int], RowSpec] = {}
+            self._row_specs = {}
             self.tree_controller = TreeController(self)
             self.update_controller = UpdateController(self)
             self.spinner_controller = SpinnerController(self)

@@ -208,9 +208,9 @@
   <div class="overflow-hidden rounded-2xl border border-plan-border bg-plan-surface/70 shadow-xl shadow-black/30">
     <div class="grid gap-6 p-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.7fr)] md:p-8">
       <div>
-        <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">New in 0.30</p>
+        <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">New in 0.31</p>
         <h2 class="mb-3 text-2xl font-bold text-white md:text-3xl">A sharper screen.</h2>
-        <p class="m-0 text-[0.95rem] text-zinc-400">Themes, checkout, and timeline.</p>
+        <p class="m-0 text-[0.95rem] text-zinc-400">Themes, checkout, timeline, export.</p>
       </div>
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div class="rounded-lg border border-plan-border bg-plan-canvas/60 p-4">
@@ -228,6 +228,10 @@
         <div class="rounded-lg border border-plan-border bg-plan-canvas/60 p-4">
           <h3 class="mb-1 text-base font-semibold text-white">Timeline</h3>
           <p class="m-0 text-[0.9rem] text-zinc-400">Every lane stays visible.</p>
+        </div>
+        <div class="rounded-lg border border-plan-border bg-plan-canvas/60 p-4">
+          <h3 class="mb-1 text-base font-semibold text-white">Markdown export</h3>
+          <p class="m-0 text-[0.9rem] text-zinc-400">Folder, then filename.</p>
         </div>
       </div>
     </div>
@@ -303,7 +307,7 @@ Task · Add the token model        done</pre>
   <div class="mb-10 max-w-2xl md:mb-14">
     <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">Screenshots</p>
     <h2 class="mb-4 text-2xl font-bold text-white md:text-3xl">See it in action.</h2>
-    <p class="text-lg text-zinc-400">Three themes, git context, and one plan.</p>
+    <p class="text-lg text-zinc-400">Three themes, git context, one plan.</p>
   </div>
   <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
     <figure class="m-0">
@@ -322,7 +326,7 @@ Task · Add the token model        done</pre>
           <img src="./screens/lpui-coordination.png" width="1604" height="904" loading="lazy" decoding="async" alt="Plan tree filtered to attention, showing active and expired claims, blocked work, aging tasks, and a red check." class="block h-auto w-full rounded-xl border border-plan-border">
         </picture>
       </a>
-      <figcaption class="mt-2 text-sm text-zinc-400">Active work, blocked work, and attention at a glance.</figcaption>
+      <figcaption class="mt-2 text-sm text-zinc-400">Active, blocked, and attention at a glance.</figcaption>
     </figure>
     <figure class="m-0">
       <a class="zoom-trigger" href="./screens/lpui-git-pane.png" data-zoom aria-haspopup="dialog">
@@ -331,7 +335,16 @@ Task · Add the token model        done</pre>
           <img src="./screens/lpui-git-pane.png" width="1604" height="904" loading="lazy" decoding="async" alt="Main shell with a linked task selected, showing the sticky preview above a GIT pane with the checkout, branch, commits, and pull requests." class="block h-auto w-full rounded-xl border border-plan-border">
         </picture>
       </a>
-      <figcaption class="mt-2 text-sm text-zinc-400">The checkout, commits, and pull requests for the row you are reading.</figcaption>
+      <figcaption class="mt-2 text-sm text-zinc-400">Checkout, commits, and pull requests for the row.</figcaption>
+    </figure>
+    <figure class="m-0">
+      <a class="zoom-trigger" href="./screens/lpui-export.png" data-zoom aria-haspopup="dialog">
+        <picture>
+          <source srcset="./screens/lpui-export.webp" type="image/webp">
+          <img src="./screens/lpui-export.png" width="1604" height="904" loading="lazy" decoding="async" alt="Markdown export picker showing the destination path, a Downloads folder tree, the filename, and Export and Cancel actions." class="block h-auto w-full rounded-xl border border-plan-border">
+        </picture>
+      </a>
+      <figcaption class="mt-2 text-sm text-zinc-400">Pick a folder.</figcaption>
     </figure>
     <figure class="m-0">
       <a class="zoom-trigger" href="./screens/lpui-timeline.png" data-zoom aria-haspopup="dialog">
@@ -340,7 +353,7 @@ Task · Add the token model        done</pre>
           <img src="./screens/lpui-timeline.png" width="1604" height="904" loading="lazy" decoding="async" alt="Main shell with sequential milestones selected, showing doing-only timeline traces at distinct start positions and one never-started lane." class="block h-auto w-full rounded-xl border border-plan-border">
         </picture>
       </a>
-      <figcaption class="mt-2 text-sm text-zinc-400">Every lane stays visible; the scoped plan names the card.</figcaption>
+      <figcaption class="mt-2 text-sm text-zinc-400">Every lane stays; the scoped plan names the card.</figcaption>
     </figure>
     <figure class="m-0">
       <a class="zoom-trigger" href="./screens/lpui-source-trail.png" data-zoom aria-haspopup="dialog">

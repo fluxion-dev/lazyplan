@@ -24,6 +24,7 @@ EXPECTED = {
     "lpui-detail",
     "lpui-source-trail",
     "lpui-git-pane",
+    "lpui-export",
     "lpui-theme-void",
     "lpui-theme-latte",
     "lpui-timeline",

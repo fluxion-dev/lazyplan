@@ -34,12 +34,13 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 from rich.text import Text  # noqa: E402
 from textual.app import App, ComposeResult  # noqa: E402
-from textual.widgets import Static, Tree  # noqa: E402
+from textual.widgets import DirectoryTree, Static, Tree  # noqa: E402
 
 from lazyplan import services  # noqa: E402
 from lazyplan.core.entities import Status  # noqa: E402
 from lazyplan.presentation.tui import create_app  # noqa: E402
 from lazyplan.presentation.tui.screens import DetailScreen, PaletteScreen  # noqa: E402
+from lazyplan.presentation.tui.screens.export import ExportScreen  # noqa: E402
 from lazyplan.presentation.tui.screens.source import SourceScreen  # noqa: E402
 from lazyplan.services import metrics  # noqa: E402
 from lazyplan.store import Store  # noqa: E402
@@ -155,6 +156,15 @@ def build_source_fixture(tmp: Path) -> Store:
             state=state,
             checks=checks,
         )
+    return store
+
+
+def build_export_fixture(tmp: Path) -> Store:
+    """A plan with a deterministic Downloads tree for the export picker shot."""
+    store = build_source_fixture(tmp)
+    downloads = tmp / "Downloads"
+    (downloads / "team").mkdir(parents=True)
+    (downloads / "archive").mkdir()
     return store
 
 
@@ -375,6 +385,33 @@ async def _capture_task_shell(store: Store, target: Path, theme: str | None = No
 
 async def capture_git_pane(store: Store, target: Path) -> None:
     await _capture_task_shell(store, target)
+
+
+async def capture_export(store: Store, target: Path) -> None:
+    """Capture the Markdown export picker with a deterministic Downloads tree."""
+    plan_id = next(plan.id for plan in store.list_plans() if plan.name == "Ship the source trail")
+    root = Path(store.path).parent
+    downloads = root / "Downloads"
+    with mock.patch.dict(os.environ, {"HOME": str(root), "USERPROFILE": str(root)}):
+        app = create_app(str(store.path))
+        async with app.run_test(size=SIZE) as pilot:
+            await pilot.pause()
+            app.push_screen(
+                ExportScreen(
+                    store,
+                    plan_id,
+                    "Ship the source trail",
+                    default_dir=downloads,
+                )
+            )
+            await pilot.pause()
+            tree = app.screen.query_one("#export-tree", DirectoryTree)
+            tree.root.expand()
+            await pilot.pause()
+            folder = next(child for child in tree.root.children if "team" in str(child.label))
+            tree.select_node(folder)
+            await pilot.pause()
+            app.save_screenshot(str(target))
 
 
 async def capture_theme_void(store: Store, target: Path) -> None:
@@ -618,6 +655,12 @@ SCENES: dict[str, Scene] = {
         build_source_fixture,
         capture_git_pane,
         "lazyplan main shell with a linked task selected, showing the sticky preview above a GIT pane with the checkout, branch, clean state, commits, and pull requests.",
+    ),
+    "lpui-export": Scene(
+        SIZE,
+        build_export_fixture,
+        capture_export,
+        "lazyplan Markdown export picker showing a Downloads destination, folder tree, filename, and Export and Cancel actions.",
     ),
     "lpui-theme-void": Scene(
         SIZE,

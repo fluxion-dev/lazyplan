@@ -1,0 +1,213 @@
+"""Windows ApplyPlan, detached spawn, parent wait, and stale-state recovery."""
+
+from __future__ import annotations
+
+import json
+import os
+import tempfile
+import unittest
+from pathlib import Path
+from unittest import mock
+
+from lazyplan.infrastructure import update_apply, update_stage
+from lazyplan.infrastructure.update_apply import ApplyPlan, build_apply_plan
+from lazyplan.infrastructure.upgrade import PIPX, VENV, InstallInfo
+
+URL = "https://files.pythonhosted.org/packages/x/w.whl"
+
+
+def staged(method: str = PIPX) -> update_stage.StagedUpdate:
+    return update_stage.StagedUpdate(
+        "9.9.9",
+        method,
+        "lazyplan_tui-9.9.9-py3-none-any.whl",
+        URL,
+        "a" * 64,
+        10,
+        1000.0,
+    )
+
+
+class TestApplyPlan(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.home = Path(self.tmp.name) / "home"
+        self.home.mkdir()
+
+    def test_pipx_windows_plan_keeps_backend_and_uses_the_venv_python(self) -> None:
+        update = staged(PIPX)
+        info = InstallInfo(PIPX, True, "C:/Users/u/pipx/venvs/lazyplan-tui")
+        with mock.patch.object(
+            update_apply.shutil,
+            "which",
+            side_effect=["C:/Users/u/pipx/bin/pipx.exe", "C:/Users/u/pipx/bin/lpui.exe"],
+        ):
+            plan = build_apply_plan(
+                update,
+                home=self.home,
+                exe="C:/Users/u/pipx/venvs/lazyplan-tui/Scripts/python.exe",
+                info=info,
+                windows=True,
+                argv=("ui",),
+            )
+        wheel = str(update_stage.wheel_path(update, self.home))
+        self.assertEqual(plan.python, "C:/Users/u/pipx/venvs/lazyplan-tui/Scripts/python.exe")
+        self.assertEqual(
+            plan.command,
+            ("C:/Users/u/pipx/bin/pipx.exe", "install", "--backend", "pip", wheel, "--force"),
+        )
+        self.assertEqual(plan.scripts, Path("C:/Users/u/pipx/bin"))
+        self.assertEqual(plan.restart, ("C:/Users/u/pipx/bin/lpui.exe", "ui"))
+        self.assertEqual(plan.log_path.parent, update_apply.update_log.logs_dir(self.home))
+
+    def test_venv_windows_plan_uses_the_owning_pip(self) -> None:
+        update = staged(VENV)
+        info = InstallInfo(VENV, True, "C:/Users/u/lazyplan-venv")
+        plan = build_apply_plan(
+            update,
+            home=self.home,
+            exe="C:/Users/u/lazyplan-venv/Scripts/python.exe",
+            info=info,
+            windows=True,
+        )
+        wheel = str(update_stage.wheel_path(update, self.home))
+        self.assertEqual(
+            plan.command,
+            (
+                "C:/Users/u/lazyplan-venv/Scripts/python.exe",
+                "-m",
+                "pip",
+                "install",
+                "--no-input",
+                wheel,
+            ),
+        )
+        self.assertEqual(
+            plan.restart,
+            ("C:/Users/u/lazyplan-venv/Scripts/python.exe", "-m", "lazyplan"),
+        )
+
+    def test_posix_pipx_command_stays_synchronous(self) -> None:
+        update = staged(PIPX)
+        info = InstallInfo(PIPX, True, "/home/u/.local/share/pipx/venvs/lazyplan-tui")
+        with mock.patch.object(update_apply.shutil, "which", return_value="/usr/bin/pipx"):
+            plan = build_apply_plan(
+                update,
+                home=self.home,
+                exe="/home/u/.local/share/pipx/venvs/lazyplan-tui/bin/python",
+                info=info,
+                windows=False,
+            )
+        wheel = str(update_stage.wheel_path(update, self.home))
+        self.assertNotIn("--backend", plan.command)
+        self.assertEqual(plan.command[-2:], (wheel, "--force"))
+
+    def test_log_path_is_unique_and_under_the_logs_dir(self) -> None:
+        plan = build_apply_plan(
+            staged(VENV),
+            home=self.home,
+            exe="/venv/bin/python",
+            info=InstallInfo(VENV, True, "/venv"),
+            windows=True,
+            now=1000.0,
+            pid=42,
+        )
+        self.assertEqual(plan.log_path.name, "update-apply-1000-42.log")
+        self.assertNotEqual(
+            plan.log_path,
+            build_apply_plan(
+                staged(VENV),
+                home=self.home,
+                exe="/venv/bin/python",
+                info=InstallInfo(VENV, True, "/venv"),
+                windows=True,
+                now=1000.0,
+                pid=43,
+            ).log_path,
+        )
+
+    def test_helper_command_carries_the_plan_and_parent(self) -> None:
+        plan = build_apply_plan(
+            staged(VENV),
+            home=self.home,
+            exe="/venv/bin/python",
+            info=InstallInfo(VENV, True, "/venv"),
+            windows=True,
+            now=1000.0,
+            pid=42,
+        )
+        command = update_apply.helper_command(plan, parent_pid=123)
+        self.assertEqual(command[:3], [plan.python, "-m", "lazyplan._update_helper"])
+        self.assertEqual(command[command.index("--parent-pid") + 1], "123")
+        payload = json.loads(command[command.index("--plan-json") + 1])
+        self.assertEqual(payload["wheel"], str(plan.wheel))
+        self.assertEqual(payload["log"], str(plan.log_path))
+
+
+class TestSpawnAndWait(unittest.TestCase):
+    def test_spawn_uses_detached_flags_and_returns_the_log(self) -> None:
+        plan = ApplyPlan(
+            wheel=Path("/wheel.whl"),
+            method=VENV,
+            python="/venv/bin/python",
+            pipx="",
+            command=("/venv/bin/python", "-m", "pip", "install", "/wheel.whl"),
+            restart=("/venv/bin/python", "-m", "lazyplan"),
+            scripts=Path("/venv/bin"),
+            log_path=Path("/home/.lazyplan/logs/update-apply-1-2.log"),
+            home=Path("/home"),
+            windows=True,
+        )
+        with mock.patch.object(update_apply.subprocess, "Popen") as popen:
+            path = update_apply.spawn_windows_apply(plan, parent_pid=123)
+        self.assertEqual(path, plan.log_path)
+        kwargs = popen.call_args.kwargs
+        self.assertTrue(kwargs["close_fds"])
+        self.assertEqual(kwargs["stdin"], update_apply.subprocess.DEVNULL)
+        self.assertNotEqual(kwargs["creationflags"], 0)
+
+    def test_wait_for_parent_succeeds_and_times_out(self) -> None:
+        values = iter([True, True, False])
+        self.assertTrue(
+            update_apply.wait_for_parent(
+                10,
+                timeout=1.0,
+                poll=0.0,
+                alive=lambda _pid: next(values),
+            )
+        )
+        self.assertFalse(
+            update_apply.wait_for_parent(
+                10,
+                timeout=0.0,
+                poll=0.0,
+                alive=lambda _pid: True,
+            )
+        )
+
+
+class TestStaleApply(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.home = Path(self.tmp.name) / "home"
+        self.home.mkdir()
+
+    def test_stale_applying_is_parked_with_a_failure(self) -> None:
+        applying = update_stage._state_path(update_stage.APPLYING, self.home)
+        applying.parent.mkdir(parents=True)
+        applying.write_text("{}\n", encoding="utf-8")
+        old = 1000.0
+        os.utime(applying, (old, old))
+        error = update_stage.recover_stale_apply(
+            self.home,
+            now=old + update_stage.STALE_APPLY + 1,
+            stale_after=update_stage.STALE_APPLY,
+        )
+        self.assertIn("did not finish", error or "")
+        self.assertFalse(applying.exists())
+
+
+if __name__ == "__main__":
+    unittest.main()

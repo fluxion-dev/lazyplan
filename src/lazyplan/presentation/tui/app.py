@@ -231,6 +231,9 @@ def run(db_path: str | None = None) -> int:
         return 3
     startup_notice = ""
     state, detail = apply_on_launch(package_version())
+    if state == "applying":
+        print(f"update applying in the background; log: {detail}", file=sys.stderr)
+        return 0
     if state == "applied":
         try:
             os.execv(sys.executable, [sys.executable, "-m", "lazyplan", *sys.argv[1:]])

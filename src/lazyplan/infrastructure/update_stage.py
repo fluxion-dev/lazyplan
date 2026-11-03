@@ -468,6 +468,7 @@ def apply_on_launch(
     home: str | Path | None = None,
     exe: str | None = None,
     runner: Callable[..., Any] = subprocess.run,
+    windows: bool | None = None,
 ) -> tuple[str, str]:
     """Claim and apply one stage; return (state, detail)."""
     update = claim_stage(home)
@@ -489,6 +490,16 @@ def apply_on_launch(
         error = "cached wheel is missing or corrupt"
         mark_failed(update, error, home)
         return ("error", error)
+    if os.name == "nt" if windows is None else windows:
+        try:
+            from .update_apply import build_apply_plan, spawn_windows_apply
+
+            plan = build_apply_plan(update, home=home, exe=exe, windows=True)
+            log = spawn_windows_apply(plan, parent_pid=os.getpid())
+        except (OSError, StageError) as exc:
+            mark_failed(update, str(exc), home)
+            return ("error", str(exc))
+        return ("applying", str(log))
     try:
         apply_update(update, home, exe, runner=runner, installed=installed)
     except StageError as exc:

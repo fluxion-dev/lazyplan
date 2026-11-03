@@ -94,6 +94,51 @@ class TestUpdateScreen(unittest.IsolatedAsyncioTestCase):
             self.assertFalse(screen.query_one("#update-download", Button).display)
             self.assertEqual(screen.query_one("#update-later", Button).label, "Close")
 
+    async def test_windows_download_offers_restart(self) -> None:
+        from textual.widgets import Button, Static
+
+        from lazyplan.presentation.tui.screens.update import UpdateScreen
+
+        async with self.app.run_test() as pilot:
+            screen = UpdateScreen("0.27.2", "9.9.9", InstallInfo(PIPX, True), windows=True)
+            self.app.push_screen(screen)
+            await pilot.pause()
+            with mock.patch.object(screen_mod, "stage_update", return_value=STAGED):
+                screen.query_one("#update-download", Button).press()
+                await self.app.workers.wait_for_complete()
+                await pilot.pause()
+            self.assertTrue(screen.query_one("#update-restart", Button).display)
+            self.assertIn(
+                "Restart now",
+                str(screen.query_one("#update-body", Static).render()),
+            )
+
+    async def test_windows_restart_spawns_the_helper_and_exits(self) -> None:
+        from textual.widgets import Button
+
+        from lazyplan.presentation.tui.screens.update import UpdateScreen
+
+        async with self.app.run_test() as pilot:
+            screen = UpdateScreen("0.27.2", "9.9.9", InstallInfo(PIPX, True), windows=True)
+            self.app.push_screen(screen)
+            await pilot.pause()
+            plan = mock.Mock()
+            with (
+                mock.patch.object(screen_mod, "stage_update", return_value=STAGED),
+                mock.patch.object(screen_mod, "build_apply_plan", return_value=plan) as build,
+                mock.patch.object(screen_mod, "spawn_windows_apply") as spawn,
+                mock.patch.object(self.app, "exit") as exit_app,
+            ):
+                screen.query_one("#update-download", Button).press()
+                await self.app.workers.wait_for_complete()
+                await pilot.pause()
+                screen.query_one("#update-restart", Button).press()
+                await pilot.pause()
+            build.assert_called_once()
+            spawn.assert_called_once()
+            self.assertEqual(spawn.call_args.kwargs["parent_pid"], os.getpid())
+            exit_app.assert_called_once()
+
     async def test_download_failure_offers_retry(self):
         from textual.widgets import Button, Static
 
@@ -185,6 +230,15 @@ class TestLaunchApply(unittest.TestCase):
         ):
             tui_mod.run("t.db")
         self.assertIn("boom", create.call_args[0][1])
+
+    def test_applying_launch_exits_without_starting_the_app(self):
+        with (
+            mock.patch.object(tui_mod, "apply_on_launch", return_value=("applying", "/logs/x")),
+            mock.patch.object(tui_mod, "create_app") as create,
+        ):
+            code = tui_mod.run("t.db")
+        self.assertEqual(code, 0)
+        create.assert_not_called()
 
     def test_prior_failure_is_shown_once(self):
         with (

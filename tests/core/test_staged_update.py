@@ -251,6 +251,32 @@ class TestApply(unittest.TestCase):
         self.assertIsNone(update_stage.read_stage(home=self.home))
         self.assertEqual(list(update_stage.update_dir(self.home).iterdir()), [])
 
+    def test_windows_launch_spawns_the_helper_and_keeps_the_stage(self):
+        update = self._stage()
+        plan = object()
+        log = Path("/logs/update-apply.log")
+        with (
+            mock.patch(
+                "lazyplan.infrastructure.update_apply.build_apply_plan",
+                return_value=plan,
+            ) as build,
+            mock.patch(
+                "lazyplan.infrastructure.update_apply.spawn_windows_apply",
+                return_value=log,
+            ) as spawn,
+        ):
+            state, detail = update_stage.apply_on_launch(
+                "0.27.2",
+                self.home,
+                windows=True,
+            )
+        self.assertEqual((state, detail), ("applying", str(log)))
+        build.assert_called_once()
+        self.assertTrue(spawn.called)
+        self.assertTrue(update_stage._state_path(update_stage.APPLYING, self.home).exists())
+        self.assertFalse(update_stage._state_path(update_stage.STAGED, self.home).exists())
+        self.assertTrue(update_stage.wheel_path(update, self.home).is_file())
+
     def test_skips_when_already_current(self):
         self._stage()
         state, _ = update_stage.apply_on_launch(VERSION, self.home)

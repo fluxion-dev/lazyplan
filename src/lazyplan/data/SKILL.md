@@ -271,7 +271,7 @@ lpui --porcelain lint --plan N                                               # p
 lpui --porcelain stats --since 7.days                                        # flow health
 lpui --porcelain feed --limit 20                                                 # recent activity
 lpui export --format json                                            # full dump when you need everything
-lpui export --format markdown --plan ID [--file out.md]              # one full-fidelity plan doc
+lpui export --format markdown --plan ID [--file out.md] [--force]    # one full-fidelity plan doc
 lpui info                                                            # resolved db path + counts (scope debugging)
 lpui reconcile                                                       # recompute parent statuses from children
 ```
@@ -279,6 +279,9 @@ lpui reconcile                                                       # recompute
 Use `--porcelain` for the active loop: one tab-separated row per record with
 no glyphs or provenance noise. Use `--json` when you need full fidelity
 (`lpui list --json`).
+
+Markdown plan export creates missing parent folders and refuses to replace an
+existing file unless `--force` is passed.
 
 ## Templates (per-repo creation defaults)
 

@@ -839,7 +839,7 @@ lpui link-repo --kind plan --id 1 --repo ~/checkouts/api [--remote URL]
 lpui unlink-repo --kind plan --id 1 --repo ~/checkouts/api
 lpui repos --kind task --id 1 [--effective]
 lpui list --repo ~/checkouts/api
-lpui export [--format json|markdown]
+lpui export [--format json|markdown] [--plan ID] [--file PATH] [--force]
 lpui import --file dump.json
 lpui upgrade [--check]
 lpui feed [--limit 20]
@@ -970,6 +970,9 @@ from pypistats or the GitHub releases API; they are never added together. See
   not the database.
 - Export: `lpui export --format json > backup.json`.
 - Import: `lpui import --file backup.json` (ids change on import).
+- Plan Markdown: `lpui export --format markdown --plan 3 --file ~/Downloads/plan-P3.md`.
+  Missing parent folders are created; an existing file is refused unless you
+  pass `--force`.
 - Demo data: `lpui seed`. Never run it in a repo with a real plan.
 - Files: plan text is read as UTF-8 or UTF-16 (PowerShell 5 writes a BOM) and
   written as UTF-8. Existing CRLF line endings are preserved on write.

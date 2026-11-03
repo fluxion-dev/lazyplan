@@ -115,6 +115,11 @@ _.action_filter
 _.check_action
 _._on_click
 _._on_highlight
+_._folder_selected
+_._file_selected
+_._export_pressed
+_._cancel_pressed
+_._path_submitted
 _._on_filter_changed
 _._on_filter_submitted
 _._create

@@ -9,6 +9,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from lazyplan import _update_helper
 from lazyplan.infrastructure import update_apply, update_stage
 from lazyplan.infrastructure.update_apply import ApplyPlan, build_apply_plan
 from lazyplan.infrastructure.upgrade import PIPX, VENV, InstallInfo
@@ -185,6 +186,69 @@ class TestSpawnAndWait(unittest.TestCase):
                 alive=lambda _pid: True,
             )
         )
+
+
+class TestHelperRun(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+        self.plan = ApplyPlan(
+            wheel=Path("/wheel.whl"),
+            method=VENV,
+            python="/venv/bin/python",
+            pipx="",
+            command=("/venv/bin/python", "-m", "pip", "install", "/wheel.whl"),
+            restart=("/venv/bin/python", "-m", "lazyplan"),
+            scripts=Path("/venv/bin"),
+            log_path=self.root / "logs" / "update-apply.log",
+            home=self.root,
+            windows=True,
+        )
+
+    def test_success_logs_clears_and_restarts(self) -> None:
+        install = mock.Mock(returncode=0, stdout="installed", stderr="")
+        setup = mock.Mock(returncode=0, stdout="setup ok", stderr="")
+        with (
+            mock.patch.object(_update_helper, "wait_for_parent", return_value=True),
+            mock.patch.object(
+                _update_helper.subprocess,
+                "run",
+                side_effect=[install, setup],
+            ),
+            mock.patch.object(update_stage, "clear_apply") as clear,
+            mock.patch.object(_update_helper, "_restart") as restart,
+        ):
+            code = _update_helper.run(self.plan, 42)
+        self.assertEqual(code, 0)
+        clear.assert_called_once_with(self.root, self.plan.wheel)
+        restart.assert_called_once_with(self.plan)
+        text = self.plan.log_path.read_text(encoding="utf-8")
+        self.assertIn("installed", text)
+        self.assertIn("setup_returncode: 0", text)
+
+    def test_install_failure_parks_without_restart(self) -> None:
+        install = mock.Mock(returncode=1, stdout="", stderr="permission denied")
+        with (
+            mock.patch.object(_update_helper, "wait_for_parent", return_value=True),
+            mock.patch.object(_update_helper.subprocess, "run", return_value=install),
+            mock.patch.object(update_stage, "park_failure") as park,
+            mock.patch.object(_update_helper, "_restart") as restart,
+        ):
+            code = _update_helper.run(self.plan, 42)
+        self.assertEqual(code, 1)
+        park.assert_called_once()
+        self.assertIn("permission denied", park.call_args.args[0])
+        restart.assert_not_called()
+
+    def test_parent_timeout_parks(self) -> None:
+        with (
+            mock.patch.object(_update_helper, "wait_for_parent", return_value=False),
+            mock.patch.object(update_stage, "park_failure") as park,
+        ):
+            code = _update_helper.run(self.plan, 42)
+        self.assertEqual(code, 2)
+        self.assertIn("timed out", park.call_args.args[0])
 
 
 class TestStaleApply(unittest.TestCase):

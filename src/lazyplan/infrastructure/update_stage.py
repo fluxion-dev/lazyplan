@@ -315,13 +315,26 @@ def recover_stale_apply(
     if age <= stale_after:
         return None
     error = "previous update helper did not finish; see the update log"
+    park_failure(error, home)
+    applying.unlink(missing_ok=True)
+    return error
+
+
+def park_failure(error: str, home: str | Path | None = None) -> None:
+    """Record a failure message for the next launch."""
     target = _state_path(FAILED, home)
     target.parent.mkdir(parents=True, exist_ok=True)
     temp = target.with_name(f"{target.name}.tmp")
     textfile.write(temp, json.dumps({"error": error}, indent=2) + "\n")
     os.replace(temp, target)
-    applying.unlink(missing_ok=True)
-    return error
+
+
+def clear_apply(home: str | Path | None = None, wheel: Path | None = None) -> None:
+    """Clear the applying/staged markers and the cached wheel after success."""
+    _state_path(APPLYING, home).unlink(missing_ok=True)
+    _state_path(STAGED, home).unlink(missing_ok=True)
+    if wheel is not None:
+        wheel.unlink(missing_ok=True)
 
 
 def verify_wheel(update: StagedUpdate, home: str | Path | None = None) -> bool:

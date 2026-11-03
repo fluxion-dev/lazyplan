@@ -174,7 +174,7 @@ def _parent_alive(pid: int) -> bool:
         return True
     import ctypes
 
-    kernel32 = getattr(ctypes, "windll").kernel32
+    kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
     handle = kernel32.OpenProcess(0x00100000, False, pid)
     if not handle:
         return False

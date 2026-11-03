@@ -51,9 +51,10 @@ def record_update(
     home: str | Path | None = None,
     now: float | None = None,
     pid: int | None = None,
+    path: Path | None = None,
 ) -> Path:
     """Write one update attempt and return its log path."""
-    target = log_path(kind, home, now, pid)
+    target = path or log_path(kind, home, now, pid)
     target.parent.mkdir(parents=True, exist_ok=True)
     lines = [
         f"method: {method}",

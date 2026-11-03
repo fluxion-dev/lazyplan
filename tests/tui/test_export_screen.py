@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from lazyplan.store import Store
 
@@ -69,6 +71,48 @@ class TestExportScreen(unittest.IsolatedAsyncioTestCase):
             screen._set_folder(sub)
             value = Path(screen.query_one("#export-path", Input).value)
             self.assertEqual(value.parent, sub)
+            self.assertEqual(value.name, f"plan-P{self.pid}.md")
+
+    async def test_real_directory_selection_updates_the_path(self) -> None:
+        from textual.widgets import DirectoryTree, Input
+
+        sub = self.downloads / "nested"
+        sub.mkdir()
+        async with self.app.run_test(size=(80, 24)) as pilot:
+            self.app.push_screen(self._screen())
+            await pilot.pause()
+            screen = self.app.screen
+            tree = screen.query_one("#export-tree", DirectoryTree)
+            tree.root.expand()
+            await pilot.pause()
+            node = next(child for child in tree.root.children if "nested" in str(child.label))
+            tree.select_node(node)
+            await pilot.pause()
+            value = Path(screen.query_one("#export-path", Input).value).expanduser()
+            self.assertEqual(value.parent, sub)
+
+    async def test_missing_downloads_falls_back_to_the_current_directory(self) -> None:
+        from textual.widgets import Input
+
+        from lazyplan.presentation.tui.screens.export import ExportScreen
+
+        home = self.root / "bare-home"
+        home.mkdir()
+        old_cwd = os.getcwd()
+        os.chdir(self.root)
+        try:
+            with mock.patch.dict(
+                os.environ,
+                {"HOME": str(home), "USERPROFILE": str(home)},
+            ):
+                screen = ExportScreen(self.store, self.pid, "Website")
+        finally:
+            os.chdir(old_cwd)
+        async with self.app.run_test(size=(80, 24)) as pilot:
+            self.app.push_screen(screen)
+            await pilot.pause()
+            value = Path(screen.query_one("#export-path", Input).value)
+            self.assertEqual(value.parent, self.root)
             self.assertEqual(value.name, f"plan-P{self.pid}.md")
 
     async def test_export_writes_and_dismisses_with_the_path(self) -> None:

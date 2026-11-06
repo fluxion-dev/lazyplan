@@ -82,6 +82,19 @@ from .provenance import (
     scan_commits,
     start_task,
 )
+from .revisions import (
+    ApprovalResult,
+    DiffEntry,
+    DiffResult,
+    RevisionEntry,
+    approve,
+    diff,
+    drift_counts,
+    drifted_plan_ids,
+    list_revisions,
+    revision_state,
+    snapshot,
+)
 from .transfer import (
     _export_entry,
     _export_maps,
@@ -170,4 +183,15 @@ __all__ = [
     "_import_all",
     "GateError",
     "DEFAULT_PLAN_LIMIT",
+    "ApprovalResult",
+    "RevisionEntry",
+    "DiffEntry",
+    "DiffResult",
+    "approve",
+    "list_revisions",
+    "diff",
+    "drifted_plan_ids",
+    "drift_counts",
+    "revision_state",
+    "snapshot",
 ]

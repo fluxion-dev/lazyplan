@@ -8,6 +8,7 @@ import sys
 from lazyplan import (
     services,
 )
+from lazyplan.services import revisions as revisions_service
 
 from ....core.entities import Milestone, Plan, Status, Task
 from ....store import Store, to_payload
@@ -22,9 +23,11 @@ from ...shared.design import (
 from ...shared.render import (
     render_full,
 )
+from .. import rows_revisions
 from ..emit import (
     _criterion_row,
     _emit,
+    _emit_read,
     _emit_record,
     _porcelain_row,
 )
@@ -167,6 +170,80 @@ def _cmd_plan_apply(store: Store, args: argparse.Namespace, actor: str) -> int:
         f"{counts['tasks']} tasks, {counts['criteria']} criteria"
     )
     return 0
+
+
+def _cmd_plan_approve(store: Store, args: argparse.Namespace, actor: str) -> int:
+    """Approve the live plan scope."""
+    plan = store.get_plan(args.id)
+    if plan is None:
+        print(msg_not_found("plan", args.id), file=sys.stderr)
+        return 1
+    try:
+        result = revisions_service.approve(
+            store,
+            args.id,
+            actor=actor,
+            reason=args.reason,
+            enforced=args.enforce,
+        )
+    except ValueError as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 2
+    return _emit_record(
+        args,
+        rows_revisions.approval_row(result, plan),
+        rows_revisions.approval_payload(result, plan),
+    )
+
+
+def _cmd_plan_revisions(store: Store, args: argparse.Namespace, actor: str) -> int:
+    """List one plan's approval history."""
+    del actor
+    plan = store.get_plan(args.id)
+    if plan is None:
+        print(msg_not_found("plan", args.id), file=sys.stderr)
+        return 1
+    entries = revisions_service.list_revisions(store, args.id)
+    return _emit_read(
+        args,
+        rows_revisions.revisions_payload(entries, plan),
+        rows_revisions.revisions_rows(entries, plan),
+        rows_revisions.revisions_text(entries, plan),
+    )
+
+
+def _cmd_plan_diff(store: Store, args: argparse.Namespace, actor: str) -> int:
+    """Report drift between an approved revision and live scope or another revision."""
+    del actor
+    plan = store.get_plan(args.id)
+    if plan is None:
+        print(msg_not_found("plan", args.id), file=sys.stderr)
+        return 1
+    try:
+        target = None if args.to_revision in (None, "live") else int(args.to_revision)
+    except ValueError:
+        print(msg_error(ValueError("--to must be a revision number or live")), file=sys.stderr)
+        return 2
+    try:
+        result = revisions_service.diff(
+            store,
+            args.id,
+            from_revision=args.from_revision,
+            to_revision=target,
+        )
+    except ValueError as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 2
+    exit_code = 1 if args.check and result.drifted else 0
+    if args.json:
+        _emit(args, rows_revisions.diff_payload(result, plan))
+        return exit_code
+    if porcelain.enabled(args):
+        for line in rows_revisions.diff_rows(result, plan):
+            print(line)
+        return exit_code
+    print(rows_revisions.diff_text(result, plan))
+    return exit_code
 
 
 def _cmd_update(store: Store, args: argparse.Namespace, actor: str) -> int:

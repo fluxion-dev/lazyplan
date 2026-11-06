@@ -312,6 +312,38 @@ def add_noun_groups(
     )
     _a = _actions.add_parser("recipe", help="print a structural plan recipe", parents=[common])
     _a.add_argument("name", choices=["feature", "bugfix", "refactor"], help="recipe name")
+    _a = _actions.add_parser("approve", help="approve the current plan scope", parents=[common])
+    _a.add_argument("--id", type=int, required=True, metavar="ID", help="plan id")
+    _a.add_argument("--reason", default="", metavar="TEXT", help="why this revision is approved")
+    _a.add_argument(
+        "--enforce",
+        action="store_true",
+        help="hard-gate plan done while this revision has drift",
+    )
+    _a = _actions.add_parser("revisions", help="list plan approvals", parents=[common])
+    _a.add_argument("--id", type=int, required=True, metavar="ID", help="plan id")
+    _a = _actions.add_parser("diff", help="show scope drift since approval", parents=[common])
+    _a.add_argument("--id", type=int, required=True, metavar="ID", help="plan id")
+    _a.add_argument(
+        "--from",
+        dest="from_revision",
+        type=int,
+        default=None,
+        metavar="REV",
+        help="baseline revision (default: latest)",
+    )
+    _a.add_argument(
+        "--to",
+        dest="to_revision",
+        default=None,
+        metavar="REV|live",
+        help="target revision or live (default: live)",
+    )
+    _a.add_argument(
+        "--check",
+        action="store_true",
+        help="exit 1 when drift exists and 0 when in sync",
+    )
 
     _group, _actions = _noun_group(
         "milestone", "add, edit, show, list, move, or delete a milestone"

@@ -262,6 +262,14 @@ def add_noun_groups(
         parser.add_argument("--title", required=required, metavar="TEXT", help="the title")
         parser.add_argument("--name", default=None, metavar="NAME", help="same as --title")
 
+    def _reason_flag(parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "--reason",
+            default="",
+            metavar="TEXT",
+            help="why this scope changed (recorded after an approval)",
+        )
+
     def _plan_list_flags(parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "--status",
@@ -291,6 +299,7 @@ def add_noun_groups(
     _a.add_argument("--desc", default=None, metavar="TEXT", help="same as --what")
     _a.add_argument("--why", default=None, metavar="TEXT", help="the new why")
     _a.add_argument("--goal", default=None, metavar="TEXT", help="same as --why")
+    _reason_flag(_a)
     _a = _actions.add_parser("show", help="show one plan", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="plan id")
     _a.add_argument("--files", action="store_true", help="list changed files per commit")
@@ -301,6 +310,7 @@ def add_noun_groups(
     _a.add_argument("--to", choices=[v.value for v in Status], required=True, help="new status")
     _a = _actions.add_parser("delete", help="delete a plan", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="plan id")
+    _reason_flag(_a)
     _a = _actions.add_parser(
         "apply", help="create a plan tree from a JSON document", parents=[common]
     )
@@ -352,10 +362,12 @@ def add_noun_groups(
     _a.add_argument("--plan", type=int, required=True, metavar="ID", help="owning plan id")
     _title_flags(_a, required=True)
     _a.add_argument("--desc", default="", metavar="TEXT", help="details")
+    _reason_flag(_a)
     _a = _actions.add_parser("edit", help="change a milestone", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="milestone id")
     _title_flags(_a)
     _a.add_argument("--desc", default=None, metavar="TEXT", help="the new details")
+    _reason_flag(_a)
     _a = _actions.add_parser("show", help="show one milestone", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="milestone id")
     _a.add_argument("--files", action="store_true", help="list changed files per commit")
@@ -367,6 +379,7 @@ def add_noun_groups(
     _a.add_argument("--to", choices=[v.value for v in Status], required=True, help="new status")
     _a = _actions.add_parser("delete", help="delete a milestone", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="milestone id")
+    _reason_flag(_a)
 
     _group, _actions = _noun_group("task", "add, edit, show, list, move, or delete a task")
     _a = _actions.add_parser("add", help="add a task", parents=[common])
@@ -375,10 +388,12 @@ def add_noun_groups(
     )
     _title_flags(_a, required=True)
     _a.add_argument("--desc", default="", metavar="TEXT", help="details")
+    _reason_flag(_a)
     _a = _actions.add_parser("edit", help="change a task", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="task id")
     _title_flags(_a)
     _a.add_argument("--desc", default=None, metavar="TEXT", help="the new details")
+    _reason_flag(_a)
     _a = _actions.add_parser("show", help="show one task", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="task id")
     _a.add_argument("--files", action="store_true", help="list changed files per commit")
@@ -390,6 +405,7 @@ def add_noun_groups(
     _a.add_argument("--to", choices=[v.value for v in Status], required=True, help="new status")
     _a = _actions.add_parser("delete", help="delete a task", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="task id")
+    _reason_flag(_a)
     _a = _actions.add_parser("block", help="block a task and record the reason", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="task id")
     _a.add_argument("--reason", required=True, metavar="TEXT", help="why the task is blocked")
@@ -457,6 +473,7 @@ def add_noun_groups(
     _a.add_argument("--kind", choices=list(KINDS), required=True, help="parent kind")
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="parent id")
     _a.add_argument("--text", required=True, metavar="TEXT", help="criterion text")
+    _reason_flag(_a)
     _a = _actions.add_parser("list", help="list a row's criteria", parents=[common])
     _a.add_argument("--kind", choices=list(KINDS), required=True, help="parent kind")
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="parent id")
@@ -466,6 +483,7 @@ def add_noun_groups(
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="criterion id")
     _a = _actions.add_parser("delete", help="delete one criterion", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="criterion id")
+    _reason_flag(_a)
     _a = _actions.add_parser(
         "relate", help="record that a task proves a criterion", parents=[common]
     )

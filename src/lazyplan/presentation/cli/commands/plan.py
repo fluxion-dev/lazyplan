@@ -74,6 +74,7 @@ def _cmd_add_milestone(store: Store, args: argparse.Namespace, actor: str) -> in
         args.title,
         args.desc,
         actor=actor,
+        reason=getattr(args, "reason", ""),
     )
     return _emit_record(args, _porcelain_row(store, s), {"milestone": to_payload(vars(s))})
 
@@ -85,6 +86,7 @@ def _cmd_add_task(store: Store, args: argparse.Namespace, actor: str) -> int:
         args.title,
         description=args.desc,
         actor=actor,
+        reason=getattr(args, "reason", ""),
     )
     return _emit_record(args, _porcelain_row(store, t), {"task": to_payload(vars(t))})
 
@@ -248,7 +250,9 @@ def _cmd_plan_diff(store: Store, args: argparse.Namespace, actor: str) -> int:
 
 def _cmd_update(store: Store, args: argparse.Namespace, actor: str) -> int:
     title_patch = _resolve_title(args) or None
-    desc_patch: str | None = args.desc if args.desc is not None else args.what
+    what = getattr(args, "what", None)
+    desc_patch: str | None = args.desc if args.desc is not None else what
+    reason = getattr(args, "reason", "")
     updated: Plan | Milestone | Task | None = None
     if args.kind == "plan":
         goal = args.goal if args.goal is not None else args.why
@@ -258,6 +262,7 @@ def _cmd_update(store: Store, args: argparse.Namespace, actor: str) -> int:
             description=desc_patch,
             goal=goal,
             actor=actor,
+            reason=reason,
         )
     elif args.kind == "milestone":
         updated = store.update_milestone(
@@ -265,6 +270,7 @@ def _cmd_update(store: Store, args: argparse.Namespace, actor: str) -> int:
             title=title_patch,
             description=desc_patch,
             actor=actor,
+            reason=reason,
         )
     else:
         updated = store.update_task(
@@ -272,6 +278,7 @@ def _cmd_update(store: Store, args: argparse.Namespace, actor: str) -> int:
             title=title_patch,
             description=desc_patch,
             actor=actor,
+            reason=reason,
         )
     if updated is None:
         print(msg_not_found(args.kind, args.id), file=sys.stderr)
@@ -336,7 +343,7 @@ def _cmd_delete(store: Store, args: argparse.Namespace, actor: str) -> int:
     elif isinstance(before, Task):
         title = before.title
         parent = f"milestone:{before.milestone_id}"
-    ok = store.delete(args.kind, args.id, actor=actor)
+    ok = store.delete(args.kind, args.id, actor=actor, reason=getattr(args, "reason", ""))
     if not ok:
         print(msg_not_found(args.kind, args.id), file=sys.stderr)
         return 1
@@ -349,7 +356,13 @@ def _cmd_reconcile(store: Store, args: argparse.Namespace, actor: str) -> int:
 
 
 def _cmd_add_criteria(store: Store, args: argparse.Namespace, actor: str) -> int:
-    c = store.add_criteria(args.kind, args.id, args.text, actor=actor)
+    c = store.add_criteria(
+        args.kind,
+        args.id,
+        args.text,
+        actor=actor,
+        reason=getattr(args, "reason", ""),
+    )
     return _emit_record(args, _criterion_row(c), {"criteria": vars(c)})
 
 
@@ -383,7 +396,7 @@ def _cmd_uncheck(store: Store, args: argparse.Namespace, actor: str) -> int:
 
 
 def _cmd_delete_criteria(store: Store, args: argparse.Namespace, actor: str) -> int:
-    if not store.delete_criteria(args.id, actor=actor):
+    if not store.delete_criteria(args.id, actor=actor, reason=getattr(args, "reason", "")):
         print(msg_not_found("criteria", args.id), file=sys.stderr)
         return 1
     line = porcelain.row("criterion", args.id, "deleted", "-", "-", "-")

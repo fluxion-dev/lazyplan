@@ -93,7 +93,7 @@ class ToolsMixin(McpBase):
                 _tool(
                     "create_milestone",
                     "Create a milestone.",
-                    {"plan": _id(), "title": _str(), "desc": _str()},
+                    {"plan": _id(), "title": _str(), "desc": _str(), "reason": _str()},
                     ["plan", "title"],
                     False,
                 ),
@@ -103,7 +103,12 @@ class ToolsMixin(McpBase):
                 _tool(
                     "create_task",
                     "Create a task.",
-                    {"milestone": _id(), "title": _str(), "desc": _str()},
+                    {
+                        "milestone": _id(),
+                        "title": _str(),
+                        "desc": _str(),
+                        "reason": _str(),
+                    },
                     ["milestone", "title"],
                     False,
                 ),
@@ -119,6 +124,7 @@ class ToolsMixin(McpBase):
                         "title": _str(),
                         "desc": _str(),
                         "why": _str(),
+                        "reason": _str(),
                     },
                     ["kind", "id"],
                     False,
@@ -143,7 +149,7 @@ class ToolsMixin(McpBase):
                 _tool(
                     "criterion_add",
                     "Add an acceptance criterion.",
-                    {"kind": _kind(), "id": _id(), "text": _str()},
+                    {"kind": _kind(), "id": _id(), "text": _str(), "reason": _str()},
                     ["kind", "id", "text"],
                     False,
                 ),
@@ -417,6 +423,7 @@ class ToolsMixin(McpBase):
             str(args["title"]),
             description=str(args.get("desc") or ""),
             actor=self.actor,
+            reason=str(args.get("reason") or ""),
         )
         return to_payload(vars(task))
 
@@ -426,6 +433,7 @@ class ToolsMixin(McpBase):
         obj_id = int(args["id"])
         title = str(args.get("title") or "") or None
         desc = str(args.get("desc") or "") or None
+        reason = str(args.get("reason") or "")
         updated: Plan | Milestone | Task | None
         if kind == "plan":
             updated = store.update_plan(
@@ -434,13 +442,16 @@ class ToolsMixin(McpBase):
                 description=desc,
                 goal=str(args.get("why") or "") or None,
                 actor=self.actor,
+                reason=reason,
             )
         elif kind == "milestone":
             updated = store.update_milestone(
-                obj_id, title=title, description=desc, actor=self.actor
+                obj_id, title=title, description=desc, actor=self.actor, reason=reason
             )
         elif kind == "task":
-            updated = store.update_task(obj_id, title=title, description=desc, actor=self.actor)
+            updated = store.update_task(
+                obj_id, title=title, description=desc, actor=self.actor, reason=reason
+            )
         else:
             raise ValueError("kind must be plan, milestone, or task")
         if updated is None:
@@ -527,6 +538,7 @@ class ToolsMixin(McpBase):
             str(args["title"]),
             str(args.get("desc") or ""),
             actor=self.actor,
+            reason=str(args.get("reason") or ""),
         )
         return to_payload(vars(milestone))
 
@@ -570,6 +582,10 @@ class ToolsMixin(McpBase):
     def _tool_criterion_add(self, args: dict) -> object:
         return vars(
             self._need_store().add_criteria(
-                str(args["kind"]), int(args["id"]), str(args["text"]), actor=self.actor
+                str(args["kind"]),
+                int(args["id"]),
+                str(args["text"]),
+                actor=self.actor,
+                reason=str(args.get("reason") or ""),
             )
         )

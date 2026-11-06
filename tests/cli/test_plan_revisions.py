@@ -151,6 +151,78 @@ class PlanRevisionsCliTest(unittest.TestCase):
         self.assertEqual(code, 0, err)
         self.assertIn("no approved revision", out)
 
+    def test_scope_reasons_are_recorded(self) -> None:
+        self._approve()
+        code, _out, err = self._run(
+            "task", "edit", "--id", str(self.task.id), "--title", "Renamed", "--reason", "clarify"
+        )
+        self.assertEqual(code, 0, err)
+        code, out, err = self._run("--json", "plan", "diff", "--id", str(self.plan.id))
+        self.assertEqual(code, 0, err)
+        payload = json.loads(out)
+        self.assertEqual(payload["changes"][0]["reason"], "clarify")
+
+        code, _out, err = self._run(
+            "plan", "edit", "--id", str(self.plan.id), "--what", "new what", "--reason", "narrow"
+        )
+        self.assertEqual(code, 0, err)
+        code, out, err = self._run("--json", "plan", "diff", "--id", str(self.plan.id))
+        self.assertEqual(code, 0, err)
+        payload = json.loads(out)
+        self.assertIn(
+            ("what", "narrow"),
+            [(item["field"], item["reason"]) for item in payload["changes"]],
+        )
+
+    def test_missing_reason_is_reported(self) -> None:
+        self._approve()
+        code, _out, err = self._run("task", "edit", "--id", str(self.task.id), "--title", "Renamed")
+        self.assertEqual(code, 0, err)
+        code, out, err = self._run("--json", "plan", "diff", "--id", str(self.plan.id))
+        self.assertEqual(code, 0, err)
+        self.assertEqual(json.loads(out)["changes"][0]["reason"], "")
+        code, out, err = self._run("plan", "diff", "--id", str(self.plan.id))
+        self.assertEqual(code, 0, err)
+        self.assertIn("no reason", out)
+
+    def test_criterion_and_milestone_reasons_are_recorded(self) -> None:
+        self._approve()
+        code, out, err = self._run(
+            "--json",
+            "criterion",
+            "add",
+            "--kind",
+            "plan",
+            "--id",
+            str(self.plan.id),
+            "--text",
+            "New proof",
+            "--reason",
+            "add proof",
+        )
+        self.assertEqual(code, 0, err)
+        criterion_id = json.loads(out)["criteria"]["id"]
+        code, _out, err = self._run(
+            "milestone",
+            "add",
+            "--plan",
+            str(self.plan.id),
+            "--title",
+            "M2",
+            "--reason",
+            "new slice",
+        )
+        self.assertEqual(code, 0, err)
+        code, _out, err = self._run(
+            "criterion", "delete", "--id", str(criterion_id), "--reason", "wrong proof"
+        )
+        self.assertEqual(code, 0, err)
+        changes = self.store.list_plan_changes(self.plan.id)
+        reasons = [(item.kind, item.action, item.reason) for item in changes]
+        self.assertIn(("criterion", "add", "add proof"), reasons)
+        self.assertIn(("milestone", "add", "new slice"), reasons)
+        self.assertIn(("criterion", "delete", "wrong proof"), reasons)
+
     def test_plan_reads_include_approval_state(self) -> None:
         self._approve("--reason", "initial")
         self.store.update_task(self.task.id, title="Renamed", reason="rename")

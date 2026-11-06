@@ -211,6 +211,37 @@ class TestMcpReadTools(unittest.TestCase):
         self.assertFalse(self.store.get_task(1).blocked)
         self.assertTrue(any(event["actor"] == "qa" for event in self.store.feed(20)))
 
+    def test_scope_reasons_are_recorded(self):
+        self.store.add_revision(self.plan_id, "a" * 64, "{}")
+        edited = self._tool(
+            "edit_row", {"kind": "task", "id": 1, "title": "Renamed", "reason": "clarify"}
+        )
+        self.assertFalse(edited.get("isError"))
+        added = self._tool(
+            "criterion_add",
+            {"kind": "plan", "id": self.plan_id, "text": "New proof", "reason": "add proof"},
+        )
+        self.assertFalse(added.get("isError"))
+        created = self._tool(
+            "create_task",
+            {
+                "milestone": 1,
+                "title": "New task",
+                "desc": "Approach: x.\n\nCommit: y.\n\nVerify: z.",
+                "reason": "new work",
+            },
+        )
+        self.assertFalse(created.get("isError"))
+        changes = self.store.list_plan_changes(self.plan_id)
+        self.assertEqual(
+            [(item.kind, item.action, item.reason) for item in changes],
+            [
+                ("task", "edit", "clarify"),
+                ("criterion", "add", "add proof"),
+                ("task", "add", "new work"),
+            ],
+        )
+
     def test_read_only_hides_and_rejects_writes(self):
         server = mcp.McpServer(self.store, actor="qa", read_only=True)
         names = {

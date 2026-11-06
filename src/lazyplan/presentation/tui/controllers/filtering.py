@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from typing import TYPE_CHECKING
 
 from .... import services
@@ -109,56 +109,67 @@ class TreeFilter:
             out[("plan", plan.id)] = (pc, pp, ps, plan_repos)
         return out
 
-    def filter_source_tree(
+    @staticmethod
+    def _next_task_ids(
+        base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]],
+        claims: Mapping[int, object],
+    ) -> set[int]:
+        """First open, unclaimed task per plan."""
+        next_ids: set[int] = set()
+        for _plan, milestones in base:
+            for _milestone, tasks in milestones:
+                candidate = next(
+                    (
+                        task
+                        for task in tasks
+                        if task.status == Status.TODO and not task.blocked and task.id not in claims
+                    ),
+                    None,
+                )
+                if candidate is not None:
+                    next_ids.add(candidate.id)
+                    break
+        return next_ids
+
+    def _focus_tree(
+        self,
+        base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]],
+    ) -> list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]:
+        """Keep the active slice plus one parent context chain."""
+        claims = self.app.store.claims_map()
+        attention = insights.stats.attention_ids(self.app.store)
+        next_ids = self._next_task_ids(base, claims)
+        return self.filter_tasks(
+            base,
+            lambda task: (
+                task.status == Status.DOING
+                or task.id in claims
+                or task.blocked
+                or task.id in attention
+                or task.id in next_ids
+            ),
+        )
+
+    def _state_tree(
+        self,
+        base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]],
+        source_filter: str,
+    ) -> list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]:
+        """Claims, blocked, or attention filters."""
+        claims = self.app.store.claims_map()
+        if source_filter == "claims":
+            return self.filter_tasks(base, lambda task: task.id in claims)
+        if source_filter == "blocked":
+            return self.filter_tasks(base, lambda task: task.blocked)
+        attention = insights.stats.attention_ids(self.app.store)
+        return self.filter_tasks(base, lambda task: task.id in attention)
+
+    def _provenance_tree(
         self,
         base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]],
         stats: dict[tuple[str, int], tuple[int, int, int, int]],
     ) -> list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]:
-        """Keep rows whose cached provenance matches the active source filter."""
-        source_filter = self.app.source_filter
-        if source_filter == "all":
-            return base
-        if source_filter == "focus":
-            claims = self.app.store.claims_map()
-            attention = insights.stats.attention_ids(self.app.store)
-            next_ids: set[int] = set()
-            for _plan, milestones in base:
-                for _milestone, tasks in milestones:
-                    candidate = next(
-                        (
-                            task
-                            for task in tasks
-                            if task.status == Status.TODO
-                            and not task.blocked
-                            and task.id not in claims
-                        ),
-                        None,
-                    )
-                    if candidate is not None:
-                        next_ids.add(candidate.id)
-                        break
-            return self.filter_tasks(
-                base,
-                lambda task: (
-                    task.status == Status.DOING
-                    or task.id in claims
-                    or task.blocked
-                    or task.id in attention
-                    or task.id in next_ids
-                ),
-            )
-        if source_filter in ("claims", "blocked", "attention"):
-            claims = self.app.store.claims_map()
-            attention = (
-                insights.stats.attention_ids(self.app.store)
-                if source_filter == "attention"
-                else set()
-            )
-            if source_filter == "claims":
-                return self.filter_tasks(base, lambda task: task.id in claims)
-            if source_filter == "blocked":
-                return self.filter_tasks(base, lambda task: task.blocked)
-            return self.filter_tasks(base, lambda task: task.id in attention)
+        """Linked, PR, stale, or unlinked filters."""
         out: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]] = []
         for plan, milestones in base:
             kept_ms: list[tuple[Milestone, list[Task]]] = []
@@ -175,6 +186,21 @@ class TreeFilter:
             if kept_ms or self.source_match(stats.get(("plan", plan.id), (0, 0, 0, 0))):
                 out.append((plan, kept_ms))
         return out
+
+    def filter_source_tree(
+        self,
+        base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]],
+        stats: dict[tuple[str, int], tuple[int, int, int, int]],
+    ) -> list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]:
+        """Keep rows whose cached provenance matches the active source filter."""
+        source_filter = self.app.source_filter
+        if source_filter == "all":
+            return base
+        if source_filter == "focus":
+            return self._focus_tree(base)
+        if source_filter in ("claims", "blocked", "attention"):
+            return self._state_tree(base, source_filter)
+        return self._provenance_tree(base, stats)
 
     def filtered_tree(
         self,

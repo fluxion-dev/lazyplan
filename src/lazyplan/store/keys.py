@@ -43,13 +43,3 @@ class KeysMixin(StoreBase):
                 (kind, key.strip()),
             ).fetchone()
         return int(row["row_id"]) if row is not None else None
-
-    def entity_key(self, kind: str, row_id: int) -> str | None:
-        """Stable key for a row, or None."""
-        check_kind(kind)
-        with self._connect() as conn:
-            row = conn.execute(
-                "SELECT key FROM entity_keys WHERE kind=? AND row_id=?",
-                (kind, row_id),
-            ).fetchone()
-        return str(row["key"]) if row is not None else None

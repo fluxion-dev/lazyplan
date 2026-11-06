@@ -20,8 +20,6 @@ class PlanningPort(Protocol):
 
     def get_entity_key(self, kind: str, key: str) -> int | None: ...
 
-    def entity_key(self, kind: str, row_id: int) -> str | None: ...
-
     def add_plan(
         self,
         name: str,

@@ -111,7 +111,6 @@ class TestStore(unittest.TestCase):
         second = self.store.add_plan("Second")
         self.store.set_entity_key("plan", first.id, "first")
         self.assertEqual(self.store.get_entity_key("plan", "first"), first.id)
-        self.assertEqual(self.store.entity_key("plan", first.id), "first")
         self.store.set_entity_key("plan", first.id, "first")
         with self.assertRaises(ValueError):
             self.store.set_entity_key("plan", second.id, "first")

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 
-from ...services import insights
+from ...services import context, insights
 from .base import McpBase
 
 
@@ -23,6 +23,11 @@ class ResourcesMixin(McpBase):
             store = self._need_store()
             if uri == "lazyplan://brief":
                 payload: object = insights.brief.build(store)
+            elif uri == "lazyplan://context" or uri.startswith("lazyplan://context/"):
+                budget = context.DEFAULT_CONTEXT_CHARS
+                if uri != "lazyplan://context":
+                    budget = int(uri.rsplit("/", 1)[-1])
+                payload = context.build(store, max_chars=budget)
             elif uri.startswith("lazyplan://plan/"):
                 plan_id = int(uri.rsplit("/", 1)[-1])
                 payload = store.get_full("plan", plan_id)
@@ -51,6 +56,11 @@ class ResourcesMixin(McpBase):
             {
                 "uri": "lazyplan://brief",
                 "name": "Session brief",
+                "mimeType": "application/json",
+            },
+            {
+                "uri": "lazyplan://context",
+                "name": "Session context packet",
                 "mimeType": "application/json",
             },
             {

@@ -33,6 +33,7 @@ from ..parser import package_version
 from ..rows_proof import (
     _audit_rows,
     _brief_rows,
+    _context_rows,
     _trace_rows,
     _trace_text,
 )
@@ -332,6 +333,41 @@ def _cmd_brief(store: Store | None, args: argparse.Namespace, actor: str) -> int
             print(line)
         return 0
     for line in brief.lines(payload):
+        print(line)
+    return 0
+
+
+def _cmd_context(store: Store | None, args: argparse.Namespace, actor: str) -> int:
+    """Read-only session context packet; never creates a database."""
+    from lazyplan.services import context
+
+    del actor
+    try:
+        db = store or _optional_store(args)
+    except (RuntimeError, OSError, sqlite3.Error) as exc:
+        print(f"error: cannot read the database: {exc}", file=sys.stderr)
+        return 2
+    if db is None:
+        payload: dict = {"active": 0, "plans": [], "truncated": False}
+    else:
+        if args.plan is not None and db.get_plan(args.plan) is None:
+            print(msg_not_found("plan", args.plan), file=sys.stderr)
+            return 1
+        try:
+            payload = context.build(db, args.plan, max_chars=args.max_chars)
+        except ValueError as exc:
+            print(msg_error(exc), file=sys.stderr)
+            return 2
+        except (RuntimeError, OSError, sqlite3.Error) as exc:
+            print(f"error: context unavailable: {exc}", file=sys.stderr)
+            return 2
+    if args.json:
+        return _emit(args, payload)
+    if porcelain.enabled(args):
+        for line in _context_rows(payload):
+            print(line)
+        return 0
+    for line in context.lines(payload):
         print(line)
     return 0
 

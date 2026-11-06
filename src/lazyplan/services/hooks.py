@@ -16,7 +16,7 @@ from ..core.entities import HookResult
 from ..core.ports.insights import InsightsPort
 from ..infrastructure.repo import resolve_db_path
 from ..store import Store
-from . import audit, brief
+from . import audit, brief, context
 
 EVENTS = ("session-start", "prompt-submit", "post-tool", "stop", "pre-compact")
 HOSTS = ("opencode", "claude", "gemini", "codex", "cursor")
@@ -96,10 +96,11 @@ def _doing_task(store: InsightsPort) -> int | None:
 
 
 def _session_text(store: InsightsPort, cwd: Path, commits: list[audit.Commit] | None) -> str:
-    payload = brief.build(store, commits=commits, cwd=cwd)
+    del cwd, commits
+    payload = context.build(store, max_chars=2000)
     if not payload.get("plans"):
         return ""
-    return "\n".join(brief.lines(payload)).strip()
+    return "\n".join(context.lines(payload)).strip()
 
 
 def _stop_text(store: InsightsPort, cwd: Path, commits: list[audit.Commit] | None) -> str:

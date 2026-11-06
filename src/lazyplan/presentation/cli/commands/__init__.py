@@ -84,6 +84,9 @@ from .system import (
     _cmd_brief as _cmd_brief,
 )
 from .system import (
+    _cmd_context as _cmd_context,
+)
+from .system import (
     _cmd_doctor,
     _cmd_lint,
     _cmd_stats,
@@ -147,6 +150,7 @@ _COMMANDS: dict[str, Callable[[Store, Namespace, str], int]] = {
     "seed": _cmd_seed,
     "list": _cmd_list,
     "help": _cmd_help,
+    "context": _cmd_context,
     "trace": _cmd_trace,
     "lint": _cmd_lint,
     "stats": _cmd_stats,

@@ -48,6 +48,7 @@ class HookCase(unittest.TestCase):
         plan = store.add_plan("P", "what", goal="why")
         milestone = store.add_milestone(plan.id, "M", "desc")
         task = store.add_task(milestone.id, "Doing task", "desc")
+        store.add_task(milestone.id, "Next task", "desc")
         services.set_status(store, "task", task.id, Status.DOING, actor="t")
         services.set_status(store, "milestone", milestone.id, Status.DOING, actor="t")
         services.set_status(store, "plan", plan.id, Status.DOING, actor="t")
@@ -66,6 +67,13 @@ class HookCase(unittest.TestCase):
     def test_session_start_names_the_doing_task(self):
         _plan, _task = self._seed()
         result = hooks.build_result("session-start", {}, self.repo, commits=[])
+        self.assertIn("Doing task", result.text)
+        self.assertIn("next", result.text)
+        self.assertTrue(result.context)
+
+    def test_pre_compact_injects_the_context_packet(self):
+        _plan, _task = self._seed()
+        result = hooks.build_result("pre-compact", {}, self.repo, commits=[])
         self.assertIn("Doing task", result.text)
         self.assertTrue(result.context)
 

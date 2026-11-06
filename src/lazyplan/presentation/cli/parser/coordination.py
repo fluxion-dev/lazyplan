@@ -215,6 +215,25 @@ def add_brief(
     br.add_argument("--plan", type=int, default=None, metavar="ID", help="brief one plan")
 
 
+def add_context(
+    sub: argparse._SubParsersAction[argparse.ArgumentParser], common: argparse.ArgumentParser
+) -> None:
+
+    ct = sub.add_parser(
+        "context",
+        help="show the budgeted session context packet",
+        parents=[common],
+    )
+    ct.add_argument("--plan", type=int, default=None, metavar="ID", help="context one plan")
+    ct.add_argument(
+        "--max-chars",
+        type=int,
+        default=4000,
+        metavar="N",
+        help="packet budget in characters (default: 4000, minimum: 120)",
+    )
+
+
 def add_stats(
     sub: argparse._SubParsersAction[argparse.ArgumentParser], common: argparse.ArgumentParser
 ) -> None:

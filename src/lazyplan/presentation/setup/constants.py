@@ -12,6 +12,7 @@ SKIP_COMMANDS = (
     "doctor",
     "audit",
     "brief",
+    "context",
     "hook",
     "help",
     "plan-recipe",

@@ -55,10 +55,28 @@ def _open_criteria(store: InsightsPort, plan: Plan, doing: list[Task]) -> list[d
 def _notes(store: InsightsPort, plan: Plan, doing: list[Task]) -> list[dict]:
     out: list[dict] = []
     for note in store.list_notes("plan", plan.id)[:5]:
-        out.append({"kind": "plan", "id": plan.id, "actor": note.actor, "text": note.text})
+        out.append(
+            {
+                "id": note.id,
+                "parent_kind": "plan",
+                "parent_id": plan.id,
+                "actor": note.actor,
+                "text": note.text,
+                "ts": note.ts,
+            }
+        )
     for task in doing:
         for note in store.list_notes("task", task.id)[:3]:
-            out.append({"kind": "task", "id": task.id, "actor": note.actor, "text": note.text})
+            out.append(
+                {
+                    "id": note.id,
+                    "parent_kind": "task",
+                    "parent_id": task.id,
+                    "actor": note.actor,
+                    "text": note.text,
+                    "ts": note.ts,
+                }
+            )
     return out[-5:]
 
 
@@ -67,13 +85,29 @@ def _comments(store: InsightsPort, plan: Plan, doing: list[Task]) -> list[dict]:
     for comment in store.list_comments("plan", plan.id):
         if not comment.resolved:
             out.append(
-                {"kind": "plan", "id": plan.id, "actor": comment.actor, "text": comment.text}
+                {
+                    "id": comment.id,
+                    "parent_kind": "plan",
+                    "parent_id": plan.id,
+                    "actor": comment.actor,
+                    "text": comment.text,
+                    "ts": comment.ts,
+                    "resolved": False,
+                }
             )
     for task in doing:
         for comment in store.list_comments("task", task.id):
             if not comment.resolved:
                 out.append(
-                    {"kind": "task", "id": task.id, "actor": comment.actor, "text": comment.text}
+                    {
+                        "id": comment.id,
+                        "parent_kind": "task",
+                        "parent_id": task.id,
+                        "actor": comment.actor,
+                        "text": comment.text,
+                        "ts": comment.ts,
+                        "resolved": False,
+                    }
                 )
     return out[-5:]
 

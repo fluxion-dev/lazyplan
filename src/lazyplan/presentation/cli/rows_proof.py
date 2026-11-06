@@ -147,6 +147,59 @@ def _brief_rows(store: Store, payload: dict) -> list[str]:
     return rows
 
 
+def _context_rows(payload: dict) -> list[str]:
+    """Context packet as plan, task, next, criterion, note, comment, and commit rows."""
+    rows = [porcelain.row("metric", "active", "-", payload.get("active", 0), "-", "context")]
+    for entry in payload.get("plans", []):
+        rows.append(
+            porcelain.plan_row(
+                entry["id"],
+                entry["status"],
+                entry["title"],
+                f"{len(entry.get('next', []))} next",
+            )
+        )
+        for task in entry.get("doing", []):
+            rows.append(
+                porcelain.row(
+                    "task",
+                    task["id"],
+                    "doing",
+                    task["title"],
+                    f"plan:{entry['id']}",
+                    "claimed" if task.get("claim") else "-",
+                )
+            )
+        for task in entry.get("next", []):
+            rows.append(
+                porcelain.row("next", task["id"], "todo", task["title"], f"plan:{entry['id']}", "-")
+            )
+        rows.extend(_criterion_dict_rows(entry.get("criteria", [])))
+        rows.extend(_note_dict_rows(entry.get("notes", [])))
+        rows.extend(_comment_dict_rows(entry.get("comments", [])))
+        for commit in entry.get("commits", []):
+            rows.append(
+                porcelain.row(
+                    "commit",
+                    commit.get("sha"),
+                    "linked",
+                    commit.get("subject"),
+                    f"plan:{entry['id']}",
+                    commit.get("timestamp"),
+                )
+            )
+        for claim in entry.get("claims", []):
+            rows.append(
+                porcelain.claim_row(
+                    claim.get("task_id"),
+                    claim.get("actor"),
+                    entry["title"],
+                    claim.get("expires_at"),
+                )
+            )
+    return rows
+
+
 def _git_status_rows(entries: list[dict], parent: str) -> list[str]:
     """One row per checkout with branch, dirty state, and tracking facts."""
     rows: list[str] = []

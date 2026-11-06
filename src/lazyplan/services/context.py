@@ -240,6 +240,10 @@ def lines(payload: dict) -> list[str]:
                 claim = task.get("claim")
                 suffix = f" @{claim['actor']}" if claim else ""
                 out.append(f"  doing    T{task['id']} {task['title']}{suffix}")
+            out.append(
+                f"  update   lpui task move --id {plan['doing'][0]['id']} --to doing|done "
+                "after each commit"
+            )
         else:
             out.append("  doing    none")
         for task in plan.get("next") or []:

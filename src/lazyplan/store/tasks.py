@@ -35,6 +35,7 @@ class TasksMixin(StoreBase):
         title: str,
         description: str = "",
         actor: str = "human",
+        reason: str = "",
     ) -> Task:
         """Insert a task row and log the event (no template fill; see services)."""
         t = Task(
@@ -44,16 +45,19 @@ class TasksMixin(StoreBase):
             description=description,
         )
         with self._connect() as conn:
-            if (
-                conn.execute("SELECT 1 FROM milestones WHERE id=?", (milestone_id,)).fetchone()
-                is None
-            ):
+            row = conn.execute(
+                "SELECT plan_id FROM milestones WHERE id=?", (milestone_id,)
+            ).fetchone()
+            if row is None:
                 raise KeyError(f"milestone #{milestone_id} not found")
             cur = conn.execute(
                 "INSERT INTO tasks (milestone_id, title, status, description) VALUES (?,?,?,?)",
                 (t.milestone_id, t.title, t.status.value, t.description),
             )
             t.id = cur.lastrowid or 0
+            self._record_scope_change(
+                int(row["plan_id"]), "task", t.id, "add", reason=reason, actor=actor
+            )
         self.log(actor, "task", "add", f"T#{t.id} {t.title}")
         return t
 
@@ -87,22 +91,38 @@ class TasksMixin(StoreBase):
         title: str | None = None,
         description: str | None = None,
         actor: str = "human",
+        reason: str = "",
     ) -> Task | None:
         """Patch task fields and log."""
         t = self.get_task(tid)
         if t is None:
             return None
+        plan_id = self._plan_for_kind("task", tid)
+        before = (t.title, t.description)
         if title is not None:
             if not title.strip():
                 raise ValueError("task title must not be empty")
             t.title = title.strip()
         if description is not None:
             t.description = description
+        after = (t.title, t.description)
         with self._connect() as conn:
             conn.execute(
                 "UPDATE tasks SET title=?, description=? WHERE id=?",
                 (t.title, t.description, tid),
             )
+            if plan_id is not None:
+                for field, old, new in zip(("title", "desc"), before, after, strict=True):
+                    if old != new:
+                        self._record_scope_change(
+                            plan_id,
+                            "task",
+                            tid,
+                            "edit",
+                            field=field,
+                            reason=reason,
+                            actor=actor,
+                        )
         self.log(actor, "task", "edit", f"T#{tid} {t.title}")
         return t
 

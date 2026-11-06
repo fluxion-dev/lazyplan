@@ -16,6 +16,7 @@ from .keys import KeysMixin
 from .links import LinksMixin
 from .plans import PlansMixin
 from .repos import ReposMixin
+from .revisions import RevisionsMixin
 from .stubs import CLAIM_DEFAULT_TTL
 from .tasks import TasksMixin
 from .views import ViewsMixin
@@ -28,6 +29,7 @@ class Store(
     KeysMixin,
     LinksMixin,
     ReposMixin,
+    RevisionsMixin,
     TasksMixin,
     ViewsMixin,
     StoreBase,

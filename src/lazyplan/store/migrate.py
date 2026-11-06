@@ -8,7 +8,7 @@ from __future__ import annotations
 import sqlite3
 import uuid
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS plans (
@@ -27,6 +27,33 @@ CREATE TABLE IF NOT EXISTS entity_keys (
     UNIQUE (kind, row_id)
 );
 CREATE INDEX IF NOT EXISTS idx_entity_keys_row ON entity_keys(kind, row_id);
+CREATE TABLE IF NOT EXISTS plan_revisions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+    revision INTEGER NOT NULL,
+    approved_at REAL NOT NULL,
+    actor TEXT NOT NULL DEFAULT 'human',
+    reason TEXT NOT NULL DEFAULT '',
+    digest TEXT NOT NULL,
+    snapshot TEXT NOT NULL,
+    change_mark INTEGER NOT NULL DEFAULT 0,
+    enforced INTEGER NOT NULL DEFAULT 0,
+    UNIQUE (plan_id, revision)
+);
+CREATE INDEX IF NOT EXISTS idx_plan_revisions_plan ON plan_revisions(plan_id, revision DESC);
+CREATE TABLE IF NOT EXISTS plan_changes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+    ts REAL NOT NULL,
+    actor TEXT NOT NULL DEFAULT 'human',
+    kind TEXT NOT NULL CHECK (kind IN ('plan', 'milestone', 'task', 'criterion')),
+    obj_id INTEGER NOT NULL,
+    action TEXT NOT NULL,
+    field TEXT NOT NULL DEFAULT '',
+    reason TEXT NOT NULL DEFAULT '',
+    detail TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_plan_changes_plan ON plan_changes(plan_id, id);
 CREATE TABLE IF NOT EXISTS milestones (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,

@@ -14,6 +14,8 @@ from ..core.entities import (
     Milestone,
     Note,
     Plan,
+    PlanChange,
+    PlanRevision,
     Task,
 )
 from ..core.policies.coordination import CLAIM_DEFAULT_TTL
@@ -53,6 +55,80 @@ class StoreStubs(StoreStubsLinks):
     def plan_uids_map(self) -> dict[int, str]:
         raise NotImplementedError
 
+    def entity_keys_map(self) -> dict[tuple[str, int], str]:
+        raise NotImplementedError
+
+    def add_revision(
+        self,
+        plan_id: int,
+        digest: str,
+        snapshot: str,
+        reason: str = "",
+        change_mark: int = 0,
+        enforced: bool = False,
+        actor: str = "human",
+    ) -> PlanRevision:
+        raise NotImplementedError
+
+    def latest_revision(self, plan_id: int) -> PlanRevision | None:
+        raise NotImplementedError
+
+    def list_revisions(self, plan_id: int) -> list[PlanRevision]:
+        raise NotImplementedError
+
+    def add_plan_change(
+        self,
+        plan_id: int,
+        kind: str,
+        obj_id: int,
+        action: str,
+        field: str = "",
+        reason: str = "",
+        detail: str = "",
+        actor: str = "human",
+    ) -> PlanChange:
+        raise NotImplementedError
+
+    def list_plan_changes(self, plan_id: int, after_id: int = 0) -> list[PlanChange]:
+        raise NotImplementedError
+
+    def max_change_id(self, plan_id: int) -> int:
+        raise NotImplementedError
+
+    def drift_counts(self) -> dict[int, int]:
+        raise NotImplementedError
+
+    def plan_drift(self, plan_id: int) -> int:
+        raise NotImplementedError
+
+    def _plan_for_kind(self, kind: str, obj_id: int) -> int | None:
+        raise NotImplementedError
+
+    def _record_scope_change(
+        self,
+        plan_id: int,
+        kind: str,
+        obj_id: int,
+        action: str,
+        field: str = "",
+        reason: str = "",
+        detail: str = "",
+        actor: str = "human",
+    ) -> PlanChange | None:
+        raise NotImplementedError
+
+    def _record_scope_change_for(
+        self,
+        kind: str,
+        obj_id: int,
+        action: str,
+        field: str = "",
+        reason: str = "",
+        detail: str = "",
+        actor: str = "human",
+    ) -> PlanChange | None:
+        raise NotImplementedError
+
     def update_plan(
         self,
         pid: int,
@@ -60,11 +136,17 @@ class StoreStubs(StoreStubsLinks):
         description: str | None = None,
         goal: str | None = None,
         actor: str = "human",
+        reason: str = "",
     ) -> Plan | None:
         raise NotImplementedError
 
     def add_milestone(
-        self, plan_id: int, title: str, description: str = "", actor: str = "human"
+        self,
+        plan_id: int,
+        title: str,
+        description: str = "",
+        actor: str = "human",
+        reason: str = "",
     ) -> Milestone:
         raise NotImplementedError
 
@@ -86,11 +168,17 @@ class StoreStubs(StoreStubsLinks):
         title: str | None = None,
         description: str | None = None,
         actor: str = "human",
+        reason: str = "",
     ) -> Milestone | None:
         raise NotImplementedError
 
     def add_task(
-        self, milestone_id: int, title: str, description: str = "", actor: str = "human"
+        self,
+        milestone_id: int,
+        title: str,
+        description: str = "",
+        actor: str = "human",
+        reason: str = "",
     ) -> Task:
         raise NotImplementedError
 
@@ -252,6 +340,7 @@ class StoreStubs(StoreStubsLinks):
         title: str | None = None,
         description: str | None = None,
         actor: str = "human",
+        reason: str = "",
     ) -> Task | None:
         raise NotImplementedError
 
@@ -268,7 +357,7 @@ class StoreStubs(StoreStubsLinks):
     ) -> list[Task]:
         raise NotImplementedError
 
-    def delete(self, kind: str, obj_id: int, actor: str = "human") -> bool:
+    def delete(self, kind: str, obj_id: int, actor: str = "human", reason: str = "") -> bool:
         raise NotImplementedError
 
     @staticmethod
@@ -304,7 +393,12 @@ class StoreStubs(StoreStubsLinks):
         raise NotImplementedError
 
     def add_criteria(
-        self, parent_kind: str, parent_id: int, text: str, actor: str = "human"
+        self,
+        parent_kind: str,
+        parent_id: int,
+        text: str,
+        actor: str = "human",
+        reason: str = "",
     ) -> Criterion:
         raise NotImplementedError
 
@@ -342,7 +436,7 @@ class StoreStubs(StoreStubsLinks):
     def set_criteria(self, cid: int, done: bool, actor: str = "human") -> Criterion | None:
         raise NotImplementedError
 
-    def delete_criteria(self, cid: int, actor: str = "human") -> bool:
+    def delete_criteria(self, cid: int, actor: str = "human", reason: str = "") -> bool:
         raise NotImplementedError
 
     def criteria_progress(self, parent_kind: str, parent_id: int) -> tuple[int, int]:

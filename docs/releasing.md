@@ -835,3 +835,44 @@ or the next plan row so the next release has the context.
   RPMs, and two DEBs; the curated release body is live; the live site shows
   0.32.0 with the Windows restart/log/diagnose copy; the sitemap `lastmod` is
   2026-11-03 and canonical/FAQ/JSON-LD are intact.
+
+### v0.33.0 (2026-11-06)
+
+- Minor bump from 0.32.0. Plan creation is one atomic JSON write:
+  `lpui plan apply --file plan.json [--dry-run]` creates the plan, milestones,
+  tasks, and criteria in one transaction; stable keys make retries no-ops and
+  a failed apply rolls back. Feature, bugfix, and refactor recipes print
+  skeletons. `lpui context --max-chars N` adds a budgeted cold-start packet on
+  the CLI, MCP (`lazyplan://context`), and session-start/pre-compact hooks. The
+  TUI source filter cycle ends with **Focus**. The database schema moves to
+  version 2 with the `entity_keys` table and migrates on open.
+- The horizon landed in PR
+  [#89](https://github.com/fluxion-dev/lazyplan/pull/89), merged as `267e299`.
+  Local `./tools/check.sh` printed ALL GATES GREEN on the feature branch; the
+  wheel inspection confirmed all three recipe JSON files; the isolated install
+  printed `0.33.0` and ran the recipe.
+- The **bump** workflow (`part=minor`) ran
+  [42306106410](https://github.com/fluxion-dev/lazyplan/actions/runs/42306106410).
+  Its `bump` job opened release PR
+  [#90](https://github.com/fluxion-dev/lazyplan/pull/90). Auto-merge was paused
+  once to add the dated changelog entry (`d1f4f16`), then re-enabled. Gates
+  [42307018876](https://github.com/fluxion-dev/lazyplan/actions/runs/42307018876)
+  passed Ubuntu and macOS, and the PR merged as `3b7d3ea`.
+- `tag-release` created annotated tag `v0.33.0`. `release.yml`
+  [42308031415](https://github.com/fluxion-dev/lazyplan/actions/runs/42308031415)
+  finished both `release` and `publish-pypi`; the `release` job built the
+  sdist, wheel, two RPMs, two DEBs, and ran the DEB install smoke. Pages
+  [42308055519](https://github.com/fluxion-dev/lazyplan/actions/runs/42308055519)
+  deployed.
+- PyPI JSON served 0.33.0. A clean
+  `pip install --no-cache-dir lazyplan-tui==0.33.0` in a fresh venv printed
+  `0.33.0`, printed the feature recipe, applied it to a dry-run and a real
+  database, and returned the context packet.
+- Curated release notes replaced the auto-generated body. Verified seven
+  release assets including `install.sh`, the wheel, sdist, two RPMs, and two
+  DEBs; the live site shows 0.33.0; `/roadmap.html` shows the Now horizon
+  shipped; the sitemap `lastmod` is 2026-11-06 and canonical/FAQ/JSON-LD are
+  intact.
+- Deviation: npm is unavailable locally, so the dist site check used the same
+  Vite build through `bun run build`; the Pages workflow ran the npm build and
+  passed.

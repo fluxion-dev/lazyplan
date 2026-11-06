@@ -8,7 +8,7 @@ from __future__ import annotations
 import sqlite3
 import uuid
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS plans (
@@ -19,6 +19,14 @@ CREATE TABLE IF NOT EXISTS plans (
     goal TEXT NOT NULL DEFAULT '',
     uid TEXT NOT NULL DEFAULT ''
 );
+CREATE TABLE IF NOT EXISTS entity_keys (
+    kind TEXT NOT NULL CHECK (kind IN ('plan', 'milestone', 'task')),
+    key TEXT NOT NULL,
+    row_id INTEGER NOT NULL,
+    PRIMARY KEY (kind, key),
+    UNIQUE (kind, row_id)
+);
+CREATE INDEX IF NOT EXISTS idx_entity_keys_row ON entity_keys(kind, row_id);
 CREATE TABLE IF NOT EXISTS milestones (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,

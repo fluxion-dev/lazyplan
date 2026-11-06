@@ -52,6 +52,8 @@ from .plan import (
     _cmd_delete,
     _cmd_delete_criteria,
     _cmd_list,
+    _cmd_plan_apply,
+    _cmd_plan_recipe,
     _cmd_reconcile,
     _cmd_show,
     _cmd_status,
@@ -82,6 +84,9 @@ from .system import (
     _cmd_brief as _cmd_brief,
 )
 from .system import (
+    _cmd_context as _cmd_context,
+)
+from .system import (
     _cmd_doctor,
     _cmd_lint,
     _cmd_stats,
@@ -101,6 +106,8 @@ _GROUP_CMDS: dict[tuple[str, str], str] = {
     ("plan", "list"): "list",
     ("plan", "move"): "status",
     ("plan", "delete"): "delete",
+    ("plan", "apply"): "plan-apply",
+    ("plan", "recipe"): "plan-recipe",
     ("milestone", "add"): "add-milestone",
     ("milestone", "edit"): "update",
     ("milestone", "show"): "show",
@@ -143,6 +150,7 @@ _COMMANDS: dict[str, Callable[[Store, Namespace, str], int]] = {
     "seed": _cmd_seed,
     "list": _cmd_list,
     "help": _cmd_help,
+    "context": _cmd_context,
     "trace": _cmd_trace,
     "lint": _cmd_lint,
     "stats": _cmd_stats,
@@ -157,6 +165,8 @@ _COMMANDS: dict[str, Callable[[Store, Namespace, str], int]] = {
     "add-plan": _cmd_add_plan,
     "add-milestone": _cmd_add_milestone,
     "add-task": _cmd_add_task,
+    "plan-apply": _cmd_plan_apply,
+    "plan-recipe": _cmd_plan_recipe,
     "update": _cmd_update,
     "show": _cmd_show,
     "status": _cmd_status,

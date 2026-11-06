@@ -77,6 +77,7 @@ class TestMcpReadTools(unittest.TestCase):
         store.relate_criterion(criterion.id, task.id, actor="fixture")
         store.claim_task(task.id, "alice", 300)
         self.store = store
+        self.plan_id = plan.id
         self.server = mcp.McpServer(store, actor="qa")
 
     def tearDown(self):
@@ -129,7 +130,11 @@ class TestMcpReadTools(unittest.TestCase):
         self.assertTrue(result["isError"])
 
     def test_resources_read_brief_and_plan(self):
-        for uri, key in (("lazyplan://brief", "plans"), ("lazyplan://plan/1", "plan")):
+        for uri, key in (
+            ("lazyplan://brief", "plans"),
+            ("lazyplan://context", "plans"),
+            ("lazyplan://plan/1", "plan"),
+        ):
             response = self.server.handle(
                 {
                     "jsonrpc": "2.0",
@@ -142,6 +147,20 @@ class TestMcpReadTools(unittest.TestCase):
             content = response["result"]["contents"][0]
             self.assertEqual(content["uri"], uri)
             self.assertIn(key, json.loads(content["text"]))
+
+    def test_context_resource_is_budgeted(self):
+        response = self.server.handle(
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "resources/read",
+                "params": {"uri": "lazyplan://context/200"},
+            }
+        )
+        assert response is not None
+        payload = json.loads(response["result"]["contents"][0]["text"])
+        self.assertEqual(payload["plans"][0]["id"], self.plan_id)
+        self.assertTrue(payload["truncated"])
 
     def test_missing_resource_is_an_error(self):
         response = self.server.handle(

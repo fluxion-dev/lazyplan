@@ -82,6 +82,8 @@ Want demo data first? Run `lpui seed`.
 ## What you get
 
 - A plan tree with progress at a glance, plus milestones and tasks underneath.
+- One atomic JSON write for a whole plan tree, with feature, bugfix, and refactor recipes.
+- A budgeted context packet that resumes a session from the active slice and its proof.
 - A balanced tree and preview that reflow at every terminal width.
 - A Markdown export picker that starts in Downloads and never overwrites by accident.
 - A sticky preview of the reason, the next tasks, and what done means.
@@ -131,6 +133,9 @@ clear exit codes:
 
 ```bash
 lpui --actor helper --porcelain next
+lpui --actor helper --porcelain context --max-chars 4000
+lpui plan recipe feature > plan.json
+lpui --actor helper --porcelain plan apply --file plan.json
 lpui --actor helper --porcelain note add --kind task --id 3 --text "Decision"
 lpui --actor helper --porcelain list --tree
 lpui --actor helper list --json
@@ -139,6 +144,11 @@ lpui --actor helper list --json
 Use `--porcelain` in an active loop: writes answer with one tab-separated row
 and reads stay glyph-free. Use `--json` when you need full fidelity.
 
+- **Create once.** `plan apply` writes a whole tree in one transaction from a
+  JSON document; stable keys make a retry a no-op, and recipes supply the
+  feature, bugfix, or refactor skeleton.
+- **Resume.** `lpui context --max-chars 4000` returns the active plan, next
+  work, open criteria, decisions, commits, comments, and claims in one read.
 - **Coordinate.** `next` claims the first eligible task with a renewable
   lease, so two agents do not take the same work. Renew or release the claim,
   note handoffs, and block parked work with a reason.

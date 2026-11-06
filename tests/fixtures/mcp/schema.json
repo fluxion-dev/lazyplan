@@ -7,6 +7,11 @@
     },
     {
       "mimeType": "application/json",
+      "name": "Session context packet",
+      "uri": "lazyplan://context"
+    },
+    {
+      "mimeType": "application/json",
       "name": "Plan document",
       "uri": "lazyplan://plan/1"
     }

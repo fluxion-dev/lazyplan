@@ -1,0 +1,42 @@
+{
+  "plan": {
+    "key": "bugfix",
+    "title": "Bug fix",
+    "why": "Remove a reproducible defect with a regression test and a reviewable fix.",
+    "what": "## Scope\n\n- State the failing behavior and the expected behavior.\n- List the affected surfaces and the non-goals.\n\n## Commit strategy\n\n- Reproduce, fix, and guard with a regression test in separate green commits."
+  },
+  "milestones": [
+    {
+      "key": "fix",
+      "title": "Fix the defect",
+      "desc": "As a user, I want the defect removed, so that the expected behavior holds. Add inputs and prerequisites here.",
+      "tasks": [
+        {
+          "key": "reproduce",
+          "title": "Reproduce the defect",
+          "desc": "Approach: add a failing test or a deterministic reproduction.\n\nCommit: reproduction slice.\n\nVerify: the reproduction fails for the expected reason."
+        },
+        {
+          "key": "fix",
+          "title": "Fix the defect",
+          "desc": "Approach: describe the root cause and the smallest safe change.\n\nCommit: fix slice.\n\nVerify: the reproduction passes and the relevant suite stays green."
+        },
+        {
+          "key": "regression",
+          "title": "Guard the fix with a regression test",
+          "desc": "Approach: keep the reproduction as a permanent regression test.\n\nCommit: regression slice.\n\nVerify: the regression test fails without the fix."
+        },
+        {
+          "key": "refactor",
+          "title": "Refactor the touched code",
+          "desc": "Approach: leave the fix area cleaner without changing behavior.\n\nCommit: refactor slice.\n\nVerify: the full test suite passes."
+        },
+        {
+          "key": "docs",
+          "title": "Update the documentation",
+          "desc": "Approach: record the corrected behavior where users will look.\n\nCommit: docs slice.\n\nVerify: links and examples resolve."
+        }
+      ]
+    }
+  ]
+}

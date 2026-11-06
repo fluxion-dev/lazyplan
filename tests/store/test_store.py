@@ -52,6 +52,7 @@ class TestStore(unittest.TestCase):
             "idx_vcs_links_sha",
             "idx_issue_links_row",
             "idx_entity_repos_branch",
+            "idx_entity_keys_row",
         ):
             self.assertIn(name, names)
         with closing(sqlite3.connect(self.db)) as conn:
@@ -104,6 +105,24 @@ class TestStore(unittest.TestCase):
             self.store.add_milestone(999, "nope")
         with self.assertRaises(KeyError):
             self.store.add_task(999, "nope")
+
+    def test_entity_keys_are_unique_and_idempotent(self):
+        first = self.store.add_plan("First")
+        second = self.store.add_plan("Second")
+        self.store.set_entity_key("plan", first.id, "first")
+        self.assertEqual(self.store.get_entity_key("plan", "first"), first.id)
+        self.store.set_entity_key("plan", first.id, "first")
+        with self.assertRaises(ValueError):
+            self.store.set_entity_key("plan", second.id, "first")
+        with self.assertRaises(ValueError):
+            self.store.set_entity_key("plan", first.id, "another")
+
+    def test_transaction_rolls_back_nested_writes(self):
+        with self.assertRaises(RuntimeError):
+            with self.store.transaction():
+                self.store.add_plan("Rolled back")
+                raise RuntimeError("stop")
+        self.assertEqual(self.store.counts()["plans"], 0)
 
     def test_cli_json_ingress(self):
         rc = lpui_main(["--db", self.db, "--json", "add-plan", "--title", "P1"])

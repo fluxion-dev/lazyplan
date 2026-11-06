@@ -1,4 +1,4 @@
-.TH LPUI 1 "2026-11-03" "lazyplan-tui 0.32.0" "User Commands"
+.TH LPUI 1 "2026-11-06" "lazyplan-tui 0.32.0" "User Commands"
 .SH NAME
 lpui \- local plan journal for you and your coding agent
 .SH SYNOPSIS
@@ -251,6 +251,39 @@ who made this change (you see it in feed)
 .TP
 .B \-\-plan ID
 brief one plan
+.RE
+.TP
+.B lpui context
+show the budgeted session context packet
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B \-\-plan ID
+context one plan
+.RE
+.RS
+.TP
+.B \-\-max\-chars N
+packet budget in characters (default: 4000, minimum: 120)
 .RE
 .TP
 .B lpui next
@@ -835,7 +868,7 @@ who made this change (you see it in feed)
 .RS
 .TP
 .B  ACTION
-what to do with a plan Choices: add, edit, show, list, move, delete\. Required\.
+what to do with a plan Choices: add, edit, show, list, move, delete, apply, recipe\. Required\.
 .RE
 .TP
 .B lpui milestone

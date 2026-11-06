@@ -29,6 +29,7 @@ if _TEXTUAL_OK:
             "claims",
             "blocked",
             "attention",
+            "focus",
         )
         """Filters behavior."""
 

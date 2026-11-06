@@ -118,6 +118,35 @@ class TreeFilter:
         source_filter = self.app.source_filter
         if source_filter == "all":
             return base
+        if source_filter == "focus":
+            claims = self.app.store.claims_map()
+            attention = insights.stats.attention_ids(self.app.store)
+            next_ids: set[int] = set()
+            for _plan, milestones in base:
+                for _milestone, tasks in milestones:
+                    candidate = next(
+                        (
+                            task
+                            for task in tasks
+                            if task.status == Status.TODO
+                            and not task.blocked
+                            and task.id not in claims
+                        ),
+                        None,
+                    )
+                    if candidate is not None:
+                        next_ids.add(candidate.id)
+                        break
+            return self.filter_tasks(
+                base,
+                lambda task: (
+                    task.status == Status.DOING
+                    or task.id in claims
+                    or task.blocked
+                    or task.id in attention
+                    or task.id in next_ids
+                ),
+            )
         if source_filter in ("claims", "blocked", "attention"):
             claims = self.app.store.claims_map()
             attention = (

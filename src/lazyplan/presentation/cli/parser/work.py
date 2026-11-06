@@ -310,6 +310,8 @@ def add_noun_groups(
         action="store_true",
         help="validate and print the intended tree without writing",
     )
+    _a = _actions.add_parser("recipe", help="print a structural plan recipe", parents=[common])
+    _a.add_argument("name", choices=["feature", "bugfix", "refactor"], help="recipe name")
 
     _group, _actions = _noun_group(
         "milestone", "add, edit, show, list, move, or delete a milestone"

@@ -86,6 +86,19 @@ def _cmd_add_task(store: Store, args: argparse.Namespace, actor: str) -> int:
     return _emit_record(args, _porcelain_row(store, t), {"task": to_payload(vars(t))})
 
 
+def _cmd_plan_recipe(store: Store | None, args: argparse.Namespace, actor: str) -> int:
+    """Print one packaged recipe document."""
+    from lazyplan.services import plan_recipes
+
+    del store, actor
+    try:
+        document = plan_recipes.load(args.name)
+    except ValueError as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 2
+    return _emit(args, document)
+
+
 def _cmd_plan_apply(store: Store, args: argparse.Namespace, actor: str) -> int:
     """Create a validated plan document atomically."""
     from lazyplan.services import plan_apply, plan_document

@@ -49,7 +49,7 @@ build-backend = "setuptools.build_meta"
 where = ["src"]
 
 [tool.setuptools.package-data]
-lazyplan = ["data/*.md", "presentation/tui/css/*.tcss"]
+lazyplan = ["data/*.md", "data/recipes/*.json", "presentation/tui/css/*.tcss"]
 
 [tool.setuptools.data-files]
 "share/man/man1" = ["docs/lpui.1", "docs/lazyplan.1"]

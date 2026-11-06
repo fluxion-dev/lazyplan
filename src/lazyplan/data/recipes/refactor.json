@@ -1,0 +1,37 @@
+{
+  "plan": {
+    "key": "refactor",
+    "title": "Refactor",
+    "why": "Improve an area without changing behavior, backed by a baseline and a green verification path.",
+    "what": "## Scope\n\n- State the area to simplify and the behavior that must not change.\n- List the non-goals and the constraints.\n\n## Commit strategy\n\n- Baseline, refactor, verify, and document in separate green commits."
+  },
+  "milestones": [
+    {
+      "key": "refactor",
+      "title": "Refactor the area",
+      "desc": "As a maintainer, I want the area simplified, so that future changes are cheaper. Add inputs and prerequisites here.",
+      "tasks": [
+        {
+          "key": "baseline",
+          "title": "Establish the baseline",
+          "desc": "Approach: name the tests and checks that prove current behavior.\n\nCommit: baseline slice.\n\nVerify: the baseline suite passes before the change."
+        },
+        {
+          "key": "simplify",
+          "title": "Refactor the area",
+          "desc": "Approach: describe the structural change and the behavior that stays fixed.\n\nCommit: refactor slice.\n\nVerify: the baseline suite passes after the change."
+        },
+        {
+          "key": "verify",
+          "title": "Test that behavior is unchanged",
+          "desc": "Approach: run the baseline plus the nearest integration checks.\n\nCommit: verification slice.\n\nVerify: every baseline check passes."
+        },
+        {
+          "key": "docs",
+          "title": "Update the documentation",
+          "desc": "Approach: record the new structure where maintainers will look.\n\nCommit: docs slice.\n\nVerify: links and examples resolve."
+        }
+      ]
+    }
+  ]
+}

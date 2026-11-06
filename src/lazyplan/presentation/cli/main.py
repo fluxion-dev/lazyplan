@@ -36,6 +36,7 @@ from .commands import (
     _cmd_doctor,
     _cmd_hook,
     _cmd_mcp,
+    _cmd_plan_recipe,
     _cmd_setup,
     _cmd_upgrade,
 )
@@ -74,6 +75,7 @@ def _dispatch_storeless(args: argparse.Namespace, actor: str) -> int | None:
         "mcp": _cmd_mcp,
         "hook": _cmd_hook,
         "completion": _cmd_completion,
+        "plan-recipe": _cmd_plan_recipe,
     }
     handler = handlers.get(args.cmd)
     return handler(None, args, actor) if handler is not None else None

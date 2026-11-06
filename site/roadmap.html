@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>lazyplan roadmap — capture, trust, parallel agents</title>
+<meta name="description" content="The lazyplan product roadmap: capture intent cheaply, resume sessions with context, prove completion, and coordinate parallel agents.">
+<meta name="keywords" content="lazyplan roadmap, terminal plan tracker, coding agent planning, agentic development, local-first developer tools">
+<meta name="author" content="Brad Lindsay">
+<meta name="theme-color" content="#09090B">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://fluxion-dev.github.io/lazyplan/roadmap.html">
+<meta property="og:title" content="lazyplan roadmap — capture, trust, parallel agents">
+<meta property="og:description" content="The lazyplan product roadmap: capture intent cheaply, resume sessions with context, prove completion, and coordinate parallel agents.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://fluxion-dev.github.io/lazyplan/roadmap.html">
+<meta property="og:site_name" content="lazyplan">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://fluxion-dev.github.io/lazyplan/screens/og-lpui-and-agent.png">
+<meta property="og:image:alt" content="lazyplan plan tree beside an agent working on the same plan.">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="lazyplan roadmap — capture, trust, parallel agents">
+<meta name="twitter:description" content="The lazyplan product roadmap: capture intent cheaply, resume sessions with context, prove completion, and coordinate parallel agents.">
+<meta name="twitter:image" content="https://fluxion-dev.github.io/lazyplan/screens/og-lpui-and-agent.png">
+<meta name="twitter:image:alt" content="lazyplan plan tree beside an agent working on the same plan.">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "lazyplan roadmap",
+  "url": "https://fluxion-dev.github.io/lazyplan/roadmap.html",
+  "description": "The lazyplan product roadmap: capture intent cheaply, resume sessions with context, prove completion, and coordinate parallel agents.",
+  "isPartOf": {
+    "@type": "WebSite",
+    "name": "lazyplan",
+    "url": "https://fluxion-dev.github.io/lazyplan/"
+  }
+}
+</script>
+<link rel="icon" href="./logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body id="top" class="bg-plan-canvas text-zinc-200 antialiased">
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<nav aria-label="Primary" class="sticky top-0 z-40 border-b border-plan-border/80 bg-plan-canvas/85 backdrop-blur-md">
+  <div class="relative mx-auto flex max-w-6xl items-center gap-x-4 px-6 py-2">
+    <a href="./index.html" class="mr-auto inline-flex items-center gap-2 text-xl font-extrabold tracking-wide text-white no-underline"><img src="./logo.svg" alt="" width="32" height="32" class="h-8 w-8" aria-hidden="true">lazyplan<span class="text-viking-gold">.</span></a>
+
+    <div class="hidden items-center gap-x-6 md:flex">
+      <a class="text-sm text-zinc-300 no-underline transition hover:text-white" href="./index.html#new">New</a>
+      <a class="text-sm text-zinc-300 no-underline transition hover:text-white" href="./index.html#features">Features</a>
+      <a class="text-sm text-zinc-300 no-underline transition hover:text-white" href="./index.html#screens">Screenshots</a>
+      <a class="text-sm text-zinc-300 no-underline transition hover:text-white" href="./index.html#faq">FAQ</a>
+      <a class="text-sm font-semibold text-white no-underline" href="./roadmap.html" aria-current="page">Roadmap</a>
+      <a class="text-sm text-zinc-300 no-underline transition hover:text-white" href="https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md">Docs</a>
+      <a class="rounded-lg bg-viking-blue px-3.5 py-1.5 text-sm font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="./index.html#install">Install</a>
+    </div>
+
+    <details class="nav-mobile md:hidden">
+      <summary class="nav-summary" aria-controls="nav-mobile" aria-expanded="false">Menu</summary>
+      <div id="nav-mobile" class="absolute left-0 right-0 top-full z-50 max-h-[calc(100vh-4rem)] overflow-y-auto border-b border-plan-border bg-plan-canvas px-6 pb-6 pt-3 shadow-2xl shadow-black/60">
+        <a class="nav-mobile-link" href="./index.html#new">New</a>
+        <a class="nav-mobile-link" href="./index.html#features">Features</a>
+        <a class="nav-mobile-link" href="./index.html#screens">Screenshots</a>
+        <a class="nav-mobile-link" href="./index.html#faq">FAQ</a>
+        <a class="nav-mobile-link" href="./roadmap.html" aria-current="page">Roadmap</a>
+        <a class="nav-mobile-link" href="https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md">Docs</a>
+        <div class="mt-4 border-t border-plan-border pt-4">
+          <a class="inline-flex min-h-9 items-center rounded-lg bg-viking-blue px-3.5 py-2 text-sm font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="./index.html#install">Install</a>
+        </div>
+      </div>
+    </details>
+  </div>
+</nav>
+
+<header class="relative overflow-hidden px-6 pt-24 pb-16 text-center md:pt-32 md:pb-20">
+  <div aria-hidden="true" class="pointer-events-none absolute inset-0">
+    <div class="absolute -top-32 left-1/2 h-80 w-[42rem] -translate-x-1/2 rounded-full bg-viking-blue/25 blur-3xl"></div>
+    <div class="absolute top-20 -left-24 h-64 w-64 rounded-full bg-cyber-cyan/15 blur-3xl"></div>
+    <div class="absolute top-24 -right-24 h-64 w-64 rounded-full bg-viking-gold/20 blur-3xl"></div>
+  </div>
+  <div class="relative mx-auto max-w-4xl">
+    <p class="mb-4 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">Product roadmap</p>
+    <h1 class="m-0 text-5xl font-extrabold tracking-tight text-white md:text-6xl">From plan to proof.</h1>
+    <p class="mx-auto mt-6 max-w-2xl text-lg text-zinc-300">lazyplan is the working memory and audit trail for agentic development. This is where we are taking it next.</p>
+    <p class="mt-4 text-sm text-zinc-500">Last updated 2026-11-06 · <a class="text-cyber-cyan underline hover:text-white" href="https://github.com/fluxion-dev/lazyplan/blob/main/docs/product/roadmap.md">Read the canonical roadmap</a></p>
+  </div>
+</header>
+
+<main id="main">
+
+<section id="how-to-read" class="mx-auto max-w-6xl scroll-mt-20 px-6 pb-4">
+  <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+    <div class="rounded-xl border border-viking-blue/40 bg-plan-surface/70 p-5">
+      <p class="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-cyber-cyan">Now</p>
+      <h2 class="mb-2 text-lg font-semibold text-white">Committed</h2>
+      <p class="m-0 text-[0.92rem] text-zinc-400">Scoped, cut into tasks, and next in line.</p>
+    </div>
+    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-5">
+      <p class="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-viking-gold">Next</p>
+      <h2 class="mb-2 text-lg font-semibold text-white">The trust layer</h2>
+      <p class="m-0 text-[0.92rem] text-zinc-400">Approved plans, evidence, and review. Scoped when Now ships.</p>
+    </div>
+    <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-5">
+      <p class="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-scanner-green">Later</p>
+      <h2 class="mb-2 text-lg font-semibold text-white">Parallel agents</h2>
+      <p class="m-0 text-[0.92rem] text-zinc-400">Sessions, safe claims, and handoff. Exploring the shape.</p>
+    </div>
+  </div>
+</section>
+
+<section id="now" class="mx-auto max-w-6xl scroll-mt-20 px-6 py-16 md:py-20">
+  <div class="mb-8 max-w-3xl">
+    <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">Now</p>
+    <h2 class="mb-3 text-2xl font-bold text-white md:text-3xl">Capture and resume.</h2>
+    <p class="m-0 text-lg text-zinc-400">Make a plan cheap to create and a session cheap to resume. This is the first implementation bet.</p>
+  </div>
+  <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+    <article class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30" data-roadmap-id="R1" data-roadmap-horizon="Now">
+      <div class="mb-3 flex items-center gap-2"><span class="rounded-md bg-viking-blue/20 px-2 py-0.5 text-xs font-bold text-cyber-cyan">R1</span><span class="text-xs font-semibold uppercase tracking-[0.14em] text-cyber-cyan">Now</span></div>
+      <h3 class="mb-2 text-lg font-semibold text-white">Plan compiler</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Create the plan, milestones, tasks, and criteria in one atomic write. Dry-run, stable keys, idempotent retry. The interview stays; the 30 calls go.</p>
+    </article>
+    <article class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30" data-roadmap-id="R2" data-roadmap-horizon="Now">
+      <div class="mb-3 flex items-center gap-2"><span class="rounded-md bg-viking-blue/20 px-2 py-0.5 text-xs font-bold text-cyber-cyan">R2</span><span class="text-xs font-semibold uppercase tracking-[0.14em] text-cyber-cyan">Now</span></div>
+      <h3 class="mb-2 text-lg font-semibold text-white">Plan recipes</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Feature, bugfix, and refactor skeletons on top of apply. QA, docs, and refactor tasks are present by default; the words stay empty for the interview.</p>
+    </article>
+    <article class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30" data-roadmap-id="R3" data-roadmap-horizon="Now">
+      <div class="mb-3 flex items-center gap-2"><span class="rounded-md bg-viking-blue/20 px-2 py-0.5 text-xs font-bold text-cyber-cyan">R3</span><span class="text-xs font-semibold uppercase tracking-[0.14em] text-cyber-cyan">Now</span></div>
+      <h3 class="mb-2 text-lg font-semibold text-white">Context pack</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">One budgeted read for a cold session: active plan, doing task, next work, decisions, commits, claims, and unresolved comments. A CLI read, an MCP resource, and hook context.</p>
+    </article>
+    <article class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30" data-roadmap-id="R4" data-roadmap-horizon="Now">
+      <div class="mb-3 flex items-center gap-2"><span class="rounded-md bg-viking-blue/20 px-2 py-0.5 text-xs font-bold text-cyber-cyan">R4</span><span class="text-xs font-semibold uppercase tracking-[0.14em] text-cyber-cyan">Now</span></div>
+      <h3 class="mb-2 text-lg font-semibold text-white">Focus lens</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">See what is in flight: doing tasks, agent claims, blocked work, attention rows, and next candidates. A cockpit for the human supervising the fleet.</p>
+    </article>
+  </div>
+</section>
+
+<section id="next" class="mx-auto max-w-6xl scroll-mt-20 px-6 py-16 md:py-20">
+  <div class="mb-8 max-w-3xl">
+    <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-viking-gold">Next</p>
+    <h2 class="mb-3 text-2xl font-bold text-white md:text-3xl">The trust layer.</h2>
+    <p class="m-0 text-lg text-zinc-400">Make delegation safe as agents take on more. These bets are candidates until Now ships.</p>
+  </div>
+  <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+    <article class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30" data-roadmap-id="R5" data-roadmap-horizon="Next">
+      <div class="mb-3 flex items-center gap-2"><span class="rounded-md bg-viking-gold/20 px-2 py-0.5 text-xs font-bold text-viking-gold">R5</span><span class="text-xs font-semibold uppercase tracking-[0.14em] text-viking-gold">Next</span></div>
+      <h3 class="mb-2 text-lg font-semibold text-white">Approval snapshots and plan diff</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Approve a revision, then see exactly what changed and why. Drift becomes visible without blocking the agent.</p>
+    </article>
+    <article class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30" data-roadmap-id="R6" data-roadmap-horizon="Next">
+      <div class="mb-3 flex items-center gap-2"><span class="rounded-md bg-viking-gold/20 px-2 py-0.5 text-xs font-bold text-viking-gold">R6</span><span class="text-xs font-semibold uppercase tracking-[0.14em] text-viking-gold">Next</span></div>
+      <h3 class="mb-2 text-lg font-semibold text-white">Evidence ledger</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Attach the command, exit code, commit, and artifact to a criterion. lazyplan records the proof; the agent or CI runs the check.</p>
+    </article>
+    <article class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30" data-roadmap-id="R7" data-roadmap-horizon="Next">
+      <div class="mb-3 flex items-center gap-2"><span class="rounded-md bg-viking-gold/20 px-2 py-0.5 text-xs font-bold text-viking-gold">R7</span><span class="text-xs font-semibold uppercase tracking-[0.14em] text-viking-gold">Next</span></div>
+      <h3 class="mb-2 text-lg font-semibold text-white">Review packet</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">One Markdown handoff with the plan, diff, criteria coverage, commits, PRs, lint, audit, and open questions. For a human or a reviewer agent.</p>
+    </article>
+    <article class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30" data-roadmap-id="R8" data-roadmap-horizon="Next">
+      <div class="mb-3 flex items-center gap-2"><span class="rounded-md bg-viking-gold/20 px-2 py-0.5 text-xs font-bold text-viking-gold">R8</span><span class="text-xs font-semibold uppercase tracking-[0.14em] text-viking-gold">Next</span></div>
+      <h3 class="mb-2 text-lg font-semibold text-white">Open questions and plan-ready gate</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Keep the ambiguity hunt. A plan cannot claim readiness while material questions are open.</p>
+    </article>
+  </div>
+</section>
+
+<section id="later" class="mx-auto max-w-6xl scroll-mt-20 px-6 py-16 md:py-20">
+  <div class="mb-8 max-w-3xl">
+    <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-scanner-green">Later</p>
+    <h2 class="mb-3 text-2xl font-bold text-white md:text-3xl">Parallel agents and handoff.</h2>
+    <p class="m-0 text-lg text-zinc-400">Keep lazyplan the source of truth when more than one agent works at once.</p>
+  </div>
+  <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+    <article class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30" data-roadmap-id="R9" data-roadmap-horizon="Later">
+      <div class="mb-3 flex items-center gap-2"><span class="rounded-md bg-scanner-green/20 px-2 py-0.5 text-xs font-bold text-scanner-green">R9</span><span class="text-xs font-semibold uppercase tracking-[0.14em] text-scanner-green">Later</span></div>
+      <h3 class="mb-2 text-lg font-semibold text-white">Session records</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">A session has a start, an end, a summary, and handoff notes. The feed can be read per session, so the next agent knows why the last one chose what it did.</p>
+    </article>
+    <article class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30" data-roadmap-id="R10" data-roadmap-horizon="Later">
+      <div class="mb-3 flex items-center gap-2"><span class="rounded-md bg-scanner-green/20 px-2 py-0.5 text-xs font-bold text-scanner-green">R10</span><span class="text-xs font-semibold uppercase tracking-[0.14em] text-scanner-green">Later</span></div>
+      <h3 class="mb-2 text-lg font-semibold text-white">Parallel-safe claims</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Tasks carry touch-points. Next avoids overlapping claims, the worktree is recorded, and finish warns when commits overlap another open task.</p>
+    </article>
+    <article class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30" data-roadmap-id="R11" data-roadmap-horizon="Later">
+      <div class="mb-3 flex items-center gap-2"><span class="rounded-md bg-scanner-green/20 px-2 py-0.5 text-xs font-bold text-scanner-green">R11</span><span class="text-xs font-semibold uppercase tracking-[0.14em] text-scanner-green">Later</span></div>
+      <h3 class="mb-2 text-lg font-semibold text-white">Outcome digest</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Close a plan into a ship note for a PR body or changelog: why, what shipped, evidence, residual risks, and follow-ups. No issue mirroring.</p>
+    </article>
+    <article class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30" data-roadmap-id="R12" data-roadmap-horizon="Later">
+      <div class="mb-3 flex items-center gap-2"><span class="rounded-md bg-scanner-green/20 px-2 py-0.5 text-xs font-bold text-scanner-green">R12</span><span class="text-xs font-semibold uppercase tracking-[0.14em] text-scanner-green">Later</span></div>
+      <h3 class="mb-2 text-lg font-semibold text-white">External reference links</h3>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Point a plan at an epic or issue without copying it. A read-only link preserves the connection; lazyplan never writes back.</p>
+    </article>
+  </div>
+</section>
+
+<section id="not-on-the-roadmap" class="mx-auto max-w-4xl scroll-mt-20 px-6 py-16 md:py-20">
+  <div class="rounded-2xl border border-plan-border bg-plan-surface/70 p-8 shadow-xl shadow-black/30 md:p-10">
+    <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-strict-red">Not on the roadmap</p>
+    <h2 class="mb-4 text-2xl font-bold text-white md:text-3xl">We are not building a tracker.</h2>
+    <p class="mb-5 text-[0.98rem] text-zinc-400">lazyplan is for the thinking before commitment. Committed work belongs in your tracker, and we will not mirror it there.</p>
+    <ul class="m-0 grid list-none grid-cols-1 gap-2 p-0 text-[0.95rem] text-zinc-400 sm:grid-cols-2">
+      <li>No two-way Jira, Linear, or GitHub Issues sync.</li>
+      <li>No plans mirrored as issues.</li>
+      <li>No sprints, estimates, assignees, or date planning.</li>
+      <li>No built-in LLM or cloud account.</li>
+      <li>No agent runtime that creates branches or commits.</li>
+      <li>No real-time multiplayer editing.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="follow" class="mx-auto max-w-4xl scroll-mt-20 px-6 pb-20 text-center md:pb-28">
+  <h2 class="mb-3 text-2xl font-bold text-white md:text-3xl">Follow the work.</h2>
+  <p class="mx-auto mb-8 max-w-xl text-lg text-zinc-400">The roadmap is a living document. The repo keeps the reasoning; lazyplan keeps the execution.</p>
+  <div class="flex flex-col items-center justify-center gap-2.5 sm:flex-row">
+    <a class="inline-flex items-center gap-2 rounded-xl bg-viking-blue px-5 py-2.5 font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="https://github.com/fluxion-dev/lazyplan/blob/main/docs/product/roadmap.md">Canonical roadmap</a>
+    <a class="inline-flex items-center gap-2 rounded-xl border border-plan-border bg-white/5 px-5 py-2.5 font-semibold text-white no-underline backdrop-blur transition hover:border-zinc-500 hover:bg-white/10" href="https://github.com/fluxion-dev/lazyplan/blob/main/docs/product/roadmap-context.md">Why these bets</a>
+    <a class="inline-flex items-center gap-2 rounded-xl border border-plan-border bg-white/5 px-5 py-2.5 font-semibold text-white no-underline backdrop-blur transition hover:border-zinc-500 hover:bg-white/10" href="https://github.com/fluxion-dev/lazyplan/blob/main/docs/product/roadmap-metaplan.md">How we plan</a>
+    <a class="inline-flex items-center gap-2 rounded-xl border border-plan-border bg-white/5 px-5 py-2.5 font-semibold text-white no-underline backdrop-blur transition hover:border-zinc-500 hover:bg-white/10" href="https://github.com/fluxion-dev/lazyplan">GitHub</a>
+  </div>
+</section>
+
+</main>
+
+<footer class="border-t border-plan-border bg-plan-surface/60 px-6 py-12 text-center text-[0.92rem] text-zinc-400 backdrop-blur">
+  <p class="m-0"><a class="text-cyber-cyan underline hover:text-white" href="./index.html">lazyplan</a> — one plan for you and your agent.</p>
+  <ul class="mt-6 flex list-none flex-wrap items-center justify-center gap-x-6 gap-y-2 p-0">
+    <li><a class="text-zinc-300 no-underline hover:text-white hover:underline" href="https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md">Docs</a></li>
+    <li><a class="text-zinc-300 no-underline hover:text-white hover:underline" href="https://github.com/fluxion-dev/lazyplan/blob/main/docs/setup.md">Setup</a></li>
+    <li><a class="text-zinc-300 no-underline hover:text-white hover:underline" href="https://github.com/fluxion-dev/lazyplan/blob/main/docs/performance.md">Performance</a></li>
+    <li><a class="text-zinc-300 no-underline hover:text-white hover:underline" href="./roadmap.html">Roadmap</a></li>
+    <li><a class="text-zinc-300 no-underline hover:text-white hover:underline" href="https://github.com/fluxion-dev/lazyplan">GitHub</a></li>
+    <li><a class="text-zinc-300 no-underline hover:text-white hover:underline" href="https://github.com/fluxion-dev/lazyplan/releases">Releases</a></li>
+    <li><a class="text-zinc-300 no-underline hover:text-white hover:underline" href="https://github.com/fluxion-dev/lazyplan/blob/main/LICENSE">License</a></li>
+  </ul>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+  var nav = document.querySelector('nav[aria-label="Primary"]');
+  if (!nav) {
+    return;
+  }
+  var menu = nav.querySelector('details.nav-mobile');
+  if (!menu) {
+    return;
+  }
+  var summary = menu.querySelector('summary');
+  function sync() {
+    if (summary) {
+      summary.setAttribute('aria-expanded', menu.open ? 'true' : 'false');
+    }
+  }
+  menu.addEventListener('toggle', sync);
+  document.addEventListener('click', function (event) {
+    if (menu.open && !nav.contains(event.target)) {
+      menu.open = false;
+      sync();
+    }
+  });
+  document.addEventListener('keydown', function (event) {
+    if (event.key !== 'Escape' || !menu.open) {
+      return;
+    }
+    event.preventDefault();
+    menu.open = false;
+    sync();
+    if (summary) {
+      summary.focus();
+    }
+  });
+  menu.querySelectorAll('a').forEach(function (link) {
+    link.addEventListener('click', function () {
+      menu.open = false;
+      sync();
+    });
+  });
+  sync();
+})();
+</script>
+
+</body>
+</html>

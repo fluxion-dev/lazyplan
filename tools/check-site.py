@@ -85,20 +85,20 @@ def _local_path(root: Path, value: str) -> Path | None:
     return root / path if path else None
 
 
-def _check_metadata(page: PageParser, errors: list[str]) -> None:
+def _check_metadata(page: PageParser, errors: list[str], canonical_url: str = BASE_URL) -> None:
     desc = _meta(page, "description")
     if not (20 <= len(desc) <= 170):
         errors.append(f"meta description must be 20-170 chars, got {len(desc)}")
     canonical = _tag(page, "link", rel="canonical")
-    if canonical is None or canonical.get("href") != BASE_URL:
-        errors.append(f"canonical must be {BASE_URL}")
+    if canonical is None or canonical.get("href") != canonical_url:
+        errors.append(f"canonical must be {canonical_url}")
     robots = _meta(page, "robots")
     if "index" not in robots or "follow" not in robots:
         errors.append("meta robots must allow index,follow")
     for name in ("og:title", "og:description", "og:type", "og:url", "og:image"):
         if not _meta(page, name):
             errors.append(f"missing {name}")
-    if _meta(page, "og:url") != BASE_URL:
+    if _meta(page, "og:url") != canonical_url:
         errors.append("og:url must match the canonical")
     for name in ("twitter:card", "twitter:title", "twitter:description", "twitter:image"):
         if not _meta(page, name):
@@ -186,7 +186,12 @@ def _check_links(page: PageParser, errors: list[str]) -> None:
             errors.append(f"broken internal anchor: {href}")
 
 
-def _check_json_ld(page: PageParser, version: str, errors: list[str]) -> None:
+def _check_json_ld(
+    page: PageParser,
+    version: str,
+    errors: list[str],
+    required_types: tuple[str, ...] = ("SoftwareApplication", "FAQPage"),
+) -> None:
     if not page.json_ld:
         errors.append("missing JSON-LD")
         return
@@ -221,12 +226,18 @@ def _check_json_ld(page: PageParser, version: str, errors: list[str]) -> None:
                     answer = item.get("acceptedAnswer", {})
                     if not isinstance(answer, dict) or not answer.get("text"):
                         errors.append("FAQPage question missing acceptedAnswer.text")
-    for required in ("SoftwareApplication", "FAQPage"):
+            if kind == "WebPage":
+                for key in ("name", "url"):
+                    if not block.get(key):
+                        errors.append(f"WebPage missing {key}")
+    for required in required_types:
         if required not in types:
             errors.append(f"missing {required} JSON-LD")
 
 
-def _check_sitemap(root: Path, errors: list[str]) -> None:
+def _check_sitemap(
+    root: Path, errors: list[str], required_urls: tuple[str, ...] = (BASE_URL,)
+) -> None:
     sitemap = root / "sitemap.xml"
     if not sitemap.is_file():
         sitemap = root / "public/sitemap.xml"
@@ -237,8 +248,9 @@ def _check_sitemap(root: Path, errors: list[str]) -> None:
         errors.append("missing sitemap.xml")
     else:
         text = sitemap.read_text(encoding="utf-8")
-        if BASE_URL not in text:
-            errors.append("sitemap does not include the canonical URL")
+        for url in required_urls:
+            if url not in text:
+                errors.append(f"sitemap does not include {url}")
         if not re.search(r"<lastmod>\d{4}-\d{2}-\d{2}</lastmod>", text):
             errors.append("sitemap needs an ISO lastmod")
     if not robots.is_file():
@@ -247,25 +259,54 @@ def _check_sitemap(root: Path, errors: list[str]) -> None:
         errors.append("robots.txt must advertise the sitemap")
 
 
-def _check_page(root: Path, version: str) -> list[str]:
+def _check_document(
+    root: Path,
+    version: str,
+    filename: str,
+    canonical_url: str,
+    required_json_ld: tuple[str, ...],
+    sitemap_urls: tuple[str, ...],
+) -> list[str]:
     errors: list[str] = []
-    index = root / "index.html"
-    if not index.is_file():
-        return [f"missing {index}"]
-    source = index.read_text(encoding="utf-8")
+    path = root / filename
+    if not path.is_file():
+        return [f"missing {path}"]
+    source = path.read_text(encoding="utf-8")
     page = PageParser()
     page.feed(source)
     title_match = re.search(r"<title>(.*?)</title>", source, re.S | re.I)
     title = title_match.group(1).strip() if title_match else ""
     if not (20 <= len(title) <= 65):
         errors.append(f"title must be 20-65 chars, got {len(title)}")
-    _check_metadata(page, errors)
+    _check_metadata(page, errors, canonical_url)
     _check_headings(page, errors)
     _check_assets(page, root, errors)
     _check_links(page, errors)
-    _check_json_ld(page, version, errors)
-    _check_sitemap(root, errors)
+    _check_json_ld(page, version, errors, required_json_ld)
+    _check_sitemap(root, errors, sitemap_urls)
     return errors
+
+
+def _check_page(root: Path, version: str) -> list[str]:
+    return _check_document(
+        root,
+        version,
+        "index.html",
+        BASE_URL,
+        ("SoftwareApplication", "FAQPage"),
+        (BASE_URL,),
+    )
+
+
+def _check_roadmap_page(root: Path, version: str) -> list[str]:
+    return _check_document(
+        root,
+        version,
+        "roadmap.html",
+        f"{BASE_URL}roadmap.html",
+        ("WebPage",),
+        (BASE_URL, f"{BASE_URL}roadmap.html"),
+    )
 
 
 def main() -> int:
@@ -285,6 +326,8 @@ def main() -> int:
             roots.append(("dist", dist))
     for label, root in roots:
         for error in _check_page(root, version):
+            failures.append(f"{label}: {error}")
+        for error in _check_roadmap_page(root, version):
             failures.append(f"{label}: {error}")
     if failures:
         print("site check failed:", file=sys.stderr)

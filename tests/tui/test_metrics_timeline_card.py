@@ -387,6 +387,7 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
+            app.metrics_controller.stop()
             card = app.query_one("#metric-timeline", TimelineCard)
             card.refresh_timeline(metrics.snapshot(self.store, now=2_000).timeline)
             await pilot.pause()

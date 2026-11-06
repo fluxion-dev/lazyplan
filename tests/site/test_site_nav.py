@@ -105,7 +105,10 @@ class TestPrimaryNavigation(unittest.TestCase):
         self.assertEqual(self.mobile[0]["summary"], "Menu")
         links = self.mobile[0]["links"]
         assert isinstance(links, list)
-        self.assertEqual(set(links), {"#new", "#features", "#screens", "#faq", "./roadmap.html", DOCS, "#install"})
+        self.assertEqual(
+            set(links),
+            {"#new", "#features", "#screens", "#faq", "./roadmap.html", DOCS, "#install"},
+        )
 
     def test_every_destination_is_preserved(self):
         self.assertTrue(

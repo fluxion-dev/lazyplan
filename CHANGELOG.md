@@ -3,13 +3,44 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
-## Unreleased
+## v0.33.0 — 2026-11-06
 
 Plan creation is now one atomic JSON write. `lpui plan apply` creates the plan,
 milestones, tasks, and criteria in one transaction; stable keys make retries
 no-ops, `--dry-run` previews, and feature, bugfix, and refactor recipes supply
 the skeleton. A budgeted `lpui context` packet resumes a session from the
 active slice, and the TUI source filter cycle ends with **Focus**.
+
+### Added
+
+- **Plan documents.** `lpui plan apply --file plan.json [--dry-run]` creates a
+  complete tree atomically. Stable keys make an identical retry a no-op; a
+  failed apply rolls the tree back.
+- **Recipes.** `lpui plan recipe feature|bugfix|refactor` prints a JSON
+  skeleton with QA, refactoring, and documentation tasks.
+- **Context packet.** `lpui context --max-chars N` returns the active plan,
+  doing task and claim, next open tasks, open criteria, recent decisions and
+  notes, recent commits, unresolved comments, and claims. Available as
+  `lazyplan://context` in MCP and in session-start and pre-compact hooks.
+- **Focus filter.** The TUI source filter cycle ends with **Focus**: doing,
+  claimed, blocked, attention, and next work with parent context.
+
+### Changed
+
+- The database schema is version 2. Existing databases migrate on open; the
+  new `entity_keys` table backs idempotent plan apply.
+- Session-start and pre-compact hook context now uses the budgeted context
+  packet instead of the brief.
+- The agent skill, packaged AGENTS contract, usage guide, man page, and site
+  roadmap document the new commands.
+
+### Upgrade
+
+```bash
+pipx upgrade lazyplan-tui
+```
+
+No manual migration is required. The database schema upgrades on open.
 
 ## v0.32.0 — 2026-11-03
 

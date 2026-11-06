@@ -29,7 +29,8 @@ If your host supports MCP, use the local `lpui mcp` server (or
 `lpui mcp --read-only` for reviews); otherwise use `--porcelain` on every
 call. Start work with `lpui next --porcelain`: it claims the first eligible todo
 and moves it doing. A claim is a lease, not an owner. Renew it while you work,
-release it when you stop, and note handoffs with `lpui note add`.
+release it when you stop, and note handoffs with `lpui note add`. MCP resources
+include `lazyplan://brief`, `lazyplan://context`, and `lazyplan://plan/{id}`.
 
 ## DB scoping (first match wins)
 
@@ -117,7 +118,7 @@ Binary, root, merge, empty, and missing states are explicit. Diffs are read
 live and never persisted. Rows with source details show commit and PR counts
 in their labels. `o` opens, `y` copies, `/` filters. Plans and milestones aggregate
 descendant work. `F` cycles source filters: all, linked, has PR, stale,
-unlinked, claims, blocked, attention.
+unlinked, claims, blocked, attention, focus.
 
 ## GitHub pull requests
 
@@ -231,12 +232,29 @@ lpui plan show --id P        # why/what + criteria + children
 
 Walk the human through every milestone and task, make last edits on the spot, and start executing only on explicit check-off. Relate every plan criterion to at least one proving task (`lpui criterion relate --id C --task T`) and run `lpui lint --plan P` before check-off. Check that the plan names its commit strategy and that every task desc names its expected commit slice and verification; reject a plan that batches a whole milestone or plan into one commit. During execution the plan stays the truth: fold new findings into the plan before changing code, never around it.
 
+## Plan documents and recipes
+
+Create the whole tree in one atomic write:
+
+```bash
+lpui --porcelain plan recipe feature > plan.json   # feature | bugfix | refactor
+lpui --porcelain plan apply --file plan.json --dry-run
+lpui --actor NAME --porcelain plan apply --file plan.json
+```
+
+The document is JSON with a `plan` object and a `milestones` list; tasks nest
+under milestones. Every plan, milestone, and task carries a stable `key`.
+Retrying the same document is a no-op, and a failed apply rolls the whole tree
+back. Recipes are skeletons with QA, refactoring, and documentation tasks;
+fill the words, add criteria, then apply.
+
 ## During execution
 
 Update the journal as you go, not at the end:
 
 ```bash
-lpui --porcelain next                          # claim the first eligible todo
+lpui --porcelain next                          # claim the first eligible task
+lpui --porcelain context --max-chars 4000      # active slice, next work, proof
 lpui --porcelain claim renew --id T --ttl 30m  # lease heartbeat while working
 lpui --porcelain note add --kind task --id T --text "Decision or handoff"
 lpui --actor T --porcelain link --kind task --id T       # after each commit (or `task finish`)
@@ -255,7 +273,7 @@ on every call. Reach for `--json` only when you need full-fidelity fields.
 - Lifecycle hooks may remind you at session start, after a commit, and before compaction. Hooks are read-only: they never move a task or link a commit for you.
 - `lpui claims` / `lpui who` shows active leases. `claim release --force` and `claim --force` record a takeover; blocked work is skipped by `next`.
 - `lpui trace --plan P` walks each criterion to its proving task, commits, and PRs. `lpui lint --plan P --strict` rejects uncovered criteria, missing slices or verification, placeholders, and done rows with open criteria.
-- `lpui stats --since 7.days` reports WIP, cycle time, throughput, aging, stale work, reopened rows, claims, and blocked tasks. The human screen's Attention filter surfaces the same risk categories.
+- `lpui stats --since 7.days` reports WIP, cycle time, throughput, aging, stale work, reopened rows, claims, and blocked tasks. The human screen's Attention filter surfaces the same risk categories; the Focus filter keeps doing, claimed, blocked, attention, and next work.
 - Finish with `task finish --require-pr --require-checks` when the task must prove PR/CI evidence; `--override REASON` records an exception. A branch already recorded on another open task is rejected.
 - Import issues once with `issue import` (GitHub live or Linear export); re-import refreshes source metadata only and never writes back.
 - Human screen: space marks rows; the palette has bulk move/block/release, clear marks, and one undo for status/block changes.
@@ -268,6 +286,7 @@ on every call. Reach for `--json` only when you need full-fidelity fields.
 lpui --porcelain list --tree [--status todo|doing|done|all]      # plan/milestone/task rows
 lpui --porcelain next                                                        # first todo, claimed
 lpui --porcelain claims                                                      # active leases
+lpui --porcelain context --max-chars 4000                                    # active slice + proof
 lpui --porcelain brief                                                       # active plan + next update
 lpui --porcelain audit --since 7.days                                        # accuracy metrics
 lpui --porcelain plan show --id N                                            # definition + criteria + children
@@ -318,6 +337,9 @@ field; missing template files mean legacy behavior (tasks default `p1`).
 
 Setup writes the opinionated starters silently; edit the files to change what
 new rows require. Existing edits are never overwritten.
+
+Structural recipes are separate: `plan recipe feature|bugfix|refactor` prints a
+full document skeleton for `plan apply`, while these templates fill one row.
 
 ## Write: full CRUD
 

@@ -3,6 +3,14 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## Unreleased
+
+Plan creation is now one atomic JSON write. `lpui plan apply` creates the plan,
+milestones, tasks, and criteria in one transaction; stable keys make retries
+no-ops, `--dry-run` previews, and feature, bugfix, and refactor recipes supply
+the skeleton. A budgeted `lpui context` packet resumes a session from the
+active slice, and the TUI source filter cycle ends with **Focus**.
+
 ## v0.32.0 — 2026-11-03
 
 Windows updates now close lpui before touching the install, apply the wheel

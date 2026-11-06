@@ -325,6 +325,7 @@ lpui list --status doing          # filter by status
 lpui plan show --id 1             # why, what, criteria, milestones
 lpui task move --id 1 --to doing
 lpui criterion tick --id 1
+lpui context --max-chars 4000     # active plan, next work, and proof
 lpui feed                         # recent activity
 ```
 
@@ -384,7 +385,7 @@ and repo detail stays in the preview/GIT pane.
 | `n` | create by context (plan, milestone, or task) |
 | `/` | filter by text |
 | `f` | change status filter |
-| `F` | change source filter: all, linked, PR, stale, unlinked, claims, blocked, attention |
+| `F` | change source filter: all, linked, PR, stale, unlinked, claims, blocked, attention, focus |
 | `g` | open the source trail for the selected row |
 | `A` | show all plans |
 | `?` | help |
@@ -453,11 +454,14 @@ Your agent is expected to work from the plan, not invent it:
 - Import provider issues with `issue import`; re-import refreshes source metadata only and never writes back.
 - Relate every plan criterion to a proving task and run `lpui --porcelain
   lint --plan P` before check-off.
+- Create the whole tree in one JSON write with `plan apply`; start from
+  `plan recipe feature|bugfix|refactor` and edit the words before applying.
 - Start a session with `lpui --porcelain next` to claim work, or
-  `lpui --porcelain brief` for the whole picture. Renew the lease while you
-  work, note handoffs, and release it when you stop. Update the journal after
-  each commit, then run `lpui --porcelain audit --since 7.days` before closing
-  a plan. Lifecycle hooks remind you, but they are read-only.
+  `lpui --porcelain context --max-chars 4000` for the budgeted picture.
+  Renew the lease while you work, note handoffs, and release it when you stop.
+  Update the journal after each commit, then run
+  `lpui --porcelain audit --since 7.days` before closing a plan. Lifecycle
+  hooks remind you, but they are read-only.
 
 `lpui setup --placement repo` writes the full contract into the repo; the
 default setup installs the skill into each detected agent's own folder.
@@ -485,6 +489,8 @@ line. Fields are never truncated.
 
 ```bash
 lpui --actor helper --porcelain plan add --title "API v2" --why ".." --what ".."
+lpui --actor helper --porcelain plan apply --file plan.json --dry-run
+lpui --actor helper --porcelain plan recipe feature
 lpui --actor helper --porcelain criterion add --kind plan --id 1 --text "Works offline"
 lpui --actor helper --porcelain milestone add --plan 1 --title "Feature Y" --desc ".."
 lpui --actor helper --porcelain task add --milestone 1 --title "Do X" --desc ".."
@@ -498,6 +504,7 @@ lpui --porcelain trace --plan 1
 lpui --porcelain lint --plan 1
 lpui --porcelain list --tree
 lpui --porcelain plan show --id 1
+lpui --porcelain context --max-chars 4000
 ```
 
 ```text
@@ -508,8 +515,69 @@ task	2	doing	Do X	milestone:1	-
 
 `show` keeps why, what, desc, criteria, and children; it omits linked repos,
 commits, and pull requests. Use `--json` when you need those full records.
-The record families for brief, audit, feed, info, commits, repos, git status,
-git scan, and PR reads are documented in `src/lazyplan/porcelain.py`.
+The record families for brief, context, audit, feed, info, commits, repos, git
+status, git scan, and PR reads are documented in `src/lazyplan/porcelain.py`.
+
+### Plan documents and recipes
+
+Create a whole plan tree in one atomic write:
+
+```bash
+lpui plan apply --file plan.json
+lpui plan apply --file plan.json --dry-run
+lpui plan recipe feature > plan.json
+```
+
+The document is JSON with `plan` and `milestones`; each milestone carries
+`tasks`. Every plan, milestone, and task needs a stable `key`. A retry with the
+same key is a no-op, and a failure rolls the whole tree back. `--dry-run`
+validates the document and prints the intended tree without writing.
+
+```json
+{
+  "plan": {
+    "key": "api-v2",
+    "title": "API v2",
+    "why": "Why this matters.",
+    "what": "## Scope\n\n- What is in and out.",
+    "criteria": ["Works offline"]
+  },
+  "milestones": [
+    {
+      "key": "auth",
+      "title": "Auth refresh",
+      "desc": "As a user, I want the change.",
+      "tasks": [
+        {
+          "key": "rotate",
+          "title": "Rotate tokens",
+          "desc": "Approach and file refs.\n\nCommit: one slice.\n\nVerify: tests pass."
+        }
+      ]
+    }
+  ]
+}
+```
+
+`feature`, `bugfix`, and `refactor` recipes are packaged skeletons with QA,
+refactoring, and documentation tasks. Edit the words, then apply the document.
+
+### Context packet
+
+`lpui context` is the read-only cold-start packet:
+
+```bash
+lpui context --max-chars 4000
+lpui context --json
+lpui --porcelain context
+```
+
+It returns the active plan, the doing task and its claim, the next three open
+tasks, open criteria, recent decisions and notes, recent commits, unresolved
+comments, and active claims. The budget is deterministic: low-priority
+sections drop first. The same packet is available as the MCP resource
+`lazyplan://context` (or `lazyplan://context/2000` for a budget) and in the
+session-start and pre-compact hook context.
 
 ### Claims, notes, and blocked work
 
@@ -586,7 +654,8 @@ and never creates a missing database.
 
 Read tools: `brief`, `list_plans`, `show_row`, `claims`, `audit`, `trace`,
 `lint`, `info`. Write tools: create/edit/move, criteria, claims, notes,
-block/unblock, and commit linking. Resources: `lazyplan://brief` and
+block/unblock, and commit linking. Resources: `lazyplan://brief`,
+`lazyplan://context` (append `/{max_chars}` for a budget), and
 `lazyplan://plan/{id}`.
 
 Claude Code, user-wide:
@@ -646,6 +715,11 @@ The screen adds an **Attention** source filter to the existing cycle
 (`F`): expired claims, blocked tasks, doing work older than the stale
 threshold, done rows with open criteria, and red PR checks. It combines with
 the status filter; the tree keeps only rows that match the active filters.
+
+The cycle also ends with **Focus**: doing tasks, active claims, blocked work,
+attention rows, and the first open, unclaimed task per plan, with their parent
+context. Use it when several agents are running and you need the active slice
+rather than the whole tree.
 
 ### Comments, sharing, and sync
 
@@ -730,12 +804,13 @@ Only `issue import --repo` calls a provider; all reads stay offline. lazyplan
 never writes back to GitHub or Linear, stores raw provider payloads, or
 stores tokens.
 
-### Session brief and accuracy audit
+### Session brief, context, and accuracy audit
 
-Start a session with the brief, update after each commit, and close with the
-audit:
+Start a session with the context packet, update after each commit, and close
+with the audit:
 
 ```bash
+lpui --porcelain context --max-chars 4000  # active slice, next work, proof, claims
 lpui --porcelain brief            # active plan, doing task, next task, loose commits
 lpui brief --json                 # same facts for a hook or script
 lpui audit --plan 12              # see the three accuracy metrics for one plan
@@ -743,8 +818,9 @@ lpui audit --since 7.days         # recent window across active plans
 lpui audit --since 7.days --strict  # exit 2 when a threshold is breached
 ```
 
-The brief is read-only and never creates a database. It names the doing task,
-the next todo, open criteria, and commits that landed without a task link.
+The context packet and the brief are read-only and never create a database.
+The context packet adds the plan's why and what, the next three open tasks,
+recent decisions, commits, comments, and claims, and trims to its budget.
 
 The audit reports three numbers:
 
@@ -775,10 +851,10 @@ touched config file is backed up under `~/.lazyplan/backups/<timestamp>/`.
 
 Notes:
 
-- OpenCode injects the brief into the first model context of a session and
+- OpenCode injects the context packet into the first model context of a session and
   queues a commit reminder for the next context.
 - Claude Code accepts no added context on PreCompact, so lazyplan skips it
-  there; SessionStart fires again after compaction and re-injects the brief.
+  there; SessionStart fires again after compaction and re-injects the context packet.
 - On Windows, Claude Code runs hook commands in Git Bash, or in PowerShell
   when Git Bash is missing. Both find `lpui` on `PATH`.
 - Codex asks you to review new hooks once with `/hooks` before it runs them.
@@ -807,6 +883,9 @@ lpui list [--tree] [--status todo|doing|done|all] [--archived] [--plan ID] [--al
 lpui plan list
 lpui plan show --id 1
 lpui plan add --title "API v2" --why ".." --what ".."
+lpui plan apply --file plan.json [--dry-run]
+lpui plan recipe feature|bugfix|refactor
+lpui context [--plan ID] [--max-chars N]
 lpui plan edit --id 1 [--title --what --why]
 lpui plan move --id 1 --to doing
 lpui plan delete --id 1

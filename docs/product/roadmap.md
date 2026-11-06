@@ -99,13 +99,12 @@ site, lazyplan, and commits refer to the same thing.
 
 ### Now — Capture and resume
 
-**Goal:** make a plan cheap to create and a session cheap to resume. This is
-the first implementation bet and the only horizon currently cut into detailed
-tasks.
+**Goal:** make a plan cheap to create and a session cheap to resume. Shipped
+2026-11-06: R1–R4 are in the product and the horizon tree is closed.
 
 #### R1 — Plan compiler
 
-**Status:** Now
+**Status:** Shipped 2026-11-06
 
 **Outcome:** an agent can create a plan, its milestones, its tasks, and its
 criteria in one atomic write, with a dry-run preview and idempotent retries.
@@ -124,7 +123,7 @@ after. Target: one call, under 100 ms after validation.
 
 #### R2 — Plan recipes
 
-**Status:** Now
+**Status:** Shipped 2026-11-06
 
 **Outcome:** feature, bugfix, and refactor recipes pre-cut the shape of a plan
 without pre-filling the content. QA, documentation, and refactor tasks are
@@ -144,7 +143,7 @@ first review gate.
 
 #### R3 — Context pack
 
-**Status:** Now
+**Status:** Shipped 2026-11-06
 
 **Outcome:** a new session reads one budgeted packet instead of reconstructing
 the plan from the tree.
@@ -164,7 +163,7 @@ first plan-affecting write.
 
 #### R4 — Focus lens
 
-**Status:** Now
+**Status:** Shipped 2026-11-06
 
 **Outcome:** the human sees what is in flight without scanning the whole tree.
 
@@ -356,6 +355,7 @@ never write back.
 | 2026-11-06 | Stable item IDs and a doc/site drift test. | Keeps the repo and site aligned without a generator or a runtime dependency. |
 | 2026-11-06 | No issue-tracker mirroring. Publish outcomes, link references. | The persona's boundary is the product's moat. |
 | 2026-11-06 | A metaplan defines how horizons become implementation plans. | The roadmap should produce plans repeatably, not by reinventing the process each time. |
+| 2026-11-06 | Now horizon shipped: plan apply, recipes, context packet, Focus lens. | R1–R4 are in the product; Next remains a candidate until its scoping pass. |
 
 ## How to update this roadmap
 

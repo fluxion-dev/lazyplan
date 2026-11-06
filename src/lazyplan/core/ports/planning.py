@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import AbstractContextManager
 from typing import Protocol
 
 from ..entities import Criterion, Milestone, Plan, Status, Task
@@ -12,6 +13,14 @@ class PlanningPort(Protocol):
 
     @property
     def db_path(self) -> str: ...
+
+    def transaction(self) -> AbstractContextManager[None]: ...
+
+    def set_entity_key(self, kind: str, row_id: int, key: str, actor: str = "human") -> None: ...
+
+    def get_entity_key(self, kind: str, key: str) -> int | None: ...
+
+    def entity_key(self, kind: str, row_id: int) -> str | None: ...
 
     def add_plan(
         self,

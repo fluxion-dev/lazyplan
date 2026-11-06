@@ -301,6 +301,15 @@ def add_noun_groups(
     _a.add_argument("--to", choices=[v.value for v in Status], required=True, help="new status")
     _a = _actions.add_parser("delete", help="delete a plan", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="plan id")
+    _a = _actions.add_parser(
+        "apply", help="create a plan tree from a JSON document", parents=[common]
+    )
+    _a.add_argument("--file", required=True, metavar="PATH", help="JSON plan document")
+    _a.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="validate and print the intended tree without writing",
+    )
 
     _group, _actions = _noun_group(
         "milestone", "add, edit, show, list, move, or delete a milestone"

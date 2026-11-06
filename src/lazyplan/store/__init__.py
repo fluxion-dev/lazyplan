@@ -12,6 +12,7 @@ from .base import (
     to_payload,
 )
 from .claims import ClaimsMixin
+from .keys import KeysMixin
 from .links import LinksMixin
 from .plans import PlansMixin
 from .repos import ReposMixin
@@ -24,6 +25,7 @@ class Store(
     PlansMixin,
     ClaimsMixin,
     AnnotationsMixin,
+    KeysMixin,
     LinksMixin,
     ReposMixin,
     TasksMixin,

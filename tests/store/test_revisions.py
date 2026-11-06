@@ -59,6 +59,7 @@ class TestRevisionsStore(unittest.TestCase):
         self.assertEqual(
             [item.revision for item in self.store.list_revisions(self.plan.id)], [1, 2]
         )
+        self.assertEqual(self.store.latest_revisions_map()[self.plan.id].revision, 2)
 
     def test_no_changes_before_approval(self) -> None:
         self.store.update_task(self.task.id, title="Renamed", reason="scope")

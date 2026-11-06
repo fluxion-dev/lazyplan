@@ -9,6 +9,7 @@ from lazyplan import (
 )
 
 from ...core.entities import Status
+from ...core.serialization import approval_payload
 from ...store import Store, to_payload
 from ..shared import (
     porcelain,
@@ -57,6 +58,8 @@ def _list_payload(
     criteria = store.criteria_map()
     links = store.vcs_links_map()
     repos = store.repos_map()
+    revisions = store.latest_revisions_map()
+    drift = store.drift_counts()
     payload = []
     for plan, milestones in services.tree(
         store,
@@ -99,6 +102,7 @@ def _list_payload(
                 "links": [vars(item) for item in links.get(("plan", plan.id), [])],
                 "repos": plan_repos,
                 "effective_repos": plan_repos,
+                "approval": approval_payload(revisions.get(plan.id), drift.get(plan.id, 0)),
                 "milestones": milestone_rows,
             }
         )

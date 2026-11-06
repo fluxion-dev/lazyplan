@@ -11,6 +11,7 @@ from ..core.entities import (
     VcsLink,
 )
 from ..core.kinds import KIND_ERROR, table_for
+from ..core.serialization import approval_payload
 from .base import StoreBase, to_payload
 
 
@@ -103,6 +104,7 @@ class ViewsMixin(StoreBase):
             "effective_forge_links": [vars(c) for c in self.effective_forge_links("plan", p.id)],
             "repos": self.list_repos("plan", p.id),
             "effective_repos": self.effective_repos("plan", p.id),
+            "approval": approval_payload(self.latest_revision(p.id), self.plan_drift(p.id)),
             "milestones": [
                 {
                     "milestone": to_payload(vars(s)),
@@ -242,6 +244,8 @@ class _FullReader:
         self.notes = store.notes_full_map()
         self.comments = store.comments_full_map()
         self.issues = store.issue_links_map()
+        self.revisions = store.latest_revisions_map()
+        self.drift = store.drift_counts()
         self.milestone_by_id = {
             milestone.id: milestone for items in self.milestones.values() for milestone in items
         }
@@ -398,6 +402,7 @@ class _FullReader:
             ],
             "repos": self.repos.get(("plan", plan.id), []),
             "effective_repos": self._effective_repos("plan", plan.id),
+            "approval": approval_payload(self.revisions.get(plan.id), self.drift.get(plan.id, 0)),
             "milestones": [
                 {
                     "milestone": to_payload(vars(milestone)),

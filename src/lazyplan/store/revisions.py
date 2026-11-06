@@ -105,6 +105,17 @@ class RevisionsMixin(StoreBase):
             ).fetchone()
         return self._row_to_revision(row) if row is not None else None
 
+    def latest_revisions_map(self) -> dict[int, PlanRevision]:
+        """Latest approval per plan, in one query."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT r.* FROM plan_revisions r"
+                " JOIN (SELECT plan_id, MAX(revision) AS revision"
+                "       FROM plan_revisions GROUP BY plan_id) latest"
+                "   ON latest.plan_id=r.plan_id AND latest.revision=r.revision"
+            ).fetchall()
+        return {int(row["plan_id"]): self._row_to_revision(row) for row in rows}
+
     def list_revisions(self, plan_id: int) -> list[PlanRevision]:
         """Every approval for one plan, oldest first."""
         with self._connect() as conn:

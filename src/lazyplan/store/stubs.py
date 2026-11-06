@@ -73,6 +73,9 @@ class StoreStubs(StoreStubsLinks):
     def latest_revision(self, plan_id: int) -> PlanRevision | None:
         raise NotImplementedError
 
+    def latest_revisions_map(self) -> dict[int, PlanRevision]:
+        raise NotImplementedError
+
     def list_revisions(self, plan_id: int) -> list[PlanRevision]:
         raise NotImplementedError
 

@@ -122,6 +122,15 @@ class TestMcpReadTools(unittest.TestCase):
         lint = json.loads(self._tool("lint", {"plan": 1})["content"][0]["text"])
         self.assertEqual(lint, [])
 
+    def test_plan_reads_include_approval_state(self):
+        self.store.add_revision(self.plan_id, "a" * 64, "{}", reason="initial")
+        shown = json.loads(
+            self._tool("show_row", {"kind": "plan", "id": self.plan_id})["content"][0]["text"]
+        )
+        self.assertEqual(shown["approval"]["revision"], 1)
+        listed = json.loads(self._tool("list_plans")["content"][0]["text"])
+        self.assertEqual(listed[0]["approval"]["revision"], 1)
+
     def test_missing_rows_are_tool_errors(self):
         result = self._tool("show_row", {"kind": "task", "id": 99})
         self.assertTrue(result["isError"])

@@ -151,6 +151,19 @@ class PlanRevisionsCliTest(unittest.TestCase):
         self.assertEqual(code, 0, err)
         self.assertIn("no approved revision", out)
 
+    def test_plan_reads_include_approval_state(self) -> None:
+        self._approve("--reason", "initial")
+        self.store.update_task(self.task.id, title="Renamed", reason="rename")
+        code, out, err = self._run("--json", "plan", "show", "--id", str(self.plan.id))
+        self.assertEqual(code, 0, err)
+        payload = json.loads(out)
+        self.assertEqual(payload["approval"]["revision"], 1)
+        self.assertEqual(payload["approval"]["drift"], 1)
+        code, out, err = self._run("--json", "plan", "list", "--tree")
+        self.assertEqual(code, 0, err)
+        payload = json.loads(out)
+        self.assertEqual(payload[0]["approval"]["revision"], 1)
+
     def test_porcelain_approve(self) -> None:
         code, out, err = self._run("--porcelain", "plan", "approve", "--id", str(self.plan.id))
         self.assertEqual(code, 0, err)

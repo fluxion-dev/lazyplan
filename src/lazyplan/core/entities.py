@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-from .kinds import KINDS, PARENT_KIND_ERROR
+from .kinds import KINDS, PARENT_KIND_ERROR, SCOPE_KINDS
 
 
 class Status(StrEnum):
@@ -71,6 +71,56 @@ class Claim:
     def expired(self, now: float) -> bool:
         """True when the lease is no longer active at `now`."""
         return self.expires_at <= now
+
+
+@dataclass(frozen=True)
+class PlanRevision:
+    """One human approval of a plan's scope, with its canonical snapshot."""
+
+    id: int
+    plan_id: int
+    revision: int
+    approved_at: float
+    actor: str = "human"
+    reason: str = ""
+    digest: str = ""
+    snapshot: str = ""
+    change_mark: int = 0
+    enforced: bool = False
+
+    def __post_init__(self) -> None:
+        if self.revision < 1:
+            raise ValueError("revision must be at least 1")
+        if len(self.digest) != 64 or any(c not in "0123456789abcdef" for c in self.digest):
+            raise ValueError("digest must be a 64-char hex sha256")
+        if not self.snapshot.strip():
+            raise ValueError("snapshot must not be empty")
+        if self.change_mark < 0:
+            raise ValueError("change_mark must not be negative")
+
+
+@dataclass(frozen=True)
+class PlanChange:
+    """One recorded scope-changing edit, with the reason the author gave."""
+
+    id: int
+    plan_id: int
+    ts: float
+    actor: str = "human"
+    kind: str = "plan"
+    obj_id: int = 0
+    action: str = "edit"
+    field: str = ""
+    reason: str = ""
+    detail: str = ""
+
+    def __post_init__(self) -> None:
+        if self.kind not in SCOPE_KINDS:
+            raise ValueError(f"kind must be {'|'.join(SCOPE_KINDS)}")
+        if self.action not in ("add", "edit", "delete"):
+            raise ValueError("action must be add|edit|delete")
+        if self.obj_id < 0:
+            raise ValueError("obj_id must not be negative")
 
 
 @dataclass(frozen=True)

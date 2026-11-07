@@ -2,29 +2,19 @@
 
 from __future__ import annotations
 
-import importlib.util
-import sys
 import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
 
 from tests.support.paths import ROOT
-
-
-def _load():
-    spec = importlib.util.spec_from_file_location("check_docs", ROOT / "tools" / "check-docs.py")
-    module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
+from tests.support.tools import load_tool
 
 
 class DocsGateCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.gate = _load()
+        cls.gate = load_tool("check-docs")
         cls.legacy = cls.gate.LEGACY_DOCS
 
     def setUp(self):

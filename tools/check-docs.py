@@ -26,6 +26,16 @@ ROOT = Path(__file__).resolve().parent.parent
 
 HUMAN_DOCS = ("README.md", "CONTRIBUTING.md", "docs/usage.md")
 ALLOWED = frozenset({*HUMAN_DOCS, "AGENTS.md", "CHANGELOG.md"})
+RETIRED_DOCS = frozenset(
+    {
+        "docs/architecture.md",
+        "docs/design-system.md",
+        "docs/downloads.md",
+        "docs/performance.md",
+        "docs/releasing.md",
+        "docs/setup.md",
+    }
+)
 LEGACY_DOCS = frozenset({"docs/product/roadmap.md"})
 POLICY_FILE = "AGENTS.md"
 POLICY_MARKER = "Do not restate source"

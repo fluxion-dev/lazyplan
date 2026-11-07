@@ -7,15 +7,9 @@ from lazyplan.infrastructure.docs_meta import ENVIRONMENT, FILES
 from lazyplan.presentation.cli.parser import build_parser
 from tests.support.docs import MAN, README, USAGE
 from tests.support.paths import ROOT
+from tests.support.tools import load_tool
 
-DELETED_DOCS = (
-    "docs/setup.md",
-    "docs/architecture.md",
-    "docs/design-system.md",
-    "docs/performance.md",
-    "docs/downloads.md",
-    "docs/releasing.md",
-)
+GATE = load_tool("check-docs")
 
 
 class DocsTruthCase(unittest.TestCase):
@@ -63,7 +57,7 @@ class DocsTruthCase(unittest.TestCase):
             self.assertIn(word, USAGE.lower())
 
     def test_removed_docs_stay_absent(self):
-        for name in DELETED_DOCS:
+        for name in GATE.RETIRED_DOCS:
             with self.subTest(name=name):
                 self.assertFalse((ROOT / name).exists())
 

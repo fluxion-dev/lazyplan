@@ -105,8 +105,11 @@ def add_reconcile(
     sub: argparse._SubParsersAction[argparse.ArgumentParser], common: argparse.ArgumentParser
 ) -> None:
 
-    sub.add_parser(
-        "reconcile", help="fix up parent statuses to match their children", parents=[common]
+    parser = sub.add_parser("reconcile", help="fix up parent statuses and leases", parents=[common])
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="report drift without writing; exit 1 when any remains",
     )
 
 

@@ -12,6 +12,7 @@ from ..core.entities import Criterion, Milestone, Plan, Status, Task
 from ..core.kinds import check_kind
 from ..core.policies.planning import is_archived as _is_archived_policy
 from ..core.policies.planning import next_status, rollup_target
+from ..core.ports.coordination import CoordinationPort
 from ..core.ports.planning import PlanningPort
 
 DEFAULT_PLAN_LIMIT = 5
@@ -170,22 +171,67 @@ def cycle_status(
     return status
 
 
-def reconcile(port: PlanningPort, actor: str = "human") -> list[dict]:
-    """Recompute every parent from its children; childless rows untouched."""
+def _child_rollup(port: PlanningPort, kind: str, obj_id: int) -> Status | None:
+    """The status children imply, or None when the row has none."""
+    if kind == "milestone":
+        kids = [task.status for task in port.list_tasks(obj_id)]
+    else:
+        kids = [row.status for row in port.list_milestones(obj_id)]
+    return rollup_target(kids) if kids else None
+
+
+def reconcile(
+    port: CoordinationPort,
+    actor: str = "human",
+    check: bool = False,
+) -> dict[str, list]:
+    """Heal parents and leases; check mode reports without writing."""
     changes: list[dict] = []
     for plan in port.list_plans():
-        before_plan = plan.status
         for milestone in port.list_milestones(plan.id):
-            before = milestone.status
-            heal(port, "milestone", milestone.id, actor)
-            after = port.get_milestone(milestone.id)
-            if after is not None and after.status != before:
-                changes.append({"kind": "milestone", "id": milestone.id, "to": after.status.value})
-        heal(port, "plan", plan.id, actor)
-        after_plan = port.get_plan(plan.id)
-        if after_plan is not None and after_plan.status != before_plan:
-            changes.append({"kind": "plan", "id": plan.id, "to": after_plan.status.value})
-    return changes
+            target = _child_rollup(port, "milestone", milestone.id)
+            if target is None or target == milestone.status:
+                continue
+            changes.append({"kind": "milestone", "id": milestone.id, "to": target.value})
+            if not check:
+                heal(port, "milestone", milestone.id, actor)
+        target = _child_rollup(port, "plan", plan.id)
+        if target is not None and target != plan.status:
+            changes.append({"kind": "plan", "id": plan.id, "to": target.value})
+            if not check:
+                heal(port, "plan", plan.id, actor)
+
+    released: list[int] = []
+    expired: list[int] = []
+    now = time.time()
+    for claim in port.list_claims(include_expired=True, now=now):
+        task_id = int(claim["task_id"])
+        task = port.get_task(task_id)
+        if task is None:
+            continue
+        if claim["expired"]:
+            expired.append(task_id)
+        elif task.status != Status.DOING:
+            released.append(task_id)
+        else:
+            continue
+        if not check:
+            port.release_claim(task_id, actor, force=True)
+
+    ambiguous: list[dict] = []
+    for plan in port.list_plans():
+        for milestone in port.list_milestones(plan.id):
+            for task in port.list_tasks(milestone.id):
+                if task.status == Status.DONE and port.open_criteria("task", task.id):
+                    ambiguous.append(
+                        {"kind": "task", "id": task.id, "reason": "done with open criteria"}
+                    )
+    return {
+        "changes": changes,
+        "released": released,
+        "expired": expired,
+        "ambiguous": ambiguous,
+    }
 
 
 def is_archived(port: PlanningPort, plan: Plan) -> bool:

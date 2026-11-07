@@ -372,7 +372,12 @@ def _cmd_delete(store: Store, args: argparse.Namespace, actor: str) -> int:
 
 
 def _cmd_reconcile(store: Store, args: argparse.Namespace, actor: str) -> int:
-    return _emit(args, {"reconciled": services.reconcile(store, actor=actor)})
+    check = bool(getattr(args, "check", False))
+    report = services.reconcile(store, actor=actor, check=check)
+    code = _emit(args, report)
+    if check and any(report.values()):
+        return 1
+    return code
 
 
 def _cmd_add_criteria(store: Store, args: argparse.Namespace, actor: str) -> int:

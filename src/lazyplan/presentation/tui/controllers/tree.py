@@ -9,6 +9,7 @@ from textual.widgets.tree import TreeNode
 
 from .... import services
 from ....core.entities import Milestone, Plan, Status, Task
+from ....core.policies.planning import progress_counts
 from ...shared.design import apply_mark, status_prefix
 from ...shared.help import hint_bar
 from ..constants import source_label
@@ -169,15 +170,9 @@ class TreeController:
         out: dict[tuple[str, int], tuple[int, int]] = {}
         for plan, milestones in base:
             all_tasks = [task for _, tasks in milestones for task in tasks]
-            out[("plan", plan.id)] = (
-                sum(1 for task in all_tasks if task.status == Status.DONE),
-                len(all_tasks),
-            )
+            out[("plan", plan.id)] = progress_counts(all_tasks)
             for milestone, tasks in milestones:
-                out[("milestone", milestone.id)] = (
-                    sum(1 for task in tasks if task.status == Status.DONE),
-                    len(tasks),
-                )
+                out[("milestone", milestone.id)] = progress_counts(tasks)
         return out
 
     def paint_mark(self, key: tuple[str, int]) -> None:

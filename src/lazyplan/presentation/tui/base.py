@@ -106,6 +106,14 @@ class AppBase(App, TuiHost):
         self.state.source_filter = value
 
     @property
+    def override_mode(self) -> bool:
+        return self.state.override_mode
+
+    @override_mode.setter
+    def override_mode(self, value: bool) -> None:
+        self.state.override_mode = value
+
+    @property
     def marked(self) -> set[tuple[str, int]]:
         return self.state.marked
 

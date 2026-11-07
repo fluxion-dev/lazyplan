@@ -21,6 +21,8 @@ class AppState:
     show_all: bool = False
     filter_text: str = ""
     source_filter: str = "all"
+    override_mode: bool = False
+    override_warned: bool = False
     marked: set[tuple[str, int]] = field(default_factory=set)
     collapsed: set[tuple[str, int]] = field(default_factory=set)
     expanded: set[tuple[str, int]] = field(default_factory=set)

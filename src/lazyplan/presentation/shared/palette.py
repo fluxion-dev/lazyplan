@@ -453,6 +453,18 @@ COMMANDS: tuple[Command, ...] = (
     ),
     # -- app -------------------------------------------------------------
     Command(
+        id="toggle-override",
+        label="Toggle manual override",
+        section=APP,
+        key="O",
+        context="always",
+        handler="toggle_override",
+        aliases=("override", "manual override", "edit mode", "read only", "unlock"),
+        help_group="APP",
+        help_hint="allow manual writes; every change is recorded",
+        tui_only=True,
+    ),
+    Command(
         id="cycle-theme",
         label="Cycle theme",
         section=APP,

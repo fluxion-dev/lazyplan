@@ -166,7 +166,16 @@ if _TEXTUAL_OK:
                 self._render_read()
                 self.query_one("#detail-read", VerticalScroll).focus()
 
+        def _require_override(self) -> bool:
+            """Writes are blocked until manual override mode is on."""
+            if bool(getattr(self.app, "override_mode", False)):
+                return True
+            self.notify("read-only — press O for manual override", timeout=3)
+            return False
+
         def action_toggle_edit(self) -> None:
+            if not self._editing and not self._require_override():
+                return
             if self._editing:
                 if self._is_dirty():
                     self.notify("save or cancel first")
@@ -208,6 +217,8 @@ if _TEXTUAL_OK:
         def action_save(self) -> None:
             if not self._editing:
                 return
+            if not self._require_override():
+                return
             title = self.query_one("#d-title", Input).value.strip()
             desc = self.query_one("#d-desc", TextArea).text
             if not title:
@@ -241,6 +252,8 @@ if _TEXTUAL_OK:
             if self._editing:
                 self.notify("save or cancel first")
                 return
+            if not self._require_override():
+                return
             nxt = services.cycle_status(self._dstore, self.dkind, self.doid, actor="tui")
             self._reload()
             if nxt is not None:
@@ -249,6 +262,8 @@ if _TEXTUAL_OK:
         def action_tick_criterion(self) -> None:
             if self._editing:
                 self.notify("save or cancel first")
+                return
+            if not self._require_override():
                 return
             items = self._dstore.list_criteria(self.dkind, self.doid)
             open_items = [c for c in items if not c.done]
@@ -263,6 +278,8 @@ if _TEXTUAL_OK:
         def action_add_criterion(self) -> None:
             if self._editing:
                 self.notify("save or cancel first")
+                return
+            if not self._require_override():
                 return
 
             def cb(text: str | None) -> None:
@@ -283,6 +300,8 @@ if _TEXTUAL_OK:
         def action_add_child(self) -> None:
             if self._editing:
                 self.notify("save or cancel first")
+                return
+            if not self._require_override():
                 return
             if self.dkind == "plan":
                 plan_id = self.doid
@@ -337,6 +356,8 @@ if _TEXTUAL_OK:
         def action_delete_row(self) -> None:
             if self._editing:
                 self.notify("save or cancel first")
+                return
+            if not self._require_override():
                 return
             title = str(self._obj().get("title", self._obj().get("name", "")))
             lines = [f'Delete {self.dkind} {self.doid} "{title}"?']

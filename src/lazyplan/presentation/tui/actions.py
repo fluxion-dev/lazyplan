@@ -23,6 +23,7 @@ from ..shared.palette import by_id
 from .constants import DOUBLE_CLICK_WINDOW
 from .context import ContextMixin
 from .git_actions import GitActionMixin
+from .override import WRITE_COMMANDS, OverrideMixin
 from .screens import (
     ConfirmScreen,
     DetailScreen,
@@ -34,11 +35,10 @@ from .screens import (
     NewTaskScreen,
     PaletteScreen,
 )
-from .theme import next_theme
 
 if _TEXTUAL_OK:
 
-    class ActionMixin(ContextMixin, GitActionMixin):
+    class ActionMixin(OverrideMixin, ContextMixin, GitActionMixin):
         """Actions behavior."""
 
         def action_new_milestone(self) -> None:
@@ -137,13 +137,6 @@ if _TEXTUAL_OK:
 
         def action_refresh(self) -> None:
             self._saved("manual refresh")
-
-        def action_cycle_theme(self) -> None:
-            """Cycle mocha, void, and latte; the chart redraws after the CSS."""
-            selected = next_theme(self.theme)
-            self.theme = selected
-            self.notify(f"theme: {selected.removeprefix('lazyplan-')}", timeout=2)
-            self.call_after_refresh(self.metrics_controller.refresh)
 
         def action_command_palette(self) -> None:
             """Open the modal command palette (c)."""
@@ -253,6 +246,9 @@ if _TEXTUAL_OK:
             command = by_id(command_id)
             if command is None:
                 return
+            if command.handler in WRITE_COMMANDS and not self.override_mode:
+                self.notify("read-only — press O for manual override", timeout=3)
+                return
             handlers: dict[str, Any] = {
                 "new_plan": self.action_new_plan,
                 "new_milestone": self.action_new_milestone,
@@ -289,6 +285,7 @@ if _TEXTUAL_OK:
                 "source_trail": self.action_source_trail,
                 "command_palette": self.action_command_palette,
                 "cycle_theme": self.action_cycle_theme,
+                "toggle_override": self.action_toggle_override,
                 "export_md": self.action_export_md,
                 "help": self.action_help,
                 "update_prompt": self.action_update_prompt,

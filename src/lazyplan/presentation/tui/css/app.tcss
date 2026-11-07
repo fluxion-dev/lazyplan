@@ -4,6 +4,14 @@
     height: 1fr;
 }
 
+#mode {
+    display: none;
+    height: 1;
+    padding: 0 1;
+    background: $lp-status-blocked;
+    color: $lp-surface;
+}
+
 #main {
     height: 1fr;
     padding: 0 0 0 1;

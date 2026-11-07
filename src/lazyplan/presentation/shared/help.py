@@ -21,6 +21,7 @@ HINT_ITEMS: tuple[tuple[str, str], ...] = (
     ("g", "source"),
     ("?", "help"),
     ("c", "commands"),
+    ("O", "override"),
 )
 
 HELP_GROUPS: tuple[str, ...] = ("MOVE", "CHANGE", "FIND", "APP")

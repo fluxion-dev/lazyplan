@@ -41,6 +41,7 @@ from .controllers.updates import UpdateController
 from .filters import FilterMixin
 from .launch import launch_update
 from .metrics import MetricsSection
+from .override import WRITE_ACTIONS
 from .preview import PreviewMixin
 from .state import AppState
 from .theme import register_themes
@@ -93,6 +94,7 @@ if _TEXTUAL_OK:
             Binding("A", "toggle_show_all", "All plans", show=False),
             Binding("r", "refresh", "Refresh", show=False),
             Binding("U", "update_prompt", "Update"),
+            Binding("O", "toggle_override", "Override"),
             Binding("question_mark", "help", "Help"),
             Binding("q", "quit", "Quit"),
         ]
@@ -163,6 +165,7 @@ if _TEXTUAL_OK:
             self.update_controller.prompt()
 
         def compose(self) -> ComposeResult:
+            yield Static("", id="mode")
             with Vertical(id="panel"):
                 with Horizontal(id="main"):
                     with Vertical(id="nav"):
@@ -196,7 +199,12 @@ if _TEXTUAL_OK:
             this guard, `d` or `s` pressed there would mutate the hidden main
             selection.
             """
-            if len(self.screen_stack) > 1 and action not in ("quit", "help"):
+            if len(self.screen_stack) > 1 and action not in ("quit", "help", "toggle_override"):
+                return False
+            if action in WRITE_ACTIONS and not self.override_mode:
+                if self._mounted and not self.state.override_warned:
+                    self.state.override_warned = True
+                    self.notify("read-only — press O for manual override", timeout=3)
                 return False
             return True
 

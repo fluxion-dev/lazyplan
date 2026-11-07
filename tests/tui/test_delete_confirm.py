@@ -40,6 +40,7 @@ class TestDeleteConfirm(unittest.IsolatedAsyncioTestCase):
         self.sid = store.add_milestone(self.pid, "S").id
         self.tid = store.add_task(self.sid, "T").id
         self.app = tui_mod.create_app(self.db)
+        self.app.override_mode = True
 
     async def asyncTearDown(self):
         self.tmp.cleanup()

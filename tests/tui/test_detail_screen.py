@@ -43,6 +43,8 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
         store.add_criteria("plan", self.pid, "Criterion two")
         self.store = Store(self.db)
         self.app = tui_mod.create_app(self.db)
+        # These tests exercise the write path; read-only gating has its own test.
+        self.app.override_mode = True
 
     async def asyncTearDown(self):
         self.tmp.cleanup()

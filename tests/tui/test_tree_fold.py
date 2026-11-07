@@ -44,6 +44,7 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
         store.add_task(self.sid, "T2")
         self.store = Store(self.db)
         self.app = tui_mod.create_app(self.db)
+        self.app.override_mode = True
 
     async def asyncTearDown(self):
         self.tmp.cleanup()
@@ -503,6 +504,7 @@ class TestDoneCollapsed(unittest.IsolatedAsyncioTestCase):
         self.oid = store.add_plan("Open").id
         store.add_milestone(self.oid, "OS")
         self.app = tui_mod.create_app(self.db)
+        self.app.override_mode = True
 
     async def asyncTearDown(self):
         self.tmp.cleanup()
@@ -559,6 +561,7 @@ class TestShowAllToggle(unittest.IsolatedAsyncioTestCase):
             store.add_plan(f"P{i}")
         self.store = Store(self.db)
         self.app = tui_mod.create_app(self.db)
+        self.app.override_mode = True
 
     async def asyncTearDown(self):
         self.tmp.cleanup()
@@ -585,6 +588,7 @@ class TestEmptyState(unittest.IsolatedAsyncioTestCase):
         self.db = os.path.join(self.tmp.name, "t.db")
         Store(self.db)
         self.app = tui_mod.create_app(self.db)
+        self.app.override_mode = True
         self.static = Static
         self.tree = Tree
 

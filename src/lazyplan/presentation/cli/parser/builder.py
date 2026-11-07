@@ -38,6 +38,7 @@ from .proof import (
     add_watch,
 )
 from .questions import add_question_group
+from .refs import add_ref_group
 from .sessions import add_session_group
 from .system import (
     add_completion,
@@ -146,6 +147,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_list(sub, common)
     add_noun_groups(sub, common)
     add_question_group(sub, common)
+    add_ref_group(sub, common)
     add_session_group(sub, common)
     add_touch_group(sub, common)
     add_add_plan(sub, common)

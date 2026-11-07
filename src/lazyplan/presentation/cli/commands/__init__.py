@@ -89,6 +89,11 @@ from .question import (
     _cmd_question_resolve,
 )
 from .ready import _cmd_plan_ready
+from .refs import (
+    _cmd_ref_link,
+    _cmd_ref_list,
+    _cmd_ref_unlink,
+)
 from .session import (
     _cmd_session_end,
     _cmd_session_list,
@@ -170,6 +175,9 @@ _GROUP_CMDS: dict[tuple[str, str], str] = {
     ("touch", "add"): "touch-add",
     ("touch", "list"): "touch-list",
     ("touch", "remove"): "touch-remove",
+    ("ref", "link"): "ref-link",
+    ("ref", "list"): "ref-list",
+    ("ref", "unlink"): "ref-unlink",
     ("issue", "import"): "issue-import",
     ("criterion", "prove"): "criterion-prove",
     ("criterion", "evidence"): "criterion-evidence",
@@ -236,6 +244,9 @@ _COMMANDS: dict[str, Callable[[Store, Namespace, str], int]] = {
     "touch-add": _cmd_touch_add,
     "touch-list": _cmd_touch_list,
     "touch-remove": _cmd_touch_remove,
+    "ref-link": _cmd_ref_link,
+    "ref-list": _cmd_ref_list,
+    "ref-unlink": _cmd_ref_unlink,
     "criterion-evidence": _cmd_criterion_evidence,
     "delete-criteria": _cmd_delete_criteria,
     "issue-import": _cmd_issue_import,

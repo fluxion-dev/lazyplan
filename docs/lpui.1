@@ -1115,6 +1115,34 @@ who made this change (you see it in feed)
 what to do with a question Choices: add, list, resolve, reopen\. Required\.
 .RE
 .TP
+.B lpui ref
+link, list, or unlink a plan's external references
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B  ACTION
+what to do with external references Choices: link, list, unlink\. Required\.
+.RE
+.TP
 .B lpui session
 start, end, show, or list agent sessions
 .RS

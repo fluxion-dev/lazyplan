@@ -11,6 +11,7 @@ from ..core.entities import (
     Claim,
     Comment,
     Criterion,
+    CriterionEvidence,
     Milestone,
     Note,
     Plan,
@@ -425,6 +426,26 @@ class StoreStubs(StoreStubsLinks):
         raise NotImplementedError
 
     def set_criteria(self, cid: int, done: bool, actor: str = "human") -> Criterion | None:
+        raise NotImplementedError
+
+    def add_evidence(
+        self,
+        criterion_id: int,
+        command: str = "",
+        exit_code: int | None = None,
+        commit_sha: str = "",
+        pr_url: str = "",
+        artifact_path: str = "",
+        note: str = "",
+        task_id: int | None = None,
+        actor: str = "human",
+    ) -> CriterionEvidence:
+        raise NotImplementedError
+
+    def list_evidence(self, criterion_id: int) -> list[CriterionEvidence]:
+        raise NotImplementedError
+
+    def evidence_map(self) -> dict[int, list[CriterionEvidence]]:
         raise NotImplementedError
 
     def delete_criteria(self, cid: int, actor: str = "human", reason: str = "") -> bool:

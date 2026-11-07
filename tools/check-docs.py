@@ -7,10 +7,6 @@ Usage:
 Stdlib only. Fails when Markdown outside the allowlist appears, when a retained
 human doc links to a missing relative path, or when ``AGENTS.md`` loses the
 documentation policy sentence.
-
-``LEGACY_DOCS`` is transitional: milestone 446 and the site slice delete those
-docs and must clear the set. An entry that no longer exists is an error, so the
-allowance cannot linger.
 """
 
 from __future__ import annotations
@@ -37,7 +33,6 @@ RETIRED_DOCS = frozenset(
         "docs/setup.md",
     }
 )
-LEGACY_DOCS = frozenset()
 POLICY_FILE = "AGENTS.md"
 POLICY_MARKER = "Do not restate source"
 SKIP_DIRS = frozenset(
@@ -123,12 +118,8 @@ def check_links(root: Path) -> list[str]:
 def check_allowlist(root: Path) -> list[str]:
     """Return errors for unapproved, missing, or stale Markdown paths."""
     present = set(markdown_files(root))
-    errors = [f"unapproved Markdown: {name}" for name in sorted(present - ALLOWED - LEGACY_DOCS)]
+    errors = [f"unapproved Markdown: {name}" for name in sorted(present - ALLOWED)]
     errors.extend(f"missing human doc: {name}" for name in HUMAN_DOCS if name not in present)
-    errors.extend(
-        f"legacy doc is gone; remove it from LEGACY_DOCS: {name}"
-        for name in sorted(LEGACY_DOCS - present)
-    )
     return errors
 
 

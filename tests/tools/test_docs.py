@@ -5,7 +5,6 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
-from unittest import mock
 
 from tests.support.paths import ROOT
 from tests.support.tools import load_tool
@@ -15,7 +14,6 @@ class DocsGateCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.gate = load_tool("check-docs")
-        cls.legacy = cls.gate.LEGACY_DOCS
 
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
@@ -25,9 +23,6 @@ class DocsGateCase(unittest.TestCase):
             (self.root / name).write_text(f"# {name}\n\nDo not restate source.\n", encoding="utf-8")
         (self.root / "docs").mkdir()
         (self.root / "docs/usage.md").write_text("# usage\n", encoding="utf-8")
-        patcher = mock.patch.object(self.gate, "LEGACY_DOCS", frozenset())
-        patcher.start()
-        self.addCleanup(patcher.stop)
 
     def test_clean_fixture_passes(self):
         self.assertEqual(self.gate.check(self.root), [])
@@ -66,14 +61,8 @@ class DocsGateCase(unittest.TestCase):
         errors = self.gate.check(self.root)
         self.assertTrue(any("documentation policy" in error for error in errors), errors)
 
-    def test_stale_legacy_entry_fails(self):
-        with mock.patch.object(self.gate, "LEGACY_DOCS", frozenset({"docs/gone.md"})):
-            errors = self.gate.check(self.root)
-        self.assertTrue(any("remove it from LEGACY_DOCS" in error for error in errors), errors)
-
     def test_real_repo_passes(self):
-        with mock.patch.object(self.gate, "LEGACY_DOCS", self.legacy):
-            self.assertEqual(self.gate.check(ROOT), [])
+        self.assertEqual(self.gate.check(ROOT), [])
 
     def test_check_script_runs_the_gate(self):
         script = (ROOT / "tools/check.sh").read_text(encoding="utf-8")

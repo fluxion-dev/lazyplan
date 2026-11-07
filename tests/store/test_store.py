@@ -757,6 +757,26 @@ class TestStore(unittest.TestCase):
         self.assertEqual(lpui_main(["--db", self.db, "reconcile"]), 0)
         self.assertEqual(lpui_main(["--db", self.db, "reconcile", "--check"]), 0)
 
+    def test_delete_last_task_recomputes_ancestors(self):
+        p = self.store.add_plan("P")
+        s = self.store.add_milestone(p.id, "S")
+        t = self.store.add_task(s.id, "T")
+        services.set_status(self.store, "task", t.id, Status.DONE, actor="t")
+        self.assertEqual(self.store.get_milestone(s.id).status, Status.DONE)
+        self.assertEqual(self.store.get_plan(p.id).status, Status.DONE)
+        self.assertTrue(services.delete_row(self.store, "task", t.id, actor="t"))
+        self.assertEqual(self.store.get_milestone(s.id).status, Status.TODO)
+        self.assertEqual(self.store.get_plan(p.id).status, Status.TODO)
+
+    def test_delete_milestone_recomputes_plan(self):
+        p = self.store.add_plan("P")
+        s = self.store.add_milestone(p.id, "S")
+        t = self.store.add_task(s.id, "T")
+        services.set_status(self.store, "task", t.id, Status.DONE, actor="t")
+        self.assertEqual(self.store.get_plan(p.id).status, Status.DONE)
+        self.assertTrue(services.delete_row(self.store, "milestone", s.id, actor="t"))
+        self.assertEqual(self.store.get_plan(p.id).status, Status.TODO)
+
     def test_cli_status_and_reconcile(self):
         self.assertEqual(lpui_main(["--db", self.db, "add-plan", "--title", "P1"]), 0)
         self.assertEqual(

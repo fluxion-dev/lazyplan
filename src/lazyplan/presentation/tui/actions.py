@@ -130,7 +130,7 @@ if _TEXTUAL_OK:
                 if not reason.strip():
                     self.notify("a delete needs a reason", timeout=3)
                     return
-                if not self.store.delete(kind, oid, actor="tui"):
+                if not services.delete_row(self.store, kind, oid, actor="tui"):
                     self.notify("already gone — refreshing")
                     return
                 self._record_override("delete", f"{kind} #{oid}", reason.strip())

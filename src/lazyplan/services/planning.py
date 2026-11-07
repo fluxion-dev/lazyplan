@@ -97,7 +97,14 @@ def create_task(
     return task
 
 
-def heal(port: PlanningPort, kind: str, obj_id: int, actor: str = "human") -> bool:
+def heal(
+    port: PlanningPort,
+    kind: str,
+    obj_id: int,
+    actor: str = "human",
+    *,
+    empty: bool = False,
+) -> bool:
     """Recompute one milestone or plan from its children. Returns changed."""
     check_kind(kind)
     obj: Plan | Milestone | None
@@ -109,7 +116,7 @@ def heal(port: PlanningPort, kind: str, obj_id: int, actor: str = "human") -> bo
         kids = [row.status for row in port.list_milestones(obj_id)] if obj is not None else []
     else:
         raise ValueError("kind must be milestone|plan")
-    if obj is None or not kids:
+    if obj is None or (not kids and not empty):
         return False
     target = rollup_target(kids)
     if obj.status == target:
@@ -137,6 +144,39 @@ def heal_parents(port: PlanningPort, kind: str, obj_id: int, actor: str = "human
             heal(port, "plan", milestone.plan_id, actor)
     elif kind == "plan":
         heal(port, "plan", obj_id, actor)
+
+
+def delete_row(
+    port: PlanningPort,
+    kind: str,
+    obj_id: int,
+    actor: str = "human",
+    reason: str = "",
+) -> bool:
+    """Delete one row, then recompute the ancestors its subtree belonged to."""
+    check_kind(kind)
+    milestone_id: int | None = None
+    plan_id: int | None = None
+    if kind == "task":
+        task = port.get_task(obj_id)
+        if task is not None:
+            milestone_id = task.milestone_id
+            milestone = port.get_milestone(milestone_id)
+            plan_id = milestone.plan_id if milestone is not None else None
+    elif kind == "milestone":
+        milestone = port.get_milestone(obj_id)
+        if milestone is not None:
+            plan_id = milestone.plan_id
+    ok = port.delete(kind, obj_id, actor=actor, reason=reason)
+    if not ok:
+        return False
+    if kind == "task" and milestone_id is not None:
+        heal(port, "milestone", milestone_id, actor, empty=True)
+        if plan_id is not None:
+            heal(port, "plan", plan_id, actor, empty=True)
+    elif kind == "milestone" and plan_id is not None:
+        heal(port, "plan", plan_id, actor, empty=True)
+    return True
 
 
 def set_status(

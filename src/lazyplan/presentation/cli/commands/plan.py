@@ -363,7 +363,9 @@ def _cmd_delete(store: Store, args: argparse.Namespace, actor: str) -> int:
     elif isinstance(before, Task):
         title = before.title
         parent = f"milestone:{before.milestone_id}"
-    ok = store.delete(args.kind, args.id, actor=actor, reason=getattr(args, "reason", ""))
+    ok = services.delete_row(
+        store, args.kind, args.id, actor=actor, reason=getattr(args, "reason", "")
+    )
     if not ok:
         print(msg_not_found(args.kind, args.id), file=sys.stderr)
         return 1

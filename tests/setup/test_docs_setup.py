@@ -5,12 +5,10 @@ import unittest
 
 from lazyplan.infrastructure.docs_meta import ENVIRONMENT, FILES
 from lazyplan.presentation.cli.parser import build_parser
+from tests.support.docs import MAN, README, USAGE
 from tests.support.paths import ROOT
 
-USAGE = (ROOT / "docs/usage.md").read_text(encoding="utf-8")
 SETUP_DOC = (ROOT / "docs/setup.md").read_text(encoding="utf-8")
-MAN = (ROOT / "docs/lpui.1").read_text(encoding="utf-8").replace("\\-", "-").replace("\\.", ".")
-README = (ROOT / "README.md").read_text(encoding="utf-8")
 
 
 class DocsTruthCase(unittest.TestCase):

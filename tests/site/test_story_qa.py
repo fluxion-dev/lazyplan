@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import unittest
 
+from tests.support.docs import README, USAGE
 from tests.support.paths import ROOT
 
 
@@ -16,16 +17,14 @@ class StoryQaTest(unittest.TestCase):
         self.assertIn("Resume and continuity | Strong", text)
 
     def test_readme_covers_the_human_entry_points(self) -> None:
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
         for heading in ("## Install", "## First run", "## Why it differs", "## Learn more"):
-            self.assertIn(heading, readme)
+            self.assertIn(heading, README)
         for target in ("docs/usage.md", "CHANGELOG.md", "CONTRIBUTING.md"):
-            self.assertIn(f"]({target})", readme)
+            self.assertIn(f"]({target})", README)
 
     def test_usage_keeps_the_manual_override_surface(self) -> None:
-        usage = (ROOT / "docs" / "usage.md").read_text(encoding="utf-8")
-        self.assertIn("Manual override mode", usage)
-        self.assertIn("lpui feed --overrides", usage)
+        self.assertIn("Manual override mode", USAGE)
+        self.assertIn("lpui feed --overrides", USAGE)
 
     def test_site_ships_the_control_room_screenshot(self) -> None:
         index = (ROOT / "site" / "index.html").read_text(encoding="utf-8")

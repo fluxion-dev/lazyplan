@@ -50,6 +50,7 @@ if _TEXTUAL_OK:
             Binding("s", "advance_status", "Status"),
             Binding("x", "tick_criterion", "Tick"),
             Binding("a", "add_criterion", "Criterion"),
+            Binding("p", "prove_criterion", "Prove"),
             Binding("n", "add_child", "New child"),
             Binding("d", "delete_row", "Delete"),
             Binding("g", "open_source", "Source"),
@@ -283,6 +284,23 @@ if _TEXTUAL_OK:
             self._record("criterion tick", f"C{target.id}")
             self._reload()
             self.notify(f"criterion {target.id} checked")
+
+        def action_prove_criterion(self) -> None:
+            if self._editing:
+                self.notify("save or cancel first")
+                return
+            if not self._require_override():
+                return
+            from .prove import prove_dialog
+
+            def done(criterion_id: int, result: services.ProofResult) -> None:
+                evidence = getattr(result, "evidence", None)
+                detail = getattr(evidence, "command", "") or getattr(evidence, "note", "")
+                self._record("criterion prove", str(detail))
+                self._reload()
+                self.notify(f"criterion {criterion_id} recorded", timeout=4)
+
+            prove_dialog(self, self._dstore, self.dkind, self.doid, done)
 
         def action_add_criterion(self) -> None:
             if self._editing:

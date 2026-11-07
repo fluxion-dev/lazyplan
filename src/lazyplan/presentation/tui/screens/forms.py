@@ -146,6 +146,27 @@ if _TEXTUAL_OK:
             super().__init__(defaults, context or f"M{milestone_id}")
             self.milestone_id = milestone_id
 
+    class ProveScreen(EntityForm):
+        """Record one evidence row for a criterion."""
+
+        heading = "Prove criterion"
+        submit_label = "Prove"
+        fields = (
+            FormField("criterion", "Criterion id", "e.g. 12", "p-criterion"),
+            FormField("command", "Command", "pytest tests/...", "p-command"),
+            FormField("exit", "Exit code", "0", "p-exit"),
+            FormField("commit", "Commit", "40-character sha", "p-commit"),
+            FormField("task", "Proving task", "task id (optional)", "p-task"),
+            FormField("note", "Note", "what this row proves", "p-note"),
+        )
+
+        def __init__(
+            self,
+            defaults: dict[str, str] | None = None,
+            context: str = "",
+        ) -> None:
+            super().__init__(defaults, context)
+
     class ConfirmScreen(_Form):
         """One destructive confirmation; dismisses True on the confirm button."""
 

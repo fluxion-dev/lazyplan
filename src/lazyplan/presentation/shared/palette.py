@@ -121,6 +121,17 @@ COMMANDS: tuple[Command, ...] = (
         tui_only=True,
     ),
     Command(
+        id="prove-criterion",
+        label="Prove criterion",
+        section=EDIT,
+        context="selection",
+        handler="prove_criterion",
+        aliases=("prove", "evidence", "record proof"),
+        help_group="CHANGE",
+        help_hint="record a command, exit code, commit, or note as proof",
+        tui_only=True,
+    ),
+    Command(
         id="edit-selection",
         label="Edit selection",
         section=EDIT,

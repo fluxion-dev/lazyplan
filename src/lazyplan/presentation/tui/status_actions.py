@@ -23,7 +23,7 @@ class StatusMixin(ContextMixin):
         if left and (current is None or current.status != Status.DONE):
             self.notify(f"warning: {len(left)} open criteria — closing anyway", timeout=5)
         if current is not None and current.status == Status.DOING:
-            gate = self._drift_warning()
+            gate = self._drift_warning() or self._evidence_warning()
             if gate:
                 self._prompt_drift_override(
                     gate, lambda reason: self._cycle_status(kind, oid, reason)
@@ -41,7 +41,7 @@ class StatusMixin(ContextMixin):
         if status == Status.DONE and left:
             self.notify(f"warning: {len(left)} open criteria — closing anyway", timeout=5)
         if status == Status.DONE:
-            gate = self._drift_warning()
+            gate = self._drift_warning() or self._evidence_warning()
             if gate:
                 self._prompt_drift_override(
                     gate, lambda reason: self._move_status(kind, oid, status, reason)
@@ -90,3 +90,9 @@ class StatusMixin(ContextMixin):
         if plan_id is None:
             return None
         return services.done_gate(self.store, plan_id)
+
+    def _evidence_warning(self) -> str | None:
+        """Finish-gate warning for the selected task, when one applies."""
+        if self.selected is None or self.selected[0] != "task":
+            return None
+        return services.task_gate(self.store, self.selected[1])

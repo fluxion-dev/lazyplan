@@ -20,6 +20,7 @@ from ..shared.palette import by_id
 from .approval_actions import ApprovalMixin
 from .claim_actions import ClaimMixin
 from .constants import DOUBLE_CLICK_WINDOW
+from .evidence_actions import EvidenceMixin
 from .git_actions import GitActionMixin
 from .override import WRITE_COMMANDS, OverrideMixin
 from .palette_handlers import palette_handlers
@@ -38,7 +39,14 @@ from .status_actions import StatusMixin
 
 if _TEXTUAL_OK:
 
-    class ActionMixin(OverrideMixin, ApprovalMixin, ClaimMixin, StatusMixin, GitActionMixin):
+    class ActionMixin(
+        OverrideMixin,
+        ApprovalMixin,
+        ClaimMixin,
+        EvidenceMixin,
+        StatusMixin,
+        GitActionMixin,
+    ):
         """Actions behavior."""
 
         def action_new_milestone(self) -> None:

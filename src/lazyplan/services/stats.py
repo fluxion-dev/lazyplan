@@ -96,34 +96,44 @@ def _activity_metrics(
 ATTENTION_STALE_SECS = 24 * 3600
 
 
-def attention_ids(
+def attention_reasons(
     store: InsightsPort, stale_after: float = ATTENTION_STALE_SECS, now: float | None = None
-) -> set[int]:
-    """Task ids the TUI should surface as needing attention."""
+) -> dict[int, list[str]]:
+    """Task ids the TUI should surface as needing attention, with reasons."""
     stamp = time.time() if now is None else now
     _added, transitions = _event_maps(_events(store))
     claims = store.claims_map()
     forge = store.forge_links_map()
     open_criteria = store.open_task_criteria_ids()
-    ids: set[int] = set()
+    reasons: dict[int, list[str]] = {}
     for task in _all_tasks(store):
+        found: list[str] = []
         claim = claims.get(task.id)
         if claim is not None and claim.expired(stamp):
-            ids.add(task.id)
+            found.append("stale claim")
         if task.blocked:
-            ids.add(task.id)
+            found.append("blocked")
         if task.status.value == "doing":
             starts = [
                 when for when, status, _actor in transitions.get(task.id, []) if status == "doing"
             ]
             if starts and stamp - starts[-1] > stale_after:
-                ids.add(task.id)
+                found.append("aging doing")
         if task.status.value == "done" and task.id in open_criteria:
-            ids.add(task.id)
+            found.append("done with open criteria")
         links = forge.get(("task", task.id), [])
         if any(str(link.checks or "") == "fail" for link in links):
-            ids.add(task.id)
-    return ids
+            found.append("failing checks")
+        if found:
+            reasons[task.id] = found
+    return reasons
+
+
+def attention_ids(
+    store: InsightsPort, stale_after: float = ATTENTION_STALE_SECS, now: float | None = None
+) -> set[int]:
+    """Task ids the TUI should surface as needing attention."""
+    return set(attention_reasons(store, stale_after=stale_after, now=now))
 
 
 def compute(

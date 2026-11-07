@@ -106,6 +106,12 @@ class InspectionCase(unittest.TestCase):
         self.assertFalse(any(item_id.startswith("skill:") for item_id in pending))
         self.assertFalse(any(item_id.startswith("hook:") for item_id in pending))
 
+    def test_unselected_hosts_are_not_pending(self):
+        pending = {item.id for item in self.inspect().pending}
+        self.assertIn(hook_id("claude", "session-start"), pending)
+        self.assertNotIn(hook_id("gemini", "session-start"), pending)
+        self.assertNotIn(hook_id("opencode", "plugin"), pending)
+
     def test_no_skills_choice_removes_skill_items(self):
         self.choice = SetupChoice(
             placement="home",

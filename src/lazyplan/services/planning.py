@@ -188,9 +188,16 @@ def set_status(
 ) -> bool:
     """Move a row, heal the subtree state, and log the transition."""
     check_kind(kind)
-    ok = port.set_status_raw(kind, obj_id, status, actor=actor)
+    claim = None
+    if kind == "task" and status is not Status.DOING:
+        get_claim = getattr(port, "get_claim", None)
+        if get_claim is not None:
+            claim = get_claim(obj_id)
+    ok = port.set_status_raw(kind, obj_id, status)
     if ok:
         port.log(actor, kind, "status", f"{kind} #{obj_id} -> {status.value}")
+        if claim is not None:
+            port.log(actor, "task", "release", f"task #{obj_id} released by status")
         heal_parents(port, kind, obj_id, actor)
     return ok
 

@@ -140,6 +140,7 @@ class TestClaims(unittest.TestCase):
 
     def test_export_and_import_preserve_active_claims(self):
         self.store.claim_task(self.task.id, "alice", 600, note="handoff")
+        services.set_status(self.store, "task", self.task.id, Status.DOING, actor="fixture")
         data = services.export_all(self.store)
         claim = data["plans"][0]["milestones"][0]["tasks"][0]["claim"]
         self.assertEqual(claim["actor"], "alice")

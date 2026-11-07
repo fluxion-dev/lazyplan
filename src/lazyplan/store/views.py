@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import sqlite3
+
 from ..core.entities import (
     Criterion,
     CriterionEvidence,
@@ -16,6 +18,14 @@ from ..core.kinds import KIND_ERROR, table_for
 from ..core.policies.evidence import summarize as evidence_summary
 from ..core.serialization import approval_payload
 from .base import StoreBase, to_payload
+
+
+def _release_lease_for_status(
+    conn: sqlite3.Connection, kind: str, obj_id: int, status: Status
+) -> None:
+    """A task that is no longer doing cannot keep a lease."""
+    if kind == "task" and status is not Status.DOING:
+        conn.execute("DELETE FROM task_claims WHERE task_id=?", (obj_id,))
 
 
 def _criterion_payload(criterion: Criterion, evidence: dict[int, list[CriterionEvidence]]) -> dict:
@@ -233,19 +243,13 @@ class ViewsMixin(StoreBase):
             out.setdefault(plan_id, (float(row["ts"]), target))
         return out
 
-    def set_status_raw(self, kind: str, obj_id: int, status: Status, actor: str = "") -> bool:
+    def set_status_raw(self, kind: str, obj_id: int, status: Status) -> bool:
         """Raw status write, no healing; a task leaving doing loses its lease."""
         table = table_for(kind)
-        released = False
         with self._connect() as conn:
-            if kind == "task" and status is not Status.DOING:
-                cur = conn.execute("DELETE FROM task_claims WHERE task_id=?", (obj_id,))
-                released = (cur.rowcount or 0) > 0
+            _release_lease_for_status(conn, kind, obj_id, status)
             cur = conn.execute(f"UPDATE {table} SET status=? WHERE id=?", (status.value, obj_id))
-            changed = (cur.rowcount or 0) > 0
-        if released and actor:
-            self.log(actor, "task", "release", f"task #{obj_id} released by status")
-        return changed
+            return (cur.rowcount or 0) > 0
 
     def counts(self) -> dict[str, int]:
         """Plan, milestone, and task totals, plus per-state plan counts."""

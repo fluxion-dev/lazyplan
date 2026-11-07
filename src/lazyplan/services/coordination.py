@@ -161,14 +161,14 @@ def block_task(port: CoordinationPort, task_id: int, reason: str, actor: str = "
     if task is None:
         raise KeyError(f"task #{task_id} not found")
     validate_block(task, reason)
-    if port.get_claim(task_id) is not None:
-        port.release_claim(task_id, actor, force=True)
     updated = port.set_blocked(task_id, True, reason, actor=actor)
     if updated is None:
         raise KeyError(f"task #{task_id} not found")
     if task.status == Status.DOING:
         set_status(port, "task", task_id, Status.TODO, actor=actor)
         updated = port.get_task(task_id) or updated
+    elif port.get_claim(task_id) is not None:
+        port.release_claim(task_id, actor, force=True)
     port.add_note("task", task_id, f"Blocked: {reason.strip()}", actor=actor)
     return updated
 

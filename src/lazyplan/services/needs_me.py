@@ -9,7 +9,7 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from ..core.entities import Task
+from ..core.entities import Plan, Task
 from ..core.policies.coordination import patterns_overlap
 from ..core.ports.needs_me import NeedsMePort
 from ..core.serialization import approval_payload
@@ -32,7 +32,7 @@ _REASON_PRIORITY = {
 }
 
 
-def _plans(port: NeedsMePort, plan_id: int | None) -> list[Any]:
+def _plans(port: NeedsMePort, plan_id: int | None) -> list[Plan]:
     if plan_id is None:
         return port.list_plans()
     plan = port.get_plan(plan_id)
@@ -127,7 +127,7 @@ def _task_counts(tasks: list[Task]) -> dict[str, int]:
 
 
 def _plan_health(
-    plans: list[Any],
+    plans: list[Plan],
     tasks_by_plan: dict[int, list[Task]],
     expired_task_ids: set[int],
     latest: dict,

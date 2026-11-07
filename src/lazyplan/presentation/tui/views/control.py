@@ -67,6 +67,15 @@ def _needs_line(parts: list[str]) -> str:
     return "[bold]needs[/]  " + (" · ".join(parts) if parts else "[green]nothing needs you[/]")
 
 
+def _task_summary(tasks: list[dict[str, Any]], stamp: float) -> tuple[int, list[dict], int, int]:
+    """Blocked, claim, stale-claim, and doing counts for a task group."""
+    blocked = sum(1 for task in tasks if task.get("blocked"))
+    claims = [claim for task in tasks if isinstance(claim := task.get("claim"), dict)]
+    stale = sum(1 for claim in claims if float(claim.get("expires_at") or 0) <= stamp)
+    doing = sum(1 for task in tasks if task.get("status") == "doing")
+    return blocked, claims, stale, doing
+
+
 def _plan_strip(store: ControlPort, oid: int, full: dict[str, Any]) -> str:
     """Plan health and the reasons it may need a human."""
     stamp = time.time()
@@ -75,9 +84,7 @@ def _plan_strip(store: ControlPort, oid: int, full: dict[str, Any]) -> str:
         question for question in full.get("questions", []) if question.get("status") == "open"
     ]
     tasks = _plan_tasks(full)
-    blocked = sum(1 for task in tasks if task.get("blocked"))
-    claims = [claim for task in tasks if isinstance(claim := task.get("claim"), dict)]
-    stale = sum(1 for claim in claims if float(claim.get("expires_at") or 0) <= stamp)
+    blocked, claims, stale, _doing = _task_summary(tasks, stamp)
     head = f"[bold]health[/]  {_readiness_line(store, oid)} · {_approval_line(approval)}"
     needs: list[str] = []
     if questions:
@@ -95,10 +102,7 @@ def _milestone_strip(_store: ControlPort, _oid: int, full: dict[str, Any]) -> st
     """Milestone health from its task rows."""
     stamp = time.time()
     tasks = [entry.get("task", {}) for entry in full.get("tasks", [])]
-    blocked = sum(1 for task in tasks if task.get("blocked"))
-    claims = [claim for task in tasks if isinstance(claim := task.get("claim"), dict)]
-    stale = sum(1 for claim in claims if float(claim.get("expires_at") or 0) <= stamp)
-    doing = sum(1 for task in tasks if task.get("status") == "doing")
+    blocked, claims, stale, doing = _task_summary(tasks, stamp)
     head = f"[bold]slice[/]  [dim]{_plural(doing, 'doing task')}[/] · {_plural(len(tasks), 'task')}"
     needs: list[str] = []
     if blocked:

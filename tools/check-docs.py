@@ -8,8 +8,8 @@ Stdlib only. Fails when Markdown outside the allowlist appears, when a retained
 human doc links to a missing relative path, or when ``AGENTS.md`` loses the
 documentation policy sentence.
 
-``LEGACY_DOCS`` is transitional: milestone 446 deletes those seven docs and
-must clear the set. An entry that no longer exists is an error, so the
+``LEGACY_DOCS`` is transitional: milestone 446 and the site slice delete those
+docs and must clear the set. An entry that no longer exists is an error, so the
 allowance cannot linger.
 """
 
@@ -26,17 +26,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 HUMAN_DOCS = ("README.md", "CONTRIBUTING.md", "docs/usage.md")
 ALLOWED = frozenset({*HUMAN_DOCS, "AGENTS.md", "CHANGELOG.md"})
-LEGACY_DOCS = frozenset(
-    {
-        "docs/architecture.md",
-        "docs/design-system.md",
-        "docs/downloads.md",
-        "docs/performance.md",
-        "docs/product/roadmap.md",
-        "docs/releasing.md",
-        "docs/setup.md",
-    }
-)
+LEGACY_DOCS = frozenset({"docs/product/roadmap.md"})
 POLICY_FILE = "AGENTS.md"
 POLICY_MARKER = "Do not restate source"
 SKIP_DIRS = frozenset(

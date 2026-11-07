@@ -36,14 +36,15 @@ SLOTS: dict[str, StatSlot] = {
     "progress": StatSlot("progress", 11, 8, 1000, 0, "left"),
     "commits": StatSlot("commits", 4, 4, 30, 1, "right"),
     "pulls": StatSlot("pulls", 4, 4, 500, 2, "right"),
-    "stale": StatSlot("stale", 2, 2, 10, 3, "right"),
-    "blocked": StatSlot("blocked", 9, 2, 250, 4, "left"),
-    "claim": StatSlot("claim", 12, 8, 125, 5, "left"),
-    "marked": StatSlot("marked", 2, 2, 60, 6, "left"),
+    "drift": StatSlot("drift", 1, 1, 900, 3, "right"),
+    "stale": StatSlot("stale", 2, 2, 10, 4, "right"),
+    "blocked": StatSlot("blocked", 9, 2, 250, 5, "left"),
+    "claim": StatSlot("claim", 12, 8, 125, 6, "left"),
+    "marked": StatSlot("marked", 2, 2, 60, 7, "left"),
 }
 
 KIND_SLOTS: dict[str, tuple[str, ...]] = {
-    "plan": ("progress", "commits", "pulls", "stale", "marked"),
+    "plan": ("progress", "commits", "pulls", "drift", "stale", "marked"),
     "milestone": ("progress", "commits", "pulls", "stale", "marked"),
     "task": ("commits", "pulls", "stale", "blocked", "claim", "marked"),
 }
@@ -64,6 +65,7 @@ class RowStats:
     blocked: bool = False
     claim_actor: str = ""
     claim_expired: bool = False
+    drifted: bool = False
 
 
 def _slot_width(key: str, compact: bool) -> int:
@@ -138,6 +140,11 @@ def _pulls_slot(stats: RowStats, compact: bool) -> tuple[str, str]:
     return (f"[dim]{text}[/]" if text else ""), text
 
 
+def _drift_slot(stats: RowStats, compact: bool) -> tuple[str, str]:
+    del compact
+    return ("[yellow]Δ[/]" if stats.drifted else ""), ("Δ" if stats.drifted else "")
+
+
 def _stale_slot(stats: RowStats, compact: bool) -> tuple[str, str]:
     if stats.kind == "task":
         text = "!" if stats.stale else ""
@@ -169,6 +176,7 @@ _SLOT_RENDERERS: dict[str, Callable[[RowStats, bool], tuple[str, str]]] = {
     "progress": _progress_slot,
     "commits": _commits_slot,
     "pulls": _pulls_slot,
+    "drift": _drift_slot,
     "stale": _stale_slot,
     "marked": _marked_slot,
     "blocked": _blocked_slot,

@@ -31,7 +31,7 @@ class RowSpec:
         return self.render(width=width)
 
 
-def plan_spec(plan: Plan, progress: dict, source_stats: dict) -> RowSpec:
+def plan_spec(plan: Plan, progress: dict, source_stats: dict, drifted: bool = False) -> RowSpec:
     """Build the width-independent renderer for one plan row."""
     stats = source_stats.get(("plan", plan.id))
     return RowSpec(
@@ -40,6 +40,7 @@ def plan_spec(plan: Plan, progress: dict, source_stats: dict) -> RowSpec:
             plan,
             progress=progress.get(("plan", plan.id)),
             source_counts=(stats[0], stats[1], stats[2]) if stats else None,
+            drifted=drifted,
         ),
         depth=3,
         status=plan.status,

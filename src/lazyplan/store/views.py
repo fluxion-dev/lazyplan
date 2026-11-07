@@ -95,6 +95,8 @@ class ViewsMixin(StoreBase):
 
     def _plan_show(self, p: Plan) -> dict:
         """Plan show payload with milestone summaries."""
+        latest = self.latest_revision(p.id)
+        recent = self.list_plan_changes(p.id, after_id=latest.change_mark)[-3:] if latest else []
         payload = {
             "plan": to_payload(vars(p)),
             "criteria": [vars(c) for c in self.list_criteria("plan", p.id)],
@@ -104,7 +106,7 @@ class ViewsMixin(StoreBase):
             "effective_forge_links": [vars(c) for c in self.effective_forge_links("plan", p.id)],
             "repos": self.list_repos("plan", p.id),
             "effective_repos": self.effective_repos("plan", p.id),
-            "approval": approval_payload(self.latest_revision(p.id), self.plan_drift(p.id)),
+            "approval": approval_payload(latest, self.plan_drift(p.id), recent),
             "milestones": [
                 {
                     "milestone": to_payload(vars(s)),

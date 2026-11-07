@@ -53,6 +53,21 @@ class PreviewDocumentTest(unittest.TestCase):
         self.assertIn("[bold]next[/]", text)
         self.assertIn("Task title", text)
 
+    def test_plan_preview_shows_approval_and_drift(self) -> None:
+        self.store.add_revision(self.plan.id, "a" * 64, "{}", reason="initial")
+        full = self.store.get_full("plan", self.plan.id)
+        assert full is not None
+        text = build_preview(self.store, "plan", self.plan.id, full, []).render()
+        self.assertIn("[bold]approval[/]", text)
+        self.assertIn("r1", text)
+        self.assertIn("in sync", text)
+        self.store.update_task(self.task.id, title="Renamed", reason="rename")
+        full = self.store.get_full("plan", self.plan.id)
+        assert full is not None
+        text = build_preview(self.store, "plan", self.plan.id, full, []).render()
+        self.assertIn("changes since approval", text)
+        self.assertIn("title: rename", text)
+
     def test_task_preview_includes_breadcrumb_and_details(self) -> None:
         full = self.store.get_full("task", self.task.id)
         assert full is not None

@@ -136,6 +136,16 @@ class TreeStatsTest(unittest.IsolatedAsyncioTestCase):
                         self.assertEqual(len(marked), row_widths[key[0]])
                         self.assertIn("✓", marked)
 
+    async def test_plan_row_shows_drift_badge(self) -> None:
+        self.store.add_revision(self.plan_a.id, "a" * 64, "{}")
+        self.store.update_task(self.task_a.id, title="Renamed", reason="rename")
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            await pilot.pause()
+            self.assertIn("Δ", self._plain(app, ("plan", self.plan_a.id)))
+            self.assertNotIn("Δ", self._plain(app, ("plan", self.plan_b.id)))
+
     async def test_resize_reflows_a_marked_doing_row(self) -> None:
         from lazyplan.core.entities import Status
 

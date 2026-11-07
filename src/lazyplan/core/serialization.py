@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from .entities import PlanRevision, Status
+from collections.abc import Sequence
+
+from .entities import PlanChange, PlanRevision, Status
 
 
 def to_payload(d: dict) -> dict:
@@ -17,11 +19,15 @@ def to_payload(d: dict) -> dict:
     return d
 
 
-def approval_payload(revision: PlanRevision | None, drift: int) -> dict:
-    """Approval state for one plan: latest revision, policy, and drift."""
+def approval_payload(
+    revision: PlanRevision | None,
+    drift: int,
+    recent: Sequence[PlanChange] | None = None,
+) -> dict:
+    """Approval state for one plan: latest revision, policy, drift, and recent changes."""
     if revision is None:
         return {"revision": 0, "enforced": False, "drift": drift}
-    return {
+    payload = {
         "revision": revision.revision,
         "approved_at": revision.approved_at,
         "actor": revision.actor,
@@ -29,3 +35,15 @@ def approval_payload(revision: PlanRevision | None, drift: int) -> dict:
         "enforced": revision.enforced,
         "drift": drift,
     }
+    if recent is not None:
+        payload["recent"] = [
+            {
+                "kind": change.kind,
+                "action": change.action,
+                "field": change.field,
+                "reason": change.reason,
+                "actor": change.actor,
+            }
+            for change in recent
+        ]
+    return payload

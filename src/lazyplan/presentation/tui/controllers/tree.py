@@ -268,6 +268,7 @@ class TreeController:
             app.store.vcs_links_map(),
             self.filters.source_stats(filtered),
             app.store.claims_map(),
+            app.store.drift_counts(),
         )
         tree.root.expand()
         app._collapsed &= set(app._row_nodes)
@@ -315,12 +316,13 @@ class TreeController:
         vcs_map: dict,
         source_stats: dict,
         claims_map: dict,
+        drift_map: dict,
     ) -> None:
         """Create plan/milestone/task nodes for one refresh."""
         app = self.app
         for plan, milestones in filtered:
             plan_key = ("plan", plan.id)
-            plan_row_spec = plan_spec(plan, progress, source_stats)
+            plan_row_spec = plan_spec(plan, progress, source_stats, drift_map.get(plan.id, 0) > 0)
             app._row_specs[plan_key] = plan_row_spec
             plan_text = self.render_row(plan_key, plan_row_spec, tree)
             plan_node = root.add(

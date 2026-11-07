@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -147,6 +148,32 @@ def acceptance_block(criteria: list[dict[str, Any]]) -> PreviewBlock | None:
     )
 
 
+def approval_block(approval: dict[str, Any] | None) -> PreviewBlock | None:
+    """Plan approval state: revision, actor, enforcement, and drift."""
+    if not approval:
+        return None
+    revision = int(approval.get("revision", 0) or 0)
+    if revision == 0:
+        return PreviewBlock("approval", ("  no approved revision",))
+    drift = int(approval.get("drift", 0) or 0)
+    enforced = " · enforced" if approval.get("enforced") else ""
+    stamp = float(approval.get("approved_at", 0) or 0)
+    day = time.strftime("%Y-%m-%d", time.localtime(stamp)) if stamp else "-"
+    lines = [f"  r{revision} {day} @{escape_markup(str(approval.get('actor', '')))}{enforced}"]
+    if drift:
+        lines.append(f"  [yellow]Δ[/] {drift} changes since approval")
+    else:
+        lines.append("  in sync")
+    marks = {"add": "+", "edit": "~", "delete": "-"}
+    for item in approval.get("recent") or []:
+        action = marks.get(str(item.get("action") or ""), "?")
+        field = str(item.get("field") or "")
+        suffix = f" {field}" if field else ""
+        reason = escape_markup(str(item.get("reason") or "no reason"))
+        lines.append(f"  {action} {item.get('kind')}{suffix}: {reason}")
+    return PreviewBlock("approval", tuple(lines))
+
+
 def _source_bits(
     links: list[dict[str, Any]],
     forge: list[dict[str, Any]],
@@ -229,6 +256,9 @@ def build_plan(
         blocks.append(PreviewBlock("why", (goal,)))
     if desc:
         blocks.append(PreviewBlock("what", (desc,)))
+    approval = approval_block(full.get("approval"))
+    if approval is not None:
+        blocks.append(approval)
     next_tasks = next_block(_tasks("plan", full))
     if next_tasks is not None:
         blocks.append(next_tasks)

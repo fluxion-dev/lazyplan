@@ -904,3 +904,22 @@ or the next plan row so the next release has the context.
   two DEBs; the live site shows 0.34.0.
 - No deviations from the release flow beyond using the admin bypass instead of
   the bump workflow.
+
+### v0.35.0 (2026-11-07)
+
+- Minor bump from 0.34.0. The control room release: needs-me landing, the
+  two-line health/needs strip, the agents pane, audited manual override mode,
+  trust actions in the palette, the Observe/Override split, and
+  `lpui feed --overrides`.
+- The work landed as 36 tasks across five milestones; `./tools/check.sh`
+  printed ALL GATES GREEN on both interpreters before the bump.
+- Performance after the needs-me work: `needs_me` 28 queries / 48.6 ms and
+  `tui_refresh` 138 queries / 199.2 ms; all budgets pass.
+- The bump used `./tools/bump.sh minor --no-tag` and produced release commit
+  `de51d9c`. The tag and GitHub release are not published yet.
+- Site source and dist checks pass. The new `screens/lpui-control-room.png` and
+  `.webp` ship, and the site shows New in 0.35 with the control-room figure.
+- Curated notes are ready at `/tmp/opencode/release-notes-v0.35.0.md`.
+- **Residual risk:** Windows parity was verified locally (no platform-specific
+  code or skips), but the Windows nightly dispatch is pending the branch push.
+  Run `gh workflow run ci-windows.yml --ref <branch>` before tagging.

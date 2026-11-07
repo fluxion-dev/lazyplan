@@ -6,6 +6,16 @@ import unittest
 from lazyplan.infrastructure.docs_meta import ENVIRONMENT, FILES
 from lazyplan.presentation.cli.parser import build_parser
 from tests.support.docs import MAN, README, USAGE
+from tests.support.paths import ROOT
+
+DELETED_DOCS = (
+    "docs/setup.md",
+    "docs/architecture.md",
+    "docs/design-system.md",
+    "docs/performance.md",
+    "docs/downloads.md",
+    "docs/releasing.md",
+)
 
 
 class DocsTruthCase(unittest.TestCase):
@@ -51,6 +61,11 @@ class DocsTruthCase(unittest.TestCase):
     def test_setup_walkthrough_names_every_placement(self):
         for word in ("home", "repo", "doctor", "upgrade", "uninstall"):
             self.assertIn(word, USAGE.lower())
+
+    def test_removed_docs_stay_absent(self):
+        for name in DELETED_DOCS:
+            with self.subTest(name=name):
+                self.assertFalse((ROOT / name).exists())
 
 
 if __name__ == "__main__":

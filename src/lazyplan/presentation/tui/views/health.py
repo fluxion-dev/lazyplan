@@ -8,7 +8,7 @@ from typing import Any, cast
 from .... import services
 from ....core.ports.insights import InsightsPort
 from ....core.ports.provenance import ProvenancePort
-from ...shared.design import SECTION_ICON, escape_markup
+from ...shared.design import EMPTY_APPROVAL, SECTION_ICON, escape_markup
 
 
 def _heading(key: str, label: str) -> str:
@@ -26,7 +26,7 @@ def read_approval(lines: list[str], kind: str, full: dict[str, Any]) -> None:
         return
     revision = int(approval.get("revision", 0) or 0)
     if not revision:
-        lines.extend(["", _heading("approval", "approval"), "  [dim]no approved revision[/]"])
+        lines.extend(["", _heading("approval", "approval"), f"  [dim]{EMPTY_APPROVAL}[/]"])
         return
     flags = " · enforced" if approval.get("enforced") else ""
     stamp = float(approval.get("approved_at", 0) or 0)

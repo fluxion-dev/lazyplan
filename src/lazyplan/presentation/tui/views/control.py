@@ -8,7 +8,7 @@ from typing import Any, Protocol
 from ....core.ports.coordination import CoordinationPort
 from ....core.ports.insights import InsightsPort
 from ....services import coordination, ready
-from ...shared.design import escape_markup, status_word
+from ...shared.design import EMPTY_NEEDS, escape_markup, status_word
 
 
 class ControlPort(InsightsPort, CoordinationPort, Protocol):
@@ -64,7 +64,7 @@ def _plan_tasks(full: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def _needs_line(parts: list[str]) -> str:
-    return "[bold]needs[/]  " + (" · ".join(parts) if parts else "[green]nothing needs you[/]")
+    return "[bold]needs[/]  " + (" · ".join(parts) if parts else f"[green]{EMPTY_NEEDS}[/]")
 
 
 def _task_summary(tasks: list[dict[str, Any]], stamp: float) -> tuple[int, list[dict], int, int]:

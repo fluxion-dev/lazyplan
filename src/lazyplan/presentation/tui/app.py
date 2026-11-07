@@ -30,6 +30,7 @@ except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
 from ...store import Store
+from ..shared.design import EMPTY_NO_PLANS
 from .actions import ActionMixin
 from .base import AppBase
 from .bulk import BulkMixin
@@ -171,7 +172,7 @@ if _TEXTUAL_OK:
                 with Horizontal(id="main"):
                     with Vertical(id="nav"):
                         yield FoldTree("plans", id="tree")
-                        yield Static("nothing planned... yet", id="tree-empty")
+                        yield Static(EMPTY_NO_PLANS, id="tree-empty")
                     with Vertical(id="side"):
                         yield PreviewPanel()
                         yield GitPanel()

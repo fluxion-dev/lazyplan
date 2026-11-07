@@ -11,7 +11,7 @@ from textual.widgets import Static
 from .... import services
 from ....core.entities import Session
 from ....core.ports.sessions import SessionsReadPort
-from ...shared.design import escape_markup
+from ...shared.design import EMPTY_AGENTS, EMPTY_AGENTS_HINT, escape_markup
 
 
 def _age(started_at: float, stamp: float) -> str:
@@ -37,9 +37,7 @@ class AgentsPanel(VerticalScroll):
         if not sessions:
             body.remove_class("agents-error")
             body.add_class("agents-empty")
-            body.update(
-                "[bold]no active sessions[/]\n[dim]start one: lpui session start --plan N[/]"
-            )
+            body.update(f"[bold]{EMPTY_AGENTS}[/]\n[dim]{EMPTY_AGENTS_HINT}[/]")
             self.border_subtitle = ""
             self.scroll_home(animate=False)
             return

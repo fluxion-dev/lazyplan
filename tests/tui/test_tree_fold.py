@@ -600,7 +600,7 @@ class TestEmptyState(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             empty = self.app.query_one("#tree-empty", self.static)
             self.assertTrue(empty.display)
-            self.assertIn("nothing planned... yet", str(empty.render()))
+            self.assertIn("No plans yet", str(empty.render()))
             self.assertFalse(self.app.query_one("#tree", self.tree).display)
 
     async def test_tree_returns_when_a_plan_exists(self):

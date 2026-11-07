@@ -1,6 +1,6 @@
 # Product roadmap
 
-> **Status:** active · **Last updated:** 2026-11-06 · **Plan of record:** P134 in lazyplan
+> **Status:** active · **Last updated:** 2026-11-07 · **Plan of record:** P134 in lazyplan
 >
 > This page is the product direction and the decision log. The live work is
 > tracked in lazyplan plan P134.
@@ -58,10 +58,10 @@ Each of these would make lazyplan more like the tracker the persona is escaping.
 |---|---|---|
 | Intent capture | Strong | The interview, templates, atomic `plan apply`, stable keys, and structural recipes. One call creates the tree; a retry is a no-op. |
 | Work breakdown | Strong | Plan, milestone, task, and criteria hierarchy with rollup and creation-order sequencing. Deliberately free of dates, owners, and estimates. |
-| Execution coordination | Adequate | Claims, leases, `next`, blocked work, and takeover. Coordination is task-level only, with no file or worktree collision awareness. |
+| Execution coordination | Strong | Claims, leases, `next`, blocked work, takeover, task touch-points, overlap-aware claims, worktree and repo context, and a finish overlap warning. |
 | Provenance | Strong | Commits, branches, pull requests, source trail with diffs, and criterion-to-commit trace. GitHub-only and read-only by design. |
 | Verification | Strong | Criterion evidence, finish gates, lint, audit, and trace. The latest evidence row decides whether a criterion is proven. |
-| Resume and continuity | Adequate | `brief` plus session-start and pre-compact hooks. No session memory, decision log, or plan diff. |
+| Resume and continuity | Strong | `brief` plus session-start and pre-compact hooks, session records with summary and handoff, the budgeted `context` packet, and plan diff. |
 | Human review | Strong | Approval snapshots, plan diff, drift badge, review packet, source trail, comments, and share. |
 | Collaboration | Adequate | Comments, mentions, static share, and plan-granularity sync. Fine for solo; thin for a human with several agents. |
 | Integrations | Strong | MCP, porcelain, five hook hosts, and one-way issue import. Deliberate no write-back. |

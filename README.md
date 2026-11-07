@@ -55,6 +55,20 @@ Want demo data first? Run `lpui seed`.
 - **Made for focus.** Plans stay as one-line summaries until you open them. Detail is there when you need it.
 - **Yours to keep.** Local-first by default. Export or import any time. No account, no cloud, no lock-in.
 
+## New in 0.35
+
+- **The screen is a control room.** It opens on what needs you: attention
+  rows, open questions, drift, stale claims, and the last handoff. A two-line
+  strip shows health and needs; an agents pane shows who is working.
+- **Manual override mode.** The screen is read-only by default. Press `O` to
+  arm deliberate writes and keep a visible banner; every change is recorded,
+  and risky writes ask for a reason. See them with `lpui feed --overrides`.
+- **Trust actions in the palette.** Approve a plan and read its diff, prove a
+  criterion, manage questions and references, claim, block, and finish a task
+  without dropping to the CLI.
+- **Observe and Override.** The palette and help are split by intent so reads
+  and writes do not blur together.
+
 ## New in 0.34
 
 - **Trust layer.** Approve plan revisions and see exactly what drifted,
@@ -76,6 +90,8 @@ Want demo data first? Run `lpui seed`.
 
 ## What you get
 
+- A needs-me landing view with attention reasons, open questions, drift, claims, and active sessions.
+- A two-line control strip and an agents pane, with manual override mode and an audited feed.
 - A plan tree with progress at a glance, plus milestones and tasks underneath.
 - One atomic JSON write for a whole plan tree, with feature, bugfix, and refactor recipes.
 - A budgeted context packet that resumes a session from the active slice and its proof.

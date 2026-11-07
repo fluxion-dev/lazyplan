@@ -15,6 +15,7 @@ from lazyplan.presentation.cli import main as lpui_main
 from lazyplan.presentation.cli.parser import build_parser
 from tests.support.home import sandbox_home
 from tests.support.paths import ROOT
+from tests.support.skill_case import SkillHomeCase
 
 
 def _answers(items):
@@ -256,7 +257,10 @@ class TestTemplateParity(unittest.TestCase):
             for dest in copies:
                 with self.subTest(dest=str(dest)):
                     self.assertTrue(dest.is_file())
-                    self.assertEqual(dest.read_text(encoding="utf-8"), skills.render_skill())
+                    text = dest.read_text(encoding="utf-8")
+                    self.assertEqual(text, skills.render_skill())
+                    self.assertTrue(text.startswith("---\n"))
+                    self.assertIn("name: lazyplan", text)
 
 
 class TestSkillContent(unittest.TestCase):
@@ -318,17 +322,7 @@ class TestToolTargets(unittest.TestCase):
         )
 
 
-class TestNativeInstall(unittest.TestCase):
-    def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
-        self.repo = Path(self.tmp.name) / "proj"
-        self.repo.mkdir()
-        self.home = Path(self.tmp.name) / "home"
-        self.home.mkdir()
-
-    def tearDown(self):
-        self.tmp.cleanup()
-
+class TestNativeInstall(SkillHomeCase):
     def test_native_tools_written_alongside_standard(self):
         res = skills.install("project", self.repo, self.home, tools=["opencode", "cursor"])
         paths = [line.rsplit(" (", 1)[0] for line in res.installed]
@@ -374,13 +368,9 @@ class TestNativeInstall(unittest.TestCase):
         )
 
 
-class TestSkillsDirOverride(unittest.TestCase):
+class TestSkillsDirOverride(SkillHomeCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
-        self.repo = Path(self.tmp.name) / "proj"
-        self.repo.mkdir()
-        self.home = Path(self.tmp.name) / "home"
-        self.home.mkdir()
+        super().setUp()
         self.old_env = os.environ.pop("LAZYPLAN_SKILLS_DIR", None)
 
     def tearDown(self):
@@ -388,7 +378,6 @@ class TestSkillsDirOverride(unittest.TestCase):
             os.environ.pop("LAZYPLAN_SKILLS_DIR", None)
         else:
             os.environ["LAZYPLAN_SKILLS_DIR"] = self.old_env
-        self.tmp.cleanup()
 
     def test_flag_redirects_all_skill_writes(self):
         custom = self.tmp.name + "/custom-skills"
@@ -412,16 +401,8 @@ class TestSkillsDirOverride(unittest.TestCase):
         self.assertIsNone(skills._skills_dir_override(args))
 
 
-class TestInstall(unittest.TestCase):
-    def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
-        self.repo = Path(self.tmp.name) / "proj"
-        (self.repo / ".git").mkdir(parents=True)
-        self.home = Path(self.tmp.name) / "home"
-        self.home.mkdir()
-
-    def tearDown(self):
-        self.tmp.cleanup()
+class TestInstall(SkillHomeCase):
+    repo_has_git = True
 
     def test_project_install_writes_skill_and_agents_md(self):
         res = skills.install("project", self.repo, self.home)

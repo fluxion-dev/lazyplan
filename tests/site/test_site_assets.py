@@ -21,6 +21,7 @@ else:
     SPEC.loader.exec_module(capture)
 
 EXPECTED = {
+    "lpui-control-room",
     "lpui-detail",
     "lpui-source-trail",
     "lpui-git-pane",

@@ -103,12 +103,7 @@ class ToolsMixin(McpBase):
                 _tool(
                     "create_task",
                     "Create a task.",
-                    {
-                        "milestone": _id(),
-                        "title": _str(),
-                        "desc": _str(),
-                        "reason": _str(),
-                    },
+                    {"milestone": _id(), "title": _str(), "desc": _str(), "reason": _str()},
                     ["milestone", "title"],
                     False,
                 ),

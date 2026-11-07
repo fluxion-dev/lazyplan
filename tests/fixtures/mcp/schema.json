@@ -200,6 +200,9 @@
           "plan": {
             "type": "integer"
           },
+          "reason": {
+            "type": "string"
+          },
           "title": {
             "type": "string"
           }
@@ -224,6 +227,9 @@
           },
           "milestone": {
             "type": "integer"
+          },
+          "reason": {
+            "type": "string"
           },
           "title": {
             "type": "string"
@@ -258,6 +264,9 @@
             ],
             "type": "string"
           },
+          "reason": {
+            "type": "string"
+          },
           "title": {
             "type": "string"
           },
@@ -289,6 +298,9 @@
               "milestone",
               "task"
             ],
+            "type": "string"
+          },
+          "override": {
             "type": "string"
           },
           "to": {
@@ -325,6 +337,9 @@
               "milestone",
               "task"
             ],
+            "type": "string"
+          },
+          "reason": {
             "type": "string"
           },
           "text": {

@@ -57,6 +57,42 @@ def _doing(store: InsightsPort, task: Task) -> dict:
     return entry
 
 
+def _criteria(store: InsightsPort, plan: Plan, doing: list[Task]) -> list[dict]:
+    """Open plan criteria plus the doing tasks' criteria."""
+    out = [
+        {"kind": "plan", "id": plan.id, "text": item.text}
+        for item in store.open_criteria("plan", plan.id)
+    ]
+    for task in doing:
+        out.extend(
+            {"kind": "task", "id": task.id, "text": item.text}
+            for item in store.open_criteria("task", task.id)
+        )
+    return out
+
+
+def _loose_commits(
+    store: InsightsPort,
+    plan: Plan,
+    commits: list[audit.Commit] | None,
+    cwd: str | Path,
+) -> list[audit.Commit]:
+    """Commits in the plan window that are not linked to it."""
+    since = audit.plan_start(store, plan.id) or 0.0
+    if commits is None:
+        return audit.unlinked_commits(store, [plan.id], since, cwd)
+    linked = audit.linked_shas(store, [plan.id])
+    loose = [commit for commit in commits if commit.sha not in linked]
+    loose.sort(key=lambda commit: commit.timestamp, reverse=True)
+    return loose
+
+
+def _approval(store: InsightsPort, plan: Plan) -> dict:
+    """Latest revision and live drift for one plan."""
+    latest = store.latest_revision(plan.id)
+    return approval_payload(latest, store.plan_drift(plan.id) if latest is not None else 0)
+
+
 def _plan_brief(
     store: InsightsPort,
     plan: Plan,
@@ -68,38 +104,20 @@ def _plan_brief(
     next_task = next(
         (task for task in tasks if task.status == Status.TODO and not task.blocked), None
     )
-    criteria = [
-        {"kind": "plan", "id": plan.id, "text": item.text}
-        for item in store.open_criteria("plan", plan.id)
-    ]
-    for task in doing:
-        criteria.extend(
-            {"kind": "task", "id": task.id, "text": item.text}
-            for item in store.open_criteria("task", task.id)
-        )
-    since = audit.plan_start(store, plan.id) or 0.0
-    if commits is None:
-        loose = audit.unlinked_commits(store, [plan.id], since, cwd)
-    else:
-        linked = audit.linked_shas(store, [plan.id])
-        loose = [commit for commit in commits if commit.sha not in linked]
-        loose.sort(key=lambda commit: commit.timestamp, reverse=True)
+    loose = _loose_commits(store, plan, commits, cwd)
     payload = {
         "id": plan.id,
         "title": plan.name,
         "status": plan.status.value,
         "doing": [_doing(store, task) for task in doing],
         "next": ({"id": next_task.id, "title": next_task.title} if next_task is not None else None),
-        "criteria": criteria[:_MAX_GAPS],
+        "criteria": _criteria(store, plan, doing)[:_MAX_GAPS],
         "unlinked": [
             {"sha": commit.sha, "subject": commit.subject, "timestamp": commit.timestamp}
             for commit in loose[:_MAX_LOOSE]
         ],
     }
-    latest = store.latest_revision(plan.id)
-    payload["approval"] = approval_payload(
-        latest, store.plan_drift(plan.id) if latest is not None else 0
-    )
+    payload["approval"] = _approval(store, plan)
     notes = store.list_notes("plan", plan.id)[:_MAX_PLAN_NOTES]
     if notes:
         payload["notes"] = [vars(n) for n in notes]
@@ -123,6 +141,19 @@ def build(
     }
 
 
+def _approval_line(plan: dict) -> str | None:
+    """One brief line for the plan's approval state, or None."""
+    approval = plan.get("approval") or {}
+    revision = int(approval.get("revision", 0) or 0)
+    if not revision:
+        return None
+    flags = " enforced" if approval.get("enforced") else ""
+    drift = int(approval.get("drift", 0) or 0)
+    if drift:
+        return f"  drift    {drift} changes since r{revision}{flags}"
+    return f"  approval r{revision}{flags} in sync"
+
+
 def lines(payload: dict) -> list[str]:
     """Plain, hook-safe rendering of one brief payload."""
     plans = payload.get("plans") or []
@@ -131,15 +162,9 @@ def lines(payload: dict) -> list[str]:
     out: list[str] = []
     for plan in plans:
         out.append(f"P{plan['id']} {plan['title']} ({plan['status']})")
-        approval = plan.get("approval") or {}
-        revision = int(approval.get("revision", 0) or 0)
-        if revision:
-            flags = " enforced" if approval.get("enforced") else ""
-            drift = int(approval.get("drift", 0) or 0)
-            if drift:
-                out.append(f"  drift    {drift} changes since r{revision}{flags}")
-            else:
-                out.append(f"  approval r{revision}{flags} in sync")
+        approval = _approval_line(plan)
+        if approval is not None:
+            out.append(approval)
         for note in plan.get("notes", []):
             out.append(f"  note     @{note['actor']}: {note['text']}")
         for comment in plan.get("comments", []):

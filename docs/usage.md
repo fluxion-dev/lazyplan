@@ -369,6 +369,25 @@ evidence, and touch overlaps all appear without opening detail. The detail page
 adds approval revision and drift, readiness checks, evidence coverage, claims,
 touch-points, and the previous session handoff.
 
+### Manual override mode
+
+The screen is read-only by default. Press `O` (or run **Toggle manual
+override** from the palette) to enable writes; the red banner and the `OVERRIDE`
+nav subtitle stay visible while it is on. Press `O` again to return to
+read-only.
+
+Every write from the screen is deliberate and recorded. The event names the
+target, the action, and, for a risky write, the reason you typed. Deleting a
+row and taking over a claim ask for a reason first; cancelling leaves the row
+or claim untouched. See only those rows with:
+
+```bash
+lpui feed --overrides
+```
+
+The normal `lpui feed` still shows every event. Agents and the CLI continue to
+write directly; override mode only gates the screen.
+
 Run **Export plan as Markdown** from the palette (`c`, then `export`) to open a
 destination picker. It starts in your Downloads folder with
 `plan-P<id>.md` ready, browses folders, and lets you edit the filename. An
@@ -405,6 +424,7 @@ and repo detail stays in the preview/GIT pane.
 | `?` | help |
 | `c` | command palette |
 | `t` | cycle theme: mocha, void, latte |
+| `O` | toggle manual override mode (writes are blocked while off) |
 | `q` | quit |
 
 The palette and the CLI use the same names: Create plan, Move to doing, Tick

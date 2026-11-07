@@ -113,6 +113,25 @@ strip; put detail in the preview body or the detail page instead.
 sessions with actor, plan, branch, start time, and age, plus the selected
 plan's last handoff. It is read-only; session lifecycle stays on the CLI.
 
+## Manual override
+
+The screen is read-only by default. `O` toggles `AppState.override_mode`; the
+red `#mode` banner and the `OVERRIDE` nav subtitle carry the state, and the
+palette has **Toggle manual override** in the APP section.
+
+Two sets own the gate: `WRITE_ACTIONS` for bindings and `WRITE_COMMANDS` for
+palette handlers, both in `tui/override.py`. `check_action` and
+`_run_palette_command` call `require_override()`; the detail screen uses the
+same helper through the app. Add a new write by adding its action or handler to
+the matching set, not by writing another gate.
+
+`services/overrides.record_override` writes one `override` event per manual
+change: actor `tui`, the action verb, and `target: action — reason` in the
+detail, capped at 500 characters. Risky writes (delete and claim takeover)
+prompt for the reason; cancel leaves the row or lease untouched. The feed
+filter is `lpui feed --overrides`. No schema change is required; the event
+reuses the existing `events` row.
+
 ## TUI module map
 
 - `app.py` is the shell: composition, global bindings, layout, lifecycle, and

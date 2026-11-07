@@ -8,7 +8,7 @@ from __future__ import annotations
 import sqlite3
 import uuid
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS plans (
@@ -88,6 +88,19 @@ CREATE TABLE IF NOT EXISTS plan_questions (
 );
 CREATE INDEX IF NOT EXISTS idx_plan_questions_plan
     ON plan_questions(plan_id, status, id);
+CREATE TABLE IF NOT EXISTS sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    actor TEXT NOT NULL DEFAULT 'human',
+    plan_id INTEGER REFERENCES plans(id) ON DELETE SET NULL,
+    repo_path TEXT NOT NULL DEFAULT '',
+    branch TEXT NOT NULL DEFAULT '',
+    started_at REAL NOT NULL,
+    ended_at REAL NOT NULL DEFAULT 0,
+    summary TEXT NOT NULL DEFAULT '',
+    handoff TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_sessions_open ON sessions(ended_at, actor, repo_path);
+CREATE INDEX IF NOT EXISTS idx_sessions_plan ON sessions(plan_id, ended_at);
 CREATE TABLE IF NOT EXISTS milestones (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
@@ -223,7 +236,8 @@ CREATE TABLE IF NOT EXISTS events (
     actor TEXT NOT NULL DEFAULT 'human',
     kind TEXT NOT NULL DEFAULT '',
     action TEXT NOT NULL DEFAULT '',
-    detail TEXT NOT NULL DEFAULT ''
+    detail TEXT NOT NULL DEFAULT '',
+    session_id INTEGER
 );
 CREATE INDEX IF NOT EXISTS idx_milestones_plan ON milestones(plan_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_milestone ON tasks(milestone_id);
@@ -403,6 +417,14 @@ def _migrate_task_blocked(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE tasks ADD COLUMN blocked_reason TEXT NOT NULL DEFAULT ''")
 
 
+def _migrate_events_session(conn: sqlite3.Connection) -> None:
+    """Add the session tag to events and index it when missing."""
+    existing = {r["name"] for r in conn.execute("PRAGMA table_info(events)").fetchall()}
+    if "session_id" not in existing:
+        conn.execute("ALTER TABLE events ADD COLUMN session_id INTEGER")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_events_session ON events(session_id, id)")
+
+
 def migrate(conn: sqlite3.Connection) -> None:
     """Bring any DB to the current schema: migrate, create, backfill. Idempotent."""
     current = int(conn.execute("PRAGMA user_version").fetchone()[0])
@@ -412,6 +434,7 @@ def migrate(conn: sqlite3.Connection) -> None:
     conn.executescript(SCHEMA)
     _migrate_plan_uid(conn)
     _migrate_task_blocked(conn)
+    _migrate_events_session(conn)
     _drop_priority_columns(conn)
     _migrate_vcs_link_state(conn)
     _migrate_entity_repo_branch(conn)

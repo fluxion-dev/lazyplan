@@ -5,6 +5,8 @@
   direct reference. Listed per method so genuinely dead actions still fail.
 - Tested API kept deliberately: criteria_progress (P#32 contract),
   STARTERS/ensure_templates (template scaffold seams), vcs registry.
+- Session API kept deliberately: the store and port surface is consumed
+  by the session commands and resume reads cut in T1436 and T1437.
 - Metrics dashboard contract: snapshot fields are consumed by the chart
   cards and their tests.
 - sqlite3 API noise: row_factory.
@@ -171,3 +173,12 @@ plan_title
 active_segments
 # Textual Tree reactive read by the framework, set as a subclass default.
 show_root
+# Session API consumed by the session commands and resume reads.
+SessionsPort
+_.duration
+_.list_sessions
+_.latest_ended_session
+_.events_for_session
+_.session_counts
+_.start_session
+_.end_session

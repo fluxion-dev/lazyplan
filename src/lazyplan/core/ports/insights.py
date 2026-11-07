@@ -7,9 +7,10 @@ from typing import Protocol
 from ..entities import Claim
 from .provenance import ProvenancePort
 from .revisions import RevisionsPort
+from .sessions import SessionsReadPort
 
 
-class InsightsPort(ProvenancePort, RevisionsPort, Protocol):
+class InsightsPort(ProvenancePort, RevisionsPort, SessionsReadPort, Protocol):
     """Read-only surface used by metrics, stats, audit, brief, and lint."""
 
     def feed(self, limit: int = 20) -> list[dict]: ...

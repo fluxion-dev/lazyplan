@@ -19,6 +19,7 @@ from .plans import PlansMixin
 from .questions import QuestionsMixin
 from .repos import ReposMixin
 from .revisions import RevisionsMixin
+from .sessions import SessionsMixin
 from .stubs import CLAIM_DEFAULT_TTL
 from .tasks import TasksMixin
 from .views import ViewsMixin
@@ -27,6 +28,7 @@ from .views import ViewsMixin
 class Store(
     PlansMixin,
     QuestionsMixin,
+    SessionsMixin,
     ClaimsMixin,
     EvidenceMixin,
     AnnotationsMixin,

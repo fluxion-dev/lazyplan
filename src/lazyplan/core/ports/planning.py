@@ -157,7 +157,14 @@ class PlanningPort(Protocol):
 
     def set_status_raw(self, kind: str, obj_id: int, status: Status) -> bool: ...
 
-    def log(self, actor: str, kind: str, action: str, detail: str = "") -> None: ...
+    def log(
+        self,
+        actor: str,
+        kind: str,
+        action: str,
+        detail: str = "",
+        session_id: int | None = None,
+    ) -> None: ...
 
     def feed(self, limit: int = 20) -> list[dict]: ...
 

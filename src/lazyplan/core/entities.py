@@ -74,6 +74,31 @@ class Claim:
 
 
 @dataclass(frozen=True)
+class Session:
+    """One agent working session with a summary and handoff."""
+
+    id: int
+    actor: str = "human"
+    plan_id: int | None = None
+    repo_path: str = ""
+    branch: str = ""
+    started_at: float = 0.0
+    ended_at: float = 0.0
+    summary: str = ""
+    handoff: str = ""
+
+    @property
+    def ended(self) -> bool:
+        """True when the session has been closed."""
+        return self.ended_at > 0
+
+    def duration(self, now: float) -> float:
+        """Seconds between start and end, or start and *now* while open."""
+        stop = self.ended_at if self.ended else now
+        return max(stop - self.started_at, 0.0)
+
+
+@dataclass(frozen=True)
 class PlanRevision:
     """One human approval of a plan's scope, with its canonical snapshot."""
 

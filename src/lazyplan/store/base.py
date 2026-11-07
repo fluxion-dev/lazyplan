@@ -66,6 +66,7 @@ class StoreBase(StoreStubs):
     def __init__(self, path: str | Path | None = None) -> None:
         self.path = resolve_db_path(path)
         self._local = threading.local()
+        self._session_cache: dict[str, int | None] = {}
         try:
             if Path(self.path).expanduser() == shared_db_path():
                 seed_shared_db(self.path)
@@ -108,12 +109,22 @@ class StoreBase(StoreStubs):
             self._local.conn = None
             conn.close()
 
-    def log(self, actor: str, kind: str, action: str, detail: str = "") -> None:
-        """Append an event row."""
+    def log(
+        self,
+        actor: str,
+        kind: str,
+        action: str,
+        detail: str = "",
+        session_id: int | None = None,
+    ) -> None:
+        """Append an event row, tagged with the active session when one exists."""
+        if session_id is None:
+            session_id = self._resolve_session_id(actor)
         with self._connect() as conn:
             conn.execute(
-                "INSERT INTO events (ts, actor, kind, action, detail) VALUES (?,?,?,?,?)",
-                (time.time(), _actor(actor), kind, action, detail[:500]),
+                "INSERT INTO events (ts, actor, kind, action, detail, session_id)"
+                " VALUES (?,?,?,?,?,?)",
+                (time.time(), _actor(actor), kind, action, detail[:500], session_id),
             )
 
     def feed(self, limit: int = 20) -> list[dict]:

@@ -154,6 +154,9 @@ def _packet(store: InsightsPort, plan: Plan) -> dict:
         ],
         "next": [{"id": task.id, "title": task.title} for task in next_tasks],
         "criteria": _open_criteria(store, plan, doing),
+        "questions": [
+            {"id": question.id, "text": question.text} for question in store.list_questions(plan.id)
+        ],
         "notes": _notes(store, plan, doing),
         "comments": _comments(store, plan, doing),
         "commits": _commits(store, plan),
@@ -186,6 +189,8 @@ def _trim(payload: dict, max_chars: int) -> dict:
             plan[key] = []
         if not _fits(payload, max_chars):
             plan["next"] = plan["next"][:1]
+        if not _fits(payload, max_chars):
+            plan["questions"] = plan["questions"][:1]
         if not _fits(payload, max_chars):
             plan["criteria"] = plan["criteria"][:3]
         if not _fits(payload, max_chars):
@@ -225,6 +230,14 @@ def build(
     return _trim(payload, max_chars)
 
 
+def _question_lines(plan: dict) -> list[str]:
+    """Open questions with ids, one line each."""
+    return [
+        f"  question Q{question['id']} {str(question['text'])[:60]}"
+        for question in plan.get("questions") or []
+    ]
+
+
 def lines(payload: dict) -> list[str]:
     """Plain text rendering for hooks and the CLI."""
     plans = payload.get("plans") or []
@@ -250,6 +263,7 @@ def lines(payload: dict) -> list[str]:
             out.append(f"  next     T{task['id']} {task['title']}")
         if plan.get("criteria"):
             out.append(f"  gaps     {len(plan['criteria'])} open criteria")
+        out.extend(_question_lines(plan))
         for note in plan.get("notes") or []:
             out.append(f"  note     @{note['actor']}: {note['text']}")
         for comment in plan.get("comments") or []:

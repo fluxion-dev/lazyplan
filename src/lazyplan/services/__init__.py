@@ -88,6 +88,12 @@ from .provenance import (
     scan_commits,
     start_task,
 )
+from .questions import (
+    add_question,
+    list_questions,
+    reopen_question,
+    resolve_question,
+)
 from .revisions import (
     ApprovalResult,
     DiffEntry,
@@ -190,6 +196,10 @@ __all__ = [
     "_import_all",
     "GateError",
     "DEFAULT_PLAN_LIMIT",
+    "add_question",
+    "list_questions",
+    "resolve_question",
+    "reopen_question",
     "ProofResult",
     "prove",
     "list_evidence",

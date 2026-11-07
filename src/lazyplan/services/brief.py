@@ -118,6 +118,7 @@ def _plan_brief(
         ],
     }
     payload["approval"] = _approval(store, plan)
+    payload["questions"] = [vars(q) for q in store.list_questions(plan.id)]
     notes = store.list_notes("plan", plan.id)[:_MAX_PLAN_NOTES]
     if notes:
         payload["notes"] = [vars(n) for n in notes]
@@ -154,6 +155,18 @@ def _approval_line(plan: dict) -> str | None:
     return f"  approval r{revision}{flags} in sync"
 
 
+def _question_lines(plan: dict) -> list[str]:
+    """Open questions with their ids, capped for scanning."""
+    questions = plan.get("questions") or []
+    if not questions:
+        return []
+    lines = [f"  questions {len(questions)} open"]
+    lines.extend(
+        f"    Q{question['id']} {str(question['text'])[:60]}" for question in questions[:3]
+    )
+    return lines
+
+
 def lines(payload: dict) -> list[str]:
     """Plain, hook-safe rendering of one brief payload."""
     plans = payload.get("plans") or []
@@ -165,6 +178,7 @@ def lines(payload: dict) -> list[str]:
         approval = _approval_line(plan)
         if approval is not None:
             out.append(approval)
+        out.extend(_question_lines(plan))
         for note in plan.get("notes", []):
             out.append(f"  note     @{note['actor']}: {note['text']}")
         for comment in plan.get("comments", []):

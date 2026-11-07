@@ -71,6 +71,14 @@ class BriefCase(unittest.TestCase):
         self.assertEqual(payload["plans"][0]["approval"]["drift"], 0)
         self.assertIn("approval r1 in sync", "\n".join(brief.lines(payload)))
 
+    def test_open_questions_are_in_brief(self):
+        question = self.store.add_question(self.plan.id, "Which host?")
+        payload = brief.build(self.store, commits=[])
+        self.assertEqual(payload["plans"][0]["questions"][0]["id"], question.id)
+        text = "\n".join(brief.lines(payload))
+        self.assertIn("questions 1 open", text)
+        self.assertIn("Which host?", text)
+
     def test_empty_store_says_no_active_plans(self):
         empty = Store(Path(self.tmp.name) / "empty.db")
         self.assertEqual(brief.lines(brief.build(empty, commits=[])), ["no active plans"])

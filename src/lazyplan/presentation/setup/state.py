@@ -39,10 +39,13 @@ class SetupState:
     explicit_db: bool = False
     last_version: str = ""
     hooks: bool = False
+    hooks_enabled: bool = True
     hook_files: list[str] = field(default_factory=list)
+    skills_enabled: bool = True
     agents_pointer: bool = False
     agents_file: str = ""
     decisions: dict[str, dict[str, Any]] = field(default_factory=dict)
+    integration_choices: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -53,10 +56,13 @@ class SetupState:
             "explicit_db": self.explicit_db,
             "last_version": self.last_version,
             "hooks": self.hooks,
+            "hooks_enabled": self.hooks_enabled,
             "hook_files": list(self.hook_files),
+            "skills_enabled": self.skills_enabled,
             "agents_pointer": self.agents_pointer,
             "agents_file": self.agents_file,
             "decisions": self.decisions,
+            "integration_choices": self.integration_choices,
         }
 
     @classmethod
@@ -75,13 +81,39 @@ class SetupState:
             explicit_db=bool(raw.get("explicit_db", False)),
             last_version=str(raw.get("last_version", "") or ""),
             hooks=bool(raw.get("hooks", False)),
+            hooks_enabled=bool(raw.get("hooks_enabled", raw.get("hooks", True))),
             hook_files=[str(p) for p in raw.get("hook_files", [])]
             if isinstance(raw.get("hook_files"), list)
             else [],
+            skills_enabled=bool(raw.get("skills_enabled", True)),
             agents_pointer=bool(raw.get("agents_pointer", False)),
             agents_file=str(raw.get("agents_file", "") or ""),
             decisions=decisions if isinstance(decisions, dict) else {},
+            integration_choices=_integration_choices(raw.get("integration_choices")),
         )
+
+
+INTEGRATION_DECISIONS = ("installed", "deferred", "never")
+
+
+def _integration_choices(raw: object) -> dict[str, dict[str, Any]]:
+    """Parse remembered per-item decisions, dropping unknown shapes."""
+    if not isinstance(raw, dict):
+        return {}
+    out: dict[str, dict[str, Any]] = {}
+    for item_id, value in raw.items():
+        if not isinstance(item_id, str) or not isinstance(value, dict):
+            continue
+        decision = str(value.get("decision", "") or "")
+        if decision not in INTEGRATION_DECISIONS:
+            continue
+        out[item_id] = {
+            "decision": decision,
+            "fingerprint": str(value.get("fingerprint", "") or ""),
+            "version": str(value.get("version", "") or ""),
+            "seen_at": str(value.get("seen_at", "") or ""),
+        }
+    return out
 
 
 def load_state(home: Path | None = None) -> SetupState:

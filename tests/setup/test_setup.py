@@ -30,11 +30,41 @@ class TestState(unittest.TestCase):
             placement=setup.REPO,
             agents=["opencode", "claude"],
             last_version="0.22.0",
+            skills_enabled=False,
+            hooks_enabled=False,
             decisions={"repo-db:/x": {"decision": "keep"}},
+            integration_choices={
+                "skill:lazyplan": {
+                    "decision": "deferred",
+                    "fingerprint": "abc123",
+                    "version": "0.35.0",
+                    "seen_at": "20261107-120000-000000",
+                }
+            },
         )
         path = setup.save_state(state, self.home)
         self.assertTrue(path.is_file())
         self.assertEqual(setup.load_state(self.home).to_dict(), state.to_dict())
+
+    def test_old_state_derives_opt_outs(self):
+        self._write_raw('{"hooks": false, "last_version": "0.22.0"}')
+        state = setup.load_state(self.home)
+        self.assertFalse(state.hooks_enabled)
+        self.assertTrue(state.skills_enabled)
+        self.assertEqual(state.integration_choices, {})
+
+    def test_invalid_integration_choices_are_dropped(self):
+        self._write_raw(
+            '{"integration_choices": {'
+            '"good": {"decision": "never", "fingerprint": "f"},'
+            '"bad-decision": {"decision": "maybe"},'
+            '"bad-shape": "never"'
+            "}}"
+        )
+        choices = setup.load_state(self.home).integration_choices
+        self.assertEqual(list(choices), ["good"])
+        self.assertEqual(choices["good"]["decision"], "never")
+        self.assertEqual(choices["good"]["version"], "")
 
     def _write_raw(self, text: str) -> None:
         path = setup.state_path(self.home)

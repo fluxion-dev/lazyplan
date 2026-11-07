@@ -12,6 +12,7 @@ from lazyplan.services import audit
 
 from ..core.entities import Plan, Status, Task
 from ..core.ports.insights import InsightsPort
+from ..core.serialization import approval_payload
 
 _MAX_PLANS = 3
 _MAX_LOOSE = 5
@@ -95,6 +96,10 @@ def _plan_brief(
             for commit in loose[:_MAX_LOOSE]
         ],
     }
+    latest = store.latest_revision(plan.id)
+    payload["approval"] = approval_payload(
+        latest, store.plan_drift(plan.id) if latest is not None else 0
+    )
     notes = store.list_notes("plan", plan.id)[:_MAX_PLAN_NOTES]
     if notes:
         payload["notes"] = [vars(n) for n in notes]
@@ -126,6 +131,15 @@ def lines(payload: dict) -> list[str]:
     out: list[str] = []
     for plan in plans:
         out.append(f"P{plan['id']} {plan['title']} ({plan['status']})")
+        approval = plan.get("approval") or {}
+        revision = int(approval.get("revision", 0) or 0)
+        if revision:
+            flags = " enforced" if approval.get("enforced") else ""
+            drift = int(approval.get("drift", 0) or 0)
+            if drift:
+                out.append(f"  drift    {drift} changes since r{revision}{flags}")
+            else:
+                out.append(f"  approval r{revision}{flags} in sync")
         for note in plan.get("notes", []):
             out.append(f"  note     @{note['actor']}: {note['text']}")
         for comment in plan.get("comments", []):

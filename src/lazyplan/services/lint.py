@@ -107,6 +107,35 @@ def lint_plan(store: InsightsPort, plan_id: int) -> list[Finding] | None:
                     criterion.id,
                 )
             )
+    latest = store.latest_revision(plan_id)
+    if latest is not None and latest.enforced:
+        drift = store.plan_drift(plan_id)
+        if drift:
+            findings.append(
+                Finding(
+                    "enforced-drift",
+                    "error",
+                    f"enforced plan has {drift} scope changes since r{latest.revision};"
+                    " run plan diff",
+                    "plan",
+                    plan_id,
+                )
+            )
+            missing = [
+                change
+                for change in store.list_plan_changes(plan_id, after_id=latest.change_mark)
+                if not change.reason
+            ]
+            if missing:
+                findings.append(
+                    Finding(
+                        "enforced-drift-no-reason",
+                        "error",
+                        f"{len(missing)} changes since r{latest.revision} have no reason",
+                        "plan",
+                        plan_id,
+                    )
+                )
     if plan.status.value == "done":
         findings.extend(_open_on_done(store, "plan", plan_id))
     for milestone in store.list_milestones(plan_id):

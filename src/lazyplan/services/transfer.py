@@ -115,6 +115,41 @@ def import_all(store: TransferPort, data: dict, actor: str = "human") -> dict[st
         return _import_all(store, data, actor)
 
 
+def _restore_evidence_row(
+    store: TransferPort,
+    criterion_id: int,
+    row: dict,
+    tasks_map: dict[int, int],
+) -> int:
+    """Restore one evidence row, remapping its task when it still exists."""
+    old_task = int(row.get("task_id", 0) or 0)
+    task_id = tasks_map.get(old_task) if old_task else None
+    restored = store.restore_evidence(
+        criterion_id,
+        task_id=task_id,
+        command=str(row.get("command", "") or ""),
+        exit_code=row.get("exit_code"),
+        commit_sha=str(row.get("commit_sha", "") or ""),
+        pr_url=str(row.get("pr_url", "") or ""),
+        artifact_path=str(row.get("artifact_path", "") or ""),
+        note=str(row.get("note", "") or ""),
+        actor=str(row.get("actor", "") or "human"),
+        ts=float(row.get("ts", 0) or 0),
+    )
+    return 1 if restored is not None else 0
+
+
+def _restore_evidence(
+    store: TransferPort,
+    items: list[tuple[int, dict]],
+    tasks_map: dict[int, int],
+) -> int:
+    """Restore every collected evidence row after tasks are mapped."""
+    return sum(
+        _restore_evidence_row(store, criterion_id, row, tasks_map) for criterion_id, row in items
+    )
+
+
 def _import_all(store: TransferPort, data: dict, actor: str = "human") -> dict[str, int]:
     """Load an export_all() dump. Returns counts.
 
@@ -374,23 +409,7 @@ def _import_all(store: TransferPort, data: dict, actor: str = "human") -> dict[s
         except (KeyError, ValueError):
             continue
         counts["criterion_links"] += 1
-    for criterion_id, row in evidence_items:
-        old_task = int(row.get("task_id", 0) or 0)
-        task_id = tasks_map.get(old_task) if old_task else None
-        restored = store.restore_evidence(
-            criterion_id,
-            task_id=task_id,
-            command=str(row.get("command", "") or ""),
-            exit_code=row.get("exit_code"),
-            commit_sha=str(row.get("commit_sha", "") or ""),
-            pr_url=str(row.get("pr_url", "") or ""),
-            artifact_path=str(row.get("artifact_path", "") or ""),
-            note=str(row.get("note", "") or ""),
-            actor=str(row.get("actor", "") or "human"),
-            ts=float(row.get("ts", 0) or 0),
-        )
-        if restored is not None:
-            counts["evidence"] += 1
+    counts["evidence"] = _restore_evidence(store, evidence_items, tasks_map)
     return counts
 
 

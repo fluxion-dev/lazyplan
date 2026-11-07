@@ -134,6 +134,19 @@ def _gate_failure(gate: dict, require_pr: bool, require_checks: bool) -> str:
     return ""
 
 
+def _finish_failure(
+    gate: dict,
+    require_pr: bool,
+    require_checks: bool,
+    evidence_failure: str | None,
+) -> str:
+    """Combined PR, check, and evidence failure for one task."""
+    reasons = [
+        item for item in (_gate_failure(gate, require_pr, require_checks), evidence_failure) if item
+    ]
+    return "; ".join(reasons)
+
+
 def finish_task(
     store: ProvenancePort,
     task_id: int,
@@ -149,11 +162,10 @@ def finish_task(
     if task is None:
         raise KeyError(f"task #{task_id} not found")
     gate = gate_state(store, task_id)
-    failure = _gate_failure(gate, require_pr, require_checks)
     evidence_failure = task_gate(store, task_id) if require_evidence else None
-    reasons = [item for item in (failure, evidence_failure) if item]
-    if reasons and not override:
-        raise GateError("; ".join(reasons))
+    failure = _finish_failure(gate, require_pr, require_checks, evidence_failure)
+    if failure and not override:
+        raise GateError(failure)
     target = _finish_target(store, task_id, repo_path)
     branch = str(target.get("branch", "") or "")
     base = str(target.get("base_sha", "") or "")

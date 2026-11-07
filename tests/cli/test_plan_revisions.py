@@ -236,6 +236,38 @@ class PlanRevisionsCliTest(unittest.TestCase):
         payload = json.loads(out)
         self.assertEqual(payload[0]["approval"]["revision"], 1)
 
+    def test_enforced_plan_done_gate(self) -> None:
+        plan = self.store.add_plan("Gate")
+        code, _out, err = self._run("--json", "plan", "approve", "--id", str(plan.id), "--enforce")
+        self.assertEqual(code, 0, err)
+        self._run("plan", "edit", "--id", str(plan.id), "--what", "new scope", "--reason", "narrow")
+        code, _out, err = self._run("plan", "move", "--id", str(plan.id), "--to", "done")
+        self.assertEqual(code, 2)
+        self.assertIn("scope change", err)
+        self.assertNotEqual(self.store.get_plan(plan.id).status.value, "done")
+        code, _out, err = self._run(
+            "plan",
+            "move",
+            "--id",
+            str(plan.id),
+            "--to",
+            "done",
+            "--override",
+            "ship now",
+        )
+        self.assertEqual(code, 0, err)
+        self.assertEqual(self.store.get_plan(plan.id).status.value, "done")
+        notes = self.store.list_notes("plan", plan.id)
+        self.assertTrue(any("Drift override" in note.text for note in notes))
+
+    def test_advisory_plan_done_is_not_gated(self) -> None:
+        plan = self.store.add_plan("Advisory")
+        self._run("--json", "plan", "approve", "--id", str(plan.id))
+        self._run("plan", "edit", "--id", str(plan.id), "--what", "new scope", "--reason", "narrow")
+        code, _out, err = self._run("plan", "move", "--id", str(plan.id), "--to", "done")
+        self.assertEqual(code, 0, err)
+        self.assertEqual(self.store.get_plan(plan.id).status.value, "done")
+
     def test_porcelain_approve(self) -> None:
         code, out, err = self._run("--porcelain", "plan", "approve", "--id", str(self.plan.id))
         self.assertEqual(code, 0, err)

@@ -311,10 +311,24 @@ def _cmd_status(store: Store, args: argparse.Namespace, actor: str) -> int:
             f"({', '.join(c.text[:40] for c in left[:3])}); closing anyway",
             file=sys.stderr,
         )
+    override = getattr(args, "override", "")
+    failure = None
+    if args.kind == "plan" and args.to == "done":
+        failure = revisions_service.done_gate(store, args.id)
+        if failure and not override:
+            print(msg_error(ValueError(failure)), file=sys.stderr)
+            return 2
     ok = services.set_status(store, args.kind, args.id, Status(args.to), actor=actor)
     if not ok:
         print(msg_not_found(args.kind, args.id), file=sys.stderr)
         return 1
+    if failure and override:
+        store.add_note(
+            "plan",
+            args.id,
+            f"Drift override by {actor}: {override}",
+            actor=actor,
+        )
     if args.to == "done":
         reason = services.auto_capture_head(store, args.kind, args.id, actor=actor)
         if reason:

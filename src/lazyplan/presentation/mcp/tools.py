@@ -139,6 +139,7 @@ class ToolsMixin(McpBase):
                         "kind": _kind(),
                         "id": _id(),
                         "to": {"type": "string", "enum": ["todo", "doing", "done"]},
+                        "override": _str(),
                     },
                     ["kind", "id", "to"],
                     False,
@@ -485,12 +486,25 @@ class ToolsMixin(McpBase):
     def _tool_move(self, args: dict) -> object:
         kind = str(args["kind"])
         obj_id = int(args["id"])
-        ok = services.set_status(
-            self._need_store(), kind, obj_id, Status(str(args["to"])), actor=self.actor
-        )
+        target = str(args["to"])
+        store = self._need_store()
+        override = str(args.get("override") or "")
+        failure = None
+        if kind == "plan" and target == "done":
+            failure = services.done_gate(store, obj_id)
+            if failure and not override:
+                raise ValueError(failure)
+        ok = services.set_status(store, kind, obj_id, Status(target), actor=self.actor)
         if not ok:
             raise KeyError(f"{kind} {obj_id} not found")
-        return {"ok": True, "kind": kind, "id": obj_id, "to": args["to"]}
+        if failure and override:
+            store.add_note(
+                "plan",
+                obj_id,
+                f"Drift override by {self.actor}: {override}",
+                actor=self.actor,
+            )
+        return {"ok": True, "kind": kind, "id": obj_id, "to": target}
 
     def _tool_create_plan(self, args: dict) -> object:
         plan = services.create_plan(

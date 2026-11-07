@@ -242,6 +242,23 @@ class TestMcpReadTools(unittest.TestCase):
             ],
         )
 
+    def test_enforced_plan_done_gate(self):
+        plan = self.store.add_plan("Gate")
+        self.store.add_revision(plan.id, "a" * 64, "{}", enforced=True)
+        self._tool(
+            "edit_row",
+            {"kind": "plan", "id": plan.id, "desc": "new scope", "reason": "narrow"},
+        )
+        blocked = self._tool("move_row", {"kind": "plan", "id": plan.id, "to": "done"})
+        self.assertTrue(blocked["isError"])
+        self.assertIn("scope change", blocked["content"][0]["text"])
+        allowed = self._tool(
+            "move_row",
+            {"kind": "plan", "id": plan.id, "to": "done", "override": "ship now"},
+        )
+        self.assertFalse(allowed.get("isError"))
+        self.assertEqual(self.store.get_plan(plan.id).status.value, "done")
+
     def test_read_only_hides_and_rejects_writes(self):
         server = mcp.McpServer(self.store, actor="qa", read_only=True)
         names = {

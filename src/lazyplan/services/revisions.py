@@ -232,6 +232,21 @@ def drift_counts(port: RevisionsPort) -> dict[int, int]:
     return port.drift_counts()
 
 
+def done_gate(port: RevisionsPort, plan_id: int) -> str | None:
+    """Reason an enforced plan cannot move to done, or None."""
+    latest = port.latest_revision(plan_id)
+    if latest is None or not latest.enforced:
+        return None
+    drift = port.plan_drift(plan_id)
+    if drift == 0:
+        return None
+    plural = "change" if drift == 1 else "changes"
+    return (
+        f"P{plan_id} has {drift} scope {plural} since r{latest.revision}; "
+        f"run `lpui plan diff --id {plan_id}` or pass --override REASON"
+    )
+
+
 def revision_state(port: RevisionsPort, plan_id: int) -> dict:
     """Latest revision, enforcement, and live drift for one plan."""
     latest = port.latest_revision(plan_id)

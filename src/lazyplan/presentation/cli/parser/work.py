@@ -93,6 +93,12 @@ def add_status(
     s.add_argument(
         "--to", choices=[v.value for v in Status], required=True, help="the new status (required)"
     )
+    s.add_argument(
+        "--override",
+        default="",
+        metavar="REASON",
+        help="record why enforced drift is being overridden when moving a plan to done",
+    )
 
 
 def add_reconcile(
@@ -308,6 +314,12 @@ def add_noun_groups(
     _a = _actions.add_parser("move", help="move a plan to a status", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="plan id")
     _a.add_argument("--to", choices=[v.value for v in Status], required=True, help="new status")
+    _a.add_argument(
+        "--override",
+        default="",
+        metavar="REASON",
+        help="record why enforced drift is being overridden when moving to done",
+    )
     _a = _actions.add_parser("delete", help="delete a plan", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="plan id")
     _reason_flag(_a)

@@ -124,6 +124,19 @@ class TestRevisionsService(unittest.TestCase):
         self.store.set_criteria(criterion.id, True)
         self.assertFalse(rev.diff(self.store, self.plan.id).drifted)
 
+    def test_done_gate_only_for_enforced_drift(self) -> None:
+        rev.approve(self.store, self.plan.id)
+        self.store.update_task(self.task.id, title="Renamed", reason="rename")
+        self.assertIsNone(rev.done_gate(self.store, self.plan.id))
+        rev.approve(self.store, self.plan.id, reason="accept rename", enforced=True)
+        self.assertIsNone(rev.done_gate(self.store, self.plan.id))
+        self.store.update_task(self.task.id, title="Renamed again", reason="rename again")
+        failure = rev.done_gate(self.store, self.plan.id)
+        self.assertIsNotNone(failure)
+        assert failure is not None
+        self.assertIn("scope change", failure)
+        self.assertIn("plan diff", failure)
+
     def test_missing_plan_raises(self) -> None:
         with self.assertRaises(KeyError):
             rev.approve(self.store, 999_999)

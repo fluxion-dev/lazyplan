@@ -6,7 +6,6 @@ from collections.abc import Callable
 
 from ... import services
 from .context import ContextMixin
-from .screens import FilterPromptScreen
 
 
 class FinishMixin(ContextMixin):
@@ -42,19 +41,10 @@ class FinishMixin(ContextMixin):
         attempt()
 
     def _prompt_finish_reason(self, gate: str, attempt: Callable[[str], None]) -> None:
-        def reason_cb(reason: str | None) -> None:
-            if reason is None:
-                return
-            if not reason.strip():
-                self.notify("a finish override needs a reason", timeout=3)
-                return
-            attempt(reason.strip())
-
-        self.push_screen(
-            FilterPromptScreen(
-                title=f"{gate}\nWhy override?",
-                placeholder="reason for the finish override…",
-                submit_label="Override",
-            ),
-            reason_cb,
+        self.prompt_reason(
+            f"{gate}\nWhy override?",
+            "reason for the finish override…",
+            "Override",
+            attempt,
+            "a finish override needs a reason",
         )

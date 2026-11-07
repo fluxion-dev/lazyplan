@@ -7,7 +7,6 @@ from collections.abc import Callable
 from ... import services
 from ...core.entities import Status
 from .context import ContextMixin
-from .screens import FilterPromptScreen
 
 
 class StatusMixin(ContextMixin):
@@ -51,22 +50,12 @@ class StatusMixin(ContextMixin):
 
     def _prompt_drift_override(self, gate: str, apply: Callable[[str], None]) -> None:
         """Ask for a reason before overriding an enforced plan's drift."""
-
-        def reason_cb(reason: str | None) -> None:
-            if reason is None:
-                return
-            if not reason.strip():
-                self.notify("a drift override needs a reason", timeout=3)
-                return
-            apply(reason.strip())
-
-        self.push_screen(
-            FilterPromptScreen(
-                title=f"{gate}\nWhy override?",
-                placeholder="reason for overriding the drift…",
-                submit_label="Override",
-            ),
-            reason_cb,
+        self.prompt_reason(
+            f"{gate}\nWhy override?",
+            "reason for overriding the drift…",
+            "Override",
+            apply,
+            "a drift override needs a reason",
         )
 
     def _cycle_status(self, kind: str, oid: int, reason: str = "") -> None:

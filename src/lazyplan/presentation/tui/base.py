@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 from textual.app import App
@@ -27,6 +28,15 @@ class TuiHost:
     def _record_override(self, action: str, target: str, reason: str = "") -> None: ...
     def require_override(self, notify: bool = True) -> bool:
         return False
+
+    def prompt_reason(
+        self,
+        title: str,
+        placeholder: str,
+        submit: str,
+        callback: Callable[[str], None],
+        empty_message: str = "a reason is required",
+    ) -> None: ...
     def _paint_mark(self, key: tuple[str, int]) -> None: ...
     def _node_key(self, node: TreeNode) -> tuple[str, int] | None: ...
     def action_toggle_status(self) -> None: ...

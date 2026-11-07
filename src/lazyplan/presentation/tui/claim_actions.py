@@ -6,7 +6,6 @@ from ... import services
 from ...core.errors import ClaimConflict
 from ...services.coordination import overlaps
 from .context import ContextMixin
-from .screens import FilterPromptScreen
 
 
 class ClaimMixin(ContextMixin):
@@ -22,22 +21,12 @@ class ClaimMixin(ContextMixin):
                 f"T{int(item['task_id'])} @{item['actor']} ({', '.join(item['patterns'])})"
                 for item in found[:3]
             )
-
-            def reason_cb(reason: str | None) -> None:
-                if reason is None:
-                    return
-                if not reason.strip():
-                    self.notify("an overlap override needs a reason", timeout=3)
-                    return
-                self._claim(task_id, reason.strip(), force=True)
-
-            self.push_screen(
-                FilterPromptScreen(
-                    title=f"Claim T{task_id}? Overlaps {summary}. Why?",
-                    placeholder="reason for the overlap override…",
-                    submit_label="Claim",
-                ),
-                reason_cb,
+            self.prompt_reason(
+                f"Claim T{task_id}? Overlaps {summary}. Why?",
+                "reason for the overlap override…",
+                "Claim",
+                lambda reason: self._claim(task_id, reason, force=True),
+                "an overlap override needs a reason",
             )
             return
         self._claim(task_id)
@@ -57,28 +46,22 @@ class ClaimMixin(ContextMixin):
         if task_id is None:
             return
 
-        def reason_cb(reason: str | None) -> None:
-            if reason is None:
-                return
-            if not reason.strip():
-                self.notify("a block needs a reason", timeout=3)
-                return
+        def block(reason: str) -> None:
             try:
-                services.block_task(self.store, task_id, reason.strip(), actor="tui")
+                services.block_task(self.store, task_id, reason, actor="tui")
             except (ValueError, KeyError) as exc:
                 self.notify(str(exc), severity="error", timeout=5)
                 return
-            self._record_override("block", f"T{task_id}", reason.strip())
+            self._record_override("block", f"T{task_id}", reason)
             self.notify(f"blocked T{task_id}", timeout=3)
             self._saved("task blocked")
 
-        self.push_screen(
-            FilterPromptScreen(
-                title=f"Block T{task_id}? Why?",
-                placeholder="what is it waiting on?",
-                submit_label="Block",
-            ),
-            reason_cb,
+        self.prompt_reason(
+            f"Block T{task_id}? Why?",
+            "what is it waiting on?",
+            "Block",
+            block,
+            "a block needs a reason",
         )
 
     def action_unblock_task(self) -> None:
@@ -107,22 +90,12 @@ class ClaimMixin(ContextMixin):
             summary = " Overlaps " + "; ".join(
                 f"T{int(item['task_id'])} ({', '.join(item['patterns'])})" for item in found[:3]
             )
-
-        def reason_cb(reason: str | None) -> None:
-            if reason is None:
-                return
-            if not reason.strip():
-                self.notify("a takeover needs a reason", timeout=3)
-                return
-            self._release_claim(True, reason.strip())
-
-        self.push_screen(
-            FilterPromptScreen(
-                title=f"Take over T{task_id}?{summary} Why?",
-                placeholder="reason for the takeover…",
-                submit_label="Take over",
-            ),
-            reason_cb,
+        self.prompt_reason(
+            f"Take over T{task_id}?{summary} Why?",
+            "reason for the takeover…",
+            "Take over",
+            lambda reason: self._release_claim(True, reason),
+            "a takeover needs a reason",
         )
 
     def _release_claim(self, force: bool, reason: str = "") -> None:

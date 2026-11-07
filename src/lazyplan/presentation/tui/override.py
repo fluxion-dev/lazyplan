@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from textual.widgets import Static
 
 from ... import services
 from .base import AppBase
+from .screens import FilterPromptScreen
 from .theme import next_theme
 
 WRITE_ACTIONS = frozenset(
@@ -81,6 +84,29 @@ class OverrideMixin(AppBase):
         if notify:
             self.notify("read-only — press O for manual override", timeout=3)
         return False
+
+    def prompt_reason(
+        self,
+        title: str,
+        placeholder: str,
+        submit: str,
+        callback: Callable[[str], None],
+        empty_message: str = "a reason is required",
+    ) -> None:
+        """Ask for a non-empty reason and hand it to one callback."""
+
+        def reason_cb(reason: str | None) -> None:
+            if reason is None:
+                return
+            if not reason.strip():
+                self.notify(empty_message, timeout=3)
+                return
+            callback(reason.strip())
+
+        self.push_screen(
+            FilterPromptScreen(title=title, placeholder=placeholder, submit_label=submit),
+            reason_cb,
+        )
 
     def _paint_mode(self) -> None:
         """Show or hide the manual-override banner."""

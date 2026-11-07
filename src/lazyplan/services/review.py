@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from ..core.entities import Criterion, Task
+from ..core.entities import Criterion, Plan, Task
 from ..core.policies.evidence import proof_state
 from ..core.policies.review import render
 from ..core.ports.insights import InsightsPort
@@ -19,6 +19,16 @@ class ReviewPacket:
     plan_id: int
     markdown: str
     payload: dict
+
+
+def active_plan(store: InsightsPort) -> Plan | None:
+    """First doing plan, else the first todo plan."""
+    plans = store.list_plans()
+    doing = [plan for plan in plans if plan.status.value == "doing"]
+    if doing:
+        return doing[0]
+    todo = [plan for plan in plans if plan.status.value == "todo"]
+    return todo[0] if todo else None
 
 
 def _criterion(store: InsightsPort, criterion: Criterion, tasks: list[Task]) -> dict:

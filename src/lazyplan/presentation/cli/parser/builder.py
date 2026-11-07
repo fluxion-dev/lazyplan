@@ -18,6 +18,7 @@ from .coordination import (
     add_mcp,
     add_next,
     add_note,
+    add_review,
     add_share,
     add_stats,
     add_sync,
@@ -126,6 +127,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_audit(sub, common)
     add_brief(sub, common)
     add_context(sub, common)
+    add_review(sub, common)
     add_next(sub, common)
     add_claim(sub, common)
     add_note(sub, common)

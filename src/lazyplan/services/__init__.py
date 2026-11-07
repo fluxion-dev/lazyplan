@@ -96,7 +96,7 @@ from .questions import (
 )
 from .ready import ReadyCheck, ReadyResult
 from .ready import check as plan_ready
-from .review import ReviewPacket
+from .review import ReviewPacket, active_plan
 from .review import build as build_review
 from .revisions import (
     ApprovalResult,
@@ -202,6 +202,7 @@ __all__ = [
     "DEFAULT_PLAN_LIMIT",
     "ReviewPacket",
     "build_review",
+    "active_plan",
     "ReadyCheck",
     "ReadyResult",
     "plan_ready",

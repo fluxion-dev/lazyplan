@@ -210,6 +210,21 @@ def add_audit(
     )
 
 
+def add_review(
+    sub: argparse._SubParsersAction[argparse.ArgumentParser], common: argparse.ArgumentParser
+) -> None:
+
+    rv = sub.add_parser(
+        "review",
+        help="print one deterministic review packet",
+        parents=[common],
+    )
+    rv.add_argument(
+        "--plan", type=int, default=None, metavar="ID", help="review one plan (default: active)"
+    )
+    rv.add_argument("--max-chars", type=int, default=0, metavar="N", help="cap the Markdown length")
+
+
 def add_brief(
     sub: argparse._SubParsersAction[argparse.ArgumentParser], common: argparse.ArgumentParser
 ) -> None:

@@ -105,6 +105,9 @@ from .system import (
     _cmd_trace,
 )
 from .system import (
+    _cmd_review as _cmd_review,
+)
+from .system import (
     _cmd_setup as _cmd_setup,
 )
 from .ui import (
@@ -173,6 +176,7 @@ _COMMANDS: dict[str, Callable[[Store, Namespace, str], int]] = {
     "list": _cmd_list,
     "help": _cmd_help,
     "context": _cmd_context,
+    "review": _cmd_review,
     "trace": _cmd_trace,
     "lint": _cmd_lint,
     "stats": _cmd_stats,

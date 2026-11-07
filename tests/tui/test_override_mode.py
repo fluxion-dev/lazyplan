@@ -20,6 +20,18 @@ except ImportError:  # pragma: no cover - stdlib-only interpreter
 from tests.support.pilot import settle
 
 
+async def _palette(pilot, query: str) -> None:
+    """Drive the modal palette: open with c, type query, run first match."""
+    await pilot.press("c")
+    await pilot.pause()
+    for char in query:
+        await pilot.press(char)
+    await pilot.pause()
+    await pilot.press("enter")
+    await pilot.pause()
+    await pilot.pause()
+
+
 @unittest.skipUnless(tui_mod is not None and tui_mod._TEXTUAL_OK, "textual not installed")
 class OverrideModeTest(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:
@@ -100,6 +112,53 @@ class OverrideModeTest(unittest.IsolatedAsyncioTestCase):
             await pilot.press("e")
             await pilot.pause()
             self.assertTrue(screen._editing)
+
+    async def test_empty_delete_reason_keeps_the_row(self) -> None:
+        async with self.app.run_test(size=(120, 40)) as pilot:
+            await settle(pilot)
+            self.app.override_mode = True
+            self.app.selected = ("task", self.task.id)
+            await _palette(pilot, "delete")
+            from lazyplan.presentation.tui.screens import FilterPromptScreen
+
+            await pilot.click("#ok")
+            await pilot.pause()
+            self.assertIsInstance(self.app.screen, FilterPromptScreen)
+            await pilot.press("enter")
+            await pilot.pause()
+            self.assertIsNotNone(Store(self.db).get_task(self.task.id))
+            self.assertEqual(
+                [event for event in Store(self.db).feed() if event["kind"] == "override"],
+                [],
+            )
+
+    async def test_force_claim_requires_and_records_a_reason(self) -> None:
+        from lazyplan.presentation.tui.screens import FilterPromptScreen
+
+        Store(self.db).claim_task(self.task.id, "alice", 300)
+        async with self.app.run_test(size=(120, 40)) as pilot:
+            await settle(pilot)
+            self.app.override_mode = True
+            self.app.selected = ("task", self.task.id)
+            await _palette(pilot, "force release")
+            self.assertIsInstance(self.app.screen, FilterPromptScreen)
+            await pilot.press("enter")
+            await pilot.pause()
+            self.assertIsNotNone(Store(self.db).get_claim(self.task.id))
+
+            await _palette(pilot, "force release")
+            for char in "takeover":
+                await pilot.press(char)
+            await pilot.press("enter")
+            await pilot.pause()
+            self.assertIsNone(Store(self.db).get_claim(self.task.id))
+            events = [event for event in Store(self.db).feed() if event["kind"] == "override"]
+            self.assertTrue(
+                any(
+                    event["action"] == "claim force release" and "takeover" in event["detail"]
+                    for event in events
+                )
+            )
 
 
 if __name__ == "__main__":

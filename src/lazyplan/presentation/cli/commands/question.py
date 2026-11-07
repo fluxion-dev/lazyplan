@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import time
 
 from ....core.entities import PlanQuestion
 from ....store import Store, to_payload
@@ -26,9 +27,16 @@ def _question_row(question: PlanQuestion) -> str:
 
 
 def _question_text(question: PlanQuestion) -> str:
-    """One human question line."""
-    suffix = f" · {question.resolution}" if question.resolution else ""
-    return f"Q{question.id} [{question.status}] {question.text}{suffix}"
+    """One human question line, including a resolution when present."""
+    if question.status != "resolved":
+        return f"Q{question.id} [open] {question.text}"
+    day = (
+        time.strftime("%Y-%m-%d", time.localtime(question.resolved_at))
+        if question.resolved_at
+        else "-"
+    )
+    answer = f": {question.resolution}" if question.resolution else ""
+    return f"Q{question.id} [resolved {day} @{question.resolved_by}] {question.text}{answer}"
 
 
 def _cmd_question_add(store: Store, args: argparse.Namespace, actor: str) -> int:

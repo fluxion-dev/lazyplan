@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from ..core.policies.questions import open_count, open_questions
 from ..core.ports.insights import InsightsPort
 from . import lint
 
@@ -51,10 +52,11 @@ def check(port: InsightsPort, plan_id: int) -> ReadyResult | None:
         tuple({"id": criterion.id, "text": criterion.text} for criterion in uncovered),
     )
     questions = port.list_questions(plan_id)
+    open_items = open_questions(questions)
     question_check = ReadyCheck(
         "questions",
-        not questions,
-        f"{len(questions)} open questions" if questions else "none open",
-        tuple({"id": question.id, "text": question.text} for question in questions),
+        not open_items,
+        f"{open_count(questions)} open questions" if open_items else "none open",
+        tuple({"id": question.id, "text": question.text} for question in open_items),
     )
     return ReadyResult(plan_id, (lint_check, coverage, question_check))

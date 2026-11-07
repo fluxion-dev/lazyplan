@@ -355,10 +355,11 @@ def work_span(
 
 def status_breakdown(tasks: list[Task]) -> StatusBreakdown:
     """Task counts by state and blocked overlay."""
+    done, _ = progress_counts(tasks)
     return StatusBreakdown(
         todo=sum(1 for task in tasks if task.status == Status.TODO),
         doing=sum(1 for task in tasks if task.status == Status.DOING),
-        done=sum(1 for task in tasks if task.status == Status.DONE),
+        done=done,
         blocked=sum(1 for task in tasks if task.blocked),
     )
 

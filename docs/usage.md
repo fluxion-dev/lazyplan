@@ -607,6 +607,70 @@ Notes are append-only on plans, milestones, and tasks. `show` and `brief`
 include them; `task block` adds one automatically. Claims and notes travel in
 export/import.
 
+### Sessions and handoff
+
+A session groups the events from one working stretch and carries the summary
+and handoff a cold agent needs:
+
+```bash
+lpui --actor NAME session start --plan 1 --branch task/1-records
+lpui --actor NAME session end --summary "Shipped the store" --handoff "next: T2"
+lpui session show                 # active session, counts, recent events
+lpui session list --open
+lpui feed --session 3
+```
+
+`session start` writes a pointer beside the database keyed by actor and
+checkout; `LAZYPLAN_SESSION=S3` overrides it. Every write made while the
+session is open is tagged with its id. Hooks stay read-only: they show the open
+session or a start hint, and `context`/`brief` render the previous handoff.
+Sessions are operational history and are not exported.
+
+### Touch-points and parallel work
+
+Tasks can declare the repo-relative paths they expect to edit:
+
+```bash
+lpui --actor NAME task add --milestone 1 --title "Store sessions" --touch src/lazyplan/store
+lpui touch add --task 12 --path src/lazyplan/store/sessions.py
+lpui touch list --task 12
+lpui touch remove --task 12 --path src/lazyplan/store/sessions.py
+```
+
+`next` skips a todo whose touch-points overlap an active claim in the same
+checkout. A manual `claim` refuses on overlap unless `--force` is passed, and
+`task finish` prints a warning when linked commit files overlap another open
+task. Finish never blocks on overlap; claims remain leases, not owners.
+`claim --worktree PATH --repo PATH` records the checkout on the lease.
+
+### External references
+
+A plan can point at an epic, issue, or doc without mirroring it:
+
+```bash
+lpui --actor NAME ref link --plan 1 --url https://github.com/org/repo/issues/7
+lpui ref list --plan 1
+lpui ref unlink --plan 1 --id 4
+```
+
+Links are read-only. lazyplan stores the URL, provider, kind, and an optional
+title and state snapshot; it never fetches or writes back to the tracker. The
+plan preview, detail, and export/import carry the references.
+
+### Ship note
+
+Turn a plan into a PR body or changelog entry:
+
+```bash
+lpui ship --plan 1
+lpui ship --plan 1 --json --max-chars 8000
+```
+
+The note has why, what shipped, evidence, commits, pull requests, residual
+risks, and follow-ups. It is deterministic, calls no model or network, and
+drops optional sections under `--max-chars`. `review` remains the full review
+packet; `ship` is the outcome summary.
+
 ### Traceability and lint
 
 Relate each plan criterion to the tasks that prove it, then inspect the evidence:

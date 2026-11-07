@@ -284,6 +284,29 @@ Questions are plan-level and all open questions block `plan ready`. Readiness
 also requires clean lint and a proving task for every plan criterion. `review`
 is the deterministic Markdown handoff; it calls no model and no network.
 
+## Parallel agents and handoff
+
+```bash
+lpui --actor NAME session start --plan P [--branch NAME] [--force]
+lpui --actor NAME session end [--id S] --summary "..." --handoff "next: T2"
+lpui session show|list
+lpui feed --session S
+lpui --actor NAME touch add --task T --path PATH
+lpui --porcelain claims
+lpui --actor NAME claim --id T [--worktree PATH] [--repo PATH] [--force]
+lpui --actor NAME task finish --id T
+lpui --actor NAME ref link --plan P --url URL [--type epic|issue|doc|other]
+lpui ref list|unlink --plan P
+lpui ship --plan P [--json] [--max-chars N]
+```
+
+Sessions tag writes from `LAZYPLAN_SESSION` or the checkout pointer; hooks stay
+read-only and `context`/`brief` show the previous handoff. Touch-points make
+`next` skip work that overlaps an active claim in the same checkout; a manual
+claim needs `--force` and finish only warns. References are read-only links to
+external work: no fetch, no write-back. `ship` prints the deterministic outcome
+note; `review` remains the full packet.
+
 ## During execution
 
 Update the journal as you go, not at the end:

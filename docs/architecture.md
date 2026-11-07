@@ -33,11 +33,11 @@ keeps hand-written modules under 600 lines.
 
 | Slice | Owns |
 | --- | --- |
-| planning | plans, milestones, tasks, criteria, plan questions, status rollup, tree reads |
-| coordination | claims, next, leases, blocked work |
+| planning | plans, milestones, tasks, criteria, plan questions, sessions, external references, status rollup, tree reads |
+| coordination | claims, next, leases, touch-points, blocked work |
 | collaboration | notes, comments, mentions |
 | provenance | commits, repos, branches, forge and GitHub, source trail, trace, criterion evidence, task start and finish gates |
-| insights | metrics, stats, audit, brief, lint, attention, plan readiness, review packet |
+| insights | metrics, stats, audit, brief, lint, attention, plan readiness, review packet, ship note |
 | transfer | export, import, sync, share, issue intake, seed |
 | environment | setup layout, hooks, skills, upgrade, update staging |
 

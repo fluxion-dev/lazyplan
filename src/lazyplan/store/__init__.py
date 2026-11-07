@@ -17,6 +17,7 @@ from .keys import KeysMixin
 from .links import LinksMixin
 from .plans import PlansMixin
 from .questions import QuestionsMixin
+from .refs import RefsMixin
 from .repos import ReposMixin
 from .revisions import RevisionsMixin
 from .sessions import SessionsMixin
@@ -29,6 +30,7 @@ from .views import ViewsMixin
 class Store(
     PlansMixin,
     QuestionsMixin,
+    RefsMixin,
     SessionsMixin,
     ClaimsMixin,
     EvidenceMixin,

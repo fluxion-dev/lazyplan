@@ -132,6 +132,7 @@ class ViewsMixin(StoreBase):
             "effective_repos": self.effective_repos("plan", p.id),
             "approval": approval_payload(latest, self.plan_drift(p.id), recent),
             "questions": [vars(q) for q in self.list_questions(p.id, status="all")],
+            "refs": [vars(ref) for ref in self.list_refs(p.id)],
             "milestones": [
                 {
                     "milestone": to_payload(vars(s)),
@@ -279,6 +280,7 @@ class _FullReader:
         self.evidence = store.evidence_map()
         self.questions = store.questions_map()
         self.touchpoints = store.touchpoints_map()
+        self.refs = store.refs_map()
         self.milestone_by_id = {
             milestone.id: milestone for items in self.milestones.values() for milestone in items
         }
@@ -445,6 +447,7 @@ class _FullReader:
             "effective_repos": self._effective_repos("plan", plan.id),
             "approval": approval_payload(self.revisions.get(plan.id), self.drift.get(plan.id, 0)),
             "questions": [vars(q) for q in self.questions.get(plan.id, [])],
+            "refs": [vars(ref) for ref in self.refs.get(plan.id, [])],
             "milestones": [
                 {
                     "milestone": to_payload(vars(milestone)),

@@ -6,11 +6,12 @@ from typing import Protocol
 
 from ..entities import Claim
 from .provenance import ProvenancePort
+from .refs import RefsPort
 from .revisions import RevisionsPort
 from .sessions import SessionsReadPort
 
 
-class InsightsPort(ProvenancePort, RevisionsPort, SessionsReadPort, Protocol):
+class InsightsPort(ProvenancePort, RevisionsPort, SessionsReadPort, RefsPort, Protocol):
     """Read-only surface used by metrics, stats, audit, brief, and lint."""
 
     def feed(self, limit: int = 20) -> list[dict]: ...

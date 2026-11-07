@@ -96,6 +96,7 @@ from .questions import (
 )
 from .ready import ReadyCheck, ReadyResult
 from .ready import check as plan_ready
+from .refs import link_ref, list_refs, unlink_ref
 from .review import ReviewPacket, active_plan
 from .review import build as build_review
 from .revisions import (
@@ -222,6 +223,9 @@ __all__ = [
     "prove",
     "list_evidence",
     "task_gate",
+    "link_ref",
+    "list_refs",
+    "unlink_ref",
     "ApprovalResult",
     "RevisionEntry",
     "DiffEntry",

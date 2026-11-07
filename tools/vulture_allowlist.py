@@ -189,3 +189,7 @@ _.add_touchpoint
 _.remove_touchpoint
 # Public selection helper kept for callers outside the overlap-aware service.
 _.next_claimable_task
+# External reference API consumed by the ref commands and plan reads.
+_.link_ref
+_.list_refs
+_.unlink_ref

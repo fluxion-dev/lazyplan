@@ -12,6 +12,7 @@ from ..core.entities import (
     Comment,
     Criterion,
     CriterionEvidence,
+    ExternalRef,
     Milestone,
     Note,
     Plan,
@@ -397,6 +398,35 @@ class StoreStubs(StoreStubsLinks):
         raise NotImplementedError
 
     def touchpoints_map(self) -> dict[int, list[str]]:
+        raise NotImplementedError
+
+    def link_ref(
+        self,
+        plan_id: int,
+        url: str,
+        provider: str = "",
+        kind: str = "issue",
+        external_id: str = "",
+        title: str = "",
+        state: str = "",
+        actor: str = "human",
+        now: float | None = None,
+    ) -> ExternalRef:
+        raise NotImplementedError
+
+    def list_refs(self, plan_id: int) -> list[ExternalRef]:
+        raise NotImplementedError
+
+    def refs_map(self) -> dict[int, list[ExternalRef]]:
+        raise NotImplementedError
+
+    def unlink_ref(
+        self,
+        plan_id: int,
+        ref_id: int = 0,
+        url: str = "",
+        actor: str = "human",
+    ) -> bool:
         raise NotImplementedError
 
     def gate_state(self, task_id: int) -> dict:

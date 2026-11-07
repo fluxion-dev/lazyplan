@@ -200,6 +200,22 @@ class CriterionEvidence:
 
 
 @dataclass(frozen=True)
+class ExternalRef:
+    """A read-only pointer from a plan to an external epic, issue, or doc."""
+
+    id: int
+    plan_id: int
+    url: str
+    provider: str = "other"
+    kind: str = "issue"
+    external_id: str = ""
+    title: str = ""
+    state: str = ""
+    actor: str = "human"
+    created_at: float = 0.0
+
+
+@dataclass(frozen=True)
 class PlanQuestion:
     """One open or resolved question on a plan."""
 

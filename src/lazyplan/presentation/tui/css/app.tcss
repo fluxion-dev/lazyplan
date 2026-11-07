@@ -45,6 +45,13 @@
     background: $lp-surface-alt;
 }
 
+#preview-strip {
+    height: auto;
+    max-height: 3;
+    padding: 0 1;
+    background: $lp-surface;
+}
+
 #preview-body {
     height: auto;
     padding: 0 1;

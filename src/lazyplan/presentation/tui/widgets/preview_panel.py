@@ -19,16 +19,20 @@ class PreviewPanel(Vertical):
 
     def compose(self) -> ComposeResult:
         yield Static("", id="preview-head")
+        yield Static("", id="preview-strip")
         with VerticalScroll(id="preview-scroll"):
             yield Static("", id="preview-body")
 
-    def show(self, document: PreviewDocument) -> None:
+    def show(self, document: PreviewDocument, strip: str = "") -> None:
         head = self.query_one("#preview-head", Static)
         body = self.query_one("#preview-body", Static)
+        strip_widget = self.query_one("#preview-strip", Static)
         body.remove_class("preview-empty", "preview-error")
         head.remove_class("preview-empty", "preview-error")
         head.update(document.render_head())
         body.update(document.render_body())
+        strip_widget.display = bool(strip)
+        strip_widget.update(strip)
         self.border_subtitle = " enter open · e edit "
         self._home()
 
@@ -42,7 +46,9 @@ class PreviewPanel(Vertical):
         """A two-line empty state with a clear next action."""
         head = self.query_one("#preview-head", Static)
         body = self.query_one("#preview-body", Static)
+        strip = self.query_one("#preview-strip", Static)
         head.update("")
+        strip.display = False
         body.remove_class("preview-error")
         body.add_class("preview-empty")
         body.update(f"[bold]{title}[/]\n\n[dim]{hint}[/]")
@@ -53,7 +59,9 @@ class PreviewPanel(Vertical):
         """A visible load failure instead of a blank pane."""
         head = self.query_one("#preview-head", Static)
         body = self.query_one("#preview-body", Static)
+        strip = self.query_one("#preview-strip", Static)
         head.update("")
+        strip.display = False
         body.remove_class("preview-empty")
         body.add_class("preview-error")
         body.update(f"[bold red]preview unavailable[/]\n\n[dim]{text}[/]")

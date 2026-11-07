@@ -9,9 +9,14 @@ import unittest
 from lazyplan.store import Store
 
 try:
-    from lazyplan.presentation.tui.views.preview import PreviewBlock, PreviewDocument, build_preview
+    from lazyplan.presentation.tui.views.control import build_control_strip
+    from lazyplan.presentation.tui.views.preview import (
+        PreviewBlock,
+        PreviewDocument,
+        build_preview,
+    )
 except ImportError:  # pragma: no cover - stdlib-only interpreter
-    PreviewBlock = PreviewDocument = build_preview = None  # type: ignore[assignment]
+    PreviewBlock = PreviewDocument = build_preview = build_control_strip = None  # type: ignore[assignment]
 
 
 @unittest.skipUnless(build_preview is not None, "textual/rich not installed")
@@ -23,6 +28,7 @@ class PreviewDocumentTest(unittest.TestCase):
         milestone = self.store.add_milestone(plan.id, "Milestone title", "Details")
         task = self.store.add_task(milestone.id, "Task title", "Task details")
         self.plan = plan
+        self.milestone = milestone
         self.task = task
 
     def tearDown(self) -> None:
@@ -109,6 +115,41 @@ class PreviewDocumentTest(unittest.TestCase):
         self.assertIn(f"▹ T{self.task.id}", text)
         self.assertIn("[bold]details[/]", text)
         self.assertIn("Task details", text)
+
+    def test_plan_control_strip_names_health_and_needs(self) -> None:
+        self.store.add_revision(self.plan.id, "a" * 64, "{}", reason="initial")
+        self.store.add_question(self.plan.id, "Which host?")
+        self.store.claim_task(self.task.id, "alice", 300)
+        self.store.set_blocked(self.task.id, True, "waiting", actor="t")
+        full = self.store.get_full("plan", self.plan.id)
+        assert full is not None
+        strip = build_control_strip(self.store, "plan", self.plan.id, full)
+        self.assertIn("[bold]health[/]", strip)
+        self.assertIn("r1", strip)
+        self.assertIn("open question", strip)
+        self.assertIn("blocked task", strip)
+        self.assertIn("claim", strip)
+
+    def test_task_control_strip_reports_overlap_and_open_criteria(self) -> None:
+        other = self.store.add_task(self.milestone.id, "Other", "Other details")
+        self.store.add_criteria("task", self.task.id, "Works")
+        self.store.add_touchpoint(self.task.id, "src/app", actor="t")
+        self.store.add_touchpoint(other.id, "src/app/api.py", actor="t")
+        self.store.claim_task(self.task.id, "alice", 300)
+        self.store.claim_task(other.id, "bob", 300)
+        full = self.store.get_full("task", self.task.id)
+        assert full is not None
+        strip = build_control_strip(self.store, "task", self.task.id, full)
+        self.assertIn("[bold]work[/]", strip)
+        self.assertIn("claim @alice", strip)
+        self.assertIn("open criterion", strip)
+        self.assertIn("overlap", strip)
+
+    def test_control_strip_says_when_nothing_needs_a_human(self) -> None:
+        full = self.store.get_full("task", self.task.id)
+        assert full is not None
+        strip = build_control_strip(self.store, "task", self.task.id, full)
+        self.assertIn("nothing needs you", strip)
 
 
 if __name__ == "__main__":

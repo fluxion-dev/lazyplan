@@ -13,6 +13,7 @@ except ImportError:  # pragma: no cover
 
 from ..shared.messages import RowAction, SelectionChanged
 from .base import AppBase
+from .views.control import build_control_strip
 from .views.git import build_git
 from .views.preview import build_preview
 
@@ -58,7 +59,10 @@ if _TEXTUAL_OK:
                     git.show_empty("row is gone", "press r to refresh the tree")
                 return
             repos = full.get("effective_repos") or full.get("repos") or []
-            panel.show(build_preview(self.store, kind, oid, full, []))
+            panel.show(
+                build_preview(self.store, kind, oid, full, []),
+                strip=build_control_strip(self.store, kind, oid, full),
+            )
             if git is not None:
                 git.show(build_git(full, self.git_state_controller.snapshot(repos)))
 

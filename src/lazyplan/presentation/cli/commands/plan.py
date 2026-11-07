@@ -81,14 +81,17 @@ def _cmd_add_milestone(store: Store, args: argparse.Namespace, actor: str) -> in
 
 
 def _cmd_add_task(store: Store, args: argparse.Namespace, actor: str) -> int:
-    t = services.create_task(
-        store,
-        args.milestone,
-        args.title,
-        description=args.desc,
-        actor=actor,
-        reason=getattr(args, "reason", ""),
-    )
+    with store.transaction():
+        t = services.create_task(
+            store,
+            args.milestone,
+            args.title,
+            description=args.desc,
+            actor=actor,
+            reason=getattr(args, "reason", ""),
+        )
+        for path in getattr(args, "touch", []) or []:
+            store.add_touchpoint(t.id, path, actor=actor)
     return _emit_record(args, _porcelain_row(store, t), {"task": to_payload(vars(t))})
 
 

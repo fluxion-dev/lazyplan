@@ -49,6 +49,7 @@ from .system import (
     add_ui,
     add_upgrade,
 )
+from .touch import add_touch_group
 from .work import (
     add_add_criteria,
     add_add_milestone,
@@ -146,6 +147,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_noun_groups(sub, common)
     add_question_group(sub, common)
     add_session_group(sub, common)
+    add_touch_group(sub, common)
     add_add_plan(sub, common)
     add_add_milestone(sub, common)
     add_add_task(sub, common)

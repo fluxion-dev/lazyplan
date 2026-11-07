@@ -17,10 +17,20 @@ def start_claim(
     ttl: str | None = None,
     note: str = "",
     force: bool = False,
+    worktree: str = "",
+    repo_path: str = "",
 ) -> dict:
     """Claim a task and move it doing; release the lease if the move fails."""
     seconds = parse_ttl(ttl)
-    claim, previous = port.claim_task(task_id, actor, ttl_seconds=seconds, note=note, force=force)
+    claim, previous = port.claim_task(
+        task_id,
+        actor,
+        ttl_seconds=seconds,
+        note=note,
+        force=force,
+        worktree=worktree,
+        repo_path=repo_path,
+    )
     try:
         set_status(port, "task", task_id, Status.DOING, actor=actor)
     except Exception:
@@ -62,6 +72,8 @@ def claim_next(
     ttl: str | None = None,
     note: str = "",
     suggest: bool = False,
+    worktree: str = "",
+    repo_path: str = "",
 ) -> dict | None:
     """Select and optionally claim the first eligible todo, retrying lost races."""
     for _ in range(100):
@@ -71,7 +83,15 @@ def claim_next(
         if suggest:
             return {"claim": None, "task": to_payload(vars(task)), "previous": None}
         try:
-            return start_claim(port, task.id, actor, ttl=ttl, note=note)
+            return start_claim(
+                port,
+                task.id,
+                actor,
+                ttl=ttl,
+                note=note,
+                worktree=worktree,
+                repo_path=repo_path,
+            )
         except ClaimConflict:
             # Another process claimed this task between selection and claim.
             continue

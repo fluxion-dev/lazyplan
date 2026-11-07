@@ -116,6 +116,11 @@ from .system import (
 from .system import (
     _cmd_setup as _cmd_setup,
 )
+from .touch import (
+    _cmd_touch_add,
+    _cmd_touch_list,
+    _cmd_touch_remove,
+)
 from .ui import (
     _cmd_ui,
 )
@@ -162,6 +167,9 @@ _GROUP_CMDS: dict[tuple[str, str], str] = {
     ("session", "end"): "session-end",
     ("session", "show"): "session-show",
     ("session", "list"): "session-list",
+    ("touch", "add"): "touch-add",
+    ("touch", "list"): "touch-list",
+    ("touch", "remove"): "touch-remove",
     ("issue", "import"): "issue-import",
     ("criterion", "prove"): "criterion-prove",
     ("criterion", "evidence"): "criterion-evidence",
@@ -225,6 +233,9 @@ _COMMANDS: dict[str, Callable[[Store, Namespace, str], int]] = {
     "session-end": _cmd_session_end,
     "session-show": _cmd_session_show,
     "session-list": _cmd_session_list,
+    "touch-add": _cmd_touch_add,
+    "touch-list": _cmd_touch_list,
+    "touch-remove": _cmd_touch_remove,
     "criterion-evidence": _cmd_criterion_evidence,
     "delete-criteria": _cmd_delete_criteria,
     "issue-import": _cmd_issue_import,

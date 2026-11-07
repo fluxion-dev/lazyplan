@@ -414,6 +414,16 @@ note stored on the claim
 .B \-\-force
 take over or release someone else's lease
 .RE
+.RS
+.TP
+.B \-\-worktree PATH
+checkout being worked
+.RE
+.RS
+.TP
+.B \-\-repo PATH
+shared repo root
+.RE
 .TP
 .B lpui note
 add or list append\-only handoff notes
@@ -1133,6 +1143,34 @@ who made this change (you see it in feed)
 what to do with a session Choices: start, end, show, list\. Required\.
 .RE
 .TP
+.B lpui touch
+add, list, or remove a task's expected file touch\-points
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B  ACTION
+what to do with touch\-points Choices: add, list, remove\. Required\.
+.RE
+.TP
 .B lpui add\-plan
 legacy alias for `plan add`
 .RS
@@ -1260,6 +1298,11 @@ title of the task (required) Required\.
 .TP
 .B \-\-desc TEXT
 what the task involves and what it needs
+.RE
+.RS
+.TP
+.B \-\-touch PATH
+repo\-relative path or glob this task will edit (repeatable) Default: []\.
 .RE
 .TP
 .B lpui update

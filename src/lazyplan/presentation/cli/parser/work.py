@@ -203,6 +203,13 @@ def add_add_task(
     a.add_argument(
         "--desc", default="", metavar="TEXT", help="what the task involves and what it needs"
     )
+    a.add_argument(
+        "--touch",
+        action="append",
+        default=[],
+        metavar="PATH",
+        help="repo-relative path or glob this task will edit (repeatable)",
+    )
 
 
 def add_add_criteria(
@@ -402,6 +409,13 @@ def add_noun_groups(
     )
     _title_flags(_a, required=True)
     _a.add_argument("--desc", default="", metavar="TEXT", help="details")
+    _a.add_argument(
+        "--touch",
+        action="append",
+        default=[],
+        metavar="PATH",
+        help="repo-relative path or glob this task will edit (repeatable)",
+    )
     _reason_flag(_a)
     _a = _actions.add_parser("edit", help="change a task", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="task id")

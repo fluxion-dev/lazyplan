@@ -29,6 +29,8 @@ def add_claim(
     cl.add_argument(
         "--force", action="store_true", help="take over or release someone else's lease"
     )
+    cl.add_argument("--worktree", default="", metavar="PATH", help="checkout being worked")
+    cl.add_argument("--repo", default="", metavar="PATH", help="shared repo root")
 
 
 def add_claims(

@@ -5,10 +5,12 @@ from __future__ import annotations
 import argparse
 import sys
 import time
+from pathlib import Path
 
 from lazyplan import (
     services,
 )
+from lazyplan.infrastructure.repo import find_repo_root
 
 from ....core.errors import ClaimConflict, ClaimMissing
 from ....core.ports.coordination import CoordinationPort
@@ -37,10 +39,20 @@ def _expiry_text(expires_at: float, now: float | None = None) -> str:
     return f"in {delta / 86400:.1f}d"
 
 
+def _current_location(args: argparse.Namespace) -> tuple[str, str]:
+    """Explicit checkout flags, else the current checkout and repo root."""
+    here = Path.cwd()
+    repo = getattr(args, "repo", "") or ""
+    root = find_repo_root(here)
+    worktree = getattr(args, "worktree", "") or repo or str(here.resolve())
+    return worktree, repo or (str(root) if root is not None else "")
+
+
 def _cmd_next(store: CoordinationPort, args: argparse.Namespace, actor: str) -> int:
     if args.plan is not None and store.get_plan(args.plan) is None:
         print(msg_not_found("plan", args.plan), file=sys.stderr)
         return 1
+    worktree, repo_path = _current_location(args)
     try:
         result = services.claim_next(
             store,
@@ -49,6 +61,8 @@ def _cmd_next(store: CoordinationPort, args: argparse.Namespace, actor: str) -> 
             ttl=args.ttl,
             note=args.note,
             suggest=bool(args.suggest),
+            worktree=worktree,
+            repo_path=repo_path,
         )
     except ClaimConflict as exc:
         print(msg_error(exc), file=sys.stderr)
@@ -92,8 +106,16 @@ def _claim_failure(exc: Exception) -> int:
 
 
 def _claim_take(store: CoordinationPort, args: argparse.Namespace, actor: str) -> int:
+    worktree, repo_path = _current_location(args)
     result = services.start_claim(
-        store, args.id, actor, ttl=args.ttl, note=args.note, force=bool(args.force)
+        store,
+        args.id,
+        actor,
+        ttl=args.ttl,
+        note=args.note,
+        force=bool(args.force),
+        worktree=worktree,
+        repo_path=repo_path,
     )
     claim = result["claim"]
     task = result["task"]

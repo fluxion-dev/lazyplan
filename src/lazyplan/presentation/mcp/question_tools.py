@@ -119,16 +119,4 @@ class QuestionToolsMixin(McpBase):
         result = services.plan_ready(self._need_store(), int(args["id"]))
         if result is None:
             raise KeyError(f"plan {args['id']} not found")
-        return {
-            "plan": result.plan_id,
-            "ready": result.ready,
-            "checks": [
-                {
-                    "id": check.id,
-                    "ok": check.ok,
-                    "detail": check.detail,
-                    "findings": list(check.findings),
-                }
-                for check in result.checks
-            ],
-        }
+        return result.to_dict()

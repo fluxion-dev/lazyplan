@@ -13,21 +13,9 @@ from ..emit import _emit
 from .system import _optional_store
 
 
-def ready_payload(plan_id: int, result: services.ReadyResult) -> dict:
+def ready_payload(result: services.ReadyResult) -> dict:
     """JSON payload for one readiness report."""
-    return {
-        "plan": plan_id,
-        "ready": result.ready,
-        "checks": [
-            {
-                "id": check.id,
-                "ok": check.ok,
-                "detail": check.detail,
-                "findings": list(check.findings),
-            }
-            for check in result.checks
-        ],
-    }
+    return result.to_dict()
 
 
 def ready_text(plan_id: int, result: services.ReadyResult) -> str:
@@ -73,7 +61,7 @@ def _cmd_plan_ready(store: Store | None, args: argparse.Namespace, actor: str) -
         print(msg_not_found("plan", args.id), file=sys.stderr)
         return 2
     if args.json:
-        _emit(args, ready_payload(args.id, result))
+        _emit(args, ready_payload(result))
     elif porcelain.enabled(args):
         for line in ready_rows(result):
             print(line)

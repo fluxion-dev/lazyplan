@@ -18,6 +18,15 @@ class ReadyCheck:
     detail: str
     findings: tuple[dict, ...] = ()
 
+    def to_dict(self) -> dict:
+        """JSON-safe check."""
+        return {
+            "id": self.id,
+            "ok": self.ok,
+            "detail": self.detail,
+            "findings": list(self.findings),
+        }
+
 
 @dataclass(frozen=True)
 class ReadyResult:
@@ -30,6 +39,14 @@ class ReadyResult:
     def ready(self) -> bool:
         """True only when every check passes."""
         return all(check.ok for check in self.checks)
+
+    def to_dict(self) -> dict:
+        """JSON-safe result shared by the CLI and MCP."""
+        return {
+            "plan": self.plan_id,
+            "ready": self.ready,
+            "checks": [check.to_dict() for check in self.checks],
+        }
 
 
 def check(port: InsightsPort, plan_id: int) -> ReadyResult | None:

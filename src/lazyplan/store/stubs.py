@@ -63,6 +63,19 @@ class StoreStubs(StoreStubsLinks):
     def add_question(self, plan_id: int, text: str, actor: str = "human") -> PlanQuestion:
         raise NotImplementedError
 
+    def restore_question(
+        self,
+        plan_id: int,
+        text: str,
+        status: str = "open",
+        actor: str = "human",
+        ts: float = 0.0,
+        resolved_at: float = 0.0,
+        resolved_by: str = "",
+        resolution: str = "",
+    ) -> PlanQuestion | None:
+        raise NotImplementedError
+
     def get_question(self, qid: int) -> PlanQuestion | None:
         raise NotImplementedError
 

@@ -56,6 +56,49 @@ class QuestionsMixin(StoreBase):
             ts=stamp,
         )
 
+    def restore_question(
+        self,
+        plan_id: int,
+        text: str,
+        status: str = "open",
+        actor: str = "human",
+        ts: float = 0.0,
+        resolved_at: float = 0.0,
+        resolved_by: str = "",
+        resolution: str = "",
+    ) -> PlanQuestion | None:
+        """Import one question with its original state and timestamps."""
+        if self.get_plan(plan_id) is None:
+            return None
+        row = PlanQuestion(
+            id=0,
+            plan_id=plan_id,
+            text=text,
+            status=status,
+            actor=actor,
+            ts=ts,
+            resolved_at=resolved_at,
+            resolved_by=resolved_by,
+            resolution=resolution,
+        )
+        with self._connect() as conn:
+            cur = conn.execute(
+                "INSERT INTO plan_questions"
+                " (plan_id, text, status, actor, ts, resolved_at, resolved_by, resolution)"
+                " VALUES (?,?,?,?,?,?,?,?)",
+                (
+                    row.plan_id,
+                    row.text,
+                    row.status,
+                    row.actor,
+                    row.ts,
+                    row.resolved_at,
+                    row.resolved_by,
+                    row.resolution,
+                ),
+            )
+            return replace(row, id=cur.lastrowid or 0)
+
     def get_question(self, qid: int) -> PlanQuestion | None:
         """Fetch one question."""
         with self._connect() as conn:

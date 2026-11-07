@@ -25,6 +25,7 @@ def _export_maps(store: TransferPort) -> dict[str, Any]:
         "claims": store.claims_map(),
         "uids": store.plan_uids_map(),
         "evidence": store.evidence_map(),
+        "questions": store.questions_map(),
     }
 
 
@@ -39,6 +40,7 @@ def _export_entry(plan: Plan, maps: dict[str, Any]) -> dict:
     issues = maps["issues"]
     claims = maps["claims"]
     evidence = maps["evidence"]
+    questions = maps["questions"]
 
     def criterion_entry(item: Criterion) -> dict:
         data = vars(item)
@@ -87,6 +89,7 @@ def _export_entry(plan: Plan, maps: dict[str, Any]) -> dict:
         "notes": [vars(item) for item in notes.get(("plan", plan.id), [])],
         "comments": [vars(item) for item in comments.get(("plan", plan.id), [])],
         "issues": issues.get(("plan", plan.id), []),
+        "questions": [vars(question) for question in questions.get(plan.id, [])],
         "milestones": milestone_entries,
     }
 
@@ -150,6 +153,27 @@ def _restore_evidence(
     )
 
 
+def _import_questions(store: TransferPort, plan_id: int, items: list, actor: str) -> int:
+    """Restore questions with their original state and timestamps."""
+    count = 0
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        restored = store.restore_question(
+            plan_id,
+            str(item.get("text", "") or ""),
+            status=str(item.get("status", "") or "open"),
+            actor=str(item.get("actor", "") or actor),
+            ts=float(item.get("ts", 0) or 0),
+            resolved_at=float(item.get("resolved_at", 0) or 0),
+            resolved_by=str(item.get("resolved_by", "") or ""),
+            resolution=str(item.get("resolution", "") or ""),
+        )
+        if restored is not None:
+            count += 1
+    return count
+
+
 def _import_all(store: TransferPort, data: dict, actor: str = "human") -> dict[str, int]:
     """Load an export_all() dump. Returns counts.
 
@@ -171,6 +195,7 @@ def _import_all(store: TransferPort, data: dict, actor: str = "human") -> dict[s
         "comments": 0,
         "issues": 0,
         "evidence": 0,
+        "questions": 0,
     }
     criteria_map: dict[int, int] = {}
     tasks_map: dict[int, int] = {}
@@ -346,6 +371,7 @@ def _import_all(store: TransferPort, data: dict, actor: str = "human") -> dict[s
             store.set_plan_uid(np.id, uid)
         counts["plans"] += 1
         _import_criteria("plan", np.id, entry.get("criteria", []))
+        counts["questions"] += _import_questions(store, np.id, entry.get("questions", []), actor)
         _import_notes("plan", np.id, entry.get("notes", []))
         _import_comments("plan", np.id, entry.get("comments", []))
         _import_issues("plan", np.id, entry.get("issues", []))

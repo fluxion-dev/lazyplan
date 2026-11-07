@@ -113,6 +113,18 @@ class PlanningPort(Protocol):
 
     def add_question(self, plan_id: int, text: str, actor: str = "human") -> PlanQuestion: ...
 
+    def restore_question(
+        self,
+        plan_id: int,
+        text: str,
+        status: str = "open",
+        actor: str = "human",
+        ts: float = 0.0,
+        resolved_at: float = 0.0,
+        resolved_by: str = "",
+        resolution: str = "",
+    ) -> PlanQuestion | None: ...
+
     def get_question(self, qid: int) -> PlanQuestion | None: ...
 
     def list_questions(self, plan_id: int, status: str = "open") -> list[PlanQuestion]: ...

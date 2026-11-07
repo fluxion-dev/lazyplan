@@ -63,6 +63,25 @@ class TestTransferService(unittest.TestCase):
             self.assertEqual(rows[0].actor, "ci")
             self.assertEqual(rows[0].task_id, target_task.id)
 
+    def test_export_import_carries_questions(self) -> None:
+        plan = self.store.list_plans()[0]
+        question = self.store.add_question(plan.id, "Which host?", actor="qa")
+        self.store.resolve_question(question.id, "OpenCode", actor="human")
+        dump = services.export_all(self.store)
+        exported = dump["plans"][0]["questions"][0]
+        self.assertEqual(exported["status"], "resolved")
+        self.assertEqual(exported["resolution"], "OpenCode")
+        with tempfile.TemporaryDirectory() as other:
+            target = Store(os.path.join(other, "target.db"))
+            counts = services.import_all(target, dump, actor="fixture")
+            self.assertEqual(counts["questions"], 1)
+            target_plan = target.list_plans()[0]
+            restored = target.list_questions(target_plan.id, status="all")[0]
+            self.assertEqual(restored.text, "Which host?")
+            self.assertEqual(restored.status, "resolved")
+            self.assertEqual(restored.resolution, "OpenCode")
+            self.assertEqual(restored.actor, "qa")
+
     def test_import_tolerates_missing_evidence_task(self) -> None:
         plan = self.store.list_plans()[0]
         criterion = self.store.list_criteria("plan", plan.id)[0]

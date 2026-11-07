@@ -187,7 +187,7 @@ class StoreStubsLinks:
     def plan_status_events_map(self) -> dict[int, tuple[float, str]]:
         raise NotImplementedError
 
-    def set_status_raw(self, kind: str, obj_id: int, status: Status) -> bool:
+    def set_status_raw(self, kind: str, obj_id: int, status: Status, actor: str = "") -> bool:
         raise NotImplementedError
 
     def counts(self) -> dict[str, int]:

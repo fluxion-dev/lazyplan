@@ -233,12 +233,19 @@ class ViewsMixin(StoreBase):
             out.setdefault(plan_id, (float(row["ts"]), target))
         return out
 
-    def set_status_raw(self, kind: str, obj_id: int, status: Status) -> bool:
-        """Raw status write, no healing or logging (see services)."""
+    def set_status_raw(self, kind: str, obj_id: int, status: Status, actor: str = "") -> bool:
+        """Raw status write, no healing; a task leaving doing loses its lease."""
         table = table_for(kind)
+        released = False
         with self._connect() as conn:
+            if kind == "task" and status is not Status.DOING:
+                cur = conn.execute("DELETE FROM task_claims WHERE task_id=?", (obj_id,))
+                released = (cur.rowcount or 0) > 0
             cur = conn.execute(f"UPDATE {table} SET status=? WHERE id=?", (status.value, obj_id))
-            return (cur.rowcount or 0) > 0
+            changed = (cur.rowcount or 0) > 0
+        if released and actor:
+            self.log(actor, "task", "release", f"task #{obj_id} released by status")
+        return changed
 
     def counts(self) -> dict[str, int]:
         """Plan, milestone, and task totals, plus per-state plan counts."""

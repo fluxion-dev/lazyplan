@@ -147,7 +147,7 @@ def set_status(
 ) -> bool:
     """Move a row, heal the subtree state, and log the transition."""
     check_kind(kind)
-    ok = port.set_status_raw(kind, obj_id, status)
+    ok = port.set_status_raw(kind, obj_id, status, actor=actor)
     if ok:
         port.log(actor, kind, "status", f"{kind} #{obj_id} -> {status.value}")
         heal_parents(port, kind, obj_id, actor)

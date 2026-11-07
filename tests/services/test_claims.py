@@ -93,6 +93,23 @@ class TestClaims(unittest.TestCase):
         self.assertEqual(self.store.list_claims(plan_id=1, now=1001)[0]["task_id"], self.task.id)
         self.assertEqual(self.store.list_claims(plan_id=99, now=1001), [])
 
+    def test_moving_to_todo_releases_the_lease(self):
+        self.store.claim_task(self.task.id, "alice", 60, now=1000)
+        services.set_status(self.store, "task", self.task.id, Status.TODO, actor="alice")
+        self.assertIsNone(self.store.get_claim(self.task.id))
+
+    def test_moving_to_done_releases_the_lease(self):
+        self.store.claim_task(self.task.id, "alice", 60, now=1000)
+        services.set_status(self.store, "task", self.task.id, Status.DONE, actor="alice")
+        self.assertIsNone(self.store.get_claim(self.task.id))
+
+    def test_moving_to_doing_keeps_an_existing_lease(self):
+        self.store.claim_task(self.task.id, "alice", 60, now=1000)
+        services.set_status(self.store, "task", self.task.id, Status.DOING, actor="alice")
+        claim = self.store.get_claim(self.task.id)
+        assert claim is not None
+        self.assertEqual(claim.actor, "alice")
+
     def test_deleting_a_task_removes_its_claim(self):
         self.store.claim_task(self.task.id, "alice", 60, now=1000)
         self.assertTrue(self.store.delete("task", self.task.id))

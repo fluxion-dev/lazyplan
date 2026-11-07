@@ -20,6 +20,7 @@ from ...store import to_payload
 from .base import McpBase
 from .evidence_tools import EvidenceToolsMixin
 from .question_tools import QuestionToolsMixin
+from .review_tools import ReviewToolsMixin
 from .schema import error as _tool_error
 from .schema import id_schema as _id
 from .schema import kind_schema as _kind
@@ -30,7 +31,7 @@ from .schema import tool as _tool
 PROTOCOL_VERSION = "2024-11-05"
 
 
-class ToolsMixin(EvidenceToolsMixin, QuestionToolsMixin, McpBase):
+class ToolsMixin(EvidenceToolsMixin, QuestionToolsMixin, ReviewToolsMixin, McpBase):
     """MCP tool definitions and handlers."""
 
     def _write_registry(self) -> dict[str, tuple[dict, Any]]:
@@ -335,6 +336,7 @@ class ToolsMixin(EvidenceToolsMixin, QuestionToolsMixin, McpBase):
         }
         tools.update(self._evidence_read_registry())
         tools.update(self._question_read_registry())
+        tools.update(self._review_read_registry())
         return tools
 
     def _tool_claim_renew(self, args: dict) -> object:

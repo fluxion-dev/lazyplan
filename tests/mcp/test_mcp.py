@@ -171,6 +171,13 @@ class TestMcpReadTools(unittest.TestCase):
         reopened = self._tool("question_reopen", {"id": question["id"], "note": "changed"})
         self.assertFalse(reopened.get("isError"))
 
+    def test_review_tool(self):
+        result = self._tool("review", {"plan": self.plan_id})
+        self.assertFalse(result.get("isError"))
+        payload = json.loads(result["content"][0]["text"])
+        self.assertIn("# P1", payload["markdown"])
+        self.assertEqual(payload["payload"]["plan"]["id"], self.plan_id)
+
     def test_missing_rows_are_tool_errors(self):
         result = self._tool("show_row", {"kind": "task", "id": 99})
         self.assertTrue(result["isError"])
@@ -313,6 +320,7 @@ class TestMcpReadTools(unittest.TestCase):
         self.assertIn("criterion_evidence", names)
         self.assertIn("question_list", names)
         self.assertIn("plan_ready", names)
+        self.assertIn("review", names)
         response = server.handle(
             {
                 "jsonrpc": "2.0",

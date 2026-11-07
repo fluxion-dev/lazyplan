@@ -227,6 +227,25 @@
     },
     {
       "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Deterministic Markdown review packet for one plan.",
+      "inputSchema": {
+        "properties": {
+          "max_chars": {
+            "type": "integer"
+          },
+          "plan": {
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "name": "review"
+    },
+    {
+      "annotations": {
         "readOnlyHint": false
       },
       "description": "Create a plan.",

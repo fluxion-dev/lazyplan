@@ -307,7 +307,12 @@ class AnnotationsMixin(StoreBase):
         return out
 
     def add_criteria(
-        self, parent_kind: str, parent_id: int, text: str, actor: str = "human"
+        self,
+        parent_kind: str,
+        parent_id: int,
+        text: str,
+        actor: str = "human",
+        reason: str = "",
     ) -> Criterion:
         """Add an acceptance checklist item and log."""
         c = Criterion(id=0, parent_kind=parent_kind, parent_id=parent_id, text=text.strip())
@@ -319,6 +324,11 @@ class AnnotationsMixin(StoreBase):
                 (c.parent_kind, c.parent_id, c.text),
             )
             c.id = cur.lastrowid or 0
+            plan_id = self._plan_for_kind(parent_kind, parent_id)
+            if plan_id is not None:
+                self._record_scope_change(
+                    plan_id, "criterion", c.id, "add", reason=reason, actor=actor
+                )
         self.log(actor, "criteria", "add", f"{parent_kind} #{parent_id}: {c.text[:80]}")
         return c
 
@@ -453,9 +463,18 @@ class AnnotationsMixin(StoreBase):
             done=done,
         )
 
-    def delete_criteria(self, cid: int, actor: str = "human") -> bool:
+    def delete_criteria(self, cid: int, actor: str = "human", reason: str = "") -> bool:
         """Remove a checklist item and log."""
         with self._connect() as conn:
+            row = conn.execute(
+                "SELECT parent_kind, parent_id FROM criteria WHERE id=?", (cid,)
+            ).fetchone()
+            if row is not None:
+                plan_id = self._plan_for_kind(str(row["parent_kind"]), int(row["parent_id"]))
+                if plan_id is not None:
+                    self._record_scope_change(
+                        plan_id, "criterion", cid, "delete", reason=reason, actor=actor
+                    )
             cur = conn.execute("DELETE FROM criteria WHERE id=?", (cid,))
             ok = (cur.rowcount or 0) > 0
         if ok:

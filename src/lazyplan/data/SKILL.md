@@ -248,6 +248,42 @@ Retrying the same document is a no-op, and a failed apply rolls the whole tree
 back. Recipes are skeletons with QA, refactoring, and documentation tasks;
 fill the words, add criteria, then apply.
 
+## Trust layer
+
+Approvals, evidence, questions, readiness, and review close the loop after the
+plan is cut.
+
+```bash
+lpui --actor NAME plan approve --id P [--reason TEXT] [--enforce]
+lpui --porcelain plan revisions --id P
+lpui --porcelain plan diff --id P [--check]
+lpui --actor NAME criterion prove --id C --command "pytest" --exit-code 0 \
+  --commit SHA [--task T] [--no-tick]
+lpui --porcelain criterion evidence --id C
+lpui --actor NAME task finish --id T --require-evidence
+lpui --actor NAME question add --plan P --text "Which host?"
+lpui --porcelain question list --plan P [--status open|resolved|all]
+lpui --actor NAME question resolve --id Q [--note TEXT]
+lpui --porcelain plan ready --id P
+lpui review --plan P [--max-chars N] [--json]
+lpui --porcelain audit --plan P [--min-evidence 0.8] --strict
+```
+
+Approval is advisory by default. `plan diff --check` is the opt-in CI gate;
+`plan approve --enforce` also gates `plan move --to done` until the drift is
+approved or overridden. Scope edits accept `--reason`; status, ticks, claims,
+commits, and PRs never create drift.
+
+Evidence is record-only: lazyplan never runs the command, fetches the PR, or
+reads the artifact. The latest row decides whether a criterion is proven.
+`criterion prove` ticks on a passing row and leaves the criterion open on a
+failure; `--no-tick` records without ticking. `task finish --require-evidence`
+checks every task criterion, with `--override REASON` as the recorded escape.
+
+Questions are plan-level and all open questions block `plan ready`. Readiness
+also requires clean lint and a proving task for every plan criterion. `review`
+is the deterministic Markdown handoff; it calls no model and no network.
+
 ## During execution
 
 Update the journal as you go, not at the end:

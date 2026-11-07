@@ -8,6 +8,7 @@ import sys
 import time
 from pathlib import Path
 
+from lazyplan import services
 from lazyplan.infrastructure.repo import find_repo_root, resolve_db_path
 from lazyplan.presentation import (
     setup,
@@ -240,6 +241,8 @@ def _audit_lines(report: audit.Report) -> list[str]:
         f"gaps       {len(report.gaps)} open criteria on done rows",
         f"trace      {report.criteria_linked}/{report.criteria_total} criteria "
         f"· {report.trace_coverage:.0%} ({len(report.trace_gaps)} unproven)",
+        f"evidence   {report.evidence_covered}/{report.evidence_total} criteria "
+        f"· {report.evidence_coverage:.0%}",
     ]
     for gap in report.gaps[:10]:
         lines.append(f"  {gap.kind} #{gap.id}: {gap.text[:60]}")
@@ -301,6 +304,7 @@ def _cmd_audit(store: Store | None, args: argparse.Namespace, actor: str) -> int
         lag_commits=args.max_lag,
         gaps=args.max_gaps,
         trace=args.min_trace,
+        evidence=args.min_evidence,
     ).breaches(result)
     return _audit_output(args, result, reasons)
 
@@ -334,6 +338,56 @@ def _cmd_brief(store: Store | None, args: argparse.Namespace, actor: str) -> int
         return 0
     for line in brief.lines(payload):
         print(line)
+    return 0
+
+
+def _cmd_review(store: Store | None, args: argparse.Namespace, actor: str) -> int:
+    """Read-only deterministic review packet."""
+    del actor
+    try:
+        db = store or _optional_store(args)
+    except (RuntimeError, OSError, sqlite3.Error) as exc:
+        print(f"error: cannot read the database: {exc}", file=sys.stderr)
+        return 2
+    if db is None:
+        if args.plan is not None:
+            print(msg_not_found("plan", args.plan), file=sys.stderr)
+            return 1
+        print("no active plans")
+        return 0
+    plan = db.get_plan(args.plan) if args.plan is not None else services.active_plan(db)
+    if plan is None:
+        if args.plan is not None:
+            print(msg_not_found("plan", args.plan), file=sys.stderr)
+            return 1
+        print("no active plans")
+        return 0
+    packet = services.build_review(
+        db,
+        plan.id,
+        max_chars=args.max_chars,
+        cwd=Path.cwd(),
+    )
+    if packet is None:
+        print(msg_not_found("plan", plan.id), file=sys.stderr)
+        return 1
+    if args.json:
+        return _emit(
+            args, {"plan": plan.id, "markdown": packet.markdown, "payload": packet.payload}
+        )
+    if porcelain.enabled(args):
+        print(
+            porcelain.row(
+                "review",
+                plan.id,
+                plan.status.value,
+                plan.name,
+                "-",
+                len(packet.markdown),
+            )
+        )
+        return 0
+    print(packet.markdown, end="")
     return 0
 
 

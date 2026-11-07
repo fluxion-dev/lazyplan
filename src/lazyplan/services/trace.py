@@ -25,6 +25,7 @@ def _criterion_entry(store: ProvenancePort, criterion: Criterion) -> dict:
     """One criterion with every proving task."""
     return {
         "criterion": vars(criterion),
+        "evidence": [vars(row) for row in store.list_evidence(criterion.id)],
         "tasks": [_task_entry(store, task) for task in store.criterion_tasks(criterion.id)],
     }
 
@@ -35,7 +36,11 @@ def trace_criterion(store: ProvenancePort, criterion_id: int) -> dict | None:
     if criterion is None:
         return None
     entry = _criterion_entry(store, criterion)
-    return {"criterion": entry["criterion"], "tasks": entry["tasks"]}
+    return {
+        "criterion": entry["criterion"],
+        "evidence": entry["evidence"],
+        "tasks": entry["tasks"],
+    }
 
 
 def trace_plan(store: ProvenancePort, plan_id: int) -> dict | None:

@@ -50,6 +50,7 @@ def create_milestone(
     title: str,
     description: str = "",
     actor: str = "human",
+    reason: str = "",
 ) -> Milestone:
     """Insert a milestone with template defaults and auto-criteria."""
     filled = apply_template(
@@ -62,9 +63,10 @@ def create_milestone(
         title=filled["title"].strip(),
         description=filled["desc"],
         actor=actor,
+        reason=reason,
     )
     for text in template_criteria("milestone", port.db_path):
-        port.add_criteria("milestone", milestone.id, text, actor=actor)
+        port.add_criteria("milestone", milestone.id, text, actor=actor, reason=reason)
     return milestone
 
 
@@ -74,6 +76,7 @@ def create_task(
     title: str,
     description: str = "",
     actor: str = "human",
+    reason: str = "",
 ) -> Task:
     """Insert a task with template defaults and auto-criteria."""
     filled = apply_template(
@@ -86,9 +89,10 @@ def create_task(
         title=filled["title"].strip(),
         description=filled["desc"],
         actor=actor,
+        reason=reason,
     )
     for text in template_criteria("task", port.db_path):
-        port.add_criteria("task", task.id, text, actor=actor)
+        port.add_criteria("task", task.id, text, actor=actor, reason=reason)
     return task
 
 

@@ -147,6 +147,17 @@ class AuditCase(unittest.TestCase):
         self.assertEqual(result.commits_total, 0)
         self.assertEqual(result.coverage, 1.0)
 
+    def test_evidence_coverage_counts_latest_passes(self):
+        criterion = self.store.add_criteria("task", self.task.id, "Works")
+        self.store.add_evidence(criterion.id, command="pytest", exit_code=0)
+        result = audit.compute(self.store, [self.plan.id], [])
+        self.assertEqual((result.evidence_covered, result.evidence_total), (1, 1))
+        self.assertEqual(result.evidence_coverage, 1.0)
+        self.store.add_evidence(criterion.id, command="pytest", exit_code=1)
+        result = audit.compute(self.store, [self.plan.id], [])
+        self.assertEqual((result.evidence_covered, result.evidence_total), (0, 1))
+        self.assertEqual(result.evidence_coverage, 0.0)
+
     def test_compute_does_not_write(self):
         before = self.store.path.read_bytes()
         audit.compute(self.store, [self.plan.id], [])
@@ -163,6 +174,13 @@ class ThresholdCase(unittest.TestCase):
 
     def test_clean_report_passes(self):
         self.assertEqual(audit.Thresholds().breaches(audit.Report()), [])
+
+    def test_evidence_threshold_is_opt_in(self):
+        result = audit.Report(evidence_total=10, evidence_covered=5)
+        self.assertEqual(audit.Thresholds().breaches(result), [])
+        reasons = audit.Thresholds(evidence=0.8).breaches(result)
+        self.assertEqual(len(reasons), 1)
+        self.assertIn("evidence", reasons[0])
 
 
 if __name__ == "__main__":

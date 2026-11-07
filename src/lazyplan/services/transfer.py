@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..core.entities import Plan, Status, Task
+from ..core.entities import Criterion, Plan, Status, Task
 from ..core.ports.transfer import TransferPort
 from ..core.serialization import to_payload
 from .planning import heal, set_status
@@ -24,6 +24,8 @@ def _export_maps(store: TransferPort) -> dict[str, Any]:
         "issues": store.issue_links_map(),
         "claims": store.claims_map(),
         "uids": store.plan_uids_map(),
+        "evidence": store.evidence_map(),
+        "questions": store.questions_map(),
     }
 
 
@@ -37,12 +39,21 @@ def _export_entry(plan: Plan, maps: dict[str, Any]) -> dict:
     comments = maps["comments"]
     issues = maps["issues"]
     claims = maps["claims"]
+    evidence = maps["evidence"]
+    questions = maps["questions"]
+
+    def criterion_entry(item: Criterion) -> dict:
+        data = vars(item)
+        rows = evidence.get(item.id, [])
+        if rows:
+            data["evidence"] = [vars(row) for row in rows]
+        return data
 
     def task_entry(task: Task) -> dict:
         claim = claims.get(task.id)
         return {
             "task": to_payload(vars(task)),
-            "criteria": [vars(item) for item in criteria.get(("task", task.id), [])],
+            "criteria": [criterion_entry(item) for item in criteria.get(("task", task.id), [])],
             "links": [vars(item) for item in links.get(("task", task.id), [])],
             "forge_links": [vars(item) for item in forge.get(("task", task.id), [])],
             "repos": repos.get(("task", task.id), []),
@@ -57,7 +68,9 @@ def _export_entry(plan: Plan, maps: dict[str, Any]) -> dict:
         milestone_entries.append(
             {
                 "milestone": to_payload(vars(milestone)),
-                "criteria": [vars(item) for item in criteria.get(("milestone", milestone.id), [])],
+                "criteria": [
+                    criterion_entry(item) for item in criteria.get(("milestone", milestone.id), [])
+                ],
                 "links": [vars(item) for item in links.get(("milestone", milestone.id), [])],
                 "forge_links": [vars(item) for item in forge.get(("milestone", milestone.id), [])],
                 "repos": repos.get(("milestone", milestone.id), []),
@@ -69,13 +82,14 @@ def _export_entry(plan: Plan, maps: dict[str, Any]) -> dict:
         )
     return {
         "plan": {**to_payload(vars(plan)), "uid": maps["uids"].get(plan.id, "")},
-        "criteria": [vars(item) for item in criteria.get(("plan", plan.id), [])],
+        "criteria": [criterion_entry(item) for item in criteria.get(("plan", plan.id), [])],
         "links": [vars(item) for item in links.get(("plan", plan.id), [])],
         "forge_links": [vars(item) for item in forge.get(("plan", plan.id), [])],
         "repos": repos.get(("plan", plan.id), []),
         "notes": [vars(item) for item in notes.get(("plan", plan.id), [])],
         "comments": [vars(item) for item in comments.get(("plan", plan.id), [])],
         "issues": issues.get(("plan", plan.id), []),
+        "questions": [vars(question) for question in questions.get(plan.id, [])],
         "milestones": milestone_entries,
     }
 
@@ -104,6 +118,62 @@ def import_all(store: TransferPort, data: dict, actor: str = "human") -> dict[st
         return _import_all(store, data, actor)
 
 
+def _restore_evidence_row(
+    store: TransferPort,
+    criterion_id: int,
+    row: dict,
+    tasks_map: dict[int, int],
+) -> int:
+    """Restore one evidence row, remapping its task when it still exists."""
+    old_task = int(row.get("task_id", 0) or 0)
+    task_id = tasks_map.get(old_task) if old_task else None
+    restored = store.restore_evidence(
+        criterion_id,
+        task_id=task_id,
+        command=str(row.get("command", "") or ""),
+        exit_code=row.get("exit_code"),
+        commit_sha=str(row.get("commit_sha", "") or ""),
+        pr_url=str(row.get("pr_url", "") or ""),
+        artifact_path=str(row.get("artifact_path", "") or ""),
+        note=str(row.get("note", "") or ""),
+        actor=str(row.get("actor", "") or "human"),
+        ts=float(row.get("ts", 0) or 0),
+    )
+    return 1 if restored is not None else 0
+
+
+def _restore_evidence(
+    store: TransferPort,
+    items: list[tuple[int, dict]],
+    tasks_map: dict[int, int],
+) -> int:
+    """Restore every collected evidence row after tasks are mapped."""
+    return sum(
+        _restore_evidence_row(store, criterion_id, row, tasks_map) for criterion_id, row in items
+    )
+
+
+def _import_questions(store: TransferPort, plan_id: int, items: list, actor: str) -> int:
+    """Restore questions with their original state and timestamps."""
+    count = 0
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        restored = store.restore_question(
+            plan_id,
+            str(item.get("text", "") or ""),
+            status=str(item.get("status", "") or "open"),
+            actor=str(item.get("actor", "") or actor),
+            ts=float(item.get("ts", 0) or 0),
+            resolved_at=float(item.get("resolved_at", 0) or 0),
+            resolved_by=str(item.get("resolved_by", "") or ""),
+            resolution=str(item.get("resolution", "") or ""),
+        )
+        if restored is not None:
+            count += 1
+    return count
+
+
 def _import_all(store: TransferPort, data: dict, actor: str = "human") -> dict[str, int]:
     """Load an export_all() dump. Returns counts.
 
@@ -124,9 +194,12 @@ def _import_all(store: TransferPort, data: dict, actor: str = "human") -> dict[s
         "criterion_links": 0,
         "comments": 0,
         "issues": 0,
+        "evidence": 0,
+        "questions": 0,
     }
     criteria_map: dict[int, int] = {}
     tasks_map: dict[int, int] = {}
+    evidence_items: list[tuple[int, dict]] = []
 
     def _apply_status(kind: str, obj_id: int, status: str) -> None:
         if status and status != Status.TODO.value:
@@ -139,6 +212,9 @@ def _import_all(store: TransferPort, data: dict, actor: str = "human") -> dict[s
                 store.set_criteria(nc.id, True, actor=actor)
             criteria_map[int(c.get("id", 0) or 0)] = nc.id
             counts["criteria"] += 1
+            for row in c.get("evidence", []):
+                if isinstance(row, dict):
+                    evidence_items.append((nc.id, row))
 
     def _import_links(kind: str, obj_id: int, items: list) -> None:
         for c in items:
@@ -295,6 +371,7 @@ def _import_all(store: TransferPort, data: dict, actor: str = "human") -> dict[s
             store.set_plan_uid(np.id, uid)
         counts["plans"] += 1
         _import_criteria("plan", np.id, entry.get("criteria", []))
+        counts["questions"] += _import_questions(store, np.id, entry.get("questions", []), actor)
         _import_notes("plan", np.id, entry.get("notes", []))
         _import_comments("plan", np.id, entry.get("comments", []))
         _import_issues("plan", np.id, entry.get("issues", []))
@@ -358,6 +435,7 @@ def _import_all(store: TransferPort, data: dict, actor: str = "human") -> dict[s
         except (KeyError, ValueError):
             continue
         counts["criterion_links"] += 1
+    counts["evidence"] = _restore_evidence(store, evidence_items, tasks_map)
     return counts
 
 

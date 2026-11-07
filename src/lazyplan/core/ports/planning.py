@@ -5,7 +5,7 @@ from __future__ import annotations
 from contextlib import AbstractContextManager
 from typing import Protocol
 
-from ..entities import Criterion, Milestone, Plan, Status, Task
+from ..entities import Criterion, Milestone, Plan, PlanQuestion, Status, Task
 
 
 class PlanningPort(Protocol):
@@ -19,6 +19,8 @@ class PlanningPort(Protocol):
     def set_entity_key(self, kind: str, row_id: int, key: str, actor: str = "human") -> None: ...
 
     def get_entity_key(self, kind: str, key: str) -> int | None: ...
+
+    def entity_keys_map(self) -> dict[tuple[str, int], str]: ...
 
     def add_plan(
         self,
@@ -34,6 +36,7 @@ class PlanningPort(Protocol):
         title: str,
         description: str = "",
         actor: str = "human",
+        reason: str = "",
     ) -> Milestone: ...
 
     def add_task(
@@ -42,6 +45,7 @@ class PlanningPort(Protocol):
         title: str,
         description: str = "",
         actor: str = "human",
+        reason: str = "",
     ) -> Task: ...
 
     def add_criteria(
@@ -50,6 +54,7 @@ class PlanningPort(Protocol):
         parent_id: int,
         text: str,
         actor: str = "human",
+        reason: str = "",
     ) -> Criterion: ...
 
     def get_plan(self, pid: int) -> Plan | None: ...
@@ -69,6 +74,7 @@ class PlanningPort(Protocol):
         description: str | None = None,
         goal: str | None = None,
         actor: str = "human",
+        reason: str = "",
     ) -> Plan | None: ...
 
     def update_milestone(
@@ -77,6 +83,7 @@ class PlanningPort(Protocol):
         title: str | None = None,
         description: str | None = None,
         actor: str = "human",
+        reason: str = "",
     ) -> Milestone | None: ...
 
     def update_task(
@@ -85,9 +92,10 @@ class PlanningPort(Protocol):
         title: str | None = None,
         description: str | None = None,
         actor: str = "human",
+        reason: str = "",
     ) -> Task | None: ...
 
-    def delete(self, kind: str, obj_id: int, actor: str = "human") -> bool: ...
+    def delete(self, kind: str, obj_id: int, actor: str = "human", reason: str = "") -> bool: ...
 
     def list_criteria(self, parent_kind: str, parent_id: int) -> list[Criterion]: ...
 
@@ -97,11 +105,39 @@ class PlanningPort(Protocol):
 
     def set_criteria(self, cid: int, done: bool, actor: str = "human") -> Criterion | None: ...
 
-    def delete_criteria(self, cid: int, actor: str = "human") -> bool: ...
+    def delete_criteria(self, cid: int, actor: str = "human", reason: str = "") -> bool: ...
 
     def relate_criterion(self, criterion_id: int, task_id: int, actor: str = "human") -> bool: ...
 
     def unrelate_criterion(self, criterion_id: int, task_id: int, actor: str = "human") -> bool: ...
+
+    def add_question(self, plan_id: int, text: str, actor: str = "human") -> PlanQuestion: ...
+
+    def restore_question(
+        self,
+        plan_id: int,
+        text: str,
+        status: str = "open",
+        actor: str = "human",
+        ts: float = 0.0,
+        resolved_at: float = 0.0,
+        resolved_by: str = "",
+        resolution: str = "",
+    ) -> PlanQuestion | None: ...
+
+    def get_question(self, qid: int) -> PlanQuestion | None: ...
+
+    def list_questions(self, plan_id: int, status: str = "open") -> list[PlanQuestion]: ...
+
+    def resolve_question(
+        self, qid: int, note: str = "", actor: str = "human"
+    ) -> PlanQuestion | None: ...
+
+    def reopen_question(
+        self, qid: int, note: str = "", actor: str = "human"
+    ) -> PlanQuestion | None: ...
+
+    def questions_map(self) -> dict[int, list[PlanQuestion]]: ...
 
     def list_plans(self) -> list[Plan]: ...
 

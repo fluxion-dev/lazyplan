@@ -58,6 +58,25 @@ class ContextTest(unittest.TestCase):
         self.assertEqual(plan["commits"][0]["short"], "a" * 8)
         self.assertEqual(plan["claims"][0]["actor"], "alice")
 
+    def test_questions_are_in_the_packet(self):
+        question = self.store.add_question(self.plan.id, "Which host?")
+        payload = context.build(self.store)
+        self.assertEqual(payload["plans"][0]["questions"][0]["id"], question.id)
+        self.assertIn("Which host?", "\n".join(context.lines(payload)))
+
+    def test_questions_survive_trimming_longer_than_notes(self):
+        self.store.add_question(self.plan.id, "Which host?")
+        found = False
+        for budget in range(150, 800, 10):
+            payload = context.build(self.store, max_chars=budget)
+            plan = payload["plans"][0] if payload["plans"] else {}
+            if plan.get("id") != self.plan.id:
+                continue
+            if not plan.get("notes") and plan.get("questions"):
+                found = True
+                break
+        self.assertTrue(found)
+
     def test_budget_is_deterministic_and_respected(self):
         full = context.build(self.store, max_chars=4000)
         tight = context.build(self.store, max_chars=200)

@@ -33,7 +33,7 @@ class StatsLayoutTest(unittest.TestCase):
 
         self.assertEqual(
             [key for key, _compact in layout],
-            ["progress", "commits", "pulls", "stale", "marked"],
+            ["progress", "commits", "pulls", "drift", "stale", "marked"],
         )
         self.assertFalse(any(compact for _key, compact in layout))
 
@@ -117,6 +117,13 @@ class StatsRenderTest(unittest.TestCase):
         self.assertIn("✓", plain)
         self.assertIn("⚑ blocked", plain)
         self.assertIn("◉ @alice", plain)
+
+    def test_drift_slot_renders_only_when_drifted(self) -> None:
+        layout = (("drift", False),)
+        rich, plain = render_stats(RowStats(kind="plan", drifted=True), layout)
+        self.assertEqual(Text.from_markup(rich).plain, plain)
+        self.assertIn("Δ", plain)
+        self.assertEqual(render_stats(RowStats(kind="plan"), layout)[1].strip(), "")
 
     def test_compact_forms_are_used_at_a_narrow_width(self) -> None:
         stats = RowStats(

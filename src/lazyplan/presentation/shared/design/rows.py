@@ -80,6 +80,7 @@ def plan_row(
     width: int | None = None,
     source_counts: tuple[int, int, int] | None = None,
     marked: bool = False,
+    drifted: bool = False,
 ) -> str:
     """TUI plan row (Rich markup): glyph + id + title + fixed stats."""
     if source_counts is None:
@@ -93,6 +94,7 @@ def plan_row(
         pulls=pulls,
         stale=stale,
         marked=marked,
+        drifted=drifted,
     )
     return _render_row("plan", p, stats, width)
 

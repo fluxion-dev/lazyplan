@@ -103,11 +103,13 @@ class PlansMixin(StoreBase):
         description: str | None = None,
         goal: str | None = None,
         actor: str = "human",
+        reason: str = "",
     ) -> Plan | None:
         """Patch plan fields and log."""
         p = self.get_plan(pid)
         if p is None:
             return None
+        before = (p.name, p.description, p.goal)
         if name is not None:
             if not name.strip():
                 raise ValueError("plan name must not be empty")
@@ -116,11 +118,17 @@ class PlansMixin(StoreBase):
             p.description = description
         if goal is not None:
             p.goal = goal
+        after = (p.name, p.description, p.goal)
         with self._connect() as conn:
             conn.execute(
                 "UPDATE plans SET name=?, description=?, goal=? WHERE id=?",
                 (p.name, p.description, p.goal, pid),
             )
+            for field, old, new in zip(("title", "what", "why"), before, after, strict=True):
+                if old != new:
+                    self._record_scope_change(
+                        pid, "plan", pid, "edit", field=field, reason=reason, actor=actor
+                    )
         self.log(actor, "plan", "edit", f"P#{pid} {p.name}")
         return p
 
@@ -130,6 +138,7 @@ class PlansMixin(StoreBase):
         title: str,
         description: str = "",
         actor: str = "human",
+        reason: str = "",
     ) -> Milestone:
         """Insert a milestone row and log the event (no template fill; see services)."""
         s = Milestone(
@@ -146,6 +155,7 @@ class PlansMixin(StoreBase):
                 (s.plan_id, s.title, s.description, s.status.value),
             )
             s.id = cur.lastrowid or 0
+            self._record_scope_change(plan_id, "milestone", s.id, "add", reason=reason, actor=actor)
         self.log(actor, "milestone", "add", f"M#{s.id} {s.title}")
         return s
 
@@ -190,29 +200,44 @@ class PlansMixin(StoreBase):
         title: str | None = None,
         description: str | None = None,
         actor: str = "human",
+        reason: str = "",
     ) -> Milestone | None:
         """Patch milestone fields and log."""
         s = self.get_milestone(sid)
         if s is None:
             return None
+        before = (s.title, s.description)
         if title is not None:
             if not title.strip():
                 raise ValueError("milestone title must not be empty")
             s.title = title.strip()
         if description is not None:
             s.description = description
+        after = (s.title, s.description)
         with self._connect() as conn:
             conn.execute(
                 "UPDATE milestones SET title=?, description=? WHERE id=?",
                 (s.title, s.description, sid),
             )
+            for field, old, new in zip(("title", "desc"), before, after, strict=True):
+                if old != new:
+                    self._record_scope_change(
+                        s.plan_id,
+                        "milestone",
+                        sid,
+                        "edit",
+                        field=field,
+                        reason=reason,
+                        actor=actor,
+                    )
         self.log(actor, "milestone", "edit", f"M#{sid} {s.title}")
         return s
 
-    def delete(self, kind: str, obj_id: int, actor: str = "human") -> bool:
+    def delete(self, kind: str, obj_id: int, actor: str = "human", reason: str = "") -> bool:
         """Delete a row and its subtree (criteria/links/repos purged; FK cascades rest)."""
         table = table_for(kind)
         with self._connect() as conn:
+            plan_id = None if kind == "plan" else self._plan_for_kind(kind, obj_id)
             if kind == "plan":
                 sids = [
                     r["id"]
@@ -261,6 +286,10 @@ class PlansMixin(StoreBase):
                 self._delete_entity_repos(conn, "task", obj_id)
                 self._delete_notes(conn, "task", obj_id)
                 self._delete_comments(conn, "task", obj_id)
+            if plan_id is not None:
+                self._record_scope_change(
+                    plan_id, kind, obj_id, "delete", reason=reason, actor=actor
+                )
             cur = conn.execute(f"DELETE FROM {table} WHERE id=?", (obj_id,))
             ok = (cur.rowcount or 0) > 0
         if ok:

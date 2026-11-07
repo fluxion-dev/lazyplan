@@ -4,6 +4,8 @@
     "lazyplan.presentation.cli.commands.admin",
     "lazyplan.presentation.cli.commands.plan",
     "lazyplan.presentation.cli.commands.proof",
+    "lazyplan.presentation.cli.commands.question",
+    "lazyplan.presentation.cli.commands.ready",
     "lazyplan.presentation.cli.commands.system",
     "lazyplan.presentation.cli.commands.ui",
     "lazyplan.presentation.cli.main",

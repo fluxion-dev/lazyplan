@@ -53,6 +53,41 @@ class PreviewDocumentTest(unittest.TestCase):
         self.assertIn("[bold]next[/]", text)
         self.assertIn("Task title", text)
 
+    def test_plan_preview_shows_approval_and_drift(self) -> None:
+        self.store.add_revision(self.plan.id, "a" * 64, "{}", reason="initial")
+        full = self.store.get_full("plan", self.plan.id)
+        assert full is not None
+        text = build_preview(self.store, "plan", self.plan.id, full, []).render()
+        self.assertIn("[bold]approval[/]", text)
+        self.assertIn("r1", text)
+        self.assertIn("in sync", text)
+        self.store.update_task(self.task.id, title="Renamed", reason="rename")
+        full = self.store.get_full("plan", self.plan.id)
+        assert full is not None
+        text = build_preview(self.store, "plan", self.plan.id, full, []).render()
+        self.assertIn("changes since approval", text)
+        self.assertIn("title: rename", text)
+
+    def test_plan_preview_shows_open_questions(self) -> None:
+        self.store.add_question(self.plan.id, "Which host?")
+        full = self.store.get_full("plan", self.plan.id)
+        assert full is not None
+        text = build_preview(self.store, "plan", self.plan.id, full, []).render()
+        self.assertIn("[bold]questions 1 open[/]", text)
+        self.assertIn("Which host?", text)
+        self.assertIn("1 open questions", text)
+
+    def test_task_preview_shows_proof(self) -> None:
+        criterion = self.store.add_criteria("task", self.task.id, "Works")
+        self.store.add_evidence(criterion.id, command="pytest", exit_code=0, actor="ci")
+        full = self.store.get_full("task", self.task.id)
+        assert full is not None
+        text = build_preview(self.store, "task", self.task.id, full, []).render()
+        self.assertIn("[bold]proof[/]", text)
+        self.assertIn("pytest", text)
+        self.assertIn("✓", text)
+        self.assertIn("exit 0", text)
+
     def test_task_preview_includes_breadcrumb_and_details(self) -> None:
         full = self.store.get_full("task", self.task.id)
         assert full is not None

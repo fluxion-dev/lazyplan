@@ -165,6 +165,87 @@
     },
     {
       "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Proof rows for one criterion.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "criterion_evidence"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Questions on one plan by state.",
+      "inputSchema": {
+        "properties": {
+          "plan": {
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "open",
+              "resolved",
+              "all"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan"
+        ],
+        "type": "object"
+      },
+      "name": "question_list"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Lint, coverage, and open-question readiness for a plan.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "plan_ready"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Deterministic Markdown review packet for one plan.",
+      "inputSchema": {
+        "properties": {
+          "max_chars": {
+            "type": "integer"
+          },
+          "plan": {
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "name": "review"
+    },
+    {
+      "annotations": {
         "readOnlyHint": false
       },
       "description": "Create a plan.",
@@ -200,6 +281,9 @@
           "plan": {
             "type": "integer"
           },
+          "reason": {
+            "type": "string"
+          },
           "title": {
             "type": "string"
           }
@@ -224,6 +308,9 @@
           },
           "milestone": {
             "type": "integer"
+          },
+          "reason": {
+            "type": "string"
           },
           "title": {
             "type": "string"
@@ -256,6 +343,9 @@
               "milestone",
               "task"
             ],
+            "type": "string"
+          },
+          "reason": {
             "type": "string"
           },
           "title": {
@@ -291,6 +381,12 @@
             ],
             "type": "string"
           },
+          "override": {
+            "type": "string"
+          },
+          "require_evidence": {
+            "type": "boolean"
+          },
           "to": {
             "enum": [
               "todo",
@@ -325,6 +421,9 @@
               "milestone",
               "task"
             ],
+            "type": "string"
+          },
+          "reason": {
             "type": "string"
           },
           "text": {
@@ -592,6 +691,112 @@
         "type": "object"
       },
       "name": "link_commit"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Record proof for a criterion; tick only when it passes.",
+      "inputSchema": {
+        "properties": {
+          "artifact": {
+            "type": "string"
+          },
+          "command": {
+            "type": "string"
+          },
+          "commit": {
+            "type": "string"
+          },
+          "exit_code": {
+            "type": "integer"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "no_tick": {
+            "type": "boolean"
+          },
+          "note": {
+            "type": "string"
+          },
+          "pr": {
+            "type": "string"
+          },
+          "task": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "criterion_prove"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Add an open question to a plan.",
+      "inputSchema": {
+        "properties": {
+          "plan": {
+            "type": "integer"
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan",
+          "text"
+        ],
+        "type": "object"
+      },
+      "name": "question_add"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Resolve a question with an answer.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "question_resolve"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Reopen a question and record why.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "question_reopen"
     }
   ]
 }

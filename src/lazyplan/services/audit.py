@@ -19,6 +19,7 @@ from ..core.entities import Status
 from ..core.policies.insights import parse_since as parse_since
 from ..core.policies.insights import status_after
 from ..core.ports.insights import InsightsPort
+from .evidence import coverage as evidence_coverage
 
 _STATUS = re.compile(r"^(plan|milestone|task) #(\d+) -> (todo|doing|done)")
 _ADDED = re.compile(r"^([PST])#(\d+) ")
@@ -63,6 +64,8 @@ class Report:
     criteria_total: int = 0
     criteria_linked: int = 0
     trace_gaps: list[Gap] = field(default_factory=list)
+    evidence_total: int = 0
+    evidence_covered: int = 0
 
     @property
     def coverage(self) -> float:
@@ -86,6 +89,13 @@ class Report:
             return 1.0
         return self.criteria_linked / self.criteria_total
 
+    @property
+    def evidence_coverage(self) -> float:
+        """Criteria whose latest evidence row passes."""
+        if self.evidence_total == 0:
+            return 1.0
+        return self.evidence_covered / self.evidence_total
+
     def to_dict(self) -> dict:
         """JSON-safe report for agents and scripts."""
         return {
@@ -107,6 +117,9 @@ class Report:
             "trace_gaps": [
                 {"kind": gap.kind, "id": gap.id, "text": gap.text} for gap in self.trace_gaps
             ],
+            "evidence_total": self.evidence_total,
+            "evidence_covered": self.evidence_covered,
+            "evidence_coverage": round(self.evidence_coverage, 4),
         }
 
 
@@ -118,6 +131,7 @@ class Thresholds:
     lag_commits: float = _DEFAULT_LAG
     gaps: int = _DEFAULT_GAPS
     trace: float = 0.0
+    evidence: float = 0.0
 
     def breaches(self, report: Report) -> list[str]:
         """Human-readable reasons the report fails strict mode."""
@@ -135,6 +149,11 @@ class Thresholds:
             out.append(
                 f"trace {report.trace_coverage:.0%} < {self.trace:.0%} "
                 f"({report.criteria_linked}/{report.criteria_total} criteria)"
+            )
+        if self.evidence and report.evidence_total and report.evidence_coverage < self.evidence:
+            out.append(
+                f"evidence {report.evidence_coverage:.0%} < {self.evidence:.0%} "
+                f"({report.evidence_covered}/{report.evidence_total} criteria)"
             )
         return out
 
@@ -318,6 +337,7 @@ def compute(
         for criterion in criteria
         if criterion.id not in linked_criteria
     ]
+    evidence_covered, evidence_total = evidence_coverage(store, plan_ids)
     return Report(
         plans=list(plan_ids),
         since=since,
@@ -331,6 +351,8 @@ def compute(
         criteria_total=len(criteria),
         criteria_linked=len(criteria) - len(trace_gaps),
         trace_gaps=trace_gaps,
+        evidence_total=evidence_total,
+        evidence_covered=evidence_covered,
     )
 
 

@@ -54,6 +54,31 @@ class BriefCase(unittest.TestCase):
         self.assertIn("Next task", text)
         self.assertIn("open criteria", text)
 
+    def test_approval_and_drift_are_in_brief(self):
+        self.store.add_revision(self.plan.id, "a" * 64, "{}")
+        self.store.update_task(self.doing.id, title="Renamed", reason="rename")
+        payload = brief.build(self.store, commits=[])
+        approval = payload["plans"][0]["approval"]
+        self.assertEqual(approval["revision"], 1)
+        self.assertEqual(approval["drift"], 1)
+        text = "\n".join(brief.lines(payload))
+        self.assertIn("drift", text)
+        self.assertIn("r1", text)
+
+    def test_approval_in_sync_is_in_brief(self):
+        self.store.add_revision(self.plan.id, "a" * 64, "{}")
+        payload = brief.build(self.store, commits=[])
+        self.assertEqual(payload["plans"][0]["approval"]["drift"], 0)
+        self.assertIn("approval r1 in sync", "\n".join(brief.lines(payload)))
+
+    def test_open_questions_are_in_brief(self):
+        question = self.store.add_question(self.plan.id, "Which host?")
+        payload = brief.build(self.store, commits=[])
+        self.assertEqual(payload["plans"][0]["questions"][0]["id"], question.id)
+        text = "\n".join(brief.lines(payload))
+        self.assertIn("questions 1 open", text)
+        self.assertIn("Which host?", text)
+
     def test_empty_store_says_no_active_plans(self):
         empty = Store(Path(self.tmp.name) / "empty.db")
         self.assertEqual(brief.lines(brief.build(empty, commits=[])), ["no active plans"])

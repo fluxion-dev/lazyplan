@@ -54,6 +54,23 @@ def _read_text(lines: list[str], kind: str, obj: dict[str, Any]) -> None:
         lines.extend(["", _heading(key, heading), desc])
 
 
+def _read_questions(lines: list[str], kind: str, full: dict[str, Any]) -> None:
+    """Open questions on a plan."""
+    if kind != "plan":
+        return
+    questions = [
+        question for question in full.get("questions", []) if question.get("status") == "open"
+    ]
+    if not questions:
+        return
+    lines.extend(["", _heading("questions", f"questions {len(questions)} open")])
+    for question in questions[:5]:
+        lines.append(
+            f"  [yellow]?[/] [dim]Q{question['id']}[/] "
+            f"{escape_markup(str(question.get('text', '')))}"
+        )
+
+
 def _read_coordination(lines: list[str], full: dict[str, Any], obj: dict[str, Any]) -> None:
     if obj.get("blocked"):
         reason = str(obj.get("blocked_reason", "") or "").strip()
@@ -90,6 +107,18 @@ def _read_coordination(lines: list[str], full: dict[str, Any], obj: dict[str, An
             )
 
 
+def _proof_chip(evidence: dict[str, Any] | None) -> str:
+    """Compact evidence state for one criterion."""
+    data = evidence or {}
+    state = str(data.get("state") or "none")
+    count = int(data.get("count", 0) or 0)
+    if state == "pass":
+        return f"[green]✓ {count}[/]"
+    if state == "fail":
+        return f"[red]✗ {count}[/]"
+    return "[dim]—[/]"
+
+
 def _read_criteria(lines: list[str], full: dict[str, Any]) -> None:
     criteria = full.get("criteria", [])
     if not criteria:
@@ -98,7 +127,45 @@ def _read_criteria(lines: list[str], full: dict[str, Any]) -> None:
     lines.extend(["", _heading("acceptance", f"acceptance {done}/{len(criteria)}")])
     for criterion in criteria:
         mark = "[green]●[/]" if criterion.get("done") else "[dim]○[/]"
-        lines.append(f"  {mark} {escape_markup(str(criterion.get('text', '')))}")
+        lines.append(
+            f"  {mark} {escape_markup(str(criterion.get('text', '')))} "
+            f"{_proof_chip(criterion.get('evidence'))}"
+        )
+
+
+def _read_proof(lines: list[str], full: dict[str, Any]) -> None:
+    """Proof rows for criteria that have evidence."""
+    criteria = [
+        criterion
+        for criterion in full.get("criteria", [])
+        if (criterion.get("evidence") or {}).get("count")
+    ]
+    if not criteria:
+        return
+    total = sum(int((criterion.get("evidence") or {}).get("count", 0)) for criterion in criteria)
+    lines.extend(["", _heading("proof", f"proof {total} rows")])
+    for criterion in criteria:
+        evidence = criterion.get("evidence") or {}
+        latest = evidence.get("latest") or {}
+        state = str(evidence.get("state") or "none")
+        if state == "pass":
+            mark = "[green]✓[/]"
+        elif state == "fail":
+            mark = "[red]✗[/]"
+        else:
+            mark = "[dim]—[/]"
+        label = (
+            latest.get("command")
+            or latest.get("note")
+            or str(latest.get("commit_sha", ""))[:12]
+            or "-"
+        )
+        exit_code = latest.get("exit_code")
+        exit_text = f" exit {exit_code}" if exit_code is not None else ""
+        lines.append(
+            f"  {mark} [dim]#{criterion['id']}[/] {escape_markup(str(label))}"
+            f"{exit_text} · {evidence.get('count', 0)} rows"
+        )
 
 
 def _read_children(lines: list[str], kind: str, full: dict[str, Any]) -> None:
@@ -231,8 +298,10 @@ def build_detail(
     )
     lines: list[str] = []
     _read_text(lines, kind, obj)
+    _read_questions(lines, kind, full)
     _read_coordination(lines, full, obj)
     _read_criteria(lines, full)
+    _read_proof(lines, full)
     _read_children(lines, kind, full)
     _read_forge(lines, full)
     _read_source(lines, store, kind, oid, full, trail)

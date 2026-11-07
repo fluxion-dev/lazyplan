@@ -82,6 +82,32 @@ class TestLint(unittest.TestCase):
         )
         self.assertTrue(criterion.done is False)
 
+    def test_enforced_drift_is_an_error(self):
+        self.store.add_revision(1, "a" * 64, "{}", enforced=True)
+        self.store.update_task(1, title="Renamed", reason="rename")
+        rules = [finding.rule for finding in lint.lint_plan(self.store, 1)]
+        self.assertIn("enforced-drift", rules)
+        self.assertNotIn("enforced-drift-no-reason", rules)
+
+    def test_advisory_drift_is_not_a_lint_error(self):
+        self.store.add_revision(1, "a" * 64, "{}")
+        self.store.update_task(1, title="Renamed", reason="rename")
+        self.assertEqual(lint.lint_plan(self.store, 1), [])
+
+    def test_enforced_drift_without_reason_is_an_error(self):
+        self.store.add_revision(1, "a" * 64, "{}", enforced=True)
+        self.store.update_task(1, title="Renamed")
+        rules = [finding.rule for finding in lint.lint_plan(self.store, 1)]
+        self.assertIn("enforced-drift", rules)
+        self.assertIn("enforced-drift-no-reason", rules)
+
+    def test_cli_strict_fails_on_enforced_drift(self):
+        self.store.add_revision(1, "a" * 64, "{}", enforced=True)
+        self.store.update_task(1, title="Renamed", reason="rename")
+        code, out, _err = self._run("lint", "--plan", "1", "--strict")
+        self.assertEqual(code, 2)
+        self.assertIn("enforced-drift", out)
+
     def test_cli_text_and_strict_exit(self):
         self.store.add_criteria("plan", 1, "Fast", actor="fixture")
         code, out, err = self._run("lint", "--plan", "1")

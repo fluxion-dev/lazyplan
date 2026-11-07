@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from ..core.entities import (
+    Criterion,
+    CriterionEvidence,
     ForgeLink,
     Milestone,
     Plan,
@@ -11,7 +13,22 @@ from ..core.entities import (
     VcsLink,
 )
 from ..core.kinds import KIND_ERROR, table_for
+from ..core.policies.evidence import summarize as evidence_summary
+from ..core.serialization import approval_payload
 from .base import StoreBase, to_payload
+
+
+def _criterion_payload(criterion: Criterion, evidence: dict[int, list[CriterionEvidence]]) -> dict:
+    """Criterion fields plus its evidence count, state, and latest row."""
+    summary = evidence_summary(evidence.get(criterion.id, ()))
+    latest = summary["latest"]
+    data = vars(criterion).copy()
+    data["evidence"] = {
+        "count": summary["count"],
+        "state": summary["state"],
+        "latest": vars(latest) if latest is not None else None,
+    }
+    return data
 
 
 class ViewsMixin(StoreBase):
@@ -49,9 +66,10 @@ class ViewsMixin(StoreBase):
 
     def _task_show(self, t: Task) -> dict:
         """Task show payload with direct links and inherited repos."""
+        evidence = self.evidence_map()
         return {
             "task": self._task_view(t),
-            "criteria": [vars(c) for c in self.list_criteria("task", t.id)],
+            "criteria": [_criterion_payload(c, evidence) for c in self.list_criteria("task", t.id)],
             "links": [vars(c) for c in self.list_links("task", t.id)],
             "effective_links": [vars(c) for c in self.effective_links("task", t.id)],
             "forge_links": [vars(c) for c in self.list_forge_links("task", t.id)],
@@ -62,9 +80,12 @@ class ViewsMixin(StoreBase):
 
     def _milestone_show(self, s: Milestone) -> dict:
         """Milestone show payload with task summaries."""
+        evidence = self.evidence_map()
         payload = {
             "milestone": to_payload(vars(s)),
-            "criteria": [vars(c) for c in self.list_criteria("milestone", s.id)],
+            "criteria": [
+                _criterion_payload(c, evidence) for c in self.list_criteria("milestone", s.id)
+            ],
             "links": [vars(c) for c in self.list_links("milestone", s.id)],
             "effective_links": [vars(c) for c in self.effective_links("milestone", s.id)],
             "forge_links": [vars(c) for c in self.list_forge_links("milestone", s.id)],
@@ -76,7 +97,9 @@ class ViewsMixin(StoreBase):
             "tasks": [
                 {
                     "task": self._task_view(t),
-                    "criteria": [vars(c) for c in self.list_criteria("task", t.id)],
+                    "criteria": [
+                        _criterion_payload(c, evidence) for c in self.list_criteria("task", t.id)
+                    ],
                 }
                 for t in self.list_tasks(s.id)
             ],
@@ -94,19 +117,27 @@ class ViewsMixin(StoreBase):
 
     def _plan_show(self, p: Plan) -> dict:
         """Plan show payload with milestone summaries."""
+        latest = self.latest_revision(p.id)
+        recent = self.list_plan_changes(p.id, after_id=latest.change_mark)[-3:] if latest else []
+        evidence = self.evidence_map()
         payload = {
             "plan": to_payload(vars(p)),
-            "criteria": [vars(c) for c in self.list_criteria("plan", p.id)],
+            "criteria": [_criterion_payload(c, evidence) for c in self.list_criteria("plan", p.id)],
             "links": [vars(c) for c in self.list_links("plan", p.id)],
             "effective_links": [vars(c) for c in self.effective_links("plan", p.id)],
             "forge_links": [vars(c) for c in self.list_forge_links("plan", p.id)],
             "effective_forge_links": [vars(c) for c in self.effective_forge_links("plan", p.id)],
             "repos": self.list_repos("plan", p.id),
             "effective_repos": self.effective_repos("plan", p.id),
+            "approval": approval_payload(latest, self.plan_drift(p.id), recent),
+            "questions": [vars(q) for q in self.list_questions(p.id, status="all")],
             "milestones": [
                 {
                     "milestone": to_payload(vars(s)),
-                    "criteria": [vars(c) for c in self.list_criteria("milestone", s.id)],
+                    "criteria": [
+                        _criterion_payload(c, evidence)
+                        for c in self.list_criteria("milestone", s.id)
+                    ],
                     "repos": self.list_repos("milestone", s.id),
                     "effective_repos": self.effective_repos("milestone", s.id),
                     "tasks": [self._task_view(t) for t in self.list_tasks(s.id)],
@@ -242,6 +273,10 @@ class _FullReader:
         self.notes = store.notes_full_map()
         self.comments = store.comments_full_map()
         self.issues = store.issue_links_map()
+        self.revisions = store.latest_revisions_map()
+        self.drift = store.drift_counts()
+        self.evidence = store.evidence_map()
+        self.questions = store.questions_map()
         self.milestone_by_id = {
             milestone.id: milestone for items in self.milestones.values() for milestone in items
         }
@@ -339,10 +374,17 @@ class _FullReader:
                 return self.repos.get(("plan", milestone.plan_id), [])
         return []
 
+    def _criteria(self, kind: str, obj_id: int) -> list[dict]:
+        """Criteria on one row with evidence summaries."""
+        return [
+            _criterion_payload(item, self.evidence)
+            for item in self.criteria.get((kind, obj_id), [])
+        ]
+
     def task(self, task: Task) -> dict:
         return {
             "task": self._task_view(task),
-            "criteria": [vars(item) for item in self.criteria.get(("task", task.id), [])],
+            "criteria": self._criteria("task", task.id),
             "links": [vars(item) for item in self.links.get(("task", task.id), [])],
             "effective_links": [vars(item) for item in self._effective_links("task", task.id)],
             "forge_links": [vars(item) for item in self.forge.get(("task", task.id), [])],
@@ -356,7 +398,7 @@ class _FullReader:
     def milestone(self, milestone: Milestone) -> dict:
         payload = {
             "milestone": to_payload(vars(milestone)),
-            "criteria": [vars(item) for item in self.criteria.get(("milestone", milestone.id), [])],
+            "criteria": self._criteria("milestone", milestone.id),
             "links": [vars(item) for item in self.links.get(("milestone", milestone.id), [])],
             "effective_links": [
                 vars(item) for item in self._effective_links("milestone", milestone.id)
@@ -370,7 +412,7 @@ class _FullReader:
             "tasks": [
                 {
                     "task": self._task_view(task),
-                    "criteria": [vars(item) for item in self.criteria.get(("task", task.id), [])],
+                    "criteria": self._criteria("task", task.id),
                 }
                 for task in self.tasks.get(milestone.id, ())
             ],
@@ -389,7 +431,7 @@ class _FullReader:
     def plan(self, plan: Plan) -> dict:
         payload = {
             "plan": to_payload(vars(plan)),
-            "criteria": [vars(item) for item in self.criteria.get(("plan", plan.id), [])],
+            "criteria": self._criteria("plan", plan.id),
             "links": [vars(item) for item in self.links.get(("plan", plan.id), [])],
             "effective_links": [vars(item) for item in self._effective_links("plan", plan.id)],
             "forge_links": [vars(item) for item in self.forge.get(("plan", plan.id), [])],
@@ -398,12 +440,12 @@ class _FullReader:
             ],
             "repos": self.repos.get(("plan", plan.id), []),
             "effective_repos": self._effective_repos("plan", plan.id),
+            "approval": approval_payload(self.revisions.get(plan.id), self.drift.get(plan.id, 0)),
+            "questions": [vars(q) for q in self.questions.get(plan.id, [])],
             "milestones": [
                 {
                     "milestone": to_payload(vars(milestone)),
-                    "criteria": [
-                        vars(item) for item in self.criteria.get(("milestone", milestone.id), [])
-                    ],
+                    "criteria": self._criteria("milestone", milestone.id),
                     "repos": self.repos.get(("milestone", milestone.id), []),
                     "effective_repos": self._effective_repos("milestone", milestone.id),
                     "tasks": [self._task_view(task) for task in self.tasks.get(milestone.id, ())],

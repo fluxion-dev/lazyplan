@@ -633,9 +633,93 @@ are many-to-many and survive export/import.
 - `TODO`, `TBD`, or `FIXME` placeholder text;
 - done rows that still have open criteria.
 
-`--strict` exits 2 when any finding exists. `audit` always reports trace
-coverage and unproven criteria; `--min-trace` is opt-in and defaults to 0
-(disabled), so existing strict runs keep their current thresholds.
+`--strict` exits 2 when any finding exists. `audit` always reports trace,
+evidence, and unproven-criteria coverage; `--min-trace` and `--min-evidence`
+are opt-in and default to 0 (disabled), so existing strict runs keep their
+current thresholds.
+
+### Approvals and drift
+
+Approval records the scope a human accepted. Later edits are visible as drift,
+and every scope-changing edit can carry a reason:
+
+```bash
+lpui plan approve --id 1 --reason "reviewed the cut"
+lpui plan revisions --id 1
+lpui plan diff --id 1
+lpui plan diff --id 1 --check          # exit 1 on drift, 0 in sync
+lpui plan diff --id 1 --from 1 --to 2  # compare two approvals
+lpui task edit --id 3 --title "Rotate tokens" --reason "split the parser"
+```
+
+Re-approving an unchanged plan is a no-op. Re-approval after drift needs
+`--reason`. `plan diff --check` is the opt-in CI gate. `plan approve --enforce`
+also makes `plan move --to done` refuse unapproved drift; pass
+`--override REASON` to record the exception and proceed. Status moves, ticks,
+claims, commits, and pull requests are not scope, so they never create drift.
+
+The TUI marks a drifted plan with `Δ` and shows the latest revision and recent
+change reasons in the plan preview. `brief` and strict lint report enforced
+drift; advisory plans report it without failing.
+
+### Evidence ledger
+
+A tick is a claim; evidence is the proof. Run the command or CI job yourself,
+then record the result:
+
+```bash
+lpui criterion prove --id 4 --command "pytest tests/store" --exit-code 0 \
+  --commit "$(git rev-parse HEAD)" --task 3 --note "local run"
+lpui criterion evidence --id 4
+lpui criterion prove --id 4 --command "pytest" --exit-code 1   # failure, left open
+```
+
+`criterion prove` ticks only when the declared exit code is absent or 0;
+`--no-tick` records without ticking. Evidence is append-only, and the latest
+row decides the criterion's state. `trace` includes evidence rows. A task
+finish gate can require proof:
+
+```bash
+lpui task finish --id 3 --require-evidence
+lpui task finish --id 3 --require-evidence --override "accepted by human"
+```
+
+lazyplan never executes the command, fetches a PR, or reads an artifact. The
+TUI shows proof chips and the latest command in task detail and preview.
+
+### Questions and readiness
+
+Open questions are first-class plan rows:
+
+```bash
+lpui question add --plan 1 --text "Which host ships first?"
+lpui question list --plan 1 [--status open|resolved|all]
+lpui question resolve --id 1 --note "OpenCode first"
+lpui question reopen --id 1 --note "host choice changed"
+lpui plan ready --id 1
+```
+
+`question list` and `plan ready` are read-only. `plan ready` combines three
+checks: lint is clean, every plan criterion has a proving task, and no questions
+are open. It exits 0 when ready, 1 when not ready, and 2 for an unknown plan.
+Brief and context include open questions; trimming keeps questions longer than
+notes, commits, and claims.
+
+### Review packet
+
+One deterministic Markdown packet for a human or reviewer agent:
+
+```bash
+lpui review --plan 1
+lpui review --plan 1 --max-chars 8000
+lpui review --plan 1 --json
+```
+
+The packet carries the plan, approval and drift, readiness, criteria coverage,
+milestones and tasks, commits, pull requests, lint and audit findings, open
+questions, and recent notes. It is assembled from existing reads, makes no LLM
+or network call, and is safe to paste into a pull request or review comment.
+`review` without `--plan` uses the active plan.
 
 ### MCP server
 
@@ -653,8 +737,9 @@ the server `--actor`; `--read-only` hides write tools, rejects direct writes,
 and never creates a missing database.
 
 Read tools: `brief`, `list_plans`, `show_row`, `claims`, `audit`, `trace`,
-`lint`, `info`. Write tools: create/edit/move, criteria, claims, notes,
-block/unblock, and commit linking. Resources: `lazyplan://brief`,
+`lint`, `info`, `criterion_evidence`, `question_list`, `plan_ready`, and
+`review`. Write tools: create/edit/move, criteria, `criterion_prove`, claims,
+notes, questions, block/unblock, and commit linking. Resources: `lazyplan://brief`,
 `lazyplan://context` (append `/{max_chars}` for a budget), and
 `lazyplan://plan/{id}`.
 
@@ -885,6 +970,11 @@ lpui plan show --id 1
 lpui plan add --title "API v2" --why ".." --what ".."
 lpui plan apply --file plan.json [--dry-run]
 lpui plan recipe feature|bugfix|refactor
+lpui plan approve --id 1 [--reason TEXT] [--enforce]
+lpui plan revisions --id 1
+lpui plan diff --id 1 [--from REV] [--to REV|live] [--check]
+lpui plan ready --id 1
+lpui review [--plan ID] [--max-chars N]
 lpui context [--plan ID] [--max-chars N]
 lpui plan edit --id 1 [--title --what --why]
 lpui plan move --id 1 --to doing
@@ -906,9 +996,15 @@ lpui criterion untick --id 4
 lpui criterion delete --id 4
 lpui criterion relate --id 4 --task 3
 lpui criterion unrelate --id 4 --task 3
+lpui criterion prove --id 4 [--command TEXT] [--exit-code N] [--commit SHA] [--task ID] [--no-tick]
+lpui criterion evidence --id 4
+lpui question add --plan 1 --text TEXT
+lpui question list --plan 1 [--status open|resolved|all]
+lpui question resolve --id 1 [--note TEXT]
+lpui question reopen --id 1 [--note TEXT]
 lpui --porcelain trace --plan 1
 lpui --porcelain lint --plan 1 [--strict]
-lpui audit --plan 1 [--min-trace 0.8]
+lpui audit --plan 1 [--min-trace 0.8] [--min-evidence 0.8]
 lpui mcp
 lpui mcp --read-only
 lpui stats --since 30.days [--by NAME] [--stale-after 1.days]
@@ -916,7 +1012,7 @@ lpui comment add --kind task --id 1 --text "..." [--mentions NAME]
 lpui comment resolve --comment 1
 lpui share --plan 1 [--format html|json] [--out PATH]
 lpui sync --file dump.json [--dry-run]
-lpui task finish --id 3 [--require-pr] [--require-checks] [--override REASON]
+lpui task finish --id 3 [--require-pr] [--require-checks] [--require-evidence] [--override REASON]
 lpui issue import --provider github --repo owner/repo [--as plan|task] [--dry-run]
 lpui issue import --provider linear --file export.json [--as plan|task] [--dry-run]
 lpui link --kind task --id 1 [--sha HASH] [--repo PATH]

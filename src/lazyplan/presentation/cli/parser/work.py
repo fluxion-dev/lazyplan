@@ -93,6 +93,12 @@ def add_status(
     s.add_argument(
         "--to", choices=[v.value for v in Status], required=True, help="the new status (required)"
     )
+    s.add_argument(
+        "--override",
+        default="",
+        metavar="REASON",
+        help="record why enforced drift is being overridden when moving a plan to done",
+    )
 
 
 def add_reconcile(
@@ -262,6 +268,14 @@ def add_noun_groups(
         parser.add_argument("--title", required=required, metavar="TEXT", help="the title")
         parser.add_argument("--name", default=None, metavar="NAME", help="same as --title")
 
+    def _reason_flag(parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "--reason",
+            default="",
+            metavar="TEXT",
+            help="why this scope changed (recorded after an approval)",
+        )
+
     def _plan_list_flags(parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "--status",
@@ -291,16 +305,26 @@ def add_noun_groups(
     _a.add_argument("--desc", default=None, metavar="TEXT", help="same as --what")
     _a.add_argument("--why", default=None, metavar="TEXT", help="the new why")
     _a.add_argument("--goal", default=None, metavar="TEXT", help="same as --why")
+    _reason_flag(_a)
     _a = _actions.add_parser("show", help="show one plan", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="plan id")
     _a.add_argument("--files", action="store_true", help="list changed files per commit")
     _a = _actions.add_parser("list", help="list plans as summaries", parents=[common])
     _plan_list_flags(_a)
+    _a = _actions.add_parser("ready", help="check plan readiness", parents=[common])
+    _a.add_argument("--id", type=int, required=True, metavar="ID", help="plan id")
     _a = _actions.add_parser("move", help="move a plan to a status", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="plan id")
     _a.add_argument("--to", choices=[v.value for v in Status], required=True, help="new status")
+    _a.add_argument(
+        "--override",
+        default="",
+        metavar="REASON",
+        help="record why enforced drift is being overridden when moving to done",
+    )
     _a = _actions.add_parser("delete", help="delete a plan", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="plan id")
+    _reason_flag(_a)
     _a = _actions.add_parser(
         "apply", help="create a plan tree from a JSON document", parents=[common]
     )
@@ -312,6 +336,38 @@ def add_noun_groups(
     )
     _a = _actions.add_parser("recipe", help="print a structural plan recipe", parents=[common])
     _a.add_argument("name", choices=["feature", "bugfix", "refactor"], help="recipe name")
+    _a = _actions.add_parser("approve", help="approve the current plan scope", parents=[common])
+    _a.add_argument("--id", type=int, required=True, metavar="ID", help="plan id")
+    _a.add_argument("--reason", default="", metavar="TEXT", help="why this revision is approved")
+    _a.add_argument(
+        "--enforce",
+        action="store_true",
+        help="hard-gate plan done while this revision has drift",
+    )
+    _a = _actions.add_parser("revisions", help="list plan approvals", parents=[common])
+    _a.add_argument("--id", type=int, required=True, metavar="ID", help="plan id")
+    _a = _actions.add_parser("diff", help="show scope drift since approval", parents=[common])
+    _a.add_argument("--id", type=int, required=True, metavar="ID", help="plan id")
+    _a.add_argument(
+        "--from",
+        dest="from_revision",
+        type=int,
+        default=None,
+        metavar="REV",
+        help="baseline revision (default: latest)",
+    )
+    _a.add_argument(
+        "--to",
+        dest="to_revision",
+        default=None,
+        metavar="REV|live",
+        help="target revision or live (default: live)",
+    )
+    _a.add_argument(
+        "--check",
+        action="store_true",
+        help="exit 1 when drift exists and 0 when in sync",
+    )
 
     _group, _actions = _noun_group(
         "milestone", "add, edit, show, list, move, or delete a milestone"
@@ -320,10 +376,12 @@ def add_noun_groups(
     _a.add_argument("--plan", type=int, required=True, metavar="ID", help="owning plan id")
     _title_flags(_a, required=True)
     _a.add_argument("--desc", default="", metavar="TEXT", help="details")
+    _reason_flag(_a)
     _a = _actions.add_parser("edit", help="change a milestone", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="milestone id")
     _title_flags(_a)
     _a.add_argument("--desc", default=None, metavar="TEXT", help="the new details")
+    _reason_flag(_a)
     _a = _actions.add_parser("show", help="show one milestone", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="milestone id")
     _a.add_argument("--files", action="store_true", help="list changed files per commit")
@@ -335,6 +393,7 @@ def add_noun_groups(
     _a.add_argument("--to", choices=[v.value for v in Status], required=True, help="new status")
     _a = _actions.add_parser("delete", help="delete a milestone", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="milestone id")
+    _reason_flag(_a)
 
     _group, _actions = _noun_group("task", "add, edit, show, list, move, or delete a task")
     _a = _actions.add_parser("add", help="add a task", parents=[common])
@@ -343,10 +402,12 @@ def add_noun_groups(
     )
     _title_flags(_a, required=True)
     _a.add_argument("--desc", default="", metavar="TEXT", help="details")
+    _reason_flag(_a)
     _a = _actions.add_parser("edit", help="change a task", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="task id")
     _title_flags(_a)
     _a.add_argument("--desc", default=None, metavar="TEXT", help="the new details")
+    _reason_flag(_a)
     _a = _actions.add_parser("show", help="show one task", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="task id")
     _a.add_argument("--files", action="store_true", help="list changed files per commit")
@@ -358,6 +419,7 @@ def add_noun_groups(
     _a.add_argument("--to", choices=[v.value for v in Status], required=True, help="new status")
     _a = _actions.add_parser("delete", help="delete a task", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="task id")
+    _reason_flag(_a)
     _a = _actions.add_parser("block", help="block a task and record the reason", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="task id")
     _a.add_argument("--reason", required=True, metavar="TEXT", help="why the task is blocked")
@@ -398,6 +460,11 @@ def add_noun_groups(
         help="finish only when every linked PR's checks pass",
     )
     _a.add_argument(
+        "--require-evidence",
+        action="store_true",
+        help="finish only when every task criterion has passing evidence",
+    )
+    _a.add_argument(
         "--override",
         default="",
         metavar="REASON",
@@ -425,6 +492,7 @@ def add_noun_groups(
     _a.add_argument("--kind", choices=list(KINDS), required=True, help="parent kind")
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="parent id")
     _a.add_argument("--text", required=True, metavar="TEXT", help="criterion text")
+    _reason_flag(_a)
     _a = _actions.add_parser("list", help="list a row's criteria", parents=[common])
     _a.add_argument("--kind", choices=list(KINDS), required=True, help="parent kind")
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="parent id")
@@ -434,14 +502,23 @@ def add_noun_groups(
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="criterion id")
     _a = _actions.add_parser("delete", help="delete one criterion", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="criterion id")
-    _a = _actions.add_parser(
-        "relate", help="record that a task proves a criterion", parents=[common]
-    )
+    _reason_flag(_a)
+    _a = _actions.add_parser("prove", help="record proof for one criterion", parents=[common])
+    _a.add_argument("--id", type=int, required=True, metavar="ID", help="criterion id")
+    _a.add_argument("--command", default="", metavar="TEXT", help="the command that ran")
+    _a.add_argument("--exit-code", type=int, default=None, metavar="N", help="exit code")
+    _a.add_argument("--commit", default="", metavar="SHA", help="the proving commit")
+    _a.add_argument("--pr", default="", metavar="URL", help="the proving pull request")
+    _a.add_argument("--artifact", default="", metavar="PATH", help="the evidence artifact path")
+    _a.add_argument("--note", default="", metavar="TEXT", help="free-form proof context")
+    _a.add_argument("--task", type=int, default=None, metavar="ID", help="the proving task")
+    _a.add_argument("--no-tick", action="store_true", help="record without ticking")
+    _a = _actions.add_parser("evidence", help="list proof rows for one criterion", parents=[common])
+    _a.add_argument("--id", type=int, required=True, metavar="ID", help="criterion id")
+    _a = _actions.add_parser("relate", help="record a proving task", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="criterion id")
     _a.add_argument("--task", type=int, required=True, metavar="ID", help="proving task id")
-    _a = _actions.add_parser(
-        "unrelate", help="remove a criterion-task proof relation", parents=[common]
-    )
+    _a = _actions.add_parser("unrelate", help="remove a proof relation", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="criterion id")
     _a.add_argument("--task", type=int, required=True, metavar="ID", help="proving task id")
 

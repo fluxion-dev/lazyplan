@@ -201,6 +201,28 @@ def add_audit(
         metavar="RATIO",
         help="strict-mode minimum criteria with a proving task; 0 disables (default: 0)",
     )
+    au.add_argument(
+        "--min-evidence",
+        type=float,
+        default=0.0,
+        metavar="RATIO",
+        help="strict-mode minimum criteria with passing evidence; 0 disables (default: 0)",
+    )
+
+
+def add_review(
+    sub: argparse._SubParsersAction[argparse.ArgumentParser], common: argparse.ArgumentParser
+) -> None:
+
+    rv = sub.add_parser(
+        "review",
+        help="print one deterministic review packet",
+        parents=[common],
+    )
+    rv.add_argument(
+        "--plan", type=int, default=None, metavar="ID", help="review one plan (default: active)"
+    )
+    rv.add_argument("--max-chars", type=int, default=0, metavar="N", help="cap the Markdown length")
 
 
 def add_brief(

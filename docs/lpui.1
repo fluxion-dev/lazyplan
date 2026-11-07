@@ -224,6 +224,11 @@ strict\-mode maximum open criteria on done rows (default: 0)
 .B \-\-min\-trace RATIO
 strict\-mode minimum criteria with a proving task; 0 disables (default: 0)
 .RE
+.RS
+.TP
+.B \-\-min\-evidence RATIO
+strict\-mode minimum criteria with passing evidence; 0 disables (default: 0)
+.RE
 .TP
 .B lpui brief
 show the active plan, the next task, and unlinked commits
@@ -284,6 +289,39 @@ context one plan
 .TP
 .B \-\-max\-chars N
 packet budget in characters (default: 4000, minimum: 120)
+.RE
+.TP
+.B lpui review
+print one deterministic review packet
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B \-\-plan ID
+review one plan (default: active)
+.RE
+.RS
+.TP
+.B \-\-max\-chars N
+cap the Markdown length Default: 0\.
 .RE
 .TP
 .B lpui next
@@ -868,7 +906,7 @@ who made this change (you see it in feed)
 .RS
 .TP
 .B  ACTION
-what to do with a plan Choices: add, edit, show, list, move, delete, apply, recipe\. Required\.
+what to do with a plan Choices: add, edit, show, list, ready, move, delete, apply, recipe, approve, revisions, diff\. Required\.
 .RE
 .TP
 .B lpui milestone
@@ -980,7 +1018,7 @@ who made this change (you see it in feed)
 .RS
 .TP
 .B  ACTION
-what to do with a criterion Choices: add, list, tick, untick, delete, relate, unrelate\. Required\.
+what to do with a criterion Choices: add, list, tick, untick, delete, prove, evidence, relate, unrelate\. Required\.
 .RE
 .TP
 .B lpui git
@@ -1037,6 +1075,34 @@ who made this change (you see it in feed)
 .TP
 .B  ACTION
 what to do with a pr Choices: auth, status, list, show, link, unlink, refresh\. Required\.
+.RE
+.TP
+.B lpui question
+add, list, resolve, or reopen a plan question
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B  ACTION
+what to do with a question Choices: add, list, resolve, reopen\. Required\.
 .RE
 .TP
 .B lpui add\-plan
@@ -1779,6 +1845,11 @@ id of the row Required\.
 .TP
 .B \-\-to {todo|doing|done}
 the new status (required) Choices: todo, doing, done\. Required\.
+.RE
+.RS
+.TP
+.B \-\-override REASON
+record why enforced drift is being overridden when moving a plan to done
 .RE
 .TP
 .B lpui reconcile

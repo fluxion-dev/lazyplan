@@ -8,6 +8,8 @@ import sys
 from lazyplan import (
     services,
 )
+from lazyplan.services import evidence as evidence_service
+from lazyplan.services import revisions as revisions_service
 
 from ....core.entities import Milestone, Plan, Status, Task
 from ....store import Store, to_payload
@@ -22,9 +24,11 @@ from ...shared.design import (
 from ...shared.render import (
     render_full,
 )
+from .. import rows_proof, rows_revisions
 from ..emit import (
     _criterion_row,
     _emit,
+    _emit_read,
     _emit_record,
     _porcelain_row,
 )
@@ -71,6 +75,7 @@ def _cmd_add_milestone(store: Store, args: argparse.Namespace, actor: str) -> in
         args.title,
         args.desc,
         actor=actor,
+        reason=getattr(args, "reason", ""),
     )
     return _emit_record(args, _porcelain_row(store, s), {"milestone": to_payload(vars(s))})
 
@@ -82,6 +87,7 @@ def _cmd_add_task(store: Store, args: argparse.Namespace, actor: str) -> int:
         args.title,
         description=args.desc,
         actor=actor,
+        reason=getattr(args, "reason", ""),
     )
     return _emit_record(args, _porcelain_row(store, t), {"task": to_payload(vars(t))})
 
@@ -169,9 +175,87 @@ def _cmd_plan_apply(store: Store, args: argparse.Namespace, actor: str) -> int:
     return 0
 
 
+def _cmd_plan_approve(store: Store, args: argparse.Namespace, actor: str) -> int:
+    """Approve the live plan scope."""
+    plan = store.get_plan(args.id)
+    if plan is None:
+        print(msg_not_found("plan", args.id), file=sys.stderr)
+        return 1
+    try:
+        result = revisions_service.approve(
+            store,
+            args.id,
+            actor=actor,
+            reason=args.reason,
+            enforced=args.enforce,
+        )
+    except ValueError as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 2
+    if args.json:
+        return _emit(args, rows_revisions.approval_payload(result, plan))
+    if porcelain.enabled(args):
+        print(rows_revisions.approval_row(result, plan))
+        return 0
+    print(rows_revisions.approval_text(result, plan))
+    return 0
+
+
+def _cmd_plan_revisions(store: Store, args: argparse.Namespace, actor: str) -> int:
+    """List one plan's approval history."""
+    del actor
+    plan = store.get_plan(args.id)
+    if plan is None:
+        print(msg_not_found("plan", args.id), file=sys.stderr)
+        return 1
+    entries = revisions_service.list_revisions(store, args.id)
+    return _emit_read(
+        args,
+        rows_revisions.revisions_payload(entries, plan),
+        rows_revisions.revisions_rows(entries, plan),
+        rows_revisions.revisions_text(entries, plan),
+    )
+
+
+def _cmd_plan_diff(store: Store, args: argparse.Namespace, actor: str) -> int:
+    """Report drift between an approved revision and live scope or another revision."""
+    del actor
+    plan = store.get_plan(args.id)
+    if plan is None:
+        print(msg_not_found("plan", args.id), file=sys.stderr)
+        return 1
+    try:
+        target = None if args.to_revision in (None, "live") else int(args.to_revision)
+    except ValueError:
+        print(msg_error(ValueError("--to must be a revision number or live")), file=sys.stderr)
+        return 2
+    try:
+        result = revisions_service.diff(
+            store,
+            args.id,
+            from_revision=args.from_revision,
+            to_revision=target,
+        )
+    except ValueError as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 2
+    exit_code = 1 if args.check and result.drifted else 0
+    if args.json:
+        _emit(args, rows_revisions.diff_payload(result, plan))
+        return exit_code
+    if porcelain.enabled(args):
+        for line in rows_revisions.diff_rows(result, plan):
+            print(line)
+        return exit_code
+    print(rows_revisions.diff_text(result, plan))
+    return exit_code
+
+
 def _cmd_update(store: Store, args: argparse.Namespace, actor: str) -> int:
     title_patch = _resolve_title(args) or None
-    desc_patch: str | None = args.desc if args.desc is not None else args.what
+    what = getattr(args, "what", None)
+    desc_patch: str | None = args.desc if args.desc is not None else what
+    reason = getattr(args, "reason", "")
     updated: Plan | Milestone | Task | None = None
     if args.kind == "plan":
         goal = args.goal if args.goal is not None else args.why
@@ -181,6 +265,7 @@ def _cmd_update(store: Store, args: argparse.Namespace, actor: str) -> int:
             description=desc_patch,
             goal=goal,
             actor=actor,
+            reason=reason,
         )
     elif args.kind == "milestone":
         updated = store.update_milestone(
@@ -188,6 +273,7 @@ def _cmd_update(store: Store, args: argparse.Namespace, actor: str) -> int:
             title=title_patch,
             description=desc_patch,
             actor=actor,
+            reason=reason,
         )
     else:
         updated = store.update_task(
@@ -195,6 +281,7 @@ def _cmd_update(store: Store, args: argparse.Namespace, actor: str) -> int:
             title=title_patch,
             description=desc_patch,
             actor=actor,
+            reason=reason,
         )
     if updated is None:
         print(msg_not_found(args.kind, args.id), file=sys.stderr)
@@ -227,10 +314,24 @@ def _cmd_status(store: Store, args: argparse.Namespace, actor: str) -> int:
             f"({', '.join(c.text[:40] for c in left[:3])}); closing anyway",
             file=sys.stderr,
         )
+    override = getattr(args, "override", "")
+    failure = None
+    if args.kind == "plan" and args.to == "done":
+        failure = revisions_service.done_gate(store, args.id)
+        if failure and not override:
+            print(msg_error(ValueError(failure)), file=sys.stderr)
+            return 2
     ok = services.set_status(store, args.kind, args.id, Status(args.to), actor=actor)
     if not ok:
         print(msg_not_found(args.kind, args.id), file=sys.stderr)
         return 1
+    if failure and override:
+        store.add_note(
+            "plan",
+            args.id,
+            f"Drift override by {actor}: {override}",
+            actor=actor,
+        )
     if args.to == "done":
         reason = services.auto_capture_head(store, args.kind, args.id, actor=actor)
         if reason:
@@ -259,7 +360,7 @@ def _cmd_delete(store: Store, args: argparse.Namespace, actor: str) -> int:
     elif isinstance(before, Task):
         title = before.title
         parent = f"milestone:{before.milestone_id}"
-    ok = store.delete(args.kind, args.id, actor=actor)
+    ok = store.delete(args.kind, args.id, actor=actor, reason=getattr(args, "reason", ""))
     if not ok:
         print(msg_not_found(args.kind, args.id), file=sys.stderr)
         return 1
@@ -272,7 +373,13 @@ def _cmd_reconcile(store: Store, args: argparse.Namespace, actor: str) -> int:
 
 
 def _cmd_add_criteria(store: Store, args: argparse.Namespace, actor: str) -> int:
-    c = store.add_criteria(args.kind, args.id, args.text, actor=actor)
+    c = store.add_criteria(
+        args.kind,
+        args.id,
+        args.text,
+        actor=actor,
+        reason=getattr(args, "reason", ""),
+    )
     return _emit_record(args, _criterion_row(c), {"criteria": vars(c)})
 
 
@@ -306,11 +413,55 @@ def _cmd_uncheck(store: Store, args: argparse.Namespace, actor: str) -> int:
 
 
 def _cmd_delete_criteria(store: Store, args: argparse.Namespace, actor: str) -> int:
-    if not store.delete_criteria(args.id, actor=actor):
+    if not store.delete_criteria(args.id, actor=actor, reason=getattr(args, "reason", "")):
         print(msg_not_found("criteria", args.id), file=sys.stderr)
         return 1
     line = porcelain.row("criterion", args.id, "deleted", "-", "-", "-")
     return _emit_record(args, line, {"ok": True, "deleted": f"criteria #{args.id}"})
+
+
+def _cmd_criterion_prove(store: Store, args: argparse.Namespace, actor: str) -> int:
+    """Record one proof row; tick only when it passes."""
+    try:
+        result = evidence_service.prove(
+            store,
+            args.id,
+            command=args.command,
+            exit_code=args.exit_code,
+            commit_sha=args.commit,
+            pr_url=args.pr,
+            artifact_path=args.artifact,
+            note=args.note,
+            task_id=args.task,
+            actor=actor,
+            tick=not args.no_tick,
+        )
+    except (KeyError, ValueError) as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 2
+    if args.json:
+        return _emit(args, rows_proof.evidence_payload(result))
+    if porcelain.enabled(args):
+        print(rows_proof.evidence_row(result))
+        return 0
+    print(rows_proof.evidence_text(result))
+    return 0
+
+
+def _cmd_criterion_evidence(store: Store, args: argparse.Namespace, actor: str) -> int:
+    """List one criterion's proof rows."""
+    del actor
+    criterion = store.get_criterion(args.id)
+    if criterion is None:
+        print(msg_not_found("criterion", args.id), file=sys.stderr)
+        return 1
+    rows = evidence_service.list_evidence(store, args.id)
+    return _emit_read(
+        args,
+        [vars(row) for row in rows],
+        rows_proof.evidence_list_rows(rows),
+        rows_proof.evidence_list_text(rows, criterion),
+    )
 
 
 def _criterion_link(store: Store, args: argparse.Namespace, actor: str, relate: bool) -> int:

@@ -12,10 +12,13 @@ from .base import (
     to_payload,
 )
 from .claims import ClaimsMixin
+from .evidence import EvidenceMixin
 from .keys import KeysMixin
 from .links import LinksMixin
 from .plans import PlansMixin
+from .questions import QuestionsMixin
 from .repos import ReposMixin
+from .revisions import RevisionsMixin
 from .stubs import CLAIM_DEFAULT_TTL
 from .tasks import TasksMixin
 from .views import ViewsMixin
@@ -23,11 +26,14 @@ from .views import ViewsMixin
 
 class Store(
     PlansMixin,
+    QuestionsMixin,
     ClaimsMixin,
+    EvidenceMixin,
     AnnotationsMixin,
     KeysMixin,
     LinksMixin,
     ReposMixin,
+    RevisionsMixin,
     TasksMixin,
     ViewsMixin,
     StoreBase,

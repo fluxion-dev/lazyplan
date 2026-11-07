@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-from .kinds import KINDS, PARENT_KIND_ERROR
+from .kinds import KINDS, PARENT_KIND_ERROR, QUESTION_STATUSES, SCOPE_KINDS
 
 
 class Status(StrEnum):
@@ -71,6 +71,128 @@ class Claim:
     def expired(self, now: float) -> bool:
         """True when the lease is no longer active at `now`."""
         return self.expires_at <= now
+
+
+@dataclass(frozen=True)
+class PlanRevision:
+    """One human approval of a plan's scope, with its canonical snapshot."""
+
+    id: int
+    plan_id: int
+    revision: int
+    approved_at: float
+    actor: str = "human"
+    reason: str = ""
+    digest: str = ""
+    snapshot: str = ""
+    change_mark: int = 0
+    enforced: bool = False
+
+    def __post_init__(self) -> None:
+        if self.revision < 1:
+            raise ValueError("revision must be at least 1")
+        if len(self.digest) != 64 or any(c not in "0123456789abcdef" for c in self.digest):
+            raise ValueError("digest must be a 64-char hex sha256")
+        if not self.snapshot.strip():
+            raise ValueError("snapshot must not be empty")
+        if self.change_mark < 0:
+            raise ValueError("change_mark must not be negative")
+
+
+@dataclass(frozen=True)
+class PlanChange:
+    """One recorded scope-changing edit, with the reason the author gave."""
+
+    id: int
+    plan_id: int
+    ts: float
+    actor: str = "human"
+    kind: str = "plan"
+    obj_id: int = 0
+    action: str = "edit"
+    field: str = ""
+    reason: str = ""
+    detail: str = ""
+
+    def __post_init__(self) -> None:
+        if self.kind not in SCOPE_KINDS:
+            raise ValueError(f"kind must be {'|'.join(SCOPE_KINDS)}")
+        if self.action not in ("add", "edit", "delete"):
+            raise ValueError("action must be add|edit|delete")
+        if self.obj_id < 0:
+            raise ValueError("obj_id must not be negative")
+
+
+@dataclass(frozen=True)
+class CriterionEvidence:
+    """One recorded proof row for a criterion.
+
+    lazyplan never executes the command, fetches the PR, or reads the artifact.
+    The row is the agent's or CI's declaration, not a verified fact.
+    """
+
+    id: int
+    criterion_id: int
+    task_id: int | None = None
+    command: str = ""
+    exit_code: int | None = None
+    commit_sha: str = ""
+    pr_url: str = ""
+    artifact_path: str = ""
+    note: str = ""
+    actor: str = "human"
+    ts: float = 0.0
+
+    def __post_init__(self) -> None:
+        if self.criterion_id < 1:
+            raise ValueError("criterion_id must be positive")
+        if self.task_id is not None and self.task_id < 1:
+            raise ValueError("task_id must be positive")
+        if self.exit_code is not None and not isinstance(self.exit_code, int):
+            raise ValueError("exit_code must be an integer or None")
+        sha = self.commit_sha.strip().lower()
+        if sha:
+            if len(sha) != 40 or any(c not in "0123456789abcdef" for c in sha):
+                raise ValueError("commit_sha must be a 40-char hex hash")
+            object.__setattr__(self, "commit_sha", sha)
+        if not any(
+            (
+                self.command.strip(),
+                sha,
+                self.pr_url.strip(),
+                self.artifact_path.strip(),
+                self.note.strip(),
+            )
+        ):
+            raise ValueError("evidence needs a command, commit, PR, artifact, or note")
+
+    @property
+    def passing(self) -> bool:
+        """True when the declared exit code is absent or zero."""
+        return self.exit_code is None or self.exit_code == 0
+
+
+@dataclass(frozen=True)
+class PlanQuestion:
+    """One open or resolved question on a plan."""
+
+    id: int
+    plan_id: int
+    text: str
+    status: str = "open"
+    actor: str = "human"
+    ts: float = 0.0
+    resolved_at: float = 0.0
+    resolved_by: str = ""
+    resolution: str = ""
+
+    def __post_init__(self) -> None:
+        if self.plan_id < 1:
+            raise ValueError("plan_id must be positive")
+        if not self.text.strip():
+            raise ValueError("question text must not be empty")
+        if self.status not in QUESTION_STATUSES:
+            raise ValueError(f"status must be {'|'.join(QUESTION_STATUSES)}")
 
 
 @dataclass(frozen=True)

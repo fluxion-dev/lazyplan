@@ -9,9 +9,16 @@ from __future__ import annotations
 PLAN = "plan"
 MILESTONE = "milestone"
 TASK = "task"
+CRITERION = "criterion"
 
 #: All element kinds, in hierarchy order.
 KINDS: tuple[str, str, str] = (PLAN, MILESTONE, TASK)
+
+#: Kinds that can appear in a scope change; criteria are scope too.
+SCOPE_KINDS: tuple[str, str, str, str] = (PLAN, MILESTONE, TASK, CRITERION)
+
+#: Plan-question states.
+QUESTION_STATUSES: tuple[str, str] = ("open", "resolved")
 
 #: Row label letters, matching the design row grammar.
 LABEL_LETTERS: dict[str, str] = {PLAN: "P", MILESTONE: "M", TASK: "T"}

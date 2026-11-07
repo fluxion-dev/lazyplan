@@ -26,6 +26,12 @@ from .coordination import (
     start_claim,
     unblock_task,
 )
+from .evidence import (
+    ProofResult,
+    list_evidence,
+    prove,
+    task_gate,
+)
 from .planning import (
     DEFAULT_PLAN_LIMIT,
     _filtered_milestones,
@@ -81,6 +87,30 @@ from .provenance import (
     repo_statuses,
     scan_commits,
     start_task,
+)
+from .questions import (
+    add_question,
+    list_questions,
+    reopen_question,
+    resolve_question,
+)
+from .ready import ReadyCheck, ReadyResult
+from .ready import check as plan_ready
+from .review import ReviewPacket, active_plan
+from .review import build as build_review
+from .revisions import (
+    ApprovalResult,
+    DiffEntry,
+    DiffResult,
+    RevisionEntry,
+    approve,
+    diff,
+    done_gate,
+    drift_counts,
+    drifted_plan_ids,
+    list_revisions,
+    revision_state,
+    snapshot,
 )
 from .transfer import (
     _export_entry,
@@ -170,4 +200,30 @@ __all__ = [
     "_import_all",
     "GateError",
     "DEFAULT_PLAN_LIMIT",
+    "ReviewPacket",
+    "build_review",
+    "active_plan",
+    "ReadyCheck",
+    "ReadyResult",
+    "plan_ready",
+    "add_question",
+    "list_questions",
+    "resolve_question",
+    "reopen_question",
+    "ProofResult",
+    "prove",
+    "list_evidence",
+    "task_gate",
+    "ApprovalResult",
+    "RevisionEntry",
+    "DiffEntry",
+    "DiffResult",
+    "approve",
+    "list_revisions",
+    "diff",
+    "done_gate",
+    "drifted_plan_ids",
+    "drift_counts",
+    "revision_state",
+    "snapshot",
 ]

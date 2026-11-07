@@ -8,7 +8,7 @@ from __future__ import annotations
 import sqlite3
 import uuid
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 5
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS plans (
@@ -27,6 +27,67 @@ CREATE TABLE IF NOT EXISTS entity_keys (
     UNIQUE (kind, row_id)
 );
 CREATE INDEX IF NOT EXISTS idx_entity_keys_row ON entity_keys(kind, row_id);
+CREATE TABLE IF NOT EXISTS plan_revisions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+    revision INTEGER NOT NULL,
+    approved_at REAL NOT NULL,
+    actor TEXT NOT NULL DEFAULT 'human',
+    reason TEXT NOT NULL DEFAULT '',
+    digest TEXT NOT NULL,
+    snapshot TEXT NOT NULL,
+    change_mark INTEGER NOT NULL DEFAULT 0,
+    enforced INTEGER NOT NULL DEFAULT 0,
+    UNIQUE (plan_id, revision)
+);
+CREATE INDEX IF NOT EXISTS idx_plan_revisions_plan ON plan_revisions(plan_id, revision DESC);
+CREATE TABLE IF NOT EXISTS plan_changes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+    ts REAL NOT NULL,
+    actor TEXT NOT NULL DEFAULT 'human',
+    kind TEXT NOT NULL CHECK (kind IN ('plan', 'milestone', 'task', 'criterion')),
+    obj_id INTEGER NOT NULL,
+    action TEXT NOT NULL,
+    field TEXT NOT NULL DEFAULT '',
+    reason TEXT NOT NULL DEFAULT '',
+    detail TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_plan_changes_plan ON plan_changes(plan_id, id);
+CREATE TABLE IF NOT EXISTS criterion_evidence (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    criterion_id INTEGER NOT NULL REFERENCES criteria(id) ON DELETE CASCADE,
+    task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL,
+    command TEXT NOT NULL DEFAULT '',
+    exit_code INTEGER,
+    commit_sha TEXT NOT NULL DEFAULT '',
+    pr_url TEXT NOT NULL DEFAULT '',
+    artifact_path TEXT NOT NULL DEFAULT '',
+    note TEXT NOT NULL DEFAULT '',
+    actor TEXT NOT NULL DEFAULT 'human',
+    ts REAL NOT NULL,
+    CHECK (
+        command <> '' OR commit_sha <> '' OR pr_url <> ''
+        OR artifact_path <> '' OR note <> ''
+    )
+);
+CREATE INDEX IF NOT EXISTS idx_criterion_evidence_criterion
+    ON criterion_evidence(criterion_id, id DESC);
+CREATE INDEX IF NOT EXISTS idx_criterion_evidence_task
+    ON criterion_evidence(task_id, id DESC);
+CREATE TABLE IF NOT EXISTS plan_questions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+    text TEXT NOT NULL CHECK (trim(text) <> ''),
+    status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'resolved')),
+    actor TEXT NOT NULL DEFAULT 'human',
+    ts REAL NOT NULL,
+    resolved_at REAL NOT NULL DEFAULT 0,
+    resolved_by TEXT NOT NULL DEFAULT '',
+    resolution TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_plan_questions_plan
+    ON plan_questions(plan_id, status, id);
 CREATE TABLE IF NOT EXISTS milestones (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,

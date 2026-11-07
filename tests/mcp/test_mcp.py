@@ -122,6 +122,62 @@ class TestMcpReadTools(unittest.TestCase):
         lint = json.loads(self._tool("lint", {"plan": 1})["content"][0]["text"])
         self.assertEqual(lint, [])
 
+    def test_plan_reads_include_approval_state(self):
+        self.store.add_revision(self.plan_id, "a" * 64, "{}", reason="initial")
+        shown = json.loads(
+            self._tool("show_row", {"kind": "plan", "id": self.plan_id})["content"][0]["text"]
+        )
+        self.assertEqual(shown["approval"]["revision"], 1)
+        listed = json.loads(self._tool("list_plans")["content"][0]["text"])
+        self.assertEqual(listed[0]["approval"]["revision"], 1)
+
+    def test_evidence_tools_and_move_gate(self):
+        proved = self._tool("criterion_prove", {"id": 1, "command": "pytest", "exit_code": 0})
+        self.assertFalse(proved.get("isError"))
+        payload = json.loads(proved["content"][0]["text"])
+        self.assertTrue(payload["ticked"])
+        listed = self._tool("criterion_evidence", {"id": 1})
+        self.assertFalse(listed.get("isError"))
+        rows = json.loads(listed["content"][0]["text"])
+        self.assertEqual(rows[0]["command"], "pytest")
+
+        criterion = self.store.add_criteria("task", 1, "Task works")
+        blocked = self._tool(
+            "move_row",
+            {"kind": "task", "id": 1, "to": "done", "require_evidence": True},
+        )
+        self.assertTrue(blocked["isError"])
+        self.assertIn("needs passing evidence", blocked["content"][0]["text"])
+        self._tool("criterion_prove", {"id": criterion.id, "command": "pytest", "exit_code": 0})
+        allowed = self._tool(
+            "move_row",
+            {"kind": "task", "id": 1, "to": "done", "require_evidence": True},
+        )
+        self.assertFalse(allowed.get("isError"))
+
+    def test_question_and_ready_tools(self):
+        added = self._tool("question_add", {"plan": self.plan_id, "text": "Which host?"})
+        self.assertFalse(added.get("isError"))
+        question = json.loads(added["content"][0]["text"])
+        listed = json.loads(
+            self._tool("question_list", {"plan": self.plan_id})["content"][0]["text"]
+        )
+        self.assertEqual(listed[0]["id"], question["id"])
+        ready = json.loads(self._tool("plan_ready", {"id": self.plan_id})["content"][0]["text"])
+        self.assertFalse(ready["ready"])
+        self._tool("question_resolve", {"id": question["id"], "note": "OpenCode"})
+        ready = json.loads(self._tool("plan_ready", {"id": self.plan_id})["content"][0]["text"])
+        self.assertTrue(ready["ready"])
+        reopened = self._tool("question_reopen", {"id": question["id"], "note": "changed"})
+        self.assertFalse(reopened.get("isError"))
+
+    def test_review_tool(self):
+        result = self._tool("review", {"plan": self.plan_id})
+        self.assertFalse(result.get("isError"))
+        payload = json.loads(result["content"][0]["text"])
+        self.assertIn("# P1", payload["markdown"])
+        self.assertEqual(payload["payload"]["plan"]["id"], self.plan_id)
+
     def test_missing_rows_are_tool_errors(self):
         result = self._tool("show_row", {"kind": "task", "id": 99})
         self.assertTrue(result["isError"])
@@ -202,6 +258,54 @@ class TestMcpReadTools(unittest.TestCase):
         self.assertFalse(self.store.get_task(1).blocked)
         self.assertTrue(any(event["actor"] == "qa" for event in self.store.feed(20)))
 
+    def test_scope_reasons_are_recorded(self):
+        self.store.add_revision(self.plan_id, "a" * 64, "{}")
+        edited = self._tool(
+            "edit_row", {"kind": "task", "id": 1, "title": "Renamed", "reason": "clarify"}
+        )
+        self.assertFalse(edited.get("isError"))
+        added = self._tool(
+            "criterion_add",
+            {"kind": "plan", "id": self.plan_id, "text": "New proof", "reason": "add proof"},
+        )
+        self.assertFalse(added.get("isError"))
+        created = self._tool(
+            "create_task",
+            {
+                "milestone": 1,
+                "title": "New task",
+                "desc": "Approach: x.\n\nCommit: y.\n\nVerify: z.",
+                "reason": "new work",
+            },
+        )
+        self.assertFalse(created.get("isError"))
+        changes = self.store.list_plan_changes(self.plan_id)
+        self.assertEqual(
+            [(item.kind, item.action, item.reason) for item in changes],
+            [
+                ("task", "edit", "clarify"),
+                ("criterion", "add", "add proof"),
+                ("task", "add", "new work"),
+            ],
+        )
+
+    def test_enforced_plan_done_gate(self):
+        plan = self.store.add_plan("Gate")
+        self.store.add_revision(plan.id, "a" * 64, "{}", enforced=True)
+        self._tool(
+            "edit_row",
+            {"kind": "plan", "id": plan.id, "desc": "new scope", "reason": "narrow"},
+        )
+        blocked = self._tool("move_row", {"kind": "plan", "id": plan.id, "to": "done"})
+        self.assertTrue(blocked["isError"])
+        self.assertIn("scope change", blocked["content"][0]["text"])
+        allowed = self._tool(
+            "move_row",
+            {"kind": "plan", "id": plan.id, "to": "done", "override": "ship now"},
+        )
+        self.assertFalse(allowed.get("isError"))
+        self.assertEqual(self.store.get_plan(plan.id).status.value, "done")
+
     def test_read_only_hides_and_rejects_writes(self):
         server = mcp.McpServer(self.store, actor="qa", read_only=True)
         names = {
@@ -211,6 +315,12 @@ class TestMcpReadTools(unittest.TestCase):
             ]["tools"]
         }
         self.assertNotIn("create_plan", names)
+        self.assertNotIn("criterion_prove", names)
+        self.assertNotIn("question_add", names)
+        self.assertIn("criterion_evidence", names)
+        self.assertIn("question_list", names)
+        self.assertIn("plan_ready", names)
+        self.assertIn("review", names)
         response = server.handle(
             {
                 "jsonrpc": "2.0",

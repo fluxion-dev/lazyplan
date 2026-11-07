@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -132,6 +133,18 @@ def notes_block(notes: list[dict[str, Any]]) -> PreviewBlock | None:
     )
 
 
+def _proof_chip(evidence: dict[str, Any] | None) -> str:
+    """One compact state chip for a criterion's evidence."""
+    data = evidence or {}
+    state = str(data.get("state") or "none")
+    count = int(data.get("count", 0) or 0)
+    if state == "pass":
+        return f"[green]✓ {count}[/]"
+    if state == "fail":
+        return f"[red]✗ {count}[/]"
+    return "[dim]—[/]"
+
+
 def acceptance_block(criteria: list[dict[str, Any]]) -> PreviewBlock | None:
     if not criteria:
         return None
@@ -141,10 +154,78 @@ def acceptance_block(criteria: list[dict[str, Any]]) -> PreviewBlock | None:
     return PreviewBlock(
         f"acceptance {done}/{len(criteria)}{tail}",
         tuple(
-            f"  [dim]○[/] {escape_markup(str(criterion.get('text', '')))}"
+            f"  [dim]○[/] {escape_markup(str(criterion.get('text', '')))} "
+            f"{_proof_chip(criterion.get('evidence'))}"
             for criterion in open_items[:3]
         ),
     )
+
+
+def questions_block(questions: list[dict[str, Any]]) -> PreviewBlock | None:
+    """Open questions on a plan."""
+    open_items = [question for question in questions if question.get("status") == "open"]
+    if not open_items:
+        return None
+    return PreviewBlock(
+        f"questions {len(open_items)} open",
+        tuple(
+            f"  [yellow]?[/] [dim]Q{question['id']}[/] "
+            f"{escape_markup(str(question.get('text', '')))}"
+            for question in open_items[:5]
+        ),
+    )
+
+
+def proof_block(criteria: list[dict[str, Any]]) -> PreviewBlock | None:
+    """Proof panel for the selected task."""
+    if not criteria:
+        return None
+    lines: list[str] = []
+    for criterion in criteria[:5]:
+        evidence = criterion.get("evidence") or {}
+        latest = evidence.get("latest") or {}
+        state = str(evidence.get("state") or "none")
+        mark = "[green]✓[/]" if state == "pass" else "[red]✗[/]" if state == "fail" else "[dim]—[/]"
+        label = (
+            latest.get("command")
+            or latest.get("note")
+            or str(latest.get("commit_sha", ""))[:12]
+            or "-"
+        )
+        exit_code = latest.get("exit_code")
+        exit_text = f" exit {exit_code}" if exit_code is not None else ""
+        lines.append(
+            f"  {mark} [dim]#{criterion['id']}[/] "
+            f"{escape_markup(str(criterion.get('text', '')))} · "
+            f"{evidence.get('count', 0)} rows{exit_text} · {escape_markup(str(label))}"
+        )
+    return PreviewBlock("proof", tuple(lines))
+
+
+def approval_block(approval: dict[str, Any] | None) -> PreviewBlock | None:
+    """Plan approval state: revision, actor, enforcement, and drift."""
+    if not approval:
+        return None
+    revision = int(approval.get("revision", 0) or 0)
+    if revision == 0:
+        return PreviewBlock("approval", ("  no approved revision",))
+    drift = int(approval.get("drift", 0) or 0)
+    enforced = " · enforced" if approval.get("enforced") else ""
+    stamp = float(approval.get("approved_at", 0) or 0)
+    day = time.strftime("%Y-%m-%d", time.localtime(stamp)) if stamp else "-"
+    lines = [f"  r{revision} {day} @{escape_markup(str(approval.get('actor', '')))}{enforced}"]
+    if drift:
+        lines.append(f"  [yellow]Δ[/] {drift} changes since approval")
+    else:
+        lines.append("  in sync")
+    marks = {"add": "+", "edit": "~", "delete": "-"}
+    for item in approval.get("recent") or []:
+        action = marks.get(str(item.get("action") or ""), "?")
+        field = str(item.get("field") or "")
+        suffix = f" {field}" if field else ""
+        reason = escape_markup(str(item.get("reason") or "no reason"))
+        lines.append(f"  {action} {item.get('kind')}{suffix}: {reason}")
+    return PreviewBlock("approval", tuple(lines))
 
 
 def _source_bits(
@@ -229,11 +310,23 @@ def build_plan(
         blocks.append(PreviewBlock("why", (goal,)))
     if desc:
         blocks.append(PreviewBlock("what", (desc,)))
+    approval = approval_block(full.get("approval"))
+    if approval is not None:
+        blocks.append(approval)
+    questions = questions_block(full.get("questions", []))
+    if questions is not None:
+        blocks.append(questions)
     next_tasks = next_block(_tasks("plan", full))
     if next_tasks is not None:
         blocks.append(next_tasks)
     blocks.extend(common_blocks(full, git_bits))
-    return PreviewDocument(header, breadcrumb, tuple(_meta_counts("plan", full)), tuple(blocks))
+    meta = list(_meta_counts("plan", full))
+    open_questions = sum(
+        1 for question in full.get("questions", []) if question.get("status") == "open"
+    )
+    if open_questions:
+        meta.append(f"[dim]{open_questions} open questions[/]")
+    return PreviewDocument(header, breadcrumb, tuple(meta), tuple(blocks))
 
 
 def build_milestone(
@@ -278,6 +371,9 @@ def build_task(
     task_notes = notes_block(obj.get("notes", []))
     if task_notes is not None:
         blocks.append(task_notes)
+    proof = proof_block(full.get("criteria", []))
+    if proof is not None:
+        blocks.append(proof)
     blocks.extend(common_blocks(full, git_bits))
     return PreviewDocument(header, breadcrumb, tuple(meta), tuple(blocks))
 

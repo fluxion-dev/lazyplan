@@ -235,14 +235,14 @@ daily schedule.
 
 ## Docs
 
-- [Usage and CLI reference](usage.md)
-- [Release steps](releasing.md)
-- [TUI design system](design-system.md)
+- [Usage and CLI reference](docs/usage.md)
+- [Release steps](docs/releasing.md)
+- [TUI design system](docs/design-system.md)
 
 The README is the short landing page. Put detail in `docs/usage.md`, not back
 into the README.
 
 ## Release
 
-Release notes, tags, and rollback steps live in [docs/releasing.md](releasing.md).
+Release notes, tags, and rollback steps live in [docs/releasing.md](docs/releasing.md).
 Do not tag a red commit.

@@ -26,6 +26,8 @@ echo "== xenon (no block worse than C) =="
 "$VENV_BIN"/python -m xenon --max-absolute C src
 echo "== man page in sync =="
 "$VENV_BIN"/python tools/gen-man.py --check
+echo "== docs allowlist and links =="
+"$SYS_PY" tools/check-docs.py
 echo "== site discoverability =="
 "$SYS_PY" tools/check-site.py
 echo "== clean install smoke =="

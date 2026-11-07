@@ -59,6 +59,12 @@ class TestViewports(unittest.IsolatedAsyncioTestCase):
                 async with app.run_test(size=(width, height)) as pilot:
                     await pilot.pause()
                     self.assertTrue(_within(app.query_one("#panel").region, width, height))
+                    app.override_mode = True
+                    app._paint_mode()
+                    await pilot.pause()
+                    mode = app.query_one("#mode")
+                    self.assertTrue(mode.display)
+                    self.assertTrue(_within(mode.region, width, height))
                     await settle(pilot)
                     app.selected = ("plan", self.pid)
                     await pilot.press("enter")
@@ -124,6 +130,10 @@ class TestViewports(unittest.IsolatedAsyncioTestCase):
                         self.assertEqual(preview.border_title, " preview ")
                         self.assertTrue(_within(git.region, width, height))
                         self.assertEqual(git.border_title, " git ")
+                        agents = app.query_one("#agents")
+                        self.assertTrue(_within(agents.region, width, height))
+                        strip = app.query_one("#preview-strip")
+                        self.assertTrue(_within(strip.region, width, height))
                         self.assertGreater(preview.region.height, git.region.height)
                         self.assertTrue(_within(metrics.region, width, height))
                         self.assertGreaterEqual(metrics.region.height, 11)

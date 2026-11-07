@@ -89,25 +89,7 @@ def _read_references(lines: list[str], kind: str, full: dict[str, Any]) -> None:
         )
 
 
-def _read_coordination(lines: list[str], full: dict[str, Any], obj: dict[str, Any]) -> None:
-    if obj.get("blocked"):
-        reason = str(obj.get("blocked_reason", "") or "").strip()
-        lines.append(f"\n[red]⚑ blocked[/] {escape_markup(reason) if reason else ''}".rstrip())
-    gate = obj.get("gate")
-    if gate:
-        lines.append(
-            f"\n[dim]⚑ gate[/] {escape_markup(str(gate.get('state')))} · {gate.get('prs', 0)} PRs"
-        )
-    claim = obj.get("claim")
-    if claim:
-        expires = int(float(claim.get("expires_at") or 0))
-        state = "expired" if expires and expires <= int(time.time()) else "active"
-        lines.append(f"\n[dim]◉ claim[/] @{escape_markup(str(claim.get('actor', '')))} ({state})")
-    touchpoints = full.get("touchpoints") or []
-    if touchpoints:
-        shown = ", ".join(str(item) for item in touchpoints[:4])
-        more = f" +{len(touchpoints) - 4}" if len(touchpoints) > 4 else ""
-        lines.append(f"\n[dim]touch[/] {escape_markup(shown)}{more}")
+def _read_comments_notes(lines: list[str], full: dict[str, Any], obj: dict[str, Any]) -> None:
     comments = [
         comment
         for comment in (full.get("comments") or obj.get("comments") or [])
@@ -128,6 +110,28 @@ def _read_coordination(lines: list[str], full: dict[str, Any], obj: dict[str, An
                 f"  [dim]@{escape_markup(str(note.get('actor', '')))}[/] "
                 f"{escape_markup(str(note.get('text', '')))}"
             )
+
+
+def _read_coordination(lines: list[str], full: dict[str, Any], obj: dict[str, Any]) -> None:
+    if obj.get("blocked"):
+        reason = str(obj.get("blocked_reason", "") or "").strip()
+        lines.append(f"\n[red]⚑ blocked[/] {escape_markup(reason) if reason else ''}".rstrip())
+    gate = obj.get("gate")
+    if gate:
+        lines.append(
+            f"\n[dim]⚑ gate[/] {escape_markup(str(gate.get('state')))} · {gate.get('prs', 0)} PRs"
+        )
+    claim = obj.get("claim")
+    if claim:
+        expires = int(float(claim.get("expires_at") or 0))
+        state = "expired" if expires and expires <= int(time.time()) else "active"
+        lines.append(f"\n[dim]◉ claim[/] @{escape_markup(str(claim.get('actor', '')))} ({state})")
+    touchpoints = full.get("touchpoints") or []
+    if touchpoints:
+        shown = ", ".join(str(item) for item in touchpoints[:4])
+        more = f" +{len(touchpoints) - 4}" if len(touchpoints) > 4 else ""
+        lines.append(f"\n[dim]touch[/] {escape_markup(shown)}{more}")
+    _read_comments_notes(lines, full, obj)
 
 
 def _proof_chip(evidence: dict[str, Any] | None) -> str:

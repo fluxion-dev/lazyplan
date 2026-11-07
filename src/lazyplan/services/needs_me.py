@@ -239,6 +239,95 @@ def _overlaps(
     return out
 
 
+def _expired_ids(claims_map: dict, task_plan: dict[int, int], stamp: float) -> set[int]:
+    return {
+        task_id
+        for task_id, claim in claims_map.items()
+        if task_id in task_plan and claim.expired(stamp)
+    }
+
+
+def _active_claims(
+    port: NeedsMePort, plan_id: int | None, plan_ids: set[int], stamp: float
+) -> list[dict]:
+    claims = port.list_claims(include_expired=False, now=stamp, plan_id=plan_id)
+    if plan_id is None:
+        return claims
+    return [claim for claim in claims if int(claim["plan_id"]) in plan_ids]
+
+
+def _session_rows(
+    port: NeedsMePort,
+    plan_id: int | None,
+    plan_names: dict[int, str],
+    max_sessions: int,
+    stamp: float,
+) -> list[dict[str, Any]]:
+    sessions = port.list_sessions(open_only=True, plan_id=plan_id, limit=max_sessions)
+    return [
+        {
+            "id": session.id,
+            "actor": session.actor,
+            "plan_id": session.plan_id,
+            "plan_title": plan_names.get(int(session.plan_id or 0), ""),
+            "branch": session.branch,
+            "started_at": session.started_at,
+            "duration": round(session.duration(stamp), 1),
+        }
+        for session in sessions
+    ]
+
+
+def _claim_rows(active_claims: list[dict], max_claims: int, stamp: float) -> list[dict[str, Any]]:
+    return [
+        {
+            "task_id": int(claim["task_id"]),
+            "task_title": str(claim.get("task_title") or ""),
+            "task_status": str(claim.get("task_status") or ""),
+            "milestone_id": int(claim.get("milestone_id") or 0),
+            "plan_id": int(claim.get("plan_id") or 0),
+            "plan_title": str(claim.get("plan_title") or ""),
+            "actor": str(claim.get("actor") or ""),
+            "expires_at": float(claim.get("expires_at") or 0.0),
+            "expires_in": max(0.0, float(claim.get("expires_at") or 0.0) - stamp),
+            "worktree": str(claim.get("worktree") or ""),
+            "repo_path": str(claim.get("repo_path") or ""),
+        }
+        for claim in active_claims[:max_claims]
+    ]
+
+
+def _needs_me_ids(
+    task_plan: dict[int, int], attention_task_ids: set[int], plan_needs_me: set[int]
+) -> set[int]:
+    out = set(plan_needs_me)
+    for task_id in attention_task_ids:
+        plan_for_task = task_plan.get(task_id)
+        if plan_for_task is not None:
+            out.add(plan_for_task)
+    return out
+
+
+def _counts(
+    plans: list[Plan],
+    attention_all: list[dict],
+    session_rows: list[dict],
+    active_claims: list[dict],
+    open_questions: int,
+    health: list[dict],
+    overlap_rows: list[dict],
+) -> dict[str, int]:
+    return {
+        "plans": len(plans),
+        "attention": len(attention_all),
+        "sessions": len(session_rows),
+        "claims": len(active_claims),
+        "open_questions": open_questions,
+        "drift": sum(1 for row in health if int(row["approval"].get("drift", 0))),
+        "overlaps": len(overlap_rows),
+    }
+
+
 def build(
     port: NeedsMePort,
     *,
@@ -259,14 +348,8 @@ def build(
 
     task_plan, task_by_id, tasks_by_plan = _task_index(port, plan_ids)
     claims_map = port.claims_map()
-    expired_task_ids = {
-        task_id
-        for task_id, claim in claims_map.items()
-        if task_id in task_plan and claim.expired(stamp)
-    }
-    active_claims = port.list_claims(include_expired=False, now=stamp, plan_id=plan_id)
-    if plan_id is not None:
-        active_claims = [claim for claim in active_claims if int(claim["plan_id"]) in plan_ids]
+    expired_task_ids = _expired_ids(claims_map, task_plan, stamp)
+    active_claims = _active_claims(port, plan_id, plan_ids, stamp)
     active_task_ids = {int(claim["task_id"]) for claim in active_claims}
     task_rows = [task for tasks in tasks_by_plan.values() for task in tasks]
 
@@ -297,55 +380,22 @@ def build(
         port.refs_map(),
         active_claims,
     )
-    needs_me_plan_ids = set(plan_needs_me)
-    for task_id in attention_task_ids:
-        plan_for_task = task_plan.get(task_id)
-        if plan_for_task is not None:
-            needs_me_plan_ids.add(plan_for_task)
+    needs_me_plan_ids = _needs_me_ids(task_plan, attention_task_ids, plan_needs_me)
 
-    sessions = port.list_sessions(open_only=True, plan_id=plan_id, limit=max_sessions)
-    session_rows = [
-        {
-            "id": session.id,
-            "actor": session.actor,
-            "plan_id": session.plan_id,
-            "plan_title": plan_names.get(int(session.plan_id or 0), ""),
-            "branch": session.branch,
-            "started_at": session.started_at,
-            "duration": round(session.duration(stamp), 1),
-        }
-        for session in sessions
-    ]
-
-    claim_rows = [
-        {
-            "task_id": int(claim["task_id"]),
-            "task_title": str(claim.get("task_title") or ""),
-            "task_status": str(claim.get("task_status") or ""),
-            "milestone_id": int(claim.get("milestone_id") or 0),
-            "plan_id": int(claim.get("plan_id") or 0),
-            "plan_title": str(claim.get("plan_title") or ""),
-            "actor": str(claim.get("actor") or ""),
-            "expires_at": float(claim.get("expires_at") or 0.0),
-            "expires_in": max(0.0, float(claim.get("expires_at") or 0.0) - stamp),
-            "worktree": str(claim.get("worktree") or ""),
-            "repo_path": str(claim.get("repo_path") or ""),
-        }
-        for claim in active_claims[:max_claims]
-    ]
+    session_rows = _session_rows(port, plan_id, plan_names, max_sessions, stamp)
+    claim_rows = _claim_rows(active_claims, max_claims, stamp)
     overlap_rows = _overlaps(
         active_claims[:OVERLAP_CLAIM_LIMIT], port.touchpoints_map(), max_overlaps
     )
-
-    counts = {
-        "plans": len(plans),
-        "attention": len(attention_all),
-        "sessions": len(session_rows),
-        "claims": len(active_claims),
-        "open_questions": open_questions,
-        "drift": sum(1 for row in health if int(row["approval"].get("drift", 0))),
-        "overlaps": len(overlap_rows),
-    }
+    counts = _counts(
+        plans,
+        attention_all,
+        session_rows,
+        active_claims,
+        open_questions,
+        health,
+        overlap_rows,
+    )
     return {
         "generated_at": stamp,
         "plan_id": plan_id,

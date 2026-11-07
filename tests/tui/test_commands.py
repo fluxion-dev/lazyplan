@@ -35,10 +35,8 @@ class TestCommandRegistry(unittest.TestCase):
         self.assertEqual([name for name, _ in palette.palette_sections()], list(palette.SECTIONS))
 
     def test_sections_split_observe_and_override(self):
-        modes = {palette.command_mode(cmd) for cmd in palette.palette_commands()}
+        modes = {cmd.mode for cmd in palette.palette_commands()}
         self.assertEqual(modes, {"observe", "override"})
-        for cmd in palette.palette_commands():
-            self.assertEqual(cmd.mode, palette.command_mode(cmd))
         from lazyplan.presentation.shared.help import HELP_TEXT
 
         self.assertIn("OBSERVE", HELP_TEXT)
@@ -71,6 +69,10 @@ class TestCommandRegistry(unittest.TestCase):
         for names in palette.LEGACY_COMMANDS.values():
             for name in names:
                 self.assertIn(name, parser, f"lpui {name} is missing")
+
+    def test_exact_alias_beats_a_substring(self):
+        sections = palette.matching("cycle status")
+        self.assertEqual(sections[0][1][0].id, "move-doing")
 
     def test_matching_finds_labels_aliases_and_verbs(self):
         def ids(query: str) -> list[str]:

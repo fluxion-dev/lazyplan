@@ -96,6 +96,32 @@ def _activity_metrics(
 ATTENTION_STALE_SECS = 24 * 3600
 
 
+def _task_attention(
+    task: Task,
+    claim: Claim | None,
+    transitions: list[tuple[float, str, str]],
+    open_criteria: set[int],
+    links: list,
+    stamp: float,
+    stale_after: float,
+) -> list[str]:
+    """Reasons one task needs attention, in display order."""
+    found: list[str] = []
+    if claim is not None and claim.expired(stamp):
+        found.append("stale claim")
+    if task.blocked:
+        found.append("blocked")
+    if task.status.value == "doing":
+        starts = [when for when, status, _actor in transitions if status == "doing"]
+        if starts and stamp - starts[-1] > stale_after:
+            found.append("aging doing")
+    if task.status.value == "done" and task.id in open_criteria:
+        found.append("done with open criteria")
+    if any(str(link.checks or "") == "fail" for link in links):
+        found.append("failing checks")
+    return found
+
+
 def attention_reasons(
     store: InsightsPort,
     stale_after: float = ATTENTION_STALE_SECS,
@@ -115,23 +141,15 @@ def attention_reasons(
     task_rows = tasks if tasks is not None else _all_tasks(store)
     reasons: dict[int, list[str]] = {}
     for task in task_rows:
-        found: list[str] = []
-        claim = claims.get(task.id)
-        if claim is not None and claim.expired(stamp):
-            found.append("stale claim")
-        if task.blocked:
-            found.append("blocked")
-        if task.status.value == "doing":
-            starts = [
-                when for when, status, _actor in transitions.get(task.id, []) if status == "doing"
-            ]
-            if starts and stamp - starts[-1] > stale_after:
-                found.append("aging doing")
-        if task.status.value == "done" and task.id in open_criteria:
-            found.append("done with open criteria")
-        links = forge.get(("task", task.id), [])
-        if any(str(link.checks or "") == "fail" for link in links):
-            found.append("failing checks")
+        found = _task_attention(
+            task,
+            claims.get(task.id),
+            transitions.get(task.id, []),
+            open_criteria,
+            forge.get(("task", task.id), []),
+            stamp,
+            stale_after,
+        )
         if found:
             reasons[task.id] = found
     return reasons

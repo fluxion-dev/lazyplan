@@ -21,11 +21,6 @@ APP = "App"
 SECTIONS: tuple[str, ...] = (VIEW, APP, CREATE, EDIT)
 
 
-def command_mode(command: Command) -> str:
-    """Observe for read-only sections; override for create and edit."""
-    return command.mode
-
-
 # -- canonical glossary ---------------------------------------------------
 VERBS: tuple[str, ...] = (
     "add",
@@ -706,6 +701,22 @@ def palette_sections() -> tuple[tuple[str, tuple[str, ...]], ...]:
     return tuple(out)
 
 
+def _match_rank(cmd: Command, query: str) -> int:
+    """0 exact id/label/alias, 1 prefix, 2 substring anywhere."""
+    if not query:
+        return 0
+    exact = [
+        cmd.id.replace("-", " "),
+        cmd.label.lower(),
+        *(alias.lower() for alias in cmd.aliases),
+    ]
+    if query in exact:
+        return 0
+    if any(item.startswith(query) for item in exact):
+        return 1
+    return 2
+
+
 def _matches(cmd: Command, query: str) -> bool:
     if not query:
         return True
@@ -717,13 +728,13 @@ def _matches(cmd: Command, query: str) -> bool:
         *cmd.nouns,
         *cmd.aliases,
     ]
-    return any(query in item.lower() for item in haystack if item)
+    return _match_rank(cmd, query) < 2 or any(query in item.lower() for item in haystack if item)
 
 
 def matching(query: str) -> list[tuple[str, list[Command]]]:
-    """Palette sections for a query; section headers never match."""
+    """Palette sections for a query; exact aliases rank ahead of substrings."""
     q = query.strip().lower()
-    out: list[tuple[str, list[Command]]] = []
+    sections: list[tuple[str, list[Command], int]] = []
     for section in SECTIONS:
         cmds = [
             cmd
@@ -731,8 +742,10 @@ def matching(query: str) -> list[tuple[str, list[Command]]]:
             if cmd.in_palette and cmd.section == section and _matches(cmd, q)
         ]
         if cmds:
-            out.append((section, cmds))
-    return out
+            cmds.sort(key=lambda cmd: _match_rank(cmd, q))
+            sections.append((section, cmds, min(_match_rank(cmd, q) for cmd in cmds)))
+    sections.sort(key=lambda item: item[2])
+    return [(section, cmds) for section, cmds, _rank in sections]
 
 
 PALETTE_COMMANDS = tuple((cmd.id, cmd.label) for cmd in palette_commands())

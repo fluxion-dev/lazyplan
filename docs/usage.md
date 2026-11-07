@@ -225,6 +225,7 @@ lpui setup --agents-pointer           # add the marked AGENTS.md section
 lpui setup --no-agents-pointer        # remove the marked AGENTS.md section
 lpui setup --yes                      # apply without prompts
 lpui setup --json                     # machine-readable, no prompts
+lpui --heal | --no-heal               # automatic repair on or off for this command
 ```
 
 Precedence is explicit flag, then environment, then remembered state, then
@@ -496,6 +497,18 @@ Status is authoritative. A task that is not `doing` cannot hold a lease: moving
 it to todo or done releases the lease, and `reconcile` removes expired leases
 and any lease left on a non-doing task. `reconcile --check` reports that drift,
 plus done rows with open criteria, without writing anything.
+
+### Progress and rollups
+
+Progress is status-based: done tasks over all tasks under the row. It ignores
+status, limit, repo, and text filters, so one snapshot shows the same done/total
+in CLI list, tree, and show, the TUI, metrics, and MCP. A done task with open
+criteria still counts as done; `reconcile --check` and `stats` report those
+criteria as a separate gap instead of changing the count.
+
+Parent status rolls up from its children: all done means done, any doing means
+doing, otherwise todo. `reconcile` heals parent drift and releases stale leases;
+`reconcile --check` reports the same drift without writing anything.
 
 ### Sessions and touch-points
 

@@ -266,7 +266,13 @@ if _TEXTUAL_OK:
                 return
             if not self._require_override():
                 return
-            nxt = services.cycle_status(self._dstore, self.dkind, self.doid, actor="tui")
+            nxt = services.cycle_status(
+                self._dstore,
+                self.dkind,
+                self.doid,
+                actor="tui",
+                heal=bool(getattr(self.app, "heal", True)),
+            )
             self._record("status", nxt.value if nxt is not None else "")
             self._reload()
             if nxt is not None:

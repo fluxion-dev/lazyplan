@@ -8,8 +8,10 @@ import json
 import os
 import tempfile
 import unittest
+from unittest import mock
 
 from lazyplan import services
+from lazyplan.core.entities import Status
 from lazyplan.presentation.cli import main as lpui_main
 from lazyplan.presentation.shared import design
 from lazyplan.store import Store
@@ -92,6 +94,15 @@ class TestCoordinationCli(unittest.TestCase):
         code, _, err = self._run("reconcile")
         self.assertEqual(code, 0, err)
         self.assertIsNone(Store(self.db).get_claim(1))
+
+    def test_strict_reconcile_fails_on_ambiguous_drift(self):
+        store = Store(self.db)
+        store.add_criteria("task", 1, "Still open", actor="fixture")
+        services.set_status(store, "task", 1, Status.DONE, actor="fixture")
+        with mock.patch.dict(os.environ, {"LAZYPLAN_HEAL": "strict"}):
+            code, out, _ = self._run("reconcile")
+        self.assertEqual(code, 1)
+        self.assertIn("ambiguous", out)
 
     def test_renew_requires_the_holder(self):
         before = self._json("claim", "--id", "1", "--ttl", "30m")

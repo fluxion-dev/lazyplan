@@ -460,7 +460,9 @@ class ToolsMixin(EvidenceToolsMixin, QuestionToolsMixin, ReviewToolsMixin, McpBa
             evidence_failure = services.task_gate(store, obj_id)
             if evidence_failure and not override:
                 raise ValueError(evidence_failure)
-        ok = services.set_status(store, kind, obj_id, Status(target), actor=self.actor)
+        ok = services.set_status(
+            store, kind, obj_id, Status(target), actor=self.actor, heal=self.heal
+        )
         if not ok:
             raise KeyError(f"{kind} {obj_id} not found")
         if failure and override:

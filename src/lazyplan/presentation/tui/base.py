@@ -62,6 +62,7 @@ class AppBase(App, TuiHost):
     """App attributes and cross-mixin declarations."""
 
     store: Store
+    heal: bool
     state: AppState
     tree_controller: TreeController
     spinner_controller: SpinnerController

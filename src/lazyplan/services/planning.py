@@ -185,8 +185,9 @@ def set_status(
     obj_id: int,
     status: Status,
     actor: str = "human",
+    heal: bool = True,
 ) -> bool:
-    """Move a row, heal the subtree state, and log the transition."""
+    """Move a row, optionally heal the subtree state, and log the transition."""
     check_kind(kind)
     claim = None
     if kind == "task" and status is not Status.DOING:
@@ -198,7 +199,8 @@ def set_status(
         port.log(actor, kind, "status", f"{kind} #{obj_id} -> {status.value}")
         if claim is not None:
             port.log(actor, "task", "release", f"task #{obj_id} released by status")
-        heal_parents(port, kind, obj_id, actor)
+        if heal:
+            heal_parents(port, kind, obj_id, actor)
     return ok
 
 
@@ -207,6 +209,7 @@ def cycle_status(
     kind: str,
     obj_id: int,
     actor: str = "human",
+    heal: bool = True,
 ) -> Status | None:
     """Advance todo to doing to done to todo."""
     check_kind(kind)
@@ -214,7 +217,7 @@ def cycle_status(
     if obj is None:
         return None
     status = next_status(obj.status)
-    set_status(port, kind, obj_id, status, actor=actor)
+    set_status(port, kind, obj_id, status, actor=actor, heal=heal)
     return status
 
 
@@ -231,8 +234,11 @@ def reconcile(
     port: CoordinationPort,
     actor: str = "human",
     check: bool = False,
+    heal_mode: bool = True,
+    strict: bool = False,
 ) -> dict[str, list]:
     """Heal parents and leases; check mode reports without writing."""
+    write = not check and heal_mode
     changes: list[dict] = []
     for plan in port.list_plans():
         for milestone in port.list_milestones(plan.id):
@@ -240,12 +246,12 @@ def reconcile(
             if target is None or target == milestone.status:
                 continue
             changes.append({"kind": "milestone", "id": milestone.id, "to": target.value})
-            if not check:
+            if write:
                 heal(port, "milestone", milestone.id, actor)
         target = _child_rollup(port, "plan", plan.id)
         if target is not None and target != plan.status:
             changes.append({"kind": "plan", "id": plan.id, "to": target.value})
-            if not check:
+            if write:
                 heal(port, "plan", plan.id, actor)
 
     released: list[int] = []
@@ -262,7 +268,7 @@ def reconcile(
             released.append(task_id)
         else:
             continue
-        if not check:
+        if write:
             port.release_claim(task_id, actor, force=True)
 
     ambiguous: list[dict] = []

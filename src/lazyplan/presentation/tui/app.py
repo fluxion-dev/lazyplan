@@ -29,6 +29,7 @@ try:
 except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
+from ...infrastructure import settings
 from ...store import Store
 from ..shared.design import EMPTY_NO_PLANS
 from .actions import ActionMixin
@@ -147,6 +148,7 @@ if _TEXTUAL_OK:
             super().__init__()
             register_themes(self)
             self.store = store
+            self.heal = settings.heal_enabled(settings.heal_mode())
             self.state = AppState()
             self._undo: list[dict] | None = None
             self._row_nodes: dict[tuple[str, int], TreeNode] = {}

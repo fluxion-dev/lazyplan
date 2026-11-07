@@ -8,6 +8,7 @@ import sys
 from lazyplan import (
     services,
 )
+from lazyplan.infrastructure import settings
 from lazyplan.services import evidence as evidence_service
 from lazyplan.services import revisions as revisions_service
 
@@ -324,7 +325,8 @@ def _cmd_status(store: Store, args: argparse.Namespace, actor: str) -> int:
         if failure and not override:
             print(msg_error(ValueError(failure)), file=sys.stderr)
             return 2
-    ok = services.set_status(store, args.kind, args.id, Status(args.to), actor=actor)
+    heal = settings.heal_enabled(settings.heal_mode(getattr(args, "heal", None)))
+    ok = services.set_status(store, args.kind, args.id, Status(args.to), actor=actor, heal=heal)
     if not ok:
         print(msg_not_found(args.kind, args.id), file=sys.stderr)
         return 1
@@ -375,9 +377,18 @@ def _cmd_delete(store: Store, args: argparse.Namespace, actor: str) -> int:
 
 def _cmd_reconcile(store: Store, args: argparse.Namespace, actor: str) -> int:
     check = bool(getattr(args, "check", False))
-    report = services.reconcile(store, actor=actor, check=check)
+    mode = settings.heal_mode(getattr(args, "heal", None))
+    report = services.reconcile(
+        store,
+        actor=actor,
+        check=check,
+        heal_mode=settings.heal_enabled(mode),
+        strict=mode == settings.HEAL_STRICT,
+    )
     code = _emit(args, report)
     if check and any(report.values()):
+        return 1
+    if mode == settings.HEAL_STRICT and report["ambiguous"]:
         return 1
     return code
 

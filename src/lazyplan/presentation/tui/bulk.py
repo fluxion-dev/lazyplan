@@ -88,7 +88,9 @@ if _TEXTUAL_OK:
                 return
             states = self._undo
             for state in states:
-                services.set_status(self.store, "task", state["id"], state["status"], actor="tui")
+                services.set_status(
+                    self.store, "task", state["id"], state["status"], actor="tui", heal=self.heal
+                )
                 services.set_blocked(
                     self.store, state["id"], state["blocked"], state["reason"], actor="tui"
                 )
@@ -107,7 +109,9 @@ if _TEXTUAL_OK:
                     return
                 self._bulk_capture(tasks)
                 for task in tasks:
-                    services.set_status(self.store, "task", task.id, status, actor="tui")
+                    services.set_status(
+                        self.store, "task", task.id, status, actor="tui", heal=self.heal
+                    )
                 self.marked.clear()
                 self._record_override("status", f"{len(tasks)} tasks", status.value)
                 self._saved(f"moved {len(tasks)} tasks to {status.value}")

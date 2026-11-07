@@ -123,6 +123,21 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="NAME",
         help="who made this change (you see it in feed)",
     )
+    heal = common.add_mutually_exclusive_group()
+    heal.add_argument(
+        "--heal",
+        dest="heal",
+        action="store_true",
+        default=argparse.SUPPRESS,
+        help="repair parent statuses and leases automatically (default)",
+    )
+    heal.add_argument(
+        "--no-heal",
+        dest="heal",
+        action="store_false",
+        default=argparse.SUPPRESS,
+        help="report drift without automatic repair for this command",
+    )
     sub = p.add_subparsers(dest="cmd", required=False, title="commands", metavar="COMMAND")
     add_setup(sub, common)
     add_seed(sub, common)

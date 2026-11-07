@@ -59,7 +59,7 @@ class StatusMixin(ContextMixin):
         )
 
     def _cycle_status(self, kind: str, oid: int, reason: str = "") -> None:
-        nxt = services.cycle_status(self.store, kind, oid, actor="tui")
+        nxt = services.cycle_status(self.store, kind, oid, actor="tui", heal=self.heal)
         if nxt is None:
             self.notify("selected row no longer exists")
         else:
@@ -67,7 +67,7 @@ class StatusMixin(ContextMixin):
         self._saved(f"{kind} {oid} -> {nxt.value if nxt else '?'}")
 
     def _move_status(self, kind: str, oid: int, status: Status, reason: str = "") -> None:
-        if not services.set_status(self.store, kind, oid, status, actor="tui"):
+        if not services.set_status(self.store, kind, oid, status, actor="tui", heal=self.heal):
             self.notify("selected row no longer exists")
             return
         self._record_override("status", f"{kind} #{oid}", reason or status.value)

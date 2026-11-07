@@ -13,6 +13,7 @@ from ...shared.design import (
     repo_project_name,
     status_word,
 )
+from .reference_lines import reference_lines
 
 if TYPE_CHECKING:
     from ....core.ports.planning import PlanningPort
@@ -176,21 +177,6 @@ def questions_block(questions: list[dict[str, Any]]) -> PreviewBlock | None:
     )
 
 
-def references_block(refs: list[dict[str, Any]]) -> PreviewBlock | None:
-    """Read-only external references on a plan."""
-    if not refs:
-        return None
-    return PreviewBlock(
-        f"references {len(refs)}",
-        tuple(
-            f"  [dim]{escape_markup(str(ref.get('provider', 'other')))}/"
-            f"{escape_markup(str(ref.get('kind', 'issue')))}[/] "
-            f"{escape_markup(str(ref.get('title') or ref.get('url', '')))}"
-            for ref in refs[:5]
-        ),
-    )
-
-
 def proof_block(criteria: list[dict[str, Any]]) -> PreviewBlock | None:
     """Proof panel for the selected task."""
     if not criteria:
@@ -331,9 +317,9 @@ def build_plan(
     questions = questions_block(full.get("questions", []))
     if questions is not None:
         blocks.append(questions)
-    references = references_block(full.get("refs", []))
-    if references is not None:
-        blocks.append(references)
+    refs = full.get("refs", [])
+    if refs:
+        blocks.append(PreviewBlock(f"references {len(refs)}", reference_lines(refs)))
     next_tasks = next_block(_tasks("plan", full))
     if next_tasks is not None:
         blocks.append(next_tasks)

@@ -26,6 +26,7 @@ from .coordination import (
     add_trace,
     add_who,
 )
+from .legacy_task import add_add_task
 from .proof import (
     add_commits,
     add_export,
@@ -56,7 +57,6 @@ from .work import (
     add_add_criteria,
     add_add_milestone,
     add_add_plan,
-    add_add_task,
     add_criteria,
     add_criterion_groups,
     add_delete,

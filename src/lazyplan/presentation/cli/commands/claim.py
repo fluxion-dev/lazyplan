@@ -171,7 +171,7 @@ def _cmd_claim(store: CoordinationPort, args: argparse.Namespace, actor: str) ->
     actions = {"take": _claim_take, "renew": _claim_renew, "release": _claim_release}
     try:
         return actions[args.action or "take"](store, args, actor)
-    except (ClaimConflict, ClaimMissing, KeyError, ValueError, TypeError) as exc:
+    except (ClaimConflict, ClaimMissing, TouchpointOverlap, KeyError, ValueError, TypeError) as exc:
         return _claim_failure(exc)
 
 

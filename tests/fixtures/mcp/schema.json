@@ -246,6 +246,25 @@
     },
     {
       "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Deterministic Markdown outcome ship note for one plan.",
+      "inputSchema": {
+        "properties": {
+          "max_chars": {
+            "type": "integer"
+          },
+          "plan": {
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "name": "ship"
+    },
+    {
+      "annotations": {
         "readOnlyHint": false
       },
       "description": "Create a plan.",

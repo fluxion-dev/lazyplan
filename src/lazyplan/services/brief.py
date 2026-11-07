@@ -169,6 +169,35 @@ def _question_lines(plan: dict) -> list[str]:
     return lines
 
 
+def _session_lines(plan: dict) -> list[str]:
+    """Previous session and handoff, when one exists."""
+    session = plan.get("previous_session")
+    if not session:
+        return []
+    lines = [f"  session  S{session['id']} @{session['actor']}"]
+    if session.get("handoff"):
+        lines.append(f"  handoff  {session['handoff']}")
+    return lines
+
+
+def _doing_lines(plan: dict) -> list[str]:
+    """Doing tasks with their claim, notes, comments, and gate."""
+    lines: list[str] = []
+    for task in plan["doing"]:
+        claim = task.get("claim")
+        suffix = f" @{claim['actor']}" if claim else ""
+        lines.append(f"  doing    T{task['id']} {task['title']}{suffix}")
+        for note in task.get("notes", []):
+            lines.append(f"    note   @{note['actor']}: {note['text']}")
+        for comment in task.get("comments", []):
+            if not comment.get("resolved"):
+                lines.append(f"    comment @{comment['actor']}: {comment['text']}")
+        gate = task.get("gate")
+        if gate:
+            lines.append(f"    gate     {gate['state']} · {gate['prs']} PRs")
+    return lines or ["  doing    none"]
+
+
 def lines(payload: dict) -> list[str]:
     """Plain, hook-safe rendering of one brief payload."""
     plans = payload.get("plans") or []
@@ -181,30 +210,13 @@ def lines(payload: dict) -> list[str]:
         if approval is not None:
             out.append(approval)
         out.extend(_question_lines(plan))
-        session = plan.get("previous_session")
-        if session:
-            out.append(f"  session  S{session['id']} @{session['actor']}")
-            if session.get("handoff"):
-                out.append(f"  handoff  {session['handoff']}")
+        out.extend(_session_lines(plan))
         for note in plan.get("notes", []):
             out.append(f"  note     @{note['actor']}: {note['text']}")
         for comment in plan.get("comments", []):
             if not comment.get("resolved"):
                 out.append(f"  comment  @{comment['actor']}: {comment['text']}")
-        for task in plan["doing"]:
-            claim = task.get("claim")
-            suffix = f" @{claim['actor']}" if claim else ""
-            out.append(f"  doing    T{task['id']} {task['title']}{suffix}")
-            for note in task.get("notes", []):
-                out.append(f"    note   @{note['actor']}: {note['text']}")
-            for comment in task.get("comments", []):
-                if not comment.get("resolved"):
-                    out.append(f"    comment @{comment['actor']}: {comment['text']}")
-            gate = task.get("gate")
-            if gate:
-                out.append(f"    gate     {gate['state']} · {gate['prs']} PRs")
-        if not plan["doing"]:
-            out.append("  doing    none")
+        out.extend(_doing_lines(plan))
         next_task = plan["next"]
         out.append(
             f"  next     T{next_task['id']} {next_task['title']}"

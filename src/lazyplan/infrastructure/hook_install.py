@@ -146,7 +146,8 @@ def _strip_flat(data: dict, host: str) -> dict:
     return data
 
 
-def _plugin_text() -> str:
+def plugin_text() -> str:
+    """Return the managed OpenCode plugin source."""
     return """// lazyplan lifecycle plugin (managed by lpui setup; remove with --no-hooks)
 import { execFile } from "node:child_process"
 import { promisify } from "node:util"
@@ -212,12 +213,12 @@ def _read(path: Path) -> dict:
 
 def _install_spec(spec: Spec, backup_dir: Path) -> bool:
     if spec.kind == "plugin":
-        if spec.path.is_file() and textfile.read(spec.path) == _plugin_text():
+        if spec.path.is_file() and textfile.read(spec.path) == plugin_text():
             return False
         if spec.path.is_file():
             backup_file(backup_dir, spec.path)
         spec.path.parent.mkdir(parents=True, exist_ok=True)
-        textfile.write(spec.path, _plugin_text())
+        textfile.write(spec.path, plugin_text())
         return True
     data = _read(spec.path)
     before = json.dumps(data, sort_keys=True)

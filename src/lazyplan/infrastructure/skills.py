@@ -28,15 +28,25 @@ def _data_text(name: str) -> str:
     return (files("lazyplan") / "data" / name).read_text(encoding="utf-8")
 
 
-_SKILL_TEXT = _data_text("SKILL.md")
+@dataclass(frozen=True)
+class SkillSpec:
+    """One shipped agent skill and its packaged Markdown file."""
+
+    name: str
+    data_file: str
+
+
+SKILLS: tuple[SkillSpec, ...] = (SkillSpec(name="lazyplan", data_file="SKILL.md"),)
+SKILL_NAME = SKILLS[0].name
+_SKILL_TEXT = _data_text(SKILLS[0].data_file)
 SKILL_BODY = _SKILL_TEXT.split("---", 2)[2].lstrip("\n")
 AGENTS_SNIPPET = _data_text("AGENTS.md")
 
-SKILL_NAME = "lazyplan"
-
 __all__ = [
     "AGENTS_SNIPPET",
+    "SKILLS",
     "SKILL_BODY",
+    "SkillSpec",
     "render_skill",
     "render_home_agents_snippet",
 ]
@@ -110,19 +120,21 @@ def skill_destinations(
     home: Path,
     tools: list[str] | None,
     skills_dir: str | Path | None = None,
+    *,
+    name: str = SKILL_NAME,
 ) -> list[Path]:
     """Pure prediction of the SKILL.md files an install would write."""
     if scope == "none":
         return []
     if skills_dir is not None:
-        return [Path(skills_dir).expanduser() / SKILL_NAME / "SKILL.md"]
+        return [Path(skills_dir).expanduser() / name / "SKILL.md"]
     targets: list[Path] = []
     if scope in ("project", "both") and repo_root is not None:
-        targets.extend(skill_targets("project", repo_root, home))
+        targets.extend(skill_targets("project", repo_root, home, name=name))
         for tool in tools or []:
-            targets.extend(tool_skill_targets(tool, "project", repo_root, home))
+            targets.extend(tool_skill_targets(tool, "project", repo_root, home, name=name))
     if scope in ("global", "both"):
-        targets.extend(global_skill_targets(tools, home))
+        targets.extend(global_skill_targets(tools, home, name=name))
     seen: set[Path] = set()
     out: list[Path] = []
     for target in targets:
@@ -215,9 +227,12 @@ def apply_skill_plan(
     return result
 
 
-def render_skill() -> str:
-    """Full SKILL.md text for the lazyplan skill."""
-    return _SKILL_TEXT
+def render_skill(name: str = SKILL_NAME) -> str:
+    """Return the packaged Markdown for one shipped skill."""
+    for spec in SKILLS:
+        if spec.name == name:
+            return _data_text(spec.data_file)
+    raise KeyError(f"unknown skill: {name}")
 
 
 def render_home_agents_snippet(db: Path) -> str:
@@ -266,13 +281,19 @@ def default_scope(repo_root: Path | None) -> str:
     return "project" if repo_root is not None else "global"
 
 
-def skill_targets(scope: str, repo_root: Path | None, home: Path) -> list[Path]:
+def skill_targets(
+    scope: str,
+    repo_root: Path | None,
+    home: Path,
+    *,
+    name: str = SKILL_NAME,
+) -> list[Path]:
     """SKILL.md destinations for a scope (universal + Claude-native when relevant)."""
     targets: list[Path] = []
     if scope in ("project", "both") and repo_root is not None:
-        targets.append(repo_root / AGENTS_DIR / SKILLS_DIR / SKILL_NAME / "SKILL.md")
+        targets.append(repo_root / AGENTS_DIR / SKILLS_DIR / name / "SKILL.md")
     if scope in ("global", "both"):
-        targets.append(home / AGENTS_DIR / SKILLS_DIR / SKILL_NAME / "SKILL.md")
+        targets.append(home / AGENTS_DIR / SKILLS_DIR / name / "SKILL.md")
     return targets
 
 
@@ -354,7 +375,14 @@ def parse_tool_selection(raw: str, hosts: list[AgentHost]) -> list[str]:
     return picked if picked else (list(detected) if detected else ["opencode"])
 
 
-def tool_skill_targets(tool: str, scope: str, repo_root: Path | None, home: Path) -> list[Path]:
+def tool_skill_targets(
+    tool: str,
+    scope: str,
+    repo_root: Path | None,
+    home: Path,
+    *,
+    name: str = SKILL_NAME,
+) -> list[Path]:
     """Native SKILL.md destinations for one tool at a scope.
 
     Unknown tools and sides with no path yield []. The open-standard
@@ -366,35 +394,40 @@ def tool_skill_targets(tool: str, scope: str, repo_root: Path | None, home: Path
     project_dir, home_dir = entry
     targets: list[Path] = []
     if scope in ("project", "both") and repo_root is not None and project_dir:
-        targets.append(repo_root / project_dir / SKILL_NAME / "SKILL.md")
+        targets.append(repo_root / project_dir / name / "SKILL.md")
     if scope in ("global", "both"):
-        targets.append(home / home_dir / SKILL_NAME / "SKILL.md")
+        targets.append(home / home_dir / name / "SKILL.md")
     return targets
 
 
-def global_skill_targets(tools: list[str] | None, home: Path) -> list[Path]:
+def global_skill_targets(
+    tools: list[str] | None,
+    home: Path,
+    *,
+    name: str = SKILL_NAME,
+) -> list[Path]:
     """Local install targets: exactly one dir per tool.
 
     Tools with a known home folder get their canonical dir; tools without
     one (copilot) and the legacy tools=None path share `~/.agents/skills`.
     """
     if tools is None:
-        return [home / AGENTS_DIR / SKILLS_DIR / SKILL_NAME / "SKILL.md"]
+        return [home / AGENTS_DIR / SKILLS_DIR / name / "SKILL.md"]
     targets: list[Path] = []
     for tool in tools:
         entry = TOOL_SKILL_DIRS.get(tool)
         if entry is not None and entry[1]:
-            dest = home / entry[1] / SKILL_NAME / "SKILL.md"
+            dest = home / entry[1] / name / "SKILL.md"
         else:
-            dest = home / AGENTS_DIR / SKILLS_DIR / SKILL_NAME / "SKILL.md"
+            dest = home / AGENTS_DIR / SKILLS_DIR / name / "SKILL.md"
         if dest not in targets:
             targets.append(dest)
     return targets
 
 
-def write_skill_file(dest: Path) -> tuple[bool, str]:
+def write_skill_file(dest: Path, *, name: str = SKILL_NAME) -> tuple[bool, str]:
     """Write SKILL.md; returns (changed, status string)."""
-    content = render_skill()
+    content = render_skill(name)
     if dest.is_file() and textfile.read(dest) == content:
         return False, "up-to-date"
     dest.parent.mkdir(parents=True, exist_ok=True)

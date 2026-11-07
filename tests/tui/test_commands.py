@@ -30,9 +30,17 @@ class TestCommandRegistry(unittest.TestCase):
     def test_palette_sections_cover_commands_once(self):
         ids = [cmd.id for cmd in palette.palette_commands()]
         sectioned = [cid for _, section in palette.palette_sections() for cid in section]
-        self.assertEqual(sectioned, ids)
+        self.assertEqual(sorted(sectioned), sorted(ids))
         self.assertEqual(len(sectioned), len(set(sectioned)))
         self.assertEqual([name for name, _ in palette.palette_sections()], list(palette.SECTIONS))
+
+    def test_sections_split_observe_and_override(self):
+        modes = {palette.command_mode(cmd) for cmd in palette.palette_commands()}
+        self.assertEqual(modes, {"observe", "override"})
+        from lazyplan.presentation.shared.help import HELP_TEXT
+
+        self.assertIn("OBSERVE", HELP_TEXT)
+        self.assertIn("OVERRIDE", HELP_TEXT)
 
     def test_data_commands_use_the_glossary(self):
         for cmd in palette.COMMANDS:

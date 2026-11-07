@@ -18,7 +18,13 @@ CREATE = "Create"
 EDIT = "Edit"
 VIEW = "View"
 APP = "App"
-SECTIONS: tuple[str, ...] = (CREATE, EDIT, VIEW, APP)
+SECTIONS: tuple[str, ...] = (VIEW, APP, CREATE, EDIT)
+
+
+def command_mode(command: Command) -> str:
+    """Observe for read-only sections; override for create and edit."""
+    return "override" if command.section in (CREATE, EDIT) else "observe"
+
 
 # -- canonical glossary ---------------------------------------------------
 VERBS: tuple[str, ...] = (
@@ -579,7 +585,7 @@ COMMANDS: tuple[Command, ...] = (
         context="plan",
         handler="plan_diff",
         aliases=("diff", "drift", "revisions", "scope changes"),
-        help_group="TRUST",
+        help_group="FIND",
         help_hint="scope changes since the last approval",
         tui_only=True,
     ),

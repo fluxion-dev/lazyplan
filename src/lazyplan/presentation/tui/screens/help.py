@@ -27,7 +27,7 @@ except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
 from ...shared.design import HELP_TEXT
-from ...shared.palette import Command, matching
+from ...shared.palette import Command, command_mode, matching
 
 if TYPE_CHECKING:
     pass
@@ -82,7 +82,8 @@ if _TEXTUAL_OK:
         def _section_options(self, sections: list[tuple[str, list[Command]]]) -> list[Option]:
             opts: list[Option] = []
             for header, cmds in sections:
-                opts.append(Option(f"── {header} ──", disabled=True))
+                mode = command_mode(cmds[0]).upper() if cmds else ""
+                opts.append(Option(f"── {mode} · {header} ──", disabled=True))
                 for cmd in cmds:
                     reason = self._ctx.get(cmd.id)
                     label = f"{cmd.label}  ({cmd.key})" if cmd.key else cmd.label

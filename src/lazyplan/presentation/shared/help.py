@@ -24,7 +24,7 @@ HINT_ITEMS: tuple[tuple[str, str], ...] = (
     ("O", "override"),
 )
 
-HELP_GROUPS: tuple[str, ...] = ("MOVE", "CHANGE", "FIND", "TRUST", "APP")
+HELP_GROUPS: tuple[str, ...] = ("MOVE", "FIND", "APP", "CHANGE", "TRUST")
 _HELP_WIDTH = 20
 
 
@@ -55,10 +55,15 @@ def _help_rows(group: str) -> list[tuple[str, str]]:
 def help_text() -> str:
     """Task-grouped help shared by `?`, the help screen, and `lpui help`."""
     lines = ["lazyplan — plan journal for you and your agent", ""]
+    current_mode = ""
     for group in HELP_GROUPS:
         rows = _help_rows(group)
         if not rows:
             continue
+        mode = "OVERRIDE" if group in ("CHANGE", "TRUST") else "OBSERVE"
+        if mode != current_mode:
+            lines.append(mode)
+            current_mode = mode
         lines.append(group)
         for key, hint in rows:
             lines.append(f"  {key:<{_HELP_WIDTH}} {hint}")

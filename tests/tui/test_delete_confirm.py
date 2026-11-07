@@ -58,9 +58,16 @@ class TestDeleteConfirm(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             self.assertEqual(len(self.app.screen_stack), 1)
             self.assertIsNotNone(Store(self.db).get_task(self.tid))
-            # confirm: row goes
+            # confirm: row goes after a reason
             await _palette(pilot, "delete")
             await pilot.click("#ok")
+            await pilot.pause()
+            from lazyplan.presentation.tui.screens import FilterPromptScreen
+
+            self.assertIsInstance(self.app.screen, FilterPromptScreen)
+            for char in "cleanup":
+                await pilot.press(char)
+            await pilot.press("enter")
             await pilot.pause()
             self.assertEqual(len(self.app.screen_stack), 1)
             self.assertIsNone(Store(self.db).get_task(self.tid))

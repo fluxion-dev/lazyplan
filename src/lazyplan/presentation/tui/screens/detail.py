@@ -371,29 +371,6 @@ if _TEXTUAL_OK:
                 return
             if not self._require_override():
                 return
-            title = str(self._obj().get("title", self._obj().get("name", "")))
-            lines = [f'Delete {self.dkind} {self.doid} "{title}"?']
-            criteria = len(self._dstore.list_criteria(self.dkind, self.doid))
-            if self.dkind == "plan":
-                milestones = self._dstore.list_milestones(self.doid)
-                tasks = sum(len(self._dstore.list_tasks(m.id)) for m in milestones)
-                lines.append(
-                    f"Also deletes {len(milestones)} milestones, {tasks} tasks, "
-                    f"{criteria} criteria."
-                )
-            elif self.dkind == "milestone":
-                tasks = len(self._dstore.list_tasks(self.doid))
-                lines.append(f"Also deletes {tasks} tasks and {criteria} criteria.")
-            elif criteria:
-                lines.append(f"Also deletes {criteria} criteria.")
+            from .detail_delete import confirm_delete
 
-            def cb(confirmed: bool | None) -> None:
-                if not confirmed:
-                    return
-                if not self._dstore.delete(self.dkind, self.doid, actor="tui"):
-                    self.notify("row is already gone", timeout=3)
-                    return
-                self._record("delete")
-                self.dismiss(True)
-
-            self.app.push_screen(ConfirmScreen("\n".join(lines)), cb)
+            confirm_delete(self)

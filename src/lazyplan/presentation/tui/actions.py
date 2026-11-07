@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import time
 from pathlib import Path
-from typing import Any
 
 try:
     from textual.widgets import Tree  # noqa: F401
@@ -17,13 +16,13 @@ from lazyplan.infrastructure.templates import load_template
 
 from ... import services
 from ...core.entities import Status
-from ...core.errors import ClaimConflict
 from ..shared.export import display_path
 from ..shared.palette import by_id
+from .claim_actions import ClaimMixin
 from .constants import DOUBLE_CLICK_WINDOW
-from .context import ContextMixin
 from .git_actions import GitActionMixin
 from .override import WRITE_COMMANDS, OverrideMixin
+from .palette_handlers import palette_handlers
 from .screens import (
     ConfirmScreen,
     DetailScreen,
@@ -38,7 +37,7 @@ from .screens import (
 
 if _TEXTUAL_OK:
 
-    class ActionMixin(OverrideMixin, ContextMixin, GitActionMixin):
+    class ActionMixin(OverrideMixin, ClaimMixin, GitActionMixin):
         """Actions behavior."""
 
         def action_new_milestone(self) -> None:
@@ -110,15 +109,30 @@ if _TEXTUAL_OK:
                 return
             kind, oid = self.selected
 
-            def cb(confirmed: bool | None) -> None:
-                if not confirmed:
+            def reason_cb(reason: str | None) -> None:
+                if reason is None:
+                    return
+                if not reason.strip():
+                    self.notify("a delete needs a reason", timeout=3)
                     return
                 if not self.store.delete(kind, oid, actor="tui"):
                     self.notify("already gone — refreshing")
                     return
-                self._record_override("delete", f"{kind} #{oid}")
+                self._record_override("delete", f"{kind} #{oid}", reason.strip())
                 self.selected = None
                 self._saved(f"deleted {kind} #{oid}")
+
+            def cb(confirmed: bool | None) -> None:
+                if not confirmed:
+                    return
+                self.push_screen(
+                    FilterPromptScreen(
+                        title=f"Delete {kind} #{oid}? Why?",
+                        placeholder="reason for deleting…",
+                        submit_label="Delete",
+                    ),
+                    reason_cb,
+                )
 
             self.push_screen(ConfirmScreen(f"Delete {kind} #{oid}?\n(children go too.)"), cb)
 
@@ -138,9 +152,6 @@ if _TEXTUAL_OK:
                     self.notify(f"exported {display_path(path)}", timeout=4)
 
             self.push_screen(ExportScreen(self.store, pid, plan.name), cb)
-
-        def action_force_release_claim(self) -> None:
-            self._release_claim(True)
 
         def action_refresh(self) -> None:
             self._saved("manual refresh")
@@ -261,48 +272,7 @@ if _TEXTUAL_OK:
             if command.handler in WRITE_COMMANDS and not self.override_mode:
                 self.notify("read-only — press O for manual override", timeout=3)
                 return
-            handlers: dict[str, Any] = {
-                "new_plan": self.action_new_plan,
-                "new_milestone": self.action_new_milestone,
-                "new_task": self.action_new_task,
-                "add_criterion": self.action_add_criterion,
-                "edit_selection": self.action_edit_selection,
-                "move_todo": lambda: self.action_move(Status.TODO),
-                "move_doing": lambda: self.action_move(Status.DOING),
-                "move_done": lambda: self.action_move(Status.DONE),
-                "tick_criterion": self.action_criteria,
-                "untick_criterion": self.action_untick_criterion,
-                "delete_selection": self.action_delete,
-                "open_detail": self.action_open_detail,
-                "fold": self.action_fold,
-                "fold_all": self.action_fold_all,
-                "filter_text": self.action_filter_text,
-                "filter_status": self.action_filter_status,
-                "filter_source": self.action_filter_source,
-                "toggle_show_all": self.action_toggle_show_all,
-                "refresh": self.action_refresh,
-                "git_status": self.action_git_status,
-                "git_refresh": self.action_git_refresh,
-                "git_capture": self.action_git_capture,
-                "toggle_mark": self.action_toggle_mark,
-                "clear_marks": self.action_clear_marks,
-                "bulk_doing": self.action_bulk_doing,
-                "bulk_done": self.action_bulk_done,
-                "bulk_block": self.action_bulk_block,
-                "bulk_release": self.action_bulk_release,
-                "undo_bulk": self.action_undo_bulk,
-                "release_claim": self.action_release_claim,
-                "force_release_claim": self.action_force_release_claim,
-                "open_pr": self.action_open_pr,
-                "source_trail": self.action_source_trail,
-                "command_palette": self.action_command_palette,
-                "cycle_theme": self.action_cycle_theme,
-                "toggle_override": self.action_toggle_override,
-                "export_md": self.action_export_md,
-                "help": self.action_help,
-                "update_prompt": self.action_update_prompt,
-                "quit": self.exit,
-            }
+            handlers = palette_handlers(self)
             fn = handlers.get(command.handler)
             if fn is None:
                 return
@@ -342,9 +312,6 @@ if _TEXTUAL_OK:
                 ),
                 cb,
             )
-
-        def action_release_claim(self) -> None:
-            self._release_claim(False)
 
         def action_untick_criterion(self) -> None:
             """Reopen the last ticked criterion on the selected row."""
@@ -391,24 +358,6 @@ if _TEXTUAL_OK:
                 return
             self._record_override("status", f"{kind} #{oid}", status.value)
             self._saved(f"{kind} {oid} -> {status.value}")
-
-        def _release_claim(self, force: bool) -> None:
-            task_id = self._selected_task()
-            if task_id is None:
-                return
-            try:
-                claim = services.release_claim(self.store, task_id, "tui", force=force)
-            except ClaimConflict as exc:
-                self.notify(str(exc), severity="error", timeout=5)
-                return
-            if claim is None:
-                self.notify(f"T{task_id} has no claim", timeout=3)
-                return
-            self._record_override(
-                "claim force release" if force else "claim release", f"T{task_id}"
-            )
-            self.notify(f"released T{task_id} from {claim.actor}", timeout=3)
-            self.refresh_all("claim released")
 
         async def action_quit(self) -> None:
             """Leave the screen (q)."""

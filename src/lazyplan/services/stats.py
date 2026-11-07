@@ -10,7 +10,7 @@ import re
 import statistics
 import time
 
-from ..core.entities import Task
+from ..core.entities import Claim, Task
 from ..core.ports.insights import InsightsPort
 
 _ADDED = re.compile(r"^T#(\d+) ")
@@ -97,16 +97,24 @@ ATTENTION_STALE_SECS = 24 * 3600
 
 
 def attention_reasons(
-    store: InsightsPort, stale_after: float = ATTENTION_STALE_SECS, now: float | None = None
+    store: InsightsPort,
+    stale_after: float = ATTENTION_STALE_SECS,
+    now: float | None = None,
+    *,
+    tasks: list[Task] | None = None,
+    claims: dict[int, Claim] | None = None,
+    forge: dict | None = None,
+    open_criteria: set[int] | None = None,
 ) -> dict[int, list[str]]:
     """Task ids the TUI should surface as needing attention, with reasons."""
     stamp = time.time() if now is None else now
     _added, transitions = _event_maps(_events(store))
-    claims = store.claims_map()
-    forge = store.forge_links_map()
-    open_criteria = store.open_task_criteria_ids()
+    claims = claims if claims is not None else store.claims_map()
+    forge = forge if forge is not None else store.forge_links_map()
+    open_criteria = open_criteria if open_criteria is not None else store.open_task_criteria_ids()
+    task_rows = tasks if tasks is not None else _all_tasks(store)
     reasons: dict[int, list[str]] = {}
-    for task in _all_tasks(store):
+    for task in task_rows:
         found: list[str] = []
         claim = claims.get(task.id)
         if claim is not None and claim.expired(stamp):

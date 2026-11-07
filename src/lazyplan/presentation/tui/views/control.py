@@ -7,7 +7,7 @@ from typing import Any, Protocol
 
 from ....core.ports.coordination import CoordinationPort
 from ....core.ports.insights import InsightsPort
-from ....services import coordination, ready
+from ....services import coordination
 from ...shared.design import EMPTY_NEEDS, escape_markup, status_word
 
 
@@ -45,20 +45,6 @@ def _claim_line(claim: dict[str, Any] | None, stamp: float) -> str:
     return f"[dim]claim @{actor}[/]"
 
 
-def _readiness_line(store: ControlPort, plan_id: int) -> str:
-    """Plan readiness in one label, or a calm unknown state."""
-    try:
-        result = ready.check(store, plan_id)
-    except Exception:
-        return "[dim]readiness unavailable[/]"
-    if result is None:
-        return "[dim]readiness unknown[/]"
-    if result.ready:
-        return "[green]✓ ready[/]"
-    failed = sum(1 for check in result.checks if not check.ok)
-    return f"[yellow]⚠ {_plural(failed, 'check')}[/]"
-
-
 def _plan_tasks(full: dict[str, Any]) -> list[dict[str, Any]]:
     return [task for entry in full.get("milestones", []) for task in entry.get("tasks", [])]
 
@@ -76,7 +62,7 @@ def _task_summary(tasks: list[dict[str, Any]], stamp: float) -> tuple[int, list[
     return blocked, claims, stale, doing
 
 
-def _plan_strip(store: ControlPort, oid: int, full: dict[str, Any]) -> str:
+def _plan_strip(_store: ControlPort, _oid: int, full: dict[str, Any]) -> str:
     """Plan health and the reasons it may need a human."""
     stamp = time.time()
     approval = full.get("approval") or {}
@@ -85,7 +71,9 @@ def _plan_strip(store: ControlPort, oid: int, full: dict[str, Any]) -> str:
     ]
     tasks = _plan_tasks(full)
     blocked, claims, stale, _doing = _task_summary(tasks, stamp)
-    head = f"[bold]health[/]  {_readiness_line(store, oid)} · {_approval_line(approval)}"
+    clear = not questions and not int(approval.get("drift", 0) or 0) and not blocked and not stale
+    health = "[green]✓ clear[/]" if clear else "[yellow]⚠ review[/]"
+    head = f"[bold]health[/]  {health} · {_approval_line(approval)}"
     needs: list[str] = []
     if questions:
         needs.append(f"[yellow]{_plural(len(questions), 'open question')}[/]")

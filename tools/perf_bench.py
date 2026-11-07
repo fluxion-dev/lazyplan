@@ -39,7 +39,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 import lazyplan.store.base as store_mod  # noqa: E402
 from lazyplan import services
 from lazyplan.presentation.shared import render
-from lazyplan.services import audit, stats  # noqa: E402
+from lazyplan.services import audit, needs_me, stats  # noqa: E402
 from lazyplan.store import Store  # noqa: E402
 
 STAMP = 1_700_000_000.0
@@ -117,6 +117,7 @@ BUDGETS: dict[str, Budget] = {
     "services.tree": Budget(15, 2_000),
     "services.tree_limit5": Budget(15, 2_000),
     "attention_ids": Budget(20, 2_000),
+    "needs_me": Budget(30, 3_000),
     "list_text": Budget(30, 3_000),
     "list_json": Budget(25, 6_000),
     "show_plan": Budget(200, 1_000),
@@ -441,6 +442,7 @@ def _core_metrics(store: Store, fixture: Fixture, repeat: int) -> list[Measureme
         measure("services.tree", lambda: services.tree(store), repeat=repeat),
         measure("services.tree_limit5", lambda: services.tree(store, limit=5), repeat=repeat),
         measure("attention_ids", lambda: stats.attention_ids(store), repeat=repeat),
+        measure("needs_me", lambda: needs_me.build(store), repeat=repeat),
         measure(
             "list_text",
             lambda: render.summary_lines(store, None, None, limit=5),

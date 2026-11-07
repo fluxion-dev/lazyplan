@@ -92,6 +92,7 @@ class PerfBenchCase(unittest.TestCase):
             "services.tree",
             "services.tree_limit5",
             "attention_ids",
+            "needs_me",
             "list_text",
             "list_json",
             "show_plan",

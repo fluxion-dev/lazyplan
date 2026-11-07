@@ -67,9 +67,22 @@ def _attention_rows(
     plan_names: dict[int, str],
     stale_after: float,
     stamp: float,
+    *,
+    claims_map: dict,
+    forge: dict,
+    open_criteria: set[int],
+    task_rows: list[Task],
 ) -> list[dict[str, Any]]:
     """Task rows that need a human, with the reason for each."""
-    reasons = stats.attention_reasons(port, stale_after=stale_after, now=stamp)
+    reasons = stats.attention_reasons(
+        port,
+        stale_after=stale_after,
+        now=stamp,
+        tasks=task_rows,
+        claims=claims_map,
+        forge=forge,
+        open_criteria=open_criteria,
+    )
     rows: list[dict[str, Any]] = []
     seen: set[int] = set()
     for task_id, found in reasons.items():
@@ -255,6 +268,7 @@ def build(
     if plan_id is not None:
         active_claims = [claim for claim in active_claims if int(claim["plan_id"]) in plan_ids]
     active_task_ids = {int(claim["task_id"]) for claim in active_claims}
+    task_rows = [task for tasks in tasks_by_plan.values() for task in tasks]
 
     attention_all = _attention_rows(
         port,
@@ -266,6 +280,10 @@ def build(
         plan_names,
         stale_after,
         stamp,
+        claims_map=claims_map,
+        forge=port.forge_links_map(),
+        open_criteria=port.open_task_criteria_ids(),
+        task_rows=task_rows,
     )
     attention_task_ids = {int(row["task_id"]) for row in attention_all}
 

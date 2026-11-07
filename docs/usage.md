@@ -443,6 +443,7 @@ lpui --actor helper --porcelain task add --milestone 1 --title "Draft proposal"
 lpui --actor helper --porcelain list --tree
 lpui --actor helper plan show --id 1
 lpui feed --json --follow
+lpui feed --overrides              # only manual changes made from the screen
 ```
 
 Your agent is expected to work from the plan, not invent it:
@@ -1115,7 +1116,7 @@ lpui list --repo ~/checkouts/api
 lpui export [--format json|markdown] [--plan ID] [--file PATH] [--force]
 lpui import --file dump.json
 lpui upgrade [--check|--diagnose]
-lpui feed [--limit 20]
+lpui feed [--limit 20] [--overrides]
 lpui watch [--limit 20]
 ```
 

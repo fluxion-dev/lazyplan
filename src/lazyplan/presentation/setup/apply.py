@@ -62,16 +62,7 @@ def apply_choice(
     if root is not None and choice.placement == REPO and not choice.explicit_db:
         for entry in resolved.gitignore_entries:
             skills.append_gitignore(root, entry)
-    state = load_state(home)
-    state.version = SETUP_VERSION
-    state.placement = REPO if resolved.storage == layout.STORAGE_REPO else HOME
-    state.agents = list(choice.agents or [])
-    state.skills_dir = choice.skills_dir or ""
-    if not choice.explicit_db:
-        state.skills_enabled = skill_plan.scope != "none"
-    state.explicit_db = bool(choice.explicit_db)
-    state.last_version = version or state.last_version
-    save_state(state, home)
+    state = _remember_choice(home, choice, resolved, skill_plan, version)
     return {
         "db": str(store.path),
         "templates": str(resolved.templates_dir),
@@ -85,6 +76,27 @@ def apply_choice(
         "agents": list(choice.agents or []),
         "explicit": bool(choice.explicit_db),
     }
+
+
+def _remember_choice(
+    home: Path,
+    choice: SetupChoice,
+    resolved: layout.SetupLayout,
+    skill_plan: skills.SkillPlan,
+    version: str,
+) -> SetupState:
+    """Persist the resolved placement, agents, and last setup version."""
+    state = load_state(home)
+    state.version = SETUP_VERSION
+    state.placement = REPO if resolved.storage == layout.STORAGE_REPO else HOME
+    state.agents = list(choice.agents or [])
+    state.skills_dir = choice.skills_dir or ""
+    if not choice.explicit_db:
+        state.skills_enabled = skill_plan.scope != "none"
+    state.explicit_db = bool(choice.explicit_db)
+    state.last_version = version or state.last_version
+    save_state(state, home)
+    return state
 
 
 def install_hooks(
@@ -246,6 +258,31 @@ def record_finding(state: SetupState, finding: Finding, decision: str) -> None:
     }
 
 
+def _review_pending_result(
+    choice: SetupChoice,
+    state: SetupState,
+    root: Path | None,
+    home: Path,
+    version: str,
+    machine: bool,
+) -> dict[str, Any] | None:
+    """Run the pending-integration review and return its payload, if any."""
+    review = review_pending(
+        choice,
+        state,
+        root,
+        home,
+        version,
+        read=input,
+        write=sys.stderr,
+        color=ui.color_enabled(sys.stderr, machine),
+        allow_prompt=True,
+    )
+    if review.decision == "none":
+        return None
+    return {"integration_review": review.to_dict()}
+
+
 def ensure(
     cmd: str | None,
     args: Any,
@@ -282,19 +319,9 @@ def ensure(
         if result is None:
             return None
     elif pending_review:
-        review = review_pending(
-            choice,
-            state,
-            root,
-            home,
-            version,
-            read=input,
-            write=sys.stderr,
-            color=ui.color_enabled(sys.stderr, bool(getattr(args, "json", False))),
-            allow_prompt=True,
+        result = _review_pending_result(
+            choice, state, root, home, version, bool(getattr(args, "json", False))
         )
-        if review.decision != "none":
-            result = {"integration_review": review.to_dict()}
     if human and findings:
         _review_setup(args, findings, home, root, can_prompt)
     return result

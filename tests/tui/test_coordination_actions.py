@@ -6,6 +6,7 @@ import os
 import tempfile
 import unittest
 
+from lazyplan.core.entities import Status
 from lazyplan.store import Store
 
 try:
@@ -70,6 +71,28 @@ class CoordinationActionsTest(unittest.IsolatedAsyncioTestCase):
             events = [event for event in Store(self.db).feed() if event["kind"] == "override"]
             actions = {event["action"] for event in events}
             self.assertTrue({"claim", "block", "unblock"} <= actions)
+
+    async def test_status_move_releases_the_lease(self) -> None:
+        self.store.claim_task(self.task.id, "alice", 300)
+        self.store.set_status_raw("task", self.task.id, Status.DOING)
+        async with self.app.run_test(size=(120, 40)) as pilot:
+            await settle(pilot)
+            self.app.selected = ("task", self.task.id)
+            await pilot.press("s")
+            await pilot.pause()
+            self.assertEqual(Store(self.db).get_task(self.task.id).status.value, "done")
+            self.assertIsNone(Store(self.db).get_claim(self.task.id))
+
+    async def test_move_to_todo_releases_the_lease(self) -> None:
+        self.store.claim_task(self.task.id, "alice", 300)
+        self.store.set_status_raw("task", self.task.id, Status.DOING)
+        async with self.app.run_test(size=(120, 40)) as pilot:
+            await settle(pilot)
+            self.app.selected = ("task", self.task.id)
+            self.app.action_move(Status.TODO)
+            await pilot.pause()
+            self.assertEqual(Store(self.db).get_task(self.task.id).status.value, "todo")
+            self.assertIsNone(Store(self.db).get_claim(self.task.id))
 
     async def test_overlapping_claim_asks_for_a_reason(self) -> None:
         other = self.store.add_task(self.milestone.id, "Other", "Commit: one.", actor="t")

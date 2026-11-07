@@ -70,6 +70,29 @@ class TestCoordinationCli(unittest.TestCase):
         self.assertEqual(result["claim"]["actor"], "bob")
         self.assertEqual(result["previous"]["actor"], "alice")
 
+    def test_moving_a_claimed_task_done_releases_the_lease(self):
+        self._json("claim", "--id", "1")
+        self.assertIsNotNone(Store(self.db).get_claim(1))
+        code, _, err = self._run("task", "move", "--id", "1", "--to", "done")
+        self.assertEqual(code, 0, err)
+        self.assertIsNone(Store(self.db).get_claim(1))
+
+    def test_moving_a_claimed_task_todo_releases_the_lease(self):
+        Store(self.db).claim_task(1, "alice", 300)
+        code, _, err = self._run("task", "move", "--id", "1", "--to", "todo")
+        self.assertEqual(code, 0, err)
+        self.assertIsNone(Store(self.db).get_claim(1))
+
+    def test_reconcile_check_reports_a_lease_on_a_todo_task(self):
+        Store(self.db).claim_task(1, "alice", 300)
+        code, out, _ = self._run("reconcile", "--check")
+        self.assertEqual(code, 1)
+        self.assertIn("released", out)
+        self.assertIsNotNone(Store(self.db).get_claim(1))
+        code, _, err = self._run("reconcile")
+        self.assertEqual(code, 0, err)
+        self.assertIsNone(Store(self.db).get_claim(1))
+
     def test_renew_requires_the_holder(self):
         before = self._json("claim", "--id", "1", "--ttl", "30m")
         after = self._json("claim", "renew", "--id", "1", "--ttl", "1.hours")

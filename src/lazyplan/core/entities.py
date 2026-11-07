@@ -124,6 +124,55 @@ class PlanChange:
 
 
 @dataclass(frozen=True)
+class CriterionEvidence:
+    """One recorded proof row for a criterion.
+
+    lazyplan never executes the command, fetches the PR, or reads the artifact.
+    The row is the agent's or CI's declaration, not a verified fact.
+    """
+
+    id: int
+    criterion_id: int
+    task_id: int | None = None
+    command: str = ""
+    exit_code: int | None = None
+    commit_sha: str = ""
+    pr_url: str = ""
+    artifact_path: str = ""
+    note: str = ""
+    actor: str = "human"
+    ts: float = 0.0
+
+    def __post_init__(self) -> None:
+        if self.criterion_id < 1:
+            raise ValueError("criterion_id must be positive")
+        if self.task_id is not None and self.task_id < 1:
+            raise ValueError("task_id must be positive")
+        if self.exit_code is not None and not isinstance(self.exit_code, int):
+            raise ValueError("exit_code must be an integer or None")
+        sha = self.commit_sha.strip().lower()
+        if sha:
+            if len(sha) != 40 or any(c not in "0123456789abcdef" for c in sha):
+                raise ValueError("commit_sha must be a 40-char hex hash")
+            object.__setattr__(self, "commit_sha", sha)
+        if not any(
+            (
+                self.command.strip(),
+                sha,
+                self.pr_url.strip(),
+                self.artifact_path.strip(),
+                self.note.strip(),
+            )
+        ):
+            raise ValueError("evidence needs a command, commit, PR, artifact, or note")
+
+    @property
+    def passing(self) -> bool:
+        """True when the declared exit code is absent or zero."""
+        return self.exit_code is None or self.exit_code == 0
+
+
+@dataclass(frozen=True)
 class Note:
     """An append-only handoff note on a plan, milestone, or task."""
 

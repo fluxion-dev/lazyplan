@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from ..entities import ForgeLink, Task, VcsLink
+from ..entities import CriterionEvidence, ForgeLink, Task, VcsLink
 from .collaboration import CollaborationPort
 
 
@@ -138,3 +138,20 @@ class ProvenancePort(CollaborationPort, CachePort, Protocol):
     def criterion_tasks(self, criterion_id: int) -> list[Task]: ...
 
     def list_issue_links(self, parent_kind: str, parent_id: int) -> list[dict]: ...
+
+    def add_evidence(
+        self,
+        criterion_id: int,
+        command: str = "",
+        exit_code: int | None = None,
+        commit_sha: str = "",
+        pr_url: str = "",
+        artifact_path: str = "",
+        note: str = "",
+        task_id: int | None = None,
+        actor: str = "human",
+    ) -> CriterionEvidence: ...
+
+    def list_evidence(self, criterion_id: int) -> list[CriterionEvidence]: ...
+
+    def evidence_map(self) -> dict[int, list[CriterionEvidence]]: ...

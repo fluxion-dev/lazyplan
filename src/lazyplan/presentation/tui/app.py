@@ -201,7 +201,7 @@ if _TEXTUAL_OK:
             """
             if len(self.screen_stack) > 1 and action not in ("quit", "help", "toggle_override"):
                 return False
-            if action in WRITE_ACTIONS and not self.override_mode:
+            if action in WRITE_ACTIONS and not self.require_override(notify=False):
                 if self._mounted and not self.state.override_warned:
                     self.state.override_warned = True
                     self.notify("read-only — press O for manual override", timeout=3)

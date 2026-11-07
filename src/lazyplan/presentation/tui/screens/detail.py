@@ -168,10 +168,10 @@ if _TEXTUAL_OK:
 
         def _require_override(self) -> bool:
             """Writes are blocked until manual override mode is on."""
-            if bool(getattr(self.app, "override_mode", False)):
-                return True
-            self.notify("read-only — press O for manual override", timeout=3)
-            return False
+            gate = getattr(self.app, "require_override", None)
+            if callable(gate):
+                return bool(gate())
+            return bool(getattr(self.app, "override_mode", False))
 
         def _record(self, action: str, reason: str = "") -> None:
             """Record one audited override for this detail write."""

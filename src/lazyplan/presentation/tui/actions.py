@@ -269,8 +269,7 @@ if _TEXTUAL_OK:
             command = by_id(command_id)
             if command is None:
                 return
-            if command.handler in WRITE_COMMANDS and not self.override_mode:
-                self.notify("read-only — press O for manual override", timeout=3)
+            if command.handler in WRITE_COMMANDS and not self.require_override():
                 return
             handlers = palette_handlers(self)
             fn = handlers.get(command.handler)

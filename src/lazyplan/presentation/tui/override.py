@@ -62,6 +62,14 @@ class OverrideMixin(AppBase):
         """Write one audited override event for this manual change."""
         services.record_override(self.store, action, target, reason)
 
+    def require_override(self, notify: bool = True) -> bool:
+        """True when writes are armed; otherwise optionally explain why not."""
+        if self.override_mode:
+            return True
+        if notify:
+            self.notify("read-only — press O for manual override", timeout=3)
+        return False
+
     def _paint_mode(self) -> None:
         """Show or hide the manual-override banner."""
         banner = self.query_one("#mode", Static)

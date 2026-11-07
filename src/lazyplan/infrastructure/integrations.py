@@ -33,9 +33,21 @@ __all__ = [
     "PLUGIN_EVENT",
     "SKILL",
     "catalog",
+    "hook_id",
     "hook_paths",
+    "skill_id",
     "skill_paths",
 ]
+
+
+def skill_id(name: str) -> str:
+    """Stable catalog id for one skill."""
+    return f"{SKILL}:{name}"
+
+
+def hook_id(host: str, event: str) -> str:
+    """Stable catalog id for one hook event."""
+    return f"{HOOK}:{host}:{event}"
 
 
 @dataclass(frozen=True)
@@ -70,7 +82,7 @@ def _fingerprint(payload: object) -> str:
 
 def _skill_item(spec: skills.SkillSpec) -> IntegrationItem:
     return IntegrationItem(
-        id=f"{SKILL}:{spec.name}",
+        id=skill_id(spec.name),
         kind=SKILL,
         label=f"{spec.name} skill",
         fingerprint=_fingerprint({"name": spec.name, "text": skills.render_skill(spec.name)}),
@@ -80,7 +92,7 @@ def _skill_item(spec: skills.SkillSpec) -> IntegrationItem:
 
 def _plugin_item(host: str) -> IntegrationItem:
     return IntegrationItem(
-        id=f"{HOOK}:{host}:{PLUGIN_EVENT}",
+        id=hook_id(host, PLUGIN_EVENT),
         kind=HOOK,
         label=f"{HOST_LABELS.get(host, host)} plugin",
         fingerprint=_fingerprint(
@@ -96,7 +108,7 @@ def _plugin_item(host: str) -> IntegrationItem:
 
 def _event_item(host: str, event: str, native: str, surface: str) -> IntegrationItem:
     return IntegrationItem(
-        id=f"{HOOK}:{host}:{event}",
+        id=hook_id(host, event),
         kind=HOOK,
         label=f"{HOST_LABELS.get(host, host)} {event}",
         fingerprint=_fingerprint(

@@ -1,6 +1,7 @@
 {
     "layer_exceptions": [],
     "budgets": {
+        "infrastructure/skills.py": 640,
         "presentation/shared/palette.py": 760
     }
 }

@@ -282,11 +282,7 @@ def default_scope(repo_root: Path | None) -> str:
 
 
 def skill_targets(
-    scope: str,
-    repo_root: Path | None,
-    home: Path,
-    *,
-    name: str = SKILL_NAME,
+    scope: str, repo_root: Path | None, home: Path, name: str = SKILL_NAME
 ) -> list[Path]:
     """SKILL.md destinations for a scope (universal + Claude-native when relevant)."""
     targets: list[Path] = []
@@ -380,7 +376,6 @@ def tool_skill_targets(
     scope: str,
     repo_root: Path | None,
     home: Path,
-    *,
     name: str = SKILL_NAME,
 ) -> list[Path]:
     """Native SKILL.md destinations for one tool at a scope.
@@ -400,12 +395,7 @@ def tool_skill_targets(
     return targets
 
 
-def global_skill_targets(
-    tools: list[str] | None,
-    home: Path,
-    *,
-    name: str = SKILL_NAME,
-) -> list[Path]:
+def global_skill_targets(tools: list[str] | None, home: Path, name: str = SKILL_NAME) -> list[Path]:
     """Local install targets: exactly one dir per tool.
 
     Tools with a known home folder get their canonical dir; tools without

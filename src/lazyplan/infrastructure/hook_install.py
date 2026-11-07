@@ -15,6 +15,7 @@ from .backup import backup_file, new_backup_dir
 
 HOSTS = ("opencode", "claude", "gemini", "codex", "cursor")
 MARKER = "lpui hook"
+PLUGIN_MARKER = "lazyplan lifecycle plugin"
 PLUGIN_NAME = "lazyplan.js"
 
 
@@ -55,6 +56,27 @@ def detected(home: Path | None = None) -> list[str]:
     """Supported hosts that are actually present, in stable order."""
     found = {host.key for host in skills.detect_agents(home) if host.detected}
     return [host for host in HOSTS if host in found]
+
+
+def installed_events(home: Path | None = None, host: str = "") -> set[str]:
+    """Return the managed events present for one host, read-only."""
+    home = home or Path.home()
+    events: set[str] = set()
+    for spec in specs(home):
+        if spec.host != host or not spec.path.is_file():
+            continue
+        try:
+            text = textfile.read(spec.path)
+        except OSError:
+            continue
+        if spec.kind == "plugin":
+            if PLUGIN_MARKER in text or MARKER in text:
+                events.add("plugin")
+            continue
+        for event in hook_hosts.EVENTS.get(host, {}):
+            if command(host, event) in text:
+                events.add(event)
+    return events
 
 
 def _managed(entry: object, host: str) -> bool:

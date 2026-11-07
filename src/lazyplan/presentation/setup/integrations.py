@@ -131,6 +131,8 @@ def inspect(
     version: str = "",
 ) -> Inspection:
     """Return installed and pending catalog items for the remembered setup."""
+    if choice.explicit_db:
+        return Inspection(installed=(), pending=())
     home = home or Path.home()
     items = catalog(home)
     installed_ids = _installed_ids(choice, root, home, items)

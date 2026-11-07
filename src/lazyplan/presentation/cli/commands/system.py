@@ -211,7 +211,10 @@ def _doctor_data(
     }
     report["state"] = state.to_dict()
     report["skills"] = [str(path) for path in skill_files]
+    inspection = setup.inspect(choice, state, root, home, package_version())
+    report["pending_integrations"] = [item.to_dict() for item in inspection.pending]
     issues = bool(report["findings"]) or bool(missing_hooks)
+    issues = issues or bool(report["pending_integrations"])
     issues = issues or (state.hooks and not state.hook_files)
     issues = issues or state.version != setup.SETUP_VERSION
     report["clean"] = bool(report["clean"] and not issues)
@@ -237,6 +240,8 @@ def _print_doctor(layout: setup_layout.SetupLayout, skill_files: list[Path], rep
         print(f"missing:   {item}")
     for finding in report["findings"]:
         print(f"finding:   {finding['kind']} {finding['path']} ({finding['state']})")
+    for item in report["pending_integrations"]:
+        print(f"pending:   {item['label']} ({item['id']})")
     for note in report["notes"]:
         print(f"note:      {note}")
 

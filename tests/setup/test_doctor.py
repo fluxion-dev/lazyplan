@@ -74,6 +74,30 @@ class DoctorCase(unittest.TestCase):
             lpui_main(["doctor"])
         self.assertIn("skill:", out.getvalue())
         self.assertIn("hooks:", out.getvalue())
+        self.assertNotIn("pending:", out.getvalue())
+
+    def test_pending_integrations_exit_one_and_are_named(self):
+        setup.save_state(
+            setup.SetupState(placement="home", agents=["claude"], last_version="0.0.0"),
+            self.home,
+        )
+        code, report = self._json(["doctor", "--json"])
+        self.assertEqual(code, 1)
+        pending = report["pending_integrations"]
+        self.assertTrue(pending)
+        self.assertTrue(any(item["id"] == "hook:claude:session-start" for item in pending))
+        self.assertFalse(report["clean"])
+
+    def test_pending_integrations_appear_in_human_output(self):
+        setup.save_state(
+            setup.SetupState(placement="home", agents=["claude"], last_version="0.0.0"),
+            self.home,
+        )
+        out = io.StringIO()
+        with redirect_stdout(out):
+            lpui_main(["doctor"])
+        self.assertIn("pending:", out.getvalue())
+        self.assertIn("hook:claude:session-start", out.getvalue())
 
 
 if __name__ == "__main__":

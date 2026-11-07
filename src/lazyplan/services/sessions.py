@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from ..core.entities import Session
-from ..core.ports.sessions import SessionsPort
+from ..core.ports.sessions import SessionsPort, SessionsReadPort
 
 
 def start_session(
@@ -43,7 +43,7 @@ def current_session(port: SessionsPort, actor: str) -> Session | None:
     return port.active_session(actor)
 
 
-def show_session(port: SessionsPort, session_id: int, limit: int = 50) -> dict | None:
+def show_session(port: SessionsReadPort, session_id: int, limit: int = 50) -> dict | None:
     """One session with its events and action counts."""
     session = port.get_session(session_id)
     if session is None:
@@ -56,7 +56,7 @@ def show_session(port: SessionsPort, session_id: int, limit: int = 50) -> dict |
 
 
 def list_sessions(
-    port: SessionsPort,
+    port: SessionsReadPort,
     actor: str = "",
     plan_id: int | None = None,
     open_only: bool = False,
@@ -64,3 +64,22 @@ def list_sessions(
 ) -> list[Session]:
     """Recent sessions, newest first."""
     return port.list_sessions(actor=actor, plan_id=plan_id, open_only=open_only, limit=limit)
+
+
+def previous_session(
+    port: SessionsReadPort,
+    plan_id: int | None = None,
+    actor: str = "",
+    repo_path: str = "",
+) -> dict | None:
+    """Most recently ended session as a compact resume block."""
+    row = port.latest_ended_session(plan_id=plan_id, actor=actor, repo_path=repo_path)
+    if row is None:
+        return None
+    return {
+        "id": row.id,
+        "actor": row.actor,
+        "ended_at": row.ended_at,
+        "summary": row.summary,
+        "handoff": row.handoff,
+    }

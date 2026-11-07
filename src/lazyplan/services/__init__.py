@@ -116,6 +116,7 @@ from .sessions import (
     current_session,
     end_session,
     list_sessions,
+    previous_session,
     show_session,
     start_session,
 )
@@ -238,4 +239,5 @@ __all__ = [
     "current_session",
     "show_session",
     "list_sessions",
+    "previous_session",
 ]

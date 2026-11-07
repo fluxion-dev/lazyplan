@@ -100,15 +100,25 @@ def _session_text(store: InsightsPort, cwd: Path, commits: list[audit.Commit] | 
     payload = context.build(store, max_chars=2000)
     if not payload.get("plans"):
         return ""
-    return "\n".join(context.lines(payload)).strip()
+    text = "\n".join(context.lines(payload)).strip()
+    open_rows = store.list_sessions(open_only=True, limit=1)
+    if open_rows:
+        session = open_rows[0]
+        text += f"\nsession    S{session.id} open @{session.actor}; end it with `lpui session end --summary`"
+    else:
+        text += "\nsession    none open; start one with `lpui session start --plan P`"
+    return text
 
 
 def _stop_text(store: InsightsPort, cwd: Path, commits: list[audit.Commit] | None) -> str:
     lines = _brief_lines(store, cwd, commits)
-    loose = [line for line in lines if line.strip().startswith("unlinked")]
-    if not loose:
+    parts = [line.strip() for line in lines if line.strip().startswith("unlinked")]
+    open_rows = store.list_sessions(open_only=True, limit=1)
+    if open_rows:
+        parts.append(f"session S{open_rows[0].id} is open; run `lpui session end --summary`")
+    if not parts:
         return ""
-    return "lazyplan: " + "; ".join(line.strip() for line in loose)
+    return "lazyplan: " + "; ".join(parts)
 
 
 def _post_tool_text(store: InsightsPort, payload: dict) -> str:

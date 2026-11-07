@@ -12,6 +12,7 @@ import json
 
 from ..core.entities import Plan, Status, Task
 from ..core.ports.insights import InsightsPort
+from .sessions import previous_session
 
 DEFAULT_CONTEXT_CHARS = 4000
 MIN_CONTEXT_CHARS = 120
@@ -144,6 +145,7 @@ def _packet(store: InsightsPort, plan: Plan) -> dict:
         "status": plan.status.value,
         "why": plan.goal,
         "what": plan.description,
+        "previous_session": previous_session(store, plan_id=plan.id),
         "doing": [
             {
                 "id": task.id,
@@ -183,10 +185,10 @@ def _trim(payload: dict, max_chars: int) -> dict:
     payload["truncated"] = True
     plans = payload["plans"]
     for plan in plans:
-        for key in ("comments", "notes", "commits", "claims"):
+        for key in ("comments", "notes", "previous_session", "commits", "claims"):
             if _fits(payload, max_chars):
                 return payload
-            plan[key] = []
+            plan[key] = [] if key != "previous_session" else None
         if not _fits(payload, max_chars):
             plan["next"] = plan["next"][:1]
         if not _fits(payload, max_chars):
@@ -248,6 +250,13 @@ def lines(payload: dict) -> list[str]:
         out.append(f"P{plan['id']} {plan['title']} ({plan['status']})")
         if plan.get("why"):
             out.append(f"  why      {plan['why']}")
+        session = plan.get("previous_session")
+        if session:
+            out.append(f"  session  S{session['id']} @{session['actor']}")
+            if session.get("summary"):
+                out.append(f"  summary  {session['summary']}")
+            if session.get("handoff"):
+                out.append(f"  handoff  {session['handoff']}")
         if plan.get("doing"):
             for task in plan["doing"]:
                 claim = task.get("claim")

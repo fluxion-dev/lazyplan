@@ -77,6 +77,23 @@ class HookCase(unittest.TestCase):
         self.assertIn("Doing task", result.text)
         self.assertTrue(result.context)
 
+    def test_session_handoff_is_in_session_start(self):
+        plan_id, _task = self._seed()
+        store = Store(self.db)
+        session, _ = store.start_session("ana", plan_id=plan_id, now=100.0)
+        store.end_session(session.id, "ana", summary="shipped", handoff="next: QA", now=200.0)
+        result = hooks.build_result("session-start", {}, self.repo, commits=[])
+        self.assertIn("next: QA", result.text)
+
+    def test_open_session_is_reminded_on_stop(self):
+        _plan, _task = self._seed()
+        store = Store(self.db)
+        session, _ = store.start_session("ana", now=100.0)
+        before = self.db.read_bytes()
+        result = hooks.build_result("stop", {}, self.repo, commits=[])
+        self.assertIn(f"S{session.id} is open", result.text)
+        self.assertEqual(self.db.read_bytes(), before)
+
     def test_missing_database_is_silent(self):
         self.assertEqual(
             hooks.build_result("session-start", {}, self.repo, commits=[]), hooks.HookResult()

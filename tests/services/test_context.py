@@ -100,6 +100,18 @@ class ContextTest(unittest.TestCase):
             context.build(self.store)
         self.assertLessEqual(connect.call_count, 25)
 
+    def test_previous_session_is_in_the_packet(self):
+        session, _ = self.store.start_session("alice", plan_id=self.plan.id, now=100.0)
+        self.store.end_session(
+            session.id, "alice", summary="shipped the slice", handoff="next: run QA", now=200.0
+        )
+        payload = context.build(self.store)
+        plan = payload["plans"][0]
+        self.assertEqual(plan["previous_session"]["handoff"], "next: run QA")
+        text = "\n".join(context.lines(payload))
+        self.assertIn("shipped the slice", text)
+        self.assertIn("next: run QA", text)
+
     def test_empty_store_is_empty(self):
         empty = Store(Path(self.tmp.name) / "empty.db")
         payload = context.build(empty)

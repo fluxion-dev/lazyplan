@@ -13,6 +13,7 @@ from lazyplan.services import audit
 from ..core.entities import Plan, Status, Task
 from ..core.ports.insights import InsightsPort
 from ..core.serialization import approval_payload
+from .sessions import previous_session
 
 _MAX_PLANS = 3
 _MAX_LOOSE = 5
@@ -119,6 +120,7 @@ def _plan_brief(
     }
     payload["approval"] = _approval(store, plan)
     payload["questions"] = [vars(q) for q in store.list_questions(plan.id)]
+    payload["previous_session"] = previous_session(store, plan_id=plan.id)
     notes = store.list_notes("plan", plan.id)[:_MAX_PLAN_NOTES]
     if notes:
         payload["notes"] = [vars(n) for n in notes]
@@ -179,6 +181,11 @@ def lines(payload: dict) -> list[str]:
         if approval is not None:
             out.append(approval)
         out.extend(_question_lines(plan))
+        session = plan.get("previous_session")
+        if session:
+            out.append(f"  session  S{session['id']} @{session['actor']}")
+            if session.get("handoff"):
+                out.append(f"  handoff  {session['handoff']}")
         for note in plan.get("notes", []):
             out.append(f"  note     @{note['actor']}: {note['text']}")
         for comment in plan.get("comments", []):

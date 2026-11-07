@@ -155,6 +155,22 @@ class TestMcpReadTools(unittest.TestCase):
         )
         self.assertFalse(allowed.get("isError"))
 
+    def test_question_and_ready_tools(self):
+        added = self._tool("question_add", {"plan": self.plan_id, "text": "Which host?"})
+        self.assertFalse(added.get("isError"))
+        question = json.loads(added["content"][0]["text"])
+        listed = json.loads(
+            self._tool("question_list", {"plan": self.plan_id})["content"][0]["text"]
+        )
+        self.assertEqual(listed[0]["id"], question["id"])
+        ready = json.loads(self._tool("plan_ready", {"id": self.plan_id})["content"][0]["text"])
+        self.assertFalse(ready["ready"])
+        self._tool("question_resolve", {"id": question["id"], "note": "OpenCode"})
+        ready = json.loads(self._tool("plan_ready", {"id": self.plan_id})["content"][0]["text"])
+        self.assertTrue(ready["ready"])
+        reopened = self._tool("question_reopen", {"id": question["id"], "note": "changed"})
+        self.assertFalse(reopened.get("isError"))
+
     def test_missing_rows_are_tool_errors(self):
         result = self._tool("show_row", {"kind": "task", "id": 99})
         self.assertTrue(result["isError"])
@@ -293,7 +309,10 @@ class TestMcpReadTools(unittest.TestCase):
         }
         self.assertNotIn("create_plan", names)
         self.assertNotIn("criterion_prove", names)
+        self.assertNotIn("question_add", names)
         self.assertIn("criterion_evidence", names)
+        self.assertIn("question_list", names)
+        self.assertIn("plan_ready", names)
         response = server.handle(
             {
                 "jsonrpc": "2.0",

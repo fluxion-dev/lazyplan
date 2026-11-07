@@ -183,6 +183,50 @@
     },
     {
       "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Questions on one plan by state.",
+      "inputSchema": {
+        "properties": {
+          "plan": {
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "open",
+              "resolved",
+              "all"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan"
+        ],
+        "type": "object"
+      },
+      "name": "question_list"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Lint, coverage, and open-question readiness for a plan.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "plan_ready"
+    },
+    {
+      "annotations": {
         "readOnlyHint": false
       },
       "description": "Create a plan.",
@@ -670,6 +714,70 @@
         "type": "object"
       },
       "name": "criterion_prove"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Add an open question to a plan.",
+      "inputSchema": {
+        "properties": {
+          "plan": {
+            "type": "integer"
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan",
+          "text"
+        ],
+        "type": "object"
+      },
+      "name": "question_add"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Resolve a question with an answer.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "question_resolve"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Reopen a question and record why.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "question_reopen"
     }
   ]
 }

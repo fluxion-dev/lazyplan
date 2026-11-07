@@ -19,6 +19,7 @@ from ...services import insights
 from ...store import to_payload
 from .base import McpBase
 from .evidence_tools import EvidenceToolsMixin
+from .question_tools import QuestionToolsMixin
 from .schema import error as _tool_error
 from .schema import id_schema as _id
 from .schema import kind_schema as _kind
@@ -29,7 +30,7 @@ from .schema import tool as _tool
 PROTOCOL_VERSION = "2024-11-05"
 
 
-class ToolsMixin(EvidenceToolsMixin, McpBase):
+class ToolsMixin(EvidenceToolsMixin, QuestionToolsMixin, McpBase):
     """MCP tool definitions and handlers."""
 
     def _write_registry(self) -> dict[str, tuple[dict, Any]]:
@@ -202,6 +203,7 @@ class ToolsMixin(EvidenceToolsMixin, McpBase):
             ),
         }
         tools.update(self._evidence_write_registry())
+        tools.update(self._question_write_registry())
         return tools
 
     def _tool_trace(self, args: dict) -> object:
@@ -332,6 +334,7 @@ class ToolsMixin(EvidenceToolsMixin, McpBase):
             "info": (_tool("info", "Resolved database, scope, and counts.", {}), self._tool_info),
         }
         tools.update(self._evidence_read_registry())
+        tools.update(self._question_read_registry())
         return tools
 
     def _tool_claim_renew(self, args: dict) -> object:

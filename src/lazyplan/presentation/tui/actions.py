@@ -25,6 +25,7 @@ from .git_actions import GitActionMixin
 from .override import WRITE_COMMANDS, OverrideMixin
 from .palette_handlers import palette_handlers
 from .question_actions import QuestionMixin
+from .reference_actions import ReferenceMixin
 from .screens import (
     ConfirmScreen,
     DetailScreen,
@@ -46,6 +47,7 @@ if _TEXTUAL_OK:
         ClaimMixin,
         EvidenceMixin,
         QuestionMixin,
+        ReferenceMixin,
         StatusMixin,
         GitActionMixin,
     ):

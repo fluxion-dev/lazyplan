@@ -167,6 +167,17 @@ if _TEXTUAL_OK:
         ) -> None:
             super().__init__(defaults, context)
 
+    class RefScreen(EntityForm):
+        """Link one external reference to a plan."""
+
+        heading = "Link external reference"
+        submit_label = "Link"
+        fields = (
+            FormField("url", "URL", "https://…", "r-url"),
+            FormField("kind", "Type", "issue, epic, doc, other", "r-kind"),
+            FormField("title", "Title", "short label (optional)", "r-title"),
+        )
+
     class ConfirmScreen(_Form):
         """One destructive confirmation; dismisses True on the confirm button."""
 

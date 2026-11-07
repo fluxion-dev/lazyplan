@@ -20,6 +20,8 @@ def palette_handlers(app: Any) -> dict[str, Callable[[], None]]:
         "add_question": app.action_add_question,
         "resolve_question": app.action_resolve_question,
         "reopen_question": app.action_reopen_question,
+        "link_ref": app.action_link_ref,
+        "unlink_ref": app.action_unlink_ref,
         "plan_diff": app.action_plan_diff,
         "edit_selection": app.action_edit_selection,
         "move_todo": lambda: app.action_move(Status.TODO),

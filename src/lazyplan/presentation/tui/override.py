@@ -42,6 +42,8 @@ WRITE_COMMANDS = frozenset(
         "add_question",
         "resolve_question",
         "reopen_question",
+        "link_ref",
+        "unlink_ref",
         "edit_selection",
         "move_todo",
         "move_doing",

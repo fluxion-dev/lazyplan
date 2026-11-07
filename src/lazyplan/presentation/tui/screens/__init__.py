@@ -9,6 +9,7 @@ from .forms import (
     NewPlanScreen,
     NewTaskScreen,
     ProveScreen,
+    RefScreen,
 )
 from .help import HelpScreen, PaletteScreen, TextScreen
 from .source import SourceScreen
@@ -25,6 +26,7 @@ __all__ = [
     "NewTaskScreen",
     "PaletteScreen",
     "ProveScreen",
+    "RefScreen",
     "TextScreen",
     "SourceScreen",
     "UpdateScreen",

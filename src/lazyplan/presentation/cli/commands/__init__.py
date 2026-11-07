@@ -121,6 +121,9 @@ from .system import (
 from .system import (
     _cmd_setup as _cmd_setup,
 )
+from .system import (
+    _cmd_ship as _cmd_ship,
+)
 from .touch import (
     _cmd_touch_add,
     _cmd_touch_list,

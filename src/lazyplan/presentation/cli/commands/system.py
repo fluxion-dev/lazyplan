@@ -391,6 +391,53 @@ def _cmd_review(store: Store | None, args: argparse.Namespace, actor: str) -> in
     return 0
 
 
+def _cmd_ship(store: Store | None, args: argparse.Namespace, actor: str) -> int:
+    """Read-only deterministic ship note."""
+    del actor
+    try:
+        db = store or _optional_store(args)
+    except (RuntimeError, OSError, sqlite3.Error) as exc:
+        print(f"error: cannot read the database: {exc}", file=sys.stderr)
+        return 2
+    if db is None:
+        if args.plan is not None:
+            print(msg_not_found("plan", args.plan), file=sys.stderr)
+            return 1
+        print("no active plans")
+        return 0
+    plan = db.get_plan(args.plan) if args.plan is not None else services.active_plan(db)
+    if plan is None:
+        if args.plan is not None:
+            print(msg_not_found("plan", args.plan), file=sys.stderr)
+            return 1
+        print("no active plans")
+        return 0
+    note = services.build_ship(db, plan.id, max_chars=args.max_chars, cwd=Path.cwd())
+    if note is None:
+        print(msg_not_found("plan", plan.id), file=sys.stderr)
+        return 1
+    if args.json:
+        return _emit(args, {"plan": plan.id, "markdown": note.markdown, "payload": note.payload})
+    if porcelain.enabled(args):
+        payload = note.payload
+        tasks = payload.get("tasks", {})
+        milestones = payload.get("milestones", [])
+        done_milestones = sum(1 for item in milestones if item.get("status") == "done")
+        print(
+            porcelain.row(
+                "ship",
+                plan.id,
+                plan.status.value,
+                f"{done_milestones}/{len(milestones)}",
+                f"{tasks.get('done', 0)}/{tasks.get('total', 0)}",
+                "-",
+            )
+        )
+        return 0
+    print(note.markdown, end="")
+    return 0
+
+
 def _cmd_context(store: Store | None, args: argparse.Namespace, actor: str) -> int:
     """Read-only session context packet; never creates a database."""
     from lazyplan.services import context

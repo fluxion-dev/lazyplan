@@ -227,6 +227,21 @@ def add_review(
     rv.add_argument("--max-chars", type=int, default=0, metavar="N", help="cap the Markdown length")
 
 
+def add_ship(
+    sub: argparse._SubParsersAction[argparse.ArgumentParser], common: argparse.ArgumentParser
+) -> None:
+
+    sh = sub.add_parser(
+        "ship",
+        help="print one deterministic outcome ship note",
+        parents=[common],
+    )
+    sh.add_argument(
+        "--plan", type=int, default=None, metavar="ID", help="ship one plan (default: active)"
+    )
+    sh.add_argument("--max-chars", type=int, default=0, metavar="N", help="cap the Markdown length")
+
+
 def add_brief(
     sub: argparse._SubParsersAction[argparse.ArgumentParser], common: argparse.ArgumentParser
 ) -> None:

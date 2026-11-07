@@ -20,6 +20,7 @@ from .coordination import (
     add_note,
     add_review,
     add_share,
+    add_ship,
     add_stats,
     add_sync,
     add_trace,
@@ -131,6 +132,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_brief(sub, common)
     add_context(sub, common)
     add_review(sub, common)
+    add_ship(sub, common)
     add_next(sub, common)
     add_claim(sub, common)
     add_note(sub, common)

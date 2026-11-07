@@ -324,6 +324,39 @@ review one plan (default: active)
 cap the Markdown length Default: 0\.
 .RE
 .TP
+.B lpui ship
+print one deterministic outcome ship note
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B \-\-plan ID
+ship one plan (default: active)
+.RE
+.RS
+.TP
+.B \-\-max\-chars N
+cap the Markdown length Default: 0\.
+.RE
+.TP
 .B lpui next
 claim the next eligible task and move it doing
 .RS

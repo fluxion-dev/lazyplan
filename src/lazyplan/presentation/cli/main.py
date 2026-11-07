@@ -45,6 +45,7 @@ from .commands import (
     _cmd_session_list,
     _cmd_session_show,
     _cmd_setup,
+    _cmd_ship,
     _cmd_upgrade,
 )
 from .parser import build_parser, package_version
@@ -90,6 +91,7 @@ def _dispatch_storeless(args: argparse.Namespace, actor: str) -> int | None:
         "session-list": _cmd_session_list,
         "session-show": _cmd_session_show,
         "review": _cmd_review,
+        "ship": _cmd_ship,
     }
     handler = handlers.get(args.cmd)
     return handler(None, args, actor) if handler is not None else None

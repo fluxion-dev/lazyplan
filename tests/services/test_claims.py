@@ -128,6 +128,12 @@ class TestClaims(unittest.TestCase):
         self.assertEqual(report["released"], [self.task.id])
         self.assertIsNotNone(self.store.get_claim(self.task.id))
 
+    def test_reconcile_check_reports_expired_without_deleting(self):
+        self.store.claim_task(self.task.id, "alice", 1, now=1000)
+        report = services.reconcile(self.store, actor="reconciler", check=True)
+        self.assertEqual(report["expired"], [self.task.id])
+        self.assertIsNotNone(self.store.get_claim(self.task.id))
+
     def test_deleting_a_task_removes_its_claim(self):
         self.store.claim_task(self.task.id, "alice", 60, now=1000)
         self.assertTrue(self.store.delete("task", self.task.id))

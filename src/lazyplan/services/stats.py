@@ -10,7 +10,8 @@ import re
 import statistics
 import time
 
-from ..core.entities import Claim, Task
+from ..core.entities import Claim, Status, Task
+from ..core.policies.planning import rollup_target
 from ..core.ports.insights import InsightsPort
 
 _ADDED = re.compile(r"^T#(\d+) ")
@@ -162,6 +163,36 @@ def attention_ids(
     return set(attention_reasons(store, stale_after=stale_after, now=now))
 
 
+def drift_summary(store: InsightsPort, now: float | None = None) -> dict[str, list]:
+    """Parent-status drift, expired claims, and done rows with open criteria."""
+    stamp = time.time() if now is None else now
+    milestones_by_plan = store.milestones_map()
+    tasks_by_milestone = store.tasks_map()
+    parent: list[dict] = []
+    for plan in store.list_plans():
+        for milestone in milestones_by_plan.get(plan.id, []):
+            kids = [task.status for task in tasks_by_milestone.get(milestone.id, [])]
+            if kids:
+                target = rollup_target(kids)
+                if target != milestone.status:
+                    parent.append({"kind": "milestone", "id": milestone.id, "to": target.value})
+        kids = [milestone.status for milestone in milestones_by_plan.get(plan.id, [])]
+        if kids:
+            target = rollup_target(kids)
+            if target != plan.status:
+                parent.append({"kind": "plan", "id": plan.id, "to": target.value})
+    open_ids = store.open_task_criteria_ids()
+    open_criteria = [
+        task.id for task in _all_tasks(store) if task.status == Status.DONE and task.id in open_ids
+    ]
+    expired = [task_id for task_id, claim in store.claims_map().items() if claim.expired(stamp)]
+    return {
+        "parent_status": parent,
+        "expired_claims": expired,
+        "open_criteria": open_criteria,
+    }
+
+
 def compute(
     store: InsightsPort,
     since: float,
@@ -199,4 +230,5 @@ def compute(
         "reopened": reopened,
         "claims": len(claims),
         "blocked": blocked,
+        "drift": drift_summary(store, now=stamp),
     }

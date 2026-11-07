@@ -72,6 +72,7 @@ class TestFlowQA(unittest.TestCase):
                 "reopened",
                 "claims",
                 "blocked",
+                "drift",
             ],
         )
 

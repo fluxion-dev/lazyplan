@@ -6,7 +6,6 @@ resources reuse the same store/services as the CLI.
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
@@ -19,66 +18,23 @@ from ...core.entities import Milestone, Plan, Status, Task
 from ...services import insights
 from ...store import to_payload
 from .base import McpBase
+from .evidence_tools import EvidenceToolsMixin
+from .schema import error as _tool_error
+from .schema import id_schema as _id
+from .schema import kind_schema as _kind
+from .schema import ok as _tool_ok
+from .schema import str_schema as _str
+from .schema import tool as _tool
 
 PROTOCOL_VERSION = "2024-11-05"
 
 
-def _id() -> dict:
-    return {"type": "integer"}
-
-
-def _str() -> dict:
-    return {"type": "string"}
-
-
-def _kind() -> dict:
-    return {"type": "string", "enum": ["plan", "milestone", "task"]}
-
-
-def _tool(
-    name: str,
-    description: str,
-    properties: dict,
-    required: list[str] | None = None,
-    read_only: bool = True,
-) -> dict:
-    """Build one MCP tool definition."""
-    return {
-        "name": name,
-        "description": description,
-        "inputSchema": {
-            "type": "object",
-            "properties": properties,
-            "required": required or [],
-        },
-        "annotations": {"readOnlyHint": read_only},
-    }
-
-
-def _tool_ok(payload: object) -> dict:
-    return {
-        "content": [
-            {
-                "type": "text",
-                "text": json.dumps(payload, indent=2, default=str),
-            }
-        ]
-    }
-
-
-def _tool_error(message: str) -> dict:
-    return {
-        "content": [{"type": "text", "text": message}],
-        "isError": True,
-    }
-
-
-class ToolsMixin(McpBase):
+class ToolsMixin(EvidenceToolsMixin, McpBase):
     """MCP tool definitions and handlers."""
 
     def _write_registry(self) -> dict[str, tuple[dict, Any]]:
         """Write tools, omitted in read-only mode."""
-        return {
+        tools = {
             "create_plan": (
                 _tool(
                     "create_plan",
@@ -135,6 +91,7 @@ class ToolsMixin(McpBase):
                         "id": _id(),
                         "to": {"type": "string", "enum": ["todo", "doing", "done"]},
                         "override": _str(),
+                        "require_evidence": {"type": "boolean"},
                     },
                     ["kind", "id", "to"],
                     False,
@@ -244,6 +201,8 @@ class ToolsMixin(McpBase):
                 self._tool_link,
             ),
         }
+        tools.update(self._evidence_write_registry())
+        return tools
 
     def _tool_trace(self, args: dict) -> object:
         store = self._need_store()
@@ -318,7 +277,7 @@ class ToolsMixin(McpBase):
 
     def _read_registry(self) -> dict[str, tuple[dict, Any]]:
         """Read tools, always available."""
-        return {
+        tools = {
             "brief": (
                 _tool(
                     "brief", "Session brief: active plan, doing task, next, gaps.", {"plan": _id()}
@@ -372,6 +331,8 @@ class ToolsMixin(McpBase):
             ),
             "info": (_tool("info", "Resolved database, scope, and counts.", {}), self._tool_info),
         }
+        tools.update(self._evidence_read_registry())
+        return tools
 
     def _tool_claim_renew(self, args: dict) -> object:
         claim = services.renew_task_claim(
@@ -489,6 +450,11 @@ class ToolsMixin(McpBase):
             failure = services.done_gate(store, obj_id)
             if failure and not override:
                 raise ValueError(failure)
+        evidence_failure = None
+        if kind == "task" and target == "done" and bool(args.get("require_evidence")):
+            evidence_failure = services.task_gate(store, obj_id)
+            if evidence_failure and not override:
+                raise ValueError(evidence_failure)
         ok = services.set_status(store, kind, obj_id, Status(target), actor=self.actor)
         if not ok:
             raise KeyError(f"{kind} {obj_id} not found")
@@ -497,6 +463,13 @@ class ToolsMixin(McpBase):
                 "plan",
                 obj_id,
                 f"Drift override by {self.actor}: {override}",
+                actor=self.actor,
+            )
+        if evidence_failure and override:
+            store.add_note(
+                "task",
+                obj_id,
+                f"Evidence gate override by {self.actor}: {override}",
                 actor=self.actor,
             )
         return {"ok": True, "kind": kind, "id": obj_id, "to": target}

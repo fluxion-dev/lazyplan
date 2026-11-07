@@ -131,6 +131,32 @@ class TestMcpReadTools(unittest.TestCase):
         listed = json.loads(self._tool("list_plans")["content"][0]["text"])
         self.assertEqual(listed[0]["approval"]["revision"], 1)
 
+    def test_evidence_tools_and_move_gate(self):
+        proved = self._tool(
+            "criterion_prove", {"id": 1, "command": "pytest", "exit_code": 0}
+        )
+        self.assertFalse(proved.get("isError"))
+        payload = json.loads(proved["content"][0]["text"])
+        self.assertTrue(payload["ticked"])
+        listed = self._tool("criterion_evidence", {"id": 1})
+        self.assertFalse(listed.get("isError"))
+        rows = json.loads(listed["content"][0]["text"])
+        self.assertEqual(rows[0]["command"], "pytest")
+
+        criterion = self.store.add_criteria("task", 1, "Task works")
+        blocked = self._tool(
+            "move_row",
+            {"kind": "task", "id": 1, "to": "done", "require_evidence": True},
+        )
+        self.assertTrue(blocked["isError"])
+        self.assertIn("needs passing evidence", blocked["content"][0]["text"])
+        self._tool("criterion_prove", {"id": criterion.id, "command": "pytest", "exit_code": 0})
+        allowed = self._tool(
+            "move_row",
+            {"kind": "task", "id": 1, "to": "done", "require_evidence": True},
+        )
+        self.assertFalse(allowed.get("isError"))
+
     def test_missing_rows_are_tool_errors(self):
         result = self._tool("show_row", {"kind": "task", "id": 99})
         self.assertTrue(result["isError"])
@@ -268,6 +294,8 @@ class TestMcpReadTools(unittest.TestCase):
             ]["tools"]
         }
         self.assertNotIn("create_plan", names)
+        self.assertNotIn("criterion_prove", names)
+        self.assertIn("criterion_evidence", names)
         response = server.handle(
             {
                 "jsonrpc": "2.0",

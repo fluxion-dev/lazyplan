@@ -504,29 +504,19 @@ def add_noun_groups(
     _a = _actions.add_parser("prove", help="record proof for one criterion", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="criterion id")
     _a.add_argument("--command", default="", metavar="TEXT", help="the command that ran")
-    _a.add_argument(
-        "--exit-code", type=int, default=None, metavar="N", help="the declared exit code"
-    )
+    _a.add_argument("--exit-code", type=int, default=None, metavar="N", help="exit code")
     _a.add_argument("--commit", default="", metavar="SHA", help="the proving commit")
     _a.add_argument("--pr", default="", metavar="URL", help="the proving pull request")
     _a.add_argument("--artifact", default="", metavar="PATH", help="the evidence artifact path")
     _a.add_argument("--note", default="", metavar="TEXT", help="free-form proof context")
     _a.add_argument("--task", type=int, default=None, metavar="ID", help="the proving task")
-    _a.add_argument(
-        "--no-tick",
-        action="store_true",
-        help="record evidence without ticking the criterion",
-    )
+    _a.add_argument("--no-tick", action="store_true", help="record without ticking")
     _a = _actions.add_parser("evidence", help="list proof rows for one criterion", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="criterion id")
-    _a = _actions.add_parser(
-        "relate", help="record that a task proves a criterion", parents=[common]
-    )
+    _a = _actions.add_parser("relate", help="record a proving task", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="criterion id")
     _a.add_argument("--task", type=int, required=True, metavar="ID", help="proving task id")
-    _a = _actions.add_parser(
-        "unrelate", help="remove a criterion-task proof relation", parents=[common]
-    )
+    _a = _actions.add_parser("unrelate", help="remove a proof relation", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="criterion id")
     _a.add_argument("--task", type=int, required=True, metavar="ID", help="proving task id")
 

@@ -9,13 +9,6 @@ from tests.support.paths import ROOT
 
 
 class StoryQaTest(unittest.TestCase):
-    def test_roadmap_has_no_stale_coordination_or_resume_claims(self) -> None:
-        text = (ROOT / "docs" / "product" / "roadmap.md").read_text(encoding="utf-8")
-        self.assertNotIn("no file or worktree collision awareness", text)
-        self.assertNotIn("No session memory, decision log, or plan diff", text)
-        self.assertIn("Execution coordination | Strong", text)
-        self.assertIn("Resume and continuity | Strong", text)
-
     def test_readme_covers_the_human_entry_points(self) -> None:
         for heading in ("## Install", "## First run", "## Why it differs", "## Learn more"):
             self.assertIn(heading, README)

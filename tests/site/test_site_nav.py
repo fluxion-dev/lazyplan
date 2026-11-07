@@ -14,11 +14,10 @@ EXPECTED_HREFS = {
     "#features",
     "#screens",
     "#faq",
-    "./roadmap.html",
     "#install",
     DOCS,
 }
-DESKTOP_LINKS = {"#new", "#features", "#screens", "#faq", "./roadmap.html", DOCS, "#install"}
+DESKTOP_LINKS = {"#new", "#features", "#screens", "#faq", DOCS, "#install"}
 
 
 class NavParser(HTMLParser):
@@ -107,7 +106,7 @@ class TestPrimaryNavigation(unittest.TestCase):
         assert isinstance(links, list)
         self.assertEqual(
             set(links),
-            {"#new", "#features", "#screens", "#faq", "./roadmap.html", DOCS, "#install"},
+            {"#new", "#features", "#screens", "#faq", DOCS, "#install"},
         )
 
     def test_every_destination_is_preserved(self):

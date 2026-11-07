@@ -298,17 +298,6 @@ def _check_page(root: Path, version: str) -> list[str]:
     )
 
 
-def _check_roadmap_page(root: Path, version: str) -> list[str]:
-    return _check_document(
-        root,
-        version,
-        "roadmap.html",
-        f"{BASE_URL}roadmap.html",
-        ("WebPage",),
-        (BASE_URL, f"{BASE_URL}roadmap.html"),
-    )
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dist", default="", metavar="PATH", help="also check a built site")
@@ -326,8 +315,6 @@ def main() -> int:
             roots.append(("dist", dist))
     for label, root in roots:
         for error in _check_page(root, version):
-            failures.append(f"{label}: {error}")
-        for error in _check_roadmap_page(root, version):
             failures.append(f"{label}: {error}")
     if failures:
         print("site check failed:", file=sys.stderr)

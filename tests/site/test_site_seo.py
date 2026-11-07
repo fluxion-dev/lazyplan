@@ -131,7 +131,7 @@ class TestSiteSEO(unittest.TestCase):
         self.assertIn('id="ways-to-work"', page)
         for phrase in (
             "One agent plans. Another builds. You stay in control.",
-            "Add work, edit a task, reorder, block, or complete any row yourself",
+            "Edit any row yourself",
             "Ask for a plan.",
             "Hand off one task.",
             "Add the token model",

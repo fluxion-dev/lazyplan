@@ -32,11 +32,12 @@ RETIRED_DOCS = frozenset(
         "docs/design-system.md",
         "docs/downloads.md",
         "docs/performance.md",
+        "docs/product/roadmap.md",
         "docs/releasing.md",
         "docs/setup.md",
     }
 )
-LEGACY_DOCS = frozenset({"docs/product/roadmap.md"})
+LEGACY_DOCS = frozenset()
 POLICY_FILE = "AGENTS.md"
 POLICY_MARKER = "Do not restate source"
 SKIP_DIRS = frozenset(

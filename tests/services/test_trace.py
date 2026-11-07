@@ -81,6 +81,16 @@ class TestTrace(unittest.TestCase):
         self.assertEqual(payload["criterion"]["text"], "Works")
         self.assertEqual(payload["tasks"][0]["task"]["title"], "T1")
 
+    def test_trace_includes_evidence(self):
+        store = Store(self.db)
+        store.add_evidence(self.covered.id, command="pytest", exit_code=0, actor="ci")
+        payload = trace.trace_plan(store, 1)
+        assert payload is not None
+        self.assertEqual(payload["criteria"][0]["evidence"][0]["command"], "pytest")
+        single = trace.trace_criterion(store, self.covered.id)
+        assert single is not None
+        self.assertEqual(single["evidence"][0]["actor"], "ci")
+
     def test_trace_text_names_missing_evidence(self):
         code, out, err = self._run("trace", "--plan", "1")
         self.assertEqual(code, 0, err)

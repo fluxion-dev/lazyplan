@@ -26,6 +26,12 @@ from .coordination import (
     start_claim,
     unblock_task,
 )
+from .evidence import (
+    ProofResult,
+    list_evidence,
+    prove,
+    task_gate,
+)
 from .planning import (
     DEFAULT_PLAN_LIMIT,
     _filtered_milestones,
@@ -184,6 +190,10 @@ __all__ = [
     "_import_all",
     "GateError",
     "DEFAULT_PLAN_LIMIT",
+    "ProofResult",
+    "prove",
+    "list_evidence",
+    "task_gate",
     "ApprovalResult",
     "RevisionEntry",
     "DiffEntry",

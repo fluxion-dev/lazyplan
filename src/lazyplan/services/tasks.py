@@ -9,6 +9,7 @@ from ..core.ports.provenance import ProvenancePort
 from .base import (
     GateError,
 )
+from .evidence import task_gate
 from .planning import set_status
 from .vcs import _ensure_task_repo_links, _norm_path, _repo_for_task
 
@@ -140,6 +141,7 @@ def finish_task(
     actor: str = "human",
     require_pr: bool = False,
     require_checks: bool = False,
+    require_evidence: bool = False,
     override: str = "",
 ) -> dict:
     """Link commits since the recorded base; move done only when the tree is clean."""
@@ -148,8 +150,10 @@ def finish_task(
         raise KeyError(f"task #{task_id} not found")
     gate = gate_state(store, task_id)
     failure = _gate_failure(gate, require_pr, require_checks)
-    if failure and not override:
-        raise GateError(failure)
+    evidence_failure = task_gate(store, task_id) if require_evidence else None
+    reasons = [item for item in (failure, evidence_failure) if item]
+    if reasons and not override:
+        raise GateError("; ".join(reasons))
     target = _finish_target(store, task_id, repo_path)
     branch = str(target.get("branch", "") or "")
     base = str(target.get("base_sha", "") or "")
@@ -162,11 +166,13 @@ def finish_task(
     if current != branch:
         raise ValueError(f"expected branch {branch!r}, found {current or 'detached HEAD'}")
     status = backend.status(root)
-    if override and (require_pr or require_checks):
+    if override and (require_pr or require_checks or require_evidence):
         store.add_note(
             "task",
             task_id,
-            f"Gate override by {actor}: {override} (prs={gate['prs']}, checks={gate['checks']})",
+            f"Gate override by {actor}: {override} "
+            f"(prs={gate['prs']}, checks={gate['checks']}, "
+            f"evidence={evidence_failure or 'ok'})",
             actor=actor,
         )
     linked = _link_commits(store, task_id, backend, str(root), base, actor)

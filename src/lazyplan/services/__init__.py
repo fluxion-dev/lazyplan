@@ -96,6 +96,8 @@ from .questions import (
 )
 from .ready import ReadyCheck, ReadyResult
 from .ready import check as plan_ready
+from .review import ReviewPacket
+from .review import build as build_review
 from .revisions import (
     ApprovalResult,
     DiffEntry,
@@ -198,6 +200,8 @@ __all__ = [
     "_import_all",
     "GateError",
     "DEFAULT_PLAN_LIMIT",
+    "ReviewPacket",
+    "build_review",
     "ReadyCheck",
     "ReadyResult",
     "plan_ready",

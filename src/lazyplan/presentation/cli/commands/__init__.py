@@ -82,6 +82,13 @@ from .proof import (
     _cmd_unlink,
     _cmd_unlink_repo,
 )
+from .question import (
+    _cmd_question_add,
+    _cmd_question_list,
+    _cmd_question_reopen,
+    _cmd_question_resolve,
+)
+from .ready import _cmd_plan_ready
 from .system import (
     _cmd_audit as _cmd_audit,
 )
@@ -109,6 +116,7 @@ _GROUP_CMDS: dict[tuple[str, str], str] = {
     ("plan", "edit"): "update",
     ("plan", "show"): "show",
     ("plan", "list"): "list",
+    ("plan", "ready"): "plan-ready",
     ("plan", "move"): "status",
     ("plan", "delete"): "delete",
     ("plan", "apply"): "plan-apply",
@@ -137,6 +145,10 @@ _GROUP_CMDS: dict[tuple[str, str], str] = {
     ("criterion", "tick"): "check",
     ("criterion", "untick"): "uncheck",
     ("criterion", "delete"): "delete-criteria",
+    ("question", "add"): "question-add",
+    ("question", "list"): "question-list",
+    ("question", "resolve"): "question-resolve",
+    ("question", "reopen"): "question-reopen",
     ("issue", "import"): "issue-import",
     ("criterion", "prove"): "criterion-prove",
     ("criterion", "evidence"): "criterion-evidence",
@@ -176,6 +188,7 @@ _COMMANDS: dict[str, Callable[[Store, Namespace, str], int]] = {
     "add-milestone": _cmd_add_milestone,
     "add-task": _cmd_add_task,
     "plan-apply": _cmd_plan_apply,
+    "plan-ready": _cmd_plan_ready,
     "plan-recipe": _cmd_plan_recipe,
     "plan-approve": _cmd_plan_approve,
     "plan-revisions": _cmd_plan_revisions,
@@ -190,6 +203,10 @@ _COMMANDS: dict[str, Callable[[Store, Namespace, str], int]] = {
     "check": _cmd_check,
     "uncheck": _cmd_uncheck,
     "criterion-prove": _cmd_criterion_prove,
+    "question-add": _cmd_question_add,
+    "question-list": _cmd_question_list,
+    "question-resolve": _cmd_question_resolve,
+    "question-reopen": _cmd_question_reopen,
     "criterion-evidence": _cmd_criterion_evidence,
     "delete-criteria": _cmd_delete_criteria,
     "issue-import": _cmd_issue_import,

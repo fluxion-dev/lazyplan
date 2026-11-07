@@ -36,6 +36,7 @@ from .proof import (
     add_unlink_repo,
     add_watch,
 )
+from .questions import add_question_group
 from .system import (
     add_completion,
     add_doctor,
@@ -140,6 +141,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_hook(sub, common)
     add_list(sub, common)
     add_noun_groups(sub, common)
+    add_question_group(sub, common)
     add_add_plan(sub, common)
     add_add_milestone(sub, common)
     add_add_task(sub, common)

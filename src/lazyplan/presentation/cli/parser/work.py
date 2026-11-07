@@ -311,6 +311,8 @@ def add_noun_groups(
     _a.add_argument("--files", action="store_true", help="list changed files per commit")
     _a = _actions.add_parser("list", help="list plans as summaries", parents=[common])
     _plan_list_flags(_a)
+    _a = _actions.add_parser("ready", help="check plan readiness", parents=[common])
+    _a.add_argument("--id", type=int, required=True, metavar="ID", help="plan id")
     _a = _actions.add_parser("move", help="move a plan to a status", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="plan id")
     _a.add_argument("--to", choices=[v.value for v in Status], required=True, help="new status")

@@ -9,7 +9,7 @@
     {
       "key": "refactor",
       "title": "Refactor the area",
-      "desc": "As a maintainer, I want the area simplified, so that future changes are cheaper. Add inputs and prerequisites here.",
+      "desc": "As a maintainer, I want the area simplified, so that future changes are cheaper. Add inputs and prerequisites.",
       "tasks": [
         {
           "key": "baseline",
@@ -19,7 +19,7 @@
         {
           "key": "simplify",
           "title": "Refactor the area",
-          "desc": "Approach: describe the structural change and the behavior that stays fixed.\n\nCommit: refactor slice.\n\nVerify: the baseline suite passes after the change."
+          "desc": "Approach: name the structural change and the behavior that stays fixed.\n\nCommit: refactor slice.\n\nVerify: the baseline suite passes after the change."
         },
         {
           "key": "verify",

@@ -9,22 +9,22 @@
     {
       "key": "deliver",
       "title": "Deliver the feature",
-      "desc": "As a user, I want the feature, so that the outcome is visible. Add inputs and prerequisites here.",
+      "desc": "As a user, I want the feature, so that the outcome is visible. Add inputs and prerequisites.",
       "tasks": [
         {
           "key": "implement",
           "title": "Implement the feature",
-          "desc": "Approach: describe the code path and the edge cases.\n\nCommit: implementation slice.\n\nVerify: the relevant test suite passes."
+          "desc": "Approach: name the code path and edge cases.\n\nCommit: implementation slice.\n\nVerify: the relevant test suite passes."
         },
         {
           "key": "test",
           "title": "Test the feature",
-          "desc": "Approach: cover the acceptance criteria and the edge cases.\n\nCommit: test slice.\n\nVerify: the new tests pass."
+          "desc": "Approach: cover the acceptance criteria and edge cases.\n\nCommit: test slice.\n\nVerify: the new tests pass."
         },
         {
           "key": "refactor",
           "title": "Refactor the touched code",
-          "desc": "Approach: leave the touched area cleaner without changing behavior.\n\nCommit: refactor slice.\n\nVerify: the full test suite passes."
+          "desc": "Approach: simplify the touched area without behavior change.\n\nCommit: refactor slice.\n\nVerify: the full test suite passes."
         },
         {
           "key": "docs",

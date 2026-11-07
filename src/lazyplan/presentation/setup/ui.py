@@ -277,6 +277,40 @@ def note(write: TextIO, text: str, color: bool, level: str = "info") -> None:
     _line(write.write, f"{mark} {text}")
 
 
+def render_integrations(
+    write: TextIO,
+    rows: list[tuple[str, str]],
+    color: bool,
+) -> None:
+    """List new catalog items with the paths they would write."""
+    mark = _paint(_icon("warn", color), "yellow", color=color)
+    _line(
+        write.write,
+        f"{mark} {_paint('New integrations are available', 'bold', 'yellow', color=color)}",
+    )
+    for label, target in rows:
+        _line(write.write, f"  {_paint(label, 'bold', color=color)}")
+        for line in wrap(target, "    ", terminal_width()):
+            _line(write.write, _paint(line, "dim", color=color))
+    _line(write.write)
+
+
+def ask_integrations(write: TextIO, read: Callable[[], str], color: bool) -> str:
+    """Install all, defer to the next version, or never ask for these items."""
+    answer = (
+        _ask(
+            write,
+            read,
+            "  1 install all   2 not now   3 never   [2]: ",
+        )
+        .strip()
+        .lower()
+    )
+    return {"1": "install", "install": "install", "3": "never", "never": "never"}.get(
+        answer, "defer"
+    )
+
+
 def ask_migration(
     write: TextIO,
     read: Callable[[], str],

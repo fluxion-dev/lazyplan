@@ -270,6 +270,9 @@ def _cmd_task_finish(store: Store, args: argparse.Namespace, actor: str) -> int:
     print(
         f"linked {result['linked']} commit(s) on {result['branch']} from {result['base_sha'][:12]}"
     )
+    for warning in result.get("overlap_warnings", []):
+        paths = ", ".join(warning["paths"])
+        print(f"warning: T{warning['task']} {warning['title']} also touches {paths}")
     if result["done"]:
         print(f"T{result['task']} done")
     else:

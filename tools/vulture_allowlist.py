@@ -187,3 +187,5 @@ matches_path
 touchpoints_overlap
 _.add_touchpoint
 _.remove_touchpoint
+# Public selection helper kept for callers outside the overlap-aware service.
+_.next_claimable_task

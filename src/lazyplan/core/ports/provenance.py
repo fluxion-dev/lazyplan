@@ -84,6 +84,8 @@ class ProvenancePort(CollaborationPort, CachePort, Protocol):
 
     def repos_map(self) -> dict[tuple[str, int], list[dict]]: ...
 
+    def list_touchpoints(self, task_id: int) -> list[str]: ...
+
     def link_forge(
         self,
         parent_kind: str,

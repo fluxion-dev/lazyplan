@@ -99,6 +99,29 @@ class TestCompletionGates(unittest.TestCase):
         notes = self.store.list_notes("task", self.task.id)
         self.assertIn("known flaky runner", notes[-1].text)
 
+    def test_finish_warns_when_commit_files_overlap_open_work(self):
+        other = self.store.add_task(self.task.milestone_id, "Other", actor="fixture")
+        self.store.add_touchpoint(other.id, "f")
+        with open(os.path.join(self.repo, "f"), "w", encoding="utf-8") as fh:
+            fh.write("changed")
+        subprocess.run(["git", "-C", self.repo, "add", "."], check=True)
+        subprocess.run(["git", "-C", self.repo, "commit", "-qm", "two"], check=True)
+        result = services.finish_task(self.store, self.task.id, actor="fixture")
+        self.assertTrue(result["done"])
+        self.assertEqual(result["overlap_warnings"][0]["task"], other.id)
+        self.assertEqual(result["overlap_warnings"][0]["paths"], ["f"])
+
+    def test_finish_does_not_warn_for_another_repo(self):
+        other = self.store.add_task(self.task.milestone_id, "Other", actor="fixture")
+        self.store.add_touchpoint(other.id, "f")
+        self.store.add_repo_link("task", other.id, "/other/repo", actor="fixture")
+        with open(os.path.join(self.repo, "f"), "w", encoding="utf-8") as fh:
+            fh.write("changed")
+        subprocess.run(["git", "-C", self.repo, "add", "."], check=True)
+        subprocess.run(["git", "-C", self.repo, "commit", "-qm", "two"], check=True)
+        result = services.finish_task(self.store, self.task.id, actor="fixture")
+        self.assertEqual(result["overlap_warnings"], [])
+
     def _run(self, *argv: str) -> tuple[int, str, str]:
         out, err = io.StringIO(), io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):

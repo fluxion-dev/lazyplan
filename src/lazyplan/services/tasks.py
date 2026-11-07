@@ -5,6 +5,7 @@ from __future__ import annotations
 from lazyplan.infrastructure.vcs import VCSBackend, detect_backend
 
 from ..core.entities import Status
+from ..core.policies.coordination import matches_path
 from ..core.ports.provenance import ProvenancePort
 from .base import (
     GateError,
@@ -147,6 +148,46 @@ def _finish_failure(
     return "; ".join(reasons)
 
 
+def _open_tasks(store: ProvenancePort, task_id: int) -> list[tuple[int, str]]:
+    """Other open tasks in the database, with their titles."""
+    out: list[tuple[int, str]] = []
+    for plan in store.list_plans():
+        if plan.status == Status.DONE:
+            continue
+        for milestone in store.list_milestones(plan.id):
+            if milestone.status == Status.DONE:
+                continue
+            for task in store.list_tasks(milestone.id):
+                if task.id != task_id and task.status != Status.DONE:
+                    out.append((task.id, task.title))
+    return out
+
+
+def _overlap_warnings(store: ProvenancePort, task_id: int, repo_root: str) -> list[dict]:
+    """Commits from this task that overlap another open task's files."""
+    files = [path for link in store.list_links("task", task_id) for path in link.files]
+    if not files:
+        return []
+    warnings: list[dict] = []
+    for other_id, title in _open_tasks(store, task_id):
+        roots = {str(repo["repo_path"]) for repo in store.effective_repos("task", other_id)}
+        if roots and repo_root not in roots:
+            continue
+        patterns = store.list_touchpoints(other_id)
+        linked = {path for link in store.list_links("task", other_id) for path in link.files}
+        matched: set[str] = set()
+        for path in files:
+            try:
+                covered = any(matches_path(pattern, path) for pattern in patterns)
+            except ValueError:
+                covered = False
+            if covered or path in linked:
+                matched.add(path)
+        if matched:
+            warnings.append({"task": other_id, "title": title, "paths": sorted(matched)})
+    return warnings
+
+
 def finish_task(
     store: ProvenancePort,
     task_id: int,
@@ -188,6 +229,7 @@ def finish_task(
             actor=actor,
         )
     linked = _link_commits(store, task_id, backend, str(root), base, actor)
+    warnings = _overlap_warnings(store, task_id, _norm_path(str(root)))
     done = False
     if not status.dirty:
         set_status(store, "task", task_id, Status.DONE, actor=actor)
@@ -201,4 +243,5 @@ def finish_task(
         "dirty": status.dirty,
         "done": done,
         "gate": gate,
+        "overlap_warnings": warnings,
     }

@@ -388,6 +388,25 @@ lpui feed --overrides
 The normal `lpui feed` still shows every event. Agents and the CLI continue to
 write directly; override mode only gates the screen.
 
+### Trust and coordination actions
+
+The palette carries the work that does not need a dedicated key. Open it with
+`c`, then type the action:
+
+- **Approve plan scope** records an approval revision; **Show plan diff** opens
+  the changes since the last approval.
+- **Prove criterion** records a command, exit code, commit, or note. A passing
+  row ticks the criterion; a failing row leaves it open.
+- **Add / Resolve / Reopen plan question** manages readiness blockers.
+- **Link / Unlink external reference** manages read-only plan pointers.
+- **Claim task**, **Block task**, and **Unblock task** manage coordination;
+  claim shows overlapping touch-points before an override.
+- **Finish task** links commits and runs the evidence, PR, and check gates. A
+  blocked finish asks for a reason before it overrides.
+
+The same actions are in the palette's **TRUST** help group. The detail page
+also binds `p` for proof and `q`, `Q`, and `R` for add, resolve, and reopen.
+
 Run **Export plan as Markdown** from the palette (`c`, then `export`) to open a
 destination picker. It starts in your Downloads folder with
 `plan-P<id>.md` ready, browses folders, and lets you edit the filename. An

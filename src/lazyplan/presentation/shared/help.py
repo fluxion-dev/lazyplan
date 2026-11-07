@@ -24,7 +24,7 @@ HINT_ITEMS: tuple[tuple[str, str], ...] = (
     ("O", "override"),
 )
 
-HELP_GROUPS: tuple[str, ...] = ("MOVE", "CHANGE", "FIND", "APP")
+HELP_GROUPS: tuple[str, ...] = ("MOVE", "CHANGE", "FIND", "TRUST", "APP")
 _HELP_WIDTH = 20
 
 
@@ -42,11 +42,13 @@ def _help_rows(group: str) -> list[tuple[str, str]]:
     rows: list[tuple[str, str]] = []
     if group == "MOVE":
         rows.extend(NAV_ROWS)
-    rows.extend(
-        (cmd.help_key or cmd.key, cmd.help_hint or cmd.label.lower())
-        for cmd in COMMANDS
-        if cmd.help_group == group and (cmd.help_key or cmd.key)
-    )
+    for cmd in COMMANDS:
+        if cmd.help_group != group:
+            continue
+        key = cmd.help_key or cmd.key
+        if not key and group != "TRUST":
+            continue
+        rows.append((key or "c", cmd.help_hint or cmd.label.lower()))
     return rows
 
 

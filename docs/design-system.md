@@ -315,9 +315,12 @@ the registry handler map.
 
 ### Help
 
-`HELP_TEXT` is grouped as MOVE / CHANGE / FIND / APP and includes
-`lpui help` as the same text at the shell. `?` and F1 open `HelpScreen`
-inside a scrolling `#help` panel. `lpui help` prints the same string.
+`HELP_TEXT` is grouped as MOVE / CHANGE / FIND / TRUST / APP and includes
+`lpui help` as the same text at the shell. The TRUST group lists the
+approval, proof, question, reference, claim, block, and finish actions that
+have no dedicated key; their key column is `c` because they run from the
+palette. `?` and F1 open `HelpScreen` inside a scrolling `#help` panel.
+`lpui help` prints the same string.
 
 ## Detail (`tui/screens/`)
 

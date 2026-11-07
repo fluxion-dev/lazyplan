@@ -80,6 +80,18 @@ class TestCommandRegistry(unittest.TestCase):
             self.assertIn(first, help_mod.HELP_TEXT, key)
             self.assertIn(first, table, key)
 
+    def test_help_lists_the_trust_actions(self):
+        from lazyplan.presentation.shared.help import HELP_TEXT
+
+        for hint in (
+            "record the current plan as an approved revision",
+            "record a command, exit code, commit, or note as proof",
+            "record a plan-level ambiguity",
+            "claim the selected task and move it doing",
+            "link commits and close the task through the finish gates",
+        ):
+            self.assertIn(hint, HELP_TEXT)
+
     def test_help_has_no_stale_claims(self):
         self.assertNotIn("press n to seed", help_mod.HELP_TEXT)
         self.assertNotIn("c ticks", help_mod.HELP_TEXT)

@@ -14,6 +14,7 @@ from typing import Any, TextIO
 
 from lazyplan.infrastructure import hook_install, skills, textfile
 from lazyplan.infrastructure.integrations import (
+    HOOK,
     SKILL,
     IntegrationItem,
     catalog,
@@ -30,6 +31,7 @@ __all__ = [
     "Inspection",
     "ReviewResult",
     "inspect",
+    "remember_installed",
     "review_pending",
 ]
 
@@ -93,7 +95,8 @@ def _installed_ids(
 def _enabled(item: IntegrationItem, state: SetupState, choice: SetupChoice) -> bool:
     if item.kind == SKILL:
         return state.skills_enabled and not choice.no_skills
-    return state.hooks_enabled
+    selected = choice.agents if choice.agents is not None else state.agents
+    return state.hooks_enabled and item.host in selected
 
 
 def _pending(
@@ -138,6 +141,27 @@ def inspect(
         if _enabled(item, state, choice) and _pending(item, state, installed_ids, version)
     )
     return Inspection(installed=installed, pending=pending)
+
+
+def remember_installed(
+    inspection: Inspection,
+    state: SetupState,
+    version: str,
+) -> bool:
+    """Adopt installed items so a missing file is not mistaken for a new one."""
+    changed = False
+    seen_at = timestamp()
+    for item in inspection.installed:
+        if item.id in state.integration_choices:
+            continue
+        state.integration_choices[item.id] = {
+            "decision": "installed",
+            "fingerprint": item.fingerprint,
+            "version": version,
+            "seen_at": seen_at,
+        }
+        changed = True
+    return changed
 
 
 def _rows(
@@ -250,7 +274,10 @@ def review_pending(
     if not allow_prompt:
         return ReviewResult(decision="pending", pending=report.pending)
     ui.render_integrations(write, _rows(report.pending, choice, root, home), color)
-    action = ui.ask_integrations(write, read, color)
+    try:
+        action = ui.ask_integrations(write, read, color)
+    except (EOFError, KeyboardInterrupt):
+        return ReviewResult(decision="pending", pending=report.pending)
     if action == "install":
         backup_dir = layout.new_backup_dir(home)
         installed = _install_skills(report.pending, choice, root, home, backup_dir)
@@ -262,6 +289,12 @@ def review_pending(
         )
         applied = tuple(item for item in report.pending if item not in failed)
         _remember(applied, state, "installed", version)
+        hosts = sorted({item.host for item in applied if item.kind == HOOK and item.host})
+        if hosts:
+            state.hook_files = [
+                str(spec.path) for spec in hook_install.preview(home, hosts) if spec.path.is_file()
+            ]
+            state.hooks = bool(state.hook_files)
         save_state(state, home)
         installed.extend(hook_installed)
         backups = [str(backup_dir)] if backup_dir.exists() else []

@@ -268,6 +268,14 @@ class PlanRevisionsCliTest(unittest.TestCase):
         self.assertEqual(code, 0, err)
         self.assertEqual(self.store.get_plan(plan.id).status.value, "done")
 
+    def test_approve_text(self) -> None:
+        code, out, err = self._run("plan", "approve", "--id", str(self.plan.id))
+        self.assertEqual(code, 0, err)
+        self.assertIn(f"approved P{self.plan.id} r1", out)
+        code, out, err = self._run("plan", "approve", "--id", str(self.plan.id))
+        self.assertEqual(code, 0, err)
+        self.assertIn("already approved at r1", out)
+
     def test_porcelain_approve(self) -> None:
         code, out, err = self._run("--porcelain", "plan", "approve", "--id", str(self.plan.id))
         self.assertEqual(code, 0, err)

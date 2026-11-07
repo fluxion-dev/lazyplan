@@ -120,18 +120,6 @@ class StoreStubs(StoreStubsLinks):
     ) -> PlanChange | None:
         raise NotImplementedError
 
-    def _record_scope_change_for(
-        self,
-        kind: str,
-        obj_id: int,
-        action: str,
-        field: str = "",
-        reason: str = "",
-        detail: str = "",
-        actor: str = "human",
-    ) -> PlanChange | None:
-        raise NotImplementedError
-
     def update_plan(
         self,
         pid: int,

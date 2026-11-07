@@ -260,28 +260,3 @@ class RevisionsMixin(StoreBase):
             detail=detail,
             actor=actor,
         )
-
-    def _record_scope_change_for(
-        self,
-        kind: str,
-        obj_id: int,
-        action: str,
-        field: str = "",
-        reason: str = "",
-        detail: str = "",
-        actor: str = "human",
-    ) -> PlanChange | None:
-        """Resolve the owning plan, then record one scope change."""
-        plan_id = self._plan_for_kind(kind, obj_id)
-        if plan_id is None:
-            return None
-        return self._record_scope_change(
-            plan_id,
-            kind,
-            obj_id,
-            action,
-            field=field,
-            reason=reason,
-            detail=detail,
-            actor=actor,
-        )

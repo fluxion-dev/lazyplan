@@ -191,11 +191,13 @@ def _cmd_plan_approve(store: Store, args: argparse.Namespace, actor: str) -> int
     except ValueError as exc:
         print(msg_error(exc), file=sys.stderr)
         return 2
-    return _emit_record(
-        args,
-        rows_revisions.approval_row(result, plan),
-        rows_revisions.approval_payload(result, plan),
-    )
+    if args.json:
+        return _emit(args, rows_revisions.approval_payload(result, plan))
+    if porcelain.enabled(args):
+        print(rows_revisions.approval_row(result, plan))
+        return 0
+    print(rows_revisions.approval_text(result, plan))
+    return 0
 
 
 def _cmd_plan_revisions(store: Store, args: argparse.Namespace, actor: str) -> int:

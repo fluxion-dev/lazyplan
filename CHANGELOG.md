@@ -3,6 +3,50 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## v0.35.0 — 2026-11-07
+
+The screen becomes the control room for the loop. It opens on what needs a
+human, shows health and coordination at a glance, and makes every manual
+correction deliberate and audited.
+
+### Added
+
+- **Needs-me landing.** The tree opens on attention rows and plans with drift,
+  open questions, stale claims, or blocked work, with parent context. `F`
+  returns to all plans.
+- **Control strip.** A two-line `health` / `needs` summary for plans, `work` /
+  `needs` for tasks, and `slice` / `needs` for milestones. It shows readiness,
+  approval and drift, open questions, blocked work, claims, evidence, and touch
+  overlaps without opening detail.
+- **Agents pane.** Active sessions with actor, plan, branch, start time, and
+  age, plus the selected plan's last handoff.
+- **Manual override mode.** The screen is read-only by default. `O` arms
+  writes behind a visible banner and nav subtitle; every write records a
+  `tui/override` event, and risky writes ask for a reason.
+- **Trust actions in the palette.** Approve a plan and show its diff, prove a
+  criterion, add/resolve/reopen questions, link/unlink references, claim, block,
+  unblock, and finish a task without leaving the screen.
+- **Observe and Override.** The palette and help group reads and writes by
+  intent, including a new TRUST help group.
+- **Override feed.** `lpui feed --overrides` lists only the manual changes made
+  from the screen.
+
+### Changed
+
+- The detail page adds approval revision and drift, readiness checks, evidence
+  coverage, claims, touch-points, and the previous session handoff.
+- Moving a drifted enforced plan to done, or finishing a task without passing
+  evidence, warns and asks for an override reason.
+- The database schema is unchanged; override audit rows reuse the events table.
+
+### Upgrade
+
+```bash
+pipx upgrade lazyplan-tui
+```
+
+No manual migration is required.
+
 ## v0.34.0 — 2026-11-07
 
 The trust layer and parallel-agent handoff are in the product. Plans can be

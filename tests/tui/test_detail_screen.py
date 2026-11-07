@@ -92,6 +92,42 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
             self.assertIn("questions 1 open", body)
             self.assertIn("Which host?", body)
 
+    async def test_detail_shows_approval_readiness_and_coverage(self):
+        from textual.widgets import Static
+
+        self.store.add_revision(self.pid, "a" * 64, "{}", reason="initial scope")
+        criterion = self.store.list_criteria("plan", self.pid)[0]
+        self.store.add_evidence(criterion.id, command="pytest", exit_code=0, actor="ci")
+        async with self.app.run_test(size=(80, 24)) as pilot:
+            await pilot.pause()
+            await self._open(pilot, "plan", self.pid)
+            body = str(self.app.screen.query_one("#detail-body", Static).render())
+            self.assertIn("approval r1", body)
+            self.assertIn("initial scope", body)
+            self.assertIn("ready", body)
+            self.assertIn("evidence 1/2", body)
+
+    async def test_detail_shows_claims_and_the_previous_handoff(self):
+        from textual.widgets import Static
+
+        session, _ = self.store.start_session("carol", plan_id=self.pid, branch="task/x")
+        self.store.end_session(session.id, "carol", summary="shipped the store", handoff="next: T2")
+        self.store.claim_task(self.tid, "alice", 300)
+        self.store.add_touchpoint(self.tid, "src/app", actor="alice")
+        async with self.app.run_test(size=(80, 24)) as pilot:
+            await pilot.pause()
+            await self._open(pilot, "plan", self.pid)
+            body = str(self.app.screen.query_one("#detail-body", Static).render())
+            self.assertIn("claims 1", body)
+            self.assertIn("@alice", body)
+            self.assertIn("handoff", body)
+            self.assertIn("next: T2", body)
+            await pilot.press("escape")
+            await self._open(pilot, "task", self.tid)
+            body = str(self.app.screen.query_one("#detail-body", Static).render())
+            self.assertIn("touch", body)
+            self.assertIn("src/app", body)
+
     async def test_detail_shows_references(self):
         from textual.widgets import Static
 

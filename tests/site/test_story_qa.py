@@ -15,14 +15,17 @@ class StoryQaTest(unittest.TestCase):
         self.assertIn("Execution coordination | Strong", text)
         self.assertIn("Resume and continuity | Strong", text)
 
-    def test_readme_and_usage_describe_the_control_room(self) -> None:
+    def test_readme_covers_the_human_entry_points(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        for heading in ("## Install", "## First run", "## Why it differs", "## Learn more"):
+            self.assertIn(heading, readme)
+        for target in ("docs/usage.md", "CHANGELOG.md", "CONTRIBUTING.md"):
+            self.assertIn(f"]({target})", readme)
+
+    def test_usage_keeps_the_manual_override_surface(self) -> None:
         usage = (ROOT / "docs" / "usage.md").read_text(encoding="utf-8")
-        self.assertIn("control room", readme.lower())
-        self.assertIn("Manual override mode", readme)
         self.assertIn("Manual override mode", usage)
         self.assertIn("lpui feed --overrides", usage)
-        self.assertIn("Observe and Override", readme)
 
     def test_site_ships_the_control_room_screenshot(self) -> None:
         index = (ROOT / "site" / "index.html").read_text(encoding="utf-8")

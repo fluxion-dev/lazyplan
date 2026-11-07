@@ -31,6 +31,11 @@ class TestVersion(unittest.TestCase):
         header = (ROOT / "README.md").read_text(encoding="utf-8").splitlines()[0]
         self.assertEqual(header, f"# lazyplan (`lpui`) — v{version}")
 
+    def test_readme_carries_no_release_notes(self):
+        text = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertNotIn("## New in", text)
+        self.assertNotIn("## Built to scale", text)
+
     def test_site_version_matches_pyproject(self):
         import json
 

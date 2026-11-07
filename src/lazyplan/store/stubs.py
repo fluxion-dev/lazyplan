@@ -442,6 +442,21 @@ class StoreStubs(StoreStubsLinks):
     ) -> CriterionEvidence:
         raise NotImplementedError
 
+    def restore_evidence(
+        self,
+        criterion_id: int,
+        task_id: int | None = None,
+        command: str = "",
+        exit_code: int | None = None,
+        commit_sha: str = "",
+        pr_url: str = "",
+        artifact_path: str = "",
+        note: str = "",
+        actor: str = "human",
+        ts: float = 0.0,
+    ) -> CriterionEvidence | None:
+        raise NotImplementedError
+
     def list_evidence(self, criterion_id: int) -> list[CriterionEvidence]:
         raise NotImplementedError
 

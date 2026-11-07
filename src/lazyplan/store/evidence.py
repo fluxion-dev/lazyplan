@@ -91,6 +91,58 @@ class EvidenceMixin(StoreBase):
         )
         return row
 
+    def restore_evidence(
+        self,
+        criterion_id: int,
+        task_id: int | None = None,
+        command: str = "",
+        exit_code: int | None = None,
+        commit_sha: str = "",
+        pr_url: str = "",
+        artifact_path: str = "",
+        note: str = "",
+        actor: str = "human",
+        ts: float = 0.0,
+    ) -> CriterionEvidence | None:
+        """Import one evidence row with its original timestamp; no feed event."""
+        if self.get_criterion(criterion_id) is None:
+            return None
+        if task_id is not None and self.get_task(task_id) is None:
+            task_id = None
+        row = CriterionEvidence(
+            id=0,
+            criterion_id=criterion_id,
+            task_id=task_id,
+            command=command,
+            exit_code=exit_code,
+            commit_sha=commit_sha,
+            pr_url=pr_url,
+            artifact_path=artifact_path,
+            note=note,
+            actor=actor,
+            ts=ts,
+        )
+        with self._connect() as conn:
+            cur = conn.execute(
+                "INSERT INTO criterion_evidence"
+                " (criterion_id, task_id, command, exit_code, commit_sha, pr_url,"
+                " artifact_path, note, actor, ts)"
+                " VALUES (?,?,?,?,?,?,?,?,?,?)",
+                (
+                    row.criterion_id,
+                    row.task_id,
+                    row.command,
+                    row.exit_code,
+                    row.commit_sha,
+                    row.pr_url,
+                    row.artifact_path,
+                    row.note,
+                    row.actor,
+                    row.ts,
+                ),
+            )
+            return replace(row, id=cur.lastrowid or 0)
+
     def list_evidence(self, criterion_id: int) -> list[CriterionEvidence]:
         """Evidence for one criterion, oldest first."""
         with self._connect() as conn:

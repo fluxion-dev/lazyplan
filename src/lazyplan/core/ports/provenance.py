@@ -152,6 +152,20 @@ class ProvenancePort(CollaborationPort, CachePort, Protocol):
         actor: str = "human",
     ) -> CriterionEvidence: ...
 
+    def restore_evidence(
+        self,
+        criterion_id: int,
+        task_id: int | None = None,
+        command: str = "",
+        exit_code: int | None = None,
+        commit_sha: str = "",
+        pr_url: str = "",
+        artifact_path: str = "",
+        note: str = "",
+        actor: str = "human",
+        ts: float = 0.0,
+    ) -> CriterionEvidence | None: ...
+
     def list_evidence(self, criterion_id: int) -> list[CriterionEvidence]: ...
 
     def evidence_map(self) -> dict[int, list[CriterionEvidence]]: ...

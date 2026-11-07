@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>lazyplan — one plan for you and your agent</title>
-<meta name="description" content="A terminal plan for you and your coding agent. Sticky preview, GIT context, three themes, and local-first storage on Linux, macOS, and Windows.">
+<meta name="description" content="A terminal plan for you and your coding agent. Approvals and evidence, session handoff, parallel-safe claims, and a ship note, local-first on Linux, macOS, and Windows.">
 <meta name="keywords" content="terminal plan tracker, coding agent, plan tracker, planner agent, executor agent, multi-agent planning, developer tools, local-first, keyboard-first, terminal themes, git pane">
 <meta name="author" content="Brad Lindsay">
 <meta name="theme-color" content="#09090B">
@@ -12,7 +12,7 @@
 <link rel="canonical" href="https://fluxion-dev.github.io/lazyplan/">
 <link rel="preload" as="image" href="./screens/lpui-and-agent.webp" type="image/webp">
 <meta property="og:title" content="lazyplan — one plan for you and your agent">
-<meta property="og:description" content="A terminal plan for you and your coding agent. Sticky preview, GIT context, three themes, and local-first storage on Linux, macOS, and Windows.">
+<meta property="og:description" content="A terminal plan for you and your coding agent. Approvals and evidence, session handoff, parallel-safe claims, and a ship note, local-first on Linux, macOS, and Windows.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://fluxion-dev.github.io/lazyplan/">
 <meta property="og:site_name" content="lazyplan">
@@ -23,7 +23,7 @@
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="lazyplan — one plan for you and your agent">
-<meta name="twitter:description" content="A terminal plan for you and your coding agent. Sticky preview, GIT context, three themes, and local-first storage on Linux, macOS, and Windows.">
+<meta name="twitter:description" content="A terminal plan for you and your coding agent. Approvals and evidence, session handoff, parallel-safe claims, and a ship note, local-first on Linux, macOS, and Windows.">
 <meta name="twitter:image" content="https://fluxion-dev.github.io/lazyplan/screens/og-lpui-and-agent.png">
 <meta name="twitter:image:alt" content="lazyplan plan tree beside terminal panes where a coding agent updates the same plan.">
 <script type="application/ld+json">
@@ -210,30 +210,34 @@
   <div class="overflow-hidden rounded-2xl border border-plan-border bg-plan-surface/70 shadow-xl shadow-black/30">
     <div class="grid gap-6 p-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.7fr)] md:p-8">
       <div>
-        <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">New in 0.31</p>
-        <h2 class="mb-3 text-2xl font-bold text-white md:text-3xl">A sharper screen.</h2>
-        <p class="m-0 text-[0.95rem] text-zinc-400">Themes, checkout, timeline, export.</p>
+        <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">New in 0.34</p>
+        <h2 class="mb-3 text-2xl font-bold text-white md:text-3xl">Trust, sessions, parallel work.</h2>
+        <p class="m-0 text-[0.95rem] text-zinc-400">Approve, prove, hand off, and ship.</p>
       </div>
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div class="rounded-lg border border-plan-border bg-plan-canvas/60 p-4">
-          <h3 class="mb-1 text-base font-semibold text-white">Three themes</h3>
-          <p class="m-0 text-[0.9rem] text-zinc-400">Mocha, OLED void, and Latte. Press <code class="inline-code">t</code>.</p>
+          <h3 class="mb-1 text-base font-semibold text-white">Trust layer</h3>
+          <p class="m-0 text-[0.9rem] text-zinc-400">Approvals, drift, evidence, review.</p>
         </div>
         <div class="rounded-lg border border-plan-border bg-plan-canvas/60 p-4">
-          <h3 class="mb-1 text-base font-semibold text-white">GIT pane</h3>
-          <p class="m-0 text-[0.9rem] text-zinc-400">Checkout, commits, pull requests.</p>
+          <h3 class="mb-1 text-base font-semibold text-white">Sessions</h3>
+          <p class="m-0 text-[0.9rem] text-zinc-400">Summary and handoff on every write.</p>
         </div>
         <div class="rounded-lg border border-plan-border bg-plan-canvas/60 p-4">
-          <h3 class="mb-1 text-base font-semibold text-white">Windows updates</h3>
-          <p class="m-0 text-[0.9rem] text-zinc-400">Close, apply, relaunch.</p>
+          <h3 class="mb-1 text-base font-semibold text-white">Touch-points</h3>
+          <p class="m-0 text-[0.9rem] text-zinc-400">Parallel claims avoid the same files.</p>
         </div>
         <div class="rounded-lg border border-plan-border bg-plan-canvas/60 p-4">
-          <h3 class="mb-1 text-base font-semibold text-white">Timeline</h3>
-          <p class="m-0 text-[0.9rem] text-zinc-400">Every lane stays visible.</p>
+          <h3 class="mb-1 text-base font-semibold text-white">Ship note</h3>
+          <p class="m-0 text-[0.9rem] text-zinc-400">Outcome, proof, risks, follow-ups.</p>
         </div>
         <div class="rounded-lg border border-plan-border bg-plan-canvas/60 p-4">
-          <h3 class="mb-1 text-base font-semibold text-white">Markdown export</h3>
-          <p class="m-0 text-[0.9rem] text-zinc-400">Folder, then filename.</p>
+          <h3 class="mb-1 text-base font-semibold text-white">External refs</h3>
+          <p class="m-0 text-[0.9rem] text-zinc-400">Read-only epic and issue links.</p>
+        </div>
+        <div class="rounded-lg border border-plan-border bg-plan-canvas/60 p-4">
+          <h3 class="mb-1 text-base font-semibold text-white">A sharper screen</h3>
+          <p class="m-0 text-[0.9rem] text-zinc-400">Themes, GIT pane, timeline, export.</p>
         </div>
       </div>
     </div>
@@ -244,7 +248,7 @@
   <div class="mb-10 max-w-2xl md:mb-14">
     <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">Why lazyplan</p>
     <h2 class="mb-4 text-2xl font-bold text-white md:text-3xl">Less chat. More done.</h2>
-    <p class="text-lg text-zinc-400">Keep the plan where you and your agent can both see it.</p>
+    <p class="text-lg text-zinc-400">The plan you and your agent both see.</p>
   </div>
   <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
     <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30">
@@ -253,11 +257,11 @@
     </div>
     <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30">
       <h3 class="mb-2 text-lg font-semibold text-white">Built for focus</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400">A fast keyboard screen keeps plans short until you open them. Detail is there when you need it.</p>
+      <p class="m-0 text-[0.95rem] text-zinc-400">A fast keyboard screen keeps plans short until you open them.</p>
     </div>
     <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30">
       <h3 class="mb-2 text-lg font-semibold text-white">Proof you can see</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400">Follow work from plan to commit to pull request in the terminal.</p>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Follow work from plan to commit to pull request.</p>
     </div>
     <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30">
       <h3 class="mb-2 text-lg font-semibold text-white">Yours to keep</h3>

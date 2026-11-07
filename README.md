@@ -55,35 +55,34 @@ Want demo data first? Run `lpui seed`.
 - **Made for focus.** Plans stay as one-line summaries until you open them. Detail is there when you need it.
 - **Yours to keep.** Local-first by default. Export or import any time. No account, no cloud, no lock-in.
 
-## New in 0.31
+## New in 0.34
 
-- **Windows updates that close cleanly.** lpui hands the install to a detached
-  helper, writes the full command and output to a log, and relaunches. Run
-  `lpui upgrade --diagnose` to see the detected method and log path.
-- **Export where you want.** The palette's **Export plan as Markdown** opens a
-  folder browser with the filename ready. It starts in Downloads, asks before
-  overwriting, and keeps errors inside the picker.
-- **Three themes, one key.** `t` cycles Catppuccin Mocha, an OLED-black `void`,
-  and Latte. `LAZYPLAN_THEME` picks one at launch, and every screen and chart
-  follows it.
-- **A real GIT pane.** Under the preview, the selected row shows its linked
-  checkouts, branch and dirty state, ahead/behind counts, newest commits, and
-  pull-request state.
-- **A preview that stays put.** The status, title, and breadcrumb stay fixed
-  while the reason, scope, next tasks, acceptance, and notes scroll beneath.
-- **An even split that keeps up.** The plan tree and preview column now share
-  the main row evenly, and rows reflow live as you resize the terminal instead
-  of keeping stale padding or a horizontal scrollbar.
-- **One icon language and a calmer timeline.** Plans, milestones, tasks,
-  checkouts, commits, and pull requests share single-cell icons. The timeline
-  card shows only the row under the cursor and its immediate children, names
-  the scoped plan, and emphasizes the clicked lane.
+- **Trust layer.** Approve plan revisions and see exactly what drifted,
+  record criterion evidence, keep open questions, and print one deterministic
+  review packet. `plan diff`, `criterion prove`, `question`, `plan ready`, and
+  `review` close the loop.
+- **Sessions and handoff.** `session start` tags every write, `session end`
+  records the summary and the next action, and `context`/`brief` show the
+  previous handoff to a cold agent.
+- **Parallel-safe claims.** Tasks carry touch-points. `next` skips work that
+  overlaps an active claim in the same checkout, a manual claim needs
+  `--force`, and `task finish` warns when commits touch another open task.
+- **External references.** Link a plan to an epic, issue, or doc read-only;
+  lazyplan never fetches or writes back to the tracker.
+- **Ship note.** `lpui ship --plan 1` turns a plan into a deterministic
+  Markdown summary for a PR body or changelog.
+- **A sharper screen.** Themes, the GIT pane, live timeline scoping, the
+  Markdown export picker, and Windows updates that close cleanly.
 
 ## What you get
 
 - A plan tree with progress at a glance, plus milestones and tasks underneath.
 - One atomic JSON write for a whole plan tree, with feature, bugfix, and refactor recipes.
 - A budgeted context packet that resumes a session from the active slice and its proof.
+- Session records with a summary and handoff, tagged onto every write.
+- Touch-point-aware claims that keep parallel agents from editing the same files.
+- Approval snapshots, plan diff, criterion evidence, open questions, and review.
+- Read-only external references and a deterministic ship note for PRs and changelogs.
 - A balanced tree and preview that reflow at every terminal width.
 - A Markdown export picker that starts in Downloads and never overwrites by accident.
 - A sticky preview of the reason, the next tasks, and what done means.
@@ -123,6 +122,10 @@ lpui list                         # plans and progress
 lpui plan show --id 1             # why, what, criteria, milestones
 lpui task move --id 1 --to doing  # move work forward
 lpui criterion tick --id 1        # tick the next acceptance item
+lpui session start --plan 1       # tag this working stretch
+lpui session end --summary "Shipped the store" --handoff "next: T2"
+lpui ref link --plan 1 --url https://github.com/org/repo/issues/7
+lpui ship --plan 1                # PR body or changelog entry
 lpui feed                         # recent activity
 ```
 
@@ -152,8 +155,19 @@ and reads stay glyph-free. Use `--json` when you need full fidelity.
 - **Coordinate.** `next` claims the first eligible task with a renewable
   lease, so two agents do not take the same work. Renew or release the claim,
   note handoffs, and block parked work with a reason.
+- **Stay out of each other's files.** `task add --touch PATH` or `touch add`
+  declares what a task will edit. `next` skips overlapping claims in the same
+  checkout, and `task finish` warns before an overlap reaches the merge.
+- **Resume a stretch.** `session start --plan 1` tags every write; `session end
+  --summary ... --handoff ...` leaves the next agent the reason and next step.
 - **Prove.** Relate each plan criterion to a proving task; `lpui trace --plan 1`
-  shows the evidence and `lpui lint --plan 1 --strict` gates the gaps.
+  shows the evidence, `criterion prove` records the command and exit code, and
+  `lpui lint --plan 1 --strict` gates the gaps.
+- **Review and ship.** `plan approve`, `plan diff`, and `question` capture the
+  scope and the ambiguity; `review --plan 1` prints the full packet and
+  `ship --plan 1` prints the outcome note for a PR or changelog.
+- **Link, do not mirror.** `ref link --plan 1 --url ...` stores a read-only
+  pointer to an epic or issue. lazyplan never fetches or writes back.
 - **Collaborate.** Comments and mentions live on plans, milestones, and tasks.
   `lpui share --plan 1` produces a read-only HTML or JSON snapshot; `lpui sync`
   merges plans by stable UID without overwriting conflicts.

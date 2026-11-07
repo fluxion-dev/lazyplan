@@ -5,7 +5,7 @@ empty states, and messages; `src/lazyplan/tui/theme/` for colour tokens and
 Textual themes; `src/lazyplan/tui/css/` for layout and component CSS;
 `src/lazyplan/palette.py` and `help.py` for command names, sections, context
 rules, key hints, and help text. If you add a view, command, or message, add
-it to the narrowest module first. Research: `docs/textual-research.md`.
+it to the narrowest module first.
 Local skills: `.agents/skills/tui-*`.
 
 ## Tokens

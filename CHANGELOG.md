@@ -3,6 +3,48 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## v0.34.0 — 2026-11-07
+
+The trust layer and parallel-agent handoff are in the product. Plans can be
+approved and diffed, criteria can carry evidence, questions can block
+readiness, sessions tag their writes and hand off cleanly, and parallel agents
+can avoid the same files.
+
+### Added
+
+- **Approval snapshots and plan diff.** `plan approve`, `plan revisions`, and
+  `plan diff` record a revision and show scope changes with reasons. Enforced
+  plans gate `plan move --to done` until the drift is approved or overridden.
+- **Criterion evidence.** `criterion prove|evidence` records the command, exit
+  code, commit, PR, artifact, and actor. `task finish --require-evidence`
+  gates on the latest passing row; `audit --min-evidence` reports coverage.
+- **Questions and readiness.** `question add|list|resolve|reopen` records
+  plan-level ambiguity, and `plan ready` refuses while lint, criterion
+  coverage, or open questions fail.
+- **Review packet.** `review --plan P` prints one deterministic Markdown
+  handoff with the plan, approval, criteria, commits, PRs, findings, and
+  questions.
+- **Sessions and handoff.** `session start|end|show|list` records a working
+  stretch, tags writes, and carries the summary and next action into
+  `context` and `brief`.
+- **Parallel-safe claims.** Task touch-points make `next` skip overlapping
+  claims in the same checkout; a manual claim needs `--force`, and
+  `task finish` warns when commit files overlap another open task.
+- **External references.** `ref link|list|unlink` stores read-only pointers to
+  epics, issues, and docs. Export and import carry them; lazyplan never fetches
+  or writes back.
+- **Ship note.** `lpui ship --plan P` prints why, what shipped, evidence,
+  residual risks, and follow-ups for a PR body or changelog.
+
+### Changed
+
+- The database schema is version 8. Existing databases migrate on open.
+- `context` and `brief` include the previous session handoff; hooks remain
+  read-only.
+- The TUI shows plan references and keeps the Later horizon visible on the
+  roadmap page.
+- The roadmap marks Foundation, Now, Next, and Later shipped.
+
 ## v0.33.0 — 2026-11-06
 
 Plan creation is now one atomic JSON write. `lpui plan apply` creates the plan,

@@ -2,11 +2,8 @@
 
 > **Status:** active · **Last updated:** 2026-11-06 · **Plan of record:** P134 in lazyplan
 >
-> This page is the product direction. The detailed reasoning is in
-> [roadmap-context.md](roadmap-context.md), and the repeatable process for
-> turning a horizon into an implementation plan is in
-> [roadmap-metaplan.md](roadmap-metaplan.md). The live work is tracked in
-> lazyplan plan P134.
+> This page is the product direction and the decision log. The live work is
+> tracked in lazyplan plan P134.
 
 ## Positioning
 
@@ -258,11 +255,11 @@ first review.
 ### Later — Parallel agents and handoff
 
 **Goal:** keep lazyplan the source of truth when more than one agent works at
-once. These bets are candidates until their scoping pass.
+once. Shipped 2026-11-06: R9–R12 are in the product and the horizon tree is closed.
 
 #### R9 — Session records
 
-**Status:** Later candidate
+**Status:** Shipped 2026-11-06
 
 **Outcome:** a session has a start, an end, a summary, and handoff notes, and
 the feed can be read per session.
@@ -280,7 +277,7 @@ decisions.
 
 #### R10 — Parallel-safe claims
 
-**Status:** Later candidate
+**Status:** Shipped 2026-11-06
 
 **Outcome:** two agents do not claim work that will edit the same files.
 
@@ -298,7 +295,7 @@ week.
 
 #### R11 — Outcome digest
 
-**Status:** Later candidate
+**Status:** Shipped 2026-11-06
 
 **Outcome:** closing a plan produces a ship note for a PR body or changelog
 without writing a single issue.
@@ -317,7 +314,7 @@ published outcome.
 
 #### R12 — External reference links
 
-**Status:** Later candidate
+**Status:** Shipped 2026-11-06
 
 **Outcome:** a plan can point at an epic or issue without copying it.
 
@@ -356,6 +353,7 @@ never write back.
 | 2026-11-06 | A metaplan defines how horizons become implementation plans. | The roadmap should produce plans repeatably, not by reinventing the process each time. |
 | 2026-11-06 | Now horizon shipped: plan apply, recipes, context packet, Focus lens. | R1–R4 are in the product; Next remains a candidate until its scoping pass. |
 | 2026-11-06 | Next horizon shipped: approvals, evidence, questions, and review. | R5–R8 are in the product (PR #92); the Later horizon moves to intake. |
+| 2026-11-06 | Later horizon shipped: sessions, parallel-safe claims, external refs, and ship. | R9–R12 are in the product; the product roadmap closes. |
 
 ## How to update this roadmap
 

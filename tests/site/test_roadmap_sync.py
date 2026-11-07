@@ -71,20 +71,6 @@ class TestRoadmapSync(unittest.TestCase):
             text,
         )
 
-    def test_site_links_to_the_context(self):
-        text = SITE.read_text(encoding="utf-8")
-        self.assertIn(
-            "https://github.com/fluxion-dev/lazyplan/blob/main/docs/product/roadmap-context.md",
-            text,
-        )
-
-    def test_site_links_to_the_metaplan(self):
-        text = SITE.read_text(encoding="utf-8")
-        self.assertIn(
-            "https://github.com/fluxion-dev/lazyplan/blob/main/docs/product/roadmap-metaplan.md",
-            text,
-        )
-
     def test_sitemap_lists_the_roadmap(self):
         sitemap = (ROOT / "site" / "public" / "sitemap.xml").read_text(encoding="utf-8")
         self.assertIn("https://fluxion-dev.github.io/lazyplan/roadmap.html", sitemap)

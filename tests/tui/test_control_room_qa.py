@@ -53,6 +53,17 @@ class ControlRoomQaTest(unittest.IsolatedAsyncioTestCase):
     async def asyncTearDown(self) -> None:
         self.tmp.cleanup()
 
+    async def test_clearing_a_done_task_releases_its_claim(self) -> None:
+        app = tui_mod.create_app(self.db)
+        app.override_mode = True
+        async with app.run_test(size=(120, 40)) as pilot:
+            await settle(pilot)
+            app.selected = ("task", self.doing.id)
+            await pilot.press("s")
+            await pilot.pause()
+            self.assertEqual(self.store.get_task(self.doing.id).status, Status.DONE)
+            self.assertIsNone(self.store.get_claim(self.doing.id))
+
     async def test_control_room_launch_panels_and_detail(self) -> None:
         app = tui_mod.create_app(self.db, startup_filter="needs")
         async with app.run_test(size=(120, 40)) as pilot:

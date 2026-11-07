@@ -127,6 +127,7 @@ class TestMcpEndToEnd(unittest.TestCase):
         store = Store(self.db)
         self.assertTrue(any(event["actor"] == "qa" for event in store.feed(50)))
         self.assertEqual(store.get_task(task_id).status.value, "done")
+        self.assertIsNone(store.get_claim(task_id))
 
     def test_read_only_session_refuses_writes(self):
         client = McpClient(self.db, read_only=True)

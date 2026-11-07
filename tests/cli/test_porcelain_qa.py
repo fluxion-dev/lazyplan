@@ -171,6 +171,16 @@ class TestPorcelainAgentLoop(unittest.TestCase):
             code = lpui_main(["--db", self.db, "--actor", "qa", "--porcelain", *argv])
         return code, out.getvalue(), err.getvalue()
 
+    def test_reconcile_check_exit_and_claim_cleanup(self):
+        _fixture(self.db)
+        Store(self.db).claim_task(1, "qa", 300)
+        code, out, _err = self._run_raw("reconcile", "--check")
+        self.assertEqual(code, 1)
+        self.assertIn("released", out)
+        code, _out, _err = self._run_raw("reconcile")
+        self.assertEqual(code, 0)
+        self.assertIsNone(Store(self.db).get_claim(1))
+
     def test_full_loop_from_porcelain_stdout(self):
         self.assertEqual(
             self._run("plan", "add", "--title", "Agent loop", "--why", "Ship", "--what", "Rows")[0],

@@ -121,6 +121,8 @@ from .sessions import (
     show_session,
     start_session,
 )
+from .ship import ShipNote
+from .ship import build as build_ship
 from .transfer import (
     _export_entry,
     _export_maps,
@@ -244,4 +246,6 @@ __all__ = [
     "show_session",
     "list_sessions",
     "previous_session",
+    "ShipNote",
+    "build_ship",
 ]

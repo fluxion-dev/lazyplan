@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import unittest
 
-from lazyplan.core.entities import Plan, Status
+from lazyplan.core.entities import Plan, Status, Task
 from lazyplan.core.policies.planning import (
     ARCHIVE_AFTER_SECS,
     is_archived,
     next_status,
+    progress_counts,
     rollup_target,
 )
 
@@ -25,6 +26,24 @@ class TestRollup(unittest.TestCase):
 
     def test_otherwise_todo(self) -> None:
         self.assertEqual(rollup_target([Status.TODO, Status.DONE]), Status.TODO)
+
+
+class TestProgress(unittest.TestCase):
+    def test_empty_is_zero(self) -> None:
+        self.assertEqual(progress_counts([]), (0, 0))
+
+    def test_counts_done_over_total(self) -> None:
+        tasks = [
+            Task(1, 1, "A", Status.TODO),
+            Task(2, 1, "B", Status.DOING),
+            Task(3, 1, "C", Status.DONE),
+            Task(4, 1, "D", Status.DONE),
+        ]
+        self.assertEqual(progress_counts(tasks), (2, 4))
+
+    def test_order_does_not_matter(self) -> None:
+        tasks = [Task(1, 1, "A", Status.DONE), Task(2, 1, "B", Status.TODO)]
+        self.assertEqual(progress_counts(list(reversed(tasks))), (1, 2))
 
 
 class TestTransitions(unittest.TestCase):

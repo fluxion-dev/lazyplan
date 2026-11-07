@@ -344,16 +344,30 @@ The CLI, export, preview, and detail views keep the static `◐`; set
 
 The TUI uses the Catppuccin-based `lazyplan-dark` theme by default. `t` cycles
 mocha, OLED-black `void`, and `latte`; `LAZYPLAN_THEME` selects one at launch.
-The main screen pairs the plan tree with a preview column: a sticky title and
-scrolling reason/scope/next/acceptance body sits above a `git` card for the
-linked checkouts, branch state, commits, and pull requests. At 100 columns and
-wider the tree and the side column share the width evenly. Rows reflow as you
-resize the terminal, so titles expand or truncate in place without a refresh.
-The `git` card
-grows with its content between 3 and 10 rows and gives the room back to the
-preview when the selection has no linked checkout. A `timeline` card closes the
-bottom of the screen. Reverse-video keycaps fill the hint bar; the same tokens
-drive the detail, source, export, palette, help, and form screens.
+The main screen pairs the plan tree with a preview column: a two-line control
+strip, a sticky title and scrolling reason/scope/next/acceptance body, a `git`
+card for the linked checkouts, branch state, commits, and pull requests, and an
+`agents` card for active sessions and the selected plan's last handoff. At 100
+columns and wider the tree and the side column share the width evenly. Rows
+reflow as you resize the terminal, so titles expand or truncate in place
+without a refresh. The `git` card grows with its content between 3 and 10 rows
+and gives the room back to the preview when the selection has no linked
+checkout. The `agents` card caps at five sessions and shows the last handoff
+for the selected plan. A `timeline` card closes the bottom of the screen.
+Reverse-video keycaps fill the hint bar; the same tokens drive the detail,
+source, export, palette, help, and form screens.
+
+On launch the tree opens on the **needs me** lens: attention tasks plus plans
+with drift, open questions, stale claims, or blocked work, each with its parent
+context. The nav border names the active lens. `F` cycles the source lenses and
+returns to all plans.
+
+The control strip is two bounded lines. For a plan it reads `health` and
+`needs`; a task reads `work` and `needs`; a milestone reads `slice` and
+`needs`. Readiness, approval and drift, open questions, blocked work, claims,
+evidence, and touch overlaps all appear without opening detail. The detail page
+adds approval revision and drift, readiness checks, evidence coverage, claims,
+touch-points, and the previous session handoff.
 
 Run **Export plan as Markdown** from the palette (`c`, then `export`) to open a
 destination picker. It starts in your Downloads folder with
@@ -385,7 +399,7 @@ and repo detail stays in the preview/GIT pane.
 | `n` | create by context (plan, milestone, or task) |
 | `/` | filter by text |
 | `f` | change status filter |
-| `F` | change source filter: all, linked, PR, stale, unlinked, claims, blocked, attention, focus |
+| `F` | change source filter: needs me, all, linked, PR, stale, unlinked, claims, blocked, attention, focus |
 | `g` | open the source trail for the selected row |
 | `A` | show all plans |
 | `?` | help |

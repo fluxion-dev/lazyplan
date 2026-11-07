@@ -93,6 +93,26 @@ shifts the stats.
 Empty states come from `EMPTY_NO_PLANS` / `EMPTY_FEED` (same in CLI and
 TUI).
 
+## Control room surfaces
+
+The landing lens is `needs`: attention tasks plus plans with drift, open
+questions, stale claims, or blocked work, kept with one parent context chain.
+The nav border names the lens; `F` cycles the other source filters and returns
+to all plans.
+
+`views/control.py` owns the two-line strip above the preview body. It is
+deliberately bounded: counts and short labels, never an unbounded list. Plan
+and task strips use `health` / `needs` and `work` / `needs`; a milestone uses
+`slice` / `needs`. Readiness, approval and drift, open questions, blocked work,
+claims, evidence, and touch overlaps are all expressed in those two lines
+(`[green]✓[/]` clear, `[yellow]⚠[/]` or `[yellow]Δ[/]` needs a human,
+`[red]` blocked or failing). Do not add a third line or a scrolling list to the
+strip; put detail in the preview body or the detail page instead.
+
+`widgets/agents_panel.py` owns the `agents` card below `git`: up to five active
+sessions with actor, plan, branch, start time, and age, plus the selected
+plan's last handoff. It is read-only; session lifecycle stays on the CLI.
+
 ## TUI module map
 
 - `app.py` is the shell: composition, global bindings, layout, lifecycle, and
@@ -116,11 +136,14 @@ TUI).
 - `controllers/spinner.py` owns frame timing and doing-row repaint.
 - `controllers/git_state.py` owns the preview's git probe and TTL cache.
 - `views/preview.py` returns a structured `PreviewDocument`; it never touches
-  widgets. `widgets/preview_panel.py` renders that document with a sticky
-  header above a scrolling body.
+  widgets. `views/control.py` builds the bounded two-line strip.
+  `widgets/preview_panel.py` renders the sticky head, the strip, and the
+  scrolling body.
 - `views/git.py` builds the pure GIT document; `widgets/git_panel.py` renders
   it under the preview. `controllers/git_state.py` supplies the cached
   branch/dirty snapshot.
+- `widgets/agents_panel.py` renders active sessions and the selected plan's
+  last handoff below the GIT card.
 - `widgets/plan_tree.py` is the `FoldTree`; `tree.py` keeps the event
   handlers and delegates behaviour to the tree controller.
 - `theme/` owns the mocha, void, and latte themes and semantic `lp-*` tokens;

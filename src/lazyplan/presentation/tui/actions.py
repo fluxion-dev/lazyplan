@@ -21,6 +21,7 @@ from .approval_actions import ApprovalMixin
 from .claim_actions import ClaimMixin
 from .constants import DOUBLE_CLICK_WINDOW
 from .evidence_actions import EvidenceMixin
+from .finish_actions import FinishMixin
 from .git_actions import GitActionMixin
 from .override import WRITE_COMMANDS, OverrideMixin
 from .palette_handlers import palette_handlers
@@ -46,6 +47,7 @@ if _TEXTUAL_OK:
         ApprovalMixin,
         ClaimMixin,
         EvidenceMixin,
+        FinishMixin,
         QuestionMixin,
         ReferenceMixin,
         StatusMixin,

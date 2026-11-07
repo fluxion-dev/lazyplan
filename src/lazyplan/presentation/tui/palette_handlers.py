@@ -25,6 +25,7 @@ def palette_handlers(app: Any) -> dict[str, Callable[[], None]]:
         "claim_task": app.action_claim_task,
         "block_task": app.action_block_task,
         "unblock_task": app.action_unblock_task,
+        "finish_task": app.action_finish_task,
         "plan_diff": app.action_plan_diff,
         "edit_selection": app.action_edit_selection,
         "move_todo": lambda: app.action_move(Status.TODO),

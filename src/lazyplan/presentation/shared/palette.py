@@ -220,6 +220,17 @@ COMMANDS: tuple[Command, ...] = (
         tui_only=True,
     ),
     Command(
+        id="finish-task",
+        label="Finish task",
+        section=EDIT,
+        context="selection",
+        handler="finish_task",
+        aliases=("finish", "close task", "done with commits"),
+        help_group="CHANGE",
+        help_hint="link commits and close the task through the finish gates",
+        tui_only=True,
+    ),
+    Command(
         id="edit-selection",
         label="Edit selection",
         section=EDIT,

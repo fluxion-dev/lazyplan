@@ -47,6 +47,7 @@ WRITE_COMMANDS = frozenset(
         "claim_task",
         "block_task",
         "unblock_task",
+        "finish_task",
         "edit_selection",
         "move_todo",
         "move_doing",

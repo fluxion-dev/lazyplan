@@ -110,6 +110,17 @@ COMMANDS: tuple[Command, ...] = (
     ),
     # -- edit ------------------------------------------------------------
     Command(
+        id="approve-plan",
+        label="Approve plan scope",
+        section=EDIT,
+        context="plan",
+        handler="approve_plan",
+        aliases=("approve", "approval", "snapshot", "sign off"),
+        help_group="CHANGE",
+        help_hint="record the current plan as an approved revision",
+        tui_only=True,
+    ),
+    Command(
         id="edit-selection",
         label="Edit selection",
         section=EDIT,
@@ -449,6 +460,17 @@ COMMANDS: tuple[Command, ...] = (
         aliases=("source", "git trail", "where", "provenance"),
         help_group="FIND",
         help_hint="repos, commits, files, and PRs for the selected row",
+        tui_only=True,
+    ),
+    Command(
+        id="plan-diff",
+        label="Show plan diff",
+        section=VIEW,
+        context="plan",
+        handler="plan_diff",
+        aliases=("diff", "drift", "revisions", "scope changes"),
+        help_group="FIND",
+        help_hint="scope changes since the last approval",
         tui_only=True,
     ),
     # -- app -------------------------------------------------------------

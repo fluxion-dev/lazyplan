@@ -57,6 +57,14 @@ if _TEXTUAL_OK:
         def _close(self) -> None:
             self.dismiss(None)
 
+    class TextScreen(HelpScreen):
+        """Read-only text overlay with a custom title and body."""
+
+        def __init__(self, title: str, text: str) -> None:
+            super().__init__()
+            self.dialog_title = title
+            self.HELP = text  # type: ignore[misc]
+
     class PaletteScreen(_Form):
         """Modal command palette: grouped sections, live filter, context rules."""
 

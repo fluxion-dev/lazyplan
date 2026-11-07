@@ -9,7 +9,7 @@ from .forms import (
     NewPlanScreen,
     NewTaskScreen,
 )
-from .help import HelpScreen, PaletteScreen
+from .help import HelpScreen, PaletteScreen, TextScreen
 from .source import SourceScreen
 from .update import UpdateScreen
 
@@ -23,6 +23,7 @@ __all__ = [
     "NewPlanScreen",
     "NewTaskScreen",
     "PaletteScreen",
+    "TextScreen",
     "SourceScreen",
     "UpdateScreen",
 ]

@@ -15,9 +15,9 @@ except ImportError:  # pragma: no cover
 from lazyplan.infrastructure.templates import load_template
 
 from ... import services
-from ...core.entities import Status
 from ..shared.export import display_path
 from ..shared.palette import by_id
+from .approval_actions import ApprovalMixin
 from .claim_actions import ClaimMixin
 from .constants import DOUBLE_CLICK_WINDOW
 from .git_actions import GitActionMixin
@@ -34,10 +34,11 @@ from .screens import (
     NewTaskScreen,
     PaletteScreen,
 )
+from .status_actions import StatusMixin
 
 if _TEXTUAL_OK:
 
-    class ActionMixin(OverrideMixin, ClaimMixin, GitActionMixin):
+    class ActionMixin(OverrideMixin, ApprovalMixin, ClaimMixin, StatusMixin, GitActionMixin):
         """Actions behavior."""
 
         def action_new_milestone(self) -> None:
@@ -206,23 +207,6 @@ if _TEXTUAL_OK:
                 cb,
             )
 
-        def action_toggle_status(self) -> None:
-            if self.selected is None:
-                self.notify("select a row first (s advances status)")
-                return
-            kind, oid = self.selected
-            left = self.store.open_criteria(kind, oid)
-            current = self.store.get_parent(kind, oid)
-            if left and (current is None or current.status != Status.DONE):
-                # advisory only: warn, then proceed (flow first)
-                self.notify(f"warning: {len(left)} open criteria — closing anyway", timeout=5)
-            nxt = services.cycle_status(self.store, kind, oid, actor="tui")
-            if nxt is None:
-                self.notify("selected row no longer exists")
-            else:
-                self._record_override("status", f"{kind} #{oid}", nxt.value)
-            self._saved(f"{kind} {oid} -> {nxt.value if nxt else '?'}")
-
         def action_open_detail(self) -> None:
             if len(self.screen_stack) > 1:
                 return  # a modal owns enter
@@ -342,21 +326,6 @@ if _TEXTUAL_OK:
             )
             self._last_click_key, self._last_click_at = key, now
             return double
-
-        def action_move(self, status: Status) -> None:
-            """Move the selection to an explicit status (palette)."""
-            if self.selected is None:
-                self.notify("select a row first, then move it")
-                return
-            kind, oid = self.selected
-            left = self.store.open_criteria(kind, oid)
-            if status == Status.DONE and left:
-                self.notify(f"warning: {len(left)} open criteria — closing anyway", timeout=5)
-            if not services.set_status(self.store, kind, oid, status, actor="tui"):
-                self.notify("selected row no longer exists")
-                return
-            self._record_override("status", f"{kind} #{oid}", status.value)
-            self._saved(f"{kind} {oid} -> {status.value}")
 
         async def action_quit(self) -> None:
             """Leave the screen (q)."""

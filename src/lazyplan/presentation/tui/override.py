@@ -36,6 +36,7 @@ WRITE_COMMANDS = frozenset(
         "new_milestone",
         "new_task",
         "add_criterion",
+        "approve_plan",
         "edit_selection",
         "move_todo",
         "move_doing",

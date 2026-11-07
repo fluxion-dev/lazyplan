@@ -45,6 +45,7 @@ from .preview import PreviewMixin
 from .state import AppState
 from .theme import register_themes
 from .tree import TreeMixin
+from .widgets.agents_panel import AgentsPanel
 from .widgets.git_panel import GitPanel
 from .widgets.plan_tree import FoldTree
 from .widgets.preview_panel import PreviewPanel
@@ -170,6 +171,7 @@ if _TEXTUAL_OK:
                     with Vertical(id="side"):
                         yield PreviewPanel()
                         yield GitPanel()
+                        yield AgentsPanel()
                 yield MetricsSection()
             yield Label("", id="hints")
 

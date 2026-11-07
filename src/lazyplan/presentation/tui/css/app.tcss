@@ -74,6 +74,23 @@
     padding: 0 1;
 }
 
+#agents {
+    width: 1fr;
+    height: auto;
+    min-height: 3;
+    max-height: 8;
+    padding: 0 1;
+    border: round $lp-border-muted;
+    border-title-color: $lp-text-muted;
+    border-title-style: bold;
+    border-title-align: left;
+}
+
+#agents-body {
+    height: auto;
+    padding: 0 1;
+}
+
 #metrics {
     height: 40%;
     min-height: 11;
@@ -94,7 +111,8 @@
 
 #main.narrow #side,
 #main.narrow #preview,
-#main.narrow #git {
+#main.narrow #git,
+#main.narrow #agents {
     display: none;
 }
 
@@ -116,7 +134,8 @@
 }
 
 #main.wide #preview,
-#main.wide #git {
+#main.wide #git,
+#main.wide #agents {
     padding: 0 2;
 }
 

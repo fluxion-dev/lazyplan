@@ -4,6 +4,7 @@ from __future__ import annotations
 
 try:
     from .query import query_one_opt
+    from .widgets.agents_panel import AgentsPanel
     from .widgets.git_panel import GitPanel
     from .widgets.preview_panel import PreviewPanel
 
@@ -22,8 +23,32 @@ if _TEXTUAL_OK:
     class PreviewMixin(AppBase):
         """Preview behavior."""
 
+        def _selected_plan_id(self) -> int | None:
+            """Resolve the selected row to its owning plan."""
+            if self.selected is None:
+                return None
+            kind, oid = self.selected
+            if kind == "plan":
+                return oid
+            if kind == "milestone":
+                milestone = self.store.get_milestone(oid)
+                return milestone.plan_id if milestone is not None else None
+            task = self.store.get_task(oid)
+            if task is None:
+                return None
+            milestone = self.store.get_milestone(task.milestone_id)
+            return milestone.plan_id if milestone is not None else None
+
+        def update_agents(self) -> None:
+            """Refresh the active-session pane for the selected plan."""
+            panel = query_one_opt(self, "#agents", AgentsPanel)
+            if panel is None:
+                return
+            panel.show(self.store, self._selected_plan_id())
+
         def update_preview(self, force: bool = False) -> None:
             """Selection preview: a bounded summary, never the full plan."""
+            self.update_agents()
             panel = query_one_opt(self, "#preview", PreviewPanel)
             if panel is None:
                 return

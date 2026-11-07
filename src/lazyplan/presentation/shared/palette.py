@@ -23,7 +23,7 @@ SECTIONS: tuple[str, ...] = (VIEW, APP, CREATE, EDIT)
 
 def command_mode(command: Command) -> str:
     """Observe for read-only sections; override for create and edit."""
-    return "override" if command.section in (CREATE, EDIT) else "observe"
+    return command.mode
 
 
 # -- canonical glossary ---------------------------------------------------
@@ -60,6 +60,11 @@ class Command:
     help_hint: str = ""
     in_palette: bool = True
     tui_only: bool = False
+
+    @property
+    def mode(self) -> str:
+        """Observe for read-only sections; override for create and edit."""
+        return "override" if self.section in (CREATE, EDIT) else "observe"
 
 
 COMMANDS: tuple[Command, ...] = (

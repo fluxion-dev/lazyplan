@@ -37,6 +37,8 @@ class TestCommandRegistry(unittest.TestCase):
     def test_sections_split_observe_and_override(self):
         modes = {palette.command_mode(cmd) for cmd in palette.palette_commands()}
         self.assertEqual(modes, {"observe", "override"})
+        for cmd in palette.palette_commands():
+            self.assertEqual(cmd.mode, palette.command_mode(cmd))
         from lazyplan.presentation.shared.help import HELP_TEXT
 
         self.assertIn("OBSERVE", HELP_TEXT)

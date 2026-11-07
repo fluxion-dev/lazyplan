@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import time
 
+from ...core.entities import Criterion, CriterionEvidence
 from ...services import insights
+from ...services.evidence import ProofResult
 from ...store import Store
 from ..shared import porcelain
 from .emit import _porcelain_row
@@ -28,6 +30,76 @@ def _commit_row(link: dict, parent: str) -> str:
         parent,
         link.get("repo_root") or "-",
     )
+
+
+def _evidence_label(row: CriterionEvidence) -> str:
+    """Short identifying text for one evidence row."""
+    values = (
+        row.command,
+        row.commit_sha[:12],
+        row.pr_url,
+        row.artifact_path,
+        row.note,
+    )
+    return next((str(value) for value in values if value), "-")
+
+
+def evidence_payload(result: ProofResult) -> dict:
+    """JSON payload for one proof."""
+    return {
+        "evidence": vars(result.evidence),
+        "criterion": vars(result.criterion),
+        "ticked": result.ticked,
+    }
+
+
+def evidence_text(result: ProofResult) -> str:
+    """Human line for one proof."""
+    state = "pass" if result.evidence.passing else "fail"
+    ticked = " (criterion ticked)" if result.ticked else ""
+    return (
+        f"recorded {state} evidence #{result.evidence.id} "
+        f"for criterion #{result.evidence.criterion_id}{ticked}"
+    )
+
+
+def evidence_row(result: ProofResult) -> str:
+    """Porcelain row for one proof."""
+    state = "pass" if result.evidence.passing else "fail"
+    return porcelain.row(
+        "evidence",
+        result.evidence.id,
+        state,
+        _evidence_label(result.evidence),
+        f"criterion:{result.evidence.criterion_id}",
+        result.evidence.actor,
+    )
+
+
+def evidence_list_text(rows: list[CriterionEvidence], criterion: Criterion) -> str:
+    """Human evidence list; empty is explicit."""
+    if not rows:
+        return f"criterion #{criterion.id} has no evidence"
+    lines: list[str] = []
+    for row in rows:
+        state = "pass" if row.passing else "fail"
+        lines.append(f"#{row.id} {state} {_evidence_label(row)} @{row.actor}")
+    return "\n".join(lines)
+
+
+def evidence_list_rows(rows: list[CriterionEvidence]) -> list[str]:
+    """Porcelain evidence rows."""
+    return [
+        porcelain.row(
+            "evidence",
+            row.id,
+            "pass" if row.passing else "fail",
+            _evidence_label(row),
+            f"criterion:{row.criterion_id}",
+            row.actor,
+        )
+        for row in rows
+    ]
 
 
 def _repo_row(row: dict, parent: str, status: str) -> str:
@@ -96,6 +168,9 @@ def _audit_rows(report: insights.audit.Report) -> list[str]:
         porcelain.row("metric", "criteria_linked", "-", report.criteria_linked),
         porcelain.row("metric", "trace_coverage", "-", round(report.trace_coverage, 4)),
         porcelain.row("metric", "trace_gaps", "-", len(report.trace_gaps)),
+        porcelain.row("metric", "evidence_total", "-", report.evidence_total),
+        porcelain.row("metric", "evidence_covered", "-", report.evidence_covered),
+        porcelain.row("metric", "evidence_coverage", "-", round(report.evidence_coverage, 4)),
     ]
     rows.extend(porcelain.row("gap", f"{gap.kind}:{gap.id}", "-", gap.text) for gap in report.gaps)
     rows.extend(
@@ -272,7 +347,13 @@ def _trace_entries(payload: dict) -> list[dict]:
     """Normalize a plan or criterion trace payload to criterion entries."""
     if "criteria" in payload:
         return list(payload["criteria"])
-    return [{"criterion": payload["criterion"], "tasks": payload.get("tasks", [])}]
+    return [
+        {
+            "criterion": payload["criterion"],
+            "evidence": payload.get("evidence", []),
+            "tasks": payload.get("tasks", []),
+        }
+    ]
 
 
 def _trace_text(payload: dict) -> list[str]:
@@ -288,6 +369,12 @@ def _trace_text(payload: dict) -> list[str]:
             f"criterion #{crit['id']} [{state}] {crit['text']} "
             f"({crit['parent_kind']} #{crit['parent_id']})"
         )
+        for row in entry.get("evidence", []):
+            proof = "pass" if row.get("exit_code") in (None, 0) else "fail"
+            lines.append(
+                f"  evidence #{row['id']} {proof} "
+                f"{row.get('command') or row.get('note') or str(row.get('commit_sha', ''))[:12]}"
+            )
         tasks = entry.get("tasks", [])
         if not tasks:
             lines.append("  (no proving task)")
@@ -323,6 +410,17 @@ def _trace_rows(payload: dict) -> list[str]:
                 "-",
             )
         )
+        for row in entry.get("evidence", []):
+            rows.append(
+                porcelain.row(
+                    "evidence",
+                    row.get("id"),
+                    "pass" if row.get("exit_code") in (None, 0) else "fail",
+                    row.get("command") or row.get("note") or str(row.get("commit_sha", ""))[:12],
+                    f"criterion:{crit['id']}",
+                    row.get("actor"),
+                )
+            )
         tasks = entry.get("tasks", [])
         if not tasks:
             rows.append(

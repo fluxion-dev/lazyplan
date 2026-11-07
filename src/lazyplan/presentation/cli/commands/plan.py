@@ -8,6 +8,7 @@ import sys
 from lazyplan import (
     services,
 )
+from lazyplan.services import evidence as evidence_service
 from lazyplan.services import revisions as revisions_service
 
 from ....core.entities import Milestone, Plan, Status, Task
@@ -23,7 +24,7 @@ from ...shared.design import (
 from ...shared.render import (
     render_full,
 )
-from .. import rows_revisions
+from .. import rows_proof, rows_revisions
 from ..emit import (
     _criterion_row,
     _emit,
@@ -417,6 +418,50 @@ def _cmd_delete_criteria(store: Store, args: argparse.Namespace, actor: str) -> 
         return 1
     line = porcelain.row("criterion", args.id, "deleted", "-", "-", "-")
     return _emit_record(args, line, {"ok": True, "deleted": f"criteria #{args.id}"})
+
+
+def _cmd_criterion_prove(store: Store, args: argparse.Namespace, actor: str) -> int:
+    """Record one proof row; tick only when it passes."""
+    try:
+        result = evidence_service.prove(
+            store,
+            args.id,
+            command=args.command,
+            exit_code=args.exit_code,
+            commit_sha=args.commit,
+            pr_url=args.pr,
+            artifact_path=args.artifact,
+            note=args.note,
+            task_id=args.task,
+            actor=actor,
+            tick=not args.no_tick,
+        )
+    except (KeyError, ValueError) as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 2
+    if args.json:
+        return _emit(args, rows_proof.evidence_payload(result))
+    if porcelain.enabled(args):
+        print(rows_proof.evidence_row(result))
+        return 0
+    print(rows_proof.evidence_text(result))
+    return 0
+
+
+def _cmd_criterion_evidence(store: Store, args: argparse.Namespace, actor: str) -> int:
+    """List one criterion's proof rows."""
+    del actor
+    criterion = store.get_criterion(args.id)
+    if criterion is None:
+        print(msg_not_found("criterion", args.id), file=sys.stderr)
+        return 1
+    rows = evidence_service.list_evidence(store, args.id)
+    return _emit_read(
+        args,
+        [vars(row) for row in rows],
+        rows_proof.evidence_list_rows(rows),
+        rows_proof.evidence_list_text(rows, criterion),
+    )
 
 
 def _criterion_link(store: Store, args: argparse.Namespace, actor: str, relate: bool) -> int:

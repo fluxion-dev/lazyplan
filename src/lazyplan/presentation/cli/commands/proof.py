@@ -255,6 +255,7 @@ def _cmd_task_finish(store: Store, args: argparse.Namespace, actor: str) -> int:
             actor=actor,
             require_pr=bool(getattr(args, "require_pr", False)),
             require_checks=bool(getattr(args, "require_checks", False)),
+            require_evidence=bool(getattr(args, "require_evidence", False)),
             override=str(getattr(args, "override", "") or ""),
         )
     except services.GateError as exc:

@@ -201,6 +201,13 @@ def add_audit(
         metavar="RATIO",
         help="strict-mode minimum criteria with a proving task; 0 disables (default: 0)",
     )
+    au.add_argument(
+        "--min-evidence",
+        type=float,
+        default=0.0,
+        metavar="RATIO",
+        help="strict-mode minimum criteria with passing evidence; 0 disables (default: 0)",
+    )
 
 
 def add_brief(

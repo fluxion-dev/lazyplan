@@ -224,6 +224,11 @@ strict\-mode maximum open criteria on done rows (default: 0)
 .B \-\-min\-trace RATIO
 strict\-mode minimum criteria with a proving task; 0 disables (default: 0)
 .RE
+.RS
+.TP
+.B \-\-min\-evidence RATIO
+strict\-mode minimum criteria with passing evidence; 0 disables (default: 0)
+.RE
 .TP
 .B lpui brief
 show the active plan, the next task, and unlinked commits
@@ -980,7 +985,7 @@ who made this change (you see it in feed)
 .RS
 .TP
 .B  ACTION
-what to do with a criterion Choices: add, list, tick, untick, delete, relate, unrelate\. Required\.
+what to do with a criterion Choices: add, list, tick, untick, delete, prove, evidence, relate, unrelate\. Required\.
 .RE
 .TP
 .B lpui git

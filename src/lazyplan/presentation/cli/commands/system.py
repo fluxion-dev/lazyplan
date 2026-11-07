@@ -240,6 +240,8 @@ def _audit_lines(report: audit.Report) -> list[str]:
         f"gaps       {len(report.gaps)} open criteria on done rows",
         f"trace      {report.criteria_linked}/{report.criteria_total} criteria "
         f"· {report.trace_coverage:.0%} ({len(report.trace_gaps)} unproven)",
+        f"evidence   {report.evidence_covered}/{report.evidence_total} criteria "
+        f"· {report.evidence_coverage:.0%}",
     ]
     for gap in report.gaps[:10]:
         lines.append(f"  {gap.kind} #{gap.id}: {gap.text[:60]}")
@@ -301,6 +303,7 @@ def _cmd_audit(store: Store | None, args: argparse.Namespace, actor: str) -> int
         lag_commits=args.max_lag,
         gaps=args.max_gaps,
         trace=args.min_trace,
+        evidence=args.min_evidence,
     ).breaches(result)
     return _audit_output(args, result, reasons)
 

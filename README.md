@@ -56,13 +56,6 @@ data with `lpui seed`.
 - **Yours to keep.** Local-first by default. Export or import any time. No
   account, no cloud, no lock-in.
 
-## The screen
-
-The screen is a control room: it opens on what needs you, with attention rows,
-open questions, drift, stale claims, and the last handoff. It is read-only by
-default; press `O` for Manual override mode when you want deliberate writes.
-The palette splits reads and writes as Observe and Override.
-
 ## Everyday commands
 
 ```bash

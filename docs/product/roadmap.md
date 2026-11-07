@@ -59,13 +59,13 @@ Each of these would make lazyplan more like the tracker the persona is escaping.
 
 | Capability | State | Read |
 |---|---|---|
-| Intent capture | Adequate | The interview skill and templates are strong, but creation is one-row-at-a-time. No atomic or bulk path, so agents burn context and can leave partial plans. |
+| Intent capture | Strong | The interview, templates, atomic `plan apply`, stable keys, and structural recipes. One call creates the tree; a retry is a no-op. |
 | Work breakdown | Strong | Plan, milestone, task, and criteria hierarchy with rollup and creation-order sequencing. Deliberately free of dates, owners, and estimates. |
 | Execution coordination | Adequate | Claims, leases, `next`, blocked work, and takeover. Coordination is task-level only, with no file or worktree collision awareness. |
 | Provenance | Strong | Commits, branches, pull requests, source trail with diffs, and criterion-to-commit trace. GitHub-only and read-only by design. |
-| Verification | Adequate | Finish gates, lint, and audit. Evidence is descriptive; there is no structured proof ledger. |
+| Verification | Strong | Criterion evidence, finish gates, lint, audit, and trace. The latest evidence row decides whether a criterion is proven. |
 | Resume and continuity | Adequate | `brief` plus session-start and pre-compact hooks. No session memory, decision log, or plan diff. |
-| Human review | Adequate | Strong read surfaces, source trail, comments, and share. No review packet and no drift view. |
+| Human review | Strong | Approval snapshots, plan diff, drift badge, review packet, source trail, comments, and share. |
 | Collaboration | Adequate | Comments, mentions, static share, and plan-granularity sync. Fine for solo; thin for a human with several agents. |
 | Integrations | Strong | MCP, porcelain, five hook hosts, and one-way issue import. Deliberate no write-back. |
 | UX, performance, trust | Strong | Fast TUI, palette, filters, timeline, local-first storage, and benchmarked query budgets. |
@@ -181,13 +181,12 @@ weekly sessions.
 
 ### Next — Trust layer
 
-**Goal:** make delegation safe as agents take on more. These bets are candidates
-until Now ships; each has a scoping task now and detailed implementation tasks
-at horizon start.
+**Goal:** make delegation safe as agents take on more. Shipped 2026-11-06:
+R5–R8 are in the product and the horizon tree is closed.
 
 #### R5 — Approval snapshots and plan diff
 
-**Status:** Next candidate
+**Status:** Shipped 2026-11-06
 
 **Outcome:** a human approves a plan revision, and later sees exactly what
 changed: added tasks, changed scope, removed criteria, and why.
@@ -205,7 +204,7 @@ per plan.
 
 #### R6 — Evidence ledger
 
-**Status:** Next candidate
+**Status:** Shipped 2026-11-06
 
 **Outcome:** a criterion can carry proof, not just a tick.
 
@@ -223,7 +222,7 @@ pass rate.
 
 #### R7 — Review packet
 
-**Status:** Next candidate
+**Status:** Shipped 2026-11-06
 
 **Outcome:** a human or reviewer agent receives one Markdown packet with the
 plan, the post-approval diff, criteria coverage, commits and PRs, lint and audit
@@ -240,7 +239,7 @@ that can become a PR body or a review comment.
 
 #### R8 — Open questions and plan-ready gate
 
-**Status:** Next candidate
+**Status:** Shipped 2026-11-06
 
 **Outcome:** ambiguity is recorded before it becomes rework, and a plan cannot
 claim readiness while material questions are open.
@@ -259,7 +258,7 @@ first review.
 ### Later — Parallel agents and handoff
 
 **Goal:** keep lazyplan the source of truth when more than one agent works at
-once. These bets are candidates until Next ships.
+once. These bets are candidates until their scoping pass.
 
 #### R9 — Session records
 
@@ -356,6 +355,7 @@ never write back.
 | 2026-11-06 | No issue-tracker mirroring. Publish outcomes, link references. | The persona's boundary is the product's moat. |
 | 2026-11-06 | A metaplan defines how horizons become implementation plans. | The roadmap should produce plans repeatably, not by reinventing the process each time. |
 | 2026-11-06 | Now horizon shipped: plan apply, recipes, context packet, Focus lens. | R1–R4 are in the product; Next remains a candidate until its scoping pass. |
+| 2026-11-06 | Next horizon shipped: approvals, evidence, questions, and review. | R5–R8 are in the product (PR #92); the Later horizon moves to intake. |
 
 ## How to update this roadmap
 

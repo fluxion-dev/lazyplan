@@ -167,6 +167,7 @@ original brainstorm.
 - Stable item IDs plus a doc/site drift test.
 - No issue-tracker mirroring; publish outcomes and link references.
 - A metaplan for turning horizons into implementation plans.
+- Next shipped 2026-11-06: approvals, evidence, questions, and review; Later moves to scoping.
 
 ## Where the context lives
 

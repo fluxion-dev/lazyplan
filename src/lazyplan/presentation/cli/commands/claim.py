@@ -12,7 +12,7 @@ from lazyplan import (
 )
 from lazyplan.infrastructure.repo import find_repo_root
 
-from ....core.errors import ClaimConflict, ClaimMissing
+from ....core.errors import ClaimConflict, ClaimMissing, TouchpointOverlap
 from ....core.ports.coordination import CoordinationPort
 from ...shared import (
     porcelain,
@@ -95,7 +95,7 @@ def _cmd_next(store: CoordinationPort, args: argparse.Namespace, actor: str) -> 
 
 def _claim_failure(exc: Exception) -> int:
     """Map a lease failure to the agent-readable exit code."""
-    if isinstance(exc, (ClaimConflict, ClaimMissing)):
+    if isinstance(exc, (ClaimConflict, ClaimMissing, TouchpointOverlap)):
         print(msg_error(exc), file=sys.stderr)
         return 1
     if isinstance(exc, KeyError):

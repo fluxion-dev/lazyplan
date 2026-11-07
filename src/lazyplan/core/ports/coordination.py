@@ -48,6 +48,10 @@ class CoordinationPort(PlanningPort, Protocol):
         self, plan_id: int | None = None, now: float | None = None
     ) -> Task | None: ...
 
+    def claimable_tasks(
+        self, plan_id: int | None = None, now: float | None = None
+    ) -> list[Task]: ...
+
     def set_blocked(
         self, tid: int, blocked: bool, reason: str = "", actor: str = "human"
     ) -> Task | None: ...
@@ -59,6 +63,8 @@ class CoordinationPort(PlanningPort, Protocol):
     def list_touchpoints(self, task_id: int) -> list[str]: ...
 
     def touchpoints_map(self) -> dict[int, list[str]]: ...
+
+    def effective_repos(self, parent_kind: str, parent_id: int) -> list[dict]: ...
 
     def add_note(
         self, parent_kind: str, parent_id: int, text: str, actor: str = "human"

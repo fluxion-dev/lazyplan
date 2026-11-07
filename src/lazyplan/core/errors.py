@@ -23,3 +23,23 @@ class ClaimConflict(ClaimError):
 
 class ClaimMissing(ClaimError):
     """No lease exists for the task."""
+
+
+class TouchpointOverlap(ClaimError):
+    """A task's touch-points overlap another active claim."""
+
+    def __init__(
+        self,
+        task_id: int,
+        other_task: int,
+        actor: str,
+        patterns: list[str],
+    ) -> None:
+        self.task_id = task_id
+        self.other_task = other_task
+        self.actor = actor
+        self.patterns = patterns
+        joined = ", ".join(patterns)
+        super().__init__(
+            f"task #{task_id} overlaps active claim on task #{other_task} by {actor}: {joined}"
+        )

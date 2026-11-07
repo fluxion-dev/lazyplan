@@ -3,11 +3,53 @@
 from __future__ import annotations
 
 from ..core.entities import Claim, Status, Task
-from ..core.errors import ClaimConflict
-from ..core.policies.coordination import parse_ttl, validate_block
+from ..core.errors import ClaimConflict, TouchpointOverlap
+from ..core.policies.coordination import parse_ttl, patterns_overlap, validate_block
 from ..core.ports.coordination import CoordinationPort
 from ..core.serialization import to_payload
 from .planning import set_status
+
+
+def overlaps(port: CoordinationPort, task_id: int) -> list[dict]:
+    """Active claims whose touch-points overlap this task in the same repo."""
+    patterns = port.list_touchpoints(task_id)
+    if not patterns:
+        return []
+    roots = {str(repo["repo_path"]) for repo in port.effective_repos("task", task_id)}
+    found: list[dict] = []
+    for claim in port.list_claims(include_expired=False):
+        other_task = int(claim["task_id"])
+        if other_task == task_id:
+            continue
+        claim_repo = str(claim.get("repo_path") or "")
+        if claim_repo and roots and claim_repo not in roots:
+            continue
+        other = port.list_touchpoints(other_task)
+        matched = sorted(
+            {
+                pattern
+                for pattern in patterns
+                for candidate in other
+                if patterns_overlap(pattern, candidate)
+            }
+            | {
+                candidate
+                for pattern in patterns
+                for candidate in other
+                if patterns_overlap(pattern, candidate)
+            }
+        )
+        if matched:
+            found.append(
+                {
+                    "task_id": other_task,
+                    "actor": str(claim.get("actor") or ""),
+                    "patterns": matched,
+                    "worktree": str(claim.get("worktree") or ""),
+                    "repo_path": claim_repo,
+                }
+            )
+    return found
 
 
 def start_claim(
@@ -19,8 +61,19 @@ def start_claim(
     force: bool = False,
     worktree: str = "",
     repo_path: str = "",
+    check_overlap: bool = True,
 ) -> dict:
     """Claim a task and move it doing; release the lease if the move fails."""
+    if check_overlap and not force:
+        found = overlaps(port, task_id)
+        if found:
+            first = found[0]
+            raise TouchpointOverlap(
+                task_id,
+                int(first["task_id"]),
+                str(first["actor"]),
+                list(first["patterns"]),
+            )
     seconds = parse_ttl(ttl)
     claim, previous = port.claim_task(
         task_id,
@@ -77,7 +130,10 @@ def claim_next(
 ) -> dict | None:
     """Select and optionally claim the first eligible todo, retrying lost races."""
     for _ in range(100):
-        task = port.next_claimable_task(plan_id)
+        tasks = port.claimable_tasks(plan_id)
+        if not tasks:
+            return None
+        task = next((item for item in tasks if not overlaps(port, item.id)), None)
         if task is None:
             return None
         if suggest:
@@ -91,6 +147,7 @@ def claim_next(
                 note=note,
                 worktree=worktree,
                 repo_path=repo_path,
+                check_overlap=False,
             )
         except ClaimConflict:
             # Another process claimed this task between selection and claim.

@@ -287,6 +287,9 @@ class StoreStubs(StoreStubsLinks):
     ) -> Task | None:
         raise NotImplementedError
 
+    def claimable_tasks(self, plan_id: int | None = None, now: float | None = None) -> list[Task]:
+        raise NotImplementedError
+
     @staticmethod
     def _row_to_note(r: sqlite3.Row) -> Note:
         raise NotImplementedError
@@ -395,6 +398,7 @@ class StoreStubs(StoreStubsLinks):
 
     def touchpoints_map(self) -> dict[int, list[str]]:
         raise NotImplementedError
+
     def gate_state(self, task_id: int) -> dict:
         raise NotImplementedError
 

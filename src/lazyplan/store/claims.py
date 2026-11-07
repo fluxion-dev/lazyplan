@@ -224,10 +224,8 @@ class ClaimsMixin(StoreBase):
             )
         return True
 
-    def next_claimable_task(
-        self, plan_id: int | None = None, now: float | None = None
-    ) -> Task | None:
-        """First unclaimed todo in active plans: doing plans first, then creation order."""
+    def claimable_tasks(self, plan_id: int | None = None, now: float | None = None) -> list[Task]:
+        """Unclaimed todo tasks in selection order: doing plans first, then creation."""
         stamp = time.time() if now is None else now
         sql = (
             "SELECT t.* FROM tasks t"
@@ -241,7 +239,14 @@ class ClaimsMixin(StoreBase):
         if plan_id is not None:
             sql += " AND p.id = ?"
             params.append(plan_id)
-        sql += " ORDER BY CASE WHEN p.status = 'doing' THEN 0 ELSE 1 END, p.id, m.id, t.id LIMIT 1"
+        sql += " ORDER BY CASE WHEN p.status = 'doing' THEN 0 ELSE 1 END, p.id, m.id, t.id"
         with self._connect() as conn:
-            row = conn.execute(sql, params).fetchone()
-        return self._row_to_task(row) if row is not None else None
+            rows = conn.execute(sql, params).fetchall()
+        return [self._row_to_task(row) for row in rows]
+
+    def next_claimable_task(
+        self, plan_id: int | None = None, now: float | None = None
+    ) -> Task | None:
+        """First unclaimed todo in active plans: doing plans first, then creation order."""
+        tasks = self.claimable_tasks(plan_id, now)
+        return tasks[0] if tasks else None

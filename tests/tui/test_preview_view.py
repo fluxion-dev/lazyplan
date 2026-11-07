@@ -68,6 +68,17 @@ class PreviewDocumentTest(unittest.TestCase):
         self.assertIn("changes since approval", text)
         self.assertIn("title: rename", text)
 
+    def test_task_preview_shows_proof(self) -> None:
+        criterion = self.store.add_criteria("task", self.task.id, "Works")
+        self.store.add_evidence(criterion.id, command="pytest", exit_code=0, actor="ci")
+        full = self.store.get_full("task", self.task.id)
+        assert full is not None
+        text = build_preview(self.store, "task", self.task.id, full, []).render()
+        self.assertIn("[bold]proof[/]", text)
+        self.assertIn("pytest", text)
+        self.assertIn("✓", text)
+        self.assertIn("exit 0", text)
+
     def test_task_preview_includes_breadcrumb_and_details(self) -> None:
         full = self.store.get_full("task", self.task.id)
         assert full is not None

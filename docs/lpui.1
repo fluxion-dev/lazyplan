@@ -1985,7 +1985,7 @@ record why enforced drift is being overridden when moving a plan to done
 .RE
 .TP
 .B lpui reconcile
-fix up parent statuses to match their children
+fix up parent statuses and leases
 .RS
 .TP
 .B \-\-json
@@ -2005,6 +2005,11 @@ print the installed version and exit
 .TP
 .B \-\-actor NAME
 who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B \-\-check
+report drift without writing; exit 1 when any remains
 .RE
 .TP
 .B lpui delete

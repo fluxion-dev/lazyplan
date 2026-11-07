@@ -7,7 +7,7 @@ Human watches `lpui ui`; agents work via the CLI with `--actor <name>`.
 - Read: `lpui --porcelain list --tree`, `lpui --porcelain next`, `lpui --porcelain claims`, `lpui --porcelain context --max-chars 4000`, `lpui --porcelain plan show --id N`, `lpui --porcelain audit --since 7.days`, `lpui --porcelain feed --limit 20` (`--json` for full fidelity)
 - Porcelain rows are `kind<TAB>id<TAB>status<TAB>title<TAB>parent<TAB>extra`; parse by tabs, not by scraping text. Set `LAZYPLAN_PORCELAIN=1` for a whole session.
 - MCP: hosts that support it can call `lpui mcp` for typed tools/resources; `--read-only` hides writes.
-- Coordinate: `next` claims atomically; `claim renew|release` manages the lease; `note add` hands off context; `task block --reason` parks blocked work without a fourth status.
+- Coordinate: `next` claims atomically; `claim renew|release` manages the lease; a task that leaves doing releases its lease; `note add` hands off context; `task block --reason` parks blocked work without a fourth status.
 - Collaborate: `comment add/list/resolve` for review, `share --plan P` for a read-only snapshot, and `sync --file dump.json --dry-run` for a plan-level merge (conflicts never overwrite).
 - Human screen: `F` cycles source filters, ending at Focus (doing, claims, blocked, attention, next); `space` marks rows for bulk actions.
 - Trace: `criterion relate --id C --task T` records proof; `trace --plan P` shows evidence; `lint --plan P --strict` gates uncovered criteria and weak task descriptions.

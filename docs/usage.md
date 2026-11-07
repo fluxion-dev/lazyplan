@@ -492,6 +492,11 @@ blocked, claimed, and done tasks. Blocking releases the claim and records the
 reason as a note; it does not add a fourth status, so the task returns to the
 todo pool and `next` still skips it until it is unblocked.
 
+Status is authoritative. A task that is not `doing` cannot hold a lease: moving
+it to todo or done releases the lease, and `reconcile` removes expired leases
+and any lease left on a non-doing task. `reconcile --check` reports that drift,
+plus done rows with open criteria, without writing anything.
+
 ### Sessions and touch-points
 
 ```bash

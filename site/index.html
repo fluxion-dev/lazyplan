@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>lazyplan — one plan for you and your agent</title>
-<meta name="description" content="A terminal plan for you and your coding agent. Approvals and evidence, session handoff, parallel-safe claims, and a ship note, local-first on Linux, macOS, and Windows.">
+<meta name="description" content="A terminal control room for you and your coding agent: needs-me triage, audited manual override, approvals, evidence, session handoff, and parallel-safe claims.">
 <meta name="keywords" content="terminal plan tracker, coding agent, plan tracker, planner agent, executor agent, multi-agent planning, developer tools, local-first, keyboard-first, terminal themes, git pane">
 <meta name="author" content="Brad Lindsay">
 <meta name="theme-color" content="#09090B">
@@ -12,7 +12,7 @@
 <link rel="canonical" href="https://fluxion-dev.github.io/lazyplan/">
 <link rel="preload" as="image" href="./screens/lpui-and-agent.webp" type="image/webp">
 <meta property="og:title" content="lazyplan — one plan for you and your agent">
-<meta property="og:description" content="A terminal plan for you and your coding agent. Approvals and evidence, session handoff, parallel-safe claims, and a ship note, local-first on Linux, macOS, and Windows.">
+<meta property="og:description" content="A terminal control room for you and your coding agent: needs-me triage, audited manual override, approvals, evidence, session handoff, and parallel-safe claims.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://fluxion-dev.github.io/lazyplan/">
 <meta property="og:site_name" content="lazyplan">
@@ -23,7 +23,7 @@
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="lazyplan — one plan for you and your agent">
-<meta name="twitter:description" content="A terminal plan for you and your coding agent. Approvals and evidence, session handoff, parallel-safe claims, and a ship note, local-first on Linux, macOS, and Windows.">
+<meta name="twitter:description" content="A terminal control room for you and your coding agent: needs-me triage, audited manual override, approvals, evidence, session handoff, and parallel-safe claims.">
 <meta name="twitter:image" content="https://fluxion-dev.github.io/lazyplan/screens/og-lpui-and-agent.png">
 <meta name="twitter:image:alt" content="lazyplan plan tree beside terminal panes where a coding agent updates the same plan.">
 <script type="application/ld+json">
@@ -210,34 +210,34 @@
   <div class="overflow-hidden rounded-2xl border border-plan-border bg-plan-surface/70 shadow-xl shadow-black/30">
     <div class="grid gap-6 p-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.7fr)] md:p-8">
       <div>
-        <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">New in 0.34</p>
-        <h2 class="mb-3 text-2xl font-bold text-white md:text-3xl">Trust, sessions, parallel work.</h2>
-        <p class="m-0 text-[0.95rem] text-zinc-400">Approve, prove, hand off, and ship.</p>
+        <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">New in 0.35</p>
+        <h2 class="mb-3 text-2xl font-bold text-white md:text-3xl">One control room for the loop.</h2>
+        <p class="m-0 text-[0.95rem] text-zinc-400">See what needs you, correct it deliberately, and ship with proof.</p>
       </div>
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div class="rounded-lg border border-plan-border bg-plan-canvas/60 p-4">
-          <h3 class="mb-1 text-base font-semibold text-white">Trust layer</h3>
-          <p class="m-0 text-[0.9rem] text-zinc-400">Approvals, drift, evidence, review.</p>
+          <h3 class="mb-1 text-base font-semibold text-white">Needs-me landing</h3>
+          <p class="m-0 text-[0.9rem] text-zinc-400">Attention, questions, drift, claims, handoff.</p>
         </div>
         <div class="rounded-lg border border-plan-border bg-plan-canvas/60 p-4">
-          <h3 class="mb-1 text-base font-semibold text-white">Sessions</h3>
-          <p class="m-0 text-[0.9rem] text-zinc-400">Summary and handoff on every write.</p>
+          <h3 class="mb-1 text-base font-semibold text-white">Manual override</h3>
+          <p class="m-0 text-[0.9rem] text-zinc-400">Read-only by default; every write audited.</p>
         </div>
         <div class="rounded-lg border border-plan-border bg-plan-canvas/60 p-4">
-          <h3 class="mb-1 text-base font-semibold text-white">Touch-points</h3>
-          <p class="m-0 text-[0.9rem] text-zinc-400">Parallel claims avoid the same files.</p>
+          <h3 class="mb-1 text-base font-semibold text-white">Trust in the palette</h3>
+          <p class="m-0 text-[0.9rem] text-zinc-400">Approve, diff, prove, question, finish.</p>
         </div>
         <div class="rounded-lg border border-plan-border bg-plan-canvas/60 p-4">
-          <h3 class="mb-1 text-base font-semibold text-white">Ship note</h3>
-          <p class="m-0 text-[0.9rem] text-zinc-400">Outcome, proof, risks, follow-ups.</p>
+          <h3 class="mb-1 text-base font-semibold text-white">Agents pane</h3>
+          <p class="m-0 text-[0.9rem] text-zinc-400">Who is working, where, and the last handoff.</p>
         </div>
         <div class="rounded-lg border border-plan-border bg-plan-canvas/60 p-4">
-          <h3 class="mb-1 text-base font-semibold text-white">External refs</h3>
-          <p class="m-0 text-[0.9rem] text-zinc-400">Read-only epic and issue links.</p>
+          <h3 class="mb-1 text-base font-semibold text-white">Health strip</h3>
+          <p class="m-0 text-[0.9rem] text-zinc-400">Readiness, drift, evidence, overlaps.</p>
         </div>
         <div class="rounded-lg border border-plan-border bg-plan-canvas/60 p-4">
-          <h3 class="mb-1 text-base font-semibold text-white">A sharper screen</h3>
-          <p class="m-0 text-[0.9rem] text-zinc-400">Themes, GIT pane, timeline, export.</p>
+          <h3 class="mb-1 text-base font-semibold text-white">Audited feed</h3>
+          <p class="m-0 text-[0.9rem] text-zinc-400"><code>lpui feed --overrides</code> shows manual changes.</p>
         </div>
       </div>
     </div>
@@ -316,6 +316,15 @@ Task · Add the token model        done</pre>
     <p class="text-lg text-zinc-400">Three themes, git context, one plan.</p>
   </div>
   <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
+    <figure class="m-0">
+      <a class="zoom-trigger" href="./screens/lpui-control-room.png" data-zoom aria-haspopup="dialog">
+        <picture>
+          <source srcset="./screens/lpui-control-room.webp" type="image/webp">
+          <img src="./screens/lpui-control-room.png" width="1604" height="904" loading="lazy" decoding="async" alt="Control room on the needs-me lens with a manual override banner, health and needs strip, active session, attention tasks, and approval drift." class="block h-auto w-full rounded-xl border border-plan-border">
+        </picture>
+      </a>
+      <figcaption class="mt-2 text-sm text-zinc-400">What needs you, in one audited control room.</figcaption>
+    </figure>
     <figure class="m-0">
       <a class="zoom-trigger" href="./screens/lpui-detail.png" data-zoom aria-haspopup="dialog">
         <picture>

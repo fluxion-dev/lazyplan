@@ -252,6 +252,36 @@ def build_coordination_fixture(tmp: Path) -> Store:
     return store
 
 
+def build_control_room_fixture(tmp: Path) -> Store:
+    """The coordination journal plus approval drift, a question, refs, and sessions."""
+    store = build_coordination_fixture(tmp)
+    plan = next(plan for plan in store.list_plans() if plan.name == "Ship the coordination release")
+    services.revisions.approve(store, plan.id, actor="Ada")
+    task = next(
+        task
+        for task in store.list_tasks(store.list_milestones(plan.id)[0].id)
+        if task.title == "Claim the release queue"
+    )
+    store.update_task(task.id, title="Claim the release queue (v2)", reason="scope change")
+    services.add_question(store, plan.id, "Which host ships first?", actor="Ada")
+    store.link_ref(
+        plan.id,
+        "https://github.com/acme/web/issues/7",
+        title="Epic: coordination",
+        kind="epic",
+        actor="Ada",
+    )
+    ended, _ = store.start_session("Ada", plan_id=plan.id, branch="feat/coordination", now=STAMP)
+    store.end_session(
+        ended.id,
+        "Ada",
+        summary="Closed the queue slice",
+        handoff="next: review the claim overlap",
+    )
+    store.start_session("Ada", plan_id=plan.id, branch="feat/control-room", now=STAMP + 60)
+    return store
+
+
 def build_search_fixture(tmp: Path) -> Store:
     """A small plan with enough rows to show marks and bulk context."""
     store = Store(str(tmp / "plan.db"))
@@ -458,6 +488,31 @@ async def capture_coordination(store: Store, target: Path) -> None:
         app.save_screenshot(str(target))
 
 
+async def capture_control_room(store: Store, target: Path) -> None:
+    plan_id = next(
+        plan.id for plan in store.list_plans() if plan.name == "Ship the coordination release"
+    )
+    app = create_app(str(store.path), startup_filter="needs")
+    async with app.run_test(size=SIZE) as pilot:
+        await pilot.pause()
+        app.action_toggle_override()
+        tree = app.query_one("#tree", Tree)
+        _expand_all(tree)
+        tree.focus()
+        plans = _nodes(tree, "plan")
+        if plans:
+            tree.select_node(plans[0])
+        tasks = _nodes(tree, "task")
+        if tasks:
+            tree.select_node(tasks[0])
+        await pilot.pause()
+        app.selected = ("plan", plan_id)
+        app.update_preview(force=True)
+        _expand_all(tree)
+        await pilot.pause(0.2)
+        app.save_screenshot(str(target))
+
+
 async def capture_plan_detail(store: Store, target: Path) -> None:
     plan_id = next(plan.id for plan in store.list_plans() if plan.name == "Ship the source trail")
     app = create_app(str(store.path))
@@ -644,6 +699,12 @@ def _no_fixture(_tmp: Path) -> Store | None:
 
 
 SCENES: dict[str, Scene] = {
+    "lpui-control-room": Scene(
+        SIZE,
+        build_control_room_fixture,
+        capture_control_room,
+        "lazyplan control room on the needs-me lens with the health strip, an active session, an open question, approval drift, claims, and the manual override banner.",
+    ),
     "lpui-source-trail": Scene(
         SIZE,
         build_source_fixture,

@@ -89,6 +89,12 @@ from .question import (
     _cmd_question_resolve,
 )
 from .ready import _cmd_plan_ready
+from .session import (
+    _cmd_session_end,
+    _cmd_session_list,
+    _cmd_session_show,
+    _cmd_session_start,
+)
 from .system import (
     _cmd_audit as _cmd_audit,
 )
@@ -152,6 +158,10 @@ _GROUP_CMDS: dict[tuple[str, str], str] = {
     ("question", "list"): "question-list",
     ("question", "resolve"): "question-resolve",
     ("question", "reopen"): "question-reopen",
+    ("session", "start"): "session-start",
+    ("session", "end"): "session-end",
+    ("session", "show"): "session-show",
+    ("session", "list"): "session-list",
     ("issue", "import"): "issue-import",
     ("criterion", "prove"): "criterion-prove",
     ("criterion", "evidence"): "criterion-evidence",
@@ -211,6 +221,10 @@ _COMMANDS: dict[str, Callable[[Store, Namespace, str], int]] = {
     "question-list": _cmd_question_list,
     "question-resolve": _cmd_question_resolve,
     "question-reopen": _cmd_question_reopen,
+    "session-start": _cmd_session_start,
+    "session-end": _cmd_session_end,
+    "session-show": _cmd_session_show,
+    "session-list": _cmd_session_list,
     "criterion-evidence": _cmd_criterion_evidence,
     "delete-criteria": _cmd_delete_criteria,
     "issue-import": _cmd_issue_import,

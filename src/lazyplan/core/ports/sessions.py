@@ -13,6 +13,8 @@ class SessionsReadPort(Protocol):
 
     def get_session(self, session_id: int) -> Session | None: ...
 
+    def active_session(self, actor: str) -> Session | None: ...
+
     def list_sessions(
         self,
         actor: str = "",

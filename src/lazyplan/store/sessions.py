@@ -123,6 +123,8 @@ class SessionsMixin(StoreBase):
                 detail += f": {note.strip()[:120]}"
             self.log(actor, "session", "start", detail, session_id=session_id)
         write_pointer(self.path, actor, repo, session_id, stamp)
+        if previous is not None:
+            previous = self.get_session(previous.id)
         self._session_cache.pop(actor, None)
         row = self.get_session(session_id)
         assert row is not None
@@ -166,6 +168,11 @@ class SessionsMixin(StoreBase):
         with self._connect() as conn:
             row = conn.execute("SELECT * FROM sessions WHERE id=?", (session_id,)).fetchone()
         return self._row_to_session(row) if row is not None else None
+
+    def active_session(self, actor: str) -> Session | None:
+        """The session this actor's writes would tag, if any."""
+        session_id = self._resolve_session_id(actor)
+        return None if session_id is None else self.get_session(session_id)
 
     def list_sessions(
         self,

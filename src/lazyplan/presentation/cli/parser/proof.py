@@ -199,6 +199,13 @@ def add_feed(
         metavar="SECS",
         help="how often to check for new events, in seconds (default: 1.0)",
     )
+    f.add_argument(
+        "--session",
+        type=int,
+        default=None,
+        metavar="ID",
+        help="only events tagged with this session",
+    )
 
 
 def add_watch(

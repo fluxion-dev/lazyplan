@@ -112,6 +112,13 @@ from .revisions import (
     revision_state,
     snapshot,
 )
+from .sessions import (
+    current_session,
+    end_session,
+    list_sessions,
+    show_session,
+    start_session,
+)
 from .transfer import (
     _export_entry,
     _export_maps,
@@ -226,4 +233,9 @@ __all__ = [
     "drift_counts",
     "revision_state",
     "snapshot",
+    "start_session",
+    "end_session",
+    "current_session",
+    "show_session",
+    "list_sessions",
 ]

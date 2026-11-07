@@ -41,6 +41,8 @@ from .commands import (
     _cmd_plan_recipe,
     _cmd_question_list,
     _cmd_review,
+    _cmd_session_list,
+    _cmd_session_show,
     _cmd_setup,
     _cmd_upgrade,
 )
@@ -83,6 +85,8 @@ def _dispatch_storeless(args: argparse.Namespace, actor: str) -> int | None:
         "plan-recipe": _cmd_plan_recipe,
         "plan-ready": _cmd_plan_ready,
         "question-list": _cmd_question_list,
+        "session-list": _cmd_session_list,
+        "session-show": _cmd_session_show,
         "review": _cmd_review,
     }
     handler = handlers.get(args.cmd)

@@ -196,8 +196,12 @@ def _print_feed_events(
 def _cmd_feed(store: Store, args: argparse.Namespace, actor: str) -> int:
     seen = -1
     terse = porcelain.enabled(args)
+    session_filter = getattr(args, "session", None)
     while True:
-        events = store.feed(args.limit)
+        if session_filter is None:
+            events = store.feed(args.limit)
+        else:
+            events = store.events_for_session(session_filter, args.limit)
         if not args.follow:
             if args.json:
                 print(json.dumps(events, indent=2, default=str))

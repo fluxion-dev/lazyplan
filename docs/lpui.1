@@ -1,4 +1,4 @@
-.TH LPUI 1 "2026-11-06" "lazyplan-tui 0.33.0" "User Commands"
+.TH LPUI 1 "2026-11-07" "lazyplan-tui 0.33.0" "User Commands"
 .SH NAME
 lpui \- local plan journal for you and your coding agent
 .SH SYNOPSIS
@@ -1105,6 +1105,34 @@ who made this change (you see it in feed)
 what to do with a question Choices: add, list, resolve, reopen\. Required\.
 .RE
 .TP
+.B lpui session
+start, end, show, or list agent sessions
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B  ACTION
+what to do with a session Choices: start, end, show, list\. Required\.
+.RE
+.TP
 .B lpui add\-plan
 legacy alias for `plan add`
 .RS
@@ -1944,6 +1972,11 @@ keep showing new events as they arrive
 .TP
 .B \-\-interval SECS
 how often to check for new events, in seconds (default: 1\.0)
+.RE
+.RS
+.TP
+.B \-\-session ID
+only events tagged with this session
 .RE
 .TP
 .B lpui watch

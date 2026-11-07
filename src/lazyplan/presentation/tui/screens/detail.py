@@ -37,11 +37,12 @@ from ..views.detail import build_detail, detail_breadcrumb
 if TYPE_CHECKING:
     from ....core.ports.provenance import ProvenancePort
 from .base import _row
+from .detail_questions import QuestionActionsMixin
 from .forms import ConfirmScreen, FilterPromptScreen, NewMilestoneScreen, NewTaskScreen
 
 if _TEXTUAL_OK:
 
-    class DetailScreen(Screen):
+    class DetailScreen(QuestionActionsMixin, Screen):
         """Read-first detail page; `e` switches to an in-place edit form."""
 
         BINDINGS = [
@@ -51,6 +52,9 @@ if _TEXTUAL_OK:
             Binding("x", "tick_criterion", "Tick"),
             Binding("a", "add_criterion", "Criterion"),
             Binding("p", "prove_criterion", "Prove"),
+            Binding("q", "add_question", "Question"),
+            Binding("Q", "resolve_question", "Resolve"),
+            Binding("R", "reopen_question", "Reopen"),
             Binding("n", "add_child", "New child"),
             Binding("d", "delete_row", "Delete"),
             Binding("g", "open_source", "Source"),

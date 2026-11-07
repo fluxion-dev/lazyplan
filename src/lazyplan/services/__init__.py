@@ -94,6 +94,8 @@ from .questions import (
     reopen_question,
     resolve_question,
 )
+from .ready import ReadyCheck, ReadyResult
+from .ready import check as plan_ready
 from .revisions import (
     ApprovalResult,
     DiffEntry,
@@ -196,6 +198,9 @@ __all__ = [
     "_import_all",
     "GateError",
     "DEFAULT_PLAN_LIMIT",
+    "ReadyCheck",
+    "ReadyResult",
+    "plan_ready",
     "add_question",
     "list_questions",
     "resolve_question",

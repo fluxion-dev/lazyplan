@@ -148,7 +148,8 @@ def test_control_room_shell(snap_compare, control_app) -> None:
         _expand_tree(pilot.app.query_one("#tree", Tree))
         await pilot.pause()
 
-    assert snap_compare(app, run_before=run_before, terminal_size=(120, 40))
+    with mock.patch("time.time", return_value=FIXED_NOW):
+        assert snap_compare(app, run_before=run_before, terminal_size=(120, 40))
 
 
 def test_help_screen(snap_compare, data_app) -> None:

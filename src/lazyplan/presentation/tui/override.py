@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from textual.widgets import Static
 
+from ... import services
 from .base import AppBase
 from .theme import next_theme
 
@@ -56,6 +57,10 @@ WRITE_COMMANDS = frozenset(
 
 class OverrideMixin(AppBase):
     """Read-only by default; one visible mode arms deliberate writes."""
+
+    def _record_override(self, action: str, target: str, reason: str = "") -> None:
+        """Write one audited override event for this manual change."""
+        services.record_override(self.store, action, target, reason)
 
     def _paint_mode(self) -> None:
         """Show or hide the manual-override banner."""

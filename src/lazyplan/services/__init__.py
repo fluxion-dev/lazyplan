@@ -32,6 +32,7 @@ from .evidence import (
     prove,
     task_gate,
 )
+from .overrides import record_override
 from .planning import (
     DEFAULT_PLAN_LIMIT,
     _filtered_milestones,
@@ -223,6 +224,7 @@ __all__ = [
     "reopen_question",
     "ProofResult",
     "prove",
+    "record_override",
     "list_evidence",
     "task_gate",
     "link_ref",

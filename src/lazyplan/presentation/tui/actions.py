@@ -60,6 +60,8 @@ if _TEXTUAL_OK:
                     )
                 except (ValueError, KeyError) as exc:
                     self.notify(f"error: {exc}")
+                    return
+                self._record_override("milestone add", f"P{pid}")
                 self._saved("milestone created")
 
             self.push_screen(
@@ -97,6 +99,9 @@ if _TEXTUAL_OK:
                 target, reopen = items[-1], True  # nothing open: re-affirm by reopening last
             self.store.set_criteria(target.id, not reopen, actor="tui")
             verb = "reopened" if reopen else "checked"
+            self._record_override(
+                "criterion reopen" if reopen else "criterion tick", f"C{target.id}"
+            )
             self._saved(f"criterion {target.id} {verb}")
 
         def action_delete(self) -> None:
@@ -110,6 +115,8 @@ if _TEXTUAL_OK:
                     return
                 if not self.store.delete(kind, oid, actor="tui"):
                     self.notify("already gone — refreshing")
+                    return
+                self._record_override("delete", f"{kind} #{oid}")
                 self.selected = None
                 self._saved(f"deleted {kind} #{oid}")
 
@@ -176,6 +183,7 @@ if _TEXTUAL_OK:
                 except (ValueError, KeyError) as exc:
                     self.notify(f"error: {exc}")
                     return
+                self._record_override("criterion add", f"{kind} #{oid}")
                 self._saved("criterion added")
 
             self.push_screen(
@@ -200,6 +208,8 @@ if _TEXTUAL_OK:
             nxt = services.cycle_status(self.store, kind, oid, actor="tui")
             if nxt is None:
                 self.notify("selected row no longer exists")
+            else:
+                self._record_override("status", f"{kind} #{oid}", nxt.value)
             self._saved(f"{kind} {oid} -> {nxt.value if nxt else '?'}")
 
         def action_open_detail(self) -> None:
@@ -224,7 +234,7 @@ if _TEXTUAL_OK:
                 if not data:
                     return
                 try:
-                    services.create_plan(
+                    plan = services.create_plan(
                         self.store,
                         data["title"],
                         data["what"],
@@ -233,6 +243,8 @@ if _TEXTUAL_OK:
                     )
                 except ValueError as exc:
                     self.notify(f"error: {exc}")
+                    return
+                self._record_override("plan add", f"P{plan.id}")
                 self._saved("plan created")
 
             self.push_screen(
@@ -307,7 +319,7 @@ if _TEXTUAL_OK:
                 if not data:
                     return
                 try:
-                    services.create_task(
+                    task = services.create_task(
                         self.store,
                         sid,
                         data["title"],
@@ -316,6 +328,8 @@ if _TEXTUAL_OK:
                     )
                 except (ValueError, KeyError) as exc:
                     self.notify(f"error: {exc}")
+                    return
+                self._record_override("task add", f"T{task.id}")
                 self._saved("task created")
 
             milestone = self.store.get_milestone(sid)
@@ -344,6 +358,7 @@ if _TEXTUAL_OK:
                 return
             target = done[-1]
             self.store.set_criteria(target.id, False, actor="tui")
+            self._record_override("criterion reopen", f"C{target.id}")
             self._saved(f"criterion #{target.id} reopened")
 
         def action_edit_selection(self) -> None:
@@ -374,6 +389,7 @@ if _TEXTUAL_OK:
             if not services.set_status(self.store, kind, oid, status, actor="tui"):
                 self.notify("selected row no longer exists")
                 return
+            self._record_override("status", f"{kind} #{oid}", status.value)
             self._saved(f"{kind} {oid} -> {status.value}")
 
         def _release_claim(self, force: bool) -> None:
@@ -388,6 +404,9 @@ if _TEXTUAL_OK:
             if claim is None:
                 self.notify(f"T{task_id} has no claim", timeout=3)
                 return
+            self._record_override(
+                "claim force release" if force else "claim release", f"T{task_id}"
+            )
             self.notify(f"released T{task_id} from {claim.actor}", timeout=3)
             self.refresh_all("claim released")
 

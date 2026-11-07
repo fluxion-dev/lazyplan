@@ -49,6 +49,10 @@ class OverrideModeTest(unittest.IsolatedAsyncioTestCase):
             await pilot.press("s")
             await pilot.pause()
             self.assertEqual(self._status(), Status.TODO.value)
+            self.assertEqual(
+                [event for event in Store(self.db).feed() if event["kind"] == "override"],
+                [],
+            )
 
             await pilot.press("O")
             await pilot.pause()
@@ -60,6 +64,10 @@ class OverrideModeTest(unittest.IsolatedAsyncioTestCase):
             await pilot.press("s")
             await pilot.pause()
             self.assertEqual(self._status(), Status.DOING.value)
+            events = [event for event in Store(self.db).feed() if event["kind"] == "override"]
+            self.assertTrue(
+                any(event["action"] == "status" and event["actor"] == "tui" for event in events)
+            )
 
             await pilot.press("O")
             await pilot.pause()

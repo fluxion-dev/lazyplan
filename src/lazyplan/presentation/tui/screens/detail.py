@@ -173,6 +173,12 @@ if _TEXTUAL_OK:
             self.notify("read-only — press O for manual override", timeout=3)
             return False
 
+        def _record(self, action: str, reason: str = "") -> None:
+            """Record one audited override for this detail write."""
+            record = getattr(self.app, "_record_override", None)
+            if callable(record):
+                record(action, f"{self.dkind} #{self.doid}", reason)
+
         def action_toggle_edit(self) -> None:
             if not self._editing and not self._require_override():
                 return
@@ -242,6 +248,7 @@ if _TEXTUAL_OK:
             except ValueError as exc:
                 self.notify(msg_error(exc))
                 return
+            self._record("edit")
             from ...shared.messages import RowAction  # noqa: F401
 
             self.post_message(RowAction("detail-saved", self.dkind, self.doid))
@@ -255,6 +262,7 @@ if _TEXTUAL_OK:
             if not self._require_override():
                 return
             nxt = services.cycle_status(self._dstore, self.dkind, self.doid, actor="tui")
+            self._record("status", nxt.value if nxt is not None else "")
             self._reload()
             if nxt is not None:
                 self.notify(f"{self.dkind} {self.doid} -> {nxt.value}")
@@ -272,6 +280,7 @@ if _TEXTUAL_OK:
                 return
             target = open_items[0]
             self._dstore.set_criteria(target.id, True, actor="tui")
+            self._record("criterion tick", f"C{target.id}")
             self._reload()
             self.notify(f"criterion {target.id} checked")
 
@@ -285,7 +294,8 @@ if _TEXTUAL_OK:
             def cb(text: str | None) -> None:
                 if not text:
                     return
-                self._dstore.add_criteria(self.dkind, self.doid, text, actor="tui")
+                criterion = self._dstore.add_criteria(self.dkind, self.doid, text, actor="tui")
+                self._record("criterion add", f"C{criterion.id}")
                 self._reload()
 
             self.app.push_screen(
@@ -309,13 +319,14 @@ if _TEXTUAL_OK:
                 def add_milestone(data: dict | None) -> None:
                     if not data:
                         return
-                    services.create_milestone(
+                    created = services.create_milestone(
                         self._dstore,
                         plan_id,
                         data["title"],
                         data["desc"],
                         actor="tui",
                     )
+                    self._record("milestone add", f"M{created.id}")
                     self._reload()
 
                 self.app.push_screen(
@@ -333,13 +344,14 @@ if _TEXTUAL_OK:
                 def add_task(data: dict | None) -> None:
                     if not data:
                         return
-                    services.create_task(
+                    created = services.create_task(
                         self._dstore,
                         milestone_id,
                         data["title"],
                         data["desc"],
                         actor="tui",
                     )
+                    self._record("task add", f"T{created.id}")
                     self._reload()
 
                 self.app.push_screen(
@@ -378,7 +390,10 @@ if _TEXTUAL_OK:
             def cb(confirmed: bool | None) -> None:
                 if not confirmed:
                     return
-                self._dstore.delete(self.dkind, self.doid, actor="tui")
+                if not self._dstore.delete(self.dkind, self.doid, actor="tui"):
+                    self.notify("row is already gone", timeout=3)
+                    return
+                self._record("delete")
                 self.dismiss(True)
 
             self.app.push_screen(ConfirmScreen("\n".join(lines)), cb)

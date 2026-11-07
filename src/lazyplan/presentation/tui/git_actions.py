@@ -101,6 +101,7 @@ class GitActionMixin(AppBase):
         after = {link.sha for link in self.store.list_links(kind, oid)}
         if after - before:
             self.notify("HEAD linked", timeout=4)
+            self._record_override("commit link", f"{kind} #{oid}")
             self._saved("commit linked")
             return
         if reason:

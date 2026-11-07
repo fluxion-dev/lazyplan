@@ -182,3 +182,8 @@ _.events_for_session
 _.session_counts
 _.start_session
 _.end_session
+# Touch-point helpers consumed by the touch CLI, next selection, and finish.
+matches_path
+touchpoints_overlap
+_.add_touchpoint
+_.remove_touchpoint

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import fnmatch
 import re
 
 from ..entities import Status, Task
@@ -58,3 +59,61 @@ def validate_block(task: Task, reason: str) -> None:
         raise ValueError("cannot block a done task")
     if not reason.strip():
         raise ValueError("blocking a task needs a reason")
+
+
+_WILDCARDS = set("*?[")
+
+
+def normalize_touchpoint(text: str) -> str:
+    """Normalize a repo-relative path or glob; reject escaping inputs."""
+    raw = str(text).strip().replace("\\", "/")
+    if not raw:
+        raise ValueError("touch-point path must not be empty")
+    if raw.startswith("/") or re.match(r"^[A-Za-z]:", raw):
+        raise ValueError("touch-point path must be repo-relative")
+    if any(ord(char) < 32 for char in raw):
+        raise ValueError("touch-point path must not contain control characters")
+    parts = [part for part in raw.split("/") if part not in ("", ".")]
+    if any(part == ".." for part in parts):
+        raise ValueError("touch-point path must not escape the repo")
+    pattern = "/".join(parts)
+    if not pattern:
+        raise ValueError("touch-point path must not be empty")
+    return pattern
+
+
+def _static_prefix(pattern: str) -> str:
+    """Path before the first wildcard, trimmed to a directory boundary."""
+    index = min((pattern.find(char) for char in _WILDCARDS if char in pattern), default=-1)
+    if index < 0:
+        return pattern
+    head = pattern[:index]
+    return head.rsplit("/", 1)[0] if "/" in head else ""
+
+
+def matches_path(pattern: str, path: str) -> bool:
+    """True when a touch-point pattern covers a repo-relative path."""
+    good = normalize_touchpoint(path)
+    if any(char in pattern for char in _WILDCARDS):
+        return fnmatch.fnmatchcase(good, pattern)
+    return good == pattern or good.startswith(pattern + "/")
+
+
+def patterns_overlap(left: str, right: str) -> bool:
+    """True when two touch-point patterns can cover the same path."""
+    first = _static_prefix(left)
+    second = _static_prefix(right)
+    if any(char in left for char in _WILDCARDS) or any(char in right for char in _WILDCARDS):
+        return (
+            first == second
+            or not first
+            or not second
+            or first.startswith(second + "/")
+            or second.startswith(first + "/")
+        )
+    return first == second or first.startswith(second + "/") or second.startswith(first + "/")
+
+
+def touchpoints_overlap(left: list[str], right: list[str]) -> bool:
+    """True when any two patterns overlap."""
+    return any(patterns_overlap(a, b) for a in left for b in right)

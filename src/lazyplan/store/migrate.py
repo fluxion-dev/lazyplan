@@ -8,7 +8,7 @@ from __future__ import annotations
 import sqlite3
 import uuid
 
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS plans (
@@ -123,9 +123,17 @@ CREATE TABLE IF NOT EXISTS task_claims (
     note TEXT NOT NULL DEFAULT '',
     started_at REAL NOT NULL,
     expires_at REAL NOT NULL,
-    renewed_at REAL NOT NULL DEFAULT 0
+    renewed_at REAL NOT NULL DEFAULT 0,
+    worktree TEXT NOT NULL DEFAULT '',
+    repo_path TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS idx_task_claims_expires ON task_claims(expires_at);
+CREATE TABLE IF NOT EXISTS task_touchpoints (
+    task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    pattern TEXT NOT NULL,
+    PRIMARY KEY (task_id, pattern)
+);
+CREATE INDEX IF NOT EXISTS idx_task_touchpoints_task ON task_touchpoints(task_id);
 CREATE TABLE IF NOT EXISTS notes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     parent_kind TEXT NOT NULL CHECK (parent_kind IN ('plan', 'milestone', 'task')),
@@ -425,6 +433,15 @@ def _migrate_events_session(conn: sqlite3.Connection) -> None:
     conn.execute("CREATE INDEX IF NOT EXISTS idx_events_session ON events(session_id, id)")
 
 
+def _migrate_claim_location(conn: sqlite3.Connection) -> None:
+    """Add the worktree and repo-root columns to claims when missing."""
+    existing = {r["name"] for r in conn.execute("PRAGMA table_info(task_claims)").fetchall()}
+    if "worktree" not in existing:
+        conn.execute("ALTER TABLE task_claims ADD COLUMN worktree TEXT NOT NULL DEFAULT ''")
+    if "repo_path" not in existing:
+        conn.execute("ALTER TABLE task_claims ADD COLUMN repo_path TEXT NOT NULL DEFAULT ''")
+
+
 def migrate(conn: sqlite3.Connection) -> None:
     """Bring any DB to the current schema: migrate, create, backfill. Idempotent."""
     current = int(conn.execute("PRAGMA user_version").fetchone()[0])
@@ -435,6 +452,7 @@ def migrate(conn: sqlite3.Connection) -> None:
     _migrate_plan_uid(conn)
     _migrate_task_blocked(conn)
     _migrate_events_session(conn)
+    _migrate_claim_location(conn)
     _drop_priority_columns(conn)
     _migrate_vcs_link_state(conn)
     _migrate_entity_repo_branch(conn)

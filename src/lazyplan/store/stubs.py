@@ -241,6 +241,8 @@ class StoreStubs(StoreStubsLinks):
         note: str = "",
         force: bool = False,
         now: float | None = None,
+        worktree: str = "",
+        repo_path: str = "",
     ) -> tuple[Claim, Claim | None]:
         raise NotImplementedError
 
@@ -275,6 +277,8 @@ class StoreStubs(StoreStubsLinks):
         expires_at: float,
         renewed_at: float = 0,
         note: str = "",
+        worktree: str = "",
+        repo_path: str = "",
     ) -> bool:
         raise NotImplementedError
 
@@ -380,6 +384,17 @@ class StoreStubs(StoreStubsLinks):
     ) -> Task | None:
         raise NotImplementedError
 
+    def add_touchpoint(self, task_id: int, pattern: str, actor: str = "human") -> str:
+        raise NotImplementedError
+
+    def remove_touchpoint(self, task_id: int, pattern: str, actor: str = "human") -> bool:
+        raise NotImplementedError
+
+    def list_touchpoints(self, task_id: int) -> list[str]:
+        raise NotImplementedError
+
+    def touchpoints_map(self) -> dict[int, list[str]]:
+        raise NotImplementedError
     def gate_state(self, task_id: int) -> dict:
         raise NotImplementedError
 

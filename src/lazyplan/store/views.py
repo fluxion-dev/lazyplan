@@ -76,6 +76,7 @@ class ViewsMixin(StoreBase):
             "effective_forge_links": [vars(c) for c in self.effective_forge_links("task", t.id)],
             "repos": self.list_repos("task", t.id),
             "effective_repos": self.effective_repos("task", t.id),
+            "touchpoints": self.list_touchpoints(t.id),
         }
 
     def _milestone_show(self, s: Milestone) -> dict:
@@ -277,6 +278,7 @@ class _FullReader:
         self.drift = store.drift_counts()
         self.evidence = store.evidence_map()
         self.questions = store.questions_map()
+        self.touchpoints = store.touchpoints_map()
         self.milestone_by_id = {
             milestone.id: milestone for items in self.milestones.values() for milestone in items
         }
@@ -393,6 +395,7 @@ class _FullReader:
             ],
             "repos": self.repos.get(("task", task.id), []),
             "effective_repos": self._effective_repos("task", task.id),
+            "touchpoints": self.touchpoints.get(task.id, []),
         }
 
     def milestone(self, milestone: Milestone) -> dict:

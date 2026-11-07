@@ -31,6 +31,8 @@ class ClaimsMixin(StoreBase):
             expires_at=float(r["expires_at"]),
             renewed_at=float(r["renewed_at"] or 0),
             note=str(r["note"] or ""),
+            worktree=str(r["worktree"] or ""),
+            repo_path=str(r["repo_path"] or ""),
         )
 
     @staticmethod
@@ -48,6 +50,8 @@ class ClaimsMixin(StoreBase):
         note: str = "",
         force: bool = False,
         now: float | None = None,
+        worktree: str = "",
+        repo_path: str = "",
     ) -> tuple[Claim, Claim | None]:
         """Take or refresh a task lease; returns the new claim and any previous one."""
         ttl = self._ttl(ttl_seconds)
@@ -73,12 +77,14 @@ class ClaimsMixin(StoreBase):
             ):
                 raise ClaimConflict(previous)
             conn.execute(
-                "INSERT INTO task_claims (task_id, actor, note, started_at, expires_at, renewed_at)"
-                " VALUES (?,?,?,?,?,?)"
+                "INSERT INTO task_claims"
+                " (task_id, actor, note, started_at, expires_at, renewed_at, worktree, repo_path)"
+                " VALUES (?,?,?,?,?,?,?,?)"
                 " ON CONFLICT(task_id) DO UPDATE SET"
                 " actor=excluded.actor, note=excluded.note, started_at=excluded.started_at,"
-                " expires_at=excluded.expires_at, renewed_at=excluded.renewed_at",
-                (task_id, actor, note, stamp, stamp + ttl, stamp),
+                " expires_at=excluded.expires_at, renewed_at=excluded.renewed_at,"
+                " worktree=excluded.worktree, repo_path=excluded.repo_path",
+                (task_id, actor, note, stamp, stamp + ttl, stamp, worktree, repo_path),
             )
         claim = Claim(
             task_id=task_id,
@@ -87,6 +93,8 @@ class ClaimsMixin(StoreBase):
             expires_at=stamp + ttl,
             renewed_at=stamp,
             note=note,
+            worktree=worktree,
+            repo_path=repo_path,
         )
         detail = f"task #{task_id} claimed by {actor} until {int(claim.expires_at)}"
         if previous is not None and previous.actor != actor:
@@ -125,6 +133,8 @@ class ClaimsMixin(StoreBase):
             expires_at=stamp + ttl,
             renewed_at=stamp,
             note=claim.note,
+            worktree=claim.worktree,
+            repo_path=claim.repo_path,
         )
         self.log(actor, "task", "renew", f"task #{task_id} until {int(renewed.expires_at)}")
         return renewed
@@ -199,6 +209,8 @@ class ClaimsMixin(StoreBase):
         expires_at: float,
         renewed_at: float = 0,
         note: str = "",
+        worktree: str = "",
+        repo_path: str = "",
     ) -> bool:
         """Import an unexpired lease with its original timestamps."""
         if expires_at <= time.time():
@@ -206,9 +218,9 @@ class ClaimsMixin(StoreBase):
         with self._connect() as conn:
             conn.execute(
                 "INSERT OR REPLACE INTO task_claims"
-                " (task_id, actor, note, started_at, expires_at, renewed_at)"
-                " VALUES (?,?,?,?,?,?)",
-                (task_id, actor, note, started_at, expires_at, renewed_at),
+                " (task_id, actor, note, started_at, expires_at, renewed_at, worktree, repo_path)"
+                " VALUES (?,?,?,?,?,?,?,?)",
+                (task_id, actor, note, started_at, expires_at, renewed_at, worktree, repo_path),
             )
         return True
 

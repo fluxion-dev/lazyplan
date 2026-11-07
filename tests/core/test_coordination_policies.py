@@ -7,7 +7,11 @@ import unittest
 from lazyplan.core.entities import Status, Task
 from lazyplan.core.policies.coordination import (
     CLAIM_DEFAULT_TTL,
+    matches_path,
+    normalize_touchpoint,
     parse_ttl,
+    patterns_overlap,
+    touchpoints_overlap,
     validate_block,
 )
 
@@ -43,6 +47,30 @@ class TestBlockValidation(unittest.TestCase):
     def test_open_task_with_reason(self) -> None:
         task = Task(id=1, milestone_id=1, title="T")
         validate_block(task, "waiting")
+
+
+class TestTouchpoints(unittest.TestCase):
+    def test_normalize_paths(self) -> None:
+        self.assertEqual(normalize_touchpoint("./src\\store//"), "src/store")
+        self.assertEqual(normalize_touchpoint("src/*.py"), "src/*.py")
+
+    def test_reject_escaping_and_absolute_paths(self) -> None:
+        for value in ("", "/etc/passwd", "C:/x", "../outside", "src/../../x"):
+            with self.subTest(value=value):
+                with self.assertRaises(ValueError):
+                    normalize_touchpoint(value)
+
+    def test_prefix_and_glob_matching(self) -> None:
+        self.assertTrue(matches_path("src/lazyplan/store", "src/lazyplan/store/base.py"))
+        self.assertTrue(matches_path("src/*.py", "src/main.py"))
+        self.assertFalse(matches_path("src/*.py", "tests/main.py"))
+
+    def test_patterns_overlap(self) -> None:
+        self.assertTrue(patterns_overlap("src/store", "src/store/base.py"))
+        self.assertFalse(patterns_overlap("src/store", "src/tui"))
+        self.assertTrue(patterns_overlap("src/*.py", "src/store/base.py"))
+        self.assertTrue(touchpoints_overlap(["src/store"], ["src/store/base.py"]))
+        self.assertFalse(touchpoints_overlap(["src/store"], ["tests"]))
 
 
 if __name__ == "__main__":

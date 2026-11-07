@@ -67,6 +67,8 @@ class Claim:
     expires_at: float
     renewed_at: float = 0.0
     note: str = ""
+    worktree: str = ""
+    repo_path: str = ""
 
     def expired(self, now: float) -> bool:
         """True when the lease is no longer active at `now`."""

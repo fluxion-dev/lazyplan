@@ -22,6 +22,7 @@ from .revisions import RevisionsMixin
 from .sessions import SessionsMixin
 from .stubs import CLAIM_DEFAULT_TTL
 from .tasks import TasksMixin
+from .touchpoints import TouchpointsMixin
 from .views import ViewsMixin
 
 
@@ -37,6 +38,7 @@ class Store(
     ReposMixin,
     RevisionsMixin,
     TasksMixin,
+    TouchpointsMixin,
     ViewsMixin,
     StoreBase,
 ):

@@ -19,6 +19,8 @@ class CoordinationPort(PlanningPort, Protocol):
         note: str = "",
         force: bool = False,
         now: float | None = None,
+        worktree: str = "",
+        repo_path: str = "",
     ) -> tuple[Claim, Claim | None]: ...
 
     def renew_claim(
@@ -49,6 +51,14 @@ class CoordinationPort(PlanningPort, Protocol):
     def set_blocked(
         self, tid: int, blocked: bool, reason: str = "", actor: str = "human"
     ) -> Task | None: ...
+
+    def add_touchpoint(self, task_id: int, pattern: str, actor: str = "human") -> str: ...
+
+    def remove_touchpoint(self, task_id: int, pattern: str, actor: str = "human") -> bool: ...
+
+    def list_touchpoints(self, task_id: int) -> list[str]: ...
+
+    def touchpoints_map(self) -> dict[int, list[str]]: ...
 
     def add_note(
         self, parent_kind: str, parent_id: int, text: str, actor: str = "human"

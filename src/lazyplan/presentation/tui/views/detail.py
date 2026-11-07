@@ -54,6 +54,23 @@ def _read_text(lines: list[str], kind: str, obj: dict[str, Any]) -> None:
         lines.extend(["", _heading(key, heading), desc])
 
 
+def _read_questions(lines: list[str], kind: str, full: dict[str, Any]) -> None:
+    """Open questions on a plan."""
+    if kind != "plan":
+        return
+    questions = [
+        question for question in full.get("questions", []) if question.get("status") == "open"
+    ]
+    if not questions:
+        return
+    lines.extend(["", _heading("questions", f"questions {len(questions)} open")])
+    for question in questions[:5]:
+        lines.append(
+            f"  [yellow]?[/] [dim]Q{question['id']}[/] "
+            f"{escape_markup(str(question.get('text', '')))}"
+        )
+
+
 def _read_coordination(lines: list[str], full: dict[str, Any], obj: dict[str, Any]) -> None:
     if obj.get("blocked"):
         reason = str(obj.get("blocked_reason", "") or "").strip()
@@ -281,6 +298,7 @@ def build_detail(
     )
     lines: list[str] = []
     _read_text(lines, kind, obj)
+    _read_questions(lines, kind, full)
     _read_coordination(lines, full, obj)
     _read_criteria(lines, full)
     _read_proof(lines, full)

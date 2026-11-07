@@ -81,6 +81,17 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
             self.assertIn(self.tid, claimed)
             self.assertNotIn(second.id, claimed)
 
+    async def test_detail_shows_open_questions(self):
+        from textual.widgets import Static
+
+        self.store.add_question(self.pid, "Which host?")
+        async with self.app.run_test(size=(80, 24)) as pilot:
+            await pilot.pause()
+            await self._open(pilot, "plan", self.pid)
+            body = str(self.app.screen.query_one("#detail-body", Static).render())
+            self.assertIn("questions 1 open", body)
+            self.assertIn("Which host?", body)
+
     async def test_detail_shows_proof_panel(self):
         from textual.widgets import Static
 

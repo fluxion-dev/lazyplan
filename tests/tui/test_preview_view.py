@@ -68,6 +68,15 @@ class PreviewDocumentTest(unittest.TestCase):
         self.assertIn("changes since approval", text)
         self.assertIn("title: rename", text)
 
+    def test_plan_preview_shows_open_questions(self) -> None:
+        self.store.add_question(self.plan.id, "Which host?")
+        full = self.store.get_full("plan", self.plan.id)
+        assert full is not None
+        text = build_preview(self.store, "plan", self.plan.id, full, []).render()
+        self.assertIn("[bold]questions 1 open[/]", text)
+        self.assertIn("Which host?", text)
+        self.assertIn("1 open questions", text)
+
     def test_task_preview_shows_proof(self) -> None:
         criterion = self.store.add_criteria("task", self.task.id, "Works")
         self.store.add_evidence(criterion.id, command="pytest", exit_code=0, actor="ci")

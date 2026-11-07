@@ -161,6 +161,21 @@ def acceptance_block(criteria: list[dict[str, Any]]) -> PreviewBlock | None:
     )
 
 
+def questions_block(questions: list[dict[str, Any]]) -> PreviewBlock | None:
+    """Open questions on a plan."""
+    open_items = [question for question in questions if question.get("status") == "open"]
+    if not open_items:
+        return None
+    return PreviewBlock(
+        f"questions {len(open_items)} open",
+        tuple(
+            f"  [yellow]?[/] [dim]Q{question['id']}[/] "
+            f"{escape_markup(str(question.get('text', '')))}"
+            for question in open_items[:5]
+        ),
+    )
+
+
 def proof_block(criteria: list[dict[str, Any]]) -> PreviewBlock | None:
     """Proof panel for the selected task."""
     if not criteria:
@@ -298,11 +313,20 @@ def build_plan(
     approval = approval_block(full.get("approval"))
     if approval is not None:
         blocks.append(approval)
+    questions = questions_block(full.get("questions", []))
+    if questions is not None:
+        blocks.append(questions)
     next_tasks = next_block(_tasks("plan", full))
     if next_tasks is not None:
         blocks.append(next_tasks)
     blocks.extend(common_blocks(full, git_bits))
-    return PreviewDocument(header, breadcrumb, tuple(_meta_counts("plan", full)), tuple(blocks))
+    meta = list(_meta_counts("plan", full))
+    open_questions = sum(
+        1 for question in full.get("questions", []) if question.get("status") == "open"
+    )
+    if open_questions:
+        meta.append(f"[dim]{open_questions} open questions[/]")
+    return PreviewDocument(header, breadcrumb, tuple(meta), tuple(blocks))
 
 
 def build_milestone(

@@ -173,23 +173,7 @@ plan_title
 active_segments
 # Textual Tree reactive read by the framework, set as a subclass default.
 show_root
-# Session API consumed by the session commands and resume reads.
-SessionsPort
-_.duration
-_.list_sessions
-_.latest_ended_session
-_.events_for_session
-_.session_counts
-_.start_session
-_.end_session
-# Touch-point helpers consumed by the touch CLI, next selection, and finish.
-matches_path
-touchpoints_overlap
-_.add_touchpoint
-_.remove_touchpoint
 # Public selection helper kept for callers outside the overlap-aware service.
 _.next_claimable_task
-# External reference API consumed by the ref commands and plan reads.
-_.link_ref
-_.list_refs
-_.unlink_ref
+# Policy helper exercised by the coordination policy tests.
+touchpoints_overlap

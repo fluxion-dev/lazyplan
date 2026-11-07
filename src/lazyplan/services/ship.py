@@ -93,13 +93,3 @@ def build(
     payload = _payload(plan, _tasks(store, plan_id), packet.payload)
     payload["stale"] = sum(1 for link in store.effective_links("plan", plan_id) if link.stale)
     return ShipNote(plan_id, render(payload, max_chars), payload)
-
-
-def active_plan(store: InsightsPort) -> Plan | None:
-    """First doing plan, else the first todo plan."""
-    plans = store.list_plans()
-    doing = [plan for plan in plans if plan.status.value == "doing"]
-    if doing:
-        return doing[0]
-    todo = [plan for plan in plans if plan.status.value == "todo"]
-    return todo[0] if todo else None

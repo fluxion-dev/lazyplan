@@ -351,6 +351,22 @@ park `failed.json` and leave the old version runnable; a stale `applying.json`
 is recovered on the next launch. `lpui upgrade --diagnose` prints the method,
 owning Python, pipx/shim paths, and log directory.
 
+## Upgrade integration review (`setup/integrations.py`)
+
+`infrastructure/integrations.py` catalogs every shipped skill and hook
+surface with a stable id and a fingerprint. After a version change, setup
+calls `presentation/setup/integrations.py` to inspect the remembered layout:
+installed items are adopted silently, installed hook hosts that have no new
+events are refreshed, and the remaining catalog ids become pending.
+
+When a terminal is available, `review_pending` renders the pending items and
+asks one question: install all, not now, or never. Install writes the skills
+and hook hosts with the usual backups; the other answers record a per-item
+choice in `setup.json` with the item fingerprint and version. Headless runs
+return the pending list without writing. Missing files for an item that was
+already installed are not treated as new; `doctor` reports pending additions
+and exits non-zero until they are answered.
+
 ## Export (`tui/screens/export.py`)
 
 `ExportScreen` is a `ModalScreen[Path | None]` opened by the palette's

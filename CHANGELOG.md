@@ -3,6 +3,27 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## Unreleased
+
+Upgrades now treat agent integrations as a catalog. Installed skills and hooks
+refresh silently, and a skill or hook surface added by a release is offered
+once instead of landing unnoticed.
+
+### Added
+
+- **New-integration review.** After a version change, one prompt lists the
+  pending skills and hook hosts with install-all, not-now, and never choices.
+  The answer is remembered per item with its fingerprint and version.
+- **Doctor pending report.** `lpui doctor` names every pending integration and
+  exits non-zero until it is answered.
+
+### Changed
+
+- `--no-skills` and `--no-hooks` are remembered across upgrades. Use
+  `lpui setup --hooks` to opt back in.
+- Headless upgrades, `--json`, `--yes`, and agent calls leave new integrations
+  pending with no writes.
+
 ## v0.35.0 — 2026-11-07
 
 The screen becomes the control room for the loop. It opens on what needs a

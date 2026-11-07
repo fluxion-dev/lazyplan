@@ -76,8 +76,11 @@ lpui upgrade --check
 `lpui upgrade` manages pipx and venv installs. System packages upgrade through
 `dnf` or `apt`. The TUI notifies and CLI stderr mentions new versions; stdout
 stays clean for `--json`. A successful upgrade re-runs setup with the new
-binary, including under `--json`, so hooks and the AGENTS pointer refresh
-without prompting.
+binary. Installed skills and hooks refresh silently, while a skill or hook
+surface added by the release is offered once on a terminal. Headless runs
+(`--json`, `--yes`, agent calls, and the Windows helper) leave those additions
+pending with no writes; `lpui doctor` names them, and the next interactive
+`lpui` or `lpui setup` asks again.
 
 On Windows the command and the TUI Update screen use a detached helper. lpui
 closes first, then the helper waits for the process to exit, updates the
@@ -274,6 +277,14 @@ finding; it does not ask on every command.
   never backed up.
 - If both databases contain plans, setup refuses to merge and prints
   export/import guidance instead.
+- A release can add a skill or hook host/event. Setup refreshes what is already
+  installed, then lists only the new items with one prompt: install all, not
+  now, or never. Install writes every listed file with a backup.
+- Not-now is remembered until the next version change; never is remembered
+  until that item's definition changes. Both choices live in
+  `~/.lazyplan/setup.json`.
+- `--no-skills` and `--no-hooks` are remembered across upgrades. New skills or
+  hooks stay pending and doctor reports them; pass `--hooks` to opt back in.
 - Only `lpui`, `lpui setup`, and `lpui upgrade` prompt. Agent calls set up
   silently and never wait for input.
 
@@ -295,8 +306,8 @@ local (gitignored) unless you force-add it.
 lpui setup --agents "opencode,claude"  # or all, or none; $LAZYPLAN_AGENTS
 lpui setup --skills-dir PATH           # or $LAZYPLAN_SKILLS_DIR
 lpui setup --no-skills                 # database only; $LAZYPLAN_NO_SKILLS
-lpui setup --hooks                     # install lifecycle hooks (default)
-lpui setup --no-hooks                  # remove installed lifecycle hooks
+lpui setup --hooks                     # install lifecycle hooks, re-enabling after --no-hooks
+lpui setup --no-hooks                  # remove lifecycle hooks and remember the opt-out
 lpui setup --agents-pointer            # add the marked AGENTS.md section
 lpui setup --no-agents-pointer         # remove the marked AGENTS.md section
 lpui setup --yes                       # apply without prompts

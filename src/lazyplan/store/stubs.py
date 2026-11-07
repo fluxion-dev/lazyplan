@@ -16,6 +16,7 @@ from ..core.entities import (
     Note,
     Plan,
     PlanChange,
+    PlanQuestion,
     PlanRevision,
     Task,
 )
@@ -57,6 +58,28 @@ class StoreStubs(StoreStubsLinks):
         raise NotImplementedError
 
     def entity_keys_map(self) -> dict[tuple[str, int], str]:
+        raise NotImplementedError
+
+    def add_question(self, plan_id: int, text: str, actor: str = "human") -> PlanQuestion:
+        raise NotImplementedError
+
+    def get_question(self, qid: int) -> PlanQuestion | None:
+        raise NotImplementedError
+
+    def list_questions(self, plan_id: int, status: str = "open") -> list[PlanQuestion]:
+        raise NotImplementedError
+
+    def resolve_question(
+        self, qid: int, note: str = "", actor: str = "human"
+    ) -> PlanQuestion | None:
+        raise NotImplementedError
+
+    def reopen_question(
+        self, qid: int, note: str = "", actor: str = "human"
+    ) -> PlanQuestion | None:
+        raise NotImplementedError
+
+    def questions_map(self) -> dict[int, list[PlanQuestion]]:
         raise NotImplementedError
 
     def add_revision(

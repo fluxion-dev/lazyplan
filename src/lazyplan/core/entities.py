@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-from .kinds import KINDS, PARENT_KIND_ERROR, SCOPE_KINDS
+from .kinds import KINDS, PARENT_KIND_ERROR, QUESTION_STATUSES, SCOPE_KINDS
 
 
 class Status(StrEnum):
@@ -170,6 +170,29 @@ class CriterionEvidence:
     def passing(self) -> bool:
         """True when the declared exit code is absent or zero."""
         return self.exit_code is None or self.exit_code == 0
+
+
+@dataclass(frozen=True)
+class PlanQuestion:
+    """One open or resolved question on a plan."""
+
+    id: int
+    plan_id: int
+    text: str
+    status: str = "open"
+    actor: str = "human"
+    ts: float = 0.0
+    resolved_at: float = 0.0
+    resolved_by: str = ""
+    resolution: str = ""
+
+    def __post_init__(self) -> None:
+        if self.plan_id < 1:
+            raise ValueError("plan_id must be positive")
+        if not self.text.strip():
+            raise ValueError("question text must not be empty")
+        if self.status not in QUESTION_STATUSES:
+            raise ValueError(f"status must be {'|'.join(QUESTION_STATUSES)}")
 
 
 @dataclass(frozen=True)

@@ -5,7 +5,7 @@ from __future__ import annotations
 from contextlib import AbstractContextManager
 from typing import Protocol
 
-from ..entities import Criterion, Milestone, Plan, Status, Task
+from ..entities import Criterion, Milestone, Plan, PlanQuestion, Status, Task
 
 
 class PlanningPort(Protocol):
@@ -110,6 +110,22 @@ class PlanningPort(Protocol):
     def relate_criterion(self, criterion_id: int, task_id: int, actor: str = "human") -> bool: ...
 
     def unrelate_criterion(self, criterion_id: int, task_id: int, actor: str = "human") -> bool: ...
+
+    def add_question(self, plan_id: int, text: str, actor: str = "human") -> PlanQuestion: ...
+
+    def get_question(self, qid: int) -> PlanQuestion | None: ...
+
+    def list_questions(self, plan_id: int, status: str = "open") -> list[PlanQuestion]: ...
+
+    def resolve_question(
+        self, qid: int, note: str = "", actor: str = "human"
+    ) -> PlanQuestion | None: ...
+
+    def reopen_question(
+        self, qid: int, note: str = "", actor: str = "human"
+    ) -> PlanQuestion | None: ...
+
+    def questions_map(self) -> dict[int, list[PlanQuestion]]: ...
 
     def list_plans(self) -> list[Plan]: ...
 

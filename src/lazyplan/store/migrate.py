@@ -8,7 +8,7 @@ from __future__ import annotations
 import sqlite3
 import uuid
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS plans (
@@ -75,6 +75,19 @@ CREATE INDEX IF NOT EXISTS idx_criterion_evidence_criterion
     ON criterion_evidence(criterion_id, id DESC);
 CREATE INDEX IF NOT EXISTS idx_criterion_evidence_task
     ON criterion_evidence(task_id, id DESC);
+CREATE TABLE IF NOT EXISTS plan_questions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+    text TEXT NOT NULL CHECK (trim(text) <> ''),
+    status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'resolved')),
+    actor TEXT NOT NULL DEFAULT 'human',
+    ts REAL NOT NULL,
+    resolved_at REAL NOT NULL DEFAULT 0,
+    resolved_by TEXT NOT NULL DEFAULT '',
+    resolution TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_plan_questions_plan
+    ON plan_questions(plan_id, status, id);
 CREATE TABLE IF NOT EXISTS milestones (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,

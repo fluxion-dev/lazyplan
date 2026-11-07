@@ -16,6 +16,7 @@ from .evidence import EvidenceMixin
 from .keys import KeysMixin
 from .links import LinksMixin
 from .plans import PlansMixin
+from .questions import QuestionsMixin
 from .repos import ReposMixin
 from .revisions import RevisionsMixin
 from .stubs import CLAIM_DEFAULT_TTL
@@ -25,6 +26,7 @@ from .views import ViewsMixin
 
 class Store(
     PlansMixin,
+    QuestionsMixin,
     ClaimsMixin,
     EvidenceMixin,
     AnnotationsMixin,

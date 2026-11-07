@@ -130,6 +130,19 @@ class TestPrimaryNavigation(unittest.TestCase):
     def test_install_is_an_action(self):
         self.assertGreaterEqual(self.parser.links.count("#install"), 2)
 
+    def test_no_link_targets_a_removed_doc(self):
+        page = (ROOT / "site/index.html").read_text(encoding="utf-8")
+        for name in (
+            "setup",
+            "architecture",
+            "design-system",
+            "performance",
+            "downloads",
+            "releasing",
+        ):
+            self.assertNotIn(f"docs/{name}.md", page)
+        self.assertNotIn("docs/product/roadmap.md", page)
+
     def test_no_wrapping_flat_nav(self):
         html = (ROOT / "site/index.html").read_text(encoding="utf-8")
         nav = html.split('<nav aria-label="Primary"', 1)[1].split("</nav>", 1)[0]

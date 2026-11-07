@@ -24,6 +24,8 @@ class TestDownloadStats(unittest.TestCase):
     def test_one_downloads_value_and_method_link(self):
         self.assertIn(">Downloads<", self.page)
         self.assertIn("How we count", self.page)
+        self.assertIn("channels are reported separately", self.page)
+        self.assertNotIn("docs/downloads.md", self.page)
         for removed in (
             "PyPI downloads",
             "including mirrors",

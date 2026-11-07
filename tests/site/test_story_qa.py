@@ -21,7 +21,7 @@ class StoryQaTest(unittest.TestCase):
 
     def test_site_ships_the_control_room_screenshot(self) -> None:
         index = (ROOT / "site" / "index.html").read_text(encoding="utf-8")
-        self.assertIn("New in 0.35", index)
+        self.assertIn("What's new", index)
         self.assertIn("lpui-control-room.webp", index)
         self.assertTrue((ROOT / "site" / "public" / "screens" / "lpui-control-room.png").is_file())
         self.assertTrue((ROOT / "site" / "public" / "screens" / "lpui-control-room.webp").is_file())

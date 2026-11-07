@@ -23,6 +23,10 @@ from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parent.parent
 BASE_URL = "https://fluxion-dev.github.io/lazyplan/"
+RETIRED_DOC_LINK = re.compile(
+    r"docs/(?:setup|architecture|design-system|performance|downloads|releasing)\.md"
+    r"|docs/product/roadmap\.md"
+)
 
 
 class PageParser(HTMLParser):
@@ -186,6 +190,15 @@ def _check_links(page: PageParser, errors: list[str]) -> None:
             errors.append(f"broken internal anchor: {href}")
 
 
+def _check_retired_docs(page: PageParser, errors: list[str]) -> None:
+    for tag, attrs in page.tags:
+        if tag != "a":
+            continue
+        href = attrs.get("href", "")
+        if RETIRED_DOC_LINK.search(href):
+            errors.append(f"link targets a removed doc: {href}")
+
+
 def _check_json_ld(
     page: PageParser,
     version: str,
@@ -282,6 +295,7 @@ def _check_document(
     _check_headings(page, errors)
     _check_assets(page, root, errors)
     _check_links(page, errors)
+    _check_retired_docs(page, errors)
     _check_json_ld(page, version, errors, required_json_ld)
     _check_sitemap(root, errors, sitemap_urls)
     return errors

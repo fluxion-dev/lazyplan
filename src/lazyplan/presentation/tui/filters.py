@@ -21,6 +21,7 @@ if _TEXTUAL_OK:
 
     class FilterMixin(AppBase):
         SOURCE_FILTERS = (
+            "needs",
             "all",
             "linked",
             "pr",

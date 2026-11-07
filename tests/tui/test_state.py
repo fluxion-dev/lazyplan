@@ -41,6 +41,13 @@ class StateTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(state.expanded, set())
         self.assertEqual(state.collapsed, set())
 
+    async def test_interactive_launch_starts_on_the_needs_lens(self) -> None:
+        app = tui_mod.create_app(self.db, startup_filter="needs")
+        async with app.run_test(size=(100, 30)) as pilot:
+            await pilot.pause()
+            self.assertEqual(app.source_filter, "needs")
+            self.assertIn("needs me", str(app.query_one("#nav").border_title))
+
     async def test_app_properties_route_through_state(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(100, 30)) as pilot:

@@ -150,6 +150,26 @@ class TreeFilter:
             ),
         )
 
+    def _needs_tree(
+        self,
+        base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]],
+    ) -> list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]:
+        """Keep attention rows and plan-level needs with parent context."""
+        payload = insights.needs_me.build(self.app.store)
+        task_ids = set(payload.get("needs_me_task_ids") or [])
+        plan_ids = set(payload.get("needs_me_plan_ids") or [])
+        out: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]] = []
+        for plan, milestones in base:
+            if plan.id not in plan_ids:
+                continue
+            kept_ms: list[tuple[Milestone, list[Task]]] = []
+            for milestone, tasks in milestones:
+                kept = [task for task in tasks if task.id in task_ids]
+                if kept:
+                    kept_ms.append((milestone, kept))
+            out.append((plan, kept_ms))
+        return out
+
     def _state_tree(
         self,
         base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]],
@@ -194,6 +214,8 @@ class TreeFilter:
     ) -> list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]:
         """Keep rows whose cached provenance matches the active source filter."""
         source_filter = self.app.source_filter
+        if source_filter == "needs":
+            return self._needs_tree(base)
         if source_filter == "all":
             return base
         if source_filter == "focus":
@@ -210,7 +232,7 @@ class TreeFilter:
         if base is None:
             base = services.tree(app.store, status=None, archived="hide")
             base = self.status_tree(base, app.status_filter)
-            if not (app.show_all or app.filter_text.strip()):
+            if not (app.show_all or app.filter_text.strip()) and app.source_filter != "needs":
                 base = base[: services.DEFAULT_PLAN_LIMIT]
         if app.source_filter != "all":
             base = self.filter_source_tree(base, self.source_stats(base))

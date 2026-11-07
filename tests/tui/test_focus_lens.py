@@ -10,6 +10,7 @@ from types import SimpleNamespace
 from lazyplan import services
 from lazyplan.core.entities import Status
 from lazyplan.presentation.shared.palette import by_id
+from lazyplan.services import revisions
 from lazyplan.store import Store
 
 try:
@@ -50,6 +51,38 @@ class FocusLensTest(unittest.TestCase):
         base = services.tree(self.store)
         return tree_filter.filter_source_tree(base, tree_filter.source_stats(base))
 
+    def _needs(self):
+        app = SimpleNamespace(store=self.store, source_filter="needs")
+        tree_filter = TreeFilter(app)
+        base = services.tree(self.store)
+        return tree_filter.filter_source_tree(base, tree_filter.source_stats(base))
+
+    def test_needs_lens_keeps_parent_context(self):
+        assert filters_mod is not None
+        self.assertIn("needs", filters_mod.FilterMixin.SOURCE_FILTERS)
+        revisions.approve(self.store, self.plan.id, actor="t")
+        self.store.update_plan(self.plan.id, description="drifted", actor="t")
+        services.add_question(self.store, self.plan.id, "Which host?", actor="t")
+        filtered = self._needs()
+        self.assertEqual(filtered[0][0].id, self.plan.id)
+        self.assertEqual(filtered[0][1][0][0].id, self.milestone.id)
+        kept = {
+            task.id
+            for _plan, milestones in filtered
+            for _milestone, tasks in milestones
+            for task in tasks
+        }
+        self.assertEqual(kept, {self.doing.id, self.blocked.id})
+
+    def test_needs_lens_keeps_a_plan_with_only_plan_level_reasons(self):
+        empty = self.store.add_plan("Needs a decision")
+        services.add_question(self.store, empty.id, "Which host?", actor="t")
+        filtered = self._needs()
+        plan_ids = {plan.id for plan, _milestones in filtered}
+        self.assertIn(empty.id, plan_ids)
+        empty_entry = next(entry for entry in filtered if entry[0].id == empty.id)
+        self.assertEqual(empty_entry[1], [])
+
     def test_focus_keeps_the_active_slice(self):
         kept = {
             task.id
@@ -75,6 +108,7 @@ class FocusLensTest(unittest.TestCase):
         command = by_id("filter-source")
         assert command is not None
         self.assertIn("focus", command.help_hint)
+        self.assertIn("needs-me", command.help_hint)
 
 
 if __name__ == "__main__":

@@ -213,10 +213,13 @@ if _TEXTUAL_OK:
             if tree.display:
                 tree.focus()
 
-    def create_app(db_path: str | None = None, startup_notice: str = "") -> LazyplanApp:
+    def create_app(
+        db_path: str | None = None, startup_notice: str = "", startup_filter: str = "all"
+    ) -> LazyplanApp:
         """Build the app bound to a store."""
         app = LazyplanApp(Store(db_path))
         app._startup_notice = startup_notice
+        app.source_filter = startup_filter
         return app
 
 
@@ -229,5 +232,5 @@ def run(db_path: str | None = None) -> int:
     startup_notice, exit_now = launch_update()
     if exit_now:
         return 0
-    create_app(db_path, startup_notice).run()
+    create_app(db_path, startup_notice, startup_filter="needs").run()
     return 0

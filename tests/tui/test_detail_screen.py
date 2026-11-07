@@ -92,6 +92,17 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
             self.assertIn("questions 1 open", body)
             self.assertIn("Which host?", body)
 
+    async def test_detail_shows_references(self):
+        from textual.widgets import Static
+
+        self.store.link_ref(self.pid, "https://example.com/a", title="Design doc")
+        async with self.app.run_test(size=(80, 24)) as pilot:
+            await pilot.pause()
+            await self._open(pilot, "plan", self.pid)
+            body = str(self.app.screen.query_one("#detail-body", Static).render())
+            self.assertIn("references 1", body)
+            self.assertIn("Design doc", body)
+
     async def test_detail_shows_proof_panel(self):
         from textual.widgets import Static
 

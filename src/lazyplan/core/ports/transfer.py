@@ -5,7 +5,7 @@ from __future__ import annotations
 from contextlib import AbstractContextManager
 from typing import Protocol
 
-from ..entities import Claim, Plan, Task
+from ..entities import Claim, ExternalRef, Plan, Task
 from .provenance import ProvenancePort
 
 
@@ -31,6 +31,21 @@ class TransferPort(ProvenancePort, Protocol):
     def claims_map(self) -> dict[int, Claim]: ...
 
     def issue_links_map(self) -> dict[tuple[str, int], list[dict]]: ...
+
+    def refs_map(self) -> dict[int, list[ExternalRef]]: ...
+
+    def link_ref(
+        self,
+        plan_id: int,
+        url: str,
+        provider: str = "",
+        kind: str = "issue",
+        external_id: str = "",
+        title: str = "",
+        state: str = "",
+        actor: str = "human",
+        now: float | None = None,
+    ) -> ExternalRef: ...
 
     def transaction(self) -> AbstractContextManager[None]: ...
 

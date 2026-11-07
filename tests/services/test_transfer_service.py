@@ -82,6 +82,28 @@ class TestTransferService(unittest.TestCase):
             self.assertEqual(restored.resolution, "OpenCode")
             self.assertEqual(restored.actor, "qa")
 
+    def test_export_import_carries_refs(self) -> None:
+        plan = self.store.list_plans()[0]
+        ref = self.store.link_ref(
+            plan.id,
+            "https://github.com/o/r/issues/7",
+            title="Epic",
+            state="open",
+            actor="qa",
+        )
+        dump = services.export_all(self.store)
+        exported = dump["plans"][0]["refs"][0]
+        self.assertEqual(exported["url"], ref.url)
+        with tempfile.TemporaryDirectory() as other:
+            target = Store(os.path.join(other, "target.db"))
+            counts = services.import_all(target, dump, actor="fixture")
+            self.assertEqual(counts["refs"], 1)
+            target_plan = target.list_plans()[0]
+            restored = target.list_refs(target_plan.id)[0]
+            self.assertEqual(restored.url, ref.url)
+            self.assertEqual(restored.title, "Epic")
+            self.assertEqual(restored.state, "open")
+
     def test_import_tolerates_missing_evidence_task(self) -> None:
         plan = self.store.list_plans()[0]
         criterion = self.store.list_criteria("plan", plan.id)[0]

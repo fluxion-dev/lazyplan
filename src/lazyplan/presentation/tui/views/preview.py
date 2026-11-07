@@ -176,6 +176,21 @@ def questions_block(questions: list[dict[str, Any]]) -> PreviewBlock | None:
     )
 
 
+def references_block(refs: list[dict[str, Any]]) -> PreviewBlock | None:
+    """Read-only external references on a plan."""
+    if not refs:
+        return None
+    return PreviewBlock(
+        f"references {len(refs)}",
+        tuple(
+            f"  [dim]{escape_markup(str(ref.get('provider', 'other')))}/"
+            f"{escape_markup(str(ref.get('kind', 'issue')))}[/] "
+            f"{escape_markup(str(ref.get('title') or ref.get('url', '')))}"
+            for ref in refs[:5]
+        ),
+    )
+
+
 def proof_block(criteria: list[dict[str, Any]]) -> PreviewBlock | None:
     """Proof panel for the selected task."""
     if not criteria:
@@ -316,6 +331,9 @@ def build_plan(
     questions = questions_block(full.get("questions", []))
     if questions is not None:
         blocks.append(questions)
+    references = references_block(full.get("refs", []))
+    if references is not None:
+        blocks.append(references)
     next_tasks = next_block(_tasks("plan", full))
     if next_tasks is not None:
         blocks.append(next_tasks)
@@ -326,6 +344,8 @@ def build_plan(
     )
     if open_questions:
         meta.append(f"[dim]{open_questions} open questions[/]")
+    if full.get("refs"):
+        meta.append(f"[dim]{len(full['refs'])} references[/]")
     return PreviewDocument(header, breadcrumb, tuple(meta), tuple(blocks))
 
 

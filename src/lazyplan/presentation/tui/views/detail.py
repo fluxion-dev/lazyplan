@@ -71,6 +71,23 @@ def _read_questions(lines: list[str], kind: str, full: dict[str, Any]) -> None:
         )
 
 
+def _read_references(lines: list[str], kind: str, full: dict[str, Any]) -> None:
+    """Read-only external references on a plan."""
+    if kind != "plan":
+        return
+    refs = full.get("refs", [])
+    if not refs:
+        return
+    lines.extend(["", _heading("references", f"references {len(refs)}")])
+    for ref in refs[:5]:
+        label = ref.get("title") or ref.get("url", "")
+        lines.append(
+            f"  [dim]{escape_markup(str(ref.get('provider', 'other')))}/"
+            f"{escape_markup(str(ref.get('kind', 'issue')))}[/] "
+            f"{escape_markup(str(label))}"
+        )
+
+
 def _read_coordination(lines: list[str], full: dict[str, Any], obj: dict[str, Any]) -> None:
     if obj.get("blocked"):
         reason = str(obj.get("blocked_reason", "") or "").strip()
@@ -299,6 +316,7 @@ def build_detail(
     lines: list[str] = []
     _read_text(lines, kind, obj)
     _read_questions(lines, kind, full)
+    _read_references(lines, kind, full)
     _read_coordination(lines, full, obj)
     _read_criteria(lines, full)
     _read_proof(lines, full)

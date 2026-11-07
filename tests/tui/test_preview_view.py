@@ -77,6 +77,15 @@ class PreviewDocumentTest(unittest.TestCase):
         self.assertIn("Which host?", text)
         self.assertIn("1 open questions", text)
 
+    def test_plan_preview_shows_references(self) -> None:
+        self.store.link_ref(self.plan.id, "https://github.com/o/r/issues/7", title="Epic")
+        full = self.store.get_full("plan", self.plan.id)
+        assert full is not None
+        text = build_preview(self.store, "plan", self.plan.id, full, []).render()
+        self.assertIn("[bold]references 1[/]", text)
+        self.assertIn("Epic", text)
+        self.assertIn("1 references", text)
+
     def test_task_preview_shows_proof(self) -> None:
         criterion = self.store.add_criteria("task", self.task.id, "Works")
         self.store.add_evidence(criterion.id, command="pytest", exit_code=0, actor="ci")

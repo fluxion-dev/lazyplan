@@ -132,9 +132,7 @@ class TestMcpReadTools(unittest.TestCase):
         self.assertEqual(listed[0]["approval"]["revision"], 1)
 
     def test_evidence_tools_and_move_gate(self):
-        proved = self._tool(
-            "criterion_prove", {"id": 1, "command": "pytest", "exit_code": 0}
-        )
+        proved = self._tool("criterion_prove", {"id": 1, "command": "pytest", "exit_code": 0})
         self.assertFalse(proved.get("isError"))
         payload = json.loads(proved["content"][0]["text"])
         self.assertTrue(payload["ticked"])

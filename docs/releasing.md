@@ -876,3 +876,31 @@ or the next plan row so the next release has the context.
 - Deviation: npm is unavailable locally, so the dist site check used the same
   Vite build through `bun run build`; the Pages workflow ran the npm build and
   passed.
+
+### v0.34.0 (2026-11-07)
+
+- Minor bump from 0.33.0. This release closed the Next and Later horizons:
+  approval snapshots and `plan diff`, criterion evidence, questions and
+  `plan ready`, the review packet, session records and handoff, parallel-safe
+  claims with task touch-points, external references, and the `ship` note. The
+  database schema moved to version 8 and migrates on open.
+- The Next horizon landed in PR
+  [#92](https://github.com/fluxion-dev/lazyplan/pull/92), merged as `20157c6`.
+  The Later horizon landed directly on `main` in `31bbf90..7b7bc36`, with docs
+  in `dd1f9e4` and `e84efe3`. Local `./tools/check.sh` printed ALL GATES GREEN
+  before the bump.
+- The release used the admin bypass, `./tools/bump.sh minor --push`, rather
+  than the **bump** workflow. It produced release commit `243088e` and
+  annotated tag `v0.34.0`.
+- `release.yml`
+  [42353246076](https://github.com/fluxion-dev/lazyplan/actions/runs/42353246076)
+  finished `release` in 1m7s and `publish-pypi` in 36s. Pages
+  [42353244383](https://github.com/fluxion-dev/lazyplan/actions/runs/42353244383)
+  deployed.
+- PyPI JSON served 0.34.0, and an isolated
+  `pipx run --spec lazyplan-tui==0.34.0 lpui --version` printed `0.34.0`.
+- Curated release notes replaced the auto-generated body. Verified seven
+  release assets including `install.sh`, the wheel, the sdist, two RPMs, and
+  two DEBs; the live site shows 0.34.0.
+- No deviations from the release flow beyond using the admin bypass instead of
+  the bump workflow.

@@ -15,7 +15,7 @@ from lazyplan import services
 from lazyplan.core.entities import Status
 from lazyplan.presentation.tui import create_app
 from lazyplan.presentation.tui.screens import DetailScreen, PaletteScreen
-from lazyplan.presentation.tui.screens.hub import CriteriaHub
+from lazyplan.presentation.tui.screens.hub_kinds import CriteriaHub
 from lazyplan.presentation.tui.screens.source import SourceScreen
 from lazyplan.services import metrics, revisions
 from lazyplan.store import Store

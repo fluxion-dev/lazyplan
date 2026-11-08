@@ -1860,7 +1860,7 @@
   "counts": {
     "cli_commands": 61,
     "doc_files": 9,
-    "doc_headings": 92,
+    "doc_headings": 93,
     "env_names": 12,
     "file_paths": 11,
     "hook_events": 24,
@@ -1932,6 +1932,7 @@
           "Everyday commands",
           "The screen",
           "Trust hubs",
+          "Coordination hubs",
           "Manual override mode",
           "Agents",
           "Porcelain output",

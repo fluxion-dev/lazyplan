@@ -23,7 +23,7 @@ python3 tools/ia_inventory.py --check
 | setup_steps | 4 |
 | hook_events | 24 |
 | doc_files | 9 |
-| doc_headings | 92 |
+| doc_headings | 93 |
 | tui_key_conflicts | 15 |
 | stale_claims | 0 |
 | env_names | 12 |

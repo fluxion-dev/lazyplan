@@ -66,6 +66,9 @@ class TrustHubTest(unittest.IsolatedAsyncioTestCase):
             await pilot.press("down")
             await pilot.pause()
             self.assertEqual(options.highlighted, 1)
+            await pilot.click("#hub-list")
+            await pilot.pause()
+            self.assertIsNotNone(options.highlighted)
 
     async def test_criteria_add_toggle_and_delete(self) -> None:
         app = self._app()
@@ -152,6 +155,18 @@ class TrustHubTest(unittest.IsolatedAsyncioTestCase):
                 await pilot.pause()
             copy.assert_called_once_with("a" * 40)
 
+    async def test_evidence_hub_shows_fail_state(self) -> None:
+        self.store.add_evidence(
+            self.criteria[0].id, command="pytest", exit_code=1, commit_sha="b" * 40
+        )
+        app = self._app()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await settle(pilot)
+            app.push_screen(EvidenceHub(self.store, self.criteria[0].id))
+            await pilot.pause()
+            preview = str(app.screen.query_one("#hub-preview-body").render())
+            self.assertIn("fail", preview)
+
     async def test_questions_hub_resolves_and_reopens(self) -> None:
         question = self.store.add_question(self.plan.id, "Which host?")
         app = self._app()
@@ -161,6 +176,12 @@ class TrustHubTest(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             preview = str(app.screen.query_one("#hub-preview-body").render())
             self.assertIn("block plan ready", preview)
+            await pilot.press("a")
+            await pilot.pause()
+            app.screen.query_one("#filter-input", Input).value = "And which database?"
+            await pilot.press("enter")
+            await pilot.pause()
+            self.assertEqual(len(Store(self.db).list_questions(self.plan.id, "all")), 2)
             await pilot.press("x")
             await pilot.pause()
             self.assertEqual(Store(self.db).get_question(question.id).status, "resolved")
@@ -223,6 +244,21 @@ class TrustHubTest(unittest.IsolatedAsyncioTestCase):
                     self.assertIsNotNone(action)
                     assert action is not None
                     self.assertEqual(action.label, label)
+
+    async def test_references_hub_rejects_duplicates(self) -> None:
+        url = "https://example.com/issue/9"
+        self.store.link_ref(self.plan.id, url, actor="tui")
+        app = self._app()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await settle(pilot)
+            app.push_screen(ReferencesHub(self.store, self.plan.id))
+            await pilot.pause()
+            await pilot.press("a")
+            await pilot.pause()
+            app.screen.query_one("#filter-input", Input).value = url
+            await pilot.press("enter")
+            await pilot.pause()
+            self.assertEqual(len(Store(self.db).list_refs(self.plan.id)), 1)
 
     async def test_empty_states_and_viewports(self) -> None:
         empty = Store(self.db).add_milestone(self.plan.id, "Empty", "No criteria here.")

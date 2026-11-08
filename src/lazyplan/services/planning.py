@@ -454,6 +454,27 @@ def _visible_plan(
     return True
 
 
+def _keep_plan(
+    plan: Plan,
+    plan_id: int | None,
+    plan_mode: str,
+    repo: str | None,
+    milestones: dict[int, list[Milestone]],
+    tasks: dict[int, list[Task]],
+    repos: dict[tuple[str, int], list[dict]],
+) -> bool:
+    """Whether one plan survives mode, id, and repo filters."""
+    if plan_id is not None and plan.id != plan_id:
+        return False
+    if plan_mode == "active" and plan.status is Status.DONE:
+        return False
+    if plan_mode == "finished" and plan.status is not Status.DONE:
+        return False
+    if repo and not _plan_matches_repo(plan.id, milestones, tasks, repos, repo):
+        return False
+    return True
+
+
 def tree(
     port: PlanningPort,
     status: Status | None = None,
@@ -477,13 +498,7 @@ def tree(
     now = time.time()
     out = []
     for plan in plans:
-        if plan_id is not None and plan.id != plan_id:
-            continue
-        if plan_mode == "active" and plan.status is Status.DONE:
-            continue
-        if plan_mode == "finished" and plan.status is not Status.DONE:
-            continue
-        if repo and not _plan_matches_repo(plan.id, milestones, tasks, repos, repo):
+        if not _keep_plan(plan, plan_id, plan_mode, repo, milestones, tasks, repos):
             continue
         items = _filtered_milestones(milestones, tasks, plan.id, status)
         if milestone_id is not None:

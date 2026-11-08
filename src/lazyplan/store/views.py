@@ -41,6 +41,77 @@ def _criterion_payload(criterion: Criterion, evidence: dict[int, list[CriterionE
     return data
 
 
+def _leading_int(text: str, start: int) -> int | None:
+    """Positive integer immediately after *start*, else None."""
+    end = start
+    while end < len(text) and text[end].isdigit():
+        end += 1
+    return int(text[start:end]) if end > start else None
+
+
+def _plan_for_milestone(mid: int | None, milestone_plan: dict[int, int]) -> int | None:
+    return milestone_plan.get(mid) if mid is not None else None
+
+
+def _plan_for_task(
+    tid: int | None,
+    task_milestone: dict[int, int],
+    milestone_plan: dict[int, int],
+) -> int | None:
+    if tid is None:
+        return None
+    return _plan_for_milestone(task_milestone.get(tid), milestone_plan)
+
+
+def _plan_for_criterion(
+    cid: int | None,
+    criterion_parent: dict[int, tuple[str, int]],
+    task_milestone: dict[int, int],
+    milestone_plan: dict[int, int],
+) -> int | None:
+    if cid is None:
+        return None
+    found = criterion_parent.get(cid)
+    if found is None:
+        return None
+    kind, parent_id = found
+    if kind == "plan":
+        return parent_id
+    if kind == "milestone":
+        return _plan_for_milestone(parent_id, milestone_plan)
+    return _plan_for_task(parent_id, task_milestone, milestone_plan)
+
+
+def _detail_plan_id(
+    detail: str,
+    milestone_plan: dict[int, int],
+    task_milestone: dict[int, int],
+    criterion_parent: dict[int, tuple[str, int]],
+) -> int | None:
+    """Owning plan encoded in one event detail, or None."""
+    if detail.startswith("P#"):
+        return _leading_int(detail, 2)
+    if detail.startswith("plan #"):
+        return _leading_int(detail, 6)
+    if detail.startswith("M#"):
+        return _plan_for_milestone(_leading_int(detail, 2), milestone_plan)
+    if detail.startswith("milestone #"):
+        return _plan_for_milestone(_leading_int(detail, 11), milestone_plan)
+    if detail.startswith("T#"):
+        return _plan_for_task(_leading_int(detail, 2), task_milestone, milestone_plan)
+    if detail.startswith("task #"):
+        return _plan_for_task(_leading_int(detail, 6), task_milestone, milestone_plan)
+    if detail.startswith("criteria #"):
+        return _plan_for_criterion(
+            _leading_int(detail, 10), criterion_parent, task_milestone, milestone_plan
+        )
+    if detail.startswith("criterion #"):
+        return _plan_for_criterion(
+            _leading_int(detail, 11), criterion_parent, task_milestone, milestone_plan
+        )
+    return None
+
+
 class ViewsMixin(StoreBase):
     """Views persistence."""
 
@@ -229,8 +300,7 @@ class ViewsMixin(StoreBase):
         scan bounded and parses the structured prefixes with slicing instead of
         compiling a regex per row.
         """
-        window = max(1, int(limit_events))
-        events = self.feed(limit=window)
+        events = self.feed(limit=max(1, int(limit_events)))
         if not events:
             return {}
         milestone_plan = {
@@ -248,54 +318,10 @@ class ViewsMixin(StoreBase):
             for items in self.criteria_map().values()
             for criterion in items
         }
-
-        def leading_int(text: str, start: int) -> int | None:
-            end = start
-            while end < len(text) and text[end].isdigit():
-                end += 1
-            return int(text[start:end]) if end > start else None
-
-        def plan_for_milestone(mid: int | None) -> int | None:
-            return milestone_plan.get(mid) if mid is not None else None
-
-        def plan_for_task(tid: int | None) -> int | None:
-            if tid is None:
-                return None
-            return plan_for_milestone(task_milestone.get(tid))
-
-        def plan_for_criterion(cid: int | None) -> int | None:
-            if cid is None:
-                return None
-            found = criterion_parent.get(cid)
-            if found is None:
-                return None
-            kind, parent_id = found
-            if kind == "plan":
-                return parent_id
-            if kind == "milestone":
-                return plan_for_milestone(parent_id)
-            return plan_for_task(parent_id)
-
         out: dict[int, float] = {}
         for event in events:
             detail = str(event.get("detail") or "")
-            plan_id: int | None = None
-            if detail.startswith("P#"):
-                plan_id = leading_int(detail, 2)
-            elif detail.startswith("plan #"):
-                plan_id = leading_int(detail, 6)
-            elif detail.startswith("M#"):
-                plan_id = plan_for_milestone(leading_int(detail, 2))
-            elif detail.startswith("milestone #"):
-                plan_id = plan_for_milestone(leading_int(detail, 11))
-            elif detail.startswith("T#"):
-                plan_id = plan_for_task(leading_int(detail, 2))
-            elif detail.startswith("task #"):
-                plan_id = plan_for_task(leading_int(detail, 6))
-            elif detail.startswith("criteria #"):
-                plan_id = plan_for_criterion(leading_int(detail, 10))
-            elif detail.startswith("criterion #"):
-                plan_id = plan_for_criterion(leading_int(detail, 11))
+            plan_id = _detail_plan_id(detail, milestone_plan, task_milestone, criterion_parent)
             if plan_id is None:
                 continue
             stamp = float(event.get("ts") or 0.0)

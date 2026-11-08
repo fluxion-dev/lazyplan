@@ -205,3 +205,4 @@ _._on_click
 _.can_focus
 on_root
 _.on_click
+_.load_children

@@ -24,6 +24,7 @@ from .evidence_actions import EvidenceMixin
 from .finish_actions import FinishMixin
 from .git_actions import GitActionMixin
 from .history_actions import HistoryMixin
+from .hub_actions import HubMixin
 from .navigation import NavEntry
 from .override import WRITE_COMMANDS, OverrideMixin
 from .palette_handlers import palette_handlers
@@ -46,6 +47,7 @@ if _TEXTUAL_OK:
 
     class ActionMixin(
         HistoryMixin,
+        HubMixin,
         OverrideMixin,
         ApprovalMixin,
         ClaimMixin,

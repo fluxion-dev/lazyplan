@@ -198,6 +198,12 @@ ACTIONS: tuple[Action, ...] = (
         palette_ids=("unlink-ref",),
     ),
     _action(
+        "reference.open",
+        "Open external reference",
+        surfaces=("tui",),
+        route=("tree", "detail", "references"),
+    ),
+    _action(
         "task.claim",
         "Claim task",
         surfaces=("tui", "cli", "mcp"),
@@ -284,6 +290,18 @@ ACTIONS: tuple[Action, ...] = (
         palette_ids=("untick-criterion",),
     ),
     _action(
+        "criterion.relate",
+        "Relate criterion to task",
+        surfaces=("tui", "cli", "mcp"),
+        route=("tree", "detail", "trust"),
+    ),
+    _action(
+        "criterion.unrelate",
+        "Unrelate criterion from task",
+        surfaces=("tui", "cli", "mcp"),
+        route=("tree", "detail", "trust"),
+    ),
+    _action(
         "row.delete",
         "Delete selection",
         "d",
@@ -355,6 +373,34 @@ ACTIONS: tuple[Action, ...] = (
         ("tui", "docs"),
         ("tree",),
         ("plan-mode",),
+    ),
+    _action(
+        "view.criteria_hub",
+        "Open criteria hub",
+        surfaces=("tui",),
+        route=("tree", "detail", "trust"),
+        palette_ids=("criteria-hub",),
+    ),
+    _action(
+        "view.evidence_hub",
+        "Open evidence hub",
+        surfaces=("tui",),
+        route=("tree", "detail", "trust"),
+        palette_ids=("evidence-hub",),
+    ),
+    _action(
+        "view.questions_hub",
+        "Open questions hub",
+        surfaces=("tui",),
+        route=("tree", "detail", "trust"),
+        palette_ids=("questions-hub",),
+    ),
+    _action(
+        "view.references_hub",
+        "Open references hub",
+        surfaces=("tui",),
+        route=("tree", "detail", "trust"),
+        palette_ids=("references-hub",),
     ),
     _action(
         "view.refresh",
@@ -448,10 +494,36 @@ PALETTE_TO_ACTION: dict[str, str] = {
     palette_id: action.id for action in ACTIONS for palette_id in action.palette_ids
 }
 
+#: Hub actions, in reading order; labels come from ACTIONS.
+HUB_ACTIONS: dict[str, tuple[str, ...]] = {
+    "criteria": (
+        "criterion.add",
+        "criterion.tick",
+        "criterion.untick",
+        "criterion.prove",
+        "criterion.relate",
+        "criterion.unrelate",
+        "row.delete",
+    ),
+    "evidence": ("criterion.prove", "source.trail"),
+    "questions": ("question.add", "question.resolve", "question.reopen"),
+    "references": ("reference.link", "reference.unlink", "reference.open"),
+}
+
 
 def by_id(action_id: str) -> Action | None:
     """Look up one canonical action."""
     return next((action for action in ACTIONS if action.id == action_id), None)
+
+
+def hub_actions(kind: str) -> tuple[tuple[str, str], ...]:
+    """(action id, label) pairs for one hub, in registry order."""
+    pairs: list[tuple[str, str]] = []
+    for action_id in HUB_ACTIONS.get(kind, ()):
+        action = by_id(action_id)
+        if action is not None:
+            pairs.append((action.id, action.label))
+    return tuple(pairs)
 
 
 def route_depth(action: Action) -> int:
@@ -553,6 +625,7 @@ __all__ = [
     "DISABLED_FOR",
     "EDIT",
     "ENTITIES",
+    "HUB_ACTIONS",
     "Deprecation",
     "LEGACY_COMMANDS",
     "NAMESPACES",
@@ -569,6 +642,7 @@ __all__ = [
     "by_id",
     "check_reachability",
     "deprecations",
+    "hub_actions",
     "key_deprecations",
     "legacy_notice",
     "matching",

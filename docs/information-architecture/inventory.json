@@ -1866,12 +1866,12 @@
     "hook_events": 24,
     "mcp_resources": 3,
     "mcp_tools": 34,
-    "palette_commands": 50,
+    "palette_commands": 54,
     "setup_steps": 4,
     "stale_claims": 0,
-    "tui_bindings": 47,
-    "tui_key_conflicts": 13,
-    "tui_screens": 14
+    "tui_bindings": 56,
+    "tui_key_conflicts": 14,
+    "tui_screens": 15
   },
   "docs": {
     "files": [
@@ -2526,6 +2526,14 @@
         "section": "Create"
       },
       {
+        "handler": "open_criteria_hub",
+        "help_group": "TRUST",
+        "id": "criteria-hub",
+        "key": "",
+        "label": "Open criteria hub",
+        "section": "View"
+      },
+      {
         "handler": "cycle_theme",
         "help_group": "APP",
         "id": "cycle-theme",
@@ -2548,6 +2556,14 @@
         "key": "e",
         "label": "Edit selection",
         "section": "Edit"
+      },
+      {
+        "handler": "open_evidence_hub",
+        "help_group": "TRUST",
+        "id": "evidence-hub",
+        "key": "",
+        "label": "Open evidence hub",
+        "section": "View"
       },
       {
         "handler": "export_md",
@@ -2702,12 +2718,28 @@
         "section": "Edit"
       },
       {
+        "handler": "open_questions_hub",
+        "help_group": "TRUST",
+        "id": "questions-hub",
+        "key": "",
+        "label": "Open questions hub",
+        "section": "View"
+      },
+      {
         "handler": "quit",
         "help_group": "APP",
         "id": "quit",
         "key": "q",
         "label": "Quit",
         "section": "App"
+      },
+      {
+        "handler": "open_references_hub",
+        "help_group": "TRUST",
+        "id": "references-hub",
+        "key": "",
+        "label": "Open references hub",
+        "section": "View"
       },
       {
         "handler": "refresh",
@@ -2814,7 +2846,7 @@
         "section": "App"
       }
     ],
-    "count": 50
+    "count": 54
   },
   "setup": {
     "steps": [
@@ -3178,6 +3210,78 @@
         "screen": "export"
       },
       {
+        "action": "unrelate",
+        "file": "src/lazyplan/presentation/tui/screens/hub.py",
+        "key": "L",
+        "label": "Unrelate",
+        "line": "73",
+        "screen": "hub"
+      },
+      {
+        "action": "add",
+        "file": "src/lazyplan/presentation/tui/screens/hub.py",
+        "key": "a",
+        "label": "Add",
+        "line": "68",
+        "screen": "hub"
+      },
+      {
+        "action": "delete",
+        "file": "src/lazyplan/presentation/tui/screens/hub.py",
+        "key": "d",
+        "label": "Delete",
+        "line": "71",
+        "screen": "hub"
+      },
+      {
+        "action": "back",
+        "file": "src/lazyplan/presentation/tui/screens/hub.py",
+        "key": "escape",
+        "label": "Back",
+        "line": "67",
+        "screen": "hub"
+      },
+      {
+        "action": "relate",
+        "file": "src/lazyplan/presentation/tui/screens/hub.py",
+        "key": "l",
+        "label": "Relate",
+        "line": "72",
+        "screen": "hub"
+      },
+      {
+        "action": "open_value",
+        "file": "src/lazyplan/presentation/tui/screens/hub.py",
+        "key": "o",
+        "label": "Open",
+        "line": "74",
+        "screen": "hub"
+      },
+      {
+        "action": "prove",
+        "file": "src/lazyplan/presentation/tui/screens/hub.py",
+        "key": "p",
+        "label": "Prove",
+        "line": "70",
+        "screen": "hub"
+      },
+      {
+        "action": "refresh",
+        "file": "src/lazyplan/presentation/tui/screens/hub.py",
+        "key": "r",
+        "label": "Refresh",
+        "line": "75",
+        "screen": "hub"
+      },
+      {
+        "action": "hub_toggle",
+        "file": "src/lazyplan/presentation/tui/screens/hub.py",
+        "key": "x",
+        "label": "Toggle",
+        "line": "69",
+        "screen": "hub"
+      },
+      {
         "action": "back",
         "file": "src/lazyplan/presentation/tui/screens/source.py",
         "key": "escape",
@@ -3254,6 +3358,11 @@
             "action": "add_criterion",
             "file": "src/lazyplan/presentation/tui/screens/detail.py",
             "line": "58"
+          },
+          {
+            "action": "add",
+            "file": "src/lazyplan/presentation/tui/screens/hub.py",
+            "line": "68"
           }
         ],
         "key": "a"
@@ -3269,6 +3378,11 @@
             "action": "delete_row",
             "file": "src/lazyplan/presentation/tui/screens/detail.py",
             "line": "64"
+          },
+          {
+            "action": "delete",
+            "file": "src/lazyplan/presentation/tui/screens/hub.py",
+            "line": "71"
           }
         ],
         "key": "d"
@@ -3327,6 +3441,11 @@
           },
           {
             "action": "back",
+            "file": "src/lazyplan/presentation/tui/screens/hub.py",
+            "line": "67"
+          },
+          {
+            "action": "back",
             "file": "src/lazyplan/presentation/tui/screens/source.py",
             "line": "60"
           },
@@ -3371,6 +3490,21 @@
       {
         "bindings": [
           {
+            "action": "open_value",
+            "file": "src/lazyplan/presentation/tui/screens/hub.py",
+            "line": "74"
+          },
+          {
+            "action": "open",
+            "file": "src/lazyplan/presentation/tui/screens/source.py",
+            "line": "61"
+          }
+        ],
+        "key": "o"
+      },
+      {
+        "bindings": [
+          {
             "action": "prove_criterion",
             "file": "src/lazyplan/presentation/tui/app.py",
             "line": "89"
@@ -3379,6 +3513,11 @@
             "action": "prove_criterion",
             "file": "src/lazyplan/presentation/tui/screens/detail.py",
             "line": "59"
+          },
+          {
+            "action": "prove",
+            "file": "src/lazyplan/presentation/tui/screens/hub.py",
+            "line": "70"
           }
         ],
         "key": "p"
@@ -3389,6 +3528,11 @@
             "action": "refresh",
             "file": "src/lazyplan/presentation/tui/app.py",
             "line": "96"
+          },
+          {
+            "action": "refresh",
+            "file": "src/lazyplan/presentation/tui/screens/hub.py",
+            "line": "75"
           },
           {
             "action": "refresh",
@@ -3454,6 +3598,11 @@
             "action": "tick_criterion",
             "file": "src/lazyplan/presentation/tui/screens/detail.py",
             "line": "57"
+          },
+          {
+            "action": "hub_toggle",
+            "file": "src/lazyplan/presentation/tui/screens/hub.py",
+            "line": "69"
           }
         ],
         "key": "x"
@@ -3507,6 +3656,10 @@
       {
         "class": "PaletteScreen",
         "file": "src/lazyplan/presentation/tui/screens/help.py"
+      },
+      {
+        "class": "HubScreen",
+        "file": "src/lazyplan/presentation/tui/screens/hub.py"
       },
       {
         "class": "SourceScreen",

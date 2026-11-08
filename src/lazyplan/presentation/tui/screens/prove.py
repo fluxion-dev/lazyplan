@@ -16,14 +16,21 @@ def prove_dialog(
     kind: str,
     oid: int,
     on_done: Callable[[int, services.ProofResult], None],
+    criterion_id: int | None = None,
 ) -> None:
-    """Open the evidence form for the first open criterion on a row."""
+    """Open the evidence form for one criterion, or the first open one."""
     items = store.list_criteria(kind, oid)
     if not items:
         screen.notify("this row has no criteria", timeout=3)
         return
-    open_items = [criterion for criterion in items if not criterion.done]
-    default = (open_items or items)[0].id
+    if criterion_id is None:
+        open_items = [criterion for criterion in items if not criterion.done]
+        template = (open_items or items)[0]
+        criterion_id = template.id
+    elif not any(criterion.id == criterion_id for criterion in items):
+        screen.notify(f"criterion #{criterion_id} is not on this row", timeout=3)
+        return
+    default = criterion_id
 
     def cb(data: dict[str, str] | None) -> None:
         if not data:

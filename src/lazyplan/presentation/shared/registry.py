@@ -493,6 +493,52 @@ def reachability_report(max_depth: int = 3) -> dict[str, object]:
     }
 
 
+DEPRECATION_RELEASE = "0.37.0"
+
+
+@dataclass(frozen=True)
+class Deprecation:
+    """One legacy path, its replacement, and the release that removes it."""
+
+    name: str
+    replacement: str
+    removal: str = DEPRECATION_RELEASE
+    kind: str = "command"
+
+
+#: Keys that moved during the navigation migration.
+DEPRECATED_KEYS: tuple[Deprecation, ...] = (
+    Deprecation("q (detail)", "Q adds a question; q quits", kind="key"),
+    Deprecation("Q (detail)", "ctrl+r resolves a question", kind="key"),
+)
+
+
+def deprecations() -> tuple[Deprecation, ...]:
+    """Every legacy command alias plus the moved keys."""
+    commands = tuple(
+        Deprecation(f"lpui {alias}", f"lpui {noun} {verb}".strip())
+        for (noun, verb), aliases in LEGACY_COMMANDS.items()
+        for alias in aliases
+    )
+    return commands + DEPRECATED_KEYS
+
+
+def key_deprecations() -> tuple[Deprecation, ...]:
+    """The moved-key rows shown in help."""
+    return DEPRECATED_KEYS
+
+
+def legacy_notice(command: str) -> str | None:
+    """A human stderr notice for a deprecated CLI verb, or None."""
+    for dep in deprecations():
+        if dep.kind == "command" and dep.name == f"lpui {command}":
+            return (
+                f"deprecated: {dep.name} is deprecated; use `{dep.replacement}` "
+                f"(removed in {dep.removal})"
+            )
+    return None
+
+
 __all__ = [
     "ACTIONS",
     "APP",
@@ -501,9 +547,12 @@ __all__ = [
     "CREATE",
     "Command",
     "Context",
+    "DEPRECATED_KEYS",
+    "DEPRECATION_RELEASE",
     "DISABLED_FOR",
     "EDIT",
     "ENTITIES",
+    "Deprecation",
     "LEGACY_COMMANDS",
     "NAMESPACES",
     "NOUNS",
@@ -517,8 +566,14 @@ __all__ = [
     "VIEW",
     "by_command_id",
     "by_id",
+    "check_reachability",
+    "deprecations",
+    "key_deprecations",
+    "legacy_notice",
     "matching",
     "palette_commands",
     "palette_context",
     "palette_sections",
+    "reachability_report",
+    "route_depth",
 ]

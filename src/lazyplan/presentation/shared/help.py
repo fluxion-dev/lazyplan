@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .registry import COMMANDS
+from .registry import COMMANDS, key_deprecations
 
 NAV_ROWS: tuple[tuple[str, str], ...] = (
     ("j/k, up/down, click", "move cursor / select"),
@@ -70,6 +70,13 @@ def help_text() -> str:
             lines.append(f"  {key:<{_HELP_WIDTH}} {hint}")
         lines.append("")
     lines.append("  lpui help".ljust(_HELP_WIDTH + 2) + " same help at the shell")
+    keys = key_deprecations()
+    if keys:
+        lines.extend(["", "DEPRECATED"])
+        for dep in keys:
+            lines.append(
+                f"  {dep.name:<{_HELP_WIDTH}} {dep.replacement} (removed in {dep.removal})"
+            )
     return "\n".join(lines).rstrip()
 
 

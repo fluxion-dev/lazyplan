@@ -24,6 +24,9 @@ from ...store import Store
 from ..shared import (
     porcelain,
 )
+from ..shared import (
+    registry as ia_registry,
+)
 from ..shared.design import (
     msg_error,
 )
@@ -112,6 +115,7 @@ def main(argv: list[str] | None = None) -> int:
     _utf8_stdio()
     args = build_parser().parse_args(argv)
     noun_group = getattr(args, "noun_group", None)
+    used_noun_form = noun_group is not None
     if noun_group:
         action = getattr(args, "action", None)
         canonical = _GROUP_CMDS.get((noun_group, action or ""))
@@ -133,6 +137,10 @@ def main(argv: list[str] | None = None) -> int:
         print(package_version())
         return 0
     actor = getattr(args, "actor", "human")
+    if not used_noun_form and not (getattr(args, "json", False) or porcelain.enabled(args)):
+        notice = ia_registry.legacy_notice(args.cmd or "")
+        if notice:
+            print(notice, file=sys.stderr)
     _maybe_notice_update(args)
     if args.cmd is None:
         # Bare `lpui` (or global flags only) opens the standard TUI.

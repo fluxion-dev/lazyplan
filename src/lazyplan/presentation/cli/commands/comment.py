@@ -112,11 +112,27 @@ def _comment_list(store: CollaborationPort, args: argparse.Namespace) -> int:
     return 0
 
 
+def _comment_edit(store: CollaborationPort, args: argparse.Namespace, actor: str) -> int:
+    if args.comment is None:
+        print("error: comment edit needs --comment ID", file=sys.stderr)
+        return 2
+    if args.text is None or not args.text.strip():
+        print("error: comment edit needs --text", file=sys.stderr)
+        return 2
+    comment = store.update_comment(args.comment, args.text, actor=actor)
+    if comment is None:
+        print(msg_not_found("comment", args.comment), file=sys.stderr)
+        return 1
+    return _comment_result(args, comment)
+
+
 def _cmd_comment(store: CollaborationPort, args: argparse.Namespace, actor: str) -> int:
     if args.action == "add":
         return _comment_add(store, args, actor)
     if args.action == "list":
         return _comment_list(store, args)
+    if args.action == "edit":
+        return _comment_edit(store, args, actor)
     return _comment_resolve(store, args, actor, args.action == "resolve")
 
 

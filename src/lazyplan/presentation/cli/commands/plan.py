@@ -404,6 +404,16 @@ def _cmd_add_criteria(store: Store, args: argparse.Namespace, actor: str) -> int
     return _emit_record(args, _criterion_row(c), {"criteria": vars(c)})
 
 
+def _cmd_criterion_edit(store: Store, args: argparse.Namespace, actor: str) -> int:
+    crit = store.update_criterion(
+        args.id, args.text, actor=actor, reason=getattr(args, "reason", "")
+    )
+    if crit is None:
+        print(msg_not_found("criteria", args.id), file=sys.stderr)
+        return 1
+    return _emit_record(args, _criterion_row(crit), {"criteria": vars(crit)})
+
+
 def _cmd_criteria(store: Store, args: argparse.Namespace, actor: str) -> int:
     found = store.get_parent(args.kind, args.id)
     if found is None:

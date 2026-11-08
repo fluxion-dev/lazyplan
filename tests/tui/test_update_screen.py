@@ -12,6 +12,7 @@ from lazyplan.infrastructure import update_stage
 from lazyplan.infrastructure.upgrade import PIPX, RPM, SOURCE, InstallInfo
 from lazyplan.store import Store
 from tests.support.home import sandbox_home
+from tests.support.pilot import settle
 
 try:
     tui_mod = importlib.import_module("lazyplan.presentation.tui.app")
@@ -108,7 +109,7 @@ class TestUpdateScreen(unittest.IsolatedAsyncioTestCase):
             with mock.patch.object(screen_mod, "stage_update", return_value=STAGED):
                 screen.query_one("#update-download", Button).press()
                 await self.app.workers.wait_for_complete()
-                await pilot.pause()
+                await settle(pilot)
             self.assertTrue(screen.query_one("#update-restart", Button).display)
             self.assertIn(
                 "Restart now",

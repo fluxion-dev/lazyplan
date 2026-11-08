@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 import time
 from pathlib import Path
 
@@ -316,55 +315,64 @@ def _plan_activity(
         for criterion in items
     }
 
-    def resolve(kind: str, detail: str) -> int | None:
-        match = re.match(r"([PMT])#(\d+)", detail)
-        if match:
-            letter, oid = match.group(1), int(match.group(2))
-            if letter == "P":
-                return oid
-            if letter == "M":
-                return milestone_plan.get(oid)
-            chained = task_milestone.get(oid)
-            return milestone_plan.get(chained) if chained is not None else None
-        match = re.match(r"(plan|milestone|task) #(\d+)", detail)
-        if match:
-            kind, oid = match.group(1), int(match.group(2))
-            if kind == "plan":
-                return oid
-            if kind == "milestone":
-                return milestone_plan.get(oid)
-            chained = task_milestone.get(oid)
-            return milestone_plan.get(chained) if chained is not None else None
-        match = re.match(r"criteria #(\d+)", detail)
-        if match:
-            found = criterion_parent.get(int(match.group(1)))
-            if found is None:
-                return None
-            criterion_kind, parent_id = found
-            if criterion_kind == "plan":
-                return parent_id
-            if criterion_kind == "milestone":
-                return milestone_plan.get(parent_id)
-            chained = task_milestone.get(parent_id)
-            return milestone_plan.get(chained) if chained is not None else None
-        return None
+    def leading_int(text: str, start: int) -> int | None:
+        end = start
+        while end < len(text) and text[end].isdigit():
+            end += 1
+        return int(text[start:end]) if end > start else None
+
+    def plan_for_milestone(mid: int | None) -> int | None:
+        return milestone_plan.get(mid) if mid is not None else None
+
+    def plan_for_task(tid: int | None) -> int | None:
+        if tid is None:
+            return None
+        return plan_for_milestone(task_milestone.get(tid))
+
+    def plan_for_criterion(cid: int | None) -> int | None:
+        if cid is None:
+            return None
+        found = criterion_parent.get(cid)
+        if found is None:
+            return None
+        kind, parent_id = found
+        if kind == "plan":
+            return parent_id
+        if kind == "milestone":
+            return plan_for_milestone(parent_id)
+        return plan_for_task(parent_id)
 
     out: dict[int, float] = {}
     for event in events:
-        plan_id = resolve(str(event["kind"]), str(event["detail"] or ""))
-        if plan_id is not None and event["ts"] > out.get(plan_id, 0.0):
-            out[plan_id] = event["ts"]
+        detail = str(event.get("detail") or "")
+        plan_id: int | None = None
+        if detail.startswith("P#"):
+            plan_id = leading_int(detail, 2)
+        elif detail.startswith("plan #"):
+            plan_id = leading_int(detail, 6)
+        elif detail.startswith("M#"):
+            plan_id = plan_for_milestone(leading_int(detail, 2))
+        elif detail.startswith("milestone #"):
+            plan_id = plan_for_milestone(leading_int(detail, 11))
+        elif detail.startswith("T#"):
+            plan_id = plan_for_task(leading_int(detail, 2))
+        elif detail.startswith("task #"):
+            plan_id = plan_for_task(leading_int(detail, 6))
+        elif detail.startswith("criteria #"):
+            plan_id = plan_for_criterion(leading_int(detail, 10))
+        elif detail.startswith("criterion #"):
+            plan_id = plan_for_criterion(leading_int(detail, 11))
+        if plan_id is None:
+            continue
+        stamp = float(event.get("ts") or 0.0)
+        if stamp > out.get(plan_id, 0.0):
+            out[plan_id] = stamp
     return out
 
 
 def plan_activity(port: PlanningPort) -> dict[int, float]:
     """Latest event timestamp per plan (whole subtree), for recent-first ordering."""
-    return _plan_activity(
-        port.milestones_map(),
-        port.tasks_map(),
-        port.criteria_map(),
-        port.feed(limit=1_000_000),
-    )
+    return port.plan_activity_map()
 
 
 def _filtered_milestones(
@@ -454,10 +462,13 @@ def tree(
     limit: int | None = None,
     repo: str | None = None,
     milestone_id: int | None = None,
+    plan_mode: str = "all",
 ) -> list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]:
     """Nested plans, milestones, and tasks with filters."""
     if archived not in ("hide", "only", "show"):
         raise ValueError("archived must be hide|only|show")
+    if plan_mode not in ("all", "active", "finished"):
+        raise ValueError("plan_mode must be all|active|finished")
     plans = port.list_plans()
     milestones = port.milestones_map()
     tasks = port.tasks_map()
@@ -467,6 +478,10 @@ def tree(
     out = []
     for plan in plans:
         if plan_id is not None and plan.id != plan_id:
+            continue
+        if plan_mode == "active" and plan.status is Status.DONE:
+            continue
+        if plan_mode == "finished" and plan.status is not Status.DONE:
             continue
         if repo and not _plan_matches_repo(plan.id, milestones, tasks, repos, repo):
             continue
@@ -486,7 +501,7 @@ def tree(
             milestones,
             tasks,
             port.criteria_map(),
-            port.feed(limit=1_000_000),
+            port.feed(limit=100_000),
         )
         out.sort(key=lambda entry: (activity.get(entry[0].id, 0.0), entry[0].id), reverse=True)
         if limit is not None:

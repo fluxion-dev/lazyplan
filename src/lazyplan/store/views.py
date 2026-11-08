@@ -222,6 +222,87 @@ class ViewsMixin(StoreBase):
             ).fetchall()
         return [(r["ts"], r["detail"]) for r in rows]
 
+    def plan_activity_map(self, limit_events: int = 100_000) -> dict[int, float]:
+        """Latest event timestamp per plan from one bounded, prefix-parsed read.
+
+        The event table is the largest read path in the tree. This keeps the
+        scan bounded and parses the structured prefixes with slicing instead of
+        compiling a regex per row.
+        """
+        window = max(1, int(limit_events))
+        events = self.feed(limit=window)
+        if not events:
+            return {}
+        milestone_plan = {
+            milestone.id: plan_id
+            for plan_id, milestones in self.milestones_map().items()
+            for milestone in milestones
+        }
+        task_milestone = {
+            task.id: milestone_id
+            for milestone_id, tasks in self.tasks_map().items()
+            for task in tasks
+        }
+        criterion_parent = {
+            criterion.id: (criterion.parent_kind, criterion.parent_id)
+            for items in self.criteria_map().values()
+            for criterion in items
+        }
+
+        def leading_int(text: str, start: int) -> int | None:
+            end = start
+            while end < len(text) and text[end].isdigit():
+                end += 1
+            return int(text[start:end]) if end > start else None
+
+        def plan_for_milestone(mid: int | None) -> int | None:
+            return milestone_plan.get(mid) if mid is not None else None
+
+        def plan_for_task(tid: int | None) -> int | None:
+            if tid is None:
+                return None
+            return plan_for_milestone(task_milestone.get(tid))
+
+        def plan_for_criterion(cid: int | None) -> int | None:
+            if cid is None:
+                return None
+            found = criterion_parent.get(cid)
+            if found is None:
+                return None
+            kind, parent_id = found
+            if kind == "plan":
+                return parent_id
+            if kind == "milestone":
+                return plan_for_milestone(parent_id)
+            return plan_for_task(parent_id)
+
+        out: dict[int, float] = {}
+        for event in events:
+            detail = str(event.get("detail") or "")
+            plan_id: int | None = None
+            if detail.startswith("P#"):
+                plan_id = leading_int(detail, 2)
+            elif detail.startswith("plan #"):
+                plan_id = leading_int(detail, 6)
+            elif detail.startswith("M#"):
+                plan_id = plan_for_milestone(leading_int(detail, 2))
+            elif detail.startswith("milestone #"):
+                plan_id = plan_for_milestone(leading_int(detail, 11))
+            elif detail.startswith("T#"):
+                plan_id = plan_for_task(leading_int(detail, 2))
+            elif detail.startswith("task #"):
+                plan_id = plan_for_task(leading_int(detail, 6))
+            elif detail.startswith("criteria #"):
+                plan_id = plan_for_criterion(leading_int(detail, 10))
+            elif detail.startswith("criterion #"):
+                plan_id = plan_for_criterion(leading_int(detail, 11))
+            if plan_id is None:
+                continue
+            stamp = float(event.get("ts") or 0.0)
+            if stamp > out.get(plan_id, 0.0):
+                out[plan_id] = stamp
+        return out
+
     def plan_status_events_map(self) -> dict[int, tuple[float, str]]:
         """Latest 'plan #id -> status' event per plan, keyed by plan id."""
         with self._connect() as conn:

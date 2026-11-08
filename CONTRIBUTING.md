@@ -108,3 +108,7 @@ publishes. Do not tag a red commit. `pyproject.toml` is the version source;
 The human doc set is `README.md`, this file, and [docs/usage.md](docs/usage.md).
 Put detail in the usage guide, not back into the README, and follow the policy
 in [AGENTS.md](AGENTS.md).
+
+The [information-architecture inventory](docs/information-architecture/inventory.md)
+lists every TUI, CLI, MCP, setup, hook, and documentation path. Its
+[findings](docs/information-architecture/findings.md) rank the known gaps.

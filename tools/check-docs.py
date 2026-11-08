@@ -22,6 +22,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 HUMAN_DOCS = ("README.md", "CONTRIBUTING.md", "docs/usage.md")
 ALLOWED = frozenset({*HUMAN_DOCS, "AGENTS.md", "CHANGELOG.md"})
+ALLOWED_PREFIXES = ("docs/information-architecture/",)
 RETIRED_DOCS = frozenset(
     {
         "docs/architecture.md",
@@ -118,7 +119,8 @@ def check_links(root: Path) -> list[str]:
 def check_allowlist(root: Path) -> list[str]:
     """Return errors for unapproved, missing, or stale Markdown paths."""
     present = set(markdown_files(root))
-    errors = [f"unapproved Markdown: {name}" for name in sorted(present - ALLOWED)]
+    unapproved = {name for name in present - ALLOWED if not name.startswith(ALLOWED_PREFIXES)}
+    errors = [f"unapproved Markdown: {name}" for name in sorted(unapproved)]
     errors.extend(f"missing human doc: {name}" for name in HUMAN_DOCS if name not in present)
     return errors
 

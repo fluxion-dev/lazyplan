@@ -62,7 +62,7 @@ class TestSiteSEO(unittest.TestCase):
         index = self.site / "index.html"
         index.write_text(
             index.read_text(encoding="utf-8").replace(
-                'alt="Plan tree filtered to attention, showing active and expired claims, blocked work, aging tasks, and a red check."',
+                'alt="Plan tree with active and expired claims, blocked work, aging tasks, and a red check, with attention summarized in the control strip."',
                 "",
             ),
             encoding="utf-8",

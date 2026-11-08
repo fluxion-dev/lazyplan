@@ -48,7 +48,10 @@
     "One shared plan for you and your agent",
     "User control over every plan, milestone, task, and criterion",
     "Planner agent and executor subagent workflow",
-    "Keyboard-first terminal screen",
+    "Keyboard-first terminal screen with history and breadcrumbs",
+    "Lazy plan tree that loads branches on expand",
+    "Selectable trust, coordination, and provenance hubs",
+    "Timeline on demand with T",
     "Three TUI themes: mocha, void, and latte",
     "GIT pane with checkout, commit, and pull-request context",
     "Read-only git and pull request proof",
@@ -214,8 +217,8 @@
       </div>
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div class="rounded-lg border border-plan-border bg-plan-canvas/60 p-4">
-          <h3 class="mb-1 text-base font-semibold text-white">Needs-me landing</h3>
-          <p class="m-0 text-[0.9rem] text-zinc-400">Attention, questions, drift, claims.</p>
+          <h3 class="mb-1 text-base font-semibold text-white">Health and needs</h3>
+          <p class="m-0 text-[0.9rem] text-zinc-400">Drift, questions, claims, overlaps.</p>
         </div>
         <div class="rounded-lg border border-plan-border bg-plan-canvas/60 p-4">
           <h3 class="mb-1 text-base font-semibold text-white">Manual override</h3>
@@ -311,7 +314,7 @@ Task · Add the token model        done</pre>
       <a class="zoom-trigger" href="./screens/lpui-control-room.png" data-zoom aria-haspopup="dialog">
         <picture>
           <source srcset="./screens/lpui-control-room.webp" type="image/webp">
-          <img src="./screens/lpui-control-room.png" width="1604" height="904" loading="lazy" decoding="async" alt="Control room on the needs-me lens with a manual override banner, health and needs strip, active session, attention tasks, and approval drift." class="block h-auto w-full rounded-xl border border-plan-border">
+          <img src="./screens/lpui-control-room.png" width="1604" height="904" loading="lazy" decoding="async" alt="Control room with a manual override banner, health and needs strip, active session, attention tasks, and approval drift." class="block h-auto w-full rounded-xl border border-plan-border">
         </picture>
       </a>
       <figcaption class="mt-2 text-sm text-zinc-400">What needs you, in one audited control room.</figcaption>
@@ -329,7 +332,7 @@ Task · Add the token model        done</pre>
       <a class="zoom-trigger" href="./screens/lpui-coordination.png" data-zoom aria-haspopup="dialog">
         <picture>
           <source srcset="./screens/lpui-coordination.webp" type="image/webp">
-          <img src="./screens/lpui-coordination.png" width="1604" height="904" loading="lazy" decoding="async" alt="Plan tree filtered to attention, showing active and expired claims, blocked work, aging tasks, and a red check." class="block h-auto w-full rounded-xl border border-plan-border">
+          <img src="./screens/lpui-coordination.png" width="1604" height="904" loading="lazy" decoding="async" alt="Plan tree with active and expired claims, blocked work, aging tasks, and a red check, with attention summarized in the control strip." class="block h-auto w-full rounded-xl border border-plan-border">
         </picture>
       </a>
       <figcaption class="mt-2 text-sm text-zinc-400">Active, blocked, and attention at a glance.</figcaption>
@@ -356,7 +359,7 @@ Task · Add the token model        done</pre>
       <a class="zoom-trigger" href="./screens/lpui-timeline.png" data-zoom aria-haspopup="dialog">
         <picture>
           <source srcset="./screens/lpui-timeline.webp" type="image/webp">
-          <img src="./screens/lpui-timeline.png" width="1604" height="904" loading="lazy" decoding="async" alt="Main shell with sequential milestones selected, showing doing-only timeline traces at distinct start positions and one never-started lane." class="block h-auto w-full rounded-xl border border-plan-border">
+          <img src="./screens/lpui-timeline.png" width="1604" height="904" loading="lazy" decoding="async" alt="Main shell with the timeline open, showing plan and milestone traces at distinct start positions and one never-started lane." class="block h-auto w-full rounded-xl border border-plan-border">
         </picture>
       </a>
       <figcaption class="mt-2 text-sm text-zinc-400">Every lane stays; the scoped plan names the card.</figcaption>

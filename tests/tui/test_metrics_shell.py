@@ -160,6 +160,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
+            app.tree_controller.expand_all()
             card = app.query_one(f"#{CARD_ID}")
             charts = []
             for key in (("milestone", milestone_id), ("task", task_ids[0])):
@@ -177,6 +178,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
+            app.tree_controller.expand_all()
             app.tree_controller.track(app._row_nodes[("task", self.task_id)])
             await pilot.pause(0.2)
             chart = self._chart(app.query_one(f"#{CARD_ID}"))
@@ -189,6 +191,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
+            app.tree_controller.expand_all()
             card = app.query_one(f"#{CARD_ID}")
 
             app.tree_controller.track(app._row_nodes[("plan", self.plan_id)])
@@ -250,6 +253,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
+            app.tree_controller.expand_all()
             for key in (
                 ("plan", self.plan_id),
                 ("milestone", self.milestone_id),
@@ -264,6 +268,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
+            app.tree_controller.expand_all()
             app.tree_controller.track(app._row_nodes[("milestone", milestone_id)])
             await pilot.pause(0.2)
             before = self._chart(app.query_one(f"#{CARD_ID}"))

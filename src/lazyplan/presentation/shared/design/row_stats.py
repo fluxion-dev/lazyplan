@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from functools import lru_cache
 from itertools import product
 
 from .text import pr_chip, pr_label, progress_bar, progress_text, truncate
@@ -88,6 +89,7 @@ def _layout_score(layout: tuple[tuple[str, bool], ...]) -> tuple[int, int, int]:
     return weight, -compact_count, len(layout)
 
 
+@lru_cache(maxsize=1024)
 def stats_layout(kind: str, width: int, prefix_width: int) -> tuple[tuple[str, bool], ...]:
     """Choose the visible slots for one row width; state never affects it."""
     budget = width - prefix_width - TITLE_MIN

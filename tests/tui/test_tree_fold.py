@@ -51,6 +51,8 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
         self.tmp.cleanup()
 
     def _nodes(self):
+        self.app.tree_controller.load_children(("plan", self.pid))
+        self.app.tree_controller.load_children(("milestone", self.sid))
         return (
             self.app._row_nodes[("plan", self.pid)],
             self.app._row_nodes[("milestone", self.sid)],
@@ -350,6 +352,7 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
     async def test_taskless_milestone_has_no_fold(self):
         async with self.app.run_test() as pilot:
             await pilot.pause()
+            self.app.tree_controller.load_children(("plan", self.pid))
             bare = self.app._row_nodes[("milestone", self.bare_sid)]
             self.assertFalse(bare.allow_expand)
 

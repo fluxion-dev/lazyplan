@@ -72,6 +72,7 @@ class ControllerTest(unittest.IsolatedAsyncioTestCase):
 
         async with self.app.run_test(size=(100, 30)) as pilot:
             await pilot.pause()
+            self.app.tree_controller.expand_all()
             label = self.app._row_nodes[("task", self.task_id)].label
             self.assertIsInstance(label, Text)
             self.assertIn("Task", str(label))

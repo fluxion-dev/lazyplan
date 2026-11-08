@@ -83,6 +83,7 @@ class TreeStatsTest(unittest.IsolatedAsyncioTestCase):
                 async with app.run_test(size=(width, 40)) as pilot:
                     await pilot.pause()
                     await pilot.pause()
+                    app.tree_controller.expand_all()
                     tree = app.query_one("#tree", Tree)
                     row_widths = {
                         "plan": app.tree_controller.row_width(tree, 3),
@@ -155,6 +156,7 @@ class TreeStatsTest(unittest.IsolatedAsyncioTestCase):
         async with app.run_test(size=(160, 40)) as pilot:
             await pilot.pause()
             await pilot.pause()
+            app.tree_controller.expand_all()
             tree = app.query_one("#tree", Tree)
             key = ("task", self.task_a.id)
             self.assertIn(key, app.spinner_controller.rows)

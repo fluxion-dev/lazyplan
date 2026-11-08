@@ -71,6 +71,7 @@ class ControlRoomQaTest(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(app.plan_mode.value, "active")
             self.assertIn("active", str(app.query_one("#nav").border_title))
             self.assertIn(("plan", self.plan.id), app._row_nodes)
+            app.tree_controller.expand_all()
             self.assertIn(("task", self.blocked.id), app._row_nodes)
 
             app.selected = ("plan", self.plan.id)

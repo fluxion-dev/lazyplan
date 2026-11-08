@@ -33,12 +33,15 @@ class TreeFilter:
     def source_stats(
         self,
         base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]],
+        vcs: dict | None = None,
+        forge: dict | None = None,
+        repos: dict | None = None,
     ) -> dict[tuple[str, int], tuple[int, int, int, int]]:
         """Direct plus descendant provenance counts per visible row."""
         store = self.app.store
-        vcs = store.vcs_links_map()
-        forge = store.forge_links_map()
-        repos = store.repos_map()
+        vcs = store.vcs_links_map() if vcs is None else vcs
+        forge = store.forge_links_map() if forge is None else forge
+        repos = store.repos_map() if repos is None else repos
 
         def direct(kind: str, oid: int) -> tuple[int, int, int, int]:
             links = vcs.get((kind, oid), [])

@@ -49,6 +49,7 @@ class TestSpinner(unittest.IsolatedAsyncioTestCase):
         async with self.app.run_test() as pilot:
             await pilot.pause()
             self._freeze()
+            self.app.tree_controller.expand_all()
             keys = [
                 ("plan", self.pid),
                 ("milestone", self.sid),
@@ -115,6 +116,7 @@ class TestSpinner(unittest.IsolatedAsyncioTestCase):
             services.set_status(store, "task", tid, Status.DOING)
             app.refresh_all()
             await pilot.pause()
+            app.tree_controller.expand_all()
             self.assertIn(("task", tid), app._spinner_rows)
             app.spinner_controller.spin()
             self.assertEqual(str(app._row_nodes[("task", tid)].label)[0], "⠙")
@@ -126,6 +128,7 @@ class TestSpinner(unittest.IsolatedAsyncioTestCase):
                 await pilot.pause()
                 self.assertFalse(app._spinner_enabled)
                 self.assertIsNone(app._spinner_timer)
+                app.tree_controller.expand_all()
                 label = str(app._row_nodes[("task", self.doing)].label)
                 self.assertEqual(label[0], "◐")
                 app.spinner_controller.spin()

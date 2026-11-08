@@ -42,6 +42,7 @@ class TestCommitChips(unittest.IsolatedAsyncioTestCase):
 
         async with self.app.run_test() as pilot:
             await pilot.pause()
+            self.app.tree_controller.expand_all()
             task_label = str(self.app._row_nodes[("task", self.tid)].label)
             self.assertIn("1c", task_label)
             self.assertNotIn(self.sha[:12], task_label)
@@ -64,6 +65,7 @@ class TestCommitChips(unittest.IsolatedAsyncioTestCase):
     async def test_rows_show_chips_without_a_marker(self):
         async with self.app.run_test() as pilot:
             await pilot.pause()
+            self.app.tree_controller.expand_all()
             linked = str(self.app._row_nodes[("task", self.tid)].label)
             repo_only = str(self.app._row_nodes[("task", self.repo_tid)].label)
             bare = str(self.app._row_nodes[("task", self.bare_tid)].label)
@@ -97,6 +99,7 @@ class TestCommitChips(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             self.app.refresh_all()
             await pilot.pause()
+            self.app.tree_controller.expand_all()
             label = str(self.app._row_nodes[("task", self.tid)].label)
             self.assertIn("PR", label)
             bare = str(self.app._row_nodes[("task", self.bare_tid)].label)

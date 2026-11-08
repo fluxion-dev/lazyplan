@@ -19,6 +19,8 @@ once instead of landing unnoticed.
 
 ### Changed
 
+- **Plan modes.** The plans tree cycles Active, Finished, and Both with `f`.
+  The old status/source filter cycles, `F`, `A`, and the five-plan cap are gone.
 - `--no-skills` and `--no-hooks` are remembered across upgrades. Use
   `lpui setup --hooks` to opt back in.
 - Headless upgrades, `--json`, `--yes`, and agent calls leave new integrations

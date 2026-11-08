@@ -304,9 +304,10 @@ strip, the selected row's reason, scope, next tasks, acceptance progress, a
 active sessions and the last handoff. The bottom timeline card follows the
 selected row and its immediate children.
 
-On launch the tree opens on the **needs me** lens: attention tasks plus plans
-with drift, open questions, stale claims, or blocked work. `F` cycles the
-source lenses and returns to all plans.
+On launch the tree opens on **Active** plans: every plan that is not done, with
+its full milestone and task tree. `f` cycles Active, Finished, and Both; Both
+puts finished plans last. The mode only chooses plans, never hides a visible
+plan's children.
 
 | key | action |
 |---|---|
@@ -317,10 +318,8 @@ source lenses and returns to all plans.
 | `e` / `s` / `x` / `a` / `d` | edit · advance status · tick next criterion · add criterion · delete |
 | `n` | create by context (plan, milestone, or task) |
 | `/` | filter by text |
-| `f` | change status filter |
-| `F` | change source filter: needs me, all, linked, PR, stale, unlinked, claims, blocked, attention, focus |
+| `f` | change plan mode: active, finished, both |
 | `g` | open the source trail for the selected row |
-| `A` | show all plans |
 | `?` | help |
 | `c` | command palette |
 | `t` | cycle theme: mocha, void, latte |

@@ -73,15 +73,6 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
             body = str(self.app.screen.query_one("#detail-body", Static).render())
             self.assertIn("blocked", body)
             self.assertIn("waiting on design", body)
-            self.app.source_filter = "claims"
-            claimed = [
-                task.id
-                for _plan, milestones in self.app.tree_controller.filters.filtered_tree()
-                for _milestone, tasks in milestones
-                for task in tasks
-            ]
-            self.assertIn(self.tid, claimed)
-            self.assertNotIn(second.id, claimed)
 
     async def test_detail_shows_open_questions(self):
         from textual.widgets import Static

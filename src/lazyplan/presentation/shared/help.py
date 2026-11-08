@@ -18,6 +18,7 @@ HINT_ITEMS: tuple[tuple[str, str], ...] = (
     ("x", "tick"),
     ("d", "delete"),
     ("/", "filter"),
+    ("f", "mode"),
     ("g", "source"),
     ("?", "help"),
     ("c", "commands"),
@@ -76,7 +77,7 @@ def hint_bar(width: int | None = None, markup: bool = False) -> str:
     """One-line key hints; drops the least important items on narrow screens."""
     items = list(HINT_ITEMS)
     text = " · ".join(f"{key} {label}" for key, label in items)
-    for key in ("c", "d", "x"):
+    for key in ("c", "d", "g", "x"):
         if width is None or len(text) <= width:
             break
         items = [item for item in items if item[0] != key]

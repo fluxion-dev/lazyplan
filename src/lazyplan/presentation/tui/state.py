@@ -8,19 +8,32 @@ widget tree.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from enum import StrEnum
 
-from ...core.entities import Status
+
+class PlanMode(StrEnum):
+    """Which plans the tree shows."""
+
+    ACTIVE = "active"
+    FINISHED = "finished"
+    BOTH = "both"
+
+
+_MODE_ORDER = (PlanMode.ACTIVE, PlanMode.FINISHED, PlanMode.BOTH)
+
+
+def next_mode(mode: PlanMode) -> PlanMode:
+    """Cycle Active -> Finished -> Both -> Active."""
+    return _MODE_ORDER[(_MODE_ORDER.index(mode) + 1) % len(_MODE_ORDER)]
 
 
 @dataclass
 class AppState:
-    """Selection, filters, marks, folds, and transient shell flags."""
+    """Selection, mode, marks, folds, and transient shell flags."""
 
     selected: tuple[str, int] | None = None
-    status_filter: Status | None = None
-    show_all: bool = False
+    plan_mode: PlanMode = PlanMode.ACTIVE
     filter_text: str = ""
-    source_filter: str = "all"
     override_mode: bool = False
     override_warned: bool = False
     marked: set[tuple[str, int]] = field(default_factory=set)

@@ -305,9 +305,8 @@ every call. Reach for `--json` only when you need full-fidelity fields.
   PRs. `lpui lint --plan P --strict` rejects uncovered criteria, missing slices
   or verification, placeholders, and done rows with open criteria.
 - `lpui stats --since 7.days` reports WIP, cycle time, throughput, aging, stale
-  work, reopened rows, claims, and blocked tasks. The Attention filter surfaces
-  the same risks; the Focus filter keeps doing, claimed, blocked, attention, and
-  next work.
+  work, reopened rows, claims, and blocked tasks. The screen's `f` cycles plan
+  modes (active, finished, both); attention data stays in the preview strip.
 - Finish with `task finish --require-pr --require-checks` when the task must
   prove PR/CI evidence; `--override REASON` records an exception. A branch
   already recorded on another open task is rejected.

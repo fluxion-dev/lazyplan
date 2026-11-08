@@ -45,7 +45,7 @@ from .launch import launch_update
 from .metrics import MetricsSection
 from .override import WRITE_ACTIONS
 from .preview import PreviewMixin
-from .state import AppState
+from .state import AppState, PlanMode
 from .theme import register_themes
 from .tree import TreeMixin
 from .widgets.agents_panel import AgentsPanel
@@ -92,9 +92,7 @@ if _TEXTUAL_OK:
             Binding("z", "fold", "Fold", show=False),
             Binding("Z", "fold_all", "Fold all", show=False),
             Binding("slash", "filter_text", "Filter"),
-            Binding("f", "filter_status", "Status filter", show=False),
-            Binding("F", "filter_source", "Source filter", show=False),
-            Binding("A", "toggle_show_all", "All plans", show=False),
+            Binding("f", "cycle_mode", "Plan mode", show=False),
             Binding("r", "refresh", "Refresh", show=False),
             Binding("U", "update_prompt", "Update"),
             Binding("O", "toggle_override", "Override"),
@@ -228,12 +226,14 @@ if _TEXTUAL_OK:
                 tree.focus()
 
     def create_app(
-        db_path: str | None = None, startup_notice: str = "", startup_filter: str = "all"
+        db_path: str | None = None,
+        startup_notice: str = "",
+        startup_mode: PlanMode = PlanMode.ACTIVE,
     ) -> LazyplanApp:
         """Build the app bound to a store."""
         app = LazyplanApp(Store(db_path))
         app._startup_notice = startup_notice
-        app.source_filter = startup_filter
+        app.plan_mode = startup_mode
         return app
 
 
@@ -246,5 +246,5 @@ def run(db_path: str | None = None) -> int:
     startup_notice, exit_now = launch_update()
     if exit_now:
         return 0
-    create_app(db_path, startup_notice, startup_filter="needs").run()
+    create_app(db_path, startup_notice).run()
     return 0

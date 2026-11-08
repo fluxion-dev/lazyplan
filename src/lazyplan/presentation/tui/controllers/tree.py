@@ -12,7 +12,6 @@ from ....core.entities import Milestone, Plan, Status, Task
 from ....core.policies.planning import progress_counts
 from ...shared.design import apply_mark, status_prefix
 from ...shared.help import hint_bar
-from ..constants import source_label
 from ..views.rows import RowSpec, milestone_spec, plan_spec, row_text, task_spec
 from .filtering import TreeFilter
 
@@ -248,13 +247,9 @@ class TreeController:
         app._row_labels = {}
         app._row_specs = {}
         app.spinner_controller.rows = {}
-        base = services.tree(app.store, status=None, archived="hide")
+        base = services.tree(app.store, status=None, archived="show")
         progress = self.progress_map(base)
-        visible = self.filters.status_tree(base, app.status_filter)
-        if not (app.show_all or app.filter_text.strip()) and app.source_filter != "needs":
-            visible = visible[: services.DEFAULT_PLAN_LIMIT]
-        filtered = self.filters.filtered_tree(visible)
-        filtered.sort(key=lambda entry: entry[0].status == Status.DONE)
+        filtered = self.filters.filtered_tree(base)
         self.build_rows(
             tree.root,
             tree,
@@ -273,8 +268,7 @@ class TreeController:
         self.show_empty(not app._row_nodes)
         app.spinner_controller.paint()
         app.query_one("#hints", Label).update(hint_bar(max(10, app.size.width - 2), markup=True))
-        lens = source_label(app.source_filter)
-        app.query_one("#nav").border_title = " plans " if lens == "all" else f" plans · {lens} "
+        app.query_one("#nav").border_title = f" plans · {app.plan_mode.value} "
         self.restore_selection(tree, prev_selected, prev_cursor)
         app.metrics_controller.refresh()
         app._preview_key = None

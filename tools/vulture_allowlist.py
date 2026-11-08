@@ -8,7 +8,7 @@
 - Session API kept deliberately: the store and port surface is consumed
   by the session commands and resume reads cut in T1436 and T1437.
 - Metrics dashboard contract: snapshot fields are consumed by the chart
-  cards and their tests.
+  cards and their tests; attention_ids is the set form of the preview map.
 - sqlite3 API noise: row_factory.
 """
 
@@ -28,10 +28,6 @@ _.action_fold
 _.action_fold_left
 _.action_fold_right
 _.action_refresh
-_.action_filter_status
-_.action_filter_source
-_.action_filter_plan
-_.action_toggle_show_all
 _.action_help
 _.action_new_context
 _.action_new_plan
@@ -70,6 +66,7 @@ _.criteria_progress
 _.day
 _.percent
 _.elapsed_seconds
+attention_ids
 _.daily_rate
 _.eta_days
 _.complete

@@ -125,7 +125,7 @@ def control_app():
             store.start_session("Ada", plan_id=plan.id, branch="feat/control-room")
         store = Store(db)
         with mock.patch("lazyplan.services.metrics.snapshot", side_effect=frozen_snapshot):
-            yield create_app(db, startup_filter="needs"), plan.id
+            yield create_app(db), plan.id
 
 
 def _expand_tree(tree: Tree) -> None:

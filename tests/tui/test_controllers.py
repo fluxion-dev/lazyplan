@@ -16,6 +16,7 @@ try:
     from lazyplan.presentation import tui as tui_mod
     from lazyplan.presentation.tui.controllers.git_state import GitStateController
     from lazyplan.presentation.tui.controllers.tree import TreeController
+    from lazyplan.presentation.tui.state import PlanMode
 except ImportError:  # pragma: no cover - stdlib-only interpreter
     tui_mod = None  # type: ignore[assignment]
 
@@ -32,7 +33,7 @@ class ControllerTest(unittest.IsolatedAsyncioTestCase):
         services.set_status(store, "task", task.id, Status.DONE, actor="qa")
         self.store = Store(self.db)
         self.task_id = task.id
-        self.app = tui_mod.create_app(self.db)
+        self.app = tui_mod.create_app(self.db, startup_mode=PlanMode.BOTH)
 
     async def asyncTearDown(self) -> None:
         self.tmp.cleanup()

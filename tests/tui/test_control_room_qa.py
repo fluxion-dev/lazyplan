@@ -65,11 +65,11 @@ class ControlRoomQaTest(unittest.IsolatedAsyncioTestCase):
             self.assertIsNone(self.store.get_claim(self.doing.id))
 
     async def test_control_room_launch_panels_and_detail(self) -> None:
-        app = tui_mod.create_app(self.db, startup_filter="needs")
+        app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await settle(pilot)
-            self.assertEqual(app.source_filter, "needs")
-            self.assertIn("needs me", str(app.query_one("#nav").border_title))
+            self.assertEqual(app.plan_mode.value, "active")
+            self.assertIn("active", str(app.query_one("#nav").border_title))
             self.assertIn(("plan", self.plan.id), app._row_nodes)
             self.assertIn(("task", self.blocked.id), app._row_nodes)
 

@@ -121,7 +121,7 @@ class TestViewports(unittest.IsolatedAsyncioTestCase):
                             _within(app.query_one(selector).region, width, height),
                             selector,
                         )
-                    self.assertEqual(app.query_one("#nav").border_title, " plans ")
+                    self.assertEqual(app.query_one("#nav").border_title, " plans · active ")
                     preview = app.query_one("#preview")
                     git = app.query_one("#git")
                     metrics = app.query_one("#metrics")

@@ -102,48 +102,6 @@ class TestCommitChips(unittest.IsolatedAsyncioTestCase):
             bare = str(self.app._row_nodes[("task", self.bare_tid)].label)
             self.assertNotIn("PR", bare)
 
-    async def test_source_filters_cycle(self):
-        async with self.app.run_test() as pilot:
-            await pilot.pause()
-            self.app.action_filter_source()
-            await pilot.pause()
-            self.assertEqual(self.app.source_filter, "linked")
-            self.assertIn(("task", self.tid), self.app._row_nodes)
-            self.assertNotIn(("task", self.bare_tid), self.app._row_nodes)
-
-            self.app.action_filter_source()
-            await pilot.pause()
-            self.assertEqual(self.app.source_filter, "pr")
-            self.assertNotIn(("task", self.tid), self.app._row_nodes)
-
-            self.app.action_filter_source()
-            self.app.action_filter_source()
-            await pilot.pause()
-            self.assertEqual(self.app.source_filter, "unlinked")
-            self.assertIn(("task", self.bare_tid), self.app._row_nodes)
-            self.assertNotIn(("task", self.tid), self.app._row_nodes)
-
-            self.app.action_filter_source()
-            await pilot.pause()
-            self.assertEqual(self.app.source_filter, "claims")
-            self.app.action_filter_source()
-            await pilot.pause()
-            self.assertEqual(self.app.source_filter, "blocked")
-            self.app.action_filter_source()
-            await pilot.pause()
-            self.assertEqual(self.app.source_filter, "attention")
-            self.app.action_filter_source()
-            await pilot.pause()
-            self.assertEqual(self.app.source_filter, "focus")
-            self.app.action_filter_source()
-            await pilot.pause()
-            self.assertEqual(self.app.source_filter, "needs")
-            self.app.action_filter_source()
-            await pilot.pause()
-            self.assertEqual(self.app.source_filter, "all")
-            self.assertIn(("task", self.tid), self.app._row_nodes)
-            self.assertIn(("task", self.bare_tid), self.app._row_nodes)
-
     async def test_g_opens_source_screen(self):
         from lazyplan.presentation.tui.screens.source import SourceScreen
 

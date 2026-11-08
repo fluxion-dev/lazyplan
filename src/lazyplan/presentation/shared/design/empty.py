@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-EMPTY_NO_PLANS = "No plans yet — press n to create one, or run: lpui plan add"
+EMPTY_NO_PLANS = "No active plans — press n to create one, or f for finished/both"
 EMPTY_FEED = "No activity yet — agents write with `lpui task add`."
 EMPTY_COMMITS = "(no commits linked)"
 EMPTY_NEEDS = "nothing needs you"

@@ -8,14 +8,13 @@ from typing import Any
 from textual.app import App
 from textual.widgets.tree import TreeNode
 
-from ...core.entities import Status
 from ...store import Store
 from .controllers.git_state import GitStateController
 from .controllers.metrics import MetricsController
 from .controllers.spinner import SpinnerController
 from .controllers.tree import TreeController
 from .controllers.updates import UpdateController
-from .state import AppState
+from .state import AppState, PlanMode
 from .views.rows import RowSpec
 
 
@@ -45,9 +44,7 @@ class TuiHost:
     def action_fold(self) -> None: ...
     def action_fold_all(self) -> None: ...
     def action_filter_text(self) -> None: ...
-    def action_filter_status(self) -> None: ...
-    def action_filter_source(self) -> None: ...
-    def action_toggle_show_all(self) -> None: ...
+    def action_cycle_mode(self) -> None: ...
     def action_toggle_mark(self) -> None: ...
     def action_clear_marks(self) -> None: ...
     def action_bulk_doing(self) -> None: ...
@@ -88,20 +85,12 @@ class AppBase(App, TuiHost):
         self.state.selected = value
 
     @property
-    def status_filter(self) -> Status | None:
-        return self.state.status_filter
+    def plan_mode(self) -> PlanMode:
+        return self.state.plan_mode
 
-    @status_filter.setter
-    def status_filter(self, value: Status | None) -> None:
-        self.state.status_filter = value
-
-    @property
-    def show_all(self) -> bool:
-        return self.state.show_all
-
-    @show_all.setter
-    def show_all(self, value: bool) -> None:
-        self.state.show_all = value
+    @plan_mode.setter
+    def plan_mode(self, value: PlanMode) -> None:
+        self.state.plan_mode = value
 
     @property
     def filter_text(self) -> str:
@@ -110,14 +99,6 @@ class AppBase(App, TuiHost):
     @filter_text.setter
     def filter_text(self, value: str) -> None:
         self.state.filter_text = value
-
-    @property
-    def source_filter(self) -> str:
-        return self.state.source_filter
-
-    @source_filter.setter
-    def source_filter(self, value: str) -> None:
-        self.state.source_filter = value
 
     @property
     def override_mode(self) -> bool:

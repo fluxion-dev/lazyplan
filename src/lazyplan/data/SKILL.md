@@ -315,6 +315,10 @@ every call. Reach for `--json` only when you need full-fidelity fields.
 - Human screen: space marks rows; `?` help, `c` palette, `[` / `]` history,
   and `q` quit work on every screen. The palette has bulk move, bulk block,
   bulk release claims, clear marks, and one undo for status/block changes.
+- Trust hubs are selectable: criteria (`t` from detail), evidence (`enter` on
+  a criterion), questions, and references from the palette. Criteria tick,
+  prove, relate, and delete; questions add, resolve, and reopen; references
+  link, open, and unlink.
 - Collaborate with `comment add/list/resolve`; use `share --plan P` for a
   read-only snapshot and `sync --file dump.json --dry-run` for a plan-level
   merge.

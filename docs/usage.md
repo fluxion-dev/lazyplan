@@ -334,6 +334,28 @@ criterion, `p` records proof, `Q` adds a plan question, `ctrl+r` resolves one,
 prior selection. Pressing `c` or `?` works there too; the palette disables
 actions the current screen cannot run and says why.
 
+### Trust hubs
+
+Criteria, evidence, questions, and references are selectable hubs, not
+read-only text. From the tree or a detail page, open **criteria hub**,
+**evidence hub**, **questions hub**, or **references hub** from the palette
+(`c`). On a detail page, `t` opens the criteria hub for that row directly.
+
+- Criteria: `a` adds, `x` ticks or reopens, `p` records proof, `l` and `L`
+  relate or unrelate a proving task, `d` deletes, and `enter` opens the
+  evidence rows for the selected criterion.
+- Evidence: each row shows pass or fail, the command, exit code, commit, note,
+  and proving task. `p` proves the selected criterion; `o` opens its pull
+  request or copies its commit.
+- Questions: `a` adds, `x` resolves an open question or reopens a resolved one,
+  and every row shows how many open questions still block plan readiness.
+- References: `a` links a URL, `o` opens it, and `d` unlinks it. Duplicate or
+  invalid URLs are rejected.
+
+`escape` returns to the parent screen and restores its selection. The hub
+header keeps the parent breadcrumb, so evidence never loses the criterion it
+proved.
+
 The palette and the CLI use the same names: Create plan, Move to doing, Tick
 next criterion, Delete selection. The palette also has Bulk move to doing/done,
 Bulk block tasks, Bulk release claims, Clear marks, and Undo bulk change. Bulk

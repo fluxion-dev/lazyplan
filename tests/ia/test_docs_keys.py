@@ -35,3 +35,23 @@ class DocumentationKeysTest(unittest.TestCase):
             with self.subTest(surface=name):
                 self.assertIn("palette", text.lower())
                 self.assertIn("history", text.lower())
+
+    def test_usage_names_every_trust_hub(self) -> None:
+        for term in (
+            "Trust hubs",
+            "criteria hub",
+            "evidence hub",
+            "questions hub",
+            "references hub",
+        ):
+            with self.subTest(term=term):
+                self.assertIn(term, USAGE)
+        for key in ("`t`", "`enter`", "`p`", "`l`", "`L`", "`o`", "`d`"):
+            with self.subTest(key=key):
+                self.assertIn(key, USAGE)
+
+    def test_site_and_skill_name_the_trust_hubs(self) -> None:
+        for name, text in (("site", SITE), ("skill", SKILL)):
+            with self.subTest(surface=name):
+                self.assertIn("criteria", text.lower())
+                self.assertIn("references", text.lower())

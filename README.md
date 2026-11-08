@@ -86,6 +86,7 @@ with `lpui import --file`; see [data and backup](docs/usage.md#data-and-backup).
 ## Learn more
 
 - [Usage and CLI reference](docs/usage.md)
+- [Information architecture](docs/information-architecture/spec.md)
 - [Changelog](CHANGELOG.md)
 - [Contributing](CONTRIBUTING.md) (main is protected; open a PR)
 - [Screenshots](https://fluxion-dev.github.io/lazyplan/)

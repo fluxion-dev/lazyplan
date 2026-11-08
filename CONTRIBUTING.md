@@ -109,6 +109,8 @@ The human doc set is `README.md`, this file, and [docs/usage.md](docs/usage.md).
 Put detail in the usage guide, not back into the README, and follow the policy
 in [AGENTS.md](AGENTS.md).
 
-The [information-architecture inventory](docs/information-architecture/inventory.md)
-lists every TUI, CLI, MCP, setup, hook, and documentation path. Its
+The [information architecture spec](docs/information-architecture/spec.md)
+defines the target entity model, journeys, taxonomy, keymap, and parity rules.
+The [inventory](docs/information-architecture/inventory.md) lists every TUI,
+CLI, MCP, setup, hook, and documentation path; its
 [findings](docs/information-architecture/findings.md) rank the known gaps.

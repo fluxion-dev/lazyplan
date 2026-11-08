@@ -32,6 +32,7 @@ from lazyplan.services.source import SourceTrail, build_source_trail
 
 from .... import services
 from ...shared.design import msg_error
+from ..navigation import NAV_BINDINGS, NavigationMixin
 from ..views.detail import build_detail, detail_breadcrumb
 
 if TYPE_CHECKING:
@@ -42,18 +43,19 @@ from .forms import ConfirmScreen, FilterPromptScreen, NewMilestoneScreen, NewTas
 
 if _TEXTUAL_OK:
 
-    class DetailScreen(QuestionActionsMixin, Screen):
+    class DetailScreen(QuestionActionsMixin, NavigationMixin, Screen):
         """Read-first detail page; `e` switches to an in-place edit form."""
 
         BINDINGS = [
+            *NAV_BINDINGS,
             Binding("escape", "back", "Back", priority=True),
             Binding("e", "toggle_edit", "Edit"),
             Binding("s", "advance_status", "Status"),
             Binding("x", "tick_criterion", "Tick"),
             Binding("a", "add_criterion", "Criterion"),
             Binding("p", "prove_criterion", "Prove"),
-            Binding("q", "add_question", "Question"),
-            Binding("Q", "resolve_question", "Resolve"),
+            Binding("Q", "add_question", "Question"),
+            Binding("ctrl+r", "resolve_question", "Resolve"),
             Binding("R", "reopen_question", "Reopen"),
             Binding("n", "add_child", "New child"),
             Binding("d", "delete_row", "Delete"),

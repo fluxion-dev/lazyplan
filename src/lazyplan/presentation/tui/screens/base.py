@@ -23,6 +23,7 @@ try:
     )
     from textual.widgets.option_list import Option  # noqa: F401
 
+    from ..navigation import NAV_BINDINGS, NavigationMixin
     from ..query import query_one_opt
 
     _TEXTUAL_OK = True
@@ -39,11 +40,15 @@ if _TEXTUAL_OK:
         """One compact action row (`.btn-row`): every modal row."""
         return Horizontal(*buttons, classes="btn-row")
 
-    class _Form(ModalScreen):
+    class _Form(NavigationMixin, ModalScreen):
         """Modal form base: Esc cancels, dirty drafts confirm first."""
 
-        BINDINGS = [Binding("escape", "cancel", "Cancel")]
+        BINDINGS = [*NAV_BINDINGS, Binding("escape", "cancel", "Cancel")]
         dialog_title = "ACTION"
+
+        def action_back(self) -> None:
+            """Esc and back both run the form's cancel path."""
+            self.action_cancel()
 
         def __init__(self) -> None:
             super().__init__()

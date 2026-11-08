@@ -32,6 +32,7 @@ from lazyplan.services.source import (
 
 from ....core.ports.provenance import ProvenancePort
 from ...shared.design import KIND_ICON, escape_markup
+from ..navigation import NAV_BINDINGS, NavigationMixin
 from ..views.source import (
     commit_label,
     commit_preview,
@@ -49,10 +50,11 @@ DIFF_PREVIEW_FILES = 20
 
 if _TEXTUAL_OK:
 
-    class SourceScreen(Screen):
+    class SourceScreen(NavigationMixin, Screen):
         """Keyboard tree of repos, commits, files, and pull requests."""
 
         BINDINGS = [
+            *NAV_BINDINGS,
             Binding("escape", "back", "Back", priority=True),
             Binding("o", "open", "Open"),
             Binding("y", "copy", "Copy"),

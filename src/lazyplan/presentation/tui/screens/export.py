@@ -26,6 +26,7 @@ from ...shared.export import (
     write_export,
 )
 from ...shared.render import render_plan_markdown
+from ..navigation import NAV_BINDINGS, NavigationMixin
 from .forms import ConfirmScreen
 
 if TYPE_CHECKING:
@@ -34,10 +35,10 @@ if TYPE_CHECKING:
 
 if _TEXTUAL_OK:
 
-    class ExportScreen(ModalScreen[Path | None]):
+    class ExportScreen(NavigationMixin, ModalScreen[Path | None]):
         """Pick a destination for one plan's Markdown export."""
 
-        BINDINGS = [Binding("escape", "cancel", "Cancel")]
+        BINDINGS = [*NAV_BINDINGS, Binding("escape", "cancel", "Cancel")]
 
         def __init__(
             self,

@@ -72,7 +72,7 @@ class TrustQaTest(unittest.IsolatedAsyncioTestCase):
             self.assertIsInstance(self.app.screen, ProveScreen)
             await pilot.press("escape")
             await pilot.pause()
-            await pilot.press("q")
+            await pilot.press("Q")
             await pilot.pause()
             self.assertIsInstance(self.app.screen, FilterPromptScreen)
             await pilot.press("escape")

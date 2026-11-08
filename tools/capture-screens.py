@@ -212,7 +212,7 @@ def build_coordination_fixture(tmp: Path) -> Store:
     milestone = store.add_milestone(
         plan.id,
         "Coordinate the queue",
-        "Leases, handoffs, and the Attention view.",
+        "Leases, handoffs, and the control strip.",
     )
     claimed = store.add_task(milestone.id, "Claim the release queue", "Commit slice: queue.")
     expired = store.add_task(milestone.id, "Reclaim the abandoned lease", "Commit slice: lease.")
@@ -476,9 +476,6 @@ async def capture_coordination(store: Store, target: Path) -> None:
     app = create_app(str(store.path))
     async with app.run_test(size=SIZE) as pilot:
         await pilot.pause()
-        app.source_filter = "attention"
-        app.refresh_all("attention")
-        await pilot.pause()
         tree = app.query_one("#tree", Tree)
         _expand_all(tree)
         tree.focus()
@@ -493,7 +490,7 @@ async def capture_control_room(store: Store, target: Path) -> None:
     plan_id = next(
         plan.id for plan in store.list_plans() if plan.name == "Ship the coordination release"
     )
-    app = create_app(str(store.path), startup_filter="needs")
+    app = create_app(str(store.path))
     async with app.run_test(size=SIZE) as pilot:
         await pilot.pause()
         app.action_toggle_override()
@@ -704,7 +701,7 @@ SCENES: dict[str, Scene] = {
         SIZE,
         build_control_room_fixture,
         capture_control_room,
-        "lazyplan control room on the needs-me lens with the health strip, an active session, an open question, approval drift, claims, and the manual override banner.",
+        "lazyplan control room with the manual override banner, health and needs strip, an active session, an open question, approval drift, claims, and attention tasks.",
     ),
     "lpui-source-trail": Scene(
         SIZE,
@@ -752,7 +749,7 @@ SCENES: dict[str, Scene] = {
         SIZE,
         build_coordination_fixture,
         capture_coordination,
-        "lazyplan plan tree filtered to Attention, showing an active claim, an expired claim, a blocked task, aging work, a done row with an open criterion, and a red PR check.",
+        "lazyplan plan tree with an active claim, an expired claim, a blocked task, aging work, a done row with an open criterion, and a red PR check, with attention summarized in the control strip.",
     ),
     "lpui-collaboration": Scene(
         SIZE,

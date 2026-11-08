@@ -8,6 +8,7 @@ from lazyplan.core.entities import Status, Task
 from lazyplan.core.policies.coordination import (
     CLAIM_DEFAULT_TTL,
     matches_path,
+    normalize_repo_path,
     normalize_touchpoint,
     parse_ttl,
     patterns_overlap,
@@ -50,6 +51,11 @@ class TestBlockValidation(unittest.TestCase):
 
 
 class TestTouchpoints(unittest.TestCase):
+    def test_normalize_repo_paths_for_comparison(self) -> None:
+        self.assertEqual(normalize_repo_path(""), "")
+        self.assertEqual(normalize_repo_path("/repo/."), normalize_repo_path("/repo"))
+        self.assertEqual(normalize_repo_path("/repo/../repo"), normalize_repo_path("/repo"))
+
     def test_normalize_paths(self) -> None:
         self.assertEqual(normalize_touchpoint("./src\\store//"), "src/store")
         self.assertEqual(normalize_touchpoint("src/*.py"), "src/*.py")

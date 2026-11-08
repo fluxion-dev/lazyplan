@@ -320,11 +320,19 @@ plan's children.
 | `/` | filter by text |
 | `f` | change plan mode: active, finished, both |
 | `g` | open the source trail for the selected row |
-| `?` | help |
-| `c` | command palette |
+| `[` / `]` | history back / forward, restoring the prior screen and selection |
+| `escape` | back from detail, source, and modals; clears the tree filter |
+| `?` | help, from any screen |
+| `c` | command palette, from any screen |
 | `t` | cycle theme: mocha, void, latte |
 | `O` | toggle manual override mode (writes are blocked while off) |
-| `q` | quit |
+| `q` | quit, from any screen |
+
+On the detail page, `e` edits, `s` advances status, `x` ticks the next
+criterion, `p` records proof, `Q` adds a plan question, `ctrl+r` resolves one,
+`R` reopens one, `g` opens the source trail, and `escape` returns to the exact
+prior selection. Pressing `c` or `?` works there too; the palette disables
+actions the current screen cannot run and says why.
 
 The palette and the CLI use the same names: Create plan, Move to doing, Tick
 next criterion, Delete selection. The palette also has Bulk move to doing/done,

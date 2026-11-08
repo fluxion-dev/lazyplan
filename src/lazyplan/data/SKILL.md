@@ -312,8 +312,9 @@ every call. Reach for `--json` only when you need full-fidelity fields.
   already recorded on another open task is rejected.
 - Import issues once with `issue import` (GitHub live or Linear export);
   re-import refreshes source metadata only and never writes back.
-- Human screen: space marks rows; the palette has bulk move, bulk block, bulk
-  release claims, clear marks, and one undo for status/block changes.
+- Human screen: space marks rows; `?` help, `c` palette, `[` / `]` history,
+  and `q` quit work on every screen. The palette has bulk move, bulk block,
+  bulk release claims, clear marks, and one undo for status/block changes.
 - Collaborate with `comment add/list/resolve`; use `share --plan P` for a
   read-only snapshot and `sync --file dump.json --dry-run` for a plan-level
   merge.

@@ -23,6 +23,12 @@ FIXED_START = 1_700_000_000.0
 FIXED_NOW = FIXED_START + 30 * 86_400
 
 
+@pytest.fixture(autouse=True)
+def freeze_spinner(monkeypatch):
+    """Keep doing-row frames deterministic across platforms."""
+    monkeypatch.setenv("LAZYPLAN_NO_SPINNER", "1")
+
+
 @contextmanager
 def utc_timezone():
     """Pin local-time formatting so timeline labels match every runner."""

@@ -353,6 +353,9 @@ class StoreStubs(StoreStubsLinks):
     ) -> Comment | None:
         raise NotImplementedError
 
+    def update_comment(self, cid: int, text: str, actor: str = "human") -> Comment | None:
+        raise NotImplementedError
+
     def restore_comment(
         self, parent_kind: str, parent_id: int, text: str, actor: str, ts: float, resolved: bool
     ) -> Comment | None:
@@ -514,6 +517,11 @@ class StoreStubs(StoreStubsLinks):
         raise NotImplementedError
 
     def set_criteria(self, cid: int, done: bool, actor: str = "human") -> Criterion | None:
+        raise NotImplementedError
+
+    def update_criterion(
+        self, cid: int, text: str, actor: str = "human", reason: str = ""
+    ) -> Criterion | None:
         raise NotImplementedError
 
     def add_evidence(

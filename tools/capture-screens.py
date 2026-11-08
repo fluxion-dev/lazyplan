@@ -341,13 +341,6 @@ def _task_id(store: Store, title: str) -> int:
     raise SystemExit(f"fixture task not found: {title}")
 
 
-def _expand_all(tree: Tree[object]) -> None:
-    for plan in tree.root.children:
-        plan.expand()
-        for milestone in plan.children:
-            milestone.expand()
-
-
 def _nodes(tree: Tree[object], kind: str) -> list[object]:
     found: list[object] = []
 
@@ -397,7 +390,7 @@ async def _capture_task_shell(store: Store, target: Path, theme: str | None = No
         async with app.run_test(size=SIZE) as pilot:
             await pilot.pause()
             tree = app.query_one("#tree", Tree)
-            _expand_all(tree)
+            app.tree_controller.expand_all()
             tree.focus()
             selected = next(
                 (
@@ -459,7 +452,7 @@ async def capture_timeline(store: Store, target: Path) -> None:
         await pilot.pause()
         app.action_toggle_timeline()
         tree = app.query_one("#tree", Tree)
-        _expand_all(tree)
+        app.tree_controller.expand_all()
         tree.focus()
         milestones = _nodes(tree, "milestone")
         if milestones:
@@ -477,7 +470,7 @@ async def capture_coordination(store: Store, target: Path) -> None:
     async with app.run_test(size=SIZE) as pilot:
         await pilot.pause()
         tree = app.query_one("#tree", Tree)
-        _expand_all(tree)
+        app.tree_controller.expand_all()
         tree.focus()
         tasks = _nodes(tree, "task")
         if tasks:
@@ -495,7 +488,7 @@ async def capture_control_room(store: Store, target: Path) -> None:
         await pilot.pause()
         app.action_toggle_override()
         tree = app.query_one("#tree", Tree)
-        _expand_all(tree)
+        app.tree_controller.expand_all()
         tree.focus()
         plans = _nodes(tree, "plan")
         if plans:
@@ -506,7 +499,7 @@ async def capture_control_room(store: Store, target: Path) -> None:
         await pilot.pause()
         app.selected = ("plan", plan_id)
         app.update_preview(force=True)
-        _expand_all(tree)
+        app.tree_controller.expand_all()
         await pilot.pause(0.2)
         app.save_screenshot(str(target))
 
@@ -538,7 +531,7 @@ async def capture_search(store: Store, target: Path) -> None:
         app.refresh_all("marked 3")
         await pilot.pause()
         tree = app.query_one("#tree", Tree)
-        _expand_all(tree)
+        app.tree_controller.expand_all()
         tree.focus()
         tasks = _nodes(tree, "task")
         if tasks:

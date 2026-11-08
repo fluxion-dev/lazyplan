@@ -128,10 +128,6 @@
     width: 100%;
 }
 
-#metrics.narrow {
-    display: none;
-}
-
 #main.compact {
     padding: 0;
 }

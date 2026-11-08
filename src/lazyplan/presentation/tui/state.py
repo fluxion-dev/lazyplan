@@ -50,4 +50,9 @@ class AppState:
     compact: bool = False
     wide: bool = False
     timeline_visible: bool = False
+
+    def timeline_shown(self, narrow: bool) -> bool:
+        """True when the timeline should be visible at this width."""
+        return self.timeline_visible and not narrow
+
     history: NavigationHistory = field(default_factory=NavigationHistory)

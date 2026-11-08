@@ -6,8 +6,8 @@ from lazyplan.infrastructure.vcs import CommitInfo, RepoStatus, VCSBackend, dete
 
 from ..core.kinds import check_kind
 from ..core.policies.provenance import branch_ref, letter_for_kind, trailer_refs
-from ..core.policies.repo_paths import resolve_repo_path
 from ..core.ports.provenance import ProvenancePort
+from ..infrastructure.repo_paths import resolve_repo_path
 
 
 def _norm_path(path: str) -> str:

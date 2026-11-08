@@ -6,7 +6,7 @@ import sqlite3
 from pathlib import Path
 
 from ..core.kinds import check_parent_kind
-from ..core.policies.repo_paths import resolve_repo_path
+from ..infrastructure.repo_paths import resolve_repo_path
 from .base import (
     StoreBase,
 )

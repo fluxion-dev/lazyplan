@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import unittest
 
-from lazyplan.core.policies.repo_paths import normalize_repo_path, resolve_repo_path
+from lazyplan.infrastructure.repo_paths import normalize_repo_path, resolve_repo_path
 
 
 class TestRepoPaths(unittest.TestCase):

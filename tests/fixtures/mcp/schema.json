@@ -265,6 +265,353 @@
     },
     {
       "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Criteria on one plan, milestone, or task.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "plan",
+              "milestone",
+              "task"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "criterion_list"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Comments on one row, optionally by mention.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "plan",
+              "milestone",
+              "task"
+            ],
+            "type": "string"
+          },
+          "mentions": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "comment_list"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Notes on one row.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "plan",
+              "milestone",
+              "task"
+            ],
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "note_list"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Sessions, newest first.",
+      "inputSchema": {
+        "properties": {
+          "limit": {
+            "type": "integer"
+          },
+          "plan": {
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "name": "session_list"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "External references on one plan.",
+      "inputSchema": {
+        "properties": {
+          "plan": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "plan"
+        ],
+        "type": "object"
+      },
+      "name": "reference_list"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Touch-point paths on one task.",
+      "inputSchema": {
+        "properties": {
+          "task": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "task"
+        ],
+        "type": "object"
+      },
+      "name": "touch_list"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Recent events, or only manual overrides.",
+      "inputSchema": {
+        "properties": {
+          "actor": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "overrides": {
+            "type": "boolean"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "name": "activity_list"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Branch and dirty state for a row's linked checkouts.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "plan",
+              "milestone",
+              "task"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "git_status"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Repos, commits, files, and pull requests for a row.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "plan",
+              "milestone",
+              "task"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "source_trail"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Commits linked to a row.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "plan",
+              "milestone",
+              "task"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "commit_list"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Repositories linked to a row.",
+      "inputSchema": {
+        "properties": {
+          "effective": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "plan",
+              "milestone",
+              "task"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "repo_list"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Cached pull requests linked to a row.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "plan",
+              "milestone",
+              "task"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "pull_request_list"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Scope drift since a plan approval.",
+      "inputSchema": {
+        "properties": {
+          "from_revision": {
+            "type": "integer"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "to_revision": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "plan_diff"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Markdown export of one plan.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "export_plan"
+    },
+    {
+      "annotations": {
         "readOnlyHint": false
       },
       "description": "Create a plan.",
@@ -816,6 +1163,431 @@
         "type": "object"
       },
       "name": "question_reopen"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Rewrite one criterion.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text"
+        ],
+        "type": "object"
+      },
+      "name": "criterion_edit"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Delete one criterion.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "criterion_delete"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Delete a plan, milestone, or task.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "plan",
+              "milestone",
+              "task"
+            ],
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "delete_row"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Add a review comment to a row.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "plan",
+              "milestone",
+              "task"
+            ],
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "text"
+        ],
+        "type": "object"
+      },
+      "name": "comment_add"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Rewrite one review comment.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text"
+        ],
+        "type": "object"
+      },
+      "name": "comment_edit"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Resolve or unresolve a review comment.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "resolved": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "comment_resolve"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Add a task touch-point path or glob.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "path"
+        ],
+        "type": "object"
+      },
+      "name": "touch_add"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Remove a task touch-point path or glob.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "path"
+        ],
+        "type": "object"
+      },
+      "name": "touch_remove"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Attach an external URL to a plan.",
+      "inputSchema": {
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "plan": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan",
+          "url"
+        ],
+        "type": "object"
+      },
+      "name": "reference_link"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Remove one external reference from a plan.",
+      "inputSchema": {
+        "properties": {
+          "plan": {
+            "type": "integer"
+          },
+          "ref": {
+            "type": "integer"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan"
+        ],
+        "type": "object"
+      },
+      "name": "reference_unlink"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Link branch commits and finish a task through the gates.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "override": {
+            "type": "string"
+          },
+          "repo": {
+            "type": "string"
+          },
+          "require_checks": {
+            "type": "boolean"
+          },
+          "require_evidence": {
+            "type": "boolean"
+          },
+          "require_pr": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "finish_task"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Re-resolve cached commit links and mark stale rows.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "plan",
+              "milestone",
+              "task"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "commit_refresh"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Approve the current plan scope.",
+      "inputSchema": {
+        "properties": {
+          "enforce": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "plan_approve"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Refresh cached pull requests from GitHub (network).",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "plan",
+              "milestone",
+              "task"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "pull_request_refresh"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Attach a GitHub pull request URL to a row.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "plan",
+              "milestone",
+              "task"
+            ],
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "url"
+        ],
+        "type": "object"
+      },
+      "name": "pull_request_link"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Detach one cached pull request.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "plan",
+              "milestone",
+              "task"
+            ],
+            "type": "string"
+          },
+          "number": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "number"
+        ],
+        "type": "object"
+      },
+      "name": "pull_request_unlink"
     }
   ]
 }

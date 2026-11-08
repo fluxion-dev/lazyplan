@@ -53,7 +53,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
         await settle(pilot)
         self.app.selected = (kind, oid)
         await pilot.press("enter")
-        await pilot.pause()
+        await settle(pilot)
 
     async def test_detail_shows_claim_blocked_and_notes(self):
         from textual.widgets import Static
@@ -69,6 +69,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
             self.assertIn("@alice", body)
             self.assertIn("Use the small parser", body)
             await pilot.press("escape")
+            await settle(pilot)
             await self._open(pilot, "task", second.id)
             body = str(self.app.screen.query_one("#detail-body", Static).render())
             self.assertIn("blocked", body)

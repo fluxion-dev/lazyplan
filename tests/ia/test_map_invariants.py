@@ -46,6 +46,17 @@ class TestMapInvariants(unittest.TestCase):
             self.assertRegex(line, r"\| (High|Medium|Low|Closed) \|")
             self.assertRegex(line, r"\| (M45\d(–M45\d)?|Closed) \|")
 
+    def test_setup_steps_and_hook_events_are_mapped(self):
+        from lazyplan.infrastructure.hook_hosts import EVENTS
+        from lazyplan.presentation.shared.registry import HOOK_EVENTS, SETUP_STEPS
+
+        ui_source = (ROOT / "src/lazyplan/presentation/setup/ui.py").read_text(encoding="utf-8")
+        for step in SETUP_STEPS:
+            with self.subTest(step=step):
+                self.assertIn(f"def {step}(", ui_source)
+        found = {event for events in EVENTS.values() for event in events}
+        self.assertEqual(set(HOOK_EVENTS), found)
+
     def test_spec_links_resolve(self):
         for target in re.findall(r"\]\(([^)]+)\)", SPEC):
             self.assertTrue((ROOT / "docs/information-architecture" / target).is_file(), target)

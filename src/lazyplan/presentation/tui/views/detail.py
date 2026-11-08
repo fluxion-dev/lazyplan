@@ -290,7 +290,7 @@ def _source_lines(trail: SourceTrail, links: list[dict[str, Any]]) -> list[str]:
         rows.extend(_repo_lines(repo))
     if len(trail.repos) > 3:
         rows.append(f"  [dim]+{len(trail.repos) - 3} more repos[/]")
-    rows.append("  [dim]g source trail[/]")
+    rows.append("  [dim]g source trail · P pull requests · A activity[/]")
     return rows
 
 

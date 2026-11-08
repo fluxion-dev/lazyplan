@@ -217,9 +217,9 @@ class CoordinationHubTest(unittest.IsolatedAsyncioTestCase):
     async def test_coordination_hubs_reuse_the_framework(self) -> None:
         from tests.support.paths import ROOT
 
-        source = (
-            ROOT / "src/lazyplan/presentation/tui/screens/hub_coordination.py"
-        ).read_text(encoding="utf-8")
+        source = (ROOT / "src/lazyplan/presentation/tui/screens/hub_coordination.py").read_text(
+            encoding="utf-8"
+        )
         self.assertNotIn("OptionList", source)
         self.assertNotIn("class HubScreen", source)
 

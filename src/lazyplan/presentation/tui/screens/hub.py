@@ -71,6 +71,7 @@ if _TEXTUAL_OK:
             Binding("l", "relate", "Relate"),
             Binding("L", "unrelate", "Unrelate"),
             Binding("o", "open_value", "Open"),
+            Binding("g", "source_hub", "Source"),
             Binding("r", "refresh", "Refresh"),
         ]
 
@@ -78,6 +79,11 @@ if _TEXTUAL_OK:
             super().__init__()
             self.store = store
             self.entries: list[HubEntry] = []
+
+        @property
+        def source_parent(self) -> tuple[str, int] | None:
+            """Row whose source trail this hub can open with `g`."""
+            return None
 
         def compose(self) -> ComposeResult:
             with Vertical(id="hub-page"):
@@ -217,6 +223,20 @@ if _TEXTUAL_OK:
 
         def action_refresh(self) -> None:
             self._reload()
+
+        def action_source_hub(self) -> None:
+            """Open the source trail for this hub's parent row."""
+            parent = self.source_parent
+            if parent is None:
+                self.notify("this hub has no source trail", timeout=3)
+                return
+            opener = getattr(self.app, "open_source", None)
+            if callable(opener):
+                opener(parent[0], parent[1])
+                return
+            from .source import SourceScreen
+
+            self.app.push_screen(SourceScreen(self.store, parent[0], parent[1]))
 
         def action_back(self) -> None:
             handler = getattr(self.app, "action_history_back", None)

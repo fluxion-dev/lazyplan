@@ -75,3 +75,23 @@ class DocumentationKeysTest(unittest.TestCase):
             with self.subTest(surface=name):
                 self.assertIn("session", text.lower())
                 self.assertIn("comment", text.lower())
+
+    def test_usage_names_every_provenance_hub(self) -> None:
+        for term in (
+            "Provenance and activity hubs",
+            "source trail",
+            "pull request hub",
+            "activity hub",
+            "stale",
+        ):
+            with self.subTest(term=term):
+                self.assertIn(term, USAGE)
+        for key in ("`g`", "`P`", "`A`", "`enter`", "`r`", "`f`", "`K`", "`u`"):
+            with self.subTest(key=key):
+                self.assertIn(key, USAGE)
+
+    def test_site_and_skill_name_the_provenance_hubs(self) -> None:
+        for name, text in (("site", SITE), ("skill", SKILL)):
+            with self.subTest(surface=name):
+                self.assertIn("pull request", text.lower())
+                self.assertIn("activity", text.lower())

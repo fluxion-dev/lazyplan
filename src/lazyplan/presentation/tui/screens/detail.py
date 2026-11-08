@@ -61,6 +61,8 @@ if _TEXTUAL_OK:
             Binding("k", "open_claims_hub", "Claims"),
             Binding("v", "open_sessions_hub", "Sessions"),
             Binding("m", "open_comments_hub", "Comments"),
+            Binding("P", "open_pull_requests_hub", "PRs"),
+            Binding("A", "open_activity_hub", "Activity"),
             Binding("Q", "add_question", "Question"),
             Binding("ctrl+r", "resolve_question", "Resolve"),
             Binding("R", "reopen_question", "Reopen"),
@@ -168,7 +170,7 @@ if _TEXTUAL_OK:
             hints = (
                 "ctrl+s save · esc cancel"
                 if self._editing
-                else "e edit · s status · x tick · a criterion · g source · n child · d delete · esc back"
+                else "e edit · s status · x tick · a criterion · g source · P PRs · A activity · n child · d delete · esc back"
             )
             self.query_one("#detail-hints", Label).update(hints)
 

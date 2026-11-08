@@ -57,6 +57,18 @@ class DetailNavigationMixin:
 
         self.app.push_screen(CommentsHub(self._dstore, self.dkind, self.doid))
 
+    def action_open_pull_requests_hub(self) -> None:
+        """Open cached pull requests for this row and its descendants."""
+        from .hub_provenance import PullRequestHub
+
+        self.app.push_screen(PullRequestHub(self._dstore, self.dkind, self.doid))
+
+    def action_open_activity_hub(self) -> None:
+        """Open the feed and override activity hub."""
+        from .hub_provenance import ActivityHub
+
+        self.app.push_screen(ActivityHub(self._dstore))
+
     def action_back(self) -> None:
         """Leave detail, confirming before discarding an unsaved edit."""
         if self._editing and self._is_dirty():

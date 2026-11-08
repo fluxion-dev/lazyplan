@@ -21,6 +21,7 @@ try:
         PaletteScreen,
         UpdateScreen,
     )
+    from lazyplan.presentation.tui.screens.hub_provenance import ActivityHub, PullRequestHub
     from lazyplan.presentation.tui.screens.source import SourceScreen
 except ImportError:  # stdlib-only interpreter: no textual, no screens
     tui_mod = None  # type: ignore[assignment]
@@ -149,6 +150,8 @@ class TestViewports(unittest.IsolatedAsyncioTestCase):
         screens = (
             (DetailScreen(self.store, "plan", self.pid), "#detail-page"),
             (SourceScreen(self.store, "plan", self.pid), "#source-page"),
+            (PullRequestHub(self.store, "plan", self.pid), "#hub-page"),
+            (ActivityHub(self.store), "#hub-page"),
             (PaletteScreen({"create-plan": None}), "#dlg"),
             (HelpScreen(), "#help"),
             (ConfirmScreen("Delete plan?"), "#dlg"),

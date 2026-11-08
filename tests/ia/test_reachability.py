@@ -9,6 +9,7 @@ import unittest
 
 from lazyplan.presentation.shared import registry
 from lazyplan.store import Store
+from tests.support.paths import ROOT
 
 try:
     from lazyplan.presentation import tui as tui_mod
@@ -16,6 +17,9 @@ except ImportError:  # pragma: no cover - stdlib-only interpreter
     tui_mod = None  # type: ignore[assignment]
 
 from tests.support.pilot import settle, walk_route
+
+REPORT_JSON = ROOT / "docs/information-architecture/reachability.json"
+REPORT_MD = ROOT / "docs/information-architecture/reachability.md"
 
 
 class TestReachability(unittest.TestCase):
@@ -50,6 +54,21 @@ class TestReachability(unittest.TestCase):
         self.assertIn("plan.deep", errors[0])
         self.assertIn("4 steps", errors[0])
         self.assertIn("deeper", errors[0])
+
+    def test_committed_report_matches_the_registry(self) -> None:
+        committed = json.loads(REPORT_JSON.read_text(encoding="utf-8"))
+        self.assertEqual(committed, registry.reachability_report())
+
+    def test_committed_markdown_names_every_action(self) -> None:
+        text = REPORT_MD.read_text(encoding="utf-8")
+        for action in registry.ACTIONS:
+            with self.subTest(action=action.id):
+                self.assertIn(f"`{action.id}`", text)
+
+    def test_committed_report_has_no_over_budget_rows(self) -> None:
+        committed = json.loads(REPORT_JSON.read_text(encoding="utf-8"))
+        self.assertEqual(committed["over_budget"], [])
+        self.assertTrue(all(row["depth"] <= 3 for row in committed["actions"]))
 
 
 @unittest.skipUnless(tui_mod is not None and tui_mod._TEXTUAL_OK, "textual not installed")

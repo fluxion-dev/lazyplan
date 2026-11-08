@@ -5,6 +5,8 @@ from __future__ import annotations
 import time
 
 try:
+    from textual.binding import Binding
+
     from .hub import HubEntry, HubScreen
 
     _TEXTUAL_OK = True
@@ -37,6 +39,14 @@ if _TEXTUAL_OK:
             self.plan_id = plan_id
             self.title = f"claims · T{task_id}" if task_id is not None else "claims"
             self.empty = "No claims or touch-points. Press a to claim a task."
+
+        @property
+        def source_parent(self) -> tuple[str, int] | None:
+            if self.task_id is not None:
+                return ("task", self.task_id)
+            if self.plan_id is not None:
+                return ("plan", self.plan_id)
+            return None
 
         def load_entries(self) -> list[HubEntry]:
             now = time.time()
@@ -181,6 +191,10 @@ if _TEXTUAL_OK:
             self.title = f"sessions · P{plan_id}"
             self.empty = "No sessions yet. Press a to start one."
 
+        @property
+        def source_parent(self) -> tuple[str, int] | None:
+            return ("plan", self.plan_id)
+
         def load_entries(self) -> list[HubEntry]:
             out: list[HubEntry] = []
             for session in services.sessions.list_sessions(
@@ -249,6 +263,7 @@ if _TEXTUAL_OK:
         """Comments and notes on one row, with an unresolved filter."""
 
         kind = "comments"
+        BINDINGS = [Binding("e", "edit_row", "Edit")]
 
         def __init__(self, store: object, parent_kind: str, parent_id: int) -> None:
             super().__init__(store)
@@ -257,6 +272,10 @@ if _TEXTUAL_OK:
             self.title = f"comments · {parent_kind} #{parent_id}"
             self.empty = "No comments or notes. Press a to comment or n to note."
             self.unresolved_only = False
+
+        @property
+        def source_parent(self) -> tuple[str, int] | None:
+            return (self.parent_kind, self.parent_id)
 
         def load_entries(self) -> list[HubEntry]:
             out: list[HubEntry] = []
@@ -296,6 +315,39 @@ if _TEXTUAL_OK:
                 self._reload()
 
             self.app.push_screen(FilterPromptScreen("Add note", "handoff note", "Add"), cb)
+
+        def edit_row(self) -> None:
+            entry = self._selected()
+            if entry is None or entry.kind != "comment":
+                self.notify("select a comment first", timeout=3)
+                return
+            comment = next(
+                (
+                    item
+                    for item in services.list_comments(self.store, self.parent_kind, self.parent_id)
+                    if item.id == entry.oid
+                ),
+                None,
+            )
+            if comment is None:
+                return
+
+            def cb(text: str | None) -> None:
+                if not text:
+                    return
+                try:
+                    self.store.update_comment(comment.id, text, actor="tui")
+                except ValueError as exc:
+                    self.notify(f"error: {exc}", timeout=4)
+                    return
+                self._reload()
+
+            self.app.push_screen(
+                FilterPromptScreen("Edit comment", "comment text", "Save", initial=comment.text)
+            )
+
+        def action_edit_row(self) -> None:
+            self.edit_row()
 
         def toggle(self) -> None:
             entry = self._selected()

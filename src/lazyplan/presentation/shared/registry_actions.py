@@ -6,85 +6,17 @@ repository budget. ``registry`` re-exports every name here.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from .registry_actions_provenance import PROVENANCE_ACTIONS
+from .registry_model import ENTITIES as ENTITIES
+from .registry_model import HOOK_EVENTS as HOOK_EVENTS
+from .registry_model import NAMESPACES as NAMESPACES
+from .registry_model import SETUP_STEPS as SETUP_STEPS
+from .registry_model import SURFACES as SURFACES
+from .registry_model import TAXONOMY as TAXONOMY
+from .registry_model import Action
+from .registry_model import action as _action
 
-ENTITIES: tuple[str, ...] = (
-    "plan",
-    "milestone",
-    "task",
-    "criterion",
-    "evidence",
-    "question",
-    "reference",
-    "claim",
-    "session",
-    "note",
-    "comment",
-    "commit",
-    "file",
-    "pull_request",
-    "repo",
-    "event",
-    "override",
-)
-
-SURFACES: tuple[str, ...] = ("tui", "cli", "mcp", "docs")
-NAMESPACES: tuple[str, ...] = (
-    "app",
-    "view",
-    "row",
-    "bulk",
-    "git",
-    "source",
-    "theme",
-    "palette",
-)
-TAXONOMY: tuple[str, ...] = ENTITIES + NAMESPACES
-
-
-@dataclass(frozen=True)
-class Action:
-    """One canonical action and where it is reachable."""
-
-    id: str
-    label: str
-    key: str = ""
-    context: str = "global"
-    surfaces: tuple[str, ...] = ("tui",)
-    route: tuple[str, ...] = ("tree",)
-    palette_ids: tuple[str, ...] = ()
-    aliases: tuple[str, ...] = ()
-    deprecated_in: str = ""
-    removal: str = ""
-
-    @property
-    def taxonomy(self) -> str:
-        """Taxonomy prefix: an entity or a UI namespace."""
-        return self.id.split(".", 1)[0]
-
-
-def _action(
-    id: str,
-    label: str,
-    key: str = "",
-    context: str = "global",
-    surfaces: tuple[str, ...] = ("tui",),
-    route: tuple[str, ...] = ("tree",),
-    palette_ids: tuple[str, ...] = (),
-) -> Action:
-    """Build one registry row with stable defaults."""
-    return Action(
-        id=id,
-        label=label,
-        key=key,
-        context=context,
-        surfaces=surfaces,
-        route=route,
-        palette_ids=palette_ids,
-    )
-
-
-ACTIONS: tuple[Action, ...] = (
+CORE_ACTIONS: tuple[Action, ...] = (
     _action(
         "plan.create",
         "Create plan",
@@ -118,14 +50,14 @@ ACTIONS: tuple[Action, ...] = (
     _action(
         "plan.approve",
         "Approve plan scope",
-        surfaces=("tui", "cli"),
+        surfaces=("tui", "cli", "mcp"),
         route=("tree", "detail", "trust"),
         palette_ids=("approve-plan",),
     ),
     _action(
         "plan.diff",
         "Show plan diff",
-        surfaces=("tui", "cli"),
+        surfaces=("tui", "cli", "mcp"),
         route=("tree", "detail", "trust"),
         palette_ids=("plan-diff",),
     ),
@@ -210,7 +142,7 @@ ACTIONS: tuple[Action, ...] = (
         "Edit selection",
         "e",
         "tree",
-        ("tui", "cli"),
+        ("tui", "cli", "mcp"),
         ("tree", "detail"),
         ("edit-selection",),
     ),
@@ -243,7 +175,7 @@ ACTIONS: tuple[Action, ...] = (
     _action(
         "claim.force_release",
         "Force release claim",
-        surfaces=("tui", "cli"),
+        surfaces=("tui", "cli", "mcp"),
         route=("tree", "detail", "coordination"),
         palette_ids=("force-release-claim",),
     ),
@@ -280,21 +212,21 @@ ACTIONS: tuple[Action, ...] = (
         "Delete selection",
         "d",
         "tree",
-        ("tui", "cli"),
+        ("tui", "cli", "mcp"),
         ("tree", "detail"),
         ("delete-selection",),
     ),
     _action(
         "commit.link",
         "Link current commit",
-        surfaces=("tui", "cli"),
+        surfaces=("tui", "cli", "mcp"),
         route=("tree", "detail", "provenance"),
         palette_ids=("git-capture",),
     ),
     _action(
         "commit.refresh",
         "Refresh commit links",
-        surfaces=("tui", "cli"),
+        surfaces=("tui", "cli", "mcp"),
         route=("tree", "detail", "provenance"),
         palette_ids=("git-refresh",),
     ),
@@ -388,7 +320,7 @@ ACTIONS: tuple[Action, ...] = (
     _action(
         "git.status",
         "Show git status",
-        surfaces=("tui", "cli"),
+        surfaces=("tui", "cli", "mcp"),
         route=("tree", "detail", "provenance"),
         palette_ids=("git-status",),
     ),
@@ -404,7 +336,7 @@ ACTIONS: tuple[Action, ...] = (
         "Open source trail",
         "g",
         "tree",
-        ("tui",),
+        ("tui", "cli", "mcp"),
         ("tree", "source"),
         ("source-trail",),
     ),
@@ -438,7 +370,7 @@ ACTIONS: tuple[Action, ...] = (
     _action(
         "plan.export",
         "Export plan as Markdown",
-        surfaces=("tui", "cli"),
+        surfaces=("tui", "cli", "mcp"),
         route=("tree", "export"),
         palette_ids=("export-plan",),
     ),
@@ -470,25 +402,25 @@ ACTIONS: tuple[Action, ...] = (
     _action(
         "task.touch_add",
         "Add touch-point",
-        surfaces=("tui", "cli"),
+        surfaces=("tui", "cli", "mcp"),
         route=("tree", "detail", "coordination"),
     ),
     _action(
         "task.touch_remove",
         "Remove touch-point",
-        surfaces=("tui", "cli"),
+        surfaces=("tui", "cli", "mcp"),
         route=("tree", "detail", "coordination"),
     ),
     _action(
         "session.start",
         "Start session",
-        surfaces=("tui", "cli", "mcp"),
+        surfaces=("tui", "cli"),
         route=("tree", "detail", "sessions"),
     ),
     _action(
         "session.end",
         "End session",
-        surfaces=("tui", "cli", "mcp"),
+        surfaces=("tui", "cli"),
         route=("tree", "detail", "sessions"),
     ),
     _action(
@@ -532,6 +464,7 @@ ACTIONS: tuple[Action, ...] = (
     ),
 )
 
+ACTIONS: tuple[Action, ...] = CORE_ACTIONS + PROVENANCE_ACTIONS
 
 PALETTE_TO_ACTION: dict[str, str] = {
     palette_id: action.id for action in ACTIONS for palette_id in action.palette_ids

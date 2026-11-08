@@ -80,3 +80,15 @@ class HubMixin:
         selected = self._hub_selection()
         if selected is not None:
             self.app.push_screen(CommentsHub(self.store, selected[0], selected[1]))
+
+    def action_open_pull_requests_hub(self) -> None:
+        from .screens.hub_provenance import PullRequestHub
+
+        selected = self._hub_selection()
+        if selected is not None:
+            self.app.push_screen(PullRequestHub(self.store, selected[0], selected[1]))
+
+    def action_open_activity_hub(self) -> None:
+        from .screens.hub_provenance import ActivityHub
+
+        self.app.push_screen(ActivityHub(self.store))

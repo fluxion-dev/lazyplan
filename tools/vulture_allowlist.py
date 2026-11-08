@@ -180,3 +180,28 @@ show_root
 _.next_claimable_task
 # Policy helper exercised by the coordination policy tests.
 touchpoints_overlap
+# Provenance, activity, and edit hubs: Textual key actions and message handlers.
+_.action_open_trust_hubs
+_._highlight
+_._select
+_.action_add
+_.action_hub_toggle
+_.action_prove
+_.action_force
+_.action_note
+_.action_relate
+_.action_unrelate
+_.action_open_value
+_.action_source_hub
+_.action_edit_row
+_.action_filter_actor
+_.action_filter_kind
+_.action_open_owner
+_.action_open
+_.action_copy
+_.action_filter
+_.check_action
+_._on_click
+_.can_focus
+on_root
+_.on_click

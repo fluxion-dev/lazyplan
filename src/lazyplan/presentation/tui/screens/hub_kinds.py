@@ -12,6 +12,8 @@ from .forms import ConfirmScreen, FilterPromptScreen
 from .prove import prove_dialog
 
 try:
+    from textual.binding import Binding
+
     from .hub import HubEntry, HubScreen
 
     _TEXTUAL_OK = True
@@ -25,6 +27,7 @@ if _TEXTUAL_OK:
         """Criteria of one plan, milestone, or task, with evidence state."""
 
         kind = "criteria"
+        BINDINGS = [Binding("e", "edit_row", "Edit")]
 
         def __init__(self, store: Any, parent_kind: str, parent_id: int) -> None:
             super().__init__(store)
@@ -32,6 +35,10 @@ if _TEXTUAL_OK:
             self.parent_id = parent_id
             self.title = f"criteria · {parent_kind} #{parent_id}"
             self.empty = "No criteria yet. Press a to add one."
+
+        @property
+        def source_parent(self) -> tuple[str, int] | None:
+            return (self.parent_kind, self.parent_id)
 
         def load_entries(self) -> list[HubEntry]:
             out: list[HubEntry] = []
@@ -92,6 +99,36 @@ if _TEXTUAL_OK:
                 criterion_id=entry.oid,
             )
 
+        def edit_row(self) -> None:
+            entry = self._selected()
+            if entry is None:
+                self._notify_empty()
+                return
+            criterion = self.store.get_criterion(entry.oid)
+            if criterion is None:
+                return
+
+            def cb(text: str | None) -> None:
+                if not text:
+                    return
+                try:
+                    self.store.update_criterion(
+                        criterion.id, text, actor="tui", reason="edited from hub"
+                    )
+                except ValueError as exc:
+                    self.notify(f"error: {exc}", timeout=4)
+                    return
+                self._reload()
+
+            self.app.push_screen(
+                FilterPromptScreen(
+                    "Edit criterion", "criterion text", "Save", initial=criterion.text
+                )
+            )
+
+        def action_edit_row(self) -> None:
+            self.edit_row()
+
         def delete_row(self) -> None:
             entry = self._selected()
             if entry is None:
@@ -147,6 +184,13 @@ if _TEXTUAL_OK:
             self.title = f"evidence · C{criterion_id}" + (f" · {context}" if context else "")
             self.empty = "No evidence yet. Press p to record proof."
             self._rows: dict[int, Any] = {}
+
+        @property
+        def source_parent(self) -> tuple[str, int] | None:
+            criterion = self.store.get_criterion(self.criterion_id)
+            if criterion is None:
+                return None
+            return (criterion.parent_kind, criterion.parent_id)
 
         def load_entries(self) -> list[HubEntry]:
             out: list[HubEntry] = []
@@ -212,6 +256,10 @@ if _TEXTUAL_OK:
             self.title = f"questions · P{plan_id}"
             self.empty = "No questions. Press a to record an ambiguity."
 
+        @property
+        def source_parent(self) -> tuple[str, int] | None:
+            return ("plan", self.plan_id)
+
         def load_entries(self) -> list[HubEntry]:
             out: list[HubEntry] = []
             questions = services.list_questions(self.store, self.plan_id, "all")
@@ -267,6 +315,10 @@ if _TEXTUAL_OK:
             self.plan_id = plan_id
             self.title = f"references · P{plan_id}"
             self.empty = "No references. Press a to link an issue, epic, or doc."
+
+        @property
+        def source_parent(self) -> tuple[str, int] | None:
+            return ("plan", self.plan_id)
 
         def load_entries(self) -> list[HubEntry]:
             out: list[HubEntry] = []

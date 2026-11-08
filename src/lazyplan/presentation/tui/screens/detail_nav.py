@@ -29,7 +29,7 @@ class DetailNavigationMixin:
 
     def action_open_trust_hubs(self) -> None:
         """Open the criteria hub for this row (palette reaches the rest)."""
-        from .hub import CriteriaHub
+        from .hub_kinds import CriteriaHub
 
         self.app.push_screen(CriteriaHub(self._dstore, self.dkind, self.doid))
 

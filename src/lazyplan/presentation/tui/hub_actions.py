@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from .screens.forms import FilterPromptScreen
-from .screens.hub import CriteriaHub, EvidenceHub, QuestionsHub, ReferencesHub
+from .screens.hub_kinds import CriteriaHub, EvidenceHub, QuestionsHub, ReferencesHub
 
 
 class HubMixin:

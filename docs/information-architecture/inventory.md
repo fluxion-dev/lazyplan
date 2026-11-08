@@ -285,21 +285,21 @@ python3 tools/ia_inventory.py --check
 
 | Key | Files and actions |
 | --- | --- |
-| `a` | `src/lazyplan/presentation/tui/app.py:88` → `add_criterion`; `src/lazyplan/presentation/tui/screens/detail.py:58` → `add_criterion`; `src/lazyplan/presentation/tui/screens/hub.py:68` → `add` |
-| `d` | `src/lazyplan/presentation/tui/app.py:90` → `delete`; `src/lazyplan/presentation/tui/screens/detail.py:65` → `delete_row`; `src/lazyplan/presentation/tui/screens/hub.py:71` → `delete` |
+| `a` | `src/lazyplan/presentation/tui/app.py:88` → `add_criterion`; `src/lazyplan/presentation/tui/screens/detail.py:58` → `add_criterion`; `src/lazyplan/presentation/tui/screens/hub.py:62` → `add` |
+| `d` | `src/lazyplan/presentation/tui/app.py:90` → `delete`; `src/lazyplan/presentation/tui/screens/detail.py:65` → `delete_row`; `src/lazyplan/presentation/tui/screens/hub.py:65` → `delete` |
 | `e` | `src/lazyplan/presentation/tui/app.py:85` → `edit_selection`; `src/lazyplan/presentation/tui/screens/detail.py:55` → `toggle_edit` |
 | `enter` | `src/lazyplan/presentation/tui/app.py:80` → `open_detail`; `src/lazyplan/presentation/tui/widgets/plan_tree.py:31` → `open_detail` |
-| `escape` | `src/lazyplan/presentation/tui/app.py:82` → `clear_filter`; `src/lazyplan/presentation/tui/screens/base.py:46` → `cancel`; `src/lazyplan/presentation/tui/screens/detail.py:54` → `back`; `src/lazyplan/presentation/tui/screens/export.py:43` → `cancel`; `src/lazyplan/presentation/tui/screens/hub.py:67` → `back`; `src/lazyplan/presentation/tui/screens/source.py:60` → `back`; `src/lazyplan/presentation/tui/screens/update.py:39` → `cancel` |
+| `escape` | `src/lazyplan/presentation/tui/app.py:82` → `clear_filter`; `src/lazyplan/presentation/tui/screens/base.py:46` → `cancel`; `src/lazyplan/presentation/tui/screens/detail.py:54` → `back`; `src/lazyplan/presentation/tui/screens/export.py:43` → `cancel`; `src/lazyplan/presentation/tui/screens/hub.py:61` → `back`; `src/lazyplan/presentation/tui/screens/source.py:60` → `back`; `src/lazyplan/presentation/tui/screens/update.py:39` → `cancel` |
 | `g` | `src/lazyplan/presentation/tui/app.py:91` → `source_trail`; `src/lazyplan/presentation/tui/screens/detail.py:66` → `open_source` |
 | `n` | `src/lazyplan/presentation/tui/app.py:84` → `new_context`; `src/lazyplan/presentation/tui/screens/detail.py:64` → `add_child` |
-| `o` | `src/lazyplan/presentation/tui/screens/hub.py:74` → `open_value`; `src/lazyplan/presentation/tui/screens/source.py:61` → `open` |
-| `p` | `src/lazyplan/presentation/tui/app.py:89` → `prove_criterion`; `src/lazyplan/presentation/tui/screens/detail.py:59` → `prove_criterion`; `src/lazyplan/presentation/tui/screens/hub.py:70` → `prove` |
-| `r` | `src/lazyplan/presentation/tui/app.py:96` → `refresh`; `src/lazyplan/presentation/tui/screens/hub.py:75` → `refresh`; `src/lazyplan/presentation/tui/screens/source.py:64` → `refresh` |
+| `o` | `src/lazyplan/presentation/tui/screens/hub.py:68` → `open_value`; `src/lazyplan/presentation/tui/screens/source.py:61` → `open` |
+| `p` | `src/lazyplan/presentation/tui/app.py:89` → `prove_criterion`; `src/lazyplan/presentation/tui/screens/detail.py:59` → `prove_criterion`; `src/lazyplan/presentation/tui/screens/hub.py:64` → `prove` |
+| `r` | `src/lazyplan/presentation/tui/app.py:96` → `refresh`; `src/lazyplan/presentation/tui/screens/hub.py:69` → `refresh`; `src/lazyplan/presentation/tui/screens/source.py:64` → `refresh` |
 | `s` | `src/lazyplan/presentation/tui/app.py:86` → `toggle_status`; `src/lazyplan/presentation/tui/screens/detail.py:56` → `advance_status` |
 | `slash` | `src/lazyplan/presentation/tui/app.py:94` → `filter_text`; `src/lazyplan/presentation/tui/screens/source.py:63` → `filter` |
 | `space` | `src/lazyplan/presentation/tui/app.py:81` → `toggle_mark`; `src/lazyplan/presentation/tui/widgets/plan_tree.py:32` → `toggle_mark` |
 | `t` | `src/lazyplan/presentation/tui/app.py:83` → `cycle_theme`; `src/lazyplan/presentation/tui/screens/detail.py:60` → `open_trust_hubs` |
-| `x` | `src/lazyplan/presentation/tui/app.py:87` → `criteria`; `src/lazyplan/presentation/tui/screens/detail.py:57` → `tick_criterion`; `src/lazyplan/presentation/tui/screens/hub.py:69` → `hub_toggle` |
+| `x` | `src/lazyplan/presentation/tui/app.py:87` → `criteria`; `src/lazyplan/presentation/tui/screens/detail.py:57` → `tick_criterion`; `src/lazyplan/presentation/tui/screens/hub.py:63` → `hub_toggle` |
 
 ## Setup steps
 

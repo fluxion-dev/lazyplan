@@ -19,7 +19,7 @@ try:
         FilterPromptScreen,
         ProveScreen,
     )
-    from lazyplan.presentation.tui.screens.hub import (
+    from lazyplan.presentation.tui.screens.hub_kinds import (
         CriteriaHub,
         EvidenceHub,
         QuestionsHub,
@@ -270,6 +270,16 @@ class TrustHubTest(unittest.IsolatedAsyncioTestCase):
             await pilot.press("t")
             await pilot.pause()
             self.assertIsInstance(app.screen, CriteriaHub)
+
+    async def test_hub_rendering_is_shared(self) -> None:
+        from tests.support.paths import ROOT
+
+        source = (
+            ROOT / "src/lazyplan/presentation/tui/screens/hub.py"
+        ).read_text(encoding="utf-8")
+        self.assertEqual(source.count("def _reload"), 1)
+        self.assertEqual(source.count("yield OptionList("), 1)
+        self.assertEqual(source.count('id="hub-preview-body"'), 1)
 
     async def test_empty_states_and_viewports(self) -> None:
         empty = Store(self.db).add_milestone(self.plan.id, "Empty", "No criteria here.")

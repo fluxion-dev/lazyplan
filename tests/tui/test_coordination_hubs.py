@@ -214,6 +214,15 @@ class CoordinationHubTest(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             self.assertEqual(len(self.store.list_sessions(plan_id=self.plan.id, limit=10)), 1)
 
+    async def test_coordination_hubs_reuse_the_framework(self) -> None:
+        from tests.support.paths import ROOT
+
+        source = (
+            ROOT / "src/lazyplan/presentation/tui/screens/hub_coordination.py"
+        ).read_text(encoding="utf-8")
+        self.assertNotIn("OptionList", source)
+        self.assertNotIn("class HubScreen", source)
+
     async def test_empty_states_and_viewports(self) -> None:
         for size in ((80, 24), (120, 40)):
             with self.subTest(size=size):

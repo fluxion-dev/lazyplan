@@ -510,6 +510,15 @@ Parent status rolls up from its children: all done means done, any doing means
 doing, otherwise todo. `reconcile` heals parent drift and releases stale leases;
 `reconcile --check` reports the same drift without writing anything.
 
+### Tracking guarantees
+
+- A task that leaves doing releases its lease; a task in doing keeps it.
+- Deleting the last task or a milestone, and importing a plan, recomputes the
+  ancestor statuses.
+- Progress is status-based and filter-independent on every surface.
+- `reconcile --check` reports parent-status drift, expired leases, and done rows
+  with open criteria without writing any row.
+
 ### Sessions and touch-points
 
 ```bash

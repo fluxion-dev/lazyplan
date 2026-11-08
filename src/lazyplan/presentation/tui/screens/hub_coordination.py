@@ -12,6 +12,7 @@ except ImportError:  # pragma: no cover - stdlib-only interpreter
     _TEXTUAL_OK = False
 
 from .... import services
+from ....core.errors import ClaimError
 from ...shared.design import escape_markup
 from .forms import FilterPromptScreen
 
@@ -96,7 +97,7 @@ if _TEXTUAL_OK:
                 return
             try:
                 self.store.claim_task(task_id, "tui")
-            except (ValueError, KeyError) as exc:
+            except (ValueError, KeyError, ClaimError) as exc:
                 self.notify(f"error: {exc}", timeout=4)
                 return
             self._reload()
@@ -107,7 +108,7 @@ if _TEXTUAL_OK:
                 return
             try:
                 self.store.renew_claim(task_id, "tui")
-            except (ValueError, KeyError) as exc:
+            except (ValueError, KeyError, ClaimError) as exc:
                 self.notify(f"error: {exc}", timeout=4)
                 return
             self._reload()
@@ -124,7 +125,7 @@ if _TEXTUAL_OK:
                 return
             try:
                 self.store.release_claim(task_id, "tui", force=force)
-            except (ValueError, KeyError) as exc:
+            except (ValueError, KeyError, ClaimError) as exc:
                 self.notify(f"error: {exc}", timeout=4)
                 return
             self._reload()
@@ -139,7 +140,7 @@ if _TEXTUAL_OK:
                     return
                 try:
                     self.store.add_touchpoint(task_id, text, actor="tui")
-                except (ValueError, KeyError) as exc:
+                except (ValueError, KeyError, ClaimError) as exc:
                     self.notify(f"error: {exc}", timeout=4)
                     return
                 self._reload()
@@ -214,7 +215,7 @@ if _TEXTUAL_OK:
                         plan_id=self.plan_id,
                         branch=(text or "").strip(),
                     )
-                except (ValueError, KeyError) as exc:
+                except (ValueError, KeyError, ClaimError) as exc:
                     self.notify(f"error: {exc}", timeout=4)
                     return
                 self._reload()
@@ -234,7 +235,7 @@ if _TEXTUAL_OK:
                     services.sessions.end_session(
                         self.store, entry.oid, "tui", summary=(text or "").strip()
                     )
-                except (ValueError, KeyError) as exc:
+                except (ValueError, KeyError, ClaimError) as exc:
                     self.notify(f"error: {exc}", timeout=4)
                     return
                 self._reload()

@@ -103,7 +103,7 @@ class CoordinationHubTest(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(self.store.list_touchpoints(self.task.id), ["src/app.py"])
 
     async def test_sessions_hub_starts_ends_and_shows_handoff(self) -> None:
-        first = self.store.start_session("alice", plan_id=self.plan.id, branch="feat/a")[0]
+        first = self.store.start_session("tui", plan_id=self.plan.id, branch="feat/a")[0]
         self.store.end_session(first.id, "alice", summary="done", handoff="next: T2")
         app = self._app()
         async with app.run_test(size=(120, 40)) as pilot:
@@ -186,6 +186,33 @@ class CoordinationHubTest(unittest.IsolatedAsyncioTestCase):
             app.query_one("#agents").on_click()
             await pilot.pause()
             self.assertIsInstance(app.screen, SessionsHub)
+
+    async def test_claims_hub_shows_expired_and_refuses_foreign_release(self) -> None:
+        self.store.claim_task(self.task.id, "alice", ttl_seconds=1, now=100.0)
+        app = self._app()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await settle(pilot)
+            app.push_screen(ClaimsHub(self.store, task_id=self.task.id, plan_id=self.plan.id))
+            await pilot.pause()
+            preview = str(app.screen.query_one("#hub-preview-body").render())
+            self.assertIn("expired", preview)
+            await pilot.press("d")
+            await pilot.pause()
+            self.assertIsNotNone(self.store.get_claim(self.task.id))
+
+    async def test_session_error_is_visible_and_leaves_state_alone(self) -> None:
+        self.store.start_session("tui", plan_id=self.plan.id, branch="feat/a")
+        app = self._app()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await settle(pilot)
+            app.push_screen(SessionsHub(self.store, self.plan.id))
+            await pilot.pause()
+            await pilot.press("a")
+            await pilot.pause()
+            app.screen.query_one("#filter-input", Input).value = "feat/b"
+            await pilot.press("enter")
+            await pilot.pause()
+            self.assertEqual(len(self.store.list_sessions(plan_id=self.plan.id, limit=10)), 1)
 
     async def test_empty_states_and_viewports(self) -> None:
         for size in ((80, 24), (120, 40)):

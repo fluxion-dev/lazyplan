@@ -6,6 +6,7 @@ import sqlite3
 from pathlib import Path
 
 from ..core.kinds import check_parent_kind
+from ..core.policies.repo_paths import resolve_repo_path
 from .base import (
     StoreBase,
 )
@@ -17,11 +18,7 @@ class ReposMixin(StoreBase):
     @staticmethod
     def _norm_repo_path(path: str | Path) -> str:
         """Absolute normalized repo path (no existence requirement)."""
-        p = Path(str(path)).expanduser()
-        try:
-            return str(p.resolve())
-        except OSError:
-            return str(p.absolute())
+        return resolve_repo_path(str(path))
 
     def add_repo_link(
         self,

@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import fnmatch
-import os
 import re
-from pathlib import Path
 
 from ..entities import Status, Task
 
@@ -64,19 +62,6 @@ def validate_block(task: Task, reason: str) -> None:
 
 
 _WILDCARDS = set("*?[")
-
-
-def normalize_repo_path(text: str) -> str:
-    """Absolute, case-folded repo path for overlap comparisons."""
-    raw = str(text).strip()
-    if not raw:
-        return ""
-    path = Path(raw).expanduser()
-    try:
-        resolved = path.resolve()
-    except OSError:
-        resolved = path.absolute()
-    return os.path.normcase(str(resolved))
 
 
 def normalize_touchpoint(text: str) -> str:

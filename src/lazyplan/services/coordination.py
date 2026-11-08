@@ -4,12 +4,8 @@ from __future__ import annotations
 
 from ..core.entities import Claim, Status, Task
 from ..core.errors import ClaimConflict, TouchpointOverlap
-from ..core.policies.coordination import (
-    normalize_repo_path,
-    parse_ttl,
-    patterns_overlap,
-    validate_block,
-)
+from ..core.policies.coordination import parse_ttl, patterns_overlap, validate_block
+from ..core.policies.repo_paths import normalize_repo_path
 from ..core.ports.coordination import CoordinationPort
 from ..core.serialization import to_payload
 from .planning import set_status

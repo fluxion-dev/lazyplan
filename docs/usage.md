@@ -330,9 +330,10 @@ plan's children.
 
 On the detail page, `e` edits, `s` advances status, `x` ticks the next
 criterion, `p` records proof, `Q` adds a plan question, `ctrl+r` resolves one,
-`R` reopens one, `g` opens the source trail, and `escape` returns to the exact
-prior selection. Pressing `c` or `?` works there too; the palette disables
-actions the current screen cannot run and says why.
+`R` reopens one, `g` opens the source trail, `P` opens cached pull requests,
+`A` opens activity, and `escape` returns to the exact prior selection.
+Pressing `c` or `?` works there too; the palette disables actions the current
+screen cannot run and says why.
 
 ### Trust hubs
 
@@ -375,6 +376,27 @@ agents pane to open the sessions hub.
 Session and touch-point authoring are first-class screen hubs now; plan 135's
 CLI-only stance is superseded for those entities. Import, sync, and setup stay
 CLI-only.
+
+### Provenance and activity hubs
+
+Repos, commits, files, and pull requests are selectable in the source trail
+(`g`), and cached pull requests have their own hub (`P` on a detail page, or
+**Open pull request hub** in the palette). The **activity hub** (`A`, or
+**Open activity hub**) shows the feed and manual overrides.
+
+- Source trail: the tree groups checkout → commits → changed files, with pull
+  requests alongside. `enter` cross-links to the owning plan, milestone, or
+  task; `o` opens the selected commit, file, or pull request; `y` copies it;
+  `/` filters. A missing commit is marked stale, and an offline diff says so.
+- Pull requests: rows show state, checks, reviews, base and head refs, merge
+  data, and a stale marker. `a` links a URL, `d` unlinks, `o` opens it, and
+  `r` refreshes. Only `r` touches the network; every other path reads cache.
+- Activity: rows show actor, action, time, and target. `f` filters by actor,
+  `K` by kind, and `u` switches between all activity and manual overrides.
+  `enter` opens the plan, milestone, or task named by the event.
+
+The palette names match the CLI: `lpui pr list|show|link|unlink|refresh`,
+`lpui commits`, `lpui repos`, and `lpui feed --overrides` read the same data.
 
 The palette and the CLI use the same names: Create plan, Move to doing, Tick
 next criterion, Delete selection. The palette also has Bulk move to doing/done,
@@ -602,6 +624,9 @@ lpui plan diff --id 1 --check
 lpui criterion prove --id 4 --command "pytest tests/store" --exit-code 0 \
   --commit "$(git rev-parse HEAD)" --task 3
 lpui criterion evidence --id 4
+lpui criterion edit --id 4 --text "Works on 3.11 and 3.12"
+lpui comment add --kind task --id 3 --text "@brad please review"
+lpui comment edit --comment 2 --text "@brad please review the retry path"
 lpui question add --plan 1 --text "Which host ships first?"
 lpui question resolve --id 1 --note "OpenCode first"
 lpui plan ready --id 1

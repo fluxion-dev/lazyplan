@@ -11,6 +11,11 @@ once instead of landing unnoticed.
 
 ### Added
 
+- **Provenance hubs.** Cached pull requests and the activity feed are
+  selectable screens. The source trail cross-links commits, files, and PRs to
+  their owning row; only the pull request refresh touches GitHub.
+- **Criterion and comment edits.** The criteria and comments hubs edit in
+  place, and the CLI exposes `criterion edit` and `comment edit`.
 - **New-integration review.** After a version change, one prompt lists the
   pending skills and hook hosts with install-all, not-now, and never choices.
   The answer is remembered per item with its fingerprint and version.
@@ -19,6 +24,9 @@ once instead of landing unnoticed.
 
 ### Changed
 
+- **One access-path registry.** Palette IDs, CLI paths, and MCP tools now map
+  from one canonical action table, with a parity gate that rejects an
+  undocumented gap. The reachability report proves the three-step budget.
 - **Plan modes.** The plans tree cycles Active, Finished, and Both with `f`.
   The old status/source filter cycles, `F`, `A`, and the five-plan cap are gone.
 - `--no-skills` and `--no-hooks` are remembered across upgrades. Use

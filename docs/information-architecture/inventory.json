@@ -1860,17 +1860,17 @@
   "counts": {
     "cli_commands": 61,
     "doc_files": 9,
-    "doc_headings": 93,
+    "doc_headings": 95,
     "env_names": 12,
     "file_paths": 11,
     "hook_events": 24,
     "mcp_resources": 3,
-    "mcp_tools": 34,
-    "palette_commands": 57,
+    "mcp_tools": 64,
+    "palette_commands": 62,
     "setup_steps": 4,
     "stale_claims": 0,
-    "tui_bindings": 63,
-    "tui_key_conflicts": 15,
+    "tui_bindings": 71,
+    "tui_key_conflicts": 16,
     "tui_screens": 15
   },
   "docs": {
@@ -1898,7 +1898,8 @@
           "edit, then commit in small green slices",
           "Release",
           "Style",
-          "Docs"
+          "Docs",
+          "Add one action across every surface"
         ]
       },
       {
@@ -1933,6 +1934,7 @@
           "The screen",
           "Trust hubs",
           "Coordination hubs",
+          "Provenance and activity hubs",
           "Manual override mode",
           "Agents",
           "Porcelain output",
@@ -2155,6 +2157,10 @@
     ],
     "tools": [
       {
+        "description": "Recent events, or only manual overrides.",
+        "name": "activity_list"
+      },
+      {
         "description": "Coverage, lag, gaps, and trace coverage.",
         "name": "audit"
       },
@@ -2183,6 +2189,30 @@
         "name": "claims"
       },
       {
+        "description": "Add a review comment to a row.",
+        "name": "comment_add"
+      },
+      {
+        "description": "Rewrite one review comment.",
+        "name": "comment_edit"
+      },
+      {
+        "description": "Comments on one row, optionally by mention.",
+        "name": "comment_list"
+      },
+      {
+        "description": "Resolve or unresolve a review comment.",
+        "name": "comment_resolve"
+      },
+      {
+        "description": "Commits linked to a row.",
+        "name": "commit_list"
+      },
+      {
+        "description": "Re-resolve cached commit links and mark stale rows.",
+        "name": "commit_refresh"
+      },
+      {
         "description": "Create a milestone.",
         "name": "create_milestone"
       },
@@ -2199,8 +2229,20 @@
         "name": "criterion_add"
       },
       {
+        "description": "Delete one criterion.",
+        "name": "criterion_delete"
+      },
+      {
+        "description": "Rewrite one criterion.",
+        "name": "criterion_edit"
+      },
+      {
         "description": "Proof rows for one criterion.",
         "name": "criterion_evidence"
+      },
+      {
+        "description": "Criteria on one plan, milestone, or task.",
+        "name": "criterion_list"
       },
       {
         "description": "Record proof for a criterion; tick only when it passes.",
@@ -2223,8 +2265,24 @@
         "name": "criterion_untick"
       },
       {
+        "description": "Delete a plan, milestone, or task.",
+        "name": "delete_row"
+      },
+      {
         "description": "Edit a plan, milestone, or task.",
         "name": "edit_row"
+      },
+      {
+        "description": "Markdown export of one plan.",
+        "name": "export_plan"
+      },
+      {
+        "description": "Link branch commits and finish a task through the gates.",
+        "name": "finish_task"
+      },
+      {
+        "description": "Branch and dirty state for a row's linked checkouts.",
+        "name": "git_status"
       },
       {
         "description": "Resolved database, scope, and counts.",
@@ -2251,8 +2309,36 @@
         "name": "note_add"
       },
       {
+        "description": "Notes on one row.",
+        "name": "note_list"
+      },
+      {
+        "description": "Approve the current plan scope.",
+        "name": "plan_approve"
+      },
+      {
+        "description": "Scope drift since a plan approval.",
+        "name": "plan_diff"
+      },
+      {
         "description": "Lint, coverage, and open-question readiness for a plan.",
         "name": "plan_ready"
+      },
+      {
+        "description": "Attach a GitHub pull request URL to a row.",
+        "name": "pull_request_link"
+      },
+      {
+        "description": "Cached pull requests linked to a row.",
+        "name": "pull_request_list"
+      },
+      {
+        "description": "Refresh cached pull requests from GitHub (network).",
+        "name": "pull_request_refresh"
+      },
+      {
+        "description": "Detach one cached pull request.",
+        "name": "pull_request_unlink"
       },
       {
         "description": "Add an open question to a plan.",
@@ -2271,8 +2357,28 @@
         "name": "question_resolve"
       },
       {
+        "description": "Attach an external URL to a plan.",
+        "name": "reference_link"
+      },
+      {
+        "description": "External references on one plan.",
+        "name": "reference_list"
+      },
+      {
+        "description": "Remove one external reference from a plan.",
+        "name": "reference_unlink"
+      },
+      {
+        "description": "Repositories linked to a row.",
+        "name": "repo_list"
+      },
+      {
         "description": "Deterministic Markdown review packet for one plan.",
         "name": "review"
+      },
+      {
+        "description": "Sessions, newest first.",
+        "name": "session_list"
       },
       {
         "description": "Deterministic Markdown outcome ship note for one plan.",
@@ -2281,6 +2387,22 @@
       {
         "description": "One plan, milestone, or task with full context.",
         "name": "show_row"
+      },
+      {
+        "description": "Repos, commits, files, and pull requests for a row.",
+        "name": "source_trail"
+      },
+      {
+        "description": "Add a task touch-point path or glob.",
+        "name": "touch_add"
+      },
+      {
+        "description": "Touch-point paths on one task.",
+        "name": "touch_list"
+      },
+      {
+        "description": "Remove a task touch-point path or glob.",
+        "name": "touch_remove"
       },
       {
         "description": "Criterion to task, commit, and PR evidence.",
@@ -2415,6 +2537,14 @@
   },
   "palette": {
     "commands": [
+      {
+        "handler": "open_activity_hub",
+        "help_group": "FIND",
+        "id": "activity-hub",
+        "key": "",
+        "label": "Open activity hub",
+        "section": "View"
+      },
       {
         "handler": "add_criterion",
         "help_group": "CHANGE",
@@ -2664,6 +2794,14 @@
         "section": "App"
       },
       {
+        "handler": "link_pr",
+        "help_group": "CHANGE",
+        "id": "link-pr",
+        "key": "",
+        "label": "Link pull request",
+        "section": "Edit"
+      },
+      {
         "handler": "link_ref",
         "help_group": "TRUST",
         "id": "link-ref",
@@ -2736,6 +2874,14 @@
         "section": "Edit"
       },
       {
+        "handler": "open_pull_requests_hub",
+        "help_group": "TRUST",
+        "id": "pull-requests-hub",
+        "key": "",
+        "label": "Open pull request hub",
+        "section": "View"
+      },
+      {
         "handler": "open_questions_hub",
         "help_group": "TRUST",
         "id": "questions-hub",
@@ -2766,6 +2912,14 @@
         "key": "r",
         "label": "Refresh",
         "section": "View"
+      },
+      {
+        "handler": "refresh_prs",
+        "help_group": "CHANGE",
+        "id": "refresh-prs",
+        "key": "",
+        "label": "Refresh pull requests",
+        "section": "Edit"
       },
       {
         "handler": "release_claim",
@@ -2848,6 +3002,14 @@
         "section": "Edit"
       },
       {
+        "handler": "unlink_pr",
+        "help_group": "CHANGE",
+        "id": "unlink-pr",
+        "key": "",
+        "label": "Unlink pull request",
+        "section": "Edit"
+      },
+      {
         "handler": "unlink_ref",
         "help_group": "TRUST",
         "id": "unlink-ref",
@@ -2872,7 +3034,7 @@
         "section": "App"
       }
     ],
-    "count": 57
+    "count": 62
   },
   "setup": {
     "steps": [
@@ -3124,11 +3286,27 @@
         "screen": "base"
       },
       {
+        "action": "open_activity_hub",
+        "file": "src/lazyplan/presentation/tui/screens/detail.py",
+        "key": "A",
+        "label": "Activity",
+        "line": "65",
+        "screen": "detail"
+      },
+      {
+        "action": "open_pull_requests_hub",
+        "file": "src/lazyplan/presentation/tui/screens/detail.py",
+        "key": "P",
+        "label": "PRs",
+        "line": "64",
+        "screen": "detail"
+      },
+      {
         "action": "add_question",
         "file": "src/lazyplan/presentation/tui/screens/detail.py",
         "key": "Q",
         "label": "Question",
-        "line": "64",
+        "line": "66",
         "screen": "detail"
       },
       {
@@ -3136,7 +3314,7 @@
         "file": "src/lazyplan/presentation/tui/screens/detail.py",
         "key": "R",
         "label": "Reopen",
-        "line": "66",
+        "line": "68",
         "screen": "detail"
       },
       {
@@ -3152,7 +3330,7 @@
         "file": "src/lazyplan/presentation/tui/screens/detail.py",
         "key": "ctrl+r",
         "label": "Resolve",
-        "line": "65",
+        "line": "67",
         "screen": "detail"
       },
       {
@@ -3160,7 +3338,7 @@
         "file": "src/lazyplan/presentation/tui/screens/detail.py",
         "key": "ctrl+s",
         "label": "Save",
-        "line": "70",
+        "line": "72",
         "screen": "detail"
       },
       {
@@ -3168,7 +3346,7 @@
         "file": "src/lazyplan/presentation/tui/screens/detail.py",
         "key": "d",
         "label": "Delete",
-        "line": "68",
+        "line": "70",
         "screen": "detail"
       },
       {
@@ -3192,7 +3370,7 @@
         "file": "src/lazyplan/presentation/tui/screens/detail.py",
         "key": "g",
         "label": "Source",
-        "line": "69",
+        "line": "71",
         "screen": "detail"
       },
       {
@@ -3216,7 +3394,7 @@
         "file": "src/lazyplan/presentation/tui/screens/detail.py",
         "key": "n",
         "label": "New child",
-        "line": "67",
+        "line": "69",
         "screen": "detail"
       },
       {
@@ -3308,6 +3486,14 @@
         "screen": "hub"
       },
       {
+        "action": "source_hub",
+        "file": "src/lazyplan/presentation/tui/screens/hub.py",
+        "key": "g",
+        "label": "Source",
+        "line": "74",
+        "screen": "hub"
+      },
+      {
         "action": "relate",
         "file": "src/lazyplan/presentation/tui/screens/hub.py",
         "key": "l",
@@ -3344,7 +3530,7 @@
         "file": "src/lazyplan/presentation/tui/screens/hub.py",
         "key": "r",
         "label": "Refresh",
-        "line": "74",
+        "line": "75",
         "screen": "hub"
       },
       {
@@ -3364,6 +3550,46 @@
         "screen": "hub"
       },
       {
+        "action": "edit_row",
+        "file": "src/lazyplan/presentation/tui/screens/hub_coordination.py",
+        "key": "e",
+        "label": "Edit",
+        "line": "266",
+        "screen": "hub_coordination"
+      },
+      {
+        "action": "edit_row",
+        "file": "src/lazyplan/presentation/tui/screens/hub_kinds.py",
+        "key": "e",
+        "label": "Edit",
+        "line": "30",
+        "screen": "hub_kinds"
+      },
+      {
+        "action": "filter_kind",
+        "file": "src/lazyplan/presentation/tui/screens/hub_provenance.py",
+        "key": "K",
+        "label": "Kind",
+        "line": "199",
+        "screen": "hub_provenance"
+      },
+      {
+        "action": "filter_actor",
+        "file": "src/lazyplan/presentation/tui/screens/hub_provenance.py",
+        "key": "f",
+        "label": "Actor",
+        "line": "198",
+        "screen": "hub_provenance"
+      },
+      {
+        "action": "open_owner",
+        "file": "src/lazyplan/presentation/tui/screens/source.py",
+        "key": "enter",
+        "label": "Owner",
+        "line": "61",
+        "screen": "source"
+      },
+      {
         "action": "back",
         "file": "src/lazyplan/presentation/tui/screens/source.py",
         "key": "escape",
@@ -3376,7 +3602,7 @@
         "file": "src/lazyplan/presentation/tui/screens/source.py",
         "key": "o",
         "label": "Open",
-        "line": "61",
+        "line": "62",
         "screen": "source"
       },
       {
@@ -3384,7 +3610,7 @@
         "file": "src/lazyplan/presentation/tui/screens/source.py",
         "key": "r",
         "label": "Refresh",
-        "line": "64",
+        "line": "65",
         "screen": "source"
       },
       {
@@ -3392,7 +3618,7 @@
         "file": "src/lazyplan/presentation/tui/screens/source.py",
         "key": "slash",
         "label": "Filter",
-        "line": "63",
+        "line": "64",
         "screen": "source"
       },
       {
@@ -3400,7 +3626,7 @@
         "file": "src/lazyplan/presentation/tui/screens/source.py",
         "key": "y",
         "label": "Copy",
-        "line": "62",
+        "line": "63",
         "screen": "source"
       },
       {
@@ -3459,7 +3685,7 @@
           {
             "action": "delete_row",
             "file": "src/lazyplan/presentation/tui/screens/detail.py",
-            "line": "68"
+            "line": "70"
           },
           {
             "action": "delete",
@@ -3480,6 +3706,16 @@
             "action": "toggle_edit",
             "file": "src/lazyplan/presentation/tui/screens/detail.py",
             "line": "55"
+          },
+          {
+            "action": "edit_row",
+            "file": "src/lazyplan/presentation/tui/screens/hub_coordination.py",
+            "line": "266"
+          },
+          {
+            "action": "edit_row",
+            "file": "src/lazyplan/presentation/tui/screens/hub_kinds.py",
+            "line": "30"
           }
         ],
         "key": "e"
@@ -3490,6 +3726,11 @@
             "action": "open_detail",
             "file": "src/lazyplan/presentation/tui/app.py",
             "line": "80"
+          },
+          {
+            "action": "open_owner",
+            "file": "src/lazyplan/presentation/tui/screens/source.py",
+            "line": "61"
           },
           {
             "action": "open_detail",
@@ -3542,6 +3783,21 @@
       {
         "bindings": [
           {
+            "action": "cycle_mode",
+            "file": "src/lazyplan/presentation/tui/app.py",
+            "line": "95"
+          },
+          {
+            "action": "filter_actor",
+            "file": "src/lazyplan/presentation/tui/screens/hub_provenance.py",
+            "line": "198"
+          }
+        ],
+        "key": "f"
+      },
+      {
+        "bindings": [
+          {
             "action": "source_trail",
             "file": "src/lazyplan/presentation/tui/app.py",
             "line": "91"
@@ -3549,7 +3805,12 @@
           {
             "action": "open_source",
             "file": "src/lazyplan/presentation/tui/screens/detail.py",
-            "line": "69"
+            "line": "71"
+          },
+          {
+            "action": "source_hub",
+            "file": "src/lazyplan/presentation/tui/screens/hub.py",
+            "line": "74"
           }
         ],
         "key": "g"
@@ -3564,7 +3825,7 @@
           {
             "action": "add_child",
             "file": "src/lazyplan/presentation/tui/screens/detail.py",
-            "line": "67"
+            "line": "69"
           },
           {
             "action": "note",
@@ -3584,7 +3845,7 @@
           {
             "action": "open",
             "file": "src/lazyplan/presentation/tui/screens/source.py",
-            "line": "61"
+            "line": "62"
           }
         ],
         "key": "o"
@@ -3619,12 +3880,12 @@
           {
             "action": "refresh",
             "file": "src/lazyplan/presentation/tui/screens/hub.py",
-            "line": "74"
+            "line": "75"
           },
           {
             "action": "refresh",
             "file": "src/lazyplan/presentation/tui/screens/source.py",
-            "line": "64"
+            "line": "65"
           }
         ],
         "key": "r"
@@ -3654,7 +3915,7 @@
           {
             "action": "filter",
             "file": "src/lazyplan/presentation/tui/screens/source.py",
-            "line": "63"
+            "line": "64"
           }
         ],
         "key": "slash"

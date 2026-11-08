@@ -114,3 +114,31 @@ defines the target entity model, journeys, taxonomy, keymap, and parity rules.
 The [inventory](docs/information-architecture/inventory.md) lists every TUI,
 CLI, MCP, setup, hook, and documentation path; its
 [findings](docs/information-architecture/findings.md) rank the known gaps.
+The generated [reachability report](docs/information-architecture/reachability.md)
+proves the three-interaction budget.
+
+## Add one action across every surface
+
+The registry is the source of truth. To add a canonical action:
+
+1. Add the `Action` row in `presentation/shared/registry_actions.py` (or
+   `registry_actions_provenance.py`) with a noun-first id, label, key, context,
+   route, and the surfaces it should reach.
+2. Map it in `presentation/shared/registry_surfaces.py`: CLI paths in
+   `CLI_ACTIONS`, MCP tools in `MCP_ACTIONS`, or an explicit
+   `SurfaceException` with a reason. A gap fails
+   `tests/ia/test_surface_parity.py`.
+3. Wire the TUI handler in the owning mixin, add the palette command in
+   `registry_commands.py`, and point its `handler` at the app action.
+4. Add the CLI parser path and command handler, then the MCP tool and schema if
+   the action declares `mcp`.
+5. Update `docs/usage.md`, the site copy, and the packaged skill; regenerate
+   the man page (`tools/gen-man.py`) and the inventory/reachability reports.
+6. Run the gates: `ruff`, `mypy`, `tests.ia`, the TUI snapshot suite, and
+   `./tools/check.sh`.
+
+Worked example: adding `criterion edit` meant one action row, one CLI path
+(`criterion edit`), one MCP tool (`criterion_edit`), a hub key (`e`), a store
+method (`update_criterion`), a usage example, and a parity test row. The same
+checklist applies to a throwaway action in a test: add the row, extend both
+maps, and `registry.uncovered()` must stay empty.

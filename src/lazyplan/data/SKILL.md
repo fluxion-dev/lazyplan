@@ -323,6 +323,11 @@ every call. Reach for `--json` only when you need full-fidelity fields.
   detail), sessions and handoffs (`v` or the agents pane), and comments and
   notes (`m`). Session and touch-point authoring works from the screen;
   import, sync, and setup stay CLI-only.
+- Provenance hubs are selectable: the source trail (`g`) cross-links commits,
+  files, and pull requests to their owning row, the pull request hub (`P`)
+  refreshes, links, unlinks, and opens cached PRs, and the activity hub (`A`)
+  filters the feed and manual overrides and jumps to the event target.
+  Only the refresh action touches the network.
 - Collaborate with `comment add/list/resolve`; use `share --plan P` for a
   read-only snapshot and `sync --file dump.json --dry-run` for a plan-level
   merge.

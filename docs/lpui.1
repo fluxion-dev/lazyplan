@@ -928,8 +928,8 @@ report drift without automatic repair for this command
 .RE
 .RS
 .TP
-.B  {add|list|resolve|unresolve}
-comment action Choices: add, list, resolve, unresolve\. Required\.
+.B  {add|list|edit|resolve|unresolve}
+comment action Choices: add, list, edit, resolve, unresolve\. Required\.
 .RE
 .RS
 .TP
@@ -944,12 +944,12 @@ row id
 .RS
 .TP
 .B \-\-comment ID
-comment id (resolve only)
+comment id (edit/resolve only)
 .RE
 .RS
 .TP
 .B \-\-text TEXT
-comment text (add only)
+comment text (add/edit only)
 .RE
 .RS
 .TP
@@ -1341,7 +1341,7 @@ report drift without automatic repair for this command
 .RS
 .TP
 .B  ACTION
-what to do with a criterion Choices: add, list, tick, untick, delete, prove, evidence, relate, unrelate\. Required\.
+what to do with a criterion Choices: add, list, tick, edit, untick, delete, prove, evidence, relate, unrelate\. Required\.
 .RE
 .TP
 .B lpui git

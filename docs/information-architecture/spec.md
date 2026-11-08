@@ -103,6 +103,8 @@ The main tree is the root. Every hub is at most three interactions away.
 | tree → detail → trust hub | `enter` → palette trust group | 2 |
 | tree → detail → provenance | `enter` → `g` | 2 |
 | tree → source trail | `g` | 1 |
+| tree → detail → pull requests | `enter` → `P` | 2 |
+| tree → detail → activity | `enter` → `A` | 2 |
 | tree → create → form | `n` → kind | 2 |
 | tree → export picker | palette → export | 2 |
 | tree → update | `U` | 1 |
@@ -121,13 +123,16 @@ every route. Palette and help are available in every context.
 | questions/references | yes | yes | yes | yes | — |
 | sessions/handoffs | yes (new hub) | yes | read-only | yes | M454 |
 | comments/notes | yes | yes | yes | yes | — |
-| commits/files/PRs/repos | yes | yes | read-only | yes | M455 |
-| feed/overrides | yes | yes | read-only | yes | M455 |
+| commits/files/PRs/repos | yes | yes | read-only | yes | — |
+| feed/overrides | yes | yes | read-only | yes | — |
 | setup/upgrade/doctor | palette | yes | no | yes | CLI-only by design |
 | theme/fold/mark/bulk | yes | no | no | no | TUI-only by design |
 
 Exceptions marked `M45x` are resolved by that milestone. CLI-only setup and
 TUI-only view actions are approved exceptions and stay in the parity matrix.
+`registry_surfaces.py` records one mapping per surface plus every approved
+exception with a reason; `tests/ia/test_surface_parity.py` fails on an
+undocumented gap.
 
 ## Deprecation policy
 
@@ -144,3 +149,17 @@ surfaces, actions, keys, contexts, routes, palette aliases, and deprecation
 fields. `palette.py` and `help.py` stay facades during migration. Tests reject
 duplicate IDs, unknown taxonomy, duplicate keys in one context, palette orphans,
 routes deeper than three, and any import of Textual.
+
+## Validation and removal plan
+
+The [reachability report](reachability.md) is generated from the registry and
+proves every action is at most three interactions from the tree. The
+[newcomer walkthrough](walkthrough.md) records each journey at 80x24 and
+120x40; the [acceptance record](acceptance.md) carries the final gate evidence.
+The [inventory](inventory.md) is the reproducible surface snapshot.
+
+Legacy CLI aliases and the moved detail keys keep working for one minor
+release. Removal target: `0.37.0`, for deprecations introduced in `0.36.0`.
+`registry.deprecations()` names each replacement, and the help screen renders
+the moved-key notice; `tools/ia_inventory.py --check` and
+`tests/cli/test_legacy_deprecation.py` keep the promise visible until removal.

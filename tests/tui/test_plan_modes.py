@@ -9,11 +9,17 @@ from types import SimpleNamespace
 
 from lazyplan import services
 from lazyplan.core.entities import Status
-from lazyplan.presentation.tui.controllers.filtering import TreeFilter
-from lazyplan.presentation.tui.state import PlanMode
 from lazyplan.store import Store
 
+try:
+    from lazyplan.presentation.tui.controllers.filtering import TreeFilter
+    from lazyplan.presentation.tui.state import PlanMode
+except ImportError:  # pragma: no cover - stdlib-only interpreter
+    TreeFilter = None  # type: ignore[assignment]
+    PlanMode = None  # type: ignore[assignment]
 
+
+@unittest.skipUnless(TreeFilter is not None, "textual not installed")
 class TestPlanModes(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

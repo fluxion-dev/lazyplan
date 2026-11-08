@@ -134,6 +134,7 @@ if _TEXTUAL_OK:
             metrics = query_one_opt(self, "#metrics", MetricsSection)
             if metrics is not None:
                 metrics.set_class(narrow, "narrow")
+                metrics.display = self.state.timeline_visible and not narrow
             screen = self.screen
             screen.set_class(compact, "compact")
             screen.set_class(wide, "wide")

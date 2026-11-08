@@ -182,6 +182,13 @@ if _TEXTUAL_OK:
         def action_refresh(self) -> None:
             self._saved("manual refresh")
 
+        def action_toggle_timeline(self) -> None:
+            """Show or hide the timeline card for this session."""
+            self.state.timeline_visible = not self.state.timeline_visible
+            self._apply_layout()
+            if self.state.timeline_visible:
+                self.metrics_controller.refresh()
+
         def action_command_palette(self) -> None:
             """Open the modal command palette (c)."""
             if len(self.screen_stack) > 1:

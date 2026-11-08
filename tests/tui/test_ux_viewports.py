@@ -98,6 +98,9 @@ class TestViewports(unittest.IsolatedAsyncioTestCase):
                     else:
                         self.assertFalse(main.has_class("narrow"))
                         self.assertTrue(preview.display)
+                        self.assertFalse(metrics.display)
+                        app.action_toggle_timeline()
+                        await pilot.pause()
                         self.assertTrue(metrics.display)
                     self.assertEqual(main.has_class("compact"), width < 80)
                     self.assertEqual(main.has_class("wide"), width >= 120)
@@ -126,6 +129,7 @@ class TestViewports(unittest.IsolatedAsyncioTestCase):
                     preview = app.query_one("#preview")
                     git = app.query_one("#git")
                     metrics = app.query_one("#metrics")
+                    self.assertFalse(metrics.display)
                     if width >= 100:
                         self.assertTrue(_within(preview.region, width, height))
                         self.assertEqual(preview.border_title, " preview ")
@@ -136,6 +140,8 @@ class TestViewports(unittest.IsolatedAsyncioTestCase):
                         strip = app.query_one("#preview-strip")
                         self.assertTrue(_within(strip.region, width, height))
                         self.assertGreater(preview.region.height, git.region.height)
+                        app.action_toggle_timeline()
+                        await pilot.pause()
                         self.assertTrue(_within(metrics.region, width, height))
                         self.assertGreaterEqual(metrics.region.height, 11)
                         if height >= 40:

@@ -49,4 +49,5 @@ class AppState:
     narrow: bool | None = None
     compact: bool = False
     wide: bool = False
+    timeline_visible: bool = False
     history: NavigationHistory = field(default_factory=NavigationHistory)

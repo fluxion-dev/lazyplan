@@ -55,11 +55,14 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
     def _chart(card) -> str:
         return card.query_one("PlotextPlot").plt.build()
 
-    async def test_section_renders_the_timeline_card(self) -> None:
+    async def test_section_starts_hidden_and_opens_on_demand(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
             section = app.query_one("#metrics", MetricsSection)
+            self.assertFalse(section.display)
+            app.action_toggle_timeline()
+            await pilot.pause()
             self.assertTrue(section.display)
             card = section.query_one(f"#{CARD_ID}")
             self.assertIsNotNone(card.query_one("PlotextPlot"))
@@ -77,6 +80,8 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
+            app.action_toggle_timeline()
+            await pilot.pause()
             app.tree_controller.track(app._row_nodes[("plan", empty.id)])
             await pilot.pause(0.2)
             section = app.query_one("#metrics", MetricsSection)
@@ -88,6 +93,8 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
+            app.action_toggle_timeline()
+            await pilot.pause()
             section = app.query_one("#metrics", MetricsSection)
             cards = section.query_one("#metric-cards")
             card = app.query_one(f"#{CARD_ID}")
@@ -97,6 +104,8 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
     async def test_timeline_card_shows_the_project_lane(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.action_toggle_timeline()
             await pilot.pause()
             app.tree_controller.track(app._row_nodes[("plan", self.plan_id)])
             await pilot.pause(0.2)
@@ -108,12 +117,16 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
+            app.action_toggle_timeline()
+            await pilot.pause()
             self.assertGreater(app.query_one("#metrics", MetricsSection).region.height, 14)
 
     async def test_p117_chart_contract_is_pinned(self) -> None:
         """Guard the merged P117 shape before the modernization refactor."""
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.action_toggle_timeline()
             await pilot.pause()
             section = app.query_one("#metrics", MetricsSection)
             card = section.query_one(f"#{CARD_ID}")
@@ -124,6 +137,8 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         app = tui_mod.create_app(self.db)
         with mock.patch.object(MetricsSection, "refresh_snapshot") as refresh:
             async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                app.action_toggle_timeline()
                 await pilot.pause()
                 services.set_status(self.store, "task", self.task_id, Status.DONE, actor="qa")
                 refresh.reset_mock()
@@ -144,6 +159,8 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
+            app.action_toggle_timeline()
+            await pilot.pause()
             card = app.query_one(f"#{CARD_ID}")
             app.tree_controller.track(app._row_nodes[("plan", self.plan_id)])
             await pilot.pause(0.2)
@@ -159,6 +176,8 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         _other_id, milestone_id, task_ids = self._other_plan()
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.action_toggle_timeline()
             await pilot.pause()
             app.tree_controller.expand_all()
             card = app.query_one(f"#{CARD_ID}")
@@ -178,6 +197,8 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
+            app.action_toggle_timeline()
+            await pilot.pause()
             app.tree_controller.expand_all()
             app.tree_controller.track(app._row_nodes[("task", self.task_id)])
             await pilot.pause(0.2)
@@ -190,6 +211,8 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
     async def test_selection_emphasis_follows_the_cursor(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.action_toggle_timeline()
             await pilot.pause()
             app.tree_controller.expand_all()
             card = app.query_one(f"#{CARD_ID}")
@@ -228,6 +251,8 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
+            app.action_toggle_timeline()
+            await pilot.pause()
             app.metrics_controller.stop()
             app.selected = None
             app.metrics_controller.refresh()
@@ -241,6 +266,8 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
+            app.action_toggle_timeline()
+            await pilot.pause()
             app.tree_controller.track(app._row_nodes[("plan", self.plan_id)])
             await pilot.pause(0.2)
             chart = self._chart(app.query_one(f"#{CARD_ID}"))
@@ -252,6 +279,8 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         events_before = len(self.store.feed(limit=10_000))
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.action_toggle_timeline()
             await pilot.pause()
             app.tree_controller.expand_all()
             for key in (
@@ -267,6 +296,8 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         milestone_id = self.store.list_milestones(self.plan_id)[0].id
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.action_toggle_timeline()
             await pilot.pause()
             app.tree_controller.expand_all()
             app.tree_controller.track(app._row_nodes[("milestone", milestone_id)])
@@ -287,6 +318,8 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
             with mock.patch.object(MetricsSection, "refresh_snapshot") as refresh:
                 async with app.run_test(size=(120, 40)) as pilot:
                     await pilot.pause()
+                    app.action_toggle_timeline()
+                    await pilot.pause()
                     refresh.reset_mock()
                     await pilot.pause(0.2)
                     self.assertGreaterEqual(refresh.call_count, 1)
@@ -296,6 +329,8 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
             app = tui_mod.create_app(self.db)
             with mock.patch.object(MetricsSection, "refresh_snapshot") as refresh:
                 async with app.run_test(size=(120, 40)) as pilot:
+                    await pilot.pause()
+                    app.action_toggle_timeline()
                     await pilot.pause()
                     app.push_screen(PaletteScreen(app._palette_context()))
                     await pilot.pause()
@@ -316,6 +351,8 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
+            app.action_toggle_timeline()
+            await pilot.pause()
             card = app.query_one(f"#{CARD_ID}")
             app.selected = None
             app.metrics_controller.stop()
@@ -331,6 +368,8 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
+            app.action_toggle_timeline()
+            await pilot.pause()
             app.tree_controller.track(app._row_nodes[("plan", other_id)])
             await pilot.pause(0.2)
             app.filter_text = "Other"
@@ -343,6 +382,8 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
     async def test_plots_fit_at_100_columns(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(100, 40)) as pilot:
+            await pilot.pause()
+            app.action_toggle_timeline()
             await pilot.pause()
             section = app.query_one("#metrics", MetricsSection)
             self.assertTrue(section.display)
@@ -370,6 +411,8 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         events_before = len(self.store.feed(limit=10_000))
         with mock.patch.object(MetricsSection, "refresh_snapshot") as refresh:
             async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                app.action_toggle_timeline()
                 await pilot.pause()
                 app.refresh_all()
                 await pilot.pause()

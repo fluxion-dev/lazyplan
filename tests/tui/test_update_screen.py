@@ -12,7 +12,7 @@ from lazyplan.infrastructure import update_stage
 from lazyplan.infrastructure.upgrade import PIPX, RPM, SOURCE, InstallInfo
 from lazyplan.store import Store
 from tests.support.home import sandbox_home
-from tests.support.pilot import settle
+from tests.support.pilot import wait_for
 
 try:
     tui_mod = importlib.import_module("lazyplan.presentation.tui.app")
@@ -76,7 +76,7 @@ class TestUpdateScreen(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             with mock.patch.object(screen_mod, "stage_update") as stage:
                 screen.query_one("#update-later").press()
-                await pilot.pause()
+                await wait_for(pilot, lambda: not isinstance(self.app.screen, UpdateScreen))
             stage.assert_not_called()
             self.assertNotIsInstance(self.app.screen, UpdateScreen)
 
@@ -89,7 +89,13 @@ class TestUpdateScreen(unittest.IsolatedAsyncioTestCase):
             with mock.patch.object(screen_mod, "stage_update", return_value=STAGED) as stage:
                 screen.query_one("#update-download", Button).press()
                 await self.app.workers.wait_for_complete()
-                await pilot.pause()
+                await wait_for(
+                    pilot,
+                    lambda: (
+                        "Downloaded v9.9.9"
+                        in str(screen.query_one("#update-body", Static).render())
+                    ),
+                )
             stage.assert_called_once_with("9.9.9", PIPX, installed="0.27.2")
             self.assertIn(
                 "Downloaded v9.9.9", str(screen.query_one("#update-body", Static).render())
@@ -109,7 +115,7 @@ class TestUpdateScreen(unittest.IsolatedAsyncioTestCase):
             with mock.patch.object(screen_mod, "stage_update", return_value=STAGED):
                 screen.query_one("#update-download", Button).press()
                 await self.app.workers.wait_for_complete()
-                await settle(pilot)
+                await wait_for(pilot, lambda: screen.query_one("#update-restart", Button).display)
             self.assertTrue(screen.query_one("#update-restart", Button).display)
             self.assertIn(
                 "Restart now",
@@ -134,9 +140,9 @@ class TestUpdateScreen(unittest.IsolatedAsyncioTestCase):
             ):
                 screen.query_one("#update-download", Button).press()
                 await self.app.workers.wait_for_complete()
-                await pilot.pause()
+                await wait_for(pilot, lambda: screen.query_one("#update-restart", Button).display)
                 screen.query_one("#update-restart", Button).press()
-                await pilot.pause()
+                await wait_for(pilot, lambda: exit_app.called)
             build.assert_called_once()
             spawn.assert_called_once()
             self.assertEqual(spawn.call_args.kwargs["parent_pid"], os.getpid())
@@ -153,7 +159,12 @@ class TestUpdateScreen(unittest.IsolatedAsyncioTestCase):
             ):
                 screen.query_one("#update-download", Button).press()
                 await self.app.workers.wait_for_complete()
-                await pilot.pause()
+                await wait_for(
+                    pilot,
+                    lambda: (
+                        "Download failed" in str(screen.query_one("#update-body", Static).render())
+                    ),
+                )
             body = str(screen.query_one("#update-body", Static).render())
             self.assertIn("Download failed", body)
             self.assertIn("offline", body)
@@ -171,7 +182,7 @@ class TestUpdateScreen(unittest.IsolatedAsyncioTestCase):
             self.app._update_latest = "9.9.9"
             self.app._update_info = InstallInfo(PIPX, True)
             await pilot.press("U")
-            await pilot.pause()
+            await wait_for(pilot, lambda: self.app.screen.__class__.__name__ == "UpdateScreen")
             self.assertEqual(self.app.screen.__class__.__name__, "UpdateScreen")
 
     async def test_source_guard_is_used(self):
@@ -210,7 +221,7 @@ class TestUpdateScreen(unittest.IsolatedAsyncioTestCase):
                     mock.patch.object(self.app, "notify") as toast,
                 ):
                     self.app.action_update_prompt()
-                    await pilot.pause()
+                    await wait_for(pilot, lambda: toast.called)
                 toast.assert_called_once()
                 self.assertNotEqual(self.app.screen.__class__.__name__, "UpdateScreen")
 

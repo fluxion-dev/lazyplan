@@ -180,6 +180,8 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
+            app.action_toggle_timeline()
+            await pilot.pause()
             app.tree_controller.track(app._row_nodes[("plan", plan.id)])
             await pilot.pause(0.2)
             scroll = app.query_one("#metric-timeline-scroll", VerticalScroll)

@@ -69,6 +69,7 @@ Budget: every action is at most **3** interactions from the tree.
 | `view.fold` | tree | 0 |
 | `view.filter` | tree | 0 |
 | `view.plan_mode` | tree | 0 |
+| `view.timeline` | tree | 0 |
 | `view.criteria_hub` | tree › detail › trust | 2 |
 | `view.evidence_hub` | tree › detail › trust | 2 |
 | `view.questions_hub` | tree › detail › trust | 2 |

@@ -413,6 +413,19 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
                 card.region.x + card.region.width,
             )
 
+    async def test_toggle_at_narrow_width_waits_for_room(self) -> None:
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(80, 24)) as pilot:
+            await pilot.pause()
+            section = app.query_one("#metrics", MetricsSection)
+            app.action_toggle_timeline()
+            await pilot.pause()
+            self.assertTrue(app.state.timeline_visible)
+            self.assertFalse(section.display)
+            await pilot.resize_terminal(120, 30)
+            await pilot.pause()
+            self.assertTrue(section.display)
+
     async def test_section_hides_below_100_columns(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(80, 24)) as pilot:

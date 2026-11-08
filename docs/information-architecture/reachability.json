@@ -315,6 +315,13 @@
       ]
     },
     {
+      "depth": 0,
+      "id": "view.timeline",
+      "route": [
+        "tree"
+      ]
+    },
+    {
       "depth": 2,
       "id": "view.criteria_hub",
       "route": [

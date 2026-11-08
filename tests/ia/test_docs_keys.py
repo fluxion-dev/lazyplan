@@ -55,3 +55,23 @@ class DocumentationKeysTest(unittest.TestCase):
             with self.subTest(surface=name):
                 self.assertIn("criteria", text.lower())
                 self.assertIn("references", text.lower())
+
+    def test_usage_names_every_coordination_hub(self) -> None:
+        for term in (
+            "Coordination hubs",
+            "claims hub",
+            "sessions hub",
+            "comments and notes hub",
+            "superseded",
+        ):
+            with self.subTest(term=term):
+                self.assertIn(term, USAGE)
+        for key in ("`k`", "`v`", "`m`"):
+            with self.subTest(key=key):
+                self.assertIn(key, USAGE)
+
+    def test_site_and_skill_name_the_coordination_hubs(self) -> None:
+        for name, text in (("site", SITE), ("skill", SKILL)):
+            with self.subTest(surface=name):
+                self.assertIn("session", text.lower())
+                self.assertIn("comment", text.lower())

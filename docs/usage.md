@@ -356,6 +356,26 @@ read-only text. From the tree or a detail page, open **criteria hub**,
 header keeps the parent breadcrumb, so evidence never loses the criterion it
 proved.
 
+### Coordination hubs
+
+Claims, touch-points, sessions, comments, and notes are selectable hubs too.
+Open **claims hub**, **sessions hub**, or **comments and notes hub** from the
+palette; on a detail page `k`, `v`, and `m` open them directly. Click the
+agents pane to open the sessions hub.
+
+- Claims: rows show the holder, expiry, age, and any overlap with another
+  active claim that edits the same path. `a` claims the task, `x` renews, `d`
+  releases, `D` forces a takeover, and `l`/`L` add or remove touch-points.
+- Sessions: rows show actor, plan, branch, age, summary, handoff, and recent
+  events. `a` starts a session, `x` or `d` ends it with a summary, and the last
+  handoff stays visible after the session closes.
+- Comments and notes: `a` adds a comment, `n` adds a note, `x` resolves or
+  reopens a comment, and `u` hides resolved comments.
+
+Session and touch-point authoring are first-class screen hubs now; plan 135's
+CLI-only stance is superseded for those entities. Import, sync, and setup stay
+CLI-only.
+
 The palette and the CLI use the same names: Create plan, Move to doing, Tick
 next criterion, Delete selection. The palette also has Bulk move to doing/done,
 Bulk block tasks, Bulk release claims, Clear marks, and Undo bulk change. Bulk
@@ -562,7 +582,9 @@ lpui touch add --task 12 --path src/lazyplan/store/sessions.py
 checkout; `LAZYPLAN_SESSION=S3` overrides it. Every write made while the
 session is open is tagged with its id. Hooks stay read-only: they show the open
 session or a start hint, and `context`/`brief` render the previous handoff.
-Sessions are operational history and are not exported.
+Sessions are operational history and are not exported. You can also start and
+end them from the sessions hub (`v` on a detail page or the agents pane); the
+CLI remains the path for scripts and hooks.
 
 Tasks can declare the repo-relative paths they expect to edit. `next` skips a
 todo whose touch-points overlap an active claim in the same checkout. A manual

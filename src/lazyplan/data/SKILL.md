@@ -319,6 +319,10 @@ every call. Reach for `--json` only when you need full-fidelity fields.
   a criterion), questions, and references from the palette. Criteria tick,
   prove, relate, and delete; questions add, resolve, and reopen; references
   link, open, and unlink.
+- Coordination hubs are selectable too: claims and touch-points (`k` from
+  detail), sessions and handoffs (`v` or the agents pane), and comments and
+  notes (`m`). Session and touch-point authoring works from the screen;
+  import, sync, and setup stay CLI-only.
 - Collaborate with `comment add/list/resolve`; use `share --plan P` for a
   read-only snapshot and `sync --file dump.json --dry-run` for a plan-level
   merge.

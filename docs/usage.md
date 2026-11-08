@@ -301,8 +301,9 @@ freeze it.
 The main screen pairs the plan tree with a preview column: a two-line control
 strip, the selected row's reason, scope, next tasks, acceptance progress, a
 `git` card for linked checkouts and pull requests, and an `agents` card for
-active sessions and the last handoff. The bottom timeline card follows the
-selected row and its immediate children.
+active sessions and the last handoff. The timeline card stays hidden on launch;
+`T` or the palette's show/hide timeline command opens it for the session. When
+open, it follows the selected row and its immediate children.
 
 On launch the tree opens on **Active** plans: every plan that is not done, with
 its full milestone and task tree. `f` cycles Active, Finished, and Both; Both
@@ -332,6 +333,7 @@ branches exist in the journal but not as screen nodes.
 | `?` | help, from any screen |
 | `c` | command palette, from any screen |
 | `t` | cycle theme: mocha, void, latte |
+| `T` | show or hide the timeline card |
 | `O` | toggle manual override mode (writes are blocked while off) |
 | `q` | quit, from any screen |
 

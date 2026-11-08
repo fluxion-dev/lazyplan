@@ -68,6 +68,7 @@ def palette_handlers(app: Any) -> dict[str, Callable[[], None]]:
         "unlink_pr": app.action_unlink_pr,
         "command_palette": app.action_command_palette,
         "cycle_theme": app.action_cycle_theme,
+        "toggle_timeline": app.action_toggle_timeline,
         "toggle_override": app.action_toggle_override,
         "export_md": app.action_export_md,
         "help": app.action_help,

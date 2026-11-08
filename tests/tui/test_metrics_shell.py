@@ -67,6 +67,19 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
             card = section.query_one(f"#{CARD_ID}")
             self.assertIsNotNone(card.query_one("PlotextPlot"))
 
+    async def test_t_and_palette_toggle_the_timeline(self) -> None:
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            section = app.query_one("#metrics", MetricsSection)
+            self.assertFalse(section.display)
+            await pilot.press("T")
+            await pilot.pause()
+            self.assertTrue(section.display)
+            app._run_palette_command("toggle-timeline")
+            await pilot.pause()
+            self.assertFalse(section.display)
+
     async def test_section_has_a_timeline_title(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:

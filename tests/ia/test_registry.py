@@ -28,6 +28,13 @@ class TestRegistry(unittest.TestCase):
                 self.assertTrue(set(action.surfaces) <= set(registry.SURFACES))
                 self.assertLessEqual(len(action.route), 3)
 
+    def test_timeline_toggle_is_a_global_view_action(self):
+        action = registry.by_id("view.timeline")
+        self.assertIsNotNone(action)
+        self.assertEqual(action.key, "T")
+        self.assertEqual(action.surfaces, ("tui",))
+        self.assertEqual(action.palette_ids, ("toggle-timeline",))
+
     def test_no_key_is_bound_twice_in_one_context(self):
         seen: dict[tuple[str, str], str] = {}
         for action in registry.ACTIONS:

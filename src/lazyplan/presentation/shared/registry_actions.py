@@ -281,6 +281,15 @@ CORE_ACTIONS: tuple[Action, ...] = (
         ("plan-mode",),
     ),
     _action(
+        "view.timeline",
+        "Show/hide timeline",
+        "T",
+        "global",
+        ("tui",),
+        ("tree",),
+        ("toggle-timeline",),
+    ),
+    _action(
         "view.criteria_hub",
         "Open criteria hub",
         surfaces=("tui",),

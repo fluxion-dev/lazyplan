@@ -81,6 +81,7 @@ if _TEXTUAL_OK:
             Binding("space", "toggle_mark", "Mark"),
             Binding("escape", "clear_filter", "Back", show=False),
             Binding("t", "cycle_theme", "Theme"),
+            Binding("T", "toggle_timeline", "Timeline"),
             Binding("n", "new_context", "New"),
             Binding("e", "edit_selection", "Edit"),
             Binding("s", "toggle_status", "Status"),

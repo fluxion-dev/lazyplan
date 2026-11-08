@@ -117,6 +117,14 @@ class TestCommandRegistry(unittest.TestCase):
             for word in banned:
                 self.assertNotIn(word, cmd.label.lower(), cmd.id)
 
+    def test_timeline_toggle_is_registered(self):
+        command = next(cmd for cmd in palette.COMMANDS if cmd.id == "toggle-timeline")
+        self.assertEqual(command.key, "T")
+        self.assertEqual(command.handler, "toggle_timeline")
+        self.assertEqual(command.action_id, "view.timeline")
+        matches = [cmd.id for _section, cmds in palette.matching("timeline") for cmd in cmds]
+        self.assertIn("toggle-timeline", matches)
+
     def test_help_and_palette_are_importable_without_textual(self):
         # The registry must stay stdlib-only: the CLI and stdlib tests use it.
         with open(palette.__file__, encoding="utf-8") as fh:

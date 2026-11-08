@@ -29,6 +29,9 @@ once instead of landing unnoticed.
 
 ### Changed
 
+- **Timeline on demand.** The timeline card starts hidden so the tree and
+  preview get the full shell. Press `T` or run the palette's show/hide timeline
+  command to open it for the session; below 100 columns it stays hidden.
 - **One access-path registry.** Palette IDs, CLI paths, and MCP tools now map
   from one canonical action table, with a parity gate that rejects an
   undocumented gap. The reachability report proves the three-step budget.

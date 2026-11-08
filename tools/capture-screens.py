@@ -453,10 +453,11 @@ async def capture_theme_latte(store: Store, target: Path) -> None:
 
 
 async def capture_timeline(store: Store, target: Path) -> None:
-    """Capture the shell with a milestone selected so only its task lanes show."""
+    """Capture the shell with the timeline open and a milestone selected."""
     app = create_app(str(store.path))
     async with app.run_test(size=SIZE) as pilot:
         await pilot.pause()
+        app.action_toggle_timeline()
         tree = app.query_one("#tree", Tree)
         _expand_all(tree)
         tree.focus()
@@ -727,13 +728,13 @@ SCENES: dict[str, Scene] = {
         SIZE,
         build_source_fixture,
         capture_theme_void,
-        "lazyplan main shell in the OLED-black void theme, with the plan tree, sticky preview, GIT pane, and timeline.",
+        "lazyplan main shell in the OLED-black void theme, with the plan tree, sticky preview, and GIT pane.",
     ),
     "lpui-theme-latte": Scene(
         SIZE,
         build_source_fixture,
         capture_theme_latte,
-        "lazyplan main shell in the light Latte theme, with the plan tree, sticky preview, GIT pane, and timeline.",
+        "lazyplan main shell in the light Latte theme, with the plan tree, sticky preview, and GIT pane.",
     ),
     "lpui-timeline": Scene(
         SIZE,

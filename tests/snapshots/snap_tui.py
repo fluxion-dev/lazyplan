@@ -15,6 +15,7 @@ from lazyplan import services
 from lazyplan.core.entities import Status
 from lazyplan.presentation.tui import create_app
 from lazyplan.presentation.tui.screens import DetailScreen, PaletteScreen
+from lazyplan.presentation.tui.screens.hub import CriteriaHub
 from lazyplan.presentation.tui.screens.source import SourceScreen
 from lazyplan.services import metrics, revisions
 from lazyplan.store import Store
@@ -150,6 +151,17 @@ def test_control_room_shell(snap_compare, control_app) -> None:
 
     with mock.patch("time.time", return_value=FIXED_NOW):
         assert snap_compare(app, run_before=run_before, terminal_size=(120, 40))
+
+
+def test_criteria_hub_snapshot(snap_compare, control_app) -> None:
+    app, plan_id = control_app
+
+    async def run_before(pilot) -> None:
+        await pilot.pause()
+        app.push_screen(CriteriaHub(app.store, "plan", plan_id))
+        await pilot.pause()
+
+    assert snap_compare(app, run_before=run_before, terminal_size=(100, 30))
 
 
 def test_help_screen(snap_compare, data_app) -> None:

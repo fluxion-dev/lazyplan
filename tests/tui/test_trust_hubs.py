@@ -274,9 +274,7 @@ class TrustHubTest(unittest.IsolatedAsyncioTestCase):
     async def test_hub_rendering_is_shared(self) -> None:
         from tests.support.paths import ROOT
 
-        source = (
-            ROOT / "src/lazyplan/presentation/tui/screens/hub.py"
-        ).read_text(encoding="utf-8")
+        source = (ROOT / "src/lazyplan/presentation/tui/screens/hub.py").read_text(encoding="utf-8")
         self.assertEqual(source.count("def _reload"), 1)
         self.assertEqual(source.count("yield OptionList("), 1)
         self.assertEqual(source.count('id="hub-preview-body"'), 1)

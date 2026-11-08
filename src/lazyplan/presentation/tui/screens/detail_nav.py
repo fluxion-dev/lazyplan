@@ -33,6 +33,30 @@ class DetailNavigationMixin:
 
         self.app.push_screen(CriteriaHub(self._dstore, self.dkind, self.doid))
 
+    def action_open_claims_hub(self) -> None:
+        """Open claims and touch-points for this row."""
+        from .hub import plan_id_for
+        from .hub_coordination import ClaimsHub
+
+        task_id = self.doid if self.dkind == "task" else None
+        plan_id = plan_id_for(self._dstore, self.dkind, self.doid)
+        self.app.push_screen(ClaimsHub(self._dstore, task_id=task_id, plan_id=plan_id))
+
+    def action_open_sessions_hub(self) -> None:
+        """Open sessions and handoffs for the owning plan."""
+        from .hub import plan_id_for
+        from .hub_coordination import SessionsHub
+
+        plan_id = plan_id_for(self._dstore, self.dkind, self.doid)
+        if plan_id is not None:
+            self.app.push_screen(SessionsHub(self._dstore, plan_id))
+
+    def action_open_comments_hub(self) -> None:
+        """Open comments and notes for this row."""
+        from .hub_coordination import CommentsHub
+
+        self.app.push_screen(CommentsHub(self._dstore, self.dkind, self.doid))
+
     def action_back(self) -> None:
         """Leave detail, confirming before discarding an unsaved edit."""
         if self._editing and self._is_dirty():

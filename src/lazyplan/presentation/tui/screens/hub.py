@@ -30,6 +30,8 @@ class HubEntry:
     oid: int
     label: str
     body: str
+    kind: str = ""
+    ref: str = ""
 
 
 def plan_id_for(store: Any, kind: str, oid: int) -> int | None:
@@ -63,6 +65,9 @@ if _TEXTUAL_OK:
             Binding("x", "hub_toggle", "Toggle"),
             Binding("p", "prove", "Prove"),
             Binding("d", "delete", "Delete"),
+            Binding("D", "force", "Force"),
+            Binding("n", "note", "Note"),
+            Binding("u", "filter", "Filter"),
             Binding("l", "relate", "Relate"),
             Binding("L", "unrelate", "Unrelate"),
             Binding("o", "open_value", "Open"),
@@ -148,6 +153,15 @@ if _TEXTUAL_OK:
         def delete_row(self) -> None:
             self._notify_empty()
 
+        def force(self) -> None:
+            self._notify_empty()
+
+        def note(self) -> None:
+            self._notify_empty()
+
+        def filter_toggle(self) -> None:
+            self._notify_empty()
+
         def relate(self) -> None:
             self._notify_empty()
 
@@ -182,6 +196,15 @@ if _TEXTUAL_OK:
 
         def action_delete(self) -> None:
             self.delete_row()
+
+        def action_force(self) -> None:
+            self.force()
+
+        def action_note(self) -> None:
+            self.note()
+
+        def action_filter(self) -> None:
+            self.filter_toggle()
 
         def action_relate(self) -> None:
             self.relate()

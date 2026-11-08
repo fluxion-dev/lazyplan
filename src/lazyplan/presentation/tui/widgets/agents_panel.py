@@ -24,9 +24,17 @@ def _age(started_at: float, stamp: float) -> str:
 class AgentsPanel(VerticalScroll):
     """Active session rows with the selected plan's last handoff."""
 
+    can_focus = True
+
     def __init__(self) -> None:
         super().__init__(id="agents")
         self.border_title = " agents "
+
+    def on_click(self) -> None:
+        """Open the sessions hub for the selected plan."""
+        handler = getattr(self.app, "action_open_sessions_hub", None)
+        if callable(handler):
+            handler()
 
     def compose(self) -> ComposeResult:
         yield Static("", id="agents-body")

@@ -461,6 +461,75 @@ ACTIONS: tuple[Action, ...] = (
         ("help",),
     ),
     _action("app.quit", "Quit", "q", "global", ("tui",), ("any",), ("quit",)),
+    _action(
+        "task.renew",
+        "Renew claim",
+        surfaces=("tui", "cli", "mcp"),
+        route=("tree", "detail", "coordination"),
+    ),
+    _action(
+        "task.touch_add",
+        "Add touch-point",
+        surfaces=("tui", "cli"),
+        route=("tree", "detail", "coordination"),
+    ),
+    _action(
+        "task.touch_remove",
+        "Remove touch-point",
+        surfaces=("tui", "cli"),
+        route=("tree", "detail", "coordination"),
+    ),
+    _action(
+        "session.start",
+        "Start session",
+        surfaces=("tui", "cli", "mcp"),
+        route=("tree", "detail", "sessions"),
+    ),
+    _action(
+        "session.end",
+        "End session",
+        surfaces=("tui", "cli", "mcp"),
+        route=("tree", "detail", "sessions"),
+    ),
+    _action(
+        "note.add",
+        "Add note",
+        surfaces=("tui", "cli", "mcp"),
+        route=("tree", "detail", "coordination"),
+    ),
+    _action(
+        "comment.add",
+        "Add comment",
+        surfaces=("tui", "cli", "mcp"),
+        route=("tree", "detail", "coordination"),
+    ),
+    _action(
+        "comment.resolve",
+        "Resolve comment",
+        surfaces=("tui", "cli", "mcp"),
+        route=("tree", "detail", "coordination"),
+    ),
+    _action(
+        "view.claims_hub",
+        "Open claims hub",
+        surfaces=("tui",),
+        route=("tree", "detail", "coordination"),
+        palette_ids=("claims-hub",),
+    ),
+    _action(
+        "view.sessions_hub",
+        "Open sessions hub",
+        surfaces=("tui",),
+        route=("tree", "detail", "sessions"),
+        palette_ids=("sessions-hub",),
+    ),
+    _action(
+        "view.comments_hub",
+        "Open comments and notes hub",
+        surfaces=("tui",),
+        route=("tree", "detail", "coordination"),
+        palette_ids=("comments-hub",),
+    ),
 )
 
 

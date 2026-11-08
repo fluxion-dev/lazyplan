@@ -58,6 +58,16 @@ HUB_ACTIONS: dict[str, tuple[str, ...]] = {
     "evidence": ("criterion.prove", "source.trail"),
     "questions": ("question.add", "question.resolve", "question.reopen"),
     "references": ("reference.link", "reference.unlink", "reference.open"),
+    "claims": (
+        "task.claim",
+        "task.renew",
+        "claim.release",
+        "claim.force_release",
+        "task.touch_add",
+        "task.touch_remove",
+    ),
+    "sessions": ("session.start", "session.end"),
+    "comments": ("comment.add", "note.add", "comment.resolve"),
 }
 
 

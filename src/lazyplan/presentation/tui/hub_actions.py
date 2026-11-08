@@ -53,3 +53,30 @@ class HubMixin:
             self.app.push_screen(EvidenceHub(self.store, criterion_id))
 
         self.app.push_screen(FilterPromptScreen("Open evidence hub", "criterion id", "Open"), cb)
+
+    def action_open_claims_hub(self) -> None:
+        from .screens.hub_coordination import ClaimsHub
+
+        selected = self._hub_selection()
+        if selected is None:
+            return
+        kind, oid = selected
+        plan_id = self._plan_ctx()
+        task_id = oid if kind == "task" else None
+        self.app.push_screen(ClaimsHub(self.store, task_id=task_id, plan_id=plan_id))
+
+    def action_open_sessions_hub(self) -> None:
+        from .screens.hub_coordination import SessionsHub
+
+        plan_id = self._plan_ctx()
+        if plan_id is None:
+            self.app.notify("select a plan first", timeout=3)
+            return
+        self.app.push_screen(SessionsHub(self.store, plan_id))
+
+    def action_open_comments_hub(self) -> None:
+        from .screens.hub_coordination import CommentsHub
+
+        selected = self._hub_selection()
+        if selected is not None:
+            self.app.push_screen(CommentsHub(self.store, selected[0], selected[1]))

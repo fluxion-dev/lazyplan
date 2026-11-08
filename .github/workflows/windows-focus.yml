@@ -1,0 +1,77 @@
+name: windows-focus
+
+# A short Windows run for one failing area. Dispatch it while fixing a Windows
+# failure, then run the full nightly gate once the focused selection is green.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag, or SHA to check out
+        required: false
+        default: main
+        type: string
+      tests:
+        description: Pytest targets separated by spaces
+        required: false
+        default: tests/snapshots/snap_tui.py::test_control_room_shell tests/tui/test_update_screen.py
+        type: string
+      update_snapshots:
+        description: Regenerate snapshots instead of comparing them
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-focus-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  focused:
+    name: focused windows tests
+    runs-on: windows-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/pip-cache
+          key: windows-focus-pip-${{ hashFiles('pyproject.toml') }}
+      - name: Install (editable + dev extras)
+        env:
+          PIP_CACHE_DIR: ${{ runner.temp }}/pip-cache
+        run: |
+          python -m venv .venv
+          if [[ -d .venv/Scripts ]]; then VENV_BIN=.venv/Scripts; else VENV_BIN=.venv/bin; fi
+          "$VENV_BIN"/python -m pip install -e ".[dev]"
+      - name: Focused tests
+        env:
+          TESTS: ${{ inputs.tests }}
+          UPDATE_SNAPSHOTS: ${{ inputs.update_snapshots }}
+        run: |
+          if [[ -d .venv/Scripts ]]; then VENV_BIN=.venv/Scripts; else VENV_BIN=.venv/bin; fi
+          extra=()
+          if [[ "$UPDATE_SNAPSHOTS" == "true" ]]; then extra=(--snapshot-update); fi
+          "$VENV_BIN"/python -m pytest $TESTS -q -rA \
+            --snapshot-report snapshot_report.html "${extra[@]}"
+      - name: Upload focused artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-focus
+          path: |
+            snapshot_report.html
+            tests/snapshots/__snapshots__/**/*.svg
+          if-no-files-found: ignore

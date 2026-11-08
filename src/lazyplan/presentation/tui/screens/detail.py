@@ -57,6 +57,7 @@ if _TEXTUAL_OK:
             Binding("x", "tick_criterion", "Tick"),
             Binding("a", "add_criterion", "Criterion"),
             Binding("p", "prove_criterion", "Prove"),
+            Binding("t", "open_trust_hubs", "Trust"),
             Binding("Q", "add_question", "Question"),
             Binding("ctrl+r", "resolve_question", "Resolve"),
             Binding("R", "reopen_question", "Reopen"),

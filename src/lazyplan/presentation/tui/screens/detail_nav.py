@@ -27,6 +27,12 @@ class DetailNavigationMixin:
 
         self.app.push_screen(SourceScreen(self._dstore, self.dkind, self.doid))
 
+    def action_open_trust_hubs(self) -> None:
+        """Open the criteria hub for this row (palette reaches the rest)."""
+        from .hub import CriteriaHub
+
+        self.app.push_screen(CriteriaHub(self._dstore, self.dkind, self.doid))
+
     def action_back(self) -> None:
         """Leave detail, confirming before discarding an unsaved edit."""
         if self._editing and self._is_dirty():

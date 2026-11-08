@@ -260,6 +260,17 @@ class TrustHubTest(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             self.assertEqual(len(Store(self.db).list_refs(self.plan.id)), 1)
 
+    async def test_detail_opens_the_criteria_hub(self) -> None:
+        app = self._app()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await settle(pilot)
+            app.selected = ("task", self.task.id)
+            await pilot.press("enter")
+            await pilot.pause()
+            await pilot.press("t")
+            await pilot.pause()
+            self.assertIsInstance(app.screen, CriteriaHub)
+
     async def test_empty_states_and_viewports(self) -> None:
         empty = Store(self.db).add_milestone(self.plan.id, "Empty", "No criteria here.")
         for size in ((80, 24), (120, 40)):

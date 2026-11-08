@@ -1869,8 +1869,8 @@
     "palette_commands": 54,
     "setup_steps": 4,
     "stale_claims": 0,
-    "tui_bindings": 56,
-    "tui_key_conflicts": 14,
+    "tui_bindings": 57,
+    "tui_key_conflicts": 15,
     "tui_screens": 15
   },
   "docs": {
@@ -3102,7 +3102,7 @@
         "file": "src/lazyplan/presentation/tui/screens/detail.py",
         "key": "Q",
         "label": "Question",
-        "line": "60",
+        "line": "61",
         "screen": "detail"
       },
       {
@@ -3110,7 +3110,7 @@
         "file": "src/lazyplan/presentation/tui/screens/detail.py",
         "key": "R",
         "label": "Reopen",
-        "line": "62",
+        "line": "63",
         "screen": "detail"
       },
       {
@@ -3126,7 +3126,7 @@
         "file": "src/lazyplan/presentation/tui/screens/detail.py",
         "key": "ctrl+r",
         "label": "Resolve",
-        "line": "61",
+        "line": "62",
         "screen": "detail"
       },
       {
@@ -3134,7 +3134,7 @@
         "file": "src/lazyplan/presentation/tui/screens/detail.py",
         "key": "ctrl+s",
         "label": "Save",
-        "line": "66",
+        "line": "67",
         "screen": "detail"
       },
       {
@@ -3142,7 +3142,7 @@
         "file": "src/lazyplan/presentation/tui/screens/detail.py",
         "key": "d",
         "label": "Delete",
-        "line": "64",
+        "line": "65",
         "screen": "detail"
       },
       {
@@ -3166,7 +3166,7 @@
         "file": "src/lazyplan/presentation/tui/screens/detail.py",
         "key": "g",
         "label": "Source",
-        "line": "65",
+        "line": "66",
         "screen": "detail"
       },
       {
@@ -3174,7 +3174,7 @@
         "file": "src/lazyplan/presentation/tui/screens/detail.py",
         "key": "n",
         "label": "New child",
-        "line": "63",
+        "line": "64",
         "screen": "detail"
       },
       {
@@ -3191,6 +3191,14 @@
         "key": "s",
         "label": "Status",
         "line": "56",
+        "screen": "detail"
+      },
+      {
+        "action": "open_trust_hubs",
+        "file": "src/lazyplan/presentation/tui/screens/detail.py",
+        "key": "t",
+        "label": "Trust",
+        "line": "60",
         "screen": "detail"
       },
       {
@@ -3377,7 +3385,7 @@
           {
             "action": "delete_row",
             "file": "src/lazyplan/presentation/tui/screens/detail.py",
-            "line": "64"
+            "line": "65"
           },
           {
             "action": "delete",
@@ -3467,7 +3475,7 @@
           {
             "action": "open_source",
             "file": "src/lazyplan/presentation/tui/screens/detail.py",
-            "line": "65"
+            "line": "66"
           }
         ],
         "key": "g"
@@ -3482,7 +3490,7 @@
           {
             "action": "add_child",
             "file": "src/lazyplan/presentation/tui/screens/detail.py",
-            "line": "63"
+            "line": "64"
           }
         ],
         "key": "n"
@@ -3586,6 +3594,21 @@
           }
         ],
         "key": "space"
+      },
+      {
+        "bindings": [
+          {
+            "action": "cycle_theme",
+            "file": "src/lazyplan/presentation/tui/app.py",
+            "line": "83"
+          },
+          {
+            "action": "open_trust_hubs",
+            "file": "src/lazyplan/presentation/tui/screens/detail.py",
+            "line": "60"
+          }
+        ],
+        "key": "t"
       },
       {
         "bindings": [

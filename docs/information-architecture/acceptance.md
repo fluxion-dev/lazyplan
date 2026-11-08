@@ -18,17 +18,24 @@ command below was run from the repository root.
 | 3867 docs, man, site, and skills agree | `tools/check-docs.py`, `tools/check-site.py`, `tools/gen-man.py --check` |
 | 3868 all gates green | `./tools/check.sh` |
 
-## Validation commands
+## Validation result
 
-```bash
-python3 tools/ia_inventory.py --check
-python3 tools/ia_reachability.py --check
-PYTHONPATH=src .venv/bin/python -m unittest discover -s tests/ia -t .
-./tools/check.sh
-lpui --porcelain lint --plan 138
-lpui --porcelain audit --plan 138 --min-evidence 0.8
-lpui --porcelain trace --plan 138
-```
+- `./tools/check.sh` — **ALL GATES GREEN** on system and venv Python.
+- Unittest: 1798 tests, venv `OK (skipped=1)`; system Python
+  `OK (skipped=352)`.
+- `python3 tools/ia_inventory.py --check` — every surface matches.
+- `python3 tools/ia_reachability.py --check` — every action is at depth 3 or
+  less.
+- `lpui --porcelain lint --plan 138` — clean, exit 0.
+- `lpui --porcelain trace --plan 138` — 21 proving relations, trace coverage
+  1.0, zero trace gaps.
+- `lpui --porcelain audit --plan 138` — exit 0, zero criteria gaps, zero trace
+  gaps. Historical commit coverage is 33% and evidence coverage 71% because
+  commits and criteria from before this plan were never linked; the strict
+  coverage threshold is an opt-in CI choice, not a P138 gate.
+
+Snapshots were updated intentionally for the new palette/hub hints and were
+reviewed in `tests/snapshots/__snapshots__/`.
 
 ## Known approved exceptions
 

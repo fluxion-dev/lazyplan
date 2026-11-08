@@ -41,7 +41,7 @@ class TestCommitChips(unittest.IsolatedAsyncioTestCase):
         from textual.widgets import Static
 
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             self.app.tree_controller.expand_all()
             task_label = str(self.app._row_nodes[("task", self.tid)].label)
             self.assertIn("1c", task_label)
@@ -64,7 +64,7 @@ class TestCommitChips(unittest.IsolatedAsyncioTestCase):
 
     async def test_rows_show_chips_without_a_marker(self):
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             self.app.tree_controller.expand_all()
             linked = str(self.app._row_nodes[("task", self.tid)].label)
             repo_only = str(self.app._row_nodes[("task", self.repo_tid)].label)
@@ -82,7 +82,7 @@ class TestCommitChips(unittest.IsolatedAsyncioTestCase):
         from lazyplan.presentation.tui.screens import DetailScreen
 
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await settle(pilot)
             self.app.selected = ("task", self.tid)
             await pilot.press("enter")
@@ -96,7 +96,7 @@ class TestCommitChips(unittest.IsolatedAsyncioTestCase):
     async def test_task_row_shows_pr_chip_only_when_cached(self):
         Store(self.db).link_forge("task", self.tid, 7, state="merged", checks="pass")
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             self.app.refresh_all()
             await pilot.pause()
             self.app.tree_controller.expand_all()
@@ -109,7 +109,7 @@ class TestCommitChips(unittest.IsolatedAsyncioTestCase):
         from lazyplan.presentation.tui.screens.source import SourceScreen
 
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await settle(pilot)
             self.app.selected = ("task", self.tid)
             await pilot.press("g")
@@ -122,7 +122,7 @@ class TestCommitChips(unittest.IsolatedAsyncioTestCase):
         from lazyplan.presentation.tui.screens import DetailScreen
 
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await settle(pilot)
             self.app.selected = ("task", self.bare_tid)
             await pilot.press("enter")

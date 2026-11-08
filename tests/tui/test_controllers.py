@@ -11,6 +11,7 @@ from unittest import mock
 from lazyplan import services
 from lazyplan.core.entities import Milestone, Plan, Status, Task
 from lazyplan.store import Store
+from tests.support.pilot import settle
 
 try:
     from lazyplan.presentation import tui as tui_mod
@@ -56,7 +57,7 @@ class ControllerTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_update_chip_toasts_once_and_clears(self) -> None:
         async with self.app.run_test(size=(100, 30)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             controller = self.app.update_controller
             with mock.patch.object(self.app, "notify") as toast:
                 controller.announce("update v9.9.9 available", "9.9.9")
@@ -71,7 +72,7 @@ class ControllerTest(unittest.IsolatedAsyncioTestCase):
         from rich.text import Text
 
         async with self.app.run_test(size=(100, 30)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             self.app.tree_controller.expand_all()
             label = self.app._row_nodes[("task", self.task_id)].label
             self.assertIsInstance(label, Text)
@@ -79,7 +80,7 @@ class ControllerTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_refresh_keeps_the_selected_row(self) -> None:
         async with self.app.run_test(size=(100, 30)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             self.app.selected = ("task", self.task_id)
             self.app.refresh_all()
             await pilot.pause()

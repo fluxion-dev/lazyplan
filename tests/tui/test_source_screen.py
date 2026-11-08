@@ -108,7 +108,7 @@ class TestSourceScreen(unittest.IsolatedAsyncioTestCase):
 
     async def test_tree_groups_repo_commit_files_and_pr(self):
         async with self.app.run_test(size=(120, 30)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             screen = await self._open(pilot)
             tree = screen.query_one("#source-tree", Tree)
             self.assertEqual(len(tree.root.children), 1)
@@ -125,7 +125,7 @@ class TestSourceScreen(unittest.IsolatedAsyncioTestCase):
 
     async def test_filter_narrows_tree(self):
         async with self.app.run_test(size=(120, 30)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             screen = await self._open(pilot)
             await pilot.press("slash")
             await pilot.pause()
@@ -143,7 +143,7 @@ class TestSourceScreen(unittest.IsolatedAsyncioTestCase):
 
     async def test_copy_and_open_selected_file(self):
         async with self.app.run_test(size=(120, 30)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             screen = await self._open(pilot)
             tree = screen.query_one("#source-tree", Tree)
             file_node = tree.root.children[0].children[0].children[0]
@@ -165,7 +165,7 @@ class TestSourceScreen(unittest.IsolatedAsyncioTestCase):
 
     async def test_plan_source_screen_rolls_up_task_work(self):
         async with self.app.run_test(size=(120, 30)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             self.app.push_screen(SourceScreen(self.store, "plan", self.pid))
             await pilot.pause()
             await self.app.workers.wait_for_complete()
@@ -189,14 +189,14 @@ class TestSourceScreen(unittest.IsolatedAsyncioTestCase):
             files=link.files,
         )
         async with self.app.run_test(size=(120, 30)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             screen = await self._open(pilot)
             tree = screen.query_one("#source-tree", Tree)
             self.assertIn("stale", str(tree.root.children[0].children[0].label))
 
     async def test_tree_navigation_and_folding_keys(self):
         async with self.app.run_test(size=(120, 30)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             screen = await self._open(pilot)
             tree = screen.query_one("#source-tree", Tree)
             repo = tree.root.children[0]
@@ -227,7 +227,7 @@ class TestSourceScreen(unittest.IsolatedAsyncioTestCase):
         from textual.widgets import Tree as TextualTree
 
         async with self.app.run_test(size=(120, 30)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             main_tree = self.app.query_one("#tree", TextualTree)
             main_plan = self.app._row_nodes[("plan", self.pid)]
             main_cursor = main_tree.cursor_node
@@ -245,7 +245,7 @@ class TestSourceScreen(unittest.IsolatedAsyncioTestCase):
     async def test_main_row_actions_do_not_fire_from_source(self):
         status_before = self.store.get_plan(self.pid).status.value
         async with self.app.run_test(size=(120, 30)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             screen = await self._open(pilot)
             for key in ("d", "s", "e", "n", "g", "f", "F", "A"):
                 await pilot.press(key)
@@ -255,7 +255,7 @@ class TestSourceScreen(unittest.IsolatedAsyncioTestCase):
 
     async def test_click_selects_a_source_row(self):
         async with self.app.run_test(size=(120, 30)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             screen = await self._open(pilot)
             tree = screen.query_one("#source-tree", Tree)
             clicked = await pilot.click("#source-tree", offset=(10, 1))
@@ -269,7 +269,7 @@ class TestSourceScreen(unittest.IsolatedAsyncioTestCase):
 
     async def test_clicking_a_source_arrow_toggles_the_node(self):
         async with self.app.run_test(size=(120, 30)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             screen = await self._open(pilot)
             tree = screen.query_one("#source-tree", Tree)
             repo = tree.root.children[0]
@@ -292,7 +292,7 @@ class TestSourceScreen(unittest.IsolatedAsyncioTestCase):
 
     async def test_commit_and_file_previews_render_diff(self):
         async with self.app.run_test(size=(120, 30)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             screen = await self._open(pilot)
             tree = screen.query_one("#source-tree", Tree)
             repo_node = tree.root.children[0]
@@ -328,7 +328,7 @@ class TestSourceScreen(unittest.IsolatedAsyncioTestCase):
             check=True,
         ).stdout.strip()
         async with self.app.run_test(size=(120, 30)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             screen = await self._open(pilot)
             with mock.patch("lazyplan.presentation.tui.screens.source.DIFF_PREVIEW_LINES", 3):
                 block = screen._diff_block(self.repo, big)
@@ -336,7 +336,7 @@ class TestSourceScreen(unittest.IsolatedAsyncioTestCase):
 
     async def test_diff_states_are_explicit(self):
         async with self.app.run_test(size=(120, 30)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             screen = await self._open(pilot)
             for state, detail, needle in (
                 ("binary", "binary file", "binary"),
@@ -355,7 +355,7 @@ class TestSourceScreen(unittest.IsolatedAsyncioTestCase):
 
     async def test_source_rows_carry_a_kind_icon(self):
         async with self.app.run_test(size=(120, 30)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             screen = await self._open(pilot)
             tree = screen.query_one("#source-tree", Tree)
             repo_node = tree.root.children[0]
@@ -378,7 +378,7 @@ class TestSourceScreen(unittest.IsolatedAsyncioTestCase):
     async def test_empty_state(self):
         empty = self.store.add_task(self.sid, "No source")
         async with self.app.run_test(size=(120, 30)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             self.app.push_screen(SourceScreen(self.store, "task", empty.id))
             await pilot.pause()
             await self.app.workers.wait_for_complete()

@@ -12,6 +12,7 @@ from lazyplan import services
 from lazyplan.core.entities import Status
 from lazyplan.services import metrics
 from lazyplan.store import Store
+from tests.support.pilot import settle
 
 try:
     from lazyplan.presentation import tui as tui_mod
@@ -150,7 +151,7 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
         plan_id = _seed(self.store)
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             card = app.query_one("#metric-timeline", TimelineCard)
             card.refresh_timeline(metrics.snapshot(self.store, now=2_000, plan_id=plan_id).timeline)
             await pilot.pause()
@@ -179,7 +180,7 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
             self.store.add_milestone(plan.id, f"Milestone {index}")
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             app.action_toggle_timeline()
             await pilot.pause()
             app.tree_controller.track(app._row_nodes[("plan", plan.id)])
@@ -201,7 +202,7 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
         )
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             card = app.query_one("#metric-timeline", TimelineCard)
             card.refresh_timeline(metrics.snapshot(self.store, now=2_000, plan_id=plan.id).timeline)
             await pilot.pause()
@@ -218,7 +219,7 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
         )
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             app.selected = ("task", task.id)
             app.metrics_controller.stop()
             card = app.query_one("#metric-timeline", TimelineCard)
@@ -245,7 +246,7 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
         _at(1_150, lambda: self.store.add_task(milestone.id, "Idle task"))
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             app.selected = None
             app.metrics_controller.stop()
             card = app.query_one("#metric-timeline", TimelineCard)
@@ -292,7 +293,7 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
             )
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             app.selected = None
             app.metrics_controller.stop()
             card = app.query_one("#metric-timeline", TimelineCard)
@@ -324,7 +325,7 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
         )
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             app.selected = None
             app.metrics_controller.stop()
             card = app.query_one("#metric-timeline", TimelineCard)
@@ -339,7 +340,7 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
         _at(1_100, lambda: self.store.add_milestone(plan.id, "Idle milestone"))
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             app.selected = None
             app.metrics_controller.stop()
             card = app.query_one("#metric-timeline", TimelineCard)
@@ -355,7 +356,7 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
     async def test_card_uses_the_empty_state(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             card = app.query_one("#metric-timeline", TimelineCard)
             card.refresh_timeline(metrics.snapshot(self.store, now=2_000).timeline)
             await pilot.pause()
@@ -368,7 +369,7 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
         plan = _at(1_000, lambda: self.store.add_plan("Empty plan"))
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             card = app.query_one("#metric-timeline", TimelineCard)
             card.refresh_timeline(
                 metrics.snapshot(
@@ -388,7 +389,7 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
         _at(1_000, lambda: self.store.add_plan("Plan"))
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             app.metrics_controller.stop()
             card = app.query_one("#metric-timeline", TimelineCard)
             card.refresh_timeline(metrics.snapshot(self.store, now=2_000).timeline)
@@ -401,7 +402,7 @@ class TimelineCardRenderTest(unittest.IsolatedAsyncioTestCase):
         _at(1_100, lambda: self.store.add_milestone(plan.id, "Milestone"))
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             card = app.query_one("#metric-timeline", TimelineCard)
             card.refresh_timeline(metrics.snapshot(self.store, now=2_000, plan_id=plan.id).timeline)
             await pilot.pause()

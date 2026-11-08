@@ -10,6 +10,7 @@ from typing import Any
 from lazyplan import services
 from lazyplan.presentation.shared.design import RowStats, render_stats, stats_layout
 from lazyplan.store import Store
+from tests.support.pilot import settle
 
 try:
     from rich.text import Text
@@ -142,7 +143,7 @@ class TreeStatsTest(unittest.IsolatedAsyncioTestCase):
         self.store.update_task(self.task_a.id, title="Renamed", reason="rename")
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await pilot.pause()
             self.assertIn("Δ", self._plain(app, ("plan", self.plan_a.id)))
             self.assertNotIn("Δ", self._plain(app, ("plan", self.plan_b.id)))
@@ -154,7 +155,7 @@ class TreeStatsTest(unittest.IsolatedAsyncioTestCase):
         app = tui_mod.create_app(self.db)
         app.marked.add(("task", self.task_a.id))
         async with app.run_test(size=(160, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await pilot.pause()
             app.tree_controller.expand_all()
             tree = app.query_one("#tree", Tree)
@@ -172,7 +173,7 @@ class TreeStatsTest(unittest.IsolatedAsyncioTestCase):
     async def test_row_specs_render_the_stored_labels(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await pilot.pause()
             tree = app.query_one("#tree", Tree)
             self.assertTrue(app._row_specs)

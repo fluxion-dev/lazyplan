@@ -11,6 +11,7 @@ from lazyplan import services
 from lazyplan.core.entities import Status
 from lazyplan.services import metrics as metrics_service
 from lazyplan.store import Store
+from tests.support.pilot import settle
 
 try:
     from lazyplan.presentation import tui as tui_mod
@@ -59,7 +60,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
     async def test_section_starts_hidden_and_opens_on_demand(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             section = app.query_one("#metrics", MetricsSection)
             self.assertFalse(section.display)
             app.action_toggle_timeline()
@@ -71,7 +72,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
     async def test_t_and_palette_toggle_the_timeline(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             section = app.query_one("#metrics", MetricsSection)
             self.assertFalse(section.display)
             await pilot.press("T")
@@ -84,7 +85,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
     async def test_section_has_a_timeline_title(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             app.action_toggle_timeline()
             await pilot.pause()
             section = app.query_one("#metrics", MetricsSection)
@@ -95,7 +96,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         empty = self.store.add_plan("Empty plan")
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             app.action_toggle_timeline()
             await pilot.pause()
             app.tree_controller.track(app._row_nodes[("plan", empty.id)])
@@ -108,7 +109,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
     async def test_timeline_card_spans_the_section(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             app.action_toggle_timeline()
             await pilot.pause()
             section = app.query_one("#metrics", MetricsSection)
@@ -120,7 +121,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
     async def test_timeline_card_shows_the_project_lane(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             app.action_toggle_timeline()
             await pilot.pause()
             app.tree_controller.track(app._row_nodes[("plan", self.plan_id)])
@@ -132,7 +133,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
     async def test_section_grows_beyond_fourteen_rows(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             app.action_toggle_timeline()
             await pilot.pause()
             self.assertGreater(app.query_one("#metrics", MetricsSection).region.height, 14)
@@ -141,7 +142,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         """Guard the merged P117 shape before the modernization refactor."""
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             app.action_toggle_timeline()
             await pilot.pause()
             section = app.query_one("#metrics", MetricsSection)
@@ -174,7 +175,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         other_id, _milestone_id, _task_ids = self._other_plan()
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             app.action_toggle_timeline()
             await pilot.pause()
             card = app.query_one(f"#{CARD_ID}")
@@ -192,7 +193,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         _other_id, milestone_id, task_ids = self._other_plan()
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             app.action_toggle_timeline()
             await pilot.pause()
             app.tree_controller.expand_all()
@@ -212,7 +213,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
     async def test_task_selection_shows_only_the_task_lane(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             app.action_toggle_timeline()
             await pilot.pause()
             app.tree_controller.expand_all()
@@ -227,7 +228,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
     async def test_selection_emphasis_follows_the_cursor(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             app.action_toggle_timeline()
             await pilot.pause()
             app.tree_controller.expand_all()
@@ -266,7 +267,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
     async def test_no_selection_shows_the_select_a_row_subtitle(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             app.action_toggle_timeline()
             await pilot.pause()
             app.metrics_controller.stop()
@@ -281,7 +282,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
     async def test_plan_draws_a_dim_baseline(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             app.action_toggle_timeline()
             await pilot.pause()
             app.tree_controller.track(app._row_nodes[("plan", self.plan_id)])
@@ -295,7 +296,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         events_before = len(self.store.feed(limit=10_000))
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             app.action_toggle_timeline()
             await pilot.pause()
             app.tree_controller.expand_all()
@@ -312,7 +313,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         milestone_id = self.store.list_milestones(self.plan_id)[0].id
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             app.action_toggle_timeline()
             await pilot.pause()
             app.tree_controller.expand_all()
@@ -366,7 +367,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         self._other_plan()
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             app.action_toggle_timeline()
             await pilot.pause()
             card = app.query_one(f"#{CARD_ID}")
@@ -383,7 +384,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
         other_id, _milestone_id, _task_ids = self._other_plan()
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             app.action_toggle_timeline()
             await pilot.pause()
             app.tree_controller.track(app._row_nodes[("plan", other_id)])
@@ -398,7 +399,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
     async def test_plots_fit_at_100_columns(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(100, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             app.action_toggle_timeline()
             await pilot.pause()
             section = app.query_one("#metrics", MetricsSection)
@@ -416,7 +417,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
     async def test_toggle_at_narrow_width_waits_for_room(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(80, 24)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             section = app.query_one("#metrics", MetricsSection)
             app.action_toggle_timeline()
             await pilot.pause()
@@ -429,7 +430,7 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
     async def test_section_hides_below_100_columns(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(80, 24)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             section = app.query_one("#metrics", MetricsSection)
             self.assertFalse(section.display)
             main = app.query_one("#main")

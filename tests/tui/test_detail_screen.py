@@ -63,7 +63,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
         second = self.store.add_task(self.sid, "Blocked task", "Needs design")
         self.store.set_blocked(second.id, True, "waiting on design", actor="alice")
         async with self.app.run_test(size=(80, 24)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._open(pilot, "task", self.tid)
             body = str(self.app.screen.query_one("#detail-body", Static).render())
             self.assertIn("@alice", body)
@@ -80,7 +80,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
 
         self.store.add_question(self.pid, "Which host?")
         async with self.app.run_test(size=(80, 24)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._open(pilot, "plan", self.pid)
             body = str(self.app.screen.query_one("#detail-body", Static).render())
             self.assertIn("questions 1 open", body)
@@ -93,7 +93,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
         criterion = self.store.list_criteria("plan", self.pid)[0]
         self.store.add_evidence(criterion.id, command="pytest", exit_code=0, actor="ci")
         async with self.app.run_test(size=(80, 24)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._open(pilot, "plan", self.pid)
             body = str(self.app.screen.query_one("#detail-body", Static).render())
             self.assertIn("approval r1", body)
@@ -109,7 +109,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
         self.store.claim_task(self.tid, "alice", 300)
         self.store.add_touchpoint(self.tid, "src/app", actor="alice")
         async with self.app.run_test(size=(80, 24)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._open(pilot, "plan", self.pid)
             body = str(self.app.screen.query_one("#detail-body", Static).render())
             self.assertIn("claims 1", body)
@@ -127,7 +127,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
 
         self.store.link_ref(self.pid, "https://example.com/a", title="Design doc")
         async with self.app.run_test(size=(80, 24)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._open(pilot, "plan", self.pid)
             body = str(self.app.screen.query_one("#detail-body", Static).render())
             self.assertIn("references 1", body)
@@ -139,7 +139,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
         criterion = self.store.add_criteria("task", self.tid, "Task works")
         self.store.add_evidence(criterion.id, command="pytest", exit_code=0, actor="ci")
         async with self.app.run_test(size=(80, 24)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._open(pilot, "task", self.tid)
             body = str(self.app.screen.query_one("#detail-body", Static).render())
             self.assertIn("proof", body)
@@ -150,7 +150,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
         from textual.widgets import Static
 
         async with self.app.run_test(size=(80, 24)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._open(pilot, "plan", self.pid)
             screen = self.app.screen
             self.assertIsInstance(screen, DetailScreen)
@@ -210,7 +210,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
         )
 
         async with self.app.run_test(size=(100, 30)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             full = self.store.get_full("task", self.tid)
             assert full is not None
             repos = full.get("effective_repos") or full.get("repos") or []
@@ -256,7 +256,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
             merge_commit_sha="b" * 40,
         )
         async with self.app.run_test(size=(100, 30)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._open(pilot, "task", self.tid)
             body = str(self.app.screen.query_one("#detail-body", Static).render())
             self.assertIn("pull requests", body)
@@ -306,7 +306,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
             files=("a.py", "src/b.py"),
         )
         async with self.app.run_test(size=(100, 30)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._open(pilot, "task", self.tid)
             body = str(self.app.screen.query_one("#detail-body", Static).render())
             self.assertIn("source · 1 commits · 2 files", body)
@@ -328,7 +328,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
             state="open",
         )
         async with self.app.run_test(size=(100, 30)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             for kind, oid in (("milestone", self.sid), ("plan", self.pid)):
                 await self._open(pilot, kind, oid)
                 body = str(self.app.screen.query_one("#detail-body", Static).render())
@@ -341,7 +341,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
         from textual.widgets import Input
 
         async with self.app.run_test(size=(80, 24)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._open(pilot, "plan", self.pid)
             await pilot.press("e")
             await pilot.pause()
@@ -356,7 +356,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
         from textual.widgets import Input
 
         async with self.app.run_test(size=(80, 24)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._open(pilot, "task", self.tid)
             await pilot.press("e")
             await pilot.pause()
@@ -373,7 +373,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
         from textual.widgets import Static
 
         async with self.app.run_test(size=(80, 24)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._open(pilot, "task", self.tid)
             await pilot.press("a")
             await pilot.pause()
@@ -394,7 +394,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
 
     async def test_n_adds_child_by_kind(self):
         async with self.app.run_test(size=(80, 24)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._open(pilot, "plan", self.pid)
             await pilot.press("n")
             await pilot.pause()
@@ -418,7 +418,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
 
     async def test_delete_confirms_cascade_and_cancel_keeps_row(self):
         async with self.app.run_test(size=(80, 24)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._open(pilot, "plan", self.pid)
             await pilot.press("d")
             await pilot.pause()
@@ -433,7 +433,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
 
     async def test_delete_enter_defaults_to_cancel(self):
         async with self.app.run_test(size=(80, 24)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._open(pilot, "plan", self.pid)
             await pilot.press("d")
             await pilot.pause()
@@ -445,7 +445,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
 
     async def test_detail_fits_80x24(self):
         async with self.app.run_test(size=(80, 24)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._open(pilot, "plan", self.pid)
             page = self.app.screen.query_one("#detail-page")
             region = page.region

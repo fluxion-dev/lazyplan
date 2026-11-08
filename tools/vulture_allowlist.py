@@ -67,6 +67,12 @@ _.day
 _.percent
 _.elapsed_seconds
 attention_ids
+_.taxonomy
+_.deprecated_in
+_.removal
+SURFACES
+TAXONOMY
+PALETTE_TO_ACTION
 _.daily_rate
 _.eta_days
 _.complete

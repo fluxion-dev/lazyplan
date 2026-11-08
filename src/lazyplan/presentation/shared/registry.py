@@ -423,14 +423,8 @@ ACTIONS: tuple[Action, ...] = (
 PALETTE_TO_ACTION: dict[str, str] = {
     palette_id: action.id for action in ACTIONS for palette_id in action.palette_ids
 }
-TUI_ONLY: tuple[str, ...] = ()
 
 
 def by_id(action_id: str) -> Action | None:
     """Look up one canonical action."""
     return next((action for action in ACTIONS if action.id == action_id), None)
-
-
-def palette_action(palette_id: str) -> Action | None:
-    """Map a palette command ID to its canonical action."""
-    return by_id(PALETTE_TO_ACTION.get(palette_id, ""))

@@ -23,6 +23,8 @@ from .constants import DOUBLE_CLICK_WINDOW
 from .evidence_actions import EvidenceMixin
 from .finish_actions import FinishMixin
 from .git_actions import GitActionMixin
+from .history_actions import HistoryMixin
+from .navigation import NavEntry
 from .override import WRITE_COMMANDS, OverrideMixin
 from .palette_handlers import palette_handlers
 from .question_actions import QuestionMixin
@@ -43,6 +45,7 @@ from .status_actions import StatusMixin
 if _TEXTUAL_OK:
 
     class ActionMixin(
+        HistoryMixin,
         OverrideMixin,
         ApprovalMixin,
         ClaimMixin,
@@ -87,7 +90,13 @@ if _TEXTUAL_OK:
                 cb,
             )
 
-        def _open_detail(self, kind: str, oid: int, edit: bool = False) -> None:
+        def _open_detail(
+            self, kind: str, oid: int, edit: bool = False, record: bool = True
+        ) -> None:
+            if record:
+                entry = NavEntry("detail", kind, oid, self._nav_label(kind, oid))
+                self.state.history.push(entry)
+
             def cb(saved: bool | None) -> None:
                 if saved:
                     self._saved("saved detail")

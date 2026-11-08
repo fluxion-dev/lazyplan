@@ -8,7 +8,6 @@ from typing import Any
 from ... import services
 from ..shared.render import render_git_status
 from .base import AppBase
-from .screens.source import SourceScreen
 
 
 class GitActionMixin(AppBase):
@@ -86,7 +85,7 @@ class GitActionMixin(AppBase):
         if selected is None:
             return
         kind, oid = selected
-        self.push_screen(SourceScreen(self.store, kind, oid))
+        self.open_source(kind, oid)
 
     def action_git_capture(self) -> None:
         """Link a safe current HEAD to the selected row."""

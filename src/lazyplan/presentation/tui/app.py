@@ -1,8 +1,7 @@
 """Modal-palette Textual TUI: nav tree + live preview, one status line.
 
-Keys: j/k navigate, left/right fold, enter detail, c palette,
-  escape clear. Press c then type a prefix (new, cycle, tick,
-  fold, filter, ...) and enter runs the match.
+Keys: j/k navigate, left/right fold, enter detail, c palette, escape clear.
+  Press c then type a prefix (new, cycle, tick, fold, filter, ...) and enter runs it.
   Mouse click selects; double-click opens detail.
 Keyboard-only: agents use the `lpui` CLI against the same SQLite file; local edits
 bump reactive rev, external DB changes arrive via fingerprint() poll + feed toast.
@@ -98,6 +97,7 @@ if _TEXTUAL_OK:
             Binding("O", "toggle_override", "Override"),
             Binding("question_mark", "help", "Help"),
             Binding("q", "quit", "Quit"),
+            Binding("]", "history_forward", "Forward", show=False),
         ]
         rev = reactive(0, init=False)
 

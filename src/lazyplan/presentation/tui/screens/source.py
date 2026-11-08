@@ -270,8 +270,12 @@ if _TEXTUAL_OK:
             return data if isinstance(data, dict) else None
 
         def action_back(self) -> None:
-            """Close the source view."""
-            self.app.pop_screen()
+            """Close the source view and restore the prior selection."""
+            handler = getattr(self.app, "action_history_back", None)
+            if callable(handler):
+                handler()
+            else:
+                self.app.pop_screen()
 
         def action_open(self) -> None:
             """Open the selected reference in the browser."""

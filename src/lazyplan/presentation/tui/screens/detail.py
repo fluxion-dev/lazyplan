@@ -38,12 +38,13 @@ from ..views.detail import build_detail, detail_breadcrumb
 if TYPE_CHECKING:
     from ....core.ports.provenance import ProvenancePort
 from .base import _row
+from .detail_nav import DetailNavigationMixin
 from .detail_questions import QuestionActionsMixin
-from .forms import ConfirmScreen, FilterPromptScreen, NewMilestoneScreen, NewTaskScreen
+from .forms import FilterPromptScreen, NewMilestoneScreen, NewTaskScreen
 
 if _TEXTUAL_OK:
 
-    class DetailScreen(QuestionActionsMixin, NavigationMixin, Screen):
+    class DetailScreen(DetailNavigationMixin, QuestionActionsMixin, NavigationMixin, Screen):
         """Read-first detail page; `e` switches to an in-place edit form."""
 
         navigation_name = "detail"
@@ -132,7 +133,7 @@ if _TEXTUAL_OK:
             return dict(self._full.get(key, {}))
 
         def _breadcrumb(self) -> str:
-            return detail_breadcrumb(self._dstore, self.dkind, self.doid, self._obj())
+            return f"plans › {detail_breadcrumb(self._dstore, self.dkind, self.doid, self._obj())}"
 
         def _render_read(self) -> None:
             document = build_detail(
@@ -204,30 +205,6 @@ if _TEXTUAL_OK:
             self._snapshot = self._form_snapshot()
             self._show_mode()
             self.query_one("#d-title", Input).focus()
-
-        def action_open_source(self) -> None:
-            """Open the read-only source trail for this row."""
-            from .source import SourceScreen
-
-            self.app.push_screen(SourceScreen(self._dstore, self.dkind, self.doid))
-
-        def action_back(self) -> None:
-            if self._editing and self._is_dirty():
-
-                def cb(confirmed: bool | None) -> None:
-                    if confirmed:
-                        self.dismiss(None)
-
-                self.app.push_screen(
-                    ConfirmScreen(
-                        "Discard your unsaved changes?",
-                        confirm_label="Discard",
-                        variant="warning",
-                    ),
-                    cb,
-                )
-                return
-            self.dismiss(None)
 
         def action_save(self) -> None:
             if not self._editing:

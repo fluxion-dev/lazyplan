@@ -10,6 +10,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import StrEnum
 
+from .navigation import NavigationHistory
+
 
 class PlanMode(StrEnum):
     """Which plans the tree shows."""
@@ -47,3 +49,4 @@ class AppState:
     narrow: bool | None = None
     compact: bool = False
     wide: bool = False
+    history: NavigationHistory = field(default_factory=NavigationHistory)

@@ -321,7 +321,7 @@ def build_detail(
     pill = f" [reverse] {status.upper()} [/]" if status else ""
     head = (
         f"{status_word(status, 'rich')} [bold]{escape_markup(title)}[/]{pill}\n"
-        f"[dim]{detail_breadcrumb(store, kind, oid, obj)}[/]"
+        f"[dim]plans › {detail_breadcrumb(store, kind, oid, obj)}[/]"
     )
     lines: list[str] = []
     _read_text(lines, kind, obj)

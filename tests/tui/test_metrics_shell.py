@@ -9,6 +9,7 @@ from unittest import mock
 
 from lazyplan import services
 from lazyplan.core.entities import Status
+from lazyplan.services import metrics as metrics_service
 from lazyplan.store import Store
 
 try:
@@ -83,6 +84,8 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
     async def test_section_has_a_timeline_title(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.action_toggle_timeline()
             await pilot.pause()
             section = app.query_one("#metrics", MetricsSection)
             self.assertEqual(section.border_title, " timeline ")
@@ -418,6 +421,20 @@ class MetricsShellTest(unittest.IsolatedAsyncioTestCase):
             self.assertFalse(section.display)
             main = app.query_one("#main")
             self.assertTrue(_within(main.region, 80, 24))
+
+    async def test_hidden_timeline_skips_snapshot_work(self) -> None:
+        with mock.patch(
+            "lazyplan.services.metrics.snapshot", wraps=metrics_service.snapshot
+        ) as snapshot:
+            app = tui_mod.create_app(self.db)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                app.refresh_all()
+                await pilot.pause()
+                self.assertEqual(snapshot.call_count, 0)
+                app.action_toggle_timeline()
+                await pilot.pause()
+                self.assertGreaterEqual(snapshot.call_count, 1)
 
     async def test_refresh_pushes_a_snapshot_without_writing(self) -> None:
         app = tui_mod.create_app(self.db)

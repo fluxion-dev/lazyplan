@@ -38,7 +38,7 @@ class MetricsController:
 
         self._stop_debounce()
         section = query_one_opt(self.app, "#metrics", MetricsSection)
-        if section is None:
+        if section is None or not section.display:
             return
         selected = self.app.selected
         snapshot = metrics_mod.snapshot(

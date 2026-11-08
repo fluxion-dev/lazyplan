@@ -10,6 +10,27 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from .legacy_commands import LEGACY_COMMANDS as LEGACY_COMMANDS
+from .registry_commands import (
+    APP,
+    COMMANDS,
+    CREATE,
+    EDIT,
+    NOUNS,
+    PALETTE_COMMANDS,
+    PALETTE_SECTIONS,
+    SECTIONS,
+    VERBS,
+    VIEW,
+    Command,
+    matching,
+    palette_commands,
+    palette_sections,
+)
+from .registry_commands import (
+    by_id as by_command_id,
+)
+
 ENTITIES: tuple[str, ...] = (
     "plan",
     "milestone",
@@ -428,3 +449,31 @@ PALETTE_TO_ACTION: dict[str, str] = {
 def by_id(action_id: str) -> Action | None:
     """Look up one canonical action."""
     return next((action for action in ACTIONS if action.id == action_id), None)
+
+
+__all__ = [
+    "ACTIONS",
+    "APP",
+    "Action",
+    "COMMANDS",
+    "CREATE",
+    "Command",
+    "EDIT",
+    "ENTITIES",
+    "LEGACY_COMMANDS",
+    "NAMESPACES",
+    "NOUNS",
+    "PALETTE_COMMANDS",
+    "PALETTE_SECTIONS",
+    "PALETTE_TO_ACTION",
+    "SECTIONS",
+    "SURFACES",
+    "TAXONOMY",
+    "VERBS",
+    "VIEW",
+    "by_command_id",
+    "by_id",
+    "matching",
+    "palette_commands",
+    "palette_sections",
+]

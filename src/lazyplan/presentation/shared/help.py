@@ -1,8 +1,8 @@
-"""Help text and key hints derived from the palette registry."""
+"""Help text and key hints derived from the canonical registry."""
 
 from __future__ import annotations
 
-from .palette import COMMANDS
+from .registry import COMMANDS
 
 NAV_ROWS: tuple[tuple[str, str], ...] = (
     ("j/k, up/down, click", "move cursor / select"),

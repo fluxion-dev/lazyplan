@@ -67,6 +67,16 @@ class TestRegistry(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertGreater(int(result.stdout.strip()), 0)
 
+    def test_palette_facade_delegates_to_the_registry(self):
+        from lazyplan.presentation.shared import palette
+
+        self.assertIs(palette.COMMANDS, registry.COMMANDS)
+        self.assertIs(palette.Command, registry.Command)
+        self.assertEqual(registry.PALETTE_TO_ACTION, {c.id: c.action_id for c in registry.COMMANDS})
+        for command in registry.COMMANDS:
+            with self.subTest(command=command.id):
+                self.assertIsNotNone(registry.by_id(command.action_id))
+
 
 if __name__ == "__main__":
     unittest.main()

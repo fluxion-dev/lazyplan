@@ -100,6 +100,7 @@ class Measurement:
     queries: int | None
     connections: int | None
     note: str = ""
+    nodes: int | None = None
 
 
 @dataclass(frozen=True)
@@ -108,6 +109,7 @@ class Budget:
 
     queries: int
     ms: float
+    nodes: int | None = None
 
 
 # These are the pre-optimization ceilings. Tighten them as each milestone lands;
@@ -124,7 +126,8 @@ BUDGETS: dict[str, Budget] = {
     "full_many": Budget(20, 1_500),
     "export_all": Budget(40, 5_000),
     "audit_report": Budget(250, 5_000),
-    "tui_refresh": Budget(150, 8_000),
+    "tui_first_paint": Budget(150, 8_000, nodes=100),
+    "tui_expand": Budget(150, 8_000, nodes=120),
     "git_status": Budget(0, 3_000),
     "git_show": Budget(0, 3_000),
 }
@@ -496,24 +499,27 @@ def _git_metrics(repo: Path | None, repeat: int) -> list[Measurement]:
     ]
 
 
-def _tui_measurement(db: Path, repeat: int) -> Measurement:
+def _tui_measurements(db: Path, repeat: int) -> list[Measurement]:
     try:
         from lazyplan.presentation import tui
         from lazyplan.presentation.tui.controllers import updates as update_mod
+        from lazyplan.presentation.tui.state import PlanMode
     except ImportError:
-        return Measurement("tui_refresh", None, None, None, "textual not installed")
+        return [
+            Measurement("tui_first_paint", None, None, None, "textual not installed"),
+            Measurement("tui_expand", None, None, None, "textual not installed"),
+        ]
 
     old_spinner = os.environ.get("LAZYPLAN_NO_SPINNER")
     os.environ["LAZYPLAN_NO_SPINNER"] = "1"
     try:
 
-        async def run() -> Measurement:
-            app = tui.create_app(str(db))
+        async def run() -> list[Measurement]:
+            app = tui.create_app(str(db), startup_mode=PlanMode.BOTH)
             with mock.patch.object(update_mod, "refresh_update", return_value=None):
                 async with app.run_test(size=(120, 40)) as pilot:
                     await pilot.pause()
-                    for _ in range(max(1, repeat)):
-                        app.refresh_all()
+                    app.refresh_all()
                     best = float("inf")
                     for _ in range(max(1, repeat)):
                         start = time.perf_counter()
@@ -521,12 +527,41 @@ def _tui_measurement(db: Path, repeat: int) -> Measurement:
                         best = min(best, (time.perf_counter() - start) * 1_000)
                     with sql_counter() as state:
                         app.refresh_all()
-                    return Measurement(
-                        "tui_refresh",
+                    first = Measurement(
+                        "tui_first_paint",
                         round(best, 1),
                         state["queries"],
                         state["connections"],
+                        nodes=len(app._row_nodes),
                     )
+                    plan_key = next((key for key in app._row_nodes if key[0] == "plan"), None)
+                    if plan_key is None:
+                        return [
+                            first,
+                            Measurement("tui_expand", None, None, None, "no plan row"),
+                        ]
+                    app.tree_controller.load_children(plan_key)
+                    milestone_key = next(
+                        (key for key in app._row_nodes if key[0] == "milestone"), None
+                    )
+                    start = time.perf_counter()
+                    if milestone_key is not None:
+                        app.tree_controller.load_children(milestone_key)
+                    expand_ms = (time.perf_counter() - start) * 1_000
+                    with sql_counter() as expand_state:
+                        app.tree_controller.load_children(plan_key)
+                        if milestone_key is not None:
+                            app.tree_controller.load_children(milestone_key)
+                    return [
+                        first,
+                        Measurement(
+                            "tui_expand",
+                            round(expand_ms, 1),
+                            expand_state["queries"],
+                            expand_state["connections"],
+                            nodes=len(app._row_nodes),
+                        ),
+                    ]
 
         return asyncio.run(run())
     finally:
@@ -550,9 +585,10 @@ def run(
         metrics = _core_metrics(store, fixture, max(1, repeat))
         metrics.extend(_git_metrics(_make_git_repo(base), max(1, repeat)))
         if include_tui:
-            metrics.append(_tui_measurement(fixture.db, max(1, repeat)))
+            metrics.extend(_tui_measurements(fixture.db, max(1, repeat)))
         else:
-            metrics.append(Measurement("tui_refresh", None, None, None, "disabled by --no-tui"))
+            metrics.append(Measurement("tui_first_paint", None, None, None, "disabled by --no-tui"))
+            metrics.append(Measurement("tui_expand", None, None, None, "disabled by --no-tui"))
         return {
             "fixture": fixture.counts,
             "metrics": [asdict(metric) for metric in metrics],
@@ -561,12 +597,13 @@ def run(
 
 def summary(result: dict) -> list[str]:
     """Readable metric table for humans."""
-    lines = ["metric                  ms      queries  connections"]
+    lines = ["metric                  ms      queries  connections     nodes"]
     for metric in result["metrics"]:
         ms = "-" if metric["ms"] is None else f"{metric['ms']:.1f}"
         queries = "-" if metric["queries"] is None else str(metric["queries"])
         connections = "-" if metric["connections"] is None else str(metric["connections"])
-        line = f"{metric['name']:<22} {ms:>7} {queries:>9} {connections:>12}"
+        nodes = "-" if metric.get("nodes") is None else str(metric["nodes"])
+        line = f"{metric['name']:<22} {ms:>7} {queries:>9} {connections:>12} {nodes:>9}"
         if metric["note"]:
             line += f"  ({metric['note']})"
         lines.append(line)
@@ -591,6 +628,12 @@ def check(result: dict, budgets: dict[str, Budget] | None = None) -> list[str]:
             continue
         if metric["queries"] > budget.queries:
             failures.append(f"{name}: {metric['queries']} queries > {budget.queries}")
+        if budget.nodes is not None:
+            nodes = metric.get("nodes")
+            if nodes is None:
+                failures.append(f"{name}: node count unavailable")
+            elif nodes > budget.nodes:
+                failures.append(f"{name}: {nodes} nodes > {budget.nodes}")
         if metric["ms"] is None:
             if name in OPTIONAL_METRICS:
                 continue

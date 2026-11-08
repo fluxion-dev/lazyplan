@@ -34,13 +34,19 @@ The gate runs:
 - the docs allowlist and link gate (`tools/check-docs.py`)
 - the site discoverability check (`tools/check-site.py`)
 - a clean-install smoke that builds, installs, and runs both console scripts
-- the unittest suite on both system Python and the venv Python
 - the visual snapshots and the performance budgets
+- the unittest suite on both system Python and the venv Python
 
 On Windows, run it from Git Bash. CI runs the same gates on Linux and macOS for
 every change; Windows runs the suite nightly in
 `.github/workflows/ci-windows.yml`. The required `gates` check passes when
 Ubuntu and macOS pass.
+
+For a Windows-only failure, dispatch `.github/workflows/windows-focus.yml` with
+the failing `tests` selection. It finishes in minutes and uploads
+`snapshot_report.html` plus the SVG snapshots. Leave `update_snapshots` off
+until the diff is understood; it is only for collecting a candidate snapshot
+from Windows.
 
 Fix failures rather than editing the scripts around them. If you add a module,
 add tests and type annotations with it.

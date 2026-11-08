@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from ...store import Store
 
 
-def _progress_map(store: Store) -> dict[int, tuple[int, int]]:
+def _plan_progress(store: Store) -> dict[int, tuple[int, int]]:
     """Task progress per plan, independent of status/limit filters."""
     out: dict[int, tuple[int, int]] = {}
     for plan, milestones in service_tree(store, status=None, archived="show"):
@@ -53,7 +53,7 @@ def summary_lines(
             tasks = [task for _, items in milestones for task in items]
             progress[plan.id] = progress_counts(tasks)
     else:
-        progress = _progress_map(store)
+        progress = _plan_progress(store)
     lines = []
     for plan, _milestones in entries:
         done, total = progress.get(plan.id, (0, 0))

@@ -454,6 +454,45 @@ def by_id(action_id: str) -> Action | None:
     return next((action for action in ACTIONS if action.id == action_id), None)
 
 
+def route_depth(action: Action) -> int:
+    """Interactions from the main tree to this action's destination."""
+    if action.route and action.route[0] in ("tree", "any"):
+        return len(action.route) - 1
+    return len(action.route)
+
+
+def check_reachability(actions: tuple[Action, ...] = ACTIONS, max_depth: int = 3) -> list[str]:
+    """Return one error per route that breaks the depth budget."""
+    errors: list[str] = []
+    for action in actions:
+        depth = route_depth(action)
+        if depth > max_depth:
+            path = " › ".join(action.route)
+            errors.append(f"{action.id}: {' › '.join(action.route)} is {depth} steps ({path})")
+    return errors
+
+
+def reachability_report(max_depth: int = 3) -> dict[str, object]:
+    """Machine-readable depth per action and entity for the validation gate."""
+    rows = [
+        {"id": action.id, "route": list(action.route), "depth": route_depth(action)}
+        for action in ACTIONS
+    ]
+    entities = {
+        entity: min(
+            (route_depth(action) for action in ACTIONS if action.taxonomy == entity),
+            default=None,
+        )
+        for entity in ENTITIES
+    }
+    return {
+        "max_depth": max_depth,
+        "actions": rows,
+        "entities": entities,
+        "over_budget": check_reachability(ACTIONS, max_depth),
+    }
+
+
 __all__ = [
     "ACTIONS",
     "APP",

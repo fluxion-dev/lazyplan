@@ -220,6 +220,35 @@ class NavigationHostTest(unittest.IsolatedAsyncioTestCase):
             self.assertNotIsInstance(self.app.screen, DetailScreen)
             self.assertEqual(self.app.selected, ("task", self.task.id))
 
+    async def test_overlays_fit_both_viewports(self) -> None:
+        from lazyplan.presentation.tui.screens import HelpScreen as Help
+        from lazyplan.presentation.tui.screens import PaletteScreen as Palette
+
+        for size in ((80, 24), (120, 40)):
+            with self.subTest(size=size):
+                app = tui_mod.create_app(self.db)
+                async with app.run_test(size=size) as pilot:
+                    await settle(pilot)
+                    app.selected = ("task", self.task.id)
+                    await pilot.press("enter")
+                    await pilot.pause()
+                    app.push_screen(Palette(app._palette_context()))
+                    await pilot.pause()
+                    dialog = app.screen.query_one("#dlg")
+                    region = dialog.region
+                    self.assertLessEqual(region.x + region.width, size[0])
+                    self.assertLessEqual(region.y + region.height, size[1])
+                    await pilot.press("escape")
+                    await pilot.pause()
+                    app.push_screen(Help())
+                    await pilot.pause()
+                    panel = app.screen.query_one("#help")
+                    region = panel.region
+                    self.assertLessEqual(region.x + region.width, size[0])
+                    self.assertLessEqual(region.y + region.height, size[1])
+                    await pilot.press("escape")
+                    await pilot.pause()
+
     async def test_q_quits_from_detail(self) -> None:
         self.app = tui_mod.create_app(self.db)
         async with self.app.run_test(size=(120, 40)) as pilot:

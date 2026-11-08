@@ -11,6 +11,11 @@ once instead of landing unnoticed.
 
 ### Added
 
+- **Lazy plan tree.** Collapsed plans and milestones no longer materialize child
+  rows. Both mode paints the plan list immediately and loads a branch only when
+  it opens, so large journals no longer stall on launch.
+- **Bounded activity ordering.** Recent-first plan ordering no longer reads every
+  event into Python, and Active or Finished mode loads only that mode's plans.
 - **Provenance hubs.** Cached pull requests and the activity feed are
   selectable screens. The source trail cross-links commits, files, and PRs to
   their owning row; only the pull request refresh touches GitHub.

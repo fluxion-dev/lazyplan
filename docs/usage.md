@@ -309,6 +309,13 @@ its full milestone and task tree. `f` cycles Active, Finished, and Both; Both
 puts finished plans last. The mode only chooses plans, never hides a visible
 plan's children.
 
+The tree loads plan rows first. A plan's milestones appear when you expand it,
+and a milestone's tasks appear when you expand that milestone. A text filter
+loads the matching branches so a collapsed hit is never hidden. `z` folds one
+row, `Z` loads and opens every visible branch, and the palette's fold-all entry
+does the same. Status actions and previews work on rows as they load; collapsed
+branches exist in the journal but not as screen nodes.
+
 | key | action |
 |---|---|
 | `j`/`k`, arrows, click | move and select |

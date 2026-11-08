@@ -15,6 +15,7 @@ from .registry_commands import (
     APP,
     COMMANDS,
     CREATE,
+    DISABLED_FOR,
     EDIT,
     NOUNS,
     PALETTE_COMMANDS,
@@ -23,8 +24,10 @@ from .registry_commands import (
     VERBS,
     VIEW,
     Command,
+    Context,
     matching,
     palette_commands,
+    palette_context,
     palette_sections,
 )
 from .registry_commands import (
@@ -458,6 +461,8 @@ __all__ = [
     "COMMANDS",
     "CREATE",
     "Command",
+    "Context",
+    "DISABLED_FOR",
     "EDIT",
     "ENTITIES",
     "LEGACY_COMMANDS",
@@ -475,5 +480,6 @@ __all__ = [
     "by_id",
     "matching",
     "palette_commands",
+    "palette_context",
     "palette_sections",
 ]

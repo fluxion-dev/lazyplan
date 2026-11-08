@@ -38,6 +38,8 @@ if _TEXTUAL_OK:
     class ExportScreen(NavigationMixin, ModalScreen[Path | None]):
         """Pick a destination for one plan's Markdown export."""
 
+        navigation_name = "export"
+
         BINDINGS = [*NAV_BINDINGS, Binding("escape", "cancel", "Cancel")]
 
         def __init__(

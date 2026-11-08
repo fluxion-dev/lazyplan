@@ -53,6 +53,8 @@ if _TEXTUAL_OK:
     class SourceScreen(NavigationMixin, Screen):
         """Keyboard tree of repos, commits, files, and pull requests."""
 
+        navigation_name = "source"
+
         BINDINGS = [
             *NAV_BINDINGS,
             Binding("escape", "back", "Back", priority=True),

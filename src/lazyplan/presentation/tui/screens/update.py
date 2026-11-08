@@ -34,6 +34,8 @@ if _TEXTUAL_OK:
     class UpdateScreen(NavigationMixin, ModalScreen):
         """Show installed/latest and offer one staged download."""
 
+        navigation_name = "update"
+
         BINDINGS = [*NAV_BINDINGS, Binding("escape", "cancel", "Close", priority=True)]
 
         def __init__(

@@ -46,6 +46,8 @@ if _TEXTUAL_OK:
         BINDINGS = [*NAV_BINDINGS, Binding("escape", "cancel", "Cancel")]
         dialog_title = "ACTION"
 
+        navigation_name = "form"
+
         def action_back(self) -> None:
             """Esc and back both run the form's cancel path."""
             self.action_cancel()

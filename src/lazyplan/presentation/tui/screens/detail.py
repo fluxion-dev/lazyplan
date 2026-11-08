@@ -46,6 +46,8 @@ if _TEXTUAL_OK:
     class DetailScreen(QuestionActionsMixin, NavigationMixin, Screen):
         """Read-first detail page; `e` switches to an in-place edit form."""
 
+        navigation_name = "detail"
+
         BINDINGS = [
             *NAV_BINDINGS,
             Binding("escape", "back", "Back", priority=True),

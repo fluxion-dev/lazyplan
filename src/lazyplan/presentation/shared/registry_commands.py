@@ -49,6 +49,7 @@ class Command:
     aliases: tuple[str, ...] = ()
     help_group: str = ""
     help_hint: str = ""
+    screens: tuple[str, ...] = ("tree",)
     in_palette: bool = True
     tui_only: bool = False
 
@@ -600,6 +601,7 @@ COMMANDS: tuple[Command, ...] = (
         aliases=("override", "manual override", "edit mode", "read only", "unlock"),
         help_group="APP",
         help_hint="allow manual writes; every change is recorded",
+        screens=("any",),
         tui_only=True,
     ),
     Command(
@@ -612,6 +614,7 @@ COMMANDS: tuple[Command, ...] = (
         aliases=("theme", "dark", "light", "void", "mocha", "latte", "appearance"),
         help_group="APP",
         help_hint="cycle mocha / void / latte",
+        screens=("any",),
         tui_only=True,
     ),
     Command(
@@ -624,6 +627,7 @@ COMMANDS: tuple[Command, ...] = (
         aliases=("commands", "palette"),
         help_group="APP",
         help_hint="open the command palette",
+        screens=("any",),
         in_palette=False,
         tui_only=True,
     ),
@@ -633,7 +637,7 @@ COMMANDS: tuple[Command, ...] = (
         section=APP,
         action_id="plan.export",
         verb="export",
-        context="selection",
+        context="plan",
         handler="export_md",
         aliases=("export plan .md", "export md", "markdown"),
         help_group="APP",
@@ -649,6 +653,7 @@ COMMANDS: tuple[Command, ...] = (
         aliases=("update", "upgrade", "new version"),
         help_group="APP",
         help_hint="download a newer release for the next launch",
+        screens=("any",),
         tui_only=True,
     ),
     Command(
@@ -662,6 +667,7 @@ COMMANDS: tuple[Command, ...] = (
         aliases=("keys", "keybindings"),
         help_group="APP",
         help_hint="this help",
+        screens=("any",),
     ),
     Command(
         id="quit",
@@ -673,6 +679,7 @@ COMMANDS: tuple[Command, ...] = (
         aliases=("exit",),
         help_group="APP",
         help_hint="quit the screen",
+        screens=("any",),
         tui_only=True,
     ),
 )
@@ -746,6 +753,50 @@ def matching(query: str) -> list[tuple[str, list[Command]]]:
             sections.append((section, cmds, min(_match_rank(cmd, q) for cmd in cmds)))
     sections.sort(key=lambda item: item[2])
     return [(section, cmds) for section, cmds, _rank in sections]
+
+
+@dataclass(frozen=True)
+class Context:
+    """What the current screen can act on, independent of Textual."""
+
+    screen: str = "tree"
+    selected_kind: str | None = None
+    has_plan: bool = False
+    has_milestone: bool = False
+    on_root: bool = False
+
+
+#: Row kinds where a command is unavailable even though it has a selection.
+DISABLED_FOR: dict[str, tuple[tuple[str, str], ...]] = {
+    "fold-one": (("task", "Nothing to fold"),),
+}
+
+
+def palette_context(ctx: Context) -> dict[str, str | None]:
+    """Palette availability for one context: id -> reason or None.
+
+    Every rule lives here so the app and the palette cannot drift apart: the
+    screen gate runs first, then the declaration on the command, then the
+    row-kind exceptions.
+    """
+    reasons: dict[str, str | None] = {}
+    for cmd in COMMANDS:
+        reason: str | None = None
+        if cmd.screens != ("any",) and ctx.screen not in cmd.screens:
+            reason = "Only available on the tree"
+        elif cmd.context == "selection" and ctx.selected_kind is None:
+            reason = "Select a row first"
+        elif cmd.context == "plan" and not ctx.has_plan:
+            reason = "Select a plan first"
+        elif cmd.context == "milestone" and not ctx.has_milestone:
+            reason = "Select a milestone first"
+        else:
+            for kind, why in DISABLED_FOR.get(cmd.id, ()):
+                if ctx.selected_kind == kind:
+                    reason = why
+                    break
+        reasons[cmd.id] = reason
+    return reasons
 
 
 PALETTE_COMMANDS = tuple((cmd.id, cmd.label) for cmd in palette_commands())

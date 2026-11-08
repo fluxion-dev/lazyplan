@@ -77,6 +77,41 @@ class TestRegistry(unittest.TestCase):
             with self.subTest(command=command.id):
                 self.assertIsNotNone(registry.by_id(command.action_id))
 
+    def test_palette_availability_is_table_driven(self):
+        empty = registry.palette_context(registry.Context(screen="tree"))
+        self.assertEqual(set(empty), {c.id for c in registry.COMMANDS})
+        self.assertEqual(empty["edit-selection"], "Select a row first")
+        self.assertEqual(empty["create-milestone"], "Select a plan first")
+        self.assertEqual(empty["create-task"], "Select a milestone first")
+        self.assertIsNone(empty["create-plan"])
+        self.assertIsNone(empty["help"])
+        task = registry.palette_context(registry.Context(selected_kind="task", has_plan=True))
+        self.assertEqual(task["fold-one"], "Nothing to fold")
+        detail = registry.palette_context(
+            registry.Context(screen="detail", selected_kind="task", has_plan=True)
+        )
+        self.assertIsNone(detail["help"])
+        self.assertIsNone(detail["quit"])
+        self.assertIsNone(detail["toggle-override"])
+        self.assertEqual(detail["edit-selection"], "Only available on the tree")
+
+    def test_every_disabled_action_explains_why(self):
+        contexts = (
+            registry.Context(screen="tree"),
+            registry.Context(screen="tree", selected_kind="task", has_plan=True),
+            registry.Context(screen="detail", selected_kind="plan", has_plan=True),
+            registry.Context(screen="form"),
+        )
+        for ctx in contexts:
+            for command_id, reason in registry.palette_context(ctx).items():
+                with self.subTest(screen=ctx.screen, command=command_id):
+                    self.assertTrue(reason is None or reason.strip(), command_id)
+
+    def test_context_module_has_no_screen_map(self):
+        source = (ROOT / "src/lazyplan/presentation/tui/context.py").read_text(encoding="utf-8")
+        self.assertIn("registry.palette_context", source)
+        self.assertNotIn('context["', source)
+
 
 if __name__ == "__main__":
     unittest.main()

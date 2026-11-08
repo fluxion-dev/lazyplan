@@ -88,7 +88,7 @@ class UiFallbackCase(unittest.TestCase):
         ):
             code = lpui_main(["--db", str(fresh)])
         self.assertEqual(code, 0)
-        self.assertIn("No plans yet", out.getvalue())
+        self.assertIn("No active plans", out.getvalue())
 
 
 if __name__ == "__main__":

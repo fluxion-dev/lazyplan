@@ -122,6 +122,18 @@ class TestMcpReadTools(unittest.TestCase):
         lint = json.loads(self._tool("lint", {"plan": 1})["content"][0]["text"])
         self.assertEqual(lint, [])
 
+    def test_moving_a_claimed_task_done_releases_the_lease(self):
+        moved = self._tool("move_row", {"kind": "task", "id": 1, "to": "done"})
+        self.assertFalse(moved.get("isError"))
+        self.assertEqual(self.store.get_task(1).status.value, "done")
+        self.assertIsNone(self.store.get_claim(1))
+
+    def test_moving_a_claimed_task_todo_releases_the_lease(self):
+        moved = self._tool("move_row", {"kind": "task", "id": 1, "to": "todo"})
+        self.assertFalse(moved.get("isError"))
+        self.assertEqual(self.store.get_task(1).status.value, "todo")
+        self.assertIsNone(self.store.get_claim(1))
+
     def test_plan_reads_include_approval_state(self):
         self.store.add_revision(self.plan_id, "a" * 64, "{}", reason="initial")
         shown = json.loads(

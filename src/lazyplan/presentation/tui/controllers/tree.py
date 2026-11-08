@@ -9,23 +9,39 @@ from textual.widgets.tree import TreeNode
 
 from .... import services
 from ....core.entities import Milestone, Plan, Status, Task
+from ....core.policies.planning import progress_counts
 from ...shared.design import apply_mark, status_prefix
 from ...shared.help import hint_bar
-from ..views.rows import RowSpec, milestone_spec, plan_spec, row_text, task_spec
+from ..views.rows import RowSpec, plan_spec, row_text
 from .filtering import TreeFilter
+from .lazy_branches import LazyBranchMixin
 
 if TYPE_CHECKING:
     from ..app import LazyplanApp
     from ..widgets.plan_tree import FoldTree
 
 
-class TreeController:
+class TreeController(LazyBranchMixin):
     """Owns the plan tree model and the row cache."""
 
     def __init__(self, app: LazyplanApp) -> None:
         self.app = app
         self.filters = TreeFilter(app)
         self._reflow_pending = False
+        self._by_plan: dict[int, list[tuple[Milestone, list[Task]]]] = {}
+        self._tasks_by_milestone: dict[int, list[Task]] = {}
+        self._milestone_plan: dict[int, int] = {}
+        self._task_milestone: dict[int, int] = {}
+        self._loaded: set[tuple[str, int]] = set()
+        self._model_keys: set[tuple[str, int]] = set()
+        self._visible_keys: set[tuple[str, int]] = set()
+        self._progress: dict[tuple[str, int], tuple[int, int]] = {}
+        self._source_stats: dict[tuple[str, int], tuple[int, int, int, int]] = {}
+        self._forge_map: dict = {}
+        self._vcs_map: dict = {}
+        self._claims_map: dict = {}
+        self._drift_map: dict = {}
+        self._loading = False
 
     @staticmethod
     def node_key(node: TreeNode) -> tuple[str, int] | None:
@@ -39,10 +55,10 @@ class TreeController:
         if isinstance(data, dict) and "kind" in data and "id" in data:
             self.app.selected = (data["kind"], int(data["id"]))
             self.app.update_preview()
-            self.app.metrics_controller.request()
+            self.app.metrics_controller.refresh()
 
     def apply_folds(self) -> None:
-        """Plans open to milestones, milestones to tasks, only when expanded."""
+        """Reflect saved expansion on the rows that exist; never load here."""
         try:
             for key, node in self.app._row_nodes.items():
                 if not node.allow_expand or not node.children:
@@ -55,39 +71,40 @@ class TreeController:
             self.app._refreshing = False
 
     def fold_all(self) -> None:
-        """Collapse every expandable row, or re-open all when fully expanded."""
-        keys = [
-            key for key, node in self.app._row_nodes.items() if node.allow_expand and node.children
-        ]
-        if not keys:
+        """Collapse every loaded row, or load and open every branch."""
+        expandable = [key for key in self._visible_keys if self.has_model_children(key)]
+        loaded = [key for key, node in self.app._row_nodes.items() if node.allow_expand]
+        if not loaded and not expandable:
             self.app.notify("nothing to fold")
             return
-        if all(key in self.app._expanded for key in keys):
-            for key in keys:
+        if expandable and all(key in self.app._expanded for key in expandable):
+            for key in loaded:
                 self.app._row_nodes[key].collapse()
             self.app._expanded.clear()
-            self.app._collapsed.update(keys)
+            self.app._collapsed.update(loaded)
             return
-        for key in keys:
-            self.app._row_nodes[key].expand()
-        self.app._expanded.update(keys)
-        self.app._collapsed.difference_update(keys)
+        self.expand_all()
 
     def fold_one(self) -> None:
         """Toggle the selected plan or milestone (z)."""
         if self.app.selected is None:
             self.app.notify("select a row first (z folds it)")
             return
-        node = self.app._row_nodes.get(self.app.selected)
-        if node is None or not node.allow_expand or not node.children:
+        key = self.app.selected
+        if not self.has_model_children(key):
             self.app.notify("nothing to fold here")
             return
-        key = self.app.selected
+        if key not in self.app._row_nodes:
+            self.ensure_path(key)
+        node = self.app._row_nodes.get(key)
+        if node is None:
+            return
         if key in self.app._expanded:
             node.collapse()
             self.app._expanded.discard(key)
             self.app._collapsed.add(key)
             return
+        self.load_branch(node, key)
         node.expand()
         self.app._expanded.add(key)
         self.app._collapsed.discard(key)
@@ -168,15 +185,9 @@ class TreeController:
         out: dict[tuple[str, int], tuple[int, int]] = {}
         for plan, milestones in base:
             all_tasks = [task for _, tasks in milestones for task in tasks]
-            out[("plan", plan.id)] = (
-                sum(1 for task in all_tasks if task.status == Status.DONE),
-                len(all_tasks),
-            )
+            out[("plan", plan.id)] = progress_counts(all_tasks)
             for milestone, tasks in milestones:
-                out[("milestone", milestone.id)] = (
-                    sum(1 for task in tasks if task.status == Status.DONE),
-                    len(tasks),
-                )
+                out[("milestone", milestone.id)] = progress_counts(tasks)
         return out
 
     def paint_mark(self, key: tuple[str, int]) -> None:
@@ -252,44 +263,80 @@ class TreeController:
         app._row_labels = {}
         app._row_specs = {}
         app.spinner_controller.rows = {}
-        base = services.tree(app.store, status=None, archived="hide")
-        progress = self.progress_map(base)
-        visible = self.filters.status_tree(base, app.status_filter)
-        if not (app.show_all or app.filter_text.strip()):
-            visible = visible[: services.DEFAULT_PLAN_LIMIT]
-        filtered = self.filters.filtered_tree(visible)
-        filtered.sort(key=lambda entry: entry[0].status == Status.DONE)
-        self.build_rows(
-            tree.root,
-            tree,
-            filtered,
-            progress,
-            app.store.forge_links_map(),
-            app.store.vcs_links_map(),
-            self.filters.source_stats(filtered),
-            app.store.claims_map(),
-            app.store.drift_counts(),
+        self._loaded.clear()
+        mode = {
+            "active": "active",
+            "finished": "finished",
+            "both": "all",
+        }[app.plan_mode.value]
+        base = services.tree(app.store, status=None, archived="show", plan_mode=mode)
+        self._prepare_model(base)
+        filtered = self.filters.filtered_tree(base)
+        self._visible_keys = set()
+        for plan, milestones in filtered:
+            self._visible_keys.add(("plan", plan.id))
+            for milestone, tasks in milestones:
+                self._visible_keys.add(("milestone", milestone.id))
+                self._visible_keys.update(("task", task.id) for task in tasks)
+        self._forge_map = app.store.forge_links_map()
+        self._vcs_map = app.store.vcs_links_map()
+        self._source_stats = self.filters.source_stats(
+            filtered, self._vcs_map, self._forge_map, app.store.repos_map()
         )
+        self._claims_map = app.store.claims_map()
+        self._drift_map = app.store.drift_counts()
+        self.build_plan_rows(tree.root, tree, filtered)
+        if app.filter_text.strip():
+            self.build_all_children()
         tree.root.expand()
-        app._collapsed &= set(app._row_nodes)
-        app._expanded &= set(app._row_nodes)
+        app._collapsed &= self._model_keys
+        app._expanded &= self._model_keys
+        self.restore_expanded()
+        for candidate in (prev_selected, prev_cursor):
+            if candidate in self._model_keys:
+                self.ensure_path(candidate)
         self.apply_folds()
         self.show_empty(not app._row_nodes)
         app.spinner_controller.paint()
         app.query_one("#hints", Label).update(hint_bar(max(10, app.size.width - 2), markup=True))
+        app.query_one("#nav").border_title = f" plans · {app.plan_mode.value} "
         self.restore_selection(tree, prev_selected, prev_cursor)
         app.metrics_controller.refresh()
         app._preview_key = None
         app.update_preview(force=True)
 
+    def _prepare_model(self, base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]) -> None:
+        """Index the model once so expansion never re-reads the database."""
+        self._by_plan = {plan.id: milestones for plan, milestones in base}
+        self._tasks_by_milestone = {
+            milestone.id: tasks for _, milestones in base for milestone, tasks in milestones
+        }
+        self._milestone_plan = {
+            milestone.id: plan.id for plan, milestones in base for milestone, _tasks in milestones
+        }
+        self._task_milestone = {
+            task.id: milestone.id
+            for _, milestones in base
+            for milestone, tasks in milestones
+            for task in tasks
+        }
+        self._progress = self.progress_map(base)
+        self._model_keys = set()
+        for plan, milestones in base:
+            self._model_keys.add(("plan", plan.id))
+            for milestone, tasks in milestones:
+                self._model_keys.add(("milestone", milestone.id))
+                self._model_keys.update(("task", task.id) for task in tasks)
+
     def on_expanded(self, node: TreeNode) -> None:
-        if self.app._refreshing:
+        if self.app._refreshing or self._loading:
             return
         key = self.node_key(node)
         if key is not None:
             self.app._collapsed.discard(key)
             if key[0] in ("plan", "milestone"):
                 self.app._expanded.add(key)
+                self.load_branch(node, key)
 
     def on_collapsed(self, node: TreeNode) -> None:
         if self.app._refreshing:
@@ -306,23 +353,22 @@ class TreeController:
         self.app.spinner_controller.remember(key, spec.status, text)
         return text
 
-    def build_rows(
+    def build_plan_rows(
         self,
         root: Any,
         tree: Tree,
         filtered: list,
-        progress: dict,
-        forge_map: dict,
-        vcs_map: dict,
-        source_stats: dict,
-        claims_map: dict,
-        drift_map: dict,
     ) -> None:
-        """Create plan/milestone/task nodes for one refresh."""
+        """Create only the plan rows for one refresh; children load on expand."""
         app = self.app
         for plan, milestones in filtered:
             plan_key = ("plan", plan.id)
-            plan_row_spec = plan_spec(plan, progress, source_stats, drift_map.get(plan.id, 0) > 0)
+            plan_row_spec = plan_spec(
+                plan,
+                self._progress,
+                self._source_stats,
+                self._drift_map.get(plan.id, 0) > 0,
+            )
             app._row_specs[plan_key] = plan_row_spec
             plan_text = self.render_row(plan_key, plan_row_spec, tree)
             plan_node = root.add(
@@ -331,24 +377,3 @@ class TreeController:
                 allow_expand=bool(milestones),
             )
             app._row_nodes[plan_key] = plan_node
-            for milestone, tasks in milestones:
-                milestone_key = ("milestone", milestone.id)
-                milestone_row_spec = milestone_spec(milestone, app.store, progress, source_stats)
-                app._row_specs[milestone_key] = milestone_row_spec
-                milestone_text = self.render_row(milestone_key, milestone_row_spec, tree)
-                milestone_node = plan_node.add(
-                    row_text(apply_mark(milestone_text, milestone_key in app.marked)),
-                    data={"kind": "milestone", "id": milestone.id},
-                    allow_expand=bool(tasks),
-                )
-                app._row_nodes[milestone_key] = milestone_node
-                for task in tasks:
-                    task_key = ("task", task.id)
-                    task_row_spec = task_spec(task, app.store, forge_map, vcs_map, claims_map)
-                    app._row_specs[task_key] = task_row_spec
-                    task_text = self.render_row(task_key, task_row_spec, tree)
-                    leaf = milestone_node.add_leaf(
-                        row_text(apply_mark(task_text, task_key in app.marked)),
-                        data={"kind": "task", "id": task.id},
-                    )
-                    app._row_nodes[task_key] = leaf

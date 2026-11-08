@@ -1,7 +1,8 @@
 # lazyplan usage
 
-The short start lives in the [README](../README.md). This page keeps the detail:
-install options, setup and layout, everyday commands, the screen, agent use, and data.
+The short start lives in the [README](../README.md). This page keeps the
+detail: install, setup and scope, everyday commands, the screen, agent use,
+provenance, and data.
 
 ## Install
 
@@ -25,7 +26,8 @@ everywhere in this guide, and the default `--actor` is `%USERNAME%`.
 ### Linux packages
 
 System packages include the CLI, man pages, and shell completions. Grab the
-matching `.deb` or `.rpm` from [Releases](https://github.com/fluxion-dev/lazyplan/releases).
+matching `.deb` or `.rpm` from
+[Releases](https://github.com/fluxion-dev/lazyplan/releases).
 
 ```bash
 # Fedora / RHEL / openSUSE
@@ -76,8 +78,11 @@ lpui upgrade --check
 `lpui upgrade` manages pipx and venv installs. System packages upgrade through
 `dnf` or `apt`. The TUI notifies and CLI stderr mentions new versions; stdout
 stays clean for `--json`. A successful upgrade re-runs setup with the new
-binary, including under `--json`, so hooks and the AGENTS pointer refresh
-without prompting.
+binary. Installed skills and hooks refresh silently, while a skill or hook
+surface added by the release is offered once on a terminal. Headless runs
+(`--json`, `--yes`, agent calls, and the Windows helper) leave those additions
+pending with no writes; `lpui doctor` names them, and the next interactive
+`lpui` or `lpui setup` asks again.
 
 On Windows the command and the TUI Update screen use a detached helper. lpui
 closes first, then the helper waits for the process to exit, updates the
@@ -91,12 +96,9 @@ anything. If the helper cannot start, close lpui and repair with
 `pipx install --force --backend pip lazyplan-tui`. A source checkout updates
 with `git pull`.
 
-#### Upgrading from 0.30.1 or earlier
-
-The 0.30.2 refactor moved the package into `core`, `services`,
-`infrastructure`, and `presentation`, and changed the `lpui`/`lazyplan`
-console-script entry points. Upgrading in place across that change is not
-supported. Use a forced reinstall in the environment that owns `lpui`:
+Upgrading from 0.30.1 or earlier is not supported in place: the package layout
+and console scripts changed. Force a reinstall in the environment that owns
+`lpui`:
 
 ```bash
 # pipx
@@ -107,101 +109,16 @@ python -m pip install --force-reinstall lazyplan-tui
 ```
 
 On Windows, add `--backend pip` to the pipx command. Do not use `lpui upgrade`
-or a plain `pipx upgrade` for this jump. The reinstall replaces only the
-program files; your database, templates, skills, hooks, and `~/.lazyplan` state
-are left in place. A forced reinstall is not needed once you are on 0.30.2 or
-newer.
+or a plain `pipx upgrade` for this jump. The reinstall replaces only the program
+files; your database, templates, skills, hooks, and `~/.lazyplan` state stay.
 
-### Metrics dashboard
+### Uninstall
 
-The bottom of the TUI keeps one read-only timeline card. It follows the row
-under the cursor and shows only that row plus its immediate children: a
-selected plan shows the plan lane and its milestones, a selected milestone
-shows that milestone and its tasks, and a selected task shows only the task
-lane. Ancestors and siblings never appear. With no selection the card shows
-`select a row`; an empty database shows `no plans yet`. Cursor changes
-refresh after a short debounce; status, text, and source filters, the plan
-limit, and space-marks never change scope. The card never writes to the
-database. The section takes 40% of the shell height (11-row minimum, 16-row
-maximum), carries a `timeline` border title and the scoped plan name (or
-`select a row`) in its border subtitle, and hides on terminals narrower than
-100 columns, so an 80x24 terminal keeps the tree and hides the side column
-and timeline.
-
-Each visible plan, milestone, and task gets one compact swimlane. A lane
-starts at its first `doing` event and ends at its last `doing` event, or at
-the current time while the work is open. A lane that has never entered doing
-keeps its `add` position and legend entry but draws no trace. Project,
-milestone, and task traces cover only `doing` intervals, so a pause leaves a
-gap and resumed work starts a new segment. Every segment gets start and
-finish dots, and any open lane gets a dim vertical `now` marker. The x-axis
-picks its tick count and date/time format from the visible timeline span, with
-unique labels from seconds through years. The empty state renders centered
-copy inside the chart.
-
-The horizontal legend sits at the top of the chart, wraps when the terminal is
-narrow, truncates titles with an ellipsis, and folds overflow into `+N more`.
-Projects use `═`, milestones use `─`, and tasks use `·`; lane colours are a
-secondary cue. When lanes outgrow the panel, the chart scrolls vertically so
-every lane remains reachable at one row each. The chart refreshes within the
-one-second database poll and advances open lanes and the `now` marker every 15
-seconds. Charts are drawn with `textual-plotext`; `theme/charts.py` maps the
-`lp-chart-lane-*`, `lp-chart-axis`, and `lp-chart-label` tokens to Plotext
-colours for the active theme.
-
-Every lane keeps a dim full-width baseline from the chart's left edge to its
-right edge, so each project, milestone, and task row stays visible even when it
-is not doing. Doing segments draw on top of that baseline. The lane under the
-cursor is emphasized: its segments render bold with a heavier glyph (`╍`
-project, `━` milestone, `●`
-task), and its legend entry is bold without a trailing `*`. The baseline itself
-is the same for every lane, so selection never changes it. Emphasis follows the
-cursor only, so ancestors, siblings, and space-marked rows keep their normal
-trace.
-
-### Staged updates in the TUI
-
-When a newer release exists, a toast appears once for that version. Press `U`
-(or run **Update lpui** from the
-palette) to open the Update screen. It shows the installed and latest versions,
-the detected install method, and **Download** and **Later**. On Windows a
-successful download also offers **Restart now**: lpui exits, the detached
-helper applies the wheel after the process is gone, writes a full log under
-`%LOCALAPPDATA%\lazyplan\logs\`, and relaunches. Choosing **Later** leaves the
-stage for the next launch, which hands off the same way.
-
-The TUI re-reads the shared update cache every 60 seconds, so a release
-published while the app is open appears without a restart. The network check
-runs at most once every 5 minutes through a shared gate under the lazyplan
-home, so several open instances still make one request. A failed check records
-a 15-minute backoff and keeps using the cached version instead of retrying
-every minute. When the installed version catches up, the chip clears.
-
-```bash
-LAZYPLAN_UPDATE_INTERVAL=30 lpui        # cache poll in seconds (default 60)
-LAZYPLAN_UPDATE_NETWORK_INTERVAL=600 lpui  # network refresh (default 300)
-LAZYPLAN_NO_UPDATE_CHECK=1 lpui        # disable both
-```
-
-Both values are clamped to safe bounds, and an invalid value falls back to its
-default. The CLI notice stays cache-only and never refreshes the network.
-
-Download fetches the exact wheel from PyPI, checks its SHA256 against the PyPI
-JSON, and caches it under the shared home (`~/.lazyplan/updates/`, or
-`%LOCALAPPDATA%\lazyplan\updates\` on Windows). The next time the TUI starts,
-lpui claims the stage, installs the cached wheel, and re-execs into the new
-version before the interface opens. Agent and machine-readable CLI calls never
-download or apply anything.
-
-The feature covers pipx and venv installs. rpm, deb, and source checkouts show
-their existing package-manager or `git pull` guidance instead of a Download
-button. A failed download leaves no stage behind. A failed apply keeps the old
-version runnable, parks the stage, and shows one notice on the next launch; the
-Update screen offers a retry after the next download.
-
-Downgrades are disabled. Staging, apply, and `lpui upgrade` all refuse a target
-older than or equal to the installed version, and there is no rollback flag.
-The Update screen hides Download when the latest release is not newer.
+Remove the program with `pipx uninstall lazyplan-tui` or your package manager.
+Your plans live in `~/.lazyplan/` (or `.agents/lazyplan/` in a repo); export
+them before deleting that folder. `lpui setup --no-skills --no-hooks` removes
+installed agent integrations, and `lpui setup --no-agents-pointer` removes the
+marked `AGENTS.md` section.
 
 ## Start
 
@@ -213,7 +130,7 @@ lpui
 The first run sets up lazyplan: it detects your coding agents, installs their
 skills, creates the database, and remembers the choices in
 `~/.lazyplan/setup.json`. On a terminal you get a short wizard; scripts, agents,
-and `--json` get the same defaults without prompts. No separate setup step to remember.
+and `--json` get the same defaults without prompts.
 
 Then create your first plan:
 
@@ -225,9 +142,7 @@ lpui plan add --title "my-plan" --why "reason" --what "scope"
 
 ## Setup and scope
 
-The full first-run, rerun, switch, and uninstall walkthrough lives in
-[setup](setup.md). Setup writes one layout. Re-run it any time to change
-placement or agents:
+Setup writes one layout. Re-run it any time to change placement or agents:
 
 ```bash
 lpui setup
@@ -274,6 +189,14 @@ finding; it does not ask on every command.
   never backed up.
 - If both databases contain plans, setup refuses to merge and prints
   export/import guidance instead.
+- A release can add a skill or hook host/event. Setup refreshes what is already
+  installed, then lists only the new items with one prompt: install all, not
+  now, or never. Install writes every listed file with a backup.
+- Not-now is remembered until the next version change; never is remembered
+  until that item's definition changes. Both choices live in
+  `~/.lazyplan/setup.json`.
+- `--no-skills` and `--no-hooks` are remembered across upgrades. New skills or
+  hooks stay pending and doctor reports them; pass `--hooks` to opt back in.
 - Only `lpui`, `lpui setup`, and `lpui upgrade` prompt. Agent calls set up
   silently and never wait for input.
 
@@ -292,15 +215,17 @@ local (gitignored) unless you force-add it.
 ### Setup flags and environment
 
 ```bash
-lpui setup --agents "opencode,claude"  # or all, or none; $LAZYPLAN_AGENTS
-lpui setup --skills-dir PATH           # or $LAZYPLAN_SKILLS_DIR
-lpui setup --no-skills                 # database only; $LAZYPLAN_NO_SKILLS
-lpui setup --hooks                     # install lifecycle hooks (default)
-lpui setup --no-hooks                  # remove installed lifecycle hooks
-lpui setup --agents-pointer            # add the marked AGENTS.md section
-lpui setup --no-agents-pointer         # remove the marked AGENTS.md section
-lpui setup --yes                       # apply without prompts
-lpui setup --json                      # machine-readable, no prompts
+lpui setup --placement repo|home      # where plans live
+lpui setup --agents "opencode,claude" # or all, or none; $LAZYPLAN_AGENTS
+lpui setup --skills-dir PATH          # or $LAZYPLAN_SKILLS_DIR
+lpui setup --no-skills                # database only; $LAZYPLAN_NO_SKILLS
+lpui setup --hooks                    # install lifecycle hooks, re-enabling after --no-hooks
+lpui setup --no-hooks                 # remove lifecycle hooks and remember the opt-out
+lpui setup --agents-pointer           # add the marked AGENTS.md section
+lpui setup --no-agents-pointer        # remove the marked AGENTS.md section
+lpui setup --yes                      # apply without prompts
+lpui setup --json                     # machine-readable, no prompts
+lpui --heal | --no-heal               # automatic repair on or off for this command
 ```
 
 Precedence is explicit flag, then environment, then remembered state, then
@@ -316,12 +241,45 @@ Unset or any other value uses mocha. Press `t` in the TUI to cycle the three
 palettes without restarting.
 `--placement repo` outside a git checkout falls back to home.
 
+| Variable | Meaning |
+| --- | --- |
+| `LAZYPLAN_DB` | Which database file to use (same as `--db`). |
+| `LAZYPLAN_PORCELAIN` | Terse tab-separated rows for active agents; `--json` still wins. |
+| `LAZYPLAN_NO_SETUP` | Skip first-run setup and upgrade review. |
+| `LAZYPLAN_AGENTS` | Default agent list for setup; an explicit flag wins. |
+| `LAZYPLAN_SKILLS_DIR` | Default skill directory for setup; an explicit flag wins. |
+| `LAZYPLAN_NO_SKILLS` | Install no agent skill. |
+| `LAZYPLAN_NO_HOOKS` | Silence installed hooks at runtime; does not remove them. |
+| `LAZYPLAN_NO_SPINNER` | Freeze the doing spinner in the TUI. |
+| `LAZYPLAN_THEME` | TUI palette: mocha, void, or latte (aliases dark, oled, light). |
+| `LAZYPLAN_NO_COLOR` | Disable setup wizard color. |
+| `NO_COLOR`, `CLICOLOR=0`, `TERM=dumb` | Plain setup output. |
+| `USER`, `USERNAME` | Used for `--actor` when you do not give one (`USERNAME` on Windows). |
+
+`doctor` and `upgrade` accept the global `--json`, `--porcelain`, `--version`,
+and `--actor`; `upgrade` adds `--check` and `--diagnose`.
+
+### Setup files
+
+| Path | Meaning |
+| --- | --- |
+| `~/.lazyplan/lazyplan.db` | Your plans, shared by every agent and folder (default home). |
+| `%LOCALAPPDATA%/lazyplan/` | The shared home on Windows, in place of `~/.lazyplan/`. |
+| `.agents/lazyplan/lazyplan.db` | The repo database (only with `lpui setup --placement repo`; keep it local). |
+| `.agents/lazyplan/config.json` | Repo marker; commit it with the plan. |
+| `.agents/lazyplan/templates/{plan,milestone,task}.md` | Repo creation templates; commit them to share defaults. |
+| `~/.lazyplan/templates/{plan,milestone,task}.md` | Home creation templates. |
+| `~/.lazyplan/setup.json` | Remembered setup choices and migration decisions. |
+| `~/.lazyplan/backups/<timestamp>/` | Tree-preserving backups of every touched file. |
+| `~/.agents/skills/lazyplan/SKILL.md` | Universal agent skill; per-tool skill directories are written too. |
+| `~/.config/opencode/plugins/lazyplan.js`, `~/.claude/settings.json`, `~/.gemini/settings.json`, `~/.codex/hooks.json`, `~/.cursor/hooks.json` | Managed read-only hook surfaces. |
+| `AGENTS.md` | Optional marked lazyplan section in a repo. |
+
 ## Everyday commands
 
 ```bash
 lpui list                         # plans and progress
 lpui list --tree                  # full plan/milestone/task tree
-lpui list --status doing          # filter by status
 lpui plan show --id 1             # why, what, criteria, milestones
 lpui task move --id 1 --to doing
 lpui criterion tick --id 1
@@ -336,44 +294,28 @@ tab-separated rows; `--json` wins when both are present.
 ## The screen
 
 Plans start collapsed. Press `right` or `z` to reveal milestones; tasks stay
-folded until you open their milestone. Completed plans are dimmed and sorted last.
+folded until you open their milestone. Completed plans are dimmed and sorted
+last. A doing row animates a small spinner; set `LAZYPLAN_NO_SPINNER=1` to
+freeze it.
 
-A doing row animates through `⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏` while work is in progress.
-The CLI, export, preview, and detail views keep the static `◐`; set
-`LAZYPLAN_NO_SPINNER=1` to freeze the tree.
+The main screen pairs the plan tree with a preview column: a two-line control
+strip, the selected row's reason, scope, next tasks, acceptance progress, a
+`git` card for linked checkouts and pull requests, and an `agents` card for
+active sessions and the last handoff. The timeline card stays hidden on launch;
+`T` or the palette's show/hide timeline command opens it for the session. When
+open, it follows the selected row and its immediate children.
 
-The TUI uses the Catppuccin-based `lazyplan-dark` theme by default. `t` cycles
-mocha, OLED-black `void`, and `latte`; `LAZYPLAN_THEME` selects one at launch.
-The main screen pairs the plan tree with a preview column: a sticky title and
-scrolling reason/scope/next/acceptance body sits above a `git` card for the
-linked checkouts, branch state, commits, and pull requests. At 100 columns and
-wider the tree and the side column share the width evenly. Rows reflow as you
-resize the terminal, so titles expand or truncate in place without a refresh.
-The `git` card
-grows with its content between 3 and 10 rows and gives the room back to the
-preview when the selection has no linked checkout. A `timeline` card closes the
-bottom of the screen. Reverse-video keycaps fill the hint bar; the same tokens
-drive the detail, source, export, palette, help, and form screens.
+On launch the tree opens on **Active** plans: every plan that is not done, with
+its full milestone and task tree. `f` cycles Active, Finished, and Both; Both
+puts finished plans last. The mode only chooses plans, never hides a visible
+plan's children.
 
-Run **Export plan as Markdown** from the palette (`c`, then `export`) to open a
-destination picker. It starts in your Downloads folder with
-`plan-P<id>.md` ready, browses folders, and lets you edit the filename. An
-existing file asks before it is replaced; a write error stays inside the
-picker so you can correct the path. `Esc` cancels without writing. The CLI
-equivalent is `lpui export --format markdown --plan ID --file PATH`; add
-`--force` to replace an existing file.
-
-Previews, details, and the source trail share one single-cell icon family:
-`◈` plan, `◇` milestone, `▹` task, `⎇` checkout, `◆` commit, `⇄` pull request,
-and `⌁` source. Rows keep the canonical status glyph and `KIND<id> title`
-grammar; the structural icons head sections and breadcrumbs.
-
-Plan, milestone, and task rows keep their stats in fixed columns. Source stats
-come first (progress, commit count, PR, stale), then state markers (blocked,
-claim, marked). Missing stats leave blank columns, so the stats block does not
-shift when a row changes state. Narrow terminals use compact forms and drop
-provenance slots first; task rows show a commit count (`2c`) rather than SHAs,
-and repo detail stays in the preview/GIT pane.
+The tree loads plan rows first. A plan's milestones appear when you expand it,
+and a milestone's tasks appear when you expand that milestone. A text filter
+loads the matching branches so a collapsed hit is never hidden. `z` folds one
+row, `Z` loads and opens every visible branch, and the palette's fold-all entry
+does the same. Status actions and previews work on rows as they load; collapsed
+branches exist in the journal but not as screen nodes.
 
 | key | action |
 |---|---|
@@ -384,14 +326,86 @@ and repo detail stays in the preview/GIT pane.
 | `e` / `s` / `x` / `a` / `d` | edit · advance status · tick next criterion · add criterion · delete |
 | `n` | create by context (plan, milestone, or task) |
 | `/` | filter by text |
-| `f` | change status filter |
-| `F` | change source filter: all, linked, PR, stale, unlinked, claims, blocked, attention, focus |
+| `f` | change plan mode: active, finished, both |
 | `g` | open the source trail for the selected row |
-| `A` | show all plans |
-| `?` | help |
-| `c` | command palette |
+| `[` / `]` | history back / forward, restoring the prior screen and selection |
+| `escape` | back from detail, source, and modals; clears the tree filter |
+| `?` | help, from any screen |
+| `c` | command palette, from any screen |
 | `t` | cycle theme: mocha, void, latte |
-| `q` | quit |
+| `T` | show or hide the timeline card |
+| `O` | toggle manual override mode (writes are blocked while off) |
+| `q` | quit, from any screen |
+
+On the detail page, `e` edits, `s` advances status, `x` ticks the next
+criterion, `p` records proof, `Q` adds a plan question, `ctrl+r` resolves one,
+`R` reopens one, `g` opens the source trail, `P` opens cached pull requests,
+`A` opens activity, and `escape` returns to the exact prior selection.
+Pressing `c` or `?` works there too; the palette disables actions the current
+screen cannot run and says why.
+
+### Trust hubs
+
+Criteria, evidence, questions, and references are selectable hubs, not
+read-only text. From the tree or a detail page, open **criteria hub**,
+**evidence hub**, **questions hub**, or **references hub** from the palette
+(`c`). On a detail page, `t` opens the criteria hub for that row directly.
+
+- Criteria: `a` adds, `x` ticks or reopens, `p` records proof, `l` and `L`
+  relate or unrelate a proving task, `d` deletes, and `enter` opens the
+  evidence rows for the selected criterion.
+- Evidence: each row shows pass or fail, the command, exit code, commit, note,
+  and proving task. `p` proves the selected criterion; `o` opens its pull
+  request or copies its commit.
+- Questions: `a` adds, `x` resolves an open question or reopens a resolved one,
+  and every row shows how many open questions still block plan readiness.
+- References: `a` links a URL, `o` opens it, and `d` unlinks it. Duplicate or
+  invalid URLs are rejected.
+
+`escape` returns to the parent screen and restores its selection. The hub
+header keeps the parent breadcrumb, so evidence never loses the criterion it
+proved.
+
+### Coordination hubs
+
+Claims, touch-points, sessions, comments, and notes are selectable hubs too.
+Open **claims hub**, **sessions hub**, or **comments and notes hub** from the
+palette; on a detail page `k`, `v`, and `m` open them directly. Click the
+agents pane to open the sessions hub.
+
+- Claims: rows show the holder, expiry, age, and any overlap with another
+  active claim that edits the same path. `a` claims the task, `x` renews, `d`
+  releases, `D` forces a takeover, and `l`/`L` add or remove touch-points.
+- Sessions: rows show actor, plan, branch, age, summary, handoff, and recent
+  events. `a` starts a session, `x` or `d` ends it with a summary, and the last
+  handoff stays visible after the session closes.
+- Comments and notes: `a` adds a comment, `n` adds a note, `x` resolves or
+  reopens a comment, and `u` hides resolved comments.
+
+Session and touch-point authoring are first-class screen hubs now; plan 135's
+CLI-only stance is superseded for those entities. Import, sync, and setup stay
+CLI-only.
+
+### Provenance and activity hubs
+
+Repos, commits, files, and pull requests are selectable in the source trail
+(`g`), and cached pull requests have their own hub (`P` on a detail page, or
+**Open pull request hub** in the palette). The **activity hub** (`A`, or
+**Open activity hub**) shows the feed and manual overrides.
+
+- Source trail: the tree groups checkout → commits → changed files, with pull
+  requests alongside. `enter` cross-links to the owning plan, milestone, or
+  task; `o` opens the selected commit, file, or pull request; `y` copies it;
+  `/` filters. A missing commit is marked stale, and an offline diff says so.
+- Pull requests: rows show state, checks, reviews, base and head refs, merge
+  data, and a stale marker. `a` links a URL, `d` unlinks, `o` opens it, and
+  `r` refreshes. Only `r` touches the network; every other path reads cache.
+- Activity: rows show actor, action, time, and target. `f` filters by actor,
+  `K` by kind, and `u` switches between all activity and manual overrides.
+  `enter` opens the plan, milestone, or task named by the event.
+
+The palette names match the CLI: `lpui pr list|show|link|unlink|refresh`,
+`lpui commits`, `lpui repos`, and `lpui feed --overrides` read the same data.
 
 The palette and the CLI use the same names: Create plan, Move to doing, Tick
 next criterion, Delete selection. The palette also has Bulk move to doing/done,
@@ -402,33 +416,50 @@ state once. Bulk delete and archive stay single-row.
 `/` searches titles, descriptions, why/what, notes, comments, claim actors,
 blocked reasons, and issue refs. Marks are session-only and survive refreshes.
 
-## Performance
+### Manual override mode
 
-lazyplan reads in bulk. The tree, lists, export, audit, MCP, and the TUI
-refresh each load their rows in a bounded number of queries instead of one per
-row. On the 88-plan, 789-task fixture the tree falls from 909 queries to 12,
-`list --json` from 7,853 to 18, export from 18,612 to 26, and TUI refresh from
-5,148 to 139.
+The screen is read-only by default. Press `O` (or run **Toggle manual
+override** from the palette) to enable writes; the red banner and the `OVERRIDE`
+nav subtitle stay visible while it is on. Press `O` again to return to
+read-only.
 
-`tools/perf_bench.py --check` is part of the gate suite and runs on Linux,
-macOS, and Windows. The method, before and after table, and query budgets live
-in [performance](performance.md).
+Every write from the screen is deliberate and recorded. The event names the
+target, the action, and, for a risky write, the reason you typed. Deleting a
+row and taking over a claim ask for a reason first; cancelling leaves the row
+or claim untouched. See only those rows with:
 
-CLI reads use a cached update notice, so list, show, next, hooks, MCP, and
-porcelain calls make no network request.
+```bash
+lpui feed --overrides
+```
+
+The normal `lpui feed` still shows every event. Agents and the CLI continue to
+write directly; override mode only gates the screen.
+
+The palette carries the work that does not need a dedicated key. **Approve
+plan scope**, **Show plan diff**, **Prove criterion**, **Add / Resolve / Reopen
+plan question**, **Link / Unlink external reference**, **Claim task**, **Block
+task**, **Unblock task**, and **Finish task** all run from the same palette.
+Run **Export plan as Markdown** to open a destination picker; the CLI
+equivalent is `lpui export --format markdown --plan ID --file PATH`
+(add `--force` to replace an existing file).
+
+Select a plan, milestone, or task and press `g` to browse the source trail:
+checkout → commits → changed files, with linked pull requests alongside. The
+preview shows a read-only diff; large diffs stop at 20 files / 300 lines.
+`o` opens the selected commit, PR, or file, `y` copies it, and `/` filters.
 
 ## Agents
 
 Every command accepts `--json`. Journal commands also accept `--porcelain` for
 the active loop. Writes accept `--actor NAME`; the default is `$USER`
-(`%USERNAME%` on Windows). The
-activity feed shows who changed what.
+(`%USERNAME%` on Windows). The activity feed shows who changed what.
 
 ```bash
 lpui --actor helper --porcelain task add --milestone 1 --title "Draft proposal"
 lpui --actor helper --porcelain list --tree
 lpui --actor helper plan show --id 1
 lpui feed --json --follow
+lpui feed --overrides              # only manual changes made from the screen
 ```
 
 Your agent is expected to work from the plan, not invent it:
@@ -438,22 +469,25 @@ Your agent is expected to work from the plan, not invent it:
   assumptions.
 - Look up ids with `list`; never guess them.
 - Prefer `edit` and `move` over deleting and re-creating.
-- Work in creation order.
-- Plan the commit sequence before coding: every task lands as one or more
-  small, green commits, never one batch for the whole plan or milestone.
+- Work in creation order, and plan the commit sequence before coding: every
+  task lands as one or more small, green commits, never one batch for the
+  whole plan or milestone.
 - Name each task's expected commit slice and verification in its desc, and
   commit after each task completes rather than deferring work to the end.
 - Link commits after the fact with `lpui link` or `task finish`; no commit
-  trailer is required. These rules apply to new plans; existing plans are
-  not rewritten.
+  trailer is required.
 - Write rows for scanning: short paragraphs and sections, no placeholder text.
 - If the host supports MCP, prefer `lpui mcp`; otherwise use `--porcelain`.
-- Check flow health with `lpui stats --since 7.days`; the human screen uses the Attention filter.
-- Leave review comments with `comment add` and share a read-only plan with `share`; sync is plan-granularity.
-- Use `task finish --require-pr --require-checks` when done must wait for evidence; overrides are recorded.
-- Import provider issues with `issue import`; re-import refreshes source metadata only and never writes back.
-- Relate every plan criterion to a proving task and run `lpui --porcelain
-  lint --plan P` before check-off.
+- Check flow health with `lpui stats --since 7.days`; the human screen uses the
+  Attention filter.
+- Leave review comments with `comment add` and share a read-only plan with
+  `share`; sync is plan-granularity.
+- Use `task finish --require-pr --require-checks` when done must wait for
+  evidence; overrides are recorded.
+- Import provider issues with `issue import`; re-import refreshes source
+  metadata only and never writes back.
+- Relate every plan criterion to a proving task and run
+  `lpui --porcelain lint --plan P` before check-off.
 - Create the whole tree in one JSON write with `plan apply`; start from
   `plan recipe feature|bugfix|refactor` and edit the words before applying.
 - Start a session with `lpui --porcelain next` to claim work, or
@@ -487,26 +521,6 @@ Every row has the same six columns, in this order, with no header:
 Tabs and newlines inside text become spaces, so one record always stays on one
 line. Fields are never truncated.
 
-```bash
-lpui --actor helper --porcelain plan add --title "API v2" --why ".." --what ".."
-lpui --actor helper --porcelain plan apply --file plan.json --dry-run
-lpui --actor helper --porcelain plan recipe feature
-lpui --actor helper --porcelain criterion add --kind plan --id 1 --text "Works offline"
-lpui --actor helper --porcelain milestone add --plan 1 --title "Feature Y" --desc ".."
-lpui --actor helper --porcelain task add --milestone 1 --title "Do X" --desc ".."
-lpui --actor helper --porcelain task move --id 2 --to doing
-lpui --porcelain next
-lpui --porcelain claims
-lpui --porcelain note add --kind task --id 2 --text "Decision or handoff"
-lpui --porcelain task block --id 2 --reason "waiting"
-lpui --porcelain criterion relate --id 1 --task 2
-lpui --porcelain trace --plan 1
-lpui --porcelain lint --plan 1
-lpui --porcelain list --tree
-lpui --porcelain plan show --id 1
-lpui --porcelain context --max-chars 4000
-```
-
 ```text
 plan	1	doing	API v2	-	0/1
 milestone	1	doing	Feature Y	plan:1	0/1
@@ -515,8 +529,6 @@ task	2	doing	Do X	milestone:1	-
 
 `show` keeps why, what, desc, criteria, and children; it omits linked repos,
 commits, and pull requests. Use `--json` when you need those full records.
-The record families for brief, context, audit, feed, info, commits, repos, git
-status, git scan, and PR reads are documented in `src/lazyplan/porcelain.py`.
 
 ### Plan documents and recipes
 
@@ -533,67 +545,25 @@ The document is JSON with `plan` and `milestones`; each milestone carries
 same key is a no-op, and a failure rolls the whole tree back. `--dry-run`
 validates the document and prints the intended tree without writing.
 
-```json
-{
-  "plan": {
-    "key": "api-v2",
-    "title": "API v2",
-    "why": "Why this matters.",
-    "what": "## Scope\n\n- What is in and out.",
-    "criteria": ["Works offline"]
-  },
-  "milestones": [
-    {
-      "key": "auth",
-      "title": "Auth refresh",
-      "desc": "As a user, I want the change.",
-      "tasks": [
-        {
-          "key": "rotate",
-          "title": "Rotate tokens",
-          "desc": "Approach and file refs.\n\nCommit: one slice.\n\nVerify: tests pass."
-        }
-      ]
-    }
-  ]
-}
-```
-
 `feature`, `bugfix`, and `refactor` recipes are packaged skeletons with QA,
 refactoring, and documentation tasks. Edit the words, then apply the document.
 
-### Context packet
-
-`lpui context` is the read-only cold-start packet:
+### Context and claims
 
 ```bash
-lpui context --max-chars 4000
-lpui context --json
-lpui --porcelain context
-```
-
-It returns the active plan, the doing task and its claim, the next three open
-tasks, open criteria, recent decisions and notes, recent commits, unresolved
-comments, and active claims. The budget is deterministic: low-priority
-sections drop first. The same packet is available as the MCP resource
-`lazyplan://context` (or `lazyplan://context/2000` for a budget) and in the
-session-start and pre-compact hook context.
-
-### Claims, notes, and blocked work
-
-An active agent can claim work atomically instead of racing for the same task:
-
-```bash
-lpui --porcelain next                        # claim the first eligible todo
-lpui --porcelain claim --id 3 --ttl 30m      # claim a specific task
+lpui --porcelain context --max-chars 4000  # active plan, next work, proof, claims
+lpui --porcelain brief                     # active plan, doing task, next task, loose commits
+lpui --porcelain next                      # claim the first eligible todo
 lpui --porcelain claim renew --id 3 --ttl 1.hours
 lpui --porcelain claim release --id 3
-lpui --porcelain claims                      # aliases: who
 lpui --porcelain note add --kind task --id 3 --text "Decision or handoff"
-lpui --porcelain note list --kind task --id 3
-lpui --porcelain task block --id 3 --reason "waiting on design"
-lpui --porcelain task unblock --id 3
 ```
+
+`context` returns the active plan, the doing task and its claim, the next three
+open tasks, open criteria, recent decisions and notes, recent commits,
+unresolved comments, and active claims. The budget is deterministic:
+low-priority sections drop first. The same packet is the MCP resource
+`lazyplan://context` (or `lazyplan://context/2000` for a budget).
 
 A claim is a lease, not an owner. It carries the actor, start, expiry, and an
 optional note; the default TTL is 30 minutes. Expired leases are reclaimable,
@@ -603,513 +573,119 @@ blocked, claimed, and done tasks. Blocking releases the claim and records the
 reason as a note; it does not add a fourth status, so the task returns to the
 todo pool and `next` still skips it until it is unblocked.
 
-Notes are append-only on plans, milestones, and tasks. `show` and `brief`
-include them; `task block` adds one automatically. Claims and notes travel in
-export/import.
+Status is authoritative. A task that is not `doing` cannot hold a lease: moving
+it to todo or done releases the lease, and `reconcile` removes expired leases
+and any lease left on a non-doing task. `reconcile --check` reports that drift,
+plus done rows with open criteria, without writing anything.
 
-### Sessions and handoff
+### Progress and rollups
 
-A session groups the events from one working stretch and carries the summary
-and handoff a cold agent needs:
+Progress is status-based: done tasks over all tasks under the row. It ignores
+status, limit, repo, and text filters, so one snapshot shows the same done/total
+in CLI list, tree, and show, the TUI, metrics, and MCP. A done task with open
+criteria still counts as done; `reconcile --check` and `stats` report those
+criteria as a separate gap instead of changing the count.
+
+Parent status rolls up from its children: all done means done, any doing means
+doing, otherwise todo. `reconcile` heals parent drift and releases stale leases;
+`reconcile --check` reports the same drift without writing anything.
+
+### Tracking guarantees
+
+- A task that leaves doing releases its lease; a task in doing keeps it.
+- Deleting the last task or a milestone, and importing a plan, recomputes the
+  ancestor statuses.
+- Progress is status-based and filter-independent on every surface.
+- `reconcile --check` reports parent-status drift, expired leases, and done rows
+  with open criteria without writing any row.
+
+### Sessions and touch-points
 
 ```bash
 lpui --actor NAME session start --plan 1 --branch task/1-records
 lpui --actor NAME session end --summary "Shipped the store" --handoff "next: T2"
-lpui session show                 # active session, counts, recent events
+lpui session show
 lpui session list --open
-lpui feed --session 3
+lpui touch add --task 12 --path src/lazyplan/store/sessions.py
 ```
 
 `session start` writes a pointer beside the database keyed by actor and
 checkout; `LAZYPLAN_SESSION=S3` overrides it. Every write made while the
 session is open is tagged with its id. Hooks stay read-only: they show the open
 session or a start hint, and `context`/`brief` render the previous handoff.
-Sessions are operational history and are not exported.
+Sessions are operational history and are not exported. You can also start and
+end them from the sessions hub (`v` on a detail page or the agents pane); the
+CLI remains the path for scripts and hooks.
 
-### Touch-points and parallel work
+Tasks can declare the repo-relative paths they expect to edit. `next` skips a
+todo whose touch-points overlap an active claim in the same checkout. A manual
+`claim` refuses on overlap unless `--force` is passed, and `task finish` prints
+a warning when linked commit files overlap another open task. Finish never
+blocks on overlap; claims remain leases, not owners.
 
-Tasks can declare the repo-relative paths they expect to edit:
-
-```bash
-lpui --actor NAME task add --milestone 1 --title "Store sessions" --touch src/lazyplan/store
-lpui touch add --task 12 --path src/lazyplan/store/sessions.py
-lpui touch list --task 12
-lpui touch remove --task 12 --path src/lazyplan/store/sessions.py
-```
-
-`next` skips a todo whose touch-points overlap an active claim in the same
-checkout. A manual `claim` refuses on overlap unless `--force` is passed, and
-`task finish` prints a warning when linked commit files overlap another open
-task. Finish never blocks on overlap; claims remain leases, not owners.
-`claim --worktree PATH --repo PATH` records the checkout on the lease.
-
-### External references
-
-A plan can point at an epic, issue, or doc without mirroring it:
-
-```bash
-lpui --actor NAME ref link --plan 1 --url https://github.com/org/repo/issues/7
-lpui ref list --plan 1
-lpui ref unlink --plan 1 --id 4
-```
-
-Links are read-only. lazyplan stores the URL, provider, kind, and an optional
-title and state snapshot; it never fetches or writes back to the tracker. The
-plan preview, detail, and export/import carry the references.
-
-### Ship note
-
-Turn a plan into a PR body or changelog entry:
-
-```bash
-lpui ship --plan 1
-lpui ship --plan 1 --json --max-chars 8000
-```
-
-The note has why, what shipped, evidence, commits, pull requests, residual
-risks, and follow-ups. It is deterministic, calls no model or network, and
-drops optional sections under `--max-chars`. `review` remains the full review
-packet; `ship` is the outcome summary.
-
-### Traceability and lint
-
-Relate each plan criterion to the tasks that prove it, then inspect the evidence:
-
-```bash
-lpui --porcelain criterion relate --id 4 --task 12
-lpui --porcelain criterion unrelate --id 4 --task 12
-lpui --porcelain trace --plan 1
-lpui --porcelain trace --criterion 4
-lpui --porcelain lint --plan 1
-lpui --porcelain lint --plan 1 --strict
-lpui audit --plan 1 --min-trace 0.8 --strict
-```
-
-`trace` walks criterion → proving tasks → effective commits → pull requests. A
-criterion with no proving task is reported as missing, not omitted. Relations
-are many-to-many and survive export/import.
-
-`lint` is read-only and advisory by default. It flags:
-
-- plan criteria with no proving task;
-- task descriptions with no commit-slice token;
-- task descriptions with no verification token;
-- `TODO`, `TBD`, or `FIXME` placeholder text;
-- done rows that still have open criteria.
-
-`--strict` exits 2 when any finding exists. `audit` always reports trace,
-evidence, and unproven-criteria coverage; `--min-trace` and `--min-evidence`
-are opt-in and default to 0 (disabled), so existing strict runs keep their
-current thresholds.
-
-### Approvals and drift
-
-Approval records the scope a human accepted. Later edits are visible as drift,
-and every scope-changing edit can carry a reason:
+### Trust: approvals, evidence, and questions
 
 ```bash
 lpui plan approve --id 1 --reason "reviewed the cut"
 lpui plan revisions --id 1
 lpui plan diff --id 1
-lpui plan diff --id 1 --check          # exit 1 on drift, 0 in sync
-lpui plan diff --id 1 --from 1 --to 2  # compare two approvals
-lpui task edit --id 3 --title "Rotate tokens" --reason "split the parser"
-```
-
-Re-approving an unchanged plan is a no-op. Re-approval after drift needs
-`--reason`. `plan diff --check` is the opt-in CI gate. `plan approve --enforce`
-also makes `plan move --to done` refuse unapproved drift; pass
-`--override REASON` to record the exception and proceed. Status moves, ticks,
-claims, commits, and pull requests are not scope, so they never create drift.
-
-The TUI marks a drifted plan with `Δ` and shows the latest revision and recent
-change reasons in the plan preview. `brief` and strict lint report enforced
-drift; advisory plans report it without failing.
-
-### Evidence ledger
-
-A tick is a claim; evidence is the proof. Run the command or CI job yourself,
-then record the result:
-
-```bash
+lpui plan diff --id 1 --check
 lpui criterion prove --id 4 --command "pytest tests/store" --exit-code 0 \
-  --commit "$(git rev-parse HEAD)" --task 3 --note "local run"
+  --commit "$(git rev-parse HEAD)" --task 3
 lpui criterion evidence --id 4
-lpui criterion prove --id 4 --command "pytest" --exit-code 1   # failure, left open
-```
-
-`criterion prove` ticks only when the declared exit code is absent or 0;
-`--no-tick` records without ticking. Evidence is append-only, and the latest
-row decides the criterion's state. `trace` includes evidence rows. A task
-finish gate can require proof:
-
-```bash
-lpui task finish --id 3 --require-evidence
-lpui task finish --id 3 --require-evidence --override "accepted by human"
-```
-
-lazyplan never executes the command, fetches a PR, or reads an artifact. The
-TUI shows proof chips and the latest command in task detail and preview.
-
-### Questions and readiness
-
-Open questions are first-class plan rows:
-
-```bash
+lpui criterion edit --id 4 --text "Works on 3.11 and 3.12"
+lpui comment add --kind task --id 3 --text "@brad please review"
+lpui comment edit --comment 2 --text "@brad please review the retry path"
 lpui question add --plan 1 --text "Which host ships first?"
-lpui question list --plan 1 [--status open|resolved|all]
 lpui question resolve --id 1 --note "OpenCode first"
-lpui question reopen --id 1 --note "host choice changed"
 lpui plan ready --id 1
-```
-
-`question list` and `plan ready` are read-only. `plan ready` combines three
-checks: lint is clean, every plan criterion has a proving task, and no questions
-are open. It exits 0 when ready, 1 when not ready, and 2 for an unknown plan.
-Brief and context include open questions; trimming keeps questions longer than
-notes, commits, and claims.
-
-### Review packet
-
-One deterministic Markdown packet for a human or reviewer agent:
-
-```bash
 lpui review --plan 1
-lpui review --plan 1 --max-chars 8000
-lpui review --plan 1 --json
 ```
 
-The packet carries the plan, approval and drift, readiness, criteria coverage,
-milestones and tasks, commits, pull requests, lint and audit findings, open
-questions, and recent notes. It is assembled from existing reads, makes no LLM
-or network call, and is safe to paste into a pull request or review comment.
-`review` without `--plan` uses the active plan.
+Approval records the scope a human accepted. Later edits are visible as drift,
+and every scope-changing edit can carry a reason. `plan diff --check` is the
+opt-in CI gate. `plan approve --enforce` also makes `plan move --to done`
+refuse unapproved drift; pass `--override REASON` to record the exception.
+Status moves, ticks, claims, commits, and pull requests are not scope, so they
+never create drift.
 
-### MCP server
+A tick is a claim; evidence is the proof. `criterion prove` ticks only when the
+declared exit code is absent or 0; `--no-tick` records without ticking.
+Evidence is append-only, and the latest row decides the criterion's state.
+lazyplan never executes the command, fetches a PR, or reads an artifact.
+`task finish --require-evidence` gates on the latest passing row.
 
-Hosts that speak the Model Context Protocol can use a typed local server
-instead of shelling out:
+Open questions are plan-level rows. `plan ready` combines three checks: lint is
+clean, every plan criterion has a proving task, and no questions are open. It
+exits 0 when ready, 1 when not ready, and 2 for an unknown plan.
+
+`review` prints one deterministic Markdown packet for a human or reviewer
+agent. It is assembled from existing reads, makes no LLM or network call, and
+is safe to paste into a pull request.
+
+### Review, lint, and audit
 
 ```bash
-lpui --actor helper mcp
-lpui --actor helper mcp --read-only
-```
-
-The server uses stdio and JSON-RPC 2.0 with no extra dependency. stdout carries
-protocol frames only; diagnostics go to stderr. Write calls are attributed to
-the server `--actor`; `--read-only` hides write tools, rejects direct writes,
-and never creates a missing database.
-
-Read tools: `brief`, `list_plans`, `show_row`, `claims`, `audit`, `trace`,
-`lint`, `info`, `criterion_evidence`, `question_list`, `plan_ready`, and
-`review`. Write tools: create/edit/move, criteria, `criterion_prove`, claims,
-notes, questions, block/unblock, and commit linking. Resources: `lazyplan://brief`,
-`lazyplan://context` (append `/{max_chars}` for a budget), and
-`lazyplan://plan/{id}`.
-
-Claude Code, user-wide:
-
-```bash
-claude mcp add --scope user --transport stdio lazyplan -- lpui mcp
-```
-
-Or commit a project `.mcp.json`:
-
-```json
-{
-  "mcpServers": {
-    "lazyplan": {
-      "command": "lpui",
-      "args": ["mcp"]
-    }
-  }
-}
-```
-
-OpenCode-style local server:
-
-```json
-{
-  "mcp": {
-    "lazyplan": {
-      "type": "local",
-      "command": ["lpui", "mcp"]
-    }
-  }
-}
-```
-
-Use `--read-only` for a reviewer or dashboard host. Use `--porcelain` when the
-host does not support MCP; both surfaces read the same database.
-
-### Flow health
-
-`lpui stats` reads existing events and current rows; it never writes or calls
-the network:
-
-```bash
-lpui stats --since 30.days
-lpui stats --since 7.days --by alice
-lpui stats --since 30.days --stale-after 3.days
-lpui --porcelain stats --since 30.days
-```
-
-It reports WIP, median cycle time from first doing to done, throughput in the
-window, median and maximum aging for doing tasks, stale todos, reopened rows,
-active claims, and blocked tasks. `--by` filters completed/reopened activity
-and claims; WIP, aging, stale, and blocked counts are current state. Missing
-timestamps are omitted, not invented.
-
-The screen adds an **Attention** source filter to the existing cycle
-(`F`): expired claims, blocked tasks, doing work older than the stale
-threshold, done rows with open criteria, and red PR checks. It combines with
-the status filter; the tree keeps only rows that match the active filters.
-
-The cycle also ends with **Focus**: doing tasks, active claims, blocked work,
-attention rows, and the first open, unclaimed task per plan, with their parent
-context. Use it when several agents are running and you need the active slice
-rather than the whole tree.
-
-### Comments, sharing, and sync
-
-Review comments live on plans, milestones, and tasks:
-
-```bash
-lpui --porcelain comment add --kind task --id 3 --text "Please cover @alice's case"
-lpui --porcelain comment list --kind task --id 3 [--mentions alice]
-lpui --porcelain comment resolve --comment 7
-lpui --porcelain comment unresolve --comment 7
-```
-
-`show`, `brief`, porcelain, and the TUI detail include comments; unresolved
-comments are called out. Deleting a parent removes its comments.
-
-Share a read-only snapshot when someone does not have the database:
-
-```bash
-lpui share --plan 1
-lpui share --plan 1 --format json --out /tmp/plan.json
-```
-
-HTML escapes every field; JSON omits tokens, auth state, cache payloads, and
-raw forge API records. Sharing never writes the database.
-
-Plans carry stable UIDs. Merge a dump from another machine with:
-
-```bash
-lpui sync --file backup.json --dry-run
-lpui sync --file backup.json
-```
-
-Sync is plan-granularity: unknown UIDs are added, identical plans are skipped,
-and a changed plan with the same UID is a conflict. Sync never deletes or
-overwrites local plans, and dry-run reports the same adds/skips/conflicts
-without writing. Row-level merge is intentionally out of scope.
-
-### Completion gates
-
-`task finish` can require cached evidence before it moves a task done:
-
-```bash
-lpui --porcelain task finish --id 3 --require-pr
-lpui --porcelain task finish --id 3 --require-checks
-lpui --porcelain task finish --id 3 --require-checks --override "known flaky runner"
-```
-
-`--require-pr` needs at least one linked pull request. `--require-checks`
-needs every linked PR's cached checks to be `pass`, `neutral`, or `skipped`.
-Gates read the cache only; run `lpui pr refresh` to update it. A failure exits
-2 and leaves the task doing with no commits linked. `--override REASON`
-records the actor, reason, and gate state as a note and completes normally.
-
-`show`, `brief`, and porcelain include a gate summary (`state`, PR count, and
-checks) for tasks that have linked PRs. Starting a task records an existing
-branch; a second open task on the same checkout or remote branch is rejected
-and names the owner. lazyplan never creates branches or worktrees.
-
-### Issue imports
-
-Bring provider issues into the journal as plans or tasks:
-
-```bash
-lpui issue import --provider github --repo owner/repo
-lpui issue import --provider github --repo owner/repo --as task --milestone 1
-lpui issue import --provider linear --file linear-export.json
-lpui issue import --provider linear --file linear-export.json --dry-run
-```
-
-GitHub uses the same token precedence as PR refresh
-(`LAZYPLAN_GITHUB_TOKEN`, `GITHUB_TOKEN`, `GH_TOKEN`, then `gh auth token`).
-Linear reads a JSON export file. GitHub pull requests mixed into an issues
-response are skipped.
-
-Imports are one-way and cached: the row carries provider, number, URL, and
-state; re-importing the same provider + external id refreshes only that cached
-metadata and never overwrites the row's title or description. `--dry-run`
-reports creates and updates without writing. `show`, `trace`, and porcelain
-list the source refs, and export/import preserves them.
-
-Only `issue import --repo` calls a provider; all reads stay offline. lazyplan
-never writes back to GitHub or Linear, stores raw provider payloads, or
-stores tokens.
-
-### Session brief, context, and accuracy audit
-
-Start a session with the context packet, update after each commit, and close
-with the audit:
-
-```bash
-lpui --porcelain context --max-chars 4000  # active slice, next work, proof, claims
-lpui --porcelain brief            # active plan, doing task, next task, loose commits
-lpui brief --json                 # same facts for a hook or script
-lpui audit --plan 12              # see the three accuracy metrics for one plan
-lpui audit --since 7.days         # recent window across active plans
-lpui audit --since 7.days --strict  # exit 2 when a threshold is breached
-```
-
-The context packet and the brief are read-only and never create a database.
-The context packet adds the plan's why and what, the next three open tasks,
-recent decisions, commits, comments, and claims, and trims to its budget.
-
-The audit reports three numbers:
-
-- **Coverage** — linked implementation commits over non-merge commits in the
-  window.
-- **Status lag** — median commits and minutes between a linked commit and the
-  first `doing` or `done` move on its task.
-- **Criteria gaps** — open acceptance items on rows closed inside the window.
-
-Strict defaults are 80% coverage, one commit of median lag, and zero gaps.
-Override them with `--min-coverage`, `--max-lag`, and `--max-gaps`; legacy
-databases usually need a gap tolerance before they can gate CI.
-
-### Lifecycle hooks
-
-`lpui setup` installs read-only hooks for every detected agent host. They
-never write to the database, never move a task, and always exit 0, so a broken
-hook cannot block an agent. Remove them with `lpui setup --no-hooks`; every
-touched config file is backed up under `~/.lazyplan/backups/<timestamp>/`.
-
-| Host | Config | Events |
-|---|---|---|
-| OpenCode | `~/.config/opencode/plugins/lazyplan.js` | session context, post-tool |
-| Claude Code | `~/.claude/settings.json` | SessionStart, UserPromptSubmit, PostToolUse (Bash and PowerShell), Stop |
-| Gemini CLI | `~/.gemini/settings.json` | SessionStart, BeforeAgent, AfterTool, AfterAgent, PreCompress |
-| Codex | `~/.codex/hooks.json` | SessionStart, UserPromptSubmit, PostToolUse, Stop, PreCompact |
-| Cursor | `~/.cursor/hooks.json` | sessionStart, beforeSubmitPrompt, postToolUse, stop, preCompact |
-
-Notes:
-
-- OpenCode injects the context packet into the first model context of a session and
-  queues a commit reminder for the next context.
-- Claude Code accepts no added context on PreCompact, so lazyplan skips it
-  there; SessionStart fires again after compaction and re-injects the context packet.
-- On Windows, Claude Code runs hook commands in Git Bash, or in PowerShell
-  when Git Bash is missing. Both find `lpui` on `PATH`.
-- Codex asks you to review new hooks once with `/hooks` before it runs them.
-- Cursor can also import Claude Code hooks; with both enabled, the same
-  reminder may appear twice.
-- Set `LAZYPLAN_NO_HOOKS=1` to silence every host without uninstalling.
-
-If a hook does not fire, run it by hand with a payload on stdin, for example:
-
-```bash
-echo '{}' | lpui hook session-start --host claude
-```
-
-Then check the host's own hook log or trust screen.
-
-## Reference
-
-Journal commands accept `--porcelain` for the rows shown above; the examples
-below omit it for readability except where the mode is the point.
-
-```bash
-lpui seed
-lpui --porcelain list --tree          # stable rows for the active loop
-lpui --porcelain plan show --id 1
-lpui list [--tree] [--status todo|doing|done|all] [--archived] [--plan ID] [--all] [--limit N]
-lpui plan list
-lpui plan show --id 1
-lpui plan add --title "API v2" --why ".." --what ".."
-lpui plan apply --file plan.json [--dry-run]
-lpui plan recipe feature|bugfix|refactor
-lpui plan approve --id 1 [--reason TEXT] [--enforce]
-lpui plan revisions --id 1
-lpui plan diff --id 1 [--from REV] [--to REV|live] [--check]
-lpui plan ready --id 1
-lpui review [--plan ID] [--max-chars N]
-lpui context [--plan ID] [--max-chars N]
-lpui plan edit --id 1 [--title --what --why]
-lpui plan move --id 1 --to doing
-lpui plan delete --id 1
-lpui milestone add --plan 1 --title "Auth refresh" [--desc ..]
-lpui milestone edit --id 2 [--title --desc]
-lpui milestone show --id 2
-lpui milestone move --id 2 --to done
-lpui milestone delete --id 2
-lpui task add --milestone 1 --title "Rotate tokens" [--desc ctx]
-lpui task edit --id 3 [--title --desc]
-lpui task show --id 3
-lpui task move --id 3 --to done
-lpui task delete --id 3
-lpui criterion add --kind plan --id 1 --text "works offline"
-lpui criterion list --kind plan --id 1
-lpui criterion tick --id 4
-lpui criterion untick --id 4
-lpui criterion delete --id 4
-lpui criterion relate --id 4 --task 3
-lpui criterion unrelate --id 4 --task 3
-lpui criterion prove --id 4 [--command TEXT] [--exit-code N] [--commit SHA] [--task ID] [--no-tick]
-lpui criterion evidence --id 4
-lpui question add --plan 1 --text TEXT
-lpui question list --plan 1 [--status open|resolved|all]
-lpui question resolve --id 1 [--note TEXT]
-lpui question reopen --id 1 [--note TEXT]
+lpui --porcelain criterion relate --id 4 --task 12
 lpui --porcelain trace --plan 1
 lpui --porcelain lint --plan 1 [--strict]
 lpui audit --plan 1 [--min-trace 0.8] [--min-evidence 0.8]
-lpui mcp
-lpui mcp --read-only
-lpui stats --since 30.days [--by NAME] [--stale-after 1.days]
-lpui comment add --kind task --id 1 --text "..." [--mentions NAME]
-lpui comment resolve --comment 1
-lpui share --plan 1 [--format html|json] [--out PATH]
-lpui sync --file dump.json [--dry-run]
-lpui task finish --id 3 [--require-pr] [--require-checks] [--require-evidence] [--override REASON]
-lpui issue import --provider github --repo owner/repo [--as plan|task] [--dry-run]
-lpui issue import --provider linear --file export.json [--as plan|task] [--dry-run]
-lpui link --kind task --id 1 [--sha HASH] [--repo PATH]
-lpui commits --kind task --id 1 [--refresh] [--files]
-lpui show --kind task --id 1 [--files]
-lpui unlink --kind task --id 1 --sha HASH
-lpui git status --kind task --id 1 [--json]
-lpui git scan --since 7.days [--dry-run] [--repo PATH]
-lpui task start --id 3 [--branch NAME]
-lpui task finish --id 3 [--repo PATH]
-lpui pr auth
-lpui pr status --kind task --id 3
-lpui pr refresh --kind task --id 3
-lpui pr list --kind task --id 3
-lpui pr show --kind task --id 3 --number 7
-lpui pr link --kind task --id 3 --url URL
-lpui pr unlink --kind task --id 3 --number 7
-lpui link-repo --kind plan --id 1 --repo ~/checkouts/api [--remote URL]
-lpui unlink-repo --kind plan --id 1 --repo ~/checkouts/api
-lpui repos --kind task --id 1 [--effective]
-lpui list --repo ~/checkouts/api
-lpui export [--format json|markdown] [--plan ID] [--file PATH] [--force]
-lpui import --file dump.json
-lpui upgrade [--check|--diagnose]
-lpui feed [--limit 20]
-lpui watch [--limit 20]
+lpui stats --since 7.days
 ```
 
-Run `lpui <command> --help` for per-command flags. `man lpui` contains the full
-manual. Legacy flat verbs (`add-plan`, `add-task`, `update`, `status`, `delete`,
-`check`, `uncheck`, …) remain as aliases.
+`trace` walks criterion → proving tasks → effective commits → pull requests. A
+criterion with no proving task is reported as missing, not omitted.
 
-## Git proof
+`lint` is read-only and advisory by default. It flags plan criteria with no
+proving task, task descriptions with no commit-slice or verification token,
+placeholder text, and done rows that still have open criteria. `--strict`
+exits 2 when any finding exists.
+
+`audit` reports commit coverage, status lag, and criteria gaps. Strict defaults
+are 80% coverage, one commit of median lag, and zero gaps; override them with
+`--min-coverage`, `--max-lag`, and `--max-gaps`.
+
+### Git provenance
 
 Rows can carry the exact commits that shipped them, including the files each
 commit changed. `link` attaches HEAD, or a SHA, from the current checkout. Pass
@@ -1140,71 +716,23 @@ already linked to another row. A task with a started branch must be on that
 branch and the commit must be on the task branch history. Otherwise lpui prints
 one warning and leaves the link for you; the status move is not blocked.
 
-## Source trail (TUI)
-
-Select a plan, milestone, or task and press `g` (or run **Open source trail**
-from the palette) to browse where it landed. The screen groups each checkout
-into repository → commits → changed files, with linked pull requests alongside.
-Plans and milestones aggregate descendant work, so a plan-level trail shows
-which tasks produced each commit.
-
-Highlighting a commit or file reads its unified diff with a read-only
-`git show` and renders it in the preview: file and hunk headers, old/new line
-numbers, and green additions / red removals. Selecting another row scrolls the
-preview back to the top. The diff is read live from the checkout, kept in a
-small in-memory cache, and never written to the database, export, or feed.
-
-Previews are bounded: at most 20 files and 300 lines are shown, followed by a
-`+N more lines` or `+N more files` notice. Press `o` for the full commit in the
-browser. Binary files, root commits, merge commits, empty diffs, missing
-commits, and non-git checkouts each render an explicit message instead of an
-empty or broken pane.
-
-Keys:
-
-- `j`/`k` or arrows move; `left`/`right` collapse/expand or walk to the
-  parent/first child. Clicking a row arrow toggles it.
-- `o` opens the selected commit, PR, or file in the browser.
-- `y` copies the selected SHA, file path, or URL.
-- `/` filters repos, commits, files, and PRs; `enter` applies, `esc` closes.
-- `r` rebuilds from cached data and clears the diff cache; `esc` returns.
-
-The detail page shows a compact source summary and hints at `g`. The main tree
-shows compact commit/PR chips on rows that have commits or pull requests.
-Rows without provenance stay unchanged.
-`F` cycles source filters: all, linked, has PR, stale, unlinked, claims,
-blocked, attention. Dirty state is
-shown per selected checkout; it is not a whole-tree filter because it requires
-live git reads.
-
-Opening the Source screen makes no network call. Browser launch is explicit.
-
-## GitHub pull requests
+### Pull requests
 
 GitHub support is read-only and opt-in. lpui reads the origin remote of each
 linked checkout, recognizes `github.com` owner/repo identities, and caches pull
 request state, checks, and reviews in the local database. `list`, `show`, and
 opening the screen never call GitHub; only `pr refresh` does.
 
-Auth precedence is:
-
-1. `LAZYPLAN_GITHUB_TOKEN`
-2. `GITHUB_TOKEN`
-3. `GH_TOKEN`
-4. `gh auth token`
-
-Tokens are never written to the database, export, feed, or logs. `pr auth`
-reports the active source; `pr status` reports repo identity, auth source, and
-cache state per linked checkout.
+Auth precedence is `LAZYPLAN_GITHUB_TOKEN`, `GITHUB_TOKEN`, `GH_TOKEN`, then
+`gh auth token`. Tokens are never written to the database, export, feed, or
+logs. `pr auth` reports the active source; `pr status` reports repo identity,
+auth source, and cache state per linked checkout.
 
 ```bash
 lpui pr auth
-lpui pr status --kind task --id 3
 lpui pr refresh --kind task --id 3
 lpui pr list --kind task --id 3
-lpui pr show --kind task --id 3 --number 7
 lpui pr link --kind task --id 3 --url https://github.com/org/repo/pull/7
-lpui pr unlink --kind task --id 3 --number 7
 ```
 
 `pr refresh` links each PR to the task that owns its commit or branch, and
@@ -1215,12 +743,36 @@ tasks to milestones and plans, and task rows show a PR chip. Scope is
 github.com only. lazyplan never creates branches, worktrees, commits, pushes,
 PRs, reviews, comments, or merges; other tools own those actions.
 
-## Download counts
+### MCP and issue imports
 
-The site reports PyPI downloads including mirrors, direct PyPI downloads, and
-GitHub release asset downloads as separate channels. Each figure is a real count
-from pypistats or the GitHub releases API; they are never added together. See
-[Download counts](downloads.md) for the method, limits, and refresh schedule.
+Hosts that speak the Model Context Protocol can use a typed local server
+instead of shelling out:
+
+```bash
+lpui --actor helper mcp
+lpui --actor helper mcp --read-only
+```
+
+The server uses stdio and JSON-RPC 2.0 with no extra dependency. stdout carries
+protocol frames only; diagnostics go to stderr. Write calls are attributed to
+the server `--actor`; `--read-only` hides write tools, rejects direct writes,
+and never creates a missing database. Resources are `lazyplan://brief`,
+`lazyplan://context` (append `/{max_chars}` for a budget), and
+`lazyplan://plan/{id}`.
+
+Bring provider issues into the journal as plans or tasks:
+
+```bash
+lpui issue import --provider github --repo owner/repo
+lpui issue import --provider linear --file linear-export.json --dry-run
+```
+
+Imports are one-way and cached: the row carries provider, number, URL, and
+state; re-importing the same provider + external id refreshes only that cached
+metadata and never overwrites the row's title or description. Only
+`issue import --repo` calls a provider; all reads stay offline. lazyplan never
+writes back to GitHub or Linear, stores raw provider payloads, or stores
+tokens.
 
 ## Data and backup
 
@@ -1237,8 +789,11 @@ from pypistats or the GitHub releases API; they are never added together. See
   written as UTF-8. Existing CRLF line endings are preserved on write.
 - Completion: `eval "$(lpui completion --shell bash)"` (or `zsh`).
 
-Exit codes: `0` worked · `1` row not found or setup layout misplaced · `2` flags
-or input wrong · `3` screen cannot start because Textual is missing.
+## Exit codes
 
-Versions up to 0.7.0 shipped this tool as `lp`, renamed because that name
-clashed with the classic Unix print command.
+`0` worked · `1` row not found or setup layout misplaced · `2` flags or input
+wrong · `3` the screen cannot start because Textual is missing.
+
+Run `lpui <command> --help` for per-command flags. `man lpui` contains the full
+manual. Legacy flat verbs (`add-plan`, `add-task`, `update`, `status`, `delete`,
+`check`, `uncheck`, …) remain as aliases.

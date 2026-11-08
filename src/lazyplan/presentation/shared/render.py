@@ -10,6 +10,7 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from ...core.policies.planning import progress_counts
 from ...services import tree as service_tree
 from .design import INDENT, milestone_label, plan_label, status_word, task_label
 
@@ -18,12 +19,12 @@ if TYPE_CHECKING:
     from ...store import Store
 
 
-def _progress_map(store: Store) -> dict[int, tuple[int, int]]:
+def _plan_progress(store: Store) -> dict[int, tuple[int, int]]:
     """Task progress per plan, independent of status/limit filters."""
     out: dict[int, tuple[int, int]] = {}
     for plan, milestones in service_tree(store, status=None, archived="show"):
         tasks = [task for _, items in milestones for task in items]
-        out[plan.id] = (sum(1 for task in tasks if task.status.value == "done"), len(tasks))
+        out[plan.id] = progress_counts(tasks)
     return out
 
 
@@ -50,12 +51,9 @@ def summary_lines(
         progress = {}
         for plan, milestones in entries:
             tasks = [task for _, items in milestones for task in items]
-            progress[plan.id] = (
-                sum(1 for task in tasks if task.status.value == "done"),
-                len(tasks),
-            )
+            progress[plan.id] = progress_counts(tasks)
     else:
-        progress = _progress_map(store)
+        progress = _plan_progress(store)
     lines = []
     for plan, _milestones in entries:
         done, total = progress.get(plan.id, (0, 0))

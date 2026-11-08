@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 
-from ..entities import Plan, Status
+from ..entities import Plan, Status, Task
 
 #: A finished plan leaves the default view after this idle window.
 ARCHIVE_AFTER_SECS = 24 * 3600
@@ -26,6 +26,11 @@ def rollup_target(statuses: Sequence[Status]) -> Status:
     if any(status == Status.DOING for status in statuses):
         return Status.DOING
     return Status.TODO
+
+
+def progress_counts(tasks: Sequence[Task]) -> tuple[int, int]:
+    """Done and total task counts; status-based and filter-independent."""
+    return sum(1 for task in tasks if task.status == Status.DONE), len(tasks)
 
 
 def is_archived(plan: Plan, events: Mapping[int, tuple[float, str]], now: float) -> bool:

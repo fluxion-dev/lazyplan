@@ -11,6 +11,7 @@ import sys
 import tempfile
 import unittest
 
+from lazyplan.core.entities import Status
 from lazyplan.presentation.cli import main as lpui_main
 from lazyplan.store import Store
 from tests.support.home import sandbox_home
@@ -138,6 +139,19 @@ class TestCoordinationQA(unittest.TestCase):
         code, out, err = self._run("--porcelain", "audit", "--plan", "1", "--since", "2026-01-01")
         self.assertEqual(code, 0, err)
         self.assertIn("metric\tplans\t-\tP1", out)
+
+    def test_reconcile_cleans_a_stale_lease_and_parent_drift(self):
+        store = Store(self.db)
+        store.claim_task(1, "alice", 300)
+        store.set_status_raw("milestone", 1, Status.DONE)
+        code, _out, _err = self._run("reconcile", "--check")
+        self.assertEqual(code, 1)
+        self.assertIsNotNone(store.get_claim(1))
+        self.assertEqual(store.get_milestone(1).status, Status.DONE)
+        code, _out, err = self._run("reconcile")
+        self.assertEqual(code, 0, err)
+        self.assertIsNone(store.get_claim(1))
+        self.assertEqual(store.get_milestone(1).status, Status.TODO)
 
 
 if __name__ == "__main__":

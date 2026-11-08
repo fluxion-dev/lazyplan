@@ -151,7 +151,8 @@ class TestDoctor(LayoutCase):
         return code, buf.getvalue()
 
     def test_doctor_is_read_only_and_clean_after_setup(self):
-        setup.apply_choice(self.choice("home"), self.repo, self.home, "0.23.0")
+        result = setup.apply_choice(self.choice("home"), self.repo, self.home, "0.23.0")
+        setup.install_integrations(result, self.home, self.repo)
         code, out = self._run(["doctor"])
         self.assertEqual(code, 0, out)
         self.assertFalse((self.home / ".lazyplan/plan.db").exists())

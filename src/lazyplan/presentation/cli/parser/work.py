@@ -105,8 +105,11 @@ def add_reconcile(
     sub: argparse._SubParsersAction[argparse.ArgumentParser], common: argparse.ArgumentParser
 ) -> None:
 
-    sub.add_parser(
-        "reconcile", help="fix up parent statuses to match their children", parents=[common]
+    parser = sub.add_parser("reconcile", help="fix up parent statuses and leases", parents=[common])
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="report drift without writing; exit 1 when any remains",
     )
 
 
@@ -483,6 +486,10 @@ def add_noun_groups(
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="parent id")
     _a = _actions.add_parser("tick", help="tick one criterion", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="criterion id")
+    _a = _actions.add_parser("edit", help="rewrite one criterion", parents=[common])
+    _a.add_argument("--id", type=int, required=True, metavar="ID", help="criterion id")
+    _a.add_argument("--text", required=True, metavar="TEXT", help="new criterion text")
+    _reason_flag(_a)
     _a = _actions.add_parser("untick", help="reopen one criterion", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="criterion id")
     _a = _actions.add_parser("delete", help="delete one criterion", parents=[common])

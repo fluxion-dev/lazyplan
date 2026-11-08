@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>lazyplan — one plan for you and your agent</title>
-<meta name="description" content="A terminal plan for you and your coding agent. Approvals and evidence, session handoff, parallel-safe claims, and a ship note, local-first on Linux, macOS, and Windows.">
+<meta name="description" content="A terminal control room for you and your coding agent: needs-me triage, audited manual override, approvals, evidence, session handoff, and parallel-safe claims.">
 <meta name="keywords" content="terminal plan tracker, coding agent, plan tracker, planner agent, executor agent, multi-agent planning, developer tools, local-first, keyboard-first, terminal themes, git pane">
 <meta name="author" content="Brad Lindsay">
 <meta name="theme-color" content="#09090B">
@@ -12,7 +12,7 @@
 <link rel="canonical" href="https://fluxion-dev.github.io/lazyplan/">
 <link rel="preload" as="image" href="./screens/lpui-and-agent.webp" type="image/webp">
 <meta property="og:title" content="lazyplan — one plan for you and your agent">
-<meta property="og:description" content="A terminal plan for you and your coding agent. Approvals and evidence, session handoff, parallel-safe claims, and a ship note, local-first on Linux, macOS, and Windows.">
+<meta property="og:description" content="A terminal control room for you and your coding agent: needs-me triage, audited manual override, approvals, evidence, session handoff, and parallel-safe claims.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://fluxion-dev.github.io/lazyplan/">
 <meta property="og:site_name" content="lazyplan">
@@ -23,7 +23,7 @@
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="lazyplan — one plan for you and your agent">
-<meta name="twitter:description" content="A terminal plan for you and your coding agent. Approvals and evidence, session handoff, parallel-safe claims, and a ship note, local-first on Linux, macOS, and Windows.">
+<meta name="twitter:description" content="A terminal control room for you and your coding agent: needs-me triage, audited manual override, approvals, evidence, session handoff, and parallel-safe claims.">
 <meta name="twitter:image" content="https://fluxion-dev.github.io/lazyplan/screens/og-lpui-and-agent.png">
 <meta name="twitter:image:alt" content="lazyplan plan tree beside terminal panes where a coding agent updates the same plan.">
 <script type="application/ld+json">
@@ -32,8 +32,8 @@
   "@type": "SoftwareApplication",
   "name": "lazyplan",
   "applicationCategory": "DeveloperApplication",
-  "version": "0.34.0",
-  "softwareVersion": "0.34.0",
+  "version": "0.35.0",
+  "softwareVersion": "0.35.0",
   "url": "https://fluxion-dev.github.io/lazyplan/",
   "screenshot": "https://fluxion-dev.github.io/lazyplan/screens/og-lpui-and-agent.png",
   "description": "A terminal plan tracker for you and your coding agent. Edit every plan row yourself, or let one agent plan while another builds, with local-first storage on Linux, macOS, and Windows.",
@@ -48,7 +48,10 @@
     "One shared plan for you and your agent",
     "User control over every plan, milestone, task, and criterion",
     "Planner agent and executor subagent workflow",
-    "Keyboard-first terminal screen",
+    "Keyboard-first terminal screen with history and breadcrumbs",
+    "Lazy plan tree that loads branches on expand",
+    "Selectable trust, coordination, and provenance hubs",
+    "Timeline on demand with T",
     "Three TUI themes: mocha, void, and latte",
     "GIT pane with checkout, commit, and pull-request context",
     "Read-only git and pull request proof",
@@ -63,10 +66,10 @@
   "operatingSystem": ["Linux", "macOS", "Windows"],
   "downloadUrl": [
     "https://github.com/fluxion-dev/lazyplan/releases/latest/download/install.sh",
-    "https://github.com/fluxion-dev/lazyplan/releases/download/v0.34.0/lazyplan_0.34.0-1_amd64.deb",
-    "https://github.com/fluxion-dev/lazyplan/releases/download/v0.34.0/lazyplan_0.34.0-1_arm64.deb",
-    "https://github.com/fluxion-dev/lazyplan/releases/download/v0.34.0/lazyplan-0.34.0-1.x86_64.rpm",
-    "https://github.com/fluxion-dev/lazyplan/releases/download/v0.34.0/lazyplan-0.34.0-1.aarch64.rpm"
+    "https://github.com/fluxion-dev/lazyplan/releases/download/v0.35.0/lazyplan_0.35.0-1_amd64.deb",
+    "https://github.com/fluxion-dev/lazyplan/releases/download/v0.35.0/lazyplan_0.35.0-1_arm64.deb",
+    "https://github.com/fluxion-dev/lazyplan/releases/download/v0.35.0/lazyplan-0.35.0-1.x86_64.rpm",
+    "https://github.com/fluxion-dev/lazyplan/releases/download/v0.35.0/lazyplan-0.35.0-1.aarch64.rpm"
   ]
 }
 </script>
@@ -142,7 +145,6 @@
       <a class="text-sm text-zinc-300 no-underline transition hover:text-white" href="#features">Features</a>
       <a class="text-sm text-zinc-300 no-underline transition hover:text-white" href="#screens">Screenshots</a>
       <a class="text-sm text-zinc-300 no-underline transition hover:text-white" href="#faq">FAQ</a>
-      <a class="text-sm text-zinc-300 no-underline transition hover:text-white" href="./roadmap.html">Roadmap</a>
       <a class="text-sm text-zinc-300 no-underline transition hover:text-white" href="https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md">Docs</a>
       <a class="rounded-lg bg-viking-blue px-3.5 py-1.5 text-sm font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="#install">Install</a>
     </div>
@@ -154,7 +156,6 @@
         <a class="nav-mobile-link" href="#features">Features</a>
         <a class="nav-mobile-link" href="#screens">Screenshots</a>
         <a class="nav-mobile-link" href="#faq">FAQ</a>
-        <a class="nav-mobile-link" href="./roadmap.html">Roadmap</a>
         <a class="nav-mobile-link" href="https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md">Docs</a>
         <div class="mt-4 border-t border-plan-border pt-4">
           <a class="inline-flex min-h-9 items-center rounded-lg bg-viking-blue px-3.5 py-2 text-sm font-semibold text-white no-underline transition hover:bg-viking-blue/80" href="#install">Install</a>
@@ -181,15 +182,15 @@
     </div>
 
     <div class="mt-8 flex flex-wrap items-center justify-center gap-x-2 gap-y-2">
-      <a class="no-underline" href="https://github.com/fluxion-dev/lazyplan/releases"><img class="inline h-5 align-middle" src="https://img.shields.io/github/v/release/fluxion-dev/lazyplan?v=0.34.0" alt="Release" width="102" height="20"></a>
-      <a class="no-underline" href="https://pypi.org/project/lazyplan-tui/"><img class="inline h-5 align-middle" src="https://img.shields.io/pypi/v/lazyplan-tui?v=0.34.0" alt="PyPI" width="86" height="20"></a>
+      <a class="no-underline" href="https://github.com/fluxion-dev/lazyplan/releases"><img class="inline h-5 align-middle" src="https://img.shields.io/github/v/release/fluxion-dev/lazyplan?v=0.35.0" alt="Release" width="102" height="20"></a>
+      <a class="no-underline" href="https://pypi.org/project/lazyplan-tui/"><img class="inline h-5 align-middle" src="https://img.shields.io/pypi/v/lazyplan-tui?v=0.35.0" alt="PyPI" width="86" height="20"></a>
       <a class="no-underline" href="https://github.com/fluxion-dev/lazyplan"><img class="inline h-5 align-middle" src="https://img.shields.io/github/license/fluxion-dev/lazyplan" alt="License" width="78" height="20"></a>
     </div>
 
     <div id="download-stats" aria-label="Downloads" class="mx-auto mt-8 hidden max-w-md rounded-xl border border-plan-border bg-plan-surface/60 px-5 py-4 text-center">
       <p class="mb-0 text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400">Downloads</p>
       <p class="mb-0 mt-1 text-3xl font-bold text-white"><span id="stats-downloads">—</span></p>
-      <p class="mb-0 mt-2 text-xs text-zinc-500">Updated <span id="stats-updated">—</span> · <a class="text-cyber-cyan underline hover:text-white" href="https://github.com/fluxion-dev/lazyplan/blob/main/docs/downloads.md">How we count</a></p>
+      <p class="mb-0 mt-2 text-xs text-zinc-500">Updated <span id="stats-updated">—</span> · How we count: channels are reported separately, never added.</p>
     </div>
 
     <figure class="mx-auto mt-12 max-w-3xl text-left">
@@ -210,34 +211,26 @@
   <div class="overflow-hidden rounded-2xl border border-plan-border bg-plan-surface/70 shadow-xl shadow-black/30">
     <div class="grid gap-6 p-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.7fr)] md:p-8">
       <div>
-        <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">New in 0.34</p>
-        <h2 class="mb-3 text-2xl font-bold text-white md:text-3xl">Trust, sessions, parallel work.</h2>
-        <p class="m-0 text-[0.95rem] text-zinc-400">Approve, prove, hand off, and ship.</p>
+        <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">What's new</p>
+        <h2 class="mb-3 text-2xl font-bold text-white md:text-3xl">One control room for the loop.</h2>
+        <p class="m-0 text-[0.95rem] text-zinc-400">See what needs you, correct it, and ship with proof.</p>
       </div>
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div class="rounded-lg border border-plan-border bg-plan-canvas/60 p-4">
-          <h3 class="mb-1 text-base font-semibold text-white">Trust layer</h3>
-          <p class="m-0 text-[0.9rem] text-zinc-400">Approvals, drift, evidence, review.</p>
+          <h3 class="mb-1 text-base font-semibold text-white">Health and needs</h3>
+          <p class="m-0 text-[0.9rem] text-zinc-400">Drift, questions, claims, overlaps.</p>
         </div>
         <div class="rounded-lg border border-plan-border bg-plan-canvas/60 p-4">
-          <h3 class="mb-1 text-base font-semibold text-white">Sessions</h3>
-          <p class="m-0 text-[0.9rem] text-zinc-400">Summary and handoff on every write.</p>
+          <h3 class="mb-1 text-base font-semibold text-white">Manual override</h3>
+          <p class="m-0 text-[0.9rem] text-zinc-400">Read-only until armed; writes audited.</p>
         </div>
         <div class="rounded-lg border border-plan-border bg-plan-canvas/60 p-4">
-          <h3 class="mb-1 text-base font-semibold text-white">Touch-points</h3>
-          <p class="m-0 text-[0.9rem] text-zinc-400">Parallel claims avoid the same files.</p>
+          <h3 class="mb-1 text-base font-semibold text-white">Trust hubs</h3>
+          <p class="m-0 text-[0.9rem] text-zinc-400">Criteria, evidence, questions, and references are selectable.</p>
         </div>
         <div class="rounded-lg border border-plan-border bg-plan-canvas/60 p-4">
-          <h3 class="mb-1 text-base font-semibold text-white">Ship note</h3>
-          <p class="m-0 text-[0.9rem] text-zinc-400">Outcome, proof, risks, follow-ups.</p>
-        </div>
-        <div class="rounded-lg border border-plan-border bg-plan-canvas/60 p-4">
-          <h3 class="mb-1 text-base font-semibold text-white">External refs</h3>
-          <p class="m-0 text-[0.9rem] text-zinc-400">Read-only epic and issue links.</p>
-        </div>
-        <div class="rounded-lg border border-plan-border bg-plan-canvas/60 p-4">
-          <h3 class="mb-1 text-base font-semibold text-white">A sharper screen</h3>
-          <p class="m-0 text-[0.9rem] text-zinc-400">Themes, GIT pane, timeline, export.</p>
+          <h3 class="mb-1 text-base font-semibold text-white">Agents pane</h3>
+          <p class="m-0 text-[0.9rem] text-zinc-400">Who is working; click for sessions, handoffs, and comments.</p>
         </div>
       </div>
     </div>
@@ -258,14 +251,15 @@
     <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30">
       <h3 class="mb-2 text-lg font-semibold text-white">Built for focus</h3>
       <p class="m-0 text-[0.95rem] text-zinc-400">A fast keyboard screen keeps plans short until you open them.</p>
+      <p class="m-0 mt-3 font-mono text-[0.85rem] text-zinc-500"><span class="text-zinc-300">c</span> palette · <span class="text-zinc-300">?</span> help · <span class="text-zinc-300">[ ]</span> history · <span class="text-zinc-300">q</span> quit anywhere</p>
     </div>
     <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30">
       <h3 class="mb-2 text-lg font-semibold text-white">Proof you can see</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400">Follow work from plan to commit to pull request.</p>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Follow plan, commit, PR, and activity.</p>
     </div>
     <div class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30">
       <h3 class="mb-2 text-lg font-semibold text-white">Yours to keep</h3>
-      <p class="m-0 text-[0.95rem] text-zinc-400">Local-first and private. Export any time. No account, no cloud, no lock-in.</p>
+      <p class="m-0 text-[0.95rem] text-zinc-400">Local-first and private. Export any time. No cloud, no lock-in.</p>
     </div>
   </div>
 </section>
@@ -274,7 +268,7 @@
   <div class="mb-10 max-w-3xl md:mb-14">
     <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">Ways to work</p>
     <h2 class="mb-4 text-2xl font-bold text-white md:text-3xl">One agent plans. Another builds. You stay in control.</h2>
-    <p class="text-lg text-zinc-400">Every plan, milestone, task, and criterion lives in lazyplan. Add work, edit a task, reorder, block, or complete any row yourself in the screen. Your agents see every change.</p>
+    <p class="text-lg text-zinc-400">Every plan row lives in lazyplan. Edit any row yourself; your agents see every change.</p>
   </div>
   <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
     <article class="rounded-xl border border-plan-border bg-plan-surface/70 p-6 shadow-lg shadow-black/30 md:p-8">
@@ -317,6 +311,15 @@ Task · Add the token model        done</pre>
   </div>
   <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
     <figure class="m-0">
+      <a class="zoom-trigger" href="./screens/lpui-control-room.png" data-zoom aria-haspopup="dialog">
+        <picture>
+          <source srcset="./screens/lpui-control-room.webp" type="image/webp">
+          <img src="./screens/lpui-control-room.png" width="1604" height="904" loading="lazy" decoding="async" alt="Control room with a manual override banner, health and needs strip, active session, attention tasks, and approval drift." class="block h-auto w-full rounded-xl border border-plan-border">
+        </picture>
+      </a>
+      <figcaption class="mt-2 text-sm text-zinc-400">What needs you, in one audited control room.</figcaption>
+    </figure>
+    <figure class="m-0">
       <a class="zoom-trigger" href="./screens/lpui-detail.png" data-zoom aria-haspopup="dialog">
         <picture>
           <source srcset="./screens/lpui-detail.webp" type="image/webp">
@@ -329,7 +332,7 @@ Task · Add the token model        done</pre>
       <a class="zoom-trigger" href="./screens/lpui-coordination.png" data-zoom aria-haspopup="dialog">
         <picture>
           <source srcset="./screens/lpui-coordination.webp" type="image/webp">
-          <img src="./screens/lpui-coordination.png" width="1604" height="904" loading="lazy" decoding="async" alt="Plan tree filtered to attention, showing active and expired claims, blocked work, aging tasks, and a red check." class="block h-auto w-full rounded-xl border border-plan-border">
+          <img src="./screens/lpui-coordination.png" width="1604" height="904" loading="lazy" decoding="async" alt="Plan tree with active and expired claims, blocked work, aging tasks, and a red check, with attention summarized in the control strip." class="block h-auto w-full rounded-xl border border-plan-border">
         </picture>
       </a>
       <figcaption class="mt-2 text-sm text-zinc-400">Active, blocked, and attention at a glance.</figcaption>
@@ -356,7 +359,7 @@ Task · Add the token model        done</pre>
       <a class="zoom-trigger" href="./screens/lpui-timeline.png" data-zoom aria-haspopup="dialog">
         <picture>
           <source srcset="./screens/lpui-timeline.webp" type="image/webp">
-          <img src="./screens/lpui-timeline.png" width="1604" height="904" loading="lazy" decoding="async" alt="Main shell with sequential milestones selected, showing doing-only timeline traces at distinct start positions and one never-started lane." class="block h-auto w-full rounded-xl border border-plan-border">
+          <img src="./screens/lpui-timeline.png" width="1604" height="904" loading="lazy" decoding="async" alt="Main shell with the timeline open, showing plan and milestone traces at distinct start positions and one never-started lane." class="block h-auto w-full rounded-xl border border-plan-border">
         </picture>
       </a>
       <figcaption class="mt-2 text-sm text-zinc-400">Every lane stays; the scoped plan names the card.</figcaption>
@@ -383,7 +386,7 @@ Task · Add the token model        done</pre>
       <a class="zoom-trigger" href="./screens/lpui-theme-void.png" data-zoom aria-haspopup="dialog">
         <picture>
           <source srcset="./screens/lpui-theme-void.webp" type="image/webp">
-          <img src="./screens/lpui-theme-void.png" width="1604" height="904" loading="lazy" decoding="async" alt="lazyplan main shell in the OLED-black void theme, with the plan tree, sticky preview, GIT pane, and timeline." class="block h-auto w-full rounded-xl border border-plan-border">
+          <img src="./screens/lpui-theme-void.png" width="1604" height="904" loading="lazy" decoding="async" alt="lazyplan main shell in the OLED-black void theme, with the plan tree, sticky preview, and GIT pane." class="block h-auto w-full rounded-xl border border-plan-border">
         </picture>
       </a>
       <figcaption class="mt-2 text-sm text-zinc-400"><code class="inline-code">void</code></figcaption>
@@ -392,7 +395,7 @@ Task · Add the token model        done</pre>
       <a class="zoom-trigger" href="./screens/lpui-theme-latte.png" data-zoom aria-haspopup="dialog">
         <picture>
           <source srcset="./screens/lpui-theme-latte.webp" type="image/webp">
-          <img src="./screens/lpui-theme-latte.png" width="1604" height="904" loading="lazy" decoding="async" alt="lazyplan main shell in the light Latte theme, with the plan tree, sticky preview, GIT pane, and timeline." class="block h-auto w-full rounded-xl border border-plan-border">
+          <img src="./screens/lpui-theme-latte.png" width="1604" height="904" loading="lazy" decoding="async" alt="lazyplan main shell in the light Latte theme, with the plan tree, sticky preview, and GIT pane." class="block h-auto w-full rounded-xl border border-plan-border">
         </picture>
       </a>
       <figcaption class="mt-2 text-sm text-zinc-400"><code class="inline-code">latte</code></figcaption>
@@ -494,9 +497,7 @@ Task · Add the token model        done</pre>
   <p class="m-0"><a class="text-cyber-cyan underline hover:text-white" href="https://github.com/fluxion-dev/lazyplan">lazyplan</a> — one plan for you and your agent.</p>
   <ul class="mt-6 flex list-none flex-wrap items-center justify-center gap-x-6 gap-y-2 p-0">
     <li><a class="text-zinc-300 no-underline hover:text-white hover:underline" href="https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md">Docs</a></li>
-    <li><a class="text-zinc-300 no-underline hover:text-white hover:underline" href="https://github.com/fluxion-dev/lazyplan/blob/main/docs/setup.md">Setup</a></li>
-    <li><a class="text-zinc-300 no-underline hover:text-white hover:underline" href="https://github.com/fluxion-dev/lazyplan/blob/main/docs/performance.md">Performance</a></li>
-    <li><a class="text-zinc-300 no-underline hover:text-white hover:underline" href="./roadmap.html">Roadmap</a></li>
+    <li><a class="text-zinc-300 no-underline hover:text-white hover:underline" href="https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md#setup-and-scope">Setup</a></li>
     <li><a class="text-zinc-300 no-underline hover:text-white hover:underline" href="https://github.com/fluxion-dev/lazyplan">GitHub</a></li>
     <li><a class="text-zinc-300 no-underline hover:text-white hover:underline" href="https://github.com/fluxion-dev/lazyplan/releases">Releases</a></li>
     <li><a class="text-zinc-300 no-underline hover:text-white hover:underline" href="https://github.com/fluxion-dev/lazyplan/blob/main/LICENSE">License</a></li>

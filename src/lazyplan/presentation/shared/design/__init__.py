@@ -27,8 +27,12 @@ from ..help import HELP_TEXT as HELP_TEXT
 from ..help import KEYMAP as KEYMAP
 from ..palette import PALETTE_COMMANDS as PALETTE_COMMANDS
 from ..palette import PALETTE_SECTIONS as PALETTE_SECTIONS
+from .empty import EMPTY_AGENTS as EMPTY_AGENTS
+from .empty import EMPTY_AGENTS_HINT as EMPTY_AGENTS_HINT
+from .empty import EMPTY_APPROVAL as EMPTY_APPROVAL
 from .empty import EMPTY_COMMITS as EMPTY_COMMITS
 from .empty import EMPTY_FEED as EMPTY_FEED
+from .empty import EMPTY_NEEDS as EMPTY_NEEDS
 from .empty import EMPTY_NO_PLANS as EMPTY_NO_PLANS
 from .empty import msg_error as msg_error
 from .empty import msg_no_head as msg_no_head
@@ -71,6 +75,10 @@ __all__ = [
     "ASCII_ICONS",
     "EMPTY_COMMITS",
     "EMPTY_FEED",
+    "EMPTY_AGENTS",
+    "EMPTY_AGENTS_HINT",
+    "EMPTY_APPROVAL",
+    "EMPTY_NEEDS",
     "EMPTY_NO_PLANS",
     "HELP_TEXT",
     "ICONS",

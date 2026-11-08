@@ -24,7 +24,8 @@ class TestDownloadStats(unittest.TestCase):
     def test_one_downloads_value_and_method_link(self):
         self.assertIn(">Downloads<", self.page)
         self.assertIn("How we count", self.page)
-        self.assertIn("docs/downloads.md", self.page)
+        self.assertIn("channels are reported separately", self.page)
+        self.assertNotIn("docs/downloads.md", self.page)
         for removed in (
             "PyPI downloads",
             "including mirrors",
@@ -66,7 +67,7 @@ class TestDownloadStats(unittest.TestCase):
             re.sub(r"<[^>]+>", " ", re.sub(r"<script.*?</script>", "", self.page, flags=re.S))
         )
         self.assertLessEqual(len(text.split()), 750)
-        self.assertEqual(self.page.count("<figure"), 10)
+        self.assertEqual(self.page.count("<figure"), 11)
 
 
 if __name__ == "__main__":

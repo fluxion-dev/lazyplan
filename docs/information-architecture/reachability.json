@@ -1,0 +1,704 @@
+{
+  "actions": [
+    {
+      "depth": 1,
+      "id": "plan.create",
+      "route": [
+        "tree",
+        "create"
+      ]
+    },
+    {
+      "depth": 1,
+      "id": "milestone.create",
+      "route": [
+        "tree",
+        "create"
+      ]
+    },
+    {
+      "depth": 1,
+      "id": "task.create",
+      "route": [
+        "tree",
+        "create"
+      ]
+    },
+    {
+      "depth": 1,
+      "id": "criterion.add",
+      "route": [
+        "tree",
+        "detail"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "plan.approve",
+      "route": [
+        "tree",
+        "detail",
+        "trust"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "plan.diff",
+      "route": [
+        "tree",
+        "detail",
+        "trust"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "criterion.prove",
+      "route": [
+        "tree",
+        "detail",
+        "evidence"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "question.add",
+      "route": [
+        "tree",
+        "detail",
+        "questions"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "question.resolve",
+      "route": [
+        "tree",
+        "detail",
+        "questions"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "question.reopen",
+      "route": [
+        "tree",
+        "detail",
+        "questions"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "reference.link",
+      "route": [
+        "tree",
+        "detail",
+        "references"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "reference.unlink",
+      "route": [
+        "tree",
+        "detail",
+        "references"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "reference.open",
+      "route": [
+        "tree",
+        "detail",
+        "references"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "task.claim",
+      "route": [
+        "tree",
+        "detail",
+        "coordination"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "task.block",
+      "route": [
+        "tree",
+        "detail",
+        "coordination"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "task.unblock",
+      "route": [
+        "tree",
+        "detail",
+        "coordination"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "task.finish",
+      "route": [
+        "tree",
+        "detail",
+        "finish"
+      ]
+    },
+    {
+      "depth": 1,
+      "id": "row.edit",
+      "route": [
+        "tree",
+        "detail"
+      ]
+    },
+    {
+      "depth": 1,
+      "id": "task.move",
+      "route": [
+        "tree",
+        "detail"
+      ]
+    },
+    {
+      "depth": 0,
+      "id": "row.mark",
+      "route": [
+        "tree"
+      ]
+    },
+    {
+      "depth": 0,
+      "id": "row.clear_marks",
+      "route": [
+        "tree"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "claim.release",
+      "route": [
+        "tree",
+        "detail",
+        "coordination"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "claim.force_release",
+      "route": [
+        "tree",
+        "detail",
+        "coordination"
+      ]
+    },
+    {
+      "depth": 1,
+      "id": "criterion.tick",
+      "route": [
+        "tree",
+        "detail"
+      ]
+    },
+    {
+      "depth": 1,
+      "id": "criterion.untick",
+      "route": [
+        "tree",
+        "detail"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "criterion.relate",
+      "route": [
+        "tree",
+        "detail",
+        "trust"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "criterion.unrelate",
+      "route": [
+        "tree",
+        "detail",
+        "trust"
+      ]
+    },
+    {
+      "depth": 1,
+      "id": "row.delete",
+      "route": [
+        "tree",
+        "detail"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "commit.link",
+      "route": [
+        "tree",
+        "detail",
+        "provenance"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "commit.refresh",
+      "route": [
+        "tree",
+        "detail",
+        "provenance"
+      ]
+    },
+    {
+      "depth": 0,
+      "id": "bulk.move",
+      "route": [
+        "tree"
+      ]
+    },
+    {
+      "depth": 0,
+      "id": "bulk.block",
+      "route": [
+        "tree"
+      ]
+    },
+    {
+      "depth": 0,
+      "id": "bulk.release",
+      "route": [
+        "tree"
+      ]
+    },
+    {
+      "depth": 0,
+      "id": "bulk.undo",
+      "route": [
+        "tree"
+      ]
+    },
+    {
+      "depth": 1,
+      "id": "view.detail",
+      "route": [
+        "tree",
+        "detail"
+      ]
+    },
+    {
+      "depth": 0,
+      "id": "view.fold",
+      "route": [
+        "tree"
+      ]
+    },
+    {
+      "depth": 0,
+      "id": "view.filter",
+      "route": [
+        "tree"
+      ]
+    },
+    {
+      "depth": 0,
+      "id": "view.plan_mode",
+      "route": [
+        "tree"
+      ]
+    },
+    {
+      "depth": 0,
+      "id": "view.timeline",
+      "route": [
+        "tree"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "view.criteria_hub",
+      "route": [
+        "tree",
+        "detail",
+        "trust"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "view.evidence_hub",
+      "route": [
+        "tree",
+        "detail",
+        "trust"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "view.questions_hub",
+      "route": [
+        "tree",
+        "detail",
+        "trust"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "view.references_hub",
+      "route": [
+        "tree",
+        "detail",
+        "trust"
+      ]
+    },
+    {
+      "depth": 0,
+      "id": "view.refresh",
+      "route": [
+        "tree"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "git.status",
+      "route": [
+        "tree",
+        "detail",
+        "provenance"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "pull_request.open",
+      "route": [
+        "tree",
+        "detail",
+        "provenance"
+      ]
+    },
+    {
+      "depth": 1,
+      "id": "source.trail",
+      "route": [
+        "tree",
+        "source"
+      ]
+    },
+    {
+      "depth": 0,
+      "id": "override.toggle",
+      "route": [
+        "tree"
+      ]
+    },
+    {
+      "depth": 0,
+      "id": "theme.cycle",
+      "route": [
+        "tree"
+      ]
+    },
+    {
+      "depth": 0,
+      "id": "palette.open",
+      "route": [
+        "any"
+      ]
+    },
+    {
+      "depth": 1,
+      "id": "plan.export",
+      "route": [
+        "tree",
+        "export"
+      ]
+    },
+    {
+      "depth": 1,
+      "id": "app.update",
+      "route": [
+        "tree",
+        "update"
+      ]
+    },
+    {
+      "depth": 0,
+      "id": "app.help",
+      "route": [
+        "any"
+      ]
+    },
+    {
+      "depth": 0,
+      "id": "app.quit",
+      "route": [
+        "any"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "task.renew",
+      "route": [
+        "tree",
+        "detail",
+        "coordination"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "task.touch_add",
+      "route": [
+        "tree",
+        "detail",
+        "coordination"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "task.touch_remove",
+      "route": [
+        "tree",
+        "detail",
+        "coordination"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "session.start",
+      "route": [
+        "tree",
+        "detail",
+        "sessions"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "session.end",
+      "route": [
+        "tree",
+        "detail",
+        "sessions"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "note.add",
+      "route": [
+        "tree",
+        "detail",
+        "coordination"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "comment.add",
+      "route": [
+        "tree",
+        "detail",
+        "coordination"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "comment.resolve",
+      "route": [
+        "tree",
+        "detail",
+        "coordination"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "view.claims_hub",
+      "route": [
+        "tree",
+        "detail",
+        "coordination"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "view.sessions_hub",
+      "route": [
+        "tree",
+        "detail",
+        "sessions"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "view.comments_hub",
+      "route": [
+        "tree",
+        "detail",
+        "coordination"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "criterion.edit",
+      "route": [
+        "tree",
+        "detail",
+        "trust"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "evidence.list",
+      "route": [
+        "tree",
+        "detail",
+        "evidence"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "criterion.delete",
+      "route": [
+        "tree",
+        "detail",
+        "trust"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "comment.edit",
+      "route": [
+        "tree",
+        "detail",
+        "coordination"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "view.pull_requests_hub",
+      "route": [
+        "tree",
+        "detail",
+        "provenance"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "pull_request.list",
+      "route": [
+        "tree",
+        "detail",
+        "provenance"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "pull_request.refresh",
+      "route": [
+        "tree",
+        "detail",
+        "provenance"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "pull_request.link",
+      "route": [
+        "tree",
+        "detail",
+        "provenance"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "pull_request.unlink",
+      "route": [
+        "tree",
+        "detail",
+        "provenance"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "commit.open",
+      "route": [
+        "tree",
+        "detail",
+        "provenance"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "file.open",
+      "route": [
+        "tree",
+        "detail",
+        "provenance"
+      ]
+    },
+    {
+      "depth": 1,
+      "id": "repo.open",
+      "route": [
+        "tree",
+        "source"
+      ]
+    },
+    {
+      "depth": 1,
+      "id": "event.list",
+      "route": [
+        "tree",
+        "activity"
+      ]
+    },
+    {
+      "depth": 1,
+      "id": "event.open",
+      "route": [
+        "tree",
+        "activity"
+      ]
+    },
+    {
+      "depth": 1,
+      "id": "override.list",
+      "route": [
+        "tree",
+        "activity"
+      ]
+    },
+    {
+      "depth": 1,
+      "id": "override.open",
+      "route": [
+        "tree",
+        "activity"
+      ]
+    }
+  ],
+  "entities": {
+    "claim": 2,
+    "comment": 2,
+    "commit": 2,
+    "criterion": 1,
+    "event": 1,
+    "evidence": 2,
+    "file": 2,
+    "milestone": 1,
+    "note": 2,
+    "override": 0,
+    "plan": 1,
+    "pull_request": 2,
+    "question": 2,
+    "reference": 2,
+    "repo": 1,
+    "session": 2,
+    "task": 1
+  },
+  "max_depth": 3,
+  "over_budget": []
+}

@@ -135,6 +135,15 @@ class StoreBase(StoreStubs):
             ).fetchall()
         return [dict(r) for r in rows]
 
+    def feed_overrides(self, limit: int = 20) -> list[dict]:
+        """Recent manual-override events, newest first."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT * FROM events WHERE kind='override' ORDER BY id DESC LIMIT ?",
+                (max(limit, 1),),
+            ).fetchall()
+        return [dict(r) for r in rows]
+
     def events_by_action(self, *actions: str) -> list[dict]:
         """All events with one of these actions, oldest first."""
         wanted = [action for action in actions if action]

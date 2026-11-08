@@ -230,6 +230,26 @@ class AnnotationsMixin(StoreBase):
             resolved,
         )
 
+    def update_comment(self, cid: int, text: str, actor: str = "human") -> Comment | None:
+        """Rewrite one review comment's text and log the change."""
+        body = validate_comment(text)
+        with self._connect() as conn:
+            row = conn.execute("SELECT * FROM comments WHERE id=?", (cid,)).fetchone()
+            if row is None:
+                return None
+            conn.execute("UPDATE comments SET text=? WHERE id=?", (body, cid))
+        self.log(actor, "comment", "edit", f"comment #{cid}: {body[:80]}")
+        comment = self._row_to_comment(row)
+        return Comment(
+            comment.id,
+            comment.parent_kind,
+            comment.parent_id,
+            body,
+            comment.actor,
+            comment.ts,
+            comment.resolved,
+        )
+
     def restore_comment(
         self,
         parent_kind: str,
@@ -461,6 +481,32 @@ class AnnotationsMixin(StoreBase):
             parent_id=r["parent_id"],
             text=r["text"],
             done=done,
+        )
+
+    def update_criterion(
+        self, cid: int, text: str, actor: str = "human", reason: str = ""
+    ) -> Criterion | None:
+        """Rewrite one checklist item's text and log the change."""
+        body = text.strip()
+        if not body:
+            raise ValueError("criterion text must not be empty")
+        with self._connect() as conn:
+            row = conn.execute("SELECT * FROM criteria WHERE id=?", (cid,)).fetchone()
+            if row is None:
+                return None
+            conn.execute("UPDATE criteria SET text=? WHERE id=?", (body, cid))
+            plan_id = self._plan_for_kind(str(row["parent_kind"]), int(row["parent_id"]))
+            if plan_id is not None:
+                self._record_scope_change(
+                    plan_id, "criterion", cid, "edit", reason=reason, actor=actor
+                )
+        self.log(actor, "criteria", "edit", f"criteria #{cid}: {body[:80]}")
+        return Criterion(
+            id=int(row["id"]),
+            parent_kind=str(row["parent_kind"]),
+            parent_id=int(row["parent_id"]),
+            text=body,
+            done=bool(row["done"]),
         )
 
     def delete_criteria(self, cid: int, actor: str = "human", reason: str = "") -> bool:

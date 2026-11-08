@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 import time
 from pathlib import Path
 
@@ -12,6 +11,7 @@ from ..core.entities import Criterion, Milestone, Plan, Status, Task
 from ..core.kinds import check_kind
 from ..core.policies.planning import is_archived as _is_archived_policy
 from ..core.policies.planning import next_status, rollup_target
+from ..core.ports.coordination import CoordinationPort
 from ..core.ports.planning import PlanningPort
 
 DEFAULT_PLAN_LIMIT = 5
@@ -96,7 +96,14 @@ def create_task(
     return task
 
 
-def heal(port: PlanningPort, kind: str, obj_id: int, actor: str = "human") -> bool:
+def heal(
+    port: PlanningPort,
+    kind: str,
+    obj_id: int,
+    actor: str = "human",
+    *,
+    empty: bool = False,
+) -> bool:
     """Recompute one milestone or plan from its children. Returns changed."""
     check_kind(kind)
     obj: Plan | Milestone | None
@@ -108,7 +115,7 @@ def heal(port: PlanningPort, kind: str, obj_id: int, actor: str = "human") -> bo
         kids = [row.status for row in port.list_milestones(obj_id)] if obj is not None else []
     else:
         raise ValueError("kind must be milestone|plan")
-    if obj is None or not kids:
+    if obj is None or (not kids and not empty):
         return False
     target = rollup_target(kids)
     if obj.status == target:
@@ -138,19 +145,61 @@ def heal_parents(port: PlanningPort, kind: str, obj_id: int, actor: str = "human
         heal(port, "plan", obj_id, actor)
 
 
+def delete_row(
+    port: PlanningPort,
+    kind: str,
+    obj_id: int,
+    actor: str = "human",
+    reason: str = "",
+) -> bool:
+    """Delete one row, then recompute the ancestors its subtree belonged to."""
+    check_kind(kind)
+    milestone_id: int | None = None
+    plan_id: int | None = None
+    if kind == "task":
+        task = port.get_task(obj_id)
+        if task is not None:
+            milestone_id = task.milestone_id
+            milestone = port.get_milestone(milestone_id)
+            plan_id = milestone.plan_id if milestone is not None else None
+    elif kind == "milestone":
+        milestone = port.get_milestone(obj_id)
+        if milestone is not None:
+            plan_id = milestone.plan_id
+    ok = port.delete(kind, obj_id, actor=actor, reason=reason)
+    if not ok:
+        return False
+    if kind == "task" and milestone_id is not None:
+        heal(port, "milestone", milestone_id, actor, empty=True)
+        if plan_id is not None:
+            heal(port, "plan", plan_id, actor, empty=True)
+    elif kind == "milestone" and plan_id is not None:
+        heal(port, "plan", plan_id, actor, empty=True)
+    return True
+
+
 def set_status(
     port: PlanningPort,
     kind: str,
     obj_id: int,
     status: Status,
     actor: str = "human",
+    heal: bool = True,
 ) -> bool:
-    """Move a row, heal the subtree state, and log the transition."""
+    """Move a row, optionally heal the subtree state, and log the transition."""
     check_kind(kind)
+    claim = None
+    if kind == "task" and status is not Status.DOING:
+        get_claim = getattr(port, "get_claim", None)
+        if get_claim is not None:
+            claim = get_claim(obj_id)
     ok = port.set_status_raw(kind, obj_id, status)
     if ok:
         port.log(actor, kind, "status", f"{kind} #{obj_id} -> {status.value}")
-        heal_parents(port, kind, obj_id, actor)
+        if claim is not None:
+            port.log(actor, "task", "release", f"task #{obj_id} released by status")
+        if heal:
+            heal_parents(port, kind, obj_id, actor)
     return ok
 
 
@@ -159,6 +208,7 @@ def cycle_status(
     kind: str,
     obj_id: int,
     actor: str = "human",
+    heal: bool = True,
 ) -> Status | None:
     """Advance todo to doing to done to todo."""
     check_kind(kind)
@@ -166,26 +216,74 @@ def cycle_status(
     if obj is None:
         return None
     status = next_status(obj.status)
-    set_status(port, kind, obj_id, status, actor=actor)
+    set_status(port, kind, obj_id, status, actor=actor, heal=heal)
     return status
 
 
-def reconcile(port: PlanningPort, actor: str = "human") -> list[dict]:
-    """Recompute every parent from its children; childless rows untouched."""
+def _child_rollup(port: PlanningPort, kind: str, obj_id: int) -> Status | None:
+    """The status children imply, or None when the row has none."""
+    if kind == "milestone":
+        kids = [task.status for task in port.list_tasks(obj_id)]
+    else:
+        kids = [row.status for row in port.list_milestones(obj_id)]
+    return rollup_target(kids) if kids else None
+
+
+def reconcile(
+    port: CoordinationPort,
+    actor: str = "human",
+    check: bool = False,
+    heal_mode: bool = True,
+    strict: bool = False,
+) -> dict[str, list]:
+    """Heal parents and leases; check mode reports without writing."""
+    write = not check and heal_mode
     changes: list[dict] = []
     for plan in port.list_plans():
-        before_plan = plan.status
         for milestone in port.list_milestones(plan.id):
-            before = milestone.status
-            heal(port, "milestone", milestone.id, actor)
-            after = port.get_milestone(milestone.id)
-            if after is not None and after.status != before:
-                changes.append({"kind": "milestone", "id": milestone.id, "to": after.status.value})
-        heal(port, "plan", plan.id, actor)
-        after_plan = port.get_plan(plan.id)
-        if after_plan is not None and after_plan.status != before_plan:
-            changes.append({"kind": "plan", "id": plan.id, "to": after_plan.status.value})
-    return changes
+            target = _child_rollup(port, "milestone", milestone.id)
+            if target is None or target == milestone.status:
+                continue
+            changes.append({"kind": "milestone", "id": milestone.id, "to": target.value})
+            if write:
+                heal(port, "milestone", milestone.id, actor)
+        target = _child_rollup(port, "plan", plan.id)
+        if target is not None and target != plan.status:
+            changes.append({"kind": "plan", "id": plan.id, "to": target.value})
+            if write:
+                heal(port, "plan", plan.id, actor)
+
+    released: list[int] = []
+    expired: list[int] = []
+    now = time.time()
+    for claim in port.list_claims(include_expired=True, now=now):
+        task_id = int(claim["task_id"])
+        task = port.get_task(task_id)
+        if task is None:
+            continue
+        if claim["expired"]:
+            expired.append(task_id)
+        elif task.status != Status.DOING:
+            released.append(task_id)
+        else:
+            continue
+        if write:
+            port.release_claim(task_id, actor, force=True)
+
+    ambiguous: list[dict] = []
+    for plan in port.list_plans():
+        for milestone in port.list_milestones(plan.id):
+            for task in port.list_tasks(milestone.id):
+                if task.status == Status.DONE and port.open_criteria("task", task.id):
+                    ambiguous.append(
+                        {"kind": "task", "id": task.id, "reason": "done with open criteria"}
+                    )
+    return {
+        "changes": changes,
+        "released": released,
+        "expired": expired,
+        "ambiguous": ambiguous,
+    }
 
 
 def is_archived(port: PlanningPort, plan: Plan) -> bool:
@@ -217,55 +315,64 @@ def _plan_activity(
         for criterion in items
     }
 
-    def resolve(kind: str, detail: str) -> int | None:
-        match = re.match(r"([PMT])#(\d+)", detail)
-        if match:
-            letter, oid = match.group(1), int(match.group(2))
-            if letter == "P":
-                return oid
-            if letter == "M":
-                return milestone_plan.get(oid)
-            chained = task_milestone.get(oid)
-            return milestone_plan.get(chained) if chained is not None else None
-        match = re.match(r"(plan|milestone|task) #(\d+)", detail)
-        if match:
-            kind, oid = match.group(1), int(match.group(2))
-            if kind == "plan":
-                return oid
-            if kind == "milestone":
-                return milestone_plan.get(oid)
-            chained = task_milestone.get(oid)
-            return milestone_plan.get(chained) if chained is not None else None
-        match = re.match(r"criteria #(\d+)", detail)
-        if match:
-            found = criterion_parent.get(int(match.group(1)))
-            if found is None:
-                return None
-            criterion_kind, parent_id = found
-            if criterion_kind == "plan":
-                return parent_id
-            if criterion_kind == "milestone":
-                return milestone_plan.get(parent_id)
-            chained = task_milestone.get(parent_id)
-            return milestone_plan.get(chained) if chained is not None else None
-        return None
+    def leading_int(text: str, start: int) -> int | None:
+        end = start
+        while end < len(text) and text[end].isdigit():
+            end += 1
+        return int(text[start:end]) if end > start else None
+
+    def plan_for_milestone(mid: int | None) -> int | None:
+        return milestone_plan.get(mid) if mid is not None else None
+
+    def plan_for_task(tid: int | None) -> int | None:
+        if tid is None:
+            return None
+        return plan_for_milestone(task_milestone.get(tid))
+
+    def plan_for_criterion(cid: int | None) -> int | None:
+        if cid is None:
+            return None
+        found = criterion_parent.get(cid)
+        if found is None:
+            return None
+        kind, parent_id = found
+        if kind == "plan":
+            return parent_id
+        if kind == "milestone":
+            return plan_for_milestone(parent_id)
+        return plan_for_task(parent_id)
 
     out: dict[int, float] = {}
     for event in events:
-        plan_id = resolve(str(event["kind"]), str(event["detail"] or ""))
-        if plan_id is not None and event["ts"] > out.get(plan_id, 0.0):
-            out[plan_id] = event["ts"]
+        detail = str(event.get("detail") or "")
+        plan_id: int | None = None
+        if detail.startswith("P#"):
+            plan_id = leading_int(detail, 2)
+        elif detail.startswith("plan #"):
+            plan_id = leading_int(detail, 6)
+        elif detail.startswith("M#"):
+            plan_id = plan_for_milestone(leading_int(detail, 2))
+        elif detail.startswith("milestone #"):
+            plan_id = plan_for_milestone(leading_int(detail, 11))
+        elif detail.startswith("T#"):
+            plan_id = plan_for_task(leading_int(detail, 2))
+        elif detail.startswith("task #"):
+            plan_id = plan_for_task(leading_int(detail, 6))
+        elif detail.startswith("criteria #"):
+            plan_id = plan_for_criterion(leading_int(detail, 10))
+        elif detail.startswith("criterion #"):
+            plan_id = plan_for_criterion(leading_int(detail, 11))
+        if plan_id is None:
+            continue
+        stamp = float(event.get("ts") or 0.0)
+        if stamp > out.get(plan_id, 0.0):
+            out[plan_id] = stamp
     return out
 
 
 def plan_activity(port: PlanningPort) -> dict[int, float]:
     """Latest event timestamp per plan (whole subtree), for recent-first ordering."""
-    return _plan_activity(
-        port.milestones_map(),
-        port.tasks_map(),
-        port.criteria_map(),
-        port.feed(limit=1_000_000),
-    )
+    return port.plan_activity_map()
 
 
 def _filtered_milestones(
@@ -347,6 +454,27 @@ def _visible_plan(
     return True
 
 
+def _keep_plan(
+    plan: Plan,
+    plan_id: int | None,
+    plan_mode: str,
+    repo: str | None,
+    milestones: dict[int, list[Milestone]],
+    tasks: dict[int, list[Task]],
+    repos: dict[tuple[str, int], list[dict]],
+) -> bool:
+    """Whether one plan survives mode, id, and repo filters."""
+    if plan_id is not None and plan.id != plan_id:
+        return False
+    if plan_mode == "active" and plan.status is Status.DONE:
+        return False
+    if plan_mode == "finished" and plan.status is not Status.DONE:
+        return False
+    if repo and not _plan_matches_repo(plan.id, milestones, tasks, repos, repo):
+        return False
+    return True
+
+
 def tree(
     port: PlanningPort,
     status: Status | None = None,
@@ -355,10 +483,13 @@ def tree(
     limit: int | None = None,
     repo: str | None = None,
     milestone_id: int | None = None,
+    plan_mode: str = "all",
 ) -> list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]:
     """Nested plans, milestones, and tasks with filters."""
     if archived not in ("hide", "only", "show"):
         raise ValueError("archived must be hide|only|show")
+    if plan_mode not in ("all", "active", "finished"):
+        raise ValueError("plan_mode must be all|active|finished")
     plans = port.list_plans()
     milestones = port.milestones_map()
     tasks = port.tasks_map()
@@ -367,9 +498,7 @@ def tree(
     now = time.time()
     out = []
     for plan in plans:
-        if plan_id is not None and plan.id != plan_id:
-            continue
-        if repo and not _plan_matches_repo(plan.id, milestones, tasks, repos, repo):
+        if not _keep_plan(plan, plan_id, plan_mode, repo, milestones, tasks, repos):
             continue
         items = _filtered_milestones(milestones, tasks, plan.id, status)
         if milestone_id is not None:
@@ -387,7 +516,7 @@ def tree(
             milestones,
             tasks,
             port.criteria_map(),
-            port.feed(limit=1_000_000),
+            port.feed(limit=100_000),
         )
         out.sort(key=lambda entry: (activity.get(entry[0].id, 0.0), entry[0].id), reverse=True)
         if limit is not None:

@@ -12,10 +12,9 @@ from lazyplan.store import Store
 try:
     from textual.widgets import Label, Tree
 
-    from lazyplan.core.entities import Status
     from lazyplan.presentation import tui as tui_mod
     from lazyplan.presentation.tui.query import query_one_opt
-    from lazyplan.presentation.tui.state import AppState
+    from lazyplan.presentation.tui.state import AppState, PlanMode
 except ImportError:  # pragma: no cover - stdlib-only interpreter
     tui_mod = None  # type: ignore[assignment]
 
@@ -33,30 +32,31 @@ class StateTest(unittest.IsolatedAsyncioTestCase):
     def test_state_defaults(self) -> None:
         state = AppState()
         self.assertIsNone(state.selected)
-        self.assertIsNone(state.status_filter)
-        self.assertFalse(state.show_all)
+        self.assertEqual(state.plan_mode, PlanMode.ACTIVE)
         self.assertEqual(state.filter_text, "")
-        self.assertEqual(state.source_filter, "all")
         self.assertEqual(state.marked, set())
         self.assertEqual(state.expanded, set())
         self.assertEqual(state.collapsed, set())
+
+    async def test_interactive_launch_starts_on_active_mode(self) -> None:
+        app = tui_mod.create_app(self.db)
+        async with app.run_test(size=(100, 30)) as pilot:
+            await pilot.pause()
+            self.assertEqual(app.plan_mode, PlanMode.ACTIVE)
+            self.assertIn("active", str(app.query_one("#nav").border_title))
 
     async def test_app_properties_route_through_state(self) -> None:
         app = tui_mod.create_app(self.db)
         async with app.run_test(size=(100, 30)) as pilot:
             await pilot.pause()
             app.selected = ("plan", 1)
-            app.status_filter = Status.DOING
-            app.show_all = True
+            app.plan_mode = PlanMode.FINISHED
             app.filter_text = "needle"
-            app.source_filter = "claims"
             app.marked.add(("plan", 1))
             app._expanded.add(("plan", 1))
             self.assertEqual(app.state.selected, ("plan", 1))
-            self.assertEqual(app.state.status_filter, Status.DOING)
-            self.assertTrue(app.state.show_all)
+            self.assertEqual(app.state.plan_mode, PlanMode.FINISHED)
             self.assertEqual(app.state.filter_text, "needle")
-            self.assertEqual(app.state.source_filter, "claims")
             self.assertIn(("plan", 1), app.state.marked)
             self.assertIn(("plan", 1), app.state.expanded)
 

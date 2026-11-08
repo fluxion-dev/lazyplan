@@ -1,5 +1,6 @@
 """Drive the real setup wizard through a pseudo-terminal."""
 
+import json
 import os
 import subprocess
 import tempfile
@@ -124,6 +125,31 @@ class TestSetupWizard(unittest.TestCase):
         self.assertEqual(code, 0, text)
         self.assertNotIn("lazyplan.js", text)
         self.assertFalse((self.home / ".config/opencode/plugins/lazyplan.js").exists())
+
+    def test_post_upgrade_review_installs_a_pending_hook(self):
+        subprocess.run(
+            [str(LPUI), "setup", "--yes", "--agents", "opencode", "--json"],
+            env=self.env,
+            cwd=self.repo,
+            check=True,
+            capture_output=True,
+        )
+        plugin = self.home / ".config/opencode/plugins/lazyplan.js"
+        self.assertTrue(plugin.is_file())
+        plugin.unlink()
+        state_file = self.home / ".lazyplan/setup.json"
+        state = json.loads(state_file.read_text(encoding="utf-8"))
+        state["integration_choices"].pop("hook:opencode:plugin", None)
+        state_file.write_text(json.dumps(state), encoding="utf-8")
+        code, text = run_pty(
+            [str(LPUI), "setup", "--post-upgrade"],
+            ["1\n"],
+            self.env,
+            self.repo,
+        )
+        self.assertEqual(code, 0, text)
+        self.assertIn("New integrations are available", text)
+        self.assertTrue(plugin.is_file())
 
 
 if __name__ == "__main__":

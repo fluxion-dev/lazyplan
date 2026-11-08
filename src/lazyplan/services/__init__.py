@@ -32,6 +32,7 @@ from .evidence import (
     prove,
     task_gate,
 )
+from .overrides import record_override
 from .planning import (
     DEFAULT_PLAN_LIMIT,
     _filtered_milestones,
@@ -45,6 +46,7 @@ from .planning import (
     create_plan,
     create_task,
     cycle_status,
+    delete_row,
     heal,
     heal_parents,
     is_archived,
@@ -146,6 +148,7 @@ __all__ = [
     "create_milestone",
     "create_task",
     "_rollup_target",
+    "delete_row",
     "heal",
     "heal_parents",
     "set_status",
@@ -223,6 +226,7 @@ __all__ = [
     "reopen_question",
     "ProofResult",
     "prove",
+    "record_override",
     "list_evidence",
     "task_gate",
     "link_ref",

@@ -27,13 +27,16 @@ from ....services.environment import (
     stage_update,
 )
 from ...shared.design import escape_markup
+from ..navigation import NAV_BINDINGS, NavigationMixin
 
 if _TEXTUAL_OK:
 
-    class UpdateScreen(ModalScreen):
+    class UpdateScreen(NavigationMixin, ModalScreen):
         """Show installed/latest and offer one staged download."""
 
-        BINDINGS = [Binding("escape", "cancel", "Close", priority=True)]
+        navigation_name = "update"
+
+        BINDINGS = [*NAV_BINDINGS, Binding("escape", "cancel", "Close", priority=True)]
 
         def __init__(
             self,

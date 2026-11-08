@@ -24,6 +24,9 @@ from ...store import Store
 from ..shared import (
     porcelain,
 )
+from ..shared import (
+    registry as ia_registry,
+)
 from ..shared.design import (
     msg_error,
 )
@@ -107,32 +110,35 @@ def _utf8_stdio() -> None:
             stream.reconfigure(encoding="utf-8", errors="replace")
 
 
-def main(argv: list[str] | None = None) -> int:
-    """Dispatch one lpui invocation; exit codes are agent-readable."""
-    _utf8_stdio()
-    args = build_parser().parse_args(argv)
+def _resolve_noun_group(args: argparse.Namespace) -> int | None:
+    """Map a noun-first group onto its canonical command; None means continue."""
     noun_group = getattr(args, "noun_group", None)
-    if noun_group:
-        action = getattr(args, "action", None)
-        canonical = _GROUP_CMDS.get((noun_group, action or ""))
-        if canonical is None:
-            print(f"error: unknown {noun_group} action {action!r}", file=sys.stderr)
-            return 2
-        args.cmd = canonical
-        if noun_group in ("plan", "milestone", "task") and canonical in (
-            "update",
-            "show",
-            "status",
-            "delete",
-        ):
-            args.kind = noun_group
-        if noun_group in ("milestone", "task") and canonical == "list":
-            args.tree = True
-    if getattr(args, "version", False):
-        # Before Store(): printing the version must not create a DB.
-        print(package_version())
-        return 0
-    actor = getattr(args, "actor", "human")
+    if not noun_group:
+        return None
+    action = getattr(args, "action", None)
+    canonical = _GROUP_CMDS.get((noun_group, action or ""))
+    if canonical is None:
+        print(f"error: unknown {noun_group} action {action!r}", file=sys.stderr)
+        return 2
+    args.cmd = canonical
+    if noun_group in ("plan", "milestone", "task") and canonical in (
+        "update",
+        "show",
+        "status",
+        "delete",
+    ):
+        args.kind = noun_group
+    if noun_group in ("milestone", "task") and canonical == "list":
+        args.tree = True
+    return None
+
+
+def _prepare_command(args: argparse.Namespace, actor: str, used_noun_form: bool) -> int | None:
+    """Notices, default command, setup, and storeless dispatch."""
+    if not used_noun_form and not (getattr(args, "json", False) or porcelain.enabled(args)):
+        notice = ia_registry.legacy_notice(args.cmd or "")
+        if notice:
+            print(notice, file=sys.stderr)
     _maybe_notice_update(args)
     if args.cmd is None:
         # Bare `lpui` (or global flags only) opens the standard TUI.
@@ -151,11 +157,11 @@ def main(argv: list[str] | None = None) -> int:
         args.follow = True
         args.interval = 1.0
         args.json = getattr(args, "json", False)
-    try:
-        store = Store(args.db)
-    except RuntimeError as exc:
-        print(msg_error(exc), file=sys.stderr)
-        return 2
+    return None
+
+
+def _run_command(store: Store, args: argparse.Namespace, actor: str) -> int:
+    """Run the resolved handler with one error boundary."""
     try:
         handler = _COMMANDS.get(args.cmd)
         if handler is None:
@@ -164,3 +170,27 @@ def main(argv: list[str] | None = None) -> int:
     except (ValueError, KeyError) as exc:
         print(msg_error(exc), file=sys.stderr)
         return 2
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Dispatch one lpui invocation; exit codes are agent-readable."""
+    _utf8_stdio()
+    args = build_parser().parse_args(argv)
+    used_noun_form = getattr(args, "noun_group", None) is not None
+    code = _resolve_noun_group(args)
+    if code is not None:
+        return code
+    if getattr(args, "version", False):
+        # Before Store(): printing the version must not create a DB.
+        print(package_version())
+        return 0
+    actor = getattr(args, "actor", "human")
+    code = _prepare_command(args, actor, used_noun_form)
+    if code is not None:
+        return code
+    try:
+        store = Store(args.db)
+    except RuntimeError as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 2
+    return _run_command(store, args, actor)

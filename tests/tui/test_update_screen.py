@@ -12,6 +12,7 @@ from lazyplan.infrastructure import update_stage
 from lazyplan.infrastructure.upgrade import PIPX, RPM, SOURCE, InstallInfo
 from lazyplan.store import Store
 from tests.support.home import sandbox_home
+from tests.support.pilot import settle
 
 try:
     tui_mod = importlib.import_module("lazyplan.presentation.tui.app")
@@ -39,7 +40,7 @@ STAGED = update_stage.StagedUpdate(
 @unittest.skipUnless(tui_mod is not None and tui_mod._TEXTUAL_OK, "textual not installed")
 class TestUpdateScreen(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         sandbox_home(self, os.path.join(self.tmp.name, "home"))
         os.makedirs(os.environ["HOME"], exist_ok=True)
         self.db = os.path.join(self.tmp.name, "t.db")
@@ -108,7 +109,7 @@ class TestUpdateScreen(unittest.IsolatedAsyncioTestCase):
             with mock.patch.object(screen_mod, "stage_update", return_value=STAGED):
                 screen.query_one("#update-download", Button).press()
                 await self.app.workers.wait_for_complete()
-                await pilot.pause()
+                await settle(pilot)
             self.assertTrue(screen.query_one("#update-restart", Button).display)
             self.assertIn(
                 "Restart now",

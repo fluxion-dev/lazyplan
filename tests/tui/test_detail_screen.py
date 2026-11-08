@@ -43,6 +43,8 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
         store.add_criteria("plan", self.pid, "Criterion two")
         self.store = Store(self.db)
         self.app = tui_mod.create_app(self.db)
+        # These tests exercise the write path; read-only gating has its own test.
+        self.app.override_mode = True
 
     async def asyncTearDown(self):
         self.tmp.cleanup()
@@ -51,7 +53,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
         await settle(pilot)
         self.app.selected = (kind, oid)
         await pilot.press("enter")
-        await pilot.pause()
+        await settle(pilot)
 
     async def test_detail_shows_claim_blocked_and_notes(self):
         from textual.widgets import Static
@@ -61,43 +63,71 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
         second = self.store.add_task(self.sid, "Blocked task", "Needs design")
         self.store.set_blocked(second.id, True, "waiting on design", actor="alice")
         async with self.app.run_test(size=(80, 24)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._open(pilot, "task", self.tid)
             body = str(self.app.screen.query_one("#detail-body", Static).render())
             self.assertIn("@alice", body)
             self.assertIn("Use the small parser", body)
             await pilot.press("escape")
+            await settle(pilot)
             await self._open(pilot, "task", second.id)
             body = str(self.app.screen.query_one("#detail-body", Static).render())
             self.assertIn("blocked", body)
             self.assertIn("waiting on design", body)
-            self.app.source_filter = "claims"
-            claimed = [
-                task.id
-                for _plan, milestones in self.app.tree_controller.filters.filtered_tree()
-                for _milestone, tasks in milestones
-                for task in tasks
-            ]
-            self.assertIn(self.tid, claimed)
-            self.assertNotIn(second.id, claimed)
 
     async def test_detail_shows_open_questions(self):
         from textual.widgets import Static
 
         self.store.add_question(self.pid, "Which host?")
         async with self.app.run_test(size=(80, 24)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._open(pilot, "plan", self.pid)
             body = str(self.app.screen.query_one("#detail-body", Static).render())
             self.assertIn("questions 1 open", body)
             self.assertIn("Which host?", body)
+
+    async def test_detail_shows_approval_readiness_and_coverage(self):
+        from textual.widgets import Static
+
+        self.store.add_revision(self.pid, "a" * 64, "{}", reason="initial scope")
+        criterion = self.store.list_criteria("plan", self.pid)[0]
+        self.store.add_evidence(criterion.id, command="pytest", exit_code=0, actor="ci")
+        async with self.app.run_test(size=(80, 24)) as pilot:
+            await settle(pilot)
+            await self._open(pilot, "plan", self.pid)
+            body = str(self.app.screen.query_one("#detail-body", Static).render())
+            self.assertIn("approval r1", body)
+            self.assertIn("initial scope", body)
+            self.assertIn("ready", body)
+            self.assertIn("evidence 1/2", body)
+
+    async def test_detail_shows_claims_and_the_previous_handoff(self):
+        from textual.widgets import Static
+
+        session, _ = self.store.start_session("carol", plan_id=self.pid, branch="task/x")
+        self.store.end_session(session.id, "carol", summary="shipped the store", handoff="next: T2")
+        self.store.claim_task(self.tid, "alice", 300)
+        self.store.add_touchpoint(self.tid, "src/app", actor="alice")
+        async with self.app.run_test(size=(80, 24)) as pilot:
+            await settle(pilot)
+            await self._open(pilot, "plan", self.pid)
+            body = str(self.app.screen.query_one("#detail-body", Static).render())
+            self.assertIn("claims 1", body)
+            self.assertIn("@alice", body)
+            self.assertIn("handoff", body)
+            self.assertIn("next: T2", body)
+            await pilot.press("escape")
+            await self._open(pilot, "task", self.tid)
+            body = str(self.app.screen.query_one("#detail-body", Static).render())
+            self.assertIn("touch", body)
+            self.assertIn("src/app", body)
 
     async def test_detail_shows_references(self):
         from textual.widgets import Static
 
         self.store.link_ref(self.pid, "https://example.com/a", title="Design doc")
         async with self.app.run_test(size=(80, 24)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._open(pilot, "plan", self.pid)
             body = str(self.app.screen.query_one("#detail-body", Static).render())
             self.assertIn("references 1", body)
@@ -109,7 +139,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
         criterion = self.store.add_criteria("task", self.tid, "Task works")
         self.store.add_evidence(criterion.id, command="pytest", exit_code=0, actor="ci")
         async with self.app.run_test(size=(80, 24)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._open(pilot, "task", self.tid)
             body = str(self.app.screen.query_one("#detail-body", Static).render())
             self.assertIn("proof", body)
@@ -120,7 +150,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
         from textual.widgets import Static
 
         async with self.app.run_test(size=(80, 24)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._open(pilot, "plan", self.pid)
             screen = self.app.screen
             self.assertIsInstance(screen, DetailScreen)
@@ -180,7 +210,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
         )
 
         async with self.app.run_test(size=(100, 30)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             full = self.store.get_full("task", self.tid)
             assert full is not None
             repos = full.get("effective_repos") or full.get("repos") or []
@@ -226,7 +256,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
             merge_commit_sha="b" * 40,
         )
         async with self.app.run_test(size=(100, 30)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._open(pilot, "task", self.tid)
             body = str(self.app.screen.query_one("#detail-body", Static).render())
             self.assertIn("pull requests", body)
@@ -276,7 +306,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
             files=("a.py", "src/b.py"),
         )
         async with self.app.run_test(size=(100, 30)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._open(pilot, "task", self.tid)
             body = str(self.app.screen.query_one("#detail-body", Static).render())
             self.assertIn("source · 1 commits · 2 files", body)
@@ -298,7 +328,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
             state="open",
         )
         async with self.app.run_test(size=(100, 30)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             for kind, oid in (("milestone", self.sid), ("plan", self.pid)):
                 await self._open(pilot, kind, oid)
                 body = str(self.app.screen.query_one("#detail-body", Static).render())
@@ -311,7 +341,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
         from textual.widgets import Input
 
         async with self.app.run_test(size=(80, 24)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._open(pilot, "plan", self.pid)
             await pilot.press("e")
             await pilot.pause()
@@ -326,7 +356,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
         from textual.widgets import Input
 
         async with self.app.run_test(size=(80, 24)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._open(pilot, "task", self.tid)
             await pilot.press("e")
             await pilot.pause()
@@ -343,7 +373,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
         from textual.widgets import Static
 
         async with self.app.run_test(size=(80, 24)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._open(pilot, "task", self.tid)
             await pilot.press("a")
             await pilot.pause()
@@ -364,7 +394,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
 
     async def test_n_adds_child_by_kind(self):
         async with self.app.run_test(size=(80, 24)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._open(pilot, "plan", self.pid)
             await pilot.press("n")
             await pilot.pause()
@@ -388,7 +418,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
 
     async def test_delete_confirms_cascade_and_cancel_keeps_row(self):
         async with self.app.run_test(size=(80, 24)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._open(pilot, "plan", self.pid)
             await pilot.press("d")
             await pilot.pause()
@@ -403,7 +433,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
 
     async def test_delete_enter_defaults_to_cancel(self):
         async with self.app.run_test(size=(80, 24)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._open(pilot, "plan", self.pid)
             await pilot.press("d")
             await pilot.pause()
@@ -415,7 +445,7 @@ class TestDetailScreen(unittest.IsolatedAsyncioTestCase):
 
     async def test_detail_fits_80x24(self):
         async with self.app.run_test(size=(80, 24)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._open(pilot, "plan", self.pid)
             page = self.app.screen.query_one("#detail-page")
             region = page.region

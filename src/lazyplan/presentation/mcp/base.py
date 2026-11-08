@@ -6,6 +6,7 @@ import json
 import sys
 from typing import TYPE_CHECKING, TextIO
 
+from ...infrastructure import settings
 from ...store import Store
 
 PROTOCOL_VERSION = "2024-11-05"
@@ -25,6 +26,7 @@ class McpBase:
         self.actor = actor
         self.read_only = read_only
         self.db_path = db_path
+        self.heal = settings.heal_enabled(settings.heal_mode())
 
     def serve(self, stdin: TextIO | None = None, stdout: TextIO | None = None) -> int:
         """Read JSON-RPC frames until EOF; never crash the loop."""

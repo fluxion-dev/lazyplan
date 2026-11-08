@@ -29,6 +29,19 @@ class TestTransferService(unittest.TestCase):
             self.assertEqual(counts["plans"], 1)
             self.assertEqual(target.list_plans()[0].name, "P")
 
+    def test_import_heals_ancestor_status_drift(self) -> None:
+        plan = self.store.list_plans()[0]
+        milestone = self.store.add_milestone(plan.id, "M", actor="fixture")
+        self.store.add_task(milestone.id, "T", actor="fixture")
+        dump = services.export_all(self.store)
+        dump["plans"][0]["milestones"][0]["status"] = "done"
+        with tempfile.TemporaryDirectory() as other:
+            target = Store(os.path.join(other, "target.db"))
+            services.import_all(target, dump, actor="fixture")
+            target_plan = target.list_plans()[0]
+            target_milestone = target.list_milestones(target_plan.id)[0]
+            self.assertEqual(target_milestone.status.value, "todo")
+
     def test_share_payload_is_redacted(self) -> None:
         plan_id = self.store.list_plans()[0].id
         self.assertIn("plan", services.export_plan(self.store, plan_id))

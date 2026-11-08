@@ -13,6 +13,7 @@ from pathlib import Path
 
 from lazyplan.presentation.cli import main
 from lazyplan.presentation.cli.parser import package_version
+from tests.support.docs import README
 from tests.support.paths import ROOT
 
 SEMVER = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
@@ -28,8 +29,12 @@ class TestVersion(unittest.TestCase):
 
     def test_readme_header_matches_pyproject(self):
         version = self._version()
-        header = (ROOT / "README.md").read_text(encoding="utf-8").splitlines()[0]
+        header = README.splitlines()[0]
         self.assertEqual(header, f"# lazyplan (`lpui`) — v{version}")
+
+    def test_readme_carries_no_release_notes(self):
+        self.assertNotIn("## New in", README)
+        self.assertNotIn("## Built to scale", README)
 
     def test_site_version_matches_pyproject(self):
         import json

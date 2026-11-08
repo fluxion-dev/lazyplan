@@ -1,8 +1,7 @@
 """Modal-palette Textual TUI: nav tree + live preview, one status line.
 
-Keys: j/k navigate, left/right fold, enter detail, c palette,
-  escape clear. Press c then type a prefix (new, cycle, tick,
-  fold, filter, ...) and enter runs the match.
+Keys: j/k navigate, left/right fold, enter detail, c palette, escape clear.
+  Press c then type a prefix (new, cycle, tick, fold, filter, ...) and enter runs it.
   Mouse click selects; double-click opens detail.
 Keyboard-only: agents use the `lpui` CLI against the same SQLite file; local edits
 bump reactive rev, external DB changes arrive via fingerprint() poll + feed toast.
@@ -23,13 +22,16 @@ try:
     from textual.widgets.tree import TreeNode
 
     from ..shared.tree_nav import NavTree  # noqa: F401
+    from .navigation import NAV_BINDINGS
     from .query import query_one_opt
 
     _TEXTUAL_OK = True
 except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
+from ...infrastructure import settings
 from ...store import Store
+from ..shared.design import EMPTY_NO_PLANS
 from .actions import ActionMixin
 from .base import AppBase
 from .bulk import BulkMixin
@@ -41,10 +43,12 @@ from .controllers.updates import UpdateController
 from .filters import FilterMixin
 from .launch import launch_update
 from .metrics import MetricsSection
+from .override import WRITE_ACTIONS
 from .preview import PreviewMixin
-from .state import AppState
+from .state import AppState, PlanMode
 from .theme import register_themes
 from .tree import TreeMixin
+from .widgets.agents_panel import AgentsPanel
 from .widgets.git_panel import GitPanel
 from .widgets.plan_tree import FoldTree
 from .widgets.preview_panel import PreviewPanel
@@ -72,28 +76,26 @@ if _TEXTUAL_OK:
         ]
         ENABLE_COMMAND_PALETTE = False
         BINDINGS = [
+            *NAV_BINDINGS,
             Binding("enter", "open_detail", "Open"),
             Binding("space", "toggle_mark", "Mark"),
             Binding("escape", "clear_filter", "Back", show=False),
-            Binding("c", "command_palette", "Palette"),
             Binding("t", "cycle_theme", "Theme"),
+            Binding("T", "toggle_timeline", "Timeline"),
             Binding("n", "new_context", "New"),
             Binding("e", "edit_selection", "Edit"),
             Binding("s", "toggle_status", "Status"),
             Binding("x", "criteria", "Tick"),
             Binding("a", "add_criterion", "Criterion"),
+            Binding("p", "prove_criterion", "Prove"),
             Binding("d", "delete", "Delete"),
             Binding("g", "source_trail", "Source"),
             Binding("z", "fold", "Fold", show=False),
             Binding("Z", "fold_all", "Fold all", show=False),
             Binding("slash", "filter_text", "Filter"),
-            Binding("f", "filter_status", "Status filter", show=False),
-            Binding("F", "filter_source", "Source filter", show=False),
-            Binding("A", "toggle_show_all", "All plans", show=False),
+            Binding("f", "cycle_mode", "Plan mode", show=False),
             Binding("r", "refresh", "Refresh", show=False),
             Binding("U", "update_prompt", "Update"),
-            Binding("question_mark", "help", "Help"),
-            Binding("q", "quit", "Quit"),
         ]
         rev = reactive(0, init=False)
 
@@ -132,7 +134,7 @@ if _TEXTUAL_OK:
                 panel.set_class(compact, "compact")
             metrics = query_one_opt(self, "#metrics", MetricsSection)
             if metrics is not None:
-                metrics.set_class(narrow, "narrow")
+                metrics.display = self.state.timeline_shown(narrow)
             screen = self.screen
             screen.set_class(compact, "compact")
             screen.set_class(wide, "wide")
@@ -142,6 +144,7 @@ if _TEXTUAL_OK:
             super().__init__()
             register_themes(self)
             self.store = store
+            self.heal = settings.heal_enabled(settings.heal_mode())
             self.state = AppState()
             self._undo: list[dict] | None = None
             self._row_nodes: dict[tuple[str, int], TreeNode] = {}
@@ -162,14 +165,16 @@ if _TEXTUAL_OK:
             self.update_controller.prompt()
 
         def compose(self) -> ComposeResult:
+            yield Static("", id="mode")
             with Vertical(id="panel"):
                 with Horizontal(id="main"):
                     with Vertical(id="nav"):
                         yield FoldTree("plans", id="tree")
-                        yield Static("nothing planned... yet", id="tree-empty")
+                        yield Static(EMPTY_NO_PLANS, id="tree-empty")
                     with Vertical(id="side"):
                         yield PreviewPanel()
                         yield GitPanel()
+                        yield AgentsPanel()
                 yield MetricsSection()
             yield Label("", id="hints")
 
@@ -194,7 +199,12 @@ if _TEXTUAL_OK:
             this guard, `d` or `s` pressed there would mutate the hidden main
             selection.
             """
-            if len(self.screen_stack) > 1 and action not in ("quit", "help"):
+            if len(self.screen_stack) > 1 and action not in ("quit", "help", "toggle_override"):
+                return False
+            if action in WRITE_ACTIONS and not self.require_override(notify=False):
+                if self._mounted and not self.state.override_warned:
+                    self.state.override_warned = True
+                    self.notify("read-only — press O for manual override", timeout=3)
                 return False
             return True
 
@@ -213,10 +223,15 @@ if _TEXTUAL_OK:
             if tree.display:
                 tree.focus()
 
-    def create_app(db_path: str | None = None, startup_notice: str = "") -> LazyplanApp:
+    def create_app(
+        db_path: str | None = None,
+        startup_notice: str = "",
+        startup_mode: PlanMode = PlanMode.ACTIVE,
+    ) -> LazyplanApp:
         """Build the app bound to a store."""
         app = LazyplanApp(Store(db_path))
         app._startup_notice = startup_notice
+        app.plan_mode = startup_mode
         return app
 
 

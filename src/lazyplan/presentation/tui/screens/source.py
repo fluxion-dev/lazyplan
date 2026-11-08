@@ -32,6 +32,7 @@ from lazyplan.services.source import (
 
 from ....core.ports.provenance import ProvenancePort
 from ...shared.design import KIND_ICON, escape_markup
+from ..navigation import NAV_BINDINGS, NavigationMixin
 from ..views.source import (
     commit_label,
     commit_preview,
@@ -49,11 +50,15 @@ DIFF_PREVIEW_FILES = 20
 
 if _TEXTUAL_OK:
 
-    class SourceScreen(Screen):
+    class SourceScreen(NavigationMixin, Screen):
         """Keyboard tree of repos, commits, files, and pull requests."""
 
+        navigation_name = "source"
+
         BINDINGS = [
+            *NAV_BINDINGS,
             Binding("escape", "back", "Back", priority=True),
+            Binding("enter", "open_owner", "Owner", priority=True),
             Binding("o", "open", "Open"),
             Binding("y", "copy", "Copy"),
             Binding("slash", "filter", "Filter"),
@@ -91,6 +96,12 @@ if _TEXTUAL_OK:
             self.query_one("#source-filter", Input).display = False
             self._load()
             self.query_one("#source-tree", NavTree).focus()
+
+        def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
+            """Keep the filter field's Enter free while it owns the keyboard."""
+            if action == "open_owner" and self._focus_is_text():
+                return False
+            return super().check_action(action, parameters)
 
         def _load(self) -> None:
             """Start one background trail load; never block the UI thread."""
@@ -195,6 +206,7 @@ if _TEXTUAL_OK:
                 "sha": commit.sha,
                 "copy": commit.sha,
                 "url": commit.url,
+                "owners": commit.owners,
                 "object": commit,
             }
 
@@ -208,6 +220,7 @@ if _TEXTUAL_OK:
                 "path": item.path,
                 "copy": item.path,
                 "url": item.url,
+                "owners": commit.owners,
                 "object": item,
             }
 
@@ -218,6 +231,7 @@ if _TEXTUAL_OK:
                 "number": pull.number,
                 "copy": pull.url,
                 "url": pull.url,
+                "owners": pull.owners,
                 "object": pull,
             }
 
@@ -266,8 +280,29 @@ if _TEXTUAL_OK:
             return data if isinstance(data, dict) else None
 
         def action_back(self) -> None:
-            """Close the source view."""
-            self.app.pop_screen()
+            """Close the source view and restore the prior selection."""
+            handler = getattr(self.app, "action_history_back", None)
+            if callable(handler):
+                handler()
+            else:
+                self.app.pop_screen()
+
+        def action_open_owner(self) -> None:
+            """Cross-link to the plan, milestone, or task that owns this row."""
+            data = self._selected()
+            if not data:
+                return
+            from ..views.provenance import owner_target
+
+            target = owner_target(tuple(data.get("owners", ())))
+            if target is None:
+                self.notify("this row has no owning plan, milestone, or task", timeout=3)
+                return
+            opener = getattr(self.app, "_open_detail", None)
+            if callable(opener):
+                opener(target[0], target[1])
+                return
+            self.notify(f"{target[0]} #{target[1]}", timeout=3)
 
         def action_open(self) -> None:
             """Open the selected reference in the browser."""

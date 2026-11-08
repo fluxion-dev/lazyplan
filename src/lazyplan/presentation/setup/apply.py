@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from lazyplan.infrastructure import hook_install, skills, textfile
+from lazyplan.infrastructure.integrations import HOOK
 from lazyplan.infrastructure.repo import (
     find_repo_root,
 )
@@ -27,6 +28,7 @@ from .findings import (
     refresh_installed_skills,
     review_findings,
 )
+from .integrations import Inspection, inspect, remember_installed, review_pending
 from .layout import SetupChoice
 from .state import SetupState, load_state, save_state, state_path, timestamp
 from .wizard import explicit_db, prompt_allowed, run_wizard, setup_skipped
@@ -60,14 +62,7 @@ def apply_choice(
     if root is not None and choice.placement == REPO and not choice.explicit_db:
         for entry in resolved.gitignore_entries:
             skills.append_gitignore(root, entry)
-    state = load_state(home)
-    state.version = SETUP_VERSION
-    state.placement = REPO if resolved.storage == layout.STORAGE_REPO else HOME
-    state.agents = list(choice.agents or [])
-    state.skills_dir = choice.skills_dir or ""
-    state.explicit_db = bool(choice.explicit_db)
-    state.last_version = version or state.last_version
-    save_state(state, home)
+    state = _remember_choice(home, choice, resolved, skill_plan, version)
     return {
         "db": str(store.path),
         "templates": str(resolved.templates_dir),
@@ -83,24 +78,48 @@ def apply_choice(
     }
 
 
+def _remember_choice(
+    home: Path,
+    choice: SetupChoice,
+    resolved: layout.SetupLayout,
+    skill_plan: skills.SkillPlan,
+    version: str,
+) -> SetupState:
+    """Persist the resolved placement, agents, and last setup version."""
+    state = load_state(home)
+    state.version = SETUP_VERSION
+    state.placement = REPO if resolved.storage == layout.STORAGE_REPO else HOME
+    state.agents = list(choice.agents or [])
+    state.skills_dir = choice.skills_dir or ""
+    if not choice.explicit_db:
+        state.skills_enabled = skill_plan.scope != "none"
+    state.explicit_db = bool(choice.explicit_db)
+    state.last_version = version or state.last_version
+    save_state(state, home)
+    return state
+
+
 def install_hooks(
     home: Path,
     agents: list[str] | None,
     enabled: bool | None = None,
 ) -> dict[str, Any]:
     """Install or remove managed hooks and remember the decision."""
+    state = load_state(home)
+    if enabled is None and not state.hooks_enabled:
+        return {"installed": [], "backups": [], "skipped": []}
     if enabled is False:
         report = hook_install.remove(home)
     else:
         hosts = None if agents is None else [host for host in agents if host in hook_install.HOSTS]
         report = hook_install.install(home, hosts=hosts)
-    state = load_state(home)
     planned = None if agents is None else [h for h in agents if h in hook_install.HOSTS]
     state.hook_files = (
         []
         if enabled is False
         else [str(spec.path) for spec in hook_install.preview(home, planned) if spec.path.is_file()]
     )
+    state.hooks_enabled = enabled is not False
     state.hooks = bool(state.hook_files)
     save_state(state, home)
     return report
@@ -163,6 +182,73 @@ def install_integrations(
     return result
 
 
+def refresh_installed_hooks(
+    inspection: Inspection,
+    state: SetupState,
+    home: Path,
+) -> dict[str, Any]:
+    """Refresh fully installed hook hosts without adding catalog items."""
+    if not state.hooks_enabled:
+        return {"installed": [], "backups": [], "skipped": []}
+    installed = {item.host for item in inspection.installed if item.kind == HOOK}
+    pending = {item.host for item in inspection.pending if item.kind == HOOK}
+    hosts = sorted(installed - pending)
+    if not hosts:
+        return {"installed": [], "backups": [], "skipped": []}
+    return hook_install.install(home, hosts=hosts)
+
+
+def refresh_integrations(
+    result: dict[str, Any],
+    choice: SetupChoice,
+    home: Path,
+    root: Path | None,
+    version: str,
+    read: Any = None,
+    write: Any = None,
+    color: bool = False,
+    allow_prompt: bool = True,
+    pointer_mode: bool | None = None,
+) -> dict[str, Any]:
+    """Refresh installed items, then offer only the pending additions."""
+    state = load_state(home)
+    inspection = inspect(choice, state, root, home, version)
+    if remember_installed(inspection, state, version):
+        save_state(state, home)
+    result["hooks"] = refresh_installed_hooks(inspection, state, home)
+    result["agents_pointer"] = install_pointer(
+        home,
+        str(result.get("placement", "")),
+        root,
+        Path(result["db"]),
+        pointer_mode,
+    )
+    review = review_pending(
+        choice,
+        state,
+        root,
+        home,
+        version,
+        read=read or (lambda: ""),
+        write=write or sys.stderr,
+        color=color,
+        allow_prompt=allow_prompt,
+    )
+    result["integration_review"] = review.to_dict()
+    return result
+
+
+def choice_from_state(state: SetupState) -> SetupChoice:
+    """Rebuild the effective setup choice from remembered state."""
+    return SetupChoice(
+        placement=state.placement,
+        agents=list(state.agents) or None,
+        skills_dir=state.skills_dir or None,
+        no_skills=not state.skills_enabled,
+        explicit_db=None,
+    )
+
+
 def record_finding(state: SetupState, finding: Finding, decision: str) -> None:
     state.decisions[finding.fingerprint] = {
         "decision": decision,
@@ -170,6 +256,31 @@ def record_finding(state: SetupState, finding: Finding, decision: str) -> None:
         "path": str(finding.path),
         "state": finding.state,
     }
+
+
+def _review_pending_result(
+    choice: SetupChoice,
+    state: SetupState,
+    root: Path | None,
+    home: Path,
+    version: str,
+    machine: bool,
+) -> dict[str, Any] | None:
+    """Run the pending-integration review and return its payload, if any."""
+    review = review_pending(
+        choice,
+        state,
+        root,
+        home,
+        version,
+        read=input,
+        write=sys.stderr,
+        color=ui.color_enabled(sys.stderr, machine),
+        allow_prompt=True,
+    )
+    if review.decision == "none":
+        return None
+    return {"integration_review": review.to_dict()}
 
 
 def ensure(
@@ -194,15 +305,23 @@ def ensure(
     first = not state.last_version
     human = cmd in HUMAN_COMMANDS
     findings = detect_findings(cwd, home, state, None) if human else []
-    if not first and not version_changed and not findings:
-        return None
     can_prompt = prompt_allowed(args, interactive)
     root = find_repo_root(cwd)
+    choice = choice_from_args(args, cwd, home, state)
+    pending_review = False
+    if human and not first and not version_changed and can_prompt:
+        pending_review = bool(inspect(choice, state, root, home, version).pending)
+    if not first and not version_changed and not findings and not pending_review:
+        return None
     result: dict[str, Any] | None = None
     if first or version_changed:
         result = _run_setup_once(args, cwd, home, state, version, root, human, can_prompt, first)
         if result is None:
             return None
+    elif pending_review:
+        result = _review_pending_result(
+            choice, state, root, home, version, bool(getattr(args, "json", False))
+        )
     if human and findings:
         _review_setup(args, findings, home, root, can_prompt)
     return result
@@ -234,13 +353,32 @@ def _run_setup_once(
             return None
     else:
         result = apply_choice(choice, root, home, version)
-    install_integrations(
-        result,
-        home,
-        root,
-        getattr(args, "hooks", None),
-        getattr(args, "agents_pointer", None),
-    )
+    if first:
+        install_integrations(
+            result,
+            home,
+            root,
+            getattr(args, "hooks", None),
+            getattr(args, "agents_pointer", None),
+        )
+        current = load_state(home)
+        adopted_choice = choice_from_state(current)
+        inspection = inspect(adopted_choice, current, root, home, version)
+        if remember_installed(inspection, current, version):
+            save_state(current, home)
+    else:
+        refresh_integrations(
+            result,
+            choice,
+            home,
+            root,
+            version,
+            read=input,
+            write=sys.stderr,
+            color=ui.color_enabled(sys.stderr, bool(getattr(args, "json", False))),
+            allow_prompt=human and can_prompt,
+            pointer_mode=getattr(args, "agents_pointer", None),
+        )
     if first and human and not getattr(args, "json", False):
         _announce_setup(result)
     return result

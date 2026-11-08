@@ -4,6 +4,7 @@ from __future__ import annotations
 
 try:
     from .query import query_one_opt
+    from .widgets.agents_panel import AgentsPanel
     from .widgets.git_panel import GitPanel
     from .widgets.preview_panel import PreviewPanel
 
@@ -13,6 +14,7 @@ except ImportError:  # pragma: no cover
 
 from ..shared.messages import RowAction, SelectionChanged
 from .base import AppBase
+from .views.control import build_control_strip
 from .views.git import build_git
 from .views.preview import build_preview
 
@@ -21,8 +23,32 @@ if _TEXTUAL_OK:
     class PreviewMixin(AppBase):
         """Preview behavior."""
 
+        def _selected_plan_id(self) -> int | None:
+            """Resolve the selected row to its owning plan."""
+            if self.selected is None:
+                return None
+            kind, oid = self.selected
+            if kind == "plan":
+                return oid
+            if kind == "milestone":
+                milestone = self.store.get_milestone(oid)
+                return milestone.plan_id if milestone is not None else None
+            task = self.store.get_task(oid)
+            if task is None:
+                return None
+            milestone = self.store.get_milestone(task.milestone_id)
+            return milestone.plan_id if milestone is not None else None
+
+        def update_agents(self) -> None:
+            """Refresh the active-session pane for the selected plan."""
+            panel = query_one_opt(self, "#agents", AgentsPanel)
+            if panel is None:
+                return
+            panel.show(self.store, self._selected_plan_id())
+
         def update_preview(self, force: bool = False) -> None:
             """Selection preview: a bounded summary, never the full plan."""
+            self.update_agents()
             panel = query_one_opt(self, "#preview", PreviewPanel)
             if panel is None:
                 return
@@ -58,7 +84,10 @@ if _TEXTUAL_OK:
                     git.show_empty("row is gone", "press r to refresh the tree")
                 return
             repos = full.get("effective_repos") or full.get("repos") or []
-            panel.show(build_preview(self.store, kind, oid, full, []))
+            panel.show(
+                build_preview(self.store, kind, oid, full, []),
+                strip=build_control_strip(self.store, kind, oid, full),
+            )
             if git is not None:
                 git.show(build_git(full, self.git_state_controller.snapshot(repos)))
 

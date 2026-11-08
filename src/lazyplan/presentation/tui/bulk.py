@@ -77,6 +77,7 @@ if _TEXTUAL_OK:
                     except ClaimConflict:
                         conflicts += 1
                 self.marked.clear()
+                self._record_override("claim release", f"{released} tasks")
                 self._saved(f"released {released}, conflicts {conflicts}")
 
             self.push_screen(ConfirmScreen(f"Release claims on {len(tasks)} marked tasks?"), cb)
@@ -87,11 +88,14 @@ if _TEXTUAL_OK:
                 return
             states = self._undo
             for state in states:
-                services.set_status(self.store, "task", state["id"], state["status"], actor="tui")
+                services.set_status(
+                    self.store, "task", state["id"], state["status"], actor="tui", heal=self.heal
+                )
                 services.set_blocked(
                     self.store, state["id"], state["blocked"], state["reason"], actor="tui"
                 )
             self._undo = None
+            self._record_override("bulk undo", f"{len(states)} tasks")
             self._saved(f"undid {len(states)} task changes")
 
         def _bulk_status(self, status: Status) -> None:
@@ -105,8 +109,11 @@ if _TEXTUAL_OK:
                     return
                 self._bulk_capture(tasks)
                 for task in tasks:
-                    services.set_status(self.store, "task", task.id, status, actor="tui")
+                    services.set_status(
+                        self.store, "task", task.id, status, actor="tui", heal=self.heal
+                    )
                 self.marked.clear()
+                self._record_override("status", f"{len(tasks)} tasks", status.value)
                 self._saved(f"moved {len(tasks)} tasks to {status.value}")
 
             self.push_screen(
@@ -135,6 +142,7 @@ if _TEXTUAL_OK:
                     for task in tasks:
                         services.block_task(self.store, task.id, reason.strip(), actor="tui")
                     self.marked.clear()
+                    self._record_override("block", f"{len(tasks)} tasks", reason.strip())
                     self._saved(f"blocked {len(tasks)} tasks")
 
                 self.push_screen(ConfirmScreen(f"Block {len(tasks)} tasks: {reason.strip()}?"), cb)

@@ -62,7 +62,7 @@ class TestSiteSEO(unittest.TestCase):
         index = self.site / "index.html"
         index.write_text(
             index.read_text(encoding="utf-8").replace(
-                'alt="Plan tree filtered to attention, showing active and expired claims, blocked work, aging tasks, and a red check."',
+                'alt="Plan tree with active and expired claims, blocked work, aging tasks, and a red check, with attention summarized in the control strip."',
                 "",
             ),
             encoding="utf-8",
@@ -131,7 +131,7 @@ class TestSiteSEO(unittest.TestCase):
         self.assertIn('id="ways-to-work"', page)
         for phrase in (
             "One agent plans. Another builds. You stay in control.",
-            "Add work, edit a task, reorder, block, or complete any row yourself",
+            "Edit any row yourself",
             "Ask for a plan.",
             "Hand off one task.",
             "Add the token model",
@@ -147,7 +147,7 @@ class TestSiteSEO(unittest.TestCase):
         )
         self.assertLessEqual(len(text.split()), 750)
         self.assertLessEqual(page.count("<code"), 8)
-        self.assertEqual(page.count("<figure"), 10)
+        self.assertEqual(page.count("<figure"), 11)
         self.assertIn('id="ways-to-work"', page)
 
 

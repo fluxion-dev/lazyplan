@@ -15,6 +15,7 @@ from tests.support.pilot import settle
 
 try:
     from lazyplan.presentation import tui as tui_mod
+    from lazyplan.presentation.tui.state import PlanMode
 except ImportError:  # stdlib-only interpreter: no textual, no screens
     tui_mod = None  # type: ignore[assignment]
 
@@ -44,11 +45,14 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
         store.add_task(self.sid, "T2")
         self.store = Store(self.db)
         self.app = tui_mod.create_app(self.db)
+        self.app.override_mode = True
 
     async def asyncTearDown(self):
         self.tmp.cleanup()
 
     def _nodes(self):
+        self.app.tree_controller.load_children(("plan", self.pid))
+        self.app.tree_controller.load_children(("milestone", self.sid))
         return (
             self.app._row_nodes[("plan", self.pid)],
             self.app._row_nodes[("milestone", self.sid)],
@@ -57,6 +61,7 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
     async def _select(self, pilot, kind: str, oid: int) -> None:
         from textual.widgets import Tree
 
+        await settle(pilot)
         tree = self.app.query_one("#tree", Tree)
         tree.move_cursor(self.app._row_nodes[(kind, oid)])
         await pilot.pause()
@@ -68,7 +73,7 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
 
     async def test_plans_start_collapsed(self):
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             proj, milestone = self._nodes()
             self.assertFalse(proj.is_expanded)
             self.assertFalse(milestone.is_expanded)
@@ -78,14 +83,14 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
         from textual.widgets import Tree
 
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             tree = self.app.query_one("#tree", Tree)
             self.assertFalse(tree.show_root)
             self.assertEqual(tree.root.children[0], self.app._row_nodes[("plan", self.pid)])
 
     async def test_expanding_plan_shows_milestones_not_tasks(self):
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._expand(pilot, "plan", self.pid)
             proj, milestone = self._nodes()
             self.assertTrue(proj.is_expanded)
@@ -101,12 +106,12 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
 
         self.app.refresh_all = counted
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
         self.assertEqual(len(calls), 1)
 
     async def test_fold_and_mark_do_not_rebuild_the_tree(self):
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._expand(pilot, "plan", self.pid)
             with mock.patch.object(self.app, "refresh_all") as refresh:
                 await pilot.press("z")
@@ -120,7 +125,7 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
 
     async def test_resize_within_a_breakpoint_does_not_rebuild(self):
         async with self.app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             with mock.patch.object(self.app, "refresh_all") as refresh:
                 await pilot.resize_terminal(110, 40)
                 await pilot.pause()
@@ -134,7 +139,7 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
         from textual.widgets import Tree
 
         async with self.app.run_test(size=(160, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await pilot.pause()
             tree = self.app.query_one("#tree", Tree)
             key = ("plan", self.pid)
@@ -168,7 +173,7 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
         from textual.widgets import Tree
 
         async with self.app.run_test(size=(160, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await pilot.pause()
             await self._expand(pilot, "plan", self.pid)
             await self._select(pilot, "plan", self.pid)
@@ -192,7 +197,7 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
         from textual.containers import Horizontal
 
         async with self.app.run_test(size=(80, 24)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             main = self.app.query_one("#main", Horizontal)
             self.assertTrue(main.has_class("narrow"))
             self.assertFalse(self.app.query_one("#preview").display)
@@ -205,7 +210,7 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
 
     async def test_external_change_keeps_folds_and_cursor(self):
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._expand(pilot, "plan", self.pid)
             Store(self.db).add_task(self.sid, "Externally added")
             self.app._poll()
@@ -216,7 +221,7 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
 
     async def test_space_cycles_status_on_plan(self):
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._select(pilot, "plan", self.pid)
             await pilot.press("space")
             await pilot.pause()
@@ -228,7 +233,7 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
 
     async def test_space_cycles_status_on_milestone(self):
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._expand(pilot, "plan", self.pid)
             await self._select(pilot, "milestone", self.sid)
             await pilot.press("space")
@@ -240,7 +245,7 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
 
     async def test_space_cycles_childless_milestone(self):
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._expand(pilot, "plan", self.pid)
             await self._select(pilot, "milestone", self.bare_sid)
             await pilot.press("space")
@@ -249,12 +254,12 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
             await _palette(pilot, "cycle status")
             self.assertEqual(self.store.get_milestone(self.bare_sid).status.value, "doing")
 
-    def test_tui_starts_unfiltered(self):
-        self.assertIsNone(self.app.status_filter)
+    def test_tui_starts_on_active_plans(self):
+        self.assertEqual(self.app.plan_mode, PlanMode.ACTIVE)
 
     async def test_single_click_selects_without_dialog(self):
         async with self.app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await pilot.click("#tree", offset=(10, 0))
             await pilot.pause()
             self.assertEqual(len(self.app.screen_stack), 1)
@@ -266,7 +271,7 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
         from lazyplan.presentation.tui.screens import DetailScreen
 
         async with self.app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             with mock.patch("lazyplan.presentation.tui.actions.DOUBLE_CLICK_WINDOW", 30.0):
                 await pilot.click("#tree", offset=(10, 0))
                 await pilot.pause()
@@ -279,7 +284,7 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
         import asyncio
 
         async with self.app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await pilot.click("#tree", offset=(10, 0))
             await pilot.pause()
             await asyncio.sleep(0.6)
@@ -291,7 +296,7 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
         from lazyplan.presentation.tui.screens import DetailScreen
 
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._select(pilot, "plan", self.pid)
             await pilot.press("enter")
             await pilot.pause()
@@ -309,7 +314,7 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
         from lazyplan.presentation.tui.screens import DetailScreen
 
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._select(pilot, "plan", self.pid)
             await pilot.press("e")
             await pilot.pause()
@@ -321,7 +326,7 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
         from lazyplan.presentation.tui.screens import NewMilestoneScreen
 
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._select(pilot, "plan", self.pid)
             await pilot.press("n")
             await pilot.pause()
@@ -329,7 +334,7 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
 
     async def test_z_folds_selected_milestone(self):
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._expand(pilot, "plan", self.pid)
             await self._select(pilot, "milestone", self.sid)
             _, milestone = self._nodes()
@@ -347,13 +352,14 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
 
     async def test_taskless_milestone_has_no_fold(self):
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
+            self.app.tree_controller.load_children(("plan", self.pid))
             bare = self.app._row_nodes[("milestone", self.bare_sid)]
             self.assertFalse(bare.allow_expand)
 
     async def test_fold_all_toggles(self):
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await _palette(pilot, "fold all")
             proj, milestone = self._nodes()
             self.assertTrue(proj.is_expanded)
@@ -365,7 +371,7 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
 
     async def test_fold_survives_refresh(self):
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._select(pilot, "plan", self.pid)
             await pilot.press("z")
             await pilot.pause()
@@ -377,7 +383,7 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
 
     async def test_left_collapses_header(self):
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._expand(pilot, "plan", self.pid)
             await pilot.press("left")
             await pilot.pause()
@@ -387,7 +393,7 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
 
     async def test_left_on_folded_milestone_jumps_to_parent(self):
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._expand(pilot, "plan", self.pid)
             await self._select(pilot, "milestone", self.sid)
             await pilot.press("left")
@@ -402,7 +408,7 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
 
     async def test_right_expands_header(self):
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._select(pilot, "plan", self.pid)
             await pilot.press("right")
             await pilot.pause()
@@ -412,7 +418,7 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
 
     async def test_right_on_open_milestone_jumps_to_first_task(self):
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._expand(pilot, "plan", self.pid)
             await self._expand(pilot, "milestone", self.sid)
             await pilot.press("right")
@@ -426,7 +432,7 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
 
     async def test_arrows_follow_the_tree_cursor(self):
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await settle(pilot)
             self.app.selected = None
             await pilot.pause()
@@ -444,7 +450,7 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
         from textual.widgets import Tree
 
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._expand(pilot, "plan", self.pid)
             await self._select(pilot, "plan", self.pid)
             await pilot.press("j")
@@ -460,7 +466,7 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
 
     async def test_clicking_the_row_arrow_toggles_the_plan(self):
         async with self.app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             proj, _ = self._nodes()
             self.assertFalse(proj.is_expanded)
             clicked = await pilot.click("#tree", offset=(1, 0))
@@ -477,7 +483,7 @@ class TestTreeFold(unittest.IsolatedAsyncioTestCase):
         from textual.widgets import Label
 
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             hints = str(self.app.query_one("#hints", Label).content)
             for key in ("n", "e", "s", "x", "d", "/", "?", "c"):
                 self.assertIn(key, hints)
@@ -502,20 +508,21 @@ class TestDoneCollapsed(unittest.IsolatedAsyncioTestCase):
         services.set_status(store, "task", dtid, Status.DONE)
         self.oid = store.add_plan("Open").id
         store.add_milestone(self.oid, "OS")
-        self.app = tui_mod.create_app(self.db)
+        self.app = tui_mod.create_app(self.db, startup_mode=PlanMode.BOTH)
+        self.app.override_mode = True
 
     async def asyncTearDown(self):
         self.tmp.cleanup()
 
     async def test_all_plans_start_collapsed(self):
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             self.assertFalse(self.app._row_nodes[("plan", self.did)].is_expanded)
             self.assertFalse(self.app._row_nodes[("plan", self.oid)].is_expanded)
 
     async def test_done_plans_sort_last(self):
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             keys = [key for key in self.app._row_nodes if key[0] == "plan"]
             self.assertEqual(keys[-1], ("plan", self.did))
 
@@ -523,7 +530,7 @@ class TestDoneCollapsed(unittest.IsolatedAsyncioTestCase):
         from textual.widgets import Tree
 
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             tree = self.app.query_one("#tree", Tree)
             tree.move_cursor(self.app._row_nodes[("plan", self.did)])
             await pilot.pause()
@@ -538,7 +545,7 @@ class TestDoneCollapsed(unittest.IsolatedAsyncioTestCase):
         from textual.widgets import Tree
 
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             tree = self.app.query_one("#tree", Tree)
             tree.move_cursor(self.app._row_nodes[("plan", self.did)])
             await pilot.pause()
@@ -550,15 +557,23 @@ class TestDoneCollapsed(unittest.IsolatedAsyncioTestCase):
 
 
 @unittest.skipUnless(tui_mod is not None and tui_mod._TEXTUAL_OK, "textual not installed")
-class TestShowAllToggle(unittest.IsolatedAsyncioTestCase):
+class TestPlanModeCycle(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
+        from lazyplan import services
+        from lazyplan.core.entities import Status
+
         self.tmp = tempfile.TemporaryDirectory()
         self.db = os.path.join(self.tmp.name, "t.db")
         store = Store(self.db)
-        for i in range(7):
+        for i in range(6):
             store.add_plan(f"P{i}")
+        done = store.add_plan("Done")
+        milestone = store.add_milestone(done.id, "M")
+        task = store.add_task(milestone.id, "T")
+        services.set_status(store, "task", task.id, Status.DONE)
         self.store = Store(self.db)
         self.app = tui_mod.create_app(self.db)
+        self.app.override_mode = True
 
     async def asyncTearDown(self):
         self.tmp.cleanup()
@@ -566,14 +581,23 @@ class TestShowAllToggle(unittest.IsolatedAsyncioTestCase):
     def _plan_rows(self):
         return [k for k in self.app._row_nodes if k[0] == "plan"]
 
-    async def test_capped_by_default_toggle_shows_all_and_back(self):
+    async def test_f_cycles_active_finished_both_without_a_cap(self):
         async with self.app.run_test() as pilot:
+            await settle(pilot)
+            self.assertEqual(self.app.plan_mode, PlanMode.ACTIVE)
+            self.assertEqual(len(self._plan_rows()), 6)
+            await pilot.press("f")
             await pilot.pause()
-            self.assertEqual(len(self._plan_rows()), 5)
-            await _palette(pilot, "show all")
+            self.assertEqual(self.app.plan_mode, PlanMode.FINISHED)
+            self.assertEqual(len(self._plan_rows()), 1)
+            await pilot.press("f")
+            await pilot.pause()
+            self.assertEqual(self.app.plan_mode, PlanMode.BOTH)
             self.assertEqual(len(self._plan_rows()), 7)
-            await _palette(pilot, "show all")
-            self.assertEqual(len(self._plan_rows()), 5)
+            await pilot.press("f")
+            await pilot.pause()
+            self.assertEqual(self.app.plan_mode, PlanMode.ACTIVE)
+            self.assertEqual(len(self._plan_rows()), 6)
 
 
 @unittest.skipUnless(tui_mod is not None and tui_mod._TEXTUAL_OK, "textual not installed")
@@ -585,6 +609,7 @@ class TestEmptyState(unittest.IsolatedAsyncioTestCase):
         self.db = os.path.join(self.tmp.name, "t.db")
         Store(self.db)
         self.app = tui_mod.create_app(self.db)
+        self.app.override_mode = True
         self.static = Static
         self.tree = Tree
 
@@ -593,16 +618,16 @@ class TestEmptyState(unittest.IsolatedAsyncioTestCase):
 
     async def test_empty_store_shows_centered_message(self):
         async with self.app.run_test(size=(100, 30)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             empty = self.app.query_one("#tree-empty", self.static)
             self.assertTrue(empty.display)
-            self.assertIn("nothing planned... yet", str(empty.render()))
+            self.assertIn("No active plans", str(empty.render()))
             self.assertFalse(self.app.query_one("#tree", self.tree).display)
 
     async def test_tree_returns_when_a_plan_exists(self):
         self.app.store.add_plan("P")
         async with self.app.run_test(size=(100, 30)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             self.assertFalse(self.app.query_one("#tree-empty", self.static).display)
             self.assertTrue(self.app.query_one("#tree", self.tree).display)
 

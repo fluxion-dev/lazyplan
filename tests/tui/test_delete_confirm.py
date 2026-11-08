@@ -40,13 +40,14 @@ class TestDeleteConfirm(unittest.IsolatedAsyncioTestCase):
         self.sid = store.add_milestone(self.pid, "S").id
         self.tid = store.add_task(self.sid, "T").id
         self.app = tui_mod.create_app(self.db)
+        self.app.override_mode = True
 
     async def asyncTearDown(self):
         self.tmp.cleanup()
 
     async def test_d_key_delete_asks_first(self):
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await settle(pilot)
             self.app.selected = ("task", self.tid)
             await _palette(pilot, "delete")
@@ -57,9 +58,16 @@ class TestDeleteConfirm(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             self.assertEqual(len(self.app.screen_stack), 1)
             self.assertIsNotNone(Store(self.db).get_task(self.tid))
-            # confirm: row goes
+            # confirm: row goes after a reason
             await _palette(pilot, "delete")
             await pilot.click("#ok")
+            await pilot.pause()
+            from lazyplan.presentation.tui.screens import FilterPromptScreen
+
+            self.assertIsInstance(self.app.screen, FilterPromptScreen)
+            for char in "cleanup":
+                await pilot.press(char)
+            await pilot.press("enter")
             await pilot.pause()
             self.assertEqual(len(self.app.screen_stack), 1)
             self.assertIsNone(Store(self.db).get_task(self.tid))
@@ -68,7 +76,7 @@ class TestDeleteConfirm(unittest.IsolatedAsyncioTestCase):
         store = Store(self.db)
         cid = store.add_criteria("task", self.tid, "works").id
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await settle(pilot)
             self.app.selected = ("task", self.tid)
             await _palette(pilot, "tick criteria")
@@ -80,7 +88,7 @@ class TestDeleteConfirm(unittest.IsolatedAsyncioTestCase):
 
     async def test_space_runs_without_confirm(self):
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await settle(pilot)
             self.app.selected = ("task", self.tid)
             await pilot.press("space")
@@ -94,7 +102,7 @@ class TestDeleteConfirm(unittest.IsolatedAsyncioTestCase):
 
     async def test_confirm_dialog_centered(self):
         async with self.app.run_test(size=(100, 30)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             self.app.push_screen(ConfirmScreen("Delete task #1?"))
             await pilot.pause()
             dlg = self.app.screen.query_one("#dlg")

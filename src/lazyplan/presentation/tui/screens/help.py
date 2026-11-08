@@ -57,6 +57,14 @@ if _TEXTUAL_OK:
         def _close(self) -> None:
             self.dismiss(None)
 
+    class TextScreen(HelpScreen):
+        """Read-only text overlay with a custom title and body."""
+
+        def __init__(self, title: str, text: str) -> None:
+            super().__init__()
+            self.dialog_title = title
+            self.HELP = text  # type: ignore[misc]
+
     class PaletteScreen(_Form):
         """Modal command palette: grouped sections, live filter, context rules."""
 
@@ -74,7 +82,8 @@ if _TEXTUAL_OK:
         def _section_options(self, sections: list[tuple[str, list[Command]]]) -> list[Option]:
             opts: list[Option] = []
             for header, cmds in sections:
-                opts.append(Option(f"── {header} ──", disabled=True))
+                mode = cmds[0].mode.upper() if cmds else ""
+                opts.append(Option(f"── {mode} · {header} ──", disabled=True))
                 for cmd in cmds:
                     reason = self._ctx.get(cmd.id)
                     label = f"{cmd.label}  ({cmd.key})" if cmd.key else cmd.label

@@ -718,7 +718,7 @@ class TestStore(unittest.TestCase):
         conn.execute("UPDATE plans SET status='done' WHERE id=?", (p.id,))
         conn.commit()
         conn.close()
-        changes = services.reconcile(self.store, actor="t")
+        changes = services.reconcile(self.store, actor="t")["changes"]
         self.assertEqual(
             changes,
             [
@@ -728,8 +728,54 @@ class TestStore(unittest.TestCase):
         )
         self.assertEqual(self.store.get_milestone(s.id).status, Status.TODO)
         self.assertEqual(self.store.get_plan(p.id).status, Status.TODO)
-        self.assertEqual(services.reconcile(self.store, actor="t"), [])
+        self.assertEqual(
+            services.reconcile(self.store, actor="t"),
+            {"changes": [], "released": [], "expired": [], "ambiguous": []},
+        )
         self.assertIsNotNone(t)
+
+    def test_reconcile_check_reports_drift_without_writing(self):
+        import sqlite3
+
+        p = self.store.add_plan("P")
+        s = self.store.add_milestone(p.id, "S")
+        self.store.add_task(s.id, "T")
+        conn = sqlite3.connect(self.db)
+        conn.execute("UPDATE milestones SET status='done' WHERE id=?", (s.id,))
+        conn.commit()
+        conn.close()
+        report = services.reconcile(self.store, actor="t", check=True)
+        self.assertEqual(
+            report["changes"],
+            [
+                {"kind": "milestone", "id": s.id, "to": "todo"},
+                {"kind": "plan", "id": p.id, "to": "done"},
+            ],
+        )
+        self.assertEqual(self.store.get_milestone(s.id).status, Status.DONE)
+        self.assertEqual(lpui_main(["--db", self.db, "reconcile", "--check"]), 1)
+        self.assertEqual(lpui_main(["--db", self.db, "reconcile"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "reconcile", "--check"]), 0)
+
+    def test_delete_last_task_recomputes_ancestors(self):
+        p = self.store.add_plan("P")
+        s = self.store.add_milestone(p.id, "S")
+        t = self.store.add_task(s.id, "T")
+        services.set_status(self.store, "task", t.id, Status.DONE, actor="t")
+        self.assertEqual(self.store.get_milestone(s.id).status, Status.DONE)
+        self.assertEqual(self.store.get_plan(p.id).status, Status.DONE)
+        self.assertTrue(services.delete_row(self.store, "task", t.id, actor="t"))
+        self.assertEqual(self.store.get_milestone(s.id).status, Status.TODO)
+        self.assertEqual(self.store.get_plan(p.id).status, Status.TODO)
+
+    def test_delete_milestone_recomputes_plan(self):
+        p = self.store.add_plan("P")
+        s = self.store.add_milestone(p.id, "S")
+        t = self.store.add_task(s.id, "T")
+        services.set_status(self.store, "task", t.id, Status.DONE, actor="t")
+        self.assertEqual(self.store.get_plan(p.id).status, Status.DONE)
+        self.assertTrue(services.delete_row(self.store, "milestone", s.id, actor="t"))
+        self.assertEqual(self.store.get_plan(p.id).status, Status.TODO)
 
     def test_cli_status_and_reconcile(self):
         self.assertEqual(lpui_main(["--db", self.db, "add-plan", "--title", "P1"]), 0)

@@ -1,0 +1,4053 @@
+{
+  "cli": {
+    "commands": [
+      {
+        "name": "add-criteria",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--kind"
+          ],
+          [
+            "--id"
+          ],
+          [
+            "--text"
+          ]
+        ]
+      },
+      {
+        "name": "add-milestone",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--plan"
+          ],
+          [
+            "--title"
+          ],
+          [
+            "--desc"
+          ]
+        ]
+      },
+      {
+        "name": "add-plan",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--title"
+          ],
+          [
+            "--name"
+          ],
+          [
+            "--what"
+          ],
+          [
+            "--desc"
+          ],
+          [
+            "--why"
+          ],
+          [
+            "--goal"
+          ]
+        ]
+      },
+      {
+        "name": "add-task",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--milestone"
+          ],
+          [
+            "--title"
+          ],
+          [
+            "--desc"
+          ],
+          [
+            "--touch"
+          ]
+        ]
+      },
+      {
+        "name": "audit",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--plan"
+          ],
+          [
+            "--since"
+          ],
+          [
+            "--strict"
+          ],
+          [
+            "--min-coverage"
+          ],
+          [
+            "--max-lag"
+          ],
+          [
+            "--max-gaps"
+          ],
+          [
+            "--min-trace"
+          ],
+          [
+            "--min-evidence"
+          ]
+        ]
+      },
+      {
+        "name": "brief",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--plan"
+          ]
+        ]
+      },
+      {
+        "name": "check",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--id"
+          ]
+        ]
+      },
+      {
+        "name": "claim",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [],
+          [
+            "--id"
+          ],
+          [
+            "--ttl"
+          ],
+          [
+            "--note"
+          ],
+          [
+            "--force"
+          ],
+          [
+            "--worktree"
+          ],
+          [
+            "--repo"
+          ]
+        ]
+      },
+      {
+        "name": "claims",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--plan"
+          ],
+          [
+            "--all"
+          ]
+        ]
+      },
+      {
+        "name": "comment",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [],
+          [
+            "--kind"
+          ],
+          [
+            "--id"
+          ],
+          [
+            "--comment"
+          ],
+          [
+            "--text"
+          ],
+          [
+            "--mentions"
+          ]
+        ]
+      },
+      {
+        "name": "commits",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--kind"
+          ],
+          [
+            "--id"
+          ],
+          [
+            "--files"
+          ],
+          [
+            "--refresh"
+          ]
+        ]
+      },
+      {
+        "name": "completion",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--shell"
+          ]
+        ]
+      },
+      {
+        "name": "context",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--plan"
+          ],
+          [
+            "--max-chars"
+          ]
+        ]
+      },
+      {
+        "name": "criteria",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--kind"
+          ],
+          [
+            "--id"
+          ]
+        ]
+      },
+      {
+        "name": "criterion",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          []
+        ]
+      },
+      {
+        "name": "delete",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--kind"
+          ],
+          [
+            "--id"
+          ]
+        ]
+      },
+      {
+        "name": "delete-criteria",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--id"
+          ]
+        ]
+      },
+      {
+        "name": "doctor",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ]
+        ]
+      },
+      {
+        "name": "export",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--format"
+          ],
+          [
+            "--plan"
+          ],
+          [
+            "--file"
+          ],
+          [
+            "--force"
+          ]
+        ]
+      },
+      {
+        "name": "feed",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--limit"
+          ],
+          [
+            "--follow"
+          ],
+          [
+            "--overrides"
+          ],
+          [
+            "--interval"
+          ],
+          [
+            "--session"
+          ]
+        ]
+      },
+      {
+        "name": "git",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          []
+        ]
+      },
+      {
+        "name": "help",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ]
+        ]
+      },
+      {
+        "name": "hook",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [],
+          [
+            "--host"
+          ]
+        ]
+      },
+      {
+        "name": "import",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--file"
+          ]
+        ]
+      },
+      {
+        "name": "info",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ]
+        ]
+      },
+      {
+        "name": "issue",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          []
+        ]
+      },
+      {
+        "name": "link",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--kind"
+          ],
+          [
+            "--id"
+          ],
+          [
+            "--repo"
+          ],
+          [
+            "--sha"
+          ]
+        ]
+      },
+      {
+        "name": "link-repo",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--kind"
+          ],
+          [
+            "--id"
+          ],
+          [
+            "--repo"
+          ],
+          [
+            "--remote"
+          ]
+        ]
+      },
+      {
+        "name": "lint",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--plan"
+          ],
+          [
+            "--strict"
+          ]
+        ]
+      },
+      {
+        "name": "list",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--status"
+          ],
+          [
+            "--archived"
+          ],
+          [
+            "--plan"
+          ],
+          [
+            "--all"
+          ],
+          [
+            "--limit"
+          ],
+          [
+            "--repo"
+          ],
+          [
+            "--tree"
+          ],
+          [
+            "--milestone"
+          ]
+        ]
+      },
+      {
+        "name": "mcp",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--read-only"
+          ]
+        ]
+      },
+      {
+        "name": "milestone",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          []
+        ]
+      },
+      {
+        "name": "next",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--plan"
+          ],
+          [
+            "--ttl"
+          ],
+          [
+            "--note"
+          ],
+          [
+            "--suggest"
+          ]
+        ]
+      },
+      {
+        "name": "note",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [],
+          [
+            "--kind"
+          ],
+          [
+            "--id"
+          ],
+          [
+            "--text"
+          ],
+          [
+            "--limit"
+          ]
+        ]
+      },
+      {
+        "name": "plan",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          []
+        ]
+      },
+      {
+        "name": "pr",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          []
+        ]
+      },
+      {
+        "name": "question",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          []
+        ]
+      },
+      {
+        "name": "reconcile",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--check"
+          ]
+        ]
+      },
+      {
+        "name": "ref",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          []
+        ]
+      },
+      {
+        "name": "repos",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--kind"
+          ],
+          [
+            "--id"
+          ],
+          [
+            "--effective"
+          ]
+        ]
+      },
+      {
+        "name": "review",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--plan"
+          ],
+          [
+            "--max-chars"
+          ]
+        ]
+      },
+      {
+        "name": "seed",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ]
+        ]
+      },
+      {
+        "name": "session",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          []
+        ]
+      },
+      {
+        "name": "setup",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--placement"
+          ],
+          [
+            "--agents"
+          ],
+          [
+            "--skills-dir"
+          ],
+          [
+            "--no-skills"
+          ],
+          [
+            "--hooks"
+          ],
+          [
+            "--no-hooks"
+          ],
+          [
+            "--agents-pointer"
+          ],
+          [
+            "--no-agents-pointer"
+          ],
+          [
+            "--yes"
+          ],
+          [
+            "--post-upgrade"
+          ]
+        ]
+      },
+      {
+        "name": "share",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--plan"
+          ],
+          [
+            "--format"
+          ],
+          [
+            "--out"
+          ]
+        ]
+      },
+      {
+        "name": "ship",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--plan"
+          ],
+          [
+            "--max-chars"
+          ]
+        ]
+      },
+      {
+        "name": "show",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--kind"
+          ],
+          [
+            "--id"
+          ],
+          [
+            "--files"
+          ]
+        ]
+      },
+      {
+        "name": "stats",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--since"
+          ],
+          [
+            "--stale-after"
+          ],
+          [
+            "--by"
+          ]
+        ]
+      },
+      {
+        "name": "status",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--kind"
+          ],
+          [
+            "--id"
+          ],
+          [
+            "--to"
+          ],
+          [
+            "--override"
+          ]
+        ]
+      },
+      {
+        "name": "sync",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--file"
+          ],
+          [
+            "--dry-run"
+          ]
+        ]
+      },
+      {
+        "name": "task",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          []
+        ]
+      },
+      {
+        "name": "touch",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          []
+        ]
+      },
+      {
+        "name": "trace",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--plan"
+          ],
+          [
+            "--criterion"
+          ]
+        ]
+      },
+      {
+        "name": "ui",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ]
+        ]
+      },
+      {
+        "name": "uncheck",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--id"
+          ]
+        ]
+      },
+      {
+        "name": "unlink",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--kind"
+          ],
+          [
+            "--id"
+          ],
+          [
+            "--sha"
+          ]
+        ]
+      },
+      {
+        "name": "unlink-repo",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--kind"
+          ],
+          [
+            "--id"
+          ],
+          [
+            "--repo"
+          ],
+          [
+            "--remote"
+          ]
+        ]
+      },
+      {
+        "name": "update",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--kind"
+          ],
+          [
+            "--id"
+          ],
+          [
+            "--title"
+          ],
+          [
+            "--name"
+          ],
+          [
+            "--desc"
+          ],
+          [
+            "--what"
+          ],
+          [
+            "--why"
+          ],
+          [
+            "--goal"
+          ]
+        ]
+      },
+      {
+        "name": "upgrade",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--check"
+          ],
+          [
+            "--diagnose"
+          ]
+        ]
+      },
+      {
+        "name": "watch",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--limit"
+          ]
+        ]
+      },
+      {
+        "name": "who",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--plan"
+          ],
+          [
+            "--all"
+          ]
+        ]
+      }
+    ],
+    "count": 61
+  },
+  "counts": {
+    "cli_commands": 61,
+    "doc_files": 9,
+    "doc_headings": 95,
+    "env_names": 12,
+    "file_paths": 11,
+    "hook_events": 24,
+    "mcp_resources": 3,
+    "mcp_tools": 64,
+    "palette_commands": 63,
+    "setup_steps": 4,
+    "stale_claims": 0,
+    "tui_bindings": 72,
+    "tui_key_conflicts": 16,
+    "tui_screens": 15
+  },
+  "docs": {
+    "files": [
+      {
+        "file": "README.md",
+        "headings": [
+          "lazyplan (`lpui`) \u2014 v0.35.0",
+          "Install",
+          "First run",
+          "Why it differs",
+          "Everyday commands",
+          "For your agent",
+          "Learn more"
+        ]
+      },
+      {
+        "file": "CONTRIBUTING.md",
+        "headings": [
+          "Contributing to lazyplan",
+          "Set up",
+          "Before you push",
+          "Tests",
+          "Landing changes",
+          "edit, then commit in small green slices",
+          "Release",
+          "Style",
+          "Docs",
+          "Add one action across every surface"
+        ]
+      },
+      {
+        "file": "AGENTS.md",
+        "headings": [
+          "Agent instructions",
+          "Documentation"
+        ]
+      },
+      {
+        "file": "docs/usage.md",
+        "headings": [
+          "lazyplan usage",
+          "Install",
+          "Linux packages",
+          "Fedora / RHEL / openSUSE",
+          "Debian / Ubuntu",
+          "One-line installer",
+          "From source",
+          "Upgrade",
+          "pipx",
+          "pip, including the install.sh venv",
+          "Uninstall",
+          "Start",
+          "Setup and scope",
+          "Inspect before writing",
+          "Upgrades and migration",
+          "Where the database resolves",
+          "Setup flags and environment",
+          "Setup files",
+          "Everyday commands",
+          "The screen",
+          "Trust hubs",
+          "Coordination hubs",
+          "Provenance and activity hubs",
+          "Manual override mode",
+          "Agents",
+          "Porcelain output",
+          "Plan documents and recipes",
+          "Context and claims",
+          "Progress and rollups",
+          "Tracking guarantees",
+          "Sessions and touch-points",
+          "Trust: approvals, evidence, and questions",
+          "Review, lint, and audit",
+          "Git provenance",
+          "Pull requests",
+          "MCP and issue imports",
+          "Data and backup",
+          "Exit codes"
+        ]
+      },
+      {
+        "file": "docs/lpui.1",
+        "headings": [
+          "NAME",
+          "SYNOPSIS",
+          "DESCRIPTION",
+          "GLOBAL OPTIONS",
+          "COMMANDS",
+          "EXAMPLES",
+          "ENVIRONMENT",
+          "FILES",
+          "EXIT STATUS",
+          "SEE ALSO"
+        ]
+      },
+      {
+        "file": "docs/lazyplan.1",
+        "headings": []
+      },
+      {
+        "file": "src/lazyplan/data/AGENTS.md",
+        "headings": [
+          "lazyplan (`lpui`)"
+        ]
+      },
+      {
+        "file": "src/lazyplan/data/SKILL.md",
+        "headings": [
+          "lazyplan (`lpui`) \u2014 local plan journal",
+          "Identity and surfaces",
+          "DB scoping and setup",
+          "Linked repos",
+          "Git proof and pull requests",
+          "Starting a plan: interview first",
+          "Readability and scouting",
+          "Record the definition",
+          "Review gate: plan is truth",
+          "Plan documents and recipes",
+          "Trust and coordination",
+          "During execution",
+          "Read first",
+          "Templates",
+          "Write and criteria",
+          "Milestone and task standards",
+          "Human-in-the-loop",
+          "Rules"
+        ]
+      },
+      {
+        "file": "site/index.html",
+        "headings": [
+          "One plan for you and your agent.",
+          "One control room for the loop.",
+          "Less chat. More done.",
+          "One agent plans. Another builds. You stay in control.",
+          "See it in action.",
+          "Start in three steps.",
+          "Get lazyplan in one command.",
+          "Questions, answered.",
+          "Bring your plan into focus."
+        ]
+      }
+    ]
+  },
+  "hooks": {
+    "events": [
+      {
+        "event": "post-tool",
+        "host": "claude",
+        "native": "PostToolUse"
+      },
+      {
+        "event": "prompt-submit",
+        "host": "claude",
+        "native": "UserPromptSubmit"
+      },
+      {
+        "event": "session-start",
+        "host": "claude",
+        "native": "SessionStart"
+      },
+      {
+        "event": "stop",
+        "host": "claude",
+        "native": "Stop"
+      },
+      {
+        "event": "post-tool",
+        "host": "codex",
+        "native": "PostToolUse"
+      },
+      {
+        "event": "pre-compact",
+        "host": "codex",
+        "native": "PreCompact"
+      },
+      {
+        "event": "prompt-submit",
+        "host": "codex",
+        "native": "UserPromptSubmit"
+      },
+      {
+        "event": "session-start",
+        "host": "codex",
+        "native": "SessionStart"
+      },
+      {
+        "event": "stop",
+        "host": "codex",
+        "native": "Stop"
+      },
+      {
+        "event": "post-tool",
+        "host": "cursor",
+        "native": "postToolUse"
+      },
+      {
+        "event": "pre-compact",
+        "host": "cursor",
+        "native": "preCompact"
+      },
+      {
+        "event": "prompt-submit",
+        "host": "cursor",
+        "native": "beforeSubmitPrompt"
+      },
+      {
+        "event": "session-start",
+        "host": "cursor",
+        "native": "sessionStart"
+      },
+      {
+        "event": "stop",
+        "host": "cursor",
+        "native": "stop"
+      },
+      {
+        "event": "post-tool",
+        "host": "gemini",
+        "native": "AfterTool"
+      },
+      {
+        "event": "pre-compact",
+        "host": "gemini",
+        "native": "PreCompress"
+      },
+      {
+        "event": "prompt-submit",
+        "host": "gemini",
+        "native": "BeforeAgent"
+      },
+      {
+        "event": "session-start",
+        "host": "gemini",
+        "native": "SessionStart"
+      },
+      {
+        "event": "stop",
+        "host": "gemini",
+        "native": "AfterAgent"
+      },
+      {
+        "event": "post-tool",
+        "host": "opencode",
+        "native": "post-tool"
+      },
+      {
+        "event": "pre-compact",
+        "host": "opencode",
+        "native": "pre-compact"
+      },
+      {
+        "event": "prompt-submit",
+        "host": "opencode",
+        "native": "prompt-submit"
+      },
+      {
+        "event": "session-start",
+        "host": "opencode",
+        "native": "session-start"
+      },
+      {
+        "event": "stop",
+        "host": "opencode",
+        "native": "stop"
+      }
+    ]
+  },
+  "mcp": {
+    "resources": [
+      {
+        "name": "Session brief",
+        "uri": "lazyplan://brief"
+      },
+      {
+        "name": "Session context packet",
+        "uri": "lazyplan://context"
+      },
+      {
+        "name": "Plan document",
+        "uri": "lazyplan://plan/1"
+      }
+    ],
+    "tools": [
+      {
+        "description": "Recent events, or only manual overrides.",
+        "name": "activity_list"
+      },
+      {
+        "description": "Coverage, lag, gaps, and trace coverage.",
+        "name": "audit"
+      },
+      {
+        "description": "Block a task with a reason.",
+        "name": "block_task"
+      },
+      {
+        "description": "Session brief: active plan, doing task, next, gaps.",
+        "name": "brief"
+      },
+      {
+        "description": "Release a task lease.",
+        "name": "claim_release"
+      },
+      {
+        "description": "Renew a task lease.",
+        "name": "claim_renew"
+      },
+      {
+        "description": "Claim a task lease.",
+        "name": "claim_task"
+      },
+      {
+        "description": "Active task leases, or all including expired.",
+        "name": "claims"
+      },
+      {
+        "description": "Add a review comment to a row.",
+        "name": "comment_add"
+      },
+      {
+        "description": "Rewrite one review comment.",
+        "name": "comment_edit"
+      },
+      {
+        "description": "Comments on one row, optionally by mention.",
+        "name": "comment_list"
+      },
+      {
+        "description": "Resolve or unresolve a review comment.",
+        "name": "comment_resolve"
+      },
+      {
+        "description": "Commits linked to a row.",
+        "name": "commit_list"
+      },
+      {
+        "description": "Re-resolve cached commit links and mark stale rows.",
+        "name": "commit_refresh"
+      },
+      {
+        "description": "Create a milestone.",
+        "name": "create_milestone"
+      },
+      {
+        "description": "Create a plan.",
+        "name": "create_plan"
+      },
+      {
+        "description": "Create a task.",
+        "name": "create_task"
+      },
+      {
+        "description": "Add an acceptance criterion.",
+        "name": "criterion_add"
+      },
+      {
+        "description": "Delete one criterion.",
+        "name": "criterion_delete"
+      },
+      {
+        "description": "Rewrite one criterion.",
+        "name": "criterion_edit"
+      },
+      {
+        "description": "Proof rows for one criterion.",
+        "name": "criterion_evidence"
+      },
+      {
+        "description": "Criteria on one plan, milestone, or task.",
+        "name": "criterion_list"
+      },
+      {
+        "description": "Record proof for a criterion; tick only when it passes.",
+        "name": "criterion_prove"
+      },
+      {
+        "description": "Relate a criterion to a proving task.",
+        "name": "criterion_relate"
+      },
+      {
+        "description": "Tick a criterion.",
+        "name": "criterion_tick"
+      },
+      {
+        "description": "Remove a criterion proof relation.",
+        "name": "criterion_unrelate"
+      },
+      {
+        "description": "Untick a criterion.",
+        "name": "criterion_untick"
+      },
+      {
+        "description": "Delete a plan, milestone, or task.",
+        "name": "delete_row"
+      },
+      {
+        "description": "Edit a plan, milestone, or task.",
+        "name": "edit_row"
+      },
+      {
+        "description": "Markdown export of one plan.",
+        "name": "export_plan"
+      },
+      {
+        "description": "Link branch commits and finish a task through the gates.",
+        "name": "finish_task"
+      },
+      {
+        "description": "Branch and dirty state for a row's linked checkouts.",
+        "name": "git_status"
+      },
+      {
+        "description": "Resolved database, scope, and counts.",
+        "name": "info"
+      },
+      {
+        "description": "Link a commit to a row.",
+        "name": "link_commit"
+      },
+      {
+        "description": "Plan-quality findings for a plan.",
+        "name": "lint"
+      },
+      {
+        "description": "All plans with milestones, tasks, and criteria.",
+        "name": "list_plans"
+      },
+      {
+        "description": "Move a row to todo, doing, or done.",
+        "name": "move_row"
+      },
+      {
+        "description": "Add a handoff note.",
+        "name": "note_add"
+      },
+      {
+        "description": "Notes on one row.",
+        "name": "note_list"
+      },
+      {
+        "description": "Approve the current plan scope.",
+        "name": "plan_approve"
+      },
+      {
+        "description": "Scope drift since a plan approval.",
+        "name": "plan_diff"
+      },
+      {
+        "description": "Lint, coverage, and open-question readiness for a plan.",
+        "name": "plan_ready"
+      },
+      {
+        "description": "Attach a GitHub pull request URL to a row.",
+        "name": "pull_request_link"
+      },
+      {
+        "description": "Cached pull requests linked to a row.",
+        "name": "pull_request_list"
+      },
+      {
+        "description": "Refresh cached pull requests from GitHub (network).",
+        "name": "pull_request_refresh"
+      },
+      {
+        "description": "Detach one cached pull request.",
+        "name": "pull_request_unlink"
+      },
+      {
+        "description": "Add an open question to a plan.",
+        "name": "question_add"
+      },
+      {
+        "description": "Questions on one plan by state.",
+        "name": "question_list"
+      },
+      {
+        "description": "Reopen a question and record why.",
+        "name": "question_reopen"
+      },
+      {
+        "description": "Resolve a question with an answer.",
+        "name": "question_resolve"
+      },
+      {
+        "description": "Attach an external URL to a plan.",
+        "name": "reference_link"
+      },
+      {
+        "description": "External references on one plan.",
+        "name": "reference_list"
+      },
+      {
+        "description": "Remove one external reference from a plan.",
+        "name": "reference_unlink"
+      },
+      {
+        "description": "Repositories linked to a row.",
+        "name": "repo_list"
+      },
+      {
+        "description": "Deterministic Markdown review packet for one plan.",
+        "name": "review"
+      },
+      {
+        "description": "Sessions, newest first.",
+        "name": "session_list"
+      },
+      {
+        "description": "Deterministic Markdown outcome ship note for one plan.",
+        "name": "ship"
+      },
+      {
+        "description": "One plan, milestone, or task with full context.",
+        "name": "show_row"
+      },
+      {
+        "description": "Repos, commits, files, and pull requests for a row.",
+        "name": "source_trail"
+      },
+      {
+        "description": "Add a task touch-point path or glob.",
+        "name": "touch_add"
+      },
+      {
+        "description": "Touch-point paths on one task.",
+        "name": "touch_list"
+      },
+      {
+        "description": "Remove a task touch-point path or glob.",
+        "name": "touch_remove"
+      },
+      {
+        "description": "Criterion to task, commit, and PR evidence.",
+        "name": "trace"
+      },
+      {
+        "description": "Clear a task's blocked flag.",
+        "name": "unblock_task"
+      }
+    ]
+  },
+  "metadata": {
+    "environment": [
+      {
+        "in_man": true,
+        "in_usage": true,
+        "name": "LAZYPLAN_DB"
+      },
+      {
+        "in_man": true,
+        "in_usage": true,
+        "name": "LAZYPLAN_PORCELAIN"
+      },
+      {
+        "in_man": true,
+        "in_usage": true,
+        "name": "LAZYPLAN_NO_SETUP"
+      },
+      {
+        "in_man": true,
+        "in_usage": true,
+        "name": "LAZYPLAN_AGENTS"
+      },
+      {
+        "in_man": true,
+        "in_usage": true,
+        "name": "LAZYPLAN_SKILLS_DIR"
+      },
+      {
+        "in_man": true,
+        "in_usage": true,
+        "name": "LAZYPLAN_NO_SKILLS"
+      },
+      {
+        "in_man": true,
+        "in_usage": true,
+        "name": "LAZYPLAN_NO_HOOKS"
+      },
+      {
+        "in_man": true,
+        "in_usage": true,
+        "name": "LAZYPLAN_NO_SPINNER"
+      },
+      {
+        "in_man": true,
+        "in_usage": true,
+        "name": "LAZYPLAN_THEME"
+      },
+      {
+        "in_man": true,
+        "in_usage": true,
+        "name": "LAZYPLAN_NO_COLOR"
+      },
+      {
+        "in_man": true,
+        "in_usage": true,
+        "name": "NO_COLOR, CLICOLOR=0, TERM=dumb"
+      },
+      {
+        "in_man": true,
+        "in_usage": true,
+        "name": "USER, USERNAME"
+      }
+    ],
+    "files": [
+      {
+        "in_man": true,
+        "in_usage": true,
+        "name": "~/.lazyplan/lazyplan.db"
+      },
+      {
+        "in_man": true,
+        "in_usage": true,
+        "name": "%LOCALAPPDATA%/lazyplan/"
+      },
+      {
+        "in_man": true,
+        "in_usage": true,
+        "name": ".agents/lazyplan/lazyplan.db"
+      },
+      {
+        "in_man": true,
+        "in_usage": true,
+        "name": ".agents/lazyplan/config.json"
+      },
+      {
+        "in_man": true,
+        "in_usage": true,
+        "name": ".agents/lazyplan/templates/{plan,milestone,task}.md"
+      },
+      {
+        "in_man": true,
+        "in_usage": true,
+        "name": "~/.lazyplan/templates/{plan,milestone,task}.md"
+      },
+      {
+        "in_man": true,
+        "in_usage": true,
+        "name": "~/.lazyplan/setup.json"
+      },
+      {
+        "in_man": true,
+        "in_usage": true,
+        "name": "~/.lazyplan/backups/<timestamp>/"
+      },
+      {
+        "in_man": true,
+        "in_usage": true,
+        "name": "~/.agents/skills/lazyplan/SKILL.md"
+      },
+      {
+        "in_man": true,
+        "in_usage": true,
+        "name": "~/.config/opencode/plugins/lazyplan.js, ~/.claude/settings.json, ~/.gemini/settings.json, ~/.codex/hooks.json, ~/.cursor/hooks.json"
+      },
+      {
+        "in_man": true,
+        "in_usage": true,
+        "name": "AGENTS.md"
+      }
+    ]
+  },
+  "palette": {
+    "commands": [
+      {
+        "handler": "open_activity_hub",
+        "help_group": "FIND",
+        "id": "activity-hub",
+        "key": "",
+        "label": "Open activity hub",
+        "section": "View"
+      },
+      {
+        "handler": "add_criterion",
+        "help_group": "CHANGE",
+        "id": "add-criterion",
+        "key": "a",
+        "label": "Add criterion",
+        "section": "Create"
+      },
+      {
+        "handler": "add_question",
+        "help_group": "TRUST",
+        "id": "add-question",
+        "key": "",
+        "label": "Add plan question",
+        "section": "Edit"
+      },
+      {
+        "handler": "approve_plan",
+        "help_group": "TRUST",
+        "id": "approve-plan",
+        "key": "",
+        "label": "Approve plan scope",
+        "section": "Edit"
+      },
+      {
+        "handler": "block_task",
+        "help_group": "TRUST",
+        "id": "block-task",
+        "key": "",
+        "label": "Block task",
+        "section": "Edit"
+      },
+      {
+        "handler": "bulk_block",
+        "help_group": "CHANGE",
+        "id": "bulk-block",
+        "key": "",
+        "label": "Bulk block tasks",
+        "section": "Edit"
+      },
+      {
+        "handler": "bulk_doing",
+        "help_group": "CHANGE",
+        "id": "bulk-doing",
+        "key": "",
+        "label": "Bulk move to doing",
+        "section": "Edit"
+      },
+      {
+        "handler": "bulk_done",
+        "help_group": "CHANGE",
+        "id": "bulk-done",
+        "key": "",
+        "label": "Bulk move to done",
+        "section": "Edit"
+      },
+      {
+        "handler": "bulk_release",
+        "help_group": "CHANGE",
+        "id": "bulk-release",
+        "key": "",
+        "label": "Bulk release claims",
+        "section": "Edit"
+      },
+      {
+        "handler": "claim_task",
+        "help_group": "TRUST",
+        "id": "claim-task",
+        "key": "",
+        "label": "Claim task",
+        "section": "Edit"
+      },
+      {
+        "handler": "open_claims_hub",
+        "help_group": "TRUST",
+        "id": "claims-hub",
+        "key": "",
+        "label": "Open claims hub",
+        "section": "View"
+      },
+      {
+        "handler": "clear_marks",
+        "help_group": "MOVE",
+        "id": "clear-marks",
+        "key": "",
+        "label": "Clear marks",
+        "section": "Edit"
+      },
+      {
+        "handler": "command_palette",
+        "help_group": "APP",
+        "id": "command-palette",
+        "key": "c",
+        "label": "Command palette",
+        "section": "App"
+      },
+      {
+        "handler": "open_comments_hub",
+        "help_group": "TRUST",
+        "id": "comments-hub",
+        "key": "",
+        "label": "Open comments and notes hub",
+        "section": "View"
+      },
+      {
+        "handler": "new_milestone",
+        "help_group": "CHANGE",
+        "id": "create-milestone",
+        "key": "",
+        "label": "Create milestone",
+        "section": "Create"
+      },
+      {
+        "handler": "new_plan",
+        "help_group": "CHANGE",
+        "id": "create-plan",
+        "key": "",
+        "label": "Create plan",
+        "section": "Create"
+      },
+      {
+        "handler": "new_task",
+        "help_group": "CHANGE",
+        "id": "create-task",
+        "key": "",
+        "label": "Create task",
+        "section": "Create"
+      },
+      {
+        "handler": "open_criteria_hub",
+        "help_group": "TRUST",
+        "id": "criteria-hub",
+        "key": "",
+        "label": "Open criteria hub",
+        "section": "View"
+      },
+      {
+        "handler": "cycle_theme",
+        "help_group": "APP",
+        "id": "cycle-theme",
+        "key": "t",
+        "label": "Cycle theme",
+        "section": "App"
+      },
+      {
+        "handler": "delete_selection",
+        "help_group": "CHANGE",
+        "id": "delete-selection",
+        "key": "d",
+        "label": "Delete selection",
+        "section": "Edit"
+      },
+      {
+        "handler": "edit_selection",
+        "help_group": "CHANGE",
+        "id": "edit-selection",
+        "key": "e",
+        "label": "Edit selection",
+        "section": "Edit"
+      },
+      {
+        "handler": "open_evidence_hub",
+        "help_group": "TRUST",
+        "id": "evidence-hub",
+        "key": "",
+        "label": "Open evidence hub",
+        "section": "View"
+      },
+      {
+        "handler": "export_md",
+        "help_group": "APP",
+        "id": "export-plan",
+        "key": "",
+        "label": "Export plan as Markdown\u2026",
+        "section": "App"
+      },
+      {
+        "handler": "filter_text",
+        "help_group": "FIND",
+        "id": "filter-text",
+        "key": "/",
+        "label": "Filter by text",
+        "section": "View"
+      },
+      {
+        "handler": "finish_task",
+        "help_group": "TRUST",
+        "id": "finish-task",
+        "key": "",
+        "label": "Finish task",
+        "section": "Edit"
+      },
+      {
+        "handler": "fold_all",
+        "help_group": "MOVE",
+        "id": "fold-all",
+        "key": "Z",
+        "label": "Fold/unfold all",
+        "section": "View"
+      },
+      {
+        "handler": "fold",
+        "help_group": "MOVE",
+        "id": "fold-one",
+        "key": "z",
+        "label": "Fold/unfold row",
+        "section": "View"
+      },
+      {
+        "handler": "force_release_claim",
+        "help_group": "CHANGE",
+        "id": "force-release-claim",
+        "key": "",
+        "label": "Force release claim",
+        "section": "Edit"
+      },
+      {
+        "handler": "git_capture",
+        "help_group": "CHANGE",
+        "id": "git-capture",
+        "key": "",
+        "label": "Link current commit",
+        "section": "Edit"
+      },
+      {
+        "handler": "git_refresh",
+        "help_group": "FIND",
+        "id": "git-refresh",
+        "key": "",
+        "label": "Refresh commit links",
+        "section": "View"
+      },
+      {
+        "handler": "git_status",
+        "help_group": "FIND",
+        "id": "git-status",
+        "key": "",
+        "label": "Show git status",
+        "section": "View"
+      },
+      {
+        "handler": "help",
+        "help_group": "APP",
+        "id": "help",
+        "key": "?",
+        "label": "Help",
+        "section": "App"
+      },
+      {
+        "handler": "link_pr",
+        "help_group": "CHANGE",
+        "id": "link-pr",
+        "key": "",
+        "label": "Link pull request",
+        "section": "Edit"
+      },
+      {
+        "handler": "link_ref",
+        "help_group": "TRUST",
+        "id": "link-ref",
+        "key": "",
+        "label": "Link external reference",
+        "section": "Edit"
+      },
+      {
+        "handler": "move_doing",
+        "help_group": "CHANGE",
+        "id": "move-doing",
+        "key": "",
+        "label": "Move to doing",
+        "section": "Edit"
+      },
+      {
+        "handler": "move_done",
+        "help_group": "CHANGE",
+        "id": "move-done",
+        "key": "",
+        "label": "Move to done",
+        "section": "Edit"
+      },
+      {
+        "handler": "move_todo",
+        "help_group": "CHANGE",
+        "id": "move-todo",
+        "key": "",
+        "label": "Move to todo",
+        "section": "Edit"
+      },
+      {
+        "handler": "open_detail",
+        "help_group": "MOVE",
+        "id": "open-detail",
+        "key": "enter",
+        "label": "Open detail",
+        "section": "View"
+      },
+      {
+        "handler": "open_pr",
+        "help_group": "FIND",
+        "id": "open-pr",
+        "key": "",
+        "label": "Open pull request",
+        "section": "View"
+      },
+      {
+        "handler": "plan_diff",
+        "help_group": "FIND",
+        "id": "plan-diff",
+        "key": "",
+        "label": "Show plan diff",
+        "section": "View"
+      },
+      {
+        "handler": "cycle_mode",
+        "help_group": "FIND",
+        "id": "plan-mode",
+        "key": "f",
+        "label": "Change plan mode",
+        "section": "View"
+      },
+      {
+        "handler": "prove_criterion",
+        "help_group": "TRUST",
+        "id": "prove-criterion",
+        "key": "",
+        "label": "Prove criterion",
+        "section": "Edit"
+      },
+      {
+        "handler": "open_pull_requests_hub",
+        "help_group": "TRUST",
+        "id": "pull-requests-hub",
+        "key": "",
+        "label": "Open pull request hub",
+        "section": "View"
+      },
+      {
+        "handler": "open_questions_hub",
+        "help_group": "TRUST",
+        "id": "questions-hub",
+        "key": "",
+        "label": "Open questions hub",
+        "section": "View"
+      },
+      {
+        "handler": "quit",
+        "help_group": "APP",
+        "id": "quit",
+        "key": "q",
+        "label": "Quit",
+        "section": "App"
+      },
+      {
+        "handler": "open_references_hub",
+        "help_group": "TRUST",
+        "id": "references-hub",
+        "key": "",
+        "label": "Open references hub",
+        "section": "View"
+      },
+      {
+        "handler": "refresh",
+        "help_group": "FIND",
+        "id": "refresh",
+        "key": "r",
+        "label": "Refresh",
+        "section": "View"
+      },
+      {
+        "handler": "refresh_prs",
+        "help_group": "CHANGE",
+        "id": "refresh-prs",
+        "key": "",
+        "label": "Refresh pull requests",
+        "section": "Edit"
+      },
+      {
+        "handler": "release_claim",
+        "help_group": "CHANGE",
+        "id": "release-claim",
+        "key": "",
+        "label": "Release claim",
+        "section": "Edit"
+      },
+      {
+        "handler": "reopen_question",
+        "help_group": "TRUST",
+        "id": "reopen-question",
+        "key": "",
+        "label": "Reopen plan question",
+        "section": "Edit"
+      },
+      {
+        "handler": "resolve_question",
+        "help_group": "TRUST",
+        "id": "resolve-question",
+        "key": "",
+        "label": "Resolve plan question",
+        "section": "Edit"
+      },
+      {
+        "handler": "open_sessions_hub",
+        "help_group": "TRUST",
+        "id": "sessions-hub",
+        "key": "",
+        "label": "Open sessions hub",
+        "section": "View"
+      },
+      {
+        "handler": "source_trail",
+        "help_group": "FIND",
+        "id": "source-trail",
+        "key": "g",
+        "label": "Open source trail",
+        "section": "View"
+      },
+      {
+        "handler": "tick_criterion",
+        "help_group": "CHANGE",
+        "id": "tick-criterion",
+        "key": "x",
+        "label": "Tick next criterion",
+        "section": "Edit"
+      },
+      {
+        "handler": "toggle_mark",
+        "help_group": "MOVE",
+        "id": "toggle-mark",
+        "key": "space",
+        "label": "Mark/unmark row",
+        "section": "Edit"
+      },
+      {
+        "handler": "toggle_override",
+        "help_group": "APP",
+        "id": "toggle-override",
+        "key": "O",
+        "label": "Toggle manual override",
+        "section": "App"
+      },
+      {
+        "handler": "toggle_timeline",
+        "help_group": "APP",
+        "id": "toggle-timeline",
+        "key": "T",
+        "label": "Show/hide timeline",
+        "section": "App"
+      },
+      {
+        "handler": "unblock_task",
+        "help_group": "TRUST",
+        "id": "unblock-task",
+        "key": "",
+        "label": "Unblock task",
+        "section": "Edit"
+      },
+      {
+        "handler": "undo_bulk",
+        "help_group": "CHANGE",
+        "id": "undo-bulk",
+        "key": "",
+        "label": "Undo bulk change",
+        "section": "Edit"
+      },
+      {
+        "handler": "unlink_pr",
+        "help_group": "CHANGE",
+        "id": "unlink-pr",
+        "key": "",
+        "label": "Unlink pull request",
+        "section": "Edit"
+      },
+      {
+        "handler": "unlink_ref",
+        "help_group": "TRUST",
+        "id": "unlink-ref",
+        "key": "",
+        "label": "Unlink external reference",
+        "section": "Edit"
+      },
+      {
+        "handler": "untick_criterion",
+        "help_group": "CHANGE",
+        "id": "untick-criterion",
+        "key": "",
+        "label": "Reopen last criterion",
+        "section": "Edit"
+      },
+      {
+        "handler": "update_prompt",
+        "help_group": "APP",
+        "id": "update-lpui",
+        "key": "U",
+        "label": "Update lpui",
+        "section": "App"
+      }
+    ],
+    "count": 63
+  },
+  "setup": {
+    "steps": [
+      "ask_agents",
+      "ask_integrations",
+      "ask_migration",
+      "ask_placement"
+    ]
+  },
+  "stale": {
+    "claims": [
+      {
+        "claim": "docs/design-system.md",
+        "found": [],
+        "replacement": "site/index.html design section"
+      },
+      {
+        "claim": "src/lazyplan/design/",
+        "found": [],
+        "replacement": "src/lazyplan/presentation/shared/design/"
+      },
+      {
+        "claim": "src/lazyplan/tui/",
+        "found": [],
+        "replacement": "src/lazyplan/presentation/tui/"
+      },
+      {
+        "claim": "src/lazyplan/palette.py",
+        "found": [],
+        "replacement": "src/lazyplan/presentation/shared/palette.py"
+      },
+      {
+        "claim": "`F` cycles source filters",
+        "found": [],
+        "replacement": "`f` cycles plan modes"
+      },
+      {
+        "claim": "status filter",
+        "found": [],
+        "replacement": "plan mode"
+      },
+      {
+        "claim": "needs me lens",
+        "found": [],
+        "replacement": "active plan mode"
+      }
+    ]
+  },
+  "tui": {
+    "bindings": [
+      {
+        "action": "toggle_timeline",
+        "file": "src/lazyplan/presentation/tui/app.py",
+        "key": "T",
+        "label": "Timeline",
+        "line": "84",
+        "screen": "app"
+      },
+      {
+        "action": "update_prompt",
+        "file": "src/lazyplan/presentation/tui/app.py",
+        "key": "U",
+        "label": "Update",
+        "line": "98",
+        "screen": "app"
+      },
+      {
+        "action": "fold_all",
+        "file": "src/lazyplan/presentation/tui/app.py",
+        "key": "Z",
+        "label": "Fold all",
+        "line": "94",
+        "screen": "app"
+      },
+      {
+        "action": "add_criterion",
+        "file": "src/lazyplan/presentation/tui/app.py",
+        "key": "a",
+        "label": "Criterion",
+        "line": "89",
+        "screen": "app"
+      },
+      {
+        "action": "delete",
+        "file": "src/lazyplan/presentation/tui/app.py",
+        "key": "d",
+        "label": "Delete",
+        "line": "91",
+        "screen": "app"
+      },
+      {
+        "action": "edit_selection",
+        "file": "src/lazyplan/presentation/tui/app.py",
+        "key": "e",
+        "label": "Edit",
+        "line": "86",
+        "screen": "app"
+      },
+      {
+        "action": "open_detail",
+        "file": "src/lazyplan/presentation/tui/app.py",
+        "key": "enter",
+        "label": "Open",
+        "line": "80",
+        "screen": "app"
+      },
+      {
+        "action": "clear_filter",
+        "file": "src/lazyplan/presentation/tui/app.py",
+        "key": "escape",
+        "label": "Back",
+        "line": "82",
+        "screen": "app"
+      },
+      {
+        "action": "cycle_mode",
+        "file": "src/lazyplan/presentation/tui/app.py",
+        "key": "f",
+        "label": "Plan mode",
+        "line": "96",
+        "screen": "app"
+      },
+      {
+        "action": "source_trail",
+        "file": "src/lazyplan/presentation/tui/app.py",
+        "key": "g",
+        "label": "Source",
+        "line": "92",
+        "screen": "app"
+      },
+      {
+        "action": "new_context",
+        "file": "src/lazyplan/presentation/tui/app.py",
+        "key": "n",
+        "label": "New",
+        "line": "85",
+        "screen": "app"
+      },
+      {
+        "action": "prove_criterion",
+        "file": "src/lazyplan/presentation/tui/app.py",
+        "key": "p",
+        "label": "Prove",
+        "line": "90",
+        "screen": "app"
+      },
+      {
+        "action": "refresh",
+        "file": "src/lazyplan/presentation/tui/app.py",
+        "key": "r",
+        "label": "Refresh",
+        "line": "97",
+        "screen": "app"
+      },
+      {
+        "action": "toggle_status",
+        "file": "src/lazyplan/presentation/tui/app.py",
+        "key": "s",
+        "label": "Status",
+        "line": "87",
+        "screen": "app"
+      },
+      {
+        "action": "filter_text",
+        "file": "src/lazyplan/presentation/tui/app.py",
+        "key": "slash",
+        "label": "Filter",
+        "line": "95",
+        "screen": "app"
+      },
+      {
+        "action": "toggle_mark",
+        "file": "src/lazyplan/presentation/tui/app.py",
+        "key": "space",
+        "label": "Mark",
+        "line": "81",
+        "screen": "app"
+      },
+      {
+        "action": "cycle_theme",
+        "file": "src/lazyplan/presentation/tui/app.py",
+        "key": "t",
+        "label": "Theme",
+        "line": "83",
+        "screen": "app"
+      },
+      {
+        "action": "criteria",
+        "file": "src/lazyplan/presentation/tui/app.py",
+        "key": "x",
+        "label": "Tick",
+        "line": "88",
+        "screen": "app"
+      },
+      {
+        "action": "fold",
+        "file": "src/lazyplan/presentation/tui/app.py",
+        "key": "z",
+        "label": "Fold",
+        "line": "93",
+        "screen": "app"
+      },
+      {
+        "action": "toggle_override",
+        "file": "src/lazyplan/presentation/tui/navigation.py",
+        "key": "O",
+        "label": "Override",
+        "line": "85",
+        "screen": "navigation"
+      },
+      {
+        "action": "history_back",
+        "file": "src/lazyplan/presentation/tui/navigation.py",
+        "key": "[",
+        "label": "Back",
+        "line": "78",
+        "screen": "navigation"
+      },
+      {
+        "action": "history_forward",
+        "file": "src/lazyplan/presentation/tui/navigation.py",
+        "key": "]",
+        "label": "Forward",
+        "line": "79",
+        "screen": "navigation"
+      },
+      {
+        "action": "command_palette",
+        "file": "src/lazyplan/presentation/tui/navigation.py",
+        "key": "c",
+        "label": "Palette",
+        "line": "82",
+        "screen": "navigation"
+      },
+      {
+        "action": "quit",
+        "file": "src/lazyplan/presentation/tui/navigation.py",
+        "key": "q",
+        "label": "Quit",
+        "line": "84",
+        "screen": "navigation"
+      },
+      {
+        "action": "help",
+        "file": "src/lazyplan/presentation/tui/navigation.py",
+        "key": "question_mark",
+        "label": "Help",
+        "line": "83",
+        "screen": "navigation"
+      },
+      {
+        "action": "cancel",
+        "file": "src/lazyplan/presentation/tui/screens/base.py",
+        "key": "escape",
+        "label": "Cancel",
+        "line": "46",
+        "screen": "base"
+      },
+      {
+        "action": "open_activity_hub",
+        "file": "src/lazyplan/presentation/tui/screens/detail.py",
+        "key": "A",
+        "label": "Activity",
+        "line": "65",
+        "screen": "detail"
+      },
+      {
+        "action": "open_pull_requests_hub",
+        "file": "src/lazyplan/presentation/tui/screens/detail.py",
+        "key": "P",
+        "label": "PRs",
+        "line": "64",
+        "screen": "detail"
+      },
+      {
+        "action": "add_question",
+        "file": "src/lazyplan/presentation/tui/screens/detail.py",
+        "key": "Q",
+        "label": "Question",
+        "line": "66",
+        "screen": "detail"
+      },
+      {
+        "action": "reopen_question",
+        "file": "src/lazyplan/presentation/tui/screens/detail.py",
+        "key": "R",
+        "label": "Reopen",
+        "line": "68",
+        "screen": "detail"
+      },
+      {
+        "action": "add_criterion",
+        "file": "src/lazyplan/presentation/tui/screens/detail.py",
+        "key": "a",
+        "label": "Criterion",
+        "line": "58",
+        "screen": "detail"
+      },
+      {
+        "action": "resolve_question",
+        "file": "src/lazyplan/presentation/tui/screens/detail.py",
+        "key": "ctrl+r",
+        "label": "Resolve",
+        "line": "67",
+        "screen": "detail"
+      },
+      {
+        "action": "save",
+        "file": "src/lazyplan/presentation/tui/screens/detail.py",
+        "key": "ctrl+s",
+        "label": "Save",
+        "line": "72",
+        "screen": "detail"
+      },
+      {
+        "action": "delete_row",
+        "file": "src/lazyplan/presentation/tui/screens/detail.py",
+        "key": "d",
+        "label": "Delete",
+        "line": "70",
+        "screen": "detail"
+      },
+      {
+        "action": "toggle_edit",
+        "file": "src/lazyplan/presentation/tui/screens/detail.py",
+        "key": "e",
+        "label": "Edit",
+        "line": "55",
+        "screen": "detail"
+      },
+      {
+        "action": "back",
+        "file": "src/lazyplan/presentation/tui/screens/detail.py",
+        "key": "escape",
+        "label": "Back",
+        "line": "54",
+        "screen": "detail"
+      },
+      {
+        "action": "open_source",
+        "file": "src/lazyplan/presentation/tui/screens/detail.py",
+        "key": "g",
+        "label": "Source",
+        "line": "71",
+        "screen": "detail"
+      },
+      {
+        "action": "open_claims_hub",
+        "file": "src/lazyplan/presentation/tui/screens/detail.py",
+        "key": "k",
+        "label": "Claims",
+        "line": "61",
+        "screen": "detail"
+      },
+      {
+        "action": "open_comments_hub",
+        "file": "src/lazyplan/presentation/tui/screens/detail.py",
+        "key": "m",
+        "label": "Comments",
+        "line": "63",
+        "screen": "detail"
+      },
+      {
+        "action": "add_child",
+        "file": "src/lazyplan/presentation/tui/screens/detail.py",
+        "key": "n",
+        "label": "New child",
+        "line": "69",
+        "screen": "detail"
+      },
+      {
+        "action": "prove_criterion",
+        "file": "src/lazyplan/presentation/tui/screens/detail.py",
+        "key": "p",
+        "label": "Prove",
+        "line": "59",
+        "screen": "detail"
+      },
+      {
+        "action": "advance_status",
+        "file": "src/lazyplan/presentation/tui/screens/detail.py",
+        "key": "s",
+        "label": "Status",
+        "line": "56",
+        "screen": "detail"
+      },
+      {
+        "action": "open_trust_hubs",
+        "file": "src/lazyplan/presentation/tui/screens/detail.py",
+        "key": "t",
+        "label": "Trust",
+        "line": "60",
+        "screen": "detail"
+      },
+      {
+        "action": "open_sessions_hub",
+        "file": "src/lazyplan/presentation/tui/screens/detail.py",
+        "key": "v",
+        "label": "Sessions",
+        "line": "62",
+        "screen": "detail"
+      },
+      {
+        "action": "tick_criterion",
+        "file": "src/lazyplan/presentation/tui/screens/detail.py",
+        "key": "x",
+        "label": "Tick",
+        "line": "57",
+        "screen": "detail"
+      },
+      {
+        "action": "cancel",
+        "file": "src/lazyplan/presentation/tui/screens/export.py",
+        "key": "escape",
+        "label": "Cancel",
+        "line": "43",
+        "screen": "export"
+      },
+      {
+        "action": "force",
+        "file": "src/lazyplan/presentation/tui/screens/hub.py",
+        "key": "D",
+        "label": "Force",
+        "line": "68",
+        "screen": "hub"
+      },
+      {
+        "action": "unrelate",
+        "file": "src/lazyplan/presentation/tui/screens/hub.py",
+        "key": "L",
+        "label": "Unrelate",
+        "line": "72",
+        "screen": "hub"
+      },
+      {
+        "action": "add",
+        "file": "src/lazyplan/presentation/tui/screens/hub.py",
+        "key": "a",
+        "label": "Add",
+        "line": "64",
+        "screen": "hub"
+      },
+      {
+        "action": "delete",
+        "file": "src/lazyplan/presentation/tui/screens/hub.py",
+        "key": "d",
+        "label": "Delete",
+        "line": "67",
+        "screen": "hub"
+      },
+      {
+        "action": "back",
+        "file": "src/lazyplan/presentation/tui/screens/hub.py",
+        "key": "escape",
+        "label": "Back",
+        "line": "63",
+        "screen": "hub"
+      },
+      {
+        "action": "source_hub",
+        "file": "src/lazyplan/presentation/tui/screens/hub.py",
+        "key": "g",
+        "label": "Source",
+        "line": "74",
+        "screen": "hub"
+      },
+      {
+        "action": "relate",
+        "file": "src/lazyplan/presentation/tui/screens/hub.py",
+        "key": "l",
+        "label": "Relate",
+        "line": "71",
+        "screen": "hub"
+      },
+      {
+        "action": "note",
+        "file": "src/lazyplan/presentation/tui/screens/hub.py",
+        "key": "n",
+        "label": "Note",
+        "line": "69",
+        "screen": "hub"
+      },
+      {
+        "action": "open_value",
+        "file": "src/lazyplan/presentation/tui/screens/hub.py",
+        "key": "o",
+        "label": "Open",
+        "line": "73",
+        "screen": "hub"
+      },
+      {
+        "action": "prove",
+        "file": "src/lazyplan/presentation/tui/screens/hub.py",
+        "key": "p",
+        "label": "Prove",
+        "line": "66",
+        "screen": "hub"
+      },
+      {
+        "action": "refresh",
+        "file": "src/lazyplan/presentation/tui/screens/hub.py",
+        "key": "r",
+        "label": "Refresh",
+        "line": "75",
+        "screen": "hub"
+      },
+      {
+        "action": "filter",
+        "file": "src/lazyplan/presentation/tui/screens/hub.py",
+        "key": "u",
+        "label": "Filter",
+        "line": "70",
+        "screen": "hub"
+      },
+      {
+        "action": "hub_toggle",
+        "file": "src/lazyplan/presentation/tui/screens/hub.py",
+        "key": "x",
+        "label": "Toggle",
+        "line": "65",
+        "screen": "hub"
+      },
+      {
+        "action": "edit_row",
+        "file": "src/lazyplan/presentation/tui/screens/hub_coordination.py",
+        "key": "e",
+        "label": "Edit",
+        "line": "266",
+        "screen": "hub_coordination"
+      },
+      {
+        "action": "edit_row",
+        "file": "src/lazyplan/presentation/tui/screens/hub_kinds.py",
+        "key": "e",
+        "label": "Edit",
+        "line": "30",
+        "screen": "hub_kinds"
+      },
+      {
+        "action": "filter_kind",
+        "file": "src/lazyplan/presentation/tui/screens/hub_provenance.py",
+        "key": "K",
+        "label": "Kind",
+        "line": "199",
+        "screen": "hub_provenance"
+      },
+      {
+        "action": "filter_actor",
+        "file": "src/lazyplan/presentation/tui/screens/hub_provenance.py",
+        "key": "f",
+        "label": "Actor",
+        "line": "198",
+        "screen": "hub_provenance"
+      },
+      {
+        "action": "open_owner",
+        "file": "src/lazyplan/presentation/tui/screens/source.py",
+        "key": "enter",
+        "label": "Owner",
+        "line": "61",
+        "screen": "source"
+      },
+      {
+        "action": "back",
+        "file": "src/lazyplan/presentation/tui/screens/source.py",
+        "key": "escape",
+        "label": "Back",
+        "line": "60",
+        "screen": "source"
+      },
+      {
+        "action": "open",
+        "file": "src/lazyplan/presentation/tui/screens/source.py",
+        "key": "o",
+        "label": "Open",
+        "line": "62",
+        "screen": "source"
+      },
+      {
+        "action": "refresh",
+        "file": "src/lazyplan/presentation/tui/screens/source.py",
+        "key": "r",
+        "label": "Refresh",
+        "line": "65",
+        "screen": "source"
+      },
+      {
+        "action": "filter",
+        "file": "src/lazyplan/presentation/tui/screens/source.py",
+        "key": "slash",
+        "label": "Filter",
+        "line": "64",
+        "screen": "source"
+      },
+      {
+        "action": "copy",
+        "file": "src/lazyplan/presentation/tui/screens/source.py",
+        "key": "y",
+        "label": "Copy",
+        "line": "63",
+        "screen": "source"
+      },
+      {
+        "action": "cancel",
+        "file": "src/lazyplan/presentation/tui/screens/update.py",
+        "key": "escape",
+        "label": "Close",
+        "line": "39",
+        "screen": "update"
+      },
+      {
+        "action": "open_detail",
+        "file": "src/lazyplan/presentation/tui/widgets/plan_tree.py",
+        "key": "enter",
+        "label": "Detail",
+        "line": "31",
+        "screen": "plan_tree"
+      },
+      {
+        "action": "toggle_mark",
+        "file": "src/lazyplan/presentation/tui/widgets/plan_tree.py",
+        "key": "space",
+        "label": "Mark",
+        "line": "32",
+        "screen": "plan_tree"
+      }
+    ],
+    "conflicts": [
+      {
+        "bindings": [
+          {
+            "action": "add_criterion",
+            "file": "src/lazyplan/presentation/tui/app.py",
+            "line": "89"
+          },
+          {
+            "action": "add_criterion",
+            "file": "src/lazyplan/presentation/tui/screens/detail.py",
+            "line": "58"
+          },
+          {
+            "action": "add",
+            "file": "src/lazyplan/presentation/tui/screens/hub.py",
+            "line": "64"
+          }
+        ],
+        "key": "a"
+      },
+      {
+        "bindings": [
+          {
+            "action": "delete",
+            "file": "src/lazyplan/presentation/tui/app.py",
+            "line": "91"
+          },
+          {
+            "action": "delete_row",
+            "file": "src/lazyplan/presentation/tui/screens/detail.py",
+            "line": "70"
+          },
+          {
+            "action": "delete",
+            "file": "src/lazyplan/presentation/tui/screens/hub.py",
+            "line": "67"
+          }
+        ],
+        "key": "d"
+      },
+      {
+        "bindings": [
+          {
+            "action": "edit_selection",
+            "file": "src/lazyplan/presentation/tui/app.py",
+            "line": "86"
+          },
+          {
+            "action": "toggle_edit",
+            "file": "src/lazyplan/presentation/tui/screens/detail.py",
+            "line": "55"
+          },
+          {
+            "action": "edit_row",
+            "file": "src/lazyplan/presentation/tui/screens/hub_coordination.py",
+            "line": "266"
+          },
+          {
+            "action": "edit_row",
+            "file": "src/lazyplan/presentation/tui/screens/hub_kinds.py",
+            "line": "30"
+          }
+        ],
+        "key": "e"
+      },
+      {
+        "bindings": [
+          {
+            "action": "open_detail",
+            "file": "src/lazyplan/presentation/tui/app.py",
+            "line": "80"
+          },
+          {
+            "action": "open_owner",
+            "file": "src/lazyplan/presentation/tui/screens/source.py",
+            "line": "61"
+          },
+          {
+            "action": "open_detail",
+            "file": "src/lazyplan/presentation/tui/widgets/plan_tree.py",
+            "line": "31"
+          }
+        ],
+        "key": "enter"
+      },
+      {
+        "bindings": [
+          {
+            "action": "clear_filter",
+            "file": "src/lazyplan/presentation/tui/app.py",
+            "line": "82"
+          },
+          {
+            "action": "cancel",
+            "file": "src/lazyplan/presentation/tui/screens/base.py",
+            "line": "46"
+          },
+          {
+            "action": "back",
+            "file": "src/lazyplan/presentation/tui/screens/detail.py",
+            "line": "54"
+          },
+          {
+            "action": "cancel",
+            "file": "src/lazyplan/presentation/tui/screens/export.py",
+            "line": "43"
+          },
+          {
+            "action": "back",
+            "file": "src/lazyplan/presentation/tui/screens/hub.py",
+            "line": "63"
+          },
+          {
+            "action": "back",
+            "file": "src/lazyplan/presentation/tui/screens/source.py",
+            "line": "60"
+          },
+          {
+            "action": "cancel",
+            "file": "src/lazyplan/presentation/tui/screens/update.py",
+            "line": "39"
+          }
+        ],
+        "key": "escape"
+      },
+      {
+        "bindings": [
+          {
+            "action": "cycle_mode",
+            "file": "src/lazyplan/presentation/tui/app.py",
+            "line": "96"
+          },
+          {
+            "action": "filter_actor",
+            "file": "src/lazyplan/presentation/tui/screens/hub_provenance.py",
+            "line": "198"
+          }
+        ],
+        "key": "f"
+      },
+      {
+        "bindings": [
+          {
+            "action": "source_trail",
+            "file": "src/lazyplan/presentation/tui/app.py",
+            "line": "92"
+          },
+          {
+            "action": "open_source",
+            "file": "src/lazyplan/presentation/tui/screens/detail.py",
+            "line": "71"
+          },
+          {
+            "action": "source_hub",
+            "file": "src/lazyplan/presentation/tui/screens/hub.py",
+            "line": "74"
+          }
+        ],
+        "key": "g"
+      },
+      {
+        "bindings": [
+          {
+            "action": "new_context",
+            "file": "src/lazyplan/presentation/tui/app.py",
+            "line": "85"
+          },
+          {
+            "action": "add_child",
+            "file": "src/lazyplan/presentation/tui/screens/detail.py",
+            "line": "69"
+          },
+          {
+            "action": "note",
+            "file": "src/lazyplan/presentation/tui/screens/hub.py",
+            "line": "69"
+          }
+        ],
+        "key": "n"
+      },
+      {
+        "bindings": [
+          {
+            "action": "open_value",
+            "file": "src/lazyplan/presentation/tui/screens/hub.py",
+            "line": "73"
+          },
+          {
+            "action": "open",
+            "file": "src/lazyplan/presentation/tui/screens/source.py",
+            "line": "62"
+          }
+        ],
+        "key": "o"
+      },
+      {
+        "bindings": [
+          {
+            "action": "prove_criterion",
+            "file": "src/lazyplan/presentation/tui/app.py",
+            "line": "90"
+          },
+          {
+            "action": "prove_criterion",
+            "file": "src/lazyplan/presentation/tui/screens/detail.py",
+            "line": "59"
+          },
+          {
+            "action": "prove",
+            "file": "src/lazyplan/presentation/tui/screens/hub.py",
+            "line": "66"
+          }
+        ],
+        "key": "p"
+      },
+      {
+        "bindings": [
+          {
+            "action": "refresh",
+            "file": "src/lazyplan/presentation/tui/app.py",
+            "line": "97"
+          },
+          {
+            "action": "refresh",
+            "file": "src/lazyplan/presentation/tui/screens/hub.py",
+            "line": "75"
+          },
+          {
+            "action": "refresh",
+            "file": "src/lazyplan/presentation/tui/screens/source.py",
+            "line": "65"
+          }
+        ],
+        "key": "r"
+      },
+      {
+        "bindings": [
+          {
+            "action": "toggle_status",
+            "file": "src/lazyplan/presentation/tui/app.py",
+            "line": "87"
+          },
+          {
+            "action": "advance_status",
+            "file": "src/lazyplan/presentation/tui/screens/detail.py",
+            "line": "56"
+          }
+        ],
+        "key": "s"
+      },
+      {
+        "bindings": [
+          {
+            "action": "filter_text",
+            "file": "src/lazyplan/presentation/tui/app.py",
+            "line": "95"
+          },
+          {
+            "action": "filter",
+            "file": "src/lazyplan/presentation/tui/screens/source.py",
+            "line": "64"
+          }
+        ],
+        "key": "slash"
+      },
+      {
+        "bindings": [
+          {
+            "action": "toggle_mark",
+            "file": "src/lazyplan/presentation/tui/app.py",
+            "line": "81"
+          },
+          {
+            "action": "toggle_mark",
+            "file": "src/lazyplan/presentation/tui/widgets/plan_tree.py",
+            "line": "32"
+          }
+        ],
+        "key": "space"
+      },
+      {
+        "bindings": [
+          {
+            "action": "cycle_theme",
+            "file": "src/lazyplan/presentation/tui/app.py",
+            "line": "83"
+          },
+          {
+            "action": "open_trust_hubs",
+            "file": "src/lazyplan/presentation/tui/screens/detail.py",
+            "line": "60"
+          }
+        ],
+        "key": "t"
+      },
+      {
+        "bindings": [
+          {
+            "action": "criteria",
+            "file": "src/lazyplan/presentation/tui/app.py",
+            "line": "88"
+          },
+          {
+            "action": "tick_criterion",
+            "file": "src/lazyplan/presentation/tui/screens/detail.py",
+            "line": "57"
+          },
+          {
+            "action": "hub_toggle",
+            "file": "src/lazyplan/presentation/tui/screens/hub.py",
+            "line": "65"
+          }
+        ],
+        "key": "x"
+      }
+    ],
+    "screens": [
+      {
+        "class": "DetailScreen",
+        "file": "src/lazyplan/presentation/tui/screens/detail.py"
+      },
+      {
+        "class": "ExportScreen",
+        "file": "src/lazyplan/presentation/tui/screens/export.py"
+      },
+      {
+        "class": "NewPlanScreen",
+        "file": "src/lazyplan/presentation/tui/screens/forms.py"
+      },
+      {
+        "class": "NewMilestoneScreen",
+        "file": "src/lazyplan/presentation/tui/screens/forms.py"
+      },
+      {
+        "class": "NewTaskScreen",
+        "file": "src/lazyplan/presentation/tui/screens/forms.py"
+      },
+      {
+        "class": "ProveScreen",
+        "file": "src/lazyplan/presentation/tui/screens/forms.py"
+      },
+      {
+        "class": "RefScreen",
+        "file": "src/lazyplan/presentation/tui/screens/forms.py"
+      },
+      {
+        "class": "ConfirmScreen",
+        "file": "src/lazyplan/presentation/tui/screens/forms.py"
+      },
+      {
+        "class": "FilterPromptScreen",
+        "file": "src/lazyplan/presentation/tui/screens/forms.py"
+      },
+      {
+        "class": "HelpScreen",
+        "file": "src/lazyplan/presentation/tui/screens/help.py"
+      },
+      {
+        "class": "TextScreen",
+        "file": "src/lazyplan/presentation/tui/screens/help.py"
+      },
+      {
+        "class": "PaletteScreen",
+        "file": "src/lazyplan/presentation/tui/screens/help.py"
+      },
+      {
+        "class": "HubScreen",
+        "file": "src/lazyplan/presentation/tui/screens/hub.py"
+      },
+      {
+        "class": "SourceScreen",
+        "file": "src/lazyplan/presentation/tui/screens/source.py"
+      },
+      {
+        "class": "UpdateScreen",
+        "file": "src/lazyplan/presentation/tui/screens/update.py"
+      }
+    ]
+  }
+}

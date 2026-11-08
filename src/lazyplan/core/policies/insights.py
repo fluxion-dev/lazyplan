@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 
 from ..entities import Milestone, Status, Task
+from .planning import progress_counts
 
 MilestonesByPlan = dict[int, list[Milestone]]
 
@@ -206,7 +207,7 @@ def top_milestones(
             tasks = tasks_by_milestone.get(milestone.id, [])
             if not tasks:
                 continue
-            done = sum(1 for task in tasks if task.status == Status.DONE)
+            done, _ = progress_counts(tasks)
             newest = max((latest.get(task.id, 0.0) for task in tasks), default=0.0)
             rows.append(
                 (
@@ -254,14 +255,14 @@ def progress(
 ) -> OverallProgress:
     """Completion, elapsed time, and ETA from one task and event snapshot."""
     tasks = [task for items in tasks_by_milestone.values() for task in items]
-    done = sum(1 for task in tasks if task.status == Status.DONE)
+    done, total = progress_counts(tasks)
     starts = add_times(events)
     elapsed = None
     if starts:
         elapsed = max(0.0, now - min(starts))
     recent = [when for when in done_times(events) if now - ETA_WINDOW_DAYS * 86_400 <= when <= now]
     rate = len(recent) / ETA_WINDOW_DAYS
-    remaining = len(tasks) - done
+    remaining = total - done
     complete = bool(tasks) and remaining == 0
     eta_days = None
     if not complete and remaining > 0 and rate > 0:
@@ -354,10 +355,11 @@ def work_span(
 
 def status_breakdown(tasks: list[Task]) -> StatusBreakdown:
     """Task counts by state and blocked overlay."""
+    done, _ = progress_counts(tasks)
     return StatusBreakdown(
         todo=sum(1 for task in tasks if task.status == Status.TODO),
         doing=sum(1 for task in tasks if task.status == Status.DOING),
-        done=sum(1 for task in tasks if task.status == Status.DONE),
+        done=done,
         blocked=sum(1 for task in tasks if task.blocked),
     )
 

@@ -92,6 +92,7 @@ class PerfBenchCase(unittest.TestCase):
             "services.tree",
             "services.tree_limit5",
             "attention_ids",
+            "needs_me",
             "list_text",
             "list_json",
             "show_plan",
@@ -99,22 +100,27 @@ class PerfBenchCase(unittest.TestCase):
             "audit_report",
             "git_status",
             "git_show",
-            "tui_refresh",
+            "tui_first_paint",
+            "tui_expand",
         ):
             self.assertIn(name, names)
         tree = next(metric for metric in result["metrics"] if metric["name"] == "services.tree")
         self.assertIsNotNone(tree["ms"])
         self.assertGreater(tree["queries"] or 0, 0)
-        tui = next(metric for metric in result["metrics"] if metric["name"] == "tui_refresh")
-        self.assertEqual(tui["note"], "disabled by --no-tui")
+        first = next(metric for metric in result["metrics"] if metric["name"] == "tui_first_paint")
+        self.assertEqual(first["note"], "disabled by --no-tui")
 
-    def test_tui_refresh_is_measured_when_textual_is_available(self):
+    def test_tui_paint_and_expand_are_measured_when_textual_is_available(self):
         if importlib.util.find_spec("textual") is None:
             self.skipTest("textual not installed")
         result = self.bench.run(self.bench.QUICK_COUNTS, repeat=1, include_tui=True)
-        tui = next(metric for metric in result["metrics"] if metric["name"] == "tui_refresh")
-        self.assertIsNotNone(tui["ms"])
-        self.assertGreater(tui["queries"] or 0, 0)
+        first = next(metric for metric in result["metrics"] if metric["name"] == "tui_first_paint")
+        expand = next(metric for metric in result["metrics"] if metric["name"] == "tui_expand")
+        self.assertIsNotNone(first["ms"])
+        self.assertGreater(first["queries"] or 0, 0)
+        self.assertEqual(first["nodes"], self.bench.QUICK_COUNTS.plans)
+        self.assertIsNotNone(expand["ms"])
+        self.assertGreater(expand["nodes"] or 0, first["nodes"] or 0)
 
     def test_budget_check_accepts_a_clean_run(self):
         result = self.bench.run(self.bench.QUICK_COUNTS, repeat=1, include_tui=False)
@@ -135,9 +141,21 @@ class PerfBenchCase(unittest.TestCase):
         failures = self.bench.check(result, {"services.tree": self.bench.Budget(10_000, 1)})
         self.assertTrue(any("ms >" in failure for failure in failures))
 
+    def test_budget_check_fails_on_a_node_count_regression(self):
+        result = self.bench.run(self.bench.QUICK_COUNTS, repeat=1, include_tui=False)
+        first = next(metric for metric in result["metrics"] if metric["name"] == "tui_first_paint")
+        first["nodes"] = self.bench.QUICK_COUNTS.plans * 4
+        first["queries"] = 1
+        first["ms"] = 1
+        first["note"] = ""
+        failures = self.bench.check(
+            result, {"tui_first_paint": self.bench.Budget(10_000, 10_000, nodes=10)}
+        )
+        self.assertTrue(any("nodes >" in failure for failure in failures))
+
     def test_budget_check_requires_the_tui_when_asked(self):
         result = self.bench.run(self.bench.QUICK_COUNTS, repeat=1, include_tui=False)
-        failures = self.bench.check(result, {"tui_refresh": self.bench.Budget(1, 1)})
+        failures = self.bench.check(result, {"tui_first_paint": self.bench.Budget(1, 1)})
         self.assertTrue(failures)
 
     def test_benchmark_leaves_the_real_home_alone(self):

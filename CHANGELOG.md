@@ -3,6 +3,78 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## v0.35.0 — 2026-11-08
+
+The screen becomes a control room for the loop: large journals open faster,
+navigation and hubs share one model, and the shell starts on the work instead
+of the chart. Upgrades also review newly shipped agent integrations before they
+land.
+
+### Added
+
+- **Control room.** A two-line health and needs strip summarizes readiness,
+  approval drift, open questions, blocked work, claims, evidence, and touch
+  overlaps. An agents pane shows active sessions, branches, ages, and the
+  selected plan's last handoff.
+- **Selectable hubs.** Criteria, evidence, questions, and references; claims,
+  touch-points, sessions, comments, and notes; and the source trail, cached pull
+  requests, and activity feed are all keyboard-selectable screens instead of
+  read-only text.
+- **Navigation history.** `[` and `]` move back and forward across screens and
+  restore the exact prior selection, with breadcrumbs on every screen.
+- **Lazy plan tree.** Collapsed plans and milestones no longer materialize child
+  rows. Both mode paints the plan list immediately and loads a branch only when
+  it opens, so large journals no longer stall on launch.
+- **Manual override mode.** The screen is read-only by default. `O` arms
+  writes behind a visible banner and nav subtitle; every write records a
+  `tui/override` event, and risky writes ask for a reason.
+- **Trust actions in the palette.** Approve a plan and show its diff, prove a
+  criterion, add, resolve, or reopen questions, link or unlink references,
+  claim, block, unblock, and finish a task without leaving the screen. The
+  palette and help group actions by Observe and Override intent, with a TRUST
+  group for approval and evidence.
+- **Override feed.** `lpui feed --overrides` lists only the manual changes made
+  from the screen.
+- **New-integration review.** After a version change, one prompt lists the
+  pending skills and hook hosts with install-all, not-now, and never choices.
+  The answer is remembered per item with its fingerprint and version.
+- **Doctor pending report.** `lpui doctor` names every pending integration and
+  exits non-zero until it is answered.
+- **Criterion and comment edits.** The criteria and comments hubs edit in
+  place; `criterion edit`, `comment edit`, and the collaboration and provenance
+  MCP tools match the screen.
+
+### Changed
+
+- **Plan modes.** The plans tree cycles Active, Finished, and Both with `f`.
+  The old status and source filter cycles, `F`, `A`, and the five-plan cap are
+  gone; attention data stays in the control strip.
+- **Timeline on demand.** The timeline card starts hidden so the tree and
+  preview get the full shell. Press `T` or run the palette's show or hide
+  timeline command to open it for the session; below 100 columns it stays
+  hidden.
+- **One access-path registry.** Palette IDs, CLI paths, and MCP tools now map
+  from one canonical action table, with a parity gate that rejects an
+  undocumented gap. The reachability report proves the three-step budget.
+- **Bounded activity ordering.** Recent-first plan ordering no longer reads every
+  event into Python, and Active or Finished mode loads only that mode's plans.
+- **Status healing and drift.** `reconcile` heals parent status and stale leases,
+  `--check` reports the same drift without writing, and `stats` names ambiguous
+  rows. `--heal` and `--no-heal` choose automatic repair per command.
+- `--no-skills` and `--no-hooks` are remembered across upgrades. Use
+  `lpui setup --hooks` to opt back in.
+- Headless upgrades, `--json`, `--yes`, and agent calls leave new integrations
+  pending with no writes.
+- The database schema is unchanged; override audit rows reuse the events table.
+
+### Upgrade
+
+```bash
+pipx upgrade lazyplan-tui
+```
+
+No manual migration is required.
+
 ## v0.34.0 — 2026-11-07
 
 The trust layer and parallel-agent handoff are in the product. Plans can be

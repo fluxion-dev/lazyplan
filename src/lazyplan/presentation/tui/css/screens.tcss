@@ -222,3 +222,59 @@ ModalScreen {
 #update-body {
     padding: 1 0;
 }
+
+#hub-page {
+    height: 1fr;
+    border: round $lp-border;
+    border-title-color: $lp-accent;
+    background: $lp-surface-alt;
+    padding: 0 1;
+}
+
+#hub-head {
+    height: auto;
+    min-height: 1;
+    background: $lp-surface;
+    color: $lp-accent;
+    padding: 0 1;
+    margin-bottom: 1;
+}
+
+#hub-main {
+    height: 1fr;
+}
+
+#hub-list-wrap {
+    width: 1fr;
+    min-width: 30;
+    border: round $lp-border-muted;
+    border-title-color: $lp-text-muted;
+    padding: 0 1;
+}
+
+#hub-preview {
+    width: 1fr;
+    min-width: 30;
+    border: round $lp-border-muted;
+    border-title-color: $lp-text-muted;
+    padding: 0 1;
+}
+
+#hub-preview-body {
+    height: auto;
+}
+
+#hub-list-wrap:focus-within,
+#hub-preview:focus-within {
+    border: round $lp-border-focus;
+}
+
+#hub-list > .option-list--option {
+    padding: 0 1;
+}
+
+#hub-list > .option-list--option-highlighted {
+    background: $lp-cursor;
+    color: $lp-accent;
+    text-style: bold;
+}

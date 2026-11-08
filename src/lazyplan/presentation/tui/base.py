@@ -2,19 +2,19 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 from textual.app import App
 from textual.widgets.tree import TreeNode
 
-from ...core.entities import Status
 from ...store import Store
 from .controllers.git_state import GitStateController
 from .controllers.metrics import MetricsController
 from .controllers.spinner import SpinnerController
 from .controllers.tree import TreeController
 from .controllers.updates import UpdateController
-from .state import AppState
+from .state import AppState, PlanMode
 from .views.rows import RowSpec
 
 
@@ -24,6 +24,21 @@ class TuiHost:
     def refresh_all(self, note: str = "") -> None: ...
     def update_git(self) -> None: ...
     def _saved(self, note: str = "") -> None: ...
+    def _apply_layout(self, width: int | None = None) -> bool:
+        return False
+
+    def _record_override(self, action: str, target: str, reason: str = "") -> None: ...
+    def require_override(self, notify: bool = True) -> bool:
+        return False
+
+    def prompt_reason(
+        self,
+        title: str,
+        placeholder: str,
+        submit: str,
+        callback: Callable[[str], None],
+        empty_message: str = "a reason is required",
+    ) -> None: ...
     def _paint_mark(self, key: tuple[str, int]) -> None: ...
     def _node_key(self, node: TreeNode) -> tuple[str, int] | None: ...
     def action_toggle_status(self) -> None: ...
@@ -32,9 +47,7 @@ class TuiHost:
     def action_fold(self) -> None: ...
     def action_fold_all(self) -> None: ...
     def action_filter_text(self) -> None: ...
-    def action_filter_status(self) -> None: ...
-    def action_filter_source(self) -> None: ...
-    def action_toggle_show_all(self) -> None: ...
+    def action_cycle_mode(self) -> None: ...
     def action_toggle_mark(self) -> None: ...
     def action_clear_marks(self) -> None: ...
     def action_bulk_doing(self) -> None: ...
@@ -43,12 +56,19 @@ class TuiHost:
     def action_bulk_release(self) -> None: ...
     def action_undo_bulk(self) -> None: ...
     def action_update_prompt(self) -> None: ...
+    def action_history_back(self) -> None: ...
+    def action_history_forward(self) -> None: ...
+    def open_source(self, kind: str, oid: int, record: bool = True) -> None: ...
+    def update_preview(self, force: bool = False) -> None: ...
+    def breadcrumb(self) -> str:
+        return ""
 
 
 class AppBase(App, TuiHost):
     """App attributes and cross-mixin declarations."""
 
     store: Store
+    heal: bool
     state: AppState
     tree_controller: TreeController
     spinner_controller: SpinnerController
@@ -74,20 +94,12 @@ class AppBase(App, TuiHost):
         self.state.selected = value
 
     @property
-    def status_filter(self) -> Status | None:
-        return self.state.status_filter
+    def plan_mode(self) -> PlanMode:
+        return self.state.plan_mode
 
-    @status_filter.setter
-    def status_filter(self, value: Status | None) -> None:
-        self.state.status_filter = value
-
-    @property
-    def show_all(self) -> bool:
-        return self.state.show_all
-
-    @show_all.setter
-    def show_all(self, value: bool) -> None:
-        self.state.show_all = value
+    @plan_mode.setter
+    def plan_mode(self, value: PlanMode) -> None:
+        self.state.plan_mode = value
 
     @property
     def filter_text(self) -> str:
@@ -98,12 +110,12 @@ class AppBase(App, TuiHost):
         self.state.filter_text = value
 
     @property
-    def source_filter(self) -> str:
-        return self.state.source_filter
+    def override_mode(self) -> bool:
+        return self.state.override_mode
 
-    @source_filter.setter
-    def source_filter(self, value: str) -> None:
-        self.state.source_filter = value
+    @override_mode.setter
+    def override_mode(self, value: bool) -> None:
+        self.state.override_mode = value
 
     @property
     def marked(self) -> set[tuple[str, int]]:

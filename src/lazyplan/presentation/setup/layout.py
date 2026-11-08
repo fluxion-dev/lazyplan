@@ -28,13 +28,14 @@ from lazyplan.infrastructure.repo import (
     shared_db_path,
 )
 from lazyplan.infrastructure.skills import (
-    AGENTS_DIR,
     AGENTS_MARK_BEGIN,
     AGENTS_MARK_END,
-    SKILL_NAME,
+    KNOWN_TOOLS,
+    SKILLS,
     SKILLS_DIR,
-    TOOL_SKILL_DIRS,
     SkillPlan,
+    skill_targets,
+    tool_skill_targets,
 )
 
 STORAGE_HOME = "home"
@@ -155,13 +156,14 @@ def resolve_choice(
 
 
 def _repo_skill_dirs(repo_root: Path) -> list[Path]:
-    dirs = [repo_root / AGENTS_DIR / SKILLS_DIR / SKILL_NAME]
-    for project_dir, _home_dir in TOOL_SKILL_DIRS.values():
-        if not project_dir:
-            continue
-        path = repo_root / project_dir / SKILL_NAME
-        if path not in dirs:
-            dirs.append(path)
+    dirs: list[Path] = []
+    for spec in SKILLS:
+        paths = skill_targets("project", repo_root, repo_root, name=spec.name)
+        for tool in KNOWN_TOOLS:
+            paths.extend(tool_skill_targets(tool, "project", repo_root, repo_root, name=spec.name))
+        for path in paths:
+            if path.parent not in dirs:
+                dirs.append(path.parent)
     return dirs
 
 
@@ -185,7 +187,9 @@ def _lazyplan_gitignore_lines(path: Path) -> list[str]:
         if line.strip()
         and (
             line.strip().rstrip("/").startswith(PLAN_DIR)
-            or line.strip().rstrip("/").endswith(f"/{SKILLS_DIR}/{SKILL_NAME}")
+            or any(
+                line.strip().rstrip("/").endswith(f"/{SKILLS_DIR}/{spec.name}") for spec in SKILLS
+            )
         )
     ]
 

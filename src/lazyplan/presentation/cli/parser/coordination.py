@@ -92,7 +92,7 @@ def add_comment(
     )
     co.add_argument(
         "action",
-        choices=["add", "list", "resolve", "unresolve"],
+        choices=["add", "list", "edit", "resolve", "unresolve"],
         help="comment action",
     )
     co.add_argument(
@@ -100,9 +100,9 @@ def add_comment(
     )
     co.add_argument("--id", type=int, default=None, metavar="ID", help="row id")
     co.add_argument(
-        "--comment", type=int, default=None, metavar="ID", help="comment id (resolve only)"
+        "--comment", type=int, default=None, metavar="ID", help="comment id (edit/resolve only)"
     )
-    co.add_argument("--text", default=None, metavar="TEXT", help="comment text (add only)")
+    co.add_argument("--text", default=None, metavar="TEXT", help="comment text (add/edit only)")
     co.add_argument(
         "--mentions",
         default=None,

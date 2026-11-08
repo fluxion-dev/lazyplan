@@ -11,6 +11,7 @@ from lazyplan.services.source import SourceTrail, build_source_trail
 from ....core.ports.provenance import ProvenancePort
 from ...shared.design import SECTION_ICON, escape_markup, status_word
 from ...shared.render import render_forge_links
+from .health import read_approval, read_claims, read_coverage, read_handoff, read_readiness
 
 KIND_KEYS = {"plan": "plan", "milestone": "milestone", "task": "task"}
 
@@ -88,20 +89,7 @@ def _read_references(lines: list[str], kind: str, full: dict[str, Any]) -> None:
         )
 
 
-def _read_coordination(lines: list[str], full: dict[str, Any], obj: dict[str, Any]) -> None:
-    if obj.get("blocked"):
-        reason = str(obj.get("blocked_reason", "") or "").strip()
-        lines.append(f"\n[red]⚑ blocked[/] {escape_markup(reason) if reason else ''}".rstrip())
-    gate = obj.get("gate")
-    if gate:
-        lines.append(
-            f"\n[dim]⚑ gate[/] {escape_markup(str(gate.get('state')))} · {gate.get('prs', 0)} PRs"
-        )
-    claim = obj.get("claim")
-    if claim:
-        expires = int(float(claim.get("expires_at") or 0))
-        state = "expired" if expires and expires <= int(time.time()) else "active"
-        lines.append(f"\n[dim]◉ claim[/] @{escape_markup(str(claim.get('actor', '')))} ({state})")
+def _read_comments_notes(lines: list[str], full: dict[str, Any], obj: dict[str, Any]) -> None:
     comments = [
         comment
         for comment in (full.get("comments") or obj.get("comments") or [])
@@ -122,6 +110,28 @@ def _read_coordination(lines: list[str], full: dict[str, Any], obj: dict[str, An
                 f"  [dim]@{escape_markup(str(note.get('actor', '')))}[/] "
                 f"{escape_markup(str(note.get('text', '')))}"
             )
+
+
+def _read_coordination(lines: list[str], full: dict[str, Any], obj: dict[str, Any]) -> None:
+    if obj.get("blocked"):
+        reason = str(obj.get("blocked_reason", "") or "").strip()
+        lines.append(f"\n[red]⚑ blocked[/] {escape_markup(reason) if reason else ''}".rstrip())
+    gate = obj.get("gate")
+    if gate:
+        lines.append(
+            f"\n[dim]⚑ gate[/] {escape_markup(str(gate.get('state')))} · {gate.get('prs', 0)} PRs"
+        )
+    claim = obj.get("claim")
+    if claim:
+        expires = int(float(claim.get("expires_at") or 0))
+        state = "expired" if expires and expires <= int(time.time()) else "active"
+        lines.append(f"\n[dim]◉ claim[/] @{escape_markup(str(claim.get('actor', '')))} ({state})")
+    touchpoints = full.get("touchpoints") or []
+    if touchpoints:
+        shown = ", ".join(str(item) for item in touchpoints[:4])
+        more = f" +{len(touchpoints) - 4}" if len(touchpoints) > 4 else ""
+        lines.append(f"\n[dim]touch[/] {escape_markup(shown)}{more}")
+    _read_comments_notes(lines, full, obj)
 
 
 def _proof_chip(evidence: dict[str, Any] | None) -> str:
@@ -280,7 +290,7 @@ def _source_lines(trail: SourceTrail, links: list[dict[str, Any]]) -> list[str]:
         rows.extend(_repo_lines(repo))
     if len(trail.repos) > 3:
         rows.append(f"  [dim]+{len(trail.repos) - 3} more repos[/]")
-    rows.append("  [dim]g source trail[/]")
+    rows.append("  [dim]g source trail · P pull requests · A activity[/]")
     return rows
 
 
@@ -311,15 +321,20 @@ def build_detail(
     pill = f" [reverse] {status.upper()} [/]" if status else ""
     head = (
         f"{status_word(status, 'rich')} [bold]{escape_markup(title)}[/]{pill}\n"
-        f"[dim]{detail_breadcrumb(store, kind, oid, obj)}[/]"
+        f"[dim]plans › {detail_breadcrumb(store, kind, oid, obj)}[/]"
     )
     lines: list[str] = []
     _read_text(lines, kind, obj)
+    read_approval(lines, kind, full)
+    read_readiness(lines, store, kind, oid)
     _read_questions(lines, kind, full)
     _read_references(lines, kind, full)
     _read_coordination(lines, full, obj)
+    read_claims(lines, kind, full)
     _read_criteria(lines, full)
+    read_coverage(lines, kind, full)
     _read_proof(lines, full)
+    read_handoff(lines, store, kind, oid, obj)
     _read_children(lines, kind, full)
     _read_forge(lines, full)
     _read_source(lines, store, kind, oid, full, trail)

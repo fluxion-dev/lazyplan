@@ -51,6 +51,8 @@ class CollaborationPort(PlanningPort, Protocol):
         self, cid: int, resolved: bool = True, actor: str = "human"
     ) -> Comment | None: ...
 
+    def update_comment(self, cid: int, text: str, actor: str = "human") -> Comment | None: ...
+
     def restore_comment(
         self,
         parent_kind: str,

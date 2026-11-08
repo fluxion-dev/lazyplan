@@ -6,7 +6,8 @@ import argparse
 import json
 import sys
 
-from ...core.entities import Criterion, Milestone, Plan, Status, Task
+from ...core.entities import Criterion, Milestone, Plan, Task
+from ...core.policies.planning import progress_counts
 from ...core.ports.planning import PlanningPort
 from ..shared import (
     porcelain,
@@ -56,8 +57,8 @@ def _progress(
             for milestone in store.list_milestones(plan_id or 0)
             for task in store.list_tasks(milestone.id)
         ]
-    done = sum(1 for task in tasks if task.status == Status.DONE)
-    return f"{done}/{len(tasks)}"
+    done, total = progress_counts(tasks)
+    return f"{done}/{total}"
 
 
 def _porcelain_row(store: PlanningPort, obj: Plan | Milestone | Task) -> str:

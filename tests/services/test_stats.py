@@ -86,6 +86,11 @@ class TestStats(unittest.TestCase):
                 "reopened": 1,
                 "claims": 1,
                 "blocked": 0,
+                "drift": {
+                    "parent_status": [],
+                    "expired_claims": [],
+                    "open_criteria": [],
+                },
             },
         )
 
@@ -100,6 +105,16 @@ class TestStats(unittest.TestCase):
         self.assertEqual(result["reopened"], 1)
         self.assertEqual(result["claims"], 1)
         self.assertEqual(result["blocked"], 0)
+
+    def test_drift_summary_reports_each_kind(self):
+        self.store.add_criteria("task", self.t1.id, "Still open", actor="alice")
+        milestone_id = self.store.get_task(self.t1.id).milestone_id
+        self.store.set_status_raw("milestone", milestone_id, Status.DONE)
+        self.store.claim_task(self.t2.id, "alice", 1, now=1000, force=True)
+        drift = stats.drift_summary(self.store, now=2000)
+        self.assertTrue(any(item["kind"] == "milestone" for item in drift["parent_status"]))
+        self.assertEqual(drift["expired_claims"], [self.t2.id])
+        self.assertIn(self.t1.id, drift["open_criteria"])
 
     def test_actor_filter_only_changes_activity(self):
         result = stats.compute(self.store, since=0, stale_before=1500, actor="bob", now=2000)

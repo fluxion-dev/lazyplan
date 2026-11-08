@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
-EMPTY_NO_PLANS = "No plans yet — press n to create one, or run: lpui plan add"
+EMPTY_NO_PLANS = "No active plans — press n to create one, or f for finished/both"
 EMPTY_FEED = "No activity yet — agents write with `lpui task add`."
 EMPTY_COMMITS = "(no commits linked)"
+EMPTY_NEEDS = "nothing needs you"
+EMPTY_AGENTS = "no active sessions"
+EMPTY_AGENTS_HINT = "start one: lpui session start --plan N"
+EMPTY_APPROVAL = "no approved revision"
 
 
 def msg_not_found(kind: str, obj_id: int) -> str:

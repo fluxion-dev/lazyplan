@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from ..core.entities import Criterion, Plan, Status, Task
+from ..core.ports.coordination import CoordinationPort
 from ..core.ports.transfer import TransferPort
 from ..core.serialization import to_payload
-from .planning import heal, set_status
+from .planning import heal, reconcile, set_status
 
 
 def _export_maps(store: TransferPort) -> dict[str, Any]:
@@ -116,9 +117,11 @@ def export_plan(store: TransferPort, plan_id: int) -> dict | None:
 
 
 def import_all(store: TransferPort, data: dict, actor: str = "human") -> dict[str, int]:
-    """Load an export_all() dump atomically; returns counts."""
+    """Load an export_all() dump atomically, then heal parents and leases."""
     with store.transaction():
-        return _import_all(store, data, actor)
+        counts = _import_all(store, data, actor)
+    reconcile(cast(CoordinationPort, store), actor=actor)
+    return counts
 
 
 def _restore_evidence_row(

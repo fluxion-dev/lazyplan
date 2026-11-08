@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import sqlite3
+
 from ..core.entities import (
     Criterion,
     CriterionEvidence,
@@ -18,6 +20,14 @@ from ..core.serialization import approval_payload
 from .base import StoreBase, to_payload
 
 
+def _release_lease_for_status(
+    conn: sqlite3.Connection, kind: str, obj_id: int, status: Status
+) -> None:
+    """A task that is no longer doing cannot keep a lease."""
+    if kind == "task" and status is not Status.DOING:
+        conn.execute("DELETE FROM task_claims WHERE task_id=?", (obj_id,))
+
+
 def _criterion_payload(criterion: Criterion, evidence: dict[int, list[CriterionEvidence]]) -> dict:
     """Criterion fields plus its evidence count, state, and latest row."""
     summary = evidence_summary(evidence.get(criterion.id, ()))
@@ -29,6 +39,77 @@ def _criterion_payload(criterion: Criterion, evidence: dict[int, list[CriterionE
         "latest": vars(latest) if latest is not None else None,
     }
     return data
+
+
+def _leading_int(text: str, start: int) -> int | None:
+    """Positive integer immediately after *start*, else None."""
+    end = start
+    while end < len(text) and text[end].isdigit():
+        end += 1
+    return int(text[start:end]) if end > start else None
+
+
+def _plan_for_milestone(mid: int | None, milestone_plan: dict[int, int]) -> int | None:
+    return milestone_plan.get(mid) if mid is not None else None
+
+
+def _plan_for_task(
+    tid: int | None,
+    task_milestone: dict[int, int],
+    milestone_plan: dict[int, int],
+) -> int | None:
+    if tid is None:
+        return None
+    return _plan_for_milestone(task_milestone.get(tid), milestone_plan)
+
+
+def _plan_for_criterion(
+    cid: int | None,
+    criterion_parent: dict[int, tuple[str, int]],
+    task_milestone: dict[int, int],
+    milestone_plan: dict[int, int],
+) -> int | None:
+    if cid is None:
+        return None
+    found = criterion_parent.get(cid)
+    if found is None:
+        return None
+    kind, parent_id = found
+    if kind == "plan":
+        return parent_id
+    if kind == "milestone":
+        return _plan_for_milestone(parent_id, milestone_plan)
+    return _plan_for_task(parent_id, task_milestone, milestone_plan)
+
+
+def _detail_plan_id(
+    detail: str,
+    milestone_plan: dict[int, int],
+    task_milestone: dict[int, int],
+    criterion_parent: dict[int, tuple[str, int]],
+) -> int | None:
+    """Owning plan encoded in one event detail, or None."""
+    if detail.startswith("P#"):
+        return _leading_int(detail, 2)
+    if detail.startswith("plan #"):
+        return _leading_int(detail, 6)
+    if detail.startswith("M#"):
+        return _plan_for_milestone(_leading_int(detail, 2), milestone_plan)
+    if detail.startswith("milestone #"):
+        return _plan_for_milestone(_leading_int(detail, 11), milestone_plan)
+    if detail.startswith("T#"):
+        return _plan_for_task(_leading_int(detail, 2), task_milestone, milestone_plan)
+    if detail.startswith("task #"):
+        return _plan_for_task(_leading_int(detail, 6), task_milestone, milestone_plan)
+    if detail.startswith("criteria #"):
+        return _plan_for_criterion(
+            _leading_int(detail, 10), criterion_parent, task_milestone, milestone_plan
+        )
+    if detail.startswith("criterion #"):
+        return _plan_for_criterion(
+            _leading_int(detail, 11), criterion_parent, task_milestone, milestone_plan
+        )
+    return None
 
 
 class ViewsMixin(StoreBase):
@@ -212,6 +293,42 @@ class ViewsMixin(StoreBase):
             ).fetchall()
         return [(r["ts"], r["detail"]) for r in rows]
 
+    def plan_activity_map(self, limit_events: int = 100_000) -> dict[int, float]:
+        """Latest event timestamp per plan from one bounded, prefix-parsed read.
+
+        The event table is the largest read path in the tree. This keeps the
+        scan bounded and parses the structured prefixes with slicing instead of
+        compiling a regex per row.
+        """
+        events = self.feed(limit=max(1, int(limit_events)))
+        if not events:
+            return {}
+        milestone_plan = {
+            milestone.id: plan_id
+            for plan_id, milestones in self.milestones_map().items()
+            for milestone in milestones
+        }
+        task_milestone = {
+            task.id: milestone_id
+            for milestone_id, tasks in self.tasks_map().items()
+            for task in tasks
+        }
+        criterion_parent = {
+            criterion.id: (criterion.parent_kind, criterion.parent_id)
+            for items in self.criteria_map().values()
+            for criterion in items
+        }
+        out: dict[int, float] = {}
+        for event in events:
+            detail = str(event.get("detail") or "")
+            plan_id = _detail_plan_id(detail, milestone_plan, task_milestone, criterion_parent)
+            if plan_id is None:
+                continue
+            stamp = float(event.get("ts") or 0.0)
+            if stamp > out.get(plan_id, 0.0):
+                out[plan_id] = stamp
+        return out
+
     def plan_status_events_map(self) -> dict[int, tuple[float, str]]:
         """Latest 'plan #id -> status' event per plan, keyed by plan id."""
         with self._connect() as conn:
@@ -234,9 +351,10 @@ class ViewsMixin(StoreBase):
         return out
 
     def set_status_raw(self, kind: str, obj_id: int, status: Status) -> bool:
-        """Raw status write, no healing or logging (see services)."""
+        """Raw status write, no healing; a task leaving doing loses its lease."""
         table = table_for(kind)
         with self._connect() as conn:
+            _release_lease_for_status(conn, kind, obj_id, status)
             cur = conn.execute(f"UPDATE {table} SET status=? WHERE id=?", (status.value, obj_id))
             return (cur.rowcount or 0) > 0
 

@@ -18,7 +18,9 @@ from ...core.entities import Milestone, Plan, Status, Task
 from ...services import insights
 from ...store import to_payload
 from .base import McpBase
+from .collaboration_tools import CollaborationToolsMixin
 from .evidence_tools import EvidenceToolsMixin
+from .provenance_tools import ProvenanceToolsMixin
 from .question_tools import QuestionToolsMixin
 from .review_tools import ReviewToolsMixin
 from .schema import error as _tool_error
@@ -31,7 +33,14 @@ from .schema import tool as _tool
 PROTOCOL_VERSION = "2024-11-05"
 
 
-class ToolsMixin(EvidenceToolsMixin, QuestionToolsMixin, ReviewToolsMixin, McpBase):
+class ToolsMixin(
+    CollaborationToolsMixin,
+    EvidenceToolsMixin,
+    ProvenanceToolsMixin,
+    QuestionToolsMixin,
+    ReviewToolsMixin,
+    McpBase,
+):
     """MCP tool definitions and handlers."""
 
     def _write_registry(self) -> dict[str, tuple[dict, Any]]:
@@ -205,6 +214,8 @@ class ToolsMixin(EvidenceToolsMixin, QuestionToolsMixin, ReviewToolsMixin, McpBa
         }
         tools.update(self._evidence_write_registry())
         tools.update(self._question_write_registry())
+        tools.update(self._collaboration_write_registry())
+        tools.update(self._provenance_write_registry())
         return tools
 
     def _tool_trace(self, args: dict) -> object:
@@ -337,6 +348,8 @@ class ToolsMixin(EvidenceToolsMixin, QuestionToolsMixin, ReviewToolsMixin, McpBa
         tools.update(self._evidence_read_registry())
         tools.update(self._question_read_registry())
         tools.update(self._review_read_registry())
+        tools.update(self._collaboration_read_registry())
+        tools.update(self._provenance_read_registry())
         return tools
 
     def _tool_claim_renew(self, args: dict) -> object:
@@ -460,7 +473,9 @@ class ToolsMixin(EvidenceToolsMixin, QuestionToolsMixin, ReviewToolsMixin, McpBa
             evidence_failure = services.task_gate(store, obj_id)
             if evidence_failure and not override:
                 raise ValueError(evidence_failure)
-        ok = services.set_status(store, kind, obj_id, Status(target), actor=self.actor)
+        ok = services.set_status(
+            store, kind, obj_id, Status(target), actor=self.actor, heal=self.heal
+        )
         if not ok:
             raise KeyError(f"{kind} {obj_id} not found")
         if failure and override:

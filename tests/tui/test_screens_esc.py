@@ -8,6 +8,7 @@ import tempfile
 import unittest
 
 from lazyplan.store import Store
+from tests.support.pilot import settle
 
 try:
     from lazyplan.presentation import tui as tui_mod
@@ -47,7 +48,7 @@ class TestEscBacksOut(unittest.IsolatedAsyncioTestCase):
         from textual.widgets import TextArea
 
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._esc_out(pilot, DetailScreen(Store(self.db), "task", self.tid))
             # focused TextArea variant: edits must not leak either
             self.app.push_screen(DetailScreen(Store(self.db), "task", self.tid))
@@ -60,20 +61,20 @@ class TestEscBacksOut(unittest.IsolatedAsyncioTestCase):
 
     async def test_new_task_esc_creates_nothing(self):
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             before = len(Store(self.db).list_tasks(self.sid))
             await self._esc_out(pilot, NewTaskScreen(self.sid))
             self.assertEqual(len(Store(self.db).list_tasks(self.sid)), before)
 
     async def test_confirm_esc_does_not_delete(self):
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._esc_out(pilot, ConfirmScreen("Delete task?"))
             self.assertIsNotNone(Store(self.db).get_task(self.tid))
 
     async def test_help_esc(self):
         async with self.app.run_test() as pilot:
-            await pilot.pause()
+            await settle(pilot)
             await self._esc_out(pilot, HelpScreen())
 
 

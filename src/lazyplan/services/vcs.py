@@ -2,21 +2,17 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from lazyplan.infrastructure.vcs import CommitInfo, RepoStatus, VCSBackend, detect_backend
 
 from ..core.kinds import check_kind
 from ..core.policies.provenance import branch_ref, letter_for_kind, trailer_refs
 from ..core.ports.provenance import ProvenancePort
+from ..infrastructure.repo_paths import resolve_repo_path
 
 
 def _norm_path(path: str) -> str:
     """Absolute normalized path for repo comparisons."""
-    try:
-        return str(Path(path).expanduser().resolve())
-    except OSError:
-        return str(Path(path).expanduser().absolute())
+    return resolve_repo_path(path)
 
 
 def _repo_for_task(store: ProvenancePort, task_id: int, repo_path: str = "") -> dict:

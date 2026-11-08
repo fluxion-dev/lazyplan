@@ -11,11 +11,13 @@ from unittest import mock
 from lazyplan import services
 from lazyplan.core.entities import Milestone, Plan, Status, Task
 from lazyplan.store import Store
+from tests.support.pilot import settle
 
 try:
     from lazyplan.presentation import tui as tui_mod
     from lazyplan.presentation.tui.controllers.git_state import GitStateController
     from lazyplan.presentation.tui.controllers.tree import TreeController
+    from lazyplan.presentation.tui.state import PlanMode
 except ImportError:  # pragma: no cover - stdlib-only interpreter
     tui_mod = None  # type: ignore[assignment]
 
@@ -32,7 +34,7 @@ class ControllerTest(unittest.IsolatedAsyncioTestCase):
         services.set_status(store, "task", task.id, Status.DONE, actor="qa")
         self.store = Store(self.db)
         self.task_id = task.id
-        self.app = tui_mod.create_app(self.db)
+        self.app = tui_mod.create_app(self.db, startup_mode=PlanMode.BOTH)
 
     async def asyncTearDown(self) -> None:
         self.tmp.cleanup()
@@ -55,7 +57,7 @@ class ControllerTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_update_chip_toasts_once_and_clears(self) -> None:
         async with self.app.run_test(size=(100, 30)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             controller = self.app.update_controller
             with mock.patch.object(self.app, "notify") as toast:
                 controller.announce("update v9.9.9 available", "9.9.9")
@@ -70,14 +72,15 @@ class ControllerTest(unittest.IsolatedAsyncioTestCase):
         from rich.text import Text
 
         async with self.app.run_test(size=(100, 30)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
+            self.app.tree_controller.expand_all()
             label = self.app._row_nodes[("task", self.task_id)].label
             self.assertIsInstance(label, Text)
             self.assertIn("Task", str(label))
 
     async def test_refresh_keeps_the_selected_row(self) -> None:
         async with self.app.run_test(size=(100, 30)) as pilot:
-            await pilot.pause()
+            await settle(pilot)
             self.app.selected = ("task", self.task_id)
             self.app.refresh_all()
             await pilot.pause()

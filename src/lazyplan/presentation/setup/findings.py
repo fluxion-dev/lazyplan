@@ -126,18 +126,17 @@ def preview(
     return resolved, list(skill_plan.skill_files)
 
 
-def _installed_skill_files(home: Path) -> list[Path]:
-    targets = [home / skills.AGENTS_DIR / skills.SKILLS_DIR / skills.SKILL_NAME / "SKILL.md"]
-    for tool in skills.KNOWN_TOOLS:
-        entry = skills.TOOL_SKILL_DIRS.get(tool)
-        if entry is None or not entry[1]:
-            continue
-        targets.append(home / entry[1] / skills.SKILL_NAME / "SKILL.md")
-    seen: list[Path] = []
-    for path in targets:
-        if path not in seen:
-            seen.append(path)
-    return seen
+def _installed_skill_files(home: Path) -> list[tuple[Path, str]]:
+    """Every generated skill copy at the home scope, with its skill name."""
+    targets: list[tuple[Path, str]] = []
+    for spec in skills.SKILLS:
+        paths = skills.skill_targets("global", None, home, name=spec.name)
+        for tool in skills.KNOWN_TOOLS:
+            paths.extend(skills.tool_skill_targets(tool, "global", None, home, name=spec.name))
+        for path in paths:
+            if not any(existing == path for existing, _name in targets):
+                targets.append((path, spec.name))
+    return targets
 
 
 def refresh_installed_skills(home: Path | None = None) -> tuple[list[Path], list[Path]]:
@@ -146,20 +145,19 @@ def refresh_installed_skills(home: Path | None = None) -> tuple[list[Path], list
     refreshed: list[Path] = []
     backups: list[Path] = []
     backup_root: Path | None = None
-    marker = "name: lazyplan"
-    for path in _installed_skill_files(home):
+    for path, name in _installed_skill_files(home):
         try:
             if not path.is_file():
                 continue
             text = textfile.read(path)
         except OSError:
             continue
-        if text == skills.render_skill() or marker not in text[:500]:
+        if text == skills.render_skill(name) or f"name: {name}" not in text[:500]:
             continue
         if backup_root is None:
             backup_root = layout.new_backup_dir(home)
         backups.append(layout.backup_file(backup_root, path))
-        changed, _status = skills.write_skill_file(path)
+        changed, _status = skills.write_skill_file(path, name=name)
         if changed:
             refreshed.append(path)
     return refreshed, backups
@@ -380,16 +378,15 @@ def legacy_db_findings(home: Path) -> list[Finding]:
 
 def _stale_skill_findings(home: Path) -> list[Finding]:
     """Installed generated skill copies older than the current render."""
-    current = skills.render_skill()
     out: list[Finding] = []
-    for path in _installed_skill_files(home):
+    for path, name in _installed_skill_files(home):
         try:
             if not path.is_file():
                 continue
             text = textfile.read(path)
         except OSError:
             continue
-        if text == current or "name: lazyplan" not in text[:500]:
+        if text == skills.render_skill(name) or f"name: {name}" not in text[:500]:
             continue
         out.append(
             Finding(

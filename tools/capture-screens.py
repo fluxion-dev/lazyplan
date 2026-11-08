@@ -212,7 +212,7 @@ def build_coordination_fixture(tmp: Path) -> Store:
     milestone = store.add_milestone(
         plan.id,
         "Coordinate the queue",
-        "Leases, handoffs, and the Attention view.",
+        "Leases, handoffs, and the control strip.",
     )
     claimed = store.add_task(milestone.id, "Claim the release queue", "Commit slice: queue.")
     expired = store.add_task(milestone.id, "Reclaim the abandoned lease", "Commit slice: lease.")
@@ -249,6 +249,36 @@ def build_coordination_fixture(tmp: Path) -> Store:
         state="open",
         checks="fail",
     )
+    return store
+
+
+def build_control_room_fixture(tmp: Path) -> Store:
+    """The coordination journal plus approval drift, a question, refs, and sessions."""
+    store = build_coordination_fixture(tmp)
+    plan = next(plan for plan in store.list_plans() if plan.name == "Ship the coordination release")
+    services.revisions.approve(store, plan.id, actor="Ada")
+    task = next(
+        task
+        for task in store.list_tasks(store.list_milestones(plan.id)[0].id)
+        if task.title == "Claim the release queue"
+    )
+    store.update_task(task.id, title="Claim the release queue (v2)", reason="scope change")
+    services.add_question(store, plan.id, "Which host ships first?", actor="Ada")
+    store.link_ref(
+        plan.id,
+        "https://github.com/acme/web/issues/7",
+        title="Epic: coordination",
+        kind="epic",
+        actor="Ada",
+    )
+    ended, _ = store.start_session("Ada", plan_id=plan.id, branch="feat/coordination", now=STAMP)
+    store.end_session(
+        ended.id,
+        "Ada",
+        summary="Closed the queue slice",
+        handoff="next: review the claim overlap",
+    )
+    store.start_session("Ada", plan_id=plan.id, branch="feat/control-room", now=STAMP + 60)
     return store
 
 
@@ -311,13 +341,6 @@ def _task_id(store: Store, title: str) -> int:
     raise SystemExit(f"fixture task not found: {title}")
 
 
-def _expand_all(tree: Tree[object]) -> None:
-    for plan in tree.root.children:
-        plan.expand()
-        for milestone in plan.children:
-            milestone.expand()
-
-
 def _nodes(tree: Tree[object], kind: str) -> list[object]:
     found: list[object] = []
 
@@ -367,7 +390,7 @@ async def _capture_task_shell(store: Store, target: Path, theme: str | None = No
         async with app.run_test(size=SIZE) as pilot:
             await pilot.pause()
             tree = app.query_one("#tree", Tree)
-            _expand_all(tree)
+            app.tree_controller.expand_all()
             tree.focus()
             selected = next(
                 (
@@ -423,12 +446,13 @@ async def capture_theme_latte(store: Store, target: Path) -> None:
 
 
 async def capture_timeline(store: Store, target: Path) -> None:
-    """Capture the shell with a milestone selected so only its task lanes show."""
+    """Capture the shell with the timeline open and a milestone selected."""
     app = create_app(str(store.path))
     async with app.run_test(size=SIZE) as pilot:
         await pilot.pause()
+        app.action_toggle_timeline()
         tree = app.query_one("#tree", Tree)
-        _expand_all(tree)
+        app.tree_controller.expand_all()
         tree.focus()
         milestones = _nodes(tree, "milestone")
         if milestones:
@@ -445,16 +469,38 @@ async def capture_coordination(store: Store, target: Path) -> None:
     app = create_app(str(store.path))
     async with app.run_test(size=SIZE) as pilot:
         await pilot.pause()
-        app.source_filter = "attention"
-        app.refresh_all("attention")
-        await pilot.pause()
         tree = app.query_one("#tree", Tree)
-        _expand_all(tree)
+        app.tree_controller.expand_all()
         tree.focus()
         tasks = _nodes(tree, "task")
         if tasks:
             tree.select_node(tasks[0])
         await pilot.pause()
+        app.save_screenshot(str(target))
+
+
+async def capture_control_room(store: Store, target: Path) -> None:
+    plan_id = next(
+        plan.id for plan in store.list_plans() if plan.name == "Ship the coordination release"
+    )
+    app = create_app(str(store.path))
+    async with app.run_test(size=SIZE) as pilot:
+        await pilot.pause()
+        app.action_toggle_override()
+        tree = app.query_one("#tree", Tree)
+        app.tree_controller.expand_all()
+        tree.focus()
+        plans = _nodes(tree, "plan")
+        if plans:
+            tree.select_node(plans[0])
+        tasks = _nodes(tree, "task")
+        if tasks:
+            tree.select_node(tasks[0])
+        await pilot.pause()
+        app.selected = ("plan", plan_id)
+        app.update_preview(force=True)
+        app.tree_controller.expand_all()
+        await pilot.pause(0.2)
         app.save_screenshot(str(target))
 
 
@@ -485,7 +531,7 @@ async def capture_search(store: Store, target: Path) -> None:
         app.refresh_all("marked 3")
         await pilot.pause()
         tree = app.query_one("#tree", Tree)
-        _expand_all(tree)
+        app.tree_controller.expand_all()
         tree.focus()
         tasks = _nodes(tree, "task")
         if tasks:
@@ -644,6 +690,12 @@ def _no_fixture(_tmp: Path) -> Store | None:
 
 
 SCENES: dict[str, Scene] = {
+    "lpui-control-room": Scene(
+        SIZE,
+        build_control_room_fixture,
+        capture_control_room,
+        "lazyplan control room with the manual override banner, health and needs strip, an active session, an open question, approval drift, claims, and attention tasks.",
+    ),
     "lpui-source-trail": Scene(
         SIZE,
         build_source_fixture,
@@ -666,13 +718,13 @@ SCENES: dict[str, Scene] = {
         SIZE,
         build_source_fixture,
         capture_theme_void,
-        "lazyplan main shell in the OLED-black void theme, with the plan tree, sticky preview, GIT pane, and timeline.",
+        "lazyplan main shell in the OLED-black void theme, with the plan tree, sticky preview, and GIT pane.",
     ),
     "lpui-theme-latte": Scene(
         SIZE,
         build_source_fixture,
         capture_theme_latte,
-        "lazyplan main shell in the light Latte theme, with the plan tree, sticky preview, GIT pane, and timeline.",
+        "lazyplan main shell in the light Latte theme, with the plan tree, sticky preview, and GIT pane.",
     ),
     "lpui-timeline": Scene(
         SIZE,
@@ -690,7 +742,7 @@ SCENES: dict[str, Scene] = {
         SIZE,
         build_coordination_fixture,
         capture_coordination,
-        "lazyplan plan tree filtered to Attention, showing an active claim, an expired claim, a blocked task, aging work, a done row with an open criterion, and a red PR check.",
+        "lazyplan plan tree with an active claim, an expired claim, a blocked task, aging work, a done row with an open criterion, and a red PR check, with attention summarized in the control strip.",
     ),
     "lpui-collaboration": Scene(
         SIZE,

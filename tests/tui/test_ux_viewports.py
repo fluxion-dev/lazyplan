@@ -21,6 +21,7 @@ try:
         PaletteScreen,
         UpdateScreen,
     )
+    from lazyplan.presentation.tui.screens.hub_provenance import ActivityHub, PullRequestHub
     from lazyplan.presentation.tui.screens.source import SourceScreen
 except ImportError:  # stdlib-only interpreter: no textual, no screens
     tui_mod = None  # type: ignore[assignment]
@@ -59,6 +60,12 @@ class TestViewports(unittest.IsolatedAsyncioTestCase):
                 async with app.run_test(size=(width, height)) as pilot:
                     await pilot.pause()
                     self.assertTrue(_within(app.query_one("#panel").region, width, height))
+                    app.override_mode = True
+                    app._paint_mode()
+                    await pilot.pause()
+                    mode = app.query_one("#mode")
+                    self.assertTrue(mode.display)
+                    self.assertTrue(_within(mode.region, width, height))
                     await settle(pilot)
                     app.selected = ("plan", self.pid)
                     await pilot.press("enter")
@@ -91,6 +98,9 @@ class TestViewports(unittest.IsolatedAsyncioTestCase):
                     else:
                         self.assertFalse(main.has_class("narrow"))
                         self.assertTrue(preview.display)
+                        self.assertFalse(metrics.display)
+                        app.action_toggle_timeline()
+                        await pilot.pause()
                         self.assertTrue(metrics.display)
                     self.assertEqual(main.has_class("compact"), width < 80)
                     self.assertEqual(main.has_class("wide"), width >= 120)
@@ -115,16 +125,23 @@ class TestViewports(unittest.IsolatedAsyncioTestCase):
                             _within(app.query_one(selector).region, width, height),
                             selector,
                         )
-                    self.assertEqual(app.query_one("#nav").border_title, " plans ")
+                    self.assertEqual(app.query_one("#nav").border_title, " plans · active ")
                     preview = app.query_one("#preview")
                     git = app.query_one("#git")
                     metrics = app.query_one("#metrics")
+                    self.assertFalse(metrics.display)
                     if width >= 100:
                         self.assertTrue(_within(preview.region, width, height))
                         self.assertEqual(preview.border_title, " preview ")
                         self.assertTrue(_within(git.region, width, height))
                         self.assertEqual(git.border_title, " git ")
+                        agents = app.query_one("#agents")
+                        self.assertTrue(_within(agents.region, width, height))
+                        strip = app.query_one("#preview-strip")
+                        self.assertTrue(_within(strip.region, width, height))
                         self.assertGreater(preview.region.height, git.region.height)
+                        app.action_toggle_timeline()
+                        await pilot.pause()
                         self.assertTrue(_within(metrics.region, width, height))
                         self.assertGreaterEqual(metrics.region.height, 11)
                         if height >= 40:
@@ -139,6 +156,8 @@ class TestViewports(unittest.IsolatedAsyncioTestCase):
         screens = (
             (DetailScreen(self.store, "plan", self.pid), "#detail-page"),
             (SourceScreen(self.store, "plan", self.pid), "#source-page"),
+            (PullRequestHub(self.store, "plan", self.pid), "#hub-page"),
+            (ActivityHub(self.store), "#hub-page"),
             (PaletteScreen({"create-plan": None}), "#dlg"),
             (HelpScreen(), "#help"),
             (ConfirmScreen("Delete plan?"), "#dlg"),

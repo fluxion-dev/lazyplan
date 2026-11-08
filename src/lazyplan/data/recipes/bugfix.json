@@ -9,7 +9,7 @@
     {
       "key": "fix",
       "title": "Fix the defect",
-      "desc": "As a user, I want the defect removed, so that the expected behavior holds. Add inputs and prerequisites here.",
+      "desc": "As a user, I want the defect removed, so that the expected behavior holds. Add inputs and prerequisites.",
       "tasks": [
         {
           "key": "reproduce",
@@ -19,7 +19,7 @@
         {
           "key": "fix",
           "title": "Fix the defect",
-          "desc": "Approach: describe the root cause and the smallest safe change.\n\nCommit: fix slice.\n\nVerify: the reproduction passes and the relevant suite stays green."
+          "desc": "Approach: name the root cause and the smallest safe change.\n\nCommit: fix slice.\n\nVerify: the reproduction passes and the relevant suite stays green."
         },
         {
           "key": "regression",

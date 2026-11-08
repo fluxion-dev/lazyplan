@@ -10,10 +10,13 @@ from lazyplan.infrastructure.repo import shared_db_path as shared_db_path
 from . import layout, ui
 from .apply import (
     apply_choice,
+    choice_from_state,
     ensure,
     install_hooks,
     install_integrations,
     install_pointer,
+    refresh_installed_hooks,
+    refresh_integrations,
 )
 from .constants import (
     HOME,
@@ -37,6 +40,13 @@ from .findings import (
 from .findings import (
     legacy_db_findings as legacy_db_findings,
 )
+from .integrations import (
+    Inspection,
+    ReviewResult,
+    inspect,
+    remember_installed,
+    review_pending,
+)
 from .layout import SetupChoice, SetupLayout
 from .moves import move_repo_db
 from .state import SetupState, git_state, load_state, plans_in, save_state, state_path
@@ -58,16 +68,20 @@ __all__ = [
     "HOME",
     "SETUP_VERSION",
     "Finding",
+    "Inspection",
+    "ReviewResult",
     "SetupChoice",
     "SetupLayout",
     "SetupState",
     "apply_choice",
     "choice_from_args",
+    "choice_from_state",
     "cleanup_repo_artifacts",
     "default_choice",
     "detect_findings",
     "ensure",
     "git_state",
+    "inspect",
     "install_hooks",
     "install_integrations",
     "install_pointer",
@@ -76,8 +90,12 @@ __all__ = [
     "move_repo_db",
     "plans_in",
     "preview",
+    "refresh_installed_hooks",
     "refresh_installed_skills",
+    "refresh_integrations",
+    "remember_installed",
     "review_findings",
+    "review_pending",
     "run_wizard",
     "save_state",
     "setup_layout",

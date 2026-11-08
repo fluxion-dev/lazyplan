@@ -92,6 +92,11 @@ def _print_setup(result: dict) -> None:
     pointer = result.get("agents_pointer") or {}
     if pointer.get("path"):
         print(f"pointer:   {pointer['path']} ({pointer['status']})")
+    review = result.get("integration_review") or {}
+    for path in review.get("installed") or []:
+        print(f"integration: {path}")
+    for item in review.get("pending") or []:
+        print(f"pending:   {item.get('label', item.get('id', '?'))}")
     print(f"state:     {result['state']}")
 
 
@@ -104,29 +109,64 @@ def _cmd_setup(store: Store | None, args: argparse.Namespace, actor: str) -> int
     state = setup.load_state(home)
     version = package_version()
     interactive = _setup_interactive(args)
+    root = find_repo_root(Path.cwd())
+    choice = setup.choice_from_args(args, Path.cwd(), home, state)
     if interactive:
-        initial = setup.choice_from_args(args, Path.cwd(), home, state)
         result = setup.run_wizard(
             Path.cwd(),
             home,
             state,
             version,
-            initial=initial,
+            initial=choice,
             hooks_enabled=getattr(args, "hooks", None),
         )
         if result is None:
             return _emit(args, {"cancelled": True}) if getattr(args, "json", False) else 0
     else:
-        choice = setup.choice_from_args(args, Path.cwd(), home, state)
-        result = setup.apply_choice(choice, find_repo_root(Path.cwd()), home, version)
-    root = find_repo_root(Path.cwd())
-    setup.install_integrations(
-        result,
-        home,
-        root,
-        getattr(args, "hooks", None),
-        getattr(args, "agents_pointer", None),
-    )
+        result = setup.apply_choice(choice, root, home, version)
+    if getattr(args, "post_upgrade", False):
+        state = setup.load_state(home)
+        choice = setup.choice_from_state(state)
+        can_review = (
+            not getattr(args, "json", False) and setup_ui.stdin_tty() and sys.stderr.isatty()
+        )
+        setup.refresh_integrations(
+            result,
+            choice,
+            home,
+            root,
+            version,
+            read=input,
+            write=sys.stderr,
+            color=setup_ui.color_enabled(sys.stderr, bool(getattr(args, "json", False))),
+            allow_prompt=can_review,
+            pointer_mode=getattr(args, "agents_pointer", None),
+        )
+    else:
+        setup.install_integrations(
+            result,
+            home,
+            root,
+            getattr(args, "hooks", None),
+            getattr(args, "agents_pointer", None),
+        )
+        state = setup.load_state(home)
+        choice = setup.choice_from_state(state)
+        inspection = setup.inspect(choice, state, root, home, version)
+        if setup.remember_installed(inspection, state, version):
+            setup.save_state(state, home)
+        review = setup.review_pending(
+            choice,
+            state,
+            root,
+            home,
+            version,
+            read=input,
+            write=sys.stderr,
+            color=setup_ui.color_enabled(sys.stderr, bool(getattr(args, "json", False))),
+            allow_prompt=interactive,
+        )
+        result["integration_review"] = review.to_dict()
     if result.get("placement") == setup.HOME:
         _setup_review(args, home, interactive)
     if result.get("wizard") and not getattr(args, "json", False):
@@ -171,7 +211,10 @@ def _doctor_data(
     }
     report["state"] = state.to_dict()
     report["skills"] = [str(path) for path in skill_files]
+    inspection = setup.inspect(choice, state, root, home, package_version())
+    report["pending_integrations"] = [item.to_dict() for item in inspection.pending]
     issues = bool(report["findings"]) or bool(missing_hooks)
+    issues = issues or bool(report["pending_integrations"])
     issues = issues or (state.hooks and not state.hook_files)
     issues = issues or state.version != setup.SETUP_VERSION
     report["clean"] = bool(report["clean"] and not issues)
@@ -197,6 +240,8 @@ def _print_doctor(layout: setup_layout.SetupLayout, skill_files: list[Path], rep
         print(f"missing:   {item}")
     for finding in report["findings"]:
         print(f"finding:   {finding['kind']} {finding['path']} ({finding['state']})")
+    for item in report["pending_integrations"]:
+        print(f"pending:   {item['label']} ({item['id']})")
     for note in report["notes"]:
         print(f"note:      {note}")
 

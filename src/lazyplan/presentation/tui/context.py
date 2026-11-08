@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from textual.widgets import Tree
 
-from ..shared.palette import COMMANDS
+from ..shared import registry
 from .base import AppBase
 
 
@@ -61,20 +61,23 @@ class ContextMixin(AppBase):
         return self._node_key(cursor) is None
 
     def _palette_context(self) -> dict[str, str | None]:
-        """Disable commands that cannot run for the current selection."""
-        selected = self.selected is not None
-        plan_id = self._plan_ctx()
-        milestone_id = self._milestone_for_task_ctx()
-        context: dict[str, str | None] = {cmd.id: None for cmd in COMMANDS}
-        if not selected:
-            for cmd in COMMANDS:
-                if cmd.context == "selection":
-                    context[cmd.id] = "Select a row first"
-        if plan_id is None:
-            context["create-milestone"] = "Select a plan first"
-            context["export-plan"] = "Select a plan first"
-        if milestone_id is None:
-            context["create-task"] = "Select a milestone first"
-        if self.selected is not None and self.selected[0] == "task":
-            context["fold-one"] = "Nothing to fold"
-        return context
+        """Disable commands the current screen and selection cannot run.
+
+        The rules live in the registry; this method only reports the context.
+        """
+        context = registry.Context(
+            screen=self._screen_name(),
+            selected_kind=self.selected[0] if self.selected else None,
+            has_plan=self._plan_ctx() is not None,
+            has_milestone=self._milestone_for_task_ctx() is not None,
+            on_root=self._cursor_is_root(),
+        )
+        return registry.palette_context(context)
+
+    def _screen_name(self) -> str:
+        """The navigation name of the top screen, or tree before mount."""
+        try:
+            screen = self.screen
+        except Exception:
+            return "tree"
+        return str(getattr(screen, "navigation_name", "tree"))

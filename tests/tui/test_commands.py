@@ -30,9 +30,17 @@ class TestCommandRegistry(unittest.TestCase):
     def test_palette_sections_cover_commands_once(self):
         ids = [cmd.id for cmd in palette.palette_commands()]
         sectioned = [cid for _, section in palette.palette_sections() for cid in section]
-        self.assertEqual(sectioned, ids)
+        self.assertEqual(sorted(sectioned), sorted(ids))
         self.assertEqual(len(sectioned), len(set(sectioned)))
         self.assertEqual([name for name, _ in palette.palette_sections()], list(palette.SECTIONS))
+
+    def test_sections_split_observe_and_override(self):
+        modes = {cmd.mode for cmd in palette.palette_commands()}
+        self.assertEqual(modes, {"observe", "override"})
+        from lazyplan.presentation.shared.help import HELP_TEXT
+
+        self.assertIn("OBSERVE", HELP_TEXT)
+        self.assertIn("OVERRIDE", HELP_TEXT)
 
     def test_data_commands_use_the_glossary(self):
         for cmd in palette.COMMANDS:
@@ -62,6 +70,10 @@ class TestCommandRegistry(unittest.TestCase):
             for name in names:
                 self.assertIn(name, parser, f"lpui {name} is missing")
 
+    def test_exact_alias_beats_a_substring(self):
+        sections = palette.matching("cycle status")
+        self.assertEqual(sections[0][1][0].id, "move-doing")
+
     def test_matching_finds_labels_aliases_and_verbs(self):
         def ids(query: str) -> list[str]:
             return [cmd.id for _, cmds in palette.matching(query) for cmd in cmds]
@@ -80,6 +92,18 @@ class TestCommandRegistry(unittest.TestCase):
             self.assertIn(first, help_mod.HELP_TEXT, key)
             self.assertIn(first, table, key)
 
+    def test_help_lists_the_trust_actions(self):
+        from lazyplan.presentation.shared.help import HELP_TEXT
+
+        for hint in (
+            "record the current plan as an approved revision",
+            "record a command, exit code, commit, or note as proof",
+            "record a plan-level ambiguity",
+            "claim the selected task and move it doing",
+            "link commits and close the task through the finish gates",
+        ):
+            self.assertIn(hint, HELP_TEXT)
+
     def test_help_has_no_stale_claims(self):
         self.assertNotIn("press n to seed", help_mod.HELP_TEXT)
         self.assertNotIn("c ticks", help_mod.HELP_TEXT)
@@ -92,6 +116,14 @@ class TestCommandRegistry(unittest.TestCase):
         for cmd in palette.palette_commands():
             for word in banned:
                 self.assertNotIn(word, cmd.label.lower(), cmd.id)
+
+    def test_timeline_toggle_is_registered(self):
+        command = next(cmd for cmd in palette.COMMANDS if cmd.id == "toggle-timeline")
+        self.assertEqual(command.key, "T")
+        self.assertEqual(command.handler, "toggle_timeline")
+        self.assertEqual(command.action_id, "view.timeline")
+        matches = [cmd.id for _section, cmds in palette.matching("timeline") for cmd in cmds]
+        self.assertIn("toggle-timeline", matches)
 
     def test_help_and_palette_are_importable_without_textual(self):
         # The registry must stay stdlib-only: the CLI and stdlib tests use it.

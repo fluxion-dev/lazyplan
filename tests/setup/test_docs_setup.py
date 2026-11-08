@@ -5,12 +5,11 @@ import unittest
 
 from lazyplan.infrastructure.docs_meta import ENVIRONMENT, FILES
 from lazyplan.presentation.cli.parser import build_parser
+from tests.support.docs import MAN, README, USAGE
 from tests.support.paths import ROOT
+from tests.support.tools import load_tool
 
-USAGE = (ROOT / "docs/usage.md").read_text(encoding="utf-8")
-SETUP_DOC = (ROOT / "docs/setup.md").read_text(encoding="utf-8")
-MAN = (ROOT / "docs/lpui.1").read_text(encoding="utf-8").replace("\\-", "-").replace("\\.", ".")
-README = (ROOT / "README.md").read_text(encoding="utf-8")
+GATE = load_tool("check-docs")
 
 
 class DocsTruthCase(unittest.TestCase):
@@ -39,6 +38,7 @@ class DocsTruthCase(unittest.TestCase):
     def test_documented_files_match_the_meta_table(self):
         for name, _text in FILES:
             with self.subTest(name=name):
+                self.assertIn(name.split(",")[0].strip(), USAGE)
                 self.assertIn(name.split(",")[0].strip(), MAN)
 
     def test_man_documents_porcelain(self):
@@ -46,7 +46,7 @@ class DocsTruthCase(unittest.TestCase):
             self.assertIn(needle, MAN)
 
     def test_removed_flags_stay_removed(self):
-        for text in (README, USAGE, SETUP_DOC, MAN):
+        for text in (README, USAGE, MAN):
             self.assertNotIn("--team", text)
 
     def test_no_suppressed_flag_leaks(self):
@@ -54,7 +54,12 @@ class DocsTruthCase(unittest.TestCase):
 
     def test_setup_walkthrough_names_every_placement(self):
         for word in ("home", "repo", "doctor", "upgrade", "uninstall"):
-            self.assertIn(word, SETUP_DOC.lower())
+            self.assertIn(word, USAGE.lower())
+
+    def test_removed_docs_stay_absent(self):
+        for name in GATE.RETIRED_DOCS:
+            with self.subTest(name=name):
+                self.assertFalse((ROOT / name).exists())
 
 
 if __name__ == "__main__":

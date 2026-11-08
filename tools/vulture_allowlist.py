@@ -8,7 +8,7 @@
 - Session API kept deliberately: the store and port surface is consumed
   by the session commands and resume reads cut in T1436 and T1437.
 - Metrics dashboard contract: snapshot fields are consumed by the chart
-  cards and their tests.
+  cards and their tests; attention_ids is the set form of the preview map.
 - sqlite3 API noise: row_factory.
 """
 
@@ -28,10 +28,6 @@ _.action_fold
 _.action_fold_left
 _.action_fold_right
 _.action_refresh
-_.action_filter_status
-_.action_filter_source
-_.action_filter_plan
-_.action_toggle_show_all
 _.action_help
 _.action_new_context
 _.action_new_plan
@@ -70,6 +66,13 @@ _.criteria_progress
 _.day
 _.percent
 _.elapsed_seconds
+attention_ids
+_.taxonomy
+_.deprecated_in
+_.removal
+SURFACES
+TAXONOMY
+PALETTE_TO_ACTION
 _.daily_rate
 _.eta_days
 _.complete
@@ -177,3 +180,29 @@ show_root
 _.next_claimable_task
 # Policy helper exercised by the coordination policy tests.
 touchpoints_overlap
+# Provenance, activity, and edit hubs: Textual key actions and message handlers.
+_.action_open_trust_hubs
+_._highlight
+_._select
+_.action_add
+_.action_hub_toggle
+_.action_prove
+_.action_force
+_.action_note
+_.action_relate
+_.action_unrelate
+_.action_open_value
+_.action_source_hub
+_.action_edit_row
+_.action_filter_actor
+_.action_filter_kind
+_.action_open_owner
+_.action_open
+_.action_copy
+_.action_filter
+_.check_action
+_._on_click
+_.can_focus
+on_root
+_.on_click
+_.load_children

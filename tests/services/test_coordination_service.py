@@ -69,6 +69,15 @@ class TestCoordinationService(unittest.TestCase):
         result = services.start_claim(self.store, second, "bob", repo_path="/repo", force=True)
         self.assertEqual(result["claim"]["actor"], "bob")
 
+    def test_overlap_compares_normalized_repo_paths(self) -> None:
+        first = self._add_task("Store", "src/store")
+        second = self._add_task("Store file", "src/store/base.py")
+        self.store.add_repo_link("task", first, "/repo", actor="fixture")
+        self.store.add_repo_link("task", second, "/repo", actor="fixture")
+        services.start_claim(self.store, first, "alice", repo_path="/repo/.")
+        with self.assertRaises(TouchpointOverlap):
+            services.start_claim(self.store, second, "bob", repo_path="/repo")
+
     def test_different_repos_do_not_overlap(self) -> None:
         first = self._add_task("A", "src/store", repo="/repo/a")
         second = self._add_task("B", "src/store", repo="/repo/b")

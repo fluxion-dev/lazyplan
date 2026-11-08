@@ -4,6 +4,14 @@
     height: 1fr;
 }
 
+#mode {
+    display: none;
+    height: 1;
+    padding: 0 1;
+    background: $lp-status-blocked;
+    color: $lp-surface;
+}
+
 #main {
     height: 1fr;
     padding: 0 0 0 1;
@@ -45,6 +53,13 @@
     background: $lp-surface-alt;
 }
 
+#preview-strip {
+    height: auto;
+    max-height: 3;
+    padding: 0 1;
+    background: $lp-surface;
+}
+
 #preview-body {
     height: auto;
     padding: 0 1;
@@ -63,6 +78,23 @@
 }
 
 #git-body {
+    height: auto;
+    padding: 0 1;
+}
+
+#agents {
+    width: 1fr;
+    height: auto;
+    min-height: 3;
+    max-height: 8;
+    padding: 0 1;
+    border: round $lp-border-muted;
+    border-title-color: $lp-text-muted;
+    border-title-style: bold;
+    border-title-align: left;
+}
+
+#agents-body {
     height: auto;
     padding: 0 1;
 }
@@ -87,16 +119,13 @@
 
 #main.narrow #side,
 #main.narrow #preview,
-#main.narrow #git {
+#main.narrow #git,
+#main.narrow #agents {
     display: none;
 }
 
 #main.narrow #nav {
     width: 100%;
-}
-
-#metrics.narrow {
-    display: none;
 }
 
 #main.compact {
@@ -109,7 +138,8 @@
 }
 
 #main.wide #preview,
-#main.wide #git {
+#main.wide #git,
+#main.wide #agents {
     padding: 0 2;
 }
 

@@ -7,12 +7,12 @@ import tempfile
 import unittest
 
 from lazyplan.infrastructure.upgrade import PIPX, InstallInfo
-from lazyplan.presentation.tui.navigation import NavEntry, NavigationHistory
 from lazyplan.store import Store
 from tests.support.pilot import settle
 
 try:
     from lazyplan.presentation import tui as tui_mod
+    from lazyplan.presentation.tui.navigation import NavEntry, NavigationHistory
     from lazyplan.presentation.tui.screens import (
         DetailScreen,
         ExportScreen,
@@ -26,6 +26,7 @@ except ImportError:  # pragma: no cover - stdlib-only interpreter
     tui_mod = None  # type: ignore[assignment]
 
 
+@unittest.skipUnless(tui_mod is not None and tui_mod._TEXTUAL_OK, "textual not installed")
 @unittest.skipUnless(tui_mod is not None and tui_mod._TEXTUAL_OK, "textual not installed")
 class NavigationHistoryTest(unittest.TestCase):
     def test_push_back_forward_restores_order(self) -> None:
@@ -89,6 +90,11 @@ class NavigationHostTest(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(self.app.screen, HelpScreen)
         await pilot.press("escape")
         await pilot.pause()
+
+    def test_app_bindings_have_no_duplicate_keys(self) -> None:
+        app = tui_mod.create_app(self.db)
+        keys = [binding.key for binding in app.BINDINGS]
+        self.assertEqual(len(keys), len(set(keys)))
 
     async def test_palette_and_help_open_on_the_main_tree(self) -> None:
         self.app = tui_mod.create_app(self.db)

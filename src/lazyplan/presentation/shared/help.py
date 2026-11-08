@@ -7,6 +7,7 @@ from .registry import COMMANDS, key_deprecations
 NAV_ROWS: tuple[tuple[str, str], ...] = (
     ("j/k, up/down, click", "move cursor / select"),
     ("left/right, click arrow", "fold / unfold row"),
+    ("[ / ]", "history back / forward"),
     ("escape", "clear filter / back"),
 )
 

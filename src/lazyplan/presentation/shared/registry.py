@@ -519,6 +519,7 @@ def deprecations() -> tuple[Deprecation, ...]:
         Deprecation(f"lpui {alias}", f"lpui {noun} {verb}".strip())
         for (noun, verb), aliases in LEGACY_COMMANDS.items()
         for alias in aliases
+        if noun or alias != verb
     )
     return commands + DEPRECATED_KEYS
 

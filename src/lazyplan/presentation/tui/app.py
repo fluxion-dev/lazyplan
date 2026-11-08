@@ -22,6 +22,7 @@ try:
     from textual.widgets.tree import TreeNode
 
     from ..shared.tree_nav import NavTree  # noqa: F401
+    from .navigation import NAV_BINDINGS
     from .query import query_one_opt
 
     _TEXTUAL_OK = True
@@ -75,10 +76,10 @@ if _TEXTUAL_OK:
         ]
         ENABLE_COMMAND_PALETTE = False
         BINDINGS = [
+            *NAV_BINDINGS,
             Binding("enter", "open_detail", "Open"),
             Binding("space", "toggle_mark", "Mark"),
             Binding("escape", "clear_filter", "Back", show=False),
-            Binding("c", "command_palette", "Palette"),
             Binding("t", "cycle_theme", "Theme"),
             Binding("n", "new_context", "New"),
             Binding("e", "edit_selection", "Edit"),
@@ -94,10 +95,6 @@ if _TEXTUAL_OK:
             Binding("f", "cycle_mode", "Plan mode", show=False),
             Binding("r", "refresh", "Refresh", show=False),
             Binding("U", "update_prompt", "Update"),
-            Binding("O", "toggle_override", "Override"),
-            Binding("question_mark", "help", "Help"),
-            Binding("q", "quit", "Quit"),
-            Binding("]", "history_forward", "Forward", show=False),
         ]
         rev = reactive(0, init=False)
 

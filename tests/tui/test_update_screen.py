@@ -39,7 +39,7 @@ STAGED = update_stage.StagedUpdate(
 @unittest.skipUnless(tui_mod is not None and tui_mod._TEXTUAL_OK, "textual not installed")
 class TestUpdateScreen(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         sandbox_home(self, os.path.join(self.tmp.name, "home"))
         os.makedirs(os.environ["HOME"], exist_ok=True)
         self.db = os.path.join(self.tmp.name, "t.db")

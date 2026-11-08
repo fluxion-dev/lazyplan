@@ -9,7 +9,6 @@ from contextlib import contextmanager
 from unittest import mock
 
 import pytest
-from textual.widgets import Tree
 
 from lazyplan import services
 from lazyplan.core.entities import Status
@@ -129,15 +128,6 @@ def control_app():
             yield create_app(db), plan.id
 
 
-def _expand_tree(tree: Tree) -> None:
-    def walk(node) -> None:
-        node.expand()
-        for child in node.children:
-            walk(child)
-
-    walk(tree.root)
-
-
 def test_control_room_shell(snap_compare, control_app) -> None:
     app, plan_id = control_app
 
@@ -146,8 +136,8 @@ def test_control_room_shell(snap_compare, control_app) -> None:
         pilot.app.action_toggle_override()
         pilot.app.selected = ("plan", plan_id)
         pilot.app.update_preview(force=True)
-        _expand_tree(pilot.app.query_one("#tree", Tree))
-        await pilot.pause()
+        pilot.app.tree_controller.expand_all()
+        await pilot.pause(0.2)
 
     with mock.patch("time.time", return_value=FIXED_NOW):
         assert snap_compare(app, run_before=run_before, terminal_size=(120, 40))

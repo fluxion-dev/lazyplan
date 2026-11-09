@@ -80,6 +80,17 @@ class TestAgentController(unittest.IsolatedAsyncioTestCase):
         await wait_for(lambda: controller.status == "idle")
         await controller.close()
 
+    async def test_second_prompt_is_rejected(self) -> None:
+        controller = self.make("cancel")
+        await controller.start()
+        first = asyncio.create_task(controller.prompt("one"))
+        await wait_for(lambda: controller.status == "running")
+        with self.assertRaises(RuntimeError):
+            await controller.prompt("two")
+        await controller.cancel()
+        await asyncio.wait_for(first, 5.0)
+        await controller.close()
+
     async def test_missing_command_reports_error(self) -> None:
         controller = AgentController(
             AgentProfile("missing", "Missing", (os.devnull,)),

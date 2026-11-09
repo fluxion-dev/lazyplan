@@ -82,6 +82,21 @@ class TestAgentScreen(unittest.IsolatedAsyncioTestCase):
             await asyncio.wait_for(sending, 5.0)
             await screen.action_close()
 
+    async def test_permission_modal_rejects_the_tool(self) -> None:
+        app = create_app(self.db)
+        async with app.run_test() as pilot:
+            screen = AgentScreen(profile("permission"), ROOT)
+            app.push_screen(screen)
+            await pilot.pause()
+            screen.query_one("#agent-prompt").text = "write"
+            sending = asyncio.create_task(screen.action_send())
+            await wait_for(lambda: app.screen.__class__.__name__ == "AgentPermissionScreen")
+            await pilot.pause()
+            app.screen.query_one("#perm-cancel", Button).press()
+            await wait_for(lambda: "cancelled" in screen.transcript)
+            await asyncio.wait_for(sending, 5.0)
+            await screen.action_close()
+
     async def test_unknown_update_renders_a_generic_line(self) -> None:
         app = create_app(self.db)
         async with app.run_test() as pilot:

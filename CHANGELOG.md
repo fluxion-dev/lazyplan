@@ -18,6 +18,8 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
   completion; `criterion prove` records evidence only.
 - **Pane empty states.** The plans, preview, git, and agents panes share one
   empty-state treatment: a bold capitalized title and a dim next step.
+- **Legacy aliases.** The deprecated CLI verbs and moved detail keys remain
+  through 0.36.0. A version guard fails at 0.37.0 until they are removed.
 
 ### Removed
 

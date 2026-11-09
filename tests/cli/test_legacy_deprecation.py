@@ -8,7 +8,9 @@ import tempfile
 import unittest
 from contextlib import redirect_stderr
 
+from lazyplan.infrastructure.environment import parse_version
 from lazyplan.presentation.cli.main import main as lpui_main
+from lazyplan.presentation.cli.parser import package_version
 from lazyplan.presentation.shared import registry
 from lazyplan.presentation.shared.help import HELP_TEXT
 
@@ -66,6 +68,16 @@ class LegacyDeprecationTest(unittest.TestCase):
             with self.subTest(name=row.name):
                 self.assertEqual(row.removal, registry.DEPRECATION_RELEASE)
                 self.assertTrue(row.replacement)
+
+    def test_removal_guard_fails_once_the_window_closes(self) -> None:
+        current = parse_version(package_version())
+        removal = parse_version(registry.DEPRECATION_RELEASE)
+        if current >= removal:
+            self.assertEqual(
+                registry.deprecations(),
+                (),
+                f"remove the deprecated aliases before {registry.DEPRECATION_RELEASE}",
+            )
 
     def test_help_shows_the_moved_keys(self) -> None:
         self.assertIn("DEPRECATED", HELP_TEXT)

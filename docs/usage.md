@@ -406,7 +406,8 @@ unchanged.
 
 From a task detail page, `W` starts a work session: lazyplan claims the task,
 opens a lazyplan session, prefills the prompt with the task, plan, branch, and
-criteria, and opens the workbench. The header follows that task and plan while
+criteria, and opens the workbench. The lazyplan session is the audit ledger and
+handoff; the ACP conversation is the agent run linked to it in `agent_runs`. The header follows that task and plan while
 the run is active. `ctrl+f` finishes the run with a summary and handoff; it runs
 the same evidence, pull-request, and check gates as `task finish`, so a failed
 gate leaves the task open and explains why.

@@ -30,7 +30,9 @@ If your host supports MCP, use the local `lpui mcp` server (or
 Inside the workbench the MCP server runs with `--proposal-only`: reads, notes,
 comments, questions, sessions, and claims are direct, while plan/milestone/task/
 criterion structure changes go through `propose_plan`, `propose_edit`, or
-`propose_task` and wait for a human to apply them.
+`propose_task` and wait for a human to apply them. A task workbench run claims
+the task and opens a lazyplan session; finish it with a summary and handoff so
+the next session can resume.
 Start work with `lpui next --porcelain`: it claims the first eligible todo and
 moves it doing. A claim is a lease, not an owner. Renew it while you work,
 release it when you stop, and note handoffs with `lpui note add`. MCP resources

@@ -3,6 +3,21 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## Unreleased
+
+### Added
+
+- **Agent workbench.** Press `W` to prompt an ACP agent beside the plan. The
+  default is OpenCode (`opencode acp`); `lpui agent list`, `lpui agent add`, and
+  `lpui agent remove` manage other commands. The screen streams assistant text,
+  tool cards, plans, and usage, and asks for permission before a tool runs.
+- **Proposal review.** Agents stage plan, milestone, task, and criterion changes
+  as proposals. `ctrl+p` opens the human review screen; applying a proposal uses
+  the normal plan-apply path.
+- **Work sessions.** On a task detail, `W` claims the task, opens a lazyplan
+  session, and prefills a work prompt. `ctrl+f` finishes with a summary and
+  handoff behind the existing evidence, pull-request, and check gates.
+
 ## v0.35.0 — 2026-11-08
 
 The screen becomes a control room for the loop: large journals open faster,

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import sys
 import tempfile
 import unittest
@@ -220,6 +221,29 @@ class TestAgentScreen(unittest.IsolatedAsyncioTestCase):
                 await wait_for(lambda: len(store.list_agent_runs()) == 1)
             self.assertEqual(store.get_task(task.id).status.value, "doing")
             self.assertEqual(store.list_agent_runs()[0]["status"], "running")
+            await screen.action_close()
+
+    async def test_agent_picker_opens(self) -> None:
+        app = create_app(self.db)
+        async with app.run_test() as pilot:
+            screen = AgentScreen(profile(), ROOT)
+            app.push_screen(screen)
+            await pilot.pause()
+            screen.query_one("#agent-pick", Button).press()
+            await pilot.pause()
+            self.assertEqual(app.screen.__class__.__name__, "AgentPickerScreen")
+
+    async def test_agent_error_is_visible(self) -> None:
+        bad = AgentProfile("missing", "Missing", (os.devnull,))
+        app = create_app(self.db)
+        async with app.run_test() as pilot:
+            screen = AgentScreen(bad, ROOT)
+            app.push_screen(screen)
+            await pilot.pause()
+            screen.query_one("#agent-prompt").text = "hello"
+            await screen.action_send()
+            await wait_for(lambda: "Error" in screen.transcript)
+            self.assertEqual(screen._controller.status if screen._controller else "", "error")
             await screen.action_close()
 
     async def test_status_strip_tracks_the_run(self) -> None:

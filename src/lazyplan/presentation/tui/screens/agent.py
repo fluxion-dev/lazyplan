@@ -23,6 +23,7 @@ from ..controllers.agent import AgentController
 from ..views.agent import AgentTranscript
 from .agent_finish import AgentFinishScreen
 from .agent_permission import AgentPermissionScreen
+from .agent_picker import AgentPickerScreen
 from .agent_proposals import ProposalReviewScreen
 
 if TYPE_CHECKING:
@@ -40,6 +41,7 @@ if _TEXTUAL_OK:
             Binding("ctrl+x", "cancel", "Stop", priority=True),
             Binding("ctrl+p", "open_proposals", "Proposals", priority=True),
             Binding("ctrl+f", "finish", "Finish", priority=True),
+            Binding("ctrl+g", "pick_agent", "Agent", priority=True),
         ]
 
         navigation_name = "agent"
@@ -88,6 +90,7 @@ if _TEXTUAL_OK:
                 with Horizontal(id="agent-actions", classes="btn-row"):
                     yield Button("Send", id="agent-send", variant="primary")
                     yield Button("Stop", id="agent-stop")
+                    yield Button("Agent", id="agent-pick")
                     yield Button("Proposals", id="agent-proposals")
                     yield Button("Finish", id="agent-finish")
                     yield Button("Close", id="agent-close")
@@ -290,6 +293,29 @@ if _TEXTUAL_OK:
             self._permission_open = False
             await self._controller.reply_permission(permission.request_id, None)
 
+        def action_pick_agent(self) -> None:
+            if self._started or self._agent_run_id is not None:
+                self.notify("finish the current run before changing agents")
+                return
+            self.app.push_screen(AgentPickerScreen(), self._set_profile)
+
+        def _set_profile(self, profile: AgentProfile | None) -> None:
+            if profile is None:
+                return
+            if self._controller is not None:
+                asyncio.create_task(self._controller.close())
+            self.profile = profile
+            self._title = profile.title
+            self._controller = AgentController(
+                profile,
+                self.cwd,
+                on_event=self._enqueue_event,
+                on_status=self._enqueue_status,
+                mcp_servers=self._mcp_servers,
+            )
+            self._update_head()
+            self._set_status("idle", profile.title)
+
         def action_finish(self) -> None:
             if self._store is None or self._agent_run_id is None:
                 self.notify("no active work run to finish")
@@ -367,6 +393,8 @@ if _TEXTUAL_OK:
                 await self.action_send()
             elif event.button.id == "agent-stop":
                 await self.action_cancel()
+            elif event.button.id == "agent-pick":
+                self.action_pick_agent()
             elif event.button.id == "agent-proposals":
                 self.action_open_proposals()
             elif event.button.id == "agent-finish":

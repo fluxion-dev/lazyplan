@@ -6,44 +6,41 @@ import re
 import unittest
 
 from tests.support.paths import ROOT
+from tests.support.site import has_built_site, page_html
 
-PAGE = ROOT / "site/index.html"
-TRIGGERS = re.compile(
-    r'<a class="zoom-trigger" href="(\./screens/[^"]+)" data-zoom aria-haspopup="dialog">',
-)
+TRIGGERS = re.compile(r"<button[^>]*data-zoom[^>]*>")
 IMAGES = re.compile(r'<img src="(\./screens/[^"]+\.png)"')
+COMPONENT = ROOT / "site/src/components/site/screenshots.tsx"
 
 
+@unittest.skipUnless(has_built_site(), "site not built")
 class TestScreenshotZoom(unittest.TestCase):
     def setUp(self):
-        self.page = PAGE.read_text(encoding="utf-8")
+        self.page = page_html()
+        self.component = COMPONENT.read_text(encoding="utf-8")
 
     def test_every_screenshot_is_a_zoom_trigger(self):
-        self.assertEqual(sorted(TRIGGERS.findall(self.page)), sorted(IMAGES.findall(self.page)))
+        self.assertEqual(len(TRIGGERS.findall(self.page)), 10)
+        self.assertEqual(len(IMAGES.findall(self.page)), 10)
 
     def test_every_trigger_targets_a_published_png(self):
-        for href in TRIGGERS.findall(self.page):
+        for href in IMAGES.findall(self.page):
             with self.subTest(href=href):
                 png = ROOT / "site/public" / href
                 webp = png.with_suffix(".webp")
                 self.assertTrue(png.is_file())
                 self.assertTrue(webp.is_file())
 
-    def test_dialog_exposes_a_close_control_and_caption(self):
-        for fragment in (
-            '<dialog id="zoom"',
-            'aria-label="Screenshot preview"',
-            'id="zoom-close"',
-            'aria-label="Close screenshot preview"',
-            'id="zoom-image"',
-            'id="zoom-caption"',
-        ):
-            self.assertIn(fragment, self.page)
+    def test_dialog_is_shadcn_with_a_title(self):
+        for fragment in ("<Dialog", "DialogContent", "DialogTitle", "data-zoom"):
+            self.assertIn(fragment, self.component)
 
-    def test_script_opens_the_native_dialog(self):
-        self.assertIn("document.querySelectorAll('[data-zoom]')", self.page)
-        self.assertIn("dialog.showModal()", self.page)
-        self.assertIn("dialog.close()", self.page)
+    def test_images_declare_dimensions_and_alt(self):
+        for tag in re.findall(r"<img[^>]*src=\"\./screens/[^\"]+\.png\"[^>]*>", self.page):
+            with self.subTest(tag=tag):
+                self.assertIn(' alt="', tag)
+                self.assertIn(' width="1604"', tag)
+                self.assertIn(' height="904"', tag)
 
 
 if __name__ == "__main__":

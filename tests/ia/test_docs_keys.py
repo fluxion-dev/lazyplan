@@ -6,10 +6,14 @@ import unittest
 
 from lazyplan.presentation.shared.help import KEYMAP
 from tests.support.paths import ROOT
+from tests.support.site import has_built_site, page_html
 
 USAGE = (ROOT / "docs/usage.md").read_text(encoding="utf-8")
-SITE = (ROOT / "site/index.html").read_text(encoding="utf-8")
 SKILL = (ROOT / "src/lazyplan/data/SKILL.md").read_text(encoding="utf-8")
+
+
+def site_text() -> str:
+    return page_html() if has_built_site() else ""
 
 
 class DocumentationKeysTest(unittest.TestCase):
@@ -30,8 +34,9 @@ class DocumentationKeysTest(unittest.TestCase):
         self.assertNotIn("q` | add a question", USAGE)
         self.assertNotIn("`Q` | resolve", USAGE)
 
+    @unittest.skipUnless(has_built_site(), "site not built")
     def test_site_and_skill_name_the_shared_overlays(self) -> None:
-        for name, text in (("site", SITE), ("skill", SKILL)):
+        for name, text in (("site", site_text()), ("skill", SKILL)):
             with self.subTest(surface=name):
                 self.assertIn("palette", text.lower())
                 self.assertIn("history", text.lower())
@@ -50,8 +55,9 @@ class DocumentationKeysTest(unittest.TestCase):
             with self.subTest(key=key):
                 self.assertIn(key, USAGE)
 
+    @unittest.skipUnless(has_built_site(), "site not built")
     def test_site_and_skill_name_the_trust_hubs(self) -> None:
-        for name, text in (("site", SITE), ("skill", SKILL)):
+        for name, text in (("site", site_text()), ("skill", SKILL)):
             with self.subTest(surface=name):
                 self.assertIn("criteria", text.lower())
                 self.assertIn("references", text.lower())
@@ -70,8 +76,9 @@ class DocumentationKeysTest(unittest.TestCase):
             with self.subTest(key=key):
                 self.assertIn(key, USAGE)
 
+    @unittest.skipUnless(has_built_site(), "site not built")
     def test_site_and_skill_name_the_coordination_hubs(self) -> None:
-        for name, text in (("site", SITE), ("skill", SKILL)):
+        for name, text in (("site", site_text()), ("skill", SKILL)):
             with self.subTest(surface=name):
                 self.assertIn("session", text.lower())
                 self.assertIn("comment", text.lower())
@@ -90,8 +97,9 @@ class DocumentationKeysTest(unittest.TestCase):
             with self.subTest(key=key):
                 self.assertIn(key, USAGE)
 
+    @unittest.skipUnless(has_built_site(), "site not built")
     def test_site_and_skill_name_the_provenance_hubs(self) -> None:
-        for name, text in (("site", SITE), ("skill", SKILL)):
+        for name, text in (("site", site_text()), ("skill", SKILL)):
             with self.subTest(surface=name):
                 self.assertIn("pull request", text.lower())
                 self.assertIn("activity", text.lower())

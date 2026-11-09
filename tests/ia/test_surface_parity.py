@@ -6,6 +6,7 @@ import argparse
 import unittest
 
 from lazyplan.presentation.cli.parser import build_parser
+from lazyplan.presentation.mcp.registry_tools import tool_actions, tool_labels
 from lazyplan.presentation.mcp.server import McpServer
 from lazyplan.presentation.shared import registry
 
@@ -60,6 +61,17 @@ class SurfaceParityTest(unittest.TestCase):
         for action_id, tool in registry.MCP_ACTIONS.items():
             with self.subTest(action=action_id):
                 self.assertIn(tool, tools)
+
+    def test_registry_tools_resolve_to_live_tools(self) -> None:
+        tools = {item["name"] for item in McpServer(None).tools()}
+        for tool in tool_actions().values():
+            with self.subTest(tool=tool):
+                self.assertIn(tool, tools)
+
+    def test_every_registry_tool_has_a_label(self) -> None:
+        for tool, label in tool_labels().items():
+            with self.subTest(tool=tool):
+                self.assertTrue(label.strip())
 
     def test_mappings_only_cover_declared_surfaces(self) -> None:
         by_id = {action.id: action for action in registry.ACTIONS}

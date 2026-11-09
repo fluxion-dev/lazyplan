@@ -49,6 +49,8 @@ _.render_plan_markdown
 BINDINGS
 auto_closed
 CSS
+tool_actions
+tool_labels
 CSS_PATH
 TITLE
 border_title

@@ -73,5 +73,6 @@ def palette_handlers(app: Any) -> dict[str, Callable[[], None]]:
         "export_md": app.action_export_md,
         "help": app.action_help,
         "update_prompt": app.action_update_prompt,
+        "open_agent": app.action_open_agent,
         "quit": app.exit,
     }

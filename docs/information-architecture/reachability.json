@@ -541,6 +541,13 @@
       ]
     },
     {
+      "depth": 0,
+      "id": "agent.workbench",
+      "route": [
+        "tree"
+      ]
+    },
+    {
       "depth": 2,
       "id": "criterion.edit",
       "route": [

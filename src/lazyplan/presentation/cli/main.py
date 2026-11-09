@@ -33,6 +33,9 @@ from ..shared.design import (
 from .commands import (
     _COMMANDS,
     _GROUP_CMDS,
+    _cmd_agent_add,
+    _cmd_agent_list,
+    _cmd_agent_remove,
     _cmd_audit,
     _cmd_brief,
     _cmd_completion,
@@ -95,6 +98,9 @@ def _dispatch_storeless(args: argparse.Namespace, actor: str) -> int | None:
         "session-show": _cmd_session_show,
         "review": _cmd_review,
         "ship": _cmd_ship,
+        "agent-list": _cmd_agent_list,
+        "agent-add": _cmd_agent_add,
+        "agent-remove": _cmd_agent_remove,
     }
     handler = handlers.get(args.cmd)
     return handler(None, args, actor) if handler is not None else None

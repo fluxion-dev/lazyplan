@@ -8,7 +8,7 @@ from __future__ import annotations
 import sqlite3
 import uuid
 
-SCHEMA_VERSION = 8
+SCHEMA_VERSION = 10
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS plans (
@@ -102,6 +102,35 @@ CREATE TABLE IF NOT EXISTS external_refs (
     UNIQUE(plan_id, url)
 );
 CREATE INDEX IF NOT EXISTS idx_external_refs_plan ON external_refs(plan_id, id);
+CREATE TABLE IF NOT EXISTS agent_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    agent_session_id TEXT NOT NULL,
+    lazyplan_session_id INTEGER REFERENCES sessions(id) ON DELETE SET NULL,
+    plan_id INTEGER REFERENCES plans(id) ON DELETE SET NULL,
+    task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL,
+    title TEXT NOT NULL DEFAULT '',
+    cwd TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'running'
+        CHECK (status IN ('running', 'idle', 'done', 'error')),
+    started_at REAL NOT NULL,
+    ended_at REAL NOT NULL DEFAULT 0,
+    summary TEXT NOT NULL DEFAULT '',
+    handoff TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_agent_runs_task ON agent_runs(task_id, status);
+CREATE TABLE IF NOT EXISTS proposals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    kind TEXT NOT NULL CHECK (kind IN ('plan_document', 'row_edit', 'task_create')),
+    title TEXT NOT NULL,
+    summary TEXT NOT NULL DEFAULT '',
+    payload TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending'
+        CHECK (status IN ('pending', 'applied', 'rejected')),
+    actor TEXT NOT NULL DEFAULT 'agent',
+    created_at REAL NOT NULL,
+    resolved_at REAL NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_proposals_status ON proposals(status, id DESC);
 CREATE TABLE IF NOT EXISTS sessions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     actor TEXT NOT NULL DEFAULT 'human',

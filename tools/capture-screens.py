@@ -926,66 +926,6 @@ def build_og(screenshot: Path, target: Path) -> None:
         base.unlink(missing_ok=True)
 
 
-def build_hero(coordination: Path, mcp: Path, gates: Path, target: Path) -> None:
-    """Compose the 1600x760 hero: plan on the left, agent surfaces on the right."""
-    for path in (coordination, mcp, gates):
-        if not path.is_file():
-            raise SystemExit(f"error: missing hero source {path}")
-    subprocess.run(
-        [
-            "magick",
-            "-size",
-            "1600x760",
-            "xc:#09090b",
-            "(",
-            str(coordination),
-            "-resize",
-            "980x",
-            "-bordercolor",
-            "#27272a",
-            "-border",
-            "2",
-            ")",
-            "-geometry",
-            "+20+102",
-            "-composite",
-            "(",
-            str(mcp),
-            "-resize",
-            "560x",
-            "-bordercolor",
-            "#27272a",
-            "-border",
-            "2",
-            ")",
-            "-geometry",
-            "+1020+104",
-            "-composite",
-            "(",
-            str(gates),
-            "-resize",
-            "560x",
-            "-bordercolor",
-            "#27272a",
-            "-border",
-            "2",
-            ")",
-            "-geometry",
-            "+1020+430",
-            "-composite",
-            "-strip",
-            "-depth",
-            "8",
-            str(target),
-        ],
-        check=True,
-    )
-    subprocess.run(
-        ["magick", str(target), "-quality", "82", str(target.with_suffix(".webp"))],
-        check=True,
-    )
-
-
 def run(out_dir: Path, only: list[str], keep_svg: Path | None, make_og: bool) -> None:
     os.environ.setdefault("LAZYPLAN_NO_SPINNER", "1")
     names = only or list(SCENES)
@@ -1021,15 +961,6 @@ def run(out_dir: Path, only: list[str], keep_svg: Path | None, make_og: bool) ->
             print(f"wrote {shown(png)} ({dimensions(png)})")
             print(f"wrote {shown(png.with_suffix('.webp'))}")
         if make_og and {"lpui-coordination", "lpui-mcp", "lpui-gates"} <= set(names):
-            hero = out_dir / "lpui-and-agent.png"
-            build_hero(
-                out_dir / "lpui-coordination.png",
-                out_dir / "lpui-mcp.png",
-                out_dir / "lpui-gates.png",
-                hero,
-            )
-            print(f"wrote {shown(hero)} ({dimensions(hero)})")
-            print(f"wrote {shown(hero.with_suffix('.webp'))}")
             og = out_dir / "og-lpui-and-agent.png"
             build_og(out_dir / "lpui-coordination.png", og)
             print(f"wrote {shown(og)} ({dimensions(og)})")

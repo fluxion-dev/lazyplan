@@ -1,4 +1,4 @@
-"""Cached git branch/dirty state for previews and detail screens."""
+"""Cached git branch/dirty state for the overview and hubs."""
 
 from __future__ import annotations
 

@@ -24,6 +24,11 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
   roots; store and services use injected path and layer adapters; parser groups
   and MCP metadata derive from the action registry; the largest modules split
   into focused files.
+- **Overview replaces detail.** The separate detail page is gone. The preview
+  pane is now the overview: a plan lists its milestones and descriptions, a
+  milestone lists its tasks, and a task shows its details, criteria, proof, and
+  notes. `e` edits the selected row in a modal form. The agents card now sits
+  under the plan tree.
 
 ### Removed
 

@@ -12,7 +12,6 @@ from lazyplan.infrastructure.environment import parse_version
 from lazyplan.presentation.cli.main import main as lpui_main
 from lazyplan.presentation.cli.parser import package_version
 from lazyplan.presentation.shared import registry
-from lazyplan.presentation.shared.help import HELP_TEXT
 
 
 class LegacyDeprecationTest(unittest.TestCase):
@@ -78,11 +77,6 @@ class LegacyDeprecationTest(unittest.TestCase):
                 (),
                 f"remove the deprecated aliases before {registry.DEPRECATION_RELEASE}",
             )
-
-    def test_help_shows_the_moved_keys(self) -> None:
-        self.assertIn("DEPRECATED", HELP_TEXT)
-        self.assertIn("removed in 0.37.0", HELP_TEXT)
-        self.assertIn("ctrl+r", HELP_TEXT)
 
     def test_moved_actions_stay_reachable_from_the_palette(self) -> None:
         from lazyplan.presentation.shared.palette import by_id

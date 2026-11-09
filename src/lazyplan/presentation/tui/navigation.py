@@ -1,8 +1,8 @@
 """Universal navigation host shared by every TUI screen.
 
 Help, palette, quit, and back mean the same thing everywhere. The
-main tree keeps its direct keys; detail, source, export, update, and every
-modal inherit this host so no screen is a dead end.
+main tree keeps its direct keys; source, export, update, and every modal
+inherit this host so no screen is a dead end.
 """
 
 from __future__ import annotations

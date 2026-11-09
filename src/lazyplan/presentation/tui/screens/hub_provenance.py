@@ -262,7 +262,7 @@ if _TEXTUAL_OK:
             except ValueError:
                 return
             if kind in ("plan", "milestone", "task"):
-                opener = getattr(self.app, "_open_detail", None)
+                opener = getattr(self.app, "select_row", None)
                 if callable(opener):
                     opener(kind, oid)
                     return

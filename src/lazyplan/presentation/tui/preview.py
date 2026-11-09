@@ -66,7 +66,7 @@ if _TEXTUAL_OK:
                     git.show_empty("No checkouts yet", "link a repo with: lpui repo add")
                 return
             if self.selected is None:
-                panel.show_empty("Nothing selected", "j/k or click a row — enter opens it")
+                panel.show_empty("Nothing selected", "j/k or click a row — the overview follows it")
                 if git is not None:
                     git.show_empty("Nothing selected", "git context follows the selected row")
                 return
@@ -110,15 +110,8 @@ if _TEXTUAL_OK:
             """Custom intents bubble here; App owns the side effects."""
             if e.action == "toggle-status":
                 self.action_toggle_status()
-            elif e.action == "open-detail":
-                if e.kind is not None and e.oid is not None:
-                    self._open_detail(e.kind, e.oid)
-                else:
-                    self.action_open_detail()
             elif e.action == "fold-all":
                 self.action_fold_all()
-            elif e.action == "detail-saved":
-                self._saved("saved detail")
             e.stop()
 
         def _on_selection_changed(self, e: SelectionChanged) -> None:

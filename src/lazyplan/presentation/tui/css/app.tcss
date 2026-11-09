@@ -9,9 +9,15 @@
     padding: 0 0 0 1;
 }
 
-#nav {
+#left {
     width: 1fr;
     min-width: 28;
+    height: 1fr;
+}
+
+#nav {
+    width: 1fr;
+    height: 1fr;
     border: round $lp-border-muted;
     border-title-color: $lp-text-muted;
     border-title-style: bold;
@@ -116,12 +122,17 @@
     display: none;
 }
 
+#main.narrow #left,
 #main.narrow #nav {
     width: 100%;
 }
 
 #main.compact {
     padding: 0;
+}
+
+#main.compact #left {
+    min-width: 0;
 }
 
 #main.compact #nav {

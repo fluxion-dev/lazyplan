@@ -298,7 +298,7 @@ if _TEXTUAL_OK:
             if target is None:
                 self.notify("this row has no owning plan, milestone, or task", timeout=3)
                 return
-            opener = getattr(self.app, "_open_detail", None)
+            opener = getattr(self.app, "select_row", None)
             if callable(opener):
                 opener(target[0], target[1])
                 return

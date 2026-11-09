@@ -1,4 +1,4 @@
-"""Open the trust hubs from the tree or detail."""
+"""Open the trust hubs from the tree."""
 
 from __future__ import annotations
 

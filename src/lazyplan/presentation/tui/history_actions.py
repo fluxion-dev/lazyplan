@@ -15,19 +15,16 @@ class HistoryMixin:
     state: Any
     selected: tuple[str, int] | None
 
-    def _open_detail(
-        self, kind: str, oid: int, edit: bool = False, record: bool = True
-    ) -> None: ...
+    def select_row(self, kind: str, oid: int) -> None: ...
 
     def _nav_label(self, kind: str, oid: int) -> str:
-        """Human breadcrumb for one row, including its ancestors."""
-        from .views.detail import detail_breadcrumb
-
+        """Human label for one row, including its ancestors."""
         full = self.store.get_full(kind, oid)
         if full is None:
             return f"{kind} #{oid}"
-        key = {"plan": "plan", "milestone": "milestone", "task": "task"}[kind]
-        return detail_breadcrumb(self.store, kind, oid, dict(full.get(key, {})))
+        obj = dict(full.get(kind, {}))
+        title = str(obj.get("title", obj.get("name", ""))).strip()
+        return f"{kind} {oid} {title}".strip()
 
     def breadcrumb(self) -> str:
         """Every level visited so far, root first."""
@@ -66,7 +63,5 @@ class HistoryMixin:
             return
         self.selected = entry.selection
         kind, oid = entry.selection
-        if entry.screen == "detail":
-            self._open_detail(kind, oid, record=False)
-        elif entry.screen == "source":
+        if entry.screen == "source":
             self.open_source(kind, oid, record=False)

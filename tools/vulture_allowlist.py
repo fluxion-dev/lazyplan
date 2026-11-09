@@ -24,7 +24,6 @@ _.on_tree_node_expanded
 _.on_tree_node_selected
 _.action_toggle_node
 _.action_toggle_expand_all
-_.action_open_detail
 _.action_fold
 _.action_fold_left
 _.action_fold_right

@@ -106,6 +106,50 @@ def _tasks(kind: str, full: dict[str, Any]) -> list[dict[str, Any]]:
     return [full.get("task", {})]
 
 
+def milestones_block(milestones: list[dict[str, Any]]) -> PreviewBlock | None:
+    """Every milestone under the selected plan, with its description."""
+    if not milestones:
+        return None
+    lines: list[str] = []
+    for entry in milestones:
+        milestone = entry.get("milestone", {})
+        tasks = entry.get("tasks", [])
+        done = sum(1 for task in tasks if task.get("status") == "done")
+        progress = f" · {done}/{len(tasks)} tasks" if tasks else ""
+        lines.append(
+            f"  {status_word(str(milestone.get('status', '')), 'rich')} "
+            f"[dim]◇ M{milestone.get('id')}[/] "
+            f"{escape_markup(str(milestone.get('title', '')))}"
+            f"[dim]{progress}[/]"
+        )
+        desc = str(milestone.get("description", "") or "").strip()
+        for line in desc.splitlines():
+            if line.strip():
+                lines.append(f"    [dim]{escape_markup(line.strip())}[/]")
+    return PreviewBlock(f"milestones {len(milestones)}", tuple(lines))
+
+
+def tasks_block(tasks: list[dict[str, Any]]) -> PreviewBlock | None:
+    """Every task under the selected milestone, with its description."""
+    if not tasks:
+        return None
+    lines: list[str] = []
+    for task in tasks:
+        claim = task.get("claim") if isinstance(task.get("claim"), dict) else None
+        claim_text = f" [dim]@{escape_markup(str(claim.get('actor', '')))}[/]" if claim else ""
+        blocked = " [red]⚑[/]" if task.get("blocked") else ""
+        lines.append(
+            f"  {status_word(str(task.get('status', '')), 'rich')} "
+            f"[dim]▹ T{task.get('id')}[/] "
+            f"{escape_markup(str(task.get('title', '')))}{blocked}{claim_text}"
+        )
+        desc = str(task.get("description", "") or "").strip()
+        for line in desc.splitlines():
+            if line.strip():
+                lines.append(f"    [dim]{escape_markup(line.strip())}[/]")
+    return PreviewBlock(f"tasks {len(tasks)}", tuple(lines))
+
+
 def next_block(tasks: list[dict[str, Any]]) -> PreviewBlock | None:
     """The first three open tasks."""
     open_tasks = [task for task in tasks if task.get("status") != "done"]
@@ -320,6 +364,9 @@ def build_plan(
     refs = full.get("refs", [])
     if refs:
         blocks.append(PreviewBlock(f"references {len(refs)}", reference_lines(refs)))
+    milestones = milestones_block(full.get("milestones", []))
+    if milestones is not None:
+        blocks.append(milestones)
     next_tasks = next_block(_tasks("plan", full))
     if next_tasks is not None:
         blocks.append(next_tasks)
@@ -347,9 +394,9 @@ def build_milestone(
     desc = str(obj.get("description", "") or "").strip()
     if desc:
         blocks.append(PreviewBlock("details", (desc,)))
-    next_tasks = next_block(_tasks("milestone", full))
-    if next_tasks is not None:
-        blocks.append(next_tasks)
+    tasks = tasks_block(_tasks("milestone", full))
+    if tasks is not None:
+        blocks.append(tasks)
     blocks.extend(common_blocks(full, git_bits))
     return PreviewDocument(
         header, breadcrumb, tuple(_meta_counts("milestone", full)), tuple(blocks)

@@ -82,67 +82,6 @@ ModalScreen {
     height: 1fr;
 }
 
-#detail-page {
-    height: 1fr;
-    border: round $lp-border;
-    border-title-color: $lp-accent;
-    background: $lp-surface-alt;
-    padding: 0 1;
-}
-
-#detail-head {
-    height: auto;
-    min-height: 1;
-    background: $lp-surface;
-    color: $lp-accent;
-    padding: 0 1;
-    margin-bottom: 1;
-}
-
-#detail-read {
-    height: 1fr;
-    padding: 0 1;
-}
-
-#detail-edit {
-    height: 1fr;
-    padding: 1 2;
-}
-
-#detail-edit .form-title {
-    height: 1;
-    color: $lp-accent;
-    text-style: bold;
-    margin-bottom: 1;
-}
-
-#detail-edit .field-label {
-    height: 1;
-    color: $lp-text-muted;
-    margin-top: 1;
-}
-
-#detail-edit Input {
-    border: tall $lp-border;
-}
-
-#detail-edit TextArea {
-    height: 5;
-    border: tall $lp-border;
-}
-
-#detail-edit .btn-row {
-    height: auto;
-    margin-top: 1;
-}
-
-#detail-hints {
-    height: 1;
-    background: $lp-surface;
-    color: $lp-text-muted;
-    padding: 0 1;
-}
-
 #source-page {
     height: 1fr;
     border: round $lp-border;
@@ -193,7 +132,7 @@ ModalScreen {
     border: round $lp-border-focus;
 }
 
-#dlg Button, #help Button, #detail-page Button {
+#dlg Button, #help Button {
     min-width: 0;
     width: auto;
     height: 3;

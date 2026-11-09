@@ -34,20 +34,6 @@ class HubEntry:
     ref: str = ""
 
 
-def plan_id_for(store: Any, kind: str, oid: int) -> int | None:
-    """Owning plan for a plan, milestone, or task."""
-    if kind == "plan":
-        return oid
-    if kind == "milestone":
-        milestone = store.get_milestone(oid)
-        return milestone.plan_id if milestone else None
-    task = store.get_task(oid)
-    if task is None:
-        return None
-    milestone = store.get_milestone(task.milestone_id)
-    return milestone.plan_id if milestone else None
-
-
 if _TEXTUAL_OK:
 
     class HubScreen(NavigationMixin, Screen):
@@ -99,7 +85,7 @@ if _TEXTUAL_OK:
             self.set_class(width >= 120, "wide")
             self.query_one("#hub-page").border_title = f" {self.title} "
             self.query_one("#hub-list-wrap").border_title = " list "
-            self.query_one("#hub-preview").border_title = " detail "
+            self.query_one("#hub-preview").border_title = " overview "
             self._reload()
             self.query_one("#hub-list", OptionList).focus()
 

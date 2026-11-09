@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 try:
     from textual.app import ComposeResult
@@ -18,7 +18,7 @@ except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
 from ....infrastructure.agents import AgentEvent, AgentProfile, PermissionRequest
-from ....store import Store
+from ....store import Store, default_actor
 from ..controllers.agent import AgentController
 from ..views.agent import AgentTranscript
 from .agent_permission import AgentPermissionScreen
@@ -50,6 +50,8 @@ if _TEXTUAL_OK:
             title: str = "",
             mcp_servers: tuple[dict[str, object], ...] = (),
             store: Store | None = None,
+            task_id: int | None = None,
+            prompt: str = "",
         ) -> None:
             super().__init__()
             self.profile = profile
@@ -57,6 +59,11 @@ if _TEXTUAL_OK:
             self._title = title or profile.title
             self._mcp_servers = mcp_servers
             self._store = store
+            self._task_id = task_id
+            self._prompt = prompt
+            self._work: dict[str, Any] | None = None
+            self._lazy_session_id: int | None = None
+            self._agent_run_id: int | None = None
             self._controller: AgentController | None = None
             self._queue: asyncio.Queue[tuple[str, object]] = asyncio.Queue()
             self._consumer: asyncio.Task[None] | None = None
@@ -93,7 +100,10 @@ if _TEXTUAL_OK:
                 f"[bold]{self._title}[/]\n[dim]{self.cwd}[/]"
             )
             self._set_status("idle", "not started")
-            self.query_one("#agent-prompt", TextArea).focus()
+            prompt = self.query_one("#agent-prompt", TextArea)
+            if self._prompt:
+                prompt.text = self._prompt
+            prompt.focus()
 
         def on_unmount(self) -> None:
             if self._consumer is not None and not self._consumer.done():
@@ -182,9 +192,30 @@ if _TEXTUAL_OK:
             prompt.text = ""
             self._transcript.add_user(text)
             try:
+                if self._task_id is not None and self._store is not None and self._work is None:
+                    from ....services.agent_work import start_work
+
+                    self._work = start_work(
+                        self._store,
+                        self._task_id,
+                        actor=default_actor(),
+                        cwd=self.cwd,
+                    )
+                    self._lazy_session_id = int(self._work["session"].id)
                 if not self._started:
-                    await self._controller.start()
+                    session_id = await self._controller.start()
                     self._started = True
+                    if self._task_id is not None and self._store is not None:
+                        run = self._store.add_agent_run(
+                            session_id,
+                            lazyplan_session_id=self._lazy_session_id,
+                            plan_id=int(self._work["plan"].id) if self._work else None,
+                            task_id=self._task_id,
+                            title=f"Work on T{self._task_id}",
+                            cwd=str(self.cwd),
+                            actor="agent",
+                        )
+                        self._agent_run_id = int(run["id"])
                 await self._controller.prompt(text)
             except Exception as exc:
                 self._transcript.add_error(str(exc))

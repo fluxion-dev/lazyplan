@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from .agent_runs import AgentRunsMixin
 from .annotations import AnnotationsMixin
 from .base import (
     ClaimConflict,
@@ -29,6 +30,7 @@ from .views import ViewsMixin
 
 
 class Store(
+    AgentRunsMixin,
     PlansMixin,
     QuestionsMixin,
     ProposalsMixin,

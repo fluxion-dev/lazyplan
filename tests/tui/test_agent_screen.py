@@ -124,6 +124,33 @@ class TestAgentScreen(unittest.IsolatedAsyncioTestCase):
             self.assertIn("unknown agent update: future_update", screen.transcript)
             await screen.action_close()
 
+    async def test_start_work_claims_and_links_the_run(self) -> None:
+        store = Store(self.db)
+        plan = store.list_plans()[0]
+        milestone = store.add_milestone(plan.id, "M", actor="fixture")
+        task = store.add_task(milestone.id, "T", "Commit: one.", actor="fixture")
+        app = create_app(self.db)
+        async with app.run_test() as pilot:
+            screen = AgentScreen(
+                profile(),
+                ROOT,
+                store=store,
+                task_id=task.id,
+                prompt="work on it",
+            )
+            app.push_screen(screen)
+            await pilot.pause()
+            await screen.action_send()
+            await wait_for(lambda: "hello from fake" in screen.transcript)
+            current = store.get_task(task.id)
+            self.assertEqual(current.status.value, "doing")
+            self.assertIsNotNone(store.get_claim(task.id))
+            runs = store.list_agent_runs()
+            self.assertEqual(len(runs), 1)
+            self.assertEqual(runs[0]["task_id"], task.id)
+            self.assertIsNotNone(runs[0]["lazyplan_session_id"])
+            await screen.action_close()
+
     async def test_status_strip_tracks_the_run(self) -> None:
         app = create_app(self.db)
         async with app.run_test() as pilot:

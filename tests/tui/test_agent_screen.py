@@ -181,6 +181,22 @@ class TestAgentScreen(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(run["handoff"], "next: T2")
             await screen.action_close()
 
+    async def test_exit_closes_the_active_run(self) -> None:
+        store = Store(self.db)
+        plan = store.list_plans()[0]
+        milestone = store.add_milestone(plan.id, "M", actor="fixture")
+        task = store.add_task(milestone.id, "T", "Commit: one.", actor="fixture")
+        app = create_app(self.db)
+        async with app.run_test() as pilot:
+            screen = AgentScreen(profile(), ROOT, store=store, task_id=task.id, prompt="work")
+            app.push_screen(screen)
+            await pilot.pause()
+            await screen.action_send()
+            await wait_for(lambda: len(store.list_agent_runs()) == 1)
+            await screen._close_run_on_exit()
+            self.assertEqual(store.list_agent_runs(), [])
+            self.assertEqual(store.list_agent_runs(status="all")[0]["status"], "done")
+
     async def test_failed_finish_gate_leaves_the_run_open(self) -> None:
         store = Store(self.db)
         plan = store.list_plans()[0]

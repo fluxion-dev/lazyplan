@@ -111,6 +111,8 @@ if _TEXTUAL_OK:
                 self._consumer.cancel()
             if self._controller is not None:
                 asyncio.create_task(self._controller.close())
+            if self._store is not None and self._agent_run_id is not None:
+                asyncio.create_task(self._close_run_on_exit())
 
         def _enqueue_event(self, event: AgentEvent) -> None:
             self._queue.put_nowait(("event", event))
@@ -262,6 +264,22 @@ if _TEXTUAL_OK:
                 )
             self.call_after_refresh(self._show_permission)
 
+        async def _close_run_on_exit(self) -> None:
+            if self._store is None or self._agent_run_id is None:
+                return
+            from ....services.agent_work import finish_work
+
+            try:
+                finish_work(
+                    self._store,
+                    self._agent_run_id,
+                    actor=default_actor(),
+                    summary="workbench closed",
+                    handoff="",
+                )
+            except (KeyError, ValueError):
+                pass
+
         async def _reject_pending_permission(self) -> None:
             permission = self._active_permission
             if permission is None or self._controller is None:
@@ -331,6 +349,9 @@ if _TEXTUAL_OK:
                 await self._controller.cancel()
 
         async def action_close(self) -> None:
+            if self._agent_run_id is not None:
+                self.action_finish()
+                return
             await self._reject_pending_permission()
             if self._controller is not None:
                 await self._controller.close()

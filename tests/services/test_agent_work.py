@@ -7,7 +7,7 @@ import tempfile
 import unittest
 
 from lazyplan.services.agent_work import finish_work, start_work
-from lazyplan.store import Store
+from lazyplan.store import ClaimConflict, Store
 
 
 class TestAgentWork(unittest.TestCase):
@@ -33,6 +33,11 @@ class TestAgentWork(unittest.TestCase):
         self.assertIn("Work on T", started["prompt"])
         self.assertIn("P", started["prompt"])
         self.assertEqual(self.store.get_session(started["session"].id).actor, "alice")
+
+    def test_start_refuses_another_claim(self) -> None:
+        self.store.claim_task(self.task.id, "bob", 300)
+        with self.assertRaises(ClaimConflict):
+            start_work(self.store, self.task.id, actor="alice", cwd=self.tmp.name)
 
     def test_finish_closes_the_run_and_session(self) -> None:
         started = start_work(self.store, self.task.id, actor="alice", cwd=self.tmp.name)

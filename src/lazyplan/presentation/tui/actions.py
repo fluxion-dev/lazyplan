@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import time
 from pathlib import Path
 
 try:
@@ -19,19 +18,16 @@ from ..shared.export import display_path
 from ..shared.palette import by_id
 from .approval_actions import ApprovalMixin
 from .claim_actions import ClaimMixin
-from .constants import DOUBLE_CLICK_WINDOW
 from .evidence_actions import EvidenceMixin
 from .finish_actions import FinishMixin
 from .git_actions import GitActionMixin
 from .history_actions import HistoryMixin
 from .hub_actions import HubMixin
-from .navigation import NavEntry
 from .palette_handlers import palette_handlers
 from .question_actions import QuestionMixin
 from .reference_actions import ReferenceMixin
 from .screens import (
     ConfirmScreen,
-    DetailScreen,
     ExportScreen,
     FilterPromptScreen,
     HelpScreen,
@@ -89,19 +85,6 @@ if _TEXTUAL_OK:
                 ),
                 cb,
             )
-
-        def _open_detail(
-            self, kind: str, oid: int, edit: bool = False, record: bool = True
-        ) -> None:
-            if record:
-                entry = NavEntry("detail", kind, oid, self._nav_label(kind, oid))
-                self.state.history.push(entry)
-
-            def cb(saved: bool | None) -> None:
-                if saved:
-                    self._saved("saved detail")
-
-            self.push_screen(DetailScreen(self.store, kind, oid, edit=edit), cb)
 
         def action_delete(self) -> None:
             if self.selected is None:
@@ -219,13 +202,20 @@ if _TEXTUAL_OK:
                 cb,
             )
 
-        def action_open_detail(self) -> None:
-            if len(self.screen_stack) > 1:
-                return  # a modal owns enter
-            if self.selected is None:
-                self.notify("select a row first, then enter")
-                return
-            self._open_detail(*self.selected)
+        def select_row(self, kind: str, oid: int) -> None:
+            """Return to the tree and select one row in the overview."""
+            while len(self.screen_stack) > 1:
+                self.pop_screen()
+            self.selected = (kind, oid)
+            node = self._row_nodes.get((kind, oid))
+            if node is not None:
+                try:
+                    tree = self.query_one("#tree", Tree)
+                    tree.move_cursor(node)
+                    tree.scroll_to_node(node)
+                except Exception:
+                    pass
+            self.update_preview(force=True)
 
         def _saved(self, note: str = "") -> None:
             """Local mutation path: bump reactive rev, watch refreshes."""
@@ -305,20 +295,91 @@ if _TEXTUAL_OK:
             )
 
         def action_edit_selection(self) -> None:
-            """Edit the selected row; detail owns the edit form."""
+            """Edit the selected row in a modal form."""
             if self.selected is None:
                 self.notify("select a row first (e edits it)")
                 return
-            self._open_detail(*self.selected, edit=True)
+            kind, oid = self.selected
+            full = self.store.get_full(kind, oid)
+            if full is None:
+                self.notify("row is gone — refreshing")
+                self._saved("row is gone")
+                return
+            screen: NewPlanScreen | NewMilestoneScreen | NewTaskScreen
+            if kind == "plan":
+                obj = full.get("plan", {})
+                screen = NewPlanScreen(
+                    defaults={
+                        "title": str(obj.get("name", "")),
+                        "why": str(obj.get("goal", "")),
+                        "what": str(obj.get("description", "")),
+                    },
+                    editing=True,
+                )
+            elif kind == "milestone":
+                obj = full.get("milestone", {})
+                plan_id = int(obj.get("plan_id", 0))
+                screen = NewMilestoneScreen(
+                    plan_id,
+                    defaults={
+                        "title": str(obj.get("title", "")),
+                        "desc": str(obj.get("description", "")),
+                    },
+                    context=f"P{plan_id}",
+                    editing=True,
+                )
+            else:
+                obj = full.get("task", {})
+                milestone_id = int(obj.get("milestone_id", 0))
+                screen = NewTaskScreen(
+                    milestone_id,
+                    defaults={
+                        "title": str(obj.get("title", "")),
+                        "desc": str(obj.get("description", "")),
+                    },
+                    context=f"M{milestone_id}",
+                    editing=True,
+                )
 
-        def note_click(self, key: tuple[str, int]) -> bool:
-            """True when this click completes a double-click on the same row."""
-            now = time.monotonic()
-            double = (
-                key == self._last_click_key and (now - self._last_click_at) < DOUBLE_CLICK_WINDOW
-            )
-            self._last_click_key, self._last_click_at = key, now
-            return double
+            def cb(data: dict | None) -> None:
+                if data:
+                    self._apply_edit(kind, oid, data)
+
+            self.push_screen(screen, cb)
+
+        def _apply_edit(self, kind: str, oid: int, data: dict) -> None:
+            """Persist one edited row; the overview refreshes on success."""
+            title = str(data.get("title", "")).strip()
+            if not title:
+                self.notify("title must not be empty")
+                return
+            try:
+                if kind == "plan":
+                    self.store.update_plan(
+                        oid,
+                        name=title,
+                        description=str(data.get("what", "")),
+                        goal=str(data.get("why", "")) or None,
+                        actor="tui",
+                    )
+                elif kind == "milestone":
+                    self.store.update_milestone(
+                        oid,
+                        title=title,
+                        description=str(data.get("desc", "")),
+                        actor="tui",
+                    )
+                else:
+                    self.store.update_task(
+                        oid,
+                        title=title,
+                        description=str(data.get("desc", "")),
+                        actor="tui",
+                    )
+            except (ValueError, KeyError) as exc:
+                self.notify(f"error: {exc}")
+                return
+            self._saved(f"saved {kind}")
 
         async def action_quit(self) -> None:
             """Leave the screen (q)."""

@@ -37,7 +37,7 @@ class TestReachability(unittest.TestCase):
         deep = registry.Action(
             "plan.deep",
             "Deep route",
-            route=("tree", "detail", "trust", "deeper", "deepest"),
+            route=("tree", "hub", "trust", "deeper", "deepest"),
         )
         errors = registry.check_reachability((deep,))
         self.assertEqual(len(errors), 1)

@@ -32,7 +32,6 @@ def palette_handlers(app: Any) -> dict[str, Callable[[], None]]:
         "move_doing": lambda: app.action_move(Status.DOING),
         "move_done": lambda: app.action_move(Status.DONE),
         "delete_selection": app.action_delete,
-        "open_detail": app.action_open_detail,
         "fold": app.action_fold,
         "fold_all": app.action_fold_all,
         "filter_text": app.action_filter_text,

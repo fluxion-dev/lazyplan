@@ -132,8 +132,6 @@ SURFACE_EXCEPTIONS: tuple[SurfaceException, ...] = (
     SurfaceException("bulk.release", "mcp", "TUI-only bulk gesture"),
     SurfaceException("bulk.undo", "cli", "TUI-only last-change undo"),
     SurfaceException("bulk.undo", "mcp", "TUI-only last-change undo"),
-    SurfaceException("view.detail", "cli", "CLI reads rows with `<noun> show`"),
-    SurfaceException("view.detail", "mcp", "MCP reads rows with `show_row`"),
     SurfaceException("view.fold", "cli", "TUI-only tree gesture"),
     SurfaceException("view.fold", "mcp", "TUI-only tree gesture"),
     SurfaceException("view.filter", "cli", "CLI filters with `list --status`/`--repo`"),

@@ -1,8 +1,8 @@
 """Modal-palette Textual TUI: nav tree + live preview, one status line.
 
-Keys: j/k navigate, left/right fold, enter detail, c palette, escape clear.
+Keys: j/k navigate, left/right fold, c palette, escape clear.
   Press c then type a prefix (new, cycle, criteria, fold, filter, ...) and enter runs it.
-  Mouse click selects; double-click opens detail.
+  Mouse click selects; the overview follows the selection.
 Keyboard-only: agents use the `lpui` CLI against the same SQLite file; local edits
 bump reactive rev, external DB changes arrive via fingerprint() poll + feed toast.
 """
@@ -76,7 +76,6 @@ if _TEXTUAL_OK:
         ENABLE_COMMAND_PALETTE = False
         BINDINGS = [
             *NAV_BINDINGS,
-            Binding("enter", "open_detail", "Open"),
             Binding("space", "toggle_mark", "Mark"),
             Binding("escape", "clear_filter", "Back", show=False),
             Binding("t", "cycle_theme", "Theme"),
@@ -153,8 +152,6 @@ if _TEXTUAL_OK:
             self.spinner_controller = SpinnerController(self)
             self.git_state_controller = GitStateController(self)
             self.metrics_controller = MetricsController(self)
-            self._last_click_key: tuple[str, int] | None = None
-            self._last_click_at: float = 0.0
             self._fp: Any = store.fingerprint()
             self._last_reap: float = 0.0
             self._last_event_id: int = 0
@@ -170,17 +167,18 @@ if _TEXTUAL_OK:
         def compose(self) -> ComposeResult:
             with Vertical(id="panel"):
                 with Horizontal(id="main"):
-                    with Vertical(id="nav"):
-                        yield FoldTree("plans", id="tree")
-                        yield Static(
-                            empty_state(EMPTY_NO_PLANS_TITLE, EMPTY_NO_PLANS_HINT),
-                            id="tree-empty",
-                            classes="pane-empty",
-                        )
+                    with Vertical(id="left"):
+                        with Vertical(id="nav"):
+                            yield FoldTree("plans", id="tree")
+                            yield Static(
+                                empty_state(EMPTY_NO_PLANS_TITLE, EMPTY_NO_PLANS_HINT),
+                                id="tree-empty",
+                                classes="pane-empty",
+                            )
+                        yield AgentsPanel()
                     with Vertical(id="side"):
                         yield PreviewPanel()
                         yield GitPanel()
-                        yield AgentsPanel()
                 yield MetricsSection()
             yield Label("", id="hints")
 

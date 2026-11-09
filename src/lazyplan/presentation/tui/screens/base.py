@@ -1,4 +1,4 @@
-"""TUI screens: modal forms and detail views.
+"""TUI screens: modal forms and overlays.
 
 The app shell (LazyplanApp) lives in tui.py; every overlay lives here.
 """

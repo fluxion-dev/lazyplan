@@ -80,16 +80,13 @@ Global keys are reserved and mean the same thing everywhere: `?` help,
 
 | Context | Keys |
 | --- | --- |
-| tree | `j`/`k` move, `left`/`right` fold, `enter` detail, `space` mark, `e` edit, `s` status, `a` add criterion, `d` delete, `n` create, `/` filter, `f` plan mode, `g` source, `z` fold, `r` refresh, `t` theme |
-| detail | `e` edit, `s` advanced status, `a` criterion, `p` prove, `t` criteria, `d` delete, `g` source, `escape` back |
+| tree | `j`/`k` move, `left`/`right` fold, `space` mark, `e` edit, `s` status, `a` add criterion, `p` prove, `d` delete, `n` create, `/` filter, `f` plan mode, `g` source, `z` fold, `r` refresh, `t` theme |
 | hubs | `j`/`k` move, `enter` open, `escape` back, `?` help |
 | modal | `enter` accept, `escape` cancel |
 
-Conflict resolution: `q` is always quit. The detail page's current `q`
-(add question) becomes `Q`; the old binding remains for one minor release with
-a deprecation notice. `c` is always the palette; the detail page does not
-rebind it. Keys that differ only by screen (for example `s` advance status in
-the tree and detail) share one action ID and one meaning.
+Conflict resolution: `q` is always quit. `c` is always the palette. Actions
+that differ only by context share one action ID and one meaning; the palette
+disables what the current selection cannot run and explains why.
 
 ## Navigation graph
 
@@ -97,13 +94,12 @@ The main tree is the root. Every hub is at most three interactions away.
 
 | Route | Path | Depth |
 | --- | --- | --- |
-| tree → plan detail | `enter` | 1 |
-| tree → task detail | `enter` on task | 1 |
-| tree → detail → trust hub | `enter` → palette trust group | 2 |
-| tree → detail → provenance | `enter` → `g` | 2 |
+| tree → overview | select a row | 0 |
+| tree → trust hub | palette trust group | 1 |
+| tree → provenance | `g` | 1 |
 | tree → source trail | `g` | 1 |
-| tree → detail → pull requests | `enter` → `P` | 2 |
-| tree → detail → activity | `enter` → `A` | 2 |
+| tree → pull requests | palette pull request hub | 1 |
+| tree → activity | palette activity hub | 1 |
 | tree → create → form | `n` → kind | 2 |
 | tree → export picker | palette → export | 2 |
 | tree → update | `U` | 1 |
@@ -157,8 +153,7 @@ proves every action is at most three interactions from the tree. The
 120x40; the [acceptance record](acceptance.md) carries the final gate evidence.
 The [inventory](inventory.md) is the reproducible surface snapshot.
 
-Legacy CLI aliases and the moved detail keys keep working for one minor
-release. Removal target: `0.37.0`, for deprecations introduced in `0.36.0`.
+Legacy CLI aliases keep working for one minor release. Removal target: `0.37.0`, for deprecations introduced in `0.36.0`.
 `registry.deprecations()` names each replacement, and the help screen renders
 the moved-key notice; `tools/ia_inventory.py --check` and
 `tests/cli/test_legacy_deprecation.py` keep the promise visible until removal.

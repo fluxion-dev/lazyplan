@@ -1,7 +1,7 @@
 # lazyplan usage
 
 The short start lives in the [README](../README.md). This page keeps the
-detail: install, setup and scope, everyday commands, the screen, agent use,
+details: install, setup and scope, everyday commands, the screen, agent use,
 provenance, and data.
 
 ## Install
@@ -298,12 +298,15 @@ folded until you open their milestone. Completed plans are dimmed and sorted
 last. A doing row animates a small spinner; set `LAZYPLAN_NO_SPINNER=1` to
 freeze it.
 
-The main screen pairs the plan tree with a preview column: a two-line control
-strip, the selected row's reason, scope, next tasks, acceptance progress, a
-`git` card for linked checkouts and pull requests, and an `agents` card for
-active sessions and the last handoff. Each session row shows its live state:
-`working`, `awaiting you`, or `idle`; awaiting rows sort first. The timeline
-card stays hidden on launch;
+The main screen pairs the plan tree with an overview column. The overview
+follows the selection: a plan shows its why, what, approval, questions,
+references, and every milestone with its description; a milestone shows its
+details and every task; a task shows its details, criteria, proof, notes, and
+source. The overview also carries a two-line control strip, acceptance
+progress, and a `git` card for linked checkouts and pull requests. The
+`agents` card sits under the plan tree and shows active sessions and the last
+handoff. Each session row shows its live state: `working`, `awaiting you`, or
+`idle`; awaiting rows sort first. The timeline card stays hidden on launch;
 `T` or the palette's show/hide timeline command opens it for the session. When
 open, it follows the selected row and its immediate children.
 
@@ -323,7 +326,6 @@ branches exist in the journal but not as screen nodes.
 |---|---|
 | `j`/`k`, arrows, click | move and select |
 | `left`/`right`, click arrow | collapse/expand, or walk to parent / first child |
-| `enter` | open the read-only detail page |
 | `space` | mark or unmark the selected row for bulk actions |
 | `e` / `s` / `a` / `d` | edit · advance status · add criterion · delete |
 | `n` | create by context (plan, milestone, or task) |
@@ -331,26 +333,24 @@ branches exist in the journal but not as screen nodes.
 | `f` | change plan mode: active, finished, both |
 | `g` | open the source trail for the selected row |
 | `[` / `]` | history back / forward, restoring the prior screen and selection |
-| `escape` | back from detail, source, and modals; clears the tree filter |
+| `escape` | back from source and modals; clears the tree filter |
 | `?` | help, from any screen |
 | `c` | command palette, from any screen |
 | `t` | cycle theme: mocha, void, latte |
 | `T` | show or hide the timeline card |
 | `q` | quit, from any screen |
 
-On the detail page, `e` edits, `s` advances status, `a` adds a criterion,
-`p` records proof, `Q` adds a plan question, `ctrl+r` resolves one,
-`R` reopens one, `g` opens the source trail, `P` opens cached pull requests,
-`A` opens activity, and `escape` returns to the exact prior selection.
-Pressing `c` or `?` works there too; the palette disables actions the current
-screen cannot run and says why.
+From the tree, `e` edits, `s` advances status, `a` adds a criterion, `p`
+records proof, `g` opens the source trail, and `n` creates by context. The
+palette carries questions, approvals, claims, sessions, comments, pull
+requests, and activity; it disables actions the current selection cannot run
+and says why.
 
 ### Trust hubs
 
 Criteria, evidence, questions, and references are selectable hubs, not
-read-only text. From the tree or a detail page, open **criteria hub**,
-**evidence hub**, **questions hub**, or **references hub** from the palette
-(`c`). On a detail page, `t` opens the criteria hub for that row directly.
+read-only text. From the tree, open **criteria hub**, **evidence hub**,
+**questions hub**, or **references hub** from the palette (`c`).
 
 - Criteria: `a` adds, `e` edits the text and done state, `p` records proof,
   `l` and `L` relate or unrelate a proving task, `d` deletes, and `enter`
@@ -371,8 +371,7 @@ proved.
 
 Claims, touch-points, sessions, comments, and notes are selectable hubs too.
 Open **claims hub**, **sessions hub**, or **comments and notes hub** from the
-palette; on a detail page `k`, `v`, and `m` open them directly. Click the
-agents pane to open the sessions hub.
+palette. Click the agents card to open the sessions hub.
 
 - Claims: rows show the holder, expiry, age, and any overlap with another
   active claim that edits the same path. `a` claims the task, `x` renews, `d`
@@ -392,9 +391,9 @@ CLI-only.
 ### Provenance and activity hubs
 
 Repos, commits, files, and pull requests are selectable in the source trail
-(`g`), and cached pull requests have their own hub (`P` on a detail page, or
-**Open pull request hub** in the palette). The **activity hub** (`A`, or
-**Open activity hub**) shows the feed.
+(`g`), and cached pull requests have their own hub (**Open pull request hub**
+in the palette). The **activity hub** (**Open activity hub** in the palette)
+shows the feed.
 
 - Source trail: the tree groups checkout → commits → changed files, with pull
   requests alongside. `enter` cross-links to the owning plan, milestone, or
@@ -428,7 +427,7 @@ equivalent is `lpui export --format markdown --plan ID --file PATH`
 
 Select a plan, milestone, or task and press `g` to browse the source trail:
 checkout → commits → changed files, with linked pull requests alongside. The
-preview shows a read-only diff; large diffs stop at 20 files / 300 lines.
+source preview shows a read-only diff; large diffs stop at 20 files / 300 lines.
 `o` opens the selected commit, PR, or file, `y` copies it, and `/` filters.
 
 ## Agents
@@ -598,8 +597,8 @@ heartbeat current: `session-start` and `prompt-submit` mark it `working`,
 `stop` marks it `awaiting`, and `context`/`brief` render the previous handoff.
 Sessions idle for 12 hours are closed automatically, and a new session in the
 same checkout reuses a live one. Sessions are operational history and are not
-exported. You can also start and end them from the sessions hub (`v` on a
-detail page or the agents pane); the CLI remains the path for scripts.
+exported. You can also start and end them from the sessions hub (click the
+agents card); the CLI remains the path for scripts.
 
 Tasks can declare the repo-relative paths they expect to edit. `next` skips a
 todo whose touch-points overlap an active claim in the same checkout. A manual
@@ -723,7 +722,7 @@ lpui pr link --kind task --id 3 --url https://github.com/org/repo/pull/7
 `pr refresh` links each PR to the task that owns its commit or branch, and
 caches state, checks, reviews, base/head refs, and merge metadata. Requests
 reuse ETags and fall back to cached data offline; stale data is marked.
-`pr link` is offline and manual. `show` and the detail screen roll PRs up from
+`pr link` is offline and manual. `show` and the overview roll PRs up from
 tasks to milestones and plans, and task rows show a PR chip. Scope is
 github.com only. lazyplan never creates branches, worktrees, commits, pushes,
 PRs, reviews, comments, or merges; other tools own those actions.

@@ -19,7 +19,7 @@ if _TEXTUAL_OK:
         """Tree event handlers kept on the app; behaviour lives in TreeController."""
 
         def on_tree_node_selected(self, e: Tree.NodeSelected) -> None:
-            """Clicks and cursor moves select only; enter/double-click open detail."""
+            """Clicks and cursor moves select only; the overview follows."""
             self.tree_controller.track(e.node)
 
         def on_tree_node_highlighted(self, e: Tree.NodeHighlighted) -> None:

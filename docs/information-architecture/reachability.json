@@ -25,144 +25,128 @@
       ]
     },
     {
-      "depth": 1,
+      "depth": 0,
       "id": "criterion.add",
       "route": [
-        "tree",
-        "detail"
+        "tree"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "plan.approve",
       "route": [
         "tree",
-        "detail",
         "trust"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "plan.diff",
       "route": [
         "tree",
-        "detail",
         "trust"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "criterion.prove",
       "route": [
         "tree",
-        "detail",
         "evidence"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "question.add",
       "route": [
         "tree",
-        "detail",
         "questions"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "question.resolve",
       "route": [
         "tree",
-        "detail",
         "questions"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "question.reopen",
       "route": [
         "tree",
-        "detail",
         "questions"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "reference.link",
       "route": [
         "tree",
-        "detail",
         "references"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "reference.unlink",
       "route": [
         "tree",
-        "detail",
         "references"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "reference.open",
       "route": [
         "tree",
-        "detail",
         "references"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "task.claim",
       "route": [
         "tree",
-        "detail",
         "coordination"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "task.block",
       "route": [
         "tree",
-        "detail",
         "coordination"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "task.unblock",
       "route": [
         "tree",
-        "detail",
         "coordination"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "task.finish",
       "route": [
         "tree",
-        "detail",
         "finish"
       ]
     },
     {
-      "depth": 1,
+      "depth": 0,
       "id": "row.edit",
       "route": [
-        "tree",
-        "detail"
+        "tree"
       ]
     },
     {
-      "depth": 1,
+      "depth": 0,
       "id": "task.move",
       "route": [
-        "tree",
-        "detail"
+        "tree"
       ]
     },
     {
@@ -180,64 +164,57 @@
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "claim.release",
       "route": [
         "tree",
-        "detail",
         "coordination"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "claim.force_release",
       "route": [
         "tree",
-        "detail",
         "coordination"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "criterion.relate",
       "route": [
         "tree",
-        "detail",
-        "trust"
-      ]
-    },
-    {
-      "depth": 2,
-      "id": "criterion.unrelate",
-      "route": [
-        "tree",
-        "detail",
         "trust"
       ]
     },
     {
       "depth": 1,
-      "id": "row.delete",
+      "id": "criterion.unrelate",
       "route": [
         "tree",
-        "detail"
+        "trust"
       ]
     },
     {
-      "depth": 2,
+      "depth": 0,
+      "id": "row.delete",
+      "route": [
+        "tree"
+      ]
+    },
+    {
+      "depth": 1,
       "id": "commit.link",
       "route": [
         "tree",
-        "detail",
         "provenance"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "commit.refresh",
       "route": [
         "tree",
-        "detail",
         "provenance"
       ]
     },
@@ -270,14 +247,6 @@
       ]
     },
     {
-      "depth": 1,
-      "id": "view.detail",
-      "route": [
-        "tree",
-        "detail"
-      ]
-    },
-    {
       "depth": 0,
       "id": "view.fold",
       "route": [
@@ -306,38 +275,34 @@
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "view.criteria_hub",
       "route": [
         "tree",
-        "detail",
         "trust"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "view.evidence_hub",
       "route": [
         "tree",
-        "detail",
         "trust"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "view.questions_hub",
       "route": [
         "tree",
-        "detail",
         "trust"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "view.references_hub",
       "route": [
         "tree",
-        "detail",
         "trust"
       ]
     },
@@ -349,20 +314,18 @@
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "git.status",
       "route": [
         "tree",
-        "detail",
         "provenance"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "pull_request.open",
       "route": [
         "tree",
-        "detail",
         "provenance"
       ]
     },
@@ -419,200 +382,178 @@
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "task.renew",
       "route": [
         "tree",
-        "detail",
         "coordination"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "task.touch_add",
       "route": [
         "tree",
-        "detail",
         "coordination"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "task.touch_remove",
       "route": [
         "tree",
-        "detail",
         "coordination"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "session.start",
       "route": [
         "tree",
-        "detail",
         "sessions"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "session.end",
       "route": [
         "tree",
-        "detail",
         "sessions"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "note.add",
       "route": [
         "tree",
-        "detail",
         "coordination"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "comment.add",
       "route": [
         "tree",
-        "detail",
         "coordination"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "comment.resolve",
       "route": [
         "tree",
-        "detail",
         "coordination"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "view.claims_hub",
       "route": [
         "tree",
-        "detail",
         "coordination"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "view.sessions_hub",
       "route": [
         "tree",
-        "detail",
         "sessions"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "view.comments_hub",
       "route": [
         "tree",
-        "detail",
         "coordination"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "criterion.edit",
       "route": [
         "tree",
-        "detail",
         "trust"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "evidence.list",
       "route": [
         "tree",
-        "detail",
         "evidence"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "criterion.delete",
       "route": [
         "tree",
-        "detail",
         "trust"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "comment.edit",
       "route": [
         "tree",
-        "detail",
         "coordination"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "view.pull_requests_hub",
       "route": [
         "tree",
-        "detail",
         "provenance"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "pull_request.list",
       "route": [
         "tree",
-        "detail",
         "provenance"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "pull_request.refresh",
       "route": [
         "tree",
-        "detail",
         "provenance"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "pull_request.link",
       "route": [
         "tree",
-        "detail",
         "provenance"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "pull_request.unlink",
       "route": [
         "tree",
-        "detail",
         "provenance"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "commit.open",
       "route": [
         "tree",
-        "detail",
         "provenance"
       ]
     },
     {
-      "depth": 2,
+      "depth": 1,
       "id": "file.open",
       "route": [
         "tree",
-        "detail",
         "provenance"
       ]
     },
@@ -642,22 +583,22 @@
     }
   ],
   "entities": {
-    "claim": 2,
-    "comment": 2,
-    "commit": 2,
-    "criterion": 1,
+    "claim": 1,
+    "comment": 1,
+    "commit": 1,
+    "criterion": 0,
     "event": 1,
-    "evidence": 2,
-    "file": 2,
+    "evidence": 1,
+    "file": 1,
     "milestone": 1,
-    "note": 2,
+    "note": 1,
     "plan": 1,
-    "pull_request": 2,
-    "question": 2,
-    "reference": 2,
+    "pull_request": 1,
+    "question": 1,
+    "reference": 1,
     "repo": 1,
-    "session": 2,
-    "task": 1
+    "session": 1,
+    "task": 0
   },
   "max_depth": 3,
   "over_budget": []

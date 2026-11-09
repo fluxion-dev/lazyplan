@@ -81,7 +81,6 @@ class TestCommandRegistry(unittest.TestCase):
         self.assertIn("create-task", ids("add task"))
         self.assertIn("create-task", ids("Create task"))
         self.assertIn("move-done", ids("complete"))
-        self.assertIn("open-detail", ids("show"))
         self.assertEqual(ids("zzz-no-such-command"), [])
 
     def test_help_shows_every_keymap_key(self):

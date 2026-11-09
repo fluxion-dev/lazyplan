@@ -39,7 +39,7 @@ from textual.widgets import DirectoryTree, Static, Tree  # noqa: E402
 from lazyplan import services  # noqa: E402
 from lazyplan.core.entities import Status  # noqa: E402
 from lazyplan.presentation.tui import create_app  # noqa: E402
-from lazyplan.presentation.tui.screens import DetailScreen, PaletteScreen  # noqa: E402
+from lazyplan.presentation.tui.screens import PaletteScreen  # noqa: E402
 from lazyplan.presentation.tui.screens.export import ExportScreen  # noqa: E402
 from lazyplan.presentation.tui.screens.source import SourceScreen  # noqa: E402
 from lazyplan.services import metrics  # noqa: E402
@@ -507,7 +507,8 @@ async def capture_plan_detail(store: Store, target: Path) -> None:
     plan_id = next(plan.id for plan in store.list_plans() if plan.name == "Ship the source trail")
     app = create_app(str(store.path))
     async with app.run_test(size=SIZE) as pilot:
-        app.push_screen(DetailScreen(store, "plan", plan_id))
+        app.selected = ("plan", plan_id)
+        app.update_preview(force=True)
         await pilot.pause()
         app.save_screenshot(str(target))
 
@@ -516,7 +517,8 @@ async def capture_collaboration(store: Store, target: Path) -> None:
     task_id = _task_id(store, "Claim the release queue")
     app = create_app(str(store.path))
     async with app.run_test(size=SIZE) as pilot:
-        app.push_screen(DetailScreen(store, "task", task_id))
+        app.selected = ("task", task_id)
+        app.update_preview(force=True)
         await pilot.pause()
         app.save_screenshot(str(target))
 
@@ -735,7 +737,7 @@ SCENES: dict[str, Scene] = {
         SIZE,
         build_source_fixture,
         capture_plan_detail,
-        "Read-only plan detail showing the reason, scope, acceptance criteria, milestones, and linked source.",
+        "Plan overview showing the reason, scope, acceptance criteria, milestones, and linked source.",
     ),
     "lpui-coordination": Scene(
         SIZE,
@@ -747,7 +749,7 @@ SCENES: dict[str, Scene] = {
         SIZE,
         build_coordination_fixture,
         capture_collaboration,
-        "lazyplan task detail page showing an active claim, two review comments, and a handoff note.",
+        "Task overview showing an active claim, two review comments, and a handoff note.",
     ),
     "lpui-search-bulk": Scene(
         SIZE,

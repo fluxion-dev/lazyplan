@@ -1,4 +1,4 @@
-"""The plan tree widget: shared navigation plus double-click detail."""
+"""The plan tree widget: shared navigation and selection."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from textual import events
 from textual.binding import Binding
 from textual.widgets import Tree
 
-from ...shared.messages import RowAction, SelectionChanged
+from ...shared.messages import SelectionChanged
 from ...shared.tree_nav import NavTree
 from ..controllers.tree import TreeController
 
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 
 class FoldTree(NavTree):
-    """Plan/milestone tree: j/k + arrows move, left/right fold, enter opens.
+    """Plan/milestone tree: j/k + arrows move, left/right fold, click selects.
 
     Every mutation runs through the modal palette (c). Native Tree Space
     marks the selected row for bulk actions; shift+space stays parked.
@@ -28,7 +28,6 @@ class FoldTree(NavTree):
     _reflow_width: int = 0
 
     BINDINGS = [
-        Binding("enter", "open_detail", "Detail"),
         Binding("space", "toggle_mark", "Mark"),
     ]
 
@@ -61,23 +60,13 @@ class FoldTree(NavTree):
         """Shift+space: parked — use the modal palette for folding."""
         return
 
-    def action_open_detail(self) -> None:
-        """Enter: post intent; App handles via @on."""
-        app = cast("LazyplanApp", self.app)
-        if app.selected is not None:
-            kind, oid = app.selected
-            self.post_message(RowAction("open-detail", kind, oid))
-        else:
-            app.action_open_detail()
-
     async def _on_click(self, event: events.Click) -> None:
-        """Single click selects; two quick clicks on one row open detail.
+        """Single click selects the row; the overview follows it.
 
         Textual dispatches `_on_click` for every class in the MRO, so the
         base Tree handler still runs after this one. Do not call super()
         here or an arrow click would toggle twice and appear to do nothing.
         """
-        app = cast("LazyplanApp", self.app)
         meta = event.style.meta
         if "line" not in meta or meta.get("toggle", False):
             return
@@ -91,5 +80,3 @@ class FoldTree(NavTree):
         if key is None:
             return
         self.post_message(SelectionChanged(kind=key[0], oid=key[1]))
-        if app.note_click(key):
-            self.post_message(RowAction("open-detail", key[0], key[1]))

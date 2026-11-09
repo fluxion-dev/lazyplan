@@ -35,11 +35,13 @@ from ..shared.design import EMPTY_NO_PLANS
 from .actions import ActionMixin
 from .base import AppBase
 from .bulk import BulkMixin
-from .controllers.git_state import GitStateController
-from .controllers.metrics import MetricsController
-from .controllers.spinner import SpinnerController
-from .controllers.tree import TreeController
-from .controllers.updates import UpdateController
+from .controllers import (
+    GitStateController,
+    MetricsController,
+    SpinnerController,
+    TreeController,
+    UpdateController,
+)
 from .filters import FilterMixin
 from .launch import launch_update
 from .metrics import MetricsSection
@@ -160,24 +162,10 @@ if _TEXTUAL_OK:
             self._last_click_at: float = 0.0
             self._fp: Any = store.fingerprint()
             self._startup_notice: str = ""
-            self.agent_status = "idle"
-            self.agent_detail = "W workbench"
 
         def action_update_prompt(self) -> None:
             """Open the update screen for a known or cached newer release."""
             self.update_controller.prompt()
-
-        def set_agent_status(self, status: str, detail: str = "") -> None:
-            """Publish the compact workbench status in the main shell."""
-            self.agent_status = status
-            self.agent_detail = detail
-            if not self._mounted:
-                return
-            label = status if not detail else f"{status} · {detail}"
-            try:
-                self.query_one("#agent-strip", Static).update(f"[dim]agent[/] {label}")
-            except Exception:
-                pass
 
         def compose(self) -> ComposeResult:
             yield Static("", id="mode")

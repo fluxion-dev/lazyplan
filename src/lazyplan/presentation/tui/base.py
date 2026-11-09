@@ -83,7 +83,23 @@ class AppBase(App, TuiHost):
     _last_click_at: float
     _fp: Any
     _startup_notice: str
+    agent_status: str = "idle"
+    agent_detail: str = "W workbench"
     rev: Any
+
+    def set_agent_status(self, status: str, detail: str = "") -> None:
+        """Publish the compact workbench status in the main shell."""
+        self.agent_status = status
+        self.agent_detail = detail
+        if not self._mounted:
+            return
+        label = status if not detail else f"{status} · {detail}"
+        try:
+            from textual.widgets import Static
+
+            self.query_one("#agent-strip", Static).update(f"[dim]agent[/] {label}")
+        except Exception:
+            pass
 
     @property
     def selected(self) -> tuple[str, int] | None:

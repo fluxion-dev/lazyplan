@@ -196,6 +196,26 @@
 
 <main id="main">
 
+<section id="install" class="mx-auto max-w-4xl scroll-mt-20 px-6 pb-20 text-center md:pb-28">
+  <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">Install</p>
+  <h2 class="mb-4 text-2xl font-bold text-white md:text-3xl">Get lazyplan in one command.</h2>
+  <p class="mb-8 text-lg text-zinc-400">Python 3.11+. Linux, macOS, Windows.</p>
+
+  <div class="mx-auto flex max-w-md items-center gap-2 rounded-xl border border-plan-border bg-plan-surface p-2 pl-4 text-left shadow-lg shadow-viking-blue/25">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-5 w-5 shrink-0 text-cyber-cyan"><path d="m4 17 6-6-6-6"/><path d="M12 19h8"/></svg>
+    <code id="install-cmd" class="min-w-0 flex-1 truncate font-mono text-sm text-zinc-100">pipx install lazyplan-tui</code>
+    <button id="install-copy" type="button" class="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-viking-blue px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-viking-blue/80">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-4 w-4"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+      Copy
+    </button>
+  </div>
+  <span id="install-copy-status" role="status" aria-live="polite" class="mt-2 block min-h-5 text-sm text-cyber-cyan"></span>
+
+  <p class="mt-4 text-[0.95rem] text-zinc-400">On Windows: <code class="inline-code">pipx install --backend pip lazyplan-tui</code>. Updates close, apply, relaunch; logs and <code class="inline-code">--diagnose</code> under <code class="inline-code">%LOCALAPPDATA%\lazyplan</code>.</p>
+  <p class="mt-2 text-[0.9rem] text-zinc-400">From 0.30.1 or earlier, reinstall: <code class="inline-code">pipx install --force lazyplan-tui</code>. <a class="text-cyber-cyan underline hover:text-white" href="https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md#upgrade">Details</a>.</p>
+  <p class="mt-6 text-[0.95rem] text-zinc-400"><a class="text-cyber-cyan underline hover:text-white" href="https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md#install">Other install options</a></p>
+</section>
+
 <section id="new" class="mx-auto max-w-6xl scroll-mt-20 px-6 pt-16 md:pt-20">
   <div class="overflow-hidden rounded-2xl border border-plan-border bg-plan-surface/70 shadow-xl shadow-black/30">
     <div class="grid gap-6 p-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.7fr)] md:p-8">
@@ -414,26 +434,6 @@ Task · Add the token model        done</pre>
       <p class="m-0 text-[0.95rem] text-zinc-400">Review progress, clear blockers, and finish.</p>
     </li>
   </ol>
-</section>
-
-<section id="install" class="mx-auto max-w-4xl scroll-mt-20 px-6 py-20 text-center md:py-28">
-  <p class="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-cyber-cyan">Install</p>
-  <h2 class="mb-4 text-2xl font-bold text-white md:text-3xl">Get lazyplan in one command.</h2>
-  <p class="mb-8 text-lg text-zinc-400">Python 3.11+. Linux, macOS, Windows.</p>
-
-  <div class="mx-auto flex max-w-md items-center gap-2 rounded-xl border border-plan-border bg-plan-surface p-2 pl-4 text-left shadow-lg shadow-viking-blue/25">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-5 w-5 shrink-0 text-cyber-cyan"><path d="m4 17 6-6-6-6"/><path d="M12 19h8"/></svg>
-    <code id="install-cmd" class="min-w-0 flex-1 truncate font-mono text-sm text-zinc-100">pipx install lazyplan-tui</code>
-    <button id="install-copy" type="button" class="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-viking-blue px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-viking-blue/80">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-4 w-4"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-      Copy
-    </button>
-  </div>
-  <span id="install-copy-status" role="status" aria-live="polite" class="mt-2 block min-h-5 text-sm text-cyber-cyan"></span>
-
-  <p class="mt-4 text-[0.95rem] text-zinc-400">On Windows: <code class="inline-code">pipx install --backend pip lazyplan-tui</code>. Updates close, apply, relaunch; logs and <code class="inline-code">--diagnose</code> under <code class="inline-code">%LOCALAPPDATA%\lazyplan</code>.</p>
-  <p class="mt-2 text-[0.9rem] text-zinc-400">From 0.30.1 or earlier, reinstall: <code class="inline-code">pipx install --force lazyplan-tui</code>. <a class="text-cyber-cyan underline hover:text-white" href="https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md#upgrade">Details</a>.</p>
-  <p class="mt-6 text-[0.95rem] text-zinc-400"><a class="text-cyber-cyan underline hover:text-white" href="https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md#install">Other install options</a></p>
 </section>
 
 <section id="faq" class="mx-auto max-w-3xl scroll-mt-20 px-6 py-20 md:py-28">

@@ -120,7 +120,12 @@ def _cmd_mcp(store: Store | None, args: argparse.Namespace, actor: str) -> int:
 
     del store
     path = resolve_db_path(args.db)
-    return mcp_mod.run(str(path), actor=actor, read_only=bool(args.read_only))
+    return mcp_mod.run(
+        str(path),
+        actor=actor,
+        read_only=bool(args.read_only),
+        proposal_only=bool(getattr(args, "proposal_only", False)),
+    )
 
 
 def _cmd_hook(store: Store | None, args: argparse.Namespace, actor: str) -> int:

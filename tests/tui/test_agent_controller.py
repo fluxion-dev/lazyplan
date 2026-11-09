@@ -39,7 +39,8 @@ class TestMcpConfig(unittest.TestCase):
         self.assertEqual(server["name"], "lazyplan")
         self.assertEqual(server["args"][:3], ["-m", "lazyplan", "--db"])
         self.assertIn("/tmp/agent.db", server["args"])
-        self.assertEqual(server["args"][-1], "mcp")
+        self.assertEqual(server["args"][-2], "mcp")
+        self.assertEqual(server["args"][-1], "--proposal-only")
 
 
 class TestAgentController(unittest.IsolatedAsyncioTestCase):

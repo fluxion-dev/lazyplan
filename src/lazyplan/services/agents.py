@@ -18,8 +18,7 @@ def lazyplan_mcp_server(
 ) -> dict[str, Any]:
     """The stdio MCP server config passed to an ACP session."""
     args = [sys.executable, "-m", "lazyplan", "--db", str(Path(db_path)), "mcp"]
-    if read_only:
-        args.append("--read-only")
+    args.append("--read-only" if read_only else "--proposal-only")
     return {
         "name": "lazyplan",
         "command": args[0],

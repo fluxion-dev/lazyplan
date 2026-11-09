@@ -13,6 +13,7 @@ from lazyplan import services
 from lazyplan.infrastructure.repo import find_repo_root, repo_label
 from lazyplan.infrastructure.vcs import detect_backend
 from lazyplan.services import trace
+from lazyplan.services.agent_policy import allowed_in_proposal_mode
 
 from ...core.entities import Milestone, Plan, Status, Task
 from ...services import insights
@@ -552,7 +553,12 @@ class ToolsMixin(
         """Merge read and write tools for the current mode."""
         tools = self._read_registry()
         if not self.read_only:
-            tools.update(self._write_registry())
+            writes = self._write_registry()
+            if self.proposal_only:
+                writes = {
+                    name: entry for name, entry in writes.items() if allowed_in_proposal_mode(name)
+                }
+            tools.update(writes)
         return tools
 
     def _tool_block(self, args: dict) -> object:

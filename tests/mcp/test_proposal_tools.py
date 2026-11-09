@@ -72,6 +72,26 @@ class TestProposalTools(unittest.TestCase):
         self.assertEqual(len(self.store.list_tasks(self.milestone.id)), 0)
         self.assertEqual(len(self.store.list_proposals()), 2)
 
+    def test_proposal_mode_hides_structural_writes(self) -> None:
+        server = mcp.McpServer(self.store, actor="agent", proposal_only=True)
+        response = server.handle({"jsonrpc": "2.0", "id": 1, "method": "tools/list"})
+        assert response is not None
+        names = {tool["name"] for tool in response["result"]["tools"]}
+        self.assertIn("propose_plan", names)
+        self.assertIn("note_add", names)
+        self.assertNotIn("create_plan", names)
+        self.assertNotIn("move_row", names)
+        response = server.handle(
+            {
+                "jsonrpc": "2.0",
+                "id": 2,
+                "method": "tools/call",
+                "params": {"name": "create_plan", "arguments": {"title": "X"}},
+            }
+        )
+        assert response is not None
+        self.assertEqual(response["error"]["code"], -32601)
+
     def test_unknown_row_is_rejected(self) -> None:
         result = self._tool("propose_edit", {"kind": "plan", "id": 999, "title": "X"})
         self.assertTrue(result.get("isError"))

@@ -612,6 +612,31 @@
     },
     {
       "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Pending or resolved agent proposals.",
+      "inputSchema": {
+        "properties": {
+          "limit": {
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "applied",
+              "rejected",
+              "all"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "name": "proposal_list"
+    },
+    {
+      "annotations": {
         "readOnlyHint": false
       },
       "description": "Create a plan.",
@@ -1588,6 +1613,101 @@
         "type": "object"
       },
       "name": "pull_request_unlink"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Stage a plan document for human review; does not create rows.",
+      "inputSchema": {
+        "properties": {
+          "document": {
+            "type": "object"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "document"
+        ],
+        "type": "object"
+      },
+      "name": "propose_plan"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Stage an edit to a plan, milestone, or task for review.",
+      "inputSchema": {
+        "properties": {
+          "desc": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "plan",
+              "milestone",
+              "task"
+            ],
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "why": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "propose_edit"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Stage a new task under a milestone for review.",
+      "inputSchema": {
+        "properties": {
+          "desc": {
+            "type": "string"
+          },
+          "milestone": {
+            "type": "integer"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "milestone",
+          "title"
+        ],
+        "type": "object"
+      },
+      "name": "propose_task"
     }
   ]
 }

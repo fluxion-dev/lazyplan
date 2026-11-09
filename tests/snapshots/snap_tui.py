@@ -18,7 +18,7 @@ from lazyplan.presentation.tui.screens.hub_kinds import CriteriaHub
 from lazyplan.presentation.tui.screens.source import SourceScreen
 from lazyplan.services import metrics, revisions
 from lazyplan.store import Store
-from tests.support.pilot import settle
+from tests.support.pilot import settle, wait_for
 
 FIXED_START = 1_700_000_000.0
 FIXED_NOW = FIXED_START + 30 * 86_400
@@ -139,12 +139,19 @@ def test_control_room_shell(snap_compare, control_app) -> None:
     app, plan_id = control_app
 
     async def run_before(pilot) -> None:
+        def expanded() -> bool:
+            node = pilot.app._row_nodes.get(("plan", plan_id))
+            return bool(node is not None and node.is_expanded and node.children)
+
         await pilot.pause()
         pilot.app.action_toggle_override()
         pilot.app.selected = ("plan", plan_id)
         pilot.app.update_preview(force=True)
-        pilot.app.tree_controller.expand_all()
         await settle(pilot)
+        pilot.app.tree_controller.expand_all()
+        await wait_for(pilot, expanded, timeout=5.0)
+        await settle(pilot)
+        await wait_for(pilot, expanded, timeout=5.0)
 
     with mock.patch("time.time", return_value=FIXED_NOW):
         assert snap_compare(app, run_before=run_before, terminal_size=(120, 40))

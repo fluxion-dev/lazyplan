@@ -224,3 +224,4 @@ _.action_start_work
 _.action_apply
 _.action_reject
 _.on_option_list_option_highlighted
+_.on_option_list_option_selected

@@ -27,7 +27,6 @@ if _TEXTUAL_OK:
         def __init__(self) -> None:
             super().__init__()
             self._profiles: dict[str, AgentProfile] = {}
-            self._default = ""
 
         def compose(self) -> ComposeResult:
             with Vertical(id="agent-picker"):
@@ -41,7 +40,6 @@ if _TEXTUAL_OK:
             except ValueError as exc:
                 self.query_one("#agent-picker-head", Static).update(f"error: {exc}")
                 return
-            self._default = default
             options = self.query_one("#agent-picker-list", OptionList)
             for profile in profiles:
                 self._profiles[profile.key] = profile

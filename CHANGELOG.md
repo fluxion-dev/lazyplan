@@ -20,6 +20,10 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
   empty-state treatment: a bold capitalized title and a dim next step.
 - **Legacy aliases.** The deprecated CLI verbs and moved detail keys remain
   through 0.36.0. A version guard fails at 0.37.0 until they are removed.
+- **Architecture seams.** Presentation constructs `Store` only in composition
+  roots; store and services use injected path and layer adapters; parser groups
+  and MCP metadata derive from the action registry; the largest modules split
+  into focused files.
 
 ### Removed
 

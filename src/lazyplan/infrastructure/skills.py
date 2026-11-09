@@ -19,13 +19,15 @@ from pathlib import Path
 from typing import TextIO
 
 from . import textfile
-
-
-def _data_text(name: str) -> str:
-    """Read one packaged agent-facing Markdown file."""
-    from importlib.resources import files
-
-    return (files("lazyplan") / "data" / name).read_text(encoding="utf-8")
+from .agents_md import (
+    AGENTS_MARK_BEGIN as AGENTS_MARK_BEGIN,
+)
+from .agents_md import AGENTS_MARK_END as AGENTS_MARK_END
+from .agents_md import append_gitignore as append_gitignore
+from .agents_md import ensure_agents_md as ensure_agents_md
+from .agents_md import remove_agents_md as remove_agents_md
+from .agents_md import render_home_agents_snippet as render_home_agents_snippet
+from .data_text import data_text
 
 
 @dataclass(frozen=True)
@@ -38,9 +40,9 @@ class SkillSpec:
 
 SKILLS: tuple[SkillSpec, ...] = (SkillSpec(name="lazyplan", data_file="SKILL.md"),)
 SKILL_NAME = SKILLS[0].name
-_SKILL_TEXT = _data_text(SKILLS[0].data_file)
+_SKILL_TEXT = data_text(SKILLS[0].data_file)
 SKILL_BODY = _SKILL_TEXT.split("---", 2)[2].lstrip("\n")
-AGENTS_SNIPPET = _data_text("AGENTS.md")
+AGENTS_SNIPPET = data_text("AGENTS.md")
 
 __all__ = [
     "AGENTS_SNIPPET",
@@ -53,9 +55,6 @@ __all__ = [
 
 AGENTS_DIR = ".agents"
 SKILLS_DIR = "skills"
-
-AGENTS_MARK_BEGIN = "<!-- lazyplan:start -->"
-AGENTS_MARK_END = "<!-- lazyplan:end -->"
 
 
 @dataclass(frozen=True)
@@ -231,30 +230,8 @@ def render_skill(name: str = SKILL_NAME) -> str:
     """Return the packaged Markdown for one shipped skill."""
     for spec in SKILLS:
         if spec.name == name:
-            return _data_text(spec.data_file)
+            return data_text(spec.data_file)
     raise KeyError(f"unknown skill: {name}")
-
-
-def render_home_agents_snippet(db: Path) -> str:
-    """AGENTS.md section for home placement; never claims a repo database."""
-    body = f"""## lazyplan (`lpui`)
-
-Plan of record: `{db}` (shared home). Human watches `lpui ui`; agents work
-through the CLI with `--actor <name>`.
-
-- Start a session with `lpui --porcelain next`: it claims the first todo. Use
-  `lpui --porcelain brief` when you need the whole active picture.
-- Use `--porcelain` in the active loop: one tab-separated row per record with
-  no glyphs; `--json` wins when you need full fidelity.
-- Renew the lease while you work (`claim renew`), note handoffs, and release it
-  when you stop. Block parked work with `task block --reason`.
-- Move the task doing before code; after each commit, link it with
-  `lpui --porcelain link --kind task --id T` (or `lpui task finish`), then move it on.
-- Run `lpui --porcelain audit --since 7.days` before closing a plan, and mark
-  criteria done only after recording evidence.
-- Lifecycle hooks keep the session heartbeat current; they never move work.
-"""
-    return body
 
 
 def detect_agents(home: Path | None = None) -> list[AgentHost]:
@@ -425,46 +402,6 @@ def write_skill_file(dest: Path, *, name: str = SKILL_NAME) -> tuple[bool, str]:
     return True, "wrote"
 
 
-def ensure_agents_md(repo_root: Path, body: str | None = None) -> tuple[bool, str]:
-    """Append the lazyplan section to repo AGENTS.md if missing. Idempotent."""
-    dest = repo_root / "AGENTS.md"
-    snippet = f"{AGENTS_MARK_BEGIN}\n{body or _data_text('AGENTS.md')}{AGENTS_MARK_END}\n"
-    wanted = (body or _data_text("AGENTS.md")).strip()
-    if dest.is_file():
-        text = textfile.read(dest)
-        if AGENTS_MARK_BEGIN in text and wanted in text:
-            return False, "up-to-date"
-        if AGENTS_MARK_BEGIN in text:
-            # stale snippet: replace the marked block
-            before, _, rest = text.partition(AGENTS_MARK_BEGIN)
-            _, _, after = rest.partition(AGENTS_MARK_END)
-            textfile.write(dest, before.rstrip() + "\n\n" + snippet + after.lstrip())
-            return True, "updated"
-        textfile.write(dest, text.rstrip() + "\n\n" + snippet)
-        return True, "appended"
-    textfile.write(dest, "# Agent instructions\n\n" + snippet)
-    return True, "created"
-
-
-def remove_agents_md(repo_root: Path) -> tuple[bool, str]:
-    """Strip only the marked lazyplan block; keep the rest of AGENTS.md."""
-    dest = repo_root / "AGENTS.md"
-    try:
-        text = textfile.read(dest)
-    except OSError:
-        return False, "absent"
-    if AGENTS_MARK_BEGIN not in text:
-        return False, "absent"
-    before, _, rest = text.partition(AGENTS_MARK_BEGIN)
-    _, _, after = rest.partition(AGENTS_MARK_END)
-    cleaned = before.rstrip() + "\n\n" + after.lstrip()
-    if cleaned.strip() in ("", "# Agent instructions"):
-        dest.unlink()
-    else:
-        textfile.write(dest, cleaned.rstrip() + "\n")
-    return True, "removed"
-
-
 def _write_skill(seen: set[Path], installed: list[str], dest: Path) -> None:
     """Write one SKILL.md unless already written (dedupes across sides)."""
     if dest in seen:
@@ -562,26 +499,6 @@ def _prompt(
         print(f"  pick one of {sorted(valid)} — using default [{default}]", file=out)
         return default
     return line or default
-
-
-def append_gitignore(root: Path, entry: str) -> bool:
-    """Append entry to the repo .gitignore when missing. Returns True when added."""
-    entry = entry.strip()
-    if not entry:
-        return False
-    gi = Path(root).expanduser() / ".gitignore"
-    try:
-        raw = textfile.read(gi) if gi.is_file() else ""
-    except OSError:
-        return False
-    lines = [ln.strip().rstrip("/") for ln in raw.splitlines()]
-    if entry.rstrip("/") in lines:
-        return False
-    try:
-        textfile.append(gi, ("\n" if raw and not raw.endswith("\n") else "") + entry + "\n")
-    except OSError:
-        return False
-    return True
 
 
 def prompt_confirm(

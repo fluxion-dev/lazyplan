@@ -51,6 +51,11 @@
       "reason": "source trail reads the VCS adapter"
     },
     {
+      "source": "lazyplan.services.source_diff",
+      "target": "lazyplan.infrastructure.vcs",
+      "reason": "diff reader uses the VCS adapter"
+    },
+    {
       "source": "lazyplan.services.tasks",
       "target": "lazyplan.infrastructure.vcs",
       "reason": "task start/finish uses the VCS adapter"

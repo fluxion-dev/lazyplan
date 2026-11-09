@@ -17,7 +17,6 @@ from ..core.entities import HookResult, Session
 from ..core.policies.sessions import IDLE_AFTER_SECS, phase_for_event
 from ..core.ports.app import AppPort
 from ..core.ports.insights import InsightsPort
-from ..infrastructure.repo import resolve_db_path
 from . import audit, brief, context
 from . import sessions as session_services
 
@@ -55,19 +54,6 @@ def detect_host(payload: dict, explicit: str = "") -> str:
     if "session_id" in payload and "source" in payload:
         return "gemini"
     return "opencode"
-
-
-def _open_db() -> AppPort | None:
-    """Existing database only; a hook never creates one."""
-    from ..store import Store
-
-    path = Path(resolve_db_path()).expanduser()
-    if not path.is_file():
-        return None
-    try:
-        return Store(str(path))
-    except (RuntimeError, OSError):
-        return None
 
 
 def _command(payload: dict) -> str:
@@ -204,11 +190,11 @@ def build_result(
     cwd: Path | None = None,
     commits: list[audit.Commit] | None = None,
     host: str = "",
+    store: AppPort | None = None,
 ) -> HookResult:
     """Decide one event's reminder without touching host output formats."""
     if event not in EVENTS:
         return HookResult()
-    store = _open_db()
     if store is None:
         return HookResult()
     here = cwd or Path.cwd()
@@ -232,11 +218,12 @@ def run(
     host: str = "",
     cwd: Path | None = None,
     commits: list[audit.Commit] | None = None,
+    store: AppPort | None = None,
 ) -> HookResult:
     """Entry point used by the CLI; never raises and never blocks."""
     if os.environ.get(NO_HOOKS_ENV, "").strip():
         return HookResult()
     try:
-        return build_result(event, payload, cwd, commits, host)
+        return build_result(event, payload, cwd, commits, host, store)
     except (RuntimeError, OSError, ValueError):
         return HookResult()

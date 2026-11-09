@@ -112,6 +112,7 @@ def _intervention(home: Path, repo: Path) -> dict:
                 {"tool_input": {"command": "git commit -m step"}},
                 repo,
                 commits=[],
+                store=store,
             )
             if reminder.text:
                 _link(store, task, commit)

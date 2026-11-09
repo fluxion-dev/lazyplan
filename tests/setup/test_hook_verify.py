@@ -82,7 +82,9 @@ class VerifyCase(unittest.TestCase):
         self.assertTrue(Store(self.db).list_sessions(open_only=True))
 
     def test_every_direct_render_has_no_ansi(self):
-        result = hooks.build_result("session-start", {}, self.repo, commits=[])
+        result = hooks.build_result(
+            "session-start", {}, self.repo, commits=[], store=Store(self.db)
+        )
         for host in HOSTS:
             text = hook_hosts.render(host, "session-start", result)
             self.assertNotIn("\x1b", text)
@@ -102,12 +104,13 @@ class VerifyCase(unittest.TestCase):
 
     def test_p95_overhead_stays_under_budget(self):
         payload = {}
+        store = Store(self.db)
         for _ in range(3):
-            hooks.build_result("session-start", payload, self.repo, commits=[])
+            hooks.build_result("session-start", payload, self.repo, commits=[], store=store)
         samples = []
         for _ in range(40):
             start = time.perf_counter()
-            hooks.build_result("session-start", payload, self.repo, commits=[])
+            hooks.build_result("session-start", payload, self.repo, commits=[], store=store)
             samples.append(time.perf_counter() - start)
         p95 = statistics.quantiles(samples, n=20)[18]
         self.assertLess(p95, 0.3)

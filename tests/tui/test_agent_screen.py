@@ -10,7 +10,7 @@ from pathlib import Path
 
 from textual.widgets import Button
 
-from lazyplan.infrastructure.agents import AgentEvent, AgentProfile
+from lazyplan.infrastructure.agents import AgentEvent, AgentProfile, ToolCall
 from lazyplan.presentation.shared import registry
 from lazyplan.presentation.tui import create_app
 from lazyplan.presentation.tui.screens.agent import AgentScreen
@@ -95,6 +95,21 @@ class TestAgentScreen(unittest.IsolatedAsyncioTestCase):
             app.screen.query_one("#perm-cancel", Button).press()
             await wait_for(lambda: "cancelled" in screen.transcript)
             await asyncio.wait_for(sending, 5.0)
+            await screen.action_close()
+
+    async def test_failed_tool_adds_a_notice(self) -> None:
+        app = create_app(self.db)
+        async with app.run_test() as pilot:
+            screen = AgentScreen(profile(), ROOT)
+            app.push_screen(screen)
+            await pilot.pause()
+            await screen._apply_event(
+                AgentEvent(
+                    kind="tool_update",
+                    tool=ToolCall("call_1", title="Read a file", status="failed"),
+                )
+            )
+            self.assertIn("Read a file failed", screen.transcript)
             await screen.action_close()
 
     async def test_unknown_update_renders_a_generic_line(self) -> None:

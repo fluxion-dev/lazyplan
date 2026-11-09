@@ -135,6 +135,9 @@ if _TEXTUAL_OK:
                 self._transcript.add_thought(event.text)
             elif event.kind in {"tool_call", "tool_update"} and event.tool is not None:
                 self._transcript.add_tool(event.tool, event.payload)
+                if event.tool.status == "failed":
+                    name = event.tool.title or event.tool.name or "tool"
+                    self._transcript.add_notice(f"{name} failed")
             elif event.kind == "plan":
                 self._transcript.add_plan(event.plan)
             elif event.kind == "usage" and event.usage is not None:

@@ -186,7 +186,7 @@ class TestUpdateScreen(unittest.IsolatedAsyncioTestCase):
             await wait_for(
                 pilot,
                 lambda: self.app.screen.__class__.__name__ == "UpdateScreen",
-                timeout=10.0,
+                timeout=5.0,
             )
             self.assertEqual(self.app.screen.__class__.__name__, "UpdateScreen")
 

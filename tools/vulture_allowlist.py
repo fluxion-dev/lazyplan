@@ -206,22 +206,3 @@ _.can_focus
 on_root
 _.on_click
 _.load_children
-
-# ACP transport surface kept for the workbench and the real-agent smoke.
-_.agent_info
-_.auth_methods
-_.load_session
-_.last_stderr
-# ACP event fields carried to the workbench and its tests.
-priority
-message_id
-# Agent policy tables kept for the documented write policy and tests.
-DIRECT_WRITES
-PROPOSAL_TOOLS
-# Agent runs and workbench actions dispatched by Textual bindings.
-_.list_agent_runs
-_.action_start_work
-_.action_apply
-_.action_reject
-_.on_option_list_option_highlighted
-_.on_option_list_option_selected

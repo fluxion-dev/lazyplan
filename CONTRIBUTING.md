@@ -54,30 +54,6 @@ the failing `tests` selection. It finishes in minutes and uploads
 until the diff is understood; it is only for collecting a candidate snapshot
 from Windows.
 
-## Agent transport
-
-The workbench talks to agents over the Agent Client Protocol. The transport
-lives in `src/lazyplan/infrastructure/agents/` and is stdlib-only; OpenCode runs
-as `opencode acp`. `opencode acp` starts a private server, so it is not the same
-process as an OpenCode TUI window.
-
-The ACP tests use `tests/support/fake_acp.py`, a scripted stdio agent with text,
-permission, cancel, and crash scenarios. Run them with:
-
-```bash
-python -m unittest tests.infrastructure.test_acp
-```
-
-`tools/opencode-acp-smoke.py` is the manual real-agent smoke; it skips when
-`opencode` is missing and needs a logged-in install. It proves initialize,
-session/new, prompt streaming, and cancel without changing files. Add
-`tests/infrastructure/test_acp.py` to the Windows focus when changing the
-transport.
-
-The agent catalog is `~/.lazyplan/agents.json` (or the Windows shared home) and
-is managed with `lpui agent list`, `lpui agent add`, and `lpui agent remove`.
-The default is `opencode` running `opencode acp`.
-
 Fix failures rather than editing the scripts around them. If you add a module,
 add tests and type annotations with it.
 

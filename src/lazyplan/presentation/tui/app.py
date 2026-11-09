@@ -35,13 +35,11 @@ from ..shared.design import EMPTY_NO_PLANS
 from .actions import ActionMixin
 from .base import AppBase
 from .bulk import BulkMixin
-from .controllers import (
-    GitStateController,
-    MetricsController,
-    SpinnerController,
-    TreeController,
-    UpdateController,
-)
+from .controllers.git_state import GitStateController
+from .controllers.metrics import MetricsController
+from .controllers.spinner import SpinnerController
+from .controllers.tree import TreeController
+from .controllers.updates import UpdateController
 from .filters import FilterMixin
 from .launch import launch_update
 from .metrics import MetricsSection
@@ -98,7 +96,6 @@ if _TEXTUAL_OK:
             Binding("f", "cycle_mode", "Plan mode", show=False),
             Binding("r", "refresh", "Refresh", show=False),
             Binding("U", "update_prompt", "Update"),
-            Binding("W", "open_agent", "Workbench"),
         ]
         rev = reactive(0, init=False)
 
@@ -179,7 +176,6 @@ if _TEXTUAL_OK:
                         yield GitPanel()
                         yield AgentsPanel()
                 yield MetricsSection()
-            yield Static("", id="agent-strip")
             yield Label("", id="hints")
 
         async def _on_resize(self, event: events.Resize) -> None:
@@ -221,7 +217,6 @@ if _TEXTUAL_OK:
             self.update_controller.start()
             self.metrics_controller.start()
             self.query_one("#nav").border_title = " plans "
-            self.set_agent_status(self.agent_status, self.agent_detail)
             if self._startup_notice:
                 self.notify(self._startup_notice, timeout=10)
             tree = self.query_one("#tree", Tree)

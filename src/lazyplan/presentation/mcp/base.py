@@ -20,13 +20,11 @@ class McpBase:
         store: Store | None,
         actor: str = "human",
         read_only: bool = False,
-        proposal_only: bool = False,
         db_path: str = "",
     ) -> None:
         self.store = store
         self.actor = actor
         self.read_only = read_only
-        self.proposal_only = proposal_only
         self.db_path = db_path
         self.heal = settings.heal_enabled(settings.heal_mode())
 

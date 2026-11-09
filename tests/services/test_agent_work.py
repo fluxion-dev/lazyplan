@@ -32,7 +32,11 @@ class TestAgentWork(unittest.TestCase):
         self.assertIsNotNone(self.store.get_claim(self.task.id))
         self.assertIn("Work on T", started["prompt"])
         self.assertIn("P", started["prompt"])
-        self.assertEqual(self.store.get_session(started["session"].id).actor, "alice")
+        session = self.store.get_session(started["session"].id)
+        assert session is not None
+        self.assertEqual(session.actor, "alice")
+        self.assertEqual(session.plan_id, self.plan.id)
+        self.assertEqual(session.branch, started["branch"])
 
     def test_start_refuses_another_claim(self) -> None:
         self.store.claim_task(self.task.id, "bob", 300)

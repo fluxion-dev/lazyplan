@@ -49,10 +49,6 @@ class AgentRuntime:
         self._started = False
         self._busy = False
 
-    @property
-    def busy(self) -> bool:
-        return self._busy
-
     async def start(self) -> str:
         """Start the process, initialize ACP, and create one session."""
         if self._started:

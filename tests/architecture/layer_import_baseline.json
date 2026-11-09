@@ -21,11 +21,6 @@
       "reason": "forge service resolves the checkout adapter"
     },
     {
-      "source": "lazyplan.services.hooks",
-      "target": "lazyplan.infrastructure.repo",
-      "reason": "hook adapter locates the existing database"
-    },
-    {
       "source": "lazyplan.services.plan_document",
       "target": "lazyplan.infrastructure.templates",
       "reason": "plan documents read repo creation templates"

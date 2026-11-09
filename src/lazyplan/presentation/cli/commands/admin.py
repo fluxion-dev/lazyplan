@@ -130,10 +130,13 @@ def _cmd_hook(store: object | None, args: argparse.Namespace, actor: str) -> int
     from lazyplan.infrastructure import hook_hosts
     from lazyplan.services import hooks
 
+    from ..store import optional_store
+
     del store, actor
+    db = optional_store(args)
     payload = hooks.read_payload(sys.stdin)
     host = hooks.detect_host(payload, args.host)
-    result = hooks.run(args.event, payload, host, Path.cwd())
+    result = hooks.run(args.event, payload, host, Path.cwd(), store=db)
     if args.json:
         _emit(
             args,

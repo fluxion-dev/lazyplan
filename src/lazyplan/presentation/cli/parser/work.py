@@ -6,6 +6,7 @@ import argparse
 
 from ....core.entities import Status
 from ....core.kinds import KINDS
+from .registry_groups import group_blurb
 
 
 def add_list(
@@ -234,7 +235,7 @@ def add_noun_groups(
     def _noun_group(
         noun: str, blurb: str
     ) -> tuple[argparse.ArgumentParser, argparse._SubParsersAction]:
-        group = sub.add_parser(noun, help=blurb, parents=[common])
+        group = sub.add_parser(noun, help=blurb or group_blurb(noun), parents=[common])
         group.set_defaults(noun_group=noun, tree=False, plan=None, milestone=None)
         actions = group.add_subparsers(
             dest="action",
@@ -272,7 +273,7 @@ def add_noun_groups(
         parser.add_argument("--repo", default=None, metavar="PATH", help="filter by linked repo")
         parser.add_argument("--tree", action="store_true", help="show the full tree")
 
-    _group, _actions = _noun_group("plan", "add, edit, show, list, move, or delete a plan")
+    _group, _actions = _noun_group("plan", "")
     _a = _actions.add_parser("add", help="add a plan", parents=[common])
     _title_flags(_a)
     _a.add_argument("--what", default="", metavar="TEXT", help="what you will build")
@@ -350,9 +351,7 @@ def add_noun_groups(
         help="exit 1 when drift exists and 0 when in sync",
     )
 
-    _group, _actions = _noun_group(
-        "milestone", "add, edit, show, list, move, or delete a milestone"
-    )
+    _group, _actions = _noun_group("milestone", "")
     _a = _actions.add_parser("add", help="add a milestone", parents=[common])
     _a.add_argument("--plan", type=int, required=True, metavar="ID", help="owning plan id")
     _title_flags(_a, required=True)
@@ -376,7 +375,7 @@ def add_noun_groups(
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="milestone id")
     _reason_flag(_a)
 
-    _group, _actions = _noun_group("task", "add, edit, show, list, move, or delete a task")
+    _group, _actions = _noun_group("task", "")
     _a = _actions.add_parser("add", help="add a task", parents=[common])
     _a.add_argument(
         "--milestone", type=int, required=True, metavar="ID", help="owning milestone id"
@@ -473,9 +472,7 @@ def add_noun_groups(
     )
     _a.add_argument("--milestone", type=int, default=0, metavar="ID", help="task placement")
     _a.add_argument("--dry-run", action="store_true", help="report without writing")
-    _group, _actions = _noun_group(
-        "criterion", "add, list, edit, or delete an acceptance criterion"
-    )
+    _group, _actions = _noun_group("criterion", "")
     _a = _actions.add_parser("add", help="add a criterion", parents=[common])
     _a.add_argument("--kind", choices=list(KINDS), required=True, help="parent kind")
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="parent id")

@@ -7,7 +7,6 @@ from ..core.errors import ClaimConflict, TouchpointOverlap
 from ..core.policies.coordination import parse_ttl, patterns_overlap, validate_block
 from ..core.ports.coordination import CoordinationPort
 from ..core.serialization import to_payload
-from ..infrastructure.repo_paths import normalize_repo_path
 from .planning import set_status
 
 
@@ -17,7 +16,7 @@ def overlaps(port: CoordinationPort, task_id: int) -> list[dict]:
     if not patterns:
         return []
     roots = {
-        normalize_repo_path(str(repo["repo_path"]))
+        port.normalize_repo_path(str(repo["repo_path"]))
         for repo in port.effective_repos("task", task_id)
     }
     found: list[dict] = []
@@ -25,7 +24,7 @@ def overlaps(port: CoordinationPort, task_id: int) -> list[dict]:
         other_task = int(claim["task_id"])
         if other_task == task_id:
             continue
-        claim_repo = normalize_repo_path(str(claim.get("repo_path") or ""))
+        claim_repo = port.normalize_repo_path(str(claim.get("repo_path") or ""))
         if claim_repo and roots and claim_repo not in roots:
             continue
         other = port.list_touchpoints(other_task)

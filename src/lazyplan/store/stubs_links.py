@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import sqlite3
-from pathlib import Path
 
 from ..core.entities import ForgeLink, Milestone, Plan, Status, Task, VcsLink
 
@@ -119,10 +118,6 @@ class StoreStubsLinks:
         raise NotImplementedError
 
     def effective_links(self, parent_kind: str, parent_id: int) -> list[VcsLink]:
-        raise NotImplementedError
-
-    @staticmethod
-    def _norm_repo_path(path: str | Path) -> str:
         raise NotImplementedError
 
     def add_repo_link(

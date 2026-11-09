@@ -20,7 +20,9 @@ class TestLaterHorizon(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.repo = Path(self.tmp.name) / "repo"
         self.repo.mkdir()
-        self.checkout = mock.patch("lazyplan.store.sessions.checkout_path", return_value=self.repo)
+        self.checkout = mock.patch(
+            "lazyplan.infrastructure.checkout.checkout_path", return_value=self.repo
+        )
         self.checkout.start()
         self.store = Store(os.path.join(self.tmp.name, "later.db"))
         self.plan = self.store.add_plan("Later", "what", goal="why", actor="ana")

@@ -7,20 +7,8 @@ import json
 import os
 from pathlib import Path
 
-from ..infrastructure.repo import find_repo_root
-
 SESSION_ENV = "LAZYPLAN_SESSION"
 SESSION_DIR = "sessions"
-
-
-def checkout_path(cwd: str | Path | None = None) -> Path:
-    """Repo root for *cwd*, else the resolved working directory."""
-    base = Path.cwd() if cwd is None else Path(cwd)
-    root = find_repo_root(base)
-    try:
-        return Path(root).resolve() if root is not None else base.resolve()
-    except OSError:
-        return base.absolute()
 
 
 def _key(actor: str, repo_path: str) -> str:

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import unittest
 
-from lazyplan.services import environment
+from lazyplan.infrastructure import environment
 
 
 class TestEnvironmentFacade(unittest.TestCase):

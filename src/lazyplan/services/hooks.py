@@ -15,10 +15,9 @@ from typing import TextIO, cast
 
 from ..core.entities import HookResult, Session
 from ..core.policies.sessions import IDLE_AFTER_SECS, phase_for_event
+from ..core.ports.app import AppPort
 from ..core.ports.insights import InsightsPort
 from ..infrastructure.repo import resolve_db_path
-from ..store import Store
-from ..store.session_pointer import checkout_path
 from . import audit, brief, context
 from . import sessions as session_services
 
@@ -58,8 +57,10 @@ def detect_host(payload: dict, explicit: str = "") -> str:
     return "opencode"
 
 
-def _open_db() -> Store | None:
+def _open_db() -> AppPort | None:
     """Existing database only; a hook never creates one."""
+    from ..store import Store
+
     path = Path(resolve_db_path()).expanduser()
     if not path.is_file():
         return None
@@ -111,10 +112,10 @@ def _doing_plan(store: InsightsPort) -> int | None:
     return plans.pop() if len(plans) == 1 else None
 
 
-def _track_session(store: Store, event: str, host: str, cwd: Path) -> Session | None:
+def _track_session(store: AppPort, event: str, host: str, cwd: Path) -> Session | None:
     """Keep the checkout's session heartbeat and phase in step with the host."""
     now = time.time()
-    repo = str(checkout_path(cwd))
+    repo = store.checkout_path(str(cwd))
     if event in ("session-start", "prompt-submit", "stop"):
         session_services.reap_idle_sessions(
             store, now=now, idle_after=IDLE_AFTER_SECS, repo_path=repo

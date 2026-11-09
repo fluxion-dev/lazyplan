@@ -17,15 +17,15 @@ try:
 except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
-from ....infrastructure.update_apply import build_apply_plan, spawn_windows_apply
-from ....infrastructure.update_stage import StagedUpdate
-from ....services.environment import (
+from ....infrastructure.environment import (
     InstallInfo,
     UpgradeError,
     guard_message,
     parse_version,
     stage_update,
 )
+from ....infrastructure.update_apply import build_apply_plan, spawn_windows_apply
+from ....infrastructure.update_stage import StagedUpdate
 from ...shared.design import escape_markup
 from ..navigation import NAV_BINDINGS, NavigationMixin
 

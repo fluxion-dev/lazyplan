@@ -21,7 +21,9 @@ class TestSessionsStore(unittest.TestCase):
         self.db = os.path.join(self.tmp.name, "t.db")
         self.repo = Path(self.tmp.name) / "repo"
         self.repo.mkdir()
-        self.checkout = mock.patch("lazyplan.store.sessions.checkout_path", return_value=self.repo)
+        self.checkout = mock.patch(
+            "lazyplan.infrastructure.checkout.checkout_path", return_value=self.repo
+        )
         self.checkout.start()
         self.store = Store(self.db)
         self.plan = self.store.add_plan("Plan", actor="ana")
@@ -112,7 +114,7 @@ class TestSessionsStore(unittest.TestCase):
         other = Path(self.tmp.name) / "other"
         other.mkdir()
         with (
-            mock.patch("lazyplan.store.sessions.checkout_path", return_value=other),
+            mock.patch("lazyplan.infrastructure.checkout.checkout_path", return_value=other),
             mock.patch.dict(os.environ, {"LAZYPLAN_SESSION": f"S{session.id}"}),
         ):
             self.store.add_task(self.milestone.id, "Env write", actor="ana")
@@ -130,7 +132,7 @@ class TestSessionsStore(unittest.TestCase):
         first, _ = self.store.start_session("ana", now=100.0)
         other = Path(self.tmp.name) / "other"
         other.mkdir()
-        with mock.patch("lazyplan.store.sessions.checkout_path", return_value=other):
+        with mock.patch("lazyplan.infrastructure.checkout.checkout_path", return_value=other):
             second, _ = self.store.start_session("ana", now=200.0)
         self.assertNotEqual(first.id, second.id)
         self.assertEqual(self.store.list_sessions(actor="ana", open_only=True), [second, first])

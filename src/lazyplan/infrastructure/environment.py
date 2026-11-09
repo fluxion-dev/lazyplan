@@ -1,15 +1,15 @@
-"""Environment use cases: upgrade detection and staged updates."""
+"""Upgrade detection and staged-update environment helpers."""
 
 from __future__ import annotations
 
-from ..infrastructure.update_stage import (
+from .update_stage import (
     apply_on_launch,
     clear_failure,
     read_failure,
     recover_stale_apply,
     stage_update,
 )
-from ..infrastructure.upgrade import (
+from .upgrade import (
     UPDATE_CACHE_TTL,
     InstallInfo,
     UpgradeError,

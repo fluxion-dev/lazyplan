@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import sys
 
-from ...services.environment import apply_on_launch, clear_failure, read_failure
+from ...infrastructure.environment import apply_on_launch, clear_failure, read_failure
 from ..cli.parser import package_version
 
 

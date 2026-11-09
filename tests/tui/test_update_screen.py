@@ -12,7 +12,7 @@ from lazyplan.infrastructure import update_stage
 from lazyplan.infrastructure.upgrade import PIPX, RPM, SOURCE, InstallInfo
 from lazyplan.store import Store
 from tests.support.home import sandbox_home
-from tests.support.pilot import wait_for
+from tests.support.pilot import settle, wait_for
 
 try:
     tui_mod = importlib.import_module("lazyplan.presentation.tui.app")
@@ -179,10 +179,15 @@ class TestUpdateScreen(unittest.IsolatedAsyncioTestCase):
 
     async def test_u_opens_the_screen(self):
         async with self.app.run_test() as pilot:
+            await settle(pilot)
             self.app._update_latest = "9.9.9"
             self.app._update_info = InstallInfo(PIPX, True)
             await pilot.press("U")
-            await wait_for(pilot, lambda: self.app.screen.__class__.__name__ == "UpdateScreen")
+            await wait_for(
+                pilot,
+                lambda: self.app.screen.__class__.__name__ == "UpdateScreen",
+                timeout=5.0,
+            )
             self.assertEqual(self.app.screen.__class__.__name__, "UpdateScreen")
 
     async def test_source_guard_is_used(self):

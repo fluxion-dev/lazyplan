@@ -83,6 +83,19 @@ class TestAcpClient(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result["stopReason"], "end_turn")
 
+    async def test_permission_reject_unblocks_the_prompt(self) -> None:
+        async with client("permission") as acp:
+            await acp.initialize()
+            session_id = await acp.new_session()
+            prompting = asyncio.create_task(acp.prompt(session_id, "write"))
+            seen = await take(acp, lambda event: event.kind == "permission")
+            permission = seen[-1].permission
+            assert permission is not None
+            await acp.reply_permission(permission.request_id, None)
+            result = await asyncio.wait_for(prompting, 5.0)
+
+        self.assertEqual(result["stopReason"], "end_turn")
+
     async def test_cancel_stops_the_active_prompt(self) -> None:
         async with client("cancel") as acp:
             await acp.initialize()
@@ -102,6 +115,8 @@ class TestAcpClient(unittest.IsolatedAsyncioTestCase):
             session_id = await acp.new_session()
             with self.assertRaises(AcpError):
                 await acp.prompt(session_id, "work", timeout=5.0)
+            exit_events = await take(acp, lambda event: event.kind == "exit")
+            self.assertEqual(exit_events[-1].payload["returncode"], 3)
         finally:
             await acp.close()
 

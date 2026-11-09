@@ -163,6 +163,36 @@ def main() -> int:
                 continue
             text("hello from fake")
             tool_call()
+            update(
+                {
+                    "sessionUpdate": "tool_call_update",
+                    "toolCallId": "call_1",
+                    "status": "completed",
+                    "content": [
+                        {
+                            "type": "content",
+                            "content": {"type": "text", "text": "read complete"},
+                        }
+                    ],
+                }
+            )
+            update(
+                {
+                    "sessionUpdate": "plan",
+                    "entries": [
+                        {"content": "Read the file", "priority": "high", "status": "completed"},
+                        {"content": "Write the change", "priority": "medium", "status": "pending"},
+                    ],
+                }
+            )
+            update(
+                {
+                    "sessionUpdate": "usage_update",
+                    "used": 10,
+                    "size": 100,
+                    "cost": {"amount": 0.001, "currency": "USD"},
+                }
+            )
             prompt_result(request_id)
             pending_prompt = None
         elif method == "session/cancel":

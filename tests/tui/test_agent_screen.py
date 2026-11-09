@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from lazyplan.infrastructure.agents import AgentProfile
+from lazyplan.infrastructure.agents import AgentEvent, AgentProfile
 from lazyplan.presentation.shared import registry
 from lazyplan.presentation.tui import create_app
 from lazyplan.presentation.tui.screens.agent import AgentScreen
@@ -52,9 +52,24 @@ class TestAgentScreen(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             screen.query_one("#agent-prompt").text = "hello"
             await screen.action_send()
-            await wait_for(lambda: "hello from fake" in screen._markdown)
-            self.assertIn("hello from fake", screen._markdown)
-            self.assertIn("Read a file", screen._markdown)
+            await wait_for(lambda: "hello from fake" in screen.transcript)
+            self.assertIn("hello from fake", screen.transcript)
+            self.assertEqual(screen.transcript.count("Read a file"), 1)
+            self.assertIn("read complete", screen.transcript)
+            self.assertIn("Write the change", screen.transcript)
+            self.assertIn("10/100 tokens", str(screen.query_one("#agent-status").render()))
+            await screen.action_close()
+
+    async def test_unknown_update_renders_a_generic_line(self) -> None:
+        app = create_app(self.db)
+        async with app.run_test() as pilot:
+            screen = AgentScreen(profile(), ROOT)
+            app.push_screen(screen)
+            await pilot.pause()
+            await screen._apply_event(
+                AgentEvent(kind="unknown", payload={"sessionUpdate": "future_update"})
+            )
+            self.assertIn("unknown agent update: future_update", screen.transcript)
             await screen.action_close()
 
     async def test_w_opens_the_workbench(self) -> None:

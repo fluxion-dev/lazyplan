@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from textual.widgets import Button
+from textual.widgets import Button, Input, TextArea
 
 from lazyplan.infrastructure.agents import AgentEvent, AgentProfile, ToolCall
 from lazyplan.presentation.shared import registry
@@ -151,6 +151,31 @@ class TestAgentScreen(unittest.IsolatedAsyncioTestCase):
             self.assertIsNotNone(runs[0]["lazyplan_session_id"])
             head = str(screen.query_one("#agent-head").render())
             self.assertIn(f"T{task.id} T", head)
+            await screen.action_close()
+
+    async def test_finish_records_the_summary_and_handoff(self) -> None:
+        store = Store(self.db)
+        plan = store.list_plans()[0]
+        milestone = store.add_milestone(plan.id, "M", actor="fixture")
+        task = store.add_task(milestone.id, "T", "Commit: one.", actor="fixture")
+        app = create_app(self.db)
+        async with app.run_test() as pilot:
+            screen = AgentScreen(profile(), ROOT, store=store, task_id=task.id, prompt="work")
+            app.push_screen(screen)
+            await pilot.pause()
+            await screen.action_send()
+            await wait_for(lambda: "hello from fake" in screen.transcript)
+            screen.query_one("#agent-finish", Button).press()
+            await wait_for(lambda: app.screen.__class__.__name__ == "AgentFinishScreen")
+            await pilot.pause()
+            app.screen.query_one("#finish-summary", TextArea).text = "did the work"
+            app.screen.query_one("#finish-handoff", Input).value = "next: T2"
+            app.screen.query_one("#finish-apply", Button).press()
+            await wait_for(lambda: store.list_agent_runs() == [])
+            run = store.list_agent_runs(status="all")[0]
+            self.assertEqual(run["status"], "done")
+            self.assertEqual(run["summary"], "did the work")
+            self.assertEqual(run["handoff"], "next: T2")
             await screen.action_close()
 
     async def test_status_strip_tracks_the_run(self) -> None:

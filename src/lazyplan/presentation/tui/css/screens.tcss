@@ -386,3 +386,22 @@ ModalScreen {
     height: auto;
     margin-top: 1;
 }
+
+#agent-finish {
+    width: 80%;
+    max-width: 72;
+    height: auto;
+    border: round $lp-border-focus;
+    border-title-color: $lp-accent;
+    background: $lp-modal-bg;
+    padding: 1 2;
+}
+
+#finish-summary {
+    height: 4;
+    border: tall $lp-border;
+}
+
+#finish-handoff {
+    border: tall $lp-border;
+}

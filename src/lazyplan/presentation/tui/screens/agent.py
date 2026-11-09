@@ -21,6 +21,7 @@ from ....infrastructure.agents import AgentEvent, AgentProfile, PermissionReques
 from ....store import Store, default_actor
 from ..controllers.agent import AgentController
 from ..views.agent import AgentTranscript
+from .agent_finish import AgentFinishScreen
 from .agent_permission import AgentPermissionScreen
 from .agent_proposals import ProposalReviewScreen
 
@@ -38,6 +39,7 @@ if _TEXTUAL_OK:
             Binding("ctrl+s", "send", "Send", priority=True),
             Binding("ctrl+x", "cancel", "Stop", priority=True),
             Binding("ctrl+p", "open_proposals", "Proposals", priority=True),
+            Binding("ctrl+f", "finish", "Finish", priority=True),
         ]
 
         navigation_name = "agent"
@@ -85,6 +87,7 @@ if _TEXTUAL_OK:
                     yield Button("Send", id="agent-send", variant="primary")
                     yield Button("Stop", id="agent-stop")
                     yield Button("Proposals", id="agent-proposals")
+                    yield Button("Finish", id="agent-finish")
                     yield Button("Close", id="agent-close")
 
         def on_mount(self) -> None:
@@ -267,6 +270,38 @@ if _TEXTUAL_OK:
             self._permission_open = False
             await self._controller.reply_permission(permission.request_id, None)
 
+        def action_finish(self) -> None:
+            if self._store is None or self._agent_run_id is None:
+                self.notify("no active work run to finish")
+                return
+            self.app.push_screen(AgentFinishScreen(), self._finish_run)
+
+        def _finish_run(self, result: tuple[str, str] | None) -> None:
+            if result is None or self._store is None or self._agent_run_id is None:
+                return
+            summary, handoff = result
+            from ....services.agent_work import finish_work
+
+            try:
+                finish_work(
+                    self._store,
+                    self._agent_run_id,
+                    actor=default_actor(),
+                    summary=summary,
+                    handoff=handoff,
+                )
+            except (KeyError, ValueError) as exc:
+                self.notify(f"error: {exc}")
+                return
+            self._transcript.add_notice("work session finished")
+            self._agent_run_id = None
+            self._work = None
+            self._update_head()
+            self._render_transcript()
+            refresh = getattr(self.app, "refresh_all", None)
+            if callable(refresh):
+                refresh("agent run finished")
+
         def action_open_proposals(self) -> None:
             if self._store is None:
                 self.notify("no database for proposals")
@@ -294,5 +329,7 @@ if _TEXTUAL_OK:
                 await self.action_cancel()
             elif event.button.id == "agent-proposals":
                 self.action_open_proposals()
+            elif event.button.id == "agent-finish":
+                self.action_finish()
             elif event.button.id == "agent-close":
                 await self.action_close()

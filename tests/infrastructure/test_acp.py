@@ -9,7 +9,12 @@ import unittest
 from collections.abc import Callable
 from pathlib import Path
 
-from lazyplan.infrastructure.agents import AcpClient, AcpError, AgentEvent
+from lazyplan.infrastructure.agents import (
+    AcpClient,
+    AcpError,
+    AgentEvent,
+    map_session_update,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 FAKE = ROOT / "tests" / "support" / "fake_acp.py"
@@ -114,6 +119,36 @@ class TestAcpClient(unittest.IsolatedAsyncioTestCase):
         await acp.close()
         await acp.close()
         self.assertFalse(acp.running)
+
+
+class TestEventMapping(unittest.TestCase):
+    def test_unknown_update_maps_to_a_generic_event(self) -> None:
+        event = map_session_update("sess_test", {"sessionUpdate": "future_update"})
+        self.assertEqual(event.kind, "unknown")
+        self.assertEqual(event.session_id, "sess_test")
+
+    def test_tool_update_patches_the_existing_call(self) -> None:
+        first = map_session_update(
+            "sess_test",
+            {
+                "sessionUpdate": "tool_call",
+                "toolCallId": "call_1",
+                "title": "Read a file",
+                "status": "pending",
+            },
+        )
+        assert first.tool is not None
+        second = map_session_update(
+            "sess_test",
+            {
+                "sessionUpdate": "tool_call_update",
+                "toolCallId": "call_1",
+                "status": "completed",
+            },
+        )
+        assert second.tool is not None
+        self.assertEqual(first.tool.merged(second.payload).status, "completed")
+        self.assertEqual(first.tool.merged(second.payload).title, "Read a file")
 
 
 if __name__ == "__main__":

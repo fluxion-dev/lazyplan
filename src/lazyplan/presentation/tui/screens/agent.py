@@ -280,8 +280,25 @@ if _TEXTUAL_OK:
             if result is None or self._store is None or self._agent_run_id is None:
                 return
             summary, handoff = result
+            from .... import services
             from ....services.agent_work import finish_work
 
+            if self._task_id is not None:
+                try:
+                    services.finish_task(
+                        self._store,
+                        self._task_id,
+                        actor=default_actor(),
+                        require_pr=True,
+                        require_checks=True,
+                        require_evidence=True,
+                    )
+                except services.GateError as exc:
+                    self.notify(f"finish blocked: {exc}", severity="error", timeout=6)
+                    return
+                except (ValueError, KeyError) as exc:
+                    self.notify(f"finish blocked: {exc}", severity="error", timeout=6)
+                    return
             try:
                 finish_work(
                     self._store,

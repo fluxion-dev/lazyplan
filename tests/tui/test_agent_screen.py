@@ -7,9 +7,11 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from textual.widgets import Button, Input, TextArea
 
+from lazyplan import services
 from lazyplan.infrastructure.agents import AgentEvent, AgentProfile, ToolCall
 from lazyplan.presentation.shared import registry
 from lazyplan.presentation.tui import create_app
@@ -170,12 +172,38 @@ class TestAgentScreen(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             app.screen.query_one("#finish-summary", TextArea).text = "did the work"
             app.screen.query_one("#finish-handoff", Input).value = "next: T2"
-            app.screen.query_one("#finish-apply", Button).press()
-            await wait_for(lambda: store.list_agent_runs() == [])
+            with mock.patch("lazyplan.services.finish_task", return_value={"done": True}):
+                app.screen.query_one("#finish-apply", Button).press()
+                await wait_for(lambda: store.list_agent_runs() == [])
             run = store.list_agent_runs(status="all")[0]
             self.assertEqual(run["status"], "done")
             self.assertEqual(run["summary"], "did the work")
             self.assertEqual(run["handoff"], "next: T2")
+            await screen.action_close()
+
+    async def test_failed_finish_gate_leaves_the_run_open(self) -> None:
+        store = Store(self.db)
+        plan = store.list_plans()[0]
+        milestone = store.add_milestone(plan.id, "M", actor="fixture")
+        task = store.add_task(milestone.id, "T", "Commit: one.", actor="fixture")
+        app = create_app(self.db)
+        async with app.run_test() as pilot:
+            screen = AgentScreen(profile(), ROOT, store=store, task_id=task.id, prompt="work")
+            app.push_screen(screen)
+            await pilot.pause()
+            await screen.action_send()
+            await wait_for(lambda: "hello from fake" in screen.transcript)
+            screen.query_one("#agent-finish", Button).press()
+            await wait_for(lambda: app.screen.__class__.__name__ == "AgentFinishScreen")
+            await pilot.pause()
+            with mock.patch(
+                "lazyplan.services.finish_task",
+                side_effect=services.GateError("PR is missing"),
+            ):
+                app.screen.query_one("#finish-apply", Button).press()
+                await wait_for(lambda: len(store.list_agent_runs()) == 1)
+            self.assertEqual(store.get_task(task.id).status.value, "doing")
+            self.assertEqual(store.list_agent_runs()[0]["status"], "running")
             await screen.action_close()
 
     async def test_status_strip_tracks_the_run(self) -> None:

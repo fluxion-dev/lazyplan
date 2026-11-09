@@ -31,6 +31,7 @@ from .comment import (
     _cmd_comment,
     _cmd_note,
 )
+from .doctor import _cmd_doctor
 from .forge import (
     _cmd_pr_auth,
     _cmd_pr_link,
@@ -99,6 +100,7 @@ from .session import (
     _cmd_session_show,
     _cmd_session_start,
 )
+from .setup import _cmd_setup as _cmd_setup
 from .system import (
     _cmd_audit as _cmd_audit,
 )
@@ -109,16 +111,12 @@ from .system import (
     _cmd_context as _cmd_context,
 )
 from .system import (
-    _cmd_doctor,
     _cmd_lint,
     _cmd_stats,
     _cmd_trace,
 )
 from .system import (
     _cmd_review as _cmd_review,
-)
-from .system import (
-    _cmd_setup as _cmd_setup,
 )
 from .system import (
     _cmd_ship as _cmd_ship,

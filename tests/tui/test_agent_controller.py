@@ -10,6 +10,7 @@ from pathlib import Path
 
 from lazyplan.infrastructure.agents import AgentEvent, AgentProfile
 from lazyplan.presentation.tui.controllers.agent import AgentController
+from lazyplan.services.agents import lazyplan_mcp_server
 
 ROOT = Path(__file__).resolve().parents[2]
 FAKE = ROOT / "tests" / "support" / "fake_acp.py"
@@ -30,6 +31,15 @@ async def wait_for(predicate) -> None:
             return
         await asyncio.sleep(0.01)
     raise AssertionError("condition not met")
+
+
+class TestMcpConfig(unittest.TestCase):
+    def test_server_command_uses_the_same_database(self) -> None:
+        server = lazyplan_mcp_server("/tmp/agent.db")
+        self.assertEqual(server["name"], "lazyplan")
+        self.assertEqual(server["args"][:3], ["-m", "lazyplan", "--db"])
+        self.assertIn("/tmp/agent.db", server["args"])
+        self.assertEqual(server["args"][-1], "mcp")
 
 
 class TestAgentController(unittest.IsolatedAsyncioTestCase):
@@ -89,6 +99,21 @@ class TestAgentController(unittest.IsolatedAsyncioTestCase):
             await controller.prompt("two")
         await controller.cancel()
         await asyncio.wait_for(first, 5.0)
+        await controller.close()
+
+    async def test_mcp_server_is_forwarded(self) -> None:
+        controller = AgentController(
+            profile("mcp"),
+            ROOT,
+            on_event=self.events.append,
+            on_status=lambda status, detail: self.statuses.append((status, detail)),
+            mcp_servers=(lazyplan_mcp_server("/tmp/agent.db"),),
+        )
+        await controller.start()
+        await controller.prompt("hello")
+        await wait_for(lambda: any(event.text.startswith("mcp:") for event in self.events))
+        text = next(event.text for event in self.events if event.text.startswith("mcp:"))
+        self.assertEqual(text, "mcp:lazyplan")
         await controller.close()
 
     async def test_missing_command_reports_error(self) -> None:

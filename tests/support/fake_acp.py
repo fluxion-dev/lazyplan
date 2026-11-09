@@ -20,6 +20,7 @@ SCENARIO = os.environ.get("FAKE_ACP_SCENARIO", "text")
 CRLF = bool(os.environ.get("FAKE_ACP_CRLF"))
 SESSION = "sess_test"
 PERMISSION_ID = 900
+MCP_NAMES: list[str] = []
 
 
 def send(payload: dict[str, Any]) -> None:
@@ -116,6 +117,12 @@ def main() -> int:
                 },
             )
         elif method == "session/new":
+            names = []
+            servers = message.get("params", {}).get("mcpServers", [])
+            if isinstance(servers, list):
+                names = [str(row.get("name") or "") for row in servers if isinstance(row, dict)]
+            global MCP_NAMES
+            MCP_NAMES = names
             result(request_id, {"sessionId": SESSION})
         elif method == "session/load":
             text("loaded")
@@ -128,6 +135,11 @@ def main() -> int:
                 return 3
             if SCENARIO == "cancel":
                 text("working")
+                continue
+            if SCENARIO == "mcp":
+                text("mcp:" + ",".join(MCP_NAMES))
+                prompt_result(request_id)
+                pending_prompt = None
                 continue
             if SCENARIO == "permission":
                 tool_call()

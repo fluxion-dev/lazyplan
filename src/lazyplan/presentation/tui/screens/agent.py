@@ -45,11 +45,13 @@ if _TEXTUAL_OK:
             cwd: str | Path,
             *,
             title: str = "",
+            mcp_servers: tuple[dict[str, object], ...] = (),
         ) -> None:
             super().__init__()
             self.profile = profile
             self.cwd = Path(cwd).expanduser().resolve()
             self._title = title or profile.title
+            self._mcp_servers = mcp_servers
             self._controller: AgentController | None = None
             self._queue: asyncio.Queue[tuple[str, object]] = asyncio.Queue()
             self._consumer: asyncio.Task[None] | None = None
@@ -78,6 +80,7 @@ if _TEXTUAL_OK:
                 self.cwd,
                 on_event=self._enqueue_event,
                 on_status=self._enqueue_status,
+                mcp_servers=self._mcp_servers,
             )
             self._consumer = asyncio.create_task(self._consume())
             self.query_one("#agent-head", Static).update(

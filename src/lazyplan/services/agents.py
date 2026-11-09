@@ -3,11 +3,29 @@
 from __future__ import annotations
 
 import os
+import sys
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
 from ..infrastructure.agents import AcpClient, AgentProfile
+
+
+def lazyplan_mcp_server(
+    db_path: str | Path,
+    *,
+    read_only: bool = False,
+) -> dict[str, Any]:
+    """The stdio MCP server config passed to an ACP session."""
+    args = [sys.executable, "-m", "lazyplan", "--db", str(Path(db_path)), "mcp"]
+    if read_only:
+        args.append("--read-only")
+    return {
+        "name": "lazyplan",
+        "command": args[0],
+        "args": args[1:],
+        "env": [],
+    }
 
 
 class AgentRuntime:

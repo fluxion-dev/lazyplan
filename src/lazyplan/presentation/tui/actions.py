@@ -215,6 +215,7 @@ if _TEXTUAL_OK:
             """Open the ACP workbench for the default agent in this checkout."""
             from ...infrastructure.agents import load_catalog
             from ...infrastructure.repo import find_repo_root
+            from ...services.agents import lazyplan_mcp_server
             from .screens.agent import AgentScreen
 
             try:
@@ -227,7 +228,13 @@ if _TEXTUAL_OK:
                 profiles[0],
             )
             cwd = find_repo_root(Path.cwd()) or Path.cwd()
-            self.push_screen(AgentScreen(profile, cwd))
+            self.push_screen(
+                AgentScreen(
+                    profile,
+                    cwd,
+                    mcp_servers=(lazyplan_mcp_server(self.store.path),),
+                )
+            )
 
         def action_add_criterion(self) -> None:
             """Prompt for a new criterion on the selected row."""

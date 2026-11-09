@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import argparse
 
-from ....store import default_actor
+from ....infrastructure.settings import default_actor
 from .common import _PARSER_DESCRIPTION, _PARSER_EPILOG
 from .coordination import (
     add_audit,

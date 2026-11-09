@@ -1,14 +1,28 @@
 {
   "modules": [
-    "lazyplan.presentation.cli.commands",
-    "lazyplan.presentation.cli.commands.ui",
-    "lazyplan.presentation.cli.main",
-    "lazyplan.presentation.cli.parser.builder",
-    "lazyplan.presentation.cli.store",
-    "lazyplan.presentation.mcp.server",
-    "lazyplan.presentation.setup.apply",
-    "lazyplan.presentation.tui.app",
-    "lazyplan.presentation.tui.base",
-    "lazyplan.services.hooks"
+    {
+      "module": "lazyplan.presentation.cli.main",
+      "reason": "CLI composition root opens the store"
+    },
+    {
+      "module": "lazyplan.presentation.cli.store",
+      "reason": "shared CLI store factory"
+    },
+    {
+      "module": "lazyplan.presentation.mcp.server",
+      "reason": "MCP composition root opens the store"
+    },
+    {
+      "module": "lazyplan.presentation.setup.apply",
+      "reason": "setup creates the initial database"
+    },
+    {
+      "module": "lazyplan.presentation.tui.app",
+      "reason": "TUI composition root opens the store"
+    },
+    {
+      "module": "lazyplan.services.hooks",
+      "reason": "temporary: lifecycle hooks own session tracking until M485"
+    }
   ]
 }

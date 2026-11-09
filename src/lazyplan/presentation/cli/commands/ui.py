@@ -9,7 +9,7 @@ from lazyplan import (
     services,
 )
 
-from ....store import Store
+from ....core.ports.insights import InsightsPort
 from ...shared.design import (
     EMPTY_NO_PLANS,
 )
@@ -32,7 +32,7 @@ def _interactive_terminal() -> bool:
         return False
 
 
-def _plain_overview(store: Store, args: argparse.Namespace) -> int:
+def _plain_overview(store: InsightsPort, args: argparse.Namespace) -> int:
     """Non-TTY fallback: a readable summary instead of full-screen ANSI."""
     if getattr(args, "json", False):
         return _emit(
@@ -55,7 +55,7 @@ def _plain_overview(store: Store, args: argparse.Namespace) -> int:
     return 0
 
 
-def _cmd_ui(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_ui(store: InsightsPort, args: argparse.Namespace, actor: str) -> int:
     del actor
     if not _interactive_terminal():
         return _plain_overview(store, args)

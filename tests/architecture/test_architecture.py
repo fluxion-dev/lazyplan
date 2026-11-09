@@ -234,10 +234,18 @@ def store_import_violations(graph: dict[str, set[str]]) -> list[str]:
     return found
 
 
+def store_import_baseline() -> dict[str, str]:
+    """Return each allowlisted Store importer and the reason it exists."""
+    data = json.loads(STORE_IMPORT_BASELINE.read_text(encoding="utf-8"))
+    entries = data["modules"]
+    if entries and isinstance(entries[0], str):
+        return {module: "" for module in entries}
+    return {str(entry["module"]): str(entry["reason"]) for entry in entries}
+
+
 def store_import_allowlist() -> set[str]:
     """Return the recorded Store-import exceptions."""
-    data = json.loads(STORE_IMPORT_BASELINE.read_text(encoding="utf-8"))
-    return set(data["modules"])
+    return set(store_import_baseline())
 
 
 class ArchitectureTest(unittest.TestCase):
@@ -298,6 +306,21 @@ class ArchitectureTest(unittest.TestCase):
     def test_store_import_allowlist_names_existing_modules(self) -> None:
         stale = sorted(store_import_allowlist() - set(self.graph))
         self.assertEqual(stale, [], f"remove stale Store-import entries: {stale}")
+
+    def test_store_import_allowlist_has_a_reason(self) -> None:
+        missing = sorted(
+            module for module, reason in store_import_baseline().items() if not reason.strip()
+        )
+        self.assertEqual(missing, [], f"name a reason for each Store import: {missing}")
+
+    def test_store_import_violation_is_reported(self) -> None:
+        violations = store_import_violations(
+            {
+                "lazyplan.presentation.cli.commands.new": {"lazyplan.store"},
+                "lazyplan.core.entities": {"lazyplan.store"},
+            }
+        )
+        self.assertEqual(violations, ["lazyplan.presentation.cli.commands.new"])
 
 
 if __name__ == "__main__":

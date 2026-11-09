@@ -17,6 +17,7 @@ from lazyplan.infrastructure.repo import (
     seed_shared_db,
     shared_db_path,
 )
+from lazyplan.infrastructure.settings import default_actor
 
 from ..core.errors import ClaimConflict as ClaimConflict
 from ..core.errors import ClaimError as ClaimError
@@ -48,11 +49,6 @@ def _files_tuple(payload: str) -> tuple[str, ...]:
     if not isinstance(raw, list):
         return ()
     return tuple(str(item) for item in raw if isinstance(item, str) and item)
-
-
-def default_actor() -> str:
-    """$USER on posix, %USERNAME% on Windows, else human."""
-    return (os.environ.get("USER") or os.environ.get("USERNAME") or "human")[:64]
 
 
 def _actor(explicit: str = "") -> str:

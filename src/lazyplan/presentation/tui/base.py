@@ -7,7 +7,7 @@ from typing import Any
 from textual.app import App
 from textual.widgets.tree import TreeNode
 
-from ...store import Store
+from ...core.ports.app import AppPort
 from .controllers.git_state import GitStateController
 from .controllers.metrics import MetricsController
 from .controllers.spinner import SpinnerController
@@ -54,7 +54,7 @@ class TuiHost:
 class AppBase(App, TuiHost):
     """App attributes and cross-mixin declarations."""
 
-    store: Store
+    store: AppPort
     heal: bool
     state: AppState
     tree_controller: TreeController

@@ -396,6 +396,14 @@ window. Manage the catalog with `lpui agent list`, `lpui agent add`, and
 (`%LOCALAPPDATA%\lazyplan\agents.json` on Windows). A second command, such as
 the Claude ACP adapter, can be added without changing lazyplan.
 
+Tool calls that need approval open a permission screen with the request and any
+diff. Choose allow once, always, or reject. Nothing is approved automatically.
+Reads, notes, comments, questions, sessions, and claims are direct; creating or
+editing plans, milestones, tasks, and criteria is staged. Press `ctrl+p` in the
+workbench, or `ctrl+p` on a detail page, to review pending proposals. Applying
+one uses the same plan-apply path as the CLI; rejecting leaves the plan
+unchanged.
+
 Session and touch-point authoring are first-class screen hubs now; plan 135's
 CLI-only stance is superseded for those entities. Import, sync, and setup stay
 CLI-only.

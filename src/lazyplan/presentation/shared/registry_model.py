@@ -25,7 +25,6 @@ ENTITIES: tuple[str, ...] = (
     "pull_request",
     "repo",
     "event",
-    "override",
 )
 
 SURFACES: tuple[str, ...] = ("tui", "cli", "mcp", "docs")

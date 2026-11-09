@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from textual.widgets import Tree
 
 from ..shared import registry
@@ -81,3 +83,28 @@ class ContextMixin(AppBase):
         except Exception:
             return "tree"
         return str(getattr(screen, "navigation_name", "tree"))
+
+    def prompt_reason(
+        self,
+        title: str,
+        placeholder: str,
+        submit: str,
+        callback: Callable[[str], None],
+        empty_message: str = "a reason is required",
+    ) -> None:
+        """Ask for a non-empty reason and hand it to one callback."""
+
+        from .screens import FilterPromptScreen
+
+        def reason_cb(reason: str | None) -> None:
+            if reason is None:
+                return
+            if not reason.strip():
+                self.notify(empty_message, timeout=3)
+                return
+            callback(reason.strip())
+
+        self.push_screen(
+            FilterPromptScreen(title=title, placeholder=placeholder, submit_label=submit),
+            reason_cb,
+        )

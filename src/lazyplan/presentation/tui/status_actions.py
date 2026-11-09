@@ -63,15 +63,20 @@ class StatusMixin(ContextMixin):
         if nxt is None:
             self.notify("selected row no longer exists")
         else:
-            self._record_override("status", f"{kind} #{oid}", reason or nxt.value)
+            self._record_gate_override(kind, oid, reason)
         self._saved(f"{kind} {oid} -> {nxt.value if nxt else '?'}")
 
     def _move_status(self, kind: str, oid: int, status: Status, reason: str = "") -> None:
         if not services.set_status(self.store, kind, oid, status, actor="tui", heal=self.heal):
             self.notify("selected row no longer exists")
             return
-        self._record_override("status", f"{kind} #{oid}", reason or status.value)
+        self._record_gate_override(kind, oid, reason)
         self._saved(f"{kind} {oid} -> {status.value}")
+
+    def _record_gate_override(self, kind: str, oid: int, reason: str) -> None:
+        """Keep a prompted gate reason on the row after the move."""
+        if reason.strip():
+            self.store.add_note(kind, oid, f"Gate override by tui: {reason.strip()}", actor="tui")
 
     def _drift_warning(self) -> str | None:
         """Done-gate warning for the selected plan, when one applies."""

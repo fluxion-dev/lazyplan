@@ -6,7 +6,7 @@ import argparse
 import sys
 
 from .... import services
-from ....store import Store
+from ....core.ports.insights import InsightsPort
 from ...shared import porcelain
 from ...shared.design import msg_error, msg_not_found
 from ..emit import _emit
@@ -45,7 +45,7 @@ def ready_rows(result: services.ReadyResult) -> list[str]:
     ]
 
 
-def _cmd_plan_ready(store: Store | None, args: argparse.Namespace, actor: str) -> int:
+def _cmd_plan_ready(store: InsightsPort | None, args: argparse.Namespace, actor: str) -> int:
     """Read-only plan-ready gate."""
     del actor
     try:

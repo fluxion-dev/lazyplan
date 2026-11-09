@@ -33,7 +33,6 @@ class ApprovalMixin(ContextMixin):
             except (ValueError, KeyError) as exc:
                 self.notify(f"error: {exc}", timeout=5)
                 return
-            self._record_override("approve", f"P{plan_id}", reason.strip())
             state = "approved" if result.created else "already in sync"
             self.notify(f"P{plan_id} {state} at r{result.revision.revision}", timeout=4)
             self._saved("plan approved")

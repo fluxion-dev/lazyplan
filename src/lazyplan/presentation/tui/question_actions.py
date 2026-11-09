@@ -24,7 +24,6 @@ class QuestionMixin(ContextMixin):
             except (ValueError, KeyError) as exc:
                 self.notify(f"error: {exc}", timeout=5)
                 return
-            self._record_override("question add", f"P{plan_id}", text)
             self.notify(f"Q{question.id} added to P{plan_id}", timeout=4)
             self._saved("question added")
 
@@ -56,7 +55,6 @@ class QuestionMixin(ContextMixin):
             except (ValueError, KeyError) as exc:
                 self.notify(f"error: {exc}", timeout=5)
                 return
-            self._record_override("question resolve", f"Q{question_id}")
             self.notify(f"Q{question_id} resolved", timeout=4)
             self._saved("question resolved")
 
@@ -88,7 +86,6 @@ class QuestionMixin(ContextMixin):
             except (ValueError, KeyError) as exc:
                 self.notify(f"error: {exc}", timeout=5)
                 return
-            self._record_override("question reopen", f"Q{question_id}")
             self.notify(f"Q{question_id} reopened", timeout=4)
             self._saved("question reopened")
 

@@ -50,9 +50,19 @@ class TestSessionsStore(unittest.TestCase):
                 for row in conn.execute("SELECT name FROM sqlite_master WHERE type='index'")
             }
             columns = {str(row[1]) for row in conn.execute("PRAGMA table_info(events)").fetchall()}
+            session_columns = {
+                str(row[1]) for row in conn.execute("PRAGMA table_info(sessions)").fetchall()
+            }
         self.assertIn("sessions", tables)
         self.assertIn("session_id", columns)
-        for name in ("idx_sessions_open", "idx_sessions_plan", "idx_events_session"):
+        for name in ("phase", "last_seen_at", "host", "auto_closed"):
+            self.assertIn(name, session_columns)
+        for name in (
+            "idx_sessions_open",
+            "idx_sessions_plan",
+            "idx_sessions_repo",
+            "idx_events_session",
+        ):
             self.assertIn(name, indexes)
 
     def test_start_tags_writes_for_the_same_actor(self) -> None:
@@ -140,6 +150,57 @@ class TestSessionsStore(unittest.TestCase):
         self.store.end_session(session.id, "ana", now=110.0)
         with self.assertRaises(ValueError):
             self.store.end_session(session.id, "ana", now=120.0)
+
+    def test_touch_updates_phase_and_heartbeat(self) -> None:
+        session, _ = self.store.start_session("ana", now=100.0)
+        touched = self.store.touch_session(session.id, phase="awaiting", host="claude", now=200.0)
+        assert touched is not None
+        self.assertTrue(touched.awaiting)
+        self.assertEqual(touched.last_seen_at, 200.0)
+        self.assertEqual(touched.host, "claude")
+        self.assertEqual(touched.idle_seconds(260.0), 60.0)
+        self.assertEqual(self.store.touch_session(999, now=300.0), None)
+
+    def test_reap_closes_sessions_idle_past_the_threshold(self) -> None:
+        session, _ = self.store.start_session("ana", now=100.0)
+        self.assertEqual(self.store.reap_idle_sessions(now=200.0, repo_path=str(self.repo)), [])
+        closed = self.store.reap_idle_sessions(now=100.0 + 43201, repo_path=str(self.repo))
+        self.assertEqual([row.id for row in closed], [session.id])
+        ended = self.store.get_session(session.id)
+        assert ended is not None
+        self.assertTrue(ended.ended)
+        self.assertTrue(ended.auto_closed)
+        self.assertIn("auto-closed", ended.summary)
+        self.assertFalse(pointer_path(self.db, "ana", self.repo).exists())
+
+    def test_start_reaps_a_stale_previous_session(self) -> None:
+        first, _ = self.store.start_session("ana", now=100.0)
+        second, previous = self.store.start_session("ana", now=100.0 + 43201)
+        self.assertIsNone(previous)
+        self.assertNotEqual(first.id, second.id)
+        old = self.store.get_session(first.id)
+        assert old is not None
+        self.assertTrue(old.ended)
+        self.assertTrue(old.auto_closed)
+
+    def test_v8_database_gains_session_state(self) -> None:
+        path = os.path.join(self.tmp.name, "v8.db")
+        with closing(sqlite3.connect(path)) as conn:
+            conn.executescript(migrate_mod.SCHEMA)
+            for column in ("phase", "last_seen_at", "host", "auto_closed"):
+                conn.execute(f"ALTER TABLE sessions DROP COLUMN {column}")
+            conn.execute("PRAGMA user_version = 8")
+            conn.execute(
+                "INSERT INTO sessions (actor, started_at, ended_at) VALUES ('ana', 100.0, 0)"
+            )
+            conn.commit()
+        store = Store(path)
+        session = store.get_session(1)
+        assert session is not None
+        self.assertEqual(session.phase, "working")
+        self.assertEqual(session.last_seen_at, 100.0)
+        self.assertEqual(session.host, "")
+        self.assertFalse(session.auto_closed)
 
     def test_v5_database_gains_sessions_and_the_event_column(self) -> None:
         path = os.path.join(self.tmp.name, "v5.db")

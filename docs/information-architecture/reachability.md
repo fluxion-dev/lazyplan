@@ -25,7 +25,6 @@ Budget: every action is at most **3** interactions from the tree.
 | `pull_request` | 2 |
 | `repo` | 1 |
 | `event` | 1 |
-| `override` | 0 |
 
 ## Action routes
 
@@ -54,8 +53,6 @@ Budget: every action is at most **3** interactions from the tree.
 | `row.clear_marks` | tree | 0 |
 | `claim.release` | tree › detail › coordination | 2 |
 | `claim.force_release` | tree › detail › coordination | 2 |
-| `criterion.tick` | tree › detail | 1 |
-| `criterion.untick` | tree › detail | 1 |
 | `criterion.relate` | tree › detail › trust | 2 |
 | `criterion.unrelate` | tree › detail › trust | 2 |
 | `row.delete` | tree › detail | 1 |
@@ -78,7 +75,6 @@ Budget: every action is at most **3** interactions from the tree.
 | `git.status` | tree › detail › provenance | 2 |
 | `pull_request.open` | tree › detail › provenance | 2 |
 | `source.trail` | tree › source | 1 |
-| `override.toggle` | tree | 0 |
 | `theme.cycle` | tree | 0 |
 | `palette.open` | any | 0 |
 | `plan.export` | tree › export | 1 |
@@ -110,8 +106,6 @@ Budget: every action is at most **3** interactions from the tree.
 | `repo.open` | tree › source | 1 |
 | `event.list` | tree › activity | 1 |
 | `event.open` | tree › activity | 1 |
-| `override.list` | tree › activity | 1 |
-| `override.open` | tree › activity | 1 |
 
 ## Over budget
 

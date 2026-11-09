@@ -40,7 +40,7 @@ class TestNextHorizon(unittest.TestCase):
         proof = evidence.prove(
             self.store, self.criterion.id, command="pytest", exit_code=0, task_id=self.task.id
         )
-        self.assertTrue(proof.ticked)
+        self.assertFalse(proof.criterion.done)
         self.assertIsNone(evidence.task_gate(self.store, self.task.id))
 
         question = questions.add_question(self.store, self.plan.id, "Which host?")

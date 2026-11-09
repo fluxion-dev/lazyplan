@@ -24,24 +24,22 @@ class TestEvidenceService(unittest.TestCase):
     def tearDown(self) -> None:
         self.tmp.cleanup()
 
-    def test_passing_proof_ticks(self) -> None:
+    def test_passing_proof_records_without_completing(self) -> None:
         result = evidence.prove(self.store, self.criterion.id, command="pytest", exit_code=0)
-        self.assertTrue(result.ticked)
-        self.assertTrue(result.criterion.done)
         self.assertTrue(result.evidence.passing)
+        self.assertFalse(result.criterion.done)
+        self.assertFalse(self.store.get_criterion(self.criterion.id).done)
 
     def test_failing_proof_leaves_open(self) -> None:
         result = evidence.prove(self.store, self.criterion.id, command="pytest", exit_code=1)
-        self.assertFalse(result.ticked)
         self.assertFalse(result.criterion.done)
         self.assertFalse(result.evidence.passing)
 
-    def test_no_tick_records_without_ticking(self) -> None:
-        result = evidence.prove(
-            self.store, self.criterion.id, command="pytest", exit_code=0, tick=False
-        )
-        self.assertFalse(result.ticked)
-        self.assertFalse(result.criterion.done)
+    def test_completion_is_a_separate_edit(self) -> None:
+        evidence.prove(self.store, self.criterion.id, command="pytest", exit_code=0)
+        self.assertFalse(self.store.get_criterion(self.criterion.id).done)
+        self.store.update_criterion(self.criterion.id, done=True)
+        self.assertTrue(self.store.get_criterion(self.criterion.id).done)
         self.assertEqual(len(evidence.list_evidence(self.store, self.criterion.id)), 1)
 
     def test_task_gate_requires_the_latest_pass(self) -> None:

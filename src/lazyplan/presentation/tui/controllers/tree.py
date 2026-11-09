@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from typing import TYPE_CHECKING, Any, cast
 
 from textual.widgets import Label, Static, Tree
@@ -15,6 +16,8 @@ from ...shared.help import hint_bar
 from ..views.rows import RowSpec, plan_spec, row_text
 from .filtering import TreeFilter
 from .lazy_branches import LazyBranchMixin
+
+REAP_INTERVAL = 300.0
 
 if TYPE_CHECKING:
     from ..app import LazyplanApp
@@ -116,6 +119,13 @@ class TreeController(LazyBranchMixin):
             app._dirty_external = False
             app.rev += 1
             return
+        now = time.time()
+        if now - app._last_reap >= REAP_INTERVAL:
+            app._last_reap = now
+            try:
+                app.store.reap_idle_sessions(now=now)
+            except Exception:
+                pass
         try:
             fingerprint = app.store.fingerprint()
         except Exception:
@@ -127,11 +137,14 @@ class TreeController(LazyBranchMixin):
         note = "db changed — refreshed"
         if events:
             event = events[0]
-            note = f"[{event['actor']}] {event['kind']}/{event['action']}: {event['detail']}"
-            try:
-                app.notify(note, timeout=4)
-            except Exception:
-                pass
+            event_id = int(event.get("id") or 0)
+            if event_id > app._last_event_id:
+                app._last_event_id = event_id
+                note = f"[{event['actor']}] {event['kind']}/{event['action']}: {event['detail']}"
+                try:
+                    app.notify(note, timeout=4)
+                except Exception:
+                    pass
         app._pending_note = note
         if len(app.screen_stack) > 1:
             app._dirty_external = True

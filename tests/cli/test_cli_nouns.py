@@ -66,9 +66,9 @@ class TestNounFirstCli(unittest.TestCase):
         c = self._json("criterion", "add", "--kind", "plan", "--id", str(pid), "--text", "works")
         assert isinstance(c, dict)
         cid = c["criteria"]["id"]
-        self._run("criterion", "tick", "--id", str(cid))
+        self._run("criterion", "edit", "--id", str(cid), "--done")
         self.assertTrue(Store(self.db).list_criteria("plan", pid)[0].done)
-        self._run("criterion", "untick", "--id", str(cid))
+        self._run("criterion", "edit", "--id", str(cid), "--open")
         self.assertFalse(Store(self.db).list_criteria("plan", pid)[0].done)
         self.assertIn(
             "works", self._run("criterion", "list", "--kind", "plan", "--id", str(pid))[1]

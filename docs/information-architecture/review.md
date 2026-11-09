@@ -25,7 +25,7 @@ Approved items:
   mark, and bulk stay TUI-only.
 - Deprecation: legacy aliases and removed keys work for one minor release;
   removal target is `0.37.0`.
-- Hub sequencing: provenance, feed, and override hubs land in M455.
+- Hub sequencing: provenance and feed hubs land in M455.
 
 ## Corrections
 

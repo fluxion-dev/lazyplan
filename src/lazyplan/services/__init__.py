@@ -32,7 +32,6 @@ from .evidence import (
     prove,
     task_gate,
 )
-from .overrides import record_override
 from .planning import (
     DEFAULT_PLAN_LIMIT,
     _filtered_milestones,
@@ -119,9 +118,13 @@ from .sessions import (
     current_session,
     end_session,
     list_sessions,
+    open_session_for,
     previous_session,
+    reap_idle_sessions,
+    session_state,
     show_session,
     start_session,
+    touch_session,
 )
 from .ship import ShipNote
 from .ship import build as build_ship
@@ -226,7 +229,6 @@ __all__ = [
     "reopen_question",
     "ProofResult",
     "prove",
-    "record_override",
     "list_evidence",
     "task_gate",
     "link_ref",
@@ -250,6 +252,10 @@ __all__ = [
     "show_session",
     "list_sessions",
     "previous_session",
+    "session_state",
+    "touch_session",
+    "open_session_for",
+    "reap_idle_sessions",
     "ShipNote",
     "build_ship",
 ]

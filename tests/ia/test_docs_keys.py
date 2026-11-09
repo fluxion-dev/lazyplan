@@ -18,7 +18,7 @@ def site_text() -> str:
 
 class DocumentationKeysTest(unittest.TestCase):
     def test_usage_lists_every_global_key(self) -> None:
-        for key in ("?", "c", "q", "O", "[", "]", "escape", "Q", "ctrl+r", "R"):
+        for key in ("?", "c", "q", "[", "]", "escape", "Q", "ctrl+r", "R"):
             with self.subTest(key=key):
                 self.assertIn(f"`{key}`", USAGE)
 
@@ -93,7 +93,7 @@ class DocumentationKeysTest(unittest.TestCase):
         ):
             with self.subTest(term=term):
                 self.assertIn(term, USAGE)
-        for key in ("`g`", "`P`", "`A`", "`enter`", "`r`", "`f`", "`K`", "`u`"):
+        for key in ("`g`", "`P`", "`A`", "`enter`", "`r`", "`f`", "`K`"):
             with self.subTest(key=key):
                 self.assertIn(key, USAGE)
 

@@ -488,7 +488,6 @@ async def capture_control_room(store: Store, target: Path) -> None:
     app = create_app(str(store.path))
     async with app.run_test(size=SIZE) as pilot:
         await pilot.pause()
-        app.action_toggle_override()
         tree = app.query_one("#tree", Tree)
         app.tree_controller.expand_all()
         tree.focus()
@@ -773,7 +772,7 @@ SCENES: dict[str, Scene] = {
         SIZE,
         build_control_room_fixture,
         capture_control_room,
-        "lazyplan control room with the manual override banner, health and needs strip, an active session, an open question, approval drift, claims, and attention tasks.",
+        "lazyplan control room with the health and needs strip, an active session, an open question, approval drift, claims, and attention tasks.",
     ),
     "lpui-source-trail": Scene(
         SIZE,

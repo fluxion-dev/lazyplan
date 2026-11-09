@@ -191,7 +191,7 @@ if _TEXTUAL_OK:
             self.app.call_from_thread(self._reload)
 
     class ActivityHub(HubScreen):
-        """Recent feed rows and manual overrides with jump targets."""
+        """Recent feed rows with jump targets."""
 
         kind = "activity"
         BINDINGS = [
@@ -204,7 +204,6 @@ if _TEXTUAL_OK:
             self.limit = limit
             self.title = "activity"
             self.empty = "No activity yet."
-            self.overrides_only = False
             self.actor_filter = ""
             self.kind_filter = ""
 
@@ -213,11 +212,7 @@ if _TEXTUAL_OK:
             return None
 
         def load_entries(self) -> list[HubEntry]:
-            rows = (
-                self.store.feed_overrides(self.limit)
-                if self.overrides_only
-                else self.store.feed(self.limit)
-            )
+            rows = self.store.feed(self.limit)
             if self.actor_filter:
                 rows = [row for row in rows if str(row.get("actor")) == self.actor_filter]
             if self.kind_filter:
@@ -237,14 +232,6 @@ if _TEXTUAL_OK:
                 )
             return out
 
-        def filter_toggle(self) -> None:
-            self.overrides_only = not self.overrides_only
-            self._reload()
-            self.notify(
-                "showing manual overrides only" if self.overrides_only else "showing all activity",
-                timeout=3,
-            )
-
         def action_filter_actor(self) -> None:
             def cb(text: str | None) -> None:
                 self.actor_filter = (text or "").strip().lstrip("@")
@@ -261,9 +248,7 @@ if _TEXTUAL_OK:
                 self._reload()
 
             self.app.push_screen(
-                FilterPromptScreen(
-                    "Filter kind", "plan, task, override, vcs… (blank for all)", "Filter"
-                ),
+                FilterPromptScreen("Filter kind", "plan, task, vcs… (blank for all)", "Filter"),
                 cb,
             )
 

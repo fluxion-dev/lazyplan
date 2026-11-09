@@ -474,7 +474,7 @@ def add_noun_groups(
     _a.add_argument("--milestone", type=int, default=0, metavar="ID", help="task placement")
     _a.add_argument("--dry-run", action="store_true", help="report without writing")
     _group, _actions = _noun_group(
-        "criterion", "add, list, tick, untick, or delete an acceptance criterion"
+        "criterion", "add, list, edit, or delete an acceptance criterion"
     )
     _a = _actions.add_parser("add", help="add a criterion", parents=[common])
     _a.add_argument("--kind", choices=list(KINDS), required=True, help="parent kind")
@@ -484,14 +484,13 @@ def add_noun_groups(
     _a = _actions.add_parser("list", help="list a row's criteria", parents=[common])
     _a.add_argument("--kind", choices=list(KINDS), required=True, help="parent kind")
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="parent id")
-    _a = _actions.add_parser("tick", help="tick one criterion", parents=[common])
+    _a = _actions.add_parser("edit", help="edit one criterion", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="criterion id")
-    _a = _actions.add_parser("edit", help="rewrite one criterion", parents=[common])
-    _a.add_argument("--id", type=int, required=True, metavar="ID", help="criterion id")
-    _a.add_argument("--text", required=True, metavar="TEXT", help="new criterion text")
+    _a.add_argument("--text", default=None, metavar="TEXT", help="new criterion text")
+    state = _a.add_mutually_exclusive_group()
+    state.add_argument("--done", action="store_true", help="mark the criterion done")
+    state.add_argument("--open", action="store_true", help="reopen the criterion")
     _reason_flag(_a)
-    _a = _actions.add_parser("untick", help="reopen one criterion", parents=[common])
-    _a.add_argument("--id", type=int, required=True, metavar="ID", help="criterion id")
     _a = _actions.add_parser("delete", help="delete one criterion", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="criterion id")
     _reason_flag(_a)
@@ -504,7 +503,6 @@ def add_noun_groups(
     _a.add_argument("--artifact", default="", metavar="PATH", help="the evidence artifact path")
     _a.add_argument("--note", default="", metavar="TEXT", help="free-form proof context")
     _a.add_argument("--task", type=int, default=None, metavar="ID", help="the proving task")
-    _a.add_argument("--no-tick", action="store_true", help="record without ticking")
     _a = _actions.add_parser("evidence", help="list proof rows for one criterion", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="criterion id")
     _a = _actions.add_parser("relate", help="record a proving task", parents=[common])
@@ -575,17 +573,3 @@ def add_noun_groups(
     _a = _actions.add_parser("refresh", help="resolve commits to PRs", parents=[common])
     _a.add_argument("--kind", choices=list(KINDS), required=True, help="row kind")
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="row id")
-
-
-def add_criterion_groups(
-    sub: argparse._SubParsersAction[argparse.ArgumentParser], common: argparse.ArgumentParser
-) -> None:
-
-    for _name, _help in (
-        ("check", "legacy alias for `criterion tick`"),
-        ("uncheck", "legacy alias for `criterion untick`"),
-    ):
-        cc = sub.add_parser(_name, help=_help, parents=[common])
-        cc.add_argument(
-            "--id", type=int, required=True, metavar="ID", help="id of the checklist item"
-        )

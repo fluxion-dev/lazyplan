@@ -40,7 +40,7 @@ The gate runs:
 - the docs allowlist and link gate (`tools/check-docs.py`)
 - the site build and discoverability check (`site/`, `tools/check-site.py`)
 - a clean-install smoke that builds, installs, and runs both console scripts
-- the visual snapshots and the performance budgets
+- the performance budgets
 - the unittest suite on both system Python and the venv Python
 
 On Windows, run it from Git Bash. CI runs the same gates on Linux and macOS for
@@ -49,10 +49,7 @@ every change; Windows runs the suite nightly in
 Ubuntu and macOS pass.
 
 For a Windows-only failure, dispatch `.github/workflows/windows-focus.yml` with
-the failing `tests` selection. It finishes in minutes and uploads
-`snapshot_report.html` plus the SVG snapshots. Leave `update_snapshots` off
-until the diff is understood; it is only for collecting a candidate snapshot
-from Windows.
+the failing unittest module names.
 
 Fix failures rather than editing the scripts around them. If you add a module,
 add tests and type annotations with it.
@@ -60,8 +57,11 @@ add tests and type annotations with it.
 ## Tests
 
 Tests mirror the package under `tests/`. Shared fixtures live in `tests/support/`;
-use `sandbox_home` for anything that touches a home directory. Run one module
-directly:
+use `sandbox_home` for anything that touches a home directory. Coverage favors
+logical validation, CLI end-to-end runs, and store/service integration;
+presentation logic lives in `tests/presentation/` without rendering a TUI.
+
+Run one module directly:
 
 ```bash
 PYTHONPATH=src python -m unittest tests.cli.test_version
@@ -146,8 +146,7 @@ The registry is the source of truth. To add a canonical action:
    the action declares `mcp`.
 5. Update `docs/usage.md`, the site copy, and the packaged skill; regenerate
    the man page (`tools/gen-man.py`) and the inventory/reachability reports.
-6. Run the gates: `ruff`, `mypy`, `tests.ia`, the TUI snapshot suite, and
-   `./tools/check.sh`.
+6. Run the gates: `ruff`, `mypy`, `tests.ia`, and `./tools/check.sh`.
 
 Worked example: adding `criterion edit` meant one action row, one CLI path
 (`criterion edit`), one MCP tool (`criterion_edit`), a hub key (`e`), a store

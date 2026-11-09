@@ -88,11 +88,30 @@ class Session:
     ended_at: float = 0.0
     summary: str = ""
     handoff: str = ""
+    phase: str = "working"
+    last_seen_at: float = 0.0
+    host: str = ""
+    auto_closed: bool = False
 
     @property
     def ended(self) -> bool:
         """True when the session has been closed."""
         return self.ended_at > 0
+
+    @property
+    def awaiting(self) -> bool:
+        """True when the agent finished its turn and waits on the user."""
+        return not self.ended and self.phase == "awaiting"
+
+    def last_activity(self) -> float:
+        """Newest heartbeat, falling back to the start for old rows."""
+        return self.last_seen_at if self.last_seen_at > 0 else self.started_at
+
+    def idle_seconds(self, now: float) -> float:
+        """Seconds since the last heartbeat while open; zero once ended."""
+        if self.ended:
+            return 0.0
+        return max(now - self.last_activity(), 0.0)
 
     def duration(self, now: float) -> float:
         """Seconds between start and end, or start and *now* while open."""

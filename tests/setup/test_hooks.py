@@ -5,6 +5,7 @@ import json
 import os
 import sys
 import tempfile
+import time
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
@@ -85,14 +86,16 @@ class HookCase(unittest.TestCase):
         result = hooks.build_result("session-start", {}, self.repo, commits=[])
         self.assertIn("next: QA", result.text)
 
-    def test_open_session_is_reminded_on_stop(self):
+    def test_open_session_is_marked_awaiting_on_stop(self):
         _plan, _task = self._seed()
         store = Store(self.db)
-        session, _ = store.start_session("ana", now=100.0)
-        before = self.db.read_bytes()
+        session, _ = store.start_session("ana", now=time.time())
         result = hooks.build_result("stop", {}, self.repo, commits=[])
-        self.assertIn(f"S{session.id} is open", result.text)
-        self.assertEqual(self.db.read_bytes(), before)
+        self.assertIn(f"S{session.id} is awaiting", result.text)
+        updated = Store(self.db).get_session(session.id)
+        assert updated is not None
+        self.assertTrue(updated.awaiting)
+        self.assertGreater(updated.last_seen_at, 0)
 
     def test_missing_database_is_silent(self):
         self.assertEqual(
@@ -115,11 +118,13 @@ class HookCase(unittest.TestCase):
         os.environ[hooks.NO_HOOKS_ENV] = "1"
         self.assertEqual(hooks.run("session-start", {}, commits=[]).text, "")
 
-    def test_hook_is_read_only(self):
+    def test_session_start_tracks_a_session(self):
         self._seed()
-        before = self.db.read_bytes()
         hooks.build_result("session-start", {}, self.repo, commits=[])
-        self.assertEqual(self.db.read_bytes(), before)
+        sessions = Store(self.db).list_sessions(open_only=True)
+        self.assertEqual(len(sessions), 1)
+        self.assertEqual(sessions[0].phase, "working")
+        self.assertTrue(sessions[0].host)
 
     def test_cli_json_and_fresh_home(self):
         self._seed()

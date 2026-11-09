@@ -34,13 +34,13 @@ class TestCommandRegistry(unittest.TestCase):
         self.assertEqual(len(sectioned), len(set(sectioned)))
         self.assertEqual([name for name, _ in palette.palette_sections()], list(palette.SECTIONS))
 
-    def test_sections_split_observe_and_override(self):
+    def test_sections_split_observe_and_write(self):
         modes = {cmd.mode for cmd in palette.palette_commands()}
-        self.assertEqual(modes, {"observe", "override"})
+        self.assertEqual(modes, {"observe", "write"})
         from lazyplan.presentation.shared.help import HELP_TEXT
 
         self.assertIn("OBSERVE", HELP_TEXT)
-        self.assertIn("OVERRIDE", HELP_TEXT)
+        self.assertIn("WRITE", HELP_TEXT)
 
     def test_data_commands_use_the_glossary(self):
         for cmd in palette.COMMANDS:
@@ -81,7 +81,6 @@ class TestCommandRegistry(unittest.TestCase):
         self.assertIn("create-task", ids("add task"))
         self.assertIn("create-task", ids("Create task"))
         self.assertIn("move-done", ids("complete"))
-        self.assertIn("tick-criterion", ids("check"))
         self.assertIn("open-detail", ids("show"))
         self.assertEqual(ids("zzz-no-such-command"), [])
 
@@ -106,7 +105,7 @@ class TestCommandRegistry(unittest.TestCase):
 
     def test_help_has_no_stale_claims(self):
         self.assertNotIn("press n to seed", help_mod.HELP_TEXT)
-        self.assertNotIn("c ticks", help_mod.HELP_TEXT)
+        self.assertNotIn("x tick", help_mod.HELP_TEXT)
         self.assertIn("n", help_mod.HELP_TEXT)
         self.assertIn("s", help_mod.HELP_TEXT)
         self.assertIn("?", help_mod.HELP_TEXT)

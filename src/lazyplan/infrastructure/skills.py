@@ -250,9 +250,9 @@ through the CLI with `--actor <name>`.
   when you stop. Block parked work with `task block --reason`.
 - Move the task doing before code; after each commit, link it with
   `lpui --porcelain link --kind task --id T` (or `lpui task finish`), then move it on.
-- Run `lpui --porcelain audit --since 7.days` before closing a plan, and tick
-  criteria only with evidence.
-- Lifecycle hooks are read-only; they remind, never move work.
+- Run `lpui --porcelain audit --since 7.days` before closing a plan, and mark
+  criteria done only after recording evidence.
+- Lifecycle hooks keep the session heartbeat current; they never move work.
 """
     return body
 

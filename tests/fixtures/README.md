@@ -9,6 +9,3 @@ intentional and named in the changelog.
   timestamps and UIDs are normalized to `<ts>` and `<uid>`.
 - `mcp/schema.json` — the `tools/list` and `resources/list` discovery schema,
   including tool input schemas and resource templates.
-
-TUI output is pinned by the SVG snapshots under
-`tests/snapshots/__snapshots__/snap_tui/`.

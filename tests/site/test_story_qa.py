@@ -1,4 +1,4 @@
-"""The story matches the shipped control room and override surfaces."""
+"""The story matches the shipped control room surfaces."""
 
 from __future__ import annotations
 
@@ -17,9 +17,9 @@ class StoryQaTest(unittest.TestCase):
         for target in ("docs/usage.md", "CHANGELOG.md", "CONTRIBUTING.md"):
             self.assertIn(f"]({target})", README)
 
-    def test_usage_keeps_the_manual_override_surface(self) -> None:
-        self.assertIn("Manual override mode", USAGE)
-        self.assertIn("lpui feed --overrides", USAGE)
+    def test_usage_has_no_manual_override_surface(self) -> None:
+        self.assertNotIn("Manual override mode", USAGE)
+        self.assertNotIn("lpui feed --overrides", USAGE)
 
     @unittest.skipUnless(has_built_site(), "site not built")
     def test_site_ships_the_control_room_screenshot(self) -> None:

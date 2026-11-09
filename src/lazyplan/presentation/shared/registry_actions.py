@@ -180,22 +180,6 @@ CORE_ACTIONS: tuple[Action, ...] = (
         palette_ids=("force-release-claim",),
     ),
     _action(
-        "criterion.tick",
-        "Tick next criterion",
-        "x",
-        "tree",
-        ("tui", "cli", "mcp"),
-        ("tree", "detail"),
-        ("tick-criterion",),
-    ),
-    _action(
-        "criterion.untick",
-        "Reopen last criterion",
-        surfaces=("tui", "cli", "mcp"),
-        route=("tree", "detail"),
-        palette_ids=("untick-criterion",),
-    ),
-    _action(
         "criterion.relate",
         "Relate criterion to task",
         surfaces=("tui", "cli", "mcp"),
@@ -348,15 +332,6 @@ CORE_ACTIONS: tuple[Action, ...] = (
         ("tui", "cli", "mcp"),
         ("tree", "source"),
         ("source-trail",),
-    ),
-    _action(
-        "override.toggle",
-        "Toggle manual override",
-        "O",
-        "global",
-        ("tui",),
-        ("tree",),
-        ("toggle-override",),
     ),
     _action(
         "theme.cycle",

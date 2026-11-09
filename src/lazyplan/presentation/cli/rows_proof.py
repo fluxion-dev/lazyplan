@@ -49,17 +49,15 @@ def evidence_payload(result: ProofResult) -> dict:
     return {
         "evidence": vars(result.evidence),
         "criterion": vars(result.criterion),
-        "ticked": result.ticked,
     }
 
 
 def evidence_text(result: ProofResult) -> str:
     """Human line for one proof."""
     state = "pass" if result.evidence.passing else "fail"
-    ticked = " (criterion ticked)" if result.ticked else ""
     return (
         f"recorded {state} evidence #{result.evidence.id} "
-        f"for criterion #{result.evidence.criterion_id}{ticked}"
+        f"for criterion #{result.evidence.criterion_id}"
     )
 
 

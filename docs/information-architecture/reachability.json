@@ -198,22 +198,6 @@
       ]
     },
     {
-      "depth": 1,
-      "id": "criterion.tick",
-      "route": [
-        "tree",
-        "detail"
-      ]
-    },
-    {
-      "depth": 1,
-      "id": "criterion.untick",
-      "route": [
-        "tree",
-        "detail"
-      ]
-    },
-    {
       "depth": 2,
       "id": "criterion.relate",
       "route": [
@@ -388,13 +372,6 @@
       "route": [
         "tree",
         "source"
-      ]
-    },
-    {
-      "depth": 0,
-      "id": "override.toggle",
-      "route": [
-        "tree"
       ]
     },
     {
@@ -662,22 +639,6 @@
         "tree",
         "activity"
       ]
-    },
-    {
-      "depth": 1,
-      "id": "override.list",
-      "route": [
-        "tree",
-        "activity"
-      ]
-    },
-    {
-      "depth": 1,
-      "id": "override.open",
-      "route": [
-        "tree",
-        "activity"
-      ]
     }
   ],
   "entities": {
@@ -690,7 +651,6 @@
     "file": 2,
     "milestone": 1,
     "note": 2,
-    "override": 0,
     "plan": 1,
     "pull_request": 2,
     "question": 2,

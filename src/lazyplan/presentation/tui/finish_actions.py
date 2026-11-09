@@ -33,7 +33,6 @@ class FinishMixin(ContextMixin):
             except (ValueError, KeyError) as exc:
                 self.notify(str(exc), severity="error", timeout=5)
                 return
-            self._record_override("finish", f"T{task_id}", reason)
             state = "finished" if result.get("done") else "linked; tree is dirty"
             self.notify(f"T{task_id} {state}", timeout=4)
             self._saved("task finished")

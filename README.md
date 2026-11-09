@@ -65,7 +65,7 @@ data with `lpui seed`.
 lpui list                         # plans and progress
 lpui plan show --id 1             # why, what, criteria, milestones
 lpui task move --id 1 --to doing  # move work forward
-lpui criterion tick --id 1        # tick the next acceptance item
+lpui criterion edit --id 1 --done # mark an acceptance item done
 lpui feed                         # recent activity
 ```
 

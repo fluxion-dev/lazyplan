@@ -409,7 +409,7 @@
       "annotations": {
         "readOnlyHint": true
       },
-      "description": "Recent events, or only manual overrides.",
+      "description": "Recent events.",
       "inputSchema": {
         "properties": {
           "actor": {
@@ -420,9 +420,6 @@
           },
           "limit": {
             "type": "integer"
-          },
-          "overrides": {
-            "type": "boolean"
           }
         },
         "required": [],
@@ -809,42 +806,6 @@
       "annotations": {
         "readOnlyHint": false
       },
-      "description": "Tick a criterion.",
-      "inputSchema": {
-        "properties": {
-          "id": {
-            "type": "integer"
-          }
-        },
-        "required": [
-          "id"
-        ],
-        "type": "object"
-      },
-      "name": "criterion_tick"
-    },
-    {
-      "annotations": {
-        "readOnlyHint": false
-      },
-      "description": "Untick a criterion.",
-      "inputSchema": {
-        "properties": {
-          "id": {
-            "type": "integer"
-          }
-        },
-        "required": [
-          "id"
-        ],
-        "type": "object"
-      },
-      "name": "criterion_untick"
-    },
-    {
-      "annotations": {
-        "readOnlyHint": false
-      },
       "description": "Relate a criterion to a proving task.",
       "inputSchema": {
         "properties": {
@@ -1062,7 +1023,7 @@
       "annotations": {
         "readOnlyHint": false
       },
-      "description": "Record proof for a criterion; tick only when it passes.",
+      "description": "Record proof for a criterion.",
       "inputSchema": {
         "properties": {
           "artifact": {
@@ -1079,9 +1040,6 @@
           },
           "id": {
             "type": "integer"
-          },
-          "no_tick": {
-            "type": "boolean"
           },
           "note": {
             "type": "string"
@@ -1168,9 +1126,12 @@
       "annotations": {
         "readOnlyHint": false
       },
-      "description": "Rewrite one criterion.",
+      "description": "Rewrite one criterion's text or completion.",
       "inputSchema": {
         "properties": {
+          "done": {
+            "type": "boolean"
+          },
           "id": {
             "type": "integer"
           },
@@ -1182,8 +1143,7 @@
           }
         },
         "required": [
-          "id",
-          "text"
+          "id"
         ],
         "type": "object"
       },

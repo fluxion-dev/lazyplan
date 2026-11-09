@@ -27,7 +27,6 @@ def add_question(screen: Any) -> None:
         if not text:
             return
         question = services.add_question(screen._dstore, plan_id, text, actor="tui")
-        screen._record("question add", text)
         screen._reload()
         screen.notify(f"Q{question.id} added", timeout=4)
 
@@ -56,7 +55,6 @@ def resolve_question(screen: Any) -> None:
             screen.notify("question id must be a number", timeout=3)
             return
         services.resolve_question(screen._dstore, question_id, actor="tui")
-        screen._record("question resolve", f"Q{question_id}")
         screen._reload()
         screen.notify(f"Q{question_id} resolved", timeout=4)
 
@@ -84,7 +82,6 @@ def reopen_question(screen: Any) -> None:
             screen.notify("question id must be a number", timeout=3)
             return
         services.reopen_question(screen._dstore, question_id, actor="tui")
-        screen._record("question reopen", f"Q{question_id}")
         screen._reload()
         screen.notify(f"Q{question_id} reopened", timeout=4)
 
@@ -105,22 +102,16 @@ class QuestionActionsMixin:
         if self._editing:
             self.notify("save or cancel first")
             return
-        if not self._require_override():
-            return
         add_question(self)
 
     def action_resolve_question(self: Any) -> None:
         if self._editing:
             self.notify("save or cancel first")
             return
-        if not self._require_override():
-            return
         resolve_question(self)
 
     def action_reopen_question(self: Any) -> None:
         if self._editing:
             self.notify("save or cancel first")
-            return
-        if not self._require_override():
             return
         reopen_question(self)

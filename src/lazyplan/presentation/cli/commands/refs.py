@@ -6,7 +6,8 @@ import argparse
 import sys
 
 from ....core.entities import ExternalRef
-from ....store import Store, to_payload
+from ....core.ports.refs import RefsPort
+from ....core.serialization import to_payload
 from ...shared import porcelain
 from ...shared.design import msg_error, msg_not_found
 from ..emit import _emit_read, _emit_record
@@ -31,7 +32,7 @@ def _ref_text(ref: ExternalRef) -> str:
     return f"R{ref.id} {ref.provider}/{ref.kind}{title} {ref.url}"
 
 
-def _cmd_ref_link(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_ref_link(store: RefsPort, args: argparse.Namespace, actor: str) -> int:
     from lazyplan import services
 
     try:
@@ -55,7 +56,7 @@ def _cmd_ref_link(store: Store, args: argparse.Namespace, actor: str) -> int:
     return _emit_record(args, _ref_row(ref), {"ref": to_payload(vars(ref))})
 
 
-def _cmd_ref_list(store: Store | None, args: argparse.Namespace, actor: str) -> int:
+def _cmd_ref_list(store: RefsPort | None, args: argparse.Namespace, actor: str) -> int:
     from lazyplan import services
 
     del actor
@@ -78,7 +79,7 @@ def _cmd_ref_list(store: Store | None, args: argparse.Namespace, actor: str) -> 
     )
 
 
-def _cmd_ref_unlink(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_ref_unlink(store: RefsPort, args: argparse.Namespace, actor: str) -> int:
     from lazyplan import services
 
     if not args.id and not args.url.strip():

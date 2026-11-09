@@ -83,7 +83,7 @@ class SessionCliTest(unittest.TestCase):
         session = self._start()
         code, out, err = self._run("--actor", "ana", "session", "list")
         self.assertEqual(code, 0, err)
-        self.assertIn(f"S{session['id']} [open]", out)
+        self.assertIn(f"S{session['id']} [working]", out)
         code, out, err = self._run("--actor", "ana", "--porcelain", "session", "list")
         self.assertEqual(code, 0, err)
         self.assertEqual(out.split("\t")[0], "session")

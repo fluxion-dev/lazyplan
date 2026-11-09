@@ -16,6 +16,7 @@ try:
     from textual.screen import ModalScreen, Screen  # noqa: F401
     from textual.widgets import (  # noqa: F401
         Button,
+        Checkbox,
         Input,
         Label,
         OptionList,
@@ -263,3 +264,45 @@ if _TEXTUAL_OK:
         @on(Input.Submitted, "#filter-input")
         def _submit(self) -> None:
             self.dismiss(self.query_one("#filter-input", Input).value.strip())
+
+    class CriterionScreen(_Form):
+        """Edit one criterion's text and completion."""
+
+        dialog_title = "CRITERION"
+
+        def __init__(self, text: str = "", done: bool = False) -> None:
+            super().__init__()
+            self._text = text
+            self._done = done
+
+        def compose(self) -> ComposeResult:
+            with Vertical(id="dlg"):
+                yield Label("Edit criterion", classes="form-title")
+                yield Label("Text", classes="field-label")
+                yield Input(value=self._text, placeholder="what must be true?", id="c-text")
+                yield Checkbox("Done", value=self._done, id="c-done")
+                with _row():
+                    yield Button("Save", id="ok", variant="primary")
+                    yield Button("Cancel", id="cancel")
+
+        def on_mount(self) -> None:
+            super().on_mount()
+            self.query_one("#c-text", Input).focus()
+
+        def _values(self) -> dict[str, object]:
+            return {
+                "text": self.query_one("#c-text", Input).value.strip(),
+                "done": self.query_one("#c-done", Checkbox).value,
+            }
+
+        @on(Button.Pressed, "#ok")
+        def _save(self) -> None:
+            self.dismiss(self._values())
+
+        @on(Button.Pressed, "#cancel")
+        def _cancel(self) -> None:
+            self.action_cancel()
+
+        @on(Input.Submitted, "#c-text")
+        def _submit(self) -> None:
+            self.dismiss(self._values())

@@ -197,7 +197,7 @@ class TestDiff(unittest.TestCase):
         self.assertEqual(changes[0].kind, "task")
         self.assertEqual(changes[0].action, "remove")
 
-    def test_status_and_ticks_are_ignored(self) -> None:
+    def test_status_and_completion_are_ignored(self) -> None:
         before = snapshot()
         after = copy.deepcopy(before)
         after["plan"]["status"] = "done"

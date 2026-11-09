@@ -405,8 +405,23 @@ def _cmd_add_criteria(store: Store, args: argparse.Namespace, actor: str) -> int
 
 
 def _cmd_criterion_edit(store: Store, args: argparse.Namespace, actor: str) -> int:
+    done: bool | None = None
+    if getattr(args, "done", False):
+        done = True
+    elif getattr(args, "open", False):
+        done = False
+    if args.text is None and done is None:
+        print(
+            msg_error(ValueError("criterion edit needs --text, --done, or --open")),
+            file=sys.stderr,
+        )
+        return 2
     crit = store.update_criterion(
-        args.id, args.text, actor=actor, reason=getattr(args, "reason", "")
+        args.id,
+        text=args.text,
+        done=done,
+        actor=actor,
+        reason=getattr(args, "reason", ""),
     )
     if crit is None:
         print(msg_not_found("criteria", args.id), file=sys.stderr)
@@ -427,22 +442,6 @@ def _cmd_criteria(store: Store, args: argparse.Namespace, actor: str) -> int:
     return _emit(args, [vars(c) for c in items])
 
 
-def _check_uncheck(store: Store, args: argparse.Namespace, actor: str, done: bool) -> int:
-    crit = store.set_criteria(args.id, done, actor=actor)
-    if crit is None:
-        print(msg_not_found("criteria", args.id), file=sys.stderr)
-        return 1
-    return _emit_record(args, _criterion_row(crit), {"criteria": vars(crit)})
-
-
-def _cmd_check(store: Store, args: argparse.Namespace, actor: str) -> int:
-    return _check_uncheck(store, args, actor, True)
-
-
-def _cmd_uncheck(store: Store, args: argparse.Namespace, actor: str) -> int:
-    return _check_uncheck(store, args, actor, False)
-
-
 def _cmd_delete_criteria(store: Store, args: argparse.Namespace, actor: str) -> int:
     if not store.delete_criteria(args.id, actor=actor, reason=getattr(args, "reason", "")):
         print(msg_not_found("criteria", args.id), file=sys.stderr)
@@ -452,7 +451,7 @@ def _cmd_delete_criteria(store: Store, args: argparse.Namespace, actor: str) -> 
 
 
 def _cmd_criterion_prove(store: Store, args: argparse.Namespace, actor: str) -> int:
-    """Record one proof row; tick only when it passes."""
+    """Record one proof row without changing criterion completion."""
     try:
         result = evidence_service.prove(
             store,
@@ -465,7 +464,6 @@ def _cmd_criterion_prove(store: Store, args: argparse.Namespace, actor: str) -> 
             note=args.note,
             task_id=args.task,
             actor=actor,
-            tick=not args.no_tick,
         )
     except (KeyError, ValueError) as exc:
         print(msg_error(exc), file=sys.stderr)

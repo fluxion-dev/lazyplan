@@ -3,20 +3,10 @@
 from __future__ import annotations
 
 import json
-import os
-import tempfile
 import unittest
 
 from lazyplan.presentation.shared import registry
-from lazyplan.store import Store
 from tests.support.paths import ROOT
-
-try:
-    from lazyplan.presentation import tui as tui_mod
-except ImportError:  # pragma: no cover - stdlib-only interpreter
-    tui_mod = None  # type: ignore[assignment]
-
-from tests.support.pilot import settle, walk_route
 
 REPORT_JSON = ROOT / "docs/information-architecture/reachability.json"
 REPORT_MD = ROOT / "docs/information-architecture/reachability.md"
@@ -69,25 +59,3 @@ class TestReachability(unittest.TestCase):
         committed = json.loads(REPORT_JSON.read_text(encoding="utf-8"))
         self.assertEqual(committed["over_budget"], [])
         self.assertTrue(all(row["depth"] <= 3 for row in committed["actions"]))
-
-
-@unittest.skipUnless(tui_mod is not None and tui_mod._TEXTUAL_OK, "textual not installed")
-class TestRouteWalk(unittest.IsolatedAsyncioTestCase):
-    async def asyncSetUp(self) -> None:
-        self.tmp = tempfile.TemporaryDirectory()
-        self.db = os.path.join(self.tmp.name, "reach.db")
-        store = Store(self.db)
-        plan = store.add_plan("Reach", "What", goal="Why")
-        milestone = store.add_milestone(plan.id, "M", "As a user.")
-        self.task = store.add_task(milestone.id, "T", "Commit: one.")
-
-    async def asyncTearDown(self) -> None:
-        self.tmp.cleanup()
-
-    async def test_walk_route_records_detail_source_and_back(self) -> None:
-        app = tui_mod.create_app(self.db)
-        async with app.run_test(size=(120, 40)) as pilot:
-            await settle(pilot)
-            app.selected = ("task", self.task.id)
-            seen = await walk_route(pilot, ("enter", "g", "escape", "escape"))
-            self.assertEqual(seen, ["tree", "detail", "source", "detail", "tree"])

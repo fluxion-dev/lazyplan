@@ -9,16 +9,12 @@ from textual.containers import VerticalScroll
 from textual.widgets import Static
 
 from .... import services
-from ....core.entities import Session
 from ....core.ports.sessions import SessionsReadPort
-from ...shared.design import EMPTY_AGENTS, EMPTY_AGENTS_HINT, escape_markup
+from ...shared.design import EMPTY_AGENTS, EMPTY_AGENTS_HINT, empty_state, escape_markup
+from ..views.agents import rank_sessions, session_line, sessions_summary
 
-
-def _age(started_at: float, stamp: float) -> str:
-    minutes = int(max(0.0, stamp - started_at) / 60)
-    if minutes < 60:
-        return f"{minutes}m"
-    return f"{minutes // 60}h{minutes % 60:02d}m"
+VISIBLE_SESSIONS = 5
+OPEN_SESSIONS_READ = 50
 
 
 class AgentsPanel(VerticalScroll):
@@ -38,33 +34,31 @@ class AgentsPanel(VerticalScroll):
 
     def compose(self) -> ComposeResult:
         yield Static("", id="agents-body")
+        yield Static("", id="agents-empty", classes="pane-empty")
+
+    def _show_body(self) -> None:
+        """Show the session rows and hide the empty state."""
+        self.query_one("#agents-body", Static).display = True
+        self.query_one("#agents-empty", Static).display = False
 
     def show(self, store: SessionsReadPort, plan_id: int | None = None) -> None:
         body = self.query_one("#agents-body", Static)
-        sessions = services.sessions.list_sessions(store, open_only=True, limit=5)
+        sessions = services.sessions.list_sessions(store, open_only=True, limit=OPEN_SESSIONS_READ)
         if not sessions:
-            body.remove_class("agents-error")
-            body.add_class("agents-empty")
-            body.update(f"[bold]{EMPTY_AGENTS}[/]\n[dim]{EMPTY_AGENTS_HINT}[/]")
+            body.display = False
+            empty = self.query_one("#agents-empty", Static)
+            empty.display = True
+            empty.update(empty_state(EMPTY_AGENTS, EMPTY_AGENTS_HINT))
             self.border_subtitle = ""
             self.scroll_home(animate=False)
             return
+        self._show_body()
         stamp = time.time()
-        lines = [self._session_line(session, stamp) for session in sessions]
+        ranked = rank_sessions(sessions, stamp)[:VISIBLE_SESSIONS]
+        lines = [session_line(session, stamp) for session in ranked]
         handoff = services.sessions.previous_session(store, plan_id=plan_id)
         if handoff and handoff.get("handoff"):
             lines.append(f"[dim]handoff[/] {escape_markup(str(handoff['handoff']))}")
-        body.remove_class("agents-empty", "agents-error")
         body.update("\n".join(lines))
-        self.border_subtitle = f"{len(sessions)} active"
+        self.border_subtitle = sessions_summary(sessions, stamp)
         self.scroll_home(animate=False)
-
-    @staticmethod
-    def _session_line(session: Session, stamp: float) -> str:
-        started = time.strftime("%H:%M", time.localtime(session.started_at))
-        plan = f"P{session.plan_id}" if session.plan_id is not None else "no plan"
-        branch = escape_markup(session.branch) if session.branch else "no branch"
-        return (
-            f"[bold]@{escape_markup(session.actor)}[/] [dim]S{session.id}[/] · "
-            f"[dim]{plan}[/] · {branch} · [dim]{started} · {_age(session.started_at, stamp)}[/]"
-        )

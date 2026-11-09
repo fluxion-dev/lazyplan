@@ -1,6 +1,5 @@
 """Every host adapter, through the real CLI, stays valid and read-only."""
 
-import hashlib
 import io
 import json
 import os
@@ -59,9 +58,6 @@ class VerifyCase(unittest.TestCase):
         services.set_status(store, "milestone", milestone.id, Status.DOING, actor="t")
         services.set_status(store, "plan", plan.id, Status.DOING, actor="t")
 
-    def _digest(self) -> str:
-        return hashlib.sha256(self.db.read_bytes()).hexdigest()
-
     def _run_hook(self, host: str) -> tuple[int, str]:
         out = io.StringIO()
         old_stdin = sys.stdin
@@ -73,8 +69,8 @@ class VerifyCase(unittest.TestCase):
             sys.stdin = old_stdin
         return code, out.getvalue().strip()
 
-    def test_every_host_emits_valid_output_and_no_write(self):
-        before = self._digest()
+    def test_every_host_emits_valid_output_and_only_tracks_sessions(self):
+        before = Store(self.db).counts()
         for host in HOSTS:
             code, text = self._run_hook(host)
             self.assertEqual(code, 0)
@@ -82,7 +78,8 @@ class VerifyCase(unittest.TestCase):
             if host != "opencode":
                 body = json.loads(text)
                 self.assertTrue(body)
-            self.assertEqual(self._digest(), before, host)
+        self.assertEqual(Store(self.db).counts(), before)
+        self.assertTrue(Store(self.db).list_sessions(open_only=True))
 
     def test_every_direct_render_has_no_ansi(self):
         result = hooks.build_result("session-start", {}, self.repo, commits=[])

@@ -21,9 +21,14 @@ class CollaborationToolsMixin(McpBase):
             "criterion_edit": (
                 _tool(
                     "criterion_edit",
-                    "Rewrite one criterion.",
-                    {"id": _id(), "text": _str(), "reason": _str()},
-                    ["id", "text"],
+                    "Rewrite one criterion's text or completion.",
+                    {
+                        "id": _id(),
+                        "text": _str(),
+                        "done": {"type": "boolean"},
+                        "reason": _str(),
+                    },
+                    ["id"],
                     False,
                 ),
                 self._tool_criterion_edit,
@@ -178,10 +183,9 @@ class CollaborationToolsMixin(McpBase):
             "activity_list": (
                 _tool(
                     "activity_list",
-                    "Recent events, or only manual overrides.",
+                    "Recent events.",
                     {
                         "limit": _id(),
-                        "overrides": {"type": "boolean"},
                         "actor": _str(),
                         "kind": _str(),
                     },
@@ -191,9 +195,12 @@ class CollaborationToolsMixin(McpBase):
         }
 
     def _tool_criterion_edit(self, args: dict) -> object:
+        text = args.get("text")
+        done = args.get("done")
         row = self._need_store().update_criterion(
             int(args["id"]),
-            str(args["text"]),
+            text=None if text is None else str(text),
+            done=None if done is None else bool(done),
             actor=self.actor,
             reason=str(args.get("reason") or ""),
         )
@@ -328,7 +335,7 @@ class CollaborationToolsMixin(McpBase):
     def _tool_activity_list(self, args: dict) -> object:
         store = self._need_store()
         limit = int(args["limit"]) if args.get("limit") else 50
-        rows = store.feed_overrides(limit) if bool(args.get("overrides")) else store.feed(limit)
+        rows = store.feed(limit)
         actor = str(args.get("actor") or "")
         kind = str(args.get("kind") or "")
         if actor:

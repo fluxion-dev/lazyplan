@@ -32,10 +32,11 @@ def confirm_delete(screen: Any) -> None:
         if not reason.strip():
             screen.notify("a delete needs a reason", timeout=3)
             return
-        if not services.delete_row(screen._dstore, screen.dkind, screen.doid, actor="tui"):
+        if not services.delete_row(
+            screen._dstore, screen.dkind, screen.doid, actor="tui", reason=reason.strip()
+        ):
             screen.notify("row is already gone", timeout=3)
             return
-        screen._record("delete", reason.strip())
         screen.dismiss(True)
 
     def cb(confirmed: bool | None) -> None:

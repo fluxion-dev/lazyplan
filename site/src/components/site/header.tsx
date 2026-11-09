@@ -36,7 +36,9 @@ export function Header() {
             className="size-8"
             aria-hidden="true"
           />
-          lazyplan<span className="text-brand-gold">.</span>
+          <span>
+            lazyplan<span className="text-brand-gold">.</span>
+          </span>
         </a>
 
         <div className="hidden items-center gap-6 md:flex">

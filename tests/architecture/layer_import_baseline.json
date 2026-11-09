@@ -1,0 +1,84 @@
+{
+  "edges": [
+    {
+      "source": "lazyplan.services.audit",
+      "target": "lazyplan.infrastructure",
+      "reason": "audit reads the VCS adapter"
+    },
+    {
+      "source": "lazyplan.services.forge",
+      "target": "lazyplan.infrastructure.forge",
+      "reason": "forge service wraps the forge adapter"
+    },
+    {
+      "source": "lazyplan.services.forge",
+      "target": "lazyplan.infrastructure.github",
+      "reason": "forge service wraps the GitHub adapter"
+    },
+    {
+      "source": "lazyplan.services.forge",
+      "target": "lazyplan.infrastructure.vcs",
+      "reason": "forge service resolves the checkout adapter"
+    },
+    {
+      "source": "lazyplan.services.hooks",
+      "target": "lazyplan.infrastructure.repo",
+      "reason": "hook adapter locates the existing database"
+    },
+    {
+      "source": "lazyplan.services.plan_document",
+      "target": "lazyplan.infrastructure.templates",
+      "reason": "plan documents read repo creation templates"
+    },
+    {
+      "source": "lazyplan.services.planning",
+      "target": "lazyplan.infrastructure.templates",
+      "reason": "planning reads repo creation templates"
+    },
+    {
+      "source": "lazyplan.services.provenance",
+      "target": "lazyplan.infrastructure.vcs",
+      "reason": "provenance refreshes VCS links"
+    },
+    {
+      "source": "lazyplan.services.share",
+      "target": "lazyplan.infrastructure",
+      "reason": "share writes through the text-file adapter"
+    },
+    {
+      "source": "lazyplan.services.source",
+      "target": "lazyplan.infrastructure.forge",
+      "reason": "source trail reads the forge adapter"
+    },
+    {
+      "source": "lazyplan.services.source",
+      "target": "lazyplan.infrastructure.vcs",
+      "reason": "source trail reads the VCS adapter"
+    },
+    {
+      "source": "lazyplan.services.tasks",
+      "target": "lazyplan.infrastructure.vcs",
+      "reason": "task start/finish uses the VCS adapter"
+    },
+    {
+      "source": "lazyplan.services.vcs",
+      "target": "lazyplan.infrastructure.vcs",
+      "reason": "VCS use cases wrap the VCS adapter"
+    },
+    {
+      "source": "lazyplan.store.base",
+      "target": "lazyplan.infrastructure.checkout",
+      "reason": "default path adapter"
+    },
+    {
+      "source": "lazyplan.store.base",
+      "target": "lazyplan.infrastructure.repo",
+      "reason": "database path resolution"
+    },
+    {
+      "source": "lazyplan.store.base",
+      "target": "lazyplan.infrastructure.settings",
+      "reason": "default actor"
+    }
+  ]
+}

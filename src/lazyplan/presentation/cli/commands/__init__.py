@@ -5,7 +5,7 @@ from __future__ import annotations
 from argparse import Namespace
 from collections.abc import Callable
 
-from ....store import Store
+from ....core.ports.app import AppPort
 from .admin import (
     _cmd_completion,
     _cmd_feed,
@@ -195,7 +195,7 @@ _GROUP_CMDS: dict[tuple[str, str], str] = {
     ("pr", "refresh"): "pr-refresh",
 }
 
-_COMMANDS: dict[str, Callable[[Store, Namespace, str], int]] = {
+_COMMANDS: dict[str, Callable[[AppPort, Namespace, str], int]] = {
     "setup": _cmd_setup,
     "doctor": _cmd_doctor,
     "info": _cmd_info,

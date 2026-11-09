@@ -6,7 +6,7 @@ import json
 import sys
 from typing import TYPE_CHECKING, TextIO
 
-from ...core.ports.mcp import McpPort
+from ...core.ports.app import AppPort
 from ...infrastructure import settings
 
 PROTOCOL_VERSION = "2024-11-05"
@@ -17,7 +17,7 @@ class McpBase:
 
     def __init__(
         self,
-        store: McpPort | None,
+        store: AppPort | None,
         actor: str = "human",
         read_only: bool = False,
         db_path: str = "",
@@ -120,7 +120,7 @@ class McpBase:
         def _read_resource(self, request_id: object, params: dict) -> dict:
             raise NotImplementedError
 
-    def _need_store(self) -> McpPort:
+    def _need_store(self) -> AppPort:
         if self.store is None:
             raise RuntimeError("no database")
         return self.store

@@ -10,6 +10,11 @@ HEAL_STRICT = "strict"
 _MODES = frozenset({HEAL_OFF, HEAL_SAFE, HEAL_STRICT})
 
 
+def default_actor() -> str:
+    """$USER on posix, %USERNAME% on Windows, else human."""
+    return (os.environ.get("USER") or os.environ.get("USERNAME") or "human")[:64]
+
+
 def heal_mode(flag: bool | None = None) -> str:
     """Resolve --heal/--no-heal, then LAZYPLAN_HEAL, then safe."""
     if flag is not None:

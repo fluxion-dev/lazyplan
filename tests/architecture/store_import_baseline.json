@@ -19,10 +19,6 @@
     {
       "module": "lazyplan.presentation.tui.app",
       "reason": "TUI composition root opens the store"
-    },
-    {
-      "module": "lazyplan.services.hooks",
-      "reason": "temporary: lifecycle hooks own session tracking until M485"
     }
   ]
 }

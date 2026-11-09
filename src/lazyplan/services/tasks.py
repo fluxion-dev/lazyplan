@@ -12,7 +12,7 @@ from .base import (
 )
 from .evidence import task_gate
 from .planning import set_status
-from .vcs import _ensure_task_repo_links, _norm_path, _repo_for_task
+from .vcs import _ensure_task_repo_links, _repo_for_task
 
 
 def start_task(
@@ -41,7 +41,7 @@ def start_task(
         )
     base = backend.merge_base(root, "HEAD", name) or backend.head(root) or ""
     _ensure_task_repo_links(store, task_id, actor)
-    resolved_root = _norm_path(str(root))
+    resolved_root = store.resolve_repo_path(str(root))
     target = next(
         (repo for repo in store.list_repos("task", task_id) if repo["repo_path"] == resolved_root),
         None,
@@ -76,7 +76,7 @@ def start_task(
 def _finish_target(store: ProvenancePort, task_id: int, repo_path: str) -> dict:
     """Repo link for finishing a task, honoring an explicit checkout."""
     if repo_path:
-        want = _norm_path(repo_path)
+        want = store.resolve_repo_path(repo_path)
         for repo in store.list_repos("task", task_id):
             if repo["repo_path"] == want:
                 return repo
@@ -229,14 +229,14 @@ def finish_task(
             actor=actor,
         )
     linked = _link_commits(store, task_id, backend, str(root), base, actor)
-    warnings = _overlap_warnings(store, task_id, _norm_path(str(root)))
+    warnings = _overlap_warnings(store, task_id, store.resolve_repo_path(str(root)))
     done = False
     if not status.dirty:
         set_status(store, "task", task_id, Status.DONE, actor=actor)
         done = True
     return {
         "task": task_id,
-        "repo_path": _norm_path(str(root)),
+        "repo_path": store.resolve_repo_path(str(root)),
         "branch": branch,
         "base_sha": base,
         "linked": linked,

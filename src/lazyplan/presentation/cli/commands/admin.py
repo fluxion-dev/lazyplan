@@ -16,9 +16,7 @@ from ....core.ports.insights import InsightsPort
 from ....core.ports.planning import PlanningPort
 from ....core.ports.transfer import TransferPort
 from ....infrastructure import textfile
-from ....infrastructure.update_apply import build_apply_plan, spawn_windows_apply
-from ....infrastructure.update_stage import StageError
-from ....services.environment import (
+from ....infrastructure.environment import (
     UpgradeError,
     detect,
     diagnostics,
@@ -28,6 +26,8 @@ from ....services.environment import (
     run_upgrade,
     stage_update,
 )
+from ....infrastructure.update_apply import build_apply_plan, spawn_windows_apply
+from ....infrastructure.update_stage import StageError
 from ...shared import (
     porcelain,
 )

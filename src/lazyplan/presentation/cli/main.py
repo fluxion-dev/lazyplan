@@ -11,13 +11,13 @@ from lazyplan.presentation import (
     setup,
 )
 
-from ...services.environment import (
+from ...infrastructure.environment import (
     cached_latest,
     detect,
     notice_text,
     update_check_enabled,
 )
-from ...services.environment import (
+from ...infrastructure.environment import (
     latest_version as latest_version,
 )
 from ...store import Store

@@ -7,19 +7,18 @@ from lazyplan.infrastructure.vcs import CommitInfo, RepoStatus, VCSBackend, dete
 from ..core.kinds import check_kind
 from ..core.policies.provenance import branch_ref, letter_for_kind, trailer_refs
 from ..core.ports.provenance import ProvenancePort
-from ..infrastructure.repo_paths import resolve_repo_path
 
 
-def _norm_path(path: str) -> str:
+def _norm_path(store: ProvenancePort, path: str) -> str:
     """Absolute normalized path for repo comparisons."""
-    return resolve_repo_path(path)
+    return store.resolve_repo_path(path)
 
 
 def _repo_for_task(store: ProvenancePort, task_id: int, repo_path: str = "") -> dict:
     """Effective repo link for a task, honoring an explicit path."""
     repos = store.effective_repos("task", task_id)
     if repo_path:
-        want = _norm_path(repo_path)
+        want = _norm_path(store, repo_path)
         for repo in repos:
             if repo.get("repo_path") == want:
                 return repo
@@ -31,7 +30,7 @@ def _repo_for_task(store: ProvenancePort, task_id: int, repo_path: str = "") -> 
         return repos[0]
     backend, root = detect_backend(".")
     if backend is not None and root is not None:
-        return {"repo_path": _norm_path(str(root)), "repo_remote": ""}
+        return {"repo_path": _norm_path(store, str(root)), "repo_remote": ""}
     raise ValueError("task has no linked repo; run link-repo first")
 
 
@@ -67,7 +66,7 @@ def _branch_scan(
     ref_kind, ref_id = branch_ref
     base = ""
     for repo in store.list_repos(ref_kind, ref_id):
-        if repo["repo_path"] == _norm_path(root) and repo.get("branch") == branch:
+        if repo["repo_path"] == _norm_path(store, root) and repo.get("branch") == branch:
             base = str(repo.get("base_sha", "") or "")
             break
     if not base:
@@ -171,7 +170,7 @@ def _task_capture_block(
     )
     if target is None:
         return False, ""
-    if _norm_path(root) != target["repo_path"]:
+    if _norm_path(store, root) != target["repo_path"]:
         return True, "HEAD is in a different checkout than the task branch"
     branch = backend.branch(root)
     if branch != target["branch"]:
@@ -253,7 +252,7 @@ def _repo_targets(
 ) -> list[dict]:
     """Checkouts to inspect: one path, a row's effective repos, or cwd."""
     if repo_path:
-        return [{"repo_path": _norm_path(repo_path), "repo_remote": ""}]
+        return [{"repo_path": _norm_path(store, repo_path), "repo_remote": ""}]
     if kind or obj_id:
         if not (kind and obj_id):
             raise ValueError("--kind and --id go together")
@@ -262,7 +261,7 @@ def _repo_targets(
     backend, root = detect_backend(cwd)
     if backend is None or root is None:
         raise ValueError("no VCS backend available (not a git repo)")
-    return [{"repo_path": _norm_path(str(root)), "repo_remote": ""}]
+    return [{"repo_path": _norm_path(store, str(root)), "repo_remote": ""}]
 
 
 def repo_statuses(

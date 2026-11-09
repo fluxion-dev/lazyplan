@@ -20,7 +20,6 @@ from ..core.policies.sessions import (
 from .base import StoreBase
 from .session_pointer import (
     SESSION_ENV,
-    checkout_path,
     clear_pointer,
     read_pointer,
     write_pointer,
@@ -72,7 +71,7 @@ class SessionsMixin(StoreBase):
                 row = self.get_session(session_id)
                 if row is not None and not row.ended and row.actor == actor:
                     return row
-        repo_path = str(checkout_path())
+        repo_path = self.checkout_path()
         pointer_id = read_pointer(self.path, actor, repo_path)
         if pointer_id is None:
             return None
@@ -105,7 +104,7 @@ class SessionsMixin(StoreBase):
         repo = (
             str(Path(repo_path).expanduser().resolve())
             if repo_path.strip()
-            else str(checkout_path())
+            else self.checkout_path()
         )
         self.reap_idle_sessions(now=stamp, repo_path=repo)
         with self._connect() as conn:

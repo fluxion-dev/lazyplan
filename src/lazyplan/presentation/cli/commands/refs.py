@@ -11,7 +11,7 @@ from ....core.serialization import to_payload
 from ...shared import porcelain
 from ...shared.design import msg_error, msg_not_found
 from ..emit import _emit_read, _emit_record
-from .system import _optional_store
+from ..store import optional_store as _optional_store
 
 
 def _ref_row(ref: ExternalRef) -> str:

@@ -16,10 +16,10 @@ from .design import INDENT, milestone_label, plan_label, status_word, task_label
 
 if TYPE_CHECKING:
     from ...core.entities import Status
-    from ...store import Store
+    from ...core.ports.insights import InsightsPort
 
 
-def _plan_progress(store: Store) -> dict[int, tuple[int, int]]:
+def _plan_progress(store: InsightsPort) -> dict[int, tuple[int, int]]:
     """Task progress per plan, independent of status/limit filters."""
     out: dict[int, tuple[int, int]] = {}
     for plan, milestones in service_tree(store, status=None, archived="show"):
@@ -29,7 +29,7 @@ def _plan_progress(store: Store) -> dict[int, tuple[int, int]]:
 
 
 def summary_lines(
-    store: Store,
+    store: InsightsPort,
     status: Status | None,
     plan_id: int | None,
     dot: str = "plain",
@@ -62,7 +62,7 @@ def summary_lines(
 
 
 def tree_lines(
-    store: Store,
+    store: InsightsPort,
     status: Status | None,
     plan_id: int | None,
     dot: str = "plain",

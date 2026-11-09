@@ -149,6 +149,8 @@ class TestAgentScreen(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(len(runs), 1)
             self.assertEqual(runs[0]["task_id"], task.id)
             self.assertIsNotNone(runs[0]["lazyplan_session_id"])
+            head = str(screen.query_one("#agent-head").render())
+            self.assertIn(f"T{task.id} T", head)
             await screen.action_close()
 
     async def test_status_strip_tracks_the_run(self) -> None:

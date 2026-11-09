@@ -96,9 +96,7 @@ if _TEXTUAL_OK:
                 mcp_servers=self._mcp_servers,
             )
             self._consumer = asyncio.create_task(self._consume())
-            self.query_one("#agent-head", Static).update(
-                f"[bold]{self._title}[/]\n[dim]{self.cwd}[/]"
-            )
+            self._update_head()
             self._set_status("idle", "not started")
             prompt = self.query_one("#agent-prompt", TextArea)
             if self._prompt:
@@ -126,6 +124,21 @@ if _TEXTUAL_OK:
                 else:
                     assert isinstance(payload, tuple) and len(payload) == 2
                     self._set_status(str(payload[0]), str(payload[1]))
+
+        def _update_head(self) -> None:
+            if self._work is None:
+                self.query_one("#agent-head", Static).update(
+                    f"[bold]{self._title}[/]\n[dim]{self.cwd}[/]"
+                )
+                return
+            task = self._work["task"]
+            plan = self._work["plan"]
+            milestone = self._work["milestone"]
+            branch = str(self._work.get("branch") or "current checkout")
+            self.query_one("#agent-head", Static).update(
+                f"[bold]T{task.id} {task.title}[/] · P{plan.id} {plan.name}\n"
+                f"[dim]{milestone.title} · {branch} · {self.cwd}[/]"
+            )
 
         def _set_status(self, status: str, detail: str = "") -> None:
             label = status if not detail else f"{status} · {detail}"
@@ -202,6 +215,7 @@ if _TEXTUAL_OK:
                         cwd=self.cwd,
                     )
                     self._lazy_session_id = int(self._work["session"].id)
+                    self._update_head()
                 if not self._started:
                     session_id = await self._controller.start()
                     self._started = True
@@ -217,6 +231,9 @@ if _TEXTUAL_OK:
                         )
                         self._agent_run_id = int(run["id"])
                 await self._controller.prompt(text)
+                refresh = getattr(self.app, "refresh_all", None)
+                if callable(refresh):
+                    refresh("agent turn")
             except Exception as exc:
                 self._transcript.add_error(str(exc))
                 self.notify(f"agent error: {exc}")

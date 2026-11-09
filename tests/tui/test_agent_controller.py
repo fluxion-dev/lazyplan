@@ -9,8 +9,14 @@ import unittest
 from pathlib import Path
 
 from lazyplan.infrastructure.agents import AgentEvent, AgentProfile
-from lazyplan.presentation.tui.controllers.agent import AgentController
 from lazyplan.services.agents import lazyplan_mcp_server
+
+try:
+    from lazyplan.presentation.tui.controllers.agent import AgentController
+
+    _TEXTUAL_OK = True
+except ImportError:  # stdlib-only interpreter
+    _TEXTUAL_OK = False
 
 ROOT = Path(__file__).resolve().parents[2]
 FAKE = ROOT / "tests" / "support" / "fake_acp.py"
@@ -44,6 +50,7 @@ class TestMcpConfig(unittest.TestCase):
         self.assertEqual(server["args"][-1], "--proposal-only")
 
 
+@unittest.skipUnless(_TEXTUAL_OK, "textual not installed")
 class TestAgentController(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:
         self.events: list[AgentEvent] = []

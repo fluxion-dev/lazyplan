@@ -14,17 +14,17 @@ python3 tools/ia_inventory.py --check
 
 | Surface | Count |
 | --- | ---: |
-| cli_commands | 61 |
-| palette_commands | 63 |
-| mcp_tools | 64 |
+| cli_commands | 62 |
+| palette_commands | 64 |
+| mcp_tools | 68 |
 | mcp_resources | 3 |
-| tui_screens | 15 |
-| tui_bindings | 72 |
+| tui_screens | 20 |
+| tui_bindings | 87 |
 | setup_steps | 4 |
 | hook_events | 24 |
 | doc_files | 9 |
-| doc_headings | 95 |
-| tui_key_conflicts | 16 |
+| doc_headings | 97 |
+| tui_key_conflicts | 19 |
 | stale_claims | 0 |
 | env_names | 12 |
 | file_paths | 11 |
@@ -37,6 +37,7 @@ python3 tools/ia_inventory.py --check
 | `add-milestone` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --title, --desc |
 | `add-plan` | --json, --porcelain, --version, --actor, --heal, --no-heal, --title, --name, --what, --desc, --why, --goal |
 | `add-task` | --json, --porcelain, --version, --actor, --heal, --no-heal, --milestone, --title, --desc, --touch |
+| `agent` | --json, --porcelain, --version, --actor, --heal, --no-heal |
 | `audit` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --since, --strict, --min-coverage, --max-lag, --max-gaps, --min-trace, --min-evidence |
 | `brief` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan |
 | `check` | --json, --porcelain, --version, --actor, --heal, --no-heal, --id |
@@ -63,7 +64,7 @@ python3 tools/ia_inventory.py --check
 | `link-repo` | --json, --porcelain, --version, --actor, --heal, --no-heal, --kind, --id, --repo, --remote |
 | `lint` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --strict |
 | `list` | --json, --porcelain, --version, --actor, --heal, --no-heal, --status, --archived, --plan, --all, --limit, --repo, --tree, --milestone |
-| `mcp` | --json, --porcelain, --version, --actor, --heal, --no-heal, --read-only |
+| `mcp` | --json, --porcelain, --version, --actor, --heal, --no-heal, --read-only, --proposal-only |
 | `milestone` | --json, --porcelain, --version, --actor, --heal, --no-heal |
 | `next` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --ttl, --note, --suggest |
 | `note` | --json, --porcelain, --version, --actor, --heal, --no-heal, --kind, --id, --text, --limit |
@@ -136,6 +137,7 @@ python3 tools/ia_inventory.py --check
 | `move-doing` | Move to doing | `` | `move_doing` |
 | `move-done` | Move to done | `` | `move_done` |
 | `move-todo` | Move to todo | `` | `move_todo` |
+| `open-agent` | Open agent workbench | `W` | `open_agent` |
 | `open-detail` | Open detail | `enter` | `open_detail` |
 | `open-pr` | Open pull request | `` | `open_pr` |
 | `plan-diff` | Show plan diff | `` | `plan_diff` |
@@ -209,6 +211,10 @@ python3 tools/ia_inventory.py --check
 | `plan_approve` | Approve the current plan scope. |
 | `plan_diff` | Scope drift since a plan approval. |
 | `plan_ready` | Lint, coverage, and open-question readiness for a plan. |
+| `proposal_list` | Pending or resolved agent proposals. |
+| `propose_edit` | Stage an edit to a plan, milestone, or task for review. |
+| `propose_plan` | Stage a plan document for human review; does not create rows. |
+| `propose_task` | Stage a new task under a milestone for review. |
 | `pull_request_link` | Attach a GitHub pull request URL to a row. |
 | `pull_request_list` | Cached pull requests linked to a row. |
 | `pull_request_refresh` | Refresh cached pull requests from GitHub (network). |
@@ -242,6 +248,11 @@ python3 tools/ia_inventory.py --check
 
 ## TUI screens
 
+- `src/lazyplan/presentation/tui/screens/agent.py` — AgentScreen
+- `src/lazyplan/presentation/tui/screens/agent_finish.py` — AgentFinishScreen
+- `src/lazyplan/presentation/tui/screens/agent_permission.py` — AgentPermissionScreen
+- `src/lazyplan/presentation/tui/screens/agent_picker.py` — AgentPickerScreen
+- `src/lazyplan/presentation/tui/screens/agent_proposals.py` — ProposalReviewScreen
 - `src/lazyplan/presentation/tui/screens/detail.py` — DetailScreen
 - `src/lazyplan/presentation/tui/screens/export.py` — ExportScreen
 - `src/lazyplan/presentation/tui/screens/forms.py` — NewPlanScreen
@@ -264,6 +275,7 @@ python3 tools/ia_inventory.py --check
 | --- | --- | --- | --- |
 | `src/lazyplan/presentation/tui/app.py` | `T` | `toggle_timeline` | Timeline |
 | `src/lazyplan/presentation/tui/app.py` | `U` | `update_prompt` | Update |
+| `src/lazyplan/presentation/tui/app.py` | `W` | `open_agent` | Workbench |
 | `src/lazyplan/presentation/tui/app.py` | `Z` | `fold_all` | Fold all |
 | `src/lazyplan/presentation/tui/app.py` | `a` | `add_criterion` | Criterion |
 | `src/lazyplan/presentation/tui/app.py` | `d` | `delete` | Delete |
@@ -287,12 +299,26 @@ python3 tools/ia_inventory.py --check
 | `src/lazyplan/presentation/tui/navigation.py` | `c` | `command_palette` | Palette |
 | `src/lazyplan/presentation/tui/navigation.py` | `q` | `quit` | Quit |
 | `src/lazyplan/presentation/tui/navigation.py` | `question_mark` | `help` | Help |
+| `src/lazyplan/presentation/tui/screens/agent.py` | `ctrl+f` | `finish` | Finish |
+| `src/lazyplan/presentation/tui/screens/agent.py` | `ctrl+g` | `pick_agent` | Agent |
+| `src/lazyplan/presentation/tui/screens/agent.py` | `ctrl+p` | `open_proposals` | Proposals |
+| `src/lazyplan/presentation/tui/screens/agent.py` | `ctrl+s` | `send` | Send |
+| `src/lazyplan/presentation/tui/screens/agent.py` | `ctrl+x` | `cancel` | Stop |
+| `src/lazyplan/presentation/tui/screens/agent.py` | `escape` | `close` | Close |
+| `src/lazyplan/presentation/tui/screens/agent_finish.py` | `escape` | `cancel` | Cancel |
+| `src/lazyplan/presentation/tui/screens/agent_permission.py` | `escape` | `reject` | Reject |
+| `src/lazyplan/presentation/tui/screens/agent_picker.py` | `escape` | `cancel` | Cancel |
+| `src/lazyplan/presentation/tui/screens/agent_proposals.py` | `a` | `apply` | Apply |
+| `src/lazyplan/presentation/tui/screens/agent_proposals.py` | `d` | `reject` | Reject |
+| `src/lazyplan/presentation/tui/screens/agent_proposals.py` | `escape` | `back` | Back |
 | `src/lazyplan/presentation/tui/screens/base.py` | `escape` | `cancel` | Cancel |
 | `src/lazyplan/presentation/tui/screens/detail.py` | `A` | `open_activity_hub` | Activity |
 | `src/lazyplan/presentation/tui/screens/detail.py` | `P` | `open_pull_requests_hub` | PRs |
 | `src/lazyplan/presentation/tui/screens/detail.py` | `Q` | `add_question` | Question |
 | `src/lazyplan/presentation/tui/screens/detail.py` | `R` | `reopen_question` | Reopen |
+| `src/lazyplan/presentation/tui/screens/detail.py` | `W` | `start_work` | Work |
 | `src/lazyplan/presentation/tui/screens/detail.py` | `a` | `add_criterion` | Criterion |
+| `src/lazyplan/presentation/tui/screens/detail.py` | `ctrl+p` | `open_proposals` | Proposals |
 | `src/lazyplan/presentation/tui/screens/detail.py` | `ctrl+r` | `resolve_question` | Resolve |
 | `src/lazyplan/presentation/tui/screens/detail.py` | `ctrl+s` | `save` | Save |
 | `src/lazyplan/presentation/tui/screens/detail.py` | `d` | `delete_row` | Delete |
@@ -339,11 +365,14 @@ python3 tools/ia_inventory.py --check
 
 | Key | Files and actions |
 | --- | --- |
-| `a` | `src/lazyplan/presentation/tui/app.py:89` → `add_criterion`; `src/lazyplan/presentation/tui/screens/detail.py:58` → `add_criterion`; `src/lazyplan/presentation/tui/screens/hub.py:64` → `add` |
-| `d` | `src/lazyplan/presentation/tui/app.py:91` → `delete`; `src/lazyplan/presentation/tui/screens/detail.py:70` → `delete_row`; `src/lazyplan/presentation/tui/screens/hub.py:67` → `delete` |
+| `W` | `src/lazyplan/presentation/tui/app.py:99` → `open_agent`; `src/lazyplan/presentation/tui/screens/detail.py:74` → `start_work` |
+| `a` | `src/lazyplan/presentation/tui/app.py:89` → `add_criterion`; `src/lazyplan/presentation/tui/screens/agent_proposals.py:44` → `apply`; `src/lazyplan/presentation/tui/screens/detail.py:58` → `add_criterion`; `src/lazyplan/presentation/tui/screens/hub.py:64` → `add` |
+| `ctrl+p` | `src/lazyplan/presentation/tui/screens/agent.py:42` → `open_proposals`; `src/lazyplan/presentation/tui/screens/detail.py:73` → `open_proposals` |
+| `ctrl+s` | `src/lazyplan/presentation/tui/screens/agent.py:40` → `send`; `src/lazyplan/presentation/tui/screens/detail.py:72` → `save` |
+| `d` | `src/lazyplan/presentation/tui/app.py:91` → `delete`; `src/lazyplan/presentation/tui/screens/agent_proposals.py:45` → `reject`; `src/lazyplan/presentation/tui/screens/detail.py:70` → `delete_row`; `src/lazyplan/presentation/tui/screens/hub.py:67` → `delete` |
 | `e` | `src/lazyplan/presentation/tui/app.py:86` → `edit_selection`; `src/lazyplan/presentation/tui/screens/detail.py:55` → `toggle_edit`; `src/lazyplan/presentation/tui/screens/hub_coordination.py:266` → `edit_row`; `src/lazyplan/presentation/tui/screens/hub_kinds.py:30` → `edit_row` |
 | `enter` | `src/lazyplan/presentation/tui/app.py:80` → `open_detail`; `src/lazyplan/presentation/tui/screens/source.py:61` → `open_owner`; `src/lazyplan/presentation/tui/widgets/plan_tree.py:31` → `open_detail` |
-| `escape` | `src/lazyplan/presentation/tui/app.py:82` → `clear_filter`; `src/lazyplan/presentation/tui/screens/base.py:46` → `cancel`; `src/lazyplan/presentation/tui/screens/detail.py:54` → `back`; `src/lazyplan/presentation/tui/screens/export.py:43` → `cancel`; `src/lazyplan/presentation/tui/screens/hub.py:63` → `back`; `src/lazyplan/presentation/tui/screens/source.py:60` → `back`; `src/lazyplan/presentation/tui/screens/update.py:39` → `cancel` |
+| `escape` | `src/lazyplan/presentation/tui/app.py:82` → `clear_filter`; `src/lazyplan/presentation/tui/screens/agent.py:39` → `close`; `src/lazyplan/presentation/tui/screens/agent_finish.py:22` → `cancel`; `src/lazyplan/presentation/tui/screens/agent_permission.py:51` → `reject`; `src/lazyplan/presentation/tui/screens/agent_picker.py:25` → `cancel`; `src/lazyplan/presentation/tui/screens/agent_proposals.py:43` → `back`; `src/lazyplan/presentation/tui/screens/base.py:46` → `cancel`; `src/lazyplan/presentation/tui/screens/detail.py:54` → `back`; `src/lazyplan/presentation/tui/screens/export.py:43` → `cancel`; `src/lazyplan/presentation/tui/screens/hub.py:63` → `back`; `src/lazyplan/presentation/tui/screens/source.py:60` → `back`; `src/lazyplan/presentation/tui/screens/update.py:39` → `cancel` |
 | `f` | `src/lazyplan/presentation/tui/app.py:96` → `cycle_mode`; `src/lazyplan/presentation/tui/screens/hub_provenance.py:198` → `filter_actor` |
 | `g` | `src/lazyplan/presentation/tui/app.py:92` → `source_trail`; `src/lazyplan/presentation/tui/screens/detail.py:71` → `open_source`; `src/lazyplan/presentation/tui/screens/hub.py:74` → `source_hub` |
 | `n` | `src/lazyplan/presentation/tui/app.py:85` → `new_context`; `src/lazyplan/presentation/tui/screens/detail.py:69` → `add_child`; `src/lazyplan/presentation/tui/screens/hub.py:69` → `note` |
@@ -437,7 +466,7 @@ python3 tools/ia_inventory.py --check
 | File | Headings |
 | --- | --- |
 | `README.md` | lazyplan (`lpui`) — v0.35.0 · Install · First run · Why it differs · Everyday commands · For your agent · Learn more |
-| `CONTRIBUTING.md` | Contributing to lazyplan · Set up · Before you push · Tests · Landing changes · edit, then commit in small green slices · Release · Style · Docs · Add one action across every surface |
+| `CONTRIBUTING.md` | Contributing to lazyplan · Set up · Before you push · Agent transport · Tests · Landing changes · edit, then commit in small green slices · Release · Style · Docs · Add one action across every surface |
 | `AGENTS.md` | Agent instructions · Documentation |
 | `docs/usage.md` | lazyplan usage · Install · Linux packages · Fedora / RHEL / openSUSE · Debian / Ubuntu · One-line installer · From source · Upgrade · pipx · pip, including the install.sh venv · Uninstall · Start |
 | `docs/lpui.1` | NAME · SYNOPSIS · DESCRIPTION · GLOBAL OPTIONS · COMMANDS · EXAMPLES · ENVIRONMENT · FILES · EXIT STATUS · SEE ALSO |

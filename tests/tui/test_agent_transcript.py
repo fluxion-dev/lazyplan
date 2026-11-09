@@ -5,9 +5,16 @@ from __future__ import annotations
 import unittest
 
 from lazyplan.infrastructure.agents import PlanEntry, ToolCall
-from lazyplan.presentation.tui.views.agent import AgentTranscript
+
+try:
+    from lazyplan.presentation.tui.views.agent import AgentTranscript
+
+    _TEXTUAL_OK = True
+except ImportError:  # stdlib-only interpreter
+    _TEXTUAL_OK = False
 
 
+@unittest.skipUnless(_TEXTUAL_OK, "textual not installed")
 class TestAgentTranscript(unittest.TestCase):
     def test_text_and_thought_blocks(self) -> None:
         transcript = AgentTranscript()

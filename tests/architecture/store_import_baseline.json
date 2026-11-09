@@ -2,6 +2,7 @@
   "modules": [
     "lazyplan.presentation.cli.commands",
     "lazyplan.presentation.cli.commands.admin",
+    "lazyplan.presentation.cli.commands.agent",
     "lazyplan.presentation.cli.commands.plan",
     "lazyplan.presentation.cli.commands.proof",
     "lazyplan.presentation.cli.commands.question",
@@ -21,6 +22,10 @@
     "lazyplan.presentation.setup.apply",
     "lazyplan.presentation.tui.app",
     "lazyplan.presentation.tui.base",
-    "lazyplan.services.hooks"
+    "lazyplan.presentation.tui.screens.agent",
+    "lazyplan.presentation.tui.screens.agent_proposals",
+    "lazyplan.services.agent_work",
+    "lazyplan.services.hooks",
+    "lazyplan.services.proposals"
   ]
 }

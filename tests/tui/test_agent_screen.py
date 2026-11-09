@@ -10,14 +10,19 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from textual.widgets import Button, Input, TextArea
+try:
+    from textual.widgets import Button, Input, TextArea
 
-from lazyplan import services
-from lazyplan.infrastructure.agents import AgentEvent, AgentProfile, ToolCall
-from lazyplan.presentation.shared import registry
-from lazyplan.presentation.tui import create_app
-from lazyplan.presentation.tui.screens.agent import AgentScreen
-from lazyplan.store import Store
+    from lazyplan import services
+    from lazyplan.infrastructure.agents import AgentEvent, AgentProfile, ToolCall
+    from lazyplan.presentation.shared import registry
+    from lazyplan.presentation.tui import create_app
+    from lazyplan.presentation.tui.screens.agent import AgentScreen
+    from lazyplan.store import Store
+
+    _TEXTUAL_OK = True
+except ImportError:  # stdlib-only interpreter
+    _TEXTUAL_OK = False
 
 ROOT = Path(__file__).resolve().parents[2]
 FAKE = ROOT / "tests" / "support" / "fake_acp.py"
@@ -40,6 +45,7 @@ async def wait_for(predicate) -> None:
     raise AssertionError("condition not met")
 
 
+@unittest.skipUnless(_TEXTUAL_OK, "textual not installed")
 class TestAgentScreen(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()

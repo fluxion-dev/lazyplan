@@ -142,6 +142,30 @@
         ]
       },
       {
+        "name": "agent",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          []
+        ]
+      },
+      {
         "name": "audit",
         "options": [
           [
@@ -960,6 +984,9 @@
           ],
           [
             "--read-only"
+          ],
+          [
+            "--proposal-only"
           ]
         ]
       },
@@ -1855,23 +1882,23 @@
         ]
       }
     ],
-    "count": 61
+    "count": 62
   },
   "counts": {
-    "cli_commands": 61,
+    "cli_commands": 62,
     "doc_files": 9,
-    "doc_headings": 95,
+    "doc_headings": 97,
     "env_names": 12,
     "file_paths": 11,
     "hook_events": 24,
     "mcp_resources": 3,
-    "mcp_tools": 64,
-    "palette_commands": 63,
+    "mcp_tools": 68,
+    "palette_commands": 64,
     "setup_steps": 4,
     "stale_claims": 0,
-    "tui_bindings": 72,
-    "tui_key_conflicts": 16,
-    "tui_screens": 15
+    "tui_bindings": 87,
+    "tui_key_conflicts": 19,
+    "tui_screens": 20
   },
   "docs": {
     "files": [
@@ -1893,6 +1920,7 @@
           "Contributing to lazyplan",
           "Set up",
           "Before you push",
+          "Agent transport",
           "Tests",
           "Landing changes",
           "edit, then commit in small green slices",
@@ -1934,6 +1962,7 @@
           "The screen",
           "Trust hubs",
           "Coordination hubs",
+          "Agent workbench",
           "Provenance and activity hubs",
           "Manual override mode",
           "Agents",
@@ -2323,6 +2352,22 @@
       {
         "description": "Lint, coverage, and open-question readiness for a plan.",
         "name": "plan_ready"
+      },
+      {
+        "description": "Pending or resolved agent proposals.",
+        "name": "proposal_list"
+      },
+      {
+        "description": "Stage an edit to a plan, milestone, or task for review.",
+        "name": "propose_edit"
+      },
+      {
+        "description": "Stage a plan document for human review; does not create rows.",
+        "name": "propose_plan"
+      },
+      {
+        "description": "Stage a new task under a milestone for review.",
+        "name": "propose_task"
       },
       {
         "description": "Attach a GitHub pull request URL to a row.",
@@ -2834,6 +2879,14 @@
         "section": "Edit"
       },
       {
+        "handler": "open_agent",
+        "help_group": "APP",
+        "id": "open-agent",
+        "key": "W",
+        "label": "Open agent workbench",
+        "section": "App"
+      },
+      {
         "handler": "open_detail",
         "help_group": "MOVE",
         "id": "open-detail",
@@ -3042,7 +3095,7 @@
         "section": "App"
       }
     ],
-    "count": 63
+    "count": 64
   },
   "setup": {
     "steps": [
@@ -3107,6 +3160,14 @@
         "key": "U",
         "label": "Update",
         "line": "98",
+        "screen": "app"
+      },
+      {
+        "action": "open_agent",
+        "file": "src/lazyplan/presentation/tui/app.py",
+        "key": "W",
+        "label": "Workbench",
+        "line": "99",
         "screen": "app"
       },
       {
@@ -3294,6 +3355,102 @@
         "screen": "navigation"
       },
       {
+        "action": "finish",
+        "file": "src/lazyplan/presentation/tui/screens/agent.py",
+        "key": "ctrl+f",
+        "label": "Finish",
+        "line": "43",
+        "screen": "agent"
+      },
+      {
+        "action": "pick_agent",
+        "file": "src/lazyplan/presentation/tui/screens/agent.py",
+        "key": "ctrl+g",
+        "label": "Agent",
+        "line": "44",
+        "screen": "agent"
+      },
+      {
+        "action": "open_proposals",
+        "file": "src/lazyplan/presentation/tui/screens/agent.py",
+        "key": "ctrl+p",
+        "label": "Proposals",
+        "line": "42",
+        "screen": "agent"
+      },
+      {
+        "action": "send",
+        "file": "src/lazyplan/presentation/tui/screens/agent.py",
+        "key": "ctrl+s",
+        "label": "Send",
+        "line": "40",
+        "screen": "agent"
+      },
+      {
+        "action": "cancel",
+        "file": "src/lazyplan/presentation/tui/screens/agent.py",
+        "key": "ctrl+x",
+        "label": "Stop",
+        "line": "41",
+        "screen": "agent"
+      },
+      {
+        "action": "close",
+        "file": "src/lazyplan/presentation/tui/screens/agent.py",
+        "key": "escape",
+        "label": "Close",
+        "line": "39",
+        "screen": "agent"
+      },
+      {
+        "action": "cancel",
+        "file": "src/lazyplan/presentation/tui/screens/agent_finish.py",
+        "key": "escape",
+        "label": "Cancel",
+        "line": "22",
+        "screen": "agent_finish"
+      },
+      {
+        "action": "reject",
+        "file": "src/lazyplan/presentation/tui/screens/agent_permission.py",
+        "key": "escape",
+        "label": "Reject",
+        "line": "51",
+        "screen": "agent_permission"
+      },
+      {
+        "action": "cancel",
+        "file": "src/lazyplan/presentation/tui/screens/agent_picker.py",
+        "key": "escape",
+        "label": "Cancel",
+        "line": "25",
+        "screen": "agent_picker"
+      },
+      {
+        "action": "apply",
+        "file": "src/lazyplan/presentation/tui/screens/agent_proposals.py",
+        "key": "a",
+        "label": "Apply",
+        "line": "44",
+        "screen": "agent_proposals"
+      },
+      {
+        "action": "reject",
+        "file": "src/lazyplan/presentation/tui/screens/agent_proposals.py",
+        "key": "d",
+        "label": "Reject",
+        "line": "45",
+        "screen": "agent_proposals"
+      },
+      {
+        "action": "back",
+        "file": "src/lazyplan/presentation/tui/screens/agent_proposals.py",
+        "key": "escape",
+        "label": "Back",
+        "line": "43",
+        "screen": "agent_proposals"
+      },
+      {
         "action": "cancel",
         "file": "src/lazyplan/presentation/tui/screens/base.py",
         "key": "escape",
@@ -3334,11 +3491,27 @@
         "screen": "detail"
       },
       {
+        "action": "start_work",
+        "file": "src/lazyplan/presentation/tui/screens/detail.py",
+        "key": "W",
+        "label": "Work",
+        "line": "74",
+        "screen": "detail"
+      },
+      {
         "action": "add_criterion",
         "file": "src/lazyplan/presentation/tui/screens/detail.py",
         "key": "a",
         "label": "Criterion",
         "line": "58",
+        "screen": "detail"
+      },
+      {
+        "action": "open_proposals",
+        "file": "src/lazyplan/presentation/tui/screens/detail.py",
+        "key": "ctrl+p",
+        "label": "Proposals",
+        "line": "73",
         "screen": "detail"
       },
       {
@@ -3674,9 +3847,29 @@
       {
         "bindings": [
           {
+            "action": "open_agent",
+            "file": "src/lazyplan/presentation/tui/app.py",
+            "line": "99"
+          },
+          {
+            "action": "start_work",
+            "file": "src/lazyplan/presentation/tui/screens/detail.py",
+            "line": "74"
+          }
+        ],
+        "key": "W"
+      },
+      {
+        "bindings": [
+          {
             "action": "add_criterion",
             "file": "src/lazyplan/presentation/tui/app.py",
             "line": "89"
+          },
+          {
+            "action": "apply",
+            "file": "src/lazyplan/presentation/tui/screens/agent_proposals.py",
+            "line": "44"
           },
           {
             "action": "add_criterion",
@@ -3694,9 +3887,44 @@
       {
         "bindings": [
           {
+            "action": "open_proposals",
+            "file": "src/lazyplan/presentation/tui/screens/agent.py",
+            "line": "42"
+          },
+          {
+            "action": "open_proposals",
+            "file": "src/lazyplan/presentation/tui/screens/detail.py",
+            "line": "73"
+          }
+        ],
+        "key": "ctrl+p"
+      },
+      {
+        "bindings": [
+          {
+            "action": "send",
+            "file": "src/lazyplan/presentation/tui/screens/agent.py",
+            "line": "40"
+          },
+          {
+            "action": "save",
+            "file": "src/lazyplan/presentation/tui/screens/detail.py",
+            "line": "72"
+          }
+        ],
+        "key": "ctrl+s"
+      },
+      {
+        "bindings": [
+          {
             "action": "delete",
             "file": "src/lazyplan/presentation/tui/app.py",
             "line": "91"
+          },
+          {
+            "action": "reject",
+            "file": "src/lazyplan/presentation/tui/screens/agent_proposals.py",
+            "line": "45"
           },
           {
             "action": "delete_row",
@@ -3762,6 +3990,31 @@
             "action": "clear_filter",
             "file": "src/lazyplan/presentation/tui/app.py",
             "line": "82"
+          },
+          {
+            "action": "close",
+            "file": "src/lazyplan/presentation/tui/screens/agent.py",
+            "line": "39"
+          },
+          {
+            "action": "cancel",
+            "file": "src/lazyplan/presentation/tui/screens/agent_finish.py",
+            "line": "22"
+          },
+          {
+            "action": "reject",
+            "file": "src/lazyplan/presentation/tui/screens/agent_permission.py",
+            "line": "51"
+          },
+          {
+            "action": "cancel",
+            "file": "src/lazyplan/presentation/tui/screens/agent_picker.py",
+            "line": "25"
+          },
+          {
+            "action": "back",
+            "file": "src/lazyplan/presentation/tui/screens/agent_proposals.py",
+            "line": "43"
           },
           {
             "action": "cancel",
@@ -3988,6 +4241,26 @@
       }
     ],
     "screens": [
+      {
+        "class": "AgentScreen",
+        "file": "src/lazyplan/presentation/tui/screens/agent.py"
+      },
+      {
+        "class": "AgentFinishScreen",
+        "file": "src/lazyplan/presentation/tui/screens/agent_finish.py"
+      },
+      {
+        "class": "AgentPermissionScreen",
+        "file": "src/lazyplan/presentation/tui/screens/agent_permission.py"
+      },
+      {
+        "class": "AgentPickerScreen",
+        "file": "src/lazyplan/presentation/tui/screens/agent_picker.py"
+      },
+      {
+        "class": "ProposalReviewScreen",
+        "file": "src/lazyplan/presentation/tui/screens/agent_proposals.py"
+      },
       {
         "class": "DetailScreen",
         "file": "src/lazyplan/presentation/tui/screens/detail.py"

@@ -7,14 +7,20 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from textual.widgets import Button
-
 from lazyplan.infrastructure.agents import AgentProfile
 from lazyplan.presentation import mcp
-from lazyplan.presentation.tui import create_app
-from lazyplan.presentation.tui.screens.agent import AgentScreen
-from lazyplan.presentation.tui.screens.agent_proposals import ProposalReviewScreen
 from lazyplan.store import Store
+
+try:
+    from textual.widgets import Button
+
+    from lazyplan.presentation.tui import create_app
+    from lazyplan.presentation.tui.screens.agent import AgentScreen
+    from lazyplan.presentation.tui.screens.agent_proposals import ProposalReviewScreen
+
+    _TEXTUAL_OK = True
+except ImportError:  # stdlib-only interpreter
+    _TEXTUAL_OK = False
 
 ROOT = Path(__file__).resolve().parents[2]
 FAKE = ROOT / "tests" / "support" / "fake_acp.py"
@@ -27,6 +33,7 @@ def document(title: str) -> dict:
     }
 
 
+@unittest.skipUnless(_TEXTUAL_OK, "textual not installed")
 class TestProposalReview(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()

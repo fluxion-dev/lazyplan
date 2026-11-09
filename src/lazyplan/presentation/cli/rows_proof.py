@@ -5,9 +5,9 @@ from __future__ import annotations
 import time
 
 from ...core.entities import Criterion, CriterionEvidence
+from ...core.ports.insights import InsightsPort
 from ...services import insights
 from ...services.evidence import ProofResult
-from ...store import Store
 from ..shared import porcelain
 from .emit import _porcelain_row
 from .rows import (
@@ -177,7 +177,7 @@ def _audit_rows(report: insights.audit.Report) -> list[str]:
     return rows
 
 
-def _brief_rows(store: Store, payload: dict) -> list[str]:
+def _brief_rows(store: InsightsPort, payload: dict) -> list[str]:
     """Brief as plan, doing, next, criterion, and unlinked commit rows."""
     rows = [porcelain.row("metric", "active", "-", payload.get("active", 0))]
     for entry in payload.get("plans", []):

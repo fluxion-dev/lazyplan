@@ -9,7 +9,7 @@ import time
 from pathlib import Path
 
 from lazyplan import services
-from lazyplan.infrastructure.repo import find_repo_root, resolve_db_path
+from lazyplan.infrastructure.repo import find_repo_root
 from lazyplan.presentation import (
     setup,
 )
@@ -17,7 +17,7 @@ from lazyplan.services import (
     audit,
 )
 
-from ....store import Store
+from ....core.ports.insights import InsightsPort
 from ...setup import layout as setup_layout
 from ...setup import ui as setup_ui
 from ...shared import (
@@ -38,6 +38,7 @@ from ..rows_proof import (
     _trace_rows,
     _trace_text,
 )
+from ..store import optional_store
 
 
 def _setup_interactive(args: argparse.Namespace) -> bool:
@@ -100,7 +101,7 @@ def _print_setup(result: dict) -> None:
     print(f"state:     {result['state']}")
 
 
-def _cmd_setup(store: Store | None, args: argparse.Namespace, actor: str) -> int:
+def _cmd_setup(store: object | None, args: argparse.Namespace, actor: str) -> int:
     """Re-run setup, or apply remembered choices without prompts."""
     from lazyplan.infrastructure import hook_install
 
@@ -246,7 +247,7 @@ def _print_doctor(layout: setup_layout.SetupLayout, skill_files: list[Path], rep
         print(f"note:      {note}")
 
 
-def _cmd_doctor(store: Store | None, args: argparse.Namespace, actor: str) -> int:
+def _cmd_doctor(store: object | None, args: argparse.Namespace, actor: str) -> int:
     """Read-only setup report; never opens or writes a database."""
     del store, actor
     home = Path.home()
@@ -258,14 +259,6 @@ def _cmd_doctor(store: Store | None, args: argparse.Namespace, actor: str) -> in
         return code
     _print_doctor(layout, skill_files, report)
     return code
-
-
-def _optional_store(args: argparse.Namespace) -> Store | None:
-    """Open an existing database without creating one."""
-    path = Path(resolve_db_path(args.db)).expanduser()
-    if not path.is_file():
-        return None
-    return Store(str(path))
 
 
 def _audit_lines(report: audit.Report) -> list[str]:
@@ -319,11 +312,11 @@ def _audit_output(args: argparse.Namespace, result: audit.Report, reasons: list[
     return 0
 
 
-def _cmd_audit(store: Store | None, args: argparse.Namespace, actor: str) -> int:
+def _cmd_audit(store: InsightsPort | None, args: argparse.Namespace, actor: str) -> int:
     """Read-only accuracy report; --strict exits 2 only on a breach."""
     del actor
     try:
-        db = store or _optional_store(args)
+        db = store or optional_store(args)
     except (RuntimeError, OSError, sqlite3.Error) as exc:
         print(f"error: cannot read the database: {exc}", file=sys.stderr)
         return 2
@@ -354,13 +347,13 @@ def _cmd_audit(store: Store | None, args: argparse.Namespace, actor: str) -> int
     return _audit_output(args, result, reasons)
 
 
-def _cmd_brief(store: Store | None, args: argparse.Namespace, actor: str) -> int:
+def _cmd_brief(store: InsightsPort | None, args: argparse.Namespace, actor: str) -> int:
     """Read-only session brief; never creates a database."""
     from lazyplan.services import brief
 
     del actor
     try:
-        db = store or _optional_store(args)
+        db = store or optional_store(args)
     except (RuntimeError, OSError, sqlite3.Error) as exc:
         print(f"error: cannot read the database: {exc}", file=sys.stderr)
         return 2
@@ -386,11 +379,11 @@ def _cmd_brief(store: Store | None, args: argparse.Namespace, actor: str) -> int
     return 0
 
 
-def _cmd_review(store: Store | None, args: argparse.Namespace, actor: str) -> int:
+def _cmd_review(store: InsightsPort | None, args: argparse.Namespace, actor: str) -> int:
     """Read-only deterministic review packet."""
     del actor
     try:
-        db = store or _optional_store(args)
+        db = store or optional_store(args)
     except (RuntimeError, OSError, sqlite3.Error) as exc:
         print(f"error: cannot read the database: {exc}", file=sys.stderr)
         return 2
@@ -436,11 +429,11 @@ def _cmd_review(store: Store | None, args: argparse.Namespace, actor: str) -> in
     return 0
 
 
-def _cmd_ship(store: Store | None, args: argparse.Namespace, actor: str) -> int:
+def _cmd_ship(store: InsightsPort | None, args: argparse.Namespace, actor: str) -> int:
     """Read-only deterministic ship note."""
     del actor
     try:
-        db = store or _optional_store(args)
+        db = store or optional_store(args)
     except (RuntimeError, OSError, sqlite3.Error) as exc:
         print(f"error: cannot read the database: {exc}", file=sys.stderr)
         return 2
@@ -483,13 +476,13 @@ def _cmd_ship(store: Store | None, args: argparse.Namespace, actor: str) -> int:
     return 0
 
 
-def _cmd_context(store: Store | None, args: argparse.Namespace, actor: str) -> int:
+def _cmd_context(store: InsightsPort | None, args: argparse.Namespace, actor: str) -> int:
     """Read-only session context packet; never creates a database."""
     from lazyplan.services import context
 
     del actor
     try:
-        db = store or _optional_store(args)
+        db = store or optional_store(args)
     except (RuntimeError, OSError, sqlite3.Error) as exc:
         print(f"error: cannot read the database: {exc}", file=sys.stderr)
         return 2
@@ -518,7 +511,7 @@ def _cmd_context(store: Store | None, args: argparse.Namespace, actor: str) -> i
     return 0
 
 
-def _cmd_stats(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_stats(store: InsightsPort, args: argparse.Namespace, actor: str) -> int:
     from ....services import insights
 
     del actor
@@ -560,7 +553,7 @@ def _cmd_stats(store: Store, args: argparse.Namespace, actor: str) -> int:
     return 0
 
 
-def _cmd_lint(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_lint(store: InsightsPort, args: argparse.Namespace, actor: str) -> int:
     from ....services import insights
 
     del actor
@@ -594,7 +587,7 @@ def _cmd_lint(store: Store, args: argparse.Namespace, actor: str) -> int:
     return 2 if args.strict and findings else 0
 
 
-def _cmd_trace(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_trace(store: InsightsPort, args: argparse.Namespace, actor: str) -> int:
     from ....services import trace as trace_mod
 
     del actor

@@ -9,8 +9,8 @@ from lazyplan import (
 )
 
 from ...core.entities import Status
-from ...core.serialization import approval_payload
-from ...store import Store, to_payload
+from ...core.ports.insights import InsightsPort
+from ...core.serialization import approval_payload, to_payload
 from ..shared import (
     porcelain,
 )
@@ -46,7 +46,7 @@ def _list_limit(args: argparse.Namespace) -> int | None:
 
 
 def _list_payload(
-    store: Store,
+    store: InsightsPort,
     status: Status | None,
     archived: str,
     limit: int | None,
@@ -110,7 +110,7 @@ def _list_payload(
 
 
 def _list_lines(
-    store: Store,
+    store: InsightsPort,
     args: argparse.Namespace,
     status: Status | None,
     archived: str,
@@ -143,7 +143,7 @@ def _list_lines(
 
 
 def _porcelain_list_lines(
-    store: Store,
+    store: InsightsPort,
     status: Status | None,
     plan_id: int | None,
     archived: str,
@@ -234,7 +234,7 @@ def _comment_dict_rows(items: list[dict]) -> list[str]:
     ]
 
 
-def _claim_line(store: Store, task_id: int, title: str) -> str | None:
+def _claim_line(store: InsightsPort, task_id: int, title: str) -> str | None:
     """Claim row for a task, or None when it has no lease."""
     claim = store.get_claim(task_id)
     if claim is None:
@@ -242,7 +242,7 @@ def _claim_line(store: Store, task_id: int, title: str) -> str | None:
     return porcelain.claim_row(task_id, claim.actor, title, claim.expires_at)
 
 
-def _porcelain_show_lines(store: Store, kind: str, full: dict) -> list[str]:
+def _porcelain_show_lines(store: InsightsPort, kind: str, full: dict) -> list[str]:
     """Plain definition rows plus criteria and children; no repo or commit noise."""
     lines: list[str] = []
     if kind == "plan":

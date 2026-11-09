@@ -10,7 +10,7 @@ from ....core.ports.insights import InsightsPort
 from ...shared import porcelain
 from ...shared.design import msg_error, msg_not_found
 from ..emit import _emit
-from .system import _optional_store
+from ..store import optional_store as _optional_store
 
 
 def ready_payload(result: services.ReadyResult) -> dict:

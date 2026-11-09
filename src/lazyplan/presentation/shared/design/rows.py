@@ -12,7 +12,7 @@ from .text import _escape_markup, repo_project_name, status_prefix, status_word,
 
 if TYPE_CHECKING:
     from ....core.entities import Milestone, Plan, Task
-    from ....store import Store
+    from ....core.ports.insights import InsightsPort
 
 DEFAULT_ROW_WIDTH = 80
 
@@ -23,14 +23,14 @@ _CORE_SPEC: dict[str, tuple[str, str]] = {
 }
 
 
-def _core(kind: str, obj: Plan | Milestone | Task, store: Store | None) -> str:
+def _core(kind: str, obj: Plan | Milestone | Task, store: InsightsPort | None) -> str:
     """Label body without the leading status word, shared by label and row."""
     letter, title_attr = _CORE_SPEC[kind]
     title = getattr(obj, title_attr)
     return f"{letter}{obj.id} {title}"
 
 
-def _label(kind: str, obj: Plan | Milestone | Task, store: Store | None, dot: str) -> str:
+def _label(kind: str, obj: Plan | Milestone | Task, store: InsightsPort | None, dot: str) -> str:
     """Canonical row label: status word + body (plain text: CLI, tests)."""
     return f"{status_word(obj.status, dot)} {_core(kind, obj, store)}"
 
@@ -63,7 +63,7 @@ def apply_mark(markup: str, marked: bool) -> str:
     return markup[: -SLOTS["marked"].width] + mark
 
 
-def plan_label(p: Plan, store: Store | None = None, dot: str = "plain") -> str:
+def plan_label(p: Plan, store: InsightsPort | None = None, dot: str = "plain") -> str:
     """Canonical row label for a plan (plain text: CLI, tests)."""
     base = _label("plan", p, store, dot)
     if store is None:
@@ -74,7 +74,7 @@ def plan_label(p: Plan, store: Store | None = None, dot: str = "plain") -> str:
 
 def plan_row(
     p: Plan,
-    store: Store | None = None,
+    store: InsightsPort | None = None,
     links: Sequence[str] | None = None,
     progress: tuple[int, int] | None = None,
     width: int | None = None,
@@ -99,14 +99,14 @@ def plan_row(
     return _render_row("plan", p, stats, width)
 
 
-def milestone_label(s: Milestone, store: Store | None = None, dot: str = "plain") -> str:
+def milestone_label(s: Milestone, store: InsightsPort | None = None, dot: str = "plain") -> str:
     """Canonical row label for a milestone."""
     return _label("milestone", s, store, dot)
 
 
 def milestone_row(
     s: Milestone,
-    store: Store | None = None,
+    store: InsightsPort | None = None,
     links: Sequence[str] | None = None,
     progress: tuple[int, int] | None = None,
     width: int | None = None,
@@ -129,7 +129,7 @@ def milestone_row(
     return _render_row("milestone", s, stats, width)
 
 
-def task_label(t: Task, store: Store | None = None, dot: str = "plain") -> str:
+def task_label(t: Task, store: InsightsPort | None = None, dot: str = "plain") -> str:
     """Canonical row label for a task, including blocked state and claim holder."""
     base = _label("task", t, store, dot)
     if t.blocked:
@@ -142,7 +142,7 @@ def task_label(t: Task, store: Store | None = None, dot: str = "plain") -> str:
 
 def task_row(
     t: Task,
-    store: Store | None = None,
+    store: InsightsPort | None = None,
     links: Sequence[str] | None = None,
     width: int | None = None,
     pr_state: str = "",

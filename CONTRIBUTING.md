@@ -19,6 +19,12 @@ python -m pip install -e ".[dev]"
 
 Run the app from the working tree with `lpui`.
 
+The marketing site in `site/` builds with Node 22:
+
+```bash
+cd site && npm ci
+```
+
 ## Before you push
 
 ```bash
@@ -32,7 +38,7 @@ The gate runs:
 - `vulture` for dead code and `xenon` for complexity
 - the man-page sync check (`tools/gen-man.py --check`)
 - the docs allowlist and link gate (`tools/check-docs.py`)
-- the site discoverability check (`tools/check-site.py`)
+- the site build and discoverability check (`site/`, `tools/check-site.py`)
 - a clean-install smoke that builds, installs, and runs both console scripts
 - the visual snapshots and the performance budgets
 - the unittest suite on both system Python and the venv Python

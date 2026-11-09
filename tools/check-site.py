@@ -2,8 +2,8 @@
 """Site discoverability gate: metadata, structured data, links, and assets.
 
 Usage:
-  python3 tools/check-site.py                 # check site/ source
-  python3 tools/check-site.py --dist site/dist # also check the built site
+  python3 tools/check-site.py                  # check the built site (site/dist)
+  python3 tools/check-site.py --dist site/dist # check a different build output
 
 Stdlib only. Fails with a readable list so Pages and local gates stop before
 shipping a page that can't be crawled or shared correctly.
@@ -314,19 +314,23 @@ def _check_page(root: Path, version: str) -> list[str]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--dist", default="", metavar="PATH", help="also check a built site")
+    parser.add_argument(
+        "--dist",
+        default="site/dist",
+        metavar="PATH",
+        help="built site to check (default: site/dist)",
+    )
     args = parser.parse_args()
     version = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"][
         "version"
     ]
     failures: list[str] = []
-    roots = [("site", ROOT / "site")]
-    if args.dist:
-        dist = (ROOT / args.dist).resolve()
-        if not dist.is_dir():
-            failures.append(f"missing dist directory: {dist}")
-        else:
-            roots.append(("dist", dist))
+    roots: list[tuple[str, Path]] = []
+    dist = (ROOT / args.dist).resolve()
+    if not dist.is_dir():
+        failures.append(f"missing dist directory: {dist} (run the site build first)")
+    else:
+        roots.append(("dist", dist))
     for label, root in roots:
         for error in _check_page(root, version):
             failures.append(f"{label}: {error}")

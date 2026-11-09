@@ -15,8 +15,6 @@ LEGACY_COMMANDS: dict[tuple[str, str], tuple[str, ...]] = {
     ("plan", "move"): ("status",),
     ("milestone", "move"): ("status",),
     ("task", "move"): ("status",),
-    ("criterion", "tick"): ("check",),
-    ("criterion", "untick"): ("uncheck",),
     ("plan", "delete"): ("delete",),
     ("milestone", "delete"): ("delete",),
     ("task", "delete"): ("delete",),

@@ -147,7 +147,7 @@ class TestMcpReadTools(unittest.TestCase):
         proved = self._tool("criterion_prove", {"id": 1, "command": "pytest", "exit_code": 0})
         self.assertFalse(proved.get("isError"))
         payload = json.loads(proved["content"][0]["text"])
-        self.assertTrue(payload["ticked"])
+        self.assertFalse(payload["criterion"]["done"])
         listed = self._tool("criterion_evidence", {"id": 1})
         self.assertFalse(listed.get("isError"))
         rows = json.loads(listed["content"][0]["text"])

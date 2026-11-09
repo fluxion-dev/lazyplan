@@ -1,14 +1,15 @@
 # Newcomer journey walkthrough
 
-Each journey was walked headlessly at 80x24 and 120x40 with
-`tests/tui/test_newcomer_journeys.py`. No journey needed the CLI or the docs.
-The screen is read-only by default, so write journeys begin by pressing `O`
-(or the palette's **Toggle manual override**); that gate is intentional, not
-friction to remove.
+> The TUI UI test suite, including this walkthrough's headless journeys, was
+> retired in favour of logical, CLI end-to-end, and integration tests. The
+> routes below remain the manual walkthrough record.
+
+Each journey was walked headlessly at 80x24 and 120x40. No journey needed the
+CLI or the docs; write journeys start directly on the tree.
 
 | Journey | Route | Result at both sizes |
 | --- | --- | --- |
-| Capture | `O` → `c` → type `create plan` → `enter` | Plan form opens; `escape` returns |
+| Capture | `c` → type `create plan` → `enter` | Plan form opens; `escape` returns |
 | Organize | tree → plan detail → `n` | Milestone form opens; `escape` returns |
 | Execute | tree → task detail → `k` (claims) | Claim hub opens and offers claim/renew/release |
 | Prove | tree → task detail → `t` (criteria) | Criteria hub opens; `p` records proof |
@@ -19,9 +20,7 @@ friction to remove.
 
 ## Friction found and fixed
 
-- The activity hub first reused the generic `u` filter for overrides and added
-  a second `u` binding. The subclass binding was removed; the generic filter
-  now toggles overrides, and `f`/`K` filter by actor and kind.
+- The activity hub uses `f`/`K` to filter by actor and kind.
 - The pull request hub sent its callback as the prompt's initial value. The
   callback is now the screen dismiss handler, so link and filter actions work.
 - Criteria and comments had no edit path. Both gained an `e` key whose prompt
@@ -29,14 +28,14 @@ friction to remove.
 
 ## Accepted friction
 
-- Write actions require override mode. This is the product's read-only safety
-  gate, not a navigation defect; the palette shows the same gate.
 - Export and setup stay CLI-only on purpose. The parity matrix records them as
   approved exceptions.
 
 ## Gate evidence
 
+The retired UI tests are no longer part of the gate. Run the logical suite
+with:
+
 ```bash
-PYTHONPATH=src .venv/bin/python -m unittest tests.tui.test_newcomer_journeys \
-  tests.tui.test_ux_viewports -v
+PYTHONPATH=src .venv/bin/python -m unittest discover -s tests -t .
 ```

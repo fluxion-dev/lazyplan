@@ -47,6 +47,8 @@ class SessionsPort(SessionsReadPort, PlanningPort, Protocol):
         note: str = "",
         force: bool = False,
         now: float | None = None,
+        host: str = "",
+        phase: str = "working",
     ) -> tuple[Session, Session | None]: ...
 
     def end_session(
@@ -56,4 +58,27 @@ class SessionsPort(SessionsReadPort, PlanningPort, Protocol):
         summary: str = "",
         handoff: str = "",
         now: float | None = None,
+        auto: bool = False,
     ) -> Session: ...
+
+    def touch_session(
+        self,
+        session_id: int,
+        phase: str | None = None,
+        host: str = "",
+        now: float | None = None,
+    ) -> Session | None: ...
+
+    def open_session_for(
+        self,
+        repo_path: str,
+        host: str = "",
+        actor: str = "",
+    ) -> Session | None: ...
+
+    def reap_idle_sessions(
+        self,
+        now: float | None = None,
+        idle_after: float = ...,
+        repo_path: str = "",
+    ) -> list[Session]: ...

@@ -3,6 +3,32 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## Unreleased
+
+### Added
+
+- **Live agent sessions.** Lifecycle hooks keep the checkout's session state
+  current: a turn marks it working, a stop marks it awaiting, and the agents
+  pane shows working, awaiting, and idle rows with awaiting first. Sessions
+  idle for 12 hours close automatically with an auto-closed summary.
+
+### Changed
+
+- **Criterion completion.** `criterion edit --id C --done` (or `--open`) sets
+  completion; `criterion prove` records evidence only.
+- **Pane empty states.** The plans, preview, git, and agents panes share one
+  empty-state treatment: a bold capitalized title and a dim next step.
+
+### Removed
+
+- **Criterion tick.** `lpui criterion tick|untick`, the legacy `check|uncheck`
+  aliases, the TUI `x` tick key, and the MCP `criterion_tick|untick` tools are
+  gone.
+- **Manual override mode and override feed.** The screen writes directly
+  again; `O`, the banner, override audit events, `lpui feed --overrides`, the
+  activity-hub override filter, and the MCP `overrides` flag are gone.
+  Historical override rows remain in the normal feed.
+
 ## v0.35.0 — 2026-11-08
 
 The screen becomes a control room for the loop: large journals open faster,

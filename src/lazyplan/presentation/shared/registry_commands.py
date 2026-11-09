@@ -21,8 +21,6 @@ VERBS: tuple[str, ...] = (
     "add",
     "edit",
     "move",
-    "tick",
-    "untick",
     "delete",
     "show",
     "list",
@@ -55,8 +53,8 @@ class Command:
 
     @property
     def mode(self) -> str:
-        """Observe for read-only sections; override for create and edit."""
-        return "override" if self.section in (CREATE, EDIT) else "observe"
+        """Observe for read-only sections; write for create and edit."""
+        return "write" if self.section in (CREATE, EDIT) else "observe"
 
 
 # fmt: off
@@ -84,8 +82,6 @@ COMMANDS: tuple[Command, ...] = (
     Command(id='clear-marks', label='Clear marks', section=EDIT, action_id='row.clear_marks', handler='clear_marks', aliases=('clear marks', 'unmark all'), help_group='MOVE', help_hint='clear every marked row', tui_only=True),
     Command(id='release-claim', label='Release claim', section=EDIT, action_id='claim.release', context='selection', handler='release_claim', aliases=('release claim', 'clear claim'), help_group='CHANGE', help_hint='release your task lease', tui_only=True),
     Command(id='force-release-claim', label='Force release claim', section=EDIT, action_id='claim.force_release', context='selection', handler='force_release_claim', aliases=('force release claim', 'take over claim'), help_group='CHANGE', help_hint="release someone else's lease with a reason", tui_only=True),
-    Command(id='tick-criterion', label='Tick next criterion', section=EDIT, action_id='criterion.tick', verb='tick', nouns=('criterion',), key='x', context='selection', handler='tick_criterion', aliases=('tick criteria', 'check', 'tick'), help_group='CHANGE', help_hint='tick the next open criterion'),
-    Command(id='untick-criterion', label='Reopen last criterion', section=EDIT, action_id='criterion.untick', verb='untick', nouns=('criterion',), context='selection', handler='untick_criterion', aliases=('uncheck', 'reopen criterion'), help_group='CHANGE', help_hint='reopen the last ticked criterion'),
     Command(id='delete-selection', label='Delete selection', section=EDIT, action_id='row.delete', verb='delete', nouns=('plan', 'milestone', 'task'), key='d', context='selection', handler='delete_selection', aliases=('delete', 'remove', 'delete with confirm'), help_group='CHANGE', help_hint='delete the selection after a confirm'),
     Command(id='git-capture', label='Link current commit', section=EDIT, action_id='commit.link', context='selection', handler='git_capture', aliases=('link commit', 'capture commit', 'attach commit'), help_group='CHANGE', help_hint='link the safe current HEAD to the selection', tui_only=True),
     Command(id='bulk-doing', label='Bulk move to doing', section=EDIT, action_id='bulk.move', handler='bulk_doing', aliases=('bulk doing', 'mark doing'), help_group='CHANGE', help_hint='move marked tasks to doing', tui_only=True),
@@ -103,7 +99,7 @@ COMMANDS: tuple[Command, ...] = (
     Command(id='git-refresh', label='Refresh commit links', section=VIEW, action_id='commit.refresh', context='selection', handler='git_refresh', aliases=('refresh commits', 'stale commits', 'refresh git'), help_group='FIND', help_hint='re-resolve commits and mark stale links', tui_only=True),
     Command(id='open-pr', label='Open pull request', section=VIEW, action_id='pull_request.open', context='selection', handler='open_pr', aliases=('open pr', 'pull request', 'github', 'browser'), help_group='FIND', help_hint='open the first linked PR in your browser', tui_only=True),
     Command(id='source-trail', label='Open source trail', section=VIEW, action_id='source.trail', key='g', context='selection', handler='source_trail', aliases=('source', 'git trail', 'where', 'provenance'), help_group='FIND', help_hint='repos, commits, files, and PRs for the selected row', tui_only=True),
-    Command(id='criteria-hub', label='Open criteria hub', section=VIEW, action_id='view.criteria_hub', context='selection', handler='open_criteria_hub', aliases=('criteria hub', 'criteria', 'checklist'), help_group='TRUST', help_hint='select, add, tick, prove, or delete criteria', screens=('tree', 'detail', 'hub'), tui_only=True),
+    Command(id='criteria-hub', label='Open criteria hub', section=VIEW, action_id='view.criteria_hub', context='selection', handler='open_criteria_hub', aliases=('criteria hub', 'criteria', 'checklist'), help_group='TRUST', help_hint='select, add, edit, prove, or delete criteria', screens=('tree', 'detail', 'hub'), tui_only=True),
     Command(id='evidence-hub', label='Open evidence hub', section=VIEW, action_id='view.evidence_hub', context='plan', handler='open_evidence_hub', aliases=('evidence hub', 'proof', 'evidence'), help_group='TRUST', help_hint='browse proof rows and record new evidence', screens=('tree', 'detail', 'hub'), tui_only=True),
     Command(id='questions-hub', label='Open questions hub', section=VIEW, action_id='view.questions_hub', context='plan', handler='open_questions_hub', aliases=('questions hub', 'questions', 'ambiguities'), help_group='TRUST', help_hint='add, resolve, or reopen plan questions', screens=('tree', 'detail', 'hub'), tui_only=True),
     Command(id='references-hub', label='Open references hub', section=VIEW, action_id='view.references_hub', context='plan', handler='open_references_hub', aliases=('references hub', 'references', 'links'), help_group='TRUST', help_hint='link, open, or remove external references', screens=('tree', 'detail', 'hub'), tui_only=True),
@@ -114,9 +110,8 @@ COMMANDS: tuple[Command, ...] = (
     Command(id='refresh-prs', label='Refresh pull requests', section=EDIT, action_id='pull_request.refresh', context='selection', handler='refresh_prs', aliases=('refresh prs', 'fetch prs', 'github refresh'), help_group='CHANGE', help_hint='refresh cached pull requests from GitHub (network)', screens=('tree', 'detail', 'hub'), tui_only=True),
     Command(id='link-pr', label='Link pull request', section=EDIT, action_id='pull_request.link', context='selection', handler='link_pr', aliases=('link pr', 'attach pr', 'add pull request'), help_group='CHANGE', help_hint='attach a GitHub pull request URL to the selection', screens=('tree', 'detail', 'hub'), tui_only=True),
     Command(id='unlink-pr', label='Unlink pull request', section=EDIT, action_id='pull_request.unlink', context='selection', handler='unlink_pr', aliases=('unlink pr', 'detach pr', 'remove pull request'), help_group='CHANGE', help_hint='detach a cached pull request by number', screens=('tree', 'detail', 'hub'), tui_only=True),
-    Command(id='activity-hub', label='Open activity hub', section=VIEW, action_id='event.list', context='always', handler='open_activity_hub', aliases=('activity hub', 'activity', 'feed', 'overrides', 'events'), help_group='FIND', help_hint='recent feed rows and manual overrides with jump targets', screens=('any',), tui_only=True),
+    Command(id='activity-hub', label='Open activity hub', section=VIEW, action_id='event.list', context='always', handler='open_activity_hub', aliases=('activity hub', 'activity', 'feed', 'events'), help_group='FIND', help_hint='recent feed rows with jump targets', screens=('any',), tui_only=True),
     Command(id='plan-diff', label='Show plan diff', section=VIEW, action_id='plan.diff', context='plan', handler='plan_diff', aliases=('diff', 'drift', 'revisions', 'scope changes'), help_group='FIND', help_hint='scope changes since the last approval', tui_only=True),
-    Command(id='toggle-override', label='Toggle manual override', section=APP, action_id='override.toggle', key='O', handler='toggle_override', aliases=('override', 'manual override', 'edit mode', 'read only', 'unlock'), help_group='APP', help_hint='allow manual writes; every change is recorded', screens=('any',), tui_only=True),
     Command(id='cycle-theme', label='Cycle theme', section=APP, action_id='theme.cycle', key='t', handler='cycle_theme', aliases=('theme', 'dark', 'light', 'void', 'mocha', 'latte', 'appearance'), help_group='APP', help_hint='cycle mocha / void / latte', screens=('any',), tui_only=True),
     Command(id='toggle-timeline', label='Show/hide timeline', section=APP, action_id='view.timeline', key='T', handler='toggle_timeline', aliases=('timeline', 'hide timeline', 'show timeline', 'gantt'), help_group='APP', help_hint='show or hide the timeline card', screens=('any',), tui_only=True),
     Command(id='command-palette', label='Command palette', section=APP, action_id='palette.open', key='c', handler='command_palette', aliases=('commands', 'palette'), help_group='APP', help_hint='open the command palette', screens=('any',), in_palette=False, tui_only=True),

@@ -11,8 +11,11 @@ from lazyplan.infrastructure.github import GitHubClient, GitHubError
 from lazyplan.infrastructure.vcs import detect_backend, origin_url
 
 from .... import services
+from ....core.ports.coordination import CoordinationPort
+from ....core.ports.provenance import ProvenancePort
+from ....core.ports.transfer import TransferPort
+from ....core.serialization import to_payload
 from ....infrastructure import textfile
-from ....store import Store, to_payload
 from ...shared import (
     porcelain,
 )
@@ -43,7 +46,7 @@ from ..rows_proof import (
 )
 
 
-def _cmd_git_scan(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_git_scan(store: ProvenancePort, args: argparse.Namespace, actor: str) -> int:
     if args.id is not None and not args.kind:
         print(msg_error(ValueError("--id needs --kind")), file=sys.stderr)
         return 2
@@ -70,7 +73,7 @@ def _cmd_git_scan(store: Store, args: argparse.Namespace, actor: str) -> int:
     )
 
 
-def _cmd_issue_import(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_issue_import(store: TransferPort, args: argparse.Namespace, actor: str) -> int:
     from ....services.transfer import import_issues, parse_github_issues, parse_linear_issues
 
     if args.as_kind == "task":
@@ -113,7 +116,7 @@ def _cmd_issue_import(store: Store, args: argparse.Namespace, actor: str) -> int
     return 0
 
 
-def _cmd_link(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_link(store: ProvenancePort, args: argparse.Namespace, actor: str) -> int:
     if store.get_parent(args.kind, args.id) is None:
         print(msg_not_found(args.kind, args.id), file=sys.stderr)
         return 1
@@ -145,7 +148,7 @@ def _cmd_link(store: Store, args: argparse.Namespace, actor: str) -> int:
     return _emit_record(args, line, {"link": vars(link)})
 
 
-def _cmd_unlink(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_unlink(store: ProvenancePort, args: argparse.Namespace, actor: str) -> int:
     if store.get_parent(args.kind, args.id) is None:
         print(msg_not_found(args.kind, args.id), file=sys.stderr)
         return 1
@@ -161,7 +164,7 @@ def _cmd_unlink(store: Store, args: argparse.Namespace, actor: str) -> int:
     return _emit_record(args, line, {"ok": True, "unlinked": str(args.sha)})
 
 
-def _cmd_commits(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_commits(store: ProvenancePort, args: argparse.Namespace, actor: str) -> int:
     if store.get_parent(args.kind, args.id) is None:
         print(msg_not_found(args.kind, args.id), file=sys.stderr)
         return 1
@@ -183,7 +186,7 @@ def _cmd_commits(store: Store, args: argparse.Namespace, actor: str) -> int:
     )
 
 
-def _cmd_task_start(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_task_start(store: ProvenancePort, args: argparse.Namespace, actor: str) -> int:
     if store.get_task(args.id) is None:
         print(msg_not_found("task", args.id), file=sys.stderr)
         return 1
@@ -204,7 +207,7 @@ def _cmd_task_start(store: Store, args: argparse.Namespace, actor: str) -> int:
     return 0
 
 
-def _cmd_task_block(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_task_block(store: CoordinationPort, args: argparse.Namespace, actor: str) -> int:
     if store.get_task(args.id) is None:
         print(msg_not_found("task", args.id), file=sys.stderr)
         return 1
@@ -225,7 +228,7 @@ def _cmd_task_block(store: Store, args: argparse.Namespace, actor: str) -> int:
     return 0
 
 
-def _cmd_task_unblock(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_task_unblock(store: CoordinationPort, args: argparse.Namespace, actor: str) -> int:
     if store.get_task(args.id) is None:
         print(msg_not_found("task", args.id), file=sys.stderr)
         return 1
@@ -243,7 +246,7 @@ def _cmd_task_unblock(store: Store, args: argparse.Namespace, actor: str) -> int
     return 0
 
 
-def _cmd_task_finish(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_task_finish(store: ProvenancePort, args: argparse.Namespace, actor: str) -> int:
     if store.get_task(args.id) is None:
         print(msg_not_found("task", args.id), file=sys.stderr)
         return 1
@@ -280,7 +283,7 @@ def _cmd_task_finish(store: Store, args: argparse.Namespace, actor: str) -> int:
     return 0
 
 
-def _cmd_git_status(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_git_status(store: ProvenancePort, args: argparse.Namespace, actor: str) -> int:
     if args.kind or args.id:
         if not (args.kind and args.id):
             print(msg_error(ValueError("--kind and --id go together")), file=sys.stderr)
@@ -312,7 +315,7 @@ def _repo_remote_default(repo_path: str) -> str:
     return origin_url(backend, root)
 
 
-def _cmd_link_repo(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_link_repo(store: ProvenancePort, args: argparse.Namespace, actor: str) -> int:
     if store.get_parent(args.kind, args.id) is None:
         print(msg_not_found(args.kind, args.id), file=sys.stderr)
         return 1
@@ -335,7 +338,7 @@ def _cmd_link_repo(store: Store, args: argparse.Namespace, actor: str) -> int:
     return _emit_record(args, line, {"repo": row})
 
 
-def _cmd_unlink_repo(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_unlink_repo(store: ProvenancePort, args: argparse.Namespace, actor: str) -> int:
     if store.get_parent(args.kind, args.id) is None:
         print(msg_not_found(args.kind, args.id), file=sys.stderr)
         return 1
@@ -347,7 +350,7 @@ def _cmd_unlink_repo(store: Store, args: argparse.Namespace, actor: str) -> int:
     return _emit_record(args, line, {"ok": True, "unlinked": str(args.repo)})
 
 
-def _cmd_repos(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_repos(store: ProvenancePort, args: argparse.Namespace, actor: str) -> int:
     if store.get_parent(args.kind, args.id) is None:
         print(msg_not_found(args.kind, args.id), file=sys.stderr)
         return 1
@@ -371,7 +374,7 @@ def _cmd_repos(store: Store, args: argparse.Namespace, actor: str) -> int:
     )
 
 
-def _cmd_export(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_export(store: TransferPort, args: argparse.Namespace, actor: str) -> int:
     from ...shared.render import render_plan_markdown
 
     plan_id = getattr(args, "plan", None)
@@ -407,7 +410,7 @@ def _cmd_export(store: Store, args: argparse.Namespace, actor: str) -> int:
     return 0
 
 
-def _cmd_import(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_import(store: TransferPort, args: argparse.Namespace, actor: str) -> int:
     import json as _json
 
     data = _json.loads(textfile.read(args.file))

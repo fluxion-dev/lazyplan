@@ -119,14 +119,6 @@ class ToolsMixin(
                 ),
                 self._tool_criterion_add,
             ),
-            "criterion_tick": (
-                _tool("criterion_tick", "Tick a criterion.", {"id": _id()}, ["id"], False),
-                self._tool_criterion_tick,
-            ),
-            "criterion_untick": (
-                _tool("criterion_untick", "Untick a criterion.", {"id": _id()}, ["id"], False),
-                self._tool_criterion_untick,
-            ),
             "criterion_relate": (
                 _tool(
                     "criterion_relate",
@@ -266,12 +258,6 @@ class ToolsMixin(
         if isinstance(limit, int):
             ids = ids[: max(limit, 0)]
         return store.get_full_many("plan", ids)
-
-    def _tool_criterion_untick(self, args: dict) -> object:
-        criterion = self._need_store().set_criteria(int(args["id"]), False, actor=self.actor)
-        if criterion is None:
-            raise KeyError(f"criterion {args['id']} not found")
-        return vars(criterion)
 
     def _tool_claim_release(self, args: dict) -> object:
         return services.release_task_claim(
@@ -507,12 +493,6 @@ class ToolsMixin(
     def _tool_brief(self, args: dict) -> object:
         plan_id = args.get("plan")
         return insights.brief.build(self._need_store(), plan_id)
-
-    def _tool_criterion_tick(self, args: dict) -> object:
-        criterion = self._need_store().set_criteria(int(args["id"]), True, actor=self.actor)
-        if criterion is None:
-            raise KeyError(f"criterion {args['id']} not found")
-        return vars(criterion)
 
     def _tool_criterion_unrelate(self, args: dict) -> object:
         ok = self._need_store().unrelate_criterion(

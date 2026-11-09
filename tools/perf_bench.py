@@ -330,7 +330,7 @@ def build_fixture(
                 f"Criterion {index + 1:04d}",
                 actor="bench",
             )
-            store.set_criteria(criterion.id, True, actor="bench")
+            store.update_criterion(criterion.id, done=True, actor="bench")
 
         for index in range(counts.links):
             task = tasks[index % len(tasks)]

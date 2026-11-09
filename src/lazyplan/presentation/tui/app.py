@@ -1,7 +1,7 @@
 """Modal-palette Textual TUI: nav tree + live preview, one status line.
 
 Keys: j/k navigate, left/right fold, enter detail, c palette, escape clear.
-  Press c then type a prefix (new, cycle, tick, fold, filter, ...) and enter runs it.
+  Press c then type a prefix (new, cycle, criteria, fold, filter, ...) and enter runs it.
   Mouse click selects; double-click opens detail.
 Keyboard-only: agents use the `lpui` CLI against the same SQLite file; local edits
 bump reactive rev, external DB changes arrive via fingerprint() poll + feed toast.
@@ -31,7 +31,7 @@ except ImportError:  # pragma: no cover
 
 from ...infrastructure import settings
 from ...store import Store
-from ..shared.design import EMPTY_NO_PLANS
+from ..shared.design import EMPTY_NO_PLANS_HINT, EMPTY_NO_PLANS_TITLE, empty_state
 from .actions import ActionMixin
 from .base import AppBase
 from .bulk import BulkMixin
@@ -43,7 +43,6 @@ from .controllers.updates import UpdateController
 from .filters import FilterMixin
 from .launch import launch_update
 from .metrics import MetricsSection
-from .override import WRITE_ACTIONS
 from .preview import PreviewMixin
 from .state import AppState, PlanMode
 from .theme import register_themes
@@ -85,7 +84,6 @@ if _TEXTUAL_OK:
             Binding("n", "new_context", "New"),
             Binding("e", "edit_selection", "Edit"),
             Binding("s", "toggle_status", "Status"),
-            Binding("x", "criteria", "Tick"),
             Binding("a", "add_criterion", "Criterion"),
             Binding("p", "prove_criterion", "Prove"),
             Binding("d", "delete", "Delete"),
@@ -158,6 +156,11 @@ if _TEXTUAL_OK:
             self._last_click_key: tuple[str, int] | None = None
             self._last_click_at: float = 0.0
             self._fp: Any = store.fingerprint()
+            self._last_reap: float = 0.0
+            self._last_event_id: int = 0
+            events = store.feed(1)
+            if events:
+                self._last_event_id = int(events[0]["id"])
             self._startup_notice: str = ""
 
         def action_update_prompt(self) -> None:
@@ -165,12 +168,15 @@ if _TEXTUAL_OK:
             self.update_controller.prompt()
 
         def compose(self) -> ComposeResult:
-            yield Static("", id="mode")
             with Vertical(id="panel"):
                 with Horizontal(id="main"):
                     with Vertical(id="nav"):
                         yield FoldTree("plans", id="tree")
-                        yield Static(EMPTY_NO_PLANS, id="tree-empty")
+                        yield Static(
+                            empty_state(EMPTY_NO_PLANS_TITLE, EMPTY_NO_PLANS_HINT),
+                            id="tree-empty",
+                            classes="pane-empty",
+                        )
                     with Vertical(id="side"):
                         yield PreviewPanel()
                         yield GitPanel()
@@ -199,12 +205,7 @@ if _TEXTUAL_OK:
             this guard, `d` or `s` pressed there would mutate the hidden main
             selection.
             """
-            if len(self.screen_stack) > 1 and action not in ("quit", "help", "toggle_override"):
-                return False
-            if action in WRITE_ACTIONS and not self.require_override(notify=False):
-                if self._mounted and not self.state.override_warned:
-                    self.state.override_warned = True
-                    self.notify("read-only — press O for manual override", timeout=3)
+            if len(self.screen_stack) > 1 and action not in ("quit", "help"):
                 return False
             return True
 

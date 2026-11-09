@@ -336,7 +336,7 @@ def add_hook(
 
     hk = sub.add_parser(
         "hook",
-        help="read a host lifecycle event and print a reminder",
+        help="read a host lifecycle event, track the session, and print a reminder",
         parents=[common],
     )
     hk.add_argument(

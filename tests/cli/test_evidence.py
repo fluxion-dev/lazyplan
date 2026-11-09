@@ -44,12 +44,11 @@ class EvidenceCliTest(unittest.TestCase):
             *extra,
         )
 
-    def test_passing_proof_ticks_and_lists(self) -> None:
+    def test_passing_proof_records_and_lists(self) -> None:
         code, out, err = self._prove("--command", "pytest", "--exit-code", "0")
         self.assertEqual(code, 0, err)
         payload = json.loads(out)
-        self.assertTrue(payload["ticked"])
-        self.assertTrue(payload["criterion"]["done"])
+        self.assertFalse(payload["criterion"]["done"])
         self.assertEqual(payload["evidence"]["command"], "pytest")
 
         code, out, err = self._run(
@@ -63,14 +62,26 @@ class EvidenceCliTest(unittest.TestCase):
         code, out, err = self._prove("--command", "pytest", "--exit-code", "1")
         self.assertEqual(code, 0, err)
         payload = json.loads(out)
-        self.assertFalse(payload["ticked"])
         self.assertFalse(payload["criterion"]["done"])
 
-    def test_no_tick_records_only(self) -> None:
-        code, out, err = self._prove("--command", "pytest", "--exit-code", "0", "--no-tick")
+    def test_edit_sets_and_clears_completion(self) -> None:
+        code, out, err = self._run(
+            "--json", "criterion", "edit", "--id", str(self.criterion.id), "--done"
+        )
         self.assertEqual(code, 0, err)
-        self.assertFalse(json.loads(out)["ticked"])
+        self.assertTrue(json.loads(out)["criteria"]["done"])
+        self.assertTrue(self.store.get_criterion(self.criterion.id).done)
+        code, out, err = self._run(
+            "--json", "criterion", "edit", "--id", str(self.criterion.id), "--open"
+        )
+        self.assertEqual(code, 0, err)
+        self.assertFalse(json.loads(out)["criteria"]["done"])
         self.assertFalse(self.store.get_criterion(self.criterion.id).done)
+
+    def test_edit_requires_a_change(self) -> None:
+        code, _out, err = self._run("criterion", "edit", "--id", str(self.criterion.id))
+        self.assertEqual(code, 2)
+        self.assertIn("--text", err)
 
     def test_text_and_porcelain_output(self) -> None:
         code, out, err = self._run(

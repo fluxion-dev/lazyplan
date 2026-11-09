@@ -58,7 +58,6 @@ from .work import (
     add_add_milestone,
     add_add_plan,
     add_criteria,
-    add_criterion_groups,
     add_delete,
     add_delete_criteria,
     add_list,
@@ -174,7 +173,6 @@ def build_parser() -> argparse.ArgumentParser:
     add_show(sub, common)
     add_add_criteria(sub, common)
     add_criteria(sub, common)
-    add_criterion_groups(sub, common)
     add_delete_criteria(sub, common)
     add_link(sub, common)
     add_unlink(sub, common)

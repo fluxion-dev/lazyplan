@@ -30,6 +30,7 @@ if _TEXTUAL_OK:
         """Active and expired claims plus touch-points for one task or plan."""
 
         kind = "claims"
+        BINDINGS = [Binding("x", "hub_toggle", "Toggle")]
 
         def __init__(
             self, store: object, task_id: int | None = None, plan_id: int | None = None
@@ -184,6 +185,7 @@ if _TEXTUAL_OK:
         """Sessions and handoffs for one plan."""
 
         kind = "sessions"
+        BINDINGS = [Binding("x", "hub_toggle", "Toggle")]
 
         def __init__(self, store: object, plan_id: int) -> None:
             super().__init__(store)
@@ -197,16 +199,19 @@ if _TEXTUAL_OK:
 
         def load_entries(self) -> list[HubEntry]:
             out: list[HubEntry] = []
+            stamp = time.time()
             for session in services.sessions.list_sessions(
                 self.store, plan_id=self.plan_id, limit=50
             ):
-                state = "ended" if session.ended else "open"
+                state = services.session_state(session, stamp)
                 body = (
                     f"S{session.id} · {state}\n"
                     f"actor   @{escape_markup(session.actor)}\n"
+                    f"host    {escape_markup(session.host or '—')}\n"
                     f"plan    P{session.plan_id}\n"
                     f"branch  {escape_markup(session.branch or '—')}\n"
-                    f"age     {_age(session.started_at, time.time())}\n"
+                    f"age     {_age(session.started_at, stamp)}\n"
+                    f"idle    {_age(session.last_activity(), stamp)}\n"
                     f"summary {escape_markup(session.summary or '—')}\n"
                     f"handoff {escape_markup(session.handoff or '—')}"
                 )
@@ -263,7 +268,11 @@ if _TEXTUAL_OK:
         """Comments and notes on one row, with an unresolved filter."""
 
         kind = "comments"
-        BINDINGS = [Binding("e", "edit_row", "Edit")]
+        BINDINGS = [
+            Binding("e", "edit_row", "Edit"),
+            Binding("x", "hub_toggle", "Toggle"),
+            Binding("u", "filter", "Filter"),
+        ]
 
         def __init__(self, store: object, parent_kind: str, parent_id: int) -> None:
             super().__init__(store)

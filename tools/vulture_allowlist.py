@@ -7,6 +7,7 @@
   STARTERS/ensure_templates (template scaffold seams), vcs registry.
 - Session API kept deliberately: the store and port surface is consumed
   by the session commands and resume reads cut in T1436 and T1437.
+  auto_closed is display metadata for idle-reaped rows.
 - Metrics dashboard contract: snapshot fields are consumed by the chart
   cards and their tests; attention_ids is the set form of the preview map.
 - sqlite3 API noise: row_factory.
@@ -33,7 +34,6 @@ _.action_new_context
 _.action_new_plan
 _.action_new_milestone
 _.action_new_task
-_.action_criteria
 _.action_delete
 _.action_toggle_status
 _.action_fold_all
@@ -41,13 +41,13 @@ _.action_cancel
 _.action_export_md
 _.action_move
 _.action_add_criterion
-_.action_untick_criterion
 _.action_edit_selection
 _.action_filter_text
 _.action_quit
 _.export_plan
 _.render_plan_markdown
 BINDINGS
+auto_closed
 CSS
 CSS_PATH
 TITLE
@@ -110,7 +110,6 @@ _.action_toggle_edit
 _.action_back
 _.action_save
 _.action_advance_status
-_.action_tick_criterion
 _.action_add_child
 _.action_delete_row
 _.action_open_source
@@ -146,6 +145,7 @@ highlighted
 disabled
 _._later
 _._download
+_._save
 bubble
 rev
 run_wizard

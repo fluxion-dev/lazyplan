@@ -16,11 +16,8 @@ class EvidenceMixin(ContextMixin):
             return
         kind, oid = self.selected
 
-        def done(criterion_id: int, result: services.ProofResult) -> None:
-            detail = result.evidence.command or result.evidence.note
-            self._record_override("criterion prove", f"C{criterion_id}", detail)
-            state = "proved" if result.ticked else "recorded, criterion stays open"
-            self.notify(f"C{criterion_id} {state}", timeout=4)
+        def done(criterion_id: int, _result: services.ProofResult) -> None:
+            self.notify(f"C{criterion_id} evidence recorded", timeout=4)
             self._saved("evidence recorded")
 
         prove_dialog(self, self.store, kind, oid, done)

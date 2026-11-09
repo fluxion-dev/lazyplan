@@ -33,11 +33,10 @@ class ClaimMixin(ContextMixin):
 
     def _claim(self, task_id: int, reason: str = "", force: bool = False) -> None:
         try:
-            services.start_claim(self.store, task_id, "tui", force=force)
+            services.start_claim(self.store, task_id, "tui", note=reason, force=force)
         except Exception as exc:
             self.notify(str(exc), severity="error", timeout=5)
             return
-        self._record_override("claim", f"T{task_id}", reason)
         self.notify(f"claimed T{task_id}", timeout=3)
         self._saved("task claimed")
 
@@ -52,7 +51,6 @@ class ClaimMixin(ContextMixin):
             except (ValueError, KeyError) as exc:
                 self.notify(str(exc), severity="error", timeout=5)
                 return
-            self._record_override("block", f"T{task_id}", reason)
             self.notify(f"blocked T{task_id}", timeout=3)
             self._saved("task blocked")
 
@@ -73,7 +71,6 @@ class ClaimMixin(ContextMixin):
         except KeyError as exc:
             self.notify(str(exc), severity="error", timeout=5)
             return
-        self._record_override("unblock", f"T{task_id}")
         self.notify(f"unblocked T{task_id}", timeout=3)
         self._saved("task unblocked")
 
@@ -110,8 +107,9 @@ class ClaimMixin(ContextMixin):
         if claim is None:
             self.notify(f"T{task_id} has no claim", timeout=3)
             return
-        self._record_override(
-            "claim force release" if force else "claim release", f"T{task_id}", reason
-        )
+        if force and reason.strip():
+            self.store.add_note(
+                "task", task_id, f"Force release by tui: {reason.strip()}", actor="tui"
+            )
         self.notify(f"released T{task_id} from {claim.actor}", timeout=3)
         self.refresh_all("claim released")

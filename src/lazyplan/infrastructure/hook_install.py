@@ -217,6 +217,26 @@ export default {
         seen.add(key)
       }
     })
+    if (typeof ctx.event?.subscribe === "function") {
+      const controller = new AbortController()
+      void (async () => {
+        try {
+          const stream = ctx.event.subscribe({
+            types: ["session.execution.started", "session.idle"],
+            signal: controller.signal,
+          })
+          for await (const event of stream) {
+            const where = event.location?.directory
+            if (where && where !== directory) continue
+            const hook = event.type === "session.idle" ? "stop" : "prompt-submit"
+            await run(directory, hook)
+          }
+        } catch {
+          // Plugin unload or a closed stream: session tracking stays best-effort.
+        }
+      })()
+      return () => controller.abort()
+    }
   },
 }
 """

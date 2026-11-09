@@ -26,7 +26,6 @@ from .git_actions import GitActionMixin
 from .history_actions import HistoryMixin
 from .hub_actions import HubMixin
 from .navigation import NavEntry
-from .override import WRITE_COMMANDS, OverrideMixin
 from .palette_handlers import palette_handlers
 from .question_actions import QuestionMixin
 from .reference_actions import ReferenceMixin
@@ -42,13 +41,13 @@ from .screens import (
     PaletteScreen,
 )
 from .status_actions import StatusMixin
+from .theme import next_theme
 
 if _TEXTUAL_OK:
 
     class ActionMixin(
         HistoryMixin,
         HubMixin,
-        OverrideMixin,
         ApprovalMixin,
         ClaimMixin,
         EvidenceMixin,
@@ -80,7 +79,6 @@ if _TEXTUAL_OK:
                 except (ValueError, KeyError) as exc:
                     self.notify(f"error: {exc}")
                     return
-                self._record_override("milestone add", f"P{pid}")
                 self._saved("milestone created")
 
             self.push_screen(
@@ -105,30 +103,6 @@ if _TEXTUAL_OK:
 
             self.push_screen(DetailScreen(self.store, kind, oid, edit=edit), cb)
 
-        def action_criteria(self) -> None:
-            """Tick first open criterion; if none open, reopen the last done one."""
-            if self.selected is None:
-                self.notify("select a row first (x ticks criteria)")
-                return
-            kind, oid = self.selected
-            items = self.store.list_criteria(kind, oid)
-            if not items:
-                self.notify(
-                    f'no criteria — add via: lpui add-criteria --kind {kind} --id {oid} --text "..."'
-                )
-                return
-            open_items = [c for c in items if not c.done]
-            if open_items:
-                target, reopen = open_items[0], False
-            else:
-                target, reopen = items[-1], True  # nothing open: re-affirm by reopening last
-            self.store.set_criteria(target.id, not reopen, actor="tui")
-            verb = "reopened" if reopen else "checked"
-            self._record_override(
-                "criterion reopen" if reopen else "criterion tick", f"C{target.id}"
-            )
-            self._saved(f"criterion {target.id} {verb}")
-
         def action_delete(self) -> None:
             if self.selected is None:
                 self.notify("select a row first (d deletes with confirm)")
@@ -141,10 +115,11 @@ if _TEXTUAL_OK:
                 if not reason.strip():
                     self.notify("a delete needs a reason", timeout=3)
                     return
-                if not services.delete_row(self.store, kind, oid, actor="tui"):
+                if not services.delete_row(
+                    self.store, kind, oid, actor="tui", reason=reason.strip()
+                ):
                     self.notify("already gone — refreshing")
                     return
-                self._record_override("delete", f"{kind} #{oid}", reason.strip())
                 self.selected = None
                 self._saved(f"deleted {kind} #{oid}")
 
@@ -188,6 +163,13 @@ if _TEXTUAL_OK:
             self._apply_layout()
             self.metrics_controller.refresh()
 
+        def action_cycle_theme(self) -> None:
+            """Cycle mocha, void, and latte; the chart redraws after the CSS."""
+            selected = next_theme(self.theme)
+            self.theme = selected
+            self.notify(f"theme: {selected.removeprefix('lazyplan-')}", timeout=2)
+            self.call_after_refresh(self.metrics_controller.refresh)
+
         def action_command_palette(self) -> None:
             """Open the modal command palette (c)."""
             if len(self.screen_stack) > 1:
@@ -226,7 +208,6 @@ if _TEXTUAL_OK:
                 except (ValueError, KeyError) as exc:
                     self.notify(f"error: {exc}")
                     return
-                self._record_override("criterion add", f"{kind} #{oid}")
                 self._saved("criterion added")
 
             self.push_screen(
@@ -260,7 +241,7 @@ if _TEXTUAL_OK:
                 if not data:
                     return
                 try:
-                    plan = services.create_plan(
+                    services.create_plan(
                         self.store,
                         data["title"],
                         data["what"],
@@ -270,7 +251,6 @@ if _TEXTUAL_OK:
                 except ValueError as exc:
                     self.notify(f"error: {exc}")
                     return
-                self._record_override("plan add", f"P{plan.id}")
                 self._saved("plan created")
 
             self.push_screen(
@@ -283,8 +263,6 @@ if _TEXTUAL_OK:
                 return
             command = by_id(command_id)
             if command is None:
-                return
-            if command.handler in WRITE_COMMANDS and not self.require_override():
                 return
             handlers = palette_handlers(self)
             fn = handlers.get(command.handler)
@@ -303,7 +281,7 @@ if _TEXTUAL_OK:
                 if not data:
                     return
                 try:
-                    task = services.create_task(
+                    services.create_task(
                         self.store,
                         sid,
                         data["title"],
@@ -313,7 +291,6 @@ if _TEXTUAL_OK:
                 except (ValueError, KeyError) as exc:
                     self.notify(f"error: {exc}")
                     return
-                self._record_override("task add", f"T{task.id}")
                 self._saved("task created")
 
             milestone = self.store.get_milestone(sid)
@@ -326,21 +303,6 @@ if _TEXTUAL_OK:
                 ),
                 cb,
             )
-
-        def action_untick_criterion(self) -> None:
-            """Reopen the last ticked criterion on the selected row."""
-            if self.selected is None:
-                self.notify("select a row first (x ticks criteria)")
-                return
-            kind, oid = self.selected
-            done = [c for c in self.store.list_criteria(kind, oid) if c.done]
-            if not done:
-                self.notify("no ticked criteria to reopen")
-                return
-            target = done[-1]
-            self.store.set_criteria(target.id, False, actor="tui")
-            self._record_override("criterion reopen", f"C{target.id}")
-            self._saved(f"criterion #{target.id} reopened")
 
         def action_edit_selection(self) -> None:
             """Edit the selected row; detail owns the edit form."""

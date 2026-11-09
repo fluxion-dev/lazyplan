@@ -12,11 +12,10 @@ from ..core.ports.provenance import ProvenancePort
 
 @dataclass(frozen=True)
 class ProofResult:
-    """One recorded proof row and whether it ticked the criterion."""
+    """One recorded proof row and the criterion it belongs to."""
 
     evidence: CriterionEvidence
     criterion: Criterion
-    ticked: bool
 
 
 def prove(
@@ -30,9 +29,8 @@ def prove(
     note: str = "",
     task_id: int | None = None,
     actor: str = "human",
-    tick: bool = True,
 ) -> ProofResult:
-    """Record evidence; tick only when the row passes and ticking is allowed."""
+    """Record one evidence row without changing the criterion's completion."""
     criterion = port.get_criterion(criterion_id)
     if criterion is None:
         raise KeyError(f"criterion #{criterion_id} not found")
@@ -47,13 +45,7 @@ def prove(
         task_id=task_id,
         actor=actor,
     )
-    ticked = False
-    if tick and row.passing:
-        updated = port.set_criteria(criterion_id, True, actor=actor)
-        if updated is not None:
-            criterion = updated
-            ticked = True
-    return ProofResult(row, criterion, ticked)
+    return ProofResult(row, criterion)
 
 
 def list_evidence(port: ProvenancePort, criterion_id: int) -> list[CriterionEvidence]:

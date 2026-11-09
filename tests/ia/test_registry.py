@@ -99,7 +99,6 @@ class TestRegistry(unittest.TestCase):
         )
         self.assertIsNone(detail["help"])
         self.assertIsNone(detail["quit"])
-        self.assertIsNone(detail["toggle-override"])
         self.assertEqual(detail["edit-selection"], "Only available on the tree")
 
     def test_every_disabled_action_explains_why(self):

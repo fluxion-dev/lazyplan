@@ -135,15 +135,6 @@ class StoreBase(StoreStubs):
             ).fetchall()
         return [dict(r) for r in rows]
 
-    def feed_overrides(self, limit: int = 20) -> list[dict]:
-        """Recent manual-override events, newest first."""
-        with self._connect() as conn:
-            rows = conn.execute(
-                "SELECT * FROM events WHERE kind='override' ORDER BY id DESC LIMIT ?",
-                (max(limit, 1),),
-            ).fetchall()
-        return [dict(r) for r in rows]
-
     def events_by_action(self, *actions: str) -> list[dict]:
         """All events with one of these actions, oldest first."""
         wanted = [action for action in actions if action]
@@ -179,7 +170,29 @@ class StoreBase(StoreStubs):
                 mr = conn.execute("SELECT COALESCE(MAX(id),0) m FROM entity_repos").fetchone()["m"]
             except Exception:
                 mr = 0
-        return (mtime, c["plans"], c["milestones"], c["tasks"], mp, ms, mt, me, mc, ml, mr, mf)
+            try:
+                mses = conn.execute("SELECT COALESCE(MAX(id),0) m FROM sessions").fetchone()["m"]
+                mseen = conn.execute(
+                    "SELECT COALESCE(MAX(last_seen_at),0) m FROM sessions"
+                ).fetchone()["m"]
+            except Exception:
+                mses, mseen = 0, 0.0
+        return (
+            mtime,
+            c["plans"],
+            c["milestones"],
+            c["tasks"],
+            mp,
+            ms,
+            mt,
+            me,
+            mc,
+            ml,
+            mr,
+            mf,
+            mses,
+            mseen,
+        )
 
 
 _ser = to_payload

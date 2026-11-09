@@ -54,7 +54,6 @@ if _TEXTUAL_OK:
             Binding("escape", "back", "Back", priority=True),
             Binding("e", "toggle_edit", "Edit"),
             Binding("s", "advance_status", "Status"),
-            Binding("x", "tick_criterion", "Tick"),
             Binding("a", "add_criterion", "Criterion"),
             Binding("p", "prove_criterion", "Prove"),
             Binding("t", "open_trust_hubs", "Trust"),
@@ -170,7 +169,7 @@ if _TEXTUAL_OK:
             hints = (
                 "ctrl+s save · esc cancel"
                 if self._editing
-                else "e edit · s status · x tick · a criterion · g source · P PRs · A activity · n child · d delete · esc back"
+                else "e edit · s status · a criterion · t criteria · g source · P PRs · A activity · n child · d delete · esc back"
             )
             self.query_one("#detail-hints", Label).update(hints)
 
@@ -182,22 +181,7 @@ if _TEXTUAL_OK:
                 self._render_read()
                 self.query_one("#detail-read", VerticalScroll).focus()
 
-        def _require_override(self) -> bool:
-            """Writes are blocked until manual override mode is on."""
-            gate = getattr(self.app, "require_override", None)
-            if callable(gate):
-                return bool(gate())
-            return bool(getattr(self.app, "override_mode", False))
-
-        def _record(self, action: str, reason: str = "") -> None:
-            """Record one audited override for this detail write."""
-            record = getattr(self.app, "_record_override", None)
-            if callable(record):
-                record(action, f"{self.dkind} #{self.doid}", reason)
-
         def action_toggle_edit(self) -> None:
-            if not self._editing and not self._require_override():
-                return
             if self._editing:
                 if self._is_dirty():
                     self.notify("save or cancel first")
@@ -214,8 +198,6 @@ if _TEXTUAL_OK:
 
         def action_save(self) -> None:
             if not self._editing:
-                return
-            if not self._require_override():
                 return
             title = self.query_one("#d-title", Input).value.strip()
             desc = self.query_one("#d-desc", TextArea).text
@@ -240,7 +222,6 @@ if _TEXTUAL_OK:
             except ValueError as exc:
                 self.notify(msg_error(exc))
                 return
-            self._record("edit")
             from ...shared.messages import RowAction  # noqa: F401
 
             self.post_message(RowAction("detail-saved", self.dkind, self.doid))
@@ -251,44 +232,19 @@ if _TEXTUAL_OK:
             if self._editing:
                 self.notify("save or cancel first")
                 return
-            if not self._require_override():
-                return
             heal = bool(getattr(self.app, "heal", True))
             nxt = services.cycle_status(self._dstore, self.dkind, self.doid, actor="tui", heal=heal)
-            self._record("status", nxt.value if nxt is not None else "")
             self._reload()
             if nxt is not None:
                 self.notify(f"{self.dkind} {self.doid} -> {nxt.value}")
-
-        def action_tick_criterion(self) -> None:
-            if self._editing:
-                self.notify("save or cancel first")
-                return
-            if not self._require_override():
-                return
-            items = self._dstore.list_criteria(self.dkind, self.doid)
-            open_items = [c for c in items if not c.done]
-            if not open_items:
-                self.notify("no open criteria")
-                return
-            target = open_items[0]
-            self._dstore.set_criteria(target.id, True, actor="tui")
-            self._record("criterion tick", f"C{target.id}")
-            self._reload()
-            self.notify(f"criterion {target.id} checked")
 
         def action_prove_criterion(self) -> None:
             if self._editing:
                 self.notify("save or cancel first")
                 return
-            if not self._require_override():
-                return
             from .prove import prove_dialog
 
-            def done(criterion_id: int, result: services.ProofResult) -> None:
-                evidence = getattr(result, "evidence", None)
-                detail = getattr(evidence, "command", "") or getattr(evidence, "note", "")
-                self._record("criterion prove", str(detail))
+            def done(criterion_id: int, _result: services.ProofResult) -> None:
                 self._reload()
                 self.notify(f"criterion {criterion_id} recorded", timeout=4)
 
@@ -298,14 +254,11 @@ if _TEXTUAL_OK:
             if self._editing:
                 self.notify("save or cancel first")
                 return
-            if not self._require_override():
-                return
 
             def cb(text: str | None) -> None:
                 if not text:
                     return
-                criterion = self._dstore.add_criteria(self.dkind, self.doid, text, actor="tui")
-                self._record("criterion add", f"C{criterion.id}")
+                self._dstore.add_criteria(self.dkind, self.doid, text, actor="tui")
                 self._reload()
 
             self.app.push_screen(
@@ -321,22 +274,19 @@ if _TEXTUAL_OK:
             if self._editing:
                 self.notify("save or cancel first")
                 return
-            if not self._require_override():
-                return
             if self.dkind == "plan":
                 plan_id = self.doid
 
                 def add_milestone(data: dict | None) -> None:
                     if not data:
                         return
-                    created = services.create_milestone(
+                    services.create_milestone(
                         self._dstore,
                         plan_id,
                         data["title"],
                         data["desc"],
                         actor="tui",
                     )
-                    self._record("milestone add", f"M{created.id}")
                     self._reload()
 
                 self.app.push_screen(
@@ -354,14 +304,13 @@ if _TEXTUAL_OK:
                 def add_task(data: dict | None) -> None:
                     if not data:
                         return
-                    created = services.create_task(
+                    services.create_task(
                         self._dstore,
                         milestone_id,
                         data["title"],
                         data["desc"],
                         actor="tui",
                     )
-                    self._record("task add", f"T{created.id}")
                     self._reload()
 
                 self.app.push_screen(
@@ -378,8 +327,6 @@ if _TEXTUAL_OK:
         def action_delete_row(self) -> None:
             if self._editing:
                 self.notify("save or cancel first")
-                return
-            if not self._require_override():
                 return
             from .detail_delete import confirm_delete
 

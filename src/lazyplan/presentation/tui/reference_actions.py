@@ -36,7 +36,6 @@ class ReferenceMixin(ContextMixin):
             except (ValueError, KeyError) as exc:
                 self.notify(f"error: {exc}", timeout=5)
                 return
-            self._record_override("ref link", f"P{plan_id}", url)
             self.notify(f"linked {ref.provider}/{ref.kind} to P{plan_id}", timeout=4)
             self._saved("reference linked")
 
@@ -63,7 +62,6 @@ class ReferenceMixin(ContextMixin):
             if not removed:
                 self.notify("no matching reference", timeout=4)
                 return
-            self._record_override("ref unlink", f"P{plan_id}", text)
             self.notify(f"unlinked reference from P{plan_id}", timeout=4)
             self._saved("reference unlinked")
 

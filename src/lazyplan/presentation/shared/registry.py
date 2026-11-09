@@ -61,8 +61,6 @@ HUB_ACTIONS: dict[str, tuple[str, ...]] = {
     "criteria": (
         "criterion.add",
         "criterion.edit",
-        "criterion.tick",
-        "criterion.untick",
         "criterion.prove",
         "criterion.relate",
         "criterion.unrelate",
@@ -89,7 +87,7 @@ HUB_ACTIONS: dict[str, tuple[str, ...]] = {
         "pull_request.unlink",
         "pull_request.open",
     ),
-    "activity": ("event.open", "override.open"),
+    "activity": ("event.open",),
 }
 
 

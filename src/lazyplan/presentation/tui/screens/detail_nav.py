@@ -64,7 +64,7 @@ class DetailNavigationMixin:
         self.app.push_screen(PullRequestHub(self._dstore, self.dkind, self.doid))
 
     def action_open_activity_hub(self) -> None:
-        """Open the feed and override activity hub."""
+        """Open the activity hub."""
         from .hub_provenance import ActivityHub
 
         self.app.push_screen(ActivityHub(self._dstore))

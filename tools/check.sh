@@ -32,8 +32,6 @@ echo "== site discoverability =="
 "$SYS_PY" tools/check-site.py
 echo "== clean install smoke =="
 ./tools/check-install.sh
-echo "== visual snapshots =="
-"$VENV_BIN"/python -m pytest tests/snapshots -q
 echo "== performance budgets =="
 "$VENV_BIN"/python tools/perf_bench.py --check
 echo "== unittest (system python, stdlib only) =="

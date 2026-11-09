@@ -49,7 +49,7 @@ FILES: tuple[tuple[str, str], ...] = (
     ),
     (
         "~/.config/opencode/plugins/lazyplan.js, ~/.claude/settings.json, ~/.gemini/settings.json, ~/.codex/hooks.json, ~/.cursor/hooks.json",
-        "Managed read-only hook surfaces.",
+        "Managed lifecycle hook surfaces; they also track session state.",
     ),
     ("AGENTS.md", "Optional marked lazyplan section in a repo."),
 )

@@ -103,10 +103,13 @@ class PlanningPort(Protocol):
 
     def open_criteria(self, kind: str, obj_id: int) -> list[Criterion]: ...
 
-    def set_criteria(self, cid: int, done: bool, actor: str = "human") -> Criterion | None: ...
-
     def update_criterion(
-        self, cid: int, text: str, actor: str = "human", reason: str = ""
+        self,
+        cid: int,
+        text: str | None = None,
+        done: bool | None = None,
+        actor: str = "human",
+        reason: str = "",
     ) -> Criterion | None: ...
 
     def delete_criteria(self, cid: int, actor: str = "human", reason: str = "") -> bool: ...

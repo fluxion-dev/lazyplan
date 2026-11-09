@@ -6,6 +6,7 @@ from textual.app import ComposeResult
 from textual.containers import Vertical, VerticalScroll
 from textual.widgets import Static
 
+from ...shared.design import empty_state
 from ..views.preview import PreviewDocument
 
 
@@ -22,13 +23,15 @@ class PreviewPanel(Vertical):
         yield Static("", id="preview-strip")
         with VerticalScroll(id="preview-scroll"):
             yield Static("", id="preview-body")
+        yield Static("", id="preview-empty", classes="pane-empty")
 
     def show(self, document: PreviewDocument, strip: str = "") -> None:
         head = self.query_one("#preview-head", Static)
         body = self.query_one("#preview-body", Static)
         strip_widget = self.query_one("#preview-strip", Static)
-        body.remove_class("preview-empty", "preview-error")
-        head.remove_class("preview-empty", "preview-error")
+        self._show_content()
+        body.remove_class("preview-error")
+        head.remove_class("preview-error")
         head.update(document.render_head())
         body.update(document.render_body())
         strip_widget.display = bool(strip)
@@ -42,16 +45,20 @@ class PreviewPanel(Vertical):
         except Exception:
             pass
 
+    def _show_content(self) -> None:
+        """Show the normal head and scroll body, hiding the empty state."""
+        self.query_one("#preview-head", Static).display = True
+        self.query_one("#preview-scroll", VerticalScroll).display = True
+        self.query_one("#preview-empty", Static).display = False
+
     def show_empty(self, title: str, hint: str) -> None:
-        """A two-line empty state with a clear next action."""
-        head = self.query_one("#preview-head", Static)
-        body = self.query_one("#preview-body", Static)
-        strip = self.query_one("#preview-strip", Static)
-        head.update("")
-        strip.display = False
-        body.remove_class("preview-error")
-        body.add_class("preview-empty")
-        body.update(f"[bold]{title}[/]\n\n[dim]{hint}[/]")
+        """A centered empty state with a clear next action."""
+        self.query_one("#preview-head", Static).display = False
+        self.query_one("#preview-strip", Static).display = False
+        self.query_one("#preview-scroll", VerticalScroll).display = False
+        empty = self.query_one("#preview-empty", Static)
+        empty.display = True
+        empty.update(empty_state(title, hint))
         self.border_subtitle = ""
         self._home()
 
@@ -60,9 +67,9 @@ class PreviewPanel(Vertical):
         head = self.query_one("#preview-head", Static)
         body = self.query_one("#preview-body", Static)
         strip = self.query_one("#preview-strip", Static)
+        self._show_content()
         head.update("")
         strip.display = False
-        body.remove_class("preview-empty")
         body.add_class("preview-error")
         body.update(f"[bold red]preview unavailable[/]\n\n[dim]{text}[/]")
         self.border_subtitle = ""

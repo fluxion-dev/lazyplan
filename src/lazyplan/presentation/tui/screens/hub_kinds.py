@@ -8,7 +8,7 @@ from typing import Any
 from .... import services
 from ....core.policies.evidence import proof_state
 from ...shared.design import escape_markup
-from .forms import ConfirmScreen, FilterPromptScreen
+from .forms import ConfirmScreen, CriterionScreen, FilterPromptScreen
 from .prove import prove_dialog
 
 try:
@@ -70,17 +70,6 @@ if _TEXTUAL_OK:
                 FilterPromptScreen("New criterion", "what must be true?", "Add"), cb
             )
 
-        def toggle(self) -> None:
-            entry = self._selected()
-            if entry is None:
-                self._notify_empty()
-                return
-            criterion = self.store.get_criterion(entry.oid)
-            if criterion is None:
-                return
-            self.store.set_criteria(criterion.id, not criterion.done, actor="tui")
-            self._reload()
-
         def prove(self) -> None:
             entry = self._selected()
             if entry is None:
@@ -108,23 +97,23 @@ if _TEXTUAL_OK:
             if criterion is None:
                 return
 
-            def cb(text: str | None) -> None:
-                if not text:
+            def cb(data: dict[str, object] | None) -> None:
+                if not data:
                     return
                 try:
                     self.store.update_criterion(
-                        criterion.id, text, actor="tui", reason="edited from hub"
+                        criterion.id,
+                        text=str(data["text"]),
+                        done=bool(data["done"]),
+                        actor="tui",
+                        reason="edited from hub",
                     )
                 except ValueError as exc:
                     self.notify(f"error: {exc}", timeout=4)
                     return
                 self._reload()
 
-            self.app.push_screen(
-                FilterPromptScreen(
-                    "Edit criterion", "criterion text", "Save", initial=criterion.text
-                )
-            )
+            self.app.push_screen(CriterionScreen(criterion.text, criterion.done), cb)
 
         def action_edit_row(self) -> None:
             self.edit_row()
@@ -249,6 +238,7 @@ if _TEXTUAL_OK:
         """Open and resolved questions on one plan, with readiness impact."""
 
         kind = "questions"
+        BINDINGS = [Binding("x", "hub_toggle", "Toggle")]
 
         def __init__(self, store: Any, plan_id: int) -> None:
             super().__init__(store)

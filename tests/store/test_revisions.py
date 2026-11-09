@@ -90,12 +90,12 @@ class TestRevisionsStore(unittest.TestCase):
         self.assertIn(("task", "delete", "", "not needed"), pairs)
         self.assertIn(("milestone", "delete", "", "not needed"), pairs)
 
-    def test_status_tick_claim_and_links_are_not_scope(self) -> None:
+    def test_status_completion_claim_and_links_are_not_scope(self) -> None:
         criterion = self.store.add_criteria("task", self.task.id, "proof")
         self.approve()
         self.store.claim_task(self.task.id, "actor")
         self.store.set_status_raw("task", self.task.id, Status.DONE)
-        self.store.set_criteria(criterion.id, True)
+        self.store.update_criterion(criterion.id, done=True)
         self.assertEqual(self.store.list_plan_changes(self.plan.id), [])
 
     def test_drift_counts_and_reapproval(self) -> None:

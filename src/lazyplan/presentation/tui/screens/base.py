@@ -15,6 +15,7 @@ try:
     from textual.screen import ModalScreen, Screen  # noqa: F401
     from textual.widgets import (  # noqa: F401
         Button,
+        Checkbox,
         Input,
         Label,
         OptionList,
@@ -72,6 +73,8 @@ if _TEXTUAL_OK:
                 values.append(widget.value)
             for area in self.query(TextArea):
                 values.append(area.text)
+            for box in self.query(Checkbox):
+                values.append(str(box.value))
             return tuple(values)
 
         def action_cancel(self) -> None:

@@ -117,11 +117,11 @@ class TestRevisionsService(unittest.TestCase):
         self.assertEqual(snap["plan"]["key"], "plan-key")
         self.assertEqual(snap["milestones"][0]["tasks"][0]["key"], "task-key")
 
-    def test_status_and_ticks_do_not_create_drift(self) -> None:
+    def test_status_and_completion_do_not_create_drift(self) -> None:
         criterion = self.store.add_criteria("task", self.task.id, "proof")
         rev.approve(self.store, self.plan.id)
         self.store.set_status_raw("task", self.task.id, Status.DONE)
-        self.store.set_criteria(criterion.id, True)
+        self.store.update_criterion(criterion.id, done=True)
         self.assertFalse(rev.diff(self.store, self.plan.id).drifted)
 
     def test_done_gate_only_for_enforced_drift(self) -> None:

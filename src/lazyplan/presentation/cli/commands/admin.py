@@ -124,7 +124,7 @@ def _cmd_mcp(store: Store | None, args: argparse.Namespace, actor: str) -> int:
 
 
 def _cmd_hook(store: Store | None, args: argparse.Namespace, actor: str) -> int:
-    """Read-only lifecycle reminder; always exits 0 so a host never blocks."""
+    """Lifecycle reminder and session heartbeat; always exits 0 so a host never blocks."""
     from lazyplan.infrastructure import hook_hosts
     from lazyplan.services import hooks
 
@@ -197,14 +197,11 @@ def _cmd_feed(store: Store, args: argparse.Namespace, actor: str) -> int:
     seen = -1
     terse = porcelain.enabled(args)
     session_filter = getattr(args, "session", None)
-    overrides = bool(getattr(args, "overrides", False))
     while True:
         if session_filter is None:
-            events = store.feed_overrides(args.limit) if overrides else store.feed(args.limit)
+            events = store.feed(args.limit)
         else:
             events = store.events_for_session(session_filter, args.limit)
-            if overrides:
-                events = [event for event in events if event.get("kind") == "override"]
         if not args.follow:
             if args.json:
                 print(json.dumps(events, indent=2, default=str))

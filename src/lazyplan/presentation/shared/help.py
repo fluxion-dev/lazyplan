@@ -16,14 +16,12 @@ HINT_ITEMS: tuple[tuple[str, str], ...] = (
     ("n", "new"),
     ("e", "edit"),
     ("s", "status"),
-    ("x", "tick"),
     ("d", "delete"),
     ("/", "filter"),
     ("f", "mode"),
     ("g", "source"),
     ("?", "help"),
     ("c", "commands"),
-    ("O", "override"),
 )
 
 HELP_GROUPS: tuple[str, ...] = ("MOVE", "FIND", "APP", "CHANGE", "TRUST")
@@ -62,7 +60,7 @@ def help_text() -> str:
         rows = _help_rows(group)
         if not rows:
             continue
-        mode = "OVERRIDE" if group in ("CHANGE", "TRUST") else "OBSERVE"
+        mode = "WRITE" if group in ("CHANGE", "TRUST") else "OBSERVE"
         if mode != current_mode:
             lines.append(mode)
             current_mode = mode
@@ -85,7 +83,7 @@ def hint_bar(width: int | None = None, markup: bool = False) -> str:
     """One-line key hints; drops the least important items on narrow screens."""
     items = list(HINT_ITEMS)
     text = " · ".join(f"{key} {label}" for key, label in items)
-    for key in ("c", "d", "g", "x"):
+    for key in ("c", "d", "g"):
         if width is None or len(text) <= width:
             break
         items = [item for item in items if item[0] != key]

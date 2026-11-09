@@ -151,7 +151,7 @@ class TestDesignSystem(unittest.TestCase):
         self.store.add_criteria("plan", p.id, "done-thing", actor="t")
         c2 = self.store.add_criteria("plan", p.id, "open-thing", actor="t")
         self.assertEqual(design.plan_label(p, self.store), "○ P1 P")
-        self.store.set_criteria(c2.id, True, actor="t")
+        self.store.update_criterion(c2.id, done=True, actor="t")
         label = design.plan_label(p, self.store)
         self.assertEqual(label, "○ P1 P")
         self.assertNotRegex(label, r"\[\d+/\d+✓\]")
@@ -227,6 +227,11 @@ class TestDesignSystem(unittest.TestCase):
         for const in (design.EMPTY_NO_PLANS, design.EMPTY_FEED):
             self.assertTrue(isinstance(const, str) and len(const) > 0)
         self.assertIn("n", design.EMPTY_NO_PLANS)
+
+    def test_empty_state_is_a_capitalized_title_and_next_step(self):
+        text = design.empty_state("no active plans", "press n to create one")
+        self.assertEqual(text, "[bold]No active plans[/]\n[dim]press n to create one[/]")
+        self.assertEqual(text.count("\n"), 1)
 
     def test_palette_sections_cover_every_command_once(self):
         ids = [cid for cid, _ in design.PALETTE_COMMANDS]

@@ -121,7 +121,7 @@ def _intervention(home: Path, repo: Path) -> dict:
                 task = task_b
             if index == COMMITS - 1:
                 for item in store.open_criteria("task", task_b):
-                    store.set_criteria(item.id, True, actor="bench")
+                    store.update_criterion(item.id, done=True, actor="bench")
                 _status(store, "task", task_b, Status.DONE, commit.timestamp + 120)
     finally:
         os.chdir(old_cwd)

@@ -160,10 +160,24 @@ if _TEXTUAL_OK:
             self._last_click_at: float = 0.0
             self._fp: Any = store.fingerprint()
             self._startup_notice: str = ""
+            self.agent_status = "idle"
+            self.agent_detail = "W workbench"
 
         def action_update_prompt(self) -> None:
             """Open the update screen for a known or cached newer release."""
             self.update_controller.prompt()
+
+        def set_agent_status(self, status: str, detail: str = "") -> None:
+            """Publish the compact workbench status in the main shell."""
+            self.agent_status = status
+            self.agent_detail = detail
+            if not self._mounted:
+                return
+            label = status if not detail else f"{status} · {detail}"
+            try:
+                self.query_one("#agent-strip", Static).update(f"[dim]agent[/] {label}")
+            except Exception:
+                pass
 
         def compose(self) -> ComposeResult:
             yield Static("", id="mode")
@@ -177,6 +191,7 @@ if _TEXTUAL_OK:
                         yield GitPanel()
                         yield AgentsPanel()
                 yield MetricsSection()
+            yield Static("", id="agent-strip")
             yield Label("", id="hints")
 
         async def _on_resize(self, event: events.Resize) -> None:
@@ -218,6 +233,7 @@ if _TEXTUAL_OK:
             self.update_controller.start()
             self.metrics_controller.start()
             self.query_one("#nav").border_title = " plans "
+            self.set_agent_status(self.agent_status, self.agent_detail)
             if self._startup_notice:
                 self.notify(self._startup_notice, timeout=10)
             tree = self.query_one("#tree", Tree)

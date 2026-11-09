@@ -72,6 +72,23 @@ class TestAgentScreen(unittest.IsolatedAsyncioTestCase):
             self.assertIn("unknown agent update: future_update", screen.transcript)
             await screen.action_close()
 
+    async def test_status_strip_tracks_the_run(self) -> None:
+        app = create_app(self.db)
+        async with app.run_test() as pilot:
+            screen = AgentScreen(profile("cancel"), ROOT)
+            app.push_screen(screen)
+            await pilot.pause()
+            screen.query_one("#agent-prompt").text = "work"
+            sending = asyncio.create_task(screen.action_send())
+            await wait_for(lambda: app.agent_status == "running")
+            self.assertIn("running", str(app.query_one("#agent-strip").render()))
+            await screen.action_cancel()
+            await asyncio.wait_for(sending, 5.0)
+            await wait_for(lambda: app.agent_status == "idle")
+            self.assertIn("idle", str(app.query_one("#agent-strip").render()))
+            await screen.action_close()
+            self.assertIn("W workbench", str(app.query_one("#agent-strip").render()))
+
     async def test_w_opens_the_workbench(self) -> None:
         self.assertIsNotNone(registry.by_command_id("open-agent"))
         app = create_app(self.db)
@@ -82,6 +99,7 @@ class TestAgentScreen(unittest.IsolatedAsyncioTestCase):
             screen = app.screen
             assert isinstance(screen, AgentScreen)
             await screen.action_close()
+            self.assertIn("W workbench", str(app.query_one("#agent-strip").render()))
 
 
 if __name__ == "__main__":

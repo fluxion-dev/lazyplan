@@ -112,6 +112,9 @@ if _TEXTUAL_OK:
             if self._usage:
                 label += f" · {self._usage}"
             self.query_one("#agent-status", Static).update(f"[dim]agent[/] {label}")
+            setter = getattr(self.app, "set_agent_status", None)
+            if callable(setter):
+                setter(status, detail)
 
         @property
         def transcript(self) -> str:
@@ -229,6 +232,9 @@ if _TEXTUAL_OK:
         async def action_close(self) -> None:
             if self._controller is not None:
                 await self._controller.close()
+            setter = getattr(self.app, "set_agent_status", None)
+            if callable(setter):
+                setter("idle", "W workbench")
             self.app.pop_screen()
 
         async def on_button_pressed(self, event: Button.Pressed) -> None:

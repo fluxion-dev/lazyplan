@@ -113,6 +113,9 @@ if _TEXTUAL_OK:
                 self.notify(f"error: {exc}")
                 return
             self.notify(f"applied proposal #{row['id']}")
+            refresh = getattr(self.app, "refresh_all", None)
+            if callable(refresh):
+                refresh("proposal applied")
             self.reload()
 
         def _reject(self) -> None:

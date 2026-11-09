@@ -35,10 +35,11 @@ async def wait_for(predicate) -> None:
 
 class TestMcpConfig(unittest.TestCase):
     def test_server_command_uses_the_same_database(self) -> None:
-        server = lazyplan_mcp_server("/tmp/agent.db")
+        db = Path("/tmp/agent.db")
+        server = lazyplan_mcp_server(db)
         self.assertEqual(server["name"], "lazyplan")
         self.assertEqual(server["args"][:3], ["-m", "lazyplan", "--db"])
-        self.assertIn("/tmp/agent.db", server["args"])
+        self.assertIn(str(db), server["args"])
         self.assertEqual(server["args"][-2], "mcp")
         self.assertEqual(server["args"][-1], "--proposal-only")
 

@@ -2,14 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
-
-TEXT_UPDATES = {
-    "agent_message_chunk": "text",
-    "agent_thought_chunk": "thought",
-    "user_message_chunk": "user",
-}
 
 
 @dataclass(frozen=True)
@@ -131,81 +126,107 @@ def _text_block(content: Any) -> str:
     return str(content.get("text") or "")
 
 
+def _text_update(session_id: str, update: dict[str, Any], kind: str) -> AgentEvent:
+    return AgentEvent(
+        kind=kind,
+        session_id=session_id,
+        text=_text_block(update.get("content")),
+        message_id=str(update.get("messageId") or ""),
+        payload=update,
+    )
+
+
+def _tool_event(session_id: str, update: dict[str, Any]) -> AgentEvent:
+    return AgentEvent(
+        kind="tool_call",
+        session_id=session_id,
+        tool=ToolCall.from_update(update),
+        payload=update,
+    )
+
+
+def _tool_update_event(session_id: str, update: dict[str, Any]) -> AgentEvent:
+    return AgentEvent(
+        kind="tool_update",
+        session_id=session_id,
+        tool=ToolCall.from_update(update),
+        payload=update,
+    )
+
+
+def _plan_event(session_id: str, update: dict[str, Any]) -> AgentEvent:
+    entries = update.get("entries")
+    rows: list[PlanEntry] = []
+    if isinstance(entries, list):
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            rows.append(
+                PlanEntry(
+                    content=str(entry.get("content") or ""),
+                    priority=str(entry.get("priority") or "medium"),
+                    status=str(entry.get("status") or "pending"),
+                )
+            )
+    return AgentEvent(kind="plan", session_id=session_id, plan=tuple(rows), payload=update)
+
+
+def _usage_event(session_id: str, update: dict[str, Any]) -> AgentEvent:
+    cost = update.get("cost")
+    amount: float | None = None
+    currency = ""
+    if isinstance(cost, dict):
+        given = cost.get("amount")
+        if isinstance(given, int | float):
+            amount = float(given)
+        currency = str(cost.get("currency") or "")
+    used = update.get("used")
+    size = update.get("size")
+    return AgentEvent(
+        kind="usage",
+        session_id=session_id,
+        usage=Usage(
+            used=used if isinstance(used, int) else 0,
+            size=size if isinstance(size, int) else 0,
+            amount=amount,
+            currency=currency,
+        ),
+        payload=update,
+    )
+
+
+def _simple_event(kind: str) -> Callable[[str, dict[str, Any]], AgentEvent]:
+    def build(session_id: str, update: dict[str, Any]) -> AgentEvent:
+        return AgentEvent(kind=kind, session_id=session_id, payload=update)
+
+    return build
+
+
 def map_session_update(session_id: str, update: dict[str, Any]) -> AgentEvent:
     """Normalize one `session/update` payload."""
     kind = str(update.get("sessionUpdate") or "unknown")
-    if kind in TEXT_UPDATES:
-        return AgentEvent(
-            kind=TEXT_UPDATES[kind],
-            session_id=session_id,
-            text=_text_block(update.get("content")),
-            message_id=str(update.get("messageId") or ""),
-            payload=update,
-        )
-    if kind == "tool_call":
-        return AgentEvent(
-            kind="tool_call",
-            session_id=session_id,
-            tool=ToolCall.from_update(update),
-            payload=update,
-        )
-    if kind == "tool_call_update":
-        return AgentEvent(
-            kind="tool_update",
-            session_id=session_id,
-            tool=ToolCall.from_update(update),
-            payload=update,
-        )
-    if kind == "plan":
-        entries = update.get("entries")
-        rows: list[PlanEntry] = []
-        if isinstance(entries, list):
-            for entry in entries:
-                if not isinstance(entry, dict):
-                    continue
-                rows.append(
-                    PlanEntry(
-                        content=str(entry.get("content") or ""),
-                        priority=str(entry.get("priority") or "medium"),
-                        status=str(entry.get("status") or "pending"),
-                    )
-                )
-        return AgentEvent(kind="plan", session_id=session_id, plan=tuple(rows), payload=update)
-    if kind == "usage_update":
-        cost = update.get("cost")
-        amount: float | None = None
-        currency = ""
-        if isinstance(cost, dict):
-            given = cost.get("amount")
-            if isinstance(given, int | float):
-                amount = float(given)
-            currency = str(cost.get("currency") or "")
-        used = update.get("used")
-        size = update.get("size")
-        return AgentEvent(
-            kind="usage",
-            session_id=session_id,
-            usage=Usage(
-                used=used if isinstance(used, int) else 0,
-                size=size if isinstance(size, int) else 0,
-                amount=amount,
-                currency=currency,
-            ),
-            payload=update,
-        )
-    if kind == "session_info_update":
-        return AgentEvent(kind="session_info", session_id=session_id, payload=update)
-    if kind == "available_commands_update":
-        return AgentEvent(kind="commands", session_id=session_id, payload=update)
-    if kind == "current_mode_update":
-        return AgentEvent(kind="mode", session_id=session_id, payload=update)
-    if kind == "config_option_update":
-        return AgentEvent(kind="config", session_id=session_id, payload=update)
-    if kind == "notice":
-        return AgentEvent(kind="notice", session_id=session_id, payload=update)
-    if kind in {"compaction_update", "compaction_summary_chunk"}:
-        return AgentEvent(kind="compaction", session_id=session_id, payload=update)
-    return AgentEvent(kind="unknown", session_id=session_id, payload=update)
+    handler = _UPDATE_HANDLERS.get(kind)
+    if handler is None:
+        return AgentEvent(kind="unknown", session_id=session_id, payload=update)
+    return handler(session_id, update)
+
+
+_UPDATE_HANDLERS: dict[str, Callable[[str, dict[str, Any]], AgentEvent]] = {
+    "agent_message_chunk": lambda session_id, update: _text_update(session_id, update, "text"),
+    "agent_thought_chunk": lambda session_id, update: _text_update(session_id, update, "thought"),
+    "user_message_chunk": lambda session_id, update: _text_update(session_id, update, "user"),
+    "tool_call": _tool_event,
+    "tool_call_update": _tool_update_event,
+    "plan": _plan_event,
+    "usage_update": _usage_event,
+    "session_info_update": _simple_event("session_info"),
+    "available_commands_update": _simple_event("commands"),
+    "current_mode_update": _simple_event("mode"),
+    "config_option_update": _simple_event("config"),
+    "notice": _simple_event("notice"),
+    "compaction_update": _simple_event("compaction"),
+    "compaction_summary_chunk": _simple_event("compaction"),
+}
 
 
 def map_server_request(request_id: int | str, method: str, params: dict[str, Any]) -> AgentEvent:

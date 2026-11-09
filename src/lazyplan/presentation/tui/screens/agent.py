@@ -54,10 +54,12 @@ if _TEXTUAL_OK:
             store: Store | None = None,
             task_id: int | None = None,
             prompt: str = "",
+            display_cwd: str = "",
         ) -> None:
             super().__init__()
             self.profile = profile
             self.cwd = Path(cwd).expanduser().resolve()
+            self._display_cwd = display_cwd or str(self.cwd)
             self._title = title or profile.title
             self._mcp_servers = mcp_servers
             self._store = store
@@ -133,7 +135,7 @@ if _TEXTUAL_OK:
         def _update_head(self) -> None:
             if self._work is None:
                 self.query_one("#agent-head", Static).update(
-                    f"[bold]{self._title}[/]\n[dim]{self.cwd}[/]"
+                    f"[bold]{self._title}[/]\n[dim]{self._display_cwd}[/]"
                 )
                 return
             task = self._work["task"]
@@ -142,7 +144,7 @@ if _TEXTUAL_OK:
             branch = str(self._work.get("branch") or "current checkout")
             self.query_one("#agent-head", Static).update(
                 f"[bold]T{task.id} {task.title}[/] · P{plan.id} {plan.name}\n"
-                f"[dim]{milestone.title} · {branch} · {self.cwd}[/]"
+                f"[dim]{milestone.title} · {branch} · {self._display_cwd}[/]"
             )
 
         def _set_status(self, status: str, detail: str = "") -> None:

@@ -96,7 +96,11 @@ def agent_app():
 
 def test_agent_workbench(snap_compare, agent_app) -> None:
     async def run_before(pilot) -> None:
-        screen = AgentScreen(AgentProfile("fake", "Fake", ("fake",)), Path("/repo"))
+        screen = AgentScreen(
+            AgentProfile("fake", "Fake", ("fake",)),
+            Path("/repo"),
+            display_cwd="/repo",
+        )
         pilot.app.push_screen(screen)
         await pilot.pause()
         screen.query_one("#agent-prompt").cursor_blink = False

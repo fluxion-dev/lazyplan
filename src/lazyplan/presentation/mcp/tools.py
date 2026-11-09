@@ -20,6 +20,7 @@ from ...store import to_payload
 from .base import McpBase
 from .collaboration_tools import CollaborationToolsMixin
 from .evidence_tools import EvidenceToolsMixin
+from .proposal_tools import ProposalToolsMixin
 from .provenance_tools import ProvenanceToolsMixin
 from .question_tools import QuestionToolsMixin
 from .review_tools import ReviewToolsMixin
@@ -36,6 +37,7 @@ PROTOCOL_VERSION = "2024-11-05"
 class ToolsMixin(
     CollaborationToolsMixin,
     EvidenceToolsMixin,
+    ProposalToolsMixin,
     ProvenanceToolsMixin,
     QuestionToolsMixin,
     ReviewToolsMixin,
@@ -216,6 +218,7 @@ class ToolsMixin(
         tools.update(self._question_write_registry())
         tools.update(self._collaboration_write_registry())
         tools.update(self._provenance_write_registry())
+        tools.update(self._proposal_write_registry())
         return tools
 
     def _tool_trace(self, args: dict) -> object:
@@ -350,6 +353,7 @@ class ToolsMixin(
         tools.update(self._review_read_registry())
         tools.update(self._collaboration_read_registry())
         tools.update(self._provenance_read_registry())
+        tools.update(self._proposal_read_registry())
         return tools
 
     def _tool_claim_renew(self, args: dict) -> object:

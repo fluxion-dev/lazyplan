@@ -8,7 +8,7 @@ from __future__ import annotations
 import sqlite3
 import uuid
 
-SCHEMA_VERSION = 8
+SCHEMA_VERSION = 9
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS plans (
@@ -102,6 +102,19 @@ CREATE TABLE IF NOT EXISTS external_refs (
     UNIQUE(plan_id, url)
 );
 CREATE INDEX IF NOT EXISTS idx_external_refs_plan ON external_refs(plan_id, id);
+CREATE TABLE IF NOT EXISTS proposals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    kind TEXT NOT NULL CHECK (kind IN ('plan_document', 'row_edit', 'task_create')),
+    title TEXT NOT NULL,
+    summary TEXT NOT NULL DEFAULT '',
+    payload TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending'
+        CHECK (status IN ('pending', 'applied', 'rejected')),
+    actor TEXT NOT NULL DEFAULT 'agent',
+    created_at REAL NOT NULL,
+    resolved_at REAL NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_proposals_status ON proposals(status, id DESC);
 CREATE TABLE IF NOT EXISTS sessions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     actor TEXT NOT NULL DEFAULT 'human',

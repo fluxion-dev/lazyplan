@@ -404,6 +404,13 @@ workbench, or `ctrl+p` on a detail page, to review pending proposals. Applying
 one uses the same plan-apply path as the CLI; rejecting leaves the plan
 unchanged.
 
+From a task detail page, `W` starts a work session: lazyplan claims the task,
+opens a lazyplan session, prefills the prompt with the task, plan, branch, and
+criteria, and opens the workbench. The header follows that task and plan while
+the run is active. `ctrl+f` finishes the run with a summary and handoff; it runs
+the same evidence, pull-request, and check gates as `task finish`, so a failed
+gate leaves the task open and explains why.
+
 Session and touch-point authoring are first-class screen hubs now; plan 135's
 CLI-only stance is superseded for those entities. Import, sync, and setup stay
 CLI-only.

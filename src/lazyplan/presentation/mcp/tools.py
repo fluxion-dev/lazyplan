@@ -15,8 +15,8 @@ from lazyplan.infrastructure.vcs import detect_backend
 from lazyplan.services import trace
 
 from ...core.entities import Milestone, Plan, Status, Task
+from ...core.serialization import to_payload
 from ...services import insights
-from ...store import to_payload
 from .base import McpBase
 from .collaboration_tools import CollaborationToolsMixin
 from .evidence_tools import EvidenceToolsMixin
@@ -423,9 +423,9 @@ class ToolsMixin(
         store = self._need_store()
         root = find_repo_root(Path.cwd())
         return {
-            "db": str(store.path),
+            "db": store.db_path,
             "repo": str(root) if root else None,
-            "scope": repo_label(store.path),
+            "scope": repo_label(store.db_path),
             "counts": store.counts(),
         }
 

@@ -17,9 +17,10 @@ try:
 except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
-from ....infrastructure.agents import AgentEvent, AgentProfile
+from ....infrastructure.agents import AgentEvent, AgentProfile, PermissionRequest
 from ..controllers.agent import AgentController
 from ..views.agent import AgentTranscript
+from .agent_permission import AgentPermissionScreen
 
 if TYPE_CHECKING:
     pass
@@ -55,6 +56,9 @@ if _TEXTUAL_OK:
             self._transcript = AgentTranscript()
             self._usage = ""
             self._started = False
+            self._permission_queue: list[PermissionRequest] = []
+            self._permission_open = False
+            self._active_permission: PermissionRequest | None = None
 
         def compose(self) -> ComposeResult:
             with Vertical(id="agent-page"):
@@ -139,6 +143,8 @@ if _TEXTUAL_OK:
                     self._set_status(self._controller.status, self._controller.detail)
             elif event.kind == "permission" and event.permission is not None:
                 self._transcript.add_permission(event.permission.tool)
+                self._permission_queue.append(event.permission)
+                self._show_permission()
             elif event.kind == "exit":
                 self._transcript.add_exit()
             elif event.kind == "notice":
@@ -172,11 +178,42 @@ if _TEXTUAL_OK:
                 self._transcript.add_error(str(exc))
                 self.notify(f"agent error: {exc}")
 
+        def _show_permission(self) -> None:
+            if self._permission_open or not self._permission_queue:
+                return
+            permission = self._permission_queue.pop(0)
+            self._active_permission = permission
+            self._permission_open = True
+            self.app.push_screen(
+                AgentPermissionScreen(permission),
+                self._permission_reply,
+            )
+
+        def _permission_reply(self, option_id: str | None) -> None:
+            permission = self._active_permission
+            self._active_permission = None
+            self._permission_open = False
+            if permission is not None and self._controller is not None:
+                asyncio.create_task(
+                    self._controller.reply_permission(permission.request_id, option_id)
+                )
+            self.call_after_refresh(self._show_permission)
+
+        async def _reject_pending_permission(self) -> None:
+            permission = self._active_permission
+            if permission is None or self._controller is None:
+                return
+            self._active_permission = None
+            self._permission_open = False
+            await self._controller.reply_permission(permission.request_id, None)
+
         async def action_cancel(self) -> None:
+            await self._reject_pending_permission()
             if self._controller is not None:
                 await self._controller.cancel()
 
         async def action_close(self) -> None:
+            await self._reject_pending_permission()
             if self._controller is not None:
                 await self._controller.close()
             setter = getattr(self.app, "set_agent_status", None)

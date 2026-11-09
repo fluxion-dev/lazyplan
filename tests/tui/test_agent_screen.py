@@ -8,6 +8,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from textual.widgets import Button
+
 from lazyplan.infrastructure.agents import AgentEvent, AgentProfile
 from lazyplan.presentation.shared import registry
 from lazyplan.presentation.tui import create_app
@@ -58,6 +60,26 @@ class TestAgentScreen(unittest.IsolatedAsyncioTestCase):
             self.assertIn("read complete", screen.transcript)
             self.assertIn("Write the change", screen.transcript)
             self.assertIn("10/100 tokens", str(screen.query_one("#agent-status").render()))
+            await screen.action_close()
+
+    async def test_permission_modal_allows_the_tool(self) -> None:
+        app = create_app(self.db)
+        async with app.run_test() as pilot:
+            screen = AgentScreen(profile("permission"), ROOT)
+            app.push_screen(screen)
+            await pilot.pause()
+            screen.query_one("#agent-prompt").text = "write"
+            sending = asyncio.create_task(screen.action_send())
+            await wait_for(lambda: app.screen.__class__.__name__ == "AgentPermissionScreen")
+            await pilot.pause()
+            modal = app.screen
+            labels = [str(button.label) for button in modal.query(Button)]
+            self.assertIn("Allow once", labels)
+            self.assertIn("Always allow", labels)
+            self.assertIn("Reject", labels)
+            modal.query_one("#perm-0", Button).press()
+            await wait_for(lambda: "approved" in screen.transcript)
+            await asyncio.wait_for(sending, 5.0)
             await screen.action_close()
 
     async def test_unknown_update_renders_a_generic_line(self) -> None:

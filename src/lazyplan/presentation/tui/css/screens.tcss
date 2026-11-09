@@ -324,3 +324,23 @@ ModalScreen {
     height: auto;
     margin-top: 1;
 }
+
+#agent-permission {
+    width: 90%;
+    max-width: 84;
+    height: auto;
+    max-height: 80%;
+    border: round $lp-border-focus;
+    border-title-color: $lp-accent;
+    background: $lp-modal-bg;
+    padding: 1 2;
+}
+
+#agent-permission-scroll {
+    height: auto;
+    max-height: 24;
+}
+
+#agent-permission-body {
+    height: auto;
+}

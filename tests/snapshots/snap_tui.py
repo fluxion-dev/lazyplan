@@ -6,14 +6,17 @@ import os
 import tempfile
 import time
 from contextlib import contextmanager
+from pathlib import Path
 from unittest import mock
 
 import pytest
 
 from lazyplan import services
 from lazyplan.core.entities import Status
+from lazyplan.infrastructure.agents import AgentProfile, PlanEntry, ToolCall
 from lazyplan.presentation.tui import create_app
 from lazyplan.presentation.tui.screens import DetailScreen, PaletteScreen
+from lazyplan.presentation.tui.screens.agent import AgentScreen
 from lazyplan.presentation.tui.screens.hub_kinds import CriteriaHub
 from lazyplan.presentation.tui.screens.source import SourceScreen
 from lazyplan.services import metrics, revisions
@@ -81,6 +84,50 @@ def data_app():
         store = Store(db)
         with mock.patch("lazyplan.services.metrics.snapshot", side_effect=frozen_snapshot):
             yield create_app(db), store, plan.id, task.id
+
+
+@pytest.fixture()
+def agent_app():
+    with tempfile.TemporaryDirectory() as tmp:
+        db = os.path.join(tmp, "agent.db")
+        Store(db)
+        yield create_app(db)
+
+
+def test_agent_workbench(snap_compare, agent_app) -> None:
+    async def run_before(pilot) -> None:
+        screen = AgentScreen(AgentProfile("fake", "Fake", ("fake",)), Path("/repo"))
+        pilot.app.push_screen(screen)
+        await pilot.pause()
+        screen.query_one("#agent-prompt").cursor_blink = False
+        screen._transcript.add_user("Draft a plan")
+        screen._transcript.add_text("I will inspect the repo.")
+        screen._transcript.add_tool(
+            ToolCall(
+                "call_1",
+                title="Read a file",
+                name="read_file",
+                kind="read",
+                status="completed",
+                content=(
+                    {
+                        "type": "content",
+                        "content": {"type": "text", "text": "read complete"},
+                    },
+                ),
+            ),
+            {},
+        )
+        screen._transcript.add_plan(
+            (
+                PlanEntry("Read the file", priority="high", status="completed"),
+                PlanEntry("Write the change", status="pending"),
+            )
+        )
+        screen._render_transcript()
+        await pilot.pause()
+
+    assert snap_compare(agent_app, run_before=run_before, terminal_size=(100, 30))
 
 
 def test_main_shell_empty(snap_compare, empty_app) -> None:

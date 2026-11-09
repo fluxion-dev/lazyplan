@@ -17,8 +17,9 @@ try:
 except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
-from ....infrastructure.agents import AgentEvent, AgentProfile, ToolCall
+from ....infrastructure.agents import AgentEvent, AgentProfile
 from ..controllers.agent import AgentController
+from ..views.agent import AgentTranscript
 
 if TYPE_CHECKING:
     pass
@@ -51,11 +52,7 @@ if _TEXTUAL_OK:
             self._controller: AgentController | None = None
             self._queue: asyncio.Queue[tuple[str, object]] = asyncio.Queue()
             self._consumer: asyncio.Task[None] | None = None
-            self._blocks: list[str] = []
-            self._kinds: list[str] = []
-            self._tool_blocks: dict[str, int] = {}
-            self._tools: dict[str, ToolCall] = {}
-            self._plan_block: int | None = None
+            self._transcript = AgentTranscript()
             self._usage = ""
             self._started = False
 
@@ -119,69 +116,20 @@ if _TEXTUAL_OK:
         @property
         def transcript(self) -> str:
             """The rendered markdown transcript, for tests and copying."""
-            return "\n\n".join(self._blocks)
+            return self._transcript.markdown()
 
         def _render_transcript(self) -> None:
             self.query_one("#agent-transcript", Markdown).update(self.transcript)
 
-        def _append(self, text: str, kind: str) -> int:
-            self._blocks.append(text)
-            self._kinds.append(kind)
-            self._render_transcript()
-            return len(self._blocks) - 1
-
-        def _write_text(self, text: str) -> None:
-            if text and self._kinds and self._kinds[-1] == "agent":
-                self._blocks[-1] += text
-                self._render_transcript()
-            elif text:
-                self._append(f"**Agent**\n\n{text}", "agent")
-
-        @staticmethod
-        def _tool_card(tool: ToolCall) -> str:
-            lines = [f"**{tool.title or tool.name or 'tool'}** `{tool.kind}` · {tool.status}"]
-            for item in tool.content:
-                if not isinstance(item, dict):
-                    continue
-                if item.get("type") == "diff":
-                    path = item.get("path") or "file"
-                    new_text = str(item.get("newText") or "").strip()
-                    lines.append(f"`{path}`")
-                    if new_text:
-                        lines.append(f"```\n{new_text[:1200]}\n```")
-                elif item.get("type") == "content":
-                    inner = item.get("content")
-                    if isinstance(inner, dict) and inner.get("type") == "text":
-                        lines.append(str(inner.get("text") or "")[:1200])
-            return "\n".join(line for line in lines if line)
-
         async def _apply_event(self, event: AgentEvent) -> None:
             if event.kind == "text":
-                self._write_text(event.text)
+                self._transcript.add_text(event.text)
             elif event.kind == "thought":
-                self._append(f"_{event.text}_", "thought")
+                self._transcript.add_thought(event.text)
             elif event.kind in {"tool_call", "tool_update"} and event.tool is not None:
-                tool = event.tool
-                previous = self._tools.get(tool.tool_call_id)
-                if previous is not None:
-                    tool = previous.merged(event.payload)
-                self._tools[tool.tool_call_id] = tool
-                card = self._tool_card(tool)
-                index = self._tool_blocks.get(tool.tool_call_id)
-                if index is None:
-                    index = self._append(card, "tool")
-                    self._tool_blocks[tool.tool_call_id] = index
-                else:
-                    self._blocks[index] = card
-                    self._render_transcript()
+                self._transcript.add_tool(event.tool, event.payload)
             elif event.kind == "plan":
-                rows = "\n".join(f"> {entry.status} · {entry.content}" for entry in event.plan)
-                block = f"**Plan**\n\n{rows}"
-                if self._plan_block is None:
-                    self._plan_block = self._append(block, "plan")
-                else:
-                    self._blocks[self._plan_block] = block
-                    self._render_transcript()
+                self._transcript.add_plan(event.plan)
             elif event.kind == "usage" and event.usage is not None:
                 cost = ""
                 if event.usage.amount is not None:
@@ -190,18 +138,17 @@ if _TEXTUAL_OK:
                 if self._controller is not None:
                     self._set_status(self._controller.status, self._controller.detail)
             elif event.kind == "permission" and event.permission is not None:
-                self._append(
-                    "> **Permission requested**\n"
-                    f"> {event.permission.tool.title or event.permission.tool.name}",
-                    "permission",
-                )
+                self._transcript.add_permission(event.permission.tool)
             elif event.kind == "exit":
-                self._append("_agent exited_", "exit")
+                self._transcript.add_exit()
             elif event.kind == "notice":
-                self._append(f"> {event.payload.get('title', 'notice')}", "notice")
+                self._transcript.add_notice(str(event.payload.get("title", "notice")))
             elif event.kind == "unknown":
-                name = event.payload.get("sessionUpdate") or event.payload.get("method") or "update"
-                self._append(f"> unknown agent update: {name}", "unknown")
+                name = str(
+                    event.payload.get("sessionUpdate") or event.payload.get("method") or "update"
+                )
+                self._transcript.add_unknown(name)
+            self._render_transcript()
 
         async def action_send(self) -> None:
             if self._controller is None:
@@ -215,14 +162,14 @@ if _TEXTUAL_OK:
                 self.notify("one prompt is already running")
                 return
             prompt.text = ""
-            self._append(f"**You**\n\n{text}", "user")
+            self._transcript.add_user(text)
             try:
                 if not self._started:
                     await self._controller.start()
                     self._started = True
                 await self._controller.prompt(text)
             except Exception as exc:
-                self._append(f"**Error**\n\n{exc}", "error")
+                self._transcript.add_error(str(exc))
                 self.notify(f"agent error: {exc}")
 
         async def action_cancel(self) -> None:

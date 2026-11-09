@@ -17,6 +17,7 @@ from pathlib import Path
 SRC = Path(__file__).resolve().parents[2] / "src" / "lazyplan"
 BASELINE = Path(__file__).with_name("architecture_baseline.json")
 STORE_IMPORT_BASELINE = Path(__file__).with_name("store_import_baseline.json")
+LAYER_IMPORT_BASELINE = Path(__file__).with_name("layer_import_baseline.json")
 PACKAGE = "lazyplan"
 
 #: Core is pure: it may not reach for these external roots.
@@ -248,6 +249,26 @@ def store_import_allowlist() -> set[str]:
     return set(store_import_baseline())
 
 
+def layer_import_baseline() -> dict[tuple[str, str], str]:
+    """Return each approved store/service-to-infrastructure edge and its reason."""
+    data = json.loads(LAYER_IMPORT_BASELINE.read_text(encoding="utf-8"))
+    return {
+        (str(edge["source"]), str(edge["target"])): str(edge["reason"]) for edge in data["edges"]
+    }
+
+
+def layer_import_violations(graph: dict[str, set[str]]) -> list[tuple[str, str]]:
+    """Return store/service edges that reach infrastructure."""
+    found: list[tuple[str, str]] = []
+    for source, dependencies in sorted(graph.items()):
+        if layer_key(source) not in ("store", "services"):
+            continue
+        for target in sorted(dependencies):
+            if layer_key(target) == "infrastructure":
+                found.append((source, target))
+    return found
+
+
 class ArchitectureTest(unittest.TestCase):
     """Every internal edge points down a layer and no cycle exists."""
 
@@ -321,6 +342,31 @@ class ArchitectureTest(unittest.TestCase):
             }
         )
         self.assertEqual(violations, ["lazyplan.presentation.cli.commands.new"])
+
+    def test_store_and_service_imports_match_the_layer_allowlist(self) -> None:
+        allowed = set(layer_import_baseline())
+        violations = set(layer_import_violations(self.graph))
+        self.assertEqual(
+            violations,
+            allowed,
+            "update layer_import_baseline.json when a slice removes a layer adapter",
+        )
+
+    def test_layer_import_allowlist_has_a_reason(self) -> None:
+        missing = sorted(
+            edge for edge, reason in layer_import_baseline().items() if not reason.strip()
+        )
+        self.assertEqual(missing, [], f"name a reason for each layer edge: {missing}")
+
+    def test_layer_import_allowlist_names_existing_edges(self) -> None:
+        stale = sorted(set(layer_import_baseline()) - set(layer_import_violations(self.graph)))
+        self.assertEqual(stale, [], f"remove stale layer edges: {stale}")
+
+    def test_layer_import_violation_is_reported(self) -> None:
+        violations = layer_import_violations(
+            {"lazyplan.services.new": {"lazyplan.infrastructure.vcs"}}
+        )
+        self.assertEqual(violations, [("lazyplan.services.new", "lazyplan.infrastructure.vcs")])
 
 
 if __name__ == "__main__":

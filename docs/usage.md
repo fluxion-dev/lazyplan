@@ -382,6 +382,19 @@ agents pane to open the sessions hub.
 - Comments and notes: `a` adds a comment, `n` adds a note, `x` resolves or
   reopens a comment, and `u` hides resolved comments.
 
+### Agent workbench
+
+Press `W` from the main shell to open the Agent Workbench. Type a prompt,
+`ctrl+s` sends it, `ctrl+x` stops the active prompt, and `escape` closes the
+screen. One prompt runs at a time. The transcript streams assistant text, tool
+cards, the agent's plan, and token or cost usage.
+
+The default agent is OpenCode via `opencode acp`. That command starts a private
+agent server for the workbench; it is not the same process as an OpenCode TUI
+window. Manage the catalog with `lpui agent list`, `lpui agent add`, and
+`lpui agent remove`. A second command, such as the Claude ACP adapter, can be
+added without changing lazyplan.
+
 Session and touch-point authoring are first-class screen hubs now; plan 135's
 CLI-only stance is superseded for those entities. Import, sync, and setup stay
 CLI-only.

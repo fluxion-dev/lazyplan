@@ -18,9 +18,11 @@ except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
 from ....infrastructure.agents import AgentEvent, AgentProfile, PermissionRequest
+from ....store import Store
 from ..controllers.agent import AgentController
 from ..views.agent import AgentTranscript
 from .agent_permission import AgentPermissionScreen
+from .agent_proposals import ProposalReviewScreen
 
 if TYPE_CHECKING:
     pass
@@ -35,6 +37,7 @@ if _TEXTUAL_OK:
             Binding("escape", "close", "Close", priority=True),
             Binding("ctrl+s", "send", "Send", priority=True),
             Binding("ctrl+x", "cancel", "Stop", priority=True),
+            Binding("ctrl+p", "open_proposals", "Proposals", priority=True),
         ]
 
         navigation_name = "agent"
@@ -46,12 +49,14 @@ if _TEXTUAL_OK:
             *,
             title: str = "",
             mcp_servers: tuple[dict[str, object], ...] = (),
+            store: Store | None = None,
         ) -> None:
             super().__init__()
             self.profile = profile
             self.cwd = Path(cwd).expanduser().resolve()
             self._title = title or profile.title
             self._mcp_servers = mcp_servers
+            self._store = store
             self._controller: AgentController | None = None
             self._queue: asyncio.Queue[tuple[str, object]] = asyncio.Queue()
             self._consumer: asyncio.Task[None] | None = None
@@ -72,6 +77,7 @@ if _TEXTUAL_OK:
                 with Horizontal(id="agent-actions", classes="btn-row"):
                     yield Button("Send", id="agent-send", variant="primary")
                     yield Button("Stop", id="agent-stop")
+                    yield Button("Proposals", id="agent-proposals")
                     yield Button("Close", id="agent-close")
 
         def on_mount(self) -> None:
@@ -213,6 +219,12 @@ if _TEXTUAL_OK:
             self._permission_open = False
             await self._controller.reply_permission(permission.request_id, None)
 
+        def action_open_proposals(self) -> None:
+            if self._store is None:
+                self.notify("no database for proposals")
+                return
+            self.app.push_screen(ProposalReviewScreen(self._store))
+
         async def action_cancel(self) -> None:
             await self._reject_pending_permission()
             if self._controller is not None:
@@ -232,5 +244,7 @@ if _TEXTUAL_OK:
                 await self.action_send()
             elif event.button.id == "agent-stop":
                 await self.action_cancel()
+            elif event.button.id == "agent-proposals":
+                self.action_open_proposals()
             elif event.button.id == "agent-close":
                 await self.action_close()

@@ -344,3 +344,45 @@ ModalScreen {
 #agent-permission-body {
     height: auto;
 }
+
+#proposal-page {
+    height: 1fr;
+    border: round $lp-border;
+    border-title-color: $lp-accent;
+    background: $lp-surface-alt;
+    padding: 0 1;
+}
+
+#proposal-head {
+    height: auto;
+    min-height: 1;
+    background: $lp-surface;
+    color: $lp-accent;
+    padding: 0 1;
+}
+
+#proposal-main {
+    height: 1fr;
+}
+
+#proposal-list {
+    width: 1fr;
+    min-width: 28;
+    border: round $lp-border-muted;
+    padding: 0 1;
+}
+
+#proposal-preview-scroll {
+    width: 1fr;
+    border: round $lp-border-muted;
+    padding: 0 1;
+}
+
+#proposal-preview {
+    height: auto;
+}
+
+#proposal-actions {
+    height: auto;
+    margin-top: 1;
+}

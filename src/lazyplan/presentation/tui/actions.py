@@ -233,6 +233,7 @@ if _TEXTUAL_OK:
                     profile,
                     cwd,
                     mcp_servers=(lazyplan_mcp_server(self.store.path),),
+                    store=self.store,
                 )
             )
 

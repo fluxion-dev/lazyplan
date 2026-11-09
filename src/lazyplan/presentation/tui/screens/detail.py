@@ -70,7 +70,17 @@ if _TEXTUAL_OK:
             Binding("d", "delete_row", "Delete"),
             Binding("g", "open_source", "Source"),
             Binding("ctrl+s", "save", "Save", priority=True),
+            Binding("ctrl+p", "open_proposals", "Proposals"),
         ]
+
+        def action_open_proposals(self) -> None:
+            from .agent_proposals import ProposalReviewScreen
+
+            store = getattr(self.app, "store", None)
+            if store is None:
+                self.notify("no database for proposals")
+                return
+            self.app.push_screen(ProposalReviewScreen(store))
 
         def __init__(self, store: ProvenancePort, kind: str, oid: int, edit: bool = False) -> None:
             super().__init__()

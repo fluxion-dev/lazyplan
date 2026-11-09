@@ -38,6 +38,7 @@ NAMESPACES: tuple[str, ...] = (
     "source",
     "theme",
     "palette",
+    "agent",
 )
 TAXONOMY: tuple[str, ...] = ENTITIES + NAMESPACES
 

@@ -1,0 +1,73 @@
+"""Headless Agent Workbench tests."""
+
+from __future__ import annotations
+
+import asyncio
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+from lazyplan.infrastructure.agents import AgentProfile
+from lazyplan.presentation.shared import registry
+from lazyplan.presentation.tui import create_app
+from lazyplan.presentation.tui.screens.agent import AgentScreen
+from lazyplan.store import Store
+
+ROOT = Path(__file__).resolve().parents[2]
+FAKE = ROOT / "tests" / "support" / "fake_acp.py"
+
+
+def profile(scenario: str = "text") -> AgentProfile:
+    return AgentProfile(
+        "fake",
+        "Fake",
+        (sys.executable, str(FAKE)),
+        {"FAKE_ACP_SCENARIO": scenario, "PYTHONIOENCODING": "utf-8"},
+    )
+
+
+async def wait_for(predicate) -> None:
+    for _ in range(500):
+        if predicate():
+            return
+        await asyncio.sleep(0.01)
+    raise AssertionError("condition not met")
+
+
+class TestAgentScreen(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.db = str(Path(self.tmp.name) / "agent.db")
+        Store(self.db).add_plan("P")
+
+    async def asyncTearDown(self) -> None:
+        self.tmp.cleanup()
+
+    async def test_prompt_streams_a_tool_card(self) -> None:
+        app = create_app(self.db)
+        async with app.run_test() as pilot:
+            screen = AgentScreen(profile(), ROOT)
+            app.push_screen(screen)
+            await pilot.pause()
+            screen.query_one("#agent-prompt").text = "hello"
+            await screen.action_send()
+            await wait_for(lambda: "hello from fake" in screen._markdown)
+            self.assertIn("hello from fake", screen._markdown)
+            self.assertIn("Read a file", screen._markdown)
+            await screen.action_close()
+
+    async def test_w_opens_the_workbench(self) -> None:
+        self.assertIsNotNone(registry.by_command_id("open-agent"))
+        app = create_app(self.db)
+        async with app.run_test() as pilot:
+            app.action_open_agent()
+            await pilot.pause()
+            self.assertEqual(app.screen.__class__.__name__, "AgentScreen")
+            screen = app.screen
+            assert isinstance(screen, AgentScreen)
+            await screen.action_close()
+
+
+if __name__ == "__main__":
+    unittest.main()

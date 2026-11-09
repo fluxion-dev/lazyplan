@@ -211,6 +211,24 @@ if _TEXTUAL_OK:
         def action_help(self) -> None:
             self.push_screen(HelpScreen())
 
+        def action_open_agent(self) -> None:
+            """Open the ACP workbench for the default agent in this checkout."""
+            from ...infrastructure.agents import load_catalog
+            from ...infrastructure.repo import find_repo_root
+            from .screens.agent import AgentScreen
+
+            try:
+                profiles, default = load_catalog()
+            except ValueError as exc:
+                self.notify(f"error: {exc}")
+                return
+            profile = next(
+                (profile for profile in profiles if profile.key == default),
+                profiles[0],
+            )
+            cwd = find_repo_root(Path.cwd()) or Path.cwd()
+            self.push_screen(AgentScreen(profile, cwd))
+
         def action_add_criterion(self) -> None:
             """Prompt for a new criterion on the selected row."""
             if self.selected is None:

@@ -96,6 +96,7 @@ if _TEXTUAL_OK:
             Binding("f", "cycle_mode", "Plan mode", show=False),
             Binding("r", "refresh", "Refresh", show=False),
             Binding("U", "update_prompt", "Update"),
+            Binding("W", "open_agent", "Workbench"),
         ]
         rev = reactive(0, init=False)
 

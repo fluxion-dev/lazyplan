@@ -278,3 +278,49 @@ ModalScreen {
     color: $lp-accent;
     text-style: bold;
 }
+
+#agent-page {
+    height: 1fr;
+    border: round $lp-border;
+    border-title-color: $lp-accent;
+    background: $lp-surface-alt;
+    padding: 0 1;
+}
+
+#agent-head {
+    height: auto;
+    min-height: 2;
+    background: $lp-surface;
+    color: $lp-accent;
+    padding: 0 1;
+    margin-bottom: 1;
+}
+
+#agent-scroll {
+    height: 1fr;
+    border: round $lp-border-muted;
+    border-title-color: $lp-text-muted;
+    padding: 0 1;
+}
+
+#agent-transcript {
+    height: auto;
+    padding: 0 1;
+}
+
+#agent-status {
+    height: 1;
+    background: $lp-surface;
+    color: $lp-text-muted;
+    padding: 0 1;
+}
+
+#agent-prompt {
+    height: 4;
+    border: tall $lp-border;
+}
+
+#agent-actions {
+    height: auto;
+    margin-top: 1;
+}

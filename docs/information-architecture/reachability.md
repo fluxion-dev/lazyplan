@@ -96,6 +96,7 @@ Budget: every action is at most **3** interactions from the tree.
 | `view.claims_hub` | tree › detail › coordination | 2 |
 | `view.sessions_hub` | tree › detail › sessions | 2 |
 | `view.comments_hub` | tree › detail › coordination | 2 |
+| `agent.workbench` | tree | 0 |
 | `criterion.edit` | tree › detail › trust | 2 |
 | `evidence.list` | tree › detail › evidence | 2 |
 | `criterion.delete` | tree › detail › trust | 2 |

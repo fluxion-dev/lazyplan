@@ -67,6 +67,8 @@ class PlanningPort(Protocol):
 
     def get_full(self, kind: str, obj_id: int) -> dict | None: ...
 
+    def get_full_many(self, kind: str, obj_ids: list[int]) -> list[dict]: ...
+
     def update_plan(
         self,
         pid: int,

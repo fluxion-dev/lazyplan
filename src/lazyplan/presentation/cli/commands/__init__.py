@@ -22,11 +22,6 @@ from .admin import (
 from .admin import (
     _cmd_mcp as _cmd_mcp,
 )
-from .agent import (
-    _cmd_agent_add,
-    _cmd_agent_list,
-    _cmd_agent_remove,
-)
 from .claim import (
     _cmd_claim,
     _cmd_claims,
@@ -202,9 +197,6 @@ _GROUP_CMDS: dict[tuple[str, str], str] = {
     ("pr", "link"): "pr-link",
     ("pr", "unlink"): "pr-unlink",
     ("pr", "refresh"): "pr-refresh",
-    ("agent", "list"): "agent-list",
-    ("agent", "add"): "agent-add",
-    ("agent", "remove"): "agent-remove",
 }
 
 _COMMANDS: dict[str, Callable[[Store, Namespace, str], int]] = {
@@ -291,7 +283,4 @@ _COMMANDS: dict[str, Callable[[Store, Namespace, str], int]] = {
     "feed": _cmd_feed,
     "completion": _cmd_completion,
     "ui": _cmd_ui,
-    "agent-list": _cmd_agent_list,
-    "agent-add": _cmd_agent_add,
-    "agent-remove": _cmd_agent_remove,
 }

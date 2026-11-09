@@ -14,7 +14,7 @@ on:
       tests:
         description: Pytest targets separated by spaces
         required: false
-        default: tests/snapshots/snap_tui.py::test_control_room_shell tests/tui/test_update_screen.py tests/infrastructure/test_acp.py
+        default: tests/snapshots/snap_tui.py::test_control_room_shell tests/tui/test_update_screen.py
         type: string
       update_snapshots:
         description: Regenerate snapshots instead of comparing them

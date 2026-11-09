@@ -13,7 +13,6 @@ from lazyplan import services
 from lazyplan.infrastructure.repo import find_repo_root, repo_label
 from lazyplan.infrastructure.vcs import detect_backend
 from lazyplan.services import trace
-from lazyplan.services.agent_policy import allowed_in_proposal_mode
 
 from ...core.entities import Milestone, Plan, Status, Task
 from ...services import insights
@@ -21,7 +20,6 @@ from ...store import to_payload
 from .base import McpBase
 from .collaboration_tools import CollaborationToolsMixin
 from .evidence_tools import EvidenceToolsMixin
-from .proposal_tools import ProposalToolsMixin
 from .provenance_tools import ProvenanceToolsMixin
 from .question_tools import QuestionToolsMixin
 from .review_tools import ReviewToolsMixin
@@ -38,7 +36,6 @@ PROTOCOL_VERSION = "2024-11-05"
 class ToolsMixin(
     CollaborationToolsMixin,
     EvidenceToolsMixin,
-    ProposalToolsMixin,
     ProvenanceToolsMixin,
     QuestionToolsMixin,
     ReviewToolsMixin,
@@ -219,7 +216,6 @@ class ToolsMixin(
         tools.update(self._question_write_registry())
         tools.update(self._collaboration_write_registry())
         tools.update(self._provenance_write_registry())
-        tools.update(self._proposal_write_registry())
         return tools
 
     def _tool_trace(self, args: dict) -> object:
@@ -354,7 +350,6 @@ class ToolsMixin(
         tools.update(self._review_read_registry())
         tools.update(self._collaboration_read_registry())
         tools.update(self._provenance_read_registry())
-        tools.update(self._proposal_read_registry())
         return tools
 
     def _tool_claim_renew(self, args: dict) -> object:
@@ -553,12 +548,7 @@ class ToolsMixin(
         """Merge read and write tools for the current mode."""
         tools = self._read_registry()
         if not self.read_only:
-            writes = self._write_registry()
-            if self.proposal_only:
-                writes = {
-                    name: entry for name, entry in writes.items() if allowed_in_proposal_mode(name)
-                }
-            tools.update(writes)
+            tools.update(self._write_registry())
         return tools
 
     def _tool_block(self, args: dict) -> object:

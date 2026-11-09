@@ -70,52 +70,7 @@ if _TEXTUAL_OK:
             Binding("d", "delete_row", "Delete"),
             Binding("g", "open_source", "Source"),
             Binding("ctrl+s", "save", "Save", priority=True),
-            Binding("ctrl+p", "open_proposals", "Proposals"),
-            Binding("W", "start_work", "Work"),
         ]
-
-        def action_start_work(self) -> None:
-            from pathlib import Path
-
-            from ....infrastructure.agents import load_catalog
-            from ....infrastructure.repo import find_repo_root
-            from ....services.agent_work import work_prompt
-            from ....services.agents import lazyplan_mcp_server
-            from .agent import AgentScreen
-
-            store = getattr(self.app, "store", None)
-            if store is None or self.dkind != "task":
-                self.notify("start work from a task detail page")
-                return
-            try:
-                profiles, default = load_catalog()
-            except ValueError as exc:
-                self.notify(f"error: {exc}")
-                return
-            profile = next(
-                (profile for profile in profiles if profile.key == default),
-                profiles[0],
-            )
-            cwd = find_repo_root(Path.cwd()) or Path.cwd()
-            self.app.push_screen(
-                AgentScreen(
-                    profile,
-                    cwd,
-                    mcp_servers=(lazyplan_mcp_server(store.path),),
-                    store=store,
-                    task_id=self.doid,
-                    prompt=work_prompt(store, self.doid),
-                )
-            )
-
-        def action_open_proposals(self) -> None:
-            from .agent_proposals import ProposalReviewScreen
-
-            store = getattr(self.app, "store", None)
-            if store is None:
-                self.notify("no database for proposals")
-                return
-            self.app.push_screen(ProposalReviewScreen(store))
 
         def __init__(self, store: ProvenancePort, kind: str, oid: int, edit: bool = False) -> None:
             super().__init__()

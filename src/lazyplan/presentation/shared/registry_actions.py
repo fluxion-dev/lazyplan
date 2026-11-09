@@ -471,15 +471,6 @@ CORE_ACTIONS: tuple[Action, ...] = (
         route=("tree", "detail", "coordination"),
         palette_ids=("comments-hub",),
     ),
-    _action(
-        "agent.workbench",
-        "Open agent workbench",
-        "W",
-        "tree",
-        ("tui",),
-        ("tree",),
-        ("open-agent",),
-    ),
 )
 
 ACTIONS: tuple[Action, ...] = CORE_ACTIONS + PROVENANCE_ACTIONS

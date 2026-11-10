@@ -39,11 +39,11 @@ export function Hero() {
 
         <h1
           id="hero-title"
-          className="m-0 text-5xl font-extrabold tracking-tight text-balance text-foreground md:text-6xl"
+          className="m-0 text-display leading-display font-extrabold tracking-display text-balance text-foreground"
         >
           Your master plan(s), laid bare.
         </h1>
-        <p className="mx-auto mt-6 max-w-2xl text-lg text-pretty text-muted-foreground">
+        <p className="mx-auto mt-6 max-w-2xl text-lead text-pretty text-muted-foreground">
           Agent compatible long context planning and control
         </p>
 

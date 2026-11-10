@@ -45,7 +45,7 @@ export function WhatsNew() {
             <p className="mb-3 text-sm font-semibold tracking-[0.18em] text-brand-cyan uppercase">
               What&apos;s new
             </p>
-            <h2 className="mb-3 text-2xl font-bold tracking-tight text-balance text-foreground md:text-3xl">
+            <h2 className="mb-3 text-3xl leading-headline font-bold tracking-headline text-balance text-foreground md:text-4xl">
               One control room for the loop.
             </h2>
             <p className="m-0 text-[0.95rem] text-pretty text-muted-foreground">

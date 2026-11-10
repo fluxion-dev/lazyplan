@@ -64,7 +64,7 @@ export function InstallCommand() {
       <p className="mb-3 text-sm font-semibold tracking-[0.18em] text-brand-cyan uppercase">
         {COPY.install.eyebrow}
       </p>
-      <h2 className="mb-4 text-2xl font-bold tracking-tight text-foreground md:text-3xl">
+      <h2 className="mb-4 text-3xl leading-headline font-bold tracking-headline text-foreground md:text-4xl">
         {COPY.install.title}
       </h2>
       <p className="mb-8 text-lg text-muted-foreground">

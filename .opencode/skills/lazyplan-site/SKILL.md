@@ -25,12 +25,35 @@ gate see full markup before JavaScript runs.
 | `site/src/main.tsx` | Hydrates the prerendered root, or mounts fresh in dev. |
 | `site/src/App.tsx` | Section order for the page. |
 | `site/src/index.css` | Tailwind, shadcn tokens, brand tokens, fonts, base layer. |
-| `site/src/data/site.ts` | Version, links, nav, FAQ, screenshots, and other page content. |
+| `site/src/data/features.json` | Ranked lead and supporting feature cards. |
+| `site/src/data/copy.ts` | Section narrative and CTAs. |
+| `site/src/data/screens.ts` | Screen type, current gallery, hero composite, and the eight-capture story. |
+| `site/src/data/faq.ts` | FAQ questions and answers mirrored in JSON-LD. |
+| `site/src/data/links.ts` | Version, URLs, badges, install command, and navigation. |
+| `site/src/data/site.ts` | Barrel re-export; import page data from here. |
 | `site/src/components/ui/` | shadcn components. Generated; prefer adding over hand-editing. |
 | `site/src/components/site/` | Page sections composed from shadcn primitives. |
 | `site/src/entry-server.tsx` | Renders the app to a string for prerendering. |
 | `site/scripts/prerender.mjs` | Injects the rendered markup into `dist/index.html`. |
 | `site/public/` | Screenshots, logo, robots, sitemap, downloads snapshot. |
+
+## Narrative map
+
+The page is one long narrative. Lead with the shared plan, the planner/executor
+loop, and proof, then open into the feature matrix.
+
+- Lead cards: `shared-plan`, `agent-loop`, `proof`.
+- Supporting cards: control room, trust hubs, claims, sessions, workbench,
+  source trail, timeline, keyboard, themes, local-first, auditability, and
+  bulk/search.
+- Hero composite: `HERO_COMPOSITE` (`lpui-hero`, 2400x1200) shows the plan tree,
+  the workbench, and the proof trail.
+- Supporting captures: `STORY_SCREENS` holds the eight scenes: control room,
+  plan detail, coordination, workbench, trust/evidence, source trail, git/PR
+  proof, and timeline.
+
+Keep the hero headline and subtitle. Rewrite section copy in `copy.ts`, card
+copy in `features.json`, and capture captions in `screens.ts`.
 
 ## Commands
 
@@ -98,7 +121,9 @@ for this site:
 - Keep the head metadata, canonical URL, Open Graph, Twitter, and JSON-LD in
   `index.html` in sync with the visible copy. The FAQ JSON-LD answers must match
   the visible FAQ.
-- Keep the word budget under 750 words and the screenshot figure count at ten.
+- Keep the page under the 1200-word budget. The target gallery is eight figures
+  plus the hero composite; `SCREENS` still holds the current ten-scene gallery
+  until the capture milestone replaces it.
 - No browser APIs at module scope; use effects. The app must render on the
   server without `window` or `document`.
 - Links to docs use
@@ -108,8 +133,8 @@ for this site:
 ## Version bumps
 
 `tools/bump.sh` updates the version in `site/index.html` and
-`site/src/data/site.ts`. When adding version-pinned links or badges, derive
-them from `VERSION` in `site/src/data/site.ts` instead of repeating literals.
+`site/src/data/links.ts`. When adding version-pinned links or badges, derive
+them from `VERSION` in `site/src/data/links.ts` instead of repeating literals.
 
 ## Deploy loop
 

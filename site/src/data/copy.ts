@@ -47,6 +47,12 @@ export const COPY = {
       },
     ],
   },
+  faq: {
+    eyebrow: "FAQ",
+    title: "Questions, answered.",
+    intro:
+      "Everything about the plan, the loop, and where your data lives.",
+  },
   install: {
     eyebrow: "Install",
     title: "Get the plan into your terminal.",

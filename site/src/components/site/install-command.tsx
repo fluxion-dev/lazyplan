@@ -71,7 +71,11 @@ export function InstallCommand() {
         {COPY.install.intro}
       </p>
 
-      <Card className="mx-auto max-w-md text-left shadow-lg shadow-brand-blue/25">
+      <Card className="relative mx-auto max-w-md overflow-hidden border-border bg-card/70 text-left shadow-cinema">
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand-gold/60 to-transparent"
+        />
         <CardContent className="flex items-center gap-2">
           <Terminal className="size-5 shrink-0 text-brand-cyan" aria-hidden="true" />
           <code

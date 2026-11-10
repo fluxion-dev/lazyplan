@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import struct
 import unittest
 
 from tests.support.paths import ROOT
@@ -13,6 +14,7 @@ FEATURES = ROOT / "site/src/data/features.json"
 SCREENS = ROOT / "site/src/data/screens.ts"
 COPY = ROOT / "site/src/data/copy.ts"
 HERO = ROOT / "site/src/components/site/hero.tsx"
+SCREENS_DIR = ROOT / "site/public/screens"
 
 LEAD_IDS = ["shared-plan", "agent-loop", "proof"]
 SUPPORT_IDS = {
@@ -138,6 +140,52 @@ class TestStoryCopy(unittest.TestCase):
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, page)
+
+
+class TestPublishedCaptures(unittest.TestCase):
+    def setUp(self):
+        self.source = SCREENS.read_text(encoding="utf-8")
+
+    def _size(self, name: str) -> tuple[int, int]:
+        data = (SCREENS_DIR / name).read_bytes()
+        self.assertEqual(data[:8], b"\x89PNG\r\n\x1a\n")
+        width, height = struct.unpack(">II", data[16:24])
+        return width, height
+
+    def test_story_capture_dimensions_match_the_data(self):
+        block = re.search(
+            r"export const STORY_SCREENS: readonly Screen\[\] = \[(.*?)\n\]",
+            self.source,
+            re.S,
+        )
+        assert block is not None
+        entries = re.findall(
+            r'file: "([^"]+)",\s*width: (\d+),\s*height: (\d+),',
+            block.group(1),
+            re.S,
+        )
+        self.assertEqual(len(entries), 8)
+        for file, width, height in entries:
+            with self.subTest(file=file):
+                self.assertEqual(self._size(f"{file}.png"), (int(width), int(height)))
+                self.assertTrue((SCREENS_DIR / f"{file}.webp").is_file())
+
+    def test_hero_composite_dimensions_match_the_data(self):
+        block = re.search(
+            r"export const HERO_COMPOSITE: Screen = \{(.*?)\n\}",
+            self.source,
+            re.S,
+        )
+        assert block is not None
+        match = re.search(
+            r'file: "([^"]+)",\s*width: (\d+),\s*height: (\d+),',
+            block.group(1),
+            re.S,
+        )
+        assert match is not None
+        file, width, height = match.groups()
+        self.assertEqual(self._size(f"{file}.png"), (int(width), int(height)))
+        self.assertTrue((SCREENS_DIR / f"{file}.webp").is_file())
 
 
 if __name__ == "__main__":

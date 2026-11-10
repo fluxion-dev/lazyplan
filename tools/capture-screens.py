@@ -1011,6 +1011,88 @@ def build_og(screenshot: Path, target: Path) -> None:
         base.unlink(missing_ok=True)
 
 
+def build_cinematic_hero(coordination: Path, workbench: Path, source: Path, target: Path) -> None:
+    """Compose the 2400x1200 hero: plan, agent, and proof side by side."""
+    for path in (coordination, workbench, source):
+        if not path.is_file():
+            raise SystemExit(f"error: missing hero source {path}")
+    subprocess.run(
+        [
+            "magick",
+            "-size",
+            "2400x1200",
+            "gradient:#0b0b12-#050507",
+            "(",
+            str(coordination),
+            "-resize",
+            "1440x812^",
+            "-gravity",
+            "center",
+            "-extent",
+            "1440x812",
+            "-bordercolor",
+            "#27272a",
+            "-border",
+            "2",
+            ")",
+            "-gravity",
+            "northwest",
+            "-geometry",
+            "+60+194",
+            "-composite",
+            "(",
+            str(workbench),
+            "-resize",
+            "820x462^",
+            "-gravity",
+            "center",
+            "-extent",
+            "820x462",
+            "-bordercolor",
+            "#27272a",
+            "-border",
+            "2",
+            ")",
+            "-gravity",
+            "northwest",
+            "-geometry",
+            "+1540+100",
+            "-composite",
+            "(",
+            str(source),
+            "-resize",
+            "820x462^",
+            "-gravity",
+            "center",
+            "-extent",
+            "820x462",
+            "-bordercolor",
+            "#27272a",
+            "-border",
+            "2",
+            ")",
+            "-gravity",
+            "northwest",
+            "-geometry",
+            "+1540+638",
+            "-composite",
+            "-fill",
+            "#f59e0b",
+            "-draw",
+            "rectangle 60,88 2340,90",
+            "-strip",
+            "-depth",
+            "8",
+            str(target),
+        ],
+        check=True,
+    )
+    subprocess.run(
+        ["magick", str(target), "-quality", "82", str(target.with_suffix(".webp"))],
+        check=True,
+    )
+
+
 def run(out_dir: Path, only: list[str], keep_svg: Path | None, make_og: bool) -> None:
     os.environ.setdefault("LAZYPLAN_NO_SPINNER", "1")
     names = only or list(SCENES)
@@ -1045,7 +1127,21 @@ def run(out_dir: Path, only: list[str], keep_svg: Path | None, make_og: bool) ->
                 shutil.copyfile(svg, keep_svg)
             print(f"wrote {shown(png)} ({dimensions(png)})")
             print(f"wrote {shown(png.with_suffix('.webp'))}")
-        if make_og and {"lpui-coordination", "lpui-mcp", "lpui-gates"} <= set(names):
+        hero_sources = {
+            "lpui-coordination",
+            "lpui-workbench",
+            "lpui-source-trail",
+        }
+        if make_og and hero_sources <= set(names):
+            hero = out_dir / "lpui-hero.png"
+            build_cinematic_hero(
+                out_dir / "lpui-coordination.png",
+                out_dir / "lpui-workbench.png",
+                out_dir / "lpui-source-trail.png",
+                hero,
+            )
+            print(f"wrote {shown(hero)} ({dimensions(hero)})")
+            print(f"wrote {shown(hero.with_suffix('.webp'))}")
             og = out_dir / "og-lpui-and-agent.png"
             build_og(out_dir / "lpui-coordination.png", og)
             print(f"wrote {shown(og)} ({dimensions(og)})")

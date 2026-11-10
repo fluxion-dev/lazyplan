@@ -44,7 +44,7 @@ class PreviewDocumentTest(unittest.TestCase):
         )
         self.assertEqual(
             document.render(),
-            "header\nbreadcrumb\nmeta\n\n[bold cyan]◎[/] [bold]WHY[/]\nbecause\n\nfooter",
+            "header\nbreadcrumb\nmeta\n\n[bold]WHY[/]\nbecause\n\nfooter",
         )
 
     def test_plan_preview_keeps_order_and_sections(self) -> None:

@@ -133,8 +133,7 @@
     layout: vertical;
 }
 
-#main.narrow #preview,
-#main.narrow #plans-finished {
+#main.narrow #preview {
     display: none;
 }
 

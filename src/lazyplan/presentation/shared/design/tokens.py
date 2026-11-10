@@ -44,8 +44,8 @@ ICONS = {
 
 # -- TUI icon language ------------------------------------------------------
 # One cell each, so rows, preview headings, and the git pane stay aligned in
-# any terminal. Kind icons label a breadcrumb; section icons head a preview
-# block; state icons mark a checkout. The CLI keeps the plain label grammar.
+# any terminal. Kind icons label a breadcrumb; section icons head the git
+# pane; state icons mark a checkout. The CLI keeps the plain label grammar.
 KIND_ICON = {"plan": "◈", "milestone": "◇", "task": "▹"}
 SECTION_ICON = {
     "why": "◎",

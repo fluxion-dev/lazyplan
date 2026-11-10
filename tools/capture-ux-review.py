@@ -633,8 +633,8 @@ def scenes() -> list[Scene]:
                 "shell-narrow",
                 "shell",
                 "Narrow terminal",
-                "Compact layout at 78 columns",
-                "The same task overview at 78 columns, where the side panes collapse and the hint bar drops lower-priority keys.",
+                "Stacked layout at 78 columns",
+                "The shell at 78 columns: the overview hides, and the queue, finished, agents, and git cards stack vertically.",
                 (
                     "Is the compact layout still legible?",
                     "What information disappears first, and is that the right order?",

@@ -14,8 +14,9 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
 
 ### Changed
 
-- **Screen refresh.** The plan tree now splits active and finished plans into
-  stacked panels. Rows show progress and one attention marker instead of commit
+- **Screen refresh.** The plan tree now splits queued and finished plans into
+  stacked panels. On narrow terminals the preview hides and the cards stack.
+  Rows show progress and one attention marker instead of commit
   and pull-request counts. Plan, milestone, and task overviews share one
   attention line and structured sections, hubs share one action footer, dialogs
   use a compact field and button scale, the palette moves with arrow keys, the

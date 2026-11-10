@@ -220,7 +220,7 @@ if _TEXTUAL_OK:
             self.spinner_controller.start()
             self.update_controller.start()
             self.metrics_controller.start()
-            self.query_one("#plans-active").border_title = " active "
+            self.query_one("#plans-active").border_title = " queue "
             self.query_one("#plans-finished").border_title = " finished "
             if self._startup_notice:
                 self.notify(self._startup_notice, timeout=10)

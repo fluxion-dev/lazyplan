@@ -5,6 +5,8 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
 
 ## Unreleased
 
+## v0.36.0 — 2026-11-09
+
 ### Added
 
 - **Agent workbench.** Press `W` to prompt an ACP agent beside the plan. The
@@ -17,6 +19,12 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
 - **Work sessions.** On a task detail, `W` claims the task, opens a lazyplan
   session, and prefills a work prompt. `ctrl+f` finishes with a summary and
   handoff behind the existing evidence, pull-request, and check gates.
+
+### Changed
+
+- **Cinematic site.** Rebuilt the landing page around the shared plan, the
+  planner/executor loop, and proof, with a new hero composite, a feature matrix
+  covering the major surfaces, and eight curated screenshots.
 
 ## v0.35.0 — 2026-11-08
 

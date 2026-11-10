@@ -9,7 +9,9 @@ from tests.support.paths import ROOT
 from tests.support.site import has_built_site, page_html
 
 TRIGGERS = re.compile(r"<button[^>]*data-zoom[^>]*>")
-IMAGES = re.compile(r'<img (?!data-hero)[^>]*src="(\./screens/[^"]+\.png)"')
+IMAGES = re.compile(
+    r'<img (?![^>]*(?:data-hero|data-proof))[^>]*src="(\./screens/[^"]+\.png)"'
+)
 COMPONENT = ROOT / "site/src/components/site/screenshots.tsx"
 FRAME = ROOT / "site/src/components/site/screenshot-frame.tsx"
 

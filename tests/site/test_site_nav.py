@@ -12,11 +12,12 @@ EXPECTED_HREFS = {
     "#top",
     "#story",
     "#features",
+    "#proof",
     "#screens",
     "#faq",
     "#install",
 } | {DOCS}
-DESKTOP_LINKS = {"#story", "#features", "#screens", "#faq", DOCS, "#install"}
+DESKTOP_LINKS = {"#story", "#features", "#proof", "#screens", "#faq", DOCS, "#install"}
 
 
 class NavParser(HTMLParser):

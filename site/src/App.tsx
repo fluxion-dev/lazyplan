@@ -7,6 +7,7 @@ import { Hero } from "./components/site/hero"
 import { HowItWorks } from "./components/site/how-it-works"
 import { InstallCommand } from "./components/site/install-command"
 import { LeadStory } from "./components/site/lead-story"
+import { ProofSection } from "./components/site/proof-section"
 import { Screenshots } from "./components/site/screenshots"
 import { WaysToWork } from "./components/site/ways-to-work"
 
@@ -20,6 +21,7 @@ export default function App() {
         <LeadStory />
         <FeatureMatrix />
         <WaysToWork />
+        <ProofSection />
         <Screenshots />
         <HowItWorks />
         <Faq />

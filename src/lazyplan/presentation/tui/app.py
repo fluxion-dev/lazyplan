@@ -138,7 +138,6 @@ if _TEXTUAL_OK:
             self.store = store
             self.heal = settings.heal_enabled(settings.heal_mode())
             self.state = AppState()
-            self._undo: list[dict] | None = None
             self._row_nodes: dict[tuple[str, int], TreeNode] = {}
             self._row_labels: dict[tuple[str, int], str] = {}
             self._row_specs = {}

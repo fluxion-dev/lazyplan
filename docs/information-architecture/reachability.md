@@ -49,8 +49,6 @@ Budget: every action is at most **3** interactions from the tree.
 | `task.finish` | tree › finish | 1 |
 | `row.edit` | tree | 0 |
 | `task.move` | tree | 0 |
-| `row.mark` | tree | 0 |
-| `row.clear_marks` | tree | 0 |
 | `claim.release` | tree › coordination | 1 |
 | `claim.force_release` | tree › coordination | 1 |
 | `criterion.relate` | tree › trust | 1 |
@@ -58,13 +56,8 @@ Budget: every action is at most **3** interactions from the tree.
 | `row.delete` | tree | 0 |
 | `commit.link` | tree › provenance | 1 |
 | `commit.refresh` | tree › provenance | 1 |
-| `bulk.move` | tree | 0 |
-| `bulk.block` | tree | 0 |
-| `bulk.release` | tree | 0 |
-| `bulk.undo` | tree | 0 |
 | `view.fold` | tree | 0 |
 | `view.filter` | tree | 0 |
-| `view.plan_mode` | tree | 0 |
 | `view.timeline` | tree | 0 |
 | `view.criteria_hub` | tree › trust | 1 |
 | `view.evidence_hub` | tree › trust | 1 |

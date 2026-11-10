@@ -150,20 +150,6 @@
       ]
     },
     {
-      "depth": 0,
-      "id": "row.mark",
-      "route": [
-        "tree"
-      ]
-    },
-    {
-      "depth": 0,
-      "id": "row.clear_marks",
-      "route": [
-        "tree"
-      ]
-    },
-    {
       "depth": 1,
       "id": "claim.release",
       "route": [
@@ -220,34 +206,6 @@
     },
     {
       "depth": 0,
-      "id": "bulk.move",
-      "route": [
-        "tree"
-      ]
-    },
-    {
-      "depth": 0,
-      "id": "bulk.block",
-      "route": [
-        "tree"
-      ]
-    },
-    {
-      "depth": 0,
-      "id": "bulk.release",
-      "route": [
-        "tree"
-      ]
-    },
-    {
-      "depth": 0,
-      "id": "bulk.undo",
-      "route": [
-        "tree"
-      ]
-    },
-    {
-      "depth": 0,
       "id": "view.fold",
       "route": [
         "tree"
@@ -256,13 +214,6 @@
     {
       "depth": 0,
       "id": "view.filter",
-      "route": [
-        "tree"
-      ]
-    },
-    {
-      "depth": 0,
-      "id": "view.plan_mode",
       "route": [
         "tree"
       ]

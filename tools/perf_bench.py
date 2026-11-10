@@ -503,7 +503,6 @@ def _tui_measurements(db: Path, repeat: int) -> list[Measurement]:
     try:
         from lazyplan.presentation import tui
         from lazyplan.presentation.tui.controllers import updates as update_mod
-        from lazyplan.presentation.tui.state import PlanMode
     except ImportError:
         return [
             Measurement("tui_first_paint", None, None, None, "textual not installed"),
@@ -515,7 +514,7 @@ def _tui_measurements(db: Path, repeat: int) -> list[Measurement]:
     try:
 
         async def run() -> list[Measurement]:
-            app = tui.create_app(str(db), startup_mode=PlanMode.BOTH)
+            app = tui.create_app(str(db))
             with mock.patch.object(update_mod, "refresh_update", return_value=None):
                 async with app.run_test(size=(120, 40)) as pilot:
                     await pilot.pause()

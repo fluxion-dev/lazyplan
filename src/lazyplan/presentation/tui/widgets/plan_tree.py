@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, cast
 
 from textual import events
-from textual.binding import Binding
 from textual.widgets import Tree
 
 from ...shared.messages import SelectionChanged

@@ -9,10 +9,9 @@ from textual.widgets import Label, Static, Tree
 from textual.widgets.tree import TreeNode
 
 from .... import services
-from ....core.entities import Milestone, Plan, Status, Task
+from ....core.entities import Milestone, Plan, Task
 from ....core.policies.planning import progress_counts
 from ....services.stats import attention_reasons
-from ...shared.design import status_prefix
 from ...shared.help import hint_bar
 from ..views.rows import RowSpec, plan_spec, row_text
 from .filtering import TreeFilter

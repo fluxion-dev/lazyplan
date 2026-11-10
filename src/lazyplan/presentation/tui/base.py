@@ -52,7 +52,6 @@ class AppBase(App, TuiHost):
     git_state_controller: GitStateController
     update_controller: UpdateController
     metrics_controller: MetricsController
-    _undo: list[dict] | None
     _row_nodes: dict[tuple[str, int], Any]
     _row_labels: dict[tuple[str, int], str]
     _row_specs: dict[tuple[str, int], RowSpec]

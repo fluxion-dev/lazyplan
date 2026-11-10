@@ -31,7 +31,7 @@ from lazyplan.services.source import (
 )
 
 from ....core.ports.provenance import ProvenancePort
-from ...shared.design import KIND_ICON, escape_markup
+from ...shared.design import KIND_ICON, action_bar, escape_markup
 from ..navigation import NAV_BINDINGS, NavigationMixin
 from ..views.source import (
     commit_label,
@@ -95,8 +95,15 @@ if _TEXTUAL_OK:
             self.query_one("#source-preview").border_title = " diff "
             self.query_one("#source-filter", Input).display = False
             self.query_one("#source-hints", Label).update(
-                "[reverse] o [/]open · [dim]enter[/] owner · [dim]y[/] copy"
-                " · [dim]/[/] filter · [dim]esc[/] back"
+                action_bar(
+                    ("o", "open"),
+                    [
+                        ("enter", "owner"),
+                        ("y", "copy"),
+                        ("/", "filter"),
+                        ("esc", "back"),
+                    ],
+                )
             )
             self._load()
             self.query_one("#source-tree", NavTree).focus()

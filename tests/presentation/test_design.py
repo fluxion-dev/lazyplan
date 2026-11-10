@@ -291,6 +291,16 @@ class TestDesignSystem(unittest.TestCase):
         )
         self.assertEqual(design.plan_label(p, self.store), "○ P1 P [api]")
 
+    def test_action_bar_reverses_only_the_primary_action(self):
+        text = design.action_bar(
+            ("o", "open"),
+            [("o", "open"), ("y", "copy"), ("", "ignored")],
+        )
+        self.assertIn("[reverse] o [/]open", text)
+        self.assertIn("[dim]y[/] copy", text)
+        self.assertNotIn("ignored", text)
+        self.assertEqual(design.action_bar(None, []), "esc back")
+
 
 if __name__ == "__main__":
     unittest.main()

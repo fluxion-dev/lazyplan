@@ -21,6 +21,7 @@ except ImportError:  # pragma: no cover - stdlib-only interpreter
     _TEXTUAL_OK = False
 
 from ...shared import registry
+from ...shared.design import action_bar
 
 
 @dataclass(frozen=True)
@@ -103,18 +104,12 @@ if _TEXTUAL_OK:
 
         def _hints(self) -> str:
             """Primary action first, then the remaining keyed actions."""
-            parts: list[str] = []
-            primary_key = ""
-            if self.primary_hint is not None:
-                primary_key, primary_label = self.primary_hint
-                parts.append(f"[reverse] {primary_key} [/]{primary_label}")
+            items: list[tuple[str, str]] = []
             for action_id, label in registry.hub_actions(self.kind):
                 action = registry.by_id(action_id)
-                key = action.key if action is not None else ""
-                if not key or key == primary_key:
-                    continue
-                parts.append(f"[dim]{key}[/] {label.lower()}")
-            return " · ".join(parts) if parts else "esc back"
+                if action is not None and action.key:
+                    items.append((action.key, label.lower()))
+            return action_bar(self.primary_hint, items)
 
         def _preview(self, index: int | None) -> None:
             body = (

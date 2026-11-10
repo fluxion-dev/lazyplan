@@ -11,7 +11,7 @@ try:
     from textual.binding import Binding  # noqa: F401
     from textual.containers import Horizontal, Vertical, VerticalScroll  # noqa: F401
     from textual.screen import Screen  # noqa: F401
-    from textual.widgets import Footer, Input, Static, Tree  # noqa: F401
+    from textual.widgets import Input, Label, Static, Tree  # noqa: F401
     from textual.widgets.tree import TreeNode  # noqa: F401
 
     from ...shared.tree_nav import NavTree  # noqa: F401
@@ -83,7 +83,7 @@ if _TEXTUAL_OK:
                         yield NavTree("source", id="source-tree")
                     with VerticalScroll(id="source-preview"):
                         yield Static("", id="source-preview-body")
-                yield Footer(compact=True)
+                yield Label("", id="source-hints")
 
         def on_mount(self) -> None:
             width = self.app.size.width
@@ -94,6 +94,10 @@ if _TEXTUAL_OK:
             self.query_one("#source-tree-wrap").border_title = " trail "
             self.query_one("#source-preview").border_title = " diff "
             self.query_one("#source-filter", Input).display = False
+            self.query_one("#source-hints", Label).update(
+                "[reverse] o [/]open · [dim]enter[/] owner · [dim]y[/] copy"
+                " · [dim]/[/] filter · [dim]esc[/] back"
+            )
             self._load()
             self.query_one("#source-tree", NavTree).focus()
 

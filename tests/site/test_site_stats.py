@@ -73,7 +73,7 @@ class TestDownloadStats(unittest.TestCase):
             re.sub(r"<[^>]+>", " ", re.sub(r"<script.*?</script>", "", self.page, flags=re.S))
         )
         self.assertLessEqual(len(text.split()), 1200)
-        self.assertEqual(self.page.count("<figure"), 10)
+        self.assertEqual(self.page.count("<figure"), 9)
 
 
 if __name__ == "__main__":

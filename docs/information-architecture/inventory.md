@@ -23,7 +23,7 @@ python3 tools/ia_inventory.py --check
 | setup_steps | 4 |
 | hook_events | 24 |
 | doc_files | 9 |
-| doc_headings | 97 |
+| doc_headings | 88 |
 | tui_key_conflicts | 19 |
 | stale_claims | 0 |
 | env_names | 12 |
@@ -473,4 +473,4 @@ python3 tools/ia_inventory.py --check
 | `docs/lazyplan.1` |  |
 | `src/lazyplan/data/AGENTS.md` | lazyplan (`lpui`) |
 | `src/lazyplan/data/SKILL.md` | lazyplan (`lpui`) — local plan journal · Identity and surfaces · DB scoping and setup · Linked repos · Git proof and pull requests · Starting a plan: interview first · Readability and scouting · Record the definition · Review gate: plan is truth · Plan documents and recipes · Trust and coordination · During execution |
-| `site/index.html` | One plan for you and your agent. · One control room for the loop. · Less chat. More done. · One agent plans. Another builds. You stay in control. · See it in action. · Start in three steps. · Get lazyplan in one command. · Questions, answered. · Bring your plan into focus. |
+| `site/index.html` |  |

@@ -18,10 +18,24 @@
 #nav {
     width: 1fr;
     height: 1fr;
+    border: none;
+    padding: 0;
+}
+
+.plan-panel {
+    width: 1fr;
     border: round $lp-border-muted;
     border-title-color: $lp-text-muted;
     border-title-style: bold;
     border-title-align: left;
+}
+
+#plans-active {
+    height: 3fr;
+}
+
+#plans-finished {
+    height: 2fr;
 }
 
 #side {
@@ -115,16 +129,38 @@
     padding: 0 2;
 }
 
-#main.narrow #side,
+#main.narrow {
+    layout: vertical;
+}
+
 #main.narrow #preview,
-#main.narrow #git,
-#main.narrow #agents {
+#main.narrow #plans-finished {
     display: none;
 }
 
 #main.narrow #left,
-#main.narrow #nav {
+#main.narrow #nav,
+#main.narrow #plans-active,
+#main.narrow #side,
+#main.narrow #git {
     width: 100%;
+}
+
+#main.narrow #left {
+    height: 1fr;
+}
+
+#main.narrow #side {
+    height: auto;
+}
+
+#main.narrow #git {
+    min-width: 0;
+    max-height: 6;
+}
+
+#main.narrow #agents {
+    max-height: 5;
 }
 
 #main.compact {
@@ -135,8 +171,12 @@
     min-width: 0;
 }
 
-#main.compact #nav {
+#main.compact #nav,
+#main.compact .plan-panel {
     min-width: 0;
+}
+
+#main.compact .plan-panel {
     border: none;
 }
 
@@ -146,7 +186,7 @@
     padding: 0 2;
 }
 
-#nav:focus-within,
+.plan-panel:focus-within,
 #preview:focus-within {
     border: round $lp-border-focus;
     border-title-color: $lp-border-focus;

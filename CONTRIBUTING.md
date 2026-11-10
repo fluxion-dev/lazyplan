@@ -54,6 +54,22 @@ the failing unittest module names.
 Fix failures rather than editing the scripts around them. If you add a module,
 add tests and type annotations with it.
 
+## UX review board
+
+`site/ux/` reviews every captured TUI, CLI, and setup screen in one place.
+Regenerate the screenshots, build the site, and serve it:
+
+```bash
+.venv/bin/python tools/capture-ux-review.py
+cd site && npm run build && cd ..
+python tools/ux-review-server.py
+```
+
+Open <http://127.0.0.1:8765/lazyplan/ux/>. Submissions go to the ignored
+`.agents/ux-review/feedback.json`; the page also exports JSON and Markdown and
+generates a `plan apply` document for the UX refresh. Without the server it
+keeps feedback in the browser.
+
 ## Tests
 
 Tests mirror the package under `tests/`. Shared fixtures live in `tests/support/`;

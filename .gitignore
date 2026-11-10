@@ -19,5 +19,9 @@ site/node_modules/
 # Vite site build output (CI rebuilds it via pages.yml; never committed)
 site/dist/
 site/.ssr/
+
+# UX review feedback captured by tools/ux-review-server.py
+.agents/ux-review/
+
 # Generated daily by tools/fetch-downloads.py before the Pages build
 site/public/downloads.json

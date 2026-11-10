@@ -31,12 +31,22 @@ ModalScreen {
     color: $lp-text-muted;
 }
 
+#dlg Input,
+#dlg Select {
+    width: 100%;
+    height: 3;
+    border: tall $lp-border;
+}
+
 #dlg TextArea {
-    height: 4;
+    width: 100%;
+    height: 5;
+    border: tall $lp-border;
+    background: $lp-surface;
 }
 
 #f-why, #f-what {
-    height: 3;
+    height: 4;
 }
 
 #dlg.export-dialog {
@@ -127,6 +137,14 @@ ModalScreen {
     height: auto;
 }
 
+#source-hints {
+    width: 100%;
+    height: 1;
+    padding: 0 1;
+    background: $lp-surface;
+    color: $lp-text-muted;
+}
+
 #source-tree-wrap:focus-within,
 #source-preview:focus-within {
     border: round $lp-border-focus;
@@ -135,8 +153,13 @@ ModalScreen {
 #dlg Button, #help Button {
     min-width: 0;
     width: auto;
-    height: 3;
+    height: 1;
     padding: 0 1;
+    border: none;
+}
+
+#dlg .btn-row Button {
+    margin-right: 1;
 }
 
 #palette-title {
@@ -168,15 +191,6 @@ ModalScreen {
     border-title-color: $lp-accent;
     background: $lp-surface-alt;
     padding: 0 1;
-}
-
-#hub-head {
-    height: auto;
-    min-height: 1;
-    background: $lp-surface;
-    color: $lp-accent;
-    padding: 0 1;
-    margin-bottom: 1;
 }
 
 #hub-main {
@@ -216,4 +230,12 @@ ModalScreen {
     background: $lp-cursor;
     color: $lp-accent;
     text-style: bold;
+}
+
+#hub-hints {
+    width: 100%;
+    height: 1;
+    padding: 0 1;
+    background: $lp-surface;
+    color: $lp-text-muted;
 }

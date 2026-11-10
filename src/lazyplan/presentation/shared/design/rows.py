@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
 from ....core.entities import Status
 from ....core.kinds import LABEL_LETTERS, MILESTONE, PLAN, TASK
-from .row_stats import SLOTS, RowStats, render_stats, stats_layout
+from .row_stats import RowStats, render_stats, stats_layout
 from .text import _escape_markup, repo_project_name, status_prefix, status_word, truncate
 
 if TYPE_CHECKING:
@@ -57,12 +56,6 @@ def _render_row(
     return f"{prefix_rich}[{style}]{_escape_markup(title)}[/]{pad}{stats_rich}"
 
 
-def apply_mark(markup: str, marked: bool) -> str:
-    """Replace the trailing mark slot on a row rendered with `marked=False`."""
-    mark = "[bold green]✓[/] " if marked else "  "
-    return markup[: -SLOTS["marked"].width] + mark
-
-
 def plan_label(p: Plan, store: InsightsPort | None = None, dot: str = "plain") -> str:
     """Canonical row label for a plan (plain text: CLI, tests)."""
     base = _label("plan", p, store, dot)
@@ -75,27 +68,12 @@ def plan_label(p: Plan, store: InsightsPort | None = None, dot: str = "plain") -
 def plan_row(
     p: Plan,
     store: InsightsPort | None = None,
-    links: Sequence[str] | None = None,
     progress: tuple[int, int] | None = None,
     width: int | None = None,
-    source_counts: tuple[int, int, int] | None = None,
-    marked: bool = False,
-    drifted: bool = False,
+    attention: bool = False,
 ) -> str:
-    """TUI plan row (Rich markup): glyph + id + title + fixed stats."""
-    if source_counts is None:
-        commits, pulls, stale = len(links or []), 0, 0
-    else:
-        commits, pulls, stale = source_counts
-    stats = RowStats(
-        kind="plan",
-        progress=progress,
-        commits=commits,
-        pulls=pulls,
-        stale=stale,
-        marked=marked,
-        drifted=drifted,
-    )
+    """TUI plan row (Rich markup): glyph + id + title + progress + attention."""
+    stats = RowStats(kind="plan", progress=progress, attention=attention)
     return _render_row("plan", p, stats, width)
 
 
@@ -107,25 +85,12 @@ def milestone_label(s: Milestone, store: InsightsPort | None = None, dot: str = 
 def milestone_row(
     s: Milestone,
     store: InsightsPort | None = None,
-    links: Sequence[str] | None = None,
     progress: tuple[int, int] | None = None,
     width: int | None = None,
-    source_counts: tuple[int, int, int] | None = None,
-    marked: bool = False,
+    attention: bool = False,
 ) -> str:
-    """TUI milestone row (Rich markup): glyph + id + title + fixed stats."""
-    if source_counts is None:
-        commits, pulls, stale = len(links or []), 0, 0
-    else:
-        commits, pulls, stale = source_counts
-    stats = RowStats(
-        kind="milestone",
-        progress=progress,
-        commits=commits,
-        pulls=pulls,
-        stale=stale,
-        marked=marked,
-    )
+    """TUI milestone row (Rich markup): glyph + id + title + progress + attention."""
+    stats = RowStats(kind="milestone", progress=progress, attention=attention)
     return _render_row("milestone", s, stats, width)
 
 
@@ -143,24 +108,16 @@ def task_label(t: Task, store: InsightsPort | None = None, dot: str = "plain") -
 def task_row(
     t: Task,
     store: InsightsPort | None = None,
-    links: Sequence[str] | None = None,
     width: int | None = None,
-    pr_state: str = "",
-    pr_checks: str = "",
-    stale: bool = False,
+    attention: bool = False,
     claim_actor: str = "",
     claim_expired: bool = False,
     blocked: bool = False,
-    marked: bool = False,
 ) -> str:
-    """TUI task row (Rich markup): glyph + id + title + fixed stats."""
+    """TUI task row (Rich markup): glyph + id + title + attention + claim."""
     stats = RowStats(
         kind="task",
-        commits=len(links or []),
-        stale=1 if stale else 0,
-        pr_state=pr_state,
-        pr_checks=pr_checks,
-        marked=marked,
+        attention=attention,
         blocked=blocked,
         claim_actor=claim_actor,
         claim_expired=claim_expired,

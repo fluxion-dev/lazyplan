@@ -35,9 +35,6 @@ if _TEXTUAL_OK:
         def _node_key(node: TreeNode) -> tuple[str, int] | None:
             return TreeController.node_key(node)
 
-        def _paint_mark(self, key: tuple[str, int]) -> None:
-            self.tree_controller.paint_mark(key)
-
         def _poll(self) -> None:
             self.tree_controller.poll()
 

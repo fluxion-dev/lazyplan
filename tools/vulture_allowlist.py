@@ -15,6 +15,7 @@
 
 _.compose
 _.on_mount
+_.on_key
 _.on_unmount
 _.on_resize
 _.on_button_pressed

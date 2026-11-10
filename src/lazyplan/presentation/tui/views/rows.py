@@ -31,16 +31,14 @@ class RowSpec:
         return self.render(width=width)
 
 
-def plan_spec(plan: Plan, progress: dict, source_stats: dict, drifted: bool = False) -> RowSpec:
+def plan_spec(plan: Plan, progress: dict, attention: bool = False) -> RowSpec:
     """Build the width-independent renderer for one plan row."""
-    stats = source_stats.get(("plan", plan.id))
     return RowSpec(
         render=partial(
             plan_row,
             plan,
             progress=progress.get(("plan", plan.id)),
-            source_counts=(stats[0], stats[1], stats[2]) if stats else None,
-            drifted=drifted,
+            attention=attention,
         ),
         depth=3,
         status=plan.status,
@@ -48,40 +46,31 @@ def plan_spec(plan: Plan, progress: dict, source_stats: dict, drifted: bool = Fa
 
 
 def milestone_spec(
-    milestone: Milestone, store: Store, progress: dict, source_stats: dict
+    milestone: Milestone, store: Store, progress: dict, attention: bool = False
 ) -> RowSpec:
     """Build the width-independent renderer for one milestone row."""
-    stats = source_stats.get(("milestone", milestone.id))
     return RowSpec(
         render=partial(
             milestone_row,
             milestone,
             store,
             progress=progress.get(("milestone", milestone.id)),
-            source_counts=(stats[0], stats[1], stats[2]) if stats else None,
+            attention=attention,
         ),
         depth=7,
         status=milestone.status,
     )
 
 
-def task_spec(
-    task: Task, store: Store, forge_map: dict, vcs_map: dict, claims_map: dict
-) -> RowSpec:
+def task_spec(task: Task, store: Store, claims_map: dict, attention: bool = False) -> RowSpec:
     """Build the width-independent renderer for one task row."""
-    prs = forge_map.get(("task", task.id), [])
-    pr = prs[0] if prs else None
-    links = vcs_map.get(("task", task.id), [])
     claim = claims_map.get(task.id)
     return RowSpec(
         render=partial(
             task_row,
             task,
             store,
-            links=[link.sha for link in links],
-            pr_state=pr.state if pr else "",
-            pr_checks=pr.checks if pr else "",
-            stale=any(link.stale for link in links),
+            attention=attention,
             claim_actor=claim.actor if claim else "",
             claim_expired=claim.expired(time.time()) if claim else False,
             blocked=task.blocked,

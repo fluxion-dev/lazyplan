@@ -9,7 +9,6 @@ from .... import services
 from ....core.policies.evidence import proof_state
 from ...shared.design import escape_markup
 from .forms import ConfirmScreen, CriterionScreen, FilterPromptScreen
-from .prove import prove_dialog
 
 try:
     from textual.binding import Binding
@@ -27,6 +26,7 @@ if _TEXTUAL_OK:
         """Criteria of one plan, milestone, or task, with evidence state."""
 
         kind = "criteria"
+        primary_hint = ("e", "edit criterion")
         BINDINGS = [Binding("e", "edit_row", "Edit")]
 
         def __init__(self, store: Any, parent_kind: str, parent_id: int) -> None:
@@ -68,24 +68,6 @@ if _TEXTUAL_OK:
 
             self.app.push_screen(
                 FilterPromptScreen("New criterion", "what must be true?", "Add"), cb
-            )
-
-        def prove(self) -> None:
-            entry = self._selected()
-            if entry is None:
-                self._notify_empty()
-                return
-
-            def done(_cid: int, _result: services.ProofResult) -> None:
-                self._reload()
-
-            prove_dialog(
-                self,
-                self.store,
-                self.parent_kind,
-                self.parent_id,
-                done,
-                criterion_id=entry.oid,
             )
 
         def edit_row(self) -> None:
@@ -163,9 +145,10 @@ if _TEXTUAL_OK:
             self.app.push_screen(EvidenceHub(self.store, entry.oid, context=self.title))
 
     class EvidenceHub(HubScreen):
-        """Evidence rows for one criterion, with prove and open actions."""
+        """Evidence rows for one criterion, with read-only open actions."""
 
         kind = "evidence"
+        primary_hint = ("o", "open evidence")
 
         def __init__(self, store: Any, criterion_id: int, context: str = "") -> None:
             super().__init__(store)
@@ -199,23 +182,6 @@ if _TEXTUAL_OK:
                 out.append(HubEntry(row.id, f"E{row.id} {state} {command[:44]}", body))
             return out
 
-        def prove(self) -> None:
-            criterion = self.store.get_criterion(self.criterion_id)
-            if criterion is None:
-                return
-
-            def done(_cid: int, _result: services.ProofResult) -> None:
-                self._reload()
-
-            prove_dialog(
-                self,
-                self.store,
-                criterion.parent_kind,
-                criterion.parent_id,
-                done,
-                criterion_id=self.criterion_id,
-            )
-
         def open_value(self) -> None:
             entry = self._selected()
             row = self._rows.get(entry.oid) if entry is not None else None
@@ -238,6 +204,7 @@ if _TEXTUAL_OK:
         """Open and resolved questions on one plan, with readiness impact."""
 
         kind = "questions"
+        primary_hint = ("x", "toggle question")
         BINDINGS = [Binding("x", "hub_toggle", "Toggle")]
 
         def __init__(self, store: Any, plan_id: int) -> None:
@@ -299,6 +266,7 @@ if _TEXTUAL_OK:
         """External references on one plan: link, open, and unlink."""
 
         kind = "references"
+        primary_hint = ("o", "open reference")
 
         def __init__(self, store: Any, plan_id: int) -> None:
             super().__init__(store)

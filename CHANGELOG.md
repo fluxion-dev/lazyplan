@@ -14,6 +14,13 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
 
 ### Changed
 
+- **Screen refresh.** The plan tree now splits active and finished plans into
+  stacked panels. Rows show progress and one attention marker instead of commit
+  and pull-request counts. Plan, milestone, and task overviews share one
+  attention line and structured sections, hubs share one action footer, dialogs
+  use a compact field and button scale, the palette moves with arrow keys, the
+  source diff carries per-file counts, and the setup wizard uses the product
+  palette.
 - **Criterion completion.** `criterion edit --id C --done` (or `--open`) sets
   completion; `criterion prove` records evidence only.
 - **Pane empty states.** The plans, preview, git, and agents panes share one
@@ -42,6 +49,10 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
   again; `O`, the banner, override audit events, `lpui feed --overrides`, the
   activity-hub override filter, and the MCP `overrides` flag are gone.
   Historical override rows remain in the normal feed.
+- **Plan mode, bulk editing, and the TUI prove screen.** The `f` mode switch,
+  space marks, bulk palette commands, and the prove form are gone. Criteria,
+  evidence, and source stay readable in their hubs; `lpui criterion prove` and
+  the MCP proof tool remain the write paths.
 
 ## v0.36.0 — 2026-11-09
 

@@ -1,0 +1,985 @@
+{
+  "version": "0.36.1",
+  "generated": "2026-11-10",
+  "groups": [
+    {
+      "id": "shell",
+      "title": "Main shell",
+      "blurb": "The tree, overview, panes, themes, and terminal widths.",
+      "count": 12
+    },
+    {
+      "id": "trust",
+      "title": "Trust hubs",
+      "blurb": "Criteria, evidence, questions, and references.",
+      "count": 4
+    },
+    {
+      "id": "coordination",
+      "title": "Coordination hubs",
+      "blurb": "Claims, sessions, comments, and handoffs.",
+      "count": 3
+    },
+    {
+      "id": "provenance",
+      "title": "Provenance hubs",
+      "blurb": "Pull requests and the activity feed.",
+      "count": 2
+    },
+    {
+      "id": "source",
+      "title": "Source trail",
+      "blurb": "Repos, commits, files, diffs, and empty states.",
+      "count": 4
+    },
+    {
+      "id": "forms",
+      "title": "Dialogs and forms",
+      "blurb": "Create, edit, prove, confirm, export, update, and overlays.",
+      "count": 23
+    },
+    {
+      "id": "cli",
+      "title": "CLI and setup",
+      "blurb": "The shell surfaces that share the same journal.",
+      "count": 7
+    }
+  ],
+  "scenes": [
+    {
+      "id": "shell-empty",
+      "group": "shell",
+      "title": "Empty journal",
+      "state": "No plans yet",
+      "description": "The first-run shell with no plans: the tree, preview, agents, and git panes each explain the next action.",
+      "lookFor": [
+        "Do the three empty panes read as one instruction or three competing ones?",
+        "Is the create hint obvious at the width you use?",
+        "Does the status line earn its space?"
+      ],
+      "keys": "n new \u00b7 ? help \u00b7 c commands",
+      "image": "shell-empty.png",
+      "webp": "shell-empty.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "shell-plan",
+      "group": "shell",
+      "title": "Plan overview",
+      "state": "Plan selected",
+      "description": "The plan overview: health strip, why and what, approval drift, an open question, references, milestones, acceptance, and the next tasks.",
+      "lookFor": [
+        "Scan order from health, to scope, to milestones.",
+        "Whether the approval drift line is understandable without the diff.",
+        "How much of the preview is visible before scrolling."
+      ],
+      "keys": "j/k select \u00b7 s status \u00b7 e edit \u00b7 c commands",
+      "image": "shell-plan.png",
+      "webp": "shell-plan.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "shell-milestone",
+      "group": "shell",
+      "title": "Milestone overview",
+      "state": "Milestone selected",
+      "description": "A milestone selection: slice health, the milestone description, its tasks with claims and blocks, acceptance, and linked source.",
+      "lookFor": [
+        "Does the milestone feel like a slice rather than a folder?",
+        "Are task claims and blocks readable at a glance?",
+        "Is the breadcrumb enough to know where you are?"
+      ],
+      "keys": "j/k select \u00b7 z fold \u00b7 s status",
+      "image": "shell-milestone.png",
+      "webp": "shell-milestone.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "shell-task",
+      "group": "shell",
+      "title": "Task overview",
+      "state": "Task selected with linked source",
+      "description": "A task selection: work health, claim, proof rows, notes, acceptance, and the GIT pane with checkout, commits, and pull requests.",
+      "lookFor": [
+        "Can you tell what is claimed, blocked, or proven without opening a hub?",
+        "Does the GIT pane compete with the task body?",
+        "Is the proof section scannable when there are several criteria?"
+      ],
+      "keys": "g source \u00b7 k claims \u00b7 m comments \u00b7 P pull requests",
+      "image": "shell-task.png",
+      "webp": "shell-task.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "shell-attention",
+      "group": "shell",
+      "title": "Attention and control strip",
+      "state": "Claims, block, aging, gaps, red checks",
+      "description": "The plan tree with an expiring claim, a blocked task, aging work, a done row with an open criterion, and a failing pull-request check.",
+      "lookFor": [
+        "Does the control strip name the reasons to intervene?",
+        "Are the glyphs and row colors distinguishable?",
+        "Does the health line match the rows below it?"
+      ],
+      "keys": "j/k select \u00b7 space mark \u00b7 c commands",
+      "image": "shell-attention.png",
+      "webp": "shell-attention.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "shell-filter",
+      "group": "shell",
+      "title": "Filtered tree",
+      "state": "Text filter applied",
+      "description": "The tree filtered by text. Matching branches stay open, so the hits and their sibling context are both visible.",
+      "lookFor": [
+        "Can you tell a filter is active without reading the status line?",
+        "Does showing full matching branches make the tree look unfiltered?",
+        "Should the filter be a prompt, an inline field, or both?"
+      ],
+      "keys": "/ filter \u00b7 escape clear",
+      "image": "shell-filter.png",
+      "webp": "shell-filter.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "shell-narrow",
+      "group": "shell",
+      "title": "Narrow terminal",
+      "state": "Compact layout at 78 columns",
+      "description": "The same task overview at 78 columns, where the side panes collapse and the hint bar drops lower-priority keys.",
+      "lookFor": [
+        "Is the compact layout still legible?",
+        "What information disappears first, and is that the right order?",
+        "Do wrapped rows lose their status glyphs?"
+      ],
+      "keys": "resize the terminal \u00b7 ? help",
+      "image": "shell-narrow.png",
+      "webp": "shell-narrow.webp",
+      "width": 970,
+      "height": 636
+    },
+    {
+      "id": "shell-wide",
+      "group": "shell",
+      "title": "Wide terminal",
+      "state": "Wide layout with timeline",
+      "description": "The shell at 170 columns with the timeline visible, showing how the side panes and the bottom timeline share the extra space.",
+      "lookFor": [
+        "Does the wide layout use the space intentionally?",
+        "Should the timeline be always-on or opt-in at this width?",
+        "Is the preview line length comfortable?"
+      ],
+      "keys": "T timeline \u00b7 t theme",
+      "image": "shell-wide.png",
+      "webp": "shell-wide.webp",
+      "width": 2092,
+      "height": 1148
+    },
+    {
+      "id": "shell-timeline",
+      "group": "shell",
+      "title": "Timeline",
+      "state": "Milestone-scoped timeline",
+      "description": "The timeline card with a milestone selected, keeping the milestone lane and its tasks while the rest of the plan stays quiet.",
+      "lookFor": [
+        "Is the lane grammar readable without a legend?",
+        "Are start positions and missing lanes understandable?",
+        "Does the card crowd the tree at normal height?"
+      ],
+      "keys": "T show/hide timeline",
+      "image": "shell-timeline.png",
+      "webp": "shell-timeline.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "shell-theme-void",
+      "group": "shell",
+      "title": "Theme: void",
+      "state": "OLED-black theme",
+      "description": "The shell in the void theme, the high-contrast black palette for dark rooms.",
+      "lookFor": [
+        "Are the accent colors still distinguishable?",
+        "Does the border contrast hold up?",
+        "Is the selected row obvious without color alone?"
+      ],
+      "keys": "t cycle theme",
+      "image": "shell-theme-void.png",
+      "webp": "shell-theme-void.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "shell-theme-latte",
+      "group": "shell",
+      "title": "Theme: latte",
+      "state": "Light theme",
+      "description": "The shell in the latte theme, the light palette for bright rooms and screen sharing.",
+      "lookFor": [
+        "Does the light theme keep status colors legible?",
+        "Are borders and dim text still readable?",
+        "Is the diff and code text comfortable on light backgrounds?"
+      ],
+      "keys": "t cycle theme",
+      "image": "shell-theme-latte.png",
+      "webp": "shell-theme-latte.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "shell-task-unlinked",
+      "group": "shell",
+      "title": "Task without source",
+      "state": "No repo or commits linked",
+      "description": "A task selection with no linked repository: the GIT pane explains the next action instead of going blank.",
+      "lookFor": [
+        "Is the empty GIT pane useful or just noise?",
+        "Should an unlinked task hide the pane entirely?",
+        "Does the preview still explain why source is missing?"
+      ],
+      "keys": "g source \u00b7 c commands",
+      "image": "shell-task-unlinked.png",
+      "webp": "shell-task-unlinked.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "hub-criteria",
+      "group": "trust",
+      "title": "Criteria hub",
+      "state": "Plan criteria with evidence states",
+      "description": "The criteria hub for a plan: checklist rows, proof state, and a preview that names evidence and proving tasks.",
+      "lookFor": [
+        "Is done/open mixed with pass/fail readable?",
+        "Does the preview explain what evidence exists?",
+        "Are the hub action hints discoverable?"
+      ],
+      "keys": "a add \u00b7 e edit \u00b7 p prove \u00b7 l relate \u00b7 d delete",
+      "image": "hub-criteria.png",
+      "webp": "hub-criteria.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "hub-evidence",
+      "group": "trust",
+      "title": "Evidence hub",
+      "state": "Criterion with pass and fail rows",
+      "description": "The evidence hub for one criterion, with command, exit code, commit, task, and note for each proof row.",
+      "lookFor": [
+        "Can you tell which row is the latest and whether it passes?",
+        "Is the command the most important field?",
+        "Does the list need grouping or a verdict column?"
+      ],
+      "keys": "p prove \u00b7 o open \u00b7 y copy",
+      "image": "hub-evidence.png",
+      "webp": "hub-evidence.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "hub-questions",
+      "group": "trust",
+      "title": "Questions hub",
+      "state": "Open and resolved plan questions",
+      "description": "The questions hub: open questions that block readiness, a resolved question with its resolution, and the readiness note in the preview.",
+      "lookFor": [
+        "Is the effect on readiness obvious?",
+        "Can you tell resolve from reopen?",
+        "Does the preview repeat the row too much?"
+      ],
+      "keys": "a add \u00b7 x toggle \u00b7 esc back",
+      "image": "hub-questions.png",
+      "webp": "hub-questions.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "hub-references",
+      "group": "trust",
+      "title": "References hub",
+      "state": "External epic and doc links",
+      "description": "The references hub: read-only external links with provider, kind, title, and URL.",
+      "lookFor": [
+        "Is the read-only nature of references clear?",
+        "Is the provider visible enough to trust the link?",
+        "Does open versus unlink need more separation?"
+      ],
+      "keys": "a link \u00b7 o open \u00b7 d unlink",
+      "image": "hub-references.png",
+      "webp": "hub-references.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "hub-claims",
+      "group": "coordination",
+      "title": "Claims and touch-points hub",
+      "state": "Active claim, overlap, and touch-points",
+      "description": "The claims hub for one task: holder, expiry, age, note, one overlapping lease, and the touch-point list.",
+      "lookFor": [
+        "Can you see why a claim is risky?",
+        "Are renew, release, and force release distinguishable?",
+        "Does the expiry date need a relative time too?"
+      ],
+      "keys": "a claim \u00b7 x renew \u00b7 d release \u00b7 D force",
+      "image": "hub-claims.png",
+      "webp": "hub-claims.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "hub-sessions",
+      "group": "coordination",
+      "title": "Sessions and handoffs hub",
+      "state": "Active and ended sessions",
+      "description": "The sessions hub: actor, host, branch, age, idle time, summary, handoff, and the recent event trail.",
+      "lookFor": [
+        "Can you tell which agent needs you?",
+        "Is idle time more useful than start time?",
+        "Is the handoff easy to find?"
+      ],
+      "keys": "a start \u00b7 d end \u00b7 x end",
+      "image": "hub-sessions.png",
+      "webp": "hub-sessions.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "hub-comments",
+      "group": "coordination",
+      "title": "Comments and notes hub",
+      "state": "Open comments and a handoff note",
+      "description": "The comments hub: review comments, a handoff note, and the unresolved-only filter.",
+      "lookFor": [
+        "Are comments and notes visually distinct?",
+        "Is the unresolved filter discoverable?",
+        "Can you tell who wrote what?"
+      ],
+      "keys": "a comment \u00b7 n note \u00b7 e edit \u00b7 x resolve \u00b7 u filter",
+      "image": "hub-comments.png",
+      "webp": "hub-comments.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "hub-pull-requests",
+      "group": "provenance",
+      "title": "Pull request hub",
+      "state": "Cached PR with failing checks",
+      "description": "The pull request hub: cached state, base and head refs, checks, reviews, merge time, URL, and the refresh boundary.",
+      "lookFor": [
+        "Is stale data marked clearly?",
+        "Does the user know refresh is the only network action?",
+        "Are checks and reviews scannable at a glance?"
+      ],
+      "keys": "a link \u00b7 r refresh \u00b7 d unlink \u00b7 o open",
+      "image": "hub-pull-requests.png",
+      "webp": "hub-pull-requests.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "hub-activity",
+      "group": "provenance",
+      "title": "Activity hub",
+      "state": "Recent feed with jump targets",
+      "description": "The activity hub: actor, event, detail, and the row each event can jump back to.",
+      "lookFor": [
+        "Can you reconstruct what changed without timestamps?",
+        "Is the actor filter visible enough?",
+        "Does every row need a jump target?"
+      ],
+      "keys": "f actor \u00b7 K kind \u00b7 enter jump",
+      "image": "hub-activity.png",
+      "webp": "hub-activity.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "source-commit",
+      "group": "source",
+      "title": "Commit selected",
+      "state": "Commit diff preview",
+      "description": "The source trail with a commit selected: repository, author, changed files, and a unified diff beside the tree.",
+      "lookFor": [
+        "Is the tree-to-diff relationship obvious?",
+        "Does the diff need syntax color to be useful?",
+        "Are commit metadata and files in the right order?"
+      ],
+      "keys": "enter owner \u00b7 o open \u00b7 y copy \u00b7 / filter",
+      "image": "source-commit.png",
+      "webp": "source-commit.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "source-file",
+      "group": "source",
+      "title": "File selected",
+      "state": "File diff preview",
+      "description": "The source trail with one changed file selected: path, status, and the line-level diff.",
+      "lookFor": [
+        "Can you tell which file and commit you are looking at?",
+        "Is the file hierarchy clear in the tree?",
+        "Should the diff own more of the screen?"
+      ],
+      "keys": "enter owner \u00b7 o open \u00b7 y copy",
+      "image": "source-file.png",
+      "webp": "source-file.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "source-empty",
+      "group": "source",
+      "title": "Source trail with no links",
+      "state": "No source linked",
+      "description": "The source trail for a task with no linked checkout, commits, or pull requests.",
+      "lookFor": [
+        "Does the empty state name the exact command to fix it?",
+        "Should the screen be reachable at all when there is no source?",
+        "Is the header summary useful when everything is zero?"
+      ],
+      "keys": "g source \u00b7 esc back",
+      "image": "source-empty.png",
+      "webp": "source-empty.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "source-filter",
+      "group": "source",
+      "title": "Source filter",
+      "state": "Filter field open",
+      "description": "The source trail with the filter field open, matching commits, files, and pull requests.",
+      "lookFor": [
+        "Is the filter field clearly temporary?",
+        "Does the tree show why rows disappeared?",
+        "Should filter and search be the same gesture as the tree?"
+      ],
+      "keys": "/ filter \u00b7 enter apply \u00b7 esc hidden",
+      "image": "source-filter.png",
+      "webp": "source-filter.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "form-new-plan",
+      "group": "forms",
+      "title": "New plan",
+      "state": "Create form with three fields",
+      "description": "The create-plan form: title, why, and what, with multiline fields for the definition.",
+      "lookFor": [
+        "Does the form teach what a plan needs?",
+        "Are why and what too open-ended?",
+        "Is the primary action obvious?"
+      ],
+      "keys": "tab next \u00b7 enter submit \u00b7 esc cancel",
+      "image": "form-new-plan.png",
+      "webp": "form-new-plan.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "form-new-milestone",
+      "group": "forms",
+      "title": "New milestone",
+      "state": "Create form scoped to a plan",
+      "description": "The create-milestone form for one plan, with a title and a details field.",
+      "lookFor": [
+        "Does the context line tell you which plan you are adding to?",
+        "Is the difference between a milestone and a task clear?",
+        "Does the placeholder ask for user value?"
+      ],
+      "keys": "tab next \u00b7 enter submit \u00b7 esc cancel",
+      "image": "form-new-milestone.png",
+      "webp": "form-new-milestone.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "form-new-task",
+      "group": "forms",
+      "title": "New task",
+      "state": "Create form scoped to a milestone",
+      "description": "The create-task form for one milestone, with a title and a details field.",
+      "lookFor": [
+        "Does the details placeholder ask for approach and verification?",
+        "Is the parent milestone obvious?",
+        "Should the form suggest a commit slice?"
+      ],
+      "keys": "tab next \u00b7 enter submit \u00b7 esc cancel",
+      "image": "form-new-task.png",
+      "webp": "form-new-task.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "form-edit-task",
+      "group": "forms",
+      "title": "Edit task",
+      "state": "Edit form prefilled",
+      "description": "The edit-task form with existing text filled in, showing the edit variant of the create form.",
+      "lookFor": [
+        "Does the title switch from New to Edit clearly?",
+        "Are long descriptions comfortable in the text area?",
+        "Is Save distinct from Cancel?"
+      ],
+      "keys": "tab next \u00b7 enter save \u00b7 esc cancel",
+      "image": "form-edit-task.png",
+      "webp": "form-edit-task.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "form-add-criterion",
+      "group": "forms",
+      "title": "Add criterion",
+      "state": "One-line prompt with context",
+      "description": "The add-criterion prompt opened from a task selection.",
+      "lookFor": [
+        "Does the FILTER heading fit an add-criterion prompt?",
+        "Does the title name the parent row?",
+        "Is one line enough for a good criterion?"
+      ],
+      "keys": "enter add \u00b7 esc cancel",
+      "image": "form-add-criterion.png",
+      "webp": "form-add-criterion.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "form-edit-criterion",
+      "group": "forms",
+      "title": "Edit criterion",
+      "state": "Text and completion in one dialog",
+      "description": "The edit-criterion form with the criterion text and a done checkbox.",
+      "lookFor": [
+        "Is the done checkbox the right control?",
+        "Should proof be visible while editing?",
+        "Is the dialog title enough context?"
+      ],
+      "keys": "tab next \u00b7 enter submit \u00b7 esc cancel",
+      "image": "form-edit-criterion.png",
+      "webp": "form-edit-criterion.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "form-link-reference",
+      "group": "forms",
+      "title": "Link reference",
+      "state": "URL, type, and optional title",
+      "description": "The external reference form: URL, kind, and a short title.",
+      "lookFor": [
+        "Is the type field understandable?",
+        "Should the app infer the provider from the URL?",
+        "Is a read-only reference clearly not a sync?"
+      ],
+      "keys": "tab next \u00b7 enter link \u00b7 esc cancel",
+      "image": "form-link-reference.png",
+      "webp": "form-link-reference.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "form-confirm-delete",
+      "group": "forms",
+      "title": "Confirm delete",
+      "state": "Destructive confirmation",
+      "description": "The first delete confirmation, with the parent and child warning.",
+      "lookFor": [
+        "Is the safe choice focused by default?",
+        "Does the copy say what else disappears?",
+        "Is a second reason prompt too much friction?"
+      ],
+      "keys": "tab choose \u00b7 enter confirm \u00b7 esc cancel",
+      "image": "form-confirm-delete.png",
+      "webp": "form-confirm-delete.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "form-delete-reason",
+      "group": "forms",
+      "title": "Delete reason",
+      "state": "Second step after confirm",
+      "description": "The required reason prompt after the destructive confirmation.",
+      "lookFor": [
+        "Does the two-step delete feel safer or slower?",
+        "Is the reason field required at the right moment?",
+        "Should the reason be visible in the feed?"
+      ],
+      "keys": "enter delete \u00b7 esc cancel",
+      "image": "form-delete-reason.png",
+      "webp": "form-delete-reason.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "form-filter",
+      "group": "forms",
+      "title": "Filter tree",
+      "state": "One-line filter prompt",
+      "description": "The tree text filter prompt, with an empty value clearing the filter.",
+      "lookFor": [
+        "Does the prompt explain that empty clears?",
+        "Should filtering be inline in the tree?",
+        "Is the scope (whole tree) obvious?"
+      ],
+      "keys": "enter apply \u00b7 esc cancel",
+      "image": "form-filter.png",
+      "webp": "form-filter.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "form-approve",
+      "group": "forms",
+      "title": "Approve plan",
+      "state": "Reason required after drift",
+      "description": "The approval prompt that records why a scope is approved after drift.",
+      "lookFor": [
+        "Does the FILTER heading fit an approval prompt?",
+        "Does the title explain why a reason is required after drift?",
+        "Should the diff be shown before this prompt?"
+      ],
+      "keys": "enter approve \u00b7 esc cancel",
+      "image": "form-approve.png",
+      "webp": "form-approve.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "form-start-session",
+      "group": "forms",
+      "title": "Start session",
+      "state": "Optional branch input",
+      "description": "The start-session prompt with an optional branch.",
+      "lookFor": [
+        "Is it clear that the branch is optional?",
+        "Does starting a session need a plan context line?",
+        "Who is the actor, and should the form say?"
+      ],
+      "keys": "enter start \u00b7 esc cancel",
+      "image": "form-start-session.png",
+      "webp": "form-start-session.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "form-add-comment",
+      "group": "forms",
+      "title": "Add comment",
+      "state": "Review comment prompt",
+      "description": "The add-comment prompt attached to one task.",
+      "lookFor": [
+        "Is the parent row named?",
+        "Does comment versus note need an explanation?",
+        "Is @mention support discoverable?"
+      ],
+      "keys": "enter add \u00b7 esc cancel",
+      "image": "form-add-comment.png",
+      "webp": "form-add-comment.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "form-add-note",
+      "group": "forms",
+      "title": "Add note",
+      "state": "Handoff note prompt",
+      "description": "The add-note prompt for a handoff or decision.",
+      "lookFor": [
+        "Is note versus comment clear?",
+        "Does the placeholder imply permanence?",
+        "Should notes be immutable?"
+      ],
+      "keys": "enter add \u00b7 esc cancel",
+      "image": "form-add-note.png",
+      "webp": "form-add-note.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "form-link-pr",
+      "group": "forms",
+      "title": "Link pull request",
+      "state": "GitHub URL prompt",
+      "description": "The prompt to attach a pull request URL to the selected row.",
+      "lookFor": [
+        "Does the placeholder show the expected URL shape?",
+        "Is an invalid URL handled clearly?",
+        "Should linking be possible without a URL?"
+      ],
+      "keys": "enter link \u00b7 esc cancel",
+      "image": "form-link-pr.png",
+      "webp": "form-link-pr.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "form-filter-actor",
+      "group": "forms",
+      "title": "Filter activity by actor",
+      "state": "Filter prompt with blank meaning all",
+      "description": "The activity hub actor filter, where blank input clears the filter.",
+      "lookFor": [
+        "Is blank-for-all clear?",
+        "Should actor filters be a picker?",
+        "Is the filter state visible after applying?"
+      ],
+      "keys": "enter filter \u00b7 esc cancel",
+      "image": "form-filter-actor.png",
+      "webp": "form-filter-actor.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "form-export",
+      "group": "forms",
+      "title": "Export plan",
+      "state": "Folder tree and filename",
+      "description": "The Markdown export picker: destination path, folder tree, filename, error line, and actions.",
+      "lookFor": [
+        "Is the destination editable and clear?",
+        "Does the folder tree earn the space?",
+        "Is overwrite protection visible before you press Export?"
+      ],
+      "keys": "tab move \u00b7 enter export \u00b7 esc cancel",
+      "image": "form-export.png",
+      "webp": "form-export.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "form-export-overwrite",
+      "group": "forms",
+      "title": "Overwrite export",
+      "state": "Destructive confirmation",
+      "description": "The overwrite confirmation that appears when the chosen export path already exists.",
+      "lookFor": [
+        "Is the full target path shown?",
+        "Is overwrite styled as dangerous enough?",
+        "Could the picker prevent this earlier?"
+      ],
+      "keys": "tab choose \u00b7 enter overwrite \u00b7 esc cancel",
+      "image": "form-export-overwrite.png",
+      "webp": "form-export-overwrite.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "form-update",
+      "group": "forms",
+      "title": "Update lpui",
+      "state": "Installed versus latest",
+      "description": "The update screen with an installed and a newer version, plus the download action.",
+      "lookFor": [
+        "Does the screen explain when the update applies?",
+        "Is the install method relevant to the user?",
+        "Is Later the easy exit?"
+      ],
+      "keys": "enter download \u00b7 esc close",
+      "image": "form-update.png",
+      "webp": "form-update.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "form-plan-diff",
+      "group": "forms",
+      "title": "Plan diff",
+      "state": "Scope changes since approval",
+      "description": "The read-only plan diff overlay: summary counts, each changed row, and the recorded reason.",
+      "lookFor": [
+        "Can you tell what changed without the code?",
+        "Do the change glyphs need a legend?",
+        "Is the reason attached to the right row?"
+      ],
+      "keys": "esc close \u00b7 c commands",
+      "image": "form-plan-diff.png",
+      "webp": "form-plan-diff.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "overlay-help",
+      "group": "forms",
+      "title": "Help",
+      "state": "Task-grouped key reference",
+      "description": "The help overlay shared by `?`, `lpui help`, and every screen.",
+      "lookFor": [
+        "Is the OBSERVE/WRITE split useful?",
+        "Are the groups in the right order?",
+        "Does the key column scan well?"
+      ],
+      "keys": "esc close \u00b7 c commands",
+      "image": "overlay-help.png",
+      "webp": "overlay-help.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "overlay-palette",
+      "group": "forms",
+      "title": "Command palette",
+      "state": "All commands grouped by mode",
+      "description": "The command palette with every command, section headers, key hints, and disabled context.",
+      "lookFor": [
+        "Can you find a command by intent?",
+        "Do section headers help or add noise?",
+        "Is the mode split visible enough?"
+      ],
+      "keys": "type search \u00b7 enter run \u00b7 esc cancel",
+      "image": "overlay-palette.png",
+      "webp": "overlay-palette.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "overlay-palette-filtered",
+      "group": "forms",
+      "title": "Filtered command palette",
+      "state": "Search narrows the list",
+      "description": "The palette after typing a query, with the result count and the first runnable command highlighted.",
+      "lookFor": [
+        "Does the count help?",
+        "Are matching aliases visible?",
+        "Is the disabled context explained?"
+      ],
+      "keys": "type search \u00b7 enter run \u00b7 esc cancel",
+      "image": "overlay-palette-filtered.png",
+      "webp": "overlay-palette-filtered.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "cli-help",
+      "group": "cli",
+      "title": "CLI help",
+      "state": "`lpui help`",
+      "description": "The task-grouped help at the shell, the same source as the `?` overlay.",
+      "lookFor": [
+        "Does the shell help match the overlay?",
+        "Is the key column aligned?",
+        "Are deprecated keys visible but quiet?"
+      ],
+      "keys": "lpui help",
+      "image": "cli-help.png",
+      "webp": "cli-help.webp",
+      "width": 1482,
+      "height": 782
+    },
+    {
+      "id": "cli-list",
+      "group": "cli",
+      "title": "CLI list",
+      "state": "`lpui list --tree`",
+      "description": "The plan tree with status glyphs, progress, and the agent-facing view.",
+      "lookFor": [
+        "Is the tree scannable in a terminal transcript?",
+        "Do the glyphs survive a monochrome terminal?",
+        "Is progress easy to compare across rows?"
+      ],
+      "keys": "lpui list --tree",
+      "image": "cli-list.png",
+      "webp": "cli-list.webp",
+      "width": 1482,
+      "height": 782
+    },
+    {
+      "id": "cli-show",
+      "group": "cli",
+      "title": "CLI show",
+      "state": "`lpui show --kind plan`",
+      "description": "One plan's why, what, criteria, and children in the shell.",
+      "lookFor": [
+        "Does the show output match the overview?",
+        "Is the hierarchy clear without color?",
+        "Is the output too long for one screen?"
+      ],
+      "keys": "lpui show --kind plan --id 1",
+      "image": "cli-show.png",
+      "webp": "cli-show.webp",
+      "width": 1482,
+      "height": 782
+    },
+    {
+      "id": "cli-stats",
+      "group": "cli",
+      "title": "CLI stats",
+      "state": "`lpui stats --since 400.days`",
+      "description": "Flow health at the shell: WIP, cycle time, throughput, aging, stale work, reopened work, claims, and blocked tasks.",
+      "lookFor": [
+        "Is the metric vocabulary explained?",
+        "Which numbers need a sparkline or trend?",
+        "Does this belong in the TUI?"
+      ],
+      "keys": "lpui stats --since 400.days",
+      "image": "cli-stats.png",
+      "webp": "cli-stats.webp",
+      "width": 1482,
+      "height": 782
+    },
+    {
+      "id": "cli-review",
+      "group": "cli",
+      "title": "CLI review",
+      "state": "`lpui review --plan 1`",
+      "description": "The deterministic review packet handed to an agent.",
+      "lookFor": [
+        "Does the packet read like a handoff?",
+        "Is the order right for a reviewer?",
+        "Does it duplicate the show output too much?"
+      ],
+      "keys": "lpui review --plan 1",
+      "image": "cli-review.png",
+      "webp": "cli-review.webp",
+      "width": 1482,
+      "height": 782
+    },
+    {
+      "id": "cli-feed",
+      "group": "cli",
+      "title": "CLI feed",
+      "state": "`lpui feed --limit 12`",
+      "description": "The activity feed at the shell, with actor and event detail.",
+      "lookFor": [
+        "Can you reconstruct a session from the feed?",
+        "Is actor noise or signal?",
+        "Should the feed group related events?"
+      ],
+      "keys": "lpui feed --limit 12",
+      "image": "cli-feed.png",
+      "webp": "cli-feed.webp",
+      "width": 1482,
+      "height": 782
+    },
+    {
+      "id": "setup-wizard",
+      "group": "cli",
+      "title": "Setup wizard",
+      "state": "Placement, agents, and review",
+      "description": "The first-run setup wizard: where plans live, which agents get the skill, and the review of everything installation will write.",
+      "lookFor": [
+        "Does the wizard explain the placement tradeoff?",
+        "Are detected agents obvious?",
+        "Is the review step scannable before writing?"
+      ],
+      "keys": "lpui setup",
+      "image": "setup-wizard.png",
+      "webp": "setup-wizard.webp",
+      "width": 1482,
+      "height": 1075
+    }
+  ]
+}

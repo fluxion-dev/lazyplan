@@ -34,7 +34,6 @@ from ...store import Store
 from ..shared.design import EMPTY_NO_PLANS_HINT, EMPTY_NO_PLANS_TITLE, empty_state
 from .actions import ActionMixin
 from .base import AppBase
-from .bulk import BulkMixin
 from .controllers.git_state import GitStateController
 from .controllers.metrics import MetricsController
 from .controllers.spinner import SpinnerController
@@ -44,7 +43,7 @@ from .filters import FilterMixin
 from .launch import launch_update
 from .metrics import MetricsSection
 from .preview import PreviewMixin
-from .state import AppState, PlanMode
+from .state import AppState
 from .theme import register_themes
 from .tree import TreeMixin
 from .widgets.agents_panel import AgentsPanel
@@ -61,7 +60,6 @@ if _TEXTUAL_OK:
         TreeMixin,
         PreviewMixin,
         FilterMixin,
-        BulkMixin,
         ActionMixin,
         AppBase,
     ):
@@ -76,7 +74,6 @@ if _TEXTUAL_OK:
         ENABLE_COMMAND_PALETTE = False
         BINDINGS = [
             *NAV_BINDINGS,
-            Binding("space", "toggle_mark", "Mark"),
             Binding("escape", "clear_filter", "Back", show=False),
             Binding("t", "cycle_theme", "Theme"),
             Binding("T", "toggle_timeline", "Timeline"),
@@ -84,13 +81,11 @@ if _TEXTUAL_OK:
             Binding("e", "edit_selection", "Edit"),
             Binding("s", "toggle_status", "Status"),
             Binding("a", "add_criterion", "Criterion"),
-            Binding("p", "prove_criterion", "Prove"),
             Binding("d", "delete", "Delete"),
             Binding("g", "source_trail", "Source"),
             Binding("z", "fold", "Fold", show=False),
             Binding("Z", "fold_all", "Fold all", show=False),
             Binding("slash", "filter_text", "Filter"),
-            Binding("f", "cycle_mode", "Plan mode", show=False),
             Binding("r", "refresh", "Refresh", show=False),
             Binding("U", "update_prompt", "Update"),
         ]
@@ -143,7 +138,6 @@ if _TEXTUAL_OK:
             self.store = store
             self.heal = settings.heal_enabled(settings.heal_mode())
             self.state = AppState()
-            self._undo: list[dict] | None = None
             self._row_nodes: dict[tuple[str, int], TreeNode] = {}
             self._row_labels: dict[tuple[str, int], str] = {}
             self._row_specs = {}
@@ -169,12 +163,23 @@ if _TEXTUAL_OK:
                 with Horizontal(id="main"):
                     with Vertical(id="left"):
                         with Vertical(id="nav"):
-                            yield FoldTree("plans", id="tree")
-                            yield Static(
-                                empty_state(EMPTY_NO_PLANS_TITLE, EMPTY_NO_PLANS_HINT),
-                                id="tree-empty",
-                                classes="pane-empty",
-                            )
+                            with Vertical(id="plans-active", classes="plan-panel"):
+                                yield FoldTree("active", id="tree", classes="plan-tree")
+                                yield Static(
+                                    empty_state(EMPTY_NO_PLANS_TITLE, EMPTY_NO_PLANS_HINT),
+                                    id="tree-empty",
+                                    classes="pane-empty",
+                                )
+                            with Vertical(id="plans-finished", classes="plan-panel"):
+                                yield FoldTree("finished", id="tree-finished", classes="plan-tree")
+                                yield Static(
+                                    empty_state(
+                                        "No finished plans",
+                                        "completed plans land here",
+                                    ),
+                                    id="tree-finished-empty",
+                                    classes="pane-empty",
+                                )
                         yield AgentsPanel()
                     with Vertical(id="side"):
                         yield PreviewPanel()
@@ -215,7 +220,8 @@ if _TEXTUAL_OK:
             self.spinner_controller.start()
             self.update_controller.start()
             self.metrics_controller.start()
-            self.query_one("#nav").border_title = " plans "
+            self.query_one("#plans-active").border_title = " active "
+            self.query_one("#plans-finished").border_title = " finished "
             if self._startup_notice:
                 self.notify(self._startup_notice, timeout=10)
             tree = self.query_one("#tree", Tree)
@@ -225,12 +231,10 @@ if _TEXTUAL_OK:
     def create_app(
         db_path: str | None = None,
         startup_notice: str = "",
-        startup_mode: PlanMode = PlanMode.ACTIVE,
     ) -> LazyplanApp:
         """Build the app bound to a store."""
         app = LazyplanApp(Store(db_path))
         app._startup_notice = startup_notice
-        app.plan_mode = startup_mode
         return app
 
 

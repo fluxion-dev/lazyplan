@@ -18,7 +18,6 @@ HINT_ITEMS: tuple[tuple[str, str], ...] = (
     ("s", "status"),
     ("d", "delete"),
     ("/", "filter"),
-    ("f", "mode"),
     ("g", "source"),
     ("?", "help"),
     ("c", "commands"),

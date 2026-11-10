@@ -64,9 +64,8 @@ CORE_ACTIONS: tuple[Action, ...] = (
     _action(
         "criterion.prove",
         "Prove criterion",
-        surfaces=("tui", "cli", "mcp"),
+        surfaces=("cli", "mcp"),
         route=("tree", "evidence"),
-        palette_ids=("prove-criterion",),
     ),
     _action(
         "question.add",
@@ -156,16 +155,6 @@ CORE_ACTIONS: tuple[Action, ...] = (
         ("move-todo", "move-doing", "move-done"),
     ),
     _action(
-        "row.mark",
-        "Mark/unmark row",
-        "space",
-        "tree",
-        ("tui",),
-        ("tree",),
-        ("toggle-mark",),
-    ),
-    _action("row.clear_marks", "Clear marks", surfaces=("tui",), palette_ids=("clear-marks",)),
-    _action(
         "claim.release",
         "Release claim",
         surfaces=("tui", "cli", "mcp"),
@@ -215,20 +204,6 @@ CORE_ACTIONS: tuple[Action, ...] = (
         palette_ids=("git-refresh",),
     ),
     _action(
-        "bulk.move",
-        "Bulk move",
-        surfaces=("tui",),
-        palette_ids=("bulk-doing", "bulk-done"),
-    ),
-    _action("bulk.block", "Bulk block tasks", surfaces=("tui",), palette_ids=("bulk-block",)),
-    _action(
-        "bulk.release",
-        "Bulk release claims",
-        surfaces=("tui",),
-        palette_ids=("bulk-release",),
-    ),
-    _action("bulk.undo", "Undo bulk change", surfaces=("tui",), palette_ids=("undo-bulk",)),
-    _action(
         "view.fold",
         "Fold/unfold row",
         "z",
@@ -245,15 +220,6 @@ CORE_ACTIONS: tuple[Action, ...] = (
         ("tui",),
         ("tree",),
         ("filter-text",),
-    ),
-    _action(
-        "view.plan_mode",
-        "Change plan mode",
-        "f",
-        "tree",
-        ("tui", "docs"),
-        ("tree",),
-        ("plan-mode",),
     ),
     _action(
         "view.timeline",

@@ -61,13 +61,12 @@ HUB_ACTIONS: dict[str, tuple[str, ...]] = {
     "criteria": (
         "criterion.add",
         "criterion.edit",
-        "criterion.prove",
         "criterion.relate",
         "criterion.unrelate",
         "criterion.delete",
         "row.delete",
     ),
-    "evidence": ("criterion.prove", "source.trail"),
+    "evidence": ("source.trail",),
     "questions": ("question.add", "question.resolve", "question.reopen"),
     "references": ("reference.link", "reference.unlink", "reference.open"),
     "claims": (

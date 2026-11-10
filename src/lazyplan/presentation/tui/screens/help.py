@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 try:
-    from textual import on  # noqa: F401
+    from textual import events, on  # noqa: F401
     from textual.app import ComposeResult  # noqa: F401
     from textual.binding import Binding  # noqa: F401
     from textual.containers import Horizontal, Vertical, VerticalScroll  # noqa: F401
@@ -96,10 +96,10 @@ if _TEXTUAL_OK:
 
         def _title(self, sections: list[tuple[str, list[Command]]], query: str) -> str:
             if not query.strip():
-                return "Commands — type to search, enter to run, esc cancels"
+                return "Commands — type, ↑/↓ move, enter runs, esc cancels"
             count = sum(len(cmds) for _, cmds in sections)
             noun = "command" if count == 1 else "commands"
-            return f"Commands — {count} {noun}"
+            return f"Commands — {count} {noun} · ↑/↓ move"
 
         @staticmethod
         def _highlight_first(lst: OptionList) -> None:
@@ -108,6 +108,39 @@ if _TEXTUAL_OK:
                 if not lst.get_option_at_index(index).disabled:
                     lst.highlighted = index
                     return
+
+        @staticmethod
+        def _next_enabled(disabled: list[bool], current: int | None, delta: int) -> int | None:
+            """Next enabled option index, wrapping around the list."""
+            count = len(disabled)
+            if not count:
+                return None
+            start = current if current is not None else (-1 if delta > 0 else 0)
+            step = 1 if delta > 0 else -1
+            for offset in range(1, count + 1):
+                candidate = (start + step * offset) % count
+                if not disabled[candidate]:
+                    return candidate
+            return None
+
+        def _move_highlight(self, delta: int) -> None:
+            try:
+                lst = self.query_one("#palette-list", OptionList)
+            except Exception:
+                return
+            disabled = [lst.get_option_at_index(i).disabled for i in range(lst.option_count)]
+            target = self._next_enabled(disabled, lst.highlighted, delta)
+            if target is not None:
+                lst.highlighted = target
+
+        def on_key(self, event: events.Key) -> None:
+            """Keep the search field focused while arrows move the highlight."""
+            if event.key in ("up", "down"):
+                self._move_highlight(-1 if event.key == "up" else 1)
+                event.stop()
+            elif event.key in ("pageup", "pagedown"):
+                self._move_highlight(-5 if event.key == "pageup" else 5)
+                event.stop()
 
         def compose(self) -> ComposeResult:
             with Vertical(id="dlg"):
@@ -143,6 +176,16 @@ if _TEXTUAL_OK:
 
         @on(Input.Submitted, "#palette-input")
         def _run_first(self, e: Input.Submitted) -> None:
+            try:
+                lst = self.query_one("#palette-list", OptionList)
+                index = lst.highlighted
+                if index is not None:
+                    option = lst.get_option_at_index(index)
+                    if not option.disabled and option.id:
+                        self.dismiss(str(option.id))
+                        return
+            except Exception:
+                pass
             for _, cmds in self._matching(e.value):
                 for cmd in cmds:
                     if not self._ctx.get(cmd.id):

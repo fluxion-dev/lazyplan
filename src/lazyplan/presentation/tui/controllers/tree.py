@@ -9,9 +9,9 @@ from textual.widgets import Label, Static, Tree
 from textual.widgets.tree import TreeNode
 
 from .... import services
-from ....core.entities import Milestone, Plan, Status, Task
+from ....core.entities import Milestone, Plan, Task
 from ....core.policies.planning import progress_counts
-from ...shared.design import apply_mark, status_prefix
+from ....services.stats import attention_reasons
 from ...shared.help import hint_bar
 from ..views.rows import RowSpec, plan_spec, row_text
 from .filtering import TreeFilter
@@ -44,6 +44,7 @@ class TreeController(LazyBranchMixin):
         self._vcs_map: dict = {}
         self._claims_map: dict = {}
         self._drift_map: dict = {}
+        self._attention: set[tuple[str, int]] = set()
         self._loading = False
 
     @staticmethod
@@ -52,6 +53,13 @@ class TreeController(LazyBranchMixin):
         if isinstance(data, dict) and "kind" in data and "id" in data:
             return (str(data["kind"]), int(data["id"]))
         return None
+
+    def trees(self) -> tuple[Tree, Tree]:
+        """The active and finished tree widgets, in reading order."""
+        return (
+            self.app.query_one("#tree", Tree),
+            self.app.query_one("#tree-finished", Tree),
+        )
 
     def track(self, node: TreeNode) -> None:
         data = getattr(node, "data", None)
@@ -153,7 +161,6 @@ class TreeController(LazyBranchMixin):
 
     def restore_selection(
         self,
-        tree: Tree,
         prev_selected: tuple[str, int] | None,
         prev_cursor: Any,
     ) -> None:
@@ -164,7 +171,7 @@ class TreeController(LazyBranchMixin):
             target = None
         if target is None and app._row_nodes:
             for key in app._row_nodes:
-                if key[0] == "plan":
+                if key[0] == "plan" and app._row_nodes[key].tree.display:
                     target = key
                     break
             if target is None:
@@ -173,6 +180,7 @@ class TreeController(LazyBranchMixin):
         if target not in app._row_nodes:
             return
         node = app._row_nodes[target]
+        tree = node.tree
         try:
             tree.move_cursor(node)
         except Exception:
@@ -203,22 +211,6 @@ class TreeController(LazyBranchMixin):
                 out[("milestone", milestone.id)] = progress_counts(tasks)
         return out
 
-    def paint_mark(self, key: tuple[str, int]) -> None:
-        """Update the fixed mark slot on one existing row."""
-        app = self.app
-        base = app._row_labels.get(key)
-        node = app._row_nodes.get(key)
-        if base is None or node is None:
-            return
-        marked = key in app.marked
-        spinner = app.spinner_controller
-        if key in spinner.rows:
-            frame = spinner.tick if spinner.enabled else None
-            label = status_prefix(Status.DOING, frame) + apply_mark(spinner.rows[key], marked)
-        else:
-            label = apply_mark(base, marked)
-        node.set_label(row_text(label))
-
     def row_width(self, tree: Tree, depth: int) -> int:
         """Usable label width for a row at `depth`, excluding tree guides."""
         app = self.app
@@ -242,51 +234,89 @@ class TreeController(LazyBranchMixin):
     def reflow(self) -> None:
         """Rewrite existing rows at the current tree width without reloading."""
         app = self.app
-        tree = cast("FoldTree", app.query_one("#tree", Tree))
+        trees = self.trees()
+        tree = trees[0]
         if not app._row_specs:
             return
         app.spinner_controller.rows = {}
         for key, spec in app._row_specs.items():
             self.render_row(key, spec, tree)
-        for key in app._row_specs:
-            self.paint_mark(key)
-        tree.reflow()
+        for widget in trees:
+            cast("FoldTree", widget).reflow()
 
-    def show_empty(self, empty: bool) -> None:
-        """Swap the tree for the centered empty state when no rows are visible."""
-        tree = self.app.query_one("#tree", Tree)
-        was_empty = not tree.display
-        tree.display = not empty
-        self.app.query_one("#tree-empty", Static).display = empty
-        if was_empty and not empty and len(self.app.screen_stack) <= 1:
-            tree.focus()
+    def show_empty(self, active_empty: bool, finished_empty: bool) -> None:
+        """Swap each tree for its centered empty state when that panel is empty."""
+        active_tree, finished_tree = self.trees()
+        active_tree.display = not active_empty
+        finished_tree.display = not finished_empty
+        self.app.query_one("#tree-empty", Static).display = active_empty
+        self.app.query_one("#tree-finished-empty", Static).display = finished_empty
+        if len(self.app.screen_stack) > 1:
+            return
+        if not any(tree.has_focus for tree in (active_tree, finished_tree)):
+            target = finished_tree if active_empty else active_tree
+            if target.display:
+                target.focus()
+
+    def _attention_keys(
+        self,
+        base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]],
+        reasons: dict[int, list[str]],
+    ) -> set[tuple[str, int]]:
+        """Task attention rolled up to milestones and plans."""
+        keys: set[tuple[str, int]] = {
+            ("task", task_id)
+            for task_id, found in reasons.items()
+            if any(reason != "blocked" for reason in found)
+        }
+        questions = self.app.store.questions_map()
+        for plan, milestones in base:
+            plan_hot = self._drift_map.get(plan.id, 0) > 0
+            if any(question.status == "open" for question in questions.get(plan.id, [])):
+                plan_hot = True
+            for milestone, tasks in milestones:
+                hot = any(task.id in reasons for task in tasks)
+                if self._source_stats.get(("milestone", milestone.id), (0, 0, 0, 0))[2]:
+                    hot = True
+                if hot:
+                    keys.add(("milestone", milestone.id))
+                    plan_hot = True
+            if self._source_stats.get(("plan", plan.id), (0, 0, 0, 0))[2]:
+                plan_hot = True
+            if plan_hot:
+                keys.add(("plan", plan.id))
+        for key, stats in self._source_stats.items():
+            if stats[2]:
+                keys.add(key)
+        return keys
 
     def refresh_all(self, note: str = "") -> None:
         app = self.app
-        tree = app.query_one("#tree", Tree)
+        active_tree, finished_tree = self.trees()
         app._refreshing = True
         prev_selected = app.selected
-        try:
-            cursor = tree.cursor_node
-            prev_cursor = self.node_key(cursor) if cursor is not None else None
-        except Exception:
-            prev_cursor = None
-        tree.clear()
+        prev_cursor = None
+        for widget in (active_tree, finished_tree):
+            if not widget.has_focus:
+                continue
+            try:
+                cursor = widget.cursor_node
+                prev_cursor = self.node_key(cursor) if cursor is not None else None
+            except Exception:
+                prev_cursor = None
+        active_tree.clear()
+        finished_tree.clear()
         app._row_nodes = {}
         app._row_labels = {}
         app._row_specs = {}
         app.spinner_controller.rows = {}
         self._loaded.clear()
-        mode = {
-            "active": "active",
-            "finished": "finished",
-            "both": "all",
-        }[app.plan_mode.value]
-        base = services.tree(app.store, status=None, archived="show", plan_mode=mode)
+        base = services.tree(app.store, status=None, archived="show", plan_mode="all")
         self._prepare_model(base)
-        filtered = self.filters.filtered_tree(base)
+        active, finished = self.filters.panels(base)
+        visible = active + finished
         self._visible_keys = set()
-        for plan, milestones in filtered:
+        for plan, milestones in visible:
             self._visible_keys.add(("plan", plan.id))
             for milestone, tasks in milestones:
                 self._visible_keys.add(("milestone", milestone.id))
@@ -294,14 +324,17 @@ class TreeController(LazyBranchMixin):
         self._forge_map = app.store.forge_links_map()
         self._vcs_map = app.store.vcs_links_map()
         self._source_stats = self.filters.source_stats(
-            filtered, self._vcs_map, self._forge_map, app.store.repos_map()
+            visible, self._vcs_map, self._forge_map, app.store.repos_map()
         )
         self._claims_map = app.store.claims_map()
         self._drift_map = app.store.drift_counts()
-        self.build_plan_rows(tree.root, tree, filtered)
+        self._attention = self._attention_keys(base, attention_reasons(app.store))
+        self.build_plan_rows(active_tree.root, active_tree, active)
+        self.build_plan_rows(finished_tree.root, finished_tree, finished)
         if app.filter_text.strip():
             self.build_all_children()
-        tree.root.expand()
+        active_tree.root.expand()
+        finished_tree.root.expand()
         app._collapsed &= self._model_keys
         app._expanded &= self._model_keys
         self.restore_expanded()
@@ -309,11 +342,10 @@ class TreeController(LazyBranchMixin):
             if candidate in self._model_keys:
                 self.ensure_path(candidate)
         self.apply_folds()
-        self.show_empty(not app._row_nodes)
+        self.show_empty(not active, not finished)
         app.spinner_controller.paint()
         app.query_one("#hints", Label).update(hint_bar(max(10, app.size.width - 2), markup=True))
-        app.query_one("#nav").border_title = f" plans · {app.plan_mode.value} "
-        self.restore_selection(tree, prev_selected, prev_cursor)
+        self.restore_selection(prev_selected, prev_cursor)
         app.metrics_controller.refresh()
         app._preview_key = None
         app.update_preview(force=True)
@@ -379,13 +411,12 @@ class TreeController(LazyBranchMixin):
             plan_row_spec = plan_spec(
                 plan,
                 self._progress,
-                self._source_stats,
-                self._drift_map.get(plan.id, 0) > 0,
+                attention=("plan", plan.id) in self._attention,
             )
             app._row_specs[plan_key] = plan_row_spec
             plan_text = self.render_row(plan_key, plan_row_spec, tree)
             plan_node = root.add(
-                row_text(apply_mark(plan_text, plan_key in app.marked)),
+                row_text(plan_text),
                 data={"kind": "plan", "id": plan.id},
                 allow_expand=bool(milestones),
             )

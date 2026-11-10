@@ -4,13 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-try:
-    from textual.widgets import Tree  # noqa: F401
-
-    _TEXTUAL_OK = True
-except ImportError:  # pragma: no cover
-    _TEXTUAL_OK = False
-
 from lazyplan.infrastructure.templates import load_template
 
 from ... import services
@@ -18,7 +11,6 @@ from ..shared.export import display_path
 from ..shared.palette import by_id
 from .approval_actions import ApprovalMixin
 from .claim_actions import ClaimMixin
-from .evidence_actions import EvidenceMixin
 from .finish_actions import FinishMixin
 from .git_actions import GitActionMixin
 from .history_actions import HistoryMixin
@@ -39,6 +31,8 @@ from .screens import (
 from .status_actions import StatusMixin
 from .theme import next_theme
 
+_TEXTUAL_OK = True
+
 if _TEXTUAL_OK:
 
     class ActionMixin(
@@ -46,7 +40,6 @@ if _TEXTUAL_OK:
         HubMixin,
         ApprovalMixin,
         ClaimMixin,
-        EvidenceMixin,
         FinishMixin,
         QuestionMixin,
         ReferenceMixin,
@@ -210,7 +203,7 @@ if _TEXTUAL_OK:
             node = self._row_nodes.get((kind, oid))
             if node is not None:
                 try:
-                    tree = self.query_one("#tree", Tree)
+                    tree = node.tree
                     tree.move_cursor(node)
                     tree.scroll_to_node(node)
                 except Exception:

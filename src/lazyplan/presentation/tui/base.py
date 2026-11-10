@@ -13,7 +13,7 @@ from .controllers.metrics import MetricsController
 from .controllers.spinner import SpinnerController
 from .controllers.tree import TreeController
 from .controllers.updates import UpdateController
-from .state import AppState, PlanMode
+from .state import AppState
 from .views.rows import RowSpec
 
 
@@ -26,21 +26,12 @@ class TuiHost:
     def _apply_layout(self, width: int | None = None) -> bool:
         return False
 
-    def _paint_mark(self, key: tuple[str, int]) -> None: ...
     def _node_key(self, node: TreeNode) -> tuple[str, int] | None: ...
     def action_toggle_status(self) -> None: ...
     def select_row(self, kind: str, oid: int) -> None: ...
     def action_fold(self) -> None: ...
     def action_fold_all(self) -> None: ...
     def action_filter_text(self) -> None: ...
-    def action_cycle_mode(self) -> None: ...
-    def action_toggle_mark(self) -> None: ...
-    def action_clear_marks(self) -> None: ...
-    def action_bulk_doing(self) -> None: ...
-    def action_bulk_done(self) -> None: ...
-    def action_bulk_block(self) -> None: ...
-    def action_bulk_release(self) -> None: ...
-    def action_undo_bulk(self) -> None: ...
     def action_update_prompt(self) -> None: ...
     def action_history_back(self) -> None: ...
     def action_history_forward(self) -> None: ...
@@ -61,7 +52,6 @@ class AppBase(App, TuiHost):
     git_state_controller: GitStateController
     update_controller: UpdateController
     metrics_controller: MetricsController
-    _undo: list[dict] | None
     _row_nodes: dict[tuple[str, int], Any]
     _row_labels: dict[tuple[str, int], str]
     _row_specs: dict[tuple[str, int], RowSpec]
@@ -80,28 +70,12 @@ class AppBase(App, TuiHost):
         self.state.selected = value
 
     @property
-    def plan_mode(self) -> PlanMode:
-        return self.state.plan_mode
-
-    @plan_mode.setter
-    def plan_mode(self, value: PlanMode) -> None:
-        self.state.plan_mode = value
-
-    @property
     def filter_text(self) -> str:
         return self.state.filter_text
 
     @filter_text.setter
     def filter_text(self, value: str) -> None:
         self.state.filter_text = value
-
-    @property
-    def marked(self) -> set[tuple[str, int]]:
-        return self.state.marked
-
-    @marked.setter
-    def marked(self, value: set[tuple[str, int]]) -> None:
-        self.state.marked = value
 
     @property
     def _collapsed(self) -> set[tuple[str, int]]:

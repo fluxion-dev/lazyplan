@@ -310,22 +310,21 @@ every call. Reach for `--json` only when you need full-fidelity fields.
   PRs. `lpui lint --plan P --strict` rejects uncovered criteria, missing slices
   or verification, placeholders, and done rows with open criteria.
 - `lpui stats --since 7.days` reports WIP, cycle time, throughput, aging, stale
-  work, reopened rows, claims, and blocked tasks. The screen's `f` cycles plan
-  modes (active, finished, both); attention data stays in the preview strip.
+  work, reopened rows, claims, and blocked tasks. The screen splits active and
+  finished plans into stacked panels; attention data stays in the preview strip.
 - Finish with `task finish --require-pr --require-checks` when the task must
   prove PR/CI evidence; `--override REASON` records an exception. A branch
   already recorded on another open task is rejected.
 - Import issues once with `issue import` (GitHub live or Linear export);
   re-import refreshes source metadata only and never writes back.
-- Human screen: space marks rows; `?` help, `c` palette, `[` / `]` history,
-  and `q` quit work on every screen. The palette has bulk move, bulk block,
-  bulk release claims, clear marks, and one undo for status/block changes.
+- Human screen: `?` help, `c` palette, `[` / `]` history, and `q` quit work on
+  every screen. Every status, block, claim, and delete action is single-row.
   The plan tree paints plans first and loads milestones and tasks on expand;
   a text filter reveals matching collapsed branches.
 - Trust hubs are selectable: criteria (`t` from detail), evidence (`enter` on
   a criterion), questions, and references from the palette. Criteria add, edit
-  (including done), prove, relate, and delete; questions add, resolve, and
-  reopen; references link, open, and unlink.
+  (including done), relate, and delete; questions add, resolve, and reopen;
+  references link, open, and unlink.
 - Coordination hubs are selectable too: claims and touch-points (`k` from
   detail), sessions and handoffs (`v` or the agents pane), and comments and
   notes (`m`). Session and touch-point authoring works from the screen;

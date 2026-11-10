@@ -129,8 +129,9 @@ lpui
 
 The first run sets up lazyplan: it detects your coding agents, installs their
 skills, creates the database, and remembers the choices in
-`~/.lazyplan/setup.json`. On a terminal you get a short wizard; scripts, agents,
-and `--json` get the same defaults without prompts.
+`~/.lazyplan/setup.json`. On a terminal you get a short wizard with the same
+palette, step rules, and compact review as the TUI; scripts, agents, and
+`--json` get the same defaults without prompts.
 
 Then create your first plan:
 
@@ -294,26 +295,25 @@ tab-separated rows; `--json` wins when both are present.
 ## The screen
 
 Plans start collapsed. Press `right` or `z` to reveal milestones; tasks stay
-folded until you open their milestone. Completed plans are dimmed and sorted
-last. A doing row animates a small spinner; set `LAZYPLAN_NO_SPINNER=1` to
-freeze it.
+folded until you open their milestone. Completed plans live in the finished
+panel and stay dimmed. A doing row animates a small spinner; set
+`LAZYPLAN_NO_SPINNER=1` to freeze it.
 
 The main screen pairs the plan tree with an overview column. The overview
-follows the selection: a plan shows its why, what, approval, questions,
+follows the selection: a plan shows open questions, why, what, approval,
 references, and every milestone with its description; a milestone shows its
 details and every task; a task shows its details, criteria, proof, notes, and
-source. The overview also carries a two-line control strip, acceptance
-progress, and a `git` card for linked checkouts and pull requests. The
-`agents` card sits under the plan tree and shows active sessions and the last
-handoff. Each session row shows its live state: `working`, `awaiting you`, or
-`idle`; awaiting rows sort first. The timeline card stays hidden on launch;
-`T` or the palette's show/hide timeline command opens it for the session. When
-open, it follows the selected row and its immediate children.
+source. The overview starts with one attention line, then prominent section
+headers and their details. A `git` card carries linked checkouts and pull
+requests. The `agents` card sits under the plan tree and shows active sessions
+and the last handoff. Each session row shows its live state: `working`,
+`awaiting you`, or `idle`; awaiting rows sort first. The timeline card stays
+hidden on launch; `T` or the palette's show/hide timeline command opens it for
+the session. When open, it follows the selected row and its immediate children.
 
-On launch the tree opens on **Active** plans: every plan that is not done, with
-its full milestone and task tree. `f` cycles Active, Finished, and Both; Both
-puts finished plans last. The mode only chooses plans, never hides a visible
-plan's children.
+The plan tree is split into two stacked panels. **Active** holds every plan that
+is not done; **Finished** holds completed plans. Both panels keep the full
+milestone and task tree, and the text filter applies inside each panel.
 
 The tree loads plan rows first. A plan's milestones appear when you expand it,
 and a milestone's tasks appear when you expand that milestone. A text filter
@@ -326,11 +326,9 @@ branches exist in the journal but not as screen nodes.
 |---|---|
 | `j`/`k`, arrows, click | move and select |
 | `left`/`right`, click arrow | collapse/expand, or walk to parent / first child |
-| `space` | mark or unmark the selected row for bulk actions |
 | `e` / `s` / `a` / `d` | edit · advance status · add criterion · delete |
 | `n` | create by context (plan, milestone, or task) |
 | `/` | filter by text |
-| `f` | change plan mode: active, finished, both |
 | `g` | open the source trail for the selected row |
 | `[` / `]` | history back / forward, restoring the prior screen and selection |
 | `escape` | back from source and modals; clears the tree filter |
@@ -340,8 +338,8 @@ branches exist in the journal but not as screen nodes.
 | `T` | show or hide the timeline card |
 | `q` | quit, from any screen |
 
-From the tree, `e` edits, `s` advances status, `a` adds a criterion, `p`
-records proof, `g` opens the source trail, and `n` creates by context. The
+From the tree, `e` edits, `s` advances status, `a` adds a criterion, `g`
+opens the source trail, and `n` creates by context. The
 palette carries questions, approvals, claims, sessions, comments, pull
 requests, and activity; it disables actions the current selection cannot run
 and says why.
@@ -352,20 +350,22 @@ Criteria, evidence, questions, and references are selectable hubs, not
 read-only text. From the tree, open **criteria hub**, **evidence hub**,
 **questions hub**, or **references hub** from the palette (`c`).
 
-- Criteria: `a` adds, `e` edits the text and done state, `p` records proof,
-  `l` and `L` relate or unrelate a proving task, `d` deletes, and `enter`
-  opens the evidence rows for the selected criterion.
+- Criteria: `a` adds, `e` edits the text and done state, `l` and `L` relate or
+  unrelate a proving task, `d` deletes, and `enter` opens the evidence rows for
+  the selected criterion.
 - Evidence: each row shows pass or fail, the command, exit code, commit, note,
-  and proving task. `p` proves the selected criterion; `o` opens its pull
-  request or copies its commit.
+  and proving task. Evidence is read-only here; record proof with
+  `lpui criterion prove` or the MCP tool. `o` opens its pull request or copies
+  its commit.
 - Questions: `a` adds, `x` resolves an open question or reopens a resolved one,
   and every row shows how many open questions still block plan readiness.
 - References: `a` links a URL, `o` opens it, and `d` unlinks it. Duplicate or
   invalid URLs are rejected.
 
 `escape` returns to the parent screen and restores its selection. The hub
-header keeps the parent breadcrumb, so evidence never loses the criterion it
-proved.
+title keeps the parent context, so evidence never loses the criterion it
+belongs to. Every hub ends in the shared action bar; the primary action is
+highlighted.
 
 ### Coordination hubs
 
@@ -398,7 +398,10 @@ shows the feed.
 - Source trail: the tree groups checkout → commits → changed files, with pull
   requests alongside. `enter` cross-links to the owning plan, milestone, or
   task; `o` opens the selected commit, file, or pull request; `y` copies it;
-  `/` filters. A missing commit is marked stale, and an offline diff says so.
+  `/` filters. The diff preview shows a file summary, per-file add/remove
+  counts, hunk headers, and old/new line numbers. A missing commit is marked
+  stale, and an offline diff says so. The source footer uses the same action
+  bar as the rest of the screen.
 - Pull requests: rows show state, checks, reviews, base and head refs, merge
   data, and a stale marker. `a` links a URL, `d` unlinks, `o` opens it, and
   `r` refreshes. Only `r` touches the network; every other path reads cache.
@@ -409,16 +412,14 @@ The palette names match the CLI: `lpui pr list|show|link|unlink|refresh`,
 `lpui commits`, `lpui repos`, and `lpui feed` read the same data.
 
 The palette and the CLI use the same names: Create plan, Move to doing, Edit
-selection, Delete selection. The palette also has Bulk move to doing/done,
-Bulk block tasks, Bulk release claims, Clear marks, and Undo bulk change. Bulk
-status and block confirm first; undo restores the exact prior status/blocked
-state once. Bulk delete and archive stay single-row.
+selection, Delete selection. Every status, block, claim, and delete action is
+single-row; the palette confirms destructive changes before writing.
 
 `/` searches titles, descriptions, why/what, notes, comments, claim actors,
-blocked reasons, and issue refs. Marks are session-only and survive refreshes.
+blocked reasons, and issue refs.
 
 The palette carries the work that does not need a dedicated key. **Approve
-plan scope**, **Show plan diff**, **Prove criterion**, **Add / Resolve / Reopen
+plan scope**, **Show plan diff**, **Add / Resolve / Reopen
 plan question**, **Link / Unlink external reference**, **Claim task**, **Block
 task**, **Unblock task**, and **Finish task** all run from the same palette.
 Run **Export plan as Markdown** to open a destination picker; the CLI

@@ -27,6 +27,7 @@ from ..help import HELP_TEXT as HELP_TEXT
 from ..help import KEYMAP as KEYMAP
 from ..palette import PALETTE_COMMANDS as PALETTE_COMMANDS
 from ..palette import PALETTE_SECTIONS as PALETTE_SECTIONS
+from .actions import action_bar as action_bar
 from .empty import EMPTY_AGENTS as EMPTY_AGENTS
 from .empty import EMPTY_AGENTS_HINT as EMPTY_AGENTS_HINT
 from .empty import EMPTY_APPROVAL as EMPTY_APPROVAL
@@ -44,7 +45,6 @@ from .empty import msg_not_found as msg_not_found
 from .row_stats import RowStats as RowStats
 from .row_stats import render_stats as render_stats
 from .row_stats import stats_layout as stats_layout
-from .rows import apply_mark as apply_mark
 from .rows import milestone_label as milestone_label
 from .rows import milestone_row as milestone_row
 from .rows import plan_label as plan_label
@@ -75,6 +75,7 @@ from .tokens import STATE_ICON as STATE_ICON
 
 __all__ = [
     "ANSI",
+    "action_bar",
     "ASCII_ICONS",
     "EMPTY_COMMITS",
     "EMPTY_FEED",
@@ -105,7 +106,6 @@ __all__ = [
     "STATUS_RICH",
     "STATE_ICON",
     "TASK",
-    "apply_mark",
     "escape_markup",
     "milestone_label",
     "milestone_row",

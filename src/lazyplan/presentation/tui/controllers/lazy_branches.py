@@ -8,11 +8,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from textual.widgets import Tree
 from textual.widgets.tree import TreeNode
 
 from ....core.entities import Milestone, Task
-from ...shared.design import apply_mark
 from ..views.rows import milestone_spec, row_text, task_spec
 
 if TYPE_CHECKING:
@@ -32,6 +30,7 @@ class LazyBranchMixin:
     _visible_keys: set[tuple[str, int]]
     _progress: dict[tuple[str, int], tuple[int, int]]
     _source_stats: dict[tuple[str, int], tuple[int, int, int, int]]
+    _attention: set[tuple[str, int]]
     _forge_map: dict
     _vcs_map: dict
     _claims_map: dict
@@ -142,13 +141,16 @@ class LazyBranchMixin:
             milestone_key = ("milestone", milestone.id)
             if milestone_key in app._row_nodes:
                 continue
-            spec = milestone_spec(milestone, app.store, self._progress, self._source_stats)
-            app._row_specs[milestone_key] = spec
-            text = self.app.tree_controller.render_row(
-                milestone_key, spec, app.query_one("#tree", Tree)
+            spec = milestone_spec(
+                milestone,
+                app.store,
+                self._progress,
+                attention=("milestone", milestone.id) in self._attention,
             )
+            app._row_specs[milestone_key] = spec
+            text = self.app.tree_controller.render_row(milestone_key, spec, plan_node.tree)
             milestone_node = plan_node.add(
-                row_text(apply_mark(text, milestone_key in app.marked)),
+                row_text(text),
                 data={"kind": "milestone", "id": milestone.id},
                 allow_expand=bool(tasks),
             )
@@ -166,11 +168,16 @@ class LazyBranchMixin:
             task_key = ("task", task.id)
             if task_key in app._row_nodes:
                 continue
-            spec = task_spec(task, app.store, self._forge_map, self._vcs_map, self._claims_map)
+            spec = task_spec(
+                task,
+                app.store,
+                self._claims_map,
+                attention=("task", task.id) in self._attention,
+            )
             app._row_specs[task_key] = spec
-            text = self.app.tree_controller.render_row(task_key, spec, app.query_one("#tree", Tree))
+            text = self.app.tree_controller.render_row(task_key, spec, milestone_node.tree)
             leaf = milestone_node.add_leaf(
-                row_text(apply_mark(text, task_key in app.marked)),
+                row_text(text),
                 data={"kind": "task", "id": task.id},
             )
             app._row_nodes[task_key] = leaf

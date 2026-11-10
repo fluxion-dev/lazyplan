@@ -158,27 +158,6 @@ if _TEXTUAL_OK:
             super().__init__(defaults, context or f"M{milestone_id}", editing=editing)
             self.milestone_id = milestone_id
 
-    class ProveScreen(EntityForm):
-        """Record one evidence row for a criterion."""
-
-        heading = "Prove criterion"
-        submit_label = "Prove"
-        fields = (
-            FormField("criterion", "Criterion id", "e.g. 12", "p-criterion"),
-            FormField("command", "Command", "pytest tests/...", "p-command"),
-            FormField("exit", "Exit code", "0", "p-exit"),
-            FormField("commit", "Commit", "40-character sha", "p-commit"),
-            FormField("task", "Proving task", "task id (optional)", "p-task"),
-            FormField("note", "Note", "what this row proves", "p-note"),
-        )
-
-        def __init__(
-            self,
-            defaults: dict[str, str] | None = None,
-            context: str = "",
-        ) -> None:
-            super().__init__(defaults, context)
-
     class RefScreen(EntityForm):
         """Link one external reference to a plan."""
 
@@ -245,6 +224,29 @@ if _TEXTUAL_OK:
             self._placeholder = placeholder
             self._submit_label = submit_label
             self._initial_text = initial
+            self.dialog_title = self._infer_title(title)
+
+        @staticmethod
+        def _infer_title(title: str) -> str:
+            """Name the prompt after the thing it changes, not its widget type."""
+            lower = title.lower()
+            if "criterion" in lower:
+                return "CRITERION"
+            if "approve" in lower:
+                return "APPROVE"
+            if "session" in lower:
+                return "SESSION"
+            if "comment" in lower:
+                return "COMMENT"
+            if "note" in lower:
+                return "NOTE"
+            if "pull request" in lower:
+                return "PULL REQUEST"
+            if "reference" in lower:
+                return "REFERENCE"
+            if "delete" in lower:
+                return "DELETE"
+            return "FILTER"
 
         def compose(self) -> ComposeResult:
             with Vertical(id="dlg"):

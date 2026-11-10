@@ -21,7 +21,7 @@
     height: auto;
 }
 
-#tree {
+.plan-tree {
     background: transparent;
     color: $foreground;
     padding: 0 1;
@@ -39,33 +39,34 @@
 }
 
 #tree-empty,
+#tree-finished-empty,
 #preview-empty {
     height: 1fr;
 }
 
-#tree > .tree--guides {
+.plan-tree > .tree--guides {
     color: $lp-border-muted;
 }
 
-#tree > .tree--guides-hover {
+.plan-tree > .tree--guides-hover {
     color: $lp-accent-muted;
 }
 
-#tree > .tree--guides-selected {
+.plan-tree > .tree--guides-selected {
     color: $lp-accent-muted;
 }
 
-#tree > .tree--highlight-line {
+.plan-tree > .tree--highlight-line {
     background: $lp-surface-raised;
 }
 
-#tree > .tree--cursor {
+.plan-tree > .tree--cursor {
     background: $lp-cursor;
     color: $foreground;
     text-style: bold;
 }
 
-#tree:focus > .tree--cursor {
+.plan-tree:focus > .tree--cursor {
     background: $lp-cursor;
     color: $lp-accent;
     text-style: bold;

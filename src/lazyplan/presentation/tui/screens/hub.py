@@ -21,6 +21,7 @@ except ImportError:  # pragma: no cover - stdlib-only interpreter
     _TEXTUAL_OK = False
 
 from ...shared import registry
+from ...shared.design import action_bar
 
 
 @dataclass(frozen=True)
@@ -43,12 +44,12 @@ if _TEXTUAL_OK:
         kind = ""
         title = "hub"
         empty = "Nothing here yet."
+        primary_hint: tuple[str, str] | None = None
 
         BINDINGS = [
             *NAV_BINDINGS,
             Binding("escape", "back", "Back", priority=True),
             Binding("a", "add", "Add"),
-            Binding("p", "prove", "Prove"),
             Binding("d", "delete", "Delete"),
             Binding("D", "force", "Force"),
             Binding("n", "note", "Note"),
@@ -71,7 +72,6 @@ if _TEXTUAL_OK:
 
         def compose(self) -> ComposeResult:
             with Vertical(id="hub-page"):
-                yield Static("", id="hub-head")
                 with Horizontal(id="hub-main"):
                     with VerticalScroll(id="hub-list-wrap"):
                         yield OptionList(id="hub-list")
@@ -92,10 +92,6 @@ if _TEXTUAL_OK:
         def _reload(self) -> None:
             entries = self.load_entries()
             self.entries = entries
-            head = f"{registry_action_count(self.kind)} actions · {len(entries)} rows"
-            if not entries:
-                head = f"{self.empty} · {len(entries)} rows"
-            self.query_one("#hub-head", Static).update(head)
             options = self.query_one("#hub-list", OptionList)
             options.clear_options()
             for index, entry in enumerate(entries):
@@ -107,8 +103,13 @@ if _TEXTUAL_OK:
             self.query_one("#hub-page").border_title = f" {self.title} "
 
         def _hints(self) -> str:
-            labels = [label for _aid, label in registry.hub_actions(self.kind)]
-            return " · ".join(f"{label.lower()}" for label in labels)
+            """Primary action first, then the remaining keyed actions."""
+            items: list[tuple[str, str]] = []
+            for action_id, label in registry.hub_actions(self.kind):
+                action = registry.by_id(action_id)
+                if action is not None and action.key:
+                    items.append((action.key, label.lower()))
+            return action_bar(self.primary_hint, items)
 
         def _preview(self, index: int | None) -> None:
             body = (
@@ -135,9 +136,6 @@ if _TEXTUAL_OK:
             self._notify_empty()
 
         def toggle(self) -> None:
-            self._notify_empty()
-
-        def prove(self) -> None:
             self._notify_empty()
 
         def delete_row(self) -> None:
@@ -180,9 +178,6 @@ if _TEXTUAL_OK:
 
         def action_hub_toggle(self) -> None:
             self.toggle()
-
-        def action_prove(self) -> None:
-            self.prove()
 
         def action_delete(self) -> None:
             self.delete_row()
@@ -228,8 +223,3 @@ if _TEXTUAL_OK:
                 handler()
             else:
                 self.app.pop_screen()
-
-
-def registry_action_count(kind: str) -> int:
-    """Number of canonical actions a hub exposes."""
-    return len(registry.hub_actions(kind))

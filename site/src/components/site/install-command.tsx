@@ -87,7 +87,7 @@ export function InstallCommand() {
           <Button
             id="install-copy"
             type="button"
-            size="sm"
+            size="default"
             onClick={copyCommand}
           >
             {copied ? <Check /> : <Copy />}

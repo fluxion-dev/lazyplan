@@ -60,7 +60,7 @@ export function Header() {
           <SheetTrigger asChild>
             <Button
               variant="ghost"
-              size="icon"
+              size="icon-lg"
               className="md:hidden"
               aria-label="Open menu"
             >
@@ -76,7 +76,7 @@ export function Header() {
                 <SheetClose key={link.href} asChild>
                   <a
                     href={link.href}
-                    className="flex min-h-10 items-center rounded-lg px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                    className="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                   >
                     {link.label}
                   </a>

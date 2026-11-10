@@ -92,10 +92,10 @@ export function Screenshots() {
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
+                  size="default"
                   onClick={() => step(-1)}
                   aria-label="Previous screenshot"
-                  className="order-2 sm:order-none"
+                  className="order-2 min-h-10 sm:order-none"
                 >
                   <ChevronLeft />
                   Previous
@@ -110,10 +110,10 @@ export function Screenshots() {
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
+                  size="default"
                   onClick={() => step(1)}
                   aria-label="Next screenshot"
-                  className="order-2 sm:order-none"
+                  className="order-2 min-h-10 sm:order-none"
                 >
                   Next
                   <ChevronRight />

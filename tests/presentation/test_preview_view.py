@@ -44,7 +44,7 @@ class PreviewDocumentTest(unittest.TestCase):
         )
         self.assertEqual(
             document.render(),
-            "header\nbreadcrumb\nmeta\n\n[bold cyan]◎[/] [bold]why[/]\nbecause\n\nfooter",
+            "header\nbreadcrumb\nmeta\n\n[bold cyan]◎[/] [bold]WHY[/]\nbecause\n\nfooter",
         )
 
     def test_plan_preview_keeps_order_and_sections(self) -> None:
@@ -53,10 +53,10 @@ class PreviewDocumentTest(unittest.TestCase):
         document = build_preview(self.store, "plan", self.plan.id, full, [])
         text = document.render()
         self.assertIn("P1", text)
-        self.assertIn("[bold]why[/]", text)
+        self.assertIn("[bold]WHY[/]", text)
         self.assertIn("Why we build", text)
-        self.assertIn("[bold]what[/]", text)
-        self.assertIn("[bold]next[/]", text)
+        self.assertIn("[bold]WHAT[/]", text)
+        self.assertIn("[bold]NEXT[/]", text)
         self.assertIn("Task title", text)
 
     def test_plan_preview_shows_approval_and_drift(self) -> None:
@@ -64,7 +64,7 @@ class PreviewDocumentTest(unittest.TestCase):
         full = self.store.get_full("plan", self.plan.id)
         assert full is not None
         text = build_preview(self.store, "plan", self.plan.id, full, []).render()
-        self.assertIn("[bold]approval[/]", text)
+        self.assertIn("[bold]APPROVAL[/]", text)
         self.assertIn("r1", text)
         self.assertIn("in sync", text)
         self.store.update_task(self.task.id, title="Renamed", reason="rename")
@@ -79,18 +79,18 @@ class PreviewDocumentTest(unittest.TestCase):
         full = self.store.get_full("plan", self.plan.id)
         assert full is not None
         text = build_preview(self.store, "plan", self.plan.id, full, []).render()
-        self.assertIn("[bold]questions 1 open[/]", text)
+        self.assertIn("[bold]QUESTIONS 1 OPEN[/]", text)
         self.assertIn("Which host?", text)
-        self.assertIn("1 open questions", text)
+        self.assertNotIn("1 open questions", text)
 
     def test_plan_preview_shows_references(self) -> None:
         self.store.link_ref(self.plan.id, "https://github.com/o/r/issues/7", title="Epic")
         full = self.store.get_full("plan", self.plan.id)
         assert full is not None
         text = build_preview(self.store, "plan", self.plan.id, full, []).render()
-        self.assertIn("[bold]references 1[/]", text)
+        self.assertIn("[bold]REFERENCES 1[/]", text)
         self.assertIn("Epic", text)
-        self.assertIn("1 references", text)
+        self.assertNotIn("1 references", text)
 
     def test_task_preview_shows_proof(self) -> None:
         criterion = self.store.add_criteria("task", self.task.id, "Works")
@@ -98,7 +98,7 @@ class PreviewDocumentTest(unittest.TestCase):
         full = self.store.get_full("task", self.task.id)
         assert full is not None
         text = build_preview(self.store, "task", self.task.id, full, []).render()
-        self.assertIn("[bold]proof[/]", text)
+        self.assertIn("[bold]PROOF[/]", text)
         self.assertIn("pytest", text)
         self.assertIn("✓", text)
         self.assertIn("exit 0", text)
@@ -113,10 +113,10 @@ class PreviewDocumentTest(unittest.TestCase):
         self.assertIn(f"M{task['milestone_id']}", text)
         self.assertIn(f"T{self.task.id}", text)
         self.assertIn(f"▹ T{self.task.id}", text)
-        self.assertIn("[bold]details[/]", text)
+        self.assertIn("[bold]DETAILS[/]", text)
         self.assertIn("Task details", text)
 
-    def test_plan_control_strip_names_health_and_needs(self) -> None:
+    def test_plan_control_strip_names_attention(self) -> None:
         self.store.add_revision(self.plan.id, "a" * 64, "{}", reason="initial")
         self.store.add_question(self.plan.id, "Which host?")
         self.store.claim_task(self.task.id, "alice", 300)
@@ -124,11 +124,9 @@ class PreviewDocumentTest(unittest.TestCase):
         full = self.store.get_full("plan", self.plan.id)
         assert full is not None
         strip = build_control_strip(self.store, "plan", self.plan.id, full)
-        self.assertIn("[bold]health[/]", strip)
-        self.assertIn("r1", strip)
-        self.assertIn("open question", strip)
-        self.assertIn("blocked task", strip)
-        self.assertIn("claim", strip)
+        self.assertIn("[bold]attention[/]", strip)
+        self.assertIn("question", strip)
+        self.assertIn("blocked", strip)
 
     def test_task_control_strip_reports_overlap_and_open_criteria(self) -> None:
         other = self.store.add_task(self.milestone.id, "Other", "Other details")
@@ -140,16 +138,16 @@ class PreviewDocumentTest(unittest.TestCase):
         full = self.store.get_full("task", self.task.id)
         assert full is not None
         strip = build_control_strip(self.store, "task", self.task.id, full)
-        self.assertIn("[bold]work[/]", strip)
+        self.assertIn("[bold]attention[/]", strip)
         self.assertIn("claim @alice", strip)
-        self.assertIn("open criterion", strip)
+        self.assertIn("criterion", strip)
         self.assertIn("overlap", strip)
 
-    def test_control_strip_says_when_nothing_needs_a_human(self) -> None:
+    def test_control_strip_says_when_attention_is_clear(self) -> None:
         full = self.store.get_full("task", self.task.id)
         assert full is not None
         strip = build_control_strip(self.store, "task", self.task.id, full)
-        self.assertIn("nothing needs you", strip)
+        self.assertIn("✓ clear", strip)
 
 
 if __name__ == "__main__":

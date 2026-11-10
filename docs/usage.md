@@ -294,21 +294,21 @@ tab-separated rows; `--json` wins when both are present.
 ## The screen
 
 Plans start collapsed. Press `right` or `z` to reveal milestones; tasks stay
-folded until you open their milestone. Completed plans are dimmed and sorted
-last. A doing row animates a small spinner; set `LAZYPLAN_NO_SPINNER=1` to
-freeze it.
+folded until you open their milestone. Completed plans live in the finished
+panel and stay dimmed. A doing row animates a small spinner; set
+`LAZYPLAN_NO_SPINNER=1` to freeze it.
 
 The main screen pairs the plan tree with an overview column. The overview
-follows the selection: a plan shows its why, what, approval, questions,
+follows the selection: a plan shows open questions, why, what, approval,
 references, and every milestone with its description; a milestone shows its
 details and every task; a task shows its details, criteria, proof, notes, and
-source. The overview also carries a two-line control strip, acceptance
-progress, and a `git` card for linked checkouts and pull requests. The
-`agents` card sits under the plan tree and shows active sessions and the last
-handoff. Each session row shows its live state: `working`, `awaiting you`, or
-`idle`; awaiting rows sort first. The timeline card stays hidden on launch;
-`T` or the palette's show/hide timeline command opens it for the session. When
-open, it follows the selected row and its immediate children.
+source. The overview starts with one attention line, then prominent section
+headers and their details. A `git` card carries linked checkouts and pull
+requests. The `agents` card sits under the plan tree and shows active sessions
+and the last handoff. Each session row shows its live state: `working`,
+`awaiting you`, or `idle`; awaiting rows sort first. The timeline card stays
+hidden on launch; `T` or the palette's show/hide timeline command opens it for
+the session. When open, it follows the selected row and its immediate children.
 
 The plan tree is split into two stacked panels. **Active** holds every plan that
 is not done; **Finished** holds completed plans. Both panels keep the full

@@ -1,4 +1,4 @@
-"""The two-line control strip above the preview."""
+"""The one-line attention strip above the preview."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from typing import Any, Protocol
 from ....core.ports.coordination import CoordinationPort
 from ....core.ports.insights import InsightsPort
 from ....services import coordination
-from ...shared.design import EMPTY_NEEDS, escape_markup, status_word
+from ...shared.design import escape_markup, status_word
 
 
 class ControlPort(InsightsPort, CoordinationPort, Protocol):
@@ -22,35 +22,28 @@ def _plural(count: int, singular: str, plural: str | None = None) -> str:
     return f"{count} {plural or singular + 's'}"
 
 
-def _approval_line(approval: dict[str, Any]) -> str:
-    """One compact approval and drift line."""
-    revision = int(approval.get("revision", 0) or 0)
+def _strip(reasons: list[str], suffix: str = "") -> str:
+    """One attention line: clear or review, then the quiet context."""
+    head = "[bold]attention[/]  "
+    body = "[yellow]⚠ review[/] · " + " · ".join(reasons) if reasons else "[green]✓ clear[/]"
+    if suffix:
+        body += f" · [dim]{suffix}[/]"
+    return head + body
+
+
+def _approval(revision: int, drift: int, enforced: bool) -> tuple[str, bool]:
+    """Approval reason and suffix; the drift count is an attention reason."""
     if not revision:
-        return "[dim]unapproved[/]"
-    flags = " enforced" if approval.get("enforced") else ""
-    drift = int(approval.get("drift", 0) or 0)
+        return "[dim]unapproved[/]", False
+    flags = " enforced" if enforced else ""
+    suffix = f"r{revision}{flags}"
     if drift:
-        return f"[yellow]Δ{drift} drift[/] · [dim]r{revision}{flags}[/]"
-    return f"[green]✓ in sync[/] · [dim]r{revision}{flags}[/]"
-
-
-def _claim_line(claim: dict[str, Any] | None, stamp: float) -> str:
-    """Claim state with a stale marker."""
-    if not claim:
-        return "[dim]no claim[/]"
-    actor = escape_markup(str(claim.get("actor") or ""))
-    expires = float(claim.get("expires_at") or 0)
-    if expires and expires <= stamp:
-        return f"[yellow]stale claim @{actor}[/]"
-    return f"[dim]claim @{actor}[/]"
+        return f"[yellow]Δ{drift} drift[/]", True
+    return f"[green]✓ in sync[/] · [dim]{suffix}[/]", False
 
 
 def _plan_tasks(full: dict[str, Any]) -> list[dict[str, Any]]:
     return [task for entry in full.get("milestones", []) for task in entry.get("tasks", [])]
-
-
-def _needs_line(parts: list[str]) -> str:
-    return "[bold]needs[/]  " + (" · ".join(parts) if parts else f"[green]{EMPTY_NEEDS}[/]")
 
 
 def _task_summary(tasks: list[dict[str, Any]], stamp: float) -> tuple[int, list[dict], int, int]:
@@ -63,47 +56,49 @@ def _task_summary(tasks: list[dict[str, Any]], stamp: float) -> tuple[int, list[
 
 
 def _plan_strip(_store: ControlPort, _oid: int, full: dict[str, Any]) -> str:
-    """Plan health and the reasons it may need a human."""
+    """Plan attention: open questions, drift, blocked work, and stale claims."""
     stamp = time.time()
     approval = full.get("approval") or {}
     questions = [
         question for question in full.get("questions", []) if question.get("status") == "open"
     ]
     tasks = _plan_tasks(full)
-    blocked, claims, stale, _doing = _task_summary(tasks, stamp)
-    clear = not questions and not int(approval.get("drift", 0) or 0) and not blocked and not stale
-    health = "[green]✓ clear[/]" if clear else "[yellow]⚠ review[/]"
-    head = f"[bold]health[/]  {health} · {_approval_line(approval)}"
-    needs: list[str] = []
+    blocked, _claims, stale, _doing = _task_summary(tasks, stamp)
+    reasons: list[str] = []
+    approval_text, drift = _approval(
+        int(approval.get("revision", 0) or 0),
+        int(approval.get("drift", 0) or 0),
+        bool(approval.get("enforced")),
+    )
+    if drift:
+        reasons.append(approval_text)
     if questions:
-        needs.append(f"[yellow]{_plural(len(questions), 'open question')}[/]")
+        reasons.append(f"[yellow]{_plural(len(questions), 'question')}[/]")
     if blocked:
-        needs.append(f"[yellow]{_plural(blocked, 'blocked task')}[/]")
+        reasons.append(f"[yellow]{_plural(blocked, 'blocked')}[/]")
     if stale:
-        needs.append(f"[yellow]{_plural(stale, 'stale claim')}[/]")
-    if claims:
-        needs.append(f"[dim]{_plural(len(claims), 'claim')}[/]")
-    return f"{head}\n{_needs_line(needs)}"
+        reasons.append(f"[yellow]{_plural(stale, 'stale claim')}[/]")
+    return _strip(reasons)
 
 
 def _milestone_strip(_store: ControlPort, _oid: int, full: dict[str, Any]) -> str:
-    """Milestone health from its task rows."""
+    """Milestone attention from its task rows."""
     stamp = time.time()
     tasks = [entry.get("task", {}) for entry in full.get("tasks", [])]
     blocked, claims, stale, doing = _task_summary(tasks, stamp)
-    head = f"[bold]slice[/]  [dim]{_plural(doing, 'doing task')}[/] · {_plural(len(tasks), 'task')}"
-    needs: list[str] = []
+    reasons: list[str] = []
     if blocked:
-        needs.append(f"[yellow]{_plural(blocked, 'blocked task')}[/]")
+        reasons.append(f"[yellow]{_plural(blocked, 'blocked')}[/]")
     if stale:
-        needs.append(f"[yellow]{_plural(stale, 'stale claim')}[/]")
+        reasons.append(f"[yellow]{_plural(stale, 'stale claim')}[/]")
+    suffix = f"{_plural(doing, 'doing task')} · {_plural(len(tasks), 'task')}"
     if claims:
-        needs.append(f"[dim]{_plural(len(claims), 'claim')}[/]")
-    return f"{head}\n{_needs_line(needs)}"
+        suffix += f" · {_plural(len(claims), 'claim')}"
+    return _strip(reasons, suffix)
 
 
 def _task_strip(store: ControlPort, oid: int, full: dict[str, Any]) -> str:
-    """Task health, claim, evidence, and overlap hints."""
+    """Task attention: blocked, open criteria, failing evidence, and overlap."""
     stamp = time.time()
     task = full.get("task", {})
     criteria = full.get("criteria", [])
@@ -119,25 +114,27 @@ def _task_strip(store: ControlPort, oid: int, full: dict[str, Any]) -> str:
             overlaps = coordination.overlaps(store, oid)
         except Exception:
             overlaps = []
-    head = (
-        f"[bold]work[/]  {status_word(str(task.get('status', '')), 'rich')}"
-        f" · {_claim_line(task.get('claim'), stamp)}"
-    )
-    needs: list[str] = []
+    reasons: list[str] = []
     if task.get("blocked"):
         reason = escape_markup(str(task.get("blocked_reason") or ""))
-        needs.append(f"[red]blocked[/] {reason}".rstrip())
+        reasons.append(f"[red]blocked[/] {reason}".rstrip())
     if open_criteria:
-        needs.append(f"[yellow]{_plural(len(open_criteria), 'open criterion', 'open criteria')}[/]")
+        reasons.append(f"[yellow]{_plural(len(open_criteria), 'criterion', 'criteria')}[/]")
     if failing:
-        needs.append(f"[red]{_plural(len(failing), 'failing evidence')}[/]")
+        reasons.append(f"[red]{_plural(len(failing), 'failing')}[/]")
     if overlaps:
-        needs.append(f"[yellow]{_plural(len(overlaps), 'overlap')}[/]")
-    return f"{head}\n{_needs_line(needs)}"
+        reasons.append(f"[yellow]{_plural(len(overlaps), 'overlap')}[/]")
+    claim = task.get("claim")
+    suffix = status_word(str(task.get("status", "")), "plain")
+    if isinstance(claim, dict):
+        expires = float(claim.get("expires_at") or 0)
+        marker = "stale " if expires and expires <= stamp else ""
+        suffix += f" · {marker}claim @{escape_markup(str(claim.get('actor') or ''))}"
+    return _strip(reasons, suffix)
 
 
 def build_control_strip(store: ControlPort, kind: str, oid: int, full: dict[str, Any]) -> str:
-    """Two-line control strip for the selected plan, milestone, or task."""
+    """One attention line for the selected plan, milestone, or task."""
     if kind == "plan":
         return _plan_strip(store, oid, full)
     if kind == "milestone":

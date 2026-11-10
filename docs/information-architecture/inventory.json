@@ -1887,7 +1887,7 @@
   "counts": {
     "cli_commands": 62,
     "doc_files": 9,
-    "doc_headings": 97,
+    "doc_headings": 88,
     "env_names": 12,
     "file_paths": 11,
     "hook_events": 24,
@@ -2031,17 +2031,7 @@
       },
       {
         "file": "site/index.html",
-        "headings": [
-          "One plan for you and your agent.",
-          "One control room for the loop.",
-          "Less chat. More done.",
-          "One agent plans. Another builds. You stay in control.",
-          "See it in action.",
-          "Start in three steps.",
-          "Get lazyplan in one command.",
-          "Questions, answered.",
-          "Bring your plan into focus."
-        ]
+        "headings": []
       }
     ]
   },

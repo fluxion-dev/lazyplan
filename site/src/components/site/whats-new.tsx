@@ -41,35 +41,35 @@ export function WhatsNew() {
     <Section id="new">
       <Reveal>
         <div className="overflow-hidden rounded-2xl border border-border bg-card/70 shadow-xl shadow-black/30">
-        <div className="grid gap-6 p-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.7fr)] md:p-8">
-          <div>
-            <p className="mb-3 text-sm font-semibold tracking-[0.18em] text-brand-cyan uppercase">
-              What&apos;s new
-            </p>
-            <h2 className="mb-3 text-3xl leading-headline font-bold tracking-headline text-balance text-foreground md:text-4xl">
-              One control room for the loop.
-            </h2>
-            <p className="m-0 text-[0.95rem] text-pretty text-muted-foreground">
-              See what needs you, correct it, and ship with proof.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {ITEMS.map((item) => (
-              <Card
-                key={item.title}
-                size="sm"
-                className="border-border bg-background/60"
-              >
-                <CardHeader>
-                  <div className="mb-1 flex size-8 items-center justify-center rounded-lg bg-secondary text-brand-cyan">
-                    <item.icon className="size-4" aria-hidden="true" />
-                  </div>
-                  <CardTitle>{item.title}</CardTitle>
-                  <CardDescription>{item.description}</CardDescription>
-                </CardHeader>
-              </Card>
-            ))}
-          </div>
+          <div className="grid gap-6 p-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.7fr)] md:p-8">
+            <div>
+              <p className="mb-3 text-sm font-semibold tracking-[0.18em] text-brand-cyan uppercase">
+                What&apos;s new
+              </p>
+              <h2 className="mb-3 text-3xl leading-headline font-bold tracking-headline text-balance text-foreground md:text-4xl">
+                One control room for the loop.
+              </h2>
+              <p className="m-0 text-[0.95rem] text-pretty text-muted-foreground">
+                See what needs you, correct it, and ship with proof.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {ITEMS.map((item) => (
+                <Card
+                  key={item.title}
+                  size="sm"
+                  className="border-border bg-background/60"
+                >
+                  <CardHeader>
+                    <div className="mb-1 flex size-8 items-center justify-center rounded-lg bg-secondary text-brand-cyan">
+                      <item.icon className="size-4" aria-hidden="true" />
+                    </div>
+                    <CardTitle>{item.title}</CardTitle>
+                    <CardDescription>{item.description}</CardDescription>
+                  </CardHeader>
+                </Card>
+              ))}
+            </div>
           </div>
         </div>
       </Reveal>

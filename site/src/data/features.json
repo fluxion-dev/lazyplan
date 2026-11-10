@@ -1,0 +1,111 @@
+{
+  "lead": [
+    {
+      "id": "shared-plan",
+      "title": "One shared plan",
+      "description": "Plans, milestones, tasks, and acceptance criteria live in one place. You and your agent read and write the same rows.",
+      "icon": "network",
+      "group": "plan"
+    },
+    {
+      "id": "agent-loop",
+      "title": "One agent plans. Another builds.",
+      "description": "A planner writes the plan while an executor claims tasks, leaves a handoff, and links the commit.",
+      "icon": "bot",
+      "group": "agents"
+    },
+    {
+      "id": "proof",
+      "title": "Proof where the work landed.",
+      "description": "Follow every task into commits, changed files, and pull requests. Missing proof is marked stale, never hidden.",
+      "icon": "git-branch",
+      "group": "proof"
+    }
+  ],
+  "support": [
+    {
+      "id": "control-room",
+      "title": "A control room for what needs you",
+      "description": "Health, drift, open questions, claims, and overlaps surface in one strip, so you know where to look.",
+      "icon": "activity",
+      "group": "plan"
+    },
+    {
+      "id": "trust-hubs",
+      "title": "Trust hubs, not a wall of text",
+      "description": "Criteria, evidence, questions, references, and approvals are selectable hubs on every row.",
+      "icon": "shield-check",
+      "group": "proof"
+    },
+    {
+      "id": "claims",
+      "title": "Claims that prevent collisions",
+      "description": "Leases, touch-points, and expiry keep parallel agents off each other's files.",
+      "icon": "lock",
+      "group": "agents"
+    },
+    {
+      "id": "sessions",
+      "title": "Sessions and handoffs",
+      "description": "Every run leaves a summary and a next step, so the next agent can resume without a briefing.",
+      "icon": "messages-square",
+      "group": "agents"
+    },
+    {
+      "id": "workbench",
+      "title": "An agent workbench",
+      "description": "Run an ACP agent beside the plan. Approvals and staged proposals keep writes deliberate.",
+      "icon": "monitor",
+      "group": "agents"
+    },
+    {
+      "id": "source-trail",
+      "title": "Source trail",
+      "description": "Walk from task to repo, commit, changed file, and pull request. Missing proof is marked stale.",
+      "icon": "route",
+      "group": "proof"
+    },
+    {
+      "id": "timeline",
+      "title": "Timeline on demand",
+      "description": "See plans and milestones across lanes without leaving the screen.",
+      "icon": "timer",
+      "group": "plan"
+    },
+    {
+      "id": "keyboard",
+      "title": "Keyboard-first",
+      "description": "A fast tree, command palette, history, and bulk actions. The mouse is optional.",
+      "icon": "keyboard",
+      "group": "plan"
+    },
+    {
+      "id": "themes",
+      "title": "Three terminal themes",
+      "description": "Mocha, void, and latte. The screen follows your terminal, not the other way around.",
+      "icon": "palette",
+      "group": "product"
+    },
+    {
+      "id": "local-first",
+      "title": "Local-first and private",
+      "description": "SQLite on your machine, no account, no cloud. Export or import any time.",
+      "icon": "database",
+      "group": "product"
+    },
+    {
+      "id": "auditability",
+      "title": "Writes are deliberate and recorded",
+      "description": "The screen is read-only until you arm override; every write lands in the activity feed.",
+      "icon": "list-checks",
+      "group": "proof"
+    },
+    {
+      "id": "bulk-search",
+      "title": "Find, mark, edit once",
+      "description": "Filter the tree, mark rows, and apply bulk moves, blocks, and releases.",
+      "icon": "search",
+      "group": "plan"
+    }
+  ]
+}

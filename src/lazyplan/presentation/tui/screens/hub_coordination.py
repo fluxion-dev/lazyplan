@@ -30,6 +30,7 @@ if _TEXTUAL_OK:
         """Active and expired claims plus touch-points for one task or plan."""
 
         kind = "claims"
+        primary_hint = ("a", "claim task")
         BINDINGS = [Binding("x", "hub_toggle", "Toggle")]
 
         def __init__(
@@ -185,6 +186,7 @@ if _TEXTUAL_OK:
         """Sessions and handoffs for one plan."""
 
         kind = "sessions"
+        primary_hint = ("a", "start session")
         BINDINGS = [Binding("x", "hub_toggle", "Toggle")]
 
         def __init__(self, store: object, plan_id: int) -> None:
@@ -268,6 +270,7 @@ if _TEXTUAL_OK:
         """Comments and notes on one row, with an unresolved filter."""
 
         kind = "comments"
+        primary_hint = ("a", "add comment")
         BINDINGS = [
             Binding("e", "edit_row", "Edit"),
             Binding("x", "hub_toggle", "Toggle"),

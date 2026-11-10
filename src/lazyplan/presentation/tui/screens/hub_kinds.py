@@ -27,6 +27,7 @@ if _TEXTUAL_OK:
         """Criteria of one plan, milestone, or task, with evidence state."""
 
         kind = "criteria"
+        primary_hint = ("e", "edit criterion")
         BINDINGS = [Binding("e", "edit_row", "Edit")]
 
         def __init__(self, store: Any, parent_kind: str, parent_id: int) -> None:
@@ -166,6 +167,7 @@ if _TEXTUAL_OK:
         """Evidence rows for one criterion, with prove and open actions."""
 
         kind = "evidence"
+        primary_hint = ("o", "open evidence")
 
         def __init__(self, store: Any, criterion_id: int, context: str = "") -> None:
             super().__init__(store)
@@ -238,6 +240,7 @@ if _TEXTUAL_OK:
         """Open and resolved questions on one plan, with readiness impact."""
 
         kind = "questions"
+        primary_hint = ("x", "toggle question")
         BINDINGS = [Binding("x", "hub_toggle", "Toggle")]
 
         def __init__(self, store: Any, plan_id: int) -> None:
@@ -299,6 +302,7 @@ if _TEXTUAL_OK:
         """External references on one plan: link, open, and unlink."""
 
         kind = "references"
+        primary_hint = ("o", "open reference")
 
         def __init__(self, store: Any, plan_id: int) -> None:
             super().__init__(store)

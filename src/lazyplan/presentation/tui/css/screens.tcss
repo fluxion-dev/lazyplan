@@ -170,15 +170,6 @@ ModalScreen {
     padding: 0 1;
 }
 
-#hub-head {
-    height: auto;
-    min-height: 1;
-    background: $lp-surface;
-    color: $lp-accent;
-    padding: 0 1;
-    margin-bottom: 1;
-}
-
 #hub-main {
     height: 1fr;
 }
@@ -216,4 +207,12 @@ ModalScreen {
     background: $lp-cursor;
     color: $lp-accent;
     text-style: bold;
+}
+
+#hub-hints {
+    width: 100%;
+    height: 1;
+    padding: 0 1;
+    background: $lp-surface;
+    color: $lp-text-muted;
 }

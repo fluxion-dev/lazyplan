@@ -43,6 +43,7 @@ if _TEXTUAL_OK:
         """Cached pull requests for one row and its descendants."""
 
         kind = "pull_requests"
+        primary_hint = ("r", "refresh pull requests")
 
         def __init__(self, store: Any, kind: str, oid: int) -> None:
             super().__init__(store)
@@ -194,6 +195,7 @@ if _TEXTUAL_OK:
         """Recent feed rows with jump targets."""
 
         kind = "activity"
+        primary_hint = ("enter", "jump to row")
         BINDINGS = [
             Binding("f", "filter_actor", "Actor"),
             Binding("K", "filter_kind", "Kind"),

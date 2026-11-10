@@ -11,6 +11,12 @@ export const COPY = {
     intro:
       "The plan tree is the spine. Claims, sessions, evidence, questions, and git proof hang off it, so the work stays in one place.",
   },
+  practice: {
+    eyebrow: "In practice",
+    title: "Ask for a plan. Hand off one task.",
+    intro:
+      "The planner writes the rows. The executor claims one, leaves a handoff, and links the commit.",
+  },
   proof: {
     eyebrow: "Proof, not promises",
     title: "The work leaves a trail.",

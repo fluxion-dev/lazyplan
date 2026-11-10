@@ -16,9 +16,9 @@ export function WaysToWork() {
   return (
     <Section id="ways-to-work">
       <SectionHeading
-        eyebrow={COPY.story.eyebrow}
-        title={COPY.story.title}
-        intro={COPY.story.intro}
+        eyebrow={COPY.practice.eyebrow}
+        title={COPY.practice.title}
+        intro={COPY.practice.intro}
         className="max-w-3xl"
       />
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">

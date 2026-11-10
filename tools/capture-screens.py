@@ -1118,7 +1118,7 @@ def run(out_dir: Path, only: list[str], keep_svg: Path | None, make_og: bool) ->
             "lpui-workbench",
             "lpui-source-trail",
         }
-        if make_og and hero_sources <= set(names):
+        if hero_sources <= set(names):
             hero = out_dir / "lpui-hero.png"
             build_cinematic_hero(
                 out_dir / "lpui-coordination.png",
@@ -1128,6 +1128,7 @@ def run(out_dir: Path, only: list[str], keep_svg: Path | None, make_og: bool) ->
             )
             print(f"wrote {shown(hero)} ({dimensions(hero)})")
             print(f"wrote {shown(hero.with_suffix('.webp'))}")
+        if make_og and "lpui-coordination" in set(names):
             og = out_dir / "og-lpui-and-agent.png"
             build_og(out_dir / "lpui-coordination.png", og)
             print(f"wrote {shown(og)} ({dimensions(og)})")

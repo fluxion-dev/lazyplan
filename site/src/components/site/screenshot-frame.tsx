@@ -47,13 +47,7 @@ export function ScreenshotFrame({
         </div>
       </button>
       <figcaption className="mt-2 text-sm text-muted-foreground">
-        {screen.mono ? (
-          <code className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[0.9em] text-foreground">
-            {screen.caption}
-          </code>
-        ) : (
-          screen.caption
-        )}
+        {screen.caption}
       </figcaption>
     </figure>
   )

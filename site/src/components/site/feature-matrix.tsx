@@ -1,3 +1,4 @@
+import { Kbd } from "@/components/ui/kbd"
 import { COPY, SUPPORT_FEATURES } from "@/data/site"
 
 import { FeatureCard } from "./feature-card"
@@ -23,6 +24,22 @@ export function FeatureMatrix() {
               icon={feature.icon}
               title={feature.title}
               description={feature.description}
+              hint={
+                feature.id === "keyboard" ? (
+                  <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="inline-flex items-center gap-1">
+                      <Kbd>c</Kbd> palette
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <Kbd>?</Kbd> help
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <Kbd>[</Kbd>
+                      <Kbd>]</Kbd> history
+                    </span>
+                  </span>
+                ) : undefined
+              }
             />
           </Reveal>
         ))}

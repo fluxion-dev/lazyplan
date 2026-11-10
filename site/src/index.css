@@ -71,13 +71,6 @@
   --color-brand-cyan: var(--brand-cyan);
   --color-brand-blue: var(--brand-blue);
   --color-brand-green: var(--brand-green);
-  --color-cinema-black: var(--cinema-black);
-  --color-cinema-panel: var(--cinema-panel);
-  --color-cinema-raised: var(--cinema-raised);
-  --color-cinema-soft: var(--cinema-soft);
-  --color-cinema-line: var(--cinema-line);
-  --color-cinema-gold: var(--cinema-gold);
-  --color-cinema-cyan: var(--cinema-cyan);
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -121,13 +114,6 @@
   --brand-cyan: #06b6d4;
   --brand-blue: #2563eb;
   --brand-green: #10b981;
-  --cinema-black: #050507;
-  --cinema-panel: #0c0c0f;
-  --cinema-raised: #121216;
-  --cinema-soft: #17171c;
-  --cinema-line: #232329;
-  --cinema-gold: #fbbf24;
-  --cinema-cyan: #22d3ee;
 
   --chart-1: #2563eb;
   --chart-2: #06b6d4;

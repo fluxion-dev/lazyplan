@@ -29,4 +29,3 @@ export type Feature = Readonly<{
 
 export const LEAD_FEATURES = features.lead as readonly Feature[]
 export const SUPPORT_FEATURES = features.support as readonly Feature[]
-export const FEATURES: readonly Feature[] = [...LEAD_FEATURES, ...SUPPORT_FEATURES]

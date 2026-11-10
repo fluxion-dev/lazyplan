@@ -5,7 +5,6 @@ export type Screen = Readonly<{
   height: number
   alt: string
   caption: string
-  mono?: boolean
 }>
 
 export const HERO_COMPOSITE: Screen = {

@@ -84,7 +84,6 @@ if _TEXTUAL_OK:
             Binding("e", "edit_selection", "Edit"),
             Binding("s", "toggle_status", "Status"),
             Binding("a", "add_criterion", "Criterion"),
-            Binding("p", "prove_criterion", "Prove"),
             Binding("d", "delete", "Delete"),
             Binding("g", "source_trail", "Source"),
             Binding("z", "fold", "Fold", show=False),

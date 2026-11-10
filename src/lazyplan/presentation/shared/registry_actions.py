@@ -64,9 +64,8 @@ CORE_ACTIONS: tuple[Action, ...] = (
     _action(
         "criterion.prove",
         "Prove criterion",
-        surfaces=("tui", "cli", "mcp"),
+        surfaces=("cli", "mcp"),
         route=("tree", "evidence"),
-        palette_ids=("prove-criterion",),
     ),
     _action(
         "question.add",

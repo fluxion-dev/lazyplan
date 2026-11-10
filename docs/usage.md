@@ -350,12 +350,13 @@ Criteria, evidence, questions, and references are selectable hubs, not
 read-only text. From the tree, open **criteria hub**, **evidence hub**,
 **questions hub**, or **references hub** from the palette (`c`).
 
-- Criteria: `a` adds, `e` edits the text and done state, `p` records proof,
-  `l` and `L` relate or unrelate a proving task, `d` deletes, and `enter`
-  opens the evidence rows for the selected criterion.
+- Criteria: `a` adds, `e` edits the text and done state, `l` and `L` relate or
+  unrelate a proving task, `d` deletes, and `enter` opens the evidence rows for
+  the selected criterion.
 - Evidence: each row shows pass or fail, the command, exit code, commit, note,
-  and proving task. `p` proves the selected criterion; `o` opens its pull
-  request or copies its commit.
+  and proving task. Evidence is read-only here; record proof with
+  `lpui criterion prove` or the MCP tool. `o` opens its pull request or copies
+  its commit.
 - Questions: `a` adds, `x` resolves an open question or reopens a resolved one,
   and every row shows how many open questions still block plan readiness.
 - References: `a` links a URL, `o` opens it, and `d` unlinks it. Duplicate or
@@ -416,7 +417,7 @@ state once. Bulk delete and archive stay single-row.
 blocked reasons, and issue refs. Marks are session-only and survive refreshes.
 
 The palette carries the work that does not need a dedicated key. **Approve
-plan scope**, **Show plan diff**, **Prove criterion**, **Add / Resolve / Reopen
+plan scope**, **Show plan diff**, **Add / Resolve / Reopen
 plan question**, **Link / Unlink external reference**, **Claim task**, **Block
 task**, **Unblock task**, and **Finish task** all run from the same palette.
 Run **Export plan as Markdown** to open a destination picker; the CLI

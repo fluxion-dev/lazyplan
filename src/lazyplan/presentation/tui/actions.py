@@ -11,7 +11,6 @@ from ..shared.export import display_path
 from ..shared.palette import by_id
 from .approval_actions import ApprovalMixin
 from .claim_actions import ClaimMixin
-from .evidence_actions import EvidenceMixin
 from .finish_actions import FinishMixin
 from .git_actions import GitActionMixin
 from .history_actions import HistoryMixin
@@ -41,7 +40,6 @@ if _TEXTUAL_OK:
         HubMixin,
         ApprovalMixin,
         ClaimMixin,
-        EvidenceMixin,
         FinishMixin,
         QuestionMixin,
         ReferenceMixin,

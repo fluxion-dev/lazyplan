@@ -324,8 +324,8 @@ every call. Reach for `--json` only when you need full-fidelity fields.
   a text filter reveals matching collapsed branches.
 - Trust hubs are selectable: criteria (`t` from detail), evidence (`enter` on
   a criterion), questions, and references from the palette. Criteria add, edit
-  (including done), prove, relate, and delete; questions add, resolve, and
-  reopen; references link, open, and unlink.
+  (including done), relate, and delete; questions add, resolve, and reopen;
+  references link, open, and unlink.
 - Coordination hubs are selectable too: claims and touch-points (`k` from
   detail), sessions and handoffs (`v` or the agents pane), and comments and
   notes (`m`). Session and touch-point authoring works from the screen;

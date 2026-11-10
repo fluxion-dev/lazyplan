@@ -95,7 +95,7 @@ class TestCommandRegistry(unittest.TestCase):
 
         for hint in (
             "record the current plan as an approved revision",
-            "record a command, exit code, commit, or note as proof",
+            "browse proof rows for a criterion",
             "record a plan-level ambiguity",
             "claim the selected task and move it doing",
             "link commits and close the task through the finish gates",

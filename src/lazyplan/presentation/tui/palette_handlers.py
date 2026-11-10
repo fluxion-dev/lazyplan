@@ -16,7 +16,6 @@ def palette_handlers(app: Any) -> dict[str, Callable[[], None]]:
         "new_task": app.action_new_task,
         "add_criterion": app.action_add_criterion,
         "approve_plan": app.action_approve_plan,
-        "prove_criterion": app.action_prove_criterion,
         "add_question": app.action_add_question,
         "resolve_question": app.action_resolve_question,
         "reopen_question": app.action_reopen_question,

@@ -49,7 +49,6 @@ if _TEXTUAL_OK:
             *NAV_BINDINGS,
             Binding("escape", "back", "Back", priority=True),
             Binding("a", "add", "Add"),
-            Binding("p", "prove", "Prove"),
             Binding("d", "delete", "Delete"),
             Binding("D", "force", "Force"),
             Binding("n", "note", "Note"),
@@ -144,9 +143,6 @@ if _TEXTUAL_OK:
         def toggle(self) -> None:
             self._notify_empty()
 
-        def prove(self) -> None:
-            self._notify_empty()
-
         def delete_row(self) -> None:
             self._notify_empty()
 
@@ -187,9 +183,6 @@ if _TEXTUAL_OK:
 
         def action_hub_toggle(self) -> None:
             self.toggle()
-
-        def action_prove(self) -> None:
-            self.prove()
 
         def action_delete(self) -> None:
             self.delete_row()

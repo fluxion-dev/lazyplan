@@ -57,7 +57,6 @@ from lazyplan.presentation.tui.screens import (  # noqa: E402
     NewPlanScreen,
     NewTaskScreen,
     PaletteScreen,
-    ProveScreen,
     RefScreen,
     SourceScreen,
     TextScreen,
@@ -1048,23 +1047,6 @@ def scenes() -> list[Scene]:
                 "tab next · enter submit · esc cancel",
                 ux,
                 lambda store: CriterionScreen("Attention fits in two lines", done=False),
-            ),
-            _modal_scene(
-                "form-prove",
-                "Prove criterion",
-                "Evidence form with six fields",
-                "The prove-criterion form: criterion id, command, exit code, commit, proving task, and note.",
-                (
-                    "Does the form explain that it records rather than runs?",
-                    "Are command and exit code grouped well?",
-                    "Is the optional proving task obvious?",
-                ),
-                "tab next · enter prove · esc cancel",
-                ux,
-                lambda store: ProveScreen(
-                    {"criterion": str(store.list_criteria("plan", _plan_id(store))[0].id)},
-                    context=f"task {_task_id(store, 'Claim the release queue (v2)')}",
-                ),
             ),
             _modal_scene(
                 "form-link-reference",

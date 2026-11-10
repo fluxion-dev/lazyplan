@@ -1,4 +1,4 @@
-export const VERSION = "0.36.1"
+export const VERSION = "0.37.0"
 export const REPO_URL = "https://github.com/fluxion-dev/lazyplan"
 export const DOCS_URL = `${REPO_URL}/blob/main/docs/usage.md`
 export const RELEASES_URL = `${REPO_URL}/releases`

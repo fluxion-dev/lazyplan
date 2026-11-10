@@ -245,6 +245,29 @@ if _TEXTUAL_OK:
             self._placeholder = placeholder
             self._submit_label = submit_label
             self._initial_text = initial
+            self.dialog_title = self._infer_title(title)
+
+        @staticmethod
+        def _infer_title(title: str) -> str:
+            """Name the prompt after the thing it changes, not its widget type."""
+            lower = title.lower()
+            if "criterion" in lower:
+                return "CRITERION"
+            if "approve" in lower:
+                return "APPROVE"
+            if "session" in lower:
+                return "SESSION"
+            if "comment" in lower:
+                return "COMMENT"
+            if "note" in lower:
+                return "NOTE"
+            if "pull request" in lower:
+                return "PULL REQUEST"
+            if "reference" in lower:
+                return "REFERENCE"
+            if "delete" in lower:
+                return "DELETE"
+            return "FILTER"
 
         def compose(self) -> ComposeResult:
             with Vertical(id="dlg"):

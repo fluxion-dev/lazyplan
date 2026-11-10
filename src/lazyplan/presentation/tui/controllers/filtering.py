@@ -72,6 +72,34 @@ class TreeFilter:
             out[("plan", plan.id)] = (pc, pp, ps, plan_repos)
         return out
 
+    def split(
+        self,
+        base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]],
+    ) -> tuple[
+        list[tuple[Plan, list[tuple[Milestone, list[Task]]]]],
+        list[tuple[Plan, list[tuple[Milestone, list[Task]]]]],
+    ]:
+        """Partition every plan into active and finished panels."""
+        active: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]] = []
+        finished: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]] = []
+        for plan, milestones in base:
+            target = finished if plan.status == Status.DONE else active
+            target.append((plan, milestones))
+        return active, finished
+
+    def panels(
+        self,
+        base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]] | None = None,
+    ) -> tuple[
+        list[tuple[Plan, list[tuple[Milestone, list[Task]]]]],
+        list[tuple[Plan, list[tuple[Milestone, list[Task]]]]],
+    ]:
+        """Split plans, then apply the text filter inside each panel."""
+        if base is None:
+            base = services.tree(self.app.store, status=None, archived="show")
+        active, finished = self.split(base)
+        return self.filtered_tree(active), self.filtered_tree(finished)
+
     def filtered_tree(
         self,
         base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]] | None = None,
@@ -79,7 +107,6 @@ class TreeFilter:
         app = self.app
         if base is None:
             base = services.tree(app.store, status=None, archived="show")
-        base = self.mode_tree(base, app.plan_mode)
         query = app.filter_text.strip().lower()
         if not query:
             return base

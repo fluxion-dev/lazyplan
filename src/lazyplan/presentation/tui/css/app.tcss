@@ -18,10 +18,24 @@
 #nav {
     width: 1fr;
     height: 1fr;
+    border: none;
+    padding: 0;
+}
+
+.plan-panel {
+    width: 1fr;
     border: round $lp-border-muted;
     border-title-color: $lp-text-muted;
     border-title-style: bold;
     border-title-align: left;
+}
+
+#plans-active {
+    height: 3fr;
+}
+
+#plans-finished {
+    height: 2fr;
 }
 
 #side {
@@ -123,7 +137,8 @@
 }
 
 #main.narrow #left,
-#main.narrow #nav {
+#main.narrow #nav,
+#main.narrow .plan-panel {
     width: 100%;
 }
 
@@ -135,8 +150,12 @@
     min-width: 0;
 }
 
-#main.compact #nav {
+#main.compact #nav,
+#main.compact .plan-panel {
     min-width: 0;
+}
+
+#main.compact .plan-panel {
     border: none;
 }
 
@@ -146,7 +165,7 @@
     padding: 0 2;
 }
 
-#nav:focus-within,
+.plan-panel:focus-within,
 #preview:focus-within {
     border: round $lp-border-focus;
     border-title-color: $lp-border-focus;

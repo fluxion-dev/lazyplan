@@ -49,18 +49,16 @@ class ContextMixin(AppBase):
         return self.selected[1]
 
     def _cursor_is_root(self) -> bool:
-        """True when the cursor sits on the dataless plans root or empty tree."""
-        try:
-            tree = self.query_one("#tree", Tree)
-        except Exception:
-            return True
-        try:
-            cursor = tree.cursor_node
-        except Exception:
-            return True
-        if cursor is None:
-            return True
-        return self._node_key(cursor) is None
+        """True when neither plan panel holds a real row under its cursor."""
+        for tree_id in ("#tree", "#tree-finished"):
+            try:
+                tree = self.query_one(tree_id, Tree)
+                cursor = tree.cursor_node
+            except Exception:
+                continue
+            if cursor is not None and self._node_key(cursor) is not None:
+                return False
+        return True
 
     def _palette_context(self) -> dict[str, str | None]:
         """Disable commands the current screen and selection cannot run.

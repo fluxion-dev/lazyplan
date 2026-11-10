@@ -169,12 +169,23 @@ if _TEXTUAL_OK:
                 with Horizontal(id="main"):
                     with Vertical(id="left"):
                         with Vertical(id="nav"):
-                            yield FoldTree("plans", id="tree")
-                            yield Static(
-                                empty_state(EMPTY_NO_PLANS_TITLE, EMPTY_NO_PLANS_HINT),
-                                id="tree-empty",
-                                classes="pane-empty",
-                            )
+                            with Vertical(id="plans-active", classes="plan-panel"):
+                                yield FoldTree("active", id="tree", classes="plan-tree")
+                                yield Static(
+                                    empty_state(EMPTY_NO_PLANS_TITLE, EMPTY_NO_PLANS_HINT),
+                                    id="tree-empty",
+                                    classes="pane-empty",
+                                )
+                            with Vertical(id="plans-finished", classes="plan-panel"):
+                                yield FoldTree("finished", id="tree-finished", classes="plan-tree")
+                                yield Static(
+                                    empty_state(
+                                        "No finished plans",
+                                        "completed plans land here",
+                                    ),
+                                    id="tree-finished-empty",
+                                    classes="pane-empty",
+                                )
                         yield AgentsPanel()
                     with Vertical(id="side"):
                         yield PreviewPanel()
@@ -215,7 +226,8 @@ if _TEXTUAL_OK:
             self.spinner_controller.start()
             self.update_controller.start()
             self.metrics_controller.start()
-            self.query_one("#nav").border_title = " plans "
+            self.query_one("#plans-active").border_title = " active "
+            self.query_one("#plans-finished").border_title = " finished "
             if self._startup_notice:
                 self.notify(self._startup_notice, timeout=10)
             tree = self.query_one("#tree", Tree)

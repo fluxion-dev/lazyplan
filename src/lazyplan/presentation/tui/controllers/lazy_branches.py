@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from textual.widgets import Tree
 from textual.widgets.tree import TreeNode
 
 from ....core.entities import Milestone, Task
@@ -144,9 +143,7 @@ class LazyBranchMixin:
                 continue
             spec = milestone_spec(milestone, app.store, self._progress, self._source_stats)
             app._row_specs[milestone_key] = spec
-            text = self.app.tree_controller.render_row(
-                milestone_key, spec, app.query_one("#tree", Tree)
-            )
+            text = self.app.tree_controller.render_row(milestone_key, spec, plan_node.tree)
             milestone_node = plan_node.add(
                 row_text(apply_mark(text, milestone_key in app.marked)),
                 data={"kind": "milestone", "id": milestone.id},
@@ -168,7 +165,7 @@ class LazyBranchMixin:
                 continue
             spec = task_spec(task, app.store, self._forge_map, self._vcs_map, self._claims_map)
             app._row_specs[task_key] = spec
-            text = self.app.tree_controller.render_row(task_key, spec, app.query_one("#tree", Tree))
+            text = self.app.tree_controller.render_row(task_key, spec, milestone_node.tree)
             leaf = milestone_node.add_leaf(
                 row_text(apply_mark(text, task_key in app.marked)),
                 data={"kind": "task", "id": task.id},

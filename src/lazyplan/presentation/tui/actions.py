@@ -4,13 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-try:
-    from textual.widgets import Tree  # noqa: F401
-
-    _TEXTUAL_OK = True
-except ImportError:  # pragma: no cover
-    _TEXTUAL_OK = False
-
 from lazyplan.infrastructure.templates import load_template
 
 from ... import services
@@ -38,6 +31,8 @@ from .screens import (
 )
 from .status_actions import StatusMixin
 from .theme import next_theme
+
+_TEXTUAL_OK = True
 
 if _TEXTUAL_OK:
 
@@ -210,7 +205,7 @@ if _TEXTUAL_OK:
             node = self._row_nodes.get((kind, oid))
             if node is not None:
                 try:
-                    tree = self.query_one("#tree", Tree)
+                    tree = node.tree
                     tree.move_cursor(node)
                     tree.scroll_to_node(node)
                 except Exception:

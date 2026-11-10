@@ -74,6 +74,8 @@ if ! grep -q "lazyplan-tui $NEXT" docs/lpui.1; then
   echo "error: man page regen failed" >&2
   exit 1
 fi
+# The README version is a doc heading in the IA inventory — keep it current.
+python3 tools/ia_inventory.py --write
 # Site mirrors: version-pinned release asset URLs, JSON-LD version, sitemap date.
 if [[ -f site/index.html ]]; then
   sed -i.bak -E "s|/releases/download/v[0-9]+\.[0-9]+\.[0-9]+/|/releases/download/v${NEXT}/|g" site/index.html && rm site/index.html.bak

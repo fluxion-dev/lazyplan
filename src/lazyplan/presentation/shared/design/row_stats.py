@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from itertools import product
 
-from .text import pr_chip, pr_label, progress_bar, progress_text, truncate
+from .text import progress_bar, progress_text, truncate
 
 TITLE_MIN = 8
 SLOT_GAP = 1
@@ -35,19 +35,16 @@ class StatSlot:
 
 SLOTS: dict[str, StatSlot] = {
     "progress": StatSlot("progress", 11, 8, 1000, 0, "left"),
-    "commits": StatSlot("commits", 4, 4, 30, 1, "right"),
-    "pulls": StatSlot("pulls", 4, 4, 500, 2, "right"),
-    "drift": StatSlot("drift", 1, 1, 900, 3, "right"),
-    "stale": StatSlot("stale", 2, 2, 10, 4, "right"),
-    "blocked": StatSlot("blocked", 9, 2, 250, 5, "left"),
-    "claim": StatSlot("claim", 12, 8, 125, 6, "left"),
-    "marked": StatSlot("marked", 2, 2, 60, 7, "left"),
+    "attention": StatSlot("attention", 1, 1, 900, 1, "right"),
+    "blocked": StatSlot("blocked", 9, 2, 250, 2, "left"),
+    "claim": StatSlot("claim", 12, 8, 125, 3, "left"),
+    "marked": StatSlot("marked", 2, 2, 60, 4, "left"),
 }
 
 KIND_SLOTS: dict[str, tuple[str, ...]] = {
-    "plan": ("progress", "commits", "pulls", "drift", "stale", "marked"),
-    "milestone": ("progress", "commits", "pulls", "stale", "marked"),
-    "task": ("commits", "pulls", "stale", "blocked", "claim", "marked"),
+    "plan": ("progress", "attention", "marked"),
+    "milestone": ("progress", "attention", "marked"),
+    "task": ("attention", "blocked", "claim", "marked"),
 }
 
 
@@ -57,16 +54,11 @@ class RowStats:
 
     kind: str
     progress: tuple[int, int] | None = None
-    commits: int = 0
-    pulls: int = 0
-    stale: int = 0
-    pr_state: str = ""
-    pr_checks: str = ""
+    attention: bool = False
     marked: bool = False
     blocked: bool = False
     claim_actor: str = ""
     claim_expired: bool = False
-    drifted: bool = False
 
 
 def _slot_width(key: str, compact: bool) -> int:
@@ -127,35 +119,13 @@ def _progress_slot(stats: RowStats, compact: bool) -> tuple[str, str]:
     return f"[dim]{text}[/]", text
 
 
-def _commits_slot(stats: RowStats, compact: bool) -> tuple[str, str]:
-    text = truncate(f"{stats.commits}c", _slot_width("commits", compact)) if stats.commits else ""
-    return (f"[dim]{text}[/]" if text else ""), text
-
-
-def _pulls_slot(stats: RowStats, compact: bool) -> tuple[str, str]:
-    if stats.kind == "task":
-        return (
-            pr_chip(stats.pr_state, stats.pr_checks),
-            pr_label(stats.pr_state, stats.pr_checks),
-        )
-    text = truncate(f"{stats.pulls}PR", _slot_width("pulls", compact)) if stats.pulls else ""
-    return (f"[dim]{text}[/]" if text else ""), text
-
-
-def _drift_slot(stats: RowStats, compact: bool) -> tuple[str, str]:
+def _attention_slot(stats: RowStats, compact: bool) -> tuple[str, str]:
     del compact
-    return ("[yellow]Δ[/]" if stats.drifted else ""), ("Δ" if stats.drifted else "")
-
-
-def _stale_slot(stats: RowStats, compact: bool) -> tuple[str, str]:
-    if stats.kind == "task":
-        text = "!" if stats.stale else ""
-    else:
-        text = truncate(f"{stats.stale}!", _slot_width("stale", compact)) if stats.stale else ""
-    return (f"[dim]{text}[/]" if text else ""), text
+    return ("[yellow]![/]" if stats.attention else ""), ("!" if stats.attention else "")
 
 
 def _marked_slot(stats: RowStats, compact: bool) -> tuple[str, str]:
+    del compact
     text = "✓" if stats.marked else ""
     return (f"[bold green]{text}[/]" if text else ""), text
 
@@ -176,10 +146,7 @@ def _claim_slot(stats: RowStats, compact: bool) -> tuple[str, str]:
 
 _SLOT_RENDERERS: dict[str, Callable[[RowStats, bool], tuple[str, str]]] = {
     "progress": _progress_slot,
-    "commits": _commits_slot,
-    "pulls": _pulls_slot,
-    "drift": _drift_slot,
-    "stale": _stale_slot,
+    "attention": _attention_slot,
     "marked": _marked_slot,
     "blocked": _blocked_slot,
     "claim": _claim_slot,

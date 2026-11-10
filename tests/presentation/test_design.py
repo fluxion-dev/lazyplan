@@ -136,7 +136,7 @@ class TestDesignSystem(unittest.TestCase):
             design.plan_row(
                 p,
                 progress=(3, 7),
-                source_counts=(2, 1, 1),
+                attention=True,
                 marked=True,
                 width=width,
             )
@@ -240,13 +240,13 @@ class TestDesignSystem(unittest.TestCase):
         self.assertEqual(len(sectioned), len(set(sectioned)))
         self.assertEqual(len(design.PALETTE_SECTIONS), 4)
 
-    def test_source_rows_show_chips_not_a_marker(self):
+    def test_rows_render_progress_and_attention_not_source_counts(self):
         p = Plan(id=1, name="N")
-        bare = design.plan_row(p)
-        linked = design.plan_row(p, source_counts=(1, 0, 0))
-        self.assertNotIn("⎇", bare)
-        self.assertNotIn("⎇", linked)
-        self.assertIn("1c", linked)
+        row = design.plan_row(p, progress=(2, 5), attention=True)
+        self.assertIn("2/5", row)
+        self.assertIn("!", row)
+        self.assertNotIn("1c", row)
+        self.assertNotIn("PR", row)
 
     def test_pr_chip_states(self):
         self.assertEqual(design.pr_chip(), "")
@@ -255,29 +255,13 @@ class TestDesignSystem(unittest.TestCase):
         self.assertIn("PR!", design.pr_chip("open", "fail"))
         self.assertIn("PR…", design.pr_chip("open", "pending"))
 
-    def test_task_row_shows_pr_chip_only_when_cached(self):
+    def test_task_row_shows_attention_not_pr_or_commit_counts(self):
         t = Task(id=3, milestone_id=1, title="T")
-        self.assertNotIn("PR", design.task_row(t))
-        self.assertIn("PR", design.task_row(t, pr_state="open"))
-        self.assertIn("PR!", design.task_row(t, pr_state="open", pr_checks="fail"))
-
-    def test_rows_show_chips_only_when_linked(self):
-        p = Plan(id=1, name="N")
-        self.assertEqual(design.plan_row(p), design.plan_row(p, links=None))
-        self.assertEqual(design.plan_row(p), design.plan_row(p, links=[]))
-        linked = design.plan_row(p, links=["a" * 40])
-        self.assertIn("1c", linked)
-        self.assertNotIn("a" * 12, linked)
-        s = Milestone(id=2, plan_id=1, title="S")
-        self.assertEqual(design.milestone_row(s), design.milestone_row(s, links=[]))
-        milestone = design.milestone_row(s, links=["b" * 40])
-        self.assertIn("1c", milestone)
-        self.assertNotIn("b" * 12, milestone)
-        t = Task(id=3, milestone_id=2, title="T")
-        self.assertEqual(design.task_row(t), design.task_row(t, links=None))
-        task = design.task_row(t, links=["c" * 40])
-        self.assertIn("1c", task)
-        self.assertNotIn("c" * 12, task)
+        bare = design.task_row(t)
+        hot = design.task_row(t, attention=True)
+        self.assertNotIn("PR", bare)
+        self.assertNotIn("1c", bare)
+        self.assertIn("!", hot)
 
     def test_repo_project_name_prefers_remote(self):
         self.assertEqual(

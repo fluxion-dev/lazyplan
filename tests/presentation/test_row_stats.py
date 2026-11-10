@@ -11,7 +11,6 @@ from lazyplan.presentation.shared.design.row_stats import (
     render_stats,
     stats_layout,
 )
-from lazyplan.presentation.shared.design.text import pr_label
 
 try:
     from rich.text import Text
@@ -28,12 +27,12 @@ def _block_width(layout: tuple[tuple[str, bool], ...]) -> int:
 
 
 class StatsLayoutTest(unittest.TestCase):
-    def test_plan_layout_keeps_the_full_order_at_a_wide_width(self) -> None:
+    def test_plan_layout_keeps_progress_and_attention_at_a_wide_width(self) -> None:
         layout = stats_layout("plan", 80, 7)
 
         self.assertEqual(
             [key for key, _compact in layout],
-            ["progress", "commits", "pulls", "drift", "stale", "marked"],
+            ["progress", "attention", "marked"],
         )
         self.assertFalse(any(compact for _key, compact in layout))
 
@@ -42,29 +41,20 @@ class StatsLayoutTest(unittest.TestCase):
 
         self.assertEqual(
             [key for key, _compact in layout],
-            ["pulls", "blocked", "claim", "marked"],
+            ["attention", "blocked", "claim", "marked"],
         )
         self.assertEqual(
             [compact for _key, compact in layout],
             [False, True, True, False],
         )
 
-    def test_milestone_layout_drops_stale_before_progress(self) -> None:
-        layout = stats_layout("milestone", 37, 6)
+    def test_milestone_layout_drops_marked_before_progress(self) -> None:
+        layout = stats_layout("milestone", 25, 6)
 
         self.assertEqual(
             [(key, compact) for key, compact in layout],
-            [("progress", True), ("commits", False), ("pulls", False), ("marked", False)],
+            [("progress", True), ("attention", False)],
         )
-
-    def test_task_layout_drops_stale_before_state(self) -> None:
-        layout = stats_layout("task", 51, 6)
-        keys = [key for key, _compact in layout]
-
-        self.assertIn("commits", keys)
-        self.assertIn("blocked", keys)
-        self.assertIn("claim", keys)
-        self.assertNotIn("stale", keys)
 
     def test_layout_never_exceeds_the_width_budget(self) -> None:
         for kind in ("plan", "milestone", "task"):
@@ -81,8 +71,7 @@ class StatsLayoutTest(unittest.TestCase):
         layout = stats_layout("task", 80, 7)
         full = RowStats(
             kind="task",
-            commits=2,
-            pr_state="open",
+            attention=True,
             marked=True,
             blocked=True,
             claim_actor="alice",
@@ -101,34 +90,32 @@ class StatsRenderTest(unittest.TestCase):
     def test_rich_and_plain_blocks_have_equal_width(self) -> None:
         stats = RowStats(
             kind="task",
-            commits=2,
-            pr_state="open",
+            attention=True,
             marked=True,
             blocked=True,
             claim_actor="alice",
-            stale=1,
         )
         layout = stats_layout("task", 80, 7)
         rich, plain = render_stats(stats, layout)
 
         self.assertEqual(Text.from_markup(rich).plain, plain)
-        self.assertIn("2c", plain)
-        self.assertIn("PR", plain)
+        self.assertIn("!", plain)
         self.assertIn("✓", plain)
         self.assertIn("⚑ blocked", plain)
         self.assertIn("◉ @alice", plain)
+        self.assertNotIn("PR", plain)
 
-    def test_drift_slot_renders_only_when_drifted(self) -> None:
-        layout = (("drift", False),)
-        rich, plain = render_stats(RowStats(kind="plan", drifted=True), layout)
+    def test_attention_slot_renders_only_when_flagged(self) -> None:
+        layout = (("attention", False),)
+        rich, plain = render_stats(RowStats(kind="plan", attention=True), layout)
         self.assertEqual(Text.from_markup(rich).plain, plain)
-        self.assertIn("Δ", plain)
+        self.assertIn("!", plain)
         self.assertEqual(render_stats(RowStats(kind="plan"), layout)[1].strip(), "")
 
     def test_compact_forms_are_used_at_a_narrow_width(self) -> None:
         stats = RowStats(
             kind="task",
-            pr_state="open",
+            attention=True,
             marked=True,
             blocked=True,
             claim_actor="alice",
@@ -153,22 +140,6 @@ class StatsRenderTest(unittest.TestCase):
 
         self.assertTrue(plain.endswith("!"))
         self.assertEqual(len(plain), 8)
-
-    def test_pr_label_matches_pr_chip_text(self) -> None:
-        from lazyplan.presentation.shared.design.text import pr_chip
-
-        for state, checks in (
-            ("", ""),
-            ("open", ""),
-            ("merged", ""),
-            ("open", "fail"),
-            ("open", "pending"),
-        ):
-            with self.subTest(state=state, checks=checks):
-                self.assertEqual(
-                    Text.from_markup(pr_chip(state, checks)).plain,
-                    pr_label(state, checks),
-                )
 
 
 if __name__ == "__main__":

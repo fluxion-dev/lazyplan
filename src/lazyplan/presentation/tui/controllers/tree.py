@@ -11,6 +11,7 @@ from textual.widgets.tree import TreeNode
 from .... import services
 from ....core.entities import Milestone, Plan, Status, Task
 from ....core.policies.planning import progress_counts
+from ....services.stats import attention_reasons
 from ...shared.design import apply_mark, status_prefix
 from ...shared.help import hint_bar
 from ..views.rows import RowSpec, plan_spec, row_text
@@ -44,6 +45,7 @@ class TreeController(LazyBranchMixin):
         self._vcs_map: dict = {}
         self._claims_map: dict = {}
         self._drift_map: dict = {}
+        self._attention: set[tuple[str, int]] = set()
         self._loading = False
 
     @staticmethod
@@ -275,6 +277,38 @@ class TreeController(LazyBranchMixin):
             if target.display:
                 target.focus()
 
+    def _attention_keys(
+        self,
+        base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]],
+        reasons: dict[int, list[str]],
+    ) -> set[tuple[str, int]]:
+        """Task attention rolled up to milestones and plans."""
+        keys: set[tuple[str, int]] = {
+            ("task", task_id)
+            for task_id, found in reasons.items()
+            if any(reason != "blocked" for reason in found)
+        }
+        questions = self.app.store.questions_map()
+        for plan, milestones in base:
+            plan_hot = self._drift_map.get(plan.id, 0) > 0
+            if any(question.status == "open" for question in questions.get(plan.id, [])):
+                plan_hot = True
+            for milestone, tasks in milestones:
+                hot = any(task.id in reasons for task in tasks)
+                if self._source_stats.get(("milestone", milestone.id), (0, 0, 0, 0))[2]:
+                    hot = True
+                if hot:
+                    keys.add(("milestone", milestone.id))
+                    plan_hot = True
+            if self._source_stats.get(("plan", plan.id), (0, 0, 0, 0))[2]:
+                plan_hot = True
+            if plan_hot:
+                keys.add(("plan", plan.id))
+        for key, stats in self._source_stats.items():
+            if stats[2]:
+                keys.add(key)
+        return keys
+
     def refresh_all(self, note: str = "") -> None:
         app = self.app
         active_tree, finished_tree = self.trees()
@@ -313,6 +347,7 @@ class TreeController(LazyBranchMixin):
         )
         self._claims_map = app.store.claims_map()
         self._drift_map = app.store.drift_counts()
+        self._attention = self._attention_keys(base, attention_reasons(app.store))
         self.build_plan_rows(active_tree.root, active_tree, active)
         self.build_plan_rows(finished_tree.root, finished_tree, finished)
         if app.filter_text.strip():
@@ -395,8 +430,7 @@ class TreeController(LazyBranchMixin):
             plan_row_spec = plan_spec(
                 plan,
                 self._progress,
-                self._source_stats,
-                self._drift_map.get(plan.id, 0) > 0,
+                attention=("plan", plan.id) in self._attention,
             )
             app._row_specs[plan_key] = plan_row_spec
             plan_text = self.render_row(plan_key, plan_row_spec, tree)

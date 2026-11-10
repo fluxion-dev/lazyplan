@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
 from ....core.entities import Status
@@ -75,27 +74,13 @@ def plan_label(p: Plan, store: InsightsPort | None = None, dot: str = "plain") -
 def plan_row(
     p: Plan,
     store: InsightsPort | None = None,
-    links: Sequence[str] | None = None,
     progress: tuple[int, int] | None = None,
     width: int | None = None,
-    source_counts: tuple[int, int, int] | None = None,
+    attention: bool = False,
     marked: bool = False,
-    drifted: bool = False,
 ) -> str:
-    """TUI plan row (Rich markup): glyph + id + title + fixed stats."""
-    if source_counts is None:
-        commits, pulls, stale = len(links or []), 0, 0
-    else:
-        commits, pulls, stale = source_counts
-    stats = RowStats(
-        kind="plan",
-        progress=progress,
-        commits=commits,
-        pulls=pulls,
-        stale=stale,
-        marked=marked,
-        drifted=drifted,
-    )
+    """TUI plan row (Rich markup): glyph + id + title + progress + attention."""
+    stats = RowStats(kind="plan", progress=progress, attention=attention, marked=marked)
     return _render_row("plan", p, stats, width)
 
 
@@ -107,25 +92,13 @@ def milestone_label(s: Milestone, store: InsightsPort | None = None, dot: str = 
 def milestone_row(
     s: Milestone,
     store: InsightsPort | None = None,
-    links: Sequence[str] | None = None,
     progress: tuple[int, int] | None = None,
     width: int | None = None,
-    source_counts: tuple[int, int, int] | None = None,
+    attention: bool = False,
     marked: bool = False,
 ) -> str:
-    """TUI milestone row (Rich markup): glyph + id + title + fixed stats."""
-    if source_counts is None:
-        commits, pulls, stale = len(links or []), 0, 0
-    else:
-        commits, pulls, stale = source_counts
-    stats = RowStats(
-        kind="milestone",
-        progress=progress,
-        commits=commits,
-        pulls=pulls,
-        stale=stale,
-        marked=marked,
-    )
+    """TUI milestone row (Rich markup): glyph + id + title + progress + attention."""
+    stats = RowStats(kind="milestone", progress=progress, attention=attention, marked=marked)
     return _render_row("milestone", s, stats, width)
 
 
@@ -143,23 +116,17 @@ def task_label(t: Task, store: InsightsPort | None = None, dot: str = "plain") -
 def task_row(
     t: Task,
     store: InsightsPort | None = None,
-    links: Sequence[str] | None = None,
     width: int | None = None,
-    pr_state: str = "",
-    pr_checks: str = "",
-    stale: bool = False,
+    attention: bool = False,
     claim_actor: str = "",
     claim_expired: bool = False,
     blocked: bool = False,
     marked: bool = False,
 ) -> str:
-    """TUI task row (Rich markup): glyph + id + title + fixed stats."""
+    """TUI task row (Rich markup): glyph + id + title + attention + claim."""
     stats = RowStats(
         kind="task",
-        commits=len(links or []),
-        stale=1 if stale else 0,
-        pr_state=pr_state,
-        pr_checks=pr_checks,
+        attention=attention,
         marked=marked,
         blocked=blocked,
         claim_actor=claim_actor,

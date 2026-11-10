@@ -27,12 +27,6 @@ fields porcelain does not carry.
 
 If your host supports MCP, use the local `lpui mcp` server (or
 `lpui mcp --read-only` for reviews); otherwise use `--porcelain` on every call.
-Inside the workbench the MCP server runs with `--proposal-only`: reads, notes,
-comments, questions, sessions, and claims are direct, while plan/milestone/task/
-criterion structure changes go through `propose_plan`, `propose_edit`, or
-`propose_task` and wait for a human to apply them. A task workbench run claims
-the task and opens a lazyplan session; finish it with a summary and handoff so
-the next session can resume.
 Start work with `lpui next --porcelain`: it claims the first eligible todo and
 moves it doing. A claim is a lease, not an owner. Renew it while you work,
 release it when you stop, and note handoffs with `lpui note add`. MCP resources
@@ -174,7 +168,7 @@ task. No row is written from unscouted ground, in any case, no exceptions.
 lpui --actor NAME plan add --title "API v2" --why ".." --what ".."
 lpui --actor NAME criterion add --kind plan --id P --text "Works offline"
 lpui criterion list --kind plan --id P
-lpui criterion tick --id C / lpui criterion untick --id C
+lpui criterion edit --id C --done / --open
 ```
 
 Only once the definition is agreed, cut the work — milestones from the plan,
@@ -233,7 +227,8 @@ lpui --actor NAME plan approve --id P [--reason TEXT] [--enforce]
 lpui --porcelain plan revisions --id P
 lpui --porcelain plan diff --id P [--check]
 lpui --actor NAME criterion prove --id C --command "pytest" --exit-code 0 \
-  --commit SHA [--task T] [--no-tick]
+  --commit SHA [--task T]
+lpui --actor NAME criterion edit --id C --done
 lpui --porcelain criterion evidence --id C
 lpui --actor NAME task finish --id T --require-evidence
 lpui --actor NAME question add --plan P --text "Which host?"
@@ -246,14 +241,15 @@ lpui --porcelain audit --plan P [--min-evidence 0.8] --strict
 
 Approval is advisory by default. `plan diff --check` is the opt-in CI gate;
 `plan approve --enforce` also gates `plan move --to done` until drift is approved
-or overridden. Scope edits accept `--reason`; status, ticks, claims, commits, and
+or overridden. Scope edits accept `--reason`; status, completion, claims, commits, and
 PRs never create drift.
 
 Evidence is record-only: lazyplan never runs the command, fetches the PR, or
 reads the artifact. The latest row decides whether a criterion is proven.
-`criterion prove` ticks on a passing row and leaves the criterion open on a
-failure; `--no-tick` records without ticking. `task finish --require-evidence`
-checks every task criterion, with `--override REASON` as the recorded escape.
+`criterion prove` records evidence without changing completion; set completion
+separately with `criterion edit --id C --done` (or `--open`). `task finish
+--require-evidence` checks every task criterion, with `--override REASON` as
+the recorded escape.
 
 Questions are plan-level and all open questions block `plan ready`. Readiness
 also requires clean lint and a proving task for every plan criterion. `review`
@@ -274,8 +270,10 @@ lpui ref list|unlink --plan P
 lpui ship --plan P [--json] [--max-chars N]
 ```
 
-Sessions tag writes from `LAZYPLAN_SESSION` or the checkout pointer; hooks stay
-read-only and `context`/`brief` show the previous handoff. Touch-points make
+Sessions tag writes from `LAZYPLAN_SESSION` or the checkout pointer; hooks keep
+the checkout's session heartbeat current and mark it `awaiting` after a turn, so
+the agents panel shows who needs you. `context`/`brief` show the previous
+handoff. Touch-points make
 `next` skip work that overlaps an active claim in the same checkout; a manual
 claim needs `--force` and finish only warns. References are read-only links to
 external work: no fetch, no write-back. `ship` prints the deterministic outcome
@@ -304,7 +302,8 @@ every call. Reach for `--json` only when you need full-fidelity fields.
 - Never batch a whole plan or milestone into one commit; link each green commit.
 - Tick task and plan criteria as they are proven, before closing the row.
 - Lifecycle hooks may remind you at session start, after a commit, and before
-  compaction. Hooks are read-only: they never move a task or link a commit.
+  compaction. They also record the checkout's session state; they never move a
+  task or link a commit.
 - `lpui claims` / `lpui who` shows active leases. `claim release --force` and
   `claim --force` record a takeover; blocked work is skipped by `next`.
 - `lpui trace --plan P` walks each criterion to its proving task, commits, and
@@ -324,9 +323,9 @@ every call. Reach for `--json` only when you need full-fidelity fields.
   The plan tree paints plans first and loads milestones and tasks on expand;
   a text filter reveals matching collapsed branches.
 - Trust hubs are selectable: criteria (`t` from detail), evidence (`enter` on
-  a criterion), questions, and references from the palette. Criteria tick,
-  prove, relate, and delete; questions add, resolve, and reopen; references
-  link, open, and unlink.
+  a criterion), questions, and references from the palette. Criteria add, edit
+  (including done), prove, relate, and delete; questions add, resolve, and
+  reopen; references link, open, and unlink.
 - Coordination hubs are selectable too: claims and touch-points (`k` from
   detail), sessions and handoffs (`v` or the agents pane), and comments and
   notes (`m`). Session and touch-point authoring works from the screen;
@@ -334,7 +333,7 @@ every call. Reach for `--json` only when you need full-fidelity fields.
 - Provenance hubs are selectable: the source trail (`g`) cross-links commits,
   files, and pull requests to their owning row, the pull request hub (`P`)
   refreshes, links, unlinks, and opens cached PRs, and the activity hub (`A`)
-  filters the feed and manual overrides and jumps to the event target.
+  filters the feed and jumps to the event target.
   Only the refresh action touches the network.
 - Collaborate with `comment add/list/resolve`; use `share --plan P` for a
   read-only snapshot and `sync --file dump.json --dry-run` for a plan-level
@@ -413,7 +412,7 @@ lpui --actor NAME task move --id T --to doing|done
 lpui --actor NAME task delete --id T
 lpui --actor NAME criterion add --kind plan --id P --text "Works offline"
 lpui criterion list --kind plan --id P
-lpui criterion tick --id C / lpui criterion untick --id C
+lpui criterion edit --id C --done / --open
 lpui --actor NAME criterion delete --id C
 lpui --actor NAME import --file dump.json
 ```
@@ -422,7 +421,7 @@ Deleting a plan removes its milestones and tasks — double-check ids first.
 Status moves roll parents up automatically; closing the last open task completes
 its milestone and plan. Closing with open acceptance criteria warns but never
 blocks. Criteria live on plans, milestones, and tasks; plan-level criteria are
-the definition of done — tick them as the work lands. Parent progress is
+the definition of done — mark them done as the work lands. Parent progress is
 recomputed from children; `lpui reconcile` can recompute parent statuses from children when an older journal drifts.
 
 ## Milestone and task standards

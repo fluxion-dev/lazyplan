@@ -7,11 +7,12 @@ import sys
 import time
 
 from ....core.entities import PlanQuestion
-from ....store import Store, to_payload
+from ....core.ports.planning import PlanningPort
+from ....core.serialization import to_payload
 from ...shared import porcelain
 from ...shared.design import msg_error, msg_not_found
 from ..emit import _emit_read, _emit_record
-from .system import _optional_store
+from ..store import optional_store as _optional_store
 
 
 def _question_row(question: PlanQuestion) -> str:
@@ -39,7 +40,7 @@ def _question_text(question: PlanQuestion) -> str:
     return f"Q{question.id} [resolved {day} @{question.resolved_by}] {question.text}{answer}"
 
 
-def _cmd_question_add(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_question_add(store: PlanningPort, args: argparse.Namespace, actor: str) -> int:
     from lazyplan import services
 
     try:
@@ -57,7 +58,7 @@ def _cmd_question_add(store: Store, args: argparse.Namespace, actor: str) -> int
     )
 
 
-def _cmd_question_list(store: Store | None, args: argparse.Namespace, actor: str) -> int:
+def _cmd_question_list(store: PlanningPort | None, args: argparse.Namespace, actor: str) -> int:
     from lazyplan import services
 
     del actor
@@ -81,7 +82,7 @@ def _cmd_question_list(store: Store | None, args: argparse.Namespace, actor: str
     )
 
 
-def _cmd_question_resolve(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_question_resolve(store: PlanningPort, args: argparse.Namespace, actor: str) -> int:
     from lazyplan import services
 
     question = services.resolve_question(store, args.id, note=args.note, actor=actor)
@@ -95,7 +96,7 @@ def _cmd_question_resolve(store: Store, args: argparse.Namespace, actor: str) ->
     )
 
 
-def _cmd_question_reopen(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_question_reopen(store: PlanningPort, args: argparse.Namespace, actor: str) -> int:
     from lazyplan import services
 
     question = services.reopen_question(store, args.id, note=args.note, actor=actor)

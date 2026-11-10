@@ -66,6 +66,9 @@ class ModuleBudgetTest(unittest.TestCase):
         stale = sorted(set(budgets()) - files)
         self.assertEqual(stale, [], f"remove stale budget entries: {stale}")
 
+    def test_no_budget_exceptions_remain(self) -> None:
+        self.assertEqual(budgets(), {}, "split the module instead of recording a budget")
+
 
 if __name__ == "__main__":
     unittest.main()

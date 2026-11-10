@@ -1,9 +1,26 @@
-"""Session use cases: start, end, and compact reads."""
+"""Session use cases: lifecycle, state, and compact reads."""
 
 from __future__ import annotations
 
+import time
+
 from ..core.entities import Session
+from ..core.policies.sessions import IDLE_AFTER_SECS
 from ..core.ports.sessions import SessionsPort, SessionsReadPort
+
+
+def session_state(
+    session: Session,
+    now: float | None = None,
+    idle_after: float = IDLE_AFTER_SECS,
+) -> str:
+    """One of ``ended``, ``auto-closed``, ``idle``, ``awaiting``, or ``working``."""
+    if session.ended:
+        return "auto-closed" if session.auto_closed else "ended"
+    stamp = time.time() if now is None else now
+    if session.idle_seconds(stamp) >= idle_after:
+        return "idle"
+    return "awaiting" if session.awaiting else "working"
 
 
 def start_session(
@@ -14,6 +31,8 @@ def start_session(
     branch: str = "",
     note: str = "",
     force: bool = False,
+    host: str = "",
+    phase: str = "working",
 ) -> dict:
     """Open a session and return it with any superseded session."""
     session, previous = port.start_session(
@@ -23,6 +42,8 @@ def start_session(
         branch=branch,
         note=note,
         force=force,
+        host=host,
+        phase=phase,
     )
     return {"session": session, "previous": previous}
 
@@ -33,12 +54,43 @@ def end_session(
     actor: str,
     summary: str = "",
     handoff: str = "",
+    auto: bool = False,
 ) -> Session:
     """Close one session with a summary and handoff."""
-    return port.end_session(session_id, actor, summary=summary, handoff=handoff)
+    return port.end_session(session_id, actor, summary=summary, handoff=handoff, auto=auto)
 
 
-def current_session(port: SessionsPort, actor: str) -> Session | None:
+def touch_session(
+    port: SessionsPort,
+    session_id: int,
+    phase: str | None = None,
+    host: str = "",
+) -> Session | None:
+    """Refresh one session's heartbeat and optional phase."""
+    return port.touch_session(session_id, phase=phase, host=host)
+
+
+def open_session_for(
+    port: SessionsPort,
+    repo_path: str,
+    host: str = "",
+    actor: str = "",
+) -> Session | None:
+    """Newest open session in one checkout, preferring a matching host."""
+    return port.open_session_for(repo_path, host=host, actor=actor)
+
+
+def reap_idle_sessions(
+    port: SessionsPort,
+    now: float | None = None,
+    idle_after: float = IDLE_AFTER_SECS,
+    repo_path: str = "",
+) -> list[Session]:
+    """Close abandoned sessions and return the ones that ended."""
+    return port.reap_idle_sessions(now=now, idle_after=idle_after, repo_path=repo_path)
+
+
+def current_session(port: SessionsReadPort, actor: str) -> Session | None:
     """The session this actor's writes would tag, if any."""
     return port.active_session(actor)
 

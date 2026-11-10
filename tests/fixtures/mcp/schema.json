@@ -409,7 +409,7 @@
       "annotations": {
         "readOnlyHint": true
       },
-      "description": "Recent events, or only manual overrides.",
+      "description": "Recent events.",
       "inputSchema": {
         "properties": {
           "actor": {
@@ -420,9 +420,6 @@
           },
           "limit": {
             "type": "integer"
-          },
-          "overrides": {
-            "type": "boolean"
           }
         },
         "required": [],
@@ -609,31 +606,6 @@
         "type": "object"
       },
       "name": "export_plan"
-    },
-    {
-      "annotations": {
-        "readOnlyHint": true
-      },
-      "description": "Pending or resolved agent proposals.",
-      "inputSchema": {
-        "properties": {
-          "limit": {
-            "type": "integer"
-          },
-          "status": {
-            "enum": [
-              "pending",
-              "applied",
-              "rejected",
-              "all"
-            ],
-            "type": "string"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "name": "proposal_list"
     },
     {
       "annotations": {
@@ -829,42 +801,6 @@
         "type": "object"
       },
       "name": "criterion_add"
-    },
-    {
-      "annotations": {
-        "readOnlyHint": false
-      },
-      "description": "Tick a criterion.",
-      "inputSchema": {
-        "properties": {
-          "id": {
-            "type": "integer"
-          }
-        },
-        "required": [
-          "id"
-        ],
-        "type": "object"
-      },
-      "name": "criterion_tick"
-    },
-    {
-      "annotations": {
-        "readOnlyHint": false
-      },
-      "description": "Untick a criterion.",
-      "inputSchema": {
-        "properties": {
-          "id": {
-            "type": "integer"
-          }
-        },
-        "required": [
-          "id"
-        ],
-        "type": "object"
-      },
-      "name": "criterion_untick"
     },
     {
       "annotations": {
@@ -1087,7 +1023,7 @@
       "annotations": {
         "readOnlyHint": false
       },
-      "description": "Record proof for a criterion; tick only when it passes.",
+      "description": "Record proof for a criterion.",
       "inputSchema": {
         "properties": {
           "artifact": {
@@ -1104,9 +1040,6 @@
           },
           "id": {
             "type": "integer"
-          },
-          "no_tick": {
-            "type": "boolean"
           },
           "note": {
             "type": "string"
@@ -1193,9 +1126,12 @@
       "annotations": {
         "readOnlyHint": false
       },
-      "description": "Rewrite one criterion.",
+      "description": "Rewrite one criterion's text or completion.",
       "inputSchema": {
         "properties": {
+          "done": {
+            "type": "boolean"
+          },
           "id": {
             "type": "integer"
           },
@@ -1207,8 +1143,7 @@
           }
         },
         "required": [
-          "id",
-          "text"
+          "id"
         ],
         "type": "object"
       },
@@ -1613,101 +1548,6 @@
         "type": "object"
       },
       "name": "pull_request_unlink"
-    },
-    {
-      "annotations": {
-        "readOnlyHint": false
-      },
-      "description": "Stage a plan document for human review; does not create rows.",
-      "inputSchema": {
-        "properties": {
-          "document": {
-            "type": "object"
-          },
-          "summary": {
-            "type": "string"
-          },
-          "title": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "title",
-          "document"
-        ],
-        "type": "object"
-      },
-      "name": "propose_plan"
-    },
-    {
-      "annotations": {
-        "readOnlyHint": false
-      },
-      "description": "Stage an edit to a plan, milestone, or task for review.",
-      "inputSchema": {
-        "properties": {
-          "desc": {
-            "type": "string"
-          },
-          "id": {
-            "type": "integer"
-          },
-          "kind": {
-            "enum": [
-              "plan",
-              "milestone",
-              "task"
-            ],
-            "type": "string"
-          },
-          "reason": {
-            "type": "string"
-          },
-          "summary": {
-            "type": "string"
-          },
-          "title": {
-            "type": "string"
-          },
-          "why": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "kind",
-          "id"
-        ],
-        "type": "object"
-      },
-      "name": "propose_edit"
-    },
-    {
-      "annotations": {
-        "readOnlyHint": false
-      },
-      "description": "Stage a new task under a milestone for review.",
-      "inputSchema": {
-        "properties": {
-          "desc": {
-            "type": "string"
-          },
-          "milestone": {
-            "type": "integer"
-          },
-          "summary": {
-            "type": "string"
-          },
-          "title": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "milestone",
-          "title"
-        ],
-        "type": "object"
-      },
-      "name": "propose_task"
     }
   ]
 }

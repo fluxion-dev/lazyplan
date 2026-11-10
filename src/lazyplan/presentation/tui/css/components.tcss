@@ -28,13 +28,19 @@
     scrollbar-size-vertical: 1;
 }
 
-#tree-empty {
+.pane-empty {
     width: 1fr;
-    height: 1fr;
+    height: auto;
     display: none;
     content-align: center middle;
     text-align: center;
     color: $lp-text-muted;
+    padding: 1 2;
+}
+
+#tree-empty,
+#preview-empty {
+    height: 1fr;
 }
 
 #tree > .tree--guides {
@@ -63,12 +69,6 @@
     background: $lp-cursor;
     color: $lp-accent;
     text-style: bold;
-}
-
-.preview-empty,
-.git-empty {
-    color: $lp-text-muted;
-    padding: 1 2;
 }
 
 .preview-error,

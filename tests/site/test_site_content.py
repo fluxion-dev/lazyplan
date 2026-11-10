@@ -22,7 +22,7 @@ SUPPORT_IDS = {
     "trust-hubs",
     "claims",
     "sessions",
-    "workbench",
+    "overview",
     "source-trail",
     "timeline",
     "keyboard",
@@ -53,7 +53,6 @@ CAPTURE_FILES = [
     "lpui-control-room",
     "lpui-detail",
     "lpui-coordination",
-    "lpui-workbench",
     "lpui-trace",
     "lpui-source-trail",
     "lpui-git-pane",
@@ -102,12 +101,12 @@ class TestCaptureStory(unittest.TestCase):
         assert match is not None
         return match.group(1)
 
-    def test_eight_supporting_captures(self):
+    def test_supporting_captures(self):
         block = self._story_block()
         self.assertEqual(re.findall(r'file: "([^"]+)"', block), CAPTURE_FILES)
-        self.assertEqual(len(re.findall(r'name: "', block)), 8)
-        self.assertEqual(len(re.findall(r'alt: "', block)), 8)
-        self.assertEqual(len(re.findall(r'caption: "', block)), 8)
+        self.assertEqual(len(re.findall(r'name: "', block)), 7)
+        self.assertEqual(len(re.findall(r'alt: "', block)), 7)
+        self.assertEqual(len(re.findall(r'caption: "', block)), 7)
 
     def test_hero_composite_is_wide(self):
         match = re.search(r"export const HERO_COMPOSITE: Screen = \{(.*?)\n\}", self.source, re.S)
@@ -164,7 +163,7 @@ class TestPublishedCaptures(unittest.TestCase):
             block.group(1),
             re.S,
         )
-        self.assertEqual(len(entries), 8)
+        self.assertEqual(len(entries), 7)
         for file, width, height in entries:
             with self.subTest(file=file):
                 self.assertEqual(self._size(f"{file}.png"), (int(width), int(height)))

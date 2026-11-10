@@ -154,11 +154,11 @@ class TestWriteRows(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(out, "criterion\t1\topen\tLoads fast\tplan:1\t-\n")
         self.assertEqual(
-            self._row("criterion", "tick", "--id", "1"),
+            self._row("criterion", "edit", "--id", "1", "--done"),
             ["criterion", "1", "done", "Loads fast", "plan:1", "-"],
         )
         self.assertEqual(
-            self._row("criterion", "untick", "--id", "1"),
+            self._row("criterion", "edit", "--id", "1", "--open"),
             ["criterion", "1", "open", "Loads fast", "plan:1", "-"],
         )
         self.assertEqual(

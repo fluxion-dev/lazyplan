@@ -467,46 +467,48 @@ class AnnotationsMixin(StoreBase):
             ).fetchall()
         return {int(row["parent_id"]) for row in rows}
 
-    def set_criteria(self, cid: int, done: bool, actor: str = "human") -> Criterion | None:
-        """Tick or untick a checklist item and log."""
-        with self._connect() as conn:
-            r = conn.execute("SELECT * FROM criteria WHERE id=?", (cid,)).fetchone()
-            if r is None:
-                return None
-            conn.execute("UPDATE criteria SET done=? WHERE id=?", (1 if done else 0, cid))
-        self.log(actor, "criteria", "check" if done else "uncheck", f"criteria #{cid}")
-        return Criterion(
-            id=r["id"],
-            parent_kind=r["parent_kind"],
-            parent_id=r["parent_id"],
-            text=r["text"],
-            done=done,
-        )
-
     def update_criterion(
-        self, cid: int, text: str, actor: str = "human", reason: str = ""
+        self,
+        cid: int,
+        text: str | None = None,
+        done: bool | None = None,
+        actor: str = "human",
+        reason: str = "",
     ) -> Criterion | None:
-        """Rewrite one checklist item's text and log the change."""
-        body = text.strip()
-        if not body:
+        """Rewrite a checklist item's text or completion and log the change."""
+        if text is None and done is None:
+            raise ValueError("criterion edit needs text or done")
+        body = text.strip() if text is not None else None
+        if body is not None and not body:
             raise ValueError("criterion text must not be empty")
         with self._connect() as conn:
             row = conn.execute("SELECT * FROM criteria WHERE id=?", (cid,)).fetchone()
             if row is None:
                 return None
-            conn.execute("UPDATE criteria SET text=? WHERE id=?", (body, cid))
-            plan_id = self._plan_for_kind(str(row["parent_kind"]), int(row["parent_id"]))
-            if plan_id is not None:
-                self._record_scope_change(
-                    plan_id, "criterion", cid, "edit", reason=reason, actor=actor
-                )
-        self.log(actor, "criteria", "edit", f"criteria #{cid}: {body[:80]}")
+            new_text = body if body is not None else str(row["text"])
+            new_done = bool(row["done"]) if done is None else done
+            conn.execute(
+                "UPDATE criteria SET text=?, done=? WHERE id=?",
+                (new_text, 1 if new_done else 0, cid),
+            )
+            if body is not None and body != str(row["text"]):
+                plan_id = self._plan_for_kind(str(row["parent_kind"]), int(row["parent_id"]))
+                if plan_id is not None:
+                    self._record_scope_change(
+                        plan_id, "criterion", cid, "edit", reason=reason, actor=actor
+                    )
+        detail = f"criteria #{cid}"
+        if body is not None:
+            detail += f": {body[:80]}"
+        if done is not None:
+            detail += f" {'done' if done else 'open'}"
+        self.log(actor, "criteria", "edit", detail)
         return Criterion(
             id=int(row["id"]),
             parent_kind=str(row["parent_kind"]),
             parent_id=int(row["parent_id"]),
-            text=body,
-            done=bool(row["done"]),
+            text=new_text,
+            done=new_done,
         )
 
     def delete_criteria(self, cid: int, actor: str = "human", reason: str = "") -> bool:

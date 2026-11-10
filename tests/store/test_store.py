@@ -159,7 +159,7 @@ class TestStore(unittest.TestCase):
         self.store.add_criteria("milestone", s.id, "milestone criterion")
         self.store.add_criteria("task", t1.id, "open task criterion")
         done = self.store.add_criteria("task", t2.id, "done task criterion")
-        self.store.set_criteria(done.id, True)
+        self.store.update_criterion(done.id, done=True)
         self.store.link_commit("task", t1.id, "a" * 40)
         issue = self.store.add_issue_link(
             "github", "42", "42", "https://example.test/42", "Issue 42", "open", "task", t1.id
@@ -272,7 +272,7 @@ class TestStore(unittest.TestCase):
             c1 = self.store.add_criteria(kind, oid, "works")
             c2 = self.store.add_criteria(kind, oid, "fast")
             self.assertEqual(self.store.criteria_progress(kind, oid), (0, 2))
-            self.store.set_criteria(c1.id, True)
+            self.store.update_criterion(c1.id, done=True)
             self.assertEqual(self.store.criteria_progress(kind, oid), (1, 2))
             self.assertEqual(len(self.store.open_criteria(kind, oid)), 1)
             self.assertTrue(self.store.delete_criteria(c2.id))
@@ -487,8 +487,12 @@ class TestStore(unittest.TestCase):
             0,
         )
         self.assertEqual(lpui_main(["--db", self.db, "criteria", "--kind", "plan", "--id", "1"]), 0)
-        self.assertEqual(lpui_main(["--db", self.db, "check", "--id", "1"]), 0)
-        self.assertEqual(lpui_main(["--db", self.db, "uncheck", "--id", "1"]), 0)
+        self.assertEqual(
+            lpui_main(["--db", self.db, "criterion", "edit", "--id", "1", "--done"]), 0
+        )
+        self.assertEqual(
+            lpui_main(["--db", self.db, "criterion", "edit", "--id", "1", "--open"]), 0
+        )
         self.assertEqual(lpui_main(["--db", self.db, "export", "--format", "markdown"]), 0)
         self.assertEqual(
             lpui_main(["--db", self.db, "status", "--kind", "task", "--id", "1", "--to", "done"]), 0

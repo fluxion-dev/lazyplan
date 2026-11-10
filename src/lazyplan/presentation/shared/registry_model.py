@@ -25,7 +25,6 @@ ENTITIES: tuple[str, ...] = (
     "pull_request",
     "repo",
     "event",
-    "override",
 )
 
 SURFACES: tuple[str, ...] = ("tui", "cli", "mcp", "docs")
@@ -38,7 +37,6 @@ NAMESPACES: tuple[str, ...] = (
     "source",
     "theme",
     "palette",
-    "agent",
 )
 TAXONOMY: tuple[str, ...] = ENTITIES + NAMESPACES
 

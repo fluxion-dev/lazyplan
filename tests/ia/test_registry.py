@@ -95,18 +95,17 @@ class TestRegistry(unittest.TestCase):
         task = registry.palette_context(registry.Context(selected_kind="task", has_plan=True))
         self.assertEqual(task["fold-one"], "Nothing to fold")
         detail = registry.palette_context(
-            registry.Context(screen="detail", selected_kind="task", has_plan=True)
+            registry.Context(screen="hub", selected_kind="task", has_plan=True)
         )
         self.assertIsNone(detail["help"])
         self.assertIsNone(detail["quit"])
-        self.assertIsNone(detail["toggle-override"])
         self.assertEqual(detail["edit-selection"], "Only available on the tree")
 
     def test_every_disabled_action_explains_why(self):
         contexts = (
             registry.Context(screen="tree"),
             registry.Context(screen="tree", selected_kind="task", has_plan=True),
-            registry.Context(screen="detail", selected_kind="plan", has_plan=True),
+            registry.Context(screen="hub", selected_kind="plan", has_plan=True),
             registry.Context(screen="form"),
         )
         for ctx in contexts:

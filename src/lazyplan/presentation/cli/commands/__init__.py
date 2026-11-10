@@ -5,7 +5,7 @@ from __future__ import annotations
 from argparse import Namespace
 from collections.abc import Callable
 
-from ....store import Store
+from ....core.ports.app import AppPort
 from .admin import (
     _cmd_completion,
     _cmd_feed,
@@ -22,11 +22,6 @@ from .admin import (
 from .admin import (
     _cmd_mcp as _cmd_mcp,
 )
-from .agent import (
-    _cmd_agent_add,
-    _cmd_agent_list,
-    _cmd_agent_remove,
-)
 from .claim import (
     _cmd_claim,
     _cmd_claims,
@@ -36,6 +31,7 @@ from .comment import (
     _cmd_comment,
     _cmd_note,
 )
+from .doctor import _cmd_doctor
 from .forge import (
     _cmd_pr_auth,
     _cmd_pr_link,
@@ -50,7 +46,6 @@ from .plan import (
     _cmd_add_milestone,
     _cmd_add_plan,
     _cmd_add_task,
-    _cmd_check,
     _cmd_criteria,
     _cmd_criterion_edit,
     _cmd_criterion_evidence,
@@ -68,7 +63,6 @@ from .plan import (
     _cmd_reconcile,
     _cmd_show,
     _cmd_status,
-    _cmd_uncheck,
     _cmd_update,
 )
 from .proof import (
@@ -106,6 +100,7 @@ from .session import (
     _cmd_session_show,
     _cmd_session_start,
 )
+from .setup import _cmd_setup as _cmd_setup
 from .system import (
     _cmd_audit as _cmd_audit,
 )
@@ -116,16 +111,12 @@ from .system import (
     _cmd_context as _cmd_context,
 )
 from .system import (
-    _cmd_doctor,
     _cmd_lint,
     _cmd_stats,
     _cmd_trace,
 )
 from .system import (
     _cmd_review as _cmd_review,
-)
-from .system import (
-    _cmd_setup as _cmd_setup,
 )
 from .system import (
     _cmd_ship as _cmd_ship,
@@ -170,9 +161,7 @@ _GROUP_CMDS: dict[tuple[str, str], str] = {
     ("task", "unblock"): "task-unblock",
     ("criterion", "add"): "add-criteria",
     ("criterion", "list"): "criteria",
-    ("criterion", "tick"): "check",
     ("criterion", "edit"): "criterion-edit",
-    ("criterion", "untick"): "uncheck",
     ("criterion", "delete"): "delete-criteria",
     ("question", "add"): "question-add",
     ("question", "list"): "question-list",
@@ -202,12 +191,9 @@ _GROUP_CMDS: dict[tuple[str, str], str] = {
     ("pr", "link"): "pr-link",
     ("pr", "unlink"): "pr-unlink",
     ("pr", "refresh"): "pr-refresh",
-    ("agent", "list"): "agent-list",
-    ("agent", "add"): "agent-add",
-    ("agent", "remove"): "agent-remove",
 }
 
-_COMMANDS: dict[str, Callable[[Store, Namespace, str], int]] = {
+_COMMANDS: dict[str, Callable[[AppPort, Namespace, str], int]] = {
     "setup": _cmd_setup,
     "doctor": _cmd_doctor,
     "info": _cmd_info,
@@ -244,8 +230,6 @@ _COMMANDS: dict[str, Callable[[Store, Namespace, str], int]] = {
     "add-criteria": _cmd_add_criteria,
     "criterion-edit": _cmd_criterion_edit,
     "criteria": _cmd_criteria,
-    "check": _cmd_check,
-    "uncheck": _cmd_uncheck,
     "criterion-prove": _cmd_criterion_prove,
     "question-add": _cmd_question_add,
     "question-list": _cmd_question_list,
@@ -291,7 +275,4 @@ _COMMANDS: dict[str, Callable[[Store, Namespace, str], int]] = {
     "feed": _cmd_feed,
     "completion": _cmd_completion,
     "ui": _cmd_ui,
-    "agent-list": _cmd_agent_list,
-    "agent-add": _cmd_agent_add,
-    "agent-remove": _cmd_agent_remove,
 }

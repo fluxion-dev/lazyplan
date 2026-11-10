@@ -3,10 +3,8 @@
 from __future__ import annotations
 
 import sqlite3
-from pathlib import Path
 
 from ..core.kinds import check_parent_kind
-from ..infrastructure.repo_paths import resolve_repo_path
 from .base import (
     StoreBase,
 )
@@ -14,11 +12,6 @@ from .base import (
 
 class ReposMixin(StoreBase):
     """Store methods for links."""
-
-    @staticmethod
-    def _norm_repo_path(path: str | Path) -> str:
-        """Absolute normalized repo path (no existence requirement)."""
-        return resolve_repo_path(str(path))
 
     def add_repo_link(
         self,
@@ -34,7 +27,7 @@ class ReposMixin(StoreBase):
         check_parent_kind(parent_kind)
         if not self._parent_exists(parent_kind, parent_id):
             raise KeyError(f"{parent_kind} #{parent_id} not found")
-        norm_path = self._norm_repo_path(repo_path)
+        norm_path = self.resolve_repo_path(repo_path)
         if not norm_path.strip():
             raise ValueError("repo path must not be empty")
         remote = (repo_remote or "").strip()
@@ -78,7 +71,7 @@ class ReposMixin(StoreBase):
     ) -> bool:
         """Unlink a repo; without remote, removes all remotes for the path."""
         check_parent_kind(parent_kind)
-        norm_path = self._norm_repo_path(repo_path)
+        norm_path = self.resolve_repo_path(repo_path)
         with self._connect() as conn:
             if repo_remote is None:
                 cur = conn.execute(

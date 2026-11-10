@@ -34,7 +34,7 @@ class TestHealMode(unittest.TestCase):
         self.assertEqual(self.store.get_milestone(self.milestone.id).status, Status.DONE)
         self.assertEqual(self.store.get_plan(self.plan.id).status, Status.DONE)
 
-    def test_reconcile_check_reports_open_criteria_without_ticking(self):
+    def test_reconcile_check_reports_open_criteria_without_completing(self):
         criterion = self.store.add_criteria("task", self.task.id, "Still open", actor="fixture")
         services.set_status(self.store, "task", self.task.id, Status.DONE, actor="fixture")
         report = services.reconcile(self.store, actor="fixture", check=True)

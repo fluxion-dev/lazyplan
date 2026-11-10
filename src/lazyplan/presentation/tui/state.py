@@ -36,8 +36,6 @@ class AppState:
     selected: tuple[str, int] | None = None
     plan_mode: PlanMode = PlanMode.ACTIVE
     filter_text: str = ""
-    override_mode: bool = False
-    override_warned: bool = False
     marked: set[tuple[str, int]] = field(default_factory=set)
     collapsed: set[tuple[str, int]] = field(default_factory=set)
     expanded: set[tuple[str, int]] = field(default_factory=set)

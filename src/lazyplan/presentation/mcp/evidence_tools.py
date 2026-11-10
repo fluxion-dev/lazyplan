@@ -21,7 +21,7 @@ class EvidenceToolsMixin(McpBase):
             "criterion_prove": (
                 _tool(
                     "criterion_prove",
-                    "Record proof for a criterion; tick only when it passes.",
+                    "Record proof for a criterion.",
                     {
                         "id": _id(),
                         "command": _str(),
@@ -31,7 +31,6 @@ class EvidenceToolsMixin(McpBase):
                         "artifact": _str(),
                         "note": _str(),
                         "task": _id(),
-                        "no_tick": {"type": "boolean"},
                     },
                     ["id"],
                     False,
@@ -67,12 +66,10 @@ class EvidenceToolsMixin(McpBase):
             note=str(args.get("note") or ""),
             task_id=task_id,
             actor=self.actor,
-            tick=not bool(args.get("no_tick")),
         )
         return {
             "evidence": vars(result.evidence),
             "criterion": vars(result.criterion),
-            "ticked": result.ticked,
         }
 
     def _tool_criterion_evidence(self, args: dict) -> object:

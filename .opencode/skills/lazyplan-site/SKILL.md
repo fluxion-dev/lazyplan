@@ -43,14 +43,14 @@ The page is one long narrative. Lead with the shared plan, the planner/executor
 loop, and proof, then open into the feature matrix.
 
 - Lead cards: `shared-plan`, `agent-loop`, `proof`.
-- Supporting cards: control room, trust hubs, claims, sessions, workbench,
+- Supporting cards: control room, trust hubs, claims, sessions, overview,
   source trail, timeline, keyboard, themes, local-first, auditability, and
   bulk/search.
 - Hero composite: `HERO_COMPOSITE` (`lpui-hero`, 2400x1200) shows the plan tree,
-  the workbench, and the proof trail.
-- Supporting captures: `STORY_SCREENS` holds the eight scenes: control room,
-  plan detail, coordination, workbench, trust/evidence, source trail, git/PR
-  proof, and timeline.
+  the agent loop, and the proof trail.
+- Supporting captures: `STORY_SCREENS` holds the seven scenes: control room,
+  plan overview, coordination, trust/evidence, source trail, git/PR proof, and
+  timeline.
 
 Keep the hero headline and subtitle. Rewrite section copy in `copy.ts`, card
 copy in `features.json`, and capture captions in `screens.ts`.
@@ -78,18 +78,18 @@ with the full rendered body; otherwise SEO and `check-site.py` fail.
 
 ## Captures
 
-The published set is the eight supporting captures, the hero pair, and the
+The published set is the seven supporting captures, the hero pair, and the
 social card. Regenerate it from the repository root:
 
 ```bash
 .venv/bin/python tools/capture-screens.py \
   --only lpui-control-room --only lpui-detail --only lpui-coordination \
-  --only lpui-workbench --only lpui-trace --only lpui-source-trail \
+  --only lpui-mcp --only lpui-trace --only lpui-source-trail \
   --only lpui-git-pane --only lpui-timeline
 ```
 
-The tool writes `lpui-hero.png` (2400x1200) from coordination, workbench, and
-source trail, plus `og-lpui-and-agent.png`. Every PNG gets a WebP. Keep only
+The tool writes `lpui-hero.png` (2400x1200) from coordination, the agent loop,
+and source trail, plus `og-lpui-and-agent.png`. Every PNG gets a WebP. Keep only
 the referenced assets in `site/public/screens`; the discoverability test rejects
 extra published screens.
 

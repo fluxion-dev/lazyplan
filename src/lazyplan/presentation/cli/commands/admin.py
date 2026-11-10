@@ -12,10 +12,11 @@ from pathlib import Path
 
 from lazyplan.infrastructure.repo import find_repo_root, repo_label, resolve_db_path
 
+from ....core.ports.insights import InsightsPort
+from ....core.ports.planning import PlanningPort
+from ....core.ports.transfer import TransferPort
 from ....infrastructure import textfile
-from ....infrastructure.update_apply import build_apply_plan, spawn_windows_apply
-from ....infrastructure.update_stage import StageError
-from ....services.environment import (
+from ....infrastructure.environment import (
     UpgradeError,
     detect,
     diagnostics,
@@ -25,7 +26,8 @@ from ....services.environment import (
     run_upgrade,
     stage_update,
 )
-from ....store import Store
+from ....infrastructure.update_apply import build_apply_plan, spawn_windows_apply
+from ....infrastructure.update_stage import StageError
 from ...shared import (
     porcelain,
 )
@@ -45,7 +47,7 @@ from ..rows_proof import (
 )
 
 
-def _cmd_sync(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_sync(store: TransferPort, args: argparse.Namespace, actor: str) -> int:
     from ....services.transfer import sync_plans
 
     try:
@@ -95,7 +97,7 @@ def _cmd_sync(store: Store, args: argparse.Namespace, actor: str) -> int:
     return 1 if report["conflicts"] else 0
 
 
-def _cmd_share(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_share(store: TransferPort, args: argparse.Namespace, actor: str) -> int:
     from ....services.transfer import share_render
 
     del actor
@@ -115,28 +117,26 @@ def _cmd_share(store: Store, args: argparse.Namespace, actor: str) -> int:
     return 0
 
 
-def _cmd_mcp(store: Store | None, args: argparse.Namespace, actor: str) -> int:
+def _cmd_mcp(store: object | None, args: argparse.Namespace, actor: str) -> int:
     from ... import mcp as mcp_mod
 
     del store
     path = resolve_db_path(args.db)
-    return mcp_mod.run(
-        str(path),
-        actor=actor,
-        read_only=bool(args.read_only),
-        proposal_only=bool(getattr(args, "proposal_only", False)),
-    )
+    return mcp_mod.run(str(path), actor=actor, read_only=bool(args.read_only))
 
 
-def _cmd_hook(store: Store | None, args: argparse.Namespace, actor: str) -> int:
-    """Read-only lifecycle reminder; always exits 0 so a host never blocks."""
+def _cmd_hook(store: object | None, args: argparse.Namespace, actor: str) -> int:
+    """Lifecycle reminder and session heartbeat; always exits 0 so a host never blocks."""
     from lazyplan.infrastructure import hook_hosts
     from lazyplan.services import hooks
 
+    from ..store import optional_store
+
     del store, actor
+    db = optional_store(args)
     payload = hooks.read_payload(sys.stdin)
     host = hooks.detect_host(payload, args.host)
-    result = hooks.run(args.event, payload, host, Path.cwd())
+    result = hooks.run(args.event, payload, host, Path.cwd(), store=db)
     if args.json:
         _emit(
             args,
@@ -154,17 +154,17 @@ def _cmd_hook(store: Store | None, args: argparse.Namespace, actor: str) -> int:
     return 0
 
 
-def _cmd_info(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_info(store: PlanningPort, args: argparse.Namespace, actor: str) -> int:
     root = find_repo_root(Path.cwd())
-    plan_dir = store.path.parent
+    plan_dir = Path(store.db_path).parent
     try:
         contents = sorted(f.name for f in plan_dir.iterdir()) if plan_dir.is_dir() else []
     except OSError:
         contents = []
     payload = {
-        "db": str(store.path),
+        "db": store.db_path,
         "repo": str(root) if root else None,
-        "scope": repo_label(store.path),
+        "scope": repo_label(store.db_path),
         "plan_files": contents,
         "counts": store.counts(),
     }
@@ -175,11 +175,11 @@ def _cmd_info(store: Store, args: argparse.Namespace, actor: str) -> int:
     return _emit(args, payload)
 
 
-def _cmd_seed(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_seed(store: TransferPort, args: argparse.Namespace, actor: str) -> int:
     from ....services.transfer import seed_demo
 
     seed_demo(store)
-    return _emit(args, {"db": str(store.path), "counts": store.counts()})
+    return _emit(args, {"db": store.db_path, "counts": store.counts()})
 
 
 def _print_feed_events(
@@ -198,18 +198,15 @@ def _print_feed_events(
             )
 
 
-def _cmd_feed(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_feed(store: InsightsPort, args: argparse.Namespace, actor: str) -> int:
     seen = -1
     terse = porcelain.enabled(args)
     session_filter = getattr(args, "session", None)
-    overrides = bool(getattr(args, "overrides", False))
     while True:
         if session_filter is None:
-            events = store.feed_overrides(args.limit) if overrides else store.feed(args.limit)
+            events = store.feed(args.limit)
         else:
             events = store.events_for_session(session_filter, args.limit)
-            if overrides:
-                events = [event for event in events if event.get("kind") == "override"]
         if not args.follow:
             if args.json:
                 print(json.dumps(events, indent=2, default=str))
@@ -229,7 +226,7 @@ def _cmd_feed(store: Store, args: argparse.Namespace, actor: str) -> int:
         time.sleep(args.interval)
 
 
-def _cmd_completion(store: Store | None, args: argparse.Namespace, actor: str) -> int:
+def _cmd_completion(store: object | None, args: argparse.Namespace, actor: str) -> int:
     parser = build_parser()
     subs = next(a for a in parser._actions if isinstance(a, argparse._SubParsersAction))
     cmds = list(subs.choices)
@@ -261,7 +258,7 @@ def _is_windows() -> bool:
     return os.name == "nt"
 
 
-def _cmd_upgrade(store: Store | None, args: argparse.Namespace, actor: str) -> int:
+def _cmd_upgrade(store: object | None, args: argparse.Namespace, actor: str) -> int:
     """Upgrade this install to the latest release; needs no database."""
     del store, actor
     if getattr(args, "diagnose", False):
@@ -345,7 +342,7 @@ def _cmd_upgrade(store: Store | None, args: argparse.Namespace, actor: str) -> i
     return 0
 
 
-def _cmd_help(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_help(store: object, args: argparse.Namespace, actor: str) -> int:
     if args.json:
         return _emit(args, {"help": HELP_TEXT})
     print(HELP_TEXT)

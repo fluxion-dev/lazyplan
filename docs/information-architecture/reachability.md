@@ -11,21 +11,20 @@ Budget: every action is at most **3** interactions from the tree.
 | --- | ---: |
 | `plan` | 1 |
 | `milestone` | 1 |
-| `task` | 1 |
-| `criterion` | 1 |
-| `evidence` | 2 |
-| `question` | 2 |
-| `reference` | 2 |
-| `claim` | 2 |
-| `session` | 2 |
-| `note` | 2 |
-| `comment` | 2 |
-| `commit` | 2 |
-| `file` | 2 |
-| `pull_request` | 2 |
+| `task` | 0 |
+| `criterion` | 0 |
+| `evidence` | 1 |
+| `question` | 1 |
+| `reference` | 1 |
+| `claim` | 1 |
+| `session` | 1 |
+| `note` | 1 |
+| `comment` | 1 |
+| `commit` | 1 |
+| `file` | 1 |
+| `pull_request` | 1 |
 | `repo` | 1 |
 | `event` | 1 |
-| `override` | 0 |
 
 ## Action routes
 
@@ -34,85 +33,78 @@ Budget: every action is at most **3** interactions from the tree.
 | `plan.create` | tree › create | 1 |
 | `milestone.create` | tree › create | 1 |
 | `task.create` | tree › create | 1 |
-| `criterion.add` | tree › detail | 1 |
-| `plan.approve` | tree › detail › trust | 2 |
-| `plan.diff` | tree › detail › trust | 2 |
-| `criterion.prove` | tree › detail › evidence | 2 |
-| `question.add` | tree › detail › questions | 2 |
-| `question.resolve` | tree › detail › questions | 2 |
-| `question.reopen` | tree › detail › questions | 2 |
-| `reference.link` | tree › detail › references | 2 |
-| `reference.unlink` | tree › detail › references | 2 |
-| `reference.open` | tree › detail › references | 2 |
-| `task.claim` | tree › detail › coordination | 2 |
-| `task.block` | tree › detail › coordination | 2 |
-| `task.unblock` | tree › detail › coordination | 2 |
-| `task.finish` | tree › detail › finish | 2 |
-| `row.edit` | tree › detail | 1 |
-| `task.move` | tree › detail | 1 |
+| `criterion.add` | tree | 0 |
+| `plan.approve` | tree › trust | 1 |
+| `plan.diff` | tree › trust | 1 |
+| `criterion.prove` | tree › evidence | 1 |
+| `question.add` | tree › questions | 1 |
+| `question.resolve` | tree › questions | 1 |
+| `question.reopen` | tree › questions | 1 |
+| `reference.link` | tree › references | 1 |
+| `reference.unlink` | tree › references | 1 |
+| `reference.open` | tree › references | 1 |
+| `task.claim` | tree › coordination | 1 |
+| `task.block` | tree › coordination | 1 |
+| `task.unblock` | tree › coordination | 1 |
+| `task.finish` | tree › finish | 1 |
+| `row.edit` | tree | 0 |
+| `task.move` | tree | 0 |
 | `row.mark` | tree | 0 |
 | `row.clear_marks` | tree | 0 |
-| `claim.release` | tree › detail › coordination | 2 |
-| `claim.force_release` | tree › detail › coordination | 2 |
-| `criterion.tick` | tree › detail | 1 |
-| `criterion.untick` | tree › detail | 1 |
-| `criterion.relate` | tree › detail › trust | 2 |
-| `criterion.unrelate` | tree › detail › trust | 2 |
-| `row.delete` | tree › detail | 1 |
-| `commit.link` | tree › detail › provenance | 2 |
-| `commit.refresh` | tree › detail › provenance | 2 |
+| `claim.release` | tree › coordination | 1 |
+| `claim.force_release` | tree › coordination | 1 |
+| `criterion.relate` | tree › trust | 1 |
+| `criterion.unrelate` | tree › trust | 1 |
+| `row.delete` | tree | 0 |
+| `commit.link` | tree › provenance | 1 |
+| `commit.refresh` | tree › provenance | 1 |
 | `bulk.move` | tree | 0 |
 | `bulk.block` | tree | 0 |
 | `bulk.release` | tree | 0 |
 | `bulk.undo` | tree | 0 |
-| `view.detail` | tree › detail | 1 |
 | `view.fold` | tree | 0 |
 | `view.filter` | tree | 0 |
 | `view.plan_mode` | tree | 0 |
 | `view.timeline` | tree | 0 |
-| `view.criteria_hub` | tree › detail › trust | 2 |
-| `view.evidence_hub` | tree › detail › trust | 2 |
-| `view.questions_hub` | tree › detail › trust | 2 |
-| `view.references_hub` | tree › detail › trust | 2 |
+| `view.criteria_hub` | tree › trust | 1 |
+| `view.evidence_hub` | tree › trust | 1 |
+| `view.questions_hub` | tree › trust | 1 |
+| `view.references_hub` | tree › trust | 1 |
 | `view.refresh` | tree | 0 |
-| `git.status` | tree › detail › provenance | 2 |
-| `pull_request.open` | tree › detail › provenance | 2 |
+| `git.status` | tree › provenance | 1 |
+| `pull_request.open` | tree › provenance | 1 |
 | `source.trail` | tree › source | 1 |
-| `override.toggle` | tree | 0 |
 | `theme.cycle` | tree | 0 |
 | `palette.open` | any | 0 |
 | `plan.export` | tree › export | 1 |
 | `app.update` | tree › update | 1 |
 | `app.help` | any | 0 |
 | `app.quit` | any | 0 |
-| `task.renew` | tree › detail › coordination | 2 |
-| `task.touch_add` | tree › detail › coordination | 2 |
-| `task.touch_remove` | tree › detail › coordination | 2 |
-| `session.start` | tree › detail › sessions | 2 |
-| `session.end` | tree › detail › sessions | 2 |
-| `note.add` | tree › detail › coordination | 2 |
-| `comment.add` | tree › detail › coordination | 2 |
-| `comment.resolve` | tree › detail › coordination | 2 |
-| `view.claims_hub` | tree › detail › coordination | 2 |
-| `view.sessions_hub` | tree › detail › sessions | 2 |
-| `view.comments_hub` | tree › detail › coordination | 2 |
-| `agent.workbench` | tree | 0 |
-| `criterion.edit` | tree › detail › trust | 2 |
-| `evidence.list` | tree › detail › evidence | 2 |
-| `criterion.delete` | tree › detail › trust | 2 |
-| `comment.edit` | tree › detail › coordination | 2 |
-| `view.pull_requests_hub` | tree › detail › provenance | 2 |
-| `pull_request.list` | tree › detail › provenance | 2 |
-| `pull_request.refresh` | tree › detail › provenance | 2 |
-| `pull_request.link` | tree › detail › provenance | 2 |
-| `pull_request.unlink` | tree › detail › provenance | 2 |
-| `commit.open` | tree › detail › provenance | 2 |
-| `file.open` | tree › detail › provenance | 2 |
+| `task.renew` | tree › coordination | 1 |
+| `task.touch_add` | tree › coordination | 1 |
+| `task.touch_remove` | tree › coordination | 1 |
+| `session.start` | tree › sessions | 1 |
+| `session.end` | tree › sessions | 1 |
+| `note.add` | tree › coordination | 1 |
+| `comment.add` | tree › coordination | 1 |
+| `comment.resolve` | tree › coordination | 1 |
+| `view.claims_hub` | tree › coordination | 1 |
+| `view.sessions_hub` | tree › sessions | 1 |
+| `view.comments_hub` | tree › coordination | 1 |
+| `criterion.edit` | tree › trust | 1 |
+| `evidence.list` | tree › evidence | 1 |
+| `criterion.delete` | tree › trust | 1 |
+| `comment.edit` | tree › coordination | 1 |
+| `view.pull_requests_hub` | tree › provenance | 1 |
+| `pull_request.list` | tree › provenance | 1 |
+| `pull_request.refresh` | tree › provenance | 1 |
+| `pull_request.link` | tree › provenance | 1 |
+| `pull_request.unlink` | tree › provenance | 1 |
+| `commit.open` | tree › provenance | 1 |
+| `file.open` | tree › provenance | 1 |
 | `repo.open` | tree › source | 1 |
 | `event.list` | tree › activity | 1 |
 | `event.open` | tree › activity | 1 |
-| `override.list` | tree › activity | 1 |
-| `override.open` | tree › activity | 1 |
 
 ## Over budget
 

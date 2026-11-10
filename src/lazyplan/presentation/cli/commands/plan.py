@@ -13,7 +13,12 @@ from lazyplan.services import evidence as evidence_service
 from lazyplan.services import revisions as revisions_service
 
 from ....core.entities import Milestone, Plan, Status, Task
-from ....store import Store, to_payload
+from ....core.ports.coordination import CoordinationPort
+from ....core.ports.insights import InsightsPort
+from ....core.ports.planning import PlanningPort
+from ....core.ports.provenance import ProvenancePort
+from ....core.ports.revisions import RevisionsPort
+from ....core.serialization import to_payload
 from ...shared import (
     porcelain,
 )
@@ -52,7 +57,7 @@ def _resolve_title(args: argparse.Namespace) -> str:
     return ""
 
 
-def _cmd_add_plan(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_add_plan(store: PlanningPort, args: argparse.Namespace, actor: str) -> int:
     title = _resolve_title(args)
     if not title.strip():
         print("error: plan add needs --title", file=sys.stderr)
@@ -69,7 +74,7 @@ def _cmd_add_plan(store: Store, args: argparse.Namespace, actor: str) -> int:
     return _emit_record(args, _porcelain_row(store, p), {"plan": to_payload(vars(p))})
 
 
-def _cmd_add_milestone(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_add_milestone(store: PlanningPort, args: argparse.Namespace, actor: str) -> int:
     s = services.create_milestone(
         store,
         args.plan,
@@ -81,7 +86,7 @@ def _cmd_add_milestone(store: Store, args: argparse.Namespace, actor: str) -> in
     return _emit_record(args, _porcelain_row(store, s), {"milestone": to_payload(vars(s))})
 
 
-def _cmd_add_task(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_add_task(store: CoordinationPort, args: argparse.Namespace, actor: str) -> int:
     with store.transaction():
         t = services.create_task(
             store,
@@ -96,7 +101,7 @@ def _cmd_add_task(store: Store, args: argparse.Namespace, actor: str) -> int:
     return _emit_record(args, _porcelain_row(store, t), {"task": to_payload(vars(t))})
 
 
-def _cmd_plan_recipe(store: Store | None, args: argparse.Namespace, actor: str) -> int:
+def _cmd_plan_recipe(store: object | None, args: argparse.Namespace, actor: str) -> int:
     """Print one packaged recipe document."""
     from lazyplan.services import plan_recipes
 
@@ -109,7 +114,7 @@ def _cmd_plan_recipe(store: Store | None, args: argparse.Namespace, actor: str) 
     return _emit(args, document)
 
 
-def _cmd_plan_apply(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_plan_apply(store: PlanningPort, args: argparse.Namespace, actor: str) -> int:
     """Create a validated plan document atomically."""
     from lazyplan.services import plan_apply, plan_document
 
@@ -179,7 +184,7 @@ def _cmd_plan_apply(store: Store, args: argparse.Namespace, actor: str) -> int:
     return 0
 
 
-def _cmd_plan_approve(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_plan_approve(store: RevisionsPort, args: argparse.Namespace, actor: str) -> int:
     """Approve the live plan scope."""
     plan = store.get_plan(args.id)
     if plan is None:
@@ -205,7 +210,7 @@ def _cmd_plan_approve(store: Store, args: argparse.Namespace, actor: str) -> int
     return 0
 
 
-def _cmd_plan_revisions(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_plan_revisions(store: RevisionsPort, args: argparse.Namespace, actor: str) -> int:
     """List one plan's approval history."""
     del actor
     plan = store.get_plan(args.id)
@@ -221,7 +226,7 @@ def _cmd_plan_revisions(store: Store, args: argparse.Namespace, actor: str) -> i
     )
 
 
-def _cmd_plan_diff(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_plan_diff(store: RevisionsPort, args: argparse.Namespace, actor: str) -> int:
     """Report drift between an approved revision and live scope or another revision."""
     del actor
     plan = store.get_plan(args.id)
@@ -255,7 +260,7 @@ def _cmd_plan_diff(store: Store, args: argparse.Namespace, actor: str) -> int:
     return exit_code
 
 
-def _cmd_update(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_update(store: PlanningPort, args: argparse.Namespace, actor: str) -> int:
     title_patch = _resolve_title(args) or None
     what = getattr(args, "what", None)
     desc_patch: str | None = args.desc if args.desc is not None else what
@@ -295,7 +300,7 @@ def _cmd_update(store: Store, args: argparse.Namespace, actor: str) -> int:
     )
 
 
-def _cmd_show(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_show(store: InsightsPort, args: argparse.Namespace, actor: str) -> int:
     full = store.get_full(args.kind, args.id)
     if full is None:
         print(msg_not_found(args.kind, args.id), file=sys.stderr)
@@ -310,7 +315,7 @@ def _cmd_show(store: Store, args: argparse.Namespace, actor: str) -> int:
     return 0
 
 
-def _cmd_status(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_status(store: InsightsPort, args: argparse.Namespace, actor: str) -> int:
     left = store.open_criteria(args.kind, args.id)
     if args.to == "done" and left:
         print(
@@ -353,7 +358,7 @@ def _cmd_status(store: Store, args: argparse.Namespace, actor: str) -> int:
     return _emit(args, payload)
 
 
-def _cmd_delete(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_delete(store: PlanningPort, args: argparse.Namespace, actor: str) -> int:
     before = store.get_parent(args.kind, args.id)
     title = "-"
     parent = "-"
@@ -375,7 +380,7 @@ def _cmd_delete(store: Store, args: argparse.Namespace, actor: str) -> int:
     return _emit_record(args, line, {"ok": True, "deleted": f"{args.kind} #{args.id}"})
 
 
-def _cmd_reconcile(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_reconcile(store: CoordinationPort, args: argparse.Namespace, actor: str) -> int:
     check = bool(getattr(args, "check", False))
     mode = settings.heal_mode(getattr(args, "heal", None))
     report = services.reconcile(
@@ -393,7 +398,7 @@ def _cmd_reconcile(store: Store, args: argparse.Namespace, actor: str) -> int:
     return code
 
 
-def _cmd_add_criteria(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_add_criteria(store: PlanningPort, args: argparse.Namespace, actor: str) -> int:
     c = store.add_criteria(
         args.kind,
         args.id,
@@ -404,9 +409,24 @@ def _cmd_add_criteria(store: Store, args: argparse.Namespace, actor: str) -> int
     return _emit_record(args, _criterion_row(c), {"criteria": vars(c)})
 
 
-def _cmd_criterion_edit(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_criterion_edit(store: PlanningPort, args: argparse.Namespace, actor: str) -> int:
+    done: bool | None = None
+    if getattr(args, "done", False):
+        done = True
+    elif getattr(args, "open", False):
+        done = False
+    if args.text is None and done is None:
+        print(
+            msg_error(ValueError("criterion edit needs --text, --done, or --open")),
+            file=sys.stderr,
+        )
+        return 2
     crit = store.update_criterion(
-        args.id, args.text, actor=actor, reason=getattr(args, "reason", "")
+        args.id,
+        text=args.text,
+        done=done,
+        actor=actor,
+        reason=getattr(args, "reason", ""),
     )
     if crit is None:
         print(msg_not_found("criteria", args.id), file=sys.stderr)
@@ -414,7 +434,7 @@ def _cmd_criterion_edit(store: Store, args: argparse.Namespace, actor: str) -> i
     return _emit_record(args, _criterion_row(crit), {"criteria": vars(crit)})
 
 
-def _cmd_criteria(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_criteria(store: PlanningPort, args: argparse.Namespace, actor: str) -> int:
     found = store.get_parent(args.kind, args.id)
     if found is None:
         print(msg_not_found(args.kind, args.id), file=sys.stderr)
@@ -427,23 +447,7 @@ def _cmd_criteria(store: Store, args: argparse.Namespace, actor: str) -> int:
     return _emit(args, [vars(c) for c in items])
 
 
-def _check_uncheck(store: Store, args: argparse.Namespace, actor: str, done: bool) -> int:
-    crit = store.set_criteria(args.id, done, actor=actor)
-    if crit is None:
-        print(msg_not_found("criteria", args.id), file=sys.stderr)
-        return 1
-    return _emit_record(args, _criterion_row(crit), {"criteria": vars(crit)})
-
-
-def _cmd_check(store: Store, args: argparse.Namespace, actor: str) -> int:
-    return _check_uncheck(store, args, actor, True)
-
-
-def _cmd_uncheck(store: Store, args: argparse.Namespace, actor: str) -> int:
-    return _check_uncheck(store, args, actor, False)
-
-
-def _cmd_delete_criteria(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_delete_criteria(store: PlanningPort, args: argparse.Namespace, actor: str) -> int:
     if not store.delete_criteria(args.id, actor=actor, reason=getattr(args, "reason", "")):
         print(msg_not_found("criteria", args.id), file=sys.stderr)
         return 1
@@ -451,8 +455,8 @@ def _cmd_delete_criteria(store: Store, args: argparse.Namespace, actor: str) -> 
     return _emit_record(args, line, {"ok": True, "deleted": f"criteria #{args.id}"})
 
 
-def _cmd_criterion_prove(store: Store, args: argparse.Namespace, actor: str) -> int:
-    """Record one proof row; tick only when it passes."""
+def _cmd_criterion_prove(store: ProvenancePort, args: argparse.Namespace, actor: str) -> int:
+    """Record one proof row without changing criterion completion."""
     try:
         result = evidence_service.prove(
             store,
@@ -465,7 +469,6 @@ def _cmd_criterion_prove(store: Store, args: argparse.Namespace, actor: str) -> 
             note=args.note,
             task_id=args.task,
             actor=actor,
-            tick=not args.no_tick,
         )
     except (KeyError, ValueError) as exc:
         print(msg_error(exc), file=sys.stderr)
@@ -479,7 +482,7 @@ def _cmd_criterion_prove(store: Store, args: argparse.Namespace, actor: str) -> 
     return 0
 
 
-def _cmd_criterion_evidence(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_criterion_evidence(store: InsightsPort, args: argparse.Namespace, actor: str) -> int:
     """List one criterion's proof rows."""
     del actor
     criterion = store.get_criterion(args.id)
@@ -495,7 +498,7 @@ def _cmd_criterion_evidence(store: Store, args: argparse.Namespace, actor: str) 
     )
 
 
-def _criterion_link(store: Store, args: argparse.Namespace, actor: str, relate: bool) -> int:
+def _criterion_link(store: PlanningPort, args: argparse.Namespace, actor: str, relate: bool) -> int:
     criterion = store.get_criterion(args.id)
     if criterion is None:
         print(msg_not_found("criterion", args.id), file=sys.stderr)
@@ -539,15 +542,15 @@ def _criterion_link(store: Store, args: argparse.Namespace, actor: str, relate: 
     return 0
 
 
-def _cmd_criterion_relate(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_criterion_relate(store: PlanningPort, args: argparse.Namespace, actor: str) -> int:
     return _criterion_link(store, args, actor, True)
 
 
-def _cmd_criterion_unrelate(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_criterion_unrelate(store: PlanningPort, args: argparse.Namespace, actor: str) -> int:
     return _criterion_link(store, args, actor, False)
 
 
-def _cmd_list(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_list(store: InsightsPort, args: argparse.Namespace, actor: str) -> int:
     archived, status = _list_filters(args)
     limit = _list_limit(args)
     repo_filter = getattr(args, "repo", None)

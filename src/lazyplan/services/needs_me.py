@@ -14,6 +14,7 @@ from ..core.policies.coordination import patterns_overlap
 from ..core.ports.needs_me import NeedsMePort
 from ..core.serialization import approval_payload
 from . import stats
+from .sessions import session_state
 
 ATTENTION_LIMIT = 20
 PLAN_LIMIT = 25
@@ -271,7 +272,12 @@ def _session_rows(
             "plan_id": session.plan_id,
             "plan_title": plan_names.get(int(session.plan_id or 0), ""),
             "branch": session.branch,
+            "host": session.host,
+            "phase": session.phase,
+            "state": session_state(session, stamp),
             "started_at": session.started_at,
+            "last_seen_at": session.last_activity(),
+            "idle": round(session.idle_seconds(stamp), 1),
             "duration": round(session.duration(stamp), 1),
         }
         for session in sessions

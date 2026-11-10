@@ -42,6 +42,8 @@ class InstallCase(unittest.TestCase):
         self.assertIn('id: "lazyplan"', text)
         self.assertIn("async setup(ctx)", text)
         self.assertIn("session-start", text)
+        self.assertIn("ctx.event.subscribe", text)
+        self.assertIn("session.idle", text)
         for relative in (".claude/settings.json", ".gemini/settings.json", ".codex/hooks.json"):
             data = self._read(self.home / relative)
             self.assertTrue(data["hooks"])

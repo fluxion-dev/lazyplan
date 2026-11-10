@@ -7,6 +7,7 @@
   STARTERS/ensure_templates (template scaffold seams), vcs registry.
 - Session API kept deliberately: the store and port surface is consumed
   by the session commands and resume reads cut in T1436 and T1437.
+  auto_closed is display metadata for idle-reaped rows.
 - Metrics dashboard contract: snapshot fields are consumed by the chart
   cards and their tests; attention_ids is the set form of the preview map.
 - sqlite3 API noise: row_factory.
@@ -23,7 +24,6 @@ _.on_tree_node_expanded
 _.on_tree_node_selected
 _.action_toggle_node
 _.action_toggle_expand_all
-_.action_open_detail
 _.action_fold
 _.action_fold_left
 _.action_fold_right
@@ -33,7 +33,6 @@ _.action_new_context
 _.action_new_plan
 _.action_new_milestone
 _.action_new_task
-_.action_criteria
 _.action_delete
 _.action_toggle_status
 _.action_fold_all
@@ -41,14 +40,16 @@ _.action_cancel
 _.action_export_md
 _.action_move
 _.action_add_criterion
-_.action_untick_criterion
 _.action_edit_selection
 _.action_filter_text
 _.action_quit
 _.export_plan
 _.render_plan_markdown
 BINDINGS
+auto_closed
 CSS
+tool_actions
+tool_labels
 CSS_PATH
 TITLE
 border_title
@@ -110,7 +111,6 @@ _.action_toggle_edit
 _.action_back
 _.action_save
 _.action_advance_status
-_.action_tick_criterion
 _.action_add_child
 _.action_delete_row
 _.action_open_source
@@ -146,6 +146,7 @@ highlighted
 disabled
 _._later
 _._download
+_._save
 bubble
 rev
 run_wizard
@@ -206,22 +207,3 @@ _.can_focus
 on_root
 _.on_click
 _.load_children
-
-# ACP transport surface kept for the workbench and the real-agent smoke.
-_.agent_info
-_.auth_methods
-_.load_session
-_.last_stderr
-# ACP event fields carried to the workbench and its tests.
-priority
-message_id
-# Agent policy tables kept for the documented write policy and tests.
-DIRECT_WRITES
-PROPOSAL_TOOLS
-# Agent runs and workbench actions dispatched by Textual bindings.
-_.list_agent_runs
-_.action_start_work
-_.action_apply
-_.action_reject
-_.on_option_list_option_highlighted
-_.on_option_list_option_selected

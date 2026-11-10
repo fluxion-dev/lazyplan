@@ -12,15 +12,10 @@ on:
         default: main
         type: string
       tests:
-        description: Pytest targets separated by spaces
+        description: Unittest targets separated by spaces
         required: false
-        default: tests/snapshots/snap_tui.py::test_control_room_shell tests/tui/test_update_screen.py tests/infrastructure/test_acp.py
+        default: tests.cli.test_evidence tests.store.test_store
         type: string
-      update_snapshots:
-        description: Regenerate snapshots instead of comparing them
-        required: false
-        default: false
-        type: boolean
       repeat:
         description: Run the selected tests this many times
         required: false
@@ -64,26 +59,13 @@ jobs:
       - name: Focused tests
         env:
           TESTS: ${{ inputs.tests }}
-          UPDATE_SNAPSHOTS: ${{ inputs.update_snapshots }}
           REPEAT: ${{ inputs.repeat }}
         run: |
           if [[ -d .venv/Scripts ]]; then VENV_BIN=.venv/Scripts; else VENV_BIN=.venv/bin; fi
-          extra=()
-          if [[ "$UPDATE_SNAPSHOTS" == "true" ]]; then extra=(--snapshot-update); fi
           repeats="$REPEAT"
           case "$repeats" in ''|*[!0-9]*) repeats=1 ;; esac
           for ((run = 1; run <= repeats; run++)); do
             echo "::group::focused run $run/$repeats"
-            "$VENV_BIN"/python -m pytest $TESTS -q -rA \
-              --snapshot-report snapshot_report.html "${extra[@]}"
+            PYTHONPATH=src "$VENV_BIN"/python -m unittest $TESTS -v
             echo "::endgroup::"
           done
-      - name: Upload focused artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-focus
-          path: |
-            snapshot_report.html
-            tests/snapshots/__snapshots__/**/*.svg
-          if-no-files-found: ignore

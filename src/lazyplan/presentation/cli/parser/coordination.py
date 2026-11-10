@@ -152,11 +152,6 @@ def add_mcp(
         action="store_true",
         help="expose read tools only and never create the database",
     )
-    mc.add_argument(
-        "--proposal-only",
-        action="store_true",
-        help="omit structural writes; agents must use propose tools",
-    )
 
 
 def add_audit(
@@ -341,7 +336,7 @@ def add_hook(
 
     hk = sub.add_parser(
         "hook",
-        help="read a host lifecycle event and print a reminder",
+        help="read a host lifecycle event, track the session, and print a reminder",
         parents=[common],
     )
     hk.add_argument(

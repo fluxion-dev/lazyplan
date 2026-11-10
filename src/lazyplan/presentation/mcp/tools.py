@@ -13,15 +13,13 @@ from lazyplan import services
 from lazyplan.infrastructure.repo import find_repo_root, repo_label
 from lazyplan.infrastructure.vcs import detect_backend
 from lazyplan.services import trace
-from lazyplan.services.agent_policy import allowed_in_proposal_mode
 
 from ...core.entities import Milestone, Plan, Status, Task
+from ...core.serialization import to_payload
 from ...services import insights
-from ...store import to_payload
 from .base import McpBase
 from .collaboration_tools import CollaborationToolsMixin
 from .evidence_tools import EvidenceToolsMixin
-from .proposal_tools import ProposalToolsMixin
 from .provenance_tools import ProvenanceToolsMixin
 from .question_tools import QuestionToolsMixin
 from .review_tools import ReviewToolsMixin
@@ -38,7 +36,6 @@ PROTOCOL_VERSION = "2024-11-05"
 class ToolsMixin(
     CollaborationToolsMixin,
     EvidenceToolsMixin,
-    ProposalToolsMixin,
     ProvenanceToolsMixin,
     QuestionToolsMixin,
     ReviewToolsMixin,
@@ -121,14 +118,6 @@ class ToolsMixin(
                     False,
                 ),
                 self._tool_criterion_add,
-            ),
-            "criterion_tick": (
-                _tool("criterion_tick", "Tick a criterion.", {"id": _id()}, ["id"], False),
-                self._tool_criterion_tick,
-            ),
-            "criterion_untick": (
-                _tool("criterion_untick", "Untick a criterion.", {"id": _id()}, ["id"], False),
-                self._tool_criterion_untick,
             ),
             "criterion_relate": (
                 _tool(
@@ -219,7 +208,6 @@ class ToolsMixin(
         tools.update(self._question_write_registry())
         tools.update(self._collaboration_write_registry())
         tools.update(self._provenance_write_registry())
-        tools.update(self._proposal_write_registry())
         return tools
 
     def _tool_trace(self, args: dict) -> object:
@@ -270,12 +258,6 @@ class ToolsMixin(
         if isinstance(limit, int):
             ids = ids[: max(limit, 0)]
         return store.get_full_many("plan", ids)
-
-    def _tool_criterion_untick(self, args: dict) -> object:
-        criterion = self._need_store().set_criteria(int(args["id"]), False, actor=self.actor)
-        if criterion is None:
-            raise KeyError(f"criterion {args['id']} not found")
-        return vars(criterion)
 
     def _tool_claim_release(self, args: dict) -> object:
         return services.release_task_claim(
@@ -354,7 +336,6 @@ class ToolsMixin(
         tools.update(self._review_read_registry())
         tools.update(self._collaboration_read_registry())
         tools.update(self._provenance_read_registry())
-        tools.update(self._proposal_read_registry())
         return tools
 
     def _tool_claim_renew(self, args: dict) -> object:
@@ -442,9 +423,9 @@ class ToolsMixin(
         store = self._need_store()
         root = find_repo_root(Path.cwd())
         return {
-            "db": str(store.path),
+            "db": store.db_path,
             "repo": str(root) if root else None,
-            "scope": repo_label(store.path),
+            "scope": repo_label(store.db_path),
             "counts": store.counts(),
         }
 
@@ -513,12 +494,6 @@ class ToolsMixin(
         plan_id = args.get("plan")
         return insights.brief.build(self._need_store(), plan_id)
 
-    def _tool_criterion_tick(self, args: dict) -> object:
-        criterion = self._need_store().set_criteria(int(args["id"]), True, actor=self.actor)
-        if criterion is None:
-            raise KeyError(f"criterion {args['id']} not found")
-        return vars(criterion)
-
     def _tool_criterion_unrelate(self, args: dict) -> object:
         ok = self._need_store().unrelate_criterion(
             int(args["id"]), int(args["task"]), actor=self.actor
@@ -553,12 +528,7 @@ class ToolsMixin(
         """Merge read and write tools for the current mode."""
         tools = self._read_registry()
         if not self.read_only:
-            writes = self._write_registry()
-            if self.proposal_only:
-                writes = {
-                    name: entry for name, entry in writes.items() if allowed_in_proposal_mode(name)
-                }
-            tools.update(writes)
+            tools.update(self._write_registry())
         return tools
 
     def _tool_block(self, args: dict) -> object:

@@ -5,6 +5,7 @@ import json
 import os
 import sys
 import tempfile
+import time
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
@@ -66,14 +67,16 @@ class HookCase(unittest.TestCase):
 
     def test_session_start_names_the_doing_task(self):
         _plan, _task = self._seed()
-        result = hooks.build_result("session-start", {}, self.repo, commits=[])
+        result = hooks.build_result(
+            "session-start", {}, self.repo, commits=[], store=Store(self.db)
+        )
         self.assertIn("Doing task", result.text)
         self.assertIn("next", result.text)
         self.assertTrue(result.context)
 
     def test_pre_compact_injects_the_context_packet(self):
         _plan, _task = self._seed()
-        result = hooks.build_result("pre-compact", {}, self.repo, commits=[])
+        result = hooks.build_result("pre-compact", {}, self.repo, commits=[], store=Store(self.db))
         self.assertIn("Doing task", result.text)
         self.assertTrue(result.context)
 
@@ -82,44 +85,58 @@ class HookCase(unittest.TestCase):
         store = Store(self.db)
         session, _ = store.start_session("ana", plan_id=plan_id, now=100.0)
         store.end_session(session.id, "ana", summary="shipped", handoff="next: QA", now=200.0)
-        result = hooks.build_result("session-start", {}, self.repo, commits=[])
+        result = hooks.build_result(
+            "session-start", {}, self.repo, commits=[], store=Store(self.db)
+        )
         self.assertIn("next: QA", result.text)
 
-    def test_open_session_is_reminded_on_stop(self):
+    def test_open_session_is_marked_awaiting_on_stop(self):
         _plan, _task = self._seed()
         store = Store(self.db)
-        session, _ = store.start_session("ana", now=100.0)
-        before = self.db.read_bytes()
-        result = hooks.build_result("stop", {}, self.repo, commits=[])
-        self.assertIn(f"S{session.id} is open", result.text)
-        self.assertEqual(self.db.read_bytes(), before)
+        session, _ = store.start_session("ana", now=time.time())
+        result = hooks.build_result("stop", {}, self.repo, commits=[], store=Store(self.db))
+        self.assertIn(f"S{session.id} is awaiting", result.text)
+        updated = Store(self.db).get_session(session.id)
+        assert updated is not None
+        self.assertTrue(updated.awaiting)
+        self.assertGreater(updated.last_seen_at, 0)
 
     def test_missing_database_is_silent(self):
         self.assertEqual(
-            hooks.build_result("session-start", {}, self.repo, commits=[]), hooks.HookResult()
+            hooks.build_result("session-start", {}, self.repo, commits=[], store=None),
+            hooks.HookResult(),
         )
 
     def test_post_tool_commit_asks_for_a_link(self):
         _plan, task_id = self._seed()
         payload = {"tool_input": {"command": "git commit -m x"}}
-        result = hooks.build_result("post-tool", payload, self.repo, commits=[])
+        result = hooks.build_result(
+            "post-tool", payload, self.repo, commits=[], store=Store(self.db)
+        )
         self.assertIn(f"--id {task_id}", result.text)
 
     def test_post_tool_other_commands_are_silent(self):
         self._seed()
         payload = {"tool_input": {"command": "git status"}}
-        self.assertEqual(hooks.build_result("post-tool", payload, self.repo, commits=[]).text, "")
+        self.assertEqual(
+            hooks.build_result(
+                "post-tool", payload, self.repo, commits=[], store=Store(self.db)
+            ).text,
+            "",
+        )
 
     def test_opt_out_is_silent(self):
         self._seed()
         os.environ[hooks.NO_HOOKS_ENV] = "1"
         self.assertEqual(hooks.run("session-start", {}, commits=[]).text, "")
 
-    def test_hook_is_read_only(self):
+    def test_session_start_tracks_a_session(self):
         self._seed()
-        before = self.db.read_bytes()
-        hooks.build_result("session-start", {}, self.repo, commits=[])
-        self.assertEqual(self.db.read_bytes(), before)
+        hooks.build_result("session-start", {}, self.repo, commits=[], store=Store(self.db))
+        sessions = Store(self.db).list_sessions(open_only=True)
+        self.assertEqual(len(sessions), 1)
+        self.assertEqual(sessions[0].phase, "working")
+        self.assertTrue(sessions[0].host)
 
     def test_cli_json_and_fresh_home(self):
         self._seed()
@@ -139,7 +156,7 @@ class HookCase(unittest.TestCase):
     def test_stop_warns_about_unlinked_commits(self):
         self._seed()
         commits = [audit.Commit("a" * 40, 1000, self.repo.as_posix(), 1, "loose")]
-        result = hooks.build_result("stop", {}, self.repo, commits=commits)
+        result = hooks.build_result("stop", {}, self.repo, commits=commits, store=Store(self.db))
         self.assertIn("unlinked", result.text)
 
     def test_closed_plan_is_silent(self):
@@ -149,7 +166,9 @@ class HookCase(unittest.TestCase):
         task = store.add_task(milestone.id, "T", "desc")
         for kind, obj_id in (("task", task.id), ("milestone", milestone.id), ("plan", plan.id)):
             services.set_status(store, kind, obj_id, Status.DONE, actor="t")
-        result = hooks.build_result("session-start", {}, self.repo, commits=[])
+        result = hooks.build_result(
+            "session-start", {}, self.repo, commits=[], store=Store(self.db)
+        )
         self.assertEqual(result.text, "")
 
     def test_cli_fresh_home_creates_nothing(self):

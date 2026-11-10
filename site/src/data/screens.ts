@@ -12,7 +12,7 @@ export const HERO_COMPOSITE: Screen = {
   file: "lpui-hero",
   width: 2400,
   height: 1200,
-  alt: "Wide lazyplan scene with the plan tree on the left, an agent workbench in the middle, and a source trail with commits and a pull request on the right.",
+  alt: "Wide lazyplan scene with the plan tree on the left, an agent loop in the middle, and a source trail with commits and a pull request on the right.",
   caption: "One shared plan, one agent loop, one proof trail.",
 }
 
@@ -30,7 +30,7 @@ export const STORY_SCREENS: readonly Screen[] = [
     file: "lpui-detail",
     width: 1604,
     height: 904,
-    alt: "Read-only detail page showing a plan's reason, scope, acceptance criteria, and milestones.",
+    alt: "Plan overview showing a plan's reason, scope, acceptance criteria, and milestones.",
     caption: "The why, the what, and what done means.",
   },
   {
@@ -40,14 +40,6 @@ export const STORY_SCREENS: readonly Screen[] = [
     height: 904,
     alt: "Plan tree with active and expired claims, blocked work, aging tasks, and a red check, with attention summarized in the control strip.",
     caption: "Claims, blockers, and attention in one tree.",
-  },
-  {
-    name: "workbench",
-    file: "lpui-workbench",
-    width: 1604,
-    height: 904,
-    alt: "lazyplan agent workbench with a task prompt, a streaming agent response, tool cards, an execution plan, and the prompt ready for the next step.",
-    caption: "Run the agent beside the plan.",
   },
   {
     name: "trust-evidence",

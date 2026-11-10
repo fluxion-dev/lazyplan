@@ -1,9 +1,4 @@
 {
-  "layer_exceptions": [],
-  "budgets": {
-    "infrastructure/skills.py": 640,
-    "presentation/cli/commands/system.py": 640,
-    "presentation/shared/palette.py": 760,
-    "presentation/mcp/tools.py": 620
-  }
+    "layer_exceptions": [],
+    "budgets": {}
 }

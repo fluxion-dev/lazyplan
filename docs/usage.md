@@ -1,7 +1,7 @@
 # lazyplan usage
 
 The short start lives in the [README](../README.md). This page keeps the
-detail: install, setup and scope, everyday commands, the screen, agent use,
+details: install, setup and scope, everyday commands, the screen, agent use,
 provenance, and data.
 
 ## Install
@@ -272,7 +272,7 @@ and `--actor`; `upgrade` adds `--check` and `--diagnose`.
 | `~/.lazyplan/setup.json` | Remembered setup choices and migration decisions. |
 | `~/.lazyplan/backups/<timestamp>/` | Tree-preserving backups of every touched file. |
 | `~/.agents/skills/lazyplan/SKILL.md` | Universal agent skill; per-tool skill directories are written too. |
-| `~/.config/opencode/plugins/lazyplan.js`, `~/.claude/settings.json`, `~/.gemini/settings.json`, `~/.codex/hooks.json`, `~/.cursor/hooks.json` | Managed read-only hook surfaces. |
+| `~/.config/opencode/plugins/lazyplan.js`, `~/.claude/settings.json`, `~/.gemini/settings.json`, `~/.codex/hooks.json`, `~/.cursor/hooks.json` | Managed lifecycle hook surfaces; they also track session state. |
 | `AGENTS.md` | Optional marked lazyplan section in a repo. |
 
 ## Everyday commands
@@ -282,7 +282,7 @@ lpui list                         # plans and progress
 lpui list --tree                  # full plan/milestone/task tree
 lpui plan show --id 1             # why, what, criteria, milestones
 lpui task move --id 1 --to doing
-lpui criterion tick --id 1
+lpui criterion edit --id 1 --done
 lpui context --max-chars 4000     # active plan, next work, and proof
 lpui feed                         # recent activity
 ```
@@ -298,10 +298,15 @@ folded until you open their milestone. Completed plans are dimmed and sorted
 last. A doing row animates a small spinner; set `LAZYPLAN_NO_SPINNER=1` to
 freeze it.
 
-The main screen pairs the plan tree with a preview column: a two-line control
-strip, the selected row's reason, scope, next tasks, acceptance progress, a
-`git` card for linked checkouts and pull requests, and an `agents` card for
-active sessions and the last handoff. The timeline card stays hidden on launch;
+The main screen pairs the plan tree with an overview column. The overview
+follows the selection: a plan shows its why, what, approval, questions,
+references, and every milestone with its description; a milestone shows its
+details and every task; a task shows its details, criteria, proof, notes, and
+source. The overview also carries a two-line control strip, acceptance
+progress, and a `git` card for linked checkouts and pull requests. The
+`agents` card sits under the plan tree and shows active sessions and the last
+handoff. Each session row shows its live state: `working`, `awaiting you`, or
+`idle`; awaiting rows sort first. The timeline card stays hidden on launch;
 `T` or the palette's show/hide timeline command opens it for the session. When
 open, it follows the selected row and its immediate children.
 
@@ -321,39 +326,35 @@ branches exist in the journal but not as screen nodes.
 |---|---|
 | `j`/`k`, arrows, click | move and select |
 | `left`/`right`, click arrow | collapse/expand, or walk to parent / first child |
-| `enter` | open the read-only detail page |
 | `space` | mark or unmark the selected row for bulk actions |
-| `e` / `s` / `x` / `a` / `d` | edit · advance status · tick next criterion · add criterion · delete |
+| `e` / `s` / `a` / `d` | edit · advance status · add criterion · delete |
 | `n` | create by context (plan, milestone, or task) |
 | `/` | filter by text |
 | `f` | change plan mode: active, finished, both |
 | `g` | open the source trail for the selected row |
 | `[` / `]` | history back / forward, restoring the prior screen and selection |
-| `escape` | back from detail, source, and modals; clears the tree filter |
+| `escape` | back from source and modals; clears the tree filter |
 | `?` | help, from any screen |
 | `c` | command palette, from any screen |
 | `t` | cycle theme: mocha, void, latte |
 | `T` | show or hide the timeline card |
-| `O` | toggle manual override mode (writes are blocked while off) |
 | `q` | quit, from any screen |
 
-On the detail page, `e` edits, `s` advances status, `x` ticks the next
-criterion, `p` records proof, `Q` adds a plan question, `ctrl+r` resolves one,
-`R` reopens one, `g` opens the source trail, `P` opens cached pull requests,
-`A` opens activity, and `escape` returns to the exact prior selection.
-Pressing `c` or `?` works there too; the palette disables actions the current
-screen cannot run and says why.
+From the tree, `e` edits, `s` advances status, `a` adds a criterion, `p`
+records proof, `g` opens the source trail, and `n` creates by context. The
+palette carries questions, approvals, claims, sessions, comments, pull
+requests, and activity; it disables actions the current selection cannot run
+and says why.
 
 ### Trust hubs
 
 Criteria, evidence, questions, and references are selectable hubs, not
-read-only text. From the tree or a detail page, open **criteria hub**,
-**evidence hub**, **questions hub**, or **references hub** from the palette
-(`c`). On a detail page, `t` opens the criteria hub for that row directly.
+read-only text. From the tree, open **criteria hub**, **evidence hub**,
+**questions hub**, or **references hub** from the palette (`c`).
 
-- Criteria: `a` adds, `x` ticks or reopens, `p` records proof, `l` and `L`
-  relate or unrelate a proving task, `d` deletes, and `enter` opens the
-  evidence rows for the selected criterion.
+- Criteria: `a` adds, `e` edits the text and done state, `p` records proof,
+  `l` and `L` relate or unrelate a proving task, `d` deletes, and `enter`
+  opens the evidence rows for the selected criterion.
 - Evidence: each row shows pass or fail, the command, exit code, commit, note,
   and proving task. `p` proves the selected criterion; `o` opens its pull
   request or copies its commit.
@@ -370,47 +371,18 @@ proved.
 
 Claims, touch-points, sessions, comments, and notes are selectable hubs too.
 Open **claims hub**, **sessions hub**, or **comments and notes hub** from the
-palette; on a detail page `k`, `v`, and `m` open them directly. Click the
-agents pane to open the sessions hub.
+palette. Click the agents card to open the sessions hub.
 
 - Claims: rows show the holder, expiry, age, and any overlap with another
   active claim that edits the same path. `a` claims the task, `x` renews, `d`
   releases, `D` forces a takeover, and `l`/`L` add or remove touch-points.
-- Sessions: rows show actor, plan, branch, age, summary, handoff, and recent
-  events. `a` starts a session, `x` or `d` ends it with a summary, and the last
-  handoff stays visible after the session closes.
+- Sessions: rows show actor, host, phase, plan, branch, age, summary, handoff,
+  and recent events. `a` starts a session, `x` or `d` ends it with a summary,
+  and the last handoff stays visible after the session closes. Hooks move a
+  session to `awaiting` when the agent stops; a session idle for 12 hours is
+  closed automatically and marked `auto-closed`.
 - Comments and notes: `a` adds a comment, `n` adds a note, `x` resolves or
   reopens a comment, and `u` hides resolved comments.
-
-### Agent workbench
-
-Press `W` from the main shell to open the Agent Workbench. Type a prompt,
-`ctrl+s` sends it, `ctrl+x` stops the active prompt, and `escape` closes the
-screen. One prompt runs at a time. The transcript streams assistant text, tool
-cards, the agent's plan, and token or cost usage.
-
-The default agent is OpenCode via `opencode acp`. That command starts a private
-agent server for the workbench; it is not the same process as an OpenCode TUI
-window. Manage the catalog with `lpui agent list`, `lpui agent add`, and
-`lpui agent remove`. It lives at `~/.lazyplan/agents.json`
-(`%LOCALAPPDATA%\lazyplan\agents.json` on Windows). A second command, such as
-the Claude ACP adapter, can be added without changing lazyplan.
-
-Tool calls that need approval open a permission screen with the request and any
-diff. Choose allow once, always, or reject. Nothing is approved automatically.
-Reads, notes, comments, questions, sessions, and claims are direct; creating or
-editing plans, milestones, tasks, and criteria is staged. Press `ctrl+p` in the
-workbench, or `ctrl+p` on a detail page, to review pending proposals. Applying
-one uses the same plan-apply path as the CLI; rejecting leaves the plan
-unchanged.
-
-From a task detail page, `W` starts a work session: lazyplan claims the task,
-opens a lazyplan session, prefills the prompt with the task, plan, branch, and
-criteria, and opens the workbench. The lazyplan session is the audit ledger and
-handoff; the ACP conversation is the agent run linked to it in `agent_runs`. The header follows that task and plan while
-the run is active. `ctrl+f` finishes the run with a summary and handoff; it runs
-the same evidence, pull-request, and check gates as `task finish`, so a failed
-gate leaves the task open and explains why.
 
 Session and touch-point authoring are first-class screen hubs now; plan 135's
 CLI-only stance is superseded for those entities. Import, sync, and setup stay
@@ -419,9 +391,9 @@ CLI-only.
 ### Provenance and activity hubs
 
 Repos, commits, files, and pull requests are selectable in the source trail
-(`g`), and cached pull requests have their own hub (`P` on a detail page, or
-**Open pull request hub** in the palette). The **activity hub** (`A`, or
-**Open activity hub**) shows the feed and manual overrides.
+(`g`), and cached pull requests have their own hub (**Open pull request hub**
+in the palette). The **activity hub** (**Open activity hub** in the palette)
+shows the feed.
 
 - Source trail: the tree groups checkout → commits → changed files, with pull
   requests alongside. `enter` cross-links to the owning plan, milestone, or
@@ -430,40 +402,20 @@ Repos, commits, files, and pull requests are selectable in the source trail
 - Pull requests: rows show state, checks, reviews, base and head refs, merge
   data, and a stale marker. `a` links a URL, `d` unlinks, `o` opens it, and
   `r` refreshes. Only `r` touches the network; every other path reads cache.
-- Activity: rows show actor, action, time, and target. `f` filters by actor,
-  `K` by kind, and `u` switches between all activity and manual overrides.
-  `enter` opens the plan, milestone, or task named by the event.
+- Activity: rows show actor, action, time, and target. `f` filters by actor and
+  `K` by kind. `enter` opens the plan, milestone, or task named by the event.
 
 The palette names match the CLI: `lpui pr list|show|link|unlink|refresh`,
-`lpui commits`, `lpui repos`, and `lpui feed --overrides` read the same data.
+`lpui commits`, `lpui repos`, and `lpui feed` read the same data.
 
-The palette and the CLI use the same names: Create plan, Move to doing, Tick
-next criterion, Delete selection. The palette also has Bulk move to doing/done,
+The palette and the CLI use the same names: Create plan, Move to doing, Edit
+selection, Delete selection. The palette also has Bulk move to doing/done,
 Bulk block tasks, Bulk release claims, Clear marks, and Undo bulk change. Bulk
 status and block confirm first; undo restores the exact prior status/blocked
 state once. Bulk delete and archive stay single-row.
 
 `/` searches titles, descriptions, why/what, notes, comments, claim actors,
 blocked reasons, and issue refs. Marks are session-only and survive refreshes.
-
-### Manual override mode
-
-The screen is read-only by default. Press `O` (or run **Toggle manual
-override** from the palette) to enable writes; the red banner and the `OVERRIDE`
-nav subtitle stay visible while it is on. Press `O` again to return to
-read-only.
-
-Every write from the screen is deliberate and recorded. The event names the
-target, the action, and, for a risky write, the reason you typed. Deleting a
-row and taking over a claim ask for a reason first; cancelling leaves the row
-or claim untouched. See only those rows with:
-
-```bash
-lpui feed --overrides
-```
-
-The normal `lpui feed` still shows every event. Agents and the CLI continue to
-write directly; override mode only gates the screen.
 
 The palette carries the work that does not need a dedicated key. **Approve
 plan scope**, **Show plan diff**, **Prove criterion**, **Add / Resolve / Reopen
@@ -475,7 +427,7 @@ equivalent is `lpui export --format markdown --plan ID --file PATH`
 
 Select a plan, milestone, or task and press `g` to browse the source trail:
 checkout → commits → changed files, with linked pull requests alongside. The
-preview shows a read-only diff; large diffs stop at 20 files / 300 lines.
+source preview shows a read-only diff; large diffs stop at 20 files / 300 lines.
 `o` opens the selected commit, PR, or file, `y` copies it, and `/` filters.
 
 ## Agents
@@ -489,7 +441,6 @@ lpui --actor helper --porcelain task add --milestone 1 --title "Draft proposal"
 lpui --actor helper --porcelain list --tree
 lpui --actor helper plan show --id 1
 lpui feed --json --follow
-lpui feed --overrides              # only manual changes made from the screen
 ```
 
 Your agent is expected to work from the plan, not invent it:
@@ -525,7 +476,7 @@ Your agent is expected to work from the plan, not invent it:
   Renew the lease while you work, note handoffs, and release it when you stop.
   Update the journal after each commit, then run
   `lpui --porcelain audit --since 7.days` before closing a plan. Lifecycle
-  hooks remind you, but they are read-only.
+  hooks remind you and track the session; they never move work.
 
 `lpui setup --placement repo` writes the full contract into the repo; the
 default setup installs the skill into each detected agent's own folder.
@@ -641,11 +592,13 @@ lpui touch add --task 12 --path src/lazyplan/store/sessions.py
 
 `session start` writes a pointer beside the database keyed by actor and
 checkout; `LAZYPLAN_SESSION=S3` overrides it. Every write made while the
-session is open is tagged with its id. Hooks stay read-only: they show the open
-session or a start hint, and `context`/`brief` render the previous handoff.
-Sessions are operational history and are not exported. You can also start and
-end them from the sessions hub (`v` on a detail page or the agents pane); the
-CLI remains the path for scripts and hooks.
+session is open is tagged with its id. Hooks keep the checkout's session
+heartbeat current: `session-start` and `prompt-submit` mark it `working`,
+`stop` marks it `awaiting`, and `context`/`brief` render the previous handoff.
+Sessions idle for 12 hours are closed automatically, and a new session in the
+same checkout reuses a live one. Sessions are operational history and are not
+exported. You can also start and end them from the sessions hub (click the
+agents card); the CLI remains the path for scripts.
 
 Tasks can declare the repo-relative paths they expect to edit. `next` skips a
 todo whose touch-points overlap an active claim in the same checkout. A manual
@@ -676,14 +629,15 @@ Approval records the scope a human accepted. Later edits are visible as drift,
 and every scope-changing edit can carry a reason. `plan diff --check` is the
 opt-in CI gate. `plan approve --enforce` also makes `plan move --to done`
 refuse unapproved drift; pass `--override REASON` to record the exception.
-Status moves, ticks, claims, commits, and pull requests are not scope, so they
-never create drift.
+Status moves, completion, claims, commits, and pull requests are not scope, so
+they never create drift.
 
-A tick is a claim; evidence is the proof. `criterion prove` ticks only when the
-declared exit code is absent or 0; `--no-tick` records without ticking.
-Evidence is append-only, and the latest row decides the criterion's state.
-lazyplan never executes the command, fetches a PR, or reads an artifact.
-`task finish --require-evidence` gates on the latest passing row.
+Completion and proof are separate. `criterion edit --id C --done` (or `--open`)
+records whether the criterion is met; `criterion prove` records evidence without
+changing completion. Evidence is append-only, and the latest row decides the
+criterion's proof state. lazyplan never executes the command, fetches a PR, or
+reads an artifact. `task finish --require-evidence` gates on the latest passing
+row.
 
 Open questions are plan-level rows. `plan ready` combines three checks: lint is
 clean, every plan criterion has a proving task, and no questions are open. It
@@ -768,7 +722,7 @@ lpui pr link --kind task --id 3 --url https://github.com/org/repo/pull/7
 `pr refresh` links each PR to the task that owns its commit or branch, and
 caches state, checks, reviews, base/head refs, and merge metadata. Requests
 reuse ETags and fall back to cached data offline; stale data is marked.
-`pr link` is offline and manual. `show` and the detail screen roll PRs up from
+`pr link` is offline and manual. `show` and the overview roll PRs up from
 tasks to milestones and plans, and task rows show a PR chip. Scope is
 github.com only. lazyplan never creates branches, worktrees, commits, pushes,
 PRs, reviews, comments, or merges; other tools own those actions.

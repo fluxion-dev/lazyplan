@@ -1,4 +1,4 @@
-"""TUI screens: modal forms and detail views.
+"""TUI screens: modal forms and overlays.
 
 The app shell (LazyplanApp) lives in tui.py; every overlay lives here.
 """
@@ -16,6 +16,7 @@ try:
     from textual.screen import ModalScreen, Screen  # noqa: F401
     from textual.widgets import (  # noqa: F401
         Button,
+        Checkbox,
         Input,
         Label,
         OptionList,
@@ -53,13 +54,21 @@ if _TEXTUAL_OK:
         fields: tuple[FormField, ...] = ()
         submit_label = "Create"
 
-        def __init__(self, defaults: dict[str, str] | None = None, context: str = "") -> None:
+        def __init__(
+            self,
+            defaults: dict[str, str] | None = None,
+            context: str = "",
+            editing: bool = False,
+        ) -> None:
             super().__init__()
             self._defaults = defaults or {}
             self._where = context
+            self._editing = editing
+            self.dialog_title = "EDIT" if editing else "CREATE"
 
         def _title(self) -> str:
-            return f"{self.heading} in {self._where}" if self._where else self.heading
+            label = self.heading.replace("New ", "Edit ", 1) if self._editing else self.heading
+            return f"{label} in {self._where}" if self._where else label
 
         def compose(self) -> ComposeResult:
             with Vertical(id="dlg"):
@@ -72,7 +81,8 @@ if _TEXTUAL_OK:
                     else:
                         yield Input(value=value, placeholder=field.placeholder, id=field.field_id)
                 with _row():
-                    yield Button(self.submit_label, id="ok", variant="primary")
+                    label = "Save" if self._editing else self.submit_label
+                    yield Button(label, id="ok", variant="primary")
                     yield Button("Cancel", id="cancel")
 
         def _values(self) -> dict[str, str]:
@@ -122,8 +132,9 @@ if _TEXTUAL_OK:
             plan_id: int,
             defaults: dict[str, str] | None = None,
             context: str = "",
+            editing: bool = False,
         ) -> None:
-            super().__init__(defaults, context or f"P{plan_id}")
+            super().__init__(defaults, context or f"P{plan_id}", editing=editing)
             self.plan_id = plan_id
 
     class NewTaskScreen(EntityForm):
@@ -142,8 +153,9 @@ if _TEXTUAL_OK:
             milestone_id: int,
             defaults: dict[str, str] | None = None,
             context: str = "",
+            editing: bool = False,
         ) -> None:
-            super().__init__(defaults, context or f"M{milestone_id}")
+            super().__init__(defaults, context or f"M{milestone_id}", editing=editing)
             self.milestone_id = milestone_id
 
     class ProveScreen(EntityForm):
@@ -263,3 +275,45 @@ if _TEXTUAL_OK:
         @on(Input.Submitted, "#filter-input")
         def _submit(self) -> None:
             self.dismiss(self.query_one("#filter-input", Input).value.strip())
+
+    class CriterionScreen(_Form):
+        """Edit one criterion's text and completion."""
+
+        dialog_title = "CRITERION"
+
+        def __init__(self, text: str = "", done: bool = False) -> None:
+            super().__init__()
+            self._text = text
+            self._done = done
+
+        def compose(self) -> ComposeResult:
+            with Vertical(id="dlg"):
+                yield Label("Edit criterion", classes="form-title")
+                yield Label("Text", classes="field-label")
+                yield Input(value=self._text, placeholder="what must be true?", id="c-text")
+                yield Checkbox("Done", value=self._done, id="c-done")
+                with _row():
+                    yield Button("Save", id="ok", variant="primary")
+                    yield Button("Cancel", id="cancel")
+
+        def on_mount(self) -> None:
+            super().on_mount()
+            self.query_one("#c-text", Input).focus()
+
+        def _values(self) -> dict[str, object]:
+            return {
+                "text": self.query_one("#c-text", Input).value.strip(),
+                "done": self.query_one("#c-done", Checkbox).value,
+            }
+
+        @on(Button.Pressed, "#ok")
+        def _save(self) -> None:
+            self.dismiss(self._values())
+
+        @on(Button.Pressed, "#cancel")
+        def _cancel(self) -> None:
+            self.action_cancel()
+
+        @on(Input.Submitted, "#c-text")
+        def _submit(self) -> None:
+            self.dismiss(self._values())

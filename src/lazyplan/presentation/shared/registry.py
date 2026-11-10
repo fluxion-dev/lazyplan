@@ -61,8 +61,6 @@ HUB_ACTIONS: dict[str, tuple[str, ...]] = {
     "criteria": (
         "criterion.add",
         "criterion.edit",
-        "criterion.tick",
-        "criterion.untick",
         "criterion.prove",
         "criterion.relate",
         "criterion.unrelate",
@@ -89,7 +87,7 @@ HUB_ACTIONS: dict[str, tuple[str, ...]] = {
         "pull_request.unlink",
         "pull_request.open",
     ),
-    "activity": ("event.open", "override.open"),
+    "activity": ("event.open",),
 }
 
 
@@ -156,10 +154,7 @@ class Deprecation:
 
 
 #: Keys that moved during the navigation migration.
-DEPRECATED_KEYS: tuple[Deprecation, ...] = (
-    Deprecation("q (detail)", "Q adds a question; q quits", kind="key"),
-    Deprecation("Q (detail)", "ctrl+r resolves a question", kind="key"),
-)
+DEPRECATED_KEYS: tuple[Deprecation, ...] = ()
 
 
 def deprecations() -> tuple[Deprecation, ...]:

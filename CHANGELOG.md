@@ -5,6 +5,44 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
 
 ## Unreleased
 
+### Added
+
+- **Live agent sessions.** Lifecycle hooks keep the checkout's session state
+  current: a turn marks it working, a stop marks it awaiting, and the agents
+  pane shows working, awaiting, and idle rows with awaiting first. Sessions
+  idle for 12 hours close automatically with an auto-closed summary.
+
+### Changed
+
+- **Criterion completion.** `criterion edit --id C --done` (or `--open`) sets
+  completion; `criterion prove` records evidence only.
+- **Pane empty states.** The plans, preview, git, and agents panes share one
+  empty-state treatment: a bold capitalized title and a dim next step.
+- **Legacy aliases.** The deprecated CLI verbs and moved detail keys remain
+  through 0.36.0. A version guard fails at 0.37.0 until they are removed.
+- **Architecture seams.** Presentation constructs `Store` only in composition
+  roots; store and services use injected path and layer adapters; parser groups
+  and MCP metadata derive from the action registry; the largest modules split
+  into focused files.
+- **Overview replaces detail.** The separate detail page is gone. The preview
+  pane is now the overview: a plan lists its milestones and descriptions, a
+  milestone lists its tasks, and a task shows its details, criteria, proof, and
+  notes. `e` edits the selected row in a modal form. The agents card now sits
+  under the plan tree.
+
+### Removed
+
+- **ACP agent integration.** The `W` agent workbench, the `lpui agent` commands,
+  the ACP transport, staged proposal review, and work sessions are gone. Plans,
+  MCP, hooks, and the plan tree remain the agent paths.
+- **Criterion tick.** `lpui criterion tick|untick`, the legacy `check|uncheck`
+  aliases, the TUI `x` tick key, and the MCP `criterion_tick|untick` tools are
+  gone.
+- **Manual override mode and override feed.** The screen writes directly
+  again; `O`, the banner, override audit events, `lpui feed --overrides`, the
+  activity-hub override filter, and the MCP `overrides` flag are gone.
+  Historical override rows remain in the normal feed.
+
 ## v0.36.0 — 2026-11-09
 
 ### Added

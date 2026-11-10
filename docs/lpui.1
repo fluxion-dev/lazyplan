@@ -1,4 +1,4 @@
-.TH LPUI 1 "2026-11-10" "lazyplan-tui 0.36.0" "User Commands"
+.TH LPUI 1 "2026-11-09" "lazyplan-tui 0.36.0" "User Commands"
 .SH NAME
 lpui \- local plan journal for you and your coding agent
 .SH SYNOPSIS
@@ -994,11 +994,6 @@ report drift without automatic repair for this command
 .B \-\-read\-only
 expose read tools only and never create the database
 .RE
-.RS
-.TP
-.B \-\-proposal\-only
-omit structural writes; agents must use propose tools
-.RE
 .TP
 .B lpui trace
 trace acceptance criteria to tasks, commits, and pull requests
@@ -1044,7 +1039,7 @@ trace one criterion
 .RE
 .TP
 .B lpui hook
-read a host lifecycle event and print a reminder
+read a host lifecycle event, track the session, and print a reminder
 .RS
 .TP
 .B \-\-json
@@ -1160,7 +1155,7 @@ show only this milestone and its tasks (implies \-\-tree)
 .RE
 .TP
 .B lpui plan
-add, edit, show, list, move, or delete a plan
+add, approve, delete, diff, edit, move a plan
 .RS
 .TP
 .B \-\-json
@@ -1198,7 +1193,7 @@ what to do with a plan Choices: add, edit, show, list, ready, move, delete, appl
 .RE
 .TP
 .B lpui milestone
-add, edit, show, list, move, or delete a milestone
+add, delete, edit, move a milestone
 .RS
 .TP
 .B \-\-json
@@ -1236,7 +1231,7 @@ what to do with a milestone Choices: add, edit, show, list, move, delete\. Requi
 .RE
 .TP
 .B lpui task
-add, edit, show, list, move, or delete a task
+add, block, delete, edit, finish, move, unblock a task
 .RS
 .TP
 .B \-\-json
@@ -1312,7 +1307,7 @@ what to do with a issue Choices: import\. Required\.
 .RE
 .TP
 .B lpui criterion
-add, list, tick, untick, or delete an acceptance criterion
+add, delete, edit, evidence, prove, relate, unrelate a criterion
 .RS
 .TP
 .B \-\-json
@@ -1346,7 +1341,7 @@ report drift without automatic repair for this command
 .RS
 .TP
 .B  ACTION
-what to do with a criterion Choices: add, list, tick, edit, untick, delete, prove, evidence, relate, unrelate\. Required\.
+what to do with a criterion Choices: add, list, edit, delete, prove, evidence, relate, unrelate\. Required\.
 .RE
 .TP
 .B lpui git
@@ -1537,44 +1532,6 @@ report drift without automatic repair for this command
 .TP
 .B  ACTION
 what to do with a session Choices: start, end, show, list\. Required\.
-.RE
-.TP
-.B lpui agent
-list, add, or remove ACP agents
-.RS
-.TP
-.B \-\-json
-print output as JSON so scripts and agents can read it
-.RE
-.RS
-.TP
-.B \-\-porcelain
-print terse tab\-separated rows for active agents (\-\-json still wins)
-.RE
-.RS
-.TP
-.B \-\-version
-print the installed version and exit
-.RE
-.RS
-.TP
-.B \-\-actor NAME
-who made this change (you see it in feed)
-.RE
-.RS
-.TP
-.B \-\-heal
-repair parent statuses and leases automatically (default)
-.RE
-.RS
-.TP
-.B \-\-no\-heal
-report drift without automatic repair for this command
-.RE
-.RS
-.TP
-.B  ACTION
-what to do with the agent catalog Choices: list, add, remove\. Required\.
 .RE
 .TP
 .B lpui touch
@@ -1989,82 +1946,6 @@ which kind of row to list Choices: plan, milestone, task\. Required\.
 .TP
 .B \-\-id ID
 id of the row Required\.
-.RE
-.TP
-.B lpui check
-legacy alias for `criterion tick`
-.RS
-.TP
-.B \-\-json
-print output as JSON so scripts and agents can read it
-.RE
-.RS
-.TP
-.B \-\-porcelain
-print terse tab\-separated rows for active agents (\-\-json still wins)
-.RE
-.RS
-.TP
-.B \-\-version
-print the installed version and exit
-.RE
-.RS
-.TP
-.B \-\-actor NAME
-who made this change (you see it in feed)
-.RE
-.RS
-.TP
-.B \-\-heal
-repair parent statuses and leases automatically (default)
-.RE
-.RS
-.TP
-.B \-\-no\-heal
-report drift without automatic repair for this command
-.RE
-.RS
-.TP
-.B \-\-id ID
-id of the checklist item Required\.
-.RE
-.TP
-.B lpui uncheck
-legacy alias for `criterion untick`
-.RS
-.TP
-.B \-\-json
-print output as JSON so scripts and agents can read it
-.RE
-.RS
-.TP
-.B \-\-porcelain
-print terse tab\-separated rows for active agents (\-\-json still wins)
-.RE
-.RS
-.TP
-.B \-\-version
-print the installed version and exit
-.RE
-.RS
-.TP
-.B \-\-actor NAME
-who made this change (you see it in feed)
-.RE
-.RS
-.TP
-.B \-\-heal
-repair parent statuses and leases automatically (default)
-.RE
-.RS
-.TP
-.B \-\-no\-heal
-report drift without automatic repair for this command
-.RE
-.RS
-.TP
-.B \-\-id ID
-id of the checklist item Required\.
 .RE
 .TP
 .B lpui delete\-criteria
@@ -2682,11 +2563,6 @@ keep showing new events as they arrive
 .RE
 .RS
 .TP
-.B \-\-overrides
-only manual override events from the screen
-.RE
-.RS
-.TP
 .B \-\-interval SECS
 how often to check for new events, in seconds (default: 1\.0)
 .RE
@@ -2962,7 +2838,7 @@ Tree-preserving backups of every touched file.
 Universal agent skill; per-tool skill directories are written too.
 .TP
 .B ~/\.config/opencode/plugins/lazyplan\.js, ~/\.claude/settings\.json, ~/\.gemini/settings\.json, ~/\.codex/hooks\.json, ~/\.cursor/hooks\.json
-Managed read-only hook surfaces.
+Managed lifecycle hook surfaces; they also track session state.
 .TP
 .B AGENTS\.md
 Optional marked lazyplan section in a repo.

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from .agents import rank_sessions, session_line, sessions_summary
 from .control import build_control_strip
-from .detail import DetailDocument, build_detail, detail_breadcrumb, detail_object
 from .git import GitDocument, build_git
 from .preview import (
     PreviewBlock,
@@ -29,7 +29,6 @@ from .source import (
 )
 
 __all__ = [
-    "DetailDocument",
     "GitDocument",
     "PreviewBlock",
     "PreviewDocument",
@@ -38,15 +37,15 @@ __all__ = [
     "build_milestone",
     "build_plan",
     "build_preview",
-    "build_detail",
     "build_task",
+    "rank_sessions",
+    "session_line",
+    "sessions_summary",
     "commit_label",
     "commit_preview",
     "file_preview",
     "common_blocks",
     "common_lines",
-    "detail_breadcrumb",
-    "detail_object",
     "pull_label",
     "pull_preview",
     "render_blocks",

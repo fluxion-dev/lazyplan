@@ -33,7 +33,7 @@ if _TEXTUAL_OK:
             self.oid = oid
 
     class RowAction(Message):
-        """Generic row intent: toggle-status, open-detail, fold-all, etc."""
+        """Generic row intent: toggle-status, fold-all, etc."""
 
         bubble = True
 

@@ -1,8 +1,8 @@
 name: ci-windows
 
-# Windows gates take 27-40 minutes, so they run nightly instead of on every
-# pull request. Dispatch this workflow when a Windows change needs an
-# on-demand gate.
+# Windows gates are slower than Linux and macOS, so they run nightly instead
+# of on every pull request. Dispatch this workflow when a Windows change needs
+# an on-demand gate.
 
 on:
   schedule:
@@ -36,15 +36,6 @@ jobs:
           "$VENV_BIN"/python -m pip install -e ".[dev]"
       - name: Gates (ruff + mypy + unittest x2)
         run: ./tools/check.sh
-      - name: Upload snapshot failure report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: snapshot-report-windows-latest
-          path: |
-            snapshot_report.html
-            tests/snapshots/__snapshots__/**/*.svg
-          if-no-files-found: ignore
 
   update-tests:
     name: windows update tests
@@ -67,8 +58,6 @@ jobs:
           tests.cli.test_upgrade
           tests.core.test_staged_update
           tests.core.test_update_log
-          tests.tui.test_update_screen
-          tests.tui.test_update_notice
 
   update-smoke:
     name: windows update smoke

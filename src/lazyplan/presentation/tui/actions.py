@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import time
 from pathlib import Path
 
 try:
@@ -19,20 +18,16 @@ from ..shared.export import display_path
 from ..shared.palette import by_id
 from .approval_actions import ApprovalMixin
 from .claim_actions import ClaimMixin
-from .constants import DOUBLE_CLICK_WINDOW
 from .evidence_actions import EvidenceMixin
 from .finish_actions import FinishMixin
 from .git_actions import GitActionMixin
 from .history_actions import HistoryMixin
 from .hub_actions import HubMixin
-from .navigation import NavEntry
-from .override import WRITE_COMMANDS, OverrideMixin
 from .palette_handlers import palette_handlers
 from .question_actions import QuestionMixin
 from .reference_actions import ReferenceMixin
 from .screens import (
     ConfirmScreen,
-    DetailScreen,
     ExportScreen,
     FilterPromptScreen,
     HelpScreen,
@@ -42,13 +37,13 @@ from .screens import (
     PaletteScreen,
 )
 from .status_actions import StatusMixin
+from .theme import next_theme
 
 if _TEXTUAL_OK:
 
     class ActionMixin(
         HistoryMixin,
         HubMixin,
-        OverrideMixin,
         ApprovalMixin,
         ClaimMixin,
         EvidenceMixin,
@@ -80,7 +75,6 @@ if _TEXTUAL_OK:
                 except (ValueError, KeyError) as exc:
                     self.notify(f"error: {exc}")
                     return
-                self._record_override("milestone add", f"P{pid}")
                 self._saved("milestone created")
 
             self.push_screen(
@@ -91,43 +85,6 @@ if _TEXTUAL_OK:
                 ),
                 cb,
             )
-
-        def _open_detail(
-            self, kind: str, oid: int, edit: bool = False, record: bool = True
-        ) -> None:
-            if record:
-                entry = NavEntry("detail", kind, oid, self._nav_label(kind, oid))
-                self.state.history.push(entry)
-
-            def cb(saved: bool | None) -> None:
-                if saved:
-                    self._saved("saved detail")
-
-            self.push_screen(DetailScreen(self.store, kind, oid, edit=edit), cb)
-
-        def action_criteria(self) -> None:
-            """Tick first open criterion; if none open, reopen the last done one."""
-            if self.selected is None:
-                self.notify("select a row first (x ticks criteria)")
-                return
-            kind, oid = self.selected
-            items = self.store.list_criteria(kind, oid)
-            if not items:
-                self.notify(
-                    f'no criteria — add via: lpui add-criteria --kind {kind} --id {oid} --text "..."'
-                )
-                return
-            open_items = [c for c in items if not c.done]
-            if open_items:
-                target, reopen = open_items[0], False
-            else:
-                target, reopen = items[-1], True  # nothing open: re-affirm by reopening last
-            self.store.set_criteria(target.id, not reopen, actor="tui")
-            verb = "reopened" if reopen else "checked"
-            self._record_override(
-                "criterion reopen" if reopen else "criterion tick", f"C{target.id}"
-            )
-            self._saved(f"criterion {target.id} {verb}")
 
         def action_delete(self) -> None:
             if self.selected is None:
@@ -141,10 +98,11 @@ if _TEXTUAL_OK:
                 if not reason.strip():
                     self.notify("a delete needs a reason", timeout=3)
                     return
-                if not services.delete_row(self.store, kind, oid, actor="tui"):
+                if not services.delete_row(
+                    self.store, kind, oid, actor="tui", reason=reason.strip()
+                ):
                     self.notify("already gone — refreshing")
                     return
-                self._record_override("delete", f"{kind} #{oid}", reason.strip())
                 self.selected = None
                 self._saved(f"deleted {kind} #{oid}")
 
@@ -188,6 +146,13 @@ if _TEXTUAL_OK:
             self._apply_layout()
             self.metrics_controller.refresh()
 
+        def action_cycle_theme(self) -> None:
+            """Cycle mocha, void, and latte; the chart redraws after the CSS."""
+            selected = next_theme(self.theme)
+            self.theme = selected
+            self.notify(f"theme: {selected.removeprefix('lazyplan-')}", timeout=2)
+            self.call_after_refresh(self.metrics_controller.refresh)
+
         def action_command_palette(self) -> None:
             """Open the modal command palette (c)."""
             if len(self.screen_stack) > 1:
@@ -211,32 +176,6 @@ if _TEXTUAL_OK:
         def action_help(self) -> None:
             self.push_screen(HelpScreen())
 
-        def action_open_agent(self) -> None:
-            """Open the ACP workbench for the default agent in this checkout."""
-            from ...infrastructure.agents import load_catalog
-            from ...infrastructure.repo import find_repo_root
-            from ...services.agents import lazyplan_mcp_server
-            from .screens.agent import AgentScreen
-
-            try:
-                profiles, default = load_catalog()
-            except ValueError as exc:
-                self.notify(f"error: {exc}")
-                return
-            profile = next(
-                (profile for profile in profiles if profile.key == default),
-                profiles[0],
-            )
-            cwd = find_repo_root(Path.cwd()) or Path.cwd()
-            self.push_screen(
-                AgentScreen(
-                    profile,
-                    cwd,
-                    mcp_servers=(lazyplan_mcp_server(self.store.path),),
-                    store=self.store,
-                )
-            )
-
         def action_add_criterion(self) -> None:
             """Prompt for a new criterion on the selected row."""
             if self.selected is None:
@@ -252,7 +191,6 @@ if _TEXTUAL_OK:
                 except (ValueError, KeyError) as exc:
                     self.notify(f"error: {exc}")
                     return
-                self._record_override("criterion add", f"{kind} #{oid}")
                 self._saved("criterion added")
 
             self.push_screen(
@@ -264,13 +202,20 @@ if _TEXTUAL_OK:
                 cb,
             )
 
-        def action_open_detail(self) -> None:
-            if len(self.screen_stack) > 1:
-                return  # a modal owns enter
-            if self.selected is None:
-                self.notify("select a row first, then enter")
-                return
-            self._open_detail(*self.selected)
+        def select_row(self, kind: str, oid: int) -> None:
+            """Return to the tree and select one row in the overview."""
+            while len(self.screen_stack) > 1:
+                self.pop_screen()
+            self.selected = (kind, oid)
+            node = self._row_nodes.get((kind, oid))
+            if node is not None:
+                try:
+                    tree = self.query_one("#tree", Tree)
+                    tree.move_cursor(node)
+                    tree.scroll_to_node(node)
+                except Exception:
+                    pass
+            self.update_preview(force=True)
 
         def _saved(self, note: str = "") -> None:
             """Local mutation path: bump reactive rev, watch refreshes."""
@@ -286,7 +231,7 @@ if _TEXTUAL_OK:
                 if not data:
                     return
                 try:
-                    plan = services.create_plan(
+                    services.create_plan(
                         self.store,
                         data["title"],
                         data["what"],
@@ -296,7 +241,6 @@ if _TEXTUAL_OK:
                 except ValueError as exc:
                     self.notify(f"error: {exc}")
                     return
-                self._record_override("plan add", f"P{plan.id}")
                 self._saved("plan created")
 
             self.push_screen(
@@ -309,8 +253,6 @@ if _TEXTUAL_OK:
                 return
             command = by_id(command_id)
             if command is None:
-                return
-            if command.handler in WRITE_COMMANDS and not self.require_override():
                 return
             handlers = palette_handlers(self)
             fn = handlers.get(command.handler)
@@ -329,7 +271,7 @@ if _TEXTUAL_OK:
                 if not data:
                     return
                 try:
-                    task = services.create_task(
+                    services.create_task(
                         self.store,
                         sid,
                         data["title"],
@@ -339,7 +281,6 @@ if _TEXTUAL_OK:
                 except (ValueError, KeyError) as exc:
                     self.notify(f"error: {exc}")
                     return
-                self._record_override("task add", f"T{task.id}")
                 self._saved("task created")
 
             milestone = self.store.get_milestone(sid)
@@ -353,36 +294,92 @@ if _TEXTUAL_OK:
                 cb,
             )
 
-        def action_untick_criterion(self) -> None:
-            """Reopen the last ticked criterion on the selected row."""
-            if self.selected is None:
-                self.notify("select a row first (x ticks criteria)")
-                return
-            kind, oid = self.selected
-            done = [c for c in self.store.list_criteria(kind, oid) if c.done]
-            if not done:
-                self.notify("no ticked criteria to reopen")
-                return
-            target = done[-1]
-            self.store.set_criteria(target.id, False, actor="tui")
-            self._record_override("criterion reopen", f"C{target.id}")
-            self._saved(f"criterion #{target.id} reopened")
-
         def action_edit_selection(self) -> None:
-            """Edit the selected row; detail owns the edit form."""
+            """Edit the selected row in a modal form."""
             if self.selected is None:
                 self.notify("select a row first (e edits it)")
                 return
-            self._open_detail(*self.selected, edit=True)
+            kind, oid = self.selected
+            full = self.store.get_full(kind, oid)
+            if full is None:
+                self.notify("row is gone — refreshing")
+                self._saved("row is gone")
+                return
+            screen: NewPlanScreen | NewMilestoneScreen | NewTaskScreen
+            if kind == "plan":
+                obj = full.get("plan", {})
+                screen = NewPlanScreen(
+                    defaults={
+                        "title": str(obj.get("name", "")),
+                        "why": str(obj.get("goal", "")),
+                        "what": str(obj.get("description", "")),
+                    },
+                    editing=True,
+                )
+            elif kind == "milestone":
+                obj = full.get("milestone", {})
+                plan_id = int(obj.get("plan_id", 0))
+                screen = NewMilestoneScreen(
+                    plan_id,
+                    defaults={
+                        "title": str(obj.get("title", "")),
+                        "desc": str(obj.get("description", "")),
+                    },
+                    context=f"P{plan_id}",
+                    editing=True,
+                )
+            else:
+                obj = full.get("task", {})
+                milestone_id = int(obj.get("milestone_id", 0))
+                screen = NewTaskScreen(
+                    milestone_id,
+                    defaults={
+                        "title": str(obj.get("title", "")),
+                        "desc": str(obj.get("description", "")),
+                    },
+                    context=f"M{milestone_id}",
+                    editing=True,
+                )
 
-        def note_click(self, key: tuple[str, int]) -> bool:
-            """True when this click completes a double-click on the same row."""
-            now = time.monotonic()
-            double = (
-                key == self._last_click_key and (now - self._last_click_at) < DOUBLE_CLICK_WINDOW
-            )
-            self._last_click_key, self._last_click_at = key, now
-            return double
+            def cb(data: dict | None) -> None:
+                if data:
+                    self._apply_edit(kind, oid, data)
+
+            self.push_screen(screen, cb)
+
+        def _apply_edit(self, kind: str, oid: int, data: dict) -> None:
+            """Persist one edited row; the overview refreshes on success."""
+            title = str(data.get("title", "")).strip()
+            if not title:
+                self.notify("title must not be empty")
+                return
+            try:
+                if kind == "plan":
+                    self.store.update_plan(
+                        oid,
+                        name=title,
+                        description=str(data.get("what", "")),
+                        goal=str(data.get("why", "")) or None,
+                        actor="tui",
+                    )
+                elif kind == "milestone":
+                    self.store.update_milestone(
+                        oid,
+                        title=title,
+                        description=str(data.get("desc", "")),
+                        actor="tui",
+                    )
+                else:
+                    self.store.update_task(
+                        oid,
+                        title=title,
+                        description=str(data.get("desc", "")),
+                        actor="tui",
+                    )
+            except (ValueError, KeyError) as exc:
+                self.notify(f"error: {exc}")
+                return
+            self._saved(f"saved {kind}")
 
         async def action_quit(self) -> None:
             """Leave the screen (q)."""

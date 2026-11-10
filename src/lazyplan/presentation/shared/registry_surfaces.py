@@ -35,8 +35,6 @@ CLI_ACTIONS: dict[str, tuple[str, ...]] = {
     "task.move": ("plan move", "milestone move", "task move"),
     "claim.release": ("claim release",),
     "claim.force_release": ("claim release",),
-    "criterion.tick": ("criterion tick",),
-    "criterion.untick": ("criterion untick",),
     "criterion.relate": ("criterion relate",),
     "criterion.unrelate": ("criterion unrelate",),
     "row.delete": ("plan delete", "milestone delete", "task delete"),
@@ -59,7 +57,7 @@ CLI_ACTIONS: dict[str, tuple[str, ...]] = {
     "pull_request.refresh": ("pr refresh",),
     "pull_request.link": ("pr link",),
     "pull_request.unlink": ("pr unlink",),
-    "override.list": ("feed",),
+    "event.list": ("feed",),
 }
 
 MCP_ACTIONS: dict[str, str] = {
@@ -87,8 +85,6 @@ MCP_ACTIONS: dict[str, str] = {
     "task.move": "move_row",
     "claim.release": "claim_release",
     "claim.force_release": "claim_release",
-    "criterion.tick": "criterion_tick",
-    "criterion.untick": "criterion_untick",
     "criterion.relate": "criterion_relate",
     "criterion.unrelate": "criterion_unrelate",
     "row.delete": "delete_row",
@@ -108,7 +104,6 @@ MCP_ACTIONS: dict[str, str] = {
     "pull_request.link": "pull_request_link",
     "pull_request.unlink": "pull_request_unlink",
     "event.list": "activity_list",
-    "override.list": "activity_list",
 }
 
 
@@ -137,8 +132,6 @@ SURFACE_EXCEPTIONS: tuple[SurfaceException, ...] = (
     SurfaceException("bulk.release", "mcp", "TUI-only bulk gesture"),
     SurfaceException("bulk.undo", "cli", "TUI-only last-change undo"),
     SurfaceException("bulk.undo", "mcp", "TUI-only last-change undo"),
-    SurfaceException("view.detail", "cli", "CLI reads rows with `<noun> show`"),
-    SurfaceException("view.detail", "mcp", "MCP reads rows with `show_row`"),
     SurfaceException("view.fold", "cli", "TUI-only tree gesture"),
     SurfaceException("view.fold", "mcp", "TUI-only tree gesture"),
     SurfaceException("view.filter", "cli", "CLI filters with `list --status`/`--repo`"),
@@ -162,8 +155,6 @@ SURFACE_EXCEPTIONS: tuple[SurfaceException, ...] = (
     SurfaceException("view.refresh", "mcp", "MCP reads fresh data on every call"),
     SurfaceException("pull_request.open", "cli", "CLI keeps URLs in `pr show`"),
     SurfaceException("pull_request.open", "mcp", "MCP never launches a browser"),
-    SurfaceException("override.toggle", "cli", "TUI-only write gate"),
-    SurfaceException("override.toggle", "mcp", "MCP writes are gated by the server mode"),
     SurfaceException("theme.cycle", "cli", "TUI-only appearance choice"),
     SurfaceException("theme.cycle", "mcp", "TUI-only appearance choice"),
     SurfaceException("palette.open", "cli", "TUI overlay; CLI has named commands"),
@@ -181,8 +172,6 @@ SURFACE_EXCEPTIONS: tuple[SurfaceException, ...] = (
     SurfaceException("repo.open", "mcp", "MCP lists repos with `repo_list`"),
     SurfaceException("event.open", "cli", "CLI output carries the target ids"),
     SurfaceException("event.open", "mcp", "MCP output carries the target ids"),
-    SurfaceException("override.open", "cli", "CLI output carries the target ids"),
-    SurfaceException("override.open", "mcp", "MCP output carries the target ids"),
 )
 
 

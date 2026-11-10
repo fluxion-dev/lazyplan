@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import argparse
 
-from ....store import default_actor
-from .agents import add_agent_group
+from ....infrastructure.settings import default_actor
 from .common import _PARSER_DESCRIPTION, _PARSER_EPILOG
 from .coordination import (
     add_audit,
@@ -59,7 +58,6 @@ from .work import (
     add_add_milestone,
     add_add_plan,
     add_criteria,
-    add_criterion_groups,
     add_delete,
     add_delete_criteria,
     add_list,
@@ -167,7 +165,6 @@ def build_parser() -> argparse.ArgumentParser:
     add_question_group(sub, common)
     add_ref_group(sub, common)
     add_session_group(sub, common)
-    add_agent_group(sub, common)
     add_touch_group(sub, common)
     add_add_plan(sub, common)
     add_add_milestone(sub, common)
@@ -176,7 +173,6 @@ def build_parser() -> argparse.ArgumentParser:
     add_show(sub, common)
     add_add_criteria(sub, common)
     add_criteria(sub, common)
-    add_criterion_groups(sub, common)
     add_delete_criteria(sub, common)
     add_link(sub, common)
     add_unlink(sub, common)

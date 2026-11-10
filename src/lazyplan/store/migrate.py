@@ -8,7 +8,7 @@ from __future__ import annotations
 import sqlite3
 import uuid
 
-SCHEMA_VERSION = 10
+SCHEMA_VERSION = 9
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS plans (
@@ -102,35 +102,6 @@ CREATE TABLE IF NOT EXISTS external_refs (
     UNIQUE(plan_id, url)
 );
 CREATE INDEX IF NOT EXISTS idx_external_refs_plan ON external_refs(plan_id, id);
-CREATE TABLE IF NOT EXISTS agent_runs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    agent_session_id TEXT NOT NULL,
-    lazyplan_session_id INTEGER REFERENCES sessions(id) ON DELETE SET NULL,
-    plan_id INTEGER REFERENCES plans(id) ON DELETE SET NULL,
-    task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL,
-    title TEXT NOT NULL DEFAULT '',
-    cwd TEXT NOT NULL DEFAULT '',
-    status TEXT NOT NULL DEFAULT 'running'
-        CHECK (status IN ('running', 'idle', 'done', 'error')),
-    started_at REAL NOT NULL,
-    ended_at REAL NOT NULL DEFAULT 0,
-    summary TEXT NOT NULL DEFAULT '',
-    handoff TEXT NOT NULL DEFAULT ''
-);
-CREATE INDEX IF NOT EXISTS idx_agent_runs_task ON agent_runs(task_id, status);
-CREATE TABLE IF NOT EXISTS proposals (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    kind TEXT NOT NULL CHECK (kind IN ('plan_document', 'row_edit', 'task_create')),
-    title TEXT NOT NULL,
-    summary TEXT NOT NULL DEFAULT '',
-    payload TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'pending'
-        CHECK (status IN ('pending', 'applied', 'rejected')),
-    actor TEXT NOT NULL DEFAULT 'agent',
-    created_at REAL NOT NULL,
-    resolved_at REAL NOT NULL DEFAULT 0
-);
-CREATE INDEX IF NOT EXISTS idx_proposals_status ON proposals(status, id DESC);
 CREATE TABLE IF NOT EXISTS sessions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     actor TEXT NOT NULL DEFAULT 'human',
@@ -140,10 +111,15 @@ CREATE TABLE IF NOT EXISTS sessions (
     started_at REAL NOT NULL,
     ended_at REAL NOT NULL DEFAULT 0,
     summary TEXT NOT NULL DEFAULT '',
-    handoff TEXT NOT NULL DEFAULT ''
+    handoff TEXT NOT NULL DEFAULT '',
+    phase TEXT NOT NULL DEFAULT 'working',
+    last_seen_at REAL NOT NULL DEFAULT 0,
+    host TEXT NOT NULL DEFAULT '',
+    auto_closed INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_sessions_open ON sessions(ended_at, actor, repo_path);
 CREATE INDEX IF NOT EXISTS idx_sessions_plan ON sessions(plan_id, ended_at);
+CREATE INDEX IF NOT EXISTS idx_sessions_repo ON sessions(ended_at, repo_path, started_at);
 CREATE TABLE IF NOT EXISTS milestones (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
@@ -476,6 +452,23 @@ def _migrate_events_session(conn: sqlite3.Connection) -> None:
     conn.execute("CREATE INDEX IF NOT EXISTS idx_events_session ON events(session_id, id)")
 
 
+def _migrate_session_state(conn: sqlite3.Connection) -> None:
+    """Add lifecycle state to sessions and backfill the heartbeat."""
+    existing = {r["name"] for r in conn.execute("PRAGMA table_info(sessions)").fetchall()}
+    if "phase" not in existing:
+        conn.execute("ALTER TABLE sessions ADD COLUMN phase TEXT NOT NULL DEFAULT 'working'")
+    if "last_seen_at" not in existing:
+        conn.execute("ALTER TABLE sessions ADD COLUMN last_seen_at REAL NOT NULL DEFAULT 0")
+    if "host" not in existing:
+        conn.execute("ALTER TABLE sessions ADD COLUMN host TEXT NOT NULL DEFAULT ''")
+    if "auto_closed" not in existing:
+        conn.execute("ALTER TABLE sessions ADD COLUMN auto_closed INTEGER NOT NULL DEFAULT 0")
+    conn.execute("UPDATE sessions SET last_seen_at=started_at WHERE last_seen_at=0")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_sessions_repo ON sessions(ended_at, repo_path, started_at)"
+    )
+
+
 def _migrate_claim_location(conn: sqlite3.Connection) -> None:
     """Add the worktree and repo-root columns to claims when missing."""
     existing = {r["name"] for r in conn.execute("PRAGMA table_info(task_claims)").fetchall()}
@@ -495,6 +488,7 @@ def migrate(conn: sqlite3.Connection) -> None:
     _migrate_plan_uid(conn)
     _migrate_task_blocked(conn)
     _migrate_events_session(conn)
+    _migrate_session_state(conn)
     _migrate_claim_location(conn)
     _drop_priority_columns(conn)
     _migrate_vcs_link_state(conn)

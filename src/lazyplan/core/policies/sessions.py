@@ -1,9 +1,32 @@
-"""Session rules: identity, summaries, and handoff limits."""
+"""Session rules: identity, lifecycle, summaries, and handoff limits."""
 
 from __future__ import annotations
 
 SUMMARY_LIMIT = 4000
 HANDOFF_LIMIT = 2000
+PHASES = ("working", "awaiting")
+
+#: An open session with no heartbeat for this long is stale and safe to close.
+IDLE_AFTER_SECS = 12 * 3600
+
+
+def normalize_phase(text: str) -> str:
+    """Return one of ``working`` or ``awaiting``, rejecting anything else."""
+    body = str(text).strip().lower()
+    if body not in PHASES:
+        raise ValueError(f"session phase must be {'|'.join(PHASES)}")
+    return body
+
+
+def phase_for_event(event: str) -> str:
+    """Canonical phase after a hook event: stop waits on the user."""
+    return "awaiting" if event == "stop" else "working"
+
+
+def auto_close_summary(seconds: float) -> str:
+    """Summary recorded when idle reaping closes an abandoned session."""
+    hours = max(1, round(max(seconds, 0.0) / 3600))
+    return f"auto-closed after {hours}h idle"
 
 
 def parse_session_id(text: str) -> int:

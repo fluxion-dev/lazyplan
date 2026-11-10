@@ -29,8 +29,7 @@ owners through the links below.
 | `file` | commit | Yes | diff |
 | `pull_request` | task, milestone, or plan | Yes | checks, reviews, commits |
 | `repo` | plan, milestone, or task | Yes | branch, commits, PRs |
-| `event` | any row | Yes | actor, target, override reason |
-| `override` | event | Yes | actor, target, reason |
+| `event` | any row | Yes | actor, target, reason |
 
 Inline-only data: touch-points (task field list), handoff (session field), and
 repo inheritance (effective repos). They appear inside their owner's hub rather
@@ -46,7 +45,7 @@ number of interactions from the tree; hubs never exceed three.
 | Capture | tree | `n` → choose kind → fill title/why/what | new plan or task | 2 |
 | Organize | tree | open plan → add milestone/task → reorder by creation order | tree shows the cut | 3 |
 | Execute | tree | open task → claim → move doing → note handoff | task doing with a lease | 3 |
-| Prove | tree | open criterion → prove → record command/commit | criterion ticks with evidence | 3 |
+| Prove | tree | open criterion → prove → record command/commit | evidence recorded; completion stays separate | 3 |
 | Ship | tree | open plan → review → export/ship note | Markdown packet | 3 |
 | Inspect | tree | open row → provenance → commit/file/PR | read-only trail | 3 |
 | Coordinate | tree | open task → claims/touch-points → claim/block | active lease or blocked row | 3 |
@@ -77,20 +76,17 @@ all) share one action; `rename` when the label changes but the handler stays;
 ## Keymap
 
 Global keys are reserved and mean the same thing everywhere: `?` help,
-`c` palette, `escape` back, `q` quit, `O` manual override.
+`c` palette, `escape` back, `q` quit.
 
 | Context | Keys |
 | --- | --- |
-| tree | `j`/`k` move, `left`/`right` fold, `enter` detail, `space` mark, `e` edit, `s` status, `x` tick, `a` add criterion, `d` delete, `n` create, `/` filter, `f` plan mode, `g` source, `z` fold, `r` refresh, `t` theme |
-| detail | `e` edit, `s` advanced status, `x` tick, `p` prove, `d` delete, `g` source, `escape` back |
+| tree | `j`/`k` move, `left`/`right` fold, `space` mark, `e` edit, `s` status, `a` add criterion, `p` prove, `d` delete, `n` create, `/` filter, `f` plan mode, `g` source, `z` fold, `r` refresh, `t` theme |
 | hubs | `j`/`k` move, `enter` open, `escape` back, `?` help |
 | modal | `enter` accept, `escape` cancel |
 
-Conflict resolution: `q` is always quit. The detail page's current `q`
-(add question) becomes `Q`; the old binding remains for one minor release with
-a deprecation notice. `c` is always the palette; the detail page does not
-rebind it. Keys that differ only by screen (for example `s` advance status in
-the tree and detail) share one action ID and one meaning.
+Conflict resolution: `q` is always quit. `c` is always the palette. Actions
+that differ only by context share one action ID and one meaning; the palette
+disables what the current selection cannot run and explains why.
 
 ## Navigation graph
 
@@ -98,13 +94,12 @@ The main tree is the root. Every hub is at most three interactions away.
 
 | Route | Path | Depth |
 | --- | --- | --- |
-| tree → plan detail | `enter` | 1 |
-| tree → task detail | `enter` on task | 1 |
-| tree → detail → trust hub | `enter` → palette trust group | 2 |
-| tree → detail → provenance | `enter` → `g` | 2 |
+| tree → overview | select a row | 0 |
+| tree → trust hub | palette trust group | 1 |
+| tree → provenance | `g` | 1 |
 | tree → source trail | `g` | 1 |
-| tree → detail → pull requests | `enter` → `P` | 2 |
-| tree → detail → activity | `enter` → `A` | 2 |
+| tree → pull requests | palette pull request hub | 1 |
+| tree → activity | palette activity hub | 1 |
 | tree → create → form | `n` → kind | 2 |
 | tree → export picker | palette → export | 2 |
 | tree → update | `U` | 1 |
@@ -119,12 +114,12 @@ every route. Palette and help are available in every context.
 | plan create/edit/delete | yes | yes | yes | yes | — |
 | milestone/task create/edit/delete | yes | yes | yes | yes | — |
 | task move/claim/block/finish | yes | yes | yes | yes | — |
-| criteria tick/prove/relate | yes | yes | yes | yes | — |
+| criteria edit/prove/relate | yes | yes | yes | yes | — |
 | questions/references | yes | yes | yes | yes | — |
 | sessions/handoffs | yes (new hub) | yes | read-only | yes | M454 |
 | comments/notes | yes | yes | yes | yes | — |
 | commits/files/PRs/repos | yes | yes | read-only | yes | — |
-| feed/overrides | yes | yes | read-only | yes | — |
+| feed | yes | yes | read-only | yes | — |
 | setup/upgrade/doctor | palette | yes | no | yes | CLI-only by design |
 | theme/fold/mark/bulk | yes | no | no | no | TUI-only by design |
 
@@ -158,8 +153,7 @@ proves every action is at most three interactions from the tree. The
 120x40; the [acceptance record](acceptance.md) carries the final gate evidence.
 The [inventory](inventory.md) is the reproducible surface snapshot.
 
-Legacy CLI aliases and the moved detail keys keep working for one minor
-release. Removal target: `0.37.0`, for deprecations introduced in `0.36.0`.
+Legacy CLI aliases keep working for one minor release. Removal target: `0.37.0`, for deprecations introduced in `0.36.0`.
 `registry.deprecations()` names each replacement, and the help screen renders
 the moved-key notice; `tools/ia_inventory.py --check` and
 `tests/cli/test_legacy_deprecation.py` keep the promise visible until removal.

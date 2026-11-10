@@ -240,7 +240,7 @@ def _import_all(store: TransferPort, data: dict, actor: str = "human") -> dict[s
         for c in items:
             nc = store.add_criteria(kind, obj_id, c.get("text", ""), actor=actor)
             if c.get("done"):
-                store.set_criteria(nc.id, True, actor=actor)
+                store.update_criterion(nc.id, done=True, actor=actor)
             criteria_map[int(c.get("id", 0) or 0)] = nc.id
             counts["criteria"] += 1
             for row in c.get("evidence", []):

@@ -9,7 +9,10 @@ from pathlib import Path
 
 from ..core.entities import Session
 from ..core.policies.sessions import (
+    IDLE_AFTER_SECS,
+    auto_close_summary,
     normalize_handoff,
+    normalize_phase,
     normalize_summary,
     parse_session_id,
     supersede_summary,
@@ -17,7 +20,6 @@ from ..core.policies.sessions import (
 from .base import StoreBase
 from .session_pointer import (
     SESSION_ENV,
-    checkout_path,
     clear_pointer,
     read_pointer,
     write_pointer,
@@ -41,6 +43,10 @@ class SessionsMixin(StoreBase):
             ended_at=float(r["ended_at"] or 0),
             summary=str(r["summary"] or ""),
             handoff=str(r["handoff"] or ""),
+            phase=str(r["phase"] or "working"),
+            last_seen_at=float(r["last_seen_at"] or 0),
+            host=str(r["host"] or ""),
+            auto_closed=bool(r["auto_closed"]),
         )
 
     def _open_session(self, actor: str, repo_path: str) -> Session | None:
@@ -65,7 +71,7 @@ class SessionsMixin(StoreBase):
                 row = self.get_session(session_id)
                 if row is not None and not row.ended and row.actor == actor:
                     return row
-        repo_path = str(checkout_path())
+        repo_path = self.checkout_path()
         pointer_id = read_pointer(self.path, actor, repo_path)
         if pointer_id is None:
             return None
@@ -90,14 +96,17 @@ class SessionsMixin(StoreBase):
         note: str = "",
         force: bool = False,
         now: float | None = None,
+        host: str = "",
+        phase: str = "working",
     ) -> tuple[Session, Session | None]:
-        """Open a session; force ends an existing open one first."""
+        """Open a session; idle ones in this checkout are closed first."""
         stamp = time.time() if now is None else now
         repo = (
             str(Path(repo_path).expanduser().resolve())
             if repo_path.strip()
-            else str(checkout_path())
+            else self.checkout_path()
         )
+        self.reap_idle_sessions(now=stamp, repo_path=repo)
         with self._connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
             if plan_id is not None:
@@ -108,9 +117,19 @@ class SessionsMixin(StoreBase):
             if previous is not None and not force:
                 raise ValueError(f"session S{previous.id} is already open; end it or pass --force")
             cur = conn.execute(
-                "INSERT INTO sessions (actor, plan_id, repo_path, branch, started_at)"
-                " VALUES (?,?,?,?,?)",
-                (actor, plan_id, repo, branch.strip(), stamp),
+                "INSERT INTO sessions"
+                " (actor, plan_id, repo_path, branch, started_at, phase, last_seen_at, host)"
+                " VALUES (?,?,?,?,?,?,?,?)",
+                (
+                    actor,
+                    plan_id,
+                    repo,
+                    branch.strip(),
+                    stamp,
+                    normalize_phase(phase),
+                    stamp,
+                    str(host)[:64],
+                ),
             )
             session_id = int(cur.lastrowid or 0)
             if previous is not None:
@@ -137,6 +156,7 @@ class SessionsMixin(StoreBase):
         summary: str = "",
         handoff: str = "",
         now: float | None = None,
+        auto: bool = False,
     ) -> Session:
         """Close one session with a summary and handoff."""
         stamp = time.time() if now is None else now
@@ -151,10 +171,17 @@ class SessionsMixin(StoreBase):
                 raise ValueError(f"session S{session_id} has already ended")
             repo = str(row["repo_path"] or "")
             owner = str(row["actor"])
-            self.log(actor, "session", "end", f"session S{session_id} ended", session_id=session_id)
+            action = "auto-close" if auto else "end"
+            self.log(
+                actor,
+                "session",
+                action,
+                f"session S{session_id} {action}d",
+                session_id=session_id,
+            )
             conn.execute(
-                "UPDATE sessions SET ended_at=?, summary=?, handoff=? WHERE id=?",
-                (stamp, body, next_step, session_id),
+                "UPDATE sessions SET ended_at=?, summary=?, handoff=?, auto_closed=? WHERE id=?",
+                (stamp, body, next_step, int(auto), session_id),
             )
         clear_pointer(self.path, owner, repo, session_id=session_id)
         self._session_cache.pop(owner, None)
@@ -162,6 +189,100 @@ class SessionsMixin(StoreBase):
         ended = self.get_session(session_id)
         assert ended is not None
         return ended
+
+    def touch_session(
+        self,
+        session_id: int,
+        phase: str | None = None,
+        host: str = "",
+        now: float | None = None,
+    ) -> Session | None:
+        """Refresh one open session's heartbeat and optional phase."""
+        stamp = time.time() if now is None else now
+        sets = ["last_seen_at=?"]
+        params: list[object] = [stamp]
+        if phase is not None:
+            sets.append("phase=?")
+            params.append(normalize_phase(phase))
+        if host:
+            sets.append("host=?")
+            params.append(str(host)[:64])
+        params.append(session_id)
+        with self._connect() as conn:
+            row = conn.execute("SELECT ended_at FROM sessions WHERE id=?", (session_id,)).fetchone()
+            if row is None or int(row["ended_at"] or 0) > 0:
+                return None
+            conn.execute(f"UPDATE sessions SET {', '.join(sets)} WHERE id=?", params)
+        return self.get_session(session_id)
+
+    def open_session_for(
+        self,
+        repo_path: str,
+        host: str = "",
+        actor: str = "",
+    ) -> Session | None:
+        """Newest open session in one checkout, preferring a matching host."""
+        base = "SELECT * FROM sessions WHERE ended_at=0 AND repo_path=?"
+        if host:
+            with self._connect() as conn:
+                row = conn.execute(
+                    base + " AND host=? ORDER BY started_at DESC, id DESC LIMIT 1",
+                    (repo_path, host),
+                ).fetchone()
+            if row is not None:
+                return self._row_to_session(row)
+        sql = base
+        params: list[object] = [repo_path]
+        if actor:
+            sql += " AND actor=?"
+            params.append(actor)
+        sql += " ORDER BY started_at DESC, id DESC LIMIT 1"
+        with self._connect() as conn:
+            row = conn.execute(sql, params).fetchone()
+        return self._row_to_session(row) if row is not None else None
+
+    def reap_idle_sessions(
+        self,
+        now: float | None = None,
+        idle_after: float = IDLE_AFTER_SECS,
+        repo_path: str = "",
+    ) -> list[Session]:
+        """Close open sessions whose heartbeat is older than *idle_after*."""
+        stamp = time.time() if now is None else now
+        cutoff = stamp - max(idle_after, 0.0)
+        sql = "SELECT * FROM sessions WHERE ended_at=0"
+        params: list[object] = []
+        if repo_path:
+            sql += " AND repo_path=?"
+            params.append(repo_path)
+        with self._connect() as conn:
+            rows = conn.execute(sql, params).fetchall()
+        closed: list[Session] = []
+        for row in rows:
+            anchor = float(row["last_seen_at"] or row["started_at"] or 0.0)
+            if anchor >= cutoff:
+                continue
+            session_id = int(row["id"])
+            owner = str(row["actor"])
+            repo = str(row["repo_path"] or "")
+            with self._connect() as conn:
+                conn.execute(
+                    "UPDATE sessions SET ended_at=?, summary=?, auto_closed=1 WHERE id=?",
+                    (stamp, auto_close_summary(stamp - anchor), session_id),
+                )
+                self.log(
+                    owner,
+                    "session",
+                    "auto-close",
+                    f"session S{session_id} auto-closed after idle",
+                    session_id=session_id,
+                )
+            clear_pointer(self.path, owner, repo, session_id=session_id)
+            ended = self.get_session(session_id)
+            if ended is not None:
+                closed.append(ended)
+        self._session_cache.clear()
+        return closed
 
     def get_session(self, session_id: int) -> Session | None:
         """One session by id."""

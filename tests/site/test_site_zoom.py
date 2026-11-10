@@ -22,8 +22,8 @@ class TestScreenshotZoom(unittest.TestCase):
         self.frame = FRAME.read_text(encoding="utf-8")
 
     def test_every_screenshot_is_a_zoom_trigger(self):
-        self.assertEqual(len(TRIGGERS.findall(self.page)), 8)
-        self.assertEqual(len(IMAGES.findall(self.page)), 8)
+        self.assertEqual(len(TRIGGERS.findall(self.page)), 7)
+        self.assertEqual(len(IMAGES.findall(self.page)), 7)
 
     def test_every_trigger_targets_a_published_png(self):
         for href in IMAGES.findall(self.page):

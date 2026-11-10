@@ -193,11 +193,6 @@ def add_feed(
     )
     f.add_argument("--follow", action="store_true", help="keep showing new events as they arrive")
     f.add_argument(
-        "--overrides",
-        action="store_true",
-        help="only manual override events from the screen",
-    )
-    f.add_argument(
         "--interval",
         type=float,
         default=1.0,

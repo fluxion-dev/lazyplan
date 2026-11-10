@@ -11,16 +11,19 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
+from lazyplan.infrastructure.checkout import PathAdapter
 from lazyplan.infrastructure.repo import (
     ensure_plan_dir,
     resolve_db_path,
     seed_shared_db,
     shared_db_path,
 )
+from lazyplan.infrastructure.settings import default_actor
 
 from ..core.errors import ClaimConflict as ClaimConflict
 from ..core.errors import ClaimError as ClaimError
 from ..core.errors import ClaimMissing as ClaimMissing
+from ..core.ports.paths import PathPort
 from ..core.serialization import to_payload
 from .migrate import migrate
 from .stubs import StoreStubs
@@ -50,11 +53,6 @@ def _files_tuple(payload: str) -> tuple[str, ...]:
     return tuple(str(item) for item in raw if isinstance(item, str) and item)
 
 
-def default_actor() -> str:
-    """$USER on posix, %USERNAME% on Windows, else human."""
-    return (os.environ.get("USER") or os.environ.get("USERNAME") or "human")[:64]
-
-
 def _actor(explicit: str = "") -> str:
     """Normalize an actor name, defaulting to the login name."""
     if explicit.strip():
@@ -63,8 +61,9 @@ def _actor(explicit: str = "") -> str:
 
 
 class StoreBase(StoreStubs):
-    def __init__(self, path: str | Path | None = None) -> None:
+    def __init__(self, path: str | Path | None = None, paths: PathPort | None = None) -> None:
         self.path = resolve_db_path(path)
+        self.paths = paths or PathAdapter()
         self._local = threading.local()
         self._session_cache: dict[str, int | None] = {}
         try:
@@ -80,6 +79,22 @@ class StoreBase(StoreStubs):
     def db_path(self) -> str:
         """Database path as text for ports and template lookups."""
         return str(self.path)
+
+    def repo_root(self, cwd: str = ".") -> str | None:
+        """Enclosing git root for *cwd*, or None."""
+        return self.paths.repo_root(cwd)
+
+    def checkout_path(self, cwd: str | None = None) -> str:
+        """Repo root for *cwd*, else the resolved working directory."""
+        return self.paths.checkout_path(cwd)
+
+    def resolve_repo_path(self, path: str) -> str:
+        """Absolute path without case folding."""
+        return self.paths.resolve_repo_path(path)
+
+    def normalize_repo_path(self, path: str) -> str:
+        """Absolute, case-folded path for equality checks."""
+        return self.paths.normalize_repo_path(path)
 
     @contextmanager
     def transaction(self) -> Iterator[None]:
@@ -135,15 +150,6 @@ class StoreBase(StoreStubs):
             ).fetchall()
         return [dict(r) for r in rows]
 
-    def feed_overrides(self, limit: int = 20) -> list[dict]:
-        """Recent manual-override events, newest first."""
-        with self._connect() as conn:
-            rows = conn.execute(
-                "SELECT * FROM events WHERE kind='override' ORDER BY id DESC LIMIT ?",
-                (max(limit, 1),),
-            ).fetchall()
-        return [dict(r) for r in rows]
-
     def events_by_action(self, *actions: str) -> list[dict]:
         """All events with one of these actions, oldest first."""
         wanted = [action for action in actions if action]
@@ -179,7 +185,29 @@ class StoreBase(StoreStubs):
                 mr = conn.execute("SELECT COALESCE(MAX(id),0) m FROM entity_repos").fetchone()["m"]
             except Exception:
                 mr = 0
-        return (mtime, c["plans"], c["milestones"], c["tasks"], mp, ms, mt, me, mc, ml, mr, mf)
+            try:
+                mses = conn.execute("SELECT COALESCE(MAX(id),0) m FROM sessions").fetchone()["m"]
+                mseen = conn.execute(
+                    "SELECT COALESCE(MAX(last_seen_at),0) m FROM sessions"
+                ).fetchone()["m"]
+            except Exception:
+                mses, mseen = 0, 0.0
+        return (
+            mtime,
+            c["plans"],
+            c["milestones"],
+            c["tasks"],
+            mp,
+            ms,
+            mt,
+            me,
+            mc,
+            ml,
+            mr,
+            mf,
+            mses,
+            mseen,
+        )
 
 
 _ser = to_payload

@@ -34,14 +34,12 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 from rich.text import Text  # noqa: E402
 from textual.app import App, ComposeResult  # noqa: E402
-from textual.widgets import DirectoryTree, Static, TextArea, Tree  # noqa: E402
+from textual.widgets import DirectoryTree, Static, Tree  # noqa: E402
 
 from lazyplan import services  # noqa: E402
 from lazyplan.core.entities import Status  # noqa: E402
-from lazyplan.infrastructure.agents import AgentProfile, PlanEntry, ToolCall  # noqa: E402
 from lazyplan.presentation.tui import create_app  # noqa: E402
-from lazyplan.presentation.tui.screens import DetailScreen, PaletteScreen  # noqa: E402
-from lazyplan.presentation.tui.screens.agent import AgentScreen  # noqa: E402
+from lazyplan.presentation.tui.screens import PaletteScreen  # noqa: E402
 from lazyplan.presentation.tui.screens.export import ExportScreen  # noqa: E402
 from lazyplan.presentation.tui.screens.source import SourceScreen  # noqa: E402
 from lazyplan.services import metrics  # noqa: E402
@@ -488,7 +486,6 @@ async def capture_control_room(store: Store, target: Path) -> None:
     app = create_app(str(store.path))
     async with app.run_test(size=SIZE) as pilot:
         await pilot.pause()
-        app.action_toggle_override()
         tree = app.query_one("#tree", Tree)
         app.tree_controller.expand_all()
         tree.focus()
@@ -510,7 +507,8 @@ async def capture_plan_detail(store: Store, target: Path) -> None:
     plan_id = next(plan.id for plan in store.list_plans() if plan.name == "Ship the source trail")
     app = create_app(str(store.path))
     async with app.run_test(size=SIZE) as pilot:
-        app.push_screen(DetailScreen(store, "plan", plan_id))
+        app.selected = ("plan", plan_id)
+        app.update_preview(force=True)
         await pilot.pause()
         app.save_screenshot(str(target))
 
@@ -519,85 +517,9 @@ async def capture_collaboration(store: Store, target: Path) -> None:
     task_id = _task_id(store, "Claim the release queue")
     app = create_app(str(store.path))
     async with app.run_test(size=SIZE) as pilot:
-        app.push_screen(DetailScreen(store, "task", task_id))
+        app.selected = ("task", task_id)
+        app.update_preview(force=True)
         await pilot.pause()
-        app.save_screenshot(str(target))
-
-
-async def capture_workbench(store: Store, target: Path) -> None:
-    """Capture the agent workbench with a deterministic transcript."""
-    profile = AgentProfile("opencode", "OpenCode", ("opencode", "acp"))
-    app = create_app(str(store.path))
-    async with app.run_test(size=SIZE) as pilot:
-        await pilot.pause()
-        screen = AgentScreen(
-            profile,
-            Path(store.path).parent,
-            title="T1 Claim the release queue",
-            display_cwd="~/acme/web",
-            prompt="T1 Claim the release queue\n\nClaim it, run the focused tests, and link the commit.",
-        )
-        app.push_screen(screen)
-        await pilot.pause()
-        transcript = screen._transcript  # noqa: SLF001 - deterministic fixture
-        transcript.add_user(
-            "T1 Claim the release queue. Claim it, run the focused tests, and link the commit."
-        )
-        transcript.add_text(
-            "I'll read the task, claim it, and run the focused tests before linking the commit."
-        )
-        transcript.add_tool(
-            ToolCall(
-                tool_call_id="read-1",
-                title="Read plan",
-                name="read",
-                kind="read",
-                status="completed",
-                content=(
-                    {
-                        "type": "content",
-                        "content": {
-                            "type": "text",
-                            "text": "T1 Claim the release queue · P1 Ship the coordination release",
-                        },
-                    },
-                ),
-            ),
-            {},
-        )
-        transcript.add_plan(
-            (
-                PlanEntry("Read the task", "high", "completed"),
-                PlanEntry("Claim the task", "high", "in_progress"),
-                PlanEntry("Run the focused tests", "medium", "pending"),
-                PlanEntry("Link the commit", "medium", "pending"),
-            )
-        )
-        transcript.add_tool(
-            ToolCall(
-                tool_call_id="test-1",
-                title="Run focused tests",
-                name="bash",
-                kind="execute",
-                status="completed",
-                content=(
-                    {
-                        "type": "content",
-                        "content": {"type": "text", "text": "42 passed in 3.8s"},
-                    },
-                ),
-            ),
-            {},
-        )
-        transcript.add_text(
-            "Claimed T1 and linked a1b2c3d. The queue is current; the next task is ready."
-        )
-        screen._render_transcript()  # noqa: SLF001 - deterministic fixture
-        screen._set_status("running", "T1 · 2 min")  # noqa: SLF001
-        prompt = screen.query_one("#agent-prompt", TextArea)
-        prompt.text = "Continue with T2 when the tests are green."
-        prompt.focus()
-        await pilot.pause(0.8)
         app.save_screenshot(str(target))
 
 
@@ -773,7 +695,7 @@ SCENES: dict[str, Scene] = {
         SIZE,
         build_control_room_fixture,
         capture_control_room,
-        "lazyplan control room with the manual override banner, health and needs strip, an active session, an open question, approval drift, claims, and attention tasks.",
+        "lazyplan control room with the health and needs strip, an active session, an open question, approval drift, claims, and attention tasks.",
     ),
     "lpui-source-trail": Scene(
         SIZE,
@@ -815,7 +737,7 @@ SCENES: dict[str, Scene] = {
         SIZE,
         build_source_fixture,
         capture_plan_detail,
-        "Read-only plan detail showing the reason, scope, acceptance criteria, milestones, and linked source.",
+        "Plan overview showing the reason, scope, acceptance criteria, milestones, and linked source.",
     ),
     "lpui-coordination": Scene(
         SIZE,
@@ -827,13 +749,7 @@ SCENES: dict[str, Scene] = {
         SIZE,
         build_coordination_fixture,
         capture_collaboration,
-        "lazyplan task detail page showing an active claim, two review comments, and a handoff note.",
-    ),
-    "lpui-workbench": Scene(
-        SIZE,
-        build_source_fixture,
-        capture_workbench,
-        "lazyplan agent workbench with a task prompt, streaming agent response, tool cards, an execution plan, and the prompt ready for the next step.",
+        "Task overview showing an active claim, two review comments, and a handoff note.",
     ),
     "lpui-search-bulk": Scene(
         SIZE,
@@ -1036,9 +952,9 @@ def _framed(path: Path, size: str) -> list[str]:
     ]
 
 
-def build_cinematic_hero(coordination: Path, workbench: Path, source: Path, target: Path) -> None:
+def build_cinematic_hero(coordination: Path, agent: Path, source: Path, target: Path) -> None:
     """Compose the 2400x1200 hero: plan, agent, and proof side by side."""
-    for path in (coordination, workbench, source):
+    for path in (coordination, agent, source):
         if not path.is_file():
             raise SystemExit(f"error: missing hero source {path}")
     subprocess.run(
@@ -1053,7 +969,7 @@ def build_cinematic_hero(coordination: Path, workbench: Path, source: Path, targ
             "-geometry",
             "+60+194",
             "-composite",
-            *_framed(workbench, "820x462"),
+            *_framed(agent, "820x462"),
             "-gravity",
             "northwest",
             "-geometry",
@@ -1115,14 +1031,14 @@ def run(out_dir: Path, only: list[str], keep_svg: Path | None, make_og: bool) ->
             print(f"wrote {shown(png.with_suffix('.webp'))}")
         hero_sources = {
             "lpui-coordination",
-            "lpui-workbench",
+            "lpui-mcp",
             "lpui-source-trail",
         }
         if hero_sources <= set(names):
             hero = out_dir / "lpui-hero.png"
             build_cinematic_hero(
                 out_dir / "lpui-coordination.png",
-                out_dir / "lpui-workbench.png",
+                out_dir / "lpui-mcp.png",
                 out_dir / "lpui-source-trail.png",
                 hero,
             )

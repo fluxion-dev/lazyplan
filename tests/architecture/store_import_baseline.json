@@ -1,31 +1,24 @@
 {
   "modules": [
-    "lazyplan.presentation.cli.commands",
-    "lazyplan.presentation.cli.commands.admin",
-    "lazyplan.presentation.cli.commands.agent",
-    "lazyplan.presentation.cli.commands.plan",
-    "lazyplan.presentation.cli.commands.proof",
-    "lazyplan.presentation.cli.commands.question",
-    "lazyplan.presentation.cli.commands.ready",
-    "lazyplan.presentation.cli.commands.refs",
-    "lazyplan.presentation.cli.commands.session",
-    "lazyplan.presentation.cli.commands.system",
-    "lazyplan.presentation.cli.commands.touch",
-    "lazyplan.presentation.cli.commands.ui",
-    "lazyplan.presentation.cli.main",
-    "lazyplan.presentation.cli.parser.builder",
-    "lazyplan.presentation.cli.rows",
-    "lazyplan.presentation.cli.rows_proof",
-    "lazyplan.presentation.mcp.base",
-    "lazyplan.presentation.mcp.server",
-    "lazyplan.presentation.mcp.tools",
-    "lazyplan.presentation.setup.apply",
-    "lazyplan.presentation.tui.app",
-    "lazyplan.presentation.tui.base",
-    "lazyplan.presentation.tui.screens.agent",
-    "lazyplan.presentation.tui.screens.agent_proposals",
-    "lazyplan.services.agent_work",
-    "lazyplan.services.hooks",
-    "lazyplan.services.proposals"
+    {
+      "module": "lazyplan.presentation.cli.main",
+      "reason": "CLI composition root opens the store"
+    },
+    {
+      "module": "lazyplan.presentation.cli.store",
+      "reason": "shared CLI store factory"
+    },
+    {
+      "module": "lazyplan.presentation.mcp.server",
+      "reason": "MCP composition root opens the store"
+    },
+    {
+      "module": "lazyplan.presentation.setup.apply",
+      "reason": "setup creates the initial database"
+    },
+    {
+      "module": "lazyplan.presentation.tui.app",
+      "reason": "TUI composition root opens the store"
+    }
   ]
 }

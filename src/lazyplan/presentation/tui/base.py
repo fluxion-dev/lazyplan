@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from typing import Any
 
 from textual.app import App
 from textual.widgets.tree import TreeNode
 
-from ...store import Store
+from ...core.ports.app import AppPort
 from .controllers.git_state import GitStateController
 from .controllers.metrics import MetricsController
 from .controllers.spinner import SpinnerController
@@ -27,23 +26,10 @@ class TuiHost:
     def _apply_layout(self, width: int | None = None) -> bool:
         return False
 
-    def _record_override(self, action: str, target: str, reason: str = "") -> None: ...
-    def require_override(self, notify: bool = True) -> bool:
-        return False
-
-    def prompt_reason(
-        self,
-        title: str,
-        placeholder: str,
-        submit: str,
-        callback: Callable[[str], None],
-        empty_message: str = "a reason is required",
-    ) -> None: ...
     def _paint_mark(self, key: tuple[str, int]) -> None: ...
     def _node_key(self, node: TreeNode) -> tuple[str, int] | None: ...
     def action_toggle_status(self) -> None: ...
-    def _open_detail(self, kind: str, oid: int, edit: bool = False) -> None: ...
-    def action_open_detail(self) -> None: ...
+    def select_row(self, kind: str, oid: int) -> None: ...
     def action_fold(self) -> None: ...
     def action_fold_all(self) -> None: ...
     def action_filter_text(self) -> None: ...
@@ -67,7 +53,7 @@ class TuiHost:
 class AppBase(App, TuiHost):
     """App attributes and cross-mixin declarations."""
 
-    store: Store
+    store: AppPort
     heal: bool
     state: AppState
     tree_controller: TreeController
@@ -83,23 +69,7 @@ class AppBase(App, TuiHost):
     _last_click_at: float
     _fp: Any
     _startup_notice: str
-    agent_status: str = "idle"
-    agent_detail: str = "W workbench"
     rev: Any
-
-    def set_agent_status(self, status: str, detail: str = "") -> None:
-        """Publish the compact workbench status in the main shell."""
-        self.agent_status = status
-        self.agent_detail = detail
-        if not self._mounted:
-            return
-        label = status if not detail else f"{status} · {detail}"
-        try:
-            from textual.widgets import Static
-
-            self.query_one("#agent-strip", Static).update(f"[dim]agent[/] {label}")
-        except Exception:
-            pass
 
     @property
     def selected(self) -> tuple[str, int] | None:
@@ -124,14 +94,6 @@ class AppBase(App, TuiHost):
     @filter_text.setter
     def filter_text(self, value: str) -> None:
         self.state.filter_text = value
-
-    @property
-    def override_mode(self) -> bool:
-        return self.state.override_mode
-
-    @override_mode.setter
-    def override_mode(self, value: bool) -> None:
-        self.state.override_mode = value
 
     @property
     def marked(self) -> set[tuple[str, int]]:

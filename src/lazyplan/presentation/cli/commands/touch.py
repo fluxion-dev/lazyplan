@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from ....store import Store
+from ....core.ports.coordination import CoordinationPort
 from ...shared import porcelain
 from ...shared.design import msg_error, msg_not_found
 from ..emit import _emit_read
@@ -16,7 +16,7 @@ def _touch_row(task_id: int, status: str, pattern: str) -> str:
     return porcelain.row("touch", task_id, status, pattern, f"task:{task_id}", "-")
 
 
-def _cmd_touch_add(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_touch_add(store: CoordinationPort, args: argparse.Namespace, actor: str) -> int:
     del actor
     task = store.get_task(args.task)
     if task is None:
@@ -38,7 +38,7 @@ def _cmd_touch_add(store: Store, args: argparse.Namespace, actor: str) -> int:
     )
 
 
-def _cmd_touch_list(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_touch_list(store: CoordinationPort, args: argparse.Namespace, actor: str) -> int:
     del actor
     if store.get_task(args.task) is None:
         print(msg_not_found("task", args.task), file=sys.stderr)
@@ -52,7 +52,7 @@ def _cmd_touch_list(store: Store, args: argparse.Namespace, actor: str) -> int:
     )
 
 
-def _cmd_touch_remove(store: Store, args: argparse.Namespace, actor: str) -> int:
+def _cmd_touch_remove(store: CoordinationPort, args: argparse.Namespace, actor: str) -> int:
     del actor
     if store.get_task(args.task) is None:
         print(msg_not_found("task", args.task), file=sys.stderr)

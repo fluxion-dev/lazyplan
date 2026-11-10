@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 EMPTY_NO_PLANS_TITLE = "No active plans"
-EMPTY_NO_PLANS_HINT = "press n to create one, or f for finished/both"
+EMPTY_NO_PLANS_HINT = "press n to create one"
 EMPTY_NO_PLANS = f"{EMPTY_NO_PLANS_TITLE} — {EMPTY_NO_PLANS_HINT}"
 EMPTY_FEED = "No activity yet — agents write with `lpui task add`."
 EMPTY_COMMITS = "(no commits linked)"

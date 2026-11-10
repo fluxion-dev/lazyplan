@@ -65,10 +65,7 @@ def render_blocks(blocks: tuple[PreviewBlock, ...]) -> list[str]:
     for block in blocks:
         lines.append("")
         if block.heading:
-            key = block.heading.split(" ", 1)[0]
-            icon = SECTION_ICON.get(key, "")
-            prefix = f"[bold cyan]{icon}[/] " if icon else ""
-            lines.append(f"{prefix}[bold]{escape_markup(block.heading.upper())}[/]")
+            lines.append(f"[bold]{escape_markup(block.heading.upper())}[/]")
         lines.extend(block.lines)
     return lines
 

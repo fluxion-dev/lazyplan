@@ -1497,9 +1497,9 @@ async def _capture_setup(store: Store, target: Path) -> None:
 
         return read
 
-    ui.banner(buf, color=False, version=VERSION)
-    ui.ask_placement(buf, answer("2"), Path("/home/ada/web"), Path("/home/ada"), "home", False)
-    ui.ask_agents(buf, answer("1 2"), hosts, ["opencode"], False)
+    ui.banner(buf, color=True, version=VERSION)
+    ui.ask_placement(buf, answer("2"), Path("/home/ada/web"), Path("/home/ada"), "home", True)
+    ui.ask_agents(buf, answer("1 2"), hosts, ["opencode"], True)
     ui.render_review(
         buf,
         Path("/home/ada/.lazyplan/lazyplan.db"),
@@ -1507,16 +1507,16 @@ async def _capture_setup(store: Store, target: Path) -> None:
         [Path("/home/ada/.config/opencode/skills/lazyplan/SKILL.md")],
         Path("/home/ada/.lazyplan/setup.json"),
         Path("/home/ada/web/.agents/lazyplan/config.json"),
-        False,
+        True,
         plugins=[("opencode", Path("/home/ada/.config/opencode/plugins/lazyplan.js"))],
     )
-    ui.confirm(buf, answer("y"), False)
+    ui.confirm(buf, answer("y"), True)
     ui.success(
         buf,
         Path("/home/ada/.lazyplan/lazyplan.db"),
         [Path("/home/ada/.config/opencode/skills/lazyplan/SKILL.md")],
         [],
-        False,
+        True,
         plugins=[Path("/home/ada/.config/opencode/plugins/lazyplan.js")],
     )
     await _capture_transcript(store, target, buf.getvalue(), "lpui setup", (120, 42))

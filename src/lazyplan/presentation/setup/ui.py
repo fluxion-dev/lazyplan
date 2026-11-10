@@ -129,7 +129,8 @@ def render_placement(
     for number, (key, label, path, note) in enumerate(placement_choices(repo_root, home), 1):
         mark = _icon("check" if key == current else "circle", color)
         name = _paint(label, "bold", "white" if key == current else "dim", color=color)
-        _line(write.write, f"  {number} {mark} {name}  {path}")
+        target = _paint(str(path), "dim", color=color)
+        _line(write.write, f"  {number} {mark} {name}  {target}")
         for line in wrap(note, "       ", terminal_width()):
             _line(write.write, _paint(line, "dim", color=color))
 
@@ -220,7 +221,8 @@ def render_review(
     if config is not None:
         rows.append(("config", str(config)))
     for label, value in rows:
-        _line(write.write, f"  {_paint(label.ljust(10), 'bold', color=color)} {value}")
+        shown = _paint(str(value), "dim", color=color)
+        _line(write.write, f"  {_paint(label.ljust(10), 'bold', color=color)} {shown}")
     if skills:
         for index, skill in enumerate(skills):
             label = "skills" if index == 0 else ""
@@ -236,7 +238,10 @@ def render_review(
             )
     else:
         _line(write.write, f"  {_paint('plugins'.ljust(10), 'bold', color=color)} none")
-    _line(write.write, f"  {_paint('state'.ljust(10), 'bold', color=color)} {state_path}")
+    shown_state = _paint(str(state_path), "dim", color=color)
+    _line(write.write, f"  {_paint('state'.ljust(10), 'bold', color=color)} {shown_state}")
+    if color:
+        _line(write.write, "  " + _paint("─" * min(48, terminal_width() - 4), "dim", color=color))
     _line(write.write)
 
 

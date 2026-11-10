@@ -1,9 +1,7 @@
-import type { ReactNode } from "react"
 import { Activity, Layers, ShieldCheck, Users } from "lucide-react"
 
 import {
   Card,
-  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
@@ -11,6 +9,7 @@ import {
 import { Kbd } from "@/components/ui/kbd"
 import { COPY } from "@/data/site"
 
+import { FeatureCard } from "./feature-card"
 import { Reveal } from "./reveal"
 import { Section, SectionHeading } from "./section"
 
@@ -89,14 +88,14 @@ export function Features() {
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <Reveal className="h-full">
           <FeatureCard
-            icon={Layers}
+            icon="network"
             title="One source of truth"
             description="Plans, milestones, and tasks live in one place. You and your agent read the same plan."
           />
         </Reveal>
         <Reveal className="h-full" delay={70}>
           <FeatureCard
-            icon={Activity}
+            icon="keyboard"
             title="Built for focus"
             description="A fast keyboard screen keeps plans short until you open them."
             hint={
@@ -120,14 +119,14 @@ export function Features() {
         </Reveal>
         <Reveal className="h-full" delay={140}>
           <FeatureCard
-            icon={ShieldCheck}
+            icon="git-branch"
             title="Proof you can see"
             description="Follow plan, commit, PR, and activity."
           />
         </Reveal>
         <Reveal className="h-full" delay={210}>
           <FeatureCard
-            icon={Users}
+            icon="database"
             title="Yours to keep"
             description="Local-first and private. Export any time. No cloud, no lock-in."
           />
@@ -137,35 +136,4 @@ export function Features() {
   )
 }
 
-type FeatureCardProps = Readonly<{
-  icon: typeof Layers
-  title: string
-  description: string
-  hint?: ReactNode
-}>
 
-function FeatureCard({
-  icon: Icon,
-  title,
-  description,
-  hint,
-}: FeatureCardProps) {
-  return (
-    <Card className="h-full border-border bg-card/70 shadow-lg shadow-black/30">
-      <CardHeader>
-        <div className="mb-2 flex size-9 items-center justify-center rounded-lg bg-secondary text-brand-cyan">
-          <Icon className="size-4" aria-hidden="true" />
-        </div>
-        <CardTitle className="text-lg">{title}</CardTitle>
-        <CardDescription className="text-[0.95rem]">
-          {description}
-        </CardDescription>
-      </CardHeader>
-      {hint ? (
-        <CardContent className="pt-0 font-mono text-[0.85rem] text-muted-foreground">
-          {hint}
-        </CardContent>
-      ) : null}
-    </Card>
-  )
-}

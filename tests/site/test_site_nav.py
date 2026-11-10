@@ -10,13 +10,13 @@ from tests.support.site import has_built_site, page_html
 DOCS = "https://github.com/fluxion-dev/lazyplan/blob/main/docs/usage.md"
 EXPECTED_HREFS = {
     "#top",
-    "#new",
+    "#story",
     "#features",
     "#screens",
     "#faq",
     "#install",
 } | {DOCS}
-DESKTOP_LINKS = {"#new", "#features", "#screens", "#faq", DOCS, "#install"}
+DESKTOP_LINKS = {"#story", "#features", "#screens", "#faq", DOCS, "#install"}
 
 
 class NavParser(HTMLParser):

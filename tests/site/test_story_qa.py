@@ -24,7 +24,7 @@ class StoryQaTest(unittest.TestCase):
     @unittest.skipUnless(has_built_site(), "site not built")
     def test_site_ships_the_control_room_screenshot(self) -> None:
         index = html.unescape(page_html())
-        self.assertIn("What's new", index)
+        self.assertIn("A control room for what needs you", index)
         self.assertIn("lpui-control-room.webp", index)
         self.assertTrue((ROOT / "site" / "public" / "screens" / "lpui-control-room.png").is_file())
         self.assertTrue((ROOT / "site" / "public" / "screens" / "lpui-control-room.webp").is_file())

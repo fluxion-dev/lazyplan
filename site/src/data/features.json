@@ -47,7 +47,7 @@
     {
       "id": "sessions",
       "title": "Sessions and handoffs",
-      "description": "Every run leaves a summary and a next step, so the next agent can resume without a briefing.",
+      "description": "Every run leaves a summary, a handoff, and comments, so the next agent can resume without a briefing.",
       "icon": "messages-square",
       "group": "agents"
     },

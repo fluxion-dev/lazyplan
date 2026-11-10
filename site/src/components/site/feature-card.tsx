@@ -30,10 +30,14 @@ export function FeatureCard({
   return (
     <Card
       className={cn(
-        "h-full border-border bg-card/70 shadow-lg shadow-black/30",
+        "relative h-full overflow-hidden border-border bg-card/70 shadow-lg shadow-black/30",
         className
       )}
     >
+      <div
+        aria-hidden="true"
+        className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand-cyan/40 to-transparent"
+      />
       <CardHeader>
         <div className="mb-2 flex size-9 items-center justify-center rounded-lg bg-secondary text-brand-cyan">
           <FeatureIcon name={icon} className="size-4" />

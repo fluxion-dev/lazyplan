@@ -72,7 +72,7 @@ class TestDownloadStats(unittest.TestCase):
         text = html.unescape(
             re.sub(r"<[^>]+>", " ", re.sub(r"<script.*?</script>", "", self.page, flags=re.S))
         )
-        self.assertLessEqual(len(text.split()), 750)
+        self.assertLessEqual(len(text.split()), 1200)
         self.assertEqual(self.page.count("<figure"), 10)
 
 

@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { COPY } from "@/data/site"
 
 import { Section, SectionHeading } from "./section"
 
@@ -14,9 +15,9 @@ export function WaysToWork() {
   return (
     <Section id="ways-to-work">
       <SectionHeading
-        eyebrow="Ways to work"
-        title="One agent plans. Another builds. You stay in control."
-        intro="Every plan row lives in lazyplan. Edit any row yourself; your agents see every change."
+        eyebrow={COPY.story.eyebrow}
+        title={COPY.story.title}
+        intro={COPY.story.intro}
         className="max-w-3xl"
       />
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">

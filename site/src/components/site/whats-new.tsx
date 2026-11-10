@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Kbd } from "@/components/ui/kbd"
+import { COPY } from "@/data/site"
 
 import { Section, SectionHeading } from "./section"
 
@@ -78,9 +79,9 @@ export function Features() {
   return (
     <Section id="features" className="max-w-7xl">
       <SectionHeading
-        eyebrow="Why lazyplan"
-        title="Less chat. More done."
-        intro="The plan you and your agent both see."
+        eyebrow={COPY.features.eyebrow}
+        title={COPY.features.title}
+        intro={COPY.features.intro}
       />
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <FeatureCard

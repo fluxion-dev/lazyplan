@@ -9,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { SCREENS, type Screen } from "@/data/site"
+import { COPY, SCREENS, type Screen } from "@/data/site"
 
 import { Section, SectionHeading } from "./section"
 
@@ -19,9 +19,9 @@ export function Screenshots() {
   return (
     <Section id="screens">
       <SectionHeading
-        eyebrow="Screenshots"
-        title="See it in action."
-        intro="Three themes, git context, one plan."
+        eyebrow={COPY.gallery.eyebrow}
+        title={COPY.gallery.title}
+        intro={COPY.gallery.intro}
       />
 
       <div className="grid grid-cols-1 gap-8 md:grid-cols-2">

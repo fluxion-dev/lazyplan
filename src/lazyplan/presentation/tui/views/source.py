@@ -70,6 +70,13 @@ def diff_row(line: DiffLine) -> str:
     return f"{gutter} {text}"
 
 
+def diff_counts(item: DiffFile) -> tuple[int, int]:
+    """Added and removed line counts for one file."""
+    added = sum(1 for hunk in item.hunks for line in hunk.lines if line.kind == "add")
+    removed = sum(1 for hunk in item.hunks for line in hunk.lines if line.kind == "remove")
+    return added, removed
+
+
 def diff_rows(files: tuple[DiffFile, ...], max_files: int) -> list[str]:
     rows: list[str] = []
     for index, item in enumerate(files):
@@ -78,9 +85,13 @@ def diff_rows(files: tuple[DiffFile, ...], max_files: int) -> list[str]:
         if item.binary:
             rows.append(f"[yellow]binary[/] {escape_markup(item.path)}")
             continue
-        rows.append(f"[bold cyan]▪[/] [bold]{escape_markup(item.path)}[/]")
+        added, removed = diff_counts(item)
+        rows.append(
+            f"[bold cyan]▪[/] [bold]{escape_markup(item.path)}[/] "
+            f"[green]+{added}[/] [red]-{removed}[/]"
+        )
         for hunk in item.hunks:
-            rows.append(f"[cyan]{escape_markup(hunk.header)}[/]")
+            rows.append(f"[bold cyan]{escape_markup(hunk.header)}[/]")
             rows.extend(diff_row(line) for line in hunk.lines)
     return rows
 
@@ -189,7 +200,13 @@ def render_diff(
     files = parse_patch(read.patch)
     if not files:
         return ["[dim]no textual changes[/]"]
-    prefix = ["[dim]root commit · full tree diff[/]"] if read.state == "root" else []
+    added = sum(diff_counts(item)[0] for item in files)
+    removed = sum(diff_counts(item)[1] for item in files)
+    prefix = [
+        f"[dim]{len(files)} files[/] · [green]+{added}[/] · [red]-{removed}[/]",
+    ]
+    if read.state == "root":
+        prefix.append("[dim]root commit · full tree diff[/]")
     rendered = diff_rows(files, max_files)
     budget = max(1, max_lines - len(prefix))
     shown = prefix + rendered[:budget]

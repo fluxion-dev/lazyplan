@@ -1805,7 +1805,7 @@
   "counts": {
     "cli_commands": 59,
     "doc_files": 9,
-    "doc_headings": 95,
+    "doc_headings": 86,
     "env_names": 12,
     "file_paths": 11,
     "hook_events": 24,
@@ -1823,7 +1823,7 @@
       {
         "file": "README.md",
         "headings": [
-          "lazyplan (`lpui`) \u2014 v0.35.0",
+          "lazyplan (`lpui`) \u2014 v0.36.1",
           "Install",
           "First run",
           "Why it differs",
@@ -1947,17 +1947,7 @@
       },
       {
         "file": "site/index.html",
-        "headings": [
-          "One plan for you and your agent.",
-          "One control room for the loop.",
-          "Less chat. More done.",
-          "One agent plans. Another builds. You stay in control.",
-          "See it in action.",
-          "Start in three steps.",
-          "Get lazyplan in one command.",
-          "Questions, answered.",
-          "Bring your plan into focus."
-        ]
+        "headings": []
       }
     ]
   },

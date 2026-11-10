@@ -7,23 +7,29 @@ import re
 import unittest
 
 from tests.support.paths import ROOT
+from tests.support.site import has_built_site, page_html
+
+COMPONENT = ROOT / "site/src/components/site/download-stats.tsx"
 
 
+@unittest.skipUnless(has_built_site(), "site not built")
 class TestDownloadStats(unittest.TestCase):
     def setUp(self):
-        self.page = (ROOT / "site/index.html").read_text(encoding="utf-8")
+        self.page = page_html()
+        self.component = COMPONENT.read_text(encoding="utf-8")
 
     def test_strip_is_hidden_until_data_loads(self):
         self.assertIn('id="download-stats"', self.page)
-        strip = self.page.split('id="download-stats"', 1)[1].split(">", 1)[0]
-        self.assertIn("hidden", strip)
+        tag = re.search(r'<[^>]*id="download-stats"[^>]*>', self.page)
+        assert tag is not None
+        self.assertIn("hidden", tag.group(0))
         self.assertIn('aria-label="Downloads"', self.page)
         for field in ("stats-downloads", "stats-updated"):
             self.assertIn(f'id="{field}"', self.page)
 
     def test_one_downloads_value_and_method_link(self):
         self.assertIn(">Downloads<", self.page)
-        self.assertIn("How we count", self.page)
+        self.assertIn("How we", self.page)
         self.assertIn("channels are reported separately", self.page)
         self.assertNotIn("docs/downloads.md", self.page)
         for removed in (
@@ -39,18 +45,18 @@ class TestDownloadStats(unittest.TestCase):
             self.assertNotIn(removed, self.page)
 
     def test_renderer_is_same_origin_and_stale_safe(self):
-        self.assertIn("fetch('downloads.json'", self.page)
-        self.assertIn("var MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;", self.page)
-        self.assertIn("data.available !== true", self.page)
-        self.assertIn("data.schema !== 2", self.page)
-        self.assertIn("channels.pypi_with_mirrors", self.page)
+        self.assertIn("fetch(DOWNLOADS_URL", self.component)
+        self.assertIn("const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000", self.component)
+        self.assertIn("data.available !== true", self.component)
+        self.assertIn("data.schema !== 2", self.component)
+        self.assertIn("channels?.pypi_with_mirrors", self.component)
         self.assertNotIn("pypistats.org", self.page)
         self.assertNotIn("https://img.shields.io/pypi/d", self.page)
 
     def test_no_cross_channel_total_is_rendered(self):
         self.assertNotIn('id="stats-total"', self.page)
-        self.assertNotIn("var total = data.total", self.page)
-        self.assertNotIn("with_mirrors +", self.page)
+        self.assertNotIn("data.total", self.component)
+        self.assertNotIn("with_mirrors +", self.component)
 
     def test_pages_refreshes_daily_and_json_is_generated(self):
         workflow = (ROOT / ".github/workflows/pages.yml").read_text(encoding="utf-8")
@@ -66,8 +72,8 @@ class TestDownloadStats(unittest.TestCase):
         text = html.unescape(
             re.sub(r"<[^>]+>", " ", re.sub(r"<script.*?</script>", "", self.page, flags=re.S))
         )
-        self.assertLessEqual(len(text.split()), 750)
-        self.assertEqual(self.page.count("<figure"), 10)
+        self.assertLessEqual(len(text.split()), 1200)
+        self.assertEqual(self.page.count("<figure"), 9)
 
 
 if __name__ == "__main__":

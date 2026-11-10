@@ -26,6 +26,14 @@ jobs:
           python -m venv .venv
           if [[ -d .venv/Scripts ]]; then VENV_BIN=.venv/Scripts; else VENV_BIN=.venv/bin; fi
           "$VENV_BIN"/python -m pip install -e ".[dev]"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - name: Install site dependencies
+        run: npm ci
+        working-directory: site
       - name: Gates (ruff + mypy + unittest x2)
         run: ./tools/check.sh
 

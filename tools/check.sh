@@ -28,8 +28,14 @@ echo "== man page in sync =="
 "$VENV_BIN"/python tools/gen-man.py --check
 echo "== docs allowlist and links =="
 "$SYS_PY" tools/check-docs.py
-echo "== site discoverability =="
-"$SYS_PY" tools/check-site.py
+echo "== site build =="
+if [[ -d site/node_modules ]] && command -v npm >/dev/null 2>&1; then
+  (cd site && npm run build >/dev/null)
+  echo "== site discoverability =="
+  "$SYS_PY" tools/check-site.py --dist site/dist
+else
+  echo "== site checks skipped (run npm ci in site/ to enable) =="
+fi
 echo "== clean install smoke =="
 ./tools/check-install.sh
 echo "== performance budgets =="

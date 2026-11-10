@@ -41,6 +41,7 @@ SKIP_DIRS = frozenset(
         ".git",
         ".venv",
         ".agents",
+        ".opencode",
         ".lazyplan",
         ".mypy_cache",
         ".pytest_cache",

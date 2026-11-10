@@ -3,7 +3,7 @@
   font-style: normal;
   font-weight: 200 800;
   font-display: swap;
-  src: url("../src/assets/fonts/plus-jakarta-sans-latin.woff2") format("woff2");
+  src: url("./assets/plus-jakarta-sans-latin.woff2") format("woff2");
 }
 
 @font-face {
@@ -11,7 +11,7 @@
   font-style: normal;
   font-weight: 100 800;
   font-display: swap;
-  src: url("../src/assets/fonts/jetbrains-mono-latin.woff2") format("woff2");
+  src: url("./assets/jetbrains-mono-latin.woff2") format("woff2");
 }
 
 :root {

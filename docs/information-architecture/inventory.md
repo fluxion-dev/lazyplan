@@ -23,7 +23,7 @@ python3 tools/ia_inventory.py --check
 | setup_steps | 4 |
 | hook_events | 24 |
 | doc_files | 9 |
-| doc_headings | 95 |
+| doc_headings | 86 |
 | tui_key_conflicts | 10 |
 | stale_claims | 0 |
 | env_names | 12 |
@@ -387,7 +387,7 @@ python3 tools/ia_inventory.py --check
 
 | File | Headings |
 | --- | --- |
-| `README.md` | lazyplan (`lpui`) — v0.35.0 · Install · First run · Why it differs · Everyday commands · For your agent · Learn more |
+| `README.md` | lazyplan (`lpui`) — v0.36.1 · Install · First run · Why it differs · Everyday commands · For your agent · Learn more |
 | `CONTRIBUTING.md` | Contributing to lazyplan · Set up · Before you push · UX review board · Tests · Landing changes · edit, then commit in small green slices · Release · Style · Docs · Add one action across every surface |
 | `AGENTS.md` | Agent instructions · Documentation |
 | `docs/usage.md` | lazyplan usage · Install · Linux packages · Fedora / RHEL / openSUSE · Debian / Ubuntu · One-line installer · From source · Upgrade · pipx · pip, including the install.sh venv · Uninstall · Start |
@@ -395,4 +395,4 @@ python3 tools/ia_inventory.py --check
 | `docs/lazyplan.1` |  |
 | `src/lazyplan/data/AGENTS.md` | lazyplan (`lpui`) |
 | `src/lazyplan/data/SKILL.md` | lazyplan (`lpui`) — local plan journal · Identity and surfaces · DB scoping and setup · Linked repos · Git proof and pull requests · Starting a plan: interview first · Readability and scouting · Record the definition · Review gate: plan is truth · Plan documents and recipes · Trust and coordination · During execution |
-| `site/index.html` | One plan for you and your agent. · One control room for the loop. · Less chat. More done. · One agent plans. Another builds. You stay in control. · See it in action. · Start in three steps. · Get lazyplan in one command. · Questions, answered. · Bring your plan into focus. |
+| `site/index.html` |  |

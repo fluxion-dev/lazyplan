@@ -281,6 +281,23 @@ def build_control_room_fixture(tmp: Path) -> Store:
     return store
 
 
+class TranscriptApp(App[None]):
+    """A dark terminal-like screen for deterministic command transcripts."""
+
+    CSS = """
+    Screen { background: #09090b; color: #e4e4e7; }
+    #term { padding: 1 2; }
+    """
+
+    def __init__(self, body: Text, title: str) -> None:
+        super().__init__()
+        self._body = body
+        self.title = title
+
+    def compose(self) -> ComposeResult:
+        yield Static(self._body, id="term")
+
+
 def transcript(*lines: tuple[str, str]) -> Text:
     """Build a monospace transcript from (text, style) pairs."""
     body = Text()
@@ -478,23 +495,6 @@ async def capture_collaboration(store: Store, target: Path) -> None:
         app.update_preview(force=True)
         await pilot.pause()
         app.save_screenshot(str(target))
-
-
-class TranscriptApp(App[None]):
-    """A dark terminal-like screen for deterministic command transcripts."""
-
-    CSS = """
-    Screen { background: #09090b; color: #e4e4e7; }
-    #term { padding: 1 2; }
-    """
-
-    def __init__(self, body: Text, title: str) -> None:
-        super().__init__()
-        self._body = body
-        self.title = title
-
-    def compose(self) -> ComposeResult:
-        yield Static(self._body, id="term")
 
 
 def _flow_health_text() -> Text:
@@ -742,13 +742,19 @@ def patch_svg(path: Path) -> None:
     path.write_text(text, encoding="utf-8", newline="\n")
 
 
+def write_webp(png: Path) -> None:
+    """Write the WebP sibling of a rendered PNG."""
+    subprocess.run(
+        ["magick", str(png), "-quality", "82", str(png.with_suffix(".webp"))],
+        check=True,
+    )
+
+
 def convert(svg: Path, png: Path) -> None:
     if shutil.which("magick") is None:
         raise SystemExit("error: ImageMagick 7 (magick) is required")
     subprocess.run(["magick", str(svg), "-strip", str(png)], check=True)
-    subprocess.run(
-        ["magick", str(png), "-quality", "82", str(png.with_suffix(".webp"))], check=True
-    )
+    write_webp(png)
 
 
 def dimensions(png: Path) -> str:
@@ -860,53 +866,58 @@ def build_og(screenshot: Path, target: Path) -> None:
         base.unlink(missing_ok=True)
 
 
-def build_hero(coordination: Path, mcp: Path, gates: Path, target: Path) -> None:
-    """Compose the 1600x760 hero: plan on the left, agent surfaces on the right."""
-    for path in (coordination, mcp, gates):
+def _framed(path: Path, size: str) -> list[str]:
+    """Return the ImageMagick tokens for one framed screenshot."""
+    return [
+        "(",
+        str(path),
+        "-resize",
+        f"{size}^",
+        "-gravity",
+        "center",
+        "-extent",
+        size,
+        "-bordercolor",
+        "#27272a",
+        "-border",
+        "2",
+        ")",
+    ]
+
+
+def build_cinematic_hero(coordination: Path, agent: Path, source: Path, target: Path) -> None:
+    """Compose the 2400x1200 hero: plan, agent, and proof side by side."""
+    for path in (coordination, agent, source):
         if not path.is_file():
             raise SystemExit(f"error: missing hero source {path}")
     subprocess.run(
         [
             "magick",
             "-size",
-            "1600x760",
-            "xc:#09090b",
-            "(",
-            str(coordination),
-            "-resize",
-            "980x",
-            "-bordercolor",
-            "#27272a",
-            "-border",
-            "2",
-            ")",
+            "2400x1200",
+            "gradient:#0b0b12-#050507",
+            *_framed(coordination, "1440x812"),
+            "-gravity",
+            "northwest",
             "-geometry",
-            "+20+102",
+            "+60+194",
             "-composite",
-            "(",
-            str(mcp),
-            "-resize",
-            "560x",
-            "-bordercolor",
-            "#27272a",
-            "-border",
-            "2",
-            ")",
+            *_framed(agent, "820x462"),
+            "-gravity",
+            "northwest",
             "-geometry",
-            "+1020+104",
+            "+1540+100",
             "-composite",
-            "(",
-            str(gates),
-            "-resize",
-            "560x",
-            "-bordercolor",
-            "#27272a",
-            "-border",
-            "2",
-            ")",
+            *_framed(source, "820x462"),
+            "-gravity",
+            "northwest",
             "-geometry",
-            "+1020+430",
+            "+1540+638",
             "-composite",
+            "-fill",
+            "#f59e0b",
+            "-draw",
+            "rectangle 60,88 2340,90",
             "-strip",
             "-depth",
             "8",
@@ -914,10 +925,7 @@ def build_hero(coordination: Path, mcp: Path, gates: Path, target: Path) -> None
         ],
         check=True,
     )
-    subprocess.run(
-        ["magick", str(target), "-quality", "82", str(target.with_suffix(".webp"))],
-        check=True,
-    )
+    write_webp(target)
 
 
 def run(out_dir: Path, only: list[str], keep_svg: Path | None, make_og: bool) -> None:
@@ -954,16 +962,22 @@ def run(out_dir: Path, only: list[str], keep_svg: Path | None, make_og: bool) ->
                 shutil.copyfile(svg, keep_svg)
             print(f"wrote {shown(png)} ({dimensions(png)})")
             print(f"wrote {shown(png.with_suffix('.webp'))}")
-        if make_og and {"lpui-coordination", "lpui-mcp", "lpui-gates"} <= set(names):
-            hero = out_dir / "lpui-and-agent.png"
-            build_hero(
+        hero_sources = {
+            "lpui-coordination",
+            "lpui-mcp",
+            "lpui-source-trail",
+        }
+        if hero_sources <= set(names):
+            hero = out_dir / "lpui-hero.png"
+            build_cinematic_hero(
                 out_dir / "lpui-coordination.png",
                 out_dir / "lpui-mcp.png",
-                out_dir / "lpui-gates.png",
+                out_dir / "lpui-source-trail.png",
                 hero,
             )
             print(f"wrote {shown(hero)} ({dimensions(hero)})")
             print(f"wrote {shown(hero.with_suffix('.webp'))}")
+        if make_og and "lpui-coordination" in set(names):
             og = out_dir / "og-lpui-and-agent.png"
             build_og(out_dir / "lpui-coordination.png", og)
             print(f"wrote {shown(og)} ({dimensions(og)})")

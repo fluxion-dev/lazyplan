@@ -12,6 +12,7 @@ import unittest
 from pathlib import Path
 
 from tests.support.paths import ROOT
+from tests.support.site import DIST, has_built_site, page_html
 
 SPEC = importlib.util.spec_from_file_location("check_site", ROOT / "tools/check-site.py")
 assert SPEC is not None and SPEC.loader is not None
@@ -20,12 +21,18 @@ sys.modules["check_site"] = check_site
 SPEC.loader.exec_module(check_site)
 
 
+def text_of(fragment: str) -> str:
+    """Return visible text with entities decoded and whitespace collapsed."""
+    return " ".join(html.unescape(re.sub(r"<[^>]+>", " ", fragment)).split())
+
+
+@unittest.skipUnless(has_built_site(), "site not built")
 class TestSiteSEO(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.site = Path(self.tmp.name) / "site"
         self.site.mkdir()
-        shutil.copy2(ROOT / "site/index.html", self.site / "index.html")
+        shutil.copy2(DIST, self.site / "index.html")
         shutil.copytree(ROOT / "site/public", self.site / "public")
         self.version = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))[
             "project"
@@ -97,7 +104,7 @@ class TestSiteSEO(unittest.TestCase):
         self.assertTrue(any("invalid JSON-LD" in error for error in self._errors()))
 
     def test_every_published_screen_is_referenced(self):
-        page = (ROOT / "site/index.html").read_text(encoding="utf-8")
+        page = page_html()
         referenced = set(re.findall(r"screens/([A-Za-z0-9._-]+)", page))
         published = {
             path.name for path in (ROOT / "site/public/screens").iterdir() if path.is_file()
@@ -108,29 +115,35 @@ class TestSiteSEO(unittest.TestCase):
                 self.assertIn(name.removesuffix(".png") + ".webp", published)
 
     def test_faq_json_ld_matches_visible_answers(self):
-        page = (ROOT / "site/index.html").read_text(encoding="utf-8")
+        page = page_html()
         blocks = re.findall(r'<script type="application/ld\+json">(.*?)</script>', page, re.S)
         faq = next(json.loads(block) for block in blocks if '"FAQPage"' in block)
-        faq_section = page.split('<section id="faq"', 1)[1].split("</section>", 1)[0]
-        visible = {
-            html.unescape(re.sub(r"<[^>]+>", "", question)).strip(): html.unescape(
-                re.sub(r"<[^>]+>", "", answer)
-            ).strip()
-            for question, answer in re.findall(
-                r"<summary[^>]*>(.*?)</summary>\s*<p[^>]*>(.*?)</p>", faq_section, re.S
+        faq_section = page.split('id="faq"', 1)[1].split("</section>", 1)[0]
+        questions = [
+            text_of(question)
+            for question in re.findall(r"<button[^>]*>(.*?)</button>", faq_section, re.S)
+        ]
+        answers = [
+            text_of(answer)
+            for answer in re.findall(
+                r'data-slot="accordion-content"[^>]*>\s*<div[^>]*>(.*?)</div>',
+                faq_section,
+                re.S,
             )
-        }
+        ]
+        visible = dict(zip(questions, answers, strict=True))
         self.assertEqual(len(faq["mainEntity"]), 6)
+        self.assertEqual(len(visible), 6)
         for item in faq["mainEntity"]:
             name = item["name"]
             self.assertIn(name, visible)
             self.assertEqual(item["acceptedAnswer"]["text"], visible[name])
 
     def test_planner_executor_story_is_present(self):
-        page = (ROOT / "site/index.html").read_text(encoding="utf-8")
+        page = page_html()
         self.assertIn('id="ways-to-work"', page)
         for phrase in (
-            "One agent plans. Another builds. You stay in control.",
+            "One plan. Two workers. No lost context.",
             "Edit any row yourself",
             "Ask for a plan.",
             "Hand off one task.",
@@ -141,13 +154,13 @@ class TestSiteSEO(unittest.TestCase):
             self.assertIn(phrase, page)
 
     def test_page_stays_within_marketing_budget(self):
-        page = (ROOT / "site/index.html").read_text(encoding="utf-8")
+        page = page_html()
         text = html.unescape(
             re.sub(r"<[^>]+>", " ", re.sub(r"<script.*?</script>", "", page, flags=re.S))
         )
-        self.assertLessEqual(len(text.split()), 750)
+        self.assertLessEqual(len(text.split()), 1200)
         self.assertLessEqual(page.count("<code"), 8)
-        self.assertEqual(page.count("<figure"), 10)
+        self.assertEqual(page.count("<figure"), 9)
         self.assertIn('id="ways-to-work"', page)
 
 

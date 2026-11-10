@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import html
 import unittest
 
 from tests.support.docs import README, USAGE
 from tests.support.paths import ROOT
+from tests.support.site import has_built_site, page_html
 
 
 class StoryQaTest(unittest.TestCase):
@@ -19,9 +21,10 @@ class StoryQaTest(unittest.TestCase):
         self.assertNotIn("Manual override mode", USAGE)
         self.assertNotIn("lpui feed --overrides", USAGE)
 
+    @unittest.skipUnless(has_built_site(), "site not built")
     def test_site_ships_the_control_room_screenshot(self) -> None:
-        index = (ROOT / "site" / "index.html").read_text(encoding="utf-8")
-        self.assertIn("What's new", index)
+        index = html.unescape(page_html())
+        self.assertIn("A control room for what needs you", index)
         self.assertIn("lpui-control-room.webp", index)
         self.assertTrue((ROOT / "site" / "public" / "screens" / "lpui-control-room.png").is_file())
         self.assertTrue((ROOT / "site" / "public" / "screens" / "lpui-control-room.webp").is_file())

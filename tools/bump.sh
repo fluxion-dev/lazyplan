@@ -2,7 +2,8 @@
 # Bump the lazyplan semantic version: major | minor | patch.
 # Single source of truth is `version = "x.y.z"` in pyproject.toml; the
 # README header (`# lazyplan (`lpui`) — vX.Y.Z`) and the version-pinned
-# asset URLs in README.md + site/index.html mirror it and are updated here.
+# asset URLs in README.md, site/index.html, and site/src/data/links.ts
+# mirror it and are updated here.
 # Commits the change and tags `vX.Y.Z` (annotated). Push with --push.
 # Use --no-tag to commit without tagging, for a release pull request.
 #
@@ -73,21 +74,22 @@ if ! grep -q "lazyplan-tui $NEXT" docs/lpui.1; then
   echo "error: man page regen failed" >&2
   exit 1
 fi
+# The README version is a doc heading in the IA inventory — keep it current.
+python3 tools/ia_inventory.py --write
 # Site mirrors: version-pinned release asset URLs, JSON-LD version, sitemap date.
 if [[ -f site/index.html ]]; then
   sed -i.bak -E "s|/releases/download/v[0-9]+\.[0-9]+\.[0-9]+/|/releases/download/v${NEXT}/|g" site/index.html && rm site/index.html.bak
   sed -i.bak -E "s/lazyplan_[0-9]+\.[0-9]+\.[0-9]+-1_/lazyplan_${NEXT}-1_/g" site/index.html && rm site/index.html.bak
   sed -i.bak -E "s/lazyplan-[0-9]+\.[0-9]+\.[0-9]+-1\./lazyplan-${NEXT}-1./g" site/index.html && rm site/index.html.bak
-  # Version badges use a per-release cache key so shields never serves the
-  # previous version from its 6-hour cache.
-  sed -i.bak -E "s|(img\.shields\.io/github/v/release/fluxion-dev/lazyplan\?v=)[0-9]+\.[0-9]+\.[0-9]+|\1${NEXT}|g" site/index.html && rm site/index.html.bak
-  sed -i.bak -E "s|(img\.shields\.io/pypi/v/lazyplan-tui\?v=)[0-9]+\.[0-9]+\.[0-9]+|\1${NEXT}|g" site/index.html && rm site/index.html.bak
-  if ! grep -q "pypi/v/lazyplan-tui?v=${NEXT}" site/index.html; then
-    echo "error: site badge update failed" >&2
-    exit 1
-  fi
   sed -i.bak -E "s/\"version\": \"[0-9]+\.[0-9]+\.[0-9]+\"/\"version\": \"$NEXT\"/" site/index.html && rm site/index.html.bak
   sed -i.bak -E "s/\"softwareVersion\": \"[0-9]+\.[0-9]+\.[0-9]+\"/\"softwareVersion\": \"$NEXT\"/" site/index.html && rm site/index.html.bak
+fi
+if [[ -f site/src/data/links.ts ]]; then
+  sed -i.bak -E "s/^export const VERSION = \"[0-9]+\.[0-9]+\.[0-9]+\"$/export const VERSION = \"$NEXT\"/" site/src/data/links.ts && rm site/src/data/links.ts.bak
+  if ! grep -q "^export const VERSION = \"$NEXT\"$" site/src/data/links.ts; then
+    echo "error: site data version update failed" >&2
+    exit 1
+  fi
 fi
 if [[ -f site/package.json ]]; then
   sed -i.bak -E "s/^  \"version\": \"[0-9]+\.[0-9]+\.[0-9]+\"(,?)$/  \"version\": \"$NEXT\"\1/" site/package.json && rm site/package.json.bak
@@ -106,7 +108,7 @@ if ! head -1 README.md | grep -q " — v$NEXT$"; then
 fi
 
 git add pyproject.toml README.md docs/
-if [[ -f site/index.html ]]; then git add site/index.html site/public/sitemap.xml site/package.json; fi
+if [[ -f site/index.html ]]; then git add site/index.html site/public/sitemap.xml site/package.json site/src/data/links.ts; fi
 git commit -m "release v$NEXT"
 if [[ $NOTAG -eq 0 ]]; then
   git tag -a "v$NEXT" -m "lazyplan v$NEXT"

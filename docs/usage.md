@@ -399,9 +399,9 @@ shows the feed.
   requests alongside. `enter` cross-links to the owning plan, milestone, or
   task; `o` opens the selected commit, file, or pull request; `y` copies it;
   `/` filters. The diff preview shows a file summary, per-file add/remove
-counts, hunk headers, and old/new line numbers. A missing commit is marked
-stale, and an offline diff says so. The source footer uses the same action bar
-as the rest of the screen.
+  counts, hunk headers, and old/new line numbers. A missing commit is marked
+  stale, and an offline diff says so. The source footer uses the same action
+  bar as the rest of the screen.
 - Pull requests: rows show state, checks, reviews, base and head refs, merge
   data, and a stale marker. `a` links a URL, `d` unlinks, `o` opens it, and
   `r` refreshes. Only `r` touches the network; every other path reads cache.
@@ -416,7 +416,7 @@ selection, Delete selection. Every status, block, claim, and delete action is
 single-row; the palette confirms destructive changes before writing.
 
 `/` searches titles, descriptions, why/what, notes, comments, claim actors,
-blocked reasons, and issue refs. Marks are session-only and survive refreshes.
+blocked reasons, and issue refs.
 
 The palette carries the work that does not need a dedicated key. **Approve
 plan scope**, **Show plan diff**, **Add / Resolve / Reopen

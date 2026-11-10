@@ -40,11 +40,14 @@ class TestVersion(unittest.TestCase):
         import json
 
         version = self._version()
+        source = (ROOT / "site/src/data/links.ts").read_text(encoding="utf-8")
+        self.assertIn(f'export const VERSION = "{version}"', source)
+        self.assertIn("img.shields.io/pypi/v/lazyplan-tui?v=${VERSION}", source)
+        self.assertIn("img.shields.io/github/v/release/fluxion-dev/lazyplan?v=${VERSION}", source)
         html = (ROOT / "site/index.html").read_text(encoding="utf-8")
         self.assertIn(f'"version": "{version}"', html)
+        self.assertIn(f'"softwareVersion": "{version}"', html)
         self.assertIn(f"/releases/download/v{version}/", html)
-        self.assertIn(f"img.shields.io/pypi/v/lazyplan-tui?v={version}", html)
-        self.assertIn(f"img.shields.io/github/v/release/fluxion-dev/lazyplan?v={version}", html)
         package = json.loads((ROOT / "site/package.json").read_text(encoding="utf-8"))
         self.assertEqual(package["version"], version)
 

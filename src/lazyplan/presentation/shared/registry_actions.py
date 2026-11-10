@@ -155,16 +155,6 @@ CORE_ACTIONS: tuple[Action, ...] = (
         ("move-todo", "move-doing", "move-done"),
     ),
     _action(
-        "row.mark",
-        "Mark/unmark row",
-        "space",
-        "tree",
-        ("tui",),
-        ("tree",),
-        ("toggle-mark",),
-    ),
-    _action("row.clear_marks", "Clear marks", surfaces=("tui",), palette_ids=("clear-marks",)),
-    _action(
         "claim.release",
         "Release claim",
         surfaces=("tui", "cli", "mcp"),
@@ -213,20 +203,6 @@ CORE_ACTIONS: tuple[Action, ...] = (
         route=("tree", "provenance"),
         palette_ids=("git-refresh",),
     ),
-    _action(
-        "bulk.move",
-        "Bulk move",
-        surfaces=("tui",),
-        palette_ids=("bulk-doing", "bulk-done"),
-    ),
-    _action("bulk.block", "Bulk block tasks", surfaces=("tui",), palette_ids=("bulk-block",)),
-    _action(
-        "bulk.release",
-        "Bulk release claims",
-        surfaces=("tui",),
-        palette_ids=("bulk-release",),
-    ),
-    _action("bulk.undo", "Undo bulk change", surfaces=("tui",), palette_ids=("undo-bulk",)),
     _action(
         "view.fold",
         "Fold/unfold row",

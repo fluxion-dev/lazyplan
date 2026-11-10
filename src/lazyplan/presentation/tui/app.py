@@ -34,7 +34,6 @@ from ...store import Store
 from ..shared.design import EMPTY_NO_PLANS_HINT, EMPTY_NO_PLANS_TITLE, empty_state
 from .actions import ActionMixin
 from .base import AppBase
-from .bulk import BulkMixin
 from .controllers.git_state import GitStateController
 from .controllers.metrics import MetricsController
 from .controllers.spinner import SpinnerController
@@ -61,7 +60,6 @@ if _TEXTUAL_OK:
         TreeMixin,
         PreviewMixin,
         FilterMixin,
-        BulkMixin,
         ActionMixin,
         AppBase,
     ):
@@ -76,7 +74,6 @@ if _TEXTUAL_OK:
         ENABLE_COMMAND_PALETTE = False
         BINDINGS = [
             *NAV_BINDINGS,
-            Binding("space", "toggle_mark", "Mark"),
             Binding("escape", "clear_filter", "Back", show=False),
             Binding("t", "cycle_theme", "Theme"),
             Binding("T", "toggle_timeline", "Timeline"),

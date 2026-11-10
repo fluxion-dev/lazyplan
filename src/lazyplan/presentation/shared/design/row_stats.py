@@ -38,13 +38,12 @@ SLOTS: dict[str, StatSlot] = {
     "attention": StatSlot("attention", 1, 1, 900, 1, "right"),
     "blocked": StatSlot("blocked", 9, 2, 250, 2, "left"),
     "claim": StatSlot("claim", 12, 8, 125, 3, "left"),
-    "marked": StatSlot("marked", 2, 2, 60, 4, "left"),
 }
 
 KIND_SLOTS: dict[str, tuple[str, ...]] = {
-    "plan": ("progress", "attention", "marked"),
-    "milestone": ("progress", "attention", "marked"),
-    "task": ("attention", "blocked", "claim", "marked"),
+    "plan": ("progress", "attention"),
+    "milestone": ("progress", "attention"),
+    "task": ("attention", "blocked", "claim"),
 }
 
 
@@ -55,7 +54,6 @@ class RowStats:
     kind: str
     progress: tuple[int, int] | None = None
     attention: bool = False
-    marked: bool = False
     blocked: bool = False
     claim_actor: str = ""
     claim_expired: bool = False
@@ -124,12 +122,6 @@ def _attention_slot(stats: RowStats, compact: bool) -> tuple[str, str]:
     return ("[yellow]![/]" if stats.attention else ""), ("!" if stats.attention else "")
 
 
-def _marked_slot(stats: RowStats, compact: bool) -> tuple[str, str]:
-    del compact
-    text = "✓" if stats.marked else ""
-    return (f"[bold green]{text}[/]" if text else ""), text
-
-
 def _blocked_slot(stats: RowStats, compact: bool) -> tuple[str, str]:
     text = ("⚑" if compact else "⚑ blocked") if stats.blocked else ""
     return (f"[red]{text}[/]" if text else ""), text
@@ -147,7 +139,6 @@ def _claim_slot(stats: RowStats, compact: bool) -> tuple[str, str]:
 _SLOT_RENDERERS: dict[str, Callable[[RowStats, bool], tuple[str, str]]] = {
     "progress": _progress_slot,
     "attention": _attention_slot,
-    "marked": _marked_slot,
     "blocked": _blocked_slot,
     "claim": _claim_slot,
 }

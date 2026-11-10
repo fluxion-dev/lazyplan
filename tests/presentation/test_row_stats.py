@@ -32,7 +32,7 @@ class StatsLayoutTest(unittest.TestCase):
 
         self.assertEqual(
             [key for key, _compact in layout],
-            ["progress", "attention", "marked"],
+            ["progress", "attention"],
         )
         self.assertFalse(any(compact for _key, compact in layout))
 
@@ -41,14 +41,14 @@ class StatsLayoutTest(unittest.TestCase):
 
         self.assertEqual(
             [key for key, _compact in layout],
-            ["attention", "blocked", "claim", "marked"],
+            ["attention", "blocked", "claim"],
         )
         self.assertEqual(
             [compact for _key, compact in layout],
-            [False, True, True, False],
+            [False, True, False],
         )
 
-    def test_milestone_layout_drops_marked_before_progress(self) -> None:
+    def test_milestone_layout_drops_attention_after_progress(self) -> None:
         layout = stats_layout("milestone", 25, 6)
 
         self.assertEqual(
@@ -72,7 +72,6 @@ class StatsLayoutTest(unittest.TestCase):
         full = RowStats(
             kind="task",
             attention=True,
-            marked=True,
             blocked=True,
             claim_actor="alice",
         )
@@ -91,7 +90,6 @@ class StatsRenderTest(unittest.TestCase):
         stats = RowStats(
             kind="task",
             attention=True,
-            marked=True,
             blocked=True,
             claim_actor="alice",
         )
@@ -100,7 +98,6 @@ class StatsRenderTest(unittest.TestCase):
 
         self.assertEqual(Text.from_markup(rich).plain, plain)
         self.assertIn("!", plain)
-        self.assertIn("✓", plain)
         self.assertIn("⚑ blocked", plain)
         self.assertIn("◉ @alice", plain)
         self.assertNotIn("PR", plain)
@@ -116,7 +113,6 @@ class StatsRenderTest(unittest.TestCase):
         stats = RowStats(
             kind="task",
             attention=True,
-            marked=True,
             blocked=True,
             claim_actor="alice",
         )

@@ -32,7 +32,6 @@ NAMESPACES: tuple[str, ...] = (
     "app",
     "view",
     "row",
-    "bulk",
     "git",
     "source",
     "theme",

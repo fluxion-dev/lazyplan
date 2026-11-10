@@ -325,7 +325,6 @@ branches exist in the journal but not as screen nodes.
 |---|---|
 | `j`/`k`, arrows, click | move and select |
 | `left`/`right`, click arrow | collapse/expand, or walk to parent / first child |
-| `space` | mark or unmark the selected row for bulk actions |
 | `e` / `s` / `a` / `d` | edit · advance status · add criterion · delete |
 | `n` | create by context (plan, milestone, or task) |
 | `/` | filter by text |
@@ -408,10 +407,8 @@ The palette names match the CLI: `lpui pr list|show|link|unlink|refresh`,
 `lpui commits`, `lpui repos`, and `lpui feed` read the same data.
 
 The palette and the CLI use the same names: Create plan, Move to doing, Edit
-selection, Delete selection. The palette also has Bulk move to doing/done,
-Bulk block tasks, Bulk release claims, Clear marks, and Undo bulk change. Bulk
-status and block confirm first; undo restores the exact prior status/blocked
-state once. Bulk delete and archive stay single-row.
+selection, Delete selection. Every status, block, claim, and delete action is
+single-row; the palette confirms destructive changes before writing.
 
 `/` searches titles, descriptions, why/what, notes, comments, claim actors,
 blocked reasons, and issue refs. Marks are session-only and survive refreshes.

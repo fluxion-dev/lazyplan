@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING
 from textual.widgets.tree import TreeNode
 
 from ....core.entities import Milestone, Task
-from ...shared.design import apply_mark
 from ..views.rows import milestone_spec, row_text, task_spec
 
 if TYPE_CHECKING:
@@ -151,7 +150,7 @@ class LazyBranchMixin:
             app._row_specs[milestone_key] = spec
             text = self.app.tree_controller.render_row(milestone_key, spec, plan_node.tree)
             milestone_node = plan_node.add(
-                row_text(apply_mark(text, milestone_key in app.marked)),
+                row_text(text),
                 data={"kind": "milestone", "id": milestone.id},
                 allow_expand=bool(tasks),
             )
@@ -178,7 +177,7 @@ class LazyBranchMixin:
             app._row_specs[task_key] = spec
             text = self.app.tree_controller.render_row(task_key, spec, milestone_node.tree)
             leaf = milestone_node.add_leaf(
-                row_text(apply_mark(text, task_key in app.marked)),
+                row_text(text),
                 data={"kind": "task", "id": task.id},
             )
             app._row_nodes[task_key] = leaf

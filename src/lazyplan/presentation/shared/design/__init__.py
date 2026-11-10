@@ -44,7 +44,6 @@ from .empty import msg_not_found as msg_not_found
 from .row_stats import RowStats as RowStats
 from .row_stats import render_stats as render_stats
 from .row_stats import stats_layout as stats_layout
-from .rows import apply_mark as apply_mark
 from .rows import milestone_label as milestone_label
 from .rows import milestone_row as milestone_row
 from .rows import plan_label as plan_label
@@ -105,7 +104,6 @@ __all__ = [
     "STATUS_RICH",
     "STATE_ICON",
     "TASK",
-    "apply_mark",
     "escape_markup",
     "milestone_label",
     "milestone_row",

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from ....core.entities import Status
 from ....core.kinds import LABEL_LETTERS, MILESTONE, PLAN, TASK
-from .row_stats import SLOTS, RowStats, render_stats, stats_layout
+from .row_stats import RowStats, render_stats, stats_layout
 from .text import _escape_markup, repo_project_name, status_prefix, status_word, truncate
 
 if TYPE_CHECKING:
@@ -56,12 +56,6 @@ def _render_row(
     return f"{prefix_rich}[{style}]{_escape_markup(title)}[/]{pad}{stats_rich}"
 
 
-def apply_mark(markup: str, marked: bool) -> str:
-    """Replace the trailing mark slot on a row rendered with `marked=False`."""
-    mark = "[bold green]✓[/] " if marked else "  "
-    return markup[: -SLOTS["marked"].width] + mark
-
-
 def plan_label(p: Plan, store: InsightsPort | None = None, dot: str = "plain") -> str:
     """Canonical row label for a plan (plain text: CLI, tests)."""
     base = _label("plan", p, store, dot)
@@ -77,10 +71,9 @@ def plan_row(
     progress: tuple[int, int] | None = None,
     width: int | None = None,
     attention: bool = False,
-    marked: bool = False,
 ) -> str:
     """TUI plan row (Rich markup): glyph + id + title + progress + attention."""
-    stats = RowStats(kind="plan", progress=progress, attention=attention, marked=marked)
+    stats = RowStats(kind="plan", progress=progress, attention=attention)
     return _render_row("plan", p, stats, width)
 
 
@@ -95,10 +88,9 @@ def milestone_row(
     progress: tuple[int, int] | None = None,
     width: int | None = None,
     attention: bool = False,
-    marked: bool = False,
 ) -> str:
     """TUI milestone row (Rich markup): glyph + id + title + progress + attention."""
-    stats = RowStats(kind="milestone", progress=progress, attention=attention, marked=marked)
+    stats = RowStats(kind="milestone", progress=progress, attention=attention)
     return _render_row("milestone", s, stats, width)
 
 
@@ -121,13 +113,11 @@ def task_row(
     claim_actor: str = "",
     claim_expired: bool = False,
     blocked: bool = False,
-    marked: bool = False,
 ) -> str:
     """TUI task row (Rich markup): glyph + id + title + attention + claim."""
     stats = RowStats(
         kind="task",
         attention=attention,
-        marked=marked,
         blocked=blocked,
         claim_actor=claim_actor,
         claim_expired=claim_expired,

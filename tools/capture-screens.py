@@ -39,7 +39,6 @@ from textual.widgets import DirectoryTree, Static, Tree  # noqa: E402
 from lazyplan import services  # noqa: E402
 from lazyplan.core.entities import Status  # noqa: E402
 from lazyplan.presentation.tui import create_app  # noqa: E402
-from lazyplan.presentation.tui.screens import PaletteScreen  # noqa: E402
 from lazyplan.presentation.tui.screens.export import ExportScreen  # noqa: E402
 from lazyplan.presentation.tui.screens.source import SourceScreen  # noqa: E402
 from lazyplan.services import metrics  # noqa: E402
@@ -282,48 +281,6 @@ def build_control_room_fixture(tmp: Path) -> Store:
     return store
 
 
-def build_search_fixture(tmp: Path) -> Store:
-    """A small plan with enough rows to show marks and bulk context."""
-    store = Store(str(tmp / "plan.db"))
-    plan = store.add_plan(
-        "Search and bulk edit",
-        "Find the row by what it says, mark several, and edit once.",
-        goal="Keep large journals navigable.",
-    )
-    milestone = store.add_milestone(plan.id, "Bulk workflow", "Marks and undo.")
-    rows = (
-        ("Find the release notes", "Search descriptions and notes."),
-        ("Mark the queue rows", "Select several tasks."),
-        ("Bulk move the release set", "Apply one status change."),
-        ("Release the stale leases", "Report conflicts per row."),
-        ("Keep delete single-row", "Undo cannot recreate a subtree."),
-    )
-    for title, desc in rows:
-        store.add_task(milestone.id, title, desc)
-    with mock.patch("lazyplan.store.base.time.time", return_value=STAMP):
-        services.set_status(store, "task", 1, Status.DOING, actor="Ada")
-        services.set_status(store, "task", 2, Status.DOING, actor="Ada")
-    store.add_note("task", 1, "Search covers descriptions, notes, and comments.", actor="Ada")
-    return store
-
-
-class TranscriptApp(App[None]):
-    """A dark terminal-like screen for deterministic command transcripts."""
-
-    CSS = """
-    Screen { background: #09090b; color: #e4e4e7; }
-    #term { padding: 1 2; }
-    """
-
-    def __init__(self, body: Text, title: str) -> None:
-        super().__init__()
-        self._body = body
-        self.title = title
-
-    def compose(self) -> ComposeResult:
-        yield Static(self._body, id="term")
-
-
 def transcript(*lines: tuple[str, str]) -> Text:
     """Build a monospace transcript from (text, style) pairs."""
     body = Text()
@@ -523,33 +480,21 @@ async def capture_collaboration(store: Store, target: Path) -> None:
         app.save_screenshot(str(target))
 
 
-async def capture_search(store: Store, target: Path) -> None:
-    app = create_app(str(store.path))
-    async with app.run_test(size=SIZE) as pilot:
-        await pilot.pause()
-        app.marked = {("task", 1), ("task", 2), ("task", 3)}
-        app.selected = ("task", 2)
-        app.refresh_all("marked 3")
-        await pilot.pause()
-        tree = app.query_one("#tree", Tree)
-        app.tree_controller.expand_all()
-        tree.focus()
-        tasks = _nodes(tree, "task")
-        if tasks:
-            tree.select_node(tasks[1])
-        await pilot.pause()
-        app.save_screenshot(str(target))
+class TranscriptApp(App[None]):
+    """A dark terminal-like screen for deterministic command transcripts."""
 
+    CSS = """
+    Screen { background: #09090b; color: #e4e4e7; }
+    #term { padding: 1 2; }
+    """
 
-async def capture_palette(store: Store, target: Path) -> None:
-    app = create_app(str(store.path))
-    async with app.run_test(size=SIZE) as pilot:
-        await pilot.pause()
-        app.push_screen(PaletteScreen({}))
-        await pilot.pause()
-        app.screen.query_one("#palette-input").value = "bulk"
-        await pilot.pause()
-        app.save_screenshot(str(target))
+    def __init__(self, body: Text, title: str) -> None:
+        super().__init__()
+        self._body = body
+        self.title = title
+
+    def compose(self) -> ComposeResult:
+        yield Static(self._body, id="term")
 
 
 def _flow_health_text() -> Text:
@@ -750,18 +695,6 @@ SCENES: dict[str, Scene] = {
         build_coordination_fixture,
         capture_collaboration,
         "Task overview showing an active claim, two review comments, and a handoff note.",
-    ),
-    "lpui-search-bulk": Scene(
-        SIZE,
-        build_search_fixture,
-        capture_search,
-        "lazyplan plan tree with three marked tasks showing checkmarks and a marked 3 count in the status line.",
-    ),
-    "lpui-bulk-palette": Scene(
-        SIZE,
-        build_search_fixture,
-        capture_palette,
-        "lazyplan command palette filtered to bulk commands: mark, move to doing, move to done, block, release claims, and undo.",
     ),
     "lpui-flow-health": Scene(
         TRANSCRIPT_SIZE,

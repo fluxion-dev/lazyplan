@@ -19,17 +19,12 @@ if TYPE_CHECKING:
 class FoldTree(NavTree):
     """Plan/milestone tree: j/k + arrows move, left/right fold, click selects.
 
-    Every mutation runs through the modal palette (c). Native Tree Space
-    marks the selected row for bulk actions; shift+space stays parked.
+    Every mutation runs through the modal palette (c).
     The root is a container only; plans render as the top-level rows.
     """
 
     show_root = False
     _reflow_width: int = 0
-
-    BINDINGS = [
-        Binding("space", "toggle_mark", "Mark"),
-    ]
 
     def on_resize(self, event: events.Resize) -> None:
         """Reflow rows when the tree's own width changes."""
@@ -51,10 +46,6 @@ class FoldTree(NavTree):
         # set_label does not clear these caches, so a shrink would keep the
         # old virtual width and an unnecessary horizontal scrollbar.
         self._invalidate()
-
-    def action_toggle_mark(self) -> None:
-        """Space: mark or unmark the selected row."""
-        cast("LazyplanApp", self.app).action_toggle_mark()
 
     def action_toggle_expand_all(self) -> None:
         """Shift+space: parked — use the modal palette for folding."""

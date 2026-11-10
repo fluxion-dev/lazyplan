@@ -93,12 +93,10 @@ class TestDesignSystem(unittest.TestCase):
         self.assertEqual(design.plan_row(p).count("○"), 1)
         self.assertNotIn("⬜", design.plan_row(p))
 
-    def test_task_row_shows_blocked_and_marked(self):
+    def test_task_row_shows_blocked_state(self):
         t = Task(id=3, milestone_id=2, title="T")
         self.assertIn("[red]⚑ blocked[/]", design.task_row(t, blocked=True))
         self.assertNotIn("blocked", design.task_row(t))
-        self.assertIn("✓", design.task_row(t, marked=True))
-        self.assertNotIn("✓", design.task_row(t))
 
     def test_rich_rows_use_the_status_prefix(self):
         p = Plan(id=1, name="N", status=Status.DOING)
@@ -137,7 +135,6 @@ class TestDesignSystem(unittest.TestCase):
                 p,
                 progress=(3, 7),
                 attention=True,
-                marked=True,
                 width=width,
             )
         ).plain

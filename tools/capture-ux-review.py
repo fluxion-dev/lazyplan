@@ -45,6 +45,7 @@ _spec.loader.exec_module(cs)
 from textual.widgets import Input, Tree  # noqa: E402
 
 from lazyplan import services  # noqa: E402
+from lazyplan.core.entities import Status  # noqa: E402
 from lazyplan.infrastructure.environment import InstallInfo  # noqa: E402
 from lazyplan.infrastructure.skills import AgentHost  # noqa: E402
 from lazyplan.presentation.cli.parser import package_version  # noqa: E402
@@ -141,6 +142,31 @@ def attach_repo(store: Store, tmp: Path, task_id: int) -> None:
             state=state,
             checks=checks,
         )
+
+
+def build_search_fixture(tmp: Path) -> Store:
+    """A small plan with enough rows to show text filtering and empty git."""
+    store = Store(str(tmp / "plan.db"))
+    plan = store.add_plan(
+        "Search and bulk edit",
+        "Find the row by what it says, then open it.",
+        goal="Keep large journals navigable.",
+    )
+    milestone = store.add_milestone(plan.id, "Search workflow", "Text filters.")
+    rows = (
+        ("Find the release notes", "Search descriptions and notes."),
+        ("Mark the queue rows", "Select several tasks."),
+        ("Move the release set", "Apply one status change."),
+        ("Release the stale leases", "Report conflicts per row."),
+        ("Keep delete single-row", "Undo cannot recreate a subtree."),
+    )
+    for title, desc in rows:
+        store.add_task(milestone.id, title, desc)
+    with cs.mock.patch("lazyplan.store.base.time.time", return_value=cs.STAMP):
+        services.set_status(store, "task", 1, Status.DOING, actor="Ada")
+        services.set_status(store, "task", 2, Status.DOING, actor="Ada")
+    store.add_note("task", 1, "Search covers descriptions, notes, and comments.", actor="Ada")
+    return store
 
 
 # -- rich fixture ---------------------------------------------------------
@@ -264,7 +290,6 @@ async def _capture_shell(
     theme: str | None = None,
     timeline: bool = False,
     filter_text: str = "",
-    marked: set[tuple[str, int]] | None = None,
 ) -> None:
     patch = (
         cs.mock.patch.dict(os.environ, {"LAZYPLAN_THEME": theme})
@@ -277,10 +302,7 @@ async def _capture_shell(
             await pilot.pause()
             if filter_text:
                 app.filter_text = filter_text
-            if marked:
-                app.marked = set(marked)
-            note = f"marked {len(marked)}" if marked else ""
-            app.refresh_all(note)
+            app.refresh_all("")
             await pilot.pause(0.15)
             app.tree_controller.expand_all()
             await pilot.pause(0.1)
@@ -591,23 +613,6 @@ def scenes() -> list[Scene]:
                 oid_of=lambda store: _plan_id(store),
             ),
             _shell_scene(
-                "shell-marked",
-                "shell",
-                "Marked rows for bulk edit",
-                "Three tasks marked",
-                "The tree after space-marking three tasks: checkmarks on the rows and bulk commands waiting in the palette.",
-                (
-                    "Is the difference between cursor, mark, and claim clear?",
-                    "Can you tell which rows a bulk action will touch?",
-                    "Does the interface need a visible marked count?",
-                ),
-                "space mark · c commands · u undo",
-                cs.build_search_fixture,
-                kind="task",
-                oid_of=lambda store: 2,
-                marked={("task", 1), ("task", 2), ("task", 3)},
-            ),
-            _shell_scene(
                 "shell-filter",
                 "shell",
                 "Filtered tree",
@@ -619,7 +624,7 @@ def scenes() -> list[Scene]:
                     "Should the filter be a prompt, an inline field, or both?",
                 ),
                 "/ filter · escape clear",
-                cs.build_search_fixture,
+                build_search_fixture,
                 kind="task",
                 oid_of=lambda store: 2,
                 filter_text="queue",
@@ -722,7 +727,7 @@ def scenes() -> list[Scene]:
                     "Does the preview still explain why source is missing?",
                 ),
                 "g source · c commands",
-                cs.build_search_fixture,
+                build_search_fixture,
                 kind="task",
                 oid_of=lambda store: 1,
             ),

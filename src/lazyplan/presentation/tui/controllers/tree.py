@@ -12,7 +12,7 @@ from .... import services
 from ....core.entities import Milestone, Plan, Status, Task
 from ....core.policies.planning import progress_counts
 from ....services.stats import attention_reasons
-from ...shared.design import apply_mark, status_prefix
+from ...shared.design import status_prefix
 from ...shared.help import hint_bar
 from ..views.rows import RowSpec, plan_spec, row_text
 from .filtering import TreeFilter
@@ -212,22 +212,6 @@ class TreeController(LazyBranchMixin):
                 out[("milestone", milestone.id)] = progress_counts(tasks)
         return out
 
-    def paint_mark(self, key: tuple[str, int]) -> None:
-        """Update the fixed mark slot on one existing row."""
-        app = self.app
-        base = app._row_labels.get(key)
-        node = app._row_nodes.get(key)
-        if base is None or node is None:
-            return
-        marked = key in app.marked
-        spinner = app.spinner_controller
-        if key in spinner.rows:
-            frame = spinner.tick if spinner.enabled else None
-            label = status_prefix(Status.DOING, frame) + apply_mark(spinner.rows[key], marked)
-        else:
-            label = apply_mark(base, marked)
-        node.set_label(row_text(label))
-
     def row_width(self, tree: Tree, depth: int) -> int:
         """Usable label width for a row at `depth`, excluding tree guides."""
         app = self.app
@@ -258,8 +242,6 @@ class TreeController(LazyBranchMixin):
         app.spinner_controller.rows = {}
         for key, spec in app._row_specs.items():
             self.render_row(key, spec, tree)
-        for key in app._row_specs:
-            self.paint_mark(key)
         for widget in trees:
             cast("FoldTree", widget).reflow()
 
@@ -435,7 +417,7 @@ class TreeController(LazyBranchMixin):
             app._row_specs[plan_key] = plan_row_spec
             plan_text = self.render_row(plan_key, plan_row_spec, tree)
             plan_node = root.add(
-                row_text(apply_mark(plan_text, plan_key in app.marked)),
+                row_text(plan_text),
                 data={"kind": "plan", "id": plan.id},
                 allow_expand=bool(milestones),
             )

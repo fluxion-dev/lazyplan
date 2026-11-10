@@ -317,9 +317,8 @@ every call. Reach for `--json` only when you need full-fidelity fields.
   already recorded on another open task is rejected.
 - Import issues once with `issue import` (GitHub live or Linear export);
   re-import refreshes source metadata only and never writes back.
-- Human screen: space marks rows; `?` help, `c` palette, `[` / `]` history,
-  and `q` quit work on every screen. The palette has bulk move, bulk block,
-  bulk release claims, clear marks, and one undo for status/block changes.
+- Human screen: `?` help, `c` palette, `[` / `]` history, and `q` quit work on
+  every screen. Every status, block, claim, and delete action is single-row.
   The plan tree paints plans first and loads milestones and tasks on expand;
   a text filter reveals matching collapsed branches.
 - Trust hubs are selectable: criteria (`t` from detail), evidence (`enter` on

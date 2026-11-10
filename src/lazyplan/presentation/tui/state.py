@@ -18,7 +18,6 @@ class AppState:
 
     selected: tuple[str, int] | None = None
     filter_text: str = ""
-    marked: set[tuple[str, int]] = field(default_factory=set)
     collapsed: set[tuple[str, int]] = field(default_factory=set)
     expanded: set[tuple[str, int]] = field(default_factory=set)
     preview_key: tuple[str, int] | None = None

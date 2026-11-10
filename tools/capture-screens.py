@@ -34,12 +34,14 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 from rich.text import Text  # noqa: E402
 from textual.app import App, ComposeResult  # noqa: E402
-from textual.widgets import DirectoryTree, Static, Tree  # noqa: E402
+from textual.widgets import DirectoryTree, Static, TextArea, Tree  # noqa: E402
 
 from lazyplan import services  # noqa: E402
 from lazyplan.core.entities import Status  # noqa: E402
+from lazyplan.infrastructure.agents import AgentProfile, PlanEntry, ToolCall  # noqa: E402
 from lazyplan.presentation.tui import create_app  # noqa: E402
 from lazyplan.presentation.tui.screens import DetailScreen, PaletteScreen  # noqa: E402
+from lazyplan.presentation.tui.screens.agent import AgentScreen  # noqa: E402
 from lazyplan.presentation.tui.screens.export import ExportScreen  # noqa: E402
 from lazyplan.presentation.tui.screens.source import SourceScreen  # noqa: E402
 from lazyplan.services import metrics  # noqa: E402
@@ -522,6 +524,83 @@ async def capture_collaboration(store: Store, target: Path) -> None:
         app.save_screenshot(str(target))
 
 
+async def capture_workbench(store: Store, target: Path) -> None:
+    """Capture the agent workbench with a deterministic transcript."""
+    profile = AgentProfile("opencode", "OpenCode", ("opencode", "acp"))
+    app = create_app(str(store.path))
+    async with app.run_test(size=SIZE) as pilot:
+        await pilot.pause()
+        screen = AgentScreen(
+            profile,
+            Path(store.path).parent,
+            title="T1 Claim the release queue",
+            display_cwd="~/acme/web",
+            prompt="T1 Claim the release queue\n\nClaim it, run the focused tests, and link the commit.",
+        )
+        app.push_screen(screen)
+        await pilot.pause()
+        transcript = screen._transcript  # noqa: SLF001 - deterministic fixture
+        transcript.add_user(
+            "T1 Claim the release queue. Claim it, run the focused tests, and link the commit."
+        )
+        transcript.add_text(
+            "I'll read the task, claim it, and run the focused tests before linking the commit."
+        )
+        transcript.add_tool(
+            ToolCall(
+                tool_call_id="read-1",
+                title="Read plan",
+                name="read",
+                kind="read",
+                status="completed",
+                content=(
+                    {
+                        "type": "content",
+                        "content": {
+                            "type": "text",
+                            "text": "T1 Claim the release queue · P1 Ship the coordination release",
+                        },
+                    },
+                ),
+            ),
+            {},
+        )
+        transcript.add_plan(
+            (
+                PlanEntry("Read the task", "high", "completed"),
+                PlanEntry("Claim the task", "high", "in_progress"),
+                PlanEntry("Run the focused tests", "medium", "pending"),
+                PlanEntry("Link the commit", "medium", "pending"),
+            )
+        )
+        transcript.add_tool(
+            ToolCall(
+                tool_call_id="test-1",
+                title="Run focused tests",
+                name="bash",
+                kind="execute",
+                status="completed",
+                content=(
+                    {
+                        "type": "content",
+                        "content": {"type": "text", "text": "42 passed in 3.8s"},
+                    },
+                ),
+            ),
+            {},
+        )
+        transcript.add_text(
+            "Claimed T1 and linked a1b2c3d. The queue is current; the next task is ready."
+        )
+        screen._render_transcript()  # noqa: SLF001 - deterministic fixture
+        screen._set_status("running", "T1 · 2 min")  # noqa: SLF001
+        prompt = screen.query_one("#agent-prompt", TextArea)
+        prompt.text = "Continue with T2 when the tests are green."
+        prompt.focus()
+        await pilot.pause(0.8)
+        app.save_screenshot(str(target))
+
+
 async def capture_search(store: Store, target: Path) -> None:
     app = create_app(str(store.path))
     async with app.run_test(size=SIZE) as pilot:
@@ -749,6 +828,12 @@ SCENES: dict[str, Scene] = {
         build_coordination_fixture,
         capture_collaboration,
         "lazyplan task detail page showing an active claim, two review comments, and a handoff note.",
+    ),
+    "lpui-workbench": Scene(
+        SIZE,
+        build_source_fixture,
+        capture_workbench,
+        "lazyplan agent workbench with a task prompt, streaming agent response, tool cards, an execution plan, and the prompt ready for the next step.",
     ),
     "lpui-search-bulk": Scene(
         SIZE,

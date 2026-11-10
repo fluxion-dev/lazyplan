@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>lpui UX review — every screen, one place</title>
+<meta name="description" content="Internal UX review for every lpui screen and state. Leave feedback per screen, export it, and roll it into a lazyplan UX refresh.">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#09090b">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23f59e0b'/%3E%3Cpath d='M9 9h14v3H9zm0 6h10v3H9zm0 6h14v3H9z' fill='%2309090b'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="./review.css">
+</head>
+<body>
+<a class="skip-link" href="#review-main">Skip to the review</a>
+
+<header class="topbar">
+  <a class="brand" href="../" title="Back to the lazyplan site">
+    <span class="brand-mark" aria-hidden="true">◇</span>
+    <span>
+      <span class="brand-name">lazyplan <span>/ lpui</span></span>
+      <span class="brand-sub">UX review board</span>
+    </span>
+  </a>
+
+  <div class="progress" aria-label="Review progress">
+    <div class="progress-track"><span id="progress-fill"></span></div>
+    <p id="progress-label" class="progress-label" aria-live="polite">Loading screens…</p>
+  </div>
+
+  <div class="top-actions">
+    <span id="storage-chip" class="chip chip-quiet" title="Where feedback is saved">local</span>
+    <button class="btn btn-quiet" type="button" id="import-button" title="Import a feedback JSON export">Import</button>
+    <button class="btn btn-quiet" type="button" id="export-button" title="Download every feedback entry as JSON">Export JSON</button>
+    <button class="btn btn-quiet" type="button" id="export-md-button" title="Download every feedback entry as Markdown">MD</button>
+    <button class="btn btn-gold" type="button" id="plan-button">UX plan</button>
+    <button class="btn btn-icon" type="button" id="help-button" aria-label="Review help" title="Help (?)">?</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="rail" id="rail" aria-label="Screen list">
+    <div class="rail-head">
+      <label class="field">
+        <span class="field-label">Find a screen</span>
+        <input id="search" type="search" placeholder="search title, state, group…" autocomplete="off" spellcheck="false">
+      </label>
+      <label class="field">
+        <span class="field-label">Group</span>
+        <select id="group-filter"></select>
+      </label>
+      <div class="status-filter" role="group" aria-label="Filter by review status">
+        <button class="status-btn is-active" type="button" data-status="all">All</button>
+        <button class="status-btn" type="button" data-status="unreviewed">Unreviewed</button>
+        <button class="status-btn" type="button" data-status="concern">Concerns</button>
+        <button class="status-btn" type="button" data-status="approved">Approved</button>
+        <button class="status-btn" type="button" data-status="idea">Ideas</button>
+        <button class="status-btn" type="button" data-status="question">Questions</button>
+      </div>
+    </div>
+    <nav id="scene-nav" class="scene-nav" aria-label="Screens"></nav>
+    <div class="rail-foot">
+      <label class="field">
+        <span class="field-label">Reviewer name</span>
+        <input id="reviewer" type="text" placeholder="who is reviewing?" autocomplete="off">
+      </label>
+      <p class="rail-note">
+        Feedback is saved in this browser, or to
+        <code>.agents/ux-review/feedback.json</code> when the local server is running.
+      </p>
+      <button class="btn btn-quiet btn-small" type="button" id="reset-button">Reset review</button>
+    </div>
+  </aside>
+
+  <main id="review-main" class="main">
+    <section id="review-view" aria-live="polite"></section>
+    <section id="plan-view" hidden></section>
+  </main>
+</div>
+
+<dialog id="lightbox" class="lightbox" aria-label="Screenshot preview">
+  <form method="dialog" class="lightbox-bar">
+    <img id="lightbox-image" alt="" decoding="async">
+    <button class="btn btn-quiet" value="close" type="submit">Close</button>
+  </form>
+</dialog>
+
+<dialog id="help-dialog" class="dialog" aria-labelledby="help-title">
+  <form method="dialog">
+    <div class="dialog-head">
+      <h2 id="help-title">How this review works</h2>
+      <button class="btn btn-icon" value="close" type="submit" aria-label="Close help">×</button>
+    </div>
+    <div class="dialog-body prose">
+      <p>Every screen and state in lpui is captured from the real Textual app with deterministic fixtures. The list on the left is the full surface area, grouped by where the screen lives.</p>
+      <h3>Leave feedback</h3>
+      <ul>
+        <li>Pick a verdict: <strong>approve</strong>, <strong>concern</strong>, <strong>idea</strong>, or <strong>question</strong>.</li>
+        <li>Concerns and ideas take a severity and optional tags.</li>
+        <li>One screen can hold several entries. The newest entry drives the sidebar dot, but every entry is kept.</li>
+      </ul>
+      <h3>Where it goes</h3>
+      <p>Static hosting keeps feedback in this browser. Run <code>python tools/ux-review-server.py</code> after a build to save every submission to <code>.agents/ux-review/feedback.json</code> instead. Export and import work in both modes.</p>
+      <h3>Roll it into a plan</h3>
+      <p>The <strong>UX plan</strong> view turns every open concern, idea, and question into a <code>plan apply</code> document: one milestone per screen group, one task per review entry, plus acceptance criteria. Download the JSON and run the printed command; retries are idempotent because every key is stable.</p>
+      <h3>Keys</h3>
+      <dl class="keys">
+        <div><dt><kbd>j</kbd> / <kbd>k</kbd></dt><dd>next / previous screen</dd></div>
+        <div><dt><kbd>a</kbd></dt><dd>approve the current screen</dd></div>
+        <div><dt><kbd>/</kbd></dt><dd>focus the screen search</dd></div>
+        <div><dt><kbd>Ctrl</kbd> + <kbd>Enter</kbd></dt><dd>save the feedback form</dd></div>
+        <div><dt><kbd>?</kbd></dt><dd>this help</dd></div>
+      </dl>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<input id="import-file" type="file" accept="application/json,.json" hidden>
+
+<script type="module" src="./review.js"></script>
+</body>
+</html>

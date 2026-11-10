@@ -6,7 +6,7 @@
       "id": "shell",
       "title": "Main shell",
       "blurb": "The tree, overview, panes, themes, and terminal widths.",
-      "count": 13
+      "count": 12
     },
     {
       "id": "trust",
@@ -36,7 +36,7 @@
       "id": "forms",
       "title": "Dialogs and forms",
       "blurb": "Create, edit, prove, confirm, export, update, and overlays.",
-      "count": 24
+      "count": 23
     },
     {
       "id": "cli",
@@ -128,23 +128,6 @@
       "keys": "j/k select \u00b7 space mark \u00b7 c commands",
       "image": "shell-attention.png",
       "webp": "shell-attention.webp",
-      "width": 1604,
-      "height": 904
-    },
-    {
-      "id": "shell-marked",
-      "group": "shell",
-      "title": "Marked rows for bulk edit",
-      "state": "Three tasks marked",
-      "description": "The tree after space-marking three tasks: checkmarks on the rows and bulk commands waiting in the palette.",
-      "lookFor": [
-        "Is the difference between cursor, mark, and claim clear?",
-        "Can you tell which rows a bulk action will touch?",
-        "Does the interface need a visible marked count?"
-      ],
-      "keys": "space mark \u00b7 c commands \u00b7 u undo",
-      "image": "shell-marked.png",
-      "webp": "shell-marked.webp",
       "width": 1604,
       "height": 904
     },
@@ -587,23 +570,6 @@
       "keys": "tab next \u00b7 enter submit \u00b7 esc cancel",
       "image": "form-edit-criterion.png",
       "webp": "form-edit-criterion.webp",
-      "width": 1604,
-      "height": 904
-    },
-    {
-      "id": "form-prove",
-      "group": "forms",
-      "title": "Prove criterion",
-      "state": "Evidence form with six fields",
-      "description": "The prove-criterion form: criterion id, command, exit code, commit, proving task, and note.",
-      "lookFor": [
-        "Does the form explain that it records rather than runs?",
-        "Are command and exit code grouped well?",
-        "Is the optional proving task obvious?"
-      ],
-      "keys": "tab next \u00b7 enter prove \u00b7 esc cancel",
-      "image": "form-prove.png",
-      "webp": "form-prove.webp",
       "width": 1604,
       "height": 904
     },

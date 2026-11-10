@@ -46,7 +46,7 @@ class DocumentationKeysTest(unittest.TestCase):
         ):
             with self.subTest(term=term):
                 self.assertIn(term, USAGE)
-        for key in ("`t`", "`enter`", "`p`", "`l`", "`L`", "`o`", "`d`"):
+        for key in ("`t`", "`enter`", "`l`", "`L`", "`o`", "`d`"):
             with self.subTest(key=key):
                 self.assertIn(key, USAGE)
 

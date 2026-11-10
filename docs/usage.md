@@ -129,8 +129,9 @@ lpui
 
 The first run sets up lazyplan: it detects your coding agents, installs their
 skills, creates the database, and remembers the choices in
-`~/.lazyplan/setup.json`. On a terminal you get a short wizard; scripts, agents,
-and `--json` get the same defaults without prompts.
+`~/.lazyplan/setup.json`. On a terminal you get a short wizard with the same
+palette, step rules, and compact review as the TUI; scripts, agents, and
+`--json` get the same defaults without prompts.
 
 Then create your first plan:
 
@@ -337,8 +338,8 @@ branches exist in the journal but not as screen nodes.
 | `T` | show or hide the timeline card |
 | `q` | quit, from any screen |
 
-From the tree, `e` edits, `s` advances status, `a` adds a criterion, `p`
-records proof, `g` opens the source trail, and `n` creates by context. The
+From the tree, `e` edits, `s` advances status, `a` adds a criterion, `g`
+opens the source trail, and `n` creates by context. The
 palette carries questions, approvals, claims, sessions, comments, pull
 requests, and activity; it disables actions the current selection cannot run
 and says why.
@@ -362,8 +363,9 @@ read-only text. From the tree, open **criteria hub**, **evidence hub**,
   invalid URLs are rejected.
 
 `escape` returns to the parent screen and restores its selection. The hub
-header keeps the parent breadcrumb, so evidence never loses the criterion it
-proved.
+title keeps the parent context, so evidence never loses the criterion it
+belongs to. Every hub ends in the shared action bar; the primary action is
+highlighted.
 
 ### Coordination hubs
 
@@ -396,7 +398,10 @@ shows the feed.
 - Source trail: the tree groups checkout → commits → changed files, with pull
   requests alongside. `enter` cross-links to the owning plan, milestone, or
   task; `o` opens the selected commit, file, or pull request; `y` copies it;
-  `/` filters. A missing commit is marked stale, and an offline diff says so.
+  `/` filters. The diff preview shows a file summary, per-file add/remove
+counts, hunk headers, and old/new line numbers. A missing commit is marked
+stale, and an offline diff says so. The source footer uses the same action bar
+as the rest of the screen.
 - Pull requests: rows show state, checks, reviews, base and head refs, merge
   data, and a stale marker. `a` links a URL, `d` unlinks, `o` opens it, and
   `r` refreshes. Only `r` touches the network; every other path reads cache.

@@ -3,19 +3,16 @@ import { ArrowRight } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
+  HERO_COMPOSITE,
   LICENSE_BADGE,
   PYPI_BADGE,
   PYPI_URL,
   RELEASE_BADGE,
   REPO_URL,
   RELEASES_URL,
-  SCREENS,
 } from "@/data/site"
 
 import { DownloadStats } from "./download-stats"
-
-const HERO_STAGE =
-  SCREENS.find((screen) => screen.name === "coordination") ?? SCREENS[0]
 
 export function Hero() {
   return (
@@ -102,19 +99,25 @@ export function Hero() {
           className="absolute -inset-6 rounded-[2rem] bg-brand-gold/10 blur-3xl"
         />
         <div className="relative overflow-hidden rounded-2xl border border-border bg-card/70 p-1.5 shadow-cinema">
-          <img
-            data-hero
-            src={`./screens/${HERO_STAGE.file}.png`}
-            width={HERO_STAGE.width}
-            height={HERO_STAGE.height}
-            loading="eager"
-            decoding="async"
-            alt={HERO_STAGE.alt}
-            className="block h-auto w-full rounded-xl"
-          />
+          <picture>
+            <source
+              srcSet={`./screens/${HERO_COMPOSITE.file}.webp`}
+              type="image/webp"
+            />
+            <img
+              data-hero
+              src={`./screens/${HERO_COMPOSITE.file}.png`}
+              width={HERO_COMPOSITE.width}
+              height={HERO_COMPOSITE.height}
+              loading="eager"
+              decoding="async"
+              alt={HERO_COMPOSITE.alt}
+              className="block h-auto w-full rounded-xl"
+            />
+          </picture>
         </div>
         <figcaption className="mt-3 text-center text-sm text-muted-foreground">
-          Plan, claims, and attention in one screen.
+          {HERO_COMPOSITE.caption}
         </figcaption>
       </figure>
     </section>

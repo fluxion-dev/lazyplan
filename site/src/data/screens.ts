@@ -8,91 +8,6 @@ export type Screen = Readonly<{
   mono?: boolean
 }>
 
-export const SCREENS: readonly Screen[] = [
-  {
-    name: "control-room",
-    file: "lpui-control-room",
-    width: 1604,
-    height: 904,
-    alt: "Control room with a manual override banner, health and needs strip, active session, attention tasks, and approval drift.",
-    caption: "What needs you, in one audited control room.",
-  },
-  {
-    name: "detail",
-    file: "lpui-detail",
-    width: 1604,
-    height: 904,
-    alt: "Read-only detail page showing a plan's reason, scope, acceptance criteria, and milestones.",
-    caption: "The why, the what, and what done means.",
-  },
-  {
-    name: "coordination",
-    file: "lpui-coordination",
-    width: 1604,
-    height: 904,
-    alt: "Plan tree with active and expired claims, blocked work, aging tasks, and a red check, with attention summarized in the control strip.",
-    caption: "Active, blocked, and attention at a glance.",
-  },
-  {
-    name: "git-pane",
-    file: "lpui-git-pane",
-    width: 1604,
-    height: 904,
-    alt: "Main shell with a linked task selected, showing the sticky preview above a GIT pane with the checkout, branch, commits, and pull requests.",
-    caption: "Checkout, commits, and pull requests for the row.",
-  },
-  {
-    name: "export",
-    file: "lpui-export",
-    width: 1604,
-    height: 904,
-    alt: "Markdown export picker showing the destination path, a Downloads folder tree, the filename, and Export and Cancel actions.",
-    caption: "Pick a folder.",
-  },
-  {
-    name: "timeline",
-    file: "lpui-timeline",
-    width: 1604,
-    height: 904,
-    alt: "Main shell with the timeline open, showing plan and milestone traces at distinct start positions and one never-started lane.",
-    caption: "Every lane stays; the scoped plan names the card.",
-  },
-  {
-    name: "source-trail",
-    file: "lpui-source-trail",
-    width: 1604,
-    height: 904,
-    alt: "Source trail for a task with a repository, commits, changed files, pull requests, and a selected file diff.",
-    caption: "Follow the plan into the code.",
-  },
-  {
-    name: "search-bulk",
-    file: "lpui-search-bulk",
-    width: 1604,
-    height: 904,
-    alt: "Plan tree with three marked tasks, checkmarks on each row, and a marked count in the status line.",
-    caption: "Find, mark, edit once.",
-  },
-  {
-    name: "theme-void",
-    file: "lpui-theme-void",
-    width: 1604,
-    height: 904,
-    alt: "lazyplan main shell in the OLED-black void theme, with the plan tree, sticky preview, and GIT pane.",
-    caption: "void",
-    mono: true,
-  },
-  {
-    name: "theme-latte",
-    file: "lpui-theme-latte",
-    width: 1604,
-    height: 904,
-    alt: "lazyplan main shell in the light Latte theme, with the plan tree, sticky preview, and GIT pane.",
-    caption: "latte",
-    mono: true,
-  },
-]
-
 export const HERO_COMPOSITE: Screen = {
   name: "hero",
   file: "lpui-hero",
@@ -132,7 +47,7 @@ export const STORY_SCREENS: readonly Screen[] = [
     file: "lpui-workbench",
     width: 1604,
     height: 904,
-    alt: "lazyplan agent workbench with a task prompt, a streaming agent response, a tool approval card, and the plan beside it.",
+    alt: "lazyplan agent workbench with a task prompt, a streaming agent response, tool cards, an execution plan, and the prompt ready for the next step.",
     caption: "Run the agent beside the plan.",
   },
   {

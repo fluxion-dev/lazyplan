@@ -55,6 +55,11 @@ loop, and proof, then open into the feature matrix.
 Keep the hero headline and subtitle. Rewrite section copy in `copy.ts`, card
 copy in `features.json`, and capture captions in `screens.ts`.
 
+## Page order
+
+Header → hero composite → install → lead story → feature matrix → ways to work
+→ proof and trust → gallery → how it works → FAQ → CTA → footer.
+
 ## Commands
 
 ```bash

@@ -15,7 +15,6 @@ from .base import AppBase
 from .screens import (
     FilterPromptScreen,
 )
-from .state import next_mode
 
 if _TEXTUAL_OK:
 
@@ -36,11 +35,6 @@ if _TEXTUAL_OK:
                     self.refresh_all(self._pending_note)
 
             self.push_screen(FilterPromptScreen(), cb)
-
-        def action_cycle_mode(self) -> None:
-            """Cycle Active, Finished, and Both plans."""
-            self.plan_mode = next_mode(self.plan_mode)
-            self.refresh_all(f"plan mode: {self.plan_mode.value}")
 
         def action_filter_text(self) -> None:
             """Prompt for filter text (slash)."""

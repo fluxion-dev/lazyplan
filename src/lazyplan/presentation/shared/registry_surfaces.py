@@ -136,7 +136,6 @@ SURFACE_EXCEPTIONS: tuple[SurfaceException, ...] = (
     SurfaceException("view.fold", "mcp", "TUI-only tree gesture"),
     SurfaceException("view.filter", "cli", "CLI filters with `list --status`/`--repo`"),
     SurfaceException("view.filter", "mcp", "MCP reads a whole plan with `show_row`"),
-    SurfaceException("view.plan_mode", "mcp", "TUI-only plan visibility mode"),
     SurfaceException("view.criteria_hub", "cli", "CLI reads criteria with `criterion list`"),
     SurfaceException("view.criteria_hub", "mcp", "MCP reads criteria with `criterion list`"),
     SurfaceException("view.evidence_hub", "cli", "CLI reads evidence with `criterion evidence`"),

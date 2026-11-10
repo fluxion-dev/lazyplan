@@ -247,15 +247,6 @@ CORE_ACTIONS: tuple[Action, ...] = (
         ("filter-text",),
     ),
     _action(
-        "view.plan_mode",
-        "Change plan mode",
-        "f",
-        "tree",
-        ("tui", "docs"),
-        ("tree",),
-        ("plan-mode",),
-    ),
-    _action(
         "view.timeline",
         "Show/hide timeline",
         "T",

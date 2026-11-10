@@ -44,7 +44,7 @@ from .filters import FilterMixin
 from .launch import launch_update
 from .metrics import MetricsSection
 from .preview import PreviewMixin
-from .state import AppState, PlanMode
+from .state import AppState
 from .theme import register_themes
 from .tree import TreeMixin
 from .widgets.agents_panel import AgentsPanel
@@ -90,7 +90,6 @@ if _TEXTUAL_OK:
             Binding("z", "fold", "Fold", show=False),
             Binding("Z", "fold_all", "Fold all", show=False),
             Binding("slash", "filter_text", "Filter"),
-            Binding("f", "cycle_mode", "Plan mode", show=False),
             Binding("r", "refresh", "Refresh", show=False),
             Binding("U", "update_prompt", "Update"),
         ]
@@ -237,12 +236,10 @@ if _TEXTUAL_OK:
     def create_app(
         db_path: str | None = None,
         startup_notice: str = "",
-        startup_mode: PlanMode = PlanMode.ACTIVE,
     ) -> LazyplanApp:
         """Build the app bound to a store."""
         app = LazyplanApp(Store(db_path))
         app._startup_notice = startup_notice
-        app.plan_mode = startup_mode
         return app
 
 

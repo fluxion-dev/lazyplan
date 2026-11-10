@@ -310,10 +310,9 @@ handoff. Each session row shows its live state: `working`, `awaiting you`, or
 `T` or the palette's show/hide timeline command opens it for the session. When
 open, it follows the selected row and its immediate children.
 
-On launch the tree opens on **Active** plans: every plan that is not done, with
-its full milestone and task tree. `f` cycles Active, Finished, and Both; Both
-puts finished plans last. The mode only chooses plans, never hides a visible
-plan's children.
+The plan tree is split into two stacked panels. **Active** holds every plan that
+is not done; **Finished** holds completed plans. Both panels keep the full
+milestone and task tree, and the text filter applies inside each panel.
 
 The tree loads plan rows first. A plan's milestones appear when you expand it,
 and a milestone's tasks appear when you expand that milestone. A text filter
@@ -330,7 +329,6 @@ branches exist in the journal but not as screen nodes.
 | `e` / `s` / `a` / `d` | edit · advance status · add criterion · delete |
 | `n` | create by context (plan, milestone, or task) |
 | `/` | filter by text |
-| `f` | change plan mode: active, finished, both |
 | `g` | open the source trail for the selected row |
 | `[` / `]` | history back / forward, restoring the prior screen and selection |
 | `escape` | back from source and modals; clears the tree filter |

@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 
 from .... import services
 from ....core.entities import Milestone, Plan, Status, Task
-from ..state import PlanMode
 
 if TYPE_CHECKING:
     from ..app import LazyplanApp
@@ -17,18 +16,6 @@ class TreeFilter:
 
     def __init__(self, app: LazyplanApp) -> None:
         self.app = app
-
-    def mode_tree(
-        self,
-        base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]],
-        mode: PlanMode,
-    ) -> list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]:
-        """Keep whole plan trees by mode; done plans sort last in Both."""
-        if mode is PlanMode.ACTIVE:
-            return [(plan, milestones) for plan, milestones in base if plan.status != Status.DONE]
-        if mode is PlanMode.FINISHED:
-            return [(plan, milestones) for plan, milestones in base if plan.status == Status.DONE]
-        return sorted(base, key=lambda entry: entry[0].status == Status.DONE)
 
     def source_stats(
         self,

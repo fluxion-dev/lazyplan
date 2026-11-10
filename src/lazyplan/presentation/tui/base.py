@@ -13,7 +13,7 @@ from .controllers.metrics import MetricsController
 from .controllers.spinner import SpinnerController
 from .controllers.tree import TreeController
 from .controllers.updates import UpdateController
-from .state import AppState, PlanMode
+from .state import AppState
 from .views.rows import RowSpec
 
 
@@ -33,7 +33,6 @@ class TuiHost:
     def action_fold(self) -> None: ...
     def action_fold_all(self) -> None: ...
     def action_filter_text(self) -> None: ...
-    def action_cycle_mode(self) -> None: ...
     def action_toggle_mark(self) -> None: ...
     def action_clear_marks(self) -> None: ...
     def action_bulk_doing(self) -> None: ...
@@ -78,14 +77,6 @@ class AppBase(App, TuiHost):
     @selected.setter
     def selected(self, value: tuple[str, int] | None) -> None:
         self.state.selected = value
-
-    @property
-    def plan_mode(self) -> PlanMode:
-        return self.state.plan_mode
-
-    @plan_mode.setter
-    def plan_mode(self, value: PlanMode) -> None:
-        self.state.plan_mode = value
 
     @property
     def filter_text(self) -> str:

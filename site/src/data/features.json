@@ -52,11 +52,11 @@
       "group": "agents"
     },
     {
-      "id": "workbench",
-      "title": "An agent workbench",
-      "description": "Run an ACP agent beside the plan. Approvals and staged proposals keep writes deliberate.",
+      "id": "overview",
+      "title": "The overview is the detail",
+      "description": "Select a row and read its milestones, tasks, criteria, proof, and notes without leaving the plan tree.",
       "icon": "monitor",
-      "group": "agents"
+      "group": "plan"
     },
     {
       "id": "source-trail",
@@ -96,7 +96,7 @@
     {
       "id": "auditability",
       "title": "Writes are deliberate and recorded",
-      "description": "The screen is read-only until you arm override; every write lands in the activity feed.",
+      "description": "Writes go straight to the plan; every change lands in the activity feed.",
       "icon": "list-checks",
       "group": "proof"
     },

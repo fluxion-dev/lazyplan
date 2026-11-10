@@ -31,7 +31,6 @@ EXPECTED = {
     "lpui-timeline",
     "lpui-coordination",
     "lpui-collaboration",
-    "lpui-workbench",
     "lpui-search-bulk",
     "lpui-bulk-palette",
     "lpui-flow-health",

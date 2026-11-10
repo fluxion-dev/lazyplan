@@ -50,7 +50,7 @@ const TRUST = [
     icon: Lock,
     title: "Auditability",
     description:
-      "Read-only until you arm override; every write lands in the feed.",
+      "Writes go straight to the plan; every change lands in the feed.",
   },
 ] as const
 

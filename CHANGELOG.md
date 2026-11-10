@@ -32,6 +32,9 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
 
 ### Removed
 
+- **ACP agent integration.** The `W` agent workbench, the `lpui agent` commands,
+  the ACP transport, staged proposal review, and work sessions are gone. Plans,
+  MCP, hooks, and the plan tree remain the agent paths.
 - **Criterion tick.** `lpui criterion tick|untick`, the legacy `check|uncheck`
   aliases, the TUI `x` tick key, and the MCP `criterion_tick|untick` tools are
   gone.

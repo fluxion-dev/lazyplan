@@ -129,17 +129,38 @@
     padding: 0 2;
 }
 
-#main.narrow #side,
+#main.narrow {
+    layout: vertical;
+}
+
 #main.narrow #preview,
-#main.narrow #git,
-#main.narrow #agents {
+#main.narrow #plans-finished {
     display: none;
 }
 
 #main.narrow #left,
 #main.narrow #nav,
-#main.narrow .plan-panel {
+#main.narrow #plans-active,
+#main.narrow #side,
+#main.narrow #git {
     width: 100%;
+}
+
+#main.narrow #left {
+    height: 1fr;
+}
+
+#main.narrow #side {
+    height: auto;
+}
+
+#main.narrow #git {
+    min-width: 0;
+    max-height: 6;
+}
+
+#main.narrow #agents {
+    max-height: 5;
 }
 
 #main.compact {

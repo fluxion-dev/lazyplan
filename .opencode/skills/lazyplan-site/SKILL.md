@@ -27,7 +27,7 @@ gate see full markup before JavaScript runs.
 | `site/src/index.css` | Tailwind, shadcn tokens, brand tokens, fonts, base layer. |
 | `site/src/data/features.json` | Ranked lead and supporting feature cards. |
 | `site/src/data/copy.ts` | Section narrative and CTAs. |
-| `site/src/data/screens.ts` | Screen type, current gallery, hero composite, and the eight-capture story. |
+| `site/src/data/screens.ts` | Screen type, hero composite, and the eight-capture gallery. |
 | `site/src/data/faq.ts` | FAQ questions and answers mirrored in JSON-LD. |
 | `site/src/data/links.ts` | Version, URLs, badges, install command, and navigation. |
 | `site/src/data/site.ts` | Barrel re-export; import page data from here. |
@@ -71,6 +71,23 @@ python3 tools/check-site.py --dist site/dist
 `npm run build` is the source of truth. It must leave `site/dist/index.html`
 with the full rendered body; otherwise SEO and `check-site.py` fail.
 
+## Captures
+
+The published set is the eight supporting captures, the hero pair, and the
+social card. Regenerate it from the repository root:
+
+```bash
+.venv/bin/python tools/capture-screens.py \
+  --only lpui-control-room --only lpui-detail --only lpui-coordination \
+  --only lpui-workbench --only lpui-trace --only lpui-source-trail \
+  --only lpui-git-pane --only lpui-timeline
+```
+
+The tool writes `lpui-hero.png` (2400x1200) from coordination, workbench, and
+source trail, plus `og-lpui-and-agent.png`. Every PNG gets a WebP. Keep only
+the referenced assets in `site/public/screens`; the discoverability test rejects
+extra published screens.
+
 ## Brand tokens
 
 Set once in `site/src/index.css`, used semantically everywhere else.
@@ -97,8 +114,8 @@ Install the official skill with `npx skills add shadcn/ui -g`; it has the full
 guide. The project imports `cn` from the `cn` package directly. The essentials
 for this site:
 
-- Prefer `Button`, `Card`, `Badge`, `Accordion`, `Dialog`, `Sheet`,
-  `Separator`, and `Kbd` over hand-rolled equivalents.
+- Prefer `Button`, `Card`, `Badge`, `Accordion`, `Dialog`, `Sheet`, and `Kbd`
+  over hand-rolled equivalents.
 - Use built-in variants before adding classes. `className` is for layout only.
 - Use full `Card` composition: `CardHeader`, `CardTitle`, `CardDescription`,
   `CardContent`, `CardFooter`.
@@ -121,9 +138,8 @@ for this site:
 - Keep the head metadata, canonical URL, Open Graph, Twitter, and JSON-LD in
   `index.html` in sync with the visible copy. The FAQ JSON-LD answers must match
   the visible FAQ.
-- Keep the page under the 1200-word budget. The target gallery is eight figures
-  plus the hero composite; `SCREENS` still holds the current ten-scene gallery
-  until the capture milestone replaces it.
+- Keep the page under the 1200-word budget. The page has a hero composite,
+  eight gallery figures, and one proof figure.
 - No browser APIs at module scope; use effects. The app must render on the
   server without `window` or `document`.
 - Links to docs use

@@ -1,7 +1,9 @@
 "use client"
 
 import { useState } from "react"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -9,13 +11,25 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { COPY, SCREENS, type Screen } from "@/data/site"
+import { COPY, SCREENS } from "@/data/site"
 
+import { Reveal } from "./reveal"
 import { ScreenshotFrame } from "./screenshot-frame"
 import { Section, SectionHeading } from "./section"
 
 export function Screenshots() {
-  const [active, setActive] = useState<Screen | null>(null)
+  const [activeIndex, setActiveIndex] = useState<number | null>(null)
+  const active = activeIndex === null ? null : SCREENS[activeIndex]
+  const position = activeIndex === null ? 0 : activeIndex + 1
+
+  function step(delta: number) {
+    setActiveIndex((current) => {
+      if (current === null) {
+        return null
+      }
+      return (current + delta + SCREENS.length) % SCREENS.length
+    })
+  }
 
   return (
     <Section id="screens">
@@ -25,13 +39,14 @@ export function Screenshots() {
         intro={COPY.gallery.intro}
       />
 
-      <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-        {SCREENS.map((screen) => (
-          <ScreenshotFrame
-            key={screen.name}
-            screen={screen}
-            onOpen={setActive}
-          />
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:gap-8">
+        {SCREENS.map((screen, index) => (
+          <Reveal key={screen.name} delay={(index % 2) * 70}>
+            <ScreenshotFrame
+              screen={screen}
+              onOpen={() => setActiveIndex(index)}
+            />
+          </Reveal>
         ))}
       </div>
 
@@ -39,17 +54,29 @@ export function Screenshots() {
         open={active !== null}
         onOpenChange={(open) => {
           if (!open) {
-            setActive(null)
+            setActiveIndex(null)
           }
         }}
       >
-        <DialogContent className="max-h-[92vh] max-w-[min(96vw,1100px)] overflow-auto p-3 sm:max-w-[min(96vw,1100px)]">
+        <DialogContent
+          className="max-h-[92vh] max-w-[min(96vw,1100px)] overflow-auto p-3 sm:max-w-[min(96vw,1100px)]"
+          onKeyDown={(event) => {
+            if (event.key === "ArrowLeft") {
+              event.preventDefault()
+              step(-1)
+            } else if (event.key === "ArrowRight") {
+              event.preventDefault()
+              step(1)
+            }
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="sr-only">
               {active?.caption ?? "Screenshot preview"}
             </DialogTitle>
             <DialogDescription className="sr-only">
-              Full-size screenshot preview.
+              Full-size screenshot preview. Use the arrow keys to move through
+              the gallery.
             </DialogDescription>
           </DialogHeader>
           {active ? (
@@ -61,9 +88,37 @@ export function Screenshots() {
                 alt={active.alt}
                 className="block h-auto w-full rounded-lg border border-border"
               />
-              <p className="m-0 text-center text-sm text-muted-foreground">
-                {active.caption}
-              </p>
+              <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => step(-1)}
+                  aria-label="Previous screenshot"
+                  className="order-2 sm:order-none"
+                >
+                  <ChevronLeft />
+                  Previous
+                </Button>
+                <p className="order-1 m-0 text-center text-sm text-muted-foreground sm:order-none">
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {position} / {SCREENS.length}
+                  </span>
+                  <span className="mx-2 text-border">·</span>
+                  {active.caption}
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => step(1)}
+                  aria-label="Next screenshot"
+                  className="order-2 sm:order-none"
+                >
+                  Next
+                  <ChevronRight />
+                </Button>
+              </div>
             </>
           ) : null}
         </DialogContent>

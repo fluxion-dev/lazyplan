@@ -893,13 +893,19 @@ def patch_svg(path: Path) -> None:
     path.write_text(text, encoding="utf-8", newline="\n")
 
 
+def write_webp(png: Path) -> None:
+    """Write the WebP sibling of a rendered PNG."""
+    subprocess.run(
+        ["magick", str(png), "-quality", "82", str(png.with_suffix(".webp"))],
+        check=True,
+    )
+
+
 def convert(svg: Path, png: Path) -> None:
     if shutil.which("magick") is None:
         raise SystemExit("error: ImageMagick 7 (magick) is required")
     subprocess.run(["magick", str(svg), "-strip", str(png)], check=True)
-    subprocess.run(
-        ["magick", str(png), "-quality", "82", str(png.with_suffix(".webp"))], check=True
-    )
+    write_webp(png)
 
 
 def dimensions(png: Path) -> str:
@@ -1011,6 +1017,25 @@ def build_og(screenshot: Path, target: Path) -> None:
         base.unlink(missing_ok=True)
 
 
+def _framed(path: Path, size: str) -> list[str]:
+    """Return the ImageMagick tokens for one framed screenshot."""
+    return [
+        "(",
+        str(path),
+        "-resize",
+        f"{size}^",
+        "-gravity",
+        "center",
+        "-extent",
+        size,
+        "-bordercolor",
+        "#27272a",
+        "-border",
+        "2",
+        ")",
+    ]
+
+
 def build_cinematic_hero(coordination: Path, workbench: Path, source: Path, target: Path) -> None:
     """Compose the 2400x1200 hero: plan, agent, and proof side by side."""
     for path in (coordination, workbench, source):
@@ -1022,55 +1047,19 @@ def build_cinematic_hero(coordination: Path, workbench: Path, source: Path, targ
             "-size",
             "2400x1200",
             "gradient:#0b0b12-#050507",
-            "(",
-            str(coordination),
-            "-resize",
-            "1440x812^",
-            "-gravity",
-            "center",
-            "-extent",
-            "1440x812",
-            "-bordercolor",
-            "#27272a",
-            "-border",
-            "2",
-            ")",
+            *_framed(coordination, "1440x812"),
             "-gravity",
             "northwest",
             "-geometry",
             "+60+194",
             "-composite",
-            "(",
-            str(workbench),
-            "-resize",
-            "820x462^",
-            "-gravity",
-            "center",
-            "-extent",
-            "820x462",
-            "-bordercolor",
-            "#27272a",
-            "-border",
-            "2",
-            ")",
+            *_framed(workbench, "820x462"),
             "-gravity",
             "northwest",
             "-geometry",
             "+1540+100",
             "-composite",
-            "(",
-            str(source),
-            "-resize",
-            "820x462^",
-            "-gravity",
-            "center",
-            "-extent",
-            "820x462",
-            "-bordercolor",
-            "#27272a",
-            "-border",
-            "2",
-            ")",
+            *_framed(source, "820x462"),
             "-gravity",
             "northwest",
             "-geometry",
@@ -1087,10 +1076,7 @@ def build_cinematic_hero(coordination: Path, workbench: Path, source: Path, targ
         ],
         check=True,
     )
-    subprocess.run(
-        ["magick", str(target), "-quality", "82", str(target.with_suffix(".webp"))],
-        check=True,
-    )
+    write_webp(target)
 
 
 def run(out_dir: Path, only: list[str], keep_svg: Path | None, make_og: bool) -> None:

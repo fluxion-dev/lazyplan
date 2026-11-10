@@ -1,49 +1,40 @@
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { COPY } from "@/data/site"
 
+import { Reveal } from "./reveal"
 import { Section, SectionHeading } from "./section"
-
-const STEPS = [
-  {
-    number: "01",
-    title: "Create a plan",
-    description: "Give it a title, a reason, and a scope.",
-  },
-  {
-    number: "02",
-    title: "Bring in your agent",
-    description: "Your agent reads and updates the same plan.",
-  },
-  {
-    number: "03",
-    title: "Keep work moving",
-    description: "Review progress, clear blockers, and finish.",
-  },
-] as const
 
 export function HowItWorks() {
   return (
-    <Section id="how" className="max-w-5xl">
+    <Section id="how" className="max-w-6xl">
       <SectionHeading
-        eyebrow="How it works"
-        title="Start in three steps."
+        eyebrow={COPY.workflow.eyebrow}
+        title={COPY.workflow.title}
       />
-      <ol className="grid list-none grid-cols-1 gap-6 p-0 md:grid-cols-3">
-        {STEPS.map((step) => (
-          <li key={step.number}>
-            <Card className="h-full border-border bg-card/70">
-              <CardHeader>
-                <span className="text-sm font-bold text-brand-gold">
-                  {step.number}
-                </span>
-                <CardTitle className="mt-2 text-lg">{step.title}</CardTitle>
-                <CardDescription className="text-[0.95rem]">
-                  {step.description}
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </li>
-        ))}
-      </ol>
+      <div className="relative">
+        <div
+          aria-hidden="true"
+          className="absolute top-6 right-0 left-0 hidden h-px bg-gradient-to-r from-transparent via-brand-gold/40 to-transparent md:block"
+        />
+        <ol className="relative grid list-none grid-cols-1 gap-8 p-0 md:grid-cols-3">
+          {COPY.workflow.steps.map((step, index) => (
+            <li key={step.number}>
+              <Reveal delay={index * 80}>
+                <div className="flex flex-col items-start gap-3">
+                  <span className="relative flex size-12 items-center justify-center rounded-full border border-border bg-background font-mono text-sm font-bold text-brand-gold shadow-glow">
+                    {step.number}
+                  </span>
+                  <h3 className="m-0 text-xl font-semibold tracking-headline text-foreground">
+                    {step.title}
+                  </h3>
+                  <p className="m-0 text-[0.95rem] text-muted-foreground">
+                    {step.description}
+                  </p>
+                </div>
+              </Reveal>
+            </li>
+          ))}
+        </ol>
+      </div>
     </Section>
   )
 }

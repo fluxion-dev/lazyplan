@@ -3,6 +3,7 @@ import { ArrowRight } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
+  HERO_COMPOSITE,
   LICENSE_BADGE,
   PYPI_BADGE,
   PYPI_URL,
@@ -17,18 +18,18 @@ export function Hero() {
   return (
     <section
       aria-labelledby="hero-title"
-      className="relative overflow-hidden px-6 pt-24 pb-20 text-center md:pt-32 md:pb-28"
+      className="relative overflow-hidden px-6 pt-24 pb-20 text-center md:pt-32 md:pb-24"
     >
       <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-32 left-1/2 h-80 w-[42rem] -translate-x-1/2 rounded-full bg-brand-blue/25 blur-3xl" />
-        <div className="absolute top-20 -left-24 size-64 rounded-full bg-brand-cyan/15 blur-3xl" />
-        <div className="absolute top-24 -right-24 size-64 rounded-full bg-brand-gold/20 blur-3xl" />
+        <div className="absolute inset-0 cinema-grid opacity-70" />
+        <div className="absolute inset-0 cinema-vignette" />
+        <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-b from-transparent to-background" />
       </div>
 
       <div className="relative mx-auto max-w-4xl">
         <Badge
           variant="outline"
-          className="mb-5 h-auto gap-2 border-border bg-card/60 px-3 py-1 text-[0.7rem] font-semibold tracking-[0.16em] text-brand-cyan uppercase"
+          className="mb-5 h-auto gap-2 border-border bg-card/60 px-3 py-1 text-[0.7rem] font-semibold tracking-[0.16em] text-brand-cyan uppercase shadow-glow"
         >
           <span
             aria-hidden="true"
@@ -39,11 +40,11 @@ export function Hero() {
 
         <h1
           id="hero-title"
-          className="m-0 text-5xl font-extrabold tracking-tight text-balance text-foreground md:text-6xl"
+          className="m-0 text-display leading-display font-extrabold tracking-display text-balance text-foreground"
         >
           Your master plan(s), laid bare.
         </h1>
-        <p className="mx-auto mt-6 max-w-2xl text-lg text-pretty text-muted-foreground">
+        <p className="mx-auto mt-6 max-w-2xl text-lead text-pretty text-muted-foreground">
           Agent compatible long context planning and control
         </p>
 
@@ -91,6 +92,34 @@ export function Hero() {
 
         <DownloadStats />
       </div>
+
+      <figure className="relative mx-auto mt-14 max-w-5xl">
+        <div
+          aria-hidden="true"
+          className="absolute -inset-6 rounded-[2rem] bg-brand-gold/10 blur-3xl"
+        />
+        <div className="relative overflow-hidden rounded-2xl border border-border bg-card/70 p-1.5 shadow-cinema">
+          <picture>
+            <source
+              srcSet={`./screens/${HERO_COMPOSITE.file}.webp`}
+              type="image/webp"
+            />
+            <img
+              data-hero
+              src={`./screens/${HERO_COMPOSITE.file}.png`}
+              width={HERO_COMPOSITE.width}
+              height={HERO_COMPOSITE.height}
+              loading="eager"
+              decoding="async"
+              alt={HERO_COMPOSITE.alt}
+              className="block h-auto w-full rounded-xl"
+            />
+          </picture>
+        </div>
+        <figcaption className="mt-3 text-center text-sm text-muted-foreground">
+          {HERO_COMPOSITE.caption}
+        </figcaption>
+      </figure>
     </section>
   )
 }

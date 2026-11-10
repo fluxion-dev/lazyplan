@@ -2,7 +2,7 @@
 # Bump the lazyplan semantic version: major | minor | patch.
 # Single source of truth is `version = "x.y.z"` in pyproject.toml; the
 # README header (`# lazyplan (`lpui`) — vX.Y.Z`) and the version-pinned
-# asset URLs in README.md, site/index.html, and site/src/data/site.ts
+# asset URLs in README.md, site/index.html, and site/src/data/links.ts
 # mirror it and are updated here.
 # Commits the change and tags `vX.Y.Z` (annotated). Push with --push.
 # Use --no-tag to commit without tagging, for a release pull request.
@@ -82,9 +82,9 @@ if [[ -f site/index.html ]]; then
   sed -i.bak -E "s/\"version\": \"[0-9]+\.[0-9]+\.[0-9]+\"/\"version\": \"$NEXT\"/" site/index.html && rm site/index.html.bak
   sed -i.bak -E "s/\"softwareVersion\": \"[0-9]+\.[0-9]+\.[0-9]+\"/\"softwareVersion\": \"$NEXT\"/" site/index.html && rm site/index.html.bak
 fi
-if [[ -f site/src/data/site.ts ]]; then
-  sed -i.bak -E "s/^export const VERSION = \"[0-9]+\.[0-9]+\.[0-9]+\"$/export const VERSION = \"$NEXT\"/" site/src/data/site.ts && rm site/src/data/site.ts.bak
-  if ! grep -q "^export const VERSION = \"$NEXT\"$" site/src/data/site.ts; then
+if [[ -f site/src/data/links.ts ]]; then
+  sed -i.bak -E "s/^export const VERSION = \"[0-9]+\.[0-9]+\.[0-9]+\"$/export const VERSION = \"$NEXT\"/" site/src/data/links.ts && rm site/src/data/links.ts.bak
+  if ! grep -q "^export const VERSION = \"$NEXT\"$" site/src/data/links.ts; then
     echo "error: site data version update failed" >&2
     exit 1
   fi
@@ -106,7 +106,7 @@ if ! head -1 README.md | grep -q " — v$NEXT$"; then
 fi
 
 git add pyproject.toml README.md docs/
-if [[ -f site/index.html ]]; then git add site/index.html site/public/sitemap.xml site/package.json site/src/data/site.ts; fi
+if [[ -f site/index.html ]]; then git add site/index.html site/public/sitemap.xml site/package.json site/src/data/links.ts; fi
 git commit -m "release v$NEXT"
 if [[ $NOTAG -eq 0 ]]; then
   git tag -a "v$NEXT" -m "lazyplan v$NEXT"

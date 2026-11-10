@@ -5,7 +5,7 @@ import { Check, Copy, Terminal } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { INSTALL_COMMAND } from "@/data/site"
+import { COPY, INSTALL_COMMAND } from "@/data/site"
 
 import { Section } from "./section"
 
@@ -62,16 +62,20 @@ export function InstallCommand() {
       className="max-w-4xl pb-20 text-center md:pb-28"
     >
       <p className="mb-3 text-sm font-semibold tracking-[0.18em] text-brand-cyan uppercase">
-        Install
+        {COPY.install.eyebrow}
       </p>
-      <h2 className="mb-4 text-2xl font-bold tracking-tight text-foreground md:text-3xl">
-        Get lazyplan in one command.
+      <h2 className="mb-4 text-3xl leading-headline font-bold tracking-headline text-foreground md:text-4xl">
+        {COPY.install.title}
       </h2>
       <p className="mb-8 text-lg text-muted-foreground">
-        Python 3.11+. Linux, macOS, Windows.
+        {COPY.install.intro}
       </p>
 
-      <Card className="mx-auto max-w-md text-left shadow-lg shadow-brand-blue/25">
+      <Card className="relative mx-auto max-w-md overflow-hidden border-border bg-card/70 text-left shadow-cinema">
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand-gold/60 to-transparent"
+        />
         <CardContent className="flex items-center gap-2">
           <Terminal className="size-5 shrink-0 text-brand-cyan" aria-hidden="true" />
           <code
@@ -83,7 +87,7 @@ export function InstallCommand() {
           <Button
             id="install-copy"
             type="button"
-            size="sm"
+            size="default"
             onClick={copyCommand}
           >
             {copied ? <Check /> : <Copy />}

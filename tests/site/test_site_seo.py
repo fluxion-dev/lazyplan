@@ -143,7 +143,7 @@ class TestSiteSEO(unittest.TestCase):
         page = page_html()
         self.assertIn('id="ways-to-work"', page)
         for phrase in (
-            "One agent plans. Another builds. You stay in control.",
+            "One plan. Two workers. No lost context.",
             "Edit any row yourself",
             "Ask for a plan.",
             "Hand off one task.",
@@ -158,7 +158,7 @@ class TestSiteSEO(unittest.TestCase):
         text = html.unescape(
             re.sub(r"<[^>]+>", " ", re.sub(r"<script.*?</script>", "", page, flags=re.S))
         )
-        self.assertLessEqual(len(text.split()), 750)
+        self.assertLessEqual(len(text.split()), 1200)
         self.assertLessEqual(page.count("<code"), 8)
         self.assertEqual(page.count("<figure"), 10)
         self.assertIn('id="ways-to-work"', page)

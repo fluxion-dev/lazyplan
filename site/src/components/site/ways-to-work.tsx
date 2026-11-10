@@ -7,16 +7,18 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { COPY } from "@/data/site"
 
 import { Section, SectionHeading } from "./section"
+import { Terminal } from "./terminal"
 
 export function WaysToWork() {
   return (
     <Section id="ways-to-work">
       <SectionHeading
-        eyebrow="Ways to work"
-        title="One agent plans. Another builds. You stay in control."
-        intro="Every plan row lives in lazyplan. Edit any row yourself; your agents see every change."
+        eyebrow={COPY.practice.eyebrow}
+        title={COPY.practice.title}
+        intro={COPY.practice.intro}
         className="max-w-3xl"
       />
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -34,7 +36,7 @@ export function WaysToWork() {
               plan for passwordless sign-in. Cover magic links, passkeys, and the
               migration. Break it into reviewable tasks.
             </blockquote>
-            <pre className="m-0 overflow-x-auto rounded-lg border border-border bg-background p-4 font-mono text-[0.82rem] leading-relaxed text-foreground">
+            <Terminal title="plan">
               {`Plan · Passwordless sign-in
   Milestone · Magic links
     Task · Add the token model
@@ -43,7 +45,7 @@ export function WaysToWork() {
     Task · Enroll a passkey
   Milestone · Migration
     Task · Keep passwords as a fallback`}
-            </pre>
+            </Terminal>
             <CardDescription className="text-[0.95rem]">
               Your planner agent writes the rows. Edit what does not fit.
             </CardDescription>
@@ -66,12 +68,12 @@ export function WaysToWork() {
               Claiming “Add the token model”. I&apos;ll add the model, migration,
               and tests, and link the commit.
             </blockquote>
-            <pre className="m-0 overflow-x-auto rounded-lg border border-border bg-background p-4 font-mono text-[0.82rem] leading-relaxed text-foreground">
+            <Terminal title="execution">
               {`Task · Add the token model        doing
   Claimed by executor · expires in 30m
   Commit · a1b2c3d · tests passing
 Task · Add the token model        done`}
-            </pre>
+            </Terminal>
             <CardDescription className="text-[0.95rem]">
               The executor works one task at a time. Take over or do it
               yourself.

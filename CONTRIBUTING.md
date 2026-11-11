@@ -122,6 +122,11 @@ pull request, `tag-release.yml` tags after it merges, and `release.yml`
 publishes. Do not tag a red commit. `pyproject.toml` is the version source;
 `tools/bump.sh` mirrors it into the README, site, and man page.
 
+The bump workflow waits for the gates it dispatches and publishes their result
+as the required `gates` status on the release commit. If GitHub still marks the
+release pull request's own `pull_request` run `action_required`, approve that run
+from the Actions tab; `tag-release` and `pages` run once the pull request merges.
+
 ## Style
 
 - Plain words in user-facing text. Name the outcome, not the implementation.

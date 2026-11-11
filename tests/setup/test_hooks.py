@@ -13,6 +13,7 @@ from pathlib import Path
 from lazyplan import services
 from lazyplan.core.entities import Status
 from lazyplan.presentation.cli import main as lpui_main
+from lazyplan.presentation.cli.parser import build_parser
 from lazyplan.services import audit, hooks
 from lazyplan.store import Store
 from tests.support.home import sandbox_home
@@ -92,6 +93,10 @@ class HookCase(unittest.TestCase):
         report = json.loads(out.getvalue())
         self.assertFalse(report["ok"])
         self.assertFalse(missing.exists())
+
+    def test_hook_probe_does_not_require_an_event(self):
+        args = build_parser().parse_args(["--db", "missing.db", "hook", "--check"])
+        self.assertIsNone(args.event)
 
     def test_hook_probe_reports_an_existing_database(self):
         Store(self.db).add_plan("P")

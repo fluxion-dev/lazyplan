@@ -342,7 +342,7 @@ def add_hook(
     hk.add_argument(
         "event",
         nargs="?",
-        default="",
+        default=None,
         choices=[
             "session-start",
             "prompt-submit",

@@ -1,6 +1,6 @@
 [project]
 name = "lazyplan-tui"
-version = "0.37.0"
+version = "0.38.0"
 description = "Plan work with your coding agent, in the terminal."
 readme = "README.md"
 license = "MIT"

@@ -30,6 +30,7 @@ class TreeController(LazyBranchMixin):
     def __init__(self, app: LazyplanApp) -> None:
         self.app = app
         self.filters = TreeFilter(app)
+        self.rebuilds = 0
         self._reflow_pending = False
         self._by_plan: dict[int, list[tuple[Milestone, list[Task]]]] = {}
         self._tasks_by_milestone: dict[int, list[Task]] = {}
@@ -292,6 +293,7 @@ class TreeController(LazyBranchMixin):
 
     def refresh_all(self, note: str = "") -> None:
         app = self.app
+        self.rebuilds += 1
         active_tree, finished_tree = self.trees()
         app._refreshing = True
         prev_selected = app.selected

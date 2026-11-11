@@ -209,6 +209,32 @@ class HookCase(unittest.TestCase):
         )
         self.assertEqual(result.block, "")
 
+    def test_session_end_closes_with_a_summary_and_handoff(self):
+        _plan, task_id = self._seed()
+        store = Store(self.db)
+        session, _ = store.start_session("ana", repo_path=str(self.repo), now=time.time())
+        hooks.build_result(
+            "session-end",
+            {},
+            self.repo,
+            commits=[],
+            store=Store(self.db),
+            host="claude",
+        )
+        closed = Store(self.db).get_session(session.id)
+        assert closed is not None
+        self.assertTrue(closed.ended)
+        self.assertIn("ended by claude", closed.summary)
+        self.assertIn(f"T{task_id}", closed.summary)
+        self.assertIn("next: T", closed.handoff)
+
+    def test_session_end_without_a_session_creates_nothing(self):
+        self._seed()
+        hooks.build_result(
+            "session-end", {}, self.repo, commits=[], store=Store(self.db), host="claude"
+        )
+        self.assertEqual(Store(self.db).list_sessions(open_only=True), [])
+
     def test_missing_database_is_silent(self):
         self.assertEqual(
             hooks.build_result("session-start", {}, self.repo, commits=[], store=None),

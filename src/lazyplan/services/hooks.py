@@ -267,6 +267,40 @@ def _prompt_text(store: InsightsPort) -> str:
     return "\n".join(context.lines(payload)).strip()[:1200]
 
 
+def _next_handoff(store: InsightsPort) -> str:
+    """First next task across active plans, as a session handoff."""
+    payload = brief.build(store)
+    for plan in payload.get("plans") or []:
+        task = plan.get("next")
+        if task:
+            return f"next: T{task['id']} {task['title']}"[:2000]
+    return ""
+
+
+def _session_end_result(store: AppPort, session: Session | None, host: str) -> HookResult:
+    """Close an open session with an automatic summary and handoff."""
+    if session is None or session.ended:
+        return HookResult()
+    scope = hook_scope.resolve(store, session.repo_path or None)
+    task = scope.task if scope.managed else None
+    if task is None and scope.managed:
+        current = _doing_task(store)
+        task = None if current is None else store.get_task(current)
+    summary = f"ended by {host or 'agent'}"
+    if task is not None:
+        summary += f" while working T{task.id} {task.title}"
+    handoff = session.handoff or _next_handoff(store)
+    session_services.end_session(
+        store,
+        session.id,
+        session.actor or "agent",
+        summary=summary,
+        handoff=handoff,
+        auto=True,
+    )
+    return HookResult()
+
+
 def _commit_reason() -> str:
     """Actionable denial text for a commit without a doing task."""
     return (
@@ -333,6 +367,8 @@ def build_result(
             return HookResult(_session_text(store, here, commits, session), context=True).capped()
         if event == "stop":
             return _stop_result(store, here, commits, session, payload, mode, who)
+        if event == "session-end":
+            return _session_end_result(store, session, who)
         if event == "prompt-submit":
             return HookResult(_prompt_text(store), context=True).capped()
         if event == "pre-tool":

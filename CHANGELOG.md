@@ -15,6 +15,13 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
   blank line above and below, including section bars and headings inside why,
   what, and details prose.
 
+### Changed
+
+- **Read-only agents card.** Clicking the agents card no longer opens the
+  sessions hub or takes keyboard focus. Open the sessions hub from the command
+  palette; the usage guide and packaged skill no longer mention a stale `v`
+  shortcut.
+
 ## v0.40.0 — 2026-11-11
 
 ### Changed

@@ -326,8 +326,8 @@ and the git card. Plan queue holds every plan that is not done; plan review
 holds completed plans. The agents card shows active sessions and the last
 handoff; each row names the plan and its title, the task when the branch is a
 `task/<id>` name, and the branch, alongside its live state: `working`,
-`awaiting you`, or `idle`, and awaiting rows sort first. The git card carries
-linked checkouts and pull requests.
+`awaiting you`, or `idle`, and awaiting rows sort first. The card is read-only.
+The git card carries linked checkouts and pull requests.
 
 The right column holds only the overview, which follows the selection: a plan
 shows open questions, why, what, approval, references, every milestone as a
@@ -408,7 +408,7 @@ highlighted.
 
 Claims, touch-points, sessions, comments, and notes are selectable hubs too.
 Open **claims hub**, **sessions hub**, or **comments and notes hub** from the
-palette. Click the agents card to open the sessions hub.
+palette. The agents card is a read-only summary; it does not open the hub.
 
 - Claims: rows show the holder, expiry, age, and any overlap with another
   active claim that edits the same path. `a` claims the task, `x` renews, `d`
@@ -646,7 +646,7 @@ it is auto-closed and its pointer and bindings are cleared. Ending one host
 session closes only its row. A manual session without a host session keeps the
 one-open rule; `--force` supersedes the open row. Sessions are operational
 history and are not exported. You can also start and end them from the sessions
-hub (click the agents card); the CLI remains the path for scripts.
+hub, opened from the palette; the CLI remains the path for scripts.
 
 #### Hook modes and gates
 

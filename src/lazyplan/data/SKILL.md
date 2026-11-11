@@ -331,7 +331,7 @@ every call. Reach for `--json` only when you need full-fidelity fields.
   (including done), relate, and delete; questions add, resolve, and reopen;
   references link, open, and unlink.
 - Coordination hubs are selectable too: claims and touch-points (`k` from
-  detail), sessions and handoffs (`v` or the agents pane), and comments and
+  detail), sessions and handoffs (from the palette), and comments and
   notes (`m`). Session and touch-point authoring works from the screen;
   import, sync, and setup stay CLI-only.
 - Provenance hubs are selectable: the source trail (`g`) cross-links commits,

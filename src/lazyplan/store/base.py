@@ -131,16 +131,23 @@ class StoreBase(StoreStubs):
         action: str,
         detail: str = "",
         session_id: int | None = None,
+        now: float | None = None,
     ) -> None:
         """Append an event row, tagged with the active session when one exists."""
         if session_id is None:
             session_id = self._resolve_session_id(actor)
+        stamp = time.time() if now is None else now
         with self._connect() as conn:
             conn.execute(
                 "INSERT INTO events (ts, actor, kind, action, detail, session_id)"
                 " VALUES (?,?,?,?,?,?)",
-                (time.time(), _actor(actor), kind, action, detail[:500], session_id),
+                (stamp, _actor(actor), kind, action, detail[:500], session_id),
             )
+            if session_id:
+                conn.execute(
+                    "UPDATE sessions SET last_seen_at=? WHERE id=? AND ended_at=0",
+                    (stamp, session_id),
+                )
 
     def feed(self, limit: int = 20) -> list[dict]:
         """Recent events, newest first."""

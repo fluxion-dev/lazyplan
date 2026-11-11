@@ -5,9 +5,12 @@ from __future__ import annotations
 import io
 import json
 import os
+import subprocess
 import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
+from pathlib import Path
+from unittest import mock
 
 from lazyplan.presentation.cli import main as lpui_main
 from lazyplan.store import Store
@@ -97,6 +100,47 @@ class SessionCliTest(unittest.TestCase):
         code, out, err = self._run("--actor", "ana", "--porcelain", "session", "list")
         self.assertEqual(code, 0, err)
         self.assertEqual(out.split("\t")[0], "session")
+
+    def test_text_list_shows_plan_title_task_and_branch(self) -> None:
+        self._start("--branch", "task/157-pane")
+        code, out, err = self._run("--actor", "ana", "session", "list")
+        self.assertEqual(code, 0, err)
+        self.assertIn(f"P{self.plan.id}", out)
+        self.assertIn("T157", out)
+        self.assertIn("on task/157-pane", out)
+
+    def test_a_plan_less_row_never_prints_pnone(self) -> None:
+        self.store.start_session("ana")
+        code, out, err = self._run("--actor", "ana", "session", "list", "--all")
+        self.assertEqual(code, 0, err)
+        self.assertNotIn("PNone", out)
+        self.assertIn("ana -", out)
+
+    def test_start_without_flags_records_the_checkout_branch(self) -> None:
+        milestone = self.store.add_milestone(self.plan.id, "M")
+        task = self.store.add_task(milestone.id, "T")
+        repo = Path(self.tmp.name) / "repo"
+        repo.mkdir()
+        for args in (
+            ("init", "-b", f"task/{task.id}-pane"),
+            ("config", "user.email", "test@example.com"),
+            ("config", "user.name", "Test"),
+        ):
+            subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True)
+        (repo / "file.txt").write_text("one\n", encoding="utf-8")
+        for args in (("add", "file.txt"), ("commit", "-m", "init")):
+            subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True)
+        with mock.patch("lazyplan.infrastructure.checkout.checkout_path", return_value=str(repo)):
+            code, out, err = self._run("--actor", "ana", "--json", "session", "start")
+        self.assertEqual(code, 0, err)
+        session = json.loads(out)["session"]
+        self.assertEqual(session["branch"], f"task/{task.id}-pane")
+        self.assertEqual(session["plan_id"], self.plan.id)
+        self.assertEqual(session["plan_source"], "auto")
+
+    def test_an_explicit_plan_is_marked_manual(self) -> None:
+        session = self._start()
+        self.assertEqual(session["plan_source"], "manual")
 
     def test_list_shows_the_short_host_session(self) -> None:
         self.store.start_session(

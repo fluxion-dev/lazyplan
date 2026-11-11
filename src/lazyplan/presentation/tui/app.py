@@ -4,7 +4,8 @@ Keys: j/k navigate, left/right fold, c palette, escape clear.
   Press c then type a prefix (new, cycle, criteria, fold, filter, ...) and enter runs it.
   Mouse click selects; the overview follows the selection.
 Keyboard-only: agents use the `lpui` CLI against the same SQLite file; local edits
-bump reactive rev, external DB changes arrive via fingerprint() poll + feed toast.
+bump reactive rev, external DB changes arrive via a structural fingerprint() poll
+plus a live_fingerprint() poll that the feed toast summarizes.
 """
 
 from __future__ import annotations

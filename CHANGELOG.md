@@ -3,6 +3,18 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## Unreleased
+
+### Fixed
+
+- **The plan tree stays still while an agent works.** Session heartbeats now
+  refresh only the agents pane, never the plan tree. Real plan edits update the
+  affected rows in place, so expansion, cursor, scroll, focus, and the preview
+  hold their position, and the doing-row spinner keeps its frame. The database
+  poll runs on a worker thread and coalesces a burst of edits, and it waits for
+  an open dialog to close before redrawing. Detection now follows the event
+  watermark, so two agents writing at once are seen within about a second.
+
 ## v0.38.0 — 2026-11-11
 
 ### Added

@@ -136,7 +136,7 @@ def _cmd_hook(store: object | None, args: argparse.Namespace, actor: str) -> int
     db = optional_store(args)
     payload = hooks.read_payload(sys.stdin)
     host = hooks.detect_host(payload, args.host)
-    result = hooks.run(args.event, payload, host, Path.cwd(), store=db)
+    result = hooks.run(args.event, payload, host, Path.cwd(), store=db, mode=args.mode)
     if args.json:
         _emit(
             args,

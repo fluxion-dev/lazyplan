@@ -231,12 +231,13 @@ def _install_skills(
 def _install_hooks(
     items: tuple[IntegrationItem, ...],
     home: Path,
+    mode: str,
 ) -> tuple[list[str], list[str], set[str]]:
     """Install pending hook hosts once each, returning skipped paths."""
     hosts = sorted({item.host for item in items if item.kind != SKILL and item.host})
     if not hosts:
         return [], [], set()
-    report = hook_install.install(home, hosts=hosts)
+    report = hook_install.install(home, hosts=hosts, mode=mode)
     skipped = {str(entry.get("path", "")) for entry in report.get("skipped") or []}
     return list(report.get("installed") or []), list(report.get("backups") or []), skipped
 
@@ -283,7 +284,9 @@ def review_pending(
     if action == "install":
         backup_dir = layout.new_backup_dir(home)
         installed = _install_skills(report.pending, choice, root, home, backup_dir)
-        hook_installed, hook_backups, skipped = _install_hooks(report.pending, home)
+        hook_installed, hook_backups, skipped = _install_hooks(
+            report.pending, home, state.effective_mode()
+        )
         failed = tuple(
             item
             for item in report.pending
@@ -296,6 +299,8 @@ def review_pending(
             state.hook_files = [
                 str(spec.path) for spec in hook_install.preview(home, hosts) if spec.path.is_file()
             ]
+            state.hooks_enabled = True
+            state.hooks_mode = state.effective_mode()
             state.hooks = bool(state.hook_files)
         save_state(state, home)
         installed.extend(hook_installed)

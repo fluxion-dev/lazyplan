@@ -34,16 +34,14 @@ def run_wizard(
     write: Any = None,
     json_mode: bool = False,
     initial: SetupChoice | None = None,
-    hooks_enabled: bool | None = None,
+    hooks_mode: str | None = None,
 ) -> dict[str, Any] | None:
     """Ask placement and agents, review, then apply. None means cancelled."""
     read = read or (lambda: input(""))
     write = write or sys.stderr
     color = ui.color_enabled(write, json_mode)
     try:
-        return run_wizard_flow(
-            cwd, home, state, version, read, write, color, initial, hooks_enabled
-        )
+        return run_wizard_flow(cwd, home, state, version, read, write, color, initial, hooks_mode)
     except (EOFError, KeyboardInterrupt):
         ui.note(write, "Setup cancelled; nothing was written.", color, "warn")
         return None
@@ -58,7 +56,7 @@ def run_wizard_flow(
     write: Any,
     color: bool,
     initial: SetupChoice | None,
-    hooks_enabled: bool | None,
+    hooks_mode: str | None,
 ) -> dict[str, Any] | None:
     root = find_repo_root(cwd)
     ui.banner(write, color, version)
@@ -89,7 +87,7 @@ def run_wizard_flow(
     labels = {host.key: host.label for host in hosts}
     plugins = (
         []
-        if hooks_enabled is False
+        if hooks_mode == "off"
         else [
             (labels.get(spec.host, spec.host), spec.path)
             for spec in hook_install.preview(home, selected)

@@ -92,7 +92,7 @@ def _cmd_setup(store: object | None, args: argparse.Namespace, actor: str) -> in
             state,
             version,
             initial=choice,
-            hooks_enabled=getattr(args, "hooks", None),
+            hooks_mode=getattr(args, "hooks", None),
         )
         if result is None:
             return _emit(args, {"cancelled": True}) if getattr(args, "json", False) else 0
@@ -145,11 +145,9 @@ def _cmd_setup(store: object | None, args: argparse.Namespace, actor: str) -> in
         _setup_review(args, home, interactive)
     if result.get("wizard") and not getattr(args, "json", False):
         selected = [h for h in (result.get("agents") or []) if h in hook_install.HOSTS]
-        plugins = (
-            [spec.path for spec in hook_install.preview(home, selected)]
-            if getattr(args, "hooks", None) is not False
-            else []
-        )
+        plugins = [
+            spec.path for spec in hook_install.preview(home, selected) if spec.path.is_file()
+        ]
         backups = [Path(path) for path in result.get("hooks", {}).get("backups") or []]
         setup_ui.success(
             sys.stderr,

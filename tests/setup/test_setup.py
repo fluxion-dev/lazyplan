@@ -24,6 +24,8 @@ class TestState(unittest.TestCase):
         self.assertEqual(state.placement, setup.HOME)
         self.assertEqual(state.agents, [])
         self.assertEqual(state.decisions, {})
+        self.assertEqual(state.hooks_mode, "strict")
+        self.assertEqual(state.effective_mode(), "strict")
 
     def test_round_trip(self):
         state = setup.SetupState(
@@ -50,8 +52,19 @@ class TestState(unittest.TestCase):
         self._write_raw('{"hooks": false, "last_version": "0.22.0"}')
         state = setup.load_state(self.home)
         self.assertFalse(state.hooks_enabled)
+        self.assertEqual(state.hooks_mode, "off")
         self.assertTrue(state.skills_enabled)
         self.assertEqual(state.integration_choices, {})
+
+    def test_old_state_without_mode_becomes_strict(self):
+        self._write_raw('{"hooks": true, "last_version": "0.22.0"}')
+        state = setup.load_state(self.home)
+        self.assertTrue(state.hooks_enabled)
+        self.assertEqual(state.hooks_mode, "strict")
+
+    def test_unknown_mode_falls_back_to_strict(self):
+        self._write_raw('{"hooks_mode": "loud", "hooks": true}')
+        self.assertEqual(setup.load_state(self.home).hooks_mode, "strict")
 
     def test_invalid_integration_choices_are_dropped(self):
         self._write_raw(

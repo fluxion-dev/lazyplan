@@ -11,6 +11,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from lazyplan.core.policies.hooks import MODES, normalize_mode
 from lazyplan.infrastructure import textfile
 from lazyplan.infrastructure.repo import (
     repo_plan_db_path,
@@ -40,12 +41,17 @@ class SetupState:
     last_version: str = ""
     hooks: bool = False
     hooks_enabled: bool = True
+    hooks_mode: str = "strict"
     hook_files: list[str] = field(default_factory=list)
     skills_enabled: bool = True
     agents_pointer: bool = False
     agents_file: str = ""
     decisions: dict[str, dict[str, Any]] = field(default_factory=dict)
     integration_choices: dict[str, dict[str, Any]] = field(default_factory=dict)
+
+    def effective_mode(self) -> str:
+        """Installed mode, forced to off when hooks are disabled."""
+        return self.hooks_mode if self.hooks_enabled else "off"
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -57,6 +63,7 @@ class SetupState:
             "last_version": self.last_version,
             "hooks": self.hooks,
             "hooks_enabled": self.hooks_enabled,
+            "hooks_mode": self.hooks_mode,
             "hook_files": list(self.hook_files),
             "skills_enabled": self.skills_enabled,
             "agents_pointer": self.agents_pointer,
@@ -73,6 +80,15 @@ class SetupState:
         placement = raw.get("placement")
         agents = raw.get("agents")
         decisions = raw.get("decisions")
+        hooks_enabled = bool(raw.get("hooks_enabled", raw.get("hooks", True)))
+        stored_mode = raw.get("hooks_mode")
+        hooks_mode = (
+            normalize_mode(stored_mode, "")
+            if str(stored_mode or "").strip()
+            else ("strict" if hooks_enabled else "off")
+        )
+        if hooks_mode not in MODES:
+            hooks_mode = "strict" if hooks_enabled else "off"
         return cls(
             version=int(raw.get("version", SETUP_VERSION) or SETUP_VERSION),
             placement=placement if placement in (HOME, REPO) else HOME,
@@ -81,7 +97,8 @@ class SetupState:
             explicit_db=bool(raw.get("explicit_db", False)),
             last_version=str(raw.get("last_version", "") or ""),
             hooks=bool(raw.get("hooks", False)),
-            hooks_enabled=bool(raw.get("hooks_enabled", raw.get("hooks", True))),
+            hooks_enabled=hooks_enabled and hooks_mode != "off",
+            hooks_mode=hooks_mode,
             hook_files=[str(p) for p in raw.get("hook_files", [])]
             if isinstance(raw.get("hook_files"), list)
             else [],

@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 from typing import Any
 
+from lazyplan.core.policies import hooks as hook_policy
 from lazyplan.infrastructure import hook_install, skills, textfile
 from lazyplan.infrastructure.integrations import HOOK
 from lazyplan.infrastructure.repo import (
@@ -102,24 +104,33 @@ def _remember_choice(
 def install_hooks(
     home: Path,
     agents: list[str] | None,
-    enabled: bool | None = None,
+    mode: str | bool | None = None,
 ) -> dict[str, Any]:
-    """Install or remove managed hooks and remember the decision."""
+    """Install or remove managed hooks in one mode and remember the decision."""
     state = load_state(home)
-    if enabled is None and not state.hooks_enabled:
-        return {"installed": [], "backups": [], "skipped": []}
-    if enabled is False:
+    flag: str | bool | None = mode
+    stored = (
+        (
+            state.hooks_mode
+            if flag is True and state.hooks_mode in ("strict", "advisory")
+            else "strict"
+        )
+        if flag is True
+        else state.effective_mode()
+    )
+    resolved = hook_policy.resolve_mode(flag, stored, os.environ)
+    planned = None if agents is None else [h for h in agents if h in hook_install.HOSTS]
+    if resolved == "off":
         report = hook_install.remove(home)
     else:
-        hosts = None if agents is None else [host for host in agents if host in hook_install.HOSTS]
-        report = hook_install.install(home, hosts=hosts)
-    planned = None if agents is None else [h for h in agents if h in hook_install.HOSTS]
+        report = hook_install.install(home, hosts=planned, mode=resolved)
     state.hook_files = (
         []
-        if enabled is False
+        if resolved == "off"
         else [str(spec.path) for spec in hook_install.preview(home, planned) if spec.path.is_file()]
     )
-    state.hooks_enabled = enabled is not False
+    state.hooks_enabled = resolved != "off"
+    state.hooks_mode = resolved
     state.hooks = bool(state.hook_files)
     save_state(state, home)
     return report
@@ -347,7 +358,7 @@ def _run_setup_once(
             version,
             json_mode=bool(getattr(args, "json", False)),
             initial=choice,
-            hooks_enabled=getattr(args, "hooks", None),
+            hooks_mode=getattr(args, "hooks", None),
         )
         if result is None:
             return None

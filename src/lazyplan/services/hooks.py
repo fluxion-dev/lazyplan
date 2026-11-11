@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import TextIO, cast
 
 from ..core.entities import HookResult, Session
+from ..core.policies import hooks as hook_policy
 from ..core.policies.sessions import IDLE_AFTER_SECS, phase_for_event
 from ..core.ports.app import AppPort
 from ..core.ports.insights import InsightsPort
@@ -22,7 +23,7 @@ from . import sessions as session_services
 
 EVENTS = ("session-start", "prompt-submit", "post-tool", "stop", "pre-compact")
 HOSTS = ("opencode", "claude", "gemini", "codex", "cursor")
-NO_HOOKS_ENV = "LAZYPLAN_NO_HOOKS"
+NO_HOOKS_ENV = hook_policy.NO_HOOKS_ENV
 
 
 def read_payload(stream: TextIO) -> dict:
@@ -191,8 +192,10 @@ def build_result(
     commits: list[audit.Commit] | None = None,
     host: str = "",
     store: AppPort | None = None,
+    mode: str = "strict",
 ) -> HookResult:
     """Decide one event's reminder without touching host output formats."""
+    del mode
     if event not in EVENTS:
         return HookResult()
     if store is None:
@@ -219,11 +222,14 @@ def run(
     cwd: Path | None = None,
     commits: list[audit.Commit] | None = None,
     store: AppPort | None = None,
+    mode: str = "strict",
 ) -> HookResult:
     """Entry point used by the CLI; never raises and never blocks."""
-    if os.environ.get(NO_HOOKS_ENV, "").strip():
+    requested = hook_policy.mode_from_env(os.environ)
+    if requested == "off":
         return HookResult()
+    effective = requested or hook_policy.normalize_mode(mode)
     try:
-        return build_result(event, payload, cwd, commits, host, store)
+        return build_result(event, payload, cwd, commits, host, store, effective)
     except (RuntimeError, OSError, ValueError):
         return HookResult()

@@ -110,7 +110,7 @@ class UpgradeCase(unittest.TestCase):
 
     def test_explicit_hooks_re_enables_install(self):
         self.first_run(hooks=False)
-        setup.install_hooks(self.home, ["claude"], enabled=True)
+        setup.install_hooks(self.home, ["claude"], mode=True)
         self.assertTrue(self.settings().is_file())
         self.assertTrue(setup.load_state(self.home).hooks_enabled)
 

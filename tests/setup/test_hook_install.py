@@ -117,7 +117,9 @@ class InstallCase(unittest.TestCase):
         settings = self.home / ".claude/settings.json"
         settings.parent.mkdir(parents=True)
         stale = [{"type": "command", "command": "lpui hook pre-compact --host claude"}]
-        old_post = [{"type": "command", "command": "lpui hook post-tool --host claude"}]
+        old_post = [
+            {"type": "command", "command": hook_install.command("claude", "post-tool")}
+        ]
         user = [{"type": "command", "command": "echo user"}]
         settings.write_text(
             json.dumps(

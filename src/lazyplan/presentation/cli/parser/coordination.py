@@ -350,6 +350,12 @@ def add_hook(
         default="",
         help="host emitting the event (inferred from the payload when omitted)",
     )
+    hk.add_argument(
+        "--mode",
+        choices=["strict", "advisory", "off"],
+        default="strict",
+        help="installed behavior mode; LAZYPLAN_HOOKS overrides it at runtime",
+    )
 
 
 def add_who(

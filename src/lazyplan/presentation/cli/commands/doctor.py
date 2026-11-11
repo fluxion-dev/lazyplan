@@ -27,6 +27,7 @@ def _doctor_data(
     missing_hooks = [path for path in state.hook_files if not Path(path).is_file()]
     report["hooks"] = {
         "enabled": state.hooks,
+        "mode": state.effective_mode(),
         "files": list(state.hook_files),
         "missing": missing_hooks,
     }
@@ -49,7 +50,7 @@ def _print_doctor(layout: setup_layout.SetupLayout, skill_files: list[Path], rep
     for skill in skill_files:
         print(f"skill:     {skill}")
     hooks = report["hooks"]
-    print(f"hooks:     {'enabled' if hooks['enabled'] else 'none'}")
+    print(f"hooks:     {hooks['mode'] if hooks['enabled'] else 'none'}")
     for path in hooks["files"]:
         print(f"hook:      {path}")
     for path in hooks["missing"]:

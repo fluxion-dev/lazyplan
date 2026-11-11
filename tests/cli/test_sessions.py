@@ -98,6 +98,21 @@ class SessionCliTest(unittest.TestCase):
         self.assertEqual(code, 0, err)
         self.assertEqual(out.split("\t")[0], "session")
 
+    def test_list_shows_the_short_host_session(self) -> None:
+        self.store.start_session(
+            "agent",
+            plan_id=self.plan.id,
+            host="opencode",
+            host_session="ses_7f3a",
+        )
+        code, out, err = self._run("--actor", "agent", "session", "list")
+        self.assertEqual(code, 0, err)
+        self.assertIn("via opencode", out)
+        self.assertIn("7f3a", out)
+        code, out, err = self._run("--json", "session", "list", "--all")
+        self.assertEqual(code, 0, err)
+        self.assertEqual(json.loads(out)[0]["host_session"], "ses_7f3a")
+
     def test_second_start_needs_force(self) -> None:
         first = self._start()
         code, _out, err = self._run(

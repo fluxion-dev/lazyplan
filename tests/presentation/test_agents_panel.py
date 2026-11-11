@@ -67,6 +67,29 @@ class TestReapBeforeRender(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(app.store.fingerprint(), structural)
             self.assertNotEqual(app.store.live_fingerprint(), live)
 
+    async def test_agents_panel_shows_every_open_session(self) -> None:
+        now = time.time()
+        for index in range(6):
+            self.store.start_session(
+                "opencode",
+                plan_id=self.plan.id,
+                repo_path=self.store.checkout_path(),
+                host="opencode",
+                host_session=f"session-{index:02d}-{index:04d}",
+                now=now,
+            )
+        app = create_app(self.store.path)
+        async with app.run_test(size=(160, 40)) as pilot:
+            await pilot.pause()
+            app.update_agents()
+            await pilot.pause()
+            panel = app.query_one("#agents")
+            body = app.query_one("#agents-body")
+            text = str(body.render())
+            self.assertIn("6 open", panel.border_subtitle)
+            for index in range(6):
+                self.assertIn(f"{index:04d}", text)
+
     async def test_empty_state_returns_after_the_row_ends(self) -> None:
         session, _ = self.store.start_session("ana", plan_id=self.plan.id)
         app = create_app(self.store.path)

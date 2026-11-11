@@ -214,6 +214,7 @@ if _TEXTUAL_OK:
                     f"S{session.id} · {state}\n"
                     f"actor   @{escape_markup(session.actor)}\n"
                     f"host    {escape_markup(session.host or '—')}\n"
+                    f"session {escape_markup(session.host_session or '—')}\n"
                     f"plan    P{session.plan_id}\n"
                     f"branch  {escape_markup(session.branch or '—')}\n"
                     f"age     {_age(session.started_at, stamp)}\n"

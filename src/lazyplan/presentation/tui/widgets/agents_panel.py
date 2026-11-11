@@ -13,7 +13,6 @@ from ....core.ports.sessions import SessionsPort
 from ...shared.design import EMPTY_AGENTS, EMPTY_AGENTS_HINT, empty_state, escape_markup
 from ..views.agents import rank_sessions, session_line, sessions_summary
 
-VISIBLE_SESSIONS = 5
 OPEN_SESSIONS_READ = 50
 
 
@@ -58,7 +57,7 @@ class AgentsPanel(VerticalScroll):
             return
         self._show_body()
         stamp = time.time()
-        ranked = rank_sessions(sessions, stamp)[:VISIBLE_SESSIONS]
+        ranked = rank_sessions(sessions, stamp)
         lines = [session_line(session, stamp) for session in ranked]
         handoff = services.sessions.previous_session(store, plan_id=plan_id)
         if handoff and handoff.get("handoff"):

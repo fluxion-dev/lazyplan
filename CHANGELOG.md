@@ -3,6 +3,19 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## Unreleased
+
+### Added
+
+- **Release notes after upgrades and on demand.** The installed package now
+  carries the changelog. `lpui notes` prints the section for the installed
+  version, `--all` prints every bundled release, `--since VERSION` prints a
+  range, and `--json` returns versions, dates, and bodies. A successful
+  `lpui upgrade` prints the notes for the versions it skipped, and the TUI
+  opens the same notes once after an upgrade; `W` or the palette's Release
+  notes command reopens them. A missing or corrupt seen-version marker counts
+  as a first install and stays quiet.
+
 ## v0.37.0 — 2026-11-10
 
 ### Added

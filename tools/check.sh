@@ -28,6 +28,8 @@ echo "== man page in sync =="
 "$VENV_BIN"/python tools/gen-man.py --check
 echo "== docs allowlist and links =="
 "$SYS_PY" tools/check-docs.py
+echo "== packaged changelog =="
+"$SYS_PY" tools/check-changelog.py
 echo "== site build =="
 if [[ -d site/node_modules ]] && command -v npm >/dev/null 2>&1; then
   (cd site && npm run build >/dev/null)

@@ -140,10 +140,16 @@ class TreeController(LazyBranchMixin):
             live = app.store.live_fingerprint()
         except Exception:
             return
-        if fingerprint == app._fp and live == app._live_fp:
+        structural_changed = fingerprint != app._fp
+        live_changed = live != app._live_fp
+        if not structural_changed and not live_changed:
             return
         app._fp = fingerprint
         app._live_fp = live
+        if live_changed:
+            app.update_agents()
+        if not structural_changed:
+            return
         events = app.store.feed(1)
         note = "db changed — refreshed"
         if events:

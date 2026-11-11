@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import argparse
 
+from lazyplan.core.policies.sessions import parse_session_id
+
 
 def add_session_group(
     sub: argparse._SubParsersAction[argparse.ArgumentParser],
@@ -29,12 +31,18 @@ def add_session_group(
     start.add_argument("--note", default="", metavar="TEXT", help="why this session started")
     start.add_argument("--force", action="store_true", help="end an existing open session first")
     end = actions.add_parser("end", help="close one session", parents=[common])
-    end.add_argument("--id", type=int, default=None, metavar="ID", help="session id")
+    end.add_argument(
+        "--id", type=parse_session_id, default=None, metavar="ID", help="session id (S12 or 12)"
+    )
     end.add_argument("--summary", default="", metavar="TEXT", help="what the session did")
     end.add_argument("--handoff", default="", metavar="TEXT", help="the next action")
     show = actions.add_parser("show", help="show one session and its events", parents=[common])
     show.add_argument(
-        "--id", type=int, default=None, metavar="ID", help="session id (default: active)"
+        "--id",
+        type=parse_session_id,
+        default=None,
+        metavar="ID",
+        help="session id (default: active)",
     )
     show.add_argument(
         "--limit", type=int, default=50, metavar="N", help="events to include (default: 50)"

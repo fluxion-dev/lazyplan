@@ -12,7 +12,7 @@ from pathlib import Path
 from ..core.entities import Status
 from ..core.policies.provenance import branch_ref
 from ..core.ports.app import AppPort
-from ..infrastructure.vcs import detect_backend
+from .vcs import current_branch as current_branch
 
 LOCAL_DB_PARTS = (".agents", "lazyplan")
 
@@ -23,19 +23,6 @@ class Attribution:
 
     plan_id: int | None = None
     task_id: int | None = None
-
-
-def current_branch(repo_path: str) -> str:
-    """Checked-out branch for one checkout; empty on a detached HEAD."""
-    if not repo_path:
-        return ""
-    backend, root = detect_backend(repo_path)
-    if backend is None or root is None:
-        return ""
-    try:
-        return backend.branch(root) or ""
-    except (OSError, RuntimeError, ValueError):
-        return ""
 
 
 def _plan_for_task(port: AppPort, task_id: int) -> Attribution | None:

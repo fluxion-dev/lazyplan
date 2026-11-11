@@ -14,6 +14,19 @@ def _norm_path(store: ProvenancePort, path: str) -> str:
     return store.resolve_repo_path(path)
 
 
+def current_branch(repo_path: str) -> str:
+    """Checked-out branch for one checkout; empty on a detached HEAD."""
+    if not repo_path:
+        return ""
+    backend, root = detect_backend(repo_path)
+    if backend is None or root is None:
+        return ""
+    try:
+        return backend.branch(root) or ""
+    except (OSError, RuntimeError, ValueError):
+        return ""
+
+
 def _repo_for_task(store: ProvenancePort, task_id: int, repo_path: str = "") -> dict:
     """Effective repo link for a task, honoring an explicit path."""
     repos = store.effective_repos("task", task_id)

@@ -634,7 +634,7 @@ def scenes() -> list[Scene]:
                 "shell",
                 "Narrow terminal",
                 "Stacked layout at 78 columns",
-                "The shell at 78 columns: the overview hides, and the queue, finished, agents, and git cards stack vertically.",
+                "The shell at 78 columns: the overview hides, and the plan queue, plan review, agents, and git cards stack vertically.",
                 (
                     "Is the compact layout still legible?",
                     "What information disappears first, and is that the right order?",

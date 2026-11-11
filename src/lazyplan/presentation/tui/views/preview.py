@@ -213,22 +213,27 @@ def acceptance_block(
                 for criterion in open_items[:3]
             ),
         )
+    return PreviewBlock(
+        f"acceptance {done}/{len(criteria)}{tail}",
+        _detailed_acceptance_rows(criteria),
+    )
+
+
+def _detailed_acceptance_rows(criteria: list[dict[str, Any]]) -> tuple[str, ...]:
+    """One row per criterion, open first, with its id and proof state."""
     ordered = sorted(
         criteria,
         key=lambda criterion: (bool(criterion.get("done")), int(criterion.get("id", 0) or 0)),
     )
-    return PreviewBlock(
-        f"acceptance {done}/{len(criteria)}{tail}",
-        tuple(
-            _row(
-                "✓" if criterion.get("done") else "○",
-                _strong(f"C{criterion.get('id')}"),
-                criterion.get("text", ""),
-                f"· {_proof_chip(criterion.get('evidence'))}",
-                sep=" ",
-            )
-            for criterion in ordered
-        ),
+    return tuple(
+        _row(
+            "✓" if criterion.get("done") else "○",
+            _strong(f"C{criterion.get('id')}"),
+            criterion.get("text", ""),
+            f"· {_proof_chip(criterion.get('evidence'))}",
+            sep=" ",
+        )
+        for criterion in ordered
     )
 
 
@@ -340,9 +345,7 @@ def common_blocks(
     notes = notes_block(full.get("notes", []))
     if notes is not None:
         blocks.append(notes)
-    acceptance = acceptance_block(
-        full.get("criteria", []), detailed=detailed_acceptance
-    )
+    acceptance = acceptance_block(full.get("criteria", []), detailed=detailed_acceptance)
     if acceptance is not None:
         blocks.append(acceptance)
     links = full.get("effective_links") or full.get("links", [])

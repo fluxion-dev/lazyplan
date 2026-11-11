@@ -191,23 +191,49 @@ def _proof_chip(evidence: dict[str, Any] | None) -> str:
     return "—"
 
 
-def acceptance_block(criteria: list[dict[str, Any]]) -> PreviewBlock | None:
+def acceptance_block(
+    criteria: list[dict[str, Any]], *, detailed: bool = False
+) -> PreviewBlock | None:
+    """Acceptance criteria; plans show every item, other rows keep the short list."""
     if not criteria:
         return None
     done = sum(1 for criterion in criteria if criterion.get("done"))
     open_items = [criterion for criterion in criteria if not criterion.get("done")]
     tail = f" · {len(open_items)} open" if open_items else " · complete"
+    if not detailed:
+        return PreviewBlock(
+            f"acceptance {done}/{len(criteria)}{tail}",
+            tuple(
+                _row(
+                    "○",
+                    criterion.get("text", ""),
+                    _proof_chip(criterion.get("evidence")),
+                    sep=" ",
+                )
+                for criterion in open_items[:3]
+            ),
+        )
     return PreviewBlock(
         f"acceptance {done}/{len(criteria)}{tail}",
-        tuple(
-            _row(
-                "○",
-                criterion.get("text", ""),
-                _proof_chip(criterion.get("evidence")),
-                sep=" ",
-            )
-            for criterion in open_items[:3]
-        ),
+        _detailed_acceptance_rows(criteria),
+    )
+
+
+def _detailed_acceptance_rows(criteria: list[dict[str, Any]]) -> tuple[str, ...]:
+    """One row per criterion, open first, with its id and proof state."""
+    ordered = sorted(
+        criteria,
+        key=lambda criterion: (bool(criterion.get("done")), int(criterion.get("id", 0) or 0)),
+    )
+    return tuple(
+        _row(
+            "✓" if criterion.get("done") else "○",
+            _strong(f"C{criterion.get('id')}"),
+            criterion.get("text", ""),
+            f"· {_proof_chip(criterion.get('evidence'))}",
+            sep=" ",
+        )
+        for criterion in ordered
     )
 
 
@@ -311,13 +337,15 @@ def _source_summary(
     return PreviewBlock("source", (bits,))
 
 
-def common_blocks(full: dict[str, Any]) -> tuple[PreviewBlock, ...]:
+def common_blocks(
+    full: dict[str, Any], *, detailed_acceptance: bool = False
+) -> tuple[PreviewBlock, ...]:
     """Coordination, acceptance, and provenance blocks for a preview."""
     blocks: list[PreviewBlock] = []
     notes = notes_block(full.get("notes", []))
     if notes is not None:
         blocks.append(notes)
-    acceptance = acceptance_block(full.get("criteria", []))
+    acceptance = acceptance_block(full.get("criteria", []), detailed=detailed_acceptance)
     if acceptance is not None:
         blocks.append(acceptance)
     links = full.get("effective_links") or full.get("links", [])
@@ -359,7 +387,7 @@ def build_plan(
     next_tasks = next_block(_tasks("plan", full))
     if next_tasks is not None:
         blocks.append(next_tasks)
-    blocks.extend(common_blocks(full))
+    blocks.extend(common_blocks(full, detailed_acceptance=True))
     return PreviewDocument(header, breadcrumb, (), tuple(blocks))
 
 

@@ -18,11 +18,13 @@ try:
     from lazyplan.presentation.tui.views.preview import (
         PreviewBlock,
         PreviewDocument,
+        acceptance_block,
         build_preview,
     )
     from lazyplan.presentation.tui.widgets.preview_panel import PreviewPanel
 except ImportError:  # pragma: no cover - stdlib-only interpreter
-    PreviewBlock = PreviewDocument = build_preview = build_control_strip = None  # type: ignore[assignment]
+    PreviewBlock = PreviewDocument = acceptance_block = None  # type: ignore[assignment]
+    build_preview = build_control_strip = None  # type: ignore[assignment]
     create_app = Markdown = PreviewPanel = Static = Tree = None  # type: ignore[assignment,misc]
     MarkdownH2 = None  # type: ignore[assignment,misc]
 
@@ -146,6 +148,62 @@ class PreviewDocumentTest(unittest.TestCase):
         self.assertNotIn("tasks", row)
         self.assertNotIn("○", row)
 
+    def test_acceptance_block_lists_every_criterion_open_first(self) -> None:
+        criteria = [
+            {"id": 1, "text": "done one", "done": True, "evidence": {"state": "pass", "count": 2}},
+            {"id": 2, "text": "open one", "done": False, "evidence": {}},
+            {"id": 3, "text": "open two", "done": False, "evidence": {"state": "fail", "count": 1}},
+            {"id": 4, "text": "done two", "done": True, "evidence": {}},
+        ]
+        block = acceptance_block(criteria, detailed=True)
+        assert block is not None
+        self.assertEqual(block.heading, "acceptance 2/4 · 2 open")
+        self.assertEqual(
+            block.lines,
+            (
+                "- ○ **C2** open one · —",
+                "- ○ **C3** open two · ✗ 1",
+                "- ✓ **C1** done one · ✓ 2",
+                "- ✓ **C4** done two · —",
+            ),
+        )
+
+    def test_plan_preview_lists_every_criterion_with_its_id(self) -> None:
+        criteria = [
+            self.store.add_criteria("plan", self.plan.id, f"criterion {index}")
+            for index in range(7)
+        ]
+        self.store.update_criterion(criteria[0].id, done=True)
+        self.store.update_criterion(criteria[1].id, done=True)
+        self.store.add_evidence(criteria[0].id, command="pytest", exit_code=0, actor="ci")
+        full = self.store.get_full("plan", self.plan.id)
+        assert full is not None
+        text = build_preview(self.store, "plan", self.plan.id, full, []).render_markdown()
+        acceptance = text.split("## ACCEPTANCE", 1)[1].split("## ", 1)[0]
+        for criterion in criteria:
+            self.assertIn(f"C{criterion.id}", acceptance)
+            self.assertIn(criterion.text, acceptance)
+        self.assertLess(acceptance.index("criterion 2"), acceptance.index("criterion 0"))
+        self.assertIn("✓ **C" + str(criteria[0].id), acceptance)
+
+    def test_plan_preview_without_criteria_has_no_acceptance_block(self) -> None:
+        full = self.store.get_full("plan", self.plan.id)
+        assert full is not None
+        text = build_preview(self.store, "plan", self.plan.id, full, []).render_markdown()
+        self.assertNotIn("## ACCEPTANCE", text)
+
+    def test_milestone_preview_keeps_the_short_acceptance_list(self) -> None:
+        criteria = [
+            self.store.add_criteria("milestone", self.milestone.id, f"milestone criterion {index}")
+            for index in range(4)
+        ]
+        full = self.store.get_full("milestone", self.milestone.id)
+        assert full is not None
+        text = build_preview(self.store, "milestone", self.milestone.id, full, []).render_markdown()
+        acceptance = text.split("## ACCEPTANCE", 1)[1].split("## ", 1)[0]
+        self.assertNotIn(f"C{criteria[0].id}", acceptance)
+        self.assertEqual(acceptance.count("- ○"), 3)
+
     def test_plan_preview_shows_approval_and_drift(self) -> None:
         self.store.add_revision(self.plan.id, "a" * 64, "{}", reason="initial")
         full = self.store.get_full("plan", self.plan.id)
@@ -263,6 +321,31 @@ class PreviewMarkdownTest(unittest.IsolatedAsyncioTestCase):
                 body = app.query_one("#preview-body", Markdown)
                 self.assertIn("Second why", body.source or "")
                 self.assertNotIn("First why", body.source or "")
+
+    async def test_overview_widget_renders_every_plan_criterion(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Store(os.path.join(tmp, "criteria.db"))
+            plan = store.add_plan("Plan", "What", goal="Why")
+            criteria = [
+                store.add_criteria("plan", plan.id, f"widget criterion {index}")
+                for index in range(4)
+            ]
+            store.update_criterion(criteria[0].id, done=True)
+            store.add_evidence(criteria[0].id, command="pytest", exit_code=0, actor="ci")
+            app = create_app(str(store.path))
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                tree = app.query_one("#tree", Tree)
+                tree.focus()
+                tree.select_node(tree.root.children[0])
+                await pilot.pause()
+                source = app.query_one("#preview-body", Markdown).source or ""
+                for criterion in criteria:
+                    self.assertIn(f"C{criterion.id}", source)
+                    self.assertIn(criterion.text, source)
+                self.assertLess(
+                    source.index("widget criterion 1"), source.index("widget criterion 0")
+                )
 
     async def test_gfm_prose_renders_as_markdown_blocks(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

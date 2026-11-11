@@ -329,9 +329,11 @@ handoff; each session row shows its live state: `working`, `awaiting you`, or
 pull requests.
 
 The right column holds only the overview, which follows the selection: a plan
-shows open questions, why, what, approval, references, and every milestone as
-a title-only row; a milestone shows its details and every task; a task shows
-its details, criteria, proof, notes, and source. The overview starts with one
+shows open questions, why, what, approval, references, every milestone as a
+title-only row, and every acceptance criterion, open first, each with its id,
+state, and proof chip; a milestone shows its details and every task; a task
+shows its details, criteria, proof, notes, and source. Milestones and tasks
+keep the shorter open-criteria list. The overview starts with one
 attention line, then full-width Markdown section bars and their content. One
 blank line separates a bar from the section above, and no blank line separates
 a bar from its content. Prose in why, what, and details renders as Markdown,

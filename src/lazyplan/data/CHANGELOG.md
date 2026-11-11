@@ -3,6 +3,15 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## Unreleased
+
+### Changed
+
+- **Full acceptance criteria in the overview.** Selecting a plan now lists every
+  acceptance criterion, open first, with its id, done state, and proof chip. No
+  criterion is capped or hidden; milestone and task previews keep their short
+  open list.
+
 ## v0.39.0 — 2026-11-11
 
 ### Added

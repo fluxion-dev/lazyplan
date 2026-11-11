@@ -191,7 +191,8 @@ class TestNotesCli(unittest.TestCase):
         self.tmp.cleanup()
 
     def test_default_prints_only_the_installed_version(self) -> None:
-        code, out, err = run_main(["notes"])
+        with mock.patch.object(system_cli, "package_version", return_value="0.37.0"):
+            code, out, err = run_main(["notes"])
         self.assertEqual(code, 0)
         self.assertEqual(err, "")
         self.assertIn("## v0.37.0", out)
@@ -226,6 +227,7 @@ class TestNotesCli(unittest.TestCase):
         info = mock.Mock(method="pipx", upgradeable=True)
         with (
             mock.patch.object(admin, "detect", return_value=info),
+            mock.patch.object(admin, "package_version", return_value="0.37.0"),
             mock.patch.object(admin, "latest_version", return_value="0.38.0"),
             mock.patch.object(admin, "run_upgrade"),
             mock.patch.object(admin, "_post_upgrade_review"),

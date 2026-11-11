@@ -31,7 +31,15 @@ except ImportError:  # pragma: no cover
 
 from ...infrastructure import settings
 from ...store import Store
-from ..shared.design import EMPTY_NO_PLANS_HINT, EMPTY_NO_PLANS_TITLE, empty_state
+from ..shared.design import (
+    EMPTY_PLAN_QUEUE_HINT,
+    EMPTY_PLAN_QUEUE_TITLE,
+    EMPTY_PLAN_REVIEW_HINT,
+    EMPTY_PLAN_REVIEW_TITLE,
+    PANEL_PLAN_QUEUE_TITLE,
+    PANEL_PLAN_REVIEW_TITLE,
+    empty_state,
+)
 from .actions import ActionMixin
 from .base import AppBase
 from .controllers.git_state import GitStateController
@@ -166,7 +174,7 @@ if _TEXTUAL_OK:
                             with Vertical(id="plans-active", classes="plan-panel"):
                                 yield FoldTree("active", id="tree", classes="plan-tree")
                                 yield Static(
-                                    empty_state(EMPTY_NO_PLANS_TITLE, EMPTY_NO_PLANS_HINT),
+                                    empty_state(EMPTY_PLAN_QUEUE_TITLE, EMPTY_PLAN_QUEUE_HINT),
                                     id="tree-empty",
                                     classes="pane-empty",
                                 )
@@ -174,8 +182,8 @@ if _TEXTUAL_OK:
                                 yield FoldTree("finished", id="tree-finished", classes="plan-tree")
                                 yield Static(
                                     empty_state(
-                                        "No finished plans",
-                                        "completed plans land here",
+                                        EMPTY_PLAN_REVIEW_TITLE,
+                                        EMPTY_PLAN_REVIEW_HINT,
                                     ),
                                     id="tree-finished-empty",
                                     classes="pane-empty",
@@ -220,8 +228,8 @@ if _TEXTUAL_OK:
             self.spinner_controller.start()
             self.update_controller.start()
             self.metrics_controller.start()
-            self.query_one("#plans-active").border_title = " queue "
-            self.query_one("#plans-finished").border_title = " finished "
+            self.query_one("#plans-active").border_title = f" {PANEL_PLAN_QUEUE_TITLE} "
+            self.query_one("#plans-finished").border_title = f" {PANEL_PLAN_REVIEW_TITLE} "
             if self._startup_notice:
                 self.notify(self._startup_notice, timeout=10)
             tree = self.query_one("#tree", Tree)

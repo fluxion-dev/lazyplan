@@ -124,7 +124,6 @@ def bindings_for_project(db_path: str | Path, project: str) -> list[dict]:
     return sorted(found, key=lambda item: float(item.get("seen_at", 0)), reverse=True)
 
 
-
 def pointer_path(db_path: str | Path, actor: str, repo_path: str | Path) -> Path:
     """Pointer file for an actor and checkout, next to the database."""
     return Path(db_path).expanduser().parent / SESSION_DIR / f"{_key(actor, str(repo_path))}.json"

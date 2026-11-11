@@ -187,8 +187,12 @@ class TestSessionsStore(unittest.TestCase):
 
     def test_two_host_bindings_share_one_row_and_close_on_last_detach(self) -> None:
         session, _ = self.store.start_session("ana", now=100.0)
-        self.store.bind_session("opencode", "host-a", "/project", str(self.repo), session.id, now=110.0)
-        self.store.bind_session("opencode", "host-b", "/project", str(self.repo), session.id, now=120.0)
+        self.store.bind_session(
+            "opencode", "host-a", "/project", str(self.repo), session.id, now=110.0
+        )
+        self.store.bind_session(
+            "opencode", "host-b", "/project", str(self.repo), session.id, now=120.0
+        )
         self.assertEqual(self.store.session_for_project("/project", host="opencode"), session)
         detached, last = self.store.detach_host_binding("opencode", "host-a", "/project")
         assert detached is not None
@@ -202,7 +206,9 @@ class TestSessionsStore(unittest.TestCase):
 
     def test_project_binding_does_not_leak_to_another_checkout(self) -> None:
         session, _ = self.store.start_session("ana", repo_path=str(self.repo), now=100.0)
-        self.store.bind_session("opencode", "host-a", "/project-a", str(self.repo), session.id, now=110.0)
+        self.store.bind_session(
+            "opencode", "host-a", "/project-a", str(self.repo), session.id, now=110.0
+        )
         self.assertEqual(self.store.session_for_project("/project-a"), session)
         self.assertIsNone(self.store.session_for_project("/project-b"))
 

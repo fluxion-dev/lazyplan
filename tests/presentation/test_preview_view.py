@@ -343,7 +343,9 @@ class PreviewMarkdownTest(unittest.IsolatedAsyncioTestCase):
                 for criterion in criteria:
                     self.assertIn(f"C{criterion.id}", source)
                     self.assertIn(criterion.text, source)
-                self.assertLess(source.index("widget criterion 1"), source.index("widget criterion 0"))
+                self.assertLess(
+                    source.index("widget criterion 1"), source.index("widget criterion 0")
+                )
 
     async def test_gfm_prose_renders_as_markdown_blocks(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

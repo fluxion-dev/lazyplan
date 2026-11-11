@@ -14,7 +14,7 @@ python3 tools/ia_inventory.py --check
 
 | Surface | Count |
 | --- | ---: |
-| cli_commands | 59 |
+| cli_commands | 49 |
 | palette_commands | 50 |
 | mcp_tools | 62 |
 | mcp_resources | 3 |
@@ -33,10 +33,6 @@ python3 tools/ia_inventory.py --check
 
 | Command | Options |
 | --- | --- |
-| `add-criteria` | --json, --porcelain, --version, --actor, --heal, --no-heal, --kind, --id, --text |
-| `add-milestone` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --title, --desc |
-| `add-plan` | --json, --porcelain, --version, --actor, --heal, --no-heal, --title, --name, --what, --desc, --why, --goal |
-| `add-task` | --json, --porcelain, --version, --actor, --heal, --no-heal, --milestone, --title, --desc, --touch |
 | `audit` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --since, --strict, --min-coverage, --max-lag, --max-gaps, --min-trace, --min-evidence |
 | `brief` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan |
 | `claim` | --json, --porcelain, --version, --actor, --heal, --no-heal, --id, --ttl, --note, --force, --worktree, --repo |
@@ -45,10 +41,7 @@ python3 tools/ia_inventory.py --check
 | `commits` | --json, --porcelain, --version, --actor, --heal, --no-heal, --kind, --id, --files, --refresh |
 | `completion` | --json, --porcelain, --version, --actor, --heal, --no-heal, --shell |
 | `context` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --max-chars |
-| `criteria` | --json, --porcelain, --version, --actor, --heal, --no-heal, --kind, --id |
 | `criterion` | --json, --porcelain, --version, --actor, --heal, --no-heal |
-| `delete` | --json, --porcelain, --version, --actor, --heal, --no-heal, --kind, --id |
-| `delete-criteria` | --json, --porcelain, --version, --actor, --heal, --no-heal, --id |
 | `doctor` | --json, --porcelain, --version, --actor, --heal, --no-heal |
 | `export` | --json, --porcelain, --version, --actor, --heal, --no-heal, --format, --plan, --file, --force |
 | `feed` | --json, --porcelain, --version, --actor, --heal, --no-heal, --limit, --follow, --interval, --session |
@@ -78,9 +71,7 @@ python3 tools/ia_inventory.py --check
 | `setup` | --json, --porcelain, --version, --actor, --heal, --no-heal, --placement, --agents, --skills-dir, --no-skills, --hooks, --no-hooks, --agents-pointer, --no-agents-pointer, --yes, --post-upgrade |
 | `share` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --format, --out |
 | `ship` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --max-chars |
-| `show` | --json, --porcelain, --version, --actor, --heal, --no-heal, --kind, --id, --files |
 | `stats` | --json, --porcelain, --version, --actor, --heal, --no-heal, --since, --stale-after, --by |
-| `status` | --json, --porcelain, --version, --actor, --heal, --no-heal, --kind, --id, --to, --override |
 | `sync` | --json, --porcelain, --version, --actor, --heal, --no-heal, --file, --dry-run |
 | `task` | --json, --porcelain, --version, --actor, --heal, --no-heal |
 | `touch` | --json, --porcelain, --version, --actor, --heal, --no-heal |
@@ -88,7 +79,6 @@ python3 tools/ia_inventory.py --check
 | `ui` | --json, --porcelain, --version, --actor, --heal, --no-heal |
 | `unlink` | --json, --porcelain, --version, --actor, --heal, --no-heal, --kind, --id, --sha |
 | `unlink-repo` | --json, --porcelain, --version, --actor, --heal, --no-heal, --kind, --id, --repo, --remote |
-| `update` | --json, --porcelain, --version, --actor, --heal, --no-heal, --kind, --id, --title, --name, --desc, --what, --why, --goal |
 | `upgrade` | --json, --porcelain, --version, --actor, --heal, --no-heal, --check, --diagnose |
 | `watch` | --json, --porcelain, --version, --actor, --heal, --no-heal, --limit |
 | `who` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --all |

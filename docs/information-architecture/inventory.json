@@ -2,146 +2,6 @@
   "cli": {
     "commands": [
       {
-        "name": "add-criteria",
-        "options": [
-          [
-            "--json"
-          ],
-          [
-            "--porcelain"
-          ],
-          [
-            "--version"
-          ],
-          [
-            "--actor"
-          ],
-          [
-            "--heal"
-          ],
-          [
-            "--no-heal"
-          ],
-          [
-            "--kind"
-          ],
-          [
-            "--id"
-          ],
-          [
-            "--text"
-          ]
-        ]
-      },
-      {
-        "name": "add-milestone",
-        "options": [
-          [
-            "--json"
-          ],
-          [
-            "--porcelain"
-          ],
-          [
-            "--version"
-          ],
-          [
-            "--actor"
-          ],
-          [
-            "--heal"
-          ],
-          [
-            "--no-heal"
-          ],
-          [
-            "--plan"
-          ],
-          [
-            "--title"
-          ],
-          [
-            "--desc"
-          ]
-        ]
-      },
-      {
-        "name": "add-plan",
-        "options": [
-          [
-            "--json"
-          ],
-          [
-            "--porcelain"
-          ],
-          [
-            "--version"
-          ],
-          [
-            "--actor"
-          ],
-          [
-            "--heal"
-          ],
-          [
-            "--no-heal"
-          ],
-          [
-            "--title"
-          ],
-          [
-            "--name"
-          ],
-          [
-            "--what"
-          ],
-          [
-            "--desc"
-          ],
-          [
-            "--why"
-          ],
-          [
-            "--goal"
-          ]
-        ]
-      },
-      {
-        "name": "add-task",
-        "options": [
-          [
-            "--json"
-          ],
-          [
-            "--porcelain"
-          ],
-          [
-            "--version"
-          ],
-          [
-            "--actor"
-          ],
-          [
-            "--heal"
-          ],
-          [
-            "--no-heal"
-          ],
-          [
-            "--milestone"
-          ],
-          [
-            "--title"
-          ],
-          [
-            "--desc"
-          ],
-          [
-            "--touch"
-          ]
-        ]
-      },
-      {
         "name": "audit",
         "options": [
           [
@@ -415,35 +275,6 @@
         ]
       },
       {
-        "name": "criteria",
-        "options": [
-          [
-            "--json"
-          ],
-          [
-            "--porcelain"
-          ],
-          [
-            "--version"
-          ],
-          [
-            "--actor"
-          ],
-          [
-            "--heal"
-          ],
-          [
-            "--no-heal"
-          ],
-          [
-            "--kind"
-          ],
-          [
-            "--id"
-          ]
-        ]
-      },
-      {
         "name": "criterion",
         "options": [
           [
@@ -465,61 +296,6 @@
             "--no-heal"
           ],
           []
-        ]
-      },
-      {
-        "name": "delete",
-        "options": [
-          [
-            "--json"
-          ],
-          [
-            "--porcelain"
-          ],
-          [
-            "--version"
-          ],
-          [
-            "--actor"
-          ],
-          [
-            "--heal"
-          ],
-          [
-            "--no-heal"
-          ],
-          [
-            "--kind"
-          ],
-          [
-            "--id"
-          ]
-        ]
-      },
-      {
-        "name": "delete-criteria",
-        "options": [
-          [
-            "--json"
-          ],
-          [
-            "--porcelain"
-          ],
-          [
-            "--version"
-          ],
-          [
-            "--actor"
-          ],
-          [
-            "--heal"
-          ],
-          [
-            "--no-heal"
-          ],
-          [
-            "--id"
-          ]
         ]
       },
       {
@@ -1386,38 +1162,6 @@
         ]
       },
       {
-        "name": "show",
-        "options": [
-          [
-            "--json"
-          ],
-          [
-            "--porcelain"
-          ],
-          [
-            "--version"
-          ],
-          [
-            "--actor"
-          ],
-          [
-            "--heal"
-          ],
-          [
-            "--no-heal"
-          ],
-          [
-            "--kind"
-          ],
-          [
-            "--id"
-          ],
-          [
-            "--files"
-          ]
-        ]
-      },
-      {
         "name": "stats",
         "options": [
           [
@@ -1446,41 +1190,6 @@
           ],
           [
             "--by"
-          ]
-        ]
-      },
-      {
-        "name": "status",
-        "options": [
-          [
-            "--json"
-          ],
-          [
-            "--porcelain"
-          ],
-          [
-            "--version"
-          ],
-          [
-            "--actor"
-          ],
-          [
-            "--heal"
-          ],
-          [
-            "--no-heal"
-          ],
-          [
-            "--kind"
-          ],
-          [
-            "--id"
-          ],
-          [
-            "--to"
-          ],
-          [
-            "--override"
           ]
         ]
       },
@@ -1681,53 +1390,6 @@
         ]
       },
       {
-        "name": "update",
-        "options": [
-          [
-            "--json"
-          ],
-          [
-            "--porcelain"
-          ],
-          [
-            "--version"
-          ],
-          [
-            "--actor"
-          ],
-          [
-            "--heal"
-          ],
-          [
-            "--no-heal"
-          ],
-          [
-            "--kind"
-          ],
-          [
-            "--id"
-          ],
-          [
-            "--title"
-          ],
-          [
-            "--name"
-          ],
-          [
-            "--desc"
-          ],
-          [
-            "--what"
-          ],
-          [
-            "--why"
-          ],
-          [
-            "--goal"
-          ]
-        ]
-      },
-      {
         "name": "upgrade",
         "options": [
           [
@@ -1812,10 +1474,10 @@
         ]
       }
     ],
-    "count": 59
+    "count": 49
   },
   "counts": {
-    "cli_commands": 59,
+    "cli_commands": 49,
     "doc_files": 9,
     "doc_headings": 86,
     "env_names": 12,

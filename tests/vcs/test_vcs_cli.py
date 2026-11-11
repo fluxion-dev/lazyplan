@@ -77,7 +77,7 @@ class TestVcsCLI(unittest.TestCase):
         rc, out, _ = _run(["--db", self.db, "commits", "--kind", "task", "--id", "1"])
         self.assertEqual(rc, 0)
         self.assertIn("cli commit", out)
-        rc, out, _ = _run(["--db", self.db, "show", "--kind", "task", "--id", "1"])
+        rc, out, _ = _run(["--db", self.db, "task", "show", "--id", "1"])
         self.assertEqual(rc, 0)
         self.assertIn("commits:", out)
         self.assertIn("cli commit", out)
@@ -94,14 +94,14 @@ class TestVcsCLI(unittest.TestCase):
 
     def test_status_done_auto_captures(self):
         os.chdir(self.repo)
-        rc, _, _ = _run(["--db", self.db, "status", "--kind", "task", "--id", "1", "--to", "done"])
+        rc, _, _ = _run(["--db", self.db, "task", "move", "--id", "1", "--to", "done"])
         self.assertEqual(rc, 0)
         store = Store(self.db)
         links = store.list_links("task", 1)
         self.assertEqual(len(links), 1)
         self.assertEqual(len(links[0].sha), 40)
         # second done is a no-op dedupe
-        rc, _, _ = _run(["--db", self.db, "status", "--kind", "task", "--id", "1", "--to", "done"])
+        rc, _, _ = _run(["--db", self.db, "task", "move", "--id", "1", "--to", "done"])
         self.assertEqual(rc, 0)
         self.assertEqual(len(Store(self.db).list_links("task", 1)), 1)
 
@@ -120,7 +120,7 @@ class TestVcsCLI(unittest.TestCase):
     def test_show_and_commits_files_flag(self):
         os.chdir(self.repo)
         _run(["--db", self.db, "link", "--kind", "task", "--id", "1"])
-        rc, out, _ = _run(["--db", self.db, "show", "--kind", "task", "--id", "1", "--files"])
+        rc, out, _ = _run(["--db", self.db, "task", "show", "--id", "1", "--files"])
         self.assertEqual(rc, 0)
         self.assertIn("f.txt", out)
         rc, out, _ = _run(["--db", self.db, "commits", "--kind", "task", "--id", "1", "--files"])
@@ -129,7 +129,7 @@ class TestVcsCLI(unittest.TestCase):
         rc, out, _ = _run(["--db", self.db, "commits", "--kind", "task", "--id", "1"])
         self.assertEqual(rc, 0)
         self.assertNotIn("f.txt", out)
-        rc, out, _ = _run(["--db", self.db, "show", "--kind", "task", "--id", "1", "--json"])
+        rc, out, _ = _run(["--db", self.db, "task", "show", "--id", "1", "--json"])
         self.assertEqual(rc, 0)
         self.assertEqual(json.loads(out)["links"][0]["files"], ["f.txt"])
 
@@ -178,7 +178,7 @@ class TestVcsCLI(unittest.TestCase):
         )
         _run(["--db", self.db, "link", "--kind", "task", "--id", "1", "--repo", other])
         for kind in ("milestone", "plan"):
-            rc, out, _ = _run(["--db", self.db, "show", "--kind", kind, "--id", "1"])
+            rc, out, _ = _run(["--db", self.db, kind, "show", "--id", "1"])
             self.assertEqual(rc, 0)
             self.assertIn("commits:", out)
             self.assertIn("cli commit", out)
@@ -398,9 +398,7 @@ class TestVcsCLI(unittest.TestCase):
         os.chdir(self.repo)
         with open(os.path.join(self.repo, "dirty.txt"), "w", encoding="utf-8") as fh:
             fh.write("dirty\n")
-        rc, _, err = _run(
-            ["--db", self.db, "status", "--kind", "task", "--id", "1", "--to", "done"]
-        )
+        rc, _, err = _run(["--db", self.db, "task", "move", "--id", "1", "--to", "done"])
         self.assertEqual(rc, 0)
         self.assertIn("working tree is dirty", err)
         self.assertEqual(Store(self.db).list_links("task", 1), [])
@@ -410,9 +408,7 @@ class TestVcsCLI(unittest.TestCase):
         os.chdir(self.repo)
         _run(["--db", self.db, "link", "--kind", "task", "--id", "1"])
         Store(self.db).add_task(1, "Second task")
-        rc, _, err = _run(
-            ["--db", self.db, "status", "--kind", "task", "--id", "2", "--to", "done"]
-        )
+        rc, _, err = _run(["--db", self.db, "task", "move", "--id", "2", "--to", "done"])
         self.assertEqual(rc, 0)
         self.assertIn("already linked to task #1", err)
         self.assertEqual(Store(self.db).list_links("task", 2), [])
@@ -435,9 +431,7 @@ class TestVcsCLI(unittest.TestCase):
             check=True,
             timeout=10,
         )
-        rc, _, err = _run(
-            ["--db", self.db, "status", "--kind", "task", "--id", "2", "--to", "done"]
-        )
+        rc, _, err = _run(["--db", self.db, "task", "move", "--id", "2", "--to", "done"])
         self.assertEqual(rc, 0)
         self.assertIn("expected branch", err)
         self.assertEqual(Store(self.db).list_links("task", 2), [])
@@ -601,7 +595,7 @@ class TestVcsCLI(unittest.TestCase):
         self.assertIn("PR #7 open Fix login", out)
         self.assertIn(url, out)
 
-        rc, out, _ = _run(["--db", self.db, "show", "--kind", "plan", "--id", "1"])
+        rc, out, _ = _run(["--db", self.db, "plan", "show", "--id", "1"])
         self.assertEqual(rc, 0)
         self.assertIn("pull requests:", out)
         self.assertIn("PR #7 open Fix login", out)

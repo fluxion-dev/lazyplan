@@ -817,5 +817,5 @@ tokens.
 wrong · `3` the screen cannot start because Textual is missing.
 
 Run `lpui <command> --help` for per-command flags. `man lpui` contains the full
-manual. Legacy flat verbs (`add-plan`, `add-task`, `update`, `status`, `delete`,
-`check`, `uncheck`, …) remain as aliases.
+manual. The flat legacy verbs were removed in 0.37.0; use the noun-first forms
+(`lpui plan add`, `lpui task edit`, `lpui criterion delete`, and so on).

@@ -78,7 +78,7 @@ different linked checkout. `commits` lists direct and inherited commits, and
 ```bash
 lpui --actor NAME link --kind task --id T [--sha SHA] [--repo PATH]
 lpui commits --kind task --id T [--refresh] [--files]
-lpui show --kind task --id T [--files]
+lpui task show --id T [--files]
 lpui git status --kind task --id T [--json]
 lpui git scan --since 7.days [--dry-run] [--repo PATH]
 ```

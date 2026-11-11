@@ -622,16 +622,17 @@ lpui touch add --task 12 --path src/lazyplan/store/sessions.py
 
 `session start` writes a pointer beside the database keyed by actor and
 checkout; `LAZYPLAN_SESSION=S3` overrides it. Every write made while the
-session is open is tagged with its id and refreshes its heartbeat. Hooks bind
-each host session to the same journal row by project, so a subagent or a linked
-worktree attaches to the primary checkout's row instead of opening a second
-one. `session-start` and `prompt-submit` mark it `working`, `stop` marks it
-`awaiting`, and `context`/`brief` render the previous handoff. A row with no
-heartbeat for 15 minutes reads `stale`; after two hours it is auto-closed and
-its pointer and bindings are cleared. A host session ending detaches only its
-binding, and the row closes when the last binding leaves. Sessions are
-operational history and are not exported. You can also start and end them from
-the sessions hub (click the agents card); the CLI remains the path for scripts.
+session is open is tagged with its id and refreshes its heartbeat. Hooks give
+every top-level host session its own row: each terminal, agent process, or
+linked worktree keeps its own phase and heartbeat, and child subagent sessions
+stay with their parent. `session-start` and `prompt-submit` mark that row
+`working`, `stop` marks it `awaiting`, and `context`/`brief` render the previous
+handoff. A row with no heartbeat for 15 minutes reads `stale`; after two hours
+it is auto-closed and its pointer and bindings are cleared. Ending one host
+session closes only its row. A manual session without a host session keeps the
+one-open rule; `--force` supersedes the open row. Sessions are operational
+history and are not exported. You can also start and end them from the sessions
+hub (click the agents card); the CLI remains the path for scripts.
 
 #### Hook modes and gates
 

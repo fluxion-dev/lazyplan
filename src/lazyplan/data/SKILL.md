@@ -271,11 +271,12 @@ lpui ship --plan P [--json] [--max-chars N]
 ```
 
 Sessions tag writes from `LAZYPLAN_SESSION` or the checkout pointer; hooks keep
-the checkout's session heartbeat current and mark it `awaiting` after a turn, so
-the agents panel shows who needs you. A row without a heartbeat for 15 minutes
-reads `stale`; two hours auto-closes it. Host sessions and worktrees bind to the
-same project row, and `lpui hook --check` probes the transport without writing.
-`context`/`brief` show the previous handoff. Touch-points make
+each top-level host session's heartbeat current and mark its row `awaiting`
+after a turn, so the agents panel shows who needs you. Child subagent sessions
+stay with their parent, and each worktree gets its own row. A row without a
+heartbeat for 15 minutes reads `stale`; two hours auto-closes it. `lpui hook
+--check` probes the transport without writing. `context`/`brief` show the
+previous handoff. Touch-points make
 `next` skip work that overlaps an active claim in the same checkout; a manual
 claim needs `--force` and finish only warns. References are read-only links to
 external work: no fetch, no write-back. `ship` prints the deterministic outcome
@@ -305,7 +306,7 @@ every call. Reach for `--json` only when you need full-fidelity fields.
 - Tick task and plan criteria as they are proven, before closing the row.
 - Lifecycle hooks may block a commit with no doing task, block one stop with
   unlinked commits, inject the active plan on every prompt, and close the
-  session at session end. They also record the checkout's session state; they
+  session at session end. They also record each host session's state; they
   never move a task or link a commit. `LAZYPLAN_HOOKS=advisory` downgrades
   blocks to reminders without reinstalling.
 - `lpui claims` / `lpui who` shows active leases. `claim release --force` and

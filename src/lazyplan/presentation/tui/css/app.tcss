@@ -77,7 +77,7 @@
 #preview-body MarkdownH5,
 #preview-body MarkdownH6 {
     width: 1fr;
-    margin: 0;
+    margin: 1 0;
     color: $lp-accent;
     text-style: bold;
 }

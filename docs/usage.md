@@ -335,9 +335,9 @@ state, and proof chip; a milestone shows its details and every task; a task
 shows its details, criteria, proof, notes, and source. Milestones and tasks
 keep the shorter open-criteria list. The overview starts with one
 attention line, then full-width Markdown section bars and their content. One
-blank line separates a bar from the section above, and no blank line separates
-a bar from its content. Prose in why, what, and details renders as Markdown,
-so lists, quotes, code fences, tables, and links appear as formatted text.
+blank line sits above and below each bar. Prose in why, what, and details
+renders as Markdown, so lists, quotes, code fences, tables, and links appear
+as formatted text.
 Only http and https links open; other schemes are reported instead. The
 timeline card stays hidden on launch; `T` or the palette's show/hide timeline
 command opens it for the session. When open, it follows the selected row and

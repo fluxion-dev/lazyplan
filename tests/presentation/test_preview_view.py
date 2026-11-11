@@ -394,6 +394,32 @@ class PreviewMarkdownTest(unittest.IsolatedAsyncioTestCase):
                     self.assertEqual(bar.region.width, body.size.width)
                     self.assertEqual(bar.styles.background.hex, expected)
 
+    async def test_section_bars_keep_one_line_above_and_below(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Store(os.path.join(tmp, "spacing.db"))
+            store.add_plan("Plan", "What", goal="Why\n\n## Inner heading\n\nProse")
+            app = create_app(str(store.path))
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                tree = app.query_one("#tree", Tree)
+                tree.focus()
+                tree.select_node(tree.root.children[0])
+                await pilot.pause()
+                body = app.query_one("#preview-body", Markdown)
+                blocks = list(body.children)
+                bars = [
+                    index for index, block in enumerate(blocks) if isinstance(block, MarkdownH2)
+                ]
+                self.assertGreaterEqual(len(bars), 3)
+                for index in bars:
+                    bar = blocks[index]
+                    margin = bar.styles.margin
+                    self.assertEqual((margin.top, margin.bottom), (1, 1))
+                    if index:
+                        self.assertEqual(bar.region.y - blocks[index - 1].region.bottom, 1)
+                    if index + 1 < len(blocks):
+                        self.assertEqual(blocks[index + 1].region.y - bar.region.bottom, 1)
+
     async def test_links_open_only_http_and_https(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             store = Store(os.path.join(tmp, "links.db"))

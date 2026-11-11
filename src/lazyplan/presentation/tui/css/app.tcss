@@ -15,13 +15,6 @@
     height: 1fr;
 }
 
-#nav {
-    width: 1fr;
-    height: 1fr;
-    border: none;
-    padding: 0;
-}
-
 .plan-panel {
     width: 1fr;
     border: round $lp-border-muted;
@@ -137,20 +130,18 @@
     display: none;
 }
 
+#main.narrow #side {
+    display: none;
+}
+
 #main.narrow #left,
-#main.narrow #nav,
 #main.narrow #plans-active,
-#main.narrow #side,
-#main.narrow #git {
+#main.narrow #plans-finished {
     width: 100%;
 }
 
 #main.narrow #left {
     height: 1fr;
-}
-
-#main.narrow #side {
-    height: auto;
 }
 
 #main.narrow #git {
@@ -170,7 +161,6 @@
     min-width: 0;
 }
 
-#main.compact #nav,
 #main.compact .plan-panel {
     min-width: 0;
 }

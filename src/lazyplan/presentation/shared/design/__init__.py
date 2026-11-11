@@ -62,6 +62,7 @@ from .text import SPINNER_INTERVAL as SPINNER_INTERVAL
 from .text import STATUS_ANSI as STATUS_ANSI
 from .text import STATUS_GLYPH as STATUS_GLYPH
 from .text import STATUS_RICH as STATUS_RICH
+from .text import escape_markdown as escape_markdown
 from .text import escape_markup as escape_markup
 from .text import pr_chip as pr_chip
 from .text import progress_bar as progress_bar
@@ -118,6 +119,7 @@ __all__ = [
     "STATUS_RICH",
     "STATE_ICON",
     "TASK",
+    "escape_markdown",
     "escape_markup",
     "milestone_label",
     "milestone_row",

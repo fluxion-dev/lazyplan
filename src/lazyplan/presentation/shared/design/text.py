@@ -129,3 +129,11 @@ def _escape_markup(text: str) -> str:
 def escape_markup(text: str) -> str:
     """Escape `[` for Rich markup surfaces (preview, rows)."""
     return _escape_markup(text)
+
+
+_MARKDOWN_SPECIAL = "\\`*_{}[]<>#|"
+
+
+def escape_markdown(text: str) -> str:
+    """Escape inline Markdown punctuation in generated titles and IDs."""
+    return "".join(f"\\{char}" if char in _MARKDOWN_SPECIAL else char for char in text)

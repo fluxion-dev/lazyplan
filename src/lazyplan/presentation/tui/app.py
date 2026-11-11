@@ -170,28 +170,27 @@ if _TEXTUAL_OK:
             with Vertical(id="panel"):
                 with Horizontal(id="main"):
                     with Vertical(id="left"):
-                        with Vertical(id="nav"):
-                            with Vertical(id="plans-active", classes="plan-panel"):
-                                yield FoldTree("active", id="tree", classes="plan-tree")
-                                yield Static(
-                                    empty_state(EMPTY_PLAN_QUEUE_TITLE, EMPTY_PLAN_QUEUE_HINT),
-                                    id="tree-empty",
-                                    classes="pane-empty",
-                                )
-                            with Vertical(id="plans-finished", classes="plan-panel"):
-                                yield FoldTree("finished", id="tree-finished", classes="plan-tree")
-                                yield Static(
-                                    empty_state(
-                                        EMPTY_PLAN_REVIEW_TITLE,
-                                        EMPTY_PLAN_REVIEW_HINT,
-                                    ),
-                                    id="tree-finished-empty",
-                                    classes="pane-empty",
-                                )
+                        with Vertical(id="plans-active", classes="plan-panel"):
+                            yield FoldTree("active", id="tree", classes="plan-tree")
+                            yield Static(
+                                empty_state(EMPTY_PLAN_QUEUE_TITLE, EMPTY_PLAN_QUEUE_HINT),
+                                id="tree-empty",
+                                classes="pane-empty",
+                            )
                         yield AgentsPanel()
+                        with Vertical(id="plans-finished", classes="plan-panel"):
+                            yield FoldTree("finished", id="tree-finished", classes="plan-tree")
+                            yield Static(
+                                empty_state(
+                                    EMPTY_PLAN_REVIEW_TITLE,
+                                    EMPTY_PLAN_REVIEW_HINT,
+                                ),
+                                id="tree-finished-empty",
+                                classes="pane-empty",
+                            )
+                        yield GitPanel()
                     with Vertical(id="side"):
                         yield PreviewPanel()
-                        yield GitPanel()
                 yield MetricsSection()
             yield Label("", id="hints")
 

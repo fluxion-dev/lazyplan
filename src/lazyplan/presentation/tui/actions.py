@@ -217,6 +217,7 @@ if _TEXTUAL_OK:
                 self.rev += 1
             except Exception:
                 self._fp = self.store.fingerprint()
+                self._live_fp = self.store.live_fingerprint()
                 self.refresh_all(note)
 
         def action_new_plan(self) -> None:

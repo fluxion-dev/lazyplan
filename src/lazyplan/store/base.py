@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 import sqlite3
 import threading
 import time
@@ -171,11 +170,13 @@ class StoreBase(StoreStubs):
         return [dict(row) for row in rows]
 
     def fingerprint(self) -> tuple:
-        """Conflict-safe poll key: mtime + row counts + max ids."""
-        try:
-            mtime = os.path.getmtime(str(self.path))
-        except OSError:
-            mtime = 0.0
+        """Structural poll key: counts, max ids, and the events watermark.
+
+        Session heartbeats and database-file mtimes are deliberately absent:
+        a live-only write must never look like a plan change. Any structural
+        edit through the store appends an event, so the watermark covers
+        status, title, and description updates that leave ids unchanged.
+        """
         c = self.counts()
         with self._connect() as conn:
             mp = conn.execute("SELECT COALESCE(MAX(id),0) m FROM plans").fetchone()["m"]
@@ -192,15 +193,7 @@ class StoreBase(StoreStubs):
                 mr = conn.execute("SELECT COALESCE(MAX(id),0) m FROM entity_repos").fetchone()["m"]
             except Exception:
                 mr = 0
-            try:
-                mses = conn.execute("SELECT COALESCE(MAX(id),0) m FROM sessions").fetchone()["m"]
-                mseen = conn.execute(
-                    "SELECT COALESCE(MAX(last_seen_at),0) m FROM sessions"
-                ).fetchone()["m"]
-            except Exception:
-                mses, mseen = 0, 0.0
         return (
-            mtime,
             c["plans"],
             c["milestones"],
             c["tasks"],
@@ -212,9 +205,26 @@ class StoreBase(StoreStubs):
             ml,
             mr,
             mf,
-            mses,
-            mseen,
         )
+
+    def live_fingerprint(self) -> tuple:
+        """Live poll key: session rows, newest heartbeat, and ended count.
+
+        This changes on every heartbeat so the agents pane can refresh while
+        the plan tree stays untouched.
+        """
+        try:
+            with self._connect() as conn:
+                row = conn.execute(
+                    "SELECT COUNT(*) c,"
+                    " COALESCE(MAX(id),0) newest,"
+                    " COALESCE(MAX(last_seen_at),0) seen,"
+                    " COALESCE(SUM(CASE WHEN ended_at>0 THEN 1 ELSE 0 END),0) ended"
+                    " FROM sessions"
+                ).fetchone()
+        except Exception:
+            return (0, 0, 0.0, 0)
+        return (int(row["c"]), int(row["newest"]), float(row["seen"]), int(row["ended"]))
 
 
 _ser = to_payload

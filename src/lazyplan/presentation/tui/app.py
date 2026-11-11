@@ -107,6 +107,7 @@ if _TEXTUAL_OK:
                 return
             try:
                 self._fp = self.store.fingerprint()
+                self._live_fp = self.store.live_fingerprint()
             except Exception:
                 pass
             note = self._pending_note
@@ -158,6 +159,7 @@ if _TEXTUAL_OK:
             self.git_state_controller = GitStateController(self)
             self.metrics_controller = MetricsController(self)
             self._fp: Any = store.fingerprint()
+            self._live_fp: Any = store.live_fingerprint()
             self._last_reap: float = 0.0
             self._last_event_id: int = 0
             events = store.feed(1)

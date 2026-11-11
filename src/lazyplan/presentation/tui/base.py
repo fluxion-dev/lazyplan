@@ -59,6 +59,7 @@ class AppBase(App, TuiHost):
     _last_click_key: tuple[str, int] | None
     _last_click_at: float
     _fp: Any
+    _live_fp: Any
     _startup_notice: str
     rev: Any
 

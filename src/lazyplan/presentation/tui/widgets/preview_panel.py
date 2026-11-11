@@ -1,17 +1,18 @@
-"""The preview panel: a sticky title over a scrollable document body."""
+"""The preview panel: a sticky title over a scrollable Markdown document body."""
 
 from __future__ import annotations
 
+from textual import on
 from textual.app import ComposeResult
 from textual.containers import Vertical, VerticalScroll
-from textual.widgets import Static
+from textual.widgets import Markdown, Static
 
 from ...shared.design import empty_state
 from ..views.preview import PreviewDocument
 
 
 class PreviewPanel(Vertical):
-    """Sticky header plus a scrollable body fed by a PreviewDocument."""
+    """Sticky header plus a scrollable Markdown body fed by a PreviewDocument."""
 
     def __init__(self) -> None:
         super().__init__(id="preview")
@@ -23,34 +24,23 @@ class PreviewPanel(Vertical):
         yield Static("", id="preview-head")
         yield Static("", id="preview-strip")
         with VerticalScroll(id="preview-scroll"):
-            yield Static("", id="preview-body")
+            yield Markdown("", id="preview-body", open_links=False)
         yield Static("", id="preview-empty", classes="pane-empty")
 
     def show(self, document: PreviewDocument, strip: str = "") -> None:
         head = self.query_one("#preview-head", Static)
         strip_widget = self.query_one("#preview-strip", Static)
+        body = self.query_one("#preview-body", Markdown)
         self._show_content()
         self._document = document
         head.remove_class("preview-error")
-        self.query_one("#preview-body", Static).remove_class("preview-error")
+        body.remove_class("preview-error")
         head.update(document.render_head())
-        self._render_body()
+        body.update(document.render_markdown())
         strip_widget.display = bool(strip)
         strip_widget.update(strip)
         self.border_subtitle = " e edit · c commands "
         self._home()
-
-    def _render_body(self) -> None:
-        """Render the body at the current width so section bars span it."""
-        if self._document is None:
-            return
-        body = self.query_one("#preview-body", Static)
-        width = body.size.width
-        body.update(self._document.render_body(width if width > 0 else None))
-
-    def on_resize(self) -> None:
-        """Keep section bars as wide as the pane after a resize."""
-        self._render_body()
 
     def _home(self) -> None:
         try:
@@ -80,12 +70,22 @@ class PreviewPanel(Vertical):
         """A visible load failure instead of a blank pane."""
         self._document = None
         head = self.query_one("#preview-head", Static)
-        body = self.query_one("#preview-body", Static)
+        body = self.query_one("#preview-body", Markdown)
         strip = self.query_one("#preview-strip", Static)
         self._show_content()
         head.update("")
         strip.display = False
         body.add_class("preview-error")
-        body.update(f"[bold red]preview unavailable[/]\n\n[dim]{text}[/]")
+        body.update(f"**preview unavailable**\n\n{text}")
         self.border_subtitle = ""
         self._home()
+
+    @on(Markdown.LinkClicked, "#preview-body")
+    def _open_link(self, event: Markdown.LinkClicked) -> None:
+        """Open http/https links; other schemes explain instead of launching."""
+        if event.href.lower().startswith(("http://", "https://")):
+            self.app.open_url(event.href)
+            self.app.notify(f"opened {event.href}", timeout=4)
+        else:
+            self.app.notify(f"cannot open {event.href}; only http and https links open", timeout=4)
+        event.stop()

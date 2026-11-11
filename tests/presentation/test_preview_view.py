@@ -5,18 +5,24 @@ from __future__ import annotations
 import os
 import tempfile
 import unittest
+from unittest import mock
 
 from lazyplan.store import Store
 
 try:
+    from textual.widgets import Markdown, Static, Tree
+
+    from lazyplan.presentation.tui import create_app
     from lazyplan.presentation.tui.views.control import build_control_strip
     from lazyplan.presentation.tui.views.preview import (
         PreviewBlock,
         PreviewDocument,
         build_preview,
     )
+    from lazyplan.presentation.tui.widgets.preview_panel import PreviewPanel
 except ImportError:  # pragma: no cover - stdlib-only interpreter
     PreviewBlock = PreviewDocument = build_preview = build_control_strip = None  # type: ignore[assignment]
+    create_app = Markdown = PreviewPanel = Static = Tree = None  # type: ignore[assignment,misc]
 
 
 @unittest.skipUnless(build_preview is not None, "textual/rich not installed")
@@ -207,6 +213,61 @@ class PreviewDocumentTest(unittest.TestCase):
         assert full is not None
         strip = build_control_strip(self.store, "task", self.task.id, full)
         self.assertIn("✓ clear", strip)
+
+
+@unittest.skipUnless(create_app is not None, "textual not installed")
+class PreviewMarkdownTest(unittest.IsolatedAsyncioTestCase):
+    async def test_the_body_is_markdown_and_tracks_the_selection(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Store(os.path.join(tmp, "markdown.db"))
+            first = store.add_plan("First plan", "First what", goal="First why")
+            store.add_plan("Second plan", "Second what", goal="Second why")
+            app = create_app(str(store.path))
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                tree = app.query_one("#tree", Tree)
+                tree.focus()
+                node = next(
+                    child for child in tree.root.children if child.data.get("id") == first.id
+                )
+                tree.select_node(node)
+                await pilot.pause()
+                body = app.query_one("#preview-body", Markdown)
+                self.assertIsInstance(app.query_one("#preview-head"), Static)
+                self.assertIsInstance(app.query_one("#preview-strip"), Static)
+                self.assertIn("## WHY", body.source or "")
+                self.assertIn("First why", body.source or "")
+                tree.select_node(next(child for child in tree.root.children if child is not node))
+                await pilot.pause()
+                body = app.query_one("#preview-body", Markdown)
+                self.assertIn("Second why", body.source or "")
+                self.assertNotIn("First why", body.source or "")
+
+    async def test_links_open_only_http_and_https(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Store(os.path.join(tmp, "links.db"))
+            store.add_plan("Plan", "What", goal="Why")
+            app = create_app(str(store.path))
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                panel = app.query_one("#preview", PreviewPanel)
+                body = app.query_one("#preview-body", Markdown)
+                for href in ("https://example.com/doc", "http://example.com/doc"):
+                    with (
+                        mock.patch.object(app, "open_url") as opener,
+                        mock.patch.object(app, "notify") as notify,
+                    ):
+                        panel._open_link(Markdown.LinkClicked(body, href))
+                        opener.assert_called_once_with(href)
+                        notify.assert_called_once()
+                for href in ("file:///etc/passwd", "javascript:alert(1)"):
+                    with (
+                        mock.patch.object(app, "open_url") as opener,
+                        mock.patch.object(app, "notify") as notify,
+                    ):
+                        panel._open_link(Markdown.LinkClicked(body, href))
+                        opener.assert_not_called()
+                        notify.assert_called_once()
 
 
 if __name__ == "__main__":

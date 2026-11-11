@@ -70,6 +70,23 @@
     padding: 0 1;
 }
 
+#preview-body MarkdownH1,
+#preview-body MarkdownH2,
+#preview-body MarkdownH3,
+#preview-body MarkdownH4,
+#preview-body MarkdownH5,
+#preview-body MarkdownH6 {
+    width: 1fr;
+    margin: 0;
+    color: $lp-accent;
+    text-style: bold;
+}
+
+#preview-body MarkdownH2 {
+    background: $lp-surface-raised;
+    padding: 0 1;
+}
+
 #git {
     width: 1fr;
     height: auto;

@@ -60,8 +60,10 @@ if _TEXTUAL_OK:
         def on_mount(self) -> None:
             """Snapshot the starting values so Esc can tell a draft from a no-op."""
             width = self.app.size.width
+            height = self.app.size.height
             self.set_class(width < 80, "compact")
             self.set_class(width >= 120, "wide")
+            self.set_class(height < 30, "short")
             dialog = query_one_opt(self, "#dlg")
             if dialog is not None:
                 dialog.border_title = self.dialog_title

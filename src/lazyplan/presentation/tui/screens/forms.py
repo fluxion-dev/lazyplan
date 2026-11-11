@@ -71,7 +71,8 @@ if _TEXTUAL_OK:
             return f"{label} in {self._where}" if self._where else label
 
         def compose(self) -> ComposeResult:
-            with Vertical(id="dlg"):
+            tall = " form-tall" if any(field.multiline for field in self.fields) else ""
+            with Vertical(id="dlg", classes=f"entity-form{tall}"):
                 yield Label(self._title(), classes="form-title")
                 for field in self.fields:
                     yield Label(field.label, classes="field-label")
@@ -289,7 +290,7 @@ if _TEXTUAL_OK:
             self._done = done
 
         def compose(self) -> ComposeResult:
-            with Vertical(id="dlg"):
+            with Vertical(id="dlg", classes="entity-form"):
                 yield Label("Edit criterion", classes="form-title")
                 yield Label("Text", classes="field-label")
                 yield Input(value=self._text, placeholder="what must be true?", id="c-text")

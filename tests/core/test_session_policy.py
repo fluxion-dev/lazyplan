@@ -7,6 +7,8 @@ import unittest
 from lazyplan.core.entities import Session
 from lazyplan.core.policies.sessions import (
     HANDOFF_LIMIT,
+    IDLE_AFTER_SECS,
+    STALE_AFTER_SECS,
     SUMMARY_LIMIT,
     auto_close_summary,
     normalize_handoff,
@@ -16,6 +18,7 @@ from lazyplan.core.policies.sessions import (
     phase_for_event,
     supersede_summary,
 )
+from lazyplan.services.sessions import session_state
 
 
 class TestSessionPolicy(unittest.TestCase):
@@ -68,6 +71,12 @@ class TestSessionPolicy(unittest.TestCase):
     def test_auto_close_summary_names_the_idle_hours(self) -> None:
         self.assertEqual(auto_close_summary(0), "auto-closed after 1h idle")
         self.assertEqual(auto_close_summary(5 * 3600), "auto-closed after 5h idle")
+
+    def test_stale_and_idle_follow_the_heartbeat(self) -> None:
+        session = Session(id=1, started_at=100.0, last_seen_at=100.0)
+        self.assertEqual(session_state(session, 100.0 + STALE_AFTER_SECS - 1), "working")
+        self.assertEqual(session_state(session, 100.0 + STALE_AFTER_SECS), "stale")
+        self.assertEqual(session_state(session, 100.0 + IDLE_AFTER_SECS), "idle")
 
 
 if __name__ == "__main__":

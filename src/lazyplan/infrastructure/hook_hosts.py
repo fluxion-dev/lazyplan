@@ -133,6 +133,8 @@ def payload(host: str, event: str, result: HookResult) -> dict:
             }
         return {"systemMessage": result.text}
     if host == "cursor":
+        if event == "session-start":
+            return {"additional_context": result.text}
         return {"agentMessage": result.text}
     return {}
 

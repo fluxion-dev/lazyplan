@@ -28,6 +28,10 @@ class HostCase(unittest.TestCase):
         body = json.loads(hook_hosts.render("cursor", "stop", HookResult("warn")))
         self.assertEqual(body, {"agentMessage": "warn"})
 
+    def test_cursor_session_start_uses_additional_context(self):
+        body = json.loads(hook_hosts.render("cursor", "session-start", HookResult("hi", True)))
+        self.assertEqual(body, {"additional_context": "hi"})
+
     def test_opencode_gets_plain_text(self):
         self.assertEqual(hook_hosts.render("opencode", "stop", HookResult("warn")), "warn")
 

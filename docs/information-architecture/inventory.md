@@ -299,7 +299,7 @@ python3 tools/ia_inventory.py --check
 | `o` | `src/lazyplan/presentation/tui/screens/hub.py:58` → `open_value`; `src/lazyplan/presentation/tui/screens/source.py:62` → `open` |
 | `r` | `src/lazyplan/presentation/tui/app.py:100` → `refresh`; `src/lazyplan/presentation/tui/screens/hub.py:60` → `refresh`; `src/lazyplan/presentation/tui/screens/source.py:65` → `refresh` |
 | `slash` | `src/lazyplan/presentation/tui/app.py:99` → `filter_text`; `src/lazyplan/presentation/tui/screens/source.py:64` → `filter` |
-| `x` | `src/lazyplan/presentation/tui/screens/hub_coordination.py:190` → `hub_toggle`; `src/lazyplan/presentation/tui/screens/hub_coordination.py:281` → `hub_toggle`; `src/lazyplan/presentation/tui/screens/hub_coordination.py:34` → `hub_toggle`; `src/lazyplan/presentation/tui/screens/hub_kinds.py:208` → `hub_toggle` |
+| `x` | `src/lazyplan/presentation/tui/screens/hub_coordination.py:190` → `hub_toggle`; `src/lazyplan/presentation/tui/screens/hub_coordination.py:281` → `hub_toggle`; `src/lazyplan/presentation/tui/screens/hub_coordination.py:34` → `hub_toggle`; `src/lazyplan/presentation/tui/screens/hub_kinds.py:214` → `hub_toggle` |
 
 ## Setup steps
 

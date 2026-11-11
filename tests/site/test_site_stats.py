@@ -27,11 +27,14 @@ class TestDownloadStats(unittest.TestCase):
         for field in ("stats-downloads", "stats-updated"):
             self.assertIn(f'id="{field}"', self.page)
 
-    def test_one_downloads_value_and_method_link(self):
+    def test_one_downloads_value_and_updated_line(self):
         self.assertIn(">Downloads<", self.page)
-        self.assertIn("How we", self.page)
-        self.assertIn("channels are reported separately", self.page)
+        strip = self.page.split('id="download-stats"', 1)[1].split("<figure", 1)[0]
+        self.assertIn("Updated", strip)
+        self.assertNotIn("How we", strip)
+        self.assertNotIn("channels are reported separately", strip)
         self.assertNotIn("docs/downloads.md", self.page)
+        self.assertNotIn("<a", strip)
         for removed in (
             "PyPI downloads",
             "including mirrors",

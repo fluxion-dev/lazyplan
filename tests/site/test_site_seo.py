@@ -143,7 +143,7 @@ class TestSiteSEO(unittest.TestCase):
         page = page_html()
         self.assertIn('id="ways-to-work"', page)
         for phrase in (
-            "One plan. Two workers. No lost context.",
+            "One plan. Many workers. Shared context.",
             "Edit any row yourself",
             "Ask for a plan.",
             "Hand off one task.",

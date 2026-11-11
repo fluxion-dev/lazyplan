@@ -1,7 +1,7 @@
 export const COPY = {
   story: {
     eyebrow: "The loop",
-    title: "One plan. Two workers. No lost context.",
+    title: "One plan. Many workers. Shared context.",
     intro:
       "You and your agent share the same rows, the same acceptance criteria, and the same history. Edit any row yourself, hand off a task, and watch the proof land.",
   },

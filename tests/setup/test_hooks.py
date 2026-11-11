@@ -272,6 +272,42 @@ class HookCase(unittest.TestCase):
         )
         self.assertEqual(result.block, "")
 
+    def test_post_tool_edit_names_the_owning_task(self):
+        _plan, task_id = self._seed()
+        Store(self.db).add_touchpoint(task_id, "src/**", actor="t")
+        payload = {"tool_name": "Edit", "tool_input": {"file_path": "src/app.py"}}
+        result = hooks.build_result(
+            "post-tool", payload, self.repo, commits=[], store=Store(self.db)
+        )
+        self.assertIn(f"T{task_id}", result.text)
+
+    def test_post_tool_edit_outside_the_task_asks_for_scope(self):
+        _plan, _task = self._seed()
+        payload = {"tool_name": "Write", "tool_input": {"file_path": "docs/readme.md"}}
+        result = hooks.build_result(
+            "post-tool", payload, self.repo, commits=[], store=Store(self.db)
+        )
+        self.assertIn("scope", result.text)
+
+    def test_post_tool_apply_patch_reads_the_patch_path(self):
+        _plan, task_id = self._seed()
+        Store(self.db).add_touchpoint(task_id, "src/**", actor="t")
+        payload = {
+            "tool_name": "apply_patch",
+            "tool_input": {"command": "*** Begin Patch\n*** Update File: src/x.py\n"},
+        }
+        result = hooks.build_result(
+            "post-tool", payload, self.repo, commits=[], store=Store(self.db)
+        )
+        self.assertIn(f"T{task_id}", result.text)
+
+    def test_post_tool_edit_without_a_task_points_at_brief(self):
+        payload = {"tool_name": "Edit", "tool_input": {"file_path": "src/app.py"}}
+        result = hooks.build_result(
+            "post-tool", payload, self.repo, commits=[], store=Store(self.db)
+        )
+        self.assertIn("lpui brief", result.text)
+
     def test_post_tool_other_commands_are_silent(self):
         self._seed()
         payload = {"tool_input": {"command": "git status"}}

@@ -7,8 +7,10 @@ the agent continue. Host-specific output shaping lives in `hook_hosts`.
 
 from __future__ import annotations
 
+import fnmatch
 import json
 import os
+import re
 import time
 from pathlib import Path
 from typing import TextIO, cast
@@ -79,6 +81,44 @@ def _command(payload: dict) -> str:
             return text
     command = payload.get("command")
     return command if isinstance(command, str) else ""
+
+
+_PATCH_FILE = re.compile(r"^\*\*\* (?:Update|Add) File: (.+)$", re.MULTILINE)
+
+
+def _tool_name(payload: dict) -> str:
+    """Tool name from the common host payload shapes."""
+    for key in ("tool_name", "tool"):
+        value = payload.get(key)
+        if isinstance(value, str):
+            return value.strip().lower()
+    return ""
+
+
+def _file_path(payload: dict) -> str:
+    """Edited file path, including the path inside an apply_patch body."""
+    for key in ("tool_input", "arguments"):
+        value = payload.get(key)
+        if isinstance(value, dict):
+            for name in ("file_path", "path", "filename"):
+                path = value.get(name)
+                if isinstance(path, str) and path.strip():
+                    return path.strip()
+    for name in ("file_path", "path"):
+        path = payload.get(name)
+        if isinstance(path, str) and path.strip():
+            return path.strip()
+    match = _PATCH_FILE.search(_command(payload))
+    return match.group(1).strip() if match else ""
+
+
+def _matches_task(path: str, patterns: list[str]) -> bool:
+    """True when a path belongs to one of a task's touch-points."""
+    name = Path(path).name
+    for pattern in patterns:
+        if fnmatch.fnmatch(path, pattern) or fnmatch.fnmatch(name, pattern):
+            return True
+    return False
 
 
 def _brief_lines(store: InsightsPort, cwd: Path, commits: list[audit.Commit] | None) -> list[str]:
@@ -251,12 +291,24 @@ def _pre_tool_result(store: AppPort, cwd: Path, payload: dict, mode: str) -> Hoo
 
 def _post_tool_text(store: InsightsPort, payload: dict) -> str:
     command = _command(payload)
-    if "git commit" not in command:
+    if "git commit" in command:
+        task_id = _doing_task(store)
+        if task_id is None:
+            return "lazyplan: commit landed; start or pick a task with `lpui brief`."
+        return f"lazyplan: commit landed; link it with `lpui link --kind task --id {task_id}`."
+    path = _file_path(payload)
+    if not path:
         return ""
     task_id = _doing_task(store)
     if task_id is None:
-        return "lazyplan: commit landed; start or pick a task with `lpui brief`."
-    return f"lazyplan: commit landed; link it with `lpui link --kind task --id {task_id}`."
+        return "lazyplan: edit landed; start or pick a task with `lpui brief`."
+    patterns = store.list_touchpoints(task_id)
+    if _matches_task(path, patterns):
+        return (
+            f"lazyplan: {path} belongs to T{task_id};"
+            f" update the task or note the decision when the slice is done."
+        )
+    return f"lazyplan: edited {path}; if this changes the task scope, edit the plan first."
 
 
 def build_result(

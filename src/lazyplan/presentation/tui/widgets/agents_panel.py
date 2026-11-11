@@ -11,6 +11,7 @@ from textual.widgets import Static
 from .... import services
 from ....core.ports.sessions import SessionsPort
 from ...shared.design import EMPTY_AGENTS, EMPTY_AGENTS_HINT, empty_state, escape_markup
+from ...shared.session_labels import plan_names
 from ..views.agents import rank_sessions, session_line, sessions_summary
 
 OPEN_SESSIONS_READ = 50
@@ -58,7 +59,7 @@ class AgentsPanel(VerticalScroll):
         self._show_body()
         stamp = time.time()
         ranked = rank_sessions(sessions, stamp)
-        titles = {plan.id: plan.name for plan in store.list_plans()}
+        titles = plan_names(store)
         lines = [
             session_line(session, stamp, plan_title=titles.get(session.plan_id or 0, ""))
             for session in ranked

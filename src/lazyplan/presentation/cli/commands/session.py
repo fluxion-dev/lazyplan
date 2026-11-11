@@ -12,7 +12,7 @@ from ....core.ports.sessions import SessionsPort
 from ....core.serialization import to_payload
 from ...shared import porcelain
 from ...shared.design import msg_error, msg_not_found
-from ...shared.session_labels import plan_label, task_label
+from ...shared.session_labels import plan_label, plan_names, task_label
 from ..emit import _emit_read, _emit_record
 from ..store import optional_store as _optional_store
 
@@ -147,7 +147,7 @@ def _cmd_session_show(store: AppPort | None, args: argparse.Namespace, actor: st
         print(msg_not_found("session", target), file=sys.stderr)
         return 1
     session = result["session"]
-    titles = {plan.id: plan.name for plan in db.list_plans()}
+    titles = plan_names(db)
     counts = ", ".join(f"{action} {count}" for action, count in result["counts"].items()) or "-"
     lines = [
         _session_text(session, plan_title=titles.get(session.plan_id or 0, "")),
@@ -180,7 +180,7 @@ def _cmd_session_list(store: AppPort | None, args: argparse.Namespace, actor: st
         open_only=bool(args.open),
         limit=args.limit,
     )
-    titles = {plan.id: plan.name for plan in db.list_plans()}
+    titles = plan_names(db)
     return _emit_read(
         args,
         [_session_payload(row) for row in rows],

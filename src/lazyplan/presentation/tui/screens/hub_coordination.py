@@ -16,7 +16,7 @@ except ImportError:  # pragma: no cover - stdlib-only interpreter
 from .... import services
 from ....core.errors import ClaimError
 from ...shared.design import escape_markup
-from ...shared.session_labels import branch_label, plan_label, task_label
+from ...shared.session_labels import branch_label, plan_label, plan_names, task_label
 from .forms import FilterPromptScreen
 
 
@@ -207,7 +207,7 @@ if _TEXTUAL_OK:
                 services.sessions.reap_idle_sessions(self.store, now=stamp)
             except (OSError, RuntimeError, ValueError):
                 pass
-            titles = {plan.id: plan.name for plan in self.store.list_plans()}
+            titles = plan_names(self.store)
             for session in services.sessions.list_sessions(
                 self.store, plan_id=self.plan_id, limit=50
             ):

@@ -51,6 +51,10 @@ jobs:
 
           Auto-merge is enabled. The \`gates\` check must pass; \`tag-release\`
           creates the tag after this PR lands."
+          # A GITHUB_TOKEN push does not start pull_request workflows, so the
+          # release PR would wait forever with no checks. Dispatch the gates
+          # against the release branch before enabling auto-merge.
+          gh workflow run ci.yml --ref "$BRANCH"
           gh pr merge "$BRANCH" --auto --merge
 
   # Auto-merge runs with GITHUB_TOKEN, and GitHub does not start push-event
@@ -68,7 +72,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NEXT: ${{ needs.bump.outputs.version }}
         run: |
-          for _ in $(seq 1 60); do
+          # macOS runners can queue; allow 40 minutes for gates and merge.
+          for _ in $(seq 1 120); do
             STATE="$(gh pr view "release/v${NEXT}" --json state --jq .state 2>/dev/null || true)"
             if [[ "$STATE" == "MERGED" ]]; then
               echo "release/v${NEXT} merged"

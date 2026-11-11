@@ -9,7 +9,7 @@ from textual.containers import VerticalScroll
 from textual.widgets import Static
 
 from .... import services
-from ....core.ports.sessions import SessionsReadPort
+from ....core.ports.sessions import SessionsPort
 from ...shared.design import EMPTY_AGENTS, EMPTY_AGENTS_HINT, empty_state, escape_markup
 from ..views.agents import rank_sessions, session_line, sessions_summary
 
@@ -41,8 +41,12 @@ class AgentsPanel(VerticalScroll):
         self.query_one("#agents-body", Static).display = True
         self.query_one("#agents-empty", Static).display = False
 
-    def show(self, store: SessionsReadPort, plan_id: int | None = None) -> None:
+    def show(self, store: SessionsPort, plan_id: int | None = None) -> None:
         body = self.query_one("#agents-body", Static)
+        try:
+            services.sessions.reap_idle_sessions(store, now=time.time())
+        except (OSError, RuntimeError, ValueError):
+            pass
         sessions = services.sessions.list_sessions(store, open_only=True, limit=OPEN_SESSIONS_READ)
         if not sessions:
             body.display = False

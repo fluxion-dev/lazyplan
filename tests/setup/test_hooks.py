@@ -158,6 +158,22 @@ class HookCase(unittest.TestCase):
         self._hook("session-end", {"host_session": "host-c"})
         self.assertEqual(Store(self.db).list_sessions(open_only=True), [])
 
+    def test_tool_events_refresh_only_the_firing_row(self):
+        for name in ("host-a", "host-b"):
+            self._hook("prompt-submit", {"host_session": name})
+        before = {
+            row.host_session: row.last_seen_at
+            for row in Store(self.db).list_sessions(open_only=True)
+        }
+        time.sleep(0.02)
+        self._hook("pre-tool", {"host_session": "host-b", "command": "ls"})
+        after = {
+            row.host_session: row.last_seen_at
+            for row in Store(self.db).list_sessions(open_only=True)
+        }
+        self.assertEqual(after["host-a"], before["host-a"])
+        self.assertGreater(after["host-b"], before["host-b"])
+
     def test_a_tool_event_opens_a_row_but_end_without_one_does_not(self):
         self._hook("pre-tool", {"host_session": "host-a", "command": "ls"})
         store = Store(self.db)

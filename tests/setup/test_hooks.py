@@ -112,6 +112,22 @@ class HookCase(unittest.TestCase):
         )
         return task_id, [commit]
 
+    def test_prompt_submit_injects_the_active_plan(self):
+        _plan, task_id = self._seed()
+        result = hooks.build_result(
+            "prompt-submit", {}, self.repo, commits=[], store=Store(self.db)
+        )
+        self.assertTrue(result.context)
+        self.assertIn(f"T{task_id}", result.text)
+        self.assertIn("next", result.text)
+        self.assertLessEqual(len(result.text), 1200)
+
+    def test_prompt_submit_is_silent_without_plans(self):
+        result = hooks.build_result(
+            "prompt-submit", {}, self.repo, commits=[], store=Store(self.db)
+        )
+        self.assertEqual(result.text, "")
+
     def test_stop_blocks_once_for_unlinked_commits(self):
         _task_id, commits = self._unlinked()
         result = hooks.build_result(

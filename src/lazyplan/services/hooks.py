@@ -219,6 +219,14 @@ def _stop_text(
     return "lazyplan: " + "; ".join(parts)
 
 
+def _prompt_text(store: InsightsPort) -> str:
+    """Small active-plan packet for every user prompt."""
+    payload = context.build(store, max_chars=1200)
+    if not payload.get("plans"):
+        return ""
+    return "\n".join(context.lines(payload)).strip()[:1200]
+
+
 def _commit_reason() -> str:
     """Actionable denial text for a commit without a doing task."""
     return (
@@ -273,6 +281,8 @@ def build_result(
             return HookResult(_session_text(store, here, commits, session), context=True).capped()
         if event == "stop":
             return _stop_result(store, here, commits, session, payload, mode, who)
+        if event == "prompt-submit":
+            return HookResult(_prompt_text(store), context=True).capped()
         if event == "pre-tool":
             return _pre_tool_result(store, here, payload, mode)
         if event == "post-tool":

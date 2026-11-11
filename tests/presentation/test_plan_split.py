@@ -1,4 +1,4 @@
-"""The main shell splits plans into active and finished panels."""
+"""The main shell splits plans into plan queue and plan review panels."""
 
 from __future__ import annotations
 

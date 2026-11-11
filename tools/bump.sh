@@ -107,7 +107,10 @@ if ! head -1 README.md | grep -q " — v$NEXT$"; then
   exit 1
 fi
 
-git add pyproject.toml README.md docs/
+# The notes reader ships the changelog inside the package; keep it identical.
+cp CHANGELOG.md src/lazyplan/data/CHANGELOG.md
+
+git add pyproject.toml README.md docs/ src/lazyplan/data/CHANGELOG.md
 if [[ -f site/index.html ]]; then git add site/index.html site/public/sitemap.xml site/package.json site/src/data/links.ts; fi
 git commit -m "release v$NEXT"
 if [[ $NOTAG -eq 0 ]]; then

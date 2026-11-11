@@ -96,6 +96,24 @@ anything. If the helper cannot start, close lpui and repair with
 `pipx install --force --backend pip lazyplan-tui`. A source checkout updates
 with `git pull`.
 
+### Release notes
+
+```bash
+lpui notes
+lpui notes --all
+lpui notes --since 0.36.0
+lpui notes --json
+```
+
+The changelog ships inside the installed package, so notes work offline and
+need no database. `lpui notes` prints the installed version; `--since` includes
+newer releases through the installed one, oldest first; `--all` lists every
+bundled release newest first. A successful `lpui upgrade` prints the range it
+skipped, and the TUI opens the same notes once after an upgrade. Press `W` or
+choose Release notes in the palette to reopen the installed version's notes.
+The last version shown is recorded in `~/.lazyplan/notes-seen.json`; a missing
+marker means a first install and stays quiet.
+
 Upgrading from 0.30.1 or earlier is not supported in place: the package layout
 and console scripts changed. Force a reinstall in the environment that owns
 `lpui`:
@@ -298,27 +316,29 @@ tab-separated rows; `--json` wins when both are present.
 ## The screen
 
 Plans start collapsed. Press `right` or `z` to reveal milestones; tasks stay
-folded until you open their milestone. Completed plans live in the finished
+folded until you open their milestone. Completed plans live in the `plan review`
 panel and stay dimmed. A doing row animates a small spinner; set
 `LAZYPLAN_NO_SPINNER=1` to freeze it.
 
 The main screen pairs the plan tree with an overview column. The overview
 follows the selection: a plan shows open questions, why, what, approval,
-references, and every milestone with its description; a milestone shows its
+references, and every milestone as a title-only row; a milestone shows its
 details and every task; a task shows its details, criteria, proof, notes, and
-source. The overview starts with one attention line, then prominent section
-headers and their details. A `git` card carries linked checkouts and pull
-requests. The `agents` card sits under the plan tree and shows active sessions
-and the last handoff. Each session row shows its live state: `working`,
-`awaiting you`, or `idle`; awaiting rows sort first. The timeline card stays
-hidden on launch; `T` or the palette's show/hide timeline command opens it for
-the session. When open, it follows the selected row and its immediate children.
+source. The overview starts with one attention line, then full-width section
+bars and their details. One blank line separates a bar from the section above,
+and no blank line separates a bar from its content. A `git` card carries linked
+checkouts and pull requests. The `agents` card sits under the plan tree and
+shows active sessions and the last handoff. Each session row shows its live
+state: `working`, `awaiting you`, or `idle`; awaiting rows sort first. The
+timeline card stays hidden on launch; `T` or the palette's show/hide timeline
+command opens it for the session. When open, it follows the selected row and
+its immediate children.
 
-The plan tree is split into two stacked panels. **Queue** holds every plan that
-is not done; **Finished** holds completed plans. Both panels keep the full
+The plan tree is split into two stacked panels. **Plan queue** holds every plan
+that is not done; **Plan review** holds completed plans. Both panels keep the full
 milestone and task tree, and the text filter applies inside each panel. On
-terminals narrower than 100 columns the overview hides, and the queue, finished,
-agents, and git cards stack vertically.
+terminals narrower than 100 columns the overview hides, and the plan queue,
+plan review, agents, and git cards stack vertically.
 
 The tree loads plan rows first. A plan's milestones appear when you expand it,
 and a milestone's tasks appear when you expand that milestone. A text filter

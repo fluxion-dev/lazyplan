@@ -314,8 +314,8 @@ every call. Reach for `--json` only when you need full-fidelity fields.
   PRs. `lpui lint --plan P --strict` rejects uncovered criteria, missing slices
   or verification, placeholders, and done rows with open criteria.
 - `lpui stats --since 7.days` reports WIP, cycle time, throughput, aging, stale
-  work, reopened rows, claims, and blocked tasks. The screen splits active and
-  finished plans into stacked panels; attention data stays in the preview strip.
+  work, reopened rows, claims, and blocked tasks. The screen splits plans into
+  plan queue and plan review panels; attention data stays in the preview strip.
 - Finish with `task finish --require-pr --require-checks` when the task must
   prove PR/CI evidence; `--override REASON` records an exception. A branch
   already recorded on another open task is rejected.

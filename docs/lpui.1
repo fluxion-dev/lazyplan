@@ -2191,6 +2191,49 @@ only report the installed and latest versions, change nothing
 print install and update paths, change nothing
 .RE
 .TP
+.B lpui notes
+print the release notes bundled with this version (works offline)
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B \-\-heal
+repair parent statuses and leases automatically (default)
+.RE
+.RS
+.TP
+.B \-\-no\-heal
+report drift without automatic repair for this command
+.RE
+.RS
+.TP
+.B \-\-all
+show every bundled release, newest first
+.RE
+.RS
+.TP
+.B \-\-since VERSION
+show releases newer than VERSION through the installed one
+.RE
+.TP
 .B lpui help
 show the screen's key bindings (same as ? in the app)
 .RS
@@ -2330,6 +2373,9 @@ Home creation templates.
 .TP
 .B ~/\.lazyplan/setup\.json
 Remembered setup choices and migration decisions.
+.TP
+.B ~/\.lazyplan/notes\-seen\.json
+Last version whose release notes were shown.
 .TP
 .B ~/\.lazyplan/backups/<timestamp>/
 Tree-preserving backups of every touched file.

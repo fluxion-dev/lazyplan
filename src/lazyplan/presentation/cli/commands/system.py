@@ -11,6 +11,7 @@ from pathlib import Path
 from lazyplan import services
 from lazyplan.services import (
     audit,
+    notes,
 )
 
 from ....core.ports.insights import InsightsPort
@@ -24,6 +25,7 @@ from ...shared.design import (
 from ..emit import (
     _emit,
 )
+from ..parser import package_version
 from ..rows_proof import (
     _audit_rows,
     _brief_rows,
@@ -381,4 +383,29 @@ def _cmd_trace(store: InsightsPort, args: argparse.Namespace, actor: str) -> int
         return 0
     for line in _trace_text(payload):
         print(line)
+    return 0
+
+
+def _cmd_notes(store: object | None, args: argparse.Namespace, actor: str) -> int:
+    """Print the changelog sections bundled with this version; needs no database."""
+    del store, actor
+    installed = package_version()
+    try:
+        chosen, text = notes.select_notes(
+            installed,
+            since=args.since or None,
+            all_=bool(args.all),
+        )
+    except (OSError, ValueError) as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 2
+    if args.json:
+        return _emit(
+            args,
+            {
+                "installed": installed,
+                "versions": [release.as_dict() for release in chosen],
+            },
+        )
+    print(text, end="")
     return 0

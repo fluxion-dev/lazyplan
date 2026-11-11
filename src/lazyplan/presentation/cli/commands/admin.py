@@ -11,12 +11,14 @@ import time
 from pathlib import Path
 
 from lazyplan.infrastructure.repo import find_repo_root, repo_label, resolve_db_path
+from lazyplan.services import notes
 
 from ....core.ports.insights import InsightsPort
 from ....core.ports.planning import PlanningPort
 from ....core.ports.transfer import TransferPort
 from ....infrastructure import textfile
 from ....infrastructure.environment import (
+    InstallInfo,
     UpgradeError,
     detect,
     diagnostics,
@@ -280,14 +282,112 @@ def _is_windows() -> bool:
     return os.name == "nt"
 
 
+def _seed_upgrade_notes(installed: str) -> None:
+    """Remember the old version before an upgrade so notes have a range."""
+    try:
+        if notes.has_release(installed):
+            notes.seed_upgrade(installed)
+    except (OSError, ValueError):
+        pass
+
+
+def _upgrade_notes(installed: str, latest: str) -> tuple[tuple[notes.Release, ...], str]:
+    """Return the notes for an upgrade without breaking the upgrade itself."""
+    _seed_upgrade_notes(installed)
+    try:
+        if notes.has_release(latest):
+            return notes.advance_notice(latest)
+    except (OSError, ValueError):
+        pass
+    return (), ""
+
+
+def _report_upgrade_status(
+    args: argparse.Namespace,
+    info: InstallInfo,
+    installed: str,
+    latest: str,
+    payload: dict[str, object],
+) -> int | None:
+    """Handle --check and already-current releases; None means keep going."""
+    try:
+        up_to_date = parse_version(latest) <= parse_version(installed)
+    except UpgradeError:
+        up_to_date = False
+    if not args.check and not up_to_date:
+        return None
+    if args.json:
+        return _emit(args, payload)
+    if up_to_date:
+        print(f"lpui v{installed} is the latest release ({info.method})")
+    else:
+        print(f"lpui v{installed} -> v{latest} available ({info.method}); run `lpui upgrade`")
+    return 0
+
+
+def _stage_windows_update(
+    args: argparse.Namespace,
+    info: InstallInfo,
+    installed: str,
+    latest: str,
+    payload: dict[str, object],
+) -> int:
+    """Stage an update for the detached Windows helper."""
+    _seed_upgrade_notes(installed)
+    try:
+        update = stage_update(latest, info.method, installed=installed)
+        plan = build_apply_plan(
+            update,
+            exe=sys.executable,
+            windows=True,
+            restart=False,
+        )
+        log = spawn_windows_apply(plan, parent_pid=os.getpid())
+    except (OSError, StageError, UpgradeError) as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 1
+    payload.update({"started": True, "restart": False, "log": str(log)})
+    if args.json:
+        return _emit(args, payload)
+    print(f"update v{latest} applying in the background; log: {log}")
+    return 0
+
+
+def _run_upgrade(
+    args: argparse.Namespace,
+    info: InstallInfo,
+    installed: str,
+    latest: str,
+    payload: dict[str, object],
+) -> int:
+    """Run the upgrade, print the unseen notes, then review setup."""
+    try:
+        run_upgrade(info, latest, sys.executable)
+    except UpgradeError as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 1
+    chosen, note_text = _upgrade_notes(installed, latest)
+    payload["upgraded"] = True
+    payload["notes"] = [release.as_dict() for release in chosen]
+    if not args.json:
+        print(f"upgraded lpui v{installed} -> v{latest} ({info.method})")
+        if note_text:
+            print()
+            print(note_text, end="")
+    _post_upgrade_review(bool(args.json))
+    if args.json:
+        return _emit(args, payload)
+    return 0
+
+
 def _cmd_upgrade(store: object | None, args: argparse.Namespace, actor: str) -> int:
     """Upgrade this install to the latest release; needs no database."""
     del store, actor
     if getattr(args, "diagnose", False):
-        payload = diagnostics()
+        diagnostic_payload = diagnostics()
         if args.json:
-            return _emit(args, payload)
-        for key, value in payload.items():
+            return _emit(args, diagnostic_payload)
+        for key, value in diagnostic_payload.items():
             print(f"{key}: {value}")
         return 0
     info = detect()
@@ -310,7 +410,7 @@ def _cmd_upgrade(store: object | None, args: argparse.Namespace, actor: str) -> 
             )
         print(f"warning: {exc}; skipping upgrade check", file=sys.stderr)
         return 0
-    payload = {
+    payload: dict[str, object] = {
         "method": info.method,
         "upgradeable": info.upgradeable,
         "installed": installed,
@@ -320,48 +420,12 @@ def _cmd_upgrade(store: object | None, args: argparse.Namespace, actor: str) -> 
     if not info.upgradeable and not args.check:
         print(msg_error(UpgradeError(guard_message(info))), file=sys.stderr)
         return 2
-    try:
-        up_to_date = parse_version(latest) <= parse_version(installed)
-    except UpgradeError:
-        up_to_date = False
-    if args.check or up_to_date:
-        if args.json:
-            return _emit(args, payload)
-        if up_to_date:
-            print(f"lpui v{installed} is the latest release ({info.method})")
-        else:
-            print(f"lpui v{installed} -> v{latest} available ({info.method}); run `lpui upgrade`")
-        return 0
+    reported = _report_upgrade_status(args, info, installed, latest, payload)
+    if reported is not None:
+        return reported
     if _is_windows() and info.upgradeable:
-        try:
-            update = stage_update(latest, info.method, installed=installed)
-            plan = build_apply_plan(
-                update,
-                exe=sys.executable,
-                windows=True,
-                restart=False,
-            )
-            log = spawn_windows_apply(plan, parent_pid=os.getpid())
-        except (OSError, StageError, UpgradeError) as exc:
-            print(msg_error(exc), file=sys.stderr)
-            return 1
-        payload.update({"started": True, "restart": False, "log": str(log)})
-        if args.json:
-            return _emit(args, payload)
-        print(f"update v{latest} applying in the background; log: {log}")
-        return 0
-    try:
-        run_upgrade(info, latest, sys.executable)
-    except UpgradeError as exc:
-        print(msg_error(exc), file=sys.stderr)
-        return 1
-    payload["upgraded"] = True
-    if not args.json:
-        print(f"upgraded lpui v{installed} -> v{latest} ({info.method})")
-    _post_upgrade_review(bool(args.json))
-    if args.json:
-        return _emit(args, payload)
-    return 0
+        return _stage_windows_update(args, info, installed, latest, payload)
+    return _run_upgrade(args, info, installed, latest, payload)
 
 
 def _cmd_help(store: object, args: argparse.Namespace, actor: str) -> int:

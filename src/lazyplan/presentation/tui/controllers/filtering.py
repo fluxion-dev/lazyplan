@@ -66,7 +66,7 @@ class TreeFilter:
         list[tuple[Plan, list[tuple[Milestone, list[Task]]]]],
         list[tuple[Plan, list[tuple[Milestone, list[Task]]]]],
     ]:
-        """Partition every plan into active and finished panels."""
+        """Partition every plan into plan queue and plan review panels."""
         active: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]] = []
         finished: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]] = []
         for plan, milestones in base:

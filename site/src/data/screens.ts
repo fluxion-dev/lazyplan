@@ -62,7 +62,7 @@ export const STORY_SCREENS: readonly Screen[] = [
     file: "lpui-git-pane",
     width: 1604,
     height: 904,
-    alt: "Main shell with a linked task selected, showing the sticky preview above a GIT pane with the checkout, branch, commits, and pull requests.",
+    alt: "Main shell with a linked task selected, showing the left work column (plan queue, agents, plan review, git) and the overview on the right.",
     caption: "Checkout, commits, and pull requests for the row.",
   },
   {

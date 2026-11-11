@@ -68,6 +68,10 @@ class TestReleaseNotesScreen(unittest.IsolatedAsyncioTestCase):
             async with app.run_test(size=(110, 35)) as pilot:
                 await pilot.pause()
                 self.assertIsInstance(app.screen, ReleaseNotesScreen)
+                await pilot.press("escape")
+                await pilot.pause()
+                self.assertNotIsInstance(app.screen, ReleaseNotesScreen)
+                self.assertEqual(len(app.screen_stack), 1)
 
     async def test_key_opens_the_installed_notes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -83,11 +87,22 @@ class TestReleaseNotesScreen(unittest.IsolatedAsyncioTestCase):
                     await pilot.pause()
                     self.assertIsInstance(app.screen, ReleaseNotesScreen)
 
+    def test_palette_uses_the_same_handler_as_the_key(self) -> None:
+        from lazyplan.presentation.tui.palette_handlers import palette_handlers
+
+        with tempfile.TemporaryDirectory() as tmp:
+            app = create_app(os.path.join(tmp, "notes.db"))
+            self.assertEqual(
+                palette_handlers(app)["release_notes"],
+                app.action_release_notes,
+            )
+
     def test_registry_names_the_palette_entry_and_key(self) -> None:
         action = registry.by_id("app.notes")
         self.assertIsNotNone(action)
         assert action is not None
         self.assertEqual(action.key, "W")
+        self.assertIn("tui", action.surfaces)
         self.assertIn("release-notes", action.palette_ids)
         command = registry.by_command_id("release-notes")
         self.assertIsNotNone(command)

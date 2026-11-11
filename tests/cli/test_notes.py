@@ -10,6 +10,7 @@ import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
+from types import SimpleNamespace
 from unittest import mock
 
 from lazyplan.presentation.cli import main
@@ -121,6 +122,58 @@ class TestMarker(unittest.TestCase):
         self.assertEqual(notes.read_seen(), "0.37.0")
         notes.seed_upgrade("0.36.0")
         self.assertEqual(notes.read_seen(), "0.37.0")
+
+
+class TestUpgradeNotes(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        sandbox_home(self, self.tmp.name)
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    def test_notes_print_before_the_setup_review(self) -> None:
+        notes.write_seen("0.36.0")
+        output = io.StringIO()
+
+        def review(_json: bool) -> None:
+            self.assertIn("## v0.38.0", output.getvalue())
+
+        with (
+            mock.patch.object(admin, "run_upgrade"),
+            mock.patch.object(admin, "_post_upgrade_review", side_effect=review),
+            mock.patch.object(notes, "has_release", return_value=True),
+            mock.patch.object(notes, "bundled_text", return_value=SAMPLE),
+            redirect_stdout(output),
+        ):
+            code = admin._run_upgrade(
+                SimpleNamespace(json=False),
+                mock.Mock(method="pipx", upgradeable=True),
+                "0.37.0",
+                "0.38.0",
+                {},
+            )
+        self.assertEqual(code, 0)
+        self.assertIn("## v0.37.0", output.getvalue())
+        self.assertEqual(notes.read_seen(), "0.38.0")
+
+    def test_failed_upgrade_leaves_the_marker_unchanged(self) -> None:
+        notes.write_seen("0.36.0")
+        with (
+            mock.patch.object(admin, "run_upgrade", side_effect=admin.UpgradeError("boom")),
+            mock.patch.object(notes, "has_release", return_value=True),
+            mock.patch.object(notes, "bundled_text", return_value=SAMPLE),
+            redirect_stderr(io.StringIO()),
+        ):
+            code = admin._run_upgrade(
+                SimpleNamespace(json=False),
+                mock.Mock(method="pipx", upgradeable=True),
+                "0.37.0",
+                "0.38.0",
+                {},
+            )
+        self.assertEqual(code, 1)
+        self.assertEqual(notes.read_seen(), "0.36.0")
 
 
 class TestNotesCli(unittest.TestCase):

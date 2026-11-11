@@ -60,9 +60,7 @@ class PreviewDocumentTest(unittest.TestCase):
         full = self.store.get_full("plan", self.plan.id)
         assert full is not None
         body = build_preview(self.store, "plan", self.plan.id, full, []).render_body(width=40)
-        bars = [
-            line for line in body.splitlines() if "[on $lp-surface-raised]" in line
-        ]
+        bars = [line for line in body.splitlines() if "[on $lp-surface-raised]" in line]
         self.assertGreaterEqual(len(bars), 4)
         for bar in bars:
             self.assertEqual(len(re.sub(r"\[[^\]]+\]", "", bar)), 40)
@@ -70,13 +68,18 @@ class PreviewDocumentTest(unittest.TestCase):
     def test_section_spacing_keeps_one_blank_before_each_bar(self) -> None:
         full = self.store.get_full("plan", self.plan.id)
         assert full is not None
-        lines = build_preview(self.store, "plan", self.plan.id, full, []).render_body(
-            width=40
-        ).splitlines()
+        lines = (
+            build_preview(self.store, "plan", self.plan.id, full, [])
+            .render_body(width=40)
+            .splitlines()
+        )
         self.assertNotEqual(lines[0], "")
         self.assertNotEqual(lines[-1], "")
         self.assertFalse(
-            any(first == "" and second == "" for first, second in zip(lines, lines[1:]))
+            any(
+                first == "" and second == ""
+                for first, second in zip(lines, lines[1:], strict=False)
+            )
         )
         for index, line in enumerate(lines):
             if "[on $lp-surface-raised]" not in line:

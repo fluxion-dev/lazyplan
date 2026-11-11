@@ -65,6 +65,7 @@ examples:
   lpui list --repo ~/checkouts/api
   lpui feed --limit 20                   show recent activity by you and your agents
   lpui upgrade [--check]                 self-update pipx/venv installs (no repo needed)
+  lpui notes [--all] [--since VERSION]   read the release notes bundled with this version
   lpui export --format json > backup.json
   lpui import --file backup.json
 
@@ -105,6 +106,7 @@ environment:
 files: shared home by default (`lpui setup --placement repo` opts a repo in)
   ~/.lazyplan/lazyplan.db                 your plans, every agent and folder (default)
   ~/.lazyplan/setup.json                  remembered setup choices and decisions
+  ~/.lazyplan/notes-seen.json             last version whose release notes were shown
   ~/.lazyplan/templates/                  creation templates shared by every agent
   .agents/lazyplan/lazyplan.db            repo database when placement is repo
   .agents/lazyplan/templates/{plan,milestone,task}.md  repo creation templates

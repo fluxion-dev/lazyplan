@@ -5,6 +5,17 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
 
 ## Unreleased
 
+### Added
+
+- **Release notes after upgrades and on demand.** The installed package now
+  carries the changelog. `lpui notes` prints the section for the installed
+  version, `--all` prints every bundled release, `--since VERSION` prints a
+  range, and `--json` returns versions, dates, and bodies. A successful
+  `lpui upgrade` prints the notes for the versions it skipped, and the TUI
+  opens the same notes once after an upgrade; `W` or the palette's Release
+  notes command reopens them. A missing or corrupt seen-version marker counts
+  as a first install and stays quiet.
+
 ### Changed
 
 - **One work column.** The screen stacks plan queue, agents, plan review, and

@@ -90,8 +90,7 @@ export function DownloadStats() {
           <span id="stats-downloads">{stats?.downloads ?? "—"}</span>
         </p>
         <p className="mt-2 mb-0 text-xs text-muted-foreground">
-          Updated <span id="stats-updated">{stats?.updated ?? "—"}</span> · How we
-          count: channels are reported separately, never added.
+          Updated <span id="stats-updated">{stats?.updated ?? "—"}</span>
         </p>
       </CardContent>
     </Card>

@@ -130,7 +130,7 @@ class TestStoryCopy(unittest.TestCase):
     def test_section_copy_is_rendered(self):
         page = page_html()
         for phrase in (
-            "One plan. Two workers. No lost context.",
+            "One plan. Many workers. Shared context.",
             "Every row is a workspace.",
             "The app, in use.",
             "Start with a plan. Finish with proof.",

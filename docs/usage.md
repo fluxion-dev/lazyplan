@@ -96,6 +96,24 @@ anything. If the helper cannot start, close lpui and repair with
 `pipx install --force --backend pip lazyplan-tui`. A source checkout updates
 with `git pull`.
 
+### Release notes
+
+```bash
+lpui notes
+lpui notes --all
+lpui notes --since 0.36.0
+lpui notes --json
+```
+
+The changelog ships inside the installed package, so notes work offline and
+need no database. `lpui notes` prints the installed version; `--since` includes
+newer releases through the installed one, oldest first; `--all` lists every
+bundled release newest first. A successful `lpui upgrade` prints the range it
+skipped, and the TUI opens the same notes once after an upgrade. Press `W` or
+choose Release notes in the palette to reopen the installed version's notes.
+The last version shown is recorded in `~/.lazyplan/notes-seen.json`; a missing
+marker means a first install and stays quiet.
+
 Upgrading from 0.30.1 or earlier is not supported in place: the package layout
 and console scripts changed. Force a reinstall in the environment that owns
 `lpui`:
@@ -308,12 +326,15 @@ and the git card. Plan queue holds every plan that is not done; plan review
 holds completed plans. The agents card shows active sessions and the last
 handoff; each session row shows its live state: `working`, `awaiting you`, or
 `idle`, and awaiting rows sort first. The git card carries linked checkouts and
-pull requests. The right column holds only the overview, which follows the
-selection: a plan shows open questions, why, what, approval, references, and
-every milestone with its description; a milestone shows its details and every
-task; a task shows its details, criteria, proof, notes, and source. The overview
-starts with one attention line, then prominent section headers and their
-details. The timeline card stays hidden on launch; `T` or the palette's
+pull requests.
+
+The right column holds only the overview, which follows the selection: a plan
+shows open questions, why, what, approval, references, and every milestone as
+a title-only row; a milestone shows its details and every task; a task shows
+its details, criteria, proof, notes, and source. The overview starts with one
+attention line, then full-width section bars and their details. One blank line
+separates a bar from the section above, and no blank line separates a bar from
+its content. The timeline card stays hidden on launch; `T` or the palette's
 show/hide timeline command opens it for the session. When open, it follows the
 selected row and its immediate children.
 

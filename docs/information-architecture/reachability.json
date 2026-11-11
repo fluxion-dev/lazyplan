@@ -319,6 +319,14 @@
       ]
     },
     {
+      "depth": 1,
+      "id": "app.notes",
+      "route": [
+        "tree",
+        "notes"
+      ]
+    },
+    {
       "depth": 0,
       "id": "app.help",
       "route": [

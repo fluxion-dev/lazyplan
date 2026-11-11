@@ -112,6 +112,7 @@ from .system import (
 )
 from .system import (
     _cmd_lint,
+    _cmd_notes,
     _cmd_stats,
     _cmd_trace,
 )
@@ -274,5 +275,6 @@ _COMMANDS: dict[str, Callable[[AppPort, Namespace, str], int]] = {
     "upgrade": _cmd_upgrade,
     "feed": _cmd_feed,
     "completion": _cmd_completion,
+    "notes": _cmd_notes,
     "ui": _cmd_ui,
 }

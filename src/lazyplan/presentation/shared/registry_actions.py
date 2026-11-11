@@ -325,6 +325,15 @@ CORE_ACTIONS: tuple[Action, ...] = (
         ("update-lpui",),
     ),
     _action(
+        "app.notes",
+        "Release notes",
+        "W",
+        "global",
+        ("tui", "cli"),
+        ("tree", "notes"),
+        ("release-notes",),
+    ),
+    _action(
         "app.help",
         "Help",
         "?",

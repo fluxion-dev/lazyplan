@@ -21,6 +21,16 @@
       "reason": "forge service resolves the checkout adapter"
     },
     {
+      "source": "lazyplan.services.notes",
+      "target": "lazyplan.infrastructure.data_text",
+      "reason": "notes read the packaged changelog"
+    },
+    {
+      "source": "lazyplan.services.notes",
+      "target": "lazyplan.infrastructure.repo",
+      "reason": "notes record the seen version in the shared home"
+    },
+    {
       "source": "lazyplan.services.plan_document",
       "target": "lazyplan.infrastructure.templates",
       "reason": "plan documents read repo creation templates"

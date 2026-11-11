@@ -46,6 +46,7 @@ from .system import (
     add_doctor,
     add_help,
     add_info,
+    add_notes,
     add_seed,
     add_setup,
     add_ui,
@@ -169,6 +170,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_watch(sub, common)
     add_completion(sub, common)
     add_upgrade(sub, common)
+    add_notes(sub, common)
     add_help(sub, common)
     add_ui(sub, common)
     return p

@@ -56,14 +56,16 @@ class TestReapBeforeRender(unittest.IsolatedAsyncioTestCase):
             assert ended is not None
             self.assertTrue(ended.ended)
 
-    async def test_a_heartbeat_alone_changes_the_fingerprint(self) -> None:
+    async def test_a_heartbeat_changes_live_state_not_structure(self) -> None:
         session, _ = self.store.start_session("ana", plan_id=self.plan.id)
         app = create_app(self.store.path)
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
-            before = app.store.fingerprint()
+            structural = app.store.fingerprint()
+            live = app.store.live_fingerprint()
             app.store.touch_session(session.id, phase="awaiting")
-            self.assertNotEqual(app.store.fingerprint(), before)
+            self.assertEqual(app.store.fingerprint(), structural)
+            self.assertNotEqual(app.store.live_fingerprint(), live)
 
     async def test_empty_state_returns_after_the_row_ends(self) -> None:
         session, _ = self.store.start_session("ana", plan_id=self.plan.id)

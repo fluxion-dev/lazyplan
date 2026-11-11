@@ -37,6 +37,7 @@ class SpinnerController:
     def remember(self, key: tuple[str, int], status: Status, label: str) -> None:
         """Keep the label after the status prefix for doing rows only."""
         if status != Status.DOING:
+            self.rows.pop(key, None)
             return
         prefix = status_prefix(Status.DOING)
         if label.startswith(prefix):

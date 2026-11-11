@@ -96,17 +96,24 @@ class PerfBenchCase(unittest.TestCase):
             "list_text",
             "list_json",
             "show_plan",
+            "store.fingerprint",
             "export_all",
             "audit_report",
             "git_status",
             "git_show",
             "tui_first_paint",
             "tui_expand",
+            "tui_reconcile",
         ):
             self.assertIn(name, names)
         tree = next(metric for metric in result["metrics"] if metric["name"] == "services.tree")
         self.assertIsNotNone(tree["ms"])
         self.assertGreater(tree["queries"] or 0, 0)
+        fingerprint = next(
+            metric for metric in result["metrics"] if metric["name"] == "store.fingerprint"
+        )
+        self.assertIsNotNone(fingerprint["ms"])
+        self.assertGreater(fingerprint["queries"] or 0, 0)
         first = next(metric for metric in result["metrics"] if metric["name"] == "tui_first_paint")
         self.assertEqual(first["note"], "disabled by --no-tui")
 
@@ -116,9 +123,15 @@ class PerfBenchCase(unittest.TestCase):
         result = self.bench.run(self.bench.QUICK_COUNTS, repeat=1, include_tui=True)
         first = next(metric for metric in result["metrics"] if metric["name"] == "tui_first_paint")
         expand = next(metric for metric in result["metrics"] if metric["name"] == "tui_expand")
+        reconcile = next(
+            metric for metric in result["metrics"] if metric["name"] == "tui_reconcile"
+        )
         self.assertIsNotNone(first["ms"])
         self.assertGreater(first["queries"] or 0, 0)
         self.assertEqual(first["nodes"], self.bench.QUICK_COUNTS.plans)
+        self.assertIsNotNone(reconcile["ms"])
+        self.assertGreater(reconcile["queries"] or 0, 0)
+        self.assertEqual(reconcile["nodes"], first["nodes"])
         self.assertIsNotNone(expand["ms"])
         self.assertGreater(expand["nodes"] or 0, first["nodes"] or 0)
 

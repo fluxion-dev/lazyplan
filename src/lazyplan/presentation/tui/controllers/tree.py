@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import time
 from typing import TYPE_CHECKING, Any, cast
 
 from textual.widgets import Label, Static, Tree
@@ -13,24 +12,30 @@ from ....core.entities import Milestone, Plan, Task
 from ....core.policies.planning import progress_counts
 from ....services.stats import attention_reasons
 from ...shared.help import hint_bar
-from ..views.rows import RowSpec, plan_spec, row_text
+from ..views.rows import RowSpec
 from .filtering import TreeFilter
 from .lazy_branches import LazyBranchMixin
-
-REAP_INTERVAL = 300.0
+from .poll import PollMixin
+from .reconcile import ReconcileMixin
 
 if TYPE_CHECKING:
     from ..app import LazyplanApp
     from ..widgets.plan_tree import FoldTree
 
 
-class TreeController(LazyBranchMixin):
+class TreeController(LazyBranchMixin, ReconcileMixin, PollMixin):
     """Owns the plan tree model and the row cache."""
 
     def __init__(self, app: LazyplanApp) -> None:
         self.app = app
         self.filters = TreeFilter(app)
+        self.rebuilds = 0
         self._reflow_pending = False
+        self._poll_worker: Any = None
+        self._flush_timer: Any = None
+        self._pending_structural = False
+        self._pending_note = ""
+        self._last_reap = 0.0
         self._by_plan: dict[int, list[tuple[Milestone, list[Task]]]] = {}
         self._tasks_by_milestone: dict[int, list[Task]] = {}
         self._milestone_plan: dict[int, int] = {}
@@ -120,84 +125,6 @@ class TreeController(LazyBranchMixin):
         self.app._expanded.add(key)
         self.app._collapsed.discard(key)
 
-    def poll(self) -> None:
-        """External-change detector; local edits go through the reactive rev."""
-        app = self.app
-        if app._dirty_external and len(app.screen_stack) <= 1:
-            app._dirty_external = False
-            app.rev += 1
-            return
-        now = time.time()
-        if now - app._last_reap >= REAP_INTERVAL:
-            app._last_reap = now
-            try:
-                app.store.reap_idle_sessions(now=now)
-            except Exception:
-                pass
-        try:
-            fingerprint = app.store.fingerprint()
-        except Exception:
-            return
-        if fingerprint == app._fp:
-            return
-        app._fp = fingerprint
-        events = app.store.feed(1)
-        note = "db changed — refreshed"
-        if events:
-            event = events[0]
-            event_id = int(event.get("id") or 0)
-            if event_id > app._last_event_id:
-                app._last_event_id = event_id
-                note = f"[{event['actor']}] {event['kind']}/{event['action']}: {event['detail']}"
-                try:
-                    app.notify(note, timeout=4)
-                except Exception:
-                    pass
-        app._pending_note = note
-        if len(app.screen_stack) > 1:
-            app._dirty_external = True
-            return
-        app.rev += 1
-
-    def restore_selection(
-        self,
-        prev_selected: tuple[str, int] | None,
-        prev_cursor: Any,
-    ) -> None:
-        """Keep the cursor on the same row across rebuilds."""
-        app = self.app
-        target = prev_selected if prev_selected in app._row_nodes else prev_cursor
-        if target not in app._row_nodes:
-            target = None
-        if target is None and app._row_nodes:
-            for key in app._row_nodes:
-                if key[0] == "plan" and app._row_nodes[key].tree.display:
-                    target = key
-                    break
-            if target is None:
-                target = next(iter(app._row_nodes))
-            app.selected = target
-        if target not in app._row_nodes:
-            return
-        node = app._row_nodes[target]
-        tree = node.tree
-        try:
-            tree.move_cursor(node)
-        except Exception:
-            pass
-
-        def _restore(cursor: Any = node) -> None:
-            try:
-                tree.move_cursor(cursor)
-                tree.scroll_to_node(cursor)
-            except Exception:
-                pass
-
-        try:
-            app.call_after_refresh(_restore)
-        except Exception:
-            pass
-
     @staticmethod
     def progress_map(
         base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]],
@@ -238,20 +165,21 @@ class TreeController(LazyBranchMixin):
         tree = trees[0]
         if not app._row_specs:
             return
-        app.spinner_controller.rows = {}
         for key, spec in app._row_specs.items():
             self.render_row(key, spec, tree)
+        app.spinner_controller.paint()
         for widget in trees:
             cast("FoldTree", widget).reflow()
 
     def show_empty(self, active_empty: bool, finished_empty: bool) -> None:
         """Swap each tree for its centered empty state when that panel is empty."""
         active_tree, finished_tree = self.trees()
+        flipped = active_tree.display == active_empty or (finished_tree.display == finished_empty)
         active_tree.display = not active_empty
         finished_tree.display = not finished_empty
         self.app.query_one("#tree-empty", Static).display = active_empty
         self.app.query_one("#tree-finished-empty", Static).display = finished_empty
-        if len(self.app.screen_stack) > 1:
+        if not flipped or len(self.app.screen_stack) > 1:
             return
         if not any(tree.has_focus for tree in (active_tree, finished_tree)):
             target = finished_tree if active_empty else active_tree
@@ -292,25 +220,12 @@ class TreeController(LazyBranchMixin):
 
     def refresh_all(self, note: str = "") -> None:
         app = self.app
+        self.rebuilds += 1
         active_tree, finished_tree = self.trees()
         app._refreshing = True
         prev_selected = app.selected
-        prev_cursor = None
-        for widget in (active_tree, finished_tree):
-            if not widget.has_focus:
-                continue
-            try:
-                cursor = widget.cursor_node
-                prev_cursor = self.node_key(cursor) if cursor is not None else None
-            except Exception:
-                prev_cursor = None
-        active_tree.clear()
-        finished_tree.clear()
-        app._row_nodes = {}
-        app._row_labels = {}
-        app._row_specs = {}
-        app.spinner_controller.rows = {}
-        self._loaded.clear()
+        view = self.capture_view()
+        prev_cursor = view["cursor"]
         base = services.tree(app.store, status=None, archived="show", plan_mode="all")
         self._prepare_model(base)
         active, finished = self.filters.panels(base)
@@ -329,10 +244,13 @@ class TreeController(LazyBranchMixin):
         self._claims_map = app.store.claims_map()
         self._drift_map = app.store.drift_counts()
         self._attention = self._attention_keys(base, attention_reasons(app.store))
-        self.build_plan_rows(active_tree.root, active_tree, active)
-        self.build_plan_rows(finished_tree.root, finished_tree, finished)
+        changed = self.reconcile_children(active_tree.root, active_tree, self.desired_plans(active))
+        changed |= self.reconcile_children(
+            finished_tree.root, finished_tree, self.desired_plans(finished)
+        )
         if app.filter_text.strip():
             self.build_all_children()
+        changed |= self.reconcile_branches()
         active_tree.root.expand()
         finished_tree.root.expand()
         app._collapsed &= self._model_keys
@@ -345,10 +263,11 @@ class TreeController(LazyBranchMixin):
         self.show_empty(not active, not finished)
         app.spinner_controller.paint()
         app.query_one("#hints", Label).update(hint_bar(max(10, app.size.width - 2), markup=True))
-        self.restore_selection(prev_selected, prev_cursor)
+        self.restore_view(view, prev_selected)
         app.metrics_controller.refresh()
-        app._preview_key = None
-        app.update_preview(force=True)
+        selected = app.selected
+        force = selected != prev_selected or (selected is not None and selected in changed)
+        app.update_preview(force=force)
 
     def _prepare_model(self, base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]) -> None:
         """Index the model once so expansion never re-reads the database."""
@@ -397,27 +316,3 @@ class TreeController(LazyBranchMixin):
         self.app._row_labels[key] = text
         self.app.spinner_controller.remember(key, spec.status, text)
         return text
-
-    def build_plan_rows(
-        self,
-        root: Any,
-        tree: Tree,
-        filtered: list,
-    ) -> None:
-        """Create only the plan rows for one refresh; children load on expand."""
-        app = self.app
-        for plan, milestones in filtered:
-            plan_key = ("plan", plan.id)
-            plan_row_spec = plan_spec(
-                plan,
-                self._progress,
-                attention=("plan", plan.id) in self._attention,
-            )
-            app._row_specs[plan_key] = plan_row_spec
-            plan_text = self.render_row(plan_key, plan_row_spec, tree)
-            plan_node = root.add(
-                row_text(plan_text),
-                data={"kind": "plan", "id": plan.id},
-                allow_expand=bool(milestones),
-            )
-            app._row_nodes[plan_key] = plan_node

@@ -12,7 +12,8 @@ Run it by hand:
     python3 tools/perf_bench.py --no-tui --repeat 3
 
 The benchmark reports wall time, SQL statement count, and connection count.
-Budget enforcement lives in a later milestone; this tool only measures.
+`BUDGETS` gates the read paths: query counts are exact and deterministic, so
+an accidental per-row query fails the check immediately.
 """
 
 from __future__ import annotations
@@ -119,6 +120,7 @@ BUDGETS: dict[str, Budget] = {
     "services.tree": Budget(15, 2_000),
     "services.tree_limit5": Budget(15, 2_000),
     "attention_ids": Budget(20, 2_000),
+    "store.fingerprint": Budget(20, 500),
     "needs_me": Budget(30, 3_000),
     "list_text": Budget(30, 3_000),
     "list_json": Budget(25, 6_000),
@@ -128,6 +130,7 @@ BUDGETS: dict[str, Budget] = {
     "audit_report": Budget(250, 5_000),
     "tui_first_paint": Budget(150, 8_000, nodes=100),
     "tui_expand": Budget(150, 8_000, nodes=120),
+    "tui_reconcile": Budget(60, 1_500, nodes=100),
     "git_status": Budget(0, 3_000),
     "git_show": Budget(0, 3_000),
 }
@@ -457,6 +460,7 @@ def _core_metrics(store: Store, fixture: Fixture, repeat: int) -> list[Measureme
             repeat=repeat,
         ),
         measure("show_plan", lambda: store.get_full("plan", fixture.first_plan_id), repeat=repeat),
+        measure("store.fingerprint", store.fingerprint, repeat=repeat),
         measure("full_many", lambda: store.get_full_many("plan", plan_ids), repeat=repeat),
         measure(
             "share_payload", lambda: share.payload(store, fixture.first_plan_id), repeat=repeat
@@ -507,6 +511,7 @@ def _tui_measurements(db: Path, repeat: int) -> list[Measurement]:
         return [
             Measurement("tui_first_paint", None, None, None, "textual not installed"),
             Measurement("tui_expand", None, None, None, "textual not installed"),
+            Measurement("tui_reconcile", None, None, None, "textual not installed"),
         ]
 
     old_spinner = os.environ.get("LAZYPLAN_NO_SPINNER")
@@ -533,10 +538,23 @@ def _tui_measurements(db: Path, repeat: int) -> list[Measurement]:
                         state["connections"],
                         nodes=len(app._row_nodes),
                     )
+                    start = time.perf_counter()
+                    app.refresh_all()
+                    reconcile_ms = (time.perf_counter() - start) * 1_000
+                    with sql_counter() as reconcile_state:
+                        app.refresh_all()
+                    reconcile = Measurement(
+                        "tui_reconcile",
+                        round(reconcile_ms, 1),
+                        reconcile_state["queries"],
+                        reconcile_state["connections"],
+                        nodes=len(app._row_nodes),
+                    )
                     plan_key = next((key for key in app._row_nodes if key[0] == "plan"), None)
                     if plan_key is None:
                         return [
                             first,
+                            reconcile,
                             Measurement("tui_expand", None, None, None, "no plan row"),
                         ]
                     app.tree_controller.load_children(plan_key)
@@ -553,6 +571,7 @@ def _tui_measurements(db: Path, repeat: int) -> list[Measurement]:
                             app.tree_controller.load_children(milestone_key)
                     return [
                         first,
+                        reconcile,
                         Measurement(
                             "tui_expand",
                             round(expand_ms, 1),
@@ -588,6 +607,7 @@ def run(
         else:
             metrics.append(Measurement("tui_first_paint", None, None, None, "disabled by --no-tui"))
             metrics.append(Measurement("tui_expand", None, None, None, "disabled by --no-tui"))
+            metrics.append(Measurement("tui_reconcile", None, None, None, "disabled by --no-tui"))
         return {
             "fixture": fixture.counts,
             "metrics": [asdict(metric) for metric in metrics],

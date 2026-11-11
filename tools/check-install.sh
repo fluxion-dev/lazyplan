@@ -25,14 +25,17 @@ echo "== build wheel =="
 echo "== install wheel =="
 "$SYS_PY" -m venv "$WORK/venv"
 if [[ -d "$WORK/venv/Scripts" ]]; then VENV_BIN="$WORK/venv/Scripts"; else VENV_BIN="$WORK/venv/bin"; fi
-"$VENV_BIN/python" -m pip install --no-deps --quiet "$WORK"/wheel/*.whl
+# A caller's PYTHONPATH (the gate exports src for the worktree tests) would
+# let pip see the source tree as an installed package and skip the wheel; the
+# smoke must prove the wheel alone installs.
+PYTHONPATH= "$VENV_BIN/python" -m pip install --no-deps --quiet "$WORK"/wheel/*.whl
 
 echo "== console scripts =="
-"$VENV_BIN/lpui" --version
-"$VENV_BIN/lazyplan" --version
+PYTHONPATH= "$VENV_BIN/lpui" --version
+PYTHONPATH= "$VENV_BIN/lazyplan" --version
 
 echo "== installed import =="
-"$VENV_BIN/python" - "$WORK" <<'PY'
+PYTHONPATH= "$VENV_BIN/python" - "$WORK" <<'PY'
 import pathlib
 import sys
 

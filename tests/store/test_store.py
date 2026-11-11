@@ -2,6 +2,7 @@ import os
 import sqlite3
 import tempfile
 import threading
+import time
 import unittest
 from contextlib import closing
 from unittest import mock
@@ -574,6 +575,41 @@ class TestStore(unittest.TestCase):
         )
         self.assertTrue(self.store.delete("task", t.id, actor="agent-1"))
         self.assertEqual(self.store.counts()["tasks"], 0)
+
+    def test_heartbeat_changes_live_fingerprint_only(self):
+        plan = self.store.add_plan("P")
+        session, _ = self.store.start_session("ana", plan_id=plan.id)
+        structural = self.store.fingerprint()
+        live = self.store.live_fingerprint()
+        self.store.touch_session(session.id, phase="awaiting", now=time.time() + 5)
+        self.assertEqual(self.store.fingerprint(), structural)
+        self.assertNotEqual(self.store.live_fingerprint(), live)
+
+    def test_structural_edits_change_fingerprint_but_not_live(self):
+        plan = self.store.add_plan("P")
+        milestone = self.store.add_milestone(plan.id, "M")
+        task = self.store.add_task(milestone.id, "T")
+        structural = self.store.fingerprint()
+        live = self.store.live_fingerprint()
+        self.store.update_task(task.id, title="renamed", actor="ana")
+        self.assertNotEqual(self.store.fingerprint(), structural)
+        self.assertEqual(self.store.live_fingerprint(), live)
+
+    def test_starting_or_ending_a_session_changes_live_fingerprint(self):
+        plan = self.store.add_plan("P")
+        live = self.store.live_fingerprint()
+        session, _ = self.store.start_session("ana", plan_id=plan.id)
+        self.assertNotEqual(self.store.live_fingerprint(), live)
+        live = self.store.live_fingerprint()
+        self.store.end_session(session.id, "ana", summary="done")
+        self.assertNotEqual(self.store.live_fingerprint(), live)
+
+    def test_out_of_band_write_leaves_the_fingerprint_alone(self):
+        self.store.add_plan("P")
+        fingerprint = self.store.fingerprint()
+        with closing(sqlite3.connect(self.db)) as conn, conn:
+            conn.execute("UPDATE plans SET name='edited outside the store'")
+        self.assertEqual(self.store.fingerprint(), fingerprint)
 
     def test_tree_orders_by_recent_activity_with_id_fallback(self):
         ids = [self.store.add_plan(f"P{i}").id for i in range(7)]

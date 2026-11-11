@@ -4,7 +4,8 @@ Keys: j/k navigate, left/right fold, c palette, escape clear.
   Press c then type a prefix (new, cycle, criteria, fold, filter, ...) and enter runs it.
   Mouse click selects; the overview follows the selection.
 Keyboard-only: agents use the `lpui` CLI against the same SQLite file; local edits
-bump reactive rev, external DB changes arrive via fingerprint() poll + feed toast.
+bump reactive rev, external DB changes arrive via a structural fingerprint() poll
+plus a live_fingerprint() poll that the feed toast summarizes.
 """
 
 from __future__ import annotations
@@ -107,6 +108,7 @@ if _TEXTUAL_OK:
                 return
             try:
                 self._fp = self.store.fingerprint()
+                self._live_fp = self.store.live_fingerprint()
             except Exception:
                 pass
             note = self._pending_note
@@ -158,7 +160,7 @@ if _TEXTUAL_OK:
             self.git_state_controller = GitStateController(self)
             self.metrics_controller = MetricsController(self)
             self._fp: Any = store.fingerprint()
-            self._last_reap: float = 0.0
+            self._live_fp: Any = store.live_fingerprint()
             self._last_event_id: int = 0
             events = store.feed(1)
             if events:

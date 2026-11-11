@@ -461,6 +461,9 @@
           ],
           [],
           [
+            "--check"
+          ],
+          [
             "--host"
           ],
           [
@@ -474,6 +477,9 @@
           ],
           [
             "--path"
+          ],
+          [
+            "--host-session"
           ]
         ]
       },
@@ -2898,7 +2904,7 @@
         "file": "src/lazyplan/presentation/tui/screens/hub_coordination.py",
         "key": "e",
         "label": "Edit",
-        "line": "275",
+        "line": "279",
         "screen": "hub_coordination"
       },
       {
@@ -2906,7 +2912,7 @@
         "file": "src/lazyplan/presentation/tui/screens/hub_coordination.py",
         "key": "u",
         "label": "Filter",
-        "line": "277",
+        "line": "281",
         "screen": "hub_coordination"
       },
       {
@@ -2930,7 +2936,7 @@
         "file": "src/lazyplan/presentation/tui/screens/hub_coordination.py",
         "key": "x",
         "label": "Toggle",
-        "line": "276",
+        "line": "280",
         "screen": "hub_coordination"
       },
       {
@@ -3063,7 +3069,7 @@
           {
             "action": "edit_row",
             "file": "src/lazyplan/presentation/tui/screens/hub_coordination.py",
-            "line": "275"
+            "line": "279"
           },
           {
             "action": "edit_row",
@@ -3198,7 +3204,7 @@
           {
             "action": "hub_toggle",
             "file": "src/lazyplan/presentation/tui/screens/hub_coordination.py",
-            "line": "276"
+            "line": "280"
           },
           {
             "action": "hub_toggle",

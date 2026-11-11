@@ -3,6 +3,18 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## Unreleased
+
+### Fixed
+
+- **Hooks finish and sessions stay honest.** `lpui hook` bounds its stdin read
+  instead of waiting for a pipe the host leaves open; the generated OpenCode
+  plugin closes the child stdin, logs a failed hook once, and maps the V2
+  lifecycle events. Host sessions and worktrees bind to one project row, tagged
+  writes refresh the heartbeat, 15 minutes without progress reads `stale`, and
+  two hours auto-closes the row. `lpui hook --check` and `lpui doctor` report
+  hook readiness without writing.
+
 ## v0.37.0 — 2026-11-10
 
 ### Added

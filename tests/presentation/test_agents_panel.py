@@ -90,6 +90,25 @@ class TestReapBeforeRender(unittest.IsolatedAsyncioTestCase):
             for index in range(6):
                 self.assertIn(f"{index:04d}", text)
 
+    async def test_agents_panel_shows_plan_title_task_and_branch(self) -> None:
+        self.store.start_session(
+            "opencode",
+            plan_id=self.plan.id,
+            repo_path=self.store.checkout_path(),
+            branch="task/157-pane",
+            host="opencode",
+            host_session="session-01",
+        )
+        app = create_app(self.store.path)
+        async with app.run_test(size=(160, 40)) as pilot:
+            await pilot.pause()
+            app.update_agents()
+            await pilot.pause()
+            text = str(app.query_one("#agents-body").render())
+            self.assertIn(f"P{self.plan.id} Plan", text)
+            self.assertIn("T157", text)
+            self.assertIn("task/157-pane", text)
+
     async def test_empty_state_returns_after_the_row_ends(self) -> None:
         session, _ = self.store.start_session("ana", plan_id=self.plan.id)
         app = create_app(self.store.path)

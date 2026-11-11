@@ -7,10 +7,12 @@ import sys
 import time
 
 from ....core.entities import Session
-from ....core.ports.sessions import SessionsPort, SessionsReadPort
+from ....core.ports.app import AppPort
+from ....core.ports.sessions import SessionsPort
 from ....core.serialization import to_payload
 from ...shared import porcelain
 from ...shared.design import msg_error, msg_not_found
+from ...shared.session_labels import plan_label, plan_names, task_label
 from ..emit import _emit_read, _emit_record
 from ..store import optional_store as _optional_store
 
@@ -34,20 +36,22 @@ def _duration_text(seconds: float) -> str:
     return f"{seconds / 86400:.1f}d"
 
 
-def _session_text(session: Session, now: float | None = None) -> str:
+def _session_text(session: Session, now: float | None = None, plan_title: str = "") -> str:
     """One human session line."""
     from lazyplan import services
 
     stamp = time.time() if now is None else now
     state = services.session_state(session, stamp)
-    plan = f"P{session.plan_id}" if session.plan_id is not None else "-"
+    plan = plan_label(session, plan_title, empty="-")
+    task = task_label(session)
+    label = f" {plan} {task}" if task else f" {plan}"
     branch = f" on {session.branch}" if session.branch else ""
     host = f" via {session.host}" if session.host and session.host != session.actor else ""
     if session.host_session:
         short = session.host_session[-4:]
         host = f"{host} · {short}" if host else f" via {short}"
     line = (
-        f"S{session.id} [{state}] {session.actor}{host} {plan}{branch} "
+        f"S{session.id} [{state}] {session.actor}{host}{label}{branch} "
         f"({_duration_text(session.duration(stamp))})"
     )
     if session.summary:
@@ -62,17 +66,24 @@ def _session_payload(session: Session) -> dict:
     return to_payload(vars(session))
 
 
-def _cmd_session_start(store: SessionsPort, args: argparse.Namespace, actor: str) -> int:
+def _cmd_session_start(store: AppPort, args: argparse.Namespace, actor: str) -> int:
     from lazyplan import services
 
+    repo = store.checkout_path()
+    branch = args.branch.strip() or services.attribution.current_branch(repo)
+    explicit = args.plan is not None
+    plan_id = args.plan
+    if plan_id is None:
+        plan_id = services.attribution.resolve(store, repo, branch).plan_id
     try:
         result = services.start_session(
             store,
             actor,
-            plan_id=args.plan,
-            branch=args.branch,
+            plan_id=plan_id,
+            branch=branch,
             note=args.note,
             force=bool(args.force),
+            plan_source="manual" if explicit else "auto",
         )
     except KeyError as exc:
         print(msg_error(exc), file=sys.stderr)
@@ -113,7 +124,7 @@ def _cmd_session_end(store: SessionsPort, args: argparse.Namespace, actor: str) 
     return _emit_record(args, _session_row(ended), {"session": _session_payload(ended)})
 
 
-def _cmd_session_show(store: SessionsReadPort | None, args: argparse.Namespace, actor: str) -> int:
+def _cmd_session_show(store: AppPort | None, args: argparse.Namespace, actor: str) -> int:
     from lazyplan import services
 
     try:
@@ -136,8 +147,12 @@ def _cmd_session_show(store: SessionsReadPort | None, args: argparse.Namespace, 
         print(msg_not_found("session", target), file=sys.stderr)
         return 1
     session = result["session"]
+    titles = plan_names(db)
     counts = ", ".join(f"{action} {count}" for action, count in result["counts"].items()) or "-"
-    lines = [_session_text(session), f"  events   {counts}"]
+    lines = [
+        _session_text(session, plan_title=titles.get(session.plan_id or 0, "")),
+        f"  events   {counts}",
+    ]
     for event in result["events"]:
         lines.append(f"  #{event['id']} {event['kind']}/{event['action']}: {event['detail']}")
     payload = {
@@ -148,7 +163,7 @@ def _cmd_session_show(store: SessionsReadPort | None, args: argparse.Namespace, 
     return _emit_read(args, payload, [_session_row(session)], "\n".join(lines))
 
 
-def _cmd_session_list(store: SessionsReadPort | None, args: argparse.Namespace, actor: str) -> int:
+def _cmd_session_list(store: AppPort | None, args: argparse.Namespace, actor: str) -> int:
     from lazyplan import services
 
     try:
@@ -165,9 +180,11 @@ def _cmd_session_list(store: SessionsReadPort | None, args: argparse.Namespace, 
         open_only=bool(args.open),
         limit=args.limit,
     )
+    titles = plan_names(db)
     return _emit_read(
         args,
         [_session_payload(row) for row in rows],
         [_session_row(row) for row in rows],
-        "\n".join(_session_text(row) for row in rows) or "no sessions",
+        "\n".join(_session_text(row, plan_title=titles.get(row.plan_id or 0, "")) for row in rows)
+        or "no sessions",
     )

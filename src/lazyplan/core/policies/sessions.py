@@ -5,6 +5,7 @@ from __future__ import annotations
 SUMMARY_LIMIT = 4000
 HANDOFF_LIMIT = 2000
 PHASES = ("working", "awaiting")
+PLAN_SOURCES = ("auto", "manual")
 
 #: An open session with no heartbeat for this long is stale in the UI.
 STALE_AFTER_SECS = 15 * 60
@@ -24,6 +25,14 @@ def normalize_phase(text: str) -> str:
 def phase_for_event(event: str) -> str:
     """Canonical phase after a hook event: stop waits on the user."""
     return "awaiting" if event == "stop" else "working"
+
+
+def normalize_plan_source(text: str) -> str:
+    """Return ``auto`` or ``manual`` for how a session got its plan."""
+    body = str(text).strip().lower()
+    if body not in PLAN_SOURCES:
+        raise ValueError(f"session plan source must be {'|'.join(PLAN_SOURCES)}")
+    return body
 
 
 def auto_close_summary(seconds: float) -> str:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from . import attribution as attribution
 from .base import GateError
 from .collaboration import (
     add_comment,

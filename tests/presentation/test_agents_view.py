@@ -69,6 +69,22 @@ class AgentsViewTest(unittest.TestCase):
         self.assertIn("idle", session_line(self.idle, self.now))
         self.assertIn("stale", session_line(self.stale, self.now))
 
+    def test_session_line_shows_the_plan_title_and_task(self) -> None:
+        line = session_line(
+            replace(self.working, branch="task/157-pane"),
+            self.now,
+            plan_title="Agents pane",
+        )
+        self.assertIn("P3 Agents pane", line)
+        self.assertIn("T157", line)
+        self.assertIn("task/157-pane", line)
+
+    def test_rows_without_a_plan_or_branch_say_so(self) -> None:
+        line = session_line(Session(id=9, actor="ana"), self.now)
+        self.assertIn("no plan", line)
+        self.assertIn("no branch", line)
+        self.assertNotIn("None", line)
+
     def test_session_line_labels_the_short_host_session(self) -> None:
         line = session_line(self.working, self.now)
         self.assertIn("via opencode", line)

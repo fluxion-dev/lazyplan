@@ -7,6 +7,10 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
 
 ### Fixed
 
+- **Agent rows name their plan and branch.** Every session records the
+  checkout's branch and the plan its work belongs to, refreshes both on each
+  heartbeat, and the agents card, sessions hub, and `lpui session` show the plan
+  title, task, and branch instead of `no plan` or `PNone`.
 - **Overview headings breathe.** Every heading in the overview now has one
   blank line above and below, including section bars and headings inside why,
   what, and details prose.

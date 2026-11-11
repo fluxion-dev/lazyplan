@@ -50,6 +50,7 @@ class SessionsPort(SessionsReadPort, PlanningPort, Protocol):
         host: str = "",
         host_session: str = "",
         phase: str = "working",
+        plan_source: str = "auto",
     ) -> tuple[Session, Session | None]: ...
 
     def end_session(
@@ -68,6 +69,9 @@ class SessionsPort(SessionsReadPort, PlanningPort, Protocol):
         phase: str | None = None,
         host: str = "",
         now: float | None = None,
+        branch: str | None = None,
+        plan_id: int | None = None,
+        replace_plan: bool = False,
     ) -> Session | None: ...
 
     def open_session_for(

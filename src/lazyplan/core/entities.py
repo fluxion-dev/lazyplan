@@ -93,6 +93,7 @@ class Session:
     host: str = ""
     host_session: str = ""
     auto_closed: bool = False
+    plan_source: str = "auto"
 
     @property
     def ended(self) -> bool:

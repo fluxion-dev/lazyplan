@@ -3,6 +3,7 @@
 import io
 import json
 import os
+import subprocess
 import sys
 import tempfile
 import time
@@ -12,6 +13,7 @@ from pathlib import Path
 
 from lazyplan import services
 from lazyplan.core.entities import Status
+from lazyplan.infrastructure.repo import git_common_dir
 from lazyplan.presentation.cli import main as lpui_main
 from lazyplan.presentation.cli.parser import build_parser
 from lazyplan.services import audit, hooks
@@ -55,6 +57,17 @@ class HookCase(unittest.TestCase):
         services.set_status(store, "milestone", milestone.id, Status.DOING, actor="t")
         services.set_status(store, "plan", plan.id, Status.DOING, actor="t")
         return plan.id, task.id
+
+    def _git(self, *args: str) -> None:
+        subprocess.run(["git", *args], cwd=self.repo, check=True, capture_output=True)
+
+    def _init_git(self, branch: str) -> None:
+        self._git("init", "-b", branch)
+        self._git("config", "user.email", "test@example.com")
+        self._git("config", "user.name", "Test")
+        (self.repo / "file.txt").write_text("one\n", encoding="utf-8")
+        self._git("add", "file.txt")
+        self._git("commit", "-m", "init")
 
     def test_read_payload_tolerates_garbage(self):
         self.assertEqual(hooks.read_payload(io.StringIO("")), {})
@@ -193,6 +206,64 @@ class HookCase(unittest.TestCase):
         kept = Store(self.db).get_session(manual.id)
         assert kept is not None
         self.assertFalse(kept.ended)
+
+    def test_session_start_records_the_branch_and_its_plan(self):
+        plan_id, task_id = self._seed()
+        self._init_git(f"task/{task_id}-pane")
+        hooks.build_result(
+            "session-start", {"session_id": "host-a"}, self.repo, commits=[], store=Store(self.db)
+        )
+        row = Store(self.db).list_sessions(open_only=True)[0]
+        self.assertEqual(row.branch, f"task/{task_id}-pane")
+        self.assertEqual(row.plan_id, plan_id)
+
+    def test_a_branch_switch_updates_the_row(self):
+        plan_id, task_id = self._seed()
+        self._init_git("main")
+        store = Store(self.db)
+        hooks.build_result(
+            "session-start", {"session_id": "host-a"}, self.repo, commits=[], store=store
+        )
+        started = Store(self.db).list_sessions(open_only=True)[0]
+        self.assertEqual(started.branch, "main")
+        self._git("switch", "-c", f"task/{task_id}-pane")
+        hooks.build_result(
+            "prompt-submit", {"session_id": "host-a"}, self.repo, commits=[], store=store
+        )
+        updated = Store(self.db).get_session(started.id)
+        assert updated is not None
+        self.assertEqual(updated.branch, f"task/{task_id}-pane")
+        self.assertEqual(updated.plan_id, plan_id)
+
+    def test_a_manual_plan_survives_a_branch_switch(self):
+        plan_id, _task_id = self._seed()
+        store = Store(self.db)
+        other = store.add_plan("Other", actor="ana")
+        milestone = store.add_milestone(other.id, "Other milestone", actor="ana")
+        other_task = store.add_task(milestone.id, "Other task", actor="ana")
+        self._init_git("main")
+        session, _ = store.start_session(
+            "ana",
+            plan_id=plan_id,
+            repo_path=str(self.repo),
+            branch="main",
+            plan_source="manual",
+        )
+        store.bind_session(
+            "opencode",
+            "host-a",
+            git_common_dir(str(self.repo)),
+            str(self.repo),
+            session.id,
+        )
+        self._git("switch", "-c", f"task/{other_task.id}-other")
+        hooks.build_result(
+            "prompt-submit", {"session_id": "host-a"}, self.repo, commits=[], store=store
+        )
+        updated = Store(self.db).get_session(session.id)
+        assert updated is not None
+        self.assertEqual(updated.plan_id, plan_id)
+        self.assertEqual(updated.branch, f"task/{other_task.id}-other")
 
     def test_session_start_names_the_doing_task(self):
         _plan, _task = self._seed()

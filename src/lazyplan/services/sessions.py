@@ -37,6 +37,7 @@ def start_session(
     host: str = "",
     host_session: str = "",
     phase: str = "working",
+    plan_source: str = "auto",
 ) -> dict:
     """Open a session and return it with any superseded session."""
     session, previous = port.start_session(
@@ -49,6 +50,7 @@ def start_session(
         host=host,
         host_session=host_session,
         phase=phase,
+        plan_source=plan_source,
     )
     return {"session": session, "previous": previous}
 
@@ -70,9 +72,19 @@ def touch_session(
     session_id: int,
     phase: str | None = None,
     host: str = "",
+    branch: str | None = None,
+    plan_id: int | None = None,
+    replace_plan: bool = False,
 ) -> Session | None:
-    """Refresh one session's heartbeat and optional phase."""
-    return port.touch_session(session_id, phase=phase, host=host)
+    """Refresh one session's heartbeat and optional attribution."""
+    return port.touch_session(
+        session_id,
+        phase=phase,
+        host=host,
+        branch=branch,
+        plan_id=plan_id,
+        replace_plan=replace_plan,
+    )
 
 
 def open_session_for(

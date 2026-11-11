@@ -2955,7 +2955,7 @@
         "file": "src/lazyplan/presentation/tui/screens/hub_coordination.py",
         "key": "e",
         "label": "Edit",
-        "line": "280",
+        "line": "293",
         "screen": "hub_coordination"
       },
       {
@@ -2963,7 +2963,7 @@
         "file": "src/lazyplan/presentation/tui/screens/hub_coordination.py",
         "key": "u",
         "label": "Filter",
-        "line": "282",
+        "line": "295",
         "screen": "hub_coordination"
       },
       {
@@ -2971,7 +2971,7 @@
         "file": "src/lazyplan/presentation/tui/screens/hub_coordination.py",
         "key": "x",
         "label": "Toggle",
-        "line": "34",
+        "line": "35",
         "screen": "hub_coordination"
       },
       {
@@ -2979,7 +2979,7 @@
         "file": "src/lazyplan/presentation/tui/screens/hub_coordination.py",
         "key": "x",
         "label": "Toggle",
-        "line": "190",
+        "line": "191",
         "screen": "hub_coordination"
       },
       {
@@ -2987,7 +2987,7 @@
         "file": "src/lazyplan/presentation/tui/screens/hub_coordination.py",
         "key": "x",
         "label": "Toggle",
-        "line": "281",
+        "line": "294",
         "screen": "hub_coordination"
       },
       {
@@ -3120,7 +3120,7 @@
           {
             "action": "edit_row",
             "file": "src/lazyplan/presentation/tui/screens/hub_coordination.py",
-            "line": "280"
+            "line": "293"
           },
           {
             "action": "edit_row",
@@ -3250,17 +3250,17 @@
           {
             "action": "hub_toggle",
             "file": "src/lazyplan/presentation/tui/screens/hub_coordination.py",
-            "line": "190"
+            "line": "191"
           },
           {
             "action": "hub_toggle",
             "file": "src/lazyplan/presentation/tui/screens/hub_coordination.py",
-            "line": "281"
+            "line": "294"
           },
           {
             "action": "hub_toggle",
             "file": "src/lazyplan/presentation/tui/screens/hub_coordination.py",
-            "line": "34"
+            "line": "35"
           },
           {
             "action": "hub_toggle",

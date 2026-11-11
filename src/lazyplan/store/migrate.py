@@ -8,7 +8,7 @@ from __future__ import annotations
 import sqlite3
 import uuid
 
-SCHEMA_VERSION = 9
+SCHEMA_VERSION = 10
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS plans (
@@ -115,6 +115,7 @@ CREATE TABLE IF NOT EXISTS sessions (
     phase TEXT NOT NULL DEFAULT 'working',
     last_seen_at REAL NOT NULL DEFAULT 0,
     host TEXT NOT NULL DEFAULT '',
+    host_session TEXT NOT NULL DEFAULT '',
     auto_closed INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_sessions_open ON sessions(ended_at, actor, repo_path);
@@ -461,6 +462,8 @@ def _migrate_session_state(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE sessions ADD COLUMN last_seen_at REAL NOT NULL DEFAULT 0")
     if "host" not in existing:
         conn.execute("ALTER TABLE sessions ADD COLUMN host TEXT NOT NULL DEFAULT ''")
+    if "host_session" not in existing:
+        conn.execute("ALTER TABLE sessions ADD COLUMN host_session TEXT NOT NULL DEFAULT ''")
     if "auto_closed" not in existing:
         conn.execute("ALTER TABLE sessions ADD COLUMN auto_closed INTEGER NOT NULL DEFAULT 0")
     conn.execute("UPDATE sessions SET last_seen_at=started_at WHERE last_seen_at=0")

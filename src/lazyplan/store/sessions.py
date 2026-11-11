@@ -20,7 +20,6 @@ from ..core.policies.sessions import (
 from .base import StoreBase
 from .session_pointer import (
     SESSION_ENV,
-    bindings_for_project,
     bindings_for_session,
     clear_pointer,
     delete_binding,
@@ -51,6 +50,7 @@ class SessionsMixin(StoreBase):
             phase=str(r["phase"] or "working"),
             last_seen_at=float(r["last_seen_at"] or 0),
             host=str(r["host"] or ""),
+            host_session=str(r["host_session"] or ""),
             auto_closed=bool(r["auto_closed"]),
         )
 
@@ -101,7 +101,13 @@ class SessionsMixin(StoreBase):
         session_id: int,
         now: float | None = None,
     ) -> None:
-        """Record one host session's journal row in this project."""
+        """Record one host session's journal row and mirror it onto the row."""
+        if host_session:
+            with self._connect() as conn:
+                conn.execute(
+                    "UPDATE sessions SET host_session=? WHERE id=? AND host_session<>?",
+                    (str(host_session)[:128], session_id, str(host_session)[:128]),
+                )
         write_binding(
             self.path,
             host,
@@ -112,21 +118,20 @@ class SessionsMixin(StoreBase):
             time.time() if now is None else now,
         )
 
-    def session_for_project(
+    def session_for_host(
         self,
+        host: str,
+        host_session: str,
         project: str,
-        host: str = "",
     ) -> Session | None:
-        """Newest open row bound to this project, preferring a matching host."""
-        bindings = bindings_for_project(self.path, project)
-        ordered = [item for item in bindings if item.get("host") == host] + [
-            item for item in bindings if item.get("host") != host
-        ]
-        for binding in ordered:
-            session = self.get_session(int(binding.get("session_id", 0)))
-            if session is not None and not session.ended:
-                return session
-        return None
+        """Open row bound to one host session in this project, if any."""
+        binding = read_binding(self.path, host, host_session, project)
+        if binding is None:
+            return None
+        session = self.get_session(int(binding.get("session_id", 0)))
+        if session is None or session.ended:
+            return None
+        return session
 
     def detach_host_binding(
         self,
@@ -153,15 +158,17 @@ class SessionsMixin(StoreBase):
         force: bool = False,
         now: float | None = None,
         host: str = "",
+        host_session: str = "",
         phase: str = "working",
     ) -> tuple[Session, Session | None]:
-        """Open a session; idle ones in this checkout are closed first."""
+        """Open a session; manual starts idle ones in this checkout first."""
         stamp = time.time() if now is None else now
         repo = (
             str(Path(repo_path).expanduser().resolve())
             if repo_path.strip()
             else self.checkout_path()
         )
+        host_session = str(host_session).strip()[:128]
         self.reap_idle_sessions(now=stamp, repo_path=repo)
         with self._connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
@@ -169,13 +176,14 @@ class SessionsMixin(StoreBase):
                 found = conn.execute("SELECT id FROM plans WHERE id=?", (plan_id,)).fetchone()
                 if found is None:
                     raise KeyError(f"plan #{plan_id} not found")
-            previous = self._open_session(actor, repo)
+            previous = None if host_session else self._open_session(actor, repo)
             if previous is not None and not force:
                 raise ValueError(f"session S{previous.id} is already open; end it or pass --force")
             cur = conn.execute(
                 "INSERT INTO sessions"
-                " (actor, plan_id, repo_path, branch, started_at, phase, last_seen_at, host)"
-                " VALUES (?,?,?,?,?,?,?,?)",
+                " (actor, plan_id, repo_path, branch, started_at, phase, last_seen_at, host,"
+                " host_session)"
+                " VALUES (?,?,?,?,?,?,?,?,?)",
                 (
                     actor,
                     plan_id,
@@ -185,6 +193,7 @@ class SessionsMixin(StoreBase):
                     normalize_phase(phase),
                     stamp,
                     str(host)[:64],
+                    host_session,
                 ),
             )
             session_id = int(cur.lastrowid or 0)

@@ -4,6 +4,10 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# The throwaway venv must prove the installed wheel, not whatever an inherited
+# PYTHONPATH points at (a worktree's src/ also carries build metadata).
+unset PYTHONPATH
+
 if [[ -z "${VENV_BIN:-}" ]]; then
   if [[ -d .venv/Scripts ]]; then VENV_BIN=.venv/Scripts; else VENV_BIN=.venv/bin; fi
 fi

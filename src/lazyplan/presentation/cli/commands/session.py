@@ -43,6 +43,9 @@ def _session_text(session: Session, now: float | None = None) -> str:
     plan = f"P{session.plan_id}" if session.plan_id is not None else "-"
     branch = f" on {session.branch}" if session.branch else ""
     host = f" via {session.host}" if session.host and session.host != session.actor else ""
+    if session.host_session:
+        short = session.host_session[-4:]
+        host = f"{host} · {short}" if host else f" via {short}"
     line = (
         f"S{session.id} [{state}] {session.actor}{host} {plan}{branch} "
         f"({_duration_text(session.duration(stamp))})"

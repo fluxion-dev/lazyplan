@@ -10,6 +10,8 @@ from contextlib import closing
 from pathlib import Path
 from unittest import mock
 
+from lazyplan.core.entities import Session
+from lazyplan.core.serialization import to_payload
 from lazyplan.store import Store
 from lazyplan.store import migrate as migrate_mod
 from lazyplan.store.session_pointer import pointer_path, write_pointer
@@ -57,7 +59,7 @@ class TestSessionsStore(unittest.TestCase):
             }
         self.assertIn("sessions", tables)
         self.assertIn("session_id", columns)
-        for name in ("phase", "last_seen_at", "host", "auto_closed"):
+        for name in ("phase", "last_seen_at", "host", "host_session", "auto_closed"):
             self.assertIn(name, session_columns)
         for name in (
             "idx_sessions_open",
@@ -185,7 +187,45 @@ class TestSessionsStore(unittest.TestCase):
         self.assertTrue(old.ended)
         self.assertTrue(old.auto_closed)
 
-    def test_two_host_bindings_share_one_row_and_close_on_last_detach(self) -> None:
+    def test_host_sessions_open_separate_rows_and_end_independently(self) -> None:
+        first, previous = self.store.start_session("opencode", host_session="host-a", now=100.0)
+        self.assertIsNone(previous)
+        self.assertEqual(first.host_session, "host-a")
+        self.store.bind_session(
+            "opencode", "host-a", "/project", str(self.repo), first.id, now=110.0
+        )
+        second, previous = self.store.start_session("opencode", host_session="host-b", now=120.0)
+        self.assertIsNone(previous)
+        self.assertEqual(second.host_session, "host-b")
+        self.store.bind_session(
+            "opencode", "host-b", "/project", str(self.repo), second.id, now=130.0
+        )
+        self.assertEqual(
+            [row.id for row in self.store.list_sessions(open_only=True)], [second.id, first.id]
+        )
+        host_a = self.store.session_for_host("opencode", "host-a", "/project")
+        host_b = self.store.session_for_host("opencode", "host-b", "/project")
+        assert host_a is not None and host_b is not None
+        self.assertEqual(host_a.id, first.id)
+        self.assertEqual(host_b.id, second.id)
+        self.store.end_session(first.id, "opencode", now=140.0)
+        still_open = self.store.get_session(second.id)
+        assert still_open is not None
+        self.assertFalse(still_open.ended)
+        self.assertIsNone(self.store.session_for_host("opencode", "host-a", "/project"))
+
+    def test_bind_session_mirrors_the_host_session_onto_a_manual_row(self) -> None:
+        session, _ = self.store.start_session("ana", now=100.0)
+        self.assertEqual(session.host_session, "")
+        self.store.bind_session(
+            "opencode", "host-a", "/project", str(self.repo), session.id, now=110.0
+        )
+        bound = self.store.session_for_host("opencode", "host-a", "/project")
+        assert bound is not None
+        self.assertEqual(bound.id, session.id)
+        self.assertEqual(bound.host_session, "host-a")
+
+    def test_two_bindings_on_one_manual_row_close_on_last_detach(self) -> None:
         session, _ = self.store.start_session("ana", now=100.0)
         self.store.bind_session(
             "opencode", "host-a", "/project", str(self.repo), session.id, now=110.0
@@ -193,7 +233,9 @@ class TestSessionsStore(unittest.TestCase):
         self.store.bind_session(
             "opencode", "host-b", "/project", str(self.repo), session.id, now=120.0
         )
-        self.assertEqual(self.store.session_for_project("/project", host="opencode"), session)
+        self.assertEqual(
+            self.store.session_for_host("opencode", "host-a", "/project").id, session.id
+        )
         detached, last = self.store.detach_host_binding("opencode", "host-a", "/project")
         assert detached is not None
         self.assertEqual(detached.id, session.id)
@@ -202,15 +244,17 @@ class TestSessionsStore(unittest.TestCase):
         detached, last = self.store.detach_host_binding("opencode", "host-b", "/project")
         assert detached is not None
         self.assertTrue(last)
-        self.assertEqual(self.store.session_for_project("/project"), None)
+        self.assertIsNone(self.store.session_for_host("opencode", "host-b", "/project"))
 
-    def test_project_binding_does_not_leak_to_another_checkout(self) -> None:
+    def test_host_binding_does_not_leak_to_another_project(self) -> None:
         session, _ = self.store.start_session("ana", repo_path=str(self.repo), now=100.0)
         self.store.bind_session(
             "opencode", "host-a", "/project-a", str(self.repo), session.id, now=110.0
         )
-        self.assertEqual(self.store.session_for_project("/project-a"), session)
-        self.assertIsNone(self.store.session_for_project("/project-b"))
+        self.assertEqual(
+            self.store.session_for_host("opencode", "host-a", "/project-a").id, session.id
+        )
+        self.assertIsNone(self.store.session_for_host("opencode", "host-a", "/project-b"))
 
     def test_tagged_writes_heartbeat_and_ended_sessions_stay_frozen(self) -> None:
         session, _ = self.store.start_session("ana", now=100.0)
@@ -223,6 +267,29 @@ class TestSessionsStore(unittest.TestCase):
         ended = self.store.get_session(session.id)
         assert ended is not None
         self.assertEqual(ended.last_seen_at, 210.0)
+
+    def test_v9_database_gains_host_session(self) -> None:
+        path = os.path.join(self.tmp.name, "v9.db")
+        with closing(sqlite3.connect(path)) as conn:
+            conn.executescript(migrate_mod.SCHEMA)
+            conn.execute("ALTER TABLE sessions DROP COLUMN host_session")
+            conn.execute("PRAGMA user_version = 9")
+            conn.execute(
+                "INSERT INTO sessions (actor, started_at, ended_at, summary)"
+                " VALUES ('ana', 100.0, 0, 'old work')"
+            )
+            conn.commit()
+        store = Store(path)
+        old = store.get_session(1)
+        assert old is not None
+        self.assertEqual(old.host_session, "")
+        self.assertEqual(old.summary, "old work")
+        self.assertEqual(old.phase, "working")
+        self.assertFalse(old.ended)
+
+    def test_session_payload_carries_the_host_session(self) -> None:
+        session = Session(id=7, actor="ana", host_session="host-a")
+        self.assertEqual(to_payload(vars(session))["host_session"], "host-a")
 
     def test_v8_database_gains_session_state(self) -> None:
         path = os.path.join(self.tmp.name, "v8.db")

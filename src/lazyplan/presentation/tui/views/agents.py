@@ -54,6 +54,19 @@ def rank_sessions(
     return sorted(sessions, key=key)
 
 
+def host_label(session: Session) -> str:
+    """Host and short host-session id, when they add anything to the actor."""
+    host = session.host if session.host and session.host != session.actor else ""
+    short = session.host_session[-4:] if session.host_session else ""
+    if host and short:
+        return f" [dim]via {escape_markup(host)} · {escape_markup(short)}[/]"
+    if short:
+        return f" [dim]via {escape_markup(short)}[/]"
+    if host:
+        return f" [dim]via {escape_markup(host)}[/]"
+    return ""
+
+
 def session_line(
     session: Session,
     now: float | None = None,
@@ -65,13 +78,9 @@ def session_line(
     started = time.strftime("%H:%M", time.localtime(session.started_at))
     plan = f"P{session.plan_id}" if session.plan_id is not None else "no plan"
     branch = escape_markup(session.branch) if session.branch else "no branch"
-    host = (
-        f" [dim]via {escape_markup(session.host)}[/]"
-        if session.host and session.host != session.actor
-        else ""
-    )
     return (
-        f"[bold]@{escape_markup(session.actor)}[/]{host} [dim]S{session.id}[/] · "
+        f"[bold]@{escape_markup(session.actor)}[/]{host_label(session)} "
+        f"[dim]S{session.id}[/] · "
         f"[dim]{plan}[/] · {branch} · [dim]{started} · {age(session.started_at, stamp)}[/] · "
         f"{STATE_BADGES.get(state, state)}"
     )

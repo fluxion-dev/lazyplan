@@ -48,6 +48,7 @@ class SessionsPort(SessionsReadPort, PlanningPort, Protocol):
         force: bool = False,
         now: float | None = None,
         host: str = "",
+        host_session: str = "",
         phase: str = "working",
     ) -> tuple[Session, Session | None]: ...
 
@@ -86,7 +87,12 @@ class SessionsPort(SessionsReadPort, PlanningPort, Protocol):
         now: float | None = None,
     ) -> None: ...
 
-    def session_for_project(self, project: str, host: str = "") -> Session | None: ...
+    def session_for_host(
+        self,
+        host: str,
+        host_session: str,
+        project: str,
+    ) -> Session | None: ...
 
     def detach_host_binding(
         self,

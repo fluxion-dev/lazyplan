@@ -186,7 +186,7 @@ def _track_session(
     cwd: Path,
     payload: dict,
 ) -> Session | None:
-    """Keep the checkout's session heartbeat and phase in step with the host."""
+    """Keep each host session's row heartbeat and phase in step with the host."""
     now = time.time()
     repo = store.checkout_path(str(cwd))
     project = _project_key(repo)
@@ -195,11 +195,14 @@ def _track_session(
         session_services.reap_idle_sessions(
             store, now=now, idle_after=IDLE_AFTER_SECS, repo_path=repo
         )
-    session = store.open_session_for(repo, host=host)
-    if session is None and host_session:
-        session = store.session_for_project(project, host=host)
+    if host_session:
+        session = store.session_for_host(host, host_session, project)
+    else:
+        session = store.open_session_for(repo, host=host)
     if session is None:
-        if event in ("pre-tool", "post-tool", "session-end", "pre-compact"):
+        if event == "session-end":
+            return None
+        if not host_session and event in ("pre-tool", "post-tool", "pre-compact"):
             return None
         result = session_services.start_session(
             store,
@@ -207,6 +210,7 @@ def _track_session(
             plan_id=_doing_plan(store),
             repo_path=repo,
             host=host,
+            host_session=host_session,
             phase=phase_for_event(event),
         )
         session = cast(Session, result["session"])
@@ -214,8 +218,6 @@ def _track_session(
         if not host_session:
             return session
         detached, last = store.detach_host_binding(host, host_session, project)
-        if detached is None:
-            return session
         return detached if last else None
     elif event in ("pre-tool", "post-tool", "pre-compact"):
         session = session_services.touch_session(store, session.id, host=host)

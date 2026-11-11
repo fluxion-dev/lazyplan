@@ -84,12 +84,12 @@ skip installing agent helper files
 .RE
 .RS
 .TP
-.B \-\-hooks
-install lifecycle hooks for detected agents (the default)
+.B \-\-hooks MODE
+install lifecycle hooks in strict (default), advisory, or off mode Choices: strict, advisory, off\.
 .RE
 .RS
 .TP
-.B \-\-no\-hooks
+.B \-\-no\-hooks VALUE
 remove installed lifecycle hooks and leave agent configs alone
 .RE
 .RS
@@ -1072,13 +1072,18 @@ report drift without automatic repair for this command
 .RE
 .RS
 .TP
-.B  {session\-start|prompt\-submit|post\-tool|stop|pre\-compact}
-which lifecycle event fired Choices: session\-start, prompt\-submit, post\-tool, stop, pre\-compact\. Required\.
+.B  {session\-start|prompt\-submit|pre\-tool|post\-tool|stop|session\-end|pre\-compact}
+which lifecycle event fired Choices: session\-start, prompt\-submit, pre\-tool, post\-tool, stop, session\-end, pre\-compact\. Required\.
 .RE
 .RS
 .TP
 .B \-\-host {opencode|claude|gemini|codex|cursor}
 host emitting the event (inferred from the payload when omitted) Choices: opencode, claude, gemini, codex, cursor\.
+.RE
+.RS
+.TP
+.B \-\-mode {strict|advisory|off}
+installed behavior mode; LAZYPLAN_HOOKS overrides it at runtime Choices: strict, advisory, off\. Default: strict\.
 .RE
 .TP
 .B lpui list

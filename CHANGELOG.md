@@ -7,6 +7,15 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
 
 ### Added
 
+- **Strict lifecycle hooks.** `lpui setup --hooks` now installs strict hooks by
+  default across OpenCode, Claude Code, Gemini CLI, Codex, and Cursor. Strict
+  mode denies a `git commit` when a managed checkout has no doing task, blocks
+  one stop per turn when commits are unlinked, injects the active plan on every
+  prompt, nudges on task edits, and closes the session with a handoff. Use
+  `--hooks advisory` for reminders only or `--no-hooks` to remove them;
+  `LAZYPLAN_HOOKS=advisory` downgrades at runtime and `LAZYPLAN_NO_HOOKS=1`
+  silences every hook. OpenCode denies commits through its permission hook but
+  has no stop-block surface.
 - **Live agent sessions.** Lifecycle hooks keep the checkout's session state
   current: a turn marks it working, a stop marks it awaiting, and the agents
   pane shows working, awaiting, and idle rows with awaiting first. Sessions

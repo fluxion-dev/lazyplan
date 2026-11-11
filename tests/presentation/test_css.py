@@ -38,6 +38,7 @@ class CssModuleTest(unittest.TestCase):
         self.assertIn("#preview-body MarkdownH2 {", shell)
         self.assertIn("background: $lp-surface-raised;", shell)
         self.assertIn("#preview-body MarkdownH1,", shell)
+        self.assertIn("margin: 1 0;", shell)
 
     def test_css_modules_are_packaged(self) -> None:
         pyproject = Path(__file__).resolve().parents[2] / "pyproject.toml"

@@ -20,8 +20,13 @@ from ..core.policies.sessions import (
 from .base import StoreBase
 from .session_pointer import (
     SESSION_ENV,
+    bindings_for_project,
+    bindings_for_session,
     clear_pointer,
+    delete_binding,
+    read_binding,
     read_pointer,
+    write_binding,
     write_pointer,
 )
 
@@ -87,6 +92,57 @@ class SessionsMixin(StoreBase):
             self._session_cache[actor] = row.id if row is not None else None
         return self._session_cache[actor]
 
+    def bind_session(
+        self,
+        host: str,
+        host_session: str,
+        project: str,
+        repo_path: str,
+        session_id: int,
+        now: float | None = None,
+    ) -> None:
+        """Record one host session's journal row in this project."""
+        write_binding(
+            self.path,
+            host,
+            host_session,
+            project,
+            repo_path,
+            session_id,
+            time.time() if now is None else now,
+        )
+
+    def session_for_project(
+        self,
+        project: str,
+        host: str = "",
+    ) -> Session | None:
+        """Newest open row bound to this project, preferring a matching host."""
+        bindings = bindings_for_project(self.path, project)
+        ordered = [item for item in bindings if item.get("host") == host] + [
+            item for item in bindings if item.get("host") != host
+        ]
+        for binding in ordered:
+            session = self.get_session(int(binding.get("session_id", 0)))
+            if session is not None and not session.ended:
+                return session
+        return None
+
+    def detach_host_binding(
+        self,
+        host: str,
+        host_session: str,
+        project: str,
+    ) -> tuple[Session | None, bool]:
+        """Remove one binding; return its row and whether it was the last one."""
+        binding = read_binding(self.path, host, host_session, project)
+        delete_binding(self.path, host, host_session, project)
+        if binding is None:
+            return None, False
+        session_id = int(binding.get("session_id", 0))
+        remaining = bindings_for_session(self.path, session_id)
+        return self.get_session(session_id), not remaining
+
     def start_session(
         self,
         actor: str,
@@ -140,7 +196,7 @@ class SessionsMixin(StoreBase):
             detail = f"session S{session_id} started"
             if note.strip():
                 detail += f": {note.strip()[:120]}"
-            self.log(actor, "session", "start", detail, session_id=session_id)
+            self.log(actor, "session", "start", detail, session_id=session_id, now=stamp)
         write_pointer(self.path, actor, repo, session_id, stamp)
         if previous is not None:
             previous = self.get_session(previous.id)
@@ -178,6 +234,7 @@ class SessionsMixin(StoreBase):
                 action,
                 f"session S{session_id} {action}d",
                 session_id=session_id,
+                now=stamp,
             )
             conn.execute(
                 "UPDATE sessions SET ended_at=?, summary=?, handoff=?, auto_closed=? WHERE id=?",
@@ -276,6 +333,7 @@ class SessionsMixin(StoreBase):
                     "auto-close",
                     f"session S{session_id} auto-closed after idle",
                     session_id=session_id,
+                    now=stamp,
                 )
             clear_pointer(self.path, owner, repo, session_id=session_id)
             ended = self.get_session(session_id)

@@ -83,10 +83,82 @@ class HookCase(unittest.TestCase):
             reader.close()
             os.close(write_fd)
 
+    def test_hook_probe_writes_nothing_without_a_database(self):
+        missing = self.home / "missing.db"
+        out = io.StringIO()
+        with redirect_stdout(out):
+            code = lpui_main(["--db", str(missing), "hook", "--check", "--json"])
+        self.assertEqual(code, 0)
+        report = json.loads(out.getvalue())
+        self.assertFalse(report["ok"])
+        self.assertFalse(missing.exists())
+
+    def test_hook_probe_reports_an_existing_database(self):
+        Store(self.db).add_plan("P")
+        report = hooks.probe(Store(self.db), self.repo)
+        self.assertTrue(report["ok"])
+        self.assertEqual(report["db"], str(self.db))
+
     def test_detect_host_from_payload_and_explicit(self):
         self.assertEqual(hooks.detect_host({}, "codex"), "codex")
         self.assertEqual(hooks.detect_host({"hook_event_name": "SessionStart"}), "claude")
         self.assertEqual(hooks.detect_host({"workspace_roots": []}), "cursor")
+
+    def test_two_host_sessions_share_one_row_and_idle_keeps_it_open(self):
+        store = Store(self.db)
+        hooks.build_result(
+            "prompt-submit",
+            {"host_session": "host-a"},
+            self.repo,
+            commits=[],
+            store=store,
+            host="opencode",
+        )
+        hooks.build_result(
+            "prompt-submit",
+            {"host_session": "host-b"},
+            self.repo,
+            commits=[],
+            store=store,
+            host="opencode",
+        )
+        sessions = store.list_sessions(open_only=True)
+        self.assertEqual(len(sessions), 1)
+        session_id = sessions[0].id
+        hooks.build_result(
+            "stop",
+            {"host_session": "host-a"},
+            self.repo,
+            commits=[],
+            store=store,
+            host="opencode",
+        )
+        stopped = store.get_session(session_id)
+        assert stopped is not None
+        self.assertTrue(stopped.awaiting)
+        self.assertFalse(stopped.ended)
+        hooks.build_result(
+            "session-end",
+            {"host_session": "host-a"},
+            self.repo,
+            commits=[],
+            store=store,
+            host="opencode",
+        )
+        still_open = store.get_session(session_id)
+        assert still_open is not None
+        self.assertFalse(still_open.ended)
+        hooks.build_result(
+            "session-end",
+            {"host_session": "host-b"},
+            self.repo,
+            commits=[],
+            store=store,
+            host="opencode",
+        )
+        closed = store.get_session(session_id)
+        assert closed is not None
+        self.assertTrue(closed.ended)
 
     def test_session_start_names_the_doing_task(self):
         _plan, _task = self._seed()

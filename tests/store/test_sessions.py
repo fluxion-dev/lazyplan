@@ -166,7 +166,7 @@ class TestSessionsStore(unittest.TestCase):
     def test_reap_closes_sessions_idle_past_the_threshold(self) -> None:
         session, _ = self.store.start_session("ana", now=100.0)
         self.assertEqual(self.store.reap_idle_sessions(now=200.0, repo_path=str(self.repo)), [])
-        closed = self.store.reap_idle_sessions(now=100.0 + 43201, repo_path=str(self.repo))
+        closed = self.store.reap_idle_sessions(now=100.0 + 7201, repo_path=str(self.repo))
         self.assertEqual([row.id for row in closed], [session.id])
         ended = self.store.get_session(session.id)
         assert ended is not None
@@ -177,13 +177,46 @@ class TestSessionsStore(unittest.TestCase):
 
     def test_start_reaps_a_stale_previous_session(self) -> None:
         first, _ = self.store.start_session("ana", now=100.0)
-        second, previous = self.store.start_session("ana", now=100.0 + 43201)
+        second, previous = self.store.start_session("ana", now=100.0 + 7201)
         self.assertIsNone(previous)
         self.assertNotEqual(first.id, second.id)
         old = self.store.get_session(first.id)
         assert old is not None
         self.assertTrue(old.ended)
         self.assertTrue(old.auto_closed)
+
+    def test_two_host_bindings_share_one_row_and_close_on_last_detach(self) -> None:
+        session, _ = self.store.start_session("ana", now=100.0)
+        self.store.bind_session("opencode", "host-a", "/project", str(self.repo), session.id, now=110.0)
+        self.store.bind_session("opencode", "host-b", "/project", str(self.repo), session.id, now=120.0)
+        self.assertEqual(self.store.session_for_project("/project", host="opencode"), session)
+        detached, last = self.store.detach_host_binding("opencode", "host-a", "/project")
+        assert detached is not None
+        self.assertEqual(detached.id, session.id)
+        self.assertFalse(last)
+        self.assertFalse(detached.ended)
+        detached, last = self.store.detach_host_binding("opencode", "host-b", "/project")
+        assert detached is not None
+        self.assertTrue(last)
+        self.assertEqual(self.store.session_for_project("/project"), None)
+
+    def test_project_binding_does_not_leak_to_another_checkout(self) -> None:
+        session, _ = self.store.start_session("ana", repo_path=str(self.repo), now=100.0)
+        self.store.bind_session("opencode", "host-a", "/project-a", str(self.repo), session.id, now=110.0)
+        self.assertEqual(self.store.session_for_project("/project-a"), session)
+        self.assertIsNone(self.store.session_for_project("/project-b"))
+
+    def test_tagged_writes_heartbeat_and_ended_sessions_stay_frozen(self) -> None:
+        session, _ = self.store.start_session("ana", now=100.0)
+        self.store.log("ana", "task", "move", "moved", now=200.0)
+        touched = self.store.get_session(session.id)
+        assert touched is not None
+        self.assertEqual(touched.last_seen_at, 200.0)
+        self.store.end_session(session.id, "ana", now=210.0)
+        self.store.log("ana", "task", "move", "after end", now=300.0)
+        ended = self.store.get_session(session.id)
+        assert ended is not None
+        self.assertEqual(ended.last_seen_at, 210.0)
 
     def test_v8_database_gains_session_state(self) -> None:
         path = os.path.join(self.tmp.name, "v8.db")
@@ -220,7 +253,12 @@ class TestSessionsStore(unittest.TestCase):
         store = Store(path)
         session, _ = store.start_session("ana", now=100.0)
         store.add_plan("New", actor="ana")
-        self.assertEqual(store.get_session(session.id), session)
+        loaded = store.get_session(session.id)
+        assert loaded is not None
+        self.assertEqual(loaded.id, session.id)
+        self.assertEqual(loaded.started_at, session.started_at)
+        self.assertEqual(loaded.phase, session.phase)
+        self.assertGreater(loaded.last_seen_at, session.last_seen_at)
         self.assertEqual(store.session_counts(session.id).get("start"), 1)
 
 

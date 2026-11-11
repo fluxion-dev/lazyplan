@@ -112,6 +112,35 @@ def _git_toplevel(cwd: str | Path) -> Path | None:
     return Path(root) if root else None
 
 
+def git_common_dir(cwd: str | Path = ".") -> str:
+    """Resolved git common dir for a checkout, or an empty string outside git.
+
+    Linked worktrees share one common dir, so it is the stable project key.
+    """
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(cwd), "rev-parse", "--git-common-dir"],
+            capture_output=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=5,
+        )
+    except (FileNotFoundError, subprocess.SubprocessError, OSError):
+        return ""
+    if out.returncode != 0:
+        return ""
+    raw = out.stdout.strip()
+    if not raw:
+        return ""
+    path = Path(raw)
+    if not path.is_absolute():
+        path = Path(cwd) / path
+    try:
+        return str(path.resolve())
+    except OSError:
+        return ""
+
+
 def find_repo_root(cwd: str | Path = ".") -> Path | None:
     """Enclosing git repo root, or None. Tries git CLI, falls back to `.git` walk."""
     root = _git_toplevel(cwd)

@@ -21,6 +21,7 @@ from ..core.policies import hooks as hook_modes
 from ..core.policies.sessions import IDLE_AFTER_SECS, phase_for_event
 from ..core.ports.app import AppPort
 from ..core.ports.insights import InsightsPort
+from ..infrastructure.repo import git_common_dir
 from . import audit, context, hook_policy
 from . import sessions as session_services
 
@@ -157,15 +158,46 @@ def _doing_plan(store: InsightsPort) -> int | None:
     return plans.pop() if len(plans) == 1 else None
 
 
-def _track_session(store: AppPort, event: str, host: str, cwd: Path) -> Session | None:
+def _host_session(payload: dict) -> str:
+    """The host's own session id from the common payload shapes."""
+    for key in ("host_session", "session_id", "sessionID", "thread_id"):
+        value = payload.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    data = payload.get("data")
+    if isinstance(data, dict):
+        for key in ("sessionID", "session_id", "thread_id"):
+            value = data.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+    return ""
+
+
+def _project_key(repo: str) -> str:
+    """Stable project key: the git common dir, else the checkout path."""
+    common = git_common_dir(repo)
+    return common or repo
+
+
+def _track_session(
+    store: AppPort,
+    event: str,
+    host: str,
+    cwd: Path,
+    payload: dict,
+) -> Session | None:
     """Keep the checkout's session heartbeat and phase in step with the host."""
     now = time.time()
     repo = store.checkout_path(str(cwd))
+    project = _project_key(repo)
+    host_session = _host_session(payload)
     if event in ("session-start", "prompt-submit", "stop"):
         session_services.reap_idle_sessions(
             store, now=now, idle_after=IDLE_AFTER_SECS, repo_path=repo
         )
-    session = session_services.open_session_for(store, repo, host=host)
+    session = store.open_session_for(repo, host=host)
+    if session is None and host_session:
+        session = store.session_for_project(project, host=host)
     if session is None:
         if event in ("pre-tool", "post-tool", "session-end", "pre-compact"):
             return None
@@ -177,12 +209,23 @@ def _track_session(store: AppPort, event: str, host: str, cwd: Path) -> Session 
             host=host,
             phase=phase_for_event(event),
         )
-        return cast(Session, result["session"])
-    if event in ("pre-tool", "post-tool", "session-end", "pre-compact"):
-        return session_services.touch_session(store, session.id, host=host)
-    return session_services.touch_session(
-        store, session.id, phase=phase_for_event(event), host=host
-    )
+        session = cast(Session, result["session"])
+    elif event == "session-end":
+        if not host_session:
+            return session
+        detached, last = store.detach_host_binding(host, host_session, project)
+        if detached is None:
+            return session
+        return detached if last else None
+    elif event in ("pre-tool", "post-tool", "pre-compact"):
+        session = session_services.touch_session(store, session.id, host=host)
+    else:
+        session = session_services.touch_session(
+            store, session.id, phase=phase_for_event(event), host=host
+        )
+    if session is not None and host_session:
+        store.bind_session(host, host_session, project, repo, session.id, now=now)
+    return session
 
 
 def _session_text(
@@ -236,7 +279,7 @@ def build_result(
     here = cwd or Path.cwd()
     who = host or detect_host(payload)
     try:
-        session = _track_session(store, event, who, here)
+        session = _track_session(store, event, who, here, payload)
         if event in ("session-start", "pre-compact"):
             return HookResult(_session_text(store, here, commits, session), context=True).capped()
         if event == "stop":
@@ -253,6 +296,37 @@ def build_result(
     except (RuntimeError, OSError, ValueError, KeyError):
         return HookResult()
     return HookResult()
+
+
+def probe(store: AppPort | None, cwd: Path | None = None) -> dict:
+    """Read-only hook readiness report; never creates a database or a row."""
+    started = time.perf_counter()
+    if store is None:
+        return {
+            "ok": False,
+            "db": None,
+            "session": None,
+            "reason": "no database",
+            "latency_ms": round((time.perf_counter() - started) * 1000, 1),
+        }
+    try:
+        repo = store.checkout_path(str(cwd or Path.cwd()))
+        session = store.open_session_for(repo)
+    except (OSError, RuntimeError, ValueError) as exc:
+        return {
+            "ok": False,
+            "db": store.db_path,
+            "session": None,
+            "reason": str(exc),
+            "latency_ms": round((time.perf_counter() - started) * 1000, 1),
+        }
+    return {
+        "ok": True,
+        "db": store.db_path,
+        "session": session.id if session is not None else None,
+        "reason": "",
+        "latency_ms": round((time.perf_counter() - started) * 1000, 1),
+    }
 
 
 def run(

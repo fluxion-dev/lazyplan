@@ -17,6 +17,7 @@ class PreviewPanel(Vertical):
         super().__init__(id="preview")
         self.border_title = " overview "
         self.border_subtitle = " e edit · c commands "
+        self._document: PreviewDocument | None = None
 
     def compose(self) -> ComposeResult:
         yield Static("", id="preview-head")
@@ -27,17 +28,29 @@ class PreviewPanel(Vertical):
 
     def show(self, document: PreviewDocument, strip: str = "") -> None:
         head = self.query_one("#preview-head", Static)
-        body = self.query_one("#preview-body", Static)
         strip_widget = self.query_one("#preview-strip", Static)
         self._show_content()
-        body.remove_class("preview-error")
+        self._document = document
         head.remove_class("preview-error")
+        self.query_one("#preview-body", Static).remove_class("preview-error")
         head.update(document.render_head())
-        body.update(document.render_body())
+        self._render_body()
         strip_widget.display = bool(strip)
         strip_widget.update(strip)
         self.border_subtitle = " e edit · c commands "
         self._home()
+
+    def _render_body(self) -> None:
+        """Render the body at the current width so section bars span it."""
+        if self._document is None:
+            return
+        body = self.query_one("#preview-body", Static)
+        width = body.size.width
+        body.update(self._document.render_body(width if width > 0 else None))
+
+    def on_resize(self) -> None:
+        """Keep section bars as wide as the pane after a resize."""
+        self._render_body()
 
     def _home(self) -> None:
         try:
@@ -53,6 +66,7 @@ class PreviewPanel(Vertical):
 
     def show_empty(self, title: str, hint: str) -> None:
         """A centered empty state with a clear next action."""
+        self._document = None
         self.query_one("#preview-head", Static).display = False
         self.query_one("#preview-strip", Static).display = False
         self.query_one("#preview-scroll", VerticalScroll).display = False
@@ -64,6 +78,7 @@ class PreviewPanel(Vertical):
 
     def show_error(self, text: str) -> None:
         """A visible load failure instead of a blank pane."""
+        self._document = None
         head = self.query_one("#preview-head", Static)
         body = self.query_one("#preview-body", Static)
         strip = self.query_one("#preview-strip", Static)

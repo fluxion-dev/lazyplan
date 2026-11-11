@@ -44,29 +44,61 @@ class PreviewDocument:
             lines.append(self.breadcrumb)
         return "\n".join(lines)
 
-    def render_body(self) -> str:
+    def render_body(self, width: int | None = None) -> str:
         """The scrollable body: meta chips, sections, and optional footer."""
         lines = list(self.meta)
-        lines.extend(render_blocks(self.blocks))
+        lines.extend(render_blocks(self.blocks, width))
         if self.footer:
             lines.extend(["", self.footer])
-        return "\n".join(lines).lstrip("\n")
+        return "\n".join(normalize_lines(lines))
 
-    def render(self) -> str:
+    def render(self, width: int | None = None) -> str:
         """Render the whole document (head then body)."""
         head = self.render_head()
-        body = self.render_body()
+        body = self.render_body(width)
         return f"{head}\n{body}" if body else head
 
 
-def render_blocks(blocks: tuple[PreviewBlock, ...]) -> list[str]:
-    """Render blocks with the one blank line and heading grammar."""
+def render_heading(heading: str, width: int | None) -> str:
+    """A bold heading, or a full-width tinted bar when width is known."""
+    text = heading.upper()
+    escaped = escape_markup(text)
+    if width is None or width <= 0:
+        return f"[bold]{escaped}[/]"
+    label = f" {text} "
+    if len(label) > width:
+        label = label[:width]
+    padding = " " * (width - len(label))
+    return f"[on $lp-surface-raised]{escape_markup(label)}{padding}[/]"
+
+
+def normalize_lines(lines: list[str]) -> list[str]:
+    """Collapse repeated blanks and strip leading or trailing blank rows."""
+    out: list[str] = []
+    for line in lines:
+        if not line.strip():
+            if out and out[-1] != "":
+                out.append("")
+            continue
+        out.append(line)
+    while out and out[0] == "":
+        out.pop(0)
+    while out and out[-1] == "":
+        out.pop()
+    return out
+
+
+def render_blocks(blocks: tuple[PreviewBlock, ...], width: int | None = None) -> list[str]:
+    """Render blocks with one blank line before each heading."""
     lines: list[str] = []
     for block in blocks:
         lines.append("")
         if block.heading:
-            lines.append(f"[bold]{escape_markup(block.heading.upper())}[/]")
-        lines.extend(block.lines)
+            lines.append(render_heading(block.heading, width))
+        body = list(block.lines)
+        while body and not body[0].strip():
+            body.pop(0)
+        lines.extend(body)
     return lines
 
 

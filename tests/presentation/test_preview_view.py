@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import tempfile
 import unittest
 
@@ -17,6 +18,14 @@ try:
     )
 except ImportError:  # pragma: no cover - stdlib-only interpreter
     PreviewBlock = PreviewDocument = build_preview = build_control_strip = None  # type: ignore[assignment]
+
+try:
+    from textual.widgets import Static, Tree
+
+    from lazyplan.presentation.tui import create_app
+except ImportError:  # pragma: no cover - textual not installed
+    Static = Tree = None  # type: ignore[assignment,misc]
+    create_app = None  # type: ignore[assignment]
 
 
 @unittest.skipUnless(build_preview is not None, "textual/rich not installed")
@@ -46,6 +55,42 @@ class PreviewDocumentTest(unittest.TestCase):
             document.render(),
             "header\nbreadcrumb\nmeta\n\n[bold]WHY[/]\nbecause\n\nfooter",
         )
+
+    def test_section_headings_become_width_aware_bars(self) -> None:
+        full = self.store.get_full("plan", self.plan.id)
+        assert full is not None
+        body = build_preview(self.store, "plan", self.plan.id, full, []).render_body(width=40)
+        bars = [
+            line for line in body.splitlines() if "[on $lp-surface-raised]" in line
+        ]
+        self.assertGreaterEqual(len(bars), 4)
+        for bar in bars:
+            self.assertEqual(len(re.sub(r"\[[^\]]+\]", "", bar)), 40)
+
+    def test_section_spacing_keeps_one_blank_before_each_bar(self) -> None:
+        full = self.store.get_full("plan", self.plan.id)
+        assert full is not None
+        lines = build_preview(self.store, "plan", self.plan.id, full, []).render_body(
+            width=40
+        ).splitlines()
+        self.assertNotEqual(lines[0], "")
+        self.assertNotEqual(lines[-1], "")
+        self.assertFalse(
+            any(first == "" and second == "" for first, second in zip(lines, lines[1:]))
+        )
+        for index, line in enumerate(lines):
+            if "[on $lp-surface-raised]" not in line:
+                continue
+            if index:
+                self.assertEqual(lines[index - 1], "")
+            self.assertNotEqual(lines[index + 1], "")
+
+    def test_plain_render_keeps_the_bold_heading_grammar(self) -> None:
+        full = self.store.get_full("plan", self.plan.id)
+        assert full is not None
+        text = build_preview(self.store, "plan", self.plan.id, full, []).render()
+        self.assertIn("[bold]MILESTONES", text)
+        self.assertNotIn("[on $lp-surface-raised]", text)
 
     def test_plan_preview_keeps_order_and_sections(self) -> None:
         full = self.store.get_full("plan", self.plan.id)
@@ -160,6 +205,42 @@ class PreviewDocumentTest(unittest.TestCase):
         assert full is not None
         strip = build_control_strip(self.store, "task", self.task.id, full)
         self.assertIn("✓ clear", strip)
+
+
+@unittest.skipUnless(create_app is not None, "textual not installed")
+class PreviewResizeTest(unittest.IsolatedAsyncioTestCase):
+    async def test_section_bars_follow_the_preview_width_on_resize(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Store(os.path.join(tmp, "resize.db"))
+            plan = store.add_plan("Plan title", "What we build", goal="Why we build")
+            milestone = store.add_milestone(plan.id, "Milestone title", "Details")
+            store.add_task(milestone.id, "Task title", "Task details")
+            app = create_app(str(store.path))
+            async with app.run_test(size=(110, 35)) as pilot:
+                await pilot.pause()
+                tree = app.query_one("#tree", Tree)
+                tree.focus()
+                tree.select_node(tree.root.children[0])
+                await pilot.pause()
+                body = app.query_one("#preview-body", Static)
+                first_width = body.size.width
+                bar = next(
+                    line
+                    for line in str(body.render()).splitlines()
+                    if line.strip().startswith("WHY")
+                )
+                self.assertEqual(len(bar), first_width)
+                await pilot.resize_terminal(150, 35)
+                await pilot.pause()
+                body = app.query_one("#preview-body", Static)
+                wider = body.size.width
+                self.assertGreater(wider, first_width)
+                bar = next(
+                    line
+                    for line in str(body.render()).splitlines()
+                    if line.strip().startswith("WHY")
+                )
+                self.assertEqual(len(bar), wider)
 
 
 if __name__ == "__main__":

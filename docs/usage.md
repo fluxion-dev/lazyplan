@@ -96,6 +96,24 @@ anything. If the helper cannot start, close lpui and repair with
 `pipx install --force --backend pip lazyplan-tui`. A source checkout updates
 with `git pull`.
 
+### Release notes
+
+```bash
+lpui notes
+lpui notes --all
+lpui notes --since 0.36.0
+lpui notes --json
+```
+
+The changelog ships inside the installed package, so notes work offline and
+need no database. `lpui notes` prints the installed version; `--since` includes
+newer releases through the installed one, oldest first; `--all` lists every
+bundled release newest first. A successful `lpui upgrade` prints the range it
+skipped, and the TUI opens the same notes once after an upgrade. Press `W` or
+choose Release notes in the palette to reopen the installed version's notes.
+The last version shown is recorded in `~/.lazyplan/notes-seen.json`; a missing
+marker means a first install and stays quiet.
+
 Upgrading from 0.30.1 or earlier is not supported in place: the package layout
 and console scripts changed. Force a reinstall in the environment that owns
 `lpui`:

@@ -31,6 +31,7 @@ except ImportError:  # pragma: no cover
 
 from ...infrastructure import settings
 from ...store import Store
+from ..cli.parser import package_version
 from ..shared.design import (
     EMPTY_PLAN_QUEUE_HINT,
     EMPTY_PLAN_QUEUE_TITLE,
@@ -48,9 +49,10 @@ from .controllers.spinner import SpinnerController
 from .controllers.tree import TreeController
 from .controllers.updates import UpdateController
 from .filters import FilterMixin
-from .launch import launch_update
+from .launch import launch_notes, launch_update
 from .metrics import MetricsSection
 from .preview import PreviewMixin
+from .screens import ReleaseNotesScreen
 from .state import AppState
 from .theme import register_themes
 from .tree import TreeMixin
@@ -96,6 +98,7 @@ if _TEXTUAL_OK:
             Binding("slash", "filter_text", "Filter"),
             Binding("r", "refresh", "Refresh", show=False),
             Binding("U", "update_prompt", "Update"),
+            Binding("W", "release_notes", "Notes"),
         ]
         rev = reactive(0, init=False)
 
@@ -161,10 +164,25 @@ if _TEXTUAL_OK:
             if events:
                 self._last_event_id = int(events[0]["id"])
             self._startup_notice: str = ""
+            self._startup_notes: str = ""
 
         def action_update_prompt(self) -> None:
             """Open the update screen for a known or cached newer release."""
             self.update_controller.prompt()
+
+        def action_release_notes(self) -> None:
+            """Open the bundled release notes for the installed version."""
+            from ...services import notes
+
+            try:
+                _releases, text = notes.select_notes(package_version())
+            except (OSError, ValueError) as exc:
+                self.notify(f"release notes unavailable: {exc}", timeout=10)
+                return
+            if not text:
+                self.notify(f"No release notes for v{package_version()}.", timeout=10)
+                return
+            self.push_screen(ReleaseNotesScreen(text))
 
         def compose(self) -> ComposeResult:
             with Vertical(id="panel"):
@@ -232,6 +250,9 @@ if _TEXTUAL_OK:
             self.query_one("#plans-finished").border_title = f" {PANEL_PLAN_REVIEW_TITLE} "
             if self._startup_notice:
                 self.notify(self._startup_notice, timeout=10)
+            if self._startup_notes:
+                notes = self._startup_notes
+                self.call_after_refresh(lambda: self.push_screen(ReleaseNotesScreen(notes)))
             tree = self.query_one("#tree", Tree)
             if tree.display:
                 tree.focus()
@@ -239,10 +260,12 @@ if _TEXTUAL_OK:
     def create_app(
         db_path: str | None = None,
         startup_notice: str = "",
+        startup_notes: str = "",
     ) -> LazyplanApp:
         """Build the app bound to a store."""
         app = LazyplanApp(Store(db_path))
         app._startup_notice = startup_notice
+        app._startup_notes = startup_notes
         return app
 
 
@@ -255,5 +278,5 @@ def run(db_path: str | None = None) -> int:
     startup_notice, exit_now = launch_update()
     if exit_now:
         return 0
-    create_app(db_path, startup_notice).run()
+    create_app(db_path, startup_notice, launch_notes()).run()
     return 0

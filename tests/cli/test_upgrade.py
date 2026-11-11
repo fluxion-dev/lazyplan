@@ -273,6 +273,9 @@ class TestUpgradeCommand(unittest.TestCase):
         patcher = mock.patch.object(cli_mod, "_is_windows", return_value=False)
         patcher.start()
         self.addCleanup(patcher.stop)
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        sandbox_home(self, self.tmp.name)
 
     def _run(self, argv: list[str]) -> tuple[int, str, str]:
         out, err = StringIO(), StringIO()

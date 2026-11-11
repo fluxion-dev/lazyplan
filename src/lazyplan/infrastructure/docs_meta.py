@@ -42,6 +42,7 @@ FILES: tuple[tuple[str, str], ...] = (
     ),
     ("~/.lazyplan/templates/{plan,milestone,task}.md", "Home creation templates."),
     ("~/.lazyplan/setup.json", "Remembered setup choices and migration decisions."),
+    ("~/.lazyplan/notes-seen.json", "Last version whose release notes were shown."),
     ("~/.lazyplan/backups/<timestamp>/", "Tree-preserving backups of every touched file."),
     (
         "~/.agents/skills/lazyplan/SKILL.md",

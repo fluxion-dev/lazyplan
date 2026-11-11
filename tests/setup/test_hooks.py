@@ -115,6 +115,55 @@ class HookCase(unittest.TestCase):
         )
         self.assertIn(f"--id {task_id}", result.text)
 
+    def _linked_plan(self) -> int:
+        store = Store(self.db)
+        plan = store.add_plan("Linked", "what", goal="why")
+        store.add_repo_link("plan", plan.id, str(self.repo), actor="t")
+        return plan.id
+
+    def test_commit_is_blocked_without_a_doing_task(self):
+        self._linked_plan()
+        payload = {"tool_input": {"command": "git commit -m x"}}
+        result = hooks.build_result(
+            "pre-tool", payload, self.repo, commits=[], store=Store(self.db), mode="strict"
+        )
+        self.assertIn("no doing task", result.block)
+        self.assertIn("lpui next", result.block)
+
+    def test_commit_is_allowed_with_a_doing_task(self):
+        plan_id, _task = self._seed()
+        Store(self.db).add_repo_link("plan", plan_id, str(self.repo), actor="t")
+        payload = {"tool_input": {"command": "git commit -m x"}}
+        result = hooks.build_result(
+            "pre-tool", payload, self.repo, commits=[], store=Store(self.db), mode="strict"
+        )
+        self.assertEqual(result.block, "")
+
+    def test_advisory_commit_reminds_without_blocking(self):
+        self._linked_plan()
+        payload = {"tool_input": {"command": "git commit -m x"}}
+        result = hooks.build_result(
+            "pre-tool", payload, self.repo, commits=[], store=Store(self.db), mode="advisory"
+        )
+        self.assertEqual(result.block, "")
+        self.assertIn("no doing task", result.text)
+
+    def test_commit_in_an_unmanaged_checkout_is_allowed(self):
+        self._seed()
+        payload = {"tool_input": {"command": "git commit -m x"}}
+        result = hooks.build_result(
+            "pre-tool", payload, self.repo, commits=[], store=Store(self.db), mode="strict"
+        )
+        self.assertEqual(result.block, "")
+
+    def test_non_git_commands_are_never_blocked(self):
+        self._linked_plan()
+        payload = {"tool_input": {"command": "git status"}}
+        result = hooks.build_result(
+            "pre-tool", payload, self.repo, commits=[], store=Store(self.db), mode="strict"
+        )
+        self.assertEqual(result.block, "")
+
     def test_post_tool_other_commands_are_silent(self):
         self._seed()
         payload = {"tool_input": {"command": "git status"}}

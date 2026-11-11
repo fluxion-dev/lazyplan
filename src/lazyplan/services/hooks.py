@@ -18,7 +18,7 @@ from ..core.policies import hooks as hook_policy
 from ..core.policies.sessions import IDLE_AFTER_SECS, phase_for_event
 from ..core.ports.app import AppPort
 from ..core.ports.insights import InsightsPort
-from . import audit, brief, context
+from . import audit, brief, context, hook_scope
 from . import sessions as session_services
 
 EVENTS = (
@@ -117,7 +117,7 @@ def _track_session(store: AppPort, event: str, host: str, cwd: Path) -> Session 
         )
     session = session_services.open_session_for(store, repo, host=host)
     if session is None:
-        if event in ("post-tool", "pre-compact"):
+        if event in ("pre-tool", "post-tool", "session-end", "pre-compact"):
             return None
         result = session_services.start_session(
             store,
@@ -128,7 +128,7 @@ def _track_session(store: AppPort, event: str, host: str, cwd: Path) -> Session 
             phase=phase_for_event(event),
         )
         return cast(Session, result["session"])
-    if event in ("post-tool", "pre-compact"):
+    if event in ("pre-tool", "post-tool", "session-end", "pre-compact"):
         return session_services.touch_session(store, session.id, host=host)
     return session_services.touch_session(
         store, session.id, phase=phase_for_event(event), host=host
@@ -183,6 +183,28 @@ def _stop_text(
     return "lazyplan: " + "; ".join(parts)
 
 
+def _commit_reason() -> str:
+    """Actionable denial text for a commit without a doing task."""
+    return (
+        "lazyplan: commit blocked; this checkout has no doing task. "
+        "Run `lpui next` or `lpui task move --id ID --to doing`, then commit."
+    )
+
+
+def _pre_tool_result(store: AppPort, cwd: Path, payload: dict, mode: str) -> HookResult:
+    """Deny a git commit when a managed checkout has no doing task."""
+    command = _command(payload)
+    if "git commit" not in command:
+        return HookResult()
+    scope = hook_scope.resolve(store, cwd)
+    if not scope.managed or scope.task is not None:
+        return HookResult()
+    reason = _commit_reason()
+    if mode == "strict":
+        return HookResult(block=reason)
+    return HookResult(reason, context=True).capped()
+
+
 def _post_tool_text(store: InsightsPort, payload: dict) -> str:
     command = _command(payload)
     if "git commit" not in command:
@@ -203,7 +225,6 @@ def build_result(
     mode: str = "strict",
 ) -> HookResult:
     """Decide one event's reminder without touching host output formats."""
-    del mode
     if event not in EVENTS:
         return HookResult()
     if store is None:
@@ -216,6 +237,8 @@ def build_result(
             return HookResult(_session_text(store, here, commits, session), context=True).capped()
         if event == "stop":
             return HookResult(_stop_text(store, here, commits, session)).capped()
+        if event == "pre-tool":
+            return _pre_tool_result(store, here, payload, mode)
         if event == "post-tool":
             return HookResult(_post_tool_text(store, payload)).capped()
     except (RuntimeError, OSError, ValueError, KeyError):

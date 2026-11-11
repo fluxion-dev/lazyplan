@@ -141,6 +141,8 @@ def _cmd_hook(store: object | None, args: argparse.Namespace, actor: str) -> int
         payload.setdefault("tool", args.tool)
     if args.path:
         payload.setdefault("path", args.path)
+    if getattr(args, "host_session", ""):
+        payload.setdefault("host_session", args.host_session)
     host = hooks.detect_host(payload, args.host)
     result = hooks.run(args.event, payload, host, Path.cwd(), store=db, mode=args.mode)
     if args.json:

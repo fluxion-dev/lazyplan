@@ -379,6 +379,11 @@ def add_hook(
         default="",
         help=argparse.SUPPRESS,
     )
+    hk.add_argument(
+        "--host-session",
+        default="",
+        help=argparse.SUPPRESS,
+    )
 
 
 def add_who(

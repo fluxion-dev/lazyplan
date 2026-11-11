@@ -172,36 +172,59 @@ def _strip_flat(data: dict, host: str) -> dict:
 def plugin_text(mode: str = DEFAULT_MODE) -> str:
     """Return the managed OpenCode plugin source."""
     return """// lazyplan lifecycle plugin (managed by lpui setup; remove with --no-hooks)
-import { execFile } from "node:child_process"
-import { promisify } from "node:util"
+import { spawn } from "node:child_process"
 
-const execFileAsync = promisify(execFile)
 const MODE = "__MODE__"
 
 const state = { started: false, cached: "", pending: "" }
 
-const run = async (directory, event, payload = {}, json = false) => {
-  const args = ["hook", event, "--host", "opencode", "--mode", MODE]
-  if (json) args.push("--json")
-  if (payload.command) args.push("--command", payload.command)
-  if (payload.tool) args.push("--tool", payload.tool)
-  if (payload.path) args.push("--path", payload.path)
-  try {
-    const { stdout } = await execFileAsync("lpui", args, {
+const report = (event, reason) => {
+  console.warn(`lazyplan hook ${event} failed: ${reason}`)
+}
+
+const run = (directory, event, payload = {}, json = false) =>
+  new Promise((resolve) => {
+    const args = ["hook", event, "--host", "opencode", "--mode", MODE]
+    if (json) args.push("--json")
+    if (payload.command) args.push("--command", payload.command)
+    if (payload.tool) args.push("--tool", payload.tool)
+    if (payload.path) args.push("--path", payload.path)
+    if (payload.session) args.push("--host-session", payload.session)
+    const child = spawn("lpui", args, {
       cwd: directory,
+      stdio: ["ignore", "pipe", "pipe"],
       timeout: 5000,
     })
-    const text = stdout.trim()
-    if (!json) return text
-    try {
-      return JSON.parse(text)
-    } catch {
-      return {}
-    }
-  } catch {
-    return json ? {} : ""
-  }
-}
+    let out = ""
+    let err = ""
+    child.stdout.on("data", (chunk) => {
+      out += chunk
+    })
+    child.stderr.on("data", (chunk) => {
+      err += chunk
+    })
+    child.on("error", (error) => {
+      report(event, error.message)
+      resolve(null)
+    })
+    child.on("close", (code, signal) => {
+      if (code !== 0) {
+        report(event, err.trim() || signal || `exit ${code}`)
+        resolve(null)
+        return
+      }
+      const text = out.trim()
+      if (!json) {
+        resolve(text)
+        return
+      }
+      try {
+        resolve(JSON.parse(text))
+      } catch {
+        resolve({})
+      }
+    })
+  })
 
 const toolInput = (event) => event.input?.args ?? event.input ?? {}
 const commandOf = (event) => {
@@ -225,6 +248,7 @@ export default {
         const text = String(resource)
         if (!text.includes("git commit")) continue
         const answer = await run(directory, "pre-tool", { command: text }, true)
+        if (!answer) return
         if (answer.block) {
           event.effect = "deny"
           event.message = answer.block
@@ -240,7 +264,8 @@ export default {
       const file = pathOf(event)
       if (tool === "bash" && !command.includes("git commit")) return
       if (!command && !file) return
-      const text = await run(directory, "post-tool", { tool, command, path: file })
+      const session = event.sessionID ?? event.session_id ?? ""
+      const text = await run(directory, "post-tool", { tool, command, path: file, session })
       if (text) state.pending = text
     })
 
@@ -251,8 +276,11 @@ export default {
         state.pending = ""
       }
       if (!state.started) {
-        state.cached = await run(directory, "session-start")
-        state.started = true
+        const text = await run(directory, "session-start")
+        if (text !== null) {
+          state.cached = text
+          state.started = true
+        }
       }
       if (state.cached) event.system.push({ type: "text", text: state.cached })
     })
@@ -266,22 +294,37 @@ export default {
       void (async () => {
         try {
           const stream = ctx.event.subscribe({
-            types: ["session.execution.started", "session.idle"],
+            types: [
+              "session.created",
+              "session.execution.started",
+              "session.idle",
+              "session.deleted",
+              "session.archived",
+            ],
             signal: controller.signal,
           })
           for await (const event of stream) {
-            const where = event.location?.directory
+            const data = event.data ?? {}
+            if (data.parentID) continue
+            const where = event.location?.directory ?? data.directory
             if (where && where !== directory) continue
+            const session = data.sessionID ?? event.sessionID ?? ""
             if (event.type === "session.idle") {
-              const text = await run(directory, "stop")
-              if (text) state.pending = text
-              await run(directory, "session-end")
+              // Idle waits on the user; it never ends the row.
+              await run(directory, "stop", { session })
+              continue
+            }
+            if (event.type === "session.deleted" || event.type === "session.archived") {
+              await run(directory, "session-end", { session })
               state.started = false
               state.cached = ""
               continue
             }
-            state.cached = (await run(directory, "prompt-submit")) || state.cached
-            state.started = true
+            const text = await run(directory, "prompt-submit", { session })
+            if (text !== null) {
+              state.cached = text || state.cached
+              state.started = true
+            }
           }
         } catch {
           // Plugin unload or a closed stream: session tracking stays best-effort.
@@ -290,8 +333,7 @@ export default {
       return () => controller.abort()
     }
   },
-}
-""".replace("__MODE__", normalize_mode(mode))
+}""".replace("__MODE__", normalize_mode(mode))
 
 
 def _read(path: Path) -> dict:

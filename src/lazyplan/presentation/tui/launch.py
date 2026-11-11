@@ -31,3 +31,14 @@ def launch_update() -> tuple[str, bool]:
             startup_notice = f"update failed: {failure}"
             clear_failure()
     return startup_notice, False
+
+
+def launch_notes() -> str:
+    """Return release notes unseen since the last launch, or an empty string."""
+    from ...services import notes
+
+    try:
+        _releases, text = notes.advance_notice(package_version())
+    except (OSError, ValueError):
+        return ""
+    return text

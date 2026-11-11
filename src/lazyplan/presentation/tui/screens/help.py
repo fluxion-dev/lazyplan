@@ -65,6 +65,12 @@ if _TEXTUAL_OK:
             self.dialog_title = title
             self.HELP = text  # type: ignore[misc]
 
+    class ReleaseNotesScreen(TextScreen):
+        """Read-only, scrollable release notes overlay."""
+
+        def __init__(self, text: str) -> None:
+            super().__init__("RELEASE NOTES", text)
+
     class PaletteScreen(_Form):
         """Modal command palette: grouped sections, live filter, context rules."""
 

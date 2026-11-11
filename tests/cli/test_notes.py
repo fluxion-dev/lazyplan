@@ -164,9 +164,7 @@ class TestNotesCli(unittest.TestCase):
         self.assertEqual(code, 0)
         payload = json.loads(out)
         self.assertEqual(payload["installed"], "0.38.0")
-        self.assertEqual(
-            [item["version"] for item in payload["versions"]], ["0.37.0", "0.38.0"]
-        )
+        self.assertEqual([item["version"] for item in payload["versions"]], ["0.37.0", "0.38.0"])
         self.assertEqual(payload["versions"][0]["date"], "2026-11-10")
         self.assertIn("Mid release.", payload["versions"][0]["body"])
 

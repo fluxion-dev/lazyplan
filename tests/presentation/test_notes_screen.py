@@ -34,6 +34,7 @@ SAMPLE = """# Changelog
 """
 
 
+@unittest.skipUnless(launch_notes is not None, "textual not installed")
 class TestLaunchNotes(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()

@@ -82,11 +82,7 @@ def select(
     if since is not None:
         lower = version_key(since)
         upper = version_key(installed)
-        chosen = [
-            release
-            for release in releases
-            if lower < version_key(release.version) <= upper
-        ]
+        chosen = [release for release in releases if lower < version_key(release.version) <= upper]
         return tuple(sorted(chosen, key=lambda release: version_key(release.version)))
     target = installed.lstrip("v")
     return tuple(release for release in releases if release.version == target)

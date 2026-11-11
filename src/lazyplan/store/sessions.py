@@ -20,7 +20,6 @@ from ..core.policies.sessions import (
 from .base import StoreBase
 from .session_pointer import (
     SESSION_ENV,
-    bindings_for_project,
     bindings_for_session,
     clear_pointer,
     delete_binding,
@@ -133,22 +132,6 @@ class SessionsMixin(StoreBase):
         if session is None or session.ended:
             return None
         return session
-
-    def session_for_project(
-        self,
-        project: str,
-        host: str = "",
-    ) -> Session | None:
-        """Newest open row bound to this project, preferring a matching host."""
-        bindings = bindings_for_project(self.path, project)
-        ordered = [item for item in bindings if item.get("host") == host] + [
-            item for item in bindings if item.get("host") != host
-        ]
-        for binding in ordered:
-            session = self.get_session(int(binding.get("session_id", 0)))
-            if session is not None and not session.ended:
-                return session
-        return None
 
     def detach_host_binding(
         self,

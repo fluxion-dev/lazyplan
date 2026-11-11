@@ -233,7 +233,9 @@ class TestSessionsStore(unittest.TestCase):
         self.store.bind_session(
             "opencode", "host-b", "/project", str(self.repo), session.id, now=120.0
         )
-        self.assertEqual(self.store.session_for_project("/project", host="opencode").id, session.id)
+        self.assertEqual(
+            self.store.session_for_host("opencode", "host-a", "/project").id, session.id
+        )
         detached, last = self.store.detach_host_binding("opencode", "host-a", "/project")
         assert detached is not None
         self.assertEqual(detached.id, session.id)
@@ -242,15 +244,17 @@ class TestSessionsStore(unittest.TestCase):
         detached, last = self.store.detach_host_binding("opencode", "host-b", "/project")
         assert detached is not None
         self.assertTrue(last)
-        self.assertEqual(self.store.session_for_project("/project"), None)
+        self.assertIsNone(self.store.session_for_host("opencode", "host-b", "/project"))
 
-    def test_project_binding_does_not_leak_to_another_checkout(self) -> None:
+    def test_host_binding_does_not_leak_to_another_project(self) -> None:
         session, _ = self.store.start_session("ana", repo_path=str(self.repo), now=100.0)
         self.store.bind_session(
             "opencode", "host-a", "/project-a", str(self.repo), session.id, now=110.0
         )
-        self.assertEqual(self.store.session_for_project("/project-a").id, session.id)
-        self.assertIsNone(self.store.session_for_project("/project-b"))
+        self.assertEqual(
+            self.store.session_for_host("opencode", "host-a", "/project-a").id, session.id
+        )
+        self.assertIsNone(self.store.session_for_host("opencode", "host-a", "/project-b"))
 
     def test_tagged_writes_heartbeat_and_ended_sessions_stay_frozen(self) -> None:
         session, _ = self.store.start_session("ana", now=100.0)

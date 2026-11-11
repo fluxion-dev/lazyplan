@@ -87,8 +87,6 @@ class SessionsPort(SessionsReadPort, PlanningPort, Protocol):
         now: float | None = None,
     ) -> None: ...
 
-    def session_for_project(self, project: str, host: str = "") -> Session | None: ...
-
     def session_for_host(
         self,
         host: str,

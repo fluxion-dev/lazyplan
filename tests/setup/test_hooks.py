@@ -109,61 +109,74 @@ class HookCase(unittest.TestCase):
         self.assertEqual(hooks.detect_host({"hook_event_name": "SessionStart"}), "claude")
         self.assertEqual(hooks.detect_host({"workspace_roots": []}), "cursor")
 
-    def test_two_host_sessions_share_one_row_and_idle_keeps_it_open(self):
+    def _hook(self, event: str, payload: dict) -> hooks.HookResult:
+        return hooks.build_result(
+            event,
+            payload,
+            self.repo,
+            commits=[],
+            store=Store(self.db),
+            host="opencode",
+        )
+
+    def test_each_host_session_gets_its_own_row(self):
+        for name in ("host-a", "host-b", "host-c"):
+            self._hook("prompt-submit", {"host_session": name})
+        sessions = Store(self.db).list_sessions(open_only=True)
+        self.assertEqual(len(sessions), 3)
+        self.assertEqual(
+            {session.host_session for session in sessions},
+            {"host-a", "host-b", "host-c"},
+        )
+        self.assertEqual(len({session.id for session in sessions}), 3)
+
+    def test_stop_and_end_events_touch_only_the_firing_row(self):
+        for name in ("host-a", "host-b", "host-c"):
+            self._hook("prompt-submit", {"host_session": name})
         store = Store(self.db)
-        hooks.build_result(
-            "prompt-submit",
-            {"host_session": "host-a"},
-            self.repo,
-            commits=[],
-            store=store,
-            host="opencode",
-        )
-        hooks.build_result(
-            "prompt-submit",
-            {"host_session": "host-b"},
-            self.repo,
-            commits=[],
-            store=store,
-            host="opencode",
-        )
-        sessions = store.list_sessions(open_only=True)
-        self.assertEqual(len(sessions), 1)
-        session_id = sessions[0].id
-        hooks.build_result(
-            "stop",
-            {"host_session": "host-a"},
-            self.repo,
-            commits=[],
-            store=store,
-            host="opencode",
-        )
-        stopped = store.get_session(session_id)
+        ids = {row.host_session: row.id for row in store.list_sessions(open_only=True)}
+        self._hook("stop", {"host_session": "host-a"})
+        store = Store(self.db)
+        stopped = store.get_session(ids["host-a"])
         assert stopped is not None
         self.assertTrue(stopped.awaiting)
-        self.assertFalse(stopped.ended)
-        hooks.build_result(
-            "session-end",
-            {"host_session": "host-a"},
-            self.repo,
-            commits=[],
-            store=store,
-            host="opencode",
-        )
-        still_open = store.get_session(session_id)
-        assert still_open is not None
-        self.assertFalse(still_open.ended)
-        hooks.build_result(
-            "session-end",
-            {"host_session": "host-b"},
-            self.repo,
-            commits=[],
-            store=store,
-            host="opencode",
-        )
-        closed = store.get_session(session_id)
-        assert closed is not None
-        self.assertTrue(closed.ended)
+        for name in ("host-b", "host-c"):
+            other = store.get_session(ids[name])
+            assert other is not None
+            self.assertFalse(other.awaiting)
+            self.assertFalse(other.ended)
+        self._hook("session-end", {"host_session": "host-a"})
+        store = Store(self.db)
+        ended = store.get_session(ids["host-a"])
+        assert ended is not None
+        self.assertTrue(ended.ended)
+        for name in ("host-b", "host-c"):
+            other = store.get_session(ids[name])
+            assert other is not None
+            self.assertFalse(other.ended)
+        self._hook("session-end", {"host_session": "host-b"})
+        self._hook("session-end", {"host_session": "host-c"})
+        self.assertEqual(Store(self.db).list_sessions(open_only=True), [])
+
+    def test_a_tool_event_opens_a_row_but_end_without_one_does_not(self):
+        self._hook("pre-tool", {"host_session": "host-a", "command": "ls"})
+        store = Store(self.db)
+        rows = store.list_sessions(open_only=True)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].host_session, "host-a")
+        self._hook("session-end", {"host_session": "host-x"})
+        self.assertEqual(len(Store(self.db).list_sessions(open_only=True)), 1)
+
+    def test_a_concrete_session_does_not_adopt_a_manual_row(self):
+        manual, _ = Store(self.db).start_session("agent", now=time.time())
+        self._hook("prompt-submit", {"host_session": "host-a"})
+        rows = Store(self.db).list_sessions(open_only=True)
+        self.assertEqual(len(rows), 2)
+        host_row = next(row for row in rows if row.host_session == "host-a")
+        self.assertNotEqual(host_row.id, manual.id)
+        kept = Store(self.db).get_session(manual.id)
+        assert kept is not None
+        self.assertFalse(kept.ended)
 
     def test_session_start_names_the_doing_task(self):
         _plan, _task = self._seed()

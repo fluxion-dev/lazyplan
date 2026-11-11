@@ -57,6 +57,10 @@ if _TEXTUAL_OK:
             super().__init__()
             self._initial: tuple[str, ...] | None = None
 
+        def _dialog(self, *classes: str) -> Vertical:
+            """The modal body with optional sizing classes."""
+            return Vertical(id="dlg", classes=" ".join(classes))
+
         def on_mount(self) -> None:
             """Snapshot the starting values so Esc can tell a draft from a no-op."""
             width = self.app.size.width

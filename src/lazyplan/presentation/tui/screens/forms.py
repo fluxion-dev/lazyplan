@@ -71,8 +71,10 @@ if _TEXTUAL_OK:
             return f"{label} in {self._where}" if self._where else label
 
         def compose(self) -> ComposeResult:
-            tall = " form-tall" if any(field.multiline for field in self.fields) else ""
-            with Vertical(id="dlg", classes=f"entity-form{tall}"):
+            classes = ["entity-form"]
+            if any(field.multiline for field in self.fields):
+                classes.append("form-tall")
+            with self._dialog(*classes):
                 yield Label(self._title(), classes="form-title")
                 for field in self.fields:
                     yield Label(field.label, classes="field-label")
@@ -187,7 +189,7 @@ if _TEXTUAL_OK:
             self.variant = variant
 
         def compose(self) -> ComposeResult:
-            with Vertical(id="dlg"):
+            with self._dialog():
                 yield Static(self.text, markup=False)
                 with _row():
                     yield Button(self.confirm_label, id="ok", variant=self.variant)
@@ -250,7 +252,7 @@ if _TEXTUAL_OK:
             return "FILTER"
 
         def compose(self) -> ComposeResult:
-            with Vertical(id="dlg"):
+            with self._dialog():
                 yield Label(self._title)
                 yield Input(
                     value=self._initial_text,
@@ -293,7 +295,7 @@ if _TEXTUAL_OK:
         def compose(self) -> ComposeResult:
             heading = "Add criterion" if self._creating else "Edit criterion"
             action = "Add" if self._creating else "Save"
-            with Vertical(id="dlg", classes="entity-form"):
+            with self._dialog("entity-form"):
                 yield Label(heading, classes="form-title")
                 yield Label("Text", classes="field-label")
                 yield Input(value=self._text, placeholder="what must be true?", id="c-text")

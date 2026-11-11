@@ -40,14 +40,18 @@ def add_setup(
     setup.add_argument(
         "--hooks",
         dest="hooks",
-        action="store_true",
+        nargs="?",
+        const="strict",
         default=None,
-        help="install lifecycle hooks for detected agents (the default)",
+        choices=["strict", "advisory", "off"],
+        metavar="MODE",
+        help="install lifecycle hooks in strict (default), advisory, or off mode",
     )
     setup.add_argument(
         "--no-hooks",
         dest="hooks",
-        action="store_false",
+        action="store_const",
+        const="off",
         help="remove installed lifecycle hooks and leave agent configs alone",
     )
     setup.add_argument(

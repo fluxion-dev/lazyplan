@@ -10,7 +10,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .legacy_commands import LEGACY_COMMANDS as LEGACY_COMMANDS
 from .registry_actions import (
     ACTIONS,
     ENTITIES,
@@ -157,14 +156,8 @@ DEPRECATED_KEYS: tuple[Deprecation, ...] = ()
 
 
 def deprecations() -> tuple[Deprecation, ...]:
-    """Every legacy command alias plus the moved keys."""
-    commands = tuple(
-        Deprecation(f"lpui {alias}", f"lpui {noun} {verb}".strip())
-        for (noun, verb), aliases in LEGACY_COMMANDS.items()
-        for alias in aliases
-        if noun or alias != verb
-    )
-    return commands + DEPRECATED_KEYS
+    """Every moved key still waiting for removal; aliases are gone in 0.37.0."""
+    return DEPRECATED_KEYS
 
 
 def key_deprecations() -> tuple[Deprecation, ...]:
@@ -200,7 +193,6 @@ __all__ = [
     "HOOK_EVENTS",
     "HUB_ACTIONS",
     "Deprecation",
-    "LEGACY_COMMANDS",
     "MCP_ACTIONS",
     "NAMESPACES",
     "NOUNS",

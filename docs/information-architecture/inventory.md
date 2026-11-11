@@ -14,14 +14,14 @@ python3 tools/ia_inventory.py --check
 
 | Surface | Count |
 | --- | ---: |
-| cli_commands | 59 |
+| cli_commands | 49 |
 | palette_commands | 50 |
 | mcp_tools | 62 |
 | mcp_resources | 3 |
 | tui_screens | 14 |
 | tui_bindings | 47 |
 | setup_steps | 4 |
-| hook_events | 24 |
+| hook_events | 35 |
 | doc_files | 9 |
 | doc_headings | 86 |
 | tui_key_conflicts | 10 |
@@ -33,10 +33,6 @@ python3 tools/ia_inventory.py --check
 
 | Command | Options |
 | --- | --- |
-| `add-criteria` | --json, --porcelain, --version, --actor, --heal, --no-heal, --kind, --id, --text |
-| `add-milestone` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --title, --desc |
-| `add-plan` | --json, --porcelain, --version, --actor, --heal, --no-heal, --title, --name, --what, --desc, --why, --goal |
-| `add-task` | --json, --porcelain, --version, --actor, --heal, --no-heal, --milestone, --title, --desc, --touch |
 | `audit` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --since, --strict, --min-coverage, --max-lag, --max-gaps, --min-trace, --min-evidence |
 | `brief` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan |
 | `claim` | --json, --porcelain, --version, --actor, --heal, --no-heal, --id, --ttl, --note, --force, --worktree, --repo |
@@ -45,16 +41,13 @@ python3 tools/ia_inventory.py --check
 | `commits` | --json, --porcelain, --version, --actor, --heal, --no-heal, --kind, --id, --files, --refresh |
 | `completion` | --json, --porcelain, --version, --actor, --heal, --no-heal, --shell |
 | `context` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --max-chars |
-| `criteria` | --json, --porcelain, --version, --actor, --heal, --no-heal, --kind, --id |
 | `criterion` | --json, --porcelain, --version, --actor, --heal, --no-heal |
-| `delete` | --json, --porcelain, --version, --actor, --heal, --no-heal, --kind, --id |
-| `delete-criteria` | --json, --porcelain, --version, --actor, --heal, --no-heal, --id |
 | `doctor` | --json, --porcelain, --version, --actor, --heal, --no-heal |
 | `export` | --json, --porcelain, --version, --actor, --heal, --no-heal, --format, --plan, --file, --force |
 | `feed` | --json, --porcelain, --version, --actor, --heal, --no-heal, --limit, --follow, --interval, --session |
 | `git` | --json, --porcelain, --version, --actor, --heal, --no-heal |
 | `help` | --json, --porcelain, --version, --actor, --heal, --no-heal |
-| `hook` | --json, --porcelain, --version, --actor, --heal, --no-heal, --host |
+| `hook` | --json, --porcelain, --version, --actor, --heal, --no-heal, --host, --mode, --command, --tool, --path |
 | `import` | --json, --porcelain, --version, --actor, --heal, --no-heal, --file |
 | `info` | --json, --porcelain, --version, --actor, --heal, --no-heal |
 | `issue` | --json, --porcelain, --version, --actor, --heal, --no-heal |
@@ -78,9 +71,7 @@ python3 tools/ia_inventory.py --check
 | `setup` | --json, --porcelain, --version, --actor, --heal, --no-heal, --placement, --agents, --skills-dir, --no-skills, --hooks, --no-hooks, --agents-pointer, --no-agents-pointer, --yes, --post-upgrade |
 | `share` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --format, --out |
 | `ship` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --max-chars |
-| `show` | --json, --porcelain, --version, --actor, --heal, --no-heal, --kind, --id, --files |
 | `stats` | --json, --porcelain, --version, --actor, --heal, --no-heal, --since, --stale-after, --by |
-| `status` | --json, --porcelain, --version, --actor, --heal, --no-heal, --kind, --id, --to, --override |
 | `sync` | --json, --porcelain, --version, --actor, --heal, --no-heal, --file, --dry-run |
 | `task` | --json, --porcelain, --version, --actor, --heal, --no-heal |
 | `touch` | --json, --porcelain, --version, --actor, --heal, --no-heal |
@@ -88,7 +79,6 @@ python3 tools/ia_inventory.py --check
 | `ui` | --json, --porcelain, --version, --actor, --heal, --no-heal |
 | `unlink` | --json, --porcelain, --version, --actor, --heal, --no-heal, --kind, --id, --sha |
 | `unlink-repo` | --json, --porcelain, --version, --actor, --heal, --no-heal, --kind, --id, --repo, --remote |
-| `update` | --json, --porcelain, --version, --actor, --heal, --no-heal, --kind, --id, --title, --name, --desc, --what, --why, --goal |
 | `upgrade` | --json, --porcelain, --version, --actor, --heal, --no-heal, --check, --diagnose |
 | `watch` | --json, --porcelain, --version, --actor, --heal, --no-heal, --limit |
 | `who` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --all |
@@ -319,27 +309,38 @@ python3 tools/ia_inventory.py --check
 | Host | Event | Native |
 | --- | --- | --- |
 | claude | `post-tool` | `PostToolUse` |
+| claude | `pre-compact` | `PreCompact` |
+| claude | `pre-tool` | `PreToolUse` |
 | claude | `prompt-submit` | `UserPromptSubmit` |
+| claude | `session-end` | `SessionEnd` |
 | claude | `session-start` | `SessionStart` |
 | claude | `stop` | `Stop` |
 | codex | `post-tool` | `PostToolUse` |
 | codex | `pre-compact` | `PreCompact` |
+| codex | `pre-tool` | `PreToolUse` |
 | codex | `prompt-submit` | `UserPromptSubmit` |
+| codex | `session-end` | `SessionEnd` |
 | codex | `session-start` | `SessionStart` |
 | codex | `stop` | `Stop` |
 | cursor | `post-tool` | `postToolUse` |
 | cursor | `pre-compact` | `preCompact` |
+| cursor | `pre-tool` | `beforeShellExecution` |
 | cursor | `prompt-submit` | `beforeSubmitPrompt` |
+| cursor | `session-end` | `sessionEnd` |
 | cursor | `session-start` | `sessionStart` |
 | cursor | `stop` | `stop` |
 | gemini | `post-tool` | `AfterTool` |
 | gemini | `pre-compact` | `PreCompress` |
+| gemini | `pre-tool` | `BeforeTool` |
 | gemini | `prompt-submit` | `BeforeAgent` |
+| gemini | `session-end` | `SessionEnd` |
 | gemini | `session-start` | `SessionStart` |
 | gemini | `stop` | `AfterAgent` |
 | opencode | `post-tool` | `post-tool` |
 | opencode | `pre-compact` | `pre-compact` |
+| opencode | `pre-tool` | `pre-tool` |
 | opencode | `prompt-submit` | `prompt-submit` |
+| opencode | `session-end` | `session-end` |
 | opencode | `session-start` | `session-start` |
 | opencode | `stop` | `stop` |
 
@@ -387,7 +388,7 @@ python3 tools/ia_inventory.py --check
 
 | File | Headings |
 | --- | --- |
-| `README.md` | lazyplan (`lpui`) — v0.36.3 · Install · First run · Why it differs · Everyday commands · For your agent · Learn more |
+| `README.md` | lazyplan (`lpui`) — v0.37.0 · Install · First run · Why it differs · Everyday commands · For your agent · Learn more |
 | `CONTRIBUTING.md` | Contributing to lazyplan · Set up · Before you push · UX review board · Tests · Landing changes · edit, then commit in small green slices · Release · Style · Docs · Add one action across every surface |
 | `AGENTS.md` | Agent instructions · Documentation |
 | `docs/usage.md` | lazyplan usage · Install · Linux packages · Fedora / RHEL / openSUSE · Debian / Ubuntu · One-line installer · From source · Upgrade · pipx · pip, including the install.sh venv · Uninstall · Start |

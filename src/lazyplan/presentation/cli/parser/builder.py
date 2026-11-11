@@ -26,7 +26,6 @@ from .coordination import (
     add_trace,
     add_who,
 )
-from .legacy_task import add_add_task
 from .proof import (
     add_commits,
     add_export,
@@ -54,18 +53,9 @@ from .system import (
 )
 from .touch import add_touch_group
 from .work import (
-    add_add_criteria,
-    add_add_milestone,
-    add_add_plan,
-    add_criteria,
-    add_delete,
-    add_delete_criteria,
     add_list,
     add_noun_groups,
     add_reconcile,
-    add_show,
-    add_status,
-    add_update,
 )
 
 
@@ -166,14 +156,6 @@ def build_parser() -> argparse.ArgumentParser:
     add_ref_group(sub, common)
     add_session_group(sub, common)
     add_touch_group(sub, common)
-    add_add_plan(sub, common)
-    add_add_milestone(sub, common)
-    add_add_task(sub, common)
-    add_update(sub, common)
-    add_show(sub, common)
-    add_add_criteria(sub, common)
-    add_criteria(sub, common)
-    add_delete_criteria(sub, common)
     add_link(sub, common)
     add_unlink(sub, common)
     add_commits(sub, common)
@@ -182,9 +164,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_repos(sub, common)
     add_export(sub, common)
     add_import(sub, common)
-    add_status(sub, common)
     add_reconcile(sub, common)
-    add_delete(sub, common)
     add_feed(sub, common)
     add_watch(sub, common)
     add_completion(sub, common)

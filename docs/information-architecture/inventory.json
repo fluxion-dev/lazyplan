@@ -2,146 +2,6 @@
   "cli": {
     "commands": [
       {
-        "name": "add-criteria",
-        "options": [
-          [
-            "--json"
-          ],
-          [
-            "--porcelain"
-          ],
-          [
-            "--version"
-          ],
-          [
-            "--actor"
-          ],
-          [
-            "--heal"
-          ],
-          [
-            "--no-heal"
-          ],
-          [
-            "--kind"
-          ],
-          [
-            "--id"
-          ],
-          [
-            "--text"
-          ]
-        ]
-      },
-      {
-        "name": "add-milestone",
-        "options": [
-          [
-            "--json"
-          ],
-          [
-            "--porcelain"
-          ],
-          [
-            "--version"
-          ],
-          [
-            "--actor"
-          ],
-          [
-            "--heal"
-          ],
-          [
-            "--no-heal"
-          ],
-          [
-            "--plan"
-          ],
-          [
-            "--title"
-          ],
-          [
-            "--desc"
-          ]
-        ]
-      },
-      {
-        "name": "add-plan",
-        "options": [
-          [
-            "--json"
-          ],
-          [
-            "--porcelain"
-          ],
-          [
-            "--version"
-          ],
-          [
-            "--actor"
-          ],
-          [
-            "--heal"
-          ],
-          [
-            "--no-heal"
-          ],
-          [
-            "--title"
-          ],
-          [
-            "--name"
-          ],
-          [
-            "--what"
-          ],
-          [
-            "--desc"
-          ],
-          [
-            "--why"
-          ],
-          [
-            "--goal"
-          ]
-        ]
-      },
-      {
-        "name": "add-task",
-        "options": [
-          [
-            "--json"
-          ],
-          [
-            "--porcelain"
-          ],
-          [
-            "--version"
-          ],
-          [
-            "--actor"
-          ],
-          [
-            "--heal"
-          ],
-          [
-            "--no-heal"
-          ],
-          [
-            "--milestone"
-          ],
-          [
-            "--title"
-          ],
-          [
-            "--desc"
-          ],
-          [
-            "--touch"
-          ]
-        ]
-      },
-      {
         "name": "audit",
         "options": [
           [
@@ -415,35 +275,6 @@
         ]
       },
       {
-        "name": "criteria",
-        "options": [
-          [
-            "--json"
-          ],
-          [
-            "--porcelain"
-          ],
-          [
-            "--version"
-          ],
-          [
-            "--actor"
-          ],
-          [
-            "--heal"
-          ],
-          [
-            "--no-heal"
-          ],
-          [
-            "--kind"
-          ],
-          [
-            "--id"
-          ]
-        ]
-      },
-      {
         "name": "criterion",
         "options": [
           [
@@ -465,61 +296,6 @@
             "--no-heal"
           ],
           []
-        ]
-      },
-      {
-        "name": "delete",
-        "options": [
-          [
-            "--json"
-          ],
-          [
-            "--porcelain"
-          ],
-          [
-            "--version"
-          ],
-          [
-            "--actor"
-          ],
-          [
-            "--heal"
-          ],
-          [
-            "--no-heal"
-          ],
-          [
-            "--kind"
-          ],
-          [
-            "--id"
-          ]
-        ]
-      },
-      {
-        "name": "delete-criteria",
-        "options": [
-          [
-            "--json"
-          ],
-          [
-            "--porcelain"
-          ],
-          [
-            "--version"
-          ],
-          [
-            "--actor"
-          ],
-          [
-            "--heal"
-          ],
-          [
-            "--no-heal"
-          ],
-          [
-            "--id"
-          ]
         ]
       },
       {
@@ -686,6 +462,18 @@
           [],
           [
             "--host"
+          ],
+          [
+            "--mode"
+          ],
+          [
+            "--command"
+          ],
+          [
+            "--tool"
+          ],
+          [
+            "--path"
           ]
         ]
       },
@@ -1374,38 +1162,6 @@
         ]
       },
       {
-        "name": "show",
-        "options": [
-          [
-            "--json"
-          ],
-          [
-            "--porcelain"
-          ],
-          [
-            "--version"
-          ],
-          [
-            "--actor"
-          ],
-          [
-            "--heal"
-          ],
-          [
-            "--no-heal"
-          ],
-          [
-            "--kind"
-          ],
-          [
-            "--id"
-          ],
-          [
-            "--files"
-          ]
-        ]
-      },
-      {
         "name": "stats",
         "options": [
           [
@@ -1434,41 +1190,6 @@
           ],
           [
             "--by"
-          ]
-        ]
-      },
-      {
-        "name": "status",
-        "options": [
-          [
-            "--json"
-          ],
-          [
-            "--porcelain"
-          ],
-          [
-            "--version"
-          ],
-          [
-            "--actor"
-          ],
-          [
-            "--heal"
-          ],
-          [
-            "--no-heal"
-          ],
-          [
-            "--kind"
-          ],
-          [
-            "--id"
-          ],
-          [
-            "--to"
-          ],
-          [
-            "--override"
           ]
         ]
       },
@@ -1669,53 +1390,6 @@
         ]
       },
       {
-        "name": "update",
-        "options": [
-          [
-            "--json"
-          ],
-          [
-            "--porcelain"
-          ],
-          [
-            "--version"
-          ],
-          [
-            "--actor"
-          ],
-          [
-            "--heal"
-          ],
-          [
-            "--no-heal"
-          ],
-          [
-            "--kind"
-          ],
-          [
-            "--id"
-          ],
-          [
-            "--title"
-          ],
-          [
-            "--name"
-          ],
-          [
-            "--desc"
-          ],
-          [
-            "--what"
-          ],
-          [
-            "--why"
-          ],
-          [
-            "--goal"
-          ]
-        ]
-      },
-      {
         "name": "upgrade",
         "options": [
           [
@@ -1800,15 +1474,15 @@
         ]
       }
     ],
-    "count": 59
+    "count": 49
   },
   "counts": {
-    "cli_commands": 59,
+    "cli_commands": 49,
     "doc_files": 9,
     "doc_headings": 86,
     "env_names": 12,
     "file_paths": 11,
-    "hook_events": 24,
+    "hook_events": 35,
     "mcp_resources": 3,
     "mcp_tools": 62,
     "palette_commands": 50,
@@ -1823,7 +1497,7 @@
       {
         "file": "README.md",
         "headings": [
-          "lazyplan (`lpui`) \u2014 v0.36.3",
+          "lazyplan (`lpui`) \u2014 v0.37.0",
           "Install",
           "First run",
           "Why it differs",
@@ -1959,9 +1633,24 @@
         "native": "PostToolUse"
       },
       {
+        "event": "pre-compact",
+        "host": "claude",
+        "native": "PreCompact"
+      },
+      {
+        "event": "pre-tool",
+        "host": "claude",
+        "native": "PreToolUse"
+      },
+      {
         "event": "prompt-submit",
         "host": "claude",
         "native": "UserPromptSubmit"
+      },
+      {
+        "event": "session-end",
+        "host": "claude",
+        "native": "SessionEnd"
       },
       {
         "event": "session-start",
@@ -1984,9 +1673,19 @@
         "native": "PreCompact"
       },
       {
+        "event": "pre-tool",
+        "host": "codex",
+        "native": "PreToolUse"
+      },
+      {
         "event": "prompt-submit",
         "host": "codex",
         "native": "UserPromptSubmit"
+      },
+      {
+        "event": "session-end",
+        "host": "codex",
+        "native": "SessionEnd"
       },
       {
         "event": "session-start",
@@ -2009,9 +1708,19 @@
         "native": "preCompact"
       },
       {
+        "event": "pre-tool",
+        "host": "cursor",
+        "native": "beforeShellExecution"
+      },
+      {
         "event": "prompt-submit",
         "host": "cursor",
         "native": "beforeSubmitPrompt"
+      },
+      {
+        "event": "session-end",
+        "host": "cursor",
+        "native": "sessionEnd"
       },
       {
         "event": "session-start",
@@ -2034,9 +1743,19 @@
         "native": "PreCompress"
       },
       {
+        "event": "pre-tool",
+        "host": "gemini",
+        "native": "BeforeTool"
+      },
+      {
         "event": "prompt-submit",
         "host": "gemini",
         "native": "BeforeAgent"
+      },
+      {
+        "event": "session-end",
+        "host": "gemini",
+        "native": "SessionEnd"
       },
       {
         "event": "session-start",
@@ -2059,9 +1778,19 @@
         "native": "pre-compact"
       },
       {
+        "event": "pre-tool",
+        "host": "opencode",
+        "native": "pre-tool"
+      },
+      {
         "event": "prompt-submit",
         "host": "opencode",
         "native": "prompt-submit"
+      },
+      {
+        "event": "session-end",
+        "host": "opencode",
+        "native": "session-end"
       },
       {
         "event": "session-start",

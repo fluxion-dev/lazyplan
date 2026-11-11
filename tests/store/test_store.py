@@ -125,11 +125,15 @@ class TestStore(unittest.TestCase):
         self.assertEqual(self.store.counts()["plans"], 0)
 
     def test_cli_json_ingress(self):
-        rc = lpui_main(["--db", self.db, "--json", "add-plan", "--title", "P1"])
+        rc = lpui_main(["--db", self.db, "--json", "plan", "add", "--title", "P1"])
         self.assertEqual(rc, 0)
-        rc = lpui_main(["--db", self.db, "--json", "add-milestone", "--plan", "1", "--title", "S1"])
+        rc = lpui_main(
+            ["--db", self.db, "--json", "milestone", "add", "--plan", "1", "--title", "S1"]
+        )
         self.assertEqual(rc, 0)
-        rc = lpui_main(["--db", self.db, "--json", "add-task", "--milestone", "1", "--title", "T1"])
+        rc = lpui_main(
+            ["--db", self.db, "--json", "task", "add", "--milestone", "1", "--title", "T1"]
+        )
         self.assertEqual(rc, 0)
         self.assertEqual(self.store.counts()["tasks"], 1)
 
@@ -428,7 +432,8 @@ class TestStore(unittest.TestCase):
                 [
                     "--db",
                     self.db,
-                    "add-plan",
+                    "plan",
+                    "add",
                     "--title",
                     "P1",
                     "--why",
@@ -444,7 +449,8 @@ class TestStore(unittest.TestCase):
                 [
                     "--db",
                     self.db,
-                    "add-milestone",
+                    "milestone",
+                    "add",
                     "--plan",
                     "1",
                     "--title",
@@ -460,7 +466,8 @@ class TestStore(unittest.TestCase):
                 [
                     "--db",
                     self.db,
-                    "add-task",
+                    "task",
+                    "add",
                     "--milestone",
                     "1",
                     "--title",
@@ -475,7 +482,8 @@ class TestStore(unittest.TestCase):
                 [
                     "--db",
                     self.db,
-                    "add-criteria",
+                    "criterion",
+                    "add",
                     "--kind",
                     "plan",
                     "--id",
@@ -486,7 +494,9 @@ class TestStore(unittest.TestCase):
             ),
             0,
         )
-        self.assertEqual(lpui_main(["--db", self.db, "criteria", "--kind", "plan", "--id", "1"]), 0)
+        self.assertEqual(
+            lpui_main(["--db", self.db, "criterion", "list", "--kind", "plan", "--id", "1"]), 0
+        )
         self.assertEqual(
             lpui_main(["--db", self.db, "criterion", "edit", "--id", "1", "--done"]), 0
         )
@@ -495,17 +505,16 @@ class TestStore(unittest.TestCase):
         )
         self.assertEqual(lpui_main(["--db", self.db, "export", "--format", "markdown"]), 0)
         self.assertEqual(
-            lpui_main(["--db", self.db, "status", "--kind", "task", "--id", "1", "--to", "done"]), 0
+            lpui_main(["--db", self.db, "task", "move", "--id", "1", "--to", "done"]), 0
         )  # warns, proceeds
-        self.assertEqual(lpui_main(["--db", self.db, "delete-criteria", "--id", "1"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "criterion", "delete", "--id", "1"]), 0)
         self.assertEqual(
             lpui_main(
                 [
                     "--db",
                     self.db,
-                    "update",
-                    "--kind",
                     "plan",
+                    "edit",
                     "--id",
                     "1",
                     "--why",
@@ -518,23 +527,32 @@ class TestStore(unittest.TestCase):
 
     def test_cli_show(self):
         self.assertEqual(
-            lpui_main(["--db", self.db, "add-plan", "--title", "P1", "--why", "g1"]), 0
+            lpui_main(["--db", self.db, "plan", "add", "--title", "P1", "--why", "g1"]), 0
         )
         self.assertEqual(
-            lpui_main(["--db", self.db, "add-milestone", "--plan", "1", "--title", "S1"]), 0
+            lpui_main(["--db", self.db, "milestone", "add", "--plan", "1", "--title", "S1"]), 0
         )
         self.assertEqual(
             lpui_main(
-                ["--db", self.db, "add-task", "--milestone", "1", "--title", "T1", "--desc", "d1"]
+                [
+                    "--db",
+                    self.db,
+                    "task",
+                    "add",
+                    "--milestone",
+                    "1",
+                    "--title",
+                    "T1",
+                    "--desc",
+                    "d1",
+                ]
             ),
             0,
         )
-        self.assertEqual(lpui_main(["--db", self.db, "show", "--kind", "plan", "--id", "1"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "plan", "show", "--id", "1"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "milestone", "show", "--id", "1"]), 0)
         self.assertEqual(
-            lpui_main(["--db", self.db, "show", "--kind", "milestone", "--id", "1"]), 0
-        )
-        self.assertEqual(
-            lpui_main(["--db", self.db, "update", "--kind", "task", "--id", "1", "--desc", "d2"]),
+            lpui_main(["--db", self.db, "task", "edit", "--id", "1", "--desc", "d2"]),
             0,
         )
         self.assertEqual(self.store.get_task(1).description, "d2")
@@ -619,7 +637,7 @@ class TestStore(unittest.TestCase):
         from contextlib import redirect_stdout
 
         for i in range(7):
-            self.assertEqual(lpui_main(["--db", self.db, "add-plan", "--title", f"P{i}"]), 0)
+            self.assertEqual(lpui_main(["--db", self.db, "plan", "add", "--title", f"P{i}"]), 0)
 
         def _lines(*argv: str) -> list[str]:
             buf = io.StringIO()
@@ -646,7 +664,7 @@ class TestStore(unittest.TestCase):
         from contextlib import redirect_stdout
 
         for i in range(7):
-            self.assertEqual(lpui_main(["--db", self.db, "add-plan", "--title", f"J{i}"]), 0)
+            self.assertEqual(lpui_main(["--db", self.db, "plan", "add", "--title", f"J{i}"]), 0)
 
         def _json(*argv: str) -> list:
             buf = io.StringIO()
@@ -658,24 +676,24 @@ class TestStore(unittest.TestCase):
         self.assertEqual(len(_json("list", "--json", "--limit", "2")), 2)
 
     def test_cli_update_delete_feed(self):
-        self.assertEqual(lpui_main(["--db", self.db, "add-plan", "--title", "P1"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "plan", "add", "--title", "P1"]), 0)
         self.assertEqual(
-            lpui_main(["--db", self.db, "add-milestone", "--plan", "1", "--title", "S1"]), 0
+            lpui_main(["--db", self.db, "milestone", "add", "--plan", "1", "--title", "S1"]), 0
         )
         self.assertEqual(
-            lpui_main(["--db", self.db, "add-task", "--milestone", "1", "--title", "T1"]), 0
+            lpui_main(["--db", self.db, "task", "add", "--milestone", "1", "--title", "T1"]), 0
         )
         self.assertEqual(
-            lpui_main(["--db", self.db, "update", "--kind", "task", "--id", "1", "--title", "T1b"]),
+            lpui_main(["--db", self.db, "task", "edit", "--id", "1", "--title", "T1b"]),
             0,
         )
         self.assertEqual(self.store.get_task(1).title, "T1b")
         self.assertEqual(
-            lpui_main(["--db", self.db, "status", "--kind", "task", "--id", "1", "--to", "doing"]),
+            lpui_main(["--db", self.db, "task", "move", "--id", "1", "--to", "doing"]),
             0,
         )
         self.assertEqual(lpui_main(["--db", self.db, "feed", "--limit", "3"]), 0)
-        self.assertEqual(lpui_main(["--db", self.db, "delete", "--kind", "task", "--id", "1"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "task", "delete", "--id", "1"]), 0)
         self.assertEqual(self.store.counts()["tasks"], 0)
 
     def test_status_rollup_cascade(self):
@@ -782,15 +800,15 @@ class TestStore(unittest.TestCase):
         self.assertEqual(self.store.get_plan(p.id).status, Status.TODO)
 
     def test_cli_status_and_reconcile(self):
-        self.assertEqual(lpui_main(["--db", self.db, "add-plan", "--title", "P1"]), 0)
+        self.assertEqual(lpui_main(["--db", self.db, "plan", "add", "--title", "P1"]), 0)
         self.assertEqual(
-            lpui_main(["--db", self.db, "add-milestone", "--plan", "1", "--title", "S1"]), 0
+            lpui_main(["--db", self.db, "milestone", "add", "--plan", "1", "--title", "S1"]), 0
         )
         self.assertEqual(
-            lpui_main(["--db", self.db, "add-task", "--milestone", "1", "--title", "T1"]), 0
+            lpui_main(["--db", self.db, "task", "add", "--milestone", "1", "--title", "T1"]), 0
         )
         self.assertEqual(
-            lpui_main(["--db", self.db, "status", "--kind", "task", "--id", "1", "--to", "done"]),
+            lpui_main(["--db", self.db, "task", "move", "--id", "1", "--to", "done"]),
             0,
         )
         self.assertEqual(self.store.get_milestone(1).status, Status.DONE)
@@ -847,7 +865,7 @@ class TestStore(unittest.TestCase):
     def test_cli_rejects_priority_flag(self):
         with self.assertRaises(SystemExit):
             lpui_main(
-                ["--db", self.db, "add-plan", "--title", "P", "--why", "w", "--priority", "p0"]
+                ["--db", self.db, "plan", "add", "--title", "P", "--why", "w", "--priority", "p0"]
             )
 
     def test_archive_rule_and_view(self):

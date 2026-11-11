@@ -51,8 +51,10 @@ SETUP_STEPS: tuple[str, ...] = (
 HOOK_EVENTS: tuple[str, ...] = (
     "session-start",
     "prompt-submit",
+    "pre-tool",
     "post-tool",
     "stop",
+    "session-end",
     "pre-compact",
 )
 

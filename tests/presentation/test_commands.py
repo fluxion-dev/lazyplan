@@ -52,23 +52,16 @@ class TestCommandRegistry(unittest.TestCase):
                 self.assertIn(noun, palette.NOUNS, cmd.id)
             self.assertTrue(cmd.verb, cmd.id)
 
-    def test_every_data_command_maps_to_a_legacy_cli_verb(self):
+    def test_every_data_command_has_a_canonical_cli_route(self):
         parser = _subcommands()
         for cmd in palette.COMMANDS:
             if cmd.tui_only:
                 continue
-            for noun in cmd.nouns or ("",):
-                key = (noun, cmd.verb)
-                legacy = palette.LEGACY_COMMANDS.get(key)
-                self.assertIsNotNone(legacy, f"{key} has no legacy CLI alias")
-                for name in legacy or ():
-                    self.assertIn(name, parser, f"lpui {name} is missing")
-
-    def test_legacy_aliases_are_documented(self):
-        parser = _subcommands()
-        for names in palette.LEGACY_COMMANDS.values():
-            for name in names:
-                self.assertIn(name, parser, f"lpui {name} is missing")
+            if cmd.nouns:
+                for noun in cmd.nouns:
+                    self.assertIn(noun, parser, f"{cmd.id} has no `{noun}` group")
+            else:
+                self.assertIn(cmd.verb, parser, f"lpui {cmd.verb} is missing")
 
     def test_exact_alias_beats_a_substring(self):
         sections = palette.matching("cycle status")

@@ -88,15 +88,15 @@ class TestNounFirstCli(unittest.TestCase):
         self.assertIn("M", tree)
         self.assertIn("T", tree)
 
-    def test_legacy_aliases_still_work(self):
-        out = self._json("add-plan", "--title", "Legacy", "--why", "w", "--what", "x")
-        assert isinstance(out, dict)
-        pid = out["plan"]["id"]
-        self.assertEqual(Store(self.db).get_plan(pid).name, "Legacy")
-        code, text = self._run("show", "--kind", "plan", "--id", str(pid))
-        self.assertEqual(code, 0)
-        self.assertIn(f"P{pid} Legacy", text)
-        self.assertNotIn("#", text)
+    def test_legacy_aliases_are_gone(self):
+        for argv in (
+            ("add-plan", "--title", "Legacy"),
+            ("show", "--kind", "plan", "--id", "1"),
+        ):
+            with self.subTest(argv=argv):
+                with self.assertRaises(SystemExit) as caught:
+                    self._run(*argv)
+                self.assertEqual(caught.exception.code, 2)
 
     def test_json_shape_is_unchanged(self):
         pid = self.store.add_plan("P").id

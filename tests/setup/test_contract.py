@@ -70,6 +70,8 @@ class ContractCase(unittest.TestCase):
         body = json.loads(text)
         if "agentMessage" in body:
             return str(body["agentMessage"])
+        if "additional_context" in body:
+            return str(body["additional_context"])
         if "systemMessage" in body:
             return str(body["systemMessage"])
         return str(body.get("hookSpecificOutput", {}).get("additionalContext", ""))

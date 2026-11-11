@@ -69,6 +69,19 @@ class CatalogCase(unittest.TestCase):
             after["hook:claude:stop"].fingerprint,
         )
 
+    def test_hook_fingerprint_tracks_a_matcher_change(self):
+        before = dict(self.items)
+        with mock.patch.dict(hook_hosts.MATCHERS["claude"], {"PostToolUse": "Edit"}):
+            after = {item.id: item for item in integrations.catalog(self.home)}
+        self.assertNotEqual(
+            before["hook:claude:post-tool"].fingerprint,
+            after["hook:claude:post-tool"].fingerprint,
+        )
+        self.assertEqual(
+            before["hook:claude:pre-tool"].fingerprint,
+            after["hook:claude:pre-tool"].fingerprint,
+        )
+
     def test_adding_a_hook_event_leaves_existing_fingerprints_alone(self):
         before = dict(self.items)
         with mock.patch.dict(hook_hosts.EVENTS["claude"], {"session-end": "SessionEnd"}):

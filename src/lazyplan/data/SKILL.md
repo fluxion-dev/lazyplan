@@ -78,7 +78,7 @@ different linked checkout. `commits` lists direct and inherited commits, and
 ```bash
 lpui --actor NAME link --kind task --id T [--sha SHA] [--repo PATH]
 lpui commits --kind task --id T [--refresh] [--files]
-lpui show --kind task --id T [--files]
+lpui task show --id T [--files]
 lpui git status --kind task --id T [--json]
 lpui git scan --since 7.days [--dry-run] [--repo PATH]
 ```
@@ -301,9 +301,11 @@ every call. Reach for `--json` only when you need full-fidelity fields.
 
 - Never batch a whole plan or milestone into one commit; link each green commit.
 - Tick task and plan criteria as they are proven, before closing the row.
-- Lifecycle hooks may remind you at session start, after a commit, and before
-  compaction. They also record the checkout's session state; they never move a
-  task or link a commit.
+- Lifecycle hooks may block a commit with no doing task, block one stop with
+  unlinked commits, inject the active plan on every prompt, and close the
+  session at session end. They also record the checkout's session state; they
+  never move a task or link a commit. `LAZYPLAN_HOOKS=advisory` downgrades
+  blocks to reminders without reinstalling.
 - `lpui claims` / `lpui who` shows active leases. `claim release --force` and
   `claim --force` record a takeover; blocked work is skipped by `next`.
 - `lpui trace --plan P` walks each criterion to its proving task, commits, and

@@ -9,20 +9,30 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 from pathlib import Path
 from typing import TextIO, cast
 
 from ..core.entities import HookResult, Session
+from ..core.policies import hooks as hook_modes
 from ..core.policies.sessions import IDLE_AFTER_SECS, phase_for_event
 from ..core.ports.app import AppPort
 from ..core.ports.insights import InsightsPort
-from . import audit, brief, context
+from . import audit, context, hook_policy
 from . import sessions as session_services
 
-EVENTS = ("session-start", "prompt-submit", "post-tool", "stop", "pre-compact")
+EVENTS = (
+    "session-start",
+    "prompt-submit",
+    "pre-tool",
+    "post-tool",
+    "stop",
+    "session-end",
+    "pre-compact",
+)
 HOSTS = ("opencode", "claude", "gemini", "codex", "cursor")
-NO_HOOKS_ENV = "LAZYPLAN_NO_HOOKS"
+NO_HOOKS_ENV = hook_modes.NO_HOOKS_ENV
 
 
 def read_payload(stream: TextIO) -> dict:
@@ -72,18 +82,24 @@ def _command(payload: dict) -> str:
     return command if isinstance(command, str) else ""
 
 
-def _brief_lines(store: InsightsPort, cwd: Path, commits: list[audit.Commit] | None) -> list[str]:
-    payload = brief.build(store, commits=commits, cwd=cwd)
-    return brief.lines(payload)
+_PATCH_FILE = re.compile(r"^\*\*\* (?:Update|Add) File: (.+)$", re.MULTILINE)
 
 
-def _doing_task(store: InsightsPort) -> int | None:
-    for plan in store.list_plans():
-        for milestone in store.list_milestones(plan.id):
-            for task in store.list_tasks(milestone.id):
-                if task.status.value == "doing":
-                    return task.id
-    return None
+def _file_path(payload: dict) -> str:
+    """Edited file path, including the path inside an apply_patch body."""
+    for key in ("tool_input", "arguments"):
+        value = payload.get(key)
+        if isinstance(value, dict):
+            for name in ("file_path", "path", "filename"):
+                path = value.get(name)
+                if isinstance(path, str) and path.strip():
+                    return path.strip()
+    for name in ("file_path", "path"):
+        path = payload.get(name)
+        if isinstance(path, str) and path.strip():
+            return path.strip()
+    match = _PATCH_FILE.search(_command(payload))
+    return match.group(1).strip() if match else ""
 
 
 def _doing_plan(store: InsightsPort) -> int | None:
@@ -108,7 +124,7 @@ def _track_session(store: AppPort, event: str, host: str, cwd: Path) -> Session 
         )
     session = session_services.open_session_for(store, repo, host=host)
     if session is None:
-        if event in ("post-tool", "pre-compact"):
+        if event in ("pre-tool", "post-tool", "session-end", "pre-compact"):
             return None
         result = session_services.start_session(
             store,
@@ -119,7 +135,7 @@ def _track_session(store: AppPort, event: str, host: str, cwd: Path) -> Session 
             phase=phase_for_event(event),
         )
         return cast(Session, result["session"])
-    if event in ("post-tool", "pre-compact"):
+    if event in ("pre-tool", "post-tool", "session-end", "pre-compact"):
         return session_services.touch_session(store, session.id, host=host)
     return session_services.touch_session(
         store, session.id, phase=phase_for_event(event), host=host
@@ -152,36 +168,12 @@ def _session_text(
     return text
 
 
-def _stop_text(
-    store: InsightsPort,
-    cwd: Path,
-    commits: list[audit.Commit] | None,
-    session: Session | None = None,
-) -> str:
-    lines = _brief_lines(store, cwd, commits)
-    parts = [line.strip() for line in lines if line.strip().startswith("unlinked")]
-    tracked = session
-    if tracked is None:
-        rows = store.list_sessions(open_only=True, limit=1)
-        tracked = rows[0] if rows else None
-    if tracked is not None:
-        state = session_services.session_state(tracked)
-        parts.append(
-            f"session S{tracked.id} is {state}; run `lpui session end --id S{tracked.id} --summary`"
-        )
-    if not parts:
+def _prompt_text(store: InsightsPort) -> str:
+    """Small active-plan packet for every user prompt."""
+    payload = context.build(store, max_chars=1200)
+    if not payload.get("plans"):
         return ""
-    return "lazyplan: " + "; ".join(parts)
-
-
-def _post_tool_text(store: InsightsPort, payload: dict) -> str:
-    command = _command(payload)
-    if "git commit" not in command:
-        return ""
-    task_id = _doing_task(store)
-    if task_id is None:
-        return "lazyplan: commit landed; start or pick a task with `lpui brief`."
-    return f"lazyplan: commit landed; link it with `lpui link --kind task --id {task_id}`."
+    return "\n".join(context.lines(payload)).strip()[:1200]
 
 
 def build_result(
@@ -191,6 +183,7 @@ def build_result(
     commits: list[audit.Commit] | None = None,
     host: str = "",
     store: AppPort | None = None,
+    mode: str = "strict",
 ) -> HookResult:
     """Decide one event's reminder without touching host output formats."""
     if event not in EVENTS:
@@ -204,9 +197,16 @@ def build_result(
         if event in ("session-start", "pre-compact"):
             return HookResult(_session_text(store, here, commits, session), context=True).capped()
         if event == "stop":
-            return HookResult(_stop_text(store, here, commits, session)).capped()
+            return hook_policy.stop_result(store, here, commits, session, payload, mode, who)
+        if event == "session-end":
+            return hook_policy.session_end_result(store, session, who)
+        if event == "prompt-submit":
+            return HookResult(_prompt_text(store), context=True).capped()
+        if event == "pre-tool":
+            return hook_policy.commit_result(store, here, _command(payload), mode)
         if event == "post-tool":
-            return HookResult(_post_tool_text(store, payload)).capped()
+            text = hook_policy.post_tool_text(store, _command(payload), _file_path(payload))
+            return HookResult(text).capped()
     except (RuntimeError, OSError, ValueError, KeyError):
         return HookResult()
     return HookResult()
@@ -219,11 +219,14 @@ def run(
     cwd: Path | None = None,
     commits: list[audit.Commit] | None = None,
     store: AppPort | None = None,
+    mode: str = "strict",
 ) -> HookResult:
     """Entry point used by the CLI; never raises and never blocks."""
-    if os.environ.get(NO_HOOKS_ENV, "").strip():
+    requested = hook_modes.mode_from_env(os.environ)
+    if requested == "off":
         return HookResult()
+    effective = requested or hook_modes.normalize_mode(mode)
     try:
-        return build_result(event, payload, cwd, commits, host, store)
+        return build_result(event, payload, cwd, commits, host, store, effective)
     except (RuntimeError, OSError, ValueError):
         return HookResult()

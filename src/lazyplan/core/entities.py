@@ -402,11 +402,12 @@ class ForgeLink:
 
 @dataclass(frozen=True)
 class HookResult:
-    """What a lifecycle hook wants the host to show."""
+    """What a lifecycle hook wants the host to show or block."""
 
     text: str = ""
     context: bool = False
+    block: str = ""
 
     def capped(self) -> HookResult:
-        """Keep injected context inside the host's patience."""
-        return HookResult(self.text[:2000], self.context)
+        """Keep context and block reasons inside the host's patience."""
+        return HookResult(self.text[:2000], self.context, self.block[:2000])

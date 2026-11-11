@@ -3,10 +3,19 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
-## Unreleased
+## v0.37.0 — 2026-11-10
 
 ### Added
 
+- **Strict lifecycle hooks.** `lpui setup --hooks` now installs strict hooks by
+  default across OpenCode, Claude Code, Gemini CLI, Codex, and Cursor. Strict
+  mode denies a `git commit` when a managed checkout has no doing task, blocks
+  one stop per turn when commits are unlinked, injects the active plan on every
+  prompt, nudges on task edits, and closes the session with a handoff. Use
+  `--hooks advisory` for reminders only or `--no-hooks` to remove them;
+  `LAZYPLAN_HOOKS=advisory` downgrades at runtime and `LAZYPLAN_NO_HOOKS=1`
+  silences every hook. OpenCode denies commits through its permission hook but
+  has no stop-block surface.
 - **Live agent sessions.** Lifecycle hooks keep the checkout's session state
   current: a turn marks it working, a stop marks it awaiting, and the agents
   pane shows working, awaiting, and idle rows with awaiting first. Sessions
@@ -26,8 +35,6 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
   completion; `criterion prove` records evidence only.
 - **Pane empty states.** The plans, preview, git, and agents panes share one
   empty-state treatment: a bold capitalized title and a dim next step.
-- **Legacy aliases.** The deprecated CLI verbs and moved detail keys remain
-  through 0.36.0. A version guard fails at 0.37.0 until they are removed.
 - **Architecture seams.** Presentation constructs `Store` only in composition
   roots; store and services use injected path and layer adapters; parser groups
   and MCP metadata derive from the action registry; the largest modules split
@@ -54,6 +61,11 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
   space marks, bulk palette commands, and the prove form are gone. Criteria,
   evidence, and source stay readable in their hubs; `lpui criterion prove` and
   the MCP proof tool remain the write paths.
+- **Legacy CLI verbs.** `add-plan`, `add-milestone`, `add-task`, `add-criteria`,
+  `criteria`, `delete-criteria`, `update`, `status`, `delete`, and `show` are
+  gone. Use the noun-first groups (`lpui plan add`, `lpui task edit`,
+  `lpui criterion delete`, and so on). The deprecation guard now reports no
+  remaining aliases.
 
 ## v0.36.0 — 2026-11-09
 

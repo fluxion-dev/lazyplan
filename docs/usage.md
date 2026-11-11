@@ -220,7 +220,9 @@ lpui setup --placement repo|home      # where plans live
 lpui setup --agents "opencode,claude" # or all, or none; $LAZYPLAN_AGENTS
 lpui setup --skills-dir PATH          # or $LAZYPLAN_SKILLS_DIR
 lpui setup --no-skills                # database only; $LAZYPLAN_NO_SKILLS
-lpui setup --hooks                    # install lifecycle hooks, re-enabling after --no-hooks
+lpui setup --hooks                    # strict lifecycle hooks (the default)
+lpui setup --hooks advisory           # remind without blocking
+lpui setup --hooks off                # same as --no-hooks
 lpui setup --no-hooks                 # remove lifecycle hooks and remember the opt-out
 lpui setup --agents-pointer           # add the marked AGENTS.md section
 lpui setup --no-agents-pointer        # remove the marked AGENTS.md section
@@ -250,6 +252,7 @@ palettes without restarting.
 | `LAZYPLAN_AGENTS` | Default agent list for setup; an explicit flag wins. |
 | `LAZYPLAN_SKILLS_DIR` | Default skill directory for setup; an explicit flag wins. |
 | `LAZYPLAN_NO_SKILLS` | Install no agent skill. |
+| `LAZYPLAN_HOOKS` | Override the installed hook mode at runtime: `strict`, `advisory`, or `off`. |
 | `LAZYPLAN_NO_HOOKS` | Silence installed hooks at runtime; does not remove them. |
 | `LAZYPLAN_NO_SPINNER` | Freeze the doing spinner in the TUI. |
 | `LAZYPLAN_THEME` | TUI palette: mocha, void, or latte (aliases dark, oled, light). |
@@ -273,7 +276,7 @@ and `--actor`; `upgrade` adds `--check` and `--diagnose`.
 | `~/.lazyplan/setup.json` | Remembered setup choices and migration decisions. |
 | `~/.lazyplan/backups/<timestamp>/` | Tree-preserving backups of every touched file. |
 | `~/.agents/skills/lazyplan/SKILL.md` | Universal agent skill; per-tool skill directories are written too. |
-| `~/.config/opencode/plugins/lazyplan.js`, `~/.claude/settings.json`, `~/.gemini/settings.json`, `~/.codex/hooks.json`, `~/.cursor/hooks.json` | Managed lifecycle hook surfaces; they also track session state. |
+| `~/.config/opencode/plugins/lazyplan.js`, `~/.claude/settings.json`, `~/.gemini/settings.json`, `~/.codex/hooks.json`, `~/.cursor/hooks.json` | Managed lifecycle hook surfaces in the installed mode; they also track session state. |
 | `AGENTS.md` | Optional marked lazyplan section in a repo. |
 
 ## Everyday commands
@@ -479,7 +482,8 @@ Your agent is expected to work from the plan, not invent it:
   Renew the lease while you work, note handoffs, and release it when you stop.
   Update the journal after each commit, then run
   `lpui --porcelain audit --since 7.days` before closing a plan. Lifecycle
-  hooks remind you and track the session; they never move work.
+  hooks remind you, gate a commit or stop in strict mode, and track the
+  session; they never move work.
 
 `lpui setup --placement repo` writes the full contract into the repo; the
 default setup installs the skill into each detected agent's own folder.
@@ -602,6 +606,37 @@ Sessions idle for 12 hours are closed automatically, and a new session in the
 same checkout reuses a live one. Sessions are operational history and are not
 exported. You can also start and end them from the sessions hub (click the
 agents card); the CLI remains the path for scripts.
+
+#### Hook modes and gates
+
+`lpui setup --hooks` installs strict hooks by default. Strict mode answers one
+question at each lifecycle point:
+
+- A `git commit` is denied when the checkout is managed and no task is doing.
+  A checkout is managed when its database lives under `.agents/lazyplan/`, a
+  plan links it, or an open session belongs to it. Unrelated repositories keep
+  normal git behavior.
+- A stop is blocked once when a managed checkout has unlinked commits. The next
+  stop after the host's continuation guard is allowed, and the session is
+  marked awaiting.
+- Every prompt receives a short active-plan packet: plan, doing task, open
+  criteria, and next task. Cursor has no prompt-context field, so it injects
+  the same packet at session start and after each reported tool.
+- Edits that touch a task's paths name that task; other edits ask to update the
+  plan when scope changed.
+- Session end closes the open session with an auto summary and a next-task
+  handoff.
+
+`--hooks advisory` keeps the same observations and turns every deny or block
+into a reminder. `--no-hooks` removes the managed entries. At runtime,
+`LAZYPLAN_HOOKS=advisory` downgrades without reinstalling, and
+`LAZYPLAN_NO_HOOKS=1` silences every hook.
+
+OpenCode has no stop-block surface, so it denies commits through its permission
+hook, injects the cached plan on every model call, and sends a stop reminder at
+idle. Claude Code and Codex block both commits and stops; Gemini blocks tools
+and retries the turn; Cursor denies shell commands and continues after a stop.
+Claude Code reads `PreCompact` output as guidance for the compaction summary.
 
 Tasks can declare the repo-relative paths they expect to edit. `next` skips a
 todo whose touch-points overlap an active claim in the same checkout. A manual
@@ -782,5 +817,5 @@ tokens.
 wrong · `3` the screen cannot start because Textual is missing.
 
 Run `lpui <command> --help` for per-command flags. `man lpui` contains the full
-manual. Legacy flat verbs (`add-plan`, `add-task`, `update`, `status`, `delete`,
-`check`, `uncheck`, …) remain as aliases.
+manual. The flat legacy verbs were removed in 0.37.0; use the noun-first forms
+(`lpui plan add`, `lpui task edit`, `lpui criterion delete`, and so on).

@@ -101,6 +101,140 @@ class HookCase(unittest.TestCase):
         self.assertTrue(updated.awaiting)
         self.assertGreater(updated.last_seen_at, 0)
 
+    def _unlinked(self):
+        plan_id, task_id = self._seed()
+        Store(self.db).add_repo_link("plan", plan_id, str(self.repo), actor="t")
+        commit = audit.Commit(
+            sha="a" * 40,
+            timestamp=int(time.time()),
+            subject="work",
+            repo=str(self.repo),
+        )
+        return task_id, [commit]
+
+    def test_prompt_submit_injects_the_active_plan(self):
+        _plan, task_id = self._seed()
+        result = hooks.build_result(
+            "prompt-submit", {}, self.repo, commits=[], store=Store(self.db)
+        )
+        self.assertTrue(result.context)
+        self.assertIn(f"T{task_id}", result.text)
+        self.assertIn("next", result.text)
+        self.assertLessEqual(len(result.text), 1200)
+
+    def test_prompt_submit_is_silent_without_plans(self):
+        result = hooks.build_result(
+            "prompt-submit", {}, self.repo, commits=[], store=Store(self.db)
+        )
+        self.assertEqual(result.text, "")
+
+    def test_stop_blocks_once_for_unlinked_commits(self):
+        _task_id, commits = self._unlinked()
+        result = hooks.build_result(
+            "stop",
+            {},
+            self.repo,
+            commits=commits,
+            store=Store(self.db),
+            mode="strict",
+            host="claude",
+        )
+        self.assertIn("unlinked commits", result.block)
+        self.assertIn("lpui link --kind task", result.block)
+
+    def test_continued_stop_is_allowed(self):
+        _task_id, commits = self._unlinked()
+        result = hooks.build_result(
+            "stop",
+            {"stop_hook_active": True},
+            self.repo,
+            commits=commits,
+            store=Store(self.db),
+            mode="strict",
+            host="claude",
+        )
+        self.assertEqual(result.block, "")
+
+    def test_cursor_loop_count_allows_the_second_stop(self):
+        _task_id, commits = self._unlinked()
+        result = hooks.build_result(
+            "stop",
+            {"loop_count": 1},
+            self.repo,
+            commits=commits,
+            store=Store(self.db),
+            mode="strict",
+            host="cursor",
+        )
+        self.assertEqual(result.block, "")
+
+    def test_advisory_stop_reminds_without_blocking(self):
+        _task_id, commits = self._unlinked()
+        result = hooks.build_result(
+            "stop",
+            {},
+            self.repo,
+            commits=commits,
+            store=Store(self.db),
+            mode="advisory",
+            host="claude",
+        )
+        self.assertEqual(result.block, "")
+        self.assertIn("unlinked", result.text)
+
+    def test_opencode_never_blocks_a_stop(self):
+        _task_id, commits = self._unlinked()
+        result = hooks.build_result(
+            "stop",
+            {},
+            self.repo,
+            commits=commits,
+            store=Store(self.db),
+            mode="strict",
+            host="opencode",
+        )
+        self.assertEqual(result.block, "")
+
+    def test_unmanaged_repo_does_not_block_a_stop(self):
+        _plan, _task = self._seed()
+        commit = audit.Commit(sha="a" * 40, timestamp=int(time.time()), subject="work")
+        result = hooks.build_result(
+            "stop",
+            {},
+            self.repo,
+            commits=[commit],
+            store=Store(self.db),
+            mode="strict",
+            host="claude",
+        )
+        self.assertEqual(result.block, "")
+
+    def test_session_end_closes_with_a_summary_and_handoff(self):
+        _plan, task_id = self._seed()
+        store = Store(self.db)
+        session, _ = store.start_session("ana", repo_path=str(self.repo), now=time.time())
+        hooks.build_result(
+            "session-end",
+            {},
+            self.repo,
+            commits=[],
+            store=Store(self.db),
+            host="claude",
+        )
+        closed = Store(self.db).get_session(session.id)
+        assert closed is not None
+        self.assertTrue(closed.ended)
+        self.assertIn("ended by claude", closed.summary)
+        self.assertIn(f"T{task_id}", closed.summary)
+        self.assertIn("next: T", closed.handoff)
+
+    def test_session_end_without_a_session_creates_nothing(self):
+        self._seed()
+        hooks.build_result(
+            "session-end", {}, self.repo, commits=[], store=Store(self.db), host="claude"
+        )
+        self.assertEqual(Store(self.db).list_sessions(open_only=True), [])
+
     def test_missing_database_is_silent(self):
         self.assertEqual(
             hooks.build_result("session-start", {}, self.repo, commits=[], store=None),
@@ -114,6 +248,91 @@ class HookCase(unittest.TestCase):
             "post-tool", payload, self.repo, commits=[], store=Store(self.db)
         )
         self.assertIn(f"--id {task_id}", result.text)
+
+    def _linked_plan(self) -> int:
+        store = Store(self.db)
+        plan = store.add_plan("Linked", "what", goal="why")
+        store.add_repo_link("plan", plan.id, str(self.repo), actor="t")
+        return plan.id
+
+    def test_commit_is_blocked_without_a_doing_task(self):
+        self._linked_plan()
+        payload = {"tool_input": {"command": "git commit -m x"}}
+        result = hooks.build_result(
+            "pre-tool", payload, self.repo, commits=[], store=Store(self.db), mode="strict"
+        )
+        self.assertIn("no doing task", result.block)
+        self.assertIn("lpui next", result.block)
+
+    def test_commit_is_allowed_with_a_doing_task(self):
+        plan_id, _task = self._seed()
+        Store(self.db).add_repo_link("plan", plan_id, str(self.repo), actor="t")
+        payload = {"tool_input": {"command": "git commit -m x"}}
+        result = hooks.build_result(
+            "pre-tool", payload, self.repo, commits=[], store=Store(self.db), mode="strict"
+        )
+        self.assertEqual(result.block, "")
+
+    def test_advisory_commit_reminds_without_blocking(self):
+        self._linked_plan()
+        payload = {"tool_input": {"command": "git commit -m x"}}
+        result = hooks.build_result(
+            "pre-tool", payload, self.repo, commits=[], store=Store(self.db), mode="advisory"
+        )
+        self.assertEqual(result.block, "")
+        self.assertIn("no doing task", result.text)
+
+    def test_commit_in_an_unmanaged_checkout_is_allowed(self):
+        self._seed()
+        payload = {"tool_input": {"command": "git commit -m x"}}
+        result = hooks.build_result(
+            "pre-tool", payload, self.repo, commits=[], store=Store(self.db), mode="strict"
+        )
+        self.assertEqual(result.block, "")
+
+    def test_non_git_commands_are_never_blocked(self):
+        self._linked_plan()
+        payload = {"tool_input": {"command": "git status"}}
+        result = hooks.build_result(
+            "pre-tool", payload, self.repo, commits=[], store=Store(self.db), mode="strict"
+        )
+        self.assertEqual(result.block, "")
+
+    def test_post_tool_edit_names_the_owning_task(self):
+        _plan, task_id = self._seed()
+        Store(self.db).add_touchpoint(task_id, "src/**", actor="t")
+        payload = {"tool_name": "Edit", "tool_input": {"file_path": "src/app.py"}}
+        result = hooks.build_result(
+            "post-tool", payload, self.repo, commits=[], store=Store(self.db)
+        )
+        self.assertIn(f"T{task_id}", result.text)
+
+    def test_post_tool_edit_outside_the_task_asks_for_scope(self):
+        _plan, _task = self._seed()
+        payload = {"tool_name": "Write", "tool_input": {"file_path": "docs/readme.md"}}
+        result = hooks.build_result(
+            "post-tool", payload, self.repo, commits=[], store=Store(self.db)
+        )
+        self.assertIn("scope", result.text)
+
+    def test_post_tool_apply_patch_reads_the_patch_path(self):
+        _plan, task_id = self._seed()
+        Store(self.db).add_touchpoint(task_id, "src/**", actor="t")
+        payload = {
+            "tool_name": "apply_patch",
+            "tool_input": {"command": "*** Begin Patch\n*** Update File: src/x.py\n"},
+        }
+        result = hooks.build_result(
+            "post-tool", payload, self.repo, commits=[], store=Store(self.db)
+        )
+        self.assertIn(f"T{task_id}", result.text)
+
+    def test_post_tool_edit_without_a_task_points_at_brief(self):
+        payload = {"tool_name": "Edit", "tool_input": {"file_path": "src/app.py"}}
+        result = hooks.build_result(
+            "post-tool", payload, self.repo, commits=[], store=Store(self.db)
+        )
+        self.assertIn("lpui brief", result.text)
 
     def test_post_tool_other_commands_are_silent(self):
         self._seed()
@@ -137,6 +356,31 @@ class HookCase(unittest.TestCase):
         self.assertEqual(len(sessions), 1)
         self.assertEqual(sessions[0].phase, "working")
         self.assertTrue(sessions[0].host)
+
+    def test_cli_command_flag_reaches_the_commit_gate(self):
+        self._linked_plan()
+        out = io.StringIO()
+        old_stdin = sys.stdin
+        sys.stdin = io.StringIO("")
+        try:
+            with redirect_stdout(out):
+                code = lpui_main(
+                    [
+                        "hook",
+                        "pre-tool",
+                        "--host",
+                        "opencode",
+                        "--mode",
+                        "strict",
+                        "--command",
+                        "git commit -m x",
+                        "--json",
+                    ]
+                )
+        finally:
+            sys.stdin = old_stdin
+        self.assertEqual(code, 0)
+        self.assertIn("no doing task", json.loads(out.getvalue())["block"])
 
     def test_cli_json_and_fresh_home(self):
         self._seed()

@@ -341,7 +341,15 @@ def add_hook(
     )
     hk.add_argument(
         "event",
-        choices=["session-start", "prompt-submit", "post-tool", "stop", "pre-compact"],
+        choices=[
+            "session-start",
+            "prompt-submit",
+            "pre-tool",
+            "post-tool",
+            "stop",
+            "session-end",
+            "pre-compact",
+        ],
         help="which lifecycle event fired",
     )
     hk.add_argument(
@@ -349,6 +357,27 @@ def add_hook(
         choices=["opencode", "claude", "gemini", "codex", "cursor"],
         default="",
         help="host emitting the event (inferred from the payload when omitted)",
+    )
+    hk.add_argument(
+        "--mode",
+        choices=["strict", "advisory", "off"],
+        default="strict",
+        help="installed behavior mode; LAZYPLAN_HOOKS overrides it at runtime",
+    )
+    hk.add_argument(
+        "--command",
+        default="",
+        help=argparse.SUPPRESS,
+    )
+    hk.add_argument(
+        "--tool",
+        default="",
+        help=argparse.SUPPRESS,
+    )
+    hk.add_argument(
+        "--path",
+        default="",
+        help=argparse.SUPPRESS,
     )
 
 

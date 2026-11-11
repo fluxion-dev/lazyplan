@@ -10,6 +10,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from ..core.policies.hooks import DEFAULT_MODE, normalize_mode
 from . import hook_hosts, skills, textfile
 from .backup import backup_file, new_backup_dir
 
@@ -28,9 +29,9 @@ class Spec:
     kind: str  # nested | flat | plugin
 
 
-def command(host: str, event: str) -> str:
+def command(host: str, event: str, mode: str = DEFAULT_MODE) -> str:
     """The exact managed command written into host config."""
-    return f"{MARKER} {event} --host {host}"
+    return f"{MARKER} {event} --host {host} --mode {normalize_mode(mode)}"
 
 
 def specs(home: Path | None = None) -> list[Spec]:
@@ -74,7 +75,7 @@ def installed_events(home: Path | None = None, host: str = "") -> set[str]:
                 events.add("plugin")
             continue
         for event in hook_hosts.EVENTS.get(host, {}):
-            if command(host, event) in text:
+            if f"{MARKER} {event} --host {host}" in text:
                 events.add(event)
     return events
 
@@ -86,21 +87,21 @@ def _managed(entry: object, host: str) -> bool:
     return MARKER in text and f"--host {host}" in text
 
 
-def _nested_entries(host: str) -> dict[str, list[dict]]:
+def _nested_entries(host: str, mode: str) -> dict[str, list[dict]]:
     out: dict[str, list[dict]] = {}
     for event, native in hook_hosts.EVENTS[host].items():
         out[native] = [
             {
                 "matcher": hook_hosts.matcher(host, native),
-                "hooks": [{"type": "command", "command": command(host, event)}],
+                "hooks": [{"type": "command", "command": command(host, event, mode)}],
             }
         ]
     return out
 
 
-def _flat_entries(host: str) -> dict[str, list[dict]]:
+def _flat_entries(host: str, mode: str) -> dict[str, list[dict]]:
     return {
-        native: [{"command": command(host, event)}]
+        native: [{"command": command(host, event, mode)}]
         for event, native in hook_hosts.EVENTS[host].items()
     }
 
@@ -116,12 +117,12 @@ def _add_entries(data: dict, entries: dict[str, list[dict]]) -> dict:
     return data
 
 
-def _merge_nested(data: dict, host: str) -> dict:
-    return _add_entries(_strip_nested(data, host), _nested_entries(host))
+def _merge_nested(data: dict, host: str, mode: str) -> dict:
+    return _add_entries(_strip_nested(data, host), _nested_entries(host, mode))
 
 
-def _merge_flat(data: dict, host: str) -> dict:
-    data = _add_entries(_strip_flat(data, host), _flat_entries(host))
+def _merge_flat(data: dict, host: str, mode: str) -> dict:
+    data = _add_entries(_strip_flat(data, host), _flat_entries(host, mode))
     data.setdefault("version", 1)
     return data
 
@@ -168,55 +169,98 @@ def _strip_flat(data: dict, host: str) -> dict:
     return data
 
 
-def plugin_text() -> str:
+def plugin_text(mode: str = DEFAULT_MODE) -> str:
     """Return the managed OpenCode plugin source."""
     return """// lazyplan lifecycle plugin (managed by lpui setup; remove with --no-hooks)
 import { execFile } from "node:child_process"
 import { promisify } from "node:util"
 
 const execFileAsync = promisify(execFile)
+const MODE = "__MODE__"
 
-const run = async (directory, event, extra = "") => {
-  const args = ["hook", event, "--host", "opencode"]
-  if (extra) args.push("--command", extra)
+const state = { started: false, cached: "", pending: "" }
+
+const run = async (directory, event, payload = {}, json = false) => {
+  const args = ["hook", event, "--host", "opencode", "--mode", MODE]
+  if (json) args.push("--json")
+  if (payload.command) args.push("--command", payload.command)
+  if (payload.tool) args.push("--tool", payload.tool)
+  if (payload.path) args.push("--path", payload.path)
   try {
     const { stdout } = await execFileAsync("lpui", args, {
       cwd: directory,
       timeout: 5000,
     })
-    return stdout.trim()
+    const text = stdout.trim()
+    if (!json) return text
+    try {
+      return JSON.parse(text)
+    } catch {
+      return {}
+    }
   } catch {
-    return ""
+    return json ? {} : ""
   }
+}
+
+const toolInput = (event) => event.input?.args ?? event.input ?? {}
+const commandOf = (event) => {
+  const value = toolInput(event).command
+  return typeof value === "string" ? value : ""
+}
+const pathOf = (event) => {
+  const value = toolInput(event).file_path ?? toolInput(event).path
+  return typeof value === "string" ? value : ""
 }
 
 export default {
   id: "lazyplan",
   async setup(ctx) {
     const directory = ctx.location?.directory ?? process.cwd()
-    const seen = new Set()
-    let pending = ""
+
+    // Deny a gated commit before the shell runs. OpenCode has no stop gate.
+    await ctx.permission.hook("evaluate", async (event) => {
+      if (event.action !== "shell") return
+      for (const resource of event.resources ?? []) {
+        const text = String(resource)
+        if (!text.includes("git commit")) continue
+        const answer = await run(directory, "pre-tool", { command: text }, true)
+        if (answer.block) {
+          event.effect = "deny"
+          event.message = answer.block
+          return
+        }
+        if (answer.text) state.pending = answer.text
+      }
+    })
+
     await ctx.tool.hook("execute.after", async (event) => {
-      if (String(event.tool).toLowerCase() !== "bash") return
-      const command = event.input?.command ?? event.input?.args?.command ?? ""
-      if (!command.includes("git commit")) return
-      const text = await run(directory, "post-tool", command)
-      if (text) pending = text
+      const tool = String(event.tool ?? "").toLowerCase()
+      const command = commandOf(event)
+      const file = pathOf(event)
+      if (tool === "bash" && !command.includes("git commit")) return
+      if (!command && !file) return
+      const text = await run(directory, "post-tool", { tool, command, path: file })
+      if (text) state.pending = text
     })
+
+    // Inject one cached packet on every model call, refreshed once per turn.
     await ctx.session.hook("context", async (event) => {
-      if (pending) {
-        event.system.push({ type: "text", text: pending })
-        pending = ""
-        return
+      if (state.pending) {
+        event.system.push({ type: "text", text: state.pending })
+        state.pending = ""
       }
-      const key = event.sessionID ?? event.session?.id ?? "default"
-      if (seen.has(key)) return
-      const text = await run(directory, "session-start")
-      if (text) {
-        event.system.push({ type: "text", text })
-        seen.add(key)
+      if (!state.started) {
+        state.cached = await run(directory, "session-start")
+        state.started = true
       }
+      if (state.cached) event.system.push({ type: "text", text: state.cached })
     })
+
+    await ctx.session.hook("compaction", async () => {
+      await run(directory, "pre-compact")
+    })
+
     if (typeof ctx.event?.subscribe === "function") {
       const controller = new AbortController()
       void (async () => {
@@ -228,8 +272,16 @@ export default {
           for await (const event of stream) {
             const where = event.location?.directory
             if (where && where !== directory) continue
-            const hook = event.type === "session.idle" ? "stop" : "prompt-submit"
-            await run(directory, hook)
+            if (event.type === "session.idle") {
+              const text = await run(directory, "stop")
+              if (text) state.pending = text
+              await run(directory, "session-end")
+              state.started = false
+              state.cached = ""
+              continue
+            }
+            state.cached = (await run(directory, "prompt-submit")) || state.cached
+            state.started = true
           }
         } catch {
           // Plugin unload or a closed stream: session tracking stays best-effort.
@@ -239,7 +291,7 @@ export default {
     }
   },
 }
-"""
+""".replace("__MODE__", normalize_mode(mode))
 
 
 def _read(path: Path) -> dict:
@@ -253,19 +305,21 @@ def _read(path: Path) -> dict:
     return data if isinstance(data, dict) else {}
 
 
-def _install_spec(spec: Spec, backup_dir: Path) -> bool:
+def _install_spec(spec: Spec, backup_dir: Path, mode: str) -> bool:
     if spec.kind == "plugin":
-        if spec.path.is_file() and textfile.read(spec.path) == plugin_text():
+        if spec.path.is_file() and textfile.read(spec.path) == plugin_text(mode):
             return False
         if spec.path.is_file():
             backup_file(backup_dir, spec.path)
         spec.path.parent.mkdir(parents=True, exist_ok=True)
-        textfile.write(spec.path, plugin_text())
+        textfile.write(spec.path, plugin_text(mode))
         return True
     data = _read(spec.path)
     before = json.dumps(data, sort_keys=True)
     merged = (
-        _merge_nested(data, spec.host) if spec.kind == "nested" else _merge_flat(data, spec.host)
+        _merge_nested(data, spec.host, mode)
+        if spec.kind == "nested"
+        else _merge_flat(data, spec.host, mode)
     )
     if json.dumps(merged, sort_keys=True) == before:
         return False
@@ -295,7 +349,11 @@ def _remove_spec(spec: Spec, backup_dir: Path) -> bool:
     return True
 
 
-def install(home: Path | None = None, hosts: list[str] | None = None) -> dict:
+def install(
+    home: Path | None = None,
+    hosts: list[str] | None = None,
+    mode: str = DEFAULT_MODE,
+) -> dict:
     """Write managed hook entries for the chosen hosts, backing up every file."""
     home = home or Path.home()
     backup_dir = new_backup_dir(home)
@@ -303,7 +361,7 @@ def install(home: Path | None = None, hosts: list[str] | None = None) -> dict:
     skipped: list[dict] = []
     for spec in preview(home, hosts):
         try:
-            if _install_spec(spec, backup_dir):
+            if _install_spec(spec, backup_dir, mode):
                 changed.append(str(spec.path))
         except (OSError, ValueError) as exc:
             skipped.append({"path": str(spec.path), "reason": str(exc)})

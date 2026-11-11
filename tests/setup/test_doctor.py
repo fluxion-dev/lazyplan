@@ -55,6 +55,12 @@ class DoctorCase(unittest.TestCase):
         self.assertEqual(report["expected"]["db"], str(db))
         self.assertEqual(code, 0, report)
 
+    def test_setup_reports_strict_mode(self):
+        self.assertEqual(lpui_main(["setup", "--yes", "--agents", "claude", "--json"]), 0)
+        code, report = self._json(["doctor", "--json"])
+        self.assertEqual(report["hooks"]["mode"], "strict")
+        self.assertEqual(code, 0, report)
+
     def test_findings_exit_one(self):
         plan_dir = self.repo / PLAN_DIR
         plan_dir.mkdir(parents=True)

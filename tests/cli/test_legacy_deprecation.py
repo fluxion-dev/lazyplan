@@ -1,4 +1,4 @@
-"""Legacy CLI aliases stay alive with one stderr deprecation notice."""
+"""Legacy CLI aliases are gone; the guard has nothing left to remove."""
 
 from __future__ import annotations
 
@@ -8,13 +8,11 @@ import tempfile
 import unittest
 from contextlib import redirect_stderr
 
-from lazyplan.infrastructure.environment import parse_version
 from lazyplan.presentation.cli.main import main as lpui_main
-from lazyplan.presentation.cli.parser import package_version
 from lazyplan.presentation.shared import registry
 
 
-class LegacyDeprecationTest(unittest.TestCase):
+class LegacyRemovalTest(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
         self.db = os.path.join(self.tmp.name, "legacy.db")
@@ -39,51 +37,21 @@ class LegacyDeprecationTest(unittest.TestCase):
             code = lpui_main(["--db", self.db, *argv])
         return code, stderr.getvalue()
 
-    def test_legacy_alias_runs_and_prints_one_notice(self) -> None:
-        code, stderr = self._run(["add-plan", "--title", "Legacy", "--what", "What"])
-        self.assertEqual(code, 0)
-        self.assertIn("deprecated", stderr)
-        self.assertIn("lpui plan add", stderr)
-        self.assertIn("0.37.0", stderr)
+    def test_flat_verbs_are_rejected(self) -> None:
+        for verb in ("add-plan", "add-task", "update", "status", "delete", "show"):
+            with self.subTest(verb=verb):
+                with self.assertRaises(SystemExit) as caught:
+                    self._run([verb, "--help"])
+                self.assertEqual(caught.exception.code, 2)
 
-    def test_porcelain_and_json_stay_machine_clean(self) -> None:
-        for flags in (["--porcelain"], ["--json"]):
-            with self.subTest(flags=flags):
-                code, stderr = self._run(
-                    [*flags, "add-plan", "--title", "Machine", "--what", "What"]
-                )
-                self.assertEqual(code, 0)
-                self.assertNotIn("deprecated", stderr)
-
-    def test_canonical_noun_form_is_silent(self) -> None:
+    def test_canonical_noun_form_still_works(self) -> None:
         code, stderr = self._run(["plan", "add", "--title", "Canonical", "--what", "What"])
         self.assertEqual(code, 0)
         self.assertNotIn("deprecated", stderr)
 
-    def test_every_deprecation_names_a_removal_release(self) -> None:
-        rows = registry.deprecations()
-        self.assertGreater(len(rows), 0)
-        for row in rows:
-            with self.subTest(name=row.name):
-                self.assertEqual(row.removal, registry.DEPRECATION_RELEASE)
-                self.assertTrue(row.replacement)
-
-    def test_removal_guard_fails_once_the_window_closes(self) -> None:
-        current = parse_version(package_version())
-        removal = parse_version(registry.DEPRECATION_RELEASE)
-        if current >= removal:
-            self.assertEqual(
-                registry.deprecations(),
-                (),
-                f"remove the deprecated aliases before {registry.DEPRECATION_RELEASE}",
-            )
-
-    def test_moved_actions_stay_reachable_from_the_palette(self) -> None:
-        from lazyplan.presentation.shared.palette import by_id
-
-        for command_id in ("add-question", "resolve-question", "reopen-question"):
-            with self.subTest(command=command_id):
-                self.assertIsNotNone(by_id(command_id))
+    def test_no_deprecations_remain(self) -> None:
+        self.assertEqual(registry.deprecations(), ())
+        self.assertEqual(registry.legacy_notice("add-plan"), None)
 
 
 if __name__ == "__main__":

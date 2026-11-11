@@ -91,6 +91,7 @@ class Session:
     phase: str = "working"
     last_seen_at: float = 0.0
     host: str = ""
+    host_session: str = ""
     auto_closed: bool = False
 
     @property

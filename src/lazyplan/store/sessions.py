@@ -51,6 +51,7 @@ class SessionsMixin(StoreBase):
             phase=str(r["phase"] or "working"),
             last_seen_at=float(r["last_seen_at"] or 0),
             host=str(r["host"] or ""),
+            host_session=str(r["host_session"] or ""),
             auto_closed=bool(r["auto_closed"]),
         )
 

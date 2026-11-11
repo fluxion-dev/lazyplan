@@ -10,6 +10,8 @@ from contextlib import closing
 from pathlib import Path
 from unittest import mock
 
+from lazyplan.core.entities import Session
+from lazyplan.core.serialization import to_payload
 from lazyplan.store import Store
 from lazyplan.store import migrate as migrate_mod
 from lazyplan.store.session_pointer import pointer_path, write_pointer
@@ -57,7 +59,7 @@ class TestSessionsStore(unittest.TestCase):
             }
         self.assertIn("sessions", tables)
         self.assertIn("session_id", columns)
-        for name in ("phase", "last_seen_at", "host", "auto_closed"):
+        for name in ("phase", "last_seen_at", "host", "host_session", "auto_closed"):
             self.assertIn(name, session_columns)
         for name in (
             "idx_sessions_open",
@@ -223,6 +225,29 @@ class TestSessionsStore(unittest.TestCase):
         ended = self.store.get_session(session.id)
         assert ended is not None
         self.assertEqual(ended.last_seen_at, 210.0)
+
+    def test_v9_database_gains_host_session(self) -> None:
+        path = os.path.join(self.tmp.name, "v9.db")
+        with closing(sqlite3.connect(path)) as conn:
+            conn.executescript(migrate_mod.SCHEMA)
+            conn.execute("ALTER TABLE sessions DROP COLUMN host_session")
+            conn.execute("PRAGMA user_version = 9")
+            conn.execute(
+                "INSERT INTO sessions (actor, started_at, ended_at, summary)"
+                " VALUES ('ana', 100.0, 0, 'old work')"
+            )
+            conn.commit()
+        store = Store(path)
+        old = store.get_session(1)
+        assert old is not None
+        self.assertEqual(old.host_session, "")
+        self.assertEqual(old.summary, "old work")
+        self.assertEqual(old.phase, "working")
+        self.assertFalse(old.ended)
+
+    def test_session_payload_carries_the_host_session(self) -> None:
+        session = Session(id=7, actor="ana", host_session="host-a")
+        self.assertEqual(to_payload(vars(session))["host_session"], "host-a")
 
     def test_v8_database_gains_session_state(self) -> None:
         path = os.path.join(self.tmp.name, "v8.db")

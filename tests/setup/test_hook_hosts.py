@@ -60,8 +60,11 @@ class HostCase(unittest.TestCase):
         )
         self.assertEqual(hook_hosts.matcher("claude", "SessionStart"), "*")
 
-    def test_claude_has_no_pre_compact_output(self):
-        self.assertEqual(hook_hosts.render("claude", "pre-compact", HookResult("hi", True)), "")
+    def test_claude_pre_compact_is_raw_summary_guidance(self):
+        self.assertEqual(
+            hook_hosts.render("claude", "pre-compact", HookResult("keep the task", True)),
+            "keep the task",
+        )
         body = json.loads(hook_hosts.render("codex", "pre-compact", HookResult("hi", True)))
         self.assertEqual(body["hookSpecificOutput"]["hookEventName"], "PreCompact")
 

@@ -2,8 +2,9 @@
 
 The canonical reminder is plain text; each host expects its own JSON
 envelope. OpenCode receives the text directly from its plugin. A host with
-no native name for an event never gets that event: Claude Code rejects
-context on PreCompact and re-runs SessionStart after compaction instead.
+no native name for an event never gets that event. Claude Code reads
+PreCompact stdout as guidance for the summary, so that event stays raw text
+instead of a JSON envelope.
 """
 
 from __future__ import annotations
@@ -20,6 +21,7 @@ EVENTS: dict[str, dict[str, str]] = {
         "post-tool": "PostToolUse",
         "stop": "Stop",
         "session-end": "SessionEnd",
+        "pre-compact": "PreCompact",
     },
     "gemini": {
         "session-start": "SessionStart",
@@ -152,5 +154,7 @@ def render(host: str, event: str, result: HookResult) -> str:
     """Stdout text for one host; OpenCode gets the raw reminder or reason."""
     if host == "opencode":
         return result.block or result.text
+    if host == "claude" and event == "pre-compact" and not result.block:
+        return result.text
     body = payload(host, event, result)
     return json.dumps(body, separators=(",", ":")) if body else ""

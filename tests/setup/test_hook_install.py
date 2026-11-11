@@ -139,7 +139,7 @@ class InstallCase(unittest.TestCase):
             hooks["PostToolUse"][0]["matcher"], hook_hosts.matcher("claude", "PostToolUse")
         )
         self.assertEqual(hooks["SessionStart"][0]["matcher"], "*")
-        self.assertNotIn("PreCompact", hooks)
+        self.assertIn("PreCompact", hooks)
 
     def test_reinstall_replaces_stale_managed_entries(self):
         settings = self.home / ".claude/settings.json"
@@ -163,7 +163,7 @@ class InstallCase(unittest.TestCase):
         )
         hook_install.install(self.home, ["claude"])
         hooks = self._read(settings)["hooks"]
-        self.assertNotIn("PreCompact", hooks)
+        self.assertIn("PreCompact", hooks)
         self.assertEqual(
             [(group["matcher"], group["hooks"]) for group in hooks["PostToolUse"]],
             [("Edit", user), (hook_hosts.matcher("claude", "PostToolUse"), old_post)],

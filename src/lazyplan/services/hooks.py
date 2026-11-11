@@ -22,7 +22,7 @@ from ..core.policies.sessions import IDLE_AFTER_SECS, phase_for_event
 from ..core.ports.app import AppPort
 from ..core.ports.insights import InsightsPort
 from ..infrastructure.repo import git_common_dir
-from . import audit, context, hook_policy
+from . import attribution, audit, context, hook_policy
 from . import sessions as session_services
 
 EVENTS = (
@@ -146,18 +146,6 @@ def _file_path(payload: dict) -> str:
     return match.group(1).strip() if match else ""
 
 
-def _doing_plan(store: InsightsPort) -> int | None:
-    """The one plan with doing work, or None when it is ambiguous."""
-    plans = {
-        plan.id
-        for plan in store.list_plans()
-        for milestone in store.list_milestones(plan.id)
-        for task in store.list_tasks(milestone.id)
-        if task.status.value == "doing"
-    }
-    return plans.pop() if len(plans) == 1 else None
-
-
 def _host_session(payload: dict) -> str:
     """The host's own session id from the common payload shapes."""
     for key in ("host_session", "session_id", "sessionID", "thread_id"):
@@ -191,6 +179,7 @@ def _track_session(
     repo = store.checkout_path(str(cwd))
     project = _project_key(repo)
     host_session = _host_session(payload)
+    branch = attribution.current_branch(repo)
     if event in ("session-start", "prompt-submit", "stop"):
         session_services.reap_idle_sessions(
             store, now=now, idle_after=IDLE_AFTER_SECS, repo_path=repo
@@ -204,11 +193,13 @@ def _track_session(
             return None
         if not host_session and event in ("pre-tool", "post-tool", "pre-compact"):
             return None
+        resolved = attribution.resolve(store, repo, branch)
         result = session_services.start_session(
             store,
             host or "agent",
-            plan_id=_doing_plan(store),
+            plan_id=resolved.plan_id,
             repo_path=repo,
+            branch=branch,
             host=host,
             host_session=host_session,
             phase=phase_for_event(event),
@@ -219,15 +210,34 @@ def _track_session(
             return session
         detached, last = store.detach_host_binding(host, host_session, project)
         return detached if last else None
-    elif event in ("pre-tool", "post-tool", "pre-compact"):
-        session = session_services.touch_session(store, session.id, host=host)
     else:
-        session = session_services.touch_session(
-            store, session.id, phase=phase_for_event(event), host=host
-        )
+        session = _refresh_tracking(store, session, event, host, repo, branch)
     if session is not None and host_session:
         store.bind_session(host, host_session, project, repo, session.id, now=now)
     return session
+
+
+def _refresh_tracking(
+    store: AppPort,
+    session: Session,
+    event: str,
+    host: str,
+    repo: str,
+    branch: str,
+) -> Session | None:
+    """Heartbeat one row and re-resolve attribution while it stays automatic."""
+    replace_plan = session.plan_source != "manual"
+    plan_id = attribution.resolve(store, repo, branch).plan_id if replace_plan else None
+    phase = phase_for_event(event) if event in ("session-start", "prompt-submit", "stop") else None
+    return session_services.touch_session(
+        store,
+        session.id,
+        phase=phase,
+        host=host,
+        branch=branch,
+        plan_id=plan_id,
+        replace_plan=replace_plan,
+    )
 
 
 def _session_text(

@@ -35,6 +35,7 @@ def start_session(
     note: str = "",
     force: bool = False,
     host: str = "",
+    host_session: str = "",
     phase: str = "working",
 ) -> dict:
     """Open a session and return it with any superseded session."""
@@ -46,6 +47,7 @@ def start_session(
         note=note,
         force=force,
         host=host,
+        host_session=host_session,
         phase=phase,
     )
     return {"session": session, "previous": previous}

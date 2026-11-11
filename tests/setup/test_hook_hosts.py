@@ -32,6 +32,15 @@ class HostCase(unittest.TestCase):
         body = json.loads(hook_hosts.render("cursor", "session-start", HookResult("hi", True)))
         self.assertEqual(body, {"additional_context": "hi"})
 
+    def test_cursor_post_tool_uses_additional_context(self):
+        body = json.loads(hook_hosts.render("cursor", "post-tool", HookResult("hi")))
+        self.assertEqual(body, {"additional_context": "hi"})
+
+    def test_cursor_prompt_submit_has_no_context_field(self):
+        body = json.loads(hook_hosts.render("cursor", "prompt-submit", HookResult("hi", True)))
+        self.assertEqual(body, {"continue": True})
+        self.assertNotIn("agentMessage", body)
+
     def test_opencode_gets_plain_text(self):
         self.assertEqual(hook_hosts.render("opencode", "stop", HookResult("warn")), "warn")
 

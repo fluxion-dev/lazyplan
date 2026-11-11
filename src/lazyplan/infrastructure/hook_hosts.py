@@ -144,8 +144,12 @@ def payload(host: str, event: str, result: HookResult) -> dict:
             }
         return {"systemMessage": result.text}
     if host == "cursor":
-        if event == "session-start":
+        if event in ("session-start", "post-tool"):
             return {"additional_context": result.text}
+        if event == "prompt-submit":
+            return {"continue": True}
+        if event == "session-end":
+            return {}
         return {"agentMessage": result.text}
     return {}
 

@@ -135,6 +135,12 @@ def _cmd_hook(store: object | None, args: argparse.Namespace, actor: str) -> int
     del store, actor
     db = optional_store(args)
     payload = hooks.read_payload(sys.stdin)
+    if args.command:
+        payload.setdefault("command", args.command)
+    if args.tool:
+        payload.setdefault("tool", args.tool)
+    if args.path:
+        payload.setdefault("path", args.path)
     host = hooks.detect_host(payload, args.host)
     result = hooks.run(args.event, payload, host, Path.cwd(), store=db, mode=args.mode)
     if args.json:

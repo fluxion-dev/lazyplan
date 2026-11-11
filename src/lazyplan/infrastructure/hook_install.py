@@ -178,47 +178,89 @@ import { promisify } from "node:util"
 const execFileAsync = promisify(execFile)
 const MODE = "__MODE__"
 
-const run = async (directory, event, extra = "") => {
+const state = { started: false, cached: "", pending: "" }
+
+const run = async (directory, event, payload = {}, json = false) => {
   const args = ["hook", event, "--host", "opencode", "--mode", MODE]
-  if (extra) args.push("--command", extra)
+  if (json) args.push("--json")
+  if (payload.command) args.push("--command", payload.command)
+  if (payload.tool) args.push("--tool", payload.tool)
+  if (payload.path) args.push("--path", payload.path)
   try {
     const { stdout } = await execFileAsync("lpui", args, {
       cwd: directory,
       timeout: 5000,
     })
-    return stdout.trim()
+    const text = stdout.trim()
+    if (!json) return text
+    try {
+      return JSON.parse(text)
+    } catch {
+      return {}
+    }
   } catch {
-    return ""
+    return json ? {} : ""
   }
+}
+
+const toolInput = (event) => event.input?.args ?? event.input ?? {}
+const commandOf = (event) => {
+  const value = toolInput(event).command
+  return typeof value === "string" ? value : ""
+}
+const pathOf = (event) => {
+  const value = toolInput(event).file_path ?? toolInput(event).path
+  return typeof value === "string" ? value : ""
 }
 
 export default {
   id: "lazyplan",
   async setup(ctx) {
     const directory = ctx.location?.directory ?? process.cwd()
-    const seen = new Set()
-    let pending = ""
+
+    // Deny a gated commit before the shell runs. OpenCode has no stop gate.
+    await ctx.permission.hook("evaluate", async (event) => {
+      if (event.action !== "shell") return
+      for (const resource of event.resources ?? []) {
+        const text = String(resource)
+        if (!text.includes("git commit")) continue
+        const answer = await run(directory, "pre-tool", { command: text }, true)
+        if (answer.block) {
+          event.effect = "deny"
+          event.message = answer.block
+          return
+        }
+        if (answer.text) state.pending = answer.text
+      }
+    })
+
     await ctx.tool.hook("execute.after", async (event) => {
-      if (String(event.tool).toLowerCase() !== "bash") return
-      const command = event.input?.command ?? event.input?.args?.command ?? ""
-      if (!command.includes("git commit")) return
-      const text = await run(directory, "post-tool", command)
-      if (text) pending = text
+      const tool = String(event.tool ?? "").toLowerCase()
+      const command = commandOf(event)
+      const file = pathOf(event)
+      if (tool === "bash" && !command.includes("git commit")) return
+      if (!command && !file) return
+      const text = await run(directory, "post-tool", { tool, command, path: file })
+      if (text) state.pending = text
     })
+
+    // Inject one cached packet on every model call, refreshed once per turn.
     await ctx.session.hook("context", async (event) => {
-      if (pending) {
-        event.system.push({ type: "text", text: pending })
-        pending = ""
-        return
+      if (state.pending) {
+        event.system.push({ type: "text", text: state.pending })
+        state.pending = ""
       }
-      const key = event.sessionID ?? event.session?.id ?? "default"
-      if (seen.has(key)) return
-      const text = await run(directory, "session-start")
-      if (text) {
-        event.system.push({ type: "text", text })
-        seen.add(key)
+      if (!state.started) {
+        state.cached = await run(directory, "session-start")
+        state.started = true
       }
+      if (state.cached) event.system.push({ type: "text", text: state.cached })
     })
+
+    await ctx.session.hook("compaction", async () => {
+      await run(directory, "pre-compact")
+    })
+
     if (typeof ctx.event?.subscribe === "function") {
       const controller = new AbortController()
       void (async () => {
@@ -230,8 +272,15 @@ export default {
           for await (const event of stream) {
             const where = event.location?.directory
             if (where && where !== directory) continue
-            const hook = event.type === "session.idle" ? "stop" : "prompt-submit"
-            await run(directory, hook)
+            if (event.type === "session.idle") {
+              await run(directory, "stop")
+              await run(directory, "session-end")
+              state.started = false
+              state.cached = ""
+              continue
+            }
+            state.cached = (await run(directory, "prompt-submit")) || state.cached
+            state.started = true
           }
         } catch {
           // Plugin unload or a closed stream: session tracking stays best-effort.

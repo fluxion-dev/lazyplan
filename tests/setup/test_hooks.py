@@ -357,6 +357,31 @@ class HookCase(unittest.TestCase):
         self.assertEqual(sessions[0].phase, "working")
         self.assertTrue(sessions[0].host)
 
+    def test_cli_command_flag_reaches_the_commit_gate(self):
+        self._linked_plan()
+        out = io.StringIO()
+        old_stdin = sys.stdin
+        sys.stdin = io.StringIO("")
+        try:
+            with redirect_stdout(out):
+                code = lpui_main(
+                    [
+                        "hook",
+                        "pre-tool",
+                        "--host",
+                        "opencode",
+                        "--mode",
+                        "strict",
+                        "--command",
+                        "git commit -m x",
+                        "--json",
+                    ]
+                )
+        finally:
+            sys.stdin = old_stdin
+        self.assertEqual(code, 0)
+        self.assertIn("no doing task", json.loads(out.getvalue())["block"])
+
     def test_cli_json_and_fresh_home(self):
         self._seed()
         out = io.StringIO()

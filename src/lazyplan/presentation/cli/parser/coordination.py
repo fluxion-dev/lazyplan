@@ -364,6 +364,21 @@ def add_hook(
         default="strict",
         help="installed behavior mode; LAZYPLAN_HOOKS overrides it at runtime",
     )
+    hk.add_argument(
+        "--command",
+        default="",
+        help=argparse.SUPPRESS,
+    )
+    hk.add_argument(
+        "--tool",
+        default="",
+        help=argparse.SUPPRESS,
+    )
+    hk.add_argument(
+        "--path",
+        default="",
+        help=argparse.SUPPRESS,
+    )
 
 
 def add_who(

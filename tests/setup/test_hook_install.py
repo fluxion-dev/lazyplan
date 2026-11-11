@@ -80,6 +80,16 @@ class InstallCase(unittest.TestCase):
         self.assertEqual(result["installed"], [])
         self.assertEqual(result["backups"], [])
 
+    def test_opencode_plugin_denies_commits_and_reuses_context(self):
+        hook_install.install(self.home, ["opencode"], mode="advisory")
+        text = (self.home / ".config/opencode/plugins/lazyplan.js").read_text(encoding="utf-8")
+        self.assertIn('ctx.permission.hook("evaluate"', text)
+        self.assertIn('ctx.session.hook("context"', text)
+        self.assertIn('ctx.session.hook("compaction"', text)
+        self.assertIn('"--mode", MODE', text)
+        self.assertIn('const MODE = "advisory"', text)
+        self.assertIn('"session-end"', text)
+
     def test_mode_reinstall_replaces_managed_commands(self):
         hook_install.install(self.home, ["claude"], mode="strict")
         hook_install.install(self.home, ["claude"], mode="advisory")

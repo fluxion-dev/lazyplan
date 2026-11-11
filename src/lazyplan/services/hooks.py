@@ -161,14 +161,50 @@ def _session_text(
     return text
 
 
+def _stop_result(
+    store: AppPort,
+    cwd: Path,
+    commits: list[audit.Commit] | None,
+    session: Session | None,
+    payload: dict,
+    mode: str,
+    host: str,
+) -> HookResult:
+    """Block one stop when a managed checkout has unlinked commits."""
+    lines = _brief_lines(store, cwd, commits)
+    loose = [line.strip() for line in lines if line.strip().startswith("unlinked")]
+    continued = bool(payload.get("stop_hook_active"))
+    try:
+        continued = continued or int(payload.get("loop_count") or 0) > 0
+    except (TypeError, ValueError):
+        continued = True
+    if loose and mode == "strict" and host != "opencode" and not continued:
+        scope = hook_scope.resolve(store, cwd)
+        if scope.managed and scope.task is not None:
+            task_id = scope.task.id
+            parts = [f"lazyplan: {len(loose)} plan(s) have unlinked commits."]
+            parts.append(f"Link them with `lpui link --kind task --id {task_id}`.")
+            if session is not None:
+                parts.append(
+                    f"Then end S{session.id} with `lpui session end --id S{session.id} --summary`."
+                )
+            return HookResult(block=" ".join(parts))
+    return HookResult(_stop_text(store, cwd, commits, session, loose=loose)).capped()
+
+
 def _stop_text(
     store: InsightsPort,
     cwd: Path,
     commits: list[audit.Commit] | None,
     session: Session | None = None,
+    loose: list[str] | None = None,
 ) -> str:
     lines = _brief_lines(store, cwd, commits)
-    parts = [line.strip() for line in lines if line.strip().startswith("unlinked")]
+    parts = (
+        loose
+        if loose is not None
+        else [line.strip() for line in lines if line.strip().startswith("unlinked")]
+    )
     tracked = session
     if tracked is None:
         rows = store.list_sessions(open_only=True, limit=1)
@@ -236,7 +272,7 @@ def build_result(
         if event in ("session-start", "pre-compact"):
             return HookResult(_session_text(store, here, commits, session), context=True).capped()
         if event == "stop":
-            return HookResult(_stop_text(store, here, commits, session)).capped()
+            return _stop_result(store, here, commits, session, payload, mode, who)
         if event == "pre-tool":
             return _pre_tool_result(store, here, payload, mode)
         if event == "post-tool":

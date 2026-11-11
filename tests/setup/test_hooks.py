@@ -101,6 +101,98 @@ class HookCase(unittest.TestCase):
         self.assertTrue(updated.awaiting)
         self.assertGreater(updated.last_seen_at, 0)
 
+    def _unlinked(self):
+        plan_id, task_id = self._seed()
+        Store(self.db).add_repo_link("plan", plan_id, str(self.repo), actor="t")
+        commit = audit.Commit(
+            sha="a" * 40,
+            timestamp=int(time.time()),
+            subject="work",
+            repo=str(self.repo),
+        )
+        return task_id, [commit]
+
+    def test_stop_blocks_once_for_unlinked_commits(self):
+        _task_id, commits = self._unlinked()
+        result = hooks.build_result(
+            "stop",
+            {},
+            self.repo,
+            commits=commits,
+            store=Store(self.db),
+            mode="strict",
+            host="claude",
+        )
+        self.assertIn("unlinked commits", result.block)
+        self.assertIn("lpui link --kind task", result.block)
+
+    def test_continued_stop_is_allowed(self):
+        _task_id, commits = self._unlinked()
+        result = hooks.build_result(
+            "stop",
+            {"stop_hook_active": True},
+            self.repo,
+            commits=commits,
+            store=Store(self.db),
+            mode="strict",
+            host="claude",
+        )
+        self.assertEqual(result.block, "")
+
+    def test_cursor_loop_count_allows_the_second_stop(self):
+        _task_id, commits = self._unlinked()
+        result = hooks.build_result(
+            "stop",
+            {"loop_count": 1},
+            self.repo,
+            commits=commits,
+            store=Store(self.db),
+            mode="strict",
+            host="cursor",
+        )
+        self.assertEqual(result.block, "")
+
+    def test_advisory_stop_reminds_without_blocking(self):
+        _task_id, commits = self._unlinked()
+        result = hooks.build_result(
+            "stop",
+            {},
+            self.repo,
+            commits=commits,
+            store=Store(self.db),
+            mode="advisory",
+            host="claude",
+        )
+        self.assertEqual(result.block, "")
+        self.assertIn("unlinked", result.text)
+
+    def test_opencode_never_blocks_a_stop(self):
+        _task_id, commits = self._unlinked()
+        result = hooks.build_result(
+            "stop",
+            {},
+            self.repo,
+            commits=commits,
+            store=Store(self.db),
+            mode="strict",
+            host="opencode",
+        )
+        self.assertEqual(result.block, "")
+
+    def test_unmanaged_repo_does_not_block_a_stop(self):
+        _plan, _task = self._seed()
+        commit = audit.Commit(sha="a" * 40, timestamp=int(time.time()), subject="work")
+        result = hooks.build_result(
+            "stop",
+            {},
+            self.repo,
+            commits=[commit],
+            store=Store(self.db),
+            mode="strict",
+            host="claude",
+        )
+        self.assertEqual(result.block, "")
+
     def test_missing_database_is_silent(self):
         self.assertEqual(
             hooks.build_result("session-start", {}, self.repo, commits=[], store=None),

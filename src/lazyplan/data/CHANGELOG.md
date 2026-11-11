@@ -3,17 +3,32 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
-## Unreleased
+## v0.39.0 — 2026-11-11
+
+### Added
+
+- **Markdown overview.** The overview body is a native Markdown document:
+  why, what, and details render lists, quotes, code fences, tables, and links,
+  section headings become full-width bars, and only http/https links open.
+- **Every agent session has its own row.** Each top-level host session now has
+  its own row with its own phase and heartbeat, the OpenCode plugin passes the
+  session id on every event, and the agents card, sessions hub, and
+  `lpui session list` show every open session with a short host id. Child
+  subagent sessions stay with their parent.
+
+### Changed
+
+- **Room to write.** Plan, milestone, and task create/edit dialogs use most of
+  the screen, multiline editors grow to fill the form, and criterion and
+  reference forms use the same scale. One-line prompts and small dialogs stay
+  compact, with a compact fallback on small terminals.
 
 ### Fixed
 
-- **The plan tree stays still while an agent works.** Session heartbeats now
-  refresh only the agents pane, never the plan tree. Real plan edits update the
-  affected rows in place, so expansion, cursor, scroll, focus, and the preview
-  hold their position, and the doing-row spinner keeps its frame. The database
-  poll runs on a worker thread and coalesces a burst of edits, and it waits for
-  an open dialog to close before redrawing. Detection now follows the event
-  watermark, so two agents writing at once are seen within about a second.
+- **The plan tree stays still while an agent works.** Session heartbeats refresh
+  only the agents pane, real edits update affected rows in place, and the
+  cursor, scroll, focus, preview, and spinner hold their position. The database
+  poll runs on a worker and coalesces a burst of edits.
 
 ## v0.38.0 — 2026-11-11
 

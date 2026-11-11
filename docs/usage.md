@@ -332,11 +332,14 @@ The right column holds only the overview, which follows the selection: a plan
 shows open questions, why, what, approval, references, and every milestone as
 a title-only row; a milestone shows its details and every task; a task shows
 its details, criteria, proof, notes, and source. The overview starts with one
-attention line, then full-width section bars and their details. One blank line
-separates a bar from the section above, and no blank line separates a bar from
-its content. The timeline card stays hidden on launch; `T` or the palette's
-show/hide timeline command opens it for the session. When open, it follows the
-selected row and its immediate children.
+attention line, then full-width Markdown section bars and their content. One
+blank line separates a bar from the section above, and no blank line separates
+a bar from its content. Prose in why, what, and details renders as Markdown,
+so lists, quotes, code fences, tables, and links appear as formatted text.
+Only http and https links open; other schemes are reported instead. The
+timeline card stays hidden on launch; `T` or the palette's show/hide timeline
+command opens it for the session. When open, it follows the selected row and
+its immediate children.
 
 Both plan panels keep the full milestone and task tree, and the text filter
 applies inside each panel. On terminals narrower than 100 columns the overview
@@ -367,8 +370,11 @@ branches exist in the journal but not as screen nodes.
 | `q` | quit, from any screen |
 
 From the tree, `e` edits, `s` advances status, `a` adds a criterion, `g`
-opens the source trail, and `n` creates by context. The
-palette carries questions, approvals, claims, sessions, comments, pull
+opens the source trail, and `n` creates by context. Create and edit dialogs
+use most of the screen: plan, milestone, task, criterion, and reference forms
+open wide, and definition forms give why, what, and details most of the
+height. One-line prompts for filter, comment, note, and approve stay compact.
+The palette carries questions, approvals, claims, sessions, comments, pull
 requests, and activity; it disables actions the current selection cannot run
 and says why.
 

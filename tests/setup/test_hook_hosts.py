@@ -53,9 +53,11 @@ class HostCase(unittest.TestCase):
                 self.assertTrue(hook_hosts.event_name(host, event))
 
     def test_shell_matchers_follow_each_host_tool_name(self):
-        self.assertEqual(hook_hosts.matcher("claude", "PostToolUse"), "Bash|PowerShell")
-        self.assertEqual(hook_hosts.matcher("codex", "PostToolUse"), "Bash")
-        self.assertEqual(hook_hosts.matcher("gemini", "AfterTool"), "run_shell_command")
+        self.assertEqual(hook_hosts.matcher("claude", "PostToolUse"), "Bash|PowerShell|Edit|Write")
+        self.assertEqual(hook_hosts.matcher("codex", "PostToolUse"), "Bash|apply_patch|Edit|Write")
+        self.assertEqual(
+            hook_hosts.matcher("gemini", "AfterTool"), "run_shell_command|replace|write_file"
+        )
         self.assertEqual(hook_hosts.matcher("claude", "SessionStart"), "*")
 
     def test_claude_has_no_pre_compact_output(self):

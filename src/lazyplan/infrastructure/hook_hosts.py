@@ -61,10 +61,19 @@ EVENTS: dict[str, dict[str, str]] = {
 
 
 MATCHERS: dict[str, dict[str, str]] = {
-    "claude": {"PreToolUse": "Bash|PowerShell", "PostToolUse": "Bash|PowerShell"},
-    "codex": {"PreToolUse": "Bash", "PostToolUse": "Bash"},
-    "gemini": {"BeforeTool": "run_shell_command", "AfterTool": "run_shell_command"},
-    "cursor": {"beforeShellExecution": "*"},
+    "claude": {
+        "PreToolUse": "Bash|PowerShell",
+        "PostToolUse": "Bash|PowerShell|Edit|Write",
+    },
+    "codex": {
+        "PreToolUse": "Bash",
+        "PostToolUse": "Bash|apply_patch|Edit|Write",
+    },
+    "gemini": {
+        "BeforeTool": "run_shell_command",
+        "AfterTool": "run_shell_command|replace|write_file",
+    },
+    "cursor": {"beforeShellExecution": "*", "postToolUse": "Shell|Write"},
 }
 
 

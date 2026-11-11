@@ -8,7 +8,7 @@ import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 
-from lazyplan.infrastructure import hook_install
+from lazyplan.infrastructure import hook_hosts, hook_install
 from lazyplan.presentation import setup
 from lazyplan.presentation.cli import main as lpui_main
 from tests.support.home import sandbox_home
@@ -80,6 +80,22 @@ class InstallCase(unittest.TestCase):
         self.assertEqual(result["installed"], [])
         self.assertEqual(result["backups"], [])
 
+    def test_mode_reinstall_replaces_managed_commands(self):
+        hook_install.install(self.home, ["claude"], mode="strict")
+        hook_install.install(self.home, ["claude"], mode="advisory")
+        text = (self.home / ".claude/settings.json").read_text(encoding="utf-8")
+        self.assertIn("--mode advisory", text)
+        self.assertNotIn("--mode strict", text)
+
+    def test_new_events_are_installed_for_every_surface(self):
+        hook_install.install(self.home, ALL)
+        claude = json.dumps(self._read(self.home / ".claude/settings.json"))
+        self.assertIn("PreToolUse", claude)
+        self.assertIn("SessionEnd", claude)
+        cursor = self._read(self.home / ".cursor/hooks.json")
+        self.assertIn("beforeShellExecution", cursor["hooks"])
+        self.assertIn("sessionEnd", cursor["hooks"])
+
     def test_remove_strips_only_managed_entries(self):
         settings = self.home / ".claude/settings.json"
         settings.parent.mkdir(parents=True)
@@ -109,7 +125,9 @@ class InstallCase(unittest.TestCase):
     def test_claude_post_tool_matches_bash_and_powershell(self):
         hook_install.install(self.home, ["claude"])
         hooks = self._read(self.home / ".claude/settings.json")["hooks"]
-        self.assertEqual(hooks["PostToolUse"][0]["matcher"], "Bash|PowerShell")
+        self.assertEqual(
+            hooks["PostToolUse"][0]["matcher"], hook_hosts.matcher("claude", "PostToolUse")
+        )
         self.assertEqual(hooks["SessionStart"][0]["matcher"], "*")
         self.assertNotIn("PreCompact", hooks)
 
@@ -117,9 +135,7 @@ class InstallCase(unittest.TestCase):
         settings = self.home / ".claude/settings.json"
         settings.parent.mkdir(parents=True)
         stale = [{"type": "command", "command": "lpui hook pre-compact --host claude"}]
-        old_post = [
-            {"type": "command", "command": hook_install.command("claude", "post-tool")}
-        ]
+        old_post = [{"type": "command", "command": hook_install.command("claude", "post-tool")}]
         user = [{"type": "command", "command": "echo user"}]
         settings.write_text(
             json.dumps(
@@ -140,7 +156,7 @@ class InstallCase(unittest.TestCase):
         self.assertNotIn("PreCompact", hooks)
         self.assertEqual(
             [(group["matcher"], group["hooks"]) for group in hooks["PostToolUse"]],
-            [("Edit", user), ("Bash|PowerShell", old_post)],
+            [("Edit", user), (hook_hosts.matcher("claude", "PostToolUse"), old_post)],
         )
 
     def test_reads_settings_with_a_byte_order_mark(self):

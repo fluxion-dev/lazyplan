@@ -56,6 +56,30 @@ class TestReapBeforeRender(unittest.IsolatedAsyncioTestCase):
             assert ended is not None
             self.assertTrue(ended.ended)
 
+    async def test_clicking_the_agents_pane_does_not_open_the_sessions_hub(self) -> None:
+        self.store.start_session("ana", plan_id=self.plan.id)
+        app = create_app(self.store.path)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            panel = app.query_one("#agents")
+            stack = len(app.screen_stack)
+            await pilot.click("#agents")
+            await pilot.pause()
+            self.assertEqual(len(app.screen_stack), stack)
+            self.assertNotIsInstance(app.screen, SessionsHub)
+            self.assertIsNot(app.focused, panel)
+
+    async def test_palette_handler_opens_the_sessions_hub(self) -> None:
+        from lazyplan.presentation.tui.palette_handlers import palette_handlers
+
+        app = create_app(self.store.path)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.selected = ("plan", self.plan.id)
+            palette_handlers(app)["open_sessions_hub"]()
+            await pilot.pause()
+            self.assertIsInstance(app.screen, SessionsHub)
+
     async def test_a_heartbeat_changes_live_state_not_structure(self) -> None:
         session, _ = self.store.start_session("ana", plan_id=self.plan.id)
         app = create_app(self.store.path)

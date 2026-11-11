@@ -51,6 +51,7 @@ _.export_plan
 _.render_plan_markdown
 _.rebuilds
 _.poll_now
+_.cursor_line
 BINDINGS
 auto_closed
 CSS

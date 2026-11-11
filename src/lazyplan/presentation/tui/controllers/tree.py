@@ -236,44 +236,63 @@ class TreeController(LazyBranchMixin):
         app._pending_note = self._pending_note
         app.rev += 1
 
-    def restore_selection(
-        self,
-        prev_selected: tuple[str, int] | None,
-        prev_cursor: Any,
-    ) -> None:
-        """Keep the cursor on the same row across rebuilds."""
+    def capture_view(self) -> dict[str, Any]:
+        """Remember the cursor row, focus, and each tree's scroll offset."""
+        view: dict[str, Any] = {"cursor": None, "focus": None, "scroll": {}}
+        for tree in self.trees():
+            view["scroll"][tree.id] = (tree.scroll_x, tree.scroll_y)
+            if tree.has_focus:
+                view["focus"] = tree.id
+                cursor = tree.cursor_node
+                view["cursor"] = self.node_key(cursor) if cursor is not None else None
+        return view
+
+    def restore_view(self, view: dict[str, Any], prev_selected: tuple[str, int] | None) -> None:
+        """Restore cursor, scroll, and focus after an in-place refresh."""
         app = self.app
-        target = prev_selected if prev_selected in app._row_nodes else prev_cursor
+        target = view.get("cursor")
         if target not in app._row_nodes:
-            target = None
-        if target is None and app._row_nodes:
-            for key in app._row_nodes:
-                if key[0] == "plan" and app._row_nodes[key].tree.display:
-                    target = key
-                    break
-            if target is None:
-                target = next(iter(app._row_nodes))
-            app.selected = target
-        if target not in app._row_nodes:
+            target = prev_selected if prev_selected in app._row_nodes else None
+        if target is None:
+            target = self.fallback_key()
+        if target is None:
             return
-        node = app._row_nodes[target]
-        tree = node.tree
+        if app.selected not in app._row_nodes:
+            app.selected = target
         try:
-            tree.move_cursor(node)
+            app.call_after_refresh(lambda: self._place_view(view, target))
         except Exception:
             pass
 
-        def _restore(cursor: Any = node) -> None:
+    def fallback_key(self) -> tuple[str, int] | None:
+        """First visible plan row, else the first row of any kind."""
+        for key, node in self.app._row_nodes.items():
+            if key[0] == "plan" and node.tree.display:
+                return key
+        return next(iter(self.app._row_nodes), None)
+
+    def _place_view(self, view: dict[str, Any], target: tuple[str, int]) -> None:
+        """Apply the saved offsets, then scroll only if the cursor is off-screen."""
+        app = self.app
+        node = app._row_nodes.get(target)
+        for tree in self.trees():
+            x, y = view["scroll"].get(tree.id, (tree.scroll_x, tree.scroll_y))
             try:
-                tree.move_cursor(cursor)
-                tree.scroll_to_node(cursor)
+                tree.scroll_to(x=x, y=y, animate=False)
             except Exception:
                 pass
-
-        try:
-            app.call_after_refresh(_restore)
-        except Exception:
-            pass
+            if node is None or node.tree is not tree or node._line < 0:
+                continue
+            try:
+                tree.cursor_line = node._line
+            except Exception:
+                continue
+            height = max(1, tree.scrollable_content_region.height)
+            if node._line < y or node._line >= y + height:
+                try:
+                    tree.scroll_to_node(node, animate=False)
+                except Exception:
+                    pass
 
     @staticmethod
     def progress_map(
@@ -324,11 +343,12 @@ class TreeController(LazyBranchMixin):
     def show_empty(self, active_empty: bool, finished_empty: bool) -> None:
         """Swap each tree for its centered empty state when that panel is empty."""
         active_tree, finished_tree = self.trees()
+        flipped = active_tree.display == active_empty or (finished_tree.display == finished_empty)
         active_tree.display = not active_empty
         finished_tree.display = not finished_empty
         self.app.query_one("#tree-empty", Static).display = active_empty
         self.app.query_one("#tree-finished-empty", Static).display = finished_empty
-        if len(self.app.screen_stack) > 1:
+        if not flipped or len(self.app.screen_stack) > 1:
             return
         if not any(tree.has_focus for tree in (active_tree, finished_tree)):
             target = finished_tree if active_empty else active_tree
@@ -373,15 +393,8 @@ class TreeController(LazyBranchMixin):
         active_tree, finished_tree = self.trees()
         app._refreshing = True
         prev_selected = app.selected
-        prev_cursor = None
-        for widget in (active_tree, finished_tree):
-            if not widget.has_focus:
-                continue
-            try:
-                cursor = widget.cursor_node
-                prev_cursor = self.node_key(cursor) if cursor is not None else None
-            except Exception:
-                prev_cursor = None
+        view = self.capture_view()
+        prev_cursor = view["cursor"]
         base = services.tree(app.store, status=None, archived="show", plan_mode="all")
         self._prepare_model(base)
         active, finished = self.filters.panels(base)
@@ -419,7 +432,7 @@ class TreeController(LazyBranchMixin):
         self.show_empty(not active, not finished)
         app.spinner_controller.paint()
         app.query_one("#hints", Label).update(hint_bar(max(10, app.size.width - 2), markup=True))
-        self.restore_selection(prev_selected, prev_cursor)
+        self.restore_view(view, prev_selected)
         app.metrics_controller.refresh()
         selected = app.selected
         force = selected != prev_selected or (selected is not None and selected in changed)

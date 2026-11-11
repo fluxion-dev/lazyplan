@@ -16,6 +16,7 @@ try:
 
     from lazyplan.presentation.tui import create_app
     from lazyplan.presentation.tui.screens.forms import ConfirmScreen
+    from lazyplan.presentation.tui.widgets.preview_panel import PreviewPanel
 except ImportError:  # pragma: no cover - textual not installed
     create_app = None  # type: ignore[assignment]
 
@@ -325,6 +326,74 @@ class TestInPlaceReconciliation(RefreshCase):
             self.assertEqual(
                 self.row_ids(app)[("plan", plans[3].id)], before[("plan", plans[3].id)]
             )
+
+
+class TestViewPreservation(RefreshCase):
+    def busy_tree(self) -> None:
+        """Make the plan list long enough to scroll and keep the fixture on top."""
+        for index in range(20):
+            self.store.add_plan(f"Extra {index}")
+        self.store.update_plan(self.plan.id, goal="most recent", actor="ana")
+
+    async def test_cursor_and_scroll_survive_a_structural_update(self) -> None:
+        self.busy_tree()
+        app = create_app(self.store.path)
+        async with app.run_test(size=(120, 18)) as pilot:
+            await pilot.pause()
+            tree = app.query_one("#tree", Tree)
+            tree.move_cursor(list(app._row_nodes.values())[4])
+            tree.scroll_to(y=3, animate=False)
+            await pilot.pause()
+            cursor_line = tree.cursor_line
+            scroll = tree.scroll_offset
+            focused = tree.has_focus
+            self.store.update_task(self.task.id, title="Renamed", actor="ana")
+            app.refresh_all()
+            await pilot.pause()
+            self.assertEqual(tree.cursor_line, cursor_line)
+            self.assertEqual(tree.scroll_offset, scroll)
+            self.assertEqual(tree.has_focus, focused)
+
+    async def test_cursor_and_scroll_survive_a_heartbeat(self) -> None:
+        self.busy_tree()
+        session_id = self.open_session()
+        app = create_app(self.store.path)
+        async with app.run_test(size=(120, 18)) as pilot:
+            await pilot.pause()
+            harness = self.harness(app, session_id)
+            tree = app.query_one("#tree", Tree)
+            tree.move_cursor(list(app._row_nodes.values())[4])
+            tree.scroll_to(y=3, animate=False)
+            await pilot.pause()
+            cursor_line = tree.cursor_line
+            scroll = tree.scroll_offset
+            harness.heartbeat("awaiting")
+            await pilot.pause()
+            self.assertEqual(tree.cursor_line, cursor_line)
+            self.assertEqual(tree.scroll_offset, scroll)
+
+    async def test_an_unselected_change_keeps_the_preview_document(self) -> None:
+        other = self.store.add_plan("Other")
+        self.store.update_plan(self.plan.id, goal="most recent", actor="ana")
+        app = create_app(self.store.path)
+        async with app.run_test(size=(120, 24)) as pilot:
+            await pilot.pause()
+            app.selected = ("plan", other.id)
+            app.update_preview(force=True)
+            await pilot.pause()
+            panel = app.query_one("#preview", PreviewPanel)
+            calls: list[object] = []
+            original = panel.show
+
+            def spy(document: object, strip: str = "") -> None:
+                calls.append(document)
+                original(document, strip)  # type: ignore[arg-type]
+
+            panel.show = spy  # type: ignore[method-assign]
+            self.store.update_task(self.task.id, title="Unrelated", actor="ana")
+            app.refresh_all()
+            await pilot.pause()
+            self.assertEqual(calls, [])
 
 
 if __name__ == "__main__":

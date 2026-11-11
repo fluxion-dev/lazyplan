@@ -10,6 +10,8 @@ from __future__ import annotations
 import json
 import os
 import re
+import select
+import threading
 import time
 from pathlib import Path
 from typing import TextIO, cast
@@ -33,12 +35,53 @@ EVENTS = (
 )
 HOSTS = ("opencode", "claude", "gemini", "codex", "cursor")
 NO_HOOKS_ENV = hook_modes.NO_HOOKS_ENV
+STDIN_TIMEOUT = 0.5
+
+
+def _read_bounded(stream: TextIO, timeout: float = STDIN_TIMEOUT) -> str:
+    """Read stdin without waiting for a pipe the host leaves open."""
+    try:
+        fd = stream.fileno()
+    except (AttributeError, OSError, ValueError):
+        # StringIO and other non-file streams already return immediately.
+        return stream.read()
+    if os.name == "nt":
+        box: dict[str, str] = {}
+
+        def read_all() -> None:
+            try:
+                box["raw"] = stream.read()
+            except (OSError, ValueError):
+                box["raw"] = ""
+
+        thread = threading.Thread(target=read_all, daemon=True)
+        thread.start()
+        thread.join(timeout)
+        return box.get("raw", "")
+    chunks: list[bytes] = []
+    deadline = time.monotonic() + timeout
+    try:
+        while True:
+            remaining = deadline - time.monotonic()
+            wait = remaining if not chunks else 0.02
+            if wait <= 0:
+                break
+            ready, _, _ = select.select([fd], [], [], wait)
+            if not ready:
+                break
+            chunk = os.read(fd, 65536)
+            if not chunk:
+                break
+            chunks.append(chunk)
+    except (OSError, ValueError):
+        return ""
+    return b"".join(chunks).decode("utf-8", "replace")
 
 
 def read_payload(stream: TextIO) -> dict:
     """Parse host JSON from stdin; malformed or empty input is an empty payload."""
     try:
-        raw = stream.read()
+        raw = _read_bounded(stream)
     except (OSError, ValueError):
         return {}
     if not raw.strip():

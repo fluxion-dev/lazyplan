@@ -60,6 +60,29 @@ class HookCase(unittest.TestCase):
         self.assertEqual(hooks.read_payload(io.StringIO("{nope")), {})
         self.assertEqual(hooks.read_payload(io.StringIO("[1]")), {})
 
+    def test_read_payload_does_not_wait_for_an_open_pipe(self):
+        read_fd, write_fd = os.pipe()
+        reader = os.fdopen(read_fd, "r", encoding="utf-8")
+        try:
+            started = time.monotonic()
+            self.assertEqual(hooks.read_payload(reader), {})
+            self.assertLess(time.monotonic() - started, 1.0)
+        finally:
+            reader.close()
+            os.close(write_fd)
+
+    def test_read_payload_keeps_a_payload_on_an_open_pipe(self):
+        read_fd, write_fd = os.pipe()
+        reader = os.fdopen(read_fd, "r", encoding="utf-8")
+        try:
+            os.write(write_fd, b'{"command": "git commit"}')
+            started = time.monotonic()
+            self.assertEqual(hooks.read_payload(reader), {"command": "git commit"})
+            self.assertLess(time.monotonic() - started, 1.0)
+        finally:
+            reader.close()
+            os.close(write_fd)
+
     def test_detect_host_from_payload_and_explicit(self):
         self.assertEqual(hooks.detect_host({}, "codex"), "codex")
         self.assertEqual(hooks.detect_host({"hook_event_name": "SessionStart"}), "claude")

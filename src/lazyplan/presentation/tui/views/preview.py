@@ -88,17 +88,24 @@ def normalize_lines(lines: list[str]) -> list[str]:
     return out
 
 
+def _block_lines(block: PreviewBlock, width: int | None) -> list[str]:
+    """One block's heading and body with any leading blank rows removed."""
+    lines: list[str] = []
+    if block.heading:
+        lines.append(render_heading(block.heading, width))
+    body = list(block.lines)
+    while body and not body[0].strip():
+        body.pop(0)
+    lines.extend(body)
+    return lines
+
+
 def render_blocks(blocks: tuple[PreviewBlock, ...], width: int | None = None) -> list[str]:
     """Render blocks with one blank line before each heading."""
     lines: list[str] = []
     for block in blocks:
         lines.append("")
-        if block.heading:
-            lines.append(render_heading(block.heading, width))
-        body = list(block.lines)
-        while body and not body[0].strip():
-            body.pop(0)
-        lines.extend(body)
+        lines.extend(_block_lines(block, width))
     return lines
 
 

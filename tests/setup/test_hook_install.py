@@ -116,6 +116,16 @@ class InstallCase(unittest.TestCase):
         idle_block = text.split('event.type === "session.idle"', 1)[1].split("continue", 1)[0]
         self.assertNotIn('"session-end"', idle_block)
 
+    def test_opencode_plugin_passes_the_session_on_every_event(self):
+        hook_install.install(self.home, ["opencode"])
+        text = (self.home / ".config/opencode/plugins/lazyplan.js").read_text(encoding="utf-8")
+        for event in ("session-start", "prompt-submit", "stop", "session-end"):
+            self.assertIn(f'await run(directory, "{event}", {{ session }})', text)
+        self.assertIn("--host-session", text)
+        self.assertIn("stateFor(session)", text)
+        self.assertIn("const states = new Map()", text)
+        self.assertIn("states.delete(session", text)
+
     def test_mode_reinstall_replaces_managed_commands(self):
         hook_install.install(self.home, ["claude"], mode="strict")
         hook_install.install(self.home, ["claude"], mode="advisory")

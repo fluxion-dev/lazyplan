@@ -176,7 +176,13 @@ import { spawn } from "node:child_process"
 
 const MODE = "__MODE__"
 
-const state = { started: false, cached: "", pending: "" }
+const states = new Map()
+const stateFor = (session) => {
+  const key = session || ""
+  if (!states.has(key)) states.set(key, { started: false, cached: "", pending: "" })
+  return states.get(key)
+}
+const sessionOf = (event) => event?.sessionID ?? event?.session_id ?? ""
 
 const report = (event, reason) => {
   console.warn(`lazyplan hook ${event} failed: ${reason}`)
@@ -244,17 +250,18 @@ export default {
     // Deny a gated commit before the shell runs. OpenCode has no stop gate.
     await ctx.permission.hook("evaluate", async (event) => {
       if (event.action !== "shell") return
+      const session = sessionOf(event)
       for (const resource of event.resources ?? []) {
         const text = String(resource)
         if (!text.includes("git commit")) continue
-        const answer = await run(directory, "pre-tool", { command: text }, true)
+        const answer = await run(directory, "pre-tool", { command: text, session }, true)
         if (!answer) return
         if (answer.block) {
           event.effect = "deny"
           event.message = answer.block
           return
         }
-        if (answer.text) state.pending = answer.text
+        if (answer.text) stateFor(session).pending = answer.text
       }
     })
 
@@ -264,19 +271,21 @@ export default {
       const file = pathOf(event)
       if (tool === "bash" && !command.includes("git commit")) return
       if (!command && !file) return
-      const session = event.sessionID ?? event.session_id ?? ""
+      const session = sessionOf(event)
       const text = await run(directory, "post-tool", { tool, command, path: file, session })
-      if (text) state.pending = text
+      if (text) stateFor(session).pending = text
     })
 
     // Inject one cached packet on every model call, refreshed once per turn.
     await ctx.session.hook("context", async (event) => {
+      const session = sessionOf(event)
+      const state = stateFor(session)
       if (state.pending) {
         event.system.push({ type: "text", text: state.pending })
         state.pending = ""
       }
       if (!state.started) {
-        const text = await run(directory, "session-start")
+        const text = await run(directory, "session-start", { session })
         if (text !== null) {
           state.cached = text
           state.started = true
@@ -285,8 +294,8 @@ export default {
       if (state.cached) event.system.push({ type: "text", text: state.cached })
     })
 
-    await ctx.session.hook("compaction", async () => {
-      await run(directory, "pre-compact")
+    await ctx.session.hook("compaction", async (event) => {
+      await run(directory, "pre-compact", { session: sessionOf(event) })
     })
 
     if (typeof ctx.event?.subscribe === "function") {
@@ -316,12 +325,12 @@ export default {
             }
             if (event.type === "session.deleted" || event.type === "session.archived") {
               await run(directory, "session-end", { session })
-              state.started = false
-              state.cached = ""
+              states.delete(session || "")
               continue
             }
             const text = await run(directory, "prompt-submit", { session })
             if (text !== null) {
+              const state = stateFor(session)
               state.cached = text || state.cached
               state.started = true
             }

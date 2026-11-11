@@ -3,6 +3,7 @@
 from .export import ExportScreen
 from .forms import (
     ConfirmScreen,
+    CriterionScreen,
     FilterPromptScreen,
     NewMilestoneScreen,
     NewPlanScreen,
@@ -15,6 +16,7 @@ from .update import UpdateScreen
 
 __all__ = [
     "ConfirmScreen",
+    "CriterionScreen",
     "ExportScreen",
     "FilterPromptScreen",
     "HelpScreen",

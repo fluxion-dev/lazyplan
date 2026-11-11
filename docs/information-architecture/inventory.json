@@ -3003,7 +3003,7 @@
         "file": "src/lazyplan/presentation/tui/screens/hub_kinds.py",
         "key": "x",
         "label": "Toggle",
-        "line": "208",
+        "line": "214",
         "screen": "hub_kinds"
       },
       {
@@ -3265,7 +3265,7 @@
           {
             "action": "hub_toggle",
             "file": "src/lazyplan/presentation/tui/screens/hub_kinds.py",
-            "line": "208"
+            "line": "214"
           }
         ],
         "key": "x"

@@ -60,15 +60,21 @@ if _TEXTUAL_OK:
             return out
 
         def add(self) -> None:
-            def cb(text: str | None) -> None:
-                if not text:
+            def cb(data: dict[str, object] | None) -> None:
+                if not data:
                     return
-                self.store.add_criteria(self.parent_kind, self.parent_id, text, actor="tui")
+                text = str(data.get("text", "")).strip()
+                if not text:
+                    self.notify("a criterion needs text", timeout=3)
+                    return
+                try:
+                    self.store.add_criteria(self.parent_kind, self.parent_id, text, actor="tui")
+                except (ValueError, KeyError) as exc:
+                    self.notify(f"error: {exc}", timeout=4)
+                    return
                 self._reload()
 
-            self.app.push_screen(
-                FilterPromptScreen("New criterion", "what must be true?", "Add"), cb
-            )
+            self.app.push_screen(CriterionScreen(creating=True), cb)
 
         def edit_row(self) -> None:
             entry = self._selected()

@@ -20,6 +20,7 @@ from .question_actions import QuestionMixin
 from .reference_actions import ReferenceMixin
 from .screens import (
     ConfirmScreen,
+    CriterionScreen,
     ExportScreen,
     FilterPromptScreen,
     HelpScreen,
@@ -170,14 +171,18 @@ if _TEXTUAL_OK:
             self.push_screen(HelpScreen())
 
         def action_add_criterion(self) -> None:
-            """Prompt for a new criterion on the selected row."""
+            """Add a criterion on the selected row through the criterion form."""
             if self.selected is None:
                 self.notify("select a row first (a adds a criterion)")
                 return
             kind, oid = self.selected
 
-            def cb(text: str | None) -> None:
+            def cb(data: dict[str, object] | None) -> None:
+                if not data:
+                    return
+                text = str(data.get("text", "")).strip()
                 if not text:
+                    self.notify("a criterion needs text", timeout=3)
                     return
                 try:
                     self.store.add_criteria(kind, oid, text, actor="tui")
@@ -186,14 +191,7 @@ if _TEXTUAL_OK:
                     return
                 self._saved("criterion added")
 
-            self.push_screen(
-                FilterPromptScreen(
-                    title=f"New criterion on {kind} {oid}",
-                    placeholder="what must be true?",
-                    submit_label="Add",
-                ),
-                cb,
-            )
+            self.push_screen(CriterionScreen(creating=True), cb)
 
         def select_row(self, kind: str, oid: int) -> None:
             """Return to the tree and select one row in the overview."""

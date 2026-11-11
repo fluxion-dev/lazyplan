@@ -13,8 +13,6 @@ from .preview import (
     build_preview,
     build_task,
     common_blocks,
-    common_lines,
-    render_blocks,
 )
 from .rows import row_text
 from .source import (
@@ -45,10 +43,8 @@ __all__ = [
     "commit_preview",
     "file_preview",
     "common_blocks",
-    "common_lines",
     "pull_label",
     "pull_preview",
-    "render_blocks",
     "render_diff",
     "repo_label",
     "repo_preview",

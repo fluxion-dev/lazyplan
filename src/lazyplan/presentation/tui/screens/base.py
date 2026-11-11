@@ -57,11 +57,17 @@ if _TEXTUAL_OK:
             super().__init__()
             self._initial: tuple[str, ...] | None = None
 
+        def _dialog(self, *classes: str) -> Vertical:
+            """The modal body with optional sizing classes."""
+            return Vertical(id="dlg", classes=" ".join(classes))
+
         def on_mount(self) -> None:
             """Snapshot the starting values so Esc can tell a draft from a no-op."""
             width = self.app.size.width
+            height = self.app.size.height
             self.set_class(width < 80, "compact")
             self.set_class(width >= 120, "wide")
+            self.set_class(height < 30, "short")
             dialog = query_one_opt(self, "#dlg")
             if dialog is not None:
                 dialog.border_title = self.dialog_title

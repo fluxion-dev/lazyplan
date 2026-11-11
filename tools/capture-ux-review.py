@@ -1026,18 +1026,16 @@ def scenes() -> list[Scene]:
             _modal_scene(
                 "form-add-criterion",
                 "Add criterion",
-                "One-line prompt with context",
-                "The add-criterion prompt opened from a task selection.",
+                "Criterion form with context",
+                "The add-criterion form opened from a task selection, with a text field and a done checkbox.",
                 (
-                    "Does the FILTER heading fit an add-criterion prompt?",
-                    "Does the title name the parent row?",
-                    "Is one line enough for a good criterion?",
+                    "Does the dialog read as adding rather than editing?",
+                    "Is the done checkbox useful before the criterion exists?",
+                    "Does the wider text field fit a full criterion?",
                 ),
-                "enter add · esc cancel",
+                "tab next · enter add · esc cancel",
                 ux,
-                lambda store: FilterPromptScreen(
-                    "New criterion on task 1", "what must be true?", "Add"
-                ),
+                lambda store: CriterionScreen(creating=True),
             ),
             _modal_scene(
                 "form-edit-criterion",

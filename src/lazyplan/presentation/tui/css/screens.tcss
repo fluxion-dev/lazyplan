@@ -45,8 +45,34 @@ ModalScreen {
     background: $lp-surface;
 }
 
-#f-why, #f-what {
-    height: 4;
+#dlg.entity-form {
+    width: 92%;
+    max-width: 120;
+}
+
+Screen.wide #dlg.entity-form {
+    max-width: 120;
+}
+
+#dlg.form-tall {
+    height: 88%;
+}
+
+#dlg.form-tall TextArea {
+    height: 1fr;
+    min-height: 8;
+}
+
+Screen.compact #dlg.entity-form {
+    width: 96%;
+}
+
+Screen.short #dlg.form-tall {
+    height: 96%;
+}
+
+Screen.short #dlg.form-tall TextArea {
+    min-height: 3;
 }
 
 #dlg.export-dialog {

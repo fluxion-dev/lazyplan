@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 from ...shared.design import (
     KIND_ICON,
-    SECTION_ICON,
+    escape_markdown,
     escape_markup,
     repo_project_name,
     status_word,
@@ -44,69 +44,45 @@ class PreviewDocument:
             lines.append(self.breadcrumb)
         return "\n".join(lines)
 
-    def render_body(self, width: int | None = None) -> str:
-        """The scrollable body: meta chips, sections, and optional footer."""
+    def render_markdown(self) -> str:
+        """The scrollable body as deterministic Markdown."""
         lines = list(self.meta)
-        lines.extend(render_blocks(self.blocks, width))
+        for block in self.blocks:
+            if lines and lines[-1] != "":
+                lines.append("")
+            if block.heading:
+                lines.append(f"## {block.heading.upper()}")
+            body = list(block.lines)
+            while body and not body[0].strip():
+                body.pop(0)
+            while body and not body[-1].strip():
+                body.pop()
+            lines.extend(body)
         if self.footer:
-            lines.extend(["", self.footer])
-        return "\n".join(normalize_lines(lines))
+            if lines and lines[-1] != "":
+                lines.append("")
+            lines.extend(self.footer.splitlines())
+        while lines and not lines[0].strip():
+            lines.pop(0)
+        while lines and not lines[-1].strip():
+            lines.pop()
+        return "\n".join(lines)
 
-    def render(self, width: int | None = None) -> str:
+    def render(self) -> str:
         """Render the whole document (head then body)."""
         head = self.render_head()
-        body = self.render_body(width)
+        body = self.render_markdown()
         return f"{head}\n{body}" if body else head
 
 
-def render_heading(heading: str, width: int | None) -> str:
-    """A bold heading, or a full-width tinted bar when width is known."""
-    text = heading.upper()
-    escaped = escape_markup(text)
-    if width is None or width <= 0:
-        return f"[bold]{escaped}[/]"
-    label = f" {text} "
-    if len(label) > width:
-        label = label[:width]
-    padding = " " * (width - len(label))
-    return f"[on $lp-surface-raised]{escape_markup(label)}{padding}[/]"
+def _strong(label: object) -> str:
+    """One escaped bold label for a generated row."""
+    return f"**{escape_markdown(str(label))}**"
 
 
-def normalize_lines(lines: list[str]) -> list[str]:
-    """Collapse repeated blanks and strip leading or trailing blank rows."""
-    out: list[str] = []
-    for line in lines:
-        if not line.strip():
-            if out and out[-1] != "":
-                out.append("")
-            continue
-        out.append(line)
-    while out and out[0] == "":
-        out.pop(0)
-    while out and out[-1] == "":
-        out.pop()
-    return out
-
-
-def _block_lines(block: PreviewBlock, width: int | None) -> list[str]:
-    """One block's heading and body with any leading blank rows removed."""
-    lines: list[str] = []
-    if block.heading:
-        lines.append(render_heading(block.heading, width))
-    body = list(block.lines)
-    while body and not body[0].strip():
-        body.pop(0)
-    lines.extend(body)
-    return lines
-
-
-def render_blocks(blocks: tuple[PreviewBlock, ...], width: int | None = None) -> list[str]:
-    """Render blocks with one blank line before each heading."""
-    lines: list[str] = []
-    for block in blocks:
-        lines.append("")
-        lines.extend(_block_lines(block, width))
-    return lines
+def _row(*parts: object, sep: str = " · ") -> str:
+    """One Markdown list row with the given separator."""
+    return "- " + sep.join(str(part) for part in parts if str(part))
 
 
 def _title(
@@ -146,11 +122,7 @@ def milestones_block(milestones: list[dict[str, Any]]) -> PreviewBlock | None:
     """Every milestone under the selected plan, as a title-only row."""
     if not milestones:
         return None
-    lines: list[str] = []
-    for entry in milestones:
-        milestone = entry.get("milestone", {})
-        title = str(milestone.get("title", ""))
-        lines.append(f"  [bold]{escape_markup(title)}[/]")
+    lines = [_row(_strong(entry.get("milestone", {}).get("title", ""))) for entry in milestones]
     return PreviewBlock(f"milestones {len(milestones)}", tuple(lines))
 
 
@@ -161,17 +133,20 @@ def tasks_block(tasks: list[dict[str, Any]]) -> PreviewBlock | None:
     lines: list[str] = []
     for task in tasks:
         claim = task.get("claim") if isinstance(task.get("claim"), dict) else None
-        claim_text = f" [dim]@{escape_markup(str(claim.get('actor', '')))}[/]" if claim else ""
-        blocked = " [red]⚑[/]" if task.get("blocked") else ""
+        actor = f"@{escape_markdown(str(claim.get('actor', '')))}" if claim else ""
         lines.append(
-            f"  {status_word(str(task.get('status', '')), 'rich')} "
-            f"[dim]▹ T{task.get('id')}[/] "
-            f"{escape_markup(str(task.get('title', '')))}{blocked}{claim_text}"
+            _row(
+                status_word(str(task.get("status", "")), "plain"),
+                _strong(f"T{task.get('id')}"),
+                escape_markdown(str(task.get("title", ""))),
+                "blocked" if task.get("blocked") else "",
+                actor,
+                sep=" ",
+            )
         )
         desc = str(task.get("description", "") or "").strip()
         for line in desc.splitlines():
-            if line.strip():
-                lines.append(f"    [dim]{escape_markup(line.strip())}[/]")
+            lines.append(f"  {line}" if line.strip() else "")
     return PreviewBlock(f"tasks {len(tasks)}", tuple(lines))
 
 
@@ -183,8 +158,12 @@ def next_block(tasks: list[dict[str, Any]]) -> PreviewBlock | None:
     return PreviewBlock(
         "next",
         tuple(
-            f"  {status_word(str(task.get('status', '')), 'rich')} "
-            f"[dim]▹ T{task.get('id')}[/] {escape_markup(str(task.get('title', '')))}"
+            _row(
+                status_word(str(task.get("status", "")), "plain"),
+                _strong(f"T{task.get('id')}"),
+                escape_markdown(str(task.get("title", ""))),
+                sep=" ",
+            )
             for task in open_tasks[:3]
         ),
     )
@@ -193,14 +172,11 @@ def next_block(tasks: list[dict[str, Any]]) -> PreviewBlock | None:
 def notes_block(notes: list[dict[str, Any]]) -> PreviewBlock | None:
     if not notes:
         return None
-    return PreviewBlock(
-        "notes",
-        tuple(
-            f"  [dim]@{escape_markup(str(note.get('actor', '')))}[/] "
-            f"{escape_markup(str(note.get('text', '')))}"
-            for note in notes[-3:]
-        ),
-    )
+    rows = []
+    for note in notes[-3:]:
+        text = str(note.get("text", "")).replace("\n", " ")
+        rows.append(_row(f"@{escape_markdown(str(note.get('actor', '')))}", text, sep=" "))
+    return PreviewBlock("notes", tuple(rows))
 
 
 def _proof_chip(evidence: dict[str, Any] | None) -> str:
@@ -209,10 +185,10 @@ def _proof_chip(evidence: dict[str, Any] | None) -> str:
     state = str(data.get("state") or "none")
     count = int(data.get("count", 0) or 0)
     if state == "pass":
-        return f"[green]✓ {count}[/]"
+        return f"✓ {count}"
     if state == "fail":
-        return f"[red]✗ {count}[/]"
-    return "[dim]—[/]"
+        return f"✗ {count}"
+    return "—"
 
 
 def acceptance_block(criteria: list[dict[str, Any]]) -> PreviewBlock | None:
@@ -224,8 +200,12 @@ def acceptance_block(criteria: list[dict[str, Any]]) -> PreviewBlock | None:
     return PreviewBlock(
         f"acceptance {done}/{len(criteria)}{tail}",
         tuple(
-            f"  [dim]○[/] {escape_markup(str(criterion.get('text', '')))} "
-            f"{_proof_chip(criterion.get('evidence'))}"
+            _row(
+                "○",
+                criterion.get("text", ""),
+                _proof_chip(criterion.get("evidence")),
+                sep=" ",
+            )
             for criterion in open_items[:3]
         ),
     )
@@ -237,10 +217,10 @@ def questions_block(questions: list[dict[str, Any]]) -> PreviewBlock | None:
     if not open_items:
         return None
     lines = [
-        f"  [yellow]?[/] [dim]Q{question['id']}[/] {escape_markup(str(question.get('text', '')))}"
+        _row("?", _strong(f"Q{question['id']}"), question.get("text", ""), sep=" ")
         for question in open_items[:5]
     ]
-    lines.append("  [dim]c · questions hub[/]")
+    lines.append("- _c · questions hub_")
     return PreviewBlock(f"questions {len(open_items)} open", tuple(lines))
 
 
@@ -253,7 +233,7 @@ def proof_block(criteria: list[dict[str, Any]]) -> PreviewBlock | None:
         evidence = criterion.get("evidence") or {}
         latest = evidence.get("latest") or {}
         state = str(evidence.get("state") or "none")
-        mark = "[green]✓[/]" if state == "pass" else "[red]✗[/]" if state == "fail" else "[dim]—[/]"
+        mark = "✓" if state == "pass" else "✗" if state == "fail" else "—"
         label = (
             latest.get("command")
             or latest.get("note")
@@ -263,9 +243,13 @@ def proof_block(criteria: list[dict[str, Any]]) -> PreviewBlock | None:
         exit_code = latest.get("exit_code")
         exit_text = f" exit {exit_code}" if exit_code is not None else ""
         lines.append(
-            f"  {mark} [dim]#{criterion['id']}[/] "
-            f"{escape_markup(str(criterion.get('text', '')))} · "
-            f"{evidence.get('count', 0)} rows{exit_text} · {escape_markup(str(label))}"
+            _row(
+                mark,
+                _strong(f"C{criterion['id']}"),
+                criterion.get("text", ""),
+                f"{evidence.get('count', 0)} rows{exit_text}",
+                escape_markdown(str(label)),
+            )
         )
     return PreviewBlock("proof", tuple(lines))
 
@@ -276,23 +260,26 @@ def approval_block(approval: dict[str, Any] | None) -> PreviewBlock | None:
         return None
     revision = int(approval.get("revision", 0) or 0)
     if revision == 0:
-        return PreviewBlock("approval", ("  no approved revision",))
+        return PreviewBlock("approval", ("- no approved revision",))
     drift = int(approval.get("drift", 0) or 0)
-    enforced = " · enforced" if approval.get("enforced") else ""
     stamp = float(approval.get("approved_at", 0) or 0)
     day = time.strftime("%Y-%m-%d", time.localtime(stamp)) if stamp else "-"
-    lines = [f"  r{revision} {day} @{escape_markup(str(approval.get('actor', '')))}{enforced}"]
-    if drift:
-        lines.append(f"  [yellow]Δ[/] {drift} changes since approval")
-    else:
-        lines.append("  in sync")
+    lines = [
+        _row(
+            f"r{revision}",
+            day,
+            f"@{escape_markdown(str(approval.get('actor', '')))}",
+            "enforced" if approval.get("enforced") else "",
+        )
+    ]
+    lines.append(_row("Δ", f"{drift} changes since approval") if drift else "- in sync")
     marks = {"add": "+", "edit": "~", "delete": "-"}
     for item in approval.get("recent") or []:
         action = marks.get(str(item.get("action") or ""), "?")
-        field = str(item.get("field") or "")
-        suffix = f" {field}" if field else ""
-        reason = escape_markup(str(item.get("reason") or "no reason"))
-        lines.append(f"  {action} {item.get('kind')}{suffix}: {reason}")
+        field = escape_markdown(str(item.get("field") or ""))
+        reason = str(item.get("reason") or "no reason")
+        label = f"{item.get('kind')} {field}".strip()
+        lines.append(_row(f"`{action}`", f"{label}: {reason}"))
     return PreviewBlock("approval", tuple(lines))
 
 
@@ -308,7 +295,7 @@ def _source_bits(
         bits.append(f"{len(forge)} PRs")
     if repos:
         names = [name for name in (repo_project_name(repo) for repo in repos) if name]
-        rendered = ", ".join(escape_markup(name) for name in names[:3])
+        rendered = ", ".join(escape_markdown(name) for name in names[:3])
         bits.append("repos: " + rendered if names else f"{len(repos)} repos")
     return " · ".join(bits)
 
@@ -321,13 +308,10 @@ def _source_summary(
     bits = _source_bits(links, forge, repos)
     if not bits:
         return None
-    return PreviewBlock("source", (f"[dim]{bits}[/]",))
+    return PreviewBlock("source", (bits,))
 
 
-def common_blocks(
-    full: dict[str, Any],
-    git_bits: list[str],
-) -> tuple[PreviewBlock, ...]:
+def common_blocks(full: dict[str, Any]) -> tuple[PreviewBlock, ...]:
     """Coordination, acceptance, and provenance blocks for a preview."""
     blocks: list[PreviewBlock] = []
     notes = notes_block(full.get("notes", []))
@@ -343,14 +327,6 @@ def common_blocks(
     if source is not None:
         blocks.append(source)
     return tuple(blocks)
-
-
-def common_lines(full: dict[str, Any], git_bits: list[str]) -> list[str]:
-    """Render the common blocks for callers that still need plain lines."""
-    lines = render_blocks(common_blocks(full, git_bits))
-    if git_bits:
-        lines.extend(["", f"[dim]{SECTION_ICON['git']} git: {' · '.join(git_bits)}[/]"])
-    return lines
 
 
 def build_plan(
@@ -383,7 +359,7 @@ def build_plan(
     next_tasks = next_block(_tasks("plan", full))
     if next_tasks is not None:
         blocks.append(next_tasks)
-    blocks.extend(common_blocks(full, git_bits))
+    blocks.extend(common_blocks(full))
     return PreviewDocument(header, breadcrumb, (), tuple(blocks))
 
 
@@ -402,7 +378,7 @@ def build_milestone(
     tasks = tasks_block(_tasks("milestone", full))
     if tasks is not None:
         blocks.append(tasks)
-    blocks.extend(common_blocks(full, git_bits))
+    blocks.extend(common_blocks(full))
     return PreviewDocument(header, breadcrumb, (), tuple(blocks))
 
 
@@ -424,7 +400,7 @@ def build_task(
     proof = proof_block(full.get("criteria", []))
     if proof is not None:
         blocks.append(proof)
-    blocks.extend(common_blocks(full, git_bits))
+    blocks.extend(common_blocks(full))
     return PreviewDocument(header, breadcrumb, (), tuple(blocks))
 
 

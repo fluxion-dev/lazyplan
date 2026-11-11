@@ -160,7 +160,6 @@ if _TEXTUAL_OK:
             self.metrics_controller = MetricsController(self)
             self._fp: Any = store.fingerprint()
             self._live_fp: Any = store.live_fingerprint()
-            self._last_reap: float = 0.0
             self._last_event_id: int = 0
             events = store.feed(1)
             if events:

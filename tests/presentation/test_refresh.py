@@ -12,8 +12,11 @@ try:
     from textual.widgets import Static, Tree
 
     from lazyplan.presentation.tui import create_app
+    from lazyplan.presentation.tui.screens.forms import ConfirmScreen
 except ImportError:  # pragma: no cover - textual not installed
     create_app = None  # type: ignore[assignment]
+
+COALESCE_PAUSE = 0.35
 
 
 class PollHarness:
@@ -30,7 +33,11 @@ class PollHarness:
         self.session_id = session_id
 
     def poll(self) -> None:
-        """Run exactly one external-change poll."""
+        """Run exactly one external-change poll on the calling thread."""
+        self.app.tree_controller.poll_now()  # type: ignore[attr-defined]
+
+    def poll_worker(self) -> None:
+        """Start the threaded poll the app's timer uses."""
         self.app.tree_controller.poll()  # type: ignore[attr-defined]
 
     def heartbeat(self, phase: str = "working") -> None:
@@ -115,6 +122,54 @@ class TestHeartbeatKeepsTreeStill(RefreshCase):
             before = harness.rebuilds
             self.store.update_task(self.task.id, title="Renamed", actor="ana")
             harness.poll()
+            await pilot.pause(COALESCE_PAUSE)
+            self.assertEqual(harness.rebuilds - before, 1)
+
+
+class TestPollScheduling(RefreshCase):
+    async def test_a_burst_of_three_writes_makes_one_tree_update(self) -> None:
+        session_id = self.open_session()
+        app = create_app(self.store.path)
+        async with app.run_test(size=(120, 24)) as pilot:
+            await pilot.pause()
+            harness = self.harness(app, session_id)
+            before = harness.rebuilds
+            for index in range(3):
+                self.store.update_task(self.task.id, title=f"Task {index}", actor="ana")
+                harness.poll()
+            self.assertEqual(harness.rebuilds, before)
+            await pilot.pause(COALESCE_PAUSE)
+            self.assertEqual(harness.rebuilds - before, 1)
+
+    async def test_an_open_modal_defers_the_refresh_until_it_closes(self) -> None:
+        session_id = self.open_session()
+        app = create_app(self.store.path)
+        async with app.run_test(size=(120, 24)) as pilot:
+            await pilot.pause()
+            harness = self.harness(app, session_id)
+            app.push_screen(ConfirmScreen("hold"))
+            await pilot.pause()
+            before = harness.rebuilds
+            self.store.update_task(self.task.id, title="While modal", actor="ana")
+            harness.poll()
+            await pilot.pause(COALESCE_PAUSE)
+            self.assertEqual(harness.rebuilds, before)
+            self.assertTrue(app._dirty_external)
+            app.pop_screen()
+            await pilot.pause()
+            harness.poll()
+            self.assertEqual(harness.rebuilds - before, 1)
+
+    async def test_a_cli_edit_lands_from_the_worker_within_one_second(self) -> None:
+        session_id = self.open_session()
+        app = create_app(self.store.path)
+        async with app.run_test(size=(120, 24)) as pilot:
+            await pilot.pause()
+            harness = self.harness(app, session_id)
+            before = harness.rebuilds
+            self.store.update_task(self.task.id, title="From the CLI", actor="ana")
+            harness.poll_worker()
+            await pilot.pause(COALESCE_PAUSE)
             self.assertEqual(harness.rebuilds - before, 1)
 
 

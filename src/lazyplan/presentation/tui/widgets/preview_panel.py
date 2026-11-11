@@ -18,7 +18,6 @@ class PreviewPanel(Vertical):
         super().__init__(id="preview")
         self.border_title = " overview "
         self.border_subtitle = " e edit · c commands "
-        self._document: PreviewDocument | None = None
 
     def compose(self) -> ComposeResult:
         yield Static("", id="preview-head")
@@ -32,7 +31,6 @@ class PreviewPanel(Vertical):
         strip_widget = self.query_one("#preview-strip", Static)
         body = self.query_one("#preview-body", Markdown)
         self._show_content()
-        self._document = document
         head.remove_class("preview-error")
         body.remove_class("preview-error")
         head.update(document.render_head())
@@ -56,7 +54,6 @@ class PreviewPanel(Vertical):
 
     def show_empty(self, title: str, hint: str) -> None:
         """A centered empty state with a clear next action."""
-        self._document = None
         self.query_one("#preview-head", Static).display = False
         self.query_one("#preview-strip", Static).display = False
         self.query_one("#preview-scroll", VerticalScroll).display = False
@@ -68,7 +65,6 @@ class PreviewPanel(Vertical):
 
     def show_error(self, text: str) -> None:
         """A visible load failure instead of a blank pane."""
-        self._document = None
         head = self.query_one("#preview-head", Static)
         body = self.query_one("#preview-body", Markdown)
         strip = self.query_one("#preview-strip", Static)

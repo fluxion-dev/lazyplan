@@ -26,6 +26,7 @@ _.on_tree_node_highlighted
 _.on_tree_node_collapsed
 _.on_tree_node_expanded
 _.on_tree_node_selected
+_._open_link
 _.action_toggle_node
 _.action_toggle_expand_all
 _.action_fold

@@ -3,6 +3,14 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## Unreleased
+
+### Changed
+
+- **One work column.** The screen stacks plan queue, agents, plan review, and
+  git in the left column and leaves the right column to the overview. Below 100
+  columns the overview column hides and the four cards keep their order.
+
 ## v0.37.0 — 2026-11-10
 
 ### Added

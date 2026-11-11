@@ -104,25 +104,14 @@ def _tasks(kind: str, full: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def milestones_block(milestones: list[dict[str, Any]]) -> PreviewBlock | None:
-    """Every milestone under the selected plan, with its description."""
+    """Every milestone under the selected plan, as a title-only row."""
     if not milestones:
         return None
     lines: list[str] = []
     for entry in milestones:
         milestone = entry.get("milestone", {})
-        tasks = entry.get("tasks", [])
-        done = sum(1 for task in tasks if task.get("status") == "done")
-        progress = f" · {done}/{len(tasks)} tasks" if tasks else ""
-        lines.append(
-            f"  {status_word(str(milestone.get('status', '')), 'rich')} "
-            f"[dim]◇ M{milestone.get('id')}[/] "
-            f"{escape_markup(str(milestone.get('title', '')))}"
-            f"[dim]{progress}[/]"
-        )
-        desc = str(milestone.get("description", "") or "").strip()
-        for line in desc.splitlines():
-            if line.strip():
-                lines.append(f"    [dim]{escape_markup(line.strip())}[/]")
+        title = str(milestone.get("title", ""))
+        lines.append(f"  [bold]{escape_markup(title)}[/]")
     return PreviewBlock(f"milestones {len(milestones)}", tuple(lines))
 
 

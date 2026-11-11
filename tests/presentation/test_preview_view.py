@@ -59,6 +59,18 @@ class PreviewDocumentTest(unittest.TestCase):
         self.assertIn("[bold]NEXT[/]", text)
         self.assertIn("Task title", text)
 
+    def test_plan_preview_milestones_are_title_only(self) -> None:
+        full = self.store.get_full("plan", self.plan.id)
+        assert full is not None
+        lines = build_preview(self.store, "plan", self.plan.id, full, []).render().splitlines()
+        heading = next(index for index, line in enumerate(lines) if "MILESTONES" in line)
+        row = lines[heading + 1]
+        self.assertIn("Milestone title", row)
+        self.assertNotIn("Details", row)
+        self.assertNotIn(f"M{self.milestone.id}", row)
+        self.assertNotIn("tasks", row)
+        self.assertNotIn("○", row)
+
     def test_plan_preview_shows_approval_and_drift(self) -> None:
         self.store.add_revision(self.plan.id, "a" * 64, "{}", reason="initial")
         full = self.store.get_full("plan", self.plan.id)

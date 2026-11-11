@@ -1,5 +1,5 @@
 {
-  "version": "0.37.0",
+  "version": "0.38.0",
   "generated": "2026-11-10",
   "groups": [
     {
@@ -543,14 +543,14 @@
       "id": "form-add-criterion",
       "group": "forms",
       "title": "Add criterion",
-      "state": "One-line prompt with context",
-      "description": "The add-criterion prompt opened from a task selection.",
+      "state": "Criterion form with context",
+      "description": "The add-criterion form opened from a task selection, with a text field and a done checkbox.",
       "lookFor": [
-        "Does the FILTER heading fit an add-criterion prompt?",
-        "Does the title name the parent row?",
-        "Is one line enough for a good criterion?"
+        "Does the dialog read as adding rather than editing?",
+        "Is the done checkbox useful before the criterion exists?",
+        "Does the wider text field fit a full criterion?"
       ],
-      "keys": "enter add \u00b7 esc cancel",
+      "keys": "tab next \u00b7 enter add \u00b7 esc cancel",
       "image": "form-add-criterion.png",
       "webp": "form-add-criterion.webp",
       "width": 1604,

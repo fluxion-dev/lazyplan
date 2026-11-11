@@ -17,6 +17,7 @@ permissions:
   contents: write
   pull-requests: write
   actions: write
+  statuses: write
 
 jobs:
   bump:
@@ -55,6 +56,27 @@ jobs:
           # release PR would wait forever with no checks. Dispatch the gates
           # against the release branch before enabling auto-merge.
           gh workflow run ci.yml --ref "$BRANCH"
+          # A GITHUB_TOKEN-created PR can still produce an action_required
+          # pull_request run that never reports `gates`. Wait for the
+          # dispatched run and publish its result as the required status on the
+          # same commit, so the release never stalls on an approval click.
+          RUN_ID=""
+          for _ in $(seq 1 12); do
+            RUN_ID="$(gh run list --workflow=ci.yml --branch "$BRANCH" \
+              --event workflow_dispatch --limit 1 \
+              --json databaseId --jq '.[0].databaseId // empty')"
+            [[ -n "$RUN_ID" ]] && break
+            sleep 5
+          done
+          if [[ -z "$RUN_ID" ]]; then
+            echo "error: no gate run was dispatched for $BRANCH" >&2
+            exit 1
+          fi
+          gh run watch "$RUN_ID" --exit-status
+          SHA="$(git rev-parse HEAD)"
+          gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" \
+            -f state=success -f context=gates \
+            -f description="dispatched gates passed"
           gh pr merge "$BRANCH" --auto --merge
 
   # Auto-merge runs with GITHUB_TOKEN, and GitHub does not start push-event

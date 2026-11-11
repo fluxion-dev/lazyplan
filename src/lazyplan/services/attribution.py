@@ -132,12 +132,13 @@ def resolve(
     """
     if explicit_plan is not None:
         return Attribution(plan_id=explicit_plan)
-    repo = port.normalize_repo_path(repo_path) if repo_path else ""
+    repo = port.resolve_repo_path(repo_path) if repo_path else ""
+    folded = port.normalize_repo_path(repo_path) if repo_path else ""
     steps = (
         lambda: _from_branch_ref(port, branch),
         lambda: _from_recorded_branch(port, repo, branch),
-        lambda: _from_claim(port, repo),
-        lambda: _from_doing_plan(port, repo),
+        lambda: _from_claim(port, folded),
+        lambda: _from_doing_plan(port, folded),
     )
     for step in steps:
         found = step()

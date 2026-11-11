@@ -280,23 +280,26 @@ if _TEXTUAL_OK:
             self.dismiss(self.query_one("#filter-input", Input).value.strip())
 
     class CriterionScreen(_Form):
-        """Edit one criterion's text and completion."""
+        """Add or edit one criterion's text and completion."""
 
         dialog_title = "CRITERION"
 
-        def __init__(self, text: str = "", done: bool = False) -> None:
+        def __init__(self, text: str = "", done: bool = False, creating: bool = False) -> None:
             super().__init__()
             self._text = text
             self._done = done
+            self._creating = creating
 
         def compose(self) -> ComposeResult:
+            heading = "Add criterion" if self._creating else "Edit criterion"
+            action = "Add" if self._creating else "Save"
             with Vertical(id="dlg", classes="entity-form"):
-                yield Label("Edit criterion", classes="form-title")
+                yield Label(heading, classes="form-title")
                 yield Label("Text", classes="field-label")
                 yield Input(value=self._text, placeholder="what must be true?", id="c-text")
                 yield Checkbox("Done", value=self._done, id="c-done")
                 with _row():
-                    yield Button("Save", id="ok", variant="primary")
+                    yield Button(action, id="ok", variant="primary")
                     yield Button("Cancel", id="cancel")
 
         def on_mount(self) -> None:

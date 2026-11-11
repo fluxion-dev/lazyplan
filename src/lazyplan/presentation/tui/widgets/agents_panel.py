@@ -58,7 +58,11 @@ class AgentsPanel(VerticalScroll):
         self._show_body()
         stamp = time.time()
         ranked = rank_sessions(sessions, stamp)
-        lines = [session_line(session, stamp) for session in ranked]
+        titles = {plan.id: plan.name for plan in store.list_plans()}
+        lines = [
+            session_line(session, stamp, plan_title=titles.get(session.plan_id or 0, ""))
+            for session in ranked
+        ]
         handoff = services.sessions.previous_session(store, plan_id=plan_id)
         if handoff and handoff.get("handoff"):
             lines.append(f"[dim]handoff[/] {escape_markup(str(handoff['handoff']))}")

@@ -12,6 +12,7 @@ from .... import services
 from ....core.entities import Session
 from ....core.policies.sessions import IDLE_AFTER_SECS
 from ...shared.design import escape_markup
+from ...shared.session_labels import branch_label, plan_label, task_label
 
 STATE_BADGES = {
     "working": "[green]▶ working[/]",
@@ -71,17 +72,22 @@ def session_line(
     session: Session,
     now: float | None = None,
     idle_after: float = IDLE_AFTER_SECS,
+    plan_title: str = "",
 ) -> str:
-    """One card row: identity, plan, branch, age, and live state."""
+    """One card row: identity, plan, task, branch, age, and live state."""
     stamp = time.time() if now is None else now
     state = services.session_state(session, stamp, idle_after)
     started = time.strftime("%H:%M", time.localtime(session.started_at))
-    plan = f"P{session.plan_id}" if session.plan_id is not None else "no plan"
-    branch = escape_markup(session.branch) if session.branch else "no branch"
+    parts = [f"[dim]{escape_markup(plan_label(session, plan_title))}[/]"]
+    task = task_label(session)
+    if task:
+        parts.append(task)
+    parts.append(escape_markup(branch_label(session)))
     return (
         f"[bold]@{escape_markup(session.actor)}[/]{host_label(session)} "
         f"[dim]S{session.id}[/] · "
-        f"[dim]{plan}[/] · {branch} · [dim]{started} · {age(session.started_at, stamp)}[/] · "
+        + " · ".join(parts)
+        + f" · [dim]{started} · {age(session.started_at, stamp)}[/] · "
         f"{STATE_BADGES.get(state, state)}"
     )
 

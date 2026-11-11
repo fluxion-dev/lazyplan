@@ -16,6 +16,7 @@ except ImportError:  # pragma: no cover - stdlib-only interpreter
 from .... import services
 from ....core.errors import ClaimError
 from ...shared.design import escape_markup
+from ...shared.session_labels import branch_label, plan_label, task_label
 from .forms import FilterPromptScreen
 
 
@@ -206,17 +207,25 @@ if _TEXTUAL_OK:
                 services.sessions.reap_idle_sessions(self.store, now=stamp)
             except (OSError, RuntimeError, ValueError):
                 pass
+            titles = {plan.id: plan.name for plan in self.store.list_plans()}
             for session in services.sessions.list_sessions(
                 self.store, plan_id=self.plan_id, limit=50
             ):
                 state = services.session_state(session, stamp)
+                plan = plan_label(session, titles.get(session.plan_id or 0, ""), empty="—")
+                branch = branch_label(session, empty="—")
+                task = task_label(session)
                 body = (
                     f"S{session.id} · {state}\n"
                     f"actor   @{escape_markup(session.actor)}\n"
                     f"host    {escape_markup(session.host or '—')}\n"
                     f"session {escape_markup(session.host_session or '—')}\n"
-                    f"plan    P{session.plan_id}\n"
-                    f"branch  {escape_markup(session.branch or '—')}\n"
+                    f"plan    {escape_markup(plan)}\n"
+                )
+                if task:
+                    body += f"task    {task}\n"
+                body += (
+                    f"branch  {escape_markup(branch)}\n"
                     f"age     {_age(session.started_at, stamp)}\n"
                     f"idle    {_age(session.last_activity(), stamp)}\n"
                     f"summary {escape_markup(session.summary or '—')}\n"
@@ -235,11 +244,15 @@ if _TEXTUAL_OK:
         def add(self) -> None:
             def cb(text: str | None) -> None:
                 try:
+                    branch = (text or "").strip() or services.attribution.current_branch(
+                        self.store.checkout_path()
+                    )
                     services.sessions.start_session(
                         self.store,
                         "tui",
                         plan_id=self.plan_id,
-                        branch=(text or "").strip(),
+                        branch=branch,
+                        plan_source="manual",
                     )
                 except (ValueError, KeyError, ClaimError) as exc:
                     self.notify(f"error: {exc}", timeout=4)

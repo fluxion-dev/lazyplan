@@ -279,7 +279,7 @@ def approval_block(approval: dict[str, Any] | None) -> PreviewBlock | None:
         field = escape_markdown(str(item.get("field") or ""))
         reason = str(item.get("reason") or "no reason")
         label = f"{item.get('kind')} {field}".strip()
-        lines.append(_row(action, f"{label}: {reason}"))
+        lines.append(_row(f"`{action}`", f"{label}: {reason}"))
     return PreviewBlock("approval", tuple(lines))
 
 

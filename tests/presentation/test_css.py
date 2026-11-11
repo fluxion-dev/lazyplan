@@ -33,6 +33,12 @@ class CssModuleTest(unittest.TestCase):
         self.assertIn("$lp-border", shell)
         self.assertIn("$lp-text-muted", shell)
 
+    def test_markdown_section_bars_use_the_raised_surface(self) -> None:
+        shell = (CSS_DIR / "app.tcss").read_text(encoding="utf-8")
+        self.assertIn("#preview-body MarkdownH2 {", shell)
+        self.assertIn("background: $lp-surface-raised;", shell)
+        self.assertIn("#preview-body MarkdownH1,", shell)
+
     def test_css_modules_are_packaged(self) -> None:
         pyproject = Path(__file__).resolve().parents[2] / "pyproject.toml"
         text = pyproject.read_text(encoding="utf-8")

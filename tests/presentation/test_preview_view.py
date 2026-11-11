@@ -11,6 +11,7 @@ from lazyplan.store import Store
 
 try:
     from textual.widgets import Markdown, Static, Tree
+    from textual.widgets._markdown import MarkdownH2
 
     from lazyplan.presentation.tui import create_app
     from lazyplan.presentation.tui.views.control import build_control_strip
@@ -23,6 +24,26 @@ try:
 except ImportError:  # pragma: no cover - stdlib-only interpreter
     PreviewBlock = PreviewDocument = build_preview = build_control_strip = None  # type: ignore[assignment]
     create_app = Markdown = PreviewPanel = Static = Tree = None  # type: ignore[assignment,misc]
+    MarkdownH2 = None  # type: ignore[assignment,misc]
+
+
+GFM_FIXTURE = """**bold** text
+
+- one
+- two
+
+> quoted
+
+```python
+print("hi")
+```
+
+| a | b |
+|---|---|
+| 1 | 2 |
+
+[site](https://example.com)
+"""
 
 
 @unittest.skipUnless(build_preview is not None, "textual/rich not installed")
@@ -242,6 +263,53 @@ class PreviewMarkdownTest(unittest.IsolatedAsyncioTestCase):
                 body = app.query_one("#preview-body", Markdown)
                 self.assertIn("Second why", body.source or "")
                 self.assertNotIn("First why", body.source or "")
+
+    async def test_gfm_prose_renders_as_markdown_blocks(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Store(os.path.join(tmp, "gfm.db"))
+            store.add_plan("Plan", "What", goal=GFM_FIXTURE)
+            app = create_app(str(store.path))
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                tree = app.query_one("#tree", Tree)
+                tree.focus()
+                tree.select_node(tree.root.children[0])
+                await pilot.pause()
+                body = app.query_one("#preview-body", Markdown)
+                self.assertIn("**bold** text", body.source or "")
+                blocks = [type(child).__name__ for child in body.children]
+                for expected in (
+                    "MarkdownBulletList",
+                    "MarkdownBlockQuote",
+                    "MarkdownFence",
+                    "MarkdownTable",
+                ):
+                    self.assertIn(expected, blocks)
+                paragraphs = [
+                    child for child in body.children if type(child).__name__ == "MarkdownParagraph"
+                ]
+                styles = [str(span.style) for child in paragraphs for span in child._content.spans]
+                self.assertTrue(any("strong" in style for style in styles))
+                self.assertTrue(any("link(" in style for style in styles))
+
+    async def test_section_bars_fill_the_body_and_use_the_raised_surface(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Store(os.path.join(tmp, "bars.db"))
+            store.add_plan("Plan", "What", goal="Why")
+            app = create_app(str(store.path))
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                tree = app.query_one("#tree", Tree)
+                tree.focus()
+                tree.select_node(tree.root.children[0])
+                await pilot.pause()
+                body = app.query_one("#preview-body", Markdown)
+                bars = list(body.query(MarkdownH2))
+                self.assertGreaterEqual(len(bars), 2)
+                expected = app.theme_variables["lp-surface-raised"]
+                for bar in bars:
+                    self.assertEqual(bar.region.width, body.size.width)
+                    self.assertEqual(bar.styles.background.hex, expected)
 
     async def test_links_open_only_http_and_https(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -11,6 +11,7 @@ import time
 from pathlib import Path
 
 from lazyplan.infrastructure.repo import find_repo_root, repo_label, resolve_db_path
+from lazyplan.services import notes
 
 from ....core.ports.insights import InsightsPort
 from ....core.ports.planning import PlanningPort
@@ -319,6 +320,11 @@ def _cmd_upgrade(store: object | None, args: argparse.Namespace, actor: str) -> 
         return 0
     if _is_windows() and info.upgradeable:
         try:
+            if notes.has_release(installed):
+                notes.seed_upgrade(installed)
+        except (OSError, ValueError):
+            pass
+        try:
             update = stage_update(latest, info.method, installed=installed)
             plan = build_apply_plan(
                 update,
@@ -340,9 +346,22 @@ def _cmd_upgrade(store: object | None, args: argparse.Namespace, actor: str) -> 
     except UpgradeError as exc:
         print(msg_error(exc), file=sys.stderr)
         return 1
+    try:
+        if notes.has_release(installed):
+            notes.seed_upgrade(installed)
+        if notes.has_release(latest):
+            chosen, note_text = notes.advance_notice(latest)
+        else:
+            chosen, note_text = (), ""
+    except (OSError, ValueError):
+        chosen, note_text = (), ""
     payload["upgraded"] = True
+    payload["notes"] = [release.as_dict() for release in chosen]
     if not args.json:
         print(f"upgraded lpui v{installed} -> v{latest} ({info.method})")
+        if note_text:
+            print()
+            print(note_text, end="")
     _post_upgrade_review(bool(args.json))
     if args.json:
         return _emit(args, payload)

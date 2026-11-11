@@ -40,6 +40,7 @@ from .commands import (
     _cmd_doctor,
     _cmd_hook,
     _cmd_mcp,
+    _cmd_notes,
     _cmd_plan_ready,
     _cmd_plan_recipe,
     _cmd_question_list,
@@ -60,7 +61,7 @@ def _maybe_notice_update(args: argparse.Namespace) -> None:
     Agent-facing calls (hooks, MCP, porcelain, JSON) stay silent. The TUI
     refreshes the cache in its background update worker.
     """
-    if args.cmd in (None, "ui", "upgrade", "hook", "mcp"):
+    if args.cmd in (None, "ui", "upgrade", "hook", "mcp", "notes"):
         return
     if getattr(args, "json", False) or getattr(args, "version", False) or porcelain.enabled(args):
         return
@@ -95,6 +96,7 @@ def _dispatch_storeless(args: argparse.Namespace, actor: str) -> int | None:
         "session-show": _cmd_session_show,
         "review": _cmd_review,
         "ship": _cmd_ship,
+        "notes": _cmd_notes,
     }
     handler = handlers.get(args.cmd)
     return handler(None, args, actor) if handler is not None else None

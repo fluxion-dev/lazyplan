@@ -141,6 +141,29 @@ def add_upgrade(
     )
 
 
+def add_notes(
+    sub: argparse._SubParsersAction[argparse.ArgumentParser], common: argparse.ArgumentParser
+) -> None:
+
+    notes = sub.add_parser(
+        "notes",
+        help="print the release notes bundled with this version (works offline)",
+        parents=[common],
+    )
+    scope = notes.add_mutually_exclusive_group()
+    scope.add_argument(
+        "--all",
+        action="store_true",
+        help="show every bundled release, newest first",
+    )
+    scope.add_argument(
+        "--since",
+        default="",
+        metavar="VERSION",
+        help="show releases newer than VERSION through the installed one",
+    )
+
+
 def add_help(
     sub: argparse._SubParsersAction[argparse.ArgumentParser], common: argparse.ArgumentParser
 ) -> None:

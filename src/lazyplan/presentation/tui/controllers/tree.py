@@ -334,9 +334,9 @@ class TreeController(LazyBranchMixin):
         tree = trees[0]
         if not app._row_specs:
             return
-        app.spinner_controller.rows = {}
         for key, spec in app._row_specs.items():
             self.render_row(key, spec, tree)
+        app.spinner_controller.paint()
         for widget in trees:
             cast("FoldTree", widget).reflow()
 

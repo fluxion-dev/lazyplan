@@ -16,6 +16,12 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
   notes command reopens them. A missing or corrupt seen-version marker counts
   as a first install and stays quiet.
 
+### Changed
+
+- **One work column.** The screen stacks plan queue, agents, plan review, and
+  git in the left column and leaves the right column to the overview. Below 100
+  columns the overview column hides and the four cards keep their order.
+
 ### Fixed
 
 - **Hooks finish and sessions stay honest.** `lpui hook` bounds its stdin read

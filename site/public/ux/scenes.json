@@ -1,5 +1,5 @@
 {
-  "version": "0.36.1",
+  "version": "0.37.0",
   "generated": "2026-11-10",
   "groups": [
     {
@@ -152,8 +152,8 @@
       "id": "shell-narrow",
       "group": "shell",
       "title": "Narrow terminal",
-      "state": "Compact layout at 78 columns",
-      "description": "The same task overview at 78 columns, where the side panes collapse and the hint bar drops lower-priority keys.",
+      "state": "Stacked layout at 78 columns",
+      "description": "The shell at 78 columns: the overview hides, and the plan queue, plan review, agents, and git cards stack vertically.",
       "lookFor": [
         "Is the compact layout still legible?",
         "What information disappears first, and is that the right order?",

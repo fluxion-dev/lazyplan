@@ -324,9 +324,10 @@ The main screen puts the work in one left column and the overview on the right.
 The left column stacks, in order, the plan queue, the agents card, plan review,
 and the git card. Plan queue holds every plan that is not done; plan review
 holds completed plans. The agents card shows active sessions and the last
-handoff; each session row shows its live state: `working`, `awaiting you`, or
-`idle`, and awaiting rows sort first. The git card carries linked checkouts and
-pull requests.
+handoff; each row names the plan and its title, the task when the branch is a
+`task/<id>` name, and the branch, alongside its live state: `working`,
+`awaiting you`, or `idle`, and awaiting rows sort first. The git card carries
+linked checkouts and pull requests.
 
 The right column holds only the overview, which follows the selection: a plan
 shows open questions, why, what, approval, references, every milestone as a
@@ -633,7 +634,12 @@ checkout; `LAZYPLAN_SESSION=S3` overrides it. Every write made while the
 session is open is tagged with its id and refreshes its heartbeat. Hooks give
 every top-level host session its own row: each terminal, agent process, or
 linked worktree keeps its own phase and heartbeat, and child subagent sessions
-stay with their parent. `session-start` and `prompt-submit` mark that row
+stay with their parent. A session takes its branch from the checkout and its
+plan from the branch name (`task/12-*`, `plan/3-*`, `milestone/4-*`), a branch
+recorded by `task start`, an active claim in that checkout, or the one doing
+plan linked there. A branch switch updates the row on its next heartbeat, while
+`--plan` and the sessions hub keep the plan you chose. A detached HEAD shows no
+branch. `session-start` and `prompt-submit` mark that row
 `working`, `stop` marks it `awaiting`, and `context`/`brief` render the previous
 handoff. A row with no heartbeat for 15 minutes reads `stale`; after two hours
 it is auto-closed and its pointer and bindings are cleared. Ending one host

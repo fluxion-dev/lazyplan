@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 from textual.widgets.tree import TreeNode
 
 from ....core.entities import Milestone, Task
-from ..views.rows import milestone_spec, row_text, task_spec
+from ..views.rows import milestone_spec, task_spec
 
 if TYPE_CHECKING:
     from ..app import LazyplanApp
@@ -147,14 +147,13 @@ class LazyBranchMixin:
                 self._progress,
                 attention=("milestone", milestone.id) in self._attention,
             )
-            app._row_specs[milestone_key] = spec
-            text = self.app.tree_controller.render_row(milestone_key, spec, plan_node.tree)
-            milestone_node = plan_node.add(
-                row_text(text),
-                data={"kind": "milestone", "id": milestone.id},
-                allow_expand=bool(tasks),
+            milestone_node = self.app.tree_controller.add_row(
+                plan_node,
+                plan_node.tree,
+                milestone_key,
+                spec,
+                bool(tasks),
             )
-            app._row_nodes[milestone_key] = milestone_node
             if milestone_key in app._expanded:
                 self._add_tasks(milestone_node, tasks)
                 milestone_node.expand()
@@ -174,13 +173,13 @@ class LazyBranchMixin:
                 self._claims_map,
                 attention=("task", task.id) in self._attention,
             )
-            app._row_specs[task_key] = spec
-            text = self.app.tree_controller.render_row(task_key, spec, milestone_node.tree)
-            leaf = milestone_node.add_leaf(
-                row_text(text),
-                data={"kind": "task", "id": task.id},
+            self.app.tree_controller.add_row(
+                milestone_node,
+                milestone_node.tree,
+                task_key,
+                spec,
+                False,
             )
-            app._row_nodes[task_key] = leaf
 
 
 __all__ = ["LazyBranchMixin"]

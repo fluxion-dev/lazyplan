@@ -13,7 +13,7 @@ from ....core.entities import Milestone, Plan, Task
 from ....core.policies.planning import progress_counts
 from ....services.stats import attention_reasons
 from ...shared.help import hint_bar
-from ..views.rows import RowSpec, plan_spec, row_text
+from ..views.rows import RowSpec, milestone_spec, plan_spec, row_text, task_spec
 from .filtering import TreeFilter
 from .lazy_branches import LazyBranchMixin
 
@@ -382,13 +382,6 @@ class TreeController(LazyBranchMixin):
                 prev_cursor = self.node_key(cursor) if cursor is not None else None
             except Exception:
                 prev_cursor = None
-        active_tree.clear()
-        finished_tree.clear()
-        app._row_nodes = {}
-        app._row_labels = {}
-        app._row_specs = {}
-        app.spinner_controller.rows = {}
-        self._loaded.clear()
         base = services.tree(app.store, status=None, archived="show", plan_mode="all")
         self._prepare_model(base)
         active, finished = self.filters.panels(base)
@@ -407,10 +400,13 @@ class TreeController(LazyBranchMixin):
         self._claims_map = app.store.claims_map()
         self._drift_map = app.store.drift_counts()
         self._attention = self._attention_keys(base, attention_reasons(app.store))
-        self.build_plan_rows(active_tree.root, active_tree, active)
-        self.build_plan_rows(finished_tree.root, finished_tree, finished)
+        changed = self.reconcile_children(active_tree.root, active_tree, self.desired_plans(active))
+        changed |= self.reconcile_children(
+            finished_tree.root, finished_tree, self.desired_plans(finished)
+        )
         if app.filter_text.strip():
             self.build_all_children()
+        changed |= self.reconcile_branches()
         active_tree.root.expand()
         finished_tree.root.expand()
         app._collapsed &= self._model_keys
@@ -425,8 +421,9 @@ class TreeController(LazyBranchMixin):
         app.query_one("#hints", Label).update(hint_bar(max(10, app.size.width - 2), markup=True))
         self.restore_selection(prev_selected, prev_cursor)
         app.metrics_controller.refresh()
-        app._preview_key = None
-        app.update_preview(force=True)
+        selected = app.selected
+        force = selected != prev_selected or (selected is not None and selected in changed)
+        app.update_preview(force=force)
 
     def _prepare_model(self, base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]) -> None:
         """Index the model once so expansion never re-reads the database."""
@@ -476,26 +473,175 @@ class TreeController(LazyBranchMixin):
         self.app.spinner_controller.remember(key, spec.status, text)
         return text
 
-    def build_plan_rows(
+    def add_row(
         self,
-        root: Any,
+        parent: TreeNode[Any],
         tree: Tree,
-        filtered: list,
-    ) -> None:
-        """Create only the plan rows for one refresh; children load on expand."""
+        key: tuple[str, int],
+        spec: RowSpec,
+        allow_expand: bool,
+    ) -> TreeNode[Any]:
+        """Create one row under *parent* and index it in the caches."""
         app = self.app
-        for plan, milestones in filtered:
-            plan_key = ("plan", plan.id)
-            plan_row_spec = plan_spec(
-                plan,
-                self._progress,
-                attention=("plan", plan.id) in self._attention,
+        app._row_specs[key] = spec
+        text = self.render_row(key, spec, tree)
+        node = parent.add(
+            row_text(text),
+            data={"kind": key[0], "id": key[1]},
+            allow_expand=allow_expand,
+        )
+        app._row_nodes[key] = node
+        return node
+
+    def update_row(
+        self,
+        node: TreeNode,
+        key: tuple[str, int],
+        spec: RowSpec,
+        tree: Tree,
+    ) -> bool:
+        """Relabel one surviving row; return True when its text changed."""
+        app = self.app
+        app._row_specs[key] = spec
+        text = spec.markup(self.row_width(tree, spec.depth))
+        app.spinner_controller.remember(key, spec.status, text)
+        if app._row_labels.get(key) == text:
+            return False
+        app._row_labels[key] = text
+        node.set_label(row_text(text))
+        return True
+
+    def forget_subtree(self, node: TreeNode) -> None:
+        """Drop every cache entry for a node and its descendants."""
+        for child in list(node.children):
+            self.forget_subtree(child)
+        key = self.node_key(node)
+        if key is None:
+            return
+        self.app._row_nodes.pop(key, None)
+        self.app._row_specs.pop(key, None)
+        self.app._row_labels.pop(key, None)
+        self.app.spinner_controller.rows.pop(key, None)
+        self._loaded.discard(key)
+
+    def reconcile_children(
+        self,
+        parent: Any,
+        tree: Tree,
+        desired: list[tuple[tuple[str, int], RowSpec, bool]],
+    ) -> set[tuple[str, int]]:
+        """Update one parent's children in place; return the changed keys.
+
+        Rows before the first order divergence keep their node object and are
+        relabelled only when their text changed. Everything from that index is
+        removed and re-added in the new order, so expansion state for the
+        recreated rows is restored from the saved keys.
+        """
+        app = self.app
+        existing = list(parent.children)
+        existing_keys = [self.node_key(node) for node in existing]
+        wanted = [item[0] for item in desired]
+        first = min(len(existing_keys), len(wanted))
+        for index in range(first):
+            if existing_keys[index] != wanted[index]:
+                first = index
+                break
+        changed: set[tuple[str, int]] = set()
+        recreated: set[tuple[str, int]] = set()
+        for node in existing[first:]:
+            key = self.node_key(node)
+            if key is not None:
+                if key in self._loaded:
+                    recreated.add(key)
+                changed.add(key)
+            self.forget_subtree(node)
+            node.remove()
+        for index in range(first):
+            key, spec, _allow_expand = desired[index]
+            if self.update_row(existing[index], key, spec, tree):
+                changed.add(key)
+        for key, spec, allow_expand in desired[first:]:
+            node = self.add_row(parent, tree, key, spec, allow_expand)
+            changed.add(key)
+            if key in recreated or key in app._expanded:
+                self.load_branch(node, key)
+                if key in app._expanded:
+                    node.expand()
+        return changed
+
+    def desired_plans(self, plans: list) -> list[tuple[tuple[str, int], RowSpec, bool]]:
+        """Row specs for one panel's plans, in order."""
+        return [
+            (
+                ("plan", plan.id),
+                plan_spec(
+                    plan,
+                    self._progress,
+                    attention=("plan", plan.id) in self._attention,
+                ),
+                bool(milestones),
             )
-            app._row_specs[plan_key] = plan_row_spec
-            plan_text = self.render_row(plan_key, plan_row_spec, tree)
-            plan_node = root.add(
-                row_text(plan_text),
-                data={"kind": "plan", "id": plan.id},
-                allow_expand=bool(milestones),
+            for plan, milestones in plans
+        ]
+
+    def desired_milestones(self, plan_id: int) -> list[tuple[tuple[str, int], RowSpec, bool]]:
+        """Row specs for one plan's visible milestones, in order."""
+        out: list[tuple[tuple[str, int], RowSpec, bool]] = []
+        for milestone, tasks in self._by_plan.get(plan_id, []):
+            key = ("milestone", milestone.id)
+            if key not in self._visible_keys:
+                continue
+            out.append(
+                (
+                    key,
+                    milestone_spec(
+                        milestone,
+                        self.app.store,
+                        self._progress,
+                        attention=key in self._attention,
+                    ),
+                    bool(tasks),
+                )
             )
-            app._row_nodes[plan_key] = plan_node
+        return out
+
+    def desired_tasks(self, milestone_id: int) -> list[tuple[tuple[str, int], RowSpec, bool]]:
+        """Row specs for one milestone's visible tasks, in order."""
+        out: list[tuple[tuple[str, int], RowSpec, bool]] = []
+        for task in self._tasks_by_milestone.get(milestone_id, []):
+            key = ("task", task.id)
+            if key not in self._visible_keys:
+                continue
+            out.append(
+                (
+                    key,
+                    task_spec(
+                        task,
+                        self.app.store,
+                        self._claims_map,
+                        attention=key in self._attention,
+                    ),
+                    False,
+                )
+            )
+        return out
+
+    def reconcile_branches(self) -> set[tuple[str, int]]:
+        """Reconcile the children of every branch that is already materialized."""
+        changed: set[tuple[str, int]] = set()
+        for tree in self.trees():
+            for plan_node in list(tree.root.children):
+                plan_key = self.node_key(plan_node)
+                if plan_key is None or plan_key not in self._loaded:
+                    continue
+                changed |= self.reconcile_children(
+                    plan_node, tree, self.desired_milestones(plan_key[1])
+                )
+                for milestone_node in list(plan_node.children):
+                    milestone_key = self.node_key(milestone_node)
+                    if milestone_key is None or milestone_key not in self._loaded:
+                        continue
+                    changed |= self.reconcile_children(
+                        milestone_node, tree, self.desired_tasks(milestone_key[1])
+                    )
+        return changed

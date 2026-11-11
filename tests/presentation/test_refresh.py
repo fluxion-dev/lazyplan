@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import os
 import tempfile
+import time
 import unittest
 
+from lazyplan import services
+from lazyplan.core.entities import Status
 from lazyplan.store import Store
 
 try:
@@ -72,6 +75,37 @@ class RefreshCase(unittest.IsolatedAsyncioTestCase):
 
     def row_ids(self, app: object) -> dict[tuple[str, int], int]:
         return {key: id(node) for key, node in app._row_nodes.items()}  # type: ignore[attr-defined]
+
+    def expand_all(self, app: object) -> None:
+        """Open the fixture plan and milestone so task rows exist."""
+        app._expanded.update(  # type: ignore[attr-defined]
+            {("plan", self.plan.id), ("milestone", self.milestone.id)}
+        )
+        app.refresh_all()  # type: ignore[attr-defined]
+
+    def spy_labels(self, app: object) -> list[tuple[str, int]]:
+        """Record every set_label call made on the current row nodes."""
+        calls: list[tuple[str, int]] = []
+        for key, node in app._row_nodes.items():  # type: ignore[attr-defined]
+            original = node.set_label
+
+            def spy(label: object, _key: tuple[str, int] = key, _set: object = original) -> None:
+                calls.append(_key)
+                _set(label)  # type: ignore[operator]
+
+            node.set_label = spy  # type: ignore[method-assign]
+        return calls
+
+    def order(self, app: object) -> list[tuple[str, int]]:
+        tree = app.query_one("#tree", Tree)  # type: ignore[attr-defined]
+        return [key for node in tree.root.children if (key := _node_key(node)) is not None]
+
+
+def _node_key(node: object) -> tuple[str, int] | None:
+    data = getattr(node, "data", None)
+    if isinstance(data, dict) and "kind" in data and "id" in data:
+        return (str(data["kind"]), int(data["id"]))
+    return None
 
 
 class TestHeartbeatKeepsTreeStill(RefreshCase):
@@ -171,6 +205,126 @@ class TestPollScheduling(RefreshCase):
             harness.poll_worker()
             await pilot.pause(COALESCE_PAUSE)
             self.assertEqual(harness.rebuilds - before, 1)
+
+
+class TestInPlaceReconciliation(RefreshCase):
+    async def test_a_task_title_edit_relabels_only_that_row(self) -> None:
+        app = create_app(self.store.path)
+        async with app.run_test(size=(120, 30)) as pilot:
+            await pilot.pause()
+            self.expand_all(app)
+            await pilot.pause()
+            nodes = self.row_ids(app)
+            calls = self.spy_labels(app)
+            self.store.update_task(self.task.id, title="Renamed", actor="ana")
+            app.refresh_all()
+            await pilot.pause()
+            self.assertEqual(self.row_ids(app), nodes)
+            self.assertEqual(calls, [("task", self.task.id)])
+
+    async def test_a_status_move_keeps_node_identity(self) -> None:
+        other = self.store.add_plan("Other plan")
+        self.store.update_plan(self.plan.id, goal="stays on top", actor="ana")
+        app = create_app(self.store.path)
+        async with app.run_test(size=(120, 30)) as pilot:
+            await pilot.pause()
+            self.expand_all(app)
+            await pilot.pause()
+            nodes = self.row_ids(app)
+            other_label = app._row_labels[("plan", other.id)]
+            calls = self.spy_labels(app)
+            services.cycle_status(self.store, "task", self.task.id, actor="ana")
+            app.refresh_all()
+            await pilot.pause()
+            self.assertEqual(self.row_ids(app), nodes)
+            self.assertIn(("task", self.task.id), calls)
+            self.assertEqual(app._row_labels[("plan", other.id)], other_label)
+            self.assertNotIn(("plan", other.id), calls)
+
+    async def test_a_new_task_appears_without_touching_existing_rows(self) -> None:
+        app = create_app(self.store.path)
+        async with app.run_test(size=(120, 30)) as pilot:
+            await pilot.pause()
+            self.expand_all(app)
+            await pilot.pause()
+            before = self.row_ids(app)
+            added = self.store.add_task(self.milestone.id, "Second", actor="ana")
+            app.refresh_all()
+            await pilot.pause()
+            after = self.row_ids(app)
+            self.assertEqual(after[("task", self.task.id)], before[("task", self.task.id)])
+            self.assertIn(("task", added.id), after)
+
+    async def test_a_removed_task_disappears_without_touching_existing_rows(self) -> None:
+        added = self.store.add_task(self.milestone.id, "Second", actor="ana")
+        app = create_app(self.store.path)
+        async with app.run_test(size=(120, 30)) as pilot:
+            await pilot.pause()
+            self.expand_all(app)
+            await pilot.pause()
+            before = self.row_ids(app)
+            self.store.delete("task", added.id, actor="ana")
+            app.refresh_all()
+            await pilot.pause()
+            after = self.row_ids(app)
+            self.assertNotIn(("task", added.id), after)
+            self.assertEqual(after[("task", self.task.id)], before[("task", self.task.id)])
+
+    async def test_a_finished_plan_moves_panels_with_its_expansion(self) -> None:
+        app = create_app(self.store.path)
+        async with app.run_test(size=(120, 30)) as pilot:
+            await pilot.pause()
+            self.expand_all(app)
+            await pilot.pause()
+            services.set_status(
+                self.store, "plan", self.plan.id, Status.DONE, actor="ana", heal=False
+            )
+            app.refresh_all()
+            await pilot.pause()
+            node = app._row_nodes[("plan", self.plan.id)]
+            self.assertIs(node.tree, app.query_one("#tree-finished", Tree))
+            self.assertTrue(node.is_expanded)
+            self.assertIn(("task", self.task.id), self.row_ids(app))
+
+    async def test_a_reorder_rebuilds_from_the_first_divergence(self) -> None:
+        base = time.time()
+        plans = [
+            self.plan,
+            self.store.add_plan("B"),
+            self.store.add_plan("C"),
+            self.store.add_plan("D"),
+        ]
+        for plan, offset in zip(plans, (1.0, 0.0, 3.0, 10.0), strict=True):
+            self.store.log("ana", "plan", "edit", f"plan #{plan.id} touched", now=base + offset)
+        app = create_app(self.store.path)
+        async with app.run_test(size=(120, 30)) as pilot:
+            await pilot.pause()
+            initial = self.order(app)
+            self.assertEqual(
+                initial,
+                [
+                    ("plan", plans[3].id),
+                    ("plan", plans[2].id),
+                    ("plan", plans[0].id),
+                    ("plan", plans[1].id),
+                ],
+            )
+            before = self.row_ids(app)
+            self.store.log("ana", "plan", "edit", f"plan #{plans[1].id} touched", now=base + 7)
+            app.refresh_all()
+            await pilot.pause()
+            self.assertEqual(
+                self.order(app),
+                [
+                    ("plan", plans[3].id),
+                    ("plan", plans[1].id),
+                    ("plan", plans[2].id),
+                    ("plan", plans[0].id),
+                ],
+            )
+            self.assertEqual(
+                self.row_ids(app)[("plan", plans[3].id)], before[("plan", plans[3].id)]
+            )
 
 
 if __name__ == "__main__":

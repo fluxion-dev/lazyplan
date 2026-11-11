@@ -10,6 +10,9 @@
   auto_closed is display metadata for idle-reaped rows.
 - Metrics dashboard contract: snapshot fields are consumed by the chart
   cards and their tests; attention_ids is the set form of the preview map.
+- Poll seams kept for tests: rebuilds counts full tree rebuilds and poll_now
+  drives one poll on the calling thread; both are read by the headless Pilot
+  tests, never by production call sites.
 - sqlite3 API noise: row_factory.
 """
 
@@ -46,6 +49,8 @@ _.action_filter_text
 _.action_quit
 _.export_plan
 _.render_plan_markdown
+_.rebuilds
+_.poll_now
 BINDINGS
 auto_closed
 CSS

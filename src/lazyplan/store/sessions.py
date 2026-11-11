@@ -13,6 +13,7 @@ from ..core.policies.sessions import (
     auto_close_summary,
     normalize_handoff,
     normalize_phase,
+    normalize_plan_source,
     normalize_summary,
     parse_session_id,
     supersede_summary,
@@ -52,6 +53,7 @@ class SessionsMixin(StoreBase):
             host=str(r["host"] or ""),
             host_session=str(r["host_session"] or ""),
             auto_closed=bool(r["auto_closed"]),
+            plan_source=str(r["plan_source"] or "auto"),
         )
 
     def _open_session(self, actor: str, repo_path: str) -> Session | None:
@@ -160,6 +162,7 @@ class SessionsMixin(StoreBase):
         host: str = "",
         host_session: str = "",
         phase: str = "working",
+        plan_source: str = "auto",
     ) -> tuple[Session, Session | None]:
         """Open a session; manual starts idle ones in this checkout first."""
         stamp = time.time() if now is None else now
@@ -182,8 +185,8 @@ class SessionsMixin(StoreBase):
             cur = conn.execute(
                 "INSERT INTO sessions"
                 " (actor, plan_id, repo_path, branch, started_at, phase, last_seen_at, host,"
-                " host_session)"
-                " VALUES (?,?,?,?,?,?,?,?,?)",
+                " host_session, plan_source)"
+                " VALUES (?,?,?,?,?,?,?,?,?,?)",
                 (
                     actor,
                     plan_id,
@@ -194,6 +197,7 @@ class SessionsMixin(StoreBase):
                     stamp,
                     str(host)[:64],
                     host_session,
+                    normalize_plan_source(plan_source),
                 ),
             )
             session_id = int(cur.lastrowid or 0)
@@ -262,8 +266,11 @@ class SessionsMixin(StoreBase):
         phase: str | None = None,
         host: str = "",
         now: float | None = None,
+        branch: str | None = None,
+        plan_id: int | None = None,
+        replace_plan: bool = False,
     ) -> Session | None:
-        """Refresh one open session's heartbeat and optional phase."""
+        """Refresh one open session's heartbeat and optional attribution."""
         stamp = time.time() if now is None else now
         sets = ["last_seen_at=?"]
         params: list[object] = [stamp]
@@ -273,6 +280,12 @@ class SessionsMixin(StoreBase):
         if host:
             sets.append("host=?")
             params.append(str(host)[:64])
+        if branch is not None:
+            sets.append("branch=?")
+            params.append(str(branch).strip())
+        if replace_plan:
+            sets.append("plan_id=?")
+            params.append(plan_id)
         params.append(session_id)
         with self._connect() as conn:
             row = conn.execute("SELECT ended_at FROM sessions WHERE id=?", (session_id,)).fetchone()

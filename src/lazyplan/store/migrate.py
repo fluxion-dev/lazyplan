@@ -8,7 +8,7 @@ from __future__ import annotations
 import sqlite3
 import uuid
 
-SCHEMA_VERSION = 10
+SCHEMA_VERSION = 11
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS plans (
@@ -116,7 +116,8 @@ CREATE TABLE IF NOT EXISTS sessions (
     last_seen_at REAL NOT NULL DEFAULT 0,
     host TEXT NOT NULL DEFAULT '',
     host_session TEXT NOT NULL DEFAULT '',
-    auto_closed INTEGER NOT NULL DEFAULT 0
+    auto_closed INTEGER NOT NULL DEFAULT 0,
+    plan_source TEXT NOT NULL DEFAULT 'auto'
 );
 CREATE INDEX IF NOT EXISTS idx_sessions_open ON sessions(ended_at, actor, repo_path);
 CREATE INDEX IF NOT EXISTS idx_sessions_plan ON sessions(plan_id, ended_at);
@@ -472,6 +473,13 @@ def _migrate_session_state(conn: sqlite3.Connection) -> None:
     )
 
 
+def _migrate_session_attribution(conn: sqlite3.Connection) -> None:
+    """Add how a session got its plan when the column is missing."""
+    existing = {r["name"] for r in conn.execute("PRAGMA table_info(sessions)").fetchall()}
+    if "plan_source" not in existing:
+        conn.execute("ALTER TABLE sessions ADD COLUMN plan_source TEXT NOT NULL DEFAULT 'auto'")
+
+
 def _migrate_claim_location(conn: sqlite3.Connection) -> None:
     """Add the worktree and repo-root columns to claims when missing."""
     existing = {r["name"] for r in conn.execute("PRAGMA table_info(task_claims)").fetchall()}
@@ -492,6 +500,7 @@ def migrate(conn: sqlite3.Connection) -> None:
     _migrate_task_blocked(conn)
     _migrate_events_session(conn)
     _migrate_session_state(conn)
+    _migrate_session_attribution(conn)
     _migrate_claim_location(conn)
     _drop_priority_columns(conn)
     _migrate_vcs_link_state(conn)

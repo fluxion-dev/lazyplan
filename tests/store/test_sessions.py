@@ -287,6 +287,23 @@ class TestSessionsStore(unittest.TestCase):
         self.assertEqual(old.phase, "working")
         self.assertFalse(old.ended)
 
+    def test_v10_database_gains_plan_source(self) -> None:
+        path = os.path.join(self.tmp.name, "v10.db")
+        with closing(sqlite3.connect(path)) as conn:
+            conn.executescript(migrate_mod.SCHEMA)
+            conn.execute("ALTER TABLE sessions DROP COLUMN plan_source")
+            conn.execute("PRAGMA user_version = 10")
+            conn.execute(
+                "INSERT INTO sessions (actor, started_at, ended_at, summary)"
+                " VALUES ('ana', 100.0, 0, 'old work')"
+            )
+            conn.commit()
+        store = Store(path)
+        old = store.get_session(1)
+        assert old is not None
+        self.assertEqual(old.plan_source, "auto")
+        self.assertEqual(old.summary, "old work")
+
     def test_session_payload_carries_the_host_session(self) -> None:
         session = Session(id=7, actor="ana", host_session="host-a")
         self.assertEqual(to_payload(vars(session))["host_session"], "host-a")

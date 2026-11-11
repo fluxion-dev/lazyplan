@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 
 from ..core.entities import Session
-from ..core.policies.sessions import IDLE_AFTER_SECS
+from ..core.policies.sessions import IDLE_AFTER_SECS, STALE_AFTER_SECS
 from ..core.ports.sessions import SessionsPort, SessionsReadPort
 
 
@@ -14,12 +14,15 @@ def session_state(
     now: float | None = None,
     idle_after: float = IDLE_AFTER_SECS,
 ) -> str:
-    """One of ``ended``, ``auto-closed``, ``idle``, ``awaiting``, or ``working``."""
+    """One of ``ended``, ``auto-closed``, ``idle``, ``stale``, ``awaiting``, or ``working``."""
     if session.ended:
         return "auto-closed" if session.auto_closed else "ended"
     stamp = time.time() if now is None else now
-    if session.idle_seconds(stamp) >= idle_after:
+    idle = session.idle_seconds(stamp)
+    if idle >= idle_after:
         return "idle"
+    if idle >= STALE_AFTER_SECS:
+        return "stale"
     return "awaiting" if session.awaiting else "working"
 
 

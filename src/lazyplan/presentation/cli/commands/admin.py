@@ -136,6 +136,19 @@ def _cmd_hook(store: object | None, args: argparse.Namespace, actor: str) -> int
 
     del store, actor
     db = optional_store(args)
+    if getattr(args, "check", False):
+        report = hooks.probe(db, Path.cwd())
+        if args.json:
+            return _emit(args, report)
+        state = "ok" if report["ok"] else report["reason"]
+        print(f"hook:      {state}")
+        print(f"database:  {report['db'] or '-'}")
+        print(f"session:   {report['session'] or '-'}")
+        print(f"latency:   {report['latency_ms']} ms")
+        return 0
+    if not args.event:
+        print("error: hook event required unless --check is used", file=sys.stderr)
+        return 2
     payload = hooks.read_payload(sys.stdin)
     if args.command:
         payload.setdefault("command", args.command)
@@ -143,6 +156,8 @@ def _cmd_hook(store: object | None, args: argparse.Namespace, actor: str) -> int
         payload.setdefault("tool", args.tool)
     if args.path:
         payload.setdefault("path", args.path)
+    if getattr(args, "host_session", ""):
+        payload.setdefault("host_session", args.host_session)
     host = hooks.detect_host(payload, args.host)
     result = hooks.run(args.event, payload, host, Path.cwd(), store=db, mode=args.mode)
     if args.json:

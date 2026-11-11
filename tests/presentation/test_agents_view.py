@@ -44,6 +44,13 @@ class AgentsViewTest(unittest.TestCase):
             last_seen_at=self.now - 50_000,
             phase="working",
         )
+        self.stale = Session(
+            id=4,
+            actor="di",
+            started_at=self.now - 2_000,
+            last_seen_at=self.now - 1_000,
+            phase="working",
+        )
 
     def test_awaiting_sorts_first_then_working_then_idle(self) -> None:
         ranked = rank_sessions([self.idle, self.working, self.awaiting], self.now)
@@ -57,12 +64,14 @@ class AgentsViewTest(unittest.TestCase):
         self.assertIn("awaiting you", line)
         self.assertIn("working", session_line(self.working, self.now))
         self.assertIn("idle", session_line(self.idle, self.now))
+        self.assertIn("stale", session_line(self.stale, self.now))
 
     def test_summary_counts_open_awaiting_and_idle(self) -> None:
         summary = sessions_summary([self.working, self.awaiting, self.idle], self.now)
         self.assertIn("3 open", summary)
         self.assertIn("1 awaiting", summary)
         self.assertIn("1 idle", summary)
+        self.assertIn("1 stale", sessions_summary([self.stale], self.now))
 
 
 if __name__ == "__main__":

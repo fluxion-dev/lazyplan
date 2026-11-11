@@ -16,11 +16,19 @@ from ...shared.design import escape_markup
 STATE_BADGES = {
     "working": "[green]▶ working[/]",
     "awaiting": "[yellow]◆ awaiting you[/]",
+    "stale": "[yellow]◌ stale[/]",
     "idle": "[dim]◌ idle[/]",
     "ended": "[dim]ended[/]",
     "auto-closed": "[dim]auto-closed[/]",
 }
-_STATE_ORDER = {"awaiting": 0, "working": 1, "idle": 2, "ended": 3, "auto-closed": 3}
+_STATE_ORDER = {
+    "awaiting": 0,
+    "working": 1,
+    "stale": 2,
+    "idle": 3,
+    "ended": 4,
+    "auto-closed": 4,
+}
 
 
 def age(started_at: float, stamp: float) -> str:
@@ -79,9 +87,12 @@ def sessions_summary(
     states = [services.session_state(session, stamp, idle_after) for session in sessions]
     parts = [f"{len(sessions)} open"]
     awaiting = states.count("awaiting")
+    stale = states.count("stale")
     idle = states.count("idle")
     if awaiting:
         parts.append(f"{awaiting} awaiting")
+    if stale:
+        parts.append(f"{stale} stale")
     if idle:
         parts.append(f"{idle} idle")
     return " · ".join(parts)

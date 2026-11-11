@@ -272,8 +272,10 @@ lpui ship --plan P [--json] [--max-chars N]
 
 Sessions tag writes from `LAZYPLAN_SESSION` or the checkout pointer; hooks keep
 the checkout's session heartbeat current and mark it `awaiting` after a turn, so
-the agents panel shows who needs you. `context`/`brief` show the previous
-handoff. Touch-points make
+the agents panel shows who needs you. A row without a heartbeat for 15 minutes
+reads `stale`; two hours auto-closes it. Host sessions and worktrees bind to the
+same project row, and `lpui hook --check` probes the transport without writing.
+`context`/`brief` show the previous handoff. Touch-points make
 `next` skip work that overlaps an active claim in the same checkout; a manual
 claim needs `--force` and finish only warns. References are read-only links to
 external work: no fetch, no write-back. `ship` prints the deterministic outcome

@@ -407,8 +407,8 @@ palette. Click the agents card to open the sessions hub.
 - Sessions: rows show actor, host, phase, plan, branch, age, summary, handoff,
   and recent events. `a` starts a session, `x` or `d` ends it with a summary,
   and the last handoff stays visible after the session closes. Hooks move a
-  session to `awaiting` when the agent stops; a session idle for 12 hours is
-  closed automatically and marked `auto-closed`.
+  session to `awaiting` when the agent stops; 15 minutes without a heartbeat
+  reads `stale`, and two hours closes it automatically as `auto-closed`.
 - Comments and notes: `a` adds a comment, `n` adds a note, `x` resolves or
   reopens a comment, and `u` hides resolved comments.
 
@@ -622,13 +622,16 @@ lpui touch add --task 12 --path src/lazyplan/store/sessions.py
 
 `session start` writes a pointer beside the database keyed by actor and
 checkout; `LAZYPLAN_SESSION=S3` overrides it. Every write made while the
-session is open is tagged with its id. Hooks keep the checkout's session
-heartbeat current: `session-start` and `prompt-submit` mark it `working`,
-`stop` marks it `awaiting`, and `context`/`brief` render the previous handoff.
-Sessions idle for 12 hours are closed automatically, and a new session in the
-same checkout reuses a live one. Sessions are operational history and are not
-exported. You can also start and end them from the sessions hub (click the
-agents card); the CLI remains the path for scripts.
+session is open is tagged with its id and refreshes its heartbeat. Hooks bind
+each host session to the same journal row by project, so a subagent or a linked
+worktree attaches to the primary checkout's row instead of opening a second
+one. `session-start` and `prompt-submit` mark it `working`, `stop` marks it
+`awaiting`, and `context`/`brief` render the previous handoff. A row with no
+heartbeat for 15 minutes reads `stale`; after two hours it is auto-closed and
+its pointer and bindings are cleared. A host session ending detaches only its
+binding, and the row closes when the last binding leaves. Sessions are
+operational history and are not exported. You can also start and end them from
+the sessions hub (click the agents card); the CLI remains the path for scripts.
 
 #### Hook modes and gates
 
@@ -653,12 +656,16 @@ question at each lifecycle point:
 `--hooks advisory` keeps the same observations and turns every deny or block
 into a reminder. `--no-hooks` removes the managed entries. At runtime,
 `LAZYPLAN_HOOKS=advisory` downgrades without reinstalling, and
-`LAZYPLAN_NO_HOOKS=1` silences every hook.
+`LAZYPLAN_NO_HOOKS=1` silences every hook. `lpui hook --check` prints a
+read-only readiness probe (database, session, and latency) and writes nothing;
+`lpui doctor` includes the same probe.
 
 OpenCode has no stop-block surface, so it denies commits through its permission
-hook, injects the cached plan on every model call, and sends a stop reminder at
-idle. Claude Code and Codex block both commits and stops; Gemini blocks tools
-and retries the turn; Cursor denies shell commands and continues after a stop.
+hook, injects the cached plan on every model call, and marks the row awaiting
+when the session idles. Its generated plugin closes the child stdin, logs a
+failed hook once with the event and reason, and retries on the next event.
+Claude Code and Codex block both commits and stops; Gemini blocks tools and
+retries the turn; Cursor denies shell commands and continues after a stop.
 Claude Code reads `PreCompact` output as guidance for the compaction summary.
 
 Tasks can declare the repo-relative paths they expect to edit. `next` skips a

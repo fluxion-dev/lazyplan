@@ -6,8 +6,11 @@ SUMMARY_LIMIT = 4000
 HANDOFF_LIMIT = 2000
 PHASES = ("working", "awaiting")
 
-#: An open session with no heartbeat for this long is stale and safe to close.
-IDLE_AFTER_SECS = 12 * 3600
+#: An open session with no heartbeat for this long is stale in the UI.
+STALE_AFTER_SECS = 15 * 60
+
+#: An open session with no heartbeat for this long is safe to close.
+IDLE_AFTER_SECS = 2 * 3600
 
 
 def normalize_phase(text: str) -> str:

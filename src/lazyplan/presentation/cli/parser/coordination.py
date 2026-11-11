@@ -341,6 +341,8 @@ def add_hook(
     )
     hk.add_argument(
         "event",
+        nargs="?",
+        default=None,
         choices=[
             "session-start",
             "prompt-submit",
@@ -351,6 +353,11 @@ def add_hook(
             "pre-compact",
         ],
         help="which lifecycle event fired",
+    )
+    hk.add_argument(
+        "--check",
+        action="store_true",
+        help="read-only hook readiness probe; writes nothing",
     )
     hk.add_argument(
         "--host",
@@ -376,6 +383,11 @@ def add_hook(
     )
     hk.add_argument(
         "--path",
+        default="",
+        help=argparse.SUPPRESS,
+    )
+    hk.add_argument(
+        "--host-session",
         default="",
         help=argparse.SUPPRESS,
     )

@@ -76,6 +76,25 @@ class SessionsPort(SessionsReadPort, PlanningPort, Protocol):
         actor: str = "",
     ) -> Session | None: ...
 
+    def bind_session(
+        self,
+        host: str,
+        host_session: str,
+        project: str,
+        repo_path: str,
+        session_id: int,
+        now: float | None = None,
+    ) -> None: ...
+
+    def session_for_project(self, project: str, host: str = "") -> Session | None: ...
+
+    def detach_host_binding(
+        self,
+        host: str,
+        host_session: str,
+        project: str,
+    ) -> tuple[Session | None, bool]: ...
+
     def reap_idle_sessions(
         self,
         now: float | None = None,

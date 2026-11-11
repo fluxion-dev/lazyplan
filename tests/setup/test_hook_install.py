@@ -90,6 +90,32 @@ class InstallCase(unittest.TestCase):
         self.assertIn('const MODE = "advisory"', text)
         self.assertIn('"session-end"', text)
 
+    def test_opencode_plugin_closes_stdin_and_reports_failures(self):
+        hook_install.install(self.home, ["opencode"], mode="strict")
+        text = (self.home / ".config/opencode/plugins/lazyplan.js").read_text(encoding="utf-8")
+        self.assertIn('stdio: ["ignore", "pipe", "pipe"]', text)
+        self.assertNotIn("execFile", text)
+        self.assertIn("console.warn", text)
+        self.assertIn("resolve(null)", text)
+        self.assertIn("state.started = true", text)
+        self.assertIn("if (text !== null)", text)
+
+    def test_opencode_plugin_maps_v2_lifecycle_events(self):
+        hook_install.install(self.home, ["opencode"])
+        text = (self.home / ".config/opencode/plugins/lazyplan.js").read_text(encoding="utf-8")
+        for event in (
+            '"session.created"',
+            '"session.execution.started"',
+            '"session.idle"',
+            '"session.deleted"',
+            '"session.archived"',
+        ):
+            self.assertIn(event, text)
+        self.assertIn("data.parentID", text)
+        self.assertIn('await run(directory, "stop", { session })', text)
+        idle_block = text.split('event.type === "session.idle"', 1)[1].split("continue", 1)[0]
+        self.assertNotIn('"session-end"', idle_block)
+
     def test_mode_reinstall_replaces_managed_commands(self):
         hook_install.install(self.home, ["claude"], mode="strict")
         hook_install.install(self.home, ["claude"], mode="advisory")

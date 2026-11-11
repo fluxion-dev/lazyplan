@@ -202,6 +202,10 @@ if _TEXTUAL_OK:
         def load_entries(self) -> list[HubEntry]:
             out: list[HubEntry] = []
             stamp = time.time()
+            try:
+                services.sessions.reap_idle_sessions(self.store, now=stamp)
+            except (OSError, RuntimeError, ValueError):
+                pass
             for session in services.sessions.list_sessions(
                 self.store, plan_id=self.plan_id, limit=50
             ):

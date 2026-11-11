@@ -37,6 +37,16 @@ class SessionCliTest(unittest.TestCase):
         self.assertEqual(code, 0, err)
         return json.loads(out)["session"]
 
+    def test_session_ids_accept_the_s_prefix(self) -> None:
+        session = self._start()
+        for raw in (f"S{session['id']}", str(session["id"])):
+            code, out, err = self._run("--json", "session", "show", "--id", raw)
+            self.assertEqual(code, 0, err)
+            self.assertEqual(json.loads(out)["session"]["id"], session["id"])
+        with self.assertRaises(SystemExit) as caught:
+            self._run("session", "show", "--id", "S0")
+        self.assertEqual(caught.exception.code, 2)
+
     def test_start_tags_writes_and_feed_filters(self) -> None:
         session = self._start()
         self.assertEqual(session["ended_at"], 0)

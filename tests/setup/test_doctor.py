@@ -61,6 +61,12 @@ class DoctorCase(unittest.TestCase):
         self.assertEqual(report["hooks"]["mode"], "strict")
         self.assertEqual(code, 0, report)
 
+    def test_doctor_reports_the_hook_probe(self):
+        _code, report = self._json(["doctor", "--json"])
+        self.assertIn("hook_probe", report)
+        self.assertIn(report["hook_probe"]["ok"], (True, False))
+        self.assertIn("db", report["hook_probe"])
+
     def test_findings_exit_one(self):
         plan_dir = self.repo / PLAN_DIR
         plan_dir.mkdir(parents=True)

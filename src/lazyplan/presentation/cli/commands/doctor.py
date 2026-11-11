@@ -7,10 +7,12 @@ from pathlib import Path
 
 from lazyplan.infrastructure.repo import find_repo_root
 from lazyplan.presentation import setup
+from lazyplan.services import hooks as hook_service
 
 from ...setup import layout as setup_layout
 from ..emit import _emit
 from ..parser import package_version
+from ..store import optional_store
 
 
 def _doctor_data(
@@ -33,6 +35,7 @@ def _doctor_data(
     }
     report["state"] = state.to_dict()
     report["skills"] = [str(path) for path in skill_files]
+    report["hook_probe"] = hook_service.probe(optional_store(args), Path.cwd())
     inspection = setup.inspect(choice, state, root, home, package_version())
     report["pending_integrations"] = [item.to_dict() for item in inspection.pending]
     issues = bool(report["findings"]) or bool(missing_hooks)
@@ -53,6 +56,8 @@ def _print_doctor(layout: setup_layout.SetupLayout, skill_files: list[Path], rep
     print(f"hooks:     {hooks['mode'] if hooks['enabled'] else 'none'}")
     for path in hooks["files"]:
         print(f"hook:      {path}")
+    probe = report["hook_probe"]
+    print(f"hook check:{' ok' if probe['ok'] else ' ' + str(probe['reason'])}")
     for path in hooks["missing"]:
         print(f"hook miss: {path}")
     print(f"clean:     {'yes' if report['clean'] else 'no'}")

@@ -12,7 +12,8 @@ Run it by hand:
     python3 tools/perf_bench.py --no-tui --repeat 3
 
 The benchmark reports wall time, SQL statement count, and connection count.
-Budget enforcement lives in a later milestone; this tool only measures.
+`BUDGETS` gates the read paths: query counts are exact and deterministic, so
+an accidental per-row query fails the check immediately.
 """
 
 from __future__ import annotations
@@ -119,7 +120,7 @@ BUDGETS: dict[str, Budget] = {
     "services.tree": Budget(15, 2_000),
     "services.tree_limit5": Budget(15, 2_000),
     "attention_ids": Budget(20, 2_000),
-    "store.fingerprint": Budget(25, 1_000),
+    "store.fingerprint": Budget(20, 500),
     "needs_me": Budget(30, 3_000),
     "list_text": Budget(30, 3_000),
     "list_json": Budget(25, 6_000),
@@ -129,7 +130,7 @@ BUDGETS: dict[str, Budget] = {
     "audit_report": Budget(250, 5_000),
     "tui_first_paint": Budget(150, 8_000, nodes=100),
     "tui_expand": Budget(150, 8_000, nodes=120),
-    "tui_reconcile": Budget(150, 8_000, nodes=100),
+    "tui_reconcile": Budget(60, 1_500, nodes=100),
     "git_status": Budget(0, 3_000),
     "git_show": Budget(0, 3_000),
 }

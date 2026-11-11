@@ -9,13 +9,13 @@ import unittest
 from lazyplan import services
 from lazyplan.core.entities import Status
 from lazyplan.presentation.shared.design import SPINNER_FRAMES, status_prefix
-from lazyplan.presentation.tui.controllers.spinner import SpinnerController
 from lazyplan.store import Store
 
 try:
     from lazyplan.presentation.tui import create_app
+    from lazyplan.presentation.tui.controllers.spinner import SpinnerController
 except ImportError:  # pragma: no cover - textual not installed
-    create_app = None  # type: ignore[assignment]
+    create_app = SpinnerController = None  # type: ignore[assignment]
 
 FRAME = 3
 
@@ -24,6 +24,7 @@ class FakeApp:
     """Minimal host for the label cache; paint is never called."""
 
 
+@unittest.skipUnless(SpinnerController is not None, "textual not installed")
 class TestSpinnerRows(unittest.TestCase):
     def test_a_status_change_drops_the_doing_row(self) -> None:
         controller = SpinnerController(FakeApp())  # type: ignore[arg-type]

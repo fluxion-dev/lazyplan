@@ -72,23 +72,23 @@ class UpgradeCase(unittest.TestCase):
 
     def test_upgrade_leaves_a_new_hook_event_pending_without_a_tty(self):
         self.first_run()
-        with mock.patch.dict(hook_hosts.EVENTS["claude"], {"session-end": "SessionEnd"}):
+        with mock.patch.dict(hook_hosts.EVENTS["claude"], {"future-event": "FutureEvent"}):
             self.upgrade()
             text = self.settings().read_text(encoding="utf-8")
-            self.assertNotIn("session-end", text)
+            self.assertNotIn("future-event", text)
             state = setup.load_state(self.home)
             self.assertEqual(state.last_version, "2.0")
-            self.assertNotIn("hook:claude:session-end", state.integration_choices)
+            self.assertNotIn("hook:claude:future-event", state.integration_choices)
 
     def test_next_human_command_installs_the_pending_event(self):
         self.first_run()
-        with mock.patch.dict(hook_hosts.EVENTS["claude"], {"session-end": "SessionEnd"}):
+        with mock.patch.dict(hook_hosts.EVENTS["claude"], {"future-event": "FutureEvent"}):
             self.upgrade()
             self.prompt_upgrade()
             text = self.settings().read_text(encoding="utf-8")
-            self.assertIn("session-end", text)
+            self.assertIn("future-event", text)
             choices = setup.load_state(self.home).integration_choices
-            self.assertEqual(choices["hook:claude:session-end"]["decision"], "installed")
+            self.assertEqual(choices["hook:claude:future-event"]["decision"], "installed")
 
     def test_new_skill_is_pending_then_installable(self):
         self.first_run()
@@ -103,7 +103,7 @@ class UpgradeCase(unittest.TestCase):
     def test_no_hooks_survives_later_upgrades(self):
         self.first_run(hooks=False)
         self.assertFalse(self.settings().exists())
-        with mock.patch.dict(hook_hosts.EVENTS["claude"], {"session-end": "SessionEnd"}):
+        with mock.patch.dict(hook_hosts.EVENTS["claude"], {"future-event": "FutureEvent"}):
             self.upgrade()
             self.assertFalse(self.settings().exists())
             self.assertFalse(setup.load_state(self.home).hooks_enabled)

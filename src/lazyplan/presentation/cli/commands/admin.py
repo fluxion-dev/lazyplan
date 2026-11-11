@@ -145,6 +145,7 @@ def _cmd_hook(store: object | None, args: argparse.Namespace, actor: str) -> int
                 "host": host,
                 "text": result.text,
                 "context": result.context,
+                "block": result.block,
             },
         )
         return 0

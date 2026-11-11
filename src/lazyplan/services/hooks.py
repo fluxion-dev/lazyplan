@@ -21,7 +21,15 @@ from ..core.ports.insights import InsightsPort
 from . import audit, brief, context
 from . import sessions as session_services
 
-EVENTS = ("session-start", "prompt-submit", "post-tool", "stop", "pre-compact")
+EVENTS = (
+    "session-start",
+    "prompt-submit",
+    "pre-tool",
+    "post-tool",
+    "stop",
+    "session-end",
+    "pre-compact",
+)
 HOSTS = ("opencode", "claude", "gemini", "codex", "cursor")
 NO_HOOKS_ENV = hook_policy.NO_HOOKS_ENV
 

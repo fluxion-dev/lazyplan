@@ -341,7 +341,15 @@ def add_hook(
     )
     hk.add_argument(
         "event",
-        choices=["session-start", "prompt-submit", "post-tool", "stop", "pre-compact"],
+        choices=[
+            "session-start",
+            "prompt-submit",
+            "pre-tool",
+            "post-tool",
+            "stop",
+            "session-end",
+            "pre-compact",
+        ],
         help="which lifecycle event fired",
     )
     hk.add_argument(

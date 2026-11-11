@@ -620,7 +620,8 @@ question at each lifecycle point:
   stop after the host's continuation guard is allowed, and the session is
   marked awaiting.
 - Every prompt receives a short active-plan packet: plan, doing task, open
-  criteria, and next task.
+  criteria, and next task. Cursor has no prompt-context field, so it injects
+  the same packet at session start and after each reported tool.
 - Edits that touch a task's paths name that task; other edits ask to update the
   plan when scope changed.
 - Session end closes the open session with an auto summary and a next-task

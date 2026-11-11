@@ -21,7 +21,7 @@ python3 tools/ia_inventory.py --check
 | tui_screens | 14 |
 | tui_bindings | 47 |
 | setup_steps | 4 |
-| hook_events | 24 |
+| hook_events | 35 |
 | doc_files | 9 |
 | doc_headings | 86 |
 | tui_key_conflicts | 10 |
@@ -54,7 +54,7 @@ python3 tools/ia_inventory.py --check
 | `feed` | --json, --porcelain, --version, --actor, --heal, --no-heal, --limit, --follow, --interval, --session |
 | `git` | --json, --porcelain, --version, --actor, --heal, --no-heal |
 | `help` | --json, --porcelain, --version, --actor, --heal, --no-heal |
-| `hook` | --json, --porcelain, --version, --actor, --heal, --no-heal, --host |
+| `hook` | --json, --porcelain, --version, --actor, --heal, --no-heal, --host, --mode, --command, --tool, --path |
 | `import` | --json, --porcelain, --version, --actor, --heal, --no-heal, --file |
 | `info` | --json, --porcelain, --version, --actor, --heal, --no-heal |
 | `issue` | --json, --porcelain, --version, --actor, --heal, --no-heal |
@@ -319,27 +319,38 @@ python3 tools/ia_inventory.py --check
 | Host | Event | Native |
 | --- | --- | --- |
 | claude | `post-tool` | `PostToolUse` |
+| claude | `pre-compact` | `PreCompact` |
+| claude | `pre-tool` | `PreToolUse` |
 | claude | `prompt-submit` | `UserPromptSubmit` |
+| claude | `session-end` | `SessionEnd` |
 | claude | `session-start` | `SessionStart` |
 | claude | `stop` | `Stop` |
 | codex | `post-tool` | `PostToolUse` |
 | codex | `pre-compact` | `PreCompact` |
+| codex | `pre-tool` | `PreToolUse` |
 | codex | `prompt-submit` | `UserPromptSubmit` |
+| codex | `session-end` | `SessionEnd` |
 | codex | `session-start` | `SessionStart` |
 | codex | `stop` | `Stop` |
 | cursor | `post-tool` | `postToolUse` |
 | cursor | `pre-compact` | `preCompact` |
+| cursor | `pre-tool` | `beforeShellExecution` |
 | cursor | `prompt-submit` | `beforeSubmitPrompt` |
+| cursor | `session-end` | `sessionEnd` |
 | cursor | `session-start` | `sessionStart` |
 | cursor | `stop` | `stop` |
 | gemini | `post-tool` | `AfterTool` |
 | gemini | `pre-compact` | `PreCompress` |
+| gemini | `pre-tool` | `BeforeTool` |
 | gemini | `prompt-submit` | `BeforeAgent` |
+| gemini | `session-end` | `SessionEnd` |
 | gemini | `session-start` | `SessionStart` |
 | gemini | `stop` | `AfterAgent` |
 | opencode | `post-tool` | `post-tool` |
 | opencode | `pre-compact` | `pre-compact` |
+| opencode | `pre-tool` | `pre-tool` |
 | opencode | `prompt-submit` | `prompt-submit` |
+| opencode | `session-end` | `session-end` |
 | opencode | `session-start` | `session-start` |
 | opencode | `stop` | `stop` |
 

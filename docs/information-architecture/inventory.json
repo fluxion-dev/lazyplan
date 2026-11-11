@@ -686,6 +686,18 @@
           [],
           [
             "--host"
+          ],
+          [
+            "--mode"
+          ],
+          [
+            "--command"
+          ],
+          [
+            "--tool"
+          ],
+          [
+            "--path"
           ]
         ]
       },
@@ -1808,7 +1820,7 @@
     "doc_headings": 86,
     "env_names": 12,
     "file_paths": 11,
-    "hook_events": 24,
+    "hook_events": 35,
     "mcp_resources": 3,
     "mcp_tools": 62,
     "palette_commands": 50,
@@ -1959,9 +1971,24 @@
         "native": "PostToolUse"
       },
       {
+        "event": "pre-compact",
+        "host": "claude",
+        "native": "PreCompact"
+      },
+      {
+        "event": "pre-tool",
+        "host": "claude",
+        "native": "PreToolUse"
+      },
+      {
         "event": "prompt-submit",
         "host": "claude",
         "native": "UserPromptSubmit"
+      },
+      {
+        "event": "session-end",
+        "host": "claude",
+        "native": "SessionEnd"
       },
       {
         "event": "session-start",
@@ -1984,9 +2011,19 @@
         "native": "PreCompact"
       },
       {
+        "event": "pre-tool",
+        "host": "codex",
+        "native": "PreToolUse"
+      },
+      {
         "event": "prompt-submit",
         "host": "codex",
         "native": "UserPromptSubmit"
+      },
+      {
+        "event": "session-end",
+        "host": "codex",
+        "native": "SessionEnd"
       },
       {
         "event": "session-start",
@@ -2009,9 +2046,19 @@
         "native": "preCompact"
       },
       {
+        "event": "pre-tool",
+        "host": "cursor",
+        "native": "beforeShellExecution"
+      },
+      {
         "event": "prompt-submit",
         "host": "cursor",
         "native": "beforeSubmitPrompt"
+      },
+      {
+        "event": "session-end",
+        "host": "cursor",
+        "native": "sessionEnd"
       },
       {
         "event": "session-start",
@@ -2034,9 +2081,19 @@
         "native": "PreCompress"
       },
       {
+        "event": "pre-tool",
+        "host": "gemini",
+        "native": "BeforeTool"
+      },
+      {
         "event": "prompt-submit",
         "host": "gemini",
         "native": "BeforeAgent"
+      },
+      {
+        "event": "session-end",
+        "host": "gemini",
+        "native": "SessionEnd"
       },
       {
         "event": "session-start",
@@ -2059,9 +2116,19 @@
         "native": "pre-compact"
       },
       {
+        "event": "pre-tool",
+        "host": "opencode",
+        "native": "pre-tool"
+      },
+      {
         "event": "prompt-submit",
         "host": "opencode",
         "native": "prompt-submit"
+      },
+      {
+        "event": "session-end",
+        "host": "opencode",
+        "native": "session-end"
       },
       {
         "event": "session-start",

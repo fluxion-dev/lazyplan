@@ -273,7 +273,8 @@ export default {
             const where = event.location?.directory
             if (where && where !== directory) continue
             if (event.type === "session.idle") {
-              await run(directory, "stop")
+              const text = await run(directory, "stop")
+              if (text) state.pending = text
               await run(directory, "session-end")
               state.started = false
               state.cached = ""

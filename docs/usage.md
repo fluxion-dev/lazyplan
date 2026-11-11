@@ -298,7 +298,7 @@ tab-separated rows; `--json` wins when both are present.
 ## The screen
 
 Plans start collapsed. Press `right` or `z` to reveal milestones; tasks stay
-folded until you open their milestone. Completed plans live in the finished
+folded until you open their milestone. Completed plans live in the `plan review`
 panel and stay dimmed. A doing row animates a small spinner; set
 `LAZYPLAN_NO_SPINNER=1` to freeze it.
 
@@ -314,11 +314,11 @@ and the last handoff. Each session row shows its live state: `working`,
 hidden on launch; `T` or the palette's show/hide timeline command opens it for
 the session. When open, it follows the selected row and its immediate children.
 
-The plan tree is split into two stacked panels. **Queue** holds every plan that
-is not done; **Finished** holds completed plans. Both panels keep the full
+The plan tree is split into two stacked panels. **Plan queue** holds every plan
+that is not done; **Plan review** holds completed plans. Both panels keep the full
 milestone and task tree, and the text filter applies inside each panel. On
-terminals narrower than 100 columns the overview hides, and the queue, finished,
-agents, and git cards stack vertically.
+terminals narrower than 100 columns the overview hides, and the plan queue,
+plan review, agents, and git cards stack vertically.
 
 The tree loads plan rows first. A plan's milestones appear when you expand it,
 and a milestone's tasks appear when you expand that milestone. A text filter

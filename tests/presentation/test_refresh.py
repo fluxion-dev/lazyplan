@@ -11,7 +11,6 @@ from unittest import mock
 from lazyplan import services
 from lazyplan.core.entities import Status
 from lazyplan.presentation.shared.design import SPINNER_FRAMES
-from lazyplan.presentation.tui.controllers.poll import REAP_INTERVAL
 from lazyplan.store import Store
 
 try:
@@ -168,6 +167,8 @@ class TestHeartbeatKeepsTreeStill(RefreshCase):
 
 class TestPollScheduling(RefreshCase):
     def test_the_background_reap_runs_every_minute(self) -> None:
+        from lazyplan.presentation.tui.controllers.poll import REAP_INTERVAL
+
         self.assertEqual(REAP_INTERVAL, 60.0)
 
     async def test_one_reap_per_minute_window(self) -> None:

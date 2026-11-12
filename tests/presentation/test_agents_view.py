@@ -5,8 +5,6 @@ from __future__ import annotations
 import unittest
 from dataclasses import replace
 
-from rich.text import Text
-
 from lazyplan.core.entities import Session
 from lazyplan.presentation.shared.design import SPINNER_FRAMES
 
@@ -22,6 +20,8 @@ except ImportError:  # pragma: no cover - stdlib-only interpreter
 
 def plain(line: str) -> str:
     """Visible row text, with Rich markup removed."""
+    from rich.text import Text
+
     return Text.from_markup(line).plain
 
 

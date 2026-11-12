@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+import shutil
 import sqlite3
 import time
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 
-from ..core.errors import MaintenanceBusy
+from ..core.errors import MaintenanceBackupError, MaintenanceBusy
 from ..core.policies.maintenance import DEFAULT_WINDOW_SECS, event_cutoff
 from ..core.ports.maintenance import (
+    BackupResult,
     MaintenanceReport,
     TableBytes,
     TableCount,
@@ -259,4 +262,88 @@ class MaintenanceMixin(StoreBase):
             before_free_pages=before_free,
             after_free_pages=self._freelist_pages(),
             applied=True,
+        )
+
+    def vacuum_preview(self) -> VacuumResult:
+        """Current file size and free pages, without reclaiming anything."""
+        try:
+            free_pages = self._freelist_pages()
+        except sqlite3.OperationalError as exc:
+            raise MaintenanceBusy(
+                "database is busy; stop other writers and retry `maint vacuum`"
+            ) from exc
+        size = self._file_size()
+        return VacuumResult(
+            before_bytes=size,
+            after_bytes=size,
+            before_free_pages=free_pages,
+            after_free_pages=free_pages,
+            applied=False,
+        )
+
+    @staticmethod
+    def _integrity_ok(conn: sqlite3.Connection) -> bool:
+        """True when SQLite's own integrity check returns only ok rows."""
+        rows = conn.execute("PRAGMA integrity_check").fetchall()
+        return bool(rows) and all(str(row[0]).lower() == "ok" for row in rows)
+
+    @staticmethod
+    def _backup_counts(conn: sqlite3.Connection) -> dict[str, int]:
+        """Counts compared between the live database and its snapshot."""
+        return {
+            table: int(conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0])
+            for table in ("plans", "tasks", "events")
+        }
+
+    @staticmethod
+    def _remove_snapshot(target: Path, bindings: Path) -> None:
+        """Delete a failed snapshot and its binding copy."""
+        try:
+            target.unlink()
+        except OSError:
+            pass
+        shutil.rmtree(bindings, ignore_errors=True)
+
+    def backup(self, label: str = "") -> BackupResult:
+        """Copy the database beside itself, verify it, and snapshot bindings."""
+        source_path = Path(self.path).expanduser()
+        stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S-%f")
+        target = source_path.with_name(f"{source_path.name}.bak-{stamp}")
+        bindings = target.with_name(f"{target.name}.bindings")
+        source = sqlite3.connect(str(source_path), timeout=5.0)
+        snapshot = sqlite3.connect(str(target), timeout=5.0)
+        try:
+            source.backup(snapshot)
+            integrity = self._integrity_ok(snapshot)
+            live = self._backup_counts(source)
+            copied = self._backup_counts(snapshot)
+        except (sqlite3.Error, OSError) as exc:
+            self._remove_snapshot(target, bindings)
+            raise MaintenanceBackupError(f"snapshot failed: {exc}") from exc
+        finally:
+            snapshot.close()
+            source.close()
+        if not integrity or live != copied:
+            self._remove_snapshot(target, bindings)
+            raise MaintenanceBackupError("snapshot failed integrity or count verification")
+        source_bindings = source_path.parent / "sessions" / "bindings"
+        details = [
+            f"plans={copied['plans']}",
+            f"tasks={copied['tasks']}",
+            f"events={copied['events']}",
+        ]
+        if label:
+            details.append(f"label={label}")
+        if source_bindings.is_dir():
+            try:
+                shutil.copytree(source_bindings, bindings)
+            except OSError as exc:
+                self._remove_snapshot(target, bindings)
+                raise MaintenanceBackupError(f"binding snapshot failed: {exc}") from exc
+            details.append(f"bindings={bindings}")
+        return BackupResult(
+            path=str(target),
+            bytes=target.stat().st_size,
+            verified=True,
+            details=tuple(details),
         )

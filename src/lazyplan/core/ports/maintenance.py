@@ -8,6 +8,7 @@ from typing import Protocol
 
 from ..policies.maintenance import DEFAULT_WINDOW_SECS
 from .planning import PlanningPort
+from .sessions import SessionsReadPort
 
 
 @dataclass(frozen=True)
@@ -146,7 +147,7 @@ class BackupResult:
         }
 
 
-class MaintenancePort(PlanningPort, Protocol):
+class MaintenancePort(PlanningPort, SessionsReadPort, Protocol):
     """Persistence surface the maintenance use cases need."""
 
     def archive_plan(
@@ -178,5 +179,7 @@ class MaintenancePort(PlanningPort, Protocol):
     ) -> TrimResult: ...
 
     def vacuum(self) -> VacuumResult: ...
+
+    def vacuum_preview(self) -> VacuumResult: ...
 
     def backup(self, label: str = "") -> BackupResult: ...

@@ -40,7 +40,7 @@ class TestMaintenanceVacuum(unittest.TestCase):
             before_free = int(conn.execute("PRAGMA freelist_count").fetchone()[0])
         self.assertGreater(before_free, 0)
 
-        result = maintenance.vacuum(self.store)
+        result = maintenance.vacuum(self.store, apply=True)
 
         self.assertTrue(result.applied)
         self.assertEqual(result.before_bytes, before_bytes)

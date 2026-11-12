@@ -35,7 +35,7 @@ class TestPlanSplit(unittest.TestCase):
 
     def _split(self, filter_text: str = ""):
         app = SimpleNamespace(store=self.store, filter_text=filter_text)
-        base = services.tree(self.store, status=None, archived="show")
+        base = services.tree(self.store, status=None, finished="show")
         return TreeFilter(app).panels(base)
 
     def test_active_panel_keeps_open_plans_with_full_children(self):

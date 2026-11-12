@@ -12,6 +12,7 @@ from ..core.entities import (
     Status,
 )
 from ..core.kinds import table_for
+from ..core.policies.maintenance import check_archive_mode, is_archived_row
 from .base import (
     StoreBase,
 )
@@ -112,11 +113,16 @@ class PlansMixin(StoreBase):
                 self.log(actor, "plan", "restore", f"P#{plan_id} restored", now=stamp)
         return changed
 
-    def list_plans(self) -> list[Plan]:
-        """All plans, newest first."""
+    def list_plans(self, archived: str = "show") -> list[Plan]:
+        """Plans, newest first, filtered by the archive view."""
+        check_archive_mode(archived)
         with self._connect() as conn:
             rows = conn.execute("SELECT * FROM plans ORDER BY id DESC").fetchall()
-        return [self._row_to_plan(r) for r in rows]
+        plans = [self._row_to_plan(r) for r in rows]
+        if archived == "show":
+            return plans
+        wanted = archived == "only"
+        return [plan for plan in plans if is_archived_row(plan) == wanted]
 
     def plan_uids_map(self) -> dict[int, str]:
         """Stable plan uid keyed by plan id, in one query."""

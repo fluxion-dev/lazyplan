@@ -11,7 +11,7 @@ from ...core.policies.provenance import branch_ref
 class PlanNamesPort(Protocol):
     """The plan list a session label needs for titles."""
 
-    def list_plans(self) -> list[Plan]: ...
+    def list_plans(self, archived: str = "show") -> list[Plan]: ...
 
 
 def plan_names(port: PlanNamesPort) -> dict[int, str]:

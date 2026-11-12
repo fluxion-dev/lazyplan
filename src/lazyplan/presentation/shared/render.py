@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 def _plan_progress(store: InsightsPort) -> dict[int, tuple[int, int]]:
     """Task progress per plan, independent of status/limit filters."""
     out: dict[int, tuple[int, int]] = {}
-    for plan, milestones in service_tree(store, status=None, archived="show"):
+    for plan, milestones in service_tree(store, status=None, finished="show", archived="show"):
         tasks = [task for _, items in milestones for task in items]
         out[plan.id] = progress_counts(tasks)
     return out
@@ -33,6 +33,7 @@ def summary_lines(
     status: Status | None,
     plan_id: int | None,
     dot: str = "plain",
+    finished: str = "hide",
     archived: str = "hide",
     limit: int | None = None,
     repo: str | None = None,
@@ -42,6 +43,7 @@ def summary_lines(
         store,
         status=status,
         plan_id=plan_id,
+        finished=finished,
         archived=archived,
         limit=limit,
         repo=repo,
@@ -66,6 +68,7 @@ def tree_lines(
     status: Status | None,
     plan_id: int | None,
     dot: str = "plain",
+    finished: str = "hide",
     archived: str = "hide",
     limit: int | None = None,
     repo: str | None = None,
@@ -77,6 +80,7 @@ def tree_lines(
         store,
         status=status,
         plan_id=plan_id,
+        finished=finished,
         archived=archived,
         limit=limit,
         repo=repo,

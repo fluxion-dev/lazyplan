@@ -55,7 +55,7 @@ class StoreStubs(StoreStubsLinks):
     def get_plan(self, pid: int) -> Plan | None:
         raise NotImplementedError
 
-    def list_plans(self) -> list[Plan]:
+    def list_plans(self, archived: str = "show") -> list[Plan]:
         raise NotImplementedError
 
     def plan_uids_map(self) -> dict[int, str]:

@@ -23,9 +23,15 @@ def add_list(
         help="show only rows with this status (default: all)",
     )
     li.add_argument(
-        "--archived",
+        "--finished",
         action="store_true",
-        help="show only finished plans older than a day",
+        help="show only plans finished longer than a day",
+    )
+    li.add_argument(
+        "--archived",
+        choices=("only", "show", "all"),
+        default=None,
+        help="archive state: only archived plans, show both, or hide (default)",
     )
     li.add_argument("--plan", type=int, default=None, metavar="ID", help="show only this plan")
     li.add_argument(
@@ -109,7 +115,15 @@ def add_noun_groups(
             default=None,
             help="show only rows with this status",
         )
-        parser.add_argument("--archived", action="store_true", help="show only finished plans")
+        parser.add_argument(
+            "--finished", action="store_true", help="show only plans finished longer than a day"
+        )
+        parser.add_argument(
+            "--archived",
+            choices=("only", "show", "all"),
+            default=None,
+            help="archive state: only archived plans, show both, or hide (default)",
+        )
         parser.add_argument("--all", action="store_true", help="show every plan")
         parser.add_argument(
             "--limit", type=int, default=None, metavar="N", help="cap the plan count"

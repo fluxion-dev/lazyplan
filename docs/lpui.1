@@ -1,4 +1,4 @@
-.TH LPUI 1 "2026-11-12" "lazyplan-tui 0.40.3" "User Commands"
+.TH LPUI 1 "2026-11-11" "lazyplan-tui 0.40.3" "User Commands"
 .SH NAME
 lpui \- local plan journal for you and your coding agent
 .SH SYNOPSIS
@@ -1130,8 +1130,13 @@ show only rows with this status (default: all) Choices: todo, doing, done, all\.
 .RE
 .RS
 .TP
-.B \-\-archived
-show only finished plans older than a day
+.B \-\-finished
+show only plans finished longer than a day
+.RE
+.RS
+.TP
+.B \-\-archived {only|show|all}
+archive state: only archived plans, show both, or hide (default) Choices: only, show, all\.
 .RE
 .RS
 .TP

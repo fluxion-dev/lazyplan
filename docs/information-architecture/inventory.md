@@ -54,7 +54,7 @@ python3 tools/ia_inventory.py --check
 | `link` | --json, --porcelain, --version, --actor, --heal, --no-heal, --kind, --id, --repo, --sha |
 | `link-repo` | --json, --porcelain, --version, --actor, --heal, --no-heal, --kind, --id, --repo, --remote |
 | `lint` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --strict |
-| `list` | --json, --porcelain, --version, --actor, --heal, --no-heal, --status, --archived, --plan, --all, --limit, --repo, --tree, --milestone |
+| `list` | --json, --porcelain, --version, --actor, --heal, --no-heal, --status, --finished, --archived, --plan, --all, --limit, --repo, --tree, --milestone |
 | `mcp` | --json, --porcelain, --version, --actor, --heal, --no-heal, --read-only |
 | `milestone` | --json, --porcelain, --version, --actor, --heal, --no-heal |
 | `next` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --ttl, --note, --suggest |

@@ -231,7 +231,7 @@ class TestStore(unittest.TestCase):
         self.store.add_repo_link("plan", p.id, "/checkout/plan", "git@example.test:org/plan.git")
         self.store.add_repo_link("task", t.id, "/checkout/task", "git@example.test:org/task.git")
 
-        payload = _list_payload(self.store, None, "show", None, None, None, None)
+        payload = _list_payload(self.store, None, "show", "show", None, None, None, None)
         self.assertEqual(len(payload), 1)
         entry = payload[0]
         self.assertEqual(entry["criteria"], [])
@@ -971,10 +971,10 @@ class TestStore(unittest.TestCase):
         ]
         self.assertNotIn("Old", names)
         self.assertIn("Fresh", names)
-        self.assertEqual([p.name for p, _ in services.tree(self.store, archived="only")], ["Old"])
-        self.assertEqual(len(services.tree(self.store, archived="show")), 3)
+        self.assertEqual([p.name for p, _ in services.tree(self.store, finished="only")], ["Old"])
+        self.assertEqual(len(services.tree(self.store, finished="show")), 3)
         with self.assertRaises(ValueError):
-            services.tree(self.store, archived="yesterday")
+            services.tree(self.store, finished="yesterday")
 
         def _list_out(argv):
             buf = io.StringIO()
@@ -983,8 +983,8 @@ class TestStore(unittest.TestCase):
             return buf.getvalue()
 
         self.assertNotIn("Old", _list_out(["list"]))
-        self.assertIn("Old", _list_out(["list", "--archived"]))
-        self.assertNotIn("Fresh", _list_out(["list", "--archived"]))
+        self.assertIn("Old", _list_out(["list", "--finished"]))
+        self.assertNotIn("Fresh", _list_out(["list", "--finished"]))
         self.assertIn("Old", _list_out(["list", "--status", "all"]))
 
     def test_counts_by_state(self):

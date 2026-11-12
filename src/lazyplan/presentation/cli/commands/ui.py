@@ -37,7 +37,7 @@ def _plain_overview(store: InsightsPort, args: argparse.Namespace) -> int:
     if getattr(args, "json", False):
         return _emit(
             args,
-            _list_payload(store, None, "hide", None, None, None, None),
+            _list_payload(store, None, "hide", "hide", None, None, None, None),
         )
     print(
         "lpui: no interactive terminal; showing the plan summary (use `lpui list --tree` for detail)",
@@ -48,6 +48,7 @@ def _plain_overview(store: InsightsPort, args: argparse.Namespace) -> int:
         None,
         None,
         dot="plain",
+        finished="hide",
         archived="hide",
         limit=services.DEFAULT_PLAN_LIMIT,
     )

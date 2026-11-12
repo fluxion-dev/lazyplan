@@ -211,7 +211,9 @@ class TreeController(ExpansionMixin, LazyBranchMixin, ReconcileMixin, PollMixin)
         try:
             prev_selected = app.selected
             view = self.capture_view()
-            base = services.tree(app.store, status=None, archived="show", plan_mode="all")
+            base = services.tree(
+                app.store, status=None, finished="show", archived="hide", plan_mode="all"
+            )
             self._prepare_model(base)
             active, finished = self.filters.panels(base)
             visible = active + finished

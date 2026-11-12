@@ -9,6 +9,7 @@ from lazyplan.infrastructure.templates import apply_template, template_criteria
 
 from ..core.entities import Criterion, Milestone, Plan, Status, Task
 from ..core.kinds import check_kind
+from ..core.policies.maintenance import check_archive_mode, is_archived_row
 from ..core.policies.planning import is_archived as _is_archived_policy
 from ..core.policies.planning import next_status, rollup_target
 from ..core.ports.coordination import CoordinationPort
@@ -441,13 +442,18 @@ def _visible_plan(
     plan: Plan,
     milestones: list[tuple[Milestone, list[Task]]],
     status: Status | None,
+    finished: str,
+    finished_now: bool,
     archived: str,
-    archived_now: bool,
 ) -> bool:
-    """Whether a plan survives status and archive filters."""
-    if archived == "only" and not archived_now:
+    """Whether a plan survives status, finished, and archive filters."""
+    if archived == "only" and not is_archived_row(plan):
         return False
-    if archived == "hide" and archived_now:
+    if archived == "hide" and is_archived_row(plan):
+        return False
+    if finished == "only" and not finished_now:
+        return False
+    if finished == "hide" and finished_now:
         return False
     if status is not None and plan.status != status and not milestones:
         return False
@@ -479,6 +485,7 @@ def tree(
     port: PlanningPort,
     status: Status | None = None,
     plan_id: int | None = None,
+    finished: str = "hide",
     archived: str = "hide",
     limit: int | None = None,
     repo: str | None = None,
@@ -486,14 +493,14 @@ def tree(
     plan_mode: str = "all",
 ) -> list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]:
     """Nested plans, milestones, and tasks with filters."""
-    if archived not in ("hide", "only", "show"):
-        raise ValueError("archived must be hide|only|show")
+    check_archive_mode(finished)
+    check_archive_mode(archived)
     if plan_mode not in ("all", "active", "finished"):
         raise ValueError("plan_mode must be all|active|finished")
     plans = port.list_plans()
     milestones = port.milestones_map()
     tasks = port.tasks_map()
-    status_events = port.plan_status_events_map() if archived != "show" else {}
+    status_events = port.plan_status_events_map() if finished != "show" else {}
     repos = port.repos_map() if repo else {}
     now = time.time()
     out = []
@@ -507,8 +514,9 @@ def tree(
             plan,
             items,
             status,
-            archived,
+            finished,
             _is_archived(plan, status_events, now),
+            archived,
         ):
             out.append((plan, items))
     if plan_id is None and milestone_id is None:

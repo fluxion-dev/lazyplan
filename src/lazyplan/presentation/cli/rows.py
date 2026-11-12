@@ -25,15 +25,18 @@ from .emit import (
 )
 
 
-def _list_filters(args: argparse.Namespace) -> tuple[str, Status | None]:
-    """Translate --archived/--status into service filters."""
-    if args.archived:
-        return "only", None
+def _list_filters(args: argparse.Namespace) -> tuple[str, Status | None, str]:
+    """Translate --finished/--archived/--status into service filters."""
+    archived = getattr(args, "archived", None) or "hide"
+    if archived == "all":
+        archived = "show"
+    if getattr(args, "finished", False):
+        return "only", None, archived
     if args.status is None:
-        return "hide", None
+        return "hide", None, archived
     if args.status == "all":
-        return "show", None
-    return "hide", Status(args.status)
+        return "show", None, archived
+    return "hide", Status(args.status), archived
 
 
 def _list_limit(args: argparse.Namespace) -> int | None:
@@ -48,6 +51,7 @@ def _list_limit(args: argparse.Namespace) -> int | None:
 def _list_payload(
     store: InsightsPort,
     status: Status | None,
+    finished: str,
     archived: str,
     limit: int | None,
     repo: str | None,
@@ -65,6 +69,7 @@ def _list_payload(
         store,
         status=status,
         plan_id=plan_id,
+        finished=finished,
         archived=archived,
         limit=limit,
         repo=repo,
@@ -113,6 +118,7 @@ def _list_lines(
     store: InsightsPort,
     args: argparse.Namespace,
     status: Status | None,
+    finished: str,
     archived: str,
     limit: int | None,
     repo: str | None,
@@ -126,6 +132,7 @@ def _list_lines(
             status,
             args.plan,
             dot=dot,
+            finished=finished,
             archived=archived,
             limit=limit,
             repo=repo,
@@ -136,6 +143,7 @@ def _list_lines(
         status,
         args.plan,
         dot=dot,
+        finished=finished,
         archived=archived,
         limit=limit,
         repo=repo,
@@ -146,6 +154,7 @@ def _porcelain_list_lines(
     store: InsightsPort,
     status: Status | None,
     plan_id: int | None,
+    finished: str,
     archived: str,
     limit: int | None,
     repo: str | None,
@@ -158,6 +167,7 @@ def _porcelain_list_lines(
         store,
         status=status,
         plan_id=plan_id,
+        finished=finished,
         archived=archived,
         limit=limit,
         repo=repo,

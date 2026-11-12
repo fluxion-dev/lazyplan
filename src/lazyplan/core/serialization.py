@@ -8,7 +8,7 @@ from .entities import PlanChange, PlanRevision, Status
 
 
 def to_payload(d: dict) -> dict:
-    """JSON/agent-safe: Status -> value, omit empty blocked fields."""
+    """JSON/agent-safe: Status -> value, omit empty blocked and archive fields."""
     d = dict(d)
     if isinstance(d.get("status"), Status):
         d["status"] = d["status"].value
@@ -16,6 +16,8 @@ def to_payload(d: dict) -> dict:
         d.pop("blocked", None)
     if not d.get("blocked_reason"):
         d.pop("blocked_reason", None)
+    if not d.get("archived_at"):
+        d.pop("archived_at", None)
     return d
 
 

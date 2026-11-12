@@ -404,11 +404,12 @@ def report(
             since = min(known) if known else 0.0
         plans = [
             plan.id
-            for plan in store.list_plans()
+            for plan in store.list_plans(archived="hide")
             if plan.status == Status.DOING or starts.get(plan.id, 0.0) >= since
         ]
     else:
-        plans = list(plan_ids)
+        archived = {plan.id for plan in store.list_plans(archived="only")}
+        plans = [plan_id for plan_id in plan_ids if plan_id not in archived]
         if since is None:
             known = [starts[plan_id] for plan_id in plans if plan_id in starts]
             since = min(known) if known else 0.0

@@ -28,7 +28,7 @@ def _answers(items):
 TEMPLATE_EXAMPLE_ARGV = [
     ["list", "--status", "todo", "--plan", "1"],
     ["list", "--status", "all"],
-    ["list", "--archived"],
+    ["list", "--finished"],
     ["plan", "show", "--id", "1"],
     ["milestone", "show", "--id", "1"],
     ["task", "show", "--id", "1"],

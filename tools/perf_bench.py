@@ -456,7 +456,7 @@ def _core_metrics(store: Store, fixture: Fixture, repeat: int) -> list[Measureme
         ),
         measure(
             "list_json",
-            lambda: _list_payload(store, None, "hide", None, None, None, None),
+            lambda: _list_payload(store, None, "hide", "hide", None, None, None, None),
             repeat=repeat,
         ),
         measure("show_plan", lambda: store.get_full("plan", fixture.first_plan_id), repeat=repeat),

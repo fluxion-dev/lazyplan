@@ -31,6 +31,18 @@ class TrimTarget:
     params: tuple[object, ...] = ()
 
 
+@dataclass(frozen=True)
+class _ReportMeasure:
+    """Raw page and row facts behind one maintenance report."""
+
+    page_size: int
+    free_pages: int
+    method: str
+    tables: tuple[TableBytes, ...]
+    total_bytes: int
+    trim_counts: dict[str, int]
+
+
 def _quoted(name: str) -> str:
     """Quote one SQLite identifier."""
     return '"' + name.replace('"', '""') + '"'
@@ -40,6 +52,22 @@ def _table_rows(conn: sqlite3.Connection, table: str) -> int:
     """Exact row count for one table."""
     row = conn.execute(f"SELECT COUNT(*) AS count FROM {_quoted(table)}").fetchone()
     return int(row["count"] if row is not None else 0)
+
+
+def _missing_owner(kind_column: str, id_column: str = "parent_id") -> str:
+    """Predicate matching rows whose plan, milestone, or task parent is gone."""
+    return (
+        f"({kind_column}='plan' AND NOT EXISTS (SELECT 1 FROM plans WHERE id={id_column}))"
+        f" OR ({kind_column}='milestone'"
+        f" AND NOT EXISTS (SELECT 1 FROM milestones WHERE id={id_column}))"
+        f" OR ({kind_column}='task'"
+        f" AND NOT EXISTS (SELECT 1 FROM tasks WHERE id={id_column}))"
+    )
+
+
+_MISSING_PARENT = _missing_owner("parent_kind")
+_MISSING_KIND = _missing_owner("kind", "row_id")
+_MISSING_ROW_KIND = _missing_owner("row_kind", "row_id")
 
 
 class MaintenanceMixin(StoreBase):
@@ -79,7 +107,7 @@ class MaintenanceMixin(StoreBase):
         tables: list[str],
         indexes: dict[str, list[str]],
         page_bytes: dict[str, int],
-    ) -> list[TableBytes]:
+    ) -> tuple[TableBytes, ...]:
         """Attribute table and index pages to each table; schema pages stay separate."""
         rows: list[TableBytes] = []
         claimed: set[str] = set()
@@ -91,17 +119,11 @@ class MaintenanceMixin(StoreBase):
         leftover = sum(size for name, size in page_bytes.items() if name not in claimed)
         if leftover:
             rows.append(TableBytes("sqlite_schema", leftover, 0))
-        return rows
+        return tuple(rows)
 
     @staticmethod
-    def _trim_targets(now: float, cutoff: float) -> tuple[TrimTarget, ...]:
-        """Every derived-row delete trim may make, in a safe order."""
-        missing_parent = (
-            "(parent_kind='plan' AND NOT EXISTS (SELECT 1 FROM plans WHERE id=parent_id))"
-            " OR (parent_kind='milestone'"
-            " AND NOT EXISTS (SELECT 1 FROM milestones WHERE id=parent_id))"
-            " OR (parent_kind='task' AND NOT EXISTS (SELECT 1 FROM tasks WHERE id=parent_id))"
-        )
+    def _claim_targets(now: float) -> tuple[TrimTarget, ...]:
+        """Expired leases and the touch-points they carried."""
         return (
             TrimTarget(
                 "task_touchpoints",
@@ -109,11 +131,23 @@ class MaintenanceMixin(StoreBase):
                 (now,),
             ),
             TrimTarget("task_claims", "expires_at <= ?", (now,)),
+        )
+
+    @staticmethod
+    def _forge_targets(cutoff: float) -> tuple[TrimTarget, ...]:
+        """Stale cache entries and pull requests that are already closed."""
+        return (
             TrimTarget("forge_cache", "fetched_at < ?", (cutoff,)),
             TrimTarget(
                 "forge_links",
                 "lower(state) IN ('closed', 'merged') OR merged_at <> ''",
             ),
+        )
+
+    @staticmethod
+    def _orphan_targets() -> tuple[TrimTarget, ...]:
+        """Derived child rows whose plan, milestone, task, or criterion is gone."""
+        return (
             TrimTarget(
                 "criterion_links",
                 "NOT EXISTS (SELECT 1 FROM criteria c WHERE c.id=criterion_id)"
@@ -125,26 +159,28 @@ class MaintenanceMixin(StoreBase):
                 " OR (task_id IS NOT NULL"
                 " AND NOT EXISTS (SELECT 1 FROM tasks t WHERE t.id=task_id))",
             ),
-            TrimTarget("criteria", missing_parent),
-            TrimTarget("notes", missing_parent),
-            TrimTarget("comments", missing_parent),
-            TrimTarget(
-                "entity_keys",
-                "(kind='plan' AND NOT EXISTS (SELECT 1 FROM plans WHERE id=row_id))"
-                " OR (kind='milestone'"
-                " AND NOT EXISTS (SELECT 1 FROM milestones WHERE id=row_id))"
-                " OR (kind='task' AND NOT EXISTS (SELECT 1 FROM tasks WHERE id=row_id))",
-            ),
-            TrimTarget("entity_repos", missing_parent),
-            TrimTarget(
-                "issue_links",
-                "(row_kind='plan' AND NOT EXISTS (SELECT 1 FROM plans WHERE id=row_id))"
-                " OR (row_kind='milestone'"
-                " AND NOT EXISTS (SELECT 1 FROM milestones WHERE id=row_id))"
-                " OR (row_kind='task' AND NOT EXISTS (SELECT 1 FROM tasks WHERE id=row_id))",
-            ),
-            TrimTarget("vcs_links", missing_parent),
-            TrimTarget("events", "ts < ?", (cutoff,)),
+            TrimTarget("criteria", _MISSING_PARENT),
+            TrimTarget("notes", _MISSING_PARENT),
+            TrimTarget("comments", _MISSING_PARENT),
+            TrimTarget("entity_keys", _MISSING_KIND),
+            TrimTarget("entity_repos", _MISSING_PARENT),
+            TrimTarget("issue_links", _MISSING_ROW_KIND),
+            TrimTarget("vcs_links", _MISSING_PARENT),
+        )
+
+    @staticmethod
+    def _event_targets(cutoff: float) -> tuple[TrimTarget, ...]:
+        """Events older than the window."""
+        return (TrimTarget("events", "ts < ?", (cutoff,)),)
+
+    @classmethod
+    def _trim_targets(cls, now: float, cutoff: float) -> tuple[TrimTarget, ...]:
+        """Every derived-row delete trim may make, in a safe order."""
+        return (
+            *cls._claim_targets(now),
+            *cls._forge_targets(cutoff),
+            *cls._orphan_targets(),
+            *cls._event_targets(cutoff),
         )
 
     @staticmethod
@@ -166,40 +202,55 @@ class MaintenanceMixin(StoreBase):
             for target in self._trim_targets(now, cutoff)
         }
 
+    def _measure(self, conn: sqlite3.Connection, now: float) -> _ReportMeasure:
+        """Collect page sizes, per-table bytes, and trim candidates."""
+        page_size = int(conn.execute("PRAGMA page_size").fetchone()[0])
+        page_count = int(conn.execute("PRAGMA page_count").fetchone()[0])
+        free_pages = int(conn.execute("PRAGMA freelist_count").fetchone()[0])
+        tables, indexes, _schema_rows = self._schema_objects(conn)
+        try:
+            page_bytes = self._dbstat_bytes(conn)
+            method = "dbstat"
+        except sqlite3.OperationalError:
+            page_bytes = {}
+            method = "page_count"
+        if method == "dbstat":
+            sized = self._table_sizes(conn, tables, indexes, page_bytes)
+            total_bytes = sum(row.bytes for row in sized)
+        else:
+            sized = tuple(TableBytes(table, 0, _table_rows(conn, table)) for table in tables)
+            total_bytes = page_count * page_size
+        return _ReportMeasure(
+            page_size=page_size,
+            free_pages=free_pages,
+            method=method,
+            tables=sized,
+            total_bytes=total_bytes,
+            trim_counts=self._trim_counts(conn, now, DEFAULT_WINDOW_SECS),
+        )
+
+    @staticmethod
+    def _reclaimable_bytes(measure: _ReportMeasure) -> int:
+        """Free pages plus the share of each table held by trim candidates."""
+        by_table = {row.table: row for row in measure.tables}
+        dead_bytes = sum(
+            round(row.bytes * min(count, row.rows) / row.rows)
+            for table, count in measure.trim_counts.items()
+            if (row := by_table.get(table)) is not None and row.rows > 0 and count > 0
+        )
+        return measure.free_pages * measure.page_size + dead_bytes
+
     def report(self) -> MaintenanceReport:
         """Per-table bytes and row counts, plus free and reclaimable pages."""
         now = time.time()
         with self._connect() as conn:
-            page_size = int(conn.execute("PRAGMA page_size").fetchone()[0])
-            page_count = int(conn.execute("PRAGMA page_count").fetchone()[0])
-            free_pages = int(conn.execute("PRAGMA freelist_count").fetchone()[0])
-            tables, indexes, _schema_rows = self._schema_objects(conn)
-            try:
-                page_bytes = self._dbstat_bytes(conn)
-                method = "dbstat"
-            except sqlite3.OperationalError:
-                page_bytes = {}
-                method = "page_count"
-            if method == "dbstat":
-                sized = self._table_sizes(conn, tables, indexes, page_bytes)
-                total_bytes = sum(row.bytes for row in sized)
-            else:
-                sized = [TableBytes(table, 0, _table_rows(conn, table)) for table in tables]
-                total_bytes = page_count * page_size
-            dead_counts = self._trim_counts(conn, now, DEFAULT_WINDOW_SECS)
-        free_bytes = free_pages * page_size
-        by_table = {row.table: row for row in sized}
-        dead_bytes = sum(
-            round(row.bytes * min(count, row.rows) / row.rows)
-            for table, count in dead_counts.items()
-            if (row := by_table.get(table)) is not None and row.rows > 0 and count > 0
-        )
+            measure = self._measure(conn, now)
         return MaintenanceReport(
-            method=method,
-            tables=tuple(sized),
-            total_bytes=total_bytes,
-            free_bytes=free_bytes,
-            reclaimable_bytes=free_bytes + dead_bytes,
+            method=measure.method,
+            tables=measure.tables,
+            total_bytes=measure.total_bytes,
+            free_bytes=measure.free_pages * measure.page_size,
+            reclaimable_bytes=self._reclaimable_bytes(measure),
         )
 
     def trim(
@@ -217,12 +268,17 @@ class MaintenanceMixin(StoreBase):
                 TableCount(target.table, self._count_target(conn, target)) for target in targets
             )
             if apply:
-                for target in targets:
-                    conn.execute(
-                        f"DELETE FROM {_quoted(target.table)} WHERE {target.where}",
-                        target.params,
-                    )
+                self._delete_targets(conn, targets)
         return TrimResult(tables=counts, applied=apply)
+
+    @staticmethod
+    def _delete_targets(conn: sqlite3.Connection, targets: tuple[TrimTarget, ...]) -> None:
+        """Run one target builder's deletes inside the caller's transaction."""
+        for target in targets:
+            conn.execute(
+                f"DELETE FROM {_quoted(target.table)} WHERE {target.where}",
+                target.params,
+            )
 
     def _freelist_pages(self, timeout: float = 1.0) -> int:
         """Free pages in the database, with a short wait for a competing writer."""
@@ -232,46 +288,52 @@ class MaintenanceMixin(StoreBase):
         finally:
             conn.close()
 
+    @staticmethod
+    def _busy_error() -> MaintenanceBusy:
+        """One clear message for a blocked vacuum."""
+        return MaintenanceBusy("database is busy; stop other writers and retry `maint vacuum`")
+
+    def _current_free_pages(self) -> int:
+        """Free pages, translated to a clear busy error."""
+        try:
+            return self._freelist_pages()
+        except sqlite3.OperationalError as exc:
+            raise self._busy_error() from exc
+
+    def _run_vacuum(self, path: Path) -> None:
+        """VACUUM on a dedicated autocommit connection with a short timeout."""
+        try:
+            conn = sqlite3.connect(str(path), timeout=1.0, isolation_level=None)
+        except sqlite3.OperationalError as exc:
+            raise self._busy_error() from exc
+        try:
+            conn.execute("PRAGMA busy_timeout = 1000")
+            conn.execute("VACUUM")
+        except sqlite3.OperationalError as exc:
+            text = str(exc).lower()
+            if "locked" in text or "busy" in text:
+                raise self._busy_error() from exc
+            raise
+        finally:
+            conn.close()
+
     def vacuum(self) -> VacuumResult:
         """Reclaim free pages outside a transaction; fail fast when the file is busy."""
         path = Path(self.path).expanduser()
         before_bytes = self._file_size()
-        try:
-            before_free = self._freelist_pages()
-        except sqlite3.OperationalError as exc:
-            raise MaintenanceBusy(
-                "database is busy; stop other writers and retry `maint vacuum`"
-            ) from exc
-        try:
-            conn = sqlite3.connect(str(path), timeout=1.0, isolation_level=None)
-            try:
-                conn.execute("PRAGMA busy_timeout = 1000")
-                conn.execute("VACUUM")
-            finally:
-                conn.close()
-        except sqlite3.OperationalError as exc:
-            text = str(exc).lower()
-            if "locked" in text or "busy" in text:
-                raise MaintenanceBusy(
-                    "database is busy; stop other writers and retry `maint vacuum`"
-                ) from exc
-            raise
+        before_free = self._current_free_pages()
+        self._run_vacuum(path)
         return VacuumResult(
             before_bytes=before_bytes,
             after_bytes=self._file_size(),
             before_free_pages=before_free,
-            after_free_pages=self._freelist_pages(),
+            after_free_pages=self._current_free_pages(),
             applied=True,
         )
 
     def vacuum_preview(self) -> VacuumResult:
         """Current file size and free pages, without reclaiming anything."""
-        try:
-            free_pages = self._freelist_pages()
-        except sqlite3.OperationalError as exc:
-            raise MaintenanceBusy(
-                "database is busy; stop other writers and retry `maint vacuum`"
-            ) from exc
+        free_pages = self._current_free_pages()
         size = self._file_size()
         return VacuumResult(
             before_bytes=size,
@@ -304,42 +366,65 @@ class MaintenanceMixin(StoreBase):
             pass
         shutil.rmtree(bindings, ignore_errors=True)
 
-    def backup(self, label: str = "") -> BackupResult:
-        """Copy the database beside itself, verify it, and snapshot bindings."""
-        source_path = Path(self.path).expanduser()
+    @staticmethod
+    def _snapshot_paths(source_path: Path) -> tuple[Path, Path]:
+        """Timestamped database snapshot and its binding-directory peer."""
         stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S-%f")
         target = source_path.with_name(f"{source_path.name}.bak-{stamp}")
+        return target, target.with_name(f"{target.name}.bindings")
+
+    def _snapshot_database(self, source_path: Path, target: Path) -> dict[str, int]:
+        """Copy the database with the backup API, then verify integrity and counts."""
         bindings = target.with_name(f"{target.name}.bindings")
-        source = sqlite3.connect(str(source_path), timeout=5.0)
-        snapshot = sqlite3.connect(str(target), timeout=5.0)
+        source: sqlite3.Connection | None = None
+        snapshot: sqlite3.Connection | None = None
         try:
+            source = sqlite3.connect(str(source_path), timeout=5.0)
+            snapshot = sqlite3.connect(str(target), timeout=5.0)
             source.backup(snapshot)
             integrity = self._integrity_ok(snapshot)
-            live = self._backup_counts(source)
-            copied = self._backup_counts(snapshot)
+            live_counts = self._backup_counts(source)
+            snapshot_counts = self._backup_counts(snapshot)
         except (sqlite3.Error, OSError) as exc:
             self._remove_snapshot(target, bindings)
             raise MaintenanceBackupError(f"snapshot failed: {exc}") from exc
         finally:
-            snapshot.close()
-            source.close()
-        if not integrity or live != copied:
+            if snapshot is not None:
+                snapshot.close()
+            if source is not None:
+                source.close()
+        if not integrity or live_counts != snapshot_counts:
             self._remove_snapshot(target, bindings)
             raise MaintenanceBackupError("snapshot failed integrity or count verification")
+        return snapshot_counts
+
+    def _snapshot_bindings(self, source_path: Path, target: Path) -> Path | None:
+        """Copy the session binding directory beside the database snapshot."""
         source_bindings = source_path.parent / "sessions" / "bindings"
+        if not source_bindings.is_dir():
+            return None
+        bindings = target.with_name(f"{target.name}.bindings")
+        try:
+            shutil.copytree(source_bindings, bindings)
+        except OSError as exc:
+            self._remove_snapshot(target, bindings)
+            raise MaintenanceBackupError(f"binding snapshot failed: {exc}") from exc
+        return bindings
+
+    def backup(self, label: str = "") -> BackupResult:
+        """Copy the database beside itself, verify it, and snapshot bindings."""
+        source_path = Path(self.path).expanduser()
+        target, _bindings = self._snapshot_paths(source_path)
+        counts = self._snapshot_database(source_path, target)
         details = [
-            f"plans={copied['plans']}",
-            f"tasks={copied['tasks']}",
-            f"events={copied['events']}",
+            f"plans={counts['plans']}",
+            f"tasks={counts['tasks']}",
+            f"events={counts['events']}",
         ]
         if label:
             details.append(f"label={label}")
-        if source_bindings.is_dir():
-            try:
-                shutil.copytree(source_bindings, bindings)
-            except OSError as exc:
-                self._remove_snapshot(target, bindings)
-                raise MaintenanceBackupError(f"binding snapshot failed: {exc}") from exc
+        bindings = self._snapshot_bindings(source_path, target)
+        if bindings is not None:
             details.append(f"bindings={bindings}")
         return BackupResult(
             path=str(target),

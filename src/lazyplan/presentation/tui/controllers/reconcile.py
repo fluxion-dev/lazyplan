@@ -43,6 +43,12 @@ class ReconcileMixin:
 
         def load_branch(self, node: TreeNode, key: tuple[str, int]) -> None: ...
 
+        def ancestor_keys(self, node: TreeNode) -> list[tuple[str, int]]: ...
+
+        def is_visible(self, node: TreeNode) -> bool: ...
+
+        def visible_key(self, key: tuple[str, int]) -> tuple[str, int] | None: ...
+
     def capture_view(self) -> dict[str, Any]:
         """Remember the cursor row, its ancestors, focus, and scroll offsets."""
         view: dict[str, Any] = {"cursor": None, "ancestors": [], "focus": None, "scroll": {}}
@@ -55,37 +61,6 @@ class ReconcileMixin:
                     view["cursor"] = self.node_key(cursor)
                     view["ancestors"] = self.ancestor_keys(cursor)
         return view
-
-    def ancestor_keys(self, node: TreeNode) -> list[tuple[str, int]]:
-        """Keys from a node's nearest parent up to the root, hidden rows included."""
-        keys: list[tuple[str, int]] = []
-        parent = node.parent
-        while parent is not None:
-            key = self.node_key(parent)
-            if key is not None:
-                keys.append(key)
-            parent = parent.parent
-        return keys
-
-    def is_visible(self, node: TreeNode) -> bool:
-        """True when the row's tree and every ancestor are open."""
-        if not node.tree.display:
-            return False
-        parent = node.parent
-        while parent is not None:
-            if not parent.is_expanded:
-                return False
-            parent = parent.parent
-        return True
-
-    def visible_key(self, key: tuple[str, int]) -> tuple[str, int] | None:
-        """The row itself or its nearest visible ancestor; never opens a branch."""
-        node = self.app._row_nodes.get(key)
-        while node is not None:
-            if self.is_visible(node):
-                return self.node_key(node)
-            node = node.parent
-        return None
 
     def restore_view(self, view: dict[str, Any], prev_selected: tuple[str, int] | None) -> None:
         """Restore cursor, scroll, and focus without opening a closed branch."""

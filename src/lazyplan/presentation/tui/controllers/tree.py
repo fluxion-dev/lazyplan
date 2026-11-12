@@ -13,6 +13,7 @@ from ....core.policies.planning import progress_counts
 from ....services.stats import attention_reasons
 from ...shared.help import hint_bar
 from ..views.rows import RowSpec
+from .expansion import ExpansionMixin
 from .filtering import TreeFilter
 from .lazy_branches import LazyBranchMixin
 from .poll import PollMixin
@@ -23,7 +24,7 @@ if TYPE_CHECKING:
     from ..widgets.plan_tree import FoldTree
 
 
-class TreeController(LazyBranchMixin, ReconcileMixin, PollMixin):
+class TreeController(ExpansionMixin, LazyBranchMixin, ReconcileMixin, PollMixin):
     """Owns the plan tree model and the row cache."""
 
     def __init__(self, app: LazyplanApp) -> None:
@@ -72,29 +73,6 @@ class TreeController(LazyBranchMixin, ReconcileMixin, PollMixin):
             self.app.selected = (data["kind"], int(data["id"]))
             self.app.update_preview()
             self.app.metrics_controller.refresh()
-
-    def apply_expansion(self, reveal: set[tuple[str, int]] | None = None) -> None:
-        """Apply the expansion sets once, parents before children.
-
-        This pass only reflects state; it never records a transition. Events
-        posted by ``expand`` and ``collapse`` are ignored by the handlers
-        because the node already agrees with the sets.
-        """
-        app = self.app
-        effective = set(app._expanded)
-        if reveal:
-            effective.update(reveal)
-        for kind in ("plan", "milestone"):
-            for key in [key for key in app._row_nodes if key[0] == kind]:
-                node = app._row_nodes.get(key)
-                if node is None or not node.allow_expand:
-                    continue
-                if key in effective:
-                    self.load_branch(node, key)
-                    if not node.is_expanded:
-                        node.expand()
-                elif node.is_expanded:
-                    node.collapse()
 
     def fold_all(self) -> None:
         """Collapse every loaded row, or load and open every branch."""
@@ -283,26 +261,6 @@ class TreeController(LazyBranchMixin, ReconcileMixin, PollMixin):
         finally:
             app._refreshing = False
 
-    def sync_filter_snapshot(self, filtering: bool) -> None:
-        """Capture the baseline once per filter run and restore it when it clears."""
-        app = self.app
-        if filtering:
-            if app.state.filter_snapshot is None:
-                app.state.filter_snapshot = (set(app._expanded), set(app._collapsed))
-            return
-        snapshot = app.state.filter_snapshot
-        if snapshot is None:
-            return
-        app._expanded.clear()
-        app._expanded.update(snapshot[0])
-        app._collapsed.clear()
-        app._collapsed.update(snapshot[1])
-        app.state.filter_snapshot = None
-
-    def reveal_keys(self) -> set[tuple[str, int]]:
-        """Branches the active filter may open without touching the baseline."""
-        return {key for key in self._visible_keys if self.has_model_children(key)}
-
     def _prepare_model(self, base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]) -> None:
         """Index the model once so expansion never re-reads the database."""
         self._by_plan = {plan.id: milestones for plan, milestones in base}
@@ -325,31 +283,6 @@ class TreeController(LazyBranchMixin, ReconcileMixin, PollMixin):
             for milestone, tasks in milestones:
                 self._model_keys.add(("milestone", milestone.id))
                 self._model_keys.update(("task", task.id) for task in tasks)
-
-    def on_expanded(self, node: TreeNode) -> None:
-        """Record a user expansion only; applied expansions already agree."""
-        if self._loading or self.app.state.filter_snapshot is not None:
-            return
-        key = self.node_key(node)
-        if key is None or key[0] not in ("plan", "milestone"):
-            return
-        if key in self.app._expanded:
-            return
-        self.app._expanded.add(key)
-        self.app._collapsed.discard(key)
-        self.load_branch(node, key)
-
-    def on_collapsed(self, node: TreeNode) -> None:
-        """Record a user collapse only; applied collapses already agree."""
-        if self.app.state.filter_snapshot is not None:
-            return
-        key = self.node_key(node)
-        if key is None or key[0] not in ("plan", "milestone"):
-            return
-        if key not in self.app._expanded:
-            return
-        self.app._expanded.discard(key)
-        self.app._collapsed.add(key)
 
     def render_row(self, key: tuple[str, int], spec: RowSpec, tree: Tree) -> str:
         """Render and cache one row at the current tree width."""

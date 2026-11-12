@@ -204,6 +204,27 @@ class PreviewDocumentTest(unittest.TestCase):
         self.assertNotIn(f"C{criteria[0].id}", acceptance)
         self.assertEqual(acceptance.count("- ○"), 3)
 
+    def test_milestone_preview_tasks_are_header_rows(self) -> None:
+        second = self.store.add_task(
+            self.milestone.id, "Second task", "Second details\nmore detail"
+        )
+        full = self.store.get_full("milestone", self.milestone.id)
+        assert full is not None
+        lines = (
+            build_preview(self.store, "milestone", self.milestone.id, full, [])
+            .render()
+            .splitlines()
+        )
+        heading = next(index for index, line in enumerate(lines) if line.startswith("## TASKS"))
+        rows = [line for line in lines[heading + 1 :] if line.startswith("- ")]
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0], f"- ○ **T{self.task.id}** Task title")
+        self.assertEqual(rows[1], f"- ○ **T{second.id}** Second task")
+        text = "\n".join(rows)
+        self.assertNotIn("Task details", text)
+        self.assertNotIn("Second details", text)
+        self.assertNotIn("more detail", text)
+
     def test_plan_preview_shows_approval_and_drift(self) -> None:
         self.store.add_revision(self.plan.id, "a" * 64, "{}", reason="initial")
         full = self.store.get_full("plan", self.plan.id)

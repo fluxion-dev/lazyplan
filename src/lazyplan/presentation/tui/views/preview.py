@@ -127,26 +127,18 @@ def milestones_block(milestones: list[dict[str, Any]]) -> PreviewBlock | None:
 
 
 def tasks_block(tasks: list[dict[str, Any]]) -> PreviewBlock | None:
-    """Every task under the selected milestone, with its description."""
+    """Every task under the selected milestone, as one header row."""
     if not tasks:
         return None
-    lines: list[str] = []
-    for task in tasks:
-        claim = task.get("claim") if isinstance(task.get("claim"), dict) else None
-        actor = f"@{escape_markdown(str(claim.get('actor', '')))}" if claim else ""
-        lines.append(
-            _row(
-                status_word(str(task.get("status", "")), "plain"),
-                _strong(f"T{task.get('id')}"),
-                escape_markdown(str(task.get("title", ""))),
-                "blocked" if task.get("blocked") else "",
-                actor,
-                sep=" ",
-            )
+    lines = [
+        _row(
+            status_word(str(task.get("status", "")), "plain"),
+            _strong(f"T{task.get('id')}"),
+            escape_markdown(str(task.get("title", ""))),
+            sep=" ",
         )
-        desc = str(task.get("description", "") or "").strip()
-        for line in desc.splitlines():
-            lines.append(f"  {line}" if line.strip() else "")
+        for task in tasks
+    ]
     return PreviewBlock(f"tasks {len(tasks)}", tuple(lines))
 
 

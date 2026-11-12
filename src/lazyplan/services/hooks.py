@@ -18,7 +18,7 @@ from typing import TextIO, cast
 
 from ..core.entities import HookResult, Session
 from ..core.policies import hooks as hook_modes
-from ..core.policies.sessions import IDLE_AFTER_SECS, phase_for_event
+from ..core.policies.sessions import phase_for_event
 from ..core.ports.app import AppPort
 from ..core.ports.insights import InsightsPort
 from ..infrastructure.repo import git_common_dir
@@ -181,9 +181,7 @@ def _track_session(
     host_session = _host_session(payload)
     branch = attribution.current_branch(repo)
     if event in ("session-start", "prompt-submit", "stop"):
-        session_services.reap_idle_sessions(
-            store, now=now, idle_after=IDLE_AFTER_SECS, repo_path=repo
-        )
+        session_services.reap_idle_sessions(store, now=now, repo_path=repo)
     if host_session:
         session = store.session_for_host(host, host_session, project)
     else:

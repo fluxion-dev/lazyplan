@@ -6,7 +6,9 @@ import os
 import tempfile
 import time
 import unittest
+from unittest import mock
 
+from lazyplan.presentation.shared.design import SPINNER_FRAMES
 from lazyplan.store import Store
 
 try:
@@ -130,8 +132,150 @@ class TestReapBeforeRender(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             text = str(app.query_one("#agents-body").render())
             self.assertIn(f"P{self.plan.id} Plan", text)
-            self.assertIn("T157", text)
             self.assertIn("task/157-pane", text)
+            self.assertNotIn("T157", text)
+
+    async def test_advance_repaints_cached_rows_without_a_store_read(self) -> None:
+        self.store.start_session(
+            "opencode",
+            plan_id=self.plan.id,
+            repo_path=self.store.checkout_path(),
+            branch="task/19-pane",
+            host="opencode",
+            host_session="session-0001",
+        )
+        app = create_app(self.store.path)
+        async with app.run_test(size=(160, 40)) as pilot:
+            await pilot.pause()
+            panel = app.query_one("#agents")
+            app.spinner_controller.stop()
+            app.update_agents()
+            body = app.query_one("#agents-body")
+            before = str(body.render())
+            with mock.patch.object(
+                app.store,
+                "list_sessions",
+                wraps=app.store.list_sessions,
+            ) as reads:
+                self.assertTrue(panel.advance(1))
+                self.assertTrue(panel.advance(2))
+                reads.assert_not_called()
+            after = str(body.render())
+            self.assertNotEqual(before, after)
+            self.assertIn(SPINNER_FRAMES[2], after)
+
+    async def test_the_spinner_advances_a_live_agents_row(self) -> None:
+        self.store.start_session(
+            "opencode",
+            plan_id=self.plan.id,
+            repo_path=self.store.checkout_path(),
+            host="opencode",
+            host_session="session-0001",
+        )
+        app = create_app(self.store.path)
+        async with app.run_test(size=(160, 40)) as pilot:
+            await pilot.pause()
+            app.spinner_controller.stop()
+            app.update_agents()
+            body = app.query_one("#agents-body")
+            self.assertIn(SPINNER_FRAMES[0], str(body.render()))
+            app.spinner_controller.tick = 0
+            app.spinner_controller.spin()
+            self.assertIn(SPINNER_FRAMES[1], str(body.render()))
+
+    async def test_advance_refreshes_ages_without_a_store_read(self) -> None:
+        self.store.start_session(
+            "opencode",
+            plan_id=self.plan.id,
+            repo_path=self.store.checkout_path(),
+            host="opencode",
+            host_session="session-0001",
+        )
+        app = create_app(self.store.path)
+        async with app.run_test(size=(160, 40)) as pilot:
+            await pilot.pause()
+            app.spinner_controller.stop()
+            app.update_agents()
+            panel = app.query_one("#agents")
+            body = app.query_one("#agents-body")
+            base = time.time()
+            self.assertIn("0m", str(body.render()))
+            with mock.patch(
+                "lazyplan.presentation.tui.widgets.agents_panel.time.time",
+                return_value=base + 90,
+            ):
+                with mock.patch.object(
+                    app.store,
+                    "list_sessions",
+                    wraps=app.store.list_sessions,
+                ) as reads:
+                    self.assertTrue(panel.advance(1))
+                    reads.assert_not_called()
+            self.assertIn("1m", str(body.render()))
+
+    async def test_a_narrow_pane_keeps_one_row_per_session(self) -> None:
+        plan = self.store.add_plan("A very long plan title that should truncate")
+        self.store.start_session(
+            "opencode",
+            plan_id=plan.id,
+            repo_path=self.store.checkout_path(),
+            branch="feature/very-long-branch-name",
+            host="opencode",
+            host_session="session-0001",
+        )
+        app = create_app(self.store.path)
+        async with app.run_test(size=(70, 30)) as pilot:
+            await pilot.pause()
+            app.update_agents()
+            body = app.query_one("#agents-body")
+            text = str(body.render())
+            lines = text.splitlines()
+            self.assertEqual(len(lines), 1)
+            self.assertLessEqual(len(lines[0]), body.size.width)
+            self.assertIn("…", lines[0])
+            self.assertEqual(body.styles.text_wrap, "nowrap")
+
+    async def test_the_spinner_leaves_an_awaiting_row_still(self) -> None:
+        self.store.start_session(
+            "opencode",
+            plan_id=self.plan.id,
+            repo_path=self.store.checkout_path(),
+            host="opencode",
+            host_session="session-0001",
+            phase="awaiting",
+        )
+        app = create_app(self.store.path)
+        async with app.run_test(size=(160, 40)) as pilot:
+            await pilot.pause()
+            app.spinner_controller.stop()
+            app.spinner_controller.tick = 0
+            app.update_agents()
+            body = app.query_one("#agents-body")
+            before = str(body.render())
+            self.assertTrue(before.endswith("· ◆"))
+            app.spinner_controller.spin()
+            self.assertEqual(app.spinner_controller.tick, 0)
+            self.assertEqual(str(body.render()), before)
+
+    async def test_no_spinner_freezes_the_agents_frame(self) -> None:
+        self.store.start_session(
+            "opencode",
+            plan_id=self.plan.id,
+            repo_path=self.store.checkout_path(),
+            host="opencode",
+            host_session="session-0001",
+        )
+        with mock.patch.dict(os.environ, {"LAZYPLAN_NO_SPINNER": "1"}):
+            app = create_app(self.store.path)
+            async with app.run_test(size=(160, 40)) as pilot:
+                await pilot.pause()
+                app.spinner_controller.stop()
+                app.update_agents()
+                panel = app.query_one("#agents")
+                body = app.query_one("#agents-body")
+                self.assertTrue(str(body.render()).endswith("· ◐"))
+                self.assertFalse(panel.advance(1))
+                self.assertTrue(str(body.render()).endswith("· ◐"))
 
     async def test_empty_state_returns_after_the_row_ends(self) -> None:
         session, _ = self.store.start_session("ana", plan_id=self.plan.id)

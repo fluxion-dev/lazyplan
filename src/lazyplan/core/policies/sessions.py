@@ -8,10 +8,23 @@ PHASES = ("working", "awaiting")
 PLAN_SOURCES = ("auto", "manual")
 
 #: An open session with no heartbeat for this long is stale in the UI.
-STALE_AFTER_SECS = 15 * 60
+STALE_AFTER_SECS = 2 * 60
 
-#: An open session with no heartbeat for this long is safe to close.
-IDLE_AFTER_SECS = 2 * 3600
+#: A working session with no heartbeat for this long is safe to close.
+CLOSE_AFTER_WORKING_SECS = 10 * 60
+
+#: An awaiting session keeps a longer grace because the user may take a while.
+CLOSE_AFTER_AWAITING_SECS = 30 * 60
+
+_CLOSE_AFTER = {
+    "working": CLOSE_AFTER_WORKING_SECS,
+    "awaiting": CLOSE_AFTER_AWAITING_SECS,
+}
+
+
+def close_after_secs(phase: str = "working") -> float:
+    """Idle window before one phase is safe to close."""
+    return _CLOSE_AFTER.get(str(phase).strip().lower(), CLOSE_AFTER_WORKING_SECS)
 
 
 def normalize_phase(text: str) -> str:
@@ -37,7 +50,11 @@ def normalize_plan_source(text: str) -> str:
 
 def auto_close_summary(seconds: float) -> str:
     """Summary recorded when idle reaping closes an abandoned session."""
-    hours = max(1, round(max(seconds, 0.0) / 3600))
+    elapsed = max(seconds, 0.0)
+    if elapsed < 3600:
+        minutes = max(1, int(elapsed // 60))
+        return f"auto-closed after {minutes}m idle"
+    hours = max(1, round(elapsed / 3600))
     return f"auto-closed after {hours}h idle"
 
 

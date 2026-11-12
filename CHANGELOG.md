@@ -12,6 +12,13 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
   the width once spent on claim and blocked stats. A blocked task marks its own
   row and still marks its milestone and plan. Blocked detail and the claim
   holder stay in the task overview and coordination hubs.
+- **The agents card reads like a live process list.** Each row shows the actor,
+  a four-character agent id, the plan id and short title, the branch, the age,
+  and a glyph: an animated frame while working, `◆` when awaiting, and `◌` when
+  stale or idle. Plan and branch truncate with an ellipsis instead of wrapping.
+- **Dead sessions leave sooner.** A row reads stale after two minutes, a
+  working row is auto-closed after ten minutes, an awaiting row after thirty,
+  and the background reap runs every minute.
 
 ## v0.40.2 — 2026-11-11
 

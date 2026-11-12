@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from ..app import LazyplanApp
 
-REAP_INTERVAL = 300.0
+REAP_INTERVAL = 60.0
 COALESCE_SECONDS = 0.25
 
 

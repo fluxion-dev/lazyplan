@@ -2,19 +2,20 @@
 
 from __future__ import annotations
 
-import os
 from typing import TYPE_CHECKING, Any
 
 from ....core.entities import Status
-from ...shared.design import SPINNER_FRAMES, SPINNER_INTERVAL, status_prefix
+from ...shared.design import SPINNER_FRAMES, SPINNER_INTERVAL, spinner_enabled, status_prefix
+from ..query import query_one_opt
 from ..views.rows import row_text
+from ..widgets.agents_panel import AgentsPanel
 
 if TYPE_CHECKING:
     from ..app import LazyplanApp
 
 
 class SpinnerController:
-    """Own the spinner timer and the doing-row label cache."""
+    """Own the spinner timer, the doing-row labels, and the live agents frame."""
 
     def __init__(self, app: LazyplanApp) -> None:
         self.app = app
@@ -25,7 +26,7 @@ class SpinnerController:
 
     def start(self) -> None:
         """Start the frame timer unless LAZYPLAN_NO_SPINNER is set."""
-        self.enabled = not os.environ.get("LAZYPLAN_NO_SPINNER", "").strip()
+        self.enabled = spinner_enabled()
         if self.enabled:
             self.timer = self.app.set_interval(SPINNER_INTERVAL, self.spin)
 
@@ -44,11 +45,17 @@ class SpinnerController:
             self.rows[key] = label[len(prefix) :]
 
     def spin(self) -> None:
-        """Advance one frame; idle when nothing is doing."""
-        if not self.enabled or not self.rows:
+        """Advance one frame; idle when nothing is doing or working."""
+        if not self.enabled:
+            return
+        panel = query_one_opt(self.app, "#agents", AgentsPanel)
+        working = panel is not None and panel.has_working()
+        if not self.rows and not working:
             return
         self.tick = (self.tick + 1) % len(SPINNER_FRAMES)
         self.paint()
+        if working and panel is not None:
+            panel.advance(self.tick)
 
     def paint(self) -> None:
         """Repaint doing rows at the current frame, without rebuilding."""

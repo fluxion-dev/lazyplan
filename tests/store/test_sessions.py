@@ -165,17 +165,40 @@ class TestSessionsStore(unittest.TestCase):
         self.assertEqual(touched.idle_seconds(260.0), 60.0)
         self.assertEqual(self.store.touch_session(999, now=300.0), None)
 
-    def test_reap_closes_sessions_idle_past_the_threshold(self) -> None:
+    def test_reap_closes_working_rows_at_ten_minutes(self) -> None:
         session, _ = self.store.start_session("ana", now=100.0)
-        self.assertEqual(self.store.reap_idle_sessions(now=200.0, repo_path=str(self.repo)), [])
-        closed = self.store.reap_idle_sessions(now=100.0 + 7201, repo_path=str(self.repo))
+        self.assertEqual(
+            self.store.reap_idle_sessions(now=100.0 + 599, repo_path=str(self.repo)), []
+        )
+        closed = self.store.reap_idle_sessions(now=100.0 + 600, repo_path=str(self.repo))
         self.assertEqual([row.id for row in closed], [session.id])
         ended = self.store.get_session(session.id)
         assert ended is not None
         self.assertTrue(ended.ended)
         self.assertTrue(ended.auto_closed)
-        self.assertIn("auto-closed", ended.summary)
+        self.assertEqual(ended.summary, "auto-closed after 10m idle")
         self.assertFalse(pointer_path(self.db, "ana", self.repo).exists())
+
+    def test_reap_gives_awaiting_rows_thirty_minutes(self) -> None:
+        session, _ = self.store.start_session("ana", now=100.0, phase="awaiting")
+        self.assertEqual(
+            self.store.reap_idle_sessions(now=100.0 + 600, repo_path=str(self.repo)), []
+        )
+        self.assertEqual(
+            self.store.reap_idle_sessions(now=100.0 + 1799, repo_path=str(self.repo)), []
+        )
+        closed = self.store.reap_idle_sessions(now=100.0 + 1800, repo_path=str(self.repo))
+        self.assertEqual([row.id for row in closed], [session.id])
+        ended = self.store.get_session(session.id)
+        assert ended is not None
+        self.assertEqual(ended.summary, "auto-closed after 30m idle")
+
+    def test_reap_honors_an_explicit_idle_after_override(self) -> None:
+        session, _ = self.store.start_session("ana", now=100.0, phase="awaiting")
+        closed = self.store.reap_idle_sessions(
+            now=100.0 + 61, idle_after=60, repo_path=str(self.repo)
+        )
+        self.assertEqual([row.id for row in closed], [session.id])
 
     def test_start_reaps_a_stale_previous_session(self) -> None:
         first, _ = self.store.start_session("ana", now=100.0)

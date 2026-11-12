@@ -6,9 +6,11 @@ import os
 import tempfile
 import time
 import unittest
+from unittest import mock
 
 from lazyplan import services
 from lazyplan.core.entities import Status
+from lazyplan.presentation.shared.design import SPINNER_FRAMES
 from lazyplan.store import Store
 
 try:
@@ -143,10 +145,12 @@ class TestHeartbeatKeepsTreeStill(RefreshCase):
             body = app.query_one("#agents-body", Static)
             harness.heartbeat("working")
             await pilot.pause()
-            self.assertIn("working", str(body.content))
+            self.assertTrue(any(frame in str(body.content) for frame in SPINNER_FRAMES))
             harness.heartbeat("awaiting")
             await pilot.pause()
-            self.assertIn("awaiting you", str(body.content))
+            self.assertIn("◆", str(body.content))
+            for word in ("working", "awaiting you"):
+                self.assertNotIn(word, str(body.content))
 
     async def test_a_structural_edit_still_rebuilds(self) -> None:
         session_id = self.open_session()
@@ -162,6 +166,41 @@ class TestHeartbeatKeepsTreeStill(RefreshCase):
 
 
 class TestPollScheduling(RefreshCase):
+    def test_the_background_reap_runs_every_minute(self) -> None:
+        from lazyplan.presentation.tui.controllers.poll import REAP_INTERVAL
+
+        self.assertEqual(REAP_INTERVAL, 60.0)
+
+    async def test_one_reap_per_minute_window(self) -> None:
+        app = create_app(self.store.path)
+        async with app.run_test(size=(120, 24)) as pilot:
+            await pilot.pause()
+            controller = app.tree_controller
+            controller._last_reap = 1000.0
+            with mock.patch.object(
+                app.store,
+                "reap_idle_sessions",
+                wraps=app.store.reap_idle_sessions,
+            ) as reap:
+                with mock.patch(
+                    "lazyplan.presentation.tui.controllers.poll.time.time",
+                    return_value=1059.0,
+                ):
+                    controller._read_state()
+                self.assertEqual(reap.call_count, 0)
+                with mock.patch(
+                    "lazyplan.presentation.tui.controllers.poll.time.time",
+                    return_value=1060.0,
+                ):
+                    controller._read_state()
+                self.assertEqual(reap.call_count, 1)
+                with mock.patch(
+                    "lazyplan.presentation.tui.controllers.poll.time.time",
+                    return_value=1061.0,
+                ):
+                    controller._read_state()
+                self.assertEqual(reap.call_count, 1)
+
     async def test_a_burst_of_three_writes_makes_one_tree_update(self) -> None:
         session_id = self.open_session()
         app = create_app(self.store.path)

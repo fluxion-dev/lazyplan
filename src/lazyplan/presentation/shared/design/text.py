@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import Mapping
 
 from ....core.entities import Status
@@ -14,6 +15,13 @@ STATUS_RICH = {"todo": "dim", "doing": "yellow", "done": "green"}
 # doing glyph above, so only the animated prefix uses these frames.
 SPINNER_FRAMES = ("⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏")
 SPINNER_INTERVAL = 0.16
+SPINNER_ENV = "LAZYPLAN_NO_SPINNER"
+
+
+def spinner_enabled(environ: Mapping[str, str] | None = None) -> bool:
+    """False when ``LAZYPLAN_NO_SPINNER`` asks for still frames."""
+    env = os.environ if environ is None else environ
+    return not env.get(SPINNER_ENV, "").strip()
 
 
 def _status(value: Status | str) -> str:

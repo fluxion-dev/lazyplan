@@ -3,7 +3,7 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
-## Unreleased
+## v0.41.1 — 2026-11-12
 
 ### Fixed
 

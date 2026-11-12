@@ -36,17 +36,10 @@ class StatsLayoutTest(unittest.TestCase):
         )
         self.assertFalse(any(compact for _key, compact in layout))
 
-    def test_task_layout_keeps_state_stats_at_a_narrow_width(self) -> None:
+    def test_task_layout_is_attention_only(self) -> None:
         layout = stats_layout("task", 33, 6)
 
-        self.assertEqual(
-            [key for key, _compact in layout],
-            ["attention", "blocked", "claim"],
-        )
-        self.assertEqual(
-            [compact for _key, compact in layout],
-            [False, True, False],
-        )
+        self.assertEqual(layout, (("attention", False),))
 
     def test_milestone_layout_drops_attention_after_progress(self) -> None:
         layout = stats_layout("milestone", 25, 6)
@@ -69,13 +62,8 @@ class StatsLayoutTest(unittest.TestCase):
 
     def test_missing_stats_reserve_blank_slots(self) -> None:
         layout = stats_layout("task", 80, 7)
-        full = RowStats(
-            kind="task",
-            attention=True,
-            blocked=True,
-            claim_actor="alice",
-        )
-        empty = RowStats(kind="task")
+        full = RowStats(attention=True)
+        empty = RowStats()
 
         full_plain = render_stats(full, layout)[1]
         empty_plain = render_stats(empty, layout)[1]
@@ -87,55 +75,31 @@ class StatsLayoutTest(unittest.TestCase):
 @unittest.skipUnless(Text is not None, "rich not installed")
 class StatsRenderTest(unittest.TestCase):
     def test_rich_and_plain_blocks_have_equal_width(self) -> None:
-        stats = RowStats(
-            kind="task",
-            attention=True,
-            blocked=True,
-            claim_actor="alice",
-        )
+        stats = RowStats(attention=True)
         layout = stats_layout("task", 80, 7)
         rich, plain = render_stats(stats, layout)
 
         self.assertEqual(Text.from_markup(rich).plain, plain)
         self.assertIn("!", plain)
-        self.assertIn("⚑ blocked", plain)
-        self.assertIn("◉ @alice", plain)
+        self.assertNotIn("⚑", plain)
+        self.assertNotIn("◉", plain)
         self.assertNotIn("PR", plain)
 
     def test_attention_slot_renders_only_when_flagged(self) -> None:
         layout = (("attention", False),)
-        rich, plain = render_stats(RowStats(kind="plan", attention=True), layout)
+        rich, plain = render_stats(RowStats(attention=True), layout)
         self.assertEqual(Text.from_markup(rich).plain, plain)
         self.assertIn("!", plain)
-        self.assertEqual(render_stats(RowStats(kind="plan"), layout)[1].strip(), "")
+        self.assertEqual(render_stats(RowStats(), layout)[1].strip(), "")
 
     def test_compact_forms_are_used_at_a_narrow_width(self) -> None:
-        stats = RowStats(
-            kind="task",
-            attention=True,
-            blocked=True,
-            claim_actor="alice",
-        )
-        layout = stats_layout("task", 33, 6)
+        stats = RowStats(progress=(1, 4), attention=True)
+        layout = stats_layout("milestone", 25, 6)
         rich, plain = render_stats(stats, layout)
 
         self.assertEqual(Text.from_markup(rich).plain, plain)
-        self.assertIn("⚑", plain)
-        self.assertNotIn("⚑ blocked", plain)
-        self.assertIn("◉ @", plain)
-        self.assertLessEqual(len(plain), 19)
-
-    def test_claim_keeps_the_expired_marker_when_truncated(self) -> None:
-        stats = RowStats(
-            kind="task",
-            claim_actor="alice",
-            claim_expired=True,
-        )
-        layout = (("claim", True),)
-        _rich, plain = render_stats(stats, layout)
-
-        self.assertTrue(plain.endswith("!"))
-        self.assertEqual(len(plain), 8)
+        self.assertIn("▰", plain)
+        self.assertLessEqual(len(plain), 10)
 
 
 if __name__ == "__main__":

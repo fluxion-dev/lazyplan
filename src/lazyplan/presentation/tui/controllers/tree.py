@@ -48,7 +48,6 @@ class TreeController(ExpansionMixin, LazyBranchMixin, ReconcileMixin, PollMixin)
         self._source_stats: dict[tuple[str, int], tuple[int, int, int, int]] = {}
         self._forge_map: dict = {}
         self._vcs_map: dict = {}
-        self._claims_map: dict = {}
         self._drift_map: dict = {}
         self._attention: set[tuple[str, int]] = set()
         self._loading = False
@@ -179,11 +178,9 @@ class TreeController(ExpansionMixin, LazyBranchMixin, ReconcileMixin, PollMixin)
         base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]],
         reasons: dict[int, list[str]],
     ) -> set[tuple[str, int]]:
-        """Task attention rolled up to milestones and plans."""
+        """Task attention, including blocked, rolled up to milestones and plans."""
         keys: set[tuple[str, int]] = {
-            ("task", task_id)
-            for task_id, found in reasons.items()
-            if any(reason != "blocked" for reason in found)
+            ("task", task_id) for task_id, found in reasons.items() if found
         }
         questions = self.app.store.questions_map()
         for plan, milestones in base:
@@ -229,7 +226,6 @@ class TreeController(ExpansionMixin, LazyBranchMixin, ReconcileMixin, PollMixin)
             self._source_stats = self.filters.source_stats(
                 visible, self._vcs_map, self._forge_map, app.store.repos_map()
             )
-            self._claims_map = app.store.claims_map()
             self._drift_map = app.store.drift_counts()
             self._attention = self._attention_keys(base, attention_reasons(app.store))
             changed = self.reconcile_children(

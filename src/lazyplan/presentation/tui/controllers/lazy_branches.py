@@ -33,7 +33,6 @@ class LazyBranchMixin:
     _attention: set[tuple[str, int]]
     _forge_map: dict
     _vcs_map: dict
-    _claims_map: dict
     _loading: bool
 
     def has_model_children(self, key: tuple[str, int]) -> bool:
@@ -151,8 +150,6 @@ class LazyBranchMixin:
                 continue
             spec = task_spec(
                 task,
-                app.store,
-                self._claims_map,
                 attention=("task", task.id) in self._attention,
             )
             self.app.tree_controller.add_row(

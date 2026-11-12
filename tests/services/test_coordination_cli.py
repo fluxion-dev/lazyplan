@@ -193,7 +193,6 @@ class TestCoordinationCli(unittest.TestCase):
 
         store = Store(self.db)
         self.assertIn("@alice", design.task_label(store.get_task(1), store))
-        self.assertIn("@alice", design.task_row(store.get_task(1), claim_actor="alice"))
 
     def test_ttl_parser(self):
         self.assertEqual(services.parse_ttl("30m"), 1800)

@@ -27,7 +27,6 @@ class ReconcileMixin:
     _visible_keys: set[tuple[str, int]]
     _by_plan: dict
     _tasks_by_milestone: dict
-    _claims_map: dict
     _progress: dict
     _attention: set[tuple[str, int]]
 
@@ -264,8 +263,6 @@ class ReconcileMixin:
                     key,
                     task_spec(
                         task,
-                        self.app.store,
-                        self._claims_map,
                         attention=key in self._attention,
                     ),
                     False,

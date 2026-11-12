@@ -42,7 +42,7 @@ def _render_row(
 ) -> str:
     """Render one TUI row from the fixed stat slots."""
     _letter, title_attr = _CORE_SPEC[kind]
-    id_part = f"{LABEL_LETTERS[kind]}{obj.id}"
+    id_part = f"{_letter}{obj.id}"
     title = getattr(obj, title_attr)
     prefix_rich = f"{status_prefix(obj.status)} [dim]{id_part}[/] "
     prefix_plain = f"{status_word(obj.status)} {id_part} "
@@ -73,7 +73,7 @@ def plan_row(
     attention: bool = False,
 ) -> str:
     """TUI plan row (Rich markup): glyph + id + title + progress + attention."""
-    stats = RowStats(kind="plan", progress=progress, attention=attention)
+    stats = RowStats(progress=progress, attention=attention)
     return _render_row("plan", p, stats, width)
 
 
@@ -90,7 +90,7 @@ def milestone_row(
     attention: bool = False,
 ) -> str:
     """TUI milestone row (Rich markup): glyph + id + title + progress + attention."""
-    stats = RowStats(kind="milestone", progress=progress, attention=attention)
+    stats = RowStats(progress=progress, attention=attention)
     return _render_row("milestone", s, stats, width)
 
 
@@ -107,19 +107,9 @@ def task_label(t: Task, store: InsightsPort | None = None, dot: str = "plain") -
 
 def task_row(
     t: Task,
-    store: InsightsPort | None = None,
     width: int | None = None,
     attention: bool = False,
-    claim_actor: str = "",
-    claim_expired: bool = False,
-    blocked: bool = False,
 ) -> str:
-    """TUI task row (Rich markup): glyph + id + title + attention + claim."""
-    stats = RowStats(
-        kind="task",
-        attention=attention,
-        blocked=blocked,
-        claim_actor=claim_actor,
-        claim_expired=claim_expired,
-    )
+    """TUI task row (Rich markup): glyph + id + title + attention."""
+    stats = RowStats(attention=attention)
     return _render_row("task", t, stats, width)

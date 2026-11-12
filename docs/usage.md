@@ -318,7 +318,10 @@ tab-separated rows; `--json` wins when both are present.
 Plans start collapsed. Press `right` or `z` to reveal milestones; tasks stay
 folded until you open their milestone. Completed plans live in the `plan review`
 panel and stay dimmed. A doing row animates a small spinner; set
-`LAZYPLAN_NO_SPINNER=1` to freeze it.
+`LAZYPLAN_NO_SPINNER=1` to freeze it. Plan and milestone rows end with progress
+and `!` when they need attention; a task row shows only the status glyph,
+`T<id>`, the title, and `!`, leaving claim and blocked detail to the task
+overview and coordination hubs.
 
 The main screen puts the work in one left column and the overview on the right.
 The left column stacks, in order, the plan queue, the agents card, plan review,

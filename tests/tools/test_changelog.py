@@ -191,6 +191,8 @@ See the releases page.
 
     def test_real_repo_stamps_cleanly(self):
         text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+        if "## Unreleased" not in text:
+            self.skipTest("the released changelog has no Unreleased section")
         stamped = self.gate.stamp_text(text, "0.41.1", "2026-11-12")
         self.assertEqual(self.gate.check_text(stamped), [])
         self.assertIn("## v0.41.1 — 2026-11-12", stamped)

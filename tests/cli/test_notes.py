@@ -226,6 +226,7 @@ class TestNotesCli(unittest.TestCase):
         notes.write_seen("0.36.0")
         info = mock.Mock(method="pipx", upgradeable=True)
         with (
+            mock.patch.object(admin, "_is_windows", return_value=False),
             mock.patch.object(admin, "detect", return_value=info),
             mock.patch.object(admin, "package_version", return_value="0.37.0"),
             mock.patch.object(admin, "latest_version", return_value="0.38.0"),

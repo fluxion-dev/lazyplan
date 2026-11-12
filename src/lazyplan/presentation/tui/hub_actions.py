@@ -92,3 +92,8 @@ class HubMixin:
         from .screens.hub_provenance import ActivityHub
 
         self.app.push_screen(ActivityHub(self.store))
+
+    def action_open_maintenance(self) -> None:
+        from .screens.maintenance import MaintenanceScreen
+
+        self.app.push_screen(MaintenanceScreen(self.store))

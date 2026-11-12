@@ -98,6 +98,7 @@ if _TEXTUAL_OK:
             Binding("Z", "fold_all", "Fold all", show=False),
             Binding("slash", "filter_text", "Filter"),
             Binding("r", "refresh", "Refresh", show=False),
+            Binding("m", "open_maintenance", "Maintain"),
             Binding("U", "update_prompt", "Update"),
             Binding("W", "release_notes", "Notes"),
         ]

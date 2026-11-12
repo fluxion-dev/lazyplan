@@ -1546,13 +1546,13 @@
     "file_paths": 12,
     "hook_events": 35,
     "mcp_resources": 3,
-    "mcp_tools": 62,
+    "mcp_tools": 67,
     "palette_commands": 52,
     "setup_steps": 4,
     "stale_claims": 0,
-    "tui_bindings": 48,
-    "tui_key_conflicts": 10,
-    "tui_screens": 15
+    "tui_bindings": 56,
+    "tui_key_conflicts": 11,
+    "tui_screens": 16
   },
   "docs": {
     "files": [
@@ -2020,6 +2020,26 @@
       {
         "description": "All plans with milestones, tasks, and criteria.",
         "name": "list_plans"
+      },
+      {
+        "description": "Archive done plans and ended sessions past the window. apply=false previews; apply=true writes after a verified snapshot.",
+        "name": "maintenance_archive"
+      },
+      {
+        "description": "Database bytes and row counts per table, free pages, and a reclaimable estimate.",
+        "name": "maintenance_report"
+      },
+      {
+        "description": "Return one archived plan or session to the default views. apply must be true; restore never runs as a preview.",
+        "name": "maintenance_restore"
+      },
+      {
+        "description": "Delete derived rows only: expired claims, stale cache, closed PRs, orphans, and old events. apply=false previews; apply=true snapshots first.",
+        "name": "maintenance_trim"
+      },
+      {
+        "description": "Reclaim free pages. apply=false previews; apply=true snapshots first and fails instead of waiting on a busy database.",
+        "name": "maintenance_vacuum"
       },
       {
         "description": "Move a row to todo, doing, or done.",
@@ -2744,7 +2764,7 @@
         "file": "src/lazyplan/presentation/tui/app.py",
         "key": "U",
         "label": "Update",
-        "line": "101",
+        "line": "102",
         "screen": "app"
       },
       {
@@ -2752,7 +2772,7 @@
         "file": "src/lazyplan/presentation/tui/app.py",
         "key": "W",
         "label": "Notes",
-        "line": "102",
+        "line": "103",
         "screen": "app"
       },
       {
@@ -2801,6 +2821,14 @@
         "key": "g",
         "label": "Source",
         "line": "96",
+        "screen": "app"
+      },
+      {
+        "action": "open_maintenance",
+        "file": "src/lazyplan/presentation/tui/app.py",
+        "key": "m",
+        "label": "Maintain",
+        "line": "101",
         "screen": "app"
       },
       {
@@ -3060,6 +3088,62 @@
         "screen": "hub_provenance"
       },
       {
+        "action": "restore",
+        "file": "src/lazyplan/presentation/tui/screens/maintenance.py",
+        "key": "R",
+        "label": "Restore",
+        "line": "45",
+        "screen": "maintenance"
+      },
+      {
+        "action": "apply_archive",
+        "file": "src/lazyplan/presentation/tui/screens/maintenance.py",
+        "key": "a",
+        "label": "Archive",
+        "line": "42",
+        "screen": "maintenance"
+      },
+      {
+        "action": "back",
+        "file": "src/lazyplan/presentation/tui/screens/maintenance.py",
+        "key": "escape",
+        "label": "Back",
+        "line": "40",
+        "screen": "maintenance"
+      },
+      {
+        "action": "refresh",
+        "file": "src/lazyplan/presentation/tui/screens/maintenance.py",
+        "key": "p",
+        "label": "Preview",
+        "line": "41",
+        "screen": "maintenance"
+      },
+      {
+        "action": "refresh",
+        "file": "src/lazyplan/presentation/tui/screens/maintenance.py",
+        "key": "r",
+        "label": "Refresh",
+        "line": "46",
+        "screen": "maintenance"
+      },
+      {
+        "action": "apply_trim",
+        "file": "src/lazyplan/presentation/tui/screens/maintenance.py",
+        "key": "t",
+        "label": "Trim",
+        "line": "43",
+        "screen": "maintenance"
+      },
+      {
+        "action": "apply_vacuum",
+        "file": "src/lazyplan/presentation/tui/screens/maintenance.py",
+        "key": "v",
+        "label": "Vacuum",
+        "line": "44",
+        "screen": "maintenance"
+      },
+      {
         "action": "open_owner",
         "file": "src/lazyplan/presentation/tui/screens/source.py",
         "key": "enter",
@@ -3128,6 +3212,11 @@
             "action": "add",
             "file": "src/lazyplan/presentation/tui/screens/hub.py",
             "line": "52"
+          },
+          {
+            "action": "apply_archive",
+            "file": "src/lazyplan/presentation/tui/screens/maintenance.py",
+            "line": "42"
           }
         ],
         "key": "a"
@@ -3188,6 +3277,11 @@
             "action": "back",
             "file": "src/lazyplan/presentation/tui/screens/hub.py",
             "line": "51"
+          },
+          {
+            "action": "back",
+            "file": "src/lazyplan/presentation/tui/screens/maintenance.py",
+            "line": "40"
           },
           {
             "action": "back",
@@ -3261,6 +3355,11 @@
           },
           {
             "action": "refresh",
+            "file": "src/lazyplan/presentation/tui/screens/maintenance.py",
+            "line": "46"
+          },
+          {
+            "action": "refresh",
             "file": "src/lazyplan/presentation/tui/screens/source.py",
             "line": "65"
           }
@@ -3281,6 +3380,21 @@
           }
         ],
         "key": "slash"
+      },
+      {
+        "bindings": [
+          {
+            "action": "cycle_theme",
+            "file": "src/lazyplan/presentation/tui/app.py",
+            "line": "89"
+          },
+          {
+            "action": "apply_trim",
+            "file": "src/lazyplan/presentation/tui/screens/maintenance.py",
+            "line": "43"
+          }
+        ],
+        "key": "t"
       },
       {
         "bindings": [
@@ -3360,6 +3474,10 @@
       {
         "class": "HubScreen",
         "file": "src/lazyplan/presentation/tui/screens/hub.py"
+      },
+      {
+        "class": "MaintenanceScreen",
+        "file": "src/lazyplan/presentation/tui/screens/maintenance.py"
       },
       {
         "class": "SourceScreen",

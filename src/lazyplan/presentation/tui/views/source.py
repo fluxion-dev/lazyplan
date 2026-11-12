@@ -13,7 +13,13 @@ from lazyplan.services.source import (
 )
 
 from ...shared.design import escape_markup
-from .diff_render import DiffOptions, DiffPalette, diff_counts, render_unified
+from .diff_render import (
+    DiffOptions,
+    DiffPalette,
+    diff_counts,
+    render_unified,
+)
+from .diff_split import render_split
 
 
 def when(timestamp: int) -> str:
@@ -136,6 +142,7 @@ def render_diff(
     max_lines: int,
     max_files: int,
     width: int = 100,
+    split: bool = False,
 ) -> list[str]:
     """Read and render a bounded diff preview."""
     page = read_diff_page(repo, sha, path, limit=max_files)
@@ -153,6 +160,15 @@ def render_diff(
         return [f"[red]{escape_markup(read.detail or 'diff unavailable')}[/]"]
     if not page.files:
         return ["[dim]no textual changes[/]"]
+    palette = DiffPalette()
+    options = DiffOptions()
+    if split:
+        result = render_split(page.files, width, palette=palette, options=options)
+        if not result.available:
+            return [f"[dim]{escape_markup(result.detail)}[/]"]
+        rendered = list(result.rows)
+    else:
+        rendered = render_unified(page.files, width, palette=palette, options=options)
     added = sum(diff_counts(item)[0] for item in page.files)
     removed = sum(diff_counts(item)[1] for item in page.files)
     prefix = [
@@ -160,12 +176,6 @@ def render_diff(
     ]
     if read.state == "root":
         prefix.append("[dim]root commit · full tree diff[/]")
-    rendered = render_unified(
-        page.files,
-        width,
-        palette=DiffPalette(),
-        options=DiffOptions(),
-    )
     budget = max(1, max_lines - len(prefix))
     shown = prefix + rendered[:budget]
     remainder = len(rendered) - budget

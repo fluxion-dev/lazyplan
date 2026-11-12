@@ -12,10 +12,11 @@ try:
         DiffPalette,
         render_unified,
     )
+    from lazyplan.presentation.tui.views.diff_split import render_split
     from lazyplan.services.source import parse_patch
 except ImportError:  # pragma: no cover - stdlib-only interpreter
     DiffOptions = DiffPalette = Text = None  # type: ignore[assignment]
-    render_unified = parse_patch = None  # type: ignore[assignment]
+    render_split = render_unified = parse_patch = None  # type: ignore[assignment]
 
 PATCH = (
     "diff --git a/old.py b/new.py\n"
@@ -61,6 +62,27 @@ WRAP_PATCH = (
     "@@ -1 +1 @@\n"
     "-short\n"
     "+" + "word " * 30 + "\n"
+)
+
+ADD_PATCH = (
+    "diff --git a/new.txt b/new.txt\n"
+    "new file mode 100644\n"
+    "--- /dev/null\n"
+    "+++ b/new.txt\n"
+    "@@ -0,0 +1,2 @@\n"
+    "+one\n"
+    "+two\n"
+)
+
+CONTEXT_PATCH = (
+    "diff --git a/a.txt b/a.txt\n"
+    "--- a/a.txt\n"
+    "+++ b/a.txt\n"
+    "@@ -1,3 +1,3 @@\n"
+    " same\n"
+    "-old\n"
+    "+new\n"
+    " tail\n"
 )
 
 
@@ -144,6 +166,62 @@ class UnifiedRenderTest(unittest.TestCase):
     def test_narrow_width_does_not_crash(self) -> None:
         rows = render_unified(parse_patch(WRAP_PATCH), 1)
         self.assertTrue(rows)
+
+
+@unittest.skipUnless(render_split is not None, "textual/rich not installed")
+class SplitRenderTest(unittest.TestCase):
+    def test_replacement_pairs_old_and_new_columns(self) -> None:
+        result = render_split(parse_patch(PATCH), 100)
+        self.assertTrue(result.available)
+        plain = _plain(list(result.rows))
+        paired = next(row for row in plain if "value = 1" in row and "value = 2" in row)
+        left, right = paired.split("│", 1)
+        self.assertIn("value = 1", left)
+        self.assertIn("value = 2", right)
+
+    def test_add_only_line_leaves_the_left_blank(self) -> None:
+        result = render_split(parse_patch(ADD_PATCH), 100)
+        plain = _plain(list(result.rows))
+        row = next(item for item in plain if "+ one" in item)
+        left, right = row.split("│", 1)
+        self.assertEqual(left.strip(), "")
+        self.assertIn("+ one", right)
+
+    def test_remove_only_line_leaves_the_right_blank(self) -> None:
+        result = render_split(parse_patch(PATCH), 100)
+        plain = _plain(list(result.rows))
+        row = next(item for item in plain if "- gone" in item)
+        left, right = row.split("│", 1)
+        self.assertIn("- gone", left)
+        self.assertEqual(right.strip(), "")
+
+    def test_context_appears_in_both_columns(self) -> None:
+        result = render_split(parse_patch(CONTEXT_PATCH), 100)
+        plain = _plain(list(result.rows))
+        row = next(item for item in plain if " same" in item and "│" in item)
+        left, right = row.split("│", 1)
+        self.assertIn("same", left)
+        self.assertIn("same", right)
+
+    def test_long_context_folds_in_split_mode(self) -> None:
+        result = render_split(parse_patch(FOLD_PATCH), 100)
+        plain = "\n".join(_plain(list(result.rows)))
+        self.assertIn("unchanged lines", plain)
+
+    def test_long_lines_wrap_inside_a_column(self) -> None:
+        result = render_split(parse_patch(WRAP_PATCH), 100)
+        plain = "\n".join(_plain(list(result.rows)))
+        self.assertIn("↳", plain)
+
+    def test_narrow_pane_reports_the_minimum_width(self) -> None:
+        result = render_split(parse_patch(PATCH), 60)
+        self.assertFalse(result.available)
+        self.assertIn("76", result.detail)
+
+    def test_empty_split_has_a_message(self) -> None:
+        result = render_split((), 100)
+        self.assertTrue(result.available)
+        self.assertEqual(result.rows, ("[dim]no textual changes[/]",))
 
 
 if __name__ == "__main__":

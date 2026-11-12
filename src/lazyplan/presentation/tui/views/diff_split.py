@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from lazyplan.services.source import DiffFile, DiffLine
 
-from .diff_render import (
+from .diff_common import (
     _code_spans,
     _context_row,
     _emphasis,

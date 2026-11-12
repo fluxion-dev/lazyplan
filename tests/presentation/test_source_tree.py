@@ -21,12 +21,6 @@ except ImportError:  # pragma: no cover - textual not installed
     CommitStats = FileStat = Store = DiffPreview = None  # type: ignore[assignment]
 
 SHA = "a" * 40
-STATS = CommitStats(
-    files=(
-        FileStat(path="app/a.py", status="modify", additions=3, deletions=1),
-        FileStat(path="app/b.py", status="add", additions=5),
-    )
-)
 
 
 @unittest.skipUnless(create_app is not None, "textual not installed")
@@ -38,6 +32,7 @@ class SourceTreeStatsTest(unittest.IsolatedAsyncioTestCase):
         self.store = Store(os.path.join(self.tmp.name, "plan.db"))
         plan = self.store.add_plan("Stats")
         milestone = self.store.add_milestone(plan.id, "Slice")
+        self.milestone = milestone
         self.task = self.store.add_task(milestone.id, "Read diffs")
         self.store.add_repo_link(
             "task",
@@ -62,9 +57,15 @@ class SourceTreeStatsTest(unittest.IsolatedAsyncioTestCase):
         return [str(child.label) for child in node.children]  # type: ignore[attr-defined]
 
     async def test_commit_expand_loads_stats_once(self) -> None:
+        stats = CommitStats(
+            files=(
+                FileStat(path="app/a.py", status="modify", additions=3, deletions=1),
+                FileStat(path="app/b.py", status="add", additions=5),
+            )
+        )
         with mock.patch(
             "lazyplan.presentation.tui.screens.source.read_commit_stats",
-            return_value=STATS,
+            return_value=stats,
         ) as reader:
             app = create_app(str(self.store.path))
             async with app.run_test(size=(130, 35)) as pilot:
@@ -184,6 +185,81 @@ class SourceTreeStatsTest(unittest.IsolatedAsyncioTestCase):
             app.screen.action_toggle_split()
             await pilot.pause()
             self.assertFalse(app.screen._split_mode)
+
+    async def test_empty_trail_shows_guidance(self) -> None:
+        empty = self.store.add_task(self.milestone.id, "No source")
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(130, 35)) as pilot:
+            app.push_screen(SourceScreen(self.store, "task", empty.id))
+            await pilot.pause(0.4)
+            tree = app.screen.query_one("#source-tree", Tree)
+            self.assertIn("No source linked", str(tree.root.children[0].label))
+
+    async def test_filter_narrows_the_tree_and_reports_no_match(self) -> None:
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(130, 35)) as pilot:
+            app.push_screen(SourceScreen(self.store, "task", self.task.id))
+            await pilot.pause(0.5)
+            tree = app.screen.query_one("#source-tree", Tree)
+            repo_node = tree.root.children[0]
+            repo_node.expand()
+            app.screen._filter = "app/a.py"
+            app.screen._build_tree()
+            await pilot.pause()
+            labels = self._tree_labels(tree.root)
+            self.assertTrue(any("app/a.py" in label for label in labels))
+            self.assertFalse(any("app/b.py" in label for label in labels))
+            app.screen._filter = "nothing-here"
+            app.screen._build_tree()
+            await pilot.pause()
+            labels = self._tree_labels(tree.root)
+            self.assertTrue(any("No source matches" in label for label in labels))
+
+    async def test_copy_open_and_owner_use_the_selected_row(self) -> None:
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(130, 35)) as pilot:
+            app.push_screen(SourceScreen(self.store, "task", self.task.id))
+            await pilot.pause(0.5)
+            tree = app.screen.query_one("#source-tree", Tree)
+            repo_node = tree.root.children[0]
+            repo_node.expand()
+            tree.move_cursor(repo_node.children[0])
+            await pilot.pause()
+            with (
+                mock.patch.object(app, "copy_to_clipboard") as copy,
+                mock.patch("lazyplan.presentation.tui.screens.source.webbrowser.open") as open_url,
+                mock.patch.object(app, "select_row") as select_row,
+            ):
+                app.screen.action_copy()
+                copy.assert_called_once_with(SHA)
+                app.screen.action_open()
+                open_url.assert_called_once()
+                app.screen.action_open_owner()
+                select_row.assert_called_once_with("task", self.task.id)
+
+    async def test_refresh_drops_preview_caches(self) -> None:
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(130, 35)) as pilot:
+            app.push_screen(SourceScreen(self.store, "task", self.task.id))
+            await pilot.pause(0.5)
+            tree = app.screen.query_one("#source-tree", Tree)
+            repo_node = tree.root.children[0]
+            repo_node.expand()
+            tree.move_cursor(repo_node.children[0])
+            await pilot.pause()
+            self.assertTrue(app.screen._diff_cache)
+            with mock.patch.object(app.screen, "_load"):
+                app.screen.action_refresh()
+            self.assertFalse(app.screen._diff_cache)
+            self.assertFalse(app.screen._stats_loaded)
+            self.assertFalse(app.screen._commit_nodes)
+
+    @staticmethod
+    def _tree_labels(node: object) -> list[str]:
+        out = [str(node.label)]  # type: ignore[attr-defined]
+        for child in node.children:  # type: ignore[attr-defined]
+            out.extend(SourceTreeStatsTest._tree_labels(child))
+        return out
 
 
 if __name__ == "__main__":

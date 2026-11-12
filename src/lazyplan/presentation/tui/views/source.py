@@ -337,6 +337,7 @@ def render_diff_preview(
     split: bool = False,
     wrap: bool = True,
     fold: bool = True,
+    palette: DiffPalette | None = None,
 ) -> DiffPreview:
     """Render one page of a single file's diff without another git read."""
     page = read_diff_page(repo, sha, path, limit=1 if path else 20)
@@ -358,7 +359,7 @@ def render_diff_preview(
         return DiffPreview(rows=(message,), total=1)
     if not page.files:
         return DiffPreview(rows=("[dim]no textual changes[/]",), total=1)
-    palette = DiffPalette()
+    palette = palette or DiffPalette()
     options = DiffOptions(fold=fold, wrap=wrap)
     if split:
         result = render_split(page.files, width, palette=palette, options=options)

@@ -37,6 +37,7 @@ from ....core.ports.provenance import ProvenancePort
 from ...shared.design import KIND_ICON, action_bar, escape_markup
 from ..navigation import NAV_BINDINGS, NavigationMixin
 from ..views.diff_split import MIN_SPLIT_WIDTH
+from ..views.diff_style import DiffPalette
 from ..views.source import (
     DiffPreview,
     commit_data,
@@ -93,7 +94,7 @@ if _TEXTUAL_OK:
             self._trail = SourceTrail(kind=kind, oid=oid, title="")
             self._filter = ""
             self._diff_cache: dict[
-                tuple[str, str, str, int, bool, bool, bool, int], DiffPreview
+                tuple[str, str, str, int, str, bool, bool, bool, int], DiffPreview
             ] = {}
             self._stats_loaded: set[tuple[str, str]] = set()
             self._stats: dict[tuple[str, str], CommitStats] = {}
@@ -402,6 +403,11 @@ if _TEXTUAL_OK:
         def _repo(self, path: str) -> SourceRepo | None:
             return next((repo for repo in self._trail.repos if repo.path == path), None)
 
+        def _palette(self) -> DiffPalette:
+            """Build the diff palette from the active theme variables."""
+            variables = {name: str(value) for name, value in self.app.theme_variables.items()}
+            return DiffPalette.from_theme(variables)
+
         def _commit(self, repo: str, sha: str) -> SourceCommit | None:
             parent = self._repo(repo)
             if parent is None:
@@ -416,6 +422,7 @@ if _TEXTUAL_OK:
                 sha,
                 path,
                 width,
+                str(self.app.theme),
                 self._split_mode,
                 self._wrap_mode,
                 self._fold_mode,
@@ -434,6 +441,7 @@ if _TEXTUAL_OK:
                 split=self._split_mode,
                 wrap=self._wrap_mode,
                 fold=self._fold_mode,
+                palette=self._palette(),
             )
             self._diff_cache[key] = preview
             return preview

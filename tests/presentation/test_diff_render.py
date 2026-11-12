@@ -8,6 +8,7 @@ try:
     from rich.cells import cell_len
     from rich.text import Text
 
+    from lazyplan.presentation.tui.theme.tokens import DARK_TOKENS, LIGHT_TOKENS, VOID_TOKENS
     from lazyplan.presentation.tui.views.diff_render import (
         DiffOptions,
         DiffPalette,
@@ -18,6 +19,7 @@ try:
 except ImportError:  # pragma: no cover - stdlib-only interpreter
     DiffOptions = DiffPalette = Text = cell_len = None  # type: ignore[assignment]
     render_split = render_unified = parse_patch = None  # type: ignore[assignment]
+    DARK_TOKENS = LIGHT_TOKENS = VOID_TOKENS = None  # type: ignore[assignment]
 
 PATCH = (
     "diff --git a/old.py b/new.py\n"
@@ -171,11 +173,15 @@ class UnifiedRenderTest(unittest.TestCase):
                 "lp-diff-add": "#001100",
                 "lp-diff-remove": "#110000",
                 "lp-diff-add-bg": "#002200",
+                "lp-diff-emphasis-add": "#003300",
+                "lp-syntax-keyword": "#004400",
                 "lp-text-faint": "#333333",
             }
         )
         self.assertEqual(palette.add, "#001100")
         self.assertEqual(palette.add_bg, "#002200")
+        self.assertIn("#003300", palette.emphasis_add)
+        self.assertEqual(palette.syntax["keyword"], "#004400")
         self.assertEqual(palette.gutter, "#333333")
 
     def test_narrow_width_does_not_crash(self) -> None:
@@ -253,6 +259,18 @@ class SplitRenderTest(unittest.TestCase):
         result = render_split((), 100)
         self.assertTrue(result.available)
         self.assertEqual(result.rows, ("[dim]no textual changes[/]",))
+
+
+@unittest.skipUnless(DARK_TOKENS is not None, "textual not installed")
+class ThemeTokenTest(unittest.TestCase):
+    def test_every_theme_carries_diff_and_syntax_tokens(self) -> None:
+        def keys(theme: dict[str, str]) -> set[str]:
+            return {name for name in theme if name.startswith(("lp-diff-", "lp-syntax-"))}
+
+        expected = keys(DARK_TOKENS)
+        self.assertTrue(expected)
+        self.assertEqual(keys(LIGHT_TOKENS), expected)
+        self.assertEqual(keys(VOID_TOKENS), expected)
 
 
 if __name__ == "__main__":

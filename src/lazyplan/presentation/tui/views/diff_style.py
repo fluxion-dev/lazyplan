@@ -55,6 +55,14 @@ class DiffPalette:
             file_bg=theme.get("lp-surface-raised", cls.file_bg),
             gutter=theme.get("lp-text-faint", cls.gutter),
             context=theme.get("lp-text-muted", cls.context),
+            emphasis_add=(
+                f"bold {theme.get('lp-diff-add', cls.add)} "
+                f"on {theme.get('lp-diff-emphasis-add', '#2f5f3f')}"
+            ),
+            emphasis_remove=(
+                f"bold {theme.get('lp-diff-remove', cls.remove)} "
+                f"on {theme.get('lp-diff-emphasis-remove', '#5f2f3f')}"
+            ),
             syntax={
                 kind: theme.get(f"lp-syntax-{kind}", default)
                 for kind, default in _DEFAULT_SYNTAX.items()

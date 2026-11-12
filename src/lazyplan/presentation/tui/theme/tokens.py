@@ -42,6 +42,23 @@ DARK_TOKENS: dict[str, str] = {
     "lp-chart-lane-6": "#94e2d5",
     "lp-diff-add": "#a6e3a1",
     "lp-diff-remove": "#f38ba8",
+    "lp-diff-add-bg": "#1e3a2a",
+    "lp-diff-remove-bg": "#3a1e2a",
+    "lp-diff-hunk": "#89b4fa",
+    "lp-diff-hunk-bg": "#1e2a3a",
+    "lp-diff-emphasis-add": "#2f5f3f",
+    "lp-diff-emphasis-remove": "#5f2f3f",
+    "lp-syntax-comment": "#6c7086",
+    "lp-syntax-keyword": "#cba6f7",
+    "lp-syntax-string": "#a6e3a1",
+    "lp-syntax-number": "#fab387",
+    "lp-syntax-function": "#89b4fa",
+    "lp-syntax-class": "#f9e2af",
+    "lp-syntax-builtin": "#f5c2e7",
+    "lp-syntax-decorator": "#f5c2e7",
+    "lp-syntax-operator": "#89dceb",
+    "lp-syntax-punct": "#bac2de",
+    "lp-syntax-text": "#cdd6f4",
 }
 
 LIGHT_TOKENS: dict[str, str] = {
@@ -79,6 +96,23 @@ LIGHT_TOKENS: dict[str, str] = {
     "lp-chart-lane-6": "#179299",
     "lp-diff-add": "#40a02b",
     "lp-diff-remove": "#d20f39",
+    "lp-diff-add-bg": "#d9f2d0",
+    "lp-diff-remove-bg": "#f7d7dc",
+    "lp-diff-hunk": "#1e66f5",
+    "lp-diff-hunk-bg": "#dbe5ff",
+    "lp-diff-emphasis-add": "#b8e6a8",
+    "lp-diff-emphasis-remove": "#f4b8c4",
+    "lp-syntax-comment": "#8c8fa1",
+    "lp-syntax-keyword": "#8839ef",
+    "lp-syntax-string": "#40a02b",
+    "lp-syntax-number": "#fe640b",
+    "lp-syntax-function": "#1e66f5",
+    "lp-syntax-class": "#df8e1d",
+    "lp-syntax-builtin": "#d20f39",
+    "lp-syntax-decorator": "#ea76cb",
+    "lp-syntax-operator": "#179299",
+    "lp-syntax-punct": "#5c5f77",
+    "lp-syntax-text": "#4c4f69",
 }
 
 VOID_TOKENS: dict[str, str] = {
@@ -93,6 +127,9 @@ VOID_TOKENS: dict[str, str] = {
     "lp-modal-bg": "#0a0a10",
     "lp-overlay": "black 65%",
     "lp-chip-bg": "#16161f",
+    "lp-diff-add-bg": "#0f2418",
+    "lp-diff-remove-bg": "#2a0f18",
+    "lp-diff-hunk-bg": "#0f1a2a",
 }
 
 TOKEN_NAMES: tuple[str, ...] = tuple(DARK_TOKENS)

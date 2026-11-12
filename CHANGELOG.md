@@ -3,6 +3,17 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## v0.41.0 — unreleased
+
+### Changed
+
+- **`--archived` is the archive switch; `--finished` keeps the old filter.**
+  `lpui list --archived only` shows archived plans, `--archived all` shows
+  both, and the default hides them. `--finished` still shows plans marked done
+  longer than a day. Archived plans and sessions leave list, tree, brief, next,
+  ready, stats, audit, trace, who, claims, and the agents panel, and
+  `lpui maint restore` brings them back.
+
 ## v0.40.3 — 2026-11-11
 
 ### Changed

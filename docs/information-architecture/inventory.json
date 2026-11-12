@@ -1517,7 +1517,7 @@
   "counts": {
     "cli_commands": 50,
     "doc_files": 9,
-    "doc_headings": 87,
+    "doc_headings": 88,
     "env_names": 12,
     "file_paths": 12,
     "hook_events": 35,
@@ -1607,6 +1607,7 @@
           "Pull requests",
           "MCP and issue imports",
           "Data and backup",
+          "Archive and restore",
           "Exit codes"
         ]
       },

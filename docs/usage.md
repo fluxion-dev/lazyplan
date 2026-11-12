@@ -870,6 +870,21 @@ tokens.
   written as UTF-8. Existing CRLF line endings are preserved on write.
 - Completion: `eval "$(lpui completion --shell bash)"` (or `zsh`).
 
+### Archive and restore
+
+- Plans and sessions archive; they never lose their text. An archived plan is
+  hidden from list, tree, brief, next, ready, stats, audit, trace, who, claims,
+  and the agents panel. `lpui maint restore` brings it back by plan or session
+  id.
+- `--archived` selects the archive state on `list`: `--archived only` shows
+  archived plans, `--archived all` (alias `show`) shows both, and the default
+  hides them. `--finished` is the separate age filter: it shows plans marked
+  done longer than a day.
+- One week is the default window for done plans, ended sessions, and events.
+  `lpui maint archive` previews the rows in that window; add `--apply` to write
+  after a verified snapshot. Override the window per run with `--days 30` or
+  `--days 30.days`.
+
 ## Exit codes
 
 `0` worked · `1` row not found or setup layout misplaced · `2` flags or input

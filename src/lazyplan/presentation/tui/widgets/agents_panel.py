@@ -19,6 +19,7 @@ from ...shared.design import (
     spinner_enabled,
 )
 from ...shared.session_labels import plan_names
+from ..query import query_one_opt
 from ..views.agents import rank_sessions, session_line, sessions_summary
 
 OPEN_SESSIONS_READ = 50
@@ -49,8 +50,8 @@ class AgentsPanel(VerticalScroll):
 
     def _row_width(self) -> int | None:
         """Content cells available to one row, or None before the first layout."""
-        body = self.query_one("#agents-body", Static)
-        width = body.size.width or self.size.width - 2
+        body = query_one_opt(self, "#agents-body", Static)
+        width = (body.size.width if body is not None else self.size.width) or self.size.width - 2
         return width if width > 0 else None
 
     def show(self, store: SessionsPort, plan_id: int | None = None) -> None:
@@ -104,6 +105,9 @@ class AgentsPanel(VerticalScroll):
         return True
 
     def _paint_rows(self) -> None:
+        body = query_one_opt(self, "#agents-body", Static)
+        if body is None:
+            return
         width = self._row_width()
         stamp = time.time()
         lines = [
@@ -118,4 +122,4 @@ class AgentsPanel(VerticalScroll):
         ]
         if self._handoff:
             lines.append(self._handoff)
-        self.query_one("#agents-body", Static).update("\n".join(lines))
+        body.update("\n".join(lines))

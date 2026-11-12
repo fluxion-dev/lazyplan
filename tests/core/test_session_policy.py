@@ -84,6 +84,16 @@ class TestSessionPolicy(unittest.TestCase):
         self.assertEqual(auto_close_summary(30 * 60), "auto-closed after 30m idle")
         self.assertEqual(auto_close_summary(5 * 3600), "auto-closed after 5h idle")
 
+    def test_an_explicit_idle_after_overrides_the_phase(self) -> None:
+        session = Session(
+            id=1,
+            started_at=100.0,
+            last_seen_at=100.0,
+            phase="awaiting",
+        )
+        self.assertEqual(session_state(session, 100.0 + 700), "stale")
+        self.assertEqual(session_state(session, 100.0 + 700, idle_after=600), "idle")
+
     def test_working_rows_read_stale_at_two_minutes_and_idle_at_ten(self) -> None:
         session = Session(id=1, started_at=100.0, last_seen_at=100.0)
         self.assertEqual(session_state(session, 100.0 + STALE_AFTER_SECS - 1), "working")

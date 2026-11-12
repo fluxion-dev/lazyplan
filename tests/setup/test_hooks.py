@@ -290,6 +290,24 @@ class HookCase(unittest.TestCase):
         )
         self.assertIn("next: QA", result.text)
 
+    def test_heartbeat_reap_uses_each_phases_window(self):
+        now = time.time()
+        store = Store(self.db)
+        working, _ = store.start_session(
+            "ana", now=now - 700, phase="working", repo_path=str(self.repo)
+        )
+        awaiting, _ = store.start_session(
+            "bo", now=now - 700, phase="awaiting", repo_path=str(self.repo)
+        )
+        self._hook("prompt-submit", {"host_session": "new"})
+        store = Store(self.db)
+        closed = store.get_session(working.id)
+        open_row = store.get_session(awaiting.id)
+        assert closed is not None and open_row is not None
+        self.assertTrue(closed.ended)
+        self.assertTrue(closed.auto_closed)
+        self.assertFalse(open_row.ended)
+
     def test_open_session_is_marked_awaiting_on_stop(self):
         _plan, _task = self._seed()
         store = Store(self.db)

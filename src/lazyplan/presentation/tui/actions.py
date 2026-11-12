@@ -194,12 +194,19 @@ if _TEXTUAL_OK:
             self.push_screen(CriterionScreen(creating=True), cb)
 
         def select_row(self, kind: str, oid: int) -> None:
-            """Return to the tree and select one row in the overview."""
+            """Return to the tree and select one row in the overview.
+
+            A row hidden under a closed branch stays hidden: the cursor lands
+            on its nearest visible ancestor instead of opening the branch.
+            """
             while len(self.screen_stack) > 1:
                 self.pop_screen()
-            self.selected = (kind, oid)
-            node = self._row_nodes.get((kind, oid))
-            if node is not None:
+            key = (kind, oid)
+            self.tree_controller.materialize_path(key)
+            target = self.tree_controller.visible_key(key) or key
+            self.selected = target
+            node = self._row_nodes.get(target)
+            if node is not None and self.tree_controller.is_visible(node):
                 try:
                     tree = node.tree
                     tree.move_cursor(node)

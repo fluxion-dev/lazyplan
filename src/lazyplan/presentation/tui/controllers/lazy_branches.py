@@ -49,25 +49,13 @@ class LazyBranchMixin:
         keys = [key for key in self._visible_keys if self.has_model_children(key)]
         keys.sort(key=lambda key: 0 if key[0] == "plan" else 1)
         for key in keys:
-            self.ensure_path(key)
+            self.materialize_path(key)
             node = self.app._row_nodes.get(key)
             if node is not None:
                 self.load_branch(node, key)
                 node.expand()
             self.app._expanded.add(key)
             self.app._collapsed.discard(key)
-
-    def restore_expanded(self) -> None:
-        """Load and open the branches that were open before this refresh."""
-        for key in list(self.app._expanded):
-            if key[0] not in ("plan", "milestone"):
-                continue
-            if key[0] == "milestone":
-                self.ensure_path(key)
-            node = self.app._row_nodes.get(key)
-            if node is not None:
-                self.load_branch(node, key)
-                node.expand()
 
     def build_all_children(self) -> None:
         """Materialize filtered matches so search never hides a collapsed hit."""
@@ -80,34 +68,29 @@ class LazyBranchMixin:
             if milestone_node is not None:
                 self.load_branch(milestone_node, ("milestone", milestone_id))
 
-    def ensure_path(self, key: tuple[str, int]) -> None:
-        """Load and open the ancestors needed for one row to exist."""
+    def materialize_path(self, key: tuple[str, int]) -> None:
+        """Create one row and its ancestors without opening or recording them."""
         if key not in self._model_keys:
             return
         kind, oid = key
-        if kind == "plan":
-            return
         if kind == "milestone":
             plan_id = self._milestone_plan.get(oid)
             if plan_id is None:
                 return
             plan_key = ("plan", plan_id)
             plan_node = self.app._row_nodes.get(plan_key)
-            if plan_node is None:
-                return
-            self.load_branch(plan_node, plan_key)
-            plan_node.expand()
-            self.app._expanded.add(plan_key)
+            if plan_node is not None:
+                self.load_branch(plan_node, plan_key)
+            return
+        if kind != "task":
             return
         milestone_id = self._task_milestone.get(oid)
         if milestone_id is None:
             return
-        self.ensure_path(("milestone", milestone_id))
+        self.materialize_path(("milestone", milestone_id))
         milestone_node = self.app._row_nodes.get(("milestone", milestone_id))
         if milestone_node is not None:
             self.load_branch(milestone_node, ("milestone", milestone_id))
-            milestone_node.expand()
-            self.app._expanded.add(("milestone", milestone_id))
 
     def load_children(self, key: tuple[str, int]) -> None:
         """Public seam used by tests and the tree event handler."""
@@ -156,7 +139,6 @@ class LazyBranchMixin:
             )
             if milestone_key in app._expanded:
                 self._add_tasks(milestone_node, tasks)
-                milestone_node.expand()
 
     def _add_tasks(self, milestone_node: TreeNode, tasks: list[Task]) -> None:
         app = self.app

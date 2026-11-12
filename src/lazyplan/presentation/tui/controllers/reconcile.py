@@ -43,28 +43,42 @@ class ReconcileMixin:
 
         def load_branch(self, node: TreeNode, key: tuple[str, int]) -> None: ...
 
+        def ancestor_keys(self, node: TreeNode) -> list[tuple[str, int]]: ...
+
+        def is_visible(self, node: TreeNode) -> bool: ...
+
+        def visible_key(self, key: tuple[str, int]) -> tuple[str, int] | None: ...
+
     def capture_view(self) -> dict[str, Any]:
-        """Remember the cursor row, focus, and each tree's scroll offset."""
-        view: dict[str, Any] = {"cursor": None, "focus": None, "scroll": {}}
+        """Remember the cursor row, its ancestors, focus, and scroll offsets."""
+        view: dict[str, Any] = {"cursor": None, "ancestors": [], "focus": None, "scroll": {}}
         for tree in self.trees():
             view["scroll"][tree.id] = (tree.scroll_x, tree.scroll_y)
             if tree.has_focus:
                 view["focus"] = tree.id
                 cursor = tree.cursor_node
-                view["cursor"] = self.node_key(cursor) if cursor is not None else None
+                if cursor is not None:
+                    view["cursor"] = self.node_key(cursor)
+                    view["ancestors"] = self.ancestor_keys(cursor)
         return view
 
     def restore_view(self, view: dict[str, Any], prev_selected: tuple[str, int] | None) -> None:
-        """Restore cursor, scroll, and focus after an in-place refresh."""
+        """Restore cursor, scroll, and focus without opening a closed branch."""
         app = self.app
-        target = view.get("cursor")
-        if target not in app._row_nodes:
-            target = prev_selected if prev_selected in app._row_nodes else None
+        candidates = [view.get("cursor"), prev_selected, *(view.get("ancestors") or [])]
+        target: tuple[str, int] | None = None
+        for candidate in candidates:
+            if candidate is None or candidate not in app._row_nodes:
+                continue
+            target = self.visible_key(candidate)
+            if target is not None:
+                break
         if target is None:
             target = self.fallback_key()
         if target is None:
             return
-        if app.selected not in app._row_nodes:
+        selected = app.selected
+        if selected not in app._row_nodes or not self.is_visible(app._row_nodes[selected]):
             app.selected = target
         try:
             app.call_after_refresh(lambda: self._place_view(view, target))
@@ -72,11 +86,14 @@ class ReconcileMixin:
             pass
 
     def fallback_key(self) -> tuple[str, int] | None:
-        """First visible plan row, else the first row of any kind."""
-        for key, node in self.app._row_nodes.items():
-            if key[0] == "plan" and node.tree.display:
+        """First visible plan row, else the first visible row of any kind."""
+        visible = [
+            (key, node) for key, node in self.app._row_nodes.items() if self.is_visible(node)
+        ]
+        for key, _node in visible:
+            if key[0] == "plan":
                 return key
-        return next(iter(self.app._row_nodes), None)
+        return visible[0][0] if visible else None
 
     def _place_view(
         self,
@@ -154,6 +171,8 @@ class ReconcileMixin:
         key = self.node_key(node)
         if key is None:
             return
+        if self.app._row_nodes.get(key) is not node:
+            return
         self.app._row_nodes.pop(key, None)
         self.app._row_specs.pop(key, None)
         self.app._row_labels.pop(key, None)
@@ -173,7 +192,6 @@ class ReconcileMixin:
         removed and re-added in the new order, so expansion state for the
         recreated rows is restored from the saved keys.
         """
-        app = self.app
         existing = list(parent.children)
         existing_keys = [self.node_key(node) for node in existing]
         wanted = [item[0] for item in desired]
@@ -183,12 +201,9 @@ class ReconcileMixin:
                 first = index
                 break
         changed: set[tuple[str, int]] = set()
-        recreated: set[tuple[str, int]] = set()
         for node in existing[first:]:
             key = self.node_key(node)
             if key is not None:
-                if key in self._loaded:
-                    recreated.add(key)
                 changed.add(key)
             self.forget_subtree(node)
             node.remove()
@@ -197,12 +212,8 @@ class ReconcileMixin:
             if self.update_row(existing[index], key, spec, tree):
                 changed.add(key)
         for key, spec, allow_expand in desired[first:]:
-            node = self.add_row(parent, tree, key, spec, allow_expand)
+            self.add_row(parent, tree, key, spec, allow_expand)
             changed.add(key)
-            if key in recreated or key in app._expanded:
-                self.load_branch(node, key)
-                if key in app._expanded:
-                    node.expand()
         return changed
 
     def desired_plans(self, plans: list) -> list[tuple[tuple[str, int], RowSpec, bool]]:

@@ -312,8 +312,13 @@ class HookCase(unittest.TestCase):
     def test_pre_compact_injects_the_context_packet(self):
         _plan, _task = self._seed()
         result = hooks.build_result("pre-compact", {}, self.repo, commits=[], store=Store(self.db))
+        self.assertTrue(result.text.startswith("Keep this lazyplan state in the summary"))
         self.assertIn("Doing task", result.text)
         self.assertTrue(result.context)
+
+    def test_pre_compact_without_active_plans_is_silent(self):
+        result = hooks.build_result("pre-compact", {}, self.repo, commits=[], store=Store(self.db))
+        self.assertEqual(result.text, "")
 
     def test_session_handoff_is_in_session_start(self):
         plan_id, _task = self._seed()

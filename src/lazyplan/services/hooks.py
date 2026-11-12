@@ -302,6 +302,17 @@ def _session_text(
     return text
 
 
+def _compaction_text(store: InsightsPort, cwd: Path, session: Session | None) -> str:
+    """Summary guidance that carries the active plan through a compaction."""
+    packet = _session_text(store, cwd, None, session)
+    if not packet:
+        return ""
+    return (
+        "Keep this lazyplan state in the summary, with plan and task ids, "
+        "so work resumes on the same task:\n" + packet
+    )
+
+
 def _prompt_text(store: InsightsPort) -> str:
     """Small active-plan packet for every user prompt."""
     payload = context.build(store, max_chars=1200)
@@ -328,8 +339,10 @@ def build_result(
     who = host or detect_host(payload)
     try:
         session = _track_session(store, event, who, here, payload)
-        if event in ("session-start", "pre-compact"):
+        if event == "session-start":
             return HookResult(_session_text(store, here, commits, session), context=True).capped()
+        if event == "pre-compact":
+            return HookResult(_compaction_text(store, here, session), context=True).capped()
         if event == "stop":
             return hook_policy.stop_result(store, here, commits, session, payload, mode, who)
         if event == "session-end":

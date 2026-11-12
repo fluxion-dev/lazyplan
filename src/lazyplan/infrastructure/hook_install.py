@@ -218,7 +218,7 @@ const run = (directory, event, payload = {}, json = false) =>
         resolve(null)
         return
       }
-      const text = out.trim()
+      const text = out.trim().replace(/\\r\\n/g, "\\n")
       if (!json) {
         resolve(text)
         return
@@ -232,118 +232,184 @@ const run = (directory, event, payload = {}, json = false) =>
   })
 
 const mentionsCommit = (text) => /\\bgit\\b[\\s\\S]*\\bcommit\\b/.test(text)
+const textOf = (value) => (typeof value === "string" ? value : "")
+const pathIn = (args) => textOf(args?.filePath ?? args?.file_path ?? args?.path)
 
-const toolInput = (event) => event.input?.args ?? event.input ?? {}
-const commandOf = (event) => {
-  const value = toolInput(event).command
-  return typeof value === "string" ? value : ""
+// The block reason when a commit must be denied; an advisory reminder is queued instead.
+const gateCommit = async (directory, session, command) => {
+  if (!mentionsCommit(command)) return ""
+  const answer = await run(directory, "pre-tool", { command, session }, true)
+  if (!answer) return ""
+  if (answer.block) return answer.block
+  if (answer.text) stateFor(session).pending = answer.text
+  return ""
 }
-const pathOf = (event) => {
-  const value = toolInput(event).file_path ?? toolInput(event).path
-  return typeof value === "string" ? value : ""
+
+const afterTool = async (directory, session, tool, command, file) => {
+  if (tool === "bash" && !mentionsCommit(command)) return
+  if (!command && !file) return
+  const text = await run(directory, "post-tool", { tool, command, path: file, session })
+  if (text) stateFor(session).pending = text
 }
 
-export default {
-  id: "lazyplan",
-  async setup(ctx) {
-    const directory = ctx.location?.directory ?? process.cwd()
-
-    // Deny a gated commit before the shell runs. OpenCode has no stop gate.
-    await ctx.permission.hook("evaluate", async (event) => {
-      if (event.action !== "shell") return
-      const session = sessionOf(event)
-      for (const resource of event.resources ?? []) {
-        const text = String(resource)
-        if (!mentionsCommit(text)) continue
-        const answer = await run(directory, "pre-tool", { command: text, session }, true)
-        if (!answer) return
-        if (answer.block) {
-          event.effect = "deny"
-          event.message = answer.block
-          return
-        }
-        if (answer.text) stateFor(session).pending = answer.text
-      }
-    })
-
-    await ctx.tool.hook("execute.after", async (event) => {
-      const tool = String(event.tool ?? "").toLowerCase()
-      const command = commandOf(event)
-      const file = pathOf(event)
-      if (tool === "bash" && !mentionsCommit(command)) return
-      if (!command && !file) return
-      const session = sessionOf(event)
-      const text = await run(directory, "post-tool", { tool, command, path: file, session })
-      if (text) stateFor(session).pending = text
-    })
-
-    // Inject one cached packet on every model call, refreshed once per turn.
-    await ctx.session.hook("context", async (event) => {
-      const session = sessionOf(event)
-      const state = stateFor(session)
-      if (state.pending) {
-        event.system.push({ type: "text", text: state.pending })
-        state.pending = ""
-      }
-      if (!state.started) {
-        const text = await run(directory, "session-start", { session })
-        if (text !== null) {
-          state.cached = text
-          state.started = true
-        }
-      }
-      if (state.cached) event.system.push({ type: "text", text: state.cached })
-    })
-
-    await ctx.session.hook("compaction", async (event) => {
-      await run(directory, "pre-compact", { session: sessionOf(event) })
-    })
-
-    if (typeof ctx.event?.subscribe === "function") {
-      const controller = new AbortController()
-      void (async () => {
-        try {
-          const stream = ctx.event.subscribe({
-            types: [
-              "session.created",
-              "session.execution.started",
-              "session.idle",
-              "session.deleted",
-              "session.archived",
-            ],
-            signal: controller.signal,
-          })
-          for await (const event of stream) {
-            const data = event.data ?? {}
-            if (data.parentID) continue
-            const where = event.location?.directory ?? data.directory
-            if (where && where !== directory) continue
-            const session = data.sessionID ?? event.sessionID ?? ""
-            if (event.type === "session.idle") {
-              // Idle waits on the user; it never ends the row.
-              await run(directory, "stop", { session })
-              continue
-            }
-            if (event.type === "session.deleted" || event.type === "session.archived") {
-              await run(directory, "session-end", { session })
-              states.delete(session || "")
-              continue
-            }
-            const text = await run(directory, "prompt-submit", { session })
-            if (text !== null) {
-              const state = stateFor(session)
-              state.cached = text || state.cached
-              state.started = true
-            }
-          }
-        } catch {
-          // Plugin unload or a closed stream: session tracking stays best-effort.
-        }
-      })()
-      return () => controller.abort()
+// Texts for one model call: a queued reminder once, then the cached plan packet.
+const systemTexts = async (directory, session) => {
+  const state = stateFor(session)
+  const texts = []
+  if (state.pending) {
+    texts.push(state.pending)
+    state.pending = ""
+  }
+  if (!state.started) {
+    const text = await run(directory, "session-start", { session })
+    if (text !== null) {
+      state.cached = text
+      state.started = true
     }
-  },
-}""".replace("__MODE__", normalize_mode(mode))
+  }
+  if (state.cached) texts.push(state.cached)
+  return texts
+}
+
+const promptSubmitted = async (directory, session) => {
+  const text = await run(directory, "prompt-submit", { session })
+  if (text !== null) {
+    const state = stateFor(session)
+    state.cached = text || state.cached
+    state.started = true
+  }
+}
+
+const sessionEnded = async (directory, session) => {
+  await run(directory, "session-end", { session })
+  states.delete(session || "")
+}
+
+// OpenCode 2.x calls setup(ctx) and registers hooks on context domains.
+const setup = async (ctx) => {
+  const directory = ctx.location?.directory ?? process.cwd()
+  const toolArgs = (event) => event.input?.args ?? event.input ?? {}
+
+  // Deny a gated commit before the shell runs. OpenCode has no stop gate.
+  await ctx.permission.hook("evaluate", async (event) => {
+    if (event.action !== "shell") return
+    const session = sessionOf(event)
+    for (const resource of event.resources ?? []) {
+      const reason = await gateCommit(directory, session, String(resource))
+      if (reason) {
+        event.effect = "deny"
+        event.message = reason
+        return
+      }
+    }
+  })
+
+  await ctx.tool.hook("execute.after", async (event) => {
+    const args = toolArgs(event)
+    const tool = String(event.tool ?? "").toLowerCase()
+    await afterTool(directory, sessionOf(event), tool, textOf(args.command), pathIn(args))
+  })
+
+  // Inject one cached packet on every model call, refreshed once per turn.
+  await ctx.session.hook("context", async (event) => {
+    for (const text of await systemTexts(directory, sessionOf(event))) {
+      event.system.push({ type: "text", text })
+    }
+  })
+
+  await ctx.session.hook("compaction", async (event) => {
+    await run(directory, "pre-compact", { session: sessionOf(event) })
+  })
+
+  if (typeof ctx.event?.subscribe === "function") {
+    const controller = new AbortController()
+    void (async () => {
+      try {
+        const stream = ctx.event.subscribe({
+          types: [
+            "session.created",
+            "session.execution.started",
+            "session.idle",
+            "session.deleted",
+            "session.archived",
+          ],
+          signal: controller.signal,
+        })
+        for await (const event of stream) {
+          const data = event.data ?? {}
+          if (data.parentID) continue
+          const where = event.location?.directory ?? data.directory
+          if (where && where !== directory) continue
+          const session = data.sessionID ?? event.sessionID ?? ""
+          if (event.type === "session.idle") {
+            // Idle waits on the user; it never ends the row.
+            await run(directory, "stop", { session })
+            continue
+          }
+          if (event.type === "session.deleted" || event.type === "session.archived") {
+            await sessionEnded(directory, session)
+            continue
+          }
+          await promptSubmitted(directory, session)
+        }
+      } catch {
+        // Plugin unload or a closed stream: session tracking stays best-effort.
+      }
+    })()
+    return () => controller.abort()
+  }
+}
+
+// OpenCode 1.x calls server(input) and reads the hooks it returns.
+const server = async (input) => {
+  const directory = input?.directory ?? process.cwd()
+  const children = new Set()
+  const tracked = (session) => !children.has(session)
+
+  return {
+    "tool.execute.before": async (event, output) => {
+      if (String(event.tool ?? "").toLowerCase() !== "bash") return
+      const reason = await gateCommit(directory, sessionOf(event), textOf(output?.args?.command))
+      if (reason) throw new Error(reason)
+    },
+    "tool.execute.after": async (event) => {
+      const args = event.args ?? {}
+      const tool = String(event.tool ?? "").toLowerCase()
+      await afterTool(directory, sessionOf(event), tool, textOf(args.command), pathIn(args))
+    },
+    "chat.message": async (event) => {
+      const session = sessionOf(event)
+      if (tracked(session)) await promptSubmitted(directory, session)
+    },
+    "experimental.chat.system.transform": async (event, output) => {
+      const session = sessionOf(event)
+      if (!tracked(session)) return
+      output.system.push(...(await systemTexts(directory, session)))
+    },
+    "experimental.session.compacting": async (event, output) => {
+      const text = await run(directory, "pre-compact", { session: sessionOf(event) })
+      if (text) output.context.push(text)
+    },
+    event: async ({ event }) => {
+      const props = event?.properties ?? {}
+      const info = props.info ?? {}
+      if (event?.type === "session.created" && info.parentID) {
+        children.add(info.id)
+        return
+      }
+      if (event?.type === "session.idle" && tracked(props.sessionID ?? "")) {
+        // Idle waits on the user; it never ends the row.
+        await run(directory, "stop", { session: props.sessionID ?? "" })
+        return
+      }
+      if (event?.type === "session.deleted" && !info.parentID) {
+        await sessionEnded(directory, info.id ?? "")
+      }
+    },
+  }
+}
+
+export default { id: "lazyplan", setup, server }""".replace("__MODE__", normalize_mode(mode))
 
 
 def _read(path: Path) -> dict:

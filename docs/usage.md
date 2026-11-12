@@ -693,10 +693,11 @@ into a reminder. `--no-hooks` removes the managed entries. At runtime,
 read-only readiness probe (database, session, and latency) and writes nothing;
 `lpui doctor` includes the same probe.
 
-OpenCode has no stop-block surface, so it denies commits through its permission
-hook, injects the cached plan on every model call, and marks the row awaiting
-when the session idles. Its generated plugin closes the child stdin, logs a
-failed hook once with the event and reason, and retries on the next event.
+OpenCode has no stop-block surface, so it denies commits before the shell runs,
+injects the cached plan on every model call, and marks the row awaiting when
+the session idles. The generated plugin loads on OpenCode 1.x and on the 2.x
+plugin API. It closes the child stdin, logs a failed hook once with the event
+and reason, and retries on the next event.
 Claude Code and Codex block both commits and stops; Gemini blocks tools and
 retries the turn; Cursor denies shell commands and continues after a stop.
 Claude Code reads `PreCompact` output as guidance for the compaction summary.

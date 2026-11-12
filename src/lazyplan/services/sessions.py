@@ -131,9 +131,16 @@ def list_sessions(
     plan_id: int | None = None,
     open_only: bool = False,
     limit: int = 20,
+    archived: str = "hide",
 ) -> list[Session]:
-    """Recent sessions, newest first."""
-    return port.list_sessions(actor=actor, plan_id=plan_id, open_only=open_only, limit=limit)
+    """Recent sessions, newest first, with archived rows hidden by default."""
+    return port.list_sessions(
+        actor=actor,
+        plan_id=plan_id,
+        open_only=open_only,
+        limit=limit,
+        archived=archived,
+    )
 
 
 def previous_session(

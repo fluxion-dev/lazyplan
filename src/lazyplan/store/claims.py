@@ -181,7 +181,7 @@ class ClaimsMixin(StoreBase):
             " JOIN milestones m ON m.id=t.milestone_id"
             " JOIN plans p ON p.id=m.plan_id"
         )
-        clauses = []
+        clauses = ["p.archived_at = 0"]
         params: list[object] = []
         if not include_expired:
             clauses.append("c.expires_at > ?")
@@ -233,7 +233,7 @@ class ClaimsMixin(StoreBase):
             " JOIN plans p ON p.id=m.plan_id"
             " LEFT JOIN task_claims c ON c.task_id=t.id AND c.expires_at > ?"
             " WHERE t.status = 'todo' AND c.task_id IS NULL AND p.status != 'done'"
-            " AND t.blocked = 0"
+            " AND p.archived_at = 0 AND t.blocked = 0"
         )
         params: list[object] = [stamp]
         if plan_id is not None:

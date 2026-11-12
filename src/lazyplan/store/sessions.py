@@ -9,6 +9,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from ..core.entities import Session
+from ..core.policies.maintenance import check_archive_mode
 from ..core.policies.sessions import (
     auto_close_summary,
     close_after_secs,
@@ -63,7 +64,7 @@ class SessionsMixin(StoreBase):
         with self._connect() as conn:
             row = conn.execute(
                 "SELECT * FROM sessions WHERE actor=? AND repo_path=? AND ended_at=0"
-                " ORDER BY id DESC LIMIT 1",
+                " AND archived_at=0 ORDER BY id DESC LIMIT 1",
                 (actor, repo_path),
             ).fetchone()
         return self._row_to_session(row) if row is not None else None
@@ -369,7 +370,7 @@ class SessionsMixin(StoreBase):
         actor: str = "",
     ) -> Session | None:
         """Newest open session in one checkout, preferring a matching host."""
-        base = "SELECT * FROM sessions WHERE ended_at=0 AND repo_path=?"
+        base = "SELECT * FROM sessions WHERE ended_at=0 AND archived_at=0 AND repo_path=?"
         if host:
             with self._connect() as conn:
                 row = conn.execute(
@@ -400,7 +401,7 @@ class SessionsMixin(StoreBase):
         host paths that need one fixed window.
         """
         stamp = time.time() if now is None else now
-        sql = "SELECT * FROM sessions WHERE ended_at=0"
+        sql = "SELECT * FROM sessions WHERE ended_at=0 AND archived_at=0"
         params: list[object] = []
         if repo_path:
             sql += " AND repo_path=?"
@@ -453,8 +454,10 @@ class SessionsMixin(StoreBase):
         plan_id: int | None = None,
         open_only: bool = False,
         limit: int = 20,
+        archived: str = "hide",
     ) -> list[Session]:
-        """Recent sessions, newest first, with optional actor and plan filters."""
+        """Recent sessions, newest first, with optional actor, plan, and archive filters."""
+        check_archive_mode(archived)
         sql = "SELECT * FROM sessions"
         clauses: list[str] = []
         params: list[object] = []
@@ -466,6 +469,10 @@ class SessionsMixin(StoreBase):
             params.append(plan_id)
         if open_only:
             clauses.append("ended_at=0")
+        if archived == "hide":
+            clauses.append("archived_at=0")
+        elif archived == "only":
+            clauses.append("archived_at>0")
         if clauses:
             sql += " WHERE " + " AND ".join(clauses)
         sql += " ORDER BY started_at DESC, id DESC LIMIT ?"
@@ -480,8 +487,8 @@ class SessionsMixin(StoreBase):
         actor: str = "",
         repo_path: str = "",
     ) -> Session | None:
-        """Most recently ended session for a plan or checkout."""
-        sql = "SELECT * FROM sessions WHERE ended_at > 0"
+        """Most recently ended, unarchived session for a plan or checkout."""
+        sql = "SELECT * FROM sessions WHERE ended_at > 0 AND archived_at = 0"
         params: list[object] = []
         if plan_id is not None:
             sql += " AND plan_id=?"

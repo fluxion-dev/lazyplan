@@ -21,6 +21,7 @@ class SessionsReadPort(Protocol):
         plan_id: int | None = None,
         open_only: bool = False,
         limit: int = 20,
+        archived: str = "hide",
     ) -> list[Session]: ...
 
     def latest_ended_session(

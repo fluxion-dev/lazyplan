@@ -13,6 +13,8 @@
 - Poll seams kept for tests: rebuilds counts full tree rebuilds and poll_now
   drives one poll on the calling thread; both are read by the headless Pilot
   tests, never by production call sites.
+- Maintenance policy seams kept for tests and future trim targets: visible_rows,
+  is_expired_claim, and is_old_event are pure predicates.
 - sqlite3 API noise: row_factory.
 """
 
@@ -48,6 +50,10 @@ _.action_add_criterion
 _.action_edit_selection
 _.action_filter_text
 _.action_quit
+_.action_apply_archive
+_.action_apply_trim
+_.action_apply_vacuum
+_.action_restore
 _.export_plan
 _.render_plan_markdown
 _.rebuilds
@@ -76,6 +82,9 @@ _.day
 _.percent
 _.elapsed_seconds
 attention_ids
+visible_rows
+is_expired_claim
+is_old_event
 _.taxonomy
 _.deprecated_in
 _.removal

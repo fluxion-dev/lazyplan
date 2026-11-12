@@ -427,6 +427,63 @@ class TestExpansionOwnership(RefreshCase):
             self.assertTrue(app.tree_controller.is_visible(cursor))
 
 
+class TestFilterExpansion(RefreshCase):
+    async def test_a_filter_reveals_a_hit_and_restores_the_baseline(self) -> None:
+        second = self.store.add_task(self.milestone.id, "Needle", actor="ana")
+        app = create_app(self.store.path)
+        async with app.run_test(size=(120, 30)) as pilot:
+            await pilot.pause()
+            self.expand_all(app)
+            await pilot.pause()
+            milestone_key = ("milestone", self.milestone.id)
+            app.selected = milestone_key
+            app.tree_controller.fold_one()
+            await pilot.pause()
+            expanded = set(app._expanded)
+            collapsed = set(app._collapsed)
+            app.filter_text = "Needle"
+            app.refresh_all()
+            await pilot.pause()
+            hit = app._row_nodes[("task", second.id)]
+            self.assertTrue(app.tree_controller.is_visible(hit))
+            self.assertEqual(set(app._expanded), expanded)
+            self.assertEqual(set(app._collapsed), collapsed)
+            app.filter_text = ""
+            app.refresh_all()
+            await pilot.pause()
+            self.assertEqual(set(app._expanded), expanded)
+            self.assertEqual(set(app._collapsed), collapsed)
+            self.assertFalse(app._row_nodes[milestone_key].is_expanded)
+            self.assertFalse(app.tree_controller.is_visible(app._row_nodes[("task", second.id)]))
+
+    async def test_a_second_filter_keeps_the_first_baseline(self) -> None:
+        second = self.store.add_task(self.milestone.id, "Needle", actor="ana")
+        app = create_app(self.store.path)
+        async with app.run_test(size=(120, 30)) as pilot:
+            await pilot.pause()
+            self.expand_all(app)
+            await pilot.pause()
+            milestone_key = ("milestone", self.milestone.id)
+            app.selected = milestone_key
+            app.tree_controller.fold_one()
+            await pilot.pause()
+            expanded = set(app._expanded)
+            collapsed = set(app._collapsed)
+            for text in ("Needle", "Task"):
+                app.filter_text = text
+                app.refresh_all()
+                await pilot.pause()
+                self.assertEqual(set(app._expanded), expanded)
+                self.assertEqual(set(app._collapsed), collapsed)
+            app.filter_text = ""
+            app.refresh_all()
+            await pilot.pause()
+            self.assertEqual(set(app._expanded), expanded)
+            self.assertEqual(set(app._collapsed), collapsed)
+            self.assertFalse(app._row_nodes[milestone_key].is_expanded)
+            self.assertIn(("task", second.id), app._row_nodes)
+
+
 class TestViewPreservation(RefreshCase):
     def busy_tree(self) -> None:
         """Make the plan list long enough to scroll and keep the fixture on top."""

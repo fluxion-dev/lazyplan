@@ -34,6 +34,7 @@ class Plan:
     description: str = ""  # the what
     status: Status = Status.TODO
     goal: str = ""  # the why
+    archived_at: float = 0.0
 
     def __post_init__(self) -> None:
         if not self.name.strip():
@@ -94,6 +95,7 @@ class Session:
     host_session: str = ""
     auto_closed: bool = False
     plan_source: str = "auto"
+    archived_at: float = 0.0
 
     @property
     def ended(self) -> bool:

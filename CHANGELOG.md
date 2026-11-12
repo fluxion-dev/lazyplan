@@ -3,6 +3,45 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## Unreleased
+
+### Fixed
+
+- **Unrelated repositories commit freely again.** With strict hooks and the
+  shared home database, an agent's first commit in any repository was denied,
+  because the session row a hook opens counted as planned work. Only a session
+  you started, or one attached to a plan, now marks a checkout as managed.
+- **The commit gate reads the command.** Searching for or echoing the words
+  `git commit` is no longer treated as a commit, and `git -C repo commit` is.
+- **Hooks no longer hang on Windows.** When a host kept stdin open, the first
+  git call a hook made never returned. The hook now reads only what the host
+  has already written.
+- **Agents see the post-tool reminder.** Claude Code, Codex, and Gemini get the
+  commit-link and touched-path reminders as context for the agent instead of a
+  warning only you see, a repository with nothing in progress stays quiet, and
+  Claude Code's absolute Windows paths now match a task's touch-points.
+- **Stop stays quiet.** The end of each agent turn no longer prints a reminder
+  to end the session, and a blocked stop no longer asks the agent to end a
+  session its host is still running.
+- **Claude Code hooks have time to finish.** Managed entries wait at most 30
+  seconds, and session end gets 10 seconds instead of Claude Code's 1.5.
+- **Upgrades keep advisory hooks advisory.** Refreshing hooks after an upgrade
+  no longer switches them back to strict.
+- **OpenCode 1.x loads the plugin.** The released OpenCode rejected the plugin,
+  which only spoke the 2.x API; it now loads on both.
+- **Windows updates apply offline.** A downloaded pipx update no longer needs
+  the package index to install.
+- **Windows updates work for pipx installs built with uv.** pipx picks uv
+  whenever it is on PATH, and those venvs have no pip, so `lpui upgrade` failed
+  with `No module named pip`. The update now installs with `uv pip`, and a
+  failed install always records `install failed` with the tool's output.
+- **The MCP server reports its version** instead of `0`.
+
+### Changed
+
+- **Compaction keeps the plan.** Claude Code's compaction summary is asked to
+  keep the active plan and task ids.
+
 ## v0.41.0 — unreleased
 
 ### Added

@@ -6,7 +6,6 @@ from typing import Any, cast
 
 from ..core.entities import Criterion, Plan, Status, Task
 from ..core.ports.coordination import CoordinationPort
-from ..core.ports.maintenance import MaintenancePort
 from ..core.ports.transfer import TransferPort
 from ..core.serialization import to_payload
 from .planning import heal, reconcile, set_status
@@ -209,7 +208,7 @@ def _restore_plan_archive(store: TransferPort, plan_id: int, item: dict, actor: 
     """Reapply an exported archive stamp to one imported plan."""
     archived_at = float(item.get("archived_at", 0) or 0)
     if archived_at > 0:
-        cast(MaintenancePort, store).archive_plan(plan_id, actor=actor, now=archived_at)
+        store.set_plan_archived(plan_id, archived_at)
 
 
 def _import_all(store: TransferPort, data: dict, actor: str = "human") -> dict[str, int]:

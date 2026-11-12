@@ -100,6 +100,14 @@ class PlansMixin(StoreBase):
                 self.log(actor, "plan", "archive", f"P#{plan_id} archived", now=stamp)
         return changed
 
+    def set_plan_archived(self, plan_id: int, archived_at: float) -> bool:
+        """Set an archive stamp verbatim for import/sync, bypassing the done guard."""
+        with self._connect() as conn:
+            cur = conn.execute(
+                "UPDATE plans SET archived_at=? WHERE id=?", (float(archived_at), plan_id)
+            )
+            return (cur.rowcount or 0) > 0
+
     def restore_plan(self, plan_id: int, actor: str = "human", now: float | None = None) -> bool:
         """Clear one plan's archive stamp; a live row writes no event."""
         stamp = time.time() if now is None else now

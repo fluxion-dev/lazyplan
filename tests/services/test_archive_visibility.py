@@ -4,11 +4,21 @@ from __future__ import annotations
 
 import os
 import tempfile
+import time
 import unittest
 
 from lazyplan import services
 from lazyplan.core.entities import Status
-from lazyplan.services import audit, brief, context, maintenance, ready, review, stats, trace
+from lazyplan.services import (
+    audit,
+    brief,
+    context,
+    maintenance,
+    ready,
+    review,
+    stats,
+    trace,
+)
 from lazyplan.store import Store
 
 
@@ -73,6 +83,39 @@ class TestArchivedPlanReads(unittest.TestCase):
         self.assertEqual(explicit.plans, [])
         default = audit.report(self.store, since=0.0, cwd=self.tmp.name)
         self.assertNotIn(self.archived.id, default.plans)
+
+    def test_tree_archive_reveal_includes_finished_plans(self) -> None:
+        self.store.log(
+            "fixture",
+            "plan",
+            "status",
+            f"plan #{self.archived.id} -> done",
+            now=time.time() - 3 * 86400,
+        )
+        finished = self.store.add_plan("Finished plan")
+        services.set_status(self.store, "plan", finished.id, Status.DONE)
+        self.store.log(
+            "fixture",
+            "plan",
+            "status",
+            f"plan #{finished.id} -> done",
+            now=time.time() - 3 * 86400,
+        )
+
+        default = [row[0].id for row in services.tree(self.store)]
+        only = [row[0].id for row in services.tree(self.store, archived="only")]
+        shown = [row[0].id for row in services.tree(self.store, archived="show")]
+
+        self.assertNotIn(self.archived.id, default)
+        self.assertIn(self.archived.id, only)
+        self.assertIn(finished.id, shown)
+
+    def test_metrics_can_show_an_explicit_archived_plan(self) -> None:
+        from lazyplan.services import metrics
+
+        snapshot = metrics.snapshot(self.store, plan_id=self.archived.id)
+        self.assertEqual(snapshot.plan_id, self.archived.id)
+        self.assertEqual(snapshot.plan_title, "Archived plan")
 
     def test_trace_hides_archived_plan_and_its_criteria(self) -> None:
         self.assertIsNone(trace.trace_plan(self.store, self.archived.id))

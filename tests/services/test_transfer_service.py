@@ -44,6 +44,18 @@ class TestTransferService(unittest.TestCase):
             restored = target.list_plans(archived="only")
             self.assertEqual([row.archived_at for row in restored], [1234.0])
 
+    def test_export_import_preserves_archived_todo_state(self) -> None:
+        plan = self.store.list_plans()[0]
+        self.store.set_plan_archived(plan.id, 4321.0)
+        dump = services.export_all(self.store)
+
+        with tempfile.TemporaryDirectory() as other:
+            target = Store(os.path.join(other, "target.db"))
+            services.import_all(target, dump, actor="fixture")
+            self.assertEqual(target.list_plans(), [])
+            restored = target.list_plans(archived="only")
+            self.assertEqual([row.archived_at for row in restored], [4321.0])
+
     def test_import_heals_ancestor_status_drift(self) -> None:
         plan = self.store.list_plans()[0]
         milestone = self.store.add_milestone(plan.id, "M", actor="fixture")

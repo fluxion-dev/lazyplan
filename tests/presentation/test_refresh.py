@@ -372,6 +372,60 @@ class TestExpansionOwnership(RefreshCase):
             self.assertFalse(milestone_node.is_expanded)
             self.assertLess(milestone_node._line, 0)
 
+    async def test_a_new_milestone_under_an_open_plan_appears_collapsed(self) -> None:
+        app = create_app(self.store.path)
+        async with app.run_test(size=(120, 30)) as pilot:
+            await pilot.pause()
+            self.expand_all(app)
+            await pilot.pause()
+            expanded = set(app._expanded)
+            added = self.store.add_milestone(self.plan.id, "Later", actor="ana")
+            app.refresh_all()
+            await pilot.pause()
+            self.assertEqual(set(app._expanded), expanded)
+            self.assertTrue(app._row_nodes[("plan", self.plan.id)].is_expanded)
+            milestone_node = app._row_nodes[("milestone", added.id)]
+            self.assertFalse(milestone_node.is_expanded)
+            self.assertTrue(app.tree_controller.is_visible(milestone_node))
+
+    async def test_selecting_a_hidden_task_keeps_the_branch_closed(self) -> None:
+        app = create_app(self.store.path)
+        async with app.run_test(size=(120, 30)) as pilot:
+            await pilot.pause()
+            self.expand_all(app)
+            await pilot.pause()
+            milestone_key = ("milestone", self.milestone.id)
+            app.selected = milestone_key
+            app.tree_controller.fold_one()
+            await pilot.pause()
+            app.select_row("task", self.task.id)
+            await pilot.pause()
+            self.assertEqual(app.selected, milestone_key)
+            self.assertNotIn(milestone_key, app._expanded)
+            self.assertFalse(app._row_nodes[milestone_key].is_expanded)
+            tree = app.query_one("#tree", Tree)
+            self.assertEqual(_node_key(tree.cursor_node), milestone_key)
+
+    async def test_deleting_the_cursor_row_falls_back_to_a_visible_survivor(self) -> None:
+        app = create_app(self.store.path)
+        async with app.run_test(size=(120, 30)) as pilot:
+            await pilot.pause()
+            self.expand_all(app)
+            await pilot.pause()
+            tree = app.query_one("#tree", Tree)
+            tree.focus()
+            tree.move_cursor(app._row_nodes[("task", self.task.id)])
+            await pilot.pause()
+            self.store.delete("task", self.task.id, actor="ana")
+            app.refresh_all()
+            await pilot.pause()
+            self.assertNotIn(("task", self.task.id), app._row_nodes)
+            cursor = tree.cursor_node
+            self.assertIsNotNone(cursor)
+            self.assertEqual(app.selected, ("milestone", self.milestone.id))
+            self.assertEqual(_node_key(cursor), app.selected)
+            self.assertTrue(app.tree_controller.is_visible(cursor))
+
 
 class TestViewPreservation(RefreshCase):
     def busy_tree(self) -> None:

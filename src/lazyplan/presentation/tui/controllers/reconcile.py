@@ -44,27 +44,66 @@ class ReconcileMixin:
         def load_branch(self, node: TreeNode, key: tuple[str, int]) -> None: ...
 
     def capture_view(self) -> dict[str, Any]:
-        """Remember the cursor row, focus, and each tree's scroll offset."""
-        view: dict[str, Any] = {"cursor": None, "focus": None, "scroll": {}}
+        """Remember the cursor row, its ancestors, focus, and scroll offsets."""
+        view: dict[str, Any] = {"cursor": None, "ancestors": [], "focus": None, "scroll": {}}
         for tree in self.trees():
             view["scroll"][tree.id] = (tree.scroll_x, tree.scroll_y)
             if tree.has_focus:
                 view["focus"] = tree.id
                 cursor = tree.cursor_node
-                view["cursor"] = self.node_key(cursor) if cursor is not None else None
+                if cursor is not None:
+                    view["cursor"] = self.node_key(cursor)
+                    view["ancestors"] = self.ancestor_keys(cursor)
         return view
 
+    def ancestor_keys(self, node: TreeNode) -> list[tuple[str, int]]:
+        """Keys from a node's nearest parent up to the root, hidden rows included."""
+        keys: list[tuple[str, int]] = []
+        parent = node.parent
+        while parent is not None:
+            key = self.node_key(parent)
+            if key is not None:
+                keys.append(key)
+            parent = parent.parent
+        return keys
+
+    def is_visible(self, node: TreeNode) -> bool:
+        """True when the row's tree and every ancestor are open."""
+        if not node.tree.display:
+            return False
+        parent = node.parent
+        while parent is not None:
+            if not parent.is_expanded:
+                return False
+            parent = parent.parent
+        return True
+
+    def visible_key(self, key: tuple[str, int]) -> tuple[str, int] | None:
+        """The row itself or its nearest visible ancestor; never opens a branch."""
+        node = self.app._row_nodes.get(key)
+        while node is not None:
+            if self.is_visible(node):
+                return self.node_key(node)
+            node = node.parent
+        return None
+
     def restore_view(self, view: dict[str, Any], prev_selected: tuple[str, int] | None) -> None:
-        """Restore cursor, scroll, and focus after an in-place refresh."""
+        """Restore cursor, scroll, and focus without opening a closed branch."""
         app = self.app
-        target = view.get("cursor")
-        if target not in app._row_nodes:
-            target = prev_selected if prev_selected in app._row_nodes else None
+        candidates = [view.get("cursor"), prev_selected, *(view.get("ancestors") or [])]
+        target: tuple[str, int] | None = None
+        for candidate in candidates:
+            if candidate is None or candidate not in app._row_nodes:
+                continue
+            target = self.visible_key(candidate)
+            if target is not None:
+                break
         if target is None:
             target = self.fallback_key()
         if target is None:
             return
-        if app.selected not in app._row_nodes:
+        selected = app.selected
+        if selected not in app._row_nodes or not self.is_visible(app._row_nodes[selected]):
             app.selected = target
         try:
             app.call_after_refresh(lambda: self._place_view(view, target))
@@ -72,11 +111,14 @@ class ReconcileMixin:
             pass
 
     def fallback_key(self) -> tuple[str, int] | None:
-        """First visible plan row, else the first row of any kind."""
-        for key, node in self.app._row_nodes.items():
-            if key[0] == "plan" and node.tree.display:
+        """First visible plan row, else the first visible row of any kind."""
+        visible = [
+            (key, node) for key, node in self.app._row_nodes.items() if self.is_visible(node)
+        ]
+        for key, _node in visible:
+            if key[0] == "plan":
                 return key
-        return next(iter(self.app._row_nodes), None)
+        return visible[0][0] if visible else None
 
     def _place_view(
         self,

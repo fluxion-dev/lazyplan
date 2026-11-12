@@ -5,21 +5,22 @@ from __future__ import annotations
 import time
 
 from ..core.entities import Session
-from ..core.policies.sessions import IDLE_AFTER_SECS, STALE_AFTER_SECS
+from ..core.policies.sessions import STALE_AFTER_SECS, close_after_secs
 from ..core.ports.sessions import SessionsPort, SessionsReadPort
 
 
 def session_state(
     session: Session,
     now: float | None = None,
-    idle_after: float = IDLE_AFTER_SECS,
+    idle_after: float | None = None,
 ) -> str:
     """One of ``ended``, ``auto-closed``, ``idle``, ``stale``, ``awaiting``, or ``working``."""
     if session.ended:
         return "auto-closed" if session.auto_closed else "ended"
     stamp = time.time() if now is None else now
     idle = session.idle_seconds(stamp)
-    if idle >= idle_after:
+    window = close_after_secs(session.phase) if idle_after is None else idle_after
+    if idle >= window:
         return "idle"
     if idle >= STALE_AFTER_SECS:
         return "stale"
@@ -100,7 +101,7 @@ def open_session_for(
 def reap_idle_sessions(
     port: SessionsPort,
     now: float | None = None,
-    idle_after: float = IDLE_AFTER_SECS,
+    idle_after: float | None = None,
     repo_path: str = "",
 ) -> list[Session]:
     """Close abandoned sessions and return the ones that ended."""

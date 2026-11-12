@@ -6,11 +6,13 @@ import unittest
 
 from lazyplan.core.entities import Session
 from lazyplan.core.policies.sessions import (
+    CLOSE_AFTER_AWAITING_SECS,
+    CLOSE_AFTER_WORKING_SECS,
     HANDOFF_LIMIT,
-    IDLE_AFTER_SECS,
     STALE_AFTER_SECS,
     SUMMARY_LIMIT,
     auto_close_summary,
+    close_after_secs,
     normalize_handoff,
     normalize_phase,
     normalize_summary,
@@ -68,15 +70,38 @@ class TestSessionPolicy(unittest.TestCase):
         self.assertEqual(session.idle_seconds(260.0), 60.0)
         self.assertFalse(Session(id=1, ended_at=10.0).awaiting)
 
-    def test_auto_close_summary_names_the_idle_hours(self) -> None:
-        self.assertEqual(auto_close_summary(0), "auto-closed after 1h idle")
+    def test_close_windows_follow_the_phase(self) -> None:
+        self.assertEqual(STALE_AFTER_SECS, 120)
+        self.assertEqual(CLOSE_AFTER_WORKING_SECS, 600)
+        self.assertEqual(CLOSE_AFTER_AWAITING_SECS, 1800)
+        self.assertEqual(close_after_secs("working"), 600)
+        self.assertEqual(close_after_secs("awaiting"), 1800)
+        self.assertEqual(close_after_secs("unexpected"), 600)
+
+    def test_auto_close_summary_names_minutes_then_hours(self) -> None:
+        self.assertEqual(auto_close_summary(0), "auto-closed after 1m idle")
+        self.assertEqual(auto_close_summary(10 * 60), "auto-closed after 10m idle")
+        self.assertEqual(auto_close_summary(30 * 60), "auto-closed after 30m idle")
         self.assertEqual(auto_close_summary(5 * 3600), "auto-closed after 5h idle")
 
-    def test_stale_and_idle_follow_the_heartbeat(self) -> None:
+    def test_working_rows_read_stale_at_two_minutes_and_idle_at_ten(self) -> None:
         session = Session(id=1, started_at=100.0, last_seen_at=100.0)
         self.assertEqual(session_state(session, 100.0 + STALE_AFTER_SECS - 1), "working")
         self.assertEqual(session_state(session, 100.0 + STALE_AFTER_SECS), "stale")
-        self.assertEqual(session_state(session, 100.0 + IDLE_AFTER_SECS), "idle")
+        self.assertEqual(session_state(session, 100.0 + CLOSE_AFTER_WORKING_SECS - 1), "stale")
+        self.assertEqual(session_state(session, 100.0 + CLOSE_AFTER_WORKING_SECS), "idle")
+        self.assertEqual(session_state(session, 100.0 + CLOSE_AFTER_AWAITING_SECS), "idle")
+
+    def test_awaiting_rows_keep_a_thirty_minute_grace(self) -> None:
+        session = Session(
+            id=1,
+            started_at=100.0,
+            last_seen_at=100.0,
+            phase="awaiting",
+        )
+        self.assertEqual(session_state(session, 100.0 + CLOSE_AFTER_WORKING_SECS + 1), "stale")
+        self.assertEqual(session_state(session, 100.0 + CLOSE_AFTER_AWAITING_SECS - 1), "stale")
+        self.assertEqual(session_state(session, 100.0 + CLOSE_AFTER_AWAITING_SECS), "idle")
 
 
 if __name__ == "__main__":

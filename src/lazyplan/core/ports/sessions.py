@@ -108,6 +108,6 @@ class SessionsPort(SessionsReadPort, PlanningPort, Protocol):
     def reap_idle_sessions(
         self,
         now: float | None = None,
-        idle_after: float = ...,
+        idle_after: float | None = ...,
         repo_path: str = "",
     ) -> list[Session]: ...

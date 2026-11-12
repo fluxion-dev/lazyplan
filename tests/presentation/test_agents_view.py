@@ -51,7 +51,7 @@ class AgentsViewTest(unittest.TestCase):
             id=4,
             actor="di",
             started_at=self.now - 2_000,
-            last_seen_at=self.now - 1_000,
+            last_seen_at=self.now - 130,
             phase="working",
         )
 

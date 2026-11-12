@@ -9,8 +9,8 @@ from pathlib import Path
 
 from ..core.entities import Session
 from ..core.policies.sessions import (
-    IDLE_AFTER_SECS,
     auto_close_summary,
+    close_after_secs,
     normalize_handoff,
     normalize_phase,
     normalize_plan_source,
@@ -323,12 +323,15 @@ class SessionsMixin(StoreBase):
     def reap_idle_sessions(
         self,
         now: float | None = None,
-        idle_after: float = IDLE_AFTER_SECS,
+        idle_after: float | None = None,
         repo_path: str = "",
     ) -> list[Session]:
-        """Close open sessions whose heartbeat is older than *idle_after*."""
+        """Close open sessions whose heartbeat is past their phase's cutoff.
+
+        An explicit *idle_after* overrides the per-phase policy for tests and
+        host paths that need one fixed window.
+        """
         stamp = time.time() if now is None else now
-        cutoff = stamp - max(idle_after, 0.0)
         sql = "SELECT * FROM sessions WHERE ended_at=0"
         params: list[object] = []
         if repo_path:
@@ -339,7 +342,8 @@ class SessionsMixin(StoreBase):
         closed: list[Session] = []
         for row in rows:
             anchor = float(row["last_seen_at"] or row["started_at"] or 0.0)
-            if anchor >= cutoff:
+            window = idle_after if idle_after is not None else close_after_secs(str(row["phase"]))
+            if anchor > stamp - max(window, 0.0):
                 continue
             session_id = int(row["id"])
             owner = str(row["actor"])

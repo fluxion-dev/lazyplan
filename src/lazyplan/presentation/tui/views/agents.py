@@ -10,7 +10,6 @@ import time
 
 from .... import services
 from ....core.entities import Session
-from ....core.policies.sessions import IDLE_AFTER_SECS
 from ...shared.design import escape_markup
 from ...shared.session_labels import branch_label, plan_label, task_label
 
@@ -43,7 +42,7 @@ def age(started_at: float, stamp: float) -> str:
 def rank_sessions(
     sessions: list[Session],
     now: float | None = None,
-    idle_after: float = IDLE_AFTER_SECS,
+    idle_after: float | None = None,
 ) -> list[Session]:
     """Awaiting first, then working, then stale; newest first within a state."""
     stamp = time.time() if now is None else now
@@ -71,7 +70,7 @@ def host_label(session: Session) -> str:
 def session_line(
     session: Session,
     now: float | None = None,
-    idle_after: float = IDLE_AFTER_SECS,
+    idle_after: float | None = None,
     plan_title: str = "",
 ) -> str:
     """One card row: identity, plan, task, branch, age, and live state."""
@@ -95,7 +94,7 @@ def session_line(
 def sessions_summary(
     sessions: list[Session],
     now: float | None = None,
-    idle_after: float = IDLE_AFTER_SECS,
+    idle_after: float | None = None,
 ) -> str:
     """Border subtitle counts: open, awaiting, and idle."""
     stamp = time.time() if now is None else now

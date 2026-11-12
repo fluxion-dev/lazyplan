@@ -7,6 +7,7 @@ state words without a terminal.
 from __future__ import annotations
 
 import time
+from typing import NamedTuple
 
 from .... import services
 from ....core.entities import Session, Status
@@ -26,6 +27,13 @@ _STATE_ORDER = {
     "ended": 4,
     "auto-closed": 4,
 }
+
+
+class RowWidths(NamedTuple):
+    """Plan-title and branch cells left after the fixed columns."""
+
+    title: int
+    branch: int
 
 
 def age(started_at: float, stamp: float) -> str:
@@ -56,23 +64,23 @@ def agent_id(session: Session) -> str:
     return session.host_session[-4:] if session.host_session else "-"
 
 
-def _widths(available: int, has_plan: bool) -> tuple[int, int]:
+def _share_widths(available: int, has_plan: bool) -> RowWidths:
     """Plan-title and branch cells: 45/55, with minimums, never over budget."""
     budget = max(available, 0)
     if not has_plan:
-        return 0, budget
+        return RowWidths(0, budget)
     if budget >= MIN_PLAN_TITLE + MIN_BRANCH:
         title = max(MIN_PLAN_TITLE, int(budget * PLAN_SHARE))
         branch = budget - title
         if branch < MIN_BRANCH:
             branch = MIN_BRANCH
             title = budget - branch
-        return title, branch
+        return RowWidths(title, branch)
     title = int(budget * PLAN_SHARE)
-    return title, budget - title
+    return RowWidths(title, budget - title)
 
 
-def _glyph(state: str, frame: int | None) -> str:
+def state_glyph(state: str, frame: int | None) -> str:
     """A spinner frame while working, ``◆`` awaiting, ``◌`` for quiet rows."""
     if state == "working":
         return status_word(Status.DOING) if frame is None else spinner_glyph(frame)
@@ -86,7 +94,7 @@ def _glyph_markup(state: str, glyph: str) -> str:
     return f"[{color}]{glyph}[/]"
 
 
-def _fixed_width(
+def _fixed_cells(
     session: Session,
     short_id: str,
     plan_head: str,
@@ -98,6 +106,21 @@ def _fixed_width(
     plan_space = 1 if session.plan_id is not None else 0
     separators = len(" · ") * 3
     return head + plan_space + separators + len(age_text) + len(glyph)
+
+
+def row_widths(
+    session: Session,
+    width: int | None,
+    short_id: str,
+    plan_head: str,
+    age_text: str,
+    glyph: str,
+) -> RowWidths | None:
+    """Width budget for one row, or None when the caller gave no width."""
+    if width is None:
+        return None
+    fixed = _fixed_cells(session, short_id, plan_head, age_text, glyph)
+    return _share_widths(width - fixed, session.plan_id is not None)
 
 
 def session_line(
@@ -114,18 +137,12 @@ def session_line(
     short_id = agent_id(session)
     plan_head = f"P{session.plan_id}" if session.plan_id is not None else "-"
     age_text = age(session.started_at, stamp)
-    glyph = _glyph(state, frame)
-    title_width = branch_width = None
-    if width is not None:
-        fixed = _fixed_width(session, short_id, plan_head, age_text, glyph)
-        title_width, branch_width = _widths(width - fixed, session.plan_id is not None)
-
-    title = plan_title
-    if title_width is not None:
-        title = truncate(title, title_width)
+    glyph = state_glyph(state, frame)
+    widths = row_widths(session, width, short_id, plan_head, age_text, glyph)
+    title = plan_title if widths is None else truncate(plan_title, widths.title)
     branch = session.branch or "-"
-    if branch_width is not None:
-        branch = truncate(branch, branch_width)
+    if widths is not None:
+        branch = truncate(branch, widths.branch)
 
     plan = f"[dim]{plan_head}[/]"
     if title:

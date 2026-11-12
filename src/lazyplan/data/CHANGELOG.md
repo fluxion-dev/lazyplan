@@ -5,6 +5,14 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
 
 ## v0.41.0 — unreleased
 
+### Added
+
+- **Maintenance report, trim, and vacuum.** `lpui maint report` shows bytes and
+  row counts per table with a reclaimable estimate; `lpui maint trim` deletes
+  only derived rows; `lpui maint vacuum` reclaims free pages. Writes require
+  `--apply` and start with a verified `lazyplan.db.bak-<timestamp>` snapshot;
+  user-authored plan text is never trimmed.
+
 ### Changed
 
 - **`--archived` is the archive switch; `--finished` keeps the old filter.**

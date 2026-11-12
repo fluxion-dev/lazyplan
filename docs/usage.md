@@ -885,6 +885,28 @@ tokens.
   after a verified snapshot. Override the window per run with `--days 30` or
   `--days 30.days`.
 
+### Maintenance: report, trim, and vacuum
+
+- `lpui maint report` names its byte method (`dbstat`, or `page_count` when
+  `dbstat` is unavailable), then prints bytes and row counts per table, free
+  pages, and a reclaimable estimate. Table bytes include their indexes.
+- `lpui maint trim` previews derived rows only: expired claims and their
+  touch-points, forge cache older than the window, closed or merged pull
+  requests, orphaned rows in `notes`, `comments`, `criteria`,
+  `criterion_links`, `criterion_evidence`, `entity_keys`, `entity_repos`,
+  `issue_links`, and `vcs_links`, plus events older than the window. Add
+  `--apply` to delete them. It never trims a plan, milestone, task, criterion,
+  note, or comment that still has a live parent.
+- `lpui maint vacuum` previews file size and free pages; `--apply` reclaims
+  them. `VACUUM` needs exclusive access, so stop other writers first; a busy
+  database returns an error instead of waiting.
+- Every `--apply` writes `lazyplan.db.bak-<timestamp>` beside the database with
+  SQLite's backup API, runs `PRAGMA integrity_check`, compares plan, task, and
+  event counts, and copies `sessions/bindings`. If the snapshot fails, nothing
+  is mutated.
+- Windows stay at one week for plans, sessions, and events unless `--days`
+  overrides them for that run.
+
 ## Exit codes
 
 `0` worked · `1` row not found or setup layout misplaced · `2` flags or input

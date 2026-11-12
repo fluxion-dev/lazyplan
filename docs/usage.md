@@ -875,7 +875,8 @@ tokens.
 - Plans and sessions archive; they never lose their text. An archived plan is
   hidden from list, tree, brief, next, ready, stats, audit, trace, who, claims,
   and the agents panel. `lpui maint restore --plan 3` or
-  `lpui maint restore --session 4` brings it back.
+  `lpui maint restore --session 4` brings it back. A restored done plan returns
+  to the `--finished` around `--archived all` views, not the default list.
 - `--archived` selects the archive state on `list`: `--archived only` shows
   archived plans, `--archived all` (alias `show`) shows both, and the default
   hides them. `--finished` is the separate age filter: it shows plans marked

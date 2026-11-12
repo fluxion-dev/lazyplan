@@ -11,12 +11,12 @@ from ...core.policies.provenance import branch_ref
 class PlanNamesPort(Protocol):
     """The plan list a session label needs for titles."""
 
-    def list_plans(self, archived: str = "show") -> list[Plan]: ...
+    def list_plans(self, archived: str = "hide") -> list[Plan]: ...
 
 
 def plan_names(port: PlanNamesPort) -> dict[int, str]:
     """Plan id to title for every plan the journal knows."""
-    return {plan.id: plan.name for plan in port.list_plans()}
+    return {plan.id: plan.name for plan in port.list_plans(archived="show")}
 
 
 def plan_label(session: Session, title: str = "", empty: str = "no plan") -> str:

@@ -7,6 +7,7 @@ import tempfile
 import unittest
 
 from lazyplan import services
+from lazyplan.core.entities import Status
 from lazyplan.store import Store
 
 
@@ -28,6 +29,20 @@ class TestTransferService(unittest.TestCase):
             counts = services.import_all(target, dump, actor="fixture")
             self.assertEqual(counts["plans"], 1)
             self.assertEqual(target.list_plans()[0].name, "P")
+
+    def test_export_import_preserves_archive_state(self) -> None:
+        plan = self.store.list_plans()[0]
+        services.set_status(self.store, "plan", plan.id, Status.DONE)
+        self.store.archive_plan(plan.id, actor="fixture", now=1234.0)
+        dump = services.export_all(self.store)
+        self.assertEqual(dump["plans"][0]["plan"]["archived_at"], 1234.0)
+
+        with tempfile.TemporaryDirectory() as other:
+            target = Store(os.path.join(other, "target.db"))
+            services.import_all(target, dump, actor="fixture")
+            self.assertEqual(target.list_plans(), [])
+            restored = target.list_plans(archived="only")
+            self.assertEqual([row.archived_at for row in restored], [1234.0])
 
     def test_import_heals_ancestor_status_drift(self) -> None:
         plan = self.store.list_plans()[0]

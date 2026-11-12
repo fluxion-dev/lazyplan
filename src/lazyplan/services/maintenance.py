@@ -60,18 +60,19 @@ def _archive_candidates(
 
 def _write_archive(
     port: MaintenancePort,
-    plan_ids: tuple[int, ...],
-    session_ids: tuple[int, ...],
     stamp: float,
+    window: float,
     actor: str,
-) -> None:
-    """Snapshot, then archive both kinds in one transaction."""
+) -> tuple[tuple[int, ...], tuple[int, ...]]:
+    """Snapshot, then re-check and archive both kinds in one transaction."""
     _snapshot(port, True, "archive")
     with port.transaction():
+        plan_ids, session_ids = _archive_candidates(port, stamp, window)
         for plan_id in plan_ids:
             port.archive_plan(plan_id, actor=actor, now=stamp)
         if session_ids:
             port.archive_sessions(session_ids, actor=actor, now=stamp)
+    return plan_ids, session_ids
 
 
 def archive(
@@ -83,9 +84,10 @@ def archive(
 ) -> ArchiveResult:
     """Preview plans and sessions past the window, or archive them with *apply*."""
     stamp = time.time() if now is None else now
-    plan_ids, session_ids = _archive_candidates(port, stamp, _window_secs(days))
+    window = _window_secs(days)
+    plan_ids, session_ids = _archive_candidates(port, stamp, window)
     if apply:
-        _write_archive(port, plan_ids, session_ids, stamp, actor)
+        plan_ids, session_ids = _write_archive(port, stamp, window, actor)
     return ArchiveResult(plans=plan_ids, sessions=session_ids, applied=apply)
 
 

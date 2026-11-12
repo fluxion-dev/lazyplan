@@ -6,6 +6,7 @@ from typing import Any, cast
 
 from ..core.entities import Criterion, Plan, Status, Task
 from ..core.ports.coordination import CoordinationPort
+from ..core.ports.maintenance import MaintenancePort
 from ..core.ports.transfer import TransferPort
 from ..core.serialization import to_payload
 from .planning import heal, reconcile, set_status
@@ -103,7 +104,7 @@ def export_all(store: TransferPort) -> dict:
     maps = _export_maps(store)
     return {
         "lazyplan": 1,
-        "plans": [_export_entry(plan, maps) for plan in store.list_plans()],
+        "plans": [_export_entry(plan, maps) for plan in store.list_plans(archived="show")],
         "criterion_links": store.all_criterion_links(),
     }
 
@@ -400,6 +401,9 @@ def _import_all(store: TransferPort, data: dict, actor: str = "human") -> dict[s
         uid = str(p.get("uid", "") or "").strip()
         if uid and store.get_plan_by_uid(uid) is None:
             store.set_plan_uid(np.id, uid)
+        archived_at = float(p.get("archived_at", 0) or 0)
+        if archived_at > 0:
+            cast(MaintenancePort, store).archive_plan(np.id, actor=actor, now=archived_at)
         counts["plans"] += 1
         _import_criteria("plan", np.id, entry.get("criteria", []))
         counts["questions"] += _import_questions(store, np.id, entry.get("questions", []), actor)

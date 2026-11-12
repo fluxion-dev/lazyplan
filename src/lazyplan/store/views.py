@@ -242,7 +242,7 @@ class ViewsMixin(StoreBase):
             reader = _FullReader(self)
             if kind == "plan":
                 objects: dict[int, Plan | Milestone | Task] = {
-                    plan.id: plan for plan in self.list_plans()
+                    plan.id: plan for plan in self.list_plans(archived="show")
                 }
             elif kind == "milestone":
                 objects = {

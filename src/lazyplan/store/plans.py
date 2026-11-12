@@ -88,11 +88,11 @@ class PlansMixin(StoreBase):
         return self._row_to_plan(r) if r is not None else None
 
     def archive_plan(self, plan_id: int, actor: str = "human", now: float | None = None) -> bool:
-        """Stamp one plan archived; an already archived row writes no event."""
+        """Stamp one done plan archived; an already archived row writes no event."""
         stamp = time.time() if now is None else now
         with self._connect() as conn:
             cur = conn.execute(
-                "UPDATE plans SET archived_at=? WHERE id=? AND archived_at=0",
+                "UPDATE plans SET archived_at=? WHERE id=? AND archived_at=0 AND status='done'",
                 (stamp, plan_id),
             )
             changed = (cur.rowcount or 0) > 0
@@ -113,7 +113,7 @@ class PlansMixin(StoreBase):
                 self.log(actor, "plan", "restore", f"P#{plan_id} restored", now=stamp)
         return changed
 
-    def list_plans(self, archived: str = "show") -> list[Plan]:
+    def list_plans(self, archived: str = "hide") -> list[Plan]:
         """Plans, newest first, filtered by the archive view."""
         check_archive_mode(archived)
         with self._connect() as conn:

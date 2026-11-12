@@ -7,6 +7,7 @@ import tempfile
 import unittest
 
 from lazyplan import services
+from lazyplan.core.entities import Status
 from lazyplan.services import needs_me
 from lazyplan.store import Store
 
@@ -54,6 +55,7 @@ class TestArchivedSessionReads(unittest.TestCase):
 
     def test_claims_and_next_skip_archived_plans(self) -> None:
         self.store.claim_task(self.task.id, "builder", ttl_seconds=600, now=500.0)
+        self.store.set_status_raw("plan", self.plan.id, Status.DONE)
         self.store.archive_plan(self.plan.id, actor="builder", now=600.0)
         self.assertEqual(self.store.list_claims(now=700.0), [])
         self.assertEqual(self.store.claimable_tasks(now=700.0), [])

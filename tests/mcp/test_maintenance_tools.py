@@ -113,6 +113,7 @@ class TestMcpMaintenance(unittest.TestCase):
         self.assertEqual(row.archived_at, 0.0)
 
     def test_list_plans_hides_archived_plans_by_default(self) -> None:
+        self.store.set_status_raw("plan", self.plan.id, Status.DONE)
         self.store.archive_plan(self.plan.id, actor="qa")
         payload = self._payload("list_plans")
         self.assertEqual(payload, [])

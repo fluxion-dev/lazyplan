@@ -142,6 +142,7 @@ class TestMaintenanceParity(unittest.TestCase):
         self.assertFalse(archive["applied"])
         self.assertGreater(archive["total"], 0)
 
+        self.store.set_status_raw("plan", self.plan.id, Status.DONE)
         self.store.archive_plan(self.plan.id, actor="qa")
         restore = self._cli_json("maint", "restore", "--plan", str(self.plan.id))
         self.assertEqual(set(restore), {"kind", "id", "restored"})

@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 
 from ..core.entities import Plan, Status, Task
+from ..core.policies.maintenance import is_archived_row
 from ..core.ports.insights import InsightsPort
 from .sessions import previous_session
 
@@ -20,7 +21,10 @@ MIN_CONTEXT_CHARS = 120
 
 def _active_plan(store: InsightsPort, plan_id: int | None) -> Plan | None:
     if plan_id is not None:
-        return store.get_plan(plan_id)
+        plan = store.get_plan(plan_id)
+        if plan is None or is_archived_row(plan):
+            return None
+        return plan
     plans = store.list_plans()
     doing = [plan for plan in plans if plan.status == Status.DOING]
     if doing:

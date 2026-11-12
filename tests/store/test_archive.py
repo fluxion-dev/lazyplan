@@ -6,6 +6,7 @@ import os
 import tempfile
 import unittest
 
+from lazyplan.core.entities import Status
 from lazyplan.store import Store
 from lazyplan.store.session_pointer import binding_path, bindings_for_session
 
@@ -28,6 +29,7 @@ class TestStoreArchive(unittest.TestCase):
 
     def test_archive_plan_stamps_and_logs_once(self) -> None:
         plan = self.store.add_plan("Old work")
+        self.store.set_status_raw("plan", plan.id, Status.DONE)
         self.assertTrue(self.store.archive_plan(plan.id, actor="builder", now=123.0))
         stored = self.store.get_plan(plan.id)
         assert stored is not None
@@ -58,6 +60,7 @@ class TestStoreArchive(unittest.TestCase):
 
     def test_restore_plan_clears_and_logs_once(self) -> None:
         plan = self.store.add_plan("Old work")
+        self.store.set_status_raw("plan", plan.id, Status.DONE)
         self.store.archive_plan(plan.id, actor="builder", now=123.0)
         self.assertTrue(self.store.restore_plan(plan.id, actor="builder", now=456.0))
         stored = self.store.get_plan(plan.id)

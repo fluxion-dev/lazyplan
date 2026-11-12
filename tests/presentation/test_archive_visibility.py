@@ -5,6 +5,7 @@ from __future__ import annotations
 import io
 import os
 import tempfile
+import time
 import unittest
 from contextlib import redirect_stdout
 
@@ -29,6 +30,14 @@ class TestArchiveVisibility(unittest.TestCase):
         self.live = self.store.add_plan("Live plan")
         self.live_milestone = self.store.add_milestone(self.live.id, "Live slice")
         self.live_task = self.store.add_task(self.live_milestone.id, "Live task")
+        self.store.set_status_raw("plan", self.archived.id, Status.DONE)
+        self.store.log(
+            "fixture",
+            "plan",
+            "status",
+            f"plan #{self.archived.id} -> done",
+            now=time.time() - 2 * 86400,
+        )
         self.store.archive_plan(self.archived.id, actor="builder")
 
     def tearDown(self) -> None:
@@ -70,21 +79,22 @@ class TestArchiveVisibility(unittest.TestCase):
         self.assertIn("Archived plan", both)
         self.assertIn("Live plan", both)
 
-    def test_restore_puts_the_plan_back_on_every_surface(self) -> None:
+    def test_restore_returns_a_done_plan_to_the_finished_views(self) -> None:
         self.assertTrue(self.store.restore_plan(self.archived.id, actor="builder"))
 
         self.assertIn("Archived plan", self._list("list", "--status", "all"))
-        tree_ids = {plan.id for plan, _ in services.tree(self.store)}
-        self.assertEqual(tree_ids, {self.archived.id, self.live.id})
+        self.assertIn("Archived plan", self._list("list", "--finished"))
+        default_tree = {plan.id for plan, _ in services.tree(self.store)}
+        self.assertEqual(default_tree, {self.live.id})
+        finished_tree = {plan.id for plan, _ in services.tree(self.store, finished="show")}
+        self.assertEqual(finished_tree, {self.archived.id, self.live.id})
         self.assertEqual(
             [plan["id"] for plan in brief.build(self.store, plan_id=self.archived.id)["plans"]],
             [self.archived.id],
         )
-        next_task = services.claim_next(
-            self.store, "builder", plan_id=self.archived.id, suggest=True
+        self.assertIsNone(
+            services.claim_next(self.store, "builder", plan_id=self.archived.id, suggest=True)
         )
-        assert next_task is not None
-        self.assertEqual(next_task["task"]["id"], self.todo.id)
         self.assertIsNotNone(ready.check(self.store, self.archived.id))
         self.assertGreater(
             stats.compute(self.store, since=0.0, stale_before=0.0)["wip"],

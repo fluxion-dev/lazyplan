@@ -32,11 +32,12 @@ def _list_filters(args: argparse.Namespace) -> tuple[str, Status | None, str]:
         archived = "show"
     if getattr(args, "finished", False):
         return "only", None, archived
+    finished = "show" if archived != "hide" else "hide"
     if args.status is None:
-        return "hide", None, archived
+        return finished, None, archived
     if args.status == "all":
         return "show", None, archived
-    return "hide", Status(args.status), archived
+    return finished, Status(args.status), archived
 
 
 def _list_limit(args: argparse.Namespace) -> int | None:

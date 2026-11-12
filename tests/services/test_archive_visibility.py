@@ -8,7 +8,7 @@ import unittest
 
 from lazyplan import services
 from lazyplan.core.entities import Status
-from lazyplan.services import audit, brief, ready, stats, trace
+from lazyplan.services import audit, brief, context, maintenance, ready, review, stats, trace
 from lazyplan.store import Store
 
 
@@ -23,7 +23,7 @@ class TestArchivedPlanReads(unittest.TestCase):
         self.doing = self.store.add_task(self.milestone.id, "Old doing task")
         self.store.set_status_raw("task", self.doing.id, Status.DOING)
         services.set_status(self.store, "task", self.task.id, Status.DONE)
-        services.set_status(self.store, "plan", self.archived.id, Status.DONE)
+        self.store.set_status_raw("plan", self.archived.id, Status.DONE)
         self.store.archive_plan(self.archived.id, actor="builder")
         self.criterion = self.store.add_criteria("plan", self.archived.id, "Old proof")
         self.live = self.store.add_plan("Live plan")
@@ -78,6 +78,36 @@ class TestArchivedPlanReads(unittest.TestCase):
         self.assertIsNone(trace.trace_plan(self.store, self.archived.id))
         self.assertIsNone(trace.trace_criterion(self.store, self.criterion.id))
         self.assertIsNotNone(trace.trace_plan(self.store, self.live.id))
+
+    def test_context_and_review_cannot_see_archived_plan(self) -> None:
+        self.assertEqual(context.build(self.store, plan_id=self.archived.id)["active"], 0)
+        active = review.active_plan(self.store)
+        assert active is not None
+        self.assertEqual(active.id, self.live.id)
+        self.assertEqual(self.store.list_plans()[0].id, self.live.id)
+
+    def test_archive_requires_a_done_plan(self) -> None:
+        self.assertFalse(self.store.archive_plan(self.live.id, actor="builder"))
+        row = self.store.get_plan(self.live.id)
+        assert row is not None
+        self.assertEqual(row.archived_at, 0.0)
+
+    def test_archive_rechecks_candidates_inside_the_write(self) -> None:
+        from unittest import mock
+
+        calls: list[int] = []
+
+        def fake(port: object, stamp: float, window: float) -> tuple:
+            del port, stamp, window
+            calls.append(1)
+            return ((self.live.id,), ()) if len(calls) == 1 else ((), ())
+
+        with mock.patch.object(maintenance, "_archive_candidates", side_effect=fake):
+            result = maintenance.archive(self.store, apply=True)
+        self.assertEqual(result.plans, ())
+        row = self.store.get_plan(self.live.id)
+        assert row is not None
+        self.assertEqual(row.archived_at, 0.0)
 
 
 if __name__ == "__main__":

@@ -495,7 +495,7 @@ def tree(
     check_archive_mode(archived)
     if plan_mode not in ("all", "active", "finished"):
         raise ValueError("plan_mode must be all|active|finished")
-    plans = port.list_plans()
+    plans = port.list_plans(archived="show")
     milestones = port.milestones_map()
     tasks = port.tasks_map()
     status_events = port.plan_status_events_map() if finished != "show" else {}

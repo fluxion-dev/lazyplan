@@ -22,7 +22,7 @@ export const STORY_SCREENS: readonly Screen[] = [
     file: "lpui-control-room",
     width: 1604,
     height: 904,
-    alt: "Control room with the health and needs strip, active session, attention tasks, open question, claims, and approval drift.",
+    alt: "Control room with the plan tree, a compact agents row and its handoff, the needs line, an open question, approval drift, and a failed check.",
     caption: "What needs you, before it blocks the loop.",
   },
   {
@@ -38,8 +38,8 @@ export const STORY_SCREENS: readonly Screen[] = [
     file: "lpui-coordination",
     width: 1604,
     height: 904,
-    alt: "Plan tree with active and expired claims, blocked work, aging tasks, and a red check, with attention summarized in the control strip.",
-    caption: "Claims, blockers, and attention in one tree.",
+    alt: "Plan tree with title-only task rows, attention markers, and the selected task's overview showing its claim.",
+    caption: "Attention in the tree; claim detail in the overview.",
   },
   {
     name: "trust-evidence",

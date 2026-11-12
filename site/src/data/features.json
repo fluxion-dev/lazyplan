@@ -26,7 +26,7 @@
     {
       "id": "control-room",
       "title": "A control room for what needs you",
-      "description": "Health, drift, open questions, claims, and overlaps surface in one strip, so you know where to look.",
+      "description": "Health, drift, open questions, and blocked work surface in one line, so you know where to look.",
       "icon": "activity",
       "group": "plan"
     },

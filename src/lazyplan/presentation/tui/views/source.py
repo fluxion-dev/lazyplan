@@ -211,7 +211,7 @@ def render_diff(
     if remainder > 0:
         shown.append(f"[dim]+{remainder} more lines — o opens the full diff[/]")
     extra_files = page.total - len(page.files)
-    if extra_files > 0:
+    if page.has_more:
         shown.append(f"[dim]+{extra_files} more files[/]")
     if read.truncated:
         shown.append("[dim]diff truncated — o opens the full commit[/]")

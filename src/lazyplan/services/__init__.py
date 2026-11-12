@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from . import attribution as attribution
+from . import maintenance as maintenance
 from .base import GateError
 from .collaboration import (
     add_comment,

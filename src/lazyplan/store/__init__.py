@@ -15,6 +15,7 @@ from .claims import ClaimsMixin
 from .evidence import EvidenceMixin
 from .keys import KeysMixin
 from .links import LinksMixin
+from .maintenance import MaintenanceMixin
 from .plans import PlansMixin
 from .questions import QuestionsMixin
 from .refs import RefsMixin
@@ -37,6 +38,7 @@ class Store(
     AnnotationsMixin,
     KeysMixin,
     LinksMixin,
+    MaintenanceMixin,
     ReposMixin,
     RevisionsMixin,
     TasksMixin,

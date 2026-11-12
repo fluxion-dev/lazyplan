@@ -173,7 +173,6 @@ class ReconcileMixin:
         removed and re-added in the new order, so expansion state for the
         recreated rows is restored from the saved keys.
         """
-        app = self.app
         existing = list(parent.children)
         existing_keys = [self.node_key(node) for node in existing]
         wanted = [item[0] for item in desired]
@@ -183,12 +182,9 @@ class ReconcileMixin:
                 first = index
                 break
         changed: set[tuple[str, int]] = set()
-        recreated: set[tuple[str, int]] = set()
         for node in existing[first:]:
             key = self.node_key(node)
             if key is not None:
-                if key in self._loaded:
-                    recreated.add(key)
                 changed.add(key)
             self.forget_subtree(node)
             node.remove()
@@ -197,12 +193,8 @@ class ReconcileMixin:
             if self.update_row(existing[index], key, spec, tree):
                 changed.add(key)
         for key, spec, allow_expand in desired[first:]:
-            node = self.add_row(parent, tree, key, spec, allow_expand)
+            self.add_row(parent, tree, key, spec, allow_expand)
             changed.add(key)
-            if key in recreated or key in app._expanded:
-                self.load_branch(node, key)
-                if key in app._expanded:
-                    node.expand()
         return changed
 
     def desired_plans(self, plans: list) -> list[tuple[tuple[str, int], RowSpec, bool]]:

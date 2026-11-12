@@ -73,18 +73,28 @@ class TreeController(LazyBranchMixin, ReconcileMixin, PollMixin):
             self.app.update_preview()
             self.app.metrics_controller.refresh()
 
-    def apply_folds(self) -> None:
-        """Reflect saved expansion on the rows that exist; never load here."""
-        try:
-            for key, node in self.app._row_nodes.items():
-                if not node.allow_expand or not node.children:
+    def apply_expansion(self, reveal: set[tuple[str, int]] | None = None) -> None:
+        """Apply the expansion sets once, parents before children.
+
+        This pass only reflects state; it never records a transition. Events
+        posted by ``expand`` and ``collapse`` are ignored by the handlers
+        because the node already agrees with the sets.
+        """
+        app = self.app
+        effective = set(app._expanded)
+        if reveal:
+            effective.update(reveal)
+        for kind in ("plan", "milestone"):
+            for key in [key for key in app._row_nodes if key[0] == kind]:
+                node = app._row_nodes.get(key)
+                if node is None or not node.allow_expand:
                     continue
-                if key in self.app._expanded:
-                    node.expand()
-                else:
+                if key in effective:
+                    self.load_branch(node, key)
+                    if not node.is_expanded:
+                        node.expand()
+                elif node.is_expanded:
                     node.collapse()
-        finally:
-            self.app._refreshing = False
 
     def fold_all(self) -> None:
         """Collapse every loaded row, or load and open every branch."""
@@ -111,7 +121,7 @@ class TreeController(LazyBranchMixin, ReconcileMixin, PollMixin):
             self.app.notify("nothing to fold here")
             return
         if key not in self.app._row_nodes:
-            self.ensure_path(key)
+            self.materialize_path(key)
         node = self.app._row_nodes.get(key)
         if node is None:
             return
@@ -223,51 +233,75 @@ class TreeController(LazyBranchMixin, ReconcileMixin, PollMixin):
         self.rebuilds += 1
         active_tree, finished_tree = self.trees()
         app._refreshing = True
-        prev_selected = app.selected
-        view = self.capture_view()
-        prev_cursor = view["cursor"]
-        base = services.tree(app.store, status=None, archived="show", plan_mode="all")
-        self._prepare_model(base)
-        active, finished = self.filters.panels(base)
-        visible = active + finished
-        self._visible_keys = set()
-        for plan, milestones in visible:
-            self._visible_keys.add(("plan", plan.id))
-            for milestone, tasks in milestones:
-                self._visible_keys.add(("milestone", milestone.id))
-                self._visible_keys.update(("task", task.id) for task in tasks)
-        self._forge_map = app.store.forge_links_map()
-        self._vcs_map = app.store.vcs_links_map()
-        self._source_stats = self.filters.source_stats(
-            visible, self._vcs_map, self._forge_map, app.store.repos_map()
-        )
-        self._claims_map = app.store.claims_map()
-        self._drift_map = app.store.drift_counts()
-        self._attention = self._attention_keys(base, attention_reasons(app.store))
-        changed = self.reconcile_children(active_tree.root, active_tree, self.desired_plans(active))
-        changed |= self.reconcile_children(
-            finished_tree.root, finished_tree, self.desired_plans(finished)
-        )
-        if app.filter_text.strip():
-            self.build_all_children()
-        changed |= self.reconcile_branches()
-        active_tree.root.expand()
-        finished_tree.root.expand()
-        app._collapsed &= self._model_keys
-        app._expanded &= self._model_keys
-        self.restore_expanded()
-        for candidate in (prev_selected, prev_cursor):
-            if candidate in self._model_keys:
-                self.ensure_path(candidate)
-        self.apply_folds()
-        self.show_empty(not active, not finished)
-        app.spinner_controller.paint()
-        app.query_one("#hints", Label).update(hint_bar(max(10, app.size.width - 2), markup=True))
-        self.restore_view(view, prev_selected)
-        app.metrics_controller.refresh()
-        selected = app.selected
-        force = selected != prev_selected or (selected is not None and selected in changed)
-        app.update_preview(force=force)
+        try:
+            prev_selected = app.selected
+            view = self.capture_view()
+            base = services.tree(app.store, status=None, archived="show", plan_mode="all")
+            self._prepare_model(base)
+            active, finished = self.filters.panels(base)
+            visible = active + finished
+            self._visible_keys = set()
+            for plan, milestones in visible:
+                self._visible_keys.add(("plan", plan.id))
+                for milestone, tasks in milestones:
+                    self._visible_keys.add(("milestone", milestone.id))
+                    self._visible_keys.update(("task", task.id) for task in tasks)
+            self._forge_map = app.store.forge_links_map()
+            self._vcs_map = app.store.vcs_links_map()
+            self._source_stats = self.filters.source_stats(
+                visible, self._vcs_map, self._forge_map, app.store.repos_map()
+            )
+            self._claims_map = app.store.claims_map()
+            self._drift_map = app.store.drift_counts()
+            self._attention = self._attention_keys(base, attention_reasons(app.store))
+            changed = self.reconcile_children(
+                active_tree.root, active_tree, self.desired_plans(active)
+            )
+            changed |= self.reconcile_children(
+                finished_tree.root, finished_tree, self.desired_plans(finished)
+            )
+            filtering = bool(app.filter_text.strip())
+            if filtering:
+                self.build_all_children()
+            changed |= self.reconcile_branches()
+            if not active_tree.root.is_expanded:
+                active_tree.root.expand()
+            if not finished_tree.root.is_expanded:
+                finished_tree.root.expand()
+            self.sync_filter_snapshot(filtering)
+            self.apply_expansion(self.reveal_keys() if filtering else None)
+            self.show_empty(not active, not finished)
+            app.spinner_controller.paint()
+            app.query_one("#hints", Label).update(
+                hint_bar(max(10, app.size.width - 2), markup=True)
+            )
+            self.restore_view(view, prev_selected)
+            app.metrics_controller.refresh()
+            selected = app.selected
+            force = selected != prev_selected or (selected is not None and selected in changed)
+            app.update_preview(force=force)
+        finally:
+            app._refreshing = False
+
+    def sync_filter_snapshot(self, filtering: bool) -> None:
+        """Capture the baseline once per filter run and restore it when it clears."""
+        app = self.app
+        if filtering:
+            if app.state.filter_snapshot is None:
+                app.state.filter_snapshot = (set(app._expanded), set(app._collapsed))
+            return
+        snapshot = app.state.filter_snapshot
+        if snapshot is None:
+            return
+        app._expanded.clear()
+        app._expanded.update(snapshot[0])
+        app._collapsed.clear()
+        app._collapsed.update(snapshot[1])
+        app.state.filter_snapshot = None
+
+    def reveal_keys(self) -> set[tuple[str, int]]:
+        """Branches the active filter may open without touching the baseline."""
+        return {key for key in self._visible_keys if self.has_model_children(key)}
 
     def _prepare_model(self, base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]) -> None:
         """Index the model once so expansion never re-reads the database."""
@@ -293,22 +327,29 @@ class TreeController(LazyBranchMixin, ReconcileMixin, PollMixin):
                 self._model_keys.update(("task", task.id) for task in tasks)
 
     def on_expanded(self, node: TreeNode) -> None:
-        if self.app._refreshing or self._loading:
+        """Record a user expansion only; applied expansions already agree."""
+        if self._loading or self.app.state.filter_snapshot is not None:
             return
         key = self.node_key(node)
-        if key is not None:
-            self.app._collapsed.discard(key)
-            if key[0] in ("plan", "milestone"):
-                self.app._expanded.add(key)
-                self.load_branch(node, key)
+        if key is None or key[0] not in ("plan", "milestone"):
+            return
+        if key in self.app._expanded:
+            return
+        self.app._expanded.add(key)
+        self.app._collapsed.discard(key)
+        self.load_branch(node, key)
 
     def on_collapsed(self, node: TreeNode) -> None:
-        if self.app._refreshing:
+        """Record a user collapse only; applied collapses already agree."""
+        if self.app.state.filter_snapshot is not None:
             return
         key = self.node_key(node)
-        if key is not None and key[0] in ("plan", "milestone"):
-            self.app._collapsed.add(key)
-            self.app._expanded.discard(key)
+        if key is None or key[0] not in ("plan", "milestone"):
+            return
+        if key not in self.app._expanded:
+            return
+        self.app._expanded.discard(key)
+        self.app._collapsed.add(key)
 
     def render_row(self, key: tuple[str, int], spec: RowSpec, tree: Tree) -> str:
         """Render and cache one row at the current tree width."""

@@ -328,6 +328,51 @@ class TestInPlaceReconciliation(RefreshCase):
             )
 
 
+class TestExpansionOwnership(RefreshCase):
+    async def test_a_closed_milestone_stays_closed_after_a_structural_write(self) -> None:
+        app = create_app(self.store.path)
+        async with app.run_test(size=(120, 30)) as pilot:
+            await pilot.pause()
+            self.expand_all(app)
+            await pilot.pause()
+            plan_key = ("plan", self.plan.id)
+            milestone_key = ("milestone", self.milestone.id)
+            app.selected = milestone_key
+            app.tree_controller.fold_one()
+            await pilot.pause()
+            self.assertNotIn(milestone_key, app._expanded)
+            expanded = set(app._expanded)
+            collapsed = set(app._collapsed)
+            self.store.add_task(self.milestone.id, "Second", actor="ana")
+            app.refresh_all()
+            await pilot.pause()
+            self.assertEqual(set(app._expanded), expanded)
+            self.assertEqual(set(app._collapsed), collapsed)
+            self.assertTrue(app._row_nodes[plan_key].is_expanded)
+            self.assertFalse(app._row_nodes[milestone_key].is_expanded)
+
+    async def test_a_closed_plan_stays_closed_and_hides_a_new_milestone(self) -> None:
+        app = create_app(self.store.path)
+        async with app.run_test(size=(120, 30)) as pilot:
+            await pilot.pause()
+            self.expand_all(app)
+            await pilot.pause()
+            plan_key = ("plan", self.plan.id)
+            app.selected = plan_key
+            app.tree_controller.fold_one()
+            await pilot.pause()
+            expanded = set(app._expanded)
+            added = self.store.add_milestone(self.plan.id, "Later", actor="ana")
+            app.refresh_all()
+            await pilot.pause()
+            self.assertEqual(set(app._expanded), expanded)
+            plan_node = app._row_nodes[plan_key]
+            self.assertFalse(plan_node.is_expanded)
+            milestone_node = app._row_nodes[("milestone", added.id)]
+            self.assertFalse(milestone_node.is_expanded)
+            self.assertLess(milestone_node._line, 0)
+
+
 class TestViewPreservation(RefreshCase):
     def busy_tree(self) -> None:
         """Make the plan list long enough to scroll and keep the fixture on top."""

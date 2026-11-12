@@ -20,6 +20,7 @@ class AppState:
     filter_text: str = ""
     collapsed: set[tuple[str, int]] = field(default_factory=set)
     expanded: set[tuple[str, int]] = field(default_factory=set)
+    filter_snapshot: tuple[set[tuple[str, int]], set[tuple[str, int]]] | None = None
     preview_key: tuple[str, int] | None = None
     dirty_external: bool = False
     pending_note: str = ""

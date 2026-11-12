@@ -2,8 +2,9 @@
 
 A hook must never turn an unrelated repository into a gated one. The checkout
 is managed only when the database lives in that checkout, a row links the
-checkout, or an open session belongs to it. The owning task is the first doing
-task under a doing plan that resolves to the same checkout.
+checkout, or an open session started for planned work belongs to it. The
+owning task is the first doing task under a doing plan that resolves to the
+same checkout.
 """
 
 from __future__ import annotations
@@ -49,9 +50,15 @@ def _linked_rows(store: AppPort, repo: str) -> set[tuple[str, int]]:
 
 
 def _open_session(store: AppPort, repo: str) -> bool:
-    """True when an open session belongs to this checkout."""
+    """True when an open session started for planned work belongs to this checkout.
+
+    Hooks open a row for every host session in every checkout, so a
+    host-bound row without a plan says nothing about the checkout.
+    """
     wanted = store.normalize_repo_path(repo)
     for session in store.list_sessions(open_only=True, limit=50):
+        if session.host_session and session.plan_id is None:
+            continue
         if store.normalize_repo_path(session.repo_path) == wanted:
             return True
     return False

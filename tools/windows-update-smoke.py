@@ -2,9 +2,10 @@
 """Real Windows smoke for the detached update path.
 
 Builds two local wheels from HEAD (9.9.8 and 9.9.9), installs 9.9.8 into an
-isolated pipx home, stages 9.9.9, and runs the installed apply_on_launch path
-with restart disabled. The detached helper must update the venv after the
-parent exits.
+isolated pipx home (with the pip backend, and again with uv when it is on
+PATH), stages 9.9.9, and runs the installed apply_on_launch path with restart
+disabled. The detached helper must update the venv after the parent exits,
+with no package index reachable.
 
 Then stages a corrupt wheel and proves the install fails, the failure is
 parked with a log, and 9.9.8 still runs.
@@ -96,7 +97,7 @@ def reset_scenario(repro, env: dict[str, str], clear_logs: bool) -> None:
 def run_success(repro, env: dict[str, str], python: Path, target_wheel: Path, method: str) -> None:
     reset_scenario(repro, env, clear_logs=True)
     repro.stage_wheel(env, target_wheel, TARGET, method)
-    apply_child(repro, python, env)
+    apply_child(repro, python, dict(env, PIP_NO_INDEX="1", UV_OFFLINE="1"))
     wait_for(
         repro,
         lambda: installed_version(repro, python, env) == TARGET,
@@ -133,6 +134,18 @@ def run_failure(repro, env: dict[str, str], python: Path, root: Path, method: st
     print(f"{method} failure: old version v{TARGET} still runs")
 
 
+def install_pipx(repro, env: dict[str, str], pipx: str, wheel: Path, backend: str) -> Path:
+    repro.run([pipx, "install", "--backend", backend, str(wheel)], env=env)
+    venv = Path(env["PIPX_HOME"]) / "venvs" / PACKAGE
+    python = venv / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+    if not python.is_file():
+        raise SystemExit(f"cannot find the pipx venv python: {python}")
+    if installed_version(repro, python, env) != PRIOR:
+        raise SystemExit(f"prior wheel did not install with the {backend} backend")
+    print(f"pipx backend: {backend}")
+    return python
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--python", default=sys.executable)
@@ -149,18 +162,12 @@ def main(argv: list[str] | None = None) -> int:
         env = repro.isolated_env(root, args.pipx)
         prior_wheel = repro.build_wheel(args.python, root / "prior", PRIOR)
         target_wheel = repro.build_wheel(args.python, root / "target", TARGET)
-        repro.run(
-            [args.pipx, "install", "--backend", "pip", str(prior_wheel)],
-            env=env,
-        )
-        venv = Path(env["PIPX_HOME"]) / "venvs" / PACKAGE
-        python = venv / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
-        if not python.is_file():
-            raise SystemExit(f"cannot find the pipx venv python: {python}")
-        if installed_version(repro, python, env) != PRIOR:
-            raise SystemExit("prior wheel did not install")
-        run_success(repro, env, python, target_wheel, "pipx")
-        run_failure(repro, env, python, root, "pipx")
+        backends = ["pip", "uv"] if shutil.which("uv") else ["pip"]
+        for backend in backends:
+            python = install_pipx(repro, env, args.pipx, prior_wheel, backend)
+            run_success(repro, env, python, target_wheel, "pipx")
+            run_failure(repro, env, python, root, "pipx")
+            repro.run([args.pipx, "uninstall", PACKAGE], env=env)
 
         venv_root = root / "venv"
         repro.run([args.python, "-m", "venv", str(venv_root)], env=env)

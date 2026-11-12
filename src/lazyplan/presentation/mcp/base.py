@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, TextIO
 
 from ...core.ports.app import AppPort
 from ...infrastructure import settings
+from ...infrastructure.upgrade import installed_version
 
 PROTOCOL_VERSION = "2024-11-05"
 
@@ -91,7 +92,7 @@ class McpBase:
                         "tools": {"listChanged": False},
                         "resources": {"listChanged": False, "subscribe": False},
                     },
-                    "serverInfo": {"name": "lazyplan", "version": "0"},
+                    "serverInfo": {"name": "lazyplan", "version": installed_version()},
                 },
             )
         if method == "ping":

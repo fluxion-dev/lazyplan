@@ -107,20 +107,22 @@ def _plugin_item(host: str) -> IntegrationItem:
 
 
 def _event_item(host: str, event: str, native: str, surface: str) -> IntegrationItem:
+    shape: dict[str, object] = {
+        "host": host,
+        "event": event,
+        "native": native,
+        "matcher": hook_hosts.matcher(host, native),
+        "command": hook_install.command(host, event),
+        "surface": surface,
+    }
+    seconds = hook_hosts.timeout(host, event)
+    if seconds is not None:
+        shape["timeout"] = seconds
     return IntegrationItem(
         id=hook_id(host, event),
         kind=HOOK,
         label=f"{HOST_LABELS.get(host, host)} {event}",
-        fingerprint=_fingerprint(
-            {
-                "host": host,
-                "event": event,
-                "native": native,
-                "matcher": hook_hosts.matcher(host, native),
-                "command": hook_install.command(host, event),
-                "surface": surface,
-            }
-        ),
+        fingerprint=_fingerprint(shape),
         host=host,
         event=event,
     )

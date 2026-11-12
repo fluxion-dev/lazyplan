@@ -86,8 +86,9 @@ pending with no writes; `lpui doctor` names them, and the next interactive
 
 On Windows the command and the TUI Update screen use a detached helper. lpui
 closes first, then the helper waits for the process to exit, updates the
-existing pipx venv with that venv's own `python -m pip` (or a plain venv's
-pip), writes the full command and output under
+existing pipx venv with that venv's own `python -m pip`, or with `uv pip` when
+pipx built the venv with uv (or a plain venv's pip), needs no network for a
+downloaded update, writes the full command and output under
 `%LOCALAPPDATA%\lazyplan\logs\`, runs the post-upgrade setup review, and
 relaunches the TUI. A failed install leaves the old version runnable and the
 next launch shows the log path. `lpui upgrade --diagnose` prints the detected
@@ -670,16 +671,20 @@ question at each lifecycle point:
 
 - A `git commit` is denied when the checkout is managed and no task is doing.
   A checkout is managed when its database lives under `.agents/lazyplan/`, a
-  plan links it, or an open session belongs to it. Unrelated repositories keep
-  normal git behavior.
+  plan links it, or an open session there was started by hand or belongs to a
+  plan. The row a hook opens for every host session does not count, so
+  unrelated repositories keep normal git behavior.
 - A stop is blocked once when a managed checkout has unlinked commits. The next
   stop after the host's continuation guard is allowed, and the session is
   marked awaiting.
 - Every prompt receives a short active-plan packet: plan, doing task, open
   criteria, and next task. Cursor has no prompt-context field, so it injects
   the same packet at session start and after each reported tool.
-- Edits that touch a task's paths name that task; other edits ask to update the
-  plan when scope changed.
+- Edits that touch a task's paths name that task, other edits ask to update the
+  plan when scope changed, and a commit asks to be linked. The agent receives
+  these as context alongside the tool result. Outside a managed checkout they
+  appear only while some plan has a doing task, and edits to files outside the
+  checkout are never reported.
 - Session end closes the open session with an auto summary and a next-task
   handoff.
 
@@ -690,13 +695,16 @@ into a reminder. `--no-hooks` removes the managed entries. At runtime,
 read-only readiness probe (database, session, and latency) and writes nothing;
 `lpui doctor` includes the same probe.
 
-OpenCode has no stop-block surface, so it denies commits through its permission
-hook, injects the cached plan on every model call, and marks the row awaiting
-when the session idles. Its generated plugin closes the child stdin, logs a
-failed hook once with the event and reason, and retries on the next event.
+OpenCode has no stop-block surface, so it denies commits before the shell runs,
+injects the cached plan on every model call, and marks the row awaiting when
+the session idles. The generated plugin loads on OpenCode 1.x and on the 2.x
+plugin API. It closes the child stdin, logs a failed hook once with the event
+and reason, and retries on the next event.
 Claude Code and Codex block both commits and stops; Gemini blocks tools and
 retries the turn; Cursor denies shell commands and continues after a stop.
 Claude Code reads `PreCompact` output as guidance for the compaction summary.
+Its entries wait at most 30 seconds, and 10 seconds at session end, where
+Claude Code otherwise allows 1.5 seconds.
 
 Tasks can declare the repo-relative paths they expect to edit. `next` skips a
 todo whose touch-points overlap an active claim in the same checkout. A manual

@@ -11,6 +11,7 @@ import fnmatch
 from pathlib import Path
 
 from ..core.entities import HookResult, Session
+from ..core.policies.hooks import is_git_commit
 from ..core.ports.app import AppPort
 from ..core.ports.insights import InsightsPort
 from . import audit, brief, hook_scope
@@ -31,6 +32,17 @@ def _doing_task(store: InsightsPort) -> int | None:
                 if task.status.value == "doing":
                     return task.id
     return None
+
+
+def _repo_relative(path: str, repo: str) -> str:
+    """A host's edited path as the repo-relative, slash-separated form touch-points use."""
+    candidate = Path(path)
+    if candidate.is_absolute() and repo:
+        try:
+            candidate = candidate.resolve().relative_to(Path(repo).resolve())
+        except (OSError, ValueError):
+            pass
+    return candidate.as_posix()
 
 
 def _matches_task(path: str, patterns: list[str]) -> bool:
@@ -54,50 +66,25 @@ def stop_result(
     """Block one stop when a managed checkout has unlinked commits."""
     lines = _brief_lines(store, cwd, commits)
     loose = [line.strip() for line in lines if line.strip().startswith("unlinked")]
+    if not loose:
+        return HookResult()
     continued = bool(payload.get("stop_hook_active"))
     try:
         continued = continued or int(payload.get("loop_count") or 0) > 0
     except (TypeError, ValueError):
         continued = True
-    if loose and mode == "strict" and host != "opencode" and not continued:
+    if mode == "strict" and host != "opencode" and not continued:
         scope = hook_scope.resolve(store, cwd)
         if scope.managed and scope.task is not None:
             task_id = scope.task.id
             parts = [f"lazyplan: {len(loose)} plan(s) have unlinked commits."]
             parts.append(f"Link them with `lpui link --kind task --id {task_id}`.")
-            if session is not None:
+            if session is not None and not session.host_session:
                 parts.append(
                     f"Then end S{session.id} with `lpui session end --id S{session.id} --summary`."
                 )
             return HookResult(block=" ".join(parts))
-    return HookResult(_stop_text(store, cwd, commits, session, loose=loose)).capped()
-
-
-def _stop_text(
-    store: InsightsPort,
-    cwd: Path,
-    commits: list[audit.Commit] | None,
-    session: Session | None = None,
-    loose: list[str] | None = None,
-) -> str:
-    lines = _brief_lines(store, cwd, commits)
-    parts = (
-        loose
-        if loose is not None
-        else [line.strip() for line in lines if line.strip().startswith("unlinked")]
-    )
-    tracked = session
-    if tracked is None:
-        rows = store.list_sessions(open_only=True, limit=1)
-        tracked = rows[0] if rows else None
-    if tracked is not None:
-        state = session_services.session_state(tracked)
-        parts.append(
-            f"session S{tracked.id} is {state}; run `lpui session end --id S{tracked.id} --summary`"
-        )
-    if not parts:
-        return ""
-    return "lazyplan: " + "; ".join(parts)
+    return HookResult("lazyplan: " + "; ".join(loose)).capped()
 
 
 def _next_handoff(store: InsightsPort) -> str:
@@ -144,7 +131,7 @@ def _commit_reason() -> str:
 
 def commit_result(store: AppPort, cwd: Path, command: str, mode: str) -> HookResult:
     """Deny a git commit when a managed checkout has no doing task."""
-    if "git commit" not in command:
+    if not is_git_commit(command):
         return HookResult()
     scope = hook_scope.resolve(store, cwd)
     if not scope.managed or scope.task is not None:
@@ -155,16 +142,22 @@ def commit_result(store: AppPort, cwd: Path, command: str, mode: str) -> HookRes
     return HookResult(reason, context=True).capped()
 
 
-def post_tool_text(store: InsightsPort, command: str, path: str) -> str:
-    """Reminder after a commit or an edit; empty for unrelated tools."""
-    if "git commit" in command:
-        task_id = _doing_task(store)
+def post_tool_text(store: AppPort, cwd: Path, command: str, path: str) -> str:
+    """Reminder after a commit or an edit; empty when no task could own the work."""
+    committed = is_git_commit(command)
+    if not committed and not path:
+        return ""
+    scope = hook_scope.resolve(store, cwd)
+    task_id = scope.task_id if scope.managed else _doing_task(store)
+    if task_id is None and not scope.managed:
+        return ""
+    if committed:
         if task_id is None:
             return "lazyplan: commit landed; start or pick a task with `lpui brief`."
         return f"lazyplan: commit landed; link it with `lpui link --kind task --id {task_id}`."
-    if not path:
+    path = _repo_relative(path, scope.repo)
+    if Path(path).is_absolute():
         return ""
-    task_id = _doing_task(store)
     if task_id is None:
         return "lazyplan: edit landed; start or pick a task with `lpui brief`."
     patterns = store.list_touchpoints(task_id)

@@ -11,7 +11,8 @@ import json
 import os
 import re
 import select
-import threading
+import stat
+import sys
 import time
 from pathlib import Path
 from typing import TextIO, cast
@@ -21,7 +22,7 @@ from ..core.policies import hooks as hook_modes
 from ..core.policies.sessions import phase_for_event
 from ..core.ports.app import AppPort
 from ..core.ports.insights import InsightsPort
-from ..infrastructure.repo import git_common_dir
+from ..infrastructure.repo import git_common_dir, shared_git_lookups
 from . import attribution, audit, context, hook_policy
 from . import sessions as session_services
 
@@ -47,18 +48,7 @@ def _read_bounded(stream: TextIO, timeout: float = STDIN_TIMEOUT) -> str:
         # StringIO and other non-file streams already return immediately.
         return stream.read()
     if os.name == "nt":
-        box: dict[str, str] = {}
-
-        def read_all() -> None:
-            try:
-                box["raw"] = stream.read()
-            except (OSError, ValueError):
-                box["raw"] = ""
-
-        thread = threading.Thread(target=read_all, daemon=True)
-        thread.start()
-        thread.join(timeout)
-        return box.get("raw", "")
+        return _read_windows(fd, timeout)
     chunks: list[bytes] = []
     deadline = time.monotonic() + timeout
     try:
@@ -77,6 +67,54 @@ def _read_bounded(stream: TextIO, timeout: float = STDIN_TIMEOUT) -> str:
     except (OSError, ValueError):
         return ""
     return b"".join(chunks).decode("utf-8", "replace")
+
+
+def _read_windows(fd: int, timeout: float) -> str:
+    """Poll a Windows pipe and read only the bytes already waiting in it.
+
+    A blocking read left pending on stdin makes every child process that
+    inherits the pipe, starting with git, hang at startup.
+    """
+    mode = os.fstat(fd).st_mode
+    if not stat.S_ISFIFO(mode):
+        return "" if stat.S_ISCHR(mode) else _read_to_end(fd).decode("utf-8", "replace")
+    chunks: list[bytes] = []
+    deadline = time.monotonic() + timeout
+    while True:
+        waiting = _pipe_waiting(fd)
+        if waiting is None:
+            break
+        if waiting:
+            chunks.append(os.read(fd, waiting))
+            deadline = time.monotonic() + 0.02
+        elif time.monotonic() >= deadline:
+            break
+        else:
+            time.sleep(0.005)
+    return b"".join(chunks).decode("utf-8", "replace")
+
+
+def _read_to_end(fd: int) -> bytes:
+    chunks: list[bytes] = []
+    while chunk := os.read(fd, 65536):
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
+def _pipe_waiting(fd: int) -> int | None:
+    """Bytes waiting in a Windows pipe; None once the writer has closed it."""
+    if sys.platform != "win32":
+        return None
+    import ctypes
+    import msvcrt
+    from ctypes import wintypes
+
+    available = wintypes.DWORD()
+    handle = wintypes.HANDLE(msvcrt.get_osfhandle(fd))
+    peek = ctypes.windll.kernel32.PeekNamedPipe
+    if not peek(handle, None, 0, None, ctypes.byref(available), None):
+        return None
+    return int(available.value)
 
 
 def read_payload(stream: TextIO) -> dict:
@@ -264,6 +302,17 @@ def _session_text(
     return text
 
 
+def _compaction_text(store: InsightsPort, cwd: Path, session: Session | None) -> str:
+    """Summary guidance that carries the active plan through a compaction."""
+    packet = _session_text(store, cwd, None, session)
+    if not packet:
+        return ""
+    return (
+        "Keep this lazyplan state in the summary, with plan and task ids, "
+        "so work resumes on the same task:\n" + packet
+    )
+
+
 def _prompt_text(store: InsightsPort) -> str:
     """Small active-plan packet for every user prompt."""
     payload = context.build(store, max_chars=1200)
@@ -289,22 +338,37 @@ def build_result(
     here = cwd or Path.cwd()
     who = host or detect_host(payload)
     try:
-        session = _track_session(store, event, who, here, payload)
-        if event in ("session-start", "pre-compact"):
-            return HookResult(_session_text(store, here, commits, session), context=True).capped()
-        if event == "stop":
-            return hook_policy.stop_result(store, here, commits, session, payload, mode, who)
-        if event == "session-end":
-            return hook_policy.session_end_result(store, session, who)
-        if event == "prompt-submit":
-            return HookResult(_prompt_text(store), context=True).capped()
-        if event == "pre-tool":
-            return hook_policy.commit_result(store, here, _command(payload), mode)
-        if event == "post-tool":
-            text = hook_policy.post_tool_text(store, _command(payload), _file_path(payload))
-            return HookResult(text).capped()
+        with shared_git_lookups():
+            return _dispatch(store, event, payload, here, commits, who, mode)
     except (RuntimeError, OSError, ValueError, KeyError):
         return HookResult()
+
+
+def _dispatch(
+    store: AppPort,
+    event: str,
+    payload: dict,
+    here: Path,
+    commits: list[audit.Commit] | None,
+    who: str,
+    mode: str,
+) -> HookResult:
+    session = _track_session(store, event, who, here, payload)
+    if event == "session-start":
+        return HookResult(_session_text(store, here, commits, session), context=True).capped()
+    if event == "pre-compact":
+        return HookResult(_compaction_text(store, here, session), context=True).capped()
+    if event == "stop":
+        return hook_policy.stop_result(store, here, commits, session, payload, mode, who)
+    if event == "session-end":
+        return hook_policy.session_end_result(store, session, who)
+    if event == "prompt-submit":
+        return HookResult(_prompt_text(store), context=True).capped()
+    if event == "pre-tool":
+        return hook_policy.commit_result(store, here, _command(payload), mode)
+    if event == "post-tool":
+        text = hook_policy.post_tool_text(store, here, _command(payload), _file_path(payload))
+        return HookResult(text, context=True).capped()
     return HookResult()
 
 

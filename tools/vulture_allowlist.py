@@ -15,6 +15,7 @@
   tests, never by production call sites.
 - sqlite3 API noise: row_factory.
 - `_status_keep_ids` is the bounded keep-set helper asserted directly by trim tests.
+- shlex API noise: whitespace and whitespace_split configure the lexer.
 """
 
 _.compose
@@ -77,6 +78,8 @@ context
 tui_only
 _.display
 _.row_factory
+_.whitespace
+_.whitespace_split
 _.criteria_progress
 _.day
 _.percent

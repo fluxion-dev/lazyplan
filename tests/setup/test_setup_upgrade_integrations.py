@@ -108,6 +108,16 @@ class UpgradeCase(unittest.TestCase):
             self.assertFalse(self.settings().exists())
             self.assertFalse(setup.load_state(self.home).hooks_enabled)
 
+    def test_upgrade_keeps_the_advisory_hook_mode(self):
+        self.first_run(hooks="advisory")
+        self.assertIn("--mode advisory", self.settings().read_text(encoding="utf-8"))
+        with mock.patch.dict(hook_hosts.TIMEOUTS, {"claude": {"*": 45}}):
+            self.upgrade()
+        text = self.settings().read_text(encoding="utf-8")
+        self.assertIn('"timeout": 45', text)
+        self.assertIn("--mode advisory", text)
+        self.assertNotIn("--mode strict", text)
+
     def test_explicit_hooks_re_enables_install(self):
         self.first_run(hooks=False)
         setup.install_hooks(self.home, ["claude"], mode=True)

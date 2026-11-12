@@ -206,7 +206,7 @@ def refresh_installed_hooks(
     hosts = sorted(installed - pending)
     if not hosts:
         return {"installed": [], "backups": [], "skipped": []}
-    return hook_install.install(home, hosts=hosts)
+    return hook_install.install(home, hosts=hosts, mode=state.hooks_mode)
 
 
 def refresh_integrations(

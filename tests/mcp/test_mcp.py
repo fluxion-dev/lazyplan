@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from importlib.metadata import version
 
 from lazyplan.presentation import mcp
 from lazyplan.store import Store
@@ -33,6 +34,9 @@ class TestMcpTransport(unittest.TestCase):
         self.assertEqual(result["protocolVersion"], mcp.PROTOCOL_VERSION)
         self.assertIn("tools", result["capabilities"])
         self.assertIn("resources", result["capabilities"])
+        self.assertEqual(
+            result["serverInfo"], {"name": "lazyplan", "version": version("lazyplan-tui")}
+        )
 
     def test_ping(self):
         self.assertEqual(_call(self.server, "ping")["result"], {})

@@ -72,6 +72,30 @@ class ScopeCase(unittest.TestCase):
         self.assertTrue(scope.managed)
         self.assertIsNone(scope.task)
 
+    def test_a_hook_session_without_a_plan_leaves_the_checkout_unmanaged(self):
+        store = Store(self.home / ".lazyplan/lazyplan.db")
+        self._seed(store)
+        store.start_session(
+            "claude", repo_path=str(self.repo), now=100.0, host="claude", host_session="s-1"
+        )
+        scope = hook_scope.resolve(store, self.repo)
+        self.assertFalse(scope.managed)
+        self.assertIsNone(scope.task)
+
+    def test_a_hook_session_with_a_plan_makes_the_checkout_managed(self):
+        store = Store(self.home / ".lazyplan/lazyplan.db")
+        plan_id, _task = self._seed(store)
+        store.start_session(
+            "claude",
+            plan_id=plan_id,
+            repo_path=str(self.repo),
+            now=100.0,
+            host="claude",
+            host_session="s-1",
+        )
+        self.assertTrue(hook_scope.resolve(store, self.repo).managed)
+        self.assertFalse(hook_scope.resolve(store, self.other).managed)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -79,6 +79,17 @@ MATCHERS: dict[str, dict[str, str]] = {
 }
 
 
+# Claude Code waits 600 seconds for a hook by default, and gives SessionEnd
+# hooks 1.5 seconds unless one names a longer timeout.
+TIMEOUTS: dict[str, dict[str, int]] = {"claude": {"*": 30, "session-end": 10}}
+
+
+def timeout(host: str, event: str) -> int | None:
+    """Seconds a host should wait for one event, or None for the host default."""
+    table = TIMEOUTS.get(host, {})
+    return table.get(event, table.get("*"))
+
+
 def matcher(host: str, native: str) -> str:
     """Tool matcher for one host event; every tool when the event has none."""
     return MATCHERS.get(host, {}).get(native, "*")

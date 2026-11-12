@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from . import update_log
+from . import textfile, update_log
 from .update_stage import StagedUpdate, StageError, wheel_path
 from .upgrade import PIPX, VENV, InstallInfo, detect
 
@@ -41,6 +41,28 @@ def _pipx_python(info: InstallInfo, windows: bool) -> str:
         return sys.executable
     venv = Path(info.detail)
     return str(venv / ("Scripts/python.exe" if windows else "bin/python"))
+
+
+def _pipx_backend(info: InstallInfo) -> str:
+    """The backend pipx recorded for this venv; pip when the metadata predates backends."""
+    try:
+        data = json.loads(textfile.read(Path(info.detail) / "pipx_metadata.json"))
+    except (OSError, ValueError):
+        return "pip"
+    return "uv" if isinstance(data, dict) and data.get("backend") == "uv" else "pip"
+
+
+def _windows_pipx_command(info: InstallInfo, python: str, wheel: Path) -> tuple[str, ...]:
+    """Install into the pipx venv with the tool that built it; a uv-built venv has no pip."""
+    if _pipx_backend(info) != "uv":
+        return (python, "-m", "pip", "install", "--no-input", str(wheel))
+    uv = shutil.which("uv")
+    if not uv:
+        raise StageError(
+            "this pipx install was built with uv, which is not on PATH; "
+            "reinstall with `pipx install --force --backend pip lazyplan-tui`"
+        )
+    return (uv, "pip", "install", "--python", python, str(wheel))
 
 
 def _restart_command(
@@ -87,15 +109,7 @@ def build_apply_plan(
         python = _pipx_python(install, is_windows)
         scripts = Path(pipx).parent
         if is_windows:
-            command = (
-                python,
-                "-m",
-                "pip",
-                "install",
-                "--force-reinstall",
-                "--no-input",
-                str(wheel),
-            )
+            command = _windows_pipx_command(install, python, wheel)
         else:
             command = (pipx, "install", str(wheel), "--force")
     elif update.method == VENV:

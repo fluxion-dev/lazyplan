@@ -10,15 +10,18 @@ import time
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
+from unittest import mock
 
 from lazyplan import services
 from lazyplan.core.entities import Status
+from lazyplan.infrastructure import repo as repo_lookups
 from lazyplan.infrastructure.repo import git_common_dir
 from lazyplan.presentation.cli import main as lpui_main
 from lazyplan.presentation.cli.parser import build_parser
 from lazyplan.services import audit, hooks
 from lazyplan.store import Store
 from tests.support.home import sandbox_home
+from tests.support.paths import ROOT
 
 
 class HookCase(unittest.TestCase):
@@ -58,6 +61,11 @@ class HookCase(unittest.TestCase):
         services.set_status(store, "plan", plan.id, Status.DOING, actor="t")
         return plan.id, task.id
 
+    def _seed_linked(self) -> tuple[int, int]:
+        plan_id, task_id = self._seed()
+        Store(self.db).add_repo_link("plan", plan_id, str(self.repo), actor="t")
+        return plan_id, task_id
+
     def _git(self, *args: str) -> None:
         subprocess.run(["git", *args], cwd=self.repo, check=True, capture_output=True)
 
@@ -96,6 +104,36 @@ class HookCase(unittest.TestCase):
         finally:
             reader.close()
             os.close(write_fd)
+
+    def test_hook_process_exits_when_the_host_keeps_stdin_open(self):
+        self._init_git("main")
+        env = dict(os.environ, LAZYPLAN_DB=str(self.db), PYTHONPATH=os.path.join(ROOT, "src"))
+        Store(self.db).add_plan("P")
+        proc = subprocess.Popen(
+            [sys.executable, "-m", "lazyplan", "hook", "stop", "--host", "claude"],
+            cwd=self.repo,
+            env=env,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        assert proc.stdin is not None
+        try:
+            proc.stdin.write(b'{"session_id": "s1", "hook_event_name": "Stop"}')
+            proc.stdin.flush()
+            code = proc.wait(timeout=30)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait()
+            self.fail("lpui hook did not exit while stdin stayed open")
+        finally:
+            proc.stdin.close()
+            for stream in (proc.stdout, proc.stderr):
+                if stream is not None:
+                    stream.close()
+        self.assertEqual(code, 0)
+        rows = Store(self.db).list_sessions(open_only=True)
+        self.assertEqual([row.host_session for row in rows], ["s1"])
 
     def test_hook_probe_writes_nothing_without_a_database(self):
         missing = self.home / "missing.db"
@@ -217,6 +255,23 @@ class HookCase(unittest.TestCase):
         self.assertEqual(row.branch, f"task/{task_id}-pane")
         self.assertEqual(row.plan_id, plan_id)
 
+    def test_a_hook_run_asks_git_for_the_checkout_once(self):
+        _plan, task_id = self._seed()
+        self._init_git(f"task/{task_id}-pane")
+        with mock.patch.object(repo_lookups.subprocess, "run", wraps=subprocess.run) as run:
+            hooks.build_result(
+                "session-start",
+                {"session_id": "host-a"},
+                self.repo,
+                commits=[],
+                store=Store(self.db),
+            )
+        rev_parses = [call for call in run.call_args_list if "rev-parse" in call.args[0]]
+        self.assertEqual(len(rev_parses), 1)
+        self.assertEqual(
+            Store(self.db).list_sessions(open_only=True)[0].branch, f"task/{task_id}-pane"
+        )
+
     def test_a_branch_switch_updates_the_row(self):
         plan_id, task_id = self._seed()
         self._init_git("main")
@@ -277,8 +332,13 @@ class HookCase(unittest.TestCase):
     def test_pre_compact_injects_the_context_packet(self):
         _plan, _task = self._seed()
         result = hooks.build_result("pre-compact", {}, self.repo, commits=[], store=Store(self.db))
+        self.assertTrue(result.text.startswith("Keep this lazyplan state in the summary"))
         self.assertIn("Doing task", result.text)
         self.assertTrue(result.context)
+
+    def test_pre_compact_without_active_plans_is_silent(self):
+        result = hooks.build_result("pre-compact", {}, self.repo, commits=[], store=Store(self.db))
+        self.assertEqual(result.text, "")
 
     def test_session_handoff_is_in_session_start(self):
         plan_id, _task = self._seed()
@@ -313,7 +373,7 @@ class HookCase(unittest.TestCase):
         store = Store(self.db)
         session, _ = store.start_session("ana", now=time.time())
         result = hooks.build_result("stop", {}, self.repo, commits=[], store=Store(self.db))
-        self.assertIn(f"S{session.id} is awaiting", result.text)
+        self.assertEqual(result, hooks.HookResult())
         updated = Store(self.db).get_session(session.id)
         assert updated is not None
         self.assertTrue(updated.awaiting)
@@ -359,6 +419,35 @@ class HookCase(unittest.TestCase):
         )
         self.assertIn("unlinked commits", result.block)
         self.assertIn("lpui link --kind task", result.block)
+
+    def test_stop_block_leaves_a_host_session_running(self):
+        _task_id, commits = self._unlinked()
+        result = hooks.build_result(
+            "stop",
+            {"session_id": "s-1"},
+            self.repo,
+            commits=commits,
+            store=Store(self.db),
+            mode="strict",
+            host="claude",
+        )
+        self.assertIn("lpui link --kind task", result.block)
+        self.assertNotIn("session end", result.block)
+
+    def test_stop_without_unlinked_commits_is_silent(self):
+        self._seed_linked()
+        result = hooks.build_result(
+            "stop",
+            {"session_id": "s-1"},
+            self.repo,
+            commits=[],
+            store=Store(self.db),
+            mode="strict",
+            host="claude",
+        )
+        self.assertEqual(result, hooks.HookResult())
+        rows = Store(self.db).list_sessions(open_only=True)
+        self.assertEqual([row.phase for row in rows], ["awaiting"])
 
     def test_continued_stop_is_allowed(self):
         _task_id, commits = self._unlinked()
@@ -460,12 +549,51 @@ class HookCase(unittest.TestCase):
         )
 
     def test_post_tool_commit_asks_for_a_link(self):
+        _plan, task_id = self._seed_linked()
+        payload = {"tool_input": {"command": "git commit -m x"}}
+        result = hooks.build_result(
+            "post-tool", payload, self.repo, commits=[], store=Store(self.db)
+        )
+        self.assertIn(f"--id {task_id}", result.text)
+        self.assertTrue(result.context)
+
+    def test_post_tool_names_a_global_plans_doing_task(self):
         _plan, task_id = self._seed()
         payload = {"tool_input": {"command": "git commit -m x"}}
         result = hooks.build_result(
             "post-tool", payload, self.repo, commits=[], store=Store(self.db)
         )
         self.assertIn(f"--id {task_id}", result.text)
+
+    def test_post_tool_with_nothing_in_progress_is_silent_outside_a_managed_checkout(self):
+        Store(self.db).add_plan("Idle", "what", goal="why")
+        for payload in (
+            {"tool_input": {"command": "git commit -m x"}},
+            {"tool_name": "Edit", "tool_input": {"file_path": "src/app.py"}},
+        ):
+            with self.subTest(payload=payload):
+                result = hooks.build_result(
+                    "post-tool", payload, self.repo, commits=[], store=Store(self.db)
+                )
+                self.assertEqual(result.text, "")
+
+    def test_cli_post_tool_reminder_reaches_claude_as_context(self):
+        _plan, task_id = self._seed_linked()
+        out = io.StringIO()
+        old_stdin = sys.stdin
+        sys.stdin = io.StringIO(
+            json.dumps({"hook_event_name": "PostToolUse", "tool_input": {"command": "git commit"}})
+        )
+        try:
+            with redirect_stdout(out):
+                code = lpui_main(["hook", "post-tool", "--host", "claude"])
+        finally:
+            sys.stdin = old_stdin
+        self.assertEqual(code, 0)
+        body = json.loads(out.getvalue())
+        self.assertNotIn("systemMessage", body)
+        self.assertEqual(body["hookSpecificOutput"]["hookEventName"], "PostToolUse")
+        self.assertIn(f"--id {task_id}", body["hookSpecificOutput"]["additionalContext"])
 
     def _linked_plan(self) -> int:
         store = Store(self.db)
@@ -508,6 +636,20 @@ class HookCase(unittest.TestCase):
         )
         self.assertEqual(result.block, "")
 
+    def test_a_host_session_in_an_unrelated_checkout_does_not_gate_commits(self):
+        self._seed()
+        payload = {"session_id": "s-1", "hook_event_name": "PreToolUse"}
+        for event in ("session-start", "prompt-submit"):
+            hooks.build_result(
+                event, payload, self.repo, commits=[], store=Store(self.db), host="claude"
+            )
+        commit = dict(payload, tool_input={"command": "git commit -m x"})
+        result = hooks.build_result(
+            "pre-tool", commit, self.repo, commits=[], store=Store(self.db), host="claude"
+        )
+        self.assertEqual(result, hooks.HookResult())
+        self.assertEqual(len(Store(self.db).list_sessions(open_only=True)), 1)
+
     def test_non_git_commands_are_never_blocked(self):
         self._linked_plan()
         payload = {"tool_input": {"command": "git status"}}
@@ -517,7 +659,7 @@ class HookCase(unittest.TestCase):
         self.assertEqual(result.block, "")
 
     def test_post_tool_edit_names_the_owning_task(self):
-        _plan, task_id = self._seed()
+        _plan, task_id = self._seed_linked()
         Store(self.db).add_touchpoint(task_id, "src/**", actor="t")
         payload = {"tool_name": "Edit", "tool_input": {"file_path": "src/app.py"}}
         result = hooks.build_result(
@@ -525,8 +667,37 @@ class HookCase(unittest.TestCase):
         )
         self.assertIn(f"T{task_id}", result.text)
 
+    def test_post_tool_absolute_edit_path_names_the_owning_task(self):
+        _plan, task_id = self._seed_linked()
+        Store(self.db).add_touchpoint(task_id, "src/**", actor="t")
+        absolute = str(self.repo / "src" / "app.py")
+        payload = {"tool_name": "Edit", "tool_input": {"file_path": absolute}}
+        result = hooks.build_result(
+            "post-tool", payload, self.repo, commits=[], store=Store(self.db)
+        )
+        self.assertIn(f"src/app.py belongs to T{task_id}", result.text)
+
+    def test_post_tool_edit_outside_the_checkout_is_silent(self):
+        _plan, task_id = self._seed_linked()
+        Store(self.db).add_touchpoint(task_id, "src/**", actor="t")
+        outside = self.home / "src" / "app.py"
+        payload = {"tool_name": "Write", "tool_input": {"file_path": str(outside)}}
+        result = hooks.build_result(
+            "post-tool", payload, self.repo, commits=[], store=Store(self.db)
+        )
+        self.assertEqual(result.text, "")
+
+    def test_post_tool_edit_outside_a_managed_checkout_without_a_task_is_silent(self):
+        self._linked_plan()
+        outside = self.home / "notes.md"
+        payload = {"tool_name": "Edit", "tool_input": {"file_path": str(outside)}}
+        result = hooks.build_result(
+            "post-tool", payload, self.repo, commits=[], store=Store(self.db)
+        )
+        self.assertEqual(result.text, "")
+
     def test_post_tool_edit_outside_the_task_asks_for_scope(self):
-        _plan, _task = self._seed()
+        _plan, _task = self._seed_linked()
         payload = {"tool_name": "Write", "tool_input": {"file_path": "docs/readme.md"}}
         result = hooks.build_result(
             "post-tool", payload, self.repo, commits=[], store=Store(self.db)
@@ -534,7 +705,7 @@ class HookCase(unittest.TestCase):
         self.assertIn("scope", result.text)
 
     def test_post_tool_apply_patch_reads_the_patch_path(self):
-        _plan, task_id = self._seed()
+        _plan, task_id = self._seed_linked()
         Store(self.db).add_touchpoint(task_id, "src/**", actor="t")
         payload = {
             "tool_name": "apply_patch",
@@ -546,6 +717,7 @@ class HookCase(unittest.TestCase):
         self.assertIn(f"T{task_id}", result.text)
 
     def test_post_tool_edit_without_a_task_points_at_brief(self):
+        self._linked_plan()
         payload = {"tool_name": "Edit", "tool_input": {"file_path": "src/app.py"}}
         result = hooks.build_result(
             "post-tool", payload, self.repo, commits=[], store=Store(self.db)

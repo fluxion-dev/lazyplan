@@ -39,8 +39,9 @@ class InstallCase(unittest.TestCase):
         self.assertTrue(plugin.is_file())
         text = plugin.read_text(encoding="utf-8")
         self.assertIn("export default", text)
-        self.assertIn('id: "lazyplan"', text)
-        self.assertIn("async setup(ctx)", text)
+        self.assertIn('export default { id: "lazyplan", setup, server }', text)
+        self.assertIn("const setup = async (ctx)", text)
+        self.assertIn("const server = async (input)", text)
         self.assertIn("session-start", text)
         self.assertIn("ctx.event.subscribe", text)
         self.assertIn("session.idle", text)
@@ -200,10 +201,25 @@ class InstallCase(unittest.TestCase):
         hook_install.install(self.home, ["claude"])
         hooks = self._read(settings)["hooks"]
         self.assertIn("PreCompact", hooks)
+        fresh = [dict(old_post[0], timeout=30)]
         self.assertEqual(
             [(group["matcher"], group["hooks"]) for group in hooks["PostToolUse"]],
-            [("Edit", user), (hook_hosts.matcher("claude", "PostToolUse"), old_post)],
+            [("Edit", user), (hook_hosts.matcher("claude", "PostToolUse"), fresh)],
         )
+
+    def test_claude_entries_carry_timeouts(self):
+        hook_install.install(self.home, ["claude"])
+        hooks = self._read(self.home / ".claude/settings.json")["hooks"]
+        timeouts = {native: groups[0]["hooks"][0]["timeout"] for native, groups in hooks.items()}
+        self.assertEqual(timeouts.pop("SessionEnd"), 10)
+        self.assertEqual(set(timeouts.values()), {30})
+        self.assertEqual(len(timeouts), len(hook_hosts.EVENTS["claude"]) - 1)
+
+    def test_other_hosts_keep_their_default_timeouts(self):
+        hook_install.install(self.home, ["gemini", "codex", "cursor"])
+        for relative in (".gemini/settings.json", ".codex/hooks.json", ".cursor/hooks.json"):
+            with self.subTest(relative=relative):
+                self.assertNotIn("timeout", (self.home / relative).read_text(encoding="utf-8"))
 
     def test_reads_settings_with_a_byte_order_mark(self):
         settings = self.home / ".claude/settings.json"

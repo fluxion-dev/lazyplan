@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+import time
 import uuid
 
 from ..core.entities import (
@@ -56,6 +57,7 @@ class PlansMixin(StoreBase):
             description=self._opt(r, keys, "description"),
             status=Status(r["status"]) if "status" in keys else Status.TODO,
             goal=self._opt(r, keys, "goal"),
+            archived_at=float(r["archived_at"]) if "archived_at" in keys else 0.0,
         )
 
     def plan_uid(self, pid: int) -> str:
@@ -83,6 +85,32 @@ class PlansMixin(StoreBase):
         with self._connect() as conn:
             r = conn.execute("SELECT * FROM plans WHERE id=?", (pid,)).fetchone()
         return self._row_to_plan(r) if r is not None else None
+
+    def archive_plan(self, plan_id: int, actor: str = "human", now: float | None = None) -> bool:
+        """Stamp one plan archived; an already archived row writes no event."""
+        stamp = time.time() if now is None else now
+        with self._connect() as conn:
+            cur = conn.execute(
+                "UPDATE plans SET archived_at=? WHERE id=? AND archived_at=0",
+                (stamp, plan_id),
+            )
+            changed = (cur.rowcount or 0) > 0
+            if changed:
+                self.log(actor, "plan", "archive", f"P#{plan_id} archived", now=stamp)
+        return changed
+
+    def restore_plan(self, plan_id: int, actor: str = "human", now: float | None = None) -> bool:
+        """Clear one plan's archive stamp; a live row writes no event."""
+        stamp = time.time() if now is None else now
+        with self._connect() as conn:
+            cur = conn.execute(
+                "UPDATE plans SET archived_at=0 WHERE id=? AND archived_at<>0",
+                (plan_id,),
+            )
+            changed = (cur.rowcount or 0) > 0
+            if changed:
+                self.log(actor, "plan", "restore", f"P#{plan_id} restored", now=stamp)
+        return changed
 
     def list_plans(self) -> list[Plan]:
         """All plans, newest first."""

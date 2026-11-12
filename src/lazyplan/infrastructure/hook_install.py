@@ -232,6 +232,8 @@ const run = (directory, event, payload = {}, json = false) =>
     })
   })
 
+const mentionsCommit = (text) => /\\bgit\\b[\\s\\S]*\\bcommit\\b/.test(text)
+
 const toolInput = (event) => event.input?.args ?? event.input ?? {}
 const commandOf = (event) => {
   const value = toolInput(event).command
@@ -253,7 +255,7 @@ export default {
       const session = sessionOf(event)
       for (const resource of event.resources ?? []) {
         const text = String(resource)
-        if (!text.includes("git commit")) continue
+        if (!mentionsCommit(text)) continue
         const answer = await run(directory, "pre-tool", { command: text, session }, true)
         if (!answer) return
         if (answer.block) {
@@ -269,7 +271,7 @@ export default {
       const tool = String(event.tool ?? "").toLowerCase()
       const command = commandOf(event)
       const file = pathOf(event)
-      if (tool === "bash" && !command.includes("git commit")) return
+      if (tool === "bash" && !mentionsCommit(command)) return
       if (!command && !file) return
       const session = sessionOf(event)
       const text = await run(directory, "post-tool", { tool, command, path: file, session })

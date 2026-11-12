@@ -11,6 +11,7 @@ import fnmatch
 from pathlib import Path
 
 from ..core.entities import HookResult, Session
+from ..core.policies.hooks import is_git_commit
 from ..core.ports.app import AppPort
 from ..core.ports.insights import InsightsPort
 from . import audit, brief, hook_scope
@@ -144,7 +145,7 @@ def _commit_reason() -> str:
 
 def commit_result(store: AppPort, cwd: Path, command: str, mode: str) -> HookResult:
     """Deny a git commit when a managed checkout has no doing task."""
-    if "git commit" not in command:
+    if not is_git_commit(command):
         return HookResult()
     scope = hook_scope.resolve(store, cwd)
     if not scope.managed or scope.task is not None:
@@ -157,7 +158,7 @@ def commit_result(store: AppPort, cwd: Path, command: str, mode: str) -> HookRes
 
 def post_tool_text(store: InsightsPort, command: str, path: str) -> str:
     """Reminder after a commit or an edit; empty for unrelated tools."""
-    if "git commit" in command:
+    if is_git_commit(command):
         task_id = _doing_task(store)
         if task_id is None:
             return "lazyplan: commit landed; start or pick a task with `lpui brief`."

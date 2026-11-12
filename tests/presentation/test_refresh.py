@@ -6,6 +6,7 @@ import os
 import tempfile
 import time
 import unittest
+from typing import Any
 from unittest import mock
 
 from lazyplan import services
@@ -645,12 +646,26 @@ class TestViewPreservation(RefreshCase):
             self.store.add_plan(f"Extra {index}")
         self.store.update_plan(self.plan.id, goal="most recent", actor="ana")
 
+    async def settled_tree(self, pilot: Any) -> Tree:
+        """The plan tree once the first layout stops resizing it.
+
+        On Windows a bare pause can return before the panes finish their first
+        layout, and the tree then shrinks under a cursor the test already placed.
+        """
+        tree = pilot.app.query_one("#tree", Tree)
+        height = -1
+        for _ in range(50):
+            await pilot.pause(0.02)
+            if tree.scrollable_content_region.height == height:
+                return tree
+            height = tree.scrollable_content_region.height
+        self.fail("the tree layout never settled")
+
     async def test_cursor_and_scroll_survive_a_structural_update(self) -> None:
         self.busy_tree()
         app = create_app(self.store.path)
         async with app.run_test(size=(120, 18)) as pilot:
-            await pilot.pause()
-            tree = app.query_one("#tree", Tree)
+            tree = await self.settled_tree(pilot)
             tree.move_cursor(list(app._row_nodes.values())[4])
             tree.scroll_to(y=3, animate=False)
             await pilot.pause()
@@ -669,9 +684,8 @@ class TestViewPreservation(RefreshCase):
         session_id = self.open_session()
         app = create_app(self.store.path)
         async with app.run_test(size=(120, 18)) as pilot:
-            await pilot.pause()
+            tree = await self.settled_tree(pilot)
             harness = self.harness(app, session_id)
-            tree = app.query_one("#tree", Tree)
             tree.move_cursor(list(app._row_nodes.values())[4])
             tree.scroll_to(y=3, animate=False)
             await pilot.pause()

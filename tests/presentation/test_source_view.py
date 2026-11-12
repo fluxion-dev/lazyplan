@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import unittest
+from unittest import mock
 
+from lazyplan.infrastructure.vcs import DiffRead
 from lazyplan.services.source import (
     CommitStats,
     FileStat,
     SourceCommit,
     SourceFile,
+    clear_diff_cache,
     parse_patch,
 )
 
@@ -16,10 +19,15 @@ try:
     from rich.text import Text
 
     from lazyplan.presentation.tui.views.diff_render import diff_counts, render_unified
-    from lazyplan.presentation.tui.views.source import commit_label, file_label
+    from lazyplan.presentation.tui.views.source import (
+        commit_label,
+        file_label,
+        render_diff_preview,
+    )
 except ImportError:  # pragma: no cover - stdlib-only interpreter
     Text = None  # type: ignore[assignment]
     diff_counts = render_unified = commit_label = file_label = None  # type: ignore[assignment]
+    render_diff_preview = None  # type: ignore[assignment]
 
 PATCH = (
     "diff --git a/a.txt b/a.txt\n"
@@ -31,6 +39,10 @@ PATCH = (
     "-two\n"
     "+TWO\n"
     "+three\n"
+)
+
+LARGE_PATCH = "diff --git a/a.txt b/a.txt\n--- a/a.txt\n+++ b/a.txt\n@@ -1 +1,500 @@\n" + "".join(
+    f"+line {index}\n" for index in range(500)
 )
 
 
@@ -56,6 +68,29 @@ class SourceDiffViewTest(unittest.TestCase):
         removed = next(row for row in rows if "two" in Text.from_markup(row).plain)
         self.assertIn("on #", added)
         self.assertIn("on #", removed)
+
+    def test_preview_pages_without_another_read(self) -> None:
+        class FakeBackend:
+            def __init__(self) -> None:
+                self.calls = 0
+
+            def diff(self, root, sha, path=""):
+                self.calls += 1
+                return DiffRead(state="ok", patch=LARGE_PATCH)
+
+        backend = FakeBackend()
+        clear_diff_cache()
+        with mock.patch(
+            "lazyplan.services.source_diff.detect_backend", return_value=(backend, "/repo")
+        ):
+            first = render_diff_preview("/repo", "d" * 40, "a.txt", 80, limit=100)
+            second = render_diff_preview("/repo", "d" * 40, "a.txt", 80, offset=100, limit=100)
+        self.assertTrue(first.has_more)
+        self.assertGreater(first.total, 100)
+        self.assertEqual(second.offset, 100)
+        self.assertTrue(second.has_more)
+        self.assertEqual(backend.calls, 1)
+        clear_diff_cache()
 
 
 @unittest.skipUnless(commit_label is not None, "textual/rich not installed")

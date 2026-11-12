@@ -223,6 +223,10 @@ _.action_filter_kind
 _.action_open_owner
 _.action_open
 _.action_copy
+_.action_next_file
+_.action_prev_file
+_.action_more
+_.action_less
 _.action_filter
 _.check_action
 _._on_click

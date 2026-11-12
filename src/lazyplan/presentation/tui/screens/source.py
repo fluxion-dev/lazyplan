@@ -22,7 +22,6 @@ except ImportError:  # pragma: no cover
 
 from lazyplan.services.source import (
     CommitStats,
-    FileStat,
     SourceCommit,
     SourceFile,
     SourcePull,
@@ -38,20 +37,27 @@ from ....core.ports.provenance import ProvenancePort
 from ...shared.design import KIND_ICON, action_bar, escape_markup
 from ..navigation import NAV_BINDINGS, NavigationMixin
 from ..views.source import (
+    DiffPreview,
+    commit_data,
     commit_label,
+    commit_matches,
     commit_preview,
+    file_data,
     file_label,
     file_preview,
+    pull_data,
     pull_label,
     pull_preview,
-    render_diff,
+    render_diff_preview,
+    repo_data,
     repo_label,
+    repo_matches,
     repo_preview,
+    source_files,
     summary_chips,
 )
 
 DIFF_PREVIEW_LINES = 300
-DIFF_PREVIEW_FILES = 20
 
 
 if _TEXTUAL_OK:
@@ -65,6 +71,10 @@ if _TEXTUAL_OK:
             *NAV_BINDINGS,
             Binding("escape", "back", "Back", priority=True),
             Binding("enter", "open_owner", "Owner", priority=True),
+            Binding("n", "next_file", "Next file"),
+            Binding("p", "prev_file", "Prev file"),
+            Binding("ctrl+d", "more", "More"),
+            Binding("ctrl+u", "less", "Less"),
             Binding("o", "open", "Open"),
             Binding("y", "copy", "Copy"),
             Binding("slash", "filter", "Filter"),
@@ -78,10 +88,17 @@ if _TEXTUAL_OK:
             self._oid = oid
             self._trail = SourceTrail(kind=kind, oid=oid, title="")
             self._filter = ""
-            self._diff_cache: dict[tuple[str, str, str, int], list[str]] = {}
+            self._diff_cache: dict[tuple[str, str, str, int, bool, int], DiffPreview] = {}
             self._stats_loaded: set[tuple[str, str]] = set()
             self._stats: dict[tuple[str, str], CommitStats] = {}
             self._commit_nodes: dict[tuple[str, str], TreeNode] = {}
+            self._file_index = 0
+            self._view_key: tuple[str, str, str] | None = None
+            self._page_offset = 0
+            self._page_total = 0
+            self._page_has_more = False
+            self._current_node: TreeNode | None = None
+            self._split_mode = False
 
         def compose(self) -> ComposeResult:
             with Vertical(id="source-page"):
@@ -101,17 +118,7 @@ if _TEXTUAL_OK:
             self.query_one("#source-tree-wrap").border_title = " trail "
             self.query_one("#source-preview").border_title = " diff "
             self.query_one("#source-filter", Input).display = False
-            self.query_one("#source-hints", Label).update(
-                action_bar(
-                    ("o", "open"),
-                    [
-                        ("enter", "owner"),
-                        ("y", "copy"),
-                        ("/", "filter"),
-                        ("esc", "back"),
-                    ],
-                )
-            )
+            self._update_hints()
             self._load()
             self.query_one("#source-tree", NavTree).focus()
 
@@ -130,9 +137,10 @@ if _TEXTUAL_OK:
                 self._preview(node)
 
         def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
-            """Keep the filter field's Enter free while it owns the keyboard."""
-            if action == "open_owner" and self._focus_is_text():
-                return False
+            """Keep the filter field's keys free while it owns the keyboard."""
+            if action in ("open_owner", "next_file", "prev_file", "more", "less"):
+                if self._focus_is_text():
+                    return False
             return super().check_action(action, parameters)
 
         def _load(self) -> None:
@@ -173,11 +181,11 @@ if _TEXTUAL_OK:
                 return
             needle = self._filter.strip().lower()
             for repo in self._trail.repos:
-                if needle and not self._repo_matches(repo, needle):
+                if needle and not repo_matches(repo, needle):
                     continue
-                repo_node = tree.root.add(repo_label(repo), data=self._repo_data(repo))
+                repo_node = tree.root.add(repo_label(repo), data=repo_data(repo))
                 for commit in repo.commits:
-                    if needle and not self._commit_matches(commit, needle):
+                    if needle and not commit_matches(commit, needle):
                         continue
                     key = (repo.path, commit.sha)
                     stats = self._stats.get(key)
@@ -187,7 +195,7 @@ if _TEXTUAL_OK:
                         else {}
                     )
                     commit_node = repo_node.add(
-                        commit_label(commit, stats), data=self._commit_data(repo, commit)
+                        commit_label(commit, stats), data=commit_data(repo, commit)
                     )
                     self._commit_nodes[key] = commit_node
                     seen: set[str] = set()
@@ -198,7 +206,7 @@ if _TEXTUAL_OK:
                         seen.add(item.path)
                         commit_node.add_leaf(
                             file_label(item, stat),
-                            data=self._file_data(repo, commit, item, stat),
+                            data=file_data(repo, commit, item, stat),
                         )
                     for stat in by_path.values():
                         if stat.path in seen:
@@ -206,7 +214,7 @@ if _TEXTUAL_OK:
                         item = SourceFile(path=stat.path)
                         commit_node.add_leaf(
                             file_label(item, stat),
-                            data=self._file_data(repo, commit, item, stat),
+                            data=file_data(repo, commit, item, stat),
                         )
                     if not commit.files and not by_path:
                         commit_node.add_leaf(
@@ -216,7 +224,7 @@ if _TEXTUAL_OK:
                 for pull in repo.pulls:
                     if needle and needle not in f"pr {pull.number} {pull.title}".lower():
                         continue
-                    repo_node.add_leaf(pull_label(pull), data=self._pull_data(repo, pull))
+                    repo_node.add_leaf(pull_label(pull), data=pull_data(repo, pull))
                 repo_node.expand()
             if not tree.root.children:
                 tree.root.add_leaf(
@@ -224,75 +232,6 @@ if _TEXTUAL_OK:
                     data={"kind": "empty", "copy": ""},
                 )
             self._preview(tree.cursor_node)
-
-        def _repo_matches(self, repo: SourceRepo, needle: str) -> bool:
-            haystack = " ".join(
-                [repo.name, repo.path, repo.remote, repo.branch, repo.slug]
-                + [commit.subject for commit in repo.commits]
-                + [item.path for commit in repo.commits for item in commit.files]
-                + [pull.title for pull in repo.pulls]
-            ).lower()
-            return needle in haystack
-
-        @staticmethod
-        def _commit_matches(commit: SourceCommit, needle: str) -> bool:
-            haystack = " ".join(
-                [commit.sha, commit.subject, *[item.path for item in commit.files]]
-            ).lower()
-            return needle in haystack
-
-        def _repo_data(self, repo: SourceRepo) -> dict[str, Any]:
-            return {
-                "kind": "repo",
-                "repo": repo.path,
-                "copy": repo.path,
-                "url": "",
-                "object": repo,
-            }
-
-        def _commit_data(self, repo: SourceRepo, commit: SourceCommit) -> dict[str, Any]:
-            return {
-                "kind": "commit",
-                "repo": repo.path,
-                "sha": commit.sha,
-                "copy": commit.sha,
-                "url": commit.url,
-                "owners": commit.owners,
-                "object": commit,
-            }
-
-        def _file_data(
-            self,
-            repo: SourceRepo,
-            commit: SourceCommit,
-            item: SourceFile,
-            stat: FileStat | None = None,
-        ) -> dict[str, Any]:
-            return {
-                "kind": "file",
-                "repo": repo.path,
-                "sha": commit.sha,
-                "path": item.path,
-                "copy": item.path,
-                "url": item.url,
-                "owners": commit.owners,
-                "object": item,
-                "status": stat.status if stat is not None else "",
-                "additions": stat.additions if stat is not None else 0,
-                "deletions": stat.deletions if stat is not None else 0,
-                "binary": stat.binary if stat is not None else False,
-            }
-
-        def _pull_data(self, repo: SourceRepo, pull: SourcePull) -> dict[str, Any]:
-            return {
-                "kind": "pull",
-                "repo": repo.path,
-                "number": pull.number,
-                "copy": pull.url,
-                "url": pull.url,
-                "owners": pull.owners,
-                "object": pull,
-            }
 
         @on(Tree.NodeHighlighted, "#source-tree")
         def _on_highlight(self, event: Tree.NodeHighlighted) -> None:
@@ -357,7 +296,7 @@ if _TEXTUAL_OK:
                     continue
                 item = SourceFile(path=path, url=urls.get(path, str(child_data.get("url") or "")))
                 child.set_label(file_label(item, stat))
-                child_data.update(self._file_data(repo_obj, commit, item, stat))
+                child_data.update(file_data(repo_obj, commit, item, stat))
                 seen.add(path)
             for stat in stats.files:
                 if stat.path in seen:
@@ -365,59 +304,197 @@ if _TEXTUAL_OK:
                 item = SourceFile(path=stat.path, url=urls.get(stat.path, ""))
                 node.add_leaf(
                     file_label(item, stat),
-                    data=self._file_data(repo_obj, commit, item, stat),
+                    data=file_data(repo_obj, commit, item, stat),
                 )
             current = self.query_one("#source-tree", NavTree).cursor_node
             if current is node:
                 self._preview(node)
 
-        def _preview(self, node: TreeNode | None) -> None:
+        def _preview(self, node: TreeNode | None, reset_page: bool = True) -> None:
+            """Paint the selected repo, commit, file, or pull request."""
             body = self.query_one("#source-preview-body", Static)
             data = node.data if node is not None else None
+            previous = self._view_key
+            if reset_page or node is not self._current_node:
+                self._page_offset = 0
             text = "Select a repo, commit, file, or pull request."
+            key: tuple[str, str, str] | None = None
+            preview = DiffPreview()
             if isinstance(data, dict):
                 kind = str(data.get("kind", ""))
                 obj = data.get("object")
                 repo = str(data.get("repo", "") or "")
                 sha = str(data.get("sha", "") or "")
                 if kind == "repo" and isinstance(obj, SourceRepo):
+                    key = (repo, "", "")
                     text = repo_preview(obj)
                 elif kind == "commit" and isinstance(obj, SourceCommit):
-                    text = commit_preview(obj, repo, self._diff_block(repo, sha))
+                    if node is not self._current_node:
+                        self._file_index = 0
+                    stats = self._stats.get((repo, sha))
+                    items = source_files(obj, stats)
+                    if items:
+                        self._file_index = min(max(0, self._file_index), len(items) - 1)
+                        path = items[self._file_index][0].path
+                        key = (repo, sha, path)
+                        preview = self._diff_preview(repo, sha, path)
+                        text = commit_preview(obj, stats, items, self._file_index, preview.rows)
+                    else:
+                        key = (repo, sha, "")
+                        text = commit_preview(obj, stats, items, 0, ())
                 elif kind == "file" and isinstance(obj, SourceFile):
-                    text = file_preview(obj, repo, sha, self._diff_block(repo, sha, str(obj.path)))
+                    commit = self._commit(repo, sha)
+                    stats = self._stats.get((repo, sha))
+                    items = source_files(commit, stats) if commit is not None else ((obj, None),)
+                    current = next(
+                        (
+                            index
+                            for index, (item, _stat) in enumerate(items)
+                            if item.path == obj.path
+                        ),
+                        0,
+                    )
+                    self._file_index = current
+                    key = (repo, sha, obj.path)
+                    preview = self._diff_preview(repo, sha, obj.path)
+                    text = file_preview(commit, items, current, preview.rows)
                 elif kind == "pull" and isinstance(obj, SourcePull):
+                    key = (repo, f"pr:{obj.number}", "")
                     text = pull_preview(obj)
                 else:
                     text = "No source linked for this row."
+            if key != previous:
+                self._view_key = key
+            self._page_total = preview.total
+            self._page_has_more = preview.has_more
+            self._current_node = node
             body.update(text)
-            try:
-                self.query_one("#source-preview", VerticalScroll).scroll_home(animate=False)
-            except Exception:
-                pass
+            if reset_page:
+                try:
+                    self.query_one("#source-preview", VerticalScroll).scroll_home(animate=False)
+                except Exception:
+                    pass
+            self._update_hints()
 
-        def _diff_block(self, repo: str, sha: str, path: str = "") -> list[str]:
-            """Read and render a bounded diff preview, cached per row and width."""
+        def _repo(self, path: str) -> SourceRepo | None:
+            return next((repo for repo in self._trail.repos if repo.path == path), None)
+
+        def _commit(self, repo: str, sha: str) -> SourceCommit | None:
+            parent = self._repo(repo)
+            if parent is None:
+                return None
+            return next((commit for commit in parent.commits if commit.sha == sha), None)
+
+        def _diff_preview(self, repo: str, sha: str, path: str) -> DiffPreview:
+            """One cached page of a single file's diff."""
             width = max(20, self.query_one("#source-preview").size.width - 2)
-            key = (repo, sha, path, width)
+            key = (repo, sha, path, width, self._split_mode, self._page_offset)
             cached = self._diff_cache.get(key)
             if cached is not None:
-                return list(cached)
-            rows = render_diff(
+                return cached
+            preview = render_diff_preview(
                 repo,
                 sha,
                 path,
-                DIFF_PREVIEW_LINES,
-                DIFF_PREVIEW_FILES,
-                width=width,
+                width,
+                offset=self._page_offset,
+                limit=DIFF_PREVIEW_LINES,
+                split=self._split_mode,
             )
-            self._diff_cache[key] = rows
-            return list(rows)
+            self._diff_cache[key] = preview
+            return preview
+
+        def _update_hints(self) -> None:
+            """Keep the footer in step with paging and file navigation."""
+            items = [
+                ("enter", "owner"),
+                ("n/p", "files"),
+                ("y", "copy"),
+                ("/", "filter"),
+            ]
+            if self._page_has_more:
+                items.append(("^d", "more"))
+            if self._page_offset:
+                items.append(("^u", "less"))
+            items.append(("esc", "back"))
+            bar = action_bar(("o", "open"), items)
+            if self._page_total > DIFF_PREVIEW_LINES or self._page_offset:
+                end = min(self._page_offset + DIFF_PREVIEW_LINES, self._page_total)
+                bar += f" · [dim]{end}/{self._page_total}[/]"
+            self.query_one("#source-hints", Label).update(bar)
 
         def _selected(self) -> dict[str, Any] | None:
             node = self.query_one("#source-tree", NavTree).cursor_node
             data = node.data if node is not None else None
             return data if isinstance(data, dict) else None
+
+        def _file_nodes(self) -> tuple[TreeNode | None, TreeNode | None, list[TreeNode]]:
+            """Current node, its commit node, and the commit's file rows."""
+            node = self.query_one("#source-tree", NavTree).cursor_node
+            data = node.data if node is not None else None
+            if not isinstance(data, dict):
+                return node, None, []
+            kind = str(data.get("kind", ""))
+            if kind == "file" and node is not None:
+                commit_node = node.parent
+            elif kind == "commit":
+                commit_node = node
+            else:
+                return node, None, []
+            if commit_node is None:
+                return node, None, []
+            files = [
+                child
+                for child in commit_node.children
+                if isinstance(child.data, dict) and child.data.get("kind") == "file"
+            ]
+            return node, commit_node, files
+
+        def _walk_file(self, step: int) -> None:
+            node, commit_node, files = self._file_nodes()
+            if not files or commit_node is None:
+                self.notify("this row has no changed files", timeout=2)
+                return
+            data = node.data if node is not None else None
+            current = -1
+            if isinstance(data, dict) and data.get("kind") == "file" and node in files:
+                current = files.index(node)
+            target = files[(current + step) % len(files)]
+            if not commit_node.is_expanded:
+                commit_node.expand()
+                self.call_after_refresh(self._move_file_cursor, target)
+            else:
+                self._move_file_cursor(target)
+
+        def _move_file_cursor(self, node: TreeNode) -> None:
+            """Select one file row and keep the tree focused."""
+            tree = self.query_one("#source-tree", NavTree)
+            tree.move_cursor(node)
+            tree.focus()
+
+        def action_next_file(self) -> None:
+            """Move to the next file in the current commit."""
+            self._walk_file(1)
+
+        def action_prev_file(self) -> None:
+            """Move to the previous file in the current commit."""
+            self._walk_file(-1)
+
+        def action_more(self) -> None:
+            """Show the next page of the current diff."""
+            if not self._page_has_more:
+                self.notify("end of diff", timeout=2)
+                return
+            self._page_offset += DIFF_PREVIEW_LINES
+            self._preview(self._current_node, reset_page=False)
+
+        def action_less(self) -> None:
+            """Show the previous page of the current diff."""
+            if self._page_offset <= 0:
+                self.notify("start of diff", timeout=2)
+                return
+            self._page_offset = max(0, self._page_offset - DIFF_PREVIEW_LINES)
+            self._preview(self._current_node, reset_page=False)
 
         def action_back(self) -> None:
             """Close the source view and restore the prior selection."""

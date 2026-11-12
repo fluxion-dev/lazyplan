@@ -260,6 +260,58 @@ class TestMaintenanceTrim(unittest.TestCase):
         preview = maintenance.archive(self.store, now=NOW, days="1", apply=False)
         self.assertIn(plans[0].id, preview.plans)
 
+    def test_uppercase_status_event_does_not_displace_the_policy_event(self) -> None:
+        plan = self.store.add_plan("Case plan")
+        self.store.set_status_raw("plan", plan.id, Status.DONE)
+        with closing(sqlite3.connect(self.db)) as conn:
+            conn.execute(
+                "INSERT INTO events (ts, actor, kind, action, detail)"
+                " VALUES (?, 'x', 'plan', 'status', ?)",
+                (OLD, f"plan #{plan.id} -> done"),
+            )
+            conn.execute(
+                "INSERT INTO events (ts, actor, kind, action, detail)"
+                " VALUES (?, 'x', 'plan', 'status', ?)",
+                (OLD + 1, f"Plan #{plan.id} -> done"),
+            )
+            conn.commit()
+
+        self._counts(apply=True)
+
+        with closing(sqlite3.connect(self.db)) as conn:
+            details = [
+                row[0]
+                for row in conn.execute(
+                    "SELECT detail FROM events WHERE kind='plan' AND action='status'"
+                )
+            ]
+        self.assertEqual(details, [f"plan #{plan.id} -> done"])
+        self.assertIn(plan.id, self.store.plan_status_events_map())
+        self.assertNotIn(plan.id, [row[0].id for row in services.tree(self.store)])
+        preview = maintenance.archive(self.store, now=NOW, days="1", apply=False)
+        self.assertIn(plan.id, preview.plans)
+
+    def test_deleted_plan_status_events_are_trimmed(self) -> None:
+        plan = self.store.add_plan("Deleted plan")
+        self.store.set_status_raw("plan", plan.id, Status.DONE)
+        with closing(sqlite3.connect(self.db)) as conn:
+            conn.execute(
+                "INSERT INTO events (ts, actor, kind, action, detail)"
+                " VALUES (?, 'x', 'plan', 'status', ?)",
+                (OLD, f"plan #{plan.id} -> done"),
+            )
+            conn.commit()
+        self.store.delete("plan", plan.id, actor="fixture")
+
+        self._counts(apply=True)
+
+        with closing(sqlite3.connect(self.db)) as conn:
+            kept = conn.execute(
+                "SELECT COUNT(*) FROM events WHERE kind='plan' AND action='status' AND detail=?",
+                (f"plan #{plan.id} -> done",),
+            ).fetchone()[0]
+        self.assertEqual(kept, 0)
+
     def test_status_events_survive_trim_and_keep_the_finished_filter(self) -> None:
         plan = self.store.add_plan("Done old")
         services.set_status(self.store, "plan", plan.id, Status.DONE)

@@ -157,6 +157,21 @@ class TestMaintenanceApply(unittest.TestCase):
             }
         self.assertEqual(counts["plans"], 1)
 
+    def test_snapshot_is_delete_mode_and_reads_in_a_read_only_dir(self) -> None:
+        self.store.add_plan("Plan")
+        result = self.store.backup()
+        backup = Path(result.path)
+        self.assertFalse(Path(f"{backup}-wal").exists())
+        self.assertFalse(Path(f"{backup}-shm").exists())
+        with closing(sqlite3.connect(backup)) as conn:
+            self.assertEqual(str(conn.execute("PRAGMA journal_mode").fetchone()[0]), "delete")
+        os.chmod(self.tmp.name, 0o555)
+        try:
+            with closing(sqlite3.connect(Path(backup).as_uri() + "?mode=ro", uri=True)) as conn:
+                self.assertEqual(conn.execute("SELECT COUNT(*) FROM plans").fetchone()[0], 1)
+        finally:
+            os.chmod(self.tmp.name, 0o755)
+
     def test_unverified_snapshot_is_removed_and_aborts(self) -> None:
         self.store.add_plan("Plan")
         with mock.patch.object(self.store, "_integrity_ok", return_value=False):

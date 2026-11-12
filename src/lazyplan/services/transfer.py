@@ -208,7 +208,7 @@ def _restore_plan_archive(store: TransferPort, plan_id: int, item: dict, actor: 
     """Reapply an exported archive stamp to one imported plan."""
     archived_at = float(item.get("archived_at", 0) or 0)
     if archived_at > 0:
-        store.set_plan_archived(plan_id, archived_at)
+        store.set_plan_archived(plan_id, archived_at, actor=actor)
 
 
 def _import_all(store: TransferPort, data: dict, actor: str = "human") -> dict[str, int]:

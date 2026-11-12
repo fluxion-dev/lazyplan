@@ -116,6 +116,7 @@ class TestArchivedPlanReads(unittest.TestCase):
         snapshot = metrics.snapshot(self.store, plan_id=self.archived.id)
         self.assertEqual(snapshot.plan_id, self.archived.id)
         self.assertEqual(snapshot.plan_title, "Archived plan")
+        self.assertTrue(snapshot.timeline.lanes)
 
     def test_trace_hides_archived_plan_and_its_criteria(self) -> None:
         self.assertIsNone(trace.trace_plan(self.store, self.archived.id))

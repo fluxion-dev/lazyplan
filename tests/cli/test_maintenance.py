@@ -123,6 +123,13 @@ class TestMaintenanceCli(unittest.TestCase):
                 self.assertEqual(code, 0, err)
                 self.assertTrue(list(Path(self.tmp.name).glob(f"{name}.bak-*")))
 
+    def test_finished_only_with_archived_show_respects_the_explicit_filter(self) -> None:
+        self.store.add_plan("Live plan")
+        code, out, err = self._run("list", "--finished", "--archived", "show")
+        self.assertEqual(code, 0, err)
+        self.assertIn("Old plan", out)
+        self.assertNotIn("Live plan", out)
+
     def test_invalid_window_exits_two_without_a_snapshot(self) -> None:
         code, _out, err = self._run("maint", "trim", "--apply", "--days", "0")
         self.assertEqual(code, 2)

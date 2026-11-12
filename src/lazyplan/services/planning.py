@@ -493,7 +493,7 @@ def tree(
     """Nested plans, milestones, and tasks with filters."""
     check_archive_mode(finished)
     check_archive_mode(archived)
-    if archived != "hide":
+    if archived != "hide" and finished == "hide":
         finished = "show"
     if plan_mode not in ("all", "active", "finished"):
         raise ValueError("plan_mode must be all|active|finished")

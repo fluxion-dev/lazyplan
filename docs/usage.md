@@ -862,7 +862,8 @@ tokens.
 - Team: `.agents/lazyplan/lazyplan.db` inside the repo; commit `config.json`,
   not the database.
 - Export: `lpui export --format json > backup.json`.
-- Import: `lpui import --file backup.json` (ids change on import).
+- Import: `lpui import --file backup.json` (ids change on import). Import
+  restores archived state, including an archived plan that is not done.
 - Plan Markdown: `lpui export --format markdown --plan 3 --file ~/Downloads/plan-P3.md`.
   Missing parent folders are created; an existing file is refused unless you
   pass `--force`.

@@ -117,16 +117,8 @@ def vacuum(port: MaintenancePort, apply: bool = False, actor: str = "human") -> 
     """Preview free pages, or snapshot and vacuum with *apply*."""
     if not apply:
         return port.vacuum_preview()
-    preview = port.vacuum_preview()
     _snapshot(port, True, "vacuum")
-    port.log(
-        actor,
-        "maintenance",
-        "vacuum",
-        f"vacuum started from {preview.before_bytes} bytes / "
-        f"{preview.before_free_pages} free page(s)",
-    )
-    return port.vacuum()
+    return port.vacuum(actor=actor)
 
 
 def restore(

@@ -50,8 +50,9 @@ def report_rows(report: MaintenanceReport) -> list[str]:
             report.method,
             report.used_bytes,
             report.free_bytes,
-            f"{report.reclaimable_bytes} file={report.file_bytes} window={report.window_days}d",
+            report.reclaimable_bytes,
         )
+        + f"\t{report.file_bytes}\t{report.window_days:g}"
     ]
     rows.extend(
         porcelain.row("maint-table", row.table, row.bytes, row.rows) for row in report.tables

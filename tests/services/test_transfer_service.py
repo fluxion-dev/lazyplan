@@ -55,6 +55,7 @@ class TestTransferService(unittest.TestCase):
             self.assertEqual(target.list_plans(), [])
             restored = target.list_plans(archived="only")
             self.assertEqual([row.archived_at for row in restored], [4321.0])
+            self.assertTrue(target.events_by_action("archive"))
 
     def test_import_heals_ancestor_status_drift(self) -> None:
         plan = self.store.list_plans()[0]

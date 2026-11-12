@@ -176,11 +176,13 @@ class MaintenanceMixin(StoreBase):
         """
         where = (
             "ts < ? AND (action <> 'status' OR kind <> 'plan'"
-            " OR detail NOT LIKE 'plan #% -> %'"
+            " OR detail NOT GLOB 'plan #* -> *'"
             " OR id NOT IN ("
-            "SELECT MAX(id) FROM events"
-            " WHERE kind='plan' AND action='status' AND detail LIKE 'plan #% -> %'"
-            " GROUP BY substr(detail, 7, instr(substr(detail, 7), ' ') - 1)))"
+            "SELECT MAX(e.id) FROM events e"
+            " WHERE e.kind='plan' AND e.action='status' AND e.detail GLOB 'plan #* -> *'"
+            " AND EXISTS (SELECT 1 FROM plans p WHERE p.id = CAST("
+            "substr(e.detail, 7, instr(substr(e.detail, 7), ' ') - 1) AS INTEGER))"
+            " GROUP BY substr(e.detail, 7, instr(substr(e.detail, 7), ' ') - 1)))"
         )
         return (TrimTarget("events", where, (cutoff,)),)
 
@@ -333,12 +335,31 @@ class MaintenanceMixin(StoreBase):
         finally:
             conn.close()
 
-    def vacuum(self) -> VacuumResult:
+    def _checkpoint_wal(self, path: Path) -> None:
+        """Checkpoint a WAL database after the completion event is written."""
+        conn = sqlite3.connect(str(path), timeout=1.0, isolation_level=None)
+        try:
+            conn.execute("PRAGMA busy_timeout = 1000")
+            mode = str(conn.execute("PRAGMA journal_mode").fetchone()[0]).lower()
+            if mode == "wal":
+                conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        finally:
+            conn.close()
+
+    def vacuum(self, actor: str = "human") -> VacuumResult:
         """Reclaim free pages outside a transaction; fail fast when the file is busy."""
         path = Path(self.path).expanduser()
         before_bytes = self._file_size()
         before_free = self._current_free_pages()
         self._run_vacuum(path)
+        after = self._file_size()
+        self.log(
+            actor,
+            "maintenance",
+            "vacuum",
+            f"vacuumed {before_bytes} -> {after} bytes",
+        )
+        self._checkpoint_wal(path)
         return VacuumResult(
             before_bytes=before_bytes,
             after_bytes=self._file_size(),
@@ -409,8 +430,10 @@ class MaintenanceMixin(StoreBase):
         try:
             source = sqlite3.connect(str(source_path), timeout=5.0)
             snapshot = sqlite3.connect(str(target), timeout=5.0)
-            snapshot.execute("PRAGMA journal_mode=DELETE")
             source.backup(snapshot)
+            mode = str(snapshot.execute("PRAGMA journal_mode=DELETE").fetchone()[0]).lower()
+            if mode != "delete":
+                raise sqlite3.OperationalError(f"snapshot journal_mode={mode}")
             live_counts = self._backup_counts(source)
         except (sqlite3.Error, OSError) as exc:
             error = exc

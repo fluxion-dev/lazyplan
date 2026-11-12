@@ -337,10 +337,12 @@ pull requests.
 
 The right column holds only the overview, which follows the selection: a plan
 shows open questions, why, what, approval, references, every milestone as a
-title-only row, and every acceptance criterion, open first, each with its id,
-state, and proof chip; a milestone shows its details and every task; a task
-shows its details, criteria, proof, notes, and source. Milestones and tasks
-keep the shorter open-criteria list. The overview starts with one
+header row with its status, id, and title, and every acceptance criterion, open
+first, each with its id, state, and proof chip; a milestone shows its details
+and every task as a header row with its status, id, and title; a task shows its
+details, criteria, proof, notes, and source. Child rows stay one line each, and
+a task's description appears only when that task is selected. Milestones and
+tasks keep the shorter open-criteria list. The overview starts with one
 attention line, then full-width Markdown section bars and their content. One
 blank line sits above and below each bar. Prose in why, what, and details
 renders as Markdown, so lists, quotes, code fences, tables, and links appear

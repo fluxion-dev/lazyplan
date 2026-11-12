@@ -3,6 +3,16 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## Unreleased
+
+### Changed
+
+- **The overview is a header list.** A plan lists its milestones and a
+  milestone lists its tasks, each as one line with its status, id, and title.
+  Task descriptions no longer repeat inline, so a milestone with detailed tasks
+  stays scannable; select the task to read its details. The plan overview's
+  `NEXT` shortcut list is gone.
+
 ## v0.41.1 — 2026-11-12
 
 ### Fixed

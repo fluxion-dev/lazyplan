@@ -87,15 +87,7 @@ def build_apply_plan(
         python = _pipx_python(install, is_windows)
         scripts = Path(pipx).parent
         if is_windows:
-            command = (
-                python,
-                "-m",
-                "pip",
-                "install",
-                "--force-reinstall",
-                "--no-input",
-                str(wheel),
-            )
+            command = (python, "-m", "pip", "install", "--no-input", str(wheel))
         else:
             command = (pipx, "install", str(wheel), "--force")
     elif update.method == VENV:

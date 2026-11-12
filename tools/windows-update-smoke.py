@@ -4,7 +4,7 @@
 Builds two local wheels from HEAD (9.9.8 and 9.9.9), installs 9.9.8 into an
 isolated pipx home, stages 9.9.9, and runs the installed apply_on_launch path
 with restart disabled. The detached helper must update the venv after the
-parent exits.
+parent exits, with no package index reachable.
 
 Then stages a corrupt wheel and proves the install fails, the failure is
 parked with a log, and 9.9.8 still runs.
@@ -96,7 +96,7 @@ def reset_scenario(repro, env: dict[str, str], clear_logs: bool) -> None:
 def run_success(repro, env: dict[str, str], python: Path, target_wheel: Path, method: str) -> None:
     reset_scenario(repro, env, clear_logs=True)
     repro.stage_wheel(env, target_wheel, TARGET, method)
-    apply_child(repro, python, env)
+    apply_child(repro, python, dict(env, PIP_NO_INDEX="1"))
     wait_for(
         repro,
         lambda: installed_version(repro, python, env) == TARGET,

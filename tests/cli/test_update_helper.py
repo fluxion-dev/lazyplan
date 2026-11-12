@@ -55,18 +55,7 @@ class TestApplyPlan(unittest.TestCase):
         wheel = str(update_stage.wheel_path(update, self.home))
         python = str(Path("C:/Users/u/pipx/venvs/lazyplan-tui/Scripts/python.exe"))
         self.assertEqual(Path(plan.python), Path(python))
-        self.assertEqual(
-            plan.command,
-            (
-                python,
-                "-m",
-                "pip",
-                "install",
-                "--force-reinstall",
-                "--no-input",
-                wheel,
-            ),
-        )
+        self.assertEqual(plan.command, (python, "-m", "pip", "install", "--no-input", wheel))
         self.assertEqual(Path(plan.scripts), Path("C:/Users/u/pipx/bin"))
         self.assertEqual(Path(plan.restart[0]), Path("C:/Users/u/pipx/bin/lpui.exe"))
         self.assertEqual(plan.restart[1:], ("ui",))

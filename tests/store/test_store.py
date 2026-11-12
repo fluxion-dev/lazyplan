@@ -383,6 +383,44 @@ class TestStore(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             Store(legacy)
 
+    def test_migrate_archive_columns_without_losing_rows(self):
+        plan = self.store.add_plan("Keep")
+        milestone = self.store.add_milestone(plan.id, "Slice")
+        self.store.add_task(milestone.id, "Work")
+        session, _previous = self.store.start_session(
+            "builder", plan_id=plan.id, repo_path=self.tmp.name
+        )
+        before = self.store.counts()
+
+        # A database written before archive columns existed.
+        with closing(sqlite3.connect(self.db)) as conn:
+            conn.execute("DROP INDEX IF EXISTS idx_plans_archived")
+            conn.execute("DROP INDEX IF EXISTS idx_sessions_archived")
+            conn.execute("ALTER TABLE plans DROP COLUMN archived_at")
+            conn.execute("ALTER TABLE sessions DROP COLUMN archived_at")
+            conn.execute(f"PRAGMA user_version = {migrate_mod.SCHEMA_VERSION - 1}")
+            conn.commit()
+
+        reopened = Store(self.db)
+        self.assertEqual(reopened.counts(), before)
+        self.assertEqual(reopened.get_plan(plan.id).name, "Keep")
+        self.assertEqual(reopened.get_session(session.id).actor, "builder")
+
+        with closing(sqlite3.connect(self.db)) as conn:
+            self.assertEqual(
+                int(conn.execute("PRAGMA user_version").fetchone()[0]),
+                migrate_mod.SCHEMA_VERSION,
+            )
+            for table in ("plans", "sessions"):
+                columns = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
+                self.assertIn("archived_at", columns)
+                indexes = {row[1] for row in conn.execute(f"PRAGMA index_list({table})")}
+                self.assertIn(f"idx_{table}_archived", indexes)
+
+        # Reopening a migrated database is a no-op, not a duplicate migration.
+        again = Store(self.db)
+        self.assertEqual(again.counts(), before)
+
     def test_export_import_roundtrip(self):
         p = self.store.add_plan("P", goal="g")
         services.set_status(self.store, "plan", p.id, Status.DOING)

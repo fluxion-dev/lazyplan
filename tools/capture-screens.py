@@ -640,7 +640,7 @@ SCENES: dict[str, Scene] = {
         SIZE,
         build_control_room_fixture,
         capture_control_room,
-        "lazyplan control room with the health and needs strip, an active session, an open question, approval drift, claims, and attention tasks.",
+        "lazyplan control room with the plan tree, a compact agents row, the needs line, an open question, approval drift, and a failed check.",
     ),
     "lpui-source-trail": Scene(
         SIZE,
@@ -688,7 +688,7 @@ SCENES: dict[str, Scene] = {
         SIZE,
         build_coordination_fixture,
         capture_coordination,
-        "lazyplan plan tree with an active claim, an expired claim, a blocked task, aging work, a done row with an open criterion, and a red PR check, with attention summarized in the control strip.",
+        "lazyplan plan tree with title-only task rows and attention markers on a blocked task, aging work, and a done row with an open criterion, plus a failing pull-request check.",
     ),
     "lpui-collaboration": Scene(
         SIZE,

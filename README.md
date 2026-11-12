@@ -52,7 +52,8 @@ data with `lpui seed`.
 - **One source of truth.** The plan you see is the plan your agent reads. No
   copy-pasting context between chats.
 - **Made for focus.** Plans stay as one-line summaries until you open them,
-  large branches load on demand, and the timeline waits for `T`.
+  branches stay open or closed exactly as you left them, large branches load on
+  demand, and the timeline waits for `T`.
 - **Proof where you need it.** Criteria, evidence, questions, references,
   claims, sessions, comments, commits, and pull requests are selectable hubs,
   not a wall of text.

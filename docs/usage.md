@@ -652,15 +652,15 @@ plan from the branch name (`task/12-*`, `plan/3-*`, `milestone/4-*`), a branch
 recorded by `task start`, an active claim in that checkout, or the one doing
 plan linked there. A branch switch updates the row on its next heartbeat, while
 `--plan` and the sessions hub keep the plan you chose. A detached HEAD shows no
-branch. `session-start` and `prompt-submit` mark that row
-`working`, `stop` marks it `awaiting`, and `context`/`brief` render the previous
-handoff. A row with no heartbeat for two minutes reads `stale`; a working row
-is auto-closed after ten minutes and an awaiting row after thirty, and its
-pointer and bindings are cleared. Ending one host session closes only its row.
-A manual session without a host session keeps the
-one-open rule; `--force` supersedes the open row. Sessions are operational
-history and are not exported. You can also start and end them from the sessions
-hub, opened from the palette; the CLI remains the path for scripts.
+branch. `session-start` and `prompt-submit` mark that row `working`, `stop`
+marks it `awaiting`, and `context`/`brief` render the previous handoff. A row
+with no heartbeat for two minutes reads `stale`; a working row is auto-closed
+after ten minutes and an awaiting row after thirty, and its pointer and
+bindings are cleared. Ending one host session closes only its row. A manual
+session without a host session keeps the one-open rule; `--force` supersedes
+the open row. Sessions are operational history and are not exported. You can
+also start and end them from the sessions hub, opened from the palette; the
+CLI remains the path for scripts.
 
 #### Hook modes and gates
 

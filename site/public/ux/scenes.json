@@ -1,5 +1,5 @@
 {
-  "version": "0.38.0",
+  "version": "0.40.3",
   "generated": "2026-11-10",
   "groups": [
     {
@@ -104,7 +104,7 @@
       "state": "Task selected with linked source",
       "description": "A task selection: work health, claim, proof rows, notes, acceptance, and the GIT pane with checkout, commits, and pull requests.",
       "lookFor": [
-        "Can you tell what is claimed, blocked, or proven without opening a hub?",
+        "Does the title-only row keep the tree scannable while the overview carries claim and proof?",
         "Does the GIT pane compete with the task body?",
         "Is the proof section scannable when there are several criteria?"
       ],
@@ -118,8 +118,8 @@
       "id": "shell-attention",
       "group": "shell",
       "title": "Attention and control strip",
-      "state": "Claims, block, aging, gaps, red checks",
-      "description": "The plan tree with an expiring claim, a blocked task, aging work, a done row with an open criterion, and a failing pull-request check.",
+      "state": "Attention markers, aging, gaps, red checks",
+      "description": "The plan tree with title-only task rows and attention markers on a blocked task, aging work, a done row with an open criterion, and a failing pull-request check.",
       "lookFor": [
         "Does the control strip name the reasons to intervene?",
         "Are the glyphs and row colors distinguishable?",

@@ -587,7 +587,7 @@ def scenes() -> list[Scene]:
                 "Task selected with linked source",
                 "A task selection: work health, claim, proof rows, notes, acceptance, and the GIT pane with checkout, commits, and pull requests.",
                 (
-                    "Can you tell what is claimed, blocked, or proven without opening a hub?",
+                    "Does the title-only row keep the tree scannable while the overview carries claim and proof?",
                     "Does the GIT pane compete with the task body?",
                     "Is the proof section scannable when there are several criteria?",
                 ),
@@ -600,8 +600,8 @@ def scenes() -> list[Scene]:
                 "shell-attention",
                 "shell",
                 "Attention and control strip",
-                "Claims, block, aging, gaps, red checks",
-                "The plan tree with an expiring claim, a blocked task, aging work, a done row with an open criterion, and a failing pull-request check.",
+                "Attention markers, aging, gaps, red checks",
+                "The plan tree with title-only task rows and attention markers on a blocked task, aging work, a done row with an open criterion, and a failing pull-request check.",
                 (
                     "Does the control strip name the reasons to intervene?",
                     "Are the glyphs and row colors distinguishable?",

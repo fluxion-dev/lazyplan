@@ -86,6 +86,13 @@ HUB_ACTIONS: dict[str, tuple[str, ...]] = {
         "pull_request.open",
     ),
     "activity": ("event.open",),
+    "maintenance": (
+        "maintenance.report",
+        "maintenance.archive",
+        "maintenance.trim",
+        "maintenance.vacuum",
+        "maintenance.restore",
+    ),
 }
 
 

@@ -25,6 +25,7 @@ Budget: every action is at most **3** interactions from the tree.
 | `pull_request` | 1 |
 | `repo` | 1 |
 | `event` | 1 |
+| `maintenance` | 1 |
 
 ## Action routes
 
@@ -85,6 +86,12 @@ Budget: every action is at most **3** interactions from the tree.
 | `view.claims_hub` | tree › coordination | 1 |
 | `view.sessions_hub` | tree › sessions | 1 |
 | `view.comments_hub` | tree › coordination | 1 |
+| `maintenance.report` | maintenance | 1 |
+| `maintenance.archive` | maintenance | 1 |
+| `maintenance.trim` | maintenance | 1 |
+| `maintenance.vacuum` | maintenance | 1 |
+| `maintenance.restore` | maintenance | 1 |
+| `maintenance.open` | maintenance | 1 |
 | `criterion.edit` | tree › trust | 1 |
 | `evidence.list` | tree › evidence | 1 |
 | `criterion.delete` | tree › trust | 1 |

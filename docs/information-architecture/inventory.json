@@ -706,6 +706,30 @@
         ]
       },
       {
+        "name": "maint",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          []
+        ]
+      },
+      {
         "name": "mcp",
         "options": [
           [
@@ -1512,10 +1536,10 @@
         ]
       }
     ],
-    "count": 50
+    "count": 51
   },
   "counts": {
-    "cli_commands": 50,
+    "cli_commands": 51,
     "doc_files": 9,
     "doc_headings": 89,
     "env_names": 12,
@@ -1523,7 +1547,7 @@
     "hook_events": 35,
     "mcp_resources": 3,
     "mcp_tools": 62,
-    "palette_commands": 51,
+    "palette_commands": 52,
     "setup_steps": 4,
     "stale_claims": 0,
     "tui_bindings": 48,
@@ -2472,6 +2496,14 @@
         "section": "Edit"
       },
       {
+        "handler": "open_maintenance",
+        "help_group": "APP",
+        "id": "maintenance",
+        "key": "m",
+        "label": "Open maintenance",
+        "section": "View"
+      },
+      {
         "handler": "move_doing",
         "help_group": "CHANGE",
         "id": "move-doing",
@@ -2648,7 +2680,7 @@
         "section": "App"
       }
     ],
-    "count": 51
+    "count": 52
   },
   "setup": {
     "steps": [

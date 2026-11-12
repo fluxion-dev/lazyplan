@@ -14,8 +14,8 @@ python3 tools/ia_inventory.py --check
 
 | Surface | Count |
 | --- | ---: |
-| cli_commands | 50 |
-| palette_commands | 51 |
+| cli_commands | 51 |
+| palette_commands | 52 |
 | mcp_tools | 62 |
 | mcp_resources | 3 |
 | tui_screens | 15 |
@@ -55,6 +55,7 @@ python3 tools/ia_inventory.py --check
 | `link-repo` | --json, --porcelain, --version, --actor, --heal, --no-heal, --kind, --id, --repo, --remote |
 | `lint` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --strict |
 | `list` | --json, --porcelain, --version, --actor, --heal, --no-heal, --status, --finished, --archived, --plan, --all, --limit, --repo, --tree, --milestone |
+| `maint` | --json, --porcelain, --version, --actor, --heal, --no-heal |
 | `mcp` | --json, --porcelain, --version, --actor, --heal, --no-heal, --read-only |
 | `milestone` | --json, --porcelain, --version, --actor, --heal, --no-heal |
 | `next` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --ttl, --note, --suggest |
@@ -117,6 +118,7 @@ python3 tools/ia_inventory.py --check
 | `help` | Help | `?` | `help` |
 | `link-pr` | Link pull request | `` | `link_pr` |
 | `link-ref` | Link external reference | `` | `link_ref` |
+| `maintenance` | Open maintenance | `m` | `open_maintenance` |
 | `move-doing` | Move to doing | `` | `move_doing` |
 | `move-done` | Move to done | `` | `move_done` |
 | `move-todo` | Move to todo | `` | `move_todo` |

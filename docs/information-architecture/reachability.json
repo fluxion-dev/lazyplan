@@ -430,6 +430,48 @@
     },
     {
       "depth": 1,
+      "id": "maintenance.report",
+      "route": [
+        "maintenance"
+      ]
+    },
+    {
+      "depth": 1,
+      "id": "maintenance.archive",
+      "route": [
+        "maintenance"
+      ]
+    },
+    {
+      "depth": 1,
+      "id": "maintenance.trim",
+      "route": [
+        "maintenance"
+      ]
+    },
+    {
+      "depth": 1,
+      "id": "maintenance.vacuum",
+      "route": [
+        "maintenance"
+      ]
+    },
+    {
+      "depth": 1,
+      "id": "maintenance.restore",
+      "route": [
+        "maintenance"
+      ]
+    },
+    {
+      "depth": 1,
+      "id": "maintenance.open",
+      "route": [
+        "maintenance"
+      ]
+    },
+    {
+      "depth": 1,
       "id": "criterion.edit",
       "route": [
         "tree",
@@ -549,6 +591,7 @@
     "event": 1,
     "evidence": 1,
     "file": 1,
+    "maintenance": 1,
     "milestone": 1,
     "note": 1,
     "plan": 1,

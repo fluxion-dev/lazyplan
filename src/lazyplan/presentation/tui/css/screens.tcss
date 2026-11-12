@@ -144,7 +144,7 @@ Screen.short #dlg.form-tall TextArea {
 }
 
 #source-tree-wrap {
-    width: 9fr;
+    width: 1fr;
     min-width: 30;
     border: round $lp-border-muted;
     border-title-color: $lp-text-muted;
@@ -152,7 +152,7 @@ Screen.short #dlg.form-tall TextArea {
 }
 
 #source-preview {
-    width: 11fr;
+    width: 1fr;
     min-width: 30;
     border: round $lp-border-muted;
     border-title-color: $lp-text-muted;

@@ -143,6 +143,7 @@ _.action_filter
 _.check_action
 _._on_click
 _._on_highlight
+_._on_expanded
 _._folder_selected
 _._file_selected
 _._export_pressed

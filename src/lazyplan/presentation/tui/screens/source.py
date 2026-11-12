@@ -21,6 +21,8 @@ except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
 from lazyplan.services.source import (
+    CommitStats,
+    FileStat,
     SourceCommit,
     SourceFile,
     SourcePull,
@@ -28,6 +30,8 @@ from lazyplan.services.source import (
     SourceTrail,
     build_source_trail,
     clear_diff_cache,
+    clear_stats_cache,
+    read_commit_stats,
 )
 
 from ....core.ports.provenance import ProvenancePort
@@ -36,6 +40,7 @@ from ..navigation import NAV_BINDINGS, NavigationMixin
 from ..views.source import (
     commit_label,
     commit_preview,
+    file_label,
     file_preview,
     pull_label,
     pull_preview,
@@ -74,6 +79,9 @@ if _TEXTUAL_OK:
             self._trail = SourceTrail(kind=kind, oid=oid, title="")
             self._filter = ""
             self._diff_cache: dict[tuple[str, str, str, int], list[str]] = {}
+            self._stats_loaded: set[tuple[str, str]] = set()
+            self._stats: dict[tuple[str, str], CommitStats] = {}
+            self._commit_nodes: dict[tuple[str, str], TreeNode] = {}
 
         def compose(self) -> ComposeResult:
             with Vertical(id="source-page"):
@@ -155,6 +163,7 @@ if _TEXTUAL_OK:
             tree = self.query_one("#source-tree", NavTree)
             tree.clear()
             tree.root.expand()
+            self._commit_nodes.clear()
             if self._trail.empty:
                 tree.root.add_leaf(
                     "No source linked. Run `lpui link`, `lpui task finish`, or `pr refresh`.",
@@ -170,15 +179,39 @@ if _TEXTUAL_OK:
                 for commit in repo.commits:
                     if needle and not self._commit_matches(commit, needle):
                         continue
-                    commit_node = repo_node.add(
-                        commit_label(commit), data=self._commit_data(repo, commit)
+                    key = (repo.path, commit.sha)
+                    stats = self._stats.get(key)
+                    by_path = (
+                        {item.path: item for item in stats.files}
+                        if stats is not None and stats.state == "ok"
+                        else {}
                     )
+                    commit_node = repo_node.add(
+                        commit_label(commit, stats), data=self._commit_data(repo, commit)
+                    )
+                    self._commit_nodes[key] = commit_node
+                    seen: set[str] = set()
                     for item in commit.files:
                         if needle and needle not in item.path.lower():
                             continue
+                        stat = by_path.get(item.path)
+                        seen.add(item.path)
                         commit_node.add_leaf(
-                            f"[dim]▪ {escape_markup(item.path)}[/]",
-                            data=self._file_data(repo, commit, item),
+                            file_label(item, stat),
+                            data=self._file_data(repo, commit, item, stat),
+                        )
+                    for stat in by_path.values():
+                        if stat.path in seen:
+                            continue
+                        item = SourceFile(path=stat.path)
+                        commit_node.add_leaf(
+                            file_label(item, stat),
+                            data=self._file_data(repo, commit, item, stat),
+                        )
+                    if not commit.files and not by_path:
+                        commit_node.add_leaf(
+                            "[dim]…[/]",
+                            data={"kind": "placeholder", "copy": ""},
                         )
                 for pull in repo.pulls:
                     if needle and needle not in f"pr {pull.number} {pull.title}".lower():
@@ -229,7 +262,11 @@ if _TEXTUAL_OK:
             }
 
         def _file_data(
-            self, repo: SourceRepo, commit: SourceCommit, item: SourceFile
+            self,
+            repo: SourceRepo,
+            commit: SourceCommit,
+            item: SourceFile,
+            stat: FileStat | None = None,
         ) -> dict[str, Any]:
             return {
                 "kind": "file",
@@ -240,6 +277,10 @@ if _TEXTUAL_OK:
                 "url": item.url,
                 "owners": commit.owners,
                 "object": item,
+                "status": stat.status if stat is not None else "",
+                "additions": stat.additions if stat is not None else 0,
+                "deletions": stat.deletions if stat is not None else 0,
+                "binary": stat.binary if stat is not None else False,
             }
 
         def _pull_data(self, repo: SourceRepo, pull: SourcePull) -> dict[str, Any]:
@@ -256,6 +297,79 @@ if _TEXTUAL_OK:
         @on(Tree.NodeHighlighted, "#source-tree")
         def _on_highlight(self, event: Tree.NodeHighlighted) -> None:
             self._preview(event.node)
+
+        @on(Tree.NodeExpanded, "#source-tree")
+        def _on_expanded(self, event: Tree.NodeExpanded) -> None:
+            """Load per-file status and counts the first time a commit opens."""
+            data = event.node.data
+            if not isinstance(data, dict) or data.get("kind") != "commit":
+                return
+            repo = str(data.get("repo", "") or "")
+            sha = str(data.get("sha", "") or "")
+            if not repo or not sha:
+                return
+            key = (repo, sha)
+            if key in self._stats_loaded:
+                return
+            self._stats_loaded.add(key)
+            self.run_worker(
+                lambda: self._stats_worker(repo, sha),
+                thread=True,
+                exclusive=False,
+            )
+
+        def _stats_worker(self, repo: str, sha: str) -> None:
+            stats = read_commit_stats(repo, sha)
+            try:
+                self.app.call_from_thread(self._apply_stats, repo, sha, stats)
+            except Exception:
+                return
+
+        def _apply_stats(self, repo: str, sha: str, stats: CommitStats) -> None:
+            """Paint cached stats onto an expanded commit and its file rows."""
+            key = (repo, sha)
+            self._stats[key] = stats
+            node = self._commit_nodes.get(key)
+            if node is None or stats.state != "ok":
+                return
+            data = node.data if isinstance(node.data, dict) else {}
+            commit = data.get("object")
+            if not isinstance(commit, SourceCommit):
+                commit = SourceCommit(sha=sha)
+            repo_obj = next((item for item in self._trail.repos if item.path == repo), None)
+            if repo_obj is None:
+                repo_obj = SourceRepo(path=repo, name="")
+            node.set_label(commit_label(commit, stats))
+            urls = {item.path: item.url for item in commit.files}
+            by_path = {item.path: item for item in stats.files}
+            seen: set[str] = set()
+            for child in list(node.children):
+                child_data = child.data if isinstance(child.data, dict) else {}
+                kind = str(child_data.get("kind", ""))
+                if kind == "placeholder":
+                    child.remove()
+                    continue
+                if kind != "file":
+                    continue
+                path = str(child_data.get("path", "") or "")
+                stat = by_path.get(path)
+                if not stat:
+                    continue
+                item = SourceFile(path=path, url=urls.get(path, str(child_data.get("url") or "")))
+                child.set_label(file_label(item, stat))
+                child_data.update(self._file_data(repo_obj, commit, item, stat))
+                seen.add(path)
+            for stat in stats.files:
+                if stat.path in seen:
+                    continue
+                item = SourceFile(path=stat.path, url=urls.get(stat.path, ""))
+                node.add_leaf(
+                    file_label(item, stat),
+                    data=self._file_data(repo_obj, commit, item, stat),
+                )
+            current = self.query_one("#source-tree", NavTree).cursor_node
+            if current is node:
+                self._preview(node)
 
         def _preview(self, node: TreeNode | None) -> None:
             body = self.query_one("#source-preview-body", Static)
@@ -371,6 +485,10 @@ if _TEXTUAL_OK:
         def action_refresh(self) -> None:
             """Rebuild from cached data and drop in-memory diff bodies."""
             clear_diff_cache()
+            clear_stats_cache()
             self._diff_cache.clear()
+            self._stats_loaded.clear()
+            self._stats.clear()
+            self._commit_nodes.clear()
             self._load()
             self.notify("source refreshed", timeout=3)

@@ -5,6 +5,8 @@ from __future__ import annotations
 from datetime import datetime
 
 from lazyplan.services.source import (
+    CommitStats,
+    FileStat,
     SourceCommit,
     SourceFile,
     SourcePull,
@@ -45,11 +47,42 @@ def when(timestamp: int) -> str:
         return ""
 
 
-def commit_label(commit: SourceCommit) -> str:
+_STATUS_GLYPH = {
+    "add": ("A", "green"),
+    "modify": ("M", "cyan"),
+    "delete": ("D", "red"),
+    "rename": ("R", "yellow"),
+}
+
+
+def commit_label(commit: SourceCommit, stats: CommitStats | None = None) -> str:
     subject = escape_markup(commit.subject or "(no subject)")
-    count = f" · {len(commit.files)} files" if commit.files else ""
+    files = len(stats.files) if stats is not None and stats.state == "ok" else len(commit.files)
+    count = f" · {files} files" if files else ""
+    changes = ""
+    if stats is not None and stats.state == "ok":
+        changes = f" [green]+{stats.additions}[/] [red]-{stats.deletions}[/]"
     stale = " [red]stale[/]" if commit.stale else ""
-    return f"[dim]◆ {commit.short}[/] {subject}[dim]{count}[/]{stale}"
+    return f"[dim]◆ {commit.short}[/] {subject}[dim]{count}[/]{changes}{stale}"
+
+
+def file_label(item: SourceFile, stat: FileStat | None = None) -> str:
+    """One file row: status glyph, path, and counts."""
+    path = escape_markup(item.path)
+    if stat is None:
+        return f"[dim]▪ {path}[/]"
+    letter, color = _STATUS_GLYPH.get(stat.status, ("M", "cyan"))
+    name = path
+    if stat.status == "rename" and stat.old_path:
+        name = f"[dim]{escape_markup(stat.old_path)} →[/] {path}"
+    if stat.binary:
+        return f"[{color}]{letter}[/] {name} [yellow]binary[/]"
+    counts = ""
+    if stat.additions:
+        counts += f" [green]+{stat.additions}[/]"
+    if stat.deletions:
+        counts += f" [red]-{stat.deletions}[/]"
+    return f"[{color}]{letter}[/] {name}{counts}"
 
 
 def repo_label(repo: SourceRepo) -> str:
@@ -58,8 +91,7 @@ def repo_label(repo: SourceRepo) -> str:
     branch = repo.branch or ("detached" if repo.detached else "unknown")
     return (
         f"[bold]⎇ {escape_markup(repo.name)}[/] "
-        f"[dim]{escape_markup(branch)} · {icon} {state} · {len(repo.commits)} commits"
-        f" · {len(repo.pulls)} PRs[/]"
+        f"[dim]{escape_markup(branch)} · {icon} {state} · {len(repo.commits)} commits[/]"
     )
 
 

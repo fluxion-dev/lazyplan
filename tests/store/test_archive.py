@@ -103,7 +103,7 @@ class TestStoreArchive(unittest.TestCase):
         self.assertEqual(restored.archived_at, 0.0)
         self.assertFalse(self.store.restore_session(ended.id, actor="builder"))
 
-    def test_feed_hides_events_for_archived_plans(self) -> None:
+    def test_feed_retains_history_for_archived_plans(self) -> None:
         old = self.store.add_plan("Old plan")
         self.store.set_status_raw("plan", old.id, Status.DONE)
         self.store.archive_plan(old.id, actor="builder")
@@ -111,7 +111,7 @@ class TestStoreArchive(unittest.TestCase):
 
         details = [event["detail"] for event in self.store.feed(50)]
 
-        self.assertFalse(any(f"P#{old.id} " in detail for detail in details))
+        self.assertTrue(any(f"P#{old.id} " in detail for detail in details))
         self.assertTrue(any(live.name in detail for detail in details))
 
 

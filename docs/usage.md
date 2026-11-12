@@ -443,7 +443,8 @@ CLI-only.
 Repos, commits, files, and pull requests are selectable in the source trail
 (`g`), and cached pull requests have their own hub (**Open pull request hub**
 in the palette). The **activity hub** (**Open activity hub** in the palette)
-shows the feed.
+shows the feed. `feed` is the historical audit trail: events stay visible after
+a plan is archived.
 
 - Source trail: the tree groups checkout → commits → changed files, with pull
   requests alongside. `enter` cross-links to the owning plan, milestone, or

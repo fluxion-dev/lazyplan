@@ -172,6 +172,42 @@ class TestMaintenanceTrim(unittest.TestCase):
         self.assertIn("new", details)
         self.assertNotIn("old", details)
 
+    def test_only_newest_plan_status_event_survives_per_plan(self) -> None:
+        plans = [self.store.add_plan(f"Done {index}") for index in range(5)]
+        with closing(sqlite3.connect(self.db)) as conn:
+            for index in range(50):
+                plan = plans[index % len(plans)]
+                target = "done" if index >= 45 else ("doing" if index % 2 else "todo")
+                conn.execute(
+                    "INSERT INTO events (ts, actor, kind, action, detail)"
+                    " VALUES (?, 'x', 'plan', 'status', ?)",
+                    (OLD + index, f"plan #{plan.id} -> {target}"),
+                )
+            conn.execute(
+                "INSERT INTO events (ts, actor, kind, action, detail)"
+                " VALUES (?, 'x', 'x', 'note', 'old non-status')",
+                (OLD,),
+            )
+            conn.commit()
+        self.store.set_status_raw("plan", plans[0].id, Status.DONE)
+
+        self._counts(apply=True)
+
+        with closing(sqlite3.connect(self.db)) as conn:
+            rows = conn.execute(
+                "SELECT substr(detail, 7, instr(substr(detail, 7), ' ') - 1) AS plan_id,"
+                " COUNT(*) FROM events WHERE kind='plan' AND action='status'"
+                " GROUP BY plan_id"
+            ).fetchall()
+            non_status = conn.execute(
+                "SELECT COUNT(*) FROM events WHERE detail='old non-status'"
+            ).fetchone()[0]
+        self.assertEqual(len(rows), len(plans))
+        self.assertTrue(all(count == 1 for _plan_id, count in rows))
+        self.assertEqual(non_status, 0)
+        preview = maintenance.archive(self.store, now=NOW, days="1", apply=False)
+        self.assertIn(plans[0].id, preview.plans)
+
     def test_status_events_survive_trim_and_keep_the_finished_filter(self) -> None:
         plan = self.store.add_plan("Done old")
         services.set_status(self.store, "plan", plan.id, Status.DONE)

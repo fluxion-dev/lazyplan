@@ -169,8 +169,20 @@ class MaintenanceMixin(StoreBase):
 
     @staticmethod
     def _event_targets(cutoff: float) -> tuple[TrimTarget, ...]:
-        """Old non-status events; status events are the archive policy input."""
-        return (TrimTarget("events", "ts < ? AND action <> 'status'", (cutoff,)),)
+        """Old non-status events plus older status events.
+
+        The newest plan status event per plan is the finished/archive policy
+        input and always survives; task and milestone status events do not.
+        """
+        where = (
+            "ts < ? AND (action <> 'status' OR kind <> 'plan'"
+            " OR detail NOT LIKE 'plan #% -> %'"
+            " OR id NOT IN ("
+            "SELECT MAX(id) FROM events"
+            " WHERE kind='plan' AND action='status' AND detail LIKE 'plan #% -> %'"
+            " GROUP BY substr(detail, 7, instr(substr(detail, 7), ' ') - 1)))"
+        )
+        return (TrimTarget("events", where, (cutoff,)),)
 
     @classmethod
     def _trim_targets(cls, now: float, cutoff: float) -> tuple[TrimTarget, ...]:

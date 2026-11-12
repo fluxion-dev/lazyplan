@@ -6,7 +6,7 @@ import webbrowser
 from typing import Any
 
 try:
-    from textual import on  # noqa: F401
+    from textual import events, on  # noqa: F401
     from textual.app import ComposeResult  # noqa: F401
     from textual.binding import Binding  # noqa: F401
     from textual.containers import Horizontal, Vertical, VerticalScroll  # noqa: F401
@@ -42,6 +42,7 @@ from ..views.source import (
     render_diff,
     repo_label,
     repo_preview,
+    summary_chips,
 )
 
 DIFF_PREVIEW_LINES = 300
@@ -80,15 +81,13 @@ if _TEXTUAL_OK:
                 yield Input(placeholder="filter source…", id="source-filter")
                 with Horizontal(id="source-main"):
                     with VerticalScroll(id="source-tree-wrap"):
-                        yield NavTree("source", id="source-tree")
+                        yield NavTree("source", id="source-tree", classes="plan-tree")
                     with VerticalScroll(id="source-preview"):
                         yield Static("", id="source-preview-body")
                 yield Label("", id="source-hints")
 
         def on_mount(self) -> None:
-            width = self.app.size.width
-            self.set_class(width < 80, "compact")
-            self.set_class(width >= 120, "wide")
+            self._apply_width_classes(self.app.size.width)
             page = self.query_one("#source-page")
             page.border_title = " source "
             self.query_one("#source-tree-wrap").border_title = " trail "
@@ -107,6 +106,20 @@ if _TEXTUAL_OK:
             )
             self._load()
             self.query_one("#source-tree", NavTree).focus()
+
+        def _apply_width_classes(self, width: int) -> None:
+            """Switch between the stacked and side-by-side layouts."""
+            self.set_class(width < 80, "compact")
+            self.set_class(width < 100, "stacked")
+            self.set_class(width >= 120, "wide")
+
+        def on_resize(self, event: events.Resize) -> None:
+            """Re-render the current preview after a width change."""
+            self._apply_width_classes(event.size.width)
+            self._diff_cache.clear()
+            node = self.query_one("#source-tree", NavTree).cursor_node
+            if node is not None:
+                self._preview(node)
 
         def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
             """Keep the filter field's Enter free while it owns the keyboard."""
@@ -134,13 +147,7 @@ if _TEXTUAL_OK:
             )
             if self._trail.title:
                 head += f" [dim]·[/] {escape_markup(self._trail.title)}"
-            summary = (
-                f"[dim]⌁ {self._trail.commit_count} commits · "
-                f"{self._trail.file_count} files · "
-                f"{self._trail.pull_count} PRs"
-                + (f" · {self._trail.stale_count} stale" if self._trail.stale_count else "")
-                + "[/]"
-            )
+            summary = summary_chips(self._trail)
             self.query_one("#source-head", Static).update(f"{head}\n{summary}")
             self._build_tree()
 

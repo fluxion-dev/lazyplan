@@ -144,7 +144,7 @@ Screen.short #dlg.form-tall TextArea {
 }
 
 #source-tree-wrap {
-    width: 1fr;
+    width: 9fr;
     min-width: 30;
     border: round $lp-border-muted;
     border-title-color: $lp-text-muted;
@@ -152,15 +152,42 @@ Screen.short #dlg.form-tall TextArea {
 }
 
 #source-preview {
-    width: 1fr;
+    width: 11fr;
     min-width: 30;
     border: round $lp-border-muted;
     border-title-color: $lp-text-muted;
     padding: 0 1;
 }
 
+Screen.stacked #source-main {
+    layout: vertical;
+}
+
+Screen.stacked #source-tree-wrap {
+    width: 100%;
+    min-width: 0;
+    height: 2fr;
+    min-height: 6;
+}
+
+Screen.stacked #source-preview {
+    width: 100%;
+    min-width: 0;
+    height: 3fr;
+    min-height: 8;
+}
+
+Screen.compact #source-head {
+    min-height: 2;
+    margin-bottom: 0;
+}
+
 #source-preview-body {
     height: auto;
+}
+
+#source-tree {
+    scrollbar-size-horizontal: 0;
 }
 
 #source-hints {

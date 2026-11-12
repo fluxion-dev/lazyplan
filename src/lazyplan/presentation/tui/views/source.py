@@ -9,6 +9,7 @@ from lazyplan.services.source import (
     SourceFile,
     SourcePull,
     SourceRepo,
+    SourceTrail,
     read_diff_page,
 )
 
@@ -20,6 +21,18 @@ from .diff_render import (
     render_unified,
 )
 from .diff_split import render_split
+
+
+def summary_chips(trail: SourceTrail) -> str:
+    """One chip row for the source head: commits, files, PRs, and stale rows."""
+    chips = [
+        f"[reverse] {trail.commit_count} commits [/]",
+        f"[reverse] {trail.file_count} files [/]",
+        f"[reverse] {trail.pull_count} PRs [/]",
+    ]
+    if trail.stale_count:
+        chips.append(f"[bold red] {trail.stale_count} stale [/]")
+    return " ".join(chips)
 
 
 def when(timestamp: int) -> str:

@@ -61,6 +61,44 @@ class TestApplyPlan(unittest.TestCase):
         self.assertEqual(plan.restart[1:], ("ui",))
         self.assertEqual(plan.log_path.parent, update_apply.update_log.logs_dir(self.home))
 
+    def _uv_pipx_venv(self) -> InstallInfo:
+        venv = Path(self.tmp.name) / "pipx" / "venvs" / "lazyplan-tui"
+        venv.mkdir(parents=True)
+        (venv / "pipx_metadata.json").write_text(json.dumps({"backend": "uv"}), encoding="utf-8")
+        return InstallInfo(PIPX, True, venv.as_posix())
+
+    def test_pipx_windows_plan_installs_a_uv_venv_with_uv(self) -> None:
+        update = staged(PIPX)
+        info = self._uv_pipx_venv()
+        tools = {"pipx": "C:/tools/pipx.exe", "uv": "C:/tools/uv.exe", "lpui": "C:/bin/lpui.exe"}
+        with mock.patch.object(update_apply.shutil, "which", side_effect=tools.get):
+            plan = build_apply_plan(update, home=self.home, info=info, windows=True)
+        python = str(Path(info.detail) / "Scripts/python.exe")
+        wheel = str(update_stage.wheel_path(update, self.home))
+        self.assertEqual(
+            plan.command, ("C:/tools/uv.exe", "pip", "install", "--python", python, wheel)
+        )
+
+    def test_pipx_windows_plan_for_a_uv_venv_without_uv_names_the_repair(self) -> None:
+        info = self._uv_pipx_venv()
+        tools = {"pipx": "C:/tools/pipx.exe"}
+        with (
+            mock.patch.object(update_apply.shutil, "which", side_effect=tools.get),
+            self.assertRaises(update_stage.StageError) as caught,
+        ):
+            build_apply_plan(staged(PIPX), home=self.home, info=info, windows=True)
+        self.assertIn("--backend pip", str(caught.exception))
+
+    def test_pipx_windows_plan_with_pip_backend_metadata_uses_pip(self) -> None:
+        venv = Path(self.tmp.name) / "pipvenv"
+        venv.mkdir()
+        (venv / "pipx_metadata.json").write_text(json.dumps({"backend": "pip"}), encoding="utf-8")
+        info = InstallInfo(PIPX, True, venv.as_posix())
+        tools = {"pipx": "C:/tools/pipx.exe", "uv": "C:/tools/uv.exe"}
+        with mock.patch.object(update_apply.shutil, "which", side_effect=tools.get):
+            plan = build_apply_plan(staged(PIPX), home=self.home, info=info, windows=True)
+        self.assertEqual(plan.command[1:4], ("-m", "pip", "install"))
+
     def test_venv_windows_plan_uses_the_owning_pip(self) -> None:
         update = staged(VENV)
         info = InstallInfo(VENV, True, "C:/Users/u/lazyplan-venv")
@@ -237,8 +275,18 @@ class TestHelperRun(unittest.TestCase):
             code = _update_helper.run(self.plan, 42)
         self.assertEqual(code, 1)
         park.assert_called_once()
-        self.assertIn("permission denied", park.call_args.args[0])
+        self.assertEqual(park.call_args.args[0], "install failed: permission denied")
         restart.assert_not_called()
+
+    def test_silent_install_failure_still_names_the_install(self) -> None:
+        install = mock.Mock(returncode=2, stdout="", stderr="")
+        with (
+            mock.patch.object(_update_helper, "wait_for_parent", return_value=True),
+            mock.patch.object(_update_helper.subprocess, "run", return_value=install),
+            mock.patch.object(update_stage, "park_failure") as park,
+        ):
+            self.assertEqual(_update_helper.run(self.plan, 42), 1)
+        self.assertEqual(park.call_args.args[0], "install failed")
 
     def test_parent_timeout_parks(self) -> None:
         with (

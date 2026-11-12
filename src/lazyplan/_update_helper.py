@@ -95,7 +95,8 @@ def run(plan: ApplyPlan, parent_pid: int) -> int:
         update_stage.park_failure(error, plan.home)
         return 1
     if result.returncode != 0:
-        error = (result.stderr or result.stdout or "install failed").strip()
+        detail = (result.stderr or result.stdout or "").strip()
+        error = f"install failed: {detail}" if detail else "install failed"
         _log(plan, result.returncode, result.stdout or "", result.stderr or "")
         update_stage.park_failure(error, plan.home)
         return 1

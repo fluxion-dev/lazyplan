@@ -86,8 +86,9 @@ pending with no writes; `lpui doctor` names them, and the next interactive
 
 On Windows the command and the TUI Update screen use a detached helper. lpui
 closes first, then the helper waits for the process to exit, updates the
-existing pipx venv with that venv's own `python -m pip` (or a plain venv's
-pip), writes the full command and output under
+existing pipx venv with that venv's own `python -m pip`, or with `uv pip` when
+pipx built the venv with uv (or a plain venv's pip), needs no network for a
+downloaded update, writes the full command and output under
 `%LOCALAPPDATA%\lazyplan\logs\`, runs the post-upgrade setup review, and
 relaunches the TUI. A failed install leaves the old version runnable and the
 next launch shows the log path. `lpui upgrade --diagnose` prints the detected

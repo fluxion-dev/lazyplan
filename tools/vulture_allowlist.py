@@ -227,6 +227,9 @@ _.action_next_file
 _.action_prev_file
 _.action_more
 _.action_less
+_.action_toggle_split
+_.action_toggle_wrap
+_.action_toggle_fold
 _.action_filter
 _.check_action
 _._on_click

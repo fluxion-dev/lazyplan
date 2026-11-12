@@ -20,7 +20,7 @@ from .diff_common import (
 )
 from .diff_style import DiffOptions, DiffPalette
 
-MIN_SPLIT_WIDTH = 76
+MIN_SPLIT_WIDTH = 64
 MIN_SPLIT_COLUMN = 24
 
 

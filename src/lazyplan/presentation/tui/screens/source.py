@@ -36,6 +36,7 @@ from lazyplan.services.source import (
 from ....core.ports.provenance import ProvenancePort
 from ...shared.design import KIND_ICON, action_bar, escape_markup
 from ..navigation import NAV_BINDINGS, NavigationMixin
+from ..views.diff_split import MIN_SPLIT_WIDTH
 from ..views.source import (
     DiffPreview,
     commit_data,
@@ -73,6 +74,9 @@ if _TEXTUAL_OK:
             Binding("enter", "open_owner", "Owner", priority=True),
             Binding("n", "next_file", "Next file"),
             Binding("p", "prev_file", "Prev file"),
+            Binding("s", "toggle_split", "Split"),
+            Binding("w", "toggle_wrap", "Wrap"),
+            Binding("f", "toggle_fold", "Fold"),
             Binding("ctrl+d", "more", "More"),
             Binding("ctrl+u", "less", "Less"),
             Binding("o", "open", "Open"),
@@ -88,7 +92,9 @@ if _TEXTUAL_OK:
             self._oid = oid
             self._trail = SourceTrail(kind=kind, oid=oid, title="")
             self._filter = ""
-            self._diff_cache: dict[tuple[str, str, str, int, bool, int], DiffPreview] = {}
+            self._diff_cache: dict[
+                tuple[str, str, str, int, bool, bool, bool, int], DiffPreview
+            ] = {}
             self._stats_loaded: set[tuple[str, str]] = set()
             self._stats: dict[tuple[str, str], CommitStats] = {}
             self._commit_nodes: dict[tuple[str, str], TreeNode] = {}
@@ -99,6 +105,8 @@ if _TEXTUAL_OK:
             self._page_has_more = False
             self._current_node: TreeNode | None = None
             self._split_mode = False
+            self._wrap_mode = True
+            self._fold_mode = True
 
         def compose(self) -> ComposeResult:
             with Vertical(id="source-page"):
@@ -131,6 +139,12 @@ if _TEXTUAL_OK:
         def on_resize(self, event: events.Resize) -> None:
             """Re-render the current preview after a width change."""
             self._apply_width_classes(event.size.width)
+            if self._split_mode and event.size.width - 2 < MIN_SPLIT_WIDTH:
+                self._split_mode = False
+                self.notify(
+                    f"side-by-side needs {MIN_SPLIT_WIDTH} columns; switched to unified",
+                    timeout=3,
+                )
             self._diff_cache.clear()
             node = self.query_one("#source-tree", NavTree).cursor_node
             if node is not None:
@@ -138,7 +152,16 @@ if _TEXTUAL_OK:
 
         def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
             """Keep the filter field's keys free while it owns the keyboard."""
-            if action in ("open_owner", "next_file", "prev_file", "more", "less"):
+            if action in (
+                "open_owner",
+                "next_file",
+                "prev_file",
+                "more",
+                "less",
+                "toggle_split",
+                "toggle_wrap",
+                "toggle_fold",
+            ):
                 if self._focus_is_text():
                     return False
             return super().check_action(action, parameters)
@@ -388,7 +411,16 @@ if _TEXTUAL_OK:
         def _diff_preview(self, repo: str, sha: str, path: str) -> DiffPreview:
             """One cached page of a single file's diff."""
             width = max(20, self.query_one("#source-preview").size.width - 2)
-            key = (repo, sha, path, width, self._split_mode, self._page_offset)
+            key = (
+                repo,
+                sha,
+                path,
+                width,
+                self._split_mode,
+                self._wrap_mode,
+                self._fold_mode,
+                self._page_offset,
+            )
             cached = self._diff_cache.get(key)
             if cached is not None:
                 return cached
@@ -400,6 +432,8 @@ if _TEXTUAL_OK:
                 offset=self._page_offset,
                 limit=DIFF_PREVIEW_LINES,
                 split=self._split_mode,
+                wrap=self._wrap_mode,
+                fold=self._fold_mode,
             )
             self._diff_cache[key] = preview
             return preview
@@ -408,9 +442,12 @@ if _TEXTUAL_OK:
             """Keep the footer in step with paging and file navigation."""
             items = [
                 ("enter", "owner"),
-                ("n/p", "files"),
+                ("n/p", "file"),
+                ("s", "unified" if self._split_mode else "split"),
+                ("w", "nowrap" if self._wrap_mode else "wrap"),
+                ("f", "unfold" if self._fold_mode else "fold"),
                 ("y", "copy"),
-                ("/", "filter"),
+                ("/", "find"),
             ]
             if self._page_has_more:
                 items.append(("^d", "more"))
@@ -495,6 +532,33 @@ if _TEXTUAL_OK:
                 return
             self._page_offset = max(0, self._page_offset - DIFF_PREVIEW_LINES)
             self._preview(self._current_node, reset_page=False)
+
+        def _rerender_modes(self) -> None:
+            """Drop cached pages and repaint the current row."""
+            self._diff_cache.clear()
+            self._preview(self._current_node, reset_page=False)
+
+        def action_toggle_split(self) -> None:
+            """Switch between unified and side-by-side diffs."""
+            width = max(20, self.query_one("#source-preview").size.width - 2)
+            if not self._split_mode and width < MIN_SPLIT_WIDTH:
+                self.notify(
+                    f"side-by-side needs {MIN_SPLIT_WIDTH} columns",
+                    timeout=3,
+                )
+                return
+            self._split_mode = not self._split_mode
+            self._rerender_modes()
+
+        def action_toggle_wrap(self) -> None:
+            """Switch between wrapped and truncated long lines."""
+            self._wrap_mode = not self._wrap_mode
+            self._rerender_modes()
+
+        def action_toggle_fold(self) -> None:
+            """Fold or unfold long unchanged runs."""
+            self._fold_mode = not self._fold_mode
+            self._rerender_modes()
 
         def action_back(self) -> None:
             """Close the source view and restore the prior selection."""

@@ -144,6 +144,47 @@ class SourceTreeStatsTest(unittest.IsolatedAsyncioTestCase):
                 self.assertIn("page one", str(body.content))
                 self.assertEqual(app.screen._page_offset, 0)
 
+    async def test_style_toggles_pass_options_to_the_renderer(self) -> None:
+        with mock.patch(
+            "lazyplan.presentation.tui.screens.source.render_diff_preview",
+            return_value=DiffPreview(rows=("x",), total=1),
+        ) as reader:
+            app = create_app(str(self.store.path))
+            async with app.run_test(size=(170, 40)) as pilot:
+                app.push_screen(SourceScreen(self.store, "task", self.task.id))
+                await pilot.pause(0.5)
+                tree = app.screen.query_one("#source-tree", Tree)
+                repo_node = tree.root.children[0]
+                repo_node.expand()
+                tree.move_cursor(repo_node.children[0])
+                await pilot.pause()
+                app.screen.action_toggle_wrap()
+                await pilot.pause()
+                self.assertFalse(app.screen._wrap_mode)
+                self.assertFalse(reader.call_args.kwargs["wrap"])
+                app.screen.action_toggle_fold()
+                await pilot.pause()
+                self.assertFalse(app.screen._fold_mode)
+                self.assertFalse(reader.call_args.kwargs["fold"])
+                app.screen.action_toggle_split()
+                await pilot.pause()
+                self.assertTrue(app.screen._split_mode)
+                self.assertTrue(reader.call_args.kwargs["split"])
+
+    async def test_split_refuses_a_narrow_pane(self) -> None:
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(50, 20)) as pilot:
+            app.push_screen(SourceScreen(self.store, "task", self.task.id))
+            await pilot.pause(0.5)
+            tree = app.screen.query_one("#source-tree", Tree)
+            repo_node = tree.root.children[0]
+            repo_node.expand()
+            tree.move_cursor(repo_node.children[0])
+            await pilot.pause()
+            app.screen.action_toggle_split()
+            await pilot.pause()
+            self.assertFalse(app.screen._split_mode)
+
 
 if __name__ == "__main__":
     unittest.main()

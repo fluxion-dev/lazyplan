@@ -245,9 +245,9 @@ class SplitRenderTest(unittest.TestCase):
         self.assertIn("↳", plain)
 
     def test_narrow_pane_reports_the_minimum_width(self) -> None:
-        result = render_split(parse_patch(PATCH), 60)
+        result = render_split(parse_patch(PATCH), 50)
         self.assertFalse(result.available)
-        self.assertIn("76", result.detail)
+        self.assertIn("64", result.detail)
 
     def test_empty_split_has_a_message(self) -> None:
         result = render_split((), 100)

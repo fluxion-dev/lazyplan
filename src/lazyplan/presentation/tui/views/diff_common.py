@@ -19,6 +19,8 @@ _STATUS_STYLE = {
     "modify": ("M", "hunk"),
 }
 
+WORD_SIMILARITY = 0.35
+
 
 def diff_counts(item: DiffFile) -> tuple[int, int]:
     """Added and removed line counts for one file."""
@@ -104,6 +106,11 @@ def _word_ranges(old: str, new: str) -> tuple[list[tuple[int, int]], list[tuple[
     old_ranges: list[tuple[int, int]] = []
     new_ranges: list[tuple[int, int]] = []
     matcher = difflib.SequenceMatcher(None, old, new, autojunk=False)
+    if matcher.ratio() < WORD_SIMILARITY:
+        return (
+            [(0, len(old))] if old else [],
+            [(0, len(new))] if new else [],
+        )
     for tag, old_start, old_end, new_start, new_end in matcher.get_opcodes():
         if tag == "equal":
             continue

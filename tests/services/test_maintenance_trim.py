@@ -381,6 +381,39 @@ class TestMaintenanceTrim(unittest.TestCase):
         self.assertIn(plan.id, preview.plans)
         self.assertIn(large, preview.plans)
 
+    def test_huge_plan_id_does_not_overflow_the_sqlite_udf(self) -> None:
+        plan = self.store.add_plan("Huge id")
+        self.store.set_status_raw("plan", plan.id, Status.DONE)
+        with closing(sqlite3.connect(self.db)) as conn:
+            conn.execute(
+                "INSERT INTO events (ts, actor, kind, action, detail)"
+                " VALUES (?, 'x', 'plan', 'status', ?)",
+                (OLD, f"plan #{plan.id} -> done"),
+            )
+            conn.execute(
+                "INSERT INTO events (ts, actor, kind, action, detail)"
+                " VALUES (?, 'x', 'plan', 'status', ?)",
+                (OLD + 1, "plan #999999999999999999999999 -> done"),
+            )
+            conn.commit()
+
+        maintenance.report(self.store)
+        maintenance.trim(self.store, now=NOW, days="1", apply=False)
+        maintenance.trim(self.store, now=NOW, days="1", apply=True)
+
+        with closing(sqlite3.connect(self.db)) as conn:
+            details = [
+                row[0]
+                for row in conn.execute(
+                    "SELECT detail FROM events WHERE kind='plan' AND action='status'"
+                )
+            ]
+        self.assertEqual(details, [f"plan #{plan.id} -> done"])
+        self.assertIn(plan.id, self.store.plan_status_events_map())
+        self.assertNotIn(plan.id, [row[0].id for row in services.tree(self.store)])
+        preview = maintenance.archive(self.store, now=NOW, days="1", apply=False)
+        self.assertIn(plan.id, preview.plans)
+
     def test_plan_status_udf_matches_the_strict_parser(self) -> None:
         cases = {
             "plan #1 -> done": 1,
@@ -388,6 +421,7 @@ class TestMaintenanceTrim(unittest.TestCase):
             "plan #1x -> done": None,
             "Plan #1 -> done": None,
             "plan #1": None,
+            "plan #999999999999999999999999 -> done": None,
         }
         with closing(sqlite3.connect(self.db)) as conn:
             self.store._register_status_parser(conn)

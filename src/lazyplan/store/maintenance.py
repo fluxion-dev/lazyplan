@@ -20,7 +20,7 @@ from ..core.ports.maintenance import (
     VacuumResult,
 )
 from .base import StoreBase
-from .status_events import parse_plan_status_detail
+from .status_events import sqlite_plan_status_id
 
 
 @dataclass(frozen=True)
@@ -185,7 +185,7 @@ class MaintenanceMixin(StoreBase):
         conn.create_function(
             "plan_status_id",
             1,
-            lambda detail: (parse_plan_status_detail(detail) or (None, None))[0],
+            sqlite_plan_status_id,
             deterministic=True,
         )
 

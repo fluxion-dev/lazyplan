@@ -6,6 +6,10 @@ the policy ignores can never displace one it reads.
 
 from __future__ import annotations
 
+#: SQLite stores integers as signed 64-bit values; a UDF must stay in range.
+SQLITE_INT_MIN = -(2**63)
+SQLITE_INT_MAX = 2**63 - 1
+
 
 def parse_plan_status_detail(detail: str) -> tuple[int, str] | None:
     """Return ``(plan_id, target)`` for a policy status event, else None.
@@ -24,3 +28,14 @@ def parse_plan_status_detail(detail: str) -> tuple[int, str] | None:
     except (TypeError, ValueError):
         return None
     return plan_id, target
+
+
+def sqlite_plan_status_id(detail: str) -> int | None:
+    """Plan id for the SQLite UDF, or None when malformed or out of int64 range."""
+    parsed = parse_plan_status_detail(detail)
+    if parsed is None:
+        return None
+    plan_id = parsed[0]
+    if plan_id < SQLITE_INT_MIN or plan_id > SQLITE_INT_MAX:
+        return None
+    return plan_id

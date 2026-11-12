@@ -15,6 +15,7 @@ from ..core.ports.maintenance import (
     BackupResult,
     MaintenancePort,
     MaintenanceReport,
+    RestoreResult,
     TrimResult,
     VacuumResult,
 )
@@ -105,3 +106,26 @@ def vacuum(port: MaintenancePort, apply: bool = False) -> VacuumResult:
         return port.vacuum_preview()
     _snapshot(port, True, "vacuum")
     return port.vacuum()
+
+
+def restore(
+    port: MaintenancePort,
+    plan_id: int | None = None,
+    session_id: int | None = None,
+    actor: str = "human",
+) -> RestoreResult:
+    """Return one archived plan or session to the default views."""
+    if (plan_id is None) == (session_id is None):
+        raise ValueError("restore needs exactly one of plan or session")
+    if plan_id is not None:
+        if port.get_plan(plan_id) is None:
+            raise KeyError(f"plan {plan_id} not found")
+        if not port.restore_plan(plan_id, actor=actor):
+            raise ValueError(f"plan {plan_id} is not archived")
+        return RestoreResult("plan", plan_id, True)
+    assert session_id is not None
+    if port.get_session(session_id) is None:
+        raise KeyError(f"session {session_id} not found")
+    if not port.restore_session(session_id, actor=actor):
+        raise ValueError(f"session {session_id} is not archived")
+    return RestoreResult("session", session_id, True)

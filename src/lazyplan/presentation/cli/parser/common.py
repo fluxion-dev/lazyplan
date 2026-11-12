@@ -64,6 +64,11 @@ examples:
   lpui repos --kind task --id 3 --effective
   lpui list --repo ~/checkouts/api
   lpui feed --limit 20                   show recent activity by you and your agents
+  lpui maint report                      bytes and row counts per table
+  lpui maint archive --days 7            preview done plans and ended sessions to archive
+  lpui maint trim --apply                delete derived rows after a verified snapshot
+  lpui maint vacuum --apply              reclaim free pages after a verified snapshot
+  lpui maint restore --plan 3            return an archived plan to the default views
   lpui upgrade [--check]                 self-update pipx/venv installs (no repo needed)
   lpui notes [--all] [--since VERSION]   read the release notes bundled with this version
   lpui export --format json > backup.json

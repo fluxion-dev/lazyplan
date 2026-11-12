@@ -278,6 +278,9 @@ class SessionsMixin(StoreBase):
         archived: list[int] = []
         with self._connect() as conn:
             for session_id in session_ids:
+                session = conn.execute(
+                    "SELECT actor, repo_path FROM sessions WHERE id=?", (session_id,)
+                ).fetchone()
                 cur = conn.execute(
                     "UPDATE sessions SET archived_at=? WHERE id=? AND ended_at>0 AND archived_at=0",
                     (stamp, session_id),
@@ -292,6 +295,14 @@ class SessionsMixin(StoreBase):
                     session_id=session_id,
                     now=stamp,
                 )
+                if session is not None:
+                    self._release_session_claims(
+                        conn,
+                        session_id,
+                        str(session["actor"]),
+                        str(session["repo_path"] or ""),
+                        stamp,
+                    )
                 archived.append(int(session_id))
         for session_id in archived:
             row = self.get_session(session_id)
@@ -306,6 +317,31 @@ class SessionsMixin(StoreBase):
                 )
             clear_pointer(self.path, row.actor, row.repo_path, session_id=session_id)
         return len(archived)
+
+    def _release_session_claims(
+        self,
+        conn: sqlite3.Connection,
+        session_id: int,
+        actor: str,
+        repo_path: str,
+        now: float,
+    ) -> None:
+        """Release leases owned by an archived session's actor in its checkout."""
+        rows = conn.execute(
+            "SELECT task_id FROM task_claims WHERE actor=? AND repo_path=?",
+            (actor, repo_path),
+        ).fetchall()
+        for row in rows:
+            task_id = int(row["task_id"])
+            conn.execute("DELETE FROM task_claims WHERE task_id=?", (task_id,))
+            self.log(
+                actor,
+                "task",
+                "release",
+                f"task #{task_id} released by archived session",
+                session_id=session_id,
+                now=now,
+            )
 
     def restore_session(
         self, session_id: int, actor: str = "human", now: float | None = None

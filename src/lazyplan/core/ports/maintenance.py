@@ -147,6 +147,19 @@ class BackupResult:
         }
 
 
+@dataclass(frozen=True)
+class RestoreResult:
+    """One archived plan or session returned to the default views."""
+
+    kind: str = ""
+    id: int = 0
+    restored: bool = False
+
+    def to_dict(self) -> dict:
+        """JSON-safe restore result."""
+        return {"kind": self.kind, "id": self.id, "restored": self.restored}
+
+
 class MaintenancePort(PlanningPort, SessionsReadPort, Protocol):
     """Persistence surface the maintenance use cases need."""
 

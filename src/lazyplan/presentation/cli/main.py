@@ -11,6 +11,7 @@ from lazyplan.presentation import (
     setup,
 )
 
+from ...core.errors import MaintenanceBackupError, MaintenanceBusy
 from ...infrastructure.environment import (
     cached_latest,
     detect,
@@ -169,6 +170,9 @@ def _run_command(store: Store, args: argparse.Namespace, actor: str) -> int:
         if handler is None:
             raise AssertionError(args.cmd)
         return handler(store, args, actor)
+    except (MaintenanceBusy, MaintenanceBackupError) as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 1
     except (ValueError, KeyError) as exc:
         print(msg_error(exc), file=sys.stderr)
         return 2

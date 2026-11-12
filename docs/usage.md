@@ -670,8 +670,9 @@ question at each lifecycle point:
 
 - A `git commit` is denied when the checkout is managed and no task is doing.
   A checkout is managed when its database lives under `.agents/lazyplan/`, a
-  plan links it, or an open session belongs to it. Unrelated repositories keep
-  normal git behavior.
+  plan links it, or an open session there was started by hand or belongs to a
+  plan. The row a hook opens for every host session does not count, so
+  unrelated repositories keep normal git behavior.
 - A stop is blocked once when a managed checkout has unlinked commits. The next
   stop after the host's continuation guard is allowed, and the session is
   marked awaiting.

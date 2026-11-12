@@ -538,6 +538,20 @@ class HookCase(unittest.TestCase):
         )
         self.assertEqual(result.block, "")
 
+    def test_a_host_session_in_an_unrelated_checkout_does_not_gate_commits(self):
+        self._seed()
+        payload = {"session_id": "s-1", "hook_event_name": "PreToolUse"}
+        for event in ("session-start", "prompt-submit"):
+            hooks.build_result(
+                event, payload, self.repo, commits=[], store=Store(self.db), host="claude"
+            )
+        commit = dict(payload, tool_input={"command": "git commit -m x"})
+        result = hooks.build_result(
+            "pre-tool", commit, self.repo, commits=[], store=Store(self.db), host="claude"
+        )
+        self.assertEqual(result, hooks.HookResult())
+        self.assertEqual(len(Store(self.db).list_sessions(open_only=True)), 1)
+
     def test_non_git_commands_are_never_blocked(self):
         self._linked_plan()
         payload = {"tool_input": {"command": "git status"}}

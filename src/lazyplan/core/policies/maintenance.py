@@ -7,9 +7,9 @@ clock, the status-event map, and the row lists.
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 
-from ..entities import Claim, Plan, Session, Status
+from ..entities import Plan, Session, Status
 
 #: One window for done plans, ended sessions, and old events.
 DEFAULT_WINDOW_DAYS = 7.0
@@ -71,13 +71,6 @@ def is_visible(row: object, archived: str = "hide") -> bool:
     return is_archived_row(row) == (archived == "only")
 
 
-def visible_rows(rows: Iterable[object], archived: str = "hide") -> list[object]:
-    """Filter rows by the archive view: hide, only, or show."""
-    if archived == "show":
-        return list(rows)
-    return [row for row in rows if is_visible(row, archived)]
-
-
 def plan_done_at(events: Mapping[int, tuple[float, str]], plan_id: int) -> float | None:
     """Timestamp of the plan's latest done transition, or None."""
     last = events.get(plan_id)
@@ -111,26 +104,9 @@ def is_ended_past_window(
     return (now - session.ended_at) > window_secs
 
 
-def is_expired_claim(claim: Claim, now: float) -> bool:
-    """True when a lease has lapsed and can be trimmed."""
-    return claim.expired(now)
-
-
 def event_cutoff(now: float, window_secs: float = DEFAULT_WINDOW_SECS) -> float:
     """Events older than this timestamp can be trimmed."""
     return now - window_secs
-
-
-def is_old_event(event: Mapping[str, object], cutoff: float) -> bool:
-    """True when one event row predates the cutoff; untimed rows are kept."""
-    raw = event.get("ts")
-    if raw is None:
-        return False
-    try:
-        stamp = float(raw)  # type: ignore[arg-type]
-    except (TypeError, ValueError):
-        return False
-    return stamp < cutoff
 
 
 def plan_archive_candidates(

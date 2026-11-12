@@ -35,9 +35,9 @@ def _snapshot(port: MaintenancePort, apply: bool, label: str = "") -> BackupResu
     return port.backup(label)
 
 
-def report(port: MaintenancePort) -> MaintenanceReport:
-    """Per-table bytes, row counts, and the reclaimable estimate."""
-    return port.report()
+def report(port: MaintenancePort, days: str | float | None = None) -> MaintenanceReport:
+    """Per-table bytes, row counts, and the reclaimable estimate for one window."""
+    return port.report(window_secs=_window_secs(days))
 
 
 def _archive_candidates(
@@ -88,6 +88,12 @@ def archive(
     plan_ids, session_ids = _archive_candidates(port, stamp, window)
     if apply:
         plan_ids, session_ids = _write_archive(port, stamp, window, actor)
+        port.log(
+            actor,
+            "maintenance",
+            "archive",
+            f"archived {len(plan_ids)} plan(s) and {len(session_ids)} session(s)",
+        )
     return ArchiveResult(plans=plan_ids, sessions=session_ids, applied=apply)
 
 
@@ -96,18 +102,30 @@ def trim(
     now: float | None = None,
     days: str | float | None = None,
     apply: bool = False,
+    actor: str = "human",
 ) -> TrimResult:
     """Preview derived-row trims, or snapshot and write them with *apply*."""
+    window = _window_secs(days)
     _snapshot(port, apply, "trim")
-    return port.trim(now=now, window_secs=_window_secs(days), apply=apply)
+    result = port.trim(now=now, window_secs=window, apply=apply)
+    if apply:
+        port.log(actor, "maintenance", "trim", f"trimmed {result.total_rows} derived row(s)")
+    return result
 
 
-def vacuum(port: MaintenancePort, apply: bool = False) -> VacuumResult:
+def vacuum(port: MaintenancePort, apply: bool = False, actor: str = "human") -> VacuumResult:
     """Preview free pages, or snapshot and vacuum with *apply*."""
     if not apply:
         return port.vacuum_preview()
     _snapshot(port, True, "vacuum")
-    return port.vacuum()
+    result = port.vacuum()
+    port.log(
+        actor,
+        "maintenance",
+        "vacuum",
+        f"vacuumed {result.before_bytes} -> {result.after_bytes} bytes",
+    )
+    return result
 
 
 def restore(

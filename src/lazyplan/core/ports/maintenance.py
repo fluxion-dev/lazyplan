@@ -42,18 +42,22 @@ class MaintenanceReport:
 
     method: str = "dbstat"
     tables: tuple[TableBytes, ...] = ()
-    total_bytes: int = 0
+    used_bytes: int = 0
+    file_bytes: int = 0
     free_bytes: int = 0
     reclaimable_bytes: int = 0
+    window_days: float = 7.0
 
     def to_dict(self) -> dict:
         """JSON-safe report for scripts and agents."""
         return {
             "method": self.method,
             "tables": [row.to_dict() for row in self.tables],
-            "total_bytes": self.total_bytes,
+            "used_bytes": self.used_bytes,
+            "file_bytes": self.file_bytes,
             "free_bytes": self.free_bytes,
             "reclaimable_bytes": self.reclaimable_bytes,
+            "window_days": self.window_days,
         }
 
 
@@ -182,7 +186,7 @@ class MaintenancePort(PlanningPort, SessionsReadPort, Protocol):
         self, session_id: int, actor: str = "human", now: float | None = None
     ) -> bool: ...
 
-    def report(self) -> MaintenanceReport: ...
+    def report(self, window_secs: float = DEFAULT_WINDOW_SECS) -> MaintenanceReport: ...
 
     def trim(
         self,

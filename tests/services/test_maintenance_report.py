@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import sqlite3
 import tempfile
+import time
 import unittest
 from contextlib import closing
 from unittest import mock
@@ -54,13 +55,36 @@ class TestMaintenanceReport(unittest.TestCase):
         report = maintenance.report(self.store)
         with closing(sqlite3.connect(self.db)) as conn:
             page_size = int(conn.execute("PRAGMA page_size").fetchone()[0])
-        file_size = os.path.getsize(self.db)
-        self.assertLessEqual(abs(report.total_bytes - file_size), page_size)
+        file_size = report.file_bytes
+        self.assertLessEqual(abs(report.used_bytes - file_size), page_size)
         self.assertLessEqual(
             abs(sum(row.bytes for row in report.tables) + report.free_bytes - file_size),
             page_size,
         )
-        self.assertGreater(report.total_bytes, 0)
+        self.assertGreater(report.used_bytes, 0)
+        self.assertGreater(report.file_bytes, 0)
+        self.assertEqual(report.window_days, 7.0)
+
+    def test_report_and_trim_use_the_same_window(self) -> None:
+        with closing(sqlite3.connect(self.db)) as conn:
+            conn.execute(
+                "INSERT INTO events (ts, actor, kind, action, detail)"
+                " VALUES (?, 'x', 'x', 'note', 'three days')",
+                (time.time() - 3 * 86400,),
+            )
+            conn.commit()
+        one_day = maintenance.report(self.store, days="1")
+        seven_days = maintenance.report(self.store, days="7")
+        self.assertEqual(one_day.window_days, 1.0)
+        self.assertEqual(seven_days.window_days, 7.0)
+        self.assertGreater(
+            one_day.reclaimable_bytes,
+            seven_days.reclaimable_bytes,
+        )
+        one_trim = maintenance.trim(self.store, days="1")
+        seven_trim = maintenance.trim(self.store, days="7")
+        self.assertEqual({row.table: row.rows for row in one_trim.tables}["events"], 1)
+        self.assertEqual({row.table: row.rows for row in seven_trim.tables}["events"], 0)
 
     def test_missing_dbstat_falls_back_to_page_counts(self) -> None:
         with mock.patch.object(
@@ -73,8 +97,8 @@ class TestMaintenanceReport(unittest.TestCase):
         with closing(sqlite3.connect(self.db)) as conn:
             page_size = int(conn.execute("PRAGMA page_size").fetchone()[0])
             page_count = int(conn.execute("PRAGMA page_count").fetchone()[0])
-        self.assertEqual(report.total_bytes, page_count * page_size)
-        self.assertLessEqual(abs(report.total_bytes - os.path.getsize(self.db)), page_size)
+        self.assertEqual(report.used_bytes, page_count * page_size)
+        self.assertLessEqual(abs(report.used_bytes - os.path.getsize(self.db)), page_size)
         self.assertTrue(self._schema_tables() <= {row.table for row in report.tables})
         self.assertTrue(all(row.bytes == 0 for row in report.tables))
 

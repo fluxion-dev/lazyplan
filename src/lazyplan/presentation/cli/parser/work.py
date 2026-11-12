@@ -31,7 +31,7 @@ def add_list(
         "--archived",
         choices=("only", "show", "all"),
         default=None,
-        help="archive state: only archived plans, show both, or hide (default)",
+        help="archive state: only archived plans, show both, or all (alias for show); the default hides archived plans",
     )
     li.add_argument("--plan", type=int, default=None, metavar="ID", help="show only this plan")
     li.add_argument(
@@ -122,7 +122,7 @@ def add_noun_groups(
             "--archived",
             choices=("only", "show", "all"),
             default=None,
-            help="archive state: only archived plans, show both, or hide (default)",
+            help="archive state: only archived plans, show both, or all (alias for show); the default hides archived plans",
         )
         parser.add_argument("--all", action="store_true", help="show every plan")
         parser.add_argument(

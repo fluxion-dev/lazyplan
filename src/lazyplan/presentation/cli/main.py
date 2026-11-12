@@ -174,6 +174,9 @@ def _run_command(store: Store, args: argparse.Namespace, actor: str) -> int:
     except (MaintenanceBusy, MaintenanceBackupError) as exc:
         print(msg_error(exc), file=sys.stderr)
         return 1
+    except sqlite3.OperationalError as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 1
     except (ValueError, KeyError) as exc:
         print(msg_error(exc), file=sys.stderr)
         return 2

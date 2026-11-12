@@ -21,11 +21,7 @@ class TestStoreArchive(unittest.TestCase):
         self.tmp.cleanup()
 
     def _events(self, kind: str, action: str) -> list[dict]:
-        return [
-            event
-            for event in self.store.feed(limit=500)
-            if event["kind"] == kind and event["action"] == action
-        ]
+        return [event for event in self.store.events_by_action(action) if event["kind"] == kind]
 
     def test_archive_plan_stamps_and_logs_once(self) -> None:
         plan = self.store.add_plan("Old work")
@@ -106,6 +102,17 @@ class TestStoreArchive(unittest.TestCase):
         assert restored is not None
         self.assertEqual(restored.archived_at, 0.0)
         self.assertFalse(self.store.restore_session(ended.id, actor="builder"))
+
+    def test_feed_hides_events_for_archived_plans(self) -> None:
+        old = self.store.add_plan("Old plan")
+        self.store.set_status_raw("plan", old.id, Status.DONE)
+        self.store.archive_plan(old.id, actor="builder")
+        live = self.store.add_plan("Live plan")
+
+        details = [event["detail"] for event in self.store.feed(50)]
+
+        self.assertFalse(any(f"P#{old.id} " in detail for detail in details))
+        self.assertTrue(any(live.name in detail for detail in details))
 
 
 if __name__ == "__main__":

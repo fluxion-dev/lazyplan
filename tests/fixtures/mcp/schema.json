@@ -431,9 +431,13 @@
       "annotations": {
         "readOnlyHint": true
       },
-      "description": "Database bytes and row counts per table, free pages, and a reclaimable estimate.",
+      "description": "Database bytes and row counts per table, free pages, and a reclaimable estimate for the window.",
       "inputSchema": {
-        "properties": {},
+        "properties": {
+          "days": {
+            "type": "string"
+          }
+        },
         "required": [],
         "type": "object"
       },

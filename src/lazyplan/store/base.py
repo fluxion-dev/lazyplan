@@ -149,12 +149,48 @@ class StoreBase(StoreStubs):
                 )
 
     def feed(self, limit: int = 20) -> list[dict]:
-        """Recent events, newest first."""
+        """Recent events, newest first, excluding archived plans."""
+        wanted = max(limit, 1)
         with self._connect() as conn:
+            archived = {
+                int(row["id"])
+                for row in conn.execute("SELECT id FROM plans WHERE archived_at>0").fetchall()
+            }
+            if not archived:
+                rows = conn.execute(
+                    "SELECT * FROM events ORDER BY id DESC LIMIT ?", (wanted,)
+                ).fetchall()
+                return [dict(r) for r in rows]
             rows = conn.execute(
-                "SELECT * FROM events ORDER BY id DESC LIMIT ?", (max(limit, 1),)
+                "SELECT * FROM events ORDER BY id DESC LIMIT ?", (wanted * 5,)
             ).fetchall()
-        return [dict(r) for r in rows]
+            milestone_plan = {
+                int(row["id"]): int(row["plan_id"])
+                for row in conn.execute("SELECT id, plan_id FROM milestones").fetchall()
+            }
+            task_milestone = {
+                int(row["id"]): int(row["milestone_id"])
+                for row in conn.execute("SELECT id, milestone_id FROM tasks").fetchall()
+            }
+            criterion_parent = {
+                int(row["id"]): (str(row["parent_kind"]), int(row["parent_id"]))
+                for row in conn.execute(
+                    "SELECT id, parent_kind, parent_id FROM criteria"
+                ).fetchall()
+            }
+        from .views import _detail_plan_id
+
+        out: list[dict] = []
+        for row in rows:
+            plan_id = _detail_plan_id(
+                str(row["detail"] or ""), milestone_plan, task_milestone, criterion_parent
+            )
+            if plan_id in archived:
+                continue
+            out.append(dict(row))
+            if len(out) >= wanted:
+                break
+        return out
 
     def events_by_action(self, *actions: str) -> list[dict]:
         """All events with one of these actions, oldest first."""

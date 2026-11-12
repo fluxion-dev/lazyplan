@@ -4,21 +4,18 @@ from __future__ import annotations
 
 import unittest
 
-from lazyplan.core.entities import Claim, Plan, Session, Status
+from lazyplan.core.entities import Plan, Session, Status
 from lazyplan.core.policies.maintenance import (
     DEFAULT_WINDOW_SECS,
     check_archive_mode,
-    event_cutoff,
     is_archived_row,
     is_done_past_window,
     is_ended_past_window,
-    is_expired_claim,
-    is_old_event,
+    is_visible,
     parse_window_days,
     parse_window_secs,
     plan_archive_candidates,
     session_archive_candidates,
-    visible_rows,
 )
 from lazyplan.core.ports.maintenance import (
     ArchiveResult,
@@ -58,13 +55,13 @@ class TestArchiveMode(unittest.TestCase):
         with self.assertRaises(ValueError):
             check_archive_mode("all")
 
-    def test_visible_rows_filters_by_stamp(self) -> None:
+    def test_is_visible_filters_by_stamp(self) -> None:
         live = Plan(id=1, name="Live")
         archived = Plan(id=2, name="Archived", archived_at=10.0)
-        rows = [live, archived]
-        self.assertEqual(visible_rows(rows), [live])
-        self.assertEqual(visible_rows(rows, "only"), [archived])
-        self.assertEqual(visible_rows(rows, "show"), rows)
+        self.assertTrue(is_visible(live))
+        self.assertFalse(is_visible(archived))
+        self.assertTrue(is_visible(archived, "only"))
+        self.assertTrue(is_visible(live, "show"))
         self.assertTrue(is_archived_row(archived))
         self.assertFalse(is_archived_row(live))
 
@@ -102,24 +99,12 @@ class TestCandidates(unittest.TestCase):
             session_archive_candidates([old, fresh, open_row, archived], self.now), [old]
         )
 
-    def test_expired_claim(self) -> None:
-        claim = Claim(task_id=1, actor="ana", started_at=0.0, expires_at=10.0)
-        self.assertTrue(is_expired_claim(claim, 10.0))
-        self.assertTrue(is_expired_claim(claim, 11.0))
-        self.assertFalse(is_expired_claim(claim, 9.0))
-
-    def test_old_events(self) -> None:
-        cutoff = event_cutoff(self.now)
-        self.assertTrue(is_old_event({"ts": self.now - DEFAULT_WINDOW_SECS - 1}, cutoff))
-        self.assertFalse(is_old_event({"ts": self.now}, cutoff))
-        self.assertFalse(is_old_event({}, cutoff))
-
 
 class TestPortResults(unittest.TestCase):
     def test_reports_serialize(self) -> None:
         report = MaintenanceReport(
             tables=(TableBytes("plans", 100, 2),),
-            total_bytes=100,
+            used_bytes=100,
             free_bytes=20,
             reclaimable_bytes=20,
         )

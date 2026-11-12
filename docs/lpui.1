@@ -1136,7 +1136,7 @@ show only plans finished longer than a day
 .RS
 .TP
 .B \-\-archived {only|show|all}
-archive state: only archived plans, show both, or hide (default) Choices: only, show, all\.
+archive state: only archived plans, show both, or all (alias for show); the default hides archived plans Choices: only, show, all\.
 .RE
 .RS
 .TP
@@ -2353,6 +2353,11 @@ lpui --actor alice add-criteria --kind plan --id 1 --text \(dqWorks offline\(dq
 lpui --actor alice add-task --milestone 1 --title \(dqFix bug\(dq
 lpui status --kind task --id 3 --to done
 lpui upgrade --check
+lpui maint report --days 30.days
+lpui maint archive --days 7
+lpui maint trim --apply
+lpui maint vacuum --apply
+lpui maint restore --plan 3
 lpui feed --limit 20
 lpui export --format json > backup.json
 lpui import --file backup.json

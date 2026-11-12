@@ -15,7 +15,11 @@ from ..emit import _emit_read
 
 def _cmd_maint_report(store: object, args: argparse.Namespace, actor: str) -> int:
     del actor
-    report = services.maintenance.report(store)  # type: ignore[arg-type]
+    try:
+        report = services.maintenance.report(store, days=args.days)  # type: ignore[arg-type]
+    except ValueError as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 2
     return _emit_read(
         args, view.report_payload(report), view.report_rows(report), view.report_text(report)
     )
@@ -60,12 +64,12 @@ def _cmd_maint_restore(store: object, args: argparse.Namespace, actor: str) -> i
 
 
 def _cmd_maint_trim(store: object, args: argparse.Namespace, actor: str) -> int:
-    del actor
     try:
         result = services.maintenance.trim(
             store,  # type: ignore[arg-type]
             days=args.days,
             apply=bool(args.apply),
+            actor=actor,
         )
     except (MaintenanceBusy, MaintenanceBackupError) as exc:
         print(msg_error(exc), file=sys.stderr)
@@ -79,9 +83,12 @@ def _cmd_maint_trim(store: object, args: argparse.Namespace, actor: str) -> int:
 
 
 def _cmd_maint_vacuum(store: object, args: argparse.Namespace, actor: str) -> int:
-    del actor
     try:
-        result = services.maintenance.vacuum(store, apply=bool(args.apply))  # type: ignore[arg-type]
+        result = services.maintenance.vacuum(
+            store,  # type: ignore[arg-type]
+            apply=bool(args.apply),
+            actor=actor,
+        )
     except (MaintenanceBusy, MaintenanceBackupError) as exc:
         print(msg_error(exc), file=sys.stderr)
         return 1

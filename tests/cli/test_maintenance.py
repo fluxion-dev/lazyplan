@@ -110,11 +110,13 @@ class TestMaintenanceCli(unittest.TestCase):
             self.assertEqual(
                 conn.execute("SELECT COUNT(*) FROM events WHERE detail='dead'").fetchone()[0], 0
             )
+        self.assertIn("trim", [event["action"] for event in self.store.feed(100)])
 
-    def test_invalid_window_exits_two(self) -> None:
-        code, _out, err = self._run("maint", "trim", "--days", "0")
+    def test_invalid_window_exits_two_without_a_snapshot(self) -> None:
+        code, _out, err = self._run("maint", "trim", "--apply", "--days", "0")
         self.assertEqual(code, 2)
         self.assertIn("window", err)
+        self.assertEqual(self._backups(), [])
 
     def test_restore_returns_a_plan_or_exits_one(self) -> None:
         self.store.archive_plan(self.old_plan.id, actor="builder")

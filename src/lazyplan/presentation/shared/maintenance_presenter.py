@@ -48,9 +48,10 @@ def report_rows(report: MaintenanceReport) -> list[str]:
             "maint",
             "report",
             report.method,
-            report.total_bytes,
-            report.free_bytes,
-            report.reclaimable_bytes,
+            report.used_bytes,
+            report.file_bytes,
+            f"free={report.free_bytes} reclaim={report.reclaimable_bytes} "
+            f"window={report.window_days}d",
         )
     ]
     rows.extend(
@@ -62,9 +63,10 @@ def report_rows(report: MaintenanceReport) -> list[str]:
 def report_text(report: MaintenanceReport) -> str:
     lines = [
         f"method     {report.method}",
-        f"total      {report.total_bytes} bytes",
+        f"used       {report.used_bytes} bytes",
+        f"file       {report.file_bytes} bytes",
         f"free       {report.free_bytes} bytes",
-        f"reclaim    {report.reclaimable_bytes} bytes",
+        f"reclaim    {report.reclaimable_bytes} bytes ({report.window_days:g}-day window)",
     ]
     for row in report.tables:
         lines.append(f"  {row.table:<24} {row.bytes:>10} bytes {row.rows:>8} rows")

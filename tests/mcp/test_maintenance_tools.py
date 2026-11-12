@@ -95,6 +95,39 @@ class TestMcpMaintenance(unittest.TestCase):
                 conn.execute("SELECT COUNT(*) FROM events WHERE detail='old'").fetchone()[0], 0
             )
 
+    def test_archive_apply_path(self) -> None:
+        old_plan = self.store.add_plan("Old plan")
+        services.set_status(self.store, "plan", old_plan.id, Status.DONE)
+        session, _previous = self.store.start_session(
+            "builder", plan_id=old_plan.id, repo_path=self.tmp.name, now=self.old
+        )
+        self.store.end_session(session.id, "builder", summary="done", now=self.old)
+        with closing(sqlite3.connect(self.db)) as conn:
+            conn.execute("UPDATE events SET ts=? WHERE detail LIKE 'plan #% -> done%'", (self.old,))
+            conn.commit()
+
+        payload = self._payload("maintenance_archive", {"apply": True, "days": "1"})
+
+        self.assertTrue(payload["applied"])
+        self.assertIn(old_plan.id, payload["plans"])
+        row = self.store.get_plan(old_plan.id)
+        assert row is not None
+        self.assertGreater(row.archived_at, 0)
+
+    def test_vacuum_apply_path(self) -> None:
+        with closing(sqlite3.connect(self.db)) as conn:
+            conn.executemany(
+                "INSERT INTO events (ts, actor, kind, action, detail) VALUES (?, 'x', 'x', 'x', ?)",
+                [(time.time(), "spill " + "x" * 200) for _ in range(2_000)],
+            )
+            conn.execute("DELETE FROM events WHERE detail LIKE 'spill %'")
+            conn.commit()
+
+        payload = self._payload("maintenance_vacuum", {"apply": True})
+
+        self.assertTrue(payload["applied"])
+        self.assertGreater(payload["freed_bytes"], 0)
+
     def test_restore_requires_apply_and_returns_the_row(self) -> None:
         old_plan = self.store.add_plan("Archived")
         services.set_status(self.store, "plan", old_plan.id, Status.DONE)

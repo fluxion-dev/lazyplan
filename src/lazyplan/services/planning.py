@@ -287,7 +287,7 @@ def reconcile(
     }
 
 
-def is_archived(port: PlanningPort, plan: Plan) -> bool:
+def is_finished(port: PlanningPort, plan: Plan) -> bool:
     """Age-based finished rule: done longer than a day. No proof: never hide."""
     return _is_finished(plan, port.plan_status_events_map(), time.time())
 
@@ -545,7 +545,7 @@ __all__ = [
     "cycle_status",
     "heal",
     "heal_parents",
-    "is_archived",
+    "is_finished",
     "plan_activity",
     "reconcile",
     "set_status",

@@ -2026,7 +2026,7 @@
         "name": "maintenance_archive"
       },
       {
-        "description": "Database bytes and row counts per table, free pages, and a reclaimable estimate.",
+        "description": "Database bytes and row counts per table, free pages, and a reclaimable estimate for the window.",
         "name": "maintenance_report"
       },
       {
@@ -3092,7 +3092,7 @@
         "file": "src/lazyplan/presentation/tui/screens/maintenance.py",
         "key": "R",
         "label": "Restore",
-        "line": "45",
+        "line": "46",
         "screen": "maintenance"
       },
       {
@@ -3100,7 +3100,7 @@
         "file": "src/lazyplan/presentation/tui/screens/maintenance.py",
         "key": "a",
         "label": "Archive",
-        "line": "42",
+        "line": "43",
         "screen": "maintenance"
       },
       {
@@ -3108,7 +3108,7 @@
         "file": "src/lazyplan/presentation/tui/screens/maintenance.py",
         "key": "escape",
         "label": "Back",
-        "line": "40",
+        "line": "41",
         "screen": "maintenance"
       },
       {
@@ -3116,7 +3116,7 @@
         "file": "src/lazyplan/presentation/tui/screens/maintenance.py",
         "key": "p",
         "label": "Preview",
-        "line": "41",
+        "line": "42",
         "screen": "maintenance"
       },
       {
@@ -3124,7 +3124,7 @@
         "file": "src/lazyplan/presentation/tui/screens/maintenance.py",
         "key": "r",
         "label": "Refresh",
-        "line": "46",
+        "line": "47",
         "screen": "maintenance"
       },
       {
@@ -3132,7 +3132,7 @@
         "file": "src/lazyplan/presentation/tui/screens/maintenance.py",
         "key": "t",
         "label": "Trim",
-        "line": "43",
+        "line": "44",
         "screen": "maintenance"
       },
       {
@@ -3140,7 +3140,7 @@
         "file": "src/lazyplan/presentation/tui/screens/maintenance.py",
         "key": "v",
         "label": "Vacuum",
-        "line": "44",
+        "line": "45",
         "screen": "maintenance"
       },
       {
@@ -3216,7 +3216,7 @@
           {
             "action": "apply_archive",
             "file": "src/lazyplan/presentation/tui/screens/maintenance.py",
-            "line": "42"
+            "line": "43"
           }
         ],
         "key": "a"
@@ -3281,7 +3281,7 @@
           {
             "action": "back",
             "file": "src/lazyplan/presentation/tui/screens/maintenance.py",
-            "line": "40"
+            "line": "41"
           },
           {
             "action": "back",
@@ -3356,7 +3356,7 @@
           {
             "action": "refresh",
             "file": "src/lazyplan/presentation/tui/screens/maintenance.py",
-            "line": "46"
+            "line": "47"
           },
           {
             "action": "refresh",
@@ -3391,7 +3391,7 @@
           {
             "action": "apply_trim",
             "file": "src/lazyplan/presentation/tui/screens/maintenance.py",
-            "line": "43"
+            "line": "44"
           }
         ],
         "key": "t"

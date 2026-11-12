@@ -39,7 +39,7 @@ class _ReportMeasure:
     free_pages: int
     method: str
     tables: tuple[TableBytes, ...]
-    total_bytes: int
+    used_bytes: int
     trim_counts: dict[str, int]
 
 
@@ -74,11 +74,15 @@ class MaintenanceMixin(StoreBase):
     """Maintenance reads and writes shared by the CLI, TUI, and MCP."""
 
     def _file_size(self) -> int:
-        """Database file size in bytes, or zero when the file is gone."""
-        try:
-            return Path(self.path).expanduser().stat().st_size
-        except OSError:
-            return 0
+        """Database size in bytes, including WAL and shared-memory sidecars."""
+        path = Path(self.path).expanduser()
+        total = 0
+        for candidate in (path, Path(f"{path}-wal"), Path(f"{path}-shm")):
+            try:
+                total += candidate.stat().st_size
+            except OSError:
+                continue
+        return total
 
     @staticmethod
     def _dbstat_bytes(conn: sqlite3.Connection) -> dict[str, int]:
@@ -91,15 +95,15 @@ class MaintenanceMixin(StoreBase):
     @staticmethod
     def _schema_objects(
         conn: sqlite3.Connection,
-    ) -> tuple[list[str], dict[str, list[str]], int]:
-        """User tables, the indexes owned by each, and the schema row count."""
+    ) -> tuple[list[str], dict[str, list[str]]]:
+        """User tables and the indexes owned by each."""
         rows = conn.execute("SELECT type, name, tbl_name FROM sqlite_master").fetchall()
         tables = [str(row["name"]) for row in rows if row["type"] == "table"]
         indexes: dict[str, list[str]] = {}
         for row in rows:
             if row["type"] == "index":
                 indexes.setdefault(str(row["tbl_name"]), []).append(str(row["name"]))
-        return tables, indexes, len(rows)
+        return tables, indexes
 
     def _table_sizes(
         self,
@@ -197,12 +201,12 @@ class MaintenanceMixin(StoreBase):
             for target in self._trim_targets(now, cutoff)
         }
 
-    def _measure(self, conn: sqlite3.Connection, now: float) -> _ReportMeasure:
+    def _measure(self, conn: sqlite3.Connection, now: float, window_secs: float) -> _ReportMeasure:
         """Collect page sizes, per-table bytes, and trim candidates."""
         page_size = int(conn.execute("PRAGMA page_size").fetchone()[0])
         page_count = int(conn.execute("PRAGMA page_count").fetchone()[0])
         free_pages = int(conn.execute("PRAGMA freelist_count").fetchone()[0])
-        tables, indexes, _schema_rows = self._schema_objects(conn)
+        tables, indexes = self._schema_objects(conn)
         try:
             page_bytes = self._dbstat_bytes(conn)
             method = "dbstat"
@@ -211,17 +215,17 @@ class MaintenanceMixin(StoreBase):
             method = "page_count"
         if method == "dbstat":
             sized = self._table_sizes(conn, tables, indexes, page_bytes)
-            total_bytes = sum(row.bytes for row in sized)
+            used_bytes = sum(row.bytes for row in sized)
         else:
             sized = tuple(TableBytes(table, 0, _table_rows(conn, table)) for table in tables)
-            total_bytes = page_count * page_size
+            used_bytes = page_count * page_size
         return _ReportMeasure(
             page_size=page_size,
             free_pages=free_pages,
             method=method,
             tables=sized,
-            total_bytes=total_bytes,
-            trim_counts=self._trim_counts(conn, now, DEFAULT_WINDOW_SECS),
+            used_bytes=used_bytes,
+            trim_counts=self._trim_counts(conn, now, window_secs),
         )
 
     @staticmethod
@@ -235,17 +239,19 @@ class MaintenanceMixin(StoreBase):
         )
         return measure.free_pages * measure.page_size + dead_bytes
 
-    def report(self) -> MaintenanceReport:
+    def report(self, window_secs: float = DEFAULT_WINDOW_SECS) -> MaintenanceReport:
         """Per-table bytes and row counts, plus free and reclaimable pages."""
         now = time.time()
         with self._connect() as conn:
-            measure = self._measure(conn, now)
+            measure = self._measure(conn, now, window_secs)
         return MaintenanceReport(
             method=measure.method,
             tables=measure.tables,
-            total_bytes=measure.total_bytes,
+            used_bytes=measure.used_bytes,
+            file_bytes=self._file_size(),
             free_bytes=measure.free_pages * measure.page_size,
             reclaimable_bytes=self._reclaimable_bytes(measure),
+            window_days=round(window_secs / 86400, 3),
         )
 
     def trim(
@@ -303,7 +309,10 @@ class MaintenanceMixin(StoreBase):
             raise self._busy_error() from exc
         try:
             conn.execute("PRAGMA busy_timeout = 1000")
+            journal = str(conn.execute("PRAGMA journal_mode").fetchone()[0]).lower()
             conn.execute("VACUUM")
+            if journal == "wal":
+                conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
         except sqlite3.OperationalError as exc:
             text = str(exc).lower()
             if "locked" in text or "busy" in text:
@@ -369,25 +378,36 @@ class MaintenanceMixin(StoreBase):
         return target, target.with_name(f"{target.name}.bindings")
 
     def _snapshot_database(self, source_path: Path, target: Path) -> dict[str, int]:
-        """Copy the database with the backup API, then verify integrity and counts."""
+        """Copy with the backup API, close, then verify the snapshot read-only."""
         bindings = target.with_name(f"{target.name}.bindings")
+        live_counts: dict[str, int] = {}
+        error: Exception | None = None
         source: sqlite3.Connection | None = None
         snapshot: sqlite3.Connection | None = None
         try:
             source = sqlite3.connect(str(source_path), timeout=5.0)
             snapshot = sqlite3.connect(str(target), timeout=5.0)
             source.backup(snapshot)
-            integrity = self._integrity_ok(snapshot)
             live_counts = self._backup_counts(source)
-            snapshot_counts = self._backup_counts(snapshot)
         except (sqlite3.Error, OSError) as exc:
-            self._remove_snapshot(target, bindings)
-            raise MaintenanceBackupError(f"snapshot failed: {exc}") from exc
+            error = exc
         finally:
             if snapshot is not None:
                 snapshot.close()
             if source is not None:
                 source.close()
+        if error is not None:
+            self._remove_snapshot(target, bindings)
+            raise MaintenanceBackupError(f"snapshot failed: {error}") from error
+        verifier = sqlite3.connect(f"file:{target}?mode=ro", uri=True, timeout=5.0)
+        try:
+            integrity = self._integrity_ok(verifier)
+            snapshot_counts = self._backup_counts(verifier)
+        except sqlite3.Error as exc:
+            verifier.close()
+            self._remove_snapshot(target, bindings)
+            raise MaintenanceBackupError(f"snapshot verification failed: {exc}") from exc
+        verifier.close()
         if not integrity or live_counts != snapshot_counts:
             self._remove_snapshot(target, bindings)
             raise MaintenanceBackupError("snapshot failed integrity or count verification")

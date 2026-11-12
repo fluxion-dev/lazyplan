@@ -961,9 +961,9 @@ class TestStore(unittest.TestCase):
         )
         conn.commit()
         conn.close()
-        self.assertTrue(services.is_archived(self.store, self.store.get_plan(old.id)))
-        self.assertFalse(services.is_archived(self.store, self.store.get_plan(fresh.id)))
-        self.assertFalse(services.is_archived(self.store, self.store.get_plan(openp.id)))
+        self.assertTrue(services.is_finished(self.store, self.store.get_plan(old.id)))
+        self.assertFalse(services.is_finished(self.store, self.store.get_plan(fresh.id)))
+        self.assertFalse(services.is_finished(self.store, self.store.get_plan(openp.id)))
         names = [
             p.name
             for p, _ in services.tree(

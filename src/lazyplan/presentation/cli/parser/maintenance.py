@@ -39,7 +39,10 @@ def add_maintenance_group(
         title="maint actions",
         help="what to do with the database",
     )
-    actions.add_parser("report", help="show bytes and row counts per table", parents=[common])
+    report = actions.add_parser(
+        "report", help="show bytes and row counts per table", parents=[common]
+    )
+    _days_flag(report)
     archive = actions.add_parser(
         "archive", help="archive done plans and ended sessions", parents=[common]
     )

@@ -876,7 +876,9 @@ tokens.
   hidden from list, tree, brief, next, ready, stats, audit, trace, who, claims,
   and the agents panel. `lpui maint restore --plan 3` or
   `lpui maint restore --session 4` brings it back. A restored done plan returns
-  to the `--finished` around `--archived all` views, not the default list.
+  to the `--finished` and `--archived all` views, not the default list.
+- Claims are task-owned. Archiving an ended session does not release a live
+  lease, so a lease created around that session can still appear in `who`.
 - `--archived` selects the archive state on `list`: `--archived only` shows
   archived plans, `--archived all` (alias `show`) shows both, and the default
   hides them. `--finished` is the separate age filter: it shows plans marked
@@ -885,9 +887,10 @@ tokens.
 ### Maintenance: report, archive, restore, trim, and vacuum
 
 - `lpui maint report` names its byte method (`dbstat`, or `page_count` when
-  `dbstat` is unavailable), then prints bytes and row counts per table, free
-  pages, and a reclaimable estimate. Table bytes include their indexes.
-  `--json` and `--porcelain` use the same fields as every other command.
+  `dbstat` is unavailable), then prints used bytes, the database file size, row
+  counts per table, free pages, and a reclaimable estimate for the window.
+  Table bytes include their indexes; `--days 30` sets the estimate window and
+  `--json`/`--porcelain` use the same fields as every other command.
 - `lpui maint archive` previews done plans and ended sessions past the window;
   `--apply` archives them after a verified snapshot.
 - `lpui maint restore --plan 3` and `lpui maint restore --session 4` are
@@ -914,7 +917,7 @@ tokens.
 
 ## Exit codes
 
-`0` worked · `1` row not found or setup layout misplaced · `2` flags or input
+`0` worked · `1` row not found or database busy · `2` flags or input
 wrong · `3` the screen cannot start because Textual is missing.
 
 Run `lpui <command> --help` for per-command flags. `man lpui` contains the full

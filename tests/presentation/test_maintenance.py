@@ -65,6 +65,14 @@ class TestMaintenanceScreen(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(any(label.startswith("restore") for label in labels))
         self.assertIn("maintenance", registry.HUB_ACTIONS)
 
+    async def test_m_binding_opens_maintenance(self) -> None:
+        app = create_app(self.store.path)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            await pilot.press("m")
+            await pilot.pause()
+            self.assertIsInstance(app.screen, MaintenanceScreen)
+
     async def test_pilot_applies_archive_and_restores(self) -> None:
         app = create_app(self.store.path)
         async with app.run_test(size=(120, 40)) as pilot:

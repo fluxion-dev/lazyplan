@@ -102,7 +102,15 @@ class TestMaintenanceParity(unittest.TestCase):
         self.assertEqual(cli, mcp)
         self.assertEqual(
             set(cli),
-            {"method", "tables", "total_bytes", "free_bytes", "reclaimable_bytes"},
+            {
+                "method",
+                "tables",
+                "used_bytes",
+                "file_bytes",
+                "free_bytes",
+                "reclaimable_bytes",
+                "window_days",
+            },
         )
 
     def test_cli_and_mcp_trim_counts_are_identical(self) -> None:

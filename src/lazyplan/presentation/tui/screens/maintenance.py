@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sqlite3
 from collections.abc import Callable
 
 try:
@@ -57,7 +58,8 @@ if _TEXTUAL_OK:
             entries = [
                 HubEntry(
                     0,
-                    f"report  {report.total_bytes} bytes · {report.reclaimable_bytes} reclaimable",
+                    f"report  {report.used_bytes} used · {report.file_bytes} file · "
+                    f"{report.reclaimable_bytes} reclaimable",
                     view.report_text(report),
                     "report",
                 ),
@@ -116,7 +118,13 @@ if _TEXTUAL_OK:
                     return
                 try:
                     note = action()
-                except (MaintenanceBusy, MaintenanceBackupError, ValueError, KeyError) as exc:
+                except (
+                    MaintenanceBusy,
+                    MaintenanceBackupError,
+                    sqlite3.OperationalError,
+                    ValueError,
+                    KeyError,
+                ) as exc:
                     self.notify(_error(exc), timeout=5)
                     return
                 self._after_write(note)
@@ -133,7 +141,7 @@ if _TEXTUAL_OK:
                 return
 
             def apply() -> str:
-                result = services.maintenance.archive(self.store, apply=True)
+                result = services.maintenance.archive(self.store, apply=True, actor="tui")
                 return f"archived {len(result.plans)} plan(s) and {len(result.sessions)} session(s)"
 
             self._confirm(
@@ -150,7 +158,7 @@ if _TEXTUAL_OK:
                 return
 
             def apply() -> str:
-                result = services.maintenance.trim(self.store, apply=True)
+                result = services.maintenance.trim(self.store, apply=True, actor="tui")
                 return f"trimmed {result.total_rows} derived row(s)"
 
             self._confirm(
@@ -167,7 +175,7 @@ if _TEXTUAL_OK:
                 return
 
             def apply() -> str:
-                result = services.maintenance.vacuum(self.store, apply=True)
+                result = services.maintenance.vacuum(self.store, apply=True, actor="tui")
                 return f"freed {result.freed_bytes} bytes"
 
             self._confirm(
@@ -185,12 +193,22 @@ if _TEXTUAL_OK:
                     kind, raw = text.strip()[:1].upper(), text.strip()[1:]
                     target = int(raw)
                     if kind == "P":
-                        result = services.maintenance.restore(self.store, plan_id=target)
+                        result = services.maintenance.restore(
+                            self.store, plan_id=target, actor="tui"
+                        )
                     elif kind == "S":
-                        result = services.maintenance.restore(self.store, session_id=target)
+                        result = services.maintenance.restore(
+                            self.store, session_id=target, actor="tui"
+                        )
                     else:
                         raise ValueError("restore id must start with P or S")
-                except (MaintenanceBusy, MaintenanceBackupError, ValueError, KeyError) as exc:
+                except (
+                    MaintenanceBusy,
+                    MaintenanceBackupError,
+                    sqlite3.OperationalError,
+                    ValueError,
+                    KeyError,
+                ) as exc:
                     self.notify(_error(exc), timeout=5)
                     return
                 self._after_write(f"restored {result.kind} #{result.id}")

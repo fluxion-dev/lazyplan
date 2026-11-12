@@ -27,8 +27,8 @@ class MaintenanceToolsMixin(McpBase):
                 _tool(
                     "maintenance_report",
                     "Database bytes and row counts per table, free pages, "
-                    "and a reclaimable estimate.",
-                    {},
+                    "and a reclaimable estimate for the window.",
+                    {"days": _str()},
                 ),
                 self._tool_maintenance_report,
             )
@@ -87,8 +87,9 @@ class MaintenanceToolsMixin(McpBase):
         return cast(MaintenancePort, self._need_store())
 
     def _tool_maintenance_report(self, args: dict) -> object:
-        del args
-        return view.report_payload(services.maintenance.report(self._maintenance_port()))
+        return view.report_payload(
+            services.maintenance.report(self._maintenance_port(), days=args.get("days") or None)
+        )
 
     def _tool_maintenance_archive(self, args: dict) -> object:
         result = services.maintenance.archive(
@@ -104,12 +105,13 @@ class MaintenanceToolsMixin(McpBase):
             self._maintenance_port(),
             days=args.get("days") or None,
             apply=bool(args.get("apply")),
+            actor=self.actor,
         )
         return view.trim_payload(result)
 
     def _tool_maintenance_vacuum(self, args: dict) -> object:
         result = services.maintenance.vacuum(
-            self._maintenance_port(), apply=bool(args.get("apply"))
+            self._maintenance_port(), apply=bool(args.get("apply")), actor=self.actor
         )
         return view.vacuum_payload(result)
 

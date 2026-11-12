@@ -11,11 +11,12 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
   and row counts per table with a reclaimable estimate; `maint archive`,
   `maint trim`, and `maint vacuum` preview by default and write only with
   `--apply`; `maint restore --plan` or `--session` returns an archived row.
-  Every apply starts with a verified `lazyplan.db.bak-<timestamp>` snapshot and
-  only derived link rows and old non-status events are trimmed; plan text,
-  criteria, evidence, notes, and comments are never trimmed. The TUI `m` hub
-  shows the same candidate counts, and MCP exposes a read-only report plus
-  apply-gated write tools.
+  `maint report --days` sets the estimate window and separates used bytes from
+  the file size. Every apply starts with a verified
+  `lazyplan.db.bak-<timestamp>` snapshot and only derived link rows and old
+  non-status events are trimmed; plan text, criteria, evidence, notes, and
+  comments are never trimmed. The TUI `m` hub shows the same candidate counts,
+  and MCP exposes a read-only report plus apply-gated write tools.
 
 ### Changed
 

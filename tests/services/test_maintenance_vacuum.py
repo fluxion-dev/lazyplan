@@ -50,6 +50,26 @@ class TestMaintenanceVacuum(unittest.TestCase):
         self.assertLess(result.after_free_pages, result.before_free_pages)
         self.assertGreater(result.freed_bytes, 0)
 
+    def test_vacuum_checkpoints_wal_sidecars(self) -> None:
+        with closing(sqlite3.connect(self.db)) as conn:
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.commit()
+        self._seed_dead_events(2_000)
+        maintenance.trim(self.store, days="1", apply=True)
+        with closing(sqlite3.connect(self.db)) as conn:
+            before_free = int(conn.execute("PRAGMA freelist_count").fetchone()[0])
+        preview = maintenance.vacuum(self.store, apply=False)
+        self.assertGreater(before_free, 0)
+
+        result = maintenance.vacuum(self.store, apply=True)
+
+        self.assertTrue(result.applied)
+        self.assertEqual(preview.before_bytes, result.before_bytes)
+        self.assertLess(result.after_bytes, result.before_bytes)
+        wal = f"{self.db}-wal"
+        if os.path.exists(wal):
+            self.assertEqual(os.path.getsize(wal), 0)
+
     def test_vacuum_fails_fast_when_the_database_is_busy(self) -> None:
         locker = sqlite3.connect(self.db, isolation_level=None)
         try:

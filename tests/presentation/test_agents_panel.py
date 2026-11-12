@@ -183,6 +183,28 @@ class TestReapBeforeRender(unittest.IsolatedAsyncioTestCase):
             app.spinner_controller.spin()
             self.assertIn(SPINNER_FRAMES[1], str(body.render()))
 
+    async def test_the_spinner_leaves_an_awaiting_row_still(self) -> None:
+        self.store.start_session(
+            "opencode",
+            plan_id=self.plan.id,
+            repo_path=self.store.checkout_path(),
+            host="opencode",
+            host_session="session-0001",
+            phase="awaiting",
+        )
+        app = create_app(self.store.path)
+        async with app.run_test(size=(160, 40)) as pilot:
+            await pilot.pause()
+            app.spinner_controller.stop()
+            app.spinner_controller.tick = 0
+            app.update_agents()
+            body = app.query_one("#agents-body")
+            before = str(body.render())
+            self.assertTrue(before.endswith("· ◆"))
+            app.spinner_controller.spin()
+            self.assertEqual(app.spinner_controller.tick, 0)
+            self.assertEqual(str(body.render()), before)
+
     async def test_no_spinner_freezes_the_agents_frame(self) -> None:
         self.store.start_session(
             "opencode",

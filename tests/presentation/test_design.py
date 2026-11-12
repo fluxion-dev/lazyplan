@@ -102,6 +102,60 @@ class TestDesignSystem(unittest.TestCase):
         self.assertNotIn("◉", row)
         self.assertNotIn("blocked", row)
 
+    @unittest.skipUnless(Text is not None, "rich not installed")
+    def test_task_row_reads_as_glyph_id_title_and_attention(self):
+        t = Task(id=3, milestone_id=2, title="Compact title")
+
+        plain = Text.from_markup(design.task_row(t, width=80)).plain
+
+        self.assertEqual(plain.rstrip(), "○ T3 Compact title")
+        for stat in ("⚑", "◉", "▰", "▱", "@", "/"):
+            self.assertNotIn(stat, plain)
+
+    @unittest.skipUnless(Text is not None, "rich not installed")
+    def test_task_row_marks_attention_with_one_bang(self):
+        t = Task(id=3, milestone_id=2, title="Compact title")
+
+        plain = Text.from_markup(design.task_row(t, attention=True, width=80)).plain
+
+        self.assertTrue(plain.rstrip().endswith("!"))
+        self.assertIn("T3 Compact title", plain)
+        self.assertEqual(plain.count("!"), 1)
+
+    @unittest.skipUnless(Text is not None, "rich not installed")
+    def test_task_row_truncates_to_the_row_width(self):
+        t = Task(id=3, milestone_id=2, title="A very long task title that will not fit")
+
+        for width in (12, 20, 33, 80):
+            with self.subTest(width=width):
+                plain = Text.from_markup(design.task_row(t, width=width)).plain
+                self.assertEqual(len(plain), width)
+                self.assertIn("T3", plain)
+
+        narrow = Text.from_markup(design.task_row(t, width=20)).plain
+        self.assertIn("…", narrow)
+
+    @unittest.skipUnless(Text is not None, "rich not installed")
+    def test_task_row_gives_the_freed_slots_to_the_title(self):
+        title = "A title long enough to be cut by the old slots"
+        t = Task(id=3, milestone_id=2, title=title)
+
+        plain = Text.from_markup(design.task_row(t, width=60)).plain
+
+        self.assertIn(title, plain)
+        self.assertNotIn("…", plain)
+
+    def test_task_label_keeps_blocked_and_claim_detail(self):
+        p = self.store.add_plan("P")
+        s = self.store.add_milestone(p.id, "S")
+        t = self.store.add_task(s.id, "T")
+        self.store.set_blocked(t.id, True, "waiting on design", actor="t")
+
+        label = design.task_label(self.store.get_task(t.id), self.store)
+
+        self.assertTrue(label.startswith("○ T"))
+        self.assertIn("[blocked]", label)
+
     def test_rich_rows_use_the_status_prefix(self):
         p = Plan(id=1, name="N", status=Status.DOING)
         s = Milestone(id=2, plan_id=1, title="S", status=Status.DOING)

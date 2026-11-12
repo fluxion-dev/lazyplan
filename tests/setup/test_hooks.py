@@ -657,7 +657,7 @@ class HookCase(unittest.TestCase):
         )
         self.assertIn(f"src/app.py belongs to T{task_id}", result.text)
 
-    def test_post_tool_edit_outside_the_checkout_keeps_its_path(self):
+    def test_post_tool_edit_outside_the_checkout_is_silent(self):
         _plan, task_id = self._seed_linked()
         Store(self.db).add_touchpoint(task_id, "src/**", actor="t")
         outside = self.home / "src" / "app.py"
@@ -665,8 +665,16 @@ class HookCase(unittest.TestCase):
         result = hooks.build_result(
             "post-tool", payload, self.repo, commits=[], store=Store(self.db)
         )
-        self.assertNotIn("belongs to", result.text)
-        self.assertIn(outside.as_posix(), result.text)
+        self.assertEqual(result.text, "")
+
+    def test_post_tool_edit_outside_a_managed_checkout_without_a_task_is_silent(self):
+        self._linked_plan()
+        outside = self.home / "notes.md"
+        payload = {"tool_name": "Edit", "tool_input": {"file_path": str(outside)}}
+        result = hooks.build_result(
+            "post-tool", payload, self.repo, commits=[], store=Store(self.db)
+        )
+        self.assertEqual(result.text, "")
 
     def test_post_tool_edit_outside_the_task_asks_for_scope(self):
         _plan, _task = self._seed_linked()

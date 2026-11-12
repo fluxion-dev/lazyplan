@@ -18,8 +18,9 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
   has already written.
 - **Agents see the post-tool reminder.** Claude Code, Codex, and Gemini get the
   commit-link and touched-path reminders as context for the agent instead of a
-  warning only you see, a repository with nothing in progress stays quiet, and
-  Claude Code's absolute Windows paths now match a task's touch-points.
+  warning only you see, a repository with nothing in progress and edits outside
+  the repository stay quiet, and Claude Code's absolute Windows paths now match
+  a task's touch-points.
 - **Stop stays quiet.** The end of each agent turn no longer prints a reminder
   to end the session, and a blocked stop no longer asks the agent to end a
   session its host is still running.

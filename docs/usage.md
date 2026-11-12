@@ -683,7 +683,8 @@ question at each lifecycle point:
 - Edits that touch a task's paths name that task, other edits ask to update the
   plan when scope changed, and a commit asks to be linked. The agent receives
   these as context alongside the tool result. Outside a managed checkout they
-  appear only while some plan has a doing task.
+  appear only while some plan has a doing task, and edits to files outside the
+  checkout are never reported.
 - Session end closes the open session with an auto summary and a next-task
   handoff.
 

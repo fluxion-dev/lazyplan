@@ -155,9 +155,11 @@ def post_tool_text(store: AppPort, cwd: Path, command: str, path: str) -> str:
         if task_id is None:
             return "lazyplan: commit landed; start or pick a task with `lpui brief`."
         return f"lazyplan: commit landed; link it with `lpui link --kind task --id {task_id}`."
+    path = _repo_relative(path, scope.repo)
+    if Path(path).is_absolute():
+        return ""
     if task_id is None:
         return "lazyplan: edit landed; start or pick a task with `lpui brief`."
-    path = _repo_relative(path, scope.repo)
     patterns = store.list_touchpoints(task_id)
     if _matches_task(path, patterns):
         return (

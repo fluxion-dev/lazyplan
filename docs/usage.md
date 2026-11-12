@@ -356,6 +356,13 @@ row, `Z` loads and opens every visible branch, and the palette's fold-all entry
 does the same. Status actions and previews work on rows as they load; collapsed
 branches exist in the journal but not as screen nodes.
 
+Expansion belongs to you. A refresh after any write, a new milestone or task, a
+reorder, and a plan moving between plan queue and plan review leave every open
+and closed branch as you left it. New rows start collapsed. Moving to a row
+inside a closed branch leaves the branch closed and selects its nearest visible
+ancestor. Clearing a text filter restores exactly the branches that were open
+before it.
+
 | key | action |
 |---|---|
 | `j`/`k`, arrows, click | move and select |

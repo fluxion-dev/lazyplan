@@ -3,6 +3,16 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## Unreleased
+
+### Fixed
+
+- **Your tree folds stay put.** Writes, new rows, reorders, and plans moving
+  between plan queue and plan review no longer open or close branches, new rows
+  start collapsed, and selecting a row inside a closed branch keeps it closed.
+  A text filter reveals hits and then restores exactly the branches that were
+  open before it.
+
 ## v0.40.1 — 2026-11-11
 
 ### Fixed

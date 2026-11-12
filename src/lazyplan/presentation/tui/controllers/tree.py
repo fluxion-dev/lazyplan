@@ -178,11 +178,9 @@ class TreeController(ExpansionMixin, LazyBranchMixin, ReconcileMixin, PollMixin)
         base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]],
         reasons: dict[int, list[str]],
     ) -> set[tuple[str, int]]:
-        """Task attention rolled up to milestones and plans."""
+        """Task attention, including blocked, rolled up to milestones and plans."""
         keys: set[tuple[str, int]] = {
-            ("task", task_id)
-            for task_id, found in reasons.items()
-            if any(reason != "blocked" for reason in found)
+            ("task", task_id) for task_id, found in reasons.items() if found
         }
         questions = self.app.store.questions_map()
         for plan, milestones in base:

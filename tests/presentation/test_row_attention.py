@@ -34,9 +34,9 @@ class TestRowAttention(unittest.TestCase):
     def _keys(self, reasons: dict[int, list[str]]) -> set[tuple[str, int]]:
         return self.controller._attention_keys(self.base, reasons)
 
-    def test_blocked_rolls_up_without_a_duplicate_task_marker(self):
+    def test_blocked_marks_the_task_and_rolls_up(self):
         keys = self._keys({self.task.id: ["blocked"]})
-        self.assertNotIn(("task", self.task.id), keys)
+        self.assertIn(("task", self.task.id), keys)
         self.assertIn(("milestone", self.milestone.id), keys)
         self.assertIn(("plan", self.plan.id), keys)
 

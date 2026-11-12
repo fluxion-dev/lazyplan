@@ -6,11 +6,13 @@ import tempfile
 import unittest
 from unittest import mock
 
-from lazyplan.infrastructure.vcs import DiffRead
+from lazyplan.infrastructure.vcs import CommitStats, DiffRead, FileStat, GitBackend
 from lazyplan.services.source import (
     build_source_trail,
     clear_diff_cache,
+    clear_stats_cache,
     parse_patch,
+    read_commit_stats,
     read_diff,
 )
 from lazyplan.store import Store
@@ -135,6 +137,83 @@ class TestDiffParsing(unittest.TestCase):
         clear_diff_cache()
 
 
+class TestCommitStats(unittest.TestCase):
+    def test_file_stats_joins_name_status_and_numstat(self):
+        names = "A\tnew.py\nM\tkeep.py\nD\tgone.py\nR100\told.py\trenamed.py\nM\timage.png\n"
+        counts = (
+            "3\t0\tnew.py\n"
+            "1\t1\tkeep.py\n"
+            "0\t2\tgone.py\n"
+            "2\t2\told.py => renamed.py\n"
+            "-\t-\timage.png\n"
+        )
+        calls = [
+            subprocess.CompletedProcess([], 0, names, ""),
+            subprocess.CompletedProcess([], 0, counts, ""),
+        ]
+        with mock.patch("lazyplan.infrastructure.vcs._run_git", side_effect=calls):
+            stats = GitBackend().file_stats("/repo", "a" * 40)
+        self.assertEqual(stats.state, "ok")
+        self.assertEqual(stats.additions, 6)
+        self.assertEqual(stats.deletions, 5)
+        by_path = {item.path: item for item in stats.files}
+        self.assertEqual(by_path["new.py"].status, "add")
+        self.assertEqual((by_path["new.py"].additions, by_path["new.py"].deletions), (3, 0))
+        self.assertEqual(by_path["keep.py"].status, "modify")
+        self.assertEqual((by_path["keep.py"].additions, by_path["keep.py"].deletions), (1, 1))
+        self.assertEqual(by_path["gone.py"].status, "delete")
+        self.assertEqual(
+            (by_path["renamed.py"].status, by_path["renamed.py"].old_path),
+            ("rename", "old.py"),
+        )
+        self.assertTrue(by_path["image.png"].binary)
+        self.assertEqual(
+            (by_path["image.png"].additions, by_path["image.png"].deletions),
+            (0, 0),
+        )
+
+    def test_file_stats_reports_missing_and_error(self):
+        with mock.patch(
+            "lazyplan.infrastructure.vcs._run_git",
+            return_value=subprocess.CompletedProcess([], 1, "", "bad"),
+        ):
+            missing = GitBackend().file_stats("/repo", "a" * 40)
+        self.assertEqual(missing.state, "missing")
+        calls = [
+            subprocess.CompletedProcess([], 0, "M\ta.py\n", ""),
+            subprocess.CompletedProcess([], 1, "", "bad"),
+        ]
+        with mock.patch("lazyplan.infrastructure.vcs._run_git", side_effect=calls):
+            error = GitBackend().file_stats("/repo", "a" * 40)
+        self.assertEqual(error.state, "error")
+
+    def test_read_commit_stats_cache_and_clear(self):
+        class FakeBackend:
+            def __init__(self) -> None:
+                self.calls = 0
+
+            def file_stats(self, root, sha):
+                self.calls += 1
+                return CommitStats(files=(FileStat(path="a.py", status="modify"),))
+
+        backend = FakeBackend()
+        clear_stats_cache()
+        with mock.patch(
+            "lazyplan.services.source_diff.detect_backend", return_value=(backend, "/repo")
+        ):
+            first = read_commit_stats("/repo", "a" * 40)
+            again = read_commit_stats("/repo", "a" * 40)
+        self.assertEqual(backend.calls, 1)
+        self.assertIs(first, again)
+        clear_stats_cache()
+        with mock.patch(
+            "lazyplan.services.source_diff.detect_backend", return_value=(backend, "/repo")
+        ):
+            read_commit_stats("/repo", "a" * 40)
+        self.assertEqual(backend.calls, 2)
+        clear_stats_cache()
+
+
 @unittest.skipUnless(_git_available(), "git CLI required")
 class TestSourceTrail(unittest.TestCase):
     def setUp(self):
@@ -223,6 +302,33 @@ class TestSourceTrail(unittest.TestCase):
             all(item.url.startswith("https://github.com/org/repo/blob/") for item in commit.files)
         )
         self.assertEqual(commit.url, f"https://github.com/org/repo/commit/{self.sha}")
+
+    def test_commit_stats_from_checkout(self):
+        with open(os.path.join(self.repo, "a.py"), "w", encoding="utf-8") as fh:
+            fh.write("a\nb\n")
+        with open(os.path.join(self.repo, "b.py"), "w", encoding="utf-8") as fh:
+            fh.write("b\n")
+        with open(os.path.join(self.repo, "img.bin"), "wb") as fh:
+            fh.write(b"\x00\x01\x02")
+        subprocess.run(["git", "-C", self.repo, "add", "."], check=True, timeout=10)
+        subprocess.run(["git", "-C", self.repo, "commit", "-qm", "second"], check=True, timeout=10)
+        sha = subprocess.run(
+            ["git", "-C", self.repo, "rev-parse", "HEAD"],
+            capture_output=True,
+            encoding="utf-8",
+            timeout=10,
+            check=True,
+        ).stdout.strip()
+        clear_stats_cache()
+        stats = read_commit_stats(self.repo, sha)
+        self.assertEqual(stats.state, "ok")
+        by_path = {item.path: item for item in stats.files}
+        self.assertEqual(by_path["a.py"].status, "modify")
+        self.assertEqual((by_path["a.py"].additions, by_path["a.py"].deletions), (1, 0))
+        self.assertEqual(by_path["b.py"].status, "add")
+        self.assertTrue(by_path["img.bin"].binary)
+        self.assertEqual((stats.additions, stats.deletions), (2, 0))
+        clear_stats_cache()
 
     def test_plan_rollup_dedupes_shared_commit_and_pr(self):
         s2 = self.store.add_milestone(self.pid, "S2")

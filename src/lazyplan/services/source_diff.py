@@ -7,9 +7,11 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
 
-from lazyplan.infrastructure.vcs import DiffRead, detect_backend
+from lazyplan.infrastructure.vcs import CommitStats, DiffRead, detect_backend
+from lazyplan.infrastructure.vcs import FileStat as FileStat
 
 DIFF_CACHE_LIMIT = 16
+STATS_CACHE_LIMIT = 64
 
 _HUNK_RE = re.compile(
     r"^@@ -(?P<old>\d+)(?:,(?P<old_count>\d+))?"
@@ -222,3 +224,35 @@ def _read_diff_uncached(repo: str, sha: str, path: str) -> DiffRead:
 def clear_diff_cache() -> None:
     """Drop every cached diff (tests and explicit refresh)."""
     _diff_cache.clear()
+
+
+_stats_cache: OrderedDict[tuple[str, str, str], CommitStats] = OrderedDict()
+
+
+def read_commit_stats(repo: str, sha: str) -> CommitStats:
+    """Read per-file status and counts through a small LRU cache."""
+    key = _cache_key(repo, sha, "")
+    hit = _stats_cache.get(key)
+    if hit is not None:
+        _stats_cache.move_to_end(key)
+        return hit
+    result = _read_commit_stats_uncached(repo, sha)
+    _stats_cache[key] = result
+    while len(_stats_cache) > STATS_CACHE_LIMIT:
+        _stats_cache.popitem(last=False)
+    return result
+
+
+def _read_commit_stats_uncached(repo: str, sha: str) -> CommitStats:
+    """Read one commit's file stats without touching the cache."""
+    if not repo.strip():
+        return CommitStats(state="error", detail="no checkout linked")
+    backend, root = detect_backend(repo)
+    if backend is None or root is None:
+        return CommitStats(state="error", detail="not a git checkout")
+    return backend.file_stats(root, sha)
+
+
+def clear_stats_cache() -> None:
+    """Drop every cached commit stat row (tests and explicit refresh)."""
+    _stats_cache.clear()

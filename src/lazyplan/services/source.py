@@ -13,11 +13,15 @@ from typing import TYPE_CHECKING
 from lazyplan.infrastructure.forge import RepoRef, detect_forge, parse_pull_url
 from lazyplan.infrastructure.vcs import commit_url, detect_backend, file_url, origin_url
 
+from .source_diff import CommitStats as CommitStats
 from .source_diff import DiffFile as DiffFile
 from .source_diff import DiffHunk as DiffHunk
 from .source_diff import DiffLine as DiffLine
+from .source_diff import FileStat as FileStat
 from .source_diff import clear_diff_cache as clear_diff_cache
+from .source_diff import clear_stats_cache as clear_stats_cache
 from .source_diff import parse_patch as parse_patch
+from .source_diff import read_commit_stats as read_commit_stats
 from .source_diff import read_diff as read_diff
 
 if TYPE_CHECKING:

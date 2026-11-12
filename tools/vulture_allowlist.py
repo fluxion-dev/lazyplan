@@ -63,6 +63,7 @@ _.rebuilds
 _.poll_now
 highlight_line
 clear_highlight_cache
+_.from_theme
 _.next_offset
 _.cursor_line
 BINDINGS

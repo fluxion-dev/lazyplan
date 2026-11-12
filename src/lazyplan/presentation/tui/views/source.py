@@ -5,8 +5,6 @@ from __future__ import annotations
 from datetime import datetime
 
 from lazyplan.services.source import (
-    DiffFile,
-    DiffLine,
     SourceCommit,
     SourceFile,
     SourcePull,
@@ -15,6 +13,7 @@ from lazyplan.services.source import (
 )
 
 from ...shared.design import escape_markup
+from .diff_render import DiffOptions, DiffPalette, diff_counts, render_unified
 
 
 def when(timestamp: int) -> str:
@@ -49,50 +48,6 @@ def pull_label(pull: SourcePull) -> str:
     title = escape_markup(pull.title or "")
     state = pull.state or "unknown"
     return f"[dim]⇄ PR #{pull.number}[/] {state} {title}".rstrip()
-
-
-def diff_gutter(line: DiffLine) -> str:
-    old = f"{line.old_no:>4}" if line.old_no is not None else "    "
-    new = f"{line.new_no:>4}" if line.new_no is not None else "    "
-    return f"[dim]{old} {new}[/]"
-
-
-def diff_row(line: DiffLine) -> str:
-    text = escape_markup(line.text)
-    gutter = diff_gutter(line)
-    if line.kind == "add":
-        return f"{gutter} [green]+{text}[/]"
-    if line.kind == "remove":
-        return f"{gutter} [red]-{text}[/]"
-    if line.kind == "meta":
-        return f"[dim]{text}[/]"
-    return f"{gutter} {text}"
-
-
-def diff_counts(item: DiffFile) -> tuple[int, int]:
-    """Added and removed line counts for one file."""
-    added = sum(1 for hunk in item.hunks for line in hunk.lines if line.kind == "add")
-    removed = sum(1 for hunk in item.hunks for line in hunk.lines if line.kind == "remove")
-    return added, removed
-
-
-def diff_rows(files: tuple[DiffFile, ...], max_files: int) -> list[str]:
-    rows: list[str] = []
-    for index, item in enumerate(files):
-        if index >= max_files:
-            break
-        if item.binary:
-            rows.append(f"[yellow]binary[/] {escape_markup(item.path)}")
-            continue
-        added, removed = diff_counts(item)
-        rows.append(
-            f"[bold cyan]▪[/] [bold]{escape_markup(item.path)}[/] "
-            f"[green]+{added}[/] [red]-{removed}[/]"
-        )
-        for hunk in item.hunks:
-            rows.append(f"[bold cyan]{escape_markup(hunk.header)}[/]")
-            rows.extend(diff_row(line) for line in hunk.lines)
-    return rows
 
 
 def repo_preview(repo: SourceRepo) -> str:
@@ -180,6 +135,7 @@ def render_diff(
     path: str,
     max_lines: int,
     max_files: int,
+    width: int = 100,
 ) -> list[str]:
     """Read and render a bounded diff preview."""
     page = read_diff_page(repo, sha, path, limit=max_files)
@@ -204,7 +160,12 @@ def render_diff(
     ]
     if read.state == "root":
         prefix.append("[dim]root commit · full tree diff[/]")
-    rendered = diff_rows(page.files, max_files)
+    rendered = render_unified(
+        page.files,
+        width,
+        palette=DiffPalette(),
+        options=DiffOptions(),
+    )
     budget = max(1, max_lines - len(prefix))
     shown = prefix + rendered[:budget]
     remainder = len(rendered) - budget

@@ -7,9 +7,12 @@ import unittest
 from lazyplan.services.source import parse_patch
 
 try:
-    from lazyplan.presentation.tui.views.source import diff_counts, diff_rows
+    from rich.text import Text
+
+    from lazyplan.presentation.tui.views.diff_render import diff_counts, render_unified
 except ImportError:  # pragma: no cover - stdlib-only interpreter
-    diff_counts = diff_rows = None  # type: ignore[assignment]
+    Text = None  # type: ignore[assignment]
+    diff_counts = render_unified = None  # type: ignore[assignment]
 
 PATCH = (
     "diff --git a/a.txt b/a.txt\n"
@@ -24,19 +27,28 @@ PATCH = (
 )
 
 
-@unittest.skipUnless(diff_rows is not None, "textual/rich not installed")
+@unittest.skipUnless(render_unified is not None, "textual/rich not installed")
 class SourceDiffViewTest(unittest.TestCase):
     def test_counts_added_and_removed_lines(self) -> None:
         item = parse_patch(PATCH)[0]
         self.assertEqual(diff_counts(item), (2, 1))
 
     def test_rows_keep_path_hunk_and_counts(self) -> None:
-        rows = diff_rows(parse_patch(PATCH), 10)
-        self.assertIn("a.txt", rows[0])
-        self.assertIn("+2", rows[0])
-        self.assertIn("-1", rows[0])
-        self.assertIn("@@ -1,2 +1,3 @@", rows[1])
-        self.assertTrue(any("+TWO" in row for row in rows))
+        rows = render_unified(parse_patch(PATCH), 80)
+        plain = [Text.from_markup(row).plain for row in rows]
+        self.assertIn("a.txt", plain[0])
+        self.assertIn("+2", plain[0])
+        self.assertIn("-1", plain[0])
+        self.assertIn("@@ -1,2 +1,3 @@", plain[1])
+        self.assertIn("section", plain[1])
+        self.assertTrue(any("+ TWO" in row for row in plain))
+
+    def test_rows_use_tinted_add_and_remove_backgrounds(self) -> None:
+        rows = render_unified(parse_patch(PATCH), 80)
+        added = next(row for row in rows if "TWO" in Text.from_markup(row).plain)
+        removed = next(row for row in rows if "two" in Text.from_markup(row).plain)
+        self.assertIn("on #", added)
+        self.assertIn("on #", removed)
 
 
 if __name__ == "__main__":

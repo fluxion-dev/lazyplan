@@ -72,7 +72,7 @@ if _TEXTUAL_OK:
             self._oid = oid
             self._trail = SourceTrail(kind=kind, oid=oid, title="")
             self._filter = ""
-            self._diff_cache: dict[tuple[str, str, str], list[str]] = {}
+            self._diff_cache: dict[tuple[str, str, str, int], list[str]] = {}
 
         def compose(self) -> ComposeResult:
             with Vertical(id="source-page"):
@@ -276,12 +276,20 @@ if _TEXTUAL_OK:
                 pass
 
         def _diff_block(self, repo: str, sha: str, path: str = "") -> list[str]:
-            """Read and render a bounded diff preview, cached per row."""
-            key = (repo, sha, path)
+            """Read and render a bounded diff preview, cached per row and width."""
+            width = max(20, self.query_one("#source-preview").size.width - 2)
+            key = (repo, sha, path, width)
             cached = self._diff_cache.get(key)
             if cached is not None:
                 return list(cached)
-            rows = render_diff(repo, sha, path, DIFF_PREVIEW_LINES, DIFF_PREVIEW_FILES)
+            rows = render_diff(
+                repo,
+                sha,
+                path,
+                DIFF_PREVIEW_LINES,
+                DIFF_PREVIEW_FILES,
+                width=width,
+            )
             self._diff_cache[key] = rows
             return list(rows)
 

@@ -874,22 +874,23 @@ tokens.
 
 - Plans and sessions archive; they never lose their text. An archived plan is
   hidden from list, tree, brief, next, ready, stats, audit, trace, who, claims,
-  and the agents panel. `lpui maint restore` brings it back by plan or session
-  id.
+  and the agents panel. `lpui maint restore --plan 3` or
+  `lpui maint restore --session 4` brings it back.
 - `--archived` selects the archive state on `list`: `--archived only` shows
   archived plans, `--archived all` (alias `show`) shows both, and the default
   hides them. `--finished` is the separate age filter: it shows plans marked
   done longer than a day.
-- One week is the default window for done plans, ended sessions, and events.
-  `lpui maint archive` previews the rows in that window; add `--apply` to write
-  after a verified snapshot. Override the window per run with `--days 30` or
-  `--days 30.days`.
 
-### Maintenance: report, trim, and vacuum
+### Maintenance: report, archive, restore, trim, and vacuum
 
 - `lpui maint report` names its byte method (`dbstat`, or `page_count` when
   `dbstat` is unavailable), then prints bytes and row counts per table, free
   pages, and a reclaimable estimate. Table bytes include their indexes.
+  `--json` and `--porcelain` use the same fields as every other command.
+- `lpui maint archive` previews done plans and ended sessions past the window;
+  `--apply` archives them after a verified snapshot.
+- `lpui maint restore --plan 3` and `lpui maint restore --session 4` are
+  explicit by id and take effect immediately.
 - `lpui maint trim` previews derived rows only: expired claims and their
   touch-points, forge cache older than the window, closed or merged pull
   requests, orphaned rows in `notes`, `comments`, `criteria`,
@@ -900,12 +901,15 @@ tokens.
 - `lpui maint vacuum` previews file size and free pages; `--apply` reclaims
   them. `VACUUM` needs exclusive access, so stop other writers first; a busy
   database returns an error instead of waiting.
-- Every `--apply` writes `lazyplan.db.bak-<timestamp>` beside the database with
-  SQLite's backup API, runs `PRAGMA integrity_check`, compares plan, task, and
-  event counts, and copies `sessions/bindings`. If the snapshot fails, nothing
-  is mutated.
-- Windows stay at one week for plans, sessions, and events unless `--days`
-  overrides them for that run.
+- `archive`, `trim`, and `vacuum` preview by default. Every `--apply` writes
+  `lazyplan.db.bak-<timestamp>` beside the database with SQLite's backup API,
+  runs `PRAGMA integrity_check`, compares plan, task, and event counts, and
+  copies `sessions/bindings`. If the snapshot fails, nothing is mutated.
+- Windows stay at one week for plans, sessions, and events unless `--days 30`
+  or `--days 30.days` overrides them for that run.
+- In the screen, `m` opens the maintenance hub with the same counts, preview,
+  confirm-then-apply, and restore. Agents get a read-only
+  `maintenance_report` tool and apply-gated MCP write tools.
 
 ## Exit codes
 

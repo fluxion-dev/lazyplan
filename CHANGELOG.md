@@ -7,11 +7,13 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
 
 ### Added
 
-- **Maintenance report, trim, and vacuum.** `lpui maint report` shows bytes and
-  row counts per table with a reclaimable estimate; `lpui maint trim` deletes
-  only derived rows; `lpui maint vacuum` reclaims free pages. Writes require
-  `--apply` and start with a verified `lazyplan.db.bak-<timestamp>` snapshot;
-  user-authored plan text is never trimmed.
+- **Maintenance is one noun-first surface.** `lpui maint report` shows bytes
+  and row counts per table with a reclaimable estimate; `maint archive`,
+  `maint trim`, and `maint vacuum` preview by default and write only with
+  `--apply`; `maint restore --plan` or `--session` returns an archived row.
+  Every apply starts with a verified `lazyplan.db.bak-<timestamp>` snapshot and
+  plain plan text is never trimmed. The TUI `m` hub shows the same candidate
+  counts, and MCP exposes a read-only report plus apply-gated write tools.
 
 ### Changed
 
@@ -20,7 +22,7 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
   both, and the default hides them. `--finished` still shows plans marked done
   longer than a day. Archived plans and sessions leave list, tree, brief, next,
   ready, stats, audit, trace, who, claims, and the agents panel, and
-  `lpui maint restore` brings them back.
+  `lpui maint restore --plan` or `--session` brings them back.
 
 ## v0.40.3 — 2026-11-11
 

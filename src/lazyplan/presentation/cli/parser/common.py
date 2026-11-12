@@ -116,7 +116,7 @@ files: shared home by default (`lpui setup --placement repo` opts a repo in)
   .agents/lazyplan/lazyplan.db            repo database when placement is repo
   .agents/lazyplan/templates/{plan,milestone,task}.md  repo creation templates
 
-exit codes: 0 it worked · 1 id not found · 2 flags or input were wrong · 3 screen cannot start (Textual is missing).
+exit codes: 0 it worked · 1 id not found or database busy · 2 flags or input were wrong · 3 screen cannot start (Textual is missing).
 
 more help:
   lpui <command> --help                  flags and examples for one command

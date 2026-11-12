@@ -1632,7 +1632,7 @@
           "MCP and issue imports",
           "Data and backup",
           "Archive and restore",
-          "Maintenance: report, trim, and vacuum",
+          "Maintenance: report, archive, restore, trim, and vacuum",
           "Exit codes"
         ]
       },

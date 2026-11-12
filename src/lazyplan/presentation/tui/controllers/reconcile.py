@@ -196,6 +196,8 @@ class ReconcileMixin:
         key = self.node_key(node)
         if key is None:
             return
+        if self.app._row_nodes.get(key) is not node:
+            return
         self.app._row_nodes.pop(key, None)
         self.app._row_specs.pop(key, None)
         self.app._row_labels.pop(key, None)

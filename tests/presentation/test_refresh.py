@@ -10,6 +10,7 @@ from unittest import mock
 
 from lazyplan import services
 from lazyplan.core.entities import Status
+from lazyplan.presentation.shared.design import SPINNER_FRAMES
 from lazyplan.presentation.tui.controllers.poll import REAP_INTERVAL
 from lazyplan.store import Store
 
@@ -145,10 +146,12 @@ class TestHeartbeatKeepsTreeStill(RefreshCase):
             body = app.query_one("#agents-body", Static)
             harness.heartbeat("working")
             await pilot.pause()
-            self.assertIn("working", str(body.content))
+            self.assertTrue(any(frame in str(body.content) for frame in SPINNER_FRAMES))
             harness.heartbeat("awaiting")
             await pilot.pause()
-            self.assertIn("awaiting you", str(body.content))
+            self.assertIn("◆", str(body.content))
+            for word in ("working", "awaiting you"):
+                self.assertNotIn(word, str(body.content))
 
     async def test_a_structural_edit_still_rebuilds(self) -> None:
         session_id = self.open_session()

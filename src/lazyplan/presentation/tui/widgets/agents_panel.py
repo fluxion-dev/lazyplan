@@ -35,6 +35,12 @@ class AgentsPanel(VerticalScroll):
         self.query_one("#agents-body", Static).display = True
         self.query_one("#agents-empty", Static).display = False
 
+    def _row_width(self) -> int | None:
+        """Content cells available to one row, or None before the first layout."""
+        body = self.query_one("#agents-body", Static)
+        width = body.size.width or self.size.width - 2
+        return width if width > 0 else None
+
     def show(self, store: SessionsPort, plan_id: int | None = None) -> None:
         body = self.query_one("#agents-body", Static)
         try:
@@ -52,10 +58,16 @@ class AgentsPanel(VerticalScroll):
             return
         self._show_body()
         stamp = time.time()
+        width = self._row_width()
         ranked = rank_sessions(sessions, stamp)
         titles = plan_names(store)
         lines = [
-            session_line(session, stamp, plan_title=titles.get(session.plan_id or 0, ""))
+            session_line(
+                session,
+                stamp,
+                plan_title=titles.get(session.plan_id or 0, ""),
+                width=width,
+            )
             for session in ranked
         ]
         handoff = services.sessions.previous_session(store, plan_id=plan_id)

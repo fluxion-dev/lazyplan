@@ -130,8 +130,8 @@ class TestReapBeforeRender(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             text = str(app.query_one("#agents-body").render())
             self.assertIn(f"P{self.plan.id} Plan", text)
-            self.assertIn("T157", text)
             self.assertIn("task/157-pane", text)
+            self.assertNotIn("T157", text)
 
     async def test_empty_state_returns_after_the_row_ends(self) -> None:
         session, _ = self.store.start_session("ana", plan_id=self.plan.id)

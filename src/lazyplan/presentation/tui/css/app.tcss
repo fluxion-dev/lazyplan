@@ -119,6 +119,7 @@
 #agents-body {
     height: auto;
     padding: 0 1;
+    text-wrap: nowrap;
 }
 
 #metrics {

@@ -49,7 +49,6 @@ KIND_SLOTS: dict[str, tuple[str, ...]] = {
 class RowStats:
     """State values rendered into the fixed tree row slots."""
 
-    kind: str
     progress: tuple[int, int] | None = None
     attention: bool = False
 

@@ -700,6 +700,8 @@ failed hook once with the event and reason, and retries on the next event.
 Claude Code and Codex block both commits and stops; Gemini blocks tools and
 retries the turn; Cursor denies shell commands and continues after a stop.
 Claude Code reads `PreCompact` output as guidance for the compaction summary.
+Its entries wait at most 30 seconds, and 10 seconds at session end, where
+Claude Code otherwise allows 1.5 seconds.
 
 Tasks can declare the repo-relative paths they expect to edit. `next` skips a
 todo whose touch-points overlap an active claim in the same checkout. A manual

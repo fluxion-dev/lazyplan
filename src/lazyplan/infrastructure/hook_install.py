@@ -90,12 +90,11 @@ def _managed(entry: object, host: str) -> bool:
 def _nested_entries(host: str, mode: str) -> dict[str, list[dict]]:
     out: dict[str, list[dict]] = {}
     for event, native in hook_hosts.EVENTS[host].items():
-        out[native] = [
-            {
-                "matcher": hook_hosts.matcher(host, native),
-                "hooks": [{"type": "command", "command": command(host, event, mode)}],
-            }
-        ]
+        entry: dict[str, object] = {"type": "command", "command": command(host, event, mode)}
+        seconds = hook_hosts.timeout(host, event)
+        if seconds is not None:
+            entry["timeout"] = seconds
+        out[native] = [{"matcher": hook_hosts.matcher(host, native), "hooks": [entry]}]
     return out
 
 

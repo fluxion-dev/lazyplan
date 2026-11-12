@@ -348,7 +348,7 @@ class HookCase(unittest.TestCase):
         store = Store(self.db)
         session, _ = store.start_session("ana", now=time.time())
         result = hooks.build_result("stop", {}, self.repo, commits=[], store=Store(self.db))
-        self.assertIn(f"S{session.id} is awaiting", result.text)
+        self.assertEqual(result, hooks.HookResult())
         updated = Store(self.db).get_session(session.id)
         assert updated is not None
         self.assertTrue(updated.awaiting)
@@ -394,6 +394,35 @@ class HookCase(unittest.TestCase):
         )
         self.assertIn("unlinked commits", result.block)
         self.assertIn("lpui link --kind task", result.block)
+
+    def test_stop_block_leaves_a_host_session_running(self):
+        _task_id, commits = self._unlinked()
+        result = hooks.build_result(
+            "stop",
+            {"session_id": "s-1"},
+            self.repo,
+            commits=commits,
+            store=Store(self.db),
+            mode="strict",
+            host="claude",
+        )
+        self.assertIn("lpui link --kind task", result.block)
+        self.assertNotIn("session end", result.block)
+
+    def test_stop_without_unlinked_commits_is_silent(self):
+        self._seed_linked()
+        result = hooks.build_result(
+            "stop",
+            {"session_id": "s-1"},
+            self.repo,
+            commits=[],
+            store=Store(self.db),
+            mode="strict",
+            host="claude",
+        )
+        self.assertEqual(result, hooks.HookResult())
+        rows = Store(self.db).list_sessions(open_only=True)
+        self.assertEqual([row.phase for row in rows], ["awaiting"])
 
     def test_continued_stop_is_allowed(self):
         _task_id, commits = self._unlinked()

@@ -66,50 +66,25 @@ def stop_result(
     """Block one stop when a managed checkout has unlinked commits."""
     lines = _brief_lines(store, cwd, commits)
     loose = [line.strip() for line in lines if line.strip().startswith("unlinked")]
+    if not loose:
+        return HookResult()
     continued = bool(payload.get("stop_hook_active"))
     try:
         continued = continued or int(payload.get("loop_count") or 0) > 0
     except (TypeError, ValueError):
         continued = True
-    if loose and mode == "strict" and host != "opencode" and not continued:
+    if mode == "strict" and host != "opencode" and not continued:
         scope = hook_scope.resolve(store, cwd)
         if scope.managed and scope.task is not None:
             task_id = scope.task.id
             parts = [f"lazyplan: {len(loose)} plan(s) have unlinked commits."]
             parts.append(f"Link them with `lpui link --kind task --id {task_id}`.")
-            if session is not None:
+            if session is not None and not session.host_session:
                 parts.append(
                     f"Then end S{session.id} with `lpui session end --id S{session.id} --summary`."
                 )
             return HookResult(block=" ".join(parts))
-    return HookResult(_stop_text(store, cwd, commits, session, loose=loose)).capped()
-
-
-def _stop_text(
-    store: InsightsPort,
-    cwd: Path,
-    commits: list[audit.Commit] | None,
-    session: Session | None = None,
-    loose: list[str] | None = None,
-) -> str:
-    lines = _brief_lines(store, cwd, commits)
-    parts = (
-        loose
-        if loose is not None
-        else [line.strip() for line in lines if line.strip().startswith("unlinked")]
-    )
-    tracked = session
-    if tracked is None:
-        rows = store.list_sessions(open_only=True, limit=1)
-        tracked = rows[0] if rows else None
-    if tracked is not None:
-        state = session_services.session_state(tracked)
-        parts.append(
-            f"session S{tracked.id} is {state}; run `lpui session end --id S{tracked.id} --summary`"
-        )
-    if not parts:
-        return ""
-    return "lazyplan: " + "; ".join(parts)
+    return HookResult("lazyplan: " + "; ".join(loose)).capped()
 
 
 def _next_handoff(store: InsightsPort) -> str:

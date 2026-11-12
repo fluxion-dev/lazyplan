@@ -156,16 +156,19 @@ def commit_result(store: AppPort, cwd: Path, command: str, mode: str) -> HookRes
     return HookResult(reason, context=True).capped()
 
 
-def post_tool_text(store: InsightsPort, command: str, path: str) -> str:
-    """Reminder after a commit or an edit; empty for unrelated tools."""
-    if is_git_commit(command):
-        task_id = _doing_task(store)
+def post_tool_text(store: AppPort, cwd: Path, command: str, path: str) -> str:
+    """Reminder after a commit or an edit; empty when no task could own the work."""
+    committed = is_git_commit(command)
+    if not committed and not path:
+        return ""
+    scope = hook_scope.resolve(store, cwd)
+    task_id = scope.task_id if scope.managed else _doing_task(store)
+    if task_id is None and not scope.managed:
+        return ""
+    if committed:
         if task_id is None:
             return "lazyplan: commit landed; start or pick a task with `lpui brief`."
         return f"lazyplan: commit landed; link it with `lpui link --kind task --id {task_id}`."
-    if not path:
-        return ""
-    task_id = _doing_task(store)
     if task_id is None:
         return "lazyplan: edit landed; start or pick a task with `lpui brief`."
     patterns = store.list_touchpoints(task_id)

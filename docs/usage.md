@@ -679,8 +679,10 @@ question at each lifecycle point:
 - Every prompt receives a short active-plan packet: plan, doing task, open
   criteria, and next task. Cursor has no prompt-context field, so it injects
   the same packet at session start and after each reported tool.
-- Edits that touch a task's paths name that task; other edits ask to update the
-  plan when scope changed.
+- Edits that touch a task's paths name that task, other edits ask to update the
+  plan when scope changed, and a commit asks to be linked. The agent receives
+  these as context alongside the tool result. Outside a managed checkout they
+  appear only while some plan has a doing task.
 - Session end closes the open session with an auto summary and a next-task
   handoff.
 

@@ -339,8 +339,8 @@ def build_result(
         if event == "pre-tool":
             return hook_policy.commit_result(store, here, _command(payload), mode)
         if event == "post-tool":
-            text = hook_policy.post_tool_text(store, _command(payload), _file_path(payload))
-            return HookResult(text).capped()
+            text = hook_policy.post_tool_text(store, here, _command(payload), _file_path(payload))
+            return HookResult(text, context=True).capped()
     except (RuntimeError, OSError, ValueError, KeyError):
         return HookResult()
     return HookResult()

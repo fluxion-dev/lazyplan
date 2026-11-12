@@ -58,6 +58,11 @@ class HookCase(unittest.TestCase):
         services.set_status(store, "plan", plan.id, Status.DOING, actor="t")
         return plan.id, task.id
 
+    def _seed_linked(self) -> tuple[int, int]:
+        plan_id, task_id = self._seed()
+        Store(self.db).add_repo_link("plan", plan_id, str(self.repo), actor="t")
+        return plan_id, task_id
+
     def _git(self, *args: str) -> None:
         subprocess.run(["git", *args], cwd=self.repo, check=True, capture_output=True)
 
@@ -490,12 +495,51 @@ class HookCase(unittest.TestCase):
         )
 
     def test_post_tool_commit_asks_for_a_link(self):
+        _plan, task_id = self._seed_linked()
+        payload = {"tool_input": {"command": "git commit -m x"}}
+        result = hooks.build_result(
+            "post-tool", payload, self.repo, commits=[], store=Store(self.db)
+        )
+        self.assertIn(f"--id {task_id}", result.text)
+        self.assertTrue(result.context)
+
+    def test_post_tool_names_a_global_plans_doing_task(self):
         _plan, task_id = self._seed()
         payload = {"tool_input": {"command": "git commit -m x"}}
         result = hooks.build_result(
             "post-tool", payload, self.repo, commits=[], store=Store(self.db)
         )
         self.assertIn(f"--id {task_id}", result.text)
+
+    def test_post_tool_with_nothing_in_progress_is_silent_outside_a_managed_checkout(self):
+        Store(self.db).add_plan("Idle", "what", goal="why")
+        for payload in (
+            {"tool_input": {"command": "git commit -m x"}},
+            {"tool_name": "Edit", "tool_input": {"file_path": "src/app.py"}},
+        ):
+            with self.subTest(payload=payload):
+                result = hooks.build_result(
+                    "post-tool", payload, self.repo, commits=[], store=Store(self.db)
+                )
+                self.assertEqual(result.text, "")
+
+    def test_cli_post_tool_reminder_reaches_claude_as_context(self):
+        _plan, task_id = self._seed_linked()
+        out = io.StringIO()
+        old_stdin = sys.stdin
+        sys.stdin = io.StringIO(
+            json.dumps({"hook_event_name": "PostToolUse", "tool_input": {"command": "git commit"}})
+        )
+        try:
+            with redirect_stdout(out):
+                code = lpui_main(["hook", "post-tool", "--host", "claude"])
+        finally:
+            sys.stdin = old_stdin
+        self.assertEqual(code, 0)
+        body = json.loads(out.getvalue())
+        self.assertNotIn("systemMessage", body)
+        self.assertEqual(body["hookSpecificOutput"]["hookEventName"], "PostToolUse")
+        self.assertIn(f"--id {task_id}", body["hookSpecificOutput"]["additionalContext"])
 
     def _linked_plan(self) -> int:
         store = Store(self.db)
@@ -561,7 +605,7 @@ class HookCase(unittest.TestCase):
         self.assertEqual(result.block, "")
 
     def test_post_tool_edit_names_the_owning_task(self):
-        _plan, task_id = self._seed()
+        _plan, task_id = self._seed_linked()
         Store(self.db).add_touchpoint(task_id, "src/**", actor="t")
         payload = {"tool_name": "Edit", "tool_input": {"file_path": "src/app.py"}}
         result = hooks.build_result(
@@ -570,7 +614,7 @@ class HookCase(unittest.TestCase):
         self.assertIn(f"T{task_id}", result.text)
 
     def test_post_tool_edit_outside_the_task_asks_for_scope(self):
-        _plan, _task = self._seed()
+        _plan, _task = self._seed_linked()
         payload = {"tool_name": "Write", "tool_input": {"file_path": "docs/readme.md"}}
         result = hooks.build_result(
             "post-tool", payload, self.repo, commits=[], store=Store(self.db)
@@ -578,7 +622,7 @@ class HookCase(unittest.TestCase):
         self.assertIn("scope", result.text)
 
     def test_post_tool_apply_patch_reads_the_patch_path(self):
-        _plan, task_id = self._seed()
+        _plan, task_id = self._seed_linked()
         Store(self.db).add_touchpoint(task_id, "src/**", actor="t")
         payload = {
             "tool_name": "apply_patch",
@@ -590,6 +634,7 @@ class HookCase(unittest.TestCase):
         self.assertIn(f"T{task_id}", result.text)
 
     def test_post_tool_edit_without_a_task_points_at_brief(self):
+        self._linked_plan()
         payload = {"tool_name": "Edit", "tool_input": {"file_path": "src/app.py"}}
         result = hooks.build_result(
             "post-tool", payload, self.repo, commits=[], store=Store(self.db)

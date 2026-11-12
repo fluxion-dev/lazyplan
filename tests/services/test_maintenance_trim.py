@@ -381,6 +381,58 @@ class TestMaintenanceTrim(unittest.TestCase):
         self.assertIn(plan.id, preview.plans)
         self.assertIn(large, preview.plans)
 
+    def test_plan_status_udf_matches_the_strict_parser(self) -> None:
+        cases = {
+            "plan #1 -> done": 1,
+            "plan # 1 -> done": 1,
+            "plan #1x -> done": None,
+            "Plan #1 -> done": None,
+            "plan #1": None,
+        }
+        with closing(sqlite3.connect(self.db)) as conn:
+            self.store._register_status_parser(conn)
+            for detail, expected in cases.items():
+                with self.subTest(detail=detail):
+                    value = conn.execute("SELECT plan_status_id(?)", (detail,)).fetchone()[0]
+                    self.assertEqual(value, expected)
+
+    def test_status_trim_keep_set_is_bounded_and_one_per_plan(self) -> None:
+        plans = [self.store.add_plan(f"Bulk {index}") for index in range(10)]
+        with closing(sqlite3.connect(self.db)) as conn:
+            conn.executemany(
+                "INSERT INTO events (ts, actor, kind, action, detail) VALUES (?, 'x', 'plan', 'status', ?)",
+                [
+                    (
+                        OLD + index,
+                        f"plan #{plans[index % len(plans)].id} -> "
+                        f"{'done' if index >= 4_990 else 'todo'}",
+                    )
+                    for index in range(5_000)
+                ],
+            )
+            conn.commit()
+        self.store.set_status_raw("plan", plans[0].id, Status.DONE)
+
+        maintenance.report(self.store)
+        preview = maintenance.trim(self.store, now=NOW, days="1", apply=False)
+        with closing(sqlite3.connect(self.db)) as conn:
+            keep = self.store._status_keep_ids(conn)
+        self.assertEqual(len(keep), len(plans))
+        self.assertLess(len(keep), 5_000)
+        self.assertGreaterEqual({row.table: row.rows for row in preview.tables}["events"], 4_990)
+
+        maintenance.trim(self.store, now=NOW, days="1", apply=True)
+
+        with closing(sqlite3.connect(self.db)) as conn:
+            kept = conn.execute(
+                "SELECT COUNT(*) FROM events WHERE kind='plan' AND action='status'"
+            ).fetchone()[0]
+        self.assertEqual(kept, len(plans))
+        self.assertIn(plans[0].id, self.store.plan_status_events_map())
+        self.assertNotIn(plans[0].id, [row[0].id for row in services.tree(self.store)])
+        preview = maintenance.archive(self.store, now=NOW, days="1", apply=False)
+        self.assertIn(plans[0].id, preview.plans)
+
     def test_malformed_only_status_events_are_trimmed(self) -> None:
         plan = self.store.add_plan("Malformed only")
         with closing(sqlite3.connect(self.db)) as conn:

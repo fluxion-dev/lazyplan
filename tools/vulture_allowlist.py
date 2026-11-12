@@ -14,6 +14,7 @@
   drives one poll on the calling thread; both are read by the headless Pilot
   tests, never by production call sites.
 - sqlite3 API noise: row_factory.
+- `_status_keep_ids` is the bounded keep-set helper asserted directly by trim tests.
 """
 
 _.compose
@@ -52,6 +53,7 @@ _.action_apply_archive
 _.action_apply_trim
 _.action_apply_vacuum
 _.action_restore
+_status_keep_ids
 _.export_plan
 _.render_plan_markdown
 _.rebuilds

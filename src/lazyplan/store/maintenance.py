@@ -172,46 +172,63 @@ class MaintenanceMixin(StoreBase):
     def _event_targets(cutoff: float) -> tuple[TrimTarget, ...]:
         """Old non-status events and old task/milestone status events.
 
-        Plan status events use the strict Python parser in
-        :meth:`_status_delete_ids` so trim and the archive policy cannot
-        disagree on which event is newest.
+        Plan status events use the strict parser registered as
+        ``plan_status_id`` so trim and the archive policy cannot disagree on
+        which event is newest.
         """
         where = "ts < ? AND (action <> 'status' OR kind <> 'plan')"
         return (TrimTarget("events", where, (cutoff,)),)
 
     @staticmethod
-    def _status_delete_ids(conn: sqlite3.Connection, cutoff: float) -> list[int]:
-        """Old plan status event ids except the newest valid one per live plan."""
-        plan_ids = {int(row["id"]) for row in conn.execute("SELECT id FROM plans")}
-        rows = conn.execute(
-            "SELECT id, ts, detail FROM events WHERE kind='plan' AND action='status'"
-        ).fetchall()
-        keep: dict[int, int] = {}
-        parsed_rows: list[tuple[int, float, int | None]] = []
-        for row in rows:
-            event_id = int(row["id"])
-            parsed = parse_plan_status_detail(str(row["detail"] or ""))
-            plan_id = parsed[0] if parsed is not None else None
-            parsed_rows.append((event_id, float(row["ts"] or 0), plan_id))
-            if plan_id is not None and plan_id in plan_ids:
-                keep[plan_id] = max(keep.get(plan_id, 0), event_id)
-        return [
-            event_id
-            for event_id, stamp, plan_id in parsed_rows
-            if stamp < cutoff
-            and (plan_id is None or plan_id not in plan_ids or keep.get(plan_id) != event_id)
-        ]
+    def _register_status_parser(conn: sqlite3.Connection) -> None:
+        """Register the strict plan status parser for SQL grouping and filtering."""
+        conn.create_function(
+            "plan_status_id",
+            1,
+            lambda detail: (parse_plan_status_detail(detail) or (None, None))[0],
+            deterministic=True,
+        )
 
     @staticmethod
-    def _delete_ids(conn: sqlite3.Connection, table: str, ids: list[int]) -> None:
-        """Delete rows by id in bounded chunks."""
-        for start in range(0, len(ids), 500):
-            chunk = ids[start : start + 500]
-            marks = ",".join("?" for _ in chunk)
-            conn.execute(
-                f"DELETE FROM {_quoted(table)} WHERE id IN ({marks})",
-                chunk,
-            )
+    def _status_keep_sql() -> str:
+        """One newest valid plan status event per live plan."""
+        return (
+            "SELECT MAX(e.id) FROM events e"
+            " WHERE e.kind='plan' AND e.action='status'"
+            " AND plan_status_id(e.detail) IS NOT NULL"
+            " AND EXISTS (SELECT 1 FROM plans p"
+            " WHERE p.id = plan_status_id(e.detail))"
+            " GROUP BY plan_status_id(e.detail)"
+        )
+
+    @classmethod
+    def _status_delete_where(cls) -> str:
+        """Predicate for old plan status events outside the keep set."""
+        return (
+            f"kind='plan' AND action='status' AND ts < ? AND id NOT IN ({cls._status_keep_sql()})"
+        )
+
+    @classmethod
+    def _status_delete_count(cls, conn: sqlite3.Connection, cutoff: float) -> int:
+        """Count old plan status rows outside the SQL keep set."""
+        cls._register_status_parser(conn)
+        row = conn.execute(
+            f"SELECT COUNT(*) FROM events WHERE {cls._status_delete_where()}",
+            (cutoff,),
+        ).fetchone()
+        return int(row[0] if row is not None else 0)
+
+    @classmethod
+    def _delete_status_events(cls, conn: sqlite3.Connection, cutoff: float) -> None:
+        """Delete old plan status rows outside the SQL keep set."""
+        cls._register_status_parser(conn)
+        conn.execute(f"DELETE FROM events WHERE {cls._status_delete_where()}", (cutoff,))
+
+    @classmethod
+    def _status_keep_ids(cls, conn: sqlite3.Connection) -> list[int]:
+        """Return the bounded keep set: at most one id per live plan."""
+        cls._register_status_parser(conn)
+        return [int(row[0]) for row in conn.execute(cls._status_keep_sql()).fetchall()]
 
     @classmethod
     def _trim_targets(cls, now: float, cutoff: float) -> tuple[TrimTarget, ...]:
@@ -241,7 +258,7 @@ class MaintenanceMixin(StoreBase):
             target.table: self._count_target(conn, target)
             for target in self._trim_targets(now, cutoff)
         }
-        counts["events"] = counts.get("events", 0) + len(self._status_delete_ids(conn, cutoff))
+        counts["events"] = counts.get("events", 0) + self._status_delete_count(conn, cutoff)
         return counts
 
     def _measure(self, conn: sqlite3.Connection, now: float, window_secs: float) -> _ReportMeasure:
@@ -309,11 +326,11 @@ class MaintenanceMixin(StoreBase):
         targets = self._trim_targets(stamp, cutoff)
         with self._connect() as conn:
             counts = {target.table: self._count_target(conn, target) for target in targets}
-            status_ids = self._status_delete_ids(conn, cutoff)
-            counts["events"] = counts.get("events", 0) + len(status_ids)
+            status_count = self._status_delete_count(conn, cutoff)
+            counts["events"] = counts.get("events", 0) + status_count
             if apply:
                 self._delete_targets(conn, targets)
-                self._delete_ids(conn, "events", status_ids)
+                self._delete_status_events(conn, cutoff)
         return TrimResult(
             tables=tuple(TableCount(table, rows) for table, rows in counts.items()),
             applied=apply,

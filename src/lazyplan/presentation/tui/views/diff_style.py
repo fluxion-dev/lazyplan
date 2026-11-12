@@ -78,3 +78,8 @@ class DiffOptions:
     wrap: bool = True
     fold_after: int = FOLD_AFTER
     fold_keep: int = FOLD_KEEP
+
+
+def palette_from_theme(theme: Mapping[str, object]) -> DiffPalette:
+    """Build a diff palette from an app's theme-variable mapping."""
+    return DiffPalette.from_theme({name: str(value) for name, value in theme.items()})

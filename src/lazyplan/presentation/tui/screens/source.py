@@ -34,10 +34,12 @@ from lazyplan.services.source import (
 )
 
 from ....core.ports.provenance import ProvenancePort
-from ...shared.design import KIND_ICON, action_bar, escape_markup
+from ...shared.design import KIND_ICON, escape_markup
+from ..controllers.source_nav import file_nodes
+from ..controllers.source_state import SourceViewState
 from ..navigation import NAV_BINDINGS, NavigationMixin
 from ..views.diff_split import MIN_SPLIT_WIDTH
-from ..views.diff_style import DiffPalette
+from ..views.diff_style import palette_from_theme
 from ..views.source import (
     DiffPreview,
     commit_data,
@@ -47,6 +49,8 @@ from ..views.source import (
     file_data,
     file_label,
     file_preview,
+    find_commit,
+    find_repo,
     pull_data,
     pull_label,
     pull_preview,
@@ -56,6 +60,7 @@ from ..views.source import (
     repo_matches,
     repo_preview,
     source_files,
+    source_hints,
     summary_chips,
 )
 
@@ -99,15 +104,8 @@ if _TEXTUAL_OK:
             self._stats_loaded: set[tuple[str, str]] = set()
             self._stats: dict[tuple[str, str], CommitStats] = {}
             self._commit_nodes: dict[tuple[str, str], TreeNode] = {}
-            self._file_index = 0
-            self._view_key: tuple[str, str, str] | None = None
-            self._page_offset = 0
-            self._page_total = 0
-            self._page_has_more = False
             self._current_node: TreeNode | None = None
-            self._split_mode = False
-            self._wrap_mode = True
-            self._fold_mode = True
+            self._view = SourceViewState()
 
         def compose(self) -> ComposeResult:
             with Vertical(id="source-page"):
@@ -140,8 +138,8 @@ if _TEXTUAL_OK:
         def on_resize(self, event: events.Resize) -> None:
             """Re-render the current preview after a width change."""
             self._apply_width_classes(event.size.width)
-            if self._split_mode and event.size.width - 2 < MIN_SPLIT_WIDTH:
-                self._split_mode = False
+            if self._view.split and event.size.width - 2 < MIN_SPLIT_WIDTH:
+                self._view.split = False
                 self.notify(
                     f"side-by-side needs {MIN_SPLIT_WIDTH} columns; switched to unified",
                     timeout=3,
@@ -299,7 +297,7 @@ if _TEXTUAL_OK:
             commit = data.get("object")
             if not isinstance(commit, SourceCommit):
                 commit = SourceCommit(sha=sha)
-            repo_obj = next((item for item in self._trail.repos if item.path == repo), None)
+            repo_obj = find_repo(self._trail, repo)
             if repo_obj is None:
                 repo_obj = SourceRepo(path=repo, name="")
             node.set_label(commit_label(commit, stats))
@@ -338,9 +336,9 @@ if _TEXTUAL_OK:
             """Paint the selected repo, commit, file, or pull request."""
             body = self.query_one("#source-preview-body", Static)
             data = node.data if node is not None else None
-            previous = self._view_key
+            previous = self._view.view_key
             if reset_page or node is not self._current_node:
-                self._page_offset = 0
+                self._view.page_offset = 0
             text = "Select a repo, commit, file, or pull request."
             key: tuple[str, str, str] | None = None
             preview = DiffPreview()
@@ -354,20 +352,22 @@ if _TEXTUAL_OK:
                     text = repo_preview(obj)
                 elif kind == "commit" and isinstance(obj, SourceCommit):
                     if node is not self._current_node:
-                        self._file_index = 0
+                        self._view.file_index = 0
                     stats = self._stats.get((repo, sha))
                     items = source_files(obj, stats)
                     if items:
-                        self._file_index = min(max(0, self._file_index), len(items) - 1)
-                        path = items[self._file_index][0].path
+                        self._view.file_index = min(max(0, self._view.file_index), len(items) - 1)
+                        path = items[self._view.file_index][0].path
                         key = (repo, sha, path)
                         preview = self._diff_preview(repo, sha, path)
-                        text = commit_preview(obj, stats, items, self._file_index, preview.rows)
+                        text = commit_preview(
+                            obj, stats, items, self._view.file_index, preview.rows
+                        )
                     else:
                         key = (repo, sha, "")
                         text = commit_preview(obj, stats, items, 0, ())
                 elif kind == "file" and isinstance(obj, SourceFile):
-                    commit = self._commit(repo, sha)
+                    commit = find_commit(self._trail, repo, sha)
                     stats = self._stats.get((repo, sha))
                     items = source_files(commit, stats) if commit is not None else ((obj, None),)
                     current = next(
@@ -378,7 +378,7 @@ if _TEXTUAL_OK:
                         ),
                         0,
                     )
-                    self._file_index = current
+                    self._view.file_index = current
                     key = (repo, sha, obj.path)
                     preview = self._diff_preview(repo, sha, obj.path)
                     text = file_preview(commit, items, current, preview.rows)
@@ -388,9 +388,9 @@ if _TEXTUAL_OK:
                 else:
                     text = "No source linked for this row."
             if key != previous:
-                self._view_key = key
-            self._page_total = preview.total
-            self._page_has_more = preview.has_more
+                self._view.view_key = key
+            self._view.page_total = preview.total
+            self._view.page_has_more = preview.has_more
             self._current_node = node
             body.update(text)
             if reset_page:
@@ -400,34 +400,10 @@ if _TEXTUAL_OK:
                     pass
             self._update_hints()
 
-        def _repo(self, path: str) -> SourceRepo | None:
-            return next((repo for repo in self._trail.repos if repo.path == path), None)
-
-        def _palette(self) -> DiffPalette:
-            """Build the diff palette from the active theme variables."""
-            variables = {name: str(value) for name, value in self.app.theme_variables.items()}
-            return DiffPalette.from_theme(variables)
-
-        def _commit(self, repo: str, sha: str) -> SourceCommit | None:
-            parent = self._repo(repo)
-            if parent is None:
-                return None
-            return next((commit for commit in parent.commits if commit.sha == sha), None)
-
         def _diff_preview(self, repo: str, sha: str, path: str) -> DiffPreview:
             """One cached page of a single file's diff."""
             width = max(20, self.query_one("#source-preview").size.width - 2)
-            key = (
-                repo,
-                sha,
-                path,
-                width,
-                str(self.app.theme),
-                self._split_mode,
-                self._wrap_mode,
-                self._fold_mode,
-                self._page_offset,
-            )
+            key = self._view.cache_key(repo, sha, path, width, str(self.app.theme))
             cached = self._diff_cache.get(key)
             if cached is not None:
                 return cached
@@ -436,36 +412,26 @@ if _TEXTUAL_OK:
                 sha,
                 path,
                 width,
-                offset=self._page_offset,
+                offset=self._view.page_offset,
                 limit=DIFF_PREVIEW_LINES,
-                split=self._split_mode,
-                wrap=self._wrap_mode,
-                fold=self._fold_mode,
-                palette=self._palette(),
+                split=self._view.split,
+                wrap=self._view.wrap,
+                fold=self._view.fold,
+                palette=palette_from_theme(self.app.theme_variables),
             )
             self._diff_cache[key] = preview
             return preview
 
         def _update_hints(self) -> None:
             """Keep the footer in step with paging and file navigation."""
-            items = [
-                ("enter", "owner"),
-                ("n/p", "file"),
-                ("s", "unified" if self._split_mode else "split"),
-                ("w", "nowrap" if self._wrap_mode else "wrap"),
-                ("f", "unfold" if self._fold_mode else "fold"),
-                ("y", "copy"),
-                ("/", "find"),
-            ]
-            if self._page_has_more:
-                items.append(("^d", "more"))
-            if self._page_offset:
-                items.append(("^u", "less"))
-            items.append(("esc", "back"))
-            bar = action_bar(("o", "open"), items)
-            if self._page_total > DIFF_PREVIEW_LINES or self._page_offset:
-                end = min(self._page_offset + DIFF_PREVIEW_LINES, self._page_total)
-                bar += f" · [dim]{end}/{self._page_total}[/]"
+            bar = source_hints(
+                split=self._view.split,
+                wrap=self._view.wrap,
+                fold=self._view.fold,
+                has_more=self._view.page_has_more,
+                has_less=self._view.page_offset > 0,
+                page_label=self._view.page_label(DIFF_PREVIEW_LINES),
+            )
             self.query_one("#source-hints", Label).update(bar)
 
         def _selected(self) -> dict[str, Any] | None:
@@ -473,30 +439,9 @@ if _TEXTUAL_OK:
             data = node.data if node is not None else None
             return data if isinstance(data, dict) else None
 
-        def _file_nodes(self) -> tuple[TreeNode | None, TreeNode | None, list[TreeNode]]:
-            """Current node, its commit node, and the commit's file rows."""
-            node = self.query_one("#source-tree", NavTree).cursor_node
-            data = node.data if node is not None else None
-            if not isinstance(data, dict):
-                return node, None, []
-            kind = str(data.get("kind", ""))
-            if kind == "file" and node is not None:
-                commit_node = node.parent
-            elif kind == "commit":
-                commit_node = node
-            else:
-                return node, None, []
-            if commit_node is None:
-                return node, None, []
-            files = [
-                child
-                for child in commit_node.children
-                if isinstance(child.data, dict) and child.data.get("kind") == "file"
-            ]
-            return node, commit_node, files
-
         def _walk_file(self, step: int) -> None:
-            node, commit_node, files = self._file_nodes()
+            tree = self.query_one("#source-tree", NavTree)
+            node, commit_node, files = file_nodes(tree)
             if not files or commit_node is None:
                 self.notify("this row has no changed files", timeout=2)
                 return
@@ -527,18 +472,18 @@ if _TEXTUAL_OK:
 
         def action_more(self) -> None:
             """Show the next page of the current diff."""
-            if not self._page_has_more:
+            if not self._view.page_has_more:
                 self.notify("end of diff", timeout=2)
                 return
-            self._page_offset += DIFF_PREVIEW_LINES
+            self._view.page_offset += DIFF_PREVIEW_LINES
             self._preview(self._current_node, reset_page=False)
 
         def action_less(self) -> None:
             """Show the previous page of the current diff."""
-            if self._page_offset <= 0:
+            if self._view.page_offset <= 0:
                 self.notify("start of diff", timeout=2)
                 return
-            self._page_offset = max(0, self._page_offset - DIFF_PREVIEW_LINES)
+            self._view.page_offset = max(0, self._view.page_offset - DIFF_PREVIEW_LINES)
             self._preview(self._current_node, reset_page=False)
 
         def _rerender_modes(self) -> None:
@@ -549,23 +494,23 @@ if _TEXTUAL_OK:
         def action_toggle_split(self) -> None:
             """Switch between unified and side-by-side diffs."""
             width = max(20, self.query_one("#source-preview").size.width - 2)
-            if not self._split_mode and width < MIN_SPLIT_WIDTH:
+            if not self._view.split and width < MIN_SPLIT_WIDTH:
                 self.notify(
                     f"side-by-side needs {MIN_SPLIT_WIDTH} columns",
                     timeout=3,
                 )
                 return
-            self._split_mode = not self._split_mode
+            self._view.split = not self._view.split
             self._rerender_modes()
 
         def action_toggle_wrap(self) -> None:
             """Switch between wrapped and truncated long lines."""
-            self._wrap_mode = not self._wrap_mode
+            self._view.wrap = not self._view.wrap
             self._rerender_modes()
 
         def action_toggle_fold(self) -> None:
             """Fold or unfold long unchanged runs."""
-            self._fold_mode = not self._fold_mode
+            self._view.fold = not self._view.fold
             self._rerender_modes()
 
         def action_back(self) -> None:

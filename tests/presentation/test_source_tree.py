@@ -139,11 +139,11 @@ class SourceTreeStatsTest(unittest.IsolatedAsyncioTestCase):
                 app.screen.action_more()
                 await pilot.pause()
                 self.assertIn("page two", str(body.content))
-                self.assertEqual(app.screen._page_offset, 300)
+                self.assertEqual(app.screen._view.page_offset, 300)
                 app.screen.action_less()
                 await pilot.pause()
                 self.assertIn("page one", str(body.content))
-                self.assertEqual(app.screen._page_offset, 0)
+                self.assertEqual(app.screen._view.page_offset, 0)
 
     async def test_style_toggles_pass_options_to_the_renderer(self) -> None:
         with mock.patch(
@@ -161,15 +161,15 @@ class SourceTreeStatsTest(unittest.IsolatedAsyncioTestCase):
                 await pilot.pause()
                 app.screen.action_toggle_wrap()
                 await pilot.pause()
-                self.assertFalse(app.screen._wrap_mode)
+                self.assertFalse(app.screen._view.wrap)
                 self.assertFalse(reader.call_args.kwargs["wrap"])
                 app.screen.action_toggle_fold()
                 await pilot.pause()
-                self.assertFalse(app.screen._fold_mode)
+                self.assertFalse(app.screen._view.fold)
                 self.assertFalse(reader.call_args.kwargs["fold"])
                 app.screen.action_toggle_split()
                 await pilot.pause()
-                self.assertTrue(app.screen._split_mode)
+                self.assertTrue(app.screen._view.split)
                 self.assertTrue(reader.call_args.kwargs["split"])
 
     async def test_split_refuses_a_narrow_pane(self) -> None:
@@ -184,7 +184,7 @@ class SourceTreeStatsTest(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             app.screen.action_toggle_split()
             await pilot.pause()
-            self.assertFalse(app.screen._split_mode)
+            self.assertFalse(app.screen._view.split)
 
     async def test_empty_trail_shows_guidance(self) -> None:
         empty = self.store.add_task(self.milestone.id, "No source")

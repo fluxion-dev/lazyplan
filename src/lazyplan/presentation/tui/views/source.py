@@ -17,7 +17,7 @@ from lazyplan.services.source import (
     read_diff_page,
 )
 
-from ...shared.design import escape_markup
+from ...shared.design import action_bar, escape_markup
 from .diff_render import (
     DiffOptions,
     DiffPalette,
@@ -47,6 +47,49 @@ def when(timestamp: int) -> str:
         return datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d")
     except (OverflowError, OSError, ValueError):
         return ""
+
+
+def find_repo(trail: SourceTrail, path: str) -> SourceRepo | None:
+    """The trail repo with this checkout path, if any."""
+    return next((repo for repo in trail.repos if repo.path == path), None)
+
+
+def find_commit(trail: SourceTrail, repo: str, sha: str) -> SourceCommit | None:
+    """The commit with this SHA inside one trail repo."""
+    parent = find_repo(trail, repo)
+    if parent is None:
+        return None
+    return next((commit for commit in parent.commits if commit.sha == sha), None)
+
+
+def source_hints(
+    *,
+    split: bool,
+    wrap: bool,
+    fold: bool,
+    has_more: bool,
+    has_less: bool,
+    page_label: str,
+) -> str:
+    """The source footer: navigation, display modes, and paging position."""
+    items = [
+        ("enter", "owner"),
+        ("n/p", "file"),
+        ("s", "unified" if split else "split"),
+        ("w", "nowrap" if wrap else "wrap"),
+        ("f", "unfold" if fold else "fold"),
+        ("y", "copy"),
+        ("/", "find"),
+        ("esc", "back"),
+    ]
+    if has_more:
+        items.insert(-1, ("^d", "more"))
+    if has_less:
+        items.insert(-1, ("^u", "less"))
+    bar = action_bar(("o", "open"), items)
+    if page_label:
+        bar += f" · [dim]{page_label}[/]"
+    return bar
 
 
 _STATUS_GLYPH = {

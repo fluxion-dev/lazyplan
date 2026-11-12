@@ -110,16 +110,7 @@ def task_row(
     store: InsightsPort | None = None,
     width: int | None = None,
     attention: bool = False,
-    claim_actor: str = "",
-    claim_expired: bool = False,
-    blocked: bool = False,
 ) -> str:
-    """TUI task row (Rich markup): glyph + id + title + attention + claim."""
-    stats = RowStats(
-        kind="task",
-        attention=attention,
-        blocked=blocked,
-        claim_actor=claim_actor,
-        claim_expired=claim_expired,
-    )
+    """TUI task row (Rich markup): glyph + id + title + attention."""
+    stats = RowStats(kind="task", attention=attention)
     return _render_row("task", t, stats, width)

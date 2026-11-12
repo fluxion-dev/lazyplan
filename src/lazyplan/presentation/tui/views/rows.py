@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from functools import partial
@@ -62,19 +61,10 @@ def milestone_spec(
     )
 
 
-def task_spec(task: Task, store: Store, claims_map: dict, attention: bool = False) -> RowSpec:
+def task_spec(task: Task, attention: bool = False) -> RowSpec:
     """Build the width-independent renderer for one task row."""
-    claim = claims_map.get(task.id)
     return RowSpec(
-        render=partial(
-            task_row,
-            task,
-            store,
-            attention=attention,
-            claim_actor=claim.actor if claim else "",
-            claim_expired=claim.expired(time.time()) if claim else False,
-            blocked=task.blocked,
-        ),
+        render=partial(task_row, task, attention=attention),
         depth=11,
         status=task.status,
     )

@@ -177,6 +177,32 @@ class TestDiffParsing(unittest.TestCase):
         self.assertEqual(backend.calls, 1)
         clear_diff_cache()
 
+    def test_read_diff_page_past_the_end_is_empty(self) -> None:
+        class FakeBackend:
+            def diff(self, root, sha, path=""):
+                return DiffRead(
+                    state="ok",
+                    patch=(
+                        "diff --git a/a.txt b/a.txt\n"
+                        "--- a/a.txt\n"
+                        "+++ b/a.txt\n"
+                        "@@ -1 +1 @@\n"
+                        "-a\n"
+                        "+b\n"
+                    ),
+                )
+
+        clear_diff_cache()
+        with mock.patch(
+            "lazyplan.services.source_diff.detect_backend",
+            return_value=(FakeBackend(), "/repo"),
+        ):
+            page = read_diff_page("/repo", "c" * 40, offset=50, limit=5)
+        self.assertEqual(page.total, 1)
+        self.assertEqual(page.files, ())
+        self.assertFalse(page.has_more)
+        clear_diff_cache()
+
 
 class TestCommitStats(unittest.TestCase):
     def test_file_stats_joins_name_status_and_numstat(self):
@@ -343,6 +369,14 @@ class TestSourceTrail(unittest.TestCase):
             all(item.url.startswith("https://github.com/org/repo/blob/") for item in commit.files)
         )
         self.assertEqual(commit.url, f"https://github.com/org/repo/commit/{self.sha}")
+
+    def test_commit_stats_for_root_commit(self):
+        clear_stats_cache()
+        stats = read_commit_stats(self.repo, self.sha)
+        self.assertEqual(stats.state, "ok")
+        self.assertEqual([item.path for item in stats.files], ["a.py"])
+        self.assertEqual(stats.files[0].status, "add")
+        clear_stats_cache()
 
     def test_commit_stats_from_checkout(self):
         with open(os.path.join(self.repo, "a.py"), "w", encoding="utf-8") as fh:

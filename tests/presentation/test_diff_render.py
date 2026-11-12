@@ -5,6 +5,7 @@ from __future__ import annotations
 import unittest
 
 try:
+    from rich.cells import cell_len
     from rich.text import Text
 
     from lazyplan.presentation.tui.views.diff_render import (
@@ -15,7 +16,7 @@ try:
     from lazyplan.presentation.tui.views.diff_split import render_split
     from lazyplan.services.source import parse_patch
 except ImportError:  # pragma: no cover - stdlib-only interpreter
-    DiffOptions = DiffPalette = Text = None  # type: ignore[assignment]
+    DiffOptions = DiffPalette = Text = cell_len = None  # type: ignore[assignment]
     render_split = render_unified = parse_patch = None  # type: ignore[assignment]
 
 PATCH = (
@@ -83,6 +84,20 @@ CONTEXT_PATCH = (
     "-old\n"
     "+new\n"
     " tail\n"
+)
+
+LONG_PATH = "src/" + "very-long-directory/" * 8 + "file.py"
+LONG_PATCH = (
+    f"diff --git a/{LONG_PATH} b/{LONG_PATH}\n"
+    f"--- a/{LONG_PATH}\n"
+    f"+++ b/{LONG_PATH}\n"
+    "@@ -1 +1 @@\n"
+    "-old\n"
+    "+new\n"
+)
+
+UNICODE_PATCH = (
+    "diff --git a/a.txt b/a.txt\n--- a/a.txt\n+++ b/a.txt\n@@ -1 +1 @@\n-old\n+\twide 界\n"
 )
 
 
@@ -166,6 +181,22 @@ class UnifiedRenderTest(unittest.TestCase):
     def test_narrow_width_does_not_crash(self) -> None:
         rows = render_unified(parse_patch(WRAP_PATCH), 1)
         self.assertTrue(rows)
+
+    def test_every_row_is_valid_markup(self) -> None:
+        for row in render_unified(parse_patch(PATCH), 90):
+            Text.from_markup(row)
+        result = render_split(parse_patch(PATCH), 100)
+        for row in result.rows:
+            Text.from_markup(row)
+
+    def test_long_path_fits_the_pane_width(self) -> None:
+        row = render_unified(parse_patch(LONG_PATCH), 60)[0]
+        self.assertLessEqual(cell_len(Text.from_markup(row).plain), 60)
+        self.assertIn("…", Text.from_markup(row).plain)
+
+    def test_tabs_and_wide_characters_survive(self) -> None:
+        plain = "\n".join(_plain(render_unified(parse_patch(UNICODE_PATCH), 80)))
+        self.assertIn("    wide 界", plain)
 
 
 @unittest.skipUnless(render_split is not None, "textual/rich not installed")

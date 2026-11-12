@@ -4,6 +4,9 @@
 # README header (`# lazyplan (`lpui`) — vX.Y.Z`) and the version-pinned
 # asset URLs in README.md, site/index.html, and site/src/data/links.ts
 # mirror it and are updated here.
+# The next notes must live under `## Unreleased`; this stamps that heading
+# with the new version and today's date, then copies the changelog into the
+# package.
 # Commits the change and tags `vX.Y.Z` (annotated). Push with --push.
 # Use --no-tag to commit without tagging, for a release pull request.
 #
@@ -65,6 +68,11 @@ if [[ $DRY -eq 1 ]]; then
 fi
 
 sed -i.bak "s/^version = \".*\"$/version = \"$NEXT\"/" pyproject.toml && rm pyproject.toml.bak
+python3 tools/check-changelog.py --stamp "$NEXT"
+if ! grep -q "^## v$NEXT — " CHANGELOG.md; then
+  echo "error: changelog stamp failed" >&2
+  exit 1
+fi
 sed -i.bak "1s/ — v[0-9][0-9.]*$/ — v$NEXT/" README.md && rm README.md.bak
 sed -i.bak -E "s/lazyplan_[0-9]+\.[0-9]+\.[0-9]+-1_/lazyplan_${NEXT}-1_/g" README.md && rm README.md.bak
 sed -i.bak -E "s/lazyplan-[0-9]+\.[0-9]+\.[0-9]+-1\./lazyplan-${NEXT}-1./g" README.md && rm README.md.bak
@@ -110,7 +118,7 @@ fi
 # The notes reader ships the changelog inside the package; keep it identical.
 cp CHANGELOG.md src/lazyplan/data/CHANGELOG.md
 
-git add pyproject.toml README.md docs/ src/lazyplan/data/CHANGELOG.md
+git add pyproject.toml README.md CHANGELOG.md docs/ src/lazyplan/data/CHANGELOG.md
 if [[ -f site/index.html ]]; then git add site/index.html site/public/sitemap.xml site/package.json site/src/data/links.ts; fi
 git commit -m "release v$NEXT"
 if [[ $NOTAG -eq 0 ]]; then

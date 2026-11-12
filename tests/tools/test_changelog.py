@@ -189,6 +189,13 @@ See the releases page.
         text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
         self.assertEqual(self.gate.check_text(text), [])
 
+    def test_real_repo_stamps_cleanly(self):
+        text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+        stamped = self.gate.stamp_text(text, "0.41.1", "2026-11-12")
+        self.assertEqual(self.gate.check_text(stamped), [])
+        self.assertIn("## v0.41.1 — 2026-11-12", stamped)
+        self.assertIn("## v0.41.0 — 2026-11-12", stamped)
+
 
 if __name__ == "__main__":
     unittest.main()

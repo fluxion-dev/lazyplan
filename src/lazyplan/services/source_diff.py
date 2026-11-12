@@ -38,6 +38,7 @@ class DiffHunk:
     new_start: int = 0
     new_count: int = 0
     lines: tuple[DiffLine, ...] = ()
+    section: str = ""
 
 
 @dataclass(frozen=True)
@@ -49,11 +50,24 @@ class DiffFile:
     header: tuple[str, ...] = ()
     hunks: tuple[DiffHunk, ...] = ()
     binary: bool = False
+    new_file: bool = False
+    deleted_file: bool = False
 
     @property
     def path(self) -> str:
         """Display path: the new path, falling back to the old one."""
         return self.new_path or self.old_path
+
+    @property
+    def status(self) -> str:
+        """Change kind: ``add``, ``delete``, ``rename``, or ``modify``."""
+        if self.new_file or (self.new_path and not self.old_path):
+            return "add"
+        if self.deleted_file or (self.old_path and not self.new_path):
+            return "delete"
+        if self.old_path and self.new_path and self.old_path != self.new_path:
+            return "rename"
+        return "modify"
 
 
 def _clean_diff_path(raw: str) -> str:
@@ -96,6 +110,7 @@ def _build_hunk(header: str, body: list[str]) -> DiffHunk:
         new_start=int(match.group("new")),
         new_count=int(match.group("new_count") or 1),
         lines=tuple(lines),
+        section=match.group("section"),
     )
 
 
@@ -106,6 +121,8 @@ def _parse_file_chunk(lines: list[str]) -> DiffFile:
     header: list[str] = []
     hunks: list[DiffHunk] = []
     binary = False
+    new_file = False
+    deleted_file = False
     hunk_header = ""
     hunk_body: list[str] = []
     for raw in lines:
@@ -125,6 +142,12 @@ def _parse_file_chunk(lines: list[str]) -> DiffFile:
         elif raw.startswith(("Binary files ", "GIT binary patch")):
             binary = True
             header.append(raw)
+        elif raw.startswith("new file mode "):
+            new_file = True
+            header.append(raw)
+        elif raw.startswith("deleted file mode "):
+            deleted_file = True
+            header.append(raw)
         elif raw.startswith("--- "):
             old_path = _clean_diff_path(raw[4:])
             header.append(raw)
@@ -143,6 +166,8 @@ def _parse_file_chunk(lines: list[str]) -> DiffFile:
         header=tuple(header),
         hunks=tuple(hunks),
         binary=binary,
+        new_file=new_file,
+        deleted_file=deleted_file,
     )
 
 

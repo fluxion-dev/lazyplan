@@ -58,7 +58,50 @@ class TestDiffParsing(unittest.TestCase):
         self.assertEqual((hunk.lines[1].old_no, hunk.lines[1].new_no), (2, None))
         self.assertEqual((hunk.lines[2].old_no, hunk.lines[2].new_no), (None, 2))
         self.assertEqual((hunk.lines[3].old_no, hunk.lines[3].new_no), (None, 3))
+        self.assertEqual(hunk.section, "section")
+        self.assertEqual(first.status, "modify")
         self.assertTrue(files[1].binary)
+
+    def test_parse_file_status_and_rename(self):
+        patch = (
+            "diff --git a/new.txt b/new.txt\n"
+            "new file mode 100644\n"
+            "--- /dev/null\n"
+            "+++ b/new.txt\n"
+            "@@ -0,0 +1 @@\n"
+            "+hello\n"
+            "diff --git a/old.txt b/old.txt\n"
+            "deleted file mode 100644\n"
+            "--- a/old.txt\n"
+            "+++ /dev/null\n"
+            "@@ -1 +0,0 @@\n"
+            "-gone\n"
+            "diff --git a/from.txt b/to.txt\n"
+            "similarity index 100%\n"
+            "rename from from.txt\n"
+            "rename to to.txt\n"
+            "diff --git a/empty.txt b/empty.txt\n"
+            "new file mode 100644\n"
+            "index 0000000..e69de29\n"
+        )
+        added, deleted, renamed, empty = parse_patch(patch)
+        self.assertEqual((added.status, added.old_path, added.new_path), ("add", "", "new.txt"))
+        self.assertEqual(
+            (deleted.status, deleted.old_path, deleted.new_path),
+            ("delete", "old.txt", ""),
+        )
+        self.assertEqual(
+            (renamed.status, renamed.old_path, renamed.new_path),
+            ("rename", "from.txt", "to.txt"),
+        )
+        self.assertEqual(renamed.hunks, ())
+        self.assertEqual(empty.status, "add")
+        self.assertEqual(empty.hunks, ())
+
+    def test_hunk_section_is_empty_without_context(self):
+        patch = "diff --git a/x.txt b/x.txt\n--- a/x.txt\n+++ b/x.txt\n@@ -1 +1 @@\n-a\n+b\n"
+        hunk = parse_patch(patch)[0].hunks[0]
+        self.assertEqual(hunk.section, "")
 
     def test_parse_empty_patch(self):
         self.assertEqual(parse_patch(""), ())

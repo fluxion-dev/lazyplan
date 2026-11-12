@@ -21,6 +21,7 @@ from lazyplan.presentation.cli.parser import build_parser
 from lazyplan.services import audit, hooks
 from lazyplan.store import Store
 from tests.support.home import sandbox_home
+from tests.support.paths import ROOT
 
 
 class HookCase(unittest.TestCase):
@@ -106,7 +107,7 @@ class HookCase(unittest.TestCase):
 
     def test_hook_process_exits_when_the_host_keeps_stdin_open(self):
         self._init_git("main")
-        env = dict(os.environ, LAZYPLAN_DB=str(self.db))
+        env = dict(os.environ, LAZYPLAN_DB=str(self.db), PYTHONPATH=os.path.join(ROOT, "src"))
         Store(self.db).add_plan("P")
         proc = subprocess.Popen(
             [sys.executable, "-m", "lazyplan", "hook", "stop", "--host", "claude"],

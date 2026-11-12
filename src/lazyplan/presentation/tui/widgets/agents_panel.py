@@ -9,8 +9,15 @@ from textual.containers import VerticalScroll
 from textual.widgets import Static
 
 from .... import services
+from ....core.entities import Session
 from ....core.ports.sessions import SessionsPort
-from ...shared.design import EMPTY_AGENTS, EMPTY_AGENTS_HINT, empty_state, escape_markup
+from ...shared.design import (
+    EMPTY_AGENTS,
+    EMPTY_AGENTS_HINT,
+    empty_state,
+    escape_markup,
+    spinner_enabled,
+)
 from ...shared.session_labels import plan_names
 from ..views.agents import rank_sessions, session_line, sessions_summary
 
@@ -25,6 +32,11 @@ class AgentsPanel(VerticalScroll):
     def __init__(self) -> None:
         super().__init__(id="agents")
         self.border_title = " agents "
+        self._sessions: list[Session] = []
+        self._titles: dict[int, str] = {}
+        self._stamp = 0.0
+        self._handoff = ""
+        self._frame: int | None = 0
 
     def compose(self) -> ComposeResult:
         yield Static("", id="agents-body")
@@ -49,6 +61,10 @@ class AgentsPanel(VerticalScroll):
             pass
         sessions = services.sessions.list_sessions(store, open_only=True, limit=OPEN_SESSIONS_READ)
         if not sessions:
+            self._sessions = []
+            self._titles = {}
+            self._handoff = ""
+            self._frame = None
             body.display = False
             empty = self.query_one("#agents-empty", Static)
             empty.display = True
@@ -57,22 +73,49 @@ class AgentsPanel(VerticalScroll):
             self.scroll_home(animate=False)
             return
         self._show_body()
+        self._stamp = time.time()
+        self._sessions = rank_sessions(sessions, self._stamp)
+        self._titles = plan_names(store)
+        handoff = services.sessions.previous_session(store, plan_id=plan_id)
+        note = str(handoff["handoff"]) if handoff and handoff.get("handoff") else ""
+        self._handoff = f"[dim]handoff[/] {escape_markup(note)}" if note else ""
+        self._frame = 0 if spinner_enabled() else None
+        self._paint_rows()
+        self.border_subtitle = sessions_summary(sessions, self._stamp)
+        self.scroll_home(animate=False)
+
+    def has_working(self) -> bool:
+        """True while a cached session is still in its working phase."""
+        if not self._sessions:
+            return False
         stamp = time.time()
+        return any(
+            services.session_state(session, stamp) == "working" for session in self._sessions
+        )
+
+    def advance(self, frame: int) -> bool:
+        """Paint the cached rows at *frame* without another store read."""
+        if not self._sessions or not spinner_enabled():
+            return False
+        if not self.has_working():
+            return False
+        self._frame = frame
+        self._paint_rows()
+        return True
+
+    def _paint_rows(self) -> None:
         width = self._row_width()
-        ranked = rank_sessions(sessions, stamp)
-        titles = plan_names(store)
+        stamp = time.time()
         lines = [
             session_line(
                 session,
                 stamp,
-                plan_title=titles.get(session.plan_id or 0, ""),
+                plan_title=self._titles.get(session.plan_id or 0, ""),
                 width=width,
+                frame=self._frame,
             )
-            for session in ranked
+            for session in self._sessions
         ]
-        handoff = services.sessions.previous_session(store, plan_id=plan_id)
-        if handoff and handoff.get("handoff"):
-            lines.append(f"[dim]handoff[/] {escape_markup(str(handoff['handoff']))}")
-        body.update("\n".join(lines))
-        self.border_subtitle = sessions_summary(sessions, stamp)
-        self.scroll_home(animate=False)
+        if self._handoff:
+            lines.append(self._handoff)
+        self.query_one("#agents-body", Static).update("\n".join(lines))

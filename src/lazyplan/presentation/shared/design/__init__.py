@@ -68,6 +68,7 @@ from .text import pr_chip as pr_chip
 from .text import progress_bar as progress_bar
 from .text import progress_text as progress_text
 from .text import repo_project_name as repo_project_name
+from .text import spinner_enabled as spinner_enabled
 from .text import spinner_glyph as spinner_glyph
 from .text import status_prefix as status_prefix
 from .text import status_word as status_word
@@ -134,6 +135,7 @@ __all__ = [
     "progress_text",
     "repo_project_name",
     "render_stats",
+    "spinner_enabled",
     "spinner_glyph",
     "stats_layout",
     "status_prefix",

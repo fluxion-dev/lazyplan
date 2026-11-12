@@ -115,6 +115,8 @@ class TestMaintenanceCli(unittest.TestCase):
     def test_apply_handles_hash_and_question_in_the_path(self) -> None:
         for name in ("hash#name.db", "question?name.db"):
             with self.subTest(name=name):
+                if "?" in name and os.name == "nt":
+                    self.skipTest("Windows file names cannot contain '?'")
                 db = os.path.join(self.tmp.name, name)
                 Store(db).add_plan("Path test")
                 out, err = io.StringIO(), io.StringIO()

@@ -119,10 +119,20 @@ def _tasks(kind: str, full: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def milestones_block(milestones: list[dict[str, Any]]) -> PreviewBlock | None:
-    """Every milestone under the selected plan, as a title-only row."""
+    """Every milestone under the selected plan, as one header row."""
     if not milestones:
         return None
-    lines = [_row(_strong(entry.get("milestone", {}).get("title", ""))) for entry in milestones]
+    lines = []
+    for entry in milestones:
+        milestone = entry.get("milestone", {})
+        lines.append(
+            _row(
+                status_word(str(milestone.get("status", "")), "plain"),
+                _strong(f"M{milestone.get('id')}"),
+                escape_markdown(str(milestone.get("title", ""))),
+                sep=" ",
+            )
+        )
     return PreviewBlock(f"milestones {len(milestones)}", tuple(lines))
 
 

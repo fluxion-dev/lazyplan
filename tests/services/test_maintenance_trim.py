@@ -112,6 +112,26 @@ class TestMaintenanceTrim(unittest.TestCase):
 
     def test_apply_removes_only_derived_rows(self) -> None:
         self._insert_orphans()
+        with closing(sqlite3.connect(self.db)) as conn:
+            orphan_notes = tuple(
+                row[0]
+                for row in conn.execute("SELECT text FROM notes WHERE parent_id=99999 ORDER BY id")
+            )
+            orphan_comments = tuple(
+                row[0]
+                for row in conn.execute(
+                    "SELECT text FROM comments WHERE parent_id=99999 ORDER BY id"
+                )
+            )
+            orphan_criteria = tuple(
+                row[0]
+                for row in conn.execute(
+                    "SELECT text FROM criteria WHERE parent_id=99999 ORDER BY id"
+                )
+            )
+            orphan_evidence = tuple(
+                conn.execute("SELECT command, note FROM criterion_evidence ORDER BY id")
+            )
         result = maintenance.trim(self.store, now=NOW, days="1", apply=True)
         self.assertTrue(result.applied)
         counts = {row.table: row.rows for row in result.tables}
@@ -152,6 +172,38 @@ class TestMaintenanceTrim(unittest.TestCase):
             [link.sha for link in self.store.list_links("task", self.live_task.id)],
             [self.live_link.sha],
         )
+        with closing(sqlite3.connect(self.db)) as conn:
+            self.assertEqual(
+                tuple(
+                    row[0]
+                    for row in conn.execute(
+                        "SELECT text FROM notes WHERE parent_id=99999 ORDER BY id"
+                    )
+                ),
+                orphan_notes,
+            )
+            self.assertEqual(
+                tuple(
+                    row[0]
+                    for row in conn.execute(
+                        "SELECT text FROM comments WHERE parent_id=99999 ORDER BY id"
+                    )
+                ),
+                orphan_comments,
+            )
+            self.assertEqual(
+                tuple(
+                    row[0]
+                    for row in conn.execute(
+                        "SELECT text FROM criteria WHERE parent_id=99999 ORDER BY id"
+                    )
+                ),
+                orphan_criteria,
+            )
+            self.assertEqual(
+                tuple(conn.execute("SELECT command, note FROM criterion_evidence ORDER BY id")),
+                orphan_evidence,
+            )
 
     def test_old_events_are_trimmed_and_new_events_kept(self) -> None:
         with closing(sqlite3.connect(self.db)) as conn:

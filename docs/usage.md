@@ -899,10 +899,12 @@ tokens.
 - `lpui maint trim` previews derived rows only: expired claims and their
   touch-points, forge cache older than the window, closed or merged pull
   requests, orphaned link rows in `criterion_links`, `entity_keys`,
-  `entity_repos`, `issue_links`, and `vcs_links`, plus non-status events older
-  than the window. Add `--apply` to delete them. User-authored criteria,
-  evidence, notes, and comments are never trimmed, even when their parent row
-  is gone; plan, milestone, and task text is never trimmed.
+  `entity_repos`, `issue_links`, and `vcs_links`, plus older events. The newest
+  plan `status` event per plan is kept because the finished/archive rule reads
+  it; older status events and non-status events are trimmed. Add `--apply` to
+  delete them. User-authored criteria, evidence, notes, and comments are never
+  trimmed, even when their parent row is gone; plan, milestone, and task text is
+  never trimmed.
 - `lpui maint vacuum` previews file size and free pages; `--apply` reclaims
   them. `VACUUM` needs exclusive access, so stop other writers first; a busy
   database returns an error instead of waiting.

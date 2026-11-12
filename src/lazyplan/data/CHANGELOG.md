@@ -14,8 +14,8 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
   `maint report --days` sets the estimate window and separates used bytes from
   the file size. Every apply starts with a verified
   `lazyplan.db.bak-<timestamp>` snapshot and only derived link rows and old
-  non-status events are trimmed; plan text, criteria, evidence, notes, and
-  comments are never trimmed. The TUI `m` hub shows the same candidate counts,
+  events are trimmed, keeping the newest plan status event per plan; plan text,
+  criteria, evidence, notes, and comments are never trimmed. The TUI `m` hub shows the same candidate counts,
   and MCP exposes a read-only report plus apply-gated write tools.
 
 ### Changed

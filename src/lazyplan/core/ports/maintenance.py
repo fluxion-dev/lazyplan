@@ -61,11 +61,6 @@ class MaintenanceReport:
             "window_days": self.window_days,
         }
 
-    @property
-    def total_bytes(self) -> int:
-        """Backward-compatible alias for the used-bytes total."""
-        return self.used_bytes
-
 
 @dataclass(frozen=True)
 class ArchiveResult:

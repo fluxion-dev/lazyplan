@@ -14,6 +14,7 @@ from lazyplan.services.source import (
     parse_patch,
     read_commit_stats,
     read_diff,
+    read_diff_page,
 )
 from lazyplan.store import Store
 
@@ -134,6 +135,46 @@ class TestDiffParsing(unittest.TestCase):
         ):
             read_diff("/repo", "a" * 40)
         self.assertEqual(backend.calls, 3)
+        clear_diff_cache()
+
+    def test_read_diff_page_slices_whole_files(self):
+        class FakeBackend:
+            def __init__(self) -> None:
+                self.calls = 0
+
+            def diff(self, root, sha, path=""):
+                self.calls += 1
+                return DiffRead(
+                    state="ok",
+                    patch=(
+                        "diff --git a/a.txt b/a.txt\n"
+                        "--- a/a.txt\n"
+                        "+++ b/a.txt\n"
+                        "@@ -1 +1 @@\n"
+                        "-a\n"
+                        "+b\n"
+                        "diff --git a/b.txt b/b.txt\n"
+                        "--- a/b.txt\n"
+                        "+++ b/b.txt\n"
+                        "@@ -1 +1 @@\n"
+                        "-c\n"
+                        "+d\n"
+                    ),
+                )
+
+        backend = FakeBackend()
+        clear_diff_cache()
+        with mock.patch(
+            "lazyplan.services.source_diff.detect_backend", return_value=(backend, "/repo")
+        ):
+            first = read_diff_page("/repo", "b" * 40, limit=1)
+            second = read_diff_page("/repo", "b" * 40, offset=first.next_offset, limit=1)
+        self.assertEqual(first.total, 2)
+        self.assertTrue(first.has_more)
+        self.assertEqual([item.path for item in first.files], ["a.txt"])
+        self.assertEqual([item.path for item in second.files], ["b.txt"])
+        self.assertFalse(second.has_more)
+        self.assertEqual(backend.calls, 1)
         clear_diff_cache()
 
 

@@ -59,9 +59,10 @@ class RepoStatus:
 class DiffRead:
     """Bounded read-only patch output for one commit and optional path.
 
-    `state` is one of ok, empty, binary, root, merge, missing, or error.
-    Root patches are still returned (the whole tree); merge patches are not,
-    because a combined diff is rarely what the preview wants.
+    `state` is one of ok, empty, root, merge, missing, or error. Root patches
+    are still returned (the whole tree); merge patches are not, because a
+    combined diff is rarely what the preview wants. Binary files stay in the
+    patch so text hunks in the same commit remain readable.
     """
 
     state: str = "ok"
@@ -337,8 +338,6 @@ class GitBackend(VCSBackend):
         patch, truncated = _bound_patch(out.stdout)
         if not patch.strip():
             return DiffRead(state="empty", detail="no textual changes")
-        if "GIT binary patch" in patch or "Binary files " in patch:
-            return DiffRead(state="binary", detail="binary file: open it in the browser")
         state = "root" if parent_count == 0 else "ok"
         return DiffRead(state=state, patch=patch, truncated=truncated)
 

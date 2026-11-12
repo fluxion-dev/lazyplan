@@ -226,6 +226,46 @@ def clear_diff_cache() -> None:
     _diff_cache.clear()
 
 
+@dataclass(frozen=True)
+class DiffPage:
+    """One whole-file window over a cached commit diff."""
+
+    read: DiffRead
+    files: tuple[DiffFile, ...] = ()
+    offset: int = 0
+    total: int = 0
+    has_more: bool = False
+
+    @property
+    def next_offset(self) -> int:
+        """Offset for the next page, or the current offset at the end."""
+        return self.offset + len(self.files)
+
+
+def read_diff_page(
+    repo: str,
+    sha: str,
+    path: str = "",
+    offset: int = 0,
+    limit: int = 20,
+) -> DiffPage:
+    """Read one whole-file page from the cached commit diff."""
+    read = read_diff(repo, sha, path)
+    if read.state not in ("ok", "root"):
+        return DiffPage(read=read)
+    files = parse_patch(read.patch)
+    total = len(files)
+    start = min(max(0, offset), total)
+    window = files[start : start + max(1, limit)]
+    return DiffPage(
+        read=read,
+        files=window,
+        offset=start,
+        total=total,
+        has_more=start + len(window) < total,
+    )
+
+
 _stats_cache: OrderedDict[tuple[str, str, str], CommitStats] = OrderedDict()
 
 

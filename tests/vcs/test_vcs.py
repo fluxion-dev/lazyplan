@@ -321,7 +321,22 @@ class TestVCS(unittest.TestCase):
             subprocess.run(["git", "-C", tmp, "commit", "-qm", "binary"], check=True, timeout=10)
             binary = self.backend.head(tmp)
             assert binary is not None
-            self.assertEqual(self.backend.diff(tmp, binary).state, "binary")
+            read = self.backend.diff(tmp, binary)
+            self.assertEqual(read.state, "ok")
+            self.assertIn("Binary files", read.patch)
+
+            with open(os.path.join(tmp, "a.txt"), "w", encoding="utf-8") as fh:
+                fh.write("one\nmore\n")
+            with open(os.path.join(tmp, "blob.bin"), "wb") as fh:
+                fh.write(b"\x00\x01\x02\x03")
+            subprocess.run(["git", "-C", tmp, "add", "."], check=True, timeout=10)
+            subprocess.run(["git", "-C", tmp, "commit", "-qm", "mixed"], check=True, timeout=10)
+            mixed = self.backend.head(tmp)
+            assert mixed is not None
+            read = self.backend.diff(tmp, mixed)
+            self.assertEqual(read.state, "ok")
+            self.assertIn("+more", read.patch)
+            self.assertIn("Binary files", read.patch)
 
     @unittest.skipUnless(_git_available(), "git CLI required")
     def test_diff_caps_output(self):

@@ -17,12 +17,14 @@ from .source_diff import CommitStats as CommitStats
 from .source_diff import DiffFile as DiffFile
 from .source_diff import DiffHunk as DiffHunk
 from .source_diff import DiffLine as DiffLine
+from .source_diff import DiffPage as DiffPage
 from .source_diff import FileStat as FileStat
 from .source_diff import clear_diff_cache as clear_diff_cache
 from .source_diff import clear_stats_cache as clear_stats_cache
 from .source_diff import parse_patch as parse_patch
 from .source_diff import read_commit_stats as read_commit_stats
 from .source_diff import read_diff as read_diff
+from .source_diff import read_diff_page as read_diff_page
 
 if TYPE_CHECKING:
     from ..core.ports.provenance import ProvenancePort

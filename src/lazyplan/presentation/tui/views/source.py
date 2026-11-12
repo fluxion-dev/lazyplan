@@ -11,8 +11,7 @@ from lazyplan.services.source import (
     SourceFile,
     SourcePull,
     SourceRepo,
-    parse_patch,
-    read_diff,
+    read_diff_page,
 )
 
 from ...shared.design import escape_markup
@@ -183,7 +182,8 @@ def render_diff(
     max_files: int,
 ) -> list[str]:
     """Read and render a bounded diff preview."""
-    read = read_diff(repo, sha, path)
+    page = read_diff_page(repo, sha, path, limit=max_files)
+    read = page.read
     if read.state == "missing":
         return [f"[red]{escape_markup(read.detail or 'commit not available')}[/]"]
     if read.state == "merge":
@@ -191,29 +191,26 @@ def render_diff(
             f"[yellow]{escape_markup(read.detail or 'merge commit')}[/]",
             "[dim]combined merge diffs are not rendered; press o to open it[/]",
         ]
-    if read.state == "binary":
-        return [f"[yellow]{escape_markup(read.detail or 'binary file')}[/]"]
     if read.state == "empty":
         return [f"[dim]{escape_markup(read.detail or 'no textual changes')}[/]"]
     if read.state == "error":
         return [f"[red]{escape_markup(read.detail or 'diff unavailable')}[/]"]
-    files = parse_patch(read.patch)
-    if not files:
+    if not page.files:
         return ["[dim]no textual changes[/]"]
-    added = sum(diff_counts(item)[0] for item in files)
-    removed = sum(diff_counts(item)[1] for item in files)
+    added = sum(diff_counts(item)[0] for item in page.files)
+    removed = sum(diff_counts(item)[1] for item in page.files)
     prefix = [
-        f"[dim]{len(files)} files[/] · [green]+{added}[/] · [red]-{removed}[/]",
+        f"[dim]{page.total} files[/] · [green]+{added}[/] · [red]-{removed}[/]",
     ]
     if read.state == "root":
         prefix.append("[dim]root commit · full tree diff[/]")
-    rendered = diff_rows(files, max_files)
+    rendered = diff_rows(page.files, max_files)
     budget = max(1, max_lines - len(prefix))
     shown = prefix + rendered[:budget]
     remainder = len(rendered) - budget
     if remainder > 0:
         shown.append(f"[dim]+{remainder} more lines — o opens the full diff[/]")
-    extra_files = len(files) - max_files
+    extra_files = page.total - len(page.files)
     if extra_files > 0:
         shown.append(f"[dim]+{extra_files} more files[/]")
     if read.truncated:

@@ -11,7 +11,8 @@ import json
 import os
 import re
 import select
-import threading
+import stat
+import sys
 import time
 from pathlib import Path
 from typing import TextIO, cast
@@ -47,18 +48,7 @@ def _read_bounded(stream: TextIO, timeout: float = STDIN_TIMEOUT) -> str:
         # StringIO and other non-file streams already return immediately.
         return stream.read()
     if os.name == "nt":
-        box: dict[str, str] = {}
-
-        def read_all() -> None:
-            try:
-                box["raw"] = stream.read()
-            except (OSError, ValueError):
-                box["raw"] = ""
-
-        thread = threading.Thread(target=read_all, daemon=True)
-        thread.start()
-        thread.join(timeout)
-        return box.get("raw", "")
+        return _read_windows(fd, timeout)
     chunks: list[bytes] = []
     deadline = time.monotonic() + timeout
     try:
@@ -77,6 +67,54 @@ def _read_bounded(stream: TextIO, timeout: float = STDIN_TIMEOUT) -> str:
     except (OSError, ValueError):
         return ""
     return b"".join(chunks).decode("utf-8", "replace")
+
+
+def _read_windows(fd: int, timeout: float) -> str:
+    """Poll a Windows pipe and read only the bytes already waiting in it.
+
+    A blocking read left pending on stdin makes every child process that
+    inherits the pipe, starting with git, hang at startup.
+    """
+    mode = os.fstat(fd).st_mode
+    if not stat.S_ISFIFO(mode):
+        return "" if stat.S_ISCHR(mode) else _read_to_end(fd).decode("utf-8", "replace")
+    chunks: list[bytes] = []
+    deadline = time.monotonic() + timeout
+    while True:
+        waiting = _pipe_waiting(fd)
+        if waiting is None:
+            break
+        if waiting:
+            chunks.append(os.read(fd, waiting))
+            deadline = time.monotonic() + 0.02
+        elif time.monotonic() >= deadline:
+            break
+        else:
+            time.sleep(0.005)
+    return b"".join(chunks).decode("utf-8", "replace")
+
+
+def _read_to_end(fd: int) -> bytes:
+    chunks: list[bytes] = []
+    while chunk := os.read(fd, 65536):
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
+def _pipe_waiting(fd: int) -> int | None:
+    """Bytes waiting in a Windows pipe; None once the writer has closed it."""
+    if sys.platform != "win32":
+        return None
+    import ctypes
+    import msvcrt
+    from ctypes import wintypes
+
+    available = wintypes.DWORD()
+    handle = wintypes.HANDLE(msvcrt.get_osfhandle(fd))
+    peek = ctypes.windll.kernel32.PeekNamedPipe
+    if not peek(handle, None, 0, None, ctypes.byref(available), None):
+        return None
+    return int(available.value)
 
 
 def read_payload(stream: TextIO) -> dict:

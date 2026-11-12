@@ -97,6 +97,36 @@ class HookCase(unittest.TestCase):
             reader.close()
             os.close(write_fd)
 
+    def test_hook_process_exits_when_the_host_keeps_stdin_open(self):
+        self._init_git("main")
+        env = dict(os.environ, LAZYPLAN_DB=str(self.db))
+        Store(self.db).add_plan("P")
+        proc = subprocess.Popen(
+            [sys.executable, "-m", "lazyplan", "hook", "stop", "--host", "claude"],
+            cwd=self.repo,
+            env=env,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        assert proc.stdin is not None
+        try:
+            proc.stdin.write(b'{"session_id": "s1", "hook_event_name": "Stop"}')
+            proc.stdin.flush()
+            code = proc.wait(timeout=30)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait()
+            self.fail("lpui hook did not exit while stdin stayed open")
+        finally:
+            proc.stdin.close()
+            for stream in (proc.stdout, proc.stderr):
+                if stream is not None:
+                    stream.close()
+        self.assertEqual(code, 0)
+        rows = Store(self.db).list_sessions(open_only=True)
+        self.assertEqual([row.host_session for row in rows], ["s1"])
+
     def test_hook_probe_writes_nothing_without_a_database(self):
         missing = self.home / "missing.db"
         out = io.StringIO()

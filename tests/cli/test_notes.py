@@ -267,7 +267,7 @@ class TestNotesCli(unittest.TestCase):
                 mock.patch.object(tool, "PACKAGED", packaged),
                 redirect_stderr(err),
             ):
-                code = tool.main()
+                code = tool.main([])
         self.assertEqual(code, 1)
         self.assertIn("cp CHANGELOG.md src/lazyplan/data/CHANGELOG.md", err.getvalue())
 

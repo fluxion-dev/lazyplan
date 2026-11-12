@@ -37,6 +37,8 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
   with `No module named pip`. The update now installs with `uv pip`, and a
   failed install always records `install failed` with the tool's output.
 - **The MCP server reports its version** instead of `0`.
+- **Release notes show v0.41.0 again.** The published section had no date, so
+  `lpui notes` skipped it; the heading now carries its release date.
 
 ### Changed
 
@@ -46,7 +48,7 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
   three times, which saves about a fifth of every hook and a third of Stop on
   Windows, and a hook outside any repository does not start git at all.
 
-## v0.41.0 — unreleased
+## v0.41.0 — 2026-11-12
 
 ### Added
 

@@ -118,9 +118,15 @@ GitHub settings page: change `.github/rulesets/main.json`, then run
 ## Release
 
 Release automation lives in `.github/workflows/`: `bump.yml` opens the release
-pull request, `tag-release.yml` tags after it merges, and `release.yml`
-publishes. Do not tag a red commit. `pyproject.toml` is the version source;
-`tools/bump.sh` mirrors it into the README, site, and man page.
+pull request, `tag-release.yml` tags after it merges, `release.yml` publishes
+the GitHub Release and PyPI package, and `pages.yml` deploys the site. Do not
+tag a red commit. `pyproject.toml` is the version source.
+
+Put the next notes under `## Unreleased` in `CHANGELOG.md` before bumping.
+`tools/bump.sh` stamps that heading with the new version and today's date,
+copies the changelog into the package, and mirrors the version into the README,
+site, and man page. The changelog gate rejects an undated release heading and
+an empty `## Unreleased` section.
 
 The bump workflow waits for the gates it dispatches and publishes their result
 as the required `gates` status on the release commit. If GitHub still marks the

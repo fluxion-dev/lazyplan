@@ -326,10 +326,12 @@ overview and coordination hubs.
 The main screen puts the work in one left column and the overview on the right.
 The left column stacks, in order, the plan queue, the agents card, plan review,
 and the git card. Plan queue holds every plan that is not done; plan review
-holds completed plans. The agents card shows active sessions and the last
-handoff; each row names the plan and its title, the task when the branch is a
-`task/<id>` name, and the branch, alongside its live state: `working`,
-`awaiting you`, or `idle`, and awaiting rows sort first. The card is read-only.
+holds completed plans. The agents card is a live process list with one line per
+open session: actor, the last four characters of its host session, the plan id
+and title, the branch, the age, and a state glyph. A working row animates,
+awaiting rows show `◆` and sort first, and stale or idle rows show `◌`. Plan and
+branch truncate with an ellipsis at narrow widths. The last handoff stays below
+the rows, and the card is read-only.
 The git card carries linked checkouts and pull requests.
 
 The right column holds only the overview, which follows the selection: a plan
@@ -426,8 +428,9 @@ palette. The agents card is a read-only summary; it does not open the hub.
 - Sessions: rows show actor, host, phase, plan, branch, age, summary, handoff,
   and recent events. `a` starts a session, `x` or `d` ends it with a summary,
   and the last handoff stays visible after the session closes. Hooks move a
-  session to `awaiting` when the agent stops; 15 minutes without a heartbeat
-  reads `stale`, and two hours closes it automatically as `auto-closed`.
+  session to `awaiting` when the agent stops; two minutes without a heartbeat
+  reads `stale`, a working row is auto-closed after ten minutes, and an
+  awaiting row after thirty.
 - Comments and notes: `a` adds a comment, `n` adds a note, `x` resolves or
   reopens a comment, and `u` hides resolved comments.
 
@@ -651,9 +654,10 @@ plan linked there. A branch switch updates the row on its next heartbeat, while
 `--plan` and the sessions hub keep the plan you chose. A detached HEAD shows no
 branch. `session-start` and `prompt-submit` mark that row
 `working`, `stop` marks it `awaiting`, and `context`/`brief` render the previous
-handoff. A row with no heartbeat for 15 minutes reads `stale`; after two hours
-it is auto-closed and its pointer and bindings are cleared. Ending one host
-session closes only its row. A manual session without a host session keeps the
+handoff. A row with no heartbeat for two minutes reads `stale`; a working row
+is auto-closed after ten minutes and an awaiting row after thirty, and its
+pointer and bindings are cleared. Ending one host session closes only its row.
+A manual session without a host session keeps the
 one-open rule; `--force` supersedes the open row. Sessions are operational
 history and are not exported. You can also start and end them from the sessions
 hub, opened from the palette; the CLI remains the path for scripts.

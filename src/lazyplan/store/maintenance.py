@@ -374,12 +374,22 @@ class MaintenanceMixin(StoreBase):
         }
 
     @staticmethod
+    def _drop_sidecars(target: Path) -> None:
+        """Remove WAL and shared-memory files beside one snapshot."""
+        for suffix in ("-wal", "-shm"):
+            try:
+                Path(f"{target}{suffix}").unlink()
+            except OSError:
+                continue
+
+    @staticmethod
     def _remove_snapshot(target: Path, bindings: Path) -> None:
-        """Delete a failed snapshot and its binding copy."""
+        """Delete a failed snapshot, its WAL sidecars, and its binding copy."""
         try:
             target.unlink()
         except OSError:
             pass
+        MaintenanceMixin._drop_sidecars(target)
         shutil.rmtree(bindings, ignore_errors=True)
 
     @staticmethod
@@ -399,6 +409,7 @@ class MaintenanceMixin(StoreBase):
         try:
             source = sqlite3.connect(str(source_path), timeout=5.0)
             snapshot = sqlite3.connect(str(target), timeout=5.0)
+            snapshot.execute("PRAGMA journal_mode=DELETE")
             source.backup(snapshot)
             live_counts = self._backup_counts(source)
         except (sqlite3.Error, OSError) as exc:
@@ -411,7 +422,9 @@ class MaintenanceMixin(StoreBase):
         if error is not None:
             self._remove_snapshot(target, bindings)
             raise MaintenanceBackupError(f"snapshot failed: {error}") from error
-        verifier = sqlite3.connect(f"file:{target}?mode=ro", uri=True, timeout=5.0)
+        verifier = sqlite3.connect(
+            Path(target).resolve().as_uri() + "?mode=ro", uri=True, timeout=5.0
+        )
         try:
             integrity = self._integrity_ok(verifier)
             snapshot_counts = self._backup_counts(verifier)
@@ -423,6 +436,7 @@ class MaintenanceMixin(StoreBase):
         if not integrity or live_counts != snapshot_counts:
             self._remove_snapshot(target, bindings)
             raise MaintenanceBackupError("snapshot failed integrity or count verification")
+        self._drop_sidecars(target)
         return snapshot_counts
 
     def _snapshot_bindings(self, source_path: Path, target: Path) -> Path | None:

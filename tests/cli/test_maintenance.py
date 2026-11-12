@@ -112,6 +112,17 @@ class TestMaintenanceCli(unittest.TestCase):
             )
         self.assertIn("trim", [event["action"] for event in self.store.feed(100)])
 
+    def test_apply_handles_hash_and_question_in_the_path(self) -> None:
+        for name in ("hash#name.db", "question?name.db"):
+            with self.subTest(name=name):
+                db = os.path.join(self.tmp.name, name)
+                Store(db).add_plan("Path test")
+                out, err = io.StringIO(), io.StringIO()
+                with redirect_stdout(out), redirect_stderr(err):
+                    code = lpui_main(["--db", db, "maint", "trim", "--apply"])
+                self.assertEqual(code, 0, err)
+                self.assertTrue(list(Path(self.tmp.name).glob(f"{name}.bak-*")))
+
     def test_invalid_window_exits_two_without_a_snapshot(self) -> None:
         code, _out, err = self._run("maint", "trim", "--apply", "--days", "0")
         self.assertEqual(code, 2)

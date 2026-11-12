@@ -8,6 +8,7 @@ import tempfile
 import time
 import unittest
 from contextlib import closing
+from pathlib import Path
 
 from lazyplan.core.errors import MaintenanceBusy
 from lazyplan.services import maintenance
@@ -67,8 +68,12 @@ class TestMaintenanceVacuum(unittest.TestCase):
         self.assertEqual(preview.before_bytes, result.before_bytes)
         self.assertLess(result.after_bytes, result.before_bytes)
         wal = f"{self.db}-wal"
-        if os.path.exists(wal):
-            self.assertEqual(os.path.getsize(wal), 0)
+        self.assertTrue(not os.path.exists(wal) or os.path.getsize(wal) == 0)
+        shm = f"{self.db}-shm"
+        self.assertTrue(not os.path.exists(shm) or os.path.getsize(shm) == 0)
+        self.assertFalse(
+            any(path.name.endswith("-wal") for path in Path(self.tmp.name).glob("*.bak-*"))
+        )
 
     def test_vacuum_fails_fast_when_the_database_is_busy(self) -> None:
         locker = sqlite3.connect(self.db, isolation_level=None)

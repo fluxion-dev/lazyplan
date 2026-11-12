@@ -110,6 +110,11 @@ MCP_ACTIONS: dict[str, str] = {
     "pull_request.link": "pull_request_link",
     "pull_request.unlink": "pull_request_unlink",
     "event.list": "activity_list",
+    "maintenance.report": "maintenance_report",
+    "maintenance.archive": "maintenance_archive",
+    "maintenance.trim": "maintenance_trim",
+    "maintenance.vacuum": "maintenance_vacuum",
+    "maintenance.restore": "maintenance_restore",
 }
 
 

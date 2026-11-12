@@ -417,7 +417,7 @@ CORE_ACTIONS: tuple[Action, ...] = (
         "Maintenance report",
         "p",
         "maintenance",
-        ("tui", "cli"),
+        ("tui", "cli", "mcp"),
         ("maintenance",),
     ),
     _action(
@@ -425,7 +425,7 @@ CORE_ACTIONS: tuple[Action, ...] = (
         "Archive old rows",
         "a",
         "maintenance",
-        ("tui", "cli"),
+        ("tui", "cli", "mcp"),
         ("maintenance",),
     ),
     _action(
@@ -433,7 +433,7 @@ CORE_ACTIONS: tuple[Action, ...] = (
         "Trim derived rows",
         "t",
         "maintenance",
-        ("tui", "cli"),
+        ("tui", "cli", "mcp"),
         ("maintenance",),
     ),
     _action(
@@ -441,7 +441,7 @@ CORE_ACTIONS: tuple[Action, ...] = (
         "Vacuum database",
         "v",
         "maintenance",
-        ("tui", "cli"),
+        ("tui", "cli", "mcp"),
         ("maintenance",),
     ),
     _action(
@@ -449,7 +449,7 @@ CORE_ACTIONS: tuple[Action, ...] = (
         "Restore archived row",
         "R",
         "maintenance",
-        ("tui", "cli"),
+        ("tui", "cli", "mcp"),
         ("maintenance",),
     ),
     _action(

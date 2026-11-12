@@ -20,6 +20,7 @@ from ...services import insights
 from .base import McpBase
 from .collaboration_tools import CollaborationToolsMixin
 from .evidence_tools import EvidenceToolsMixin
+from .maintenance_tools import MaintenanceToolsMixin
 from .provenance_tools import ProvenanceToolsMixin
 from .question_tools import QuestionToolsMixin
 from .review_tools import ReviewToolsMixin
@@ -36,6 +37,7 @@ PROTOCOL_VERSION = "2024-11-05"
 class ToolsMixin(
     CollaborationToolsMixin,
     EvidenceToolsMixin,
+    MaintenanceToolsMixin,
     ProvenanceToolsMixin,
     QuestionToolsMixin,
     ReviewToolsMixin,
@@ -207,6 +209,7 @@ class ToolsMixin(
         tools.update(self._evidence_write_registry())
         tools.update(self._question_write_registry())
         tools.update(self._collaboration_write_registry())
+        tools.update(self._maintenance_write_registry())
         tools.update(self._provenance_write_registry())
         return tools
 
@@ -254,7 +257,7 @@ class ToolsMixin(
     def _tool_list(self, args: dict) -> object:
         store = self._need_store()
         limit = args.get("limit")
-        ids = [plan.id for plan in store.list_plans()]
+        ids = [plan.id for plan in store.list_plans(archived="hide")]
         if isinstance(limit, int):
             ids = ids[: max(limit, 0)]
         return store.get_full_many("plan", ids)
@@ -335,6 +338,7 @@ class ToolsMixin(
         tools.update(self._question_read_registry())
         tools.update(self._review_read_registry())
         tools.update(self._collaboration_read_registry())
+        tools.update(self._maintenance_read_registry())
         tools.update(self._provenance_read_registry())
         return tools
 

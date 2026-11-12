@@ -67,13 +67,10 @@ class TestSiteSEO(unittest.TestCase):
 
     def test_missing_alt_fails(self):
         index = self.site / "index.html"
-        index.write_text(
-            index.read_text(encoding="utf-8").replace(
-                'alt="Plan tree with active and expired claims, blocked work, aging tasks, and a red check, with attention summarized in the control strip."',
-                "",
-            ),
-            encoding="utf-8",
-        )
+        text = index.read_text(encoding="utf-8")
+        stripped = re.sub(r'\s+alt="[^"]*"', "", text, count=1)
+        self.assertNotEqual(stripped, text)
+        index.write_text(stripped, encoding="utf-8")
         self.assertTrue(any("missing alt" in error for error in self._errors()))
 
     def test_wrong_image_width_fails(self):

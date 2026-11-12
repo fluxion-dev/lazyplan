@@ -10,9 +10,11 @@ import time
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
+from unittest import mock
 
 from lazyplan import services
 from lazyplan.core.entities import Status
+from lazyplan.infrastructure import repo as repo_lookups
 from lazyplan.infrastructure.repo import git_common_dir
 from lazyplan.presentation.cli import main as lpui_main
 from lazyplan.presentation.cli.parser import build_parser
@@ -251,6 +253,23 @@ class HookCase(unittest.TestCase):
         row = Store(self.db).list_sessions(open_only=True)[0]
         self.assertEqual(row.branch, f"task/{task_id}-pane")
         self.assertEqual(row.plan_id, plan_id)
+
+    def test_a_hook_run_asks_git_for_the_checkout_once(self):
+        _plan, task_id = self._seed()
+        self._init_git(f"task/{task_id}-pane")
+        with mock.patch.object(repo_lookups.subprocess, "run", wraps=subprocess.run) as run:
+            hooks.build_result(
+                "session-start",
+                {"session_id": "host-a"},
+                self.repo,
+                commits=[],
+                store=Store(self.db),
+            )
+        rev_parses = [call for call in run.call_args_list if "rev-parse" in call.args[0]]
+        self.assertEqual(len(rev_parses), 1)
+        self.assertEqual(
+            Store(self.db).list_sessions(open_only=True)[0].branch, f"task/{task_id}-pane"
+        )
 
     def test_a_branch_switch_updates_the_row(self):
         plan_id, task_id = self._seed()

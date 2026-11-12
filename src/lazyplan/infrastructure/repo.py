@@ -19,6 +19,9 @@ import json
 import os
 import shutil
 import subprocess
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -94,44 +97,66 @@ def walk_up_team_db(cwd: str | Path = ".") -> Path | None:
     return None
 
 
-def _git_toplevel(cwd: str | Path) -> Path | None:
+_GitDirs = tuple[Path | None, str]
+_SHARED_LOOKUPS: ContextVar[dict[str, _GitDirs] | None] = ContextVar(
+    "lazyplan_git_lookups", default=None
+)
+
+
+@contextmanager
+def shared_git_lookups() -> Iterator[None]:
+    """Answer repeated toplevel and common-dir lookups from one git call per directory.
+
+    Only for short-lived callers such as one hook run: answers are not refreshed
+    if the checkout changes inside the block.
+    """
+    token = _SHARED_LOOKUPS.set({})
     try:
-        out = subprocess.run(
-            ["git", "rev-parse", "--show-toplevel"],
-            cwd=str(cwd),
-            capture_output=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=5,
-        )
-    except (FileNotFoundError, subprocess.SubprocessError, OSError):
-        return None
-    if out.returncode != 0:
-        return None
-    root = out.stdout.strip()
-    return Path(root) if root else None
+        yield
+    finally:
+        _SHARED_LOOKUPS.reset(token)
 
 
-def git_common_dir(cwd: str | Path = ".") -> str:
-    """Resolved git common dir for a checkout, or an empty string outside git.
+def _lookup_key(cwd: str | Path) -> str:
+    return os.path.normcase(os.path.abspath(str(cwd)))
 
-    Linked worktrees share one common dir, so it is the stable project key.
+
+def _git_dirs(cwd: str | Path) -> _GitDirs:
+    cache = _SHARED_LOOKUPS.get()
+    key = _lookup_key(cwd)
+    if cache is not None and key in cache:
+        return cache[key]
+    found = _rev_parse_dirs(cwd)
+    if cache is not None:
+        cache[key] = found
+        if found[0] is not None:
+            cache.setdefault(_lookup_key(found[0]), found)
+    return found
+
+
+def _rev_parse_dirs(cwd: str | Path) -> _GitDirs:
+    """Toplevel and resolved common dir for *cwd* from one git call.
+
+    git prints the common dir before failing on --show-toplevel, so a bare
+    repository still reports its common dir with no toplevel.
     """
     try:
         out = subprocess.run(
-            ["git", "-C", str(cwd), "rev-parse", "--git-common-dir"],
+            ["git", "-C", str(cwd), "rev-parse", "--git-common-dir", "--show-toplevel"],
             capture_output=True,
             encoding="utf-8",
             errors="replace",
             timeout=5,
         )
     except (FileNotFoundError, subprocess.SubprocessError, OSError):
-        return ""
-    if out.returncode != 0:
-        return ""
-    raw = out.stdout.strip()
-    if not raw:
-        return ""
+        return None, ""
+    lines = [line.strip() for line in out.stdout.splitlines()]
+    common = _resolved_common_dir(cwd, lines[0]) if lines and lines[0] else ""
+    top = Path(lines[1]) if out.returncode == 0 and len(lines) > 1 and lines[1] else None
+    return top, common
+
+
+def _resolved_common_dir(cwd: str | Path, raw: str) -> str:
     path = Path(raw)
     if not path.is_absolute():
         path = Path(cwd) / path
@@ -139,6 +164,18 @@ def git_common_dir(cwd: str | Path = ".") -> str:
         return str(path.resolve())
     except OSError:
         return ""
+
+
+def _git_toplevel(cwd: str | Path) -> Path | None:
+    return _git_dirs(cwd)[0]
+
+
+def git_common_dir(cwd: str | Path = ".") -> str:
+    """Resolved git common dir for a checkout, or an empty string outside git.
+
+    Linked worktrees share one common dir, so it is the stable project key.
+    """
+    return _git_dirs(cwd)[1]
 
 
 def find_repo_root(cwd: str | Path = ".") -> Path | None:

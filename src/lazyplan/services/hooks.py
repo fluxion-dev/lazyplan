@@ -22,7 +22,7 @@ from ..core.policies import hooks as hook_modes
 from ..core.policies.sessions import phase_for_event
 from ..core.ports.app import AppPort
 from ..core.ports.insights import InsightsPort
-from ..infrastructure.repo import git_common_dir
+from ..infrastructure.repo import git_common_dir, shared_git_lookups
 from . import attribution, audit, context, hook_policy
 from . import sessions as session_services
 
@@ -338,24 +338,37 @@ def build_result(
     here = cwd or Path.cwd()
     who = host or detect_host(payload)
     try:
-        session = _track_session(store, event, who, here, payload)
-        if event == "session-start":
-            return HookResult(_session_text(store, here, commits, session), context=True).capped()
-        if event == "pre-compact":
-            return HookResult(_compaction_text(store, here, session), context=True).capped()
-        if event == "stop":
-            return hook_policy.stop_result(store, here, commits, session, payload, mode, who)
-        if event == "session-end":
-            return hook_policy.session_end_result(store, session, who)
-        if event == "prompt-submit":
-            return HookResult(_prompt_text(store), context=True).capped()
-        if event == "pre-tool":
-            return hook_policy.commit_result(store, here, _command(payload), mode)
-        if event == "post-tool":
-            text = hook_policy.post_tool_text(store, here, _command(payload), _file_path(payload))
-            return HookResult(text, context=True).capped()
+        with shared_git_lookups():
+            return _dispatch(store, event, payload, here, commits, who, mode)
     except (RuntimeError, OSError, ValueError, KeyError):
         return HookResult()
+
+
+def _dispatch(
+    store: AppPort,
+    event: str,
+    payload: dict,
+    here: Path,
+    commits: list[audit.Commit] | None,
+    who: str,
+    mode: str,
+) -> HookResult:
+    session = _track_session(store, event, who, here, payload)
+    if event == "session-start":
+        return HookResult(_session_text(store, here, commits, session), context=True).capped()
+    if event == "pre-compact":
+        return HookResult(_compaction_text(store, here, session), context=True).capped()
+    if event == "stop":
+        return hook_policy.stop_result(store, here, commits, session, payload, mode, who)
+    if event == "session-end":
+        return hook_policy.session_end_result(store, session, who)
+    if event == "prompt-submit":
+        return HookResult(_prompt_text(store), context=True).capped()
+    if event == "pre-tool":
+        return hook_policy.commit_result(store, here, _command(payload), mode)
+    if event == "post-tool":
+        text = hook_policy.post_tool_text(store, here, _command(payload), _file_path(payload))
+        return HookResult(text, context=True).capped()
     return HookResult()
 
 

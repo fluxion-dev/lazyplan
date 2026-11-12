@@ -42,6 +42,9 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
 
 - **Compaction keeps the plan.** Claude Code's compaction summary is asked to
   keep the active plan and task ids.
+- **Hooks are faster.** A hook asks git for the checkout once instead of up to
+  three times, which saves about a fifth of every hook and a third of Stop on
+  Windows.
 
 ## v0.41.0 — unreleased
 

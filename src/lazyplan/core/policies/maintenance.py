@@ -63,14 +63,19 @@ def is_archived_row(row: object) -> bool:
     return float(getattr(row, "archived_at", 0.0) or 0.0) > 0.0
 
 
-def visible_rows(rows: Iterable[object], archived: str = "hide") -> list[object]:
-    """Filter rows by the archive view: hide, only, or show."""
+def is_visible(row: object, archived: str = "hide") -> bool:
+    """True when one row survives the archive view (hide, only, or show)."""
     check_archive_mode(archived)
     if archived == "show":
+        return True
+    return is_archived_row(row) == (archived == "only")
+
+
+def visible_rows(rows: Iterable[object], archived: str = "hide") -> list[object]:
+    """Filter rows by the archive view: hide, only, or show."""
+    if archived == "show":
         return list(rows)
-    if archived == "only":
-        return [row for row in rows if is_archived_row(row)]
-    return [row for row in rows if not is_archived_row(row)]
+    return [row for row in rows if is_visible(row, archived)]
 
 
 def plan_done_at(events: Mapping[int, tuple[float, str]], plan_id: int) -> float | None:

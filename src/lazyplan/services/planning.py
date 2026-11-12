@@ -9,7 +9,7 @@ from lazyplan.infrastructure.templates import apply_template, template_criteria
 
 from ..core.entities import Criterion, Milestone, Plan, Status, Task
 from ..core.kinds import check_kind
-from ..core.policies.maintenance import check_archive_mode, is_archived_row
+from ..core.policies.maintenance import check_archive_mode, is_visible
 from ..core.policies.planning import is_archived as _is_archived_policy
 from ..core.policies.planning import next_status, rollup_target
 from ..core.ports.coordination import CoordinationPort
@@ -288,12 +288,12 @@ def reconcile(
 
 
 def is_archived(port: PlanningPort, plan: Plan) -> bool:
-    """Done longer than a day, with history to prove it. No proof: never hide."""
-    return _is_archived(plan, port.plan_status_events_map(), time.time())
+    """Age-based finished rule: done longer than a day. No proof: never hide."""
+    return _is_finished(plan, port.plan_status_events_map(), time.time())
 
 
-def _is_archived(plan: Plan, events: dict[int, tuple[float, str]], now: float) -> bool:
-    """Archive decision from a preloaded latest-status map."""
+def _is_finished(plan: Plan, events: dict[int, tuple[float, str]], now: float) -> bool:
+    """Age-based finished decision from a preloaded latest-status map."""
     return _is_archived_policy(plan, events, now)
 
 
@@ -443,17 +443,15 @@ def _visible_plan(
     milestones: list[tuple[Milestone, list[Task]]],
     status: Status | None,
     finished: str,
-    finished_now: bool,
+    past_finished_window: bool,
     archived: str,
 ) -> bool:
     """Whether a plan survives status, finished, and archive filters."""
-    if archived == "only" and not is_archived_row(plan):
+    if not is_visible(plan, archived):
         return False
-    if archived == "hide" and is_archived_row(plan):
+    if finished == "only" and not past_finished_window:
         return False
-    if finished == "only" and not finished_now:
-        return False
-    if finished == "hide" and finished_now:
+    if finished == "hide" and past_finished_window:
         return False
     if status is not None and plan.status != status and not milestones:
         return False
@@ -515,7 +513,7 @@ def tree(
             items,
             status,
             finished,
-            _is_archived(plan, status_events, now),
+            _is_finished(plan, status_events, now),
             archived,
         ):
             out.append((plan, items))
@@ -535,7 +533,7 @@ def tree(
 __all__ = [
     "DEFAULT_PLAN_LIMIT",
     "_filtered_milestones",
-    "_is_archived",
+    "_is_finished",
     "_plan_activity",
     "_plan_matches_repo",
     "_repo_match",

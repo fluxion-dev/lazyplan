@@ -36,7 +36,7 @@ from .evidence import (
 from .planning import (
     DEFAULT_PLAN_LIMIT,
     _filtered_milestones,
-    _is_archived,
+    _is_finished,
     _plan_activity,
     _plan_matches_repo,
     _repo_match,
@@ -202,7 +202,7 @@ __all__ = [
     "_tasks_in_scope",
     "refresh_forge",
     "is_archived",
-    "_is_archived",
+    "_is_finished",
     "_plan_activity",
     "plan_activity",
     "_filtered_milestones",

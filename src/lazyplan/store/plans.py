@@ -12,7 +12,7 @@ from ..core.entities import (
     Status,
 )
 from ..core.kinds import table_for
-from ..core.policies.maintenance import check_archive_mode, is_archived_row
+from ..core.policies.maintenance import check_archive_mode, is_visible
 from .base import (
     StoreBase,
 )
@@ -119,10 +119,7 @@ class PlansMixin(StoreBase):
         with self._connect() as conn:
             rows = conn.execute("SELECT * FROM plans ORDER BY id DESC").fetchall()
         plans = [self._row_to_plan(r) for r in rows]
-        if archived == "show":
-            return plans
-        wanted = archived == "only"
-        return [plan for plan in plans if is_archived_row(plan) == wanted]
+        return [plan for plan in plans if is_visible(plan, archived)]
 
     def plan_uids_map(self) -> dict[int, str]:
         """Stable plan uid keyed by plan id, in one query."""

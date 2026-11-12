@@ -275,8 +275,8 @@ each top-level host session's heartbeat current and mark its row `awaiting`
 after a turn, so the agents panel shows who needs you. Child subagent sessions
 stay with their parent, and each worktree gets its own row. A row without a
 heartbeat for two minutes reads `stale`; a working row is auto-closed after ten
-minutes and an awaiting row after thirty. `lpui hook
---check` probes the transport without writing. `context`/`brief` show the
+minutes and an awaiting row after thirty. `lpui hook --check` probes the
+transport without writing. `context`/`brief` show the
 previous handoff. Touch-points make
 `next` skip work that overlaps an active claim in the same checkout; a manual
 claim needs `--force` and finish only warns. References are read-only links to

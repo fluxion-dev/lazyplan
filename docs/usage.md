@@ -331,8 +331,8 @@ open session: actor, the last four characters of its host session, the plan id
 and title, the branch, the age, and a state glyph. A working row animates,
 awaiting rows show `◆` and sort first, and stale or idle rows show `◌`. Plan and
 branch truncate with an ellipsis at narrow widths. The last handoff stays below
-the rows, and the card is read-only.
-The git card carries linked checkouts and pull requests.
+the rows, and the card is read-only. The git card carries linked checkouts and
+pull requests.
 
 The right column holds only the overview, which follows the selection: a plan
 shows open questions, why, what, approval, references, every milestone as a

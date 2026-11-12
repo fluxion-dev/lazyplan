@@ -34,6 +34,17 @@ def _doing_task(store: InsightsPort) -> int | None:
     return None
 
 
+def _repo_relative(path: str, repo: str) -> str:
+    """A host's edited path as the repo-relative, slash-separated form touch-points use."""
+    candidate = Path(path)
+    if candidate.is_absolute() and repo:
+        try:
+            candidate = candidate.resolve().relative_to(Path(repo).resolve())
+        except (OSError, ValueError):
+            pass
+    return candidate.as_posix()
+
+
 def _matches_task(path: str, patterns: list[str]) -> bool:
     """True when a path belongs to one of a task's touch-points."""
     name = Path(path).name
@@ -171,6 +182,7 @@ def post_tool_text(store: AppPort, cwd: Path, command: str, path: str) -> str:
         return f"lazyplan: commit landed; link it with `lpui link --kind task --id {task_id}`."
     if task_id is None:
         return "lazyplan: edit landed; start or pick a task with `lpui brief`."
+    path = _repo_relative(path, scope.repo)
     patterns = store.list_touchpoints(task_id)
     if _matches_task(path, patterns):
         return (

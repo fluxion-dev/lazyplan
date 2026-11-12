@@ -613,6 +613,27 @@ class HookCase(unittest.TestCase):
         )
         self.assertIn(f"T{task_id}", result.text)
 
+    def test_post_tool_absolute_edit_path_names_the_owning_task(self):
+        _plan, task_id = self._seed_linked()
+        Store(self.db).add_touchpoint(task_id, "src/**", actor="t")
+        absolute = str(self.repo / "src" / "app.py")
+        payload = {"tool_name": "Edit", "tool_input": {"file_path": absolute}}
+        result = hooks.build_result(
+            "post-tool", payload, self.repo, commits=[], store=Store(self.db)
+        )
+        self.assertIn(f"src/app.py belongs to T{task_id}", result.text)
+
+    def test_post_tool_edit_outside_the_checkout_keeps_its_path(self):
+        _plan, task_id = self._seed_linked()
+        Store(self.db).add_touchpoint(task_id, "src/**", actor="t")
+        outside = self.home / "src" / "app.py"
+        payload = {"tool_name": "Write", "tool_input": {"file_path": str(outside)}}
+        result = hooks.build_result(
+            "post-tool", payload, self.repo, commits=[], store=Store(self.db)
+        )
+        self.assertNotIn("belongs to", result.text)
+        self.assertIn(outside.as_posix(), result.text)
+
     def test_post_tool_edit_outside_the_task_asks_for_scope(self):
         _plan, _task = self._seed_linked()
         payload = {"tool_name": "Write", "tool_input": {"file_path": "docs/readme.md"}}

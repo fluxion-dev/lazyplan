@@ -2115,6 +2115,44 @@ report drift without automatic repair for this command
 how many recent events to show (default: 20)
 .RE
 .TP
+.B lpui maint
+report, archive, restore, trim, and vacuum the database
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B \-\-heal
+repair parent statuses and leases automatically (default)
+.RE
+.RS
+.TP
+.B \-\-no\-heal
+report drift without automatic repair for this command
+.RE
+.RS
+.TP
+.B  ACTION
+what to do with the database Choices: report, archive, restore, trim, vacuum\. Required\.
+.RE
+.TP
 .B lpui completion
 print tab\-completions for your shell
 .RS

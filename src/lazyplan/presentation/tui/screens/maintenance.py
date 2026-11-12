@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
 
 try:
     from textual.binding import Binding
@@ -18,6 +17,7 @@ except ImportError:  # pragma: no cover - stdlib-only interpreter
 
 from .... import services
 from ....core.errors import MaintenanceBackupError, MaintenanceBusy
+from ...shared import maintenance_presenter as view
 from ...shared.design import escape_markup
 
 
@@ -58,31 +58,33 @@ if _TEXTUAL_OK:
                 HubEntry(
                     0,
                     f"report  {report.total_bytes} bytes · {report.reclaimable_bytes} reclaimable",
-                    self._report_body(report),
+                    view.report_text(report),
                     "report",
                 ),
                 HubEntry(
                     0,
                     f"archive  {len(archive.plans)} plan(s) · {len(archive.sessions)} session(s)",
-                    self._archive_body(archive),
+                    view.archive_text(archive)
+                    + "\n\nPress a to confirm and archive after a verified snapshot.",
                     "archive",
                 ),
             ]
-            for row in trim.tables:
+            for table, count in view.trim_counts(trim).items():
                 entries.append(
                     HubEntry(
                         0,
-                        f"trim  {row.table} · {row.rows}",
-                        f"target {row.table}\nrows   {row.rows}\n\nTrim deletes derived rows only.",
+                        f"trim  {table} · {count}",
+                        f"target {table}\nrows   {count}\n\nTrim deletes derived rows only.",
                         "trim",
-                        row.table,
+                        table,
                     )
                 )
             entries.append(
                 HubEntry(
                     0,
                     f"vacuum  {vacuum.before_bytes} bytes · {vacuum.before_free_pages} free page(s)",
-                    self._vacuum_body(vacuum),
+                    view.vacuum_text(vacuum)
+                    + "\n\nPress v to confirm and reclaim free pages after a verified snapshot.",
                     "vacuum",
                 )
             )
@@ -95,42 +97,6 @@ if _TEXTUAL_OK:
                 )
             )
             return entries
-
-        @staticmethod
-        def _report_body(report: Any) -> str:
-            lines = [
-                f"method   {report.method}",
-                f"total    {report.total_bytes} bytes",
-                f"free     {report.free_bytes} bytes",
-                f"reclaim  {report.reclaimable_bytes} bytes",
-                "",
-            ]
-            lines.extend(
-                f"{row.table:<24} {row.bytes:>10} bytes {row.rows:>8} rows" for row in report.tables
-            )
-            return "\n".join(lines)
-
-        @staticmethod
-        def _archive_body(result: Any) -> str:
-            lines = [
-                f"plans    {len(result.plans)}",
-                f"sessions {len(result.sessions)}",
-                "",
-                "Press a to confirm and archive after a verified snapshot.",
-            ]
-            if result.plans:
-                lines.append("plans    " + ", ".join(f"P{pid}" for pid in result.plans))
-            if result.sessions:
-                lines.append("sessions " + ", ".join(f"S{sid}" for sid in result.sessions))
-            return "\n".join(lines)
-
-        @staticmethod
-        def _vacuum_body(result: Any) -> str:
-            return (
-                f"file       {result.before_bytes} bytes\n"
-                f"free pages {result.before_free_pages}\n\n"
-                "Press v to confirm and reclaim free pages after a verified snapshot."
-            )
 
         def _after_write(self, note: str) -> None:
             self._reload()

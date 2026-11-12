@@ -7,6 +7,7 @@ from typing import Any, cast
 from lazyplan import services
 
 from ...core.ports.maintenance import MaintenancePort
+from ..shared import maintenance_presenter as view
 from .base import McpBase
 from .schema import id_schema as _id
 from .schema import str_schema as _str
@@ -87,7 +88,7 @@ class MaintenanceToolsMixin(McpBase):
 
     def _tool_maintenance_report(self, args: dict) -> object:
         del args
-        return services.maintenance.report(self._maintenance_port()).to_dict()
+        return view.report_payload(services.maintenance.report(self._maintenance_port()))
 
     def _tool_maintenance_archive(self, args: dict) -> object:
         result = services.maintenance.archive(
@@ -96,7 +97,7 @@ class MaintenanceToolsMixin(McpBase):
             apply=bool(args.get("apply")),
             actor=self.actor,
         )
-        return result.to_dict()
+        return view.archive_payload(result)
 
     def _tool_maintenance_trim(self, args: dict) -> object:
         result = services.maintenance.trim(
@@ -104,22 +105,24 @@ class MaintenanceToolsMixin(McpBase):
             days=args.get("days") or None,
             apply=bool(args.get("apply")),
         )
-        return result.to_dict()
+        return view.trim_payload(result)
 
     def _tool_maintenance_vacuum(self, args: dict) -> object:
         result = services.maintenance.vacuum(
             self._maintenance_port(), apply=bool(args.get("apply"))
         )
-        return result.to_dict()
+        return view.vacuum_payload(result)
 
     def _tool_maintenance_restore(self, args: dict) -> object:
         if args.get("apply") is not True:
             raise ValueError("apply must be true to restore a row")
         plan_id = int(args["plan"]) if args.get("plan") is not None else None
         session_id = int(args["session"]) if args.get("session") is not None else None
-        return services.maintenance.restore(
-            self._maintenance_port(),
-            plan_id=plan_id,
-            session_id=session_id,
-            actor=self.actor,
-        ).to_dict()
+        return view.restore_payload(
+            services.maintenance.restore(
+                self._maintenance_port(),
+                plan_id=plan_id,
+                session_id=session_id,
+                actor=self.actor,
+            )
+        )

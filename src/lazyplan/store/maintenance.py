@@ -20,6 +20,7 @@ from ..core.ports.maintenance import (
     VacuumResult,
 )
 from .base import StoreBase
+from .status_events import parse_plan_status_detail
 
 
 @dataclass(frozen=True)
@@ -169,25 +170,48 @@ class MaintenanceMixin(StoreBase):
 
     @staticmethod
     def _event_targets(cutoff: float) -> tuple[TrimTarget, ...]:
-        """Old non-status events plus older status events.
+        """Old non-status events and old task/milestone status events.
 
-        The newest plan status event per plan is the finished/archive policy
-        input and always survives; task and milestone status events do not.
+        Plan status events use the strict Python parser in
+        :meth:`_status_delete_ids` so trim and the archive policy cannot
+        disagree on which event is newest.
         """
-        plan_id = (
-            "CAST(substr(ltrim(substr(e.detail, 7)), 1,"
-            " instr(ltrim(substr(e.detail, 7)), ' ') - 1) AS INTEGER)"
-        )
-        where = (
-            "ts < ? AND (action <> 'status' OR kind <> 'plan'"
-            " OR detail NOT GLOB 'plan #* -> *'"
-            " OR id NOT IN ("
-            "SELECT MAX(e.id) FROM events e"
-            " WHERE e.kind='plan' AND e.action='status' AND e.detail GLOB 'plan #* -> *'"
-            f" AND EXISTS (SELECT 1 FROM plans p WHERE p.id = {plan_id})"
-            f" GROUP BY {plan_id}))"
-        )
+        where = "ts < ? AND (action <> 'status' OR kind <> 'plan')"
         return (TrimTarget("events", where, (cutoff,)),)
+
+    @staticmethod
+    def _status_delete_ids(conn: sqlite3.Connection, cutoff: float) -> list[int]:
+        """Old plan status event ids except the newest valid one per live plan."""
+        plan_ids = {int(row["id"]) for row in conn.execute("SELECT id FROM plans")}
+        rows = conn.execute(
+            "SELECT id, ts, detail FROM events WHERE kind='plan' AND action='status'"
+        ).fetchall()
+        keep: dict[int, int] = {}
+        parsed_rows: list[tuple[int, float, int | None]] = []
+        for row in rows:
+            event_id = int(row["id"])
+            parsed = parse_plan_status_detail(str(row["detail"] or ""))
+            plan_id = parsed[0] if parsed is not None else None
+            parsed_rows.append((event_id, float(row["ts"] or 0), plan_id))
+            if plan_id is not None and plan_id in plan_ids:
+                keep[plan_id] = max(keep.get(plan_id, 0), event_id)
+        return [
+            event_id
+            for event_id, stamp, plan_id in parsed_rows
+            if stamp < cutoff
+            and (plan_id is None or plan_id not in plan_ids or keep.get(plan_id) != event_id)
+        ]
+
+    @staticmethod
+    def _delete_ids(conn: sqlite3.Connection, table: str, ids: list[int]) -> None:
+        """Delete rows by id in bounded chunks."""
+        for start in range(0, len(ids), 500):
+            chunk = ids[start : start + 500]
+            marks = ",".join("?" for _ in chunk)
+            conn.execute(
+                f"DELETE FROM {_quoted(table)} WHERE id IN ({marks})",
+                chunk,
+            )
 
     @classmethod
     def _trim_targets(cls, now: float, cutoff: float) -> tuple[TrimTarget, ...]:
@@ -213,10 +237,12 @@ class MaintenanceMixin(StoreBase):
     ) -> dict[str, int]:
         """Candidate counts per table, shared by report and trim."""
         cutoff = event_cutoff(now, window_secs)
-        return {
+        counts = {
             target.table: self._count_target(conn, target)
             for target in self._trim_targets(now, cutoff)
         }
+        counts["events"] = counts.get("events", 0) + len(self._status_delete_ids(conn, cutoff))
+        return counts
 
     def _measure(self, conn: sqlite3.Connection, now: float, window_secs: float) -> _ReportMeasure:
         """Collect page sizes, per-table bytes, and trim candidates."""
@@ -282,12 +308,16 @@ class MaintenanceMixin(StoreBase):
         cutoff = event_cutoff(stamp, window_secs)
         targets = self._trim_targets(stamp, cutoff)
         with self._connect() as conn:
-            counts = tuple(
-                TableCount(target.table, self._count_target(conn, target)) for target in targets
-            )
+            counts = {target.table: self._count_target(conn, target) for target in targets}
+            status_ids = self._status_delete_ids(conn, cutoff)
+            counts["events"] = counts.get("events", 0) + len(status_ids)
             if apply:
                 self._delete_targets(conn, targets)
-        return TrimResult(tables=counts, applied=apply)
+                self._delete_ids(conn, "events", status_ids)
+        return TrimResult(
+            tables=tuple(TableCount(table, rows) for table, rows in counts.items()),
+            applied=apply,
+        )
 
     @staticmethod
     def _delete_targets(conn: sqlite3.Connection, targets: tuple[TrimTarget, ...]) -> None:

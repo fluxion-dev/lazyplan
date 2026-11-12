@@ -291,6 +291,115 @@ class TestMaintenanceTrim(unittest.TestCase):
         preview = maintenance.archive(self.store, now=NOW, days="1", apply=False)
         self.assertIn(plan.id, preview.plans)
 
+    def test_malformed_plan_status_details_do_not_displace_the_real_event(self) -> None:
+        plan = self.store.add_plan("Malformed plan")
+        self.store.set_status_raw("plan", plan.id, Status.DONE)
+        with closing(sqlite3.connect(self.db)) as conn:
+            conn.execute(
+                "INSERT INTO events (ts, actor, kind, action, detail)"
+                " VALUES (?, 'x', 'plan', 'status', ?)",
+                (OLD, f"plan #{plan.id} -> done"),
+            )
+            for offset, detail in enumerate(
+                (
+                    f"plan #{plan.id}x -> done",
+                    f"plan #{plan.id}.0 -> done",
+                    f"plan #{plan.id}e2 -> done",
+                    f"Plan #{plan.id} -> done",
+                ),
+                start=1,
+            ):
+                conn.execute(
+                    "INSERT INTO events (ts, actor, kind, action, detail)"
+                    " VALUES (?, 'x', 'plan', 'status', ?)",
+                    (OLD + offset, detail),
+                )
+            conn.commit()
+
+        self._counts(apply=True)
+
+        with closing(sqlite3.connect(self.db)) as conn:
+            details = [
+                row[0]
+                for row in conn.execute(
+                    "SELECT detail FROM events WHERE kind='plan' AND action='status'"
+                )
+            ]
+        self.assertEqual(details, [f"plan #{plan.id} -> done"])
+        self.assertIn(plan.id, self.store.plan_status_events_map())
+        self.assertNotIn(plan.id, [row[0].id for row in services.tree(self.store)])
+        preview = maintenance.archive(self.store, now=NOW, days="1", apply=False)
+        self.assertIn(plan.id, preview.plans)
+
+    def test_python_int_forms_share_one_normalized_plan_status(self) -> None:
+        plan = self.store.add_plan("Int forms")
+        large = 1_000
+        self.store.set_status_raw("plan", plan.id, Status.DONE)
+        with closing(sqlite3.connect(self.db)) as conn:
+            conn.execute(
+                "INSERT INTO plans (id, name, description, status, goal, uid)"
+                " VALUES (?, 'Large int plan', '', 'done', '', 'uid-int-1000')",
+                (large,),
+            )
+            conn.execute(
+                "INSERT INTO events (ts, actor, kind, action, detail)"
+                " VALUES (?, 'x', 'plan', 'status', ?)",
+                (OLD, f"plan #{plan.id} -> done"),
+            )
+            for offset, detail in enumerate(
+                (
+                    f"plan #+{plan.id} -> done",
+                    f"plan #\t{plan.id} -> done",
+                    f"plan #   {plan.id} -> done",
+                    f"plan #0{plan.id} -> done",
+                    f"plan #{large} -> done",
+                ),
+                start=1,
+            ):
+                conn.execute(
+                    "INSERT INTO events (ts, actor, kind, action, detail)"
+                    " VALUES (?, 'x', 'plan', 'status', ?)",
+                    (OLD + offset, detail),
+                )
+            conn.commit()
+        self.store.set_status_raw("plan", large, Status.DONE)
+
+        self._counts(apply=True)
+
+        mapped = self.store.plan_status_events_map()
+        self.assertEqual(mapped[plan.id][1], "done")
+        self.assertEqual(mapped[large][1], "done")
+        with closing(sqlite3.connect(self.db)) as conn:
+            rows = conn.execute(
+                "SELECT detail FROM events WHERE kind='plan' AND action='status'"
+            ).fetchall()
+        self.assertEqual(len(rows), 2)
+        visible = {row[0].id for row in services.tree(self.store)}
+        self.assertNotIn(plan.id, visible)
+        self.assertNotIn(large, visible)
+        preview = maintenance.archive(self.store, now=NOW, days="1", apply=False)
+        self.assertIn(plan.id, preview.plans)
+        self.assertIn(large, preview.plans)
+
+    def test_malformed_only_status_events_are_trimmed(self) -> None:
+        plan = self.store.add_plan("Malformed only")
+        with closing(sqlite3.connect(self.db)) as conn:
+            conn.execute(
+                "INSERT INTO events (ts, actor, kind, action, detail)"
+                " VALUES (?, 'x', 'plan', 'status', ?)",
+                (OLD, f"plan #{plan.id}x -> done"),
+            )
+            conn.commit()
+
+        self._counts(apply=True)
+
+        with closing(sqlite3.connect(self.db)) as conn:
+            kept = conn.execute(
+                "SELECT COUNT(*) FROM events WHERE kind='plan' AND action='status'"
+            ).fetchone()[0]
+        self.assertEqual(kept, 0)
+        self.assertNotIn(plan.id, self.store.plan_status_events_map())
+
     def test_deleted_plan_status_events_are_trimmed(self) -> None:
         plan = self.store.add_plan("Deleted plan")
         self.store.set_status_raw("plan", plan.id, Status.DONE)

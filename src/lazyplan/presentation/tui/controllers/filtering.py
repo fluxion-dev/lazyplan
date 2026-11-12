@@ -83,7 +83,7 @@ class TreeFilter:
     ]:
         """Split plans, then apply the text filter inside each panel."""
         if base is None:
-            base = services.tree(self.app.store, status=None, archived="show")
+            base = services.tree(self.app.store, status=None, finished="show", archived="hide")
         active, finished = self.split(base)
         return self.filtered_tree(active), self.filtered_tree(finished)
 
@@ -93,7 +93,7 @@ class TreeFilter:
     ) -> list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]:
         app = self.app
         if base is None:
-            base = services.tree(app.store, status=None, archived="show")
+            base = services.tree(app.store, status=None, finished="show", archived="hide")
         query = app.filter_text.strip().lower()
         if not query:
             return base

@@ -244,7 +244,7 @@ def _links(store: InsightsPort, plan_ids: list[int]) -> tuple[dict[str, set[int]
 def _gaps(store: InsightsPort, plan_ids: list[int], since: float = 0.0) -> list[Gap]:
     """Open criteria on rows done inside the window (all rows when since is 0)."""
     done = _done_times(store)
-    plans = {plan.id: plan for plan in store.list_plans()}
+    plans = {plan.id: plan for plan in store.list_plans(archived="show")}
     milestones = store.milestones_map()
     tasks = store.tasks_map()
     criteria = store.criteria_map()
@@ -404,11 +404,12 @@ def report(
             since = min(known) if known else 0.0
         plans = [
             plan.id
-            for plan in store.list_plans()
+            for plan in store.list_plans(archived="hide")
             if plan.status == Status.DOING or starts.get(plan.id, 0.0) >= since
         ]
     else:
-        plans = list(plan_ids)
+        archived = {plan.id for plan in store.list_plans(archived="only")}
+        plans = [plan_id for plan_id in plan_ids if plan_id not in archived]
         if since is None:
             known = [starts[plan_id] for plan_id in plans if plan_id in starts]
             since = min(known) if known else 0.0

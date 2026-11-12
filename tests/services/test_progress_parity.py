@@ -60,7 +60,7 @@ class TestProgressParity(unittest.TestCase):
         self.tmp.cleanup()
 
     def test_every_surface_agrees(self):
-        base = services.tree(self.store, status=None, archived="show")
+        base = services.tree(self.store, status=None, finished="show")
         tui = TreeController.progress_map(base) if TreeController is not None else None
         milestones_by_plan = {self.plan.id: [row for row, _tasks in base[0][1]]}
         tasks_by_milestone = {row.id: tasks for row, tasks in base[0][1]}

@@ -51,6 +51,7 @@ def palette_handlers(app: Any) -> dict[str, Callable[[], None]]:
         "open_comments_hub": app.action_open_comments_hub,
         "open_pull_requests_hub": app.action_open_pull_requests_hub,
         "open_activity_hub": app.action_open_activity_hub,
+        "open_maintenance": app.action_open_maintenance,
         "refresh_prs": app.action_refresh_prs,
         "link_pr": app.action_link_pr,
         "unlink_pr": app.action_unlink_pr,

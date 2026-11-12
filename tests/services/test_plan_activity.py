@@ -40,7 +40,7 @@ class PlanActivityTest(unittest.TestCase):
     def test_tree_ordering_is_recent_first(self) -> None:
         self.store.log("a", "plan", "status", f"plan #{self.first.id} -> doing")
         self.store.log("a", "plan", "status", f"plan #{self.second.id} -> doing")
-        plans = [plan.id for plan, _ in services.tree(self.store, archived="show")]
+        plans = [plan.id for plan, _ in services.tree(self.store, finished="show")]
         self.assertEqual(plans[0], self.second.id)
 
     def test_bounded_window_only_sees_recent_events(self) -> None:

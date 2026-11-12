@@ -289,7 +289,7 @@ def snapshot(
         progress=_progress(milestones_by_plan, tasks_by_milestone, events, stamp),
         status=_status(_flatten(tasks_by_milestone)),
         timeline=_timeline(
-            store.list_plans(),
+            store.list_plans(archived="show" if plan_id is not None else "hide"),
             milestones_by_plan,
             tasks_by_milestone,
             events,

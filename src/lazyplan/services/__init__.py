@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from . import attribution as attribution
+from . import maintenance as maintenance
 from .base import GateError
 from .collaboration import (
     add_comment,
@@ -36,7 +37,7 @@ from .evidence import (
 from .planning import (
     DEFAULT_PLAN_LIMIT,
     _filtered_milestones,
-    _is_archived,
+    _is_finished,
     _plan_activity,
     _plan_matches_repo,
     _repo_match,
@@ -49,7 +50,7 @@ from .planning import (
     delete_row,
     heal,
     heal_parents,
-    is_archived,
+    is_finished,
     plan_activity,
     reconcile,
     set_status,
@@ -201,8 +202,8 @@ __all__ = [
     "_store_pulls",
     "_tasks_in_scope",
     "refresh_forge",
-    "is_archived",
-    "_is_archived",
+    "is_finished",
+    "_is_finished",
     "_plan_activity",
     "plan_activity",
     "_filtered_milestones",

@@ -14,6 +14,7 @@
   drives one poll on the calling thread; both are read by the headless Pilot
   tests, never by production call sites.
 - sqlite3 API noise: row_factory.
+- `_status_keep_ids` is the bounded keep-set helper asserted directly by trim tests.
 """
 
 _.compose
@@ -48,6 +49,11 @@ _.action_add_criterion
 _.action_edit_selection
 _.action_filter_text
 _.action_quit
+_.action_apply_archive
+_.action_apply_trim
+_.action_apply_vacuum
+_.action_restore
+_status_keep_ids
 _.export_plan
 _.render_plan_markdown
 _.rebuilds
@@ -172,7 +178,6 @@ FILES
 # Compatibility helper kept for tests and callers outside the CLI.
 default_choice
 # Public read helpers kept for tests and callers outside the tree path.
-is_archived
 plan_activity
 _.plan_uid
 # Metrics chart-row helpers kept for the core metrics API and its tests.

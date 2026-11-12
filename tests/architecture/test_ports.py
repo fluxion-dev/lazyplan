@@ -9,6 +9,7 @@ import unittest
 from lazyplan.core.ports.collaboration import CollaborationPort
 from lazyplan.core.ports.coordination import CoordinationPort
 from lazyplan.core.ports.insights import InsightsPort
+from lazyplan.core.ports.maintenance import MaintenancePort
 from lazyplan.core.ports.planning import PlanningPort
 from lazyplan.core.ports.provenance import ProvenancePort
 from lazyplan.core.ports.transfer import TransferPort
@@ -45,6 +46,11 @@ def _accepts_transfer(port: TransferPort) -> None:
     assert port is not None
 
 
+def _accepts_maintenance(port: MaintenancePort) -> None:
+    """Compile-time structural check; runtime is a no-op."""
+    assert port is not None
+
+
 class TestStorePorts(unittest.TestCase):
     def test_store_satisfies_planning_port(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -75,6 +81,11 @@ class TestStorePorts(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             store = Store(os.path.join(tmp, "transfer.db"))
             _accepts_transfer(store)
+
+    def test_store_satisfies_maintenance_port(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Store(os.path.join(tmp, "maintenance.db"))
+            _accepts_maintenance(store)
 
 
 if __name__ == "__main__":

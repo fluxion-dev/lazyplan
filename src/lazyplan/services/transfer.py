@@ -103,7 +103,7 @@ def export_all(store: TransferPort) -> dict:
     maps = _export_maps(store)
     return {
         "lazyplan": 1,
-        "plans": [_export_entry(plan, maps) for plan in store.list_plans()],
+        "plans": [_export_entry(plan, maps) for plan in store.list_plans(archived="show")],
         "criterion_links": store.all_criterion_links(),
     }
 
@@ -202,6 +202,13 @@ def _import_refs(store: TransferPort, plan_id: int, items: list, actor: str) -> 
             continue
         count += 1
     return count
+
+
+def _restore_plan_archive(store: TransferPort, plan_id: int, item: dict, actor: str) -> None:
+    """Reapply an exported archive stamp to one imported plan."""
+    archived_at = float(item.get("archived_at", 0) or 0)
+    if archived_at > 0:
+        store.set_plan_archived(plan_id, archived_at, actor=actor)
 
 
 def _import_all(store: TransferPort, data: dict, actor: str = "human") -> dict[str, int]:
@@ -400,6 +407,7 @@ def _import_all(store: TransferPort, data: dict, actor: str = "human") -> dict[s
         uid = str(p.get("uid", "") or "").strip()
         if uid and store.get_plan_by_uid(uid) is None:
             store.set_plan_uid(np.id, uid)
+        _restore_plan_archive(store, np.id, p, actor)
         counts["plans"] += 1
         _import_criteria("plan", np.id, entry.get("criteria", []))
         counts["questions"] += _import_questions(store, np.id, entry.get("questions", []), actor)

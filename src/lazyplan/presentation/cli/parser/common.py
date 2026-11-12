@@ -64,6 +64,11 @@ examples:
   lpui repos --kind task --id 3 --effective
   lpui list --repo ~/checkouts/api
   lpui feed --limit 20                   show recent activity by you and your agents
+  lpui maint report                      bytes and row counts per table
+  lpui maint archive --days 7            preview done plans and ended sessions to archive
+  lpui maint trim --apply                delete derived rows after a verified snapshot
+  lpui maint vacuum --apply              reclaim free pages after a verified snapshot
+  lpui maint restore --plan 3            return an archived plan to the default views
   lpui upgrade [--check]                 self-update pipx/venv installs (no repo needed)
   lpui notes [--all] [--since VERSION]   read the release notes bundled with this version
   lpui export --format json > backup.json
@@ -111,7 +116,7 @@ files: shared home by default (`lpui setup --placement repo` opts a repo in)
   .agents/lazyplan/lazyplan.db            repo database when placement is repo
   .agents/lazyplan/templates/{plan,milestone,task}.md  repo creation templates
 
-exit codes: 0 it worked · 1 id not found · 2 flags or input were wrong · 3 screen cannot start (Textual is missing).
+exit codes: 0 it worked · 1 id not found or database busy · 2 flags or input were wrong · 3 screen cannot start (Textual is missing).
 
 more help:
   lpui <command> --help                  flags and examples for one command

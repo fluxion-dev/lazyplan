@@ -26,7 +26,7 @@ class TestRowAttention(unittest.TestCase):
         self.milestone = self.store.add_milestone(self.plan.id, "Slice", actor="fixture")
         self.task = self.store.add_task(self.milestone.id, "Task", actor="fixture")
         self.controller = TreeController(SimpleNamespace(store=self.store))
-        self.base = services.tree(self.store, status=None, archived="show")
+        self.base = services.tree(self.store, status=None, finished="show")
 
     def tearDown(self):
         self.tmp.cleanup()

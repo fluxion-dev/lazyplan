@@ -23,6 +23,7 @@ CORE_GROUPS = (
     "issue",
     "git",
     "pr",
+    "maint",
 )
 
 

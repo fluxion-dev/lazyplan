@@ -431,6 +431,22 @@
       "annotations": {
         "readOnlyHint": true
       },
+      "description": "Database bytes and row counts per table, free pages, and a reclaimable estimate for the window.",
+      "inputSchema": {
+        "properties": {
+          "days": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "name": "maintenance_report"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
       "description": "Branch and dirty state for a row's linked checkouts.",
       "inputSchema": {
         "properties": {
@@ -1369,6 +1385,90 @@
         "type": "object"
       },
       "name": "reference_unlink"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Archive done plans and ended sessions past the window. apply=false previews; apply=true writes after a verified snapshot.",
+      "inputSchema": {
+        "properties": {
+          "apply": {
+            "type": "boolean"
+          },
+          "days": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "apply"
+        ],
+        "type": "object"
+      },
+      "name": "maintenance_archive"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Delete derived rows only: expired claims, stale cache, closed PRs, orphans, and old events. apply=false previews; apply=true snapshots first.",
+      "inputSchema": {
+        "properties": {
+          "apply": {
+            "type": "boolean"
+          },
+          "days": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "apply"
+        ],
+        "type": "object"
+      },
+      "name": "maintenance_trim"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Reclaim free pages. apply=false previews; apply=true snapshots first and fails instead of waiting on a busy database.",
+      "inputSchema": {
+        "properties": {
+          "apply": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "apply"
+        ],
+        "type": "object"
+      },
+      "name": "maintenance_vacuum"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Return one archived plan or session to the default views. apply must be true; restore never runs as a preview.",
+      "inputSchema": {
+        "properties": {
+          "apply": {
+            "type": "boolean"
+          },
+          "plan": {
+            "type": "integer"
+          },
+          "session": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "apply"
+        ],
+        "type": "object"
+      },
+      "name": "maintenance_restore"
     },
     {
       "annotations": {

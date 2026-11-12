@@ -551,7 +551,7 @@ def _cmd_criterion_unrelate(store: PlanningPort, args: argparse.Namespace, actor
 
 
 def _cmd_list(store: InsightsPort, args: argparse.Namespace, actor: str) -> int:
-    archived, status = _list_filters(args)
+    finished, status, archived = _list_filters(args)
     limit = _list_limit(args)
     repo_filter = getattr(args, "repo", None)
     milestone_filter = getattr(args, "milestone", None)
@@ -561,6 +561,7 @@ def _cmd_list(store: InsightsPort, args: argparse.Namespace, actor: str) -> int:
             _list_payload(
                 store,
                 status,
+                finished,
                 archived,
                 limit,
                 repo_filter,
@@ -573,6 +574,7 @@ def _cmd_list(store: InsightsPort, args: argparse.Namespace, actor: str) -> int:
             store,
             status,
             args.plan,
+            finished,
             archived,
             limit,
             repo_filter,
@@ -581,6 +583,8 @@ def _cmd_list(store: InsightsPort, args: argparse.Namespace, actor: str) -> int:
         ):
             print(line)
         return 0
-    lines = _list_lines(store, args, status, archived, limit, repo_filter, milestone_filter)
+    lines = _list_lines(
+        store, args, status, finished, archived, limit, repo_filter, milestone_filter
+    )
     print("\n".join(lines) if lines else EMPTY_NO_PLANS)
     return 0

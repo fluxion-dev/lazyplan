@@ -7,7 +7,7 @@ from ..core.ports.transfer import TransferPort
 
 def seed(store: TransferPort) -> None:
     """Insert the demo plan, milestones, and tasks into an empty store."""
-    if store.list_plans():
+    if store.list_plans(archived="show"):
         print("db already has plans, skipping seed")
         return
     p = store.add_plan(

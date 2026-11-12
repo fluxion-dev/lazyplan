@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from ..core.policies.maintenance import is_archived_row
 from ..core.policies.questions import open_count, open_questions
 from ..core.ports.insights import InsightsPort
 from . import lint
@@ -50,8 +51,9 @@ class ReadyResult:
 
 
 def check(port: InsightsPort, plan_id: int) -> ReadyResult | None:
-    """Check one plan for readiness; None when the plan does not exist."""
-    if port.get_plan(plan_id) is None:
+    """Check one plan for readiness; None when the plan is missing or archived."""
+    plan = port.get_plan(plan_id)
+    if plan is None or is_archived_row(plan):
         return None
     findings = lint.lint_plan(port, plan_id) or []
     lint_check = ReadyCheck(

@@ -231,7 +231,7 @@ class TestStore(unittest.TestCase):
         self.store.add_repo_link("plan", p.id, "/checkout/plan", "git@example.test:org/plan.git")
         self.store.add_repo_link("task", t.id, "/checkout/task", "git@example.test:org/task.git")
 
-        payload = _list_payload(self.store, None, "show", None, None, None, None)
+        payload = _list_payload(self.store, None, "show", "show", None, None, None, None)
         self.assertEqual(len(payload), 1)
         entry = payload[0]
         self.assertEqual(entry["criteria"], [])
@@ -382,6 +382,45 @@ class TestStore(unittest.TestCase):
         conn.close()
         with self.assertRaises(RuntimeError):
             Store(legacy)
+
+    def test_migrate_archive_columns_without_losing_rows(self):
+        legacy = os.path.join(self.tmp.name, "legacy-archive.db")
+        previous = migrate_mod.SCHEMA.replace(",\n    archived_at REAL NOT NULL DEFAULT 0", "")
+        self.assertNotIn("archived_at", previous)
+        with closing(sqlite3.connect(legacy)) as conn:
+            conn.executescript(previous)
+            conn.execute(
+                "INSERT INTO plans (name, description, status, goal, uid)"
+                " VALUES ('Keep', '', 'todo', '', 'uid-keep')"
+            )
+            conn.execute("INSERT INTO milestones (plan_id, title) VALUES (1, 'Slice')")
+            conn.execute("INSERT INTO tasks (milestone_id, title) VALUES (1, 'Work')")
+            conn.execute(
+                "INSERT INTO sessions (actor, repo_path, started_at, last_seen_at)"
+                " VALUES ('builder', '/tmp/checkout', 100, 100)"
+            )
+            conn.execute(f"PRAGMA user_version = {migrate_mod.SCHEMA_VERSION - 1}")
+            conn.commit()
+
+        reopened = Store(legacy)
+        counts = reopened.counts()
+        self.assertEqual((counts["plans"], counts["milestones"], counts["tasks"]), (1, 1, 1))
+        self.assertEqual(reopened.get_plan(1).name, "Keep")
+        self.assertEqual(reopened.get_session(1).actor, "builder")
+
+        with closing(sqlite3.connect(legacy)) as conn:
+            self.assertEqual(
+                int(conn.execute("PRAGMA user_version").fetchone()[0]),
+                migrate_mod.SCHEMA_VERSION,
+            )
+            for table in ("plans", "sessions"):
+                columns = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
+                self.assertIn("archived_at", columns)
+                indexes = {row[1] for row in conn.execute(f"PRAGMA index_list({table})")}
+                self.assertIn(f"idx_{table}_archived", indexes)
+
+        again = Store(legacy)
+        self.assertEqual(again.counts(), counts)
 
     def test_export_import_roundtrip(self):
         p = self.store.add_plan("P", goal="g")
@@ -922,9 +961,9 @@ class TestStore(unittest.TestCase):
         )
         conn.commit()
         conn.close()
-        self.assertTrue(services.is_archived(self.store, self.store.get_plan(old.id)))
-        self.assertFalse(services.is_archived(self.store, self.store.get_plan(fresh.id)))
-        self.assertFalse(services.is_archived(self.store, self.store.get_plan(openp.id)))
+        self.assertTrue(services.is_finished(self.store, self.store.get_plan(old.id)))
+        self.assertFalse(services.is_finished(self.store, self.store.get_plan(fresh.id)))
+        self.assertFalse(services.is_finished(self.store, self.store.get_plan(openp.id)))
         names = [
             p.name
             for p, _ in services.tree(
@@ -933,10 +972,10 @@ class TestStore(unittest.TestCase):
         ]
         self.assertNotIn("Old", names)
         self.assertIn("Fresh", names)
-        self.assertEqual([p.name for p, _ in services.tree(self.store, archived="only")], ["Old"])
-        self.assertEqual(len(services.tree(self.store, archived="show")), 3)
+        self.assertEqual([p.name for p, _ in services.tree(self.store, finished="only")], ["Old"])
+        self.assertEqual(len(services.tree(self.store, finished="show")), 3)
         with self.assertRaises(ValueError):
-            services.tree(self.store, archived="yesterday")
+            services.tree(self.store, finished="yesterday")
 
         def _list_out(argv):
             buf = io.StringIO()
@@ -945,8 +984,8 @@ class TestStore(unittest.TestCase):
             return buf.getvalue()
 
         self.assertNotIn("Old", _list_out(["list"]))
-        self.assertIn("Old", _list_out(["list", "--archived"]))
-        self.assertNotIn("Fresh", _list_out(["list", "--archived"]))
+        self.assertIn("Old", _list_out(["list", "--finished"]))
+        self.assertNotIn("Fresh", _list_out(["list", "--finished"]))
         self.assertIn("Old", _list_out(["list", "--status", "all"]))
 
     def test_counts_by_state(self):

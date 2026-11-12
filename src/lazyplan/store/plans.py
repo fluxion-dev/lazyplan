@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+import time
 import uuid
 
 from ..core.entities import (
@@ -11,6 +12,7 @@ from ..core.entities import (
     Status,
 )
 from ..core.kinds import table_for
+from ..core.policies.maintenance import check_archive_mode, is_visible
 from .base import (
     StoreBase,
 )
@@ -56,6 +58,7 @@ class PlansMixin(StoreBase):
             description=self._opt(r, keys, "description"),
             status=Status(r["status"]) if "status" in keys else Status.TODO,
             goal=self._opt(r, keys, "goal"),
+            archived_at=float(r["archived_at"]) if "archived_at" in keys else 0.0,
         )
 
     def plan_uid(self, pid: int) -> str:
@@ -84,11 +87,49 @@ class PlansMixin(StoreBase):
             r = conn.execute("SELECT * FROM plans WHERE id=?", (pid,)).fetchone()
         return self._row_to_plan(r) if r is not None else None
 
-    def list_plans(self) -> list[Plan]:
-        """All plans, newest first."""
+    def archive_plan(self, plan_id: int, actor: str = "human", now: float | None = None) -> bool:
+        """Stamp one done plan archived; an already archived row writes no event."""
+        stamp = time.time() if now is None else now
+        with self._connect() as conn:
+            cur = conn.execute(
+                "UPDATE plans SET archived_at=? WHERE id=? AND archived_at=0 AND status='done'",
+                (stamp, plan_id),
+            )
+            changed = (cur.rowcount or 0) > 0
+            if changed:
+                self.log(actor, "plan", "archive", f"P#{plan_id} archived", now=stamp)
+        return changed
+
+    def set_plan_archived(self, plan_id: int, archived_at: float, actor: str = "human") -> bool:
+        """Set an archive stamp verbatim for import/sync, bypassing the done guard."""
+        stamp = float(archived_at)
+        with self._connect() as conn:
+            cur = conn.execute("UPDATE plans SET archived_at=? WHERE id=?", (stamp, plan_id))
+            changed = (cur.rowcount or 0) > 0
+            if changed:
+                self.log(actor, "plan", "archive", f"P#{plan_id} archived", now=stamp)
+            return changed
+
+    def restore_plan(self, plan_id: int, actor: str = "human", now: float | None = None) -> bool:
+        """Clear one plan's archive stamp; a live row writes no event."""
+        stamp = time.time() if now is None else now
+        with self._connect() as conn:
+            cur = conn.execute(
+                "UPDATE plans SET archived_at=0 WHERE id=? AND archived_at<>0",
+                (plan_id,),
+            )
+            changed = (cur.rowcount or 0) > 0
+            if changed:
+                self.log(actor, "plan", "restore", f"P#{plan_id} restored", now=stamp)
+        return changed
+
+    def list_plans(self, archived: str = "hide") -> list[Plan]:
+        """Plans, newest first, filtered by the archive view."""
+        check_archive_mode(archived)
         with self._connect() as conn:
             rows = conn.execute("SELECT * FROM plans ORDER BY id DESC").fetchall()
-        return [self._row_to_plan(r) for r in rows]
+        plans = [self._row_to_plan(r) for r in rows]
+        return [plan for plan in plans if is_visible(plan, archived)]
 
     def plan_uids_map(self) -> dict[int, str]:
         """Stable plan uid keyed by plan id, in one query."""

@@ -11,6 +11,7 @@ from pathlib import Path
 from lazyplan.services import audit
 
 from ..core.entities import Plan, Status, Task
+from ..core.policies.maintenance import is_archived_row
 from ..core.ports.insights import InsightsPort
 from ..core.serialization import approval_payload
 from .sessions import previous_session
@@ -24,8 +25,10 @@ _MAX_PLAN_NOTES = 5
 def _active_plans(store: InsightsPort, plan_id: int | None) -> list[Plan]:
     if plan_id is not None:
         plan = store.get_plan(plan_id)
-        return [plan] if plan is not None else []
-    plans = store.list_plans()
+        if plan is None or is_archived_row(plan):
+            return []
+        return [plan]
+    plans = store.list_plans(archived="hide")
     doing = [plan for plan in plans if plan.status == Status.DOING]
     if doing:
         return doing[:_MAX_PLANS]

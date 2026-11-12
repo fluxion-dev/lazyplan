@@ -11,6 +11,7 @@ from typing import Any
 
 from ..core.entities import Plan, Task
 from ..core.policies.coordination import patterns_overlap
+from ..core.policies.maintenance import is_archived_row
 from ..core.ports.needs_me import NeedsMePort
 from ..core.serialization import approval_payload
 from . import stats
@@ -35,9 +36,11 @@ _REASON_PRIORITY = {
 
 def _plans(port: NeedsMePort, plan_id: int | None) -> list[Plan]:
     if plan_id is None:
-        return port.list_plans()
+        return port.list_plans(archived="hide")
     plan = port.get_plan(plan_id)
-    return [plan] if plan is not None else []
+    if plan is None or is_archived_row(plan):
+        return []
+    return [plan]
 
 
 def _task_index(

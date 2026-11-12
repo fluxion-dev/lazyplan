@@ -41,6 +41,13 @@ from .forge import (
     _cmd_pr_status,
     _cmd_pr_unlink,
 )
+from .maintenance import (
+    _cmd_maint_archive,
+    _cmd_maint_report,
+    _cmd_maint_restore,
+    _cmd_maint_trim,
+    _cmd_maint_vacuum,
+)
 from .plan import (
     _cmd_add_criteria,
     _cmd_add_milestone,
@@ -192,6 +199,11 @@ _GROUP_CMDS: dict[tuple[str, str], str] = {
     ("pr", "link"): "pr-link",
     ("pr", "unlink"): "pr-unlink",
     ("pr", "refresh"): "pr-refresh",
+    ("maint", "report"): "maint-report",
+    ("maint", "archive"): "maint-archive",
+    ("maint", "restore"): "maint-restore",
+    ("maint", "trim"): "maint-trim",
+    ("maint", "vacuum"): "maint-vacuum",
 }
 
 _COMMANDS: dict[str, Callable[[AppPort, Namespace, str], int]] = {
@@ -277,4 +289,9 @@ _COMMANDS: dict[str, Callable[[AppPort, Namespace, str], int]] = {
     "completion": _cmd_completion,
     "notes": _cmd_notes,
     "ui": _cmd_ui,
+    "maint-report": _cmd_maint_report,
+    "maint-archive": _cmd_maint_archive,
+    "maint-restore": _cmd_maint_restore,
+    "maint-trim": _cmd_maint_trim,
+    "maint-vacuum": _cmd_maint_vacuum,
 }

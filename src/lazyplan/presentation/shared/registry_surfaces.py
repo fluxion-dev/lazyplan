@@ -59,6 +59,11 @@ CLI_ACTIONS: dict[str, tuple[str, ...]] = {
     "pull_request.link": ("pr link",),
     "pull_request.unlink": ("pr unlink",),
     "event.list": ("feed",),
+    "maintenance.report": ("maint report",),
+    "maintenance.archive": ("maint archive",),
+    "maintenance.trim": ("maint trim",),
+    "maintenance.vacuum": ("maint vacuum",),
+    "maintenance.restore": ("maint restore",),
 }
 
 MCP_ACTIONS: dict[str, str] = {
@@ -105,6 +110,11 @@ MCP_ACTIONS: dict[str, str] = {
     "pull_request.link": "pull_request_link",
     "pull_request.unlink": "pull_request_unlink",
     "event.list": "activity_list",
+    "maintenance.report": "maintenance_report",
+    "maintenance.archive": "maintenance_archive",
+    "maintenance.trim": "maintenance_trim",
+    "maintenance.vacuum": "maintenance_vacuum",
+    "maintenance.restore": "maintenance_restore",
 }
 
 

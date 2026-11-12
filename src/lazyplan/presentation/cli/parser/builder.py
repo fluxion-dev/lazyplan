@@ -26,6 +26,7 @@ from .coordination import (
     add_trace,
     add_who,
 )
+from .maintenance import add_maintenance_group
 from .proof import (
     add_commits,
     add_export,
@@ -168,6 +169,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_reconcile(sub, common)
     add_feed(sub, common)
     add_watch(sub, common)
+    add_maintenance_group(sub, common)
     add_completion(sub, common)
     add_upgrade(sub, common)
     add_notes(sub, common)

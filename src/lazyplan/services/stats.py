@@ -24,12 +24,20 @@ def _events(store: InsightsPort) -> list[dict]:
 
 
 def _all_tasks(store: InsightsPort) -> list[Task]:
-    """Every task in one query, in creation order."""
-    return [task for tasks in store.tasks_map().values() for task in tasks]
+    """Every task under a live plan, in creation order."""
+    milestones = store.milestones_map()
+    tasks = store.tasks_map()
+    return [
+        task
+        for plan in store.list_plans(archived="hide")
+        for milestone in milestones.get(plan.id, ())
+        for task in tasks.get(milestone.id, ())
+    ]
 
 
 def _event_maps(
     events: list[dict],
+    task_ids: set[int] | None = None,
 ) -> tuple[dict[int, float], dict[int, list[tuple[float, str, str]]]]:
     """Task add times and status transitions from the event stream."""
     added: dict[int, float] = {}
@@ -39,13 +47,17 @@ def _event_maps(
         actor_name = str(event.get("actor") or "")
         found = _ADDED.match(detail)
         if found is not None:
-            added.setdefault(int(found.group(1)), float(event["ts"]))
+            task_id = int(found.group(1))
+            if task_ids is None or task_id in task_ids:
+                added.setdefault(task_id, float(event["ts"]))
             continue
         found = _STATUS.match(detail)
         if found is not None:
-            transitions.setdefault(int(found.group(1)), []).append(
-                (float(event["ts"]), found.group(2), actor_name)
-            )
+            task_id = int(found.group(1))
+            if task_ids is None or task_id in task_ids:
+                transitions.setdefault(task_id, []).append(
+                    (float(event["ts"]), found.group(2), actor_name)
+                )
     return added, transitions
 
 
@@ -135,11 +147,11 @@ def attention_reasons(
 ) -> dict[int, list[str]]:
     """Task ids the TUI should surface as needing attention, with reasons."""
     stamp = time.time() if now is None else now
-    _added, transitions = _event_maps(_events(store))
+    task_rows = tasks if tasks is not None else _all_tasks(store)
+    _added, transitions = _event_maps(_events(store), {task.id for task in task_rows})
     claims = claims if claims is not None else store.claims_map()
     forge = forge if forge is not None else store.forge_links_map()
     open_criteria = open_criteria if open_criteria is not None else store.open_task_criteria_ids()
-    task_rows = tasks if tasks is not None else _all_tasks(store)
     reasons: dict[int, list[str]] = {}
     for task in task_rows:
         found = _task_attention(
@@ -169,7 +181,7 @@ def drift_summary(store: InsightsPort, now: float | None = None) -> dict[str, li
     milestones_by_plan = store.milestones_map()
     tasks_by_milestone = store.tasks_map()
     parent: list[dict] = []
-    for plan in store.list_plans():
+    for plan in store.list_plans(archived="hide"):
         for milestone in milestones_by_plan.get(plan.id, []):
             kids = [task.status for task in tasks_by_milestone.get(milestone.id, [])]
             if kids:
@@ -202,8 +214,8 @@ def compute(
 ) -> dict:
     """Compute current flow metrics plus actor-filtered completion metrics."""
     stamp = time.time() if now is None else now
-    added, transitions = _event_maps(_events(store))
     tasks = _all_tasks(store)
+    added, transitions = _event_maps(_events(store), {task.id for task in tasks})
     wip, blocked, stale = _current_metrics(tasks, added, stale_before, stamp)
     aging: list[float] = []
     for task in tasks:

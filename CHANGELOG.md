@@ -3,6 +3,30 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## v0.41.0 — unreleased
+
+### Added
+
+- **Maintenance is one noun-first surface.** `lpui maint report` shows bytes
+  and row counts per table with a reclaimable estimate; `maint archive`,
+  `maint trim`, and `maint vacuum` preview by default and write only with
+  `--apply`; `maint restore --plan` or `--session` returns an archived row.
+  `maint report --days` sets the estimate window and separates used bytes from
+  the file size. Every apply starts with a verified
+  `lazyplan.db.bak-<timestamp>` snapshot and only derived link rows and old
+  events are trimmed, keeping the newest plan status event per plan; plan text,
+  criteria, evidence, notes, and comments are never trimmed. The TUI `m` hub shows the same candidate counts,
+  and MCP exposes a read-only report plus apply-gated write tools.
+
+### Changed
+
+- **`--archived` is the archive switch; `--finished` keeps the old filter.**
+  `lpui list --archived only` shows archived plans, `--archived all` shows
+  both, and the default hides them. `--finished` still shows plans marked done
+  longer than a day. Archived plans and sessions leave list, tree, brief, next,
+  ready, stats, audit, trace, who, claims, and the agents panel, and
+  `lpui maint restore --plan` or `--session` brings them back.
+
 ## v0.40.3 — 2026-11-11
 
 ### Changed

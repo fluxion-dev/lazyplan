@@ -14,6 +14,7 @@ from ..core.kinds import KIND_ERROR, table_for
 from ..core.serialization import approval_payload
 from .base import StoreBase, to_payload
 from .full_reader import _criterion_payload, _FullReader
+from .status_events import parse_plan_status_detail
 
 
 def _release_lease_for_status(
@@ -242,7 +243,7 @@ class ViewsMixin(StoreBase):
             reader = _FullReader(self)
             if kind == "plan":
                 objects: dict[int, Plan | Milestone | Task] = {
-                    plan.id: plan for plan in self.list_plans()
+                    plan.id: plan for plan in self.list_plans(archived="show")
                 }
             elif kind == "milestone":
                 objects = {
@@ -321,15 +322,10 @@ class ViewsMixin(StoreBase):
             ).fetchall()
         out: dict[int, tuple[float, str]] = {}
         for row in rows:
-            detail = str(row["detail"] or "").removesuffix(" (rollup)")
-            if not detail.startswith("plan #"):
+            parsed = parse_plan_status_detail(str(row["detail"] or ""))
+            if parsed is None:
                 continue
-            body = detail[len("plan #") :]
-            try:
-                plan_text, target = body.split(" -> ", 1)
-                plan_id = int(plan_text)
-            except ValueError:
-                continue
+            plan_id, target = parsed
             out.setdefault(plan_id, (float(row["ts"]), target))
         return out
 

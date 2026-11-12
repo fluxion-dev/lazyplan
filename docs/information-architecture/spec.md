@@ -30,6 +30,7 @@ owners through the links below.
 | `pull_request` | task, milestone, or plan | Yes | checks, reviews, commits |
 | `repo` | plan, milestone, or task | Yes | branch, commits, PRs |
 | `event` | any row | Yes | actor, target, reason |
+| `maintenance` | database | Yes | report, archive, restore, trim, vacuum, snapshots |
 
 Inline-only data: touch-points (task field list), handoff (session field), and
 repo inheritance (effective repos). They appear inside their owner's hub rather

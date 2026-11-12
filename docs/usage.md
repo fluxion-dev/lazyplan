@@ -443,7 +443,8 @@ CLI-only.
 Repos, commits, files, and pull requests are selectable in the source trail
 (`g`), and cached pull requests have their own hub (**Open pull request hub**
 in the palette). The **activity hub** (**Open activity hub** in the palette)
-shows the feed.
+shows the feed. `feed` is the historical audit trail: events stay visible after
+a plan is archived.
 
 - Source trail: the tree groups checkout → commits → changed files, with pull
   requests alongside. `enter` cross-links to the owning plan, milestone, or
@@ -861,7 +862,8 @@ tokens.
 - Team: `.agents/lazyplan/lazyplan.db` inside the repo; commit `config.json`,
   not the database.
 - Export: `lpui export --format json > backup.json`.
-- Import: `lpui import --file backup.json` (ids change on import).
+- Import: `lpui import --file backup.json` (ids change on import). Import
+  restores archived state, including an archived plan that is not done.
 - Plan Markdown: `lpui export --format markdown --plan 3 --file ~/Downloads/plan-P3.md`.
   Missing parent folders are created; an existing file is refused unless you
   pass `--force`.
@@ -870,9 +872,62 @@ tokens.
   written as UTF-8. Existing CRLF line endings are preserved on write.
 - Completion: `eval "$(lpui completion --shell bash)"` (or `zsh`).
 
+### Archive and restore
+
+- Plans and sessions archive; they never lose their text. An archived plan is
+  hidden from list, tree, brief, next, ready, stats, audit, trace, who, claims,
+  and the agents panel. `lpui maint restore --plan 3` or
+  `lpui maint restore --session 4` brings it back. A restored done plan returns
+  to the `--finished` and `--archived all` views, not the default list.
+- Claims are task-owned. Archiving an ended session does not release a live
+  lease, so a lease created around that session can still appear in `who`.
+- `--archived` selects the archive state on `list`: `--archived only` shows
+  archived plans, `--archived all` (alias `show`) shows both, and the default
+  hides them. `--finished` is the separate age filter: it shows plans marked
+  done longer than a day.
+
+### Maintenance: report, archive, restore, trim, and vacuum
+
+- `lpui maint report` names its byte method (`dbstat`, or `page_count` when
+  `dbstat` is unavailable), then prints used bytes, the database file size, row
+  counts per table, free pages, and a reclaimable estimate for the window.
+  Table bytes include their indexes; `--days 30` sets the estimate window and
+  `--json`/`--porcelain` use the same fields as every other command. On SQLite
+  builds without `dbstat` (including Apple's), the method is `page_count`,
+  per-table bytes are unavailable, and the reclaimable estimate counts free
+  pages only.
+- `lpui maint archive` previews done plans and ended sessions past the window;
+  `--apply` archives them after a verified snapshot.
+- `lpui maint restore --plan 3` and `lpui maint restore --session 4` are
+  explicit by id and take effect immediately.
+- `lpui maint trim` previews derived rows only: expired claims and their
+  touch-points, forge cache older than the window, closed or merged pull
+  requests, orphaned link rows in `criterion_links`, `entity_keys`,
+  `entity_repos`, `issue_links`, and `vcs_links`, plus older events. The newest
+  plan `status` event per plan is kept because the finished/archive rule reads
+  it; older status events and non-status events are trimmed. Add `--apply` to
+  delete them. User-authored criteria, evidence, notes, and comments are never
+  trimmed, even when their parent row is gone; plan, milestone, and task text is
+  never trimmed.
+- `lpui maint vacuum` previews file size and free pages; `--apply` reclaims
+  them. `VACUUM` needs exclusive access, so stop other writers first; a busy
+  database returns an error instead of waiting.
+- `archive`, `trim`, and `vacuum` preview by default. Every `--apply` writes
+  `lazyplan.db.bak-<timestamp>` beside the database with SQLite's backup API,
+  runs `PRAGMA integrity_check`, compares plan, task, and event counts, and
+  copies `sessions/bindings`. If the snapshot fails, nothing is mutated. If
+  the process dies after the copy but before journal-mode conversion, an
+  unverified `.bak-*` can remain; the live database is untouched. Remove it
+  manually; the next apply writes a fresh snapshot.
+- Windows stay at one week for plans, sessions, and events unless `--days 30`
+  or `--days 30.days` overrides them for that run.
+- In the screen, `m` opens the maintenance hub with the same counts, preview,
+  confirm-then-apply, and restore. Agents get a read-only
+  `maintenance_report` tool and apply-gated MCP write tools.
+
 ## Exit codes
 
-`0` worked · `1` row not found or setup layout misplaced · `2` flags or input
+`0` worked · `1` row not found or database busy · `2` flags or input
 wrong · `3` the screen cannot start because Textual is missing.
 
 Run `lpui <command> --help` for per-command flags. `man lpui` contains the full

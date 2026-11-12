@@ -5,9 +5,11 @@ from __future__ import annotations
 import os
 import sqlite3
 import time
+from collections.abc import Sequence
 from pathlib import Path
 
 from ..core.entities import Session
+from ..core.policies.maintenance import check_archive_mode
 from ..core.policies.sessions import (
     auto_close_summary,
     close_after_secs,
@@ -54,6 +56,7 @@ class SessionsMixin(StoreBase):
             host_session=str(r["host_session"] or ""),
             auto_closed=bool(r["auto_closed"]),
             plan_source=str(r["plan_source"] or "auto"),
+            archived_at=float(r["archived_at"] or 0),
         )
 
     def _open_session(self, actor: str, repo_path: str) -> Session | None:
@@ -61,7 +64,7 @@ class SessionsMixin(StoreBase):
         with self._connect() as conn:
             row = conn.execute(
                 "SELECT * FROM sessions WHERE actor=? AND repo_path=? AND ended_at=0"
-                " ORDER BY id DESC LIMIT 1",
+                " AND archived_at=0 ORDER BY id DESC LIMIT 1",
                 (actor, repo_path),
             ).fetchone()
         return self._row_to_session(row) if row is not None else None
@@ -260,6 +263,72 @@ class SessionsMixin(StoreBase):
         assert ended is not None
         return ended
 
+    def archive_sessions(
+        self,
+        session_ids: Sequence[int],
+        actor: str = "human",
+        now: float | None = None,
+    ) -> int:
+        """Archive ended sessions and remove their binding files.
+
+        Open sessions are never archived. Each newly archived row writes one
+        event; already archived or missing rows are skipped.
+        """
+        stamp = time.time() if now is None else now
+        archived: list[int] = []
+        with self._connect() as conn:
+            for session_id in session_ids:
+                cur = conn.execute(
+                    "UPDATE sessions SET archived_at=? WHERE id=? AND ended_at>0 AND archived_at=0",
+                    (stamp, session_id),
+                )
+                if (cur.rowcount or 0) == 0:
+                    continue
+                self.log(
+                    actor,
+                    "session",
+                    "archive",
+                    f"session S{session_id} archived",
+                    session_id=session_id,
+                    now=stamp,
+                )
+                archived.append(int(session_id))
+        for session_id in archived:
+            row = self.get_session(session_id)
+            if row is None:
+                continue
+            for binding in bindings_for_session(self.path, session_id):
+                delete_binding(
+                    self.path,
+                    str(binding.get("host", "")),
+                    str(binding.get("host_session", "")),
+                    str(binding.get("project", "")),
+                )
+            clear_pointer(self.path, row.actor, row.repo_path, session_id=session_id)
+        return len(archived)
+
+    def restore_session(
+        self, session_id: int, actor: str = "human", now: float | None = None
+    ) -> bool:
+        """Clear one session's archive stamp; a live row writes no event."""
+        stamp = time.time() if now is None else now
+        with self._connect() as conn:
+            cur = conn.execute(
+                "UPDATE sessions SET archived_at=0 WHERE id=? AND archived_at<>0",
+                (session_id,),
+            )
+            changed = (cur.rowcount or 0) > 0
+            if changed:
+                self.log(
+                    actor,
+                    "session",
+                    "restore",
+                    f"session S{session_id} restored",
+                    session_id=session_id,
+                    now=stamp,
+                )
+        return changed
+
     def touch_session(
         self,
         session_id: int,
@@ -301,7 +370,7 @@ class SessionsMixin(StoreBase):
         actor: str = "",
     ) -> Session | None:
         """Newest open session in one checkout, preferring a matching host."""
-        base = "SELECT * FROM sessions WHERE ended_at=0 AND repo_path=?"
+        base = "SELECT * FROM sessions WHERE ended_at=0 AND archived_at=0 AND repo_path=?"
         if host:
             with self._connect() as conn:
                 row = conn.execute(
@@ -332,7 +401,7 @@ class SessionsMixin(StoreBase):
         host paths that need one fixed window.
         """
         stamp = time.time() if now is None else now
-        sql = "SELECT * FROM sessions WHERE ended_at=0"
+        sql = "SELECT * FROM sessions WHERE ended_at=0 AND archived_at=0"
         params: list[object] = []
         if repo_path:
             sql += " AND repo_path=?"
@@ -385,8 +454,10 @@ class SessionsMixin(StoreBase):
         plan_id: int | None = None,
         open_only: bool = False,
         limit: int = 20,
+        archived: str = "hide",
     ) -> list[Session]:
-        """Recent sessions, newest first, with optional actor and plan filters."""
+        """Recent sessions, newest first, with optional actor, plan, and archive filters."""
+        check_archive_mode(archived)
         sql = "SELECT * FROM sessions"
         clauses: list[str] = []
         params: list[object] = []
@@ -398,6 +469,10 @@ class SessionsMixin(StoreBase):
             params.append(plan_id)
         if open_only:
             clauses.append("ended_at=0")
+        if archived == "hide":
+            clauses.append("archived_at=0")
+        elif archived == "only":
+            clauses.append("archived_at>0")
         if clauses:
             sql += " WHERE " + " AND ".join(clauses)
         sql += " ORDER BY started_at DESC, id DESC LIMIT ?"
@@ -412,8 +487,8 @@ class SessionsMixin(StoreBase):
         actor: str = "",
         repo_path: str = "",
     ) -> Session | None:
-        """Most recently ended session for a plan or checkout."""
-        sql = "SELECT * FROM sessions WHERE ended_at > 0"
+        """Most recently ended, unarchived session for a plan or checkout."""
+        sql = "SELECT * FROM sessions WHERE ended_at > 0 AND archived_at = 0"
         params: list[object] = []
         if plan_id is not None:
             sql += " AND plan_id=?"

@@ -11,6 +11,7 @@ from .forms import (
     RefScreen,
 )
 from .help import HelpScreen, PaletteScreen, ReleaseNotesScreen, TextScreen
+from .maintenance import MaintenanceScreen
 from .source import SourceScreen
 from .update import UpdateScreen
 
@@ -20,6 +21,7 @@ __all__ = [
     "ExportScreen",
     "FilterPromptScreen",
     "HelpScreen",
+    "MaintenanceScreen",
     "NewMilestoneScreen",
     "NewPlanScreen",
     "NewTaskScreen",

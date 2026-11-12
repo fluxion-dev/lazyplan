@@ -384,29 +384,31 @@ class TestStore(unittest.TestCase):
             Store(legacy)
 
     def test_migrate_archive_columns_without_losing_rows(self):
-        plan = self.store.add_plan("Keep")
-        milestone = self.store.add_milestone(plan.id, "Slice")
-        self.store.add_task(milestone.id, "Work")
-        session, _previous = self.store.start_session(
-            "builder", plan_id=plan.id, repo_path=self.tmp.name
-        )
-        before = self.store.counts()
-
-        # A database written before archive columns existed.
-        with closing(sqlite3.connect(self.db)) as conn:
-            conn.execute("DROP INDEX IF EXISTS idx_plans_archived")
-            conn.execute("DROP INDEX IF EXISTS idx_sessions_archived")
-            conn.execute("ALTER TABLE plans DROP COLUMN archived_at")
-            conn.execute("ALTER TABLE sessions DROP COLUMN archived_at")
+        legacy = os.path.join(self.tmp.name, "legacy-archive.db")
+        previous = migrate_mod.SCHEMA.replace(",\n    archived_at REAL NOT NULL DEFAULT 0", "")
+        self.assertNotIn("archived_at", previous)
+        with closing(sqlite3.connect(legacy)) as conn:
+            conn.executescript(previous)
+            conn.execute(
+                "INSERT INTO plans (name, description, status, goal, uid)"
+                " VALUES ('Keep', '', 'todo', '', 'uid-keep')"
+            )
+            conn.execute("INSERT INTO milestones (plan_id, title) VALUES (1, 'Slice')")
+            conn.execute("INSERT INTO tasks (milestone_id, title) VALUES (1, 'Work')")
+            conn.execute(
+                "INSERT INTO sessions (actor, repo_path, started_at, last_seen_at)"
+                " VALUES ('builder', '/tmp/checkout', 100, 100)"
+            )
             conn.execute(f"PRAGMA user_version = {migrate_mod.SCHEMA_VERSION - 1}")
             conn.commit()
 
-        reopened = Store(self.db)
-        self.assertEqual(reopened.counts(), before)
-        self.assertEqual(reopened.get_plan(plan.id).name, "Keep")
-        self.assertEqual(reopened.get_session(session.id).actor, "builder")
+        reopened = Store(legacy)
+        counts = reopened.counts()
+        self.assertEqual((counts["plans"], counts["milestones"], counts["tasks"]), (1, 1, 1))
+        self.assertEqual(reopened.get_plan(1).name, "Keep")
+        self.assertEqual(reopened.get_session(1).actor, "builder")
 
-        with closing(sqlite3.connect(self.db)) as conn:
+        with closing(sqlite3.connect(legacy)) as conn:
             self.assertEqual(
                 int(conn.execute("PRAGMA user_version").fetchone()[0]),
                 migrate_mod.SCHEMA_VERSION,
@@ -417,9 +419,8 @@ class TestStore(unittest.TestCase):
                 indexes = {row[1] for row in conn.execute(f"PRAGMA index_list({table})")}
                 self.assertIn(f"idx_{table}_archived", indexes)
 
-        # Reopening a migrated database is a no-op, not a duplicate migration.
-        again = Store(self.db)
-        self.assertEqual(again.counts(), before)
+        again = Store(legacy)
+        self.assertEqual(again.counts(), counts)
 
     def test_export_import_roundtrip(self):
         p = self.store.add_plan("P", goal="g")

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import io
+import sqlite3
 import sys
 from pathlib import Path
 
@@ -197,6 +198,16 @@ def main(argv: list[str] | None = None) -> int:
     try:
         store = Store(args.db)
     except RuntimeError as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 2
+    except sqlite3.OperationalError as exc:
+        text = str(exc).lower()
+        if "locked" in text or "busy" in text:
+            print(
+                "error: database is busy; stop other writers and retry",
+                file=sys.stderr,
+            )
+            return 1
         print(msg_error(exc), file=sys.stderr)
         return 2
     return _run_command(store, args, actor)

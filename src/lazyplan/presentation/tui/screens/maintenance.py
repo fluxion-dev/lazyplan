@@ -74,7 +74,9 @@ if _TEXTUAL_OK:
                     HubEntry(
                         0,
                         f"trim  {table} · {count}",
-                        f"target {table}\nrows   {count}\n\nTrim deletes derived rows only.",
+                        f"target {table}\nrows   {count}\n\n"
+                        "Trim deletes derived link rows only; plan text, criteria, "
+                        "notes, comments, and evidence are kept.",
                         "trim",
                         table,
                     )

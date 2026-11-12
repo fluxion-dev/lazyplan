@@ -140,7 +140,8 @@ class TestMaintenanceFixture(unittest.TestCase):
 
         with closing(sqlite3.connect(self.db)) as conn:
             self.assertEqual(
-                conn.execute("SELECT COUNT(*) FROM notes WHERE parent_id=999999").fetchone()[0], 0
+                conn.execute("SELECT COUNT(*) FROM notes WHERE parent_id=999999").fetchone()[0],
+                100,
             )
             self.assertEqual(
                 conn.execute(

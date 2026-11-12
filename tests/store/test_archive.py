@@ -40,26 +40,21 @@ class TestStoreArchive(unittest.TestCase):
         self.assertEqual(again.archived_at, 123.0)
         self.assertEqual(len(self._events("plan", "archive")), 1)
 
-    def test_archive_sessions_releases_leases_owned_by_the_session(self) -> None:
+    def test_archive_sessions_keeps_claims_made_after_the_session_ended(self) -> None:
         plan = self.store.add_plan("Work")
         milestone = self.store.add_milestone(plan.id, "Slice")
-        mine = self.store.add_task(milestone.id, "Mine")
-        other = self.store.add_task(milestone.id, "Other")
+        task = self.store.add_task(milestone.id, "Task")
         session, _previous = self.store.start_session(
             "builder", plan_id=plan.id, repo_path=self.tmp.name, now=100.0
         )
         self.store.end_session(session.id, "builder", summary="done", now=200.0)
         self.store.claim_task(
-            mine.id, "builder", ttl_seconds=10_000, now=300.0, repo_path=self.tmp.name
-        )
-        self.store.claim_task(
-            other.id, "reviewer", ttl_seconds=10_000, now=300.0, repo_path="/elsewhere"
+            task.id, "builder", ttl_seconds=10_000, now=300.0, repo_path=self.tmp.name
         )
 
         self.assertEqual(self.store.archive_sessions([session.id], actor="builder", now=400.0), 1)
 
-        self.assertIsNone(self.store.get_claim(mine.id))
-        self.assertIsNotNone(self.store.get_claim(other.id))
+        self.assertIsNotNone(self.store.get_claim(task.id))
 
     def test_restore_plan_clears_and_logs_once(self) -> None:
         plan = self.store.add_plan("Old work")

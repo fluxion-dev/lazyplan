@@ -12,8 +12,10 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
   `maint trim`, and `maint vacuum` preview by default and write only with
   `--apply`; `maint restore --plan` or `--session` returns an archived row.
   Every apply starts with a verified `lazyplan.db.bak-<timestamp>` snapshot and
-  plain plan text is never trimmed. The TUI `m` hub shows the same candidate
-  counts, and MCP exposes a read-only report plus apply-gated write tools.
+  only derived link rows and old non-status events are trimmed; plan text,
+  criteria, evidence, notes, and comments are never trimmed. The TUI `m` hub
+  shows the same candidate counts, and MCP exposes a read-only report plus
+  apply-gated write tools.
 
 ### Changed
 

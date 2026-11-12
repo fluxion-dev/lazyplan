@@ -9,6 +9,8 @@ import time
 import unittest
 from contextlib import closing
 
+from lazyplan import services
+from lazyplan.core.entities import Status
 from lazyplan.services import maintenance
 from lazyplan.store import Store
 
@@ -95,11 +97,11 @@ class TestMaintenanceTrim(unittest.TestCase):
         self.assertEqual(counts["task_touchpoints"], 1)
         self.assertEqual(counts["forge_cache"], 1)
         self.assertEqual(counts["forge_links"], 2)
-        self.assertEqual(counts["notes"], 1)
-        self.assertEqual(counts["comments"], 1)
-        self.assertEqual(counts["criteria"], 1)
+        self.assertNotIn("notes", counts)
+        self.assertNotIn("comments", counts)
+        self.assertNotIn("criteria", counts)
         self.assertEqual(counts["criterion_links"], 1)
-        self.assertEqual(counts["criterion_evidence"], 1)
+        self.assertNotIn("criterion_evidence", counts)
         self.assertEqual(counts["entity_keys"], 1)
         self.assertEqual(counts["entity_repos"], 1)
         self.assertEqual(counts["issue_links"], 1)
@@ -123,16 +125,16 @@ class TestMaintenanceTrim(unittest.TestCase):
         states = [link.state for link in self.store.list_forge_links("task", self.live_task.id)]
         self.assertEqual(states, ["open"])
 
-        self.assertEqual(self._count("SELECT COUNT(*) FROM notes"), 1)
-        self.assertEqual(self._count("SELECT COUNT(*) FROM comments"), 1)
-        self.assertEqual(self._count("SELECT COUNT(*) FROM criteria"), 1)
+        self.assertEqual(self._count("SELECT COUNT(*) FROM notes"), 2)
+        self.assertEqual(self._count("SELECT COUNT(*) FROM comments"), 2)
+        self.assertEqual(self._count("SELECT COUNT(*) FROM criteria"), 2)
         self.assertEqual(self._count("SELECT COUNT(*) FROM criterion_links"), 0)
-        self.assertEqual(self._count("SELECT COUNT(*) FROM criterion_evidence"), 0)
+        self.assertEqual(self._count("SELECT COUNT(*) FROM criterion_evidence"), 1)
         self.assertEqual(self._count("SELECT COUNT(*) FROM entity_keys"), 0)
         self.assertEqual(self._count("SELECT COUNT(*) FROM entity_repos"), 0)
         self.assertEqual(self._count("SELECT COUNT(*) FROM issue_links"), 0)
         self.assertEqual(self._count("SELECT COUNT(*) FROM vcs_links"), 1)
-        self.assertEqual(counts["notes"], 1)
+        self.assertNotIn("notes", counts)
         self.assertEqual(counts["vcs_links"], 1)
 
         self.assertEqual(
@@ -169,6 +171,37 @@ class TestMaintenanceTrim(unittest.TestCase):
             details = {row[0] for row in conn.execute("SELECT detail FROM events")}
         self.assertIn("new", details)
         self.assertNotIn("old", details)
+
+    def test_status_events_survive_trim_and_keep_the_finished_filter(self) -> None:
+        plan = self.store.add_plan("Done old")
+        services.set_status(self.store, "plan", plan.id, Status.DONE)
+        with closing(sqlite3.connect(self.db)) as conn:
+            conn.execute(
+                "UPDATE events SET ts=? WHERE detail LIKE ?",
+                (OLD, f"plan #{plan.id} -> done%"),
+            )
+            conn.execute(
+                "INSERT INTO events (ts, actor, kind, action, detail)"
+                " VALUES (?, 'x', 'x', 'note', 'old non-status')",
+                (OLD,),
+            )
+            conn.commit()
+
+        self._counts(apply=True)
+
+        with closing(sqlite3.connect(self.db)) as conn:
+            status_events = conn.execute(
+                "SELECT COUNT(*) FROM events WHERE detail LIKE ?",
+                (f"plan #{plan.id} -> done%",),
+            ).fetchone()[0]
+            detail = conn.execute(
+                "SELECT COUNT(*) FROM events WHERE detail='old non-status'"
+            ).fetchone()[0]
+        self.assertEqual(status_events, 1)
+        self.assertEqual(detail, 0)
+        self.assertNotIn(plan.id, [row[0].id for row in services.tree(self.store)])
+        preview = maintenance.archive(self.store, now=NOW, days="1", apply=False)
+        self.assertIn(plan.id, preview.plans)
 
 
 if __name__ == "__main__":

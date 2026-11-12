@@ -146,22 +146,17 @@ class MaintenanceMixin(StoreBase):
 
     @staticmethod
     def _orphan_targets() -> tuple[TrimTarget, ...]:
-        """Derived child rows whose plan, milestone, task, or criterion is gone."""
+        """Derived link rows whose plan, milestone, task, or criterion is gone.
+
+        User-authored text (criteria, evidence, notes, comments) is never a
+        trim target, even when its parent row is missing.
+        """
         return (
             TrimTarget(
                 "criterion_links",
                 "NOT EXISTS (SELECT 1 FROM criteria c WHERE c.id=criterion_id)"
                 " OR NOT EXISTS (SELECT 1 FROM tasks t WHERE t.id=task_id)",
             ),
-            TrimTarget(
-                "criterion_evidence",
-                "NOT EXISTS (SELECT 1 FROM criteria c WHERE c.id=criterion_id)"
-                " OR (task_id IS NOT NULL"
-                " AND NOT EXISTS (SELECT 1 FROM tasks t WHERE t.id=task_id))",
-            ),
-            TrimTarget("criteria", _MISSING_PARENT),
-            TrimTarget("notes", _MISSING_PARENT),
-            TrimTarget("comments", _MISSING_PARENT),
             TrimTarget("entity_keys", _MISSING_KIND),
             TrimTarget("entity_repos", _MISSING_PARENT),
             TrimTarget("issue_links", _MISSING_ROW_KIND),
@@ -170,8 +165,8 @@ class MaintenanceMixin(StoreBase):
 
     @staticmethod
     def _event_targets(cutoff: float) -> tuple[TrimTarget, ...]:
-        """Events older than the window."""
-        return (TrimTarget("events", "ts < ?", (cutoff,)),)
+        """Old non-status events; status events are the archive policy input."""
+        return (TrimTarget("events", "ts < ? AND action <> 'status'", (cutoff,)),)
 
     @classmethod
     def _trim_targets(cls, now: float, cutoff: float) -> tuple[TrimTarget, ...]:

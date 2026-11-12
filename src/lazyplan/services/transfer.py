@@ -205,6 +205,13 @@ def _import_refs(store: TransferPort, plan_id: int, items: list, actor: str) -> 
     return count
 
 
+def _restore_plan_archive(store: TransferPort, plan_id: int, item: dict, actor: str) -> None:
+    """Reapply an exported archive stamp to one imported plan."""
+    archived_at = float(item.get("archived_at", 0) or 0)
+    if archived_at > 0:
+        cast(MaintenancePort, store).archive_plan(plan_id, actor=actor, now=archived_at)
+
+
 def _import_all(store: TransferPort, data: dict, actor: str = "human") -> dict[str, int]:
     """Load an export_all() dump. Returns counts.
 
@@ -401,9 +408,7 @@ def _import_all(store: TransferPort, data: dict, actor: str = "human") -> dict[s
         uid = str(p.get("uid", "") or "").strip()
         if uid and store.get_plan_by_uid(uid) is None:
             store.set_plan_uid(np.id, uid)
-        archived_at = float(p.get("archived_at", 0) or 0)
-        if archived_at > 0:
-            cast(MaintenancePort, store).archive_plan(np.id, actor=actor, now=archived_at)
+        _restore_plan_archive(store, np.id, p, actor)
         counts["plans"] += 1
         _import_criteria("plan", np.id, entry.get("criteria", []))
         counts["questions"] += _import_questions(store, np.id, entry.get("questions", []), actor)

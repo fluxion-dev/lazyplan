@@ -152,25 +152,6 @@ def tasks_block(tasks: list[dict[str, Any]]) -> PreviewBlock | None:
     return PreviewBlock(f"tasks {len(tasks)}", tuple(lines))
 
 
-def next_block(tasks: list[dict[str, Any]]) -> PreviewBlock | None:
-    """The first three open tasks."""
-    open_tasks = [task for task in tasks if task.get("status") != "done"]
-    if not open_tasks:
-        return None
-    return PreviewBlock(
-        "next",
-        tuple(
-            _row(
-                status_word(str(task.get("status", "")), "plain"),
-                _strong(f"T{task.get('id')}"),
-                escape_markdown(str(task.get("title", ""))),
-                sep=" ",
-            )
-            for task in open_tasks[:3]
-        ),
-    )
-
-
 def notes_block(notes: list[dict[str, Any]]) -> PreviewBlock | None:
     if not notes:
         return None
@@ -386,9 +367,6 @@ def build_plan(
     milestones = milestones_block(full.get("milestones", []))
     if milestones is not None:
         blocks.append(milestones)
-    next_tasks = next_block(_tasks("plan", full))
-    if next_tasks is not None:
-        blocks.append(next_tasks)
     blocks.extend(common_blocks(full, detailed_acceptance=True))
     return PreviewDocument(header, breadcrumb, (), tuple(blocks))
 

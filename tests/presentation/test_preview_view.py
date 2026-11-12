@@ -120,9 +120,14 @@ class PreviewDocumentTest(unittest.TestCase):
         full = self.store.get_full("plan", plan.id)
         assert full is not None
         text = build_preview(self.store, "plan", plan.id, full, []).render()
-        self.assertIn("Milestone \\*bold\\* \\[x\\]", text)
-        self.assertIn(f"**T{task.id}** Task \\#hash", text)
+        self.assertIn(f"**M{milestone.id}** Milestone \\*bold\\* \\[x\\]", text)
         self.assertIn("raw **prose**", text)
+        milestone_full = self.store.get_full("milestone", milestone.id)
+        assert milestone_full is not None
+        milestone_text = build_preview(
+            self.store, "milestone", milestone.id, milestone_full, []
+        ).render()
+        self.assertIn(f"**T{task.id}** Task \\#hash", milestone_text)
 
     def test_plan_preview_keeps_order_and_sections(self) -> None:
         full = self.store.get_full("plan", self.plan.id)
@@ -133,8 +138,10 @@ class PreviewDocumentTest(unittest.TestCase):
         self.assertIn("## WHY", text)
         self.assertIn("Why we build", text)
         self.assertIn("## WHAT", text)
-        self.assertIn("## NEXT", text)
-        self.assertIn("Task title", text)
+        self.assertIn("## MILESTONES 1", text)
+        self.assertIn("Milestone title", text)
+        self.assertNotIn("## NEXT", text)
+        self.assertNotIn("Task title", text)
 
     def test_plan_preview_milestones_are_header_rows(self) -> None:
         full = self.store.get_full("plan", self.plan.id)

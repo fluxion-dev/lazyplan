@@ -135,6 +135,11 @@ class TestMaintenanceParity(unittest.TestCase):
         self.assertEqual(rows[0][5], str(report["reclaimable_bytes"]))
         self.assertEqual(rows[0][6], str(report["file_bytes"]))
         self.assertEqual(rows[0][7], f"{report['window_days']:g}")
+        json_tables = {row["table"]: (row["bytes"], row["rows"]) for row in report["tables"]}
+        porcelain_tables = {
+            row[1]: (int(row[2]), int(row[3])) for row in rows if row[0] == "maint-table"
+        }
+        self.assertEqual(porcelain_tables, json_tables)
 
         code, out, err = self._cli("--porcelain", "maint", "trim")
         self.assertEqual(code, 0, err)

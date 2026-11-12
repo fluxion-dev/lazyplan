@@ -75,6 +75,26 @@ class TestMaintenanceVacuum(unittest.TestCase):
             any(path.name.endswith("-wal") for path in Path(self.tmp.name).glob("*.bak-*"))
         )
 
+    def test_vacuum_logs_one_completion_event_with_actor(self) -> None:
+        self._seed_dead_events()
+        maintenance.trim(self.store, days="1", apply=True)
+
+        result = maintenance.vacuum(self.store, apply=True, actor="qa")
+
+        events = [
+            event
+            for event in self.store.events_by_action("vacuum")
+            if event["kind"] == "maintenance"
+        ]
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["actor"], "qa")
+        detail = str(events[0]["detail"])
+        prefix = f"vacuumed {result.before_bytes} -> "
+        self.assertTrue(detail.startswith(prefix), detail)
+        event_after = int(detail.removeprefix(prefix).split()[0])
+        self.assertLessEqual(event_after, result.after_bytes)
+        self.assertLessEqual(result.after_bytes - event_after, 4096)
+
     def test_vacuum_fails_fast_when_the_database_is_busy(self) -> None:
         locker = sqlite3.connect(self.db, isolation_level=None)
         try:

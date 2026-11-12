@@ -312,6 +312,68 @@ class TestMaintenanceTrim(unittest.TestCase):
             ).fetchone()[0]
         self.assertEqual(kept, 0)
 
+    def test_normalized_plan_ids_survive_trim(self) -> None:
+        plans = [self.store.add_plan(f"Normalized {index}") for index in range(3)]
+        large = 123_456
+        for plan in plans:
+            self.store.set_status_raw("plan", plan.id, Status.DONE)
+        with closing(sqlite3.connect(self.db)) as conn:
+            conn.execute(
+                "INSERT INTO plans (id, name, description, status, goal, uid)"
+                " VALUES (?, 'Large plan', '', 'done', '', 'uid-large')",
+                (large,),
+            )
+            for index, plan in enumerate(plans):
+                details = (
+                    f"plan #{plan.id} -> done",
+                    f"plan # {plan.id} -> done",
+                    f"plan #{plan.id:02d} -> done",
+                )
+                conn.execute(
+                    "INSERT INTO events (ts, actor, kind, action, detail)"
+                    " VALUES (?, 'x', 'plan', 'status', ?)",
+                    (OLD + index, details[index]),
+                )
+            conn.execute(
+                "INSERT INTO events (ts, actor, kind, action, detail)"
+                " VALUES (?, 'x', 'plan', 'status', ?)",
+                (OLD + 5, f"Plan #{plans[0].id} -> done"),
+            )
+            conn.execute(
+                "INSERT INTO events (ts, actor, kind, action, detail)"
+                " VALUES (?, 'x', 'plan', 'status', ?)",
+                (OLD + 6, f"plan #{large} -> done"),
+            )
+            conn.commit()
+        self.store.set_status_raw("plan", large, Status.DONE)
+
+        self._counts(apply=True)
+
+        expected = {
+            f"plan #{plans[0].id} -> done",
+            f"plan # {plans[1].id} -> done",
+            f"plan #{plans[2].id:02d} -> done",
+            f"plan #{large} -> done",
+        }
+        with closing(sqlite3.connect(self.db)) as conn:
+            details = {
+                row[0]
+                for row in conn.execute(
+                    "SELECT detail FROM events WHERE kind='plan' AND action='status'"
+                )
+            }
+        self.assertEqual(details, expected)
+        mapped = self.store.plan_status_events_map()
+        for plan_id in (*[plan.id for plan in plans], large):
+            self.assertIn(plan_id, mapped)
+            self.assertEqual(mapped[plan_id][1], "done")
+        visible = {row[0].id for row in services.tree(self.store)}
+        for plan_id in (*[plan.id for plan in plans], large):
+            self.assertNotIn(plan_id, visible)
+        preview = maintenance.archive(self.store, now=NOW, days="1", apply=False)
+        for plan_id in (*[plan.id for plan in plans], large):
+            self.assertIn(plan_id, preview.plans)
+
     def test_status_events_survive_trim_and_keep_the_finished_filter(self) -> None:
         plan = self.store.add_plan("Done old")
         services.set_status(self.store, "plan", plan.id, Status.DONE)

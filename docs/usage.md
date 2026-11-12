@@ -912,7 +912,10 @@ tokens.
 - `archive`, `trim`, and `vacuum` preview by default. Every `--apply` writes
   `lazyplan.db.bak-<timestamp>` beside the database with SQLite's backup API,
   runs `PRAGMA integrity_check`, compares plan, task, and event counts, and
-  copies `sessions/bindings`. If the snapshot fails, nothing is mutated.
+  copies `sessions/bindings`. If the snapshot fails, nothing is mutated. If
+  the process dies after the copy but before journal-mode conversion, an
+  unverified `.bak-*` can remain; the live database is untouched. Remove it
+  manually; the next apply writes a fresh snapshot.
 - Windows stay at one week for plans, sessions, and events unless `--days 30`
   or `--days 30.days` overrides them for that run.
 - In the screen, `m` opens the maintenance hub with the same counts, preview,

@@ -174,15 +174,18 @@ class MaintenanceMixin(StoreBase):
         The newest plan status event per plan is the finished/archive policy
         input and always survives; task and milestone status events do not.
         """
+        plan_id = (
+            "CAST(substr(ltrim(substr(e.detail, 7)), 1,"
+            " instr(ltrim(substr(e.detail, 7)), ' ') - 1) AS INTEGER)"
+        )
         where = (
             "ts < ? AND (action <> 'status' OR kind <> 'plan'"
             " OR detail NOT GLOB 'plan #* -> *'"
             " OR id NOT IN ("
             "SELECT MAX(e.id) FROM events e"
             " WHERE e.kind='plan' AND e.action='status' AND e.detail GLOB 'plan #* -> *'"
-            " AND EXISTS (SELECT 1 FROM plans p WHERE p.id = CAST("
-            "substr(e.detail, 7, instr(substr(e.detail, 7), ' ') - 1) AS INTEGER))"
-            " GROUP BY substr(e.detail, 7, instr(substr(e.detail, 7), ' ') - 1)))"
+            f" AND EXISTS (SELECT 1 FROM plans p WHERE p.id = {plan_id})"
+            f" GROUP BY {plan_id}))"
         )
         return (TrimTarget("events", where, (cutoff,)),)
 

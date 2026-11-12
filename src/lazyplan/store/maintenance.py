@@ -307,6 +307,9 @@ class MaintenanceMixin(StoreBase):
         return MaintenanceReport(
             method=measure.method,
             tables=measure.tables,
+            candidates=tuple(
+                TableCount(table, rows) for table, rows in measure.trim_counts.items()
+            ),
             used_bytes=measure.used_bytes,
             file_bytes=self._file_size(),
             free_bytes=measure.free_pages * measure.page_size,

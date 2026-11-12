@@ -892,7 +892,10 @@ tokens.
   `dbstat` is unavailable), then prints used bytes, the database file size, row
   counts per table, free pages, and a reclaimable estimate for the window.
   Table bytes include their indexes; `--days 30` sets the estimate window and
-  `--json`/`--porcelain` use the same fields as every other command.
+  `--json`/`--porcelain` use the same fields as every other command. On SQLite
+  builds without `dbstat` (including Apple's), the method is `page_count`,
+  per-table bytes are unavailable, and the reclaimable estimate counts free
+  pages only.
 - `lpui maint archive` previews done plans and ended sessions past the window;
   `--apply` archives them after a verified snapshot.
 - `lpui maint restore --plan 3` and `lpui maint restore --session 4` are

@@ -42,6 +42,7 @@ class MaintenanceReport:
 
     method: str = "dbstat"
     tables: tuple[TableBytes, ...] = ()
+    candidates: tuple[TableCount, ...] = ()
     used_bytes: int = 0
     file_bytes: int = 0
     free_bytes: int = 0

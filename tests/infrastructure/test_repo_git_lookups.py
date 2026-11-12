@@ -90,6 +90,19 @@ class GitLookupsCase(unittest.TestCase):
             repo.find_repo_root(self.top)
         self.assertEqual(run.call_count, 2)
 
+    def test_a_folder_outside_any_repository_never_starts_git(self):
+        with mock.patch.object(repo.subprocess, "run", wraps=subprocess.run) as run:
+            self.assertIsNone(repo._git_toplevel(self.plain))
+            self.assertEqual(repo.git_common_dir(self.plain), "")
+        self.assertEqual(run.call_count, 0)
+
+    def test_a_bare_repository_and_git_dir_still_ask_git(self):
+        with mock.patch.object(repo.subprocess, "run", wraps=subprocess.run) as run:
+            repo.git_common_dir(self.bare)
+            with mock.patch.dict(repo.os.environ, {"GIT_DIR": str(self.top / ".git")}):
+                repo.git_common_dir(self.plain)
+        self.assertEqual(run.call_count, 2)
+
     def test_a_missing_git_is_outside_a_checkout(self):
         with mock.patch.object(repo.subprocess, "run", side_effect=FileNotFoundError("git")):
             self.assertIsNone(repo._git_toplevel(self.top))

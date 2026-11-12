@@ -44,7 +44,7 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
   keep the active plan and task ids.
 - **Hooks are faster.** A hook asks git for the checkout once instead of up to
   three times, which saves about a fifth of every hook and a third of Stop on
-  Windows.
+  Windows, and a hook outside any repository does not start git at all.
 
 ## v0.41.0 — unreleased
 

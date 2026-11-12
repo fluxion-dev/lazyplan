@@ -126,12 +126,28 @@ def _git_dirs(cwd: str | Path) -> _GitDirs:
     key = _lookup_key(cwd)
     if cache is not None and key in cache:
         return cache[key]
-    found = _rev_parse_dirs(cwd)
+    found = _rev_parse_dirs(cwd) if _may_be_in_git(cwd) else (None, "")
     if cache is not None:
         cache[key] = found
         if found[0] is not None:
             cache.setdefault(_lookup_key(found[0]), found)
     return found
+
+
+def _may_be_in_git(cwd: str | Path) -> bool:
+    """False only when no folder from *cwd* up holds a `.git` or a bare repository."""
+    if os.environ.get("GIT_DIR"):
+        return True
+    try:
+        start = Path(cwd).resolve()
+    except OSError:
+        return True
+    for folder in (start, *start.parents):
+        if (folder / ".git").exists():
+            return True
+        if (folder / "HEAD").is_file() and (folder / "objects").is_dir():
+            return True
+    return False
 
 
 def _rev_parse_dirs(cwd: str | Path) -> _GitDirs:

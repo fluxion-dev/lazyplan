@@ -7,12 +7,14 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
+from ..core.errors import MaintenanceBusy
 from ..core.policies.maintenance import DEFAULT_WINDOW_SECS, event_cutoff
 from ..core.ports.maintenance import (
     MaintenanceReport,
     TableBytes,
     TableCount,
     TrimResult,
+    VacuumResult,
 )
 from .base import StoreBase
 
@@ -218,3 +220,43 @@ class MaintenanceMixin(StoreBase):
                         target.params,
                     )
         return TrimResult(tables=counts, applied=apply)
+
+    def _freelist_pages(self, timeout: float = 1.0) -> int:
+        """Free pages in the database, with a short wait for a competing writer."""
+        conn = sqlite3.connect(str(self.path), timeout=timeout)
+        try:
+            return int(conn.execute("PRAGMA freelist_count").fetchone()[0])
+        finally:
+            conn.close()
+
+    def vacuum(self) -> VacuumResult:
+        """Reclaim free pages outside a transaction; fail fast when the file is busy."""
+        path = Path(self.path).expanduser()
+        before_bytes = self._file_size()
+        try:
+            before_free = self._freelist_pages()
+        except sqlite3.OperationalError as exc:
+            raise MaintenanceBusy(
+                "database is busy; stop other writers and retry `maint vacuum`"
+            ) from exc
+        try:
+            conn = sqlite3.connect(str(path), timeout=1.0, isolation_level=None)
+            try:
+                conn.execute("PRAGMA busy_timeout = 1000")
+                conn.execute("VACUUM")
+            finally:
+                conn.close()
+        except sqlite3.OperationalError as exc:
+            text = str(exc).lower()
+            if "locked" in text or "busy" in text:
+                raise MaintenanceBusy(
+                    "database is busy; stop other writers and retry `maint vacuum`"
+                ) from exc
+            raise
+        return VacuumResult(
+            before_bytes=before_bytes,
+            after_bytes=self._file_size(),
+            before_free_pages=before_free,
+            after_free_pages=self._freelist_pages(),
+            applied=True,
+        )

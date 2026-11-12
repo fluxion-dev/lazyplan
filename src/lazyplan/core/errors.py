@@ -43,3 +43,15 @@ class TouchpointOverlap(ClaimError):
         super().__init__(
             f"task #{task_id} overlaps active claim on task #{other_task} by {actor}: {joined}"
         )
+
+
+class MaintenanceError(RuntimeError):
+    """Base error for maintenance report, trim, vacuum, and snapshots."""
+
+
+class MaintenanceBusy(MaintenanceError):
+    """Another writer holds the database and VACUUM cannot start."""
+
+
+class MaintenanceBackupError(MaintenanceError):
+    """The pre-write snapshot could not be verified, so nothing was mutated."""

@@ -102,10 +102,13 @@ class TrimResult:
 
 @dataclass(frozen=True)
 class VacuumResult:
-    """File size before and after VACUUM, plus the bytes reclaimed."""
+    """File size and free pages before and after VACUUM."""
 
     before_bytes: int = 0
     after_bytes: int = 0
+    before_free_pages: int = 0
+    after_free_pages: int = 0
+    applied: bool = True
 
     @property
     def freed_bytes(self) -> int:
@@ -117,7 +120,10 @@ class VacuumResult:
         return {
             "before_bytes": self.before_bytes,
             "after_bytes": self.after_bytes,
+            "before_free_pages": self.before_free_pages,
+            "after_free_pages": self.after_free_pages,
             "freed_bytes": self.freed_bytes,
+            "applied": self.applied,
         }
 
 

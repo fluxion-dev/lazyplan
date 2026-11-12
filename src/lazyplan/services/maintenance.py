@@ -7,6 +7,7 @@ from ..core.ports.maintenance import (
     MaintenancePort,
     MaintenanceReport,
     TrimResult,
+    VacuumResult,
 )
 
 
@@ -30,3 +31,8 @@ def trim(
 ) -> TrimResult:
     """Preview derived-row trims, or write them when *apply* is true."""
     return port.trim(now=now, window_secs=_window_secs(days), apply=apply)
+
+
+def vacuum(port: MaintenancePort) -> VacuumResult:
+    """Reclaim free pages and report the file size before and after."""
+    return port.vacuum()

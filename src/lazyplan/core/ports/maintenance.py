@@ -53,12 +53,18 @@ class MaintenanceReport:
         return {
             "method": self.method,
             "tables": [row.to_dict() for row in self.tables],
+            "total_bytes": self.used_bytes,
             "used_bytes": self.used_bytes,
             "file_bytes": self.file_bytes,
             "free_bytes": self.free_bytes,
             "reclaimable_bytes": self.reclaimable_bytes,
             "window_days": self.window_days,
         }
+
+    @property
+    def total_bytes(self) -> int:
+        """Backward-compatible alias for the used-bytes total."""
+        return self.used_bytes
 
 
 @dataclass(frozen=True)

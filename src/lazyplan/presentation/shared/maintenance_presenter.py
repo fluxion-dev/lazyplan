@@ -49,9 +49,8 @@ def report_rows(report: MaintenanceReport) -> list[str]:
             "report",
             report.method,
             report.used_bytes,
-            report.file_bytes,
-            f"free={report.free_bytes} reclaim={report.reclaimable_bytes} "
-            f"window={report.window_days}d",
+            report.free_bytes,
+            f"{report.reclaimable_bytes} file={report.file_bytes} window={report.window_days}d",
         )
     ]
     rows.extend(

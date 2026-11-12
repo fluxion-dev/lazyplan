@@ -105,6 +105,7 @@ class TestMaintenanceParity(unittest.TestCase):
             {
                 "method",
                 "tables",
+                "total_bytes",
                 "used_bytes",
                 "file_bytes",
                 "free_bytes",

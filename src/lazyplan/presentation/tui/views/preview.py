@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import time
 from dataclasses import dataclass
 from typing import Any
@@ -78,17 +79,35 @@ def _row(*parts: object, sep: str = " · ") -> str:
     return "- " + sep.join(str(part) for part in parts if str(part))
 
 
-HEADLINE_LIMIT = 120
+NONE_YET = "_None yet._"
+_HEADING = re.compile(r"^( {0,3})(#{1,6})(?=[ \t]|$)")
+_FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
 
 
-def headline(text: str, limit: int = HEADLINE_LIMIT) -> str:
-    """One paragraph collapsed to a single clamped line."""
-    paragraph = text.strip().split("\n\n", 1)[0]
-    line = " ".join(paragraph.split())
-    if len(line) <= limit:
-        return line
-    cut = line[:limit].rsplit(" ", 1)[0].rstrip(" ,;:.-")
-    return f"{cut}…"
+def nest_headings(text: str) -> str:
+    """Push ATX headings outside code fences two levels down, capped at H6."""
+    lines: list[str] = []
+    fence = ""
+    for line in text.splitlines():
+        opener = _FENCE.match(line)
+        if fence:
+            if opener and opener.group(1)[0] == fence[0] and len(opener.group(1)) >= len(fence):
+                fence = ""
+        elif opener:
+            fence = opener.group(1)
+        else:
+            heading = _HEADING.match(line)
+            if heading:
+                indent, marks = heading.groups()
+                line = indent + "#" * min(6, len(marks) + 2) + line[heading.end() :]
+        lines.append(line)
+    return "\n".join(lines)
+
+
+def details_block(heading: str, text: object) -> PreviewBlock:
+    """One details section; an empty field still shows its heading."""
+    body = str(text or "").strip()
+    return PreviewBlock(heading, (nest_headings(body) if body else NONE_YET,))
 
 
 def _child_row(letter: str, oid: object, title: object, suffix: str = "") -> str:
@@ -313,14 +332,11 @@ def build_plan(
     obj = full.get("plan", {})
     header, meta_line = _title("plan", oid, obj, full)
     blocks: list[PreviewBlock] = []
+    blocks.append(details_block("why", obj.get("goal")))
+    blocks.append(details_block("what", obj.get("description")))
     questions = questions_block(full.get("questions", []))
     if questions is not None:
         blocks.append(questions)
-    goal = str(obj.get("goal", "") or "").strip()
-    desc = str(obj.get("description", "") or "").strip()
-    lead = goal or desc
-    if lead:
-        blocks.append(PreviewBlock("why" if goal else "what", (headline(lead),)))
     approval = approval_block(full.get("approval"))
     if approval is not None:
         blocks.append(approval)
@@ -346,9 +362,7 @@ def build_milestone(
     obj = full.get("milestone", {})
     header, meta_line = _title("milestone", oid, obj, full)
     blocks: list[PreviewBlock] = []
-    desc = str(obj.get("description", "") or "").strip()
-    if desc:
-        blocks.append(PreviewBlock("details", (headline(desc),)))
+    blocks.append(details_block("details", obj.get("description")))
     tasks = tasks_block(_milestone_tasks(full))
     if tasks is not None:
         blocks.append(tasks)
@@ -365,9 +379,7 @@ def build_task(
     obj = full.get("task", {})
     header, meta_line = _title("task", oid, obj, full)
     blocks: list[PreviewBlock] = []
-    desc = str(obj.get("description", "") or "").strip()
-    if desc:
-        blocks.append(PreviewBlock("details", (desc,)))
+    blocks.append(details_block("details", obj.get("description")))
     proof = proof_block(full.get("criteria", []))
     if proof is not None:
         blocks.append(proof)

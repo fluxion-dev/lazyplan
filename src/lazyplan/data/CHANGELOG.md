@@ -5,6 +5,12 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
 
 ## Unreleased
 
+### Fixed
+
+- **Source trails reach symlinked checkouts.** A commit recorded through a
+  symlinked path now groups with its resolved checkout, so macOS checkouts and
+  other symlinked repos show their commits instead of an empty repo row.
+
 ### Changed
 
 - **The overview is a header list.** A plan lists its milestones and a

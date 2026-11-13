@@ -69,6 +69,18 @@ class IntegrationFindingsTest(HealthCase):
         report = self.check()
         self.assertEqual(report.findings, ())
 
+    def test_a_skill_deleted_after_install_is_an_open_fixable_finding(self):
+        self.install_skill()
+        hook_install.install(self.home, ["claude"])
+        for item in catalog(self.home):
+            if item.host in ("", "claude"):
+                self.remember(item.id, "installed")
+        self.assertEqual(self.check().findings, ())
+        (self.home / ".claude" / "skills" / "lazyplan" / "SKILL.md").unlink()
+        finding = self.by_id(self.check())[skill_id("lazyplan")]
+        self.assertTrue(finding.open)
+        self.assertTrue(finding.fixable)
+
     def test_undecided_findings_are_open(self):
         report = self.check()
         self.assertEqual(report.open, report.findings)

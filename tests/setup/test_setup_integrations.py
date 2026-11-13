@@ -90,14 +90,43 @@ class InspectionCase(unittest.TestCase):
         self.state.integration_choices[skill.id]["fingerprint"] = "old"
         self.assertIn(skill.id, {item.id for item in self.inspect("2.0").pending})
 
-    def test_installed_choice_does_not_repair_a_missing_file(self):
+    def test_installed_item_whose_file_was_removed_is_pending_again(self):
         skill = self.item(skill_id("lazyplan"))
         self.state.integration_choices[skill.id] = {
             "decision": "installed",
             "fingerprint": skill.fingerprint,
             "version": "1.0",
         }
-        self.assertNotIn(skill.id, {item.id for item in self.inspect().pending})
+        report = self.inspect()
+        self.assertIn(skill.id, {item.id for item in report.pending})
+        self.assertNotIn(skill.id, {item.id for item in report.suppressed})
+
+    def test_removed_hook_entry_is_pending_again(self):
+        hook_install.install(self.home, ["claude"])
+        for item in self.inspect().installed:
+            self.state.integration_choices[item.id] = {
+                "decision": "installed",
+                "fingerprint": item.fingerprint,
+                "version": "1.0",
+            }
+        settings_path = self.home / ".claude" / "settings.json"
+        data = json.loads(settings_path.read_text(encoding="utf-8"))
+        del data["hooks"]["Stop"]
+        settings_path.write_text(json.dumps(data), encoding="utf-8")
+        pending = {item.id for item in self.inspect().pending}
+        self.assertIn(hook_id("claude", "stop"), pending)
+        self.assertNotIn(hook_id("claude", "session-start"), pending)
+
+    def test_never_and_deferred_items_are_suppressed_not_pending(self):
+        skill = self.item(skill_id("lazyplan"))
+        self.state.integration_choices[skill.id] = {
+            "decision": "never",
+            "fingerprint": skill.fingerprint,
+            "version": "1.0",
+        }
+        report = self.inspect()
+        self.assertNotIn(skill.id, {item.id for item in report.pending})
+        self.assertIn(skill.id, {item.id for item in report.suppressed})
 
     def test_skills_and_hooks_opt_outs_remove_their_items(self):
         self.state.skills_enabled = False

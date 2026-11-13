@@ -112,23 +112,16 @@ def suppressing_decision(
     stored = remembered.get("fingerprint")
     if stored and stored != fingerprint:
         return ""
-    if decision in ("installed", "never"):
+    if decision == "never":
         return decision
     if decision == "deferred" and remembered.get("version", "") == version:
         return decision
     return ""
 
 
-def _pending(
-    item: IntegrationItem,
-    state: SetupState,
-    installed: set[str],
-    version: str,
-) -> bool:
-    if item.id in installed:
-        return False
+def _suppressed(item: IntegrationItem, state: SetupState, version: str) -> bool:
     remembered = state.integration_choices.get(item.id)
-    return not suppressing_decision(remembered, item.fingerprint, version)
+    return bool(suppressing_decision(remembered, item.fingerprint, version))
 
 
 def inspect(
@@ -148,14 +141,8 @@ def inspect(
     missing = tuple(
         item for item in items if _enabled(item, state, choice) and item.id not in installed_ids
     )
-    pending = tuple(item for item in missing if _pending(item, state, installed_ids, version))
-    suppressed = tuple(
-        item
-        for item in missing
-        if item not in pending
-        and suppressing_decision(state.integration_choices.get(item.id), item.fingerprint, version)
-        in ("never", "deferred")
-    )
+    pending = tuple(item for item in missing if not _suppressed(item, state, version))
+    suppressed = tuple(item for item in missing if _suppressed(item, state, version))
     return Inspection(installed=installed, pending=pending, suppressed=suppressed)
 
 

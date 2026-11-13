@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from ....core.entities import Status
 from ....core.kinds import LABEL_LETTERS, MILESTONE, PLAN, TASK
 from .row_stats import RowStats, render_stats, stats_layout
-from .text import _escape_markup, repo_project_name, status_prefix, status_word, truncate
+from .text import _escape_markup, repo_project_name, status_word, truncate
 
 if TYPE_CHECKING:
     from ....core.entities import Milestone, Plan, Task
@@ -34,6 +34,17 @@ def _label(kind: str, obj: Plan | Milestone | Task, store: InsightsPort | None, 
     return f"{status_word(obj.status, dot)} {_core(kind, obj, store)}"
 
 
+def _state_word(obj: Plan | Milestone | Task, attention: bool) -> str:
+    """One trailing word for a row that needs one; todo and done stay blank."""
+    if getattr(obj, "blocked", False):
+        return "blocked"
+    if attention:
+        return "review"
+    if obj.status == Status.DOING:
+        return "doing"
+    return ""
+
+
 def _render_row(
     kind: str,
     obj: Plan | Milestone | Task,
@@ -41,14 +52,14 @@ def _render_row(
     width: int | None,
     badge: str = "",
 ) -> str:
-    """Render one TUI row from the fixed stat slots."""
+    """Render one TUI row from the fixed word slots."""
     _letter, title_attr = _CORE_SPEC[kind]
     id_part = f"{_letter}{obj.id}"
     title = getattr(obj, title_attr)
     if badge:
         title = f"{title} {badge}"
-    prefix_rich = f"{status_prefix(obj.status)} [dim]{id_part}[/] "
-    prefix_plain = f"{status_word(obj.status)} {id_part} "
+    prefix_rich = f"[dim]{id_part}[/] "
+    prefix_plain = f"{id_part} "
     row_width = DEFAULT_ROW_WIDTH if width is None else width
     layout = stats_layout(kind, row_width, len(prefix_plain))
     stats_rich, stats_plain = render_stats(stats, layout)
@@ -76,8 +87,8 @@ def plan_row(
     attention: bool = False,
     worktrees: int = 0,
 ) -> str:
-    """TUI plan row (Rich markup): glyph + id + title + progress + attention."""
-    stats = RowStats(progress=progress, attention=attention)
+    """TUI plan row (Rich markup): id + title + count and state words."""
+    stats = RowStats(progress=progress, state=_state_word(p, attention))
     return _render_row("plan", p, stats, width, badge="wt" if worktrees else "")
 
 
@@ -93,8 +104,8 @@ def milestone_row(
     width: int | None = None,
     attention: bool = False,
 ) -> str:
-    """TUI milestone row (Rich markup): glyph + id + title + progress + attention."""
-    stats = RowStats(progress=progress, attention=attention)
+    """TUI milestone row (Rich markup): id + title + count and state words."""
+    stats = RowStats(progress=progress, state=_state_word(s, attention))
     return _render_row("milestone", s, stats, width)
 
 
@@ -114,6 +125,6 @@ def task_row(
     width: int | None = None,
     attention: bool = False,
 ) -> str:
-    """TUI task row (Rich markup): glyph + id + title + attention."""
-    stats = RowStats(attention=attention)
+    """TUI task row (Rich markup): id + title + one state word."""
+    stats = RowStats(state=_state_word(t, attention))
     return _render_row("task", t, stats, width)

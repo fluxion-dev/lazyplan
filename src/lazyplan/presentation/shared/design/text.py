@@ -69,16 +69,6 @@ def progress_text(done: int, total: int) -> str:
     return f"{done}/{total}"
 
 
-def progress_bar(done: int, total: int, width: int = 5) -> str:
-    """A one-cell-per-column bar: ``▰▰▰▱▱`` for ``3/5``."""
-    if total <= 0 or width <= 0:
-        return ""
-    filled = round(width * min(max(done, 0), total) / total)
-    if done > 0 and filled == 0:
-        filled = 1
-    return "▰" * filled + "▱" * (width - filled)
-
-
 def repo_project_name(repo: Mapping[str, object] | None) -> str:
     """Project name for a linked repo: remote repo name, else checkout basename."""
     if not repo:

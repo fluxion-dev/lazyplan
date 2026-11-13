@@ -65,7 +65,6 @@ from .text import STATUS_RICH as STATUS_RICH
 from .text import escape_markdown as escape_markdown
 from .text import escape_markup as escape_markup
 from .text import pr_chip as pr_chip
-from .text import progress_bar as progress_bar
 from .text import progress_text as progress_text
 from .text import repo_project_name as repo_project_name
 from .text import spinner_enabled as spinner_enabled
@@ -131,7 +130,6 @@ __all__ = [
     "plan_label",
     "plan_row",
     "pr_chip",
-    "progress_bar",
     "progress_text",
     "repo_project_name",
     "render_stats",

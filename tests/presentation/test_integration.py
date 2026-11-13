@@ -29,7 +29,6 @@ except ImportError:  # pragma: no cover - textual not installed
 
 HOST_SESSION = "ses_01JABCDEF4Z"
 SPINNER = "".join(SPINNER_FRAMES)
-TASK_GLYPHS = {"○", "◐", "●"}
 
 
 @unittest.skipUnless(create_app is not None, "textual not installed")
@@ -49,15 +48,17 @@ class TestCombinedSurfaces(RefreshCase):
         body = app.query_one("#agents-body", Static)  # type: ignore[attr-defined]
         return Text.from_markup(str(body.content)).plain
 
-    def assert_task_row(self, app: object, task: object, attention: bool = False) -> None:
-        """A task row is a glyph, its id, its title, and at most the marker."""
+    def assert_task_row(self, app: object, task: object, state: str = "") -> None:
+        """A task row is its id, its title, and at most one state word."""
         text = self.plain_row(app, ("task", task.id)).strip()  # type: ignore[attr-defined]
         tokens = text.split()
-        self.assertIn(tokens[0], TASK_GLYPHS)
-        self.assertEqual(tokens[1], f"T{task.id}")
-        self.assertEqual(" ".join(tokens[2:]).removesuffix("!").strip(), task.title)
-        self.assertEqual(text.endswith("!"), attention)
-        for banned in ("@", "◉", "⚑", "blocked", "done", "0/"):
+        self.assertEqual(tokens[0], f"T{task.id}")
+        words = tokens[1:]
+        if state:
+            self.assertEqual(words[-1], state)
+            words = words[:-1]
+        self.assertEqual(" ".join(words), task.title)
+        for banned in ("○", "◐", "●", "@", "◉", "⚑", "!", "0/"):
             self.assertNotIn(banned, text)
 
     async def test_writes_keep_the_tree_task_rows_and_agents_in_step(self) -> None:
@@ -121,13 +122,13 @@ class TestCombinedSurfaces(RefreshCase):
             self.assertTrue(app.tree_controller.is_visible(app._row_nodes[("task", added.id)]))
 
             # Every visible task row keeps the milestone shape.
-            for task, attention in (
-                (self.task, False),
-                (second, False),
-                (blocked, True),
-                (added, False),
+            for task, state in (
+                (self.task, ""),
+                (second, "doing"),
+                (blocked, "blocked"),
+                (added, ""),
             ):
-                self.assert_task_row(app, self.store.get_task(task.id), attention=attention)
+                self.assert_task_row(app, self.store.get_task(task.id), state=state)
             self.assertTrue(app._row_nodes[plan_key].is_expanded)
 
             # A settled session swaps the spinner for the awaiting glyph.

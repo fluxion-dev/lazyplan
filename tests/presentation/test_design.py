@@ -211,6 +211,11 @@ class TestDesignSystem(unittest.TestCase):
         self.assertEqual(label, "○ P1 P")
         self.assertNotRegex(label, r"\[\d+/\d+✓\]")
 
+    def test_plan_row_marks_a_registered_worktree(self):
+        p = Plan(id=1, name="Plan")
+        self.assertIn("wt", design.plan_row(p, worktrees=1, width=80))
+        self.assertNotIn("wt", design.plan_row(p, worktrees=0, width=80))
+
     def test_plan_row_escapes_title(self):
         p = Plan(id=1, name="Ray [old]")
         row = design.plan_row(p, width=80)

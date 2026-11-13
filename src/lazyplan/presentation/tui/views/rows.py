@@ -30,7 +30,7 @@ class RowSpec:
         return self.render(width=width)
 
 
-def plan_spec(plan: Plan, progress: dict, attention: bool = False) -> RowSpec:
+def plan_spec(plan: Plan, progress: dict, attention: bool = False, worktrees: int = 0) -> RowSpec:
     """Build the width-independent renderer for one plan row."""
     return RowSpec(
         render=partial(
@@ -38,6 +38,7 @@ def plan_spec(plan: Plan, progress: dict, attention: bool = False) -> RowSpec:
             plan,
             progress=progress.get(("plan", plan.id)),
             attention=attention,
+            worktrees=worktrees,
         ),
         depth=3,
         status=plan.status,

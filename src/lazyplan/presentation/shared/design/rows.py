@@ -39,11 +39,14 @@ def _render_row(
     obj: Plan | Milestone | Task,
     stats: RowStats,
     width: int | None,
+    badge: str = "",
 ) -> str:
     """Render one TUI row from the fixed stat slots."""
     _letter, title_attr = _CORE_SPEC[kind]
     id_part = f"{_letter}{obj.id}"
     title = getattr(obj, title_attr)
+    if badge:
+        title = f"{title} {badge}"
     prefix_rich = f"{status_prefix(obj.status)} [dim]{id_part}[/] "
     prefix_plain = f"{status_word(obj.status)} {id_part} "
     row_width = DEFAULT_ROW_WIDTH if width is None else width
@@ -71,10 +74,11 @@ def plan_row(
     progress: tuple[int, int] | None = None,
     width: int | None = None,
     attention: bool = False,
+    worktrees: int = 0,
 ) -> str:
     """TUI plan row (Rich markup): glyph + id + title + progress + attention."""
     stats = RowStats(progress=progress, attention=attention)
-    return _render_row("plan", p, stats, width)
+    return _render_row("plan", p, stats, width, badge="wt" if worktrees else "")
 
 
 def milestone_label(s: Milestone, store: InsightsPort | None = None, dot: str = "plain") -> str:

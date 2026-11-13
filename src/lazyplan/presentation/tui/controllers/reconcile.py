@@ -224,6 +224,7 @@ class ReconcileMixin:
                     plan,
                     self._progress,
                     attention=("plan", plan.id) in self._attention,
+                    worktrees=len(self.app.store.list_plan_worktrees(plan.id)),
                 ),
                 bool(milestones),
             )

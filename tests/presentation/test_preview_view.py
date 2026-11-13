@@ -143,6 +143,32 @@ class PreviewDocumentTest(unittest.TestCase):
         self.assertNotIn("## NEXT", text)
         self.assertNotIn("Task title", text)
 
+    def test_plan_preview_shows_the_registered_worktree(self) -> None:
+        self.store.register_plan_worktree(
+            self.plan.id,
+            "/repos/lazyplan",
+            "/repos/lazyplan--plan-1-plan-title",
+            branch="plan/1-plan-title",
+        )
+        full = self.store.get_full("plan", self.plan.id)
+        assert full is not None
+
+        text = build_preview(self.store, "plan", self.plan.id, full, []).render()
+
+        self.assertIn("## WORKTREES", text)
+        self.assertIn("isolation required", text)
+        self.assertIn("plan/1-plan-title", text)
+        self.assertIn("lazyplan--plan-1-plan-title", text)
+
+    def test_grandfathered_plan_preview_omits_worktrees(self) -> None:
+        plan = self.store.add_plan("Old plan", worktree_required=False)
+        full = self.store.get_full("plan", plan.id)
+        assert full is not None
+
+        text = build_preview(self.store, "plan", plan.id, full, []).render()
+
+        self.assertNotIn("## WORKTREES", text)
+
     def test_plan_preview_milestones_are_header_rows(self) -> None:
         full = self.store.get_full("plan", self.plan.id)
         assert full is not None

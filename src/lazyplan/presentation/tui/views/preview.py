@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from ...shared.design import (
-    KIND_ICON,
     escape_markdown,
     escape_markup,
     repo_project_name,
@@ -32,21 +31,20 @@ class PreviewDocument:
     """Everything the preview panel renders for one selection."""
 
     header: str
-    breadcrumb: str = ""
-    meta: tuple[str, ...] = ()
+    meta_line: str = ""
     blocks: tuple[PreviewBlock, ...] = ()
     footer: str = ""
 
     def render_head(self) -> str:
-        """The sticky top: status, title, and breadcrumb."""
+        """The sticky top: the title and one dim context line."""
         lines = [self.header]
-        if self.breadcrumb:
-            lines.append(self.breadcrumb)
+        if self.meta_line:
+            lines.append(self.meta_line)
         return "\n".join(lines)
 
     def render_markdown(self) -> str:
         """The scrollable body as deterministic Markdown."""
-        lines = list(self.meta)
+        lines: list[str] = []
         for block in self.blocks:
             if lines and lines[-1] != "":
                 lines.append("")
@@ -97,23 +95,43 @@ def _title(
     kind: str,
     oid: int,
     obj: dict[str, Any],
+    full: dict[str, Any],
 ) -> tuple[str, str]:
+    """The title alone plus one dim line of ids, counts, and state."""
     title = str(obj.get("title", obj.get("name", "")))
-    status = str(obj.get("status", ""))
-    label = {"plan": "P", "milestone": "M", "task": "T"}[kind]
-    icon = KIND_ICON[kind]
-    header = (
-        f"{status_word(status, 'rich')} "
-        f"[bold cyan]{icon} {label}{oid}[/] [bold]{escape_markup(title)}[/]"
-    )
-    breadcrumb = ""
-    if kind == "milestone":
-        breadcrumb = f"[dim]◈ P{obj.get('plan_id')} › ◇ M{oid}[/]"
-    elif kind == "task":
-        milestone = store.get_milestone(int(obj.get("milestone_id", 0)))
-        plan_id = milestone.plan_id if milestone else "?"
-        breadcrumb = f"[dim]◈ P{plan_id} › ◇ M{obj.get('milestone_id')} › ▹ T{oid}[/]"
-    return header, breadcrumb
+    header = f"[bold]{escape_markup(title)}[/]"
+    return header, _meta_line(store, kind, oid, obj, full)
+
+
+def _done(rows: list[dict[str, Any]]) -> int:
+    return sum(1 for row in rows if row.get("status") == "done" or row.get("done"))
+
+
+def _meta_line(
+    store: PlanningPort,
+    kind: str,
+    oid: int,
+    obj: dict[str, Any],
+    full: dict[str, Any],
+) -> str:
+    """One dim context line: ids, counts, and state for the selected level."""
+    if kind == "plan":
+        tasks = [task for entry in full.get("milestones", []) for task in entry.get("tasks", [])]
+        criteria = full.get("criteria", [])
+        parts = [f"P{oid}", f"{_done(tasks)}/{len(tasks)} tasks"]
+        if criteria:
+            parts.append(f"{_done(criteria)}/{len(criteria)} criteria")
+    elif kind == "milestone":
+        tasks = [entry.get("task", {}) for entry in full.get("tasks", [])]
+        parts = [f"M{oid}", f"P{obj.get('plan_id')}", f"{_done(tasks)}/{len(tasks)} tasks"]
+    else:
+        parts = [f"T{oid}", f"M{obj.get('milestone_id')}", str(obj.get("status", ""))]
+        if obj.get("blocked"):
+            parts.append("blocked")
+        claim = store.get_claim(oid)
+        if claim is not None:
+            parts.append(f"@{escape_markup(str(claim.actor))}")
+    return "[dim]" + " · ".join(part for part in parts if part) + "[/]"
 
 
 def _milestone_tasks(full: dict[str, Any]) -> list[dict[str, Any]]:
@@ -362,7 +380,7 @@ def build_plan(
     git_bits: list[str],
 ) -> PreviewDocument:
     obj = full.get("plan", {})
-    header, breadcrumb = _title(store, "plan", oid, obj)
+    header, meta_line = _title(store, "plan", oid, obj, full)
     blocks: list[PreviewBlock] = []
     questions = questions_block(full.get("questions", []))
     if questions is not None:
@@ -386,7 +404,7 @@ def build_plan(
     if milestones is not None:
         blocks.append(milestones)
     blocks.extend(common_blocks(full, detailed_acceptance=True))
-    return PreviewDocument(header, breadcrumb, (), tuple(blocks))
+    return PreviewDocument(header, meta_line, tuple(blocks))
 
 
 def build_milestone(
@@ -396,7 +414,7 @@ def build_milestone(
     git_bits: list[str],
 ) -> PreviewDocument:
     obj = full.get("milestone", {})
-    header, breadcrumb = _title(store, "milestone", oid, obj)
+    header, meta_line = _title(store, "milestone", oid, obj, full)
     blocks: list[PreviewBlock] = []
     desc = str(obj.get("description", "") or "").strip()
     if desc:
@@ -405,7 +423,7 @@ def build_milestone(
     if tasks is not None:
         blocks.append(tasks)
     blocks.extend(common_blocks(full))
-    return PreviewDocument(header, breadcrumb, (), tuple(blocks))
+    return PreviewDocument(header, meta_line, tuple(blocks))
 
 
 def build_task(
@@ -415,7 +433,7 @@ def build_task(
     git_bits: list[str],
 ) -> PreviewDocument:
     obj = full.get("task", {})
-    header, breadcrumb = _title(store, "task", oid, obj)
+    header, meta_line = _title(store, "task", oid, obj, full)
     blocks: list[PreviewBlock] = []
     desc = str(obj.get("description", "") or "").strip()
     if desc:
@@ -427,7 +445,7 @@ def build_task(
     if proof is not None:
         blocks.append(proof)
     blocks.extend(common_blocks(full))
-    return PreviewDocument(header, breadcrumb, (), tuple(blocks))
+    return PreviewDocument(header, meta_line, tuple(blocks))
 
 
 def build_preview(

@@ -66,14 +66,13 @@ class PreviewDocumentTest(unittest.TestCase):
     def test_document_renders_header_blocks_and_footer(self) -> None:
         document = PreviewDocument(
             header="header",
-            breadcrumb="breadcrumb",
-            meta=("meta",),
+            meta_line="meta line",
             blocks=(PreviewBlock("why", ("because",)),),
             footer="footer",
         )
         self.assertEqual(
             document.render(),
-            "header\nbreadcrumb\nmeta\n\n## WHY\nbecause\n\nfooter",
+            "header\nmeta line\n## WHY\nbecause\n\nfooter",
         )
 
     def test_section_headings_become_markdown_h2(self) -> None:
@@ -299,18 +298,34 @@ class PreviewDocumentTest(unittest.TestCase):
         self.assertIn("✓", text)
         self.assertIn("exit 0", text)
 
-    def test_task_preview_includes_breadcrumb_and_details(self) -> None:
+    def test_task_preview_shows_context_line_and_details(self) -> None:
         full = self.store.get_full("task", self.task.id)
         assert full is not None
         document = build_preview(self.store, "task", self.task.id, full, [])
         text = document.render()
         task = full["task"]
-        self.assertIn(f"P{self.plan.id}", text)
+        head = document.render_head().splitlines()
+        self.assertEqual(head[0], "[bold]Task title[/]")
+        self.assertEqual(len(head), 2)
         self.assertIn(f"M{task['milestone_id']}", text)
         self.assertIn(f"T{self.task.id}", text)
-        self.assertIn(f"▹ T{self.task.id}", text)
+        self.assertEqual(head[1], f"[dim]T{self.task.id} · M{task['milestone_id']} · todo[/]")
+        self.assertNotIn("▹", text)
+        self.assertNotIn("◈", text)
         self.assertIn("## DETAILS", text)
         self.assertIn("Task details", text)
+
+    def test_plan_head_is_the_title_and_one_meta_line(self) -> None:
+        full = self.store.get_full("plan", self.plan.id)
+        assert full is not None
+        document = build_preview(self.store, "plan", self.plan.id, full, [])
+        head = document.render_head().splitlines()
+        self.assertEqual(head[0], "[bold]Plan title[/]")
+        self.assertEqual(len(head), 2)
+        self.assertIn(f"P{self.plan.id}", head[1])
+        self.assertIn("0/1 tasks", head[1])
+        for icon in ("◈", "◇", "▹", "○", "◐", "●"):
+            self.assertNotIn(icon, document.render_head())
 
     def test_plan_control_strip_names_attention(self) -> None:
         self.store.add_revision(self.plan.id, "a" * 64, "{}", reason="initial")

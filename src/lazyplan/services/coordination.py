@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import time
+
 from ..core.entities import Claim, Status, Task
-from ..core.errors import ClaimConflict, TouchpointOverlap
+from ..core.errors import ClaimConflict, ClaimError, TouchpointOverlap
 from ..core.policies.coordination import parse_ttl, patterns_overlap, validate_block
 from ..core.ports.coordination import CoordinationPort
 from ..core.serialization import to_payload
-from .planning import requeue_expired, set_status
+from .planning import end_claim, requeue_expired, set_status
 from .worktrees import checkout_gate
 
 
@@ -114,6 +116,46 @@ def start_claim(
         "task": to_payload(vars(task)) if task is not None else None,
         "previous": vars(previous) if previous is not None else None,
     }
+
+
+RENEW_EVERY = 5 * 60
+
+
+def checkout_claims(port: CoordinationPort, checkout: str) -> list[dict]:
+    """Live claims recorded in this checkout, as worktree or repo root."""
+    target = port.normalize_repo_path(checkout)
+    rows = []
+    for claim in port.list_claims():
+        places = (str(claim.get("worktree") or ""), str(claim.get("repo_path") or ""))
+        if any(place and port.normalize_repo_path(place) == target for place in places):
+            rows.append(claim)
+    return rows
+
+
+def renew_checkout_claims(
+    port: CoordinationPort, checkout: str, now: float | None = None
+) -> list[int]:
+    """Renew this checkout's claims last renewed over RENEW_EVERY ago."""
+    stamp = time.time() if now is None else now
+    renewed = []
+    for claim in checkout_claims(port, checkout):
+        if stamp - float(claim["renewed_at"] or claim["started_at"]) < RENEW_EVERY:
+            continue
+        try:
+            port.renew_claim(int(claim["task_id"]), str(claim["actor"]), now=stamp)
+        except ClaimError:
+            continue
+        renewed.append(int(claim["task_id"]))
+    return renewed
+
+
+def end_checkout_claims(port: CoordinationPort, checkout: str) -> list[int]:
+    """End this checkout's claims and requeue their tasks."""
+    ended = []
+    for claim in checkout_claims(port, checkout):
+        end_claim(port, int(claim["task_id"]), str(claim["actor"]))
+        ended.append(int(claim["task_id"]))
+    return ended
 
 
 def renew_task_claim(

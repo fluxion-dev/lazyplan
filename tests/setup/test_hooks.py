@@ -169,6 +169,33 @@ class HookCase(unittest.TestCase):
             host="opencode",
         )
 
+    def test_hook_events_keep_this_checkouts_claims_and_session_end_requeues(self):
+        store = Store(self.db)
+        plan = store.add_plan("P", worktree_required=False)
+        milestone = store.add_milestone(plan.id, "M")
+        task = store.add_task(milestone.id, "T")
+        checkout = store.checkout_path(str(self.repo))
+        services.start_claim(store, task.id, "codex", worktree=checkout)
+        claim = store.get_claim(task.id)
+        assert claim is not None
+        store.claim_task(
+            task.id,
+            "codex",
+            now=claim.started_at - services.RENEW_EVERY - 5,
+            worktree=checkout,
+            repo_path=checkout,
+        )
+        self._hook("post-tool", {"host_session": "s"})
+        renewed = Store(self.db).get_claim(task.id)
+        assert renewed is not None
+        self.assertGreater(renewed.renewed_at, claim.started_at - services.RENEW_EVERY)
+        self._hook("session-end", {"host_session": "s"})
+        store = Store(self.db)
+        self.assertIsNone(store.get_claim(task.id))
+        requeued = store.get_task(task.id)
+        assert requeued is not None
+        self.assertIs(requeued.status, Status.TODO)
+
     def test_each_host_session_gets_its_own_row(self):
         for name in ("host-a", "host-b", "host-c"):
             self._hook("prompt-submit", {"host_session": name})

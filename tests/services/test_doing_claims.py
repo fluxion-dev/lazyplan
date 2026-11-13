@@ -105,5 +105,47 @@ class ClaimEndsRequeueTest(ClaimCase):
         self.assertIs(self.status(), Status.TODO)
 
 
+class CheckoutClaimsTest(ClaimCase):
+    def setUp(self) -> None:
+        super().setUp()
+        self.here = os.path.join(self.tmp.name, "here")
+        self.elsewhere = os.path.join(self.tmp.name, "elsewhere")
+        other = self.store.add_task(self.task.milestone_id, "Other", actor="fixture")
+        self.other = other
+        services.start_claim(self.store, self.task.id, "alice", worktree=self.here)
+        services.start_claim(self.store, other.id, "bob", worktree=self.elsewhere)
+
+    def claim(self, task_id: int):
+        claim = self.store.get_claim(task_id)
+        assert claim is not None
+        return claim
+
+    def test_only_this_checkouts_claims_match(self) -> None:
+        rows = services.checkout_claims(self.store, self.here)
+        self.assertEqual([int(row["task_id"]) for row in rows], [self.task.id])
+
+    def test_renewal_skips_a_fresh_claim(self) -> None:
+        started = self.claim(self.task.id).renewed_at
+        self.assertEqual(
+            services.renew_checkout_claims(self.store, self.here, now=started + 60), []
+        )
+
+    def test_renewal_extends_a_stale_claim_in_this_checkout_only(self) -> None:
+        later = self.claim(self.task.id).renewed_at + services.RENEW_EVERY + 1
+        before = self.claim(self.other.id).expires_at
+        renewed = services.renew_checkout_claims(self.store, self.here, now=later)
+        self.assertEqual(renewed, [self.task.id])
+        self.assertGreater(self.claim(self.task.id).expires_at, later)
+        self.assertEqual(self.claim(self.other.id).expires_at, before)
+
+    def test_ending_requeues_this_checkouts_tasks_only(self) -> None:
+        self.assertEqual(services.end_checkout_claims(self.store, self.here), [self.task.id])
+        self.assertIsNone(self.store.get_claim(self.task.id))
+        task = self.store.get_task(self.task.id)
+        assert task is not None
+        self.assertIs(task.status, Status.TODO)
+        self.assertEqual(self.claim(self.other.id).actor, "bob")
+
+
 if __name__ == "__main__":
     unittest.main()

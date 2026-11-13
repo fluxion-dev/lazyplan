@@ -24,7 +24,7 @@ from ..core.policies.agents import parse_pid
 from ..core.ports.app import AppPort
 from ..core.ports.insights import InsightsPort
 from ..infrastructure.repo import shared_git_lookups
-from . import agents, audit, context, hook_policy
+from . import agents, audit, context, coordination, hook_policy
 from .agent_identity import extract_identity
 
 EVENTS = AGENT_EVENTS
@@ -275,14 +275,18 @@ def _dispatch(
     mode: str,
 ) -> HookResult:
     agent = _track_agent(store, event, who, here, payload)
+    checkout = store.checkout_path(str(here))
+    if event == "session-end":
+        result = hook_policy.session_end_result(store, agent, who)
+        coordination.end_checkout_claims(store, checkout)
+        return result
+    coordination.renew_checkout_claims(store, checkout)
     if event == "session-start":
         return HookResult(_agent_text(store, here, commits), context=True).capped()
     if event == "pre-compact":
         return HookResult(_compaction_text(store, here), context=True).capped()
     if event == "stop":
         return hook_policy.stop_result(store, here, commits, agent, payload, mode, who)
-    if event == "session-end":
-        return hook_policy.session_end_result(store, agent, who)
     if event == "prompt-submit":
         return HookResult(_prompt_text(store), context=True).capped()
     if event == "pre-tool":

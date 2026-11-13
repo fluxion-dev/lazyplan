@@ -162,6 +162,12 @@ def add_noun_groups(
         metavar="REASON",
         help="record why enforced drift is being overridden when moving to done",
     )
+    _a.add_argument(
+        "--force",
+        action="store_true",
+        help="override the worktree gate when moving to doing",
+    )
+    _reason_flag(_a)
     _a = _actions.add_parser("delete", help="delete a plan", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="plan id")
     _reason_flag(_a)

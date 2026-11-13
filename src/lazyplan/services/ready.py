@@ -8,6 +8,7 @@ from ..core.policies.maintenance import is_archived_row
 from ..core.policies.questions import open_count, open_questions
 from ..core.ports.insights import InsightsPort
 from . import lint
+from .worktrees import worktree_gate
 
 
 @dataclass(frozen=True)
@@ -78,4 +79,13 @@ def check(port: InsightsPort, plan_id: int) -> ReadyResult | None:
         f"{open_count(questions)} open questions" if open_items else "none open",
         tuple({"id": question.id, "text": question.text} for question in open_items),
     )
-    return ReadyResult(plan_id, (lint_check, coverage, question_check))
+    blocker = worktree_gate(port, plan_id)
+    repos = port.list_repos("plan", plan_id)
+    if not plan.worktree_required:
+        worktree_detail = "not required"
+    elif blocker:
+        worktree_detail = blocker
+    else:
+        worktree_detail = f"{len(repos)}/{len(repos)} registered"
+    worktree_check = ReadyCheck("worktrees", not blocker, worktree_detail)
+    return ReadyResult(plan_id, (lint_check, coverage, question_check, worktree_check))

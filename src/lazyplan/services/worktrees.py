@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
+from ..core.ports.insights import InsightsPort
 from ..infrastructure.repo import git_common_dir
 from ..infrastructure.vcs import GitBackend
 
@@ -24,6 +25,30 @@ def _refuse(
     reason: str, branch: str = "", head: str = "", dirty: bool = False
 ) -> WorktreeVerification:
     return WorktreeVerification(False, reason=reason, branch=branch, head=head, dirty=dirty)
+
+
+def worktree_gate(store: InsightsPort, plan_id: int) -> str:
+    """Refusal text when an isolation-required plan has a missing registration."""
+    plan = store.get_plan(plan_id)
+    if plan is None or not plan.worktree_required:
+        return ""
+    repos = store.list_repos("plan", plan_id)
+    if not repos:
+        return (
+            f"plan #{plan_id} requires isolation but has no linked repo;"
+            f" run `lpui plan worktree --print --id {plan_id}`"
+        )
+    missing = [
+        str(row["repo_path"])
+        for row in repos
+        if store.get_plan_worktree(plan_id, str(row["repo_path"])) is None
+    ]
+    if not missing:
+        return ""
+    return (
+        f"plan #{plan_id} requires a registered worktree for: {', '.join(missing)};"
+        f" run `lpui plan worktree --print --id {plan_id}`"
+    )
 
 
 def verify_worktree(repo_path: str, worktree_path: str, branch: str) -> WorktreeVerification:

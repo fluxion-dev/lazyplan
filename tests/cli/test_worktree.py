@@ -201,6 +201,85 @@ class PlanWorktreeRegisterTest(unittest.TestCase):
         self.assertEqual(row.worktree_path, self.target.worktree_path)
         self.assertEqual(json.loads(output)["worktree"]["branch"], self.target.branch)
 
+    def test_plan_start_requires_registration(self) -> None:
+        code, _, error = self._run(["plan", "move", "--id", str(self.plan.id), "--to", "doing"])
+        self.assertEqual(code, 2)
+        self.assertIn("requires a registered worktree", error)
+
+        code, _, error = self._run(
+            ["plan", "move", "--id", str(self.plan.id), "--to", "doing", "--force"]
+        )
+        self.assertEqual(code, 2)
+        self.assertIn("--force needs --reason", error)
+
+        code, _, _ = self._run(
+            [
+                "plan",
+                "move",
+                "--id",
+                str(self.plan.id),
+                "--to",
+                "doing",
+                "--force",
+                "--reason",
+                "temporary pairing",
+            ]
+        )
+        self.assertEqual(code, 0)
+        self.assertEqual(Store(self.db).get_plan(self.plan.id).status.value, "doing")
+        notes = Store(self.db).list_notes("plan", self.plan.id)
+        self.assertTrue(any("Worktree gate override" in note.text for note in notes))
+
+    def test_registered_plan_starts(self) -> None:
+        self.assertEqual(
+            self._run(
+                [
+                    "plan",
+                    "worktree",
+                    "add",
+                    "--id",
+                    str(self.plan.id),
+                    "--repo",
+                    self.repo,
+                ]
+            )[0],
+            0,
+        )
+
+        code, _, error = self._run(["plan", "move", "--id", str(self.plan.id), "--to", "doing"])
+
+        self.assertEqual(code, 0, error)
+        self.assertEqual(Store(self.db).get_plan(self.plan.id).status.value, "doing")
+
+    def test_grandfathered_plan_starts_without_a_worktree(self) -> None:
+        old = Store(self.db).add_plan("Old", worktree_required=False)
+
+        code, _, error = self._run(["plan", "move", "--id", str(old.id), "--to", "doing"])
+
+        self.assertEqual(code, 0, error)
+
+    def test_plan_ready_reports_the_worktree_gate(self) -> None:
+        code, output, error = self._run(["plan", "ready", "--id", str(self.plan.id)])
+        self.assertEqual(code, 1, output + error)
+        self.assertIn("worktrees", output)
+
+        self.assertEqual(
+            self._run(
+                [
+                    "plan",
+                    "worktree",
+                    "add",
+                    "--id",
+                    str(self.plan.id),
+                    "--repo",
+                    self.repo,
+                ]
+            )[0],
+            0,
+        )
+        code, output, error = self._run(["plan", "ready", "--id", str(self.plan.id)])
+        self.assertEqual(code, 0, output + error)
+
     def test_plan_show_and_list_expose_worktrees(self) -> None:
         self.assertEqual(
             self._run(

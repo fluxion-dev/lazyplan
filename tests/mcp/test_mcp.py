@@ -69,7 +69,7 @@ class TestMcpReadTools(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         store = Store(os.path.join(self.tmp.name, "mcp.db"))
-        plan = store.add_plan("P", "what", goal="why", actor="fixture")
+        plan = store.add_plan("P", "what", goal="why", actor="fixture", worktree_required=False)
         milestone = store.add_milestone(plan.id, "M", actor="fixture")
         task = store.add_task(
             milestone.id,

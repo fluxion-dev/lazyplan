@@ -6,11 +6,12 @@ import argparse
 import os
 import sys
 
-from lazyplan.services.worktrees import verify_worktree
+from lazyplan.services.worktrees import verify_worktree, worktree_gate
 
 from ....core.entities import Plan, PlanWorktree
 from ....core.policies.worktrees import WorktreeCollision, derive_worktree, derive_worktrees
 from ....core.ports.app import AppPort
+from ....core.ports.insights import InsightsPort
 from ....core.serialization import to_payload
 from ...shared import porcelain
 from ...shared.design import msg_error, msg_not_found
@@ -174,6 +175,30 @@ def _remove_plan_worktree(store: AppPort, plan: Plan, args: argparse.Namespace, 
 
     store.remove_plan_worktree(plan.id, repo, actor=actor)
     return _emit_worktree(args, plan, existing, "removed")
+
+
+def _guard_plan_start(store: InsightsPort, args: argparse.Namespace) -> tuple[str, int]:
+    """Worktree refusal and exit code for a plan start."""
+    if getattr(args, "kind", "") != "plan" or getattr(args, "to", "") != "doing":
+        return "", 0
+    failure = worktree_gate(store, args.id)
+    if not failure:
+        return "", 0
+    if not getattr(args, "force", False):
+        return failure, 2
+    if not str(getattr(args, "reason", "") or "").strip():
+        return "--force needs --reason", 2
+    return failure, 0
+
+
+def record_worktree_override(store: InsightsPort, plan_id: int, actor: str, reason: str) -> None:
+    """Record that an agent forced an isolated plan start."""
+    store.add_note(
+        "plan",
+        plan_id,
+        f"Worktree gate override by {actor}: {reason}",
+        actor=actor,
+    )
 
 
 def _cmd_plan_worktree(store: AppPort, args: argparse.Namespace, actor: str) -> int:

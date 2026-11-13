@@ -174,12 +174,16 @@ class UnifiedRenderTest(unittest.TestCase):
                 "lp-diff-remove": "#110000",
                 "lp-diff-add-bg": "#002200",
                 "lp-diff-emphasis-add": "#003300",
+                "lp-diff-change": "#005500",
+                "lp-diff-move": "#006600",
                 "lp-syntax-keyword": "#004400",
                 "lp-text-faint": "#333333",
             }
         )
         self.assertEqual(palette.add, "#001100")
         self.assertEqual(palette.add_bg, "#002200")
+        self.assertEqual(palette.change, "#005500")
+        self.assertEqual(palette.move, "#006600")
         self.assertIn("#003300", palette.emphasis_add)
         self.assertEqual(palette.syntax["keyword"], "#004400")
         self.assertEqual(palette.gutter, "#333333")

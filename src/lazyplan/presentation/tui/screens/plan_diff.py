@@ -16,6 +16,7 @@ except ImportError:  # pragma: no cover
 from ....services.revisions import DiffResult
 from ...shared.design import action_bar
 from ..views.diff import build_plan_diff, render_plan_diff
+from ..views.diff_style import palette_from_theme
 
 if _TEXTUAL_OK:
 
@@ -40,7 +41,10 @@ if _TEXTUAL_OK:
 
         def on_mount(self) -> None:
             self.query_one("#plan-diff-page").border_title = " plan diff "
-            head, body = render_plan_diff(self._view)
+            head, body = render_plan_diff(
+                self._view,
+                palette_from_theme(self.app.theme_variables),
+            )
             self.query_one("#plan-diff-head", Static).update(head)
             self.query_one("#plan-diff-body", Static).update(body)
             self.query_one("#plan-diff-hints", Label).update(

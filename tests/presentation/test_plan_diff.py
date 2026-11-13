@@ -14,8 +14,10 @@ try:
         diff_text,
         render_plan_diff,
     )
+    from lazyplan.presentation.tui.views.diff_style import DiffPalette
 except ImportError:  # pragma: no cover - textual not installed
     build_plan_diff = diff_text = render_plan_diff = None  # type: ignore[assignment]
+    DiffPalette = None  # type: ignore[assignment]
 
 REVISION = PlanRevision(
     id=1,
@@ -164,6 +166,26 @@ class PlanDiffModelTest(unittest.TestCase):
             self.assertIn(f"1 {action}", head)
         for glyph in ("+", "-", "~", "→"):
             self.assertIn(glyph, body)
+
+    def test_screen_markup_uses_the_palette(self) -> None:
+        result = _result(
+            (
+                _entry("task", "change", "Changed", before="old", after="new"),
+                _entry("criterion", "move", "Moved", before="a", after="b"),
+            ),
+            summary={"add": 0, "remove": 0, "change": 1, "move": 1, "total": 2},
+        )
+        palette = DiffPalette(
+            add="#111111",
+            remove="#222222",
+            change="#333333",
+            move="#444444",
+        )
+        head, body = render_plan_diff(build_plan_diff(result), palette)
+        self.assertIn("#333333", body)
+        self.assertIn("#111111", body)
+        self.assertIn("#222222", body)
+        self.assertIn("#444444", head)
 
 
 if __name__ == "__main__":

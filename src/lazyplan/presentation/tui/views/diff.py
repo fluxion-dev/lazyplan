@@ -6,14 +6,8 @@ from dataclasses import dataclass
 
 from ....services.revisions import DiffEntry, DiffResult
 from ...shared.design import escape_markup, truncate
+from .diff_style import ACTION_GLYPH, ACTION_SLOT, DiffPalette
 
-_GLYPH = {"add": "+", "remove": "-", "change": "~", "move": "→"}
-_ACTION_STYLE = {
-    "add": "green",
-    "remove": "red",
-    "change": "yellow",
-    "move": "cyan",
-}
 _ORDER = ("plan", "milestone", "task", "criterion")
 _LABELS = {
     "plan": "plan",
@@ -74,7 +68,7 @@ def _row(entry: DiffEntry, limit: int) -> DiffRow:
     change = entry.change
     return DiffRow(
         action=change.action,
-        glyph=_GLYPH.get(change.action, "?"),
+        glyph=ACTION_GLYPH.get(change.action, "?"),
         kind=change.kind,
         obj_id=change.obj_id,
         title=change.title,
@@ -102,39 +96,63 @@ def build_plan_diff(result: DiffResult, max_text: int = 240) -> PlanDiffView:
     )
 
 
-def render_plan_diff(view: PlanDiffView) -> tuple[str, str]:
-    """Return the head and body markup for the dedicated plan diff screen."""
+def _action_color(palette: DiffPalette, action: str) -> str:
+    """Palette colour for one scope action."""
+    slot = ACTION_SLOT.get(action, "hunk")
+    return getattr(palette, slot, palette.context)
+
+
+def _head(view: PlanDiffView, palette: DiffPalette) -> str:
+    """Head line plus one summary chip per action."""
     head = f"[bold]P{view.plan_id} scope diff[/] [dim]from r{view.from_revision}[/]"
     chips = [f"[reverse] {view.total} changes [/]"]
     for action in ("add", "remove", "change", "move"):
         count = view.summary.get(action, 0)
         if count:
-            chips.append(f"[{_ACTION_STYLE[action]}]{count} {action}[/]")
-    head = f"{head}\n{' '.join(chips)}"
+            chips.append(f"[{_action_color(palette, action)}]{count} {action}[/]")
+    return f"{head}\n{' '.join(chips)}"
+
+
+def _row_lines(row: DiffRow, palette: DiffPalette) -> list[str]:
+    """One change: its identity, before/after blocks, and reason."""
+    color = _action_color(palette, row.action)
+    ident = f"{row.kind} {row.obj_id}"
+    line = f"[{color}]{row.glyph}[/] [bold]{escape_markup(ident)}[/] {escape_markup(row.title)}"
+    if row.field:
+        line += f" [dim]· {escape_markup(row.field)}[/]"
+    lines = [line]
+    if row.action in ("change", "move"):
+        if row.before:
+            lines.append(f"  [{palette.remove}]− {escape_markup(row.before)}[/]")
+        if row.after:
+            lines.append(f"  [{palette.add}]+ {escape_markup(row.after)}[/]")
+    if row.reason:
+        lines.append(f"  [{palette.context}]reason: {escape_markup(row.reason)}[/]")
+    return lines
+
+
+def _group_lines(group: DiffGroup, palette: DiffPalette) -> list[str]:
+    """One section header and its change rows."""
+    lines = [f"[bold {palette.hunk}]{group.label.upper()}[/] [dim]{len(group.rows)}[/]"]
+    for row in group.rows:
+        lines.extend(_row_lines(row, palette))
+    return lines
+
+
+def render_plan_diff(
+    view: PlanDiffView,
+    palette: DiffPalette | None = None,
+) -> tuple[str, str]:
+    """Return the head and body markup for the dedicated plan diff screen."""
+    palette = palette or DiffPalette()
+    head = _head(view, palette)
     if view.empty:
-        return head, "[green]✓[/] [dim]in sync with the approved revision[/]"
+        return head, f"[{palette.add}]✓[/] [dim]in sync with the approved revision[/]"
     lines: list[str] = []
     for group in view.groups:
         if lines:
             lines.append("")
-        lines.append(f"[bold cyan]{group.label.upper()}[/] [dim]{len(group.rows)}[/]")
-        for row in group.rows:
-            color = _ACTION_STYLE.get(row.action, "dim")
-            ident = f"{row.kind} {row.obj_id}"
-            line = (
-                f"[{color}]{row.glyph}[/] [bold]{escape_markup(ident)}[/] "
-                f"{escape_markup(row.title)}"
-            )
-            if row.field:
-                line += f" [dim]· {escape_markup(row.field)}[/]"
-            lines.append(line)
-            if row.action in ("change", "move"):
-                if row.before:
-                    lines.append(f"  [red]− {escape_markup(row.before)}[/]")
-                if row.after:
-                    lines.append(f"  [green]+ {escape_markup(row.after)}[/]")
-            if row.reason:
-                lines.append(f"  [dim]reason: {escape_markup(row.reason)}[/]")
+        lines.extend(_group_lines(group, palette))
     return head, "\n".join(lines)
 
 

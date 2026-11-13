@@ -8,6 +8,14 @@ from dataclasses import dataclass, field
 FOLD_AFTER = 6
 FOLD_KEEP = 3
 
+ACTION_GLYPH = {"add": "+", "remove": "-", "change": "~", "move": "→"}
+ACTION_SLOT = {
+    "add": "add",
+    "remove": "remove",
+    "change": "change",
+    "move": "move",
+}
+
 _DEFAULT_SYNTAX: dict[str, str] = {
     "comment": "italic #6c7086",
     "keyword": "bold #cba6f7",
@@ -33,6 +41,8 @@ class DiffPalette:
     remove_bg: str = "#3a1e2a"
     hunk: str = "#89b4fa"
     hunk_bg: str = "#1e2a3a"
+    change: str = "#f9e2af"
+    move: str = "#94e2d5"
     file: str = "#b4befe"
     file_bg: str = "#2a2a3e"
     gutter: str = "#6c7086"
@@ -51,6 +61,8 @@ class DiffPalette:
             remove_bg=theme.get("lp-diff-remove-bg", cls.remove_bg),
             hunk=theme.get("lp-diff-hunk", cls.hunk),
             hunk_bg=theme.get("lp-diff-hunk-bg", cls.hunk_bg),
+            change=theme.get("lp-diff-change", cls.change),
+            move=theme.get("lp-diff-move", cls.move),
             file=theme.get("lp-accent", cls.file),
             file_bg=theme.get("lp-surface-raised", cls.file_bg),
             gutter=theme.get("lp-text-faint", cls.gutter),

@@ -102,13 +102,11 @@ _STATUS_GLYPH = {
 
 def commit_label(commit: SourceCommit, stats: CommitStats | None = None) -> str:
     subject = escape_markup(commit.subject or "(no subject)")
-    files = len(stats.files) if stats is not None and stats.state == "ok" else len(commit.files)
-    count = f" · {files} files" if files else ""
     changes = ""
     if stats is not None and stats.state == "ok":
         changes = f" [green]+{stats.additions}[/] [red]-{stats.deletions}[/]"
     stale = " [red]stale[/]" if commit.stale else ""
-    return f"[dim]◆ {commit.short}[/] {subject}[dim]{count}[/]{changes}{stale}"
+    return f"[dim]◆ {commit.short}[/] {subject}{changes}{stale}"
 
 
 def file_label(item: SourceFile, stat: FileStat | None = None) -> str:

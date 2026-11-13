@@ -104,7 +104,7 @@ class SourceLabelTest(unittest.TestCase):
             )
         )
         label = Text.from_markup(commit_label(commit, stats)).plain
-        self.assertIn("2 files", label)
+        self.assertIn("Render diffs", label)
         self.assertIn("+8", label)
         self.assertIn("-1", label)
 

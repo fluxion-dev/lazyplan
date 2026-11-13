@@ -84,7 +84,7 @@ class SourceTreeStatsTest(unittest.IsolatedAsyncioTestCase):
                 labels = await self._labels(app, commit_node)
                 self.assertTrue(any("M app/a.py" in label and "+3" in label for label in labels))
                 self.assertTrue(any("A app/b.py" in label and "+5" in label for label in labels))
-                self.assertIn("2 files", str(commit_node.label))
+                self.assertIn("+8 -1", str(commit_node.label))
                 self.assertEqual(reader.call_count, 1)
                 commit_node.collapse()
                 commit_node.expand()

@@ -256,7 +256,6 @@ or `--no-skills` changes what the questions propose.
 
 `LAZYPLAN_NO_SETUP=1` skips first-run setup and upgrade review. `NO_COLOR`,
 `LAZYPLAN_NO_COLOR`, `CLICOLOR=0`, and `TERM=dumb` keep the wizard plain.
-`LAZYPLAN_NO_SPINNER=1` freezes the doing spinner in the TUI.
 `LAZYPLAN_THEME` selects a TUI palette: `dark` or `mocha` (the default),
 `void` for an OLED-black variant, and `light` or `latte` for the light theme.
 Unset or any other value uses mocha. Press `t` in the TUI to cycle the three
@@ -273,7 +272,6 @@ palettes without restarting.
 | `LAZYPLAN_NO_SKILLS` | Install no agent skill. |
 | `LAZYPLAN_HOOKS` | Override the installed hook mode at runtime: `strict`, `advisory`, or `off`. |
 | `LAZYPLAN_NO_HOOKS` | Silence installed hooks at runtime; does not remove them. |
-| `LAZYPLAN_NO_SPINNER` | Freeze the doing spinner in the TUI. |
 | `LAZYPLAN_THEME` | TUI palette: mocha, void, or latte (aliases dark, oled, light). |
 | `LAZYPLAN_NO_COLOR` | Disable setup wizard color. |
 | `NO_COLOR`, `CLICOLOR=0`, `TERM=dumb` | Plain setup output. |
@@ -316,46 +314,41 @@ tab-separated rows; `--json` wins when both are present.
 
 ## The screen
 
-Plans start collapsed. Press `right` or `z` to reveal milestones; tasks stay
-folded until you open their milestone. Completed plans live in the `plan review`
-panel and stay dimmed. A doing row animates a small spinner; set
-`LAZYPLAN_NO_SPINNER=1` to freeze it. Plan and milestone rows end with progress
-and `!` when they need attention; a task row shows only the status glyph,
-`T<id>`, the title, and `!`, leaving claim and blocked detail to the task
-overview and coordination hubs.
+Every row reads as plain words: an id, the title, and at most a right-aligned
+count. Plans and milestones end with `done/total`; any row that needs it ends
+with one word: `doing`, `blocked`, or `review`. Completed plans live in the
+`plan review` panel and stay dimmed. Plans start collapsed; `right` or `z`
+reveals milestones, and tasks appear when you open their milestone.
 
 The main screen puts the work in one left column and the overview on the right.
-The left column stacks, in order, the plan queue, the agents card, plan review,
-and the git card. Plan queue holds every plan that is not done; plan review
-holds completed plans. The agents card reads the exact agent registry every
-quarter second on a worker thread and paints one line per open row: agent name,
-`A` id, plan and task, branch, age, and status word. Running rows animate,
-waiting rows show `◆`, blocked rows show `⊘`, lost rows show `✕`, and unbound
-rows carry a yellow `unbound` badge. Plan and branch truncate with an ellipsis
-at narrow widths. The last handoff stays below the rows, and the card is
-read-only. The git card carries linked checkouts and pull requests.
+The left column stacks the plan queue, the agents card, plan review, and the git
+card. A card with no rows is hidden, so an empty journal shows only the plan
+queue. The plan queue holds every plan that is not done; plan review holds
+completed plans. The agents card reads the exact agent registry and paints one
+line per open row: agent name, `A` id, plan and task, branch, age, and status
+word. The last handoff stays below the rows; the card is read-only. The git card
+carries linked checkouts and pull requests.
 
-The right column holds only the overview, which follows the selection: a plan
-shows open questions, why, what, approval, references, every milestone as a
-header row with its status, id, and title, and every acceptance criterion, open
-first, each with its id, state, and proof chip; a milestone shows its details
-and every task as a header row with its status, id, and title; a task shows its
-details, criteria, proof, notes, and source. Child rows stay one line each, and
-a task's description appears only when that task is selected. Milestones and
-tasks keep the shorter open-criteria list. The overview starts with one
-attention line, then full-width Markdown section bars and their content. One
-blank line sits above and below each bar. Prose in why, what, and details
-renders as Markdown, so lists, quotes, code fences, tables, and links appear
-as formatted text.
-Only http and https links open; other schemes are reported instead. The
-timeline card stays hidden on launch; `T` or the palette's show/hide timeline
-command opens it for the session. When open, it follows the selected row and
-its immediate children.
+The overview follows the selection and reveals one level at a time. A plan shows
+its title, one context line with ids and counts, one clamped why line, its
+milestones, and the first three open acceptance criteria. A milestone shows its
+title, context line, one clamped intent line, its tasks, and open criteria. A
+task is the first level with the full description and its proof. Child rows
+carry only an id, a title, and a count or state word. Sections with nothing
+actionable are omitted: approval without a revision, empty acceptance, notes,
+source counts, and worktrees unless the plan requires isolation. The overview
+adds one plain attention line only when something needs attention.
+
+Only http and https links open; other schemes are reported instead. The timeline
+card stays hidden on launch; `T` or the palette's show/hide timeline command
+opens it for the session. When open, it follows the selected row and its
+immediate children.
 
 Both plan panels keep the full milestone and task tree, and the text filter
 applies inside each panel. On terminals narrower than 100 columns the overview
 column is hidden, and the plan queue, agents, plan review, and git cards keep
-their order in the stacked left column.
+their order in the stacked left column. The footer names only `?`, `c`, and
+`/`; the full key list is under `?`.
 
 The tree loads plan rows first. A plan's milestones appear when you expand it,
 and a milestone's tasks appear when you expand that milestone. A text filter

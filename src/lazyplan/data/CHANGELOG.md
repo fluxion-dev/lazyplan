@@ -3,6 +3,18 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## Unreleased
+
+### Changed
+
+- **The overview reads at a glance.** Tree rows, the overview header, and the
+  agents card use plain words instead of status glyphs, progress bars, and
+  spinners: a row carries an id, a title, and a count or one state word. A plan
+  shows one why line and its milestones, a milestone shows one intent line and
+  its tasks, and only a task shows full prose and proof. Empty approval, notes,
+  source, and worktree sections no longer render, empty panes stay hidden, and
+  the main footer names three keys.
+
 ## v0.43.0 — 2026-11-13
 
 ### Changed

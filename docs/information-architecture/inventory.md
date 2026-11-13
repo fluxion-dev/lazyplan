@@ -392,7 +392,6 @@ python3 tools/ia_inventory.py --check
 | `LAZYPLAN_SKILLS_DIR` | True | True |
 | `LAZYPLAN_NO_SKILLS` | True | True |
 | `LAZYPLAN_NO_HOOKS` | True | True |
-| `LAZYPLAN_NO_SPINNER` | True | True |
 | `LAZYPLAN_THEME` | True | True |
 | `LAZYPLAN_NO_COLOR` | True | True |
 | `NO_COLOR, CLICOLOR=0, TERM=dumb` | True | True |

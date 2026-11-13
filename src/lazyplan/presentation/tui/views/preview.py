@@ -4,16 +4,13 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from ...shared.design import (
     escape_markdown,
     escape_markup,
 )
 from .reference_lines import reference_lines
-
-if TYPE_CHECKING:
-    from ....core.ports.planning import PlanningPort
 
 
 @dataclass(frozen=True)
@@ -101,7 +98,6 @@ def _child_row(letter: str, oid: object, title: object, suffix: str = "") -> str
 
 
 def _title(
-    store: PlanningPort,
     kind: str,
     oid: int,
     obj: dict[str, Any],
@@ -110,7 +106,7 @@ def _title(
     """The title alone plus one dim line of ids, counts, and state."""
     title = str(obj.get("title", obj.get("name", "")))
     header = f"[bold]{escape_markup(title)}[/]"
-    return header, _meta_line(store, kind, oid, obj, full)
+    return header, _meta_line(kind, oid, obj, full)
 
 
 def _done(rows: list[dict[str, Any]]) -> int:
@@ -118,7 +114,6 @@ def _done(rows: list[dict[str, Any]]) -> int:
 
 
 def _meta_line(
-    store: PlanningPort,
     kind: str,
     oid: int,
     obj: dict[str, Any],
@@ -138,9 +133,9 @@ def _meta_line(
         parts = [f"T{oid}", f"M{obj.get('milestone_id')}", str(obj.get("status", ""))]
         if obj.get("blocked"):
             parts.append("blocked")
-        claim = store.get_claim(oid)
-        if claim is not None:
-            parts.append(f"@{escape_markup(str(claim.actor))}")
+        claim = obj.get("claim") or {}
+        if claim:
+            parts.append(f"@{escape_markup(str(claim.get('actor', '')))}")
     return "[dim]" + " · ".join(part for part in parts if part) + "[/]"
 
 
@@ -312,12 +307,11 @@ def worktrees_block(full: dict[str, Any]) -> PreviewBlock | None:
 
 
 def build_plan(
-    store: PlanningPort,
     full: dict[str, Any],
     oid: int,
 ) -> PreviewDocument:
     obj = full.get("plan", {})
-    header, meta_line = _title(store, "plan", oid, obj, full)
+    header, meta_line = _title("plan", oid, obj, full)
     blocks: list[PreviewBlock] = []
     questions = questions_block(full.get("questions", []))
     if questions is not None:
@@ -346,12 +340,11 @@ def build_plan(
 
 
 def build_milestone(
-    store: PlanningPort,
     full: dict[str, Any],
     oid: int,
 ) -> PreviewDocument:
     obj = full.get("milestone", {})
-    header, meta_line = _title(store, "milestone", oid, obj, full)
+    header, meta_line = _title("milestone", oid, obj, full)
     blocks: list[PreviewBlock] = []
     desc = str(obj.get("description", "") or "").strip()
     if desc:
@@ -366,12 +359,11 @@ def build_milestone(
 
 
 def build_task(
-    store: PlanningPort,
     full: dict[str, Any],
     oid: int,
 ) -> PreviewDocument:
     obj = full.get("task", {})
-    header, meta_line = _title(store, "task", oid, obj, full)
+    header, meta_line = _title("task", oid, obj, full)
     blocks: list[PreviewBlock] = []
     desc = str(obj.get("description", "") or "").strip()
     if desc:
@@ -383,14 +375,13 @@ def build_task(
 
 
 def build_preview(
-    store: PlanningPort,
     kind: str,
     oid: int,
     full: dict[str, Any],
 ) -> PreviewDocument:
     """Build the document for one selected row."""
     if kind == "plan":
-        return build_plan(store, full, oid)
+        return build_plan(full, oid)
     if kind == "milestone":
-        return build_milestone(store, full, oid)
-    return build_task(store, full, oid)
+        return build_milestone(full, oid)
+    return build_task(full, oid)

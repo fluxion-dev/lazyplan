@@ -79,7 +79,7 @@ class PreviewDocumentTest(unittest.TestCase):
     def test_section_headings_become_markdown_h2(self) -> None:
         full = self.store.get_full("plan", self.plan.id)
         assert full is not None
-        body = build_preview(self.store, "plan", self.plan.id, full).render_markdown()
+        body = build_preview("plan", self.plan.id, full).render_markdown()
         headings = [line for line in body.splitlines() if line.startswith("## ")]
         self.assertGreaterEqual(len(headings), 2)
         for heading in headings:
@@ -88,7 +88,7 @@ class PreviewDocumentTest(unittest.TestCase):
     def test_section_spacing_keeps_one_blank_between_sections(self) -> None:
         full = self.store.get_full("plan", self.plan.id)
         assert full is not None
-        lines = build_preview(self.store, "plan", self.plan.id, full).render_markdown().splitlines()
+        lines = build_preview("plan", self.plan.id, full).render_markdown().splitlines()
         self.assertNotEqual(lines[0], "")
         self.assertNotEqual(lines[-1], "")
         self.assertFalse(
@@ -107,7 +107,7 @@ class PreviewDocumentTest(unittest.TestCase):
     def test_plain_render_keeps_the_markdown_heading_grammar(self) -> None:
         full = self.store.get_full("plan", self.plan.id)
         assert full is not None
-        text = build_preview(self.store, "plan", self.plan.id, full).render()
+        text = build_preview("plan", self.plan.id, full).render()
         self.assertIn("## MILESTONES 1", text)
         self.assertNotIn("[on $lp-surface-raised]", text)
 
@@ -117,20 +117,18 @@ class PreviewDocumentTest(unittest.TestCase):
         task = self.store.add_task(milestone.id, "Task #hash", "Task details")
         full = self.store.get_full("plan", plan.id)
         assert full is not None
-        text = build_preview(self.store, "plan", plan.id, full).render()
+        text = build_preview("plan", plan.id, full).render()
         self.assertIn(f"M{milestone.id}  Milestone \\*bold\\* \\[x\\]", text)
         self.assertIn("raw **prose**", text)
         milestone_full = self.store.get_full("milestone", milestone.id)
         assert milestone_full is not None
-        milestone_text = build_preview(
-            self.store, "milestone", milestone.id, milestone_full
-        ).render()
+        milestone_text = build_preview("milestone", milestone.id, milestone_full).render()
         self.assertIn(f"T{task.id}  Task \\#hash", milestone_text)
 
     def test_plan_preview_keeps_order_and_sections(self) -> None:
         full = self.store.get_full("plan", self.plan.id)
         assert full is not None
-        document = build_preview(self.store, "plan", self.plan.id, full)
+        document = build_preview("plan", self.plan.id, full)
         text = document.render()
         self.assertIn("P1", text)
         self.assertIn("## WHY", text)
@@ -150,7 +148,7 @@ class PreviewDocumentTest(unittest.TestCase):
         )
         full = self.store.get_full("plan", plan.id)
         assert full is not None
-        text = build_preview(self.store, "plan", plan.id, full).render_markdown()
+        text = build_preview("plan", plan.id, full).render_markdown()
         why = text.split("## WHY", 1)[1].split("## ", 1)[0]
         self.assertIn("First sentence stays.", why)
         self.assertNotIn("Second paragraph", why)
@@ -159,7 +157,7 @@ class PreviewDocumentTest(unittest.TestCase):
         plan = self.store.add_plan("Long plan", "What", goal="word " * 60)
         full = self.store.get_full("plan", plan.id)
         assert full is not None
-        text = build_preview(self.store, "plan", plan.id, full).render_markdown()
+        text = build_preview("plan", plan.id, full).render_markdown()
         why = text.split("## WHY", 1)[1].split("## ", 1)[0].strip()
         self.assertTrue(why.endswith("…"))
         self.assertLessEqual(len(why), 121)
@@ -173,7 +171,7 @@ class PreviewDocumentTest(unittest.TestCase):
         )
         full = self.store.get_full("milestone", milestone.id)
         assert full is not None
-        text = build_preview(self.store, "milestone", milestone.id, full).render_markdown()
+        text = build_preview("milestone", milestone.id, full).render_markdown()
         details = text.split("## DETAILS", 1)[1].split("## ", 1)[0]
         self.assertIn("First line of intent.", details)
         self.assertNotIn("INVEST", details)
@@ -188,7 +186,7 @@ class PreviewDocumentTest(unittest.TestCase):
         full = self.store.get_full("plan", self.plan.id)
         assert full is not None
 
-        text = build_preview(self.store, "plan", self.plan.id, full).render()
+        text = build_preview("plan", self.plan.id, full).render()
 
         self.assertIn("## WORKTREES", text)
         self.assertIn("isolation required", text)
@@ -200,14 +198,14 @@ class PreviewDocumentTest(unittest.TestCase):
         full = self.store.get_full("plan", plan.id)
         assert full is not None
 
-        text = build_preview(self.store, "plan", plan.id, full).render()
+        text = build_preview("plan", plan.id, full).render()
 
         self.assertNotIn("## WORKTREES", text)
 
     def test_plan_preview_milestones_are_header_rows(self) -> None:
         full = self.store.get_full("plan", self.plan.id)
         assert full is not None
-        lines = build_preview(self.store, "plan", self.plan.id, full).render().splitlines()
+        lines = build_preview("plan", self.plan.id, full).render().splitlines()
         heading = next(index for index, line in enumerate(lines) if "MILESTONES" in line)
         row = lines[heading + 1]
         self.assertEqual(row, f"- M{self.milestone.id}  Milestone title · 0/1")
@@ -247,7 +245,7 @@ class PreviewDocumentTest(unittest.TestCase):
         self.store.add_evidence(criteria[0].id, command="pytest", exit_code=0, actor="ci")
         full = self.store.get_full("plan", self.plan.id)
         assert full is not None
-        text = build_preview(self.store, "plan", self.plan.id, full).render_markdown()
+        text = build_preview("plan", self.plan.id, full).render_markdown()
         acceptance = text.split("## ACCEPTANCE", 1)[1].split("## ", 1)[0]
         for criterion in criteria[2:5]:
             self.assertIn(criterion.text, acceptance)
@@ -271,13 +269,13 @@ class PreviewDocumentTest(unittest.TestCase):
     def test_plan_preview_without_criteria_has_no_acceptance_block(self) -> None:
         full = self.store.get_full("plan", self.plan.id)
         assert full is not None
-        text = build_preview(self.store, "plan", self.plan.id, full).render_markdown()
+        text = build_preview("plan", self.plan.id, full).render_markdown()
         self.assertNotIn("## ACCEPTANCE", text)
 
     def test_unapproved_plan_has_no_approval_block(self) -> None:
         full = self.store.get_full("plan", self.plan.id)
         assert full is not None
-        text = build_preview(self.store, "plan", self.plan.id, full).render_markdown()
+        text = build_preview("plan", self.plan.id, full).render_markdown()
         self.assertNotIn("## APPROVAL", text)
         self.assertNotIn("no approved revision", text)
 
@@ -292,7 +290,7 @@ class PreviewDocumentTest(unittest.TestCase):
         ):
             full = self.store.get_full(kind, obj_id)
             assert full is not None
-            text = build_preview(self.store, kind, obj_id, full).render_markdown()
+            text = build_preview(kind, obj_id, full).render_markdown()
             self.assertNotIn("## NOTES", text)
             self.assertNotIn("## SOURCE", text)
             self.assertNotIn("a private note", text)
@@ -305,7 +303,7 @@ class PreviewDocumentTest(unittest.TestCase):
         ]
         full = self.store.get_full("milestone", self.milestone.id)
         assert full is not None
-        text = build_preview(self.store, "milestone", self.milestone.id, full).render_markdown()
+        text = build_preview("milestone", self.milestone.id, full).render_markdown()
         acceptance = text.split("## ACCEPTANCE", 1)[1].split("## ", 1)[0]
         self.assertNotIn(f"C{criteria[0].id}", acceptance)
         self.assertEqual(acceptance.count("- milestone criterion"), 3)
@@ -313,7 +311,7 @@ class PreviewDocumentTest(unittest.TestCase):
     def test_child_rows_use_words_not_glyphs(self) -> None:
         full = self.store.get_full("plan", self.plan.id)
         assert full is not None
-        text = build_preview(self.store, "plan", self.plan.id, full).render_markdown()
+        text = build_preview("plan", self.plan.id, full).render_markdown()
         for icon in ("○", "◐", "●", "◈", "◇", "▹", "✓", "✗", "—", "▰", "▱"):
             self.assertNotIn(icon, text)
 
@@ -321,13 +319,13 @@ class PreviewDocumentTest(unittest.TestCase):
         self.store.set_status_raw("task", self.task.id, Status.DOING)
         full = self.store.get_full("milestone", self.milestone.id)
         assert full is not None
-        text = build_preview(self.store, "milestone", self.milestone.id, full).render_markdown()
+        text = build_preview("milestone", self.milestone.id, full).render_markdown()
         self.assertIn(f"- T{self.task.id}  Task title · doing", text)
 
         self.store.set_blocked(self.task.id, True, "waiting", actor="t")
         full = self.store.get_full("milestone", self.milestone.id)
         assert full is not None
-        text = build_preview(self.store, "milestone", self.milestone.id, full).render_markdown()
+        text = build_preview("milestone", self.milestone.id, full).render_markdown()
         self.assertIn(f"- T{self.task.id}  Task title · blocked", text)
 
     def test_acceptance_rows_keep_plain_prose(self) -> None:
@@ -335,7 +333,7 @@ class PreviewDocumentTest(unittest.TestCase):
         self.store.add_evidence(criterion.id, command="pytest", exit_code=0, actor="ci")
         full = self.store.get_full("task", self.task.id)
         assert full is not None
-        text = build_preview(self.store, "task", self.task.id, full).render_markdown()
+        text = build_preview("task", self.task.id, full).render_markdown()
         self.assertIn("- Run `pytest` in the repo · proven · pytest · exit 0", text)
         self.assertNotIn("\\`", text)
         self.assertNotIn(f"C{criterion.id}", text)
@@ -346,9 +344,7 @@ class PreviewDocumentTest(unittest.TestCase):
         )
         full = self.store.get_full("milestone", self.milestone.id)
         assert full is not None
-        lines = (
-            build_preview(self.store, "milestone", self.milestone.id, full).render().splitlines()
-        )
+        lines = build_preview("milestone", self.milestone.id, full).render().splitlines()
         heading = next(index for index, line in enumerate(lines) if line.startswith("## TASKS"))
         rows = [line for line in lines[heading + 1 :] if line.startswith("- ")]
         self.assertEqual(len(rows), 2)
@@ -363,14 +359,14 @@ class PreviewDocumentTest(unittest.TestCase):
         self.store.add_revision(self.plan.id, "a" * 64, "{}", reason="initial")
         full = self.store.get_full("plan", self.plan.id)
         assert full is not None
-        text = build_preview(self.store, "plan", self.plan.id, full).render()
+        text = build_preview("plan", self.plan.id, full).render()
         self.assertIn("## APPROVAL", text)
         self.assertIn("r1", text)
         self.assertIn("in sync", text)
         self.store.update_task(self.task.id, title="Renamed", reason="rename")
         full = self.store.get_full("plan", self.plan.id)
         assert full is not None
-        text = build_preview(self.store, "plan", self.plan.id, full).render()
+        text = build_preview("plan", self.plan.id, full).render()
         self.assertIn("changes since approval", text)
         self.assertIn("title: rename", text)
 
@@ -378,7 +374,7 @@ class PreviewDocumentTest(unittest.TestCase):
         self.store.add_question(self.plan.id, "Which host?")
         full = self.store.get_full("plan", self.plan.id)
         assert full is not None
-        text = build_preview(self.store, "plan", self.plan.id, full).render()
+        text = build_preview("plan", self.plan.id, full).render()
         self.assertIn("## QUESTIONS 1 OPEN", text)
         self.assertIn("Which host?", text)
         self.assertNotIn("1 open questions", text)
@@ -387,7 +383,7 @@ class PreviewDocumentTest(unittest.TestCase):
         self.store.link_ref(self.plan.id, "https://github.com/o/r/issues/7", title="Epic")
         full = self.store.get_full("plan", self.plan.id)
         assert full is not None
-        text = build_preview(self.store, "plan", self.plan.id, full).render()
+        text = build_preview("plan", self.plan.id, full).render()
         self.assertIn("## REFERENCES 1", text)
         self.assertIn("[Epic](<https://github.com/o/r/issues/7>)", text)
 
@@ -396,7 +392,7 @@ class PreviewDocumentTest(unittest.TestCase):
         self.store.add_evidence(criterion.id, command="pytest", exit_code=0, actor="ci")
         full = self.store.get_full("task", self.task.id)
         assert full is not None
-        text = build_preview(self.store, "task", self.task.id, full).render()
+        text = build_preview("task", self.task.id, full).render()
         self.assertIn("## PROOF", text)
         self.assertIn("pytest", text)
         self.assertIn("proven", text)
@@ -406,7 +402,7 @@ class PreviewDocumentTest(unittest.TestCase):
     def test_task_preview_shows_context_line_and_details(self) -> None:
         full = self.store.get_full("task", self.task.id)
         assert full is not None
-        document = build_preview(self.store, "task", self.task.id, full)
+        document = build_preview("task", self.task.id, full)
         text = document.render()
         task = full["task"]
         head = document.render_head().splitlines()
@@ -423,7 +419,7 @@ class PreviewDocumentTest(unittest.TestCase):
     def test_plan_head_is_the_title_and_one_meta_line(self) -> None:
         full = self.store.get_full("plan", self.plan.id)
         assert full is not None
-        document = build_preview(self.store, "plan", self.plan.id, full)
+        document = build_preview("plan", self.plan.id, full)
         head = document.render_head().splitlines()
         self.assertEqual(head[0], "[bold]Plan title[/]")
         self.assertEqual(len(head), 2)

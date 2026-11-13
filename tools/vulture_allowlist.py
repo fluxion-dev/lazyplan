@@ -5,9 +5,8 @@
   direct reference. Listed per method so genuinely dead actions still fail.
 - Tested API kept deliberately: criteria_progress (P#32 contract),
   STARTERS/ensure_templates (template scaffold seams), vcs registry.
-- Session API kept deliberately: the store and port surface is consumed
-  by the session commands and resume reads cut in T1436 and T1437.
-  auto_closed is display metadata for idle-reaped rows.
+- Legacy session history: the MCP session_list tool serializes every row
+  field through vars(), so auto_closed, handoff, and host_session are read.
 - Metrics dashboard contract: snapshot fields are consumed by the chart
   cards and their tests; attention_ids is the set form of the preview map.
 - Poll seams kept for tests: rebuilds counts full tree rebuilds and poll_now
@@ -67,7 +66,6 @@ _.next_offset
 _.cursor_line
 BINDINGS
 auto_closed
-agent_counts
 CSS
 tool_actions
 tool_labels
@@ -239,6 +237,5 @@ _.can_focus
 on_root
 _.on_click
 _.load_children
-# Legacy session history rows serialize every field through vars().
 _.handoff
 _.host_session

@@ -31,7 +31,7 @@ class TestPanelCopy(unittest.TestCase):
 @unittest.skipUnless(create_app is not None, "textual not installed")
 class TestMountedPanelCopy(unittest.IsolatedAsyncioTestCase):
     async def test_empty_journal_shows_only_the_plan_queue(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
             app = create_app(os.path.join(tmp, "panel.db"))
             async with app.run_test(size=(120, 35)) as pilot:
                 await pilot.pause()

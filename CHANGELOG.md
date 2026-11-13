@@ -3,6 +3,15 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## Unreleased
+
+### Fixed
+
+- **Plan worktrees work on Windows.** `lpui plan worktree` accepts checkouts
+  below the drive root, such as `C:\Users\me\repos\app`, instead of refusing
+  them as not absolute. `--print` also prints one command when a plan links
+  the same checkout twice, instead of failing.
+
 ## v0.44.0 — 2026-11-13
 
 ### Changed

@@ -51,9 +51,24 @@ class TestDeriveWorktree(unittest.TestCase):
         self.assertEqual(target.repo_path, REPO)
 
     def test_rejects_a_relative_or_bare_path(self):
-        for path in ("lazyplan", os.path.join("repos", "lazyplan")):
+        for path in (
+            "lazyplan",
+            os.path.join("repos", "lazyplan"),
+            "C:lazyplan",
+            "C:repos\\lazyplan",
+        ):
             with self.subTest(path=path), self.assertRaises(ValueError):
                 derive_worktree(path, 6, "Plan")
+
+    def test_accepts_drive_paths_at_any_depth(self):
+        cases = {
+            "C:\\lazyplan": "C:\\lazyplan--plan-6-plan",
+            "C:\\Users\\me\\repos\\lazyplan": "C:\\Users\\me\\repos\\lazyplan--plan-6-plan",
+            "D:/work/lazyplan": "D:/work/lazyplan--plan-6-plan",
+        }
+        for repo, worktree in cases.items():
+            with self.subTest(repo=repo):
+                self.assertEqual(derive_worktree(repo, 6, "Plan").worktree_path, worktree)
 
 
 class TestDeriveWorktrees(unittest.TestCase):

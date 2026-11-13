@@ -50,8 +50,12 @@ def _print_plan_worktrees(
     except (ValueError, WorktreeCollision) as exc:
         print(msg_error(exc), file=sys.stderr)
         return 2
+    rows: dict[str, dict] = {}
+    for repo in repos:
+        rows.setdefault(str(repo["repo_path"]).rstrip("/\\"), repo)
     entries = []
-    for repo, target in zip(repos, targets, strict=True):
+    for target in targets:
+        repo = rows[target.repo_path]
         start = str(repo.get("base_sha") or repo.get("branch") or "HEAD")
         command = (
             f"git -C {quote_path(target.repo_path)} worktree add -b {target.branch}"

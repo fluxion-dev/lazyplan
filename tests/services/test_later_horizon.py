@@ -34,14 +34,14 @@ class TestLaterHorizon(unittest.TestCase):
         self.checkout.stop()
         self.tmp.cleanup()
 
-    def test_session_tags_work_and_hands_off(self) -> None:
-        session, _ = self.store.start_session("ana", plan_id=self.plan.id)
-        self.store.add_task(self.milestone.id, "Tagged", actor="ana")
-        self.store.end_session(session.id, "ana", summary="shipped", handoff="next: QA")
-        tagged = [
-            event for event in self.store.events_for_session(session.id) if event["action"] == "add"
-        ]
-        self.assertTrue(tagged)
+    def test_agent_records_work_and_hands_off(self) -> None:
+        agent = self.store.add_agent(
+            "ana", host="opencode", agent="ana", host_session="host-1", plan_id=self.plan.id
+        )
+        self.store.transition_agent(agent.id, "working", event="prompt-submit")
+        self.store.end_agent(agent.id, "ana", summary="shipped", handoff="next: QA")
+        events = [event.event for event in self.store.agent_events(agent.id)]
+        self.assertEqual(events, ["session-end", "prompt-submit", "start"])
         packet = context.build(self.store)
         self.assertEqual(packet["plans"][0]["previous_session"]["handoff"], "next: QA")
 

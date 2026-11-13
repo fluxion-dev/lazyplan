@@ -80,14 +80,14 @@ class BriefCase(unittest.TestCase):
         self.assertIn("Which host?", text)
 
     def test_previous_session_handoff_is_in_brief(self):
-        session, _ = self.store.start_session("alice", plan_id=self.plan.id, now=100.0)
-        self.store.end_session(
-            session.id, "alice", summary="shipped", handoff="next: T2", now=200.0
+        agent = self.store.add_agent(
+            "alice", host="opencode", agent="alice", plan_id=self.plan.id, now=100.0
         )
+        self.store.end_agent(agent.id, "alice", summary="shipped", handoff="next: T2", now=200.0)
         payload = brief.build(self.store, commits=[])
         self.assertEqual(payload["plans"][0]["previous_session"]["handoff"], "next: T2")
         text = "\n".join(brief.lines(payload))
-        self.assertIn("session  S", text)
+        self.assertIn("session  A", text)
         self.assertIn("next: T2", text)
 
     def test_empty_store_says_no_active_plans(self):

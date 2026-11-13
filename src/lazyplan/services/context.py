@@ -13,7 +13,7 @@ import json
 from ..core.entities import Plan, Status, Task
 from ..core.policies.maintenance import is_archived_row
 from ..core.ports.insights import InsightsPort
-from .sessions import previous_session
+from .agents import previous_agent
 
 DEFAULT_CONTEXT_CHARS = 4000
 MIN_CONTEXT_CHARS = 120
@@ -149,7 +149,7 @@ def _packet(store: InsightsPort, plan: Plan) -> dict:
         "status": plan.status.value,
         "why": plan.goal,
         "what": plan.description,
-        "previous_session": previous_session(store, plan_id=plan.id),
+        "previous_session": previous_agent(store, plan_id=plan.id),
         "doing": [
             {
                 "id": task.id,
@@ -256,7 +256,9 @@ def lines(payload: dict) -> list[str]:
             out.append(f"  why      {plan['why']}")
         session = plan.get("previous_session")
         if session:
-            out.append(f"  session  S{session['id']} @{session['actor']}")
+            label = session.get("label") or f"A{session['id']}"
+            who = session.get("agent") or session.get("actor") or "agent"
+            out.append(f"  session  {label} @{who}")
             if session.get("summary"):
                 out.append(f"  summary  {session['summary']}")
             if session.get("handoff"):

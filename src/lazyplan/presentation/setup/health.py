@@ -2,8 +2,8 @@
 
 A finding groups the missing catalog items it can install (``items``), or
 names a manual ``fix`` when lazyplan cannot repair it. ``decision`` is the
-remembered "not now" or "never" that keeps it from prompting. This module
-never writes.
+remembered "not now" or "never" that keeps it from prompting. ``check``
+never writes; ``HealthContext.install`` does.
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from lazyplan.infrastructure.integrations import HOOK, HOST_LABELS, IntegrationI
 from lazyplan.infrastructure.repo import find_repo_root
 
 from .apply import choice_from_state
-from .integrations import inspect, suppressing_decision
+from .integrations import ReviewResult, inspect, install_items, suppressing_decision
 from .layout import SetupChoice
 from .state import SetupState, load_state
 
@@ -230,6 +230,11 @@ class HealthContext:
     def report(self) -> HealthReport:
         """Run the check for this context."""
         return check(self.choice, self.state, self.root, self.home, self.version)
+
+    def install(self, findings: tuple[HealthFinding, ...]) -> ReviewResult:
+        """Install every fixable item behind these findings."""
+        items = tuple(item for finding in findings for item in finding.items)
+        return install_items(items, self.choice, self.state, self.root, self.home, self.version)
 
 
 def current(cwd: Path, home: Path | None = None, version: str = "") -> HealthContext:

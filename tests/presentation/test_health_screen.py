@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import tempfile
 import unittest
+from unittest import mock
 
 from lazyplan.infrastructure.integrations import IntegrationItem
 from lazyplan.presentation.setup.health import (
@@ -13,11 +14,13 @@ from lazyplan.presentation.setup.health import (
     HealthFinding,
     HealthReport,
 )
+from lazyplan.presentation.setup.integrations import ReviewResult
 
 try:
     from textual.widgets import Static
 
-    from lazyplan.presentation.tui import create_app
+    from lazyplan.presentation.tui import create_app, launch
+    from lazyplan.presentation.tui.launch import Restart
     from lazyplan.presentation.tui.screens import HealthScreen
 except ImportError:  # pragma: no cover - textual not installed
     create_app = HealthScreen = None  # type: ignore[assignment]
@@ -47,6 +50,20 @@ GH = HealthFinding(
 )
 
 
+class FakeSession:
+    def __init__(self, report: HealthReport, pending=()) -> None:
+        self._report = report
+        self.pending = pending
+        self.installed: list[tuple[HealthFinding, ...]] = []
+
+    def report(self) -> HealthReport:
+        return self._report
+
+    def install(self, findings: tuple[HealthFinding, ...]) -> ReviewResult:
+        self.installed.append(findings)
+        return ReviewResult(decision="install", pending=self.pending)
+
+
 @unittest.skipUnless(create_app is not None, "textual not installed")
 class HealthScreenTest(unittest.IsolatedAsyncioTestCase):
     def setUp(self) -> None:
@@ -56,8 +73,9 @@ class HealthScreenTest(unittest.IsolatedAsyncioTestCase):
     def tearDown(self) -> None:
         self.tmp.cleanup()
 
-    def app(self, report: HealthReport):
-        return create_app(self.db, health_check=lambda: report)
+    def app(self, report: HealthReport, pending=()):
+        self.session = FakeSession(report, pending)
+        return create_app(self.db, health_check=lambda: self.session)
 
     async def settle(self, pilot) -> None:
         await pilot.app.workers.wait_for_complete()
@@ -83,6 +101,35 @@ class HealthScreenTest(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             self.assertNotIsInstance(app.screen, HealthScreen)
             self.assertEqual(len(app.screen_stack), 1)
+
+    async def test_install_and_restart_installs_fixable_findings_then_exits(self) -> None:
+        app = self.app(HealthReport(findings=(HOOKS, GIT)))
+        async with app.run_test(size=(110, 40)) as pilot:
+            await self.settle(pilot)
+            body = str(app.screen.query_one("#health-body", Static).render())
+            self.assertIn("Install & restart adds the missing skills and hooks", body)
+            await pilot.click("#health-install")
+            await pilot.pause()
+        self.assertEqual(self.session.installed, [(HOOKS,)])
+        self.assertEqual(app.return_value, Restart(("Claude Code",)))
+
+    async def test_hosts_the_installer_skipped_are_not_named(self) -> None:
+        app = self.app(HealthReport(findings=(HOOKS,)), pending=(HOOK,))
+        async with app.run_test(size=(110, 40)) as pilot:
+            await self.settle(pilot)
+            await pilot.click("#health-install")
+            await pilot.pause()
+        self.assertEqual(app.return_value, Restart(()))
+
+    async def test_nothing_fixable_offers_no_install(self) -> None:
+        app = self.app(HealthReport(findings=(GIT,)))
+        async with app.run_test(size=(110, 40)) as pilot:
+            await self.settle(pilot)
+            self.assertFalse(app.screen.query("#health-install"))
+            await pilot.click("#health-later")
+            await pilot.pause()
+            self.assertEqual(len(app.screen_stack), 1)
+        self.assertEqual(self.session.installed, [])
 
     async def test_a_clean_report_stays_quiet(self) -> None:
         app = self.app(HealthReport())
@@ -123,6 +170,29 @@ class HealthScreenTest(unittest.IsolatedAsyncioTestCase):
 class SeverityTest(unittest.TestCase):
     def test_tool_findings_default_to_errors(self) -> None:
         self.assertEqual(GIT.severity, ERROR)
+
+
+@unittest.skipUnless(create_app is not None, "textual not installed")
+class RelaunchTest(unittest.TestCase):
+    def test_windows_waits_on_a_child_with_the_same_arguments(self) -> None:
+        with (
+            mock.patch.object(launch.os, "name", "nt"),
+            mock.patch.object(launch.sys, "argv", ["lpui", "ui"]),
+            mock.patch.object(launch.subprocess, "call", return_value=7) as call,
+        ):
+            self.assertEqual(launch.relaunch(), 7)
+        call.assert_called_once_with([launch.sys.executable, "-m", "lazyplan", "ui"])
+
+    def test_posix_replaces_the_process(self) -> None:
+        with (
+            mock.patch.object(launch.os, "name", "posix"),
+            mock.patch.object(launch.sys, "argv", ["lpui"]),
+            mock.patch.object(launch.os, "execv") as execv,
+        ):
+            launch.relaunch()
+        execv.assert_called_once_with(
+            launch.sys.executable, [launch.sys.executable, "-m", "lazyplan"]
+        )
 
 
 if __name__ == "__main__":

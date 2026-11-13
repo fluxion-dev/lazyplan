@@ -134,6 +134,14 @@ class IntegrationFindingsTest(HealthCase):
         self.assertTrue(payload["fixable"])
         self.assertIn(hook_id("claude", "stop"), payload["items"])
 
+    def test_context_install_writes_the_fixable_items_and_clears_them(self):
+        context = health.HealthContext(self.choice, self.state, None, self.home, "1.0")
+        before = self.check()
+        result = context.install(before.open)
+        self.assertEqual(result.pending, ())
+        self.assertTrue((self.home / ".claude" / "skills" / "lazyplan" / "SKILL.md").is_file())
+        self.assertEqual(self.check().findings, ())
+
     def test_check_writes_nothing(self):
         before = sorted(path.relative_to(self.home) for path in self.home.rglob("*"))
         self.check()

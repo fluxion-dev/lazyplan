@@ -49,7 +49,7 @@ from .controllers.metrics import MetricsController
 from .controllers.tree import TreeController
 from .controllers.updates import UpdateController
 from .filters import FilterMixin
-from .launch import launch_notes, launch_update
+from .launch import Restart, launch_notes, launch_update, relaunch
 from .metrics import MetricsSection
 from .preview import PreviewMixin
 from .screens import ReleaseNotesScreen
@@ -270,7 +270,7 @@ def _startup_health_check(db_path: str | None) -> HealthCheck | None:
 
     if db_path or os.environ.get("LAZYPLAN_DB") or os.environ.get(NO_SETUP_ENV, "").strip():
         return None
-    return lambda: current(Path.cwd(), version=package_version()).report()
+    return lambda: current(Path.cwd(), version=package_version())
 
 
 def run(db_path: str | None = None) -> int:
@@ -282,5 +282,7 @@ def run(db_path: str | None = None) -> int:
     startup_notice, exit_now = launch_update()
     if exit_now:
         return 0
-    create_app(db_path, startup_notice, launch_notes(), _startup_health_check(db_path)).run()
+    app = create_app(db_path, startup_notice, launch_notes(), _startup_health_check(db_path))
+    if isinstance(app.run(), Restart):
+        return relaunch()
     return 0

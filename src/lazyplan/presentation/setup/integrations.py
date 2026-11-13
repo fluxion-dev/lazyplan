@@ -283,37 +283,50 @@ def review_pending(
     except (EOFError, KeyboardInterrupt):
         return ReviewResult(decision="pending", pending=report.pending)
     if action == "install":
-        backup_dir = layout.new_backup_dir(home)
-        installed = _install_skills(report.pending, choice, root, home, backup_dir)
-        hook_installed, hook_backups, skipped = _install_hooks(
-            report.pending, home, state.effective_mode()
-        )
-        failed = tuple(
-            item
-            for item in report.pending
-            if item.kind != SKILL and any(str(path) in skipped for path in hook_paths(item, home))
-        )
-        applied = tuple(item for item in report.pending if item not in failed)
-        _remember(applied, state, "installed", version)
-        hosts = sorted({item.host for item in applied if item.kind == HOOK and item.host})
-        if hosts:
-            state.hook_files = [
-                str(spec.path) for spec in hook_install.preview(home, hosts) if spec.path.is_file()
-            ]
-            state.hooks_enabled = True
-            state.hooks_mode = state.effective_mode()
-            state.hooks = bool(state.hook_files)
-        save_state(state, home)
-        installed.extend(hook_installed)
-        backups = [str(backup_dir)] if backup_dir.exists() else []
-        backups.extend(hook_backups)
-        return ReviewResult(
-            decision="install",
-            installed=tuple(installed),
-            backups=tuple(backups),
-            pending=failed,
-        )
+        return install_items(report.pending, choice, state, root, home, version)
     decision = "deferred" if action == "defer" else "never"
     _remember(report.pending, state, decision, version)
     save_state(state, home)
     return ReviewResult(decision=decision)
+
+
+def install_items(
+    items: tuple[IntegrationItem, ...],
+    choice: SetupChoice,
+    state: SetupState,
+    root: Path | None,
+    home: Path,
+    version: str,
+) -> ReviewResult:
+    """Write the given skills and hooks, remember them, and save state.
+
+    Hook hosts the installer skipped come back as ``pending``.
+    """
+    backup_dir = layout.new_backup_dir(home)
+    installed = _install_skills(items, choice, root, home, backup_dir)
+    hook_installed, hook_backups, skipped = _install_hooks(items, home, state.effective_mode())
+    failed = tuple(
+        item
+        for item in items
+        if item.kind != SKILL and any(str(path) in skipped for path in hook_paths(item, home))
+    )
+    applied = tuple(item for item in items if item not in failed)
+    _remember(applied, state, "installed", version)
+    hosts = sorted({item.host for item in applied if item.kind == HOOK and item.host})
+    if hosts:
+        written = [str(spec.path) for spec in hook_install.preview(home, hosts)]
+        merged = dict.fromkeys([*state.hook_files, *written])
+        state.hook_files = [path for path in merged if Path(path).is_file()]
+        state.hooks_enabled = True
+        state.hooks_mode = state.effective_mode()
+        state.hooks = bool(state.hook_files)
+    save_state(state, home)
+    installed.extend(hook_installed)
+    backups = [str(backup_dir)] if backup_dir.exists() else []
+    backups.extend(hook_backups)
+    return ReviewResult(
+        decision="install",
+        installed=tuple(installed),
+        backups=tuple(backups),
+        pending=failed,
+    )

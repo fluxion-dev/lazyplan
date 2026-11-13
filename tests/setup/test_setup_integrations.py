@@ -128,6 +128,17 @@ class InspectionCase(unittest.TestCase):
         self.assertNotIn(skill.id, {item.id for item in report.pending})
         self.assertIn(skill.id, {item.id for item in report.suppressed})
 
+    def test_installing_one_host_keeps_the_other_hosts_hook_files(self):
+        self.choice = SetupChoice(placement="home", agents=["claude", "gemini"])
+        hook_install.install(self.home, ["gemini"])
+        gemini = str(self.home / ".gemini" / "settings.json")
+        self.state.hook_files = [gemini]
+        claude = tuple(item for item in self.inspect().pending if item.host == "claude")
+        integrations.install_items(claude, self.choice, self.state, self.repo, self.home, "1.0")
+        self.assertEqual(
+            self.state.hook_files, [gemini, str(self.home / ".claude" / "settings.json")]
+        )
+
     def test_skills_and_hooks_opt_outs_remove_their_items(self):
         self.state.skills_enabled = False
         self.state.hooks_enabled = False

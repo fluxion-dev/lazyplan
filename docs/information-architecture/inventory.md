@@ -35,7 +35,7 @@ python3 tools/ia_inventory.py --check
 | --- | --- |
 | `audit` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --since, --strict, --min-coverage, --max-lag, --max-gaps, --min-trace, --min-evidence |
 | `brief` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan |
-| `claim` | --json, --porcelain, --version, --actor, --heal, --no-heal, --id, --ttl, --note, --force, --worktree, --repo |
+| `claim` | --json, --porcelain, --version, --actor, --heal, --no-heal, --id, --ttl, --note, --force, --worktree, --repo, --reason |
 | `claims` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --all |
 | `comment` | --json, --porcelain, --version, --actor, --heal, --no-heal, --kind, --id, --comment, --text, --mentions |
 | `commits` | --json, --porcelain, --version, --actor, --heal, --no-heal, --kind, --id, --files, --refresh |
@@ -58,7 +58,7 @@ python3 tools/ia_inventory.py --check
 | `maint` | --json, --porcelain, --version, --actor, --heal, --no-heal |
 | `mcp` | --json, --porcelain, --version, --actor, --heal, --no-heal, --read-only |
 | `milestone` | --json, --porcelain, --version, --actor, --heal, --no-heal |
-| `next` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --ttl, --note, --suggest |
+| `next` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --ttl, --note, --suggest, --force, --reason |
 | `note` | --json, --porcelain, --version, --actor, --heal, --no-heal, --kind, --id, --text, --limit |
 | `notes` | --json, --porcelain, --version, --actor, --heal, --no-heal, --all, --since |
 | `plan` | --json, --porcelain, --version, --actor, --heal, --no-heal |

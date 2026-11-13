@@ -21,7 +21,7 @@ class TestBlockedTasks(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.db = os.path.join(self.tmp.name, "blocked.db")
         store = Store(self.db)
-        plan = store.add_plan("P", "what", goal="why", actor="fixture")
+        plan = store.add_plan("P", "what", goal="why", actor="fixture", worktree_required=False)
         milestone = store.add_milestone(plan.id, "M", actor="fixture")
         store.add_task(milestone.id, "T1", description="first", actor="fixture")
         store.add_task(milestone.id, "T2", description="second", actor="fixture")

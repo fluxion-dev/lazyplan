@@ -80,7 +80,7 @@ class PreviewDocumentTest(unittest.TestCase):
         assert full is not None
         body = build_preview(self.store, "plan", self.plan.id, full, []).render_markdown()
         headings = [line for line in body.splitlines() if line.startswith("## ")]
-        self.assertGreaterEqual(len(headings), 4)
+        self.assertGreaterEqual(len(headings), 2)
         for heading in headings:
             self.assertEqual(heading, heading.upper())
 
@@ -215,7 +215,7 @@ class PreviewDocumentTest(unittest.TestCase):
         self.assertNotIn("Details", row)
         self.assertNotIn("tasks", row)
 
-    def test_acceptance_block_lists_every_criterion_open_first(self) -> None:
+    def test_acceptance_block_lists_open_criteria_only(self) -> None:
         criteria = [
             {"id": 1, "text": "done one", "done": True, "evidence": {"state": "pass", "count": 2}},
             {"id": 2, "text": "open one", "done": False, "evidence": {}},
@@ -230,12 +230,15 @@ class PreviewDocumentTest(unittest.TestCase):
             (
                 "- ○ **C2** open one · —",
                 "- ○ **C3** open two · ✗ 1",
-                "- ✓ **C1** done one · ✓ 2",
-                "- ✓ **C4** done two · —",
             ),
         )
 
-    def test_plan_preview_lists_every_criterion_with_its_id(self) -> None:
+    def test_acceptance_block_is_absent_when_every_criterion_is_done(self) -> None:
+        criteria = [{"id": 1, "text": "done", "done": True, "evidence": {}}]
+        self.assertIsNone(acceptance_block(criteria, detailed=True))
+        self.assertIsNone(acceptance_block(criteria))
+
+    def test_plan_preview_lists_open_criteria_only(self) -> None:
         criteria = [
             self.store.add_criteria("plan", self.plan.id, f"criterion {index}")
             for index in range(7)
@@ -247,17 +250,42 @@ class PreviewDocumentTest(unittest.TestCase):
         assert full is not None
         text = build_preview(self.store, "plan", self.plan.id, full, []).render_markdown()
         acceptance = text.split("## ACCEPTANCE", 1)[1].split("## ", 1)[0]
-        for criterion in criteria:
+        for criterion in criteria[2:]:
             self.assertIn(f"C{criterion.id}", acceptance)
             self.assertIn(criterion.text, acceptance)
-        self.assertLess(acceptance.index("criterion 2"), acceptance.index("criterion 0"))
-        self.assertIn("✓ **C" + str(criteria[0].id), acceptance)
+        self.assertNotIn(f"C{criteria[0].id}", acceptance)
+        self.assertNotIn(f"C{criteria[1].id}", acceptance)
+        self.assertIn("2/7 · 5 OPEN", acceptance)
 
     def test_plan_preview_without_criteria_has_no_acceptance_block(self) -> None:
         full = self.store.get_full("plan", self.plan.id)
         assert full is not None
         text = build_preview(self.store, "plan", self.plan.id, full, []).render_markdown()
         self.assertNotIn("## ACCEPTANCE", text)
+
+    def test_unapproved_plan_has_no_approval_block(self) -> None:
+        full = self.store.get_full("plan", self.plan.id)
+        assert full is not None
+        text = build_preview(self.store, "plan", self.plan.id, full, []).render_markdown()
+        self.assertNotIn("## APPROVAL", text)
+        self.assertNotIn("no approved revision", text)
+
+    def test_notes_and_source_never_render(self) -> None:
+        self.store.add_note("plan", self.plan.id, "a private note", actor="t")
+        self.store.add_note("task", self.task.id, "a task note", actor="t")
+        self.store.link_commit("task", self.task.id, "a" * 40, "subject", actor="t")
+        for kind, obj_id in (
+            ("plan", self.plan.id),
+            ("milestone", self.milestone.id),
+            ("task", self.task.id),
+        ):
+            full = self.store.get_full(kind, obj_id)
+            assert full is not None
+            text = build_preview(self.store, kind, obj_id, full, []).render_markdown()
+            self.assertNotIn("## NOTES", text)
+            self.assertNotIn("## SOURCE", text)
+            self.assertNotIn("a private note", text)
+            self.assertNotIn("a task note", text)
 
     def test_milestone_preview_keeps_the_short_acceptance_list(self) -> None:
         criteria = [
@@ -426,7 +454,7 @@ class PreviewMarkdownTest(unittest.IsolatedAsyncioTestCase):
                 self.assertIn("Second why", body.source or "")
                 self.assertNotIn("First why", body.source or "")
 
-    async def test_overview_widget_renders_every_plan_criterion(self) -> None:
+    async def test_overview_widget_renders_open_plan_criteria(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             store = Store(os.path.join(tmp, "criteria.db"))
             plan = store.add_plan("Plan", "What", goal="Why")
@@ -444,11 +472,12 @@ class PreviewMarkdownTest(unittest.IsolatedAsyncioTestCase):
                 tree.select_node(tree.root.children[0])
                 await pilot.pause()
                 source = app.query_one("#preview-body", Markdown).source or ""
-                for criterion in criteria:
+                for criterion in criteria[1:]:
                     self.assertIn(f"C{criterion.id}", source)
                     self.assertIn(criterion.text, source)
+                self.assertNotIn(f"C{criteria[0].id}", source)
                 self.assertLess(
-                    source.index("widget criterion 1"), source.index("widget criterion 0")
+                    source.index("widget criterion 1"), source.index("widget criterion 2")
                 )
 
     async def test_gfm_prose_renders_as_markdown_blocks(self) -> None:
@@ -517,7 +546,7 @@ class PreviewMarkdownTest(unittest.IsolatedAsyncioTestCase):
                 bars = [
                     index for index, block in enumerate(blocks) if isinstance(block, MarkdownH2)
                 ]
-                self.assertGreaterEqual(len(bars), 3)
+                self.assertGreaterEqual(len(bars), 2)
                 for index in bars:
                     bar = blocks[index]
                     margin = bar.styles.margin

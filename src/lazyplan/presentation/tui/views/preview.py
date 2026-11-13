@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Any
 from ...shared.design import (
     escape_markdown,
     escape_markup,
-    repo_project_name,
     status_word,
 )
 from .reference_lines import reference_lines
@@ -181,16 +180,6 @@ def tasks_block(tasks: list[dict[str, Any]]) -> PreviewBlock | None:
     return PreviewBlock(f"tasks {len(tasks)}", tuple(lines))
 
 
-def notes_block(notes: list[dict[str, Any]]) -> PreviewBlock | None:
-    if not notes:
-        return None
-    rows = []
-    for note in notes[-3:]:
-        text = str(note.get("text", "")).replace("\n", " ")
-        rows.append(_row(f"@{escape_markdown(str(note.get('actor', '')))}", text, sep=" "))
-    return PreviewBlock("notes", tuple(rows))
-
-
 def _proof_chip(evidence: dict[str, Any] | None) -> str:
     """One compact state chip for a criterion's evidence."""
     data = evidence or {}
@@ -206,15 +195,15 @@ def _proof_chip(evidence: dict[str, Any] | None) -> str:
 def acceptance_block(
     criteria: list[dict[str, Any]], *, detailed: bool = False
 ) -> PreviewBlock | None:
-    """Acceptance criteria; plans show every item, other rows keep the short list."""
-    if not criteria:
-        return None
-    done = sum(1 for criterion in criteria if criterion.get("done"))
+    """Open acceptance criteria, or nothing when every item is done."""
     open_items = [criterion for criterion in criteria if not criterion.get("done")]
-    tail = f" · {len(open_items)} open" if open_items else " · complete"
+    if not open_items:
+        return None
+    done = len(criteria) - len(open_items)
+    heading = f"acceptance {done}/{len(criteria)} · {len(open_items)} open"
     if not detailed:
         return PreviewBlock(
-            f"acceptance {done}/{len(criteria)}{tail}",
+            heading,
             tuple(
                 _row(
                     "○",
@@ -225,10 +214,7 @@ def acceptance_block(
                 for criterion in open_items[:3]
             ),
         )
-    return PreviewBlock(
-        f"acceptance {done}/{len(criteria)}{tail}",
-        _detailed_acceptance_rows(criteria),
-    )
+    return PreviewBlock(heading, _detailed_acceptance_rows(open_items))
 
 
 def _detailed_acceptance_rows(criteria: list[dict[str, Any]]) -> tuple[str, ...]:
@@ -298,7 +284,7 @@ def approval_block(approval: dict[str, Any] | None) -> PreviewBlock | None:
         return None
     revision = int(approval.get("revision", 0) or 0)
     if revision == 0:
-        return PreviewBlock("approval", ("- no approved revision",))
+        return None
     drift = int(approval.get("drift", 0) or 0)
     stamp = float(approval.get("approved_at", 0) or 0)
     day = time.strftime("%Y-%m-%d", time.localtime(stamp)) if stamp else "-"
@@ -321,52 +307,12 @@ def approval_block(approval: dict[str, Any] | None) -> PreviewBlock | None:
     return PreviewBlock("approval", tuple(lines))
 
 
-def _source_bits(
-    links: list[dict[str, Any]],
-    forge: list[dict[str, Any]],
-    repos: list[dict[str, Any]],
-) -> str:
-    bits: list[str] = []
-    if links:
-        bits.append(f"{len(links)} commits")
-    if forge:
-        bits.append(f"{len(forge)} PRs")
-    if repos:
-        names = [name for name in (repo_project_name(repo) for repo in repos) if name]
-        rendered = ", ".join(escape_markdown(name) for name in names[:3])
-        bits.append("repos: " + rendered if names else f"{len(repos)} repos")
-    return " · ".join(bits)
-
-
-def _source_summary(
-    links: list[dict[str, Any]],
-    forge: list[dict[str, Any]],
-    repos: list[dict[str, Any]],
-) -> PreviewBlock | None:
-    bits = _source_bits(links, forge, repos)
-    if not bits:
-        return None
-    return PreviewBlock("source", (bits,))
-
-
 def common_blocks(
     full: dict[str, Any], *, detailed_acceptance: bool = False
 ) -> tuple[PreviewBlock, ...]:
-    """Coordination, acceptance, and provenance blocks for a preview."""
-    blocks: list[PreviewBlock] = []
-    notes = notes_block(full.get("notes", []))
-    if notes is not None:
-        blocks.append(notes)
+    """Open acceptance criteria for the selected level, when any remain."""
     acceptance = acceptance_block(full.get("criteria", []), detailed=detailed_acceptance)
-    if acceptance is not None:
-        blocks.append(acceptance)
-    links = full.get("effective_links") or full.get("links", [])
-    forge = full.get("effective_forge_links") or full.get("forge_links", [])
-    repos = full.get("effective_repos") or full.get("repos") or []
-    source = _source_summary(links, forge, repos)
-    if source is not None:
-        blocks.append(source)
-    return tuple(blocks)
+    return (acceptance,) if acceptance is not None else ()
 
 
 def worktrees_block(full: dict[str, Any]) -> PreviewBlock | None:
@@ -450,13 +396,9 @@ def build_task(
     desc = str(obj.get("description", "") or "").strip()
     if desc:
         blocks.append(PreviewBlock("details", (desc,)))
-    task_notes = notes_block(obj.get("notes", []))
-    if task_notes is not None:
-        blocks.append(task_notes)
     proof = proof_block(full.get("criteria", []))
     if proof is not None:
         blocks.append(proof)
-    blocks.extend(common_blocks(full))
     return PreviewDocument(header, meta_line, tuple(blocks))
 
 

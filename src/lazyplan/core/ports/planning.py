@@ -5,7 +5,7 @@ from __future__ import annotations
 from contextlib import AbstractContextManager
 from typing import Protocol
 
-from ..entities import Criterion, Milestone, Plan, PlanQuestion, Status, Task
+from ..entities import Criterion, Milestone, Plan, PlanQuestion, PlanWorktree, Status, Task
 
 
 class PlanningPort(Protocol):
@@ -169,6 +169,23 @@ class PlanningPort(Protocol):
     def criteria_map(self) -> dict[tuple[str, int], list[Criterion]]: ...
 
     def repos_map(self) -> dict[tuple[str, int], list[dict]]: ...
+
+    def register_plan_worktree(
+        self,
+        plan_id: int,
+        repo_path: str,
+        worktree_path: str,
+        branch: str = "",
+        repo_remote: str = "",
+        actor: str = "human",
+        registered_at: float = 0.0,
+    ) -> PlanWorktree: ...
+
+    def get_plan_worktree(self, plan_id: int, repo_path: str) -> PlanWorktree | None: ...
+
+    def list_plan_worktrees(self, plan_id: int) -> list[PlanWorktree]: ...
+
+    def remove_plan_worktree(self, plan_id: int, repo_path: str, actor: str = "human") -> bool: ...
 
     def plan_status_events_map(self) -> dict[int, tuple[float, str]]: ...
 

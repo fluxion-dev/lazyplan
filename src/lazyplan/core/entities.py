@@ -41,6 +41,27 @@ class Plan:
             raise ValueError("plan name must not be empty")
 
 
+@dataclass(frozen=True)
+class PlanWorktree:
+    """A plan's registered checkout for one linked repository."""
+
+    id: int
+    plan_id: int
+    repo_path: str
+    worktree_path: str
+    repo_remote: str = ""
+    branch: str = ""
+    registered_at: float = 0.0
+
+    def __post_init__(self) -> None:
+        if self.plan_id < 1:
+            raise ValueError("plan_id must be positive")
+        if not self.repo_path.strip():
+            raise ValueError("repo_path must not be empty")
+        if not self.worktree_path.strip():
+            raise ValueError("worktree_path must not be empty")
+
+
 @dataclass
 class Task:
     """An atomic unit of work under a milestone."""

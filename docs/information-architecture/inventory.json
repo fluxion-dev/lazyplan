@@ -2,6 +2,30 @@
   "cli": {
     "commands": [
       {
+        "name": "agent",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          []
+        ]
+      },
+      {
         "name": "audit",
         "options": [
           [
@@ -483,6 +507,21 @@
           ],
           [
             "--host-session"
+          ],
+          [
+            "--agent"
+          ],
+          [
+            "--model"
+          ],
+          [
+            "--role"
+          ],
+          [
+            "--parent-session"
+          ],
+          [
+            "--pid"
           ]
         ]
       },
@@ -1545,17 +1584,17 @@
         ]
       }
     ],
-    "count": 51
+    "count": 52
   },
   "counts": {
-    "cli_commands": 51,
+    "cli_commands": 52,
     "doc_files": 9,
     "doc_headings": 91,
     "env_names": 12,
     "file_paths": 12,
     "hook_events": 35,
     "mcp_resources": 3,
-    "mcp_tools": 67,
+    "mcp_tools": 68,
     "palette_commands": 52,
     "setup_steps": 4,
     "stale_claims": 0,
@@ -1634,7 +1673,7 @@
           "Progress and rollups",
           "Tracking guarantees",
           "Plan worktrees",
-          "Sessions and touch-points",
+          "Agents and touch-points",
           "Trust: approvals, evidence, and questions",
           "Review, lint, and audit",
           "Git provenance",
@@ -1901,6 +1940,10 @@
         "name": "activity_list"
       },
       {
+        "description": "Live agents, newest first.",
+        "name": "agent_list"
+      },
+      {
         "description": "Coverage, lag, gaps, and trace coverage.",
         "name": "audit"
       },
@@ -2129,7 +2172,7 @@
         "name": "review"
       },
       {
-        "description": "Sessions, newest first.",
+        "description": "Legacy session history, newest first.",
         "name": "session_list"
       },
       {
@@ -2317,6 +2360,14 @@
         "key": "",
         "label": "Add plan question",
         "section": "Edit"
+      },
+      {
+        "handler": "open_agents_hub",
+        "help_group": "TRUST",
+        "id": "agents-hub",
+        "key": "",
+        "label": "Open agents hub",
+        "section": "View"
       },
       {
         "handler": "approve_plan",
@@ -2653,14 +2704,6 @@
         "key": "",
         "label": "Resolve plan question",
         "section": "Edit"
-      },
-      {
-        "handler": "open_sessions_hub",
-        "help_group": "TRUST",
-        "id": "sessions-hub",
-        "key": "",
-        "label": "Open sessions hub",
-        "section": "View"
       },
       {
         "handler": "source_trail",
@@ -3031,7 +3074,7 @@
         "file": "src/lazyplan/presentation/tui/screens/hub_coordination.py",
         "key": "e",
         "label": "Edit",
-        "line": "293",
+        "line": "294",
         "screen": "hub_coordination"
       },
       {
@@ -3039,7 +3082,7 @@
         "file": "src/lazyplan/presentation/tui/screens/hub_coordination.py",
         "key": "u",
         "label": "Filter",
-        "line": "295",
+        "line": "296",
         "screen": "hub_coordination"
       },
       {
@@ -3063,7 +3106,7 @@
         "file": "src/lazyplan/presentation/tui/screens/hub_coordination.py",
         "key": "x",
         "label": "Toggle",
-        "line": "294",
+        "line": "295",
         "screen": "hub_coordination"
       },
       {
@@ -3329,7 +3372,7 @@
           {
             "action": "edit_row",
             "file": "src/lazyplan/presentation/tui/screens/hub_coordination.py",
-            "line": "293"
+            "line": "294"
           },
           {
             "action": "edit_row",
@@ -3559,7 +3602,7 @@
           {
             "action": "hub_toggle",
             "file": "src/lazyplan/presentation/tui/screens/hub_coordination.py",
-            "line": "294"
+            "line": "295"
           },
           {
             "action": "hub_toggle",

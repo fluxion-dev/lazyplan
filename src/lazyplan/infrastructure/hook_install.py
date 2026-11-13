@@ -195,6 +195,11 @@ const run = (directory, event, payload = {}, json = false) =>
     if (payload.tool) args.push("--tool", payload.tool)
     if (payload.path) args.push("--path", payload.path)
     if (payload.session) args.push("--host-session", payload.session)
+    if (payload.agent) args.push("--agent", payload.agent)
+    if (payload.model) args.push("--model", payload.model)
+    if (payload.parent) args.push("--parent-session", payload.parent)
+    if (payload.role) args.push("--role", payload.role)
+    if (payload.pid) args.push("--pid", String(payload.pid))
     const child = spawn("lpui", args, {
       cwd: directory,
       stdio: ["ignore", "pipe", "pipe"],
@@ -337,10 +342,19 @@ const setup = async (ctx) => {
         })
         for await (const event of stream) {
           const data = event.data ?? {}
-          if (data.parentID) continue
           const where = event.location?.directory ?? data.directory
           if (where && where !== directory) continue
           const session = data.sessionID ?? event.sessionID ?? ""
+          if (event.type === "session.created") {
+            await run(directory, "session-start", {
+              session,
+              parent: data.parentID,
+              agent: data.agent,
+              model: data.model,
+              pid: process.pid,
+            })
+            continue
+          }
           if (event.type === "session.idle") {
             // Idle waits on the user; it never ends the row.
             await run(directory, "stop", { session })
@@ -393,8 +407,14 @@ const server = async (input) => {
     event: async ({ event }) => {
       const props = event?.properties ?? {}
       const info = props.info ?? {}
-      if (event?.type === "session.created" && info.parentID) {
-        children.add(info.id)
+      if (event?.type === "session.created") {
+        await run(directory, "session-start", {
+          session: info.id ?? "",
+          parent: info.parentID,
+          agent: info.agent,
+          model: info.model,
+          pid: process.pid,
+        })
         return
       }
       if (event?.type === "session.idle" && tracked(props.sessionID ?? "")) {
@@ -402,7 +422,7 @@ const server = async (input) => {
         await run(directory, "stop", { session: props.sessionID ?? "" })
         return
       }
-      if (event?.type === "session.deleted" && !info.parentID) {
+      if (event?.type === "session.deleted") {
         await sessionEnded(directory, info.id ?? "")
       }
     },

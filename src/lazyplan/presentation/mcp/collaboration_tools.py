@@ -154,10 +154,18 @@ class CollaborationToolsMixin(McpBase):
                 ),
                 self._tool_note_list,
             ),
+            "agent_list": (
+                _tool(
+                    "agent_list",
+                    "Live agents, newest first.",
+                    {"plan": _id(), "limit": _id(), "live": {"type": "boolean"}},
+                ),
+                self._tool_agent_list,
+            ),
             "session_list": (
                 _tool(
                     "session_list",
-                    "Sessions, newest first.",
+                    "Legacy session history, newest first.",
                     {"plan": _id(), "limit": _id()},
                 ),
                 self._tool_session_list,
@@ -316,11 +324,21 @@ class CollaborationToolsMixin(McpBase):
             )
         ]
 
+    def _tool_agent_list(self, args: dict) -> object:
+        store = self._need_store()
+        return [
+            vars(row)
+            for row in store.list_agents(
+                plan_id=int(args["plan"]) if args.get("plan") else None,
+                live_only=bool(args.get("live")),
+                limit=int(args["limit"]) if args.get("limit") else 20,
+            )
+        ]
+
     def _tool_session_list(self, args: dict) -> object:
         return [
             vars(row)
-            for row in services.sessions.list_sessions(
-                self._need_store(),
+            for row in self._need_store().list_sessions(
                 plan_id=int(args["plan"]) if args.get("plan") else None,
                 limit=int(args["limit"]) if args.get("limit") else 20,
             )

@@ -398,6 +398,8 @@ def add_hook(
         default="",
         help=argparse.SUPPRESS,
     )
+    for option in ("--agent", "--model", "--role", "--parent-session", "--pid"):
+        hk.add_argument(option, default="", help=argparse.SUPPRESS)
 
 
 def add_who(

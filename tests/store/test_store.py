@@ -397,7 +397,7 @@ class TestStore(unittest.TestCase):
             conn.execute("INSERT INTO milestones (plan_id, title) VALUES (1, 'Slice')")
             conn.execute("INSERT INTO tasks (milestone_id, title) VALUES (1, 'Work')")
             conn.execute(
-                "INSERT INTO sessions (actor, repo_path, started_at, last_seen_at)"
+                "INSERT INTO session_history (actor, repo_path, started_at, last_seen_at)"
                 " VALUES ('builder', '/tmp/checkout', 100, 100)"
             )
             conn.execute(f"PRAGMA user_version = {migrate_mod.SCHEMA_VERSION - 1}")
@@ -414,7 +414,7 @@ class TestStore(unittest.TestCase):
                 int(conn.execute("PRAGMA user_version").fetchone()[0]),
                 migrate_mod.SCHEMA_VERSION,
             )
-            for table in ("plans", "sessions"):
+            for table in ("plans", "session_history"):
                 columns = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
                 self.assertIn("archived_at", columns)
                 indexes = {row[1] for row in conn.execute(f"PRAGMA index_list({table})")}
@@ -504,6 +504,7 @@ class TestStore(unittest.TestCase):
                 "evidence": 0,
                 "questions": 0,
                 "refs": 0,
+                "session_history": 0,
             },
         )
         self.assertEqual(s2.get_plan(1).status, Status.DONE)  # rolled up: only milestone done
@@ -665,12 +666,12 @@ class TestStore(unittest.TestCase):
         self.assertTrue(self.store.delete("task", t.id, actor="agent-1"))
         self.assertEqual(self.store.counts()["tasks"], 0)
 
-    def test_heartbeat_changes_live_fingerprint_only(self):
+    def test_an_agent_transition_changes_live_fingerprint_only(self):
         plan = self.store.add_plan("P")
-        session, _ = self.store.start_session("ana", plan_id=plan.id)
+        agent = self.store.add_agent("ana", host="opencode", agent="builder", plan_id=plan.id)
         structural = self.store.fingerprint()
         live = self.store.live_fingerprint()
-        self.store.touch_session(session.id, phase="awaiting", now=time.time() + 5)
+        self.store.transition_agent(agent.id, "waiting", event="stop")
         self.assertEqual(self.store.fingerprint(), structural)
         self.assertNotEqual(self.store.live_fingerprint(), live)
 
@@ -684,13 +685,13 @@ class TestStore(unittest.TestCase):
         self.assertNotEqual(self.store.fingerprint(), structural)
         self.assertEqual(self.store.live_fingerprint(), live)
 
-    def test_starting_or_ending_a_session_changes_live_fingerprint(self):
+    def test_starting_or_ending_an_agent_changes_live_fingerprint(self):
         plan = self.store.add_plan("P")
         live = self.store.live_fingerprint()
-        session, _ = self.store.start_session("ana", plan_id=plan.id)
+        agent = self.store.add_agent("ana", host="opencode", agent="builder", plan_id=plan.id)
         self.assertNotEqual(self.store.live_fingerprint(), live)
         live = self.store.live_fingerprint()
-        self.store.end_session(session.id, "ana", summary="done")
+        self.store.end_agent(agent.id, "ana", summary="done")
         self.assertNotEqual(self.store.live_fingerprint(), live)
 
     def test_out_of_band_write_leaves_the_fingerprint_alone(self):
@@ -996,7 +997,6 @@ class TestStore(unittest.TestCase):
     def test_archive_rule_and_view(self):
         import io
         import sqlite3
-        import time
         from contextlib import redirect_stdout
 
         old = self.store.add_plan("Old")

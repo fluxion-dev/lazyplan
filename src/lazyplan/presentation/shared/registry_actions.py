@@ -362,16 +362,16 @@ CORE_ACTIONS: tuple[Action, ...] = (
         route=("tree", "coordination"),
     ),
     _action(
-        "session.start",
-        "Start session",
+        "agent.start",
+        "Start agent",
         surfaces=("tui", "cli"),
-        route=("tree", "sessions"),
+        route=("tree", "agents"),
     ),
     _action(
-        "session.end",
-        "End session",
+        "agent.end",
+        "End agent",
         surfaces=("tui", "cli"),
-        route=("tree", "sessions"),
+        route=("tree", "agents"),
     ),
     _action(
         "note.add",
@@ -399,11 +399,11 @@ CORE_ACTIONS: tuple[Action, ...] = (
         palette_ids=("claims-hub",),
     ),
     _action(
-        "view.sessions_hub",
-        "Open sessions hub",
+        "view.agents_hub",
+        "Open agents hub",
         surfaces=("tui",),
-        route=("tree", "sessions"),
-        palette_ids=("sessions-hub",),
+        route=("tree", "agents"),
+        palette_ids=("agents-hub",),
     ),
     _action(
         "view.comments_hub",

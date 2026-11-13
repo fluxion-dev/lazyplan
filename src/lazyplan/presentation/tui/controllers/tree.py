@@ -36,7 +36,7 @@ class TreeController(ExpansionMixin, LazyBranchMixin, ReconcileMixin, PollMixin)
         self._flush_timer: Any = None
         self._pending_structural = False
         self._pending_note = ""
-        self._last_reap = 0.0
+        self._last_sweep = 0.0
         self._by_plan: dict[int, list[tuple[Milestone, list[Task]]]] = {}
         self._tasks_by_milestone: dict[int, list[Task]] = {}
         self._milestone_plan: dict[int, int] = {}

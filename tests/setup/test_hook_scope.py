@@ -65,9 +65,9 @@ class ScopeCase(unittest.TestCase):
         self.assertTrue(scope.managed)
         self.assertIsNone(scope.task)
 
-    def test_an_open_session_makes_the_checkout_managed(self):
+    def test_an_open_agent_makes_the_checkout_managed(self):
         store = Store(self.home / ".lazyplan/lazyplan.db")
-        store.start_session("ana", repo_path=str(self.repo), now=100.0)
+        store.add_agent("ana", host="manual", agent="ana", worktree=str(self.repo), now=100.0)
         scope = hook_scope.resolve(store, self.repo)
         self.assertTrue(scope.managed)
         self.assertIsNone(scope.task)
@@ -75,8 +75,13 @@ class ScopeCase(unittest.TestCase):
     def test_a_hook_session_without_a_plan_leaves_the_checkout_unmanaged(self):
         store = Store(self.home / ".lazyplan/lazyplan.db")
         self._seed(store)
-        store.start_session(
-            "claude", repo_path=str(self.repo), now=100.0, host="claude", host_session="s-1"
+        store.add_agent(
+            "claude",
+            host="claude",
+            host_session="s-1",
+            agent="claude",
+            worktree=str(self.repo),
+            now=100.0,
         )
         scope = hook_scope.resolve(store, self.repo)
         self.assertFalse(scope.managed)
@@ -101,13 +106,14 @@ class ScopeCase(unittest.TestCase):
     def test_a_hook_session_with_a_plan_makes_the_checkout_managed(self):
         store = Store(self.home / ".lazyplan/lazyplan.db")
         plan_id, _task = self._seed(store)
-        store.start_session(
+        store.add_agent(
             "claude",
-            plan_id=plan_id,
-            repo_path=str(self.repo),
-            now=100.0,
             host="claude",
             host_session="s-1",
+            agent="claude",
+            plan_id=plan_id,
+            worktree=str(self.repo),
+            now=100.0,
         )
         self.assertTrue(hook_scope.resolve(store, self.repo).managed)
         self.assertFalse(hook_scope.resolve(store, self.other).managed)

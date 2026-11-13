@@ -10,12 +10,11 @@ from __future__ import annotations
 import fnmatch
 from pathlib import Path
 
-from ..core.entities import HookResult, Session
+from ..core.entities import Agent, HookResult
 from ..core.policies.hooks import is_git_commit
 from ..core.ports.app import AppPort
 from ..core.ports.insights import InsightsPort
-from . import audit, brief, hook_scope
-from . import sessions as session_services
+from . import agents, audit, brief, hook_scope
 
 
 def _brief_lines(store: InsightsPort, cwd: Path, commits: list[audit.Commit] | None) -> list[str]:
@@ -58,7 +57,7 @@ def stop_result(
     store: AppPort,
     cwd: Path,
     commits: list[audit.Commit] | None,
-    session: Session | None,
+    agent: Agent | None,
     payload: dict,
     mode: str,
     host: str,
@@ -79,9 +78,9 @@ def stop_result(
             task_id = scope.task.id
             parts = [f"lazyplan: {len(loose)} plan(s) have unlinked commits."]
             parts.append(f"Link them with `lpui link --kind task --id {task_id}`.")
-            if session is not None and not session.host_session:
+            if agent is not None and not agent.host_session:
                 parts.append(
-                    f"Then end S{session.id} with `lpui session end --id S{session.id} --summary`."
+                    f"Then end A{agent.id} with `lpui agent end --id A{agent.id} --summary`."
                 )
             return HookResult(block=" ".join(parts))
     return HookResult("lazyplan: " + "; ".join(loose)).capped()
@@ -97,11 +96,12 @@ def _next_handoff(store: InsightsPort) -> str:
     return ""
 
 
-def session_end_result(store: AppPort, session: Session | None, host: str) -> HookResult:
-    """Close an open session with an automatic summary and handoff."""
-    if session is None or session.ended:
+def session_end_result(store: AppPort, agent: Agent | None, host: str) -> HookResult:
+    """Close an open agent with an automatic summary and handoff."""
+    if agent is None or agent.ended:
         return HookResult()
-    scope = hook_scope.resolve(store, session.repo_path or None)
+    checkout = agent.worktree or agent.repo_path or None
+    scope = hook_scope.resolve(store, checkout)
     task = scope.task if scope.managed else None
     if task is None and scope.managed:
         current = _doing_task(store)
@@ -109,14 +109,13 @@ def session_end_result(store: AppPort, session: Session | None, host: str) -> Ho
     summary = f"ended by {host or 'agent'}"
     if task is not None:
         summary += f" while working T{task.id} {task.title}"
-    handoff = session.handoff or _next_handoff(store)
-    session_services.end_session(
+    handoff = agent.handoff or _next_handoff(store)
+    agents.end_agent(
         store,
-        session.id,
-        session.actor or "agent",
+        agent.id,
+        agent.agent or "agent",
         summary=summary,
         handoff=handoff,
-        auto=True,
     )
     return HookResult()
 

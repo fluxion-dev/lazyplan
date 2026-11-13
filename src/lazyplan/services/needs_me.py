@@ -15,7 +15,6 @@ from ..core.policies.maintenance import is_archived_row
 from ..core.ports.needs_me import NeedsMePort
 from ..core.serialization import approval_payload
 from . import stats
-from .sessions import session_state
 
 ATTENTION_LIMIT = 20
 PLAN_LIMIT = 25
@@ -260,30 +259,38 @@ def _active_claims(
     return [claim for claim in claims if int(claim["plan_id"]) in plan_ids]
 
 
-def _session_rows(
+def _agent_rows(
     port: NeedsMePort,
     plan_id: int | None,
     plan_names: dict[int, str],
-    max_sessions: int,
+    max_agents: int,
     stamp: float,
 ) -> list[dict[str, Any]]:
-    sessions = port.list_sessions(open_only=True, plan_id=plan_id, limit=max_sessions)
+    agents = port.list_agents(plan_id=plan_id, open_only=True, limit=max_agents)
     return [
         {
-            "id": session.id,
-            "actor": session.actor,
-            "plan_id": session.plan_id,
-            "plan_title": plan_names.get(int(session.plan_id or 0), ""),
-            "branch": session.branch,
-            "host": session.host,
-            "phase": session.phase,
-            "state": session_state(session, stamp),
-            "started_at": session.started_at,
-            "last_seen_at": session.last_activity(),
-            "idle": round(session.idle_seconds(stamp), 1),
-            "duration": round(session.duration(stamp), 1),
+            "id": agent.id,
+            "agent": agent.agent,
+            "role": agent.role,
+            "model": agent.model,
+            "host": agent.host,
+            "host_session": agent.host_session,
+            "parent_id": agent.parent_id,
+            "pid": agent.pid,
+            "plan_id": agent.plan_id,
+            "plan_title": plan_names.get(int(agent.plan_id or 0), ""),
+            "task_id": agent.task_id,
+            "worktree": agent.worktree,
+            "branch": agent.branch,
+            "head_sha": agent.head_sha,
+            "status": agent.status,
+            "unbound": agent.unbound,
+            "reason": agent.unbound_reason,
+            "started_at": agent.started_at,
+            "updated_at": agent.updated_at,
+            "duration": round(agent.duration(stamp), 1),
         }
-        for session in sessions
+        for agent in agents
     ]
 
 
@@ -320,7 +327,7 @@ def _needs_me_ids(
 def _counts(
     plans: list[Plan],
     attention_all: list[dict],
-    session_rows: list[dict],
+    agent_rows: list[dict],
     active_claims: list[dict],
     open_questions: int,
     health: list[dict],
@@ -329,7 +336,7 @@ def _counts(
     return {
         "plans": len(plans),
         "attention": len(attention_all),
-        "sessions": len(session_rows),
+        "agents": len(agent_rows),
         "claims": len(active_claims),
         "open_questions": open_questions,
         "drift": sum(1 for row in health if int(row["approval"].get("drift", 0))),
@@ -345,7 +352,7 @@ def build(
     plan_id: int | None = None,
     max_attention: int = ATTENTION_LIMIT,
     max_plans: int = PLAN_LIMIT,
-    max_sessions: int = SESSION_LIMIT,
+    max_agents: int = SESSION_LIMIT,
     max_claims: int = CLAIM_LIMIT,
     max_overlaps: int = OVERLAP_LIMIT,
 ) -> dict[str, Any]:
@@ -391,7 +398,7 @@ def build(
     )
     needs_me_plan_ids = _needs_me_ids(task_plan, attention_task_ids, plan_needs_me)
 
-    session_rows = _session_rows(port, plan_id, plan_names, max_sessions, stamp)
+    agent_rows = _agent_rows(port, plan_id, plan_names, max_agents, stamp)
     claim_rows = _claim_rows(active_claims, max_claims, stamp)
     overlap_rows = _overlaps(
         active_claims[:OVERLAP_CLAIM_LIMIT], port.touchpoints_map(), max_overlaps
@@ -399,7 +406,7 @@ def build(
     counts = _counts(
         plans,
         attention_all,
-        session_rows,
+        agent_rows,
         active_claims,
         open_questions,
         health,
@@ -410,7 +417,7 @@ def build(
         "plan_id": plan_id,
         "plans": health[:max_plans],
         "attention": attention_all[:max_attention],
-        "sessions": session_rows,
+        "agents": agent_rows,
         "claims": claim_rows,
         "overlaps": overlap_rows,
         "counts": counts,

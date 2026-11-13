@@ -40,7 +40,7 @@ if _TEXTUAL_OK:
             return milestone.plan_id if milestone is not None else None
 
         def update_agents(self) -> None:
-            """Refresh the active-session pane for the selected plan."""
+            """Refresh the live agent pane for the selected plan."""
             panel = query_one_opt(self, "#agents", AgentsPanel)
             if panel is None:
                 return

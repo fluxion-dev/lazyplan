@@ -143,7 +143,7 @@ def _cmd_hook(store: object | None, args: argparse.Namespace, actor: str) -> int
         state = "ok" if report["ok"] else report["reason"]
         print(f"hook:      {state}")
         print(f"database:  {report['db'] or '-'}")
-        print(f"session:   {report['session'] or '-'}")
+        print(f"agent:     {report['agent'] or '-'}")
         print(f"latency:   {report['latency_ms']} ms")
         return 0
     if not args.event:
@@ -156,8 +156,10 @@ def _cmd_hook(store: object | None, args: argparse.Namespace, actor: str) -> int
         payload.setdefault("tool", args.tool)
     if args.path:
         payload.setdefault("path", args.path)
-    if getattr(args, "host_session", ""):
-        payload.setdefault("host_session", args.host_session)
+    for name in ("host_session", "agent", "model", "role", "parent_session", "pid"):
+        value = getattr(args, name, "")
+        if value:
+            payload.setdefault(name, value)
     host = hooks.detect_host(payload, args.host)
     result = hooks.run(args.event, payload, host, Path.cwd(), store=db, mode=args.mode)
     if args.json:

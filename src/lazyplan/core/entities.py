@@ -111,12 +111,9 @@ class Session:
     ended_at: float = 0.0
     summary: str = ""
     handoff: str = ""
-    phase: str = "working"
-    last_seen_at: float = 0.0
     host: str = ""
     host_session: str = ""
     auto_closed: bool = False
-    plan_source: str = "auto"
     archived_at: float = 0.0
 
     @property
@@ -124,25 +121,77 @@ class Session:
         """True when the session has been closed."""
         return self.ended_at > 0
 
-    @property
-    def awaiting(self) -> bool:
-        """True when the agent finished its turn and waits on the user."""
-        return not self.ended and self.phase == "awaiting"
-
-    def last_activity(self) -> float:
-        """Newest heartbeat, falling back to the start for old rows."""
-        return self.last_seen_at if self.last_seen_at > 0 else self.started_at
-
-    def idle_seconds(self, now: float) -> float:
-        """Seconds since the last heartbeat while open; zero once ended."""
-        if self.ended:
-            return 0.0
-        return max(now - self.last_activity(), 0.0)
-
     def duration(self, now: float) -> float:
         """Seconds between start and end, or start and *now* while open."""
         stop = self.ended_at if self.ended else now
         return max(stop - self.started_at, 0.0)
+
+
+@dataclass(frozen=True)
+class Agent:
+    """One registered host agent, exactly as the host reported it."""
+
+    id: int
+    host: str = "unknown"
+    host_session: str = ""
+    agent: str = "unknown"
+    role: str = "primary"
+    model: str = "unknown"
+    parent_id: int | None = None
+    pid: int = 0
+    process_start: str = ""
+    repo_path: str = ""
+    worktree: str = ""
+    branch: str = ""
+    head_sha: str = ""
+    plan_id: int | None = None
+    task_id: int | None = None
+    status: str = "starting"
+    unbound_reason: str = ""
+    started_at: float = 0.0
+    updated_at: float = 0.0
+    ended_at: float = 0.0
+    summary: str = ""
+    handoff: str = ""
+    archived_at: float = 0.0
+
+    @property
+    def ended(self) -> bool:
+        """True once the host ended the agent."""
+        return self.ended_at > 0 or self.status == "ended"
+
+    @property
+    def lost(self) -> bool:
+        """True when the process disappeared without ending the row."""
+        return self.status == "lost"
+
+    @property
+    def live(self) -> bool:
+        """True while the agent is running or waiting on the user."""
+        return not self.ended and not self.lost
+
+    @property
+    def unbound(self) -> bool:
+        """True when no exact plan or worktree could be proven."""
+        return self.plan_id is None or not self.worktree
+
+    def duration(self, now: float) -> float:
+        """Seconds between start and end, or start and *now* while open."""
+        stop = self.ended_at if self.ended_at > 0 else now
+        return max(stop - self.started_at, 0.0)
+
+
+@dataclass(frozen=True)
+class AgentEvent:
+    """One recorded status transition or host event for an agent."""
+
+    id: int
+    agent_id: int
+    ts: float
+    event: str = ""
+    from_status: str = ""
+    to_status: str = ""
+    detail: str = ""
 
 
 @dataclass(frozen=True)

@@ -31,8 +31,3 @@ def task_label(session: Session) -> str:
     """Task id encoded in the branch name, else an empty string."""
     ref = branch_ref(session.branch)
     return f"T{ref[1]}" if ref is not None and ref[0] == "task" else ""
-
-
-def branch_label(session: Session, empty: str = "no branch") -> str:
-    """Branch name, or *empty* when the row has none."""
-    return session.branch if session.branch else empty

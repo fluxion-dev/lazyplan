@@ -4,6 +4,39 @@ from __future__ import annotations
 
 from . import attribution as attribution
 from . import maintenance as maintenance
+from .agent_identity import extract_identity as extract_identity
+from .agent_identity import git_facts as git_facts
+from .agent_identity import resolve_binding as resolve_binding
+from .agents import (
+    AgentStartError as AgentStartError,
+)
+from .agents import (
+    agent_state as agent_state,
+)
+from .agents import (
+    apply_event as apply_event,
+)
+from .agents import (
+    current_agent as current_agent,
+)
+from .agents import (
+    end_agent as end_agent,
+)
+from .agents import (
+    find_agent as find_agent,
+)
+from .agents import (
+    previous_agent as previous_agent,
+)
+from .agents import (
+    show_agent as show_agent,
+)
+from .agents import (
+    start_agent as start_agent,
+)
+from .agents import (
+    sweep_lost as sweep_lost,
+)
 from .base import GateError
 from .collaboration import (
     add_comment,
@@ -115,18 +148,6 @@ from .revisions import (
     list_revisions,
     revision_state,
     snapshot,
-)
-from .sessions import (
-    current_session,
-    end_session,
-    list_sessions,
-    open_session_for,
-    previous_session,
-    reap_idle_sessions,
-    session_state,
-    show_session,
-    start_session,
-    touch_session,
 )
 from .ship import ShipNote
 from .ship import build as build_ship
@@ -254,7 +275,6 @@ __all__ = [
     "show_session",
     "list_sessions",
     "previous_session",
-    "session_state",
     "touch_session",
     "open_session_for",
     "reap_idle_sessions",

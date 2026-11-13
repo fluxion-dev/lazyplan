@@ -75,15 +75,11 @@ class MaintenanceMixin(StoreBase):
     """Maintenance reads and writes shared by the CLI, TUI, and MCP."""
 
     def _file_size(self) -> int:
-        """Database size in bytes, including WAL and shared-memory sidecars."""
-        path = Path(self.path).expanduser()
-        total = 0
-        for candidate in (path, Path(f"{path}-wal"), Path(f"{path}-shm")):
-            try:
-                total += candidate.stat().st_size
-            except OSError:
-                continue
-        return total
+        """Main database file size in bytes; WAL sidecars are transient."""
+        try:
+            return Path(self.path).expanduser().stat().st_size
+        except OSError:
+            return 0
 
     @staticmethod
     def _dbstat_bytes(conn: sqlite3.Connection) -> dict[str, int]:
@@ -515,19 +511,6 @@ class MaintenanceMixin(StoreBase):
         self._drop_sidecars(target)
         return snapshot_counts
 
-    def _snapshot_bindings(self, source_path: Path, target: Path) -> Path | None:
-        """Copy the session binding directory beside the database snapshot."""
-        source_bindings = source_path.parent / "sessions" / "bindings"
-        if not source_bindings.is_dir():
-            return None
-        bindings = target.with_name(f"{target.name}.bindings")
-        try:
-            shutil.copytree(source_bindings, bindings)
-        except OSError as exc:
-            self._remove_snapshot(target, bindings)
-            raise MaintenanceBackupError(f"binding snapshot failed: {exc}") from exc
-        return bindings
-
     def backup(self, label: str = "") -> BackupResult:
         """Copy the database beside itself, verify it, and snapshot bindings."""
         source_path = Path(self.path).expanduser()
@@ -540,9 +523,6 @@ class MaintenanceMixin(StoreBase):
         ]
         if label:
             details.append(f"label={label}")
-        bindings = self._snapshot_bindings(source_path, target)
-        if bindings is not None:
-            details.append(f"bindings={bindings}")
         return BackupResult(
             path=str(target),
             bytes=target.stat().st_size,

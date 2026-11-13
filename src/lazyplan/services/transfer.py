@@ -105,6 +105,9 @@ def export_all(store: TransferPort) -> dict:
         "lazyplan": 1,
         "plans": [_export_entry(plan, maps) for plan in store.list_plans(archived="show")],
         "criterion_links": store.all_criterion_links(),
+        "session_history": [
+            to_payload(vars(row)) for row in store.list_sessions(archived="show", limit=1_000_000)
+        ],
     }
 
 
@@ -234,6 +237,7 @@ def _import_all(store: TransferPort, data: dict, actor: str = "human") -> dict[s
         "evidence": 0,
         "questions": 0,
         "refs": 0,
+        "session_history": 0,
     }
     criteria_map: dict[int, int] = {}
     tasks_map: dict[int, int] = {}
@@ -477,7 +481,17 @@ def _import_all(store: TransferPort, data: dict, actor: str = "human") -> dict[s
             continue
         counts["criterion_links"] += 1
     counts["evidence"] = _restore_evidence(store, evidence_items, tasks_map)
+    counts["session_history"] = _import_session_history(store, data, actor)
     return counts
+
+
+def _import_session_history(store: TransferPort, data: dict, actor: str) -> int:
+    """Restore exported history rows with their original ids."""
+    count = 0
+    for row in data.get("session_history", []):
+        if isinstance(row, dict) and store.restore_session_history(row, actor=actor) is not None:
+            count += 1
+    return count
 
 
 def share_render(port: TransferPort, plan_id: int, fmt: str, dest: str | None) -> str | None:

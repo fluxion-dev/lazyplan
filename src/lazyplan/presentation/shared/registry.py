@@ -76,7 +76,7 @@ HUB_ACTIONS: dict[str, tuple[str, ...]] = {
         "task.touch_add",
         "task.touch_remove",
     ),
-    "sessions": ("session.start", "session.end"),
+    "agents": ("agent.start", "agent.end"),
     "comments": ("comment.add", "comment.edit", "note.add", "comment.resolve"),
     "pull_requests": (
         "pull_request.list",

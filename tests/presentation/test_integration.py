@@ -64,13 +64,15 @@ class TestCombinedSurfaces(RefreshCase):
         other = self.store.add_plan("Other", goal="keeps the queue busy")
         second = self.store.add_task(self.milestone.id, "Second task")
         blocked = self.store.add_task(self.milestone.id, "Blocked task")
-        session, _ = self.store.start_session(
+        session = self.store.add_agent(
             "ana",
+            agent="ana",
             plan_id=self.plan.id,
             branch="feat/integration",
             host="opencode",
             host_session=HOST_SESSION,
-            phase="working",
+            worktree=self.store.checkout_path(),
+            status="working",
         )
         self.store.claim_task(blocked.id, "lin", ttl_seconds=900, note="review")
         services.set_status(self.store, "task", blocked.id, Status.DOING, actor="ana")
@@ -92,12 +94,11 @@ class TestCombinedSurfaces(RefreshCase):
             harness.heartbeat("working")
             await pilot.pause()
             body = self.agents_body(app)
-            self.assertIn(f"@ana {HOST_SESSION[-4:]}", body)
+            self.assertIn("@ana", body)
             self.assertIn(f"P{self.plan.id} {self.plan.name}", body)
             self.assertIn("feat/integration", body)
             self.assertRegex(body, rf"[{re.escape(SPINNER)}]")
-            self.assertNotIn("working", body)
-            self.assertNotIn("awaiting you", body)
+            self.assertIn("working", body)
 
             # Structural, claim, and block writes leave branches alone.
             added = self.store.add_task(self.milestone.id, "Third task", actor="ana")
@@ -130,11 +131,11 @@ class TestCombinedSurfaces(RefreshCase):
             self.assertTrue(app._row_nodes[plan_key].is_expanded)
 
             # A settled session swaps the spinner for the awaiting glyph.
-            harness.heartbeat("awaiting")
+            harness.heartbeat("waiting")
             await pilot.pause()
             body = self.agents_body(app)
             self.assertIn("◆", body)
-            self.assertNotRegex(body, rf"[{re.escape(SPINNER)}]")
+            self.assertIn("waiting", body)
 
             # The owning plan never leaves its panel while tasks come and go.
             services.set_status(self.store, "task", added.id, Status.DONE, actor="ana")

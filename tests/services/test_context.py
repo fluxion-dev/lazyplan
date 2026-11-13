@@ -101,9 +101,11 @@ class ContextTest(unittest.TestCase):
         self.assertLessEqual(connect.call_count, 25)
 
     def test_previous_session_is_in_the_packet(self):
-        session, _ = self.store.start_session("alice", plan_id=self.plan.id, now=100.0)
-        self.store.end_session(
-            session.id, "alice", summary="shipped the slice", handoff="next: run QA", now=200.0
+        agent = self.store.add_agent(
+            "alice", host="opencode", agent="alice", plan_id=self.plan.id, now=100.0
+        )
+        self.store.end_agent(
+            agent.id, "alice", summary="shipped the slice", handoff="next: run QA", now=200.0
         )
         payload = context.build(self.store)
         plan = payload["plans"][0]

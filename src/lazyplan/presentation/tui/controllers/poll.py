@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from ..app import LazyplanApp
 
-REAP_INTERVAL = 60.0
+SWEEP_INTERVAL = 1.0
 COALESCE_SECONDS = 0.25
 
 
@@ -25,7 +25,7 @@ class PollMixin:
     _flush_timer: Any
     _pending_structural: bool
     _pending_note: str
-    _last_reap: float
+    _last_sweep: float
 
     def poll(self) -> None:
         """Start one background read of the poll keys, if none is pending."""
@@ -62,10 +62,12 @@ class PollMixin:
         """Read both poll keys and the newest event; never touches widgets."""
         app = self.app
         now = time.time()
-        if now - self._last_reap >= REAP_INTERVAL:
-            self._last_reap = now
+        if now - self._last_sweep >= SWEEP_INTERVAL:
+            self._last_sweep = now
             try:
-                app.store.reap_idle_sessions(now=now)
+                from ....services import agents
+
+                agents.sweep_lost(app.store, now=now)
             except Exception:
                 pass
         try:

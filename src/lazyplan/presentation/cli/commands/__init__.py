@@ -22,6 +22,20 @@ from .admin import (
 from .admin import (
     _cmd_mcp as _cmd_mcp,
 )
+from .agent import (
+    _cmd_agent_archive,
+    _cmd_agent_end,
+    _cmd_agent_history,
+    _cmd_agent_list,
+    _cmd_agent_restore,
+    _cmd_agent_show,
+    _cmd_agent_start,
+    _cmd_agent_sweep,
+    _cmd_session_end,
+    _cmd_session_list,
+    _cmd_session_show,
+    _cmd_session_start,
+)
 from .claim import (
     _cmd_claim,
     _cmd_claims,
@@ -101,12 +115,6 @@ from .refs import (
     _cmd_ref_list,
     _cmd_ref_unlink,
 )
-from .session import (
-    _cmd_session_end,
-    _cmd_session_list,
-    _cmd_session_show,
-    _cmd_session_start,
-)
 from .setup import _cmd_setup as _cmd_setup
 from .system import (
     _cmd_audit as _cmd_audit,
@@ -177,6 +185,14 @@ _GROUP_CMDS: dict[tuple[str, str], str] = {
     ("question", "list"): "question-list",
     ("question", "resolve"): "question-resolve",
     ("question", "reopen"): "question-reopen",
+    ("agent", "start"): "agent-start",
+    ("agent", "end"): "agent-end",
+    ("agent", "show"): "agent-show",
+    ("agent", "list"): "agent-list",
+    ("agent", "sweep"): "agent-sweep",
+    ("agent", "archive"): "agent-archive",
+    ("agent", "restore"): "agent-restore",
+    ("agent", "history"): "agent-history",
     ("session", "start"): "session-start",
     ("session", "end"): "session-end",
     ("session", "show"): "session-show",
@@ -251,6 +267,14 @@ _COMMANDS: dict[str, Callable[[AppPort, Namespace, str], int]] = {
     "question-list": _cmd_question_list,
     "question-resolve": _cmd_question_resolve,
     "question-reopen": _cmd_question_reopen,
+    "agent-start": _cmd_agent_start,
+    "agent-end": _cmd_agent_end,
+    "agent-show": _cmd_agent_show,
+    "agent-list": _cmd_agent_list,
+    "agent-sweep": _cmd_agent_sweep,
+    "agent-archive": _cmd_agent_archive,
+    "agent-restore": _cmd_agent_restore,
+    "agent-history": _cmd_agent_history,
     "session-start": _cmd_session_start,
     "session-end": _cmd_session_end,
     "session-show": _cmd_session_show,

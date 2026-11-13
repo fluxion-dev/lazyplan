@@ -10,12 +10,9 @@ import time
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
-from unittest import mock
 
 from lazyplan import services
 from lazyplan.core.entities import Status
-from lazyplan.infrastructure import repo as repo_lookups
-from lazyplan.infrastructure.repo import git_common_dir
 from lazyplan.presentation.cli import main as lpui_main
 from lazyplan.presentation.cli.parser import build_parser
 from lazyplan.services import audit, hooks
@@ -63,7 +60,9 @@ class HookCase(unittest.TestCase):
 
     def _seed_linked(self) -> tuple[int, int]:
         plan_id, task_id = self._seed()
-        Store(self.db).add_repo_link("plan", plan_id, str(self.repo), actor="t")
+        store = Store(self.db)
+        store.add_repo_link("plan", plan_id, str(self.repo), actor="t")
+        store.register_plan_worktree(plan_id, str(self.repo), str(self.repo), actor="t")
         return plan_id, task_id
 
     def _git(self, *args: str) -> None:
@@ -132,7 +131,7 @@ class HookCase(unittest.TestCase):
                 if stream is not None:
                     stream.close()
         self.assertEqual(code, 0)
-        rows = Store(self.db).list_sessions(open_only=True)
+        rows = Store(self.db).list_agents(open_only=True)
         self.assertEqual([row.host_session for row in rows], ["s1"])
 
     def test_hook_probe_writes_nothing_without_a_database(self):
@@ -173,149 +172,138 @@ class HookCase(unittest.TestCase):
     def test_each_host_session_gets_its_own_row(self):
         for name in ("host-a", "host-b", "host-c"):
             self._hook("prompt-submit", {"host_session": name})
-        sessions = Store(self.db).list_sessions(open_only=True)
-        self.assertEqual(len(sessions), 3)
+        agents = Store(self.db).list_agents(open_only=True)
+        self.assertEqual(len(agents), 3)
         self.assertEqual(
-            {session.host_session for session in sessions},
+            {agent.host_session for agent in agents},
             {"host-a", "host-b", "host-c"},
         )
-        self.assertEqual(len({session.id for session in sessions}), 3)
+        self.assertEqual(len({agent.id for agent in agents}), 3)
 
     def test_stop_and_end_events_touch_only_the_firing_row(self):
         for name in ("host-a", "host-b", "host-c"):
             self._hook("prompt-submit", {"host_session": name})
         store = Store(self.db)
-        ids = {row.host_session: row.id for row in store.list_sessions(open_only=True)}
+        ids = {row.host_session: row.id for row in store.list_agents(open_only=True)}
         self._hook("stop", {"host_session": "host-a"})
         store = Store(self.db)
-        stopped = store.get_session(ids["host-a"])
+        stopped = store.get_agent(ids["host-a"])
         assert stopped is not None
-        self.assertTrue(stopped.awaiting)
+        self.assertEqual(stopped.status, "waiting")
         for name in ("host-b", "host-c"):
-            other = store.get_session(ids[name])
+            other = store.get_agent(ids[name])
             assert other is not None
-            self.assertFalse(other.awaiting)
+            self.assertEqual(other.status, "working")
             self.assertFalse(other.ended)
         self._hook("session-end", {"host_session": "host-a"})
         store = Store(self.db)
-        ended = store.get_session(ids["host-a"])
+        ended = store.get_agent(ids["host-a"])
         assert ended is not None
         self.assertTrue(ended.ended)
         for name in ("host-b", "host-c"):
-            other = store.get_session(ids[name])
+            other = store.get_agent(ids[name])
             assert other is not None
             self.assertFalse(other.ended)
         self._hook("session-end", {"host_session": "host-b"})
         self._hook("session-end", {"host_session": "host-c"})
-        self.assertEqual(Store(self.db).list_sessions(open_only=True), [])
+        self.assertEqual(Store(self.db).list_agents(open_only=True), [])
 
     def test_tool_events_refresh_only_the_firing_row(self):
         for name in ("host-a", "host-b"):
             self._hook("prompt-submit", {"host_session": name})
         before = {
-            row.host_session: row.last_seen_at
-            for row in Store(self.db).list_sessions(open_only=True)
+            row.host_session: row.updated_at for row in Store(self.db).list_agents(open_only=True)
         }
         time.sleep(0.02)
         self._hook("pre-tool", {"host_session": "host-b", "command": "ls"})
-        after = {
-            row.host_session: row.last_seen_at
-            for row in Store(self.db).list_sessions(open_only=True)
-        }
+        store = Store(self.db)
+        after = {row.host_session: row.updated_at for row in store.list_agents(open_only=True)}
         self.assertEqual(after["host-a"], before["host-a"])
         self.assertGreater(after["host-b"], before["host-b"])
+        self.assertEqual(store.get_agent(store.list_agents(host="opencode")[0].id).status, "tool")
 
-    def test_a_tool_event_opens_a_row_but_end_without_one_does_not(self):
+    def test_a_tool_event_leaves_an_unknown_session_alone(self):
         self._hook("pre-tool", {"host_session": "host-a", "command": "ls"})
         store = Store(self.db)
-        rows = store.list_sessions(open_only=True)
-        self.assertEqual(len(rows), 1)
-        self.assertEqual(rows[0].host_session, "host-a")
+        self.assertEqual(store.list_agents(open_only=True), [])
         self._hook("session-end", {"host_session": "host-x"})
-        self.assertEqual(len(Store(self.db).list_sessions(open_only=True)), 1)
+        self.assertEqual(Store(self.db).list_agents(open_only=True), [])
 
     def test_a_concrete_session_does_not_adopt_a_manual_row(self):
-        manual, _ = Store(self.db).start_session("agent", now=time.time())
+        manual = Store(self.db).add_agent("agent", host="manual", agent="agent")
         self._hook("prompt-submit", {"host_session": "host-a"})
-        rows = Store(self.db).list_sessions(open_only=True)
+        rows = Store(self.db).list_agents(open_only=True)
         self.assertEqual(len(rows), 2)
         host_row = next(row for row in rows if row.host_session == "host-a")
         self.assertNotEqual(host_row.id, manual.id)
-        kept = Store(self.db).get_session(manual.id)
+        kept = Store(self.db).get_agent(manual.id)
         assert kept is not None
         self.assertFalse(kept.ended)
 
     def test_session_start_records_the_branch_and_its_plan(self):
-        plan_id, task_id = self._seed()
+        plan_id, task_id = self._seed_linked()
         self._init_git(f"task/{task_id}-pane")
         hooks.build_result(
             "session-start", {"session_id": "host-a"}, self.repo, commits=[], store=Store(self.db)
         )
-        row = Store(self.db).list_sessions(open_only=True)[0]
+        row = Store(self.db).list_agents(open_only=True)[0]
         self.assertEqual(row.branch, f"task/{task_id}-pane")
         self.assertEqual(row.plan_id, plan_id)
+        self.assertEqual(Path(row.worktree).resolve(), self.repo.resolve())
 
-    def test_a_hook_run_asks_git_for_the_checkout_once(self):
-        _plan, task_id = self._seed()
+    def test_a_hook_run_records_exact_git_facts(self):
+        _plan, task_id = self._seed_linked()
         self._init_git(f"task/{task_id}-pane")
-        with mock.patch.object(repo_lookups.subprocess, "run", wraps=subprocess.run) as run:
-            hooks.build_result(
-                "session-start",
-                {"session_id": "host-a"},
-                self.repo,
-                commits=[],
-                store=Store(self.db),
-            )
-        rev_parses = [call for call in run.call_args_list if "rev-parse" in call.args[0]]
-        self.assertEqual(len(rev_parses), 1)
-        self.assertEqual(
-            Store(self.db).list_sessions(open_only=True)[0].branch, f"task/{task_id}-pane"
+        hooks.build_result(
+            "session-start",
+            {"session_id": "host-a"},
+            self.repo,
+            commits=[],
+            store=Store(self.db),
         )
+        row = Store(self.db).list_agents(open_only=True)[0]
+        self.assertEqual(row.branch, f"task/{task_id}-pane")
+        self.assertEqual(Path(row.worktree).resolve(), self.repo.resolve())
+        self.assertEqual(len(row.head_sha), 40)
 
     def test_a_branch_switch_updates_the_row(self):
-        plan_id, task_id = self._seed()
+        plan_id, task_id = self._seed_linked()
         self._init_git("main")
         store = Store(self.db)
         hooks.build_result(
             "session-start", {"session_id": "host-a"}, self.repo, commits=[], store=store
         )
-        started = Store(self.db).list_sessions(open_only=True)[0]
+        started = Store(self.db).list_agents(open_only=True)[0]
         self.assertEqual(started.branch, "main")
         self._git("switch", "-c", f"task/{task_id}-pane")
         hooks.build_result(
             "prompt-submit", {"session_id": "host-a"}, self.repo, commits=[], store=store
         )
-        updated = Store(self.db).get_session(started.id)
+        updated = Store(self.db).get_agent(started.id)
         assert updated is not None
         self.assertEqual(updated.branch, f"task/{task_id}-pane")
         self.assertEqual(updated.plan_id, plan_id)
 
     def test_a_manual_plan_survives_a_branch_switch(self):
-        plan_id, _task_id = self._seed()
+        plan_id, _task_id = self._seed_linked()
         store = Store(self.db)
         other = store.add_plan("Other", actor="ana")
         milestone = store.add_milestone(other.id, "Other milestone", actor="ana")
         other_task = store.add_task(milestone.id, "Other task", actor="ana")
         self._init_git("main")
-        session, _ = store.start_session(
+        agent = store.add_agent(
             "ana",
+            host="opencode",
+            host_session="host-a",
+            agent="ana",
             plan_id=plan_id,
-            repo_path=str(self.repo),
-            branch="main",
-            plan_source="manual",
-        )
-        store.bind_session(
-            "opencode",
-            "host-a",
-            git_common_dir(str(self.repo)),
-            str(self.repo),
-            session.id,
+            worktree=str(self.repo),
         )
         self._git("switch", "-c", f"task/{other_task.id}-other")
         hooks.build_result(
             "prompt-submit", {"session_id": "host-a"}, self.repo, commits=[], store=store
         )
-        updated = Store(self.db).get_session(session.id)
+        updated = Store(self.db).get_agent(agent.id)
         assert updated is not None
         self.assertEqual(updated.plan_id, plan_id)
         self.assertEqual(updated.branch, f"task/{other_task.id}-other")
@@ -343,41 +331,34 @@ class HookCase(unittest.TestCase):
     def test_session_handoff_is_in_session_start(self):
         plan_id, _task = self._seed()
         store = Store(self.db)
-        session, _ = store.start_session("ana", plan_id=plan_id, now=100.0)
-        store.end_session(session.id, "ana", summary="shipped", handoff="next: QA", now=200.0)
+        agent = store.add_agent("ana", host="opencode", agent="ana", plan_id=plan_id, now=100.0)
+        store.end_agent(agent.id, "ana", summary="shipped", handoff="next: QA", now=200.0)
         result = hooks.build_result(
             "session-start", {}, self.repo, commits=[], store=Store(self.db)
         )
         self.assertIn("next: QA", result.text)
 
-    def test_heartbeat_reap_uses_each_phases_window(self):
+    def test_idle_agents_are_never_closed_by_time(self):
         now = time.time()
         store = Store(self.db)
-        working, _ = store.start_session(
-            "ana", now=now - 700, phase="working", repo_path=str(self.repo)
-        )
-        awaiting, _ = store.start_session(
-            "bo", now=now - 700, phase="awaiting", repo_path=str(self.repo)
-        )
+        live = store.add_agent("ana", host="manual", agent="ana", now=now - 10_000)
         self._hook("prompt-submit", {"host_session": "new"})
         store = Store(self.db)
-        closed = store.get_session(working.id)
-        open_row = store.get_session(awaiting.id)
-        assert closed is not None and open_row is not None
-        self.assertTrue(closed.ended)
-        self.assertTrue(closed.auto_closed)
-        self.assertFalse(open_row.ended)
+        kept = store.get_agent(live.id)
+        assert kept is not None
+        self.assertFalse(kept.ended)
+        self.assertEqual(kept.status, "starting")
 
-    def test_open_session_is_marked_awaiting_on_stop(self):
+    def test_open_agent_is_marked_waiting_on_stop(self):
         _plan, _task = self._seed()
         store = Store(self.db)
-        session, _ = store.start_session("ana", now=time.time())
+        agent = store.add_agent("ana", host="manual", agent="ana", worktree=str(self.repo))
         result = hooks.build_result("stop", {}, self.repo, commits=[], store=Store(self.db))
         self.assertEqual(result, hooks.HookResult())
-        updated = Store(self.db).get_session(session.id)
+        updated = Store(self.db).get_agent(agent.id)
         assert updated is not None
-        self.assertTrue(updated.awaiting)
-        self.assertGreater(updated.last_seen_at, 0)
+        self.assertEqual(updated.status, "waiting")
+        self.assertGreater(updated.updated_at, 0)
 
     def _unlinked(self):
         plan_id, task_id = self._seed()
@@ -446,8 +427,8 @@ class HookCase(unittest.TestCase):
             host="claude",
         )
         self.assertEqual(result, hooks.HookResult())
-        rows = Store(self.db).list_sessions(open_only=True)
-        self.assertEqual([row.phase for row in rows], ["awaiting"])
+        rows = Store(self.db).list_agents(open_only=True)
+        self.assertEqual([row.status for row in rows], ["waiting"])
 
     def test_continued_stop_is_allowed(self):
         _task_id, commits = self._unlinked()
@@ -517,18 +498,20 @@ class HookCase(unittest.TestCase):
         self.assertEqual(result.block, "")
 
     def test_session_end_closes_with_a_summary_and_handoff(self):
-        _plan, task_id = self._seed()
+        _plan, task_id = self._seed_linked()
         store = Store(self.db)
-        session, _ = store.start_session("ana", repo_path=str(self.repo), now=time.time())
+        agent = store.add_agent(
+            "ana", host="claude", host_session="s-1", agent="ana", worktree=str(self.repo)
+        )
         hooks.build_result(
             "session-end",
-            {},
+            {"session_id": "s-1"},
             self.repo,
             commits=[],
             store=Store(self.db),
             host="claude",
         )
-        closed = Store(self.db).get_session(session.id)
+        closed = Store(self.db).get_agent(agent.id)
         assert closed is not None
         self.assertTrue(closed.ended)
         self.assertIn("ended by claude", closed.summary)
@@ -648,7 +631,7 @@ class HookCase(unittest.TestCase):
             "pre-tool", commit, self.repo, commits=[], store=Store(self.db), host="claude"
         )
         self.assertEqual(result, hooks.HookResult())
-        self.assertEqual(len(Store(self.db).list_sessions(open_only=True)), 1)
+        self.assertEqual(len(Store(self.db).list_agents(open_only=True)), 1)
 
     def test_non_git_commands_are_never_blocked(self):
         self._linked_plan()
@@ -739,13 +722,13 @@ class HookCase(unittest.TestCase):
         os.environ[hooks.NO_HOOKS_ENV] = "1"
         self.assertEqual(hooks.run("session-start", {}, commits=[]).text, "")
 
-    def test_session_start_tracks_a_session(self):
+    def test_session_start_tracks_an_agent(self):
         self._seed()
         hooks.build_result("session-start", {}, self.repo, commits=[], store=Store(self.db))
-        sessions = Store(self.db).list_sessions(open_only=True)
-        self.assertEqual(len(sessions), 1)
-        self.assertEqual(sessions[0].phase, "working")
-        self.assertTrue(sessions[0].host)
+        agents = Store(self.db).list_agents(open_only=True)
+        self.assertEqual(len(agents), 1)
+        self.assertEqual(agents[0].status, "starting")
+        self.assertTrue(agents[0].host)
 
     def test_cli_command_flag_reaches_the_commit_gate(self):
         self._linked_plan()

@@ -67,6 +67,7 @@ _.next_offset
 _.cursor_line
 BINDINGS
 auto_closed
+agent_counts
 CSS
 tool_actions
 tool_labels

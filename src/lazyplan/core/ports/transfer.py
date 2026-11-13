@@ -5,7 +5,7 @@ from __future__ import annotations
 from contextlib import AbstractContextManager
 from typing import Protocol
 
-from ..entities import Claim, ExternalRef, Plan, Task
+from ..entities import Claim, ExternalRef, Plan, Session, Task
 from .provenance import ProvenancePort
 
 
@@ -52,6 +52,17 @@ class TransferPort(ProvenancePort, Protocol):
     def transaction(self) -> AbstractContextManager[None]: ...
 
     def all_criterion_links(self) -> list[dict]: ...
+
+    def list_sessions(
+        self,
+        actor: str = "",
+        plan_id: int | None = None,
+        open_only: bool = False,
+        limit: int = 20,
+        archived: str = "hide",
+    ) -> list[Session]: ...
+
+    def restore_session_history(self, row: dict, actor: str = "human") -> int | None: ...
 
     def set_blocked(
         self, tid: int, blocked: bool, reason: str = "", actor: str = "human"

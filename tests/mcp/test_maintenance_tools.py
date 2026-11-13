@@ -98,10 +98,17 @@ class TestMcpMaintenance(unittest.TestCase):
     def test_archive_apply_path(self) -> None:
         old_plan = self.store.add_plan("Old plan")
         services.set_status(self.store, "plan", old_plan.id, Status.DONE)
-        session, _previous = self.store.start_session(
-            "builder", plan_id=old_plan.id, repo_path=self.tmp.name, now=self.old
+        self.store.restore_session_history(
+            {
+                "id": 1,
+                "actor": "builder",
+                "plan_id": old_plan.id,
+                "repo_path": self.tmp.name,
+                "started_at": self.old,
+                "ended_at": self.old,
+                "summary": "done",
+            }
         )
-        self.store.end_session(session.id, "builder", summary="done", now=self.old)
         with closing(sqlite3.connect(self.db)) as conn:
             conn.execute("UPDATE events SET ts=? WHERE detail LIKE 'plan #% -> done%'", (self.old,))
             conn.commit()

@@ -79,7 +79,7 @@ class VerifyCase(unittest.TestCase):
                 body = json.loads(text)
                 self.assertTrue(body)
         self.assertEqual(Store(self.db).counts(), before)
-        self.assertTrue(Store(self.db).list_sessions(open_only=True))
+        self.assertTrue(Store(self.db).list_agents(open_only=True))
 
     def test_every_direct_render_has_no_ansi(self):
         result = hooks.build_result(

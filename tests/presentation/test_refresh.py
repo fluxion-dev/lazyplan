@@ -11,7 +11,6 @@ from unittest import mock
 
 from lazyplan import services
 from lazyplan.core.entities import Status
-from lazyplan.presentation.shared.design import SPINNER_FRAMES
 from lazyplan.store import Store
 
 try:
@@ -27,10 +26,10 @@ COALESCE_PAUSE = 0.35
 
 
 class PollHarness:
-    """One open session plus a hand-driven external-change poll.
+    """One live agent plus a hand-driven external-change poll.
 
-    The app's own one-second timer is never waited on: tests call `poll()`
-    after each database write so a heartbeat or edit is observed at a known
+    The app's own quarter-second timer is never waited on: tests call `poll()`
+    after each database write so a transition or edit is observed at a known
     point in time.
     """
 
@@ -47,9 +46,9 @@ class PollHarness:
         """Start the threaded poll the app's timer uses."""
         self.app.tree_controller.poll()  # type: ignore[attr-defined]
 
-    def heartbeat(self, phase: str = "working") -> None:
-        """Touch the open session, then poll once."""
-        self.store.touch_session(self.session_id, phase=phase)
+    def heartbeat(self, status: str = "working") -> None:
+        """Move the agent, then poll once."""
+        self.store.transition_agent(self.session_id, status, event="test")
         self.poll()
 
     @property
@@ -71,8 +70,14 @@ class RefreshCase(unittest.IsolatedAsyncioTestCase):
         self.task = self.store.add_task(self.milestone.id, "Task")
 
     def open_session(self) -> int:
-        session, _ = self.store.start_session("ana", plan_id=self.plan.id)
-        return session.id
+        agent = self.store.add_agent(
+            "ana",
+            host="opencode",
+            agent="ana",
+            plan_id=self.plan.id,
+            worktree=self.store.checkout_path(),
+        )
+        return agent.id
 
     def harness(self, app: object, session_id: int) -> PollHarness:
         return PollHarness(app, self.store, session_id)
@@ -129,8 +134,8 @@ class TestHeartbeatKeepsTreeStill(RefreshCase):
             cursor_line = tree.cursor_line
             scroll = tree.scroll_offset
             rebuilds = harness.rebuilds
-            for phase in ("working", "awaiting", "working", "awaiting", "working"):
-                harness.heartbeat(phase)
+            for status in ("working", "waiting", "working", "waiting", "working"):
+                harness.heartbeat(status)
                 await pilot.pause()
             self.assertEqual(harness.rebuilds, rebuilds)
             self.assertEqual(self.row_ids(app), nodes)
@@ -146,12 +151,11 @@ class TestHeartbeatKeepsTreeStill(RefreshCase):
             body = app.query_one("#agents-body", Static)
             harness.heartbeat("working")
             await pilot.pause()
-            self.assertTrue(any(frame in str(body.content) for frame in SPINNER_FRAMES))
-            harness.heartbeat("awaiting")
+            self.assertIn("working", str(body.content))
+            harness.heartbeat("waiting")
             await pilot.pause()
             self.assertIn("◆", str(body.content))
-            for word in ("working", "awaiting you"):
-                self.assertNotIn(word, str(body.content))
+            self.assertIn("waiting", str(body.content))
 
     async def test_a_structural_edit_still_rebuilds(self) -> None:
         session_id = self.open_session()
@@ -167,40 +171,36 @@ class TestHeartbeatKeepsTreeStill(RefreshCase):
 
 
 class TestPollScheduling(RefreshCase):
-    def test_the_background_reap_runs_every_minute(self) -> None:
-        from lazyplan.presentation.tui.controllers.poll import REAP_INTERVAL
+    def test_the_background_sweep_runs_every_second(self) -> None:
+        from lazyplan.presentation.tui.controllers.poll import SWEEP_INTERVAL
 
-        self.assertEqual(REAP_INTERVAL, 60.0)
+        self.assertEqual(SWEEP_INTERVAL, 1.0)
 
-    async def test_one_reap_per_minute_window(self) -> None:
+    async def test_one_sweep_per_second_window(self) -> None:
         app = create_app(self.store.path)
         async with app.run_test(size=(120, 24)) as pilot:
             await pilot.pause()
             controller = app.tree_controller
-            controller._last_reap = 1000.0
-            with mock.patch.object(
-                app.store,
-                "reap_idle_sessions",
-                wraps=app.store.reap_idle_sessions,
-            ) as reap:
+            controller._last_sweep = 1000.0
+            with mock.patch("lazyplan.services.agents.sweep_lost") as sweep:
                 with mock.patch(
                     "lazyplan.presentation.tui.controllers.poll.time.time",
-                    return_value=1059.0,
+                    return_value=1000.5,
                 ):
                     controller._read_state()
-                self.assertEqual(reap.call_count, 0)
+                self.assertEqual(sweep.call_count, 0)
                 with mock.patch(
                     "lazyplan.presentation.tui.controllers.poll.time.time",
-                    return_value=1060.0,
+                    return_value=1001.0,
                 ):
                     controller._read_state()
-                self.assertEqual(reap.call_count, 1)
+                self.assertEqual(sweep.call_count, 1)
                 with mock.patch(
                     "lazyplan.presentation.tui.controllers.poll.time.time",
-                    return_value=1061.0,
+                    return_value=1001.5,
                 ):
                     controller._read_state()
-                self.assertEqual(reap.call_count, 1)
+                self.assertEqual(sweep.call_count, 1)
 
     async def test_a_burst_of_three_writes_makes_one_tree_update(self) -> None:
         session_id = self.open_session()
@@ -691,7 +691,7 @@ class TestViewPreservation(RefreshCase):
             await pilot.pause()
             cursor_line = tree.cursor_line
             scroll = tree.scroll_offset
-            harness.heartbeat("awaiting")
+            harness.heartbeat("waiting")
             await pilot.pause()
             self.assertEqual(tree.cursor_line, cursor_line)
             self.assertEqual(tree.scroll_offset, scroll)

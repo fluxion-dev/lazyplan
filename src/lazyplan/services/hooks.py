@@ -1,7 +1,7 @@
 """Canonical hook events for coding-agent hosts.
 
-One entry point maps host lifecycle events to a short reminder and keeps the
-checkout's session heartbeat current. Hooks never move a task and always let
+One entry point maps host lifecycle events to a short reminder and applies
+them to the exact agent registry row. Hooks never move a task and always let
 the agent continue. Host-specific output shaping lives in `hook_hosts`.
 """
 
@@ -15,26 +15,19 @@ import stat
 import sys
 import time
 from pathlib import Path
-from typing import TextIO, cast
+from typing import TextIO
 
-from ..core.entities import HookResult, Session
+from ..core.entities import Agent, HookResult
 from ..core.policies import hooks as hook_modes
-from ..core.policies.sessions import phase_for_event
+from ..core.policies.agents import EVENTS as AGENT_EVENTS
+from ..core.policies.agents import parse_pid
 from ..core.ports.app import AppPort
 from ..core.ports.insights import InsightsPort
-from ..infrastructure.repo import git_common_dir, shared_git_lookups
-from . import attribution, audit, context, hook_policy
-from . import sessions as session_services
+from ..infrastructure.repo import shared_git_lookups
+from . import agents, audit, context, hook_policy
+from .agent_identity import extract_identity
 
-EVENTS = (
-    "session-start",
-    "prompt-submit",
-    "pre-tool",
-    "post-tool",
-    "stop",
-    "session-end",
-    "pre-compact",
-)
+EVENTS = AGENT_EVENTS
 HOSTS = ("opencode", "claude", "gemini", "codex", "cursor")
 NO_HOOKS_ENV = hook_modes.NO_HOOKS_ENV
 STDIN_TIMEOUT = 0.5
@@ -184,127 +177,55 @@ def _file_path(payload: dict) -> str:
     return match.group(1).strip() if match else ""
 
 
-def _host_session(payload: dict) -> str:
-    """The host's own session id from the common payload shapes."""
-    for key in ("host_session", "session_id", "sessionID", "thread_id"):
-        value = payload.get(key)
-        if isinstance(value, str) and value.strip():
-            return value.strip()
-    data = payload.get("data")
-    if isinstance(data, dict):
-        for key in ("sessionID", "session_id", "thread_id"):
-            value = data.get(key)
-            if isinstance(value, str) and value.strip():
-                return value.strip()
-    return ""
+def _hook_pid(payload: dict) -> int:
+    """Host PID: the payload value, else the process that spawned this hook."""
+    reported = payload.get("pid") or payload.get("process_id")
+    if reported:
+        return parse_pid(reported)
+    if payload.get("host_session") or payload.get("session_id") or payload.get("sessionID"):
+        return parse_pid(os.getppid())
+    return 0
 
 
-def _project_key(repo: str) -> str:
-    """Stable project key: the git common dir, else the checkout path."""
-    common = git_common_dir(repo)
-    return common or repo
-
-
-def _track_session(
+def _track_agent(
     store: AppPort,
     event: str,
     host: str,
     cwd: Path,
     payload: dict,
-) -> Session | None:
-    """Keep each host session's row heartbeat and phase in step with the host."""
-    now = time.time()
-    repo = store.checkout_path(str(cwd))
-    project = _project_key(repo)
-    host_session = _host_session(payload)
-    branch = attribution.current_branch(repo)
-    if event in ("session-start", "prompt-submit", "stop"):
-        session_services.reap_idle_sessions(store, now=now, repo_path=repo)
-    if host_session:
-        session = store.session_for_host(host, host_session, project)
-    else:
-        session = store.open_session_for(repo, host=host)
-    if session is None:
-        if event == "session-end":
-            return None
-        if not host_session and event in ("pre-tool", "post-tool", "pre-compact"):
-            return None
-        resolved = attribution.resolve(store, repo, branch)
-        result = session_services.start_session(
-            store,
-            host or "agent",
-            plan_id=resolved.plan_id,
-            repo_path=repo,
-            branch=branch,
-            host=host,
-            host_session=host_session,
-            phase=phase_for_event(event),
+) -> Agent | None:
+    """Apply one host event to the exact agent row for this host session."""
+    identity = extract_identity(host, payload, cwd, pid=_hook_pid(payload))
+    if event == "session-end":
+        return agents.find_agent(
+            store, identity.host, identity.host_session, identity.pid, identity.cwd
         )
-        session = cast(Session, result["session"])
-    elif event == "session-end":
-        if not host_session:
-            return session
-        detached, last = store.detach_host_binding(host, host_session, project)
-        return detached if last else None
-    else:
-        session = _refresh_tracking(store, session, event, host, repo, branch)
-    if session is not None and host_session:
-        store.bind_session(host, host_session, project, repo, session.id, now=now)
-    return session
+    actor = identity.agent if identity.agent != "unknown" else (host or "agent")
+    return agents.apply_event(store, actor, event, identity)
 
 
-def _refresh_tracking(
-    store: AppPort,
-    session: Session,
-    event: str,
-    host: str,
-    repo: str,
-    branch: str,
-) -> Session | None:
-    """Heartbeat one row and re-resolve attribution while it stays automatic."""
-    replace_plan = session.plan_source != "manual"
-    plan_id = attribution.resolve(store, repo, branch).plan_id if replace_plan else None
-    phase = phase_for_event(event) if event in ("session-start", "prompt-submit", "stop") else None
-    return session_services.touch_session(
-        store,
-        session.id,
-        phase=phase,
-        host=host,
-        branch=branch,
-        plan_id=plan_id,
-        replace_plan=replace_plan,
-    )
-
-
-def _session_text(
-    store: InsightsPort,
-    cwd: Path,
-    commits: list[audit.Commit] | None,
-    session: Session | None = None,
-) -> str:
+def _agent_text(store: InsightsPort, cwd: Path, commits: list[audit.Commit] | None) -> str:
+    """Session-start packet with exact agent identity and next ending command."""
     del cwd, commits
     payload = context.build(store, max_chars=2000)
     if not payload.get("plans"):
         return ""
     text = "\n".join(context.lines(payload)).strip()
-    tracked = session
-    if tracked is None:
-        rows = store.list_sessions(open_only=True, limit=1)
-        tracked = rows[0] if rows else None
+    rows = store.list_agents(live_only=True, limit=1)
+    tracked = rows[0] if rows else None
     if tracked is not None:
-        state = session_services.session_state(tracked)
         text += (
-            f"\nsession    S{tracked.id} {state} @{tracked.actor};"
-            f" end it with `lpui session end --id S{tracked.id} --summary`"
+            f"\nagent      A{tracked.id} {tracked.status} @{tracked.agent};"
+            f" end it with `lpui agent end --id A{tracked.id} --summary`"
         )
     else:
-        text += "\nsession    none open; start one with `lpui session start --plan P`"
+        text += "\nagent      none registered; start one with `lpui agent start --plan P`"
     return text
 
 
-def _compaction_text(store: InsightsPort, cwd: Path, session: Session | None) -> str:
+def _compaction_text(store: InsightsPort, cwd: Path) -> str:
     """Summary guidance that carries the active plan through a compaction."""
-    packet = _session_text(store, cwd, None, session)
+    packet = _agent_text(store, cwd, None)
     if not packet:
         return ""
     return (
@@ -353,15 +274,15 @@ def _dispatch(
     who: str,
     mode: str,
 ) -> HookResult:
-    session = _track_session(store, event, who, here, payload)
+    agent = _track_agent(store, event, who, here, payload)
     if event == "session-start":
-        return HookResult(_session_text(store, here, commits, session), context=True).capped()
+        return HookResult(_agent_text(store, here, commits), context=True).capped()
     if event == "pre-compact":
-        return HookResult(_compaction_text(store, here, session), context=True).capped()
+        return HookResult(_compaction_text(store, here), context=True).capped()
     if event == "stop":
-        return hook_policy.stop_result(store, here, commits, session, payload, mode, who)
+        return hook_policy.stop_result(store, here, commits, agent, payload, mode, who)
     if event == "session-end":
-        return hook_policy.session_end_result(store, session, who)
+        return hook_policy.session_end_result(store, agent, who)
     if event == "prompt-submit":
         return HookResult(_prompt_text(store), context=True).capped()
     if event == "pre-tool":
@@ -380,24 +301,32 @@ def probe(store: AppPort | None, cwd: Path | None = None) -> dict:
             "ok": False,
             "db": None,
             "session": None,
+            "agent": None,
             "reason": "no database",
             "latency_ms": round((time.perf_counter() - started) * 1000, 1),
         }
     try:
         repo = store.checkout_path(str(cwd or Path.cwd()))
-        session = store.open_session_for(repo)
+        rows = [
+            row
+            for row in store.list_agents(live_only=True, limit=50)
+            if store.normalize_repo_path(row.repo_path) == store.normalize_repo_path(repo)
+        ]
+        agent = rows[0] if rows else None
     except (OSError, RuntimeError, ValueError) as exc:
         return {
             "ok": False,
             "db": store.db_path,
             "session": None,
+            "agent": None,
             "reason": str(exc),
             "latency_ms": round((time.perf_counter() - started) * 1000, 1),
         }
     return {
         "ok": True,
         "db": store.db_path,
-        "session": session.id if session is not None else None,
+        "session": agent.id if agent is not None else None,
+        "agent": agent.id if agent is not None else None,
         "reason": "",
         "latency_ms": round((time.perf_counter() - started) * 1000, 1),
     }

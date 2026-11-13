@@ -1,4 +1,4 @@
-"""The agents pane: active sessions and the last handoff."""
+"""The agents pane: exact live registry rows and the last handoff."""
 
 from __future__ import annotations
 
@@ -9,8 +9,8 @@ from textual.containers import VerticalScroll
 from textual.widgets import Static
 
 from .... import services
-from ....core.entities import Session
-from ....core.ports.sessions import SessionsPort
+from ....core.entities import Agent
+from ....core.ports.agents import AgentsPort
 from ...shared.design import (
     EMPTY_AGENTS,
     EMPTY_AGENTS_HINT,
@@ -20,20 +20,20 @@ from ...shared.design import (
 )
 from ...shared.session_labels import plan_names
 from ..query import query_one_opt
-from ..views.agents import rank_sessions, session_line, sessions_summary
+from ..views.agents import agent_line, agents_summary, rank_agents
 
-OPEN_SESSIONS_READ = 50
+OPEN_AGENTS_READ = 50
 
 
 class AgentsPanel(VerticalScroll):
-    """Active session rows with the selected plan's last handoff."""
+    """Live agent rows with the selected plan's last handoff."""
 
     can_focus = False
 
     def __init__(self) -> None:
         super().__init__(id="agents")
         self.border_title = " agents "
-        self._sessions: list[Session] = []
+        self._agents: list[Agent] = []
         self._titles: dict[int, str] = {}
         self._stamp = 0.0
         self._handoff = ""
@@ -44,7 +44,7 @@ class AgentsPanel(VerticalScroll):
         yield Static("", id="agents-empty", classes="pane-empty")
 
     def _show_body(self) -> None:
-        """Show the session rows and hide the empty state."""
+        """Show the agent rows and hide the empty state."""
         self.query_one("#agents-body", Static).display = True
         self.query_one("#agents-empty", Static).display = False
 
@@ -54,15 +54,15 @@ class AgentsPanel(VerticalScroll):
         width = (body.size.width if body is not None else self.size.width) or self.size.width - 2
         return width if width > 0 else None
 
-    def show(self, store: SessionsPort, plan_id: int | None = None) -> None:
+    def show(self, store: AgentsPort, plan_id: int | None = None) -> None:
         body = self.query_one("#agents-body", Static)
         try:
-            services.sessions.reap_idle_sessions(store, now=time.time())
+            services.sweep_lost(store)
         except (OSError, RuntimeError, ValueError):
             pass
-        sessions = services.sessions.list_sessions(store, open_only=True, limit=OPEN_SESSIONS_READ)
-        if not sessions:
-            self._sessions = []
+        agents = store.list_agents(open_only=True, limit=OPEN_AGENTS_READ)
+        if not agents:
+            self._agents = []
             self._titles = {}
             self._handoff = ""
             self._frame = None
@@ -75,28 +75,25 @@ class AgentsPanel(VerticalScroll):
             return
         self._show_body()
         self._stamp = time.time()
-        self._sessions = rank_sessions(sessions, self._stamp)
+        self._agents = rank_agents(agents, self._stamp)
         self._titles = plan_names(store)
-        handoff = services.sessions.previous_session(store, plan_id=plan_id)
+        handoff = services.previous_agent(store, plan_id=plan_id)
         note = str(handoff["handoff"]) if handoff and handoff.get("handoff") else ""
         self._handoff = f"[dim]handoff[/] {escape_markup(note)}" if note else ""
         self._frame = 0 if spinner_enabled() else None
         self._paint_rows()
-        self.border_subtitle = sessions_summary(sessions, self._stamp)
+        self.border_subtitle = agents_summary(agents, self._stamp)
         self.scroll_home(animate=False)
 
     def has_working(self) -> bool:
-        """True while a cached session is still in its working phase."""
-        if not self._sessions:
-            return False
-        stamp = time.time()
+        """True while a cached agent is still starting or working."""
         return any(
-            services.session_state(session, stamp) == "working" for session in self._sessions
+            agent.status in ("working", "starting", "tool", "compacting") for agent in self._agents
         )
 
     def advance(self, frame: int) -> bool:
         """Paint the cached rows at *frame* without another store read."""
-        if not self._sessions or not spinner_enabled():
+        if not self._agents or not spinner_enabled():
             return False
         if not self.has_working():
             return False
@@ -111,14 +108,14 @@ class AgentsPanel(VerticalScroll):
         width = self._row_width()
         stamp = time.time()
         lines = [
-            session_line(
-                session,
+            agent_line(
+                agent,
                 stamp,
-                plan_title=self._titles.get(session.plan_id or 0, ""),
+                plan_title=self._titles.get(agent.plan_id or 0, ""),
                 width=width,
                 frame=self._frame,
             )
-            for session in self._sessions
+            for agent in self._agents
         ]
         if self._handoff:
             lines.append(self._handoff)

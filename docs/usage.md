@@ -295,7 +295,7 @@ and `--actor`; `upgrade` adds `--check` and `--diagnose`.
 | `~/.lazyplan/setup.json` | Remembered setup choices and migration decisions. |
 | `~/.lazyplan/backups/<timestamp>/` | Tree-preserving backups of every touched file. |
 | `~/.agents/skills/lazyplan/SKILL.md` | Universal agent skill; per-tool skill directories are written too. |
-| `~/.config/opencode/plugins/lazyplan.js`, `~/.claude/settings.json`, `~/.gemini/settings.json`, `~/.codex/hooks.json`, `~/.cursor/hooks.json` | Managed lifecycle hook surfaces in the installed mode; they also track session state. |
+| `~/.config/opencode/plugins/lazyplan.js`, `~/.claude/settings.json`, `~/.gemini/settings.json`, `~/.codex/hooks.json`, `~/.cursor/hooks.json` | Managed lifecycle hook surfaces in the installed mode; they also register exact agent state. |
 | `AGENTS.md` | Optional marked lazyplan section in a repo. |
 
 ## Everyday commands
@@ -327,13 +327,13 @@ overview and coordination hubs.
 The main screen puts the work in one left column and the overview on the right.
 The left column stacks, in order, the plan queue, the agents card, plan review,
 and the git card. Plan queue holds every plan that is not done; plan review
-holds completed plans. The agents card is a live process list with one line per
-open session: actor, the last four characters of its host session, the plan id
-and title, the branch, the age, and a state glyph. A working row animates,
-awaiting rows show `◆` and sort first, and stale or idle rows show `◌`. Plan and
-branch truncate with an ellipsis at narrow widths. The last handoff stays below
-the rows, and the card is read-only. The git card carries linked checkouts and
-pull requests.
+holds completed plans. The agents card reads the exact agent registry every
+quarter second on a worker thread and paints one line per open row: agent name,
+`A` id, plan and task, branch, age, and status word. Running rows animate,
+waiting rows show `◆`, blocked rows show `⊘`, lost rows show `✕`, and unbound
+rows carry a yellow `unbound` badge. Plan and branch truncate with an ellipsis
+at narrow widths. The last handoff stays below the rows, and the card is
+read-only. The git card carries linked checkouts and pull requests.
 
 The right column holds only the overview, which follows the selection: a plan
 shows open questions, why, what, approval, references, every milestone as a
@@ -395,7 +395,7 @@ opens the source trail, and `n` creates by context. Create and edit dialogs
 use most of the screen: plan, milestone, task, criterion, and reference forms
 open wide, and definition forms give why, what, and details most of the
 height. One-line prompts for filter, comment, note, and approve stay compact.
-The palette carries questions, approvals, claims, sessions, comments, pull
+The palette carries questions, approvals, claims, agents, comments, pull
 requests, and activity; it disables actions the current selection cannot run
 and says why.
 
@@ -424,23 +424,24 @@ highlighted.
 
 ### Coordination hubs
 
-Claims, touch-points, sessions, comments, and notes are selectable hubs too.
-Open **claims hub**, **sessions hub**, or **comments and notes hub** from the
+Claims, touch-points, agents, comments, and notes are selectable hubs too.
+Open **claims hub**, **agents hub**, or **comments and notes hub** from the
 palette. The agents card is a read-only summary; it does not open the hub.
 
 - Claims: rows show the holder, expiry, age, and any overlap with another
   active claim that edits the same path. `a` claims the task, `x` renews, `d`
   releases, `D` forces a takeover, and `l`/`L` add or remove touch-points.
-- Sessions: rows show actor, host, phase, plan, branch, age, summary, handoff,
-  and recent events. `a` starts a session, `x` or `d` ends it with a summary,
-  and the last handoff stays visible after the session closes. Hooks move a
-  session to `awaiting` when the agent stops; two minutes without a heartbeat
-  reads `stale`, a working row is auto-closed after ten minutes, and an
-  awaiting row after thirty.
+- Agents: rows show the exact host, host session, agent, role, model, parent,
+  PID, plan, task, worktree, branch, HEAD, status, summary, handoff, and recent
+  transitions. `a` starts a managed agent, `x` or `d` ends it with a summary,
+  and ending a parent also ends every live child. Hooks move a row through
+  `starting`, `working`, `tool`, `compacting`, `waiting`, `blocked`, `lost`,
+  and `ended`; a dead PID becomes `lost` on the next sweep and is never closed
+  by elapsed time.
 - Comments and notes: `a` adds a comment, `n` adds a note, `x` resolves or
   reopens a comment, and `u` hides resolved comments.
 
-Session and touch-point authoring are first-class screen hubs now; plan 135's
+Agent and touch-point authoring are first-class screen hubs now; plan 135's
 CLI-only stance is superseded for those entities. Import, sync, and setup stay
 CLI-only.
 
@@ -539,13 +540,13 @@ Your agent is expected to work from the plan, not invent it:
   `lpui --porcelain lint --plan P` before check-off.
 - Create the whole tree in one JSON write with `plan apply`; start from
   `plan recipe feature|bugfix|refactor` and edit the words before applying.
-- Start a session with `lpui --porcelain next` to claim work, or
+- Start with `lpui --porcelain next` to claim work, or
   `lpui --porcelain context --max-chars 4000` for the budgeted picture.
   Renew the lease while you work, note handoffs, and release it when you stop.
   Update the journal after each commit, then run
   `lpui --porcelain audit --since 7.days` before closing a plan. Lifecycle
-  hooks remind you, gate a commit or stop in strict mode, and track the
-  session; they never move work.
+  hooks remind you, gate a commit or stop in strict mode, and register the
+  exact agent; they never move work.
 
 `lpui setup --placement repo` writes the full contract into the repo; the
 default setup installs the skill into each detected agent's own folder.
@@ -669,35 +670,39 @@ registration. `doctor` and `plan worktree list --stale` report missing,
 unlisted, or drifted worktrees without deleting anything. Plans created before
 isolation stay grandfathered.
 
-### Sessions and touch-points
+### Agents and touch-points
 
 ```bash
-lpui --actor NAME session start --plan 1 --branch task/1-records
-lpui --actor NAME session end --summary "Shipped the store" --handoff "next: T2"
-lpui session show
-lpui session list --open
-lpui touch add --task 12 --path src/lazyplan/store/sessions.py
+lpui --actor NAME agent start --plan 1 --host opencode --session HOST-SESSION
+lpui --actor NAME agent end --summary "Shipped the store" --handoff "next: T2"
+lpui agent show --id A3
+lpui agent list --open
+lpui agent sweep
+lpui agent history --plan 1
+lpui touch add --task 12 --path src/lazyplan/store/agents.py
 ```
 
-`session start` writes a pointer beside the database keyed by actor and
-checkout; `LAZYPLAN_SESSION=S3` overrides it. Every write made while the
-session is open is tagged with its id and refreshes its heartbeat. Hooks give
-every top-level host session its own row: each terminal, agent process, or
-linked worktree keeps its own phase and heartbeat, and child subagent sessions
-stay with their parent. A session takes its branch from the checkout and its
-plan from the branch name (`task/12-*`, `plan/3-*`, `milestone/4-*`), a branch
-recorded by `task start`, an active claim in that checkout, or the one doing
-plan linked there. A branch switch updates the row on its next heartbeat, while
-`--plan` and the sessions hub keep the plan you chose. A detached HEAD shows no
-branch. `session-start` and `prompt-submit` mark that row `working`, `stop`
-marks it `awaiting`, and `context`/`brief` render the previous handoff. A row
-with no heartbeat for two minutes reads `stale`; a working row is auto-closed
-after ten minutes and an awaiting row after thirty, and its pointer and
-bindings are cleared. Ending one host session closes only its row. A manual
-session without a host session keeps the one-open rule; `--force` supersedes
-the open row. Sessions are operational history and are not exported. You can
-also start and end them from the sessions hub, opened from the palette; the
-CLI remains the path for scripts.
+`agent start` registers one row from an exact host lifecycle event or a manual
+command. It records the host, host session, agent name, role, model, parent,
+PID and process start stamp, repo, worktree, branch, HEAD, plan, and task, plus
+one of `starting`, `working`, `tool`, `compacting`, `waiting`, `blocked`,
+`lost`, or `ended`. A managed start proves its plan through the worktree
+registered for that checkout and its task through an active claim; an
+unregistered worktree, two matching plans, or no exact plan is refused with the
+expected path. `--force --reason` is the only override and is recorded on the
+row. Host hooks may still register an unbound row so the tracker shows the
+agent; the row carries the reason and is skipped by managed gates.
+
+A child subagent is its own row linked to the parent through the parent host
+session, and ending the parent ends every live child. PID liveness uses the
+process start stamp where the OS exposes one, so PID reuse cannot revive a dead
+row: `agent sweep` marks it `lost`, and only an explicit end moves it to
+`ended`. Nothing closes an open row because it has been quiet.
+
+Historical sessions remain readable with their original `S` ids through
+`agent history`, `agent show --id S12`, `feed --session 12`, export, import,
+and MCP. New rows use `A` ids. `session start|end|show|list` stays as a hidden
+alias for one release; it delegates to the same managed start and gate.
 
 #### Hook modes and gates
 
@@ -706,12 +711,12 @@ question at each lifecycle point:
 
 - A `git commit` is denied when the checkout is managed and no task is doing.
   A checkout is managed when its database lives under `.agents/lazyplan/`, a
-  plan links it, or an open session there was started by hand or belongs to a
-  plan. The row a hook opens for every host session does not count, so
+  plan links it, or a live agent there was started by hand or is bound to a
+  plan. An unbound row a hook opens for a host session does not count, so
   unrelated repositories keep normal git behavior.
 - A stop is blocked once when a managed checkout has unlinked commits. The next
-  stop after the host's continuation guard is allowed, and the session is
-  marked awaiting.
+  stop after the host's continuation guard is allowed, and the agent is
+  marked waiting.
 - Every prompt receives a short active-plan packet: plan, doing task, open
   criteria, and next task. Cursor has no prompt-context field, so it injects
   the same packet at session start and after each reported tool.
@@ -720,18 +725,18 @@ question at each lifecycle point:
   these as context alongside the tool result. Outside a managed checkout they
   appear only while some plan has a doing task, and edits to files outside the
   checkout are never reported.
-- Session end closes the open session with an auto summary and a next-task
+- Session end closes the open agent with an auto summary and a next-task
   handoff.
 
 `--hooks advisory` keeps the same observations and turns every deny or block
 into a reminder. `--no-hooks` removes the managed entries. At runtime,
 `LAZYPLAN_HOOKS=advisory` downgrades without reinstalling, and
 `LAZYPLAN_NO_HOOKS=1` silences every hook. `lpui hook --check` prints a
-read-only readiness probe (database, session, and latency) and writes nothing;
+read-only readiness probe (database, agent, and latency) and writes nothing;
 `lpui doctor` includes the same probe.
 
 OpenCode has no stop-block surface, so it denies commits before the shell runs,
-injects the cached plan on every model call, and marks the row awaiting when
+injects the cached plan on every model call, and marks the row waiting when
 the session idles. The generated plugin loads on OpenCode 1.x and on the 2.x
 plugin API. It closes the child stdin, logs a failed hook once with the event
 and reason, and retries on the next event.
@@ -957,8 +962,8 @@ tokens.
   database returns an error instead of waiting.
 - `archive`, `trim`, and `vacuum` preview by default. Every `--apply` writes
   `lazyplan.db.bak-<timestamp>` beside the database with SQLite's backup API,
-  runs `PRAGMA integrity_check`, compares plan, task, and event counts, and
-  copies `sessions/bindings`. If the snapshot fails, nothing is mutated. If
+  runs `PRAGMA integrity_check`, and compares plan, task, and event counts.
+  If the snapshot fails, nothing is mutated. If
   the process dies after the copy but before journal-mode conversion, an
   unverified `.bak-*` can remain; the live database is untouched. Remove it
   manually; the next apply writes a fresh snapshot.

@@ -1,61 +1,6 @@
-"""Session rules: identity, lifecycle, summaries, and handoff limits."""
+"""Legacy session history: ids only. History is read-only."""
 
 from __future__ import annotations
-
-SUMMARY_LIMIT = 4000
-HANDOFF_LIMIT = 2000
-PHASES = ("working", "awaiting")
-PLAN_SOURCES = ("auto", "manual")
-
-#: An open session with no heartbeat for this long is stale in the UI.
-STALE_AFTER_SECS = 2 * 60
-
-#: A working session with no heartbeat for this long is safe to close.
-CLOSE_AFTER_WORKING_SECS = 10 * 60
-
-#: An awaiting session keeps a longer grace because the user may take a while.
-CLOSE_AFTER_AWAITING_SECS = 30 * 60
-
-_CLOSE_AFTER = {
-    "working": CLOSE_AFTER_WORKING_SECS,
-    "awaiting": CLOSE_AFTER_AWAITING_SECS,
-}
-
-
-def close_after_secs(phase: str = "working") -> float:
-    """Idle window before one phase is safe to close."""
-    return _CLOSE_AFTER.get(str(phase).strip().lower(), CLOSE_AFTER_WORKING_SECS)
-
-
-def normalize_phase(text: str) -> str:
-    """Return one of ``working`` or ``awaiting``, rejecting anything else."""
-    body = str(text).strip().lower()
-    if body not in PHASES:
-        raise ValueError(f"session phase must be {'|'.join(PHASES)}")
-    return body
-
-
-def phase_for_event(event: str) -> str:
-    """Canonical phase after a hook event: stop waits on the user."""
-    return "awaiting" if event == "stop" else "working"
-
-
-def normalize_plan_source(text: str) -> str:
-    """Return ``auto`` or ``manual`` for how a session got its plan."""
-    body = str(text).strip().lower()
-    if body not in PLAN_SOURCES:
-        raise ValueError(f"session plan source must be {'|'.join(PLAN_SOURCES)}")
-    return body
-
-
-def auto_close_summary(seconds: float) -> str:
-    """Summary recorded when idle reaping closes an abandoned session."""
-    elapsed = max(seconds, 0.0)
-    if elapsed < 3600:
-        minutes = max(1, int(elapsed // 60))
-        return f"auto-closed after {minutes}m idle"
-    hours = max(1, round(elapsed / 3600))
-    return f"auto-closed after {hours}h idle"
 
 
 def parse_session_id(text: str) -> int:
@@ -66,24 +11,3 @@ def parse_session_id(text: str) -> int:
     if not raw.isdigit() or int(raw) <= 0:
         raise ValueError(f"invalid session id {text!r}; use S12 or 12")
     return int(raw)
-
-
-def normalize_summary(text: str) -> str:
-    """Trimmed summary; an empty summary is allowed."""
-    body = str(text).strip()
-    if len(body) > SUMMARY_LIMIT:
-        raise ValueError(f"session summary must be at most {SUMMARY_LIMIT} characters")
-    return body
-
-
-def normalize_handoff(text: str) -> str:
-    """Trimmed handoff note; an empty handoff is allowed."""
-    body = str(text).strip()
-    if len(body) > HANDOFF_LIMIT:
-        raise ValueError(f"session handoff must be at most {HANDOFF_LIMIT} characters")
-    return body
-
-
-def supersede_summary(previous_id: int, new_id: int) -> str:
-    """Summary recorded when a session is force-replaced by a newer one."""
-    return f"superseded by session S{new_id}" if new_id else f"superseded session S{previous_id}"

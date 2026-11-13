@@ -28,8 +28,25 @@ class HealthCase(unittest.TestCase):
             os.environ["LAZYPLAN_NO_SKILLS"] = self.old_noskills
         self.tmp.cleanup()
 
-    def check(self, version: str = "1.0") -> health.HealthReport:
-        return health.check(self.choice, self.state, None, self.home, version)
+    def check(
+        self,
+        version: str = "1.0",
+        missing: tuple[str, ...] = (),
+        gh_exit: int = 0,
+        env: dict[str, str] | None = None,
+    ) -> health.HealthReport:
+        self.ran: list[list[str]] = []
+
+        def which(binary: str) -> str | None:
+            return None if binary in missing else f"/bin/{binary}"
+
+        def run(argv: list[str]) -> int:
+            self.ran.append(argv)
+            return gh_exit
+
+        return health.check(
+            self.choice, self.state, None, self.home, version, which, run, env or {}
+        )
 
     def remember(self, item_id: str, decision: str, version: str = "1.0") -> None:
         item = next(item for item in catalog(self.home) if item.id == item_id)
@@ -122,6 +139,51 @@ class IntegrationFindingsTest(HealthCase):
         self.check()
         after = sorted(path.relative_to(self.home) for path in self.home.rglob("*"))
         self.assertEqual(before, after)
+
+
+class ToolFindingsTest(HealthCase):
+    def setUp(self):
+        super().setUp()
+        self.install_skill()
+        hook_install.install(self.home, ["claude"])
+
+    def test_tools_on_path_report_nothing(self):
+        self.assertEqual(self.check().findings, ())
+        self.assertEqual(self.ran, [["/bin/gh", "auth", "token"]])
+
+    def test_missing_lpui_and_git_are_errors_with_a_manual_fix(self):
+        findings = self.by_id(self.check(missing=("lpui", "git")))
+        for tool_id in ("tool:lpui", "tool:git"):
+            finding = findings[tool_id]
+            self.assertEqual(finding.severity, health.ERROR)
+            self.assertFalse(finding.fixable)
+            self.assertTrue(finding.fix)
+            self.assertTrue(finding.capability)
+        self.assertIn("PATH", findings["tool:lpui"].fix)
+
+    def test_missing_gh_is_a_warning(self):
+        finding = self.by_id(self.check(missing=("gh",)))["tool:gh"]
+        self.assertEqual(finding.severity, health.WARNING)
+        self.assertIn("gh auth login", finding.fix)
+        self.assertEqual(self.ran, [])
+
+    def test_gh_without_a_login_is_a_warning(self):
+        findings = self.by_id(self.check(gh_exit=1))
+        self.assertEqual(set(findings), {"tool:gh-auth"})
+        self.assertEqual(findings["tool:gh-auth"].severity, health.WARNING)
+
+    def test_a_token_in_the_environment_skips_gh(self):
+        for name in health.TOKEN_ENV:
+            with self.subTest(name=name):
+                report = self.check(missing=("gh",), env={name: "t"})
+                self.assertEqual(report.findings, ())
+                self.assertEqual(self.ran, [])
+
+    def test_never_hides_a_tool_finding(self):
+        self.state.integration_choices["tool:git"] = {"decision": "never", "fingerprint": ""}
+        report = self.check(missing=("git",))
+        self.assertEqual(self.by_id(report)["tool:git"].decision, "never")
+        self.assertEqual(report.open, ())
 
 
 if __name__ == "__main__":

@@ -8,17 +8,26 @@ never writes.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import os
+import shutil
+import subprocess
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
 from lazyplan.infrastructure.integrations import HOOK, HOST_LABELS, IntegrationItem
 
-from .integrations import inspect
+from .integrations import inspect, suppressing_decision
 from .layout import SetupChoice
 from .state import SetupState
 
 ERROR = "error"
+WARNING = "warning"
+TOKEN_ENV = ("LAZYPLAN_GITHUB_TOKEN", "GITHUB_TOKEN", "GH_TOKEN")
+
+Which = Callable[[str], str | None]
+Run = Callable[[list[str]], int]
 
 SKILL_COST = "Agents won't load lazyplan's instructions for planning and tracking work."
 HOOK_COST = (
@@ -124,12 +133,69 @@ def _integration_findings(
     return findings
 
 
+LPUI = HealthFinding(
+    id="tool:lpui",
+    label="lpui on PATH",
+    capability=(
+        "Hooks and agents run `lpui`, so hooks fail silently and agents can't read"
+        " or update the plan."
+    ),
+    fix=(
+        "Add the folder holding lpui to PATH (`uv tool update-shell` or"
+        " `pipx ensurepath`), then open a new terminal."
+    ),
+)
+GIT = HealthFinding(
+    id="tool:git",
+    label="git on PATH",
+    capability="Commit links, `task start`, `task finish`, and `git scan` don't work.",
+    fix="Install Git from https://git-scm.com/downloads.",
+)
+GH = HealthFinding(
+    id="tool:gh",
+    label="GitHub CLI",
+    capability="Pull request and check status can't refresh without a GitHub token.",
+    severity=WARNING,
+    fix="Install GitHub CLI from https://cli.github.com and run `gh auth login`.",
+)
+GH_AUTH = HealthFinding(
+    id="tool:gh-auth",
+    label="GitHub CLI login",
+    capability="gh isn't logged in, so pull request and check status can't refresh.",
+    severity=WARNING,
+    fix="Run `gh auth login`.",
+)
+
+
+def _exit_code(argv: list[str]) -> int:
+    try:
+        return subprocess.run(argv, capture_output=True, timeout=5, check=False).returncode
+    except (OSError, subprocess.SubprocessError):
+        return 1
+
+
+def _missing_tools(which: Which, run: Run, env: Mapping[str, str]) -> list[HealthFinding]:
+    """Tools lazyplan shells out to; gh is skipped when a token is set."""
+    missing = [tool for tool, binary in ((LPUI, "lpui"), (GIT, "git")) if which(binary) is None]
+    if any(env.get(name) for name in TOKEN_ENV):
+        return missing
+    gh = which("gh")
+    if gh is None:
+        missing.append(GH)
+    elif run([gh, "auth", "token"]) != 0:
+        missing.append(GH_AUTH)
+    return missing
+
+
 def check(
     choice: SetupChoice,
     state: SetupState,
     root: Path | None,
     home: Path | None = None,
     version: str = "",
+    which: Which = shutil.which,
+    run: Run = _exit_code,
+    env: Mapping[str, str] | None = None,
 ) -> HealthReport:
     """Return every gap for the remembered setup, without writing."""
     if choice.explicit_db:
@@ -137,4 +203,8 @@ def check(
     inspection = inspect(choice, state, root, home, version)
     findings = _integration_findings(inspection.pending, state, decided=False)
     findings += _integration_findings(inspection.suppressed, state, decided=True)
+    for tool in _missing_tools(which, run, os.environ if env is None else env):
+        remembered = state.integration_choices.get(tool.id)
+        decision = suppressing_decision(remembered, "", version)
+        findings.append(replace(tool, decision=decision))
     return HealthReport(findings=tuple(findings))

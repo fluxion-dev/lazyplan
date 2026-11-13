@@ -79,10 +79,9 @@ lpui upgrade --check
 `dnf` or `apt`. The TUI notifies and CLI stderr mentions new versions; stdout
 stays clean for `--json`. A successful upgrade re-runs setup with the new
 binary. Installed skills and hooks refresh silently, while a skill or hook
-surface added by the release is offered once on a terminal. Headless runs
-(`--json`, `--yes`, agent calls, and the Windows helper) leave those additions
-pending with no writes; `lpui doctor` names them, and the next interactive
-`lpui` or `lpui setup` asks again.
+surface added by the release waits for the startup health check. Headless runs
+(`--json`, `--yes`, agent calls, and the Windows helper) never prompt; `lpui
+doctor` names what is pending, and the next `lpui` or `lpui setup` offers it.
 
 On Windows the command and the TUI Update screen use a detached helper. lpui
 closes first, then the helper waits for the process to exit, updates the
@@ -160,6 +159,27 @@ lpui plan add --title "my-plan" --why "reason" --what "scope"
 
 `lpui` with no command opens the screen. `lpui ui` does the same.
 
+### Startup health check
+
+Each time the screen opens, lazyplan checks what its agent features rely on:
+the skill and hooks for each agent you chose, `lpui` and `git` on `PATH`, and
+the GitHub CLI and its login. A skill or hook that was installed and later
+deleted counts as missing again. When something is missing, a health dialog
+lists each gap with what it costs you, for example that Claude Code sessions
+aren't tracked without its hooks, and how to fix what lazyplan can't.
+
+- **Install & restart** writes the missing skills and hooks, then restarts
+  `lpui`. The next screen names the agents to restart: running agent sessions
+  keep their old setup until you restart them.
+- **Not now** hides those gaps until the next version.
+- **Never ask** hides them until a shipped skill or hook changes.
+
+A missing GitHub CLI or login is only a warning, and it is skipped when
+`GITHUB_TOKEN`, `GH_TOKEN`, or `LAZYPLAN_GITHUB_TOKEN` is set. Hidden gaps stay
+counted in the health chip on the key-hint line, and the **Health check**
+palette command lists every gap with Install & restart. The check is off with
+`--db`, `$LAZYPLAN_DB`, or `LAZYPLAN_NO_SETUP`.
+
 ## Setup and scope
 
 Setup writes one layout. Re-run it any time to change placement or agents:
@@ -189,9 +209,11 @@ lpui doctor --json
 ```
 
 Read-only. Exit `0` means clean, `1` means any finding: misplaced resources,
-missing hook files, a state-version mismatch, or migration drift. The report
-names the resolved database, config, templates, skill paths, hook files, state,
-and every finding. It resolves the same database a normal run would open,
+missing hook files or integrations, a state-version mismatch, or migration
+drift. The report names the resolved database, config, templates, skill paths,
+hook files, state, and every finding, plus the same health findings the
+startup check shows, hidden ones included. Missing tools are listed but don't
+change the exit code. It resolves the same database a normal run would open,
 including `--db` and `$LAZYPLAN_DB`.
 
 ### Upgrades and migration
@@ -210,15 +232,17 @@ finding; it does not ask on every command.
 - If both databases contain plans, setup refuses to merge and prints
   export/import guidance instead.
 - A release can add a skill or hook host/event. Setup refreshes what is already
-  installed, then lists only the new items with one prompt: install all, not
-  now, or never. Install writes every listed file with a backup.
+  installed and leaves the new items to the startup health check; `lpui setup`
+  lists them with one prompt: install all, not now, or never. Install writes
+  every listed file with a backup.
 - Not-now is remembered until the next version change; never is remembered
   until that item's definition changes. Both choices live in
   `~/.lazyplan/setup.json`.
 - `--no-skills` and `--no-hooks` are remembered across upgrades. New skills or
   hooks stay pending and doctor reports them; pass `--hooks` to opt back in.
-- Only `lpui`, `lpui setup`, and `lpui upgrade` prompt. Agent calls set up
-  silently and never wait for input.
+- Only `lpui`, `lpui setup`, and `lpui upgrade` prompt, and `lpui` asks about
+  integrations inside the screen. Agent calls set up silently and never wait
+  for input.
 
 ### Where the database resolves
 

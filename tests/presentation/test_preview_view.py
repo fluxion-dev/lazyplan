@@ -133,35 +133,36 @@ class PreviewDocumentTest(unittest.TestCase):
         self.assertIn("P1", text)
         self.assertIn("## WHY", text)
         self.assertIn("Why we build", text)
-        self.assertNotIn("## WHAT", text)
-        self.assertNotIn("What we build", text)
-        self.assertIn("## MILESTONES 1", text)
+        self.assertIn("## WHAT", text)
+        self.assertIn("What we build", text)
+        self.assertLess(text.index("## WHY"), text.index("## WHAT"))
+        self.assertLess(text.index("## WHAT"), text.index("## MILESTONES 1"))
         self.assertIn("Milestone title", text)
         self.assertNotIn("## NEXT", text)
         self.assertNotIn("Task title", text)
 
-    def test_plan_headline_keeps_only_the_first_paragraph(self) -> None:
+    def test_plan_why_and_what_show_in_full(self) -> None:
         plan = self.store.add_plan(
             "Long plan",
-            "What we build",
-            goal="First sentence stays.\n\nSecond paragraph is detail.",
+            "Scope paragraph.\n\nCommit strategy paragraph.",
+            goal="First sentence stays.\n\nSecond paragraph stays too. " + "word " * 60,
         )
         full = self.store.get_full("plan", plan.id)
         assert full is not None
         text = build_preview("plan", plan.id, full).render_markdown()
-        why = text.split("## WHY", 1)[1].split("## ", 1)[0]
-        self.assertIn("First sentence stays.", why)
-        self.assertNotIn("Second paragraph", why)
+        why = text.split("## WHY", 1)[1].split("## WHAT", 1)[0]
+        self.assertIn("Second paragraph stays too.", why)
+        self.assertIn("word " * 59, why)
+        self.assertNotIn("…", why)
+        self.assertIn("Commit strategy paragraph.", text.split("## WHAT", 1)[1])
 
-    def test_long_headlines_clamp_at_a_word_boundary(self) -> None:
-        plan = self.store.add_plan("Long plan", "What", goal="word " * 60)
-        full = self.store.get_full("plan", plan.id)
+    def test_plan_details_come_before_open_questions(self) -> None:
+        self.store.add_question(self.plan.id, "Which host?")
+        full = self.store.get_full("plan", self.plan.id)
         assert full is not None
-        text = build_preview("plan", plan.id, full).render_markdown()
-        why = text.split("## WHY", 1)[1].split("## ", 1)[0].strip()
-        self.assertTrue(why.endswith("…"))
-        self.assertLessEqual(len(why), 121)
-        self.assertNotIn("  ", why)
+        text = build_preview("plan", self.plan.id, full).render_markdown()
+        self.assertTrue(text.startswith("## WHY"))
+        self.assertLess(text.index("## WHAT"), text.index("## QUESTIONS"))
 
     def test_milestone_details_are_one_headline(self) -> None:
         milestone = self.store.add_milestone(

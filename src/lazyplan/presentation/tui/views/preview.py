@@ -313,14 +313,15 @@ def build_plan(
     obj = full.get("plan", {})
     header, meta_line = _title("plan", oid, obj, full)
     blocks: list[PreviewBlock] = []
+    goal = str(obj.get("goal", "") or "").strip()
+    desc = str(obj.get("description", "") or "").strip()
+    if goal:
+        blocks.append(PreviewBlock("why", (goal,)))
+    if desc:
+        blocks.append(PreviewBlock("what", (desc,)))
     questions = questions_block(full.get("questions", []))
     if questions is not None:
         blocks.append(questions)
-    goal = str(obj.get("goal", "") or "").strip()
-    desc = str(obj.get("description", "") or "").strip()
-    lead = goal or desc
-    if lead:
-        blocks.append(PreviewBlock("why" if goal else "what", (headline(lead),)))
     approval = approval_block(full.get("approval"))
     if approval is not None:
         blocks.append(approval)

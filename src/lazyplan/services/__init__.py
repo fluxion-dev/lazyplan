@@ -86,6 +86,7 @@ from .planning import (
     is_finished,
     plan_activity,
     reconcile,
+    requeue_expired,
     set_status,
     tree,
 )
@@ -178,6 +179,7 @@ __all__ = [
     "heal",
     "heal_parents",
     "set_status",
+    "requeue_expired",
     "cycle_status",
     "refresh_links",
     "reconcile",

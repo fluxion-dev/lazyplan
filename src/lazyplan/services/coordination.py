@@ -7,7 +7,7 @@ from ..core.errors import ClaimConflict, TouchpointOverlap
 from ..core.policies.coordination import parse_ttl, patterns_overlap, validate_block
 from ..core.ports.coordination import CoordinationPort
 from ..core.serialization import to_payload
-from .planning import set_status
+from .planning import requeue_expired, set_status
 from .worktrees import checkout_gate
 
 
@@ -131,6 +131,9 @@ def release_task_claim(
     if task is None:
         raise KeyError(f"task #{task_id} not found")
     claim = port.release_claim(task_id, actor, force=force)
+    if claim is not None and task.status is Status.DOING:
+        set_status(port, "task", task_id, Status.TODO, actor=actor)
+        task = port.get_task(task_id) or task
     return {
         "claim": vars(claim) if claim is not None else None,
         "task": to_payload(vars(task)),
@@ -154,6 +157,7 @@ def claim_next(
         blocker = checkout_gate(port, plan_id, worktree)
         if blocker and not (force and reason.strip()):
             raise ValueError(blocker)
+    requeue_expired(port)
     for _ in range(100):
         tasks = port.claimable_tasks(plan_id)
         if not tasks:
@@ -217,7 +221,8 @@ def list_claims(
     include_expired: bool = False,
     plan_id: int | None = None,
 ) -> list[dict]:
-    """Lease rows with task and plan context."""
+    """Lease rows with task and plan context, after requeueing expired ones."""
+    requeue_expired(port)
     return port.list_claims(include_expired=include_expired, plan_id=plan_id)
 
 

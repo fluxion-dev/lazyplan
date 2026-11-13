@@ -212,6 +212,28 @@ def set_status(
     return ok
 
 
+def end_claim(port: PlanningPort, task_id: int, actor: str) -> None:
+    """Drop a task's claim and send it back to todo if it was still doing."""
+    task = port.get_task(task_id)
+    if task is not None and task.status is Status.DOING:
+        set_status(port, "task", task_id, Status.TODO, actor=actor)
+        return
+    release = getattr(port, "release_claim", None)
+    if release is not None:
+        release(task_id, actor, force=True)
+
+
+def requeue_expired(port: CoordinationPort, now: float | None = None) -> list[int]:
+    """End every expired claim; returns the task ids it requeued or released."""
+    stamp = time.time() if now is None else now
+    ended = []
+    for claim in port.list_claims(include_expired=True, now=stamp):
+        if claim["expired"]:
+            end_claim(port, int(claim["task_id"]), str(claim["actor"]))
+            ended.append(int(claim["task_id"]))
+    return ended
+
+
 def _check_claimable(claim: Claim | None, task_id: int, actor: str) -> None:
     """Refuse doing while another actor's live claim holds the task."""
     if claim is not None and not claim.expired(time.time()) and claim.actor != actor:
@@ -297,7 +319,7 @@ def reconcile(
         else:
             continue
         if write:
-            port.release_claim(task_id, actor, force=True)
+            end_claim(port, task_id, actor)
 
     ambiguous: list[dict] = []
     for plan in port.list_plans():

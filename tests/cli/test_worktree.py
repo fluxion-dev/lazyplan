@@ -109,6 +109,19 @@ class PlanWorktreeCommandTest(unittest.TestCase):
         self.assertEqual([item["repo_path"] for item in entries], [self.repo, other])
         self.assertEqual({item["branch"] for item in entries}, {self._target()["branch"]})
 
+    def test_duplicate_links_to_one_checkout_print_once(self) -> None:
+        store = Store(self.db)
+        store.add_repo_link("plan", self.plan.id, self.repo)
+        store.add_repo_link("plan", self.plan.id, self.repo, "https://example.com/repo.git")
+
+        code, output, _ = self._run(
+            ["--json", "plan", "worktree", "--id", str(self.plan.id), "--print"]
+        )
+
+        self.assertEqual(code, 0)
+        entries = json.loads(output)["worktrees"]
+        self.assertEqual([item["repo_path"] for item in entries], [self.repo])
+
     def test_missing_links_default_to_the_current_checkout(self) -> None:
         os.chdir(self.repo)
 

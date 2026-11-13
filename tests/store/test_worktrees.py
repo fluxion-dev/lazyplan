@@ -52,6 +52,15 @@ class TestPlanWorktrees(unittest.TestCase):
         self.assertEqual(second.worktree_path, os.path.abspath(self.worktree + "-moved"))
         self.assertEqual(len(self.store.list_plan_worktrees(self.plan.id)), 1)
 
+    def test_registration_survives_reopen(self):
+        row = self.store.register_plan_worktree(
+            self.plan.id, self.repo, self.worktree, branch="plan/6-test"
+        )
+
+        reopened = Store(self.store.path)
+
+        self.assertEqual(reopened.list_plan_worktrees(self.plan.id), [row])
+
     def test_remove_reports_whether_a_row_existed(self):
         self.store.register_plan_worktree(self.plan.id, self.repo, self.worktree)
 

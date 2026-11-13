@@ -39,7 +39,6 @@
 }
 
 #tree-empty,
-#tree-finished-empty,
 #preview-empty {
     height: 1fr;
 }

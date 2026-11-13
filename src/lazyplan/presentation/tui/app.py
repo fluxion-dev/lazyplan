@@ -36,8 +36,6 @@ from ..cli.parser import package_version
 from ..shared.design import (
     EMPTY_PLAN_QUEUE_HINT,
     EMPTY_PLAN_QUEUE_TITLE,
-    EMPTY_PLAN_REVIEW_HINT,
-    EMPTY_PLAN_REVIEW_TITLE,
     PANEL_PLAN_QUEUE_TITLE,
     PANEL_PLAN_REVIEW_TITLE,
     empty_state,
@@ -199,14 +197,6 @@ if _TEXTUAL_OK:
                         yield AgentsPanel()
                         with Vertical(id="plans-finished", classes="plan-panel"):
                             yield FoldTree("finished", id="tree-finished", classes="plan-tree")
-                            yield Static(
-                                empty_state(
-                                    EMPTY_PLAN_REVIEW_TITLE,
-                                    EMPTY_PLAN_REVIEW_HINT,
-                                ),
-                                id="tree-finished-empty",
-                                classes="pane-empty",
-                            )
                         yield GitPanel()
                     with Vertical(id="side"):
                         yield PreviewPanel()

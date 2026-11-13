@@ -124,10 +124,7 @@ def build_git(
             hidden.append(f"{hidden_pulls} more PRs")
         lines.append(f"[dim]+{' · '.join(hidden)}[/]")
     if not lines:
-        lines = [
-            "[dim]no linked checkouts[/]",
-            "[dim]g opens the source trail[/]",
-        ]
+        return GitDocument(body="")
     counts = []
     if links:
         counts.append(f"{len(links)} commits")

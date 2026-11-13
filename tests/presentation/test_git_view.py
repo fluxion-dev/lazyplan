@@ -12,10 +12,9 @@ except ImportError:  # pragma: no cover - stdlib-only interpreter
 
 @unittest.skipUnless(build_git is not None, "textual/rich not installed")
 class GitDocumentTest(unittest.TestCase):
-    def test_empty_selection_offers_the_source_trail(self) -> None:
+    def test_empty_selection_renders_nothing(self) -> None:
         document = build_git({})
-        self.assertIn("no linked checkouts", document.render())
-        self.assertIn("g opens the source trail", document.render())
+        self.assertEqual(document.render(), "")
         self.assertEqual(document.summary, "")
 
     def test_repo_state_uses_icons_and_tracking(self) -> None:

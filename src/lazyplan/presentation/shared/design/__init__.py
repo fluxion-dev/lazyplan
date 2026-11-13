@@ -28,8 +28,6 @@ from ..help import KEYMAP as KEYMAP
 from ..palette import PALETTE_COMMANDS as PALETTE_COMMANDS
 from ..palette import PALETTE_SECTIONS as PALETTE_SECTIONS
 from .actions import action_bar as action_bar
-from .empty import EMPTY_AGENTS as EMPTY_AGENTS
-from .empty import EMPTY_AGENTS_HINT as EMPTY_AGENTS_HINT
 from .empty import EMPTY_APPROVAL as EMPTY_APPROVAL
 from .empty import EMPTY_COMMITS as EMPTY_COMMITS
 from .empty import EMPTY_FEED as EMPTY_FEED
@@ -39,8 +37,6 @@ from .empty import EMPTY_NO_PLANS_HINT as EMPTY_NO_PLANS_HINT
 from .empty import EMPTY_NO_PLANS_TITLE as EMPTY_NO_PLANS_TITLE
 from .empty import EMPTY_PLAN_QUEUE_HINT as EMPTY_PLAN_QUEUE_HINT
 from .empty import EMPTY_PLAN_QUEUE_TITLE as EMPTY_PLAN_QUEUE_TITLE
-from .empty import EMPTY_PLAN_REVIEW_HINT as EMPTY_PLAN_REVIEW_HINT
-from .empty import EMPTY_PLAN_REVIEW_TITLE as EMPTY_PLAN_REVIEW_TITLE
 from .empty import PANEL_PLAN_QUEUE_TITLE as PANEL_PLAN_QUEUE_TITLE
 from .empty import PANEL_PLAN_REVIEW_TITLE as PANEL_PLAN_REVIEW_TITLE
 from .empty import empty_state as empty_state
@@ -81,8 +77,6 @@ __all__ = [
     "ASCII_ICONS",
     "EMPTY_COMMITS",
     "EMPTY_FEED",
-    "EMPTY_AGENTS",
-    "EMPTY_AGENTS_HINT",
     "EMPTY_APPROVAL",
     "EMPTY_NEEDS",
     "EMPTY_NO_PLANS",
@@ -90,8 +84,6 @@ __all__ = [
     "EMPTY_NO_PLANS_TITLE",
     "EMPTY_PLAN_QUEUE_HINT",
     "EMPTY_PLAN_QUEUE_TITLE",
-    "EMPTY_PLAN_REVIEW_HINT",
-    "EMPTY_PLAN_REVIEW_TITLE",
     "empty_state",
     "HELP_TEXT",
     "ICONS",

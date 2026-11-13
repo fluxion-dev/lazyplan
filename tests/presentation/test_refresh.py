@@ -154,7 +154,8 @@ class TestHeartbeatKeepsTreeStill(RefreshCase):
             self.assertIn("working", str(body.content))
             harness.heartbeat("waiting")
             await pilot.pause()
-            self.assertIn("◆", str(body.content))
+            self.assertIn("waiting", str(body.content))
+            self.assertNotIn("◆", str(body.content))
             self.assertIn("waiting", str(body.content))
 
     async def test_a_structural_edit_still_rebuilds(self) -> None:

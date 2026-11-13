@@ -5,7 +5,9 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Protocol
 
-from ...setup.health import HealthFinding, HealthReport
+from textual.widgets import Label
+
+from ...setup.health import HealthFinding, HealthReport, items_of
 from ...setup.integrations import ReviewResult
 from ...shared.help import hint_bar
 from ..launch import Restart
@@ -98,9 +100,8 @@ class HealthController:
         except OSError as exc:
             self.app.notify(f"install failed: {exc}", severity="error", timeout=15)
             return
-        installed = tuple(item for finding in fixable for item in finding.items)
         missed = {item.id for item in result.pending}
-        done = tuple(item for item in installed if item.id not in missed)
+        done = tuple(item for item in items_of(fixable) if item.id not in missed)
         self.app.exit(Restart(tuple(self.report.hosts(done))))
 
     def chip(self) -> str:
@@ -112,8 +113,6 @@ class HealthController:
 
     def refresh_hints(self) -> None:
         """Repaint the key hints with the health chip on the end."""
-        from textual.widgets import Label
-
         chip = self.chip()
         width = max(10, self.app.size.width - 2 - len(chip))
         self.app.query_one("#hints", Label).update(hint_bar(width, markup=True) + chip)

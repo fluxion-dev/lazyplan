@@ -127,7 +127,7 @@ class IntegrationFindingsTest(HealthCase):
 
     def test_report_names_hosts_for_the_restart_notice(self):
         report = self.check()
-        self.assertEqual(report.hosts(report.items), ["Claude Code"])
+        self.assertEqual(report.hosts(health.items_of(report.findings)), ["Claude Code"])
 
     def test_findings_serialize(self):
         payload = self.by_id(self.check())["hook:claude"].to_dict()

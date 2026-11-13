@@ -92,15 +92,15 @@ class HealthReport:
         """True when an open error needs the user's attention."""
         return any(finding.severity == ERROR for finding in self.open)
 
-    @property
-    def items(self) -> tuple[IntegrationItem, ...]:
-        """Installable items behind every finding."""
-        return tuple(item for finding in self.findings for item in finding.items)
-
     def hosts(self, items: tuple[IntegrationItem, ...]) -> list[str]:
         """Agent labels whose hooks or skills these items change."""
         hosts = {item.host for item in items if item.kind == HOOK and item.host}
         return [HOST_LABELS.get(host, host) for host in sorted(hosts)]
+
+
+def items_of(findings: tuple[HealthFinding, ...]) -> tuple[IntegrationItem, ...]:
+    """Installable items behind these findings, in order."""
+    return tuple(item for finding in findings for item in finding.items)
 
 
 def _decision(state: SetupState, items: tuple[IntegrationItem, ...]) -> str:
@@ -233,8 +233,9 @@ class HealthContext:
 
     def install(self, findings: tuple[HealthFinding, ...]) -> ReviewResult:
         """Install every fixable item behind these findings."""
-        items = tuple(item for finding in findings for item in finding.items)
-        return install_items(items, self.choice, self.state, self.root, self.home, self.version)
+        return install_items(
+            items_of(findings), self.choice, self.state, self.root, self.home, self.version
+        )
 
     def decide(self, findings: tuple[HealthFinding, ...], decision: str) -> None:
         """Remember "deferred" or "never" for these findings and save state."""

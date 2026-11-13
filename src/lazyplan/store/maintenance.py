@@ -75,15 +75,11 @@ class MaintenanceMixin(StoreBase):
     """Maintenance reads and writes shared by the CLI, TUI, and MCP."""
 
     def _file_size(self) -> int:
-        """Database size in bytes, including WAL and shared-memory sidecars."""
-        path = Path(self.path).expanduser()
-        total = 0
-        for candidate in (path, Path(f"{path}-wal"), Path(f"{path}-shm")):
-            try:
-                total += candidate.stat().st_size
-            except OSError:
-                continue
-        return total
+        """Main database file size in bytes; WAL sidecars are transient."""
+        try:
+            return Path(self.path).expanduser().stat().st_size
+        except OSError:
+            return 0
 
     @staticmethod
     def _dbstat_bytes(conn: sqlite3.Connection) -> dict[str, int]:

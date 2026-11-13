@@ -82,7 +82,7 @@ class AgentServiceCase(unittest.TestCase):
         )
         self.assertEqual(agent.plan_id, self.plan.id)
         self.assertEqual(agent.task_id, self.task.id)
-        self.assertEqual(agent.worktree, str(self.worktree))
+        self.assertEqual(Path(agent.worktree).resolve(), self.worktree.resolve())
         self.assertEqual(len(agent.head_sha), 40)
         self.assertEqual(agent.branch, "plan/1-test")
 

@@ -249,7 +249,7 @@ class HookCase(unittest.TestCase):
         row = Store(self.db).list_agents(open_only=True)[0]
         self.assertEqual(row.branch, f"task/{task_id}-pane")
         self.assertEqual(row.plan_id, plan_id)
-        self.assertEqual(row.worktree, str(self.repo))
+        self.assertEqual(Path(row.worktree).resolve(), self.repo.resolve())
 
     def test_a_hook_run_records_exact_git_facts(self):
         _plan, task_id = self._seed_linked()
@@ -263,7 +263,7 @@ class HookCase(unittest.TestCase):
         )
         row = Store(self.db).list_agents(open_only=True)[0]
         self.assertEqual(row.branch, f"task/{task_id}-pane")
-        self.assertEqual(row.worktree, str(self.repo))
+        self.assertEqual(Path(row.worktree).resolve(), self.repo.resolve())
         self.assertEqual(len(row.head_sha), 40)
 
     def test_a_branch_switch_updates_the_row(self):

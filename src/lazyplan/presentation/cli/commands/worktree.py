@@ -5,7 +5,9 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+from pathlib import Path
 
+from lazyplan.infrastructure.repo import git_worktree_paths
 from lazyplan.services.worktrees import (
     done_blocker,
     removal_commands,
@@ -193,6 +195,57 @@ def guard_plan_done(store: InsightsPort, plan_id: int) -> int:
     return 0
 
 
+def _worktree_is_stale(row: PlanWorktree) -> bool:
+    """True when the path vanished or git no longer lists it."""
+    if not Path(row.worktree_path).exists():
+        return True
+    listed = git_worktree_paths(row.repo_path)
+    current = str(Path(row.worktree_path).resolve())
+    return bool(listed) and current not in listed
+
+
+def _list_plan_worktrees(store: InsightsPort, plan: Plan, args: argparse.Namespace) -> int:
+    """List registrations with a read-only stale flag."""
+    entries = []
+    for row in store.list_plan_worktrees(plan.id):
+        stale = _worktree_is_stale(row)
+        if getattr(args, "stale", False) and not stale:
+            continue
+        entries.append(
+            {
+                "repo_path": row.repo_path,
+                "worktree_path": row.worktree_path,
+                "branch": row.branch,
+                "stale": stale,
+            }
+        )
+    if args.json:
+        return _emit(args, {"plan": to_payload(vars(plan)), "worktrees": entries})
+    if porcelain.enabled(args):
+        for entry in entries:
+            print(
+                porcelain.row(
+                    "worktree",
+                    plan.id,
+                    "stale" if entry["stale"] else "ready",
+                    entry["branch"],
+                    f"plan:{plan.id}",
+                    entry["worktree_path"],
+                )
+            )
+        return 0
+    if not entries:
+        print(f"plan {plan.id}: no stale worktrees")
+        return 0
+    print(f"plan {plan.id}: {plan.name}")
+    for entry in entries:
+        state_word = "stale" if entry["stale"] else "ok"
+        print(
+            f"  {entry['repo_path']} -> {entry['worktree_path']} [{entry['branch']}] {state_word}"
+        )
+    return 0
+
+
 def _guard_plan_start(store: InsightsPort, args: argparse.Namespace) -> tuple[str, int]:
     """Worktree refusal and exit code for a plan start."""
     if getattr(args, "kind", "") != "plan" or getattr(args, "to", "") != "doing":
@@ -231,4 +284,6 @@ def _cmd_plan_worktree(store: AppPort, args: argparse.Namespace, actor: str) -> 
         return _register_plan_worktree(store, plan, args, actor)
     if action == "remove":
         return _remove_plan_worktree(store, plan, args, actor)
+    if action == "list":
+        return _list_plan_worktrees(store, plan, args)
     return _print_plan_worktrees(store, plan, args, actor)

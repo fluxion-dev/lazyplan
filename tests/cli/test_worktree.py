@@ -5,6 +5,7 @@ from __future__ import annotations
 import io
 import json
 import os
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -427,6 +428,46 @@ class PlanWorktreeRegisterTest(unittest.TestCase):
 
         self.assertEqual(code, 0, error)
         self.assertEqual(json.loads(output)["session"]["plan_id"], self.plan.id)
+
+    def test_deleted_worktree_is_listed_stale_and_kept(self) -> None:
+        self.assertEqual(
+            self._run(
+                [
+                    "plan",
+                    "worktree",
+                    "add",
+                    "--id",
+                    str(self.plan.id),
+                    "--repo",
+                    self.repo,
+                ]
+            )[0],
+            0,
+        )
+        shutil.rmtree(self.target.worktree_path)
+
+        code, output, _ = self._run(
+            [
+                "--json",
+                "plan",
+                "worktree",
+                "list",
+                "--id",
+                str(self.plan.id),
+                "--stale",
+            ]
+        )
+        self.assertEqual(code, 0)
+        entries = json.loads(output)["worktrees"]
+        self.assertEqual(len(entries), 1)
+        self.assertTrue(entries[0]["stale"])
+
+        code, output, _ = self._run(
+            ["--json", "plan", "worktree", "list", "--id", str(self.plan.id)]
+        )
+        self.assertEqual(code, 0)
+        self.assertTrue(json.loads(output)["worktrees"][0]["stale"])
+        self.assertIsNotNone(Store(self.db).get_plan_worktree(self.plan.id, self.repo))
 
     def test_plan_ready_reports_the_worktree_gate(self) -> None:
         code, output, error = self._run(["plan", "ready", "--id", str(self.plan.id)])

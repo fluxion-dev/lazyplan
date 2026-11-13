@@ -21,7 +21,7 @@ try:
 
     from lazyplan.presentation.tui import create_app, launch
     from lazyplan.presentation.tui.launch import Restart
-    from lazyplan.presentation.tui.screens import HealthScreen
+    from lazyplan.presentation.tui.screens import HealthScreen, TextScreen
 except ImportError:  # pragma: no cover - textual not installed
     create_app = HealthScreen = None  # type: ignore[assignment]
 
@@ -174,25 +174,57 @@ class SeverityTest(unittest.TestCase):
 
 @unittest.skipUnless(create_app is not None, "textual not installed")
 class RelaunchTest(unittest.TestCase):
-    def test_windows_waits_on_a_child_with_the_same_arguments(self) -> None:
+    def tearDown(self) -> None:
+        os.environ.pop(launch.RESTART_ENV, None)
+
+    def test_windows_waits_on_a_child_that_knows_the_agents(self) -> None:
         with (
             mock.patch.object(launch.os, "name", "nt"),
             mock.patch.object(launch.sys, "argv", ["lpui", "ui"]),
             mock.patch.object(launch.subprocess, "call", return_value=7) as call,
         ):
-            self.assertEqual(launch.relaunch(), 7)
-        call.assert_called_once_with([launch.sys.executable, "-m", "lazyplan", "ui"])
+            self.assertEqual(launch.relaunch(Restart(("Claude Code", "Gemini CLI"))), 7)
+        argv = call.call_args.args[0]
+        self.assertEqual(argv, [launch.sys.executable, "-m", "lazyplan", "ui"])
+        env = call.call_args.kwargs["env"]
+        self.assertEqual(env[launch.RESTART_ENV], "Claude Code,Gemini CLI")
 
     def test_posix_replaces_the_process(self) -> None:
         with (
             mock.patch.object(launch.os, "name", "posix"),
             mock.patch.object(launch.sys, "argv", ["lpui"]),
-            mock.patch.object(launch.os, "execv") as execv,
+            mock.patch.object(launch.os, "execve") as execve,
         ):
-            launch.relaunch()
-        execv.assert_called_once_with(
-            launch.sys.executable, [launch.sys.executable, "-m", "lazyplan"]
-        )
+            launch.relaunch(Restart(("Codex",)))
+        executable, argv, env = execve.call_args.args
+        self.assertEqual(argv, [launch.sys.executable, "-m", "lazyplan"])
+        self.assertEqual(env[launch.RESTART_ENV], "Codex")
+
+    def test_the_notice_names_each_agent_once_then_clears(self) -> None:
+        os.environ[launch.RESTART_ENV] = "Claude Code,Gemini CLI"
+        notice = launch.take_restart_notice()
+        self.assertIn("Restart any Claude Code and Gemini CLI sessions", notice)
+        self.assertEqual(launch.take_restart_notice(), "")
+
+    def test_skills_only_names_agents_in_general(self) -> None:
+        os.environ[launch.RESTART_ENV] = ""
+        self.assertIn("Restart any agent sessions", launch.take_restart_notice())
+
+    def test_a_normal_launch_has_no_notice(self) -> None:
+        self.assertEqual(launch.take_restart_notice(), "")
+
+
+@unittest.skipUnless(create_app is not None, "textual not installed")
+class RestartNoticeTest(unittest.IsolatedAsyncioTestCase):
+    async def test_a_relaunch_opens_the_restart_notice(self) -> None:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
+            notice = launch.restart_notice(["Claude Code"])
+            app = create_app(os.path.join(tmp, "n.db"), restart_notice=notice)
+            async with app.run_test(size=(110, 40)) as pilot:
+                await pilot.pause()
+                self.assertIsInstance(app.screen, TextScreen)
+                self.assertEqual(app.screen.dialog_title, "RESTART YOUR AGENTS")
+                self.assertIn("Claude Code sessions", app.screen.HELP)
 
 
 if __name__ == "__main__":

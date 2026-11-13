@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Protocol
 from ...setup.health import HealthFinding, HealthReport
 from ...setup.integrations import ReviewResult
 from ..launch import Restart
+from ..screens import TextScreen
 from ..screens.health import INSTALL, HealthScreen
 
 if TYPE_CHECKING:
@@ -33,9 +34,12 @@ class HealthController:
         self.check = check
         self.session: HealthSession | None = None
         self.report: HealthReport | None = None
+        self.restart_notice = ""
 
     def start(self) -> None:
-        """Run the check once in a worker; no check means it is switched off."""
+        """Show a relaunch's restart notice, then run the check in a worker."""
+        if self.restart_notice:
+            self.app.push_screen(TextScreen("RESTART YOUR AGENTS", self.restart_notice))
         if self.check is None:
             return
         self.app.run_worker(self._worker, thread=True, group="health")

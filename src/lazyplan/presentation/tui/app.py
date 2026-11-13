@@ -49,7 +49,7 @@ from .controllers.metrics import MetricsController
 from .controllers.tree import TreeController
 from .controllers.updates import UpdateController
 from .filters import FilterMixin
-from .launch import Restart, launch_notes, launch_update, relaunch
+from .launch import Restart, launch_notes, launch_update, relaunch, take_restart_notice
 from .metrics import MetricsSection
 from .preview import PreviewMixin
 from .screens import ReleaseNotesScreen
@@ -254,12 +254,14 @@ if _TEXTUAL_OK:
         startup_notice: str = "",
         startup_notes: str = "",
         health_check: HealthCheck | None = None,
+        restart_notice: str = "",
     ) -> LazyplanApp:
         """Build the app bound to a store."""
         app = LazyplanApp(Store(db_path))
         app._startup_notice = startup_notice
         app._startup_notes = startup_notes
         app.health_controller.check = health_check
+        app.health_controller.restart_notice = restart_notice
         return app
 
 
@@ -282,7 +284,14 @@ def run(db_path: str | None = None) -> int:
     startup_notice, exit_now = launch_update()
     if exit_now:
         return 0
-    app = create_app(db_path, startup_notice, launch_notes(), _startup_health_check(db_path))
-    if isinstance(app.run(), Restart):
-        return relaunch()
+    app = create_app(
+        db_path,
+        startup_notice,
+        launch_notes(),
+        _startup_health_check(db_path),
+        take_restart_notice(),
+    )
+    result = app.run()
+    if isinstance(result, Restart):
+        return relaunch(result)
     return 0

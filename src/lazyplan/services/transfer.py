@@ -105,6 +105,9 @@ def export_all(store: TransferPort) -> dict:
         "lazyplan": 1,
         "plans": [_export_entry(plan, maps) for plan in store.list_plans(archived="show")],
         "criterion_links": store.all_criterion_links(),
+        "session_history": [
+            to_payload(vars(row)) for row in store.list_sessions(archived="show", limit=1_000_000)
+        ],
     }
 
 
@@ -234,6 +237,7 @@ def _import_all(store: TransferPort, data: dict, actor: str = "human") -> dict[s
         "evidence": 0,
         "questions": 0,
         "refs": 0,
+        "session_history": 0,
     }
     criteria_map: dict[int, int] = {}
     tasks_map: dict[int, int] = {}
@@ -477,6 +481,11 @@ def _import_all(store: TransferPort, data: dict, actor: str = "human") -> dict[s
             continue
         counts["criterion_links"] += 1
     counts["evidence"] = _restore_evidence(store, evidence_items, tasks_map)
+    for row in data.get("session_history", []):
+        if not isinstance(row, dict):
+            continue
+        if store.restore_session_history(row, actor=actor) is not None:
+            counts["session_history"] += 1
     return counts
 
 

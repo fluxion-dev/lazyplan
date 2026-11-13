@@ -35,11 +35,18 @@ class TestMaintenanceCli(unittest.TestCase):
     def _seed_old_rows(self) -> None:
         self.old_plan = self.store.add_plan("Old plan")
         services.set_status(self.store, "plan", self.old_plan.id, Status.DONE)
-        session, _previous = self.store.start_session(
-            "builder", plan_id=self.old_plan.id, repo_path=self.tmp.name, now=self.old
+        self.store.restore_session_history(
+            {
+                "id": 1,
+                "actor": "builder",
+                "plan_id": self.old_plan.id,
+                "repo_path": self.tmp.name,
+                "started_at": self.old,
+                "ended_at": self.old,
+                "summary": "done",
+            }
         )
-        self.store.end_session(session.id, "builder", summary="done", now=self.old)
-        self.session_id = session.id
+        self.session_id = 1
         self.store.claim_task(
             self.task.id, "builder", ttl_seconds=60, now=self.old, repo_path=self.tmp.name
         )

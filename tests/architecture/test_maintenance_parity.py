@@ -43,10 +43,17 @@ class TestMaintenanceParity(unittest.TestCase):
     def _seed(self) -> None:
         old_plan = self.store.add_plan("Old plan")
         services.set_status(self.store, "plan", old_plan.id, Status.DONE)
-        session, _previous = self.store.start_session(
-            "builder", plan_id=old_plan.id, repo_path=self.tmp.name, now=self.old
+        self.store.restore_session_history(
+            {
+                "id": 1,
+                "actor": "builder",
+                "plan_id": old_plan.id,
+                "repo_path": self.tmp.name,
+                "started_at": self.old,
+                "ended_at": self.old,
+                "summary": "done",
+            }
         )
-        self.store.end_session(session.id, "builder", summary="done", now=self.old)
         self.store.claim_task(
             self.task.id, "builder", ttl_seconds=60, now=self.old, repo_path=self.tmp.name
         )
@@ -200,7 +207,7 @@ class TestMaintenanceParity(unittest.TestCase):
         locker = sqlite3.connect(self.db, isolation_level=None)
         try:
             locker.execute("BEGIN EXCLUSIVE")
-            code, _out, err = self._cli("maint", "vacuum")
+            code, _out, err = self._cli("maint", "vacuum", "--apply")
         finally:
             locker.rollback()
             locker.close()

@@ -4,39 +4,6 @@ from __future__ import annotations
 
 from . import attribution as attribution
 from . import maintenance as maintenance
-from .agent_identity import extract_identity as extract_identity
-from .agent_identity import git_facts as git_facts
-from .agent_identity import resolve_binding as resolve_binding
-from .agents import (
-    AgentStartError as AgentStartError,
-)
-from .agents import (
-    agent_state as agent_state,
-)
-from .agents import (
-    apply_event as apply_event,
-)
-from .agents import (
-    current_agent as current_agent,
-)
-from .agents import (
-    end_agent as end_agent,
-)
-from .agents import (
-    find_agent as find_agent,
-)
-from .agents import (
-    previous_agent as previous_agent,
-)
-from .agents import (
-    show_agent as show_agent,
-)
-from .agents import (
-    start_agent as start_agent,
-)
-from .agents import (
-    sweep_lost as sweep_lost,
-)
 from .base import GateError
 from .collaboration import (
     add_comment,
@@ -50,12 +17,16 @@ from .collaboration import (
     resolve_comment,
 )
 from .coordination import (
+    RENEW_EVERY,
     block_task,
+    checkout_claims,
     claim_next,
+    end_checkout_claims,
     list_claims,
     parse_ttl,
     release_claim,
     release_task_claim,
+    renew_checkout_claims,
     renew_task_claim,
     set_blocked,
     start_claim,
@@ -86,6 +57,7 @@ from .planning import (
     is_finished,
     plan_activity,
     reconcile,
+    requeue_expired,
     set_status,
     tree,
 )
@@ -178,6 +150,7 @@ __all__ = [
     "heal",
     "heal_parents",
     "set_status",
+    "requeue_expired",
     "cycle_status",
     "refresh_links",
     "reconcile",
@@ -185,6 +158,10 @@ __all__ = [
     "start_claim",
     "renew_task_claim",
     "release_task_claim",
+    "RENEW_EVERY",
+    "checkout_claims",
+    "end_checkout_claims",
+    "renew_checkout_claims",
     "release_claim",
     "set_blocked",
     "list_claims",

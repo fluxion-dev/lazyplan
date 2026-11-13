@@ -33,7 +33,7 @@ class ContextTest(unittest.TestCase):
         self.store.add_criteria("task", self.doing.id, "task tests pass")
         self.store.add_note("plan", self.plan.id, "decision", actor="alice")
         self.store.add_comment("task", self.doing.id, "please check", actor="rev")
-        self.store.claim_task(self.doing.id, "alice", 300)
+        self.store.claim_task(self.doing.id, "alice", 300, force=True)
         self.store.link_commit(
             "task", self.doing.id, "a" * 40, subject="linked", timestamp=1000, actor="t"
         )
@@ -100,19 +100,13 @@ class ContextTest(unittest.TestCase):
             context.build(self.store)
         self.assertLessEqual(connect.call_count, 25)
 
-    def test_previous_session_is_in_the_packet(self):
-        agent = self.store.add_agent(
-            "alice", host="opencode", agent="alice", plan_id=self.plan.id, now=100.0
-        )
-        self.store.end_agent(
-            agent.id, "alice", summary="shipped the slice", handoff="next: run QA", now=200.0
-        )
+    def test_a_handoff_note_is_in_the_packet(self):
+        self.store.add_note("plan", self.plan.id, "Handoff: next run QA", actor="alice")
         payload = context.build(self.store)
         plan = payload["plans"][0]
-        self.assertEqual(plan["previous_session"]["handoff"], "next: run QA")
+        self.assertNotIn("previous_session", plan)
         text = "\n".join(context.lines(payload))
-        self.assertIn("shipped the slice", text)
-        self.assertIn("next: run QA", text)
+        self.assertIn("Handoff: next run QA", text)
 
     def test_empty_store_is_empty(self):
         empty = Store(Path(self.tmp.name) / "empty.db")

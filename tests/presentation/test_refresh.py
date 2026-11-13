@@ -14,7 +14,7 @@ from lazyplan.core.entities import Status
 from lazyplan.store import Store
 
 try:
-    from textual.widgets import Static, Tree
+    from textual.widgets import Tree
 
     from lazyplan.presentation.tui import create_app
     from lazyplan.presentation.tui.screens.forms import ConfirmScreen
@@ -26,7 +26,7 @@ COALESCE_PAUSE = 0.35
 
 
 class PollHarness:
-    """One live agent plus a hand-driven external-change poll.
+    """One live claim plus a hand-driven external-change poll.
 
     The app's own quarter-second timer is never waited on: tests call `poll()`
     after each database write so a transition or edit is observed at a known
@@ -37,6 +37,7 @@ class PollHarness:
         self.app = app
         self.store = store
         self.session_id = session_id
+        self.beats = 0
 
     def poll(self) -> None:
         """Run exactly one external-change poll on the calling thread."""
@@ -46,9 +47,10 @@ class PollHarness:
         """Start the threaded poll the app's timer uses."""
         self.app.tree_controller.poll()  # type: ignore[attr-defined]
 
-    def heartbeat(self, status: str = "working") -> None:
-        """Move the agent, then poll once."""
-        self.store.transition_agent(self.session_id, status, event="test")
+    def heartbeat(self) -> None:
+        """Renew the claim the way a hook does, then poll once."""
+        self.beats += 1
+        self.store.renew_claim(self.session_id, "ana", now=time.time() + self.beats, log=False)
         self.poll()
 
     @property
@@ -70,14 +72,8 @@ class RefreshCase(unittest.IsolatedAsyncioTestCase):
         self.task = self.store.add_task(self.milestone.id, "Task")
 
     def open_session(self) -> int:
-        agent = self.store.add_agent(
-            "ana",
-            host="opencode",
-            agent="ana",
-            plan_id=self.plan.id,
-            worktree=self.store.checkout_path(),
-        )
-        return agent.id
+        self.store.claim_task(self.task.id, "ana", worktree=self.store.checkout_path())
+        return self.task.id
 
     def harness(self, app: object, session_id: int) -> PollHarness:
         return PollHarness(app, self.store, session_id)
@@ -134,29 +130,13 @@ class TestHeartbeatKeepsTreeStill(RefreshCase):
             cursor_line = tree.cursor_line
             scroll = tree.scroll_offset
             rebuilds = harness.rebuilds
-            for status in ("working", "waiting", "working", "waiting", "working"):
-                harness.heartbeat(status)
+            for _ in range(5):
+                harness.heartbeat()
                 await pilot.pause()
             self.assertEqual(harness.rebuilds, rebuilds)
             self.assertEqual(self.row_ids(app), nodes)
             self.assertEqual(tree.cursor_line, cursor_line)
             self.assertEqual(tree.scroll_offset, scroll)
-
-    async def test_the_agents_pane_follows_working_and_awaiting(self) -> None:
-        session_id = self.open_session()
-        app = create_app(self.store.path)
-        async with app.run_test(size=(120, 24)) as pilot:
-            await pilot.pause()
-            harness = self.harness(app, session_id)
-            body = app.query_one("#agents-body", Static)
-            harness.heartbeat("working")
-            await pilot.pause()
-            self.assertIn("working", str(body.content))
-            harness.heartbeat("waiting")
-            await pilot.pause()
-            self.assertIn("waiting", str(body.content))
-            self.assertNotIn("◆", str(body.content))
-            self.assertIn("waiting", str(body.content))
 
     async def test_a_structural_edit_still_rebuilds(self) -> None:
         session_id = self.open_session()
@@ -183,7 +163,7 @@ class TestPollScheduling(RefreshCase):
             await pilot.pause()
             controller = app.tree_controller
             controller._last_sweep = 1000.0
-            with mock.patch("lazyplan.services.agents.sweep_lost") as sweep:
+            with mock.patch("lazyplan.services.requeue_expired") as sweep:
                 with mock.patch(
                     "lazyplan.presentation.tui.controllers.poll.time.time",
                     return_value=1000.5,
@@ -692,7 +672,7 @@ class TestViewPreservation(RefreshCase):
             await pilot.pause()
             cursor_line = tree.cursor_line
             scroll = tree.scroll_offset
-            harness.heartbeat("waiting")
+            harness.heartbeat()
             await pilot.pause()
             self.assertEqual(tree.cursor_line, cursor_line)
             self.assertEqual(tree.scroll_offset, scroll)

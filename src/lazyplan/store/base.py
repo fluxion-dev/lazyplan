@@ -202,23 +202,20 @@ class StoreBase(StoreStubs):
         )
 
     def live_fingerprint(self) -> tuple:
-        """Live poll key: agent rows, newest update, and terminal count.
+        """Live poll key: claim count and the newest start and renewal.
 
-        This changes on every agent transition so the tracker can repaint
-        while the plan tree stays untouched.
+        Every claim, renewal, or release changes it, so the agents panel can
+        repaint while the tree stays untouched.
         """
         try:
             with self._connect() as conn:
-                row = conn.execute(
-                    "SELECT COUNT(*) c,"
-                    " COALESCE(MAX(id),0) newest,"
-                    " COALESCE(MAX(updated_at),0) seen,"
-                    " COALESCE(SUM(CASE WHEN ended_at>0 THEN 1 ELSE 0 END),0) ended"
-                    " FROM agents"
+                claims = conn.execute(
+                    "SELECT COUNT(*) c, COALESCE(MAX(started_at),0) started,"
+                    " COALESCE(MAX(renewed_at),0) renewed FROM task_claims"
                 ).fetchone()
         except Exception:
-            return (0, 0, 0.0, 0)
-        return (int(row["c"]), int(row["newest"]), float(row["seen"]), int(row["ended"]))
+            return (0, 0.0, 0.0)
+        return (int(claims["c"]), float(claims["started"]), float(claims["renewed"]))
 
 
 _ser = to_payload

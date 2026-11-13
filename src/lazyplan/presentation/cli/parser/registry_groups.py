@@ -16,7 +16,6 @@ CORE_GROUPS = (
     "task",
     "criterion",
     "question",
-    "session",
     "touch",
     "ref",
     "claim",

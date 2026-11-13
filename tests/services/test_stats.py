@@ -61,6 +61,8 @@ class TestStats(unittest.TestCase):
     def _status(self, tid: int, when: float, status: Status, actor: str) -> None:
         with mock.patch("lazyplan.store.base.time.time", return_value=when):
             services.set_status(self.store, "task", tid, status, actor=actor)
+        if status is Status.DOING:
+            self.store.release_claim(tid, actor)
 
     def _compute(self) -> dict:
         return stats.compute(self.store, since=0, stale_before=1500, now=2000)

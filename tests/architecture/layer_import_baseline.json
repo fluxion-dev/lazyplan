@@ -1,21 +1,6 @@
 {
   "edges": [
     {
-      "source": "lazyplan.services.agent_identity",
-      "target": "lazyplan.infrastructure.process",
-      "reason": "agent identity reads a process start stamp"
-    },
-    {
-      "source": "lazyplan.services.agent_identity",
-      "target": "lazyplan.infrastructure.repo",
-      "reason": "agent identity resolves the exact worktree"
-    },
-    {
-      "source": "lazyplan.services.agents",
-      "target": "lazyplan.infrastructure.process",
-      "reason": "agent liveness reads the process adapter"
-    },
-    {
       "source": "lazyplan.services.audit",
       "target": "lazyplan.infrastructure",
       "reason": "audit reads the VCS adapter"

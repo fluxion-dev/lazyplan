@@ -78,7 +78,7 @@ class NowHorizonTest(unittest.TestCase):
         milestone = self.store.list_milestones(plan.id)[0]
         task = self.store.list_tasks(milestone.id)[0]
         services.set_status(self.store, "task", task.id, Status.DOING, actor="t")
-        self.store.claim_task(task.id, "alice", 300)
+        self.store.claim_task(task.id, "alice", 300, force=True)
         payload = context.build(self.store)
         self.assertEqual(payload["plans"][0]["id"], plan.id)
         self.assertEqual(payload["plans"][0]["doing"][0]["id"], task.id)

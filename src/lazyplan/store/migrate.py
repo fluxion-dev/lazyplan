@@ -8,9 +8,7 @@ from __future__ import annotations
 import sqlite3
 import uuid
 
-from .agent_schema import AGENT_SCHEMA
-
-SCHEMA_VERSION = 15
+SCHEMA_VERSION = 16
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS plans (
@@ -551,14 +549,20 @@ def _migrate_plan_worktree_required(conn: sqlite3.Connection) -> None:
 
 
 def _migrate_archive_columns(conn: sqlite3.Connection) -> None:
-    """Add the archive stamp to plans, sessions, and agents, then index it."""
+    """Add the archive stamp to plans and session history, then index it."""
     history = _history_table(conn)
-    tables = ["plans", "agents"] + ([history] if history else [])
+    tables = ["plans"] + ([history] if history else [])
     for table in tables:
         existing = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()}
         if "archived_at" not in existing:
             conn.execute(f"ALTER TABLE {table} ADD COLUMN archived_at REAL NOT NULL DEFAULT 0")
         conn.execute(f"CREATE INDEX IF NOT EXISTS idx_{table}_archived ON {table}(archived_at)")
+
+
+def _drop_agent_registry(conn: sqlite3.Connection) -> None:
+    """Claims record who works on what; the agent registry tables go."""
+    conn.execute("DROP TABLE IF EXISTS agent_events")
+    conn.execute("DROP TABLE IF EXISTS agents")
 
 
 def migrate(conn: sqlite3.Connection) -> None:
@@ -569,7 +573,6 @@ def migrate(conn: sqlite3.Connection) -> None:
     _migrate_elements(conn)
     _migrate_session_history(conn)
     conn.executescript(SCHEMA)
-    conn.executescript(AGENT_SCHEMA)
     _migrate_plan_uid(conn)
     _migrate_task_blocked(conn)
     _migrate_events_session(conn)
@@ -578,6 +581,7 @@ def migrate(conn: sqlite3.Connection) -> None:
     _migrate_claim_location(conn)
     _migrate_plan_worktree_required(conn)
     _migrate_archive_columns(conn)
+    _drop_agent_registry(conn)
     _drop_priority_columns(conn)
     _migrate_vcs_link_state(conn)
     _migrate_entity_repo_branch(conn)

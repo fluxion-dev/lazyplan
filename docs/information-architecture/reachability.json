@@ -374,22 +374,6 @@
     },
     {
       "depth": 1,
-      "id": "agent.start",
-      "route": [
-        "tree",
-        "agents"
-      ]
-    },
-    {
-      "depth": 1,
-      "id": "agent.end",
-      "route": [
-        "tree",
-        "agents"
-      ]
-    },
-    {
-      "depth": 1,
       "id": "note.add",
       "route": [
         "tree",
@@ -418,14 +402,6 @@
       "route": [
         "tree",
         "coordination"
-      ]
-    },
-    {
-      "depth": 1,
-      "id": "view.agents_hub",
-      "route": [
-        "tree",
-        "agents"
       ]
     },
     {
@@ -592,7 +568,6 @@
     }
   ],
   "entities": {
-    "agent": 1,
     "claim": 1,
     "comment": 1,
     "commit": 1,

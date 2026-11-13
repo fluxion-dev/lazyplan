@@ -17,7 +17,6 @@ Budget: every action is at most **3** interactions from the tree.
 | `question` | 1 |
 | `reference` | 1 |
 | `claim` | 1 |
-| `agent` | 1 |
 | `note` | 1 |
 | `comment` | 1 |
 | `commit` | 1 |
@@ -79,13 +78,10 @@ Budget: every action is at most **3** interactions from the tree.
 | `task.renew` | tree › coordination | 1 |
 | `task.touch_add` | tree › coordination | 1 |
 | `task.touch_remove` | tree › coordination | 1 |
-| `agent.start` | tree › agents | 1 |
-| `agent.end` | tree › agents | 1 |
 | `note.add` | tree › coordination | 1 |
 | `comment.add` | tree › coordination | 1 |
 | `comment.resolve` | tree › coordination | 1 |
 | `view.claims_hub` | tree › coordination | 1 |
-| `view.agents_hub` | tree › agents | 1 |
 | `view.comments_hub` | tree › coordination | 1 |
 | `maintenance.report` | maintenance | 1 |
 | `maintenance.archive` | maintenance | 1 |

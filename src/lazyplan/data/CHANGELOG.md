@@ -25,6 +25,21 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
   and what, and a milestone and task their whole description, as the first
   sections under the title instead of one clipped line. An empty field keeps its
   heading with "None yet.", and headings inside the text nest under the section.
+- **The agents panel shows who holds which task, live.** Claims are the one
+  record of who is working on what: moving a task to doing claims it for the
+  actor, moving it off doing releases it, and a released or expired claim puts
+  the task back to todo. The panel lists one row per claim (holder, task, plan,
+  age) and repaints within a quarter second. Agent hooks renew the claims held
+  in their checkout and release them at session end; handoffs are plan and
+  task notes.
+
+### Removed
+
+- **The agent registry.** `lpui agent ...`, the hidden `lpui session ...`
+  aliases, the agents hub, and the `agent_list` MCP tool are gone, and upgrading
+  drops the `agents` and `agent_events` tables with their history. Use
+  `lpui claims`, `lpui next`, `lpui claim`, and `lpui note add` instead. Legacy
+  session history stays readable.
 
 ### Fixed
 

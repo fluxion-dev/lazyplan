@@ -102,6 +102,7 @@ def build_fixture(db: str) -> None:
     milestone = store.add_milestone(plan.id, "Homepage", "Hero work", actor="fixture")
     task = store.add_task(milestone.id, "Design hero", "Hero section", actor="fixture")
     set_status(store, "task", task.id, Status.DOING, actor="fixture")
+    store.claim_task(task.id, "fixture", ttl_seconds=1800, now=4_000_000_000.0)
 
 
 LOCAL_TIME_CASES = {"audit_default"}

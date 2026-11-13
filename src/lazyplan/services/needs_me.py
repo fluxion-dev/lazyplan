@@ -18,7 +18,6 @@ from . import stats
 
 ATTENTION_LIMIT = 20
 PLAN_LIMIT = 25
-AGENT_LIMIT = 8
 CLAIM_LIMIT = 20
 OVERLAP_LIMIT = 10
 OVERLAP_CLAIM_LIMIT = 40
@@ -259,41 +258,6 @@ def _active_claims(
     return [claim for claim in claims if int(claim["plan_id"]) in plan_ids]
 
 
-def _agent_rows(
-    port: NeedsMePort,
-    plan_id: int | None,
-    plan_names: dict[int, str],
-    max_agents: int,
-    stamp: float,
-) -> list[dict[str, Any]]:
-    agents = port.list_agents(plan_id=plan_id, open_only=True, limit=max_agents)
-    return [
-        {
-            "id": agent.id,
-            "agent": agent.agent,
-            "role": agent.role,
-            "model": agent.model,
-            "host": agent.host,
-            "host_session": agent.host_session,
-            "parent_id": agent.parent_id,
-            "pid": agent.pid,
-            "plan_id": agent.plan_id,
-            "plan_title": plan_names.get(int(agent.plan_id or 0), ""),
-            "task_id": agent.task_id,
-            "worktree": agent.worktree,
-            "branch": agent.branch,
-            "head_sha": agent.head_sha,
-            "status": agent.status,
-            "unbound": agent.unbound,
-            "reason": agent.unbound_reason,
-            "started_at": agent.started_at,
-            "updated_at": agent.updated_at,
-            "duration": round(agent.duration(stamp), 1),
-        }
-        for agent in agents
-    ]
-
-
 def _claim_rows(active_claims: list[dict], max_claims: int, stamp: float) -> list[dict[str, Any]]:
     return [
         {
@@ -327,7 +291,6 @@ def _needs_me_ids(
 def _counts(
     plans: list[Plan],
     attention_all: list[dict],
-    agent_rows: list[dict],
     active_claims: list[dict],
     open_questions: int,
     health: list[dict],
@@ -336,7 +299,6 @@ def _counts(
     return {
         "plans": len(plans),
         "attention": len(attention_all),
-        "agents": len(agent_rows),
         "claims": len(active_claims),
         "open_questions": open_questions,
         "drift": sum(1 for row in health if int(row["approval"].get("drift", 0))),
@@ -352,7 +314,6 @@ def build(
     plan_id: int | None = None,
     max_attention: int = ATTENTION_LIMIT,
     max_plans: int = PLAN_LIMIT,
-    max_agents: int = AGENT_LIMIT,
     max_claims: int = CLAIM_LIMIT,
     max_overlaps: int = OVERLAP_LIMIT,
 ) -> dict[str, Any]:
@@ -398,7 +359,6 @@ def build(
     )
     needs_me_plan_ids = _needs_me_ids(task_plan, attention_task_ids, plan_needs_me)
 
-    agent_rows = _agent_rows(port, plan_id, plan_names, max_agents, stamp)
     claim_rows = _claim_rows(active_claims, max_claims, stamp)
     overlap_rows = _overlaps(
         active_claims[:OVERLAP_CLAIM_LIMIT], port.touchpoints_map(), max_overlaps
@@ -406,7 +366,6 @@ def build(
     counts = _counts(
         plans,
         attention_all,
-        agent_rows,
         active_claims,
         open_questions,
         health,
@@ -417,7 +376,6 @@ def build(
         "plan_id": plan_id,
         "plans": health[:max_plans],
         "attention": attention_all[:max_attention],
-        "agents": agent_rows,
         "claims": claim_rows,
         "overlaps": overlap_rows,
         "counts": counts,

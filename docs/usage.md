@@ -348,10 +348,11 @@ The main screen puts the work in one left column and the overview on the right.
 The left column stacks the plan queue, the agents card, plan review, and the git
 card. A card with no rows is hidden, so an empty journal shows only the plan
 queue. The plan queue holds every plan that is not done; plan review holds
-completed plans. The agents card reads the exact agent registry and paints one
-line per open row: agent name, `A` id, plan and task, branch, age, and status
-word. The last handoff stays below the rows; the card is read-only. The git card
-carries linked checkouts and pull requests.
+completed plans. The agents card shows who is working on what: one line per
+live claim with the holder, the task, its plan, and how long it has been held.
+It repaints within a quarter second of any claim, renewal, or release, and hides
+when nobody holds a task; the card is read-only. The git card carries linked
+checkouts and pull requests.
 
 The overview follows the selection and reveals one level at a time. Under the
 title and one context line with ids and counts, the full details always come
@@ -443,20 +444,13 @@ highlighted.
 
 ### Coordination hubs
 
-Claims, touch-points, agents, comments, and notes are selectable hubs too.
-Open **claims hub**, **agents hub**, or **comments and notes hub** from the
-palette. The agents card is a read-only summary; it does not open the hub.
+Claims, touch-points, comments, and notes are selectable hubs too. Open
+**claims hub** or **comments and notes hub** from the palette. The agents card
+is a read-only summary; it does not open a hub.
 
 - Claims: rows show the holder, expiry, age, and any overlap with another
   active claim that edits the same path. `a` claims the task, `x` renews, `d`
   releases, `D` forces a takeover, and `l`/`L` add or remove touch-points.
-- Agents: rows show the exact host, host session, agent, role, model, parent,
-  PID, plan, task, worktree, branch, HEAD, status, summary, handoff, and recent
-  transitions. `a` starts a managed agent, `x` or `d` ends it with a summary,
-  and ending a parent also ends every live child. Hooks move a row through
-  `starting`, `working`, `tool`, `compacting`, `waiting`, `blocked`, `lost`,
-  and `ended`; a dead PID becomes `lost` on the next sweep and is never closed
-  by elapsed time.
 - Comments and notes: `a` adds a comment, `n` adds a note, `x` resolves or
   reopens a comment, and `u` hides resolved comments.
 
@@ -564,8 +558,8 @@ Your agent is expected to work from the plan, not invent it:
   Renew the lease while you work, note handoffs, and release it when you stop.
   Update the journal after each commit, then run
   `lpui --porcelain audit --since 7.days` before closing a plan. Lifecycle
-  hooks remind you, gate a commit or stop in strict mode, and register the
-  exact agent; they never move work.
+  hooks remind you, gate a commit or stop in strict mode, and keep this
+  checkout's claims alive; they never move work.
 
 `lpui setup --placement repo` writes the full contract into the repo; the
 default setup installs the skill into each detected agent's own folder.
@@ -689,39 +683,31 @@ registration. `doctor` and `plan worktree list --stale` report missing,
 unlisted, or drifted worktrees without deleting anything. Plans created before
 isolation stay grandfathered.
 
-### Agents and touch-points
+### Claims and touch-points
 
 ```bash
-lpui --actor NAME agent start --plan 1 --host opencode --session HOST-SESSION
-lpui --actor NAME agent end --summary "Shipped the store" --handoff "next: T2"
-lpui agent show --id A3
-lpui agent list --open
-lpui agent sweep
-lpui agent history --plan 1
-lpui touch add --task 12 --path src/lazyplan/store/agents.py
+lpui --actor NAME next
+lpui --actor NAME task move --id 12 --to doing
+lpui claims
+lpui --actor NAME claim release --id 12
+lpui --actor NAME note add --kind task --id 12 --text "Handoff: next T13"
+lpui touch add --task 12 --path src/lazyplan/store/claims.py
 ```
 
-`agent start` registers one row from an exact host lifecycle event or a manual
-command. It records the host, host session, agent name, role, model, parent,
-PID and process start stamp, repo, worktree, branch, HEAD, plan, and task, plus
-one of `starting`, `working`, `tool`, `compacting`, `waiting`, `blocked`,
-`lost`, or `ended`. A managed start proves its plan through the worktree
-registered for that checkout and its task through an active claim; an
-unregistered worktree, two matching plans, or no exact plan is refused with the
-expected path. `--force --reason` is the only override and is recorded on the
-row. Host hooks may still register an unbound row so the tracker shows the
-agent; the row carries the reason and is skipped by managed gates.
+A claim is the record of who is working on a task. A task is doing exactly
+while an actor holds its claim: `next`, `claim`, or moving a task to doing
+claims it for `--actor` in the current checkout, and moving it to done, todo,
+or blocked releases the claim. Moving a task another actor holds to doing is
+refused; `claim --force` takes it over. Releasing a claim, or letting its
+30-minute lease expire, puts a doing task back to todo.
 
-A child subagent is its own row linked to the parent through the parent host
-session, and ending the parent ends every live child. PID liveness uses the
-process start stamp where the OS exposes one, so PID reuse cannot revive a dead
-row: `agent sweep` marks it `lost`, and only an explicit end moves it to
-`ended`. Nothing closes an open row because it has been quiet.
+Every agent hook event renews the claims held in that session's checkout, at
+most once every five minutes and without a feed entry, and the session-end hook
+releases them. The lease only matters when an agent crashes. Handoffs are
+notes: `brief`, `context`, and the session-start packet carry the plan's notes.
+Legacy session history stays readable through `feed --session 12`, export,
+import, and the MCP `session_list` tool.
 
-Historical sessions remain readable with their original `S` ids through
-`agent history`, `agent show --id S12`, `feed --session 12`, export, import,
-and MCP. New rows use `A` ids. `session start|end|show|list` stays as a hidden
-alias for one release; it delegates to the same managed start and gate.
 
 #### Hook modes and gates
 
@@ -730,12 +716,10 @@ question at each lifecycle point:
 
 - A `git commit` is denied when the checkout is managed and no task is doing.
   A checkout is managed when its database lives under `.agents/lazyplan/`, a
-  plan links it, or a live agent there was started by hand or is bound to a
-  plan. An unbound row a hook opens for a host session does not count, so
-  unrelated repositories keep normal git behavior.
+  plan links it, or a live claim was taken in it, so unrelated repositories
+  keep normal git behavior.
 - A stop is blocked once when a managed checkout has unlinked commits. The next
-  stop after the host's continuation guard is allowed, and the agent is
-  marked waiting.
+  stop after the host's continuation guard is allowed.
 - Every prompt receives a short active-plan packet: plan, doing task, open
   criteria, and next task. Cursor has no prompt-context field, so it injects
   the same packet at session start and after each reported tool.
@@ -744,19 +728,19 @@ question at each lifecycle point:
   these as context alongside the tool result. Outside a managed checkout they
   appear only while some plan has a doing task, and edits to files outside the
   checkout are never reported.
-- Session end closes the open agent with an auto summary and a next-task
-  handoff.
+- Every event renews this checkout's claims, and session end releases them
+  and puts their tasks back to todo.
 
 `--hooks advisory` keeps the same observations and turns every deny or block
 into a reminder. `--no-hooks` removes the managed entries. At runtime,
 `LAZYPLAN_HOOKS=advisory` downgrades without reinstalling, and
 `LAZYPLAN_NO_HOOKS=1` silences every hook. `lpui hook --check` prints a
-read-only readiness probe (database, agent, and latency) and writes nothing;
+read-only readiness probe (database, this checkout's claims, and latency) and
+writes nothing;
 `lpui doctor` includes the same probe.
 
 OpenCode has no stop-block surface, so it denies commits before the shell runs,
-injects the cached plan on every model call, and marks the row waiting when
-the session idles. The generated plugin loads on OpenCode 1.x and on the 2.x
+and injects the cached plan on every model call. The generated plugin loads on OpenCode 1.x and on the 2.x
 plugin API. It closes the child stdin, logs a failed hook once with the event
 and reason, and retries on the next event.
 Claude Code and Codex block both commits and stops; Gemini blocks tools and

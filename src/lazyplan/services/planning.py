@@ -14,6 +14,7 @@ from ..core.policies.planning import is_archived as _is_archived_policy
 from ..core.policies.planning import next_status, rollup_target
 from ..core.ports.coordination import CoordinationPort
 from ..core.ports.planning import PlanningPort
+from .doing_claims import check_claimable, claim_for_doing
 
 DEFAULT_PLAN_LIMIT = 5
 
@@ -186,22 +187,54 @@ def set_status(
     status: Status,
     actor: str = "human",
     heal: bool = True,
+    take_claim: bool = True,
 ) -> bool:
-    """Move a row, optionally heal the subtree state, and log the transition."""
+    """Move a row, optionally heal the subtree state, and log the transition.
+
+    A task is doing exactly while an actor holds its claim: moving it to doing
+    claims it for ``actor`` and moving it anywhere else releases the claim.
+    ``take_claim=False`` restores a recorded status (import) without claiming.
+    """
     check_kind(kind)
     claim = None
-    if kind == "task" and status is not Status.DOING:
-        get_claim = getattr(port, "get_claim", None)
-        if get_claim is not None:
-            claim = get_claim(obj_id)
+    get_claim = getattr(port, "get_claim", None) if kind == "task" else None
+    if get_claim is not None:
+        claim = get_claim(obj_id)
+    doing = take_claim and kind == "task" and status is Status.DOING
+    if doing:
+        check_claimable(claim, obj_id, actor)
     ok = port.set_status_raw(kind, obj_id, status)
     if ok:
         port.log(actor, kind, "status", f"{kind} #{obj_id} -> {status.value}")
-        if claim is not None:
+        if doing:
+            claim_for_doing(port, claim, obj_id, actor)
+        elif claim is not None:
             port.log(actor, "task", "release", f"task #{obj_id} released by status")
         if heal:
             heal_parents(port, kind, obj_id, actor)
     return ok
+
+
+def end_claim(port: PlanningPort, task_id: int, actor: str) -> None:
+    """Drop a task's claim and send it back to todo if it was still doing."""
+    task = port.get_task(task_id)
+    if task is not None and task.status is Status.DOING:
+        set_status(port, "task", task_id, Status.TODO, actor=actor)
+        return
+    release = getattr(port, "release_claim", None)
+    if release is not None:
+        release(task_id, actor, force=True)
+
+
+def requeue_expired(port: CoordinationPort, now: float | None = None) -> list[int]:
+    """End every expired claim; returns the task ids it requeued or released."""
+    stamp = time.time() if now is None else now
+    ended = []
+    for claim in port.list_claims(include_expired=True, now=stamp):
+        if claim["expired"]:
+            end_claim(port, int(claim["task_id"]), str(claim["actor"]))
+            ended.append(int(claim["task_id"]))
+    return ended
 
 
 def cycle_status(
@@ -269,7 +302,7 @@ def reconcile(
         else:
             continue
         if write:
-            port.release_claim(task_id, actor, force=True)
+            end_claim(port, task_id, actor)
 
     ambiguous: list[dict] = []
     for plan in port.list_plans():

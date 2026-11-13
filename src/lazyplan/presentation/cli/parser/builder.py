@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 
 from ....infrastructure.settings import default_actor
-from .agents import add_agent_group
 from .common import _PARSER_DESCRIPTION, _PARSER_EPILOG
 from .coordination import (
     add_audit,
@@ -156,7 +155,6 @@ def build_parser() -> argparse.ArgumentParser:
     add_noun_groups(sub, common)
     add_question_group(sub, common)
     add_ref_group(sub, common)
-    add_agent_group(sub, common)
     add_touch_group(sub, common)
     add_link(sub, common)
     add_unlink(sub, common)

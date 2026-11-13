@@ -23,28 +23,12 @@ if _TEXTUAL_OK:
     class PreviewMixin(AppBase):
         """Preview behavior."""
 
-        def _selected_plan_id(self) -> int | None:
-            """Resolve the selected row to its owning plan."""
-            if self.selected is None:
-                return None
-            kind, oid = self.selected
-            if kind == "plan":
-                return oid
-            if kind == "milestone":
-                milestone = self.store.get_milestone(oid)
-                return milestone.plan_id if milestone is not None else None
-            task = self.store.get_task(oid)
-            if task is None:
-                return None
-            milestone = self.store.get_milestone(task.milestone_id)
-            return milestone.plan_id if milestone is not None else None
-
         def update_agents(self) -> None:
-            """Refresh the live agent pane for the selected plan."""
+            """Refresh the live claims in the agents pane."""
             panel = query_one_opt(self, "#agents", AgentsPanel)
             if panel is None:
                 return
-            panel.show(self.store, self._selected_plan_id())
+            panel.show(self.store)
 
         def update_preview(self, force: bool = False) -> None:
             """Selection preview: a bounded summary, never the full plan."""

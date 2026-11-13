@@ -1,4 +1,4 @@
-"""MCP exposes live agents and keeps legacy history readable."""
+"""MCP keeps legacy session history readable."""
 
 from __future__ import annotations
 
@@ -11,20 +11,12 @@ from lazyplan.presentation import mcp
 from lazyplan.store import Store
 
 
-class TestAgentMcpTools(unittest.TestCase):
+class TestSessionMcpTools(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.store = Store(os.path.join(self.tmp.name, "mcp-agents.db"))
         self.plan = self.store.add_plan("P")
-        self.agent = self.store.add_agent(
-            "ana",
-            host="opencode",
-            host_session="host-1",
-            agent="builder",
-            plan_id=self.plan.id,
-            worktree=self.store.checkout_path(),
-        )
         self.store.restore_session_history(
             {
                 "id": 7,
@@ -50,13 +42,6 @@ class TestAgentMcpTools(unittest.TestCase):
         result = response["result"]
         text = result["content"][0]["text"]
         return json.loads(text)
-
-    def test_agent_list_reports_every_field(self) -> None:
-        rows = self._tool("agent_list", {"live": True})
-        self.assertIsInstance(rows, list)
-        self.assertEqual(rows[0]["id"], self.agent.id)
-        self.assertEqual(rows[0]["host_session"], "host-1")
-        self.assertEqual(rows[0]["worktree"], self.store.checkout_path())
 
     def test_session_list_keeps_the_legacy_s_id(self) -> None:
         rows = self._tool("session_list")

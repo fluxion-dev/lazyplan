@@ -37,7 +37,7 @@ SAMPLE = """# Changelog
 @unittest.skipUnless(launch_notes is not None, "textual not installed")
 class TestLaunchNotes(unittest.TestCase):
     def setUp(self) -> None:
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         sandbox_home(self, self.tmp.name)
 
     def tearDown(self) -> None:
@@ -60,7 +60,7 @@ class TestLaunchNotes(unittest.TestCase):
 @unittest.skipUnless(create_app is not None, "textual not installed")
 class TestReleaseNotesScreen(unittest.IsolatedAsyncioTestCase):
     async def test_startup_notes_open_the_read_only_screen(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
             app = create_app(
                 os.path.join(tmp, "notes.db"),
                 startup_notes="## v0.38.0 — 2026-11-11\n\n- New notes.",
@@ -74,7 +74,7 @@ class TestReleaseNotesScreen(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(len(app.screen_stack), 1)
 
     async def test_key_opens_the_installed_notes(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
             app = create_app(os.path.join(tmp, "notes.db"))
             with mock.patch.object(
                 notes,
@@ -90,7 +90,7 @@ class TestReleaseNotesScreen(unittest.IsolatedAsyncioTestCase):
     def test_palette_uses_the_same_handler_as_the_key(self) -> None:
         from lazyplan.presentation.tui.palette_handlers import palette_handlers
 
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
             app = create_app(os.path.join(tmp, "notes.db"))
             self.assertEqual(
                 palette_handlers(app)["release_notes"],

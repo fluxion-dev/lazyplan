@@ -80,7 +80,7 @@ class PromptTitleTest(unittest.TestCase):
 @unittest.skipUnless(create_app is not None, "textual not installed")
 class CriterionFormTest(unittest.IsolatedAsyncioTestCase):
     async def _app_and_plan(self):
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.addCleanup(self.tmp.cleanup)
         store = Store(os.path.join(self.tmp.name, "forms.db"))
         plan = store.add_plan("Plan title", "What we build", goal="Why we build")
@@ -133,7 +133,7 @@ class CriterionFormTest(unittest.IsolatedAsyncioTestCase):
 @unittest.skipUnless(create_app is not None, "textual not installed")
 class DialogSizingTest(unittest.IsolatedAsyncioTestCase):
     async def _app(self, size: tuple[int, int]):
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.addCleanup(self.tmp.cleanup)
         store = Store(os.path.join(self.tmp.name, "sizing.db"))
         plan = store.add_plan("Plan title", "What we build", goal="Why we build")

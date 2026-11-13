@@ -25,7 +25,7 @@ except ImportError:  # pragma: no cover - textual not installed
 @unittest.skipUnless(create_app is not None, "textual not installed")
 class TestMaintenanceScreen(unittest.IsolatedAsyncioTestCase):
     def setUp(self) -> None:
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.addCleanup(self.tmp.cleanup)
         self.store = Store(os.path.join(self.tmp.name, "maint-tui.db"))
         self.plan = self.store.add_plan("Live plan")

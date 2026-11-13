@@ -26,7 +26,7 @@ SHA = "a" * 40
 @unittest.skipUnless(create_app is not None, "textual not installed")
 class SourceTreeStatsTest(unittest.IsolatedAsyncioTestCase):
     def setUp(self) -> None:
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.repo = os.path.join(self.tmp.name, "repo")
         os.makedirs(self.repo)
         self.store = Store(os.path.join(self.tmp.name, "plan.db"))

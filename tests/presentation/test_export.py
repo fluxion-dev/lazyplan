@@ -20,7 +20,7 @@ from lazyplan.presentation.shared.export import (
 
 class DownloadDirTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.home = Path(self.tmp.name) / "home"
         self.home.mkdir()
 
@@ -60,7 +60,7 @@ class DownloadDirTest(unittest.TestCase):
 
 class ExportPathTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.root = Path(self.tmp.name)
         self.home = self.root / "home"
         self.home.mkdir()
@@ -107,7 +107,7 @@ class ExportPathTest(unittest.TestCase):
 
 class WriteExportTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.root = Path(self.tmp.name)
         self.path = self.root / "nested" / "plan.md"
 

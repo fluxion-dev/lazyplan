@@ -52,7 +52,7 @@ print("hi")
 @unittest.skipUnless(build_preview is not None, "textual/rich not installed")
 class PreviewDocumentTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.store = Store(os.path.join(self.tmp.name, "t.db"))
         plan = self.store.add_plan("Plan title", "What we build", goal="Why we build")
         milestone = self.store.add_milestone(plan.id, "Milestone title", "Details")
@@ -466,7 +466,7 @@ class PreviewDocumentTest(unittest.TestCase):
 @unittest.skipUnless(create_app is not None, "textual not installed")
 class PreviewMarkdownTest(unittest.IsolatedAsyncioTestCase):
     async def test_the_body_is_markdown_and_tracks_the_selection(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
             store = Store(os.path.join(tmp, "markdown.db"))
             first = store.add_plan("First plan", "First what", goal="First why")
             store.add_plan("Second plan", "Second what", goal="Second why")
@@ -492,7 +492,7 @@ class PreviewMarkdownTest(unittest.IsolatedAsyncioTestCase):
                 self.assertNotIn("First why", body.source or "")
 
     async def test_overview_widget_renders_open_plan_criteria(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
             store = Store(os.path.join(tmp, "criteria.db"))
             plan = store.add_plan("Plan", "What", goal="Why")
             criteria = [
@@ -517,7 +517,7 @@ class PreviewMarkdownTest(unittest.IsolatedAsyncioTestCase):
                 )
 
     async def test_gfm_prose_renders_as_markdown_blocks(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
             store = Store(os.path.join(tmp, "gfm.db"))
             plan = store.add_plan("Plan", "What", goal="Why")
             milestone = store.add_milestone(plan.id, "Slice", "Details")
@@ -548,7 +548,7 @@ class PreviewMarkdownTest(unittest.IsolatedAsyncioTestCase):
                 self.assertTrue(any("link(" in style for style in styles))
 
     async def test_section_bars_fill_the_body_and_use_the_raised_surface(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
             store = Store(os.path.join(tmp, "bars.db"))
             store.add_plan("Plan", "What", goal="Why")
             app = create_app(str(store.path))
@@ -567,7 +567,7 @@ class PreviewMarkdownTest(unittest.IsolatedAsyncioTestCase):
                     self.assertEqual(bar.styles.background.hex, expected)
 
     async def test_section_bars_keep_one_line_above_and_below(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
             store = Store(os.path.join(tmp, "spacing.db"))
             store.add_plan("Plan", "What", goal="Why\n\n## Inner heading\n\nProse")
             app = create_app(str(store.path))
@@ -593,7 +593,7 @@ class PreviewMarkdownTest(unittest.IsolatedAsyncioTestCase):
                         self.assertEqual(blocks[index + 1].region.y - bar.region.bottom, 1)
 
     async def test_links_open_only_http_and_https(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
             store = Store(os.path.join(tmp, "links.db"))
             store.add_plan("Plan", "What", goal="Why")
             app = create_app(str(store.path))

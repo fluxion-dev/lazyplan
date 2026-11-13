@@ -20,7 +20,7 @@ except ImportError:  # pragma: no cover - stdlib-only interpreter
 
 class TestDesignSystem(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.db = os.path.join(self.tmp.name, "t.db")
         self.store = Store(self.db)
 

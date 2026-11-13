@@ -17,7 +17,7 @@ from tests.support.home import sandbox_home
 
 class UiFallbackCase(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.home = Path(self.tmp.name) / "home"
         self.home.mkdir()
         self.repo = Path(self.tmp.name) / "repo"

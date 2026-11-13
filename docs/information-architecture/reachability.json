@@ -366,18 +366,18 @@
     },
     {
       "depth": 1,
-      "id": "session.start",
+      "id": "agent.start",
       "route": [
         "tree",
-        "sessions"
+        "agents"
       ]
     },
     {
       "depth": 1,
-      "id": "session.end",
+      "id": "agent.end",
       "route": [
         "tree",
-        "sessions"
+        "agents"
       ]
     },
     {
@@ -414,10 +414,10 @@
     },
     {
       "depth": 1,
-      "id": "view.sessions_hub",
+      "id": "view.agents_hub",
       "route": [
         "tree",
-        "sessions"
+        "agents"
       ]
     },
     {
@@ -584,6 +584,7 @@
     }
   ],
   "entities": {
+    "agent": 1,
     "claim": 1,
     "comment": 1,
     "commit": 1,
@@ -599,7 +600,6 @@
     "question": 1,
     "reference": 1,
     "repo": 1,
-    "session": 1,
     "task": 0
   },
   "max_depth": 3,

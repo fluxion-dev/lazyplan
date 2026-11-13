@@ -16,7 +16,6 @@ from lazyplan.core.entities import Status
 from lazyplan.core.errors import MaintenanceBackupError
 from lazyplan.services import maintenance
 from lazyplan.store import Store
-from lazyplan.store.session_pointer import binding_path
 
 
 class TestMaintenanceApply(unittest.TestCase):
@@ -65,13 +64,20 @@ class TestMaintenanceApply(unittest.TestCase):
         self.assertEqual(self._backups(), [])
 
         plan_id = self._old_done_plan("Old plan")
-        session, _previous = self.store.start_session(
-            "builder", plan_id=plan_id, repo_path=self.tmp.name, now=self.old
+        self.store.restore_session_history(
+            {
+                "id": 1,
+                "actor": "builder",
+                "plan_id": plan_id,
+                "repo_path": self.tmp.name,
+                "started_at": self.old,
+                "ended_at": self.old,
+                "summary": "done",
+            }
         )
-        self.store.end_session(session.id, "builder", summary="done", now=self.old)
         archive = maintenance.archive(self.store, days="1", apply=False)
         self.assertIn(plan_id, archive.plans)
-        self.assertIn(session.id, archive.sessions)
+        self.assertIn(1, archive.sessions)
         row = self.store.get_plan(plan_id)
         assert row is not None
         self.assertEqual(row.archived_at, 0.0)
@@ -133,22 +139,12 @@ class TestMaintenanceApply(unittest.TestCase):
         self.assertLess(result.after_bytes, before)
         self.assertEqual(len(self._backups()), 1)
 
-    def test_backup_snapshots_database_and_bindings(self) -> None:
-        plan = self.store.add_plan("Plan")
-        session, _previous = self.store.start_session(
-            "builder", plan_id=plan.id, repo_path=self.tmp.name
-        )
-        self.store.bind_session("claude", "host-1", "project", self.tmp.name, session.id)
-        binding = binding_path(self.db, "claude", "host-1", "project")
-        self.assertTrue(binding.exists())
-
+    def test_backup_snapshots_the_database(self) -> None:
+        self.store.add_plan("Plan")
         result = self.store.backup("test")
-
         backup = Path(result.path)
         self.assertTrue(result.verified)
         self.assertTrue(backup.is_file())
-        self.assertTrue(Path(f"{result.path}.bindings").is_dir())
-        self.assertTrue((Path(f"{result.path}.bindings") / binding.name).exists())
         with closing(sqlite3.connect(backup)) as conn:
             self.assertEqual(str(conn.execute("PRAGMA integrity_check").fetchone()[0]), "ok")
             counts = {

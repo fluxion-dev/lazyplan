@@ -71,7 +71,15 @@ class TestNeedsMe(unittest.TestCase):
         revisions.approve(self.store, self.second.id, actor="fixture")
         self.store.update_plan(self.second.id, description="changed", actor="fixture")
         services.add_question(self.store, self.second.id, "Which host?", actor="fixture")
-        self.store.start_session("carol", plan_id=self.second.id, branch="task/x", now=1_000_001)
+        self.store.add_agent(
+            "carol",
+            host="opencode",
+            agent="carol",
+            host_session="host-carol",
+            plan_id=self.second.id,
+            branch="task/x",
+            now=1_000_001,
+        )
 
     def tearDown(self) -> None:
         self.tmp.cleanup()
@@ -108,10 +116,10 @@ class TestNeedsMe(unittest.TestCase):
         self.assertEqual(payload["counts"]["drift"], 1)
         self.assertEqual(payload["needs_me_plan_ids"], sorted([self.plan.id, self.second.id]))
 
-    def test_sessions_claims_and_overlaps(self) -> None:
+    def test_agents_claims_and_overlaps(self) -> None:
         payload = self._build()
-        self.assertEqual([row["plan_id"] for row in payload["sessions"]], [self.second.id])
-        self.assertEqual(payload["sessions"][0]["actor"], "carol")
+        self.assertEqual([row["plan_id"] for row in payload["agents"]], [self.second.id])
+        self.assertEqual(payload["agents"][0]["agent"], "carol")
         self.assertEqual(payload["counts"]["claims"], 2)
         self.assertEqual(len(payload["claims"]), 2)
         self.assertEqual(payload["counts"]["overlaps"], 1)
@@ -127,7 +135,7 @@ class TestNeedsMe(unittest.TestCase):
         self.assertEqual(payload["attention"], [])
         self.assertEqual(payload["claims"], [])
         self.assertEqual(payload["overlaps"], [])
-        self.assertEqual([row["plan_id"] for row in payload["sessions"]], [self.second.id])
+        self.assertEqual([row["plan_id"] for row in payload["agents"]], [self.second.id])
         self.assertEqual(payload["counts"]["plans"], 1)
 
     def test_limits_keep_the_payload_bounded(self) -> None:

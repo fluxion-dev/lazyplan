@@ -22,7 +22,8 @@ owners through the links below.
 | `question` | plan | Yes | resolution note |
 | `reference` | plan | Yes | external URL |
 | `claim` | task | Yes | actor, worktree, repo |
-| `session` | plan | Yes | events, handoff note |
+| `agent` | plan | Yes | events, handoff note, session history |
+| `session` | plan | Read-only | events, handoff note |
 | `note` | plan, milestone, or task | Yes | actor, timestamp |
 | `comment` | plan, milestone, or task | Yes | mentions, resolution |
 | `commit` | task, milestone, or plan | Yes | files, PRs, repo |

@@ -1,4 +1,4 @@
-.TH LPUI 1 "2026-11-12" "lazyplan-tui 0.42.0" "User Commands"
+.TH LPUI 1 "2026-11-13" "lazyplan-tui 0.42.0" "User Commands"
 .SH NAME
 lpui \- local plan journal for you and your coding agent
 .SH SYNOPSIS
@@ -1526,8 +1526,8 @@ report drift without automatic repair for this command
 what to do with external references Choices: link, list, unlink\. Required\.
 .RE
 .TP
-.B lpui session
-start, end, show, or list agent sessions
+.B lpui agent
+start, end, show, list, sweep, or archive exact host agents
 .RS
 .TP
 .B \-\-json
@@ -1561,7 +1561,40 @@ report drift without automatic repair for this command
 .RS
 .TP
 .B  ACTION
-what to do with a session Choices: start, end, show, list\. Required\.
+what to do with an agent Choices: start, end, show, list, sweep, archive, restore, history\. Required\.
+.RE
+.TP
+.B lpui session
+
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B \-\-heal
+repair parent statuses and leases automatically (default)
+.RE
+.RS
+.TP
+.B \-\-no\-heal
+report drift without automatic repair for this command
 .RE
 .TP
 .B lpui touch

@@ -7,6 +7,22 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
 
 ### Changed
 
+- **Agents are an exact registry, not a heartbeat.** Every host session now
+  registers one row with its host, host session, agent, role, model, parent,
+  PID and process start stamp, repo, worktree, branch, HEAD, plan, task, and an
+  explicit status (`starting`, `working`, `tool`, `compacting`, `waiting`,
+  `blocked`, `lost`, `ended`). A managed start proves its plan through the
+  registered worktree and its task through an active claim; an unregistered
+  checkout or an ambiguous plan is refused with the expected path, and
+  `--force --reason` is the only override. Child subagents are their own rows,
+  ending a parent ends its live children, and a dead PID becomes `lost` on the
+  next sweep. No row is closed because it has been quiet. The agents tracker
+  repaints at 250ms from a worker thread, and lost and unbound rows have their
+  own badge and status word. `lpui agent start|end|show|list|sweep|archive`
+  replaces the live session commands; `session start|end|show|list` stays as a
+  hidden alias for one release, and legacy `S` rows remain readable through
+  `agent history`, the feed, export, import, and MCP. The database moves to
+  WAL so hook writes and TUI reads no longer block each other.
 - **Plans run in their own worktree.** A new plan is isolation-required:
   `plan worktree --print` emits one setup command per linked repo, `add` and
   `remove` register the real checkouts, and plan start, session start, next,

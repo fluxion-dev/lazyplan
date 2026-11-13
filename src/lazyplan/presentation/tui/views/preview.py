@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import time
 from dataclasses import dataclass
 from typing import Any
@@ -79,12 +80,34 @@ def _row(*parts: object, sep: str = " · ") -> str:
 
 
 NONE_YET = "_None yet._"
+_HEADING = re.compile(r"^( {0,3})(#{1,6})(?=[ \t]|$)")
+_FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
+
+
+def nest_headings(text: str) -> str:
+    """Push ATX headings outside code fences two levels down, capped at H6."""
+    lines: list[str] = []
+    fence = ""
+    for line in text.splitlines():
+        opener = _FENCE.match(line)
+        if fence:
+            if opener and opener.group(1)[0] == fence[0] and len(opener.group(1)) >= len(fence):
+                fence = ""
+        elif opener:
+            fence = opener.group(1)
+        else:
+            heading = _HEADING.match(line)
+            if heading:
+                indent, marks = heading.groups()
+                line = indent + "#" * min(6, len(marks) + 2) + line[heading.end() :]
+        lines.append(line)
+    return "\n".join(lines)
 
 
 def details_block(heading: str, text: object) -> PreviewBlock:
     """One details section; an empty field still shows its heading."""
     body = str(text or "").strip()
-    return PreviewBlock(heading, (body or NONE_YET,))
+    return PreviewBlock(heading, (nest_headings(body) if body else NONE_YET,))
 
 
 def _child_row(letter: str, oid: object, title: object, suffix: str = "") -> str:

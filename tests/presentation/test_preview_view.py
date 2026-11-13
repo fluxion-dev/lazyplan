@@ -21,10 +21,11 @@ try:
         PreviewDocument,
         acceptance_block,
         build_preview,
+        nest_headings,
     )
     from lazyplan.presentation.tui.widgets.preview_panel import PreviewPanel
 except ImportError:  # pragma: no cover - stdlib-only interpreter
-    PreviewBlock = PreviewDocument = acceptance_block = None  # type: ignore[assignment]
+    PreviewBlock = PreviewDocument = acceptance_block = nest_headings = None  # type: ignore[assignment]
     build_preview = build_control_strip = None  # type: ignore[assignment]
     create_app = Markdown = PreviewPanel = Static = Tree = None  # type: ignore[assignment,misc]
     MarkdownH2 = None  # type: ignore[assignment,misc]
@@ -163,6 +164,39 @@ class PreviewDocumentTest(unittest.TestCase):
         text = build_preview("plan", self.plan.id, full).render_markdown()
         self.assertTrue(text.startswith("## WHY"))
         self.assertLess(text.index("## WHAT"), text.index("## QUESTIONS"))
+
+    def test_headings_inside_details_nest_under_the_section(self) -> None:
+        cases = {
+            "## Scope": "#### Scope",
+            "# Title": "### Title",
+            "#### Deep": "###### Deep",
+            "###### Deepest": "###### Deepest",
+            "   ## Indented": "   #### Indented",
+            "#hashtag": "#hashtag",
+            "text ## not a heading": "text ## not a heading",
+        }
+        for line, expected in cases.items():
+            with self.subTest(line=line):
+                self.assertEqual(nest_headings(line), expected)
+
+    def test_headings_inside_code_fences_stay_put(self) -> None:
+        text = "```bash\n# comment\n```\n## After\n~~~~\n## inside\n```\n## still inside\n~~~~"
+        self.assertEqual(
+            nest_headings(text),
+            "```bash\n# comment\n```\n#### After\n~~~~\n## inside\n```\n## still inside\n~~~~",
+        )
+
+    def test_plan_what_headings_render_below_the_section(self) -> None:
+        plan = self.store.add_plan("Plan", "## In scope\n\n- one\n\n## Out of scope\n\n- two")
+        full = self.store.get_full("plan", plan.id)
+        assert full is not None
+        text = build_preview("plan", plan.id, full).render_markdown()
+        self.assertIn("#### In scope", text)
+        self.assertIn("#### Out of scope", text)
+        sections = [line for line in text.splitlines() if line.startswith("## ")]
+        self.assertEqual(sections[:2], ["## WHY", "## WHAT"])
+        self.assertNotIn("## In scope", sections)
+        self.assertNotIn("## Out of scope", sections)
 
     def test_empty_details_keep_their_heading_with_a_placeholder(self) -> None:
         plan = self.store.add_plan("Bare plan", "")

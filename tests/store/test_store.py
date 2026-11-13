@@ -675,6 +675,21 @@ class TestStore(unittest.TestCase):
         self.assertEqual(self.store.fingerprint(), structural)
         self.assertNotEqual(self.store.live_fingerprint(), live)
 
+    def test_every_claim_change_moves_the_live_fingerprint(self):
+        plan = self.store.add_plan("P")
+        milestone = self.store.add_milestone(plan.id, "M")
+        task = self.store.add_task(milestone.id, "T")
+        steps = (
+            lambda: self.store.claim_task(task.id, "ana", now=1000.0),
+            lambda: self.store.renew_claim(task.id, "ana", now=1100.0),
+            lambda: self.store.release_claim(task.id, "ana"),
+            lambda: self.store.claim_task(task.id, "bob", now=1200.0),
+        )
+        for step in steps:
+            before = self.store.live_fingerprint()
+            step()
+            self.assertNotEqual(self.store.live_fingerprint(), before)
+
     def test_structural_edits_change_fingerprint_but_not_live(self):
         plan = self.store.add_plan("P")
         milestone = self.store.add_milestone(plan.id, "M")

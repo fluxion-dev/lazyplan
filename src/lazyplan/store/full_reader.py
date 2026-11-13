@@ -25,6 +25,7 @@ class _FullReader:
     """Build full show payloads from one set of bulk maps."""
 
     def __init__(self, store: StoreBase) -> None:
+        self._store = store
         self.milestones = store.milestones_map()
         self.tasks = store.tasks_map()
         self.criteria = store.criteria_map()
@@ -205,6 +206,7 @@ class _FullReader:
             ],
             "repos": self.repos.get(("plan", plan.id), []),
             "effective_repos": self._effective_repos("plan", plan.id),
+            "worktrees": [vars(row) for row in self._store.list_plan_worktrees(plan.id)],
             "approval": approval_payload(self.revisions.get(plan.id), self.drift.get(plan.id, 0)),
             "questions": [vars(q) for q in self.questions.get(plan.id, [])],
             "refs": [vars(ref) for ref in self.refs.get(plan.id, [])],

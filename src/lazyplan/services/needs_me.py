@@ -18,7 +18,7 @@ from . import stats
 
 ATTENTION_LIMIT = 20
 PLAN_LIMIT = 25
-SESSION_LIMIT = 8
+AGENT_LIMIT = 8
 CLAIM_LIMIT = 20
 OVERLAP_LIMIT = 10
 OVERLAP_CLAIM_LIMIT = 40
@@ -352,7 +352,7 @@ def build(
     plan_id: int | None = None,
     max_attention: int = ATTENTION_LIMIT,
     max_plans: int = PLAN_LIMIT,
-    max_agents: int = SESSION_LIMIT,
+    max_agents: int = AGENT_LIMIT,
     max_claims: int = CLAIM_LIMIT,
     max_overlaps: int = OVERLAP_LIMIT,
 ) -> dict[str, Any]:

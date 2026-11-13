@@ -55,7 +55,7 @@ data with `lpui seed`.
   branches stay open or closed exactly as you left them, large branches load on
   demand, and the timeline waits for `T`.
 - **Proof where you need it.** Criteria, evidence, questions, references,
-  claims, sessions, comments, commits, and pull requests are selectable hubs,
+  claims, agents, comments, commits, and pull requests are selectable hubs,
   not a wall of text.
 - **Yours to keep.** Local-first by default. Export or import any time. No
   account, no cloud, no lock-in.
@@ -83,7 +83,7 @@ lpui plan recipe feature > plan.json
 lpui --actor helper --porcelain plan apply --file plan.json
 ```
 
-See the [agent contract](docs/usage.md#agents) for claims, sessions, evidence,
+See the [agent contract](docs/usage.md#agents) for claims, agents, evidence,
 and MCP. For your data, back up with `lpui export --format json` and restore
 with `lpui import --file`; see [data and backup](docs/usage.md#data-and-backup).
 

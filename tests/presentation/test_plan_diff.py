@@ -148,6 +148,23 @@ class PlanDiffModelTest(unittest.TestCase):
         self.assertIn("0 changes", head)
         self.assertIn("in sync with the approved revision", body)
 
+    def test_every_action_has_a_glyph_and_count(self) -> None:
+        result = _result(
+            (
+                _entry("plan", "add", "Added plan"),
+                _entry("milestone", "remove", "Removed slice"),
+                _entry("task", "change", "Changed task", before="a", after="b"),
+                _entry("criterion", "move", "Moved criterion", before="p1", after="p2"),
+            ),
+            summary={"add": 1, "remove": 1, "change": 1, "move": 1, "total": 4},
+        )
+        head, body = render_plan_diff(build_plan_diff(result))
+        self.assertIn("4 changes", head)
+        for action in ("add", "remove", "change", "move"):
+            self.assertIn(f"1 {action}", head)
+        for glyph in ("+", "-", "~", "→"):
+            self.assertIn(glyph, body)
+
 
 if __name__ == "__main__":
     unittest.main()

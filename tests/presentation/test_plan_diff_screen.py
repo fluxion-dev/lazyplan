@@ -6,6 +6,7 @@ import os
 import tempfile
 import unittest
 
+from lazyplan import services
 from lazyplan.core.entities import PlanRevision
 from lazyplan.core.policies.revisions import Change
 from lazyplan.services.revisions import DiffEntry, DiffResult
@@ -69,6 +70,8 @@ class PlanDiffScreenTest(unittest.IsolatedAsyncioTestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.store = Store(os.path.join(self.tmp.name, "plan.db"))
         self.plan = self.store.add_plan("Diff")
+        self.milestone = self.store.add_milestone(self.plan.id, "Slice")
+        self.task = self.store.add_task(self.milestone.id, "Read the diff")
 
     def tearDown(self) -> None:
         self.tmp.cleanup()
@@ -100,6 +103,38 @@ class PlanDiffScreenTest(unittest.IsolatedAsyncioTestCase):
         _, head, body = await self._open(_result(()))
         self.assertIn("0 changes", head)
         self.assertIn("in sync with the approved revision", body)
+
+    async def test_plan_diff_action_opens_from_plan_and_task(self) -> None:
+        services.approve(self.store, self.plan.id, actor="test", reason="start")
+        self.store.update_task(self.task.id, title="Renamed task", actor="test")
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(130, 35)) as pilot:
+            await pilot.pause()
+            app.selected = ("plan", self.plan.id)
+            app.action_plan_diff()
+            await pilot.pause()
+            self.assertIsInstance(app.screen, PlanDiffScreen)
+            body = str(app.screen.query_one("#plan-diff-body").content)
+            self.assertIn("TASKS", body)
+            self.assertIn("Renamed task", body)
+            await pilot.press("escape")
+            await pilot.pause()
+            app.selected = ("task", self.task.id)
+            app.action_plan_diff()
+            await pilot.pause()
+            self.assertIsInstance(app.screen, PlanDiffScreen)
+            await pilot.press("escape")
+
+    async def test_clean_plan_action_paints_in_sync(self) -> None:
+        services.approve(self.store, self.plan.id, actor="test", reason="start")
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(130, 35)) as pilot:
+            await pilot.pause()
+            app.selected = ("plan", self.plan.id)
+            app.action_plan_diff()
+            await pilot.pause()
+            body = str(app.screen.query_one("#plan-diff-body").content)
+            self.assertIn("in sync with the approved revision", body)
 
 
 if __name__ == "__main__":

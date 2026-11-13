@@ -258,6 +258,74 @@ class PlanWorktreeRegisterTest(unittest.TestCase):
 
         self.assertEqual(code, 0, error)
 
+    def test_session_start_requires_the_registered_worktree(self) -> None:
+        self.assertEqual(
+            self._run(
+                [
+                    "plan",
+                    "worktree",
+                    "add",
+                    "--id",
+                    str(self.plan.id),
+                    "--repo",
+                    self.repo,
+                ]
+            )[0],
+            0,
+        )
+        os.chdir(self.repo)
+
+        code, _, error = self._run(
+            ["--actor", "fixture", "session", "start", "--plan", str(self.plan.id)]
+        )
+        self.assertEqual(code, 2)
+        self.assertIn("registered worktree", error)
+
+        code, _, error = self._run(
+            ["--actor", "fixture", "session", "start", "--plan", str(self.plan.id), "--force"]
+        )
+        self.assertEqual(code, 2)
+        self.assertIn("--force needs --reason", error)
+
+        code, _, error = self._run(
+            [
+                "--actor",
+                "fixture",
+                "session",
+                "start",
+                "--plan",
+                str(self.plan.id),
+                "--force",
+                "--reason",
+                "temporary pairing",
+            ]
+        )
+        self.assertEqual(code, 0, error)
+
+    def test_session_start_succeeds_inside_the_worktree(self) -> None:
+        self.assertEqual(
+            self._run(
+                [
+                    "plan",
+                    "worktree",
+                    "add",
+                    "--id",
+                    str(self.plan.id),
+                    "--repo",
+                    self.repo,
+                ]
+            )[0],
+            0,
+        )
+        os.chdir(self.target.worktree_path)
+
+        code, output, error = self._run(
+            ["--actor", "fixture", "--json", "session", "start", "--plan", str(self.plan.id)]
+        )
+
+        self.assertEqual(code, 0, error)
+        self.assertEqual(json.loads(output)["session"]["plan_id"], self.plan.id)
+
     def test_plan_ready_reports_the_worktree_gate(self) -> None:
         code, output, error = self._run(["plan", "ready", "--id", str(self.plan.id)])
         self.assertEqual(code, 1, output + error)

@@ -51,6 +51,22 @@ def worktree_gate(store: InsightsPort, plan_id: int) -> str:
     )
 
 
+def checkout_gate(store: InsightsPort, plan_id: int, checkout: str) -> str:
+    """Refusal text when a session starts outside the plan's registered worktree."""
+    plan = store.get_plan(plan_id)
+    if plan is None or not plan.worktree_required:
+        return ""
+    blocker = worktree_gate(store, plan_id)
+    if blocker:
+        return blocker
+    current = os.path.normcase(os.path.abspath(checkout))
+    registered = store.list_plan_worktrees(plan_id)
+    if any(os.path.normcase(os.path.abspath(row.worktree_path)) == current for row in registered):
+        return ""
+    expected = ", ".join(row.worktree_path for row in registered)
+    return f"session start must run in a registered worktree: {expected}"
+
+
 def verify_worktree(repo_path: str, worktree_path: str, branch: str) -> WorktreeVerification:
     """Check that *worktree_path* is this repo's checkout on *branch* and clean."""
     if os.path.normcase(os.path.abspath(repo_path)) == os.path.normcase(

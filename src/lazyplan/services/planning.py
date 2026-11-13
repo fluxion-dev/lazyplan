@@ -7,7 +7,7 @@ from pathlib import Path
 
 from lazyplan.infrastructure.templates import apply_template, template_criteria
 
-from ..core.entities import Criterion, Milestone, Plan, Status, Task
+from ..core.entities import Claim, Criterion, Milestone, Plan, Status, Task
 from ..core.kinds import check_kind
 from ..core.policies.maintenance import check_archive_mode, is_visible
 from ..core.policies.planning import is_archived as _is_archived_policy
@@ -187,21 +187,49 @@ def set_status(
     actor: str = "human",
     heal: bool = True,
 ) -> bool:
-    """Move a row, optionally heal the subtree state, and log the transition."""
+    """Move a row, optionally heal the subtree state, and log the transition.
+
+    A task is doing exactly while an actor holds its claim: moving it to doing
+    claims it for ``actor`` and moving it anywhere else releases the claim.
+    """
     check_kind(kind)
     claim = None
-    if kind == "task" and status is not Status.DOING:
-        get_claim = getattr(port, "get_claim", None)
-        if get_claim is not None:
-            claim = get_claim(obj_id)
+    get_claim = getattr(port, "get_claim", None) if kind == "task" else None
+    if get_claim is not None:
+        claim = get_claim(obj_id)
+    doing = kind == "task" and status is Status.DOING
+    if doing:
+        _check_claimable(claim, obj_id, actor)
     ok = port.set_status_raw(kind, obj_id, status)
     if ok:
         port.log(actor, kind, "status", f"{kind} #{obj_id} -> {status.value}")
-        if claim is not None:
+        if doing:
+            _claim_for_doing(port, claim, obj_id, actor)
+        elif claim is not None:
             port.log(actor, "task", "release", f"task #{obj_id} released by status")
         if heal:
             heal_parents(port, kind, obj_id, actor)
     return ok
+
+
+def _check_claimable(claim: Claim | None, task_id: int, actor: str) -> None:
+    """Refuse doing while another actor's live claim holds the task."""
+    if claim is not None and not claim.expired(time.time()) and claim.actor != actor:
+        raise ValueError(
+            f"task #{task_id} is claimed by {claim.actor}; take it over with"
+            f" `lpui claim --id {task_id} --force`"
+        )
+
+
+def _claim_for_doing(port: PlanningPort, claim: Claim | None, task_id: int, actor: str) -> None:
+    """Claim a task that just moved to doing, unless the actor already holds it."""
+    claim_task = getattr(port, "claim_task", None)
+    if claim_task is None:
+        return
+    if claim is not None and not claim.expired(time.time()) and claim.actor == actor:
+        return
+    checkout = port.checkout_path()
+    claim_task(task_id, actor, worktree=checkout, repo_path=checkout, force=True)
 
 
 def cycle_status(

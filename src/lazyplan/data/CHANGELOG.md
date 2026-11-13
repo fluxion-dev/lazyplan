@@ -21,6 +21,10 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
 - **Integration prompts moved into the screen.** `lpui` no longer asks about
   new integrations in plain text before the screen opens; the health dialog
   does. `lpui setup` keeps its prompt.
+- **The overview always shows the full details.** A plan shows its whole why
+  and what, and a milestone and task their whole description, as the first
+  sections under the title instead of one clipped line. An empty field keeps its
+  heading with "None yet.", and headings inside the text nest under the section.
 
 ### Fixed
 

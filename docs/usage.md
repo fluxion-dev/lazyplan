@@ -353,14 +353,16 @@ line per open row: agent name, `A` id, plan and task, branch, age, and status
 word. The last handoff stays below the rows; the card is read-only. The git card
 carries linked checkouts and pull requests.
 
-The overview follows the selection and reveals one level at a time. A plan shows
-its title, one context line with ids and counts, one clamped why line, its
-milestones, and the first three open acceptance criteria. A milestone shows its
-title, context line, one clamped intent line, its tasks, and open criteria. A
-task is the first level with the full description and its proof. Child rows
-carry only an id, a title, and a count or state word. Sections with nothing
-actionable are omitted: approval without a revision, empty acceptance, notes,
-source counts, and worktrees unless the plan requires isolation. The overview
+The overview follows the selection and reveals one level at a time. Under the
+title and one context line with ids and counts, the full details always come
+first: a plan's whole why and what, and a milestone's or task's whole
+description. An empty field still shows its heading with "None yet." Headings
+inside that text sit one level below the section. Then a plan shows its
+milestones and the first three open acceptance criteria, a milestone its tasks
+and open criteria, and a task its proof. Child rows carry only an id, a title,
+and a count or state word. Other sections with nothing actionable are omitted:
+approval without a revision, empty acceptance, notes, source counts, and
+worktrees unless the plan requires isolation. The overview
 adds one plain attention line only when something needs attention.
 
 Only http and https links open; other schemes are reported instead. The timeline

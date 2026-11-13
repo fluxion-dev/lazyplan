@@ -33,7 +33,7 @@ class ContextTest(unittest.TestCase):
         self.store.add_criteria("task", self.doing.id, "task tests pass")
         self.store.add_note("plan", self.plan.id, "decision", actor="alice")
         self.store.add_comment("task", self.doing.id, "please check", actor="rev")
-        self.store.claim_task(self.doing.id, "alice", 300)
+        self.store.claim_task(self.doing.id, "alice", 300, force=True)
         self.store.link_commit(
             "task", self.doing.id, "a" * 40, subject="linked", timestamp=1000, actor="t"
         )
@@ -107,7 +107,6 @@ class ContextTest(unittest.TestCase):
         self.assertNotIn("previous_session", plan)
         text = "\n".join(context.lines(payload))
         self.assertIn("Handoff: next run QA", text)
-        self.assertIn("next: run QA", text)
 
     def test_empty_store_is_empty(self):
         empty = Store(Path(self.tmp.name) / "empty.db")

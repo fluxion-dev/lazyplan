@@ -187,18 +187,20 @@ def set_status(
     status: Status,
     actor: str = "human",
     heal: bool = True,
+    take_claim: bool = True,
 ) -> bool:
     """Move a row, optionally heal the subtree state, and log the transition.
 
     A task is doing exactly while an actor holds its claim: moving it to doing
     claims it for ``actor`` and moving it anywhere else releases the claim.
+    ``take_claim=False`` restores a recorded status (import) without claiming.
     """
     check_kind(kind)
     claim = None
     get_claim = getattr(port, "get_claim", None) if kind == "task" else None
     if get_claim is not None:
         claim = get_claim(obj_id)
-    doing = kind == "task" and status is Status.DOING
+    doing = take_claim and kind == "task" and status is Status.DOING
     if doing:
         check_claimable(claim, obj_id, actor)
     ok = port.set_status_raw(kind, obj_id, status)

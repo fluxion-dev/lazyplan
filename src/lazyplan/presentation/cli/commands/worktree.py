@@ -5,31 +5,28 @@ from __future__ import annotations
 import argparse
 import os
 import sys
-from pathlib import Path
 
-from lazyplan.infrastructure.repo import git_worktree_paths
 from lazyplan.services.worktrees import (
     done_blocker,
     removal_commands,
+    stale_reason,
     verify_worktree,
     worktree_gate,
 )
 
 from ....core.entities import Plan, PlanWorktree
-from ....core.policies.worktrees import WorktreeCollision, derive_worktree, derive_worktrees
+from ....core.policies.worktrees import (
+    WorktreeCollision,
+    derive_worktree,
+    derive_worktrees,
+    quote_path,
+)
 from ....core.ports.app import AppPort
 from ....core.ports.insights import InsightsPort
 from ....core.serialization import to_payload
 from ...shared import porcelain
 from ...shared.design import msg_error, msg_not_found
 from ..emit import _emit
-
-
-def _quote_path(text: str) -> str:
-    """Quote one shell path only when it needs it."""
-    if any(char.isspace() for char in text):
-        return f'"{text}"'
-    return text
 
 
 def _print_plan_worktrees(
@@ -57,8 +54,8 @@ def _print_plan_worktrees(
     for repo, target in zip(repos, targets, strict=True):
         start = str(repo.get("base_sha") or repo.get("branch") or "HEAD")
         command = (
-            f"git -C {_quote_path(target.repo_path)} worktree add -b {target.branch}"
-            f" {_quote_path(target.worktree_path)} {_quote_path(start)}"
+            f"git -C {quote_path(target.repo_path)} worktree add -b {target.branch}"
+            f" {quote_path(target.worktree_path)} {quote_path(start)}"
         )
         entries.append(
             {
@@ -195,20 +192,11 @@ def guard_plan_done(store: InsightsPort, plan_id: int) -> int:
     return 0
 
 
-def _worktree_is_stale(row: PlanWorktree) -> bool:
-    """True when the path vanished or git no longer lists it."""
-    if not Path(row.worktree_path).exists():
-        return True
-    listed = git_worktree_paths(row.repo_path)
-    current = str(Path(row.worktree_path).resolve())
-    return bool(listed) and current not in listed
-
-
 def _list_plan_worktrees(store: InsightsPort, plan: Plan, args: argparse.Namespace) -> int:
     """List registrations with a read-only stale flag."""
     entries = []
     for row in store.list_plan_worktrees(plan.id):
-        stale = _worktree_is_stale(row)
+        stale = bool(stale_reason(row))
         if getattr(args, "stale", False) and not stale:
             continue
         entries.append(

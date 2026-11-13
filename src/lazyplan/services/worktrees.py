@@ -6,8 +6,10 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+from ..core.entities import PlanWorktree
+from ..core.policies.worktrees import quote_path
 from ..core.ports.planning import PlanningPort
-from ..infrastructure.repo import git_common_dir
+from ..infrastructure.repo import git_common_dir, git_worktree_paths
 from ..infrastructure.vcs import GitBackend
 
 
@@ -68,9 +70,16 @@ def checkout_gate(store: PlanningPort, plan_id: int, checkout: str) -> str:
     return f"session start must run in a registered worktree: {expected}"
 
 
-def _quote_path(text: str) -> str:
-    """Quote one shell path only when it needs it."""
-    return f'"{text}"' if any(char.isspace() for char in text) else text
+def stale_reason(row: PlanWorktree) -> str:
+    """Why a registration no longer points at a live worktree; empty when current."""
+    path = row.worktree_path
+    if not Path(path).exists():
+        return "registered worktree path does not exist"
+    listed = git_worktree_paths(row.repo_path)
+    current = str(Path(path).resolve())
+    if listed and current not in listed:
+        return "registered worktree is not listed by git worktree list"
+    return ""
 
 
 def done_blocker(store: PlanningPort, plan_id: int) -> str:
@@ -87,7 +96,7 @@ def done_blocker(store: PlanningPort, plan_id: int) -> str:
 def removal_commands(store: PlanningPort, plan_id: int) -> list[str]:
     """Read-only removal commands printed when a plan closes."""
     return [
-        f"git -C {_quote_path(row.repo_path)} worktree remove {_quote_path(row.worktree_path)}"
+        f"git -C {quote_path(row.repo_path)} worktree remove {quote_path(row.worktree_path)}"
         for row in store.list_plan_worktrees(plan_id)
     ]
 

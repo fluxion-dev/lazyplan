@@ -5,10 +5,10 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from lazyplan.infrastructure.repo import find_repo_root, git_worktree_paths
+from lazyplan.infrastructure.repo import find_repo_root
 from lazyplan.presentation import setup
 from lazyplan.services import hooks as hook_service
-from lazyplan.services.worktrees import verify_worktree
+from lazyplan.services.worktrees import stale_reason, verify_worktree
 
 from ....core.entities import PlanWorktree, Status
 from ....core.ports.app import AppPort
@@ -26,21 +26,13 @@ def _worktree_row_findings(row: PlanWorktree) -> list[dict]:
         "repo_path": row.repo_path,
         "worktree_path": row.worktree_path,
     }
-    if not Path(row.worktree_path).exists():
-        return [{**base, "state": "missing-path", "detail": "registered path does not exist"}]
+    stale = stale_reason(row)
+    if stale:
+        state = "missing-path" if "does not exist" in stale else "unlisted"
+        return [{**base, "state": state, "detail": stale}]
     check = verify_worktree(row.repo_path, row.worktree_path, row.branch)
     if not check.ok:
         return [{**base, "state": "drift", "detail": check.reason}]
-    listed = git_worktree_paths(row.repo_path)
-    current = str(Path(row.worktree_path).resolve())
-    if listed and current not in listed:
-        return [
-            {
-                **base,
-                "state": "unlisted",
-                "detail": "registered worktree is not listed by git worktree list",
-            }
-        ]
     return []
 
 

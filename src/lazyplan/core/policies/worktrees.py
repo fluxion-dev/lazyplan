@@ -30,6 +30,11 @@ class WorktreeTarget:
     branch: str
 
 
+def quote_path(text: str) -> str:
+    """Quote one shell path only when it needs it."""
+    return f'"{text}"' if any(char.isspace() for char in text) else text
+
+
 def slugify(title: str) -> str:
     """Lowercase ASCII slug, bounded, with ``plan`` for an empty result."""
     words = _SLUG_WORD.findall(title.lower())

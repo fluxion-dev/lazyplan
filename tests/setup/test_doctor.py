@@ -160,7 +160,7 @@ class DoctorCase(unittest.TestCase):
         store.register_plan_worktree(plan.id, str(self.repo), target.worktree_path, target.branch)
 
         with mock.patch(
-            "lazyplan.presentation.cli.commands.doctor.git_worktree_paths",
+            "lazyplan.services.worktrees.git_worktree_paths",
             return_value={"/somewhere/else"},
         ):
             code, report = self._json(["--db", str(db), "doctor", "--json"])

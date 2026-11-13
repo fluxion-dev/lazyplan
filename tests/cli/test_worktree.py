@@ -5,12 +5,36 @@ from __future__ import annotations
 import io
 import json
 import os
+import subprocess
 import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 
+from lazyplan.core.policies.worktrees import derive_worktree
 from lazyplan.presentation.cli.main import main as lpui_main
 from lazyplan.store import Store
+
+
+def git(cwd: str, *args: str) -> None:
+    subprocess.run(
+        ["git", "-C", cwd, *args],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+
+def make_repo(path: str) -> None:
+    os.makedirs(path)
+    git(path, "init")
+    git(path, "config", "user.email", "test@example.test")
+    git(path, "config", "user.name", "Test")
+    git(path, "config", "commit.gpgsign", "false")
+    with open(os.path.join(path, "README.md"), "w", encoding="utf-8") as handle:
+        handle.write("readme\n")
+    git(path, "add", "README.md")
+    git(path, "commit", "-m", "init")
+    git(path, "branch", "-M", "main")
 
 
 class PlanWorktreeCommandTest(unittest.TestCase):
@@ -112,3 +136,165 @@ class PlanWorktreeCommandTest(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn(f"repo {self.repo}", output)
         self.assertIn("git -C", output)
+
+
+class PlanWorktreeRegisterTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = os.path.realpath(self.tmp.name)
+        self.db = os.path.join(self.root, "register.db")
+        self.repo = os.path.join(self.root, "repo")
+        make_repo(self.repo)
+        self.env = {"LAZYPLAN_NO_SETUP": "1", "LAZYPLAN_NO_UPDATE_CHECK": "1"}
+        self.saved = {key: os.environ.get(key) for key in self.env}
+        os.environ.update(self.env)
+        self.old_cwd = os.getcwd()
+
+        store = Store(self.db)
+        self.plan = store.add_plan("Run every plan", "What", goal="Why")
+        store.add_repo_link("plan", self.plan.id, self.repo)
+        self.target = derive_worktree(self.repo, self.plan.id, self.plan.name)
+        git(
+            self.repo,
+            "worktree",
+            "add",
+            "-b",
+            self.target.branch,
+            self.target.worktree_path,
+        )
+
+    def tearDown(self) -> None:
+        os.chdir(self.old_cwd)
+        for key, value in self.saved.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+        self.tmp.cleanup()
+
+    def _run(self, argv: list[str]) -> tuple[int, str, str]:
+        out = io.StringIO()
+        err = io.StringIO()
+        with redirect_stdout(out), redirect_stderr(err):
+            code = lpui_main(["--db", self.db, *argv])
+        return code, out.getvalue(), err.getvalue()
+
+    def test_register_validates_and_records_the_actor(self) -> None:
+        code, output, _ = self._run(
+            [
+                "--json",
+                "plan",
+                "worktree",
+                "add",
+                "--id",
+                str(self.plan.id),
+                "--repo",
+                self.repo,
+            ]
+        )
+
+        self.assertEqual(code, 0)
+        row = Store(self.db).get_plan_worktree(self.plan.id, self.repo)
+        self.assertIsNotNone(row)
+        assert row is not None
+        self.assertEqual(row.branch, self.target.branch)
+        self.assertEqual(row.worktree_path, self.target.worktree_path)
+        self.assertEqual(json.loads(output)["worktree"]["branch"], self.target.branch)
+
+    def test_reregister_is_a_no_op(self) -> None:
+        argv = [
+            "plan",
+            "worktree",
+            "add",
+            "--id",
+            str(self.plan.id),
+            "--repo",
+            self.repo,
+        ]
+        self.assertEqual(self._run(argv)[0], 0)
+        before = len(Store(self.db).events_by_action("register"))
+
+        code, output, _ = self._run(argv)
+
+        self.assertEqual(code, 0)
+        self.assertIn("already-registered", output)
+        self.assertEqual(len(Store(self.db).list_plan_worktrees(self.plan.id)), 1)
+        self.assertEqual(len(Store(self.db).events_by_action("register")), before)
+
+    def test_remove_unregisters_a_clean_worktree(self) -> None:
+        self.assertEqual(
+            self._run(
+                [
+                    "plan",
+                    "worktree",
+                    "add",
+                    "--id",
+                    str(self.plan.id),
+                    "--repo",
+                    self.repo,
+                ]
+            )[0],
+            0,
+        )
+
+        code, output, _ = self._run(
+            ["plan", "worktree", "remove", "--id", str(self.plan.id), "--repo", self.repo]
+        )
+
+        self.assertEqual(code, 0)
+        self.assertIn("removed", output)
+        self.assertIsNone(Store(self.db).get_plan_worktree(self.plan.id, self.repo))
+
+    def test_remove_refuses_a_dirty_worktree(self) -> None:
+        self.assertEqual(
+            self._run(
+                [
+                    "plan",
+                    "worktree",
+                    "add",
+                    "--id",
+                    str(self.plan.id),
+                    "--repo",
+                    self.repo,
+                ]
+            )[0],
+            0,
+        )
+        with open(
+            os.path.join(self.target.worktree_path, "scratch.txt"), "w", encoding="utf-8"
+        ) as handle:
+            handle.write("dirty\n")
+
+        code, _, error = self._run(
+            ["plan", "worktree", "remove", "--id", str(self.plan.id), "--repo", self.repo]
+        )
+
+        self.assertEqual(code, 2)
+        self.assertIn("uncommitted changes", error)
+        self.assertIsNotNone(Store(self.db).get_plan_worktree(self.plan.id, self.repo))
+
+    def test_remove_unknown_registration_is_an_error(self) -> None:
+        code, _, error = self._run(
+            ["plan", "worktree", "remove", "--id", str(self.plan.id), "--repo", self.repo]
+        )
+        self.assertEqual(code, 1)
+        self.assertIn("has no worktree", error)
+
+    def test_add_refuses_an_unlinked_repo(self) -> None:
+        other = os.path.join(self.root, "other")
+        make_repo(other)
+
+        code, _, error = self._run(
+            [
+                "plan",
+                "worktree",
+                "add",
+                "--id",
+                str(self.plan.id),
+                "--repo",
+                other,
+            ]
+        )
+
+        self.assertEqual(code, 2)
+        self.assertIn("not linked", error)

@@ -79,15 +79,16 @@ def _aligned(text: str, slot: StatSlot) -> str:
     return text.rjust(slot.width) if slot.align == "right" else text.ljust(slot.width)
 
 
-def _slot_markup(stats: RowStats, key: str) -> str:
-    slot = SLOTS[key]
-    text = _slot_text(stats, key)
-    aligned = _aligned(text, slot)
-    return f"[dim]{aligned}[/]" if key == "progress" and text else aligned
+def _slot_markup(key: str, aligned: str) -> str:
+    return f"[dim]{aligned}[/]" if key == "progress" and aligned.strip() else aligned
 
 
 def render_stats(stats: RowStats, layout: tuple[str, ...]) -> tuple[str, str]:
     """Render one fixed-width stats block as rich markup and plain text."""
-    rich_parts = [_slot_markup(stats, key) for key in layout]
-    plain_parts = [_aligned(_slot_text(stats, key), SLOTS[key]) for key in layout]
+    rich_parts: list[str] = []
+    plain_parts: list[str] = []
+    for key in layout:
+        aligned = _aligned(_slot_text(stats, key), SLOTS[key])
+        rich_parts.append(_slot_markup(key, aligned))
+        plain_parts.append(aligned)
     return " ".join(rich_parts), " ".join(plain_parts)

@@ -649,6 +649,26 @@ doing, otherwise todo. `reconcile` heals parent drift and releases stale leases;
 - `reconcile --check` reports parent-status drift, expired leases, and done rows
   with open criteria without writing any row.
 
+### Plan worktrees
+
+A new plan is isolation-required. Print the setup command, create the worktree
+with git, then register the checkout that actually exists:
+
+```bash
+lpui plan worktree --print --id 6
+git -C /path/to/repo worktree add -b plan/6-my-plan /path/to/repo--plan-6-my-plan
+lpui --actor NAME plan worktree add --id 6 --repo /path/to/repo
+lpui plan worktree list --id 6 [--stale]
+lpui --actor NAME plan worktree remove --id 6 --repo /path/to/repo
+```
+
+The shared checkout cannot start, session-start, claim, or advance an isolated
+plan. `--force --reason` records an override. Closing a plan refuses a dirty or
+wrong-branch worktree and prints one `git worktree remove` command per
+registration. `doctor` and `plan worktree list --stale` report missing,
+unlisted, or drifted worktrees without deleting anything. Plans created before
+isolation stay grandfathered.
+
 ### Sessions and touch-points
 
 ```bash

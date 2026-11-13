@@ -3,6 +3,18 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## Unreleased
+
+### Changed
+
+- **Plans run in their own worktree.** A new plan is isolation-required:
+  `plan worktree --print` emits one setup command per linked repo, `add` and
+  `remove` register the real checkouts, and plan start, session start, next,
+  and claim refuse the shared checkout unless `--force --reason` records an
+  override. A done move refuses a dirty worktree and prints removal commands;
+  `doctor` and `plan worktree list --stale` report drift without deleting
+  anything. Plans created before the flag stay grandfathered.
+
 ## v0.42.0 — 2026-11-13
 
 ### Fixed

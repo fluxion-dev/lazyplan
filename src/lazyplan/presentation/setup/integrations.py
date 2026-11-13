@@ -42,6 +42,7 @@ class Inspection:
 
     installed: tuple[IntegrationItem, ...]
     pending: tuple[IntegrationItem, ...]
+    suppressed: tuple[IntegrationItem, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -99,6 +100,25 @@ def _enabled(item: IntegrationItem, state: SetupState, choice: SetupChoice) -> b
     return state.hooks_enabled and item.host in selected
 
 
+def suppressing_decision(
+    remembered: dict[str, Any] | None,
+    fingerprint: str,
+    version: str,
+) -> str:
+    """The remembered decision that still hides a missing item, or ``""``."""
+    if remembered is None:
+        return ""
+    decision = str(remembered.get("decision", "") or "")
+    stored = remembered.get("fingerprint")
+    if stored and stored != fingerprint:
+        return ""
+    if decision in ("installed", "never"):
+        return decision
+    if decision == "deferred" and remembered.get("version", "") == version:
+        return decision
+    return ""
+
+
 def _pending(
     item: IntegrationItem,
     state: SetupState,
@@ -108,19 +128,7 @@ def _pending(
     if item.id in installed:
         return False
     remembered = state.integration_choices.get(item.id)
-    if remembered is None:
-        return True
-    changed = bool(remembered.get("fingerprint")) and (
-        remembered.get("fingerprint") != item.fingerprint
-    )
-    decision = remembered.get("decision")
-    if decision == "installed":
-        return False
-    if decision == "never":
-        return changed
-    if decision == "deferred":
-        return changed or remembered.get("version", "") != version
-    return True
+    return not suppressing_decision(remembered, item.fingerprint, version)
 
 
 def inspect(
@@ -137,12 +145,18 @@ def inspect(
     items = catalog(home)
     installed_ids = _installed_ids(choice, root, home, items)
     installed = tuple(item for item in items if item.id in installed_ids)
-    pending = tuple(
-        item
-        for item in items
-        if _enabled(item, state, choice) and _pending(item, state, installed_ids, version)
+    missing = tuple(
+        item for item in items if _enabled(item, state, choice) and item.id not in installed_ids
     )
-    return Inspection(installed=installed, pending=pending)
+    pending = tuple(item for item in missing if _pending(item, state, installed_ids, version))
+    suppressed = tuple(
+        item
+        for item in missing
+        if item not in pending
+        and suppressing_decision(state.integration_choices.get(item.id), item.fingerprint, version)
+        in ("never", "deferred")
+    )
+    return Inspection(installed=installed, pending=pending, suppressed=suppressed)
 
 
 def remember_installed(

@@ -10,8 +10,8 @@ class TestPlanWorktrees(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.store = Store(os.path.join(self.tmp.name, "worktrees.db"))
         self.plan = self.store.add_plan("Plan 6", description="", goal="")
-        self.repo = os.path.join(self.tmp.name, "repo")
-        self.worktree = os.path.join(self.tmp.name, "repo--plan-6")
+        self.repo = os.path.realpath(os.path.join(self.tmp.name, "repo"))
+        self.worktree = os.path.realpath(os.path.join(self.tmp.name, "repo--plan-6"))
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -27,8 +27,8 @@ class TestPlanWorktrees(unittest.TestCase):
         )
 
         self.assertEqual(row.plan_id, self.plan.id)
-        self.assertEqual(row.repo_path, os.path.abspath(self.repo))
-        self.assertEqual(row.worktree_path, os.path.abspath(self.worktree))
+        self.assertEqual(row.repo_path, os.path.realpath(self.repo))
+        self.assertEqual(row.worktree_path, os.path.realpath(self.worktree))
         self.assertEqual(row.branch, "plan/6-plan-worktrees")
         self.assertEqual(row.repo_remote, "https://example.test/repo.git")
         self.assertEqual(row.registered_at, 123.0)
@@ -49,7 +49,7 @@ class TestPlanWorktrees(unittest.TestCase):
 
         self.assertEqual(second.id, first.id)
         self.assertEqual(second.branch, "new")
-        self.assertEqual(second.worktree_path, os.path.abspath(self.worktree + "-moved"))
+        self.assertEqual(second.worktree_path, os.path.realpath(self.worktree + "-moved"))
         self.assertEqual(len(self.store.list_plan_worktrees(self.plan.id)), 1)
 
     def test_registration_survives_reopen(self):

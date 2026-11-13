@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import re
 import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
@@ -193,10 +194,17 @@ See the releases page.
         text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
         if "## Unreleased" not in text:
             self.skipTest("the released changelog has no Unreleased section")
-        stamped = self.gate.stamp_text(text, "0.41.1", "2026-11-12")
+        released = re.findall(r"^## v(\d+)\.(\d+)\.(\d+)", text, re.MULTILINE)
+        self.assertTrue(released)
+        major, minor, patch = (int(part) for part in released[0])
+        version = f"{major}.{minor}.{patch + 1}"
+        stamped = self.gate.stamp_text(text, version, "2026-11-12")
         self.assertEqual(self.gate.check_text(stamped), [])
-        self.assertIn("## v0.41.1 — 2026-11-12", stamped)
-        self.assertIn("## v0.41.0 — 2026-11-12", stamped)
+        self.assertIn(f"## v{version} — 2026-11-12", stamped)
+        self.assertIn(
+            f"## v{major}.{minor}.{patch} — 2026-11-12",
+            stamped,
+        )
 
 
 if __name__ == "__main__":

@@ -89,6 +89,24 @@ def _isolated_plans(store: AppPort, repo: str, doing: list[Plan]) -> tuple[set[i
     return ignored, registered
 
 
+def _doing_task(store: AppPort, plan_id: int) -> Task | None:
+    """First doing task under one plan, if any."""
+    for milestone in store.list_milestones(plan_id):
+        for task in store.list_tasks(milestone.id):
+            if task.status == Status.DOING:
+                return task
+    return None
+
+
+def _plan_linked(store: AppPort, plan_id: int, linked: set[tuple[str, int]]) -> bool:
+    """True when the plan or one of its milestones links this checkout."""
+    if ("plan", plan_id) in linked:
+        return True
+    return any(
+        ("milestone", milestone.id) in linked for milestone in store.list_milestones(plan_id)
+    )
+
+
 def resolve(store: AppPort, cwd: str | Path | None = None) -> HookScope:
     """Return the managed state and doing task for one checkout."""
     repo = store.checkout_path(str(cwd or Path.cwd()))
@@ -105,20 +123,9 @@ def resolve(store: AppPort, cwd: str | Path | None = None) -> HookScope:
     for plan in doing:
         if plan.id in ignored:
             continue
-        if plan.worktree_required and plan.id in registered:
-            for milestone in store.list_milestones(plan.id):
-                for task in store.list_tasks(milestone.id):
-                    if task.status == Status.DOING:
-                        return HookScope(repo=repo, managed=True, task=task)
+        if not local and plan.id not in registered and not _plan_linked(store, plan.id, linked):
             continue
-        if not local and ("plan", plan.id) not in linked:
-            for milestone in store.list_milestones(plan.id):
-                if ("milestone", milestone.id) in linked:
-                    break
-            else:
-                continue
-        for milestone in store.list_milestones(plan.id):
-            for task in store.list_tasks(milestone.id):
-                if task.status == Status.DOING:
-                    return HookScope(repo=repo, managed=True, task=task)
+        task = _doing_task(store, plan.id)
+        if task is not None:
+            return HookScope(repo=repo, managed=True, task=task)
     return HookScope(repo=repo, managed=True)

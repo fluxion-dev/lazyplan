@@ -23,7 +23,7 @@ python3 tools/ia_inventory.py --check
 | setup_steps | 4 |
 | hook_events | 35 |
 | doc_files | 9 |
-| doc_headings | 89 |
+| doc_headings | 91 |
 | tui_key_conflicts | 15 |
 | stale_claims | 0 |
 | env_names | 12 |
@@ -431,5 +431,5 @@ python3 tools/ia_inventory.py --check
 | `docs/lpui.1` | NAME · SYNOPSIS · DESCRIPTION · GLOBAL OPTIONS · COMMANDS · EXAMPLES · ENVIRONMENT · FILES · EXIT STATUS · SEE ALSO |
 | `docs/lazyplan.1` |  |
 | `src/lazyplan/data/AGENTS.md` | lazyplan (`lpui`) |
-| `src/lazyplan/data/SKILL.md` | lazyplan (`lpui`) — local plan journal · Identity and surfaces · DB scoping and setup · Linked repos · Git proof and pull requests · Starting a plan: interview first · Readability and scouting · Record the definition · Review gate: plan is truth · Plan documents and recipes · Trust and coordination · During execution |
+| `src/lazyplan/data/SKILL.md` | lazyplan (`lpui`) — local plan journal · Identity and surfaces · DB scoping and setup · Linked repos · Git proof and pull requests · Starting a plan: interview first · Readability and scouting · Record the definition · Review gate: plan is truth · Plan documents and recipes · Trust and coordination · Plan worktrees |
 | `site/index.html` |  |

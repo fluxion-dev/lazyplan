@@ -217,6 +217,9 @@ class ReconcileMixin:
 
     def desired_plans(self, plans: list) -> list[tuple[tuple[str, int], RowSpec, bool]]:
         """Row specs for one panel's plans, in order."""
+        counts = {
+            plan_id: len(rows) for plan_id, rows in self.app.store.plan_worktrees_map().items()
+        }
         return [
             (
                 ("plan", plan.id),
@@ -224,7 +227,7 @@ class ReconcileMixin:
                     plan,
                     self._progress,
                     attention=("plan", plan.id) in self._attention,
-                    worktrees=len(self.app.store.list_plan_worktrees(plan.id)),
+                    worktrees=counts.get(plan.id, 0),
                 ),
                 bool(milestones),
             )

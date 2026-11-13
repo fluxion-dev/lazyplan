@@ -72,6 +72,16 @@ class WorktreesMixin(StoreBase):
             ).fetchall()
         return [self._row_to_plan_worktree(row) for row in rows]
 
+    def plan_worktrees_map(self) -> dict[int, list[PlanWorktree]]:
+        """Every registration grouped by plan id, oldest first, in one read."""
+        with self._connect() as conn:
+            rows = conn.execute("SELECT * FROM plan_worktrees ORDER BY id").fetchall()
+        out: dict[int, list[PlanWorktree]] = {}
+        for row in rows:
+            item = self._row_to_plan_worktree(row)
+            out.setdefault(item.plan_id, []).append(item)
+        return out
+
     def remove_plan_worktree(self, plan_id: int, repo_path: str, actor: str = "human") -> bool:
         """Remove one registration; False when the pair was never registered."""
         repo = self.resolve_repo_path(repo_path)

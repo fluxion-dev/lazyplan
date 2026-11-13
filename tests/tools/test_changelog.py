@@ -201,10 +201,7 @@ See the releases page.
         stamped = self.gate.stamp_text(text, version, "2026-11-12")
         self.assertEqual(self.gate.check_text(stamped), [])
         self.assertIn(f"## v{version} — 2026-11-12", stamped)
-        self.assertIn(
-            f"## v{major}.{minor}.{patch} — 2026-11-12",
-            stamped,
-        )
+        self.assertIn(f"## v{major}.{minor}.{patch} — ", stamped)
 
 
 if __name__ == "__main__":

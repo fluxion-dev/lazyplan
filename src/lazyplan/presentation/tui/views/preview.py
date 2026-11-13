@@ -78,6 +78,15 @@ def _row(*parts: object, sep: str = " · ") -> str:
     return "- " + sep.join(str(part) for part in parts if str(part))
 
 
+NONE_YET = "_None yet._"
+
+
+def details_block(heading: str, text: object) -> PreviewBlock:
+    """One details section; an empty field still shows its heading."""
+    body = str(text or "").strip()
+    return PreviewBlock(heading, (body or NONE_YET,))
+
+
 def _child_row(letter: str, oid: object, title: object, suffix: str = "") -> str:
     """One plain child row: id, two spaces, title, then an optional count."""
     head = f"- {letter}{oid}  {escape_markdown(str(title))}"
@@ -300,12 +309,8 @@ def build_plan(
     obj = full.get("plan", {})
     header, meta_line = _title("plan", oid, obj, full)
     blocks: list[PreviewBlock] = []
-    goal = str(obj.get("goal", "") or "").strip()
-    desc = str(obj.get("description", "") or "").strip()
-    if goal:
-        blocks.append(PreviewBlock("why", (goal,)))
-    if desc:
-        blocks.append(PreviewBlock("what", (desc,)))
+    blocks.append(details_block("why", obj.get("goal")))
+    blocks.append(details_block("what", obj.get("description")))
     questions = questions_block(full.get("questions", []))
     if questions is not None:
         blocks.append(questions)
@@ -334,9 +339,7 @@ def build_milestone(
     obj = full.get("milestone", {})
     header, meta_line = _title("milestone", oid, obj, full)
     blocks: list[PreviewBlock] = []
-    desc = str(obj.get("description", "") or "").strip()
-    if desc:
-        blocks.append(PreviewBlock("details", (desc,)))
+    blocks.append(details_block("details", obj.get("description")))
     tasks = tasks_block(_milestone_tasks(full))
     if tasks is not None:
         blocks.append(tasks)
@@ -353,9 +356,7 @@ def build_task(
     obj = full.get("task", {})
     header, meta_line = _title("task", oid, obj, full)
     blocks: list[PreviewBlock] = []
-    desc = str(obj.get("description", "") or "").strip()
-    if desc:
-        blocks.append(PreviewBlock("details", (desc,)))
+    blocks.append(details_block("details", obj.get("description")))
     proof = proof_block(full.get("criteria", []))
     if proof is not None:
         blocks.append(proof)

@@ -164,6 +164,25 @@ class PreviewDocumentTest(unittest.TestCase):
         self.assertTrue(text.startswith("## WHY"))
         self.assertLess(text.index("## WHAT"), text.index("## QUESTIONS"))
 
+    def test_empty_details_keep_their_heading_with_a_placeholder(self) -> None:
+        plan = self.store.add_plan("Bare plan", "")
+        milestone = self.store.add_milestone(plan.id, "Bare milestone", "")
+        task = self.store.add_task(milestone.id, "Bare task", "")
+        cases = (
+            ("plan", plan.id, ("## WHY", "## WHAT")),
+            ("milestone", milestone.id, ("## DETAILS",)),
+            ("task", task.id, ("## DETAILS",)),
+        )
+        for kind, oid, headings in cases:
+            with self.subTest(kind=kind):
+                full = self.store.get_full(kind, oid)
+                assert full is not None
+                text = build_preview(kind, oid, full).render_markdown()
+                self.assertTrue(text.startswith(headings[0]))
+                for heading in headings:
+                    section = text.split(heading, 1)[1].split("## ", 1)[0]
+                    self.assertIn("_None yet._", section)
+
     def test_milestone_details_show_in_full_first(self) -> None:
         milestone = self.store.add_milestone(
             self.plan.id,

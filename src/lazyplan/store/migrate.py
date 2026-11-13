@@ -8,7 +8,9 @@ from __future__ import annotations
 import sqlite3
 import uuid
 
-SCHEMA_VERSION = 14
+from .agent_schema import AGENT_SCHEMA
+
+SCHEMA_VERSION = 15
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS plans (
@@ -104,7 +106,7 @@ CREATE TABLE IF NOT EXISTS external_refs (
     UNIQUE(plan_id, url)
 );
 CREATE INDEX IF NOT EXISTS idx_external_refs_plan ON external_refs(plan_id, id);
-CREATE TABLE IF NOT EXISTS sessions (
+CREATE TABLE IF NOT EXISTS session_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     actor TEXT NOT NULL DEFAULT 'human',
     plan_id INTEGER REFERENCES plans(id) ON DELETE SET NULL,
@@ -122,9 +124,13 @@ CREATE TABLE IF NOT EXISTS sessions (
     plan_source TEXT NOT NULL DEFAULT 'auto',
     archived_at REAL NOT NULL DEFAULT 0
 );
-CREATE INDEX IF NOT EXISTS idx_sessions_open ON sessions(ended_at, actor, repo_path);
-CREATE INDEX IF NOT EXISTS idx_sessions_plan ON sessions(plan_id, ended_at);
-CREATE INDEX IF NOT EXISTS idx_sessions_repo ON sessions(ended_at, repo_path, started_at);
+CREATE INDEX IF NOT EXISTS idx_session_history_open
+    ON session_history(ended_at, actor, repo_path);
+CREATE INDEX IF NOT EXISTS idx_session_history_plan
+    ON session_history(plan_id, ended_at);
+CREATE INDEX IF NOT EXISTS idx_session_history_repo
+    ON session_history(ended_at, repo_path, started_at);
+
 CREATE TABLE IF NOT EXISTS milestones (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
@@ -468,30 +474,64 @@ def _migrate_events_session(conn: sqlite3.Connection) -> None:
     conn.execute("CREATE INDEX IF NOT EXISTS idx_events_session ON events(session_id, id)")
 
 
+def _tables(conn: sqlite3.Connection) -> set[str]:
+    """Every table currently in the database."""
+    return {
+        str(r["name"])
+        for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+    }
+
+
+def _history_table(conn: sqlite3.Connection) -> str | None:
+    """The session history table, under either its old or current name."""
+    tables = _tables(conn)
+    if "session_history" in tables:
+        return "session_history"
+    if "sessions" in tables:
+        return "sessions"
+    return None
+
+
+def _migrate_session_history(conn: sqlite3.Connection) -> None:
+    """Rename sessions to session_history, keeping every id and summary."""
+    tables = _tables(conn)
+    if "session_history" in tables and "sessions" not in tables:
+        return
+    if "sessions" in tables and "session_history" not in tables:
+        conn.execute("ALTER TABLE sessions RENAME TO session_history")
+        return
+    if "sessions" in tables and "session_history" in tables:
+        conn.execute("INSERT OR IGNORE INTO session_history SELECT * FROM sessions")
+        conn.execute("DROP TABLE sessions")
+
+
 def _migrate_session_state(conn: sqlite3.Connection) -> None:
-    """Add lifecycle state to sessions and backfill the heartbeat."""
-    existing = {r["name"] for r in conn.execute("PRAGMA table_info(sessions)").fetchall()}
+    """Add lifecycle state to session history and backfill the heartbeat."""
+    table = _history_table(conn)
+    if table is None:
+        return
+    existing = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()}
     if "phase" not in existing:
-        conn.execute("ALTER TABLE sessions ADD COLUMN phase TEXT NOT NULL DEFAULT 'working'")
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN phase TEXT NOT NULL DEFAULT 'working'")
     if "last_seen_at" not in existing:
-        conn.execute("ALTER TABLE sessions ADD COLUMN last_seen_at REAL NOT NULL DEFAULT 0")
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN last_seen_at REAL NOT NULL DEFAULT 0")
     if "host" not in existing:
-        conn.execute("ALTER TABLE sessions ADD COLUMN host TEXT NOT NULL DEFAULT ''")
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN host TEXT NOT NULL DEFAULT ''")
     if "host_session" not in existing:
-        conn.execute("ALTER TABLE sessions ADD COLUMN host_session TEXT NOT NULL DEFAULT ''")
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN host_session TEXT NOT NULL DEFAULT ''")
     if "auto_closed" not in existing:
-        conn.execute("ALTER TABLE sessions ADD COLUMN auto_closed INTEGER NOT NULL DEFAULT 0")
-    conn.execute("UPDATE sessions SET last_seen_at=started_at WHERE last_seen_at=0")
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_sessions_repo ON sessions(ended_at, repo_path, started_at)"
-    )
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN auto_closed INTEGER NOT NULL DEFAULT 0")
+    conn.execute(f"UPDATE {table} SET last_seen_at=started_at WHERE last_seen_at=0")
 
 
 def _migrate_session_attribution(conn: sqlite3.Connection) -> None:
     """Add how a session got its plan when the column is missing."""
-    existing = {r["name"] for r in conn.execute("PRAGMA table_info(sessions)").fetchall()}
+    table = _history_table(conn)
+    if table is None:
+        return
+    existing = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()}
     if "plan_source" not in existing:
-        conn.execute("ALTER TABLE sessions ADD COLUMN plan_source TEXT NOT NULL DEFAULT 'auto'")
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN plan_source TEXT NOT NULL DEFAULT 'auto'")
 
 
 def _migrate_claim_location(conn: sqlite3.Connection) -> None:
@@ -511,8 +551,10 @@ def _migrate_plan_worktree_required(conn: sqlite3.Connection) -> None:
 
 
 def _migrate_archive_columns(conn: sqlite3.Connection) -> None:
-    """Add the archive stamp to plans and sessions, then index it."""
-    for table in ("plans", "sessions"):
+    """Add the archive stamp to plans, sessions, and agents, then index it."""
+    history = _history_table(conn)
+    tables = ["plans", "agents"] + ([history] if history else [])
+    for table in tables:
         existing = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()}
         if "archived_at" not in existing:
             conn.execute(f"ALTER TABLE {table} ADD COLUMN archived_at REAL NOT NULL DEFAULT 0")
@@ -525,7 +567,9 @@ def migrate(conn: sqlite3.Connection) -> None:
     if current == SCHEMA_VERSION:
         return
     _migrate_elements(conn)
+    _migrate_session_history(conn)
     conn.executescript(SCHEMA)
+    conn.executescript(AGENT_SCHEMA)
     _migrate_plan_uid(conn)
     _migrate_task_blocked(conn)
     _migrate_events_session(conn)

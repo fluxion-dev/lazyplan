@@ -64,7 +64,6 @@ class StoreBase(StoreStubs):
         self.path = resolve_db_path(path)
         self.paths = paths or PathAdapter()
         self._local = threading.local()
-        self._session_cache: dict[str, int | None] = {}
         try:
             if Path(self.path).expanduser() == shared_db_path():
                 seed_shared_db(self.path)
@@ -117,6 +116,9 @@ class StoreBase(StoreStubs):
         try:
             conn.row_factory = sqlite3.Row
             conn.execute("PRAGMA foreign_keys = ON")
+            conn.execute("PRAGMA busy_timeout = 5000")
+            conn.execute("PRAGMA journal_mode = WAL")
+            conn.execute("PRAGMA synchronous = NORMAL")
             with conn:
                 yield conn
         finally:
@@ -132,9 +134,7 @@ class StoreBase(StoreStubs):
         session_id: int | None = None,
         now: float | None = None,
     ) -> None:
-        """Append an event row, tagged with the active session when one exists."""
-        if session_id is None:
-            session_id = self._resolve_session_id(actor)
+        """Append an event row; history rows keep their original session tag."""
         stamp = time.time() if now is None else now
         with self._connect() as conn:
             conn.execute(
@@ -142,11 +142,6 @@ class StoreBase(StoreStubs):
                 " VALUES (?,?,?,?,?,?)",
                 (stamp, _actor(actor), kind, action, detail[:500], session_id),
             )
-            if session_id:
-                conn.execute(
-                    "UPDATE sessions SET last_seen_at=? WHERE id=? AND ended_at=0",
-                    (stamp, session_id),
-                )
 
     def feed(self, limit: int = 20) -> list[dict]:
         """Recent events, newest first."""
@@ -208,19 +203,19 @@ class StoreBase(StoreStubs):
         )
 
     def live_fingerprint(self) -> tuple:
-        """Live poll key: session rows, newest heartbeat, and ended count.
+        """Live poll key: agent rows, newest update, and terminal count.
 
-        This changes on every heartbeat so the agents pane can refresh while
-        the plan tree stays untouched.
+        This changes on every agent transition so the tracker can repaint
+        while the plan tree stays untouched.
         """
         try:
             with self._connect() as conn:
                 row = conn.execute(
                     "SELECT COUNT(*) c,"
                     " COALESCE(MAX(id),0) newest,"
-                    " COALESCE(MAX(last_seen_at),0) seen,"
+                    " COALESCE(MAX(updated_at),0) seen,"
                     " COALESCE(SUM(CASE WHEN ended_at>0 THEN 1 ELSE 0 END),0) ended"
-                    " FROM sessions"
+                    " FROM agents"
                 ).fetchone()
         except Exception:
             return (0, 0, 0.0, 0)

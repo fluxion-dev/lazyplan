@@ -46,9 +46,6 @@ class StoreStubs(StoreStubsLinks):
     def _row_to_plan(self, r: sqlite3.Row) -> Plan:
         raise NotImplementedError
 
-    def _resolve_session_id(self, actor: str) -> int | None:
-        raise NotImplementedError
-
     def plan_uid(self, pid: int) -> str:
         raise NotImplementedError
 

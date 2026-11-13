@@ -5,13 +5,13 @@ from __future__ import annotations
 from typing import Protocol
 
 from ..entities import Claim, PlanWorktree
+from .agents import AgentsReadPort
 from .provenance import ProvenancePort
 from .refs import RefsPort
 from .revisions import RevisionsPort
-from .sessions import SessionsReadPort
 
 
-class InsightsPort(ProvenancePort, RevisionsPort, SessionsReadPort, RefsPort, Protocol):
+class InsightsPort(ProvenancePort, RevisionsPort, AgentsReadPort, RefsPort, Protocol):
     """Read-only surface used by metrics, stats, audit, brief, and lint."""
 
     def list_plan_worktrees(self, plan_id: int) -> list[PlanWorktree]: ...

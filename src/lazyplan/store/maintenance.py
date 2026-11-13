@@ -515,19 +515,6 @@ class MaintenanceMixin(StoreBase):
         self._drop_sidecars(target)
         return snapshot_counts
 
-    def _snapshot_bindings(self, source_path: Path, target: Path) -> Path | None:
-        """Copy the session binding directory beside the database snapshot."""
-        source_bindings = source_path.parent / "sessions" / "bindings"
-        if not source_bindings.is_dir():
-            return None
-        bindings = target.with_name(f"{target.name}.bindings")
-        try:
-            shutil.copytree(source_bindings, bindings)
-        except OSError as exc:
-            self._remove_snapshot(target, bindings)
-            raise MaintenanceBackupError(f"binding snapshot failed: {exc}") from exc
-        return bindings
-
     def backup(self, label: str = "") -> BackupResult:
         """Copy the database beside itself, verify it, and snapshot bindings."""
         source_path = Path(self.path).expanduser()
@@ -540,9 +527,6 @@ class MaintenanceMixin(StoreBase):
         ]
         if label:
             details.append(f"label={label}")
-        bindings = self._snapshot_bindings(source_path, target)
-        if bindings is not None:
-            details.append(f"bindings={bindings}")
         return BackupResult(
             path=str(target),
             bytes=target.stat().st_size,

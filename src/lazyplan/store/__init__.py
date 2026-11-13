@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from .agents import AgentsMixin
 from .annotations import AnnotationsMixin
 from .base import (
     ClaimConflict,
@@ -21,7 +22,7 @@ from .questions import QuestionsMixin
 from .refs import RefsMixin
 from .repos import ReposMixin
 from .revisions import RevisionsMixin
-from .sessions import SessionsMixin
+from .session_history import SessionHistoryMixin
 from .stubs import CLAIM_DEFAULT_TTL
 from .tasks import TasksMixin
 from .touchpoints import TouchpointsMixin
@@ -33,7 +34,8 @@ class Store(
     PlansMixin,
     QuestionsMixin,
     RefsMixin,
-    SessionsMixin,
+    AgentsMixin,
+    SessionHistoryMixin,
     ClaimsMixin,
     EvidenceMixin,
     AnnotationsMixin,

@@ -45,6 +45,7 @@ CLI_ACTIONS: dict[str, tuple[str, ...]] = {
     "plan.export": ("export",),
     "app.update": ("upgrade",),
     "app.notes": ("notes",),
+    "app.health": ("doctor",),
     "app.help": ("help",),
     "task.touch_add": ("touch add",),
     "task.touch_remove": ("touch remove",),

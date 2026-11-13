@@ -5,6 +5,23 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
 
 ## Unreleased
 
+### Added
+
+- **A startup health check.** Opening `lpui` checks the skills and hooks for
+  your agents, `lpui` and `git` on `PATH`, and the GitHub CLI login. A dialog
+  lists each gap with what it costs, installs the missing skills and hooks and
+  restarts `lpui`, then names the agent sessions to restart. Not now and Never
+  ask hide gaps without losing them: a health chip and the Health check palette
+  command still list them, and `lpui doctor` prints the same findings.
+
+### Changed
+
+- **Removed skills and hooks are offered again.** A skill file or hook entry
+  deleted after install now shows up as missing instead of staying silent.
+- **Integration prompts moved into the screen.** `lpui` no longer asks about
+  new integrations in plain text before the screen opens; the health dialog
+  does. `lpui setup` keeps its prompt.
+
 ### Fixed
 
 - **Plan worktrees work on Windows.** `lpui plan worktree` accepts checkouts

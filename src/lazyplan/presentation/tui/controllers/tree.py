@@ -4,14 +4,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, cast
 
-from textual.widgets import Label, Static, Tree
+from textual.widgets import Static, Tree
 from textual.widgets.tree import TreeNode
 
 from .... import services
 from ....core.entities import Milestone, Plan, Task
 from ....core.policies.planning import progress_counts
 from ....services.stats import attention_reasons
-from ...shared.help import hint_bar
 from ..views.rows import RowSpec
 from .expansion import ExpansionMixin
 from .filtering import TreeFilter
@@ -247,9 +246,7 @@ class TreeController(ExpansionMixin, LazyBranchMixin, ReconcileMixin, PollMixin)
             self.sync_filter_snapshot(filtering)
             self.apply_expansion(self.reveal_keys() if filtering else None)
             self.show_empty(not active, not finished)
-            app.query_one("#hints", Label).update(
-                hint_bar(max(10, app.size.width - 2), markup=True)
-            )
+            app.health_controller.refresh_hints()
             self.restore_view(view, prev_selected)
             app.metrics_controller.refresh()
             selected = app.selected

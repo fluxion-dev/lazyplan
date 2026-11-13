@@ -1589,18 +1589,18 @@
   "counts": {
     "cli_commands": 52,
     "doc_files": 9,
-    "doc_headings": 91,
+    "doc_headings": 92,
     "env_names": 11,
     "file_paths": 12,
     "hook_events": 35,
     "mcp_resources": 3,
     "mcp_tools": 68,
-    "palette_commands": 52,
+    "palette_commands": 53,
     "setup_steps": 4,
     "stale_claims": 0,
-    "tui_bindings": 65,
+    "tui_bindings": 66,
     "tui_key_conflicts": 15,
-    "tui_screens": 17
+    "tui_screens": 18
   },
   "docs": {
     "files": [
@@ -1655,6 +1655,7 @@
           "pip, including the install.sh venv",
           "Uninstall",
           "Start",
+          "Startup health check",
           "Setup and scope",
           "Inspect before writing",
           "Upgrades and migration",
@@ -2549,6 +2550,14 @@
         "section": "View"
       },
       {
+        "handler": "health_prompt",
+        "help_group": "APP",
+        "id": "health-check",
+        "key": "",
+        "label": "Health check",
+        "section": "App"
+      },
+      {
         "handler": "help",
         "help_group": "APP",
         "id": "help",
@@ -2749,7 +2758,7 @@
         "section": "App"
       }
     ],
-    "count": 52
+    "count": 53
   },
   "setup": {
     "steps": [
@@ -2805,7 +2814,7 @@
         "file": "src/lazyplan/presentation/tui/app.py",
         "key": "T",
         "label": "Timeline",
-        "line": "87",
+        "line": "89",
         "screen": "app"
       },
       {
@@ -2813,7 +2822,7 @@
         "file": "src/lazyplan/presentation/tui/app.py",
         "key": "U",
         "label": "Update",
-        "line": "99",
+        "line": "101",
         "screen": "app"
       },
       {
@@ -2821,7 +2830,7 @@
         "file": "src/lazyplan/presentation/tui/app.py",
         "key": "W",
         "label": "Notes",
-        "line": "100",
+        "line": "102",
         "screen": "app"
       },
       {
@@ -2829,7 +2838,7 @@
         "file": "src/lazyplan/presentation/tui/app.py",
         "key": "Z",
         "label": "Fold all",
-        "line": "95",
+        "line": "97",
         "screen": "app"
       },
       {
@@ -2837,7 +2846,7 @@
         "file": "src/lazyplan/presentation/tui/app.py",
         "key": "a",
         "label": "Criterion",
-        "line": "91",
+        "line": "93",
         "screen": "app"
       },
       {
@@ -2845,7 +2854,7 @@
         "file": "src/lazyplan/presentation/tui/app.py",
         "key": "d",
         "label": "Delete",
-        "line": "92",
+        "line": "94",
         "screen": "app"
       },
       {
@@ -2853,7 +2862,7 @@
         "file": "src/lazyplan/presentation/tui/app.py",
         "key": "e",
         "label": "Edit",
-        "line": "89",
+        "line": "91",
         "screen": "app"
       },
       {
@@ -2861,7 +2870,7 @@
         "file": "src/lazyplan/presentation/tui/app.py",
         "key": "escape",
         "label": "Back",
-        "line": "85",
+        "line": "87",
         "screen": "app"
       },
       {
@@ -2869,7 +2878,7 @@
         "file": "src/lazyplan/presentation/tui/app.py",
         "key": "g",
         "label": "Source",
-        "line": "93",
+        "line": "95",
         "screen": "app"
       },
       {
@@ -2877,7 +2886,7 @@
         "file": "src/lazyplan/presentation/tui/app.py",
         "key": "m",
         "label": "Maintain",
-        "line": "98",
+        "line": "100",
         "screen": "app"
       },
       {
@@ -2885,7 +2894,7 @@
         "file": "src/lazyplan/presentation/tui/app.py",
         "key": "n",
         "label": "New",
-        "line": "88",
+        "line": "90",
         "screen": "app"
       },
       {
@@ -2893,7 +2902,7 @@
         "file": "src/lazyplan/presentation/tui/app.py",
         "key": "r",
         "label": "Refresh",
-        "line": "97",
+        "line": "99",
         "screen": "app"
       },
       {
@@ -2901,7 +2910,7 @@
         "file": "src/lazyplan/presentation/tui/app.py",
         "key": "s",
         "label": "Status",
-        "line": "90",
+        "line": "92",
         "screen": "app"
       },
       {
@@ -2909,7 +2918,7 @@
         "file": "src/lazyplan/presentation/tui/app.py",
         "key": "slash",
         "label": "Filter",
-        "line": "96",
+        "line": "98",
         "screen": "app"
       },
       {
@@ -2917,7 +2926,7 @@
         "file": "src/lazyplan/presentation/tui/app.py",
         "key": "t",
         "label": "Theme",
-        "line": "86",
+        "line": "88",
         "screen": "app"
       },
       {
@@ -2925,7 +2934,7 @@
         "file": "src/lazyplan/presentation/tui/app.py",
         "key": "z",
         "label": "Fold",
-        "line": "94",
+        "line": "96",
         "screen": "app"
       },
       {
@@ -2983,6 +2992,14 @@
         "label": "Cancel",
         "line": "43",
         "screen": "export"
+      },
+      {
+        "action": "cancel",
+        "file": "src/lazyplan/presentation/tui/screens/health.py",
+        "key": "escape",
+        "label": "Not now",
+        "line": "63",
+        "screen": "health"
       },
       {
         "action": "force",
@@ -3327,7 +3344,7 @@
           {
             "action": "add_criterion",
             "file": "src/lazyplan/presentation/tui/app.py",
-            "line": "91"
+            "line": "93"
           },
           {
             "action": "add",
@@ -3347,7 +3364,7 @@
           {
             "action": "delete",
             "file": "src/lazyplan/presentation/tui/app.py",
-            "line": "92"
+            "line": "94"
           },
           {
             "action": "delete",
@@ -3362,7 +3379,7 @@
           {
             "action": "edit_selection",
             "file": "src/lazyplan/presentation/tui/app.py",
-            "line": "89"
+            "line": "91"
           },
           {
             "action": "edit_row",
@@ -3382,7 +3399,7 @@
           {
             "action": "clear_filter",
             "file": "src/lazyplan/presentation/tui/app.py",
-            "line": "85"
+            "line": "87"
           },
           {
             "action": "cancel",
@@ -3393,6 +3410,11 @@
             "action": "cancel",
             "file": "src/lazyplan/presentation/tui/screens/export.py",
             "line": "43"
+          },
+          {
+            "action": "cancel",
+            "file": "src/lazyplan/presentation/tui/screens/health.py",
+            "line": "63"
           },
           {
             "action": "back",
@@ -3442,7 +3464,7 @@
           {
             "action": "source_trail",
             "file": "src/lazyplan/presentation/tui/app.py",
-            "line": "93"
+            "line": "95"
           },
           {
             "action": "source_hub",
@@ -3457,7 +3479,7 @@
           {
             "action": "new_context",
             "file": "src/lazyplan/presentation/tui/app.py",
-            "line": "88"
+            "line": "90"
           },
           {
             "action": "note",
@@ -3522,7 +3544,7 @@
           {
             "action": "refresh",
             "file": "src/lazyplan/presentation/tui/app.py",
-            "line": "97"
+            "line": "99"
           },
           {
             "action": "refresh",
@@ -3547,7 +3569,7 @@
           {
             "action": "toggle_status",
             "file": "src/lazyplan/presentation/tui/app.py",
-            "line": "90"
+            "line": "92"
           },
           {
             "action": "toggle_split",
@@ -3562,7 +3584,7 @@
           {
             "action": "filter_text",
             "file": "src/lazyplan/presentation/tui/app.py",
-            "line": "96"
+            "line": "98"
           },
           {
             "action": "filter",
@@ -3577,7 +3599,7 @@
           {
             "action": "cycle_theme",
             "file": "src/lazyplan/presentation/tui/app.py",
-            "line": "86"
+            "line": "88"
           },
           {
             "action": "apply_trim",
@@ -3645,6 +3667,10 @@
       {
         "class": "CriterionScreen",
         "file": "src/lazyplan/presentation/tui/screens/forms.py"
+      },
+      {
+        "class": "HealthScreen",
+        "file": "src/lazyplan/presentation/tui/screens/health.py"
       },
       {
         "class": "HelpScreen",

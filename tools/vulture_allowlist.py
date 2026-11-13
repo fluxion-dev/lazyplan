@@ -169,6 +169,8 @@ border_subtitle
 highlighted
 disabled
 _._later
+_._install
+_._never
 _._download
 _._save
 bubble

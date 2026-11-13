@@ -10,6 +10,7 @@ plus a live_fingerprint() poll that the feed toast summarizes.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -43,11 +44,12 @@ from ..shared.design import (
 from .actions import ActionMixin
 from .base import AppBase
 from .controllers.git_state import GitStateController
+from .controllers.health import HealthCheck, HealthController
 from .controllers.metrics import MetricsController
 from .controllers.tree import TreeController
 from .controllers.updates import UpdateController
 from .filters import FilterMixin
-from .launch import launch_notes, launch_update
+from .launch import Restart, launch_notes, launch_update, relaunch, take_restart_notice
 from .metrics import MetricsSection
 from .preview import PreviewMixin
 from .screens import ReleaseNotesScreen
@@ -154,6 +156,7 @@ if _TEXTUAL_OK:
             self._row_specs = {}
             self.tree_controller = TreeController(self)
             self.update_controller = UpdateController(self)
+            self.health_controller = HealthController(self)
             self.git_state_controller = GitStateController(self)
             self.metrics_controller = MetricsController(self)
             self._fp: Any = store.fingerprint()
@@ -168,6 +171,10 @@ if _TEXTUAL_OK:
         def action_update_prompt(self) -> None:
             """Open the update screen for a known or cached newer release."""
             self.update_controller.prompt()
+
+        def action_health_prompt(self) -> None:
+            """Open the health check with every finding, hidden ones included."""
+            self.health_controller.prompt()
 
         def action_release_notes(self) -> None:
             """Open the bundled release notes for the installed version."""
@@ -234,6 +241,7 @@ if _TEXTUAL_OK:
             self.set_interval(0.25, self._poll)
             self.update_controller.start()
             self.metrics_controller.start()
+            self.health_controller.start()
             self.query_one("#plans-active").border_title = f" {PANEL_PLAN_QUEUE_TITLE} "
             self.query_one("#plans-finished").border_title = f" {PANEL_PLAN_REVIEW_TITLE} "
             if self._startup_notice:
@@ -249,12 +257,26 @@ if _TEXTUAL_OK:
         db_path: str | None = None,
         startup_notice: str = "",
         startup_notes: str = "",
+        health_check: HealthCheck | None = None,
+        restart_notice: str = "",
     ) -> LazyplanApp:
         """Build the app bound to a store."""
         app = LazyplanApp(Store(db_path))
         app._startup_notice = startup_notice
         app._startup_notes = startup_notes
+        app.health_controller.check = health_check
+        app.health_controller.restart_notice = restart_notice
         return app
+
+
+def _startup_health_check(db_path: str | None) -> HealthCheck | None:
+    """The real check, off for a caller-owned database or a skipped setup."""
+    from ..setup.constants import NO_SETUP_ENV
+    from ..setup.health import current
+
+    if db_path or os.environ.get("LAZYPLAN_DB") or os.environ.get(NO_SETUP_ENV, "").strip():
+        return None
+    return lambda: current(Path.cwd(), version=package_version())
 
 
 def run(db_path: str | None = None) -> int:
@@ -266,5 +288,14 @@ def run(db_path: str | None = None) -> int:
     startup_notice, exit_now = launch_update()
     if exit_now:
         return 0
-    create_app(db_path, startup_notice, launch_notes()).run()
+    app = create_app(
+        db_path,
+        startup_notice,
+        launch_notes(),
+        _startup_health_check(db_path),
+        take_restart_notice(),
+    )
+    result = app.run()
+    if isinstance(result, Restart):
+        return relaunch(result)
     return 0

@@ -1589,7 +1589,7 @@
   "counts": {
     "cli_commands": 52,
     "doc_files": 9,
-    "doc_headings": 91,
+    "doc_headings": 92,
     "env_names": 11,
     "file_paths": 12,
     "hook_events": 35,
@@ -1655,6 +1655,7 @@
           "pip, including the install.sh venv",
           "Uninstall",
           "Start",
+          "Startup health check",
           "Setup and scope",
           "Inspect before writing",
           "Upgrades and migration",

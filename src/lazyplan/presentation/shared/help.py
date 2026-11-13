@@ -13,14 +13,9 @@ NAV_ROWS: tuple[tuple[str, str], ...] = (
 
 #: One-line hint bar: (key, short label) in reading order.
 HINT_ITEMS: tuple[tuple[str, str], ...] = (
-    ("n", "new"),
-    ("e", "edit"),
-    ("s", "status"),
-    ("d", "delete"),
-    ("/", "filter"),
-    ("g", "source"),
     ("?", "help"),
     ("c", "commands"),
+    ("/", "filter"),
 )
 
 HELP_GROUPS: tuple[str, ...] = ("MOVE", "FIND", "APP", "CHANGE", "TRUST")
@@ -95,7 +90,7 @@ def hint_bar(width: int | None = None, markup: bool = False) -> str:
     """One-line key hints; drops the least important items on narrow screens."""
     items = list(HINT_ITEMS)
     text = " · ".join(f"{key} {label}" for key, label in items)
-    for key in ("c", "d", "g"):
+    for key in ("c", "/"):
         if width is None or len(text) <= width:
             break
         items = [item for item in items if item[0] != key]

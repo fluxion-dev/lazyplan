@@ -254,6 +254,13 @@ class TestDesignSystem(unittest.TestCase):
         self.assertIn("n", table)
         self.assertIn("s", table)
 
+    def test_hint_bar_names_at_most_three_keys(self):
+        for width in (20, 40, 80, 120):
+            with self.subTest(width=width):
+                bar = help_mod.hint_bar(width)
+                self.assertLessEqual(bar.count(" · ") + 1, 3)
+                self.assertTrue(bar)
+
     def test_message_helpers(self):
         self.assertEqual(design.msg_not_found("task", 7), "task 7 not found")
         self.assertTrue(design.msg_error(ValueError("x")).startswith("error:"))

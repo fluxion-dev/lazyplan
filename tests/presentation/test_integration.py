@@ -127,12 +127,12 @@ class TestCombinedSurfaces(RefreshCase):
                 self.assert_task_row(app, self.store.get_task(task.id), state=state)
             self.assertTrue(app._row_nodes[plan_key].is_expanded)
 
-            # A settled session swaps the active glyph for the awaiting glyph.
+            # A settled session swaps the active word for the awaiting word.
             harness.heartbeat("waiting")
             await pilot.pause()
             body = self.agents_body(app)
-            self.assertIn("◆", body)
             self.assertIn("waiting", body)
+            self.assertNotIn("◆", body)
 
             # The owning plan never leaves its panel while tasks come and go.
             services.set_status(self.store, "task", added.id, Status.DONE, actor="ana")

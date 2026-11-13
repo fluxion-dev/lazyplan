@@ -159,16 +159,79 @@ Screen.short #dlg.form-tall TextArea {
     padding: 0 1;
 }
 
+Screen.stacked #source-main {
+    layout: vertical;
+}
+
+Screen.stacked #source-tree-wrap {
+    width: 100%;
+    min-width: 0;
+    height: 2fr;
+    min-height: 6;
+}
+
+Screen.stacked #source-preview {
+    width: 100%;
+    min-width: 0;
+    height: 3fr;
+    min-height: 8;
+}
+
+Screen.compact #source-head {
+    min-height: 2;
+    margin-bottom: 0;
+}
+
 #source-preview-body {
     height: auto;
 }
 
-#source-hints {
+#source-tree {
+    scrollbar-size-horizontal: 0;
+}
+
+#plan-diff-page {
+    height: 1fr;
+    border: round $lp-border;
+    border-title-color: $lp-accent;
+    background: $lp-surface-alt;
+    padding: 0 1;
+}
+
+#plan-diff-head {
+    height: auto;
+    min-height: 2;
+    background: $lp-surface;
+    color: $lp-accent;
+    padding: 0 1;
+    margin-bottom: 1;
+}
+
+#plan-diff-scroll {
+    height: 1fr;
+    padding: 0 1;
+}
+
+#plan-diff-body {
+    height: auto;
+}
+
+#plan-diff-hints {
     width: 100%;
     height: 1;
     padding: 0 1;
     background: $lp-surface;
     color: $lp-text-muted;
+}
+
+#source-hints {
+    width: 100%;
+    height: auto;
+    max-height: 2;
+    padding: 0 1;
+    background: $lp-surface;
+    color: $lp-text-muted;
+    text-wrap: wrap;
 }
 
 #source-tree-wrap:focus-within,

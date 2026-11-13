@@ -7,9 +7,11 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
 
-from lazyplan.infrastructure.vcs import DiffRead, detect_backend
+from lazyplan.infrastructure.vcs import CommitStats, DiffRead, detect_backend
+from lazyplan.infrastructure.vcs import FileStat as FileStat
 
 DIFF_CACHE_LIMIT = 16
+STATS_CACHE_LIMIT = 64
 
 _HUNK_RE = re.compile(
     r"^@@ -(?P<old>\d+)(?:,(?P<old_count>\d+))?"
@@ -38,6 +40,7 @@ class DiffHunk:
     new_start: int = 0
     new_count: int = 0
     lines: tuple[DiffLine, ...] = ()
+    section: str = ""
 
 
 @dataclass(frozen=True)
@@ -49,11 +52,24 @@ class DiffFile:
     header: tuple[str, ...] = ()
     hunks: tuple[DiffHunk, ...] = ()
     binary: bool = False
+    new_file: bool = False
+    deleted_file: bool = False
 
     @property
     def path(self) -> str:
         """Display path: the new path, falling back to the old one."""
         return self.new_path or self.old_path
+
+    @property
+    def status(self) -> str:
+        """Change kind: ``add``, ``delete``, ``rename``, or ``modify``."""
+        if self.new_file or (self.new_path and not self.old_path):
+            return "add"
+        if self.deleted_file or (self.old_path and not self.new_path):
+            return "delete"
+        if self.old_path and self.new_path and self.old_path != self.new_path:
+            return "rename"
+        return "modify"
 
 
 def _clean_diff_path(raw: str) -> str:
@@ -96,6 +112,7 @@ def _build_hunk(header: str, body: list[str]) -> DiffHunk:
         new_start=int(match.group("new")),
         new_count=int(match.group("new_count") or 1),
         lines=tuple(lines),
+        section=match.group("section"),
     )
 
 
@@ -106,6 +123,8 @@ def _parse_file_chunk(lines: list[str]) -> DiffFile:
     header: list[str] = []
     hunks: list[DiffHunk] = []
     binary = False
+    new_file = False
+    deleted_file = False
     hunk_header = ""
     hunk_body: list[str] = []
     for raw in lines:
@@ -125,6 +144,12 @@ def _parse_file_chunk(lines: list[str]) -> DiffFile:
         elif raw.startswith(("Binary files ", "GIT binary patch")):
             binary = True
             header.append(raw)
+        elif raw.startswith("new file mode "):
+            new_file = True
+            header.append(raw)
+        elif raw.startswith("deleted file mode "):
+            deleted_file = True
+            header.append(raw)
         elif raw.startswith("--- "):
             old_path = _clean_diff_path(raw[4:])
             header.append(raw)
@@ -143,6 +168,8 @@ def _parse_file_chunk(lines: list[str]) -> DiffFile:
         header=tuple(header),
         hunks=tuple(hunks),
         binary=binary,
+        new_file=new_file,
+        deleted_file=deleted_file,
     )
 
 
@@ -197,3 +224,75 @@ def _read_diff_uncached(repo: str, sha: str, path: str) -> DiffRead:
 def clear_diff_cache() -> None:
     """Drop every cached diff (tests and explicit refresh)."""
     _diff_cache.clear()
+
+
+@dataclass(frozen=True)
+class DiffPage:
+    """One whole-file window over a cached commit diff."""
+
+    read: DiffRead
+    files: tuple[DiffFile, ...] = ()
+    offset: int = 0
+    total: int = 0
+    has_more: bool = False
+
+    @property
+    def next_offset(self) -> int:
+        """Offset for the next page, or the current offset at the end."""
+        return self.offset + len(self.files)
+
+
+def read_diff_page(
+    repo: str,
+    sha: str,
+    path: str = "",
+    offset: int = 0,
+    limit: int = 20,
+) -> DiffPage:
+    """Read one whole-file page from the cached commit diff."""
+    read = read_diff(repo, sha, path)
+    if read.state not in ("ok", "root"):
+        return DiffPage(read=read)
+    files = parse_patch(read.patch)
+    total = len(files)
+    start = min(max(0, offset), total)
+    window = files[start : start + max(1, limit)]
+    return DiffPage(
+        read=read,
+        files=window,
+        offset=start,
+        total=total,
+        has_more=start + len(window) < total,
+    )
+
+
+_stats_cache: OrderedDict[tuple[str, str, str], CommitStats] = OrderedDict()
+
+
+def read_commit_stats(repo: str, sha: str) -> CommitStats:
+    """Read per-file status and counts through a small LRU cache."""
+    key = _cache_key(repo, sha, "")
+    hit = _stats_cache.get(key)
+    if hit is not None:
+        _stats_cache.move_to_end(key)
+        return hit
+    result = _read_commit_stats_uncached(repo, sha)
+    _stats_cache[key] = result
+    while len(_stats_cache) > STATS_CACHE_LIMIT:
+        _stats_cache.popitem(last=False)
+    return result
+
+
+def _read_commit_stats_uncached(repo: str, sha: str) -> CommitStats:
+    """Read one commit's file stats without touching the cache."""
+    if not repo.strip():
+        return CommitStats(state="error", detail="no checkout linked")
+    backend, root = detect_backend(repo)
+    if backend is None or root is None:
+        return CommitStats(state="error", detail="not a git checkout")
+    return backend.file_stats(root, sha)
+
+
+def clear_stats_cache() -> None:
+    """Drop every cached commit stat row (tests and explicit refresh)."""
+    _stats_cache.clear()

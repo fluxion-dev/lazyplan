@@ -120,9 +120,14 @@ class PreviewDocumentTest(unittest.TestCase):
         full = self.store.get_full("plan", plan.id)
         assert full is not None
         text = build_preview(self.store, "plan", plan.id, full, []).render()
-        self.assertIn("Milestone \\*bold\\* \\[x\\]", text)
-        self.assertIn(f"**T{task.id}** Task \\#hash", text)
+        self.assertIn(f"**M{milestone.id}** Milestone \\*bold\\* \\[x\\]", text)
         self.assertIn("raw **prose**", text)
+        milestone_full = self.store.get_full("milestone", milestone.id)
+        assert milestone_full is not None
+        milestone_text = build_preview(
+            self.store, "milestone", milestone.id, milestone_full, []
+        ).render()
+        self.assertIn(f"**T{task.id}** Task \\#hash", milestone_text)
 
     def test_plan_preview_keeps_order_and_sections(self) -> None:
         full = self.store.get_full("plan", self.plan.id)
@@ -133,20 +138,20 @@ class PreviewDocumentTest(unittest.TestCase):
         self.assertIn("## WHY", text)
         self.assertIn("Why we build", text)
         self.assertIn("## WHAT", text)
-        self.assertIn("## NEXT", text)
-        self.assertIn("Task title", text)
+        self.assertIn("## MILESTONES 1", text)
+        self.assertIn("Milestone title", text)
+        self.assertNotIn("## NEXT", text)
+        self.assertNotIn("Task title", text)
 
-    def test_plan_preview_milestones_are_title_only(self) -> None:
+    def test_plan_preview_milestones_are_header_rows(self) -> None:
         full = self.store.get_full("plan", self.plan.id)
         assert full is not None
         lines = build_preview(self.store, "plan", self.plan.id, full, []).render().splitlines()
         heading = next(index for index, line in enumerate(lines) if "MILESTONES" in line)
         row = lines[heading + 1]
-        self.assertIn("Milestone title", row)
+        self.assertEqual(row, f"- ○ **M{self.milestone.id}** Milestone title")
         self.assertNotIn("Details", row)
-        self.assertNotIn(f"M{self.milestone.id}", row)
         self.assertNotIn("tasks", row)
-        self.assertNotIn("○", row)
 
     def test_acceptance_block_lists_every_criterion_open_first(self) -> None:
         criteria = [
@@ -203,6 +208,27 @@ class PreviewDocumentTest(unittest.TestCase):
         acceptance = text.split("## ACCEPTANCE", 1)[1].split("## ", 1)[0]
         self.assertNotIn(f"C{criteria[0].id}", acceptance)
         self.assertEqual(acceptance.count("- ○"), 3)
+
+    def test_milestone_preview_tasks_are_header_rows(self) -> None:
+        second = self.store.add_task(
+            self.milestone.id, "Second task", "Second details\nmore detail"
+        )
+        full = self.store.get_full("milestone", self.milestone.id)
+        assert full is not None
+        lines = (
+            build_preview(self.store, "milestone", self.milestone.id, full, [])
+            .render()
+            .splitlines()
+        )
+        heading = next(index for index, line in enumerate(lines) if line.startswith("## TASKS"))
+        rows = [line for line in lines[heading + 1 :] if line.startswith("- ")]
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0], f"- ○ **T{self.task.id}** Task title")
+        self.assertEqual(rows[1], f"- ○ **T{second.id}** Second task")
+        text = "\n".join(rows)
+        self.assertNotIn("Task details", text)
+        self.assertNotIn("Second details", text)
+        self.assertNotIn("more detail", text)
 
     def test_plan_preview_shows_approval_and_drift(self) -> None:
         self.store.add_revision(self.plan.id, "a" * 64, "{}", reason="initial")

@@ -13,12 +13,18 @@ from typing import TYPE_CHECKING
 from lazyplan.infrastructure.forge import RepoRef, detect_forge, parse_pull_url
 from lazyplan.infrastructure.vcs import commit_url, detect_backend, file_url, origin_url
 
+from .source_diff import CommitStats as CommitStats
 from .source_diff import DiffFile as DiffFile
 from .source_diff import DiffHunk as DiffHunk
 from .source_diff import DiffLine as DiffLine
+from .source_diff import DiffPage as DiffPage
+from .source_diff import FileStat as FileStat
 from .source_diff import clear_diff_cache as clear_diff_cache
+from .source_diff import clear_stats_cache as clear_stats_cache
 from .source_diff import parse_patch as parse_patch
+from .source_diff import read_commit_stats as read_commit_stats
 from .source_diff import read_diff as read_diff
+from .source_diff import read_diff_page as read_diff_page
 
 if TYPE_CHECKING:
     from ..core.ports.provenance import ProvenancePort
@@ -167,7 +173,8 @@ def _commit_groups(
     groups: dict[str, list[tuple[object, list[str]]]] = {}
     for parent_kind, parent_id in _scope_parents(store, kind, obj_id):
         for link in store.list_links(parent_kind, parent_id):
-            repo = str(getattr(link, "repo_root", "") or "")
+            raw_repo = str(getattr(link, "repo_root", "") or "")
+            repo = store.resolve_repo_path(raw_repo) if raw_repo else ""
             owners: list[str] = []
             _add_unique(owners, _owner_label(store, link.parent_kind, link.parent_id))
             groups.setdefault(repo, []).append((link, owners))

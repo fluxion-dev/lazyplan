@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from ... import services
 from .context import ContextMixin
-from .screens import FilterPromptScreen, TextScreen
-from .views.diff import diff_text
+from .screens import FilterPromptScreen
+from .screens.plan_diff import PlanDiffScreen
 
 
 class ApprovalMixin(ContextMixin):
@@ -56,4 +56,4 @@ class ApprovalMixin(ContextMixin):
         except (ValueError, KeyError) as exc:
             self.notify(str(exc), timeout=4)
             return
-        self.push_screen(TextScreen(f"PLAN P{plan_id} DIFF", diff_text(result)))
+        self.push_screen(PlanDiffScreen(result))

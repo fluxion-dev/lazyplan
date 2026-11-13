@@ -13,6 +13,8 @@
 - Poll seams kept for tests: rebuilds counts full tree rebuilds and poll_now
   drives one poll on the calling thread; both are read by the headless Pilot
   tests, never by production call sites.
+- Diff renderer seams: highlight_line and clear_highlight_cache are consumed by
+  the unified renderer and its cache reset in the next slice.
 - sqlite3 API noise: row_factory.
 - `_status_keep_ids` is the bounded keep-set helper asserted directly by trim tests.
 - shlex API noise: whitespace and whitespace_split configure the lexer.
@@ -59,6 +61,9 @@ _.export_plan
 _.render_plan_markdown
 _.rebuilds
 _.poll_now
+highlight_line
+clear_highlight_cache
+_.next_offset
 _.cursor_line
 BINDINGS
 auto_closed
@@ -137,6 +142,7 @@ _.action_filter
 _.check_action
 _._on_click
 _._on_highlight
+_._on_expanded
 _._folder_selected
 _._file_selected
 _._export_pressed
@@ -216,6 +222,13 @@ _.action_filter_kind
 _.action_open_owner
 _.action_open
 _.action_copy
+_.action_next_file
+_.action_prev_file
+_.action_more
+_.action_less
+_.action_toggle_split
+_.action_toggle_wrap
+_.action_toggle_fold
 _.action_filter
 _.check_action
 _._on_click

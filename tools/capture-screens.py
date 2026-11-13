@@ -344,6 +344,10 @@ async def capture_source(store: Store, target: Path) -> None:
             if child.data.get("kind") == "commit" and "Render diffs" in str(child.label)
         )
         feature_node.expand()
+        for _ in range(20):
+            if any("M " in str(child.label) for child in feature_node.children):
+                break
+            await pilot.pause(0.05)
         tree.focus()
         await pilot.pause()
         tree.select_node(feature_node.children[0])

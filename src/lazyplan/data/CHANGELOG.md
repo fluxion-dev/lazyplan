@@ -3,6 +3,28 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## Unreleased
+
+### Fixed
+
+- **Source trails reach symlinked checkouts.** A commit recorded through a
+  symlinked path now groups with its resolved checkout, so macOS checkouts and
+  other symlinked repos show their commits instead of an empty repo row.
+
+### Changed
+
+- **The overview is a header list.** A plan lists its milestones and a
+  milestone lists its tasks, each as one line with its status, id, and title.
+  Task descriptions no longer repeat inline, so a milestone with detailed tasks
+  stays scannable; select the task to read its details. The plan overview's
+  `NEXT` shortcut list is gone.
+- **The source trail explains the change.** Expanding a commit now shows each
+  file's status and line counts. Diffs use tinted rows, aligned old/new
+  gutters, folded context, changed-word emphasis, syntax colors, and a
+  side-by-side toggle. `n` / `p` walk the files and `ctrl+d` / `ctrl+u` page a
+  long diff. **Show plan diff** now opens a dedicated screen grouped by kind
+  with before/after text and the reason for each change.
+
 ## v0.41.1 — 2026-11-12
 
 ### Fixed

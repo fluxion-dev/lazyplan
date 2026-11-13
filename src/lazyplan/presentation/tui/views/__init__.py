@@ -16,17 +16,22 @@ from .preview import (
 )
 from .rows import row_text
 from .source import (
+    DiffPreview,
     commit_label,
     commit_preview,
+    file_label,
     file_preview,
     pull_label,
     pull_preview,
-    render_diff,
+    render_diff_preview,
     repo_label,
     repo_preview,
+    source_files,
+    summary_chips,
 )
 
 __all__ = [
+    "DiffPreview",
     "GitDocument",
     "PreviewBlock",
     "PreviewDocument",
@@ -41,12 +46,15 @@ __all__ = [
     "sessions_summary",
     "commit_label",
     "commit_preview",
+    "file_label",
     "file_preview",
     "common_blocks",
     "pull_label",
     "pull_preview",
-    "render_diff",
+    "render_diff_preview",
     "repo_label",
     "repo_preview",
     "row_text",
+    "source_files",
+    "summary_chips",
 ]

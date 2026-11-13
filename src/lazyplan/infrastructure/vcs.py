@@ -13,6 +13,10 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 
+from .vcs_stats import CommitStats as CommitStats
+from .vcs_stats import FileStat as FileStat
+from .vcs_stats import merge_file_stats
+
 
 @dataclass(frozen=True)
 class CommitInfo:
@@ -55,9 +59,10 @@ class RepoStatus:
 class DiffRead:
     """Bounded read-only patch output for one commit and optional path.
 
-    `state` is one of ok, empty, binary, root, merge, missing, or error.
-    Root patches are still returned (the whole tree); merge patches are not,
-    because a combined diff is rarely what the preview wants.
+    `state` is one of ok, empty, root, merge, missing, or error. Root patches
+    are still returned (the whole tree); merge patches are not, because a
+    combined diff is rarely what the preview wants. Binary files stay in the
+    patch so text hunks in the same commit remain readable.
     """
 
     state: str = "ok"
@@ -133,6 +138,11 @@ class VCSBackend(ABC):
     @abstractmethod
     def diff(self, root: str | Path, sha: str, path: str = "") -> DiffRead:
         """Bounded read-only patch for one commit, optionally one path."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def file_stats(self, root: str | Path, sha: str) -> CommitStats:
+        """Per-file status and line counts for one commit."""
         raise NotImplementedError
 
 
@@ -328,10 +338,22 @@ class GitBackend(VCSBackend):
         patch, truncated = _bound_patch(out.stdout)
         if not patch.strip():
             return DiffRead(state="empty", detail="no textual changes")
-        if "GIT binary patch" in patch or "Binary files " in patch:
-            return DiffRead(state="binary", detail="binary file: open it in the browser")
         state = "root" if parent_count == 0 else "ok"
         return DiffRead(state=state, patch=patch, truncated=truncated)
+
+    def file_stats(self, root: str | Path, sha: str) -> CommitStats:
+        """Read per-file status and counts with two bounded `git show` calls."""
+        ref = sha.strip()
+        if not ref:
+            return CommitStats(state="missing", detail="no commit selected")
+        base = ["show", "--no-color", "--no-ext-diff", "--format=", "-M"]
+        names = _run_git(root, *base, "--name-status", ref)
+        if names is None or names.returncode != 0:
+            return CommitStats(state="missing", detail="commit not found in this checkout")
+        counts = _run_git(root, *base, "--numstat", ref)
+        if counts is None or counts.returncode != 0:
+            return CommitStats(state="error", detail="git could not read commit stats")
+        return CommitStats(files=merge_file_stats(names.stdout, counts.stdout))
 
     def show(self, root: str | Path, sha: str) -> CommitInfo | None:
         """Resolve sha to full CommitInfo; None when unknown."""

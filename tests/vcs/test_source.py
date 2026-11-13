@@ -6,12 +6,15 @@ import tempfile
 import unittest
 from unittest import mock
 
-from lazyplan.infrastructure.vcs import DiffRead
+from lazyplan.infrastructure.vcs import CommitStats, DiffRead, FileStat, GitBackend
 from lazyplan.services.source import (
     build_source_trail,
     clear_diff_cache,
+    clear_stats_cache,
     parse_patch,
+    read_commit_stats,
     read_diff,
+    read_diff_page,
 )
 from lazyplan.store import Store
 
@@ -58,7 +61,50 @@ class TestDiffParsing(unittest.TestCase):
         self.assertEqual((hunk.lines[1].old_no, hunk.lines[1].new_no), (2, None))
         self.assertEqual((hunk.lines[2].old_no, hunk.lines[2].new_no), (None, 2))
         self.assertEqual((hunk.lines[3].old_no, hunk.lines[3].new_no), (None, 3))
+        self.assertEqual(hunk.section, "section")
+        self.assertEqual(first.status, "modify")
         self.assertTrue(files[1].binary)
+
+    def test_parse_file_status_and_rename(self):
+        patch = (
+            "diff --git a/new.txt b/new.txt\n"
+            "new file mode 100644\n"
+            "--- /dev/null\n"
+            "+++ b/new.txt\n"
+            "@@ -0,0 +1 @@\n"
+            "+hello\n"
+            "diff --git a/old.txt b/old.txt\n"
+            "deleted file mode 100644\n"
+            "--- a/old.txt\n"
+            "+++ /dev/null\n"
+            "@@ -1 +0,0 @@\n"
+            "-gone\n"
+            "diff --git a/from.txt b/to.txt\n"
+            "similarity index 100%\n"
+            "rename from from.txt\n"
+            "rename to to.txt\n"
+            "diff --git a/empty.txt b/empty.txt\n"
+            "new file mode 100644\n"
+            "index 0000000..e69de29\n"
+        )
+        added, deleted, renamed, empty = parse_patch(patch)
+        self.assertEqual((added.status, added.old_path, added.new_path), ("add", "", "new.txt"))
+        self.assertEqual(
+            (deleted.status, deleted.old_path, deleted.new_path),
+            ("delete", "old.txt", ""),
+        )
+        self.assertEqual(
+            (renamed.status, renamed.old_path, renamed.new_path),
+            ("rename", "from.txt", "to.txt"),
+        )
+        self.assertEqual(renamed.hunks, ())
+        self.assertEqual(empty.status, "add")
+        self.assertEqual(empty.hunks, ())
+
+    def test_hunk_section_is_empty_without_context(self):
+        patch = "diff --git a/x.txt b/x.txt\n--- a/x.txt\n+++ b/x.txt\n@@ -1 +1 @@\n-a\n+b\n"
+        hunk = parse_patch(patch)[0].hunks[0]
+        self.assertEqual(hunk.section, "")
 
     def test_parse_empty_patch(self):
         self.assertEqual(parse_patch(""), ())
@@ -90,6 +136,149 @@ class TestDiffParsing(unittest.TestCase):
             read_diff("/repo", "a" * 40)
         self.assertEqual(backend.calls, 3)
         clear_diff_cache()
+
+    def test_read_diff_page_slices_whole_files(self):
+        class FakeBackend:
+            def __init__(self) -> None:
+                self.calls = 0
+
+            def diff(self, root, sha, path=""):
+                self.calls += 1
+                return DiffRead(
+                    state="ok",
+                    patch=(
+                        "diff --git a/a.txt b/a.txt\n"
+                        "--- a/a.txt\n"
+                        "+++ b/a.txt\n"
+                        "@@ -1 +1 @@\n"
+                        "-a\n"
+                        "+b\n"
+                        "diff --git a/b.txt b/b.txt\n"
+                        "--- a/b.txt\n"
+                        "+++ b/b.txt\n"
+                        "@@ -1 +1 @@\n"
+                        "-c\n"
+                        "+d\n"
+                    ),
+                )
+
+        backend = FakeBackend()
+        clear_diff_cache()
+        with mock.patch(
+            "lazyplan.services.source_diff.detect_backend", return_value=(backend, "/repo")
+        ):
+            first = read_diff_page("/repo", "b" * 40, limit=1)
+            second = read_diff_page("/repo", "b" * 40, offset=first.next_offset, limit=1)
+        self.assertEqual(first.total, 2)
+        self.assertTrue(first.has_more)
+        self.assertEqual([item.path for item in first.files], ["a.txt"])
+        self.assertEqual([item.path for item in second.files], ["b.txt"])
+        self.assertFalse(second.has_more)
+        self.assertEqual(backend.calls, 1)
+        clear_diff_cache()
+
+    def test_read_diff_page_past_the_end_is_empty(self) -> None:
+        class FakeBackend:
+            def diff(self, root, sha, path=""):
+                return DiffRead(
+                    state="ok",
+                    patch=(
+                        "diff --git a/a.txt b/a.txt\n"
+                        "--- a/a.txt\n"
+                        "+++ b/a.txt\n"
+                        "@@ -1 +1 @@\n"
+                        "-a\n"
+                        "+b\n"
+                    ),
+                )
+
+        clear_diff_cache()
+        with mock.patch(
+            "lazyplan.services.source_diff.detect_backend",
+            return_value=(FakeBackend(), "/repo"),
+        ):
+            page = read_diff_page("/repo", "c" * 40, offset=50, limit=5)
+        self.assertEqual(page.total, 1)
+        self.assertEqual(page.files, ())
+        self.assertFalse(page.has_more)
+        clear_diff_cache()
+
+
+class TestCommitStats(unittest.TestCase):
+    def test_file_stats_joins_name_status_and_numstat(self):
+        names = "A\tnew.py\nM\tkeep.py\nD\tgone.py\nR100\told.py\trenamed.py\nM\timage.png\n"
+        counts = (
+            "3\t0\tnew.py\n"
+            "1\t1\tkeep.py\n"
+            "0\t2\tgone.py\n"
+            "2\t2\told.py => renamed.py\n"
+            "-\t-\timage.png\n"
+        )
+        calls = [
+            subprocess.CompletedProcess([], 0, names, ""),
+            subprocess.CompletedProcess([], 0, counts, ""),
+        ]
+        with mock.patch("lazyplan.infrastructure.vcs._run_git", side_effect=calls):
+            stats = GitBackend().file_stats("/repo", "a" * 40)
+        self.assertEqual(stats.state, "ok")
+        self.assertEqual(stats.additions, 6)
+        self.assertEqual(stats.deletions, 5)
+        by_path = {item.path: item for item in stats.files}
+        self.assertEqual(by_path["new.py"].status, "add")
+        self.assertEqual((by_path["new.py"].additions, by_path["new.py"].deletions), (3, 0))
+        self.assertEqual(by_path["keep.py"].status, "modify")
+        self.assertEqual((by_path["keep.py"].additions, by_path["keep.py"].deletions), (1, 1))
+        self.assertEqual(by_path["gone.py"].status, "delete")
+        self.assertEqual(
+            (by_path["renamed.py"].status, by_path["renamed.py"].old_path),
+            ("rename", "old.py"),
+        )
+        self.assertTrue(by_path["image.png"].binary)
+        self.assertEqual(
+            (by_path["image.png"].additions, by_path["image.png"].deletions),
+            (0, 0),
+        )
+
+    def test_file_stats_reports_missing_and_error(self):
+        with mock.patch(
+            "lazyplan.infrastructure.vcs._run_git",
+            return_value=subprocess.CompletedProcess([], 1, "", "bad"),
+        ):
+            missing = GitBackend().file_stats("/repo", "a" * 40)
+        self.assertEqual(missing.state, "missing")
+        calls = [
+            subprocess.CompletedProcess([], 0, "M\ta.py\n", ""),
+            subprocess.CompletedProcess([], 1, "", "bad"),
+        ]
+        with mock.patch("lazyplan.infrastructure.vcs._run_git", side_effect=calls):
+            error = GitBackend().file_stats("/repo", "a" * 40)
+        self.assertEqual(error.state, "error")
+
+    def test_read_commit_stats_cache_and_clear(self):
+        class FakeBackend:
+            def __init__(self) -> None:
+                self.calls = 0
+
+            def file_stats(self, root, sha):
+                self.calls += 1
+                return CommitStats(files=(FileStat(path="a.py", status="modify"),))
+
+        backend = FakeBackend()
+        clear_stats_cache()
+        with mock.patch(
+            "lazyplan.services.source_diff.detect_backend", return_value=(backend, "/repo")
+        ):
+            first = read_commit_stats("/repo", "a" * 40)
+            again = read_commit_stats("/repo", "a" * 40)
+        self.assertEqual(backend.calls, 1)
+        self.assertIs(first, again)
+        clear_stats_cache()
+        with mock.patch(
+            "lazyplan.services.source_diff.detect_backend", return_value=(backend, "/repo")
+        ):
+            read_commit_stats("/repo", "a" * 40)
+        self.assertEqual(backend.calls, 2)
+        clear_stats_cache()
 
 
 @unittest.skipUnless(_git_available(), "git CLI required")
@@ -180,6 +369,58 @@ class TestSourceTrail(unittest.TestCase):
             all(item.url.startswith("https://github.com/org/repo/blob/") for item in commit.files)
         )
         self.assertEqual(commit.url, f"https://github.com/org/repo/commit/{self.sha}")
+
+    def test_commit_repo_root_matches_a_symlinked_checkout(self):
+        alias = os.path.join(self.tmp.name, "alias")
+        os.symlink(self.repo, alias)
+        self.store.link_commit(
+            "task",
+            self.tid,
+            self.sha,
+            subject="first",
+            author="Tester",
+            repo_root=alias,
+            files=("a.py",),
+        )
+        trail = build_source_trail(self.store, "task", self.tid)
+        self.assertEqual(len(trail.repos), 1)
+        self.assertEqual(trail.commit_count, 1)
+        self.assertEqual(trail.repos[0].path, os.path.realpath(self.repo))
+
+    def test_commit_stats_for_root_commit(self):
+        clear_stats_cache()
+        stats = read_commit_stats(self.repo, self.sha)
+        self.assertEqual(stats.state, "ok")
+        self.assertEqual([item.path for item in stats.files], ["a.py"])
+        self.assertEqual(stats.files[0].status, "add")
+        clear_stats_cache()
+
+    def test_commit_stats_from_checkout(self):
+        with open(os.path.join(self.repo, "a.py"), "w", encoding="utf-8") as fh:
+            fh.write("a\nb\n")
+        with open(os.path.join(self.repo, "b.py"), "w", encoding="utf-8") as fh:
+            fh.write("b\n")
+        with open(os.path.join(self.repo, "img.bin"), "wb") as fh:
+            fh.write(b"\x00\x01\x02")
+        subprocess.run(["git", "-C", self.repo, "add", "."], check=True, timeout=10)
+        subprocess.run(["git", "-C", self.repo, "commit", "-qm", "second"], check=True, timeout=10)
+        sha = subprocess.run(
+            ["git", "-C", self.repo, "rev-parse", "HEAD"],
+            capture_output=True,
+            encoding="utf-8",
+            timeout=10,
+            check=True,
+        ).stdout.strip()
+        clear_stats_cache()
+        stats = read_commit_stats(self.repo, sha)
+        self.assertEqual(stats.state, "ok")
+        by_path = {item.path: item for item in stats.files}
+        self.assertEqual(by_path["a.py"].status, "modify")
+        self.assertEqual((by_path["a.py"].additions, by_path["a.py"].deletions), (1, 0))
+        self.assertEqual(by_path["b.py"].status, "add")
+        self.assertTrue(by_path["img.bin"].binary)
+        self.assertEqual((stats.additions, stats.deletions), (2, 0))
+        clear_stats_cache()
 
     def test_plan_rollup_dedupes_shared_commit_and_pr(self):
         s2 = self.store.add_milestone(self.pid, "S2")

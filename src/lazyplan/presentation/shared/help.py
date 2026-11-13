@@ -24,6 +24,13 @@ HINT_ITEMS: tuple[tuple[str, str], ...] = (
 )
 
 HELP_GROUPS: tuple[str, ...] = ("MOVE", "FIND", "APP", "CHANGE", "TRUST")
+_SOURCE_ROWS: tuple[tuple[str, str], ...] = (
+    ("n / p", "next / previous file in a commit"),
+    ("s", "toggle split or unified diff"),
+    ("w", "toggle wrapped or truncated lines"),
+    ("f", "toggle folded or full context"),
+    ("ctrl+d / ctrl+u", "next / previous diff page"),
+)
 _HELP_WIDTH = 20
 
 
@@ -34,6 +41,8 @@ def keymap() -> tuple[tuple[str, str, str], ...]:
         key = cmd.key or cmd.help_key
         if key:
             rows.append((key, cmd.help_hint or cmd.label.lower(), "tree"))
+    for key, hint in _SOURCE_ROWS:
+        rows.append((key, hint, "source"))
     return tuple(rows)
 
 
@@ -67,6 +76,10 @@ def help_text() -> str:
         for key, hint in rows:
             lines.append(f"  {key:<{_HELP_WIDTH}} {hint}")
         lines.append("")
+    lines.append("SOURCE")
+    for key, hint in _SOURCE_ROWS:
+        lines.append(f"  {key:<{_HELP_WIDTH}} {hint}")
+    lines.append("")
     lines.append("  lpui help".ljust(_HELP_WIDTH + 2) + " same help at the shell")
     keys = key_deprecations()
     if keys:

@@ -85,6 +85,13 @@ def _row(*parts: object, sep: str = " · ") -> str:
     return "- " + sep.join(str(part) for part in parts if str(part))
 
 
+def _header_row(status: str, label: str, oid: object, title: object) -> str:
+    """One child header row: status glyph, kind and id, then the escaped title."""
+    return _row(
+        status_word(status, "plain"), _strong(f"{label}{oid}"), escape_markdown(str(title)), sep=" "
+    )
+
+
 def _title(
     store: PlanningPort,
     kind: str,
@@ -109,64 +116,38 @@ def _title(
     return header, breadcrumb
 
 
-def _tasks(kind: str, full: dict[str, Any]) -> list[dict[str, Any]]:
-    """Flat task dicts for a preview card (plan/milestone/task)."""
-    if kind == "plan":
-        return [task for entry in full.get("milestones", []) for task in entry.get("tasks", [])]
-    if kind == "milestone":
-        return [entry.get("task", {}) for entry in full.get("tasks", [])]
-    return [full.get("task", {})]
+def _milestone_tasks(full: dict[str, Any]) -> list[dict[str, Any]]:
+    """Flat task dicts for a milestone preview card."""
+    return [entry.get("task", {}) for entry in full.get("tasks", [])]
 
 
 def milestones_block(milestones: list[dict[str, Any]]) -> PreviewBlock | None:
-    """Every milestone under the selected plan, as a title-only row."""
+    """Every milestone under the selected plan, as one header row."""
     if not milestones:
         return None
-    lines = [_row(_strong(entry.get("milestone", {}).get("title", ""))) for entry in milestones]
+    lines = []
+    for entry in milestones:
+        milestone = entry.get("milestone", {})
+        lines.append(
+            _header_row(
+                str(milestone.get("status", "")),
+                "M",
+                milestone.get("id"),
+                milestone.get("title", ""),
+            )
+        )
     return PreviewBlock(f"milestones {len(milestones)}", tuple(lines))
 
 
 def tasks_block(tasks: list[dict[str, Any]]) -> PreviewBlock | None:
-    """Every task under the selected milestone, with its description."""
+    """Every task under the selected milestone, as one header row."""
     if not tasks:
         return None
-    lines: list[str] = []
-    for task in tasks:
-        claim = task.get("claim") if isinstance(task.get("claim"), dict) else None
-        actor = f"@{escape_markdown(str(claim.get('actor', '')))}" if claim else ""
-        lines.append(
-            _row(
-                status_word(str(task.get("status", "")), "plain"),
-                _strong(f"T{task.get('id')}"),
-                escape_markdown(str(task.get("title", ""))),
-                "blocked" if task.get("blocked") else "",
-                actor,
-                sep=" ",
-            )
-        )
-        desc = str(task.get("description", "") or "").strip()
-        for line in desc.splitlines():
-            lines.append(f"  {line}" if line.strip() else "")
+    lines = [
+        _header_row(str(task.get("status", "")), "T", task.get("id"), task.get("title", ""))
+        for task in tasks
+    ]
     return PreviewBlock(f"tasks {len(tasks)}", tuple(lines))
-
-
-def next_block(tasks: list[dict[str, Any]]) -> PreviewBlock | None:
-    """The first three open tasks."""
-    open_tasks = [task for task in tasks if task.get("status") != "done"]
-    if not open_tasks:
-        return None
-    return PreviewBlock(
-        "next",
-        tuple(
-            _row(
-                status_word(str(task.get("status", "")), "plain"),
-                _strong(f"T{task.get('id')}"),
-                escape_markdown(str(task.get("title", ""))),
-                sep=" ",
-            )
-            for task in open_tasks[:3]
-        ),
-    )
 
 
 def notes_block(notes: list[dict[str, Any]]) -> PreviewBlock | None:
@@ -384,9 +365,6 @@ def build_plan(
     milestones = milestones_block(full.get("milestones", []))
     if milestones is not None:
         blocks.append(milestones)
-    next_tasks = next_block(_tasks("plan", full))
-    if next_tasks is not None:
-        blocks.append(next_tasks)
     blocks.extend(common_blocks(full, detailed_acceptance=True))
     return PreviewDocument(header, breadcrumb, (), tuple(blocks))
 
@@ -403,7 +381,7 @@ def build_milestone(
     desc = str(obj.get("description", "") or "").strip()
     if desc:
         blocks.append(PreviewBlock("details", (desc,)))
-    tasks = tasks_block(_tasks("milestone", full))
+    tasks = tasks_block(_milestone_tasks(full))
     if tasks is not None:
         blocks.append(tasks)
     blocks.extend(common_blocks(full))

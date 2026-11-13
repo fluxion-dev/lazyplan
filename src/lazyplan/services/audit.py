@@ -360,11 +360,16 @@ def _repo_paths(store: InsightsPort, plan_ids: list[int], cwd: str | Path) -> li
     """Linked checkout paths, or cwd when the plans have no repo links."""
     seen: list[str] = []
     repos = store.repos_map()
+    worktrees = store.plan_worktrees_map()
     for plan_id in plan_ids:
         for repo in repos.get(("plan", plan_id), ()):
             path = str(repo.get("repo_path") or "")
             if path and path not in seen:
                 seen.append(path)
+        for row in worktrees.get(plan_id, ()):
+            for path in (row.repo_path, row.worktree_path):
+                if path and path not in seen:
+                    seen.append(path)
     return seen or [str(Path(cwd).expanduser())]
 
 

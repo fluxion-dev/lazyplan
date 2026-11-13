@@ -334,6 +334,13 @@ CORE_ACTIONS: tuple[Action, ...] = (
         ("release-notes",),
     ),
     _action(
+        "app.health",
+        "Health check",
+        surfaces=("tui", "cli"),
+        route=("tree", "health"),
+        palette_ids=("health-check",),
+    ),
+    _action(
         "app.help",
         "Help",
         "?",

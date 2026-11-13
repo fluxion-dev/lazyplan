@@ -73,6 +73,7 @@ Budget: every action is at most **3** interactions from the tree.
 | `plan.export` | tree › export | 1 |
 | `app.update` | tree › update | 1 |
 | `app.notes` | tree › notes | 1 |
+| `app.health` | tree › health | 1 |
 | `app.help` | any | 0 |
 | `app.quit` | any | 0 |
 | `task.renew` | tree › coordination | 1 |

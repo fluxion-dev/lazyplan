@@ -327,6 +327,14 @@
       ]
     },
     {
+      "depth": 1,
+      "id": "app.health",
+      "route": [
+        "tree",
+        "health"
+      ]
+    },
+    {
       "depth": 0,
       "id": "app.help",
       "route": [

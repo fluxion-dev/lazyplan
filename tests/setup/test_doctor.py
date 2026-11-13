@@ -3,12 +3,16 @@
 import io
 import json
 import os
+import shutil
 import subprocess
 import tempfile
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
+from unittest import mock
 
+from lazyplan.core.entities import Status
+from lazyplan.core.policies.worktrees import derive_worktree
 from lazyplan.infrastructure.repo import PLAN_DIR, repo_plan_db_path
 from lazyplan.presentation import setup
 from lazyplan.presentation.cli import main as lpui_main
@@ -76,6 +80,102 @@ class DoctorCase(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertTrue(report["findings"])
         self.assertFalse(report["clean"])
+
+    def _git_commit(self) -> None:
+        subprocess.run(["git", "-C", str(self.repo), "config", "user.email", "t@example.test"])
+        subprocess.run(["git", "-C", str(self.repo), "config", "user.name", "Test"])
+        subprocess.run(["git", "-C", str(self.repo), "config", "commit.gpgsign", "false"])
+        (self.repo / "README.md").write_text("readme\n", encoding="utf-8")
+        subprocess.run(["git", "-C", str(self.repo), "add", "README.md"], check=True)
+        subprocess.run(["git", "-C", str(self.repo), "commit", "-m", "init"], check=True)
+        subprocess.run(["git", "-C", str(self.repo), "branch", "-M", "main"], check=True)
+
+    def _worktree_plan(self):
+        self._git_commit()
+        db = Path(self.tmp.name) / "worktrees.db"
+        store = Store(db)
+        plan = store.add_plan("Worktrees")
+        store.add_repo_link("plan", plan.id, str(self.repo))
+        target = derive_worktree(str(self.repo), plan.id, plan.name)
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                str(self.repo),
+                "worktree",
+                "add",
+                "-b",
+                target.branch,
+                target.worktree_path,
+            ],
+            check=True,
+        )
+        return db, store, plan, target
+
+    def test_clean_worktree_has_no_finding(self):
+        db, store, plan, target = self._worktree_plan()
+        store.register_plan_worktree(plan.id, str(self.repo), target.worktree_path, target.branch)
+
+        code, report = self._json(["--db", str(db), "doctor", "--json"])
+
+        self.assertEqual(code, 0, report)
+        self.assertEqual(report["worktrees"], [])
+
+    def test_doing_plan_without_registration_exits_one(self):
+        db, store, plan, _target = self._worktree_plan()
+        store.set_status_raw("plan", plan.id, Status.DOING)
+
+        code, report = self._json(["--db", str(db), "doctor", "--json"])
+
+        self.assertEqual(code, 1)
+        self.assertEqual(report["worktrees"][0]["state"], "unregistered")
+        self.assertIn("without a registered worktree", report["worktrees"][0]["detail"])
+
+    def test_dirty_worktree_exits_one(self):
+        db, store, plan, target = self._worktree_plan()
+        store.register_plan_worktree(plan.id, str(self.repo), target.worktree_path, target.branch)
+        (Path(target.worktree_path) / "scratch.txt").write_text("dirty\n", encoding="utf-8")
+
+        code, report = self._json(["--db", str(db), "doctor", "--json"])
+
+        self.assertEqual(code, 1)
+        self.assertEqual(report["worktrees"][0]["state"], "drift")
+        self.assertIn("uncommitted changes", report["worktrees"][0]["detail"])
+
+    def test_wrong_branch_and_missing_path_exit_one(self):
+        db, store, plan, target = self._worktree_plan()
+        store.register_plan_worktree(plan.id, str(self.repo), target.worktree_path, "plan/wrong")
+
+        code, report = self._json(["--db", str(db), "doctor", "--json"])
+        self.assertEqual(code, 1)
+        self.assertIn("expected", report["worktrees"][0]["detail"])
+
+        shutil.rmtree(target.worktree_path)
+        code, report = self._json(["--db", str(db), "doctor", "--json"])
+        self.assertEqual(code, 1)
+        self.assertEqual(report["worktrees"][0]["state"], "missing-path")
+
+    def test_unlisted_registration_exits_one(self):
+        db, store, plan, target = self._worktree_plan()
+        store.register_plan_worktree(plan.id, str(self.repo), target.worktree_path, target.branch)
+
+        with mock.patch(
+            "lazyplan.services.worktrees.git_worktree_paths",
+            return_value={"/somewhere/else"},
+        ):
+            code, report = self._json(["--db", str(db), "doctor", "--json"])
+
+        self.assertEqual(code, 1)
+        self.assertEqual(report["worktrees"][0]["state"], "unlisted")
+
+    def test_human_output_lists_worktree_drift(self):
+        db, store, plan, _target = self._worktree_plan()
+        store.set_status_raw("plan", plan.id, Status.DOING)
+        out = io.StringIO()
+        with redirect_stdout(out):
+            code = lpui_main(["--db", str(db), "doctor"])
+        self.assertEqual(code, 1)
+        self.assertIn("worktree:  plan", out.getvalue())
 
     def test_human_output_lists_skill_paths(self):
         out = io.StringIO()

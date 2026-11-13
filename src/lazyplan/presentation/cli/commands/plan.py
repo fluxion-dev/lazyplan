@@ -46,6 +46,7 @@ from ..rows import (
     _porcelain_list_lines,
     _porcelain_show_lines,
 )
+from .worktree import _guard_plan_start, guard_plan_done, record_worktree_override
 
 
 def _resolve_title(args: argparse.Namespace) -> str:
@@ -330,6 +331,13 @@ def _cmd_status(store: InsightsPort, args: argparse.Namespace, actor: str) -> in
         if failure and not override:
             print(msg_error(ValueError(failure)), file=sys.stderr)
             return 2
+        done_code = guard_plan_done(store, args.id)
+        if done_code:
+            return done_code
+    worktree_failure, gate_code = _guard_plan_start(store, args)
+    if gate_code:
+        print(msg_error(ValueError(worktree_failure)), file=sys.stderr)
+        return 2
     heal = settings.heal_enabled(settings.heal_mode(getattr(args, "heal", None)))
     ok = services.set_status(store, args.kind, args.id, Status(args.to), actor=actor, heal=heal)
     if not ok:
@@ -342,11 +350,13 @@ def _cmd_status(store: InsightsPort, args: argparse.Namespace, actor: str) -> in
             f"Drift override by {actor}: {override}",
             actor=actor,
         )
+    if worktree_failure:
+        record_worktree_override(store, args.id, actor, str(getattr(args, "reason", "")))
     if args.to == "done":
-        reason = services.auto_capture_head(store, args.kind, args.id, actor=actor)
-        if reason:
+        link_warning = services.auto_capture_head(store, args.kind, args.id, actor=actor)
+        if link_warning:
             print(
-                f"warning: {args.kind} #{args.id} done, but HEAD was not linked: {reason}. "
+                f"warning: {args.kind} #{args.id} done, but HEAD was not linked: {link_warning}. "
                 f"Commit, then run `lpui link --kind {args.kind} --id {args.id}`.",
                 file=sys.stderr,
             )

@@ -45,5 +45,5 @@ echo "== performance budgets =="
 echo "== unittest (system python, stdlib only) =="
 PYTHONPATH=src "$SYS_PY" -m unittest discover -s tests -t .
 echo "== unittest (venv python, with textual) =="
-"$VENV_BIN"/python -m unittest discover -s tests -t .
+PYTHONPATH=src "$VENV_BIN"/python -m unittest discover -s tests -t .
 echo "ALL GATES GREEN"

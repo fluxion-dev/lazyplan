@@ -162,6 +162,12 @@ def add_noun_groups(
         metavar="REASON",
         help="record why enforced drift is being overridden when moving to done",
     )
+    _a.add_argument(
+        "--force",
+        action="store_true",
+        help="override the worktree gate when moving to doing",
+    )
+    _reason_flag(_a)
     _a = _actions.add_parser("delete", help="delete a plan", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="plan id")
     _reason_flag(_a)
@@ -208,6 +214,38 @@ def add_noun_groups(
         action="store_true",
         help="exit 1 when drift exists and 0 when in sync",
     )
+
+    _a = _actions.add_parser(
+        "worktree", help="print plan worktree setup commands", parents=[common]
+    )
+    _a.add_argument("--id", type=int, default=None, metavar="ID", help="plan id")
+    _a.add_argument(
+        "--print",
+        action="store_true",
+        help="print one git worktree command per linked repo",
+    )
+    _wt = _a.add_subparsers(
+        dest="worktree_action",
+        required=False,
+        metavar="ACTION",
+        title="worktree actions",
+        help="print, register, or remove a worktree",
+    )
+    _w = _wt.add_parser("print", help="print setup commands", parents=[common])
+    _w.add_argument("--id", type=int, required=True, metavar="ID", help="plan id")
+    _w = _wt.add_parser("list", help="list registered worktrees", parents=[common])
+    _w.add_argument("--id", type=int, required=True, metavar="ID", help="plan id")
+    _w.add_argument("--stale", action="store_true", help="only worktrees git no longer lists")
+    _w = _wt.add_parser("add", help="register one worktree", parents=[common])
+    _w.add_argument("--id", type=int, required=True, metavar="ID", help="plan id")
+    _w.add_argument("--repo", required=True, metavar="PATH", help="linked repository checkout")
+    _w.add_argument(
+        "--worktree", default=None, metavar="PATH", help="worktree path (default: derived)"
+    )
+    _w.add_argument("--branch", default=None, metavar="NAME", help="branch (default: derived)")
+    _w = _wt.add_parser("remove", help="unregister one worktree", parents=[common])
+    _w.add_argument("--id", type=int, required=True, metavar="ID", help="plan id")
+    _w.add_argument("--repo", required=True, metavar="PATH", help="linked repository checkout")
 
     _group, _actions = _noun_group("milestone", "")
     _a = _actions.add_parser("add", help="add a milestone", parents=[common])

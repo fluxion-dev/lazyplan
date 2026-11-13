@@ -30,6 +30,9 @@ def add_session_group(
     start.add_argument("--branch", default="", metavar="NAME", help="branch being worked")
     start.add_argument("--note", default="", metavar="TEXT", help="why this session started")
     start.add_argument("--force", action="store_true", help="end an existing open session first")
+    start.add_argument(
+        "--reason", default="", metavar="TEXT", help="why a worktree gate is being overridden"
+    )
     end = actions.add_parser("end", help="close one session", parents=[common])
     end.add_argument(
         "--id", type=parse_session_id, default=None, metavar="ID", help="session id (S12 or 12)"

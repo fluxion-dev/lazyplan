@@ -26,6 +26,7 @@ from .stubs import CLAIM_DEFAULT_TTL
 from .tasks import TasksMixin
 from .touchpoints import TouchpointsMixin
 from .views import ViewsMixin
+from .worktrees import WorktreesMixin
 
 
 class Store(
@@ -44,6 +45,7 @@ class Store(
     TasksMixin,
     TouchpointsMixin,
     ViewsMixin,
+    WorktreesMixin,
     StoreBase,
 ):
     """SQLite persistence shared by the TUI and the lpui CLI."""

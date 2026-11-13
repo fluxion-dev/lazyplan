@@ -16,7 +16,7 @@ class TestClaims(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.db = os.path.join(self.tmp.name, "claims.db")
         self.store = Store(self.db)
-        plan = self.store.add_plan("P", actor="fixture")
+        plan = self.store.add_plan("P", actor="fixture", worktree_required=False)
         milestone = self.store.add_milestone(plan.id, "M", actor="fixture")
         self.task = self.store.add_task(milestone.id, "T", actor="fixture")
 

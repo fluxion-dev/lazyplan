@@ -18,7 +18,7 @@ class TestLaterHorizonCli(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.db = os.path.join(self.tmp.name, "later.db")
         self.store = Store(self.db)
-        plan = self.store.add_plan("Later")
+        plan = self.store.add_plan("Later", worktree_required=False)
         milestone = self.store.add_milestone(plan.id, "M")
         self.first = self.store.add_task(milestone.id, "First")
         self.second = self.store.add_task(milestone.id, "Second")

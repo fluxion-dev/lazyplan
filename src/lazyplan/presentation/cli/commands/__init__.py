@@ -137,6 +137,7 @@ from .touch import (
 from .ui import (
     _cmd_ui,
 )
+from .worktree import _cmd_plan_worktree
 
 _GROUP_CMDS: dict[tuple[str, str], str] = {
     ("plan", "add"): "add-plan",
@@ -151,6 +152,7 @@ _GROUP_CMDS: dict[tuple[str, str], str] = {
     ("plan", "approve"): "plan-approve",
     ("plan", "revisions"): "plan-revisions",
     ("plan", "diff"): "plan-diff",
+    ("plan", "worktree"): "plan-worktree",
     ("milestone", "add"): "add-milestone",
     ("milestone", "edit"): "update",
     ("milestone", "show"): "show",
@@ -235,6 +237,7 @@ _COMMANDS: dict[str, Callable[[AppPort, Namespace, str], int]] = {
     "plan-approve": _cmd_plan_approve,
     "plan-revisions": _cmd_plan_revisions,
     "plan-diff": _cmd_plan_diff,
+    "plan-worktree": _cmd_plan_worktree,
     "update": _cmd_update,
     "show": _cmd_show,
     "status": _cmd_status,

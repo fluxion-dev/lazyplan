@@ -1,4 +1,4 @@
-.TH LPUI 1 "2026-11-13" "lazyplan-tui 0.42.0" "User Commands"
+.TH LPUI 1 "2026-11-12" "lazyplan-tui 0.42.0" "User Commands"
 .SH NAME
 lpui \- local plan journal for you and your coding agent
 .SH SYNOPSIS
@@ -499,6 +499,16 @@ note stored on the claim
 .B \-\-suggest
 show the next task without claiming it
 .RE
+.RS
+.TP
+.B \-\-force
+override a worktree gate
+.RE
+.RS
+.TP
+.B \-\-reason TEXT
+why a worktree gate is overridden
+.RE
 .TP
 .B lpui claim
 claim, renew, or release a task lease
@@ -566,6 +576,11 @@ checkout being worked
 .TP
 .B \-\-repo PATH
 shared repo root
+.RE
+.RS
+.TP
+.B \-\-reason TEXT
+why a worktree gate is overridden
 .RE
 .TP
 .B lpui note
@@ -1204,7 +1219,7 @@ report drift without automatic repair for this command
 .RS
 .TP
 .B  ACTION
-what to do with a plan Choices: add, edit, show, list, ready, move, delete, apply, recipe, approve, revisions, diff\. Required\.
+what to do with a plan Choices: add, edit, show, list, ready, move, delete, apply, recipe, approve, revisions, diff, worktree\. Required\.
 .RE
 .TP
 .B lpui milestone

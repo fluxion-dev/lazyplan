@@ -63,6 +63,8 @@ def _cmd_next(store: CoordinationPort, args: argparse.Namespace, actor: str) -> 
             suggest=bool(args.suggest),
             worktree=worktree,
             repo_path=repo_path,
+            force=bool(getattr(args, "force", False)),
+            reason=str(getattr(args, "reason", "") or ""),
         )
     except ClaimConflict as exc:
         print(msg_error(exc), file=sys.stderr)
@@ -116,6 +118,7 @@ def _claim_take(store: CoordinationPort, args: argparse.Namespace, actor: str) -
         force=bool(args.force),
         worktree=worktree,
         repo_path=repo_path,
+        reason=str(getattr(args, "reason", "") or ""),
     )
     claim = result["claim"]
     task = result["task"]

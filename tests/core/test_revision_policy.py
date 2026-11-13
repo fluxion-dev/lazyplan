@@ -73,6 +73,18 @@ class TestSnapshot(unittest.TestCase):
             [1200, 1201],
         )
 
+    def test_worktree_required_is_part_of_scope(self) -> None:
+        plan, milestones, tasks, criteria, keys = sample()
+        plan.worktree_required = True
+        changed = build_snapshot(plan, milestones, tasks, criteria, keys)
+
+        self.assertTrue(changed["plan"]["worktree_required"])
+        changes = diff_snapshots(snapshot(), changed)
+        self.assertEqual(
+            [(item.kind, item.field, item.before, item.after) for item in changes],
+            [("plan", "worktree_required", "", "True")],
+        )
+
     def test_scope_only(self) -> None:
         plan, milestones, tasks, criteria, keys = sample()
         plan.status = Status.DONE
@@ -84,7 +96,11 @@ class TestSnapshot(unittest.TestCase):
 
     def test_digest_is_canonical(self) -> None:
         snap = snapshot()
-        reordered = {"milestones": snap["milestones"], "plan": snap["plan"], "schema": 1}
+        reordered = {
+            "milestones": snap["milestones"],
+            "plan": snap["plan"],
+            "schema": SNAPSHOT_SCHEMA,
+        }
         self.assertEqual(canonical(snap), canonical(reordered))
         self.assertEqual(digest(snap), digest(reordered))
 

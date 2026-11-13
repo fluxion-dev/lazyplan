@@ -41,6 +41,7 @@ class _FullReader:
         self.questions = store.questions_map()
         self.touchpoints = store.touchpoints_map()
         self.refs = store.refs_map()
+        self.worktrees = store.plan_worktrees_map()
         self.milestone_by_id = {
             milestone.id: milestone for items in self.milestones.values() for milestone in items
         }
@@ -205,6 +206,7 @@ class _FullReader:
             ],
             "repos": self.repos.get(("plan", plan.id), []),
             "effective_repos": self._effective_repos("plan", plan.id),
+            "worktrees": [vars(row) for row in self.worktrees.get(plan.id, [])],
             "approval": approval_payload(self.revisions.get(plan.id), self.drift.get(plan.id, 0)),
             "questions": [vars(q) for q in self.questions.get(plan.id, [])],
             "refs": [vars(ref) for ref in self.refs.get(plan.id, [])],

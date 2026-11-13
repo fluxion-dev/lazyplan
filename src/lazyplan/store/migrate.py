@@ -8,7 +8,7 @@ from __future__ import annotations
 import sqlite3
 import uuid
 
-SCHEMA_VERSION = 12
+SCHEMA_VERSION = 14
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS plans (
@@ -18,7 +18,8 @@ CREATE TABLE IF NOT EXISTS plans (
     status TEXT NOT NULL DEFAULT 'todo',
     goal TEXT NOT NULL DEFAULT '',
     uid TEXT NOT NULL DEFAULT '',
-    archived_at REAL NOT NULL DEFAULT 0
+    archived_at REAL NOT NULL DEFAULT 0,
+    worktree_required INTEGER NOT NULL DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS entity_keys (
     kind TEXT NOT NULL CHECK (kind IN ('plan', 'milestone', 'task')),
@@ -261,6 +262,17 @@ CREATE TABLE IF NOT EXISTS entity_repos (
 );
 CREATE INDEX IF NOT EXISTS idx_entity_repos_parent ON entity_repos(parent_kind, parent_id);
 CREATE INDEX IF NOT EXISTS idx_entity_repos_branch ON entity_repos(branch, repo_path, repo_remote);
+CREATE TABLE IF NOT EXISTS plan_worktrees (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+    repo_path TEXT NOT NULL,
+    repo_remote TEXT NOT NULL DEFAULT '',
+    worktree_path TEXT NOT NULL,
+    branch TEXT NOT NULL DEFAULT '',
+    registered_at REAL NOT NULL,
+    UNIQUE(plan_id, repo_path)
+);
+CREATE INDEX IF NOT EXISTS idx_plan_worktrees_plan ON plan_worktrees(plan_id);
 CREATE TABLE IF NOT EXISTS events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     ts REAL NOT NULL,
@@ -491,6 +503,13 @@ def _migrate_claim_location(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE task_claims ADD COLUMN repo_path TEXT NOT NULL DEFAULT ''")
 
 
+def _migrate_plan_worktree_required(conn: sqlite3.Connection) -> None:
+    """Add the isolation flag to plans created before it existed."""
+    existing = {r["name"] for r in conn.execute("PRAGMA table_info(plans)").fetchall()}
+    if "worktree_required" not in existing:
+        conn.execute("ALTER TABLE plans ADD COLUMN worktree_required INTEGER NOT NULL DEFAULT 0")
+
+
 def _migrate_archive_columns(conn: sqlite3.Connection) -> None:
     """Add the archive stamp to plans and sessions, then index it."""
     for table in ("plans", "sessions"):
@@ -513,6 +532,7 @@ def migrate(conn: sqlite3.Connection) -> None:
     _migrate_session_state(conn)
     _migrate_session_attribution(conn)
     _migrate_claim_location(conn)
+    _migrate_plan_worktree_required(conn)
     _migrate_archive_columns(conn)
     _drop_priority_columns(conn)
     _migrate_vcs_link_state(conn)

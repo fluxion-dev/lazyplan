@@ -54,6 +54,7 @@ class TestStore(unittest.TestCase):
             "idx_issue_links_row",
             "idx_entity_repos_branch",
             "idx_entity_keys_row",
+            "idx_plan_worktrees_plan",
         ):
             self.assertIn(name, names)
         with closing(sqlite3.connect(self.db)) as conn:
@@ -421,6 +422,55 @@ class TestStore(unittest.TestCase):
 
         again = Store(legacy)
         self.assertEqual(again.counts(), counts)
+
+    def test_migrate_plan_worktrees_without_losing_rows(self):
+        legacy = os.path.join(self.tmp.name, "legacy-worktrees.db")
+        store = Store(legacy)
+        store.add_plan("Keep", description="", goal="")
+        with closing(sqlite3.connect(legacy)) as conn:
+            conn.execute("DROP TABLE plan_worktrees")
+            conn.execute(f"PRAGMA user_version = {migrate_mod.SCHEMA_VERSION - 1}")
+            conn.commit()
+
+        reopened = Store(legacy)
+        self.assertEqual(reopened.get_plan(1).name, "Keep")
+
+        with closing(sqlite3.connect(legacy)) as conn:
+            self.assertEqual(
+                int(conn.execute("PRAGMA user_version").fetchone()[0]),
+                migrate_mod.SCHEMA_VERSION,
+            )
+            columns = {row[1] for row in conn.execute("PRAGMA table_info(plan_worktrees)")}
+            self.assertEqual(
+                columns,
+                {
+                    "id",
+                    "plan_id",
+                    "repo_path",
+                    "repo_remote",
+                    "worktree_path",
+                    "branch",
+                    "registered_at",
+                },
+            )
+            indexes = {row[1] for row in conn.execute("PRAGMA index_list(plan_worktrees)")}
+            self.assertIn("idx_plan_worktrees_plan", indexes)
+
+        again = Store(legacy)
+        self.assertEqual(again.get_plan(1).name, "Keep")
+
+    def test_new_plans_require_worktrees_and_legacy_rows_do_not(self):
+        legacy = os.path.join(self.tmp.name, "legacy-worktree-required.db")
+        store = Store(legacy)
+        old = store.add_plan("Old")
+        with closing(sqlite3.connect(legacy)) as conn:
+            conn.execute("ALTER TABLE plans DROP COLUMN worktree_required")
+            conn.execute(f"PRAGMA user_version = {migrate_mod.SCHEMA_VERSION - 1}")
+            conn.commit()
+
+        reopened = Store(legacy)
+        self.assertFalse(reopened.get_plan(old.id).worktree_required)
+        self.assertTrue(reopened.add_plan("New").worktree_required)
 
     def test_export_import_roundtrip(self):
         p = self.store.add_plan("P", goal="g")

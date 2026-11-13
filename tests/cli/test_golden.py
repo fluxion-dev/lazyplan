@@ -51,6 +51,8 @@ class TestGoldenOutputs(unittest.TestCase):
             "\nwhat: Marketing site\n"
             "\nacceptance:\n"
             "  [ ] Loads fast\n"
+            "\nworktrees (isolation required):\n"
+            "  none registered\n"
             "\n  ◐ M1 Homepage",
         )
 

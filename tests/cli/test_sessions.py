@@ -21,7 +21,7 @@ class SessionCliTest(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.db = os.path.join(self.tmp.name, "t.db")
         self.store = Store(self.db)
-        self.plan = self.store.add_plan("P")
+        self.plan = self.store.add_plan("P", worktree_required=False)
 
     def tearDown(self) -> None:
         self.tmp.cleanup()

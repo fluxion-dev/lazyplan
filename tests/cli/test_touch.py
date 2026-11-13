@@ -18,7 +18,7 @@ class TouchCliTest(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.db = os.path.join(self.tmp.name, "t.db")
         self.store = Store(self.db)
-        plan = self.store.add_plan("P")
+        plan = self.store.add_plan("P", worktree_required=False)
         milestone = self.store.add_milestone(plan.id, "M")
         self.task = self.store.add_task(milestone.id, "T")
 

@@ -6,6 +6,8 @@ import argparse
 import sys
 import time
 
+from lazyplan.services.worktrees import checkout_gate
+
 from ....core.entities import Session
 from ....core.ports.app import AppPort
 from ....core.ports.sessions import SessionsPort
@@ -15,6 +17,7 @@ from ...shared.design import msg_error, msg_not_found
 from ...shared.session_labels import plan_label, plan_names, task_label
 from ..emit import _emit_read, _emit_record
 from ..store import optional_store as _optional_store
+from .worktree import record_worktree_override
 
 
 def _session_row(session: Session) -> str:
@@ -75,6 +78,16 @@ def _cmd_session_start(store: AppPort, args: argparse.Namespace, actor: str) -> 
     plan_id = args.plan
     if plan_id is None:
         plan_id = services.attribution.resolve(store, repo, branch).plan_id
+    if explicit and plan_id is not None:
+        blocker = checkout_gate(store, plan_id, repo)
+        if blocker:
+            if not args.force:
+                print(msg_error(ValueError(blocker)), file=sys.stderr)
+                return 2
+            if not str(getattr(args, "reason", "") or "").strip():
+                print(msg_error(ValueError("--force needs --reason")), file=sys.stderr)
+                return 2
+            record_worktree_override(store, plan_id, actor, str(getattr(args, "reason", "")))
     try:
         result = services.start_session(
             store,

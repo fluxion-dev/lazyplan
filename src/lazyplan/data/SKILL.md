@@ -282,6 +282,26 @@ checkout; a manual claim needs `--force` and finish only warns. References are
 read-only links to external work: no fetch, no write-back. `ship` prints the
 deterministic outcome note; `review` remains the full packet.
 
+## Plan worktrees
+
+New plans are isolation-required. Print the setup command, create the worktree
+with git, then register it. lazyplan never creates, removes, or checks out a
+worktree itself.
+
+```bash
+lpui plan worktree --print --id P
+git -C REPO worktree add -b plan/P-SLUG SIBLING
+lpui --actor NAME plan worktree add --id P --repo REPO
+lpui plan worktree list --id P [--stale]
+lpui --actor NAME plan worktree remove --id P --repo REPO
+```
+
+`plan move --to doing`, `session start --plan P`, `next --plan P`, and
+`claim --id T` refuse the shared checkout. `--force --reason` records the
+override. A done move refuses a dirty worktree and prints removal commands;
+`doctor` and `--stale` report drift without deleting. Plans created before the
+flag stay grandfathered.
+
 ## During execution
 
 Update the journal as you go, not at the end:

@@ -320,6 +320,23 @@ def _append_common(lines: list[str], full: dict, files: bool = False) -> None:
         for line in render_forge_links(forge_links).splitlines():
             lines.append(f"  {line}")
     _append_repos(lines, full)
+    _append_worktrees(lines, full)
+
+
+def _append_worktrees(lines: list[str], full: dict) -> None:
+    """Plan worktree registry, including an explicit isolation requirement."""
+    plan = full.get("plan") or {}
+    rows = full.get("worktrees") or []
+    required = bool(plan.get("worktree_required"))
+    if not rows and not required:
+        return
+    state = "required" if required else "optional"
+    lines.append(f"\nworktrees (isolation {state}):")
+    if not rows:
+        lines.append("  none registered")
+        return
+    for row in rows:
+        lines.append(f"  {row['repo_path']} -> {row['worktree_path']} [{row['branch']}]")
 
 
 def _render_plan_full(full: dict, lines: list[str], files: bool = False) -> None:

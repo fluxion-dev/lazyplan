@@ -195,6 +195,7 @@ class ViewsMixin(StoreBase):
             "effective_forge_links": [vars(c) for c in self.effective_forge_links("plan", p.id)],
             "repos": self.list_repos("plan", p.id),
             "effective_repos": self.effective_repos("plan", p.id),
+            "worktrees": [vars(row) for row in self.list_plan_worktrees(p.id)],
             "approval": approval_payload(latest, self.plan_drift(p.id), recent),
             "questions": [vars(q) for q in self.list_questions(p.id, status="all")],
             "refs": [vars(ref) for ref in self.list_refs(p.id)],

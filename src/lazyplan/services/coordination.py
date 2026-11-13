@@ -8,6 +8,7 @@ from ..core.policies.coordination import parse_ttl, patterns_overlap, validate_b
 from ..core.ports.coordination import CoordinationPort
 from ..core.serialization import to_payload
 from .planning import set_status
+from .worktrees import checkout_gate
 
 
 def overlaps(port: CoordinationPort, task_id: int) -> list[dict]:
@@ -55,6 +56,15 @@ def overlaps(port: CoordinationPort, task_id: int) -> list[dict]:
     return found
 
 
+def _task_plan_id(port: CoordinationPort, task_id: int) -> int | None:
+    """Owning plan for one task, or None when the row is missing."""
+    task = port.get_task(task_id)
+    if task is None:
+        return None
+    milestone = port.get_milestone(task.milestone_id)
+    return milestone.plan_id if milestone is not None else None
+
+
 def start_claim(
     port: CoordinationPort,
     task_id: int,
@@ -65,8 +75,14 @@ def start_claim(
     worktree: str = "",
     repo_path: str = "",
     check_overlap: bool = True,
+    reason: str = "",
 ) -> dict:
     """Claim a task and move it doing; release the lease if the move fails."""
+    plan_id = _task_plan_id(port, task_id)
+    if worktree and plan_id is not None:
+        blocker = checkout_gate(port, plan_id, worktree)
+        if blocker and not (force and reason.strip()):
+            raise ValueError(blocker)
     if check_overlap and not force:
         found = overlaps(port, task_id)
         if found:
@@ -130,8 +146,14 @@ def claim_next(
     suggest: bool = False,
     worktree: str = "",
     repo_path: str = "",
+    force: bool = False,
+    reason: str = "",
 ) -> dict | None:
     """Select and optionally claim the first eligible todo, retrying lost races."""
+    if plan_id is not None and worktree:
+        blocker = checkout_gate(port, plan_id, worktree)
+        if blocker and not (force and reason.strip()):
+            raise ValueError(blocker)
     for _ in range(100):
         tasks = port.claimable_tasks(plan_id)
         if not tasks:
@@ -151,6 +173,8 @@ def claim_next(
                 worktree=worktree,
                 repo_path=repo_path,
                 check_overlap=False,
+                force=force,
+                reason=reason,
             )
         except ClaimConflict:
             # Another process claimed this task between selection and claim.

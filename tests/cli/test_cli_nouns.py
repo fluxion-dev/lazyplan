@@ -40,13 +40,23 @@ class TestNounFirstCli(unittest.TestCase):
         self.assertIn("0/0", summary)
         self._run("plan", "edit", "--id", str(pid), "--title", "P2")
         self.assertEqual(Store(self.db).get_plan(pid).name, "P2")
-        self._run("plan", "move", "--id", str(pid), "--to", "doing")
+        self._run(
+            "plan",
+            "move",
+            "--id",
+            str(pid),
+            "--to",
+            "doing",
+            "--force",
+            "--reason",
+            "CLI lifecycle test",
+        )
         self.assertEqual(Store(self.db).get_plan(pid).status.value, "doing")
         self._run("plan", "delete", "--id", str(pid))
         self.assertIsNone(Store(self.db).get_plan(pid))
 
     def test_milestone_and_task_groups(self):
-        pid = self.store.add_plan("P").id
+        pid = self.store.add_plan("P", worktree_required=False).id
         ms = self._json("milestone", "add", "--plan", str(pid), "--title", "M", "--desc", "d")
         assert isinstance(ms, dict)
         sid = ms["milestone"]["id"]
@@ -62,7 +72,7 @@ class TestNounFirstCli(unittest.TestCase):
         self.assertIn("T", tasks)
 
     def test_criterion_group(self):
-        pid = self.store.add_plan("P").id
+        pid = self.store.add_plan("P", worktree_required=False).id
         c = self._json("criterion", "add", "--kind", "plan", "--id", str(pid), "--text", "works")
         assert isinstance(c, dict)
         cid = c["criteria"]["id"]
@@ -77,7 +87,7 @@ class TestNounFirstCli(unittest.TestCase):
         self.assertEqual(Store(self.db).list_criteria("plan", pid), [])
 
     def test_list_is_summary_first_and_tree_is_opt_in(self):
-        pid = self.store.add_plan("P").id
+        pid = self.store.add_plan("P", worktree_required=False).id
         sid = self.store.add_milestone(pid, "M").id
         self.store.add_task(sid, "T")
         summary = self._run("list")[1]
@@ -99,7 +109,7 @@ class TestNounFirstCli(unittest.TestCase):
                 self.assertEqual(caught.exception.code, 2)
 
     def test_json_shape_is_unchanged(self):
-        pid = self.store.add_plan("P").id
+        pid = self.store.add_plan("P", worktree_required=False).id
         self.store.add_milestone(pid, "M")
         payload = self._json("list")
         assert isinstance(payload, list)

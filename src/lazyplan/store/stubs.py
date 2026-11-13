@@ -19,6 +19,7 @@ from ..core.entities import (
     PlanChange,
     PlanQuestion,
     PlanRevision,
+    PlanWorktree,
     Task,
 )
 from ..core.policies.coordination import CLAIM_DEFAULT_TTL
@@ -29,7 +30,12 @@ class StoreStubs(StoreStubsLinks):
     """Declarations filled in by the persistence mixins."""
 
     def add_plan(
-        self, name: str, description: str = "", goal: str = "", actor: str = "human"
+        self,
+        name: str,
+        description: str = "",
+        goal: str = "",
+        actor: str = "human",
+        worktree_required: bool = True,
     ) -> Plan:
         raise NotImplementedError
 
@@ -568,4 +574,25 @@ class StoreStubs(StoreStubsLinks):
         raise NotImplementedError
 
     def open_criteria(self, kind: str, obj_id: int) -> list[Criterion]:
+        raise NotImplementedError
+
+    def register_plan_worktree(
+        self,
+        plan_id: int,
+        repo_path: str,
+        worktree_path: str,
+        branch: str = "",
+        repo_remote: str = "",
+        actor: str = "human",
+        registered_at: float = 0.0,
+    ) -> PlanWorktree:
+        raise NotImplementedError
+
+    def get_plan_worktree(self, plan_id: int, repo_path: str) -> PlanWorktree | None:
+        raise NotImplementedError
+
+    def list_plan_worktrees(self, plan_id: int) -> list[PlanWorktree]:
+        raise NotImplementedError
+
+    def remove_plan_worktree(self, plan_id: int, repo_path: str, actor: str = "human") -> bool:
         raise NotImplementedError

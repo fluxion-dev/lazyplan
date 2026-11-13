@@ -18,7 +18,7 @@ class PlanReadyCliTest(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.db = os.path.join(self.tmp.name, "t.db")
         self.store = Store(self.db)
-        self.plan = self.store.add_plan("P")
+        self.plan = self.store.add_plan("P", worktree_required=False)
         self.milestone = self.store.add_milestone(self.plan.id, "M")
         self.task = self.store.add_task(
             self.milestone.id,
@@ -63,8 +63,8 @@ class PlanReadyCliTest(unittest.TestCase):
         code, out, err = self._run("--porcelain", "plan", "ready", "--id", str(self.plan.id))
         self.assertEqual(code, 0, err)
         rows = [line.split("\t") for line in out.splitlines()]
-        self.assertEqual([row[0] for row in rows], ["check", "check", "check"])
-        self.assertEqual([row[2] for row in rows], ["pass", "pass", "pass"])
+        self.assertEqual([row[0] for row in rows], ["check", "check", "check", "check"])
+        self.assertEqual([row[2] for row in rows], ["pass", "pass", "pass", "pass"])
 
     def test_unknown_plan_and_missing_database(self) -> None:
         code, _out, err = self._run("plan", "ready", "--id", "999")

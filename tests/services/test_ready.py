@@ -15,7 +15,7 @@ class TestReadyService(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.db = os.path.join(self.tmp.name, "t.db")
         self.store = Store(self.db)
-        self.plan = self.store.add_plan("Plan")
+        self.plan = self.store.add_plan("Plan", worktree_required=False)
         self.milestone = self.store.add_milestone(self.plan.id, "M")
         self.task = self.store.add_task(
             self.milestone.id,
@@ -32,7 +32,9 @@ class TestReadyService(unittest.TestCase):
         result = ready.check(self.store, self.plan.id)
         assert result is not None
         self.assertTrue(result.ready)
-        self.assertEqual([check.id for check in result.checks], ["lint", "coverage", "questions"])
+        self.assertEqual(
+            [check.id for check in result.checks], ["lint", "coverage", "questions", "worktrees"]
+        )
         self.assertTrue(all(check.ok for check in result.checks))
 
     def test_lint_failure(self) -> None:

@@ -338,6 +338,23 @@ def common_blocks(
     return tuple(blocks)
 
 
+def worktrees_block(full: dict[str, Any]) -> PreviewBlock | None:
+    """Read-only plan worktree registry, including the isolation requirement."""
+    plan = full.get("plan") or {}
+    rows = full.get("worktrees") or []
+    required = bool(plan.get("worktree_required"))
+    if not rows and not required:
+        return None
+    lines = [f"isolation {'required' if required else 'optional'}"]
+    if not rows:
+        lines.append("none registered")
+    for row in rows:
+        branch = escape_markdown(str(row.get("branch", "")))
+        path = escape_markdown(str(row.get("worktree_path", "")))
+        lines.append(f"`{branch}` -> {path}")
+    return PreviewBlock("worktrees", tuple(lines))
+
+
 def build_plan(
     store: PlanningPort,
     full: dict[str, Any],
@@ -359,6 +376,9 @@ def build_plan(
     approval = approval_block(full.get("approval"))
     if approval is not None:
         blocks.append(approval)
+    worktrees = worktrees_block(full)
+    if worktrees is not None:
+        blocks.append(worktrees)
     refs = full.get("refs", [])
     if refs:
         blocks.append(PreviewBlock(f"references {len(refs)}", reference_lines(refs)))

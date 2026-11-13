@@ -81,6 +81,16 @@
       "reason": "VCS use cases wrap the VCS adapter"
     },
     {
+      "source": "lazyplan.services.worktrees",
+      "target": "lazyplan.infrastructure.repo",
+      "reason": "worktree checks compare git common dirs"
+    },
+    {
+      "source": "lazyplan.services.worktrees",
+      "target": "lazyplan.infrastructure.vcs",
+      "reason": "worktree checks read branch and status"
+    },
+    {
       "source": "lazyplan.store.base",
       "target": "lazyplan.infrastructure.checkout",
       "reason": "default path adapter"

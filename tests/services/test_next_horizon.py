@@ -16,7 +16,7 @@ class TestNextHorizon(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.db = os.path.join(self.tmp.name, "t.db")
         self.store = Store(self.db)
-        self.plan = self.store.add_plan("Plan", "What", goal="Why")
+        self.plan = self.store.add_plan("Plan", "What", goal="Why", worktree_required=False)
         self.milestone = self.store.add_milestone(self.plan.id, "M")
         self.task = self.store.add_task(
             self.milestone.id,

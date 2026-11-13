@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 
-from ..core.entities import ForgeLink, Milestone, Plan, Status, Task, VcsLink
+from ..core.entities import ForgeLink, Milestone, Plan, PlanWorktree, Status, Task, VcsLink
 
 
 class StoreStubsLinks:
@@ -177,6 +177,9 @@ class StoreStubsLinks:
         raise NotImplementedError
 
     def status_events(self, kind: str) -> list[tuple[float, str]]:
+        raise NotImplementedError
+
+    def plan_worktrees_map(self) -> dict[int, list[PlanWorktree]]:
         raise NotImplementedError
 
     def plan_status_events_map(self) -> dict[int, tuple[float, str]]:

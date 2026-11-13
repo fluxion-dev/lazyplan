@@ -370,6 +370,23 @@ class TestSourceTrail(unittest.TestCase):
         )
         self.assertEqual(commit.url, f"https://github.com/org/repo/commit/{self.sha}")
 
+    def test_commit_repo_root_matches_a_symlinked_checkout(self):
+        alias = os.path.join(self.tmp.name, "alias")
+        os.symlink(self.repo, alias)
+        self.store.link_commit(
+            "task",
+            self.tid,
+            self.sha,
+            subject="first",
+            author="Tester",
+            repo_root=alias,
+            files=("a.py",),
+        )
+        trail = build_source_trail(self.store, "task", self.tid)
+        self.assertEqual(len(trail.repos), 1)
+        self.assertEqual(trail.commit_count, 1)
+        self.assertEqual(trail.repos[0].path, os.path.realpath(self.repo))
+
     def test_commit_stats_for_root_commit(self):
         clear_stats_cache()
         stats = read_commit_stats(self.repo, self.sha)

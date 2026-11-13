@@ -13,6 +13,7 @@ from unittest import mock
 
 from lazyplan.core.entities import Status
 from lazyplan.core.policies.worktrees import derive_worktree
+from lazyplan.infrastructure.integrations import catalog
 from lazyplan.infrastructure.repo import PLAN_DIR, repo_plan_db_path
 from lazyplan.presentation import setup
 from lazyplan.presentation.cli import main as lpui_main
@@ -186,7 +187,8 @@ class DoctorCase(unittest.TestCase):
             lpui_main(["doctor"])
         self.assertIn("skill:", out.getvalue())
         self.assertIn("hooks:", out.getvalue())
-        self.assertNotIn("pending:", out.getvalue())
+        self.assertNotIn("Claude Code hooks", out.getvalue())
+        self.assertNotIn("lazyplan skill", out.getvalue())
 
     def test_pending_integrations_exit_one_and_are_named(self):
         setup.save_state(
@@ -208,8 +210,33 @@ class DoctorCase(unittest.TestCase):
         out = io.StringIO()
         with redirect_stdout(out):
             lpui_main(["doctor"])
-        self.assertIn("pending:", out.getvalue())
-        self.assertIn("hook:claude:session-start", out.getvalue())
+        self.assertIn("health:    Claude Code hooks (error):", out.getvalue())
+        self.assertIn("sessions aren't tracked", out.getvalue())
+
+    def test_never_items_stay_in_the_health_report_without_failing(self):
+        self.assertEqual(lpui_main(["setup", "--yes", "--agents", "claude", "--json"]), 0)
+        state = setup.load_state(self.home)
+        for item in catalog(self.home):
+            if item.host == "claude":
+                state.integration_choices[item.id] = {
+                    "decision": "never",
+                    "fingerprint": item.fingerprint,
+                }
+        setup.save_state(state, self.home)
+        setup.hook_install.remove(self.home)
+        code, report = self._json(["doctor", "--json"])
+        hooks = next(f for f in report["health"] if f["id"] == "hook:claude")
+        self.assertEqual(hooks["decision"], "never")
+        self.assertEqual(report["pending_integrations"], [])
+
+    def test_a_removed_skill_is_reported_as_fixable(self):
+        self.assertEqual(lpui_main(["setup", "--yes", "--agents", "claude", "--json"]), 0)
+        (self.home / ".claude" / "skills" / "lazyplan" / "SKILL.md").unlink()
+        code, report = self._json(["doctor", "--json"])
+        skill = next(f for f in report["health"] if f["id"] == "skill:lazyplan")
+        self.assertTrue(skill["fixable"])
+        self.assertEqual(skill["decision"], "")
+        self.assertEqual(code, 1)
 
 
 if __name__ == "__main__":

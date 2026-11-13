@@ -83,6 +83,19 @@ def _row(*parts: object, sep: str = " · ") -> str:
     return "- " + sep.join(str(part) for part in parts if str(part))
 
 
+HEADLINE_LIMIT = 120
+
+
+def headline(text: str, limit: int = HEADLINE_LIMIT) -> str:
+    """One paragraph collapsed to a single clamped line."""
+    paragraph = text.strip().split("\n\n", 1)[0]
+    line = " ".join(paragraph.split())
+    if len(line) <= limit:
+        return line
+    cut = line[:limit].rsplit(" ", 1)[0].rstrip(" ,;:.-")
+    return f"{cut}…"
+
+
 def _header_row(status: str, label: str, oid: object, title: object) -> str:
     """One child header row: status glyph, kind and id, then the escaped title."""
     return _row(
@@ -387,10 +400,9 @@ def build_plan(
         blocks.append(questions)
     goal = str(obj.get("goal", "") or "").strip()
     desc = str(obj.get("description", "") or "").strip()
-    if goal:
-        blocks.append(PreviewBlock("why", (goal,)))
-    if desc:
-        blocks.append(PreviewBlock("what", (desc,)))
+    lead = goal or desc
+    if lead:
+        blocks.append(PreviewBlock("why" if goal else "what", (headline(lead),)))
     approval = approval_block(full.get("approval"))
     if approval is not None:
         blocks.append(approval)
@@ -418,7 +430,7 @@ def build_milestone(
     blocks: list[PreviewBlock] = []
     desc = str(obj.get("description", "") or "").strip()
     if desc:
-        blocks.append(PreviewBlock("details", (desc,)))
+        blocks.append(PreviewBlock("details", (headline(desc),)))
     tasks = tasks_block(_milestone_tasks(full))
     if tasks is not None:
         blocks.append(tasks)

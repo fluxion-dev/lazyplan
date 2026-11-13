@@ -136,11 +136,48 @@ class PreviewDocumentTest(unittest.TestCase):
         self.assertIn("P1", text)
         self.assertIn("## WHY", text)
         self.assertIn("Why we build", text)
-        self.assertIn("## WHAT", text)
+        self.assertNotIn("## WHAT", text)
+        self.assertNotIn("What we build", text)
         self.assertIn("## MILESTONES 1", text)
         self.assertIn("Milestone title", text)
         self.assertNotIn("## NEXT", text)
         self.assertNotIn("Task title", text)
+
+    def test_plan_headline_keeps_only_the_first_paragraph(self) -> None:
+        plan = self.store.add_plan(
+            "Long plan",
+            "What we build",
+            goal="First sentence stays.\n\nSecond paragraph is detail.",
+        )
+        full = self.store.get_full("plan", plan.id)
+        assert full is not None
+        text = build_preview(self.store, "plan", plan.id, full, []).render_markdown()
+        why = text.split("## WHY", 1)[1].split("## ", 1)[0]
+        self.assertIn("First sentence stays.", why)
+        self.assertNotIn("Second paragraph", why)
+
+    def test_long_headlines_clamp_at_a_word_boundary(self) -> None:
+        plan = self.store.add_plan("Long plan", "What", goal="word " * 60)
+        full = self.store.get_full("plan", plan.id)
+        assert full is not None
+        text = build_preview(self.store, "plan", plan.id, full, []).render_markdown()
+        why = text.split("## WHY", 1)[1].split("## ", 1)[0].strip()
+        self.assertTrue(why.endswith("…"))
+        self.assertLessEqual(len(why), 121)
+        self.assertNotIn("  ", why)
+
+    def test_milestone_details_are_one_headline(self) -> None:
+        milestone = self.store.add_milestone(
+            self.plan.id,
+            "Slice",
+            "First line of intent.\n\nINVEST: detail stays behind.",
+        )
+        full = self.store.get_full("milestone", milestone.id)
+        assert full is not None
+        text = build_preview(self.store, "milestone", milestone.id, full, []).render_markdown()
+        details = text.split("## DETAILS", 1)[1].split("## ", 1)[0]
+        self.assertIn("First line of intent.", details)
+        self.assertNotIn("INVEST", details)
 
     def test_plan_preview_shows_the_registered_worktree(self) -> None:
         self.store.register_plan_worktree(
@@ -417,13 +454,16 @@ class PreviewMarkdownTest(unittest.IsolatedAsyncioTestCase):
     async def test_gfm_prose_renders_as_markdown_blocks(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             store = Store(os.path.join(tmp, "gfm.db"))
-            store.add_plan("Plan", "What", goal=GFM_FIXTURE)
+            plan = store.add_plan("Plan", "What", goal="Why")
+            milestone = store.add_milestone(plan.id, "Slice", "Details")
+            task = store.add_task(milestone.id, "Task", GFM_FIXTURE)
             app = create_app(str(store.path))
             async with app.run_test(size=(120, 40)) as pilot:
                 await pilot.pause()
-                tree = app.query_one("#tree", Tree)
-                tree.focus()
-                tree.select_node(tree.root.children[0])
+                app._expanded.update({("plan", plan.id), ("milestone", milestone.id)})
+                app.refresh_all()
+                await pilot.pause()
+                app.select_row("task", task.id)
                 await pilot.pause()
                 body = app.query_one("#preview-body", Markdown)
                 self.assertIn("**bold** text", body.source or "")

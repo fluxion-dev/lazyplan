@@ -42,6 +42,19 @@ def slugify(title: str) -> str:
     return slug or _FALLBACK
 
 
+def _is_rooted(parent: str) -> bool:
+    """True for ``/x``, ``\\x``, ``C:``, and ``C:\\x``; false for ``C:x``."""
+    if parent[0] in "/\\":
+        return True
+    drive, rest = parent[:2], parent[2:]
+    return (
+        len(drive) == 2
+        and drive[0].isalpha()
+        and drive[1] == ":"
+        and (not rest or rest[0] in "/\\")
+    )
+
+
 def _split_repo(repo_path: str) -> tuple[str, str, str]:
     """Parent, directory name, and native separator for an absolute path."""
     repo = repo_path.rstrip("/\\")
@@ -49,8 +62,7 @@ def _split_repo(repo_path: str) -> tuple[str, str, str]:
     if index < 1:
         raise ValueError(f"repo path must be an absolute checkout: {repo_path!r}")
     parent, name = repo[:index], repo[index + 1 :]
-    drive = len(parent) == 2 and parent[1] == ":"
-    if not name or not parent or not (parent[0] in "/\\" or drive):
+    if not name or not parent or not _is_rooted(parent):
         raise ValueError(f"repo path must be an absolute checkout: {repo_path!r}")
     return parent, name, repo[index]
 

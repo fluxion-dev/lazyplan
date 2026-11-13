@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
-from ..core.ports.insights import InsightsPort
+from ..core.ports.planning import PlanningPort
 from ..infrastructure.repo import git_common_dir
 from ..infrastructure.vcs import GitBackend
 
@@ -27,12 +27,12 @@ def _refuse(
     return WorktreeVerification(False, reason=reason, branch=branch, head=head, dirty=dirty)
 
 
-def worktree_gate(store: InsightsPort, plan_id: int) -> str:
+def worktree_gate(store: PlanningPort, plan_id: int) -> str:
     """Refusal text when an isolation-required plan has a missing registration."""
     plan = store.get_plan(plan_id)
     if plan is None or not plan.worktree_required:
         return ""
-    repos = store.list_repos("plan", plan_id)
+    repos = store.repos_map().get(("plan", plan_id), [])
     if not repos:
         return (
             f"plan #{plan_id} requires isolation but has no linked repo;"
@@ -51,7 +51,7 @@ def worktree_gate(store: InsightsPort, plan_id: int) -> str:
     )
 
 
-def checkout_gate(store: InsightsPort, plan_id: int, checkout: str) -> str:
+def checkout_gate(store: PlanningPort, plan_id: int, checkout: str) -> str:
     """Refusal text when a session starts outside the plan's registered worktree."""
     plan = store.get_plan(plan_id)
     if plan is None or not plan.worktree_required:

@@ -499,6 +499,16 @@ note stored on the claim
 .B \-\-suggest
 show the next task without claiming it
 .RE
+.RS
+.TP
+.B \-\-force
+override a worktree gate
+.RE
+.RS
+.TP
+.B \-\-reason TEXT
+why a worktree gate is overridden
+.RE
 .TP
 .B lpui claim
 claim, renew, or release a task lease
@@ -566,6 +576,11 @@ checkout being worked
 .TP
 .B \-\-repo PATH
 shared repo root
+.RE
+.RS
+.TP
+.B \-\-reason TEXT
+why a worktree gate is overridden
 .RE
 .TP
 .B lpui note

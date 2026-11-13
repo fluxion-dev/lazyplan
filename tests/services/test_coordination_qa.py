@@ -26,7 +26,7 @@ class TestCoordinationQA(unittest.TestCase):
         sandbox_home(self, self.tmp.name)
         os.environ["LAZYPLAN_NO_SETUP"] = "1"
         store = Store(self.db)
-        plan = store.add_plan("P", "what", goal="why", actor="fixture")
+        plan = store.add_plan("P", "what", goal="why", actor="fixture", worktree_required=False)
         milestone = store.add_milestone(plan.id, "M", actor="fixture")
         store.add_task(milestone.id, "T1", description="first", actor="fixture")
         store.add_task(milestone.id, "T2", description="second", actor="fixture")

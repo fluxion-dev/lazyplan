@@ -31,6 +31,9 @@ def add_claim(
     )
     cl.add_argument("--worktree", default="", metavar="PATH", help="checkout being worked")
     cl.add_argument("--repo", default="", metavar="PATH", help="shared repo root")
+    cl.add_argument(
+        "--reason", default="", metavar="TEXT", help="why a worktree gate is overridden"
+    )
 
 
 def add_claims(
@@ -60,6 +63,10 @@ def add_next(
     nxt.add_argument("--note", default="", metavar="TEXT", help="note stored on the claim")
     nxt.add_argument(
         "--suggest", action="store_true", help="show the next task without claiming it"
+    )
+    nxt.add_argument("--force", action="store_true", help="override a worktree gate")
+    nxt.add_argument(
+        "--reason", default="", metavar="TEXT", help="why a worktree gate is overridden"
     )
 
 

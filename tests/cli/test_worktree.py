@@ -258,6 +258,78 @@ class PlanWorktreeRegisterTest(unittest.TestCase):
 
         self.assertEqual(code, 0, error)
 
+    def _register_and_task(self) -> int:
+        self.assertEqual(
+            self._run(
+                [
+                    "plan",
+                    "worktree",
+                    "add",
+                    "--id",
+                    str(self.plan.id),
+                    "--repo",
+                    self.repo,
+                ]
+            )[0],
+            0,
+        )
+        store = Store(self.db)
+        milestone = store.add_milestone(self.plan.id, "M")
+        task = store.add_task(milestone.id, "T", "Approach: x.\n\nCommit: one.\n\nVerify: y.")
+        return task.id
+
+    def test_next_refuses_the_shared_checkout(self) -> None:
+        self._register_and_task()
+        os.chdir(self.repo)
+
+        code, _, error = self._run(["--actor", "fixture", "next", "--plan", str(self.plan.id)])
+        self.assertEqual(code, 2)
+        self.assertIn("registered worktree", error)
+
+        code, _, error = self._run(
+            [
+                "--actor",
+                "fixture",
+                "next",
+                "--plan",
+                str(self.plan.id),
+                "--force",
+                "--reason",
+                "temporary pairing",
+            ]
+        )
+        self.assertEqual(code, 0, error)
+
+    def test_claim_refuses_the_shared_checkout(self) -> None:
+        task_id = self._register_and_task()
+        os.chdir(self.repo)
+
+        code, _, error = self._run(["--actor", "fixture", "claim", "--id", str(task_id)])
+        self.assertEqual(code, 2)
+        self.assertIn("registered worktree", error)
+
+        code, _, error = self._run(
+            [
+                "--actor",
+                "fixture",
+                "claim",
+                "--id",
+                str(task_id),
+                "--force",
+                "--reason",
+                "temporary pairing",
+            ]
+        )
+        self.assertEqual(code, 0, error)
+
+    def test_claim_succeeds_inside_the_worktree(self) -> None:
+        task_id = self._register_and_task()
+        os.chdir(self.target.worktree_path)
+
+        code, _, error = self._run(["--actor", "fixture", "claim", "--id", str(task_id)])
+
+        self.assertEqual(code, 0, error)
+
     def test_session_start_requires_the_registered_worktree(self) -> None:
         self.assertEqual(
             self._run(

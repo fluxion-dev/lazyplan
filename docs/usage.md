@@ -379,6 +379,9 @@ before it.
 | `n` | create by context (plan, milestone, or task) |
 | `/` | filter by text |
 | `g` | open the source trail for the selected row |
+| `n` / `p` | next / previous file in a commit diff |
+| `s` / `w` / `f` | split or unified · wrap or truncate · fold or unfold |
+| `ctrl+d` / `ctrl+u` | next / previous diff page |
 | `[` / `]` | history back / forward, restoring the prior screen and selection |
 | `escape` | back from source and modals; clears the tree filter |
 | `?` | help, from any screen |
@@ -450,12 +453,17 @@ shows the feed. `feed` is the historical audit trail: events stay visible after
 a plan is archived.
 
 - Source trail: the tree groups checkout → commits → changed files, with pull
-  requests alongside. `enter` cross-links to the owning plan, milestone, or
-  task; `o` opens the selected commit, file, or pull request; `y` copies it;
-  `/` filters. The diff preview shows a file summary, per-file add/remove
-  counts, hunk headers, and old/new line numbers. A missing commit is marked
-  stale, and an offline diff says so. The source footer uses the same action
-  bar as the rest of the screen.
+  requests alongside. Expanding a commit loads file status letters and
+  per-file add/remove counts. The preview shows the commit summary, a compact
+  file index, and one file's diff; `n` and `p` walk the files. Diffs use tinted
+  rows, aligned old/new gutters, hunk context, folded unchanged runs,
+  changed-word emphasis, and syntax colors. `s` switches between unified and
+  side-by-side, `w` toggles wrapping, and `f` toggles folded context;
+  `ctrl+d` / `ctrl+u` page a long diff. `enter` cross-links to the owning plan,
+  milestone, or task; `o` opens the selected commit, file, or pull request; `y`
+  copies it; `/` filters. A missing commit is marked stale, and an offline diff
+  says so. The source footer uses the same action bar as the rest of the
+  screen.
 - Pull requests: rows show state, checks, reviews, base and head refs, merge
   data, and a stale marker. `a` links a URL, `d` unlinks, `o` opens it, and
   `r` refreshes. Only `r` touches the network; every other path reads cache.
@@ -476,14 +484,19 @@ The palette carries the work that does not need a dedicated key. **Approve
 plan scope**, **Show plan diff**, **Add / Resolve / Reopen
 plan question**, **Link / Unlink external reference**, **Claim task**, **Block
 task**, **Unblock task**, and **Finish task** all run from the same palette.
+**Show plan diff** opens a dedicated screen: changes grouped by plan,
+milestone, task, and criterion, with before/after text and the recorded reason;
+a plan in sync says so.
 Run **Export plan as Markdown** to open a destination picker; the CLI
 equivalent is `lpui export --format markdown --plan ID --file PATH`
 (add `--force` to replace an existing file).
 
 Select a plan, milestone, or task and press `g` to browse the source trail:
-checkout → commits → changed files, with linked pull requests alongside. The
-source preview shows a read-only diff; large diffs stop at 20 files / 300 lines.
-`o` opens the selected commit, PR, or file, `y` copies it, and `/` filters.
+checkout → commits → changed files, with linked pull requests alongside.
+Expanding a commit loads file status and counts. The preview shows the commit
+summary, its files, and one file's diff; `n` and `p` move between files and the
+footer pages through long diffs. `o` opens the selected commit, PR, or file,
+`y` copies it, and `/` filters.
 
 ## Agents
 

@@ -12,6 +12,12 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
   Task descriptions no longer repeat inline, so a milestone with detailed tasks
   stays scannable; select the task to read its details. The plan overview's
   `NEXT` shortcut list is gone.
+- **The source trail explains the change.** Expanding a commit now shows each
+  file's status and line counts. Diffs use tinted rows, aligned old/new
+  gutters, folded context, changed-word emphasis, syntax colors, and a
+  side-by-side toggle. `n` / `p` walk the files and `ctrl+d` / `ctrl+u` page a
+  long diff. **Show plan diff** now opens a dedicated screen grouped by kind
+  with before/after text and the reason for each change.
 
 ## v0.41.1 — 2026-11-12
 

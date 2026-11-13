@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Any
 from ...shared.design import (
     escape_markdown,
     escape_markup,
-    status_word,
 )
 from .reference_lines import reference_lines
 
@@ -95,11 +94,16 @@ def headline(text: str, limit: int = HEADLINE_LIMIT) -> str:
     return f"{cut}…"
 
 
-def _header_row(status: str, label: str, oid: object, title: object) -> str:
-    """One child header row: status glyph, kind and id, then the escaped title."""
-    return _row(
-        status_word(status, "plain"), _strong(f"{label}{oid}"), escape_markdown(str(title)), sep=" "
-    )
+def _child_row(letter: str, oid: object, title: object, suffix: str = "") -> str:
+    """One plain child row: id, two spaces, title, then an optional count."""
+    head = f"- {letter}{oid}  {escape_markdown(str(title))}"
+    return f"{head} · {suffix}" if suffix else head
+
+
+def _header_row(status: str, label: str, oid: object, title: object, suffix: str = "") -> str:
+    """One child header row: kind id, title, and an optional count or state."""
+    del status
+    return _child_row(label, oid, title, suffix)
 
 
 def _title(
@@ -151,8 +155,14 @@ def _milestone_tasks(full: dict[str, Any]) -> list[dict[str, Any]]:
     return [entry.get("task", {}) for entry in full.get("tasks", [])]
 
 
+def _task_states(tasks: list[dict[str, Any]]) -> str:
+    """Compact done/total count for a task group."""
+    done = sum(1 for task in tasks if task.get("status") == "done")
+    return f"{done}/{len(tasks)}"
+
+
 def milestones_block(milestones: list[dict[str, Any]]) -> PreviewBlock | None:
-    """Every milestone under the selected plan, as one header row."""
+    """Every milestone under the selected plan, as one plain row."""
     if not milestones:
         return None
     lines = []
@@ -164,32 +174,45 @@ def milestones_block(milestones: list[dict[str, Any]]) -> PreviewBlock | None:
                 "M",
                 milestone.get("id"),
                 milestone.get("title", ""),
+                _task_states(entry.get("tasks", [])),
             )
         )
     return PreviewBlock(f"milestones {len(milestones)}", tuple(lines))
 
 
+def _task_state(task: dict[str, Any]) -> str:
+    if task.get("blocked"):
+        return "blocked"
+    if task.get("status") == "doing":
+        return "doing"
+    return ""
+
+
 def tasks_block(tasks: list[dict[str, Any]]) -> PreviewBlock | None:
-    """Every task under the selected milestone, as one header row."""
+    """Every task under the selected milestone, as one plain row."""
     if not tasks:
         return None
     lines = [
-        _header_row(str(task.get("status", "")), "T", task.get("id"), task.get("title", ""))
+        _header_row(
+            str(task.get("status", "")),
+            "T",
+            task.get("id"),
+            task.get("title", ""),
+            _task_state(task),
+        )
         for task in tasks
     ]
     return PreviewBlock(f"tasks {len(tasks)}", tuple(lines))
 
 
-def _proof_chip(evidence: dict[str, Any] | None) -> str:
-    """One compact state chip for a criterion's evidence."""
-    data = evidence or {}
-    state = str(data.get("state") or "none")
-    count = int(data.get("count", 0) or 0)
+def _proof_word(evidence: dict[str, Any] | None) -> str:
+    """One plain word for a criterion's evidence state."""
+    state = str((evidence or {}).get("state") or "none")
     if state == "pass":
-        return f"✓ {count}"
+        return "proven"
     if state == "fail":
-        return f"✗ {count}"
-    return "—"
+        return "failing"
+    return "no evidence"
 
 
 def acceptance_block(
@@ -204,35 +227,15 @@ def acceptance_block(
     if not detailed:
         return PreviewBlock(
             heading,
-            tuple(
-                _row(
-                    "○",
-                    criterion.get("text", ""),
-                    _proof_chip(criterion.get("evidence")),
-                    sep=" ",
-                )
-                for criterion in open_items[:3]
-            ),
+            tuple(_row(str(criterion.get("text", ""))) for criterion in open_items[:3]),
         )
     return PreviewBlock(heading, _detailed_acceptance_rows(open_items))
 
 
 def _detailed_acceptance_rows(criteria: list[dict[str, Any]]) -> tuple[str, ...]:
-    """One row per criterion, open first, with its id and proof state."""
-    ordered = sorted(
-        criteria,
-        key=lambda criterion: (bool(criterion.get("done")), int(criterion.get("id", 0) or 0)),
-    )
-    return tuple(
-        _row(
-            "✓" if criterion.get("done") else "○",
-            _strong(f"C{criterion.get('id')}"),
-            criterion.get("text", ""),
-            f"· {_proof_chip(criterion.get('evidence'))}",
-            sep=" ",
-        )
-        for criterion in ordered
-    )
+    """One plain row per open criterion."""
+    ordered = sorted(criteria, key=lambda criterion: int(criterion.get("id", 0) or 0))
+    return tuple(_row(str(criterion.get("text", ""))) for criterion in ordered)
 
 
 def questions_block(questions: list[dict[str, Any]]) -> PreviewBlock | None:
@@ -249,32 +252,29 @@ def questions_block(questions: list[dict[str, Any]]) -> PreviewBlock | None:
 
 
 def proof_block(criteria: list[dict[str, Any]]) -> PreviewBlock | None:
-    """Proof panel for the selected task."""
+    """Proof panel for the selected task: criterion, proof word, and evidence."""
     if not criteria:
         return None
     lines: list[str] = []
     for criterion in criteria[:5]:
         evidence = criterion.get("evidence") or {}
         latest = evidence.get("latest") or {}
-        state = str(evidence.get("state") or "none")
-        mark = "✓" if state == "pass" else "✗" if state == "fail" else "—"
         label = (
             latest.get("command")
             or latest.get("note")
             or str(latest.get("commit_sha", ""))[:12]
-            or "-"
+            or ""
         )
+        parts = [
+            str(criterion.get("text", "")),
+            _proof_word(evidence),
+        ]
+        if label:
+            parts.append(escape_markdown(str(label)))
         exit_code = latest.get("exit_code")
-        exit_text = f" exit {exit_code}" if exit_code is not None else ""
-        lines.append(
-            _row(
-                mark,
-                _strong(f"C{criterion['id']}"),
-                criterion.get("text", ""),
-                f"{evidence.get('count', 0)} rows{exit_text}",
-                escape_markdown(str(label)),
-            )
-        )
+        if exit_code is not None:
+            parts.append(f"exit {exit_code}")
+        lines.append(_row(*parts))
     return PreviewBlock("proof", tuple(lines))
 
 

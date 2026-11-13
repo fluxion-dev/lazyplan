@@ -7,6 +7,7 @@ import tempfile
 import unittest
 from unittest import mock
 
+from lazyplan.core.entities import Status
 from lazyplan.store import Store
 
 try:
@@ -119,14 +120,14 @@ class PreviewDocumentTest(unittest.TestCase):
         full = self.store.get_full("plan", plan.id)
         assert full is not None
         text = build_preview(self.store, "plan", plan.id, full, []).render()
-        self.assertIn(f"**M{milestone.id}** Milestone \\*bold\\* \\[x\\]", text)
+        self.assertIn(f"M{milestone.id}  Milestone \\*bold\\* \\[x\\]", text)
         self.assertIn("raw **prose**", text)
         milestone_full = self.store.get_full("milestone", milestone.id)
         assert milestone_full is not None
         milestone_text = build_preview(
             self.store, "milestone", milestone.id, milestone_full, []
         ).render()
-        self.assertIn(f"**T{task.id}** Task \\#hash", milestone_text)
+        self.assertIn(f"T{task.id}  Task \\#hash", milestone_text)
 
     def test_plan_preview_keeps_order_and_sections(self) -> None:
         full = self.store.get_full("plan", self.plan.id)
@@ -211,7 +212,7 @@ class PreviewDocumentTest(unittest.TestCase):
         lines = build_preview(self.store, "plan", self.plan.id, full, []).render().splitlines()
         heading = next(index for index, line in enumerate(lines) if "MILESTONES" in line)
         row = lines[heading + 1]
-        self.assertEqual(row, f"- ○ **M{self.milestone.id}** Milestone title")
+        self.assertEqual(row, f"- M{self.milestone.id}  Milestone title · 0/1")
         self.assertNotIn("Details", row)
         self.assertNotIn("tasks", row)
 
@@ -228,8 +229,8 @@ class PreviewDocumentTest(unittest.TestCase):
         self.assertEqual(
             block.lines,
             (
-                "- ○ **C2** open one · —",
-                "- ○ **C3** open two · ✗ 1",
+                "- open one",
+                "- open two",
             ),
         )
 
@@ -251,7 +252,6 @@ class PreviewDocumentTest(unittest.TestCase):
         text = build_preview(self.store, "plan", self.plan.id, full, []).render_markdown()
         acceptance = text.split("## ACCEPTANCE", 1)[1].split("## ", 1)[0]
         for criterion in criteria[2:]:
-            self.assertIn(f"C{criterion.id}", acceptance)
             self.assertIn(criterion.text, acceptance)
         self.assertNotIn(f"C{criteria[0].id}", acceptance)
         self.assertNotIn(f"C{criteria[1].id}", acceptance)
@@ -297,7 +297,37 @@ class PreviewDocumentTest(unittest.TestCase):
         text = build_preview(self.store, "milestone", self.milestone.id, full, []).render_markdown()
         acceptance = text.split("## ACCEPTANCE", 1)[1].split("## ", 1)[0]
         self.assertNotIn(f"C{criteria[0].id}", acceptance)
-        self.assertEqual(acceptance.count("- ○"), 3)
+        self.assertEqual(acceptance.count("- milestone criterion"), 3)
+
+    def test_child_rows_use_words_not_glyphs(self) -> None:
+        full = self.store.get_full("plan", self.plan.id)
+        assert full is not None
+        text = build_preview(self.store, "plan", self.plan.id, full, []).render_markdown()
+        for icon in ("○", "◐", "●", "◈", "◇", "▹", "✓", "✗", "—", "▰", "▱"):
+            self.assertNotIn(icon, text)
+
+    def test_task_rows_carry_one_state_word(self) -> None:
+        self.store.set_status_raw("task", self.task.id, Status.DOING)
+        full = self.store.get_full("milestone", self.milestone.id)
+        assert full is not None
+        text = build_preview(self.store, "milestone", self.milestone.id, full, []).render_markdown()
+        self.assertIn(f"- T{self.task.id}  Task title · doing", text)
+
+        self.store.set_blocked(self.task.id, True, "waiting", actor="t")
+        full = self.store.get_full("milestone", self.milestone.id)
+        assert full is not None
+        text = build_preview(self.store, "milestone", self.milestone.id, full, []).render_markdown()
+        self.assertIn(f"- T{self.task.id}  Task title · blocked", text)
+
+    def test_acceptance_rows_keep_plain_prose(self) -> None:
+        criterion = self.store.add_criteria("task", self.task.id, "Run `pytest` in the repo")
+        self.store.add_evidence(criterion.id, command="pytest", exit_code=0, actor="ci")
+        full = self.store.get_full("task", self.task.id)
+        assert full is not None
+        text = build_preview(self.store, "task", self.task.id, full, []).render_markdown()
+        self.assertIn("- Run `pytest` in the repo · proven · pytest · exit 0", text)
+        self.assertNotIn("\\`", text)
+        self.assertNotIn(f"C{criterion.id}", text)
 
     def test_milestone_preview_tasks_are_header_rows(self) -> None:
         second = self.store.add_task(
@@ -313,8 +343,8 @@ class PreviewDocumentTest(unittest.TestCase):
         heading = next(index for index, line in enumerate(lines) if line.startswith("## TASKS"))
         rows = [line for line in lines[heading + 1 :] if line.startswith("- ")]
         self.assertEqual(len(rows), 2)
-        self.assertEqual(rows[0], f"- ○ **T{self.task.id}** Task title")
-        self.assertEqual(rows[1], f"- ○ **T{second.id}** Second task")
+        self.assertEqual(rows[0], f"- T{self.task.id}  Task title")
+        self.assertEqual(rows[1], f"- T{second.id}  Second task")
         text = "\n".join(rows)
         self.assertNotIn("Task details", text)
         self.assertNotIn("Second details", text)
@@ -360,8 +390,9 @@ class PreviewDocumentTest(unittest.TestCase):
         text = build_preview(self.store, "task", self.task.id, full, []).render()
         self.assertIn("## PROOF", text)
         self.assertIn("pytest", text)
-        self.assertIn("✓", text)
+        self.assertIn("proven", text)
         self.assertIn("exit 0", text)
+        self.assertNotIn("✓", text)
 
     def test_task_preview_shows_context_line_and_details(self) -> None:
         full = self.store.get_full("task", self.task.id)
@@ -474,7 +505,6 @@ class PreviewMarkdownTest(unittest.IsolatedAsyncioTestCase):
                 await pilot.pause()
                 source = app.query_one("#preview-body", Markdown).source or ""
                 for criterion in criteria[1:]:
-                    self.assertIn(f"C{criterion.id}", source)
                     self.assertIn(criterion.text, source)
                 self.assertNotIn(f"C{criteria[0].id}", source)
                 self.assertLess(

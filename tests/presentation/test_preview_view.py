@@ -249,11 +249,24 @@ class PreviewDocumentTest(unittest.TestCase):
         assert full is not None
         text = build_preview(self.store, "plan", self.plan.id, full).render_markdown()
         acceptance = text.split("## ACCEPTANCE", 1)[1].split("## ", 1)[0]
-        for criterion in criteria[2:]:
+        for criterion in criteria[2:5]:
             self.assertIn(criterion.text, acceptance)
+        self.assertNotIn(criteria[5].text, acceptance)
+        self.assertNotIn(criteria[6].text, acceptance)
         self.assertNotIn(f"C{criteria[0].id}", acceptance)
         self.assertNotIn(f"C{criteria[1].id}", acceptance)
         self.assertIn("2/7 · 5 OPEN", acceptance)
+        self.assertIn("- 2 more open", acceptance)
+
+    def test_acceptance_list_caps_at_three_rows(self) -> None:
+        criteria = [
+            {"id": index, "text": f"open {index}", "done": False, "evidence": {}}
+            for index in range(4)
+        ]
+        block = acceptance_block(criteria, detailed=True)
+        assert block is not None
+        self.assertEqual(len(block.lines), 4)
+        self.assertEqual(block.lines[-1], "- 1 more open")
 
     def test_plan_preview_without_criteria_has_no_acceptance_block(self) -> None:
         full = self.store.get_full("plan", self.plan.id)

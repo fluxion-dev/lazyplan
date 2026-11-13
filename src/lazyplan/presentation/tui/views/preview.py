@@ -213,7 +213,10 @@ def acceptance_block(
             heading,
             tuple(_row(str(criterion.get("text", ""))) for criterion in open_items[:3]),
         )
-    return PreviewBlock(heading, _detailed_acceptance_rows(open_items))
+    rows = list(_detailed_acceptance_rows(open_items))
+    if len(rows) > 3:
+        rows = rows[:3] + [f"- {len(rows) - 3} more open"]
+    return PreviewBlock(heading, tuple(rows))
 
 
 def _detailed_acceptance_rows(criteria: list[dict[str, Any]]) -> tuple[str, ...]:

@@ -46,6 +46,8 @@ class TestOverviewGlance(unittest.IsolatedAsyncioTestCase):
         self.blocked = self.store.add_task(self.milestone.id, "Wait on review", "Details.")
         self.store.set_blocked(self.blocked.id, True, "waiting", actor="t")
         self.store.add_criteria("plan", self.plan.id, "The screen reads as words", actor="t")
+        for index in range(4):
+            self.store.add_criteria("plan", self.plan.id, f"Extra criterion {index}", actor="t")
 
     def _tree_row(self, app: object, key: tuple[str, int]) -> str:
         return Text.from_markup(app._row_labels[key]).plain  # type: ignore[attr-defined]
@@ -75,6 +77,8 @@ class TestOverviewGlance(unittest.IsolatedAsyncioTestCase):
                     self.assertIn("## WHY", body)
                     self.assertIn("## MILESTONES 1", body)
                     self.assertIn("The screen should answer", body)
+                    self.assertIn("- 2 more open", body)
+                    self.assertNotIn("Extra criterion 3", body)
                     for hidden in ("## APPROVAL", "## SOURCE", "## NOTES", "## WORKTREES"):
                         self.assertNotIn(hidden, body)
                     for glyph in GLYPHS:

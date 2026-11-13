@@ -1,4 +1,4 @@
-"""Coordination hubs: claims and touch-points, sessions, comments and notes."""
+"""Coordination hubs: claims and touch-points, agents, comments and notes."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ except ImportError:  # pragma: no cover - stdlib-only interpreter
 from .... import services
 from ....core.errors import ClaimError
 from ...shared.design import escape_markup
-from ...shared.session_labels import branch_label, plan_label, plan_names, task_label
+from ...shared.session_labels import plan_names
 from .forms import FilterPromptScreen
 
 
@@ -183,18 +183,18 @@ if _TEXTUAL_OK:
                 FilterPromptScreen("Remove touch-point", "path or glob", "Remove"), cb
             )
 
-    class SessionsHub(HubScreen):
-        """Sessions and handoffs for one plan."""
+    class AgentsHub(HubScreen):
+        """Exact live agents and handoffs for one plan."""
 
-        kind = "sessions"
-        primary_hint = ("a", "start session")
+        kind = "agents"
+        primary_hint = ("a", "start agent")
         BINDINGS = [Binding("x", "hub_toggle", "Toggle")]
 
         def __init__(self, store: object, plan_id: int) -> None:
             super().__init__(store)
             self.plan_id = plan_id
-            self.title = f"sessions · P{plan_id}"
-            self.empty = "No sessions yet. Press a to start one."
+            self.title = f"agents · P{plan_id}"
+            self.empty = "No agents yet. Press a to start one."
 
         @property
         def source_parent(self) -> tuple[str, int] | None:
@@ -204,55 +204,58 @@ if _TEXTUAL_OK:
             out: list[HubEntry] = []
             stamp = time.time()
             try:
-                services.sessions.reap_idle_sessions(self.store, now=stamp)
+                services.sweep_lost(self.store)
             except (OSError, RuntimeError, ValueError):
                 pass
             titles = plan_names(self.store)
-            for session in services.sessions.list_sessions(
-                self.store, plan_id=self.plan_id, limit=50
-            ):
-                state = services.session_state(session, stamp)
-                plan = plan_label(session, titles.get(session.plan_id or 0, ""), empty="—")
-                branch = branch_label(session, empty="—")
-                task = task_label(session)
+            for agent in self.store.list_agents(plan_id=self.plan_id, limit=50):
+                plan = (
+                    f"P{agent.plan_id} {titles.get(agent.plan_id, '')}".strip()
+                    if agent.plan_id is not None
+                    else "unbound"
+                )
                 body = (
-                    f"S{session.id} · {state}\n"
-                    f"actor   @{escape_markup(session.actor)}\n"
-                    f"host    {escape_markup(session.host or '—')}\n"
-                    f"session {escape_markup(session.host_session or '—')}\n"
+                    f"A{agent.id} · {agent.status}\n"
+                    f"agent   @{escape_markup(agent.agent)}\n"
+                    f"role    {escape_markup(agent.role)}\n"
+                    f"model   {escape_markup(agent.model)}\n"
+                    f"host    {escape_markup(agent.host)}\n"
+                    f"session {escape_markup(agent.host_session or '—')}\n"
+                    f"pid     {agent.pid or '—'}\n"
+                    f"parent  {f'A{agent.parent_id}' if agent.parent_id else '—'}\n"
                     f"plan    {escape_markup(plan)}\n"
                 )
-                if task:
-                    body += f"task    {task}\n"
+                if agent.task_id is not None:
+                    body += f"task    T{agent.task_id}\n"
                 body += (
-                    f"branch  {escape_markup(branch)}\n"
-                    f"age     {_age(session.started_at, stamp)}\n"
-                    f"idle    {_age(session.last_activity(), stamp)}\n"
-                    f"summary {escape_markup(session.summary or '—')}\n"
-                    f"handoff {escape_markup(session.handoff or '—')}"
+                    f"worktree {escape_markup(agent.worktree or '—')}\n"
+                    f"branch  {escape_markup(agent.branch or '—')}\n"
+                    f"head    {escape_markup(agent.head_sha[:12] or '—')}\n"
+                    f"age     {_age(agent.started_at, stamp)}\n"
+                    f"summary {escape_markup(agent.summary or '—')}\n"
+                    f"handoff {escape_markup(agent.handoff or '—')}"
                 )
-                detail = services.sessions.show_session(self.store, session.id, limit=5)
+                if agent.unbound:
+                    body += f"\nunbound {escape_markup(agent.unbound_reason or 'no exact plan')}"
+                detail = services.show_agent(self.store, agent.id, limit=5)
                 events = detail.get("events", []) if detail else []
                 if events:
                     body += "\nevents  " + " · ".join(
-                        f"{event.get('action', '')} {str(event.get('detail', ''))[:30]}"
-                        for event in events
+                        f"{event.event} {event.from_status}->{event.to_status}" for event in events
                     )
-                out.append(HubEntry(session.id, f"S{session.id} @{session.actor} {state}", body))
+                out.append(HubEntry(agent.id, f"A{agent.id} @{agent.agent} {agent.status}", body))
             return out
 
         def add(self) -> None:
             def cb(text: str | None) -> None:
                 try:
-                    branch = (text or "").strip() or services.attribution.current_branch(
-                        self.store.checkout_path()
-                    )
-                    services.sessions.start_session(
+                    services.start_agent(
                         self.store,
                         "tui",
+                        host="tui",
+                        agent=text and text.strip() or "tui",
                         plan_id=self.plan_id,
-                        branch=branch,
-                        plan_source="manual",
+                        cwd=self.store.checkout_path(),
                     )
                 except (ValueError, KeyError, ClaimError) as exc:
                     self.notify(f"error: {exc}", timeout=4)
@@ -260,7 +263,7 @@ if _TEXTUAL_OK:
                 self._reload()
 
             self.app.push_screen(
-                FilterPromptScreen("Start session", "branch (optional)", "Start"), cb
+                FilterPromptScreen("Start agent", "agent name (optional)", "Start"), cb
             )
 
         def delete_row(self) -> None:
@@ -271,15 +274,13 @@ if _TEXTUAL_OK:
 
             def cb(text: str | None) -> None:
                 try:
-                    services.sessions.end_session(
-                        self.store, entry.oid, "tui", summary=(text or "").strip()
-                    )
+                    services.end_agent(self.store, entry.oid, "tui", summary=(text or "").strip())
                 except (ValueError, KeyError, ClaimError) as exc:
                     self.notify(f"error: {exc}", timeout=4)
                     return
                 self._reload()
 
-            self.app.push_screen(FilterPromptScreen("End session", "summary (optional)", "End"), cb)
+            self.app.push_screen(FilterPromptScreen("End agent", "summary (optional)", "End"), cb)
 
         def toggle(self) -> None:
             self.delete_row()

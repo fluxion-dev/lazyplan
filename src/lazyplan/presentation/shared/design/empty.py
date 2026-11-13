@@ -14,8 +14,8 @@ EMPTY_PLAN_REVIEW_HINT = "completed plans land here"
 EMPTY_FEED = "No activity yet — agents write with `lpui task add`."
 EMPTY_COMMITS = "(no commits linked)"
 EMPTY_NEEDS = "nothing needs you"
-EMPTY_AGENTS = "No active sessions"
-EMPTY_AGENTS_HINT = "start one: lpui session start --plan N"
+EMPTY_AGENTS = "No live agents"
+EMPTY_AGENTS_HINT = "start one: lpui agent start --plan N"
 EMPTY_APPROVAL = "no approved revision"
 
 

@@ -65,14 +65,14 @@ class HubMixin:
         task_id = oid if kind == "task" else None
         self.app.push_screen(ClaimsHub(self.store, task_id=task_id, plan_id=plan_id))
 
-    def action_open_sessions_hub(self) -> None:
-        from .screens.hub_coordination import SessionsHub
+    def action_open_agents_hub(self) -> None:
+        from .screens.hub_coordination import AgentsHub
 
         plan_id = self._plan_ctx()
         if plan_id is None:
             self.app.notify("select a plan first", timeout=3)
             return
-        self.app.push_screen(SessionsHub(self.store, plan_id))
+        self.app.push_screen(AgentsHub(self.store, plan_id))
 
     def action_open_comments_hub(self) -> None:
         from .screens.hub_coordination import CommentsHub

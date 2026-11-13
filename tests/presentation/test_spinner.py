@@ -45,7 +45,13 @@ class TestSpinnerAcrossUpdates(unittest.IsolatedAsyncioTestCase):
         self.milestone = self.store.add_milestone(self.plan.id, "Milestone")
         self.task = self.store.add_task(self.milestone.id, "Task")
         services.set_status(self.store, "task", self.task.id, Status.DOING, actor="ana")
-        self.session, _ = self.store.start_session("ana", plan_id=self.plan.id)
+        self.session = self.store.add_agent(
+            "ana",
+            host="opencode",
+            agent="ana",
+            plan_id=self.plan.id,
+            worktree=self.store.checkout_path(),
+        )
 
     async def test_the_doing_row_keeps_its_frame_across_a_heartbeat(self) -> None:
         app = create_app(self.store.path)
@@ -59,7 +65,7 @@ class TestSpinnerAcrossUpdates(unittest.IsolatedAsyncioTestCase):
             node = app._row_nodes[("task", self.task.id)]
             before = str(node.label)
             self.assertIn(SPINNER_FRAMES[FRAME], before)
-            self.store.touch_session(self.session.id, phase="awaiting")
+            self.store.transition_agent(self.session.id, "waiting", event="stop")
             app.tree_controller.poll_now()
             await pilot.pause()
             self.assertEqual(app.spinner_controller.tick, FRAME)

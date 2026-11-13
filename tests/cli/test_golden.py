@@ -6,6 +6,7 @@ purpose, never by accident.
 
 import os
 import tempfile
+import time
 import unittest
 
 from lazyplan import services
@@ -13,15 +14,19 @@ from lazyplan.core.entities import Status
 from lazyplan.presentation.shared import render
 from lazyplan.store import Store
 
+CLAIMED_AT = 1_800_000_000.0
+CLAIM_UNTIL = time.strftime("%Y-%m-%d %H:%M", time.localtime(CLAIMED_AT + 1800))
+
 
 def build_fixture(db_path: str) -> tuple[Store, int, int, int]:
-    """Deterministic plan + milestone + task + criterion, task doing."""
+    """Deterministic plan + milestone + task + criterion, task doing and claimed."""
     s = Store(db_path)
     p = s.add_plan("Website", "Marketing site", goal="Convert")
     m = s.add_milestone(p.id, "Homepage", "Hero work")
     t = s.add_task(m.id, "Design hero")
     s.add_criteria("plan", p.id, "Loads fast")
     services.set_status(s, "task", t.id, Status.DOING)
+    s.claim_task(t.id, "human", ttl_seconds=1800, now=CLAIMED_AT)
     return s, p.id, m.id, t.id
 
 
@@ -38,7 +43,7 @@ class TestGoldenOutputs(unittest.TestCase):
     def test_tree_lines(self):
         self.assertEqual(
             render.tree_lines(self.store, None, None),
-            ["◐ P1 Website", "  ◐ M1 Homepage", "    ◐ T1 Design hero"],
+            ["◐ P1 Website", "  ◐ M1 Homepage", "    ◐ T1 Design hero @human"],
         )
 
     def test_render_full_plan(self):
@@ -61,7 +66,8 @@ class TestGoldenOutputs(unittest.TestCase):
         assert full is not None
         self.assertEqual(
             render.render_full("milestone", full),
-            "◐ M1 Homepage (P1)\n\ndetails: Hero work\n\n  ◐ T1 Design hero",
+            "◐ M1 Homepage (P1)\n\ndetails: Hero work\n\n  ◐ T1 Design hero\n"
+            f"  claim: @human until {CLAIM_UNTIL}",
         )
 
     def test_render_markdown(self):

@@ -18,13 +18,13 @@ python3 tools/ia_inventory.py --check
 | palette_commands | 52 |
 | mcp_tools | 67 |
 | mcp_resources | 3 |
-| tui_screens | 16 |
-| tui_bindings | 56 |
+| tui_screens | 17 |
+| tui_bindings | 65 |
 | setup_steps | 4 |
 | hook_events | 35 |
 | doc_files | 9 |
 | doc_headings | 89 |
-| tui_key_conflicts | 11 |
+| tui_key_conflicts | 15 |
 | stale_claims | 0 |
 | env_names | 12 |
 | file_paths | 12 |
@@ -238,6 +238,7 @@ python3 tools/ia_inventory.py --check
 - `src/lazyplan/presentation/tui/screens/help.py` — PaletteScreen
 - `src/lazyplan/presentation/tui/screens/hub.py` — HubScreen
 - `src/lazyplan/presentation/tui/screens/maintenance.py` — MaintenanceScreen
+- `src/lazyplan/presentation/tui/screens/plan_diff.py` — PlanDiffScreen
 - `src/lazyplan/presentation/tui/screens/source.py` — SourceScreen
 - `src/lazyplan/presentation/tui/screens/update.py` — UpdateScreen
 
@@ -294,11 +295,20 @@ python3 tools/ia_inventory.py --check
 | `src/lazyplan/presentation/tui/screens/maintenance.py` | `r` | `refresh` | Refresh |
 | `src/lazyplan/presentation/tui/screens/maintenance.py` | `t` | `apply_trim` | Trim |
 | `src/lazyplan/presentation/tui/screens/maintenance.py` | `v` | `apply_vacuum` | Vacuum |
+| `src/lazyplan/presentation/tui/screens/plan_diff.py` | `escape` | `back` | Back |
+| `src/lazyplan/presentation/tui/screens/plan_diff.py` | `q` | `back` | Quit |
+| `src/lazyplan/presentation/tui/screens/source.py` | `ctrl+d` | `more` | More |
+| `src/lazyplan/presentation/tui/screens/source.py` | `ctrl+u` | `less` | Less |
 | `src/lazyplan/presentation/tui/screens/source.py` | `enter` | `open_owner` | Owner |
 | `src/lazyplan/presentation/tui/screens/source.py` | `escape` | `back` | Back |
+| `src/lazyplan/presentation/tui/screens/source.py` | `f` | `toggle_fold` | Fold |
+| `src/lazyplan/presentation/tui/screens/source.py` | `n` | `next_file` | Next file |
 | `src/lazyplan/presentation/tui/screens/source.py` | `o` | `open` | Open |
+| `src/lazyplan/presentation/tui/screens/source.py` | `p` | `prev_file` | Prev file |
 | `src/lazyplan/presentation/tui/screens/source.py` | `r` | `refresh` | Refresh |
+| `src/lazyplan/presentation/tui/screens/source.py` | `s` | `toggle_split` | Split |
 | `src/lazyplan/presentation/tui/screens/source.py` | `slash` | `filter` | Filter |
+| `src/lazyplan/presentation/tui/screens/source.py` | `w` | `toggle_wrap` | Wrap |
 | `src/lazyplan/presentation/tui/screens/source.py` | `y` | `copy` | Copy |
 | `src/lazyplan/presentation/tui/screens/update.py` | `escape` | `cancel` | Close |
 
@@ -309,12 +319,16 @@ python3 tools/ia_inventory.py --check
 | `a` | `src/lazyplan/presentation/tui/app.py:94` → `add_criterion`; `src/lazyplan/presentation/tui/screens/hub.py:52` → `add`; `src/lazyplan/presentation/tui/screens/maintenance.py:43` → `apply_archive` |
 | `d` | `src/lazyplan/presentation/tui/app.py:95` → `delete`; `src/lazyplan/presentation/tui/screens/hub.py:53` → `delete` |
 | `e` | `src/lazyplan/presentation/tui/app.py:92` → `edit_selection`; `src/lazyplan/presentation/tui/screens/hub_coordination.py:293` → `edit_row`; `src/lazyplan/presentation/tui/screens/hub_kinds.py:30` → `edit_row` |
-| `escape` | `src/lazyplan/presentation/tui/app.py:88` → `clear_filter`; `src/lazyplan/presentation/tui/screens/base.py:47` → `cancel`; `src/lazyplan/presentation/tui/screens/export.py:43` → `cancel`; `src/lazyplan/presentation/tui/screens/hub.py:51` → `back`; `src/lazyplan/presentation/tui/screens/maintenance.py:41` → `back`; `src/lazyplan/presentation/tui/screens/source.py:60` → `back`; `src/lazyplan/presentation/tui/screens/update.py:39` → `cancel` |
+| `escape` | `src/lazyplan/presentation/tui/app.py:88` → `clear_filter`; `src/lazyplan/presentation/tui/screens/base.py:47` → `cancel`; `src/lazyplan/presentation/tui/screens/export.py:43` → `cancel`; `src/lazyplan/presentation/tui/screens/hub.py:51` → `back`; `src/lazyplan/presentation/tui/screens/maintenance.py:41` → `back`; `src/lazyplan/presentation/tui/screens/plan_diff.py:27` → `back`; `src/lazyplan/presentation/tui/screens/source.py:73` → `back`; `src/lazyplan/presentation/tui/screens/update.py:39` → `cancel` |
+| `f` | `src/lazyplan/presentation/tui/screens/hub_provenance.py:200` → `filter_actor`; `src/lazyplan/presentation/tui/screens/source.py:79` → `toggle_fold` |
 | `g` | `src/lazyplan/presentation/tui/app.py:96` → `source_trail`; `src/lazyplan/presentation/tui/screens/hub.py:59` → `source_hub` |
-| `n` | `src/lazyplan/presentation/tui/app.py:91` → `new_context`; `src/lazyplan/presentation/tui/screens/hub.py:55` → `note` |
-| `o` | `src/lazyplan/presentation/tui/screens/hub.py:58` → `open_value`; `src/lazyplan/presentation/tui/screens/source.py:62` → `open` |
-| `r` | `src/lazyplan/presentation/tui/app.py:100` → `refresh`; `src/lazyplan/presentation/tui/screens/hub.py:60` → `refresh`; `src/lazyplan/presentation/tui/screens/maintenance.py:47` → `refresh`; `src/lazyplan/presentation/tui/screens/source.py:65` → `refresh` |
-| `slash` | `src/lazyplan/presentation/tui/app.py:99` → `filter_text`; `src/lazyplan/presentation/tui/screens/source.py:64` → `filter` |
+| `n` | `src/lazyplan/presentation/tui/app.py:91` → `new_context`; `src/lazyplan/presentation/tui/screens/hub.py:55` → `note`; `src/lazyplan/presentation/tui/screens/source.py:75` → `next_file` |
+| `o` | `src/lazyplan/presentation/tui/screens/hub.py:58` → `open_value`; `src/lazyplan/presentation/tui/screens/source.py:82` → `open` |
+| `p` | `src/lazyplan/presentation/tui/screens/maintenance.py:42` → `refresh`; `src/lazyplan/presentation/tui/screens/source.py:76` → `prev_file` |
+| `q` | `src/lazyplan/presentation/tui/navigation.py:84` → `quit`; `src/lazyplan/presentation/tui/screens/plan_diff.py:28` → `back` |
+| `r` | `src/lazyplan/presentation/tui/app.py:100` → `refresh`; `src/lazyplan/presentation/tui/screens/hub.py:60` → `refresh`; `src/lazyplan/presentation/tui/screens/maintenance.py:47` → `refresh`; `src/lazyplan/presentation/tui/screens/source.py:85` → `refresh` |
+| `s` | `src/lazyplan/presentation/tui/app.py:93` → `toggle_status`; `src/lazyplan/presentation/tui/screens/source.py:77` → `toggle_split` |
+| `slash` | `src/lazyplan/presentation/tui/app.py:99` → `filter_text`; `src/lazyplan/presentation/tui/screens/source.py:84` → `filter` |
 | `t` | `src/lazyplan/presentation/tui/app.py:89` → `cycle_theme`; `src/lazyplan/presentation/tui/screens/maintenance.py:44` → `apply_trim` |
 | `x` | `src/lazyplan/presentation/tui/screens/hub_coordination.py:191` → `hub_toggle`; `src/lazyplan/presentation/tui/screens/hub_coordination.py:294` → `hub_toggle`; `src/lazyplan/presentation/tui/screens/hub_coordination.py:35` → `hub_toggle`; `src/lazyplan/presentation/tui/screens/hub_kinds.py:214` → `hub_toggle` |
 

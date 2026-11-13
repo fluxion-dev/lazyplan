@@ -85,7 +85,7 @@ if _TEXTUAL_OK:
                 return
             repos = full.get("effective_repos") or full.get("repos") or []
             panel.show(
-                build_preview(self.store, kind, oid, full, []),
+                build_preview(kind, oid, full),
                 strip=build_control_strip(self.store, kind, oid, full),
             )
             if git is not None:

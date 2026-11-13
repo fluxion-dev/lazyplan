@@ -9,13 +9,9 @@ PANEL_PLAN_QUEUE_TITLE = "plan queue"
 PANEL_PLAN_REVIEW_TITLE = "plan review"
 EMPTY_PLAN_QUEUE_TITLE = "No plans in the plan queue"
 EMPTY_PLAN_QUEUE_HINT = "press n to create one"
-EMPTY_PLAN_REVIEW_TITLE = "No plans in plan review"
-EMPTY_PLAN_REVIEW_HINT = "completed plans land here"
 EMPTY_FEED = "No activity yet — agents write with `lpui task add`."
 EMPTY_COMMITS = "(no commits linked)"
 EMPTY_NEEDS = "nothing needs you"
-EMPTY_AGENTS = "No live agents"
-EMPTY_AGENTS_HINT = "start one: lpui agent start --plan N"
 EMPTY_APPROVAL = "no approved revision"
 
 

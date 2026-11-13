@@ -56,11 +56,13 @@ class TestAgentLine(unittest.TestCase):
             self.assertIn(expected, line)
         self.assertIn("working", line)
 
-    def test_waiting_working_blocked_and_lost_have_distinct_glyphs(self) -> None:
-        self.assertIn("◆", plain(agent_line(self.waiting, self.now)))
-        self.assertIn("◐", plain(agent_line(self.working, self.now, frame=None)))
-        self.assertIn("⊘", plain(agent_line(self.blocked, self.now)))
-        self.assertIn("✕", plain(agent_line(self.lost, self.now)))
+    def test_waiting_working_blocked_and_lost_read_as_words(self) -> None:
+        self.assertIn("waiting", plain(agent_line(self.waiting, self.now)))
+        self.assertIn("working", plain(agent_line(self.working, self.now)))
+        self.assertIn("blocked", plain(agent_line(self.blocked, self.now)))
+        self.assertIn("lost", plain(agent_line(self.lost, self.now)))
+        for glyph in ("◆", "✕", "⊘", "▶", "◐"):
+            self.assertNotIn(glyph, plain(agent_line(self.working, self.now)))
 
     def test_unbound_row_names_its_reason(self) -> None:
         row = replace(
@@ -73,11 +75,6 @@ class TestAgentLine(unittest.TestCase):
         line = plain(agent_line(row, self.now))
         self.assertIn("unbound", line)
         self.assertIn("A1", line)
-
-    def test_spinner_frame_and_plain_word(self) -> None:
-        line = plain(agent_line(self.working, self.now, frame=3))
-        self.assertNotIn("◌", line)
-        self.assertIn("working", line)
 
     def test_no_branch_falls_back_to_a_dash(self) -> None:
         line = plain(agent_line(replace(self.working, branch=""), self.now))

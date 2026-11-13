@@ -36,8 +36,6 @@ from ..cli.parser import package_version
 from ..shared.design import (
     EMPTY_PLAN_QUEUE_HINT,
     EMPTY_PLAN_QUEUE_TITLE,
-    EMPTY_PLAN_REVIEW_HINT,
-    EMPTY_PLAN_REVIEW_TITLE,
     PANEL_PLAN_QUEUE_TITLE,
     PANEL_PLAN_REVIEW_TITLE,
     empty_state,
@@ -46,7 +44,6 @@ from .actions import ActionMixin
 from .base import AppBase
 from .controllers.git_state import GitStateController
 from .controllers.metrics import MetricsController
-from .controllers.spinner import SpinnerController
 from .controllers.tree import TreeController
 from .controllers.updates import UpdateController
 from .filters import FilterMixin
@@ -157,7 +154,6 @@ if _TEXTUAL_OK:
             self._row_specs = {}
             self.tree_controller = TreeController(self)
             self.update_controller = UpdateController(self)
-            self.spinner_controller = SpinnerController(self)
             self.git_state_controller = GitStateController(self)
             self.metrics_controller = MetricsController(self)
             self._fp: Any = store.fingerprint()
@@ -201,14 +197,6 @@ if _TEXTUAL_OK:
                         yield AgentsPanel()
                         with Vertical(id="plans-finished", classes="plan-panel"):
                             yield FoldTree("finished", id="tree-finished", classes="plan-tree")
-                            yield Static(
-                                empty_state(
-                                    EMPTY_PLAN_REVIEW_TITLE,
-                                    EMPTY_PLAN_REVIEW_HINT,
-                                ),
-                                id="tree-finished-empty",
-                                classes="pane-empty",
-                            )
                         yield GitPanel()
                     with Vertical(id="side"):
                         yield PreviewPanel()
@@ -226,7 +214,6 @@ if _TEXTUAL_OK:
             """Stop app-owned timers; each drives deferred or periodic work."""
             self._mounted = False
             self.update_controller.stop()
-            self.spinner_controller.stop()
             self.metrics_controller.stop()
 
         def check_action(self, action: str, _parameters: tuple[object, ...]) -> bool | None:
@@ -245,7 +232,6 @@ if _TEXTUAL_OK:
             self._apply_layout()
             self.call_after_refresh(lambda: self.refresh_all("ready — ? for help"))
             self.set_interval(0.25, self._poll)
-            self.spinner_controller.start()
             self.update_controller.start()
             self.metrics_controller.start()
             self.query_one("#plans-active").border_title = f" {PANEL_PLAN_QUEUE_TITLE} "

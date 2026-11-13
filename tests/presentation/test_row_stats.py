@@ -1,4 +1,4 @@
-"""Fixed-width stat slots: layout, blanks, compact forms, and drop order."""
+"""Fixed-width word slots: layout, blanks, and drop order."""
 
 from __future__ import annotations
 
@@ -18,36 +18,27 @@ except ImportError:  # pragma: no cover - stdlib-only interpreter
     Text = None  # type: ignore[assignment,misc]
 
 
-def _block_width(layout: tuple[tuple[str, bool], ...]) -> int:
+def _block_width(layout: tuple[str, ...]) -> int:
     if not layout:
         return 0
-    return sum(
-        SLOTS[key].compact_width if compact else SLOTS[key].width for key, compact in layout
-    ) + (len(layout) - 1)
+    return sum(SLOTS[key].width for key in layout) + (len(layout) - 1)
 
 
 class StatsLayoutTest(unittest.TestCase):
-    def test_plan_layout_keeps_progress_and_attention_at_a_wide_width(self) -> None:
+    def test_plan_layout_keeps_the_count_and_the_state_word_at_a_wide_width(self) -> None:
         layout = stats_layout("plan", 80, 7)
 
-        self.assertEqual(
-            [key for key, _compact in layout],
-            ["progress", "attention"],
-        )
-        self.assertFalse(any(compact for _key, compact in layout))
+        self.assertEqual(layout, ("progress", "state"))
 
-    def test_task_layout_is_attention_only(self) -> None:
+    def test_task_layout_is_state_only(self) -> None:
         layout = stats_layout("task", 33, 6)
 
-        self.assertEqual(layout, (("attention", False),))
+        self.assertEqual(layout, ("state",))
 
-    def test_milestone_layout_drops_attention_after_progress(self) -> None:
+    def test_milestone_layout_keeps_the_state_word_at_a_narrow_width(self) -> None:
         layout = stats_layout("milestone", 25, 6)
 
-        self.assertEqual(
-            [(key, compact) for key, compact in layout],
-            [("progress", True), ("attention", False)],
-        )
+        self.assertEqual(layout, ("state",))
 
     def test_layout_never_exceeds_the_width_budget(self) -> None:
         for kind in ("plan", "milestone", "task"):
@@ -62,7 +53,7 @@ class StatsLayoutTest(unittest.TestCase):
 
     def test_missing_stats_reserve_blank_slots(self) -> None:
         layout = stats_layout("task", 80, 7)
-        full = RowStats(attention=True)
+        full = RowStats(state="review")
         empty = RowStats()
 
         full_plain = render_stats(full, layout)[1]
@@ -75,31 +66,33 @@ class StatsLayoutTest(unittest.TestCase):
 @unittest.skipUnless(Text is not None, "rich not installed")
 class StatsRenderTest(unittest.TestCase):
     def test_rich_and_plain_blocks_have_equal_width(self) -> None:
-        stats = RowStats(attention=True)
+        stats = RowStats(state="review")
         layout = stats_layout("task", 80, 7)
         rich, plain = render_stats(stats, layout)
 
         self.assertEqual(Text.from_markup(rich).plain, plain)
-        self.assertIn("!", plain)
-        self.assertNotIn("⚑", plain)
-        self.assertNotIn("◉", plain)
+        self.assertIn("review", plain)
+        self.assertNotIn("!", plain)
+        self.assertNotIn("▰", plain)
         self.assertNotIn("PR", plain)
 
-    def test_attention_slot_renders_only_when_flagged(self) -> None:
-        layout = (("attention", False),)
-        rich, plain = render_stats(RowStats(attention=True), layout)
+    def test_state_slot_renders_only_when_set(self) -> None:
+        layout = ("state",)
+        rich, plain = render_stats(RowStats(state="blocked"), layout)
         self.assertEqual(Text.from_markup(rich).plain, plain)
-        self.assertIn("!", plain)
+        self.assertIn("blocked", plain)
         self.assertEqual(render_stats(RowStats(), layout)[1].strip(), "")
 
-    def test_compact_forms_are_used_at_a_narrow_width(self) -> None:
-        stats = RowStats(progress=(1, 4), attention=True)
-        layout = stats_layout("milestone", 25, 6)
+    def test_progress_is_a_count_without_a_bar(self) -> None:
+        stats = RowStats(progress=(1, 4), state="doing")
+        layout = stats_layout("plan", 80, 7)
         rich, plain = render_stats(stats, layout)
 
         self.assertEqual(Text.from_markup(rich).plain, plain)
-        self.assertIn("▰", plain)
-        self.assertLessEqual(len(plain), 10)
+        self.assertIn("1/4", plain)
+        self.assertIn("doing", plain)
+        self.assertNotIn("▰", plain)
+        self.assertNotIn("▱", plain)
 
 
 if __name__ == "__main__":

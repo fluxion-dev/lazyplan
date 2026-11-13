@@ -154,19 +154,19 @@ class TreeController(ExpansionMixin, LazyBranchMixin, ReconcileMixin, PollMixin)
             return
         for key, spec in app._row_specs.items():
             self.render_row(key, spec, tree)
-        app.spinner_controller.paint()
         for widget in trees:
             cast("FoldTree", widget).reflow()
 
     def show_empty(self, active_empty: bool, finished_empty: bool) -> None:
-        """Swap each tree for its centered empty state when that panel is empty."""
+        """Hide a panel with no rows; keep the plan queue's empty state."""
         active_tree, finished_tree = self.trees()
-        flipped = active_tree.display == active_empty or (finished_tree.display == finished_empty)
+        app = self.app
         active_tree.display = not active_empty
         finished_tree.display = not finished_empty
-        self.app.query_one("#tree-empty", Static).display = active_empty
-        self.app.query_one("#tree-finished-empty", Static).display = finished_empty
-        if not flipped or len(self.app.screen_stack) > 1:
+        app.query_one("#tree-empty", Static).display = active_empty
+        app.query_one("#plans-finished").display = not finished_empty
+        flipped = active_tree.display or finished_tree.display
+        if not flipped or len(app.screen_stack) > 1:
             return
         if not any(tree.has_focus for tree in (active_tree, finished_tree)):
             target = finished_tree if active_empty else active_tree
@@ -247,7 +247,6 @@ class TreeController(ExpansionMixin, LazyBranchMixin, ReconcileMixin, PollMixin)
             self.sync_filter_snapshot(filtering)
             self.apply_expansion(self.reveal_keys() if filtering else None)
             self.show_empty(not active, not finished)
-            app.spinner_controller.paint()
             app.query_one("#hints", Label).update(
                 hint_bar(max(10, app.size.width - 2), markup=True)
             )
@@ -286,5 +285,4 @@ class TreeController(ExpansionMixin, LazyBranchMixin, ReconcileMixin, PollMixin)
         """Render and cache one row at the current tree width."""
         text = spec.markup(self.row_width(tree, spec.depth))
         self.app._row_labels[key] = text
-        self.app.spinner_controller.remember(key, spec.status, text)
         return text

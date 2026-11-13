@@ -3,7 +3,6 @@
 import io
 import os
 import tempfile
-import unicodedata
 import unittest
 from contextlib import redirect_stdout
 
@@ -21,7 +20,7 @@ except ImportError:  # pragma: no cover - stdlib-only interpreter
 
 class TestDesignSystem(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.db = os.path.join(self.tmp.name, "t.db")
         self.store = Store(self.db)
 
@@ -52,25 +51,6 @@ class TestDesignSystem(unittest.TestCase):
         with self.assertRaises(ValueError):
             design.status_word("todo", "neon")
 
-    def test_spinner_frames_and_prefix(self):
-        self.assertEqual(
-            design.SPINNER_FRAMES,
-            ("⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"),
-        )
-        self.assertEqual(design.SPINNER_INTERVAL, 0.16)
-        for frame in design.SPINNER_FRAMES:
-            self.assertEqual(len(frame), 1)
-            self.assertNotIn(unicodedata.east_asian_width(frame), ("W", "F"))
-        self.assertEqual(design.spinner_glyph(1), "⠙")
-        self.assertEqual(design.spinner_glyph(len(design.SPINNER_FRAMES)), "⠋")
-        self.assertEqual(design.status_prefix("doing"), "[yellow]◐[/]")
-        self.assertEqual(design.status_prefix("doing", 0), "[yellow]⠋[/]")
-        self.assertEqual(design.status_prefix("doing", 1), "[yellow]⠙[/]")
-        self.assertEqual(design.status_prefix("doing", 7), "[yellow]⠧[/]")
-        self.assertEqual(design.status_prefix("todo", 2), "[dim]○[/]")
-        self.assertEqual(design.status_prefix("done", 3), "[green]●[/]")
-        self.assertEqual(design.status_word("doing", "rich"), "[yellow]◐[/]")
-
     def test_ansi_labels_colorize_the_word(self):
         p = Plan(id=1, name="N")
         self.assertIn("\x1b[90m○\x1b[0m P1", design.plan_label(p, dot="ansi"))
@@ -82,15 +62,14 @@ class TestDesignSystem(unittest.TestCase):
 
     def test_rich_rows_for_tui(self):
         s = Milestone(id=2, plan_id=1, title="S")
-        self.assertTrue(design.milestone_row(s).startswith("[dim]○[/]"))
-        self.assertIn("[dim]M2[/]", design.milestone_row(s))
+        self.assertTrue(design.milestone_row(s).startswith("[dim]M2[/] "))
         self.assertIn("[bold]S[/]", design.milestone_row(s))
-        self.assertEqual(design.milestone_row(s).count("○"), 1)
+        self.assertNotIn("○", design.milestone_row(s))
         t = Task(id=3, milestone_id=2, title="T")
-        self.assertTrue(design.task_row(t).startswith("[dim]○[/]"))
+        self.assertTrue(design.task_row(t).startswith("[dim]T3[/] "))
         self.assertNotIn("⬜", design.task_row(t))
         p = Plan(id=1, name="N")
-        self.assertEqual(design.plan_row(p).count("○"), 1)
+        self.assertTrue(design.plan_row(p).startswith("[dim]P1[/] "))
         self.assertNotIn("⬜", design.plan_row(p))
 
     def test_task_row_hides_claim_and_blocked_detail(self):
@@ -103,24 +82,25 @@ class TestDesignSystem(unittest.TestCase):
         self.assertNotIn("blocked", row)
 
     @unittest.skipUnless(Text is not None, "rich not installed")
-    def test_task_row_reads_as_glyph_id_title_and_attention(self):
+    def test_task_row_reads_as_id_title_and_words(self):
         t = Task(id=3, milestone_id=2, title="Compact title")
 
         plain = Text.from_markup(design.task_row(t, width=80)).plain
 
-        self.assertEqual(plain.rstrip(), "○ T3 Compact title")
-        for stat in ("⚑", "◉", "▰", "▱", "@", "/"):
+        self.assertEqual(plain.rstrip(), "T3 Compact title")
+        for stat in ("○", "◐", "●", "⚑", "◉", "▰", "▱", "@", "/", "!"):
             self.assertNotIn(stat, plain)
 
     @unittest.skipUnless(Text is not None, "rich not installed")
-    def test_task_row_marks_attention_with_one_bang(self):
+    def test_task_row_marks_attention_with_one_word(self):
         t = Task(id=3, milestone_id=2, title="Compact title")
 
         plain = Text.from_markup(design.task_row(t, attention=True, width=80)).plain
 
-        self.assertTrue(plain.rstrip().endswith("!"))
+        self.assertTrue(plain.rstrip().endswith("review"))
         self.assertIn("T3 Compact title", plain)
-        self.assertEqual(plain.count("!"), 1)
+        self.assertEqual(plain.count("review"), 1)
+        self.assertNotIn("!", plain)
 
     @unittest.skipUnless(Text is not None, "rich not installed")
     def test_task_row_truncates_to_the_row_width(self):
@@ -156,32 +136,26 @@ class TestDesignSystem(unittest.TestCase):
         self.assertTrue(label.startswith("○ T"))
         self.assertIn("[blocked]", label)
 
-    def test_rich_rows_use_the_status_prefix(self):
+    def test_rich_rows_show_doing_as_a_word(self):
         p = Plan(id=1, name="N", status=Status.DOING)
         s = Milestone(id=2, plan_id=1, title="S", status=Status.DOING)
         t = Task(id=3, milestone_id=2, title="T", status=Status.DOING)
         for row in (design.plan_row(p), design.milestone_row(s), design.task_row(t)):
-            self.assertTrue(row.startswith(design.status_prefix("doing")))
-            self.assertTrue(row.startswith("[yellow]◐[/]"))
-        self.assertEqual(design.status_prefix("doing"), design.status_word("doing", "rich"))
+            self.assertTrue(row.rstrip().endswith("doing"))
+            self.assertNotIn("◐", row)
 
     def test_progress_and_truncation(self):
         p = Plan(id=12, name="A very long plan title")
         row = design.plan_row(p, progress=(3, 7), width=24)
-        self.assertIn("3/7", row)
-        self.assertIn("▰", row)
         self.assertIn("…", row)
+        self.assertNotIn("▰", row)
         self.assertNotIn("title", row)  # truncated before the last word
         full = design.plan_row(p, progress=(3, 7), width=80)
         self.assertIn("A very long plan title", full)
-        self.assertIn("▰▰", full)
+        self.assertIn("3/7", full)
         self.assertNotIn("…", full)
         self.assertEqual(design.truncate("short", 10), "short")
         self.assertEqual(design.truncate("abcdef", 3), "ab…")
-        self.assertEqual(design.progress_bar(0, 0), "")
-        self.assertEqual(design.progress_bar(0, 5), "▱▱▱▱▱")
-        self.assertEqual(design.progress_bar(5, 5), "▰▰▰▰▰")
-        self.assertEqual(design.progress_bar(1, 5), "▰▱▱▱▱")
 
     @unittest.skipUnless(Text is not None, "rich not installed")
     def test_plan_rows_keep_the_stats_block_start(self):
@@ -232,8 +206,7 @@ class TestDesignSystem(unittest.TestCase):
             self.assertEqual(lpui_main(["--db", self.db, "list", "--tree"]), 0)
         out = buf.getvalue()
         self.assertIn("◐ T", out)
-        for frame in design.SPINNER_FRAMES:
-            self.assertNotIn(frame, out)
+        self.assertNotIn("⠋", out)
 
     def test_cli_uses_design_labels(self):
         p = self.store.add_plan("P")
@@ -281,6 +254,13 @@ class TestDesignSystem(unittest.TestCase):
         self.assertIn("n", table)
         self.assertIn("s", table)
 
+    def test_hint_bar_names_at_most_three_keys(self):
+        for width in (20, 40, 80, 120):
+            with self.subTest(width=width):
+                bar = help_mod.hint_bar(width)
+                self.assertLessEqual(bar.count(" · ") + 1, 3)
+                self.assertTrue(bar)
+
     def test_message_helpers(self):
         self.assertEqual(design.msg_not_found("task", 7), "task 7 not found")
         self.assertTrue(design.msg_error(ValueError("x")).startswith("error:"))
@@ -304,7 +284,8 @@ class TestDesignSystem(unittest.TestCase):
         p = Plan(id=1, name="N")
         row = design.plan_row(p, progress=(2, 5), attention=True)
         self.assertIn("2/5", row)
-        self.assertIn("!", row)
+        self.assertIn("review", row)
+        self.assertNotIn("!", row)
         self.assertNotIn("1c", row)
         self.assertNotIn("PR", row)
 
@@ -321,7 +302,8 @@ class TestDesignSystem(unittest.TestCase):
         hot = design.task_row(t, attention=True)
         self.assertNotIn("PR", bare)
         self.assertNotIn("1c", bare)
-        self.assertIn("!", hot)
+        self.assertIn("review", hot)
+        self.assertNotIn("!", hot)
 
     def test_repo_project_name_prefers_remote(self):
         self.assertEqual(

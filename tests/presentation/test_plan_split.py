@@ -20,7 +20,7 @@ except ImportError:  # pragma: no cover - stdlib-only interpreter
 @unittest.skipUnless(TreeFilter is not None, "textual not installed")
 class TestPlanSplit(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.store = Store(os.path.join(self.tmp.name, "split.db"))
         self.open = self.store.add_plan("Open", actor="fixture")
         self.open_m = self.store.add_milestone(self.open.id, "M", actor="fixture")

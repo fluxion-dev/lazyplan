@@ -156,7 +156,6 @@ class ReconcileMixin:
         app = self.app
         app._row_specs[key] = spec
         text = spec.markup(self.row_width(tree, spec.depth))
-        app.spinner_controller.remember(key, spec.status, text)
         if app._row_labels.get(key) == text:
             return False
         app._row_labels[key] = text
@@ -175,7 +174,6 @@ class ReconcileMixin:
         self.app._row_nodes.pop(key, None)
         self.app._row_specs.pop(key, None)
         self.app._row_labels.pop(key, None)
-        self.app.spinner_controller.rows.pop(key, None)
         self._loaded.discard(key)
 
     def reconcile_children(

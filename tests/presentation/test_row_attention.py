@@ -20,7 +20,7 @@ except ImportError:  # pragma: no cover - stdlib-only interpreter
 @unittest.skipUnless(TreeController is not None, "textual not installed")
 class TestRowAttention(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.store = Store(os.path.join(self.tmp.name, "attention.db"))
         self.plan = self.store.add_plan("Plan", actor="fixture")
         self.milestone = self.store.add_milestone(self.plan.id, "Slice", actor="fixture")

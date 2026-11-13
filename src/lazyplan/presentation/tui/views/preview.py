@@ -4,19 +4,13 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from ...shared.design import (
-    KIND_ICON,
     escape_markdown,
     escape_markup,
-    repo_project_name,
-    status_word,
 )
 from .reference_lines import reference_lines
-
-if TYPE_CHECKING:
-    from ....core.ports.planning import PlanningPort
 
 
 @dataclass(frozen=True)
@@ -32,21 +26,20 @@ class PreviewDocument:
     """Everything the preview panel renders for one selection."""
 
     header: str
-    breadcrumb: str = ""
-    meta: tuple[str, ...] = ()
+    meta_line: str = ""
     blocks: tuple[PreviewBlock, ...] = ()
     footer: str = ""
 
     def render_head(self) -> str:
-        """The sticky top: status, title, and breadcrumb."""
+        """The sticky top: the title and one dim context line."""
         lines = [self.header]
-        if self.breadcrumb:
-            lines.append(self.breadcrumb)
+        if self.meta_line:
+            lines.append(self.meta_line)
         return "\n".join(lines)
 
     def render_markdown(self) -> str:
         """The scrollable body as deterministic Markdown."""
-        lines = list(self.meta)
+        lines: list[str] = []
         for block in self.blocks:
             if lines and lines[-1] != "":
                 lines.append("")
@@ -85,35 +78,65 @@ def _row(*parts: object, sep: str = " · ") -> str:
     return "- " + sep.join(str(part) for part in parts if str(part))
 
 
-def _header_row(status: str, label: str, oid: object, title: object) -> str:
-    """One child header row: status glyph, kind and id, then the escaped title."""
-    return _row(
-        status_word(status, "plain"), _strong(f"{label}{oid}"), escape_markdown(str(title)), sep=" "
-    )
+HEADLINE_LIMIT = 120
+
+
+def headline(text: str, limit: int = HEADLINE_LIMIT) -> str:
+    """One paragraph collapsed to a single clamped line."""
+    paragraph = text.strip().split("\n\n", 1)[0]
+    line = " ".join(paragraph.split())
+    if len(line) <= limit:
+        return line
+    cut = line[:limit].rsplit(" ", 1)[0].rstrip(" ,;:.-")
+    return f"{cut}…"
+
+
+def _child_row(letter: str, oid: object, title: object, suffix: str = "") -> str:
+    """One plain child row: id, two spaces, title, then an optional count."""
+    head = f"- {letter}{oid}  {escape_markdown(str(title))}"
+    return f"{head} · {suffix}" if suffix else head
 
 
 def _title(
-    store: PlanningPort,
     kind: str,
     oid: int,
     obj: dict[str, Any],
+    full: dict[str, Any],
 ) -> tuple[str, str]:
+    """The title alone plus one dim line of ids, counts, and state."""
     title = str(obj.get("title", obj.get("name", "")))
-    status = str(obj.get("status", ""))
-    label = {"plan": "P", "milestone": "M", "task": "T"}[kind]
-    icon = KIND_ICON[kind]
-    header = (
-        f"{status_word(status, 'rich')} "
-        f"[bold cyan]{icon} {label}{oid}[/] [bold]{escape_markup(title)}[/]"
-    )
-    breadcrumb = ""
-    if kind == "milestone":
-        breadcrumb = f"[dim]◈ P{obj.get('plan_id')} › ◇ M{oid}[/]"
-    elif kind == "task":
-        milestone = store.get_milestone(int(obj.get("milestone_id", 0)))
-        plan_id = milestone.plan_id if milestone else "?"
-        breadcrumb = f"[dim]◈ P{plan_id} › ◇ M{obj.get('milestone_id')} › ▹ T{oid}[/]"
-    return header, breadcrumb
+    header = f"[bold]{escape_markup(title)}[/]"
+    return header, _meta_line(kind, oid, obj, full)
+
+
+def _done(rows: list[dict[str, Any]]) -> int:
+    return sum(1 for row in rows if row.get("status") == "done" or row.get("done"))
+
+
+def _meta_line(
+    kind: str,
+    oid: int,
+    obj: dict[str, Any],
+    full: dict[str, Any],
+) -> str:
+    """One dim context line: ids, counts, and state for the selected level."""
+    if kind == "plan":
+        tasks = [task for entry in full.get("milestones", []) for task in entry.get("tasks", [])]
+        criteria = full.get("criteria", [])
+        parts = [f"P{oid}", f"{_done(tasks)}/{len(tasks)} tasks"]
+        if criteria:
+            parts.append(f"{_done(criteria)}/{len(criteria)} criteria")
+    elif kind == "milestone":
+        tasks = [entry.get("task", {}) for entry in full.get("tasks", [])]
+        parts = [f"M{oid}", f"P{obj.get('plan_id')}", f"{_done(tasks)}/{len(tasks)} tasks"]
+    else:
+        parts = [f"T{oid}", f"M{obj.get('milestone_id')}", str(obj.get("status", ""))]
+        if obj.get("blocked"):
+            parts.append("blocked")
+        claim = obj.get("claim") or {}
+        if claim:
+            parts.append(f"@{escape_markup(str(claim.get('actor', '')))}")
+    return "[dim]" + " · ".join(part for part in parts if part) + "[/]"
 
 
 def _milestone_tasks(full: dict[str, Any]) -> list[dict[str, Any]]:
@@ -121,101 +144,80 @@ def _milestone_tasks(full: dict[str, Any]) -> list[dict[str, Any]]:
     return [entry.get("task", {}) for entry in full.get("tasks", [])]
 
 
+def _task_states(tasks: list[dict[str, Any]]) -> str:
+    """Compact done/total count for a task group."""
+    done = sum(1 for task in tasks if task.get("status") == "done")
+    return f"{done}/{len(tasks)}"
+
+
 def milestones_block(milestones: list[dict[str, Any]]) -> PreviewBlock | None:
-    """Every milestone under the selected plan, as one header row."""
+    """Every milestone under the selected plan, as one plain row."""
     if not milestones:
         return None
-    lines = []
-    for entry in milestones:
-        milestone = entry.get("milestone", {})
-        lines.append(
-            _header_row(
-                str(milestone.get("status", "")),
-                "M",
-                milestone.get("id"),
-                milestone.get("title", ""),
-            )
+    lines = [
+        _child_row(
+            "M",
+            entry.get("milestone", {}).get("id"),
+            entry.get("milestone", {}).get("title", ""),
+            _task_states(entry.get("tasks", [])),
         )
+        for entry in milestones
+    ]
     return PreviewBlock(f"milestones {len(milestones)}", tuple(lines))
 
 
+def _task_state(task: dict[str, Any]) -> str:
+    if task.get("blocked"):
+        return "blocked"
+    if task.get("status") == "doing":
+        return "doing"
+    return ""
+
+
 def tasks_block(tasks: list[dict[str, Any]]) -> PreviewBlock | None:
-    """Every task under the selected milestone, as one header row."""
+    """Every task under the selected milestone, as one plain row."""
     if not tasks:
         return None
     lines = [
-        _header_row(str(task.get("status", "")), "T", task.get("id"), task.get("title", ""))
-        for task in tasks
+        _child_row("T", task.get("id"), task.get("title", ""), _task_state(task)) for task in tasks
     ]
     return PreviewBlock(f"tasks {len(tasks)}", tuple(lines))
 
 
-def notes_block(notes: list[dict[str, Any]]) -> PreviewBlock | None:
-    if not notes:
-        return None
-    rows = []
-    for note in notes[-3:]:
-        text = str(note.get("text", "")).replace("\n", " ")
-        rows.append(_row(f"@{escape_markdown(str(note.get('actor', '')))}", text, sep=" "))
-    return PreviewBlock("notes", tuple(rows))
-
-
-def _proof_chip(evidence: dict[str, Any] | None) -> str:
-    """One compact state chip for a criterion's evidence."""
-    data = evidence or {}
-    state = str(data.get("state") or "none")
-    count = int(data.get("count", 0) or 0)
+def _proof_word(evidence: dict[str, Any] | None) -> str:
+    """One plain word for a criterion's evidence state."""
+    state = str((evidence or {}).get("state") or "none")
     if state == "pass":
-        return f"✓ {count}"
+        return "proven"
     if state == "fail":
-        return f"✗ {count}"
-    return "—"
+        return "failing"
+    return "no evidence"
 
 
 def acceptance_block(
     criteria: list[dict[str, Any]], *, detailed: bool = False
 ) -> PreviewBlock | None:
-    """Acceptance criteria; plans show every item, other rows keep the short list."""
-    if not criteria:
-        return None
-    done = sum(1 for criterion in criteria if criterion.get("done"))
+    """Open acceptance criteria, or nothing when every item is done."""
     open_items = [criterion for criterion in criteria if not criterion.get("done")]
-    tail = f" · {len(open_items)} open" if open_items else " · complete"
+    if not open_items:
+        return None
+    done = len(criteria) - len(open_items)
+    heading = f"acceptance {done}/{len(criteria)} · {len(open_items)} open"
     if not detailed:
         return PreviewBlock(
-            f"acceptance {done}/{len(criteria)}{tail}",
-            tuple(
-                _row(
-                    "○",
-                    criterion.get("text", ""),
-                    _proof_chip(criterion.get("evidence")),
-                    sep=" ",
-                )
-                for criterion in open_items[:3]
-            ),
+            heading,
+            tuple(_row(str(criterion.get("text", ""))) for criterion in open_items[:3]),
         )
-    return PreviewBlock(
-        f"acceptance {done}/{len(criteria)}{tail}",
-        _detailed_acceptance_rows(criteria),
-    )
+    rows = list(_detailed_acceptance_rows(open_items))
+    if len(rows) > 3:
+        rows = rows[:3] + [f"- {len(rows) - 3} more open"]
+    return PreviewBlock(heading, tuple(rows))
 
 
 def _detailed_acceptance_rows(criteria: list[dict[str, Any]]) -> tuple[str, ...]:
-    """One row per criterion, open first, with its id and proof state."""
-    ordered = sorted(
-        criteria,
-        key=lambda criterion: (bool(criterion.get("done")), int(criterion.get("id", 0) or 0)),
-    )
-    return tuple(
-        _row(
-            "✓" if criterion.get("done") else "○",
-            _strong(f"C{criterion.get('id')}"),
-            criterion.get("text", ""),
-            f"· {_proof_chip(criterion.get('evidence'))}",
-            sep=" ",
-        )
-        for criterion in ordered
-    )
+    """One plain row per open criterion."""
+    ordered = sorted(criteria, key=lambda criterion: int(criterion.get("id", 0) or 0))
+    return tuple(_row(str(criterion.get("text", ""))) for criterion in ordered)
 
 
 def questions_block(questions: list[dict[str, Any]]) -> PreviewBlock | None:
@@ -232,32 +234,29 @@ def questions_block(questions: list[dict[str, Any]]) -> PreviewBlock | None:
 
 
 def proof_block(criteria: list[dict[str, Any]]) -> PreviewBlock | None:
-    """Proof panel for the selected task."""
+    """Proof panel for the selected task: criterion, proof word, and evidence."""
     if not criteria:
         return None
     lines: list[str] = []
     for criterion in criteria[:5]:
         evidence = criterion.get("evidence") or {}
         latest = evidence.get("latest") or {}
-        state = str(evidence.get("state") or "none")
-        mark = "✓" if state == "pass" else "✗" if state == "fail" else "—"
         label = (
             latest.get("command")
             or latest.get("note")
             or str(latest.get("commit_sha", ""))[:12]
-            or "-"
+            or ""
         )
+        parts = [
+            str(criterion.get("text", "")),
+            _proof_word(evidence),
+        ]
+        if label:
+            parts.append(escape_markdown(str(label)))
         exit_code = latest.get("exit_code")
-        exit_text = f" exit {exit_code}" if exit_code is not None else ""
-        lines.append(
-            _row(
-                mark,
-                _strong(f"C{criterion['id']}"),
-                criterion.get("text", ""),
-                f"{evidence.get('count', 0)} rows{exit_text}",
-                escape_markdown(str(label)),
-            )
-        )
+        if exit_code is not None:
+            parts.append(f"exit {exit_code}")
+        lines.append(_row(*parts))
     return PreviewBlock("proof", tuple(lines))
 
 
@@ -267,7 +266,7 @@ def approval_block(approval: dict[str, Any] | None) -> PreviewBlock | None:
         return None
     revision = int(approval.get("revision", 0) or 0)
     if revision == 0:
-        return PreviewBlock("approval", ("- no approved revision",))
+        return None
     drift = int(approval.get("drift", 0) or 0)
     stamp = float(approval.get("approved_at", 0) or 0)
     day = time.strftime("%Y-%m-%d", time.localtime(stamp)) if stamp else "-"
@@ -290,54 +289,6 @@ def approval_block(approval: dict[str, Any] | None) -> PreviewBlock | None:
     return PreviewBlock("approval", tuple(lines))
 
 
-def _source_bits(
-    links: list[dict[str, Any]],
-    forge: list[dict[str, Any]],
-    repos: list[dict[str, Any]],
-) -> str:
-    bits: list[str] = []
-    if links:
-        bits.append(f"{len(links)} commits")
-    if forge:
-        bits.append(f"{len(forge)} PRs")
-    if repos:
-        names = [name for name in (repo_project_name(repo) for repo in repos) if name]
-        rendered = ", ".join(escape_markdown(name) for name in names[:3])
-        bits.append("repos: " + rendered if names else f"{len(repos)} repos")
-    return " · ".join(bits)
-
-
-def _source_summary(
-    links: list[dict[str, Any]],
-    forge: list[dict[str, Any]],
-    repos: list[dict[str, Any]],
-) -> PreviewBlock | None:
-    bits = _source_bits(links, forge, repos)
-    if not bits:
-        return None
-    return PreviewBlock("source", (bits,))
-
-
-def common_blocks(
-    full: dict[str, Any], *, detailed_acceptance: bool = False
-) -> tuple[PreviewBlock, ...]:
-    """Coordination, acceptance, and provenance blocks for a preview."""
-    blocks: list[PreviewBlock] = []
-    notes = notes_block(full.get("notes", []))
-    if notes is not None:
-        blocks.append(notes)
-    acceptance = acceptance_block(full.get("criteria", []), detailed=detailed_acceptance)
-    if acceptance is not None:
-        blocks.append(acceptance)
-    links = full.get("effective_links") or full.get("links", [])
-    forge = full.get("effective_forge_links") or full.get("forge_links", [])
-    repos = full.get("effective_repos") or full.get("repos") or []
-    source = _source_summary(links, forge, repos)
-    if source is not None:
-        blocks.append(source)
-    return tuple(blocks)
-
-
 def worktrees_block(full: dict[str, Any]) -> PreviewBlock | None:
     """Read-only plan worktree registry, including the isolation requirement."""
     plan = full.get("plan") or {}
@@ -356,23 +307,20 @@ def worktrees_block(full: dict[str, Any]) -> PreviewBlock | None:
 
 
 def build_plan(
-    store: PlanningPort,
     full: dict[str, Any],
     oid: int,
-    git_bits: list[str],
 ) -> PreviewDocument:
     obj = full.get("plan", {})
-    header, breadcrumb = _title(store, "plan", oid, obj)
+    header, meta_line = _title("plan", oid, obj, full)
     blocks: list[PreviewBlock] = []
     questions = questions_block(full.get("questions", []))
     if questions is not None:
         blocks.append(questions)
     goal = str(obj.get("goal", "") or "").strip()
     desc = str(obj.get("description", "") or "").strip()
-    if goal:
-        blocks.append(PreviewBlock("why", (goal,)))
-    if desc:
-        blocks.append(PreviewBlock("what", (desc,)))
+    lead = goal or desc
+    if lead:
+        blocks.append(PreviewBlock("why" if goal else "what", (headline(lead),)))
     approval = approval_block(full.get("approval"))
     if approval is not None:
         blocks.append(approval)
@@ -385,61 +333,55 @@ def build_plan(
     milestones = milestones_block(full.get("milestones", []))
     if milestones is not None:
         blocks.append(milestones)
-    blocks.extend(common_blocks(full, detailed_acceptance=True))
-    return PreviewDocument(header, breadcrumb, (), tuple(blocks))
+    acceptance = acceptance_block(full.get("criteria", []), detailed=True)
+    if acceptance is not None:
+        blocks.append(acceptance)
+    return PreviewDocument(header, meta_line, tuple(blocks))
 
 
 def build_milestone(
-    store: PlanningPort,
     full: dict[str, Any],
     oid: int,
-    git_bits: list[str],
 ) -> PreviewDocument:
     obj = full.get("milestone", {})
-    header, breadcrumb = _title(store, "milestone", oid, obj)
+    header, meta_line = _title("milestone", oid, obj, full)
     blocks: list[PreviewBlock] = []
     desc = str(obj.get("description", "") or "").strip()
     if desc:
-        blocks.append(PreviewBlock("details", (desc,)))
+        blocks.append(PreviewBlock("details", (headline(desc),)))
     tasks = tasks_block(_milestone_tasks(full))
     if tasks is not None:
         blocks.append(tasks)
-    blocks.extend(common_blocks(full))
-    return PreviewDocument(header, breadcrumb, (), tuple(blocks))
+    acceptance = acceptance_block(full.get("criteria", []))
+    if acceptance is not None:
+        blocks.append(acceptance)
+    return PreviewDocument(header, meta_line, tuple(blocks))
 
 
 def build_task(
-    store: PlanningPort,
     full: dict[str, Any],
     oid: int,
-    git_bits: list[str],
 ) -> PreviewDocument:
     obj = full.get("task", {})
-    header, breadcrumb = _title(store, "task", oid, obj)
+    header, meta_line = _title("task", oid, obj, full)
     blocks: list[PreviewBlock] = []
     desc = str(obj.get("description", "") or "").strip()
     if desc:
         blocks.append(PreviewBlock("details", (desc,)))
-    task_notes = notes_block(obj.get("notes", []))
-    if task_notes is not None:
-        blocks.append(task_notes)
     proof = proof_block(full.get("criteria", []))
     if proof is not None:
         blocks.append(proof)
-    blocks.extend(common_blocks(full))
-    return PreviewDocument(header, breadcrumb, (), tuple(blocks))
+    return PreviewDocument(header, meta_line, tuple(blocks))
 
 
 def build_preview(
-    store: PlanningPort,
     kind: str,
     oid: int,
     full: dict[str, Any],
-    git_bits: list[str],
 ) -> PreviewDocument:
     """Build the document for one selected row."""
     if kind == "plan":
-        return build_plan(store, full, oid, git_bits)
+        return build_plan(full, oid)
     if kind == "milestone":
-        return build_milestone(store, full, oid, git_bits)
-    return build_task(store, full, oid, git_bits)
+        return build_milestone(full, oid)
+    return build_task(full, oid)

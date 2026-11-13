@@ -18,7 +18,7 @@ from lazyplan.store import Store
 
 class TestArchiveVisibility(unittest.TestCase):
     def setUp(self) -> None:
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.db = os.path.join(self.tmp.name, "visible.db")
         self.store = Store(self.db)
         self.archived = self.store.add_plan("Archived plan", goal="shelved")

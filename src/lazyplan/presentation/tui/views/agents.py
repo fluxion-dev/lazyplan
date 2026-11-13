@@ -10,13 +10,9 @@ from __future__ import annotations
 import time
 from typing import NamedTuple
 
-from ....core.entities import Agent, Status
-from ...shared.design import escape_markup, spinner_glyph, status_word, truncate
+from ....core.entities import Agent
+from ...shared.design import escape_markup, truncate
 
-GLYPH_WAITING = "◆"
-GLYPH_LOST = "✕"
-GLYPH_BLOCKED = "⊘"
-GLYPH_TOOL = "▶"
 PLAN_SHARE = 0.45
 MIN_PLAN_TITLE = 8
 MIN_BRANCH = 10
@@ -79,47 +75,17 @@ def _share_widths(available: int, has_plan: bool) -> RowWidths:
     return RowWidths(title, budget - title)
 
 
-def state_glyph(state: str, frame: int | None) -> str:
-    """A spinner while active, then a distinct glyph per terminal state."""
-    if state in ("working", "starting", "compacting", "tool"):
-        if state == "tool":
-            return GLYPH_TOOL
-        return status_word(Status.DOING) if frame is None else spinner_glyph(frame)
-    if state == "waiting":
-        return GLYPH_WAITING
-    if state == "lost":
-        return GLYPH_LOST
-    if state == "blocked":
-        return GLYPH_BLOCKED
-    return GLYPH_LOST
-
-
-def _glyph_markup(state: str, glyph: str) -> str:
-    color = {
-        "working": "green",
-        "starting": "green",
-        "tool": "cyan",
-        "compacting": "cyan",
-        "waiting": "yellow",
-        "blocked": "yellow",
-        "lost": "red",
-        "ended": "dim",
-    }.get(state, "dim")
-    return f"[{color}]{glyph}[/]"
-
-
 def _fixed_cells(
     agent: Agent,
     short_id: str,
     plan_head: str,
     age_text: str,
-    glyph: str,
 ) -> int:
     """Cells the row spends before the plan title and branch share the rest."""
     head = len(f"@{agent.agent} {short_id} · {plan_head}")
     plan_space = 1 if agent.plan_id is not None else 0
     separators = len(" · ") * 4
-    return head + plan_space + separators + len(age_text) + len(glyph)
+    return head + plan_space + separators + len(age_text)
 
 
 def row_widths(
@@ -128,12 +94,11 @@ def row_widths(
     short_id: str,
     plan_head: str,
     age_text: str,
-    glyph: str,
 ) -> RowWidths | None:
     """Width budget for one row, or None when the caller gave no width."""
     if width is None:
         return None
-    fixed = _fixed_cells(agent, short_id, plan_head, age_text, glyph)
+    fixed = _fixed_cells(agent, short_id, plan_head, age_text)
     return _share_widths(width - fixed, agent.plan_id is not None)
 
 
@@ -142,17 +107,15 @@ def agent_line(
     now: float | None = None,
     plan_title: str = "",
     width: int | None = None,
-    frame: int | None = 0,
 ) -> str:
-    """One live row: agent, id, plan/task, branch, age, and status glyph."""
+    """One live row: agent, id, plan/task, branch, age, and state word."""
     stamp = time.time() if now is None else now
     state = agent.status
     short_id = agent_id(agent)
     task = f" T{agent.task_id}" if agent.task_id is not None else ""
     plan_head = f"P{agent.plan_id}" if agent.plan_id is not None else "unbound"
     age_text = age(agent.started_at, stamp)
-    glyph = state_glyph(state, frame)
-    widths = row_widths(agent, width, short_id, plan_head, age_text, glyph)
+    widths = row_widths(agent, width, short_id, plan_head, age_text)
     title = plan_title if widths is None else truncate(plan_title, widths.title)
     branch = agent.branch or "-"
     if widths is not None:
@@ -169,7 +132,7 @@ def agent_line(
     return (
         f"[bold]@{escape_markup(agent.agent)}[/] [dim]{escape_markup(short_id)}[/] · "
         f"{plan} · {escape_markup(branch)} · [dim]{age_text}[/] · "
-        f"{_glyph_markup(state, glyph)} [dim]{escape_markup(state)}[/]{marker}"
+        f"[dim]{escape_markup(state)}[/]{marker}"
     )
 
 

@@ -67,7 +67,7 @@ DRIFT = _result(
 @unittest.skipUnless(create_app is not None, "textual not installed")
 class PlanDiffScreenTest(unittest.IsolatedAsyncioTestCase):
     def setUp(self) -> None:
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.store = Store(os.path.join(self.tmp.name, "plan.db"))
         self.plan = self.store.add_plan("Diff")
         self.milestone = self.store.add_milestone(self.plan.id, "Slice")

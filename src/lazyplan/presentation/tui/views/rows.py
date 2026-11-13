@@ -1,4 +1,4 @@
-"""Row renderables shared by the tree and the spinner."""
+"""Row renderables shared by the tree and the row cache."""
 
 from __future__ import annotations
 

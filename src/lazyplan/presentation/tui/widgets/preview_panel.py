@@ -17,7 +17,6 @@ class PreviewPanel(Vertical):
     def __init__(self) -> None:
         super().__init__(id="preview")
         self.border_title = " overview "
-        self.border_subtitle = " e edit · c commands "
 
     def compose(self) -> ComposeResult:
         yield Static("", id="preview-head")
@@ -37,7 +36,6 @@ class PreviewPanel(Vertical):
         body.update(document.render_markdown())
         strip_widget.display = bool(strip)
         strip_widget.update(strip)
-        self.border_subtitle = " e edit · c commands "
         self._home()
 
     def _home(self) -> None:

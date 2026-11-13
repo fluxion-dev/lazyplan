@@ -11,13 +11,7 @@ from textual.widgets import Static
 from .... import services
 from ....core.entities import Agent
 from ....core.ports.agents import AgentsPort
-from ...shared.design import (
-    EMPTY_AGENTS,
-    EMPTY_AGENTS_HINT,
-    empty_state,
-    escape_markup,
-    spinner_enabled,
-)
+from ...shared.design import escape_markup
 from ...shared.session_labels import plan_names
 from ..query import query_one_opt
 from ..views.agents import agent_line, agents_summary, rank_agents
@@ -33,20 +27,14 @@ class AgentsPanel(VerticalScroll):
     def __init__(self) -> None:
         super().__init__(id="agents")
         self.border_title = " agents "
+        self.display = False
         self._agents: list[Agent] = []
         self._titles: dict[int, str] = {}
         self._stamp = 0.0
         self._handoff = ""
-        self._frame: int | None = 0
 
     def compose(self) -> ComposeResult:
         yield Static("", id="agents-body")
-        yield Static("", id="agents-empty", classes="pane-empty")
-
-    def _show_body(self) -> None:
-        """Show the agent rows and hide the empty state."""
-        self.query_one("#agents-body", Static).display = True
-        self.query_one("#agents-empty", Static).display = False
 
     def _row_width(self) -> int | None:
         """Content cells available to one row, or None before the first layout."""
@@ -55,7 +43,6 @@ class AgentsPanel(VerticalScroll):
         return width if width > 0 else None
 
     def show(self, store: AgentsPort, plan_id: int | None = None) -> None:
-        body = self.query_one("#agents-body", Static)
         try:
             services.sweep_lost(store)
         except (OSError, RuntimeError, ValueError):
@@ -65,41 +52,20 @@ class AgentsPanel(VerticalScroll):
             self._agents = []
             self._titles = {}
             self._handoff = ""
-            self._frame = None
-            body.display = False
-            empty = self.query_one("#agents-empty", Static)
-            empty.display = True
-            empty.update(empty_state(EMPTY_AGENTS, EMPTY_AGENTS_HINT))
+            self.display = False
             self.border_subtitle = ""
             self.scroll_home(animate=False)
             return
-        self._show_body()
+        self.display = True
         self._stamp = time.time()
         self._agents = rank_agents(agents, self._stamp)
         self._titles = plan_names(store)
         handoff = services.previous_agent(store, plan_id=plan_id)
         note = str(handoff["handoff"]) if handoff and handoff.get("handoff") else ""
         self._handoff = f"[dim]handoff[/] {escape_markup(note)}" if note else ""
-        self._frame = 0 if spinner_enabled() else None
         self._paint_rows()
         self.border_subtitle = agents_summary(agents, self._stamp)
         self.scroll_home(animate=False)
-
-    def has_working(self) -> bool:
-        """True while a cached agent is still starting or working."""
-        return any(
-            agent.status in ("working", "starting", "tool", "compacting") for agent in self._agents
-        )
-
-    def advance(self, frame: int) -> bool:
-        """Paint the cached rows at *frame* without another store read."""
-        if not self._agents or not spinner_enabled():
-            return False
-        if not self.has_working():
-            return False
-        self._frame = frame
-        self._paint_rows()
-        return True
 
     def _paint_rows(self) -> None:
         body = query_one_opt(self, "#agents-body", Static)
@@ -113,7 +79,6 @@ class AgentsPanel(VerticalScroll):
                 stamp,
                 plan_title=self._titles.get(agent.plan_id or 0, ""),
                 width=width,
-                frame=self._frame,
             )
             for agent in self._agents
         ]

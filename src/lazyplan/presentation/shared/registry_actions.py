@@ -371,13 +371,13 @@ CORE_ACTIONS: tuple[Action, ...] = (
     _action(
         "agent.start",
         "Start agent",
-        surfaces=("tui", "cli"),
+        surfaces=("tui",),
         route=("tree", "agents"),
     ),
     _action(
         "agent.end",
         "End agent",
-        surfaces=("tui", "cli"),
+        surfaces=("tui",),
         route=("tree", "agents"),
     ),
     _action(

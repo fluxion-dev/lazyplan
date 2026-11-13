@@ -8,29 +8,12 @@ from lazyplan.core.entities import Agent
 from lazyplan.core.policies.agents import (
     STATUSES,
     can_transition,
-    parse_agent_id,
     parse_pid,
     status_for_event,
 )
-from lazyplan.core.policies.sessions import parse_session_id
 
 
 class TestAgentPolicy(unittest.TestCase):
-    def test_parse_agent_id_accepts_prefixed_and_bare_ids(self) -> None:
-        for text, want in (("A12", 12), ("a12", 12), ("12", 12), (" A7 ", 7)):
-            with self.subTest(text=text):
-                self.assertEqual(parse_agent_id(text), want)
-
-    def test_parse_agent_id_rejects_empty_zero_and_text(self) -> None:
-        for text in ("", "A", "A0", "0", "-3", "abc"):
-            with self.subTest(text=text):
-                with self.assertRaises(ValueError):
-                    parse_agent_id(text)
-
-    def test_session_ids_keep_their_own_prefix(self) -> None:
-        self.assertEqual(parse_session_id("S12"), 12)
-        self.assertEqual(parse_session_id("12"), 12)
-
     def test_parse_pid_is_non_negative(self) -> None:
         self.assertEqual(parse_pid("42"), 42)
         self.assertEqual(parse_pid(""), 0)

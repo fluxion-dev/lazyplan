@@ -7,8 +7,6 @@ guesses where an agent works; unbound rows carry a reason instead.
 
 from __future__ import annotations
 
-import re
-
 STATUSES = (
     "starting",
     "working",
@@ -60,8 +58,6 @@ NAME_LIMIT = 64
 SESSION_LIMIT = 128
 PATH_LIMIT = 4096
 
-AGENT_ID = re.compile(r"^[Aa](\d+)$")
-
 
 def normalize_status(text: str) -> str:
     """Return one of the known statuses, rejecting anything else."""
@@ -103,17 +99,6 @@ def normalize_session_id(value: object) -> str:
 def normalize_path(value: object) -> str:
     """A bounded path string, or an empty string."""
     return str(value or "").strip()[:PATH_LIMIT]
-
-
-def parse_agent_id(text: str) -> int:
-    """Parse ``A12``, ``a12``, or ``12`` into a positive agent id."""
-    raw = str(text).strip()
-    match = AGENT_ID.match(raw)
-    if match:
-        raw = match.group(1)
-    if not raw.isdigit() or int(raw) <= 0:
-        raise ValueError(f"invalid agent id {text!r}; use A12 or 12")
-    return int(raw)
 
 
 def parse_pid(value: object) -> int:

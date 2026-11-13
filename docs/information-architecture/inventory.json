@@ -2,30 +2,6 @@
   "cli": {
     "commands": [
       {
-        "name": "agent",
-        "options": [
-          [
-            "--json"
-          ],
-          [
-            "--porcelain"
-          ],
-          [
-            "--version"
-          ],
-          [
-            "--actor"
-          ],
-          [
-            "--heal"
-          ],
-          [
-            "--no-heal"
-          ],
-          []
-        ]
-      },
-      {
         "name": "audit",
         "options": [
           [
@@ -1134,30 +1110,6 @@
         ]
       },
       {
-        "name": "session",
-        "options": [
-          [
-            "--json"
-          ],
-          [
-            "--porcelain"
-          ],
-          [
-            "--version"
-          ],
-          [
-            "--actor"
-          ],
-          [
-            "--heal"
-          ],
-          [
-            "--no-heal"
-          ],
-          []
-        ]
-      },
-      {
         "name": "setup",
         "options": [
           [
@@ -1584,17 +1536,17 @@
         ]
       }
     ],
-    "count": 52
+    "count": 50
   },
   "counts": {
-    "cli_commands": 52,
+    "cli_commands": 50,
     "doc_files": 9,
     "doc_headings": 92,
     "env_names": 11,
     "file_paths": 12,
     "hook_events": 35,
     "mcp_resources": 3,
-    "mcp_tools": 68,
+    "mcp_tools": 67,
     "palette_commands": 53,
     "setup_steps": 4,
     "stale_claims": 0,
@@ -1939,10 +1891,6 @@
       {
         "description": "Recent events.",
         "name": "activity_list"
-      },
-      {
-        "description": "Live agents, newest first.",
-        "name": "agent_list"
       },
       {
         "description": "Coverage, lag, gaps, and trace coverage.",

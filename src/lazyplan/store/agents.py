@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import sqlite3
 import time
-from collections.abc import Sequence
 
 from ..core.entities import Agent, AgentEvent
 from ..core.policies.agents import can_transition, normalize_status
@@ -397,42 +396,6 @@ class AgentsMixin(StoreBase):
                 (agent_id,),
             ).fetchall()
         return {str(row["event"]): int(row["n"]) for row in rows}
-
-    def archive_agents(
-        self,
-        agent_ids: Sequence[int],
-        actor: str = "human",
-        now: float | None = None,
-    ) -> int:
-        """Archive ended agents; open and lost rows are never archived."""
-        stamp = time.time() if now is None else now
-        archived = 0
-        with self._connect() as conn:
-            for agent_id in agent_ids:
-                cur = conn.execute(
-                    "UPDATE agents SET archived_at=?"
-                    " WHERE id=? AND status='ended' AND archived_at=0",
-                    (stamp, agent_id),
-                )
-                if (cur.rowcount or 0) == 0:
-                    continue
-                archived += 1
-        if archived:
-            self.log(actor, "agent", "archive", f"archived {archived} agent row(s)", now=stamp)
-        return archived
-
-    def restore_agent(self, agent_id: int, actor: str = "human", now: float | None = None) -> bool:
-        """Clear one agent's archive stamp; a live row writes no event."""
-        stamp = time.time() if now is None else now
-        with self._connect() as conn:
-            cur = conn.execute(
-                "UPDATE agents SET archived_at=0 WHERE id=? AND archived_at<>0",
-                (agent_id,),
-            )
-            changed = (cur.rowcount or 0) > 0
-        if changed:
-            self.log(actor, "agent", "restore", f"agent A{agent_id} restored", now=stamp)
-        return changed
 
     def agent_counts(self) -> dict[str, int]:
         """Open agents by status, for the tracker subtitle."""

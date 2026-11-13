@@ -135,16 +135,12 @@ class AgentStoreTest(unittest.TestCase):
         with self.assertRaises(KeyError):
             self.store.add_agent("ana", agent="x", parent_id=999)
 
-    def test_list_filters_and_archive(self) -> None:
+    def test_list_filters_open_and_live_rows(self) -> None:
         first = self._agent()
         second = self._agent(host_session="host-2")
         self.store.end_agent(second.id, "ana")
         self.assertEqual([row.id for row in self.store.list_agents(open_only=True)], [first.id])
         self.assertEqual([row.id for row in self.store.list_agents(live_only=True)], [first.id])
-        self.assertEqual(self.store.archive_agents([first.id]), 0)
-        self.assertEqual(self.store.archive_agents([second.id]), 1)
-        self.assertEqual([row.id for row in self.store.list_agents()], [first.id])
-        self.assertTrue(self.store.restore_agent(second.id))
 
     def test_liveness_marks_a_dead_pid_lost_and_never_revives_it(self) -> None:
         agent = self._agent(pid=999_999, process_start="1")

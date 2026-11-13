@@ -51,13 +51,6 @@ class TestAgentMcpTools(unittest.TestCase):
         text = result["content"][0]["text"]
         return json.loads(text)
 
-    def test_agent_list_reports_every_field(self) -> None:
-        rows = self._tool("agent_list", {"live": True})
-        self.assertIsInstance(rows, list)
-        self.assertEqual(rows[0]["id"], self.agent.id)
-        self.assertEqual(rows[0]["host_session"], "host-1")
-        self.assertEqual(rows[0]["worktree"], self.store.checkout_path())
-
     def test_session_list_keeps_the_legacy_s_id(self) -> None:
         rows = self._tool("session_list")
         self.assertEqual([row["id"] for row in rows], [7])

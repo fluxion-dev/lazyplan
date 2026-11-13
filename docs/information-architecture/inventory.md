@@ -14,9 +14,9 @@ python3 tools/ia_inventory.py --check
 
 | Surface | Count |
 | --- | ---: |
-| cli_commands | 52 |
+| cli_commands | 50 |
 | palette_commands | 53 |
-| mcp_tools | 68 |
+| mcp_tools | 67 |
 | mcp_resources | 3 |
 | tui_screens | 18 |
 | tui_bindings | 66 |
@@ -33,7 +33,6 @@ python3 tools/ia_inventory.py --check
 
 | Command | Options |
 | --- | --- |
-| `agent` | --json, --porcelain, --version, --actor, --heal, --no-heal |
 | `audit` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --since, --strict, --min-coverage, --max-lag, --max-gaps, --min-trace, --min-evidence |
 | `brief` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan |
 | `claim` | --json, --porcelain, --version, --actor, --heal, --no-heal, --id, --ttl, --note, --force, --worktree, --repo, --reason |
@@ -70,7 +69,6 @@ python3 tools/ia_inventory.py --check
 | `repos` | --json, --porcelain, --version, --actor, --heal, --no-heal, --kind, --id, --effective |
 | `review` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --max-chars |
 | `seed` | --json, --porcelain, --version, --actor, --heal, --no-heal |
-| `session` | --json, --porcelain, --version, --actor, --heal, --no-heal |
 | `setup` | --json, --porcelain, --version, --actor, --heal, --no-heal, --placement, --agents, --skills-dir, --no-skills, --hooks, --no-hooks, --agents-pointer, --no-agents-pointer, --yes, --post-upgrade |
 | `share` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --format, --out |
 | `ship` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --max-chars |
@@ -149,7 +147,6 @@ python3 tools/ia_inventory.py --check
 | Tool | Description |
 | --- | --- |
 | `activity_list` | Recent events. |
-| `agent_list` | Live agents, newest first. |
 | `audit` | Coverage, lag, gaps, and trace coverage. |
 | `block_task` | Block a task with a reason. |
 | `brief` | Session brief: active plan, doing task, next, gaps. |

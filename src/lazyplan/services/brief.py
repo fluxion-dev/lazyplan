@@ -14,7 +14,6 @@ from ..core.entities import Plan, Status, Task
 from ..core.policies.maintenance import is_archived_row
 from ..core.ports.insights import InsightsPort
 from ..core.serialization import approval_payload
-from .agents import previous_agent
 
 _MAX_PLANS = 3
 _MAX_LOOSE = 5
@@ -123,7 +122,6 @@ def _plan_brief(
     }
     payload["approval"] = _approval(store, plan)
     payload["questions"] = [vars(q) for q in store.list_questions(plan.id)]
-    payload["previous_session"] = previous_agent(store, plan_id=plan.id)
     notes = store.list_notes("plan", plan.id)[:_MAX_PLAN_NOTES]
     if notes:
         payload["notes"] = [vars(n) for n in notes]
@@ -172,19 +170,6 @@ def _question_lines(plan: dict) -> list[str]:
     return lines
 
 
-def _session_lines(plan: dict) -> list[str]:
-    """Previous session and handoff, when one exists."""
-    session = plan.get("previous_session")
-    if not session:
-        return []
-    label = session.get("label") or f"A{session['id']}"
-    who = session.get("agent") or session.get("actor") or "agent"
-    lines = [f"  session  {label} @{who}"]
-    if session.get("handoff"):
-        lines.append(f"  handoff  {session['handoff']}")
-    return lines
-
-
 def _doing_lines(plan: dict) -> list[str]:
     """Doing tasks with their claim, notes, comments, and gate."""
     lines: list[str] = []
@@ -215,7 +200,6 @@ def lines(payload: dict) -> list[str]:
         if approval is not None:
             out.append(approval)
         out.extend(_question_lines(plan))
-        out.extend(_session_lines(plan))
         for note in plan.get("notes", []):
             out.append(f"  note     @{note['actor']}: {note['text']}")
         for comment in plan.get("comments", []):

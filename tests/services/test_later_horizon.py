@@ -11,7 +11,7 @@ from unittest import mock
 
 from lazyplan import services
 from lazyplan.core.errors import TouchpointOverlap
-from lazyplan.services import context, ship
+from lazyplan.services import ship
 from lazyplan.store import Store
 
 
@@ -42,8 +42,6 @@ class TestLaterHorizon(unittest.TestCase):
         self.store.end_agent(agent.id, "ana", summary="shipped", handoff="next: QA")
         events = [event.event for event in self.store.agent_events(agent.id)]
         self.assertEqual(events, ["session-end", "prompt-submit", "start"])
-        packet = context.build(self.store)
-        self.assertEqual(packet["plans"][0]["previous_session"]["handoff"], "next: QA")
 
     def test_overlap_selection_and_refs_and_ship(self) -> None:
         self.store.add_touchpoint(self.first.id, "src/store")

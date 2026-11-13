@@ -204,26 +204,23 @@ def _track_agent(
     return agents.apply_event(store, actor, event, identity)
 
 
-def _agent_text(store: InsightsPort, cwd: Path, commits: list[audit.Commit] | None) -> str:
-    """Session-start packet with exact agent identity and next ending command."""
-    del cwd, commits
+def _agent_text(store: AppPort, cwd: Path, commits: list[audit.Commit] | None) -> str:
+    """Session-start packet: the active plan and this checkout's claims."""
+    del commits
     payload = context.build(store, max_chars=2000)
     if not payload.get("plans"):
         return ""
     text = "\n".join(context.lines(payload)).strip()
-    rows = store.list_agents(live_only=True, limit=1)
-    tracked = rows[0] if rows else None
-    if tracked is not None:
-        text += (
-            f"\nagent      A{tracked.id} {tracked.status} @{tracked.agent};"
-            f" end it with `lpui agent end --id A{tracked.id} --summary`"
-        )
+    held = coordination.checkout_claims(store, store.checkout_path(str(cwd)))
+    if held:
+        names = ", ".join(f"T{claim['task_id']} @{claim['actor']}" for claim in held)
+        text += f"\nclaims     {names}"
     else:
-        text += "\nagent      none registered; start one with `lpui agent start --plan P`"
+        text += "\nclaims     none here; take work with `lpui next` or move a task to doing"
     return text
 
 
-def _compaction_text(store: InsightsPort, cwd: Path) -> str:
+def _compaction_text(store: AppPort, cwd: Path) -> str:
     """Summary guidance that carries the active plan through a compaction."""
     packet = _agent_text(store, cwd, None)
     if not packet:

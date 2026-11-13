@@ -355,15 +355,15 @@ class HookCase(unittest.TestCase):
         result = hooks.build_result("pre-compact", {}, self.repo, commits=[], store=Store(self.db))
         self.assertEqual(result.text, "")
 
-    def test_session_handoff_is_in_session_start(self):
+    def test_session_start_carries_handoff_notes_and_checkout_claims(self):
         plan_id, _task = self._seed()
-        store = Store(self.db)
-        agent = store.add_agent("ana", host="opencode", agent="ana", plan_id=plan_id, now=100.0)
-        store.end_agent(agent.id, "ana", summary="shipped", handoff="next: QA", now=200.0)
+        Store(self.db).add_note("plan", plan_id, "Handoff: next QA", actor="ana")
         result = hooks.build_result(
             "session-start", {}, self.repo, commits=[], store=Store(self.db)
         )
-        self.assertIn("next: QA", result.text)
+        self.assertIn("Handoff: next QA", result.text)
+        self.assertIn("claims     T1 @t", result.text)
+        self.assertNotIn("lpui agent", result.text)
 
     def test_idle_agents_are_never_closed_by_time(self):
         now = time.time()

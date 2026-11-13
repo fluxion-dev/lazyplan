@@ -13,7 +13,6 @@ import json
 from ..core.entities import Plan, Status, Task
 from ..core.policies.maintenance import is_archived_row
 from ..core.ports.insights import InsightsPort
-from .agents import previous_agent
 
 DEFAULT_CONTEXT_CHARS = 4000
 MIN_CONTEXT_CHARS = 120
@@ -149,7 +148,6 @@ def _packet(store: InsightsPort, plan: Plan) -> dict:
         "status": plan.status.value,
         "why": plan.goal,
         "what": plan.description,
-        "previous_session": previous_agent(store, plan_id=plan.id),
         "doing": [
             {
                 "id": task.id,
@@ -189,10 +187,10 @@ def _trim(payload: dict, max_chars: int) -> dict:
     payload["truncated"] = True
     plans = payload["plans"]
     for plan in plans:
-        for key in ("comments", "notes", "previous_session", "commits", "claims"):
+        for key in ("comments", "notes", "commits", "claims"):
             if _fits(payload, max_chars):
                 return payload
-            plan[key] = [] if key != "previous_session" else None
+            plan[key] = []
         if not _fits(payload, max_chars):
             plan["next"] = plan["next"][:1]
         if not _fits(payload, max_chars):
@@ -244,18 +242,6 @@ def _question_lines(plan: dict) -> list[str]:
     ]
 
 
-def _previous_lines(session: dict) -> list[str]:
-    """Previous agent id, summary, and handoff."""
-    label = session.get("label") or f"A{session['id']}"
-    who = session.get("agent") or session.get("actor") or "agent"
-    out = [f"  session  {label} @{who}"]
-    for key in ("summary", "handoff"):
-        value = session.get(key)
-        if value:
-            out.append(f"  {key:<8} {value}")
-    return out
-
-
 def lines(payload: dict) -> list[str]:
     """Plain text rendering for hooks and the CLI."""
     plans = payload.get("plans") or []
@@ -266,9 +252,6 @@ def lines(payload: dict) -> list[str]:
         out.append(f"P{plan['id']} {plan['title']} ({plan['status']})")
         if plan.get("why"):
             out.append(f"  why      {plan['why']}")
-        session = plan.get("previous_session")
-        if session:
-            out.extend(_previous_lines(session))
         if plan.get("doing"):
             for task in plan["doing"]:
                 claim = task.get("claim")

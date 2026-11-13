@@ -78,19 +78,6 @@ def _row(*parts: object, sep: str = " · ") -> str:
     return "- " + sep.join(str(part) for part in parts if str(part))
 
 
-HEADLINE_LIMIT = 120
-
-
-def headline(text: str, limit: int = HEADLINE_LIMIT) -> str:
-    """One paragraph collapsed to a single clamped line."""
-    paragraph = text.strip().split("\n\n", 1)[0]
-    line = " ".join(paragraph.split())
-    if len(line) <= limit:
-        return line
-    cut = line[:limit].rsplit(" ", 1)[0].rstrip(" ,;:.-")
-    return f"{cut}…"
-
-
 def _child_row(letter: str, oid: object, title: object, suffix: str = "") -> str:
     """One plain child row: id, two spaces, title, then an optional count."""
     head = f"- {letter}{oid}  {escape_markdown(str(title))}"
@@ -349,7 +336,7 @@ def build_milestone(
     blocks: list[PreviewBlock] = []
     desc = str(obj.get("description", "") or "").strip()
     if desc:
-        blocks.append(PreviewBlock("details", (headline(desc),)))
+        blocks.append(PreviewBlock("details", (desc,)))
     tasks = tasks_block(_milestone_tasks(full))
     if tasks is not None:
         blocks.append(tasks)

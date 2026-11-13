@@ -164,18 +164,22 @@ class PreviewDocumentTest(unittest.TestCase):
         self.assertTrue(text.startswith("## WHY"))
         self.assertLess(text.index("## WHAT"), text.index("## QUESTIONS"))
 
-    def test_milestone_details_are_one_headline(self) -> None:
+    def test_milestone_details_show_in_full_first(self) -> None:
         milestone = self.store.add_milestone(
             self.plan.id,
             "Slice",
-            "First line of intent.\n\nINVEST: detail stays behind.",
+            "First line of intent.\n\nINVEST: detail stays. " + "word " * 40,
         )
+        self.store.add_task(milestone.id, "Child task", "")
         full = self.store.get_full("milestone", milestone.id)
         assert full is not None
         text = build_preview("milestone", milestone.id, full).render_markdown()
+        self.assertTrue(text.startswith("## DETAILS"))
         details = text.split("## DETAILS", 1)[1].split("## ", 1)[0]
         self.assertIn("First line of intent.", details)
-        self.assertNotIn("INVEST", details)
+        self.assertIn("INVEST: detail stays.", details)
+        self.assertIn("word " * 39, details)
+        self.assertNotIn("…", details)
 
     def test_plan_preview_shows_the_registered_worktree(self) -> None:
         self.store.register_plan_worktree(

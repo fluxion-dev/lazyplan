@@ -172,6 +172,10 @@ if _TEXTUAL_OK:
             """Open the update screen for a known or cached newer release."""
             self.update_controller.prompt()
 
+        def action_health_prompt(self) -> None:
+            """Open the health check with every finding, hidden ones included."""
+            self.health_controller.prompt()
+
         def action_release_notes(self) -> None:
             """Open the bundled release notes for the installed version."""
             from ...services import notes

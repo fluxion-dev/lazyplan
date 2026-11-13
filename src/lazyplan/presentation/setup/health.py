@@ -22,7 +22,7 @@ from lazyplan.infrastructure.repo import find_repo_root
 from .apply import choice_from_state
 from .integrations import ReviewResult, inspect, install_items, suppressing_decision
 from .layout import SetupChoice
-from .state import SetupState, load_state
+from .state import SetupState, load_state, save_state, timestamp
 
 ERROR = "error"
 WARNING = "warning"
@@ -235,6 +235,20 @@ class HealthContext:
         """Install every fixable item behind these findings."""
         items = tuple(item for finding in findings for item in finding.items)
         return install_items(items, self.choice, self.state, self.root, self.home, self.version)
+
+    def decide(self, findings: tuple[HealthFinding, ...], decision: str) -> None:
+        """Remember "deferred" or "never" for these findings and save state."""
+        seen_at = timestamp()
+        for finding in findings:
+            keys = [(item.id, item.fingerprint) for item in finding.items] or [(finding.id, "")]
+            for key, fingerprint in keys:
+                self.state.integration_choices[key] = {
+                    "decision": decision,
+                    "fingerprint": fingerprint,
+                    "version": self.version,
+                    "seen_at": seen_at,
+                }
+        save_state(self.state, self.home)
 
 
 def current(cwd: Path, home: Path | None = None, version: str = "") -> HealthContext:

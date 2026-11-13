@@ -14,18 +14,21 @@ try:
 except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
 
-from ...setup.health import ERROR, HealthFinding, HealthReport
+from ...setup.health import ERROR, HealthFinding
 from ...shared.design import escape_markup
 from ..navigation import NAV_BINDINGS, NavigationMixin
 
 LATER = "later"
+NEVER = "never"
 INSTALL = "install"
 INSTALL_NOTE = "Install & restart adds the missing skills and hooks, then restarts lpui."
 
 
 def _finding_lines(finding: HealthFinding) -> list[str]:
     mark = "[red]✗[/]" if finding.severity == ERROR else "[yellow]![/]"
-    lines = [f"{mark} [b]{escape_markup(finding.label)}[/]"]
+    hidden = {"never": " [dim](never ask)[/]", "deferred": " [dim](not now)[/]"}
+    tag = hidden.get(finding.decision, "")
+    lines = [f"{mark} [b]{escape_markup(finding.label)}[/]{tag}"]
     lines.append(f"  {escape_markup(finding.capability)}")
     if finding.fix:
         lines.append(f"  [dim]fix:[/] {escape_markup(finding.fix)}")
@@ -49,15 +52,20 @@ def health_body(findings: tuple[HealthFinding, ...]) -> str:
 if _TEXTUAL_OK:
 
     class HealthScreen(NavigationMixin, ModalScreen[str | None]):
-        """List open findings; dismiss with the chosen action."""
+        """List findings; dismiss with the chosen action.
+
+        On startup it offers Not now and Never ask for the open findings. In
+        review it lists every finding, hidden ones included, and only closes.
+        """
 
         navigation_name = "health"
 
         BINDINGS = [*NAV_BINDINGS, Binding("escape", "cancel", "Not now", priority=True)]
 
-        def __init__(self, report: HealthReport) -> None:
+        def __init__(self, findings: tuple[HealthFinding, ...], review: bool = False) -> None:
             super().__init__()
-            self.report = report
+            self.findings = findings
+            self.review = review
 
         def on_mount(self) -> None:
             self.query_one("#dlg").border_title = "HEALTH CHECK"
@@ -66,22 +74,30 @@ if _TEXTUAL_OK:
             with Vertical(id="dlg"):
                 yield Label("lazyplan health check")
                 with VerticalScroll(id="health-scroll"):
-                    yield Static(health_body(self.report.open), id="health-body")
-                fixable = any(finding.fixable for finding in self.report.open)
+                    yield Static(health_body(self.findings), id="health-body")
+                fixable = any(finding.fixable for finding in self.findings)
                 with Horizontal(classes="btn-row"):
                     if fixable:
                         yield Button("Install & restart", id="health-install", variant="primary")
                     yield Button(
-                        "Not now", id="health-later", variant="default" if fixable else "primary"
+                        "Close" if self.review else "Not now",
+                        id="health-later",
+                        variant="default" if fixable else "primary",
                     )
+                    if not self.review:
+                        yield Button("Never ask", id="health-never")
 
         @on(Button.Pressed, "#health-install")
         def _install(self) -> None:
             self.dismiss(INSTALL)
 
+        @on(Button.Pressed, "#health-never")
+        def _never(self) -> None:
+            self.dismiss(NEVER)
+
         @on(Button.Pressed, "#health-later")
         def _later(self) -> None:
-            self.dismiss(LATER)
+            self.action_cancel()
 
         def action_cancel(self) -> None:
-            self.dismiss(LATER)
+            self.dismiss(None if self.review else LATER)

@@ -17,7 +17,7 @@ from lazyplan.presentation.setup.health import (
 from lazyplan.presentation.setup.integrations import ReviewResult
 
 try:
-    from textual.widgets import Static
+    from textual.widgets import Label, Static
 
     from lazyplan.presentation.tui import create_app, launch
     from lazyplan.presentation.tui.launch import Restart
@@ -55,6 +55,7 @@ class FakeSession:
         self._report = report
         self.pending = pending
         self.installed: list[tuple[HealthFinding, ...]] = []
+        self.decided: list[tuple[tuple[HealthFinding, ...], str]] = []
 
     def report(self) -> HealthReport:
         return self._report
@@ -62,6 +63,9 @@ class FakeSession:
     def install(self, findings: tuple[HealthFinding, ...]) -> ReviewResult:
         self.installed.append(findings)
         return ReviewResult(decision="install", pending=self.pending)
+
+    def decide(self, findings: tuple[HealthFinding, ...], decision: str) -> None:
+        self.decided.append((findings, decision))
 
 
 @unittest.skipUnless(create_app is not None, "textual not installed")
@@ -93,7 +97,7 @@ class HealthScreenTest(unittest.IsolatedAsyncioTestCase):
             self.assertIn("Install Git.", body)
             self.assertIn("lazyplan can do less", body)
 
-    async def test_not_now_closes_the_modal(self) -> None:
+    async def test_not_now_closes_the_modal_and_defers(self) -> None:
         app = self.app(HealthReport(findings=(GIT,)))
         async with app.run_test(size=(110, 40)) as pilot:
             await self.settle(pilot)
@@ -101,6 +105,52 @@ class HealthScreenTest(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             self.assertNotIsInstance(app.screen, HealthScreen)
             self.assertEqual(len(app.screen_stack), 1)
+        self.assertEqual(self.session.decided, [((GIT,), "deferred")])
+
+    async def test_never_ask_remembers_never(self) -> None:
+        app = self.app(HealthReport(findings=(HOOKS, GIT)))
+        async with app.run_test(size=(110, 40)) as pilot:
+            await self.settle(pilot)
+            await pilot.click("#health-never")
+            await pilot.pause()
+            self.assertEqual(len(app.screen_stack), 1)
+        self.assertEqual(self.session.decided, [((HOOKS, GIT), "never")])
+        self.assertEqual(self.session.installed, [])
+
+    async def test_the_chip_counts_every_finding_including_hidden_ones(self) -> None:
+        hidden = HealthFinding(**{**GIT.__dict__, "decision": "never"})
+        app = self.app(HealthReport(findings=(hidden, GH)))
+        async with app.run_test(size=(140, 40)) as pilot:
+            await self.settle(pilot)
+            hints = str(app.query_one("#hints", Label).render())
+            self.assertIn("health", hints)
+            self.assertIn("2 issues", hints)
+
+    async def test_the_palette_review_lists_hidden_findings_and_only_closes(self) -> None:
+        hidden = HealthFinding(**{**GIT.__dict__, "decision": "never"})
+        app = self.app(HealthReport(findings=(hidden,)))
+        async with app.run_test(size=(110, 40)) as pilot:
+            await self.settle(pilot)
+            app.action_health_prompt()
+            await pilot.pause()
+            self.assertIsInstance(app.screen, HealthScreen)
+            body = str(app.screen.query_one("#health-body", Static).render())
+            self.assertIn("(never ask)", body)
+            self.assertFalse(app.screen.query("#health-never"))
+            await pilot.press("escape")
+            await pilot.pause()
+            self.assertEqual(len(app.screen_stack), 1)
+        self.assertEqual(self.session.decided, [])
+
+    async def test_the_palette_says_so_when_nothing_is_missing(self) -> None:
+        app = self.app(HealthReport())
+        async with app.run_test(size=(110, 40)) as pilot:
+            await self.settle(pilot)
+            app.action_health_prompt()
+            await pilot.pause()
+            self.assertEqual(len(app.screen_stack), 1)
+            hints = str(app.query_one("#hints", Label).render())
+            self.assertNotIn("health", hints)
 
     async def test_install_and_restart_installs_fixable_findings_then_exits(self) -> None:
         app = self.app(HealthReport(findings=(HOOKS, GIT)))

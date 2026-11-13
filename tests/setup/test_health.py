@@ -11,7 +11,7 @@ from lazyplan.infrastructure import hook_install
 from lazyplan.infrastructure.integrations import catalog, hook_id, skill_id
 from lazyplan.presentation.setup import health
 from lazyplan.presentation.setup.layout import SetupChoice
-from lazyplan.presentation.setup.state import SetupState
+from lazyplan.presentation.setup.state import SetupState, state_path
 
 
 class HealthCase(unittest.TestCase):
@@ -141,6 +141,15 @@ class IntegrationFindingsTest(HealthCase):
         self.assertEqual(result.pending, ())
         self.assertTrue((self.home / ".claude" / "skills" / "lazyplan" / "SKILL.md").is_file())
         self.assertEqual(self.check().findings, ())
+
+    def test_context_decide_hides_the_findings_until_their_rule_lifts(self):
+        context = health.HealthContext(self.choice, self.state, None, self.home, "1.0")
+        context.decide(self.check(missing=("git",)).open, "deferred")
+        self.assertEqual(self.check(missing=("git",)).open, ())
+        self.assertTrue(self.check("2.0", missing=("git",)).open)
+        context.decide(self.check(missing=("git",)).findings, "never")
+        self.assertEqual(self.check("2.0", missing=("git",)).open, ())
+        self.assertTrue(state_path(self.home).is_file())
 
     def test_check_writes_nothing(self):
         before = sorted(path.relative_to(self.home) for path in self.home.rglob("*"))

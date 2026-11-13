@@ -7,12 +7,15 @@ from typing import TYPE_CHECKING, Protocol
 
 from ...setup.health import HealthFinding, HealthReport
 from ...setup.integrations import ReviewResult
+from ...shared.help import hint_bar
 from ..launch import Restart
 from ..screens import TextScreen
-from ..screens.health import INSTALL, HealthScreen
+from ..screens.health import INSTALL, LATER, NEVER, HealthScreen
 
 if TYPE_CHECKING:
     from ..app import LazyplanApp
+
+DECISIONS = {LATER: "deferred", NEVER: "never"}
 
 
 class HealthSession(Protocol):
@@ -22,12 +25,14 @@ class HealthSession(Protocol):
 
     def install(self, findings: tuple[HealthFinding, ...]) -> ReviewResult: ...
 
+    def decide(self, findings: tuple[HealthFinding, ...], decision: str) -> None: ...
+
 
 HealthCheck = Callable[[], HealthSession]
 
 
 class HealthController:
-    """Own the startup report and the health modal."""
+    """Own the startup report, the health modal, and the status-line chip."""
 
     def __init__(self, app: LazyplanApp, check: HealthCheck | None = None) -> None:
         self.app = app
@@ -35,6 +40,7 @@ class HealthController:
         self.session: HealthSession | None = None
         self.report: HealthReport | None = None
         self.restart_notice = ""
+        self.offered: tuple[HealthFinding, ...] = ()
 
     def start(self) -> None:
         """Show a relaunch's restart notice, then run the check in a worker."""
@@ -54,17 +60,39 @@ class HealthController:
         self.app.call_from_thread(self.apply, session, report)
 
     def apply(self, session: HealthSession, report: HealthReport) -> None:
-        """Store the report and open the modal when an open error needs attention."""
+        """Store the report, update the chip, and prompt for open errors."""
         self.session = session
         self.report = report
+        self.refresh_hints()
         if report.should_prompt:
-            self.app.push_screen(HealthScreen(report), self.on_choice)
+            self._offer(report.open, review=False)
+
+    def prompt(self) -> None:
+        """Open every finding, hidden ones included, from the palette."""
+        if self.report is None:
+            self.app.notify("health check is not available yet")
+            return
+        if not self.report.findings:
+            self.app.notify("lazyplan has everything it needs")
+            return
+        self._offer(self.report.findings, review=True)
+
+    def _offer(self, findings: tuple[HealthFinding, ...], review: bool) -> None:
+        self.offered = findings
+        self.app.push_screen(HealthScreen(findings, review=review), self.on_choice)
 
     def on_choice(self, action: str | None) -> None:
-        """Install and restart, or leave everything as it is."""
-        if action != INSTALL or self.session is None or self.report is None:
+        """Install and restart, or remember Not now or Never ask."""
+        if self.session is None or action is None:
             return
-        fixable = tuple(finding for finding in self.report.open if finding.fixable)
+        if action == INSTALL:
+            self._install()
+            return
+        self.session.decide(self.offered, DECISIONS[action])
+
+    def _install(self) -> None:
+        assert self.session is not None and self.report is not None
+        fixable = tuple(finding for finding in self.offered if finding.fixable)
         try:
             result = self.session.install(fixable)
         except OSError as exc:
@@ -74,3 +102,18 @@ class HealthController:
         missed = {item.id for item in result.pending}
         done = tuple(item for item in installed if item.id not in missed)
         self.app.exit(Restart(tuple(self.report.hosts(done))))
+
+    def chip(self) -> str:
+        """Status-line text naming how many findings exist, hidden ones included."""
+        count = len(self.report.findings) if self.report is not None else 0
+        if not count:
+            return ""
+        return f" · [reverse] health [/]{count} {'issue' if count == 1 else 'issues'}"
+
+    def refresh_hints(self) -> None:
+        """Repaint the key hints with the health chip on the end."""
+        from textual.widgets import Label
+
+        chip = self.chip()
+        width = max(10, self.app.size.width - 2 - len(chip))
+        self.app.query_one("#hints", Label).update(hint_bar(width, markup=True) + chip)

@@ -6,7 +6,7 @@ from pathlib import Path
 
 from lazyplan import services
 from lazyplan.core.entities import Status
-from lazyplan.services import hook_scope
+from lazyplan.services import hook_policy, hook_scope
 from lazyplan.store import Store
 
 
@@ -81,6 +81,22 @@ class ScopeCase(unittest.TestCase):
         scope = hook_scope.resolve(store, self.repo)
         self.assertFalse(scope.managed)
         self.assertIsNone(scope.task)
+
+    def test_an_isolated_plan_gates_only_its_registered_worktree(self):
+        store = Store(self.home / ".lazyplan/lazyplan.db")
+        plan_id, task_id = self._seed(store, linked=self.repo)
+        store.register_plan_worktree(plan_id, str(self.repo), str(self.other), branch="plan/1")
+
+        shared = hook_scope.resolve(store, self.repo)
+        self.assertFalse(shared.managed)
+        self.assertIsNone(shared.task)
+
+        inside = hook_scope.resolve(store, self.other)
+        self.assertTrue(inside.managed)
+        self.assertEqual(inside.task_id, task_id)
+
+        blocked = hook_policy.commit_result(store, self.repo, "git commit -m x", "strict")
+        self.assertEqual(blocked.block, "")
 
     def test_a_hook_session_with_a_plan_makes_the_checkout_managed(self):
         store = Store(self.home / ".lazyplan/lazyplan.db")

@@ -1,5 +1,5 @@
 {
-  "version": "0.40.3",
+  "version": "0.41.1",
   "generated": "2026-11-10",
   "groups": [
     {
@@ -30,13 +30,13 @@
       "id": "source",
       "title": "Source trail",
       "blurb": "Repos, commits, files, diffs, and empty states.",
-      "count": 4
+      "count": 6
     },
     {
       "id": "forms",
       "title": "Dialogs and forms",
       "blurb": "Create, edit, prove, confirm, export, update, and overlays.",
-      "count": 23
+      "count": 22
     },
     {
       "id": "cli",
@@ -438,6 +438,23 @@
       "height": 904
     },
     {
+      "id": "source-split",
+      "group": "source",
+      "title": "Side-by-side diff",
+      "state": "Split diff",
+      "description": "One file paired old and new, with status, counts, word-level emphasis, and wrapped lines.",
+      "lookFor": [
+        "Do paired rows read faster than the unified view?",
+        "Is the separator obvious at this width?",
+        "When should split turn itself off?"
+      ],
+      "keys": "s unified \u00b7 w wrap \u00b7 f fold \u00b7 n/p file",
+      "image": "source-split.png",
+      "webp": "source-split.webp",
+      "width": 2092,
+      "height": 1026
+    },
+    {
       "id": "source-empty",
       "group": "source",
       "title": "Source trail with no links",
@@ -796,20 +813,20 @@
     },
     {
       "id": "form-plan-diff",
-      "group": "forms",
-      "title": "Plan diff",
-      "state": "Scope changes since approval",
-      "description": "The read-only plan diff overlay: summary counts, each changed row, and the recorded reason.",
+      "group": "source",
+      "title": "Plan scope diff",
+      "state": "Drifted plan",
+      "description": "The dedicated plan diff: summary chips, sections by kind, before and after blocks, and the reason for each change.",
       "lookFor": [
-        "Can you tell what changed without the code?",
-        "Do the change glyphs need a legend?",
-        "Is the reason attached to the right row?"
+        "Is the summary enough to decide whether to approve?",
+        "Do the before and after blocks read as one change?",
+        "Are reasons visible without crowding the rows?"
       ],
-      "keys": "esc close \u00b7 c commands",
+      "keys": "esc back \u00b7 q quit",
       "image": "form-plan-diff.png",
       "webp": "form-plan-diff.webp",
-      "width": 1604,
-      "height": 904
+      "width": 1482,
+      "height": 782
     },
     {
       "id": "overlay-help",

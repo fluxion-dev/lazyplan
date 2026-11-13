@@ -58,6 +58,7 @@ from lazyplan.presentation.tui.screens import (  # noqa: E402
     NewPlanScreen,
     NewTaskScreen,
     PaletteScreen,
+    PlanDiffScreen,
     RefScreen,
     SourceScreen,
     TextScreen,
@@ -79,7 +80,6 @@ from lazyplan.presentation.tui.screens.hub_provenance import (  # noqa: E402
     ActivityHub,
     PullRequestHub,
 )
-from lazyplan.presentation.tui.views.diff import diff_text  # noqa: E402
 from lazyplan.store import Store  # noqa: E402
 
 SIZE = cs.SIZE
@@ -418,10 +418,16 @@ def _modal_scene(
 # -- source captures ------------------------------------------------------
 
 
-async def _capture_source(store: Store, target: Path, task_title: str, pick: str) -> None:
+async def _capture_source(
+    store: Store,
+    target: Path,
+    task_title: str,
+    pick: str,
+    size: tuple[int, int] = SIZE,
+) -> None:
     task_id = _task_id(store, task_title)
     app = create_app(str(store.path))
-    async with app.run_test(size=SIZE) as pilot:
+    async with app.run_test(size=size) as pilot:
         await pilot.pause()
         app.push_screen(SourceScreen(store, "task", task_id))
         await pilot.pause(0.45)
@@ -437,10 +443,16 @@ async def _capture_source(store: Store, target: Path, task_title: str, pick: str
             repo.children[0],
         )
         commit.expand()
+        for _ in range(20):
+            if any("M " in str(child.label) for child in commit.children):
+                break
+            await pilot.pause(0.05)
         tree.focus()
-        node = commit.children[0] if pick == "file" else commit
+        node = commit.children[0] if pick in ("file", "split") else commit
         await _select_preserving(tree, node, pilot)
         app.screen._preview(node)
+        if pick == "split":
+            app.screen.action_toggle_split()
         await pilot.pause(0.5)
         app.save_screenshot(str(target))
 
@@ -455,12 +467,24 @@ def _source_scene(
     build: Callable[[Path], Store | None],
     task_title: str,
     pick: str,
+    size: tuple[int, int] = SIZE,
 ) -> Scene:
     async def capture(store: Store | None, target: Path) -> None:
         assert store is not None
-        await _capture_source(store, target, task_title, pick)
+        await _capture_source(store, target, task_title, pick, size)
 
-    return Scene(id, "source", title, state, description, look_for, keys, build, capture)
+    return Scene(
+        id,
+        "source",
+        title,
+        state,
+        description,
+        look_for,
+        keys,
+        build,
+        capture,
+        size,
+    )
 
 
 # -- transcript captures --------------------------------------------------
@@ -922,6 +946,22 @@ def scenes() -> list[Scene]:
                 "Render unified diffs",
                 "file",
             ),
+            _source_scene(
+                "source-split",
+                "Side-by-side diff",
+                "Split diff",
+                "One file paired old and new, with status, counts, word-level emphasis, and wrapped lines.",
+                (
+                    "Do paired rows read faster than the unified view?",
+                    "Is the separator obvious at this width?",
+                    "When should split turn itself off?",
+                ),
+                "s unified · w wrap · f fold · n/p file",
+                source,
+                "Render unified diffs",
+                "split",
+                (170, 40),
+            ),
             Scene(
                 "source-empty",
                 "source",
@@ -1252,16 +1292,16 @@ def scenes() -> list[Scene]:
             ),
             Scene(
                 "form-plan-diff",
-                "forms",
-                "Plan diff",
-                "Scope changes since approval",
-                "The read-only plan diff overlay: summary counts, each changed row, and the recorded reason.",
+                "source",
+                "Plan scope diff",
+                "Drifted plan",
+                "The dedicated plan diff: summary chips, sections by kind, before and after blocks, and the reason for each change.",
                 (
-                    "Can you tell what changed without the code?",
-                    "Do the change glyphs need a legend?",
-                    "Is the reason attached to the right row?",
+                    "Is the summary enough to decide whether to approve?",
+                    "Do the before and after blocks read as one change?",
+                    "Are reasons visible without crowding the rows?",
                 ),
-                "esc close · c commands",
+                "esc back · q quit",
                 ux,
                 _capture_plan_diff,
             ),
@@ -1461,9 +1501,24 @@ async def _capture_export(store: Store, target: Path) -> None:
 
 
 async def _capture_plan_diff(store: Store, target: Path) -> None:
+    """Approve the fixture, add drift, and capture the dedicated diff screen."""
     plan_id = _plan_id(store)
+    plan = store.get_plan(plan_id)
+    if plan is None:
+        return
+    if not store.list_revisions(plan_id):
+        services.approve(store, plan_id, actor="fixture", reason="baseline")
+    store.update_plan(
+        plan_id,
+        description=(plan.description or "") + "\n\nScope added for the review.",
+        actor="fixture",
+    )
     result = services.diff(store, plan_id)
-    await _capture_modal(store, target, TextScreen(f"PLAN P{plan_id} DIFF", diff_text(result)))
+    app = create_app(str(store.path))
+    async with app.run_test(size=(120, 30)) as pilot:
+        app.push_screen(PlanDiffScreen(result))
+        await pilot.pause()
+        app.save_screenshot(str(target))
 
 
 async def _capture_palette_filtered(store: Store, target: Path) -> None:

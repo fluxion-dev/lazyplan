@@ -194,6 +194,31 @@ def git_common_dir(cwd: str | Path = ".") -> str:
     return _git_dirs(cwd)[1]
 
 
+def git_worktree_paths(cwd: str | Path = ".") -> set[str]:
+    """Resolved paths `git worktree list` reports for a checkout; empty outside git."""
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(cwd), "worktree", "list", "--porcelain"],
+            capture_output=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=5,
+        )
+    except (FileNotFoundError, subprocess.SubprocessError, OSError):
+        return set()
+    if out.returncode != 0:
+        return set()
+    paths: set[str] = set()
+    for line in out.stdout.splitlines():
+        if not line.startswith("worktree "):
+            continue
+        try:
+            paths.add(str(Path(line[9:]).resolve()))
+        except OSError:
+            paths.add(line[9:])
+    return paths
+
+
 def find_repo_root(cwd: str | Path = ".") -> Path | None:
     """Enclosing git repo root, or None. Tries git CLI, falls back to `.git` walk."""
     root = _git_toplevel(cwd)

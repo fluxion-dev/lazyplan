@@ -67,7 +67,6 @@ from .plan import (
     _cmd_plan_diff,
     _cmd_plan_recipe,
     _cmd_plan_revisions,
-    _cmd_plan_worktree,
     _cmd_reconcile,
     _cmd_show,
     _cmd_status,
@@ -138,6 +137,7 @@ from .touch import (
 from .ui import (
     _cmd_ui,
 )
+from .worktree import _cmd_plan_worktree
 
 _GROUP_CMDS: dict[tuple[str, str], str] = {
     ("plan", "add"): "add-plan",

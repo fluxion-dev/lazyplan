@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
 
 from ..core.ports.planning import PlanningPort
 from ..infrastructure.repo import git_common_dir
@@ -65,6 +66,30 @@ def checkout_gate(store: PlanningPort, plan_id: int, checkout: str) -> str:
         return ""
     expected = ", ".join(row.worktree_path for row in registered)
     return f"session start must run in a registered worktree: {expected}"
+
+
+def _quote_path(text: str) -> str:
+    """Quote one shell path only when it needs it."""
+    return f'"{text}"' if any(char.isspace() for char in text) else text
+
+
+def done_blocker(store: PlanningPort, plan_id: int) -> str:
+    """Refusal text when a registered worktree cannot be closed out cleanly."""
+    for row in store.list_plan_worktrees(plan_id):
+        if not Path(row.worktree_path).exists():
+            continue
+        check = verify_worktree(row.repo_path, row.worktree_path, row.branch)
+        if not check.ok:
+            return f"plan #{plan_id} worktree {row.worktree_path}: {check.reason}"
+    return ""
+
+
+def removal_commands(store: PlanningPort, plan_id: int) -> list[str]:
+    """Read-only removal commands printed when a plan closes."""
+    return [
+        f"git -C {_quote_path(row.repo_path)} worktree remove {_quote_path(row.worktree_path)}"
+        for row in store.list_plan_worktrees(plan_id)
+    ]
 
 
 def verify_worktree(repo_path: str, worktree_path: str, branch: str) -> WorktreeVerification:

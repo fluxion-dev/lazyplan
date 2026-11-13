@@ -6,7 +6,12 @@ import argparse
 import os
 import sys
 
-from lazyplan.services.worktrees import verify_worktree, worktree_gate
+from lazyplan.services.worktrees import (
+    done_blocker,
+    removal_commands,
+    verify_worktree,
+    worktree_gate,
+)
 
 from ....core.entities import Plan, PlanWorktree
 from ....core.policies.worktrees import WorktreeCollision, derive_worktree, derive_worktrees
@@ -175,6 +180,17 @@ def _remove_plan_worktree(store: AppPort, plan: Plan, args: argparse.Namespace, 
 
     store.remove_plan_worktree(plan.id, repo, actor=actor)
     return _emit_worktree(args, plan, existing, "removed")
+
+
+def guard_plan_done(store: InsightsPort, plan_id: int) -> int:
+    """Refuse a dirty worktree, else print the removal commands."""
+    blocked = done_blocker(store, plan_id)
+    if blocked:
+        print(msg_error(ValueError(blocked)), file=sys.stderr)
+        return 2
+    for command in removal_commands(store, plan_id):
+        print(f"remove: {command}", file=sys.stderr)
+    return 0
 
 
 def _guard_plan_start(store: InsightsPort, args: argparse.Namespace) -> tuple[str, int]:

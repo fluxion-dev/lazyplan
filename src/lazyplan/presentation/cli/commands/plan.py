@@ -46,7 +46,7 @@ from ..rows import (
     _porcelain_list_lines,
     _porcelain_show_lines,
 )
-from .worktree import _guard_plan_start, record_worktree_override
+from .worktree import _guard_plan_start, guard_plan_done, record_worktree_override
 
 
 def _resolve_title(args: argparse.Namespace) -> str:
@@ -331,6 +331,9 @@ def _cmd_status(store: InsightsPort, args: argparse.Namespace, actor: str) -> in
         if failure and not override:
             print(msg_error(ValueError(failure)), file=sys.stderr)
             return 2
+        done_code = guard_plan_done(store, args.id)
+        if done_code:
+            return done_code
     worktree_failure, gate_code = _guard_plan_start(store, args)
     if gate_code:
         print(msg_error(ValueError(worktree_failure)), file=sys.stderr)

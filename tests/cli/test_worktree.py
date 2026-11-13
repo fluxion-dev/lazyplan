@@ -278,6 +278,36 @@ class PlanWorktreeRegisterTest(unittest.TestCase):
         task = store.add_task(milestone.id, "T", "Approach: x.\n\nCommit: one.\n\nVerify: y.")
         return task.id
 
+    def test_done_refuses_a_dirty_worktree_and_prints_removal(self) -> None:
+        self.assertEqual(
+            self._run(
+                [
+                    "plan",
+                    "worktree",
+                    "add",
+                    "--id",
+                    str(self.plan.id),
+                    "--repo",
+                    self.repo,
+                ]
+            )[0],
+            0,
+        )
+        scratch = os.path.join(self.target.worktree_path, "scratch.txt")
+        with open(scratch, "w", encoding="utf-8") as handle:
+            handle.write("dirty\n")
+
+        code, _, error = self._run(["plan", "move", "--id", str(self.plan.id), "--to", "done"])
+        self.assertEqual(code, 2)
+        self.assertIn("uncommitted changes", error)
+        self.assertEqual(Store(self.db).get_plan(self.plan.id).status.value, "todo")
+
+        os.remove(scratch)
+        code, _, error = self._run(["plan", "move", "--id", str(self.plan.id), "--to", "done"])
+        self.assertEqual(code, 0, error)
+        self.assertIn("worktree remove", error)
+        self.assertEqual(Store(self.db).get_plan(self.plan.id).status.value, "done")
+
     def test_next_refuses_the_shared_checkout(self) -> None:
         self._register_and_task()
         os.chdir(self.repo)

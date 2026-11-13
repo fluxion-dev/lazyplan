@@ -459,6 +459,19 @@ class TestStore(unittest.TestCase):
         again = Store(legacy)
         self.assertEqual(again.get_plan(1).name, "Keep")
 
+    def test_new_plans_require_worktrees_and_legacy_rows_do_not(self):
+        legacy = os.path.join(self.tmp.name, "legacy-worktree-required.db")
+        store = Store(legacy)
+        old = store.add_plan("Old")
+        with closing(sqlite3.connect(legacy)) as conn:
+            conn.execute("ALTER TABLE plans DROP COLUMN worktree_required")
+            conn.execute(f"PRAGMA user_version = {migrate_mod.SCHEMA_VERSION - 1}")
+            conn.commit()
+
+        reopened = Store(legacy)
+        self.assertFalse(reopened.get_plan(old.id).worktree_required)
+        self.assertTrue(reopened.add_plan("New").worktree_required)
+
     def test_export_import_roundtrip(self):
         p = self.store.add_plan("P", goal="g")
         services.set_status(self.store, "plan", p.id, Status.DOING)

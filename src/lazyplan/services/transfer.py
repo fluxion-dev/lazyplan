@@ -402,6 +402,7 @@ def _import_all(store: TransferPort, data: dict, actor: str = "human") -> dict[s
             p.get("description", ""),
             goal=p.get("goal", ""),
             actor=actor,
+            worktree_required=bool(p.get("worktree_required", False)),
         )
         _apply_status("plan", np.id, p.get("status", ""))
         uid = str(p.get("uid", "") or "").strip()

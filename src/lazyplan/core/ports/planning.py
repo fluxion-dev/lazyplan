@@ -36,6 +36,7 @@ class PlanningPort(Protocol):
         description: str = "",
         goal: str = "",
         actor: str = "human",
+        worktree_required: bool = True,
     ) -> Plan: ...
 
     def add_milestone(

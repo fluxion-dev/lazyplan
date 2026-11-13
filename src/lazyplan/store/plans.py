@@ -27,6 +27,7 @@ class PlansMixin(StoreBase):
         description: str = "",
         goal: str = "",
         actor: str = "human",
+        worktree_required: bool = True,
     ) -> Plan:
         """Insert a plan row and log the event (no template fill; see services)."""
         p = Plan(
@@ -34,11 +35,20 @@ class PlansMixin(StoreBase):
             name=name.strip(),
             description=description,
             goal=goal,
+            worktree_required=worktree_required,
         )
         with self._connect() as conn:
             cur = conn.execute(
-                "INSERT INTO plans (name, description, status, goal, uid) VALUES (?,?,?,?,?)",
-                (p.name, p.description, p.status.value, p.goal, str(uuid.uuid4())),
+                "INSERT INTO plans (name, description, status, goal, uid, worktree_required)"
+                " VALUES (?,?,?,?,?,?)",
+                (
+                    p.name,
+                    p.description,
+                    p.status.value,
+                    p.goal,
+                    str(uuid.uuid4()),
+                    int(p.worktree_required),
+                ),
             )
             p.id = cur.lastrowid or 0
         self.log(actor, "plan", "add", f"P#{p.id} {p.name}")
@@ -59,6 +69,9 @@ class PlansMixin(StoreBase):
             status=Status(r["status"]) if "status" in keys else Status.TODO,
             goal=self._opt(r, keys, "goal"),
             archived_at=float(r["archived_at"]) if "archived_at" in keys else 0.0,
+            worktree_required=(
+                bool(r["worktree_required"]) if "worktree_required" in keys else False
+            ),
         )
 
     def plan_uid(self, pid: int) -> str:

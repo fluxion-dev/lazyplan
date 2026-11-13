@@ -35,6 +35,7 @@ class Plan:
     status: Status = Status.TODO
     goal: str = ""  # the why
     archived_at: float = 0.0
+    worktree_required: bool = False
 
     def __post_init__(self) -> None:
         if not self.name.strip():

@@ -22,9 +22,9 @@ from typing import Any
 from ..entities import Criterion, Milestone, Plan, Task
 
 #: Bumped when the snapshot shape changes in a way that invalidates old digests.
-SNAPSHOT_SCHEMA = 1
+SNAPSHOT_SCHEMA = 2
 
-_PLAN_FIELDS = ("title", "why", "what")
+_PLAN_FIELDS = ("title", "why", "what", "worktree_required")
 _ROW_FIELDS = {"milestone": ("title", "desc"), "task": ("title", "desc")}
 _KIND_ORDER = {"plan": 0, "milestone": 1, "task": 2, "criterion": 3}
 
@@ -83,6 +83,7 @@ def build_snapshot(
         "title": plan.name,
         "why": plan.goal,
         "what": plan.description,
+        "worktree_required": plan.worktree_required,
         "criteria": _criteria_payload(criteria, "plan", plan.id),
     }
     milestone_payloads: list[dict[str, Any]] = []

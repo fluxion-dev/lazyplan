@@ -30,7 +30,12 @@ class StoreStubs(StoreStubsLinks):
     """Declarations filled in by the persistence mixins."""
 
     def add_plan(
-        self, name: str, description: str = "", goal: str = "", actor: str = "human"
+        self,
+        name: str,
+        description: str = "",
+        goal: str = "",
+        actor: str = "human",
+        worktree_required: bool = True,
     ) -> Plan:
         raise NotImplementedError
 

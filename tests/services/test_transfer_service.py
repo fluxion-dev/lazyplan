@@ -30,6 +30,26 @@ class TestTransferService(unittest.TestCase):
             self.assertEqual(counts["plans"], 1)
             self.assertEqual(target.list_plans()[0].name, "P")
 
+    def test_export_import_preserves_worktree_required(self) -> None:
+        plan = self.store.list_plans()[0]
+        self.assertTrue(plan.worktree_required)
+        dump = services.export_all(self.store)
+        self.assertTrue(dump["plans"][0]["plan"]["worktree_required"])
+
+        with tempfile.TemporaryDirectory() as other:
+            target = Store(os.path.join(other, "target.db"))
+            services.import_all(target, dump, actor="fixture")
+            self.assertTrue(target.list_plans()[0].worktree_required)
+
+    def test_import_treats_a_missing_flag_as_grandfathered(self) -> None:
+        dump = services.export_all(self.store)
+        dump["plans"][0]["plan"].pop("worktree_required")
+
+        with tempfile.TemporaryDirectory() as other:
+            target = Store(os.path.join(other, "target.db"))
+            services.import_all(target, dump, actor="fixture")
+            self.assertFalse(target.list_plans()[0].worktree_required)
+
     def test_export_import_preserves_archive_state(self) -> None:
         plan = self.store.list_plans()[0]
         services.set_status(self.store, "plan", plan.id, Status.DONE)

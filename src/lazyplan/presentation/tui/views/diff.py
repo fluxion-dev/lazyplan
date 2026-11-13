@@ -5,9 +5,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ....services.revisions import DiffEntry, DiffResult
-from ...shared.design import truncate
+from ...shared.design import escape_markup, truncate
 
 _GLYPH = {"add": "+", "remove": "-", "change": "~", "move": "→"}
+_ACTION_STYLE = {
+    "add": "green",
+    "remove": "red",
+    "change": "yellow",
+    "move": "cyan",
+}
 _ORDER = ("plan", "milestone", "task", "criterion")
 _LABELS = {
     "plan": "plan",
@@ -94,6 +100,42 @@ def build_plan_diff(result: DiffResult, max_text: int = 240) -> PlanDiffView:
         summary=dict(result.summary),
         groups=tuple(groups),
     )
+
+
+def render_plan_diff(view: PlanDiffView) -> tuple[str, str]:
+    """Return the head and body markup for the dedicated plan diff screen."""
+    head = f"[bold]P{view.plan_id} scope diff[/] [dim]from r{view.from_revision}[/]"
+    chips = [f"[reverse] {view.total} changes [/]"]
+    for action in ("add", "remove", "change", "move"):
+        count = view.summary.get(action, 0)
+        if count:
+            chips.append(f"[{_ACTION_STYLE[action]}]{count} {action}[/]")
+    head = f"{head}\n{' '.join(chips)}"
+    if view.empty:
+        return head, "[green]✓[/] [dim]in sync with the approved revision[/]"
+    lines: list[str] = []
+    for group in view.groups:
+        if lines:
+            lines.append("")
+        lines.append(f"[bold cyan]{group.label.upper()}[/] [dim]{len(group.rows)}[/]")
+        for row in group.rows:
+            color = _ACTION_STYLE.get(row.action, "dim")
+            ident = f"{row.kind} {row.obj_id}"
+            line = (
+                f"[{color}]{row.glyph}[/] [bold]{escape_markup(ident)}[/] "
+                f"{escape_markup(row.title)}"
+            )
+            if row.field:
+                line += f" [dim]· {escape_markup(row.field)}[/]"
+            lines.append(line)
+            if row.action in ("change", "move"):
+                if row.before:
+                    lines.append(f"  [red]− {escape_markup(row.before)}[/]")
+                if row.after:
+                    lines.append(f"  [green]+ {escape_markup(row.after)}[/]")
+            if row.reason:
+                lines.append(f"  [dim]reason: {escape_markup(row.reason)}[/]")
+    return head, "\n".join(lines)
 
 
 def diff_text(result: DiffResult) -> str:

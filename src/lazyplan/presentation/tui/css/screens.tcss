@@ -190,6 +190,40 @@ Screen.compact #source-head {
     scrollbar-size-horizontal: 0;
 }
 
+#plan-diff-page {
+    height: 1fr;
+    border: round $lp-border;
+    border-title-color: $lp-accent;
+    background: $lp-surface-alt;
+    padding: 0 1;
+}
+
+#plan-diff-head {
+    height: auto;
+    min-height: 2;
+    background: $lp-surface;
+    color: $lp-accent;
+    padding: 0 1;
+    margin-bottom: 1;
+}
+
+#plan-diff-scroll {
+    height: 1fr;
+    padding: 0 1;
+}
+
+#plan-diff-body {
+    height: auto;
+}
+
+#plan-diff-hints {
+    width: 100%;
+    height: 1;
+    padding: 0 1;
+    background: $lp-surface;
+    color: $lp-text-muted;
+}
+
 #source-hints {
     width: 100%;
     height: auto;

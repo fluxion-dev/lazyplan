@@ -9,9 +9,13 @@ from lazyplan.core.policies.revisions import Change
 from lazyplan.services.revisions import DiffEntry, DiffResult
 
 try:
-    from lazyplan.presentation.tui.views.diff import build_plan_diff, diff_text
+    from lazyplan.presentation.tui.views.diff import (
+        build_plan_diff,
+        diff_text,
+        render_plan_diff,
+    )
 except ImportError:  # pragma: no cover - textual not installed
-    build_plan_diff = diff_text = None  # type: ignore[assignment]
+    build_plan_diff = diff_text = render_plan_diff = None  # type: ignore[assignment]
 
 REVISION = PlanRevision(
     id=1,
@@ -120,6 +124,29 @@ class PlanDiffModelTest(unittest.TestCase):
         self.assertIn("TASKS", text)
         self.assertIn("~ task 1 Read the diff", text)
         self.assertIn("reason: scope", text)
+
+    def test_screen_markup_groups_before_after_and_reason(self) -> None:
+        result = _result(
+            (
+                _entry(
+                    "task", "change", "Read the diff", before="old", after="new", reason="because"
+                ),
+            ),
+            summary={"add": 0, "remove": 0, "change": 1, "move": 0, "total": 1},
+        )
+        head, body = render_plan_diff(build_plan_diff(result))
+        self.assertIn("P1 scope diff", head)
+        self.assertIn("1 changes", head)
+        self.assertIn("TASKS", body)
+        self.assertIn("~", body)
+        self.assertIn("− old", body)
+        self.assertIn("+ new", body)
+        self.assertIn("reason: because", body)
+
+    def test_screen_markup_reports_in_sync(self) -> None:
+        head, body = render_plan_diff(build_plan_diff(_result(())))
+        self.assertIn("0 changes", head)
+        self.assertIn("in sync with the approved revision", body)
 
 
 if __name__ == "__main__":

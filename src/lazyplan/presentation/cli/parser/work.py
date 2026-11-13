@@ -209,6 +209,16 @@ def add_noun_groups(
         help="exit 1 when drift exists and 0 when in sync",
     )
 
+    _a = _actions.add_parser(
+        "worktree", help="print plan worktree setup commands", parents=[common]
+    )
+    _a.add_argument("--id", type=int, required=True, metavar="ID", help="plan id")
+    _a.add_argument(
+        "--print",
+        action="store_true",
+        help="print one git worktree command per linked repo",
+    )
+
     _group, _actions = _noun_group("milestone", "")
     _a = _actions.add_parser("add", help="add a milestone", parents=[common])
     _a.add_argument("--plan", type=int, required=True, metavar="ID", help="owning plan id")

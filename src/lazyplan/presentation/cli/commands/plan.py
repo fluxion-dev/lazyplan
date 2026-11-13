@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 
 from lazyplan import (
@@ -13,6 +14,8 @@ from lazyplan.services import evidence as evidence_service
 from lazyplan.services import revisions as revisions_service
 
 from ....core.entities import Milestone, Plan, Status, Task
+from ....core.policies.worktrees import WorktreeCollision, derive_worktrees
+from ....core.ports.app import AppPort
 from ....core.ports.coordination import CoordinationPort
 from ....core.ports.insights import InsightsPort
 from ....core.ports.planning import PlanningPort
@@ -99,6 +102,70 @@ def _cmd_add_task(store: CoordinationPort, args: argparse.Namespace, actor: str)
         for path in getattr(args, "touch", []) or []:
             store.add_touchpoint(t.id, path, actor=actor)
     return _emit_record(args, _porcelain_row(store, t), {"task": to_payload(vars(t))})
+
+
+def _quote_path(text: str) -> str:
+    """Quote one shell path only when it needs it."""
+    if any(char.isspace() for char in text):
+        return f'"{text}"'
+    return text
+
+
+def _cmd_plan_worktree(store: AppPort, args: argparse.Namespace, actor: str) -> int:
+    """Print one git worktree setup command per linked repo."""
+    plan = store.get_plan(args.id)
+    if plan is None:
+        print(msg_not_found("plan", args.id), file=sys.stderr)
+        return 1
+    repos = store.list_repos("plan", plan.id)
+    if not repos:
+        store.add_repo_link("plan", plan.id, store.checkout_path(), actor=actor)
+        repos = store.list_repos("plan", plan.id)
+    try:
+        targets = derive_worktrees(
+            [str(repo["repo_path"]) for repo in repos],
+            plan.id,
+            plan.name,
+            exists=os.path.exists,
+        )
+    except (ValueError, WorktreeCollision) as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 2
+    entries = []
+    for repo, target in zip(repos, targets, strict=True):
+        start = str(repo.get("base_sha") or repo.get("branch") or "HEAD")
+        command = (
+            f"git -C {_quote_path(target.repo_path)} worktree add -b {target.branch}"
+            f" {_quote_path(target.worktree_path)} {_quote_path(start)}"
+        )
+        entries.append(
+            {
+                "repo_path": target.repo_path,
+                "worktree_path": target.worktree_path,
+                "branch": target.branch,
+                "command": command,
+            }
+        )
+    if args.json:
+        return _emit(args, {"plan": to_payload(vars(plan)), "worktrees": entries})
+    if porcelain.enabled(args):
+        for entry in entries:
+            print(
+                porcelain.row(
+                    "worktree",
+                    plan.id,
+                    "ready",
+                    entry["branch"],
+                    f"plan:{plan.id}",
+                    entry["worktree_path"],
+                )
+            )
+        return 0
+    print(f"plan {plan.id}: {plan.name}")
+    for entry in entries:
+        print(f"repo {entry['repo_path']}")
+        print(f"  {entry['command']}")
+    return 0
 
 
 def _cmd_plan_recipe(store: object | None, args: argparse.Namespace, actor: str) -> int:

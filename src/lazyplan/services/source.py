@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from lazyplan.infrastructure.forge import RepoRef, detect_forge, parse_pull_url
-from lazyplan.infrastructure.repo_paths import resolve_repo_path
 from lazyplan.infrastructure.vcs import commit_url, detect_backend, file_url, origin_url
 
 from .source_diff import CommitStats as CommitStats
@@ -175,7 +174,7 @@ def _commit_groups(
     for parent_kind, parent_id in _scope_parents(store, kind, obj_id):
         for link in store.list_links(parent_kind, parent_id):
             raw_repo = str(getattr(link, "repo_root", "") or "")
-            repo = resolve_repo_path(raw_repo) if raw_repo else ""
+            repo = store.resolve_repo_path(raw_repo) if raw_repo else ""
             owners: list[str] = []
             _add_unique(owners, _owner_label(store, link.parent_kind, link.parent_id))
             groups.setdefault(repo, []).append((link, owners))

@@ -1,39 +1,17 @@
-"""Exact agent rows for the tracker.
+"""Claim rows for the agents panel: who holds which task, and for how long.
 
-Pure formatting: no Textual imports, so the CLI and tests can reuse the
-status words without a terminal. The registry is authoritative; nothing here
-infers a state from elapsed time.
+Pure formatting: no Textual imports, so tests can render rows without a
+terminal. A row exists only while a claim does.
 """
 
 from __future__ import annotations
 
-import time
-from typing import NamedTuple
+from typing import Any
 
-from ....core.entities import Agent
 from ...shared.design import escape_markup, truncate
 
-PLAN_SHARE = 0.45
-MIN_PLAN_TITLE = 8
-MIN_BRANCH = 10
-
-_STATE_ORDER = {
-    "waiting": 0,
-    "working": 1,
-    "tool": 1,
-    "compacting": 1,
-    "starting": 1,
-    "blocked": 2,
-    "lost": 3,
-    "ended": 4,
-}
-
-
-class RowWidths(NamedTuple):
-    """Plan-title and branch cells left after the fixed columns."""
-
-    title: int
-    branch: int
+TASK_SHARE = 0.6
+MIN_TITLE = 6
 
 
 def age(started_at: float, stamp: float) -> str:
@@ -44,107 +22,37 @@ def age(started_at: float, stamp: float) -> str:
     return f"{minutes // 60}h{minutes % 60:02d}m"
 
 
-def rank_agents(agents: list[Agent], now: float | None = None) -> list[Agent]:
-    """Waiting first, then working, blocked, and lost; newest first within a state."""
-    del now
-
-    def key(agent: Agent) -> tuple[int, float]:
-        return (_STATE_ORDER.get(agent.status, 3), -agent.started_at)
-
-    return sorted(agents, key=key)
+def rank_claims(claims: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Newest claim first."""
+    return sorted(claims, key=lambda claim: -float(claim["started_at"]))
 
 
-def agent_id(agent: Agent) -> str:
-    """Short human id: ``A12``."""
-    return f"A{agent.id}"
+def _titles(task: str, plan: str, budget: int | None) -> tuple[str, str]:
+    """Task and plan titles cut to share the cells left in a row."""
+    if budget is None:
+        return task, plan
+    room = max(budget, 2 * MIN_TITLE)
+    task_room = max(MIN_TITLE, int(room * TASK_SHARE))
+    return truncate(task, task_room), truncate(plan, max(MIN_TITLE, room - task_room))
 
 
-def _share_widths(available: int, has_plan: bool) -> RowWidths:
-    """Plan-title and branch cells: 45/55, with minimums, never over budget."""
-    budget = max(available, 0)
-    if not has_plan:
-        return RowWidths(0, budget)
-    if budget >= MIN_PLAN_TITLE + MIN_BRANCH:
-        title = max(MIN_PLAN_TITLE, int(budget * PLAN_SHARE))
-        branch = budget - title
-        if branch < MIN_BRANCH:
-            branch = MIN_BRANCH
-            title = budget - branch
-        return RowWidths(title, branch)
-    title = int(budget * PLAN_SHARE)
-    return RowWidths(title, budget - title)
-
-
-def _fixed_cells(
-    agent: Agent,
-    short_id: str,
-    plan_head: str,
-    age_text: str,
-) -> int:
-    """Cells the row spends before the plan title and branch share the rest."""
-    head = len(f"@{agent.agent} {short_id} · {plan_head}")
-    plan_space = 1 if agent.plan_id is not None else 0
-    separators = len(" · ") * 4
-    return head + plan_space + separators + len(age_text)
-
-
-def row_widths(
-    agent: Agent,
-    width: int | None,
-    short_id: str,
-    plan_head: str,
-    age_text: str,
-) -> RowWidths | None:
-    """Width budget for one row, or None when the caller gave no width."""
-    if width is None:
-        return None
-    fixed = _fixed_cells(agent, short_id, plan_head, age_text)
-    return _share_widths(width - fixed, agent.plan_id is not None)
-
-
-def agent_line(
-    agent: Agent,
-    now: float | None = None,
-    plan_title: str = "",
-    width: int | None = None,
-) -> str:
-    """One live row: agent, id, plan/task, branch, age, and state word."""
-    stamp = time.time() if now is None else now
-    state = agent.status
-    short_id = agent_id(agent)
-    task = f" T{agent.task_id}" if agent.task_id is not None else ""
-    plan_head = f"P{agent.plan_id}" if agent.plan_id is not None else "unbound"
-    age_text = age(agent.started_at, stamp)
-    widths = row_widths(agent, width, short_id, plan_head, age_text)
-    title = plan_title if widths is None else truncate(plan_title, widths.title)
-    branch = agent.branch or "-"
-    if widths is not None:
-        branch = truncate(branch, widths.branch)
-
-    plan = f"[dim]{plan_head}[/]"
-    if title:
-        plan += f" {escape_markup(title)}"
-    if task:
-        plan += f"[dim]{task}[/]"
-    marker = ""
-    if agent.unbound:
-        marker = " [yellow]unbound[/]"
+def claim_line(claim: dict[str, Any], now: float, width: int | None = None) -> str:
+    """One row: ``@actor T12 task title · P3 plan title · 5m``."""
+    actor = str(claim["actor"])
+    task_id = f"T{claim['task_id']}"
+    plan_id = f"P{claim['plan_id']}"
+    elapsed = age(float(claim["started_at"]), now)
+    fixed = len(f"@{actor} {task_id}  ·  {plan_id}  · {elapsed}")
+    budget = None if width is None else width - fixed
+    task, plan = _titles(str(claim["task_title"]), str(claim["plan_title"]), budget)
     return (
-        f"[bold]@{escape_markup(agent.agent)}[/] [dim]{escape_markup(short_id)}[/] · "
-        f"{plan} · {escape_markup(branch)} · [dim]{age_text}[/] · "
-        f"[dim]{escape_markup(state)}[/]{marker}"
+        f"[bold]@{escape_markup(actor)}[/] [dim]{task_id}[/] {escape_markup(task)}"
+        f" · [dim]{plan_id}[/] {escape_markup(plan)} · [dim]{elapsed}[/]"
     )
 
 
-def agents_summary(agents: list[Agent], now: float | None = None) -> str:
-    """Border subtitle counts: open, waiting, lost, and unbound."""
-    del now
-    parts = [f"{len(agents)} open"]
-    for state in ("waiting", "lost", "blocked"):
-        count = sum(1 for agent in agents if agent.status == state)
-        if count:
-            parts.append(f"{count} {state}")
-    unbound = sum(1 for agent in agents if agent.unbound)
-    if unbound:
-        parts.append(f"{unbound} unbound")
-    return " · ".join(parts)
+def claims_summary(claims: list[dict[str, Any]]) -> str:
+    """Border subtitle: how many tasks are held and by how many agents."""
+    actors = {str(claim["actor"]) for claim in claims}
+    tasks = f"{len(claims)} {'task' if len(claims) == 1 else 'tasks'}"
+    return f"{tasks} · {len(actors)} {'agent' if len(actors) == 1 else 'agents'}"

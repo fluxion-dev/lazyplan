@@ -51,7 +51,8 @@ class TestShellLayout(unittest.IsolatedAsyncioTestCase):
     async def test_panes_return_when_they_have_rows(self) -> None:
         store = self._store()
         plan = store.add_plan("Plan", "What", goal="Why")
-        store.add_milestone(plan.id, "Milestone", "Details")
+        live = store.add_milestone(plan.id, "Milestone", "Details")
+        working = store.add_task(live.id, "Working task", "Details")
         done = store.add_plan("Finished", "What", goal="Why")
         milestone = store.add_milestone(done.id, "Done slice", "Details")
         task = store.add_task(milestone.id, "Done task", "Details")
@@ -59,13 +60,7 @@ class TestShellLayout(unittest.IsolatedAsyncioTestCase):
         store.set_status_raw("milestone", milestone.id, Status.DONE)
         store.set_status_raw("plan", done.id, Status.DONE)
         store.add_repo_link("plan", plan.id, "/home/u/checkouts/api", "git@github.com:org/api.git")
-        store.add_agent(
-            "ana",
-            host="opencode",
-            agent="ana",
-            plan_id=plan.id,
-            worktree=store.checkout_path(),
-        )
+        store.claim_task(working.id, "ana")
         app = create_app(str(store.path))
         async with app.run_test(size=(130, 40)) as pilot:
             await pilot.pause()

@@ -14,7 +14,7 @@ from lazyplan.core.entities import Status
 from lazyplan.store import Store
 
 try:
-    from textual.widgets import Static, Tree
+    from textual.widgets import Tree
 
     from lazyplan.presentation.tui import create_app
     from lazyplan.presentation.tui.screens.forms import ConfirmScreen
@@ -141,22 +141,6 @@ class TestHeartbeatKeepsTreeStill(RefreshCase):
             self.assertEqual(self.row_ids(app), nodes)
             self.assertEqual(tree.cursor_line, cursor_line)
             self.assertEqual(tree.scroll_offset, scroll)
-
-    async def test_the_agents_pane_follows_working_and_awaiting(self) -> None:
-        session_id = self.open_session()
-        app = create_app(self.store.path)
-        async with app.run_test(size=(120, 24)) as pilot:
-            await pilot.pause()
-            harness = self.harness(app, session_id)
-            body = app.query_one("#agents-body", Static)
-            harness.heartbeat("working")
-            await pilot.pause()
-            self.assertIn("working", str(body.content))
-            harness.heartbeat("waiting")
-            await pilot.pause()
-            self.assertIn("waiting", str(body.content))
-            self.assertNotIn("◆", str(body.content))
-            self.assertIn("waiting", str(body.content))
 
     async def test_a_structural_edit_still_rebuilds(self) -> None:
         session_id = self.open_session()

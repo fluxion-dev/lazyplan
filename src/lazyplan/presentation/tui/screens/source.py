@@ -37,27 +37,21 @@ from ....core.ports.provenance import ProvenancePort
 from ...shared.design import KIND_ICON, escape_markup
 from ..controllers.source_nav import file_nodes
 from ..controllers.source_state import SourceViewState
+from ..controllers.source_tree import build_trail_tree
 from ..navigation import NAV_BINDINGS, NavigationMixin
 from ..views.diff_split import MIN_SPLIT_WIDTH
 from ..views.diff_style import palette_from_theme
 from ..views.source import (
     DiffPreview,
-    commit_data,
     commit_label,
-    commit_matches,
     commit_preview,
     file_data,
     file_label,
     file_preview,
     find_commit,
     find_repo,
-    pull_data,
-    pull_label,
     pull_preview,
     render_diff_preview,
-    repo_data,
-    repo_label,
-    repo_matches,
     repo_preview,
     source_files,
     source_hints,
@@ -191,68 +185,13 @@ if _TEXTUAL_OK:
 
         def _build_tree(self) -> None:
             tree = self.query_one("#source-tree", NavTree)
-            tree.clear()
-            tree.root.expand()
-            self._commit_nodes.clear()
-            if self._trail.empty:
-                tree.root.add_leaf(
-                    "No source linked. Run `lpui link`, `lpui task finish`, or `pr refresh`.",
-                    data={"kind": "empty", "copy": ""},
-                )
-                self._preview(None)
-                return
-            needle = self._filter.strip().lower()
-            for repo in self._trail.repos:
-                if needle and not repo_matches(repo, needle):
-                    continue
-                repo_node = tree.root.add(repo_label(repo), data=repo_data(repo))
-                for commit in repo.commits:
-                    if needle and not commit_matches(commit, needle):
-                        continue
-                    key = (repo.path, commit.sha)
-                    stats = self._stats.get(key)
-                    by_path = (
-                        {item.path: item for item in stats.files}
-                        if stats is not None and stats.state == "ok"
-                        else {}
-                    )
-                    commit_node = repo_node.add(
-                        commit_label(commit, stats), data=commit_data(repo, commit)
-                    )
-                    self._commit_nodes[key] = commit_node
-                    seen: set[str] = set()
-                    for item in commit.files:
-                        if needle and needle not in item.path.lower():
-                            continue
-                        stat = by_path.get(item.path)
-                        seen.add(item.path)
-                        commit_node.add_leaf(
-                            file_label(item, stat),
-                            data=file_data(repo, commit, item, stat),
-                        )
-                    for stat in by_path.values():
-                        if stat.path in seen:
-                            continue
-                        item = SourceFile(path=stat.path)
-                        commit_node.add_leaf(
-                            file_label(item, stat),
-                            data=file_data(repo, commit, item, stat),
-                        )
-                    if not commit.files and not by_path:
-                        commit_node.add_leaf(
-                            "[dim]…[/]",
-                            data={"kind": "placeholder", "copy": ""},
-                        )
-                for pull in repo.pulls:
-                    if needle and needle not in f"pr {pull.number} {pull.title}".lower():
-                        continue
-                    repo_node.add_leaf(pull_label(pull), data=pull_data(repo, pull))
-                repo_node.expand()
-            if not tree.root.children:
-                tree.root.add_leaf(
-                    f"No source matches {self._filter!r}.",
-                    data={"kind": "empty", "copy": ""},
-                )
+            build_trail_tree(
+                tree,
+                self._trail,
+                self._stats,
+                self._filter.strip().lower(),
+                self._commit_nodes,
+            )
             self._preview(tree.cursor_node)
 
         @on(Tree.NodeHighlighted, "#source-tree")
@@ -334,71 +273,91 @@ if _TEXTUAL_OK:
 
         def _preview(self, node: TreeNode | None, reset_page: bool = True) -> None:
             """Paint the selected repo, commit, file, or pull request."""
-            body = self.query_one("#source-preview-body", Static)
-            data = node.data if node is not None else None
-            previous = self._view.view_key
             if reset_page or node is not self._current_node:
                 self._view.page_offset = 0
-            text = "Select a repo, commit, file, or pull request."
-            key: tuple[str, str, str] | None = None
-            preview = DiffPreview()
-            if isinstance(data, dict):
-                kind = str(data.get("kind", ""))
-                obj = data.get("object")
-                repo = str(data.get("repo", "") or "")
-                sha = str(data.get("sha", "") or "")
-                if kind == "repo" and isinstance(obj, SourceRepo):
-                    key = (repo, "", "")
-                    text = repo_preview(obj)
-                elif kind == "commit" and isinstance(obj, SourceCommit):
-                    if node is not self._current_node:
-                        self._view.file_index = 0
-                    stats = self._stats.get((repo, sha))
-                    items = source_files(obj, stats)
-                    if items:
-                        self._view.file_index = min(max(0, self._view.file_index), len(items) - 1)
-                        path = items[self._view.file_index][0].path
-                        key = (repo, sha, path)
-                        preview = self._diff_preview(repo, sha, path)
-                        text = commit_preview(
-                            obj, stats, items, self._view.file_index, preview.rows
-                        )
-                    else:
-                        key = (repo, sha, "")
-                        text = commit_preview(obj, stats, items, 0, ())
-                elif kind == "file" and isinstance(obj, SourceFile):
-                    commit = find_commit(self._trail, repo, sha)
-                    stats = self._stats.get((repo, sha))
-                    items = source_files(commit, stats) if commit is not None else ((obj, None),)
-                    current = next(
-                        (
-                            index
-                            for index, (item, _stat) in enumerate(items)
-                            if item.path == obj.path
-                        ),
-                        0,
-                    )
-                    self._view.file_index = current
-                    key = (repo, sha, obj.path)
-                    preview = self._diff_preview(repo, sha, obj.path)
-                    text = file_preview(commit, items, current, preview.rows)
-                elif kind == "pull" and isinstance(obj, SourcePull):
-                    key = (repo, f"pr:{obj.number}", "")
-                    text = pull_preview(obj)
-                else:
-                    text = "No source linked for this row."
-            if key != previous:
+            key, text, preview = self._preview_target(node)
+            if key != self._view.view_key:
                 self._view.view_key = key
             self._view.page_total = preview.total
             self._view.page_has_more = preview.has_more
             self._current_node = node
-            body.update(text)
+            self.query_one("#source-preview-body", Static).update(text)
             if reset_page:
                 try:
                     self.query_one("#source-preview", VerticalScroll).scroll_home(animate=False)
                 except Exception:
                     pass
             self._update_hints()
+
+        def _preview_target(
+            self,
+            node: TreeNode | None,
+        ) -> tuple[tuple[str, str, str] | None, str, DiffPreview]:
+            """Resolve one tree node into a key, body markup, and diff page."""
+            data = node.data if node is not None else None
+            if not isinstance(data, dict):
+                return None, "Select a repo, commit, file, or pull request.", DiffPreview()
+            kind = str(data.get("kind", ""))
+            obj = data.get("object")
+            repo = str(data.get("repo", "") or "")
+            sha = str(data.get("sha", "") or "")
+            if kind == "repo" and isinstance(obj, SourceRepo):
+                return (repo, "", ""), repo_preview(obj), DiffPreview()
+            if kind == "commit" and isinstance(obj, SourceCommit):
+                return self._commit_target(node, obj, repo, sha)
+            if kind == "file" and isinstance(obj, SourceFile):
+                return self._file_target(obj, repo, sha)
+            if kind == "pull" and isinstance(obj, SourcePull):
+                return (repo, f"pr:{obj.number}", ""), pull_preview(obj), DiffPreview()
+            return None, "No source linked for this row.", DiffPreview()
+
+        def _commit_target(
+            self,
+            node: TreeNode | None,
+            commit: SourceCommit,
+            repo: str,
+            sha: str,
+        ) -> tuple[tuple[str, str, str], str, DiffPreview]:
+            """Resolve a commit preview to its current file."""
+            if node is not self._current_node:
+                self._view.file_index = 0
+            stats = self._stats.get((repo, sha))
+            items = source_files(commit, stats)
+            if not items:
+                return (repo, sha, ""), commit_preview(commit, stats, items, 0, ()), DiffPreview()
+            self._view.file_index = min(
+                max(0, self._view.file_index),
+                len(items) - 1,
+            )
+            path = items[self._view.file_index][0].path
+            preview = self._diff_preview(repo, sha, path)
+            text = commit_preview(
+                commit,
+                stats,
+                items,
+                self._view.file_index,
+                preview.rows,
+            )
+            return (repo, sha, path), text, preview
+
+        def _file_target(
+            self,
+            item: SourceFile,
+            repo: str,
+            sha: str,
+        ) -> tuple[tuple[str, str, str], str, DiffPreview]:
+            """Resolve a file preview to its commit position."""
+            commit = find_commit(self._trail, repo, sha)
+            stats = self._stats.get((repo, sha))
+            items = source_files(commit, stats) if commit is not None else ((item, None),)
+            current = next(
+                (index for index, (entry, _stat) in enumerate(items) if entry.path == item.path),
+                0,
+            )
+            self._view.file_index = current
+            preview = self._diff_preview(repo, sha, item.path)
+            text = file_preview(commit, items, current, preview.rows)
+            return (repo, sha, item.path), text, preview
 
         def _diff_preview(self, repo: str, sha: str, path: str) -> DiffPreview:
             """One cached page of a single file's diff."""

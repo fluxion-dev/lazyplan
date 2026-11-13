@@ -10,6 +10,7 @@ from .forms import (
     NewTaskScreen,
     RefScreen,
 )
+from .health import HealthScreen
 from .help import HelpScreen, PaletteScreen, ReleaseNotesScreen, TextScreen
 from .maintenance import MaintenanceScreen
 from .plan_diff import PlanDiffScreen
@@ -21,6 +22,7 @@ __all__ = [
     "CriterionScreen",
     "ExportScreen",
     "FilterPromptScreen",
+    "HealthScreen",
     "HelpScreen",
     "MaintenanceScreen",
     "NewMilestoneScreen",

@@ -17,10 +17,12 @@ from pathlib import Path
 from typing import Any
 
 from lazyplan.infrastructure.integrations import HOOK, HOST_LABELS, IntegrationItem
+from lazyplan.infrastructure.repo import find_repo_root
 
+from .apply import choice_from_state
 from .integrations import inspect, suppressing_decision
 from .layout import SetupChoice
-from .state import SetupState
+from .state import SetupState, load_state
 
 ERROR = "error"
 WARNING = "warning"
@@ -84,6 +86,11 @@ class HealthReport:
     def open(self) -> tuple[HealthFinding, ...]:
         """Findings no remembered decision hides."""
         return tuple(finding for finding in self.findings if finding.open)
+
+    @property
+    def should_prompt(self) -> bool:
+        """True when an open error needs the user's attention."""
+        return any(finding.severity == ERROR for finding in self.open)
 
     @property
     def items(self) -> tuple[IntegrationItem, ...]:
@@ -208,3 +215,25 @@ def check(
         decision = suppressing_decision(remembered, "", version)
         findings.append(replace(tool, decision=decision))
     return HealthReport(findings=tuple(findings))
+
+
+@dataclass(frozen=True)
+class HealthContext:
+    """The remembered setup one startup check runs against."""
+
+    choice: SetupChoice
+    state: SetupState
+    root: Path | None
+    home: Path
+    version: str
+
+    def report(self) -> HealthReport:
+        """Run the check for this context."""
+        return check(self.choice, self.state, self.root, self.home, self.version)
+
+
+def current(cwd: Path, home: Path | None = None, version: str = "") -> HealthContext:
+    """Context for the checkout at ``cwd`` and the remembered setup."""
+    home = home or Path.home()
+    state = load_state(home)
+    return HealthContext(choice_from_state(state), state, find_repo_root(cwd), home, version)

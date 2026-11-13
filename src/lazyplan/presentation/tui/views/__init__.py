@@ -12,7 +12,6 @@ from .preview import (
     build_plan,
     build_preview,
     build_task,
-    common_blocks,
 )
 from .rows import row_text
 from .source import (
@@ -48,7 +47,6 @@ __all__ = [
     "commit_preview",
     "file_label",
     "file_preview",
-    "common_blocks",
     "pull_label",
     "pull_preview",
     "render_diff_preview",

@@ -100,12 +100,6 @@ def _child_row(letter: str, oid: object, title: object, suffix: str = "") -> str
     return f"{head} · {suffix}" if suffix else head
 
 
-def _header_row(status: str, label: str, oid: object, title: object, suffix: str = "") -> str:
-    """One child header row: kind id, title, and an optional count or state."""
-    del status
-    return _child_row(label, oid, title, suffix)
-
-
 def _title(
     store: PlanningPort,
     kind: str,
@@ -165,18 +159,15 @@ def milestones_block(milestones: list[dict[str, Any]]) -> PreviewBlock | None:
     """Every milestone under the selected plan, as one plain row."""
     if not milestones:
         return None
-    lines = []
-    for entry in milestones:
-        milestone = entry.get("milestone", {})
-        lines.append(
-            _header_row(
-                str(milestone.get("status", "")),
-                "M",
-                milestone.get("id"),
-                milestone.get("title", ""),
-                _task_states(entry.get("tasks", [])),
-            )
+    lines = [
+        _child_row(
+            "M",
+            entry.get("milestone", {}).get("id"),
+            entry.get("milestone", {}).get("title", ""),
+            _task_states(entry.get("tasks", [])),
         )
+        for entry in milestones
+    ]
     return PreviewBlock(f"milestones {len(milestones)}", tuple(lines))
 
 
@@ -193,14 +184,7 @@ def tasks_block(tasks: list[dict[str, Any]]) -> PreviewBlock | None:
     if not tasks:
         return None
     lines = [
-        _header_row(
-            str(task.get("status", "")),
-            "T",
-            task.get("id"),
-            task.get("title", ""),
-            _task_state(task),
-        )
-        for task in tasks
+        _child_row("T", task.get("id"), task.get("title", ""), _task_state(task)) for task in tasks
     ]
     return PreviewBlock(f"tasks {len(tasks)}", tuple(lines))
 
@@ -307,14 +291,6 @@ def approval_block(approval: dict[str, Any] | None) -> PreviewBlock | None:
     return PreviewBlock("approval", tuple(lines))
 
 
-def common_blocks(
-    full: dict[str, Any], *, detailed_acceptance: bool = False
-) -> tuple[PreviewBlock, ...]:
-    """Open acceptance criteria for the selected level, when any remain."""
-    acceptance = acceptance_block(full.get("criteria", []), detailed=detailed_acceptance)
-    return (acceptance,) if acceptance is not None else ()
-
-
 def worktrees_block(full: dict[str, Any]) -> PreviewBlock | None:
     """Read-only plan worktree registry, including the isolation requirement."""
     plan = full.get("plan") or {}
@@ -336,7 +312,6 @@ def build_plan(
     store: PlanningPort,
     full: dict[str, Any],
     oid: int,
-    git_bits: list[str],
 ) -> PreviewDocument:
     obj = full.get("plan", {})
     header, meta_line = _title(store, "plan", oid, obj, full)
@@ -361,7 +336,9 @@ def build_plan(
     milestones = milestones_block(full.get("milestones", []))
     if milestones is not None:
         blocks.append(milestones)
-    blocks.extend(common_blocks(full, detailed_acceptance=True))
+    acceptance = acceptance_block(full.get("criteria", []), detailed=True)
+    if acceptance is not None:
+        blocks.append(acceptance)
     return PreviewDocument(header, meta_line, tuple(blocks))
 
 
@@ -369,7 +346,6 @@ def build_milestone(
     store: PlanningPort,
     full: dict[str, Any],
     oid: int,
-    git_bits: list[str],
 ) -> PreviewDocument:
     obj = full.get("milestone", {})
     header, meta_line = _title(store, "milestone", oid, obj, full)
@@ -380,7 +356,9 @@ def build_milestone(
     tasks = tasks_block(_milestone_tasks(full))
     if tasks is not None:
         blocks.append(tasks)
-    blocks.extend(common_blocks(full))
+    acceptance = acceptance_block(full.get("criteria", []))
+    if acceptance is not None:
+        blocks.append(acceptance)
     return PreviewDocument(header, meta_line, tuple(blocks))
 
 
@@ -388,7 +366,6 @@ def build_task(
     store: PlanningPort,
     full: dict[str, Any],
     oid: int,
-    git_bits: list[str],
 ) -> PreviewDocument:
     obj = full.get("task", {})
     header, meta_line = _title(store, "task", oid, obj, full)
@@ -407,11 +384,10 @@ def build_preview(
     kind: str,
     oid: int,
     full: dict[str, Any],
-    git_bits: list[str],
 ) -> PreviewDocument:
     """Build the document for one selected row."""
     if kind == "plan":
-        return build_plan(store, full, oid, git_bits)
+        return build_plan(store, full, oid)
     if kind == "milestone":
-        return build_milestone(store, full, oid, git_bits)
-    return build_task(store, full, oid, git_bits)
+        return build_milestone(store, full, oid)
+    return build_task(store, full, oid)

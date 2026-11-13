@@ -107,6 +107,7 @@ def _list_payload(
                 "links": [vars(item) for item in links.get(("plan", plan.id), [])],
                 "repos": plan_repos,
                 "effective_repos": plan_repos,
+                "worktrees": [vars(row) for row in store.list_plan_worktrees(plan.id)],
                 "approval": approval_payload(revisions.get(plan.id), drift.get(plan.id, 0)),
                 "milestones": milestone_rows,
             }
@@ -268,6 +269,17 @@ def _porcelain_show_lines(store: InsightsPort, kind: str, full: dict) -> list[st
         lines.extend(_note_dict_rows(full.get("notes", [])))
         lines.extend(_comment_dict_rows(full.get("comments", [])))
         lines.extend(_issue_dict_rows(full.get("issues", [])))
+        for row in full.get("worktrees", []):
+            lines.append(
+                porcelain.row(
+                    "worktree",
+                    plan["id"],
+                    "registered",
+                    row["branch"],
+                    f"plan:{plan['id']}",
+                    row["worktree_path"],
+                )
+            )
         for entry in full.get("milestones", []):
             milestone = entry["milestone"]
             lines.append(

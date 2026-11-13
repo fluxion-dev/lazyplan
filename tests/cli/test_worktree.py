@@ -201,6 +201,62 @@ class PlanWorktreeRegisterTest(unittest.TestCase):
         self.assertEqual(row.worktree_path, self.target.worktree_path)
         self.assertEqual(json.loads(output)["worktree"]["branch"], self.target.branch)
 
+    def test_plan_show_and_list_expose_worktrees(self) -> None:
+        self.assertEqual(
+            self._run(
+                [
+                    "plan",
+                    "worktree",
+                    "add",
+                    "--id",
+                    str(self.plan.id),
+                    "--repo",
+                    self.repo,
+                ]
+            )[0],
+            0,
+        )
+
+        code, output, _ = self._run(["--json", "plan", "show", "--id", str(self.plan.id)])
+        self.assertEqual(code, 0)
+        row = json.loads(output)["worktrees"][0]
+        self.assertEqual(row["branch"], self.target.branch)
+        self.assertEqual(row["worktree_path"], self.target.worktree_path)
+
+        code, output, _ = self._run(["plan", "show", "--id", str(self.plan.id)])
+        self.assertEqual(code, 0)
+        self.assertIn("worktrees (isolation required)", output)
+        self.assertIn(self.target.branch, output)
+        self.assertIn(self.target.worktree_path, output)
+
+        code, output, _ = self._run(["--json", "list", "--all"])
+        self.assertEqual(code, 0)
+        entry = next(item for item in json.loads(output) if item["plan"]["id"] == self.plan.id)
+        self.assertEqual(entry["worktrees"][0]["branch"], self.target.branch)
+
+    def test_plan_show_porcelain_adds_a_worktree_row(self) -> None:
+        self.assertEqual(
+            self._run(
+                [
+                    "plan",
+                    "worktree",
+                    "add",
+                    "--id",
+                    str(self.plan.id),
+                    "--repo",
+                    self.repo,
+                ]
+            )[0],
+            0,
+        )
+
+        code, output, _ = self._run(["--porcelain", "plan", "show", "--id", str(self.plan.id)])
+
+        self.assertEqual(code, 0)
+        rows = [line for line in output.splitlines() if line.startswith("worktree\t")]
+        self.assertEqual(len(rows), 1)
+        self.assertIn(self.target.branch, rows[0])
+
     def test_reregister_is_a_no_op(self) -> None:
         argv = [
             "plan",

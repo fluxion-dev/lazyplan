@@ -51,8 +51,9 @@ class TestDeriveWorktree(unittest.TestCase):
         self.assertEqual(target.repo_path, REPO)
 
     def test_rejects_a_relative_or_bare_path(self):
-        with self.assertRaises(ValueError):
-            derive_worktree("lazyplan", 6, "Plan")
+        for path in ("lazyplan", os.path.join("repos", "lazyplan")):
+            with self.subTest(path=path), self.assertRaises(ValueError):
+                derive_worktree(path, 6, "Plan")
 
 
 class TestDeriveWorktrees(unittest.TestCase):

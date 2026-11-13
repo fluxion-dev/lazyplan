@@ -441,7 +441,7 @@ palette. The agents card is a read-only summary; it does not open the hub.
 - Comments and notes: `a` adds a comment, `n` adds a note, `x` resolves or
   reopens a comment, and `u` hides resolved comments.
 
-Session and touch-point authoring are first-class screen hubs now; plan 135's
+Agent and touch-point authoring are first-class screen hubs now; plan 135's
 CLI-only stance is superseded for those entities. Import, sync, and setup stay
 CLI-only.
 

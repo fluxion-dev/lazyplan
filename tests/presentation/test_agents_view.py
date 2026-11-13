@@ -25,6 +25,7 @@ def plain(markup: str) -> str:
     return console.export_text()
 
 
+@unittest.skipUnless(agent_line is not None, "rich not installed")
 class TestAgentLine(unittest.TestCase):
     def setUp(self) -> None:
         self.now = 1_000_000.0

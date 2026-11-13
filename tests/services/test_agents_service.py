@@ -23,9 +23,7 @@ class AgentServiceCase(unittest.TestCase):
         self.worktree = Path(self.tmp.name) / "worktree"
         self.repo.mkdir()
         subprocess.run(["git", "init", "-q"], cwd=self.repo, check=True)
-        subprocess.run(
-            ["git", "config", "user.email", "t@example.com"], cwd=self.repo, check=True
-        )
+        subprocess.run(["git", "config", "user.email", "t@example.com"], cwd=self.repo, check=True)
         subprocess.run(["git", "config", "user.name", "T"], cwd=self.repo, check=True)
         (self.repo / "f").write_text("one\n", encoding="utf-8")
         subprocess.run(["git", "add", "f"], cwd=self.repo, check=True)
@@ -58,9 +56,7 @@ class AgentServiceCase(unittest.TestCase):
         }
         for host, payload in payloads.items():
             with self.subTest(host=host):
-                identity = services.extract_identity(
-                    host, payload, self.worktree, pid=1234
-                )
+                identity = services.extract_identity(host, payload, self.worktree, pid=1234)
                 self.assertEqual(identity.host, host)
                 self.assertTrue(identity.host_session)
                 self.assertEqual(identity.agent, "build")
@@ -130,9 +126,7 @@ class AgentServiceCase(unittest.TestCase):
         self.assertTrue(agent.unbound_reason.startswith("override: pairing"))
 
     def test_each_host_event_writes_one_transition(self) -> None:
-        identity = services.extract_identity(
-            "opencode", {"sessionID": "host-1"}, self.worktree
-        )
+        identity = services.extract_identity("opencode", {"sessionID": "host-1"}, self.worktree)
         agent = services.apply_event(self.store, "ana", "session-start", identity)
         assert agent is not None
         for event in ("prompt-submit", "pre-tool", "post-tool", "stop", "pre-compact"):

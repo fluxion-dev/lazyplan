@@ -18,8 +18,12 @@ class TestAgentMcpTools(unittest.TestCase):
         self.store = Store(os.path.join(self.tmp.name, "mcp-agents.db"))
         self.plan = self.store.add_plan("P")
         self.agent = self.store.add_agent(
-            "ana", host="opencode", host_session="host-1", agent="builder",
-            plan_id=self.plan.id, worktree=self.store.checkout_path(),
+            "ana",
+            host="opencode",
+            host_session="host-1",
+            agent="builder",
+            plan_id=self.plan.id,
+            worktree=self.store.checkout_path(),
         )
         self.store.restore_session_history(
             {

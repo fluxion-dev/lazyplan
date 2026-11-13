@@ -47,6 +47,7 @@ def _run(
         input=stdin,
         capture_output=True,
         text=True,
+        encoding="utf-8",
         env=env,
         cwd=cwd,
         timeout=60,

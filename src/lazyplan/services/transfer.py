@@ -481,12 +481,17 @@ def _import_all(store: TransferPort, data: dict, actor: str = "human") -> dict[s
             continue
         counts["criterion_links"] += 1
     counts["evidence"] = _restore_evidence(store, evidence_items, tasks_map)
-    for row in data.get("session_history", []):
-        if not isinstance(row, dict):
-            continue
-        if store.restore_session_history(row, actor=actor) is not None:
-            counts["session_history"] += 1
+    counts["session_history"] = _import_session_history(store, data, actor)
     return counts
+
+
+def _import_session_history(store: TransferPort, data: dict, actor: str) -> int:
+    """Restore exported history rows with their original ids."""
+    count = 0
+    for row in data.get("session_history", []):
+        if isinstance(row, dict) and store.restore_session_history(row, actor=actor) is not None:
+            count += 1
+    return count
 
 
 def share_render(port: TransferPort, plan_id: int, fmt: str, dest: str | None) -> str | None:

@@ -244,6 +244,18 @@ def _question_lines(plan: dict) -> list[str]:
     ]
 
 
+def _previous_lines(session: dict) -> list[str]:
+    """Previous agent id, summary, and handoff."""
+    label = session.get("label") or f"A{session['id']}"
+    who = session.get("agent") or session.get("actor") or "agent"
+    out = [f"  session  {label} @{who}"]
+    for key in ("summary", "handoff"):
+        value = session.get(key)
+        if value:
+            out.append(f"  {key:<8} {value}")
+    return out
+
+
 def lines(payload: dict) -> list[str]:
     """Plain text rendering for hooks and the CLI."""
     plans = payload.get("plans") or []
@@ -256,13 +268,7 @@ def lines(payload: dict) -> list[str]:
             out.append(f"  why      {plan['why']}")
         session = plan.get("previous_session")
         if session:
-            label = session.get("label") or f"A{session['id']}"
-            who = session.get("agent") or session.get("actor") or "agent"
-            out.append(f"  session  {label} @{who}")
-            if session.get("summary"):
-                out.append(f"  summary  {session['summary']}")
-            if session.get("handoff"):
-                out.append(f"  handoff  {session['handoff']}")
+            out.extend(_previous_lines(session))
         if plan.get("doing"):
             for task in plan["doing"]:
                 claim = task.get("claim")

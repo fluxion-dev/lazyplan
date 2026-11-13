@@ -1673,7 +1673,7 @@
           "Progress and rollups",
           "Tracking guarantees",
           "Plan worktrees",
-          "Sessions and touch-points",
+          "Agents and touch-points",
           "Trust: approvals, evidence, and questions",
           "Review, lint, and audit",
           "Git provenance",
@@ -3074,7 +3074,7 @@
         "file": "src/lazyplan/presentation/tui/screens/hub_coordination.py",
         "key": "e",
         "label": "Edit",
-        "line": "297",
+        "line": "294",
         "screen": "hub_coordination"
       },
       {
@@ -3082,7 +3082,7 @@
         "file": "src/lazyplan/presentation/tui/screens/hub_coordination.py",
         "key": "u",
         "label": "Filter",
-        "line": "299",
+        "line": "296",
         "screen": "hub_coordination"
       },
       {
@@ -3106,7 +3106,7 @@
         "file": "src/lazyplan/presentation/tui/screens/hub_coordination.py",
         "key": "x",
         "label": "Toggle",
-        "line": "298",
+        "line": "295",
         "screen": "hub_coordination"
       },
       {
@@ -3372,7 +3372,7 @@
           {
             "action": "edit_row",
             "file": "src/lazyplan/presentation/tui/screens/hub_coordination.py",
-            "line": "297"
+            "line": "294"
           },
           {
             "action": "edit_row",
@@ -3602,7 +3602,7 @@
           {
             "action": "hub_toggle",
             "file": "src/lazyplan/presentation/tui/screens/hub_coordination.py",
-            "line": "298"
+            "line": "295"
           },
           {
             "action": "hub_toggle",

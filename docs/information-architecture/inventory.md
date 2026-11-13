@@ -15,11 +15,11 @@ python3 tools/ia_inventory.py --check
 | Surface | Count |
 | --- | ---: |
 | cli_commands | 50 |
-| palette_commands | 53 |
+| palette_commands | 52 |
 | mcp_tools | 67 |
 | mcp_resources | 3 |
 | tui_screens | 18 |
-| tui_bindings | 66 |
+| tui_bindings | 65 |
 | setup_steps | 4 |
 | hook_events | 35 |
 | doc_files | 9 |
@@ -91,7 +91,6 @@ python3 tools/ia_inventory.py --check
 | `activity-hub` | Open activity hub | `` | `open_activity_hub` |
 | `add-criterion` | Add criterion | `a` | `add_criterion` |
 | `add-question` | Add plan question | `` | `add_question` |
-| `agents-hub` | Open agents hub | `` | `open_agents_hub` |
 | `approve-plan` | Approve plan scope | `` | `approve_plan` |
 | `block-task` | Block task | `` | `block_task` |
 | `claim-task` | Claim task | `` | `claim_task` |
@@ -285,7 +284,6 @@ python3 tools/ia_inventory.py --check
 | `src/lazyplan/presentation/tui/screens/hub_coordination.py` | `u` | `filter` | Filter |
 | `src/lazyplan/presentation/tui/screens/hub_coordination.py` | `x` | `hub_toggle` | Toggle |
 | `src/lazyplan/presentation/tui/screens/hub_coordination.py` | `x` | `hub_toggle` | Toggle |
-| `src/lazyplan/presentation/tui/screens/hub_coordination.py` | `x` | `hub_toggle` | Toggle |
 | `src/lazyplan/presentation/tui/screens/hub_kinds.py` | `e` | `edit_row` | Edit |
 | `src/lazyplan/presentation/tui/screens/hub_kinds.py` | `x` | `hub_toggle` | Toggle |
 | `src/lazyplan/presentation/tui/screens/hub_provenance.py` | `K` | `filter_kind` | Kind |
@@ -320,7 +318,7 @@ python3 tools/ia_inventory.py --check
 | --- | --- |
 | `a` | `src/lazyplan/presentation/tui/app.py:93` → `add_criterion`; `src/lazyplan/presentation/tui/screens/hub.py:52` → `add`; `src/lazyplan/presentation/tui/screens/maintenance.py:43` → `apply_archive` |
 | `d` | `src/lazyplan/presentation/tui/app.py:94` → `delete`; `src/lazyplan/presentation/tui/screens/hub.py:53` → `delete` |
-| `e` | `src/lazyplan/presentation/tui/app.py:91` → `edit_selection`; `src/lazyplan/presentation/tui/screens/hub_coordination.py:294` → `edit_row`; `src/lazyplan/presentation/tui/screens/hub_kinds.py:30` → `edit_row` |
+| `e` | `src/lazyplan/presentation/tui/app.py:91` → `edit_selection`; `src/lazyplan/presentation/tui/screens/hub_coordination.py:191` → `edit_row`; `src/lazyplan/presentation/tui/screens/hub_kinds.py:30` → `edit_row` |
 | `escape` | `src/lazyplan/presentation/tui/app.py:87` → `clear_filter`; `src/lazyplan/presentation/tui/screens/base.py:47` → `cancel`; `src/lazyplan/presentation/tui/screens/export.py:43` → `cancel`; `src/lazyplan/presentation/tui/screens/health.py:63` → `cancel`; `src/lazyplan/presentation/tui/screens/hub.py:51` → `back`; `src/lazyplan/presentation/tui/screens/maintenance.py:41` → `back`; `src/lazyplan/presentation/tui/screens/plan_diff.py:27` → `back`; `src/lazyplan/presentation/tui/screens/source.py:73` → `back`; `src/lazyplan/presentation/tui/screens/update.py:39` → `cancel` |
 | `f` | `src/lazyplan/presentation/tui/screens/hub_provenance.py:200` → `filter_actor`; `src/lazyplan/presentation/tui/screens/source.py:79` → `toggle_fold` |
 | `g` | `src/lazyplan/presentation/tui/app.py:95` → `source_trail`; `src/lazyplan/presentation/tui/screens/hub.py:59` → `source_hub` |
@@ -332,7 +330,7 @@ python3 tools/ia_inventory.py --check
 | `s` | `src/lazyplan/presentation/tui/app.py:92` → `toggle_status`; `src/lazyplan/presentation/tui/screens/source.py:77` → `toggle_split` |
 | `slash` | `src/lazyplan/presentation/tui/app.py:98` → `filter_text`; `src/lazyplan/presentation/tui/screens/source.py:84` → `filter` |
 | `t` | `src/lazyplan/presentation/tui/app.py:88` → `cycle_theme`; `src/lazyplan/presentation/tui/screens/maintenance.py:44` → `apply_trim` |
-| `x` | `src/lazyplan/presentation/tui/screens/hub_coordination.py:191` → `hub_toggle`; `src/lazyplan/presentation/tui/screens/hub_coordination.py:295` → `hub_toggle`; `src/lazyplan/presentation/tui/screens/hub_coordination.py:35` → `hub_toggle`; `src/lazyplan/presentation/tui/screens/hub_kinds.py:214` → `hub_toggle` |
+| `x` | `src/lazyplan/presentation/tui/screens/hub_coordination.py:192` → `hub_toggle`; `src/lazyplan/presentation/tui/screens/hub_coordination.py:34` → `hub_toggle`; `src/lazyplan/presentation/tui/screens/hub_kinds.py:214` → `hub_toggle` |
 
 ## Setup steps
 

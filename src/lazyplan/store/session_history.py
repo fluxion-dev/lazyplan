@@ -78,29 +78,6 @@ class SessionHistoryMixin(StoreBase):
             rows = conn.execute(sql, params).fetchall()
         return [self._row_to_session(row) for row in rows]
 
-    def latest_ended_session(
-        self,
-        plan_id: int | None = None,
-        actor: str = "",
-        repo_path: str = "",
-    ) -> Session | None:
-        """Most recently ended, unarchived history row for a plan or checkout."""
-        sql = "SELECT * FROM session_history WHERE ended_at > 0 AND archived_at = 0"
-        params: list[object] = []
-        if plan_id is not None:
-            sql += " AND plan_id=?"
-            params.append(plan_id)
-        if actor:
-            sql += " AND actor=?"
-            params.append(actor)
-        if repo_path:
-            sql += " AND repo_path=?"
-            params.append(repo_path)
-        sql += " ORDER BY ended_at DESC, id DESC LIMIT 1"
-        with self._connect() as conn:
-            row = conn.execute(sql, params).fetchone()
-        return self._row_to_session(row) if row is not None else None
-
     def events_for_session(self, session_id: int, limit: int = 50) -> list[dict]:
         """Newest events tagged with one historical session."""
         with self._connect() as conn:

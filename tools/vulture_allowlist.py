@@ -239,3 +239,6 @@ _.can_focus
 on_root
 _.on_click
 _.load_children
+# Legacy session history rows serialize every field through vars().
+_.handoff
+_.host_session

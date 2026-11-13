@@ -144,8 +144,6 @@ SURFACE_EXCEPTIONS: tuple[SurfaceException, ...] = (
     SurfaceException("view.references_hub", "mcp", "MCP reads refs with `reference_list`"),
     SurfaceException("view.claims_hub", "cli", "CLI reads claims with `claims`"),
     SurfaceException("view.claims_hub", "mcp", "MCP reads claims with `claims`"),
-    SurfaceException("view.agents_hub", "cli", "CLI lists claim holders with `claims`"),
-    SurfaceException("view.agents_hub", "mcp", "MCP lists claim holders with `claims`"),
     SurfaceException("view.comments_hub", "cli", "CLI reads comments with `comment list`"),
     SurfaceException("view.comments_hub", "mcp", "MCP reads comments with `comment_list`"),
     SurfaceException("view.refresh", "cli", "CLI reads fresh data on every call"),

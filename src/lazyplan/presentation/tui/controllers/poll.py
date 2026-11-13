@@ -65,9 +65,8 @@ class PollMixin:
         if now - self._last_sweep >= SWEEP_INTERVAL:
             self._last_sweep = now
             try:
-                from ....services import agents, requeue_expired
+                from ....services import requeue_expired
 
-                agents.sweep_lost(app.store, now=now)
                 requeue_expired(app.store, now=now)
             except Exception:
                 pass

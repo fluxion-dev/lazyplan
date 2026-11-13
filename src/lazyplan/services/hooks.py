@@ -17,17 +17,14 @@ import time
 from pathlib import Path
 from typing import TextIO
 
-from ..core.entities import Agent, HookResult
+from ..core.entities import HookResult
 from ..core.policies import hooks as hook_modes
-from ..core.policies.agents import EVENTS as AGENT_EVENTS
-from ..core.policies.agents import parse_pid
 from ..core.ports.app import AppPort
 from ..core.ports.insights import InsightsPort
 from ..infrastructure.repo import shared_git_lookups
-from . import agents, audit, context, coordination, hook_policy
-from .agent_identity import extract_identity
+from . import audit, context, coordination, hook_policy
 
-EVENTS = AGENT_EVENTS
+EVENTS = hook_modes.EVENTS
 HOSTS = ("opencode", "claude", "gemini", "codex", "cursor")
 NO_HOOKS_ENV = hook_modes.NO_HOOKS_ENV
 STDIN_TIMEOUT = 0.5
@@ -177,33 +174,6 @@ def _file_path(payload: dict) -> str:
     return match.group(1).strip() if match else ""
 
 
-def _hook_pid(payload: dict) -> int:
-    """Host PID: the payload value, else the process that spawned this hook."""
-    reported = payload.get("pid") or payload.get("process_id")
-    if reported:
-        return parse_pid(reported)
-    if payload.get("host_session") or payload.get("session_id") or payload.get("sessionID"):
-        return parse_pid(os.getppid())
-    return 0
-
-
-def _track_agent(
-    store: AppPort,
-    event: str,
-    host: str,
-    cwd: Path,
-    payload: dict,
-) -> Agent | None:
-    """Apply one host event to the exact agent row for this host session."""
-    identity = extract_identity(host, payload, cwd, pid=_hook_pid(payload))
-    if event == "session-end":
-        return agents.find_agent(
-            store, identity.host, identity.host_session, identity.pid, identity.cwd
-        )
-    actor = identity.agent if identity.agent != "unknown" else (host or "agent")
-    return agents.apply_event(store, actor, event, identity)
-
-
 def _agent_text(store: AppPort, cwd: Path, commits: list[audit.Commit] | None) -> str:
     """Session-start packet: the active plan and this checkout's claims."""
     del commits
@@ -271,19 +241,17 @@ def _dispatch(
     who: str,
     mode: str,
 ) -> HookResult:
-    agent = _track_agent(store, event, who, here, payload)
     checkout = store.checkout_path(str(here))
     if event == "session-end":
-        result = hook_policy.session_end_result(store, agent, who)
         coordination.end_checkout_claims(store, checkout)
-        return result
+        return HookResult()
     coordination.renew_checkout_claims(store, checkout)
     if event == "session-start":
         return HookResult(_agent_text(store, here, commits), context=True).capped()
     if event == "pre-compact":
         return HookResult(_compaction_text(store, here), context=True).capped()
     if event == "stop":
-        return hook_policy.stop_result(store, here, commits, agent, payload, mode, who)
+        return hook_policy.stop_result(store, here, commits, payload, mode, who)
     if event == "prompt-submit":
         return HookResult(_prompt_text(store), context=True).capped()
     if event == "pre-tool":
@@ -297,40 +265,24 @@ def _dispatch(
 def probe(store: AppPort | None, cwd: Path | None = None) -> dict:
     """Read-only hook readiness report; never creates a database or a row."""
     started = time.perf_counter()
-    if store is None:
+
+    def report(ok: bool, db: str | None, claims: list[int], reason: str) -> dict:
         return {
-            "ok": False,
-            "db": None,
-            "session": None,
-            "agent": None,
-            "reason": "no database",
+            "ok": ok,
+            "db": db,
+            "claims": claims,
+            "reason": reason,
             "latency_ms": round((time.perf_counter() - started) * 1000, 1),
         }
+
+    if store is None:
+        return report(False, None, [], "no database")
     try:
         repo = store.checkout_path(str(cwd or Path.cwd()))
-        rows = [
-            row
-            for row in store.list_agents(live_only=True, limit=50)
-            if store.normalize_repo_path(row.repo_path) == store.normalize_repo_path(repo)
-        ]
-        agent = rows[0] if rows else None
+        held = [int(claim["task_id"]) for claim in coordination.checkout_claims(store, repo)]
     except (OSError, RuntimeError, ValueError) as exc:
-        return {
-            "ok": False,
-            "db": store.db_path,
-            "session": None,
-            "agent": None,
-            "reason": str(exc),
-            "latency_ms": round((time.perf_counter() - started) * 1000, 1),
-        }
-    return {
-        "ok": True,
-        "db": store.db_path,
-        "session": agent.id if agent is not None else None,
-        "agent": agent.id if agent is not None else None,
-        "reason": "",
-        "latency_ms": round((time.perf_counter() - started) * 1000, 1),
-    }
+        return report(False, store.db_path, [], str(exc))
+    return report(True, store.db_path, held, "")
 
 
 def run(

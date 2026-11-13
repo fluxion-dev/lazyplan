@@ -34,15 +34,6 @@ class TestLaterHorizon(unittest.TestCase):
         self.checkout.stop()
         self.tmp.cleanup()
 
-    def test_agent_records_work_and_hands_off(self) -> None:
-        agent = self.store.add_agent(
-            "ana", host="opencode", agent="ana", host_session="host-1", plan_id=self.plan.id
-        )
-        self.store.transition_agent(agent.id, "working", event="prompt-submit")
-        self.store.end_agent(agent.id, "ana", summary="shipped", handoff="next: QA")
-        events = [event.event for event in self.store.agent_events(agent.id)]
-        self.assertEqual(events, ["session-end", "prompt-submit", "start"])
-
     def test_overlap_selection_and_refs_and_ship(self) -> None:
         self.store.add_touchpoint(self.first.id, "src/store")
         self.store.add_touchpoint(self.second.id, "src/tui")

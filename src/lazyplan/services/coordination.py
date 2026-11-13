@@ -142,7 +142,7 @@ def renew_checkout_claims(
         if stamp - float(claim["renewed_at"] or claim["started_at"]) < RENEW_EVERY:
             continue
         try:
-            port.renew_claim(int(claim["task_id"]), str(claim["actor"]), now=stamp)
+            port.renew_claim(int(claim["task_id"]), str(claim["actor"]), now=stamp, log=False)
         except ClaimError:
             continue
         renewed.append(int(claim["task_id"]))

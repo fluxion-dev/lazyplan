@@ -12,9 +12,8 @@ from lazyplan.store import Store
 
 try:
     from lazyplan.presentation.tui import create_app
-    from lazyplan.presentation.tui.screens.hub_coordination import AgentsHub
 except ImportError:  # pragma: no cover - textual not installed
-    create_app = AgentsHub = None  # type: ignore[assignment]
+    create_app = None  # type: ignore[assignment]
 
 
 @unittest.skipUnless(create_app is not None, "textual not installed")
@@ -76,7 +75,7 @@ class TestAgentsPanel(unittest.IsolatedAsyncioTestCase):
             await self.settle(pilot)
             self.assertFalse(app.query_one("#agents").display)
 
-    async def test_clicking_the_agents_pane_does_not_open_the_hub(self) -> None:
+    async def test_clicking_the_agents_pane_opens_nothing(self) -> None:
         services.start_claim(self.store, self.task.id, "claude")
         app = create_app(self.store.path)
         async with app.run_test(size=(120, 40)) as pilot:
@@ -86,19 +85,7 @@ class TestAgentsPanel(unittest.IsolatedAsyncioTestCase):
             await pilot.click("#agents")
             await pilot.pause()
             self.assertEqual(len(app.screen_stack), stack)
-            self.assertNotIsInstance(app.screen, AgentsHub)
             self.assertIsNot(app.focused, panel)
-
-    async def test_palette_handler_opens_the_agents_hub(self) -> None:
-        from lazyplan.presentation.tui.palette_handlers import palette_handlers
-
-        app = create_app(self.store.path)
-        async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
-            app.selected = ("plan", self.plan.id)
-            palette_handlers(app)["open_agents_hub"]()
-            await pilot.pause()
-            self.assertIsInstance(app.screen, AgentsHub)
 
     async def test_the_poll_interval_is_quarter_second(self) -> None:
         app = create_app(self.store.path)

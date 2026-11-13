@@ -1547,10 +1547,10 @@
     "hook_events": 35,
     "mcp_resources": 3,
     "mcp_tools": 67,
-    "palette_commands": 53,
+    "palette_commands": 52,
     "setup_steps": 4,
     "stale_claims": 0,
-    "tui_bindings": 66,
+    "tui_bindings": 65,
     "tui_key_conflicts": 15,
     "tui_screens": 18
   },
@@ -2306,14 +2306,6 @@
         "section": "Edit"
       },
       {
-        "handler": "open_agents_hub",
-        "help_group": "TRUST",
-        "id": "agents-hub",
-        "key": "",
-        "label": "Open agents hub",
-        "section": "View"
-      },
-      {
         "handler": "approve_plan",
         "help_group": "TRUST",
         "id": "approve-plan",
@@ -2706,7 +2698,7 @@
         "section": "App"
       }
     ],
-    "count": 53
+    "count": 52
   },
   "setup": {
     "steps": [
@@ -3034,7 +3026,7 @@
         "file": "src/lazyplan/presentation/tui/screens/hub_coordination.py",
         "key": "e",
         "label": "Edit",
-        "line": "294",
+        "line": "191",
         "screen": "hub_coordination"
       },
       {
@@ -3042,7 +3034,7 @@
         "file": "src/lazyplan/presentation/tui/screens/hub_coordination.py",
         "key": "u",
         "label": "Filter",
-        "line": "296",
+        "line": "193",
         "screen": "hub_coordination"
       },
       {
@@ -3050,7 +3042,7 @@
         "file": "src/lazyplan/presentation/tui/screens/hub_coordination.py",
         "key": "x",
         "label": "Toggle",
-        "line": "35",
+        "line": "34",
         "screen": "hub_coordination"
       },
       {
@@ -3058,15 +3050,7 @@
         "file": "src/lazyplan/presentation/tui/screens/hub_coordination.py",
         "key": "x",
         "label": "Toggle",
-        "line": "191",
-        "screen": "hub_coordination"
-      },
-      {
-        "action": "hub_toggle",
-        "file": "src/lazyplan/presentation/tui/screens/hub_coordination.py",
-        "key": "x",
-        "label": "Toggle",
-        "line": "295",
+        "line": "192",
         "screen": "hub_coordination"
       },
       {
@@ -3332,7 +3316,7 @@
           {
             "action": "edit_row",
             "file": "src/lazyplan/presentation/tui/screens/hub_coordination.py",
-            "line": "294"
+            "line": "191"
           },
           {
             "action": "edit_row",
@@ -3562,17 +3546,12 @@
           {
             "action": "hub_toggle",
             "file": "src/lazyplan/presentation/tui/screens/hub_coordination.py",
-            "line": "191"
+            "line": "192"
           },
           {
             "action": "hub_toggle",
             "file": "src/lazyplan/presentation/tui/screens/hub_coordination.py",
-            "line": "295"
-          },
-          {
-            "action": "hub_toggle",
-            "file": "src/lazyplan/presentation/tui/screens/hub_coordination.py",
-            "line": "35"
+            "line": "34"
           },
           {
             "action": "hub_toggle",

@@ -8,7 +8,6 @@ import unittest
 
 from lazyplan import services
 from lazyplan.core.entities import Status
-from lazyplan.services import needs_me
 from lazyplan.store import Store
 
 
@@ -42,13 +41,6 @@ class TestArchivedSessionReads(unittest.TestCase):
                 "ended_at": 0.0,
             }
         )
-        self.live = self.store.add_agent(
-            "reviewer",
-            host="opencode",
-            agent="reviewer",
-            plan_id=self.plan.id,
-            worktree=self.tmp.name,
-        )
 
     def tearDown(self) -> None:
         self.tmp.cleanup()
@@ -66,14 +58,6 @@ class TestArchivedSessionReads(unittest.TestCase):
         assert row is not None
         self.assertGreater(row.archived_at, 0)
 
-    def test_previous_agent_skips_archived_rows(self) -> None:
-        self.assertIsNone(self.store.latest_ended_session(plan_id=self.plan.id))
-        self.assertIsNone(services.previous_agent(self.store, plan_id=self.plan.id))
-
-    def test_needs_me_lists_live_agents_not_history(self) -> None:
-        payload = needs_me.build(self.store)
-        self.assertEqual([row["id"] for row in payload["agents"]], [self.live.id])
-
     def test_claims_and_next_skip_archived_plans(self) -> None:
         self.store.claim_task(self.task.id, "builder", ttl_seconds=600, now=500.0)
         self.store.set_status_raw("plan", self.plan.id, Status.DONE)
@@ -81,13 +65,6 @@ class TestArchivedSessionReads(unittest.TestCase):
         self.assertEqual(self.store.list_claims(now=700.0), [])
         self.assertEqual(self.store.claimable_tasks(now=700.0), [])
         self.assertIsNone(services.claim_next(self.store, "reviewer", plan_id=self.plan.id))
-
-    def test_history_never_ends_a_live_agent(self) -> None:
-        self.store.archive_sessions([2], actor="builder", now=10_000.0)
-        row = self.store.get_agent(self.live.id)
-        assert row is not None
-        self.assertEqual(row.status, "starting")
-        self.assertEqual(row.archived_at, 0.0)
 
 
 if __name__ == "__main__":

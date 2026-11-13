@@ -29,6 +29,7 @@ class CoordinationPort(PlanningPort, Protocol):
         actor: str,
         ttl_seconds: float = ...,
         now: float | None = None,
+        log: bool = True,
     ) -> Claim: ...
 
     def release_claim(self, task_id: int, actor: str, force: bool = False) -> Claim | None: ...

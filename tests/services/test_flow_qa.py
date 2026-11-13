@@ -56,7 +56,7 @@ class TestFlowQA(unittest.TestCase):
         self.assertEqual(result["wip"], 2)
         self.assertEqual(result["blocked"], 1)
         self.assertEqual(result["throughput"], 1)
-        self.assertEqual(result["claims"], 0)  # expired lease is not active
+        self.assertEqual(result["claims"], 1)
 
     def test_stats_porcelain_is_six_columns(self):
         result = stats.compute(self.store, since=0, stale_before=0, now=time.time())

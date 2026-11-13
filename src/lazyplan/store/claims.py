@@ -108,8 +108,12 @@ class ClaimsMixin(StoreBase):
         actor: str,
         ttl_seconds: float = CLAIM_DEFAULT_TTL,
         now: float | None = None,
+        log: bool = True,
     ) -> Claim:
-        """Extend an active lease held by the same actor."""
+        """Extend an active lease held by the same actor.
+
+        ``log=False`` is a heartbeat: the lease moves without a feed event.
+        """
         ttl = self._ttl(ttl_seconds)
         stamp = time.time() if now is None else now
         with self._connect() as conn:
@@ -136,7 +140,8 @@ class ClaimsMixin(StoreBase):
             worktree=claim.worktree,
             repo_path=claim.repo_path,
         )
-        self.log(actor, "task", "renew", f"task #{task_id} until {int(renewed.expires_at)}")
+        if log:
+            self.log(actor, "task", "renew", f"task #{task_id} until {int(renewed.expires_at)}")
         return renewed
 
     def release_claim(self, task_id: int, actor: str, force: bool = False) -> Claim | None:

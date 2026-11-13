@@ -400,9 +400,10 @@ class PreviewDocumentTest(unittest.TestCase):
         full = self.store.get_full("plan", self.plan.id)
         assert full is not None
         strip = build_control_strip(self.store, "plan", self.plan.id, full)
-        self.assertIn("[bold]attention[/]", strip)
-        self.assertIn("question", strip)
-        self.assertIn("blocked", strip)
+        self.assertNotIn("[bold]", strip)
+        self.assertNotIn("✓", strip)
+        self.assertIn("1 open question", strip)
+        self.assertIn("1 blocked task", strip)
 
     def test_task_control_strip_reports_overlap_and_open_criteria(self) -> None:
         other = self.store.add_task(self.milestone.id, "Other", "Other details")
@@ -414,16 +415,16 @@ class PreviewDocumentTest(unittest.TestCase):
         full = self.store.get_full("task", self.task.id)
         assert full is not None
         strip = build_control_strip(self.store, "task", self.task.id, full)
-        self.assertIn("[bold]attention[/]", strip)
-        self.assertIn("claim @alice", strip)
-        self.assertIn("criterion", strip)
-        self.assertIn("overlap", strip)
+        self.assertNotIn("[bold]", strip)
+        self.assertNotIn("@alice", strip)
+        self.assertIn("1 open criterion", strip)
+        self.assertIn("1 overlap", strip)
 
-    def test_control_strip_says_when_attention_is_clear(self) -> None:
+    def test_control_strip_is_empty_when_attention_is_clear(self) -> None:
         full = self.store.get_full("task", self.task.id)
         assert full is not None
         strip = build_control_strip(self.store, "task", self.task.id, full)
-        self.assertIn("✓ clear", strip)
+        self.assertEqual(strip, "")
 
 
 @unittest.skipUnless(create_app is not None, "textual not installed")

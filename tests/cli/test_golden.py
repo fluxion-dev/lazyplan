@@ -14,7 +14,7 @@ from lazyplan.core.entities import Status
 from lazyplan.presentation.shared import render
 from lazyplan.store import Store
 
-CLAIMED_AT = 1_800_000_000.0
+CLAIMED_AT = 4_000_000_000.0
 CLAIM_UNTIL = time.strftime("%Y-%m-%d %H:%M", time.localtime(CLAIMED_AT + 1800))
 
 

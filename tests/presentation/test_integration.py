@@ -9,7 +9,6 @@ proves they hold at the same time.
 
 from __future__ import annotations
 
-import re
 import unittest
 
 from lazyplan import services
@@ -19,16 +18,13 @@ try:
     from rich.text import Text
     from textual.widgets import Static, Tree
 
-    from lazyplan.presentation.shared.design import SPINNER_FRAMES
     from lazyplan.presentation.tui import create_app
     from tests.presentation.test_refresh import RefreshCase
 except ImportError:  # pragma: no cover - textual not installed
     create_app = None  # type: ignore[assignment]
     RefreshCase = unittest.TestCase  # type: ignore[misc,assignment]
-    SPINNER_FRAMES = ()  # type: ignore[assignment]
 
 HOST_SESSION = "ses_01JABCDEF4Z"
-SPINNER = "".join(SPINNER_FRAMES)
 
 
 @unittest.skipUnless(create_app is not None, "textual not installed")
@@ -98,7 +94,7 @@ class TestCombinedSurfaces(RefreshCase):
             self.assertIn("@ana", body)
             self.assertIn(f"P{self.plan.id} {self.plan.name}", body)
             self.assertIn("feat/integration", body)
-            self.assertRegex(body, rf"[{re.escape(SPINNER)}]")
+            self.assertNotRegex(body, r"[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]")
             self.assertIn("working", body)
 
             # Structural, claim, and block writes leave branches alone.
@@ -131,7 +127,7 @@ class TestCombinedSurfaces(RefreshCase):
                 self.assert_task_row(app, self.store.get_task(task.id), state=state)
             self.assertTrue(app._row_nodes[plan_key].is_expanded)
 
-            # A settled session swaps the spinner for the awaiting glyph.
+            # A settled session swaps the active glyph for the awaiting glyph.
             harness.heartbeat("waiting")
             await pilot.pause()
             body = self.agents_body(app)

@@ -92,21 +92,6 @@ class TestAgentsPanel(unittest.IsolatedAsyncioTestCase):
                 await pilot.pause()
         self.assertEqual(self.store.get_agent(agent.id).status, "lost")
 
-    async def test_advance_repaints_cached_rows_without_a_store_read(self) -> None:
-        self._agent(branch="task/19-pane")
-        app = create_app(self.store.path)
-        async with app.run_test(size=(160, 40)) as pilot:
-            await pilot.pause()
-            panel = app.query_one("#agents")
-            body = app.query_one("#agents-body")
-            before = str(body.render())
-            with mock.patch.object(
-                app.store, "list_agents", side_effect=AssertionError("store read")
-            ):
-                changed = panel.advance(1)
-            self.assertTrue(changed)
-            self.assertEqual(str(body.render()).count("\n"), before.count("\n"))
-
     async def test_clicking_the_agents_pane_does_not_open_the_hub(self) -> None:
         self._agent()
         app = create_app(self.store.path)

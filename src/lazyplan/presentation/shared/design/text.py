@@ -1,8 +1,7 @@
-"""Glyphs, status words, progress, truncation, and PR chips."""
+"""Status words, progress, truncation, and PR chips."""
 
 from __future__ import annotations
 
-import os
 from collections.abc import Mapping
 
 from ....core.entities import Status
@@ -11,26 +10,9 @@ STATUS_GLYPH = {"todo": "○", "doing": "◐", "done": "●"}
 STATUS_ANSI = {"todo": "90", "doing": "33", "done": "32"}
 STATUS_RICH = {"todo": "dim", "doing": "yellow", "done": "green"}
 
-# The TUI advances one single-cell frame per tick. Static surfaces keep the
-# doing glyph above, so only the animated prefix uses these frames.
-SPINNER_FRAMES = ("⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏")
-SPINNER_INTERVAL = 0.16
-SPINNER_ENV = "LAZYPLAN_NO_SPINNER"
-
-
-def spinner_enabled(environ: Mapping[str, str] | None = None) -> bool:
-    """False when ``LAZYPLAN_NO_SPINNER`` asks for still frames."""
-    env = os.environ if environ is None else environ
-    return not env.get(SPINNER_ENV, "").strip()
-
 
 def _status(value: Status | str) -> str:
     return value.value if isinstance(value, Status) else str(value)
-
-
-def spinner_glyph(frame: int) -> str:
-    """One frame of the doing spinner; any integer wraps into the cycle."""
-    return SPINNER_FRAMES[frame % len(SPINNER_FRAMES)]
 
 
 def status_word(status: Status | str, dot: str = "plain") -> str:
@@ -44,13 +26,6 @@ def status_word(status: Status | str, dot: str = "plain") -> str:
     if dot != "plain":
         raise ValueError("dot must be plain|ansi|rich")
     return glyph
-
-
-def status_prefix(status: Status | str, frame: int | None = None) -> str:
-    """Rich row prefix: a spinner frame when animated, a static glyph otherwise."""
-    if _status(status) == "doing" and frame is not None:
-        return f"[{STATUS_RICH['doing']}]{spinner_glyph(frame)}[/]"
-    return status_word(status, "rich")
 
 
 def truncate(text: str, width: int | None) -> str:

@@ -110,8 +110,6 @@ class LazyBranchMixin:
                 self._add_tasks(node, self._tasks_by_milestone.get(key[1], []))
         finally:
             self._loading = False
-            if self.app.spinner_controller.rows:
-                self.app.spinner_controller.paint()
 
     def _add_milestones(
         self,

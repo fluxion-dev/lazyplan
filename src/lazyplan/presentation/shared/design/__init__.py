@@ -57,8 +57,6 @@ from .rows import plan_label as plan_label
 from .rows import plan_row as plan_row
 from .rows import task_label as task_label
 from .rows import task_row as task_row
-from .text import SPINNER_FRAMES as SPINNER_FRAMES
-from .text import SPINNER_INTERVAL as SPINNER_INTERVAL
 from .text import STATUS_ANSI as STATUS_ANSI
 from .text import STATUS_GLYPH as STATUS_GLYPH
 from .text import STATUS_RICH as STATUS_RICH
@@ -67,9 +65,6 @@ from .text import escape_markup as escape_markup
 from .text import pr_chip as pr_chip
 from .text import progress_text as progress_text
 from .text import repo_project_name as repo_project_name
-from .text import spinner_enabled as spinner_enabled
-from .text import spinner_glyph as spinner_glyph
-from .text import status_prefix as status_prefix
 from .text import status_word as status_word
 from .text import truncate as truncate
 from .tokens import ANSI as ANSI
@@ -112,8 +107,6 @@ __all__ = [
     "PLAN",
     "RowStats",
     "SECTION_ICON",
-    "SPINNER_FRAMES",
-    "SPINNER_INTERVAL",
     "STATUS_ANSI",
     "STATUS_GLYPH",
     "STATUS_RICH",
@@ -133,10 +126,7 @@ __all__ = [
     "progress_text",
     "repo_project_name",
     "render_stats",
-    "spinner_enabled",
-    "spinner_glyph",
     "stats_layout",
-    "status_prefix",
     "status_word",
     "task_label",
     "task_row",

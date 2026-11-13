@@ -16,7 +16,6 @@ from ...shared.design import (
     EMPTY_AGENTS_HINT,
     empty_state,
     escape_markup,
-    spinner_enabled,
 )
 from ...shared.session_labels import plan_names
 from ..query import query_one_opt
@@ -37,7 +36,6 @@ class AgentsPanel(VerticalScroll):
         self._titles: dict[int, str] = {}
         self._stamp = 0.0
         self._handoff = ""
-        self._frame: int | None = 0
 
     def compose(self) -> ComposeResult:
         yield Static("", id="agents-body")
@@ -65,7 +63,6 @@ class AgentsPanel(VerticalScroll):
             self._agents = []
             self._titles = {}
             self._handoff = ""
-            self._frame = None
             body.display = False
             empty = self.query_one("#agents-empty", Static)
             empty.display = True
@@ -80,26 +77,9 @@ class AgentsPanel(VerticalScroll):
         handoff = services.previous_agent(store, plan_id=plan_id)
         note = str(handoff["handoff"]) if handoff and handoff.get("handoff") else ""
         self._handoff = f"[dim]handoff[/] {escape_markup(note)}" if note else ""
-        self._frame = 0 if spinner_enabled() else None
         self._paint_rows()
         self.border_subtitle = agents_summary(agents, self._stamp)
         self.scroll_home(animate=False)
-
-    def has_working(self) -> bool:
-        """True while a cached agent is still starting or working."""
-        return any(
-            agent.status in ("working", "starting", "tool", "compacting") for agent in self._agents
-        )
-
-    def advance(self, frame: int) -> bool:
-        """Paint the cached rows at *frame* without another store read."""
-        if not self._agents or not spinner_enabled():
-            return False
-        if not self.has_working():
-            return False
-        self._frame = frame
-        self._paint_rows()
-        return True
 
     def _paint_rows(self) -> None:
         body = query_one_opt(self, "#agents-body", Static)
@@ -113,7 +93,6 @@ class AgentsPanel(VerticalScroll):
                 stamp,
                 plan_title=self._titles.get(agent.plan_id or 0, ""),
                 width=width,
-                frame=self._frame,
             )
             for agent in self._agents
         ]

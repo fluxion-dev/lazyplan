@@ -10,7 +10,6 @@ from textual.widgets.tree import TreeNode
 from ...core.ports.app import AppPort
 from .controllers.git_state import GitStateController
 from .controllers.metrics import MetricsController
-from .controllers.spinner import SpinnerController
 from .controllers.tree import TreeController
 from .controllers.updates import UpdateController
 from .state import AppState
@@ -49,7 +48,6 @@ class AppBase(App, TuiHost):
     heal: bool
     state: AppState
     tree_controller: TreeController
-    spinner_controller: SpinnerController
     git_state_controller: GitStateController
     update_controller: UpdateController
     metrics_controller: MetricsController
@@ -190,35 +188,3 @@ class AppBase(App, TuiHost):
     @_update_checking.setter
     def _update_checking(self, value: bool) -> None:
         self.update_controller.checking = value
-
-    @property
-    def _spinner_tick(self) -> int:
-        return self.spinner_controller.tick
-
-    @_spinner_tick.setter
-    def _spinner_tick(self, value: int) -> None:
-        self.spinner_controller.tick = value
-
-    @property
-    def _spinner_rows(self) -> dict[tuple[str, int], str]:
-        return self.spinner_controller.rows
-
-    @_spinner_rows.setter
-    def _spinner_rows(self, value: dict[tuple[str, int], str]) -> None:
-        self.spinner_controller.rows = value
-
-    @property
-    def _spinner_enabled(self) -> bool:
-        return self.spinner_controller.enabled
-
-    @_spinner_enabled.setter
-    def _spinner_enabled(self, value: bool) -> None:
-        self.spinner_controller.enabled = value
-
-    @property
-    def _spinner_timer(self) -> Any:
-        return self.spinner_controller.timer
-
-    @_spinner_timer.setter
-    def _spinner_timer(self, value: Any) -> None:
-        self.spinner_controller.timer = value

@@ -154,7 +154,6 @@ class TreeController(ExpansionMixin, LazyBranchMixin, ReconcileMixin, PollMixin)
             return
         for key, spec in app._row_specs.items():
             self.render_row(key, spec, tree)
-        app.spinner_controller.paint()
         for widget in trees:
             cast("FoldTree", widget).reflow()
 
@@ -247,7 +246,6 @@ class TreeController(ExpansionMixin, LazyBranchMixin, ReconcileMixin, PollMixin)
             self.sync_filter_snapshot(filtering)
             self.apply_expansion(self.reveal_keys() if filtering else None)
             self.show_empty(not active, not finished)
-            app.spinner_controller.paint()
             app.query_one("#hints", Label).update(
                 hint_bar(max(10, app.size.width - 2), markup=True)
             )
@@ -286,5 +284,4 @@ class TreeController(ExpansionMixin, LazyBranchMixin, ReconcileMixin, PollMixin)
         """Render and cache one row at the current tree width."""
         text = spec.markup(self.row_width(tree, spec.depth))
         self.app._row_labels[key] = text
-        self.app.spinner_controller.remember(key, spec.status, text)
         return text

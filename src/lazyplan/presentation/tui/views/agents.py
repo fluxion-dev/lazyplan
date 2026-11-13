@@ -11,7 +11,7 @@ import time
 from typing import NamedTuple
 
 from ....core.entities import Agent, Status
-from ...shared.design import escape_markup, spinner_glyph, status_word, truncate
+from ...shared.design import escape_markup, status_word, truncate
 
 GLYPH_WAITING = "◆"
 GLYPH_LOST = "✕"
@@ -79,12 +79,10 @@ def _share_widths(available: int, has_plan: bool) -> RowWidths:
     return RowWidths(title, budget - title)
 
 
-def state_glyph(state: str, frame: int | None) -> str:
-    """A spinner while active, then a distinct glyph per terminal state."""
+def state_glyph(state: str) -> str:
+    """A distinct glyph per state; active work uses the static doing word."""
     if state in ("working", "starting", "compacting", "tool"):
-        if state == "tool":
-            return GLYPH_TOOL
-        return status_word(Status.DOING) if frame is None else spinner_glyph(frame)
+        return status_word(Status.DOING)
     if state == "waiting":
         return GLYPH_WAITING
     if state == "lost":
@@ -142,7 +140,6 @@ def agent_line(
     now: float | None = None,
     plan_title: str = "",
     width: int | None = None,
-    frame: int | None = 0,
 ) -> str:
     """One live row: agent, id, plan/task, branch, age, and status glyph."""
     stamp = time.time() if now is None else now
@@ -151,7 +148,7 @@ def agent_line(
     task = f" T{agent.task_id}" if agent.task_id is not None else ""
     plan_head = f"P{agent.plan_id}" if agent.plan_id is not None else "unbound"
     age_text = age(agent.started_at, stamp)
-    glyph = state_glyph(state, frame)
+    glyph = state_glyph(state)
     widths = row_widths(agent, width, short_id, plan_head, age_text, glyph)
     title = plan_title if widths is None else truncate(plan_title, widths.title)
     branch = agent.branch or "-"

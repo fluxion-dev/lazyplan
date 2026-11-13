@@ -8,7 +8,7 @@ from __future__ import annotations
 import sqlite3
 import uuid
 
-SCHEMA_VERSION = 12
+SCHEMA_VERSION = 13
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS plans (
@@ -261,6 +261,17 @@ CREATE TABLE IF NOT EXISTS entity_repos (
 );
 CREATE INDEX IF NOT EXISTS idx_entity_repos_parent ON entity_repos(parent_kind, parent_id);
 CREATE INDEX IF NOT EXISTS idx_entity_repos_branch ON entity_repos(branch, repo_path, repo_remote);
+CREATE TABLE IF NOT EXISTS plan_worktrees (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+    repo_path TEXT NOT NULL,
+    repo_remote TEXT NOT NULL DEFAULT '',
+    worktree_path TEXT NOT NULL,
+    branch TEXT NOT NULL DEFAULT '',
+    registered_at REAL NOT NULL,
+    UNIQUE(plan_id, repo_path)
+);
+CREATE INDEX IF NOT EXISTS idx_plan_worktrees_plan ON plan_worktrees(plan_id);
 CREATE TABLE IF NOT EXISTS events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     ts REAL NOT NULL,

@@ -36,7 +36,10 @@ class SkillSpec:
     data_file: str
 
 
-SKILLS: tuple[SkillSpec, ...] = (SkillSpec(name="lazyplan", data_file="SKILL.md"),)
+SKILLS: tuple[SkillSpec, ...] = (
+    SkillSpec(name="lazyplan", data_file="SKILL.md"),
+    SkillSpec(name="lazyplan-orchestrate", data_file="orchestrate/SKILL.md"),
+)
 SKILL_NAME = SKILLS[0].name
 _SKILL_TEXT = data_text(SKILLS[0].data_file)
 SKILL_BODY = _SKILL_TEXT.split("---", 2)[2].lstrip("\n")
@@ -49,6 +52,7 @@ __all__ = [
     "SkillSpec",
     "render_skill",
     "render_home_agents_snippet",
+    "skill_files_for",
 ]
 
 AGENTS_DIR = ".agents"
@@ -141,6 +145,29 @@ def skill_destinations(
     return out
 
 
+def skill_files_for(
+    scope: str,
+    repo_root: Path | None,
+    home: Path,
+    tools: list[str] | None,
+    skills_dir: str | Path | None = None,
+) -> list[Path]:
+    """Every shipped skill's destination files for one scope."""
+    files: list[Path] = []
+    for spec in SKILLS:
+        files.extend(
+            skill_destinations(
+                scope,
+                repo_root,
+                home,
+                tools,
+                skills_dir,
+                name=spec.name,
+            )
+        )
+    return files
+
+
 def _empty_plan(reason: str) -> SkillPlan:
     return SkillPlan(
         scope="none",
@@ -169,7 +196,7 @@ def _plan_for(
         scope=scope,
         tools=tools,
         skills_dir=skills_dir,
-        skill_files=skill_destinations(scope, repo_root, home, tools, skills_dir),
+        skill_files=skill_files_for(scope, repo_root, home, tools, skills_dir),
         agents_md=(
             repo_root / "AGENTS.md"
             if with_agents_md and scope in ("project", "both") and repo_root is not None
@@ -217,6 +244,8 @@ def apply_skill_plan(
     )
     for dest_line in list(result.installed):
         dest = dest_line.rsplit(" (", 1)[0]
+        if Path(dest).parent.name != SKILL_NAME:
+            continue
         try:
             ensure_skill_db(dest)
         except OSError:
@@ -395,12 +424,12 @@ def write_skill_file(dest: Path, *, name: str = SKILL_NAME) -> tuple[bool, str]:
     return True, "wrote"
 
 
-def _write_skill(seen: set[Path], installed: list[str], dest: Path) -> None:
+def _write_skill(seen: set[Path], installed: list[str], dest: Path, name: str = SKILL_NAME) -> None:
     """Write one SKILL.md unless already written (dedupes across sides)."""
     if dest in seen:
         return
     seen.add(dest)
-    _, status = write_skill_file(dest)
+    _, status = write_skill_file(dest, name=name)
     installed.append(f"{dest} ({status})")
 
 
@@ -413,14 +442,17 @@ def _install_team_side(
     tools: list[str] | None,
 ) -> None:
     """Team side: shared repo standard + native per-tool repo dirs."""
-    for dest in skill_targets("project", repo_root, home):
-        _write_skill(seen, installed, dest)
+    for spec in SKILLS:
+        for dest in skill_targets("project", repo_root, home, name=spec.name):
+            _write_skill(seen, installed, dest, spec.name)
     if with_claude_copy:
-        for dest in tool_skill_targets("claude", "project", repo_root, home):
-            _write_skill(seen, installed, dest)
+        for spec in SKILLS:
+            for dest in tool_skill_targets("claude", "project", repo_root, home, name=spec.name):
+                _write_skill(seen, installed, dest, spec.name)
     for tool in tools or []:
-        for dest in tool_skill_targets(tool, "project", repo_root, home):
-            _write_skill(seen, installed, dest)
+        for spec in SKILLS:
+            for dest in tool_skill_targets(tool, "project", repo_root, home, name=spec.name):
+                _write_skill(seen, installed, dest, spec.name)
 
 
 def _install_local_side(
@@ -432,11 +464,13 @@ def _install_local_side(
     tools: list[str] | None,
 ) -> None:
     """Local side: exactly one dir per tool (no universal duplicate)."""
-    for dest in global_skill_targets(tools, home):
-        _write_skill(seen, installed, dest)
+    for spec in SKILLS:
+        for dest in global_skill_targets(tools, home, name=spec.name):
+            _write_skill(seen, installed, dest, spec.name)
     if with_claude_copy and tools is None:
-        for dest in tool_skill_targets("claude", "global", repo_root, home):
-            _write_skill(seen, installed, dest)
+        for spec in SKILLS:
+            for dest in tool_skill_targets("claude", "global", repo_root, home, name=spec.name):
+                _write_skill(seen, installed, dest, spec.name)
 
 
 def install(
@@ -458,9 +492,13 @@ def install(
     result = InstallResult(scope=scope)
     seen: set[Path] = set()
     if skills_dir is not None:
-        _write_skill(
-            seen, result.installed, Path(skills_dir).expanduser() / SKILL_NAME / "SKILL.md"
-        )
+        for spec in SKILLS:
+            _write_skill(
+                seen,
+                result.installed,
+                Path(skills_dir).expanduser() / spec.name / "SKILL.md",
+                spec.name,
+            )
     else:
         if scope in ("project", "both") and repo_root is not None:
             _install_team_side(seen, result.installed, repo_root, home, with_claude_copy, tools)

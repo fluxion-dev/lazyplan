@@ -52,6 +52,7 @@ lazyplan = [
     "data/*.md",
     "data/*.json",
     "data/agents/*/*.md",
+    "data/orchestrate/*.md",
     "data/recipes/*.json",
     "presentation/tui/css/*.tcss",
 ]

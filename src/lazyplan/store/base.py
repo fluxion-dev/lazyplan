@@ -156,6 +156,33 @@ class StoreBase(StoreStubs):
             rows = conn.execute(sql, params).fetchall()
         return {key(row): make(row) for row in rows}
 
+    def _latest_ended(
+        self,
+        table: str,
+        ended: str,
+        actor_column: str,
+        make: Callable[[sqlite3.Row], _V],
+        plan_id: int | None = None,
+        actor: str = "",
+        repo_path: str = "",
+    ) -> _V | None:
+        """Newest ended, unarchived row of *table* for a plan, actor, or checkout."""
+        sql = f"SELECT * FROM {table} WHERE {ended} AND archived_at = 0"
+        params: list[object] = []
+        if plan_id is not None:
+            sql += " AND plan_id=?"
+            params.append(plan_id)
+        if actor:
+            sql += f" AND {actor_column}=?"
+            params.append(actor)
+        if repo_path:
+            sql += " AND repo_path=?"
+            params.append(repo_path)
+        sql += " ORDER BY ended_at DESC, id DESC LIMIT 1"
+        with self._connect() as conn:
+            row = conn.execute(sql, params).fetchone()
+        return make(row) if row is not None else None
+
     def log(
         self,
         actor: str,

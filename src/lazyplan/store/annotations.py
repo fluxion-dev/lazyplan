@@ -40,12 +40,7 @@ class AnnotationsMixin(StoreBase):
         if not self._parent_exists(parent_kind, parent_id):
             raise KeyError(f"{parent_kind} #{parent_id} not found")
         stamp = time.time()
-        with self._connect() as conn:
-            cur = conn.execute(
-                "INSERT INTO notes (parent_kind, parent_id, actor, ts, text) VALUES (?,?,?,?,?)",
-                (parent_kind, parent_id, actor, stamp, body),
-            )
-            note_id = cur.lastrowid or 0
+        note_id = self._insert_text("notes", parent_kind, parent_id, actor, stamp, body)
         self.log(actor, parent_kind, "note", f"{parent_kind} #{parent_id}: {body[:80]}")
         return Note(
             id=note_id,
@@ -79,12 +74,7 @@ class AnnotationsMixin(StoreBase):
         """Import a note with its original timestamp."""
         if not text.strip():
             return None
-        with self._connect() as conn:
-            cur = conn.execute(
-                "INSERT INTO notes (parent_kind, parent_id, actor, ts, text) VALUES (?,?,?,?,?)",
-                (parent_kind, parent_id, actor, ts, text.strip()),
-            )
-            note_id = cur.lastrowid or 0
+        note_id = self._insert_text("notes", parent_kind, parent_id, actor, ts, text.strip())
         return Note(note_id, parent_kind, parent_id, text.strip(), actor, ts)
 
     def add_issue_link(
@@ -183,12 +173,7 @@ class AnnotationsMixin(StoreBase):
         if not self._parent_exists(parent_kind, parent_id):
             raise KeyError(f"{parent_kind} #{parent_id} not found")
         stamp = time.time()
-        with self._connect() as conn:
-            cur = conn.execute(
-                "INSERT INTO comments (parent_kind, parent_id, actor, ts, text) VALUES (?,?,?,?,?)",
-                (parent_kind, parent_id, actor, stamp, body),
-            )
-            comment_id = cur.lastrowid or 0
+        comment_id = self._insert_text("comments", parent_kind, parent_id, actor, stamp, body)
         self.log(actor, parent_kind, "comment", f"{parent_kind} #{parent_id}: {body[:80]}")
         return Comment(comment_id, parent_kind, parent_id, body, actor, stamp, False)
 
@@ -261,32 +246,18 @@ class AnnotationsMixin(StoreBase):
         """Import a comment with its timestamp and resolution state."""
         if not text.strip():
             return None
-        with self._connect() as conn:
-            cur = conn.execute(
-                "INSERT INTO comments (parent_kind, parent_id, actor, ts, text, resolved)"
-                " VALUES (?,?,?,?,?,?)",
-                (parent_kind, parent_id, actor, ts, text.strip(), 1 if resolved else 0),
-            )
-            comment_id = cur.lastrowid or 0
+        comment_id = self._insert_text(
+            "comments", parent_kind, parent_id, actor, ts, text.strip(), resolved=resolved
+        )
         return Comment(comment_id, parent_kind, parent_id, text.strip(), actor, ts, resolved)
 
     def notes_map(self) -> dict[tuple[str, int], list[str]]:
         """All note text grouped by parent, for TUI search."""
-        return self._grouped(
-            "SELECT parent_kind, parent_id, text FROM notes",
-            (),
-            lambda row: str(row["text"]),
-            lambda row: (str(row["parent_kind"]), int(row["parent_id"])),
-        )
+        return self._text_map("notes")
 
     def comments_map(self) -> dict[tuple[str, int], list[str]]:
         """All comment text grouped by parent, for TUI search."""
-        return self._grouped(
-            "SELECT parent_kind, parent_id, text FROM comments",
-            (),
-            lambda row: str(row["text"]),
-            lambda row: (str(row["parent_kind"]), int(row["parent_id"])),
-        )
+        return self._text_map("comments")
 
     def notes_full_map(self) -> dict[tuple[str, int], list[Note]]:
         """Every note grouped by parent, oldest first, with full metadata."""
@@ -525,3 +496,35 @@ class AnnotationsMixin(StoreBase):
     def open_criteria(self, kind: str, obj_id: int) -> list[Criterion]:
         """Not-done checklist items."""
         return [c for c in self.list_criteria(kind, obj_id) if not c.done]
+
+    def _insert_text(
+        self,
+        table: str,
+        parent_kind: str,
+        parent_id: int,
+        actor: str,
+        ts: float,
+        text: str,
+        resolved: bool | None = None,
+    ) -> int:
+        """Insert one note or comment row and return its id."""
+        columns = ["parent_kind", "parent_id", "actor", "ts", "text"]
+        values: list[object] = [parent_kind, parent_id, actor, ts, text]
+        if resolved is not None:
+            columns.append("resolved")
+            values.append(1 if resolved else 0)
+        marks = ",".join("?" for _ in values)
+        with self._connect() as conn:
+            cur = conn.execute(
+                f"INSERT INTO {table} ({', '.join(columns)}) VALUES ({marks})", values
+            )
+            return int(cur.lastrowid or 0)
+
+    def _text_map(self, table: str) -> dict[tuple[str, int], list[str]]:
+        """All text of one note or comment table grouped by parent."""
+        return self._grouped(
+            f"SELECT parent_kind, parent_id, text FROM {table}",
+            (),
+            lambda row: str(row["text"]),
+            lambda row: (str(row["parent_kind"]), int(row["parent_id"])),
+        )

@@ -58,7 +58,7 @@ def _is_docstring(statement: ast.stmt) -> bool:
 
 
 def _bodies(root: Path) -> list[tuple[str, str, bool]]:
-    """One ``(method name, body digest, iterates)`` row per Store map method."""
+    """One ``(method name, body digest, iterates)`` row per public map read."""
     found: list[tuple[str, str, bool]] = []
     for path in sorted(root.glob("*.py")):
         if path.name in MIRRORS:
@@ -69,6 +69,8 @@ def _bodies(root: Path) -> list[tuple[str, str, bool]]:
                 continue
             for item in node.body:
                 if not isinstance(item, ast.FunctionDef) or not item.name.endswith("_map"):
+                    continue
+                if item.name.startswith("_"):
                     continue
                 body = [statement for statement in item.body if not _is_docstring(statement)]
                 shape = tuple(_Shape().visit(statement) for statement in body)

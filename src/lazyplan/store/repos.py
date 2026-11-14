@@ -117,18 +117,16 @@ class ReposMixin(StoreBase):
 
     def repos_map(self) -> dict[tuple[str, int], list[dict]]:
         """Every linked repo grouped by (parent_kind, parent_id), oldest first."""
-        with self._connect() as conn:
-            try:
-                rows = conn.execute(
-                    "SELECT id, parent_kind, parent_id, repo_path, repo_remote, branch, base_sha"
-                    " FROM entity_repos ORDER BY id"
-                ).fetchall()
-            except Exception:
-                return {}
-        out: dict[tuple[str, int], list[dict]] = {}
-        for r in rows:
-            out.setdefault((r["parent_kind"], r["parent_id"]), []).append(dict(r))
-        return out
+        try:
+            return self._grouped(
+                "SELECT id, parent_kind, parent_id, repo_path, repo_remote, branch, base_sha"
+                " FROM entity_repos ORDER BY id",
+                (),
+                dict,
+                lambda row: (str(row["parent_kind"]), int(row["parent_id"])),
+            )
+        except Exception:
+            return {}
 
     @staticmethod
     def _delete_entity_repos(conn: sqlite3.Connection, kind: str, obj_id: int) -> None:

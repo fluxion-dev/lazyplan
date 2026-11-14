@@ -57,8 +57,8 @@ def _is_docstring(statement: ast.stmt) -> bool:
     )
 
 
-def _bodies(root: Path) -> list[tuple[str, str, bool]]:
-    """One ``(method name, body digest, iterates)`` row per public map read."""
+def _bodies(root: Path = STORE) -> list[tuple[str, str, bool]]:
+    """One ``(method name, body digest, own logic)`` row per public map read."""
     found: list[tuple[str, str, bool]] = []
     for path in sorted(root.glob("*.py")):
         if path.name in MIRRORS:
@@ -73,34 +73,43 @@ def _bodies(root: Path) -> list[tuple[str, str, bool]]:
                 if item.name.startswith("_"):
                     continue
                 body = [statement for statement in item.body if not _is_docstring(statement)]
+                own_logic = not _delegates(body)
                 shape = tuple(_Shape().visit(statement) for statement in body)
                 dump = ast.dump(
                     ast.Module(body=list(shape), type_ignores=[]), annotate_fields=False
                 )
-                found.append((item.name, hashlib.sha1(dump.encode()).hexdigest(), _iterates(body)))
+                digest = hashlib.sha1(dump.encode()).hexdigest()
+                found.append((item.name, digest, own_logic))
     return found
 
 
-def _iterates(body: list[ast.stmt]) -> bool:
-    """True when a body loops over rows itself instead of delegating the read."""
-    return any(
-        isinstance(node, (ast.For, ast.AsyncFor, ast.While, ast.comprehension))
-        for statement in body
-        for node in ast.walk(statement)
+#: Helpers that own the read; a one-line call to one of them is not a duplicate.
+SHARED_READERS = frozenset({"_grouped", "_indexed", "_text_map"})
+
+
+def _delegates(body: list[ast.stmt]) -> bool:
+    """True when the whole body is one return of a shared reader call."""
+    if len(body) != 1 or not isinstance(body[0], ast.Return):
+        return False
+    value = body[0].value
+    return (
+        isinstance(value, ast.Call)
+        and isinstance(value.func, ast.Attribute)
+        and value.func.attr in SHARED_READERS
     )
 
 
 def duplicate_groups(root: Path = STORE) -> list[tuple[str, ...]]:
-    """Iterating methods with identical normalized bodies, one sorted group each."""
+    """Methods with their own logic and identical bodies, one sorted group each."""
     by_body: dict[str, list[str]] = {}
-    for name, digest, iterates in _bodies(root):
-        if iterates:
+    for name, digest, own_logic in _bodies(root):
+        if own_logic:
             by_body.setdefault(digest, []).append(name)
     return sorted(tuple(sorted(names)) for names in by_body.values() if len(names) > 1)
 
 
 def map_methods(root: Path = STORE) -> list[str]:
-    """Every Store map method name, in file order."""
+    """Every public Store map method name, in file order."""
     return [name for name, _, _ in _bodies(root)]
 
 
@@ -130,6 +139,10 @@ def _seeded_pair(root: Path) -> None:
 class StoreMapDuplicateTest(unittest.TestCase):
     def test_duplicate_baseline_is_recorded(self) -> None:
         self.assertEqual(duplicate_groups(), list(BASELINE_DUPLICATES))
+
+    def test_each_map_method_is_defined_once(self) -> None:
+        names = map_methods()
+        self.assertEqual(sorted(names), sorted(set(names)), "a map method is defined twice")
 
     def test_gate_detects_a_seeded_duplicate(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

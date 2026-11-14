@@ -78,6 +78,36 @@ class OpenCodeProfileInstallTest(unittest.TestCase):
         result = agent_install.install_opencode("none", self.repo, self.home, self.profiles)
         self.assertEqual(result.installed, [])
 
+    def test_claude_install_writes_frontmatter_and_read_only_roles(self) -> None:
+        result = agent_install.install_claude("project", self.repo, self.home, self.profiles)
+        self.assertEqual(len(result.installed), len(AGENT_ROLES))
+        reviewer = (self.repo / ".claude/agents/lazyplan-reviewer.md").read_text()
+        self.assertIn("name: lazyplan-reviewer", reviewer)
+        self.assertIn("model: opus", reviewer)
+        self.assertIn("permissionMode: plan", reviewer)
+        self.assertIn("Read, Grep, Glob, Bash", reviewer)
+        implementer = (self.repo / ".claude/agents/lazyplan-implementer.md").read_text()
+        self.assertIn("model: haiku", implementer)
+        self.assertIn("Edit, Write", implementer)
+        self.assertIn(agent_install.MARKER, implementer)
+
+    def test_claude_refresh_and_user_file_keep(self) -> None:
+        agent_install.install_claude("project", self.repo, self.home, self.profiles)
+        path = self.repo / ".claude/agents/lazyplan-docs.md"
+        path.write_text(path.read_text() + "\nstale\n", encoding="utf-8")
+        agent_install.install_claude("project", self.repo, self.home, self.profiles)
+        self.assertNotIn("stale", path.read_text())
+
+        custom = self.repo / ".claude/agents/lazyplan-qa.md"
+        custom.write_text("custom\n", encoding="utf-8")
+        result = agent_install.install_claude("project", self.repo, self.home, self.profiles)
+        self.assertEqual(custom.read_text(), "custom\n")
+        self.assertTrue(any("kept user file" in line for line in result.kept))
+
+    def test_claude_global_scope(self) -> None:
+        agent_install.install_claude("global", self.repo, self.home, self.profiles)
+        self.assertTrue((self.home / ".claude/agents/lazyplan-qa.md").is_file())
+
 
 if __name__ == "__main__":
     unittest.main()

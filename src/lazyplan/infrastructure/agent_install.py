@@ -17,7 +17,14 @@ from .profiles import Profile, resolve
 
 OPENCODE_DIR = Path(".opencode") / "agent"
 OPENCODE_HOME_DIR = Path(".config") / "opencode" / "agent"
+CLAUDE_DIR = Path(".claude") / "agents"
+CLAUDE_HOME_DIR = Path(".claude") / "agents"
 MARKER = "<!-- managed by lazyplan:"
+CLAUDE_TOOLS = "Read, Grep, Glob, Edit, Write, Bash"
+CLAUDE_READ_TOOLS = {
+    "scout": "Read, Grep, Glob",
+    "reviewer": "Read, Grep, Glob, Bash",
+}
 
 ROLE_META: dict[str, dict[str, str]] = {
     "scout": {
@@ -107,6 +114,66 @@ def install_opencode(
     return result
 
 
+def claude_targets(scope: str, repo_root: Path | None, home: Path) -> list[Path]:
+    """One Claude Code profile path per role for a scope."""
+    targets: list[Path] = []
+    if scope in ("project", "both") and repo_root is not None:
+        targets.extend(repo_root / CLAUDE_DIR / f"lazyplan-{role}.md" for role in AGENT_ROLES)
+    if scope in ("global", "both"):
+        targets.extend(home / CLAUDE_HOME_DIR / f"lazyplan-{role}.md" for role in AGENT_ROLES)
+    return targets
+
+
+def install_claude(
+    scope: str,
+    repo_root: Path | None,
+    home: Path,
+    profiles: dict[str, Profile],
+    models: dict[str, str] | None = None,
+) -> AgentInstallResult:
+    """Write or refresh every Claude Code profile for a scope."""
+    result = AgentInstallResult("claude", scope)
+    for dest in claude_targets(scope, repo_root, home):
+        role = dest.stem.removeprefix("lazyplan-")
+        written, status = _install_file(dest, render_claude(role, profiles[role], models))
+        line = f"{dest} ({status})"
+        if written:
+            result.installed.append(line)
+        else:
+            result.kept.append(line)
+    return result
+
+
+def render_claude(role: str, profile: Profile, models: dict[str, str] | None) -> str:
+    """One managed Claude Code subagent file."""
+    resolved = resolve(profile, "claude", models)
+    meta = ROLE_META[role]
+    tools = CLAUDE_READ_TOOLS.get(role, CLAUDE_TOOLS)
+    lines = [
+        "---",
+        f"name: lazyplan-{role}",
+        f"description: {meta['description']}",
+        f"tools: {tools}",
+    ]
+    if resolved["model"]:
+        lines.append(f"model: {resolved['model']}")
+    if resolved["effort"]:
+        lines.append(f"effort: {resolved['effort']}")
+    if meta["edit"] == "deny":
+        lines.append("permissionMode: plan")
+    lines.extend(
+        [
+            "---",
+            "",
+            data_text(f"agents/common/{role}.md").rstrip(),
+            "",
+            f"{MARKER} claude {role} -->",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
 def render_opencode(role: str, profile: Profile, models: dict[str, str] | None) -> str:
     """One managed OpenCode subagent file."""
     resolved = resolve(profile, "opencode", models)
@@ -127,7 +194,7 @@ def render_opencode(role: str, profile: Profile, models: dict[str, str] | None) 
             f"  bash: {meta['bash']}",
             "---",
             "",
-            data_text(f"agents/opencode/{role}.md").rstrip(),
+            data_text(f"agents/common/{role}.md").rstrip(),
             "",
             f"{MARKER} opencode {role} -->",
             "",

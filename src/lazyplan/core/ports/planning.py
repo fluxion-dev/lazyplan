@@ -195,15 +195,24 @@ class PlanningPort(
         repo_remote: str = "",
         actor: str = "human",
         registered_at: float = 0.0,
+        milestone_id: int | None = None,
     ) -> PlanWorktree: ...
 
-    def get_plan_worktree(self, plan_id: int, repo_path: str) -> PlanWorktree | None: ...
+    def get_plan_worktree(
+        self, plan_id: int, repo_path: str, milestone_id: int | None = None
+    ) -> PlanWorktree | None: ...
 
     def list_plan_worktrees(self, plan_id: int) -> list[PlanWorktree]: ...
 
     def plan_worktrees_map(self) -> dict[int, list[PlanWorktree]]: ...
 
-    def remove_plan_worktree(self, plan_id: int, repo_path: str, actor: str = "human") -> bool: ...
+    def remove_plan_worktree(
+        self,
+        plan_id: int,
+        repo_path: str,
+        actor: str = "human",
+        milestone_id: int | None = None,
+    ) -> bool: ...
 
     def plan_status_events_map(self) -> dict[int, tuple[float, str]]: ...
 

@@ -14,9 +14,11 @@ from lazyplan.services.worktrees import (
     worktree_gate,
 )
 
-from ....core.entities import Plan, PlanWorktree
+from ....core.entities import Milestone, Plan, PlanWorktree
 from ....core.policies.worktrees import (
     WorktreeCollision,
+    derive_lane_worktree,
+    derive_lane_worktrees,
     derive_worktree,
     derive_worktrees,
     quote_path,
@@ -29,24 +31,45 @@ from ...shared.design import msg_error, msg_not_found
 from ..emit import _emit
 
 
+def _lane_or_error(store: AppPort, plan: Plan, args: argparse.Namespace) -> Milestone | None:
+    """The requested lane milestone, or None for the plan-level checkout."""
+    milestone_id = getattr(args, "milestone", None)
+    if milestone_id is None:
+        return None
+    milestone = store.get_milestone(milestone_id)
+    if milestone is None or milestone.plan_id != plan.id:
+        raise ValueError(f"milestone #{milestone_id} is not in plan #{plan.id}")
+    return milestone
+
+
 def _print_plan_worktrees(
     store: AppPort,
     plan: Plan,
     args: argparse.Namespace,
     actor: str,
 ) -> int:
-    """Print one setup command per linked repo."""
+    """Print one setup command per linked repo and requested lane."""
     repos = store.list_repos("plan", plan.id)
     if not repos:
         store.add_repo_link("plan", plan.id, store.checkout_path(), actor=actor)
         repos = store.list_repos("plan", plan.id)
     try:
-        targets = derive_worktrees(
-            [str(repo["repo_path"]) for repo in repos],
-            plan.id,
-            plan.name,
-            exists=os.path.exists,
-        )
+        milestone = _lane_or_error(store, plan, args)
+        paths = [str(repo["repo_path"]) for repo in repos]
+        derived: list[tuple[str, str, str, int | None]] = []
+        if milestone is None:
+            for target in derive_worktrees(paths, plan.id, plan.name, exists=os.path.exists):
+                derived.append((target.repo_path, target.worktree_path, target.branch, None))
+        else:
+            for lane in derive_lane_worktrees(
+                paths,
+                plan.id,
+                plan.name,
+                milestone.id,
+                milestone.title,
+                exists=os.path.exists,
+            ):
+                derived.append((lane.repo_path, lane.worktree_path, lane.branch, milestone.id))
     except (ValueError, WorktreeCollision) as exc:
         print(msg_error(exc), file=sys.stderr)
         return 2
@@ -54,18 +77,19 @@ def _print_plan_worktrees(
     for repo in repos:
         rows.setdefault(str(repo["repo_path"]).rstrip("/\\"), repo)
     entries = []
-    for target in targets:
-        repo = rows[target.repo_path]
+    for repo_path, worktree_path, branch, lane_id in derived:
+        repo = rows[repo_path]
         start = str(repo.get("base_sha") or repo.get("branch") or "HEAD")
         command = (
-            f"git -C {quote_path(target.repo_path)} worktree add -b {target.branch}"
-            f" {quote_path(target.worktree_path)} {quote_path(start)}"
+            f"git -C {quote_path(repo_path)} worktree add -b {branch}"
+            f" {quote_path(worktree_path)} {quote_path(start)}"
         )
         entries.append(
             {
-                "repo_path": target.repo_path,
-                "worktree_path": target.worktree_path,
-                "branch": target.branch,
+                "repo_path": repo_path,
+                "worktree_path": worktree_path,
+                "branch": branch,
+                "milestone_id": lane_id,
                 "command": command,
             }
         )
@@ -79,7 +103,9 @@ def _print_plan_worktrees(
                     plan.id,
                     "ready",
                     entry["branch"],
-                    f"plan:{plan.id}",
+                    f"lane:M{entry['milestone_id']}"
+                    if entry["milestone_id"]
+                    else f"plan:{plan.id}",
                     entry["worktree_path"],
                 )
             )
@@ -108,12 +134,13 @@ def _emit_worktree(
                 plan.id,
                 state,
                 row.branch,
-                f"plan:{plan.id}",
+                f"lane:M{row.milestone_id}" if row.milestone_id else f"plan:{plan.id}",
                 row.worktree_path,
             )
         )
         return 0
-    print(f"{state} plan {plan.id} worktree {row.worktree_path} on {row.branch}")
+    lane = f" lane M{row.milestone_id}" if row.milestone_id else ""
+    print(f"{state} plan {plan.id}{lane} worktree {row.worktree_path} on {row.branch}")
     return 0
 
 
@@ -141,15 +168,27 @@ def _register_plan_worktree(
         )
         return 2
 
-    target = derive_worktree(repo, plan.id, plan.name)
-    worktree = store.resolve_repo_path(args.worktree) if args.worktree else target.worktree_path
-    branch = args.branch or target.branch
+    try:
+        milestone = _lane_or_error(store, plan, args)
+    except ValueError as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 2
+    if milestone is None:
+        target = derive_worktree(repo, plan.id, plan.name)
+        derived_path, derived_branch = target.worktree_path, target.branch
+    else:
+        lane_target = derive_lane_worktree(repo, plan.id, plan.name, milestone.id, milestone.title)
+        derived_path, derived_branch = lane_target.worktree_path, lane_target.branch
+    worktree = store.resolve_repo_path(args.worktree) if args.worktree else derived_path
+    branch = args.branch or derived_branch
     check = verify_worktree(repo, worktree, branch)
     if not check.ok:
         print(msg_error(ValueError(check.reason)), file=sys.stderr)
         return 2
 
-    existing = store.get_plan_worktree(plan.id, repo)
+    existing = store.get_plan_worktree(
+        plan.id, repo, milestone.id if milestone is not None else None
+    )
     if existing is not None and existing.worktree_path == worktree and existing.branch == branch:
         return _emit_worktree(args, plan, existing, "already-registered")
 
@@ -160,6 +199,7 @@ def _register_plan_worktree(
         branch=branch,
         repo_remote=str(repos[repo].get("repo_remote", "")),
         actor=actor,
+        milestone_id=milestone.id if milestone is not None else None,
     )
     return _emit_worktree(args, plan, row, "registered")
 
@@ -167,10 +207,17 @@ def _register_plan_worktree(
 def _remove_plan_worktree(store: AppPort, plan: Plan, args: argparse.Namespace, actor: str) -> int:
     """Unregister one repo after a clean check; a missing checkout may still go."""
     repo = store.resolve_repo_path(args.repo)
-    existing = store.get_plan_worktree(plan.id, repo)
+    try:
+        milestone = _lane_or_error(store, plan, args)
+    except ValueError as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 2
+    lane_id = milestone.id if milestone is not None else None
+    existing = store.get_plan_worktree(plan.id, repo, lane_id)
     if existing is None:
+        lane = f" lane M{lane_id}" if lane_id else ""
         print(
-            msg_error(ValueError(f"plan #{plan.id} has no worktree for {repo}")),
+            msg_error(ValueError(f"plan #{plan.id}{lane} has no worktree for {repo}")),
             file=sys.stderr,
         )
         return 1
@@ -181,7 +228,7 @@ def _remove_plan_worktree(store: AppPort, plan: Plan, args: argparse.Namespace, 
             print(msg_error(ValueError(check.reason)), file=sys.stderr)
             return 2
 
-    store.remove_plan_worktree(plan.id, repo, actor=actor)
+    store.remove_plan_worktree(plan.id, repo, actor=actor, milestone_id=lane_id)
     return _emit_worktree(args, plan, existing, "removed")
 
 
@@ -197,9 +244,12 @@ def guard_plan_done(store: InsightsPort, plan_id: int) -> int:
 
 
 def _list_plan_worktrees(store: InsightsPort, plan: Plan, args: argparse.Namespace) -> int:
-    """List registrations with a read-only stale flag."""
+    """List registrations with a read-only stale flag, optionally one lane."""
+    wanted_lane = getattr(args, "milestone", None)
     entries = []
     for row in store.list_plan_worktrees(plan.id):
+        if wanted_lane is not None and row.milestone_id != wanted_lane:
+            continue
         stale = bool(stale_reason(row))
         if getattr(args, "stale", False) and not stale:
             continue
@@ -208,6 +258,7 @@ def _list_plan_worktrees(store: InsightsPort, plan: Plan, args: argparse.Namespa
                 "repo_path": row.repo_path,
                 "worktree_path": row.worktree_path,
                 "branch": row.branch,
+                "milestone_id": row.milestone_id,
                 "stale": stale,
             }
         )
@@ -221,7 +272,9 @@ def _list_plan_worktrees(store: InsightsPort, plan: Plan, args: argparse.Namespa
                     plan.id,
                     "stale" if entry["stale"] else "ready",
                     entry["branch"],
-                    f"plan:{plan.id}",
+                    f"lane:M{entry['milestone_id']}"
+                    if entry["milestone_id"]
+                    else f"plan:{plan.id}",
                     entry["worktree_path"],
                 )
             )
@@ -232,8 +285,10 @@ def _list_plan_worktrees(store: InsightsPort, plan: Plan, args: argparse.Namespa
     print(f"plan {plan.id}: {plan.name}")
     for entry in entries:
         state_word = "stale" if entry["stale"] else "ok"
+        lane = f"M{entry['milestone_id']} " if entry["milestone_id"] else ""
         print(
-            f"  {entry['repo_path']} -> {entry['worktree_path']} [{entry['branch']}] {state_word}"
+            f"  {lane}{entry['repo_path']} -> {entry['worktree_path']}"
+            f" [{entry['branch']}] {state_word}"
         )
     return 0
 

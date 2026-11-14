@@ -10,7 +10,7 @@ import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 
-from lazyplan.core.policies.worktrees import derive_worktree
+from lazyplan.core.policies.worktrees import derive_lane_worktree, derive_worktree
 from lazyplan.presentation.cli.main import main as lpui_main
 from lazyplan.store import Store
 
@@ -97,6 +97,51 @@ class PlanWorktreeLifecycleTest(unittest.TestCase):
         )
         self.assertEqual(code, 0, error)
         self.assertEqual(json.loads(output)["worktrees"], [])
+
+    def test_lane_registration_and_removal(self) -> None:
+        store = Store(self.db)
+        milestone = store.add_milestone(self.new.id, "Read path")
+        target = derive_lane_worktree(
+            self.repo, self.new.id, self.new.name, milestone.id, milestone.title
+        )
+        git(self.repo, "worktree", "add", "-b", target.branch, target.worktree_path)
+        code, _, error = self._run(
+            "plan",
+            "worktree",
+            "add",
+            "--id",
+            str(self.new.id),
+            "--milestone",
+            str(milestone.id),
+            "--repo",
+            self.repo,
+        )
+        self.assertEqual(code, 0, error)
+        row = Store(self.db).get_plan_worktree(self.new.id, self.repo, milestone.id)
+        self.assertIsNotNone(row)
+        self.assertEqual(row.milestone_id, milestone.id)
+
+        code, output, error = self._run(
+            "--json", "plan", "worktree", "list", "--id", str(self.new.id)
+        )
+        self.assertEqual(code, 0, error)
+        entries = json.loads(output)["worktrees"]
+        self.assertEqual([entry["milestone_id"] for entry in entries], [milestone.id])
+
+        git(self.repo, "worktree", "remove", target.worktree_path)
+        code, _, error = self._run(
+            "plan",
+            "worktree",
+            "remove",
+            "--id",
+            str(self.new.id),
+            "--milestone",
+            str(milestone.id),
+            "--repo",
+            self.repo,
+        )
+        self.assertEqual(code, 0, error)
+        self.assertIsNone(Store(self.db).get_plan_worktree(self.new.id, self.repo, milestone.id))
 
 
 if __name__ == "__main__":

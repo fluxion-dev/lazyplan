@@ -364,7 +364,8 @@ def _append_worktrees(lines: list[str], full: dict) -> None:
         lines.append("  none registered")
         return
     for row in rows:
-        lines.append(f"  {row['repo_path']} -> {row['worktree_path']} [{row['branch']}]")
+        lane = f"M{row['milestone_id']} " if row.get("milestone_id") else ""
+        lines.append(f"  {lane}{row['repo_path']} -> {row['worktree_path']} [{row['branch']}]")
 
 
 def _render_plan_full(full: dict, lines: list[str], files: bool = False) -> None:

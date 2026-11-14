@@ -1,8 +1,11 @@
 import os
+import sqlite3
 import tempfile
 import unittest
+from contextlib import closing
 
 from lazyplan.store import Store
+from lazyplan.store import migrate as migrate_mod
 
 
 class TestPlanWorktrees(unittest.TestCase):
@@ -73,6 +76,75 @@ class TestPlanWorktrees(unittest.TestCase):
             self.store.register_plan_worktree(999, self.repo, self.worktree)
         with self.assertRaises(ValueError):
             self.store.register_plan_worktree(self.plan.id, self.repo, "")
+
+    def test_one_worktree_per_lane_in_the_same_repo(self):
+        lane_a = self.store.add_milestone(self.plan.id, "Lane A")
+        lane_b = self.store.add_milestone(self.plan.id, "Lane B")
+        plan_row = self.store.register_plan_worktree(
+            self.plan.id, self.repo, self.worktree, branch="plan/6"
+        )
+        a = self.store.register_plan_worktree(
+            self.plan.id,
+            self.repo,
+            self.worktree + "-a",
+            branch="plan/6--a",
+            milestone_id=lane_a.id,
+        )
+        b = self.store.register_plan_worktree(
+            self.plan.id,
+            self.repo,
+            self.worktree + "-b",
+            branch="plan/6--b",
+            milestone_id=lane_b.id,
+        )
+
+        rows = self.store.list_plan_worktrees(self.plan.id)
+        self.assertEqual({row.id for row in rows}, {plan_row.id, a.id, b.id})
+        self.assertEqual(self.store.get_plan_worktree(self.plan.id, self.repo), plan_row)
+        self.assertEqual(self.store.get_plan_worktree(self.plan.id, self.repo, lane_a.id), a)
+        self.assertIsNone(self.store.get_plan_worktree(self.plan.id, self.repo, lane_b.id + 1))
+
+        self.assertTrue(
+            self.store.remove_plan_worktree(self.plan.id, self.repo, milestone_id=lane_a.id)
+        )
+        self.assertEqual(len(self.store.list_plan_worktrees(self.plan.id)), 2)
+
+    def test_lane_registration_refuses_a_foreign_milestone(self):
+        other = self.store.add_plan("Other")
+        foreign = self.store.add_milestone(other.id, "Foreign")
+        with self.assertRaises(ValueError):
+            self.store.register_plan_worktree(
+                self.plan.id, self.repo, self.worktree, milestone_id=foreign.id
+            )
+        with self.assertRaises(KeyError):
+            self.store.register_plan_worktree(
+                self.plan.id, self.repo, self.worktree, milestone_id=999
+            )
+
+    def test_legacy_registry_gains_a_lane_column(self):
+        lane = self.store.add_milestone(self.plan.id, "Lane")
+        self.store.register_plan_worktree(self.plan.id, self.repo, self.worktree, branch="plan/6")
+        with closing(sqlite3.connect(self.store.path)) as conn:
+            conn.execute("DROP INDEX IF EXISTS idx_plan_worktrees_plan_repo")
+            conn.execute("DROP INDEX IF EXISTS idx_plan_worktrees_lane")
+            conn.execute("DROP INDEX IF EXISTS idx_plan_worktrees_milestone")
+            conn.execute("ALTER TABLE plan_worktrees DROP COLUMN milestone_id")
+            conn.execute(f"PRAGMA user_version = {migrate_mod.SCHEMA_VERSION - 1}")
+            conn.commit()
+
+        reopened = Store(self.store.path)
+        rows = reopened.list_plan_worktrees(self.plan.id)
+        self.assertEqual(len(rows), 1)
+        self.assertIsNone(rows[0].milestone_id)
+        lane_row = reopened.register_plan_worktree(
+            self.plan.id,
+            self.repo,
+            self.worktree + "-lane",
+            branch="plan/6--lane",
+            milestone_id=lane.id,
+        )
+        self.assertEqual(lane_row.milestone_id, lane.id)
+        self.assertEqual(len(reopened.list_plan_worktrees(self.plan.id)), 2)
 
     def test_deleting_a_plan_removes_its_worktrees(self):
         self.store.register_plan_worktree(self.plan.id, self.repo, self.worktree)

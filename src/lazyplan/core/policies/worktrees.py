@@ -30,6 +30,16 @@ class WorktreeTarget:
     branch: str
 
 
+@dataclass(frozen=True)
+class LaneWorktreeTarget:
+    """One derived checkout for a plan lane and linked repository."""
+
+    repo_path: str
+    worktree_path: str
+    branch: str
+    milestone_id: int
+
+
 def quote_path(text: str) -> str:
     """Quote one shell path only when it needs it."""
     return f'"{text}"' if any(char.isspace() for char in text) else text
@@ -92,6 +102,51 @@ def derive_worktrees(
     seen: set[str] = set()
     for repo_path in repo_paths:
         target = derive_worktree(repo_path, plan_id, title)
+        if target.repo_path in seen:
+            continue
+        seen.add(target.repo_path)
+        if exists is not None and exists(target.worktree_path):
+            raise WorktreeCollision(f"worktree path already exists: {target.worktree_path}")
+        targets.append(target)
+    return targets
+
+
+def derive_lane_worktree(
+    repo_path: str,
+    plan_id: int,
+    plan_title: str,
+    milestone_id: int,
+    milestone_title: str,
+) -> LaneWorktreeTarget:
+    """Derive the sibling path and branch for one lane of one repository."""
+    if plan_id < 1 or milestone_id < 1:
+        raise ValueError("plan and milestone ids must be positive")
+    parent, name, separator = _split_repo(repo_path)
+    plan_slug = slugify(plan_title)
+    lane_slug = slugify(milestone_title)
+    return LaneWorktreeTarget(
+        repo_path=repo_path.rstrip("/\\"),
+        worktree_path=(
+            f"{parent}{separator}{name}--plan-{plan_id}-{plan_slug}-m{milestone_id}-{lane_slug}"
+        ),
+        branch=f"plan/{plan_id}-{plan_slug}--m{milestone_id}-{lane_slug}",
+        milestone_id=milestone_id,
+    )
+
+
+def derive_lane_worktrees(
+    repo_paths: Iterable[str],
+    plan_id: int,
+    plan_title: str,
+    milestone_id: int,
+    milestone_title: str,
+    exists: Callable[[str], bool] | None = None,
+) -> list[LaneWorktreeTarget]:
+    """Derive one lane target per unique repo; refuse an existing path."""
+    targets: list[LaneWorktreeTarget] = []
+    seen: set[str] = set()
+    for repo_path in repo_paths:
+        target = derive_lane_worktree(repo_path, plan_id, plan_title, milestone_id, milestone_title)
         if target.repo_path in seen:
             continue
         seen.add(target.repo_path)

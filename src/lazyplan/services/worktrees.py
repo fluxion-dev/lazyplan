@@ -42,10 +42,14 @@ def worktree_gate(store: ReposPort, plan_id: int) -> str:
             f"plan #{plan_id} requires isolation but has no linked repo;"
             f" run `lpui plan worktree --print --id {plan_id}`"
         )
+    registered_paths = {
+        os.path.normcase(os.path.abspath(row.repo_path))
+        for row in store.list_plan_worktrees(plan_id)
+    }
     missing = [
         str(row["repo_path"])
         for row in repos
-        if store.get_plan_worktree(plan_id, str(row["repo_path"])) is None
+        if os.path.normcase(os.path.abspath(str(row["repo_path"]))) not in registered_paths
     ]
     if not missing:
         return ""

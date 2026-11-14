@@ -268,6 +268,13 @@ def add_noun_groups(
     )
     _a.add_argument("--id", type=int, default=None, metavar="ID", help="plan id")
     _a.add_argument(
+        "--milestone",
+        type=int,
+        default=None,
+        metavar="ID",
+        help="lane milestone id (default: the plan-level worktree)",
+    )
+    _a.add_argument(
         "--print",
         action="store_true",
         help="print one git worktree command per linked repo",
@@ -281,11 +288,14 @@ def add_noun_groups(
     )
     _w = _wt.add_parser("print", help="print setup commands", parents=[common])
     _w.add_argument("--id", type=int, required=True, metavar="ID", help="plan id")
+    _w.add_argument("--milestone", type=int, default=None, metavar="ID", help="lane milestone id")
     _w = _wt.add_parser("list", help="list registered worktrees", parents=[common])
     _w.add_argument("--id", type=int, required=True, metavar="ID", help="plan id")
+    _w.add_argument("--milestone", type=int, default=None, metavar="ID", help="lane milestone id")
     _w.add_argument("--stale", action="store_true", help="only worktrees git no longer lists")
     _w = _wt.add_parser("add", help="register one worktree", parents=[common])
     _w.add_argument("--id", type=int, required=True, metavar="ID", help="plan id")
+    _w.add_argument("--milestone", type=int, default=None, metavar="ID", help="lane milestone id")
     _w.add_argument("--repo", required=True, metavar="PATH", help="linked repository checkout")
     _w.add_argument(
         "--worktree", default=None, metavar="PATH", help="worktree path (default: derived)"
@@ -293,6 +303,7 @@ def add_noun_groups(
     _w.add_argument("--branch", default=None, metavar="NAME", help="branch (default: derived)")
     _w = _wt.add_parser("remove", help="unregister one worktree", parents=[common])
     _w.add_argument("--id", type=int, required=True, metavar="ID", help="plan id")
+    _w.add_argument("--milestone", type=int, default=None, metavar="ID", help="lane milestone id")
     _w.add_argument("--repo", required=True, metavar="PATH", help="linked repository checkout")
 
     _group, _actions = _noun_group("milestone", "")

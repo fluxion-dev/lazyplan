@@ -6,8 +6,9 @@ import sqlite3
 import uuid
 
 from .migrate_lanes import migrate_lanes
+from .migrate_worktrees import migrate_worktree_lanes
 
-SCHEMA_VERSION = 17
+SCHEMA_VERSION = 18
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS plans (
@@ -273,12 +274,12 @@ CREATE INDEX IF NOT EXISTS idx_entity_repos_branch ON entity_repos(branch, repo_
 CREATE TABLE IF NOT EXISTS plan_worktrees (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+    milestone_id INTEGER REFERENCES milestones(id) ON DELETE CASCADE,
     repo_path TEXT NOT NULL,
     repo_remote TEXT NOT NULL DEFAULT '',
     worktree_path TEXT NOT NULL,
     branch TEXT NOT NULL DEFAULT '',
-    registered_at REAL NOT NULL,
-    UNIQUE(plan_id, repo_path)
+    registered_at REAL NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_plan_worktrees_plan ON plan_worktrees(plan_id);
 CREATE TABLE IF NOT EXISTS events (
@@ -305,11 +306,10 @@ _MIGRATIONS: dict[str, tuple[str, ...]] = {
 def _migrate_elements(conn: sqlite3.Connection) -> None:
     """Rename pre-rename tables/kinds to plans/milestones, preserving data and ids.
 
-    Old DBs (any version: with or without goal columns, with story|task-
-    only or full criteria CHECKs, plus unrelated debris tables from older
-    generations) are rebuilt to the current schema. Each element migrates
-    independently, so a previously interrupted migration resumes cleanly.
-    New DBs are untouched. The events log is history and is left as-is.
+    Old DBs (any version: with or without goal columns, with story|task-only or
+    full criteria CHECKs, plus unrelated debris) are rebuilt to the current schema;
+    each element migrates independently, so an interrupted migration resumes
+    cleanly. New DBs are untouched. The events log is history and is left as-is.
     """
     tables = {
         r["name"]
@@ -577,6 +577,7 @@ def migrate(conn: sqlite3.Connection) -> None:
     _migrate_elements(conn)
     _migrate_session_history(conn)
     conn.executescript(SCHEMA)
+    migrate_worktree_lanes(conn)
     _migrate_plan_uid(conn)
     _migrate_task_blocked(conn)
     _migrate_events_session(conn)

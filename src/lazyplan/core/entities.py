@@ -58,7 +58,7 @@ class Plan:
 
 @dataclass(frozen=True)
 class PlanWorktree:
-    """A plan's registered checkout for one linked repository."""
+    """A plan's registered checkout for one linked repository and optional lane."""
 
     id: int
     plan_id: int
@@ -67,10 +67,13 @@ class PlanWorktree:
     repo_remote: str = ""
     branch: str = ""
     registered_at: float = 0.0
+    milestone_id: int | None = None
 
     def __post_init__(self) -> None:
         if self.plan_id < 1:
             raise ValueError("plan_id must be positive")
+        if self.milestone_id is not None and self.milestone_id < 1:
+            raise ValueError("milestone_id must be positive when set")
         if not self.repo_path.strip():
             raise ValueError("repo_path must not be empty")
         if not self.worktree_path.strip():

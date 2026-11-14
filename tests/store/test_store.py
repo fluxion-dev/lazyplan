@@ -446,6 +446,7 @@ class TestStore(unittest.TestCase):
                 {
                     "id",
                     "plan_id",
+                    "milestone_id",
                     "repo_path",
                     "repo_remote",
                     "worktree_path",
@@ -455,6 +456,8 @@ class TestStore(unittest.TestCase):
             )
             indexes = {row[1] for row in conn.execute("PRAGMA index_list(plan_worktrees)")}
             self.assertIn("idx_plan_worktrees_plan", indexes)
+            self.assertIn("idx_plan_worktrees_plan_repo", indexes)
+            self.assertIn("idx_plan_worktrees_lane", indexes)
 
         again = Store(legacy)
         self.assertEqual(again.get_plan(1).name, "Keep")

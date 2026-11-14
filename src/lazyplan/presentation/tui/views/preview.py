@@ -339,7 +339,8 @@ def worktrees_block(full: dict[str, Any]) -> PreviewBlock | None:
     for row in rows:
         branch = escape_markdown(str(row.get("branch", "")))
         path = escape_markdown(str(row.get("worktree_path", "")))
-        lines.append(f"`{branch}` -> {path}")
+        lane = f"M{row['milestone_id']} " if row.get("milestone_id") else ""
+        lines.append(f"{lane}`{branch}` -> {path}")
     return PreviewBlock("worktrees", tuple(lines))
 
 

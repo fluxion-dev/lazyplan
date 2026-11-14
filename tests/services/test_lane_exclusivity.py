@@ -54,6 +54,23 @@ class LaneExclusivityTest(unittest.TestCase):
         assert result is not None
         self.assertEqual(result["task"]["id"], task.id)
 
+    def test_session_end_records_one_handoff_and_releases(self) -> None:
+        from pathlib import Path
+
+        work = Path(self.tmp.name) / "work"
+        work.mkdir()
+        self.store.claim_task(self.first.id, "worker", worktree=str(work), repo_path=str(work))
+        self.store.set_status_raw("task", self.first.id, Status.DOING)
+
+        self.assertEqual(coordination.record_lane_handoffs(self.store, str(work)), 1)
+        notes = self.store.list_notes("task", self.first.id)
+        self.assertTrue(notes[-1].text.startswith(f"Lane M{self.lane.id} handoff"))
+        self.assertEqual(coordination.record_lane_handoffs(self.store, str(work)), 0)
+
+        coordination.end_checkout_claims(self.store, str(work))
+        self.assertEqual(self.store.get_task(self.first.id).status, Status.TODO)
+        self.assertIsNone(self.store.get_claim(self.first.id))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -12,8 +12,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from ..core.entities import Plan, Status, Task
+from ..core.entities import Milestone, Plan, Status, Task
 from ..core.ports.app import AppPort
+from ..core.ports.planning import PlanningPort
 from . import coordination
 
 LOCAL_PARTS = (".agents", "lazyplan")
@@ -60,13 +61,13 @@ def _claimed_here(store: AppPort, repo: str, ignored: set[int]) -> bool:
     )
 
 
-def _same_checkout(left: str, right: str, store: AppPort) -> bool:
+def _same_checkout(left: str, right: str, store: PlanningPort) -> bool:
     """True when two paths resolve to one checkout."""
     return store.normalize_repo_path(left) == store.normalize_repo_path(right)
 
 
 def lane_for_checkout(
-    store: AppPort, cwd: str | Path | None = None
+    store: PlanningPort, cwd: str | Path | None = None
 ) -> tuple[Plan, Milestone] | None:
     """The doing plan and lane registered at this checkout, if any."""
     repo = store.checkout_path(str(cwd or Path.cwd()))

@@ -172,6 +172,39 @@ def end_checkout_claims(port: CoordinationPort, checkout: str) -> list[int]:
     return ended
 
 
+def record_lane_handoffs(port: CoordinationPort, checkout: str) -> int:
+    """Record one lane handoff note per claimed task with open lane work."""
+    recorded = 0
+    for claim in checkout_claims(port, checkout):
+        task_id = int(claim["task_id"])
+        task = port.get_task(task_id)
+        if task is None or task.status is not Status.DOING:
+            continue
+        milestone = port.get_milestone(task.milestone_id)
+        if milestone is None:
+            continue
+        plan = port.get_plan(milestone.plan_id)
+        if plan is None or plan.dispatch_mode != "parallel":
+            continue
+        open_tasks = [
+            item for item in port.list_tasks(milestone.id) if item.status is not Status.DONE
+        ]
+        if not open_tasks:
+            continue
+        prefix = f"Lane M{milestone.id} handoff"
+        notes = port.list_notes("task", task_id)
+        if any(note.text.startswith(prefix) for note in notes):
+            continue
+        port.add_note(
+            "task",
+            task_id,
+            f"{prefix}: {len(open_tasks)} open task(s) remain.",
+            actor=str(claim["actor"]),
+        )
+        recorded += 1
+    return recorded
+
+
 def renew_task_claim(
     port: CoordinationPort, task_id: int, actor: str, ttl: str | None = None
 ) -> Claim:

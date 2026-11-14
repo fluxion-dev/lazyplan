@@ -259,6 +259,7 @@ def _dispatch(
 ) -> HookResult:
     checkout = store.checkout_path(str(here))
     if event == "session-end":
+        coordination.record_lane_handoffs(store, checkout)
         coordination.end_checkout_claims(store, checkout)
         return HookResult()
     coordination.renew_checkout_claims(store, checkout)

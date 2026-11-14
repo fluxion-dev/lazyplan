@@ -91,14 +91,27 @@ def _task_findings(store: InsightsPort, task: Task) -> list[Finding]:
     return findings
 
 
+Lane = tuple[Milestone, list[Task]]
+
+
 def _lane_findings(store: InsightsPort, plan: Plan) -> list[Finding]:
     """Parallel-plan rules: cap, lanes, waves, integrator, overlap, and roles."""
     if plan.dispatch_mode != "parallel":
         return []
-    findings: list[Finding] = []
     milestones = store.list_milestones(plan.id)
-    lanes = [(milestone, store.list_tasks(milestone.id)) for milestone in milestones]
+    lanes: list[Lane] = [(milestone, store.list_tasks(milestone.id)) for milestone in milestones]
+    regular = [lane for lane in lanes if lane[0].agent_role != "integrator"]
+    integrators = [lane for lane in lanes if lane[0].agent_role == "integrator"]
+    findings = _shape_findings(plan, lanes)
+    findings.extend(_integrator_findings(plan, regular, integrators))
+    findings.extend(_wave_overlap_findings(store, lanes))
+    findings.extend(_qa_coverage_findings(lanes, regular))
+    return findings
 
+
+def _shape_findings(plan: Plan, lanes: list[Lane]) -> list[Finding]:
+    """Cap, lane count, and empty-lane rules."""
+    findings: list[Finding] = []
     if plan.max_agents < 2:
         findings.append(
             Finding(
@@ -130,13 +143,12 @@ def _lane_findings(store: InsightsPort, plan: Plan) -> list[Finding]:
                     milestone.id,
                 )
             )
+    return findings
 
-    regular = [
-        (milestone, tasks) for milestone, tasks in lanes if milestone.agent_role != "integrator"
-    ]
-    integrators = [
-        (milestone, tasks) for milestone, tasks in lanes if milestone.agent_role == "integrator"
-    ]
+
+def _integrator_findings(plan: Plan, regular: list[Lane], integrators: list[Lane]) -> list[Finding]:
+    """Integrator presence and wave-order rules."""
+    findings: list[Finding] = []
     if len(regular) > 1 and not integrators:
         findings.append(
             Finding(
@@ -159,28 +171,39 @@ def _lane_findings(store: InsightsPort, plan: Plan) -> list[Finding]:
                     milestone.id,
                 )
             )
+    return findings
 
-    waves: dict[int, list[tuple[Milestone, list[Task]]]] = {}
+
+def _wave_overlap_findings(store: InsightsPort, lanes: list[Lane]) -> list[Finding]:
+    """Touch-point collisions between two lanes that share a wave."""
+    waves: dict[int, list[Lane]] = {}
     for milestone, tasks in lanes:
         waves.setdefault(milestone.lane_group, []).append((milestone, tasks))
+    findings: list[Finding] = []
     for group, entries in sorted(waves.items()):
         for left in range(len(entries)):
             for right in range(left + 1, len(entries)):
                 findings.extend(_overlap_findings(store, group, entries[left], entries[right]))
+    return findings
 
+
+def _qa_coverage_findings(lanes: list[Lane], regular: list[Lane]) -> list[Finding]:
+    """Every non-integrator lane carries a qa task when the plan has one."""
     qa_in_plan = any(task.role == "qa" for _, tasks in lanes for task in tasks)
-    if qa_in_plan:
-        for milestone, tasks in regular:
-            if not any(task.role == "qa" for task in tasks):
-                findings.append(
-                    Finding(
-                        "lane-missing-qa",
-                        "error",
-                        f"lane M{milestone.id} has no qa task while other lanes do",
-                        "milestone",
-                        milestone.id,
-                    )
+    if not qa_in_plan:
+        return []
+    findings: list[Finding] = []
+    for milestone, tasks in regular:
+        if not any(task.role == "qa" for task in tasks):
+            findings.append(
+                Finding(
+                    "lane-missing-qa",
+                    "error",
+                    f"lane M{milestone.id} has no qa task while other lanes do",
+                    "milestone",
+                    milestone.id,
                 )
+            )
     return findings
 
 

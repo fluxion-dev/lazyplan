@@ -85,6 +85,35 @@ def _worktree_findings(store: AppPort | None) -> list[dict]:
     return findings
 
 
+def _profile_report(
+    choice: setup.SetupChoice, state: setup.SetupState, root: Path | None, home: Path
+) -> dict:
+    """Missing and unmarked agent profiles for the remembered setup."""
+    profile_agents = (
+        [] if choice.explicit_db or not state.profile_files else list(choice.agents or state.agents)
+    )
+    scope = "project" if state.placement == "repo" and root is not None else "global"
+    files = agent_install.profile_paths(scope, root, home, profile_agents)
+    missing = [str(path) for path in files if not path.is_file()]
+    unmanaged = []
+    for path in files:
+        if not path.is_file():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        if agent_install.MARKER not in text:
+            unmanaged.append(str(path))
+    return {
+        "scope": scope,
+        "agents": profile_agents,
+        "files": [str(path) for path in files],
+        "missing": missing,
+        "unmanaged": unmanaged,
+    }
+
+
 def _doctor_data(
     args: argparse.Namespace, home: Path, state: setup.SetupState, store: AppPort | None
 ) -> tuple[setup_layout.SetupLayout, list[Path], dict]:
@@ -103,31 +132,7 @@ def _doctor_data(
         "files": list(state.hook_files),
         "missing": missing_hooks,
     }
-    profile_agents = (
-        []
-        if choice.explicit_db or not state.profile_files
-        else list(choice.agents or state.agents)
-    )
-    profile_scope = "project" if state.placement == "repo" and root is not None else "global"
-    profile_files = agent_install.profile_paths(profile_scope, root, home, profile_agents)
-    missing_profiles = [str(path) for path in profile_files if not path.is_file()]
-    unmanaged_profiles = []
-    for path in profile_files:
-        if not path.is_file():
-            continue
-        try:
-            text = path.read_text(encoding="utf-8")
-        except OSError:
-            continue
-        if agent_install.MARKER not in text:
-            unmanaged_profiles.append(str(path))
-    report["profiles"] = {
-        "scope": profile_scope,
-        "agents": profile_agents,
-        "files": [str(path) for path in profile_files],
-        "missing": missing_profiles,
-        "unmanaged": unmanaged_profiles,
-    }
+    report["profiles"] = _profile_report(choice, state, root, home)
     report["state"] = state.to_dict()
     report["skills"] = [str(path) for path in skill_files]
     report["worktrees"] = _worktree_findings(store)

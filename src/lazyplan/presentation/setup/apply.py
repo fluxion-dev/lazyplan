@@ -36,6 +36,22 @@ from .state import SetupState, load_state, save_state, state_path, timestamp
 from .wizard import explicit_db, prompt_allowed, run_wizard, setup_skipped
 
 
+def _install_agent_profiles(
+    choice: SetupChoice,
+    skill_plan: skills.SkillPlan,
+    root: Path | None,
+    home: Path,
+    db_path: str | Path,
+) -> tuple[list[agent_install.AgentInstallResult], list[str]]:
+    """Install selected-host profiles and list every target file."""
+    agents = choice.agents or [host.key for host in skills.detect_agents(home) if host.detected]
+    results = agent_install.install_profiles(skill_plan.scope, root, home, agents, db_path)
+    files = [
+        str(path) for path in agent_install.profile_paths(skill_plan.scope, root, home, agents)
+    ]
+    return results, files
+
+
 def apply_choice(
     choice: SetupChoice,
     root: Path | None,
@@ -60,17 +76,15 @@ def apply_choice(
     store = Store(str(resolved.db))
     # Back up old generated copies before the installer rewrites the same paths.
     refreshed, backups = refresh_installed_skills(home)
-    result = skills.apply_skill_plan(skill_plan, root, home)
-    profile_agents = choice.agents or [
-        host.key for host in skills.detect_agents(home) if host.detected
-    ]
-    profile_results = agent_install.install_profiles(
-        skill_plan.scope, root, home, profile_agents, resolved.db
+    result = skills.apply_skill_plan(
+        skill_plan,
+        root,
+        home,
+        only_existing=bool(previous.last_version and previous.skills_enabled),
     )
-    profile_files = [
-        str(path)
-        for path in agent_install.profile_paths(skill_plan.scope, root, home, profile_agents)
-    ]
+    profile_results, profile_files = _install_agent_profiles(
+        choice, skill_plan, root, home, resolved.db
+    )
     if root is not None and choice.placement == REPO and not choice.explicit_db:
         for entry in resolved.gitignore_entries:
             skills.append_gitignore(root, entry)

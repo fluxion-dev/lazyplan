@@ -132,25 +132,3 @@ def derive_lane_worktree(
         branch=f"plan/{plan_id}-{plan_slug}--m{milestone_id}-{lane_slug}",
         milestone_id=milestone_id,
     )
-
-
-def derive_lane_worktrees(
-    repo_paths: Iterable[str],
-    plan_id: int,
-    plan_title: str,
-    milestone_id: int,
-    milestone_title: str,
-    exists: Callable[[str], bool] | None = None,
-) -> list[LaneWorktreeTarget]:
-    """Derive one lane target per unique repo; refuse an existing path."""
-    targets: list[LaneWorktreeTarget] = []
-    seen: set[str] = set()
-    for repo_path in repo_paths:
-        target = derive_lane_worktree(repo_path, plan_id, plan_title, milestone_id, milestone_title)
-        if target.repo_path in seen:
-            continue
-        seen.add(target.repo_path)
-        if exists is not None and exists(target.worktree_path):
-            raise WorktreeCollision(f"worktree path already exists: {target.worktree_path}")
-        targets.append(target)
-    return targets

@@ -213,12 +213,7 @@ def check(
     findings += _integration_findings(inspection.suppressed, state, decided=True)
     home = home or Path.home()
     profile_agents = choice.agents or state.agents
-    if (
-        not choice.explicit_db
-        and state.skills_enabled
-        and state.profile_files
-        and profile_agents
-    ):
+    if not choice.explicit_db and state.skills_enabled and state.profile_files and profile_agents:
         scope = "project" if choice.placement == "repo" and root is not None else "global"
         paths = agent_install.profile_paths(scope, root, home, profile_agents)
         missing = [path for path in paths if not path.is_file()]

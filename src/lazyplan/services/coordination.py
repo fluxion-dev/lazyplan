@@ -229,6 +229,29 @@ def release_task_claim(
     }
 
 
+def _pick_candidate(
+    port: CoordinationPort,
+    candidates: list[Task],
+    worktree: str,
+    force: bool,
+    reason: str,
+    plan_id: int | None,
+) -> Task | None:
+    """First candidate this checkout may claim, or None with a lane refusal."""
+    if force and reason.strip():
+        return candidates[0]
+    chosen = next(
+        (item for item in candidates if not lane_gate(port, item.id, worktree)),
+        None,
+    )
+    if chosen is not None:
+        return chosen
+    blocker = next((lane_gate(port, item.id, worktree) for item in candidates), "")
+    if blocker and plan_id is not None:
+        raise ValueError(blocker)
+    return None
+
+
 def claim_next(
     port: CoordinationPort,
     actor: str,
@@ -259,19 +282,9 @@ def claim_next(
         ]
         if not candidates:
             return None
-        if force and reason.strip():
-            task = candidates[0]
-        else:
-            chosen: Task | None = next(
-                (item for item in candidates if not lane_gate(port, item.id, worktree)),
-                None,
-            )
-            if chosen is None:
-                blocker = next((lane_gate(port, item.id, worktree) for item in candidates), "")
-                if blocker and plan_id is not None:
-                    raise ValueError(blocker)
-                return None
-            task = chosen
+        task = _pick_candidate(port, candidates, worktree, force, reason, plan_id)
+        if task is None:
+            return None
         if suggest:
             return {"claim": None, "task": to_payload(vars(task)), "previous": None}
         try:

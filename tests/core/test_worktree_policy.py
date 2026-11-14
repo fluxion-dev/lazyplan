@@ -6,11 +6,9 @@ import os
 import unittest
 
 from lazyplan.core.policies.worktrees import (
-    LaneWorktreeTarget,
     WorktreeCollision,
     WorktreeTarget,
     derive_lane_worktree,
-    derive_lane_worktrees,
     derive_worktree,
     derive_worktrees,
     slugify,
@@ -127,28 +125,3 @@ class TestDeriveLaneWorktree(unittest.TestCase):
         second = derive_lane_worktree(REPO, 7, "Lanes", 2, "Build")
         self.assertNotEqual(first.worktree_path, second.worktree_path)
         self.assertNotEqual(first.branch, second.branch)
-
-    def test_multi_repo_lanes_get_one_target_each(self):
-        other = os.path.join(ROOT, "site")
-        targets = derive_lane_worktrees([REPO, other], 7, "Lanes", 58, "Lane model")
-        self.assertEqual([item.repo_path for item in targets], [REPO, other])
-
-    def test_existing_lane_path_is_refused_not_suffixed(self):
-        target = derive_lane_worktree(REPO, 7, "Lanes", 58, "Lane model")
-        with self.assertRaises(WorktreeCollision):
-            derive_lane_worktrees([REPO], 7, "Lanes", 58, "Lane model", exists=lambda path: True)
-        self.assertEqual(target.milestone_id, 58)
-
-    def test_duplicate_repo_paths_are_derived_once(self):
-        targets = derive_lane_worktrees([REPO, REPO + os.sep], 7, "Lanes", 58, "Lane model")
-        self.assertEqual(
-            targets,
-            [
-                LaneWorktreeTarget(
-                    REPO,
-                    os.path.join(ROOT, "lazyplan--plan-7-lanes-m58-lane-model"),
-                    "plan/7-lanes--m58-lane-model",
-                    58,
-                )
-            ],
-        )

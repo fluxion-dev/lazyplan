@@ -33,88 +33,18 @@ def build(
     done_groups = {group: _group_done(milestones, tasks_by, group) for group in groups}
     current = next((group for group in groups if not done_groups[group]), None)
     cap = plan.max_agents if plan.dispatch_mode == "parallel" else 1
-
-    lanes: list[dict[str, Any]] = []
-    next_by_lane: dict[int, Task | None] = {}
-    for milestone in milestones:
-        tasks = tasks_by[milestone.id]
-        claim = next(
-            (
-                claims[task.id]
-                for task in tasks
-                if task.id in claims
-                and task.status.value == "doing"
-                and not claims[task.id].expired(now)
-            ),
-            None,
-        )
-        worktrees = lane_worktree_entries(store, plan, milestone)
-        lane_next = next(
-            (task for task in tasks if task.status.value == "todo" and not task.blocked),
-            None,
-        )
-        next_by_lane[milestone.id] = lane_next
-        state = _state(milestone, tasks, worktrees, claim, current)
-        blocked = (
-            [] if state == "done" else _lane_blockers(milestone, tasks, worktrees, claim, current)
-        )
-        prompt = (
-            _prompt(plan, milestone, lane_next, worktrees, max_chars)
-            if lane_next is not None
-            else ""
-        )
-        lanes.append(
-            {
-                "milestone_id": milestone.id,
-                "title": milestone.title,
-                "group": milestone.lane_group,
-                "agent_role": milestone.agent_role,
-                "state": state,
-                "worktrees": worktrees,
-                "tasks": [
-                    {
-                        "id": task.id,
-                        "title": task.title,
-                        "role": task.role,
-                        "status": task.status.value,
-                        "blocked": task.blocked,
-                        "touchpoints": store.list_touchpoints(task.id),
-                    }
-                    for task in tasks
-                ],
-                "claim": _claim_payload(claim),
-                "next": (
-                    {"id": lane_next.id, "title": lane_next.title, "role": lane_next.role}
-                    if lane_next is not None
-                    else None
-                ),
-                "blocked": blocked,
-                "prompt": prompt,
-            }
-        )
-
+    lanes, next_by_lane = _lane_views(
+        store, plan, milestones, tasks_by, claims, now, current, max_chars
+    )
     milestone_by_id = {milestone.id: milestone for milestone in milestones}
     selected = [lane for lane in lanes if lane_id is None or lane["milestone_id"] == lane_id]
     active = sum(1 for lane in lanes if lane["claim"] is not None)
     available = max(0, cap - active) if current is not None else 0
     if lane_id is not None:
         available = min(available, 1)
-    dispatchable: list[dict[str, Any]] = []
-    for lane in selected:
-        if len(dispatchable) >= available:
-            break
-        task = next_by_lane[lane["milestone_id"]]
-        if lane["state"] != "ready" or lane["claim"] is not None or task is None:
-            continue
-        dispatchable.append(
-            _dispatchable(
-                plan,
-                milestone_by_id[lane["milestone_id"]],
-                lane,
-                task,
-                max_chars,
-            )
-        )
+    dispatchable = _dispatchable_tasks(
+        plan, selected, next_by_lane, milestone_by_id, available, max_chars
+    )
     actions = _actions(lanes, dispatchable)
     top_blocked = _top_blockers(store, plan, milestones)
     return {
@@ -134,6 +64,133 @@ def build(
         "actions": actions,
         "blocked": top_blocked,
     }
+
+
+def _lane_views(
+    store: InsightsPort,
+    plan: Plan,
+    milestones: list[Milestone],
+    tasks_by: dict[int, list[Task]],
+    claims: dict[int, Claim],
+    now: float,
+    current: int | None,
+    max_chars: int,
+) -> tuple[list[dict[str, Any]], dict[int, Task | None]]:
+    """Build one lane view per milestone and its next task."""
+    lanes: list[dict[str, Any]] = []
+    next_by_lane: dict[int, Task | None] = {}
+    for milestone in milestones:
+        tasks = tasks_by[milestone.id]
+        claim = _active_claim(tasks, claims, now)
+        worktrees = lane_worktree_entries(store, plan, milestone)
+        lane_next = _next_task(tasks)
+        next_by_lane[milestone.id] = lane_next
+        state = _state(milestone, tasks, worktrees, claim, current)
+        blocked = (
+            [] if state == "done" else _lane_blockers(milestone, tasks, worktrees, claim, current)
+        )
+        prompt = (
+            _prompt(plan, milestone, lane_next, worktrees, max_chars)
+            if lane_next is not None
+            else ""
+        )
+        lanes.append(
+            _lane_payload(
+                store, milestone, tasks, worktrees, claim, lane_next, state, blocked, prompt
+            )
+        )
+    return lanes, next_by_lane
+
+
+def _active_claim(tasks: list[Task], claims: dict[int, Claim], now: float) -> Claim | None:
+    """The live claim on one lane's doing task."""
+    return next(
+        (
+            claims[task.id]
+            for task in tasks
+            if task.id in claims
+            and task.status.value == "doing"
+            and not claims[task.id].expired(now)
+        ),
+        None,
+    )
+
+
+def _next_task(tasks: list[Task]) -> Task | None:
+    """The first todo task that is not blocked."""
+    return next(
+        (task for task in tasks if task.status.value == "todo" and not task.blocked),
+        None,
+    )
+
+
+def _lane_payload(
+    store: InsightsPort,
+    milestone: Milestone,
+    tasks: list[Task],
+    worktrees: list[dict[str, Any]],
+    claim: Claim | None,
+    lane_next: Task | None,
+    state: str,
+    blocked: list[str],
+    prompt: str,
+) -> dict[str, Any]:
+    """One JSON-safe lane view."""
+    return {
+        "milestone_id": milestone.id,
+        "title": milestone.title,
+        "group": milestone.lane_group,
+        "agent_role": milestone.agent_role,
+        "state": state,
+        "worktrees": worktrees,
+        "tasks": [
+            {
+                "id": task.id,
+                "title": task.title,
+                "role": task.role,
+                "status": task.status.value,
+                "blocked": task.blocked,
+                "touchpoints": store.list_touchpoints(task.id),
+            }
+            for task in tasks
+        ],
+        "claim": _claim_payload(claim),
+        "next": (
+            {"id": lane_next.id, "title": lane_next.title, "role": lane_next.role}
+            if lane_next is not None
+            else None
+        ),
+        "blocked": blocked,
+        "prompt": prompt,
+    }
+
+
+def _dispatchable_tasks(
+    plan: Plan,
+    selected: list[dict[str, Any]],
+    next_by_lane: dict[int, Task | None],
+    milestone_by_id: dict[int, Milestone],
+    available: int,
+    max_chars: int,
+) -> list[dict[str, Any]]:
+    """Ready tasks up to the available capacity."""
+    dispatchable: list[dict[str, Any]] = []
+    for lane in selected:
+        if len(dispatchable) >= available:
+            break
+        task = next_by_lane[lane["milestone_id"]]
+        if lane["state"] != "ready" or lane["claim"] is not None or task is None:
+            continue
+        dispatchable.append(
+            _dispatchable(
+                plan,
+                milestone_by_id[lane["milestone_id"]],
+                lane,
+                task,
+                max_chars,
+            )
+        )
+    return dispatchable
 
 
 def _groups(milestones: list[Milestone]) -> list[int]:

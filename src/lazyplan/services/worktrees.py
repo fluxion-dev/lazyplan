@@ -41,9 +41,14 @@ def lane_registrations(
     return [row for row in rows if row.milestone_id == milestone_id]
 
 
-def lane_worktree_entries(store: ReposPort, plan: Plan, milestone: Milestone) -> list[dict]:
+def lane_worktree_entries(
+    store: ReposPort,
+    plan: Plan,
+    milestone: Milestone,
+    repos: list[dict] | None = None,
+) -> list[dict]:
     """Derived, registered, and command-ready checkouts for one lane."""
-    repos = store.list_repos("plan", plan.id)
+    repos = store.list_repos("plan", plan.id) if repos is None else repos
     all_rows = lane_registrations(store, plan.id)
     rows = [row for row in all_rows if row.milestone_id == milestone.id]
     if not rows and plan.dispatch_mode != "parallel":

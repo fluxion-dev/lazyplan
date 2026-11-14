@@ -34,17 +34,22 @@ def build(
     current = next((group for group in groups if not done_groups[group]), None)
     cap = plan.max_agents if plan.dispatch_mode == "parallel" else 1
     lanes, next_by_lane = _lane_views(
-        store, plan, milestones, tasks_by, claims, now, current, max_chars
+        store,
+        plan,
+        milestones,
+        tasks_by,
+        claims,
+        now,
+        current,
+        max_chars,
+        store.list_repos("plan", plan.id),
     )
-    milestone_by_id = {milestone.id: milestone for milestone in milestones}
     selected = [lane for lane in lanes if lane_id is None or lane["milestone_id"] == lane_id]
     active = sum(1 for lane in lanes if lane["claim"] is not None)
     available = max(0, cap - active) if current is not None else 0
     if lane_id is not None:
         available = min(available, 1)
-    dispatchable = _dispatchable_tasks(
-        plan, selected, next_by_lane, milestone_by_id, available, max_chars
-    )
+    dispatchable = _dispatchable_tasks(selected, next_by_lane, available)
     actions = _actions(lanes, dispatchable)
     top_blocked = _top_blockers(store, plan, milestones)
     return {
@@ -75,6 +80,7 @@ def _lane_views(
     now: float,
     current: int | None,
     max_chars: int,
+    repos: list[dict],
 ) -> tuple[list[dict[str, Any]], dict[int, Task | None]]:
     """Build one lane view per milestone and its next task."""
     lanes: list[dict[str, Any]] = []
@@ -82,7 +88,7 @@ def _lane_views(
     for milestone in milestones:
         tasks = tasks_by[milestone.id]
         claim = _active_claim(tasks, claims, now)
-        worktrees = lane_worktree_entries(store, plan, milestone)
+        worktrees = lane_worktree_entries(store, plan, milestone, repos)
         lane_next = _next_task(tasks)
         next_by_lane[milestone.id] = lane_next
         state = _state(milestone, tasks, worktrees, claim, current)
@@ -166,12 +172,9 @@ def _lane_payload(
 
 
 def _dispatchable_tasks(
-    plan: Plan,
     selected: list[dict[str, Any]],
     next_by_lane: dict[int, Task | None],
-    milestone_by_id: dict[int, Milestone],
     available: int,
-    max_chars: int,
 ) -> list[dict[str, Any]]:
     """Ready tasks up to the available capacity."""
     dispatchable: list[dict[str, Any]] = []
@@ -181,15 +184,7 @@ def _dispatchable_tasks(
         task = next_by_lane[lane["milestone_id"]]
         if lane["state"] != "ready" or lane["claim"] is not None or task is None:
             continue
-        dispatchable.append(
-            _dispatchable(
-                plan,
-                milestone_by_id[lane["milestone_id"]],
-                lane,
-                task,
-                max_chars,
-            )
-        )
+        dispatchable.append(_dispatchable(lane, task))
     return dispatchable
 
 
@@ -277,11 +272,8 @@ def _claim_payload(claim: Claim | None) -> dict[str, Any] | None:
 
 
 def _dispatchable(
-    plan: Plan,
-    milestone: Milestone,
     lane: dict[str, Any],
     task: Task,
-    max_chars: int,
 ) -> dict[str, Any]:
     """One ready task with its lane, worktree, claim, and prompt."""
     registered = [row for row in lane["worktrees"] if row["registered"]]
@@ -300,7 +292,7 @@ def _dispatchable(
         "claim_command": (
             f"lpui claim --id {task.id} --worktree {quote_path(path)}" if path else ""
         ),
-        "prompt": _prompt(plan, milestone, task, lane["worktrees"], max_chars),
+        "prompt": lane["prompt"],
     }
 
 

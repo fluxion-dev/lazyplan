@@ -1573,7 +1573,7 @@
   "counts": {
     "cli_commands": 51,
     "doc_files": 9,
-    "doc_headings": 93,
+    "doc_headings": 94,
     "env_names": 11,
     "file_paths": 12,
     "hook_events": 35,
@@ -1653,6 +1653,7 @@
           "Provenance and activity hubs",
           "Agents",
           "Lanes and waves",
+          "Agent profiles",
           "Porcelain output",
           "Plan documents and recipes",
           "Context and claims",

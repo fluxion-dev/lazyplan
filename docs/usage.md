@@ -585,6 +585,25 @@ below two, a missing or early integrator, an empty lane, uneven QA coverage,
 and same-wave touch-point overlap. `list --tree` and `plan show` render the
 wave and role beside each lane.
 
+### Agent profiles
+
+Roles are journal vocabulary; models live beside the database in
+`agents.json`. `lpui setup` writes the defaults and installs one managed
+subagent file per role for each selected host:
+
+- OpenCode: `.opencode/agent/lazyplan-*.md` or `~/.config/opencode/agent/`.
+- Claude Code: `.claude/agents/lazyplan-*.md` or `~/.claude/agents/`.
+
+The defaults put scout, implementer, and docs on the fast tier, qa and refactor
+on standard, and reviewer and integrator on deep. Retune one role by editing
+`agents.json` beside the database and rerunning `lpui setup`: an explicit
+`model` wins, and an empty one follows the host tier (OpenCode's `small_model`
+or `model`, Claude's haiku, sonnet, or opus). Managed files carry a marker and
+are refreshed; an unmarked file of the same name is left alone.
+
+Other hosts get the role, tier, effort, and prompt in `lpui dispatch --json`.
+`lpui doctor` lists missing or unmarked profiles.
+
 ### Porcelain output
 
 `--porcelain` (or `LAZYPLAN_PORCELAIN=1` for a whole session) switches journal

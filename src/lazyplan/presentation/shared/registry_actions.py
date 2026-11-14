@@ -23,6 +23,8 @@ CORE_ACTIONS: tuple[Action, ...] = (
         surfaces=("tui", "cli", "mcp"),
         route=("tree", "create"),
         palette_ids=("create-plan",),
+        cli_paths=("plan add",),
+        mcp_tool="create_plan",
     ),
     _action(
         "milestone.create",
@@ -30,6 +32,8 @@ CORE_ACTIONS: tuple[Action, ...] = (
         surfaces=("tui", "cli", "mcp"),
         route=("tree", "create"),
         palette_ids=("create-milestone",),
+        cli_paths=("milestone add",),
+        mcp_tool="create_milestone",
     ),
     _action(
         "task.create",
@@ -37,6 +41,8 @@ CORE_ACTIONS: tuple[Action, ...] = (
         surfaces=("tui", "cli", "mcp"),
         route=("tree", "create"),
         palette_ids=("create-task",),
+        cli_paths=("task add",),
+        mcp_tool="create_task",
     ),
     _action(
         "criterion.add",
@@ -46,6 +52,8 @@ CORE_ACTIONS: tuple[Action, ...] = (
         ("tui", "cli", "mcp"),
         ("tree",),
         ("add-criterion",),
+        cli_paths=("criterion add",),
+        mcp_tool="criterion_add",
     ),
     _action(
         "plan.approve",
@@ -53,6 +61,8 @@ CORE_ACTIONS: tuple[Action, ...] = (
         surfaces=("tui", "cli", "mcp"),
         route=("tree", "trust"),
         palette_ids=("approve-plan",),
+        cli_paths=("plan approve",),
+        mcp_tool="plan_approve",
     ),
     _action(
         "plan.diff",
@@ -60,12 +70,16 @@ CORE_ACTIONS: tuple[Action, ...] = (
         surfaces=("tui", "cli", "mcp"),
         route=("tree", "trust"),
         palette_ids=("plan-diff",),
+        cli_paths=("plan diff",),
+        mcp_tool="plan_diff",
     ),
     _action(
         "criterion.prove",
         "Prove criterion",
         surfaces=("cli", "mcp"),
         route=("tree", "evidence"),
+        cli_paths=("criterion prove",),
+        mcp_tool="criterion_prove",
     ),
     _action(
         "question.add",
@@ -73,6 +87,8 @@ CORE_ACTIONS: tuple[Action, ...] = (
         surfaces=("tui", "cli", "mcp"),
         route=("tree", "questions"),
         palette_ids=("add-question",),
+        cli_paths=("question add",),
+        mcp_tool="question_add",
     ),
     _action(
         "question.resolve",
@@ -80,6 +96,8 @@ CORE_ACTIONS: tuple[Action, ...] = (
         surfaces=("tui", "cli", "mcp"),
         route=("tree", "questions"),
         palette_ids=("resolve-question",),
+        cli_paths=("question resolve",),
+        mcp_tool="question_resolve",
     ),
     _action(
         "question.reopen",
@@ -87,6 +105,8 @@ CORE_ACTIONS: tuple[Action, ...] = (
         surfaces=("tui", "cli", "mcp"),
         route=("tree", "questions"),
         palette_ids=("reopen-question",),
+        cli_paths=("question reopen",),
+        mcp_tool="question_reopen",
     ),
     _action(
         "reference.link",
@@ -94,6 +114,8 @@ CORE_ACTIONS: tuple[Action, ...] = (
         surfaces=("tui", "cli", "mcp"),
         route=("tree", "references"),
         palette_ids=("link-ref",),
+        cli_paths=("ref link",),
+        mcp_tool="reference_link",
     ),
     _action(
         "reference.unlink",
@@ -101,6 +123,8 @@ CORE_ACTIONS: tuple[Action, ...] = (
         surfaces=("tui", "cli", "mcp"),
         route=("tree", "references"),
         palette_ids=("unlink-ref",),
+        cli_paths=("ref unlink",),
+        mcp_tool="reference_unlink",
     ),
     _action(
         "reference.open",
@@ -114,6 +138,8 @@ CORE_ACTIONS: tuple[Action, ...] = (
         surfaces=("tui", "cli", "mcp"),
         route=("tree", "coordination"),
         palette_ids=("claim-task",),
+        cli_paths=("claim take",),
+        mcp_tool="claim_task",
     ),
     _action(
         "task.block",
@@ -121,6 +147,8 @@ CORE_ACTIONS: tuple[Action, ...] = (
         surfaces=("tui", "cli", "mcp"),
         route=("tree", "coordination"),
         palette_ids=("block-task",),
+        cli_paths=("task block",),
+        mcp_tool="block_task",
     ),
     _action(
         "task.unblock",
@@ -128,6 +156,8 @@ CORE_ACTIONS: tuple[Action, ...] = (
         surfaces=("tui", "cli", "mcp"),
         route=("tree", "coordination"),
         palette_ids=("unblock-task",),
+        cli_paths=("task unblock",),
+        mcp_tool="unblock_task",
     ),
     _action(
         "task.finish",
@@ -135,6 +165,8 @@ CORE_ACTIONS: tuple[Action, ...] = (
         surfaces=("tui", "cli", "mcp"),
         route=("tree", "finish"),
         palette_ids=("finish-task",),
+        cli_paths=("task finish",),
+        mcp_tool="finish_task",
     ),
     _action(
         "row.edit",
@@ -144,6 +176,12 @@ CORE_ACTIONS: tuple[Action, ...] = (
         ("tui", "cli", "mcp"),
         ("tree",),
         ("edit-selection",),
+        cli_paths=(
+            "plan edit",
+            "milestone edit",
+            "task edit",
+        ),
+        mcp_tool="edit_row",
     ),
     _action(
         "task.move",
@@ -153,6 +191,12 @@ CORE_ACTIONS: tuple[Action, ...] = (
         ("tui", "cli", "mcp"),
         ("tree",),
         ("move-todo", "move-doing", "move-done"),
+        cli_paths=(
+            "plan move",
+            "milestone move",
+            "task move",
+        ),
+        mcp_tool="move_row",
     ),
     _action(
         "claim.release",
@@ -160,6 +204,8 @@ CORE_ACTIONS: tuple[Action, ...] = (
         surfaces=("tui", "cli", "mcp"),
         route=("tree", "coordination"),
         palette_ids=("release-claim",),
+        cli_paths=("claim release",),
+        mcp_tool="claim_release",
     ),
     _action(
         "claim.force_release",
@@ -167,18 +213,24 @@ CORE_ACTIONS: tuple[Action, ...] = (
         surfaces=("tui", "cli", "mcp"),
         route=("tree", "coordination"),
         palette_ids=("force-release-claim",),
+        cli_paths=("claim release",),
+        mcp_tool="claim_release",
     ),
     _action(
         "criterion.relate",
         "Relate criterion to task",
         surfaces=("tui", "cli", "mcp"),
         route=("tree", "trust"),
+        cli_paths=("criterion relate",),
+        mcp_tool="criterion_relate",
     ),
     _action(
         "criterion.unrelate",
         "Unrelate criterion from task",
         surfaces=("tui", "cli", "mcp"),
         route=("tree", "trust"),
+        cli_paths=("criterion unrelate",),
+        mcp_tool="criterion_unrelate",
     ),
     _action(
         "row.delete",
@@ -188,6 +240,12 @@ CORE_ACTIONS: tuple[Action, ...] = (
         ("tui", "cli", "mcp"),
         ("tree",),
         ("delete-selection",),
+        cli_paths=(
+            "plan delete",
+            "milestone delete",
+            "task delete",
+        ),
+        mcp_tool="delete_row",
     ),
     _action(
         "commit.link",
@@ -195,6 +253,8 @@ CORE_ACTIONS: tuple[Action, ...] = (
         surfaces=("tui", "cli", "mcp"),
         route=("tree", "provenance"),
         palette_ids=("git-capture",),
+        cli_paths=("link",),
+        mcp_tool="link_commit",
     ),
     _action(
         "commit.refresh",
@@ -202,6 +262,8 @@ CORE_ACTIONS: tuple[Action, ...] = (
         surfaces=("tui", "cli", "mcp"),
         route=("tree", "provenance"),
         palette_ids=("git-refresh",),
+        cli_paths=("commits",),
+        mcp_tool="commit_refresh",
     ),
     _action(
         "view.fold",
@@ -273,6 +335,8 @@ CORE_ACTIONS: tuple[Action, ...] = (
         surfaces=("tui", "cli", "mcp"),
         route=("tree", "provenance"),
         palette_ids=("git-status",),
+        cli_paths=("git status",),
+        mcp_tool="git_status",
     ),
     _action(
         "pull_request.open",
@@ -289,6 +353,8 @@ CORE_ACTIONS: tuple[Action, ...] = (
         ("tui", "cli", "mcp"),
         ("tree", "source"),
         ("source-trail",),
+        cli_paths=("commits",),
+        mcp_tool="source_trail",
     ),
     _action(
         "theme.cycle",
@@ -314,6 +380,8 @@ CORE_ACTIONS: tuple[Action, ...] = (
         surfaces=("tui", "cli", "mcp"),
         route=("tree", "export"),
         palette_ids=("export-plan",),
+        cli_paths=("export",),
+        mcp_tool="export_plan",
     ),
     _action(
         "app.update",
@@ -323,6 +391,7 @@ CORE_ACTIONS: tuple[Action, ...] = (
         ("tui", "cli"),
         ("tree", "update"),
         ("update-lpui",),
+        cli_paths=("upgrade",),
     ),
     _action(
         "app.notes",
@@ -332,6 +401,7 @@ CORE_ACTIONS: tuple[Action, ...] = (
         ("tui", "cli"),
         ("tree", "notes"),
         ("release-notes",),
+        cli_paths=("notes",),
     ),
     _action(
         "app.help",
@@ -341,6 +411,7 @@ CORE_ACTIONS: tuple[Action, ...] = (
         ("tui", "cli", "docs"),
         ("any",),
         ("help",),
+        cli_paths=("help",),
     ),
     _action("app.quit", "Quit", "q", "global", ("tui",), ("any",), ("quit",)),
     _action(
@@ -348,48 +419,62 @@ CORE_ACTIONS: tuple[Action, ...] = (
         "Renew claim",
         surfaces=("tui", "cli", "mcp"),
         route=("tree", "coordination"),
+        cli_paths=("claim renew",),
+        mcp_tool="claim_renew",
     ),
     _action(
         "task.touch_add",
         "Add touch-point",
         surfaces=("tui", "cli", "mcp"),
         route=("tree", "coordination"),
+        cli_paths=("touch add",),
+        mcp_tool="touch_add",
     ),
     _action(
         "task.touch_remove",
         "Remove touch-point",
         surfaces=("tui", "cli", "mcp"),
         route=("tree", "coordination"),
+        cli_paths=("touch remove",),
+        mcp_tool="touch_remove",
     ),
     _action(
         "agent.start",
         "Start agent",
         surfaces=("tui", "cli"),
         route=("tree", "agents"),
+        cli_paths=("agent start",),
     ),
     _action(
         "agent.end",
         "End agent",
         surfaces=("tui", "cli"),
         route=("tree", "agents"),
+        cli_paths=("agent end",),
     ),
     _action(
         "note.add",
         "Add note",
         surfaces=("tui", "cli", "mcp"),
         route=("tree", "coordination"),
+        cli_paths=("note add",),
+        mcp_tool="note_add",
     ),
     _action(
         "comment.add",
         "Add comment",
         surfaces=("tui", "cli", "mcp"),
         route=("tree", "coordination"),
+        cli_paths=("comment add",),
+        mcp_tool="comment_add",
     ),
     _action(
         "comment.resolve",
         "Resolve comment",
         surfaces=("tui", "cli", "mcp"),
         route=("tree", "coordination"),
+        cli_paths=("comment resolve",),
+        mcp_tool="comment_resolve",
     ),
     _action(
         "view.claims_hub",
@@ -419,6 +504,8 @@ CORE_ACTIONS: tuple[Action, ...] = (
         "maintenance",
         ("tui", "cli", "mcp"),
         ("maintenance",),
+        cli_paths=("maint report",),
+        mcp_tool="maintenance_report",
     ),
     _action(
         "maintenance.archive",
@@ -427,6 +514,8 @@ CORE_ACTIONS: tuple[Action, ...] = (
         "maintenance",
         ("tui", "cli", "mcp"),
         ("maintenance",),
+        cli_paths=("maint archive",),
+        mcp_tool="maintenance_archive",
     ),
     _action(
         "maintenance.trim",
@@ -435,6 +524,8 @@ CORE_ACTIONS: tuple[Action, ...] = (
         "maintenance",
         ("tui", "cli", "mcp"),
         ("maintenance",),
+        cli_paths=("maint trim",),
+        mcp_tool="maintenance_trim",
     ),
     _action(
         "maintenance.vacuum",
@@ -443,6 +534,8 @@ CORE_ACTIONS: tuple[Action, ...] = (
         "maintenance",
         ("tui", "cli", "mcp"),
         ("maintenance",),
+        cli_paths=("maint vacuum",),
+        mcp_tool="maintenance_vacuum",
     ),
     _action(
         "maintenance.restore",
@@ -451,6 +544,8 @@ CORE_ACTIONS: tuple[Action, ...] = (
         "maintenance",
         ("tui", "cli", "mcp"),
         ("maintenance",),
+        cli_paths=("maint restore",),
+        mcp_tool="maintenance_restore",
     ),
     _action(
         "maintenance.open",

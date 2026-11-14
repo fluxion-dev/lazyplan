@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 
 from ....core.entities import Status
-from ....core.kinds import KINDS
+from .common import plan_id_arg, row_target_args
 from .registry_groups import group_blurb
 
 
@@ -33,7 +33,7 @@ def add_list(
         default=None,
         help="archive state: only archived plans, show both, or all (alias for show); the default hides archived plans",
     )
-    li.add_argument("--plan", type=int, default=None, metavar="ID", help="show only this plan")
+    plan_id_arg(li, help="show only this plan")
     li.add_argument(
         "--all",
         action="store_true",
@@ -249,7 +249,7 @@ def add_noun_groups(
 
     _group, _actions = _noun_group("milestone", "")
     _a = _actions.add_parser("add", help="add a milestone", parents=[common])
-    _a.add_argument("--plan", type=int, required=True, metavar="ID", help="owning plan id")
+    plan_id_arg(_a, help="owning plan id", required=True)
     _title_flags(_a, required=True)
     _a.add_argument("--desc", default="", metavar="TEXT", help="details")
     _reason_flag(_a)
@@ -262,7 +262,7 @@ def add_noun_groups(
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="milestone id")
     _a.add_argument("--files", action="store_true", help="list changed files per commit")
     _a = _actions.add_parser("list", help="list one plan's milestones as a tree", parents=[common])
-    _a.add_argument("--plan", type=int, required=True, metavar="ID", help="plan id")
+    plan_id_arg(_a, help="plan id", required=True)
     _plan_list_flags(_a)
     _a = _actions.add_parser("move", help="move a milestone to a status", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="milestone id")
@@ -370,13 +370,11 @@ def add_noun_groups(
     _a.add_argument("--dry-run", action="store_true", help="report without writing")
     _group, _actions = _noun_group("criterion", "")
     _a = _actions.add_parser("add", help="add a criterion", parents=[common])
-    _a.add_argument("--kind", choices=list(KINDS), required=True, help="parent kind")
-    _a.add_argument("--id", type=int, required=True, metavar="ID", help="parent id")
+    row_target_args(_a, kind_help="parent kind", id_help="parent id")
     _a.add_argument("--text", required=True, metavar="TEXT", help="criterion text")
     _reason_flag(_a)
     _a = _actions.add_parser("list", help="list a row's criteria", parents=[common])
-    _a.add_argument("--kind", choices=list(KINDS), required=True, help="parent kind")
-    _a.add_argument("--id", type=int, required=True, metavar="ID", help="parent id")
+    row_target_args(_a, kind_help="parent kind", id_help="parent id")
     _a = _actions.add_parser("edit", help="edit one criterion", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="criterion id")
     _a.add_argument("--text", default=None, metavar="TEXT", help="new criterion text")
@@ -409,8 +407,7 @@ def add_noun_groups(
     _a = _actions.add_parser(
         "status", help="branch, dirty tree, and tracking state", parents=[common]
     )
-    _a.add_argument("--kind", choices=list(KINDS), default=None, help="row kind")
-    _a.add_argument("--id", type=int, default=None, metavar="ID", help="row id")
+    row_target_args(_a, kind_help="row kind", id_help="row id", required=False)
     _a.add_argument(
         "--repo",
         default=None,
@@ -428,8 +425,9 @@ def add_noun_groups(
         action="store_true",
         help="show matches without writing links",
     )
-    _a.add_argument("--kind", choices=list(KINDS), default=None, help="limit to one row kind")
-    _a.add_argument("--id", type=int, default=None, metavar="ID", help="limit to one row id")
+    row_target_args(
+        _a, kind_help="limit to one row kind", id_help="limit to one row id", required=False
+    )
 
     _group, _actions = _noun_group("pr", "read-only GitHub pull requests and auth")
     _a = _actions.add_parser(
@@ -438,8 +436,7 @@ def add_noun_groups(
     _a = _actions.add_parser(
         "status", help="GitHub identity and auth for linked repos", parents=[common]
     )
-    _a.add_argument("--kind", choices=list(KINDS), default=None, help="row kind")
-    _a.add_argument("--id", type=int, default=None, metavar="ID", help="row id")
+    row_target_args(_a, kind_help="row kind", id_help="row id", required=False)
     _a.add_argument(
         "--repo",
         default=None,
@@ -447,22 +444,17 @@ def add_noun_groups(
         help="inspect one checkout instead of the row's effective repos",
     )
     _a = _actions.add_parser("list", help="list linked pull requests", parents=[common])
-    _a.add_argument("--kind", choices=list(KINDS), required=True, help="row kind")
-    _a.add_argument("--id", type=int, required=True, metavar="ID", help="row id")
+    row_target_args(_a, kind_help="row kind", id_help="row id")
     _a = _actions.add_parser("show", help="show one linked pull request", parents=[common])
-    _a.add_argument("--kind", choices=list(KINDS), required=True, help="row kind")
-    _a.add_argument("--id", type=int, required=True, metavar="ID", help="row id")
+    row_target_args(_a, kind_help="row kind", id_help="row id")
     _a.add_argument("--number", type=int, required=True, metavar="N", help="pull request number")
     _a = _actions.add_parser("link", help="link a pull request URL to a row", parents=[common])
-    _a.add_argument("--kind", choices=list(KINDS), required=True, help="row kind")
-    _a.add_argument("--id", type=int, required=True, metavar="ID", help="row id")
+    row_target_args(_a, kind_help="row kind", id_help="row id")
     _a.add_argument("--url", required=True, metavar="URL", help="GitHub pull request URL")
     _a.add_argument("--title", default=None, metavar="TEXT", help="optional PR title")
     _a.add_argument("--state", default=None, metavar="STATE", help="optional PR state")
     _a = _actions.add_parser("unlink", help="detach one pull request", parents=[common])
-    _a.add_argument("--kind", choices=list(KINDS), required=True, help="row kind")
-    _a.add_argument("--id", type=int, required=True, metavar="ID", help="row id")
+    row_target_args(_a, kind_help="row kind", id_help="row id")
     _a.add_argument("--number", type=int, required=True, metavar="N", help="pull request number")
     _a = _actions.add_parser("refresh", help="resolve commits to PRs", parents=[common])
-    _a.add_argument("--kind", choices=list(KINDS), required=True, help="row kind")
-    _a.add_argument("--id", type=int, required=True, metavar="ID", help="row id")
+    row_target_args(_a, kind_help="row kind", id_help="row id")

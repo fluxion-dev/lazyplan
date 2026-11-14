@@ -12,7 +12,16 @@ from typing import TYPE_CHECKING
 
 from ...core.policies.planning import progress_counts
 from ...services import tree as service_tree
-from .design import INDENT, milestone_label, plan_label, status_word, task_label
+from .design import (
+    INDENT,
+    branch_word,
+    checkout_state,
+    milestone_label,
+    plan_label,
+    short_sha,
+    status_word,
+    task_label,
+)
 
 if TYPE_CHECKING:
     from ...core.entities import Status
@@ -97,7 +106,7 @@ def tree_lines(
 def _commit_line(link: dict, show_repo: bool) -> str:
     """One commit line: short SHA, subject, author, optional repo, stale."""
     sha = str(link.get("sha", ""))
-    short = sha[:12] if len(sha) >= 12 else sha
+    short = short_sha(sha)
     subject = str(link.get("subject", "") or "").strip()
     author = str(link.get("author", "") or "").strip()
     extra = f" ({author})" if author and subject else author
@@ -145,10 +154,8 @@ def render_git_status(entries: list[dict]) -> str:
         if entry.get("error"):
             lines.append(f"  error: {entry['error']}")
             continue
-        branch = str(entry.get("branch", "") or "")
-        if not branch:
-            branch = "detached" if entry.get("detached") else "unknown"
-        state = "dirty" if entry.get("dirty") else "clean"
+        branch = branch_word(entry)
+        state = checkout_state(entry)
         if entry.get("upstream"):
             tracking = f"{entry.get('ahead', 0)} ahead, {entry.get('behind', 0)} behind"
         else:
@@ -157,7 +164,7 @@ def render_git_status(entries: list[dict]) -> str:
         sha = str(entry.get("head", "") or "")
         if sha:
             subject = str(entry.get("subject", "") or "").strip()
-            lines.append(f"  {sha[:12]} {subject}".rstrip())
+            lines.append(f"  {short_sha(sha)} {subject}".rstrip())
     return "\n".join(lines)
 
 

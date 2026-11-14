@@ -8,6 +8,8 @@ from typing import Any
 
 from lazyplan.core.policies.agents import STATUSES, parse_agent_id, parse_pid
 
+from .common import plan_id_arg
+
 
 def _any_id(text: str) -> int:
     """Parse A12, S12, a12, or 12 for the compatibility alias."""
@@ -30,7 +32,7 @@ def _show_ref(text: str) -> str:
 
 def _start_arguments(parser: argparse.ArgumentParser) -> None:
     """Identity and binding flags shared by start and its hidden alias."""
-    parser.add_argument("--plan", type=int, default=None, metavar="ID", help="plan id")
+    plan_id_arg(parser, help="plan id")
     parser.add_argument("--task", type=int, default=None, metavar="ID", help="task id")
     parser.add_argument("--host", default="", metavar="NAME", help="host name")
     parser.add_argument("--session", default="", metavar="ID", help="host session id")
@@ -46,7 +48,7 @@ def _start_arguments(parser: argparse.ArgumentParser) -> None:
 
 
 def _list_arguments(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--plan", type=int, default=None, metavar="ID", help="plan id")
+    plan_id_arg(parser, help="plan id")
     parser.add_argument("--open", action="store_true", help="only rows not ended")
     parser.add_argument("--live", action="store_true", help="only rows still running")
     parser.add_argument("--host", default="", metavar="NAME", help="only this host")
@@ -98,7 +100,7 @@ def add_agent_group(
     history = actions.add_parser(
         "history", help="list read-only legacy session rows", parents=[common]
     )
-    history.add_argument("--plan", type=int, default=None, metavar="ID", help="plan id")
+    plan_id_arg(history, help="plan id")
     history.add_argument("--limit", type=int, default=20, metavar="N", help="rows (default: 20)")
 
     alias = sub.add_parser(

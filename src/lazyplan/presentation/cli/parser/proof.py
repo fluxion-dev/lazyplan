@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import argparse
 
-from ....core.kinds import KINDS
+from .common import row_target_args
 
 
 def add_link(
@@ -12,13 +12,7 @@ def add_link(
 ) -> None:
 
     lk = sub.add_parser("link", help="attach a git commit to a row", parents=[common])
-    lk.add_argument(
-        "--kind",
-        choices=list(KINDS),
-        required=True,
-        help="which kind of row to attach to",
-    )
-    lk.add_argument("--id", type=int, required=True, metavar="ID", help="id of the row")
+    row_target_args(lk, kind_help="which kind of row to attach to", id_help="id of the row")
     lk.add_argument(
         "--repo",
         default=None,
@@ -38,13 +32,7 @@ def add_unlink(
 ) -> None:
 
     ul = sub.add_parser("unlink", help="detach a git commit from a row", parents=[common])
-    ul.add_argument(
-        "--kind",
-        choices=list(KINDS),
-        required=True,
-        help="which kind of row to detach from",
-    )
-    ul.add_argument("--id", type=int, required=True, metavar="ID", help="id of the row")
+    row_target_args(ul, kind_help="which kind of row to detach from", id_help="id of the row")
     ul.add_argument("--sha", required=True, metavar="SHA", help="which commit to detach (required)")
 
 
@@ -53,13 +41,7 @@ def add_commits(
 ) -> None:
 
     cm = sub.add_parser("commits", help="list the commits attached to a row", parents=[common])
-    cm.add_argument(
-        "--kind",
-        choices=list(KINDS),
-        required=True,
-        help="which kind of row to list",
-    )
-    cm.add_argument("--id", type=int, required=True, metavar="ID", help="id of the row")
+    row_target_args(cm, kind_help="which kind of row to list", id_help="id of the row")
     cm.add_argument("--files", action="store_true", help="list changed files per commit")
     cm.add_argument(
         "--refresh",
@@ -68,50 +50,48 @@ def add_commits(
     )
 
 
+def _repo_link_command(
+    sub: argparse._SubParsersAction[argparse.ArgumentParser],
+    common: argparse.ArgumentParser,
+    *,
+    name: str,
+    blurb: str,
+    kind_help: str,
+    repo_help: str,
+    remote_help: str,
+) -> None:
+    """One repo-attachment command: row target, checkout path, optional remote."""
+    parser = sub.add_parser(name, help=blurb, parents=[common])
+    row_target_args(parser, kind_help=kind_help, id_help="id of the row")
+    parser.add_argument("--repo", required=True, metavar="PATH", help=repo_help)
+    parser.add_argument("--remote", default=None, metavar="URL", help=remote_help)
+
+
 def add_link_repo(
     sub: argparse._SubParsersAction[argparse.ArgumentParser], common: argparse.ArgumentParser
 ) -> None:
-
-    lr = sub.add_parser("link-repo", help="attach a repo checkout to a row", parents=[common])
-    lr.add_argument(
-        "--kind",
-        choices=list(KINDS),
-        required=True,
-        help="which kind of row to attach to",
-    )
-    lr.add_argument("--id", type=int, required=True, metavar="ID", help="id of the row")
-    lr.add_argument(
-        "--repo",
-        required=True,
-        metavar="PATH",
-        help="repo checkout path (absolute or relative; stored absolute)",
-    )
-    lr.add_argument(
-        "--remote",
-        default=None,
-        metavar="URL",
-        help="remote URL (default: git remote get-url origin for the path, else empty)",
+    _repo_link_command(
+        sub,
+        common,
+        name="link-repo",
+        blurb="attach a repo checkout to a row",
+        kind_help="which kind of row to attach to",
+        repo_help="repo checkout path (absolute or relative; stored absolute)",
+        remote_help="remote URL (default: git remote get-url origin for the path, else empty)",
     )
 
 
 def add_unlink_repo(
     sub: argparse._SubParsersAction[argparse.ArgumentParser], common: argparse.ArgumentParser
 ) -> None:
-
-    ulr = sub.add_parser("unlink-repo", help="detach a repo checkout from a row", parents=[common])
-    ulr.add_argument(
-        "--kind",
-        choices=list(KINDS),
-        required=True,
-        help="which kind of row to detach from",
-    )
-    ulr.add_argument("--id", type=int, required=True, metavar="ID", help="id of the row")
-    ulr.add_argument("--repo", required=True, metavar="PATH", help="which repo path to detach")
-    ulr.add_argument(
-        "--remote",
-        default=None,
-        metavar="URL",
-        help="only detach this remote (default: all remotes for the path)",
+    _repo_link_command(
+        sub,
+        common,
+        name="unlink-repo",
+        blurb="detach a repo checkout from a row",
+        kind_help="which kind of row to detach from",
+        repo_help="which repo path to detach",
+        remote_help="only detach this remote (default: all remotes for the path)",
     )
 
 
@@ -120,13 +100,7 @@ def add_repos(
 ) -> None:
 
     rp = sub.add_parser("repos", help="list the repos attached to a row", parents=[common])
-    rp.add_argument(
-        "--kind",
-        choices=list(KINDS),
-        required=True,
-        help="which kind of row to list",
-    )
-    rp.add_argument("--id", type=int, required=True, metavar="ID", help="id of the row")
+    row_target_args(rp, kind_help="which kind of row to list", id_help="id of the row")
     rp.add_argument(
         "--effective",
         action="store_true",

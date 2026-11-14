@@ -7,6 +7,7 @@ from typing import Any
 from lazyplan import services
 
 from .base import McpBase
+from .handlers import id_rows
 from .schema import id_schema as _id
 from .schema import str_schema as _str
 from .schema import tool as _tool
@@ -15,10 +16,10 @@ from .schema import tool as _tool
 class EvidenceToolsMixin(McpBase):
     """Criterion proof tools."""
 
-    def _evidence_write_registry(self) -> dict[str, tuple[dict, Any]]:
+    def _evidence_write_registry(self) -> list[tuple[dict, Any]]:
         """Write tools, omitted in read-only mode."""
-        return {
-            "criterion_prove": (
+        return [
+            (
                 _tool(
                     "criterion_prove",
                     "Record proof for a criterion.",
@@ -37,21 +38,24 @@ class EvidenceToolsMixin(McpBase):
                 ),
                 self._tool_criterion_prove,
             )
-        }
+        ]
 
-    def _evidence_read_registry(self) -> dict[str, tuple[dict, Any]]:
+    def _evidence_read_registry(self) -> list[tuple[dict, Any]]:
         """Read tools, always available."""
-        return {
-            "criterion_evidence": (
+        return [
+            (
                 _tool(
                     "criterion_evidence",
                     "Proof rows for one criterion.",
                     {"id": _id()},
                     ["id"],
                 ),
-                self._tool_criterion_evidence,
+                id_rows(
+                    self._need_store,
+                    lambda store, criterion_id: services.list_evidence(store, criterion_id),
+                ),
             )
-        }
+        ]
 
     def _tool_criterion_prove(self, args: dict) -> object:
         task_id = int(args["task"]) if args.get("task") else None
@@ -71,6 +75,3 @@ class EvidenceToolsMixin(McpBase):
             "evidence": vars(result.evidence),
             "criterion": vars(result.criterion),
         }
-
-    def _tool_criterion_evidence(self, args: dict) -> object:
-        return [vars(row) for row in services.list_evidence(self._need_store(), int(args["id"]))]

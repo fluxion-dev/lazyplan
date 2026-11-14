@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 
 from ....core.kinds import QUESTION_STATUSES
+from .common import plan_id_arg
 
 
 def add_question_group(
@@ -26,10 +27,10 @@ def add_question_group(
         help="what to do with a question",
     )
     add = actions.add_parser("add", help="add an open question", parents=[common])
-    add.add_argument("--plan", type=int, required=True, metavar="ID", help="plan id")
+    plan_id_arg(add, help="plan id", required=True)
     add.add_argument("--text", required=True, metavar="TEXT", help="the question")
     listing = actions.add_parser("list", help="list plan questions", parents=[common])
-    listing.add_argument("--plan", type=int, required=True, metavar="ID", help="plan id")
+    plan_id_arg(listing, help="plan id", required=True)
     listing.add_argument(
         "--status",
         choices=[*QUESTION_STATUSES, "all"],

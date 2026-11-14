@@ -10,7 +10,7 @@ from ..core.policies.coordination import parse_ttl, patterns_overlap, validate_b
 from ..core.ports.coordination import CoordinationPort
 from ..core.serialization import to_payload
 from .planning import end_claim, requeue_expired, set_status
-from .worktrees import checkout_gate, lane_gate
+from .worktrees import checkout_gate, lane_busy, lane_gate
 
 
 def overlaps(port: CoordinationPort, task_id: int) -> list[dict]:
@@ -88,6 +88,9 @@ def start_claim(
     lane_blocker = lane_gate(port, task_id, worktree)
     if lane_blocker and not (force and reason.strip()):
         raise ValueError(lane_blocker)
+    busy = lane_busy(port, task_id)
+    if busy and not (force and reason.strip()):
+        raise ValueError(busy)
     if check_overlap and not force:
         found = overlaps(port, task_id)
         if found:
@@ -204,6 +207,7 @@ def claim_next(
     repo_path: str = "",
     force: bool = False,
     reason: str = "",
+    lane_id: int | None = None,
 ) -> dict | None:
     """Select and optionally claim the first eligible todo, retrying lost races."""
     if plan_id is not None and worktree:
@@ -215,7 +219,11 @@ def claim_next(
         tasks = port.claimable_tasks(plan_id)
         if not tasks:
             return None
-        candidates = [item for item in tasks if not overlaps(port, item.id)]
+        candidates = [
+            item
+            for item in tasks
+            if not overlaps(port, item.id) and (lane_id is None or item.milestone_id == lane_id)
+        ]
         if not candidates:
             return None
         if force and reason.strip():

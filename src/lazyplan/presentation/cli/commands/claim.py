@@ -65,6 +65,7 @@ def _cmd_next(store: CoordinationPort, args: argparse.Namespace, actor: str) -> 
             repo_path=repo_path,
             force=bool(getattr(args, "force", False)),
             reason=str(getattr(args, "reason", "") or ""),
+            lane_id=getattr(args, "lane", None),
         )
     except ClaimConflict as exc:
         print(msg_error(exc), file=sys.stderr)

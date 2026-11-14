@@ -69,6 +69,13 @@ def add_next(
     nxt.add_argument("--ttl", default="", metavar="TIME", help="lease length, e.g. 30m or 2.hours")
     nxt.add_argument("--note", default="", metavar="TEXT", help="note stored on the claim")
     nxt.add_argument(
+        "--lane",
+        type=int,
+        default=None,
+        metavar="ID",
+        help="only claim a task in this lane milestone",
+    )
+    nxt.add_argument(
         "--suggest", action="store_true", help="show the next task without claiming it"
     )
     nxt.add_argument("--force", action="store_true", help="override a worktree gate")

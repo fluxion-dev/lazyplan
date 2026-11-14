@@ -6,7 +6,7 @@ import time
 
 from ..core.entities import Claim
 from ..core.ports.planning import PlanningPort
-from .worktrees import lane_gate
+from .worktrees import lane_busy, lane_gate
 
 
 def check_claimable(
@@ -27,6 +27,9 @@ def check_claimable(
         blocker = lane_gate(port, task_id, worktree)
         if blocker:
             raise ValueError(blocker)
+        busy = lane_busy(port, task_id)
+        if busy:
+            raise ValueError(busy)
 
 
 def claim_for_doing(

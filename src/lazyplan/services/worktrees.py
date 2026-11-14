@@ -6,7 +6,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from ..core.entities import Milestone, Plan, PlanWorktree
+from ..core.entities import Milestone, Plan, PlanWorktree, Status
 from ..core.policies.worktrees import derive_lane_worktree, quote_path
 from ..core.ports.planning import PlanningPort
 from ..core.ports.repos import ReposPort
@@ -66,6 +66,30 @@ def lane_worktree_entries(store: ReposPort, plan: Plan, milestone: Milestone) ->
             }
         )
     return entries
+
+
+def lane_busy(store: PlanningPort, task_id: int) -> str:
+    """Refusal text when another task is already doing in the same lane."""
+    task = store.get_task(task_id)
+    if task is None:
+        return ""
+    milestone = store.get_milestone(task.milestone_id)
+    if milestone is None:
+        return ""
+    plan = store.get_plan(milestone.plan_id)
+    if plan is None or plan.dispatch_mode != "parallel":
+        return ""
+    for other in store.list_tasks(milestone.id):
+        if other.id == task_id or other.status is not Status.DOING:
+            continue
+        get_claim = getattr(store, "get_claim", None)
+        held = get_claim(other.id) if get_claim is not None else None
+        holder = held.actor if held is not None else "another agent"
+        return (
+            f"lane M{milestone.id} already has T{other.id} doing by {holder};"
+            f" finish it or use `lpui claim --id {task_id} --force --reason TEXT`"
+        )
+    return ""
 
 
 def worktree_gate(store: ReposPort, plan_id: int) -> str:

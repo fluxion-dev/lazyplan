@@ -470,12 +470,3 @@ def install(
         _, status = ensure_agents_md(repo_root)
         result.updated_agents_md = f"{repo_root / 'AGENTS.md'} ({status})"
     return result
-
-
-def _skills_dir_override(args: object) -> str | None:
-    """Explicit skill dir: --skills-dir wins, then $LAZYPLAN_SKILLS_DIR."""
-    flag = str(getattr(args, "skills_dir", "") or "").strip()
-    if flag:
-        return flag
-    env = os.environ.get("LAZYPLAN_SKILLS_DIR", "").strip()
-    return env or None

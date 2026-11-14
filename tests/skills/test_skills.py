@@ -5,7 +5,6 @@ import json
 import os
 import tempfile
 import unittest
-from argparse import Namespace
 from contextlib import redirect_stdout
 from pathlib import Path
 from unittest import mock
@@ -377,20 +376,6 @@ class TestSkillsDirOverride(SkillHomeCase):
         self.assertEqual(res.installed, [f"{Path(custom, 'lazyplan', 'SKILL.md')} (wrote)"])
         self.assertTrue(Path(custom, "lazyplan/SKILL.md").is_file())
         self.assertFalse((self.repo / ".agents").exists())
-
-    def test_flag_beats_env(self):
-        os.environ["LAZYPLAN_SKILLS_DIR"] = "/tmp/from-env"
-        args = Namespace(skills_dir="/tmp/from-flag")
-        self.assertEqual(skills._skills_dir_override(args), "/tmp/from-flag")
-
-    def test_env_used_when_no_flag(self):
-        os.environ["LAZYPLAN_SKILLS_DIR"] = "/tmp/from-env"
-        args = Namespace(skills_dir="")
-        self.assertEqual(skills._skills_dir_override(args), "/tmp/from-env")
-
-    def test_none_when_neither(self):
-        args = Namespace(skills_dir="")
-        self.assertIsNone(skills._skills_dir_override(args))
 
 
 class TestInstall(SkillHomeCase):

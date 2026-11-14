@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 
 from ....core.kinds import KINDS
+from .common import plan_id_arg
 
 
 def add_claim(
@@ -36,17 +37,23 @@ def add_claim(
     )
 
 
+def _lease_list(
+    sub: argparse._SubParsersAction[argparse.ArgumentParser],
+    common: argparse.ArgumentParser,
+    *,
+    name: str,
+    blurb: str,
+) -> None:
+    """One claims-shaped command: plan filter plus the expired toggle."""
+    parser = sub.add_parser(name, help=blurb, parents=[common])
+    plan_id_arg(parser, help="only this plan")
+    parser.add_argument("--all", action="store_true", help="include expired claims")
+
+
 def add_claims(
     sub: argparse._SubParsersAction[argparse.ArgumentParser], common: argparse.ArgumentParser
 ) -> None:
-
-    cls = sub.add_parser(
-        "claims",
-        help="list active task leases with holder and expiry",
-        parents=[common],
-    )
-    cls.add_argument("--plan", type=int, default=None, metavar="ID", help="only this plan")
-    cls.add_argument("--all", action="store_true", help="include expired claims")
+    _lease_list(sub, common, name="claims", blurb="list active task leases with holder and expiry")
 
 
 def add_next(
@@ -58,7 +65,7 @@ def add_next(
         help="claim the next eligible task and move it doing",
         parents=[common],
     )
-    nxt.add_argument("--plan", type=int, default=None, metavar="ID", help="only this plan")
+    plan_id_arg(nxt, help="only this plan")
     nxt.add_argument("--ttl", default="", metavar="TIME", help="lease length, e.g. 30m or 2.hours")
     nxt.add_argument("--note", default="", metavar="TEXT", help="note stored on the claim")
     nxt.add_argument(
@@ -127,7 +134,7 @@ def add_share(
         help="write a read-only HTML or JSON plan snapshot",
         parents=[common],
     )
-    sh.add_argument("--plan", type=int, required=True, metavar="ID", help="plan to share")
+    plan_id_arg(sh, help="plan to share", required=True)
     sh.add_argument("--format", choices=["html", "json"], default="html", help="snapshot format")
     sh.add_argument("--out", default=None, metavar="PATH", help="write to a file")
 
@@ -170,7 +177,7 @@ def add_audit(
         help="measure commit linkage, status lag, and criteria gaps",
         parents=[common],
     )
-    au.add_argument("--plan", type=int, default=None, metavar="ID", help="audit one plan")
+    plan_id_arg(au, help="audit one plan")
     au.add_argument(
         "--since",
         default=None,
@@ -219,34 +226,44 @@ def add_audit(
     )
 
 
+def _packet_command(
+    sub: argparse._SubParsersAction[argparse.ArgumentParser],
+    common: argparse.ArgumentParser,
+    *,
+    name: str,
+    blurb: str,
+    plan_help: str,
+) -> None:
+    """One review-packet command: plan choice plus a Markdown length cap."""
+    parser = sub.add_parser(name, help=blurb, parents=[common])
+    parser.add_argument("--plan", type=int, default=None, metavar="ID", help=plan_help)
+    parser.add_argument(
+        "--max-chars", type=int, default=0, metavar="N", help="cap the Markdown length"
+    )
+
+
 def add_review(
     sub: argparse._SubParsersAction[argparse.ArgumentParser], common: argparse.ArgumentParser
 ) -> None:
-
-    rv = sub.add_parser(
-        "review",
-        help="print one deterministic review packet",
-        parents=[common],
+    _packet_command(
+        sub,
+        common,
+        name="review",
+        blurb="print one deterministic review packet",
+        plan_help="review one plan (default: active)",
     )
-    rv.add_argument(
-        "--plan", type=int, default=None, metavar="ID", help="review one plan (default: active)"
-    )
-    rv.add_argument("--max-chars", type=int, default=0, metavar="N", help="cap the Markdown length")
 
 
 def add_ship(
     sub: argparse._SubParsersAction[argparse.ArgumentParser], common: argparse.ArgumentParser
 ) -> None:
-
-    sh = sub.add_parser(
-        "ship",
-        help="print one deterministic outcome ship note",
-        parents=[common],
+    _packet_command(
+        sub,
+        common,
+        name="ship",
+        blurb="print one deterministic outcome ship note",
+        plan_help="ship one plan (default: active)",
     )
-    sh.add_argument(
-        "--plan", type=int, default=None, metavar="ID", help="ship one plan (default: active)"
-    )
-    sh.add_argument("--max-chars", type=int, default=0, metavar="N", help="cap the Markdown length")
 
 
 def add_brief(
@@ -258,7 +275,7 @@ def add_brief(
         help="show the active plan, the next task, and unlinked commits",
         parents=[common],
     )
-    br.add_argument("--plan", type=int, default=None, metavar="ID", help="brief one plan")
+    plan_id_arg(br, help="brief one plan")
 
 
 def add_context(
@@ -270,7 +287,7 @@ def add_context(
         help="show the budgeted session context packet",
         parents=[common],
     )
-    ct.add_argument("--plan", type=int, default=None, metavar="ID", help="context one plan")
+    plan_id_arg(ct, help="context one plan")
     ct.add_argument(
         "--max-chars",
         type=int,
@@ -319,7 +336,7 @@ def add_lint(
         help="lint a plan for traceability and task-quality gaps",
         parents=[common],
     )
-    li.add_argument("--plan", type=int, required=True, metavar="ID", help="plan to lint")
+    plan_id_arg(li, help="plan to lint", required=True)
     li.add_argument("--strict", action="store_true", help="exit 2 when any finding exists")
 
 
@@ -405,11 +422,4 @@ def add_hook(
 def add_who(
     sub: argparse._SubParsersAction[argparse.ArgumentParser], common: argparse.ArgumentParser
 ) -> None:
-
-    who = sub.add_parser(
-        "who",
-        help="alias for `claims`: active task leases",
-        parents=[common],
-    )
-    who.add_argument("--plan", type=int, default=None, metavar="ID", help="only this plan")
-    who.add_argument("--all", action="store_true", help="include expired claims")
+    _lease_list(sub, common, name="who", blurb="alias for `claims`: active task leases")

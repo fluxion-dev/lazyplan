@@ -6,14 +6,12 @@ from collections.abc import Sequence
 
 from ..entities import PlanQuestion
 from ..kinds import QUESTION_STATUSES
+from .collaboration import cleaned_text
 
 
 def validate_text(text: str) -> str:
     """Trimmed question text; empty is rejected."""
-    body = text.strip()
-    if not body:
-        raise ValueError("question text must not be empty")
-    return body
+    return cleaned_text(text, "question text must not be empty")
 
 
 def validate_status(status: str) -> str:

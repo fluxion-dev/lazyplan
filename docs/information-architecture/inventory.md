@@ -320,7 +320,7 @@ python3 tools/ia_inventory.py --check
 | `d` | `src/lazyplan/presentation/tui/app.py:94` → `delete`; `src/lazyplan/presentation/tui/screens/hub.py:53` → `delete` |
 | `e` | `src/lazyplan/presentation/tui/app.py:91` → `edit_selection`; `src/lazyplan/presentation/tui/screens/hub_coordination.py:191` → `edit_row`; `src/lazyplan/presentation/tui/screens/hub_kinds.py:30` → `edit_row` |
 | `escape` | `src/lazyplan/presentation/tui/app.py:87` → `clear_filter`; `src/lazyplan/presentation/tui/screens/base.py:47` → `cancel`; `src/lazyplan/presentation/tui/screens/export.py:43` → `cancel`; `src/lazyplan/presentation/tui/screens/health.py:63` → `cancel`; `src/lazyplan/presentation/tui/screens/hub.py:51` → `back`; `src/lazyplan/presentation/tui/screens/maintenance.py:41` → `back`; `src/lazyplan/presentation/tui/screens/plan_diff.py:27` → `back`; `src/lazyplan/presentation/tui/screens/source.py:73` → `back`; `src/lazyplan/presentation/tui/screens/update.py:39` → `cancel` |
-| `f` | `src/lazyplan/presentation/tui/screens/hub_provenance.py:200` → `filter_actor`; `src/lazyplan/presentation/tui/screens/source.py:79` → `toggle_fold` |
+| `f` | `src/lazyplan/presentation/tui/screens/hub_provenance.py:188` → `filter_actor`; `src/lazyplan/presentation/tui/screens/source.py:79` → `toggle_fold` |
 | `g` | `src/lazyplan/presentation/tui/app.py:95` → `source_trail`; `src/lazyplan/presentation/tui/screens/hub.py:59` → `source_hub` |
 | `n` | `src/lazyplan/presentation/tui/app.py:90` → `new_context`; `src/lazyplan/presentation/tui/screens/hub.py:55` → `note`; `src/lazyplan/presentation/tui/screens/source.py:75` → `next_file` |
 | `o` | `src/lazyplan/presentation/tui/screens/hub.py:58` → `open_value`; `src/lazyplan/presentation/tui/screens/source.py:82` → `open` |
@@ -423,7 +423,7 @@ python3 tools/ia_inventory.py --check
 
 | File | Headings |
 | --- | --- |
-| `README.md` | lazyplan (`lpui`) — v0.45.0 · Install · First run · Why it differs · Everyday commands · For your agent · Learn more |
+| `README.md` | lazyplan (`lpui`) — v0.46.0 · Install · First run · Why it differs · Everyday commands · For your agent · Learn more |
 | `CONTRIBUTING.md` | Contributing to lazyplan · Set up · Before you push · UX review board · Tests · Landing changes · edit, then commit in small green slices · Release · Style · Docs · Add one action across every surface |
 | `AGENTS.md` | Agent instructions · Documentation |
 | `docs/usage.md` | lazyplan usage · Install · Linux packages · Fedora / RHEL / openSUSE · Debian / Ubuntu · One-line installer · From source · Upgrade · Release notes · pipx · pip, including the install.sh venv · Uninstall |

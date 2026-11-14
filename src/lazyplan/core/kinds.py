@@ -31,18 +31,21 @@ KIND_ERROR = f"kind must be {'|'.join(KINDS)}"
 PARENT_KIND_ERROR = f"parent_kind must be {'|'.join(KINDS)}"
 
 
+def _check(value: str, message: str) -> str:
+    """One allowed-kind check with the caller's message."""
+    if value not in KINDS:
+        raise ValueError(message)
+    return value
+
+
 def check_kind(kind: str) -> str:
     """Validate an element kind, naming the allowed values."""
-    if kind not in KINDS:
-        raise ValueError(KIND_ERROR)
-    return kind
+    return _check(kind, KIND_ERROR)
 
 
 def check_parent_kind(parent_kind: str) -> str:
     """Validate a criteria/link parent kind, naming the allowed values."""
-    if parent_kind not in KINDS:
-        raise ValueError(PARENT_KIND_ERROR)
-    return parent_kind
+    return _check(parent_kind, PARENT_KIND_ERROR)
 
 
 def table_for(kind: str) -> str:

@@ -44,6 +44,11 @@ from .empty import msg_error as msg_error
 from .empty import msg_no_head as msg_no_head
 from .empty import msg_no_vcs as msg_no_vcs
 from .empty import msg_not_found as msg_not_found
+from .facts import branch_word as branch_word
+from .facts import checkout_state as checkout_state
+from .facts import evidence_label as evidence_label
+from .facts import short_sha as short_sha
+from .facts import stale_word as stale_word
 from .row_stats import RowStats as RowStats
 from .row_stats import render_stats as render_stats
 from .row_stats import stats_layout as stats_layout
@@ -72,6 +77,11 @@ from .tokens import SECTION_ICON as SECTION_ICON
 from .tokens import STATE_ICON as STATE_ICON
 
 __all__ = [
+    "branch_word",
+    "checkout_state",
+    "evidence_label",
+    "short_sha",
+    "stale_word",
     "ANSI",
     "action_bar",
     "ASCII_ICONS",

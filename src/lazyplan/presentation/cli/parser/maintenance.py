@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import argparse
 
+from .common import plan_id_arg
+
 
 def _apply_flag(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
@@ -52,7 +54,7 @@ def add_maintenance_group(
         "restore", help="return an archived plan or session", parents=[common]
     )
     restore_target = restore.add_mutually_exclusive_group(required=True)
-    restore_target.add_argument("--plan", type=int, default=None, metavar="ID", help="plan id")
+    plan_id_arg(restore_target, help="plan id")
     restore_target.add_argument(
         "--session", type=int, default=None, metavar="ID", help="session id"
     )

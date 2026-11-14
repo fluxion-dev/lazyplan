@@ -113,24 +113,26 @@ class Budget:
     nodes: int | None = None
 
 
-# These are the pre-optimization ceilings. Tighten them as each milestone lands;
-# task 876 owns the final cross-platform table. Query counts are exact and
-# deterministic, so any accidental per-row query breaks the gate immediately.
+# Query ceilings sit within 20% of the measured count on the default fixture;
+# query counts are exact and deterministic, so an accidental per-row query
+# breaks the gate immediately. Wall ceilings stay generous because runner
+# variance dwarfs the real cost; see WALL_MULTIPLIER below.
 BUDGETS: dict[str, Budget] = {
-    "services.tree": Budget(15, 2_000),
-    "services.tree_limit5": Budget(15, 2_000),
-    "attention_ids": Budget(20, 2_000),
+    "services.tree": Budget(14, 2_000),
+    "services.tree_limit5": Budget(14, 2_000),
+    "attention_ids": Budget(16, 2_000),
     "store.fingerprint": Budget(20, 500),
-    "needs_me": Budget(30, 3_000),
-    "list_text": Budget(30, 3_000),
+    "needs_me": Budget(15, 3_000),
+    "list_text": Budget(26, 3_000),
     "list_json": Budget(25, 6_000),
-    "show_plan": Budget(200, 1_000),
+    "show_plan": Budget(24, 1_000),
+    "share_payload": Budget(24, 1_000),
     "full_many": Budget(20, 1_500),
     "export_all": Budget(40, 5_000),
-    "audit_report": Budget(250, 5_000),
-    "tui_first_paint": Budget(150, 8_000, nodes=100),
-    "tui_expand": Budget(150, 8_000, nodes=120),
-    "tui_reconcile": Budget(60, 1_500, nodes=100),
+    "audit_report": Budget(28, 5_000),
+    "tui_first_paint": Budget(48, 8_000, nodes=100),
+    "tui_expand": Budget(0, 8_000, nodes=120),
+    "tui_reconcile": Budget(48, 1_500, nodes=100),
     "git_status": Budget(0, 3_000),
     "git_show": Budget(0, 3_000),
 }

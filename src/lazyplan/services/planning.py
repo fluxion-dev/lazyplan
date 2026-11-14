@@ -9,11 +9,13 @@ from lazyplan.infrastructure.templates import apply_template, template_criteria
 
 from ..core.entities import Criterion, Milestone, Plan, Status, Task
 from ..core.kinds import check_kind
+from ..core.policies.insights import leading_int
 from ..core.policies.maintenance import check_archive_mode, is_visible
 from ..core.policies.planning import is_archived as _is_archived_policy
 from ..core.policies.planning import next_status, rollup_target
 from ..core.ports.coordination import CoordinationPort
 from ..core.ports.planning import PlanningPort
+from ..core.ports.repos import ReposPort
 from .doing_claims import check_claimable, claim_for_doing
 
 DEFAULT_PLAN_LIMIT = 5
@@ -349,12 +351,6 @@ def _plan_activity(
         for criterion in items
     }
 
-    def leading_int(text: str, start: int) -> int | None:
-        end = start
-        while end < len(text) and text[end].isdigit():
-            end += 1
-        return int(text[start:end]) if end > start else None
-
     def plan_for_milestone(mid: int | None) -> int | None:
         return milestone_plan.get(mid) if mid is not None else None
 
@@ -513,7 +509,7 @@ def _keep_plan(
 
 
 def tree(
-    port: PlanningPort,
+    port: ReposPort,
     status: Status | None = None,
     plan_id: int | None = None,
     finished: str = "hide",

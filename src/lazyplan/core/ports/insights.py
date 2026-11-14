@@ -1,38 +1,24 @@
-"""The insights read port: events, rows, links, claims, and annotations."""
+"""The insights read port: events over the provenance read surface."""
 
 from __future__ import annotations
 
 from typing import Protocol
 
-from ..entities import Claim, PlanWorktree
+from .claims import ClaimsReadPort
 from .provenance import ProvenancePort
 from .refs import RefsPort
 from .revisions import RevisionsPort
 from .sessions import SessionsReadPort
 
 
-class InsightsPort(ProvenancePort, RevisionsPort, SessionsReadPort, RefsPort, Protocol):
+class InsightsPort(
+    ProvenancePort,
+    RevisionsPort,
+    RefsPort,
+    ClaimsReadPort,
+    SessionsReadPort,
+    Protocol,
+):
     """Read-only surface used by metrics, stats, audit, brief, and lint."""
 
-    def list_plan_worktrees(self, plan_id: int) -> list[PlanWorktree]: ...
-
-    def plan_worktrees_map(self) -> dict[int, list[PlanWorktree]]: ...
-
-    def feed(self, limit: int = 20) -> list[dict]: ...
-
     def events_by_action(self, *actions: str) -> list[dict]: ...
-
-    def claims_map(self) -> dict[int, Claim]: ...
-
-    def get_claim(self, task_id: int) -> Claim | None: ...
-
-    def list_claims(
-        self,
-        include_expired: bool = False,
-        now: float | None = None,
-        plan_id: int | None = None,
-    ) -> list[dict]: ...
-
-    def open_task_criteria_ids(self) -> set[int]: ...
-
-    def all_criterion_links(self) -> list[dict]: ...

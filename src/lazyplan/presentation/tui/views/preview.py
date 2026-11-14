@@ -10,6 +10,7 @@ from typing import Any
 from ...shared.design import (
     escape_markdown,
     escape_markup,
+    evidence_label,
 )
 from .reference_lines import reference_lines
 
@@ -260,12 +261,7 @@ def proof_block(criteria: list[dict[str, Any]]) -> PreviewBlock | None:
     for criterion in criteria[:5]:
         evidence = criterion.get("evidence") or {}
         latest = evidence.get("latest") or {}
-        label = (
-            latest.get("command")
-            or latest.get("note")
-            or str(latest.get("commit_sha", ""))[:12]
-            or ""
-        )
+        label = evidence_label(latest)
         parts = [
             str(criterion.get("text", "")),
             _proof_word(evidence),

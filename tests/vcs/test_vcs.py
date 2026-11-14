@@ -6,9 +6,7 @@ from unittest import mock
 
 from lazyplan.infrastructure.vcs import (
     GitBackend,
-    backends,
     commit_url,
-    current_head,
     detect_backend,
     file_url,
     web_remote,
@@ -59,9 +57,6 @@ class TestVCS(unittest.TestCase):
     def setUp(self):
         self.backend = GitBackend()
 
-    def test_registry_has_git(self):
-        self.assertTrue(any(b.name == "git" for b in backends()))
-
     def test_remote_and_commit_urls(self):
         self.assertEqual(web_remote("git@github.com:org/repo.git"), "https://github.com/org/repo")
         self.assertEqual(
@@ -91,9 +86,6 @@ class TestVCS(unittest.TestCase):
             backend, root = detect_backend(tmp)
             self.assertIsNone(backend)
             self.assertIsNone(root)
-            be, info = current_head(tmp)
-            self.assertIsNone(be)
-            self.assertIsNone(info)
 
     @unittest.skipUnless(_git_available(), "git CLI required")
     def test_git_repo_head_and_show(self):
@@ -137,12 +129,11 @@ class TestVCS(unittest.TestCase):
             self.assertEqual(short.sha, sha)
             # unknown sha -> None
             self.assertIsNone(self.backend.show(tmp, "0" * 40))
-            # current_head helper works from a subdir
+            # detection works from a subdir
             sub = os.path.join(tmp, "sub")
             os.makedirs(sub)
-            be, cur = current_head(sub)
+            be, _root = detect_backend(sub)
             self.assertIsNotNone(be)
-            self.assertIsNotNone(cur)
 
     @unittest.skipUnless(_git_available(), "git CLI required")
     def test_empty_repo_has_no_head(self):

@@ -11,10 +11,9 @@ from typing import Any
 
 from ..core.entities import Plan, Task
 from ..core.policies.coordination import patterns_overlap
-from ..core.policies.maintenance import is_archived_row
 from ..core.ports.needs_me import NeedsMePort
 from ..core.serialization import approval_payload
-from . import stats
+from . import active, stats
 
 ATTENTION_LIMIT = 20
 PLAN_LIMIT = 25
@@ -30,33 +29,6 @@ _REASON_PRIORITY = {
     "done with open criteria": 4,
     "failing checks": 5,
 }
-
-
-def _plans(port: NeedsMePort, plan_id: int | None) -> list[Plan]:
-    if plan_id is None:
-        return port.list_plans(archived="hide")
-    plan = port.get_plan(plan_id)
-    if plan is None or is_archived_row(plan):
-        return []
-    return [plan]
-
-
-def _task_index(
-    port: NeedsMePort, plan_ids: set[int]
-) -> tuple[dict[int, int], dict[int, Task], dict[int, list[Task]]]:
-    """Task to plan/milestone maps and per-plan task lists from bulk reads."""
-    milestones = port.milestones_map()
-    tasks = port.tasks_map()
-    task_plan: dict[int, int] = {}
-    task_by_id: dict[int, Task] = {}
-    tasks_by_plan: dict[int, list[Task]] = {plan_id: [] for plan_id in plan_ids}
-    for plan_id in plan_ids:
-        for milestone in milestones.get(plan_id, []):
-            for task in tasks.get(milestone.id, []):
-                task_plan[task.id] = plan_id
-                task_by_id[task.id] = task
-                tasks_by_plan[plan_id].append(task)
-    return task_plan, task_by_id, tasks_by_plan
 
 
 def _attention_rows(
@@ -241,21 +213,48 @@ def _overlaps(
     return out
 
 
-def _expired_ids(claims_map: dict, task_plan: dict[int, int], stamp: float) -> set[int]:
-    return {
-        task_id
-        for task_id, claim in claims_map.items()
-        if task_id in task_plan and claim.expired(stamp)
-    }
-
-
-def _active_claims(
-    port: NeedsMePort, plan_id: int | None, plan_ids: set[int], stamp: float
-) -> list[dict]:
-    claims = port.list_claims(include_expired=False, now=stamp, plan_id=plan_id)
-    if plan_id is None:
-        return claims
-    return [claim for claim in claims if int(claim["plan_id"]) in plan_ids]
+def _claim_views(
+    claims_map: dict,
+    task_plan: dict[int, int],
+    task_by_id: dict[int, Task],
+    plan_names: dict[int, str],
+    plan_id: int | None,
+    plan_ids: set[int],
+    stamp: float,
+) -> tuple[list[dict], set[int]]:
+    """Active lease rows and expired task ids from the one claims read."""
+    rows: list[dict] = []
+    expired: set[int] = set()
+    for task_id, claim in claims_map.items():
+        task = task_by_id.get(task_id)
+        plan = task_plan.get(task_id)
+        if task is None or plan is None:
+            continue
+        if plan_id is not None and plan not in plan_ids:
+            continue
+        if claim.expired(stamp):
+            expired.add(task_id)
+            continue
+        rows.append(
+            {
+                "task_id": task_id,
+                "task_title": task.title,
+                "task_status": task.status.value,
+                "milestone_id": task.milestone_id,
+                "plan_id": plan,
+                "plan_title": plan_names.get(plan, ""),
+                "actor": claim.actor,
+                "expires_at": claim.expires_at,
+                "renewed_at": claim.renewed_at,
+                "started_at": claim.started_at,
+                "note": claim.note,
+                "worktree": claim.worktree,
+                "repo_path": claim.repo_path,
+                "expired": False,
+            }
+        )
+    rows.sort(key=lambda row: (float(row["expires_at"]), int(row["task_id"])))
+    return rows, expired
 
 
 def _claim_rows(active_claims: list[dict], max_claims: int, stamp: float) -> list[dict[str, Any]]:
@@ -318,67 +317,69 @@ def build(
     max_overlaps: int = OVERLAP_LIMIT,
 ) -> dict[str, Any]:
     """Assemble the control-room payload from bulk reads."""
-    stamp = time.time() if now is None else now
-    plans = _plans(port, plan_id)
-    plan_ids = {int(plan.id) for plan in plans}
-    plan_names = {int(plan.id): str(plan.name) for plan in plans}
+    with port.transaction():
+        stamp = time.time() if now is None else now
+        plans = active.plan_list(port, plan_id)
+        plan_ids = {int(plan.id) for plan in plans}
+        plan_names = {int(plan.id): str(plan.name) for plan in plans}
 
-    task_plan, task_by_id, tasks_by_plan = _task_index(port, plan_ids)
-    claims_map = port.claims_map()
-    expired_task_ids = _expired_ids(claims_map, task_plan, stamp)
-    active_claims = _active_claims(port, plan_id, plan_ids, stamp)
-    active_task_ids = {int(claim["task_id"]) for claim in active_claims}
-    task_rows = [task for tasks in tasks_by_plan.values() for task in tasks]
+        task_plan, task_by_id, tasks_by_plan = active.task_index(port, plan_ids)
+        claims_map = port.claims_map()
+        active_claims, expired_task_ids = _claim_views(
+            claims_map, task_plan, task_by_id, plan_names, plan_id, plan_ids, stamp
+        )
+        active_task_ids = {int(claim["task_id"]) for claim in active_claims}
+        task_rows = [task for tasks in tasks_by_plan.values() for task in tasks]
 
-    attention_all = _attention_rows(
-        port,
-        task_plan,
-        task_by_id,
-        tasks_by_plan,
-        active_task_ids,
-        expired_task_ids,
-        plan_names,
-        stale_after,
-        stamp,
-        claims_map=claims_map,
-        forge=port.forge_links_map(),
-        open_criteria=port.open_task_criteria_ids(),
-        task_rows=task_rows,
-    )
-    attention_task_ids = {int(row["task_id"]) for row in attention_all}
+        attention_all = _attention_rows(
+            port,
+            task_plan,
+            task_by_id,
+            tasks_by_plan,
+            active_task_ids,
+            expired_task_ids,
+            plan_names,
+            stale_after,
+            stamp,
+            claims_map=claims_map,
+            forge=port.forge_links_map(),
+            open_criteria=port.open_task_criteria_ids(),
+            task_rows=task_rows,
+        )
+        attention_task_ids = {int(row["task_id"]) for row in attention_all}
 
-    health, plan_needs_me, open_questions = _plan_health(
-        plans,
-        tasks_by_plan,
-        expired_task_ids,
-        port.latest_revisions_map(),
-        port.drift_counts(),
-        port.questions_map(),
-        port.refs_map(),
-        active_claims,
-    )
-    needs_me_plan_ids = _needs_me_ids(task_plan, attention_task_ids, plan_needs_me)
+        health, plan_needs_me, open_questions = _plan_health(
+            plans,
+            tasks_by_plan,
+            expired_task_ids,
+            port.latest_revisions_map(),
+            port.drift_counts(),
+            port.questions_map(),
+            port.refs_map(),
+            active_claims,
+        )
+        needs_me_plan_ids = _needs_me_ids(task_plan, attention_task_ids, plan_needs_me)
 
-    claim_rows = _claim_rows(active_claims, max_claims, stamp)
-    overlap_rows = _overlaps(
-        active_claims[:OVERLAP_CLAIM_LIMIT], port.touchpoints_map(), max_overlaps
-    )
-    counts = _counts(
-        plans,
-        attention_all,
-        active_claims,
-        open_questions,
-        health,
-        overlap_rows,
-    )
-    return {
-        "generated_at": stamp,
-        "plan_id": plan_id,
-        "plans": health[:max_plans],
-        "attention": attention_all[:max_attention],
-        "claims": claim_rows,
-        "overlaps": overlap_rows,
-        "counts": counts,
-        "needs_me_task_ids": sorted(attention_task_ids),
-        "needs_me_plan_ids": sorted(needs_me_plan_ids),
-    }
+        claim_rows = _claim_rows(active_claims, max_claims, stamp)
+        overlap_rows = _overlaps(
+            active_claims[:OVERLAP_CLAIM_LIMIT], port.touchpoints_map(), max_overlaps
+        )
+        counts = _counts(
+            plans,
+            attention_all,
+            active_claims,
+            open_questions,
+            health,
+            overlap_rows,
+        )
+        return {
+            "generated_at": stamp,
+            "plan_id": plan_id,
+            "plans": health[:max_plans],
+            "attention": attention_all[:max_attention],
+            "claims": claim_rows,
+            "overlaps": overlap_rows,
+            "counts": counts,
+            "needs_me_task_ids": sorted(attention_task_ids),
+            "needs_me_plan_ids": sorted(needs_me_plan_ids),
+        }

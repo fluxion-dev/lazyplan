@@ -9,6 +9,7 @@ from ...core.ports.insights import InsightsPort
 from ...services import insights
 from ...services.evidence import ProofResult
 from ..shared import porcelain
+from ..shared.design import branch_word, evidence_label, short_sha, stale_word
 from .emit import _porcelain_row
 from .rows import (
     _claim_line,
@@ -25,7 +26,7 @@ def _commit_row(link: dict, parent: str) -> str:
     return porcelain.row(
         "commit",
         link.get("sha"),
-        "stale" if link.get("stale") else "linked",
+        stale_word(link) or "linked",
         link.get("subject"),
         parent,
         link.get("repo_root") or "-",
@@ -285,8 +286,8 @@ def _git_status_rows(entries: list[dict], parent: str) -> list[str]:
                 )
             )
             continue
-        branch = entry.get("branch") or ("detached" if entry.get("detached") else "unknown")
-        head = str(entry.get("head") or "")[:12]
+        branch = branch_word(entry)
+        head = short_sha(str(entry.get("head") or ""))
         extra = (
             f"head={head or '-'} ahead={entry.get('ahead', 0)} behind={entry.get('behind', 0)} "
             f"upstream={entry.get('upstream') or '-'} subject={entry.get('subject') or '-'}"
@@ -369,10 +370,7 @@ def _trace_text(payload: dict) -> list[str]:
         )
         for row in entry.get("evidence", []):
             proof = "pass" if row.get("exit_code") in (None, 0) else "fail"
-            lines.append(
-                f"  evidence #{row['id']} {proof} "
-                f"{row.get('command') or row.get('note') or str(row.get('commit_sha', ''))[:12]}"
-            )
+            lines.append(f"  evidence #{row['id']} {proof} {evidence_label(row)}")
         tasks = entry.get("tasks", [])
         if not tasks:
             lines.append("  (no proving task)")
@@ -381,7 +379,9 @@ def _trace_text(payload: dict) -> list[str]:
             task = item["task"]
             lines.append(f"  T{task['id']} {task['title']} (M{task['milestone_id']})")
             for commit in item.get("commits", []):
-                lines.append(f"    {str(commit.get('sha', ''))[:12]} {commit.get('subject', '')}")
+                lines.append(
+                    f"    {short_sha(str(commit.get('sha', '')))} {commit.get('subject', '')}"
+                )
             for pull in item.get("forge_links", []):
                 lines.append(
                     f"    PR #{pull.get('number')} {pull.get('state') or 'unknown'} "
@@ -414,7 +414,7 @@ def _trace_rows(payload: dict) -> list[str]:
                     "evidence",
                     row.get("id"),
                     "pass" if row.get("exit_code") in (None, 0) else "fail",
-                    row.get("command") or row.get("note") or str(row.get("commit_sha", ""))[:12],
+                    evidence_label(row),
                     f"criterion:{crit['id']}",
                     row.get("actor"),
                 )

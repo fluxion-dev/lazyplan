@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Protocol
 
 from ..policies.maintenance import DEFAULT_WINDOW_SECS
 from .planning import PlanningPort
-from .sessions import SessionsReadPort
+from .sessions import SessionsPort
 
 
 @dataclass(frozen=True)
@@ -166,7 +165,7 @@ class RestoreResult:
         return {"kind": self.kind, "id": self.id, "restored": self.restored}
 
 
-class MaintenancePort(PlanningPort, SessionsReadPort, Protocol):
+class MaintenancePort(PlanningPort, SessionsPort, Protocol):
     """Persistence surface the maintenance use cases need."""
 
     def archive_plan(
@@ -175,17 +174,6 @@ class MaintenancePort(PlanningPort, SessionsReadPort, Protocol):
 
     def restore_plan(
         self, plan_id: int, actor: str = "human", now: float | None = None
-    ) -> bool: ...
-
-    def archive_sessions(
-        self,
-        session_ids: Sequence[int],
-        actor: str = "human",
-        now: float | None = None,
-    ) -> int: ...
-
-    def restore_session(
-        self, session_id: int, actor: str = "human", now: float | None = None
     ) -> bool: ...
 
     def report(self, window_secs: float = DEFAULT_WINDOW_SECS) -> MaintenanceReport: ...

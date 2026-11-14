@@ -146,9 +146,12 @@ class PlansMixin(StoreBase):
 
     def plan_uids_map(self) -> dict[int, str]:
         """Stable plan uid keyed by plan id, in one query."""
-        with self._connect() as conn:
-            rows = conn.execute("SELECT id, uid FROM plans ORDER BY id").fetchall()
-        return {int(row["id"]): str(row["uid"] or "") for row in rows}
+        return self._indexed(
+            "SELECT id, uid FROM plans ORDER BY id",
+            (),
+            lambda row: str(row["uid"] or ""),
+            lambda row: int(row["id"]),
+        )
 
     def update_plan(
         self,
@@ -240,13 +243,12 @@ class PlansMixin(StoreBase):
 
     def milestones_map(self) -> dict[int, list[Milestone]]:
         """Every milestone grouped by plan id, in creation order."""
-        with self._connect() as conn:
-            rows = conn.execute("SELECT * FROM milestones ORDER BY id").fetchall()
-        out: dict[int, list[Milestone]] = {}
-        for row in rows:
-            milestone = self._row_to_milestone(row)
-            out.setdefault(milestone.plan_id, []).append(milestone)
-        return out
+        return self._grouped(
+            "SELECT * FROM milestones ORDER BY id",
+            (),
+            self._row_to_milestone,
+            lambda row: int(row["plan_id"]),
+        )
 
     def update_milestone(
         self,
@@ -351,45 +353,53 @@ class PlansMixin(StoreBase):
         return ok
 
     @staticmethod
-    def _delete_milestone_criteria(conn: sqlite3.Connection, milestone_id: int) -> None:
-        """Remove criteria under a milestone and its tasks."""
-        tids = [
-            r["id"]
-            for r in conn.execute(
+    def _milestone_task_ids(conn: sqlite3.Connection, milestone_id: int) -> list[int]:
+        """Task ids under one milestone."""
+        return [
+            int(row["id"])
+            for row in conn.execute(
                 "SELECT id FROM tasks WHERE milestone_id=?", (milestone_id,)
             ).fetchall()
         ]
-        conn.execute(
-            "DELETE FROM criteria WHERE parent_kind='milestone' AND parent_id=?", (milestone_id,)
-        )
-        for tid in tids:
-            conn.execute("DELETE FROM criteria WHERE parent_kind='task' AND parent_id=?", (tid,))
 
-    @staticmethod
-    def _delete_milestone_links(conn: sqlite3.Connection, milestone_id: int) -> None:
-        """Remove VCS links under a milestone and its tasks."""
-        tids = [
-            r["id"]
-            for r in conn.execute(
-                "SELECT id FROM tasks WHERE milestone_id=?", (milestone_id,)
-            ).fetchall()
-        ]
+    @classmethod
+    def _delete_scoped_rows(cls, conn: sqlite3.Connection, table: str, milestone_id: int) -> None:
+        """Delete rows keyed by (parent_kind, parent_id) for a milestone and its tasks."""
         conn.execute(
-            "DELETE FROM vcs_links WHERE parent_kind='milestone' AND parent_id=?", (milestone_id,)
+            f"DELETE FROM {table} WHERE parent_kind='milestone' AND parent_id=?", (milestone_id,)
         )
-        for tid in tids:
-            conn.execute("DELETE FROM vcs_links WHERE parent_kind='task' AND parent_id=?", (tid,))
+        for tid in cls._milestone_task_ids(conn, milestone_id):
+            conn.execute(f"DELETE FROM {table} WHERE parent_kind='task' AND parent_id=?", (tid,))
+
+    @classmethod
+    def _delete_milestone_criteria(cls, conn: sqlite3.Connection, milestone_id: int) -> None:
+        """Remove criteria under a milestone and its tasks."""
+        cls._delete_scoped_rows(conn, "criteria", milestone_id)
+
+    @classmethod
+    def _delete_milestone_links(cls, conn: sqlite3.Connection, milestone_id: int) -> None:
+        """Remove VCS links under a milestone and its tasks."""
+        cls._delete_scoped_rows(conn, "vcs_links", milestone_id)
+
+    @classmethod
+    def _delete_milestone_forge_links(cls, conn: sqlite3.Connection, milestone_id: int) -> None:
+        """Remove forge links under a milestone and its tasks."""
+        cls._delete_scoped_rows(conn, "forge_links", milestone_id)
+
+    @classmethod
+    def _delete_milestone_notes(cls, conn: sqlite3.Connection, milestone_id: int) -> None:
+        """Remove notes under a milestone and its tasks."""
+        cls._delete_scoped_rows(conn, "notes", milestone_id)
+
+    @classmethod
+    def _delete_milestone_comments(cls, conn: sqlite3.Connection, milestone_id: int) -> None:
+        """Remove comments under a milestone and its tasks."""
+        cls._delete_scoped_rows(conn, "comments", milestone_id)
 
     def _delete_milestone_repos(self, conn: sqlite3.Connection, milestone_id: int) -> None:
         """Remove repo links under a milestone and its tasks."""
-        tids = [
-            r["id"]
-            for r in conn.execute(
-                "SELECT id FROM tasks WHERE milestone_id=?", (milestone_id,)
-            ).fetchall()
-        ]
         self._delete_entity_repos(conn, "milestone", milestone_id)
-        for tid in tids:
+        for tid in self._milestone_task_ids(conn, milestone_id):
             self._delete_entity_repos(conn, "task", tid)
 
     @staticmethod
@@ -405,46 +415,6 @@ class PlansMixin(StoreBase):
         conn.execute(
             "DELETE FROM comments WHERE parent_kind=? AND parent_id=?", (parent_kind, parent_id)
         )
-
-    def _delete_milestone_comments(self, conn: sqlite3.Connection, milestone_id: int) -> None:
-        """Remove comments under a milestone and its tasks."""
-        tids = [
-            r["id"]
-            for r in conn.execute(
-                "SELECT id FROM tasks WHERE milestone_id=?", (milestone_id,)
-            ).fetchall()
-        ]
-        self._delete_comments(conn, "milestone", milestone_id)
-        for tid in tids:
-            self._delete_comments(conn, "task", tid)
-
-    def _delete_milestone_notes(self, conn: sqlite3.Connection, milestone_id: int) -> None:
-        """Remove notes under a milestone and its tasks."""
-        tids = [
-            r["id"]
-            for r in conn.execute(
-                "SELECT id FROM tasks WHERE milestone_id=?", (milestone_id,)
-            ).fetchall()
-        ]
-        self._delete_notes(conn, "milestone", milestone_id)
-        for tid in tids:
-            self._delete_notes(conn, "task", tid)
-
-    @staticmethod
-    def _delete_milestone_forge_links(conn: sqlite3.Connection, milestone_id: int) -> None:
-        """Remove forge links under a milestone and its tasks."""
-        tids = [
-            r["id"]
-            for r in conn.execute(
-                "SELECT id FROM tasks WHERE milestone_id=?", (milestone_id,)
-            ).fetchall()
-        ]
-        conn.execute(
-            "DELETE FROM forge_links WHERE parent_kind='milestone' AND parent_id=?",
-            (milestone_id,),
-        )
-        for tid in tids:
-            conn.execute("DELETE FROM forge_links WHERE parent_kind='task' AND parent_id=?", (tid,))
 
     def _parent_exists(self, parent_kind: str, parent_id: int) -> bool:
         """True when the criteria parent row exists."""

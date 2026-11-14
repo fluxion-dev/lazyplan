@@ -6,7 +6,6 @@ from dataclasses import dataclass
 
 from ..core.entities import Criterion, CriterionEvidence
 from ..core.policies.evidence import PROOF_PASS, proof_state
-from ..core.policies.evidence import coverage as coverage_policy
 from ..core.ports.provenance import ProvenancePort
 
 
@@ -68,18 +67,3 @@ def task_gate(port: ProvenancePort, task_id: int) -> str | None:
         f"task #{task_id} needs passing evidence for criteria {names}{more};"
         " run lpui criterion prove --id <criterion> ..."
     )
-
-
-def coverage(port: ProvenancePort, plan_ids: list[int]) -> tuple[int, int]:
-    """Criteria with a latest passing row, and total criteria, for these plans."""
-    criteria = port.criteria_map()
-    milestones = port.milestones_map()
-    tasks = port.tasks_map()
-    ids: list[int] = []
-    for plan_id in plan_ids:
-        ids.extend(item.id for item in criteria.get(("plan", plan_id), ()))
-        for milestone in milestones.get(plan_id, ()):
-            ids.extend(item.id for item in criteria.get(("milestone", milestone.id), ()))
-            for task in tasks.get(milestone.id, ()):
-                ids.extend(item.id for item in criteria.get(("task", task.id), ()))
-    return coverage_policy(port.evidence_map(), ids)

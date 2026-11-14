@@ -236,15 +236,15 @@ class TestTemplateDirs(unittest.TestCase):
             out = templates.apply_template("task", {"title": "T"}, db)
             self.assertEqual(out["desc"], "from home")
 
-    def test_ensure_is_idempotent(self):
+    def test_setup_is_idempotent(self):
         with tempfile.TemporaryDirectory() as tmp:
             plan = Path(tmp) / ".agents/lazyplan"
-            first = templates.ensure_templates(plan)
-            self.assertEqual(len(first), 3)
+            first = templates.run_template_setup(plan, interactive=False)
+            self.assertEqual(len(first["added"]), 3)
             self.assertTrue((plan / "templates" / "plan.md").is_file())
             (plan / "templates" / "plan.md").write_text("edited", encoding="utf-8")
-            second = templates.ensure_templates(plan)
-            self.assertEqual(second, [])
+            second = templates.run_template_setup(plan, interactive=False)
+            self.assertEqual(second["added"], [])
             self.assertEqual((plan / "templates" / "plan.md").read_text(encoding="utf-8"), "edited")
 
 
@@ -268,7 +268,7 @@ class TestStoreTemplates(unittest.TestCase):
         self.assertEqual(self.store.list_criteria("plan", p.id), [])
 
     def test_fill_and_auto_criteria(self):
-        templates.ensure_templates(self.db.parent)
+        templates.run_template_setup(self.db.parent, interactive=False)
         (self.db.parent / "templates" / "plan.md").write_text(
             "---\ndefaults:\n  why: W\nrequired: [title]\ncriteria:\n  - C1\n  - C2\n---\nbody\n",
             encoding="utf-8",
@@ -279,7 +279,7 @@ class TestStoreTemplates(unittest.TestCase):
         self.assertEqual([c.text for c in store.list_criteria("plan", p.id)], ["C1", "C2"])
 
     def test_enforce_names_field(self):
-        templates.ensure_templates(self.db.parent)
+        templates.run_template_setup(self.db.parent, interactive=False)
         (self.db.parent / "templates" / "plan.md").write_text(
             "---\nrequired: [title]\n---\n", encoding="utf-8"
         )
@@ -298,7 +298,7 @@ class TestStoreTemplates(unittest.TestCase):
         store = Store(self.db)
         t = services.create_task(store, s.id, "A")
         self.assertFalse(hasattr(t, "priority"))
-        templates.ensure_templates(self.db.parent)
+        templates.run_template_setup(self.db.parent, interactive=False)
         (self.db.parent / "templates" / "task.md").write_text(
             "---\ndefaults:\n  priority: p2\nrequired: [title]\n---\n", encoding="utf-8"
         )
@@ -307,7 +307,7 @@ class TestStoreTemplates(unittest.TestCase):
         self.assertFalse(hasattr(t2, "priority"))
 
     def test_malformed_template_raises(self):
-        templates.ensure_templates(self.db.parent)
+        templates.run_template_setup(self.db.parent, interactive=False)
         (self.db.parent / "templates" / "plan.md").write_text(
             "---\ndefaults:\n  nope: x\n---\n", encoding="utf-8"
         )

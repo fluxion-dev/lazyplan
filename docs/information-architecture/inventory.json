@@ -1559,7 +1559,7 @@
       {
         "file": "README.md",
         "headings": [
-          "lazyplan (`lpui`) \u2014 v0.45.0",
+          "lazyplan (`lpui`) \u2014 v0.46.0",
           "Install",
           "First run",
           "Why it differs",
@@ -3074,7 +3074,7 @@
         "file": "src/lazyplan/presentation/tui/screens/hub_provenance.py",
         "key": "K",
         "label": "Kind",
-        "line": "201",
+        "line": "189",
         "screen": "hub_provenance"
       },
       {
@@ -3082,7 +3082,7 @@
         "file": "src/lazyplan/presentation/tui/screens/hub_provenance.py",
         "key": "f",
         "label": "Actor",
-        "line": "200",
+        "line": "188",
         "screen": "hub_provenance"
       },
       {
@@ -3381,7 +3381,7 @@
           {
             "action": "filter_actor",
             "file": "src/lazyplan/presentation/tui/screens/hub_provenance.py",
-            "line": "200"
+            "line": "188"
           },
           {
             "action": "toggle_fold",

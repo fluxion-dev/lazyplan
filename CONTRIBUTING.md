@@ -40,7 +40,7 @@ The gate runs:
 - the docs allowlist and link gate (`tools/check-docs.py`)
 - the site build and discoverability check (`site/`, `tools/check-site.py`)
 - a clean-install smoke that builds, installs, and runs both console scripts
-- the performance budgets
+- the performance budgets (`tools/perf_bench.py --check`: exact query ceilings on a deterministic fixture)
 - the unittest suite on both system Python and the venv Python
 
 On Windows, run it from Git Bash. CI runs the same gates on Linux and macOS for
@@ -162,10 +162,11 @@ The registry is the source of truth. To add a canonical action:
 
 1. Add the `Action` row in `presentation/shared/registry_actions.py` (or
    `registry_actions_provenance.py`) with a noun-first id, label, key, context,
-   route, and the surfaces it should reach.
-2. Map it in `presentation/shared/registry_surfaces.py`: CLI paths in
-   `CLI_ACTIONS`, MCP tools in `MCP_ACTIONS`, or an explicit
-   `SurfaceException` with a reason. A gap fails
+   route, the surfaces it should reach, and its CLI command paths
+   (`cli_paths`) and MCP tool name (`mcp_tool`). The surface maps derive from
+   the rows, so the names are typed once.
+2. When a declared surface has no path, record an explicit `SurfaceException`
+   with a reason in `presentation/shared/registry_surfaces.py`. A gap fails
    `tests/ia/test_surface_parity.py`.
 3. Wire the TUI handler in the owning mixin, add the palette command in
    `registry_commands.py`, and point its `handler` at the app action.
@@ -178,5 +179,5 @@ The registry is the source of truth. To add a canonical action:
 Worked example: adding `criterion edit` meant one action row, one CLI path
 (`criterion edit`), one MCP tool (`criterion_edit`), a hub key (`e`), a store
 method (`update_criterion`), a usage example, and a parity test row. The same
-checklist applies to a throwaway action in a test: add the row, extend both
-maps, and `registry.uncovered()` must stay empty.
+checklist applies to a throwaway action in a test: add the row with its paths
+and `registry.uncovered()` must stay empty.

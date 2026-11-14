@@ -264,20 +264,6 @@ def templates_dir_for_db(db_path: str | Path) -> Path | None:
     return sibling if sibling.is_dir() else None
 
 
-def ensure_templates(plan_dir: str | Path, choices: TemplateChoices | None = None) -> list[str]:
-    """Scaffold starter templates (idempotent: never overwrites edits)."""
-    picks = choices or OPINIONATED
-    d = Path(plan_dir).expanduser() / TEMPLATE_DIRNAME
-    d.mkdir(parents=True, exist_ok=True)
-    written: list[str] = []
-    for kind, filename in TEMPLATE_FILES.items():
-        dest = d / filename
-        if not dest.exists():
-            textfile.write(dest, render_starter(kind, picks))
-            written.append(str(dest))
-    return written
-
-
 def _split_body(text: str) -> tuple[str, str]:
     """Frontmatter and body of a template file (body may be empty)."""
     lines = text.splitlines(keepends=True)

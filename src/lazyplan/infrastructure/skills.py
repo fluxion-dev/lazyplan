@@ -13,10 +13,8 @@ from __future__ import annotations
 
 import os
 import shutil
-from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TextIO
 
 from . import textfile
 from .agents_md import (
@@ -253,11 +251,6 @@ def detect_agents(home: Path | None = None) -> list[AgentHost]:
     return out
 
 
-def default_scope(repo_root: Path | None) -> str:
-    """Plan when inside a repo, else global."""
-    return "project" if repo_root is not None else "global"
-
-
 def skill_targets(
     scope: str, repo_root: Path | None, home: Path, name: str = SKILL_NAME
 ) -> list[Path]:
@@ -477,52 +470,3 @@ def install(
         _, status = ensure_agents_md(repo_root)
         result.updated_agents_md = f"{repo_root / 'AGENTS.md'} ({status})"
     return result
-
-
-def _prompt(
-    prompt: str,
-    valid: set[str] | None = None,
-    default: str = "",
-    read: Callable[[], str] | None = None,
-    write: TextIO | None = None,
-) -> str:
-    """Prompt on stderr, read stdin; EOF/KeyboardInterrupt means default/skip."""
-    import sys
-
-    out: TextIO = write if write is not None else sys.stderr
-    print(prompt, file=out, end="", flush=True)
-    try:
-        line = (read() if read is not None else input()).strip()
-    except (EOFError, KeyboardInterrupt, StopIteration):
-        return default
-    if valid is not None and line and line not in valid:
-        print(f"  pick one of {sorted(valid)} — using default [{default}]", file=out)
-        return default
-    return line or default
-
-
-def prompt_confirm(
-    prompt: str,
-    default_yes: bool = True,
-    read: Callable[[], str] | None = None,
-    write: TextIO | None = None,
-) -> bool:
-    """Y/n prompt on stderr/stdin; EOF/empty means the default. Never raises."""
-    default = "Y" if default_yes else "N"
-    ans = _prompt(
-        f"{prompt} [{'Y/n' if default_yes else 'y/N'}]: ",
-        valid={"y", "n", "Y", "N", ""},
-        default=default,
-        read=read,
-        write=write,
-    )
-    return ans.lower() != "n" if default_yes else ans.lower() == "y"
-
-
-def _skills_dir_override(args: object) -> str | None:
-    """Explicit skill dir: --skills-dir wins, then $LAZYPLAN_SKILLS_DIR."""
-    flag = str(getattr(args, "skills_dir", "") or "").strip()
-    if flag:
-        return flag
-    env = os.environ.get("LAZYPLAN_SKILLS_DIR", "").strip()
-    return env or None

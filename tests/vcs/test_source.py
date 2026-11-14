@@ -168,7 +168,9 @@ class TestDiffParsing(unittest.TestCase):
             "lazyplan.services.source_diff.detect_backend", return_value=(backend, "/repo")
         ):
             first = read_diff_page("/repo", "b" * 40, limit=1)
-            second = read_diff_page("/repo", "b" * 40, offset=first.next_offset, limit=1)
+            second = read_diff_page(
+                "/repo", "b" * 40, offset=first.offset + len(first.files), limit=1
+            )
         self.assertEqual(first.total, 2)
         self.assertTrue(first.has_more)
         self.assertEqual([item.path for item in first.files], ["a.txt"])

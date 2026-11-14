@@ -46,6 +46,9 @@ class KeysMixin(StoreBase):
 
     def entity_keys_map(self) -> dict[tuple[str, int], str]:
         """Every stable document key, keyed by kind and row id."""
-        with self._connect() as conn:
-            rows = conn.execute("SELECT kind, row_id, key FROM entity_keys").fetchall()
-        return {(str(row["kind"]), int(row["row_id"])): str(row["key"]) for row in rows}
+        return self._indexed(
+            "SELECT kind, row_id, key FROM entity_keys",
+            (),
+            lambda row: str(row["key"]),
+            lambda row: (str(row["kind"]), int(row["row_id"])),
+        )

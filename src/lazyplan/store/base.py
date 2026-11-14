@@ -6,9 +6,10 @@ import json
 import sqlite3
 import threading
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from pathlib import Path
+from typing import TYPE_CHECKING, TypeVar
 
 from lazyplan.infrastructure.checkout import PathAdapter
 from lazyplan.infrastructure.repo import (
@@ -25,7 +26,42 @@ from ..core.errors import ClaimMissing as ClaimMissing
 from ..core.ports.paths import PathPort
 from ..core.serialization import to_payload
 from .migrate import migrate
-from .stubs import StoreStubs
+
+if TYPE_CHECKING:
+    from typing import Protocol
+
+    from ..core.entities import PlanChange, Task
+    from ..core.ports.app import AppPort
+
+    class _StoreContract(AppPort, Protocol):
+        """The assembled Store: public capabilities plus cross-mixin helpers."""
+
+        @staticmethod
+        def _opt(r: sqlite3.Row, keys: set[str], name: str) -> str: ...
+
+        def _row_to_task(self, r: sqlite3.Row) -> Task: ...
+
+        def _plan_for_kind(self, kind: str, obj_id: int) -> int | None: ...
+
+        def _record_scope_change(
+            self,
+            plan_id: int,
+            kind: str,
+            obj_id: int,
+            action: str,
+            field: str = "",
+            reason: str = "",
+            detail: str = "",
+            actor: str = "human",
+        ) -> PlanChange | None: ...
+
+        @staticmethod
+        def _delete_entity_repos(conn: sqlite3.Connection, kind: str, obj_id: int) -> None: ...
+
+        def _parent_exists(self, parent_kind: str, parent_id: int) -> bool: ...
+
+else:
+    _StoreContract = object
 
 
 def _files_json(files: tuple[str, ...] | list[str]) -> str:
@@ -59,7 +95,11 @@ def _actor(explicit: str = "") -> str:
     return default_actor()
 
 
-class StoreBase(StoreStubs):
+_K = TypeVar("_K")
+_V = TypeVar("_V")
+
+
+class StoreBase(_StoreContract):
     def __init__(self, path: str | Path | None = None, paths: PathPort | None = None) -> None:
         self.path = resolve_db_path(path)
         self.paths = paths or PathAdapter()
@@ -72,8 +112,11 @@ class StoreBase(StoreStubs):
         ensure_plan_dir(self.path)
         with self._connect() as conn:
             migrate(conn)
-        with sqlite3.connect(str(self.path), timeout=5.0) as conn:
-            conn.execute("PRAGMA journal_mode = WAL")
+        wal = sqlite3.connect(str(self.path), timeout=5.0)
+        try:
+            wal.execute("PRAGMA journal_mode = WAL")
+        finally:
+            wal.close()
 
     @property
     def db_path(self) -> str:
@@ -123,6 +166,33 @@ class StoreBase(StoreStubs):
         finally:
             self._local.conn = None
             conn.close()
+
+    def _grouped(
+        self,
+        sql: str,
+        params: Sequence[object],
+        make: Callable[[sqlite3.Row], _V],
+        key: Callable[[sqlite3.Row], _K],
+    ) -> dict[_K, list[_V]]:
+        """Rows mapped by *make* and grouped under the row's *key*, in read order."""
+        with self._connect() as conn:
+            rows = conn.execute(sql, params).fetchall()
+        out: dict[_K, list[_V]] = {}
+        for row in rows:
+            out.setdefault(key(row), []).append(make(row))
+        return out
+
+    def _indexed(
+        self,
+        sql: str,
+        params: Sequence[object],
+        make: Callable[[sqlite3.Row], _V],
+        key: Callable[[sqlite3.Row], _K],
+    ) -> dict[_K, _V]:
+        """One value per key, for a read with at most one row per key."""
+        with self._connect() as conn:
+            rows = conn.execute(sql, params).fetchall()
+        return {key(row): make(row) for row in rows}
 
     def log(
         self,

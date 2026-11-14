@@ -68,13 +68,6 @@ class TestEvidenceService(unittest.TestCase):
                 override="accepted by human",
             )
 
-    def test_coverage_counts_plan_tree(self) -> None:
-        extra = self.store.add_criteria("plan", self.plan.id, "Ships")
-        evidence.prove(self.store, self.criterion.id, command="pytest", exit_code=0)
-        self.assertEqual(evidence.coverage(self.store, [self.plan.id]), (1, 2))
-        evidence.prove(self.store, extra.id, note="reviewed")
-        self.assertEqual(evidence.coverage(self.store, [self.plan.id]), (2, 2))
-
     def test_missing_criterion_raises(self) -> None:
         with self.assertRaises(KeyError):
             evidence.prove(self.store, 999_999, command="pytest")

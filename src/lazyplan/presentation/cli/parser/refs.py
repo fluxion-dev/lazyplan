@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 
 from ....core.policies.refs import REF_KINDS
+from .common import plan_id_arg
 
 
 def add_ref_group(
@@ -26,7 +27,7 @@ def add_ref_group(
         help="what to do with external references",
     )
     link = actions.add_parser("link", help="link an external URL", parents=[common])
-    link.add_argument("--plan", type=int, required=True, metavar="ID", help="plan id")
+    plan_id_arg(link, help="plan id", required=True)
     link.add_argument("--url", required=True, metavar="URL", help="http(s) URL")
     link.add_argument("--provider", default="", metavar="NAME", help="provider (inferred)")
     link.add_argument("--type", choices=list(REF_KINDS), default="issue", help="reference kind")
@@ -34,8 +35,8 @@ def add_ref_group(
     link.add_argument("--title", default="", metavar="TEXT", help="snapshot title")
     link.add_argument("--state", default="", metavar="TEXT", help="snapshot state")
     listing = actions.add_parser("list", help="list a plan's references", parents=[common])
-    listing.add_argument("--plan", type=int, required=True, metavar="ID", help="plan id")
+    plan_id_arg(listing, help="plan id", required=True)
     unlink = actions.add_parser("unlink", help="remove a reference", parents=[common])
-    unlink.add_argument("--plan", type=int, required=True, metavar="ID", help="plan id")
+    plan_id_arg(unlink, help="plan id", required=True)
     unlink.add_argument("--id", type=int, default=0, metavar="ID", help="reference row id")
     unlink.add_argument("--url", default="", metavar="URL", help="reference URL")

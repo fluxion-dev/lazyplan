@@ -1,120 +1,23 @@
 """Canonical action adapters for the CLI and MCP surfaces (stdlib only).
 
-The registry declares which surfaces should expose an action. This module is
-the one mapping per surface: canonical action id to CLI command path or MCP
-tool name. Actions that intentionally stay on one surface carry an explicit
-exception with a reason, so the parity gate fails on an undocumented gap.
+The registry declares which surfaces should expose an action, and each
+``Action`` row carries its CLI command paths and MCP tool name, so the maps
+below are derived once instead of maintained in parallel. Actions that
+intentionally stay on one surface carry an explicit exception with a reason,
+so the parity gate fails on an undocumented gap.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
+from .registry_actions import ACTIONS
+
 CLI_ACTIONS: dict[str, tuple[str, ...]] = {
-    "plan.create": ("plan add",),
-    "milestone.create": ("milestone add",),
-    "task.create": ("task add",),
-    "criterion.add": ("criterion add",),
-    "criterion.edit": ("criterion edit",),
-    "criterion.delete": ("criterion delete",),
-    "evidence.list": ("criterion evidence",),
-    "plan.approve": ("plan approve",),
-    "plan.diff": ("plan diff",),
-    "criterion.prove": ("criterion prove",),
-    "question.add": ("question add",),
-    "question.resolve": ("question resolve",),
-    "question.reopen": ("question reopen",),
-    "reference.link": ("ref link",),
-    "reference.unlink": ("ref unlink",),
-    "task.claim": ("claim take",),
-    "task.block": ("task block",),
-    "task.unblock": ("task unblock",),
-    "task.finish": ("task finish",),
-    "task.renew": ("claim renew",),
-    "row.edit": ("plan edit", "milestone edit", "task edit"),
-    "task.move": ("plan move", "milestone move", "task move"),
-    "claim.release": ("claim release",),
-    "claim.force_release": ("claim release",),
-    "criterion.relate": ("criterion relate",),
-    "criterion.unrelate": ("criterion unrelate",),
-    "row.delete": ("plan delete", "milestone delete", "task delete"),
-    "commit.link": ("link",),
-    "commit.refresh": ("commits",),
-    "git.status": ("git status",),
-    "source.trail": ("commits",),
-    "plan.export": ("export",),
-    "app.update": ("upgrade",),
-    "app.notes": ("notes",),
-    "app.health": ("doctor",),
-    "app.help": ("help",),
-    "task.touch_add": ("touch add",),
-    "task.touch_remove": ("touch remove",),
-    "note.add": ("note add",),
-    "comment.add": ("comment add",),
-    "comment.edit": ("comment edit",),
-    "comment.resolve": ("comment resolve",),
-    "pull_request.list": ("pr list",),
-    "pull_request.refresh": ("pr refresh",),
-    "pull_request.link": ("pr link",),
-    "pull_request.unlink": ("pr unlink",),
-    "event.list": ("feed",),
-    "maintenance.report": ("maint report",),
-    "maintenance.archive": ("maint archive",),
-    "maintenance.trim": ("maint trim",),
-    "maintenance.vacuum": ("maint vacuum",),
-    "maintenance.restore": ("maint restore",),
+    action.id: action.cli_paths for action in ACTIONS if action.cli_paths
 }
 
-MCP_ACTIONS: dict[str, str] = {
-    "plan.create": "create_plan",
-    "milestone.create": "create_milestone",
-    "task.create": "create_task",
-    "criterion.add": "criterion_add",
-    "criterion.edit": "criterion_edit",
-    "criterion.delete": "criterion_delete",
-    "evidence.list": "criterion_evidence",
-    "plan.approve": "plan_approve",
-    "plan.diff": "plan_diff",
-    "criterion.prove": "criterion_prove",
-    "question.add": "question_add",
-    "question.resolve": "question_resolve",
-    "question.reopen": "question_reopen",
-    "reference.link": "reference_link",
-    "reference.unlink": "reference_unlink",
-    "task.claim": "claim_task",
-    "task.block": "block_task",
-    "task.unblock": "unblock_task",
-    "task.finish": "finish_task",
-    "task.renew": "claim_renew",
-    "row.edit": "edit_row",
-    "task.move": "move_row",
-    "claim.release": "claim_release",
-    "claim.force_release": "claim_release",
-    "criterion.relate": "criterion_relate",
-    "criterion.unrelate": "criterion_unrelate",
-    "row.delete": "delete_row",
-    "commit.link": "link_commit",
-    "commit.refresh": "commit_refresh",
-    "git.status": "git_status",
-    "source.trail": "source_trail",
-    "plan.export": "export_plan",
-    "task.touch_add": "touch_add",
-    "task.touch_remove": "touch_remove",
-    "note.add": "note_add",
-    "comment.add": "comment_add",
-    "comment.edit": "comment_edit",
-    "comment.resolve": "comment_resolve",
-    "pull_request.list": "pull_request_list",
-    "pull_request.refresh": "pull_request_refresh",
-    "pull_request.link": "pull_request_link",
-    "pull_request.unlink": "pull_request_unlink",
-    "event.list": "activity_list",
-    "maintenance.report": "maintenance_report",
-    "maintenance.archive": "maintenance_archive",
-    "maintenance.trim": "maintenance_trim",
-    "maintenance.vacuum": "maintenance_vacuum",
-    "maintenance.restore": "maintenance_restore",
-}
+MCP_ACTIONS: dict[str, str] = {action.id: action.mcp_tool for action in ACTIONS if action.mcp_tool}
 
 
 @dataclass(frozen=True)

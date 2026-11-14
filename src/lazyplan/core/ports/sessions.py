@@ -6,7 +6,6 @@ from collections.abc import Sequence
 from typing import Protocol
 
 from ..entities import Session
-from .planning import PlanningPort
 
 
 class SessionsReadPort(Protocol):
@@ -26,7 +25,7 @@ class SessionsReadPort(Protocol):
     def events_for_session(self, session_id: int, limit: int = 50) -> list[dict]: ...
 
 
-class SessionsPort(SessionsReadPort, PlanningPort, Protocol):
+class SessionsPort(SessionsReadPort, Protocol):
     """Archive and restore surface for session history."""
 
     def archive_sessions(
@@ -37,4 +36,4 @@ class SessionsPort(SessionsReadPort, PlanningPort, Protocol):
         self, session_id: int, actor: str = ..., now: float | None = ...
     ) -> bool: ...
 
-    def restore_session_history(self, row: dict, actor: str = ...) -> int | None: ...
+    def restore_session_history(self, row: dict, actor: str = "human") -> int | None: ...

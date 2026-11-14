@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from ..core.policies.coordination import CLAIM_DEFAULT_TTL
 from .annotations import AnnotationsMixin
 from .base import (
     ClaimConflict,
@@ -22,7 +23,6 @@ from .refs import RefsMixin
 from .repos import ReposMixin
 from .revisions import RevisionsMixin
 from .session_history import SessionHistoryMixin
-from .stubs import CLAIM_DEFAULT_TTL
 from .tasks import TasksMixin
 from .touchpoints import TouchpointsMixin
 from .views import ViewsMixin

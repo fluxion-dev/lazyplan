@@ -67,3 +67,23 @@ def checks_state(data: object) -> str:
     if all(conclusion in {"success", "neutral", "skipped"} for conclusion in conclusions):
         return "pass"
     return "none"
+
+
+def gate_state(links: list) -> dict:
+    """Cached PR/check summary for a row's forge links."""
+    if not links:
+        return {"prs": 0, "checks": "none", "state": "missing"}
+    values = [str(link.checks or "none") for link in links]
+    if any(value == "fail" for value in values):
+        checks = "fail"
+    elif any(value == "pending" for value in values):
+        checks = "pending"
+    elif all(value in {"pass", "neutral", "skipped"} for value in values):
+        checks = "pass"
+    else:
+        checks = "none"
+    return {
+        "prs": len(links),
+        "checks": checks,
+        "state": "pass" if checks == "pass" else checks,
+    }

@@ -2,8 +2,18 @@
 
 from __future__ import annotations
 
-from ..core.entities import Criterion, CriterionEvidence, ForgeLink, Milestone, Plan, Task, VcsLink
+from ..core.entities import (
+    Criterion,
+    CriterionEvidence,
+    ForgeLink,
+    Milestone,
+    Plan,
+    PlanChange,
+    Task,
+    VcsLink,
+)
 from ..core.policies.evidence import summarize as evidence_summary
+from ..core.policies.provenance import gate_state
 from ..core.serialization import approval_payload, to_payload
 from .base import StoreBase
 
@@ -48,23 +58,7 @@ class _FullReader:
         self.task_by_id = {task.id: task for items in self.tasks.values() for task in items}
 
     def _gate_state(self, task_id: int) -> dict:
-        links = self.forge.get(("task", task_id), [])
-        if not links:
-            return {"prs": 0, "checks": "none", "state": "missing"}
-        values = [str(link.checks or "none") for link in links]
-        if any(value == "fail" for value in values):
-            checks = "fail"
-        elif any(value == "pending" for value in values):
-            checks = "pending"
-        elif all(value in {"pass", "neutral", "skipped"} for value in values):
-            checks = "pass"
-        else:
-            checks = "none"
-        return {
-            "prs": len(links),
-            "checks": checks,
-            "state": "pass" if checks == "pass" else checks,
-        }
+        return gate_state(self.forge.get(("task", task_id), []))
 
     def _task_view(self, task: Task) -> dict:
         data = to_payload(vars(task))
@@ -194,7 +188,7 @@ class _FullReader:
             payload["issues"] = issue_refs
         return payload
 
-    def plan(self, plan: Plan) -> dict:
+    def plan(self, plan: Plan, recent: list[PlanChange] | None = None) -> dict:
         payload = {
             "plan": to_payload(vars(plan)),
             "criteria": self._criteria("plan", plan.id),
@@ -207,7 +201,9 @@ class _FullReader:
             "repos": self.repos.get(("plan", plan.id), []),
             "effective_repos": self._effective_repos("plan", plan.id),
             "worktrees": [vars(row) for row in self.worktrees.get(plan.id, [])],
-            "approval": approval_payload(self.revisions.get(plan.id), self.drift.get(plan.id, 0)),
+            "approval": approval_payload(
+                self.revisions.get(plan.id), self.drift.get(plan.id, 0), recent
+            ),
             "questions": [vars(q) for q in self.questions.get(plan.id, [])],
             "refs": [vars(ref) for ref in self.refs.get(plan.id, [])],
             "milestones": [

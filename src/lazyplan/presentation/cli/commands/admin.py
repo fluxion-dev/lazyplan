@@ -13,7 +13,7 @@ from pathlib import Path
 from lazyplan.infrastructure.repo import find_repo_root, repo_label, resolve_db_path
 from lazyplan.services import notes
 
-from ....core.ports.insights import InsightsPort
+from ....core.ports.app import AppPort
 from ....core.ports.planning import PlanningPort
 from ....core.ports.transfer import TransferPort
 from ....infrastructure import textfile
@@ -224,7 +224,7 @@ def _print_feed_events(
             )
 
 
-def _cmd_feed(store: InsightsPort, args: argparse.Namespace, actor: str) -> int:
+def _cmd_feed(store: AppPort, args: argparse.Namespace, actor: str) -> int:
     seen = -1
     terse = porcelain.enabled(args)
     session_filter = getattr(args, "session", None)

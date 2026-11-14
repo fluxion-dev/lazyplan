@@ -40,12 +40,7 @@ class AnnotationsMixin(StoreBase):
         if not self._parent_exists(parent_kind, parent_id):
             raise KeyError(f"{parent_kind} #{parent_id} not found")
         stamp = time.time()
-        with self._connect() as conn:
-            cur = conn.execute(
-                "INSERT INTO notes (parent_kind, parent_id, actor, ts, text) VALUES (?,?,?,?,?)",
-                (parent_kind, parent_id, actor, stamp, body),
-            )
-            note_id = cur.lastrowid or 0
+        note_id = self._insert_text("notes", parent_kind, parent_id, actor, stamp, body)
         self.log(actor, parent_kind, "note", f"{parent_kind} #{parent_id}: {body[:80]}")
         return Note(
             id=note_id,
@@ -79,12 +74,7 @@ class AnnotationsMixin(StoreBase):
         """Import a note with its original timestamp."""
         if not text.strip():
             return None
-        with self._connect() as conn:
-            cur = conn.execute(
-                "INSERT INTO notes (parent_kind, parent_id, actor, ts, text) VALUES (?,?,?,?,?)",
-                (parent_kind, parent_id, actor, ts, text.strip()),
-            )
-            note_id = cur.lastrowid or 0
+        note_id = self._insert_text("notes", parent_kind, parent_id, actor, ts, text.strip())
         return Note(note_id, parent_kind, parent_id, text.strip(), actor, ts)
 
     def add_issue_link(
@@ -142,13 +132,12 @@ class AnnotationsMixin(StoreBase):
 
     def issue_links_map(self) -> dict[tuple[str, int], list[dict]]:
         """Every issue source grouped by (row_kind, row_id), oldest first."""
-        with self._connect() as conn:
-            rows = conn.execute("SELECT * FROM issue_links ORDER BY id").fetchall()
-        out: dict[tuple[str, int], list[dict]] = {}
-        for row in rows:
-            item = dict(row)
-            out.setdefault((str(item["row_kind"]), int(item["row_id"])), []).append(item)
-        return out
+        return self._grouped(
+            "SELECT * FROM issue_links ORDER BY id",
+            (),
+            dict,
+            lambda row: (str(row["row_kind"]), int(row["row_id"])),
+        )
 
     def update_issue_link(
         self, provider: str, external_id: str, title: str, url: str, state: str, updated_at: float
@@ -184,12 +173,7 @@ class AnnotationsMixin(StoreBase):
         if not self._parent_exists(parent_kind, parent_id):
             raise KeyError(f"{parent_kind} #{parent_id} not found")
         stamp = time.time()
-        with self._connect() as conn:
-            cur = conn.execute(
-                "INSERT INTO comments (parent_kind, parent_id, actor, ts, text) VALUES (?,?,?,?,?)",
-                (parent_kind, parent_id, actor, stamp, body),
-            )
-            comment_id = cur.lastrowid or 0
+        comment_id = self._insert_text("comments", parent_kind, parent_id, actor, stamp, body)
         self.log(actor, parent_kind, "comment", f"{parent_kind} #{parent_id}: {body[:80]}")
         return Comment(comment_id, parent_kind, parent_id, body, actor, stamp, False)
 
@@ -262,69 +246,45 @@ class AnnotationsMixin(StoreBase):
         """Import a comment with its timestamp and resolution state."""
         if not text.strip():
             return None
-        with self._connect() as conn:
-            cur = conn.execute(
-                "INSERT INTO comments (parent_kind, parent_id, actor, ts, text, resolved)"
-                " VALUES (?,?,?,?,?,?)",
-                (parent_kind, parent_id, actor, ts, text.strip(), 1 if resolved else 0),
-            )
-            comment_id = cur.lastrowid or 0
+        comment_id = self._insert_text(
+            "comments", parent_kind, parent_id, actor, ts, text.strip(), resolved=resolved
+        )
         return Comment(comment_id, parent_kind, parent_id, text.strip(), actor, ts, resolved)
 
     def notes_map(self) -> dict[tuple[str, int], list[str]]:
         """All note text grouped by parent, for TUI search."""
-        with self._connect() as conn:
-            rows = conn.execute("SELECT parent_kind, parent_id, text FROM notes").fetchall()
-        out: dict[tuple[str, int], list[str]] = {}
-        for row in rows:
-            out.setdefault((str(row["parent_kind"]), int(row["parent_id"])), []).append(
-                str(row["text"])
-            )
-        return out
+        return self._text_map("notes")
 
     def comments_map(self) -> dict[tuple[str, int], list[str]]:
         """All comment text grouped by parent, for TUI search."""
-        with self._connect() as conn:
-            rows = conn.execute("SELECT parent_kind, parent_id, text FROM comments").fetchall()
-        out: dict[tuple[str, int], list[str]] = {}
-        for row in rows:
-            out.setdefault((str(row["parent_kind"]), int(row["parent_id"])), []).append(
-                str(row["text"])
-            )
-        return out
+        return self._text_map("comments")
 
     def notes_full_map(self) -> dict[tuple[str, int], list[Note]]:
         """Every note grouped by parent, oldest first, with full metadata."""
-        with self._connect() as conn:
-            rows = conn.execute("SELECT * FROM notes ORDER BY id").fetchall()
-        out: dict[tuple[str, int], list[Note]] = {}
-        for row in rows:
-            note = self._row_to_note(row)
-            out.setdefault((note.parent_kind, note.parent_id), []).append(note)
-        return out
+        return self._grouped(
+            "SELECT * FROM notes ORDER BY id",
+            (),
+            self._row_to_note,
+            lambda row: (str(row["parent_kind"]), int(row["parent_id"])),
+        )
 
     def comments_full_map(self) -> dict[tuple[str, int], list[Comment]]:
         """Every comment grouped by parent, oldest first, with full metadata."""
-        with self._connect() as conn:
-            rows = conn.execute("SELECT * FROM comments ORDER BY id").fetchall()
-        out: dict[tuple[str, int], list[Comment]] = {}
-        for row in rows:
-            comment = self._row_to_comment(row)
-            out.setdefault((comment.parent_kind, comment.parent_id), []).append(comment)
-        return out
+        return self._grouped(
+            "SELECT * FROM comments ORDER BY id",
+            (),
+            self._row_to_comment,
+            lambda row: (str(row["parent_kind"]), int(row["parent_id"])),
+        )
 
     def issues_map(self) -> dict[tuple[str, int], list[str]]:
         """Issue source text grouped by row, for TUI search."""
-        with self._connect() as conn:
-            rows = conn.execute(
-                "SELECT row_kind, row_id, provider, number, title, url FROM issue_links"
-            ).fetchall()
-        out: dict[tuple[str, int], list[str]] = {}
-        for row in rows:
-            out.setdefault((str(row["row_kind"]), int(row["row_id"])), []).append(
-                " ".join(str(row[key]) for key in ("provider", "number", "title", "url"))
-            )
-        return out
+        return self._grouped(
+            "SELECT row_kind, row_id, provider, number, title, url FROM issue_links",
+            (),
+            lambda row: " ".join(str(row[key]) for key in ("provider", "number", "title", "url")),
+            lambda row: (str(row["row_kind"]), int(row["row_id"])),
+        )
 
     def add_criteria(
         self,
@@ -450,13 +410,12 @@ class AnnotationsMixin(StoreBase):
 
     def criteria_map(self) -> dict[tuple[str, int], list[Criterion]]:
         """Every checklist item grouped by (parent_kind, parent_id), in id order."""
-        with self._connect() as conn:
-            rows = conn.execute("SELECT * FROM criteria ORDER BY id").fetchall()
-        out: dict[tuple[str, int], list[Criterion]] = {}
-        for row in rows:
-            criterion = self._row_to_criterion(row)
-            out.setdefault((criterion.parent_kind, criterion.parent_id), []).append(criterion)
-        return out
+        return self._grouped(
+            "SELECT * FROM criteria ORDER BY id",
+            (),
+            self._row_to_criterion,
+            lambda row: (str(row["parent_kind"]), int(row["parent_id"])),
+        )
 
     def open_task_criteria_ids(self) -> set[int]:
         """Task ids that still have at least one open criterion."""
@@ -537,3 +496,35 @@ class AnnotationsMixin(StoreBase):
     def open_criteria(self, kind: str, obj_id: int) -> list[Criterion]:
         """Not-done checklist items."""
         return [c for c in self.list_criteria(kind, obj_id) if not c.done]
+
+    def _insert_text(
+        self,
+        table: str,
+        parent_kind: str,
+        parent_id: int,
+        actor: str,
+        ts: float,
+        text: str,
+        resolved: bool | None = None,
+    ) -> int:
+        """Insert one note or comment row and return its id."""
+        columns = ["parent_kind", "parent_id", "actor", "ts", "text"]
+        values: list[object] = [parent_kind, parent_id, actor, ts, text]
+        if resolved is not None:
+            columns.append("resolved")
+            values.append(1 if resolved else 0)
+        marks = ",".join("?" for _ in values)
+        with self._connect() as conn:
+            cur = conn.execute(
+                f"INSERT INTO {table} ({', '.join(columns)}) VALUES ({marks})", values
+            )
+            return int(cur.lastrowid or 0)
+
+    def _text_map(self, table: str) -> dict[tuple[str, int], list[str]]:
+        """All text of one note or comment table grouped by parent."""
+        return self._grouped(
+            f"SELECT parent_kind, parent_id, text FROM {table}",
+            (),
+            lambda row: str(row["text"]),
+            lambda row: (str(row["parent_kind"]), int(row["parent_id"])),
+        )

@@ -10,12 +10,12 @@ from ..core.entities import (
     Status,
     Task,
 )
+from ..core.policies.coordination import CLAIM_DEFAULT_TTL
 from .base import (
     ClaimConflict,
     ClaimMissing,
     StoreBase,
 )
-from .stubs import CLAIM_DEFAULT_TTL
 
 
 class ClaimsMixin(StoreBase):
@@ -166,9 +166,12 @@ class ClaimsMixin(StoreBase):
 
     def claims_map(self) -> dict[int, Claim]:
         """All leases keyed by task id, for one-query tree rendering."""
-        with self._connect() as conn:
-            rows = conn.execute("SELECT * FROM task_claims").fetchall()
-        return {int(row["task_id"]): self._row_to_claim(row) for row in rows}
+        return self._indexed(
+            "SELECT * FROM task_claims",
+            (),
+            self._row_to_claim,
+            lambda row: int(row["task_id"]),
+        )
 
     def list_claims(
         self,
@@ -248,10 +251,3 @@ class ClaimsMixin(StoreBase):
         with self._connect() as conn:
             rows = conn.execute(sql, params).fetchall()
         return [self._row_to_task(row) for row in rows]
-
-    def next_claimable_task(
-        self, plan_id: int | None = None, now: float | None = None
-    ) -> Task | None:
-        """First unclaimed todo in active plans: doing plans first, then creation order."""
-        tasks = self.claimable_tasks(plan_id, now)
-        return tasks[0] if tasks else None

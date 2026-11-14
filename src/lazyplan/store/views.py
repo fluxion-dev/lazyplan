@@ -11,9 +11,9 @@ from ..core.entities import (
     Task,
 )
 from ..core.kinds import KIND_ERROR, table_for
-from ..core.serialization import approval_payload
-from .base import StoreBase, to_payload
-from .full_reader import _criterion_payload, _FullReader
+from ..core.policies.insights import leading_int
+from .base import StoreBase
+from .full_reader import _FullReader
 from .status_events import parse_plan_status_detail
 
 
@@ -23,14 +23,6 @@ def _release_lease_for_status(
     """A task that is no longer doing cannot keep a lease."""
     if kind == "task" and status is not Status.DOING:
         conn.execute("DELETE FROM task_claims WHERE task_id=?", (obj_id,))
-
-
-def _leading_int(text: str, start: int) -> int | None:
-    """Positive integer immediately after *start*, else None."""
-    end = start
-    while end < len(text) and text[end].isdigit():
-        end += 1
-    return int(text[start:end]) if end > start else None
 
 
 def _plan_for_milestone(mid: int | None, milestone_plan: dict[int, int]) -> int | None:
@@ -74,24 +66,24 @@ def _detail_plan_id(
 ) -> int | None:
     """Owning plan encoded in one event detail, or None."""
     if detail.startswith("P#"):
-        return _leading_int(detail, 2)
+        return leading_int(detail, 2)
     if detail.startswith("plan #"):
-        return _leading_int(detail, 6)
+        return leading_int(detail, 6)
     if detail.startswith("M#"):
-        return _plan_for_milestone(_leading_int(detail, 2), milestone_plan)
+        return _plan_for_milestone(leading_int(detail, 2), milestone_plan)
     if detail.startswith("milestone #"):
-        return _plan_for_milestone(_leading_int(detail, 11), milestone_plan)
+        return _plan_for_milestone(leading_int(detail, 11), milestone_plan)
     if detail.startswith("T#"):
-        return _plan_for_task(_leading_int(detail, 2), task_milestone, milestone_plan)
+        return _plan_for_task(leading_int(detail, 2), task_milestone, milestone_plan)
     if detail.startswith("task #"):
-        return _plan_for_task(_leading_int(detail, 6), task_milestone, milestone_plan)
+        return _plan_for_task(leading_int(detail, 6), task_milestone, milestone_plan)
     if detail.startswith("criteria #"):
         return _plan_for_criterion(
-            _leading_int(detail, 10), criterion_parent, task_milestone, milestone_plan
+            leading_int(detail, 10), criterion_parent, task_milestone, milestone_plan
         )
     if detail.startswith("criterion #"):
         return _plan_for_criterion(
-            _leading_int(detail, 11), criterion_parent, task_milestone, milestone_plan
+            leading_int(detail, 11), criterion_parent, task_milestone, milestone_plan
         )
     return None
 
@@ -109,133 +101,26 @@ class ViewsMixin(StoreBase):
             return self.get_task(obj_id)
         raise ValueError(KIND_ERROR)
 
-    def _task_view(self, t: Task) -> dict:
-        """Task fields plus any active or expired claim."""
-        data = to_payload(vars(t))
-        claim = self.get_claim(t.id)
-        if claim is not None:
-            data["claim"] = vars(claim)
-        notes = self.list_notes("task", t.id)
-        if notes:
-            data["notes"] = [vars(n) for n in notes]
-        comments = self.list_comments("task", t.id)
-        if comments:
-            data["comments"] = [vars(c) for c in comments]
-        gate = self.gate_state(t.id)
-        if gate["prs"]:
-            data["gate"] = gate
-        issue_refs = self.list_issue_links("task", t.id)
-        if issue_refs:
-            data["issues"] = issue_refs
-        return data
-
-    def _task_show(self, t: Task) -> dict:
-        """Task show payload with direct links and inherited repos."""
-        evidence = self.evidence_map()
-        return {
-            "task": self._task_view(t),
-            "criteria": [_criterion_payload(c, evidence) for c in self.list_criteria("task", t.id)],
-            "links": [vars(c) for c in self.list_links("task", t.id)],
-            "effective_links": [vars(c) for c in self.effective_links("task", t.id)],
-            "forge_links": [vars(c) for c in self.list_forge_links("task", t.id)],
-            "effective_forge_links": [vars(c) for c in self.effective_forge_links("task", t.id)],
-            "repos": self.list_repos("task", t.id),
-            "effective_repos": self.effective_repos("task", t.id),
-            "touchpoints": self.list_touchpoints(t.id),
-        }
-
-    def _milestone_show(self, s: Milestone) -> dict:
-        """Milestone show payload with task summaries."""
-        evidence = self.evidence_map()
-        payload = {
-            "milestone": to_payload(vars(s)),
-            "criteria": [
-                _criterion_payload(c, evidence) for c in self.list_criteria("milestone", s.id)
-            ],
-            "links": [vars(c) for c in self.list_links("milestone", s.id)],
-            "effective_links": [vars(c) for c in self.effective_links("milestone", s.id)],
-            "forge_links": [vars(c) for c in self.list_forge_links("milestone", s.id)],
-            "effective_forge_links": [
-                vars(c) for c in self.effective_forge_links("milestone", s.id)
-            ],
-            "repos": self.list_repos("milestone", s.id),
-            "effective_repos": self.effective_repos("milestone", s.id),
-            "tasks": [
-                {
-                    "task": self._task_view(t),
-                    "criteria": [
-                        _criterion_payload(c, evidence) for c in self.list_criteria("task", t.id)
-                    ],
-                }
-                for t in self.list_tasks(s.id)
-            ],
-        }
-        notes = self.list_notes("milestone", s.id)
-        if notes:
-            payload["notes"] = [vars(n) for n in notes]
-        comments = self.list_comments("milestone", s.id)
-        if comments:
-            payload["comments"] = [vars(c) for c in comments]
-        issue_refs = self.list_issue_links("milestone", s.id)
-        if issue_refs:
-            payload["issues"] = issue_refs
-        return payload
-
-    def _plan_show(self, p: Plan) -> dict:
-        """Plan show payload with milestone summaries."""
-        latest = self.latest_revision(p.id)
-        recent = self.list_plan_changes(p.id, after_id=latest.change_mark)[-3:] if latest else []
-        evidence = self.evidence_map()
-        payload = {
-            "plan": to_payload(vars(p)),
-            "criteria": [_criterion_payload(c, evidence) for c in self.list_criteria("plan", p.id)],
-            "links": [vars(c) for c in self.list_links("plan", p.id)],
-            "effective_links": [vars(c) for c in self.effective_links("plan", p.id)],
-            "forge_links": [vars(c) for c in self.list_forge_links("plan", p.id)],
-            "effective_forge_links": [vars(c) for c in self.effective_forge_links("plan", p.id)],
-            "repos": self.list_repos("plan", p.id),
-            "effective_repos": self.effective_repos("plan", p.id),
-            "worktrees": [vars(row) for row in self.list_plan_worktrees(p.id)],
-            "approval": approval_payload(latest, self.plan_drift(p.id), recent),
-            "questions": [vars(q) for q in self.list_questions(p.id, status="all")],
-            "refs": [vars(ref) for ref in self.list_refs(p.id)],
-            "milestones": [
-                {
-                    "milestone": to_payload(vars(s)),
-                    "criteria": [
-                        _criterion_payload(c, evidence)
-                        for c in self.list_criteria("milestone", s.id)
-                    ],
-                    "repos": self.list_repos("milestone", s.id),
-                    "effective_repos": self.effective_repos("milestone", s.id),
-                    "tasks": [self._task_view(t) for t in self.list_tasks(s.id)],
-                }
-                for s in self.list_milestones(p.id)
-            ],
-        }
-        notes = self.list_notes("plan", p.id)
-        if notes:
-            payload["notes"] = [vars(n) for n in notes]
-        comments = self.list_comments("plan", p.id)
-        if comments:
-            payload["comments"] = [vars(c) for c in comments]
-        issue_refs = self.list_issue_links("plan", p.id)
-        if issue_refs:
-            payload["issues"] = issue_refs
-        return payload
-
     def get_full(self, kind: str, obj_id: int) -> dict | None:
         """Full context record for `lpui show`: fields + criteria + links + repos + children."""
         with self._connect():
             if kind == "plan":
                 p = self.get_plan(obj_id)
-                return None if p is None else self._plan_show(p)
+                if p is None:
+                    return None
+                latest = self.latest_revision(obj_id)
+                recent = (
+                    self.list_plan_changes(obj_id, after_id=latest.change_mark)[-3:]
+                    if latest
+                    else []
+                )
+                return _FullReader(self).plan(p, recent=recent)
             if kind == "milestone":
                 s = self.get_milestone(obj_id)
-                return None if s is None else self._milestone_show(s)
+                return None if s is None else _FullReader(self).milestone(s)
             if kind == "task":
                 t = self.get_task(obj_id)
-                return None if t is None else self._task_show(t)
+                return None if t is None else _FullReader(self).task(t)
         raise ValueError(KIND_ERROR)
 
     def get_full_many(self, kind: str, obj_ids: list[int]) -> list[dict]:

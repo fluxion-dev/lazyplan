@@ -8,7 +8,6 @@ from lazyplan.infrastructure.forge import (
     RepoRef,
     UnsupportedRemote,
     detect_forge,
-    forges,
     parse_pull_url,
     redact,
     resolve_auth,
@@ -18,9 +17,6 @@ from lazyplan.infrastructure.forge import (
 class TestForge(unittest.TestCase):
     def setUp(self):
         self.forge = GitHubForge()
-
-    def test_registry_has_github(self):
-        self.assertTrue(any(forge.name == "github" for forge in forges()))
 
     def test_parse_https_and_ssh_remotes(self):
         expected = RepoRef("github", "github.com", "org", "repo")

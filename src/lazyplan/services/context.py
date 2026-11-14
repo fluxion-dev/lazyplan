@@ -11,49 +11,15 @@ from __future__ import annotations
 import json
 
 from ..core.entities import Plan, Status, Task
-from ..core.policies.maintenance import is_archived_row
 from ..core.ports.insights import InsightsPort
+from . import active
 
 DEFAULT_CONTEXT_CHARS = 4000
 MIN_CONTEXT_CHARS = 120
 
 
-def _active_plan(store: InsightsPort, plan_id: int | None) -> Plan | None:
-    if plan_id is not None:
-        plan = store.get_plan(plan_id)
-        if plan is None or is_archived_row(plan):
-            return None
-        return plan
-    plans = store.list_plans()
-    doing = [plan for plan in plans if plan.status == Status.DOING]
-    if doing:
-        return doing[0]
-    todo = [plan for plan in plans if plan.status == Status.TODO]
-    return todo[0] if todo else None
-
-
-def _tasks(store: InsightsPort, plan: Plan) -> list[Task]:
-    out: list[Task] = []
-    for milestone in store.list_milestones(plan.id):
-        out.extend(store.list_tasks(milestone.id))
-    return out
-
-
 def _claims(store: InsightsPort, plan: Plan) -> dict[int, dict]:
     return {int(item["task_id"]): item for item in store.list_claims(plan_id=plan.id)}
-
-
-def _open_criteria(store: InsightsPort, plan: Plan, doing: list[Task]) -> list[dict]:
-    out = [
-        {"kind": "plan", "id": plan.id, "text": item.text}
-        for item in store.open_criteria("plan", plan.id)
-    ]
-    for task in doing:
-        out.extend(
-            {"kind": "task", "id": task.id, "text": item.text}
-            for item in store.open_criteria("task", task.id)
-        )
-    return out
 
 
 def _notes(store: InsightsPort, plan: Plan, doing: list[Task]) -> list[dict]:
@@ -134,7 +100,7 @@ def _commits(store: InsightsPort, plan: Plan) -> list[dict]:
 
 
 def _packet(store: InsightsPort, plan: Plan) -> dict:
-    tasks = _tasks(store, plan)
+    tasks = active.tasks_for(store, plan)
     claims = _claims(store, plan)
     doing = [task for task in tasks if task.status == Status.DOING][:3]
     next_tasks = [
@@ -157,7 +123,7 @@ def _packet(store: InsightsPort, plan: Plan) -> dict:
             for task in doing
         ],
         "next": [{"id": task.id, "title": task.title} for task in next_tasks],
-        "criteria": _open_criteria(store, plan, doing),
+        "criteria": active.open_criteria_rows(store, plan, doing),
         "questions": [
             {"id": question.id, "text": question.text} for question in store.list_questions(plan.id)
         ],
@@ -225,7 +191,7 @@ def build(
     """Build one budgeted, read-only context packet."""
     if max_chars < MIN_CONTEXT_CHARS:
         raise ValueError(f"max_chars must be at least {MIN_CONTEXT_CHARS}")
-    plan = _active_plan(store, plan_id)
+    plan = active.selected_plan(store, plan_id)
     payload = {
         "active": 1 if plan is not None else 0,
         "plans": [_packet(store, plan)] if plan is not None else [],

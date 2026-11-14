@@ -154,7 +154,7 @@ def _add_unique(values: list[str], value: str) -> None:
         values.append(value)
 
 
-def _scope_parents(store: ProvenancePort, kind: str, obj_id: int) -> list[tuple[str, int]]:
+def scope_parents(store: ProvenancePort, kind: str, obj_id: int) -> list[tuple[str, int]]:
     """Direct row plus descendant rows, without link deduplication."""
     out: list[tuple[str, int]] = [(kind, obj_id)]
     if kind == "milestone":
@@ -171,7 +171,7 @@ def _commit_groups(
 ) -> dict[str, list[tuple[object, list[str]]]]:
     """Cached links grouped by repo root with owner labels."""
     groups: dict[str, list[tuple[object, list[str]]]] = {}
-    for parent_kind, parent_id in _scope_parents(store, kind, obj_id):
+    for parent_kind, parent_id in scope_parents(store, kind, obj_id):
         for link in store.list_links(parent_kind, parent_id):
             raw_repo = str(getattr(link, "repo_root", "") or "")
             repo = store.resolve_repo_path(raw_repo) if raw_repo else ""
@@ -221,7 +221,7 @@ def _commit_rows(
 def _pull_rows(store: ProvenancePort, kind: str, obj_id: int) -> list[tuple[SourcePull, str]]:
     """Merged forge links with owners and the repo slug parsed from their URL."""
     by_number: dict[tuple[str, int], tuple[SourcePull, str]] = {}
-    for parent_kind, parent_id in _scope_parents(store, kind, obj_id):
+    for parent_kind, parent_id in scope_parents(store, kind, obj_id):
         for link in store.list_forge_links(parent_kind, parent_id, kind="pull"):
             number = int(getattr(link, "number", 0) or 0)
             if number <= 0:

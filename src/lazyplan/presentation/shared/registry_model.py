@@ -73,6 +73,8 @@ class Action:
     aliases: tuple[str, ...] = ()
     deprecated_in: str = ""
     removal: str = ""
+    cli_paths: tuple[str, ...] = ()
+    mcp_tool: str = ""
 
     @property
     def taxonomy(self) -> str:
@@ -88,6 +90,8 @@ def action(
     surfaces: tuple[str, ...] = ("tui",),
     route: tuple[str, ...] = ("tree",),
     palette_ids: tuple[str, ...] = (),
+    cli_paths: tuple[str, ...] = (),
+    mcp_tool: str = "",
 ) -> Action:
     """Build one registry row with stable defaults."""
     return Action(
@@ -98,6 +102,8 @@ def action(
         surfaces=surfaces,
         route=route,
         palette_ids=palette_ids,
+        cli_paths=cli_paths,
+        mcp_tool=mcp_tool,
     )
 
 

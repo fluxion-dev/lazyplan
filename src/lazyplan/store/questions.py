@@ -124,13 +124,12 @@ class QuestionsMixin(StoreBase):
 
     def questions_map(self) -> dict[int, list[PlanQuestion]]:
         """Every question grouped by plan id, in creation order."""
-        with self._connect() as conn:
-            rows = conn.execute("SELECT * FROM plan_questions ORDER BY plan_id, id").fetchall()
-        out: dict[int, list[PlanQuestion]] = {}
-        for row in rows:
-            item = self._row_to_question(row)
-            out.setdefault(item.plan_id, []).append(item)
-        return out
+        return self._grouped(
+            "SELECT * FROM plan_questions ORDER BY plan_id, id",
+            (),
+            self._row_to_question,
+            lambda row: int(row["plan_id"]),
+        )
 
     def resolve_question(
         self, qid: int, note: str = "", actor: str = "human"

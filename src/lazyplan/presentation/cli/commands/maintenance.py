@@ -25,23 +25,50 @@ def _cmd_maint_report(store: object, args: argparse.Namespace, actor: str) -> in
     )
 
 
-def _cmd_maint_archive(store: object, args: argparse.Namespace, actor: str) -> int:
+def _maint_error(exc: Exception) -> int:
+    """Exit code for one maintenance failure: busy/backup 1, bad input 2."""
+    print(msg_error(exc), file=sys.stderr)
+    return 1 if isinstance(exc, (MaintenanceBusy, MaintenanceBackupError)) else 2
+
+
+def _days_action(store: object, args: argparse.Namespace, actor: str, action: str) -> int:
+    """Archive or trim with the shared days/apply flags and payload views."""
+    if action == "archive":
+        try:
+            archived = services.maintenance.archive(
+                store,  # type: ignore[arg-type]
+                days=args.days,
+                apply=bool(args.apply),
+                actor=actor,
+            )
+        except (MaintenanceBusy, MaintenanceBackupError, ValueError) as exc:
+            return _maint_error(exc)
+        return _emit_read(
+            args,
+            view.archive_payload(archived),
+            view.archive_rows(archived),
+            view.archive_text(archived),
+        )
     try:
-        result = services.maintenance.archive(
+        trimmed = services.maintenance.trim(
             store,  # type: ignore[arg-type]
             days=args.days,
             apply=bool(args.apply),
             actor=actor,
         )
-    except (MaintenanceBusy, MaintenanceBackupError) as exc:
-        print(msg_error(exc), file=sys.stderr)
-        return 1
-    except ValueError as exc:
-        print(msg_error(exc), file=sys.stderr)
-        return 2
+    except (MaintenanceBusy, MaintenanceBackupError, ValueError) as exc:
+        return _maint_error(exc)
     return _emit_read(
-        args, view.archive_payload(result), view.archive_rows(result), view.archive_text(result)
+        args, view.trim_payload(trimmed), view.trim_rows(trimmed), view.trim_text(trimmed)
     )
+
+
+def _cmd_maint_archive(store: object, args: argparse.Namespace, actor: str) -> int:
+    return _days_action(store, args, actor, "archive")
+
+
+def _cmd_maint_trim(store: object, args: argparse.Namespace, actor: str) -> int:
+    return _days_action(store, args, actor, "trim")
 
 
 def _cmd_maint_restore(store: object, args: argparse.Namespace, actor: str) -> int:
@@ -60,25 +87,6 @@ def _cmd_maint_restore(store: object, args: argparse.Namespace, actor: str) -> i
         return 1
     return _emit_read(
         args, view.restore_payload(result), view.restore_rows(result), view.restore_text(result)
-    )
-
-
-def _cmd_maint_trim(store: object, args: argparse.Namespace, actor: str) -> int:
-    try:
-        result = services.maintenance.trim(
-            store,  # type: ignore[arg-type]
-            days=args.days,
-            apply=bool(args.apply),
-            actor=actor,
-        )
-    except (MaintenanceBusy, MaintenanceBackupError) as exc:
-        print(msg_error(exc), file=sys.stderr)
-        return 1
-    except ValueError as exc:
-        print(msg_error(exc), file=sys.stderr)
-        return 2
-    return _emit_read(
-        args, view.trim_payload(result), view.trim_rows(result), view.trim_text(result)
     )
 
 

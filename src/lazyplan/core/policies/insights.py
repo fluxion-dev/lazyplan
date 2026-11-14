@@ -56,9 +56,7 @@ class MilestoneProgress:
     @property
     def percent(self) -> int:
         """Whole-percent completion, or 0 when the milestone has no tasks."""
-        if self.total <= 0:
-            return 0
-        return round(self.done * 100 / self.total)
+        return percent_of(self.done, self.total)
 
 
 @dataclass(frozen=True)
@@ -77,9 +75,7 @@ class OverallProgress:
     @property
     def percent(self) -> int:
         """Whole-percent completion, or 0 when there is no work."""
-        if self.total <= 0:
-            return 0
-        return round(self.done * 100 / self.total)
+        return percent_of(self.done, self.total)
 
 
 @dataclass(frozen=True)
@@ -396,3 +392,24 @@ def status_after(
         ts for ts, status in times.get(task_id, []) if ts >= after and status != Status.TODO
     ]
     return min(candidates) if candidates else None
+
+
+def leading_int(text: str, start: int) -> int | None:
+    """Positive integer immediately after *start*, else None."""
+    end = start
+    while end < len(text) and text[end].isdigit():
+        end += 1
+    return int(text[start:end]) if end > start else None
+
+
+def one_line(value: object, limit: int = 60) -> str:
+    """Flattened one-line excerpt of a value."""
+    text = " ".join(str(value).split())
+    return text if len(text) <= limit else text[: limit - 1] + "…"
+
+
+def percent_of(done: int, total: int) -> int:
+    """Whole-percent completion, or 0 when there is no work."""
+    if total <= 0:
+        return 0
+    return round(done * 100 / total)

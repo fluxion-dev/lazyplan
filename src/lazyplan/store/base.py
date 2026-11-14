@@ -112,8 +112,11 @@ class StoreBase(_StoreContract):
         ensure_plan_dir(self.path)
         with self._connect() as conn:
             migrate(conn)
-        with sqlite3.connect(str(self.path), timeout=5.0) as conn:
-            conn.execute("PRAGMA journal_mode = WAL")
+        wal = sqlite3.connect(str(self.path), timeout=5.0)
+        try:
+            wal.execute("PRAGMA journal_mode = WAL")
+        finally:
+            wal.close()
 
     @property
     def db_path(self) -> str:

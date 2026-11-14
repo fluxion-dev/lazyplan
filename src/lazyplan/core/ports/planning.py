@@ -2,20 +2,22 @@
 
 from __future__ import annotations
 
-from contextlib import AbstractContextManager
 from typing import Protocol
 
 from ..entities import Criterion, Milestone, Plan, PlanQuestion, PlanWorktree, Status, Task
 from .paths import PathPort
+from .transaction import TransactionPort
 
 
-class PlanningPort(PathPort, Protocol):
+class PlanningPort(
+    PathPort,
+    TransactionPort,
+    Protocol,
+):
     """Persistence surface the planning use cases need."""
 
     @property
     def db_path(self) -> str: ...
-
-    def transaction(self) -> AbstractContextManager[None]: ...
 
     def set_entity_key(self, kind: str, row_id: int, key: str, actor: str = "human") -> None: ...
 

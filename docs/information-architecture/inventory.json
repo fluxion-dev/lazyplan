@@ -302,6 +302,38 @@
         ]
       },
       {
+        "name": "dispatch",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--plan"
+          ],
+          [
+            "--lane"
+          ],
+          [
+            "--max-chars"
+          ]
+        ]
+      },
+      {
         "name": "doctor",
         "options": [
           [
@@ -1536,17 +1568,17 @@
         ]
       }
     ],
-    "count": 50
+    "count": 51
   },
   "counts": {
-    "cli_commands": 50,
+    "cli_commands": 51,
     "doc_files": 9,
     "doc_headings": 93,
     "env_names": 11,
     "file_paths": 12,
     "hook_events": 35,
     "mcp_resources": 3,
-    "mcp_tools": 67,
+    "mcp_tools": 68,
     "palette_commands": 52,
     "setup_steps": 4,
     "stale_claims": 0,
@@ -1992,6 +2024,10 @@
       {
         "description": "Delete a plan, milestone, or task.",
         "name": "delete_row"
+      },
+      {
+        "description": "Plan lanes, waves, capacity, worktree actions, and worker prompts.",
+        "name": "dispatch"
       },
       {
         "description": "Edit a plan, milestone, or task.",

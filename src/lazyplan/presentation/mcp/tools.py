@@ -12,6 +12,7 @@ from typing import Any
 from lazyplan import services
 from lazyplan.infrastructure.repo import find_repo_root, repo_label
 from lazyplan.infrastructure.vcs import detect_backend
+from lazyplan.services import dispatch as dispatch_service
 from lazyplan.services import trace
 
 from ...core.entities import Milestone, Plan, Status, Task
@@ -289,6 +290,15 @@ class ToolsMixin(
             ),
             (
                 _tool(
+                    "dispatch",
+                    "Plan lanes, waves, capacity, worktree actions, and worker prompts.",
+                    {"plan": _id(), "lane": _id(), "max_chars": {"type": "integer"}},
+                    ["plan"],
+                ),
+                self._tool_dispatch,
+            ),
+            (
+                _tool(
                     "list_plans",
                     "All plans with milestones, tasks, and criteria.",
                     {"limit": {"type": "integer"}},
@@ -497,6 +507,16 @@ class ToolsMixin(
     def _tool_brief(self, args: dict) -> object:
         plan_id = args.get("plan")
         return insights.brief.build(self._need_store(), plan_id)
+
+    def _tool_dispatch(self, args: dict) -> object:
+        lane = args.get("lane")
+        budget = args.get("max_chars")
+        return dispatch_service.build(
+            self._need_store(),
+            int(args["plan"]),
+            lane_id=int(lane) if lane else None,
+            max_chars=int(budget) if isinstance(budget, int) else 4000,
+        )
 
     def _tool_criterion_unrelate(self, args: dict) -> object:
         ok = self._need_store().unrelate_criterion(

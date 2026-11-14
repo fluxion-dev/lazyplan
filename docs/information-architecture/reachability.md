@@ -36,6 +36,7 @@ Budget: every action is at most **3** interactions from the tree.
 | `criterion.add` | tree | 0 |
 | `plan.approve` | tree › trust | 1 |
 | `plan.diff` | tree › trust | 1 |
+| `plan.dispatch` | tree › coordination | 1 |
 | `criterion.prove` | tree › evidence | 1 |
 | `question.add` | tree › questions | 1 |
 | `question.resolve` | tree › questions | 1 |

@@ -74,6 +74,14 @@ CORE_ACTIONS: tuple[Action, ...] = (
         mcp_tool="plan_diff",
     ),
     _action(
+        "plan.dispatch",
+        "Dispatch plan lanes",
+        surfaces=("cli", "mcp"),
+        route=("tree", "coordination"),
+        cli_paths=("dispatch",),
+        mcp_tool="dispatch",
+    ),
+    _action(
         "criterion.prove",
         "Prove criterion",
         surfaces=("cli", "mcp"),

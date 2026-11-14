@@ -77,6 +77,26 @@ def add_next(
     )
 
 
+def add_dispatch(
+    sub: argparse._SubParsersAction[argparse.ArgumentParser], common: argparse.ArgumentParser
+) -> None:
+
+    dp = sub.add_parser(
+        "dispatch",
+        help="show plan lanes, waves, capacity, and worker prompts",
+        parents=[common],
+    )
+    plan_id_arg(dp, help="plan to dispatch", required=True)
+    dp.add_argument("--lane", type=int, default=None, metavar="ID", help="one lane milestone")
+    dp.add_argument(
+        "--max-chars",
+        type=int,
+        default=4000,
+        metavar="N",
+        help="prompt budget in characters (default: 4000)",
+    )
+
+
 def add_note(
     sub: argparse._SubParsersAction[argparse.ArgumentParser], common: argparse.ArgumentParser
 ) -> None:

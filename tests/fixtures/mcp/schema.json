@@ -37,6 +37,30 @@
       "annotations": {
         "readOnlyHint": true
       },
+      "description": "Plan lanes, waves, capacity, worktree actions, and worker prompts.",
+      "inputSchema": {
+        "properties": {
+          "lane": {
+            "type": "integer"
+          },
+          "max_chars": {
+            "type": "integer"
+          },
+          "plan": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "plan"
+        ],
+        "type": "object"
+      },
+      "name": "dispatch"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
       "description": "All plans with milestones, tasks, and criteria.",
       "inputSchema": {
         "properties": {

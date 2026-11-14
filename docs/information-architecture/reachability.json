@@ -49,6 +49,14 @@
     },
     {
       "depth": 1,
+      "id": "plan.dispatch",
+      "route": [
+        "tree",
+        "coordination"
+      ]
+    },
+    {
+      "depth": 1,
       "id": "criterion.prove",
       "route": [
         "tree",

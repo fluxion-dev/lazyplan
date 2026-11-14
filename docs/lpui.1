@@ -510,6 +510,54 @@ override a worktree gate
 why a worktree gate is overridden
 .RE
 .TP
+.B lpui dispatch
+show plan lanes, waves, capacity, and worker prompts
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B \-\-heal
+repair parent statuses and leases automatically (default)
+.RE
+.RS
+.TP
+.B \-\-no\-heal
+report drift without automatic repair for this command
+.RE
+.RS
+.TP
+.B \-\-plan ID
+plan to dispatch Required\.
+.RE
+.RS
+.TP
+.B \-\-lane ID
+one lane milestone
+.RE
+.RS
+.TP
+.B \-\-max\-chars N
+prompt budget in characters (default: 4000)
+.RE
+.TP
 .B lpui claim
 claim, renew, or release a task lease
 .RS

@@ -31,6 +31,7 @@ from .comment import (
     _cmd_comment,
     _cmd_note,
 )
+from .dispatch import _cmd_dispatch
 from .doctor import _cmd_doctor
 from .forge import (
     _cmd_pr_auth,
@@ -216,6 +217,7 @@ _COMMANDS: dict[str, Callable[[AppPort, Namespace, str], int]] = {
     "share": _cmd_share,
     "sync": _cmd_sync,
     "next": _cmd_next,
+    "dispatch": _cmd_dispatch,
     "claim": _cmd_claim,
     "claims": _cmd_claims,
     "who": _cmd_claims,

@@ -10,6 +10,7 @@ from contextlib import closing
 
 from lazyplan import services
 from lazyplan.store import Store
+from lazyplan.store import migrate as migrate_mod
 
 
 class SessionHistoryStoreTest(unittest.TestCase):
@@ -169,7 +170,7 @@ class SessionHistoryStoreTest(unittest.TestCase):
             version = conn.execute("PRAGMA user_version").fetchone()[0]
         self.assertNotIn("agents", tables)
         self.assertNotIn("agent_events", tables)
-        self.assertEqual(version, 16)
+        self.assertEqual(version, migrate_mod.SCHEMA_VERSION)
         claim = store.get_claim(self.task.id)
         assert claim is not None
         self.assertEqual(claim.actor, "ana")

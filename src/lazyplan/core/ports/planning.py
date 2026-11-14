@@ -5,6 +5,12 @@ from __future__ import annotations
 from typing import Protocol
 
 from ..entities import Criterion, Milestone, Plan, PlanQuestion, PlanWorktree, Status, Task
+from ..policies.lanes import (
+    DEFAULT_AGENT_ROLE,
+    DEFAULT_DISPATCH_MODE,
+    DEFAULT_LANE_GROUP,
+    DEFAULT_MAX_AGENTS,
+)
 from .paths import PathPort
 from .transaction import TransactionPort
 
@@ -32,6 +38,8 @@ class PlanningPort(
         goal: str = "",
         actor: str = "human",
         worktree_required: bool = True,
+        dispatch_mode: str = DEFAULT_DISPATCH_MODE,
+        max_agents: int = DEFAULT_MAX_AGENTS,
     ) -> Plan: ...
 
     def add_milestone(
@@ -41,6 +49,8 @@ class PlanningPort(
         description: str = "",
         actor: str = "human",
         reason: str = "",
+        lane_group: int = DEFAULT_LANE_GROUP,
+        agent_role: str = DEFAULT_AGENT_ROLE,
     ) -> Milestone: ...
 
     def add_task(
@@ -50,6 +60,7 @@ class PlanningPort(
         description: str = "",
         actor: str = "human",
         reason: str = "",
+        role: str = DEFAULT_AGENT_ROLE,
     ) -> Task: ...
 
     def add_criteria(
@@ -81,6 +92,8 @@ class PlanningPort(
         goal: str | None = None,
         actor: str = "human",
         reason: str = "",
+        dispatch_mode: str | None = None,
+        max_agents: int | None = None,
     ) -> Plan | None: ...
 
     def update_milestone(
@@ -90,6 +103,8 @@ class PlanningPort(
         description: str | None = None,
         actor: str = "human",
         reason: str = "",
+        lane_group: int | None = None,
+        agent_role: str | None = None,
     ) -> Milestone | None: ...
 
     def update_task(
@@ -99,6 +114,7 @@ class PlanningPort(
         description: str | None = None,
         actor: str = "human",
         reason: str = "",
+        role: str | None = None,
     ) -> Task | None: ...
 
     def delete(self, kind: str, obj_id: int, actor: str = "human", reason: str = "") -> bool: ...

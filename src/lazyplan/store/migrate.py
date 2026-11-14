@@ -1,14 +1,13 @@
-"""Database schema and migrations. Applied by Store on open; idempotent.
-
-Stdlib only.
-"""
+"""Database schema and migrations. Applied by Store on open; idempotent."""
 
 from __future__ import annotations
 
 import sqlite3
 import uuid
 
-SCHEMA_VERSION = 16
+from .migrate_lanes import migrate_lanes
+
+SCHEMA_VERSION = 17
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS plans (
@@ -19,7 +18,9 @@ CREATE TABLE IF NOT EXISTS plans (
     goal TEXT NOT NULL DEFAULT '',
     uid TEXT NOT NULL DEFAULT '',
     archived_at REAL NOT NULL DEFAULT 0,
-    worktree_required INTEGER NOT NULL DEFAULT 0
+    worktree_required INTEGER NOT NULL DEFAULT 0,
+    dispatch_mode TEXT NOT NULL DEFAULT 'serial',
+    max_agents INTEGER NOT NULL DEFAULT 1
 );
 CREATE TABLE IF NOT EXISTS entity_keys (
     kind TEXT NOT NULL CHECK (kind IN ('plan', 'milestone', 'task')),
@@ -134,7 +135,9 @@ CREATE TABLE IF NOT EXISTS milestones (
     plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
     description TEXT NOT NULL DEFAULT '',
-    status TEXT NOT NULL DEFAULT 'todo'
+    status TEXT NOT NULL DEFAULT 'todo',
+    lane_group INTEGER NOT NULL DEFAULT 1,
+    agent_role TEXT NOT NULL DEFAULT 'implementer'
 );
 CREATE TABLE IF NOT EXISTS tasks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -143,7 +146,8 @@ CREATE TABLE IF NOT EXISTS tasks (
     status TEXT NOT NULL DEFAULT 'todo',
     description TEXT NOT NULL DEFAULT '',
     blocked INTEGER NOT NULL DEFAULT 0,
-    blocked_reason TEXT NOT NULL DEFAULT ''
+    blocked_reason TEXT NOT NULL DEFAULT '',
+    role TEXT NOT NULL DEFAULT 'implementer'
 );
 CREATE TABLE IF NOT EXISTS task_claims (
     task_id INTEGER PRIMARY KEY REFERENCES tasks(id) ON DELETE CASCADE,
@@ -580,6 +584,7 @@ def migrate(conn: sqlite3.Connection) -> None:
     _migrate_session_attribution(conn)
     _migrate_claim_location(conn)
     _migrate_plan_worktree_required(conn)
+    migrate_lanes(conn)
     _migrate_archive_columns(conn)
     _drop_agent_registry(conn)
     _drop_priority_columns(conn)

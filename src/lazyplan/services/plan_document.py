@@ -15,14 +15,22 @@ from typing import Any, NoReturn
 
 from lazyplan.infrastructure.templates import apply_template, template_criteria
 
+from ..core.policies.lanes import (
+    AGENT_ROLES,
+    DEFAULT_AGENT_ROLE,
+    DEFAULT_DISPATCH_MODE,
+    DEFAULT_LANE_GROUP,
+    DEFAULT_MAX_AGENTS,
+    DISPATCH_MODES,
+)
 from ..core.ports.planning import PlanningPort
 
 _PLACEHOLDER = re.compile(r"\b(TODO|TBD|FIXME)\b")
 _KEY = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 _TOP_FIELDS = {"plan", "milestones"}
-_PLAN_FIELDS = {"key", "title", "why", "what", "criteria"}
-_MILESTONE_FIELDS = {"key", "title", "desc", "criteria", "tasks"}
-_TASK_FIELDS = {"key", "title", "desc", "criteria"}
+_PLAN_FIELDS = {"key", "title", "why", "what", "criteria", "dispatch_mode", "max_agents"}
+_MILESTONE_FIELDS = {"key", "title", "desc", "criteria", "tasks", "lane_group", "agent_role"}
+_TASK_FIELDS = {"key", "title", "desc", "criteria", "role"}
 
 
 class PlanDocumentError(ValueError):
@@ -37,17 +45,20 @@ class TaskDocument:
     title: str
     description: str
     criteria: tuple[str, ...]
+    role: str = DEFAULT_AGENT_ROLE
 
 
 @dataclass(frozen=True)
 class MilestoneDocument:
-    """One milestone in a plan document."""
+    """One milestone (lane) in a plan document."""
 
     key: str
     title: str
     description: str
     criteria: tuple[str, ...]
     tasks: tuple[TaskDocument, ...]
+    lane_group: int = DEFAULT_LANE_GROUP
+    agent_role: str = DEFAULT_AGENT_ROLE
 
 
 @dataclass(frozen=True)
@@ -60,6 +71,8 @@ class PlanDocument:
     what: str
     criteria: tuple[str, ...]
     milestones: tuple[MilestoneDocument, ...]
+    dispatch_mode: str = DEFAULT_DISPATCH_MODE
+    max_agents: int = DEFAULT_MAX_AGENTS
 
 
 def _fail(path: str, message: str) -> NoReturn:
@@ -109,6 +122,25 @@ def _criteria(value: Any, path: str) -> tuple[str, ...]:
     return tuple(out)
 
 
+def _enum(value: Any, path: str, field: str, allowed: tuple[str, ...], default: str) -> str:
+    """One optional enum field with a default."""
+    if value is None:
+        return default
+    text = _text(value, path, field)
+    if text not in allowed:
+        _fail(path, f"{field} must be {'|'.join(allowed)}")
+    return text
+
+
+def _positive_int(value: Any, path: str, field: str) -> int:
+    """One positive integer field."""
+    if isinstance(value, bool) or not isinstance(value, int):
+        _fail(path, f"{field} must be an integer")
+    if value < 1:
+        _fail(path, f"{field} must be at least 1")
+    return value
+
+
 def _dedupe(items: tuple[str, ...]) -> tuple[str, ...]:
     seen: set[str] = set()
     out: list[str] = []
@@ -154,6 +186,16 @@ def _milestone(
     criteria = _with_template(
         port, "milestone", _criteria(item.get("criteria"), f"{path}.criteria"), path
     )
+    lane_group = _positive_int(
+        item.get("lane_group", DEFAULT_LANE_GROUP), f"{path}.lane_group", "lane_group"
+    )
+    agent_role = _enum(
+        item.get("agent_role"),
+        f"{path}.agent_role",
+        "agent_role",
+        AGENT_ROLES,
+        DEFAULT_AGENT_ROLE,
+    )
 
     tasks_raw = item.get("tasks", [])
     if not isinstance(tasks_raw, list):
@@ -163,7 +205,15 @@ def _milestone(
         task_path = f"{path}.tasks[{index}]"
         task = _task(port, task_raw, task_path, seen_tasks)
         tasks.append(task)
-    return MilestoneDocument(key, filled["title"], filled["desc"], criteria, tuple(tasks))
+    return MilestoneDocument(
+        key,
+        filled["title"],
+        filled["desc"],
+        criteria,
+        tuple(tasks),
+        lane_group,
+        agent_role,
+    )
 
 
 def _task(port: PlanningPort, raw: Any, path: str, seen_tasks: set[str]) -> TaskDocument:
@@ -178,7 +228,8 @@ def _task(port: PlanningPort, raw: Any, path: str, seen_tasks: set[str]) -> Task
     criteria = _with_template(
         port, "task", _criteria(item.get("criteria"), f"{path}.criteria"), path
     )
-    return TaskDocument(key, filled["title"], filled["desc"], criteria)
+    role = _enum(item.get("role"), f"{path}.role", "role", AGENT_ROLES, DEFAULT_AGENT_ROLE)
+    return TaskDocument(key, filled["title"], filled["desc"], criteria, role)
 
 
 def validate_document(port: PlanningPort, raw: Any) -> PlanDocument:
@@ -194,6 +245,16 @@ def validate_document(port: PlanningPort, raw: Any) -> PlanDocument:
     filled = _filled(port, "plan", {"title": title, "why": why, "what": what}, "plan")
     criteria = _with_template(
         port, "plan", _criteria(plan_raw.get("criteria"), "plan.criteria"), "plan"
+    )
+    dispatch_mode = _enum(
+        plan_raw.get("dispatch_mode"),
+        "plan.dispatch_mode",
+        "dispatch_mode",
+        DISPATCH_MODES,
+        DEFAULT_DISPATCH_MODE,
+    )
+    max_agents = _positive_int(
+        plan_raw.get("max_agents", DEFAULT_MAX_AGENTS), "plan.max_agents", "max_agents"
     )
 
     milestones_raw = document.get("milestones", [])
@@ -219,6 +280,8 @@ def validate_document(port: PlanningPort, raw: Any) -> PlanDocument:
         what=filled["what"],
         criteria=criteria,
         milestones=tuple(milestones),
+        dispatch_mode=dispatch_mode,
+        max_agents=max_agents,
     )
 
 

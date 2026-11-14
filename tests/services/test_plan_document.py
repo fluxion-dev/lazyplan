@@ -7,6 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from lazyplan.services import plan_apply
 from lazyplan.services.plan_document import (
     PlanDocumentError,
     counts,
@@ -147,6 +148,65 @@ class PlanDocumentTest(unittest.TestCase):
     def test_missing_file(self):
         with self.assertRaisesRegex(PlanDocumentError, "cannot read"):
             load_document(Path(self.tmp.name) / "missing.json")
+
+    def test_lane_fields_default_when_absent(self):
+        parsed = validate_document(self.store, document())
+        self.assertEqual((parsed.dispatch_mode, parsed.max_agents), ("serial", 1))
+        milestone = parsed.milestones[0]
+        self.assertEqual((milestone.lane_group, milestone.agent_role), (1, "implementer"))
+        self.assertEqual(milestone.tasks[0].role, "implementer")
+
+    def test_lane_fields_resolve_and_apply(self):
+        raw = document()
+        raw["plan"].update({"dispatch_mode": "parallel", "max_agents": 3})
+        raw["milestones"][0].update({"lane_group": 2, "agent_role": "integrator"})
+        raw["milestones"][0]["tasks"][0]["role"] = "docs"
+        parsed = validate_document(self.store, raw)
+        self.assertEqual((parsed.dispatch_mode, parsed.max_agents), ("parallel", 3))
+        self.assertEqual(parsed.milestones[0].lane_group, 2)
+        self.assertEqual(parsed.milestones[0].agent_role, "integrator")
+        self.assertEqual(parsed.milestones[0].tasks[0].role, "docs")
+
+        result = plan_apply.apply(self.store, parsed)
+        plan = self.store.get_plan(result["plan"].id)
+        assert plan is not None
+        milestone = self.store.list_milestones(plan.id)[0]
+        task = self.store.list_tasks(milestone.id)[0]
+        self.assertEqual((plan.dispatch_mode, plan.max_agents), ("parallel", 3))
+        self.assertEqual((milestone.lane_group, milestone.agent_role), (2, "integrator"))
+        self.assertEqual(task.role, "docs")
+
+    def test_invalid_dispatch_mode_names_the_field(self):
+        raw = document()
+        raw["plan"]["dispatch_mode"] = "sometimes"
+        with self.assertRaisesRegex(PlanDocumentError, "plan.dispatch_mode"):
+            validate_document(self.store, raw)
+
+    def test_invalid_lane_cap_names_the_field(self):
+        for value in (0, -1, True, "2"):
+            raw = document()
+            raw["plan"]["max_agents"] = value
+            with (
+                self.subTest(value=value),
+                self.assertRaisesRegex(PlanDocumentError, "plan.max_agents"),
+            ):
+                validate_document(self.store, raw)
+
+    def test_invalid_lane_group_names_the_field(self):
+        raw = document()
+        raw["milestones"][0]["lane_group"] = 0
+        with self.assertRaisesRegex(PlanDocumentError, "lane_group"):
+            validate_document(self.store, raw)
+
+    def test_invalid_role_names_the_field(self):
+        raw = document()
+        raw["milestones"][0]["agent_role"] = "wizard"
+        with self.assertRaisesRegex(PlanDocumentError, "agent_role"):
+            validate_document(self.store, raw)
+        raw = document()
+        raw["milestones"][0]["tasks"][0]["role"] = "wizard"
+        with self.assertRaisesRegex(PlanDocumentError, "role"):
+            validate_document(self.store, raw)
 
 
 if __name__ == "__main__":

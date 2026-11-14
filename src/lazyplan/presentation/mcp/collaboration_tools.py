@@ -7,6 +7,7 @@ from typing import Any
 from lazyplan import services
 
 from .base import McpBase
+from .handlers import kind_id_rows, plan_rows
 from .schema import id_schema as _id
 from .schema import kind_schema as _kind
 from .schema import str_schema as _str
@@ -134,7 +135,10 @@ class CollaborationToolsMixin(McpBase):
                     {"kind": _kind(), "id": _id()},
                     ["kind", "id"],
                 ),
-                self._tool_criterion_list,
+                kind_id_rows(
+                    self._need_store,
+                    lambda store, kind, row_id: store.list_criteria(kind, row_id),
+                ),
             ),
             "comment_list": (
                 _tool(
@@ -177,7 +181,10 @@ class CollaborationToolsMixin(McpBase):
                     {"plan": _id()},
                     ["plan"],
                 ),
-                self._tool_reference_list,
+                plan_rows(
+                    self._need_store,
+                    lambda store, plan_id: services.list_refs(store, plan_id),
+                ),
             ),
             "touch_list": (
                 _tool(
@@ -298,12 +305,6 @@ class CollaborationToolsMixin(McpBase):
         )
         return {"ok": ok, "plan": args["plan"]}
 
-    def _tool_criterion_list(self, args: dict) -> object:
-        return [
-            vars(row)
-            for row in self._need_store().list_criteria(str(args["kind"]), int(args["id"]))
-        ]
-
     def _tool_comment_list(self, args: dict) -> object:
         return [
             vars(row)
@@ -343,9 +344,6 @@ class CollaborationToolsMixin(McpBase):
                 limit=int(args["limit"]) if args.get("limit") else 20,
             )
         ]
-
-    def _tool_reference_list(self, args: dict) -> object:
-        return [vars(row) for row in services.list_refs(self._need_store(), int(args["plan"]))]
 
     def _tool_touch_list(self, args: dict) -> object:
         return self._need_store().list_touchpoints(int(args["task"]))

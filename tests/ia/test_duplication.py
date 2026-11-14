@@ -19,18 +19,8 @@ from tests.ia import duplication
 BASELINE_PARSER_DUPLICATES: tuple[tuple[str, ...], ...] = ()
 
 #: MCP _tool_* handlers whose normalized bodies are identical, sorted by name.
-BASELINE_HANDLER_DUPLICATES: tuple[tuple[str, ...], ...] = (
-    (
-        "collaboration_tools:_tool_criterion_list",
-        "provenance_tools:_tool_commit_list",
-        "provenance_tools:_tool_pull_request_list",
-    ),
-    ("collaboration_tools:_tool_reference_list", "evidence_tools:_tool_criterion_evidence"),
-    ("maintenance_tools:_tool_maintenance_archive", "maintenance_tools:_tool_maintenance_trim"),
-    ("provenance_tools:_tool_commit_refresh", "provenance_tools:_tool_pull_request_refresh"),
-    ("question_tools:_tool_question_reopen", "question_tools:_tool_question_resolve"),
-    ("review_tools:_tool_review", "review_tools:_tool_ship"),
-)
+#: The handler factories collapsed every group in the MCP slice.
+BASELINE_HANDLER_DUPLICATES: tuple[tuple[str, ...], ...] = ()
 
 #: Action ids typed as literals outside the Action rows, and their occurrences.
 #: After the registry slice these are the palette Command references alone.

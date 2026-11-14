@@ -7,6 +7,7 @@ from typing import Any
 from lazyplan import services
 
 from .base import McpBase
+from .handlers import question_note
 from .schema import id_schema as _id
 from .schema import str_schema as _str
 from .schema import tool as _tool
@@ -36,7 +37,7 @@ class QuestionToolsMixin(McpBase):
                     ["id"],
                     False,
                 ),
-                self._tool_question_resolve,
+                question_note(self._need_store, self.actor, services.resolve_question),
             ),
             "question_reopen": (
                 _tool(
@@ -46,7 +47,7 @@ class QuestionToolsMixin(McpBase):
                     ["id"],
                     False,
                 ),
-                self._tool_question_reopen,
+                question_note(self._need_store, self.actor, services.reopen_question),
             ),
         }
 
@@ -83,28 +84,6 @@ class QuestionToolsMixin(McpBase):
             str(args["text"]),
             actor=self.actor,
         )
-        return vars(question)
-
-    def _tool_question_resolve(self, args: dict) -> object:
-        question = services.resolve_question(
-            self._need_store(),
-            int(args["id"]),
-            note=str(args.get("note") or ""),
-            actor=self.actor,
-        )
-        if question is None:
-            raise KeyError(f"question {args['id']} not found")
-        return vars(question)
-
-    def _tool_question_reopen(self, args: dict) -> object:
-        question = services.reopen_question(
-            self._need_store(),
-            int(args["id"]),
-            note=str(args.get("note") or ""),
-            actor=self.actor,
-        )
-        if question is None:
-            raise KeyError(f"question {args['id']} not found")
         return vars(question)
 
     def _tool_question_list(self, args: dict) -> object:

@@ -10,6 +10,7 @@ from lazyplan.infrastructure.forge import parse_pull_url
 from lazyplan.services.source import build_source_trail
 
 from .base import McpBase
+from .handlers import kind_id_action, kind_id_rows
 from .schema import id_schema as _id
 from .schema import kind_schema as _kind
 from .schema import str_schema as _str
@@ -46,7 +47,7 @@ class ProvenanceToolsMixin(McpBase):
                     ["kind", "id"],
                     False,
                 ),
-                self._tool_commit_refresh,
+                kind_id_action(self._need_store, self.actor, services.refresh_links),
             ),
             "plan_approve": (
                 _tool(
@@ -70,7 +71,7 @@ class ProvenanceToolsMixin(McpBase):
                     ["kind", "id"],
                     False,
                 ),
-                self._tool_pull_request_refresh,
+                kind_id_action(self._need_store, self.actor, services.refresh_forge),
             ),
             "pull_request_link": (
                 _tool(
@@ -121,7 +122,10 @@ class ProvenanceToolsMixin(McpBase):
                     {"kind": _kind(), "id": _id()},
                     ["kind", "id"],
                 ),
-                self._tool_commit_list,
+                kind_id_rows(
+                    self._need_store,
+                    lambda store, kind, row_id: store.effective_links(kind, row_id),
+                ),
             ),
             "repo_list": (
                 _tool(
@@ -139,7 +143,10 @@ class ProvenanceToolsMixin(McpBase):
                     {"kind": _kind(), "id": _id()},
                     ["kind", "id"],
                 ),
-                self._tool_pull_request_list,
+                kind_id_rows(
+                    self._need_store,
+                    lambda store, kind, row_id: store.effective_forge_links(kind, row_id),
+                ),
             ),
             "plan_diff": (
                 _tool(
@@ -173,11 +180,6 @@ class ProvenanceToolsMixin(McpBase):
             override=str(args.get("override") or ""),
         )
 
-    def _tool_commit_refresh(self, args: dict) -> object:
-        return services.refresh_links(
-            self._need_store(), str(args["kind"]), int(args["id"]), actor=self.actor
-        )
-
     def _tool_plan_approve(self, args: dict) -> object:
         result = services.approve(
             self._need_store(),
@@ -191,11 +193,6 @@ class ProvenanceToolsMixin(McpBase):
             "created": result.created,
             "acknowledged": result.acknowledged,
         }
-
-    def _tool_pull_request_refresh(self, args: dict) -> object:
-        return services.refresh_forge(
-            self._need_store(), str(args["kind"]), int(args["id"]), actor=self.actor
-        )
 
     def _tool_pull_request_link(self, args: dict) -> object:
         parsed = parse_pull_url(str(args["url"]))
@@ -230,23 +227,11 @@ class ProvenanceToolsMixin(McpBase):
     def _tool_source_trail(self, args: dict) -> object:
         return asdict(build_source_trail(self._need_store(), str(args["kind"]), int(args["id"])))
 
-    def _tool_commit_list(self, args: dict) -> object:
-        return [
-            vars(link)
-            for link in self._need_store().effective_links(str(args["kind"]), int(args["id"]))
-        ]
-
     def _tool_repo_list(self, args: dict) -> object:
         store = self._need_store()
         if bool(args.get("effective")):
             return store.effective_repos(str(args["kind"]), int(args["id"]))
         return store.list_repos(str(args["kind"]), int(args["id"]))
-
-    def _tool_pull_request_list(self, args: dict) -> object:
-        return [
-            vars(link)
-            for link in self._need_store().effective_forge_links(str(args["kind"]), int(args["id"]))
-        ]
 
     def _tool_plan_diff(self, args: dict) -> object:
         result = services.diff(

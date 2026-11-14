@@ -9,6 +9,7 @@ from lazyplan import services
 from ...core.ports.maintenance import MaintenancePort
 from ..shared import maintenance_presenter as view
 from .base import McpBase
+from .handlers import maintenance_days
 from .schema import id_schema as _id
 from .schema import str_schema as _str
 from .schema import tool as _tool
@@ -46,7 +47,12 @@ class MaintenanceToolsMixin(McpBase):
                     ["apply"],
                     False,
                 ),
-                self._tool_maintenance_archive,
+                maintenance_days(
+                    self._maintenance_port,
+                    self.actor,
+                    services.maintenance.archive,
+                    view.archive_payload,
+                ),
             ),
             "maintenance_trim": (
                 _tool(
@@ -57,7 +63,12 @@ class MaintenanceToolsMixin(McpBase):
                     ["apply"],
                     False,
                 ),
-                self._tool_maintenance_trim,
+                maintenance_days(
+                    self._maintenance_port,
+                    self.actor,
+                    services.maintenance.trim,
+                    view.trim_payload,
+                ),
             ),
             "maintenance_vacuum": (
                 _tool(
@@ -90,24 +101,6 @@ class MaintenanceToolsMixin(McpBase):
         return view.report_payload(
             services.maintenance.report(self._maintenance_port(), days=args.get("days") or None)
         )
-
-    def _tool_maintenance_archive(self, args: dict) -> object:
-        result = services.maintenance.archive(
-            self._maintenance_port(),
-            days=args.get("days") or None,
-            apply=bool(args.get("apply")),
-            actor=self.actor,
-        )
-        return view.archive_payload(result)
-
-    def _tool_maintenance_trim(self, args: dict) -> object:
-        result = services.maintenance.trim(
-            self._maintenance_port(),
-            days=args.get("days") or None,
-            apply=bool(args.get("apply")),
-            actor=self.actor,
-        )
-        return view.trim_payload(result)
 
     def _tool_maintenance_vacuum(self, args: dict) -> object:
         result = services.maintenance.vacuum(

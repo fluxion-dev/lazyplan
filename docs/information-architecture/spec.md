@@ -118,7 +118,7 @@ every route. Palette and help are available in every context.
 | task move/claim/block/finish | yes | yes | yes | yes | — |
 | criteria edit/prove/relate | yes | yes | yes | yes | — |
 | questions/references | yes | yes | yes | yes | — |
-| sessions/handoffs | yes (new hub) | yes | read-only | yes | M454 |
+| sessions/handoffs | yes (new hub) | yes | read-only | yes | — |
 | comments/notes | yes | yes | yes | yes | — |
 | commits/files/PRs/repos | yes | yes | read-only | yes | — |
 | feed | yes | yes | read-only | yes | — |

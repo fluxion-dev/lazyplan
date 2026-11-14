@@ -25,7 +25,7 @@ Approved items:
   mark, and bulk stay TUI-only.
 - Deprecation: legacy aliases and removed keys work for one minor release;
   removal target is `0.37.0`.
-- Hub sequencing: provenance and feed hubs land in M455.
+- Hub sequencing: provenance and feed hubs land with the hub releases.
 
 ## Corrections
 
@@ -42,5 +42,5 @@ None.
 
 ## Sign-off
 
-The human approved the spec on 2026-11-07. No refactor task had started before
-this record, so M452 may begin.
+The human approved the spec on 2026-11-07; the refactor work began after
+this record.

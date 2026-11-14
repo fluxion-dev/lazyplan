@@ -15,17 +15,49 @@ from pathlib import Path
 
 from lazyplan.infrastructure import vcs
 
-from ..core.entities import Status
+from ..core.entities import Plan, Status
+from ..core.policies.evidence import coverage as coverage_policy
 from ..core.policies.insights import parse_since as parse_since
 from ..core.policies.insights import status_after
 from ..core.ports.insights import InsightsPort
-from .evidence import coverage as evidence_coverage
 
 _STATUS = re.compile(r"^(plan|milestone|task) #(\d+) -> (todo|doing|done)")
 _ADDED = re.compile(r"^([PST])#(\d+) ")
 _DEFAULT_COVERAGE = 0.8
 _DEFAULT_LAG = 1.0
 _DEFAULT_GAPS = 0
+
+
+@dataclass(frozen=True)
+class _Snapshot:
+    """One read of every map and event list an audit report walks."""
+
+    plans: dict[int, Plan]
+    milestones: dict[int, list]
+    tasks: dict[int, list]
+    criteria: dict[tuple[str, int], list]
+    links: dict[tuple[str, int], list]
+    repos: dict[tuple[str, int], list[dict]]
+    worktrees: dict[int, list]
+    evidence: dict[int, list]
+    criterion_links: list[dict]
+    status_events: list[dict]
+
+
+def _snapshot(store: InsightsPort) -> _Snapshot:
+    """Every read the report needs, loaded once."""
+    return _Snapshot(
+        plans={plan.id: plan for plan in store.list_plans(archived="show")},
+        milestones=store.milestones_map(),
+        tasks=store.tasks_map(),
+        criteria=store.criteria_map(),
+        links=store.vcs_links_map(),
+        repos=store.repos_map(),
+        worktrees=store.plan_worktrees_map(),
+        evidence=store.evidence_map(),
+        criterion_links=store.all_criterion_links(),
+        status_events=store.events_by_action("status"),
+    )
 
 
 @dataclass(frozen=True)
@@ -184,10 +216,10 @@ def plan_start(store: InsightsPort, plan_id: int) -> float | None:
     return earliest
 
 
-def _status_times(store: InsightsPort) -> dict[int, list[tuple[float, Status]]]:
+def _status_times(events: list[dict]) -> dict[int, list[tuple[float, Status]]]:
     """Per-task status events, oldest first."""
     out: dict[int, list[tuple[float, Status]]] = {}
-    for event in store.events_by_action("status"):
+    for event in events:
         found = _STATUS.match(str(event.get("detail") or ""))
         if found is None or found.group(1) != "task":
             continue
@@ -196,10 +228,10 @@ def _status_times(store: InsightsPort) -> dict[int, list[tuple[float, Status]]]:
     return out
 
 
-def _done_times(store: InsightsPort) -> dict[tuple[str, int], float]:
+def _done_times(events: list[dict]) -> dict[tuple[str, int], float]:
     """Latest done event per row, oldest-first scan so the last write wins."""
     out: dict[tuple[str, int], float] = {}
-    for event in store.events_by_action("status"):
+    for event in events:
         found = _STATUS.match(str(event.get("detail") or ""))
         if found is None or found.group(3) != "done":
             continue
@@ -207,10 +239,10 @@ def _done_times(store: InsightsPort) -> dict[tuple[str, int], float]:
     return out
 
 
-def _plan_tasks(store: InsightsPort, plan_ids: list[int]) -> dict[int, int]:
+def _plan_tasks(snap: _Snapshot, plan_ids: list[int]) -> dict[int, int]:
     """Task id -> milestone id for the plans in scope."""
-    milestones = store.milestones_map()
-    tasks = store.tasks_map()
+    milestones = snap.milestones
+    tasks = snap.tasks
     out: dict[int, int] = {}
     for plan_id in plan_ids:
         for milestone in milestones.get(plan_id, ()):
@@ -219,10 +251,10 @@ def _plan_tasks(store: InsightsPort, plan_ids: list[int]) -> dict[int, int]:
     return out
 
 
-def _links(store: InsightsPort, plan_ids: list[int]) -> tuple[dict[str, set[int]], set[str]]:
+def _links(snap: _Snapshot, plan_ids: list[int]) -> tuple[dict[str, set[int]], set[str]]:
     """Commit SHA -> owning task ids, plus every linked SHA for coverage."""
-    tasks = _plan_tasks(store, plan_ids)
-    links = store.vcs_links_map()
+    tasks = _plan_tasks(snap, plan_ids)
+    links = snap.links
     by_sha: dict[str, set[int]] = {}
     linked: set[str] = set()
 
@@ -241,13 +273,13 @@ def _links(store: InsightsPort, plan_ids: list[int]) -> tuple[dict[str, set[int]
     return by_sha, linked
 
 
-def _gaps(store: InsightsPort, plan_ids: list[int], since: float = 0.0) -> list[Gap]:
+def _gaps(snap: _Snapshot, plan_ids: list[int], since: float = 0.0) -> list[Gap]:
     """Open criteria on rows done inside the window (all rows when since is 0)."""
-    done = _done_times(store)
-    plans = {plan.id: plan for plan in store.list_plans(archived="show")}
-    milestones = store.milestones_map()
-    tasks = store.tasks_map()
-    criteria = store.criteria_map()
+    done = _done_times(snap.status_events)
+    plans = snap.plans
+    milestones = snap.milestones
+    tasks = snap.tasks
+    criteria = snap.criteria
 
     def closed_in_window(kind: str, obj_id: int) -> bool:
         when = done.get((kind, obj_id))
@@ -313,31 +345,31 @@ def compute(
     commits: list[Commit],
     since: float = 0.0,
     repos: list[str] | None = None,
+    snapshot: _Snapshot | None = None,
 ) -> Report:
     """Build a report from an explicit commit list; no writes and no git calls."""
+    snap = snapshot or _snapshot(store)
     unique = {commit.sha: commit for commit in commits if commit.parents <= 1}
     ordered = sorted(unique.values(), key=lambda item: (item.timestamp, item.sha))
-    owners, linked = _links(store, plan_ids)
+    owners, linked = _links(snap, plan_ids)
     linked_commits = [commit for commit in ordered if commit.sha in linked]
     lag_commits, lag_minutes, unresolved = _lag(
-        ordered, linked_commits, owners, _status_times(store)
+        ordered, linked_commits, owners, _status_times(snap.status_events)
     )
     criteria = [
-        criterion
-        for plan_id in plan_ids
-        for criterion in store.criteria_map().get(("plan", plan_id), ())
+        criterion for plan_id in plan_ids for criterion in snap.criteria.get(("plan", plan_id), ())
     ]
     linked_criteria = {
-        int(link["criterion_id"])
-        for link in store.all_criterion_links()
-        if link.get("criterion_id")
+        int(link["criterion_id"]) for link in snap.criterion_links if link.get("criterion_id")
     }
     trace_gaps = [
         Gap("criterion", criterion.id, criterion.text)
         for criterion in criteria
         if criterion.id not in linked_criteria
     ]
-    evidence_covered, evidence_total = evidence_coverage(store, plan_ids)
+    evidence_covered, evidence_total = coverage_policy(
+        snap.evidence, _criterion_ids(snap, plan_ids)
+    )
     return Report(
         plans=list(plan_ids),
         since=since,
@@ -347,7 +379,7 @@ def compute(
         lag_commits=lag_commits,
         lag_minutes=lag_minutes,
         unresolved=unresolved,
-        gaps=_gaps(store, plan_ids, since),
+        gaps=_gaps(snap, plan_ids, since),
         criteria_total=len(criteria),
         criteria_linked=len(criteria) - len(trace_gaps),
         trace_gaps=trace_gaps,
@@ -356,11 +388,23 @@ def compute(
     )
 
 
-def _repo_paths(store: InsightsPort, plan_ids: list[int], cwd: str | Path) -> list[str]:
+def _criterion_ids(snap: _Snapshot, plan_ids: list[int]) -> list[int]:
+    """Every criterion id under the plans in scope."""
+    ids: list[int] = []
+    for plan_id in plan_ids:
+        ids.extend(item.id for item in snap.criteria.get(("plan", plan_id), ()))
+        for milestone in snap.milestones.get(plan_id, ()):
+            ids.extend(item.id for item in snap.criteria.get(("milestone", milestone.id), ()))
+            for task in snap.tasks.get(milestone.id, ()):
+                ids.extend(item.id for item in snap.criteria.get(("task", task.id), ()))
+    return ids
+
+
+def _repo_paths(snap: _Snapshot, plan_ids: list[int], cwd: str | Path) -> list[str]:
     """Linked checkout paths, or cwd when the plans have no repo links."""
     seen: list[str] = []
-    repos = store.repos_map()
-    worktrees = store.plan_worktrees_map()
+    repos = snap.repos
+    worktrees = snap.worktrees
     for plan_id in plan_ids:
         for repo in repos.get(("plan", plan_id), ()):
             path = str(repo.get("repo_path") or "")
@@ -374,10 +418,14 @@ def _repo_paths(store: InsightsPort, plan_ids: list[int], cwd: str | Path) -> li
 
 
 def gather_commits(
-    store: InsightsPort, plan_ids: list[int], since: float, cwd: str | Path = "."
+    store: InsightsPort,
+    plan_ids: list[int],
+    since: float,
+    cwd: str | Path = ".",
+    snapshot: _Snapshot | None = None,
 ) -> tuple[list[Commit], list[str]]:
     """Read non-merge commits from every effective repo after `since`."""
-    repos = _repo_paths(store, plan_ids, cwd)
+    repos = _repo_paths(snapshot or _snapshot(store), plan_ids, cwd)
     stamp = datetime.fromtimestamp(since, UTC).isoformat()
     out: list[Commit] = []
     for path in repos:
@@ -403,6 +451,7 @@ def report(
 ) -> Report:
     """Audit live: resolve the window, read git, then compute."""
     starts = plan_starts(store)
+    snap = _snapshot(store)
     if plan_ids is None:
         if since is None:
             known = [start for start in starts.values() if start > 0]
@@ -418,13 +467,13 @@ def report(
         if since is None:
             known = [starts[plan_id] for plan_id in plans if plan_id in starts]
             since = min(known) if known else 0.0
-    commits, repos = gather_commits(store, plans, since, cwd)
-    return compute(store, plans, commits, since=since, repos=repos)
+    commits, repos = gather_commits(store, plans, since, cwd, snapshot=snap)
+    return compute(store, plans, commits, since=since, repos=repos, snapshot=snap)
 
 
 def linked_shas(store: InsightsPort, plan_ids: list[int]) -> set[str]:
     """Every commit SHA already owned by a row in these plans."""
-    return _links(store, plan_ids)[1]
+    return _links(_snapshot(store), plan_ids)[1]
 
 
 def unlinked_commits(

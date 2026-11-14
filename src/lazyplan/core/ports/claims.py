@@ -57,10 +57,6 @@ class ClaimsPort(ClaimsReadPort, Protocol):
         note: str = "",
     ) -> bool: ...
 
-    def next_claimable_task(
-        self, plan_id: int | None = None, now: float | None = None
-    ) -> Task | None: ...
-
     def claimable_tasks(
         self, plan_id: int | None = None, now: float | None = None
     ) -> list[Task]: ...

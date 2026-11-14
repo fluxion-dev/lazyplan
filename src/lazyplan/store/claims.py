@@ -243,10 +243,3 @@ class ClaimsMixin(StoreBase):
         with self._connect() as conn:
             rows = conn.execute(sql, params).fetchall()
         return [self._row_to_task(row) for row in rows]
-
-    def next_claimable_task(
-        self, plan_id: int | None = None, now: float | None = None
-    ) -> Task | None:
-        """First unclaimed todo in active plans: doing plans first, then creation order."""
-        tasks = self.claimable_tasks(plan_id, now)
-        return tasks[0] if tasks else None

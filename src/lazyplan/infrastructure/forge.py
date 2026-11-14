@@ -164,11 +164,6 @@ class GitHubForge(Forge):
 _FORGES: list[Forge] = [GitHubForge()]
 
 
-def forges() -> list[Forge]:
-    """Registered forge providers; append new ones here."""
-    return list(_FORGES)
-
-
 def detect_forge(remote: str) -> tuple[Forge, RepoRef] | None:
     """First provider that claims this remote, else None."""
     for forge in _FORGES:

@@ -112,8 +112,3 @@ def patterns_overlap(left: str, right: str) -> bool:
             or second.startswith(first + "/")
         )
     return first == second or first.startswith(second + "/") or second.startswith(first + "/")
-
-
-def touchpoints_overlap(left: list[str], right: list[str]) -> bool:
-    """True when any two patterns overlap."""
-    return any(patterns_overlap(a, b) for a in left for b in right)

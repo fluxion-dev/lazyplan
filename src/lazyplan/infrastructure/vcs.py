@@ -486,11 +486,6 @@ def file_url(remote: str, sha: str, path: str) -> str:
     return f"{base}/blob/{commit}/{quoted}"
 
 
-def backends() -> list[VCSBackend]:
-    """Registered backends; append new ones here to support more VCSs."""
-    return list(_BACKENDS)
-
-
 def detect_backend(cwd: str | Path = ".") -> tuple[VCSBackend | None, Path | None]:
     """First backend claiming cwd, else (None, None). Git-only for now."""
     for backend in _BACKENDS:
@@ -498,14 +493,3 @@ def detect_backend(cwd: str | Path = ".") -> tuple[VCSBackend | None, Path | Non
         if root is not None:
             return backend, root
     return None, None
-
-
-def current_head(cwd: str | Path = ".") -> tuple[VCSBackend | None, CommitInfo | None]:
-    """HEAD commit for cwd's repo, else (None, None) outside a VCS."""
-    backend, root = detect_backend(cwd)
-    if backend is None or root is None:
-        return None, None
-    sha = backend.head(root)
-    if sha is None:
-        return backend, None
-    return backend, backend.show(root, sha)

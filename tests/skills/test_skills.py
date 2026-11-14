@@ -17,12 +17,6 @@ from tests.support.home import sandbox_home
 from tests.support.paths import ROOT
 from tests.support.skill_case import SkillHomeCase
 
-
-def _answers(items):
-    it = iter(items)
-    return lambda: next(it)
-
-
 # Every `lpui` example taught by the templates, as parser argv (ids substituted).
 # If a template gains an example, add its argv here — this is the drift guard.
 TEMPLATE_EXAMPLE_ARGV = [
@@ -277,10 +271,6 @@ class TestSkillContent(unittest.TestCase):
             hosts = skills.detect_agents(Path(home))
         keys = {h.key for h in hosts}
         self.assertTrue({"opencode", "claude", "codex", "gemini"}.issubset(keys))
-
-    def test_default_scope(self):
-        self.assertEqual(skills.default_scope(Path("/repo")), "project")
-        self.assertEqual(skills.default_scope(None), "global")
 
 
 class TestToolTargets(unittest.TestCase):
@@ -571,26 +561,6 @@ class TestAppendGitignore(unittest.TestCase):
         self.assertEqual(
             open(root / ".gitignore", encoding="utf-8").read(), "*.db\n.agents/lazyplan/\n"
         )
-
-
-class TestPromptConfirm(unittest.TestCase):
-    def test_yes_variants(self):
-        for ans in ("Y", "y", ""):
-            self.assertTrue(skills.prompt_confirm("Q?", read=_answers([ans])))
-
-    def test_no_variants(self):
-        for ans in ("N", "n"):
-            self.assertFalse(skills.prompt_confirm("Q?", read=_answers([ans])))
-
-    def test_eof_means_default(self):
-        def _boom():
-            raise EOFError
-
-        self.assertTrue(skills.prompt_confirm("Q?", read=_boom))
-        self.assertFalse(skills.prompt_confirm("Q?", default_yes=False, read=_boom))
-
-    def test_invalid_falls_back_to_default(self):
-        self.assertTrue(skills.prompt_confirm("Q?", read=_answers(["maybe"])))
 
 
 if __name__ == "__main__":

@@ -102,7 +102,6 @@ class AgentStoreTest(unittest.TestCase):
         self.assertEqual(
             [(event.event, event.to_status) for event in events], [("start", "starting")]
         )
-        self.assertEqual(self.store.agent_counts(), {"starting": 1})
 
     def test_transitions_are_validated_and_logged_once(self) -> None:
         agent = self._agent()

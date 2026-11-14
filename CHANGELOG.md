@@ -3,6 +3,45 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## Unreleased
+
+### Added
+
+- **Plans orchestrate parallel agent lanes.** A plan declares `serial` or
+  `parallel` dispatch and an agent cap; each milestone is a lane with a wave
+  group and an agent role, and each task names the role that runs it. Lanes get
+  their own registered worktree and branch, run in wave order, and hold one
+  doing task at a time.
+- **`lpui dispatch` is the read-only orchestration manifest.** It prints waves,
+  lane state, capacity, exact worktree commands, and a bounded prompt per ready
+  task, and creates no row, worktree, or feed event.
+- **Roles get host profiles.** `lpui setup` writes managed OpenCode and Claude
+  Code subagent files for scout, implementer, QA, refactor, docs, reviewer, and
+  integrator, with a `agents.json` tier map beside the database. Other hosts
+  receive role, tier, effort, and prompt hints in the dispatch manifest.
+- **The orchestration skill ships beside the core skill.** Hosts install both
+  `lazyplan` and `lazyplan-orchestrate`; the second carries the dispatch,
+  handoff, integration, and close-out loop.
+
+### Changed
+
+- Plan, milestone, and task writes accept the lane flags, plan documents and
+  recipes carry them, and `list --tree`, `plan show`, and the TUI preview render
+  them.
+- `lint` flags a parallel plan without a lane cap, a missing or early
+  integrator, an empty lane, uneven QA coverage, and same-wave touch-point
+  overlap.
+- Hooks resolve the task claimed in the current lane, name that lane in session
+  packets, and block a commit from a lane with no claimed task with the exact
+  `next --lane` command.
+- Session end records one lane handoff note per claimed task with open work
+  before releasing that checkout's claims.
+
+### Fixed
+
+- Worktree registration now permits one row per lane while keeping the
+  plan-level row unique, and existing registries migrate in place.
+
 ## v0.46.0 — 2026-11-14
 
 ### Changed

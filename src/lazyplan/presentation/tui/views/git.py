@@ -9,7 +9,10 @@ from typing import Any
 from ...shared.design import (
     SECTION_ICON,
     STATE_ICON,
+    branch_word,
+    checkout_state,
     escape_markup,
+    short_sha,
     truncate,
 )
 
@@ -33,11 +36,9 @@ class GitDocument:
 def _state_word(state: Mapping[str, Any]) -> tuple[str, str]:
     if state.get("detached"):
         return STATE_ICON["detached"], "detached"
-    if state.get("branch"):
-        return (STATE_ICON["dirty"] if state.get("dirty") else STATE_ICON["clean"]), (
-            "dirty" if state.get("dirty") else "clean"
-        )
-    return "·", "unknown"
+    word = checkout_state(state)
+    icon = STATE_ICON["dirty"] if word == "dirty" else STATE_ICON["clean"]
+    return icon, word if state.get("branch") else "unknown"
 
 
 def _tracking(state: Mapping[str, Any]) -> str:
@@ -53,9 +54,7 @@ def _tracking(state: Mapping[str, Any]) -> str:
 
 def _repo_line(state: Mapping[str, Any]) -> str:
     name = escape_markup(str(state.get("name") or state.get("path") or "checkout"))
-    branch = escape_markup(
-        str(state.get("branch") or ("detached" if state.get("detached") else "unknown"))
-    )
+    branch = escape_markup(branch_word(state))
     icon, word = _state_word(state)
     color = "green" if word == "clean" else ("red" if word == "dirty" else "dim")
     line = f"[bold]{SECTION_ICON['git']} {name}[/] [dim]{branch}[/] [{color}]{icon} {word}[/]"
@@ -66,7 +65,7 @@ def _repo_line(state: Mapping[str, Any]) -> str:
 
 
 def _commit_line(link: Mapping[str, Any]) -> str:
-    short = escape_markup(str(link.get("sha", ""))[:12])
+    short = escape_markup(short_sha(str(link.get("sha", ""))))
     subject = escape_markup(str(link.get("subject", "") or "(no subject)"))
     files = link.get("files") or ()
     count = f" [dim]· {len(files)} files[/]" if files else ""

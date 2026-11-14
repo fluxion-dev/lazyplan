@@ -96,6 +96,39 @@ class ScopeCase(unittest.TestCase):
         )
         self.assertFalse(hook_scope.resolve(store, self.repo).managed)
 
+    def test_two_lanes_resolve_their_own_claimed_task(self):
+        store = Store(self.home / ".lazyplan/lazyplan.db")
+        plan = store.add_plan("Lanes", dispatch_mode="parallel", max_agents=2)
+        store.add_repo_link("plan", plan.id, str(self.repo))
+        lane_a = self.tmp_path("lane-a")
+        lane_b = self.tmp_path("lane-b")
+        lane_a.mkdir()
+        lane_b.mkdir()
+        tasks = []
+        for title, path in (("A", lane_a), ("B", lane_b)):
+            milestone = store.add_milestone(plan.id, title, lane_group=1)
+            task = store.add_task(milestone.id, f"Work {title}", "Commit. Verify.")
+            store.register_plan_worktree(
+                plan.id,
+                str(self.repo),
+                str(path),
+                branch=f"plan/{title}",
+                milestone_id=milestone.id,
+            )
+            store.claim_task(task.id, "worker", worktree=str(path), repo_path=str(self.repo))
+            store.set_status_raw("task", task.id, Status.DOING)
+            store.set_status_raw("milestone", milestone.id, Status.DOING)
+            tasks.append(task)
+        store.set_status_raw("plan", plan.id, Status.DOING)
+
+        self.assertEqual(hook_scope.resolve(store, lane_a).task_id, tasks[0].id)
+        self.assertEqual(hook_scope.resolve(store, lane_b).task_id, tasks[1].id)
+        self.assertFalse(hook_scope.resolve(store, self.repo).managed)
+
+    def tmp_path(self, name: str) -> Path:
+        """A sibling checkout path under the test root."""
+        return Path(self.tmp.name) / name
+
 
 if __name__ == "__main__":
     unittest.main()

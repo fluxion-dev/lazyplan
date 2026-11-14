@@ -14,6 +14,7 @@ from ..core.policies.planning import is_archived as _is_archived_policy
 from ..core.policies.planning import next_status, rollup_target
 from ..core.ports.coordination import CoordinationPort
 from ..core.ports.planning import PlanningPort
+from ..core.ports.repos import ReposPort
 
 DEFAULT_PLAN_LIMIT = 5
 
@@ -480,7 +481,7 @@ def _keep_plan(
 
 
 def tree(
-    port: PlanningPort,
+    port: ReposPort,
     status: Status | None = None,
     plan_id: int | None = None,
     finished: str = "hide",

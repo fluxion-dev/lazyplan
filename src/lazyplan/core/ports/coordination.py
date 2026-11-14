@@ -1,71 +1,21 @@
-"""The coordination repository port: leases and blocked work."""
+"""The coordination repository port: leases, blocked work, and touch-points."""
 
 from __future__ import annotations
 
 from typing import Protocol
 
-from ..entities import Claim, Note, Task
-from .planning import PlanningPort
+from .claims import BlockedPort, ClaimsPort
+from .collaboration import CollaborationPort
+from .repos import ReposPort
+from .touchpoints import TouchpointPort
 
 
-class CoordinationPort(PlanningPort, Protocol):
-    """Claim and blocked-work surface, on top of the planning read/write surface."""
-
-    def claim_task(
-        self,
-        task_id: int,
-        actor: str,
-        ttl_seconds: float = ...,
-        note: str = "",
-        force: bool = False,
-        now: float | None = None,
-        worktree: str = "",
-        repo_path: str = "",
-    ) -> tuple[Claim, Claim | None]: ...
-
-    def renew_claim(
-        self,
-        task_id: int,
-        actor: str,
-        ttl_seconds: float = ...,
-        now: float | None = None,
-    ) -> Claim: ...
-
-    def release_claim(self, task_id: int, actor: str, force: bool = False) -> Claim | None: ...
-
-    def get_claim(self, task_id: int) -> Claim | None: ...
-
-    def claims_map(self) -> dict[int, Claim]: ...
-
-    def list_claims(
-        self,
-        include_expired: bool = False,
-        now: float | None = None,
-        plan_id: int | None = None,
-    ) -> list[dict]: ...
-
-    def next_claimable_task(
-        self, plan_id: int | None = None, now: float | None = None
-    ) -> Task | None: ...
-
-    def claimable_tasks(
-        self, plan_id: int | None = None, now: float | None = None
-    ) -> list[Task]: ...
-
-    def set_blocked(
-        self, tid: int, blocked: bool, reason: str = "", actor: str = "human"
-    ) -> Task | None: ...
-
-    def add_touchpoint(self, task_id: int, pattern: str, actor: str = "human") -> str: ...
-
-    def remove_touchpoint(self, task_id: int, pattern: str, actor: str = "human") -> bool: ...
-
-    def list_touchpoints(self, task_id: int) -> list[str]: ...
-
-    def touchpoints_map(self) -> dict[int, list[str]]: ...
-
-    def effective_repos(self, parent_kind: str, parent_id: int) -> list[dict]: ...
-
-    def add_note(
-        self, parent_kind: str, parent_id: int, text: str, actor: str = "human"
-    ) -> Note: ...
+class CoordinationPort(
+    ReposPort,
+    CollaborationPort,
+    TouchpointPort,
+    ClaimsPort,
+    BlockedPort,
+    Protocol,
+):
+    """Claim, blocked-work, and touch-point surface, composed from capabilities."""

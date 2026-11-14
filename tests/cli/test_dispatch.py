@@ -67,6 +67,8 @@ class DispatchCliTest(unittest.TestCase):
         self.assertEqual(data["capacity"]["available"], 2)
         self.assertEqual([lane["state"] for lane in data["lanes"]], ["ready", "ready"])
         self.assertEqual(len(data["dispatchable"]), 2)
+        self.assertEqual(data["profiles"]["reviewer"]["claude"], "opus")
+        self.assertEqual(data["dispatchable"][0]["profile"]["tier"], "fast")
 
     def test_porcelain_rows(self) -> None:
         code, out, err = self._run("--porcelain", "dispatch", "--plan", str(self.plan.id))

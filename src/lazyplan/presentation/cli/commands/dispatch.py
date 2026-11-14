@@ -8,6 +8,7 @@ import sys
 from lazyplan.services import dispatch
 
 from ....core.ports.insights import InsightsPort
+from ....infrastructure.profiles import dispatch_profiles
 from ...shared import porcelain
 from ...shared.design import msg_error
 from ..emit import _emit
@@ -26,6 +27,9 @@ def _cmd_dispatch(store: InsightsPort, args: argparse.Namespace, actor: str) -> 
     except (KeyError, ValueError) as exc:
         print(msg_error(exc), file=sys.stderr)
         return 2
+    manifest["profiles"] = dispatch_profiles(store.db_path)
+    for item in manifest["dispatchable"]:
+        item["profile"] = manifest["profiles"].get(item["role"], {})
     if args.json:
         return _emit(args, manifest)
     if porcelain.enabled(args):

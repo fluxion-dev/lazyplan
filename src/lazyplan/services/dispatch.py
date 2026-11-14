@@ -3,15 +3,11 @@
 from __future__ import annotations
 
 import time
-from pathlib import Path
 from typing import Any
 
 from ..core.entities import Claim, Milestone, Plan, Task
 from ..core.policies.worktrees import quote_path
 from ..core.ports.insights import InsightsPort
-from ..infrastructure import agent_install
-from ..infrastructure.profiles import load as load_profiles
-from ..infrastructure.profiles import resolve as resolve_profile
 from .worktrees import lane_worktree_entries
 
 DEFAULT_MAX_CHARS = 4000
@@ -37,7 +33,6 @@ def build(
     done_groups = {group: _group_done(milestones, tasks_by, group) for group in groups}
     current = next((group for group in groups if not done_groups[group]), None)
     cap = plan.max_agents if plan.dispatch_mode == "parallel" else 1
-    profile_map = _profile_map(store)
 
     lanes: list[dict[str, Any]] = []
     next_by_lane: dict[int, Task | None] = {}
@@ -116,7 +111,6 @@ def build(
                 lane,
                 task,
                 max_chars,
-                profile_map,
             )
         )
     actions = _actions(lanes, dispatchable)
@@ -132,7 +126,6 @@ def build(
         },
         "capacity": {"max": cap, "active": active, "available": available},
         "wave": current,
-        "profiles": profile_map,
         "waves": _waves(groups, lanes, current),
         "lanes": selected,
         "dispatchable": dispatchable,
@@ -230,7 +223,6 @@ def _dispatchable(
     lane: dict[str, Any],
     task: Task,
     max_chars: int,
-    profile_map: dict[str, dict[str, str]],
 ) -> dict[str, Any]:
     """One ready task with its lane, worktree, claim, and prompt."""
     registered = [row for row in lane["worktrees"] if row["registered"]]
@@ -243,7 +235,6 @@ def _dispatchable(
         "title": task.title,
         "role": task.role,
         "agent_role": lane["agent_role"],
-        "profile": profile_map.get(task.role, {}),
         "worktree": path,
         "branch": branch,
         "worktrees": lane["worktrees"],
@@ -305,24 +296,6 @@ def _waves(
             state = "waiting"
         waves.append({"group": group, "state": state, "lanes": members})
     return waves
-
-
-def _profile_map(store: InsightsPort) -> dict[str, dict[str, str]]:
-    """Resolved role profiles for the dispatch manifest."""
-    try:
-        loaded = load_profiles(store.db_path)
-    except (OSError, ValueError):
-        return {}
-    models = agent_install.opencode_models(Path.home())
-    out: dict[str, dict[str, str]] = {}
-    for role, profile in loaded.items():
-        out[role] = {
-            "tier": profile.tier,
-            "effort": profile.effort,
-            "opencode": resolve_profile(profile, "opencode", models)["model"],
-            "claude": resolve_profile(profile, "claude")["model"],
-        }
-    return out
 
 
 def _top_blockers(store: InsightsPort, plan: Plan, milestones: list[Milestone]) -> list[str]:

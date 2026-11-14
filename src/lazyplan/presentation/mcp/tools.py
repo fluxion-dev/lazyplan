@@ -12,7 +12,6 @@ from typing import Any
 from lazyplan import services
 from lazyplan.infrastructure.repo import find_repo_root, repo_label
 from lazyplan.infrastructure.vcs import detect_backend
-from lazyplan.services import dispatch as dispatch_service
 from lazyplan.services import trace
 
 from ...core.entities import Milestone, Plan, Status, Task
@@ -20,6 +19,7 @@ from ...core.serialization import to_payload
 from ...services import insights
 from .base import McpBase
 from .collaboration_tools import CollaborationToolsMixin
+from .dispatch_tools import DispatchToolsMixin
 from .evidence_tools import EvidenceToolsMixin
 from .maintenance_tools import MaintenanceToolsMixin
 from .provenance_tools import ProvenanceToolsMixin
@@ -37,6 +37,7 @@ PROTOCOL_VERSION = "2024-11-05"
 
 class ToolsMixin(
     CollaborationToolsMixin,
+    DispatchToolsMixin,
     EvidenceToolsMixin,
     MaintenanceToolsMixin,
     ProvenanceToolsMixin,
@@ -507,16 +508,6 @@ class ToolsMixin(
     def _tool_brief(self, args: dict) -> object:
         plan_id = args.get("plan")
         return insights.brief.build(self._need_store(), plan_id)
-
-    def _tool_dispatch(self, args: dict) -> object:
-        lane = args.get("lane")
-        budget = args.get("max_chars")
-        return dispatch_service.build(
-            self._need_store(),
-            int(args["plan"]),
-            lane_id=int(lane) if lane else None,
-            max_chars=int(budget) if isinstance(budget, int) else 4000,
-        )
 
     def _tool_criterion_unrelate(self, args: dict) -> object:
         ok = self._need_store().unrelate_criterion(

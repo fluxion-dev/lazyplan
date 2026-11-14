@@ -85,6 +85,12 @@ class ProfileMapTest(unittest.TestCase):
         with self.assertRaisesRegex(profiles.ProfileError, "invalid JSON"):
             profiles.load(self.db)
 
+    def test_dispatch_profiles_resolve_each_host(self) -> None:
+        payload = profiles.dispatch_profiles(self.db)
+        self.assertEqual(payload["implementer"]["tier"], "fast")
+        self.assertEqual(payload["implementer"]["claude"], "haiku")
+        self.assertEqual(payload["reviewer"]["claude"], "opus")
+
 
 if __name__ == "__main__":
     unittest.main()

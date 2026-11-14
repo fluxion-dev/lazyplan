@@ -7,14 +7,14 @@ it is a managed profile being refreshed. Stdlib only.
 
 from __future__ import annotations
 
-import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from ..core.policies.lanes import AGENT_ROLES
 from . import textfile
 from .data_text import data_text
-from .profiles import Profile, load, resolve
+from .profiles import Profile, load, opencode_models, resolve
 
 OPENCODE_DIR = Path(".opencode") / "agent"
 OPENCODE_HOME_DIR = Path(".config") / "opencode" / "agent"
@@ -103,16 +103,13 @@ def install_opencode(
     models: dict[str, str] | None = None,
 ) -> AgentInstallResult:
     """Write or refresh every OpenCode profile for a scope."""
-    result = AgentInstallResult("opencode", scope)
-    for dest in opencode_targets(scope, repo_root, home):
-        role = dest.stem.removeprefix("lazyplan-")
-        written, status = _install_file(dest, render_opencode(role, profiles[role], models))
-        line = f"{dest} ({status})"
-        if written:
-            result.installed.append(line)
-        else:
-            result.kept.append(line)
-    return result
+    return _install_host(
+        "opencode",
+        scope,
+        opencode_targets(scope, repo_root, home),
+        profiles,
+        lambda role, profile: render_opencode(role, profile, models),
+    )
 
 
 def claude_targets(scope: str, repo_root: Path | None, home: Path) -> list[Path]:
@@ -133,10 +130,27 @@ def install_claude(
     models: dict[str, str] | None = None,
 ) -> AgentInstallResult:
     """Write or refresh every Claude Code profile for a scope."""
-    result = AgentInstallResult("claude", scope)
-    for dest in claude_targets(scope, repo_root, home):
+    return _install_host(
+        "claude",
+        scope,
+        claude_targets(scope, repo_root, home),
+        profiles,
+        lambda role, profile: render_claude(role, profile, models),
+    )
+
+
+def _install_host(
+    host: str,
+    scope: str,
+    targets: list[Path],
+    profiles: dict[str, Profile],
+    render: Callable[[str, Profile], str],
+) -> AgentInstallResult:
+    """Shared install loop: render one file per role and record its status."""
+    result = AgentInstallResult(host, scope)
+    for dest in targets:
         role = dest.stem.removeprefix("lazyplan-")
-        written, status = _install_file(dest, render_claude(role, profiles[role], models))
+        written, status = _install_file(dest, render(role, profiles[role]))
         line = f"{dest} ({status})"
         if written:
             result.installed.append(line)
@@ -233,32 +247,6 @@ def install_profiles(
     if "claude" in agents:
         results.append(install_claude(scope, repo_root, home, loaded))
     return results
-
-
-def opencode_models(home: Path, repo_root: Path | None = None) -> dict[str, str]:
-    """Read the configured main and small OpenCode models, when present."""
-    candidates: list[Path] = []
-    if repo_root is not None:
-        candidates.extend([repo_root / "opencode.json", repo_root / "opencode.jsonc"])
-    candidates.append(home / ".config" / "opencode" / "opencode.json")
-    for path in candidates:
-        if not path.is_file():
-            continue
-        try:
-            text = path.read_text(encoding="utf-8")
-        except OSError:
-            continue
-        main = _json_field(text, "model")
-        small = _json_field(text, "small_model")
-        if main or small:
-            return {"main": main, "small": small or main}
-    return {}
-
-
-def _json_field(text: str, name: str) -> str:
-    """One top-level string field from JSON or JSONC."""
-    match = re.search(rf'"{re.escape(name)}"\s*:\s*"([^"]+)"', text)
-    return match.group(1) if match is not None else ""
 
 
 def _install_file(dest: Path, content: str) -> tuple[bool, str]:

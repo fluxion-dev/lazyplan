@@ -8,6 +8,7 @@ Stdlib only.
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -103,6 +104,47 @@ def resolve(
         "model": model,
         "effort": profile.effort,
     }
+
+
+def dispatch_profiles(db_path: str | Path, home: Path | None = None) -> dict[str, dict[str, str]]:
+    """Resolved role profiles for the dispatch manifest."""
+    loaded = load(db_path)
+    models = opencode_models(home or Path.home())
+    out: dict[str, dict[str, str]] = {}
+    for role, profile in loaded.items():
+        out[role] = {
+            "tier": profile.tier,
+            "effort": profile.effort,
+            "opencode": resolve(profile, "opencode", models)["model"],
+            "claude": resolve(profile, "claude")["model"],
+        }
+    return out
+
+
+def opencode_models(home: Path, repo_root: Path | None = None) -> dict[str, str]:
+    """Read the configured main and small OpenCode models, when present."""
+    candidates: list[Path] = []
+    if repo_root is not None:
+        candidates.extend([repo_root / "opencode.json", repo_root / "opencode.jsonc"])
+    candidates.append(home / ".config" / "opencode" / "opencode.json")
+    for path in candidates:
+        if not path.is_file():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        main = _json_field(text, "model")
+        small = _json_field(text, "small_model")
+        if main or small:
+            return {"main": main, "small": small or main}
+    return {}
+
+
+def _json_field(text: str, name: str) -> str:
+    """One top-level string field from JSON or JSONC."""
+    match = re.search(rf'"{re.escape(name)}"\s*:\s*"([^"]+)"', text)
+    return match.group(1) if match is not None else ""
 
 
 def _parse(text: str, source: str) -> dict[str, Profile]:

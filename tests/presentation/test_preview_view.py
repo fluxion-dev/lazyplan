@@ -266,7 +266,9 @@ class PreviewDocumentTest(unittest.TestCase):
         lines = build_preview("plan", self.plan.id, full).render().splitlines()
         heading = next(index for index, line in enumerate(lines) if "MILESTONES" in line)
         row = lines[heading + 1]
-        self.assertEqual(row, f"- M{self.milestone.id}  Milestone title · 0/1 · w1 implementer")
+        self.assertEqual(
+            row, f"- M{self.milestone.id}  Milestone title · 0/1 · w1 · implementer"
+        )
         self.assertNotIn("Details", row)
         self.assertNotIn("tasks", row)
 

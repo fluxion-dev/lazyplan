@@ -10,7 +10,12 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from ...core.policies.lanes import DEFAULT_AGENT_ROLE
+from ...core.policies.lanes import (
+    DEFAULT_AGENT_ROLE,
+    DEFAULT_DISPATCH_MODE,
+    DEFAULT_LANE_GROUP,
+    DEFAULT_MAX_AGENTS,
+)
 from ...core.policies.planning import progress_counts
 from ...services import tree as service_tree
 from .design import (
@@ -107,14 +112,14 @@ def tree_lines(
 
 def _dispatch_label(plan: object) -> str:
     """One compact dispatch summary for a plan row."""
-    mode = str(getattr(plan, "dispatch_mode", "serial") or "serial")
-    cap = int(getattr(plan, "max_agents", 1) or 1)
+    mode = str(getattr(plan, "dispatch_mode", DEFAULT_DISPATCH_MODE) or DEFAULT_DISPATCH_MODE)
+    cap = int(getattr(plan, "max_agents", DEFAULT_MAX_AGENTS) or DEFAULT_MAX_AGENTS)
     return f"{mode} · max {cap}" if mode == "parallel" else mode
 
 
 def _lane_label(milestone: object) -> str:
     """One compact wave and role summary for a lane row."""
-    group = int(getattr(milestone, "lane_group", 1) or 1)
+    group = int(getattr(milestone, "lane_group", DEFAULT_LANE_GROUP) or DEFAULT_LANE_GROUP)
     role = str(getattr(milestone, "agent_role", DEFAULT_AGENT_ROLE) or DEFAULT_AGENT_ROLE)
     return f"w{group} · {role}"
 
@@ -372,13 +377,17 @@ def _render_plan_full(full: dict, lines: list[str], files: bool = False) -> None
         lines.append(f"why: {p['goal']}")
     if p.get("description"):
         lines.append(f"\nwhat: {p['description']}")
-    lines.append(f"\nlanes: {p.get('dispatch_mode', 'serial')} · max {p.get('max_agents', 1)}")
+    lines.append(
+        f"\nlanes: {p.get('dispatch_mode', DEFAULT_DISPATCH_MODE)}"
+        f" · max {p.get('max_agents', DEFAULT_MAX_AGENTS)}"
+    )
     _append_common(lines, full, files=files)
     for entry in full["milestones"]:
         s = entry["milestone"]
         lines.append(
             f"\n  {status_word(s['status'])} M{s['id']} {s['title']}"
-            f" · wave {s.get('lane_group', 1)} · {s.get('agent_role', 'implementer')}"
+            f" · wave {s.get('lane_group', DEFAULT_LANE_GROUP)}"
+            f" · {s.get('agent_role', DEFAULT_AGENT_ROLE)}"
         )
 
 
@@ -389,7 +398,8 @@ def _render_milestone_full(full: dict, lines: list[str], files: bool = False) ->
     s = full["milestone"]
     lines.append(
         f"{status_word(s['status'])} M{s['id']} {s['title']} (P{s['plan_id']})"
-        f" · wave {s.get('lane_group', 1)} · {s.get('agent_role', 'implementer')}"
+        f" · wave {s.get('lane_group', DEFAULT_LANE_GROUP)}"
+        f" · {s.get('agent_role', DEFAULT_AGENT_ROLE)}"
     )
     if s.get("description"):
         lines.append(f"\ndetails: {s['description']}")
@@ -415,7 +425,7 @@ def _render_task_full(full: dict, lines: list[str], files: bool = False) -> None
     t = full["task"]
     lines.append(
         f"{status_word(t['status'])} T{t['id']} {t['title']} (M{t['milestone_id']})"
-        f" · {t.get('role', 'implementer')}"
+        f" · {t.get('role', DEFAULT_AGENT_ROLE)}"
     )
     if t.get("blocked"):
         lines.append(f"blocked: {t.get('blocked_reason') or '-'}")

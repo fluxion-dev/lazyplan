@@ -12,6 +12,7 @@ from unittest import mock
 
 from lazyplan.infrastructure import hook_hosts, skills
 from lazyplan.presentation import setup
+from lazyplan.presentation.setup import health
 from tests.support.home import sandbox_home
 
 
@@ -59,13 +60,18 @@ class UpgradeCase(unittest.TestCase):
         with redirect_stderr(io.StringIO()):
             setup.ensure("ui", args, self.repo, self.home, version, interactive=False)
 
-    def prompt_upgrade(self, version: str = "2.0", answer: str = "1") -> None:
+    def launch_ui(self, version: str = "2.0") -> mock.MagicMock:
+        """A later interactive `lpui` launch; returns the input mock."""
         args = make_args()
         with (
-            mock.patch("builtins.input", return_value=answer),
+            mock.patch("builtins.input", return_value="1") as answer,
             redirect_stderr(io.StringIO()),
         ):
             setup.ensure("ui", args, self.repo, self.home, version, interactive=True)
+        return answer
+
+    def health_context(self, version: str = "2.0") -> health.HealthContext:
+        return health.current(self.repo, self.home, version)
 
     def settings(self) -> Path:
         return self.home / ".claude" / "settings.json"
@@ -80,13 +86,19 @@ class UpgradeCase(unittest.TestCase):
             self.assertEqual(state.last_version, "2.0")
             self.assertNotIn("hook:claude:future-event", state.integration_choices)
 
-    def test_next_human_command_installs_the_pending_event(self):
+    def test_lpui_leaves_the_pending_event_to_the_tui(self):
         self.first_run()
         with mock.patch.dict(hook_hosts.EVENTS["claude"], {"future-event": "FutureEvent"}):
             self.upgrade()
-            self.prompt_upgrade()
-            text = self.settings().read_text(encoding="utf-8")
-            self.assertIn("future-event", text)
+            answer = self.launch_ui()
+            answer.assert_not_called()
+            self.assertNotIn("future-event", self.settings().read_text(encoding="utf-8"))
+            context = self.health_context()
+            report = context.report()
+            hooks = next(f for f in report.open if f.id == "hook:claude")
+            self.assertIn("hook:claude:future-event", {item.id for item in hooks.items})
+            context.install((hooks,))
+            self.assertIn("future-event", self.settings().read_text(encoding="utf-8"))
             choices = setup.load_state(self.home).integration_choices
             self.assertEqual(choices["hook:claude:future-event"]["decision"], "installed")
 
@@ -97,7 +109,11 @@ class UpgradeCase(unittest.TestCase):
             self.upgrade()
             dest = self.home / ".claude" / "skills" / "extra" / "SKILL.md"
             self.assertFalse(dest.exists())
-            self.prompt_upgrade()
+            self.launch_ui().assert_not_called()
+            self.assertFalse(dest.exists())
+            context = self.health_context()
+            extra_skill = next(f for f in context.report().open if f.id == "skill:extra")
+            context.install((extra_skill,))
             self.assertTrue(dest.is_file())
 
     def test_no_hooks_survives_later_upgrades(self):

@@ -245,7 +245,7 @@ def _import_all(store: TransferPort, data: dict, actor: str = "human") -> dict[s
 
     def _apply_status(kind: str, obj_id: int, status: str) -> None:
         if status and status != Status.TODO.value:
-            set_status(store, kind, obj_id, Status(status), actor=actor)
+            set_status(store, kind, obj_id, Status(status), actor=actor, take_claim=False)
 
     def _import_criteria(kind: str, obj_id: int, items: list) -> None:
         for c in items:

@@ -78,23 +78,6 @@ class SessionHistoryMixin(StoreBase):
             rows = conn.execute(sql, params).fetchall()
         return [self._row_to_session(row) for row in rows]
 
-    def latest_ended_session(
-        self,
-        plan_id: int | None = None,
-        actor: str = "",
-        repo_path: str = "",
-    ) -> Session | None:
-        """Most recently ended, unarchived history row for a plan or checkout."""
-        return self._latest_ended(
-            "session_history",
-            "ended_at > 0",
-            "actor",
-            self._row_to_session,
-            plan_id=plan_id,
-            actor=actor,
-            repo_path=repo_path,
-        )
-
     def events_for_session(self, session_id: int, limit: int = 50) -> list[dict]:
         """Newest events tagged with one historical session."""
         with self._connect() as conn:
@@ -103,10 +86,6 @@ class SessionHistoryMixin(StoreBase):
                 (session_id, max(int(limit), 1)),
             ).fetchall()
         return [dict(row) for row in rows]
-
-    def session_counts(self, session_id: int) -> dict[str, int]:
-        """Event counts by action for one historical session."""
-        return self._counts_by("events", "action", "session_id", session_id)
 
     def archive_sessions(
         self,

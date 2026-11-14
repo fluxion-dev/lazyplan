@@ -66,7 +66,6 @@ class DocumentationKeysTest(unittest.TestCase):
         for term in (
             "Coordination hubs",
             "claims hub",
-            "agents hub",
             "comments and notes hub",
             "superseded",
         ):

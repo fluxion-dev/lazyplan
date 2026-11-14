@@ -15,7 +15,7 @@
 # Textual dispatch: key actions, lifecycle handlers, and callbacks.
 _._cancel, _._cancel_pressed, _._close, _._create
 _._download, _._export_pressed, _._file_selected, _._folder_selected
-_._highlight, _._later, _._on_click, _._on_expanded
+_._highlight, _._later, _._never, _._on_click, _._on_expanded
 _._on_filter_changed, _._on_filter_submitted, _._on_highlight, _._on_row_action
 _._on_selection_changed, _._open_link, _._path_submitted, _._pick
 _._run_first, _._save, _._select, _._submit
@@ -37,7 +37,7 @@ _.compose, _.cursor_line, _.load_children, _.on_root
 _.rev, _.show_root
 # Dataclass fields consumed through serialization.
 _.auto_closed, _.daily_rate, _.deprecated_in, _.elapsed_seconds
-_.from_cache, _.new_count, _.old_count, _.rebuilds
+_.from_cache, _.handoff, _.host_session, _.new_count, _.old_count, _.rebuilds
 _.rev, _.tui_only
 # sqlite3/shlex API noise and docs metadata read by tools/gen-man.py.
 _.ENVIRONMENT, _.FILES, _.row_factory, _.whitespace

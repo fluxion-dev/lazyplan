@@ -471,6 +471,7 @@ class TestSessionRows(unittest.TestCase):
         set_status(store, "plan", plan.id, Status.DOING, actor="fixture")
         set_status(store, "milestone", milestone.id, Status.DOING, actor="fixture")
         set_status(store, "task", task.id, Status.DOING, actor="fixture")
+        store.claim_task(task.id, "fixture", ttl_seconds=1800, now=4_000_000_000.0)
         self.old_setup = os.environ.get("LAZYPLAN_NO_SETUP")
         self.old_cwd = os.getcwd()
         sandbox_home(self, self.tmp.name)
@@ -506,6 +507,7 @@ class TestSessionRows(unittest.TestCase):
                 ["metric", "active", "-", "1", "-", "-"],
                 ["plan", "1", "doing", "Website", "-", "0/1"],
                 ["task", "1", "doing", "Design hero", "milestone:1", "-"],
+                ["claim", "1", "fixture", "Design hero", "task:1", "4000001800.0"],
                 ["criterion", "1", "open", "Loads fast", "plan:1", "-"],
             ],
         )

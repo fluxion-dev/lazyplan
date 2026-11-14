@@ -12,7 +12,6 @@ from pathlib import Path
 from ..core.entities import Status
 from ..core.policies.provenance import branch_ref
 from ..core.ports.app import AppPort
-from .agent_identity import same_checkout
 from .vcs import current_branch as current_branch
 
 LOCAL_DB_PARTS = (".agents", "lazyplan")
@@ -60,13 +59,20 @@ def _from_recorded_branch(port: AppPort, repo_path: str, branch: str) -> Attribu
     return _plan_for_task(port, owners[0].id) if owners else None
 
 
+def _same_checkout(port: AppPort, left: str, right: str) -> bool:
+    """True when two paths name the same checkout."""
+    if not left or not right:
+        return False
+    return port.normalize_repo_path(left) == port.normalize_repo_path(right)
+
+
 def _from_claim(port: AppPort, repo_path: str) -> Attribution | None:
     """Newest active claim held in this checkout."""
     matches = [
         claim
         for claim in port.list_claims()
-        if same_checkout(port, str(claim.get("repo_path", "")), repo_path)
-        or same_checkout(port, str(claim.get("worktree", "")), repo_path)
+        if _same_checkout(port, str(claim.get("repo_path", "")), repo_path)
+        or _same_checkout(port, str(claim.get("worktree", "")), repo_path)
     ]
     if not matches:
         return None
@@ -78,7 +84,7 @@ def _linked_rows(port: AppPort, repo_path: str) -> set[tuple[str, int]]:
     """Rows with an explicit repo link to this checkout."""
     linked: set[tuple[str, int]] = set()
     for (kind, row_id), links in port.repos_map().items():
-        if any(same_checkout(port, str(link.get("repo_path", "")), repo_path) for link in links):
+        if any(_same_checkout(port, str(link.get("repo_path", "")), repo_path) for link in links):
             linked.add((kind, row_id))
     return linked
 

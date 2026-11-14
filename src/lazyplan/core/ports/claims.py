@@ -43,6 +43,7 @@ class ClaimsPort(ClaimsReadPort, Protocol):
         actor: str,
         ttl_seconds: float = ...,
         now: float | None = None,
+        log: bool = ...,
     ) -> Claim: ...
 
     def release_claim(self, task_id: int, actor: str, force: bool = False) -> Claim | None: ...

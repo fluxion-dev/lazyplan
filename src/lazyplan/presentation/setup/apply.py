@@ -269,31 +269,6 @@ def record_finding(state: SetupState, finding: Finding, decision: str) -> None:
     }
 
 
-def _review_pending_result(
-    choice: SetupChoice,
-    state: SetupState,
-    root: Path | None,
-    home: Path,
-    version: str,
-    machine: bool,
-) -> dict[str, Any] | None:
-    """Run the pending-integration review and return its payload, if any."""
-    review = review_pending(
-        choice,
-        state,
-        root,
-        home,
-        version,
-        read=input,
-        write=sys.stderr,
-        color=ui.color_enabled(sys.stderr, machine),
-        allow_prompt=True,
-    )
-    if review.decision == "none":
-        return None
-    return {"integration_review": review.to_dict()}
-
-
 def ensure(
     cmd: str | None,
     args: Any,
@@ -302,7 +277,10 @@ def ensure(
     version: str = "",
     interactive: bool | None = None,
 ) -> dict[str, Any] | None:
-    """First-run setup and upgrade review; never blocks agent commands."""
+    """First-run setup and upgrade refresh; never blocks agent commands.
+
+    Pending integrations are left for the TUI's health check to offer.
+    """
     if setup_skipped(cmd, args):
         return None
     home = home or Path.home()
@@ -318,21 +296,13 @@ def ensure(
     findings = detect_findings(cwd, home, state, None) if human else []
     can_prompt = prompt_allowed(args, interactive)
     root = find_repo_root(cwd)
-    choice = choice_from_args(args, cwd, home, state)
-    pending_review = False
-    if human and not first and not version_changed and can_prompt:
-        pending_review = bool(inspect(choice, state, root, home, version).pending)
-    if not first and not version_changed and not findings and not pending_review:
+    if not first and not version_changed and not findings:
         return None
     result: dict[str, Any] | None = None
     if first or version_changed:
         result = _run_setup_once(args, cwd, home, state, version, root, human, can_prompt, first)
         if result is None:
             return None
-    elif pending_review:
-        result = _review_pending_result(
-            choice, state, root, home, version, bool(getattr(args, "json", False))
-        )
     if human and findings:
         _review_setup(args, findings, home, root, can_prompt)
     return result
@@ -384,10 +354,7 @@ def _run_setup_once(
             home,
             root,
             version,
-            read=input,
-            write=sys.stderr,
-            color=ui.color_enabled(sys.stderr, bool(getattr(args, "json", False))),
-            allow_prompt=human and can_prompt,
+            allow_prompt=False,
             pointer_mode=getattr(args, "agents_pointer", None),
         )
     if first and human and not getattr(args, "json", False):

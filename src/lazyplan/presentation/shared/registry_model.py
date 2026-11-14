@@ -17,7 +17,6 @@ ENTITIES: tuple[str, ...] = (
     "question",
     "reference",
     "claim",
-    "agent",
     "note",
     "comment",
     "commit",

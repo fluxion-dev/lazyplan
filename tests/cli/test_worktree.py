@@ -109,6 +109,19 @@ class PlanWorktreeCommandTest(unittest.TestCase):
         self.assertEqual([item["repo_path"] for item in entries], [self.repo, other])
         self.assertEqual({item["branch"] for item in entries}, {self._target()["branch"]})
 
+    def test_duplicate_links_to_one_checkout_print_once(self) -> None:
+        store = Store(self.db)
+        store.add_repo_link("plan", self.plan.id, self.repo)
+        store.add_repo_link("plan", self.plan.id, self.repo, "https://example.com/repo.git")
+
+        code, output, _ = self._run(
+            ["--json", "plan", "worktree", "--id", str(self.plan.id), "--print"]
+        )
+
+        self.assertEqual(code, 0)
+        entries = json.loads(output)["worktrees"]
+        self.assertEqual([item["repo_path"] for item in entries], [self.repo])
+
     def test_missing_links_default_to_the_current_checkout(self) -> None:
         os.chdir(self.repo)
 
@@ -360,74 +373,6 @@ class PlanWorktreeRegisterTest(unittest.TestCase):
         code, _, error = self._run(["--actor", "fixture", "claim", "--id", str(task_id)])
 
         self.assertEqual(code, 0, error)
-
-    def test_session_start_requires_the_registered_worktree(self) -> None:
-        self.assertEqual(
-            self._run(
-                [
-                    "plan",
-                    "worktree",
-                    "add",
-                    "--id",
-                    str(self.plan.id),
-                    "--repo",
-                    self.repo,
-                ]
-            )[0],
-            0,
-        )
-        os.chdir(self.repo)
-
-        code, _, error = self._run(
-            ["--actor", "fixture", "session", "start", "--plan", str(self.plan.id)]
-        )
-        self.assertEqual(code, 2)
-        self.assertIn("registered worktree", error)
-
-        code, _, error = self._run(
-            ["--actor", "fixture", "session", "start", "--plan", str(self.plan.id), "--force"]
-        )
-        self.assertEqual(code, 2)
-        self.assertIn("--force needs --reason", error)
-
-        code, _, error = self._run(
-            [
-                "--actor",
-                "fixture",
-                "session",
-                "start",
-                "--plan",
-                str(self.plan.id),
-                "--force",
-                "--reason",
-                "temporary pairing",
-            ]
-        )
-        self.assertEqual(code, 0, error)
-
-    def test_session_start_succeeds_inside_the_worktree(self) -> None:
-        self.assertEqual(
-            self._run(
-                [
-                    "plan",
-                    "worktree",
-                    "add",
-                    "--id",
-                    str(self.plan.id),
-                    "--repo",
-                    self.repo,
-                ]
-            )[0],
-            0,
-        )
-        os.chdir(self.target.worktree_path)
-
-        code, output, error = self._run(
-            ["--actor", "fixture", "--json", "session", "start", "--plan", str(self.plan.id)]
-        )
-
-        self.assertEqual(code, 0, error)
-        self.assertEqual(json.loads(output)["session"]["plan_id"], self.plan.id)
 
     def test_deleted_worktree_is_listed_stale_and_kept(self) -> None:
         self.assertEqual(

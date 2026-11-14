@@ -10,11 +10,11 @@ from __future__ import annotations
 import fnmatch
 from pathlib import Path
 
-from ..core.entities import Agent, HookResult
+from ..core.entities import HookResult
 from ..core.policies.hooks import is_git_commit
 from ..core.ports.app import AppPort
 from ..core.ports.insights import InsightsPort
-from . import agents, audit, brief, hook_scope
+from . import audit, brief, hook_scope
 
 
 def _brief_lines(store: InsightsPort, cwd: Path, commits: list[audit.Commit] | None) -> list[str]:
@@ -57,7 +57,6 @@ def stop_result(
     store: AppPort,
     cwd: Path,
     commits: list[audit.Commit] | None,
-    agent: Agent | None,
     payload: dict,
     mode: str,
     host: str,
@@ -78,46 +77,8 @@ def stop_result(
             task_id = scope.task.id
             parts = [f"lazyplan: {len(loose)} plan(s) have unlinked commits."]
             parts.append(f"Link them with `lpui link --kind task --id {task_id}`.")
-            if agent is not None and not agent.host_session:
-                parts.append(
-                    f"Then end A{agent.id} with `lpui agent end --id A{agent.id} --summary`."
-                )
             return HookResult(block=" ".join(parts))
     return HookResult("lazyplan: " + "; ".join(loose)).capped()
-
-
-def _next_handoff(store: InsightsPort) -> str:
-    """First next task across active plans, as a session handoff."""
-    payload = brief.build(store)
-    for plan in payload.get("plans") or []:
-        task = plan.get("next")
-        if task:
-            return f"next: T{task['id']} {task['title']}"[:2000]
-    return ""
-
-
-def session_end_result(store: AppPort, agent: Agent | None, host: str) -> HookResult:
-    """Close an open agent with an automatic summary and handoff."""
-    if agent is None or agent.ended:
-        return HookResult()
-    checkout = agent.worktree or agent.repo_path or None
-    scope = hook_scope.resolve(store, checkout)
-    task = scope.task if scope.managed else None
-    if task is None and scope.managed:
-        current = _doing_task(store)
-        task = None if current is None else store.get_task(current)
-    summary = f"ended by {host or 'agent'}"
-    if task is not None:
-        summary += f" while working T{task.id} {task.title}"
-    handoff = agent.handoff or _next_handoff(store)
-    agents.end_agent(
-        store,
-        agent.id,
-        agent.agent or "agent",
-        summary=summary,
-        handoff=handoff,
-    )
-    return HookResult()
 
 
 def _commit_reason() -> str:

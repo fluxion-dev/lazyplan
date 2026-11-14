@@ -67,13 +67,11 @@ GOLDENS: dict[str, dict[str, object]] = {
             "plan_id": None,
             "plans": [],
             "attention": [],
-            "agents": [],
             "claims": [],
             "overlaps": [],
             "counts": {
                 "plans": 0,
                 "attention": 0,
-                "agents": 0,
                 "claims": 0,
                 "open_questions": 0,
                 "drift": 0,
@@ -103,7 +101,6 @@ GOLDENS: dict[str, dict[str, object]] = {
                     "unlinked": [],
                     "approval": {"revision": 0, "enforced": False, "drift": 0},
                     "questions": [],
-                    "previous_session": None,
                 }
             ],
             "active": 1,
@@ -126,13 +123,11 @@ GOLDENS: dict[str, dict[str, object]] = {
                 }
             ],
             "attention": [],
-            "agents": [],
             "claims": [],
             "overlaps": [],
             "counts": {
                 "plans": 1,
                 "attention": 0,
-                "agents": 0,
                 "claims": 0,
                 "open_questions": 0,
                 "drift": 0,
@@ -202,7 +197,6 @@ GOLDENS: dict[str, dict[str, object]] = {
                     "unlinked": [],
                     "approval": {"revision": 0, "enforced": False, "drift": 0},
                     "questions": [],
-                    "previous_session": None,
                 }
             ],
             "active": 1,
@@ -225,7 +219,6 @@ GOLDENS: dict[str, dict[str, object]] = {
                 }
             ],
             "attention": [],
-            "agents": [],
             "claims": [
                 {
                     "task_id": 1,
@@ -245,7 +238,6 @@ GOLDENS: dict[str, dict[str, object]] = {
             "counts": {
                 "plans": 1,
                 "attention": 0,
-                "agents": 0,
                 "claims": 1,
                 "open_questions": 0,
                 "drift": 0,
@@ -315,7 +307,6 @@ GOLDENS: dict[str, dict[str, object]] = {
                     "unlinked": [],
                     "approval": {"revision": 0, "enforced": False, "drift": 0},
                     "questions": [],
-                    "previous_session": None,
                 }
             ],
             "active": 1,
@@ -350,7 +341,6 @@ GOLDENS: dict[str, dict[str, object]] = {
                 },
             ],
             "attention": [],
-            "agents": [],
             "claims": [
                 {
                     "task_id": 1,
@@ -370,7 +360,6 @@ GOLDENS: dict[str, dict[str, object]] = {
             "counts": {
                 "plans": 2,
                 "attention": 0,
-                "agents": 0,
                 "claims": 1,
                 "open_questions": 0,
                 "drift": 0,

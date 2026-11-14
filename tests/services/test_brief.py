@@ -79,16 +79,11 @@ class BriefCase(unittest.TestCase):
         self.assertIn("questions 1 open", text)
         self.assertIn("Which host?", text)
 
-    def test_previous_session_handoff_is_in_brief(self):
-        agent = self.store.add_agent(
-            "alice", host="opencode", agent="alice", plan_id=self.plan.id, now=100.0
-        )
-        self.store.end_agent(agent.id, "alice", summary="shipped", handoff="next: T2", now=200.0)
+    def test_a_handoff_note_is_in_brief(self):
+        self.store.add_note("plan", self.plan.id, "Handoff: next T2", actor="alice")
         payload = brief.build(self.store, commits=[])
-        self.assertEqual(payload["plans"][0]["previous_session"]["handoff"], "next: T2")
-        text = "\n".join(brief.lines(payload))
-        self.assertIn("session  A", text)
-        self.assertIn("next: T2", text)
+        self.assertNotIn("previous_session", payload["plans"][0])
+        self.assertEqual(payload["plans"][0]["notes"][0]["text"], "Handoff: next T2")
 
     def test_empty_store_says_no_active_plans(self):
         empty = Store(Path(self.tmp.name) / "empty.db")

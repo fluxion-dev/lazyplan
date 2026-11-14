@@ -21,10 +21,11 @@ try:
         PreviewDocument,
         acceptance_block,
         build_preview,
+        nest_headings,
     )
     from lazyplan.presentation.tui.widgets.preview_panel import PreviewPanel
 except ImportError:  # pragma: no cover - stdlib-only interpreter
-    PreviewBlock = PreviewDocument = acceptance_block = None  # type: ignore[assignment]
+    PreviewBlock = PreviewDocument = acceptance_block = nest_headings = None  # type: ignore[assignment]
     build_preview = build_control_strip = None  # type: ignore[assignment]
     create_app = Markdown = PreviewPanel = Static = Tree = None  # type: ignore[assignment,misc]
     MarkdownH2 = None  # type: ignore[assignment,misc]
@@ -133,48 +134,105 @@ class PreviewDocumentTest(unittest.TestCase):
         self.assertIn("P1", text)
         self.assertIn("## WHY", text)
         self.assertIn("Why we build", text)
-        self.assertNotIn("## WHAT", text)
-        self.assertNotIn("What we build", text)
-        self.assertIn("## MILESTONES 1", text)
+        self.assertIn("## WHAT", text)
+        self.assertIn("What we build", text)
+        self.assertLess(text.index("## WHY"), text.index("## WHAT"))
+        self.assertLess(text.index("## WHAT"), text.index("## MILESTONES 1"))
         self.assertIn("Milestone title", text)
         self.assertNotIn("## NEXT", text)
         self.assertNotIn("Task title", text)
 
-    def test_plan_headline_keeps_only_the_first_paragraph(self) -> None:
+    def test_plan_why_and_what_show_in_full(self) -> None:
         plan = self.store.add_plan(
             "Long plan",
-            "What we build",
-            goal="First sentence stays.\n\nSecond paragraph is detail.",
+            "Scope paragraph.\n\nCommit strategy paragraph.",
+            goal="First sentence stays.\n\nSecond paragraph stays too. " + "word " * 60,
         )
         full = self.store.get_full("plan", plan.id)
         assert full is not None
         text = build_preview("plan", plan.id, full).render_markdown()
-        why = text.split("## WHY", 1)[1].split("## ", 1)[0]
-        self.assertIn("First sentence stays.", why)
-        self.assertNotIn("Second paragraph", why)
+        why = text.split("## WHY", 1)[1].split("## WHAT", 1)[0]
+        self.assertIn("Second paragraph stays too.", why)
+        self.assertIn("word " * 59, why)
+        self.assertNotIn("…", why)
+        self.assertIn("Commit strategy paragraph.", text.split("## WHAT", 1)[1])
 
-    def test_long_headlines_clamp_at_a_word_boundary(self) -> None:
-        plan = self.store.add_plan("Long plan", "What", goal="word " * 60)
+    def test_plan_details_come_before_open_questions(self) -> None:
+        self.store.add_question(self.plan.id, "Which host?")
+        full = self.store.get_full("plan", self.plan.id)
+        assert full is not None
+        text = build_preview("plan", self.plan.id, full).render_markdown()
+        self.assertTrue(text.startswith("## WHY"))
+        self.assertLess(text.index("## WHAT"), text.index("## QUESTIONS"))
+
+    def test_headings_inside_details_nest_under_the_section(self) -> None:
+        cases = {
+            "## Scope": "#### Scope",
+            "# Title": "### Title",
+            "#### Deep": "###### Deep",
+            "###### Deepest": "###### Deepest",
+            "   ## Indented": "   #### Indented",
+            "#hashtag": "#hashtag",
+            "text ## not a heading": "text ## not a heading",
+        }
+        for line, expected in cases.items():
+            with self.subTest(line=line):
+                self.assertEqual(nest_headings(line), expected)
+
+    def test_headings_inside_code_fences_stay_put(self) -> None:
+        text = "```bash\n# comment\n```\n## After\n~~~~\n## inside\n```\n## still inside\n~~~~"
+        self.assertEqual(
+            nest_headings(text),
+            "```bash\n# comment\n```\n#### After\n~~~~\n## inside\n```\n## still inside\n~~~~",
+        )
+
+    def test_plan_what_headings_render_below_the_section(self) -> None:
+        plan = self.store.add_plan("Plan", "## In scope\n\n- one\n\n## Out of scope\n\n- two")
         full = self.store.get_full("plan", plan.id)
         assert full is not None
         text = build_preview("plan", plan.id, full).render_markdown()
-        why = text.split("## WHY", 1)[1].split("## ", 1)[0].strip()
-        self.assertTrue(why.endswith("…"))
-        self.assertLessEqual(len(why), 121)
-        self.assertNotIn("  ", why)
+        self.assertIn("#### In scope", text)
+        self.assertIn("#### Out of scope", text)
+        sections = [line for line in text.splitlines() if line.startswith("## ")]
+        self.assertEqual(sections[:2], ["## WHY", "## WHAT"])
+        self.assertNotIn("## In scope", sections)
+        self.assertNotIn("## Out of scope", sections)
 
-    def test_milestone_details_are_one_headline(self) -> None:
+    def test_empty_details_keep_their_heading_with_a_placeholder(self) -> None:
+        plan = self.store.add_plan("Bare plan", "")
+        milestone = self.store.add_milestone(plan.id, "Bare milestone", "")
+        task = self.store.add_task(milestone.id, "Bare task", "")
+        cases = (
+            ("plan", plan.id, ("## WHY", "## WHAT")),
+            ("milestone", milestone.id, ("## DETAILS",)),
+            ("task", task.id, ("## DETAILS",)),
+        )
+        for kind, oid, headings in cases:
+            with self.subTest(kind=kind):
+                full = self.store.get_full(kind, oid)
+                assert full is not None
+                text = build_preview(kind, oid, full).render_markdown()
+                self.assertTrue(text.startswith(headings[0]))
+                for heading in headings:
+                    section = text.split(heading, 1)[1].split("## ", 1)[0]
+                    self.assertIn("_None yet._", section)
+
+    def test_milestone_details_show_in_full_first(self) -> None:
         milestone = self.store.add_milestone(
             self.plan.id,
             "Slice",
-            "First line of intent.\n\nINVEST: detail stays behind.",
+            "First line of intent.\n\nINVEST: detail stays. " + "word " * 40,
         )
+        self.store.add_task(milestone.id, "Child task", "")
         full = self.store.get_full("milestone", milestone.id)
         assert full is not None
         text = build_preview("milestone", milestone.id, full).render_markdown()
+        self.assertTrue(text.startswith("## DETAILS"))
         details = text.split("## DETAILS", 1)[1].split("## ", 1)[0]
         self.assertIn("First line of intent.", details)
-        self.assertNotIn("INVEST", details)
+        self.assertIn("INVEST: detail stays.", details)
+        self.assertIn("word " * 39, details)
+        self.assertNotIn("…", details)
 
     def test_plan_preview_shows_the_registered_worktree(self) -> None:
         self.store.register_plan_worktree(

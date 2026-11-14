@@ -2,7 +2,7 @@
 
 A hook must never turn an unrelated repository into a gated one. The checkout
 is managed only when the database lives in that checkout, a row links the
-checkout, or a live agent started for planned work belongs to it. The
+checkout, or a live claim was taken in it. The
 owning task is the first doing task under a doing plan that resolves to the
 same checkout.
 """
@@ -14,6 +14,7 @@ from pathlib import Path
 
 from ..core.entities import Plan, Status, Task
 from ..core.ports.app import AppPort
+from . import coordination
 
 LOCAL_PARTS = (".agents", "lazyplan")
 
@@ -49,25 +50,14 @@ def _linked_rows(store: AppPort, repo: str) -> set[tuple[str, int]]:
     return linked
 
 
-def _open_agent(store: AppPort, repo: str, ignored: set[int]) -> bool:
-    """True when a live agent started for planned work belongs to this checkout.
+def _claimed_here(store: AppPort, repo: str, ignored: set[int]) -> bool:
+    """True when a live claim was taken in this checkout.
 
-    Hooks register a row for every host session in every checkout, so an
-    unbound host row says nothing about the checkout. Agents for plans
-    isolated in another worktree do not manage this checkout.
+    Claims for plans isolated in another worktree do not manage this checkout.
     """
-    wanted = store.normalize_repo_path(repo)
-    for agent in store.list_agents(live_only=True, limit=50):
-        if agent.plan_id in ignored:
-            continue
-        if agent.host_session and agent.plan_id is None:
-            continue
-        if (
-            store.normalize_repo_path(agent.worktree) == wanted
-            or store.normalize_repo_path(agent.repo_path) == wanted
-        ):
-            return True
-    return False
+    return any(
+        int(claim["plan_id"]) not in ignored for claim in coordination.checkout_claims(store, repo)
+    )
 
 
 def _same_checkout(left: str, right: str, store: AppPort) -> bool:
@@ -119,7 +109,7 @@ def resolve(store: AppPort, cwd: str | Path | None = None) -> HookScope:
     linked = {
         row for row in _linked_rows(store, repo) if not (row[0] == "plan" and row[1] in ignored)
     }
-    managed = local or bool(linked) or bool(registered) or _open_agent(store, repo, ignored)
+    managed = local or bool(linked) or bool(registered) or _claimed_here(store, repo, ignored)
     if not managed:
         return HookScope(repo=repo)
 

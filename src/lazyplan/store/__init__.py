@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from ..core.policies.coordination import CLAIM_DEFAULT_TTL
-from .agents import AgentsMixin
 from .annotations import AnnotationsMixin
 from .base import (
     ClaimConflict,
@@ -34,7 +33,6 @@ class Store(
     PlansMixin,
     QuestionsMixin,
     RefsMixin,
-    AgentsMixin,
     SessionHistoryMixin,
     ClaimsMixin,
     EvidenceMixin,

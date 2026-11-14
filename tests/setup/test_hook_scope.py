@@ -65,28 +65,6 @@ class ScopeCase(unittest.TestCase):
         self.assertTrue(scope.managed)
         self.assertIsNone(scope.task)
 
-    def test_an_open_agent_makes_the_checkout_managed(self):
-        store = Store(self.home / ".lazyplan/lazyplan.db")
-        store.add_agent("ana", host="manual", agent="ana", worktree=str(self.repo), now=100.0)
-        scope = hook_scope.resolve(store, self.repo)
-        self.assertTrue(scope.managed)
-        self.assertIsNone(scope.task)
-
-    def test_a_hook_session_without_a_plan_leaves_the_checkout_unmanaged(self):
-        store = Store(self.home / ".lazyplan/lazyplan.db")
-        self._seed(store)
-        store.add_agent(
-            "claude",
-            host="claude",
-            host_session="s-1",
-            agent="claude",
-            worktree=str(self.repo),
-            now=100.0,
-        )
-        scope = hook_scope.resolve(store, self.repo)
-        self.assertFalse(scope.managed)
-        self.assertIsNone(scope.task)
-
     def test_an_isolated_plan_gates_only_its_registered_worktree(self):
         store = Store(self.home / ".lazyplan/lazyplan.db")
         plan_id, task_id = self._seed(store, linked=self.repo)
@@ -103,20 +81,20 @@ class ScopeCase(unittest.TestCase):
         blocked = hook_policy.commit_result(store, self.repo, "git commit -m x", "strict")
         self.assertEqual(blocked.block, "")
 
-    def test_a_hook_session_with_a_plan_makes_the_checkout_managed(self):
+    def test_a_live_claim_in_this_checkout_makes_it_managed(self):
         store = Store(self.home / ".lazyplan/lazyplan.db")
-        plan_id, _task = self._seed(store)
-        store.add_agent(
-            "claude",
-            host="claude",
-            host_session="s-1",
-            agent="claude",
-            plan_id=plan_id,
-            worktree=str(self.repo),
-            now=100.0,
-        )
+        _plan, task_id = self._seed(store)
+        store.claim_task(task_id, "t", worktree=str(self.repo), repo_path=str(self.repo))
         self.assertTrue(hook_scope.resolve(store, self.repo).managed)
         self.assertFalse(hook_scope.resolve(store, self.other).managed)
+
+    def test_an_expired_claim_leaves_the_checkout_unmanaged(self):
+        store = Store(self.home / ".lazyplan/lazyplan.db")
+        _plan, task_id = self._seed(store)
+        store.claim_task(
+            task_id, "t", ttl_seconds=1, now=0, worktree=str(self.repo), repo_path=str(self.repo)
+        )
+        self.assertFalse(hook_scope.resolve(store, self.repo).managed)
 
 
 if __name__ == "__main__":

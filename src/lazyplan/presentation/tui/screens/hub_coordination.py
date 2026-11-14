@@ -16,7 +16,6 @@ except ImportError:  # pragma: no cover - stdlib-only interpreter
 from .... import services
 from ....core.errors import ClaimError
 from ...shared.design import escape_markup
-from ...shared.session_labels import plan_names
 from .forms import FilterPromptScreen
 
 
@@ -182,108 +181,6 @@ if _TEXTUAL_OK:
             self.app.push_screen(
                 FilterPromptScreen("Remove touch-point", "path or glob", "Remove"), cb
             )
-
-    class AgentsHub(HubScreen):
-        """Exact live agents and handoffs for one plan."""
-
-        kind = "agents"
-        primary_hint = ("a", "start agent")
-        BINDINGS = [Binding("x", "hub_toggle", "Toggle")]
-
-        def __init__(self, store: object, plan_id: int) -> None:
-            super().__init__(store)
-            self.plan_id = plan_id
-            self.title = f"agents · P{plan_id}"
-            self.empty = "No agents yet. Press a to start one."
-
-        @property
-        def source_parent(self) -> tuple[str, int] | None:
-            return ("plan", self.plan_id)
-
-        def load_entries(self) -> list[HubEntry]:
-            out: list[HubEntry] = []
-            stamp = time.time()
-            try:
-                services.sweep_lost(self.store)
-            except (OSError, RuntimeError, ValueError):
-                pass
-            titles = plan_names(self.store)
-            for agent in self.store.list_agents(plan_id=self.plan_id, limit=50):
-                plan = (
-                    f"P{agent.plan_id} {titles.get(agent.plan_id, '')}".strip()
-                    if agent.plan_id is not None
-                    else "unbound"
-                )
-                body = (
-                    f"A{agent.id} · {agent.status}\n"
-                    f"agent   @{escape_markup(agent.agent)}\n"
-                    f"role    {escape_markup(agent.role)}\n"
-                    f"model   {escape_markup(agent.model)}\n"
-                    f"host    {escape_markup(agent.host)}\n"
-                    f"session {escape_markup(agent.host_session or '—')}\n"
-                    f"pid     {agent.pid or '—'}\n"
-                    f"parent  {f'A{agent.parent_id}' if agent.parent_id else '—'}\n"
-                    f"plan    {escape_markup(plan)}\n"
-                )
-                if agent.task_id is not None:
-                    body += f"task    T{agent.task_id}\n"
-                body += (
-                    f"worktree {escape_markup(agent.worktree or '—')}\n"
-                    f"branch  {escape_markup(agent.branch or '—')}\n"
-                    f"head    {escape_markup(agent.head_sha[:12] or '—')}\n"
-                    f"age     {_age(agent.started_at, stamp)}\n"
-                    f"summary {escape_markup(agent.summary or '—')}\n"
-                    f"handoff {escape_markup(agent.handoff or '—')}"
-                )
-                if agent.unbound:
-                    body += f"\nunbound {escape_markup(agent.unbound_reason or 'no exact plan')}"
-                detail = services.show_agent(self.store, agent.id, limit=5)
-                events = detail.get("events", []) if detail else []
-                if events:
-                    body += "\nevents  " + " · ".join(
-                        f"{event.event} {event.from_status}->{event.to_status}" for event in events
-                    )
-                out.append(HubEntry(agent.id, f"A{agent.id} @{agent.agent} {agent.status}", body))
-            return out
-
-        def add(self) -> None:
-            def cb(text: str | None) -> None:
-                try:
-                    services.start_agent(
-                        self.store,
-                        "tui",
-                        host="tui",
-                        agent=text and text.strip() or "tui",
-                        plan_id=self.plan_id,
-                        cwd=self.store.checkout_path(),
-                    )
-                except (ValueError, KeyError, ClaimError) as exc:
-                    self.notify(f"error: {exc}", timeout=4)
-                    return
-                self._reload()
-
-            self.app.push_screen(
-                FilterPromptScreen("Start agent", "agent name (optional)", "Start"), cb
-            )
-
-        def delete_row(self) -> None:
-            entry = self._selected()
-            if entry is None:
-                self._notify_empty()
-                return
-
-            def cb(text: str | None) -> None:
-                try:
-                    services.end_agent(self.store, entry.oid, "tui", summary=(text or "").strip())
-                except (ValueError, KeyError, ClaimError) as exc:
-                    self.notify(f"error: {exc}", timeout=4)
-                    return
-                self._reload()
-
-            self.app.push_screen(FilterPromptScreen("End agent", "summary (optional)", "End"), cb)
-
-        def toggle(self) -> None:
-            self.delete_row()
 
     class CommentsHub(HubScreen):
         """Comments and notes on one row, with an unresolved filter."""

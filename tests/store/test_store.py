@@ -666,14 +666,20 @@ class TestStore(unittest.TestCase):
         self.assertTrue(self.store.delete("task", t.id, actor="agent-1"))
         self.assertEqual(self.store.counts()["tasks"], 0)
 
-    def test_an_agent_transition_changes_live_fingerprint_only(self):
+    def test_every_claim_change_moves_the_live_fingerprint(self):
         plan = self.store.add_plan("P")
-        agent = self.store.add_agent("ana", host="opencode", agent="builder", plan_id=plan.id)
-        structural = self.store.fingerprint()
-        live = self.store.live_fingerprint()
-        self.store.transition_agent(agent.id, "waiting", event="stop")
-        self.assertEqual(self.store.fingerprint(), structural)
-        self.assertNotEqual(self.store.live_fingerprint(), live)
+        milestone = self.store.add_milestone(plan.id, "M")
+        task = self.store.add_task(milestone.id, "T")
+        steps = (
+            lambda: self.store.claim_task(task.id, "ana", now=1000.0),
+            lambda: self.store.renew_claim(task.id, "ana", now=1100.0),
+            lambda: self.store.release_claim(task.id, "ana"),
+            lambda: self.store.claim_task(task.id, "bob", now=1200.0),
+        )
+        for step in steps:
+            before = self.store.live_fingerprint()
+            step()
+            self.assertNotEqual(self.store.live_fingerprint(), before)
 
     def test_structural_edits_change_fingerprint_but_not_live(self):
         plan = self.store.add_plan("P")
@@ -684,15 +690,6 @@ class TestStore(unittest.TestCase):
         self.store.update_task(task.id, title="renamed", actor="ana")
         self.assertNotEqual(self.store.fingerprint(), structural)
         self.assertEqual(self.store.live_fingerprint(), live)
-
-    def test_starting_or_ending_an_agent_changes_live_fingerprint(self):
-        plan = self.store.add_plan("P")
-        live = self.store.live_fingerprint()
-        agent = self.store.add_agent("ana", host="opencode", agent="builder", plan_id=plan.id)
-        self.assertNotEqual(self.store.live_fingerprint(), live)
-        live = self.store.live_fingerprint()
-        self.store.end_agent(agent.id, "ana", summary="done")
-        self.assertNotEqual(self.store.live_fingerprint(), live)
 
     def test_out_of_band_write_leaves_the_fingerprint_alone(self):
         self.store.add_plan("P")

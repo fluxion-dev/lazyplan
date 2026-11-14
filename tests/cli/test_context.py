@@ -59,7 +59,7 @@ class ContextCliTest(unittest.TestCase):
         services.set_status(store, "task", doing.id, Status.DOING, actor="t")
         services.set_status(store, "milestone", milestone.id, Status.DOING, actor="t")
         services.set_status(store, "plan", plan.id, Status.DOING, actor="t")
-        store.claim_task(doing.id, "alice", 300)
+        store.claim_task(doing.id, "alice", 300, force=True)
         return plan.id, doing.id
 
     def test_missing_database_is_empty_and_file_free(self):

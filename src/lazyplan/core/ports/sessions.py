@@ -1,4 +1,4 @@
-"""The sessions port: legacy session history and its archive lifecycle."""
+"""The legacy session history port: read-only rows plus archive and restore."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from ..entities import Session
 
 
 class SessionsReadPort(Protocol):
-    """Session history reads used by agents, context, and the feed."""
+    """Read surface for archived session history."""
 
     def get_session(self, session_id: int) -> Session | None: ...
 
@@ -22,17 +22,11 @@ class SessionsReadPort(Protocol):
         archived: str = "hide",
     ) -> list[Session]: ...
 
-    def latest_ended_session(
-        self, plan_id: int | None = None, actor: str = "", repo_path: str = ""
-    ) -> Session | None: ...
-
     def events_for_session(self, session_id: int, limit: int = 50) -> list[dict]: ...
-
-    def session_counts(self, session_id: int) -> dict[str, int]: ...
 
 
 class SessionsPort(SessionsReadPort, Protocol):
-    """Session history writes used by maintenance and transfer."""
+    """Archive and restore surface for session history."""
 
     def archive_sessions(
         self, session_ids: Sequence[int], actor: str = ..., now: float | None = ...

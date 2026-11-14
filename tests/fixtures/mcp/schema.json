@@ -354,28 +354,6 @@
       "annotations": {
         "readOnlyHint": true
       },
-      "description": "Live agents, newest first.",
-      "inputSchema": {
-        "properties": {
-          "limit": {
-            "type": "integer"
-          },
-          "live": {
-            "type": "boolean"
-          },
-          "plan": {
-            "type": "integer"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "name": "agent_list"
-    },
-    {
-      "annotations": {
-        "readOnlyHint": true
-      },
       "description": "Legacy session history, newest first.",
       "inputSchema": {
         "properties": {

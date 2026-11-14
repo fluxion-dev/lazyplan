@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .agents import agent_line, agents_summary, rank_agents
+from .agents import claim_line, claims_summary, rank_claims
 from .control import build_control_strip
 from .git import GitDocument, build_git
 from .preview import (
@@ -40,9 +40,9 @@ __all__ = [
     "build_plan",
     "build_preview",
     "build_task",
-    "agents_summary",
-    "agent_line",
-    "rank_agents",
+    "claims_summary",
+    "claim_line",
+    "rank_claims",
     "commit_label",
     "commit_preview",
     "file_label",

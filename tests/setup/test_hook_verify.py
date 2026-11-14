@@ -69,7 +69,7 @@ class VerifyCase(unittest.TestCase):
             sys.stdin = old_stdin
         return code, out.getvalue().strip()
 
-    def test_every_host_emits_valid_output_and_only_tracks_sessions(self):
+    def test_every_host_emits_valid_output_and_writes_no_rows(self):
         before = Store(self.db).counts()
         for host in HOSTS:
             code, text = self._run_hook(host)
@@ -79,7 +79,6 @@ class VerifyCase(unittest.TestCase):
                 body = json.loads(text)
                 self.assertTrue(body)
         self.assertEqual(Store(self.db).counts(), before)
-        self.assertTrue(Store(self.db).list_agents(open_only=True))
 
     def test_every_direct_render_has_no_ansi(self):
         result = hooks.build_result(

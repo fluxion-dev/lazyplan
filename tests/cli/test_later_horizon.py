@@ -1,4 +1,4 @@
-"""Later horizon CLI walkthrough: session, touch, claim, ref, and ship."""
+"""Later horizon CLI walkthrough: touch, claim, ref, and ship."""
 
 from __future__ import annotations
 
@@ -36,9 +36,6 @@ class TestLaterHorizonCli(unittest.TestCase):
         return code, out.getvalue(), err.getvalue()
 
     def test_walkthrough(self) -> None:
-        code, out, err = self._run("--json", "session", "start", "--plan", "1")
-        self.assertEqual(code, 0, err)
-        session = json.loads(out)["session"]
         code, _out, err = self._run(
             "touch", "add", "--task", str(self.first.id), "--path", "src/store"
         )
@@ -56,10 +53,6 @@ class TestLaterHorizonCli(unittest.TestCase):
         code, out, err = self._run("ship", "--plan", "1")
         self.assertEqual(code, 0, err)
         self.assertIn("## Follow-ups", out)
-        code, _out, err = self._run(
-            "--json", "session", "end", "--id", str(session["id"]), "--summary", "done"
-        )
-        self.assertEqual(code, 0, err)
 
 
 if __name__ == "__main__":

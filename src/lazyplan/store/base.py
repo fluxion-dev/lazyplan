@@ -194,43 +194,6 @@ class StoreBase(_StoreContract):
             rows = conn.execute(sql, params).fetchall()
         return {key(row): make(row) for row in rows}
 
-    def _counts_by(self, table: str, column: str, key: str, value: object) -> dict[str, int]:
-        """Count rows by one text column, filtered by one key column."""
-        with self._connect() as conn:
-            rows = conn.execute(
-                f"SELECT {column} AS name, COUNT(*) AS n FROM {table}"
-                f" WHERE {key}=? GROUP BY {column} ORDER BY {column}",
-                (value,),
-            ).fetchall()
-        return {str(row["name"]): int(row["n"]) for row in rows}
-
-    def _latest_ended(
-        self,
-        table: str,
-        ended: str,
-        actor_column: str,
-        make: Callable[[sqlite3.Row], _V],
-        plan_id: int | None = None,
-        actor: str = "",
-        repo_path: str = "",
-    ) -> _V | None:
-        """Newest ended, unarchived row of *table* for a plan, actor, or checkout."""
-        sql = f"SELECT * FROM {table} WHERE {ended} AND archived_at = 0"
-        params: list[object] = []
-        if plan_id is not None:
-            sql += " AND plan_id=?"
-            params.append(plan_id)
-        if actor:
-            sql += f" AND {actor_column}=?"
-            params.append(actor)
-        if repo_path:
-            sql += " AND repo_path=?"
-            params.append(repo_path)
-        sql += " ORDER BY ended_at DESC, id DESC LIMIT 1"
-        with self._connect() as conn:
-            row = conn.execute(sql, params).fetchone()
-        return make(row) if row is not None else None
-
     def log(
         self,
         actor: str,
@@ -309,23 +272,20 @@ class StoreBase(_StoreContract):
         )
 
     def live_fingerprint(self) -> tuple:
-        """Live poll key: agent rows, newest update, and terminal count.
+        """Live poll key: claim count and the newest start and renewal.
 
-        This changes on every agent transition so the tracker can repaint
-        while the plan tree stays untouched.
+        Every claim, renewal, or release changes it, so the agents panel can
+        repaint while the tree stays untouched.
         """
         try:
             with self._connect() as conn:
-                row = conn.execute(
-                    "SELECT COUNT(*) c,"
-                    " COALESCE(MAX(id),0) newest,"
-                    " COALESCE(MAX(updated_at),0) seen,"
-                    " COALESCE(SUM(CASE WHEN ended_at>0 THEN 1 ELSE 0 END),0) ended"
-                    " FROM agents"
+                claims = conn.execute(
+                    "SELECT COUNT(*) c, COALESCE(MAX(started_at),0) started,"
+                    " COALESCE(MAX(renewed_at),0) renewed FROM task_claims"
                 ).fetchone()
         except Exception:
-            return (0, 0, 0.0, 0)
-        return (int(row["c"]), int(row["newest"]), float(row["seen"]), int(row["ended"]))
+            return (0, 0.0, 0.0)
+        return (int(claims["c"]), float(claims["started"]), float(claims["renewed"]))
 
 
 _ser = to_payload

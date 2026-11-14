@@ -47,7 +47,6 @@ def palette_handlers(app: Any) -> dict[str, Callable[[], None]]:
         "open_questions_hub": app.action_open_questions_hub,
         "open_references_hub": app.action_open_references_hub,
         "open_claims_hub": app.action_open_claims_hub,
-        "open_agents_hub": app.action_open_agents_hub,
         "open_comments_hub": app.action_open_comments_hub,
         "open_pull_requests_hub": app.action_open_pull_requests_hub,
         "open_activity_hub": app.action_open_activity_hub,
@@ -62,5 +61,6 @@ def palette_handlers(app: Any) -> dict[str, Callable[[], None]]:
         "help": app.action_help,
         "update_prompt": app.action_update_prompt,
         "release_notes": app.action_release_notes,
+        "health_prompt": app.action_health_prompt,
         "quit": app.exit,
     }

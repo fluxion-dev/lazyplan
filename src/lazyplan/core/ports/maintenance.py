@@ -6,7 +6,6 @@ from dataclasses import dataclass, field
 from typing import Protocol
 
 from ..policies.maintenance import DEFAULT_WINDOW_SECS
-from .agents import AgentsReadPort
 from .planning import PlanningPort
 from .sessions import SessionsPort
 
@@ -166,7 +165,7 @@ class RestoreResult:
         return {"kind": self.kind, "id": self.id, "restored": self.restored}
 
 
-class MaintenancePort(PlanningPort, AgentsReadPort, SessionsPort, Protocol):
+class MaintenancePort(PlanningPort, SessionsPort, Protocol):
     """Persistence surface the maintenance use cases need."""
 
     def archive_plan(

@@ -11,6 +11,15 @@ import re
 import shlex
 from collections.abc import Iterator, Mapping
 
+EVENTS = (
+    "session-start",
+    "prompt-submit",
+    "pre-tool",
+    "post-tool",
+    "stop",
+    "session-end",
+    "pre-compact",
+)
 MODES = ("strict", "advisory", "off")
 DEFAULT_MODE = "strict"
 MODE_ENV = "LAZYPLAN_HOOKS"

@@ -24,8 +24,6 @@ except ImportError:  # pragma: no cover - textual not installed
     create_app = None  # type: ignore[assignment]
     RefreshCase = unittest.TestCase  # type: ignore[misc,assignment]
 
-HOST_SESSION = "ses_01JABCDEF4Z"
-
 
 @unittest.skipUnless(create_app is not None, "textual not installed")
 class TestCombinedSurfaces(RefreshCase):
@@ -61,24 +59,13 @@ class TestCombinedSurfaces(RefreshCase):
         other = self.store.add_plan("Other", goal="keeps the queue busy")
         second = self.store.add_task(self.milestone.id, "Second task")
         blocked = self.store.add_task(self.milestone.id, "Blocked task")
-        session = self.store.add_agent(
-            "ana",
-            agent="ana",
-            plan_id=self.plan.id,
-            branch="feat/integration",
-            host="opencode",
-            host_session=HOST_SESSION,
-            worktree=self.store.checkout_path(),
-            status="working",
-        )
         self.store.claim_task(blocked.id, "lin", ttl_seconds=900, note="review")
-        services.set_status(self.store, "task", blocked.id, Status.DOING, actor="ana")
+        services.set_status(self.store, "task", blocked.id, Status.DOING, actor="lin")
         services.block_task(self.store, blocked.id, reason="waiting on review", actor="lin")
 
         app = create_app(self.store.path)
         async with app.run_test(size=(140, 40)) as pilot:
             await pilot.pause()
-            harness = self.harness(app, session.id)
             self.expand_all(app)
             await pilot.pause()
 
@@ -86,16 +73,6 @@ class TestCombinedSurfaces(RefreshCase):
             milestone_key = ("milestone", self.milestone.id)
             plan_node = app._row_nodes[plan_key]
             expansion = self.branch_state(app)
-
-            # Heartbeats repaint the card and never rebuild the tree.
-            harness.heartbeat("working")
-            await pilot.pause()
-            body = self.agents_body(app)
-            self.assertIn("@ana", body)
-            self.assertIn(f"P{self.plan.id} {self.plan.name}", body)
-            self.assertIn("feat/integration", body)
-            self.assertNotRegex(body, r"[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]")
-            self.assertIn("working", body)
 
             # Structural, claim, and block writes leave branches alone.
             added = self.store.add_task(self.milestone.id, "Third task", actor="ana")
@@ -127,17 +104,19 @@ class TestCombinedSurfaces(RefreshCase):
                 self.assert_task_row(app, self.store.get_task(task.id), state=state)
             self.assertTrue(app._row_nodes[plan_key].is_expanded)
 
-            # A settled session swaps the active word for the awaiting word.
-            harness.heartbeat("waiting")
+            # The agents card names each claim holder and its task.
+            app.update_agents()
             await pilot.pause()
             body = self.agents_body(app)
-            self.assertIn("waiting", body)
-            self.assertNotIn("◆", body)
+            self.assertIn(f"@sam T{added.id} Third task", body)
+            self.assertIn(f"@ana T{second.id} Second task", body)
+            self.assertIn(f"P{self.plan.id} {self.plan.name}", body)
 
             # The owning plan never leaves its panel while tasks come and go.
             services.set_status(self.store, "task", added.id, Status.DONE, actor="ana")
             app.refresh_all()
             await pilot.pause()
+            self.assertNotIn("@sam", self.agents_body(app))
             self.assertIs(plan_node.tree, app.query_one("#tree", Tree))
             self.assertIsNot(plan_node.tree, app.query_one("#tree-finished", Tree))
             self.assertEqual(self.branch_state(app), expansion)

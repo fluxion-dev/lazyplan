@@ -28,8 +28,10 @@ fields porcelain does not carry.
 If your host supports MCP, use the local `lpui mcp` server (or
 `lpui mcp --read-only` for reviews); otherwise use `--porcelain` on every call.
 Start work with `lpui next --porcelain`: it claims the first eligible todo and
-moves it doing. A claim is a lease, not an owner. Renew it while you work,
-release it when you stop, and note handoffs with `lpui note add`. MCP resources
+moves it doing. A task is doing exactly while you hold its claim: moving a task
+to doing claims it for your `--actor`, and moving it off doing releases it.
+Hooks keep your checkout's claims alive; release when you stop, and note
+handoffs with `lpui note add`. MCP resources
 include `lazyplan://brief`, `lazyplan://context`, and `lazyplan://plan/{id}`.
 
 ## DB scoping and setup
@@ -256,10 +258,6 @@ also requires clean lint and a proving task for every plan criterion. `review`
 is the deterministic Markdown handoff; it calls no model and no network.
 
 ```bash
-lpui --actor NAME agent start --plan P [--host NAME --session HOST] [--force --reason TEXT]
-lpui --actor NAME agent end [--id A] --summary "..." --handoff "next: T2"
-lpui agent show|list|sweep
-lpui agent history [--plan P]
 lpui feed --session S
 lpui --actor NAME touch add --task T --path PATH
 lpui --porcelain claims
@@ -271,17 +269,12 @@ lpui ref list|unlink --plan P
 lpui ship --plan P [--json] [--max-chars N]
 ```
 
-Agents are an exact registry, not a lease. A managed start records the host,
-host session, agent, role, model, parent, PID, repo, worktree, branch, HEAD,
-plan, task, and status, proving the plan through its registered worktree and
-the task through an active claim. An unregistered checkout or an ambiguous
-plan is refused; `--force --reason` is the only override. Hooks register a row
-per top-level host session and move it through `starting`, `working`, `tool`,
-`compacting`, `waiting`, `blocked`, `lost`, and `ended`; a child subagent is
-its own row and ending a parent ends its live children. A dead PID becomes
-`lost` on the next sweep and no row is closed by elapsed time. `lpui hook
---check` probes the transport without writing. `context`/`brief` show the
-previous handoff; historical `S` ids stay readable through `agent history`.
+Claims are the only record of who works on what; the agents panel lists them
+live. Moving a task another actor holds to doing is refused; `claim --force`
+takes it over. A released or expired claim puts a doing task back to todo.
+Hooks renew the claims held in their checkout and release them at session
+end. `lpui hook --check` probes the transport without writing.
+`context`/`brief` carry the plan's notes, so a handoff is a note.
 Touch-points make `next` skip work that overlaps an active claim in the same
 checkout; a manual claim needs `--force` and finish only warns. References are
 read-only links to external work: no fetch, no write-back. `ship` prints the
@@ -301,8 +294,8 @@ lpui plan worktree list --id P [--stale]
 lpui --actor NAME plan worktree remove --id P --repo REPO
 ```
 
-`plan move --to doing`, `agent start --plan P`, `next --plan P`, and
-`claim --id T` refuse the shared checkout. `--force --reason` records the
+`plan move --to doing`, `next --plan P`, and `claim --id T` refuse the shared
+checkout. `--force --reason` records the
 override. A done move refuses a dirty worktree and prints removal commands;
 `doctor` and `--stale` report drift without deleting. Plans created before the
 flag stay grandfathered.
@@ -356,9 +349,8 @@ every call. Reach for `--json` only when you need full-fidelity fields.
   (including done), relate, and delete; questions add, resolve, and reopen;
   references link, open, and unlink.
 - Coordination hubs are selectable too: claims and touch-points (`k` from
-  detail), agents and handoffs (from the palette), and comments and
-  notes (`m`). Agent and touch-point authoring works from the screen;
-  import, sync, and setup stay CLI-only.
+  detail), and comments and notes (`m`). Claim and touch-point authoring works
+  from the screen; import, sync, and setup stay CLI-only.
 - Provenance hubs are selectable: the source trail (`g`) cross-links commits,
   files, and pull requests to their owning row, the pull request hub (`P`)
   refreshes, links, unlinks, and opens cached PRs, and the activity hub (`A`)

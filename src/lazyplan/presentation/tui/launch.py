@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import os
+import subprocess
 import sys
+from dataclasses import dataclass
 
 from ...infrastructure.environment import apply_on_launch, clear_failure, read_failure
 from ..cli.parser import package_version
@@ -42,3 +44,46 @@ def launch_notes() -> str:
     except (OSError, ValueError):
         return ""
     return text
+
+
+RESTART_ENV = "LAZYPLAN_RESTART_AGENTS"
+
+
+@dataclass(frozen=True)
+class Restart:
+    """App exit result asking ``run`` to start lpui again."""
+
+    agents: tuple[str, ...] = ()
+
+
+def relaunch(restart: Restart) -> int:
+    """Start lpui again with the same arguments and the agents to name.
+
+    Windows cannot replace a console process, so it waits on a child instead.
+    """
+    argv = [sys.executable, "-m", "lazyplan", *sys.argv[1:]]
+    env = {**os.environ, RESTART_ENV: ",".join(restart.agents)}
+    if os.name == "nt":
+        return subprocess.call(argv, env=env)
+    os.execve(sys.executable, argv, env)
+
+
+def restart_notice(agents: list[str]) -> str:
+    """Tell the user to restart the agent sessions an install changed."""
+    if agents:
+        who = agents[0] if len(agents) == 1 else f"{', '.join(agents[:-1])} and {agents[-1]}"
+    else:
+        who = "agent"
+    return (
+        "lazyplan installed the missing skills and hooks.\n\n"
+        f"Restart any {who} sessions that are already running. Open sessions keep"
+        " their old setup and won't load the new skills or hooks until they restart."
+    )
+
+
+def take_restart_notice() -> str:
+    """The notice a relaunch asked for, once; empty on a normal launch."""
+    raw = os.environ.pop(RESTART_ENV, None)
+    if raw is None:
+        return ""
+    return restart_notice([agent for agent in raw.split(",") if agent])

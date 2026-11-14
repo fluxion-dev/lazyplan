@@ -3,6 +3,51 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## v0.45.0 — 2026-11-13
+
+### Added
+
+- **A startup health check.** Opening `lpui` checks the skills and hooks for
+  your agents, `lpui` and `git` on `PATH`, and the GitHub CLI login. A dialog
+  lists each gap with what it costs, installs the missing skills and hooks and
+  restarts `lpui`, then names the agent sessions to restart. Not now and Never
+  ask hide gaps without losing them: a health chip and the Health check palette
+  command still list them, and `lpui doctor` prints the same findings.
+
+### Changed
+
+- **Removed skills and hooks are offered again.** A skill file or hook entry
+  deleted after install now shows up as missing instead of staying silent.
+- **Integration prompts moved into the screen.** `lpui` no longer asks about
+  new integrations in plain text before the screen opens; the health dialog
+  does. `lpui setup` keeps its prompt.
+- **The overview always shows the full details.** A plan shows its whole why
+  and what, and a milestone and task their whole description, as the first
+  sections under the title instead of one clipped line. An empty field keeps its
+  heading with "None yet.", and headings inside the text nest under the section.
+- **The agents panel shows who holds which task, live.** Claims are the one
+  record of who is working on what: moving a task to doing claims it for the
+  actor, moving it off doing releases it, and a released or expired claim puts
+  the task back to todo. The panel lists one row per claim (holder, task, plan,
+  age) and repaints within a quarter second. Agent hooks renew the claims held
+  in their checkout and release them at session end; handoffs are plan and
+  task notes.
+
+### Removed
+
+- **The agent registry.** `lpui agent ...`, the hidden `lpui session ...`
+  aliases, the agents hub, and the `agent_list` MCP tool are gone, and upgrading
+  drops the `agents` and `agent_events` tables with their history. Use
+  `lpui claims`, `lpui next`, `lpui claim`, and `lpui note add` instead. Legacy
+  session history stays readable.
+
+### Fixed
+
+- **Plan worktrees work on Windows.** `lpui plan worktree` accepts checkouts
+  below the drive root, such as `C:\Users\me\repos\app`, instead of refusing
+  them as not absolute. `--print` also prints one command when a plan links
+  the same checkout twice, instead of failing.
+
 ## v0.44.0 — 2026-11-13
 
 ### Changed

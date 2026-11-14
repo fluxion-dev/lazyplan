@@ -44,6 +44,7 @@ class TestNeedsMe(unittest.TestCase):
             services.set_status(
                 self.store, "task", self.tasks["aging"], Status.DOING, actor="fixture"
             )
+        self.store.release_claim(self.tasks["aging"], "fixture")
         self.store.add_criteria("task", self.tasks["gap"], "open", actor="fixture")
         services.set_status(self.store, "task", self.tasks["gap"], Status.DONE, actor="fixture")
         self.store.link_forge(
@@ -59,6 +60,7 @@ class TestNeedsMe(unittest.TestCase):
             services.set_status(
                 self.store, "task", self.tasks["unclaimed"], Status.DOING, actor="fixture"
             )
+        self.store.release_claim(self.tasks["unclaimed"], "fixture")
         self.store.claim_task(self.tasks["overlap-a"], "alice", 10_000, now=1_000_000)
         self.store.claim_task(self.tasks["overlap-b"], "bob", 10_000, now=1_000_000)
         self.store.add_touchpoint(self.tasks["overlap-a"], "src/app", actor="fixture")
@@ -71,15 +73,6 @@ class TestNeedsMe(unittest.TestCase):
         revisions.approve(self.store, self.second.id, actor="fixture")
         self.store.update_plan(self.second.id, description="changed", actor="fixture")
         services.add_question(self.store, self.second.id, "Which host?", actor="fixture")
-        self.store.add_agent(
-            "carol",
-            host="opencode",
-            agent="carol",
-            host_session="host-carol",
-            plan_id=self.second.id,
-            branch="task/x",
-            now=1_000_001,
-        )
 
     def tearDown(self) -> None:
         self.tmp.cleanup()
@@ -116,10 +109,9 @@ class TestNeedsMe(unittest.TestCase):
         self.assertEqual(payload["counts"]["drift"], 1)
         self.assertEqual(payload["needs_me_plan_ids"], sorted([self.plan.id, self.second.id]))
 
-    def test_agents_claims_and_overlaps(self) -> None:
+    def test_claims_and_overlaps(self) -> None:
         payload = self._build()
-        self.assertEqual([row["plan_id"] for row in payload["agents"]], [self.second.id])
-        self.assertEqual(payload["agents"][0]["agent"], "carol")
+        self.assertNotIn("agents", payload)
         self.assertEqual(payload["counts"]["claims"], 2)
         self.assertEqual(len(payload["claims"]), 2)
         self.assertEqual(payload["counts"]["overlaps"], 1)
@@ -135,7 +127,6 @@ class TestNeedsMe(unittest.TestCase):
         self.assertEqual(payload["attention"], [])
         self.assertEqual(payload["claims"], [])
         self.assertEqual(payload["overlaps"], [])
-        self.assertEqual([row["plan_id"] for row in payload["agents"]], [self.second.id])
         self.assertEqual(payload["counts"]["plans"], 1)
 
     def test_limits_keep_the_payload_bounded(self) -> None:

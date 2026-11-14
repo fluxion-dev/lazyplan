@@ -12,6 +12,7 @@ from lazyplan.services.worktrees import stale_reason, verify_worktree
 
 from ....core.entities import PlanWorktree, Status
 from ....core.ports.app import AppPort
+from ...setup import health as setup_health
 from ...setup import layout as setup_layout
 from ..emit import _emit
 from ..parser import package_version
@@ -81,8 +82,11 @@ def _doctor_data(
     report["skills"] = [str(path) for path in skill_files]
     report["worktrees"] = _worktree_findings(store)
     report["hook_probe"] = hook_service.probe(store, Path.cwd())
-    inspection = setup.inspect(choice, state, root, home, package_version())
-    report["pending_integrations"] = [item.to_dict() for item in inspection.pending]
+    health = setup_health.check(choice, state, root, home, package_version())
+    report["health"] = [finding.to_dict() for finding in health.findings]
+    report["pending_integrations"] = [
+        item.to_dict() for finding in health.open for item in finding.items
+    ]
     issues = bool(report["findings"]) or bool(missing_hooks)
     issues = issues or bool(report["pending_integrations"]) or bool(report["worktrees"])
     issues = issues or (state.hooks and not state.hook_files)
@@ -112,8 +116,11 @@ def _print_doctor(layout: setup_layout.SetupLayout, skill_files: list[Path], rep
         print(f"missing:   {item}")
     for finding in report["findings"]:
         print(f"finding:   {finding['kind']} {finding['path']} ({finding['state']})")
-    for item in report["pending_integrations"]:
-        print(f"pending:   {item['label']} ({item['id']})")
+    for finding in report["health"]:
+        tags = ", ".join(tag for tag in (finding["severity"], finding["decision"]) if tag)
+        print(f"health:    {finding['label']} ({tags}): {finding['capability']}")
+        if finding["fix"]:
+            print(f"  fix:     {finding['fix']}")
     for item in report["worktrees"]:
         print(f"worktree:  plan {item['plan_id']} {item['state']} ({item['detail']})")
     for note in report["notes"]:

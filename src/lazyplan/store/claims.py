@@ -10,12 +10,12 @@ from ..core.entities import (
     Status,
     Task,
 )
+from ..core.policies.coordination import CLAIM_DEFAULT_TTL
 from .base import (
     ClaimConflict,
     ClaimMissing,
     StoreBase,
 )
-from .stubs import CLAIM_DEFAULT_TTL
 
 
 class ClaimsMixin(StoreBase):

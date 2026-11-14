@@ -52,18 +52,24 @@ def lane_worktree_entries(store: ReposPort, plan: Plan, milestone: Milestone) ->
     for repo in repos:
         repo_path = str(repo["repo_path"])
         target = derive_lane_worktree(repo_path, plan.id, plan.name, milestone.id, milestone.title)
-        registered = any(
-            store.normalize_repo_path(row.repo_path) == store.normalize_repo_path(repo_path)
-            for row in rows
+        registered = next(
+            (
+                row
+                for row in rows
+                if store.normalize_repo_path(row.repo_path) == store.normalize_repo_path(repo_path)
+            ),
+            None,
         )
+        worktree_path = registered.worktree_path if registered is not None else target.worktree_path
+        branch = registered.branch if registered is not None else target.branch
         base = str(repo.get("base_sha") or repo.get("branch") or "HEAD")
         entries.append(
             {
                 "repo_path": target.repo_path,
-                "worktree_path": target.worktree_path,
-                "branch": target.branch,
-                "registered": registered,
-                "exists": os.path.exists(target.worktree_path),
+                "worktree_path": worktree_path,
+                "branch": branch,
+                "registered": registered is not None,
+                "exists": os.path.exists(worktree_path),
                 "git_command": (
                     f"git -C {quote_path(target.repo_path)} worktree add -b"
                     f" {target.branch} {quote_path(target.worktree_path)}"
@@ -132,7 +138,7 @@ def worktree_gate(store: ReposPort, plan_id: int) -> str:
         missing_lanes = [
             milestone.id
             for milestone in store.list_milestones(plan_id)
-            if milestone.id not in lanes
+            if milestone.status is not Status.DONE and milestone.id not in lanes
         ]
         if missing_lanes:
             names = ", ".join(f"M{row}" for row in missing_lanes)

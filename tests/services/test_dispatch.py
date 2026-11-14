@@ -88,6 +88,11 @@ class DispatchManifestTest(unittest.TestCase):
         manifest = dispatch.build(self.store, self.plan.id)
         self.assertNotIn("profiles", manifest)
 
+    def test_dispatchable_uses_the_registered_worktree_path(self) -> None:
+        self._parallel_plan()
+        manifest = dispatch.build(self.store, self.plan.id)
+        self.assertTrue(manifest["dispatchable"][0]["worktree"].endswith("repo--alpha"))
+
     def test_missing_lane_worktree_becomes_an_action(self) -> None:
         lanes, tasks = self._parallel_plan()
         self.store.remove_plan_worktree(self.plan.id, self.repo, milestone_id=lanes[1])

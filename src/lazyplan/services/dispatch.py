@@ -55,7 +55,9 @@ def build(
         )
         next_by_lane[milestone.id] = lane_next
         state = _state(milestone, tasks, worktrees, claim, current)
-        blocked = _lane_blockers(milestone, tasks, worktrees, claim, current)
+        blocked = (
+            [] if state == "done" else _lane_blockers(milestone, tasks, worktrees, claim, current)
+        )
         prompt = (
             _prompt(plan, milestone, lane_next, worktrees, max_chars)
             if lane_next is not None
@@ -316,6 +318,8 @@ def _actions(lanes: list[dict[str, Any]], dispatchable: list[dict[str, Any]]) ->
     """Ordered commands the orchestrator runs next."""
     actions: list[str] = []
     for lane in lanes:
+        if lane["state"] == "done":
+            continue
         for row in lane["worktrees"]:
             if row["registered"]:
                 continue

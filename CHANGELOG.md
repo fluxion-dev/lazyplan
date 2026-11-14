@@ -3,6 +3,32 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## Unreleased
+
+### Changed
+
+- **The internals lost their duplicates.** The Store contract is declared
+  once per method, every bulk map read shares one grouping helper, and the
+  active-plan selection and traversal live in one module. The CLI, MCP, and
+  TUI now read their names from the same action rows, MCP handlers share one
+  factory per shape, and the vulture allowlist shrank from 239 lines to 47.
+- **Reads cost fewer round trips.** `lpui show` and `share` issue 20 queries
+  instead of 145, `lpui audit` 24 instead of 212 (a 10x wall-time drop), and
+  the control-room payload 13 instead of 28 on a single connection. Every
+  performance budget is now within 20 percent of the measured count, and
+  `share` is gated for the first time.
+- **No user-facing change.** Commands, flags, MCP tool names and schemas, key
+  bindings, rendered text, hook bytes, and the database schema are unchanged;
+  the release is verified against its base by comparing every rendered payload
+  byte for byte.
+
+### Removed
+
+- Dead seams that only tests reached: the forge and VCS registries, the
+  prompt and template scaffolding helpers, the MCP registry label wrappers,
+  the diff paging offset, and the touch-point overlap variant. The
+  unreferenced tmux helper script is gone.
+
 ## v0.45.0 — 2026-11-13
 
 ### Added

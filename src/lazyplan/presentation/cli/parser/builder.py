@@ -4,9 +4,8 @@ from __future__ import annotations
 
 import argparse
 
-from ....infrastructure.settings import default_actor
 from .agents import add_agent_group
-from .common import _PARSER_DESCRIPTION, _PARSER_EPILOG
+from .common import _PARSER_DESCRIPTION, _PARSER_EPILOG, global_flags
 from .coordination import (
     add_audit,
     add_brief,
@@ -74,46 +73,9 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="PATH",
         help="which database file to use (default: $LAZYPLAN_DB, else ./.agents/lazyplan/ in a repo, else the global one)",
     )
-    p.add_argument(
-        "--json", action="store_true", help="print output as JSON so scripts and agents can read it"
-    )
-    p.add_argument(
-        "--porcelain",
-        action="store_true",
-        help="print terse tab-separated rows for active agents (--json still wins)",
-    )
-    p.add_argument("--version", action="store_true", help="print the installed version and exit")
-    p.add_argument(
-        "--actor",
-        default=default_actor(),
-        metavar="NAME",
-        help="who is making this change (you see it in feed; default: your login name or 'human')",
-    )
+    global_flags(p, inherited=False)
     common = argparse.ArgumentParser(add_help=False)
-    common.add_argument(
-        "--json",
-        action="store_true",
-        default=argparse.SUPPRESS,
-        help="print output as JSON so scripts and agents can read it",
-    )
-    common.add_argument(
-        "--porcelain",
-        action="store_true",
-        default=argparse.SUPPRESS,
-        help="print terse tab-separated rows for active agents (--json still wins)",
-    )
-    common.add_argument(
-        "--version",
-        action="store_true",
-        default=argparse.SUPPRESS,
-        help="print the installed version and exit",
-    )
-    common.add_argument(
-        "--actor",
-        default=argparse.SUPPRESS,
-        metavar="NAME",
-        help="who made this change (you see it in feed)",
-    )
+    global_flags(common, inherited=True)
     heal = common.add_mutually_exclusive_group()
     heal.add_argument(
         "--heal",

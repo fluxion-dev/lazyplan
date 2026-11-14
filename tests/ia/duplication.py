@@ -45,18 +45,25 @@ def surface_rows() -> list[dict[str, object]]:
     return rows
 
 
-def _normalized_call(call: ast.Call) -> tuple[str, tuple[tuple[str, str], ...]]:
-    """One add_argument/add_parser call as (method, kept keyword shapes)."""
+def _normalized_call(call: ast.Call) -> tuple[str, str, tuple[tuple[str, str], ...]]:
+    """One builder call as (method, flag, kept keyword shapes).
+
+    The flag name distinguishes ``--read-only`` from ``--check``; the
+    subcommand name does not, because two names sharing one flag set is
+    exactly the duplication this detector reports.
+    """
     method = call.func.attr if isinstance(call.func, ast.Attribute) else ""
+    first = call.args[0].value if call.args and isinstance(call.args[0], ast.Constant) else ""
+    flag = str(first) if method == "add_argument" else ""
     kept = sorted(
         (kw.arg, ast.dump(kw.value, annotate_fields=False))
         for kw in call.keywords
         if kw.arg in WIRING_KEYS
     )
-    return method, tuple(kept)
+    return method, flag, tuple(kept)
 
 
-def _wiring(node: ast.FunctionDef) -> tuple[tuple[str, tuple[tuple[str, str], ...]], ...]:
+def _wiring(node: ast.FunctionDef) -> tuple[tuple[str, str, tuple[tuple[str, str], ...]], ...]:
     """The parser-building calls inside one ``add_*`` function, in order."""
     calls = []
     for statement in ast.walk(node):
@@ -79,7 +86,7 @@ def parser_duplicates(root: Path = PARSER_DIR) -> list[tuple[str, ...]]:
             if not isinstance(node, ast.FunctionDef) or not node.name.startswith("add_"):
                 continue
             calls = _wiring(node)
-            if any(method == "add_argument" for method, _ in calls):
+            if any(method == "add_argument" for method, _, _ in calls):
                 by_wiring.setdefault(calls, []).append(f"{path.stem}:{node.name}")
     return sorted(tuple(sorted(names)) for names in by_wiring.values() if len(names) > 1)
 

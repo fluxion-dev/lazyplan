@@ -1,11 +1,14 @@
-"""Shared parser constants and version lookup."""
+"""Shared parser constants, flag helpers, and version lookup."""
 
 from __future__ import annotations
 
+import argparse
 import re
 from pathlib import Path
 
+from lazyplan.core.kinds import KINDS
 from lazyplan.infrastructure import textfile
+from lazyplan.infrastructure.settings import default_actor
 
 _PARSER_DESCRIPTION = (
     "lazyplan keeps your plans, milestones, and tasks in one SQLite database, "
@@ -139,3 +142,67 @@ def package_version() -> str:
         return version("lazyplan-tui")
     except PackageNotFoundError:
         return "unknown"
+
+
+def row_target_args(
+    target: argparse._ActionsContainer,
+    *,
+    kind_help: str,
+    id_help: str,
+    required: bool = True,
+) -> None:
+    """The --kind/--id pair that addresses one row."""
+    target.add_argument("--kind", choices=list(KINDS), required=required, help=kind_help)
+    target.add_argument("--id", type=int, required=required, metavar="ID", help=id_help)
+
+
+def plan_id_arg(
+    target: argparse._ActionsContainer,
+    *,
+    help: str = "plan id",
+    required: bool = False,
+) -> None:
+    """The --plan scope or target every plan-scoped command takes."""
+    target.add_argument("--plan", type=int, required=required, metavar="ID", help=help)
+
+
+def global_flags(target: argparse.ArgumentParser, *, inherited: bool) -> None:
+    """The --json/--porcelain/--version/--actor globals every surface takes.
+
+    Root-level flags carry their own defaults; the ``common`` parent repeats
+    them with ``SUPPRESS`` so a subcommand only stores what the caller set.
+    """
+    default = argparse.SUPPRESS if inherited else False
+    target.add_argument(
+        "--json",
+        action="store_true",
+        default=default,
+        help="print output as JSON so scripts and agents can read it",
+    )
+    target.add_argument(
+        "--porcelain",
+        action="store_true",
+        default=default,
+        help="print terse tab-separated rows for active agents (--json still wins)",
+    )
+    target.add_argument(
+        "--version",
+        action="store_true",
+        default=default,
+        help="print the installed version and exit",
+    )
+    if inherited:
+        target.add_argument(
+            "--actor",
+            default=argparse.SUPPRESS,
+            metavar="NAME",
+            help="who made this change (you see it in feed)",
+        )
+    else:
+        target.add_argument(
+            "--actor",
+            default=default_actor(),
+            metavar="NAME",
+            help="who is making this change (you see it in feed; default: your login name or"
+            " 'human')",
+        )

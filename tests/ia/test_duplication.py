@@ -14,13 +14,9 @@ from pathlib import Path
 from lazyplan.presentation.shared import registry
 from tests.ia import duplication
 
-#: add_* parser builders that wire the same flags, sorted by name.
-BASELINE_PARSER_DUPLICATES: tuple[tuple[str, ...], ...] = (
-    ("coordination:add_claims", "coordination:add_who"),
-    ("coordination:add_mcp", "work:add_reconcile"),
-    ("coordination:add_review", "coordination:add_ship"),
-    ("proof:add_link_repo", "proof:add_unlink_repo"),
-)
+#: add_* parser builders that wire the same flags, sorted by name. The shared
+#: helpers and merged alias pairs collapsed every group in the parser slice.
+BASELINE_PARSER_DUPLICATES: tuple[tuple[str, ...], ...] = ()
 
 #: MCP _tool_* handlers whose normalized bodies are identical, sorted by name.
 BASELINE_HANDLER_DUPLICATES: tuple[tuple[str, ...], ...] = (

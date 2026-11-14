@@ -8,6 +8,7 @@ from ..core.entities import (
     Status,
     Task,
 )
+from ..core.policies.provenance import gate_state
 from .base import (
     StoreBase,
 )
@@ -148,23 +149,7 @@ class TasksMixin(StoreBase):
 
     def gate_state(self, task_id: int) -> dict:
         """Cached PR/check state for a task without network access."""
-        links = self.effective_forge_links("task", task_id)
-        if not links:
-            return {"prs": 0, "checks": "none", "state": "missing"}
-        values = [str(link.checks or "none") for link in links]
-        if any(value == "fail" for value in values):
-            checks = "fail"
-        elif any(value == "pending" for value in values):
-            checks = "pending"
-        elif all(value in {"pass", "neutral", "skipped"} for value in values):
-            checks = "pass"
-        else:
-            checks = "none"
-        return {
-            "prs": len(links),
-            "checks": checks,
-            "state": "pass" if checks == "pass" else checks,
-        }
+        return gate_state(self.effective_forge_links("task", task_id))
 
     def branch_owners(
         self,

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from ..core.entities import Criterion, CriterionEvidence, ForgeLink, Milestone, Plan, Task, VcsLink
 from ..core.policies.evidence import summarize as evidence_summary
+from ..core.policies.provenance import gate_state
 from ..core.serialization import approval_payload, to_payload
 from .base import StoreBase
 
@@ -48,23 +49,7 @@ class _FullReader:
         self.task_by_id = {task.id: task for items in self.tasks.values() for task in items}
 
     def _gate_state(self, task_id: int) -> dict:
-        links = self.forge.get(("task", task_id), [])
-        if not links:
-            return {"prs": 0, "checks": "none", "state": "missing"}
-        values = [str(link.checks or "none") for link in links]
-        if any(value == "fail" for value in values):
-            checks = "fail"
-        elif any(value == "pending" for value in values):
-            checks = "pending"
-        elif all(value in {"pass", "neutral", "skipped"} for value in values):
-            checks = "pass"
-        else:
-            checks = "none"
-        return {
-            "prs": len(links),
-            "checks": checks,
-            "state": "pass" if checks == "pass" else checks,
-        }
+        return gate_state(self.forge.get(("task", task_id), []))
 
     def _task_view(self, task: Task) -> dict:
         data = to_payload(vars(task))

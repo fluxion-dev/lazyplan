@@ -81,7 +81,7 @@ class TasksMixin(StoreBase):
             "SELECT * FROM tasks ORDER BY id",
             (),
             self._row_to_task,
-            lambda task: task.milestone_id,
+            lambda row: int(row["milestone_id"]),
         )
 
     def update_task(

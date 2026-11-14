@@ -142,13 +142,12 @@ class AnnotationsMixin(StoreBase):
 
     def issue_links_map(self) -> dict[tuple[str, int], list[dict]]:
         """Every issue source grouped by (row_kind, row_id), oldest first."""
-        with self._connect() as conn:
-            rows = conn.execute("SELECT * FROM issue_links ORDER BY id").fetchall()
-        out: dict[tuple[str, int], list[dict]] = {}
-        for row in rows:
-            item = dict(row)
-            out.setdefault((str(item["row_kind"]), int(item["row_id"])), []).append(item)
-        return out
+        return self._grouped(
+            "SELECT * FROM issue_links ORDER BY id",
+            (),
+            dict,
+            lambda row: (str(row["row_kind"]), int(row["row_id"])),
+        )
 
     def update_issue_link(
         self, provider: str, external_id: str, title: str, url: str, state: str, updated_at: float
@@ -273,58 +272,48 @@ class AnnotationsMixin(StoreBase):
 
     def notes_map(self) -> dict[tuple[str, int], list[str]]:
         """All note text grouped by parent, for TUI search."""
-        with self._connect() as conn:
-            rows = conn.execute("SELECT parent_kind, parent_id, text FROM notes").fetchall()
-        out: dict[tuple[str, int], list[str]] = {}
-        for row in rows:
-            out.setdefault((str(row["parent_kind"]), int(row["parent_id"])), []).append(
-                str(row["text"])
-            )
-        return out
+        return self._grouped(
+            "SELECT parent_kind, parent_id, text FROM notes",
+            (),
+            lambda row: str(row["text"]),
+            lambda row: (str(row["parent_kind"]), int(row["parent_id"])),
+        )
 
     def comments_map(self) -> dict[tuple[str, int], list[str]]:
         """All comment text grouped by parent, for TUI search."""
-        with self._connect() as conn:
-            rows = conn.execute("SELECT parent_kind, parent_id, text FROM comments").fetchall()
-        out: dict[tuple[str, int], list[str]] = {}
-        for row in rows:
-            out.setdefault((str(row["parent_kind"]), int(row["parent_id"])), []).append(
-                str(row["text"])
-            )
-        return out
+        return self._grouped(
+            "SELECT parent_kind, parent_id, text FROM comments",
+            (),
+            lambda row: str(row["text"]),
+            lambda row: (str(row["parent_kind"]), int(row["parent_id"])),
+        )
 
     def notes_full_map(self) -> dict[tuple[str, int], list[Note]]:
         """Every note grouped by parent, oldest first, with full metadata."""
-        with self._connect() as conn:
-            rows = conn.execute("SELECT * FROM notes ORDER BY id").fetchall()
-        out: dict[tuple[str, int], list[Note]] = {}
-        for row in rows:
-            note = self._row_to_note(row)
-            out.setdefault((note.parent_kind, note.parent_id), []).append(note)
-        return out
+        return self._grouped(
+            "SELECT * FROM notes ORDER BY id",
+            (),
+            self._row_to_note,
+            lambda row: (str(row["parent_kind"]), int(row["parent_id"])),
+        )
 
     def comments_full_map(self) -> dict[tuple[str, int], list[Comment]]:
         """Every comment grouped by parent, oldest first, with full metadata."""
-        with self._connect() as conn:
-            rows = conn.execute("SELECT * FROM comments ORDER BY id").fetchall()
-        out: dict[tuple[str, int], list[Comment]] = {}
-        for row in rows:
-            comment = self._row_to_comment(row)
-            out.setdefault((comment.parent_kind, comment.parent_id), []).append(comment)
-        return out
+        return self._grouped(
+            "SELECT * FROM comments ORDER BY id",
+            (),
+            self._row_to_comment,
+            lambda row: (str(row["parent_kind"]), int(row["parent_id"])),
+        )
 
     def issues_map(self) -> dict[tuple[str, int], list[str]]:
         """Issue source text grouped by row, for TUI search."""
-        with self._connect() as conn:
-            rows = conn.execute(
-                "SELECT row_kind, row_id, provider, number, title, url FROM issue_links"
-            ).fetchall()
-        out: dict[tuple[str, int], list[str]] = {}
-        for row in rows:
-            out.setdefault((str(row["row_kind"]), int(row["row_id"])), []).append(
-                " ".join(str(row[key]) for key in ("provider", "number", "title", "url"))
-            )
-        return out
+        return self._grouped(
+            "SELECT row_kind, row_id, provider, number, title, url FROM issue_links",
+            (),
+            lambda row: " ".join(str(row[key]) for key in ("provider", "number", "title", "url")),
+            lambda row: (str(row["row_kind"]), int(row["row_id"])),
+        )
 
     def add_criteria(
         self,
@@ -450,13 +439,12 @@ class AnnotationsMixin(StoreBase):
 
     def criteria_map(self) -> dict[tuple[str, int], list[Criterion]]:
         """Every checklist item grouped by (parent_kind, parent_id), in id order."""
-        with self._connect() as conn:
-            rows = conn.execute("SELECT * FROM criteria ORDER BY id").fetchall()
-        out: dict[tuple[str, int], list[Criterion]] = {}
-        for row in rows:
-            criterion = self._row_to_criterion(row)
-            out.setdefault((criterion.parent_kind, criterion.parent_id), []).append(criterion)
-        return out
+        return self._grouped(
+            "SELECT * FROM criteria ORDER BY id",
+            (),
+            self._row_to_criterion,
+            lambda row: (str(row["parent_kind"]), int(row["parent_id"])),
+        )
 
     def open_task_criteria_ids(self) -> set[int]:
         """Task ids that still have at least one open criterion."""

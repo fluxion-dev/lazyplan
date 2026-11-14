@@ -1,14 +1,16 @@
-"""No two Store map methods share a function body.
+"""No two Store map methods repeat the same row-iteration logic.
 
 Every ``*_map`` method is a bulk read that groups rows by a key. When two of
-them carry the same shape, the grouping is written once per method instead of
-once in the base. ``BASELINE_DUPLICATES`` records today's groups so the cleanup
-can shrink it to zero without a red commit in between.
+them contain the same grouping loop, the grouping is written once per method
+instead of once in the base. ``BASELINE_DUPLICATES`` records today's groups so
+the cleanup can shrink it to zero without a red commit in between.
 
 Bodies are compared after erasing names, attribute names, constants, and
 annotations, so two methods that differ only in row type or column name still
-count as one shape. The declaration mirrors in ``store/stubs*.py`` are skipped:
-they hold signatures, not implementations.
+count as one shape. A method that only delegates to a shared helper carries no
+row iteration of its own, so it is not compared: the helper is the one
+implementation. The declaration mirrors in ``store/stubs*.py`` are signatures,
+not implementations, and are skipped.
 """
 
 from __future__ import annotations
@@ -25,25 +27,7 @@ STORE = Path(__file__).resolve().parents[2] / "src" / "lazyplan" / "store"
 MIRRORS = frozenset({"stubs.py", "stubs_links.py"})
 
 #: Normalized-body groups to collapse, sorted by method name.
-BASELINE_DUPLICATES: tuple[tuple[str, ...], ...] = (
-    ("claims_map", "latest_revisions_map"),
-    (
-        "comments_full_map",
-        "criteria_map",
-        "forge_links_map",
-        "notes_full_map",
-        "vcs_links_map",
-    ),
-    ("comments_map", "notes_map"),
-    (
-        "evidence_map",
-        "milestones_map",
-        "plan_worktrees_map",
-        "questions_map",
-        "refs_map",
-        "tasks_map",
-    ),
-)
+BASELINE_DUPLICATES: tuple[tuple[str, ...], ...] = ()
 
 
 class _Shape(ast.NodeTransformer):
@@ -73,9 +57,9 @@ def _is_docstring(statement: ast.stmt) -> bool:
     )
 
 
-def _bodies(root: Path) -> list[tuple[str, str]]:
-    """One ``(method name, body digest)`` pair per Store map method."""
-    found: list[tuple[str, str]] = []
+def _bodies(root: Path) -> list[tuple[str, str, bool]]:
+    """One ``(method name, body digest, iterates)`` row per Store map method."""
+    found: list[tuple[str, str, bool]] = []
     for path in sorted(root.glob("*.py")):
         if path.name in MIRRORS:
             continue
@@ -91,21 +75,31 @@ def _bodies(root: Path) -> list[tuple[str, str]]:
                 dump = ast.dump(
                     ast.Module(body=list(shape), type_ignores=[]), annotate_fields=False
                 )
-                found.append((item.name, hashlib.sha1(dump.encode()).hexdigest()))
+                found.append((item.name, hashlib.sha1(dump.encode()).hexdigest(), _iterates(body)))
     return found
 
 
+def _iterates(body: list[ast.stmt]) -> bool:
+    """True when a body loops over rows itself instead of delegating the read."""
+    return any(
+        isinstance(node, (ast.For, ast.AsyncFor, ast.While, ast.comprehension))
+        for statement in body
+        for node in ast.walk(statement)
+    )
+
+
 def duplicate_groups(root: Path = STORE) -> list[tuple[str, ...]]:
-    """Methods whose normalized bodies are identical, one sorted group each."""
+    """Iterating methods with identical normalized bodies, one sorted group each."""
     by_body: dict[str, list[str]] = {}
-    for name, digest in _bodies(root):
-        by_body.setdefault(digest, []).append(name)
+    for name, digest, iterates in _bodies(root):
+        if iterates:
+            by_body.setdefault(digest, []).append(name)
     return sorted(tuple(sorted(names)) for names in by_body.values() if len(names) > 1)
 
 
 def map_methods(root: Path = STORE) -> list[str]:
     """Every Store map method name, in file order."""
-    return [name for name, _ in _bodies(root)]
+    return [name for name, _, _ in _bodies(root)]
 
 
 def _seeded_pair(root: Path) -> None:

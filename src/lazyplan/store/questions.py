@@ -128,7 +128,7 @@ class QuestionsMixin(StoreBase):
             "SELECT * FROM plan_questions ORDER BY plan_id, id",
             (),
             self._row_to_question,
-            lambda question: question.plan_id,
+            lambda row: int(row["plan_id"]),
         )
 
     def resolve_question(

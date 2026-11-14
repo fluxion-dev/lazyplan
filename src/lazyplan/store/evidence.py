@@ -158,5 +158,5 @@ class EvidenceMixin(StoreBase):
             "SELECT * FROM criterion_evidence ORDER BY criterion_id, id",
             (),
             self._row_to_evidence,
-            lambda item: item.criterion_id,
+            lambda row: int(row["criterion_id"]),
         )

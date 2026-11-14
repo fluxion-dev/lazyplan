@@ -91,7 +91,7 @@ class RefsMixin(StoreBase):
             "SELECT * FROM external_refs ORDER BY id",
             (),
             self._row_to_ref,
-            lambda ref: ref.plan_id,
+            lambda row: int(row["plan_id"]),
         )
 
     def unlink_ref(

@@ -410,23 +410,21 @@ class LinksMixin(StoreBase):
 
     def forge_links_map(self) -> dict[tuple[str, int], list[ForgeLink]]:
         """Every forge link grouped by (parent_kind, parent_id), oldest first."""
-        with self._connect() as conn:
-            rows = conn.execute("SELECT * FROM forge_links ORDER BY id").fetchall()
-        out: dict[tuple[str, int], list[ForgeLink]] = {}
-        for row in rows:
-            link = self._row_to_forge_link(row)
-            out.setdefault((link.parent_kind, link.parent_id), []).append(link)
-        return out
+        return self._grouped(
+            "SELECT * FROM forge_links ORDER BY id",
+            (),
+            self._row_to_forge_link,
+            lambda row: (str(row["parent_kind"]), int(row["parent_id"])),
+        )
 
     def vcs_links_map(self) -> dict[tuple[str, int], list[VcsLink]]:
         """Every commit link grouped by (parent_kind, parent_id), oldest first."""
-        with self._connect() as conn:
-            rows = conn.execute("SELECT * FROM vcs_links ORDER BY id").fetchall()
-        out: dict[tuple[str, int], list[VcsLink]] = {}
-        for row in rows:
-            link = self._row_to_link(row)
-            out.setdefault((link.parent_kind, link.parent_id), []).append(link)
-        return out
+        return self._grouped(
+            "SELECT * FROM vcs_links ORDER BY id",
+            (),
+            self._row_to_link,
+            lambda row: (str(row["parent_kind"]), int(row["parent_id"])),
+        )
 
     def cache_get(self, key: str) -> dict | None:
         """Cached HTTP entry by key, or None."""

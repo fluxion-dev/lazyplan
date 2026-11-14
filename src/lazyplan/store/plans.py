@@ -247,7 +247,7 @@ class PlansMixin(StoreBase):
             "SELECT * FROM milestones ORDER BY id",
             (),
             self._row_to_milestone,
-            lambda milestone: milestone.plan_id,
+            lambda row: int(row["plan_id"]),
         )
 
     def update_milestone(

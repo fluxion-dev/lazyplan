@@ -134,15 +134,14 @@ class StoreBase(StoreStubs):
         sql: str,
         params: Sequence[object],
         make: Callable[[sqlite3.Row], _V],
-        key: Callable[[_V], _K],
+        key: Callable[[sqlite3.Row], _K],
     ) -> dict[_K, list[_V]]:
-        """Rows mapped by *make* and grouped under *key*, in read order."""
+        """Rows mapped by *make* and grouped under the row's *key*, in read order."""
         with self._connect() as conn:
             rows = conn.execute(sql, params).fetchall()
         out: dict[_K, list[_V]] = {}
         for row in rows:
-            item = make(row)
-            out.setdefault(key(item), []).append(item)
+            out.setdefault(key(row), []).append(make(row))
         return out
 
     def _indexed(

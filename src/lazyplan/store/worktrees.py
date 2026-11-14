@@ -78,7 +78,7 @@ class WorktreesMixin(StoreBase):
             "SELECT * FROM plan_worktrees ORDER BY id",
             (),
             self._row_to_plan_worktree,
-            lambda item: item.plan_id,
+            lambda row: int(row["plan_id"]),
         )
 
     def remove_plan_worktree(self, plan_id: int, repo_path: str, actor: str = "human") -> bool:

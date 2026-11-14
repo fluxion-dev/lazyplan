@@ -7,7 +7,7 @@ from pathlib import Path
 
 from ..core.entities import Agent
 from ..core.policies.agents import normalize_status, status_for_event
-from ..core.ports.agents import AgentsPort, AgentsReadPort
+from ..core.ports.agents import AgentHistoryPort, AgentsPort, AgentsReadPort
 from ..core.ports.app import AppPort
 from ..infrastructure.process import process_alive, process_start
 from .agent_identity import AgentIdentity, GitFacts, git_facts, resolve_binding
@@ -392,7 +392,7 @@ def show_agent(store: AgentsReadPort, agent_id: int, limit: int = 50) -> dict | 
 
 
 def previous_agent(
-    store: AgentsReadPort,
+    store: AgentHistoryPort,
     plan_id: int | None = None,
     repo_path: str = "",
 ) -> dict | None:

@@ -14,36 +14,10 @@ from pathlib import Path
 PORTS = Path(__file__).resolve().parents[2] / "src" / "lazyplan" / "core" / "ports"
 
 #: Method name to the port modules that declare it more than once today.
-BASELINE_DUPLICATES: dict[str, tuple[str, ...]] = {
-    "add_note": ("collaboration", "coordination"),
-    "all_criterion_links": ("insights", "transfer"),
-    "archive_sessions": ("agents", "maintenance"),
-    "checkout_path": ("paths", "planning"),
-    "claims_map": ("coordination", "insights", "transfer"),
-    "effective_repos": ("coordination", "provenance"),
-    "feed": ("insights", "planning"),
-    "get_claim": ("coordination", "insights"),
-    "link_ref": ("refs", "transfer"),
-    "list_claims": ("coordination", "insights"),
-    "list_issue_links": ("provenance", "transfer"),
-    "list_plan_worktrees": ("insights", "planning"),
-    "list_sessions": ("agents", "transfer"),
-    "list_touchpoints": ("coordination", "provenance"),
-    "normalize_repo_path": ("paths", "planning"),
-    "plan_worktrees_map": ("insights", "planning"),
-    "refs_map": ("refs", "transfer"),
-    "repo_root": ("paths", "planning"),
-    "repos_map": ("planning", "provenance"),
-    "resolve_repo_path": ("paths", "planning"),
-    "restore_session": ("agents", "maintenance"),
-    "restore_session_history": ("agents", "transfer"),
-    "set_blocked": ("coordination", "transfer"),
-    "touchpoints_map": ("coordination", "needs_me"),
-    "transaction": ("planning", "transfer"),
-}
+BASELINE_DUPLICATES: dict[str, tuple[str, ...]] = {}
 
 #: Declarations beyond the first for each duplicated name.
-BASELINE_EXTRA = 26
+BASELINE_EXTRA = 0
 
 
 def protocol_methods() -> dict[str, tuple[str, ...]]:

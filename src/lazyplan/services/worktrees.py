@@ -9,6 +9,7 @@ from pathlib import Path
 from ..core.entities import PlanWorktree
 from ..core.policies.worktrees import quote_path
 from ..core.ports.planning import PlanningPort
+from ..core.ports.repos import ReposPort
 from ..infrastructure.repo import git_common_dir, git_worktree_paths
 from ..infrastructure.vcs import GitBackend
 
@@ -30,7 +31,7 @@ def _refuse(
     return WorktreeVerification(False, reason=reason, branch=branch, head=head, dirty=dirty)
 
 
-def worktree_gate(store: PlanningPort, plan_id: int) -> str:
+def worktree_gate(store: ReposPort, plan_id: int) -> str:
     """Refusal text when an isolation-required plan has a missing registration."""
     plan = store.get_plan(plan_id)
     if plan is None or not plan.worktree_required:
@@ -54,7 +55,7 @@ def worktree_gate(store: PlanningPort, plan_id: int) -> str:
     )
 
 
-def checkout_gate(store: PlanningPort, plan_id: int, checkout: str) -> str:
+def checkout_gate(store: ReposPort, plan_id: int, checkout: str) -> str:
     """Refusal text when a session starts outside the plan's registered worktree."""
     plan = store.get_plan(plan_id)
     if plan is None or not plan.worktree_required:

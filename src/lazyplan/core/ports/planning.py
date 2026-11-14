@@ -6,21 +6,14 @@ from contextlib import AbstractContextManager
 from typing import Protocol
 
 from ..entities import Criterion, Milestone, Plan, PlanQuestion, PlanWorktree, Status, Task
+from .paths import PathPort
 
 
-class PlanningPort(Protocol):
+class PlanningPort(PathPort, Protocol):
     """Persistence surface the planning use cases need."""
 
     @property
     def db_path(self) -> str: ...
-
-    def repo_root(self, cwd: str = ".") -> str | None: ...
-
-    def checkout_path(self, cwd: str | None = None) -> str: ...
-
-    def resolve_repo_path(self, path: str) -> str: ...
-
-    def normalize_repo_path(self, path: str) -> str: ...
 
     def transaction(self) -> AbstractContextManager[None]: ...
 
@@ -169,7 +162,11 @@ class PlanningPort(Protocol):
 
     def criteria_map(self) -> dict[tuple[str, int], list[Criterion]]: ...
 
-    def repos_map(self) -> dict[tuple[str, int], list[dict]]: ...
+    def all_criterion_links(self) -> list[dict]: ...
+
+    def open_task_criteria_ids(self) -> set[int]: ...
+
+    def criterion_tasks(self, criterion_id: int) -> list[Task]: ...
 
     def register_plan_worktree(
         self,

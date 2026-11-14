@@ -5,8 +5,9 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Protocol
 
-from ..entities import Agent, AgentEvent, Session
+from ..entities import Agent, AgentEvent
 from .planning import PlanningPort
+from .sessions import SessionsPort, SessionsReadPort
 
 
 class AgentsReadPort(Protocol):
@@ -40,27 +41,12 @@ class AgentsReadPort(Protocol):
 
     def agent_event_counts(self, agent_id: int) -> dict[str, int]: ...
 
-    def get_session(self, session_id: int) -> Session | None: ...
 
-    def list_sessions(
-        self,
-        actor: str = "",
-        plan_id: int | None = None,
-        open_only: bool = False,
-        limit: int = 20,
-        archived: str = "hide",
-    ) -> list[Session]: ...
-
-    def latest_ended_session(
-        self, plan_id: int | None = None, actor: str = "", repo_path: str = ""
-    ) -> Session | None: ...
-
-    def events_for_session(self, session_id: int, limit: int = 50) -> list[dict]: ...
-
-    def session_counts(self, session_id: int) -> dict[str, int]: ...
+class AgentHistoryPort(AgentsReadPort, SessionsReadPort, Protocol):
+    """Agent reads plus the legacy session history they fall back to."""
 
 
-class AgentsPort(AgentsReadPort, PlanningPort, Protocol):
+class AgentsPort(AgentsReadPort, PlanningPort, SessionsPort, Protocol):
     """Write surface used by the agent commands, hooks, and maintenance."""
 
     def add_agent(
@@ -115,13 +101,3 @@ class AgentsPort(AgentsReadPort, PlanningPort, Protocol):
     ) -> int: ...
 
     def restore_agent(self, agent_id: int, actor: str = ..., now: float | None = ...) -> bool: ...
-
-    def archive_sessions(
-        self, session_ids: Sequence[int], actor: str = ..., now: float | None = ...
-    ) -> int: ...
-
-    def restore_session(
-        self, session_id: int, actor: str = ..., now: float | None = ...
-    ) -> bool: ...
-
-    def restore_session_history(self, row: dict, actor: str = ...) -> int | None: ...

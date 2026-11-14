@@ -194,6 +194,16 @@ class StoreBase(_StoreContract):
             rows = conn.execute(sql, params).fetchall()
         return {key(row): make(row) for row in rows}
 
+    def _counts_by(self, table: str, column: str, key: str, value: object) -> dict[str, int]:
+        """Count rows by one text column, filtered by one key column."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                f"SELECT {column} AS name, COUNT(*) AS n FROM {table}"
+                f" WHERE {key}=? GROUP BY {column} ORDER BY {column}",
+                (value,),
+            ).fetchall()
+        return {str(row["name"]): int(row["n"]) for row in rows}
+
     def _latest_ended(
         self,
         table: str,

@@ -25,18 +25,6 @@ except ImportError:  # pragma: no cover - stdlib-only interpreter
     parse_pull_url = None  # type: ignore[assignment]
 
 
-def scope_parents(store: Any, kind: str, oid: int) -> list[tuple[str, int]]:
-    """Direct row plus descendant rows whose links the hub aggregates."""
-    out: list[tuple[str, int]] = [(kind, oid)]
-    if kind == "milestone":
-        out.extend(("task", task.id) for task in store.list_tasks(oid))
-    elif kind == "plan":
-        for milestone in store.list_milestones(oid):
-            out.append(("milestone", milestone.id))
-            out.extend(("task", task.id) for task in store.list_tasks(milestone.id))
-    return out
-
-
 if _TEXTUAL_OK:
 
     class PullRequestHub(HubScreen):
@@ -60,7 +48,7 @@ if _TEXTUAL_OK:
         def load_entries(self) -> list[HubEntry]:
             self._rows = []
             seen: set[tuple[str, int, int]] = set()
-            for parent_kind, parent_id in scope_parents(
+            for parent_kind, parent_id in services.source.scope_parents(
                 self.store, self.parent_kind, self.parent_id
             ):
                 for link in self.store.list_forge_links(parent_kind, parent_id, kind="pull"):
@@ -273,4 +261,4 @@ if _TEXTUAL_OK:
             self.notify(f"{kind} #{oid}", timeout=3)
 
 
-__all__ = ["ActivityHub", "PullRequestHub", "scope_parents"]
+__all__ = ["ActivityHub", "PullRequestHub"]

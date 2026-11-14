@@ -23,19 +23,6 @@ def _claims(store: InsightsPort, plan: Plan) -> dict[int, dict]:
     return {int(item["task_id"]): item for item in store.list_claims(plan_id=plan.id)}
 
 
-def _open_criteria(store: InsightsPort, plan: Plan, doing: list[Task]) -> list[dict]:
-    out = [
-        {"kind": "plan", "id": plan.id, "text": item.text}
-        for item in store.open_criteria("plan", plan.id)
-    ]
-    for task in doing:
-        out.extend(
-            {"kind": "task", "id": task.id, "text": item.text}
-            for item in store.open_criteria("task", task.id)
-        )
-    return out
-
-
 def _notes(store: InsightsPort, plan: Plan, doing: list[Task]) -> list[dict]:
     out: list[dict] = []
     for note in store.list_notes("plan", plan.id)[:5]:
@@ -138,7 +125,7 @@ def _packet(store: InsightsPort, plan: Plan) -> dict:
             for task in doing
         ],
         "next": [{"id": task.id, "title": task.title} for task in next_tasks],
-        "criteria": _open_criteria(store, plan, doing),
+        "criteria": active.open_criteria_rows(store, plan, doing),
         "questions": [
             {"id": question.id, "text": question.text} for question in store.list_questions(plan.id)
         ],

@@ -6,6 +6,7 @@ import time
 from typing import Any
 
 from ...core.entities import Plan
+from ...core.policies.insights import one_line
 from ...services.revisions import ApprovalResult, DiffResult, RevisionEntry
 from ..shared import porcelain
 
@@ -13,12 +14,6 @@ from ..shared import porcelain
 def _date(stamp: float) -> str:
     """Stored timestamp as a stable local date."""
     return time.strftime("%Y-%m-%d", time.localtime(stamp))
-
-
-def _short(text: str, limit: int = 60) -> str:
-    """One-line excerpt for a diff field."""
-    flat = " ".join(str(text).split())
-    return flat if len(flat) <= limit else flat[: limit - 1] + "…"
 
 
 def _reason(entry: Any) -> str:
@@ -40,7 +35,7 @@ def _label(entry: Any) -> str:
     label = labels.get(change.kind, f"T{change.obj_id}")
     if change.kind == "criterion":
         label = f"criterion #{change.obj_id}"
-    return f"{label} {_short(change.title, 40)}".rstrip()
+    return f"{label} {one_line(change.title, 40)}".rstrip()
 
 
 def approval_payload(result: ApprovalResult, plan: Plan) -> dict:
@@ -100,7 +95,7 @@ def revisions_text(entries: list[RevisionEntry], plan: Plan) -> str:
         revision = entry.revision
         plural = "change" if entry.changes == 1 else "changes"
         flags = " [enforced]" if revision.enforced else ""
-        reason = f"  {_short(revision.reason, 50)}" if revision.reason else ""
+        reason = f"  {one_line(revision.reason, 50)}" if revision.reason else ""
         lines.append(
             f"r{revision.revision} {_date(revision.approved_at)} "
             f"@{revision.actor} {entry.changes} {plural}{flags}{reason}"
@@ -180,7 +175,7 @@ def diff_text(result: DiffResult, plan: Plan) -> str:
         else:
             lines.append(
                 f"  ~ {_label(entry)} {change.field}: "
-                f"{_short(change.before)!r} -> {_short(change.after)!r} "
+                f"{one_line(change.before)!r} -> {one_line(change.after)!r} "
                 f"({_reason(entry)})"
             )
     return "\n".join(lines)

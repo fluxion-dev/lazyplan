@@ -106,13 +106,7 @@ class SessionHistoryMixin(StoreBase):
 
     def session_counts(self, session_id: int) -> dict[str, int]:
         """Event counts by action for one historical session."""
-        with self._connect() as conn:
-            rows = conn.execute(
-                "SELECT action, COUNT(*) AS n FROM events WHERE session_id=?"
-                " GROUP BY action ORDER BY action",
-                (session_id,),
-            ).fetchall()
-        return {str(row["action"]): int(row["n"]) for row in rows}
+        return self._counts_by("events", "action", "session_id", session_id)
 
     def archive_sessions(
         self,

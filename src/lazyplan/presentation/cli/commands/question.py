@@ -82,10 +82,12 @@ def _cmd_question_list(store: PlanningPort | None, args: argparse.Namespace, act
     )
 
 
-def _cmd_question_resolve(store: PlanningPort, args: argparse.Namespace, actor: str) -> int:
+def _question_state(store: PlanningPort, args: argparse.Namespace, actor: str, action: str) -> int:
+    """Resolve or reopen one question and emit the new row."""
     from lazyplan import services
 
-    question = services.resolve_question(store, args.id, note=args.note, actor=actor)
+    run = services.resolve_question if action == "resolve" else services.reopen_question
+    question = run(store, args.id, note=args.note, actor=actor)
     if question is None:
         print(msg_not_found("question", args.id), file=sys.stderr)
         return 1
@@ -94,17 +96,11 @@ def _cmd_question_resolve(store: PlanningPort, args: argparse.Namespace, actor: 
         _question_row(question),
         {"question": to_payload(vars(question))},
     )
+
+
+def _cmd_question_resolve(store: PlanningPort, args: argparse.Namespace, actor: str) -> int:
+    return _question_state(store, args, actor, "resolve")
 
 
 def _cmd_question_reopen(store: PlanningPort, args: argparse.Namespace, actor: str) -> int:
-    from lazyplan import services
-
-    question = services.reopen_question(store, args.id, note=args.note, actor=actor)
-    if question is None:
-        print(msg_not_found("question", args.id), file=sys.stderr)
-        return 1
-    return _emit_record(
-        args,
-        _question_row(question),
-        {"question": to_payload(vars(question))},
-    )
+    return _question_state(store, args, actor, "reopen")

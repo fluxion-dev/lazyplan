@@ -5,16 +5,12 @@ from __future__ import annotations
 import time
 from typing import Any
 
+from .insights import one_line
+
 
 def _cell(value: Any) -> str:
     """One table cell: no pipes or newlines."""
     return " ".join(str(value).split()).replace("|", "\\|")
-
-
-def _short(value: Any, limit: int = 60) -> str:
-    """One-line excerpt."""
-    text = " ".join(str(value).split())
-    return text if len(text) <= limit else text[: limit - 1] + "…"
 
 
 def _date(stamp: float) -> str:
@@ -85,7 +81,7 @@ def _provenance(payload: dict[str, Any]) -> list[str]:
     for commit in commits:
         sha = str(commit.get("sha", ""))[:12]
         link = f" ([link]({commit['url']}))" if commit.get("url") else ""
-        lines.append(f"- `{sha}` {_short(commit.get('subject', ''))}{link}")
+        lines.append(f"- `{sha}` {one_line(commit.get('subject', ''))}{link}")
     lines.extend(["", "## Pull requests", ""])
     pulls = payload.get("prs", [])
     if not pulls:
@@ -93,7 +89,7 @@ def _provenance(payload: dict[str, Any]) -> list[str]:
     for pull in pulls:
         link = f" ([link]({pull['url']}))" if pull.get("url") else ""
         lines.append(
-            f"- #{pull.get('number')} {_short(pull.get('title', ''))} "
+            f"- #{pull.get('number')} {one_line(pull.get('title', ''))} "
             f"({pull.get('state', 'unknown')}){link}"
         )
     return lines
@@ -108,7 +104,7 @@ def _findings(payload: dict[str, Any]) -> list[str]:
     for finding in findings:
         lines.append(
             f"- lint {finding.get('severity', '')} {finding.get('rule', '')}: "
-            f"{_short(finding.get('message', ''))}"
+            f"{one_line(finding.get('message', ''))}"
         )
     report = payload.get("audit") or {}
     lines.append(
@@ -137,7 +133,7 @@ def _notes(payload: dict[str, Any]) -> list[str]:
         return []
     lines = ["## Notes and follow-ups", ""]
     for note in notes:
-        lines.append(f"- @{note.get('actor', '')}: {_short(note.get('text', ''), 120)}")
+        lines.append(f"- @{note.get('actor', '')}: {one_line(note.get('text', ''), 120)}")
     return lines
 
 

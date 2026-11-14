@@ -11,6 +11,7 @@ from ..core.entities import (
     Task,
 )
 from ..core.kinds import KIND_ERROR, table_for
+from ..core.policies.insights import leading_int
 from .base import StoreBase
 from .full_reader import _FullReader
 from .status_events import parse_plan_status_detail
@@ -22,14 +23,6 @@ def _release_lease_for_status(
     """A task that is no longer doing cannot keep a lease."""
     if kind == "task" and status is not Status.DOING:
         conn.execute("DELETE FROM task_claims WHERE task_id=?", (obj_id,))
-
-
-def _leading_int(text: str, start: int) -> int | None:
-    """Positive integer immediately after *start*, else None."""
-    end = start
-    while end < len(text) and text[end].isdigit():
-        end += 1
-    return int(text[start:end]) if end > start else None
 
 
 def _plan_for_milestone(mid: int | None, milestone_plan: dict[int, int]) -> int | None:
@@ -73,24 +66,24 @@ def _detail_plan_id(
 ) -> int | None:
     """Owning plan encoded in one event detail, or None."""
     if detail.startswith("P#"):
-        return _leading_int(detail, 2)
+        return leading_int(detail, 2)
     if detail.startswith("plan #"):
-        return _leading_int(detail, 6)
+        return leading_int(detail, 6)
     if detail.startswith("M#"):
-        return _plan_for_milestone(_leading_int(detail, 2), milestone_plan)
+        return _plan_for_milestone(leading_int(detail, 2), milestone_plan)
     if detail.startswith("milestone #"):
-        return _plan_for_milestone(_leading_int(detail, 11), milestone_plan)
+        return _plan_for_milestone(leading_int(detail, 11), milestone_plan)
     if detail.startswith("T#"):
-        return _plan_for_task(_leading_int(detail, 2), task_milestone, milestone_plan)
+        return _plan_for_task(leading_int(detail, 2), task_milestone, milestone_plan)
     if detail.startswith("task #"):
-        return _plan_for_task(_leading_int(detail, 6), task_milestone, milestone_plan)
+        return _plan_for_task(leading_int(detail, 6), task_milestone, milestone_plan)
     if detail.startswith("criteria #"):
         return _plan_for_criterion(
-            _leading_int(detail, 10), criterion_parent, task_milestone, milestone_plan
+            leading_int(detail, 10), criterion_parent, task_milestone, milestone_plan
         )
     if detail.startswith("criterion #"):
         return _plan_for_criterion(
-            _leading_int(detail, 11), criterion_parent, task_milestone, milestone_plan
+            leading_int(detail, 11), criterion_parent, task_milestone, milestone_plan
         )
     return None
 
@@ -111,7 +104,6 @@ class ViewsMixin(StoreBase):
     def get_full(self, kind: str, obj_id: int) -> dict | None:
         """Full context record for `lpui show`: fields + criteria + links + repos + children."""
         with self._connect():
-            reader = _FullReader(self)
             if kind == "plan":
                 p = self.get_plan(obj_id)
                 if p is None:
@@ -122,13 +114,13 @@ class ViewsMixin(StoreBase):
                     if latest
                     else []
                 )
-                return reader.plan(p, recent=recent)
+                return _FullReader(self).plan(p, recent=recent)
             if kind == "milestone":
                 s = self.get_milestone(obj_id)
-                return None if s is None else reader.milestone(s)
+                return None if s is None else _FullReader(self).milestone(s)
             if kind == "task":
                 t = self.get_task(obj_id)
-                return None if t is None else reader.task(t)
+                return None if t is None else _FullReader(self).task(t)
         raise ValueError(KIND_ERROR)
 
     def get_full_many(self, kind: str, obj_ids: list[int]) -> list[dict]:

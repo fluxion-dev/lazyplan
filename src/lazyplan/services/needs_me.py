@@ -214,15 +214,7 @@ def _overlaps(
     return out
 
 
-def _expired_ids(claims_map: dict, task_plan: dict[int, int], stamp: float) -> set[int]:
-    return {
-        task_id
-        for task_id, claim in claims_map.items()
-        if task_id in task_plan and claim.expired(stamp)
-    }
-
-
-def _active_claims(
+def _claim_views(
     claims_map: dict,
     task_plan: dict[int, int],
     task_by_id: dict[int, Task],
@@ -230,9 +222,10 @@ def _active_claims(
     plan_id: int | None,
     plan_ids: set[int],
     stamp: float,
-) -> list[dict]:
-    """Active leases as payload rows, derived from the one claims read."""
+) -> tuple[list[dict], set[int]]:
+    """Active lease rows and expired task ids from the one claims read."""
     rows: list[dict] = []
+    expired: set[int] = set()
     for task_id, claim in claims_map.items():
         task = task_by_id.get(task_id)
         plan = task_plan.get(task_id)
@@ -241,6 +234,7 @@ def _active_claims(
         if plan_id is not None and plan not in plan_ids:
             continue
         if claim.expired(stamp):
+            expired.add(task_id)
             continue
         rows.append(
             {
@@ -261,7 +255,7 @@ def _active_claims(
             }
         )
     rows.sort(key=lambda row: (float(row["expires_at"]), int(row["task_id"])))
-    return rows
+    return rows, expired
 
 
 def _agent_rows(
@@ -370,8 +364,7 @@ def build(
 
         task_plan, task_by_id, tasks_by_plan = active.task_index(port, plan_ids)
         claims_map = port.claims_map()
-        expired_task_ids = _expired_ids(claims_map, task_plan, stamp)
-        active_claims = _active_claims(
+        active_claims, expired_task_ids = _claim_views(
             claims_map, task_plan, task_by_id, plan_names, plan_id, plan_ids, stamp
         )
         active_task_ids = {int(claim["task_id"]) for claim in active_claims}

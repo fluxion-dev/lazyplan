@@ -100,3 +100,17 @@ def all_tasks(port: InsightsPort) -> list[Task]:
     plans = live_plans(port)
     _, _, tasks_by_plan = task_index(port, (plan.id for plan in plans))
     return [task for plan in plans for task in tasks_by_plan.get(plan.id, ())]
+
+
+def open_criteria_rows(store: InsightsPort, plan: Plan, doing: list[Task]) -> list[dict]:
+    """Open plan criteria plus the doing tasks' criteria, as payload rows."""
+    rows: list[dict] = [
+        {"kind": "plan", "id": plan.id, "text": item.text}
+        for item in store.open_criteria("plan", plan.id)
+    ]
+    for task in doing:
+        rows.extend(
+            {"kind": "task", "id": task.id, "text": item.text}
+            for item in store.open_criteria("task", task.id)
+        )
+    return rows

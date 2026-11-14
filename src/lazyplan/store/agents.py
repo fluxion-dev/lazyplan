@@ -384,13 +384,7 @@ class AgentsMixin(StoreBase):
 
     def agent_event_counts(self, agent_id: int) -> dict[str, int]:
         """Transition counts by event name for one agent."""
-        with self._connect() as conn:
-            rows = conn.execute(
-                "SELECT event, COUNT(*) AS n FROM agent_events WHERE agent_id=?"
-                " GROUP BY event ORDER BY event",
-                (agent_id,),
-            ).fetchall()
-        return {str(row["event"]): int(row["n"]) for row in rows}
+        return self._counts_by("agent_events", "event", "agent_id", agent_id)
 
     def archive_agents(
         self,

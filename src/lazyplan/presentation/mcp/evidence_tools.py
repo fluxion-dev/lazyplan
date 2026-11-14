@@ -7,7 +7,7 @@ from typing import Any
 from lazyplan import services
 
 from .base import McpBase
-from .handlers import id_rows
+from .handlers import one_arg_rows
 from .schema import id_schema as _id
 from .schema import str_schema as _str
 from .schema import tool as _tool
@@ -50,7 +50,7 @@ class EvidenceToolsMixin(McpBase):
                     {"id": _id()},
                     ["id"],
                 ),
-                id_rows(
+                one_arg_rows(
                     self._need_store,
                     lambda store, criterion_id: services.list_evidence(store, criterion_id),
                 ),

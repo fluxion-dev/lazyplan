@@ -2,7 +2,16 @@
 
 from __future__ import annotations
 
-from ..core.entities import Criterion, CriterionEvidence, ForgeLink, Milestone, Plan, Task, VcsLink
+from ..core.entities import (
+    Criterion,
+    CriterionEvidence,
+    ForgeLink,
+    Milestone,
+    Plan,
+    PlanChange,
+    Task,
+    VcsLink,
+)
 from ..core.policies.evidence import summarize as evidence_summary
 from ..core.policies.provenance import gate_state
 from ..core.serialization import approval_payload, to_payload
@@ -179,7 +188,7 @@ class _FullReader:
             payload["issues"] = issue_refs
         return payload
 
-    def plan(self, plan: Plan, recent: list | None = None) -> dict:
+    def plan(self, plan: Plan, recent: list[PlanChange] | None = None) -> dict:
         payload = {
             "plan": to_payload(vars(plan)),
             "criteria": self._criteria("plan", plan.id),

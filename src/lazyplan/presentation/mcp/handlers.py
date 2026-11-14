@@ -33,20 +33,15 @@ def kind_id_rows(
     return handler
 
 
-def id_rows(store_of: StoreOf, read: Callable[[AppPort, int], Iterable[object]]) -> Handler:
-    """vars() of every row a single-id read returns."""
+def one_arg_rows(
+    store_of: StoreOf,
+    read: Callable[[AppPort, int], Iterable[object]],
+    key: str = "id",
+) -> Handler:
+    """vars() of every row a single-argument read returns."""
 
     def handler(args: dict) -> object:
-        return [vars(row) for row in read(store_of(), int(args["id"]))]
-
-    return handler
-
-
-def plan_rows(store_of: StoreOf, read: Callable[[AppPort, int], Iterable[object]]) -> Handler:
-    """vars() of every row a plan read returns."""
-
-    def handler(args: dict) -> object:
-        return [vars(row) for row in read(store_of(), int(args["plan"]))]
+        return [vars(row) for row in read(store_of(), int(args[key]))]
 
     return handler
 

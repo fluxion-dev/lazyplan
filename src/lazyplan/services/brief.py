@@ -39,20 +39,6 @@ def _doing(store: InsightsPort, task: Task) -> dict:
     return entry
 
 
-def _criteria(store: InsightsPort, plan: Plan, doing: list[Task]) -> list[dict]:
-    """Open plan criteria plus the doing tasks' criteria."""
-    out = [
-        {"kind": "plan", "id": plan.id, "text": item.text}
-        for item in store.open_criteria("plan", plan.id)
-    ]
-    for task in doing:
-        out.extend(
-            {"kind": "task", "id": task.id, "text": item.text}
-            for item in store.open_criteria("task", task.id)
-        )
-    return out
-
-
 def _loose_commits(
     store: InsightsPort,
     plan: Plan,
@@ -93,7 +79,7 @@ def _plan_brief(
         "status": plan.status.value,
         "doing": [_doing(store, task) for task in doing],
         "next": ({"id": next_task.id, "title": next_task.title} if next_task is not None else None),
-        "criteria": _criteria(store, plan, doing)[:_MAX_GAPS],
+        "criteria": active.open_criteria_rows(store, plan, doing)[:_MAX_GAPS],
         "unlinked": [
             {"sha": commit.sha, "subject": commit.subject, "timestamp": commit.timestamp}
             for commit in loose[:_MAX_LOOSE]

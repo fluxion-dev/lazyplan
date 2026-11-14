@@ -322,7 +322,7 @@ python3 tools/ia_inventory.py --check
 | `d` | `src/lazyplan/presentation/tui/app.py:92` → `delete`; `src/lazyplan/presentation/tui/screens/hub.py:53` → `delete` |
 | `e` | `src/lazyplan/presentation/tui/app.py:89` → `edit_selection`; `src/lazyplan/presentation/tui/screens/hub_coordination.py:294` → `edit_row`; `src/lazyplan/presentation/tui/screens/hub_kinds.py:30` → `edit_row` |
 | `escape` | `src/lazyplan/presentation/tui/app.py:85` → `clear_filter`; `src/lazyplan/presentation/tui/screens/base.py:47` → `cancel`; `src/lazyplan/presentation/tui/screens/export.py:43` → `cancel`; `src/lazyplan/presentation/tui/screens/hub.py:51` → `back`; `src/lazyplan/presentation/tui/screens/maintenance.py:41` → `back`; `src/lazyplan/presentation/tui/screens/plan_diff.py:27` → `back`; `src/lazyplan/presentation/tui/screens/source.py:73` → `back`; `src/lazyplan/presentation/tui/screens/update.py:39` → `cancel` |
-| `f` | `src/lazyplan/presentation/tui/screens/hub_provenance.py:200` → `filter_actor`; `src/lazyplan/presentation/tui/screens/source.py:79` → `toggle_fold` |
+| `f` | `src/lazyplan/presentation/tui/screens/hub_provenance.py:188` → `filter_actor`; `src/lazyplan/presentation/tui/screens/source.py:79` → `toggle_fold` |
 | `g` | `src/lazyplan/presentation/tui/app.py:93` → `source_trail`; `src/lazyplan/presentation/tui/screens/hub.py:59` → `source_hub` |
 | `n` | `src/lazyplan/presentation/tui/app.py:88` → `new_context`; `src/lazyplan/presentation/tui/screens/hub.py:55` → `note`; `src/lazyplan/presentation/tui/screens/source.py:75` → `next_file` |
 | `o` | `src/lazyplan/presentation/tui/screens/hub.py:58` → `open_value`; `src/lazyplan/presentation/tui/screens/source.py:82` → `open` |

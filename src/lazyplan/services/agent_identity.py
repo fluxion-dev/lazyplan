@@ -169,7 +169,7 @@ def git_facts(cwd: str | Path | None = None) -> GitFacts:
     )
 
 
-def _same_path(store: AppPort, left: str, right: str) -> bool:
+def same_checkout(store: AppPort, left: str, right: str) -> bool:
     """True when two checkout paths name the same directory."""
     if not left or not right:
         return False
@@ -181,7 +181,7 @@ def _registered_plans(store: AppPort, worktree: str) -> list[int]:
     found: list[int] = []
     for plan in store.list_plans(archived="show"):
         if any(
-            _same_path(store, row.worktree_path, worktree)
+            same_checkout(store, row.worktree_path, worktree)
             for row in store.list_plan_worktrees(plan.id)
         ):
             found.append(plan.id)
@@ -198,8 +198,8 @@ def _claimed_task(store: AppPort, plan_id: int, worktree: str, repo: str) -> int
         and not bool(claim.get("expired"))
         and (
             not str(claim.get("worktree") or claim.get("repo_path") or "").strip()
-            or _same_path(store, str(claim.get("worktree") or ""), worktree)
-            or _same_path(store, str(claim.get("repo_path") or ""), repo)
+            or same_checkout(store, str(claim.get("worktree") or ""), worktree)
+            or same_checkout(store, str(claim.get("repo_path") or ""), repo)
         )
         and float(claim.get("expires_at") or 0) > now
     ]
@@ -221,7 +221,9 @@ def resolve_binding(
         if plan is None:
             raise KeyError(f"plan #{explicit_plan} not found")
         rows = store.list_plan_worktrees(explicit_plan)
-        match = next((row for row in rows if _same_path(store, row.worktree_path, worktree)), None)
+        match = next(
+            (row for row in rows if same_checkout(store, row.worktree_path, worktree)), None
+        )
         if match is None:
             expected = ", ".join(row.worktree_path for row in rows)
             reason = (

@@ -99,12 +99,16 @@ class Report:
     evidence_total: int = 0
     evidence_covered: int = 0
 
+    @staticmethod
+    def _ratio(part: int, total: int) -> float:
+        """Part over total, where an empty denominator is full."""
+
+        return 1.0 if total == 0 else part / total
+
     @property
     def coverage(self) -> float:
         """Linked commits over total commits; a window with no work scores 1."""
-        if self.commits_total == 0:
-            return 1.0
-        return self.commits_linked / self.commits_total
+        return self._ratio(self.commits_linked, self.commits_total)
 
     @property
     def median_lag_commits(self) -> float:
@@ -117,16 +121,12 @@ class Report:
     @property
     def trace_coverage(self) -> float:
         """Plan criteria with at least one proving task."""
-        if self.criteria_total == 0:
-            return 1.0
-        return self.criteria_linked / self.criteria_total
+        return self._ratio(self.criteria_linked, self.criteria_total)
 
     @property
     def evidence_coverage(self) -> float:
         """Criteria whose latest evidence row passes."""
-        if self.evidence_total == 0:
-            return 1.0
-        return self.evidence_covered / self.evidence_total
+        return self._ratio(self.evidence_covered, self.evidence_total)
 
     def to_dict(self) -> dict:
         """JSON-safe report for agents and scripts."""

@@ -7,7 +7,7 @@ from typing import Any
 from lazyplan import services
 
 from .base import McpBase
-from .handlers import kind_id_rows, plan_rows
+from .handlers import kind_id_rows, one_arg_rows
 from .schema import id_schema as _id
 from .schema import kind_schema as _kind
 from .schema import str_schema as _str
@@ -181,9 +181,10 @@ class CollaborationToolsMixin(McpBase):
                     {"plan": _id()},
                     ["plan"],
                 ),
-                plan_rows(
+                one_arg_rows(
                     self._need_store,
                     lambda store, plan_id: services.list_refs(store, plan_id),
+                    key="plan",
                 ),
             ),
             (

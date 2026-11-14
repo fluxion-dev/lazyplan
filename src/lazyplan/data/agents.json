@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "scout": {"tier": "fast", "model": "", "effort": ""},
+    "implementer": {"tier": "fast", "model": "", "effort": ""},
+    "qa": {"tier": "standard", "model": "", "effort": ""},
+    "refactor": {"tier": "standard", "model": "", "effort": ""},
+    "docs": {"tier": "fast", "model": "", "effort": ""},
+    "reviewer": {"tier": "deep", "model": "", "effort": ""},
+    "integrator": {"tier": "deep", "model": "", "effort": ""}
+  }
+}

@@ -17,8 +17,6 @@
   the unified renderer and its cache reset in the next slice.
 - sqlite3 API noise: row_factory.
 - `_status_keep_ids` is the bounded keep-set helper asserted directly by trim tests.
-- Active-plan selection: the module is introduced for the surfaces that adopt it
-  in the next slice; its traversal helpers are exercised by their own tests.
 - shlex API noise: whitespace and whitespace_split configure the lexer.
 """
 
@@ -206,8 +204,6 @@ show_root
 _.next_claimable_task
 # Policy helper exercised by the coordination policy tests.
 touchpoints_overlap
-# Active-plan traversal helper routed by the surfaces in the next slice.
-tasks_for
 # Provenance, activity, and edit hubs: Textual key actions and message handlers.
 _.action_open_trust_hubs
 _._highlight

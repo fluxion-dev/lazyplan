@@ -11,10 +11,9 @@ from typing import Any
 
 from ..core.entities import Plan, Task
 from ..core.policies.coordination import patterns_overlap
-from ..core.policies.maintenance import is_archived_row
 from ..core.ports.needs_me import NeedsMePort
 from ..core.serialization import approval_payload
-from . import stats
+from . import active, stats
 
 ATTENTION_LIMIT = 20
 PLAN_LIMIT = 25
@@ -31,33 +30,6 @@ _REASON_PRIORITY = {
     "done with open criteria": 4,
     "failing checks": 5,
 }
-
-
-def _plans(port: NeedsMePort, plan_id: int | None) -> list[Plan]:
-    if plan_id is None:
-        return port.list_plans(archived="hide")
-    plan = port.get_plan(plan_id)
-    if plan is None or is_archived_row(plan):
-        return []
-    return [plan]
-
-
-def _task_index(
-    port: NeedsMePort, plan_ids: set[int]
-) -> tuple[dict[int, int], dict[int, Task], dict[int, list[Task]]]:
-    """Task to plan/milestone maps and per-plan task lists from bulk reads."""
-    milestones = port.milestones_map()
-    tasks = port.tasks_map()
-    task_plan: dict[int, int] = {}
-    task_by_id: dict[int, Task] = {}
-    tasks_by_plan: dict[int, list[Task]] = {plan_id: [] for plan_id in plan_ids}
-    for plan_id in plan_ids:
-        for milestone in milestones.get(plan_id, []):
-            for task in tasks.get(milestone.id, []):
-                task_plan[task.id] = plan_id
-                task_by_id[task.id] = task
-                tasks_by_plan[plan_id].append(task)
-    return task_plan, task_by_id, tasks_by_plan
 
 
 def _attention_rows(
@@ -358,11 +330,11 @@ def build(
 ) -> dict[str, Any]:
     """Assemble the control-room payload from bulk reads."""
     stamp = time.time() if now is None else now
-    plans = _plans(port, plan_id)
+    plans = active.plan_list(port, plan_id)
     plan_ids = {int(plan.id) for plan in plans}
     plan_names = {int(plan.id): str(plan.name) for plan in plans}
 
-    task_plan, task_by_id, tasks_by_plan = _task_index(port, plan_ids)
+    task_plan, task_by_id, tasks_by_plan = active.task_index(port, plan_ids)
     claims_map = port.claims_map()
     expired_task_ids = _expired_ids(claims_map, task_plan, stamp)
     active_claims = _active_claims(port, plan_id, plan_ids, stamp)

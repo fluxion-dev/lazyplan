@@ -9,7 +9,7 @@ from ..core.entities import Criterion, Plan, Task
 from ..core.policies.evidence import proof_state
 from ..core.policies.review import render
 from ..core.ports.insights import InsightsPort
-from . import audit, lint, ready
+from . import active, audit, lint, ready
 
 
 @dataclass(frozen=True)
@@ -23,12 +23,7 @@ class ReviewPacket:
 
 def active_plan(store: InsightsPort) -> Plan | None:
     """First doing plan, else the first todo plan."""
-    plans = store.list_plans()
-    doing = [plan for plan in plans if plan.status.value == "doing"]
-    if doing:
-        return doing[0]
-    todo = [plan for plan in plans if plan.status.value == "todo"]
-    return todo[0] if todo else None
+    return active.selected_plan(store)
 
 
 def _criterion(store: InsightsPort, criterion: Criterion, tasks: list[Task]) -> dict:

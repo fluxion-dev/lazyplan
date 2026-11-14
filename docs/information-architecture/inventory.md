@@ -59,7 +59,7 @@ python3 tools/ia_inventory.py --check
 | `maint` | --json, --porcelain, --version, --actor, --heal, --no-heal |
 | `mcp` | --json, --porcelain, --version, --actor, --heal, --no-heal, --read-only |
 | `milestone` | --json, --porcelain, --version, --actor, --heal, --no-heal |
-| `next` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --ttl, --note, --suggest, --force, --reason |
+| `next` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --ttl, --note, --lane, --suggest, --force, --reason |
 | `note` | --json, --porcelain, --version, --actor, --heal, --no-heal, --kind, --id, --text, --limit |
 | `notes` | --json, --porcelain, --version, --actor, --heal, --no-heal, --all, --since |
 | `plan` | --json, --porcelain, --version, --actor, --heal, --no-heal |

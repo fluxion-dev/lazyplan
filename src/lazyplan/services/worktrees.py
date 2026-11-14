@@ -31,10 +31,20 @@ def _refuse(
     return WorktreeVerification(False, reason=reason, branch=branch, head=head, dirty=dirty)
 
 
+def lane_registrations(
+    store: PlanningPort, plan_id: int, milestone_id: int | None = None
+) -> list[PlanWorktree]:
+    """Registered checkouts for one plan, optionally one lane."""
+    rows = store.list_plan_worktrees(plan_id)
+    if milestone_id is None:
+        return rows
+    return [row for row in rows if row.milestone_id == milestone_id]
+
+
 def lane_worktree_entries(store: ReposPort, plan: Plan, milestone: Milestone) -> list[dict]:
     """Derived, registered, and command-ready checkouts for one lane."""
     repos = store.list_repos("plan", plan.id)
-    all_rows = store.list_plan_worktrees(plan.id)
+    all_rows = lane_registrations(store, plan.id)
     rows = [row for row in all_rows if row.milestone_id == milestone.id]
     if not rows and plan.dispatch_mode != "parallel":
         rows = [row for row in all_rows if row.milestone_id is None]
@@ -105,7 +115,7 @@ def worktree_gate(store: ReposPort, plan_id: int) -> str:
         )
     registered_paths = {
         os.path.normcase(os.path.abspath(row.repo_path))
-        for row in store.list_plan_worktrees(plan_id)
+        for row in lane_registrations(store, plan_id)
     }
     missing = [
         str(row["repo_path"])
@@ -118,7 +128,7 @@ def worktree_gate(store: ReposPort, plan_id: int) -> str:
             f" run `lpui plan worktree --print --id {plan_id}`"
         )
     if plan.dispatch_mode == "parallel":
-        lanes = {row.milestone_id for row in store.list_plan_worktrees(plan_id)}
+        lanes = {row.milestone_id for row in lane_registrations(store, plan_id)}
         missing_lanes = [
             milestone.id
             for milestone in store.list_milestones(plan_id)
@@ -147,7 +157,7 @@ def lane_gate(store: PlanningPort, task_id: int, checkout: str) -> str:
     plan = store.get_plan(milestone.plan_id)
     if plan is None or not plan.worktree_required or plan.dispatch_mode != "parallel":
         return ""
-    rows = store.list_plan_worktrees(plan.id)
+    rows = lane_registrations(store, plan.id)
     lane_rows = [row for row in rows if row.milestone_id == milestone.id]
     if not lane_rows:
         return (

@@ -16,6 +16,7 @@ from ..core.entities import Milestone, Plan, Status, Task
 from ..core.ports.app import AppPort
 from ..core.ports.planning import PlanningPort
 from . import coordination
+from .worktrees import lane_registrations
 
 LOCAL_PARTS = (".agents", "lazyplan")
 
@@ -74,7 +75,7 @@ def lane_for_checkout(
     for plan in store.list_plans():
         if plan.status != Status.DOING:
             continue
-        for row in store.list_plan_worktrees(plan.id):
+        for row in lane_registrations(store, plan.id):
             if row.milestone_id is None:
                 continue
             if not _same_checkout(row.worktree_path, repo, store):
@@ -128,7 +129,7 @@ def _lane_task(store: AppPort, plan: Plan, repo: str) -> Task | None:
         return _doing_task(store, plan.id)
     lanes = {
         row.milestone_id
-        for row in store.list_plan_worktrees(plan.id)
+        for row in lane_registrations(store, plan.id)
         if _same_checkout(row.worktree_path, repo, store)
     }
     for milestone in store.list_milestones(plan.id):

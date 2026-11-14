@@ -7,6 +7,7 @@ import tempfile
 import unittest
 
 from lazyplan import services
+from lazyplan.services import planning
 from lazyplan.store import Store
 
 
@@ -53,7 +54,7 @@ class PlanActivityTest(unittest.TestCase):
         self.store.log("a", "task", "status", f"T#{self.task_id} -> doing")
         self.store.log("a", "milestone", "edit", f"milestone #{self.milestone_id} title")
         self.store.log("a", "criteria", "check", f"criteria #{self.criterion_id}")
-        expected = services._plan_activity(
+        expected = planning._plan_activity(
             self.store.milestones_map(),
             self.store.tasks_map(),
             self.store.criteria_map(),

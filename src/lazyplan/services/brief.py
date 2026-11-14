@@ -11,36 +11,14 @@ from pathlib import Path
 from lazyplan.services import audit
 
 from ..core.entities import Plan, Status, Task
-from ..core.policies.maintenance import is_archived_row
 from ..core.ports.insights import InsightsPort
 from ..core.serialization import approval_payload
+from . import active
 from .agents import previous_agent
 
-_MAX_PLANS = 3
 _MAX_LOOSE = 5
 _MAX_GAPS = 5
 _MAX_PLAN_NOTES = 5
-
-
-def _active_plans(store: InsightsPort, plan_id: int | None) -> list[Plan]:
-    if plan_id is not None:
-        plan = store.get_plan(plan_id)
-        if plan is None or is_archived_row(plan):
-            return []
-        return [plan]
-    plans = store.list_plans(archived="hide")
-    doing = [plan for plan in plans if plan.status == Status.DOING]
-    if doing:
-        return doing[:_MAX_PLANS]
-    todo = [plan for plan in plans if plan.status == Status.TODO]
-    return todo[:1]
-
-
-def _tasks(store: InsightsPort, plan: Plan) -> list[Task]:
-    out: list[Task] = []
-    for milestone in store.list_milestones(plan.id):
-        out.extend(store.list_tasks(milestone.id))
-    return out
 
 
 def _doing(store: InsightsPort, task: Task) -> dict:
@@ -103,7 +81,7 @@ def _plan_brief(
     commits: list[audit.Commit] | None,
     cwd: str | Path,
 ) -> dict:
-    tasks = _tasks(store, plan)
+    tasks = active.tasks_for(store, plan)
     doing = [task for task in tasks if task.status == Status.DOING]
     next_task = next(
         (task for task in tasks if task.status == Status.TODO and not task.blocked), None
@@ -140,7 +118,7 @@ def build(
     cwd: str | Path = ".",
 ) -> dict:
     """Assemble the brief payload from existing rows and commits."""
-    plans = _active_plans(store, plan_id)
+    plans = active.active_plans(store, plan_id)
     return {
         "plans": [_plan_brief(store, plan, commits, cwd) for plan in plans],
         "active": len(plans),

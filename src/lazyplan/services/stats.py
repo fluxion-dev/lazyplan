@@ -13,6 +13,7 @@ import time
 from ..core.entities import Claim, Status, Task
 from ..core.policies.planning import rollup_target
 from ..core.ports.insights import InsightsPort
+from . import active
 
 _ADDED = re.compile(r"^T#(\d+) ")
 _STATUS = re.compile(r"^task #(\d+) -> (todo|doing|done)$")
@@ -21,18 +22,6 @@ _STATUS = re.compile(r"^task #(\d+) -> (todo|doing|done)$")
 def _events(store: InsightsPort) -> list[dict]:
     """All events oldest first."""
     return list(reversed(store.feed(limit=1_000_000)))
-
-
-def _all_tasks(store: InsightsPort) -> list[Task]:
-    """Every task under a live plan, in creation order."""
-    milestones = store.milestones_map()
-    tasks = store.tasks_map()
-    return [
-        task
-        for plan in store.list_plans(archived="hide")
-        for milestone in milestones.get(plan.id, ())
-        for task in tasks.get(milestone.id, ())
-    ]
 
 
 def _event_maps(
@@ -147,7 +136,7 @@ def attention_reasons(
 ) -> dict[int, list[str]]:
     """Task ids the TUI should surface as needing attention, with reasons."""
     stamp = time.time() if now is None else now
-    task_rows = tasks if tasks is not None else _all_tasks(store)
+    task_rows = tasks if tasks is not None else active.all_tasks(store)
     _added, transitions = _event_maps(_events(store), {task.id for task in task_rows})
     claims = claims if claims is not None else store.claims_map()
     forge = forge if forge is not None else store.forge_links_map()
@@ -181,7 +170,7 @@ def drift_summary(store: InsightsPort, now: float | None = None) -> dict[str, li
     milestones_by_plan = store.milestones_map()
     tasks_by_milestone = store.tasks_map()
     parent: list[dict] = []
-    for plan in store.list_plans(archived="hide"):
+    for plan in active.live_plans(store):
         for milestone in milestones_by_plan.get(plan.id, []):
             kids = [task.status for task in tasks_by_milestone.get(milestone.id, [])]
             if kids:
@@ -195,7 +184,9 @@ def drift_summary(store: InsightsPort, now: float | None = None) -> dict[str, li
                 parent.append({"kind": "plan", "id": plan.id, "to": target.value})
     open_ids = store.open_task_criteria_ids()
     open_criteria = [
-        task.id for task in _all_tasks(store) if task.status == Status.DONE and task.id in open_ids
+        task.id
+        for task in active.all_tasks(store)
+        if task.status == Status.DONE and task.id in open_ids
     ]
     expired = [task_id for task_id, claim in store.claims_map().items() if claim.expired(stamp)]
     return {
@@ -214,7 +205,7 @@ def compute(
 ) -> dict:
     """Compute current flow metrics plus actor-filtered completion metrics."""
     stamp = time.time() if now is None else now
-    tasks = _all_tasks(store)
+    tasks = active.all_tasks(store)
     added, transitions = _event_maps(_events(store), {task.id for task in tasks})
     wip, blocked, stale = _current_metrics(tasks, added, stale_before, stamp)
     aging: list[float] = []

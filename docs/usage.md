@@ -697,12 +697,28 @@ lpui plan worktree list --id 6 [--stale]
 lpui --actor NAME plan worktree remove --id 6 --repo /path/to/repo
 ```
 
+A parallel plan registers one worktree per lane with `--milestone`, and the
+lane's own branch is derived from the plan and lane titles:
+
+```bash
+lpui plan worktree print --id 6 --milestone 12
+lpui --actor NAME plan worktree add --id 6 --milestone 12 --repo /path/to/repo
+lpui plan worktree list --id 6 --milestone 12
+```
+
 The shared checkout cannot start, session-start, claim, or advance an isolated
-plan. `--force --reason` records an override. Closing a plan refuses a dirty or
-wrong-branch worktree and prints one `git worktree remove` command per
+plan, and a parallel plan refuses a claim or a doing move from another lane's
+checkout. `--force --reason` records an override. Closing a plan refuses a dirty
+or wrong-branch worktree and prints one `git worktree remove` command per
 registration. `doctor` and `plan worktree list --stale` report missing,
-unlisted, or drifted worktrees without deleting anything. Plans created before
-isolation stay grandfathered.
+unlisted, or drifted worktrees, including lanes with no registration, without
+deleting anything. Plans created before isolation stay grandfathered.
+
+`lpui dispatch --plan 6` is the read-only orchestration view: waves, lane
+state, capacity, the exact worktree commands, and a bounded prompt for each
+ready task. Add `--lane 12` for one lane, `--max-chars N` for the prompt
+budget, and `--json` or `--porcelain` for agents. It never creates a worktree,
+starts an agent, or writes a feed event.
 
 ### Claims and touch-points
 

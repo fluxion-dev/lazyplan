@@ -170,7 +170,7 @@ def drift_summary(store: InsightsPort, now: float | None = None) -> dict[str, li
     milestones_by_plan = store.milestones_map()
     tasks_by_milestone = store.tasks_map()
     parent: list[dict] = []
-    for plan in store.list_plans(archived="hide"):
+    for plan in active.live_plans(store):
         for milestone in milestones_by_plan.get(plan.id, []):
             kids = [task.status for task in tasks_by_milestone.get(milestone.id, [])]
             if kids:

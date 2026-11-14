@@ -1576,7 +1576,7 @@
   "counts": {
     "cli_commands": 51,
     "doc_files": 9,
-    "doc_headings": 94,
+    "doc_headings": 95,
     "env_names": 11,
     "file_paths": 12,
     "hook_events": 35,
@@ -1715,6 +1715,7 @@
           "Plan documents and recipes",
           "Trust and coordination",
           "Plan worktrees",
+          "Orchestration and dispatch",
           "During execution",
           "Read first",
           "Templates",

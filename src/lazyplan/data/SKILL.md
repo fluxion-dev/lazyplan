@@ -300,6 +300,29 @@ override. A done move refuses a dirty worktree and prints removal commands;
 `doctor` and `--stale` report drift without deleting. Plans created before the
 flag stay grandfathered.
 
+## Orchestration and dispatch
+
+A milestone is a lane. A plan declares `dispatch_mode` and `max_agents`;
+milestones declare `lane_group` (wave) and `agent_role`; tasks declare `role`.
+Waves run in group order, lanes in one wave run in parallel up to the cap, and
+tasks run serially inside a lane. A parallel plan needs an integrator lane in a
+later wave.
+
+`lpui dispatch --plan P` is read-only: it returns waves, lane state, capacity,
+the exact worktree commands, and a bounded prompt per dispatchable task. Run
+the printed git commands, register each lane with `plan worktree add
+--milestone S`, then start one worker per ready task with its role profile. A
+high-reasoning orchestrator plans and reviews; cheap workers implement.
+
+One lane holds one doing task. `next --lane S` limits selection; a second claim
+is refused unless forced with a reason. Session start names the lane, wave,
+role, and worktree; session end records a handoff note and releases that
+checkout's claims. `lpui lint --plan P` rejects parallel plans without a lane
+cap, an integrator, QA coverage, or disjoint same-wave touch-points.
+
+The `lazyplan-orchestrate` skill carries the full loop: dispatch, worktrees,
+role handoffs, integration, and closeout.
+
 ## During execution
 
 Update the journal as you go, not at the end:
@@ -372,6 +395,7 @@ lpui --porcelain context --max-chars 4000
 lpui --porcelain brief
 lpui --porcelain audit --since 7.days
 lpui --porcelain plan show --id N
+lpui --porcelain dispatch --plan N [--lane M] [--max-chars 4000]
 lpui --porcelain trace --plan N
 lpui --porcelain lint --plan N
 lpui --porcelain stats --since 7.days

@@ -757,6 +757,15 @@ or blocked releases the claim. Moving a task another actor holds to doing is
 refused; `claim --force` takes it over. Releasing a claim, or letting its
 30-minute lease expire, puts a doing task back to todo.
 
+In a parallel plan one lane holds one doing task: a second claim or doing move
+in the same lane is refused with the holder named, and
+`claim --force --reason TEXT` records the override. `next --lane 12` limits the
+pick to one lane. Session start names the lane, wave, role, and worktree, and a
+commit from a lane with no claimed task is blocked with the exact
+`next --plan P --lane M` command. Session end records one lane handoff note per
+claimed task with open work, then releases that checkout's claims; renewal
+stays throttled to once every five minutes.
+
 Every agent hook event renews the claims held in that session's checkout, at
 most once every five minutes and without a feed entry, and the session-end hook
 releases them. The lease only matters when an agent crashes. Handoffs are

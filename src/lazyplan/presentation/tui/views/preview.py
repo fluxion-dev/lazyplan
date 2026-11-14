@@ -146,11 +146,20 @@ def _meta_line(
         parts = [f"P{oid}", f"{_done(tasks)}/{len(tasks)} tasks"]
         if criteria:
             parts.append(f"{_done(criteria)}/{len(criteria)} criteria")
+        parts.append(f"{obj.get('dispatch_mode', 'serial')} · max {obj.get('max_agents', 1)}")
     elif kind == "milestone":
         tasks = [entry.get("task", {}) for entry in full.get("tasks", [])]
-        parts = [f"M{oid}", f"P{obj.get('plan_id')}", f"{_done(tasks)}/{len(tasks)} tasks"]
+        parts = [
+            f"M{oid}",
+            f"P{obj.get('plan_id')}",
+            f"{_done(tasks)}/{len(tasks)} tasks",
+            f"w{obj.get('lane_group', 1)} · {obj.get('agent_role', 'implementer')}",
+        ]
     else:
         parts = [f"T{oid}", f"M{obj.get('milestone_id')}", str(obj.get("status", ""))]
+        role = str(obj.get("role", "") or "")
+        if role and role != "implementer":
+            parts.append(role)
         if obj.get("blocked"):
             parts.append("blocked")
         claim = obj.get("claim") or {}
@@ -179,7 +188,8 @@ def milestones_block(milestones: list[dict[str, Any]]) -> PreviewBlock | None:
             "M",
             entry.get("milestone", {}).get("id"),
             entry.get("milestone", {}).get("title", ""),
-            _task_states(entry.get("tasks", [])),
+            f"{_task_states(entry.get('tasks', []))} · w{entry.get('milestone', {}).get('lane_group', 1)}"
+            f" {entry.get('milestone', {}).get('agent_role', 'implementer')}",
         )
         for entry in milestones
     ]

@@ -5,6 +5,14 @@ from __future__ import annotations
 import argparse
 
 from ....core.entities import Status
+from ....core.policies.lanes import (
+    AGENT_ROLES,
+    DEFAULT_AGENT_ROLE,
+    DEFAULT_DISPATCH_MODE,
+    DEFAULT_LANE_GROUP,
+    DEFAULT_MAX_AGENTS,
+    DISPATCH_MODES,
+)
 from .common import plan_id_arg, row_target_args
 from .registry_groups import group_blurb
 
@@ -108,6 +116,44 @@ def add_noun_groups(
             help="why this scope changed (recorded after an approval)",
         )
 
+    def _plan_lane_flags(parser: argparse.ArgumentParser, *, edit: bool) -> None:
+        parser.add_argument(
+            "--dispatch",
+            choices=DISPATCH_MODES,
+            default=None if edit else DEFAULT_DISPATCH_MODE,
+            help="serial or parallel lane dispatch",
+        )
+        parser.add_argument(
+            "--max-agents",
+            type=int,
+            default=None if edit else DEFAULT_MAX_AGENTS,
+            metavar="N",
+            help="cap concurrent lanes",
+        )
+
+    def _milestone_lane_flags(parser: argparse.ArgumentParser, *, edit: bool) -> None:
+        parser.add_argument(
+            "--lane-group",
+            type=int,
+            default=None if edit else DEFAULT_LANE_GROUP,
+            metavar="N",
+            help="wave number; lower waves run first",
+        )
+        parser.add_argument(
+            "--agent-role",
+            choices=AGENT_ROLES,
+            default=None if edit else DEFAULT_AGENT_ROLE,
+            help="profile that owns this lane",
+        )
+
+    def _task_role_flag(parser: argparse.ArgumentParser, *, edit: bool) -> None:
+        parser.add_argument(
+            "--role",
+            choices=AGENT_ROLES,
+            default=None if edit else DEFAULT_AGENT_ROLE,
+            help="profile that runs this slice",
+        )
+
     def _plan_list_flags(parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "--status",
@@ -138,6 +184,7 @@ def add_noun_groups(
     _a.add_argument("--desc", default=None, metavar="TEXT", help="same as --what")
     _a.add_argument("--why", default="", metavar="TEXT", help="why this plan exists")
     _a.add_argument("--goal", default=None, metavar="TEXT", help="same as --why")
+    _plan_lane_flags(_a, edit=False)
     _a = _actions.add_parser("edit", help="change a plan", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="plan id")
     _title_flags(_a)
@@ -145,6 +192,7 @@ def add_noun_groups(
     _a.add_argument("--desc", default=None, metavar="TEXT", help="same as --what")
     _a.add_argument("--why", default=None, metavar="TEXT", help="the new why")
     _a.add_argument("--goal", default=None, metavar="TEXT", help="same as --why")
+    _plan_lane_flags(_a, edit=True)
     _reason_flag(_a)
     _a = _actions.add_parser("show", help="show one plan", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="plan id")
@@ -252,11 +300,13 @@ def add_noun_groups(
     plan_id_arg(_a, help="owning plan id", required=True)
     _title_flags(_a, required=True)
     _a.add_argument("--desc", default="", metavar="TEXT", help="details")
+    _milestone_lane_flags(_a, edit=False)
     _reason_flag(_a)
     _a = _actions.add_parser("edit", help="change a milestone", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="milestone id")
     _title_flags(_a)
     _a.add_argument("--desc", default=None, metavar="TEXT", help="the new details")
+    _milestone_lane_flags(_a, edit=True)
     _reason_flag(_a)
     _a = _actions.add_parser("show", help="show one milestone", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="milestone id")
@@ -278,6 +328,7 @@ def add_noun_groups(
     )
     _title_flags(_a, required=True)
     _a.add_argument("--desc", default="", metavar="TEXT", help="details")
+    _task_role_flag(_a, edit=False)
     _a.add_argument(
         "--touch",
         action="append",
@@ -290,6 +341,7 @@ def add_noun_groups(
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="task id")
     _title_flags(_a)
     _a.add_argument("--desc", default=None, metavar="TEXT", help="the new details")
+    _task_role_flag(_a, edit=True)
     _reason_flag(_a)
     _a = _actions.add_parser("show", help="show one task", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="task id")

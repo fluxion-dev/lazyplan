@@ -216,8 +216,10 @@ class TestDesignSystem(unittest.TestCase):
         with redirect_stdout(buf):
             self.assertEqual(lpui_main(["--db", self.db, "list", "--tree"]), 0)
         lines = buf.getvalue().splitlines()
-        self.assertEqual(lines[0], design.plan_label(p, self.store))
-        self.assertEqual(lines[1], "  " + design.milestone_label(s, self.store))
+        self.assertEqual(lines[0], design.plan_label(p, self.store) + " · serial")
+        self.assertEqual(
+            lines[1], "  " + design.milestone_label(s, self.store) + " · w1 · implementer"
+        )
         self.assertEqual(lines[2], "    " + design.task_label(t, self.store))
 
     def test_help_single_source(self):

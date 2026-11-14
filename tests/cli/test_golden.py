@@ -43,7 +43,11 @@ class TestGoldenOutputs(unittest.TestCase):
     def test_tree_lines(self):
         self.assertEqual(
             render.tree_lines(self.store, None, None),
-            ["◐ P1 Website", "  ◐ M1 Homepage", "    ◐ T1 Design hero @human"],
+            [
+                "◐ P1 Website · serial",
+                "  ◐ M1 Homepage · w1 · implementer",
+                "    ◐ T1 Design hero @human",
+            ],
         )
 
     def test_render_full_plan(self):
@@ -54,11 +58,12 @@ class TestGoldenOutputs(unittest.TestCase):
             "◐ P1 Website\n"
             "why: Convert\n"
             "\nwhat: Marketing site\n"
+            "\nlanes: serial · max 1\n"
             "\nacceptance:\n"
             "  [ ] Loads fast\n"
             "\nworktrees (isolation required):\n"
             "  none registered\n"
-            "\n  ◐ M1 Homepage",
+            "\n  ◐ M1 Homepage · wave 1 · implementer",
         )
 
     def test_render_full_milestone(self):
@@ -66,8 +71,8 @@ class TestGoldenOutputs(unittest.TestCase):
         assert full is not None
         self.assertEqual(
             render.render_full("milestone", full),
-            "◐ M1 Homepage (P1)\n\ndetails: Hero work\n\n  ◐ T1 Design hero\n"
-            f"  claim: @human until {CLAIM_UNTIL}",
+            f"◐ M1 Homepage (P1) · wave 1 · implementer\n\ndetails: Hero work\n"
+            f"\n  ◐ T1 Design hero\n  claim: @human until {CLAIM_UNTIL}",
         )
 
     def test_render_markdown(self):

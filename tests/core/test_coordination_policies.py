@@ -11,7 +11,6 @@ from lazyplan.core.policies.coordination import (
     normalize_touchpoint,
     parse_ttl,
     patterns_overlap,
-    touchpoints_overlap,
     validate_block,
 )
 
@@ -69,8 +68,6 @@ class TestTouchpoints(unittest.TestCase):
         self.assertTrue(patterns_overlap("src/store", "src/store/base.py"))
         self.assertFalse(patterns_overlap("src/store", "src/tui"))
         self.assertTrue(patterns_overlap("src/*.py", "src/store/base.py"))
-        self.assertTrue(touchpoints_overlap(["src/store"], ["src/store/base.py"]))
-        self.assertFalse(touchpoints_overlap(["src/store"], ["tests"]))
 
 
 if __name__ == "__main__":

@@ -71,9 +71,3 @@ def highlight_line(path: str, text: str) -> tuple[HighlightSpan, ...]:
         else:
             spans.pop()
     return tuple(spans) or (("text", text),)
-
-
-def clear_highlight_cache() -> None:
-    """Drop cached lexers and lines (tests and explicit refresh)."""
-    _lexer.cache_clear()
-    highlight_line.cache_clear()

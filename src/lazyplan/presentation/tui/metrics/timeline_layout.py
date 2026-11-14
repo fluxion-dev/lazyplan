@@ -100,13 +100,6 @@ def _clip_segments(
     return segments
 
 
-def active_segments(
-    lane: TimelineLane, left: float, right: float, min_visible: float
-) -> list[tuple[float, float]]:
-    """Visible trace segments for one lane's doing intervals."""
-    return _clip_segments(lane.active, left, right, min_visible)
-
-
 def trace_points(start: float, end: float, left: float, right: float, width: int) -> list[float]:
     """Evenly spaced x points so a heavy marker draws a continuous trace."""
     span = max(right - left, 1e-9)

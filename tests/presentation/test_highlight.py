@@ -5,20 +5,16 @@ from __future__ import annotations
 import unittest
 
 try:
-    from lazyplan.presentation.tui.views.highlight import (
-        clear_highlight_cache,
-        highlight_line,
-    )
+    from lazyplan.presentation.tui.views.highlight import highlight_line
 except ImportError:  # pragma: no cover - stdlib-only interpreter
     highlight_line = None  # type: ignore[assignment]
-    clear_highlight_cache = None  # type: ignore[assignment]
 
 
 @unittest.skipUnless(highlight_line is not None, "pygments not installed")
 class HighlightLineTest(unittest.TestCase):
     def setUp(self) -> None:
-        assert clear_highlight_cache is not None
-        clear_highlight_cache()
+        assert highlight_line is not None
+        highlight_line.cache_clear()
 
     def test_python_keyword_and_function(self) -> None:
         spans = highlight_line("app/source.py", "def trail(repo):")

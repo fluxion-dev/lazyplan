@@ -236,11 +236,6 @@ class DiffPage:
     total: int = 0
     has_more: bool = False
 
-    @property
-    def next_offset(self) -> int:
-        """Offset for the next page, or the current offset at the end."""
-        return self.offset + len(self.files)
-
 
 def read_diff_page(
     repo: str,

@@ -427,12 +427,3 @@ class AgentsMixin(StoreBase):
         if changed:
             self.log(actor, "agent", "restore", f"agent A{agent_id} restored", now=stamp)
         return changed
-
-    def agent_counts(self) -> dict[str, int]:
-        """Open agents by status, for the tracker subtitle."""
-        with self._connect() as conn:
-            rows = conn.execute(
-                "SELECT status, COUNT(*) AS n FROM agents WHERE ended_at=0"
-                " GROUP BY status ORDER BY status"
-            ).fetchall()
-        return {str(row["status"]): int(row["n"]) for row in rows}

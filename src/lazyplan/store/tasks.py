@@ -77,13 +77,12 @@ class TasksMixin(StoreBase):
 
     def tasks_map(self) -> dict[int, list[Task]]:
         """Every task grouped by milestone id, in creation order."""
-        with self._connect() as conn:
-            rows = conn.execute("SELECT * FROM tasks ORDER BY id").fetchall()
-        out: dict[int, list[Task]] = {}
-        for row in rows:
-            task = self._row_to_task(row)
-            out.setdefault(task.milestone_id, []).append(task)
-        return out
+        return self._grouped(
+            "SELECT * FROM tasks ORDER BY id",
+            (),
+            self._row_to_task,
+            lambda task: task.milestone_id,
+        )
 
     def update_task(
         self,

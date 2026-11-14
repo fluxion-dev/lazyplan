@@ -154,12 +154,9 @@ class EvidenceMixin(StoreBase):
 
     def evidence_map(self) -> dict[int, list[CriterionEvidence]]:
         """Every evidence row grouped by criterion id, in id order."""
-        with self._connect() as conn:
-            rows = conn.execute(
-                "SELECT * FROM criterion_evidence ORDER BY criterion_id, id"
-            ).fetchall()
-        out: dict[int, list[CriterionEvidence]] = {}
-        for row in rows:
-            item = self._row_to_evidence(row)
-            out.setdefault(item.criterion_id, []).append(item)
-        return out
+        return self._grouped(
+            "SELECT * FROM criterion_evidence ORDER BY criterion_id, id",
+            (),
+            self._row_to_evidence,
+            lambda item: item.criterion_id,
+        )

@@ -146,9 +146,12 @@ class PlansMixin(StoreBase):
 
     def plan_uids_map(self) -> dict[int, str]:
         """Stable plan uid keyed by plan id, in one query."""
-        with self._connect() as conn:
-            rows = conn.execute("SELECT id, uid FROM plans ORDER BY id").fetchall()
-        return {int(row["id"]): str(row["uid"] or "") for row in rows}
+        return self._indexed(
+            "SELECT id, uid FROM plans ORDER BY id",
+            (),
+            lambda row: str(row["uid"] or ""),
+            lambda row: int(row["id"]),
+        )
 
     def update_plan(
         self,
@@ -240,13 +243,12 @@ class PlansMixin(StoreBase):
 
     def milestones_map(self) -> dict[int, list[Milestone]]:
         """Every milestone grouped by plan id, in creation order."""
-        with self._connect() as conn:
-            rows = conn.execute("SELECT * FROM milestones ORDER BY id").fetchall()
-        out: dict[int, list[Milestone]] = {}
-        for row in rows:
-            milestone = self._row_to_milestone(row)
-            out.setdefault(milestone.plan_id, []).append(milestone)
-        return out
+        return self._grouped(
+            "SELECT * FROM milestones ORDER BY id",
+            (),
+            self._row_to_milestone,
+            lambda milestone: milestone.plan_id,
+        )
 
     def update_milestone(
         self,

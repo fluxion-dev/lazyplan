@@ -6,9 +6,10 @@ import json
 import sqlite3
 import threading
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from pathlib import Path
+from typing import TypeVar
 
 from lazyplan.infrastructure.checkout import PathAdapter
 from lazyplan.infrastructure.repo import (
@@ -57,6 +58,10 @@ def _actor(explicit: str = "") -> str:
     if explicit.strip():
         return explicit.strip()[:64]
     return default_actor()
+
+
+_K = TypeVar("_K")
+_V = TypeVar("_V")
 
 
 class StoreBase(StoreStubs):
@@ -123,6 +128,34 @@ class StoreBase(StoreStubs):
         finally:
             self._local.conn = None
             conn.close()
+
+    def _grouped(
+        self,
+        sql: str,
+        params: Sequence[object],
+        make: Callable[[sqlite3.Row], _V],
+        key: Callable[[_V], _K],
+    ) -> dict[_K, list[_V]]:
+        """Rows mapped by *make* and grouped under *key*, in read order."""
+        with self._connect() as conn:
+            rows = conn.execute(sql, params).fetchall()
+        out: dict[_K, list[_V]] = {}
+        for row in rows:
+            item = make(row)
+            out.setdefault(key(item), []).append(item)
+        return out
+
+    def _indexed(
+        self,
+        sql: str,
+        params: Sequence[object],
+        make: Callable[[sqlite3.Row], _V],
+        key: Callable[[sqlite3.Row], _K],
+    ) -> dict[_K, _V]:
+        """One value per key, for a read with at most one row per key."""
+        with self._connect() as conn:
+            rows = conn.execute(sql, params).fetchall()
+        return {key(row): make(row) for row in rows}
 
     def log(
         self,

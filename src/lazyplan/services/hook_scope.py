@@ -65,6 +65,25 @@ def _same_checkout(left: str, right: str, store: AppPort) -> bool:
     return store.normalize_repo_path(left) == store.normalize_repo_path(right)
 
 
+def lane_for_checkout(
+    store: AppPort, cwd: str | Path | None = None
+) -> tuple[Plan, Milestone] | None:
+    """The doing plan and lane registered at this checkout, if any."""
+    repo = store.checkout_path(str(cwd or Path.cwd()))
+    for plan in store.list_plans():
+        if plan.status != Status.DOING:
+            continue
+        for row in store.list_plan_worktrees(plan.id):
+            if row.milestone_id is None:
+                continue
+            if not _same_checkout(row.worktree_path, repo, store):
+                continue
+            milestone = store.get_milestone(row.milestone_id)
+            if milestone is not None:
+                return plan, milestone
+    return None
+
+
 def _isolated_plans(store: AppPort, repo: str, doing: list[Plan]) -> tuple[set[int], set[int]]:
     """Plans registered in another worktree, and plans registered here."""
     ignored: set[int] = set()

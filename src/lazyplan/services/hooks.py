@@ -22,7 +22,7 @@ from ..core.policies import hooks as hook_modes
 from ..core.ports.app import AppPort
 from ..core.ports.insights import InsightsPort
 from ..infrastructure.repo import shared_git_lookups
-from . import audit, context, coordination, hook_policy
+from . import audit, context, coordination, hook_policy, hook_scope
 
 EVENTS = hook_modes.EVENTS
 HOSTS = ("opencode", "claude", "gemini", "codex", "cursor")
@@ -175,12 +175,20 @@ def _file_path(payload: dict) -> str:
 
 
 def _agent_text(store: AppPort, cwd: Path, commits: list[audit.Commit] | None) -> str:
-    """Session-start packet: the active plan and this checkout's claims."""
+    """Session-start packet: the active plan, lane, and this checkout's claims."""
     del commits
     payload = context.build(store, max_chars=2000)
     if not payload.get("plans"):
         return ""
     text = "\n".join(context.lines(payload)).strip()
+    located = hook_scope.lane_for_checkout(store, cwd)
+    if located is not None:
+        plan, milestone = located
+        text += (
+            f"\nlane       M{milestone.id} {milestone.title} · wave {milestone.lane_group}"
+            f" · {milestone.agent_role} (P{plan.id})"
+            f"\nworktree   {store.checkout_path(str(cwd))}"
+        )
     held = coordination.checkout_claims(store, store.checkout_path(str(cwd)))
     if held:
         names = ", ".join(f"T{claim['task_id']} @{claim['actor']}" for claim in held)
@@ -201,12 +209,20 @@ def _compaction_text(store: AppPort, cwd: Path) -> str:
     )
 
 
-def _prompt_text(store: InsightsPort) -> str:
+def _prompt_text(store: InsightsPort, cwd: Path | None = None) -> str:
     """Small active-plan packet for every user prompt."""
     payload = context.build(store, max_chars=1200)
     if not payload.get("plans"):
         return ""
-    return "\n".join(context.lines(payload)).strip()[:1200]
+    text = "\n".join(context.lines(payload)).strip()
+    located = hook_scope.lane_for_checkout(store, cwd)
+    if located is not None:
+        _plan, milestone = located
+        text += (
+            f"\nlane M{milestone.id} {milestone.title} · w{milestone.lane_group}"
+            f" · {milestone.agent_role}"
+        )
+    return text[:1200]
 
 
 def build_result(
@@ -253,7 +269,7 @@ def _dispatch(
     if event == "stop":
         return hook_policy.stop_result(store, here, commits, payload, mode, who)
     if event == "prompt-submit":
-        return HookResult(_prompt_text(store), context=True).capped()
+        return HookResult(_prompt_text(store, here), context=True).capped()
     if event == "pre-tool":
         return hook_policy.commit_result(store, here, _command(payload), mode)
     if event == "post-tool":

@@ -24,16 +24,19 @@ def _worktree_row_findings(row: PlanWorktree) -> list[dict]:
     base = {
         "kind": "worktree",
         "plan_id": row.plan_id,
+        "milestone_id": row.milestone_id,
         "repo_path": row.repo_path,
         "worktree_path": row.worktree_path,
     }
     stale = stale_reason(row)
     if stale:
         state = "missing-path" if "does not exist" in stale else "unlisted"
-        return [{**base, "state": state, "detail": stale}]
+        lane = f"lane M{row.milestone_id} " if row.milestone_id else ""
+        return [{**base, "state": state, "detail": f"{lane}{stale}"}]
     check = verify_worktree(row.repo_path, row.worktree_path, row.branch)
     if not check.ok:
-        return [{**base, "state": "drift", "detail": check.reason}]
+        lane = f"lane M{row.milestone_id} " if row.milestone_id else ""
+        return [{**base, "state": "drift", "detail": f"{lane}{check.reason}"}]
     return []
 
 
@@ -49,12 +52,33 @@ def _worktree_findings(store: AppPort | None) -> list[dict]:
                 {
                     "kind": "worktree",
                     "plan_id": plan.id,
+                    "milestone_id": None,
                     "repo_path": "",
                     "worktree_path": "",
                     "state": "unregistered",
                     "detail": f"plan #{plan.id} is doing without a registered worktree",
                 }
             )
+        elif (
+            plan.worktree_required
+            and plan.status == Status.DOING
+            and plan.dispatch_mode == "parallel"
+        ):
+            lanes = {row.milestone_id for row in rows}
+            for milestone in store.list_milestones(plan.id):
+                if milestone.id in lanes:
+                    continue
+                findings.append(
+                    {
+                        "kind": "worktree",
+                        "plan_id": plan.id,
+                        "milestone_id": milestone.id,
+                        "repo_path": "",
+                        "worktree_path": "",
+                        "state": "unregistered-lane",
+                        "detail": f"lane M{milestone.id} has no registered worktree",
+                    }
+                )
         for row in rows:
             findings.extend(_worktree_row_findings(row))
     return findings

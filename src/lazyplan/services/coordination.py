@@ -10,7 +10,7 @@ from ..core.policies.coordination import parse_ttl, patterns_overlap, validate_b
 from ..core.ports.coordination import CoordinationPort
 from ..core.serialization import to_payload
 from .planning import end_claim, requeue_expired, set_status
-from .worktrees import checkout_gate
+from .worktrees import checkout_gate, lane_gate
 
 
 def overlaps(port: CoordinationPort, task_id: int) -> list[dict]:
@@ -85,6 +85,9 @@ def start_claim(
         blocker = checkout_gate(port, plan_id, worktree)
         if blocker and not (force and reason.strip()):
             raise ValueError(blocker)
+    lane_blocker = lane_gate(port, task_id, worktree)
+    if lane_blocker and not (force and reason.strip()):
+        raise ValueError(lane_blocker)
     if check_overlap and not force:
         found = overlaps(port, task_id)
         if found:
@@ -106,7 +109,15 @@ def start_claim(
         repo_path=repo_path,
     )
     try:
-        set_status(port, "task", task_id, Status.DOING, actor=actor)
+        set_status(
+            port,
+            "task",
+            task_id,
+            Status.DOING,
+            actor=actor,
+            worktree=worktree,
+            check_lane=not (force and reason.strip()),
+        )
     except Exception:
         port.release_claim(task_id, actor, force=True)
         raise
@@ -204,9 +215,22 @@ def claim_next(
         tasks = port.claimable_tasks(plan_id)
         if not tasks:
             return None
-        task = next((item for item in tasks if not overlaps(port, item.id)), None)
-        if task is None:
+        candidates = [item for item in tasks if not overlaps(port, item.id)]
+        if not candidates:
             return None
+        if force and reason.strip():
+            task = candidates[0]
+        else:
+            chosen: Task | None = next(
+                (item for item in candidates if not lane_gate(port, item.id, worktree)),
+                None,
+            )
+            if chosen is None:
+                blocker = next((lane_gate(port, item.id, worktree) for item in candidates), "")
+                if blocker and plan_id is not None:
+                    raise ValueError(blocker)
+                return None
+            task = chosen
         if suggest:
             return {"claim": None, "task": to_payload(vars(task)), "previous": None}
         try:

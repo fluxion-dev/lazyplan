@@ -564,6 +564,27 @@ Your agent is expected to work from the plan, not invent it:
 `lpui setup --placement repo` writes the full contract into the repo; the
 default setup installs the skill into each detected agent's own folder.
 
+### Lanes and waves
+
+A milestone is a lane. `--lane-group` is its wave and `--agent-role` names the
+profile that owns it. A plan sets `--dispatch serial|parallel` and
+`--max-agents N`, and every task carries a `--role`:
+
+```bash
+lpui --actor NAME plan add --title "API v2" --why ".." --what ".." \
+  --dispatch parallel --max-agents 2
+lpui --actor NAME milestone add --plan 7 --title "Read path" \
+  --lane-group 1 --agent-role implementer
+lpui --actor NAME task add --milestone 12 --title "Run the suite" --role qa
+```
+
+Waves run in group order. Lanes in one wave may run at once, up to the plan's
+agent cap, and tasks inside a lane run serially. A parallel plan with more than
+one working lane needs an integrator lane in a later wave. `lint` flags a cap
+below two, a missing or early integrator, an empty lane, uneven QA coverage,
+and same-wave touch-point overlap. `list --tree` and `plan show` render the
+wave and role beside each lane.
+
 ### Porcelain output
 
 `--porcelain` (or `LAZYPLAN_PORCELAIN=1` for a whole session) switches journal

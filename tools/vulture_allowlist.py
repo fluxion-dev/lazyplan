@@ -8,8 +8,8 @@
 - sqlite3 and shlex API noise: row_factory and the lexer switches.
 - Docs metadata: ENVIRONMENT and FILES are read by tools/gen-man.py.
 - Kept-live seams: attention_ids (tools/perf_bench.py), criteria_progress
-  (P#32 contract), the VCS backend contract (is_available), and the claim,
-  plan-uid, poll, and trim helpers asserted by their own tests.
+  (public metrics contract), the VCS backend contract (is_available), and the
+  claim, plan-uid, poll, and trim helpers asserted by their own tests.
 """
 
 # Textual dispatch: key actions, lifecycle handlers, and callbacks.

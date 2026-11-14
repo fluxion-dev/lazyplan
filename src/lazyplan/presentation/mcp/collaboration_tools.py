@@ -17,9 +17,9 @@ from .schema import tool as _tool
 class CollaborationToolsMixin(McpBase):
     """Criteria, comments, notes, sessions, references, and activity rows."""
 
-    def _collaboration_write_registry(self) -> dict[str, tuple[dict, Any]]:
-        return {
-            "criterion_edit": (
+    def _collaboration_write_registry(self) -> list[tuple[dict, Any]]:
+        return [
+            (
                 _tool(
                     "criterion_edit",
                     "Rewrite one criterion's text or completion.",
@@ -34,7 +34,7 @@ class CollaborationToolsMixin(McpBase):
                 ),
                 self._tool_criterion_edit,
             ),
-            "criterion_delete": (
+            (
                 _tool(
                     "criterion_delete",
                     "Delete one criterion.",
@@ -44,7 +44,7 @@ class CollaborationToolsMixin(McpBase):
                 ),
                 self._tool_criterion_delete,
             ),
-            "delete_row": (
+            (
                 _tool(
                     "delete_row",
                     "Delete a plan, milestone, or task.",
@@ -54,7 +54,7 @@ class CollaborationToolsMixin(McpBase):
                 ),
                 self._tool_delete_row,
             ),
-            "comment_add": (
+            (
                 _tool(
                     "comment_add",
                     "Add a review comment to a row.",
@@ -64,7 +64,7 @@ class CollaborationToolsMixin(McpBase):
                 ),
                 self._tool_comment_add,
             ),
-            "comment_edit": (
+            (
                 _tool(
                     "comment_edit",
                     "Rewrite one review comment.",
@@ -74,7 +74,7 @@ class CollaborationToolsMixin(McpBase):
                 ),
                 self._tool_comment_edit,
             ),
-            "comment_resolve": (
+            (
                 _tool(
                     "comment_resolve",
                     "Resolve or unresolve a review comment.",
@@ -84,7 +84,7 @@ class CollaborationToolsMixin(McpBase):
                 ),
                 self._tool_comment_resolve,
             ),
-            "touch_add": (
+            (
                 _tool(
                     "touch_add",
                     "Add a task touch-point path or glob.",
@@ -94,7 +94,7 @@ class CollaborationToolsMixin(McpBase):
                 ),
                 self._tool_touch_add,
             ),
-            "touch_remove": (
+            (
                 _tool(
                     "touch_remove",
                     "Remove a task touch-point path or glob.",
@@ -104,7 +104,7 @@ class CollaborationToolsMixin(McpBase):
                 ),
                 self._tool_touch_remove,
             ),
-            "reference_link": (
+            (
                 _tool(
                     "reference_link",
                     "Attach an external URL to a plan.",
@@ -114,7 +114,7 @@ class CollaborationToolsMixin(McpBase):
                 ),
                 self._tool_reference_link,
             ),
-            "reference_unlink": (
+            (
                 _tool(
                     "reference_unlink",
                     "Remove one external reference from a plan.",
@@ -124,11 +124,11 @@ class CollaborationToolsMixin(McpBase):
                 ),
                 self._tool_reference_unlink,
             ),
-        }
+        ]
 
-    def _collaboration_read_registry(self) -> dict[str, tuple[dict, Any]]:
-        return {
-            "criterion_list": (
+    def _collaboration_read_registry(self) -> list[tuple[dict, Any]]:
+        return [
+            (
                 _tool(
                     "criterion_list",
                     "Criteria on one plan, milestone, or task.",
@@ -140,7 +140,7 @@ class CollaborationToolsMixin(McpBase):
                     lambda store, kind, row_id: store.list_criteria(kind, row_id),
                 ),
             ),
-            "comment_list": (
+            (
                 _tool(
                     "comment_list",
                     "Comments on one row, optionally by mention.",
@@ -149,7 +149,7 @@ class CollaborationToolsMixin(McpBase):
                 ),
                 self._tool_comment_list,
             ),
-            "note_list": (
+            (
                 _tool(
                     "note_list",
                     "Notes on one row.",
@@ -158,7 +158,7 @@ class CollaborationToolsMixin(McpBase):
                 ),
                 self._tool_note_list,
             ),
-            "agent_list": (
+            (
                 _tool(
                     "agent_list",
                     "Live agents, newest first.",
@@ -166,7 +166,7 @@ class CollaborationToolsMixin(McpBase):
                 ),
                 self._tool_agent_list,
             ),
-            "session_list": (
+            (
                 _tool(
                     "session_list",
                     "Legacy session history, newest first.",
@@ -174,7 +174,7 @@ class CollaborationToolsMixin(McpBase):
                 ),
                 self._tool_session_list,
             ),
-            "reference_list": (
+            (
                 _tool(
                     "reference_list",
                     "External references on one plan.",
@@ -186,7 +186,7 @@ class CollaborationToolsMixin(McpBase):
                     lambda store, plan_id: services.list_refs(store, plan_id),
                 ),
             ),
-            "touch_list": (
+            (
                 _tool(
                     "touch_list",
                     "Touch-point paths on one task.",
@@ -195,7 +195,7 @@ class CollaborationToolsMixin(McpBase):
                 ),
                 self._tool_touch_list,
             ),
-            "activity_list": (
+            (
                 _tool(
                     "activity_list",
                     "Recent events.",
@@ -207,7 +207,7 @@ class CollaborationToolsMixin(McpBase):
                 ),
                 self._tool_activity_list,
             ),
-        }
+        ]
 
     def _tool_criterion_edit(self, args: dict) -> object:
         text = args.get("text")

@@ -15,9 +15,9 @@ from .schema import tool as _tool
 class ReviewToolsMixin(McpBase):
     """Read-only review packet tool."""
 
-    def _review_read_registry(self) -> dict[str, tuple[dict, Any]]:
-        return {
-            "review": (
+    def _review_read_registry(self) -> list[tuple[dict, Any]]:
+        return [
+            (
                 _tool(
                     "review",
                     "Deterministic Markdown review packet for one plan.",
@@ -25,7 +25,7 @@ class ReviewToolsMixin(McpBase):
                 ),
                 review_packet(self._need_store, services.build_review),
             ),
-            "ship": (
+            (
                 _tool(
                     "ship",
                     "Deterministic Markdown outcome ship note for one plan.",
@@ -33,4 +33,4 @@ class ReviewToolsMixin(McpBase):
                 ),
                 review_packet(self._need_store, services.build_ship),
             ),
-        }
+        ]

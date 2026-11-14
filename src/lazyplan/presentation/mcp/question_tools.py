@@ -16,10 +16,10 @@ from .schema import tool as _tool
 class QuestionToolsMixin(McpBase):
     """Plan questions and the readiness gate."""
 
-    def _question_write_registry(self) -> dict[str, tuple[dict, Any]]:
+    def _question_write_registry(self) -> list[tuple[dict, Any]]:
         """Write tools, omitted in read-only mode."""
-        return {
-            "question_add": (
+        return [
+            (
                 _tool(
                     "question_add",
                     "Add an open question to a plan.",
@@ -29,7 +29,7 @@ class QuestionToolsMixin(McpBase):
                 ),
                 self._tool_question_add,
             ),
-            "question_resolve": (
+            (
                 _tool(
                     "question_resolve",
                     "Resolve a question with an answer.",
@@ -39,7 +39,7 @@ class QuestionToolsMixin(McpBase):
                 ),
                 question_note(self._need_store, self.actor, services.resolve_question),
             ),
-            "question_reopen": (
+            (
                 _tool(
                     "question_reopen",
                     "Reopen a question and record why.",
@@ -49,12 +49,12 @@ class QuestionToolsMixin(McpBase):
                 ),
                 question_note(self._need_store, self.actor, services.reopen_question),
             ),
-        }
+        ]
 
-    def _question_read_registry(self) -> dict[str, tuple[dict, Any]]:
+    def _question_read_registry(self) -> list[tuple[dict, Any]]:
         """Read tools, always available."""
-        return {
-            "question_list": (
+        return [
+            (
                 _tool(
                     "question_list",
                     "Questions on one plan by state.",
@@ -66,7 +66,7 @@ class QuestionToolsMixin(McpBase):
                 ),
                 self._tool_question_list,
             ),
-            "plan_ready": (
+            (
                 _tool(
                     "plan_ready",
                     "Lint, coverage, and open-question readiness for a plan.",
@@ -75,7 +75,7 @@ class QuestionToolsMixin(McpBase):
                 ),
                 self._tool_plan_ready,
             ),
-        }
+        ]
 
     def _tool_question_add(self, args: dict) -> object:
         question = services.add_question(

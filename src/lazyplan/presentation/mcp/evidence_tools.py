@@ -16,10 +16,10 @@ from .schema import tool as _tool
 class EvidenceToolsMixin(McpBase):
     """Criterion proof tools."""
 
-    def _evidence_write_registry(self) -> dict[str, tuple[dict, Any]]:
+    def _evidence_write_registry(self) -> list[tuple[dict, Any]]:
         """Write tools, omitted in read-only mode."""
-        return {
-            "criterion_prove": (
+        return [
+            (
                 _tool(
                     "criterion_prove",
                     "Record proof for a criterion.",
@@ -38,12 +38,12 @@ class EvidenceToolsMixin(McpBase):
                 ),
                 self._tool_criterion_prove,
             )
-        }
+        ]
 
-    def _evidence_read_registry(self) -> dict[str, tuple[dict, Any]]:
+    def _evidence_read_registry(self) -> list[tuple[dict, Any]]:
         """Read tools, always available."""
-        return {
-            "criterion_evidence": (
+        return [
+            (
                 _tool(
                     "criterion_evidence",
                     "Proof rows for one criterion.",
@@ -55,7 +55,7 @@ class EvidenceToolsMixin(McpBase):
                     lambda store, criterion_id: services.list_evidence(store, criterion_id),
                 ),
             )
-        }
+        ]
 
     def _tool_criterion_prove(self, args: dict) -> object:
         task_id = int(args["task"]) if args.get("task") else None

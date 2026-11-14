@@ -22,9 +22,9 @@ def _apply() -> dict:
 class MaintenanceToolsMixin(McpBase):
     """Report, archive, trim, vacuum, and restore over MCP."""
 
-    def _maintenance_read_registry(self) -> dict[str, tuple[dict, Any]]:
-        return {
-            "maintenance_report": (
+    def _maintenance_read_registry(self) -> list[tuple[dict, Any]]:
+        return [
+            (
                 _tool(
                     "maintenance_report",
                     "Database bytes and row counts per table, free pages, "
@@ -33,12 +33,12 @@ class MaintenanceToolsMixin(McpBase):
                 ),
                 self._tool_maintenance_report,
             )
-        }
+        ]
 
-    def _maintenance_write_registry(self) -> dict[str, tuple[dict, Any]]:
+    def _maintenance_write_registry(self) -> list[tuple[dict, Any]]:
         """Write tools; apply=false previews, apply=true snapshots then writes."""
-        return {
-            "maintenance_archive": (
+        return [
+            (
                 _tool(
                     "maintenance_archive",
                     "Archive done plans and ended sessions past the window. "
@@ -54,7 +54,7 @@ class MaintenanceToolsMixin(McpBase):
                     view.archive_payload,
                 ),
             ),
-            "maintenance_trim": (
+            (
                 _tool(
                     "maintenance_trim",
                     "Delete derived rows only: expired claims, stale cache, closed PRs, "
@@ -70,7 +70,7 @@ class MaintenanceToolsMixin(McpBase):
                     view.trim_payload,
                 ),
             ),
-            "maintenance_vacuum": (
+            (
                 _tool(
                     "maintenance_vacuum",
                     "Reclaim free pages. apply=false previews; apply=true snapshots first "
@@ -81,7 +81,7 @@ class MaintenanceToolsMixin(McpBase):
                 ),
                 self._tool_maintenance_vacuum,
             ),
-            "maintenance_restore": (
+            (
                 _tool(
                     "maintenance_restore",
                     "Return one archived plan or session to the default views. "
@@ -92,7 +92,7 @@ class MaintenanceToolsMixin(McpBase):
                 ),
                 self._tool_maintenance_restore,
             ),
-        }
+        ]
 
     def _maintenance_port(self) -> MaintenancePort:
         return cast(MaintenancePort, self._need_store())

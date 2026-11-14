@@ -20,9 +20,9 @@ from .schema import tool as _tool
 class ProvenanceToolsMixin(McpBase):
     """Read-only provenance plus the few explicit write actions."""
 
-    def _provenance_write_registry(self) -> dict[str, tuple[dict, Any]]:
-        return {
-            "finish_task": (
+    def _provenance_write_registry(self) -> list[tuple[dict, Any]]:
+        return [
+            (
                 _tool(
                     "finish_task",
                     "Link branch commits and finish a task through the gates.",
@@ -39,7 +39,7 @@ class ProvenanceToolsMixin(McpBase):
                 ),
                 self._tool_finish_task,
             ),
-            "commit_refresh": (
+            (
                 _tool(
                     "commit_refresh",
                     "Re-resolve cached commit links and mark stale rows.",
@@ -49,7 +49,7 @@ class ProvenanceToolsMixin(McpBase):
                 ),
                 kind_id_action(self._need_store, self.actor, services.refresh_links),
             ),
-            "plan_approve": (
+            (
                 _tool(
                     "plan_approve",
                     "Approve the current plan scope.",
@@ -63,7 +63,7 @@ class ProvenanceToolsMixin(McpBase):
                 ),
                 self._tool_plan_approve,
             ),
-            "pull_request_refresh": (
+            (
                 _tool(
                     "pull_request_refresh",
                     "Refresh cached pull requests from GitHub (network).",
@@ -73,7 +73,7 @@ class ProvenanceToolsMixin(McpBase):
                 ),
                 kind_id_action(self._need_store, self.actor, services.refresh_forge),
             ),
-            "pull_request_link": (
+            (
                 _tool(
                     "pull_request_link",
                     "Attach a GitHub pull request URL to a row.",
@@ -83,7 +83,7 @@ class ProvenanceToolsMixin(McpBase):
                 ),
                 self._tool_pull_request_link,
             ),
-            "pull_request_unlink": (
+            (
                 _tool(
                     "pull_request_unlink",
                     "Detach one cached pull request.",
@@ -93,11 +93,11 @@ class ProvenanceToolsMixin(McpBase):
                 ),
                 self._tool_pull_request_unlink,
             ),
-        }
+        ]
 
-    def _provenance_read_registry(self) -> dict[str, tuple[dict, Any]]:
-        return {
-            "git_status": (
+    def _provenance_read_registry(self) -> list[tuple[dict, Any]]:
+        return [
+            (
                 _tool(
                     "git_status",
                     "Branch and dirty state for a row's linked checkouts.",
@@ -106,7 +106,7 @@ class ProvenanceToolsMixin(McpBase):
                 ),
                 self._tool_git_status,
             ),
-            "source_trail": (
+            (
                 _tool(
                     "source_trail",
                     "Repos, commits, files, and pull requests for a row.",
@@ -115,7 +115,7 @@ class ProvenanceToolsMixin(McpBase):
                 ),
                 self._tool_source_trail,
             ),
-            "commit_list": (
+            (
                 _tool(
                     "commit_list",
                     "Commits linked to a row.",
@@ -127,7 +127,7 @@ class ProvenanceToolsMixin(McpBase):
                     lambda store, kind, row_id: store.effective_links(kind, row_id),
                 ),
             ),
-            "repo_list": (
+            (
                 _tool(
                     "repo_list",
                     "Repositories linked to a row.",
@@ -136,7 +136,7 @@ class ProvenanceToolsMixin(McpBase):
                 ),
                 self._tool_repo_list,
             ),
-            "pull_request_list": (
+            (
                 _tool(
                     "pull_request_list",
                     "Cached pull requests linked to a row.",
@@ -148,7 +148,7 @@ class ProvenanceToolsMixin(McpBase):
                     lambda store, kind, row_id: store.effective_forge_links(kind, row_id),
                 ),
             ),
-            "plan_diff": (
+            (
                 _tool(
                     "plan_diff",
                     "Scope drift since a plan approval.",
@@ -157,7 +157,7 @@ class ProvenanceToolsMixin(McpBase):
                 ),
                 self._tool_plan_diff,
             ),
-            "export_plan": (
+            (
                 _tool(
                     "export_plan",
                     "Markdown export of one plan.",
@@ -166,7 +166,7 @@ class ProvenanceToolsMixin(McpBase):
                 ),
                 self._tool_export_plan,
             ),
-        }
+        ]
 
     def _tool_finish_task(self, args: dict) -> object:
         return services.finish_task(

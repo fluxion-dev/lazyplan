@@ -45,10 +45,10 @@ class ToolsMixin(
 ):
     """MCP tool definitions and handlers."""
 
-    def _write_registry(self) -> dict[str, tuple[dict, Any]]:
+    def _write_registry(self) -> list[tuple[dict, Any]]:
         """Write tools, omitted in read-only mode."""
-        tools = {
-            "create_plan": (
+        tools = [
+            (
                 _tool(
                     "create_plan",
                     "Create a plan.",
@@ -58,7 +58,7 @@ class ToolsMixin(
                 ),
                 self._tool_create_plan,
             ),
-            "create_milestone": (
+            (
                 _tool(
                     "create_milestone",
                     "Create a milestone.",
@@ -68,7 +68,7 @@ class ToolsMixin(
                 ),
                 self._tool_create_milestone,
             ),
-            "create_task": (
+            (
                 _tool(
                     "create_task",
                     "Create a task.",
@@ -78,7 +78,7 @@ class ToolsMixin(
                 ),
                 self._tool_create_task,
             ),
-            "edit_row": (
+            (
                 _tool(
                     "edit_row",
                     "Edit a plan, milestone, or task.",
@@ -95,7 +95,7 @@ class ToolsMixin(
                 ),
                 self._tool_edit,
             ),
-            "move_row": (
+            (
                 _tool(
                     "move_row",
                     "Move a row to todo, doing, or done.",
@@ -111,7 +111,7 @@ class ToolsMixin(
                 ),
                 self._tool_move,
             ),
-            "criterion_add": (
+            (
                 _tool(
                     "criterion_add",
                     "Add an acceptance criterion.",
@@ -121,7 +121,7 @@ class ToolsMixin(
                 ),
                 self._tool_criterion_add,
             ),
-            "criterion_relate": (
+            (
                 _tool(
                     "criterion_relate",
                     "Relate a criterion to a proving task.",
@@ -131,7 +131,7 @@ class ToolsMixin(
                 ),
                 self._tool_criterion_relate,
             ),
-            "criterion_unrelate": (
+            (
                 _tool(
                     "criterion_unrelate",
                     "Remove a criterion proof relation.",
@@ -141,7 +141,7 @@ class ToolsMixin(
                 ),
                 self._tool_criterion_unrelate,
             ),
-            "claim_task": (
+            (
                 _tool(
                     "claim_task",
                     "Claim a task lease.",
@@ -151,7 +151,7 @@ class ToolsMixin(
                 ),
                 self._tool_claim,
             ),
-            "claim_renew": (
+            (
                 _tool(
                     "claim_renew",
                     "Renew a task lease.",
@@ -161,7 +161,7 @@ class ToolsMixin(
                 ),
                 self._tool_claim_renew,
             ),
-            "claim_release": (
+            (
                 _tool(
                     "claim_release",
                     "Release a task lease.",
@@ -171,7 +171,7 @@ class ToolsMixin(
                 ),
                 self._tool_claim_release,
             ),
-            "note_add": (
+            (
                 _tool(
                     "note_add",
                     "Add a handoff note.",
@@ -181,7 +181,7 @@ class ToolsMixin(
                 ),
                 self._tool_note_add,
             ),
-            "block_task": (
+            (
                 _tool(
                     "block_task",
                     "Block a task with a reason.",
@@ -191,11 +191,11 @@ class ToolsMixin(
                 ),
                 self._tool_block,
             ),
-            "unblock_task": (
+            (
                 _tool("unblock_task", "Clear a task's blocked flag.", {"id": _id()}, ["id"], False),
                 self._tool_unblock,
             ),
-            "link_commit": (
+            (
                 _tool(
                     "link_commit",
                     "Link a commit to a row.",
@@ -205,12 +205,12 @@ class ToolsMixin(
                 ),
                 self._tool_link,
             ),
-        }
-        tools.update(self._evidence_write_registry())
-        tools.update(self._question_write_registry())
-        tools.update(self._collaboration_write_registry())
-        tools.update(self._maintenance_write_registry())
-        tools.update(self._provenance_write_registry())
+        ]
+        tools.extend(self._evidence_write_registry())
+        tools.extend(self._question_write_registry())
+        tools.extend(self._collaboration_write_registry())
+        tools.extend(self._maintenance_write_registry())
+        tools.extend(self._provenance_write_registry())
         return tools
 
     def _tool_trace(self, args: dict) -> object:
@@ -278,16 +278,16 @@ class ToolsMixin(
             plan_id=int(args["plan"]) if args.get("plan") else None,
         )
 
-    def _read_registry(self) -> dict[str, tuple[dict, Any]]:
+    def _read_registry(self) -> list[tuple[dict, Any]]:
         """Read tools, always available."""
-        tools = {
-            "brief": (
+        tools = [
+            (
                 _tool(
                     "brief", "Session brief: active plan, doing task, next, gaps.", {"plan": _id()}
                 ),
                 self._tool_brief,
             ),
-            "list_plans": (
+            (
                 _tool(
                     "list_plans",
                     "All plans with milestones, tasks, and criteria.",
@@ -295,7 +295,7 @@ class ToolsMixin(
                 ),
                 self._tool_list,
             ),
-            "show_row": (
+            (
                 _tool(
                     "show_row",
                     "One plan, milestone, or task with full context.",
@@ -304,7 +304,7 @@ class ToolsMixin(
                 ),
                 self._tool_show,
             ),
-            "claims": (
+            (
                 _tool(
                     "claims",
                     "Active task leases, or all including expired.",
@@ -312,7 +312,7 @@ class ToolsMixin(
                 ),
                 self._tool_claims,
             ),
-            "audit": (
+            (
                 _tool(
                     "audit",
                     "Coverage, lag, gaps, and trace coverage.",
@@ -320,7 +320,7 @@ class ToolsMixin(
                 ),
                 self._tool_audit,
             ),
-            "trace": (
+            (
                 _tool(
                     "trace",
                     "Criterion to task, commit, and PR evidence.",
@@ -328,18 +328,18 @@ class ToolsMixin(
                 ),
                 self._tool_trace,
             ),
-            "lint": (
+            (
                 _tool("lint", "Plan-quality findings for a plan.", {"plan": _id()}, ["plan"]),
                 self._tool_lint,
             ),
-            "info": (_tool("info", "Resolved database, scope, and counts.", {}), self._tool_info),
-        }
-        tools.update(self._evidence_read_registry())
-        tools.update(self._question_read_registry())
-        tools.update(self._review_read_registry())
-        tools.update(self._collaboration_read_registry())
-        tools.update(self._maintenance_read_registry())
-        tools.update(self._provenance_read_registry())
+            (_tool("info", "Resolved database, scope, and counts.", {}), self._tool_info),
+        ]
+        tools.extend(self._evidence_read_registry())
+        tools.extend(self._question_read_registry())
+        tools.extend(self._review_read_registry())
+        tools.extend(self._collaboration_read_registry())
+        tools.extend(self._maintenance_read_registry())
+        tools.extend(self._provenance_read_registry())
         return tools
 
     def _tool_claim_renew(self, args: dict) -> object:
@@ -529,11 +529,11 @@ class ToolsMixin(
         return to_payload(vars(milestone))
 
     def _registry(self) -> dict[str, tuple[dict, Any]]:
-        """Merge read and write tools for the current mode."""
-        tools = self._read_registry()
+        """Merge read and write tools for the current mode, keyed by name."""
+        entries = self._read_registry()
         if not self.read_only:
-            tools.update(self._write_registry())
-        return tools
+            entries.extend(self._write_registry())
+        return {entry[0]["name"]: entry for entry in entries}
 
     def _tool_block(self, args: dict) -> object:
         task = services.block_task(

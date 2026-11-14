@@ -40,7 +40,7 @@ The gate runs:
 - the docs allowlist and link gate (`tools/check-docs.py`)
 - the site build and discoverability check (`site/`, `tools/check-site.py`)
 - a clean-install smoke that builds, installs, and runs both console scripts
-- the performance budgets
+- the performance budgets (`tools/perf_bench.py --check`: exact query ceilings on a deterministic fixture)
 - the unittest suite on both system Python and the venv Python
 
 On Windows, run it from Git Bash. CI runs the same gates on Linux and macOS for

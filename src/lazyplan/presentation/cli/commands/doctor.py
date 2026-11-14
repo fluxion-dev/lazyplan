@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from lazyplan.infrastructure import agent_install
 from lazyplan.infrastructure.repo import find_repo_root
 from lazyplan.presentation import setup
 from lazyplan.services import hooks as hook_service
@@ -102,6 +103,31 @@ def _doctor_data(
         "files": list(state.hook_files),
         "missing": missing_hooks,
     }
+    profile_agents = (
+        []
+        if choice.explicit_db or not state.profile_files
+        else list(choice.agents or state.agents)
+    )
+    profile_scope = "project" if state.placement == "repo" and root is not None else "global"
+    profile_files = agent_install.profile_paths(profile_scope, root, home, profile_agents)
+    missing_profiles = [str(path) for path in profile_files if not path.is_file()]
+    unmanaged_profiles = []
+    for path in profile_files:
+        if not path.is_file():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        if agent_install.MARKER not in text:
+            unmanaged_profiles.append(str(path))
+    report["profiles"] = {
+        "scope": profile_scope,
+        "agents": profile_agents,
+        "files": [str(path) for path in profile_files],
+        "missing": missing_profiles,
+        "unmanaged": unmanaged_profiles,
+    }
     report["state"] = state.to_dict()
     report["skills"] = [str(path) for path in skill_files]
     report["worktrees"] = _worktree_findings(store)
@@ -113,6 +139,7 @@ def _doctor_data(
     ]
     issues = bool(report["findings"]) or bool(missing_hooks)
     issues = issues or bool(report["pending_integrations"]) or bool(report["worktrees"])
+    issues = issues or bool(report["profiles"]["missing"])
     issues = issues or (state.hooks and not state.hook_files)
     issues = issues or state.version != setup.SETUP_VERSION
     report["clean"] = bool(report["clean"] and not issues)
@@ -133,6 +160,9 @@ def _print_doctor(layout: setup_layout.SetupLayout, skill_files: list[Path], rep
     print(f"hook check:{' ok' if probe['ok'] else ' ' + str(probe['reason'])}")
     for path in hooks["missing"]:
         print(f"hook miss: {path}")
+    for path in report.get("profiles", {}).get("files", []):
+        state_word = "missing" if path in report["profiles"]["missing"] else "ok"
+        print(f"profile:   {path} ({state_word})")
     print(f"clean:     {'yes' if report['clean'] else 'no'}")
     for item in report["misplaced"]:
         print(f"misplaced: {item}")

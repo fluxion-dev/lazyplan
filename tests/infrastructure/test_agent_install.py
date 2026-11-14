@@ -108,6 +108,24 @@ class OpenCodeProfileInstallTest(unittest.TestCase):
         agent_install.install_claude("global", self.repo, self.home, self.profiles)
         self.assertTrue((self.home / ".claude/agents/lazyplan-qa.md").is_file())
 
+    def test_install_profiles_selects_the_requested_hosts(self) -> None:
+        db = self.root / "profiles.db"
+        result = agent_install.install_profiles(
+            "project",
+            self.repo,
+            self.home,
+            ["opencode", "claude"],
+            db,
+            {"main": "provider/big", "small": "provider/tiny"},
+        )
+        self.assertEqual([row.host for row in result], ["opencode", "claude"])
+        self.assertTrue((self.repo / ".opencode/agent/lazyplan-qa.md").is_file())
+        self.assertTrue((self.repo / ".claude/agents/lazyplan-qa.md").is_file())
+        self.assertEqual(
+            agent_install.install_profiles("none", self.repo, self.home, ["claude"], db),
+            [],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

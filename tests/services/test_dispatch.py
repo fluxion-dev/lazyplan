@@ -82,6 +82,14 @@ class DispatchManifestTest(unittest.TestCase):
             self.assertIn(f"T{item['task_id']}", item["prompt"])
             self.assertIn("Commit small green slices", item["prompt"])
             self.assertTrue(item["claim_command"])
+            self.assertIn("tier", item["profile"])
+
+    def test_manifest_includes_resolved_profiles(self) -> None:
+        self._parallel_plan()
+        manifest = dispatch.build(self.store, self.plan.id)
+        self.assertIn("implementer", manifest["profiles"])
+        self.assertEqual(manifest["profiles"]["reviewer"]["claude"], "opus")
+        self.assertEqual(manifest["profiles"]["implementer"]["tier"], "fast")
 
     def test_missing_lane_worktree_becomes_an_action(self) -> None:
         lanes, tasks = self._parallel_plan()

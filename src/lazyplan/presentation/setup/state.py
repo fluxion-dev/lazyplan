@@ -43,6 +43,7 @@ class SetupState:
     hooks_enabled: bool = True
     hooks_mode: str = "strict"
     hook_files: list[str] = field(default_factory=list)
+    profile_files: list[str] = field(default_factory=list)
     skills_enabled: bool = True
     agents_pointer: bool = False
     agents_file: str = ""
@@ -65,6 +66,7 @@ class SetupState:
             "hooks_enabled": self.hooks_enabled,
             "hooks_mode": self.hooks_mode,
             "hook_files": list(self.hook_files),
+            "profile_files": list(self.profile_files),
             "skills_enabled": self.skills_enabled,
             "agents_pointer": self.agents_pointer,
             "agents_file": self.agents_file,
@@ -101,6 +103,9 @@ class SetupState:
             hooks_mode=hooks_mode,
             hook_files=[str(p) for p in raw.get("hook_files", [])]
             if isinstance(raw.get("hook_files"), list)
+            else [],
+            profile_files=[str(p) for p in raw.get("profile_files", [])]
+            if isinstance(raw.get("profile_files"), list)
             else [],
             skills_enabled=bool(raw.get("skills_enabled", True)),
             agents_pointer=bool(raw.get("agents_pointer", False)),

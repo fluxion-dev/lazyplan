@@ -7,13 +7,14 @@ it is a managed profile being refreshed. Stdlib only.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from ..core.policies.lanes import AGENT_ROLES
 from . import textfile
 from .data_text import data_text
-from .profiles import Profile, resolve
+from .profiles import Profile, load, resolve
 
 OPENCODE_DIR = Path(".opencode") / "agent"
 OPENCODE_HOME_DIR = Path(".config") / "opencode" / "agent"
@@ -201,6 +202,63 @@ def render_opencode(role: str, profile: Profile, models: dict[str, str] | None) 
         ]
     )
     return "\n".join(lines)
+
+
+def profile_paths(scope: str, repo_root: Path | None, home: Path, agents: list[str]) -> list[Path]:
+    """Every profile file the selected hosts would write."""
+    paths: list[Path] = []
+    if "opencode" in agents:
+        paths.extend(opencode_targets(scope, repo_root, home))
+    if "claude" in agents:
+        paths.extend(claude_targets(scope, repo_root, home))
+    return paths
+
+
+def install_profiles(
+    scope: str,
+    repo_root: Path | None,
+    home: Path,
+    agents: list[str],
+    db_path: str | Path,
+    models: dict[str, str] | None = None,
+) -> list[AgentInstallResult]:
+    """Install every selected host's profiles for one scope."""
+    if scope == "none" or not agents:
+        return []
+    loaded = load(db_path)
+    host_models = models if models is not None else opencode_models(home, repo_root)
+    results: list[AgentInstallResult] = []
+    if "opencode" in agents:
+        results.append(install_opencode(scope, repo_root, home, loaded, host_models))
+    if "claude" in agents:
+        results.append(install_claude(scope, repo_root, home, loaded))
+    return results
+
+
+def opencode_models(home: Path, repo_root: Path | None = None) -> dict[str, str]:
+    """Read the configured main and small OpenCode models, when present."""
+    candidates: list[Path] = []
+    if repo_root is not None:
+        candidates.extend([repo_root / "opencode.json", repo_root / "opencode.jsonc"])
+    candidates.append(home / ".config" / "opencode" / "opencode.json")
+    for path in candidates:
+        if not path.is_file():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        main = _json_field(text, "model")
+        small = _json_field(text, "small_model")
+        if main or small:
+            return {"main": main, "small": small or main}
+    return {}
+
+
+def _json_field(text: str, name: str) -> str:
+    """One top-level string field from JSON or JSONC."""
+    match = re.search(rf'"{re.escape(name)}"\s*:\s*"([^"]+)"', text)
+    return match.group(1) if match is not None else ""
 
 
 def _install_file(dest: Path, content: str) -> tuple[bool, str]:

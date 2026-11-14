@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from lazyplan.core.policies import hooks as hook_policy
-from lazyplan.infrastructure import hook_install, skills, textfile
+from lazyplan.infrastructure import agent_install, hook_install, skills, textfile
 from lazyplan.infrastructure.integrations import HOOK
 from lazyplan.infrastructure.repo import (
     find_repo_root,
@@ -61,16 +61,28 @@ def apply_choice(
     # Back up old generated copies before the installer rewrites the same paths.
     refreshed, backups = refresh_installed_skills(home)
     result = skills.apply_skill_plan(skill_plan, root, home)
+    profile_agents = choice.agents or [
+        host.key for host in skills.detect_agents(home) if host.detected
+    ]
+    profile_results = agent_install.install_profiles(
+        skill_plan.scope, root, home, profile_agents, resolved.db
+    )
+    profile_files = [
+        str(path)
+        for path in agent_install.profile_paths(skill_plan.scope, root, home, profile_agents)
+    ]
     if root is not None and choice.placement == REPO and not choice.explicit_db:
         for entry in resolved.gitignore_entries:
             skills.append_gitignore(root, entry)
-    state = _remember_choice(home, choice, resolved, skill_plan, version)
+    state = _remember_choice(home, choice, resolved, skill_plan, version, profile_files)
     return {
         "db": str(store.path),
         "templates": str(resolved.templates_dir),
         "config": str(resolved.config) if resolved.config else None,
         "skills": [str(path) for path in skill_plan.skill_files],
         "installed": result.installed,
+        "profiles": [item.to_dict() for item in profile_results],
+        "profile_files": profile_files,
         "refreshed": [str(path) for path in refreshed],
         "backups": [str(path) for path in backups],
         "state": str(state_path(home)),
@@ -86,6 +98,7 @@ def _remember_choice(
     resolved: layout.SetupLayout,
     skill_plan: skills.SkillPlan,
     version: str,
+    profile_files: list[str] | None = None,
 ) -> SetupState:
     """Persist the resolved placement, agents, and last setup version."""
     state = load_state(home)
@@ -95,6 +108,8 @@ def _remember_choice(
     state.skills_dir = choice.skills_dir or ""
     if not choice.explicit_db:
         state.skills_enabled = skill_plan.scope != "none"
+    if profile_files is not None:
+        state.profile_files = list(profile_files)
     state.explicit_db = bool(choice.explicit_db)
     state.last_version = version or state.last_version
     save_state(state, home)

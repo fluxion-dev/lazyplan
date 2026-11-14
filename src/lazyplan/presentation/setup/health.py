@@ -16,6 +16,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
+from lazyplan.infrastructure import agent_install
 from lazyplan.infrastructure.integrations import HOOK, HOST_LABELS, IntegrationItem
 from lazyplan.infrastructure.repo import find_repo_root
 
@@ -210,6 +211,30 @@ def check(
     inspection = inspect(choice, state, root, home, version)
     findings = _integration_findings(inspection.pending, state, decided=False)
     findings += _integration_findings(inspection.suppressed, state, decided=True)
+    home = home or Path.home()
+    profile_agents = choice.agents or state.agents
+    if (
+        not choice.explicit_db
+        and state.skills_enabled
+        and state.profile_files
+        and profile_agents
+    ):
+        scope = "project" if choice.placement == "repo" and root is not None else "global"
+        paths = agent_install.profile_paths(scope, root, home, profile_agents)
+        missing = [path for path in paths if not path.is_file()]
+        if missing:
+            findings.append(
+                HealthFinding(
+                    id="profile:agents",
+                    label="Agent profiles",
+                    capability=(
+                        f"{len(missing)} managed subagent profile(s) are missing, so"
+                        " lane work falls back to the main agent."
+                    ),
+                    severity=WARNING,
+                    fix="Run `lpui setup` to reinstall the missing agent profiles.",
+                )
+            )
     for tool in _missing_tools(which, run, os.environ if env is None else env):
         remembered = state.integration_choices.get(tool.id)
         decision = suppressing_decision(remembered, "", version)

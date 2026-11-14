@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import AbstractContextManager
 from typing import Protocol
 
 from ..entities import Claim, PlanWorktree
@@ -13,6 +14,8 @@ from .revisions import RevisionsPort
 
 class InsightsPort(ProvenancePort, RevisionsPort, AgentsReadPort, RefsPort, Protocol):
     """Read-only surface used by metrics, stats, audit, brief, and lint."""
+
+    def transaction(self) -> AbstractContextManager[None]: ...
 
     def list_plan_worktrees(self, plan_id: int) -> list[PlanWorktree]: ...
 

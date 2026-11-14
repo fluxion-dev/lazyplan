@@ -161,9 +161,12 @@ class ClaimsMixin(StoreBase):
 
     def claims_map(self) -> dict[int, Claim]:
         """All leases keyed by task id, for one-query tree rendering."""
-        with self._connect() as conn:
-            rows = conn.execute("SELECT * FROM task_claims").fetchall()
-        return {int(row["task_id"]): self._row_to_claim(row) for row in rows}
+        return self._indexed(
+            "SELECT * FROM task_claims",
+            (),
+            self._row_to_claim,
+            lambda row: int(row["task_id"]),
+        )
 
     def list_claims(
         self,

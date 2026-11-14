@@ -87,13 +87,12 @@ class RefsMixin(StoreBase):
 
     def refs_map(self) -> dict[int, list[ExternalRef]]:
         """Every reference grouped by plan id."""
-        with self._connect() as conn:
-            rows = conn.execute("SELECT * FROM external_refs ORDER BY id").fetchall()
-        out: dict[int, list[ExternalRef]] = {}
-        for row in rows:
-            ref = self._row_to_ref(row)
-            out.setdefault(ref.plan_id, []).append(ref)
-        return out
+        return self._grouped(
+            "SELECT * FROM external_refs ORDER BY id",
+            (),
+            self._row_to_ref,
+            lambda row: int(row["plan_id"]),
+        )
 
     def unlink_ref(
         self,

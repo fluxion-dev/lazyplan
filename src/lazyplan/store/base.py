@@ -6,10 +6,10 @@ import json
 import sqlite3
 import threading
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar
 
 from lazyplan.infrastructure.checkout import PathAdapter
 from lazyplan.infrastructure.repo import (
@@ -95,6 +95,10 @@ def _actor(explicit: str = "") -> str:
     return default_actor()
 
 
+_K = TypeVar("_K")
+_V = TypeVar("_V")
+
+
 class StoreBase(_StoreContract):
     def __init__(self, path: str | Path | None = None, paths: PathPort | None = None) -> None:
         self.path = resolve_db_path(path)
@@ -159,6 +163,60 @@ class StoreBase(_StoreContract):
         finally:
             self._local.conn = None
             conn.close()
+
+    def _grouped(
+        self,
+        sql: str,
+        params: Sequence[object],
+        make: Callable[[sqlite3.Row], _V],
+        key: Callable[[sqlite3.Row], _K],
+    ) -> dict[_K, list[_V]]:
+        """Rows mapped by *make* and grouped under the row's *key*, in read order."""
+        with self._connect() as conn:
+            rows = conn.execute(sql, params).fetchall()
+        out: dict[_K, list[_V]] = {}
+        for row in rows:
+            out.setdefault(key(row), []).append(make(row))
+        return out
+
+    def _indexed(
+        self,
+        sql: str,
+        params: Sequence[object],
+        make: Callable[[sqlite3.Row], _V],
+        key: Callable[[sqlite3.Row], _K],
+    ) -> dict[_K, _V]:
+        """One value per key, for a read with at most one row per key."""
+        with self._connect() as conn:
+            rows = conn.execute(sql, params).fetchall()
+        return {key(row): make(row) for row in rows}
+
+    def _latest_ended(
+        self,
+        table: str,
+        ended: str,
+        actor_column: str,
+        make: Callable[[sqlite3.Row], _V],
+        plan_id: int | None = None,
+        actor: str = "",
+        repo_path: str = "",
+    ) -> _V | None:
+        """Newest ended, unarchived row of *table* for a plan, actor, or checkout."""
+        sql = f"SELECT * FROM {table} WHERE {ended} AND archived_at = 0"
+        params: list[object] = []
+        if plan_id is not None:
+            sql += " AND plan_id=?"
+            params.append(plan_id)
+        if actor:
+            sql += f" AND {actor_column}=?"
+            params.append(actor)
+        if repo_path:
+            sql += " AND repo_path=?"
+            params.append(repo_path)
+        sql += " ORDER BY ended_at DESC, id DESC LIMIT 1"
+        with self._connect() as conn:
+            row = conn.execute(sql, params).fetchone()
+        return make(row) if row is not None else None
 
     def log(
         self,

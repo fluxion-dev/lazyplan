@@ -46,11 +46,9 @@ class TouchpointsMixin(StoreBase):
 
     def touchpoints_map(self) -> dict[int, list[str]]:
         """Every task's patterns, grouped by task id."""
-        with self._connect() as conn:
-            rows = conn.execute(
-                "SELECT task_id, pattern FROM task_touchpoints ORDER BY task_id, pattern"
-            ).fetchall()
-        out: dict[int, list[str]] = {}
-        for row in rows:
-            out.setdefault(int(row["task_id"]), []).append(str(row["pattern"]))
-        return out
+        return self._grouped(
+            "SELECT task_id, pattern FROM task_touchpoints ORDER BY task_id, pattern",
+            (),
+            lambda row: str(row["pattern"]),
+            lambda row: int(row["task_id"]),
+        )

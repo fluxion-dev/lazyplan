@@ -363,21 +363,15 @@ class AgentsMixin(StoreBase):
         repo_path: str = "",
     ) -> Agent | None:
         """Most recently ended, unarchived agent for a plan or checkout."""
-        sql = "SELECT * FROM agents WHERE status='ended' AND archived_at=0"
-        params: list[object] = []
-        if plan_id is not None:
-            sql += " AND plan_id=?"
-            params.append(plan_id)
-        if actor:
-            sql += " AND agent=?"
-            params.append(actor)
-        if repo_path:
-            sql += " AND repo_path=?"
-            params.append(repo_path)
-        sql += " ORDER BY ended_at DESC, id DESC LIMIT 1"
-        with self._connect() as conn:
-            row = conn.execute(sql, params).fetchone()
-        return self._row_to_agent(row) if row is not None else None
+        return self._latest_ended(
+            "agents",
+            "status = 'ended'",
+            "agent",
+            self._row_to_agent,
+            plan_id=plan_id,
+            actor=actor,
+            repo_path=repo_path,
+        )
 
     def agent_events(self, agent_id: int, limit: int = 50) -> list[AgentEvent]:
         """Newest transitions for one agent."""

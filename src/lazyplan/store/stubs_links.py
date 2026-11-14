@@ -158,18 +158,6 @@ class StoreStubsLinks:
     def get_parent(self, kind: str, obj_id: int) -> Plan | Milestone | Task | None:
         raise NotImplementedError
 
-    def _task_view(self, t: Task) -> dict:
-        raise NotImplementedError
-
-    def _task_show(self, t: Task) -> dict:
-        raise NotImplementedError
-
-    def _milestone_show(self, s: Milestone) -> dict:
-        raise NotImplementedError
-
-    def _plan_show(self, p: Plan) -> dict:
-        raise NotImplementedError
-
     def get_full(self, kind: str, obj_id: int) -> dict | None:
         raise NotImplementedError
 

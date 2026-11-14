@@ -194,7 +194,7 @@ class _FullReader:
             payload["issues"] = issue_refs
         return payload
 
-    def plan(self, plan: Plan) -> dict:
+    def plan(self, plan: Plan, recent: list | None = None) -> dict:
         payload = {
             "plan": to_payload(vars(plan)),
             "criteria": self._criteria("plan", plan.id),
@@ -207,7 +207,9 @@ class _FullReader:
             "repos": self.repos.get(("plan", plan.id), []),
             "effective_repos": self._effective_repos("plan", plan.id),
             "worktrees": [vars(row) for row in self.worktrees.get(plan.id, [])],
-            "approval": approval_payload(self.revisions.get(plan.id), self.drift.get(plan.id, 0)),
+            "approval": approval_payload(
+                self.revisions.get(plan.id), self.drift.get(plan.id, 0), recent
+            ),
             "questions": [vars(q) for q in self.questions.get(plan.id, [])],
             "refs": [vars(ref) for ref in self.refs.get(plan.id, [])],
             "milestones": [

@@ -8,6 +8,7 @@ import sys
 
 from lazyplan.services.worktrees import (
     done_blocker,
+    lane_worktree_entries,
     removal_commands,
     stale_reason,
     verify_worktree,
@@ -18,7 +19,6 @@ from ....core.entities import Milestone, Plan, PlanWorktree
 from ....core.policies.worktrees import (
     WorktreeCollision,
     derive_lane_worktree,
-    derive_lane_worktrees,
     derive_worktree,
     derive_worktrees,
     quote_path,
@@ -61,15 +61,15 @@ def _print_plan_worktrees(
             for target in derive_worktrees(paths, plan.id, plan.name, exists=os.path.exists):
                 derived.append((target.repo_path, target.worktree_path, target.branch, None))
         else:
-            for lane in derive_lane_worktrees(
-                paths,
-                plan.id,
-                plan.name,
-                milestone.id,
-                milestone.title,
-                exists=os.path.exists,
-            ):
-                derived.append((lane.repo_path, lane.worktree_path, lane.branch, milestone.id))
+            for row in lane_worktree_entries(store, plan, milestone):
+                derived.append(
+                    (
+                        row["repo_path"],
+                        row["worktree_path"],
+                        row["branch"],
+                        milestone.id,
+                    )
+                )
     except (ValueError, WorktreeCollision) as exc:
         print(msg_error(exc), file=sys.stderr)
         return 2

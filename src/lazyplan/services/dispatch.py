@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import os
 import time
 from typing import Any
 
 from ..core.entities import Claim, Milestone, Plan, Task
-from ..core.policies.worktrees import derive_lane_worktree, quote_path
+from ..core.policies.worktrees import quote_path
 from ..core.ports.insights import InsightsPort
+from .worktrees import lane_worktree_entries
 
 DEFAULT_MAX_CHARS = 4000
 
@@ -48,7 +48,7 @@ def build(
             ),
             None,
         )
-        worktrees = _worktrees(store, plan, milestone)
+        worktrees = lane_worktree_entries(store, plan, milestone)
         lane_next = next(
             (task for task in tasks if task.status.value == "todo" and not task.blocked),
             None,
@@ -204,47 +204,6 @@ def _lane_blockers(
     if any(task.blocked for task in tasks):
         blocked.append("a task is blocked")
     return blocked
-
-
-def _worktrees(store: InsightsPort, plan: Plan, milestone: Milestone) -> list[dict[str, Any]]:
-    """Derived and registered checkouts for one lane."""
-    repos = store.list_repos("plan", plan.id)
-    all_rows = store.list_plan_worktrees(plan.id)
-    rows = [row for row in all_rows if row.milestone_id == milestone.id]
-    if not rows and plan.dispatch_mode != "parallel":
-        rows = [row for row in all_rows if row.milestone_id is None]
-    entries: list[dict[str, Any]] = []
-    for repo in repos:
-        repo_path = str(repo["repo_path"])
-        target = derive_lane_worktree(repo_path, plan.id, plan.name, milestone.id, milestone.title)
-        registered = next(
-            (
-                row
-                for row in rows
-                if store.normalize_repo_path(row.repo_path) == store.normalize_repo_path(repo_path)
-            ),
-            None,
-        )
-        base = str(repo.get("base_sha") or repo.get("branch") or "HEAD")
-        entries.append(
-            {
-                "repo_path": target.repo_path,
-                "worktree_path": target.worktree_path,
-                "branch": target.branch,
-                "registered": registered is not None,
-                "exists": os.path.exists(target.worktree_path),
-                "git_command": (
-                    f"git -C {quote_path(target.repo_path)} worktree add -b"
-                    f" {target.branch} {quote_path(target.worktree_path)}"
-                    f" {quote_path(base)}"
-                ),
-                "register_command": (
-                    f"lpui plan worktree add --id {plan.id}"
-                    f" --milestone {milestone.id} --repo {quote_path(target.repo_path)}"
-                ),
-            }
-        )
-    return entries
 
 
 def _claim_payload(claim: Claim | None) -> dict[str, Any] | None:

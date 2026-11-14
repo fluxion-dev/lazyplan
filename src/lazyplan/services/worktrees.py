@@ -6,8 +6,8 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from ..core.entities import PlanWorktree
-from ..core.policies.worktrees import quote_path
+from ..core.entities import Milestone, Plan, PlanWorktree
+from ..core.policies.worktrees import derive_lane_worktree, quote_path
 from ..core.ports.planning import PlanningPort
 from ..core.ports.repos import ReposPort
 from ..infrastructure.repo import git_common_dir, git_worktree_paths
@@ -29,6 +29,43 @@ def _refuse(
     reason: str, branch: str = "", head: str = "", dirty: bool = False
 ) -> WorktreeVerification:
     return WorktreeVerification(False, reason=reason, branch=branch, head=head, dirty=dirty)
+
+
+def lane_worktree_entries(store: ReposPort, plan: Plan, milestone: Milestone) -> list[dict]:
+    """Derived, registered, and command-ready checkouts for one lane."""
+    repos = store.list_repos("plan", plan.id)
+    all_rows = store.list_plan_worktrees(plan.id)
+    rows = [row for row in all_rows if row.milestone_id == milestone.id]
+    if not rows and plan.dispatch_mode != "parallel":
+        rows = [row for row in all_rows if row.milestone_id is None]
+    entries: list[dict] = []
+    for repo in repos:
+        repo_path = str(repo["repo_path"])
+        target = derive_lane_worktree(repo_path, plan.id, plan.name, milestone.id, milestone.title)
+        registered = any(
+            store.normalize_repo_path(row.repo_path) == store.normalize_repo_path(repo_path)
+            for row in rows
+        )
+        base = str(repo.get("base_sha") or repo.get("branch") or "HEAD")
+        entries.append(
+            {
+                "repo_path": target.repo_path,
+                "worktree_path": target.worktree_path,
+                "branch": target.branch,
+                "registered": registered,
+                "exists": os.path.exists(target.worktree_path),
+                "git_command": (
+                    f"git -C {quote_path(target.repo_path)} worktree add -b"
+                    f" {target.branch} {quote_path(target.worktree_path)}"
+                    f" {quote_path(base)}"
+                ),
+                "register_command": (
+                    f"lpui plan worktree add --id {plan.id}"
+                    f" --milestone {milestone.id} --repo {quote_path(target.repo_path)}"
+                ),
+            }
+        )
+    return entries
 
 
 def worktree_gate(store: ReposPort, plan_id: int) -> str:

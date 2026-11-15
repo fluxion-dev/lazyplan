@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 from collections.abc import Iterable
@@ -128,3 +129,50 @@ class SetupSessionTest(unittest.TestCase):
 
     def test_layout_root_is_none_outside_a_checkout(self) -> None:
         self.assertIsNone(session_module.layout_root(Path(self.tmp.name) / "outside"))
+
+    def test_an_old_state_file_without_wizard_fields_loads(self) -> None:
+        state_dir = self.home / ".lazyplan"
+        state_dir.mkdir()
+        (state_dir / "setup.json").write_text(
+            json.dumps({"version": 1, "placement": "home", "agents": ["opencode"]}),
+            encoding="utf-8",
+        )
+        session = self.load()
+        self.assertEqual(session.draft.agents, ["opencode"])
+        self.assertEqual(session.draft.theme, "")
+
+    def test_second_apply_keeps_managed_files_byte_identical(self) -> None:
+        session = self.load()
+        session.set_placement("home")
+        session.set_agents(["opencode"])
+        session.set_hooks_mode("off")
+        for item in session.pending:
+            session.set_integration(item.id, "defer")
+        session.apply()
+        mapping = self.home / ".lazyplan" / "agents.json"
+        profile = self.home / ".config" / "opencode" / "agent" / "lazyplan-implementer.md"
+        before = (mapping.read_bytes(), profile.read_bytes())
+        session.apply()
+        self.assertEqual((mapping.read_bytes(), profile.read_bytes()), before)
+
+    def test_session_apply_matches_the_terminal_choice_files(self) -> None:
+        other = Path(self.tmp.name) / "other-home"
+        other.mkdir()
+        session = self.load()
+        session.set_placement("home")
+        session.set_agents(["opencode"])
+        session.set_hooks_mode("off")
+        for item in session.pending:
+            session.set_integration(item.id, "defer")
+        session.apply()
+        setup.apply_choice(session.choice(), None, other, "1.0")
+        self.assertEqual(
+            (self.home / ".lazyplan" / "agents.json").read_bytes(),
+            (other / ".lazyplan" / "agents.json").read_bytes(),
+        )
+        for name in ("lazyplan-implementer.md", "lazyplan-reviewer.md"):
+            relative = Path(".config") / "opencode" / "agent" / name
+            self.assertEqual(
+                (self.home / relative).read_bytes(),
+                (other / relative).read_bytes(),
+            )

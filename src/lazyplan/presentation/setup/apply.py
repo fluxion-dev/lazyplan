@@ -70,6 +70,39 @@ def _seed_profile_map(
     return path, backup
 
 
+def _remove_deselected_profiles(
+    previous: SetupState,
+    selected: list[str],
+    root: Path | None,
+    home: Path,
+    scope: str,
+) -> list[str]:
+    """Remove only marked files for hosts that are no longer selected."""
+    dropped = [host for host in previous.agents if host not in set(selected)]
+    if not dropped:
+        return []
+    scopes = {scope}
+    if previous.placement == REPO and root is not None:
+        scopes.add("project")
+    if previous.placement == HOME:
+        scopes.add("global")
+    removed: list[str] = []
+    for host in dropped:
+        for current in scopes:
+            for path in agent_install.profile_paths(current, root, home, [host]):
+                if not path.is_file():
+                    continue
+                try:
+                    text = textfile.read(path)
+                except OSError:
+                    continue
+                if "managed by lazyplan:" not in text:
+                    continue
+                path.unlink()
+                removed.append(str(path))
+    return removed
+
+
 def _install_agent_profiles(
     choice: SetupChoice,
     skill_plan: skills.SkillPlan,
@@ -125,6 +158,7 @@ def apply_choice(
     profile_results, profile_files = _install_agent_profiles(
         choice, skill_plan, root, home, resolved.db
     )
+    removed_profiles = _remove_deselected_profiles(previous, agents, root, home, skill_plan.scope)
     if root is not None and choice.placement == REPO and not choice.explicit_db:
         for entry in resolved.gitignore_entries:
             skills.append_gitignore(root, entry)
@@ -138,6 +172,7 @@ def apply_choice(
         "agents_json": str(profile_map) if profile_map is not None else None,
         "profiles": [item.to_dict() for item in profile_results],
         "profile_files": profile_files,
+        "removed_profiles": removed_profiles,
         "refreshed": [str(path) for path in refreshed],
         "backups": [str(path) for path in backups],
         "state": str(state_path(home)),

@@ -128,6 +128,22 @@ class ProfileMapSetupTest(unittest.TestCase):
         self.assertEqual(written["profiles"]["qa"]["tier"], "deep")
         self.assertTrue((self.home / ".config/opencode/agent/lazyplan-qa.md").is_file())
 
+    def test_deselected_host_removes_only_managed_profiles(self) -> None:
+        setup.apply_choice(self._choice(agents=["opencode", "claude"]), None, self.home, "1.0")
+        custom = self.home / ".claude/agents/lazyplan-custom.md"
+        custom.write_text("my custom agent\n", encoding="utf-8")
+        managed = self.home / ".claude/agents/lazyplan-qa.md"
+        self.assertTrue(managed.is_file())
+        result = setup.apply_choice(self._choice(agents=["opencode"]), None, self.home, "1.0")
+        self.assertFalse(managed.exists())
+        self.assertEqual(custom.read_text(encoding="utf-8"), "my custom agent\n")
+        self.assertTrue((self.home / ".config/opencode/agent/lazyplan-qa.md").is_file())
+        self.assertTrue(result["removed_profiles"])
+        self.assertEqual(setup.load_state(self.home).agents, ["opencode"])
+        self.assertFalse(
+            any("claude" in path for path in setup.load_state(self.home).profile_files)
+        )
+
     def test_wizard_can_skip_the_model_review(self) -> None:
         import io
 

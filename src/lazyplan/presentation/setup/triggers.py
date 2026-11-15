@@ -7,16 +7,23 @@ broken managed profiles. ``detect`` never writes; ``mark_pending`` and
 
 from __future__ import annotations
 
+import importlib.util
+import os
+import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from lazyplan.infrastructure.repo import find_repo_root
 
+from . import ui
 from .apply import choice_from_state, profile_drift
+from .constants import NO_SETUP_ENV
 from .integrations import inspect
 from .layout import SetupChoice
 from .state import SetupState, load_state, save_state
 
+UI_COMMAND = "ui"
 FRESH = "fresh"
 VERSION = "version"
 INTEGRATIONS = "integrations"
@@ -120,6 +127,54 @@ def clear_pending(state: SetupState, version: str, home: Path) -> SetupState:
     state.wizard_completed = version
     save_state(state, home)
     return state
+
+
+def textual_available() -> bool:
+    """True when the optional Textual dependency can be imported."""
+    try:
+        return importlib.util.find_spec("textual") is not None
+    except (ImportError, ValueError):  # pragma: no cover - broken install
+        return False
+
+
+def setup_off(db_path: str | None = None) -> bool:
+    """True when a caller-owned database or ``LAZYPLAN_NO_SETUP`` turns setup off."""
+    explicit = db_path or os.environ.get("LAZYPLAN_DB", "")
+    return bool(str(explicit).strip() or os.environ.get(NO_SETUP_ENV, "").strip())
+
+
+def _screen_terminal(interactive: bool | None) -> bool:
+    """Whether this run has the terminal the full screen needs."""
+    if interactive is not None:
+        return interactive
+    try:
+        return ui.stdin_tty() and sys.stderr.isatty() and sys.stdout.isatty()
+    except (AttributeError, ValueError):
+        return False
+
+
+def tui_owns_setup(
+    cmd: str | None,
+    args: Any,
+    interactive: bool | None = None,
+) -> bool:
+    """Whether the TUI wizard, not the terminal one, owns setup for this run.
+
+    Only an interactive ``ui`` run with Textual installed defers; every other
+    command keeps the terminal path, and ``--json`` and ``--yes`` stay silent.
+    """
+    if cmd != UI_COMMAND:
+        return False
+    if getattr(args, "json", False) or getattr(args, "yes", False):
+        return False
+    return _screen_terminal(interactive) and textual_available()
+
+
+def defer_to_tui(state: SetupState, version: str, home: Path) -> WizardNeed:
+    """Remember why setup left the wizard to the screen and return the reason."""
+    reason = pending_reason(state, version) or VERSION
+    mark_pending(load_state(home), reason, version, home)
+    return WizardNeed(reason, version, DEFAULT_DETAILS[reason])
 
 
 def _pending_items(

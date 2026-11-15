@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 from textual.app import App
 from textual.theme import Theme
 
+from ...setup.state import load_state, save_state
 from .tokens import DARK_TOKENS, LIGHT_TOKENS, VOID_TOKENS
 
 DARK_NAME = "lazyplan-dark"
@@ -86,10 +88,31 @@ _ALIASES = {
 }
 
 
-def choose_theme(value: str | None = None) -> str:
-    """Resolve a theme name from an explicit value or ``LAZYPLAN_THEME``."""
-    raw = (value if value is not None else os.environ.get(ENV_VAR, "")).strip().lower()
-    return _ALIASES.get(raw, DARK_NAME)
+def _resolve(raw: str | None) -> str:
+    """Canonical theme name for a stored value, or an empty string."""
+    return _ALIASES.get((raw or "").strip().lower(), "")
+
+
+def choose_theme(remembered: str = "", explicit: str | None = None) -> str:
+    """Resolve a theme: ``LAZYPLAN_THEME`` first, then memory, then the default."""
+    for candidate in (os.environ.get(ENV_VAR, ""), remembered if explicit is None else explicit):
+        name = _resolve(candidate)
+        if name:
+            return name
+    return DARK_NAME
+
+
+def remembered_theme(home: Path | None = None) -> str:
+    """The theme the last cycle or wizard apply saved."""
+    return load_state(home).theme
+
+
+def remember_theme(name: str, home: Path | None = None) -> str:
+    """Save the theme the screen shows so the next launch opens with it."""
+    state = load_state(home)
+    state.theme = _resolve(name) or DARK_NAME
+    save_state(state, home)
+    return state.theme
 
 
 def next_theme(current: str) -> str:
@@ -101,10 +124,10 @@ def next_theme(current: str) -> str:
     return THEME_NAMES[(index + 1) % len(THEME_NAMES)]
 
 
-def register_themes(app: App) -> str:
+def register_themes(app: App, remembered: str = "") -> str:
     """Register every theme and activate the selected one."""
     for theme in THEMES:
         app.register_theme(theme)
-    selected = choose_theme()
+    selected = choose_theme(remembered)
     app.theme = selected
     return selected

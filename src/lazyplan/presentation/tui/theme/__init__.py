@@ -23,6 +23,8 @@ from .themes import (
     choose_theme,
     next_theme,
     register_themes,
+    remember_theme,
+    remembered_theme,
 )
 from .tokens import DARK_TOKENS, LIGHT_TOKENS, TOKEN_NAMES, VOID_TOKENS
 
@@ -48,5 +50,7 @@ __all__ = [
     "lane_rgb",
     "next_theme",
     "register_themes",
+    "remember_theme",
+    "remembered_theme",
     "token_rgb",
 ]

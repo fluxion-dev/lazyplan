@@ -420,6 +420,15 @@ CORE_ACTIONS: tuple[Action, ...] = (
         cli_paths=("doctor",),
     ),
     _action(
+        "app.setup",
+        "Open setup wizard",
+        "S",
+        "global",
+        ("tui",),
+        ("tree", "setup"),
+        ("open-setup",),
+    ),
+    _action(
         "app.help",
         "Help",
         "?",

@@ -147,9 +147,9 @@ lpui
 
 The first run sets up lazyplan: it detects your coding agents, installs their
 skills, creates the database, and remembers the choices in
-`~/.lazyplan/setup.json`. On a terminal you get a short wizard with the same
-palette, step rules, and compact review as the TUI; scripts, agents, and
-`--json` get the same defaults without prompts.
+`~/.lazyplan/setup.json`. The screen then opens the setup wizard to review and
+change those choices; scripts, agents, and `--json` get the same defaults
+without prompts.
 
 Then create your first plan:
 
@@ -182,7 +182,25 @@ palette command lists every gap with Install & restart. The check is off with
 
 ## Setup and scope
 
-Setup writes one layout. Re-run it any time to change placement or agents:
+Setup writes one layout, and the screen is where you review it. `lpui` on a
+terminal opens a multi-step setup wizard before normal use: placement, agents
+and their skills, hooks and the `AGENTS.md` pointer, model targets, per-role
+tier and effort, pending integrations, the theme, and read-only tool checks.
+Nothing is written until the last step lists the exact writes and removals and
+you apply them.
+
+The wizard opens when setup is due: a fresh install, a release that changed
+setup, new skills or hooks a release added, managed agent profiles that are
+missing or out of date, or an explicit request. Choosing **finish later**
+writes nothing and reopens the wizard at the next applicable launch. Reopen it
+any time from the palette's **Open setup wizard** or the `S` key; it starts
+filled with the remembered choices.
+
+`lpui setup` keeps the terminal wizard for an explicit run. Runs without a
+terminal, without Textual, with `--json`, `--yes`, or `LAZYPLAN_NO_SETUP`
+apply the same defaults silently and never wait for input; an explicit `--db`
+or `$LAZYPLAN_DB` keeps setup out of the way entirely. `lpui setup` is the
+fallback for a headless shell.
 
 ```bash
 lpui setup
@@ -196,10 +214,8 @@ lpui setup --json
 | `--placement repo` | `<repo>/.agents/lazyplan/` | repo config | repo skill dirs | repo pointer |
 | `--db PATH` / `$LAZYPLAN_DB` | `PATH` and its sibling `templates/` | only for a repo plan dir | none | none |
 
-The wizard asks two questions: where plans live (home or this repo when you are
-inside a git checkout) and which detected agents get the skill. Templates use
-the opinionated defaults and are written without extra questions. An explicit
-`--db` or `$LAZYPLAN_DB` always wins and is never moved.
+Templates use the opinionated defaults and are written without extra questions.
+An explicit `--db` or `$LAZYPLAN_DB` always wins and is never moved.
 
 ### Inspect before writing
 
@@ -212,14 +228,16 @@ Read-only. Exit `0` means clean, `1` means any finding: misplaced resources,
 missing hook files or integrations, a state-version mismatch, or migration
 drift. The report names the resolved database, config, templates, skill paths,
 hook files, state, and every finding, plus the same health findings the
-startup check shows, hidden ones included. Missing tools are listed but don't
-change the exit code. It resolves the same database a normal run would open,
-including `--db` and `$LAZYPLAN_DB`.
+startup check shows, hidden ones included. A pending setup wizard is one
+informational `wizard:` line; doctor never opens it. Missing tools are listed
+but don't change the exit code. It resolves the same database a normal run
+would open, including `--db` and `$LAZYPLAN_DB`.
 
 ### Upgrades and migration
 
-Setup runs again after a version change and reviews layout drift once per
-finding; it does not ask on every command.
+A version change runs the silent refresh, then reopens the wizard so the new
+choices are visible once; layout drift is reviewed once per finding, not on
+every command.
 
 - An untracked or ignored repo database is offered once: move it to
   `~/.lazyplan/lazyplan.db`, keep it here, or never ask for that path.
@@ -232,17 +250,16 @@ finding; it does not ask on every command.
 - If both databases contain plans, setup refuses to merge and prints
   export/import guidance instead.
 - A release can add a skill or hook host/event. Setup refreshes what is already
-  installed and leaves the new items to the startup health check; `lpui setup`
-  lists them with one prompt: install all, not now, or never. Install writes
-  every listed file with a backup.
+  installed and the wizard's integrations step offers the new items: install,
+  not now, or never. Install writes every listed file with a backup.
 - Not-now is remembered until the next version change; never is remembered
   until that item's definition changes. Both choices live in
   `~/.lazyplan/setup.json`.
 - `--no-skills` and `--no-hooks` are remembered across upgrades. New skills or
   hooks stay pending and doctor reports them; pass `--hooks` to opt back in.
-- Only `lpui`, `lpui setup`, and `lpui upgrade` prompt, and `lpui` asks about
-  integrations inside the screen. Agent calls set up silently and never wait
-  for input.
+- Only the setup wizard, `lpui setup`, and `lpui upgrade` ask. Agent calls set
+  up silently and never wait for input, and the startup health prompt stays
+  quiet while the wizard is due.
 
 ### Where the database resolves
 
@@ -275,15 +292,16 @@ lpui --heal | --no-heal               # automatic repair on or off for this comm
 ```
 
 Precedence is explicit flag, then environment, then remembered state, then
-detection. The wizard uses the same defaults, so `lpui setup --placement repo`
-or `--no-skills` changes what the questions propose.
+detection. The terminal wizard uses the same defaults, so `lpui setup
+--placement repo` or `--no-skills` changes what it proposes.
 
 `LAZYPLAN_NO_SETUP=1` skips first-run setup and upgrade review. `NO_COLOR`,
 `LAZYPLAN_NO_COLOR`, `CLICOLOR=0`, and `TERM=dumb` keep the wizard plain.
 `LAZYPLAN_THEME` selects a TUI palette: `dark` or `mocha` (the default),
 `void` for an OLED-black variant, and `light` or `latte` for the light theme.
-Unset or any other value uses mocha. Press `t` in the TUI to cycle the three
-palettes without restarting.
+Unset or any other value uses the remembered choice from setup, then mocha.
+Press `t` in the TUI to cycle the three palettes without restarting; the cycle
+remembers the choice, and `LAZYPLAN_THEME` still wins at the next launch.
 `--placement repo` outside a git checkout falls back to home.
 
 | Variable | Meaning |
@@ -406,6 +424,7 @@ before it.
 | `escape` | back from source and modals; clears the tree filter |
 | `?` | help, from any screen |
 | `c` | command palette, from any screen |
+| `S` | setup wizard, from any screen |
 | `t` | cycle theme: mocha, void, latte |
 | `T` | show or hide the timeline card |
 | `q` | quit, from any screen |

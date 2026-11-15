@@ -29,6 +29,7 @@ from ...setup.layout import resolve_choice
 from ...setup.session import SetupSession, SetupSessionError
 from ...setup.state import state_path
 from ...setup.steps import WELCOME, Step
+from ...setup.triggers import WizardNeed
 from ...shared.design import escape_markup
 
 try:
@@ -280,7 +281,7 @@ if _TEXTUAL_OK:
         def __init__(
             self,
             session: SetupSession,
-            start: str = "",
+            start: str | WizardNeed = "",
             *,
             checks: Checks | None = None,
         ) -> None:
@@ -299,11 +300,17 @@ if _TEXTUAL_OK:
             self._apply_error = ""
             self._result: WizardResult | None = None
 
-        def _start_index(self, start: str) -> int:
-            """The requested step when it is visible, else the first one."""
+        def _start_index(self, start: str | WizardNeed) -> int:
+            """The requested step when it is visible, else the first one.
+
+            The startup controller hands over the :class:`WizardNeed` that
+            opened the wizard. The reason explains why the wizard is due; the
+            run still starts at Welcome so the user reads the whole contract.
+            """
+            key = "" if isinstance(start, WizardNeed) else start
             keys = [step.key for step in self._steps]
-            if start in keys:
-                return keys.index(start)
+            if key in keys:
+                return keys.index(key)
             return 0
 
         @property

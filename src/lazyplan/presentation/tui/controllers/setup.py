@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Any
 
 from ...setup.session import SetupSession
 from ...setup.triggers import WizardNeed, detect
+from ..launch import Restart
 from .background import run_off_thread
 
 if TYPE_CHECKING:
@@ -57,7 +58,9 @@ def wizard_screen(launch: WizardLaunch) -> Any:
     """Build the wizard screen for one launch; imported only when it opens."""
     from ..screens import SetupWizardScreen  # type: ignore[attr-defined]  # lane M68
 
-    return SetupWizardScreen(launch.session, launch.need)
+    session = launch.session
+    assert session is not None  # a due launch always carries its session
+    return SetupWizardScreen(session, launch.need)
 
 
 class SetupController:
@@ -100,13 +103,20 @@ class SetupController:
         run_off_thread(self.app, lambda: self._detect(True), self._apply, "setup")
 
     def on_dismiss(self, result: Any) -> None:
-        """Refresh health and the tree after a completed apply."""
-        if result is None:
+        """Finish a wizard run; only a real apply clears pending and refreshes.
+
+        The screen always dismisses with a :class:`WizardResult`. Its ``applied``
+        flag is the single source of truth: finishing later or cancelling keeps
+        the pending marker and the remembered choices exactly as they were.
+        """
+        if not bool(getattr(result, "applied", False)):
             return
         self.launch = WizardLaunch(WizardNeed())
         self.app.notify("setup applied", timeout=4)
         self.app.health_controller.refresh()
         self.app.refresh_all("setup applied")
+        if bool(getattr(result, "restart", False)):
+            self.app.exit(Restart(tuple(getattr(result, "hosts", ()) or ())))
 
     def _detect(self, requested: bool) -> WizardLaunch:
         assert self.check is not None

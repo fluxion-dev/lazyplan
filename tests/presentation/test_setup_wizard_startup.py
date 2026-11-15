@@ -21,7 +21,8 @@ try:
 
     from lazyplan.presentation.tui import create_app
     from lazyplan.presentation.tui.controllers.setup import current
-    from lazyplan.presentation.tui.screens import HealthScreen
+    from lazyplan.presentation.tui.launch import Restart
+    from lazyplan.presentation.tui.screens import HealthScreen, WizardResult
 except ImportError:  # pragma: no cover - textual not installed
     create_app = None  # type: ignore[assignment]
 
@@ -182,27 +183,55 @@ class SetupStartupTest(unittest.IsolatedAsyncioTestCase):
                 mock.patch.object(app.health_controller, "refresh") as refresh,
                 mock.patch.object(app, "refresh_all") as refreshed,
             ):
-                app.screen.dismiss({"applied": True})
+                app.screen.dismiss(WizardResult(applied=True))
                 await self.settle(pilot)
             refresh.assert_called_once()
             refreshed.assert_called_once()
             self.assertFalse(app.setup_controller.pending)
             self.assertEqual(len(app.screen_stack), 1)
 
+    async def test_a_completed_apply_returns_the_restart_payload(self) -> None:
+        app = self.launch()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await self.settle(pilot)
+            app.screen.dismiss(
+                WizardResult(applied=True, hosts=("opencode",), restart=True),
+            )
+            await self.settle(pilot)
+        self.assertEqual(app.return_value, Restart(("opencode",)))
+
+    async def test_an_apply_without_a_restart_stays_in_the_screen(self) -> None:
+        app = self.launch()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await self.settle(pilot)
+            app.screen.dismiss(WizardResult(applied=True))
+            await self.settle(pilot)
+        self.assertIsNone(app.return_value)
+
     async def test_finishing_later_keeps_the_wizard_pending(self) -> None:
         app = self.launch()
         async with app.run_test(size=(120, 40)) as pilot:
             await self.settle(pilot)
-            app.screen.dismiss(None)
+            app.screen.dismiss(WizardResult())
             await self.settle(pilot)
             self.assertEqual(len(app.screen_stack), 1)
+            self.assertTrue(app.setup_controller.pending)
+
+    async def test_an_empty_payload_is_not_an_apply(self) -> None:
+        app = self.launch()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await self.settle(pilot)
+            with mock.patch.object(app, "refresh_all") as refreshed:
+                app.screen.dismiss(None)
+                await self.settle(pilot)
+            refreshed.assert_not_called()
             self.assertTrue(app.setup_controller.pending)
 
     async def test_finishing_later_reopens_from_the_palette(self) -> None:
         app = self.launch()
         async with app.run_test(size=(120, 40)) as pilot:
             await self.settle(pilot)
-            app.screen.dismiss(None)
+            app.screen.dismiss(WizardResult())
             await self.settle(pilot)
             app.action_open_setup()
             await self.settle(pilot)

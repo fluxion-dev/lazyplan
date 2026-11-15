@@ -101,9 +101,8 @@ if _TEXTUAL_OK:
             if entries:
                 options.highlighted = 0
             self._preview(0 if entries else None)
-            self.query_one("#hub-hints", Taskbar).set_line(
+            self.query_one("#hub-hints", Taskbar).set_for_app(
                 self._hints(),
-                latest=self.app.update_controller.latest,
             )
             self.query_one("#hub-page").border_title = f" {self.title} "
 

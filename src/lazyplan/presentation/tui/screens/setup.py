@@ -162,9 +162,8 @@ if _TEXTUAL_OK:
             self.set_class(height < 30, "short")
             hints = query_one_opt(self, "#setup-hints", Taskbar)
             if hints is not None:
-                hints.set_line(
+                hints.set_for_app(
                     hint_text(width),
-                    latest=self.app.update_controller.latest,
                 )
 
         def on_resize(self, event: events.Resize) -> None:

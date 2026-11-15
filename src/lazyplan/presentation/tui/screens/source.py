@@ -393,9 +393,8 @@ if _TEXTUAL_OK:
                 has_less=self._view.page_offset > 0,
                 page_label=self._view.page_label(DIFF_PREVIEW_LINES),
             )
-            self.query_one("#source-hints", Taskbar).set_line(
+            self.query_one("#source-hints", Taskbar).set_for_app(
                 bar,
-                latest=self.app.update_controller.latest,
             )
 
         def _selected(self) -> dict[str, Any] | None:

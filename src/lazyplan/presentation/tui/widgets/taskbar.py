@@ -120,6 +120,11 @@ class Taskbar(Static):
         self._version_latest = latest
         self._repaint()
 
+    def set_for_app(self, hints: str, *, health: str = "") -> None:
+        """Repaint from the app's remembered update state."""
+        controller = getattr(self.app, "update_controller", None)
+        self.set_line(hints, health=health, latest=str(getattr(controller, "latest", "") or ""))
+
     def set_latest(self, latest: str) -> None:
         """Repaint after an update poll names or clears a newer release."""
         self._version_latest = latest

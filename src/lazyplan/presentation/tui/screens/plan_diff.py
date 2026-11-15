@@ -50,9 +50,8 @@ if _TEXTUAL_OK:
             )
             self.query_one("#plan-diff-head", Static).update(head)
             self.query_one("#plan-diff-body", Static).update(body)
-            self.query_one("#plan-diff-hints", Taskbar).set_line(
+            self.query_one("#plan-diff-hints", Taskbar).set_for_app(
                 action_bar(None, [("↑↓", "scroll"), ("esc", "back")]),
-                latest=str(getattr(getattr(self.app, "update_controller", None), "latest", "")),
             )
             self.query_one("#plan-diff-scroll", VerticalScroll).focus()
 

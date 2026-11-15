@@ -14,6 +14,7 @@ from .health import HealthScreen
 from .help import HelpScreen, PaletteScreen, ReleaseNotesScreen, TextScreen
 from .maintenance import MaintenanceScreen
 from .plan_diff import PlanDiffScreen
+from .setup import SetupWizardScreen, WizardResult
 from .source import SourceScreen
 from .update import UpdateScreen
 
@@ -32,7 +33,9 @@ __all__ = [
     "PlanDiffScreen",
     "RefScreen",
     "ReleaseNotesScreen",
+    "SetupWizardScreen",
     "TextScreen",
     "SourceScreen",
     "UpdateScreen",
+    "WizardResult",
 ]

@@ -144,10 +144,37 @@ class OpenCodeProfileInstallTest(unittest.TestCase):
     def test_codex_global_scope_and_profile_paths(self) -> None:
         agent_install.install_codex("global", self.repo, self.home, self.profiles)
         self.assertTrue((self.home / ".codex/agents/lazyplan-qa.toml").is_file())
-        paths = agent_install.profile_paths(
-            "both", self.repo, self.home, ["codex"]
-        )
+        paths = agent_install.profile_paths("both", self.repo, self.home, ["codex"])
         self.assertEqual(len(paths), len(AGENT_ROLES) * 2)
+
+    def test_gemini_install_writes_model_and_read_only_tools(self) -> None:
+        tiers = {"standard": {"gemini": "gemini-3.8-flash"}}
+        result = agent_install.install_gemini(
+            "project", self.repo, self.home, self.profiles, None, tiers
+        )
+        self.assertEqual(len(result.installed), len(AGENT_ROLES))
+        qa = (self.repo / ".gemini/agents/lazyplan-qa.md").read_text(encoding="utf-8")
+        self.assertIn("name: lazyplan-qa", qa)
+        self.assertIn("model: gemini-3.8-flash", qa)
+        scout = (self.repo / ".gemini/agents/lazyplan-scout.md").read_text(encoding="utf-8")
+        self.assertIn("tools:", scout)
+        self.assertIn("read_file", scout)
+        self.assertNotIn("run_shell_command", scout)
+        reviewer = (self.repo / ".gemini/agents/lazyplan-reviewer.md").read_text(encoding="utf-8")
+        self.assertIn("run_shell_command", reviewer)
+        implementer = (self.repo / ".gemini/agents/lazyplan-implementer.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("tools:", implementer)
+
+    def test_gemini_empty_model_is_inherit_and_global_scope(self) -> None:
+        agent_install.install_gemini("global", self.repo, self.home, self.profiles)
+        qa = (self.home / ".gemini/agents/lazyplan-qa.md").read_text(encoding="utf-8")
+        self.assertIn("model: inherit", qa)
+        self.assertEqual(
+            len(agent_install.profile_paths("both", self.repo, self.home, ["gemini"])),
+            len(AGENT_ROLES) * 2,
+        )
 
     def test_install_profiles_selects_the_requested_hosts(self) -> None:
         db = self.root / "profiles.db"

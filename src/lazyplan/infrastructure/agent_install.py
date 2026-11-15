@@ -24,6 +24,10 @@ CLAUDE_READ_TOOLS = {
     "scout": "Read, Grep, Glob",
     "reviewer": "Read, Grep, Glob, Bash",
 }
+GEMINI_READ_TOOLS = {
+    "scout": ("read_file", "grep_search", "glob", "list_directory"),
+    "reviewer": ("read_file", "grep_search", "glob", "list_directory", "run_shell_command"),
+}
 
 ROLE_META: dict[str, dict[str, str]] = {
     "scout": {
@@ -158,6 +162,29 @@ def install_codex(
     )
 
 
+def gemini_targets(scope: str, repo_root: Path | None, home: Path) -> list[Path]:
+    """One Gemini subagent path per role for a scope."""
+    return _targets("gemini", scope, repo_root, home)
+
+
+def install_gemini(
+    scope: str,
+    repo_root: Path | None,
+    home: Path,
+    profiles: dict[str, Profile],
+    models: dict[str, str] | None = None,
+    tiers: dict[str, dict[str, str]] | None = None,
+) -> AgentInstallResult:
+    """Write or refresh every Gemini profile for a scope."""
+    return _install_host(
+        "gemini",
+        scope,
+        gemini_targets(scope, repo_root, home),
+        profiles,
+        lambda role, profile: render_gemini(role, profile, models, tiers),
+    )
+
+
 def _install_host(
     host: str,
     scope: str,
@@ -207,6 +234,38 @@ def render_claude(
             data_text(f"agents/common/{role}.md").rstrip(),
             "",
             f"{MARKER} claude {role} -->",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def render_gemini(
+    role: str,
+    profile: Profile,
+    models: dict[str, str] | None,
+    tiers: dict[str, dict[str, str]] | None = None,
+) -> str:
+    """One managed Gemini CLI subagent file."""
+    resolved = resolve(profile, "gemini", models, tiers)
+    meta = ROLE_META[role]
+    lines = [
+        "---",
+        f"name: lazyplan-{role}",
+        f"description: {meta['description']}",
+        f"model: {resolved['model'] or 'inherit'}",
+    ]
+    tools = GEMINI_READ_TOOLS.get(role)
+    if tools:
+        lines.append("tools:")
+        lines.extend(f"  - {tool}" for tool in tools)
+    lines.extend(
+        [
+            "---",
+            "",
+            data_text(f"agents/common/{role}.md").rstrip(),
+            "",
+            f"{MARKER} gemini {role} -->",
             "",
         ]
     )
@@ -308,6 +367,8 @@ def install_profiles(
         results.append(install_claude(scope, repo_root, home, loaded, None, tiers))
     if "codex" in agents:
         results.append(install_codex(scope, repo_root, home, loaded, None, tiers))
+    if "gemini" in agents:
+        results.append(install_gemini(scope, repo_root, home, loaded, None, tiers))
     return results
 
 

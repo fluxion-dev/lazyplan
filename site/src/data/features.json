@@ -61,7 +61,7 @@
     {
       "id": "handoffs",
       "title": "Sessions and handoffs",
-      "description": "Hooks record each agent session, and the next worker resumes from a note instead of a briefing.",
+      "description": "Hooks record each agent session. Comments and notes carry the handoff, so the next worker resumes instead of asking for a briefing.",
       "icon": "messages-square",
       "group": "agents"
     },

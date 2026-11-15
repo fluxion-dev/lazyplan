@@ -6,4 +6,6 @@ run the full suite after every merge.
 
 Commit each merge or conflict fix separately, link the integration task with
 `lpui link --kind task --id T`, and finish with `lpui task finish --id T --repo PATH`.
-Do not start new feature work in this lane.
+Do not start new feature work in this lane. You run on the integrator tier and
+effort from `agents.json`; run the full suite yourself rather than trusting a
+lane report.

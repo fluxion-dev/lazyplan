@@ -1,12 +1,12 @@
 {
-  "version": "0.41.1",
-  "generated": "2026-11-10",
+  "version": "0.47.0",
+  "generated": "2026-11-15",
   "groups": [
     {
       "id": "shell",
       "title": "Main shell",
       "blurb": "The tree, overview, panes, themes, and terminal widths.",
-      "count": 12
+      "count": 13
     },
     {
       "id": "trust",
@@ -17,8 +17,8 @@
     {
       "id": "coordination",
       "title": "Coordination hubs",
-      "blurb": "Claims, sessions, comments, and handoffs.",
-      "count": 3
+      "blurb": "Claims, comments, and handoffs.",
+      "count": 2
     },
     {
       "id": "provenance",
@@ -39,10 +39,16 @@
       "count": 22
     },
     {
+      "id": "setup",
+      "title": "Setup wizard",
+      "blurb": "First run: placement, agents, models, roles, and review.",
+      "count": 4
+    },
+    {
       "id": "cli",
-      "title": "CLI and setup",
+      "title": "CLI and transcripts",
       "blurb": "The shell surfaces that share the same journal.",
-      "count": 7
+      "count": 9
     }
   ],
   "scenes": [
@@ -251,6 +257,23 @@
       "height": 904
     },
     {
+      "id": "shell-version",
+      "group": "shell",
+      "title": "Version badge with an update",
+      "state": "Taskbar badge shows the next release",
+      "description": "The shell taskbar with the running version at the right edge and an arrow to a newer cached release that a click or U opens.",
+      "lookFor": [
+        "Is the version readable without competing with the hints?",
+        "Does the arrow explain itself, or does it need a legend?",
+        "Is the badge a big enough target for a mouse?"
+      ],
+      "keys": "click the badge \u00b7 U update",
+      "image": "shell-version.png",
+      "webp": "shell-version.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
       "id": "hub-criteria",
       "group": "trust",
       "title": "Criteria hub",
@@ -332,23 +355,6 @@
       "keys": "a claim \u00b7 x renew \u00b7 d release \u00b7 D force",
       "image": "hub-claims.png",
       "webp": "hub-claims.webp",
-      "width": 1604,
-      "height": 904
-    },
-    {
-      "id": "hub-sessions",
-      "group": "coordination",
-      "title": "Sessions and handoffs hub",
-      "state": "Active and ended sessions",
-      "description": "The sessions hub: actor, host, branch, age, idle time, summary, handoff, and the recent event trail.",
-      "lookFor": [
-        "Can you tell which agent needs you?",
-        "Is idle time more useful than start time?",
-        "Is the handoff easy to find?"
-      ],
-      "keys": "a start \u00b7 d end \u00b7 x end",
-      "image": "hub-sessions.png",
-      "webp": "hub-sessions.webp",
       "width": 1604,
       "height": 904
     },
@@ -982,11 +988,45 @@
       "height": 782
     },
     {
+      "id": "cli-dispatch",
+      "group": "cli",
+      "title": "CLI dispatch",
+      "state": "`lpui dispatch --plan 1`",
+      "description": "The read-only orchestration view: waves, lane state, capacity, registered worktrees, and the claim command for each ready task.",
+      "lookFor": [
+        "Does the lane block read as a plan you can act on?",
+        "Is capacity obvious when nothing is running?",
+        "Are the worktree paths scannable at 120 columns?"
+      ],
+      "keys": "lpui dispatch --plan 1",
+      "image": "cli-dispatch.png",
+      "webp": "cli-dispatch.webp",
+      "width": 1482,
+      "height": 782
+    },
+    {
+      "id": "cli-worktrees",
+      "group": "cli",
+      "title": "CLI worktrees",
+      "state": "`lpui plan worktree list|print|add`",
+      "description": "The worktree registry: the registered lane checkouts, the git command for a new lane, and the registration result.",
+      "lookFor": [
+        "Is the branch visible beside each checkout?",
+        "Is it clear that lazyplan never creates a worktree?",
+        "Do the long paths wrap usefully?"
+      ],
+      "keys": "lpui plan worktree list|print|add",
+      "image": "cli-worktrees.png",
+      "webp": "cli-worktrees.webp",
+      "width": 1482,
+      "height": 782
+    },
+    {
       "id": "setup-wizard",
       "group": "cli",
-      "title": "Setup wizard",
-      "state": "Placement, agents, and review",
-      "description": "The first-run setup wizard: where plans live, which agents get the skill, and the review of everything installation will write.",
+      "title": "Setup transcript",
+      "state": "Placement, agents, and review at the shell",
+      "description": "The terminal setup flow: where plans live, which agents get the skill, and the review of everything installation will write.",
       "lookFor": [
         "Does the wizard explain the placement tradeoff?",
         "Are detected agents obvious?",
@@ -997,6 +1037,74 @@
       "webp": "setup-wizard.webp",
       "width": 1482,
       "height": 1075
+    },
+    {
+      "id": "setup-welcome",
+      "group": "setup",
+      "title": "Wizard welcome",
+      "state": "First step, repo placement",
+      "description": "The TUI setup wizard's welcome step with the resolved database, templates, config, pointer, and state paths, and the step rail.",
+      "lookFor": [
+        "Is the whole wizard's scope clear on the first screen?",
+        "Does the rail order match the mental model?",
+        "Is Finish later easy to trust?"
+      ],
+      "keys": "b back \u00b7 n next \u00b7 l later",
+      "image": "setup-welcome.png",
+      "webp": "setup-welcome.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "setup-models",
+      "group": "setup",
+      "title": "Model targets",
+      "state": "Tier targets per host",
+      "description": "One select and one free-text field per host and capability tier.",
+      "lookFor": [
+        "Do the selects show their current value?",
+        "Is inherit distinguishable from empty?",
+        "Is the source line useful or noise?"
+      ],
+      "keys": "tab between targets",
+      "image": "setup-models.png",
+      "webp": "setup-models.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "setup-roles",
+      "group": "setup",
+      "title": "Role tiers and effort",
+      "state": "Every role's tier and effort",
+      "description": "One row per role with a tier selector and an effort selector, plus the reset action.",
+      "lookFor": [
+        "Do the selectors render their stored values?",
+        "Is effort visibly optional?",
+        "Is the host field name worth showing?"
+      ],
+      "keys": "tab between roles",
+      "image": "setup-roles.png",
+      "webp": "setup-roles.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "setup-review",
+      "group": "setup",
+      "title": "Wizard review",
+      "state": "Every file before Apply",
+      "description": "The review step listing every file the apply will write, ending with the Apply and Finish later actions.",
+      "lookFor": [
+        "Is the list complete enough to approve?",
+        "Does it read as a write plan, not a summary?",
+        "Is Apply clearly the last step?"
+      ],
+      "keys": "n apply \u00b7 l later",
+      "image": "setup-review.png",
+      "webp": "setup-review.webp",
+      "width": 1604,
+      "height": 904
     }
   ]
 }

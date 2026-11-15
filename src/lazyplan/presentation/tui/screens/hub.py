@@ -11,10 +11,11 @@ try:
     from textual.binding import Binding
     from textual.containers import Horizontal, Vertical, VerticalScroll
     from textual.screen import Screen
-    from textual.widgets import Label, OptionList, Static
+    from textual.widgets import OptionList, Static
     from textual.widgets.option_list import Option
 
     from ..navigation import NAV_BINDINGS, NavigationMixin
+    from ..widgets.taskbar import Taskbar
 
     _TEXTUAL_OK = True
 except ImportError:  # pragma: no cover - stdlib-only interpreter
@@ -77,7 +78,7 @@ if _TEXTUAL_OK:
                         yield OptionList(id="hub-list")
                     with VerticalScroll(id="hub-preview"):
                         yield Static("", id="hub-preview-body")
-                yield Label("", id="hub-hints")
+                yield Taskbar("", id="hub-hints")
 
         def on_mount(self) -> None:
             width = self.app.size.width
@@ -99,7 +100,10 @@ if _TEXTUAL_OK:
             if entries:
                 options.highlighted = 0
             self._preview(0 if entries else None)
-            self.query_one("#hub-hints", Label).update(self._hints())
+            self.query_one("#hub-hints", Taskbar).set_line(
+                self._hints(),
+                latest=self.app.update_controller.latest,
+            )
             self.query_one("#hub-page").border_title = f" {self.title} "
 
         def _hints(self) -> str:

@@ -76,6 +76,10 @@ class Taskbar(Static):
     """One-line bar that keeps its badge pinned to the right edge."""
 
     def __init__(self, content: str = "", **kwargs: Any) -> None:
+        self._hints = ""
+        self._health = ""
+        self._version_running = ""
+        self._version_latest = ""
         super().__init__(content, markup=True, **kwargs)
 
     def set_line(
@@ -86,14 +90,29 @@ class Taskbar(Static):
         running: str = "",
         latest: str = "",
     ) -> None:
-        """Repaint the line at the current widget width."""
+        """Remember the line and repaint it at the current widget width."""
+        if not running:
+            from ...cli.parser import package_version
+
+            running = package_version()
+        self._hints = hints
+        self._health = health
+        self._version_running = running
+        self._version_latest = latest
+        self._repaint()
+
+    def on_resize(self) -> None:
+        """Keep the badge pinned after a terminal resize."""
+        self._repaint()
+
+    def _repaint(self) -> None:
         width = max(10, self.size.width or 80)
         self.update(
             taskbar_markup(
-                hints,
-                health=health,
-                running=running,
-                latest=latest,
+                self._hints,
+                health=self._health,
+                running=self._version_running,
+                latest=self._version_latest,
                 width=width,
             )
         )

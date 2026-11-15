@@ -58,6 +58,7 @@ try:
     from ..query import query_one_opt
     from ..theme.themes import THEME_NAMES
     from ..widgets.setup_controls import first_focusable
+    from ..widgets.taskbar import Taskbar
 
     _TEXTUAL_OK = True
 except ImportError:  # pragma: no cover - stdlib-only interpreter
@@ -136,7 +137,7 @@ if _TEXTUAL_OK:
                         with Vertical(id="setup-panel"):
                             yield from self._panel_widgets(self.step)
                 yield Static("", id="setup-errors")
-                yield Label("", id="setup-hints")
+                yield Taskbar("", id="setup-hints")
                 with Horizontal(id="setup-actions"):
                     yield Button("Back", id="setup-back")
                     yield Button(NEXT_LABEL, id="setup-next", variant="primary")
@@ -158,9 +159,12 @@ if _TEXTUAL_OK:
             self.set_class(width < 80, "compact")
             self.set_class(width >= 120, "wide")
             self.set_class(height < 30, "short")
-            hints = query_one_opt(self, "#setup-hints", Label)
+            hints = query_one_opt(self, "#setup-hints", Taskbar)
             if hints is not None:
-                hints.update(hint_text(width))
+                hints.set_line(
+                    hint_text(width),
+                    latest=self.app.update_controller.latest,
+                )
 
         def on_resize(self, event: events.Resize) -> None:
             self._apply_size(event.size.width, event.size.height)

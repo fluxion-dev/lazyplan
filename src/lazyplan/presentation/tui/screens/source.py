@@ -15,6 +15,7 @@ try:
     from textual.widgets.tree import TreeNode  # noqa: F401
 
     from ...shared.tree_nav import NavTree  # noqa: F401
+    from ..widgets.taskbar import Taskbar
 
     _TEXTUAL_OK = True
 except ImportError:  # pragma: no cover
@@ -110,7 +111,7 @@ if _TEXTUAL_OK:
                         yield NavTree("source", id="source-tree", classes="plan-tree")
                     with VerticalScroll(id="source-preview"):
                         yield Static("", id="source-preview-body")
-                yield Label("", id="source-hints")
+                yield Taskbar("", id="source-hints")
 
         def on_mount(self) -> None:
             self._apply_width_classes(self.app.size.width)
@@ -391,7 +392,10 @@ if _TEXTUAL_OK:
                 has_less=self._view.page_offset > 0,
                 page_label=self._view.page_label(DIFF_PREVIEW_LINES),
             )
-            self.query_one("#source-hints", Label).update(bar)
+            self.query_one("#source-hints", Taskbar).set_line(
+                bar,
+                latest=self.app.update_controller.latest,
+            )
 
         def _selected(self) -> dict[str, Any] | None:
             node = self.query_one("#source-tree", NavTree).cursor_node

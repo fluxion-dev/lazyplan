@@ -16,6 +16,7 @@ from typing import TextIO
 
 from lazyplan.infrastructure import textfile
 from lazyplan.infrastructure.backup import backup_file, new_backup_dir
+from lazyplan.infrastructure.profiles import Profile
 from lazyplan.infrastructure.repo import (
     CONFIG_NAME,
     DB_NAME,
@@ -56,6 +57,8 @@ class SetupChoice:
     tier_models: dict[str, dict[str, str]] | None = None
     role_models: dict[str, dict[str, str]] | None = None
     model_review: bool = True
+    profiles_map: dict[str, Profile] | None = None
+    tiers_map: dict[str, dict[str, str]] | None = None
 
 
 @dataclass(frozen=True)

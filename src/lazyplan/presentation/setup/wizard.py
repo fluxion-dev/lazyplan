@@ -7,13 +7,13 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from lazyplan.infrastructure import hook_install, skills
+from lazyplan.infrastructure import hook_install, host_models, skills
 from lazyplan.infrastructure.repo import (
     find_repo_root,
     repo_plan_db_path,
 )
 
-from . import ui
+from . import models, ui
 from .constants import (
     HOME,
     NO_SETUP_ENV,
@@ -74,6 +74,13 @@ def run_wizard_flow(
         agents=base_agents or parse_agents("", home),
         skills_dir=seeded.skills_dir or state.skills_dir or None,
         no_skills=seeded.no_skills,
+        explicit_db=seeded.explicit_db,
+        role_tiers=seeded.role_tiers,
+        tier_models=seeded.tier_models,
+        role_models=seeded.role_models,
+        model_review=seeded.model_review,
+        profiles_map=seeded.profiles_map,
+        tiers_map=seeded.tiers_map,
     )
     hosts = skills.detect_agents(home)
     selected = ui.ask_agents(write, read, hosts, list(choice.agents or []), color)
@@ -82,8 +89,36 @@ def run_wizard_flow(
         agents=selected,
         skills_dir=choice.skills_dir,
         no_skills=choice.no_skills,
+        explicit_db=choice.explicit_db,
+        role_tiers=choice.role_tiers,
+        tier_models=choice.tier_models,
+        role_models=choice.role_models,
+        model_review=choice.model_review,
+        profiles_map=choice.profiles_map,
+        tiers_map=choice.tiers_map,
     )
     layout, skill_files = preview(choice, root, home)
+    if choice.model_review and not choice.no_skills and selected:
+        loaded, tiers = models.initial_maps(layout.db, home, root, selected)
+        loaded, tiers = models.apply_overrides(
+            loaded,
+            tiers,
+            choice.role_tiers,
+            choice.tier_models,
+            choice.role_models,
+        )
+        catalogs = host_models.discover_all(selected, home, root)
+        loaded, tiers = ui.ask_models(write, read, selected, loaded, tiers, catalogs, color)
+        choice = SetupChoice(
+            placement=choice.placement,
+            agents=choice.agents,
+            skills_dir=choice.skills_dir,
+            no_skills=choice.no_skills,
+            explicit_db=choice.explicit_db,
+            model_review=False,
+            profiles_map=loaded,
+            tiers_map=tiers,
+        )
     labels = {host.key: host.label for host in hosts}
     plugins = (
         []

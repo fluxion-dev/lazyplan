@@ -7,24 +7,15 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from dataclasses import replace
-
 from lazyplan.core.policies import hooks as hook_policy
-from lazyplan.infrastructure import (
-    agent_install,
-    host_models,
-    hook_install,
-    profiles,
-    skills,
-    textfile,
-)
+from lazyplan.infrastructure import agent_install, hook_install, profiles, skills, textfile
 from lazyplan.infrastructure.integrations import HOOK
 from lazyplan.infrastructure.repo import (
     find_repo_root,
 )
 
 from ...store import Store
-from . import layout, ui
+from . import layout, models, ui
 from .constants import (
     HOME,
     HUMAN_COMMANDS,
@@ -56,21 +47,18 @@ def _seed_profile_map(
     if choice.explicit_db or not agents:
         return None, None
     path = profiles.path_for(db_path)
-    loaded, _saved = profiles.load_all(db_path)
-    effective = host_models.effective_tiers(db_path, home, root, agents)
-    role_models: dict[str, dict[str, str]] = {}
-    for host, roles in (choice.role_models or {}).items():
-        for role, model in roles.items():
-            role_models.setdefault(role, {})[host] = model
-    updated: dict[str, profiles.Profile] = {}
-    for role, profile in loaded.items():
-        tier = (choice.role_tiers or {}).get(role, profile.tier)
-        models = dict(profile.models)
-        models.update(role_models.get(role, {}))
-        updated[role] = replace(profile, tier=tier, models=models)
-    for host, tiers in (choice.tier_models or {}).items():
-        for tier, model in tiers.items():
-            effective.setdefault(tier, {})[host] = model
+    loaded, effective = models.initial_maps(db_path, home, root, agents)
+    if choice.profiles_map is not None:
+        loaded = dict(choice.profiles_map)
+    if choice.tiers_map is not None:
+        effective = {tier: dict(values) for tier, values in choice.tiers_map.items()}
+    updated, effective = models.apply_overrides(
+        loaded,
+        effective,
+        choice.role_tiers,
+        choice.tier_models,
+        choice.role_models,
+    )
     text = profiles.render(updated, effective)
     if path.is_file() and textfile.read(path) == text:
         return path, None
@@ -309,6 +297,14 @@ def refresh_integrations(
     if remember_installed(inspection, state, version):
         save_state(state, home)
     result["hooks"] = refresh_installed_hooks(inspection, state, home)
+    if state.profile_files and state.agents and not state.explicit_db:
+        db_path = Path(result["db"])
+        scope = "project" if state.placement == REPO and root is not None else "global"
+        _seed_profile_map(choice_from_state(state), root, home, db_path, state.agents)
+        result["profiles"] = [
+            item.to_dict()
+            for item in agent_install.install_profiles(scope, root, home, state.agents, db_path)
+        ]
     result["agents_pointer"] = install_pointer(
         home,
         str(result.get("placement", "")),

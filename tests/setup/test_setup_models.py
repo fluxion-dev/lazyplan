@@ -109,6 +109,47 @@ class ProfileMapSetupTest(unittest.TestCase):
         setup.apply_choice(self._choice(no_skills=True), None, self.home, "1.0")
         self.assertFalse(self.map.exists())
 
+    def test_wizard_reviews_and_writes_the_edited_map(self) -> None:
+        import io
+
+        answers = iter(["", "", "t qa deep", "", "y"])
+        result = setup.run_wizard(
+            self.home,
+            self.home,
+            setup.SetupState(),
+            "1.0",
+            read=lambda: next(answers),
+            write=io.StringIO(),
+            initial=setup.SetupChoice(placement=setup.HOME, agents=["opencode"]),
+            hooks_mode="off",
+        )
+        self.assertIsNotNone(result)
+        written = json.loads(self.map.read_text(encoding="utf-8"))
+        self.assertEqual(written["profiles"]["qa"]["tier"], "deep")
+        self.assertTrue((self.home / ".config/opencode/agent/lazyplan-qa.md").is_file())
+
+    def test_wizard_can_skip_the_model_review(self) -> None:
+        import io
+
+        answers = iter(["", "", "y"])
+        result = setup.run_wizard(
+            self.home,
+            self.home,
+            setup.SetupState(),
+            "1.0",
+            read=lambda: next(answers),
+            write=io.StringIO(),
+            initial=setup.SetupChoice(
+                placement=setup.HOME,
+                agents=["opencode"],
+                model_review=False,
+            ),
+            hooks_mode="off",
+        )
+        self.assertIsNotNone(result)
+        written = json.loads(self.map.read_text(encoding="utf-8"))
+        self.assertEqual(written["profiles"]["qa"]["tier"], "standard")
+
 
 if __name__ == "__main__":
     unittest.main()

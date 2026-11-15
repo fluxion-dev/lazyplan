@@ -200,6 +200,32 @@ class OpenCodeProfileInstallTest(unittest.TestCase):
             len(AGENT_ROLES) * 2,
         )
 
+    def test_copilot_install_uses_agent_suffix_and_readonly_tools(self) -> None:
+        tiers = {"standard": {"copilot": "local/model"}}
+        result = agent_install.install_copilot(
+            "project", self.repo, self.home, self.profiles, None, tiers
+        )
+        self.assertEqual(len(result.installed), len(AGENT_ROLES))
+        qa = (self.repo / ".github/agents/lazyplan-qa.agent.md").read_text(encoding="utf-8")
+        self.assertIn("name: lazyplan-qa", qa)
+        self.assertIn("model: local/model", qa)
+        scout = (self.repo / ".github/agents/lazyplan-scout.agent.md").read_text(encoding="utf-8")
+        self.assertIn('tools: ["read", "grep", "glob"]', scout)
+        self.assertIn("strict-tools-list: true", scout)
+        implementer = (self.repo / ".github/agents/lazyplan-implementer.agent.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("tools:", implementer)
+        self.assertNotIn("model: inherit", implementer)
+
+    def test_copilot_global_scope_and_profile_paths(self) -> None:
+        agent_install.install_copilot("global", self.repo, self.home, self.profiles)
+        self.assertTrue((self.home / ".copilot/agents/lazyplan-qa.agent.md").is_file())
+        self.assertEqual(
+            len(agent_install.profile_paths("both", self.repo, self.home, ["copilot"])),
+            len(AGENT_ROLES) * 2,
+        )
+
     def test_install_profiles_selects_the_requested_hosts(self) -> None:
         db = self.root / "profiles.db"
         result = agent_install.install_profiles(

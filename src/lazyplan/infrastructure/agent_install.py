@@ -28,6 +28,10 @@ GEMINI_READ_TOOLS = {
     "scout": ("read_file", "grep_search", "glob", "list_directory"),
     "reviewer": ("read_file", "grep_search", "glob", "list_directory", "run_shell_command"),
 }
+COPILOT_READ_TOOLS = {
+    "scout": ("read", "grep", "glob"),
+    "reviewer": ("read", "grep", "glob", "execute"),
+}
 
 ROLE_META: dict[str, dict[str, str]] = {
     "scout": {
@@ -208,6 +212,42 @@ def install_cursor(
     )
 
 
+def copilot_targets(scope: str, repo_root: Path | None, home: Path) -> list[Path]:
+    """One Copilot agent path per role for a scope."""
+    return _targets("copilot", scope, repo_root, home)
+
+
+def install_copilot(
+    scope: str,
+    repo_root: Path | None,
+    home: Path,
+    profiles: dict[str, Profile],
+    models: dict[str, str] | None = None,
+    tiers: dict[str, dict[str, str]] | None = None,
+) -> AgentInstallResult:
+    """Write or refresh every Copilot profile for a scope."""
+    return _install_host(
+        "copilot",
+        scope,
+        copilot_targets(scope, repo_root, home),
+        profiles,
+        lambda role, profile: render_copilot(role, profile, models, tiers),
+    )
+
+
+def _role_for(path: Path) -> str:
+    """Recover the role from a managed profile filename."""
+    name = path.name
+    prefix = "lazyplan-"
+    if not name.startswith(prefix):
+        return ""
+    rest = name[len(prefix) :]
+    for suffix in (".agent.md", ".md", ".toml"):
+        if rest.endswith(suffix):
+            return rest[: -len(suffix)]
+    return rest
+
+
 def _install_host(
     host: str,
     scope: str,
@@ -218,7 +258,7 @@ def _install_host(
     """Shared install loop: render one file per role and record its status."""
     result = AgentInstallResult(host, scope)
     for dest in targets:
-        role = dest.stem.removeprefix("lazyplan-")
+        role = _role_for(dest)
         written, status = _install_file(dest, render(role, profiles[role]))
         line = f"{dest} ({status})"
         if written:
@@ -257,6 +297,40 @@ def render_claude(
             data_text(f"agents/common/{role}.md").rstrip(),
             "",
             f"{MARKER} claude {role} -->",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def render_copilot(
+    role: str,
+    profile: Profile,
+    models: dict[str, str] | None,
+    tiers: dict[str, dict[str, str]] | None = None,
+) -> str:
+    """One managed Copilot CLI agent file."""
+    resolved = resolve(profile, "copilot", models, tiers)
+    meta = ROLE_META[role]
+    lines = [
+        "---",
+        f"name: lazyplan-{role}",
+        f"description: {meta['description']}",
+    ]
+    if resolved["model"]:
+        lines.append(f"model: {resolved['model']}")
+    tools = COPILOT_READ_TOOLS.get(role)
+    if tools:
+        rendered = ", ".join(f'"{tool}"' for tool in tools)
+        lines.append(f"tools: [{rendered}]")
+        lines.append("strict-tools-list: true")
+    lines.extend(
+        [
+            "---",
+            "",
+            data_text(f"agents/common/{role}.md").rstrip(),
+            "",
+            f"{MARKER} copilot {role} -->",
             "",
         ]
     )
@@ -424,6 +498,8 @@ def install_profiles(
         results.append(install_gemini(scope, repo_root, home, loaded, None, tiers))
     if "cursor" in agents:
         results.append(install_cursor(scope, repo_root, home, loaded, None, tiers))
+    if "copilot" in agents:
+        results.append(install_copilot(scope, repo_root, home, loaded, None, tiers))
     return results
 
 

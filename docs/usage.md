@@ -14,7 +14,8 @@ lpui
 ```
 
 The first `lpui` run finishes setup (agents, skills, database) and opens the
-screen. On Windows, use the pip backend:
+screen, where the setup wizard reviews the choices. On Windows, use the pip
+backend:
 
 ```powershell
 pipx install --backend pip lazyplan-tui
@@ -78,10 +79,12 @@ lpui upgrade --check
 `lpui upgrade` manages pipx and venv installs. System packages upgrade through
 `dnf` or `apt`. The TUI notifies and CLI stderr mentions new versions; stdout
 stays clean for `--json`. A successful upgrade re-runs setup with the new
-binary. Installed skills and hooks refresh silently, while a skill or hook
-surface added by the release waits for the startup health check. Headless runs
-(`--json`, `--yes`, agent calls, and the Windows helper) never prompt; `lpui
-doctor` names what is pending, and the next `lpui` or `lpui setup` offers it.
+binary. Installed skills and hooks refresh silently, and a release that
+changed setup or added a skill or hook surface makes the setup wizard due at
+the next launch, where the integrations step offers the new items. Headless
+runs (`--json`, `--yes`, agent calls, and the Windows helper) never prompt;
+`lpui doctor` names what is pending, and the next `lpui` or `lpui setup`
+offers it.
 
 On Windows the command and the TUI Update screen use a detached helper. lpui
 closes first, then the helper waits for the process to exit, updates the
@@ -314,7 +317,7 @@ remembers the choice, and `LAZYPLAN_THEME` still wins at the next launch.
 | `LAZYPLAN_NO_SKILLS` | Install no agent skill. |
 | `LAZYPLAN_HOOKS` | Override the installed hook mode at runtime: `strict`, `advisory`, or `off`. |
 | `LAZYPLAN_NO_HOOKS` | Silence installed hooks at runtime; does not remove them. |
-| `LAZYPLAN_THEME` | TUI palette: mocha, void, or latte (aliases dark, oled, light). |
+| `LAZYPLAN_THEME` | TUI palette: mocha (`dark`), void (`oled`), or latte (`light`). |
 | `LAZYPLAN_NO_COLOR` | Disable setup wizard color. |
 | `NO_COLOR`, `CLICOLOR=0`, `TERM=dumb` | Plain setup output. |
 | `USER`, `USERNAME` | Used for `--actor` when you do not give one (`USERNAME` on Windows). |

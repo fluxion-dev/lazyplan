@@ -401,6 +401,45 @@ Screen.compact #source-head {
     height: auto;
 }
 
+#setup-panel .setup-label {
+    height: 1;
+    color: $lp-text-muted;
+    margin-top: 1;
+}
+
+#setup-panel .setup-note {
+    height: auto;
+    color: $lp-text-muted;
+    padding: 1 0 0 0;
+}
+
+#setup-panel .setup-choice {
+    height: auto;
+    padding: 1 0 0 1;
+}
+
+#setup-placement-list {
+    height: auto;
+    background: transparent;
+    padding: 0;
+}
+
+#setup-placement-list > .option-list--option {
+    padding: 0 1;
+}
+
+#setup-placement-list > .option-list--option-highlighted {
+    background: $lp-cursor;
+    color: $lp-accent;
+    text-style: bold;
+}
+
+#setup-panel Checkbox {
+    height: auto;
+    min-height: 1;
+    margin: 0;
+}
+
 #setup-errors {
     height: auto;
     color: $lp-status-blocked;

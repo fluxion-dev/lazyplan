@@ -11,9 +11,13 @@ import copy
 from dataclasses import dataclass, field
 from typing import Any
 
+from ....core.policies.agents import HOSTS
+from ....core.policies.hooks import MODES
 from ....infrastructure import skills
+from ...setup import ui as setup_ui
+from ...setup.constants import HOME
 from ...setup.layout import resolve_choice
-from ...setup.session import SetupSession
+from ...setup.session import SetupSession, SetupSessionError
 from ...setup.state import state_path
 from ...setup.steps import WELCOME, Step
 from ...shared.design import escape_markup
@@ -24,7 +28,14 @@ try:
     from textual.binding import Binding
     from textual.containers import Horizontal, Vertical, VerticalScroll
     from textual.screen import Screen
-    from textual.widgets import Button, Label, OptionList, Static
+    from textual.widgets import (
+        Button,
+        Checkbox,
+        Label,
+        OptionList,
+        Select,
+        Static,
+    )
     from textual.widgets.option_list import Option
 
     from ..navigation import NAV_BINDINGS, NavigationMixin
@@ -37,6 +48,12 @@ except ImportError:  # pragma: no cover - stdlib-only interpreter
 LATER_LABEL = "Finish later"
 NEXT_LABEL = "Next"
 APPLY_LABEL = "Apply"
+
+HOOK_MODES: tuple[tuple[str, str], ...] = (
+    ("strict", "Strict — hooks block unsafe commits and stops"),
+    ("advisory", "Advisory — hooks remind but never block"),
+    ("off", "Off — remove the managed hooks"),
+)
 
 
 @dataclass(frozen=True)
@@ -235,16 +252,17 @@ if _TEXTUAL_OK:
             block.display = bool(self._errors)
             block.update("\n".join(f"[red]✗[/] {escape_markup(error)}" for error in self._errors))
 
-        def _panel_widgets(self, step: Step) -> list[Static]:
-            """The body of one step; controls replace the summary over time."""
-            if step.key == WELCOME.key:
-                return [
-                    Static(
-                        "\n".join(welcome_lines(self.session)),
-                        id="setup-welcome",
-                        markup=False,
-                    )
-                ]
+        def _panel_widgets(self, step: Step) -> list[Any]:
+            """The body of one step, wired to the shared session draft."""
+            builders = {
+                WELCOME.key: self._welcome_panel,
+                "placement": self._placement_panel,
+                "agents": self._agents_panel,
+                "hooks": self._hooks_panel,
+            }
+            builder = builders.get(step.key)
+            if builder is not None:
+                return builder()
             return [
                 Static(
                     escape_markup(current_line(self.session, step)),
@@ -252,13 +270,158 @@ if _TEXTUAL_OK:
                 )
             ]
 
+        def _welcome_panel(self) -> list[Any]:
+            return [
+                Static(
+                    "\n".join(welcome_lines(self.session)),
+                    id="setup-welcome",
+                    markup=False,
+                )
+            ]
+
+        def _placement_panel(self) -> list[Any]:
+            """Home and repo placement, each with its exact target and tradeoff."""
+            draft = self.session.draft
+            choices = setup_ui.placement_choices(self.session.root, self.session.home)
+            options = [Option(f"{label} — {path}", id=key) for key, label, path, _note in choices]
+            widgets: list[Any] = [
+                OptionList(*options, id="setup-placement-list"),
+                Static(
+                    "Choose where the plan journal lives. Both choices keep the"
+                    " database out of version control when it sits in a checkout.",
+                    classes="setup-note",
+                ),
+            ]
+            for _key, label, path, note in choices:
+                widgets.append(
+                    Static(
+                        f"[b]{escape_markup(label)}[/] [dim]{escape_markup(str(path))}[/]\n"
+                        f"{escape_markup(note)}",
+                        classes="setup-choice",
+                    )
+                )
+            widgets.append(Static(f"Current: {draft.placement}", classes="setup-note"))
+            return widgets
+
+        def _agents_panel(self) -> list[Any]:
+            """Detected hosts with their hint and the skill toggle."""
+            draft = self.session.draft
+            detected = {host.key: host for host in skills.detect_agents(self.session.home)}
+            widgets: list[Any] = [
+                Static(
+                    "Selected hosts receive the lazyplan skill and managed role"
+                    " profiles. Detection is local and read-only.",
+                    classes="setup-note",
+                )
+            ]
+            for host in HOSTS:
+                found = detected.get(host)
+                if found is None:
+                    label = host
+                elif found.detected:
+                    label = f"{found.label} — detected ({found.hint})"
+                else:
+                    label = f"{found.label} — not detected ({found.hint})"
+                widgets.append(
+                    Checkbox(
+                        label,
+                        value=host in draft.agents,
+                        compact=True,
+                        id=f"setup-agent-{host}",
+                    )
+                )
+            widgets.append(
+                Checkbox(
+                    "Install the managed skills and role profiles",
+                    value=draft.skills_enabled,
+                    compact=True,
+                    id="setup-skills",
+                )
+            )
+            widgets.append(
+                Static(
+                    "Turning skills off leaves the hosts selected but writes no"
+                    " skill files, profiles, or model map.",
+                    classes="setup-note",
+                )
+            )
+            return widgets
+
+        def _hooks_panel(self) -> list[Any]:
+            """Hook mode, its tradeoffs, and the opt-in AGENTS.md pointer."""
+            draft = self.session.draft
+            pointer_ready = self.session.root is not None and draft.placement == HOME
+            widgets: list[Any] = [
+                Label("Hook mode", classes="setup-label"),
+                Select(
+                    [(label, key) for key, label in HOOK_MODES],
+                    value=draft.hooks_mode,
+                    allow_blank=False,
+                    id="setup-hooks-mode",
+                ),
+                Static(
+                    "Hooks record agent sessions, inject the active plan, and check"
+                    " commits and stops. Off removes the managed hooks and asks for"
+                    " no session tracking.",
+                    classes="setup-note",
+                ),
+                Checkbox(
+                    "Add the lazyplan pointer to this checkout's AGENTS.md",
+                    value=draft.agents_pointer and pointer_ready,
+                    compact=True,
+                    id="setup-pointer",
+                    disabled=not pointer_ready,
+                ),
+                Static(
+                    "The pointer names the shared database so agents in this"
+                    " checkout know where the plans live."
+                    if pointer_ready
+                    else "The pointer applies only with home placement in a git"
+                    " checkout; repo placement sets it up with the repo resources.",
+                    classes="setup-note",
+                ),
+            ]
+            return widgets
+
         async def _show_step(self) -> None:
             """Swap the panel for the step now selected."""
             panel = self.query_one("#setup-panel", Vertical)
             await panel.remove_children()
             await panel.mount(*self._panel_widgets(self.step))
             self._update_chrome()
+            self._highlight_panel_choice()
             self.call_after_refresh(self._focus_panel)
+
+        def _highlight_panel_choice(self) -> None:
+            """Highlight the remembered placement in its option list."""
+            listing = query_one_opt(self, "#setup-placement-list", OptionList)
+            if listing is None:
+                return
+            keys = [
+                str(option.id)
+                for option in (listing.get_option_at_index(i) for i in range(listing.option_count))
+            ]
+            if self.session.draft.placement in keys:
+                listing.highlighted = keys.index(self.session.draft.placement)
+
+        def _sync_steps(self) -> None:
+            """Keep the rail in step with visibility changes in the draft."""
+            steps = self.session.steps()
+            if tuple(step.key for step in steps) == tuple(step.key for step in self._steps):
+                self._steps = steps
+                return
+            current = self.step.key
+            self._steps = steps
+            keys = [step.key for step in steps]
+            self._index = (
+                keys.index(current) if current in keys else min(self._index, len(steps) - 1)
+            )
+            self._fill_rail()
+
+        def _after_change(self) -> None:
+            """Re-sync the rail and chrome after a draft edit."""
+            self._sync_steps()
+            self._update_chrome()
 
         def _focus_panel(self) -> None:
             """Focus the first control in the panel, or the Next button."""
@@ -323,6 +486,48 @@ if _TEXTUAL_OK:
             keys = [step.key for step in self._steps]
             if event.option.id in keys:
                 await self._select(keys.index(str(event.option.id)))
+
+        @on(OptionList.OptionSelected, "#setup-placement-list")
+        async def _placement_selected(self, event: OptionList.OptionSelected) -> None:
+            event.stop()
+            try:
+                self.session.set_placement(str(event.option.id))
+            except SetupSessionError as exc:
+                self.notify(str(exc), severity="error")
+                return
+            self._after_change()
+            await self._show_step()
+
+        @on(Checkbox.Changed)
+        def _checkbox_changed(self, event: Checkbox.Changed) -> None:
+            """Apply one host, skills, or pointer toggle to the draft."""
+            ident = event.checkbox.id or ""
+            if ident == "setup-skills":
+                self.session.set_skills_enabled(bool(event.value))
+            elif ident == "setup-pointer":
+                self.session.draft.agents_pointer = bool(event.value)
+            elif ident.startswith("setup-agent-"):
+                self.session.set_agents(self._selected_hosts())
+            else:
+                return
+            self._after_change()
+
+        def _selected_hosts(self) -> list[str]:
+            """Hosts whose checkbox is on, in registry order."""
+            chosen: list[str] = []
+            for host in HOSTS:
+                box = query_one_opt(self, f"#setup-agent-{host}", Checkbox)
+                if box is not None and box.value:
+                    chosen.append(host)
+            return chosen
+
+        @on(Select.Changed, "#setup-hooks-mode")
+        def _hooks_changed(self, event: Select.Changed) -> None:
+            mode = str(event.value)
+            if mode not in MODES:
+                return
+            self.session.set_hooks_mode(mode)
+            self._after_change()
 
         @on(Button.Pressed, "#setup-back")
         async def _back(self) -> None:

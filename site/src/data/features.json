@@ -10,7 +10,7 @@
     {
       "id": "dispatch",
       "title": "Milestones are lanes",
-      "description": "A lane names its wave and role. Dispatch prints the worktree command for the lane and one prompt per ready task.",
+      "description": "A lane names its wave and role. Dispatch prints the worktree command for the lane and the command that starts the next ready task.",
       "icon": "layers",
       "group": "agents"
     },

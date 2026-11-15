@@ -14,7 +14,7 @@ export const FAQ: readonly FaqItem[] = [
   {
     question: "Do I need more than one agent?",
     answer:
-      "No. One agent can plan and execute. When you add workers, milestones become lanes and lpui dispatch --plan P prints the waves, the worktree commands, and one prompt per ready task.",
+      "No. One agent can plan and execute. When you add workers, milestones become lanes and lpui dispatch --plan P prints the waves, the worktree commands, and the next command for each ready task.",
   },
   {
     question: "How do parallel lanes avoid collisions?",

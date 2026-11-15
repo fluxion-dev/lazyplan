@@ -55,7 +55,7 @@ export const COPY = {
     eyebrow: "Lanes and dispatch",
     title: "Milestones are lanes. Lanes run in waves.",
     intro:
-      "lpui dispatch --plan P prints the waves, the capacity, the worktree command for each lane, and one prompt per ready task. You run the commands; lazyplan keeps the journal.",
+      "lpui dispatch --plan P prints the waves, the capacity, the worktree command for each lane, and the command that starts each ready task. You run them; lazyplan keeps the journal.",
     beats: [
       {
         title: "Declare the shape",
@@ -105,7 +105,7 @@ export const COPY = {
         number: "02",
         title: "Dispatch the lanes",
         description:
-          "Milestones become lanes in waves. Dispatch prints the capacity, the worktree command, and one prompt per ready task.",
+          "Milestones become lanes in waves. Dispatch prints the capacity, the worktree command, and the next command for each ready task.",
       },
       {
         number: "03",

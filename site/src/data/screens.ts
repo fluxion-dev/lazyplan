@@ -22,8 +22,8 @@ export const SCREENS = {
     file: "lpui-setup",
     width: 1604,
     height: 904,
-    alt: "Setup wizard on its welcome step, with the step rail on the left, the placement and agent summary in the panel, and Back, Next, and Finish later buttons.",
-    caption: "First run asks, then shows every file before it writes.",
+    alt: "Setup wizard on its welcome step, with the step rail on the left and the resolved database, templates, config, pointer, and state paths in the panel.",
+    caption: "First run asks where plans live and who they serve.",
   },
   "setup-review": {
     name: "setup-review",
@@ -70,7 +70,7 @@ export const SCREENS = {
     file: "lpui-control-room",
     width: 1604,
     height: 904,
-    alt: "Control room with the plan tree, a compact agents row and its handoff, the needs line, an open question, approval drift, and a failed check.",
+    alt: "Control room with the plan tree, a compact agents row with two claims, the needs line, an open question, approval drift, and a failed check.",
     caption: "What needs you, before it blocks the loop.",
   },
   "git-pane": {
@@ -78,7 +78,7 @@ export const SCREENS = {
     file: "lpui-git-pane",
     width: 1604,
     height: 904,
-    alt: "Main shell with a linked task selected, showing the left work column (plan queue, agents, plan review, git) and the overview on the right.",
+    alt: "Main shell with a linked task selected: the plan tree and GIT pane with checkout, branch, commits, and pull requests on the left, and the task overview on the right.",
     caption: "Checkout, commits, and pull requests for the row.",
   },
   "source-trail": {
@@ -102,8 +102,8 @@ export const SCREENS = {
     file: "lpui-timeline",
     width: 1604,
     height: 904,
-    alt: "Main shell with the timeline open, showing plan and milestone traces at distinct start positions and one never-started lane.",
-    caption: "Plans and milestones across lanes.",
+    alt: "Main shell with the timeline open under the plan tree, showing the selected milestone's task lanes with start positions and duration segments on a fixed time axis.",
+    caption: "The selected milestone across time.",
   },
 } as const satisfies Record<string, Screen>
 

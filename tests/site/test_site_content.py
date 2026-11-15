@@ -13,50 +13,52 @@ from tests.support.site import has_built_site, page_html
 FEATURES = ROOT / "site/src/data/features.json"
 SCREENS = ROOT / "site/src/data/screens.ts"
 COPY = ROOT / "site/src/data/copy.ts"
-HERO = ROOT / "site/src/components/site/hero.tsx"
 SCREENS_DIR = ROOT / "site/public/screens"
 
-LEAD_IDS = ["shared-plan", "agent-loop", "proof"]
+LEAD_IDS = ["shared-plan", "dispatch", "proof"]
 SUPPORT_IDS = {
+    "setup",
+    "models",
+    "lanes",
+    "worktrees",
+    "claims",
+    "handoffs",
     "control-room",
     "trust-hubs",
-    "claims",
-    "sessions",
-    "overview",
+    "evidence",
     "source-trail",
-    "timeline",
+    "updates",
+    "local-first",
     "keyboard",
     "themes",
-    "local-first",
-    "auditability",
-    "bulk-search",
 }
 ICONS = {
     "activity",
-    "bot",
     "database",
+    "download",
     "git-branch",
     "keyboard",
+    "layers",
     "list-checks",
     "lock",
     "messages-square",
-    "monitor",
     "network",
     "palette",
     "route",
-    "search",
     "shield-check",
-    "timer",
+    "sliders",
+    "sparkles",
 }
 GROUPS = {"plan", "agents", "proof", "product"}
-CAPTURE_FILES = [
-    "lpui-control-room",
-    "lpui-detail",
-    "lpui-coordination",
-    "lpui-trace",
-    "lpui-source-trail",
-    "lpui-git-pane",
-    "lpui-timeline",
+GALLERY_KEYS = [
+    "setup-review",
+    "update",
+    "detail",
+    "worktrees",
+    "git-pane",
+    "source-trail",
+    "trace",
+    "timeline",
 ]
 
 
@@ -72,7 +74,7 @@ class TestFeatureCatalog(unittest.TestCase):
 
     def test_support_covers_the_major_surfaces(self):
         ids = {feature["id"] for feature in self.support}
-        self.assertGreaterEqual(len(ids), 12)
+        self.assertGreaterEqual(len(ids), 14)
         self.assertEqual(ids, SUPPORT_IDS)
 
     def test_every_feature_is_complete(self):
@@ -92,21 +94,30 @@ class TestCaptureStory(unittest.TestCase):
     def setUp(self):
         self.source = SCREENS.read_text(encoding="utf-8")
 
-    def _story_block(self) -> str:
+    def _screens_block(self) -> str:
+        match = re.search(r"export const SCREENS = \{(.*?)\n\} as const", self.source, re.S)
+        assert match is not None
+        return match.group(1)
+
+    def test_gallery_order(self):
         match = re.search(
-            r"export const STORY_SCREENS: readonly Screen\[\] = \[(.*?)\n\]",
+            r"export const GALLERY: readonly ScreenName\[\] = \[(.*?)\n\]",
             self.source,
             re.S,
         )
         assert match is not None
-        return match.group(1)
+        self.assertEqual(re.findall(r'"([^"]+)"', match.group(1)), GALLERY_KEYS)
 
-    def test_supporting_captures(self):
-        block = self._story_block()
-        self.assertEqual(re.findall(r'file: "([^"]+)"', block), CAPTURE_FILES)
-        self.assertEqual(len(re.findall(r'name: "', block)), 7)
-        self.assertEqual(len(re.findall(r'alt: "', block)), 7)
-        self.assertEqual(len(re.findall(r'caption: "', block)), 7)
+    def test_every_gallery_screen_is_complete(self):
+        block = self._screens_block()
+        for key in GALLERY_KEYS:
+            with self.subTest(screen=key):
+                pattern = rf'"?{re.escape(key)}"?: \{{(.*?)\n  \}}'
+                match = re.search(pattern, block, re.S)
+                assert match is not None, f"{key} missing from SCREENS"
+                entry = match.group(1)
+                self.assertIn('alt: "', entry)
+                self.assertIn('caption: "', entry)
 
     def test_hero_composite_is_wide(self):
         match = re.search(r"export const HERO_COMPOSITE: Screen = \{(.*?)\n\}", self.source, re.S)
@@ -119,21 +130,22 @@ class TestCaptureStory(unittest.TestCase):
 
 
 class TestStoryCopy(unittest.TestCase):
-    def test_source_keeps_the_hero_and_adds_proof_copy(self):
+    def test_copy_leads_with_plan_dispatch_proof(self):
         source = COPY.read_text(encoding="utf-8")
-        hero = HERO.read_text(encoding="utf-8")
-        self.assertIn("Your master plan(s), laid bare.", hero)
-        self.assertIn("Agent compatible long context planning and control", hero)
+        self.assertIn('title: ["Plan it.", "Dispatch it.", "Prove it."]', source)
+        self.assertIn("One plan. Many lanes. Proof attached.", source)
         self.assertIn("The work leaves a trail.", source)
 
     @unittest.skipUnless(has_built_site(), "site not built")
     def test_section_copy_is_rendered(self):
         page = page_html()
         for phrase in (
-            "One plan. Many workers. Shared context.",
+            "One plan. Many lanes. Proof attached.",
             "Every row is a workspace.",
+            "A wizard, not a config file.",
+            "Milestones are lanes. Lanes run in waves.",
             "The app, in use.",
-            "Start with a plan. Finish with proof.",
+            "Plan, dispatch, prove.",
             "Get the plan into your terminal.",
             "Bring your plan into focus.",
         ):
@@ -151,19 +163,22 @@ class TestPublishedCaptures(unittest.TestCase):
         width, height = struct.unpack(">II", data[16:24])
         return width, height
 
+    def _entries(self, block: str) -> list[tuple[str, str, str]]:
+        return re.findall(
+            r'file: "([^"]+)",\s*width: (\d+),\s*height: (\d+),',
+            block,
+            re.S,
+        )
+
     def test_story_capture_dimensions_match_the_data(self):
         block = re.search(
-            r"export const STORY_SCREENS: readonly Screen\[\] = \[(.*?)\n\]",
+            r"export const SCREENS = \{(.*?)\n\} as const",
             self.source,
             re.S,
         )
         assert block is not None
-        entries = re.findall(
-            r'file: "([^"]+)",\s*width: (\d+),\s*height: (\d+),',
-            block.group(1),
-            re.S,
-        )
-        self.assertEqual(len(entries), 7)
+        entries = self._entries(block.group(1))
+        self.assertEqual(len(entries), 11)
         for file, width, height in entries:
             with self.subTest(file=file):
                 self.assertEqual(self._size(f"{file}.png"), (int(width), int(height)))

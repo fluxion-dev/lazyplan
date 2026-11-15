@@ -3,28 +3,27 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>lazyplan — one plan for you and your agent</title>
-<meta name="description" content="A terminal control room for you and your coding agent: needs-me triage, audited manual override, approvals, evidence, session handoff, and parallel-safe claims.">
-<meta name="keywords" content="terminal plan tracker, coding agent, plan tracker, planner agent, executor agent, multi-agent planning, developer tools, local-first, keyboard-first, terminal themes, git pane">
+<title>lazyplan — plan it, dispatch it, prove it</title>
+<meta name="description" content="A local plan your coding agents can read: guided first run, lanes and worktrees for parallel agents, and proof attached to every acceptance criterion.">
 <meta name="author" content="Brad Lindsay">
 <meta name="theme-color" content="#09090B">
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="https://fluxion-dev.github.io/lazyplan/">
-<meta property="og:title" content="lazyplan — one plan for you and your agent">
-<meta property="og:description" content="A terminal control room for you and your coding agent: needs-me triage, audited manual override, approvals, evidence, session handoff, and parallel-safe claims.">
+<meta property="og:title" content="lazyplan — plan it, dispatch it, prove it">
+<meta property="og:description" content="A local plan your coding agents can read: guided first run, lanes and worktrees for parallel agents, and proof attached to every acceptance criterion.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://fluxion-dev.github.io/lazyplan/">
 <meta property="og:site_name" content="lazyplan">
 <meta property="og:locale" content="en_US">
 <meta property="og:image" content="https://fluxion-dev.github.io/lazyplan/screens/og-lpui-and-agent.png">
-<meta property="og:image:alt" content="lazyplan plan tree beside terminal panes where a coding agent updates the same plan.">
+<meta property="og:image:alt" content="lazyplan plan tree beside a dispatch transcript with lanes and a source trail with commits and a merged pull request.">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="lazyplan — one plan for you and your agent">
-<meta name="twitter:description" content="A terminal control room for you and your coding agent: needs-me triage, audited manual override, approvals, evidence, session handoff, and parallel-safe claims.">
+<meta name="twitter:title" content="lazyplan — plan it, dispatch it, prove it">
+<meta name="twitter:description" content="A local plan your coding agents can read: guided first run, lanes and worktrees for parallel agents, and proof attached to every acceptance criterion.">
 <meta name="twitter:image" content="https://fluxion-dev.github.io/lazyplan/screens/og-lpui-and-agent.png">
-<meta name="twitter:image:alt" content="lazyplan plan tree beside terminal panes where a coding agent updates the same plan.">
+<meta name="twitter:image:alt" content="lazyplan plan tree beside a dispatch transcript with lanes and a source trail with commits and a merged pull request.">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -35,25 +34,23 @@
   "softwareVersion": "0.47.0",
   "url": "https://fluxion-dev.github.io/lazyplan/",
   "screenshot": "https://fluxion-dev.github.io/lazyplan/screens/og-lpui-and-agent.png",
-  "description": "A terminal plan tracker for you and your coding agent. Edit every plan row yourself, or let one agent plan while another builds, with local-first storage on Linux, macOS, and Windows.",
+  "description": "A local plan your coding agents can read. A guided first run sets up the journal, agents, hooks, models, and effort; milestones become lanes for parallel agent work; and every acceptance criterion keeps read-only proof from commits and pull requests.",
   "author": {
     "@type": "Person",
     "name": "Brad Lindsay"
   },
   "license": "MIT",
   "isAccessibleForFree": true,
-  "keywords": "terminal plan tracker, coding agent, plan tracker, planner agent, executor agent, multi-agent planning, developer tools, local-first, keyboard-first, terminal themes, git pane",
   "featureList": [
-    "One shared plan for you and your agent",
-    "User control over every plan, milestone, task, and criterion",
-    "Planner agent and executor subagent workflow",
-    "Keyboard-first terminal screen with history and breadcrumbs",
-    "Lazy plan tree that loads branches on expand",
-    "Selectable trust, coordination, and provenance hubs",
-    "Timeline on demand with T",
+    "Guided first-run setup wizard for placement, agents, hooks, models, and effort",
+    "Model tiers and per-role effort for every agent host",
+    "Milestones as lanes, with waves, a capacity cap, and an integrator lane",
+    "Read-only dispatch view with worktree commands and worker prompts",
+    "One registered worktree per lane",
+    "Acceptance criteria with evidence, commits, and pull requests",
+    "Taskbar version badge with a one-key verified update",
+    "Keyboard-first terminal screen with palette and history",
     "Three TUI themes: mocha, void, and latte",
-    "GIT pane with checkout, commit, and pull-request context",
-    "Read-only git and pull request proof",
     "Local-first SQLite database",
     "Windows, macOS, and Linux",
     "Export and import any time"
@@ -82,15 +79,31 @@
       "name": "What is lazyplan?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "A shared plan for you and your coding agent. Plans, milestones, tasks, and acceptance criteria live in one place, so the work, the handoffs, and the proof stay visible instead of disappearing into chat."
+        "text": "A local plan your coding agents can read and write. Plans, milestones, tasks, and acceptance criteria live in one SQLite journal, and the read-only trail from each criterion to its commits and pull requests stays attached."
       }
     },
     {
       "@type": "Question",
-      "name": "Who is it for?",
+      "name": "What happens on first run?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Developers and small teams who use coding agents and want one plan everyone can see."
+        "text": "lpui detects your agents, offers the setup wizard, and creates the plan store. The wizard asks where plans live, which agents receive the skill, how hooks behave, and which models each role uses. It lists every file it will write before anything is applied. Reopen it with lpui setup or by pressing S in the screen."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do I need more than one agent?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. One agent can plan and execute. When you add workers, milestones become lanes and lpui dispatch --plan P prints the waves, the worktree commands, and the next command for each ready task."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do parallel lanes avoid collisions?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "A lane holds one doing task at a time, claims carry a lease with an expiry, and touch-points name the files a task expects. Parallel plans also require a lane cap and an integrator lane in a later wave."
       }
     },
     {
@@ -98,15 +111,7 @@
       "name": "Does it work with my coding agent?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Yes. It works with OpenCode, Claude Code, Cursor, Codex, Gemini CLI, and any agent that can run a command."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Does it run on Windows, macOS, and Linux?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Yes. Linux, macOS, and Windows; your plan stays local."
+        "text": "Yes. Setup detects OpenCode, Claude Code, Codex, Cursor, Gemini CLI, and Copilot, and any agent that can run a command can use the CLI or the MCP server."
       }
     },
     {
@@ -114,15 +119,23 @@
       "name": "Where is my data stored?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "In a local SQLite database on your machine. There is no account and no cloud dependency, and you can export or back up everything at any time."
+        "text": "In a local SQLite database: your home directory by default, or inside the repo when setup chooses repo placement. There is no account and no cloud dependency, and you can export or import everything at any time."
       }
     },
     {
       "@type": "Question",
-      "name": "Can I use one agent to plan and another to execute?",
+      "name": "How do updates work?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Yes. A planner agent can write the plan while an executor or subagent claims and completes individual tasks. You can change roles or run both at once; everyone reads the same plan."
+        "text": "The taskbar shows the running version. When the update cache knows a newer release it adds an arrow; click the badge or press U to download and verify a wheel that applies on the next launch. lpui upgrade does the same from the shell."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does it run on Windows, macOS, and Linux?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Linux, macOS, and Windows; the plan stays local on all three."
       }
     }
   ]

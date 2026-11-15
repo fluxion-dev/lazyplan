@@ -118,6 +118,17 @@ class SetupWizardPilotTest(unittest.IsolatedAsyncioTestCase):
 
             self.assertIsInstance(app.screen, ConfirmScreen)
 
+    async def test_help_names_how_to_reopen_the_wizard(self) -> None:
+        from lazyplan.presentation.tui.screens import HelpScreen
+
+        app = create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            app.push_screen(HelpScreen())
+            await pilot.pause()
+            body = str(app.screen.query_one("#help-scroll Static", Static).render())
+            self.assertIn("reopen the setup wizard", body)
+            self.assertIn("finish later", body)
+
     async def test_resume_prefills_the_remembered_choices(self) -> None:
         state = setup.SetupState(
             placement="home",

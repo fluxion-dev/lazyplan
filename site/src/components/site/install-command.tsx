@@ -103,6 +103,10 @@ export function InstallCommand() {
       >
         {status}
       </span>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Then run <code className="font-mono text-foreground">lpui</code>. The
+        first launch creates the plan store and offers the setup wizard.
+      </p>
     </Section>
   )
 }

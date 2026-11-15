@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { COPY, STORY_SCREENS } from "@/data/site"
+import { COPY, GALLERY, screen } from "@/data/site"
 
 import { Reveal } from "./reveal"
 import { ScreenshotFrame } from "./screenshot-frame"
@@ -19,7 +19,7 @@ import { Section, SectionHeading } from "./section"
 
 export function Screenshots() {
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
-  const active = activeIndex === null ? null : STORY_SCREENS[activeIndex]
+  const active = activeIndex === null ? null : screen(GALLERY[activeIndex])
   const position = activeIndex === null ? 0 : activeIndex + 1
 
   function step(delta: number) {
@@ -27,7 +27,7 @@ export function Screenshots() {
       if (current === null) {
         return null
       }
-      return (current + delta + STORY_SCREENS.length) % STORY_SCREENS.length
+      return (current + delta + GALLERY.length) % GALLERY.length
     })
   }
 
@@ -40,10 +40,10 @@ export function Screenshots() {
       />
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:gap-8">
-        {STORY_SCREENS.map((screen, index) => (
-          <Reveal key={screen.name} delay={(index % 2) * 70}>
+        {GALLERY.map((name, index) => (
+          <Reveal key={name} delay={(index % 2) * 70}>
             <ScreenshotFrame
-              screen={screen}
+              screen={screen(name)}
               onOpen={() => setActiveIndex(index)}
             />
           </Reveal>
@@ -102,7 +102,7 @@ export function Screenshots() {
                 </Button>
                 <p className="order-1 m-0 text-center text-sm text-muted-foreground sm:order-none">
                   <span className="font-mono text-xs text-muted-foreground">
-                    {position} / {STORY_SCREENS.length}
+                    {position} / {GALLERY.length}
                   </span>
                   <span className="mx-2 text-border">·</span>
                   {active.caption}

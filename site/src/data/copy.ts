@@ -1,4 +1,10 @@
 export const COPY = {
+  hero: {
+    badge: "The terminal plan tracker",
+    title: "Plan it. Dispatch it. Prove it.",
+    intro:
+      "One local plan you and your agents share. First run sets it up, lanes carry it out, and every criterion keeps its proof.",
+  },
   story: {
     eyebrow: "The loop",
     title: "One plan. Many lanes. Proof attached.",
@@ -35,7 +41,7 @@ export const COPY = {
       {
         title: "Review, then apply",
         description:
-          "The last step lists every file setup writes, refreshes, or removes. Apply runs the same writer as `lpui setup`.",
+          "The last step lists every file setup writes, refreshes, or removes. Apply runs the same writer as lpui setup.",
       },
     ],
   },
@@ -49,7 +55,7 @@ export const COPY = {
     eyebrow: "Lanes and dispatch",
     title: "Milestones are lanes. Lanes run in waves.",
     intro:
-      "`lpui dispatch --plan P` prints the waves, the capacity, the worktree command for each lane, and one prompt per ready task. You run the commands; lazyplan keeps the journal.",
+      "lpui dispatch --plan P prints the waves, the capacity, the worktree command for each lane, and one prompt per ready task. You run the commands; lazyplan keeps the journal.",
     beats: [
       {
         title: "Declare the shape",

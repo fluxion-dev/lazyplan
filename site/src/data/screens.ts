@@ -16,8 +16,8 @@ export const HERO_COMPOSITE: Screen = {
   caption: "Plan with an agent, dispatch the lanes, keep the proof.",
 }
 
-export const STORY_SCREENS: readonly Screen[] = [
-  {
+export const SCREENS = {
+  setup: {
     name: "setup",
     file: "lpui-setup",
     width: 1604,
@@ -25,7 +25,15 @@ export const STORY_SCREENS: readonly Screen[] = [
     alt: "Setup wizard on its welcome step, with the step rail on the left, the placement and agent summary in the panel, and Back, Next, and Finish later buttons.",
     caption: "First run asks, then shows every file before it writes.",
   },
-  {
+  "setup-roles": {
+    name: "setup-roles",
+    file: "lpui-setup-roles",
+    width: 1604,
+    height: 904,
+    alt: "Setup wizard on the role tiers step, listing each agent role with its tier selector and an effort selector beside the step rail.",
+    caption: "Every role names a tier and, where the host supports it, an effort.",
+  },
+  update: {
     name: "update",
     file: "lpui-update",
     width: 1604,
@@ -33,7 +41,7 @@ export const STORY_SCREENS: readonly Screen[] = [
     alt: "Update dialog showing the installed version, the latest release, the install method, and Download, Restart, and Later buttons.",
     caption: "The taskbar badge opens a verified update.",
   },
-  {
+  detail: {
     name: "detail",
     file: "lpui-detail",
     width: 1604,
@@ -41,7 +49,7 @@ export const STORY_SCREENS: readonly Screen[] = [
     alt: "Plan overview showing a plan's reason, scope, acceptance criteria, and milestones.",
     caption: "The why, the what, and what done means.",
   },
-  {
+  dispatch: {
     name: "dispatch",
     file: "lpui-dispatch",
     width: 1482,
@@ -49,7 +57,7 @@ export const STORY_SCREENS: readonly Screen[] = [
     alt: "Terminal transcript of lpui dispatch showing waves, lane roles, registered worktrees, the capacity line, and the claim and worktree commands to run.",
     caption: "Waves, lane capacity, worktrees, and one prompt per task.",
   },
-  {
+  worktrees: {
     name: "worktrees",
     file: "lpui-worktrees",
     width: 1482,
@@ -57,7 +65,7 @@ export const STORY_SCREENS: readonly Screen[] = [
     alt: "Terminal transcript of lpui plan worktree list and print showing the registered lane checkouts and the git worktree command for a new lane.",
     caption: "Every lane gets its own checkout, registered by you.",
   },
-  {
+  "control-room": {
     name: "control-room",
     file: "lpui-control-room",
     width: 1604,
@@ -65,7 +73,7 @@ export const STORY_SCREENS: readonly Screen[] = [
     alt: "Control room with the plan tree, a compact agents row and its handoff, the needs line, an open question, approval drift, and a failed check.",
     caption: "What needs you, before it blocks the loop.",
   },
-  {
+  "git-pane": {
     name: "git-pane",
     file: "lpui-git-pane",
     width: 1604,
@@ -73,7 +81,7 @@ export const STORY_SCREENS: readonly Screen[] = [
     alt: "Main shell with a linked task selected, showing the left work column (plan queue, agents, plan review, git) and the overview on the right.",
     caption: "Checkout, commits, and pull requests for the row.",
   },
-  {
+  "source-trail": {
     name: "source-trail",
     file: "lpui-source-trail",
     width: 1604,
@@ -81,7 +89,7 @@ export const STORY_SCREENS: readonly Screen[] = [
     alt: "Source trail for a task with a repository, commits, changed files, pull requests, and a selected file diff.",
     caption: "Follow a task into the commit and the code.",
   },
-  {
+  trace: {
     name: "trace",
     file: "lpui-trace",
     width: 1482,
@@ -89,7 +97,7 @@ export const STORY_SCREENS: readonly Screen[] = [
     alt: "Terminal transcript of lpui trace and lpui lint --strict linking acceptance criteria to tasks, commits, and pull requests, with a finding for a criterion that has no proving task.",
     caption: "Every criterion keeps its proof.",
   },
-  {
+  timeline: {
     name: "timeline",
     file: "lpui-timeline",
     width: 1604,
@@ -97,4 +105,22 @@ export const STORY_SCREENS: readonly Screen[] = [
     alt: "Main shell with the timeline open, showing plan and milestone traces at distinct start positions and one never-started lane.",
     caption: "Plans and milestones across lanes.",
   },
+} as const satisfies Record<string, Screen>
+
+export type ScreenName = keyof typeof SCREENS
+
+export function screen(name: ScreenName): Screen {
+  return SCREENS[name]
+}
+
+/** Gallery order: setup, updates, the plan, lanes, and the proof trail. */
+export const GALLERY: readonly ScreenName[] = [
+  "setup-roles",
+  "update",
+  "detail",
+  "worktrees",
+  "git-pane",
+  "source-trail",
+  "trace",
+  "timeline",
 ]

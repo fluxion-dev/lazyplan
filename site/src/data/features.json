@@ -47,7 +47,7 @@
     {
       "id": "worktrees",
       "title": "One worktree per lane",
-      "description": "`lpui plan worktree` prints and registers the checkout commands. lazyplan never creates, merges, or removes one itself.",
+      "description": "lpui plan worktree prints and registers the checkout commands. lazyplan never creates, merges, or removes one itself.",
       "icon": "git-branch",
       "group": "agents"
     },

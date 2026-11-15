@@ -9,12 +9,12 @@ export const FAQ: readonly FaqItem[] = [
   {
     question: "What happens on first run?",
     answer:
-      "`lpui` detects your agents, offers the setup wizard, and creates the plan store. The wizard asks where plans live, which agents receive the skill, how hooks behave, and which models each role uses. It lists every file it will write before anything is applied. Reopen it with `lpui setup` or by pressing S in the screen.",
+      "lpui detects your agents, offers the setup wizard, and creates the plan store. The wizard asks where plans live, which agents receive the skill, how hooks behave, and which models each role uses. It lists every file it will write before anything is applied. Reopen it with lpui setup or by pressing S in the screen.",
   },
   {
     question: "Do I need more than one agent?",
     answer:
-      "No. One agent can plan and execute. When you add workers, milestones become lanes and `lpui dispatch --plan P` prints the waves, the worktree commands, and one prompt per ready task.",
+      "No. One agent can plan and execute. When you add workers, milestones become lanes and lpui dispatch --plan P prints the waves, the worktree commands, and one prompt per ready task.",
   },
   {
     question: "How do parallel lanes avoid collisions?",
@@ -34,7 +34,7 @@ export const FAQ: readonly FaqItem[] = [
   {
     question: "How do updates work?",
     answer:
-      "The taskbar shows the running version. When the update cache knows a newer release it adds an arrow; click the badge or press U to download and verify a wheel that applies on the next launch. `lpui upgrade` does the same from the shell.",
+      "The taskbar shows the running version. When the update cache knows a newer release it adds an arrow; click the badge or press U to download and verify a wheel that applies on the next launch. lpui upgrade does the same from the shell.",
   },
   {
     question: "Does it run on Windows, macOS, and Linux?",

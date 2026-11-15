@@ -2,15 +2,7 @@ import { ArrowRight } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  HERO_COMPOSITE,
-  LICENSE_BADGE,
-  PYPI_BADGE,
-  PYPI_URL,
-  RELEASE_BADGE,
-  REPO_URL,
-  RELEASES_URL,
-} from "@/data/site"
+import { COPY, HERO_COMPOSITE, LICENSE_BADGE, PYPI_BADGE, PYPI_URL, RELEASE_BADGE, REPO_URL, RELEASES_URL } from "@/data/site"
 
 import { DownloadStats } from "./download-stats"
 
@@ -35,17 +27,17 @@ export function Hero() {
             aria-hidden="true"
             className="size-1.5 rounded-full bg-brand-gold"
           />
-          The terminal plan tracker
+          {COPY.hero.badge}
         </Badge>
 
         <h1
           id="hero-title"
           className="m-0 text-display leading-display font-extrabold tracking-display text-balance text-foreground"
         >
-          Your master plan(s), laid bare.
+          {COPY.hero.title}
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lead text-pretty text-muted-foreground">
-          Agent compatible long context planning and control
+          {COPY.hero.intro}
         </p>
 
         <div className="mt-8 flex flex-col items-center justify-center gap-2.5 sm:flex-row">
@@ -53,8 +45,8 @@ export function Hero() {
             <a href="#install">Install</a>
           </Button>
           <Button asChild size="lg" variant="outline">
-            <a href="#screens">
-              See it in action
+            <a href="#first-run">
+              See first run
               <ArrowRight />
             </a>
           </Button>

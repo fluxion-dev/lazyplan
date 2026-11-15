@@ -1,5 +1,7 @@
+import { Dispatch } from "./components/site/dispatch"
 import { Faq } from "./components/site/faq"
 import { FeatureMatrix } from "./components/site/feature-matrix"
+import { FirstRun } from "./components/site/first-run"
 import { Footer } from "./components/site/footer"
 import { GetStarted } from "./components/site/get-started"
 import { Header } from "./components/site/header"
@@ -18,9 +20,11 @@ export default function App() {
       <Hero />
       <main id="main">
         <InstallCommand />
+        <FirstRun />
         <LeadStory />
         <FeatureMatrix />
         <WaysToWork />
+        <Dispatch />
         <ProofSection />
         <Screenshots />
         <HowItWorks />

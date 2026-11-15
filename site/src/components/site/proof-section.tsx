@@ -8,13 +8,12 @@ import {
 } from "lucide-react"
 
 import { Card, CardContent } from "@/components/ui/card"
-import { COPY, STORY_SCREENS } from "@/data/site"
+import { COPY, screen } from "@/data/site"
 
 import { Reveal } from "./reveal"
 import { Section, SectionHeading } from "./section"
 
-const PROOF_SCREEN =
-  STORY_SCREENS.find((screen) => screen.name === "control-room") ?? STORY_SCREENS[0]
+const PROOF_SCREEN = screen("control-room")
 
 const TRUST = [
   {

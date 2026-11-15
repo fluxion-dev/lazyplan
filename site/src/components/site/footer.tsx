@@ -10,8 +10,9 @@ const GROUPS = [
   {
     title: "Product",
     links: [
-      { href: "#story", label: "Story" },
-      { href: "#features", label: "Features" },
+      { href: "#first-run", label: "First run" },
+      { href: "#story", label: "Plan" },
+      { href: "#dispatch", label: "Dispatch" },
       { href: "#proof", label: "Proof" },
       { href: "#screens", label: "Screenshots" },
     ],
@@ -21,6 +22,8 @@ const GROUPS = [
     links: [
       { href: DOCS_URL, label: "Usage" },
       { href: `${DOCS_URL}#setup-and-scope`, label: "Setup" },
+      { href: `${DOCS_URL}#lanes-and-waves`, label: "Lanes" },
+      { href: `${DOCS_URL}#plan-worktrees`, label: "Worktrees" },
       { href: REPO_URL, label: "GitHub" },
       { href: RELEASES_URL, label: "Releases" },
       { href: LICENSE_URL, label: "License" },
@@ -55,7 +58,7 @@ export function Footer() {
               </span>
             </a>
             <p className="mt-4 max-w-sm text-sm text-pretty text-muted-foreground">
-              One plan for you and your agent. Plan locally. Ship with proof.
+              Plan with an agent. Dispatch the lanes. Keep the proof.
             </p>
             <p className="mt-4 font-mono text-xs text-muted-foreground">
               v{VERSION} · MIT

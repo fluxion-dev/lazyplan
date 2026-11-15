@@ -11,6 +11,7 @@ from pathlib import Path
 from unittest import mock
 
 from lazyplan.store import Store
+from tests.support.home import sandbox_home
 from tests.support.paths import ROOT
 
 
@@ -171,11 +172,16 @@ class PerfBenchCase(unittest.TestCase):
         failures = self.bench.check(result, {"tui_first_paint": self.bench.Budget(1, 1)})
         self.assertTrue(failures)
 
-    def test_benchmark_leaves_the_real_home_alone(self):
-        home = Path.home()
-        before = set(home.glob(".lazyplan/*")) if (home / ".lazyplan").is_dir() else set()
+    def test_benchmark_leaves_its_sandboxed_home_alone(self):
+        home = Path(tempfile.mkdtemp()) / "home"
+        home.mkdir(parents=True)
+        sandbox_home(self, home)
+        (home / ".lazyplan").mkdir()
+        marker = home / ".lazyplan" / "marker.txt"
+        marker.write_text("kept", encoding="utf-8")
+        before = set(home.rglob("*"))
         self.bench.run(self.bench.QUICK_COUNTS, repeat=1, include_tui=False)
-        after = set(home.glob(".lazyplan/*")) if (home / ".lazyplan").is_dir() else set()
+        after = set(home.rglob("*"))
         self.assertEqual(before, after)
 
 

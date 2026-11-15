@@ -6,6 +6,7 @@ import json
 import tempfile
 import unittest
 from collections.abc import Iterable
+from dataclasses import replace
 from pathlib import Path
 
 from lazyplan.infrastructure.host_models import HostCatalog
@@ -65,7 +66,11 @@ class SetupSessionTest(unittest.TestCase):
         session.set_role_tier("reviewer", "standard")
         session.set_role_effort("reviewer", "high")
         session.set_tier_model("opencode", "fast", "provider/tiny")
-        session.set_role_model("scout", "opencode", "provider/scout")
+        scout = session.draft.profiles_map["scout"]
+        session.draft.profiles_map["scout"] = replace(
+            scout,
+            models={"opencode": "provider/scout"},
+        )
         choice = session.choice()
         self.assertEqual(choice.agents, ["opencode"])
         self.assertEqual(choice.profiles_map["reviewer"].tier, "standard")

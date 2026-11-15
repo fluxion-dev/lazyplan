@@ -119,11 +119,6 @@ class SetupSession:
         plan = skills.plan_choice(choice, self.root, self.home)
         return layout.resolve_choice(choice, self.root, plan, self.home).db
 
-    @property
-    def host_labels(self) -> dict[str, str]:
-        """Display label for every selected host that has a catalog."""
-        return {host: catalog.label for host, catalog in self.catalogs.items()}
-
     def steps(self) -> tuple[Step, ...]:
         """The steps this context needs, in order."""
         return visible_steps(
@@ -232,20 +227,6 @@ class SetupSession:
         """Set or clear one host's model for a tier."""
         self._check_target(host, tier)
         self.draft.tiers_map.setdefault(tier, {})[host] = model.strip()
-
-    def set_role_model(self, role: str, host: str, model: str) -> None:
-        """Set or clear one role's per-host override."""
-        profile = self.draft.profiles_map.get(role)
-        if profile is None:
-            raise SetupSessionError(f"unknown role {role!r}")
-        if host not in self.draft.agents:
-            raise SetupSessionError(f"host must be one of {', '.join(self.draft.agents)}")
-        models = dict(profile.models)
-        if model.strip():
-            models[host] = model.strip()
-        else:
-            models.pop(host, None)
-        self.draft.profiles_map[role] = replace(profile, models=models)
 
     def _check_target(self, host: str, tier: str) -> None:
         if host not in self.draft.agents:

@@ -18,13 +18,13 @@ python3 tools/ia_inventory.py --check
 | palette_commands | 53 |
 | mcp_tools | 68 |
 | mcp_resources | 3 |
-| tui_screens | 18 |
-| tui_bindings | 66 |
+| tui_screens | 20 |
+| tui_bindings | 70 |
 | setup_steps | 5 |
 | hook_events | 35 |
 | doc_files | 9 |
 | doc_headings | 95 |
-| tui_key_conflicts | 15 |
+| tui_key_conflicts | 16 |
 | stale_claims | 0 |
 | env_names | 11 |
 | file_paths | 12 |
@@ -242,6 +242,8 @@ python3 tools/ia_inventory.py --check
 - `src/lazyplan/presentation/tui/screens/hub.py` — HubScreen
 - `src/lazyplan/presentation/tui/screens/maintenance.py` — MaintenanceScreen
 - `src/lazyplan/presentation/tui/screens/plan_diff.py` — PlanDiffScreen
+- `src/lazyplan/presentation/tui/screens/setup.py` — SetupWizardScreen
+- `src/lazyplan/presentation/tui/screens/setup_panels.py` — SetupPanelsScreen
 - `src/lazyplan/presentation/tui/screens/source.py` — SourceScreen
 - `src/lazyplan/presentation/tui/screens/update.py` — UpdateScreen
 
@@ -301,6 +303,10 @@ python3 tools/ia_inventory.py --check
 | `src/lazyplan/presentation/tui/screens/maintenance.py` | `v` | `apply_vacuum` | Vacuum |
 | `src/lazyplan/presentation/tui/screens/plan_diff.py` | `escape` | `back` | Back |
 | `src/lazyplan/presentation/tui/screens/plan_diff.py` | `q` | `back` | Quit |
+| `src/lazyplan/presentation/tui/screens/setup.py` | `b` | `previous` | Back |
+| `src/lazyplan/presentation/tui/screens/setup.py` | `escape` | `cancel` |  |
+| `src/lazyplan/presentation/tui/screens/setup.py` | `l` | `later` |  |
+| `src/lazyplan/presentation/tui/screens/setup.py` | `n` | `next` |  |
 | `src/lazyplan/presentation/tui/screens/source.py` | `ctrl+d` | `more` | More |
 | `src/lazyplan/presentation/tui/screens/source.py` | `ctrl+u` | `less` | Less |
 | `src/lazyplan/presentation/tui/screens/source.py` | `enter` | `open_owner` | Owner |
@@ -323,10 +329,11 @@ python3 tools/ia_inventory.py --check
 | `a` | `src/lazyplan/presentation/tui/app.py:94` → `add_criterion`; `src/lazyplan/presentation/tui/screens/hub.py:52` → `add`; `src/lazyplan/presentation/tui/screens/maintenance.py:43` → `apply_archive` |
 | `d` | `src/lazyplan/presentation/tui/app.py:95` → `delete`; `src/lazyplan/presentation/tui/screens/hub.py:53` → `delete` |
 | `e` | `src/lazyplan/presentation/tui/app.py:92` → `edit_selection`; `src/lazyplan/presentation/tui/screens/hub_coordination.py:191` → `edit_row`; `src/lazyplan/presentation/tui/screens/hub_kinds.py:30` → `edit_row` |
-| `escape` | `src/lazyplan/presentation/tui/app.py:87` → `clear_filter`; `src/lazyplan/presentation/tui/screens/base.py:47` → `cancel`; `src/lazyplan/presentation/tui/screens/export.py:43` → `cancel`; `src/lazyplan/presentation/tui/screens/health.py:63` → `cancel`; `src/lazyplan/presentation/tui/screens/hub.py:51` → `back`; `src/lazyplan/presentation/tui/screens/maintenance.py:41` → `back`; `src/lazyplan/presentation/tui/screens/plan_diff.py:27` → `back`; `src/lazyplan/presentation/tui/screens/source.py:73` → `back`; `src/lazyplan/presentation/tui/screens/update.py:39` → `cancel` |
+| `escape` | `src/lazyplan/presentation/tui/app.py:87` → `clear_filter`; `src/lazyplan/presentation/tui/screens/base.py:47` → `cancel`; `src/lazyplan/presentation/tui/screens/export.py:43` → `cancel`; `src/lazyplan/presentation/tui/screens/health.py:63` → `cancel`; `src/lazyplan/presentation/tui/screens/hub.py:51` → `back`; `src/lazyplan/presentation/tui/screens/maintenance.py:41` → `back`; `src/lazyplan/presentation/tui/screens/plan_diff.py:27` → `back`; `src/lazyplan/presentation/tui/screens/setup.py:81` → `cancel`; `src/lazyplan/presentation/tui/screens/source.py:73` → `back`; `src/lazyplan/presentation/tui/screens/update.py:39` → `cancel` |
 | `f` | `src/lazyplan/presentation/tui/screens/hub_provenance.py:188` → `filter_actor`; `src/lazyplan/presentation/tui/screens/source.py:79` → `toggle_fold` |
 | `g` | `src/lazyplan/presentation/tui/app.py:96` → `source_trail`; `src/lazyplan/presentation/tui/screens/hub.py:59` → `source_hub` |
-| `n` | `src/lazyplan/presentation/tui/app.py:91` → `new_context`; `src/lazyplan/presentation/tui/screens/hub.py:55` → `note`; `src/lazyplan/presentation/tui/screens/source.py:75` → `next_file` |
+| `l` | `src/lazyplan/presentation/tui/screens/hub.py:56` → `relate`; `src/lazyplan/presentation/tui/screens/setup.py:84` → `later` |
+| `n` | `src/lazyplan/presentation/tui/app.py:91` → `new_context`; `src/lazyplan/presentation/tui/screens/hub.py:55` → `note`; `src/lazyplan/presentation/tui/screens/setup.py:83` → `next`; `src/lazyplan/presentation/tui/screens/source.py:75` → `next_file` |
 | `o` | `src/lazyplan/presentation/tui/screens/hub.py:58` → `open_value`; `src/lazyplan/presentation/tui/screens/source.py:82` → `open` |
 | `p` | `src/lazyplan/presentation/tui/screens/maintenance.py:42` → `refresh`; `src/lazyplan/presentation/tui/screens/source.py:76` → `prev_file` |
 | `q` | `src/lazyplan/presentation/tui/navigation.py:84` → `quit`; `src/lazyplan/presentation/tui/screens/plan_diff.py:28` → `back` |

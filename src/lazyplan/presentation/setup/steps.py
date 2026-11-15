@@ -87,7 +87,6 @@ STEPS: tuple[Step, ...] = (
     APPEARANCE,
     REVIEW,
 )
-STEP_BY_KEY: dict[str, Step] = {step.key: step for step in STEPS}
 
 
 def visible_steps(

@@ -49,7 +49,9 @@ from .integrations import (
 )
 from .layout import SetupChoice, SetupLayout
 from .moves import move_repo_db
+from .session import SetupDraft, SetupSession, SetupSessionError
 from .state import SetupState, git_state, load_state, plans_in, save_state, state_path
+from .steps import Step, visible_steps
 from .wizard import run_wizard
 
 setup_layout = layout
@@ -71,8 +73,12 @@ __all__ = [
     "Inspection",
     "ReviewResult",
     "SetupChoice",
+    "SetupDraft",
     "SetupLayout",
+    "SetupSession",
+    "SetupSessionError",
     "SetupState",
+    "Step",
     "apply_choice",
     "choice_from_args",
     "choice_from_state",
@@ -102,4 +108,5 @@ __all__ = [
     "setup_ui",
     "state_path",
     "ui",
+    "visible_steps",
 ]

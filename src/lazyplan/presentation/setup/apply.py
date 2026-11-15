@@ -325,7 +325,7 @@ def install_integrations(
     result: dict[str, Any],
     home: Path,
     root: Path | None,
-    hook_mode: bool | None = None,
+    hook_mode: str | bool | None = None,
     pointer_mode: bool | None = None,
 ) -> dict[str, Any]:
     """Install hooks and the optional pointer for a completed layout."""

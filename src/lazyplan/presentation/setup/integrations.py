@@ -260,6 +260,20 @@ def _remember(
         }
 
 
+def remember_decisions(
+    items: tuple[IntegrationItem, ...],
+    state: SetupState,
+    decision: str,
+    version: str,
+    home: Path,
+) -> None:
+    """Record deferred or never for these items and save setup state."""
+    if not items:
+        return
+    _remember(items, state, decision, version)
+    save_state(state, home)
+
+
 def review_pending(
     choice: SetupChoice,
     state: SetupState,

@@ -226,6 +226,22 @@ class OpenCodeProfileInstallTest(unittest.TestCase):
             len(AGENT_ROLES) * 2,
         )
 
+    def test_installers_registry_covers_every_host(self) -> None:
+        self.assertEqual(set(agent_install.INSTALLERS), set(profiles.HOSTS))
+
+    def test_install_profiles_covers_every_host(self) -> None:
+        db = self.root / "all-hosts.db"
+        results = agent_install.install_profiles(
+            "project", self.repo, self.home, list(profiles.HOSTS), db
+        )
+        self.assertEqual({row.host for row in results}, set(profiles.HOSTS))
+        self.assertTrue((self.repo / ".opencode/agent/lazyplan-qa.md").is_file())
+        self.assertTrue((self.repo / ".claude/agents/lazyplan-qa.md").is_file())
+        self.assertTrue((self.repo / ".codex/agents/lazyplan-qa.toml").is_file())
+        self.assertTrue((self.repo / ".gemini/agents/lazyplan-qa.md").is_file())
+        self.assertTrue((self.repo / ".cursor/agents/lazyplan-qa.md").is_file())
+        self.assertTrue((self.repo / ".github/agents/lazyplan-qa.agent.md").is_file())
+
     def test_install_profiles_selects_the_requested_hosts(self) -> None:
         db = self.root / "profiles.db"
         result = agent_install.install_profiles(

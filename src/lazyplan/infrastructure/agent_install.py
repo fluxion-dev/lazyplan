@@ -488,18 +488,12 @@ def install_profiles(
     opencode_defaults = models if models is not None else opencode_models(home, repo_root)
     tiers = effective_tiers(db_path, home, repo_root, agents)
     results: list[AgentInstallResult] = []
-    if "opencode" in agents:
-        results.append(install_opencode(scope, repo_root, home, loaded, opencode_defaults, tiers))
-    if "claude" in agents:
-        results.append(install_claude(scope, repo_root, home, loaded, None, tiers))
-    if "codex" in agents:
-        results.append(install_codex(scope, repo_root, home, loaded, None, tiers))
-    if "gemini" in agents:
-        results.append(install_gemini(scope, repo_root, home, loaded, None, tiers))
-    if "cursor" in agents:
-        results.append(install_cursor(scope, repo_root, home, loaded, None, tiers))
-    if "copilot" in agents:
-        results.append(install_copilot(scope, repo_root, home, loaded, None, tiers))
+    for host in agents:
+        installer = INSTALLERS.get(host)
+        if installer is None:
+            continue
+        models = opencode_defaults if host == "opencode" else None
+        results.append(installer(scope, repo_root, home, loaded, models, tiers))
     return results
 
 
@@ -519,3 +513,13 @@ def _install_file(dest: Path, content: str) -> tuple[bool, str]:
         textfile.write(dest, content)
         return True, "refreshed"
     return False, "kept user file"
+
+
+INSTALLERS: dict[str, Callable[..., AgentInstallResult]] = {
+    "opencode": install_opencode,
+    "claude": install_claude,
+    "codex": install_codex,
+    "gemini": install_gemini,
+    "cursor": install_cursor,
+    "copilot": install_copilot,
+}

@@ -1172,6 +1172,18 @@
             "--agents"
           ],
           [
+            "--agent-tier"
+          ],
+          [
+            "--tier-model"
+          ],
+          [
+            "--role-model"
+          ],
+          [
+            "--no-model-review"
+          ],
+          [
             "--skills-dir"
           ],
           [
@@ -1583,7 +1595,7 @@
     "mcp_resources": 3,
     "mcp_tools": 68,
     "palette_commands": 52,
-    "setup_steps": 4,
+    "setup_steps": 5,
     "stale_claims": 0,
     "tui_bindings": 65,
     "tui_key_conflicts": 15,
@@ -2747,6 +2759,7 @@
       "ask_agents",
       "ask_integrations",
       "ask_migration",
+      "ask_models",
       "ask_placement"
     ]
   },

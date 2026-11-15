@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import tempfile
+import tomllib
 import unittest
 from pathlib import Path
 
@@ -107,6 +108,181 @@ class OpenCodeProfileInstallTest(unittest.TestCase):
     def test_claude_global_scope(self) -> None:
         agent_install.install_claude("global", self.repo, self.home, self.profiles)
         self.assertTrue((self.home / ".claude/agents/lazyplan-qa.md").is_file())
+
+    def test_codex_install_writes_valid_toml_and_read_only_sandbox(self) -> None:
+        tiers = {"deep": {"codex": "gpt-6.1-sol"}, "fast": {"codex": "gpt-6-luna"}}
+        result = agent_install.install_codex(
+            "project", self.repo, self.home, self.profiles, None, tiers
+        )
+        self.assertEqual(len(result.installed), len(AGENT_ROLES))
+        path = self.repo / ".codex/agents/lazyplan-reviewer.toml"
+        text = path.read_text(encoding="utf-8")
+        self.assertTrue(text.startswith("# managed by lazyplan: codex reviewer"))
+        parsed = tomllib.loads(text)
+        self.assertEqual(parsed["name"], "lazyplan-reviewer")
+        self.assertEqual(parsed["model"], "gpt-6.1-sol")
+        self.assertEqual(parsed["sandbox_mode"], "read-only")
+        self.assertIn("developer_instructions", parsed)
+        implementer = tomllib.loads(
+            (self.repo / ".codex/agents/lazyplan-implementer.toml").read_text(encoding="utf-8")
+        )
+        self.assertEqual(implementer["model"], "gpt-6-luna")
+        self.assertNotIn("sandbox_mode", implementer)
+
+    def test_codex_refresh_and_user_file_keep(self) -> None:
+        agent_install.install_codex("project", self.repo, self.home, self.profiles)
+        path = self.repo / ".codex/agents/lazyplan-docs.toml"
+        path.write_text(path.read_text(encoding="utf-8") + "\n# stale\n", encoding="utf-8")
+        agent_install.install_codex("project", self.repo, self.home, self.profiles)
+        self.assertNotIn("stale", path.read_text(encoding="utf-8"))
+        custom = self.repo / ".codex/agents/lazyplan-qa.toml"
+        custom.write_text('name = "mine"\n', encoding="utf-8")
+        result = agent_install.install_codex("project", self.repo, self.home, self.profiles)
+        self.assertEqual(custom.read_text(encoding="utf-8"), 'name = "mine"\n')
+        self.assertTrue(any("kept user file" in line for line in result.kept))
+
+    def test_codex_global_scope_and_profile_paths(self) -> None:
+        agent_install.install_codex("global", self.repo, self.home, self.profiles)
+        self.assertTrue((self.home / ".codex/agents/lazyplan-qa.toml").is_file())
+        paths = agent_install.profile_paths("both", self.repo, self.home, ["codex"])
+        self.assertEqual(len(paths), len(AGENT_ROLES) * 2)
+
+    def test_gemini_install_writes_model_and_read_only_tools(self) -> None:
+        tiers = {"standard": {"gemini": "gemini-3.8-flash"}}
+        result = agent_install.install_gemini(
+            "project", self.repo, self.home, self.profiles, None, tiers
+        )
+        self.assertEqual(len(result.installed), len(AGENT_ROLES))
+        qa = (self.repo / ".gemini/agents/lazyplan-qa.md").read_text(encoding="utf-8")
+        self.assertIn("name: lazyplan-qa", qa)
+        self.assertIn("model: gemini-3.8-flash", qa)
+        scout = (self.repo / ".gemini/agents/lazyplan-scout.md").read_text(encoding="utf-8")
+        self.assertIn("tools:", scout)
+        self.assertIn("read_file", scout)
+        self.assertNotIn("run_shell_command", scout)
+        reviewer = (self.repo / ".gemini/agents/lazyplan-reviewer.md").read_text(encoding="utf-8")
+        self.assertIn("run_shell_command", reviewer)
+        implementer = (self.repo / ".gemini/agents/lazyplan-implementer.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("tools:", implementer)
+
+    def test_gemini_empty_model_is_inherit_and_global_scope(self) -> None:
+        agent_install.install_gemini("global", self.repo, self.home, self.profiles)
+        qa = (self.home / ".gemini/agents/lazyplan-qa.md").read_text(encoding="utf-8")
+        self.assertIn("model: inherit", qa)
+        self.assertEqual(
+            len(agent_install.profile_paths("both", self.repo, self.home, ["gemini"])),
+            len(AGENT_ROLES) * 2,
+        )
+
+    def test_cursor_install_writes_model_and_readonly_roles(self) -> None:
+        tiers = {"deep": {"cursor": "composer-2"}}
+        result = agent_install.install_cursor(
+            "project", self.repo, self.home, self.profiles, None, tiers
+        )
+        self.assertEqual(len(result.installed), len(AGENT_ROLES))
+        reviewer = (self.repo / ".cursor/agents/lazyplan-reviewer.md").read_text(encoding="utf-8")
+        self.assertIn("name: lazyplan-reviewer", reviewer)
+        self.assertIn("model: composer-2", reviewer)
+        self.assertIn("readonly: true", reviewer)
+        implementer = (self.repo / ".cursor/agents/lazyplan-implementer.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("model: inherit", implementer)
+        self.assertNotIn("readonly:", implementer)
+
+    def test_cursor_global_scope_and_profile_paths(self) -> None:
+        agent_install.install_cursor("global", self.repo, self.home, self.profiles)
+        self.assertTrue((self.home / ".cursor/agents/lazyplan-qa.md").is_file())
+        self.assertEqual(
+            len(agent_install.profile_paths("both", self.repo, self.home, ["cursor"])),
+            len(AGENT_ROLES) * 2,
+        )
+
+    def test_copilot_install_uses_agent_suffix_and_readonly_tools(self) -> None:
+        tiers = {"standard": {"copilot": "local/model"}}
+        result = agent_install.install_copilot(
+            "project", self.repo, self.home, self.profiles, None, tiers
+        )
+        self.assertEqual(len(result.installed), len(AGENT_ROLES))
+        qa = (self.repo / ".github/agents/lazyplan-qa.agent.md").read_text(encoding="utf-8")
+        self.assertIn("name: lazyplan-qa", qa)
+        self.assertIn("model: local/model", qa)
+        scout = (self.repo / ".github/agents/lazyplan-scout.agent.md").read_text(encoding="utf-8")
+        self.assertIn('tools: ["read", "grep", "glob"]', scout)
+        self.assertIn("strict-tools-list: true", scout)
+        implementer = (self.repo / ".github/agents/lazyplan-implementer.agent.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("tools:", implementer)
+        self.assertNotIn("model: inherit", implementer)
+
+    def test_copilot_global_scope_and_profile_paths(self) -> None:
+        agent_install.install_copilot("global", self.repo, self.home, self.profiles)
+        self.assertTrue((self.home / ".copilot/agents/lazyplan-qa.agent.md").is_file())
+        self.assertEqual(
+            len(agent_install.profile_paths("both", self.repo, self.home, ["copilot"])),
+            len(AGENT_ROLES) * 2,
+        )
+
+    def test_all_host_matrix_at_every_scope(self) -> None:
+        readonly = {
+            "opencode": "edit: deny",
+            "claude": "permissionMode: plan",
+            "codex": 'sandbox_mode = "read-only"',
+            "gemini": "read_file",
+            "cursor": "readonly: true",
+            "copilot": "strict-tools-list: true",
+        }
+        for scope in ("project", "global", "both"):
+            for host in profiles.HOSTS:
+                with self.subTest(scope=scope, host=host):
+                    base = self.root / f"{scope}-{host}"
+                    home = base / "home"
+                    repo = base / "repo"
+                    home.mkdir(parents=True)
+                    repo.mkdir()
+                    db = base / "matrix.db"
+                    agent_install.install_profiles(scope, repo, home, [host], db)
+                    paths = agent_install.profile_paths(scope, repo, home, [host])
+                    self.assertEqual(len(paths), len(AGENT_ROLES) * (2 if scope == "both" else 1))
+                    again = agent_install.install_profiles(scope, repo, home, [host], db)
+                    self.assertTrue(all("up-to-date" in line for line in again[0].installed))
+                    scout = next(path for path in paths if path.name.startswith("lazyplan-scout"))
+                    self.assertIn(readonly[host], scout.read_text(encoding="utf-8"))
+                    reviewer = next(
+                        path for path in paths if path.name.startswith("lazyplan-reviewer")
+                    )
+                    self.assertTrue(reviewer.is_file())
+
+    def test_unmarked_user_file_is_kept_for_every_host(self) -> None:
+        for host in profiles.HOSTS:
+            with self.subTest(host=host):
+                target = agent_install.profile_paths("project", self.repo, self.home, [host])[0]
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text("my custom agent\n", encoding="utf-8")
+                result = agent_install.install_profiles(
+                    "project", self.repo, self.home, [host], self.root / f"{host}.db"
+                )
+                self.assertEqual(target.read_text(encoding="utf-8"), "my custom agent\n")
+                self.assertTrue(any("kept user file" in line for line in result[0].kept))
+
+    def test_installers_registry_covers_every_host(self) -> None:
+        self.assertEqual(set(agent_install.INSTALLERS), set(profiles.HOSTS))
+
+    def test_install_profiles_covers_every_host(self) -> None:
+        db = self.root / "all-hosts.db"
+        results = agent_install.install_profiles(
+            "project", self.repo, self.home, list(profiles.HOSTS), db
+        )
+        self.assertEqual({row.host for row in results}, set(profiles.HOSTS))
+        self.assertTrue((self.repo / ".opencode/agent/lazyplan-qa.md").is_file())
+        self.assertTrue((self.repo / ".claude/agents/lazyplan-qa.md").is_file())
+        self.assertTrue((self.repo / ".codex/agents/lazyplan-qa.toml").is_file())
+        self.assertTrue((self.repo / ".gemini/agents/lazyplan-qa.md").is_file())
+        self.assertTrue((self.repo / ".cursor/agents/lazyplan-qa.md").is_file())
+        self.assertTrue((self.repo / ".github/agents/lazyplan-qa.agent.md").is_file())
 
     def test_install_profiles_selects_the_requested_hosts(self) -> None:
         db = self.root / "profiles.db"

@@ -89,6 +89,25 @@ class DoctorCase(unittest.TestCase):
         self.assertTrue(report["profiles"]["missing"])
         self.assertFalse(report["clean"])
 
+    def test_doctor_reports_a_drifted_profile_and_resolved_models(self):
+        self.assertEqual(lpui_main(["setup", "--yes", "--agents", "claude", "--json"]), 0)
+        path = self.home / ".claude" / "agents" / "lazyplan-qa.md"
+        path.write_text(path.read_text(encoding="utf-8") + "\nstale\n", encoding="utf-8")
+        code, report = self._json(["doctor", "--json"])
+        self.assertEqual(code, 1)
+        self.assertIn(str(path), report["profiles"]["drifted"])
+        self.assertEqual(report["profiles"]["models"]["claude"]["qa"], "sonnet")
+        self.assertFalse(report["clean"])
+
+    def test_doctor_warns_about_an_unmanaged_profile_without_failing(self):
+        self.assertEqual(lpui_main(["setup", "--yes", "--agents", "claude", "--json"]), 0)
+        path = self.home / ".claude" / "agents" / "lazyplan-qa.md"
+        path.write_text("my custom agent\n", encoding="utf-8")
+        code, report = self._json(["doctor", "--json"])
+        self.assertIn(str(path), report["profiles"]["unmanaged"])
+        self.assertEqual(report["profiles"]["drifted"], [])
+        self.assertEqual(code, 0, report)
+
     def test_findings_exit_one(self):
         plan_dir = self.repo / PLAN_DIR
         plan_dir.mkdir(parents=True)

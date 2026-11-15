@@ -1,11 +1,38 @@
 {
+  "schema": 2,
+  "tiers": {
+    "fast": {
+      "opencode": "",
+      "claude": "haiku",
+      "codex": "",
+      "gemini": "",
+      "cursor": "",
+      "copilot": ""
+    },
+    "standard": {
+      "opencode": "",
+      "claude": "sonnet",
+      "codex": "",
+      "gemini": "",
+      "cursor": "",
+      "copilot": ""
+    },
+    "deep": {
+      "opencode": "",
+      "claude": "opus",
+      "codex": "",
+      "gemini": "",
+      "cursor": "",
+      "copilot": ""
+    }
+  },
   "profiles": {
-    "scout": {"tier": "fast", "model": "", "effort": ""},
-    "implementer": {"tier": "fast", "model": "", "effort": ""},
-    "qa": {"tier": "standard", "model": "", "effort": ""},
-    "refactor": {"tier": "standard", "model": "", "effort": ""},
-    "docs": {"tier": "fast", "model": "", "effort": ""},
-    "reviewer": {"tier": "deep", "model": "", "effort": ""},
-    "integrator": {"tier": "deep", "model": "", "effort": ""}
+    "scout": {"tier": "fast", "model": "", "effort": "", "models": {}},
+    "implementer": {"tier": "fast", "model": "", "effort": "", "models": {}},
+    "qa": {"tier": "standard", "model": "", "effort": "", "models": {}},
+    "refactor": {"tier": "standard", "model": "", "effort": "", "models": {}},
+    "docs": {"tier": "fast", "model": "", "effort": "", "models": {}},
+    "reviewer": {"tier": "deep", "model": "", "effort": "", "models": {}},
+    "integrator": {"tier": "deep", "model": "", "effort": "", "models": {}}
   }
 }

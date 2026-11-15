@@ -18,7 +18,7 @@ from typing import Any
 
 from lazyplan.infrastructure import agent_install
 from lazyplan.infrastructure.integrations import HOOK, HOST_LABELS, IntegrationItem
-from lazyplan.infrastructure.repo import find_repo_root
+from lazyplan.infrastructure.repo import find_repo_root, repo_plan_db_path, shared_db_path
 
 from .apply import choice_from_state
 from .integrations import ReviewResult, inspect, install_items, suppressing_decision
@@ -215,19 +215,24 @@ def check(
     profile_agents = choice.agents or state.agents
     if not choice.explicit_db and state.skills_enabled and state.profile_files and profile_agents:
         scope = "project" if choice.placement == "repo" and root is not None else "global"
-        paths = agent_install.profile_paths(scope, root, home, profile_agents)
-        missing = [path for path in paths if not path.is_file()]
-        if missing:
+        db_path = (
+            repo_plan_db_path(root)
+            if choice.placement == "repo" and root is not None
+            else shared_db_path(home)
+        )
+        disk = agent_install.inspect_profiles(scope, root, home, profile_agents, db_path)
+        if disk.broken:
+            count = len(disk.missing) + len(disk.drifted)
             findings.append(
                 HealthFinding(
                     id="profile:agents",
                     label="Agent profiles",
                     capability=(
-                        f"{len(missing)} managed subagent profile(s) are missing, so"
-                        " lane work falls back to the main agent."
+                        f"{count} managed subagent profile(s) are missing or out of date,"
+                        " so lane work falls back to the main agent."
                     ),
                     severity=WARNING,
-                    fix="Run `lpui setup` to reinstall the missing agent profiles.",
+                    fix="Run `lpui setup` to reinstall the agent profiles.",
                 )
             )
     for tool in _missing_tools(which, run, os.environ if env is None else env):

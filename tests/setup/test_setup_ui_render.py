@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from lazyplan.infrastructure import skills
+from lazyplan.infrastructure import host_models, profiles, skills
 from lazyplan.presentation.setup import ui as setup_ui
 
 
@@ -61,7 +61,7 @@ class RenderCase(unittest.TestCase):
             )
         )
         lines = self._lines(text)
-        self.assertIn("3/3 Review", lines[0])
+        self.assertIn("4/4 Review", lines[0])
         self.assertTrue(any("database" in line for line in lines))
         self.assertTrue(any("state" in line for line in lines))
         self.assertTrue(any("plugins" in line for line in lines))
@@ -99,6 +99,118 @@ class RenderCase(unittest.TestCase):
         hosts = skills.detect_agents(self.home)
         text = self._text(lambda out: setup_ui.render_agents(out, hosts, [], False))
         self.assertEqual(len(self._lines(text)), len(hosts))
+
+    def test_model_review_lists_tiers_roles_and_sources(self):
+        catalogs = {
+            "opencode": host_models.HostCatalog(
+                "opencode",
+                "OpenCode",
+                ("provider/tiny", "provider/big"),
+                {"fast": "provider/tiny", "standard": "provider/big", "deep": "provider/big"},
+                "opencode models",
+            ),
+            "claude": host_models.HostCatalog(
+                "claude",
+                "Claude Code",
+                ("haiku", "sonnet", "opus"),
+                {"fast": "haiku", "standard": "sonnet", "deep": "opus"},
+                "Claude Code aliases",
+            ),
+        }
+        text = self._text(
+            lambda out: setup_ui.render_models(
+                out,
+                ["opencode", "claude"],
+                profiles.defaults(),
+                profiles.default_tiers(),
+                catalogs,
+                False,
+            )
+        )
+        lines = self._lines(text)
+        self.assertIn("3/4 Model targets", lines[0])
+        self.assertTrue(any("fast" in line and "provider/tiny" in line for line in lines))
+        self.assertTrue(any("scout" in line and "haiku" in line for line in lines))
+        self.assertTrue(any("sources:" in line and "opencode models" in line for line in lines))
+        self.assertTrue(any("enter accept" in line for line in lines))
+        self.assertNotIn("\x1b", text)
+
+    def _catalogs(self):
+        return {
+            "opencode": host_models.HostCatalog(
+                "opencode",
+                "OpenCode",
+                ("provider/tiny", "provider/big"),
+                {"fast": "provider/tiny", "standard": "provider/big", "deep": "provider/big"},
+                "opencode models",
+            ),
+            "claude": host_models.HostCatalog(
+                "claude",
+                "Claude Code",
+                ("haiku", "sonnet", "opus"),
+                {"fast": "haiku", "standard": "sonnet", "deep": "opus"},
+                "Claude Code aliases",
+            ),
+        }
+
+    def _edits(self, answers: list[str]):
+        out = io.StringIO()
+        values = iter(answers)
+        updated, tiers = setup_ui.ask_models(
+            out,
+            lambda: next(values),
+            ["opencode", "claude"],
+            profiles.defaults(),
+            profiles.default_tiers(),
+            self._catalogs(),
+            False,
+        )
+        return out.getvalue(), updated, tiers
+
+    def test_model_review_edits_roles_tiers_and_resets(self):
+        text, updated, tiers = self._edits(
+            [
+                "t qa deep",
+                "m opencode fast provider/tiny",
+                "r claude deep",
+                "",
+            ]
+        )
+        self.assertEqual(updated["qa"].tier, "deep")
+        self.assertEqual(tiers["fast"]["opencode"], "provider/tiny")
+        self.assertEqual(tiers["deep"]["claude"], "opus")
+        self.assertIn("enter to accept", text)
+
+    def test_model_review_inherit_clears_a_target(self):
+        _text, updated, tiers = self._edits(["m opencode fast inherit", ""])
+        self.assertEqual(tiers["fast"]["opencode"], "")
+        self.assertEqual(updated["scout"].tier, "fast")
+
+    def test_model_review_rejects_bad_input_and_help_is_shown(self):
+        text, updated, tiers = self._edits(["t wizard fast", "?", ""])
+        self.assertIn("unknown role", text)
+        self.assertIn("t ROLE TIER", text)
+        self.assertEqual(updated["scout"].tier, "fast")
+        self.assertEqual(tiers, profiles.default_tiers())
+
+    def test_model_review_marks_a_catalog_warning(self):
+        catalog = host_models.HostCatalog(
+            "opencode",
+            "OpenCode",
+            warning="OpenCode is not detected",
+        )
+        text = self._text(
+            lambda out: setup_ui.render_models(
+                out,
+                ["opencode"],
+                profiles.defaults(),
+                profiles.default_tiers(),
+                {"opencode": catalog},
+                False,
+            )
+        )
+        self.assertIn("OpenCode is not detected", text)
+        self.assertIn("inherit", text)
 
 
 if __name__ == "__main__":

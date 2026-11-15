@@ -7,6 +7,7 @@ it is a managed profile being refreshed. Stdlib only.
 
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -14,17 +15,22 @@ from pathlib import Path
 from ..core.policies.lanes import AGENT_ROLES
 from . import textfile
 from .data_text import data_text
-from .profiles import Profile, load, opencode_models, resolve
+from .host_models import HOST_SPECS, effective_tiers
+from .profiles import Profile, load_all, opencode_models, resolve
 
-OPENCODE_DIR = Path(".opencode") / "agent"
-OPENCODE_HOME_DIR = Path(".config") / "opencode" / "agent"
-CLAUDE_DIR = Path(".claude") / "agents"
-CLAUDE_HOME_DIR = Path(".claude") / "agents"
 MARKER = "<!-- managed by lazyplan:"
 CLAUDE_TOOLS = "Read, Grep, Glob, Edit, Write, Bash"
 CLAUDE_READ_TOOLS = {
     "scout": "Read, Grep, Glob",
     "reviewer": "Read, Grep, Glob, Bash",
+}
+GEMINI_READ_TOOLS = {
+    "scout": ("read_file", "grep_search", "glob", "list_directory"),
+    "reviewer": ("read_file", "grep_search", "glob", "list_directory", "run_shell_command"),
+}
+COPILOT_READ_TOOLS = {
+    "scout": ("read", "grep", "glob"),
+    "reviewer": ("read", "grep", "glob", "execute"),
 }
 
 ROLE_META: dict[str, dict[str, str]] = {
@@ -85,14 +91,58 @@ class AgentInstallResult:
         }
 
 
-def opencode_targets(scope: str, repo_root: Path | None, home: Path) -> list[Path]:
-    """One profile path per role for a scope."""
-    targets: list[Path] = []
-    if scope in ("project", "both") and repo_root is not None:
-        targets.extend(repo_root / OPENCODE_DIR / f"lazyplan-{role}.md" for role in AGENT_ROLES)
-    if scope in ("global", "both"):
-        targets.extend(home / OPENCODE_HOME_DIR / f"lazyplan-{role}.md" for role in AGENT_ROLES)
-    return targets
+@dataclass
+class ProfileState:
+    """Disk state of every managed profile for one setup."""
+
+    files: list[Path] = field(default_factory=list)
+    missing: list[Path] = field(default_factory=list)
+    drifted: list[Path] = field(default_factory=list)
+    unmanaged: list[Path] = field(default_factory=list)
+
+    @property
+    def broken(self) -> bool:
+        """True when a profile is missing or no longer matches its render."""
+        return bool(self.missing or self.drifted)
+
+
+def inspect_profiles(
+    scope: str,
+    root: Path | None,
+    home: Path,
+    agents: list[str],
+    db_path: str | Path,
+) -> ProfileState:
+    """Compare every managed profile with the map that would rewrite it."""
+    loaded, _saved = load_all(db_path)
+    tiers = effective_tiers(db_path, home, root, agents)
+    state = ProfileState(files=profile_paths(scope, root, home, agents))
+    for host in agents:
+        for path in _targets(host, scope, root, home):
+            if not path.is_file():
+                state.missing.append(path)
+                continue
+            try:
+                text = textfile.read(path)
+            except OSError:
+                state.missing.append(path)
+                continue
+            if "managed by lazyplan:" not in text:
+                state.unmanaged.append(path)
+                continue
+            role = role_for(path)
+            if role not in loaded:
+                continue
+            expected = render_profile(host, role, loaded, None, tiers)
+            if text != expected:
+                state.drifted.append(path)
+    return state
+
+
+def _targets(host: str, scope: str, repo_root: Path | None, home: Path) -> list[Path]:
+    """One profile path per role for a scope from the host registry."""
+    spec = HOST_SPECS[host]
+    return [path for role in AGENT_ROLES for path in spec.targets(scope, repo_root, home, role)]
 
 
 def install_opencode(
@@ -101,25 +151,16 @@ def install_opencode(
     home: Path,
     profiles: dict[str, Profile],
     models: dict[str, str] | None = None,
+    tiers: dict[str, dict[str, str]] | None = None,
 ) -> AgentInstallResult:
     """Write or refresh every OpenCode profile for a scope."""
     return _install_host(
         "opencode",
         scope,
-        opencode_targets(scope, repo_root, home),
+        _targets("opencode", scope, repo_root, home),
         profiles,
-        lambda role, profile: render_opencode(role, profile, models),
+        lambda role, profile: render_opencode(role, profile, models, tiers),
     )
-
-
-def claude_targets(scope: str, repo_root: Path | None, home: Path) -> list[Path]:
-    """One Claude Code profile path per role for a scope."""
-    targets: list[Path] = []
-    if scope in ("project", "both") and repo_root is not None:
-        targets.extend(repo_root / CLAUDE_DIR / f"lazyplan-{role}.md" for role in AGENT_ROLES)
-    if scope in ("global", "both"):
-        targets.extend(home / CLAUDE_HOME_DIR / f"lazyplan-{role}.md" for role in AGENT_ROLES)
-    return targets
 
 
 def install_claude(
@@ -128,15 +169,107 @@ def install_claude(
     home: Path,
     profiles: dict[str, Profile],
     models: dict[str, str] | None = None,
+    tiers: dict[str, dict[str, str]] | None = None,
 ) -> AgentInstallResult:
     """Write or refresh every Claude Code profile for a scope."""
     return _install_host(
         "claude",
         scope,
-        claude_targets(scope, repo_root, home),
+        _targets("claude", scope, repo_root, home),
         profiles,
-        lambda role, profile: render_claude(role, profile, models),
+        lambda role, profile: render_claude(role, profile, models, tiers),
     )
+
+
+def install_codex(
+    scope: str,
+    repo_root: Path | None,
+    home: Path,
+    profiles: dict[str, Profile],
+    models: dict[str, str] | None = None,
+    tiers: dict[str, dict[str, str]] | None = None,
+) -> AgentInstallResult:
+    """Write or refresh every Codex profile for a scope."""
+    return _install_host(
+        "codex",
+        scope,
+        _targets("codex", scope, repo_root, home),
+        profiles,
+        lambda role, profile: render_codex(role, profile, models, tiers),
+    )
+
+
+def install_gemini(
+    scope: str,
+    repo_root: Path | None,
+    home: Path,
+    profiles: dict[str, Profile],
+    models: dict[str, str] | None = None,
+    tiers: dict[str, dict[str, str]] | None = None,
+) -> AgentInstallResult:
+    """Write or refresh every Gemini profile for a scope."""
+    return _install_host(
+        "gemini",
+        scope,
+        _targets("gemini", scope, repo_root, home),
+        profiles,
+        lambda role, profile: render_gemini(role, profile, models, tiers),
+    )
+
+
+def install_cursor(
+    scope: str,
+    repo_root: Path | None,
+    home: Path,
+    profiles: dict[str, Profile],
+    models: dict[str, str] | None = None,
+    tiers: dict[str, dict[str, str]] | None = None,
+) -> AgentInstallResult:
+    """Write or refresh every Cursor profile for a scope."""
+    return _install_host(
+        "cursor",
+        scope,
+        _targets("cursor", scope, repo_root, home),
+        profiles,
+        lambda role, profile: render_cursor(role, profile, models, tiers),
+    )
+
+
+def install_copilot(
+    scope: str,
+    repo_root: Path | None,
+    home: Path,
+    profiles: dict[str, Profile],
+    models: dict[str, str] | None = None,
+    tiers: dict[str, dict[str, str]] | None = None,
+) -> AgentInstallResult:
+    """Write or refresh every Copilot profile for a scope."""
+    return _install_host(
+        "copilot",
+        scope,
+        _targets("copilot", scope, repo_root, home),
+        profiles,
+        lambda role, profile: render_copilot(role, profile, models, tiers),
+    )
+
+
+def _markdown_file(role: str, host: str, front: list[str], body: str) -> str:
+    """Render one managed Markdown profile with a shared marker."""
+    lines = ["---", *front, "---", "", body.rstrip(), "", f"{MARKER} {host} {role} -->", ""]
+    return "\n".join(lines)
+
+
+def role_for(path: Path) -> str:
+    """Recover the role from a managed profile filename."""
+    name = path.name
+    prefix = "lazyplan-"
+    if not name.startswith(prefix):
+        return ""
+    rest = name[len(prefix) :]
+    for suffix in (".agent.md", ".md", ".toml"):
+        if rest.endswith(suffix):
+            return rest[: -len(suffix)]
+    return rest
 
 
 def _install_host(
@@ -149,7 +282,7 @@ def _install_host(
     """Shared install loop: render one file per role and record its status."""
     result = AgentInstallResult(host, scope)
     for dest in targets:
-        role = dest.stem.removeprefix("lazyplan-")
+        role = role_for(dest)
         written, status = _install_file(dest, render(role, profiles[role]))
         line = f"{dest} ({status})"
         if written:
@@ -159,73 +292,158 @@ def _install_host(
     return result
 
 
-def render_claude(role: str, profile: Profile, models: dict[str, str] | None) -> str:
+def render_claude(
+    role: str,
+    profile: Profile,
+    models: dict[str, str] | None,
+    tiers: dict[str, dict[str, str]] | None = None,
+) -> str:
     """One managed Claude Code subagent file."""
-    resolved = resolve(profile, "claude", models)
+    resolved = resolve(profile, "claude", models, tiers)
     meta = ROLE_META[role]
     tools = CLAUDE_READ_TOOLS.get(role, CLAUDE_TOOLS)
-    lines = [
-        "---",
+    front = [
         f"name: lazyplan-{role}",
         f"description: {meta['description']}",
         f"tools: {tools}",
     ]
     if resolved["model"]:
-        lines.append(f"model: {resolved['model']}")
+        front.append(f"model: {resolved['model']}")
     if resolved["effort"]:
-        lines.append(f"effort: {resolved['effort']}")
+        front.append(f"effort: {resolved['effort']}")
     if meta["edit"] == "deny":
-        lines.append("permissionMode: plan")
+        front.append("permissionMode: plan")
+    return _markdown_file(role, "claude", front, data_text(f"agents/common/{role}.md"))
+
+
+def render_copilot(
+    role: str,
+    profile: Profile,
+    models: dict[str, str] | None,
+    tiers: dict[str, dict[str, str]] | None = None,
+) -> str:
+    """One managed Copilot CLI agent file."""
+    resolved = resolve(profile, "copilot", models, tiers)
+    meta = ROLE_META[role]
+    front = [
+        f"name: lazyplan-{role}",
+        f"description: {meta['description']}",
+    ]
+    if resolved["model"]:
+        front.append(f"model: {resolved['model']}")
+    tools = COPILOT_READ_TOOLS.get(role)
+    if tools:
+        rendered = ", ".join(f'"{tool}"' for tool in tools)
+        front.append(f"tools: [{rendered}]")
+        front.append("strict-tools-list: true")
+    return _markdown_file(role, "copilot", front, data_text(f"agents/common/{role}.md"))
+
+
+def render_cursor(
+    role: str,
+    profile: Profile,
+    models: dict[str, str] | None,
+    tiers: dict[str, dict[str, str]] | None = None,
+) -> str:
+    """One managed Cursor subagent file."""
+    resolved = resolve(profile, "cursor", models, tiers)
+    meta = ROLE_META[role]
+    front = [
+        f"name: lazyplan-{role}",
+        f"description: {meta['description']}",
+        f"model: {resolved['model'] or 'inherit'}",
+    ]
+    if meta["edit"] == "deny":
+        front.append("readonly: true")
+    return _markdown_file(role, "cursor", front, data_text(f"agents/common/{role}.md"))
+
+
+def render_gemini(
+    role: str,
+    profile: Profile,
+    models: dict[str, str] | None,
+    tiers: dict[str, dict[str, str]] | None = None,
+) -> str:
+    """One managed Gemini CLI subagent file."""
+    resolved = resolve(profile, "gemini", models, tiers)
+    meta = ROLE_META[role]
+    front = [
+        f"name: lazyplan-{role}",
+        f"description: {meta['description']}",
+        f"model: {resolved['model'] or 'inherit'}",
+    ]
+    tools = GEMINI_READ_TOOLS.get(role)
+    if tools:
+        front.append("tools:")
+        front.extend(f"  - {tool}" for tool in tools)
+    return _markdown_file(role, "gemini", front, data_text(f"agents/common/{role}.md"))
+
+
+def _toml_string(value: str) -> str:
+    """One TOML basic string, escaped like JSON."""
+    return json.dumps(value, ensure_ascii=False)
+
+
+def render_codex(
+    role: str,
+    profile: Profile,
+    models: dict[str, str] | None,
+    tiers: dict[str, dict[str, str]] | None = None,
+) -> str:
+    """One managed Codex custom-agent TOML file."""
+    resolved = resolve(profile, "codex", models, tiers)
+    meta = ROLE_META[role]
+    lines = [
+        f"# managed by lazyplan: codex {role}",
+        f"name = {_toml_string(f'lazyplan-{role}')}",
+        f"description = {_toml_string(meta['description'])}",
+    ]
+    if resolved["model"]:
+        lines.append(f"model = {_toml_string(resolved['model'])}")
+    if resolved["effort"]:
+        lines.append(f"model_reasoning_effort = {_toml_string(resolved['effort'])}")
+    if meta["edit"] == "deny":
+        lines.append('sandbox_mode = "read-only"')
+    instructions = data_text(f"agents/common/{role}.md").rstrip()
     lines.extend(
         [
-            "---",
-            "",
-            data_text(f"agents/common/{role}.md").rstrip(),
-            "",
-            f"{MARKER} claude {role} -->",
+            f"developer_instructions = {_toml_string(instructions)}",
             "",
         ]
     )
     return "\n".join(lines)
 
 
-def render_opencode(role: str, profile: Profile, models: dict[str, str] | None) -> str:
+def render_opencode(
+    role: str,
+    profile: Profile,
+    models: dict[str, str] | None,
+    tiers: dict[str, dict[str, str]] | None = None,
+) -> str:
     """One managed OpenCode subagent file."""
-    resolved = resolve(profile, "opencode", models)
+    resolved = resolve(profile, "opencode", models, tiers)
     meta = ROLE_META[role]
-    lines = [
-        "---",
+    front = [
         f"description: {meta['description']}",
         "mode: subagent",
     ]
     if resolved["model"]:
-        lines.append(f"model: {resolved['model']}")
+        front.append(f"model: {resolved['model']}")
     if resolved["effort"]:
-        lines.append(f"variant: {resolved['effort']}")
-    lines.extend(
+        front.append(f"variant: {resolved['effort']}")
+    front.extend(
         [
             "permission:",
             f"  edit: {meta['edit']}",
             f"  bash: {meta['bash']}",
-            "---",
-            "",
-            data_text(f"agents/common/{role}.md").rstrip(),
-            "",
-            f"{MARKER} opencode {role} -->",
-            "",
         ]
     )
-    return "\n".join(lines)
+    return _markdown_file(role, "opencode", front, data_text(f"agents/common/{role}.md"))
 
 
 def profile_paths(scope: str, repo_root: Path | None, home: Path, agents: list[str]) -> list[Path]:
     """Every profile file the selected hosts would write."""
-    paths: list[Path] = []
-    if "opencode" in agents:
-        paths.extend(opencode_targets(scope, repo_root, home))
-    if "claude" in agents:
-        paths.extend(claude_targets(scope, repo_root, home))
-    return paths
+    return [path for host in agents for path in _targets(host, scope, repo_root, home)]
 
 
 def install_profiles(
@@ -239,13 +457,16 @@ def install_profiles(
     """Install every selected host's profiles for one scope."""
     if scope == "none" or not agents:
         return []
-    loaded = load(db_path)
-    host_models = models if models is not None else opencode_models(home, repo_root)
+    loaded, _saved_tiers = load_all(db_path)
+    opencode_defaults = models if models is not None else opencode_models(home, repo_root)
+    tiers = effective_tiers(db_path, home, repo_root, agents)
     results: list[AgentInstallResult] = []
-    if "opencode" in agents:
-        results.append(install_opencode(scope, repo_root, home, loaded, host_models))
-    if "claude" in agents:
-        results.append(install_claude(scope, repo_root, home, loaded))
+    for host in agents:
+        installer = INSTALLERS.get(host)
+        if installer is None:
+            continue
+        models = opencode_defaults if host == "opencode" else None
+        results.append(installer(scope, repo_root, home, loaded, models, tiers))
     return results
 
 
@@ -261,7 +482,37 @@ def _install_file(dest: Path, content: str) -> tuple[bool, str]:
         return False, "unreadable"
     if existing == content:
         return True, "up-to-date"
-    if MARKER in existing:
+    if "managed by lazyplan:" in existing:
         textfile.write(dest, content)
         return True, "refreshed"
     return False, "kept user file"
+
+
+INSTALLERS: dict[str, Callable[..., AgentInstallResult]] = {
+    "opencode": install_opencode,
+    "claude": install_claude,
+    "codex": install_codex,
+    "gemini": install_gemini,
+    "cursor": install_cursor,
+    "copilot": install_copilot,
+}
+
+RENDERERS: dict[str, Callable[..., str]] = {
+    "opencode": render_opencode,
+    "claude": render_claude,
+    "codex": render_codex,
+    "gemini": render_gemini,
+    "cursor": render_cursor,
+    "copilot": render_copilot,
+}
+
+
+def render_profile(
+    host: str,
+    role: str,
+    profiles_map: dict[str, Profile],
+    models: dict[str, str] | None = None,
+    tiers: dict[str, dict[str, str]] | None = None,
+) -> str:
+    """Render one managed profile without writing it."""
+    return RENDERERS[host](role, profiles_map[role], models, tiers)

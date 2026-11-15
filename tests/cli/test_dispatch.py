@@ -68,6 +68,9 @@ class DispatchCliTest(unittest.TestCase):
         self.assertEqual([lane["state"] for lane in data["lanes"]], ["ready", "ready"])
         self.assertEqual(len(data["dispatchable"]), 2)
         self.assertEqual(data["profiles"]["reviewer"]["claude"], "opus")
+        self.assertEqual(data["profiles"]["reviewer"]["models"]["claude"], "opus")
+        for host in ("opencode", "claude", "codex", "gemini", "cursor", "copilot"):
+            self.assertIn(host, data["profiles"]["reviewer"]["models"])
         self.assertEqual(data["dispatchable"][0]["profile"]["tier"], "fast")
 
     def test_porcelain_rows(self) -> None:

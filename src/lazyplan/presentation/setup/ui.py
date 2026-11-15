@@ -9,10 +9,14 @@ from __future__ import annotations
 import os
 import shutil
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
+from dataclasses import replace
 from pathlib import Path
 from typing import TextIO
 
+from lazyplan.core.policies.lanes import AGENT_ROLES
+from lazyplan.infrastructure import profiles
+from lazyplan.infrastructure.host_models import HostCatalog
 from lazyplan.infrastructure.skills import AgentHost
 
 from ..shared.design import ANSI, ASCII_ICONS, ICONS
@@ -206,6 +210,164 @@ def ask_agents(
     return parse_tool_selection(answer, hosts)
 
 
+def _tier_model(
+    tier: str,
+    host: str,
+    tiers: Mapping[str, Mapping[str, str]],
+    catalog: HostCatalog,
+) -> str:
+    """One tier target, falling back to the catalog's discovered default."""
+    model = str((tiers.get(tier) or {}).get(host, "") or "").strip()
+    return model or str(catalog.tier_defaults.get(tier, "") or "").strip() or "inherit"
+
+
+def _role_model(
+    profile: profiles.Profile,
+    host: str,
+    tiers: Mapping[str, Mapping[str, str]],
+    catalog: HostCatalog,
+) -> str:
+    """One role target, falling back to the catalog's tier default."""
+    effective = {tier: dict(values) for tier, values in tiers.items()}
+    for tier, model in catalog.tier_defaults.items():
+        if model and not effective.get(tier, {}).get(host):
+            effective.setdefault(tier, {})[host] = model
+    return profiles.resolve(profile, host, tiers=effective)["model"] or "inherit"
+
+
+def render_models(
+    write: TextIO,
+    hosts: list[str],
+    profiles_map: Mapping[str, profiles.Profile],
+    tiers: Mapping[str, Mapping[str, str]],
+    catalogs: Mapping[str, HostCatalog],
+    color: bool,
+) -> None:
+    """Render tiers and roles with each selected host's target model."""
+    step(write, 3, 4, "Model targets", color)
+    chosen = [host for host in hosts if host in catalogs]
+    for tier in profiles.TIERS:
+        models = "  ".join(
+            f"{catalogs[host].label} {_tier_model(tier, host, tiers, catalogs[host])}"
+            for host in chosen
+        )
+        _line(
+            write.write,
+            f"  {_paint(tier.ljust(9), 'bold', color=color)} {models}",
+        )
+    _line(write.write)
+    for role in AGENT_ROLES:
+        profile = profiles_map.get(role)
+        if profile is None:
+            continue
+        models = "  ".join(
+            f"{catalogs[host].label} {_role_model(profile, host, tiers, catalogs[host])}"
+            for host in chosen
+        )
+        _line(
+            write.write,
+            f"  {_paint(role.ljust(12), 'bold', color=color)} "
+            f"{_paint(profile.tier.ljust(9), 'dim', color=color)} {models}",
+        )
+    sources = "  ".join(
+        f"{catalogs[host].label}: {catalogs[host].source or 'defaults'}" for host in chosen
+    )
+    if sources:
+        _line(write.write, _paint(f"  sources: {sources}", "dim", color=color))
+    for host in chosen:
+        warning = catalogs[host].warning
+        if warning:
+            note(write, f"{catalogs[host].label}: {warning}", color, "warn")
+    _line(
+        write.write,
+        _paint(
+            "  enter accept · t ROLE TIER · m HOST TIER MODEL · r HOST TIER · ? help",
+            "dim",
+            color=color,
+        ),
+    )
+    _line(write.write)
+
+
+def model_help(write: TextIO, color: bool) -> None:
+    """Print the model review edit commands."""
+    for line in (
+        "  t ROLE TIER       change one role's tier",
+        "  m HOST TIER MODEL set one host target for a tier",
+        "  r HOST TIER       reset a tier target to the discovered default",
+        "  inherit           use the host default for a model",
+        "  enter             accept the map",
+    ):
+        _line(write.write, _paint(line, "dim", color=color))
+
+
+def _model_edit(
+    answer: str,
+    hosts: list[str],
+    profiles_map: dict[str, profiles.Profile],
+    tiers: dict[str, dict[str, str]],
+    catalogs: Mapping[str, HostCatalog],
+) -> tuple[dict[str, profiles.Profile], dict[str, dict[str, str]], str]:
+    """Apply one edit command; return maps and an error message."""
+    parts = answer.split()
+    command = parts[0].lower()
+    updated = dict(profiles_map)
+    targets = {tier: dict(values) for tier, values in tiers.items()}
+    if command == "t" and len(parts) == 3:
+        role, tier = parts[1], parts[2].lower()
+        if role not in updated:
+            return profiles_map, tiers, f"unknown role {role!r}"
+        if tier not in profiles.TIERS:
+            return profiles_map, tiers, f"tier must be {'|'.join(profiles.TIERS)}"
+        updated[role] = replace(updated[role], tier=tier)
+        return updated, targets, ""
+    if command == "m" and len(parts) == 4:
+        host, tier, model = parts[1], parts[2].lower(), parts[3]
+        if host not in hosts:
+            return profiles_map, tiers, f"host must be one of {', '.join(hosts)}"
+        if tier not in profiles.TIERS:
+            return profiles_map, tiers, f"tier must be {'|'.join(profiles.TIERS)}"
+        targets.setdefault(tier, {})[host] = "" if model.lower() == "inherit" else model
+        return updated, targets, ""
+    if command == "r" and len(parts) == 3:
+        host, tier = parts[1], parts[2].lower()
+        if host not in hosts:
+            return profiles_map, tiers, f"host must be one of {', '.join(hosts)}"
+        if tier not in profiles.TIERS:
+            return profiles_map, tiers, f"tier must be {'|'.join(profiles.TIERS)}"
+        reset = catalogs[host].tier_defaults.get(tier, "")
+        targets.setdefault(tier, {})[host] = reset
+        return updated, targets, ""
+    return profiles_map, tiers, "unknown command; use t, m, r, inherit, or ?"
+
+
+def ask_models(
+    write: TextIO,
+    read: Callable[[], str],
+    hosts: list[str],
+    profiles_map: dict[str, profiles.Profile],
+    tiers: dict[str, dict[str, str]],
+    catalogs: Mapping[str, HostCatalog],
+    color: bool,
+) -> tuple[dict[str, profiles.Profile], dict[str, dict[str, str]]]:
+    """Show the model map and apply edits until the human accepts it."""
+    current_profiles = dict(profiles_map)
+    current_tiers = {tier: dict(values) for tier, values in tiers.items()}
+    while True:
+        render_models(write, hosts, current_profiles, current_tiers, catalogs, color)
+        answer = _ask(write, read, "  edit [enter to accept]: ").strip()
+        if not answer:
+            return current_profiles, current_tiers
+        if answer in ("?", "help"):
+            model_help(write, color)
+            continue
+        current_profiles, current_tiers, error = _model_edit(
+            answer, hosts, current_profiles, current_tiers, catalogs
+        )
+        if error:
+            note(write, error, color, "warn")
+
+
 def render_review(
     write: TextIO,
     db: Path,
@@ -216,7 +378,7 @@ def render_review(
     color: bool,
     plugins: list[tuple[str, Path]] | None = None,
 ) -> None:
-    step(write, 3, 3, "Review", color)
+    step(write, 4, 4, "Review", color)
     rows = [("database", str(db)), ("templates", str(templates))]
     if config is not None:
         rows.append(("config", str(config)))

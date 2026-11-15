@@ -20,7 +20,7 @@ python3 tools/ia_inventory.py --check
 | mcp_resources | 3 |
 | tui_screens | 18 |
 | tui_bindings | 65 |
-| setup_steps | 4 |
+| setup_steps | 5 |
 | hook_events | 35 |
 | doc_files | 9 |
 | doc_headings | 95 |
@@ -70,7 +70,7 @@ python3 tools/ia_inventory.py --check
 | `repos` | --json, --porcelain, --version, --actor, --heal, --no-heal, --kind, --id, --effective |
 | `review` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --max-chars |
 | `seed` | --json, --porcelain, --version, --actor, --heal, --no-heal |
-| `setup` | --json, --porcelain, --version, --actor, --heal, --no-heal, --placement, --agents, --skills-dir, --no-skills, --hooks, --no-hooks, --agents-pointer, --no-agents-pointer, --yes, --post-upgrade |
+| `setup` | --json, --porcelain, --version, --actor, --heal, --no-heal, --placement, --agents, --agent-tier, --tier-model, --role-model, --no-model-review, --skills-dir, --no-skills, --hooks, --no-hooks, --agents-pointer, --no-agents-pointer, --yes, --post-upgrade |
 | `share` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --format, --out |
 | `ship` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --max-chars |
 | `stats` | --json, --porcelain, --version, --actor, --heal, --no-heal, --since, --stale-after, --by |
@@ -339,6 +339,7 @@ python3 tools/ia_inventory.py --check
 - `ask_agents`
 - `ask_integrations`
 - `ask_migration`
+- `ask_models`
 - `ask_placement`
 
 ## Hook events

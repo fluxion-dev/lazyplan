@@ -76,6 +76,43 @@ def parse_agents(raw: str, home: Path) -> list[str]:
     return parse_tool_selection(text, hosts)
 
 
+def _group_host_keys(raw: Any) -> dict[str, dict[str, str]]:
+    """Group HOST:KEY=MODEL tuples into nested dictionaries."""
+    out: dict[str, dict[str, str]] = {}
+    for host, key, model in raw or []:
+        out.setdefault(host, {})[key] = model
+    return out
+
+
+def _choice_placement(args: Any, cwd: Path, state: SetupState) -> str:
+    placement = str(getattr(args, "placement", "") or "").strip()
+    if placement not in (HOME, REPO):
+        placement = (
+            state.placement
+            if state.last_version
+            else (REPO if walk_up_team_db(cwd) is not None else HOME)
+        )
+    if find_repo_root(cwd) is None:
+        return HOME
+    return placement
+
+
+def _choice_agents(args: Any, home: Path, state: SetupState) -> list[str]:
+    raw = str(getattr(args, "agents", "") or os.environ.get("LAZYPLAN_AGENTS", "")).strip()
+    if raw:
+        return parse_agents(raw, home)
+    return state.agents or parse_agents("", home)
+
+
+def _choice_skills_dir(args: Any, state: SetupState) -> str | None:
+    return (
+        str(getattr(args, "skills_dir", "") or "").strip()
+        or os.environ.get("LAZYPLAN_SKILLS_DIR", "").strip()
+        or state.skills_dir
+        or None
+    )
+
+
 def choice_from_args(
     args: Any,
     cwd: Path,
@@ -86,32 +123,16 @@ def choice_from_args(
     home = home or Path.home()
     state = state or load_state(home)
     explicit = str(getattr(args, "db", "") or os.environ.get("LAZYPLAN_DB", "") or "") or None
-    placement = str(getattr(args, "placement", "") or "").strip()
-    if placement not in (HOME, REPO):
-        placement = (
-            state.placement
-            if state.last_version
-            else (REPO if walk_up_team_db(cwd) is not None else HOME)
-        )
-    if find_repo_root(cwd) is None:
-        placement = HOME
-    raw_agents = str(getattr(args, "agents", "") or os.environ.get("LAZYPLAN_AGENTS", "")).strip()
-    if raw_agents:
-        agents = parse_agents(raw_agents, home)
-    else:
-        agents = state.agents or parse_agents("", home)
-    skills_dir = (
-        str(getattr(args, "skills_dir", "") or "").strip()
-        or os.environ.get("LAZYPLAN_SKILLS_DIR", "").strip()
-        or state.skills_dir
-        or None
-    )
     return SetupChoice(
-        placement=placement,
-        agents=agents,
-        skills_dir=skills_dir,
+        placement=_choice_placement(args, cwd, state),
+        agents=_choice_agents(args, home, state),
+        skills_dir=_choice_skills_dir(args, state),
         no_skills=bool(getattr(args, "no_skills", False)),
         explicit_db=explicit,
+        role_tiers=dict(getattr(args, "agent_tier", []) or []) or None,
+        tier_models=_group_host_keys(getattr(args, "tier_model", [])) or None,
+        role_models=_group_host_keys(getattr(args, "role_model", [])) or None,
+        model_review=bool(getattr(args, "model_review", True)),
     )
 
 

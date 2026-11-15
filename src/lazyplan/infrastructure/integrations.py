@@ -24,6 +24,7 @@ HOST_LABELS: dict[str, str] = {
     "gemini": "Gemini CLI",
     "codex": "Codex",
     "cursor": "Cursor",
+    "copilot": "Copilot CLI",
 }
 
 __all__ = [

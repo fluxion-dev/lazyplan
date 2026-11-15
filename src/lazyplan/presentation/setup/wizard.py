@@ -4,16 +4,17 @@ from __future__ import annotations
 
 import os
 import sys
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
-from lazyplan.infrastructure import hook_install, skills
+from lazyplan.infrastructure import hook_install, host_models, skills
 from lazyplan.infrastructure.repo import (
     find_repo_root,
     repo_plan_db_path,
 )
 
-from . import ui
+from . import models, ui
 from .constants import (
     HOME,
     NO_SETUP_ENV,
@@ -69,21 +70,36 @@ def run_wizard_flow(
         default_placement = HOME
     placement = ui.ask_placement(write, read, root, home, default_placement, color)
     base_agents = seeded.agents if seeded.agents is not None else state.agents
-    choice = SetupChoice(
+    choice = replace(
+        seeded,
         placement=placement,
         agents=base_agents or parse_agents("", home),
         skills_dir=seeded.skills_dir or state.skills_dir or None,
-        no_skills=seeded.no_skills,
     )
     hosts = skills.detect_agents(home)
     selected = ui.ask_agents(write, read, hosts, list(choice.agents or []), color)
-    choice = SetupChoice(
-        placement=placement,
-        agents=selected,
-        skills_dir=choice.skills_dir,
-        no_skills=choice.no_skills,
-    )
+    choice = replace(choice, agents=selected)
     layout, skill_files = preview(choice, root, home)
+    if choice.model_review and not choice.no_skills and selected:
+        loaded, tiers = models.initial_maps(layout.db, home, root, selected)
+        loaded, tiers = models.apply_overrides(
+            loaded,
+            tiers,
+            choice.role_tiers,
+            choice.tier_models,
+            choice.role_models,
+        )
+        catalogs = host_models.discover_all(selected, home, root)
+        loaded, tiers = ui.ask_models(write, read, selected, loaded, tiers, catalogs, color)
+        choice = replace(
+            choice,
+            model_review=False,
+            role_tiers=None,
+            tier_models=None,
+            role_models=None,
+            profiles_map=loaded,
+            tiers_map=tiers,
+        )
     labels = {host.key: host.label for host in hosts}
     plugins = (
         []

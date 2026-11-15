@@ -588,21 +588,76 @@ wave and role beside each lane.
 ### Agent profiles
 
 Roles are journal vocabulary; models live beside the database in
-`agents.json`. `lpui setup` writes the defaults and installs one managed
-subagent file per role for each selected host:
+`agents.json`. A role names a capability tier, and the tier table points that
+tier at each host's model. One map therefore drives every host without
+duplicating role text.
 
-- OpenCode: `.opencode/agent/lazyplan-*.md` or `~/.config/opencode/agent/`.
-- Claude Code: `.claude/agents/lazyplan-*.md` or `~/.claude/agents/`.
+```json
+{
+  "schema": 2,
+  "tiers": {
+    "fast":     {"opencode": "provider/tiny", "claude": "haiku"},
+    "standard": {"opencode": "provider/mid",  "claude": "sonnet"},
+    "deep":     {"opencode": "provider/big",  "claude": "opus"}
+  },
+  "profiles": {
+    "scout": {"tier": "fast", "effort": "", "model": "", "models": {}}
+  }
+}
+```
+
+Resolution runs in this order: a role's per-host `models` entry, its all-host
+`model`, the tier's target for that host, the host's configured default, then
+an empty value or `inherit`. A version 1 file without `schema` still loads and
+is written back as version 2 when a choice changes; unknown roles, hosts,
+tiers, and fields fail with the file path and key.
 
 The defaults put scout, implementer, and docs on the fast tier, qa and refactor
-on standard, and reviewer and integrator on deep. Retune one role by editing
-`agents.json` beside the database and rerunning `lpui setup`: an explicit
-`model` wins, and an empty one follows the host tier (OpenCode's `small_model`
-or `model`, Claude's haiku, sonnet, or opus). Managed files carry a marker and
-are refreshed; an unmarked file of the same name is left alone.
+on standard, and reviewer and integrator on deep. `lpui setup` seeds the map
+and installs one managed subagent file per role for each selected host:
 
-Other hosts get the role, tier, effort, and prompt in `lpui dispatch --json`.
-`lpui doctor` lists missing or unmarked profiles.
+| Host | Project | Global | Format |
+| --- | --- | --- | --- |
+| OpenCode | `.opencode/agent/` | `~/.config/opencode/agent/` | Markdown |
+| Claude Code | `.claude/agents/` | `~/.claude/agents/` | Markdown |
+| Codex | `.codex/agents/` | `~/.codex/agents/` | TOML |
+| Gemini CLI | `.gemini/agents/` | `~/.gemini/agents/` | Markdown |
+| Cursor | `.cursor/agents/` | `~/.cursor/agents/` | Markdown |
+| Copilot CLI | `.github/agents/` | `~/.copilot/agents/` | `.agent.md` |
+
+Scout and reviewer stay read-only per host: OpenCode denies edits, Claude uses
+its tool allowlist and plan mode, Codex sets a read-only sandbox, Gemini and
+Copilot restrict tools, and Cursor sets `readonly`. Write roles inherit the
+host's normal tool access.
+
+Model discovery stays local. OpenCode reads `opencode models` and its
+`model`/`small_model` config; Codex reads `codex debug models --bundled` and
+`~/.codex/config.toml`; Claude uses its documented aliases and settings;
+Gemini reads `~/.gemini/settings.json`; Cursor and Copilot read their config
+and otherwise keep the host default. A missing binary or bad config becomes a
+warning, never a failed setup.
+
+The interactive flow has four steps: placement, agents, model targets, and
+review. The model step prints the tier table, then one row per role with its
+tier and each selected host's resolved model. Enter accepts the map;
+`t ROLE TIER`, `m HOST TIER MODEL`, and `r HOST TIER` edit it, and `inherit`
+clears a target back to the host default. Setup backs up `agents.json` before
+rewriting it, and rerunning with an unchanged map writes no profile bytes.
+When a host is deselected, setup removes only its marked `lazyplan-*` files.
+
+Retune without a prompt in scripts:
+
+```bash
+lpui setup --agent-tier qa=deep --agent-tier docs=standard
+lpui setup --tier-model opencode:fast=provider/tiny
+lpui setup --role-model claude:reviewer=opus --no-model-review
+```
+
+`--yes`, `--json`, a version upgrade, and every agent command apply the saved
+map without prompting. Managed files carry a marker and are refreshed; an
+unmarked file of the same name is left alone. `lpui doctor` lists missing,
+drifted, and unmarked profiles, and `lpui dispatch --json` carries the
+resolved tier, effort, and model for every host.
 
 ### Porcelain output
 

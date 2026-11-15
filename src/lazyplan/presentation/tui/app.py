@@ -55,7 +55,7 @@ from .metrics import MetricsSection
 from .preview import PreviewMixin
 from .screens import ReleaseNotesScreen
 from .state import AppState
-from .theme import register_themes
+from .theme import register_themes, remembered_theme
 from .tree import TreeMixin
 from .widgets.agents_panel import AgentsPanel
 from .widgets.git_panel import GitPanel
@@ -149,7 +149,7 @@ if _TEXTUAL_OK:
 
         def __init__(self, store: Store) -> None:
             super().__init__()
-            register_themes(self)
+            register_themes(self, remembered_theme())
             self.store = store
             self.heal = settings.heal_enabled(settings.heal_mode())
             self.state = AppState()

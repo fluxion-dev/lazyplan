@@ -17,8 +17,14 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
   task, and creates no row, worktree, or feed event.
 - **Roles get host profiles.** `lpui setup` writes managed OpenCode and Claude
   Code subagent files for scout, implementer, QA, refactor, docs, reviewer, and
-  integrator, with a `agents.json` tier map beside the database. Other hosts
-  receive role, tier, effort, and prompt hints in the dispatch manifest.
+  integrator, with an `agents.json` schema 2 map beside the database. Roles
+  name fast, standard, or deep; each host maps that tier to its own model, and
+  version 1 files migrate on write. Other hosts receive role, tier, effort, and
+  prompt hints in the dispatch manifest.
+- **Setup targets models without prompts when asked.** `--agent-tier`,
+  `--tier-model`, and `--role-model` set the role tiers and host models, and
+  `--no-model-review` keeps the current map. OpenCode and Codex catalogs are
+  read locally, and missing binaries or bad config degrade to a warning.
 - **The orchestration skill ships beside the core skill.** Hosts install both
   `lazyplan` and `lazyplan-orchestrate`; the second carries the dispatch,
   handoff, integration, and close-out loop.

@@ -8,6 +8,8 @@ between steps, and dismissal reports exactly what the app should restart.
 from __future__ import annotations
 
 import copy
+import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -17,8 +19,10 @@ from ....core.policies.hooks import MODES
 from ....core.policies.lanes import AGENT_ROLES
 from ....infrastructure import skills
 from ....infrastructure.host_models import HostCatalog
+from ...setup import health as setup_health
 from ...setup import ui as setup_ui
 from ...setup.constants import HOME
+from ...setup.health import HealthFinding
 from ...setup.layout import resolve_choice
 from ...setup.session import SetupSession, SetupSessionError
 from ...setup.state import state_path
@@ -44,6 +48,7 @@ try:
 
     from ..navigation import NAV_BINDINGS, NavigationMixin
     from ..query import query_one_opt
+    from ..theme.themes import THEME_NAMES
 
     _TEXTUAL_OK = True
 except ImportError:  # pragma: no cover - stdlib-only interpreter
@@ -60,6 +65,18 @@ HOOK_MODES: tuple[tuple[str, str], ...] = (
 )
 INHERIT = "__inherit__"
 INHERIT_LABEL = "inherit (host default)"
+INTEGRATION_CHOICES: tuple[tuple[str, str], ...] = (
+    ("install — write it now", "install"),
+    ("not now — ask again next launch", "defer"),
+    ("never — stop asking for this item", "never"),
+)
+TOOL_ROWS: tuple[tuple[str, str], ...] = (
+    ("tool:lpui", "lpui on PATH"),
+    ("tool:git", "git on PATH"),
+    ("tool:gh", "GitHub CLI"),
+    ("tool:gh-auth", "GitHub CLI login"),
+)
+Checks = Callable[[], tuple[HealthFinding, ...]]
 
 
 @dataclass(frozen=True)
@@ -134,6 +151,11 @@ def hint_text(width: int) -> str:
     return text
 
 
+def _widget_id(text: str) -> str:
+    """Turn a catalog id into a Textual widget id."""
+    return re.sub(r"[^A-Za-z0-9_-]+", "-", text).strip("-")
+
+
 def _first_focusable(node: Any) -> Any:
     """The first widget in *node* that can take focus, depth first."""
     for child in getattr(node, "children", ()):
@@ -165,12 +187,23 @@ if _TEXTUAL_OK:
             Binding("l", "later", LATER_LABEL),
         ]
 
-        def __init__(self, session: SetupSession, start: str = "") -> None:
+        def __init__(
+            self,
+            session: SetupSession,
+            start: str = "",
+            *,
+            checks: Checks | None = None,
+        ) -> None:
             super().__init__()
             self.session = session
             self._steps = session.steps()
             self._index = self._start_index(start)
             self._initial = copy.deepcopy(session.draft)
+            self._initial_theme = ""
+            self._checks = checks
+            self._check_findings: tuple[HealthFinding, ...] | None = None
+            self._check_error = ""
+            self._integration_ids: dict[str, str] = {}
             self._errors: tuple[str, ...] = ()
 
         def _start_index(self, start: str) -> int:
@@ -206,11 +239,14 @@ if _TEXTUAL_OK:
 
         def on_mount(self) -> None:
             self._apply_size(self.app.size.width, self.app.size.height)
+            self._initial_theme = str(getattr(self.app, "theme", ""))
             page = self.query_one("#setup-page")
             page.border_title = " setup "
             self._fill_rail()
             self._update_chrome()
             self.call_after_refresh(self._focus_panel)
+            if self.step.key == "appearance":
+                self.call_after_refresh(self._start_checks)
 
         def _apply_size(self, width: int, height: int) -> None:
             """Mirror the shell's compact, wide, and short size classes."""
@@ -267,6 +303,8 @@ if _TEXTUAL_OK:
                 "hooks": self._hooks_panel,
                 "models": self._models_panel,
                 "roles": self._roles_panel,
+                "integrations": self._integrations_panel,
+                "appearance": self._appearance_panel,
             }
             builder = builders.get(step.key)
             if builder is not None:
@@ -518,6 +556,141 @@ if _TEXTUAL_OK:
             widgets.append(Button("Reset roles to tier defaults", id="setup-roles-reset"))
             return widgets
 
+        def _integrations_panel(self) -> list[Any]:
+            """One install, not now, or never decision per pending item."""
+            draft = self.session.draft
+            widgets: list[Any] = [
+                Static(
+                    "A release can add a skill or hook surface. Install writes it"
+                    " now; not now asks again next launch; never stops asking for"
+                    " this exact item.",
+                    classes="setup-note",
+                )
+            ]
+            if not self.session.pending:
+                widgets.append(Static("Nothing is pending right now.", classes="setup-note"))
+                return widgets
+            for item in self.session.pending:
+                widget_id = _widget_id(item.id)
+                self._integration_ids[widget_id] = item.id
+                widgets.append(
+                    Static(
+                        f"[b]{escape_markup(item.label)}[/] [dim]{escape_markup(item.kind)}[/]",
+                        classes="setup-item",
+                    )
+                )
+                widgets.append(
+                    Select(
+                        list(INTEGRATION_CHOICES),
+                        value=draft.integrations.get(item.id, "install"),
+                        allow_blank=False,
+                        id=f"setup-integration-{widget_id}",
+                    )
+                )
+            return widgets
+
+        def _appearance_panel(self) -> list[Any]:
+            """Theme preview plus read-only tool and GitHub login checks."""
+            theme = self._theme_value()
+            widgets: list[Any] = [
+                Label("Theme", classes="setup-label"),
+                Select(
+                    [
+                        (
+                            name.removeprefix("lazyplan-").replace("-", " ").title(),
+                            name,
+                        )
+                        for name in THEME_NAMES
+                    ],
+                    value=theme,
+                    allow_blank=False,
+                    id="setup-theme",
+                ),
+                Static(
+                    "The preview applies immediately and is remembered when you"
+                    " apply. LAZYPLAN_THEME still wins over the remembered choice.",
+                    classes="setup-note",
+                ),
+                Label("Checks", classes="setup-label"),
+                Static(self._checks_text(), id="setup-checks-body", classes="setup-checks"),
+                Button("Recheck", id="setup-recheck"),
+                Static(
+                    "The checks are read-only. They name the missing tool or login"
+                    " and the command that fixes it; the wizard never asks for or"
+                    " stores a token.",
+                    classes="setup-note",
+                ),
+            ]
+            return widgets
+
+        def _theme_value(self) -> str:
+            """The theme the picker shows: remembered, else the live app theme."""
+            draft = self.session.draft
+            if draft.theme in THEME_NAMES:
+                return draft.theme
+            live = str(getattr(self.app, "theme", ""))
+            return live if live in THEME_NAMES else THEME_NAMES[0]
+
+        def _checks_text(self) -> str:
+            """One line per tool, with the fix for anything missing."""
+            if self._check_error:
+                return f"[red]The check could not run:[/] {escape_markup(self._check_error)}"
+            if self._check_findings is None:
+                return "Checking lpui, git, GitHub CLI, and GitHub login…"
+            found = {finding.id: finding for finding in self._check_findings}
+            lines: list[str] = []
+            for key, label in TOOL_ROWS:
+                finding = found.get(key)
+                if finding is not None:
+                    mark = "[red]✗[/]" if finding.severity == setup_health.ERROR else "[yellow]![/]"
+                    lines.append(f"{mark} [b]{escape_markup(label)}[/]")
+                    lines.append(f"  {escape_markup(finding.capability)}")
+                    if finding.fix:
+                        lines.append(f"  [dim]fix:[/] {escape_markup(finding.fix)}")
+                elif key == "tool:gh-auth" and "tool:gh" in found:
+                    lines.append("[dim]– GitHub CLI login is skipped until gh is installed[/]")
+                else:
+                    lines.append(f"[green]✓[/] {escape_markup(label)} — ok")
+            return "\n".join(lines)
+
+        def _start_checks(self) -> None:
+            """Run the read-only checks off the UI thread."""
+            body = query_one_opt(self, "#setup-checks-body", Static)
+            if body is not None:
+                body.update(self._checks_text())
+            self.run_worker(self._check_worker, thread=True, exclusive=True, group="setup-checks")
+
+        def _findings(self) -> tuple[HealthFinding, ...]:
+            """Tool findings from the injected check or the live probes."""
+            if self._checks is not None:
+                return tuple(self._checks())
+            report = setup_health.check(
+                self.session.choice(),
+                self.session.state,
+                self.session.root,
+                self.session.home,
+                self.session.version,
+            )
+            wanted = {key for key, _label in TOOL_ROWS}
+            return tuple(finding for finding in report.findings if finding.id in wanted)
+
+        def _check_worker(self) -> None:
+            try:
+                findings = self._findings()
+            except Exception as exc:  # noqa: BLE001 - show the failure on the step
+                self.app.call_from_thread(self._checks_done, (), str(exc))
+            else:
+                self.app.call_from_thread(self._checks_done, findings, "")
+
+        def _checks_done(self, findings: tuple[HealthFinding, ...], error: str) -> None:
+            if not self.is_mounted:
+                return
+            self._check_findings = findings
+            self._check_error = error
+            body = query_one_opt(self, "#setup-checks-body", Static)
+            if body is not None:
+                body.update(self._checks_text())
+
         async def _show_step(self) -> None:
             """Swap the panel for the step now selected."""
             panel = self.query_one("#setup-panel", Vertical)
@@ -526,6 +699,8 @@ if _TEXTUAL_OK:
             self._update_chrome()
             self._highlight_panel_choice()
             self.call_after_refresh(self._focus_panel)
+            if self.step.key == "appearance":
+                self.call_after_refresh(self._start_checks)
 
         def _highlight_panel_choice(self) -> None:
             """Highlight the remembered placement in its option list."""
@@ -605,17 +780,25 @@ if _TEXTUAL_OK:
 
         def action_later(self) -> None:
             """Close without writing anything."""
+            self._restore_theme()
             self.dismiss(WizardResult())
+
+        def _restore_theme(self) -> None:
+            """Put the preview back when the run ends without applying."""
+            if self._initial_theme and getattr(self.app, "theme", "") != self._initial_theme:
+                self.app.theme = self._initial_theme
 
         def action_cancel(self) -> None:
             """Ask before discarding edits, then close without writing."""
             if not self._dirty():
+                self._restore_theme()
                 self.dismiss(WizardResult())
                 return
             from .forms import ConfirmScreen
 
             def cb(confirmed: bool | None) -> None:
                 if confirmed:
+                    self._restore_theme()
                     self.dismiss(WizardResult())
 
             self.app.push_screen(
@@ -693,6 +876,24 @@ if _TEXTUAL_OK:
                 self.session.set_role_tier(ident.removeprefix("setup-role-tier-"), value)
             elif ident.startswith("setup-role-effort-"):
                 self.session.set_role_effort(ident.removeprefix("setup-role-effort-"), value)
+            elif ident.startswith("setup-integration-"):
+                item_id = self._integration_ids.get(ident.removeprefix("setup-integration-"))
+                if item_id is not None:
+                    self.session.set_integration(item_id, value)
+
+        @on(Select.Changed, "#setup-theme")
+        def _theme_changed(self, event: Select.Changed) -> None:
+            """Preview a theme and remember the choice in the draft."""
+            name = str(event.value)
+            if name in THEME_NAMES:
+                self.session.draft.theme = name
+                self.app.theme = name
+
+        @on(Button.Pressed, "#setup-recheck")
+        def _recheck(self) -> None:
+            self._check_findings = None
+            self._check_error = ""
+            self._start_checks()
 
         @on(Input.Submitted)
         def _model_submitted(self, event: Input.Submitted) -> None:

@@ -446,6 +446,16 @@ Screen.compact #source-head {
     padding: 1 0 0 0;
 }
 
+#setup-panel .setup-item {
+    height: auto;
+    padding: 1 0 0 0;
+}
+
+#setup-panel .setup-checks {
+    height: auto;
+    padding: 0;
+}
+
 #setup-panel .setup-row {
     height: auto;
     margin: 0 0 1 0;

@@ -235,6 +235,12 @@ def install_copilot(
     )
 
 
+def _markdown_file(role: str, host: str, front: list[str], body: str) -> str:
+    """Render one managed Markdown profile with a shared marker."""
+    lines = ["---", *front, "---", "", body.rstrip(), "", f"{MARKER} {host} {role} -->", ""]
+    return "\n".join(lines)
+
+
 def _role_for(path: Path) -> str:
     """Recover the role from a managed profile filename."""
     name = path.name
@@ -278,29 +284,18 @@ def render_claude(
     resolved = resolve(profile, "claude", models, tiers)
     meta = ROLE_META[role]
     tools = CLAUDE_READ_TOOLS.get(role, CLAUDE_TOOLS)
-    lines = [
-        "---",
+    front = [
         f"name: lazyplan-{role}",
         f"description: {meta['description']}",
         f"tools: {tools}",
     ]
     if resolved["model"]:
-        lines.append(f"model: {resolved['model']}")
+        front.append(f"model: {resolved['model']}")
     if resolved["effort"]:
-        lines.append(f"effort: {resolved['effort']}")
+        front.append(f"effort: {resolved['effort']}")
     if meta["edit"] == "deny":
-        lines.append("permissionMode: plan")
-    lines.extend(
-        [
-            "---",
-            "",
-            data_text(f"agents/common/{role}.md").rstrip(),
-            "",
-            f"{MARKER} claude {role} -->",
-            "",
-        ]
-    )
-    return "\n".join(lines)
+        front.append("permissionMode: plan")
+    return _markdown_file(role, "claude", front, data_text(f"agents/common/{role}.md"))
 
 
 def render_copilot(
@@ -312,29 +307,18 @@ def render_copilot(
     """One managed Copilot CLI agent file."""
     resolved = resolve(profile, "copilot", models, tiers)
     meta = ROLE_META[role]
-    lines = [
-        "---",
+    front = [
         f"name: lazyplan-{role}",
         f"description: {meta['description']}",
     ]
     if resolved["model"]:
-        lines.append(f"model: {resolved['model']}")
+        front.append(f"model: {resolved['model']}")
     tools = COPILOT_READ_TOOLS.get(role)
     if tools:
         rendered = ", ".join(f'"{tool}"' for tool in tools)
-        lines.append(f"tools: [{rendered}]")
-        lines.append("strict-tools-list: true")
-    lines.extend(
-        [
-            "---",
-            "",
-            data_text(f"agents/common/{role}.md").rstrip(),
-            "",
-            f"{MARKER} copilot {role} -->",
-            "",
-        ]
-    )
-    return "\n".join(lines)
+        front.append(f"tools: [{rendered}]")
+        front.append("strict-tools-list: true")
+    return _markdown_file(role, "copilot", front, data_text(f"agents/common/{role}.md"))
 
 
 def render_cursor(
@@ -346,25 +330,14 @@ def render_cursor(
     """One managed Cursor subagent file."""
     resolved = resolve(profile, "cursor", models, tiers)
     meta = ROLE_META[role]
-    lines = [
-        "---",
+    front = [
         f"name: lazyplan-{role}",
         f"description: {meta['description']}",
         f"model: {resolved['model'] or 'inherit'}",
     ]
     if meta["edit"] == "deny":
-        lines.append("readonly: true")
-    lines.extend(
-        [
-            "---",
-            "",
-            data_text(f"agents/common/{role}.md").rstrip(),
-            "",
-            f"{MARKER} cursor {role} -->",
-            "",
-        ]
-    )
-    return "\n".join(lines)
+        front.append("readonly: true")
+    return _markdown_file(role, "cursor", front, data_text(f"agents/common/{role}.md"))
 
 
 def render_gemini(
@@ -376,27 +349,16 @@ def render_gemini(
     """One managed Gemini CLI subagent file."""
     resolved = resolve(profile, "gemini", models, tiers)
     meta = ROLE_META[role]
-    lines = [
-        "---",
+    front = [
         f"name: lazyplan-{role}",
         f"description: {meta['description']}",
         f"model: {resolved['model'] or 'inherit'}",
     ]
     tools = GEMINI_READ_TOOLS.get(role)
     if tools:
-        lines.append("tools:")
-        lines.extend(f"  - {tool}" for tool in tools)
-    lines.extend(
-        [
-            "---",
-            "",
-            data_text(f"agents/common/{role}.md").rstrip(),
-            "",
-            f"{MARKER} gemini {role} -->",
-            "",
-        ]
-    )
-    return "\n".join(lines)
+        front.append("tools:")
+        front.extend(f"  - {tool}" for tool in tools)
+    return _markdown_file(role, "gemini", front, data_text(f"agents/common/{role}.md"))
 
 
 def _toml_string(value: str) -> str:
@@ -443,29 +405,22 @@ def render_opencode(
     """One managed OpenCode subagent file."""
     resolved = resolve(profile, "opencode", models, tiers)
     meta = ROLE_META[role]
-    lines = [
-        "---",
+    front = [
         f"description: {meta['description']}",
         "mode: subagent",
     ]
     if resolved["model"]:
-        lines.append(f"model: {resolved['model']}")
+        front.append(f"model: {resolved['model']}")
     if resolved["effort"]:
-        lines.append(f"variant: {resolved['effort']}")
-    lines.extend(
+        front.append(f"variant: {resolved['effort']}")
+    front.extend(
         [
             "permission:",
             f"  edit: {meta['edit']}",
             f"  bash: {meta['bash']}",
-            "---",
-            "",
-            data_text(f"agents/common/{role}.md").rstrip(),
-            "",
-            f"{MARKER} opencode {role} -->",
-            "",
         ]
     )
-    return "\n".join(lines)
+    return _markdown_file(role, "opencode", front, data_text(f"agents/common/{role}.md"))
 
 
 def profile_paths(scope: str, repo_root: Path | None, home: Path, agents: list[str]) -> list[Path]:

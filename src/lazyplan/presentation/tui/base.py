@@ -11,6 +11,7 @@ from ...core.ports.app import AppPort
 from .controllers.git_state import GitStateController
 from .controllers.health import HealthController
 from .controllers.metrics import MetricsController
+from .controllers.setup import SetupController
 from .controllers.tree import TreeController
 from .controllers.updates import UpdateController
 from .state import AppState
@@ -52,6 +53,7 @@ class AppBase(App, TuiHost):
     git_state_controller: GitStateController
     update_controller: UpdateController
     health_controller: HealthController
+    setup_controller: SetupController
     metrics_controller: MetricsController
     _row_nodes: dict[tuple[str, int], Any]
     _row_labels: dict[tuple[str, int], str]

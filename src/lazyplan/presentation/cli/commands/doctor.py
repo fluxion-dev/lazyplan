@@ -147,6 +147,7 @@ def _doctor_data(
     report["skills"] = [str(path) for path in skill_files]
     report["worktrees"] = _worktree_findings(store)
     report["hook_probe"] = hook_service.probe(store, Path.cwd())
+    report["wizard"] = _wizard_report(args, home, state)
     health = setup_health.check(choice, state, root, home, package_version())
     report["health"] = [finding.to_dict() for finding in health.findings]
     report["pending_integrations"] = [
@@ -160,6 +161,14 @@ def _doctor_data(
     issues = issues or state.version != setup.SETUP_VERSION
     report["clean"] = bool(report["clean"] and not issues)
     return layout, skill_files, report
+
+
+def _wizard_report(args: argparse.Namespace, home: Path, state: setup.SetupState) -> dict:
+    """Why the in-TUI wizard is pending; read-only and never gating."""
+    if setup.setup_off(getattr(args, "db", "")):
+        return setup.WizardNeed().to_dict()
+    need = setup.detect(Path.cwd(), home, package_version(), state)
+    return need.to_dict()
 
 
 def _print_layout(layout: setup_layout.SetupLayout, skill_files: list[Path]) -> None:
@@ -204,6 +213,9 @@ def _print_notes(report: dict) -> None:
         print(f"missing:   {item}")
     for finding in report["findings"]:
         print(f"finding:   {finding['kind']} {finding['path']} ({finding['state']})")
+    wizard = report.get("wizard") or {}
+    if wizard.get("due"):
+        print(f"wizard:    setup pending ({wizard['reason']}): {wizard['detail']}")
     for finding in report["health"]:
         tags = ", ".join(tag for tag in (finding["severity"], finding["decision"]) if tag)
         print(f"health:    {finding['label']} ({tags}): {finding['capability']}")

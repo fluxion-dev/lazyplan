@@ -3,6 +3,39 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## Unreleased
+
+### Added
+
+- **The first `lpui` run finishes setup inside the screen.** On a terminal with
+  Textual installed, the first launch applies the silent baseline and opens a
+  setup wizard before normal use: placement, agents and their skills, hooks and
+  the `AGENTS.md` pointer, per-host tier models, per-role tier and effort,
+  pending integrations, theme and read-only tool checks, and a review of every
+  write and removal before it applies. The wizard reopens prefilled on a
+  version change, a new skill or hook, or managed profile drift.
+- **Setup is one key away.** The command palette's **Open setup wizard** row and
+  the `S` key open the same screen from any view, and the in-app help lists the
+  wizard keys. **Finish later** writes nothing and keeps the wizard due at the
+  next applicable launch.
+- **Roles get curated effort levels.** Each role names `inherit`, `low`,
+  `medium`, or `high`; the level renders only into hosts with a native effort
+  field and every other host stays at inherit.
+- **The theme is remembered.** A theme chosen in setup, or cycled with `t`, is
+  stored in setup state; `LAZYPLAN_THEME` still takes precedence.
+
+### Changed
+
+- **The wizard is a second front end, not a second writer.** It edits a
+  UI-agnostic session and applies through the same `apply_choice`, integrations,
+  and items path as `lpui setup`; for the same choices both front ends write
+  identical `agents.json`, managed profiles, skills, hooks, and setup decisions.
+- `lpui setup` keeps the terminal wizard. Runs without a terminal or Textual,
+  with `--json` or `--yes`, agent commands, and `LAZYPLAN_NO_SETUP` apply the
+  same defaults silently and never prompt.
+- The startup health prompt waits while a setup wizard is pending, so setup is
+  offered once rather than twice.
+
 ## v0.47.0 — 2026-11-15
 
 ### Added

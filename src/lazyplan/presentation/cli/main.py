@@ -133,6 +133,19 @@ def _resolve_noun_group(args: argparse.Namespace) -> int | None:
     return None
 
 
+def _setup_interactive(args: argparse.Namespace) -> bool | None:
+    """Interactive intent for setup; the screen needs stdin and stdout.
+
+    Only the ``ui`` command knows whether it will open the full screen, so
+    every other command keeps the terminal's own tty check.
+    """
+    if args.cmd != "ui":
+        return None
+    from .commands.ui import _interactive_terminal
+
+    return _interactive_terminal()
+
+
 def _prepare_command(args: argparse.Namespace, actor: str, used_noun_form: bool) -> int | None:
     """Notices, default command, setup, and storeless dispatch."""
     if not used_noun_form and not (getattr(args, "json", False) or porcelain.enabled(args)):
@@ -144,7 +157,13 @@ def _prepare_command(args: argparse.Namespace, actor: str, used_noun_form: bool)
         # Bare `lpui` (or global flags only) opens the standard TUI.
         args.cmd = "ui"
     try:
-        setup.ensure(args.cmd, args, Path.cwd(), version=package_version())
+        setup.ensure(
+            args.cmd,
+            args,
+            Path.cwd(),
+            version=package_version(),
+            interactive=_setup_interactive(args),
+        )
     except (OSError, RuntimeError, ValueError) as exc:
         # Setup must never break an agent call; the database still opens.
         print(f"warning: setup skipped: {exc}", file=sys.stderr)

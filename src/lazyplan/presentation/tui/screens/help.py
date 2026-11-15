@@ -28,10 +28,17 @@ except ImportError:  # pragma: no cover
 
 from ...shared.design import HELP_TEXT
 from ...shared.palette import Command, matching
+from .base import _Form, _row
+
+SETUP_HELP = """
+SETUP
+  b / n / l            back / next / finish later
+  escape               finish later; asks before discarding edits
+  c, type setup        reopen the setup wizard at any time
+"""
 
 if TYPE_CHECKING:
     pass
-from .base import _Form, _row
 
 if _TEXTUAL_OK:
 
@@ -39,6 +46,7 @@ if _TEXTUAL_OK:
         """Shared help text overlay; same source as `lpui help`."""
 
         HELP = HELP_TEXT
+        EXTRA = SETUP_HELP
         dialog_title = "HELP"
 
         def on_mount(self) -> None:
@@ -47,9 +55,10 @@ if _TEXTUAL_OK:
             help_panel.border_title = self.dialog_title
 
         def compose(self) -> ComposeResult:
+            body = f"{self.HELP.rstrip()}\n{self.EXTRA}" if self.EXTRA else self.HELP
             with Vertical(id="help"):
                 with VerticalScroll(id="help-scroll"):
-                    yield Static(self.HELP, markup=False)
+                    yield Static(body, markup=False)
                 with _row():
                     yield Button("Close", id="cancel")
 
@@ -59,6 +68,8 @@ if _TEXTUAL_OK:
 
     class TextScreen(HelpScreen):
         """Read-only text overlay with a custom title and body."""
+
+        EXTRA = ""
 
         def __init__(self, title: str, text: str) -> None:
             super().__init__()

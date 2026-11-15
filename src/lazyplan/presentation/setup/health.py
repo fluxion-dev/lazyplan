@@ -16,11 +16,10 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
-from lazyplan.infrastructure import agent_install
 from lazyplan.infrastructure.integrations import HOOK, HOST_LABELS, IntegrationItem
-from lazyplan.infrastructure.repo import find_repo_root, repo_plan_db_path, shared_db_path
+from lazyplan.infrastructure.repo import find_repo_root
 
-from .apply import choice_from_state
+from .apply import choice_from_state, profile_drift
 from .integrations import ReviewResult, inspect, install_items, suppressing_decision
 from .layout import SetupChoice
 from .state import SetupState, load_state, save_state, timestamp
@@ -212,29 +211,21 @@ def check(
     findings = _integration_findings(inspection.pending, state, decided=False)
     findings += _integration_findings(inspection.suppressed, state, decided=True)
     home = home or Path.home()
-    profile_agents = choice.agents or state.agents
-    if not choice.explicit_db and state.skills_enabled and state.profile_files and profile_agents:
-        scope = "project" if choice.placement == "repo" and root is not None else "global"
-        db_path = (
-            repo_plan_db_path(root)
-            if choice.placement == "repo" and root is not None
-            else shared_db_path(home)
-        )
-        disk = agent_install.inspect_profiles(scope, root, home, profile_agents, db_path)
-        if disk.broken:
-            count = len(disk.missing) + len(disk.drifted)
-            findings.append(
-                HealthFinding(
-                    id="profile:agents",
-                    label="Agent profiles",
-                    capability=(
-                        f"{count} managed subagent profile(s) are missing or out of date,"
-                        " so lane work falls back to the main agent."
-                    ),
-                    severity=WARNING,
-                    fix="Run `lpui setup` to reinstall the agent profiles.",
-                )
+    disk = None if choice.explicit_db else profile_drift(choice, state, root, home)
+    if disk is not None and disk.broken:
+        count = len(disk.missing) + len(disk.drifted)
+        findings.append(
+            HealthFinding(
+                id="profile:agents",
+                label="Agent profiles",
+                capability=(
+                    f"{count} managed subagent profile(s) are missing or out of date,"
+                    " so lane work falls back to the main agent."
+                ),
+                severity=WARNING,
+                fix="Run `lpui setup` to reinstall the agent profiles.",
             )
+        )
     for tool in _missing_tools(which, run, os.environ if env is None else env):
         remembered = state.integration_choices.get(tool.id)
         decision = suppressing_decision(remembered, "", version)

@@ -343,6 +343,14 @@
       ]
     },
     {
+      "depth": 1,
+      "id": "app.setup",
+      "route": [
+        "tree",
+        "setup"
+      ]
+    },
+    {
       "depth": 0,
       "id": "app.help",
       "route": [

@@ -21,19 +21,11 @@ from typing import Any
 from . import textfile
 from .profiles import HOSTS, TIERS
 
-LABELS: dict[str, str] = {
-    "opencode": "OpenCode",
-    "claude": "Claude Code",
-    "codex": "Codex",
-    "gemini": "Gemini CLI",
-    "cursor": "Cursor",
-    "copilot": "Copilot CLI",
-}
-
 CLAUDE_ALIASES: tuple[str, ...] = ("haiku", "sonnet", "opus", "fable", "best", "opusplan")
 TIMEOUT = 5
 Which = Callable[[str], str | None]
 Run = Callable[[list[str], int], subprocess.CompletedProcess[str]]
+Discover = Callable[..., "HostCatalog"]
 
 
 @dataclass(frozen=True)
@@ -59,6 +51,32 @@ class HostCatalog:
         }
 
 
+@dataclass(frozen=True)
+class HostSpec:
+    """One host's paths, label, and discovery adapter."""
+
+    key: str
+    label: str
+    project_dir: str
+    home_dir: str
+    suffix: str = ".md"
+    discover: Discover | None = None
+
+    def targets(self, scope: str, repo_root: Path | None, home: Path, role: str) -> list[Path]:
+        """Profile paths for one role at one scope."""
+        name = f"lazyplan-{role}{self.suffix}"
+        out: list[Path] = []
+        if scope in ("project", "both") and repo_root is not None and self.project_dir:
+            out.append(repo_root / self.project_dir / name)
+        if scope in ("global", "both") and self.home_dir:
+            out.append(home / self.home_dir / name)
+        return out
+
+
+HOST_SPECS: dict[str, HostSpec] = {}
+LABELS: dict[str, str] = {}
+
+
 def discover(
     host: str,
     home: Path,
@@ -70,25 +88,18 @@ def discover(
     """Discover one host without raising on a missing binary or bad config."""
     if host not in HOSTS:
         raise ValueError(f"unknown host {host!r}; expected {'|'.join(HOSTS)}")
+    spec = HOST_SPECS[host]
     finder = which or shutil.which
     runner = run or _run
+    if spec.discover is None:
+        return HostCatalog(host=host, label=spec.label)
     try:
-        if host == "opencode":
-            return _opencode(home, repo_root, finder, runner)
-        if host == "claude":
-            return _claude(home)
-        if host == "codex":
-            return _codex(home, finder, runner)
-        if host == "gemini":
-            return _gemini(home)
-        if host == "cursor":
-            return _cursor(home, repo_root)
-        return _copilot(home)
+        return spec.discover(home, repo_root, finder, runner)
     except (OSError, ValueError, TypeError, KeyError) as exc:
         return HostCatalog(
             host=host,
-            label=LABELS[host],
-            warning=f"could not read {LABELS[host]} models: {exc}",
+            label=spec.label,
+            warning=f"could not read {spec.label} models: {exc}",
         )
 
 
@@ -234,7 +245,7 @@ def _opencode_config(home: Path, repo_root: Path | None) -> dict[str, str]:
     return {}
 
 
-def _claude(home: Path) -> HostCatalog:
+def _claude(home: Path, _repo_root: Path | None, _which: Which, _run: Run) -> HostCatalog:
     settings = home / ".claude" / "settings.json"
     configured = ""
     source = "Claude Code aliases"
@@ -259,7 +270,12 @@ def _claude(home: Path) -> HostCatalog:
     )
 
 
-def _codex(home: Path, which: Which, run: Run) -> HostCatalog:
+def _codex(
+    home: Path,
+    _repo_root: Path | None,
+    which: Which,
+    run: Run,
+) -> HostCatalog:
     binary = which("codex")
     live: tuple[str, ...] = ()
     source = ""
@@ -341,7 +357,7 @@ def _codex_config(home: Path) -> dict[str, str]:
     }
 
 
-def _gemini(home: Path) -> HostCatalog:
+def _gemini(home: Path, _repo_root: Path | None, _which: Which, _run: Run) -> HostCatalog:
     settings = home / ".gemini" / "settings.json"
     configured = ""
     definitions: list[str] = []
@@ -377,7 +393,7 @@ def _gemini(home: Path) -> HostCatalog:
     )
 
 
-def _cursor(home: Path, repo_root: Path | None) -> HostCatalog:
+def _cursor(home: Path, repo_root: Path | None, _which: Which, _run: Run) -> HostCatalog:
     candidates: list[Path] = []
     if repo_root is not None:
         candidates.append(repo_root / ".cursor" / "settings.json")
@@ -413,7 +429,7 @@ def _cursor(home: Path, repo_root: Path | None) -> HostCatalog:
     )
 
 
-def _copilot(home: Path) -> HostCatalog:
+def _copilot(home: Path, _repo_root: Path | None, _which: Which, _run: Run) -> HostCatalog:
     path = home / ".copilot" / "config.json"
     configured = ""
     source = "Copilot CLI defaults"
@@ -490,3 +506,58 @@ def _strip_jsonc(text: str) -> str:
 
 def _string(value: object) -> str:
     return str(value or "").strip()
+
+
+HOST_SPECS.update(
+    {
+        "opencode": HostSpec(
+            "opencode",
+            "OpenCode",
+            ".opencode/agent",
+            ".config/opencode/agent",
+            ".md",
+            _opencode,
+        ),
+        "claude": HostSpec(
+            "claude",
+            "Claude Code",
+            ".claude/agents",
+            ".claude/agents",
+            ".md",
+            _claude,
+        ),
+        "codex": HostSpec(
+            "codex",
+            "Codex",
+            ".codex/agents",
+            ".codex/agents",
+            ".toml",
+            _codex,
+        ),
+        "gemini": HostSpec(
+            "gemini",
+            "Gemini CLI",
+            ".gemini/agents",
+            ".gemini/agents",
+            ".md",
+            _gemini,
+        ),
+        "cursor": HostSpec(
+            "cursor",
+            "Cursor",
+            ".cursor/agents",
+            ".cursor/agents",
+            ".md",
+            _cursor,
+        ),
+        "copilot": HostSpec(
+            "copilot",
+            "Copilot CLI",
+            ".github/agents",
+            ".copilot/agents",
+            ".agent.md",
+            _copilot,
+        ),
+    }
+)
+LABELS.update({key: spec.label for key, spec in HOST_SPECS.items()})

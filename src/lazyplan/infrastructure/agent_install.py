@@ -14,13 +14,9 @@ from pathlib import Path
 from ..core.policies.lanes import AGENT_ROLES
 from . import textfile
 from .data_text import data_text
-from .host_models import effective_tiers
+from .host_models import HOST_SPECS, effective_tiers
 from .profiles import Profile, load_all, opencode_models, resolve
 
-OPENCODE_DIR = Path(".opencode") / "agent"
-OPENCODE_HOME_DIR = Path(".config") / "opencode" / "agent"
-CLAUDE_DIR = Path(".claude") / "agents"
-CLAUDE_HOME_DIR = Path(".claude") / "agents"
 MARKER = "<!-- managed by lazyplan:"
 CLAUDE_TOOLS = "Read, Grep, Glob, Edit, Write, Bash"
 CLAUDE_READ_TOOLS = {
@@ -86,14 +82,15 @@ class AgentInstallResult:
         }
 
 
+def _targets(host: str, scope: str, repo_root: Path | None, home: Path) -> list[Path]:
+    """One profile path per role for a scope from the host registry."""
+    spec = HOST_SPECS[host]
+    return [path for role in AGENT_ROLES for path in spec.targets(scope, repo_root, home, role)]
+
+
 def opencode_targets(scope: str, repo_root: Path | None, home: Path) -> list[Path]:
     """One profile path per role for a scope."""
-    targets: list[Path] = []
-    if scope in ("project", "both") and repo_root is not None:
-        targets.extend(repo_root / OPENCODE_DIR / f"lazyplan-{role}.md" for role in AGENT_ROLES)
-    if scope in ("global", "both"):
-        targets.extend(home / OPENCODE_HOME_DIR / f"lazyplan-{role}.md" for role in AGENT_ROLES)
-    return targets
+    return _targets("opencode", scope, repo_root, home)
 
 
 def install_opencode(
@@ -116,12 +113,7 @@ def install_opencode(
 
 def claude_targets(scope: str, repo_root: Path | None, home: Path) -> list[Path]:
     """One Claude Code profile path per role for a scope."""
-    targets: list[Path] = []
-    if scope in ("project", "both") and repo_root is not None:
-        targets.extend(repo_root / CLAUDE_DIR / f"lazyplan-{role}.md" for role in AGENT_ROLES)
-    if scope in ("global", "both"):
-        targets.extend(home / CLAUDE_HOME_DIR / f"lazyplan-{role}.md" for role in AGENT_ROLES)
-    return targets
+    return _targets("claude", scope, repo_root, home)
 
 
 def install_claude(

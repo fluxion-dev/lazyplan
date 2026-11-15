@@ -176,6 +176,30 @@ class OpenCodeProfileInstallTest(unittest.TestCase):
             len(AGENT_ROLES) * 2,
         )
 
+    def test_cursor_install_writes_model_and_readonly_roles(self) -> None:
+        tiers = {"deep": {"cursor": "composer-2"}}
+        result = agent_install.install_cursor(
+            "project", self.repo, self.home, self.profiles, None, tiers
+        )
+        self.assertEqual(len(result.installed), len(AGENT_ROLES))
+        reviewer = (self.repo / ".cursor/agents/lazyplan-reviewer.md").read_text(encoding="utf-8")
+        self.assertIn("name: lazyplan-reviewer", reviewer)
+        self.assertIn("model: composer-2", reviewer)
+        self.assertIn("readonly: true", reviewer)
+        implementer = (self.repo / ".cursor/agents/lazyplan-implementer.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("model: inherit", implementer)
+        self.assertNotIn("readonly:", implementer)
+
+    def test_cursor_global_scope_and_profile_paths(self) -> None:
+        agent_install.install_cursor("global", self.repo, self.home, self.profiles)
+        self.assertTrue((self.home / ".cursor/agents/lazyplan-qa.md").is_file())
+        self.assertEqual(
+            len(agent_install.profile_paths("both", self.repo, self.home, ["cursor"])),
+            len(AGENT_ROLES) * 2,
+        )
+
     def test_install_profiles_selects_the_requested_hosts(self) -> None:
         db = self.root / "profiles.db"
         result = agent_install.install_profiles(

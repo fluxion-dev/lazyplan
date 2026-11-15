@@ -185,6 +185,29 @@ def install_gemini(
     )
 
 
+def cursor_targets(scope: str, repo_root: Path | None, home: Path) -> list[Path]:
+    """One Cursor subagent path per role for a scope."""
+    return _targets("cursor", scope, repo_root, home)
+
+
+def install_cursor(
+    scope: str,
+    repo_root: Path | None,
+    home: Path,
+    profiles: dict[str, Profile],
+    models: dict[str, str] | None = None,
+    tiers: dict[str, dict[str, str]] | None = None,
+) -> AgentInstallResult:
+    """Write or refresh every Cursor profile for a scope."""
+    return _install_host(
+        "cursor",
+        scope,
+        cursor_targets(scope, repo_root, home),
+        profiles,
+        lambda role, profile: render_cursor(role, profile, models, tiers),
+    )
+
+
 def _install_host(
     host: str,
     scope: str,
@@ -234,6 +257,36 @@ def render_claude(
             data_text(f"agents/common/{role}.md").rstrip(),
             "",
             f"{MARKER} claude {role} -->",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def render_cursor(
+    role: str,
+    profile: Profile,
+    models: dict[str, str] | None,
+    tiers: dict[str, dict[str, str]] | None = None,
+) -> str:
+    """One managed Cursor subagent file."""
+    resolved = resolve(profile, "cursor", models, tiers)
+    meta = ROLE_META[role]
+    lines = [
+        "---",
+        f"name: lazyplan-{role}",
+        f"description: {meta['description']}",
+        f"model: {resolved['model'] or 'inherit'}",
+    ]
+    if meta["edit"] == "deny":
+        lines.append("readonly: true")
+    lines.extend(
+        [
+            "---",
+            "",
+            data_text(f"agents/common/{role}.md").rstrip(),
+            "",
+            f"{MARKER} cursor {role} -->",
             "",
         ]
     )
@@ -369,6 +422,8 @@ def install_profiles(
         results.append(install_codex(scope, repo_root, home, loaded, None, tiers))
     if "gemini" in agents:
         results.append(install_gemini(scope, repo_root, home, loaded, None, tiers))
+    if "cursor" in agents:
+        results.append(install_cursor(scope, repo_root, home, loaded, None, tiers))
     return results
 
 

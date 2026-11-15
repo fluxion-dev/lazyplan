@@ -5,14 +5,14 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Protocol
 
-from textual.widgets import Label
-
+from ...cli.parser import package_version
 from ...setup.health import HealthFinding, HealthReport, items_of
 from ...setup.integrations import ReviewResult
 from ...shared.help import hint_bar
 from ..launch import Restart
 from ..screens import TextScreen
 from ..screens.health import INSTALL, LATER, NEVER, HealthScreen
+from ..widgets.taskbar import Taskbar
 from .background import run_off_thread
 
 if TYPE_CHECKING:
@@ -127,7 +127,11 @@ class HealthController:
         return f" · [reverse] health [/]{count} {'issue' if count == 1 else 'issues'}"
 
     def refresh_hints(self) -> None:
-        """Repaint the key hints with the health chip on the end."""
-        chip = self.chip()
-        width = max(10, self.app.size.width - 2 - len(chip))
-        self.app.query_one("#hints", Label).update(hint_bar(width, markup=True) + chip)
+        """Repaint the key hints, health chip, and version badge."""
+        width = max(10, self.app.size.width - 4)
+        self.app.query_one("#hints", Taskbar).set_line(
+            hint_bar(width, markup=True),
+            health=self.chip(),
+            running=package_version(),
+            latest=self.app.update_controller.latest,
+        )

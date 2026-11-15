@@ -101,7 +101,7 @@ class SetupWizardShellTest(unittest.IsolatedAsyncioTestCase):
             screen, _results = await self.offer(app, pilot, session, start="review")
             button = screen.query_one("#setup-next", Button)
             self.assertEqual(str(button.label), "Apply")
-            self.assertTrue(button.disabled)
+            self.assertFalse(button.disabled)
 
     async def test_finish_later_dismisses_and_writes_nothing(self) -> None:
         session = self.session()

@@ -8,17 +8,20 @@ between steps, and dismissal reports exactly what the app should restart.
 from __future__ import annotations
 
 import copy
+import io
 import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 from ....core.policies import effort as effort_policy
 from ....core.policies.agents import DEFAULT_ROLE_TIERS, HOSTS, TIERS
 from ....core.policies.hooks import MODES
 from ....core.policies.lanes import AGENT_ROLES
-from ....infrastructure import skills
+from ....infrastructure import agent_install, hook_install, profiles, skills, textfile
 from ....infrastructure.host_models import HostCatalog
+from ....infrastructure.integrations import HOOK, SKILL, hook_paths, skill_paths
 from ...setup import health as setup_health
 from ...setup import ui as setup_ui
 from ...setup.constants import HOME
@@ -151,6 +154,102 @@ def hint_text(width: int) -> str:
     return text
 
 
+def review_sections(session: SetupSession) -> list[tuple[str, list[str]]]:
+    """Every write, refresh, removal, and state change the draft would cause."""
+    draft = session.draft
+    state = session.state
+    home = session.home
+    root = session.root
+    choice = session.choice()
+    plan = skills.plan_choice(choice, root, home)
+    resolved = resolve_choice(choice, root, plan, home)
+    groups: dict[str, list[str]] = {
+        "Writes": [],
+        "Refreshes": [],
+        "Removals": [],
+        "State changes": [],
+    }
+
+    def add(path: Path | str) -> None:
+        text = str(path)
+        if Path(text).exists():
+            groups["Refreshes"].append(text)
+        else:
+            groups["Writes"].append(text)
+
+    add(resolved.db)
+    add(resolved.templates_dir)
+    if resolved.config is not None:
+        add(resolved.config)
+    for path in plan.skill_files:
+        add(path)
+    if plan.agents_md is not None:
+        add(plan.agents_md)
+    if plan.scope != "none" and draft.agents:
+        add(profiles.path_for(resolved.db))
+        for path in agent_install.profile_paths(plan.scope, root, home, draft.agents):
+            add(path)
+    dropped = [host for host in state.agents if host not in draft.agents]
+    scopes = {plan.scope}
+    scopes.add("project" if state.placement == "repo" and root is not None else "global")
+    for host in dropped:
+        for scope in scopes:
+            for path in agent_install.profile_paths(scope, root, home, [host]):
+                if path.is_file() and _managed_profile(path):
+                    groups["Removals"].append(str(path))
+    hosts = sorted(set(draft.agents) | set(state.agents))
+    specs = hook_install.preview(home, [host for host in hosts if host in hook_install.HOSTS])
+    if draft.hooks_mode == "off":
+        for spec in specs:
+            if spec.path.is_file():
+                groups["Removals"].append(str(spec.path))
+    else:
+        for spec in specs:
+            if spec.host in draft.agents:
+                add(spec.path)
+    pointer = root / "AGENTS.md" if root is not None else None
+    if pointer is not None and draft.agents_pointer and draft.placement == HOME:
+        add(pointer)
+    elif pointer is not None and state.agents_pointer and pointer.is_file():
+        groups["Removals"].append(str(pointer))
+    for item in session.pending:
+        decision = draft.integrations.get(item.id, "install")
+        if decision != "install":
+            groups["State changes"].append(f"integration {item.label}: {decision}")
+            continue
+        if item.kind == SKILL and plan.scope != "none":
+            for path in skill_paths(item, plan.scope, root, home, plan.tools, plan.skills_dir):
+                add(path)
+        elif item.kind == HOOK:
+            for path in hook_paths(item, home):
+                add(path)
+    theme = (
+        f"theme: {state.theme or 'default'} -> {draft.theme}"
+        if draft.theme and draft.theme != state.theme
+        else f"theme: unchanged ({state.theme or 'default'})"
+    )
+    groups["State changes"].extend(
+        [
+            f"setup state: {state_path(home)}",
+            f"placement: {state.placement} -> {draft.placement}",
+            f"agents: {', '.join(state.agents) or 'none'} -> {', '.join(draft.agents) or 'none'}",
+            f"hooks: {state.effective_mode()} -> {draft.hooks_mode}",
+            f"AGENTS.md pointer: {'on' if draft.agents_pointer else 'off'}",
+            theme,
+            "pending wizard marker: cleared for this version",
+        ]
+    )
+    return [(label, list(dict.fromkeys(items))) for label, items in groups.items() if items]
+
+
+def _managed_profile(path: Any) -> bool:
+    """True when the file carries lazyplan's managed marker."""
+    try:
+        return agent_install.MARKER in textfile.read(path)
+    except OSError:
+        return False
+
+
 def _widget_id(text: str) -> str:
     """Turn a catalog id into a Textual widget id."""
     return re.sub(r"[^A-Za-z0-9_-]+", "-", text).strip("-")
@@ -205,6 +304,9 @@ if _TEXTUAL_OK:
             self._check_error = ""
             self._integration_ids: dict[str, str] = {}
             self._errors: tuple[str, ...] = ()
+            self._applying = False
+            self._apply_error = ""
+            self._result: WizardResult | None = None
 
         def _start_index(self, start: str) -> int:
             """The requested step when it is visible, else the first one."""
@@ -283,11 +385,19 @@ if _TEXTUAL_OK:
             self._update_primary()
 
         def _update_primary(self) -> None:
-            """The last step applies; earlier steps move forward."""
+            """One primary button: Next, Apply, or Close after applying."""
             button = self.query_one("#setup-next", Button)
             last = self._index == len(self._steps) - 1
-            button.label = APPLY_LABEL if last else NEXT_LABEL
-            button.disabled = last
+            if self._result is not None:
+                button.label = "Close"
+                button.disabled = False
+            else:
+                button.label = APPLY_LABEL if last else NEXT_LABEL
+                button.disabled = self._applying
+            back = self.query_one("#setup-back", Button)
+            back.disabled = self._index == 0 or self._applying or self._result is not None
+            later = self.query_one("#setup-later", Button)
+            later.disabled = self._applying and self._result is None
 
         def _show_errors(self) -> None:
             block = self.query_one("#setup-errors", Static)
@@ -305,6 +415,7 @@ if _TEXTUAL_OK:
                 "roles": self._roles_panel,
                 "integrations": self._integrations_panel,
                 "appearance": self._appearance_panel,
+                "review": self._review_panel,
             }
             builder = builders.get(step.key)
             if builder is not None:
@@ -691,6 +802,99 @@ if _TEXTUAL_OK:
             if body is not None:
                 body.update(self._checks_text())
 
+        def _review_panel(self) -> list[Any]:
+            """Exact writes, refreshes, removals, and state changes."""
+            widgets: list[Any] = [
+                Static(
+                    "Apply writes these exact files through the same setup path as"
+                    " `lpui setup`. Nothing has been written yet.",
+                    classes="setup-note",
+                )
+            ]
+            for label, items in review_sections(self.session):
+                widgets.append(Static(f"[b]{label}[/]", classes="setup-host"))
+                widgets.append(
+                    Static(
+                        "\n".join(f"  {escape_markup(item)}" for item in items),
+                        classes="setup-list",
+                    )
+                )
+            widgets.append(Static("", id="setup-apply-status", classes="setup-apply-status"))
+            return widgets
+
+        def _set_apply_status(self, text: str) -> None:
+            status = query_one_opt(self, "#setup-apply-status", Static)
+            if status is not None:
+                status.update(text)
+                status.display = bool(text)
+
+        def _start_apply(self) -> None:
+            """Validate, then run the shared apply path off the UI thread."""
+            if self._applying or self._result is not None:
+                return
+            self._commit_inputs()
+            self._errors = tuple(self.session.validate())
+            if self._errors:
+                self._update_chrome()
+                return
+            self._applying = True
+            self._apply_error = ""
+            self._update_chrome()
+            self._set_apply_status("[yellow]Applying setup…[/]")
+            self.run_worker(self._apply_worker, thread=True, exclusive=True, group="setup-apply")
+
+        def _apply_worker(self) -> None:
+            try:
+                result = self.session.apply(io.StringIO())
+            except Exception as exc:  # noqa: BLE001 - keep the failure on the step
+                self.app.call_from_thread(self._apply_failed, str(exc))
+            else:
+                self.app.call_from_thread(self._apply_done, result)
+
+        def _apply_done(self, result: dict[str, Any]) -> None:
+            """Keep the summary on the step and wait for Close."""
+            if not self.is_mounted:
+                return
+            self._applying = False
+            profiles = tuple(
+                str(path)
+                for path in [
+                    *(result.get("profile_files") or []),
+                    *(result.get("removed_profiles") or []),
+                ]
+            )
+            hooks = result.get("hooks") or {}
+            restart = bool(
+                hooks.get("installed")
+                or hooks.get("backups")
+                or result.get("installed")
+                or profiles
+            )
+            self._result = WizardResult(
+                applied=True,
+                hosts=tuple(result.get("agents") or ()),
+                profiles=profiles,
+                restart=restart,
+                result=dict(result),
+            )
+            tail = (
+                " Restart running agent sessions; their skills or hooks changed." if restart else ""
+            )
+            self._set_apply_status(f"[green]Setup applied.[/] Press Close to return.{tail}")
+            self._update_chrome()
+
+        def _apply_failed(self, detail: str) -> None:
+            """Leave the wizard open and name the failure."""
+            if not self.is_mounted:
+                return
+            self._applying = False
+            self._apply_error = detail
+            self._set_apply_status(
+                f"[red]Apply failed[/]\n{escape_markup(detail)}\n"
+                "The previous setup is unchanged. Fix the problem and apply again."
+            )
+            self._update_chrome()
+
         async def _show_step(self) -> None:
             """Swap the panel for the step now selected."""
             panel = self.query_one("#setup-panel", Vertical)
@@ -766,20 +970,35 @@ if _TEXTUAL_OK:
 
         async def action_previous(self) -> None:
             """Move one step back; edits stay in the draft."""
+            if self._applying or self._result is not None:
+                return
             self._commit_inputs()
             await self._select(self._index - 1)
 
         async def action_next(self) -> None:
-            """Validate this step, then move one step forward."""
+            """Close after applying, apply on the last step, else move forward."""
+            if self._applying:
+                return
+            if self._result is not None:
+                self.dismiss(self._result)
+                return
             self._commit_inputs()
             self._errors = tuple(self.session.validate())
             if self._errors:
                 self._update_chrome()
                 return
+            if self._index == len(self._steps) - 1:
+                self._start_apply()
+                return
             await self._select(self._index + 1)
 
         def action_later(self) -> None:
-            """Close without writing anything."""
+            """Close without writing anything, returning the applied result."""
+            if self._applying:
+                return
+            if self._result is not None:
+                self.dismiss(self._result)
+                return
             self._restore_theme()
             self.dismiss(WizardResult())
 
@@ -790,6 +1009,11 @@ if _TEXTUAL_OK:
 
         def action_cancel(self) -> None:
             """Ask before discarding edits, then close without writing."""
+            if self._applying:
+                return
+            if self._result is not None:
+                self.dismiss(self._result)
+                return
             if not self._dirty():
                 self._restore_theme()
                 self.dismiss(WizardResult())

@@ -39,10 +39,17 @@ For system packages, the one-line installer, or installs from source, see
 
 ```bash
 cd ~/my-plan
-lpui                     # detects agents and creates the plan store
+lpui                     # applies setup, then opens the setup wizard
 lpui plan add --title "my-plan" --why "reason" --what "scope"
 lpui
 ```
+
+The first `lpui` applies a baseline setup, then opens a wizard before normal
+use: where plans live, which agents get lazyplan, hooks and the `AGENTS.md`
+pointer, per-host model targets, per-role tier and effort, and a review of every
+write before it applies. **Finish later** writes nothing and asks again at the
+next applicable launch; `S` opens the wizard from any screen. A run without a
+terminal, or with `--json` or `--yes`, applies the same defaults without asking.
 
 Keep the plan in the repo with `lpui setup --placement repo`, or try the demo
 data with `lpui seed`.
@@ -70,6 +77,10 @@ lpui criterion edit --id 1 --done # mark an acceptance item done
 lpui feed                         # recent activity
 ```
 
+The bottom bar pins the running version at its right edge, with an arrow to a
+newer release once one is cached. Click it or press `U` to open the update
+screen.
+
 ## For your agent
 
 The first run installs the agent skills. Agents read and write the same plan
@@ -83,8 +94,14 @@ lpui plan recipe feature > plan.json
 lpui --actor helper --porcelain plan apply --file plan.json
 ```
 
-Parallel plans use the orchestration skill; `lpui dispatch --plan P` prints the
-waves, lane worktrees, and one worker prompt per ready task.
+Roles name a capability tier (`fast`, `standard`, `deep`) and an effort level;
+`agents.json` maps each tier to a model per host, and setup installs one managed
+subagent file per role. See [agent profiles](docs/usage.md#agent-profiles).
+
+Parallel plans are lanes: a milestone is a lane with a wave and a role, and it
+gets its own registered worktree. `lpui dispatch --plan P` prints the waves,
+lane worktrees, and one worker prompt per ready task; lazyplan never creates a
+worktree or starts an agent itself.
 
 See the [agent contract](docs/usage.md#agents) for claims, agents, evidence,
 and MCP. For your data, back up with `lpui export --format json` and restore

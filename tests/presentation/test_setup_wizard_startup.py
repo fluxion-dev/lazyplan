@@ -198,6 +198,60 @@ class SetupStartupTest(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(len(app.screen_stack), 1)
             self.assertTrue(app.setup_controller.pending)
 
+    async def test_finishing_later_reopens_from_the_palette(self) -> None:
+        app = self.launch()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await self.settle(pilot)
+            app.screen.dismiss(None)
+            await self.settle(pilot)
+            app.action_open_setup()
+            await self.settle(pilot)
+            self.assertIsInstance(app.screen, FakeWizardScreen)
+            self.assertEqual(app.screen.need.reason, REQUEST)
+
+    async def test_a_second_open_while_the_wizard_is_up_is_ignored(self) -> None:
+        app = self.launch()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await self.settle(pilot)
+            first = app.screen
+            app.action_open_setup()
+            await pilot.press("S")
+            await self.settle(pilot)
+            self.assertIs(app.screen, first)
+            self.assertEqual(len(app.screen_stack), 2)
+
+    async def test_the_health_prompt_still_opens_without_a_pending_wizard(self) -> None:
+        from lazyplan.presentation.setup.health import ERROR, HealthFinding, HealthReport
+
+        class FakeHealth:
+            def report(self) -> HealthReport:
+                finding = HealthFinding(
+                    id="tool:git",
+                    label="git on PATH",
+                    capability="Commit links don't work.",
+                    severity=ERROR,
+                )
+                return HealthReport(findings=(finding,))
+
+            def install(self, findings: tuple[HealthFinding, ...]) -> Any:
+                raise AssertionError("nothing to install")
+
+            def decide(self, findings: tuple[HealthFinding, ...], decision: str) -> None:
+                return None
+
+        self.state(last_version="1.0", wizard_completed="1.0")
+        with self.probes():
+            app = create_app(
+                self.db,
+                health_check=FakeHealth,
+                wizard_check=current(self.repo, self.home, "1.0"),
+            )
+            app.setup_controller.screen_factory = fake_screen
+            async with app.run_test(size=(120, 40)) as pilot:
+                await self.settle(pilot)
+                self.assertIsInstance(app.screen, HealthScreen)
+                self.assertFalse(app.setup_controller.pending)
+
     async def test_a_missing_screen_class_leaves_the_app_running(self) -> None:
         app = self.launch()
         app.setup_controller.screen_factory = mock.Mock(side_effect=ImportError("no screen"))

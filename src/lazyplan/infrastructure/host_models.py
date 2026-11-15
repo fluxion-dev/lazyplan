@@ -364,7 +364,9 @@ def _gemini(home: Path) -> HostCatalog:
                 source = str(settings)
     models = _merge_models([configured], definitions)
     defaults = {"fast": "", "standard": configured, "deep": configured}
-    warning = "" if models else "Gemini CLI model list is not available; enter an ID or keep inherit."
+    warning = (
+        "" if models else "Gemini CLI model list is not available; enter an ID or keep inherit."
+    )
     return HostCatalog(
         host="gemini",
         label=LABELS["gemini"],
@@ -394,7 +396,11 @@ def _cursor(home: Path, repo_root: Path | None) -> HostCatalog:
             if configured:
                 source = str(path)
                 break
-    defaults = {"fast": "inherit", "standard": configured or "inherit", "deep": configured or "inherit"}
+    defaults = {
+        "fast": "inherit",
+        "standard": configured or "inherit",
+        "deep": configured or "inherit",
+    }
     models = _merge_models([configured], ["inherit"])
     warning = "" if configured else "Cursor model IDs are entered manually; inherit is the default."
     return HostCatalog(

@@ -162,6 +162,36 @@ class ProfileMapTest(unittest.TestCase):
         self.assertEqual(payload["implementer"]["claude"], "haiku")
         self.assertEqual(payload["reviewer"]["claude"], "opus")
 
+    def test_resolve_all_covers_every_host(self) -> None:
+        loaded = profiles.defaults()
+        tiers = profiles.default_tiers()
+        payload = profiles.resolve_all(loaded, tiers)
+        self.assertEqual(set(payload), set(AGENT_ROLES))
+        for resolved in payload.values():
+            self.assertEqual(set(resolved["models"]), set(profiles.HOSTS))
+            for host in profiles.HOSTS:
+                self.assertEqual(resolved[host], resolved["models"][host])
+        self.assertEqual(payload["implementer"]["opencode"], "")
+        self.assertEqual(payload["implementer"]["claude"], "haiku")
+
+    def test_resolve_rejects_unknown_host(self) -> None:
+        with self.assertRaisesRegex(profiles.ProfileError, "unknown host"):
+            profiles.resolve(profiles.Profile(role="qa"), "wizard")
+
+    def test_per_host_override_wins_over_all_host_and_tier(self) -> None:
+        profile = profiles.Profile(
+            role="reviewer",
+            tier="deep",
+            model="all/host",
+            models={"codex": "codex/role"},
+        )
+        tiers = {"deep": {"codex": "codex/tier", "claude": "opus"}}
+        self.assertEqual(profiles.resolve(profile, "codex", tiers=tiers)["model"], "codex/role")
+        self.assertEqual(profiles.resolve(profile, "claude", tiers=tiers)["model"], "all/host")
+        plain = profiles.Profile(role="reviewer", tier="deep")
+        self.assertEqual(profiles.resolve(plain, "codex", tiers=tiers)["model"], "codex/tier")
+        self.assertEqual(profiles.resolve(plain, "gemini", tiers=tiers)["model"], "")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -14,7 +14,8 @@ from pathlib import Path
 from ..core.policies.lanes import AGENT_ROLES
 from . import textfile
 from .data_text import data_text
-from .profiles import Profile, load, opencode_models, resolve
+from .host_models import effective_tiers
+from .profiles import Profile, load_all, opencode_models, resolve
 
 OPENCODE_DIR = Path(".opencode") / "agent"
 OPENCODE_HOME_DIR = Path(".config") / "opencode" / "agent"
@@ -101,6 +102,7 @@ def install_opencode(
     home: Path,
     profiles: dict[str, Profile],
     models: dict[str, str] | None = None,
+    tiers: dict[str, dict[str, str]] | None = None,
 ) -> AgentInstallResult:
     """Write or refresh every OpenCode profile for a scope."""
     return _install_host(
@@ -108,7 +110,7 @@ def install_opencode(
         scope,
         opencode_targets(scope, repo_root, home),
         profiles,
-        lambda role, profile: render_opencode(role, profile, models),
+        lambda role, profile: render_opencode(role, profile, models, tiers),
     )
 
 
@@ -128,6 +130,7 @@ def install_claude(
     home: Path,
     profiles: dict[str, Profile],
     models: dict[str, str] | None = None,
+    tiers: dict[str, dict[str, str]] | None = None,
 ) -> AgentInstallResult:
     """Write or refresh every Claude Code profile for a scope."""
     return _install_host(
@@ -135,7 +138,7 @@ def install_claude(
         scope,
         claude_targets(scope, repo_root, home),
         profiles,
-        lambda role, profile: render_claude(role, profile, models),
+        lambda role, profile: render_claude(role, profile, models, tiers),
     )
 
 
@@ -159,9 +162,14 @@ def _install_host(
     return result
 
 
-def render_claude(role: str, profile: Profile, models: dict[str, str] | None) -> str:
+def render_claude(
+    role: str,
+    profile: Profile,
+    models: dict[str, str] | None,
+    tiers: dict[str, dict[str, str]] | None = None,
+) -> str:
     """One managed Claude Code subagent file."""
-    resolved = resolve(profile, "claude", models)
+    resolved = resolve(profile, "claude", models, tiers)
     meta = ROLE_META[role]
     tools = CLAUDE_READ_TOOLS.get(role, CLAUDE_TOOLS)
     lines = [
@@ -189,9 +197,14 @@ def render_claude(role: str, profile: Profile, models: dict[str, str] | None) ->
     return "\n".join(lines)
 
 
-def render_opencode(role: str, profile: Profile, models: dict[str, str] | None) -> str:
+def render_opencode(
+    role: str,
+    profile: Profile,
+    models: dict[str, str] | None,
+    tiers: dict[str, dict[str, str]] | None = None,
+) -> str:
     """One managed OpenCode subagent file."""
-    resolved = resolve(profile, "opencode", models)
+    resolved = resolve(profile, "opencode", models, tiers)
     meta = ROLE_META[role]
     lines = [
         "---",
@@ -239,13 +252,14 @@ def install_profiles(
     """Install every selected host's profiles for one scope."""
     if scope == "none" or not agents:
         return []
-    loaded = load(db_path)
-    host_models = models if models is not None else opencode_models(home, repo_root)
+    loaded, _saved_tiers = load_all(db_path)
+    opencode_defaults = models if models is not None else opencode_models(home, repo_root)
+    tiers = effective_tiers(db_path, home, repo_root, agents)
     results: list[AgentInstallResult] = []
     if "opencode" in agents:
-        results.append(install_opencode(scope, repo_root, home, loaded, host_models))
+        results.append(install_opencode(scope, repo_root, home, loaded, opencode_defaults, tiers))
     if "claude" in agents:
-        results.append(install_claude(scope, repo_root, home, loaded))
+        results.append(install_claude(scope, repo_root, home, loaded, None, tiers))
     return results
 
 

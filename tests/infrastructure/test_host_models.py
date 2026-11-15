@@ -40,9 +40,7 @@ class HostCatalogTest(unittest.TestCase):
             self.home,
             self.repo,
             which=lambda name: "/bin/opencode",
-            run=lambda command, timeout: completed(
-                "provider/big\nprovider/tiny\nprovider/mid\n"
-            ),
+            run=lambda command, timeout: completed("provider/big\nprovider/tiny\nprovider/mid\n"),
         )
         self.assertIn("provider/mid", catalog.models)
         self.assertEqual(catalog.tier_defaults["fast"], "provider/tiny")
@@ -178,6 +176,27 @@ class HostCatalogTest(unittest.TestCase):
             with self.subTest(host=host):
                 catalog = host_models.discover(host, self.home)
                 self.assertEqual(set(catalog.tier_defaults), set(profiles.TIERS))
+
+    def test_effective_tiers_merge_saved_and_discovered_defaults(self) -> None:
+        db = self.home / ".lazyplan/lazyplan.db"
+        profiles.save(
+            db,
+            profiles.defaults(),
+            {
+                "fast": {"claude": "haiku", "codex": "saved/fast"},
+                "standard": {},
+                "deep": {},
+            },
+        )
+        self._write(
+            self.home / ".config/opencode/opencode.json",
+            json.dumps({"model": "provider/big", "small_model": "provider/tiny"}),
+        )
+        tiers = host_models.effective_tiers(db, self.home, self.repo, profiles.HOSTS)
+        self.assertEqual(tiers["fast"]["codex"], "saved/fast")
+        self.assertEqual(tiers["fast"]["opencode"], "provider/tiny")
+        self.assertEqual(tiers["deep"]["opencode"], "provider/big")
+        self.assertEqual(tiers["fast"]["claude"], "haiku")
 
 
 if __name__ == "__main__":

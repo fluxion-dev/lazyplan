@@ -398,6 +398,12 @@ column is hidden, and the plan queue, agents, plan review, and git cards keep
 their order in the stacked left column. The footer names only `?`, `c`, and
 `/`; the full key list is under `?`.
 
+The bottom bar also pins the running version at its right edge, for example
+`v0.47.0`. A newer release already in the update cache adds an arrow,
+`v0.47.0 → v0.48.0`; click the badge or press `U` to open the update screen.
+The health count, when present, sits just left of the version. The same bar
+appears at the bottom of the source, hub, plan diff, and setup views.
+
 The tree loads plan rows first. A plan's milestones appear when you expand it,
 and a milestone's tasks appear when you expand that milestone. A text filter
 loads the matching branches so a collapsed hit is never hidden. `z` folds one

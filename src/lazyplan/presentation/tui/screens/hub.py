@@ -11,10 +11,11 @@ try:
     from textual.binding import Binding
     from textual.containers import Horizontal, Vertical, VerticalScroll
     from textual.screen import Screen
-    from textual.widgets import Label, OptionList, Static
+    from textual.widgets import OptionList, Static
     from textual.widgets.option_list import Option
 
     from ..navigation import NAV_BINDINGS, NavigationMixin
+    from ..widgets.taskbar import Taskbar
 
     _TEXTUAL_OK = True
 except ImportError:  # pragma: no cover - stdlib-only interpreter
@@ -58,6 +59,7 @@ if _TEXTUAL_OK:
             Binding("o", "open_value", "Open"),
             Binding("g", "source_hub", "Source"),
             Binding("r", "refresh", "Refresh"),
+            Binding("U", "update_prompt", "Update", show=False),
         ]
 
         def __init__(self, store: Any) -> None:
@@ -77,7 +79,7 @@ if _TEXTUAL_OK:
                         yield OptionList(id="hub-list")
                     with VerticalScroll(id="hub-preview"):
                         yield Static("", id="hub-preview-body")
-                yield Label("", id="hub-hints")
+                yield Taskbar("", id="hub-hints")
 
         def on_mount(self) -> None:
             width = self.app.size.width
@@ -99,7 +101,9 @@ if _TEXTUAL_OK:
             if entries:
                 options.highlighted = 0
             self._preview(0 if entries else None)
-            self.query_one("#hub-hints", Label).update(self._hints())
+            self.query_one("#hub-hints", Taskbar).set_for_app(
+                self._hints(),
+            )
             self.query_one("#hub-page").border_title = f" {self.title} "
 
         def _hints(self) -> str:
@@ -216,6 +220,10 @@ if _TEXTUAL_OK:
             from .source import SourceScreen
 
             self.app.push_screen(SourceScreen(self.store, parent[0], parent[1]))
+
+        def action_update_prompt(self) -> None:
+            """Open the update screen without leaving this view."""
+            self.app.action_update_prompt()  # type: ignore[attr-defined]
 
         def action_back(self) -> None:
             handler = getattr(self.app, "action_history_back", None)

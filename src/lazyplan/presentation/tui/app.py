@@ -19,12 +19,13 @@ try:
     from textual.binding import Binding
     from textual.containers import Horizontal, Vertical
     from textual.reactive import reactive
-    from textual.widgets import Label, Static, Tree
+    from textual.widgets import Static, Tree
     from textual.widgets.tree import TreeNode
 
     from ..shared.tree_nav import NavTree  # noqa: F401
     from .navigation import NAV_BINDINGS
     from .query import query_one_opt
+    from .widgets.taskbar import Taskbar
 
     _TEXTUAL_OK = True
 except ImportError:  # pragma: no cover
@@ -178,6 +179,16 @@ if _TEXTUAL_OK:
             """Open the health check with every finding, hidden ones included."""
             self.health_controller.prompt()
 
+        def refresh_taskbar(self) -> None:
+            """Push the current update state into every visible taskbar."""
+            latest = self.update_controller.latest
+            for screen in self.screen_stack:
+                try:
+                    for bar in screen.query(Taskbar):
+                        bar.set_latest(latest)
+                except Exception:  # noqa: BLE001 - a closing screen may race a poll
+                    continue
+
         def action_open_setup(self) -> None:
             """Reopen the setup wizard from the palette or the S key."""
             self.setup_controller.open()
@@ -214,7 +225,7 @@ if _TEXTUAL_OK:
                     with Vertical(id="side"):
                         yield PreviewPanel()
                 yield MetricsSection()
-            yield Label("", id="hints")
+            yield Taskbar("", id="hints")
 
         async def _on_resize(self, event: events.Resize) -> None:
             """Textual stops Resize at the App; re-apply the shell after it."""
@@ -236,7 +247,7 @@ if _TEXTUAL_OK:
             this guard, `d` or `s` pressed there would mutate the hidden main
             selection.
             """
-            if len(self.screen_stack) > 1 and action not in ("quit", "help"):
+            if len(self.screen_stack) > 1 and action not in ("quit", "help", "update_prompt"):
                 return False
             return True
 

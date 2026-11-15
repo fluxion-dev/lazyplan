@@ -74,8 +74,8 @@ class SetupWizardBasicsTest(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             self.assertEqual(session.draft.placement, "repo")
             self.assertEqual(
-                session.db_path,
-                self.repo / ".agents" / "lazyplan" / "lazyplan.db",
+                session.db_path.resolve(),
+                (self.repo / ".agents" / "lazyplan" / "lazyplan.db").resolve(),
             )
 
     async def test_choosing_home_placement_returns_to_the_shared_database(self) -> None:

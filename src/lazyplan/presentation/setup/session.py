@@ -112,12 +112,16 @@ class SetupSession:
         session.refresh_pending()
         return session
 
+    def resolved(self) -> tuple[skills.SkillPlan, layout.SetupLayout]:
+        """The skill plan and layout the current draft resolves to, without writing."""
+        choice = self.choice()
+        plan = skills.plan_choice(choice, self.root, self.home)
+        return plan, layout.resolve_choice(choice, self.root, plan, self.home)
+
     @property
     def db_path(self) -> Path:
         """The database the current draft would use, without writing."""
-        choice = self.choice()
-        plan = skills.plan_choice(choice, self.root, self.home)
-        return layout.resolve_choice(choice, self.root, plan, self.home).db
+        return self.resolved()[1].db
 
     def steps(self) -> tuple[Step, ...]:
         """The steps this context needs, in order."""

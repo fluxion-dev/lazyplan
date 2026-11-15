@@ -15,10 +15,19 @@ from ....infrastructure import agent_install, hook_install, profiles, skills, te
 from ....infrastructure.integrations import HOOK, SKILL, hook_paths, skill_paths
 from ...setup.constants import HOME
 from ...setup.health import HealthFinding
-from ...setup.layout import SetupLayout, resolve_choice
+from ...setup.layout import SetupLayout
 from ...setup.session import SetupSession
 from ...setup.state import state_path
-from ...setup.steps import Step
+from ...setup.steps import (
+    AGENTS,
+    APPEARANCE,
+    HOOKS,
+    INTEGRATIONS,
+    MODELS,
+    PLACEMENT,
+    ROLES,
+    Step,
+)
 
 LATER_LABEL = "Finish later"
 NEXT_LABEL = "Next"
@@ -58,9 +67,7 @@ class WizardResult:
 
 def welcome_lines(session: SetupSession) -> list[str]:
     """What setup owns, where it lands, and how to leave without writing."""
-    choice = session.choice()
-    plan = skills.plan_choice(choice, session.root, session.home)
-    layout = resolve_choice(choice, session.root, plan, session.home)
+    _plan, layout = session.resolved()
     lines = [
         "Setup owns the plan journal and the agent side of lazyplan:",
         f"  database   {layout.db}",
@@ -87,23 +94,23 @@ def welcome_lines(session: SetupSession) -> list[str]:
 def current_line(session: SetupSession, step: Step) -> str:
     """One plain-language summary of the draft for a step panel."""
     draft = session.draft
-    if step.key == "placement":
+    if step.key == PLACEMENT.key:
         target = session.db_path
         return f"Plans currently live at {target} ({draft.placement} placement)."
-    if step.key == "agents":
+    if step.key == AGENTS.key:
         if not draft.agents:
             return "No agent host is selected, so no skills or profiles are written."
         return f"Selected hosts: {', '.join(draft.agents)}."
-    if step.key == "hooks":
+    if step.key == HOOKS.key:
         pointer = "with" if draft.agents_pointer else "without"
         return f"Hooks are {draft.hooks_mode}; the AGENTS.md pointer is {pointer}."
-    if step.key == "models":
+    if step.key == MODELS.key:
         return f"{len(draft.agents)} host(s) map the fast, standard, and deep tiers."
-    if step.key == "roles":
+    if step.key == ROLES.key:
         return f"{len(draft.profiles_map)} roles name a tier and an effort level."
-    if step.key == "integrations":
+    if step.key == INTEGRATIONS.key:
         return f"{len(session.pending)} catalog item(s) are waiting for a decision."
-    if step.key == "appearance":
+    if step.key == APPEARANCE.key:
         return f"Theme: {draft.theme or 'not chosen'}."
     return "The next step reviews every write, removal, and state change."
 
@@ -119,9 +126,7 @@ def hint_text(width: int) -> str:
 
 def review_sections(session: SetupSession) -> list[tuple[str, list[str]]]:
     """Every write, refresh, removal, and state change the draft would cause."""
-    choice = session.choice()
-    plan = skills.plan_choice(choice, session.root, session.home)
-    resolved = resolve_choice(choice, session.root, plan, session.home)
+    plan, resolved = session.resolved()
     groups: dict[str, list[str]] = {
         "Writes": [],
         "Refreshes": [],

@@ -16,7 +16,7 @@ from ....core.policies.agents import DEFAULT_ROLE_TIERS, HOSTS
 from ....core.policies.hooks import MODES
 from ...setup.health import HealthFinding
 from ...setup.session import SetupSession, SetupSessionError
-from ...setup.steps import Step
+from ...setup.steps import APPEARANCE, Step
 from ...setup.triggers import WizardNeed
 from ...shared.design import escape_markup
 from .setup_panels import SetupPanelsScreen
@@ -150,7 +150,7 @@ if _TEXTUAL_OK:
             self._fill_rail()
             self._update_chrome()
             self.call_after_refresh(self._focus_panel)
-            if self.step.key == "appearance":
+            if self.step.key == APPEARANCE.key:
                 self.call_after_refresh(self._start_checks)
 
         def _apply_size(self, width: int, height: int) -> None:
@@ -280,7 +280,7 @@ if _TEXTUAL_OK:
             self._update_chrome()
             self._highlight_panel_choice()
             self.call_after_refresh(self._focus_panel)
-            if self.step.key == "appearance":
+            if self.step.key == APPEARANCE.key:
                 self.call_after_refresh(self._start_checks)
 
         def _highlight_panel_choice(self) -> None:

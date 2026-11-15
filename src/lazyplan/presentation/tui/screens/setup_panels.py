@@ -18,7 +18,18 @@ from ...setup import ui as setup_ui
 from ...setup.constants import HOME
 from ...setup.health import HealthFinding
 from ...setup.session import SetupSession
-from ...setup.steps import WELCOME, Step
+from ...setup.steps import (
+    AGENTS,
+    APPEARANCE,
+    HOOKS,
+    INTEGRATIONS,
+    MODELS,
+    PLACEMENT,
+    REVIEW,
+    ROLES,
+    WELCOME,
+    Step,
+)
 from ...shared.design import escape_markup
 from .setup_support import (
     HOOK_MODES,
@@ -79,14 +90,14 @@ if _TEXTUAL_OK:
             """The body of one step, wired to the shared session draft."""
             builders = {
                 WELCOME.key: self._welcome_panel,
-                "placement": self._placement_panel,
-                "agents": self._agents_panel,
-                "hooks": self._hooks_panel,
-                "models": self._models_panel,
-                "roles": self._roles_panel,
-                "integrations": self._integrations_panel,
-                "appearance": self._appearance_panel,
-                "review": self._review_panel,
+                PLACEMENT.key: self._placement_panel,
+                AGENTS.key: self._agents_panel,
+                HOOKS.key: self._hooks_panel,
+                MODELS.key: self._models_panel,
+                ROLES.key: self._roles_panel,
+                INTEGRATIONS.key: self._integrations_panel,
+                APPEARANCE.key: self._appearance_panel,
+                REVIEW.key: self._review_panel,
             }
             builder = builders.get(step.key)
             if builder is not None:

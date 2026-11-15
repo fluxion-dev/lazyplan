@@ -145,11 +145,6 @@ def _targets(host: str, scope: str, repo_root: Path | None, home: Path) -> list[
     return [path for role in AGENT_ROLES for path in spec.targets(scope, repo_root, home, role)]
 
 
-def opencode_targets(scope: str, repo_root: Path | None, home: Path) -> list[Path]:
-    """One profile path per role for a scope."""
-    return _targets("opencode", scope, repo_root, home)
-
-
 def install_opencode(
     scope: str,
     repo_root: Path | None,
@@ -162,15 +157,10 @@ def install_opencode(
     return _install_host(
         "opencode",
         scope,
-        opencode_targets(scope, repo_root, home),
+        _targets("opencode", scope, repo_root, home),
         profiles,
         lambda role, profile: render_opencode(role, profile, models, tiers),
     )
-
-
-def claude_targets(scope: str, repo_root: Path | None, home: Path) -> list[Path]:
-    """One Claude Code profile path per role for a scope."""
-    return _targets("claude", scope, repo_root, home)
 
 
 def install_claude(
@@ -185,15 +175,10 @@ def install_claude(
     return _install_host(
         "claude",
         scope,
-        claude_targets(scope, repo_root, home),
+        _targets("claude", scope, repo_root, home),
         profiles,
         lambda role, profile: render_claude(role, profile, models, tiers),
     )
-
-
-def codex_targets(scope: str, repo_root: Path | None, home: Path) -> list[Path]:
-    """One Codex custom-agent path per role for a scope."""
-    return _targets("codex", scope, repo_root, home)
 
 
 def install_codex(
@@ -208,15 +193,10 @@ def install_codex(
     return _install_host(
         "codex",
         scope,
-        codex_targets(scope, repo_root, home),
+        _targets("codex", scope, repo_root, home),
         profiles,
         lambda role, profile: render_codex(role, profile, models, tiers),
     )
-
-
-def gemini_targets(scope: str, repo_root: Path | None, home: Path) -> list[Path]:
-    """One Gemini subagent path per role for a scope."""
-    return _targets("gemini", scope, repo_root, home)
 
 
 def install_gemini(
@@ -231,15 +211,10 @@ def install_gemini(
     return _install_host(
         "gemini",
         scope,
-        gemini_targets(scope, repo_root, home),
+        _targets("gemini", scope, repo_root, home),
         profiles,
         lambda role, profile: render_gemini(role, profile, models, tiers),
     )
-
-
-def cursor_targets(scope: str, repo_root: Path | None, home: Path) -> list[Path]:
-    """One Cursor subagent path per role for a scope."""
-    return _targets("cursor", scope, repo_root, home)
 
 
 def install_cursor(
@@ -254,15 +229,10 @@ def install_cursor(
     return _install_host(
         "cursor",
         scope,
-        cursor_targets(scope, repo_root, home),
+        _targets("cursor", scope, repo_root, home),
         profiles,
         lambda role, profile: render_cursor(role, profile, models, tiers),
     )
-
-
-def copilot_targets(scope: str, repo_root: Path | None, home: Path) -> list[Path]:
-    """One Copilot agent path per role for a scope."""
-    return _targets("copilot", scope, repo_root, home)
 
 
 def install_copilot(
@@ -277,7 +247,7 @@ def install_copilot(
     return _install_host(
         "copilot",
         scope,
-        copilot_targets(scope, repo_root, home),
+        _targets("copilot", scope, repo_root, home),
         profiles,
         lambda role, profile: render_copilot(role, profile, models, tiers),
     )

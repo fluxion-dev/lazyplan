@@ -176,3 +176,26 @@ class SetupSessionTest(unittest.TestCase):
                 (self.home / relative).read_bytes(),
                 (other / relative).read_bytes(),
             )
+
+
+class SetupWriterSeamTest(unittest.TestCase):
+    """The TUI is a front end: one session, one writer, one trigger."""
+
+    TUI = Path(__file__).resolve().parents[2] / "src" / "lazyplan" / "presentation" / "tui"
+
+    def read(self, relative: str) -> str:
+        return (self.TUI / relative).read_text(encoding="utf-8")
+
+    def test_the_wizard_never_calls_a_setup_writer_directly(self) -> None:
+        for relative in ("screens/setup.py", "controllers/setup.py"):
+            source = self.read(relative)
+            for writer in ("apply_choice(", "install_integrations(", "install_items("):
+                with self.subTest(module=relative, writer=writer):
+                    self.assertNotIn(writer, source)
+        self.assertIn("session.apply(", self.read("screens/setup.py"))
+
+    def test_one_screen_construction_and_one_trigger_source(self) -> None:
+        controller = self.read("controllers/setup.py")
+        self.assertEqual(controller.count("SetupWizardScreen("), 1)
+        self.assertEqual(controller.count("from ...setup.triggers import"), 1)
+        self.assertIn("detect(", controller)

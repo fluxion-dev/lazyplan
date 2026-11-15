@@ -72,7 +72,7 @@ lpui feed                         # recent activity
 
 ## For your agent
 
-The first run installs the agent skill. Agents read and write the same plan
+The first run installs the agent skills. Agents read and write the same plan
 through the CLI, using `--porcelain` for terse rows and `--json` for full
 fidelity:
 
@@ -82,6 +82,9 @@ lpui --actor helper --porcelain context --max-chars 4000
 lpui plan recipe feature > plan.json
 lpui --actor helper --porcelain plan apply --file plan.json
 ```
+
+Parallel plans use the orchestration skill; `lpui dispatch --plan P` prints the
+waves, lane worktrees, and one worker prompt per ready task.
 
 See the [agent contract](docs/usage.md#agents) for claims, agents, evidence,
 and MCP. For your data, back up with `lpui export --format json` and restore

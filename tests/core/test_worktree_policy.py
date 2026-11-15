@@ -8,6 +8,7 @@ import unittest
 from lazyplan.core.policies.worktrees import (
     WorktreeCollision,
     WorktreeTarget,
+    derive_lane_worktree,
     derive_worktree,
     derive_worktrees,
     slugify,
@@ -105,3 +106,22 @@ class TestDeriveWorktrees(unittest.TestCase):
             targets,
             [WorktreeTarget(REPO, os.path.join(ROOT, "lazyplan--plan-6-plan"), "plan/6-plan")],
         )
+
+
+class TestDeriveLaneWorktree(unittest.TestCase):
+    def test_derives_a_sibling_path_and_branch_per_lane(self):
+        target = derive_lane_worktree(REPO, 7, "Lanes", 58, "Lane model")
+
+        self.assertEqual(target.repo_path, REPO)
+        self.assertEqual(
+            target.worktree_path,
+            os.path.join(ROOT, "lazyplan--plan-7-lanes-m58-lane-model"),
+        )
+        self.assertEqual(target.branch, "plan/7-lanes--m58-lane-model")
+        self.assertEqual(target.milestone_id, 58)
+
+    def test_same_titles_stay_unique_by_milestone_id(self):
+        first = derive_lane_worktree(REPO, 7, "Lanes", 1, "Build")
+        second = derive_lane_worktree(REPO, 7, "Lanes", 2, "Build")
+        self.assertNotEqual(first.worktree_path, second.worktree_path)
+        self.assertNotEqual(first.branch, second.branch)

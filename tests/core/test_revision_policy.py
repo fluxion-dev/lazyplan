@@ -85,6 +85,39 @@ class TestSnapshot(unittest.TestCase):
             [("plan", "worktree_required", "", "True")],
         )
 
+    def test_lane_fields_are_part_of_scope(self) -> None:
+        plan, milestones, tasks, criteria, keys = sample()
+        plan.dispatch_mode = "parallel"
+        plan.max_agents = 3
+        milestones[0].lane_group = 2
+        milestones[0].agent_role = "qa"
+        tasks[10][0].role = "docs"
+        changed = build_snapshot(plan, milestones, tasks, criteria, keys)
+
+        changes = diff_snapshots(snapshot(), changed)
+        self.assertEqual(
+            [(item.kind, item.field, item.before, item.after) for item in changes],
+            [
+                ("plan", "dispatch_mode", "serial", "parallel"),
+                ("plan", "max_agents", "1", "3"),
+                ("milestone", "agent_role", "implementer", "qa"),
+                ("milestone", "lane_group", "1", "2"),
+                ("task", "role", "implementer", "docs"),
+            ],
+        )
+
+    def test_schema_upgrade_ignores_fields_missing_from_old_snapshots(self) -> None:
+        old = copy.deepcopy(snapshot())
+        old["schema"] = 2
+        for field in ("dispatch_mode", "max_agents"):
+            old["plan"].pop(field)
+        for milestone in old["milestones"]:
+            milestone.pop("lane_group")
+            milestone.pop("agent_role")
+            for task in milestone["tasks"]:
+                task.pop("role")
+        self.assertEqual(diff_snapshots(old, snapshot()), ())
+
     def test_scope_only(self) -> None:
         plan, milestones, tasks, criteria, keys = sample()
         plan.status = Status.DONE

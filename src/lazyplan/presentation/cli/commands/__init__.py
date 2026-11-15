@@ -31,6 +31,7 @@ from .comment import (
     _cmd_comment,
     _cmd_note,
 )
+from .dispatch import _cmd_dispatch
 from .doctor import _cmd_doctor
 from .forge import (
     _cmd_pr_auth,
@@ -62,10 +63,8 @@ from .plan import (
     _cmd_delete,
     _cmd_delete_criteria,
     _cmd_list,
-    _cmd_plan_apply,
     _cmd_plan_approve,
     _cmd_plan_diff,
-    _cmd_plan_recipe,
     _cmd_plan_revisions,
     _cmd_reconcile,
     _cmd_show,
@@ -96,6 +95,10 @@ from .question import (
     _cmd_question_resolve,
 )
 from .ready import _cmd_plan_ready
+from .recipes import (
+    _cmd_plan_apply,
+    _cmd_plan_recipe,
+)
 from .refs import (
     _cmd_ref_link,
     _cmd_ref_list,
@@ -214,6 +217,7 @@ _COMMANDS: dict[str, Callable[[AppPort, Namespace, str], int]] = {
     "share": _cmd_share,
     "sync": _cmd_sync,
     "next": _cmd_next,
+    "dispatch": _cmd_dispatch,
     "claim": _cmd_claim,
     "claims": _cmd_claims,
     "who": _cmd_claims,

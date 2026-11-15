@@ -72,6 +72,23 @@ class DoctorCase(unittest.TestCase):
         self.assertIn(report["hook_probe"]["ok"], (True, False))
         self.assertIn("db", report["hook_probe"])
 
+    def test_setup_installs_agent_profiles(self):
+        self.assertEqual(lpui_main(["setup", "--yes", "--agents", "claude", "--json"]), 0)
+        profile = self.home / ".claude" / "agents" / "lazyplan-implementer.md"
+        self.assertTrue(profile.is_file())
+        code, report = self._json(["doctor", "--json"])
+        self.assertIn(str(profile), report["profiles"]["files"])
+        self.assertEqual(report["profiles"]["missing"], [])
+        self.assertEqual(code, 0, report)
+
+    def test_doctor_reports_a_missing_profile(self):
+        self.assertEqual(lpui_main(["setup", "--yes", "--agents", "claude", "--json"]), 0)
+        (self.home / ".claude" / "agents" / "lazyplan-qa.md").unlink()
+        code, report = self._json(["doctor", "--json"])
+        self.assertEqual(code, 1)
+        self.assertTrue(report["profiles"]["missing"])
+        self.assertFalse(report["clean"])
+
     def test_findings_exit_one(self):
         plan_dir = self.repo / PLAN_DIR
         plan_dir.mkdir(parents=True)

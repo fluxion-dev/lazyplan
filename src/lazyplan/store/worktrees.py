@@ -10,7 +10,7 @@ from .base import StoreBase
 
 
 class WorktreesMixin(StoreBase):
-    """Register, read, and remove one checkout per plan and repository."""
+    """Register, read, and remove checkouts per plan, repository, and lane."""
 
     def register_plan_worktree(
         self,
@@ -21,8 +21,9 @@ class WorktreesMixin(StoreBase):
         repo_remote: str = "",
         actor: str = "human",
         registered_at: float = 0.0,
+        milestone_id: int | None = None,
     ) -> PlanWorktree:
-        """Register or refresh one plan worktree; unique per plan and repo."""
+        """Register or refresh one checkout; unique per plan, repo, and lane."""
         if self.get_plan(plan_id) is None:
             raise KeyError(f"plan #{plan_id} not found")
         repo = self.resolve_repo_path(repo_path)
@@ -31,40 +32,84 @@ class WorktreesMixin(StoreBase):
             raise ValueError("repo path must not be empty")
         if not worktree.strip():
             raise ValueError("worktree path must not be empty")
+        if milestone_id is not None:
+            self._check_lane(plan_id, milestone_id)
         stamp = registered_at if registered_at > 0 else time.time()
         with self._connect() as conn:
-            conn.execute(
-                "INSERT INTO plan_worktrees"
-                " (plan_id, repo_path, repo_remote, worktree_path, branch, registered_at)"
-                " VALUES (?,?,?,?,?,?)"
-                " ON CONFLICT(plan_id, repo_path) DO UPDATE SET"
-                " repo_remote=excluded.repo_remote,"
-                " worktree_path=excluded.worktree_path,"
-                " branch=excluded.branch,"
-                " registered_at=excluded.registered_at",
-                (plan_id, repo, repo_remote.strip(), worktree, branch.strip(), stamp),
+            existing = conn.execute(
+                "SELECT id FROM plan_worktrees"
+                " WHERE plan_id=? AND repo_path=? AND milestone_id IS ?",
+                (plan_id, repo, milestone_id),
+            ).fetchone()
+            values = (
+                repo_remote.strip(),
+                worktree,
+                branch.strip(),
+                stamp,
+                plan_id,
+                repo,
+                milestone_id,
             )
+            if existing is None:
+                conn.execute(
+                    "INSERT INTO plan_worktrees"
+                    " (plan_id, milestone_id, repo_path, repo_remote, worktree_path,"
+                    " branch, registered_at)"
+                    " VALUES (?,?,?,?,?,?,?)",
+                    (
+                        plan_id,
+                        milestone_id,
+                        repo,
+                        repo_remote.strip(),
+                        worktree,
+                        branch.strip(),
+                        stamp,
+                    ),
+                )
+            else:
+                conn.execute(
+                    "UPDATE plan_worktrees"
+                    " SET repo_remote=?, worktree_path=?, branch=?, registered_at=?"
+                    " WHERE plan_id=? AND repo_path=? AND milestone_id IS ?",
+                    values,
+                )
             row = conn.execute(
-                "SELECT * FROM plan_worktrees WHERE plan_id=? AND repo_path=?",
-                (plan_id, repo),
+                "SELECT * FROM plan_worktrees"
+                " WHERE plan_id=? AND repo_path=? AND milestone_id IS ?",
+                (plan_id, repo, milestone_id),
             ).fetchone()
             assert row is not None
             worktree_row = self._row_to_plan_worktree(row)
-        self.log(actor, "worktree", "register", f"plan #{plan_id}: {worktree}")
+        lane = f" lane M{milestone_id}" if milestone_id is not None else ""
+        self.log(actor, "worktree", "register", f"plan #{plan_id}{lane}: {worktree}")
         return worktree_row
 
-    def get_plan_worktree(self, plan_id: int, repo_path: str) -> PlanWorktree | None:
-        """The registered worktree for one plan and repo, or None."""
+    def _check_lane(self, plan_id: int, milestone_id: int) -> None:
+        """Refuse a lane that does not belong to the plan."""
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT plan_id FROM milestones WHERE id=?", (milestone_id,)
+            ).fetchone()
+        if row is None:
+            raise KeyError(f"milestone #{milestone_id} not found")
+        if int(row["plan_id"]) != plan_id:
+            raise ValueError(f"milestone #{milestone_id} does not belong to plan #{plan_id}")
+
+    def get_plan_worktree(
+        self, plan_id: int, repo_path: str, milestone_id: int | None = None
+    ) -> PlanWorktree | None:
+        """The registered checkout for one plan, repo, and lane, or None."""
         repo = self.resolve_repo_path(repo_path)
         with self._connect() as conn:
             row = conn.execute(
-                "SELECT * FROM plan_worktrees WHERE plan_id=? AND repo_path=?",
-                (plan_id, repo),
+                "SELECT * FROM plan_worktrees"
+                " WHERE plan_id=? AND repo_path=? AND milestone_id IS ?",
+                (plan_id, repo, milestone_id),
             ).fetchone()
         return None if row is None else self._row_to_plan_worktree(row)
 
     def list_plan_worktrees(self, plan_id: int) -> list[PlanWorktree]:
-        """Every registered worktree for one plan, oldest first."""
+        """Every registered checkout for one plan, oldest first."""
         with self._connect() as conn:
             rows = conn.execute(
                 "SELECT * FROM plan_worktrees WHERE plan_id=? ORDER BY id",
@@ -81,22 +126,31 @@ class WorktreesMixin(StoreBase):
             lambda row: int(row["plan_id"]),
         )
 
-    def remove_plan_worktree(self, plan_id: int, repo_path: str, actor: str = "human") -> bool:
-        """Remove one registration; False when the pair was never registered."""
+    def remove_plan_worktree(
+        self,
+        plan_id: int,
+        repo_path: str,
+        actor: str = "human",
+        milestone_id: int | None = None,
+    ) -> bool:
+        """Remove one registration; False when the row was never registered."""
         repo = self.resolve_repo_path(repo_path)
         with self._connect() as conn:
             cur = conn.execute(
-                "DELETE FROM plan_worktrees WHERE plan_id=? AND repo_path=?",
-                (plan_id, repo),
+                "DELETE FROM plan_worktrees WHERE plan_id=? AND repo_path=? AND milestone_id IS ?",
+                (plan_id, repo, milestone_id),
             )
             ok = (cur.rowcount or 0) > 0
         if ok:
-            self.log(actor, "worktree", "remove", f"plan #{plan_id}: {repo}")
+            lane = f" lane M{milestone_id}" if milestone_id is not None else ""
+            self.log(actor, "worktree", "remove", f"plan #{plan_id}{lane}: {repo}")
         return ok
 
     @staticmethod
     def _row_to_plan_worktree(row: sqlite3.Row) -> PlanWorktree:
         """Map one sqlite row to the entity."""
+        keys = set(row.keys())
+        raw_lane = row["milestone_id"] if "milestone_id" in keys else None
         return PlanWorktree(
             id=int(row["id"]),
             plan_id=int(row["plan_id"]),
@@ -105,4 +159,5 @@ class WorktreesMixin(StoreBase):
             repo_remote=str(row["repo_remote"]),
             branch=str(row["branch"]),
             registered_at=float(row["registered_at"]),
+            milestone_id=int(raw_lane) if raw_lane is not None else None,
         )

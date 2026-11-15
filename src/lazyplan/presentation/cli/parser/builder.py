@@ -12,6 +12,7 @@ from .coordination import (
     add_claims,
     add_comment,
     add_context,
+    add_dispatch,
     add_hook,
     add_lint,
     add_mcp,
@@ -101,6 +102,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_review(sub, common)
     add_ship(sub, common)
     add_next(sub, common)
+    add_dispatch(sub, common)
     add_claim(sub, common)
     add_note(sub, common)
     add_claims(sub, common)

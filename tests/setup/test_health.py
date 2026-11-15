@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from lazyplan.infrastructure import hook_install
+from lazyplan.infrastructure import hook_install, skills
 from lazyplan.infrastructure.integrations import catalog, hook_id, skill_id
 from lazyplan.presentation.setup import health
 from lazyplan.presentation.setup.layout import SetupChoice
@@ -60,9 +60,10 @@ class HealthCase(unittest.TestCase):
         return {finding.id: finding for finding in report.findings}
 
     def install_skill(self) -> None:
-        dest = self.home / ".claude" / "skills" / "lazyplan" / "SKILL.md"
-        dest.parent.mkdir(parents=True)
-        dest.write_text("installed", encoding="utf-8")
+        for spec in skills.SKILLS:
+            dest = self.home / ".claude" / "skills" / spec.name / "SKILL.md"
+            dest.parent.mkdir(parents=True)
+            dest.write_text("installed", encoding="utf-8")
 
 
 class IntegrationFindingsTest(HealthCase):

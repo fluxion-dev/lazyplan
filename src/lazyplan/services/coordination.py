@@ -10,7 +10,7 @@ from ..core.policies.coordination import parse_ttl, patterns_overlap, validate_b
 from ..core.ports.coordination import CoordinationPort
 from ..core.serialization import to_payload
 from .planning import end_claim, requeue_expired, set_status
-from .worktrees import checkout_gate
+from .worktrees import checkout_gate, lane_busy, lane_gate
 
 
 def overlaps(port: CoordinationPort, task_id: int) -> list[dict]:
@@ -85,6 +85,12 @@ def start_claim(
         blocker = checkout_gate(port, plan_id, worktree)
         if blocker and not (force and reason.strip()):
             raise ValueError(blocker)
+    lane_blocker = lane_gate(port, task_id, worktree)
+    if lane_blocker and not (force and reason.strip()):
+        raise ValueError(lane_blocker)
+    busy = lane_busy(port, task_id)
+    if busy and not (force and reason.strip()):
+        raise ValueError(busy)
     if check_overlap and not force:
         found = overlaps(port, task_id)
         if found:
@@ -106,7 +112,15 @@ def start_claim(
         repo_path=repo_path,
     )
     try:
-        set_status(port, "task", task_id, Status.DOING, actor=actor)
+        set_status(
+            port,
+            "task",
+            task_id,
+            Status.DOING,
+            actor=actor,
+            worktree=worktree,
+            check_lane=not (force and reason.strip()),
+        )
     except Exception:
         port.release_claim(task_id, actor, force=True)
         raise
@@ -158,6 +172,39 @@ def end_checkout_claims(port: CoordinationPort, checkout: str) -> list[int]:
     return ended
 
 
+def record_lane_handoffs(port: CoordinationPort, checkout: str) -> int:
+    """Record one lane handoff note per claimed task with open lane work."""
+    recorded = 0
+    for claim in checkout_claims(port, checkout):
+        task_id = int(claim["task_id"])
+        task = port.get_task(task_id)
+        if task is None or task.status is not Status.DOING:
+            continue
+        milestone = port.get_milestone(task.milestone_id)
+        if milestone is None:
+            continue
+        plan = port.get_plan(milestone.plan_id)
+        if plan is None or plan.dispatch_mode != "parallel":
+            continue
+        open_tasks = [
+            item for item in port.list_tasks(milestone.id) if item.status is not Status.DONE
+        ]
+        if not open_tasks:
+            continue
+        prefix = f"Lane M{milestone.id} handoff"
+        notes = port.list_notes("task", task_id)
+        if any(note.text.startswith(prefix) for note in notes):
+            continue
+        port.add_note(
+            "task",
+            task_id,
+            f"{prefix}: {len(open_tasks)} open task(s) remain.",
+            actor=str(claim["actor"]),
+        )
+        recorded += 1
+    return recorded
+
+
 def renew_task_claim(
     port: CoordinationPort, task_id: int, actor: str, ttl: str | None = None
 ) -> Claim:
@@ -182,6 +229,29 @@ def release_task_claim(
     }
 
 
+def _pick_candidate(
+    port: CoordinationPort,
+    candidates: list[Task],
+    worktree: str,
+    force: bool,
+    reason: str,
+    plan_id: int | None,
+) -> Task | None:
+    """First candidate this checkout may claim, or None with a lane refusal."""
+    if force and reason.strip():
+        return candidates[0]
+    chosen = next(
+        (item for item in candidates if not lane_gate(port, item.id, worktree)),
+        None,
+    )
+    if chosen is not None:
+        return chosen
+    blocker = next((lane_gate(port, item.id, worktree) for item in candidates), "")
+    if blocker and plan_id is not None:
+        raise ValueError(blocker)
+    return None
+
+
 def claim_next(
     port: CoordinationPort,
     actor: str,
@@ -193,6 +263,7 @@ def claim_next(
     repo_path: str = "",
     force: bool = False,
     reason: str = "",
+    lane_id: int | None = None,
 ) -> dict | None:
     """Select and optionally claim the first eligible todo, retrying lost races."""
     if plan_id is not None and worktree:
@@ -204,7 +275,14 @@ def claim_next(
         tasks = port.claimable_tasks(plan_id)
         if not tasks:
             return None
-        task = next((item for item in tasks if not overlaps(port, item.id)), None)
+        candidates = [
+            item
+            for item in tasks
+            if not overlaps(port, item.id) and (lane_id is None or item.milestone_id == lane_id)
+        ]
+        if not candidates:
+            return None
+        task = _pick_candidate(port, candidates, worktree, force, reason, plan_id)
         if task is None:
             return None
         if suggest:

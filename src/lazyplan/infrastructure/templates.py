@@ -141,6 +141,10 @@ Commit strategy: state the ordered slices of small commits in `what`, and the
 check that keeps each commit green. Do not plan one batch commit for the whole
 plan.
 
+Lanes: `dispatch_mode` is `serial` or `parallel`, and `max_agents` caps
+concurrent lanes. A parallel plan needs an integrator lane in a later wave, and
+one lane holds one doing task at a time.
+
 Readability (enforced): write `why`/`what` for scanning — short paragraphs
 separated by blank lines, sections with headers or lists where needed
 (e.g. Scope in/out, Deliverables in order, Constraints/assumptions,
@@ -168,6 +172,10 @@ How `add-milestone` (and the TUI create command) uses this file:
 
 Commit order: map each task to the slice it advances.
 
+Lane: `lane_group` is the wave, and `agent_role` names the profile that owns
+the lane. Tasks run serially inside it, so split a milestone that needs two
+agents at once.
+
 Readability (enforced): structure `desc` in paragraphs and sections —
 narrative first, then inputs/prerequisites. Long single-blob text is
 rejected at creation; short descs stay legal.
@@ -190,6 +198,10 @@ How `add-task` (and the TUI create command) uses this file:
   referencing the plan criterion it satisfies (never ship example text).
 
 Commit slice: one task lands as one or more small commits. Every commit is green — the relevant checks pass and the tree builds — and independently reviewable. Name what each commit proves and the verification that keeps it green.
+
+Role: `role` names the profile that runs this slice: implementer, qa,
+refactor, docs, reviewer, integrator, or scout. The lane stays serial
+regardless of role.
 
 Readability (enforced): structure `desc` in paragraphs and sections.
 Long single-blob text is rejected at creation; short descs stay legal.

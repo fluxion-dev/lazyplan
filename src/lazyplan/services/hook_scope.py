@@ -12,9 +12,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from ..core.entities import Plan, Status, Task
+from ..core.entities import Milestone, Plan, Status, Task
 from ..core.ports.app import AppPort
+from ..core.ports.planning import PlanningPort
 from . import coordination
+from .worktrees import lane_registrations
 
 LOCAL_PARTS = (".agents", "lazyplan")
 
@@ -60,9 +62,28 @@ def _claimed_here(store: AppPort, repo: str, ignored: set[int]) -> bool:
     )
 
 
-def _same_checkout(left: str, right: str, store: AppPort) -> bool:
+def _same_checkout(left: str, right: str, store: PlanningPort) -> bool:
     """True when two paths resolve to one checkout."""
     return store.normalize_repo_path(left) == store.normalize_repo_path(right)
+
+
+def lane_for_checkout(
+    store: PlanningPort, cwd: str | Path | None = None
+) -> tuple[Plan, Milestone] | None:
+    """The doing plan and lane registered at this checkout, if any."""
+    repo = store.checkout_path(str(cwd or Path.cwd()))
+    for plan in store.list_plans():
+        if plan.status != Status.DOING:
+            continue
+        for row in lane_registrations(store, plan.id):
+            if row.milestone_id is None:
+                continue
+            if not _same_checkout(row.worktree_path, repo, store):
+                continue
+            milestone = store.get_milestone(row.milestone_id)
+            if milestone is not None:
+                return plan, milestone
+    return None
 
 
 def _isolated_plans(store: AppPort, repo: str, doing: list[Plan]) -> tuple[set[int], set[int]]:
@@ -85,6 +106,35 @@ def _isolated_plans(store: AppPort, repo: str, doing: list[Plan]) -> tuple[set[i
 def _doing_task(store: AppPort, plan_id: int) -> Task | None:
     """First doing task under one plan, if any."""
     for milestone in store.list_milestones(plan_id):
+        for task in store.list_tasks(milestone.id):
+            if task.status == Status.DOING:
+                return task
+    return None
+
+
+def _claimed_task(store: AppPort, plan_id: int, repo: str) -> Task | None:
+    """The doing task this checkout's live claim holds for one plan."""
+    for claim in coordination.checkout_claims(store, repo):
+        if int(claim.get("plan_id") or 0) != plan_id:
+            continue
+        task = store.get_task(int(claim["task_id"]))
+        if task is not None and task.status == Status.DOING:
+            return task
+    return None
+
+
+def _lane_task(store: AppPort, plan: Plan, repo: str) -> Task | None:
+    """A doing task in a lane registered at this checkout, else the first doing."""
+    if plan.dispatch_mode != "parallel":
+        return _doing_task(store, plan.id)
+    lanes = {
+        row.milestone_id
+        for row in lane_registrations(store, plan.id)
+        if _same_checkout(row.worktree_path, repo, store)
+    }
+    for milestone in store.list_milestones(plan.id):
+        if milestone.id not in lanes:
+            continue
         for task in store.list_tasks(milestone.id):
             if task.status == Status.DOING:
                 return task
@@ -118,7 +168,7 @@ def resolve(store: AppPort, cwd: str | Path | None = None) -> HookScope:
             continue
         if not local and plan.id not in registered and not _plan_linked(store, plan.id, linked):
             continue
-        task = _doing_task(store, plan.id)
+        task = _claimed_task(store, plan.id, repo) or _lane_task(store, plan, repo)
         if task is not None:
             return HookScope(repo=repo, managed=True, task=task)
     return HookScope(repo=repo, managed=True)

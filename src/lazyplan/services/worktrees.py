@@ -6,8 +6,8 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from ..core.entities import PlanWorktree
-from ..core.policies.worktrees import quote_path
+from ..core.entities import Milestone, Plan, PlanWorktree, Status
+from ..core.policies.worktrees import derive_lane_worktree, quote_path
 from ..core.ports.planning import PlanningPort
 from ..core.ports.repos import ReposPort
 from ..infrastructure.repo import git_common_dir, git_worktree_paths
@@ -31,8 +31,90 @@ def _refuse(
     return WorktreeVerification(False, reason=reason, branch=branch, head=head, dirty=dirty)
 
 
+def lane_registrations(
+    store: PlanningPort, plan_id: int, milestone_id: int | None = None
+) -> list[PlanWorktree]:
+    """Registered checkouts for one plan, optionally one lane."""
+    rows = store.list_plan_worktrees(plan_id)
+    if milestone_id is None:
+        return rows
+    return [row for row in rows if row.milestone_id == milestone_id]
+
+
+def lane_worktree_entries(
+    store: ReposPort,
+    plan: Plan,
+    milestone: Milestone,
+    repos: list[dict] | None = None,
+) -> list[dict]:
+    """Derived, registered, and command-ready checkouts for one lane."""
+    repos = store.list_repos("plan", plan.id) if repos is None else repos
+    all_rows = lane_registrations(store, plan.id)
+    rows = [row for row in all_rows if row.milestone_id == milestone.id]
+    if not rows and plan.dispatch_mode != "parallel":
+        rows = [row for row in all_rows if row.milestone_id is None]
+    entries: list[dict] = []
+    for repo in repos:
+        repo_path = str(repo["repo_path"])
+        target = derive_lane_worktree(repo_path, plan.id, plan.name, milestone.id, milestone.title)
+        registered = next(
+            (
+                row
+                for row in rows
+                if store.normalize_repo_path(row.repo_path) == store.normalize_repo_path(repo_path)
+            ),
+            None,
+        )
+        worktree_path = registered.worktree_path if registered is not None else target.worktree_path
+        branch = registered.branch if registered is not None else target.branch
+        base = str(repo.get("base_sha") or repo.get("branch") or "HEAD")
+        entries.append(
+            {
+                "repo_path": target.repo_path,
+                "worktree_path": worktree_path,
+                "branch": branch,
+                "registered": registered is not None,
+                "exists": os.path.exists(worktree_path),
+                "git_command": (
+                    f"git -C {quote_path(target.repo_path)} worktree add -b"
+                    f" {target.branch} {quote_path(target.worktree_path)}"
+                    f" {quote_path(base)}"
+                ),
+                "register_command": (
+                    f"lpui plan worktree add --id {plan.id}"
+                    f" --milestone {milestone.id} --repo {quote_path(target.repo_path)}"
+                ),
+            }
+        )
+    return entries
+
+
+def lane_busy(store: PlanningPort, task_id: int) -> str:
+    """Refusal text when another task is already doing in the same lane."""
+    task = store.get_task(task_id)
+    if task is None:
+        return ""
+    milestone = store.get_milestone(task.milestone_id)
+    if milestone is None:
+        return ""
+    plan = store.get_plan(milestone.plan_id)
+    if plan is None or plan.dispatch_mode != "parallel":
+        return ""
+    for other in store.list_tasks(milestone.id):
+        if other.id == task_id or other.status is not Status.DOING:
+            continue
+        get_claim = getattr(store, "get_claim", None)
+        held = get_claim(other.id) if get_claim is not None else None
+        holder = held.actor if held is not None else "another agent"
+        return (
+            f"lane M{milestone.id} already has T{other.id} doing by {holder};"
+            f" finish it or use `lpui claim --id {task_id} --force --reason TEXT`"
+        )
+    return ""
+
+
 def worktree_gate(store: ReposPort, plan_id: int) -> str:
-    """Refusal text when an isolation-required plan has a missing registration."""
+    """Refusal text when an isolation-required plan is missing a worktree."""
     plan = store.get_plan(plan_id)
     if plan is None or not plan.worktree_required:
         return ""
@@ -42,17 +124,76 @@ def worktree_gate(store: ReposPort, plan_id: int) -> str:
             f"plan #{plan_id} requires isolation but has no linked repo;"
             f" run `lpui plan worktree --print --id {plan_id}`"
         )
+    registered_paths = {
+        os.path.normcase(os.path.abspath(row.repo_path))
+        for row in lane_registrations(store, plan_id)
+    }
     missing = [
         str(row["repo_path"])
         for row in repos
-        if store.get_plan_worktree(plan_id, str(row["repo_path"])) is None
+        if os.path.normcase(os.path.abspath(str(row["repo_path"]))) not in registered_paths
     ]
-    if not missing:
+    if missing:
+        return (
+            f"plan #{plan_id} requires a registered worktree for: {', '.join(missing)};"
+            f" run `lpui plan worktree --print --id {plan_id}`"
+        )
+    if plan.dispatch_mode == "parallel":
+        lanes = {row.milestone_id for row in lane_registrations(store, plan_id)}
+        missing_lanes = [
+            milestone.id
+            for milestone in store.list_milestones(plan_id)
+            if milestone.status is not Status.DONE and milestone.id not in lanes
+        ]
+        if missing_lanes:
+            names = ", ".join(f"M{row}" for row in missing_lanes)
+            first = missing_lanes[0]
+            return (
+                f"plan #{plan_id} requires a registered worktree for lanes: {names};"
+                f" run `lpui plan worktree print --id {plan_id} --milestone {first}`"
+            )
+    return ""
+
+
+def lane_gate(store: PlanningPort, task_id: int, checkout: str) -> str:
+    """Refusal text when a task must run in a different lane checkout."""
+    if not checkout.strip():
         return ""
-    return (
-        f"plan #{plan_id} requires a registered worktree for: {', '.join(missing)};"
-        f" run `lpui plan worktree --print --id {plan_id}`"
+    task = store.get_task(task_id)
+    if task is None:
+        return ""
+    milestone = store.get_milestone(task.milestone_id)
+    if milestone is None:
+        return ""
+    plan = store.get_plan(milestone.plan_id)
+    if plan is None or not plan.worktree_required or plan.dispatch_mode != "parallel":
+        return ""
+    rows = lane_registrations(store, plan.id)
+    lane_rows = [row for row in rows if row.milestone_id == milestone.id]
+    if not lane_rows:
+        return (
+            f"lane M{milestone.id} of plan #{plan.id} has no registered worktree;"
+            f" run `lpui plan worktree print --id {plan.id} --milestone {milestone.id}`"
+        )
+    current = os.path.normcase(os.path.abspath(checkout))
+    if any(os.path.normcase(os.path.abspath(row.worktree_path)) == current for row in lane_rows):
+        return ""
+    other = next(
+        (
+            row
+            for row in rows
+            if row.milestone_id is not None
+            and os.path.normcase(os.path.abspath(row.worktree_path)) == current
+        ),
+        None,
     )
+    if other is not None:
+        return (
+            f"this checkout is lane M{other.milestone_id};"
+            f" task #{task_id} belongs to lane M{milestone.id}"
+        )
+    expected = ", ".join(row.worktree_path for row in lane_rows)
+    return f"task #{task_id} must run in lane M{milestone.id}: {expected}"
 
 
 def checkout_gate(store: ReposPort, plan_id: int, checkout: str) -> str:

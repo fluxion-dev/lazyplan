@@ -14,16 +14,16 @@ python3 tools/ia_inventory.py --check
 
 | Surface | Count |
 | --- | ---: |
-| cli_commands | 50 |
+| cli_commands | 51 |
 | palette_commands | 52 |
-| mcp_tools | 67 |
+| mcp_tools | 68 |
 | mcp_resources | 3 |
 | tui_screens | 18 |
 | tui_bindings | 65 |
 | setup_steps | 4 |
 | hook_events | 35 |
 | doc_files | 9 |
-| doc_headings | 92 |
+| doc_headings | 95 |
 | tui_key_conflicts | 15 |
 | stale_claims | 0 |
 | env_names | 11 |
@@ -42,6 +42,7 @@ python3 tools/ia_inventory.py --check
 | `completion` | --json, --porcelain, --version, --actor, --heal, --no-heal, --shell |
 | `context` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --max-chars |
 | `criterion` | --json, --porcelain, --version, --actor, --heal, --no-heal |
+| `dispatch` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --lane, --max-chars |
 | `doctor` | --json, --porcelain, --version, --actor, --heal, --no-heal |
 | `export` | --json, --porcelain, --version, --actor, --heal, --no-heal, --format, --plan, --file, --force |
 | `feed` | --json, --porcelain, --version, --actor, --heal, --no-heal, --limit, --follow, --interval, --session |
@@ -58,7 +59,7 @@ python3 tools/ia_inventory.py --check
 | `maint` | --json, --porcelain, --version, --actor, --heal, --no-heal |
 | `mcp` | --json, --porcelain, --version, --actor, --heal, --no-heal, --read-only |
 | `milestone` | --json, --porcelain, --version, --actor, --heal, --no-heal |
-| `next` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --ttl, --note, --suggest, --force, --reason |
+| `next` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --ttl, --note, --lane, --suggest, --force, --reason |
 | `note` | --json, --porcelain, --version, --actor, --heal, --no-heal, --kind, --id, --text, --limit |
 | `notes` | --json, --porcelain, --version, --actor, --heal, --no-heal, --all, --since |
 | `plan` | --json, --porcelain, --version, --actor, --heal, --no-heal |
@@ -171,6 +172,7 @@ python3 tools/ia_inventory.py --check
 | `criterion_relate` | Relate a criterion to a proving task. |
 | `criterion_unrelate` | Remove a criterion proof relation. |
 | `delete_row` | Delete a plan, milestone, or task. |
+| `dispatch` | Plan lanes, waves, capacity, worktree actions, and worker prompts. |
 | `edit_row` | Edit a plan, milestone, or task. |
 | `export_plan` | Markdown export of one plan. |
 | `finish_task` | Link branch commits and finish a task through the gates. |

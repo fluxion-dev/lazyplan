@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from lazyplan.infrastructure import agent_install
 from lazyplan.infrastructure.repo import find_repo_root
 from lazyplan.presentation import setup
 from lazyplan.services import hooks as hook_service
@@ -24,16 +25,19 @@ def _worktree_row_findings(row: PlanWorktree) -> list[dict]:
     base = {
         "kind": "worktree",
         "plan_id": row.plan_id,
+        "milestone_id": row.milestone_id,
         "repo_path": row.repo_path,
         "worktree_path": row.worktree_path,
     }
     stale = stale_reason(row)
     if stale:
         state = "missing-path" if "does not exist" in stale else "unlisted"
-        return [{**base, "state": state, "detail": stale}]
+        lane = f"lane M{row.milestone_id} " if row.milestone_id else ""
+        return [{**base, "state": state, "detail": f"{lane}{stale}"}]
     check = verify_worktree(row.repo_path, row.worktree_path, row.branch)
     if not check.ok:
-        return [{**base, "state": "drift", "detail": check.reason}]
+        lane = f"lane M{row.milestone_id} " if row.milestone_id else ""
+        return [{**base, "state": "drift", "detail": f"{lane}{check.reason}"}]
     return []
 
 
@@ -49,15 +53,65 @@ def _worktree_findings(store: AppPort | None) -> list[dict]:
                 {
                     "kind": "worktree",
                     "plan_id": plan.id,
+                    "milestone_id": None,
                     "repo_path": "",
                     "worktree_path": "",
                     "state": "unregistered",
                     "detail": f"plan #{plan.id} is doing without a registered worktree",
                 }
             )
+        elif (
+            plan.worktree_required
+            and plan.status == Status.DOING
+            and plan.dispatch_mode == "parallel"
+        ):
+            lanes = {row.milestone_id for row in rows}
+            for milestone in store.list_milestones(plan.id):
+                if milestone.id in lanes:
+                    continue
+                findings.append(
+                    {
+                        "kind": "worktree",
+                        "plan_id": plan.id,
+                        "milestone_id": milestone.id,
+                        "repo_path": "",
+                        "worktree_path": "",
+                        "state": "unregistered-lane",
+                        "detail": f"lane M{milestone.id} has no registered worktree",
+                    }
+                )
         for row in rows:
             findings.extend(_worktree_row_findings(row))
     return findings
+
+
+def _profile_report(
+    choice: setup.SetupChoice, state: setup.SetupState, root: Path | None, home: Path
+) -> dict:
+    """Missing and unmarked agent profiles for the remembered setup."""
+    profile_agents = (
+        [] if choice.explicit_db or not state.profile_files else list(choice.agents or state.agents)
+    )
+    scope = "project" if state.placement == "repo" and root is not None else "global"
+    files = agent_install.profile_paths(scope, root, home, profile_agents)
+    missing = [str(path) for path in files if not path.is_file()]
+    unmanaged = []
+    for path in files:
+        if not path.is_file():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        if agent_install.MARKER not in text:
+            unmanaged.append(str(path))
+    return {
+        "scope": scope,
+        "agents": profile_agents,
+        "files": [str(path) for path in files],
+        "missing": missing,
+        "unmanaged": unmanaged,
+    }
 
 
 def _doctor_data(
@@ -78,6 +132,7 @@ def _doctor_data(
         "files": list(state.hook_files),
         "missing": missing_hooks,
     }
+    report["profiles"] = _profile_report(choice, state, root, home)
     report["state"] = state.to_dict()
     report["skills"] = [str(path) for path in skill_files]
     report["worktrees"] = _worktree_findings(store)
@@ -89,6 +144,7 @@ def _doctor_data(
     ]
     issues = bool(report["findings"]) or bool(missing_hooks)
     issues = issues or bool(report["pending_integrations"]) or bool(report["worktrees"])
+    issues = issues or bool(report["profiles"]["missing"])
     issues = issues or (state.hooks and not state.hook_files)
     issues = issues or state.version != setup.SETUP_VERSION
     report["clean"] = bool(report["clean"] and not issues)
@@ -109,6 +165,9 @@ def _print_doctor(layout: setup_layout.SetupLayout, skill_files: list[Path], rep
     print(f"hook check:{' ok' if probe['ok'] else ' ' + str(probe['reason'])}")
     for path in hooks["missing"]:
         print(f"hook miss: {path}")
+    for path in report.get("profiles", {}).get("files", []):
+        state_word = "missing" if path in report["profiles"]["missing"] else "ok"
+        print(f"profile:   {path} ({state_word})")
     print(f"clean:     {'yes' if report['clean'] else 'no'}")
     for item in report["misplaced"]:
         print(f"misplaced: {item}")

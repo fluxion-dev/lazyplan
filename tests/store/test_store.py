@@ -446,6 +446,7 @@ class TestStore(unittest.TestCase):
                 {
                     "id",
                     "plan_id",
+                    "milestone_id",
                     "repo_path",
                     "repo_remote",
                     "worktree_path",
@@ -455,6 +456,8 @@ class TestStore(unittest.TestCase):
             )
             indexes = {row[1] for row in conn.execute("PRAGMA index_list(plan_worktrees)")}
             self.assertIn("idx_plan_worktrees_plan", indexes)
+            self.assertIn("idx_plan_worktrees_plan_repo", indexes)
+            self.assertIn("idx_plan_worktrees_lane", indexes)
 
         again = Store(legacy)
         self.assertEqual(again.get_plan(1).name, "Keep")
@@ -471,6 +474,74 @@ class TestStore(unittest.TestCase):
         reopened = Store(legacy)
         self.assertFalse(reopened.get_plan(old.id).worktree_required)
         self.assertTrue(reopened.add_plan("New").worktree_required)
+
+    def test_migrate_lane_fields_without_losing_rows(self):
+        legacy = os.path.join(self.tmp.name, "legacy-lanes.db")
+        store = Store(legacy)
+        plan = store.add_plan("Keep", dispatch_mode="parallel", max_agents=2)
+        milestone = store.add_milestone(plan.id, "Slice", lane_group=3, agent_role="integrator")
+        task = store.add_task(milestone.id, "Work", role="docs")
+        with closing(sqlite3.connect(legacy)) as conn:
+            for table, column in (
+                ("plans", "dispatch_mode"),
+                ("plans", "max_agents"),
+                ("milestones", "lane_group"),
+                ("milestones", "agent_role"),
+                ("tasks", "role"),
+            ):
+                conn.execute(f"ALTER TABLE {table} DROP COLUMN {column}")
+            conn.execute(f"PRAGMA user_version = {migrate_mod.SCHEMA_VERSION - 1}")
+            conn.commit()
+
+        reopened = Store(legacy)
+        kept_plan = reopened.get_plan(plan.id)
+        kept_milestone = reopened.get_milestone(milestone.id)
+        kept_task = reopened.get_task(task.id)
+        self.assertIsNotNone(kept_plan)
+        self.assertIsNotNone(kept_milestone)
+        self.assertIsNotNone(kept_task)
+        self.assertEqual(kept_plan.dispatch_mode, "serial")
+        self.assertEqual(kept_plan.max_agents, 1)
+        self.assertEqual(kept_milestone.lane_group, 1)
+        self.assertEqual(kept_milestone.agent_role, "implementer")
+        self.assertEqual(kept_task.role, "implementer")
+
+        with closing(sqlite3.connect(legacy)) as conn:
+            for table, column in (
+                ("plans", "dispatch_mode"),
+                ("plans", "max_agents"),
+                ("milestones", "lane_group"),
+                ("milestones", "agent_role"),
+                ("tasks", "role"),
+            ):
+                columns = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
+                self.assertIn(column, columns)
+
+        updated = reopened.update_plan(plan.id, dispatch_mode="parallel", max_agents=3)
+        self.assertEqual((updated.dispatch_mode, updated.max_agents), ("parallel", 3))
+        again = Store(legacy)
+        self.assertEqual(again.get_plan(plan.id).max_agents, 3)
+
+    def test_lane_fields_roundtrip_through_store_and_export(self):
+        plan = self.store.add_plan("Lanes", dispatch_mode="parallel", max_agents=3)
+        milestone = self.store.add_milestone(plan.id, "Lane A", lane_group=2, agent_role="qa")
+        task = self.store.add_task(milestone.id, "Slice", role="docs")
+        self.assertEqual(plan.dispatch_mode, "parallel")
+        self.assertEqual(plan.max_agents, 3)
+        self.assertEqual(milestone.lane_group, 2)
+        self.assertEqual(milestone.agent_role, "qa")
+        self.assertEqual(task.role, "docs")
+
+        data = services.export_all(self.store)
+        imported_db = os.path.join(tempfile.mkdtemp(), "lanes.db")
+        imported = Store(imported_db)
+        services.import_all(imported, data)
+        plan2 = imported.get_plan(1)
+        milestone2 = imported.get_milestone(1)
+        task2 = imported.get_task(1)
+        self.assertEqual((plan2.dispatch_mode, plan2.max_agents), ("parallel", 3))
+        self.assertEqual((milestone2.lane_group, milestone2.agent_role), (2, "qa"))
+        self.assertEqual(task2.role, "docs")
 
     def test_export_import_roundtrip(self):
         p = self.store.add_plan("P", goal="g")

@@ -325,12 +325,12 @@ class TestNativeInstall(SkillHomeCase):
 
     def test_unknown_tool_ignored(self):
         res = skills.install("project", self.repo, self.home, tools=["copilot"])
-        self.assertEqual(len(res.installed), 1)
+        self.assertEqual(len(res.installed), 2)
 
     def test_claude_deduped_across_flag_and_tools(self):
         res = skills.install("both", self.repo, self.home, with_claude_copy=True, tools=["claude"])
         claude_lines = [line for line in res.installed if os.path.join(".claude", "skills") in line]
-        self.assertEqual(len(claude_lines), 2)
+        self.assertEqual(len(claude_lines), 4)
 
     def test_second_run_reports_up_to_date(self):
         skills.install("project", self.repo, self.home, tools=["opencode"])
@@ -346,6 +346,8 @@ class TestNativeInstall(SkillHomeCase):
                 [
                     str(self.home / ".config/opencode/skills/lazyplan/SKILL.md"),
                     str(self.home / ".claude/skills/lazyplan/SKILL.md"),
+                    str(self.home / ".config/opencode/skills/lazyplan-orchestrate/SKILL.md"),
+                    str(self.home / ".claude/skills/lazyplan-orchestrate/SKILL.md"),
                 ]
             ),
         )
@@ -355,7 +357,10 @@ class TestNativeInstall(SkillHomeCase):
         res = skills.install("global", self.repo, self.home, tools=["copilot"])
         self.assertEqual(
             res.installed,
-            [f"{self.home / '.agents/skills/lazyplan/SKILL.md'} (wrote)"],
+            [
+                f"{self.home / '.agents/skills/lazyplan/SKILL.md'} (wrote)",
+                f"{self.home / '.agents/skills/lazyplan-orchestrate/SKILL.md'} (wrote)",
+            ],
         )
 
 
@@ -373,8 +378,15 @@ class TestSkillsDirOverride(SkillHomeCase):
     def test_flag_redirects_all_skill_writes(self):
         custom = self.tmp.name + "/custom-skills"
         res = skills.install("both", self.repo, self.home, tools=["opencode"], skills_dir=custom)
-        self.assertEqual(res.installed, [f"{Path(custom, 'lazyplan', 'SKILL.md')} (wrote)"])
+        self.assertEqual(
+            res.installed,
+            [
+                f"{Path(custom, 'lazyplan', 'SKILL.md')} (wrote)",
+                f"{Path(custom, 'lazyplan-orchestrate', 'SKILL.md')} (wrote)",
+            ],
+        )
         self.assertTrue(Path(custom, "lazyplan/SKILL.md").is_file())
+        self.assertTrue(Path(custom, "lazyplan-orchestrate/SKILL.md").is_file())
         self.assertFalse((self.repo / ".agents").exists())
 
 

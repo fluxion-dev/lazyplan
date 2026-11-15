@@ -69,11 +69,38 @@ def add_next(
     nxt.add_argument("--ttl", default="", metavar="TIME", help="lease length, e.g. 30m or 2.hours")
     nxt.add_argument("--note", default="", metavar="TEXT", help="note stored on the claim")
     nxt.add_argument(
+        "--lane",
+        type=int,
+        default=None,
+        metavar="ID",
+        help="only claim a task in this lane milestone",
+    )
+    nxt.add_argument(
         "--suggest", action="store_true", help="show the next task without claiming it"
     )
     nxt.add_argument("--force", action="store_true", help="override a worktree gate")
     nxt.add_argument(
         "--reason", default="", metavar="TEXT", help="why a worktree gate is overridden"
+    )
+
+
+def add_dispatch(
+    sub: argparse._SubParsersAction[argparse.ArgumentParser], common: argparse.ArgumentParser
+) -> None:
+
+    dp = sub.add_parser(
+        "dispatch",
+        help="show plan lanes, waves, capacity, and worker prompts",
+        parents=[common],
+    )
+    plan_id_arg(dp, help="plan to dispatch", required=True)
+    dp.add_argument("--lane", type=int, default=None, metavar="ID", help="one lane milestone")
+    dp.add_argument(
+        "--max-chars",
+        type=int,
+        default=4000,
+        metavar="N",
+        help="prompt budget in characters (default: 4000)",
     )
 
 

@@ -8,6 +8,11 @@ from ..core.entities import (
     Status,
     Task,
 )
+from ..core.policies.lanes import (
+    DEFAULT_AGENT_ROLE,
+    check_agent_role,
+    normalize_agent_role,
+)
 from ..core.policies.provenance import gate_state
 from .base import (
     StoreBase,
@@ -28,6 +33,7 @@ class TasksMixin(StoreBase):
             description=self._opt(r, keys, "description"),
             blocked=bool(r["blocked"]) if "blocked" in keys else False,
             blocked_reason=self._opt(r, keys, "blocked_reason"),
+            role=normalize_agent_role(r["role"]) if "role" in keys else DEFAULT_AGENT_ROLE,
         )
 
     def add_task(
@@ -37,6 +43,7 @@ class TasksMixin(StoreBase):
         description: str = "",
         actor: str = "human",
         reason: str = "",
+        role: str = DEFAULT_AGENT_ROLE,
     ) -> Task:
         """Insert a task row and log the event (no template fill; see services)."""
         t = Task(
@@ -44,6 +51,7 @@ class TasksMixin(StoreBase):
             milestone_id=milestone_id,
             title=title.strip(),
             description=description,
+            role=role,
         )
         with self._connect() as conn:
             row = conn.execute(
@@ -52,8 +60,9 @@ class TasksMixin(StoreBase):
             if row is None:
                 raise KeyError(f"milestone #{milestone_id} not found")
             cur = conn.execute(
-                "INSERT INTO tasks (milestone_id, title, status, description) VALUES (?,?,?,?)",
-                (t.milestone_id, t.title, t.status.value, t.description),
+                "INSERT INTO tasks (milestone_id, title, status, description, role)"
+                " VALUES (?,?,?,?,?)",
+                (t.milestone_id, t.title, t.status.value, t.description, t.role),
             )
             t.id = cur.lastrowid or 0
             self._record_scope_change(
@@ -92,27 +101,31 @@ class TasksMixin(StoreBase):
         description: str | None = None,
         actor: str = "human",
         reason: str = "",
+        role: str | None = None,
     ) -> Task | None:
         """Patch task fields and log."""
         t = self.get_task(tid)
         if t is None:
             return None
         plan_id = self._plan_for_kind("task", tid)
-        before = (t.title, t.description)
+        before = (t.title, t.description, t.role)
         if title is not None:
             if not title.strip():
                 raise ValueError("task title must not be empty")
             t.title = title.strip()
         if description is not None:
             t.description = description
-        after = (t.title, t.description)
+        if role is not None:
+            t.role = check_agent_role(role)
+        after = (t.title, t.description, t.role)
         with self._connect() as conn:
             conn.execute(
-                "UPDATE tasks SET title=?, description=? WHERE id=?",
-                (t.title, t.description, tid),
+                "UPDATE tasks SET title=?, description=?, role=? WHERE id=?",
+                (t.title, t.description, t.role, tid),
             )
             if plan_id is not None:
-                for field, old, new in zip(("title", "desc"), before, after, strict=True):
+                fields = ("title", "desc", "role")
+                for field, old, new in zip(fields, before, after, strict=True):
                     if old != new:
                         self._record_scope_change(
                             plan_id,

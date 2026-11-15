@@ -10,6 +10,12 @@ from lazyplan.infrastructure.templates import apply_template, template_criteria
 from ..core.entities import Criterion, Milestone, Plan, Status, Task
 from ..core.kinds import check_kind
 from ..core.policies.insights import leading_int
+from ..core.policies.lanes import (
+    DEFAULT_AGENT_ROLE,
+    DEFAULT_DISPATCH_MODE,
+    DEFAULT_LANE_GROUP,
+    DEFAULT_MAX_AGENTS,
+)
 from ..core.policies.maintenance import check_archive_mode, is_visible
 from ..core.policies.planning import is_archived as _is_archived_policy
 from ..core.policies.planning import next_status, rollup_target
@@ -30,6 +36,8 @@ def create_plan(
     description: str = "",
     goal: str = "",
     actor: str = "human",
+    dispatch_mode: str = DEFAULT_DISPATCH_MODE,
+    max_agents: int = DEFAULT_MAX_AGENTS,
 ) -> Plan:
     """Insert a plan with template defaults and auto-criteria."""
     filled = apply_template(
@@ -42,6 +50,8 @@ def create_plan(
         description=filled["what"],
         goal=filled["why"],
         actor=actor,
+        dispatch_mode=dispatch_mode,
+        max_agents=max_agents,
     )
     for text in template_criteria("plan", port.db_path):
         port.add_criteria("plan", plan.id, text, actor=actor)
@@ -55,6 +65,8 @@ def create_milestone(
     description: str = "",
     actor: str = "human",
     reason: str = "",
+    lane_group: int = DEFAULT_LANE_GROUP,
+    agent_role: str = DEFAULT_AGENT_ROLE,
 ) -> Milestone:
     """Insert a milestone with template defaults and auto-criteria."""
     filled = apply_template(
@@ -68,6 +80,8 @@ def create_milestone(
         description=filled["desc"],
         actor=actor,
         reason=reason,
+        lane_group=lane_group,
+        agent_role=agent_role,
     )
     for text in template_criteria("milestone", port.db_path):
         port.add_criteria("milestone", milestone.id, text, actor=actor, reason=reason)
@@ -81,6 +95,7 @@ def create_task(
     description: str = "",
     actor: str = "human",
     reason: str = "",
+    role: str = DEFAULT_AGENT_ROLE,
 ) -> Task:
     """Insert a task with template defaults and auto-criteria."""
     filled = apply_template(
@@ -94,6 +109,7 @@ def create_task(
         description=filled["desc"],
         actor=actor,
         reason=reason,
+        role=role,
     )
     for text in template_criteria("task", port.db_path):
         port.add_criteria("task", task.id, text, actor=actor, reason=reason)
@@ -190,11 +206,11 @@ def set_status(
     actor: str = "human",
     heal: bool = True,
     take_claim: bool = True,
+    worktree: str = "",
+    check_lane: bool = True,
 ) -> bool:
-    """Move a row, optionally heal the subtree state, and log the transition.
+    """Move a row and log it; a doing task is claimed and checked against its lane.
 
-    A task is doing exactly while an actor holds its claim: moving it to doing
-    claims it for ``actor`` and moving it anywhere else releases the claim.
     ``take_claim=False`` restores a recorded status (import) without claiming.
     """
     check_kind(kind)
@@ -204,12 +220,12 @@ def set_status(
         claim = get_claim(obj_id)
     doing = take_claim and kind == "task" and status is Status.DOING
     if doing:
-        check_claimable(claim, obj_id, actor)
+        check_claimable(port, claim, obj_id, actor, worktree or port.checkout_path(), check_lane)
     ok = port.set_status_raw(kind, obj_id, status)
     if ok:
         port.log(actor, kind, "status", f"{kind} #{obj_id} -> {status.value}")
         if doing:
-            claim_for_doing(port, claim, obj_id, actor)
+            claim_for_doing(port, claim, obj_id, actor, worktree=worktree)
         elif claim is not None:
             port.log(actor, "task", "release", f"task #{obj_id} released by status")
         if heal:

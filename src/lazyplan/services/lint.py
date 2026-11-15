@@ -9,7 +9,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from ..core.entities import Task
+from ..core.entities import Milestone, Plan, Task
+from ..core.policies.coordination import patterns_overlap
 from ..core.ports.insights import InsightsPort
 
 _PLACEHOLDER = re.compile(r"\b(TODO|TBD|FIXME)\b", re.IGNORECASE)
@@ -90,6 +91,166 @@ def _task_findings(store: InsightsPort, task: Task) -> list[Finding]:
     return findings
 
 
+Lane = tuple[Milestone, list[Task]]
+
+
+def _lane_findings(store: InsightsPort, plan: Plan) -> list[Finding]:
+    """Parallel-plan rules: cap, lanes, waves, integrator, overlap, and roles."""
+    if plan.dispatch_mode != "parallel":
+        return []
+    milestones = store.list_milestones(plan.id)
+    lanes: list[Lane] = [(milestone, store.list_tasks(milestone.id)) for milestone in milestones]
+    regular = [lane for lane in lanes if lane[0].agent_role != "integrator"]
+    integrators = [lane for lane in lanes if lane[0].agent_role == "integrator"]
+    findings = _shape_findings(plan, lanes)
+    findings.extend(_integrator_findings(plan, regular, integrators))
+    findings.extend(_wave_overlap_findings(store, lanes))
+    findings.extend(_qa_coverage_findings(lanes, regular))
+    return findings
+
+
+def _shape_findings(plan: Plan, lanes: list[Lane]) -> list[Finding]:
+    """Cap, lane count, and empty-lane rules."""
+    findings: list[Finding] = []
+    if plan.max_agents < 2:
+        findings.append(
+            Finding(
+                "parallel-cap",
+                "error",
+                f"parallel plan #{plan.id} needs max_agents >= 2",
+                "plan",
+                plan.id,
+            )
+        )
+    if len(lanes) < 2:
+        findings.append(
+            Finding(
+                "parallel-lanes",
+                "error",
+                f"parallel plan #{plan.id} needs at least two lanes",
+                "plan",
+                plan.id,
+            )
+        )
+    for milestone, tasks in lanes:
+        if not tasks:
+            findings.append(
+                Finding(
+                    "lane-without-tasks",
+                    "error",
+                    f"lane M{milestone.id} has no tasks",
+                    "milestone",
+                    milestone.id,
+                )
+            )
+    return findings
+
+
+def _integrator_findings(plan: Plan, regular: list[Lane], integrators: list[Lane]) -> list[Finding]:
+    """Integrator presence and wave-order rules."""
+    findings: list[Finding] = []
+    if len(regular) > 1 and not integrators:
+        findings.append(
+            Finding(
+                "missing-integrator",
+                "error",
+                f"parallel plan #{plan.id} with {len(regular)} lanes needs an integrator lane",
+                "plan",
+                plan.id,
+            )
+        )
+    last_regular = max((milestone.lane_group for milestone, _ in regular), default=0)
+    for milestone, _ in integrators:
+        if milestone.lane_group <= last_regular:
+            findings.append(
+                Finding(
+                    "integrator-order",
+                    "error",
+                    f"integrator lane M{milestone.id} must run after wave {last_regular}",
+                    "milestone",
+                    milestone.id,
+                )
+            )
+    return findings
+
+
+def _wave_overlap_findings(store: InsightsPort, lanes: list[Lane]) -> list[Finding]:
+    """Touch-point collisions between two lanes that share a wave."""
+    waves: dict[int, list[Lane]] = {}
+    for milestone, tasks in lanes:
+        waves.setdefault(milestone.lane_group, []).append((milestone, tasks))
+    findings: list[Finding] = []
+    for group, entries in sorted(waves.items()):
+        for left in range(len(entries)):
+            for right in range(left + 1, len(entries)):
+                findings.extend(_overlap_findings(store, group, entries[left], entries[right]))
+    return findings
+
+
+def _qa_coverage_findings(lanes: list[Lane], regular: list[Lane]) -> list[Finding]:
+    """Every non-integrator lane carries a qa task when the plan has one."""
+    qa_in_plan = any(task.role == "qa" for _, tasks in lanes for task in tasks)
+    if not qa_in_plan:
+        return []
+    findings: list[Finding] = []
+    for milestone, tasks in regular:
+        if not any(task.role == "qa" for task in tasks):
+            findings.append(
+                Finding(
+                    "lane-missing-qa",
+                    "error",
+                    f"lane M{milestone.id} has no qa task while other lanes do",
+                    "milestone",
+                    milestone.id,
+                )
+            )
+    return findings
+
+
+def _overlap_findings(
+    store: InsightsPort,
+    group: int,
+    left: tuple[Milestone, list[Task]],
+    right: tuple[Milestone, list[Task]],
+) -> list[Finding]:
+    """Touch-point collisions between two lanes that share a wave."""
+    findings: list[Finding] = []
+    for left_task in left[1]:
+        left_patterns = store.list_touchpoints(left_task.id)
+        if not left_patterns:
+            continue
+        for right_task in right[1]:
+            right_patterns = store.list_touchpoints(right_task.id)
+            matched = _matched_patterns(left_patterns, right_patterns)
+            if not matched:
+                continue
+            findings.append(
+                Finding(
+                    "lane-touchpoint-overlap",
+                    "error",
+                    f"tasks #{left_task.id} and #{right_task.id} share wave {group}: "
+                    f"{', '.join(matched)}",
+                    "task",
+                    left_task.id,
+                )
+            )
+    return findings
+
+
+def _matched_patterns(left: list[str], right: list[str]) -> list[str]:
+    """Patterns from *left* that overlap *right*, tolerating bad patterns."""
+    matched: set[str] = set()
+    for pattern in left:
+        for candidate in right:
+            try:
+                overlap = patterns_overlap(pattern, candidate)
+            except ValueError:
+                overlap = False
+            if overlap:
+                matched.add(pattern)
+    return sorted(matched)
+
+
 def lint_plan(store: InsightsPort, plan_id: int) -> list[Finding] | None:
     """Lint one plan; None when the plan does not exist."""
     plan = store.get_plan(plan_id)
@@ -138,6 +299,7 @@ def lint_plan(store: InsightsPort, plan_id: int) -> list[Finding] | None:
                 )
     if plan.status.value == "done":
         findings.extend(_open_on_done(store, "plan", plan_id))
+    findings.extend(_lane_findings(store, plan))
     for milestone in store.list_milestones(plan_id):
         if milestone.status.value == "done":
             findings.extend(_open_on_done(store, "milestone", milestone.id))

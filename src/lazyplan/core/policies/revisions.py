@@ -22,10 +22,13 @@ from typing import Any
 from ..entities import Criterion, Milestone, Plan, Task
 
 #: Bumped when the snapshot shape changes in a way that invalidates old digests.
-SNAPSHOT_SCHEMA = 2
+SNAPSHOT_SCHEMA = 3
 
-_PLAN_FIELDS = ("title", "why", "what", "worktree_required")
-_ROW_FIELDS = {"milestone": ("title", "desc"), "task": ("title", "desc")}
+_PLAN_FIELDS = ("title", "why", "what", "worktree_required", "dispatch_mode", "max_agents")
+_ROW_FIELDS = {
+    "milestone": ("title", "desc", "lane_group", "agent_role"),
+    "task": ("title", "desc", "role"),
+}
 _KIND_ORDER = {"plan": 0, "milestone": 1, "task": 2, "criterion": 3}
 
 
@@ -84,6 +87,8 @@ def build_snapshot(
         "why": plan.goal,
         "what": plan.description,
         "worktree_required": plan.worktree_required,
+        "dispatch_mode": plan.dispatch_mode,
+        "max_agents": plan.max_agents,
         "criteria": _criteria_payload(criteria, "plan", plan.id),
     }
     milestone_payloads: list[dict[str, Any]] = []
@@ -94,6 +99,8 @@ def build_snapshot(
                 "key": key("milestone", milestone.id),
                 "title": milestone.title,
                 "desc": milestone.description,
+                "lane_group": milestone.lane_group,
+                "agent_role": milestone.agent_role,
                 "criteria": _criteria_payload(criteria, "milestone", milestone.id),
                 "tasks": [
                     {
@@ -101,6 +108,7 @@ def build_snapshot(
                         "key": key("task", task.id),
                         "title": task.title,
                         "desc": task.description,
+                        "role": task.role,
                         "criteria": _criteria_payload(criteria, "task", task.id),
                     }
                     for task in sorted(tasks.get(milestone.id, ()), key=lambda item: item.id)
@@ -216,6 +224,8 @@ def _compare(
         )
     fields = _PLAN_FIELDS if kind == "plan" else _ROW_FIELDS.get(kind, ("text",))
     for field in fields:
+        if field not in before.payload or field not in after.payload:
+            continue
         old = str(before.payload.get(field, "") or "")
         new = str(after.payload.get(field, "") or "")
         if old != new:
@@ -237,6 +247,8 @@ def diff_snapshots(
     changes: list[Change] = []
 
     for field in _PLAN_FIELDS:
+        if field not in before_plan or field not in after_plan:
+            continue
         old = str(before_plan.get(field, "") or "")
         new = str(after_plan.get(field, "") or "")
         if old != new:

@@ -36,7 +36,10 @@ class SkillSpec:
     data_file: str
 
 
-SKILLS: tuple[SkillSpec, ...] = (SkillSpec(name="lazyplan", data_file="SKILL.md"),)
+SKILLS: tuple[SkillSpec, ...] = (
+    SkillSpec(name="lazyplan", data_file="SKILL.md"),
+    SkillSpec(name="lazyplan-orchestrate", data_file="orchestrate/SKILL.md"),
+)
 SKILL_NAME = SKILLS[0].name
 _SKILL_TEXT = data_text(SKILLS[0].data_file)
 SKILL_BODY = _SKILL_TEXT.split("---", 2)[2].lstrip("\n")
@@ -49,6 +52,7 @@ __all__ = [
     "SkillSpec",
     "render_skill",
     "render_home_agents_snippet",
+    "skill_files_for",
 ]
 
 AGENTS_DIR = ".agents"
@@ -141,6 +145,57 @@ def skill_destinations(
     return out
 
 
+def skill_files_for(
+    scope: str,
+    repo_root: Path | None,
+    home: Path,
+    tools: list[str] | None,
+    skills_dir: str | Path | None = None,
+) -> list[Path]:
+    """Every shipped skill's destination files for one scope."""
+    files: list[Path] = []
+    for spec in SKILLS:
+        files.extend(
+            skill_destinations(
+                scope,
+                repo_root,
+                home,
+                tools,
+                skills_dir,
+                name=spec.name,
+            )
+        )
+    return files
+
+
+def installed_skill_names(home: Path, repo_root: Path | None = None) -> set[str]:
+    """Shipped skill names already present in any known host skill root."""
+    roots = [
+        home / AGENTS_DIR / SKILLS_DIR,
+        home / ".claude" / SKILLS_DIR,
+        home / ".config" / "opencode" / SKILLS_DIR,
+        home / ".codex" / SKILLS_DIR,
+        home / ".gemini" / SKILLS_DIR,
+        home / ".cursor" / SKILLS_DIR,
+    ]
+    if repo_root is not None:
+        roots.extend(
+            [
+                repo_root / AGENTS_DIR / SKILLS_DIR,
+                repo_root / ".opencode" / SKILLS_DIR,
+                repo_root / ".claude" / SKILLS_DIR,
+                repo_root / ".gemini" / SKILLS_DIR,
+                repo_root / ".cursor" / SKILLS_DIR,
+            ]
+        )
+    names: set[str] = set()
+    for root in roots:
+        if not root.is_dir():
+            continue
+        names.update(path.parent.name for path in root.glob("*/SKILL.md"))
+    return names
+
+
 def _empty_plan(reason: str) -> SkillPlan:
     return SkillPlan(
         scope="none",
@@ -169,7 +224,7 @@ def _plan_for(
         scope=scope,
         tools=tools,
         skills_dir=skills_dir,
-        skill_files=skill_destinations(scope, repo_root, home, tools, skills_dir),
+        skill_files=skill_files_for(scope, repo_root, home, tools, skills_dir),
         agents_md=(
             repo_root / "AGENTS.md"
             if with_agents_md and scope in ("project", "both") and repo_root is not None
@@ -202,6 +257,8 @@ def apply_skill_plan(
     plan: SkillPlan,
     repo_root: Path | None,
     home: Path | None = None,
+    *,
+    only_existing: bool = False,
 ) -> InstallResult:
     """Write the files described by a `SkillPlan`."""
     home = home or Path.home()
@@ -214,9 +271,12 @@ def apply_skill_plan(
         with_agents_md=plan.agents_md is not None,
         tools=plan.tools,
         skills_dir=plan.skills_dir,
+        only_existing=only_existing,
     )
     for dest_line in list(result.installed):
         dest = dest_line.rsplit(" (", 1)[0]
+        if Path(dest).parent.name != SKILL_NAME:
+            continue
         try:
             ensure_skill_db(dest)
         except OSError:
@@ -395,12 +455,18 @@ def write_skill_file(dest: Path, *, name: str = SKILL_NAME) -> tuple[bool, str]:
     return True, "wrote"
 
 
-def _write_skill(seen: set[Path], installed: list[str], dest: Path) -> None:
-    """Write one SKILL.md unless already written (dedupes across sides)."""
-    if dest in seen:
+def _write_skill(
+    seen: set[Path],
+    installed: list[str],
+    dest: Path,
+    name: str = SKILL_NAME,
+    existing: set[str] | None = None,
+) -> None:
+    """Write one SKILL.md unless already written or no longer shipped."""
+    if dest in seen or (existing is not None and name not in existing):
         return
     seen.add(dest)
-    _, status = write_skill_file(dest)
+    _, status = write_skill_file(dest, name=name)
     installed.append(f"{dest} ({status})")
 
 
@@ -411,16 +477,20 @@ def _install_team_side(
     home: Path,
     with_claude_copy: bool,
     tools: list[str] | None,
+    existing: set[str] | None = None,
 ) -> None:
     """Team side: shared repo standard + native per-tool repo dirs."""
-    for dest in skill_targets("project", repo_root, home):
-        _write_skill(seen, installed, dest)
+    for spec in SKILLS:
+        for dest in skill_targets("project", repo_root, home, name=spec.name):
+            _write_skill(seen, installed, dest, spec.name, existing)
     if with_claude_copy:
-        for dest in tool_skill_targets("claude", "project", repo_root, home):
-            _write_skill(seen, installed, dest)
+        for spec in SKILLS:
+            for dest in tool_skill_targets("claude", "project", repo_root, home, name=spec.name):
+                _write_skill(seen, installed, dest, spec.name, existing)
     for tool in tools or []:
-        for dest in tool_skill_targets(tool, "project", repo_root, home):
-            _write_skill(seen, installed, dest)
+        for spec in SKILLS:
+            for dest in tool_skill_targets(tool, "project", repo_root, home, name=spec.name):
+                _write_skill(seen, installed, dest, spec.name, existing)
 
 
 def _install_local_side(
@@ -430,13 +500,16 @@ def _install_local_side(
     home: Path,
     with_claude_copy: bool,
     tools: list[str] | None,
+    existing: set[str] | None = None,
 ) -> None:
     """Local side: exactly one dir per tool (no universal duplicate)."""
-    for dest in global_skill_targets(tools, home):
-        _write_skill(seen, installed, dest)
+    for spec in SKILLS:
+        for dest in global_skill_targets(tools, home, name=spec.name):
+            _write_skill(seen, installed, dest, spec.name, existing)
     if with_claude_copy and tools is None:
-        for dest in tool_skill_targets("claude", "global", repo_root, home):
-            _write_skill(seen, installed, dest)
+        for spec in SKILLS:
+            for dest in tool_skill_targets("claude", "global", repo_root, home, name=spec.name):
+                _write_skill(seen, installed, dest, spec.name, existing)
 
 
 def install(
@@ -447,6 +520,7 @@ def install(
     with_agents_md: bool = True,
     tools: list[str] | None = None,
     skills_dir: str | Path | None = None,
+    only_existing: bool = False,
 ) -> InstallResult:
     """Non-interactive install to a scope. Never prompts, never raises on write."""
     home = home or Path.home()
@@ -457,15 +531,25 @@ def install(
         scope = "global"
     result = InstallResult(scope=scope)
     seen: set[Path] = set()
+    existing = installed_skill_names(home, repo_root) if only_existing else None
     if skills_dir is not None:
-        _write_skill(
-            seen, result.installed, Path(skills_dir).expanduser() / SKILL_NAME / "SKILL.md"
-        )
+        for spec in SKILLS:
+            _write_skill(
+                seen,
+                result.installed,
+                Path(skills_dir).expanduser() / spec.name / "SKILL.md",
+                spec.name,
+                existing,
+            )
     else:
         if scope in ("project", "both") and repo_root is not None:
-            _install_team_side(seen, result.installed, repo_root, home, with_claude_copy, tools)
+            _install_team_side(
+                seen, result.installed, repo_root, home, with_claude_copy, tools, existing
+            )
         if scope in ("global", "both"):
-            _install_local_side(seen, result.installed, repo_root, home, with_claude_copy, tools)
+            _install_local_side(
+                seen, result.installed, repo_root, home, with_claude_copy, tools, existing
+            )
     if with_agents_md and scope in ("project", "both") and repo_root is not None:
         _, status = ensure_agents_md(repo_root)
         result.updated_agents_md = f"{repo_root / 'AGENTS.md'} ({status})"

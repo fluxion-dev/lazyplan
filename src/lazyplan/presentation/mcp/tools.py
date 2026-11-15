@@ -19,6 +19,7 @@ from ...core.serialization import to_payload
 from ...services import insights
 from .base import McpBase
 from .collaboration_tools import CollaborationToolsMixin
+from .dispatch_tools import DispatchToolsMixin
 from .evidence_tools import EvidenceToolsMixin
 from .maintenance_tools import MaintenanceToolsMixin
 from .provenance_tools import ProvenanceToolsMixin
@@ -36,6 +37,7 @@ PROTOCOL_VERSION = "2024-11-05"
 
 class ToolsMixin(
     CollaborationToolsMixin,
+    DispatchToolsMixin,
     EvidenceToolsMixin,
     MaintenanceToolsMixin,
     ProvenanceToolsMixin,
@@ -286,6 +288,15 @@ class ToolsMixin(
                     "brief", "Session brief: active plan, doing task, next, gaps.", {"plan": _id()}
                 ),
                 self._tool_brief,
+            ),
+            (
+                _tool(
+                    "dispatch",
+                    "Plan lanes, waves, capacity, worktree actions, and worker prompts.",
+                    {"plan": _id(), "lane": _id(), "max_chars": {"type": "integer"}},
+                    ["plan"],
+                ),
+                self._tool_dispatch,
             ),
             (
                 _tool(

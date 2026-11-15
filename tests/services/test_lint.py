@@ -108,6 +108,80 @@ class TestLint(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("enforced-drift", out)
 
+    def _lane_rules(self, plan_id: int) -> list[str]:
+        findings = lint.lint_plan(self.store, plan_id)
+        assert findings is not None
+        return [
+            finding.rule
+            for finding in findings
+            if finding.rule.startswith(("lane-", "parallel-", "missing-integrator", "integrator-"))
+        ]
+
+    def test_parallel_plan_needs_a_lane_cap_and_two_lanes(self):
+        plan = self.store.add_plan("P2", dispatch_mode="parallel", max_agents=1)
+        milestone = self.store.add_milestone(plan.id, "Only")
+        task = self.store.add_task(milestone.id, "Do", "Commit: one.\n\nVerify: tests.", role="qa")
+        self.assertIn("parallel-cap", self._lane_rules(plan.id))
+        self.assertIn("parallel-lanes", self._lane_rules(plan.id))
+        self.assertTrue(task.id)
+
+    def test_parallel_plan_needs_an_integrator_lane(self):
+        plan = self.store.add_plan("P2", dispatch_mode="parallel", max_agents=2)
+        for title in ("A", "B"):
+            milestone = self.store.add_milestone(plan.id, title, lane_group=1)
+            self.store.add_task(
+                milestone.id, f"Work {title}", "Commit: one.\n\nVerify: tests.", role="qa"
+            )
+        rules = self._lane_rules(plan.id)
+        self.assertIn("missing-integrator", rules)
+
+    def test_integrator_lane_runs_after_the_lanes_it_merges(self):
+        plan = self.store.add_plan("P2", dispatch_mode="parallel", max_agents=2)
+        integrator = self.store.add_milestone(
+            plan.id, "Integrate", lane_group=1, agent_role="integrator"
+        )
+        self.store.add_task(integrator.id, "Merge", "Commit: one.\n\nVerify: tests.")
+        for title in ("A", "B"):
+            milestone = self.store.add_milestone(plan.id, title, lane_group=2)
+            self.store.add_task(
+                milestone.id, f"Work {title}", "Commit: one.\n\nVerify: tests.", role="qa"
+            )
+        self.assertIn("integrator-order", self._lane_rules(plan.id))
+
+    def test_same_wave_lanes_must_not_share_touchpoints(self):
+        plan = self.store.add_plan("P2", dispatch_mode="parallel", max_agents=2)
+        for title, path in (("A", "src/**"), ("B", "src/lazyplan/**")):
+            milestone = self.store.add_milestone(plan.id, title, lane_group=1)
+            task = self.store.add_task(
+                milestone.id, f"Work {title}", "Commit: one.\n\nVerify: tests.", role="qa"
+            )
+            self.store.add_touchpoint(task.id, path)
+        self.assertIn("lane-touchpoint-overlap", self._lane_rules(plan.id))
+
+    def test_lane_qa_coverage_when_qa_is_present(self):
+        plan = self.store.add_plan("P2", dispatch_mode="parallel", max_agents=2)
+        first = self.store.add_milestone(plan.id, "A", lane_group=1)
+        self.store.add_task(first.id, "Work A", "Commit: one.\n\nVerify: tests.", role="qa")
+        second = self.store.add_milestone(plan.id, "B", lane_group=1)
+        self.store.add_task(second.id, "Work B", "Commit: one.\n\nVerify: tests.")
+        self.assertIn("lane-missing-qa", self._lane_rules(plan.id))
+
+    def test_clean_parallel_plan_has_no_lane_findings(self):
+        plan = self.store.add_plan("P2", dispatch_mode="parallel", max_agents=2)
+        for title in ("A", "B"):
+            milestone = self.store.add_milestone(plan.id, title, lane_group=1)
+            self.store.add_task(
+                milestone.id, f"Work {title}", "Commit: one.\n\nVerify: tests.", role="qa"
+            )
+        integrator = self.store.add_milestone(
+            plan.id, "Integrate", lane_group=2, agent_role="integrator"
+        )
+        self.store.add_task(integrator.id, "Merge", "Commit: one.\n\nVerify: tests.")
+        self.assertEqual(self._lane_rules(plan.id), [])
+
+    def test_serial_plan_is_free_of_lane_findings(self):
+        self.assertEqual(self._lane_rules(1), [])
+
     def test_cli_text_and_strict_exit(self):
         self.store.add_criteria("plan", 1, "Fast", actor="fixture")
         code, out, err = self._run("lint", "--plan", "1")

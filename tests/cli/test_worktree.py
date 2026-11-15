@@ -122,6 +122,51 @@ class PlanWorktreeCommandTest(unittest.TestCase):
         entries = json.loads(output)["worktrees"]
         self.assertEqual([item["repo_path"] for item in entries], [self.repo])
 
+    def test_prints_a_lane_command(self) -> None:
+        store = Store(self.db)
+        store.add_repo_link("plan", self.plan.id, self.repo)
+        milestone = store.add_milestone(self.plan.id, "Read path")
+
+        code, output, error = self._run(
+            [
+                "--json",
+                "plan",
+                "worktree",
+                "--id",
+                str(self.plan.id),
+                "--milestone",
+                str(milestone.id),
+                "--print",
+            ]
+        )
+
+        self.assertEqual(code, 0, error)
+        (entry,) = json.loads(output)["worktrees"]
+        self.assertIn("--m" + str(milestone.id) + "-read-path", entry["branch"])
+        self.assertIn("-m" + str(milestone.id) + "-read-path", entry["worktree_path"])
+        self.assertEqual(entry["milestone_id"], milestone.id)
+
+    def test_lane_print_refuses_a_foreign_milestone(self) -> None:
+        store = Store(self.db)
+        store.add_repo_link("plan", self.plan.id, self.repo)
+        other = store.add_plan("Other")
+        foreign = store.add_milestone(other.id, "Foreign")
+
+        code, _, error = self._run(
+            [
+                "plan",
+                "worktree",
+                "--id",
+                str(self.plan.id),
+                "--milestone",
+                str(foreign.id),
+                "--print",
+            ]
+        )
+
+        self.assertEqual(code, 2)
+        self.assertIn("not in plan", error)
+
     def test_missing_links_default_to_the_current_checkout(self) -> None:
         os.chdir(self.repo)
 

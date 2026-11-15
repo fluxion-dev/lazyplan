@@ -11,6 +11,16 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from .kinds import KINDS, PARENT_KIND_ERROR, QUESTION_STATUSES, SCOPE_KINDS
+from .policies.lanes import (
+    DEFAULT_AGENT_ROLE,
+    DEFAULT_DISPATCH_MODE,
+    DEFAULT_LANE_GROUP,
+    DEFAULT_MAX_AGENTS,
+    check_agent_role,
+    check_dispatch_mode,
+    check_lane_group,
+    check_max_agents,
+)
 
 
 class Status(StrEnum):
@@ -36,15 +46,19 @@ class Plan:
     goal: str = ""  # the why
     archived_at: float = 0.0
     worktree_required: bool = False
+    dispatch_mode: str = DEFAULT_DISPATCH_MODE
+    max_agents: int = DEFAULT_MAX_AGENTS
 
     def __post_init__(self) -> None:
         if not self.name.strip():
             raise ValueError("plan name must not be empty")
+        check_dispatch_mode(self.dispatch_mode)
+        check_max_agents(self.max_agents)
 
 
 @dataclass(frozen=True)
 class PlanWorktree:
-    """A plan's registered checkout for one linked repository."""
+    """A plan's registered checkout for one linked repository and optional lane."""
 
     id: int
     plan_id: int
@@ -53,10 +67,13 @@ class PlanWorktree:
     repo_remote: str = ""
     branch: str = ""
     registered_at: float = 0.0
+    milestone_id: int | None = None
 
     def __post_init__(self) -> None:
         if self.plan_id < 1:
             raise ValueError("plan_id must be positive")
+        if self.milestone_id is not None and self.milestone_id < 1:
+            raise ValueError("milestone_id must be positive when set")
         if not self.repo_path.strip():
             raise ValueError("repo_path must not be empty")
         if not self.worktree_path.strip():
@@ -74,10 +91,12 @@ class Task:
     description: str = ""  # details / context for whoever picks this up
     blocked: bool = False
     blocked_reason: str = ""
+    role: str = DEFAULT_AGENT_ROLE
 
     def __post_init__(self) -> None:
         if not self.title.strip():
             raise ValueError("task title must not be empty")
+        check_agent_role(self.role)
 
 
 @dataclass(frozen=True)
@@ -320,10 +339,14 @@ class Milestone:
     title: str
     description: str = ""
     status: Status = Status.TODO
+    lane_group: int = DEFAULT_LANE_GROUP
+    agent_role: str = DEFAULT_AGENT_ROLE
 
     def __post_init__(self) -> None:
         if not self.title.strip():
             raise ValueError("milestone title must not be empty")
+        check_lane_group(self.lane_group)
+        check_agent_role(self.agent_role)
 
 
 @dataclass

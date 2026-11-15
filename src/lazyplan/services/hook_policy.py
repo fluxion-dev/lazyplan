@@ -81,8 +81,16 @@ def stop_result(
     return HookResult("lazyplan: " + "; ".join(loose)).capped()
 
 
-def _commit_reason() -> str:
-    """Actionable denial text for a commit without a doing task."""
+def _commit_reason(store: AppPort, cwd: Path) -> str:
+    """Actionable denial text for a commit without a doing task in this lane."""
+    located = hook_scope.lane_for_checkout(store, cwd)
+    if located is not None:
+        plan, milestone = located
+        return (
+            f"lazyplan: commit blocked; lane M{milestone.id} of plan #{plan.id}"
+            " has no claimed task. Run"
+            f" `lpui next --plan {plan.id} --lane {milestone.id}`, then commit."
+        )
     return (
         "lazyplan: commit blocked; this checkout has no doing task. "
         "Run `lpui next` or `lpui task move --id ID --to doing`, then commit."
@@ -96,7 +104,7 @@ def commit_result(store: AppPort, cwd: Path, command: str, mode: str) -> HookRes
     scope = hook_scope.resolve(store, cwd)
     if not scope.managed or scope.task is not None:
         return HookResult()
-    reason = _commit_reason()
+    reason = _commit_reason(store, cwd)
     if mode == "strict":
         return HookResult(block=reason)
     return HookResult(reason, context=True).capped()
@@ -114,7 +122,11 @@ def post_tool_text(store: AppPort, cwd: Path, command: str, path: str) -> str:
     if committed:
         if task_id is None:
             return "lazyplan: commit landed; start or pick a task with `lpui brief`."
-        return f"lazyplan: commit landed; link it with `lpui link --kind task --id {task_id}`."
+        located = hook_scope.lane_for_checkout(store, cwd)
+        lane = f" on lane M{located[1].id}" if located is not None else ""
+        return (
+            f"lazyplan: commit landed{lane}; link it with `lpui link --kind task --id {task_id}`."
+        )
     path = _repo_relative(path, scope.repo)
     if Path(path).is_absolute():
         return ""

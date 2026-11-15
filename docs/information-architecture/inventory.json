@@ -302,6 +302,38 @@
         ]
       },
       {
+        "name": "dispatch",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--plan"
+          ],
+          [
+            "--lane"
+          ],
+          [
+            "--max-chars"
+          ]
+        ]
+      },
+      {
         "name": "doctor",
         "options": [
           [
@@ -826,6 +858,9 @@
           ],
           [
             "--note"
+          ],
+          [
+            "--lane"
           ],
           [
             "--suggest"
@@ -1536,17 +1571,17 @@
         ]
       }
     ],
-    "count": 50
+    "count": 51
   },
   "counts": {
-    "cli_commands": 50,
+    "cli_commands": 51,
     "doc_files": 9,
-    "doc_headings": 92,
+    "doc_headings": 95,
     "env_names": 11,
     "file_paths": 12,
     "hook_events": 35,
     "mcp_resources": 3,
-    "mcp_tools": 67,
+    "mcp_tools": 68,
     "palette_commands": 52,
     "setup_steps": 4,
     "stale_claims": 0,
@@ -1620,6 +1655,8 @@
           "Coordination hubs",
           "Provenance and activity hubs",
           "Agents",
+          "Lanes and waves",
+          "Agent profiles",
           "Porcelain output",
           "Plan documents and recipes",
           "Context and claims",
@@ -1678,6 +1715,7 @@
           "Plan documents and recipes",
           "Trust and coordination",
           "Plan worktrees",
+          "Orchestration and dispatch",
           "During execution",
           "Read first",
           "Templates",
@@ -1991,6 +2029,10 @@
       {
         "description": "Delete a plan, milestone, or task.",
         "name": "delete_row"
+      },
+      {
+        "description": "Plan lanes, waves, capacity, worktree actions, and worker prompts.",
+        "name": "dispatch"
       },
       {
         "description": "Edit a plan, milestone, or task.",

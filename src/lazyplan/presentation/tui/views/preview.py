@@ -7,6 +7,12 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
+from ....core.policies.lanes import (
+    DEFAULT_AGENT_ROLE,
+    DEFAULT_DISPATCH_MODE,
+    DEFAULT_LANE_GROUP,
+    DEFAULT_MAX_AGENTS,
+)
 from ...shared.design import (
     escape_markdown,
     escape_markup,
@@ -146,11 +152,24 @@ def _meta_line(
         parts = [f"P{oid}", f"{_done(tasks)}/{len(tasks)} tasks"]
         if criteria:
             parts.append(f"{_done(criteria)}/{len(criteria)} criteria")
+        parts.append(
+            f"{obj.get('dispatch_mode', DEFAULT_DISPATCH_MODE)}"
+            f" · max {obj.get('max_agents', DEFAULT_MAX_AGENTS)}"
+        )
     elif kind == "milestone":
         tasks = [entry.get("task", {}) for entry in full.get("tasks", [])]
-        parts = [f"M{oid}", f"P{obj.get('plan_id')}", f"{_done(tasks)}/{len(tasks)} tasks"]
+        parts = [
+            f"M{oid}",
+            f"P{obj.get('plan_id')}",
+            f"{_done(tasks)}/{len(tasks)} tasks",
+            f"w{obj.get('lane_group', DEFAULT_LANE_GROUP)}"
+            f" · {obj.get('agent_role', DEFAULT_AGENT_ROLE)}",
+        ]
     else:
         parts = [f"T{oid}", f"M{obj.get('milestone_id')}", str(obj.get("status", ""))]
+        role = str(obj.get("role", "") or "")
+        if role and role != DEFAULT_AGENT_ROLE:
+            parts.append(role)
         if obj.get("blocked"):
             parts.append("blocked")
         claim = obj.get("claim") or {}
@@ -170,19 +189,22 @@ def _task_states(tasks: list[dict[str, Any]]) -> str:
     return f"{done}/{len(tasks)}"
 
 
+def _milestone_lane(milestone: dict[str, Any]) -> str:
+    """One compact wave and role summary for a milestone row."""
+    group = milestone.get("lane_group", DEFAULT_LANE_GROUP)
+    role = milestone.get("agent_role", DEFAULT_AGENT_ROLE)
+    return f"w{group} · {role}"
+
+
 def milestones_block(milestones: list[dict[str, Any]]) -> PreviewBlock | None:
     """Every milestone under the selected plan, as one plain row."""
     if not milestones:
         return None
-    lines = [
-        _child_row(
-            "M",
-            entry.get("milestone", {}).get("id"),
-            entry.get("milestone", {}).get("title", ""),
-            _task_states(entry.get("tasks", [])),
-        )
-        for entry in milestones
-    ]
+    lines = []
+    for entry in milestones:
+        milestone = entry.get("milestone", {})
+        suffix = f"{_task_states(entry.get('tasks', []))} · {_milestone_lane(milestone)}"
+        lines.append(_child_row("M", milestone.get("id"), milestone.get("title", ""), suffix))
     return PreviewBlock(f"milestones {len(milestones)}", tuple(lines))
 
 
@@ -317,7 +339,8 @@ def worktrees_block(full: dict[str, Any]) -> PreviewBlock | None:
     for row in rows:
         branch = escape_markdown(str(row.get("branch", "")))
         path = escape_markdown(str(row.get("worktree_path", "")))
-        lines.append(f"`{branch}` -> {path}")
+        lane = f"M{row['milestone_id']} " if row.get("milestone_id") else ""
+        lines.append(f"{lane}`{branch}` -> {path}")
     return PreviewBlock("worktrees", tuple(lines))
 
 

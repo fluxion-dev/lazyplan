@@ -5,6 +5,12 @@ from __future__ import annotations
 from typing import Any, cast
 
 from ..core.entities import Criterion, Plan, Status, Task
+from ..core.policies.lanes import (
+    normalize_agent_role,
+    normalize_dispatch_mode,
+    normalize_lane_group,
+    normalize_max_agents,
+)
 from ..core.ports.coordination import CoordinationPort
 from ..core.ports.transfer import TransferPort
 from ..core.serialization import to_payload
@@ -407,6 +413,8 @@ def _import_all(store: TransferPort, data: dict, actor: str = "human") -> dict[s
             goal=p.get("goal", ""),
             actor=actor,
             worktree_required=bool(p.get("worktree_required", False)),
+            dispatch_mode=normalize_dispatch_mode(p.get("dispatch_mode")),
+            max_agents=normalize_max_agents(p.get("max_agents")),
         )
         _apply_status("plan", np.id, p.get("status", ""))
         uid = str(p.get("uid", "") or "").strip()
@@ -430,6 +438,8 @@ def _import_all(store: TransferPort, data: dict, actor: str = "human") -> dict[s
                 sp.get("title", ""),
                 sp.get("description", ""),
                 actor=actor,
+                lane_group=normalize_lane_group(sp.get("lane_group")),
+                agent_role=normalize_agent_role(sp.get("agent_role")),
             )
             _apply_status("milestone", ns.id, sp.get("status", ""))
             counts["milestones"] += 1
@@ -447,6 +457,7 @@ def _import_all(store: TransferPort, data: dict, actor: str = "human") -> dict[s
                     tp.get("title", ""),
                     description=tp.get("description", ""),
                     actor=actor,
+                    role=normalize_agent_role(tp.get("role")),
                 )
                 _apply_status("task", nt.id, tp.get("status", ""))
                 if tp.get("blocked"):

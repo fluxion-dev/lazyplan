@@ -12,6 +12,20 @@ from ..core.entities import (
     Status,
 )
 from ..core.kinds import table_for
+from ..core.policies.lanes import (
+    DEFAULT_AGENT_ROLE,
+    DEFAULT_DISPATCH_MODE,
+    DEFAULT_LANE_GROUP,
+    DEFAULT_MAX_AGENTS,
+    check_agent_role,
+    check_dispatch_mode,
+    check_lane_group,
+    check_max_agents,
+    normalize_agent_role,
+    normalize_dispatch_mode,
+    normalize_lane_group,
+    normalize_max_agents,
+)
 from ..core.policies.maintenance import check_archive_mode, is_visible
 from .base import (
     StoreBase,
@@ -28,6 +42,8 @@ class PlansMixin(StoreBase):
         goal: str = "",
         actor: str = "human",
         worktree_required: bool = True,
+        dispatch_mode: str = DEFAULT_DISPATCH_MODE,
+        max_agents: int = DEFAULT_MAX_AGENTS,
     ) -> Plan:
         """Insert a plan row and log the event (no template fill; see services)."""
         p = Plan(
@@ -36,11 +52,15 @@ class PlansMixin(StoreBase):
             description=description,
             goal=goal,
             worktree_required=worktree_required,
+            dispatch_mode=dispatch_mode,
+            max_agents=max_agents,
         )
         with self._connect() as conn:
             cur = conn.execute(
-                "INSERT INTO plans (name, description, status, goal, uid, worktree_required)"
-                " VALUES (?,?,?,?,?,?)",
+                "INSERT INTO plans"
+                " (name, description, status, goal, uid, worktree_required,"
+                " dispatch_mode, max_agents)"
+                " VALUES (?,?,?,?,?,?,?,?)",
                 (
                     p.name,
                     p.description,
@@ -48,6 +68,8 @@ class PlansMixin(StoreBase):
                     p.goal,
                     str(uuid.uuid4()),
                     int(p.worktree_required),
+                    p.dispatch_mode,
+                    p.max_agents,
                 ),
             )
             p.id = cur.lastrowid or 0
@@ -71,6 +93,16 @@ class PlansMixin(StoreBase):
             archived_at=float(r["archived_at"]) if "archived_at" in keys else 0.0,
             worktree_required=(
                 bool(r["worktree_required"]) if "worktree_required" in keys else False
+            ),
+            dispatch_mode=(
+                normalize_dispatch_mode(r["dispatch_mode"])
+                if "dispatch_mode" in keys
+                else DEFAULT_DISPATCH_MODE
+            ),
+            max_agents=(
+                normalize_max_agents(r["max_agents"])
+                if "max_agents" in keys
+                else DEFAULT_MAX_AGENTS
             ),
         )
 
@@ -161,12 +193,14 @@ class PlansMixin(StoreBase):
         goal: str | None = None,
         actor: str = "human",
         reason: str = "",
+        dispatch_mode: str | None = None,
+        max_agents: int | None = None,
     ) -> Plan | None:
         """Patch plan fields and log."""
         p = self.get_plan(pid)
         if p is None:
             return None
-        before = (p.name, p.description, p.goal)
+        before = (p.name, p.description, p.goal, p.dispatch_mode, p.max_agents)
         if name is not None:
             if not name.strip():
                 raise ValueError("plan name must not be empty")
@@ -175,13 +209,27 @@ class PlansMixin(StoreBase):
             p.description = description
         if goal is not None:
             p.goal = goal
-        after = (p.name, p.description, p.goal)
+        if dispatch_mode is not None:
+            p.dispatch_mode = check_dispatch_mode(dispatch_mode)
+        if max_agents is not None:
+            p.max_agents = check_max_agents(max_agents)
+        after = (p.name, p.description, p.goal, p.dispatch_mode, p.max_agents)
         with self._connect() as conn:
             conn.execute(
-                "UPDATE plans SET name=?, description=?, goal=? WHERE id=?",
-                (p.name, p.description, p.goal, pid),
+                "UPDATE plans"
+                " SET name=?, description=?, goal=?, dispatch_mode=?, max_agents=?"
+                " WHERE id=?",
+                (
+                    p.name,
+                    p.description,
+                    p.goal,
+                    p.dispatch_mode,
+                    p.max_agents,
+                    pid,
+                ),
             )
-            for field, old, new in zip(("title", "what", "why"), before, after, strict=True):
+            fields = ("title", "what", "why", "dispatch_mode", "max_agents")
+            for field, old, new in zip(fields, before, after, strict=True):
                 if old != new:
                     self._record_scope_change(
                         pid, "plan", pid, "edit", field=field, reason=reason, actor=actor
@@ -196,6 +244,8 @@ class PlansMixin(StoreBase):
         description: str = "",
         actor: str = "human",
         reason: str = "",
+        lane_group: int = DEFAULT_LANE_GROUP,
+        agent_role: str = DEFAULT_AGENT_ROLE,
     ) -> Milestone:
         """Insert a milestone row and log the event (no template fill; see services)."""
         s = Milestone(
@@ -203,13 +253,24 @@ class PlansMixin(StoreBase):
             plan_id=plan_id,
             title=title.strip(),
             description=description,
+            lane_group=lane_group,
+            agent_role=agent_role,
         )
         with self._connect() as conn:
             if conn.execute("SELECT 1 FROM plans WHERE id=?", (plan_id,)).fetchone() is None:
                 raise KeyError(f"plan #{plan_id} not found")
             cur = conn.execute(
-                "INSERT INTO milestones (plan_id, title, description, status) VALUES (?,?,?,?)",
-                (s.plan_id, s.title, s.description, s.status.value),
+                "INSERT INTO milestones"
+                " (plan_id, title, description, status, lane_group, agent_role)"
+                " VALUES (?,?,?,?,?,?)",
+                (
+                    s.plan_id,
+                    s.title,
+                    s.description,
+                    s.status.value,
+                    s.lane_group,
+                    s.agent_role,
+                ),
             )
             s.id = cur.lastrowid or 0
             self._record_scope_change(plan_id, "milestone", s.id, "add", reason=reason, actor=actor)
@@ -225,6 +286,16 @@ class PlansMixin(StoreBase):
             title=r["title"],
             description=self._opt(r, keys, "description"),
             status=Status(r["status"]) if "status" in keys else Status.TODO,
+            lane_group=(
+                normalize_lane_group(r["lane_group"])
+                if "lane_group" in keys
+                else DEFAULT_LANE_GROUP
+            ),
+            agent_role=(
+                normalize_agent_role(r["agent_role"])
+                if "agent_role" in keys
+                else DEFAULT_AGENT_ROLE
+            ),
         )
 
     def get_milestone(self, sid: int) -> Milestone | None:
@@ -257,25 +328,34 @@ class PlansMixin(StoreBase):
         description: str | None = None,
         actor: str = "human",
         reason: str = "",
+        lane_group: int | None = None,
+        agent_role: str | None = None,
     ) -> Milestone | None:
         """Patch milestone fields and log."""
         s = self.get_milestone(sid)
         if s is None:
             return None
-        before = (s.title, s.description)
+        before = (s.title, s.description, s.lane_group, s.agent_role)
         if title is not None:
             if not title.strip():
                 raise ValueError("milestone title must not be empty")
             s.title = title.strip()
         if description is not None:
             s.description = description
-        after = (s.title, s.description)
+        if lane_group is not None:
+            s.lane_group = check_lane_group(lane_group)
+        if agent_role is not None:
+            s.agent_role = check_agent_role(agent_role)
+        after = (s.title, s.description, s.lane_group, s.agent_role)
         with self._connect() as conn:
             conn.execute(
-                "UPDATE milestones SET title=?, description=? WHERE id=?",
-                (s.title, s.description, sid),
+                "UPDATE milestones"
+                " SET title=?, description=?, lane_group=?, agent_role=?"
+                " WHERE id=?",
+                (s.title, s.description, s.lane_group, s.agent_role, sid),
             )
-            for field, old, new in zip(("title", "desc"), before, after, strict=True):
+            fields = ("title", "desc", "lane_group", "agent_role")
+            for field, old, new in zip(fields, before, after, strict=True):
                 if old != new:
                     self._record_scope_change(
                         s.plan_id,

@@ -39,6 +39,8 @@ def _create_milestone(
         milestone.title,
         milestone.description,
         actor=actor,
+        lane_group=milestone.lane_group,
+        agent_role=milestone.agent_role,
     )
     port.set_entity_key("milestone", row.id, milestone.key, actor=actor)
     for text in milestone.criteria:
@@ -52,6 +54,7 @@ def _create_milestone(
             task.title,
             task.description,
             actor=actor,
+            role=task.role,
         )
         port.set_entity_key("task", created.id, task.key, actor=actor)
         for text in task.criteria:
@@ -77,6 +80,8 @@ def apply(port: PlanningPort, document: PlanDocument, actor: str = "human") -> d
             description=document.what,
             goal=document.why,
             actor=actor,
+            dispatch_mode=document.dispatch_mode,
+            max_agents=document.max_agents,
         )
         port.set_entity_key("plan", plan.id, document.key, actor=actor)
         for text in document.criteria:

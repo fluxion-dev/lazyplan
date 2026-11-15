@@ -27,6 +27,7 @@ from .integrations import inspect, install_items, remember_decisions
 from .layout import SetupChoice
 from .state import SetupState, load_state
 from .steps import Step, visible_steps
+from .triggers import clear_pending
 
 INTEGRATION_DECISIONS = ("install", "defer", "never")
 Discover = Callable[[Iterable[str], Path, Path | None], dict[str, HostCatalog]]
@@ -94,7 +95,7 @@ class SetupSession:
             agents_pointer=state.agents_pointer,
             profiles_map=profile_map,
             tiers_map=tiers,
-            theme=str(getattr(state, "theme", "") or ""),
+            theme=state.theme,
         )
         finder = discover or host_models.discover_all
         session = cls(
@@ -296,6 +297,10 @@ class SetupSession:
             remember_decisions(deferred, state, "deferred", self.version, self.home)
         if never:
             remember_decisions(never, state, "never", self.version, self.home)
+        state = load_state(self.home)
+        if self.draft.theme:
+            state.theme = self.draft.theme
+        clear_pending(state, self.version, self.home)
         return result
 
     def _integration_groups(

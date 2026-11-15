@@ -49,6 +49,10 @@ class SetupState:
     agents_file: str = ""
     decisions: dict[str, dict[str, Any]] = field(default_factory=dict)
     integration_choices: dict[str, dict[str, Any]] = field(default_factory=dict)
+    theme: str = ""
+    wizard_pending: str = ""
+    wizard_version: str = ""
+    wizard_completed: str = ""
 
     def effective_mode(self) -> str:
         """Installed mode, forced to off when hooks are disabled."""
@@ -72,6 +76,10 @@ class SetupState:
             "agents_file": self.agents_file,
             "decisions": self.decisions,
             "integration_choices": self.integration_choices,
+            "theme": self.theme,
+            "wizard_pending": self.wizard_pending,
+            "wizard_version": self.wizard_version,
+            "wizard_completed": self.wizard_completed,
         }
 
     @classmethod
@@ -112,6 +120,10 @@ class SetupState:
             agents_file=str(raw.get("agents_file", "") or ""),
             decisions=decisions if isinstance(decisions, dict) else {},
             integration_choices=_integration_choices(raw.get("integration_choices")),
+            theme=str(raw.get("theme", "") or ""),
+            wizard_pending=str(raw.get("wizard_pending", "") or ""),
+            wizard_version=str(raw.get("wizard_version", "") or ""),
+            wizard_completed=str(raw.get("wizard_completed", "") or ""),
         )
 
 

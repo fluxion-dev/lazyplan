@@ -128,6 +128,97 @@ class ProfileMapSetupTest(unittest.TestCase):
         self.assertEqual(written["profiles"]["qa"]["tier"], "deep")
         self.assertTrue((self.home / ".config/opencode/agent/lazyplan-qa.md").is_file())
 
+    def test_end_to_end_setup_drives_profiles_doctor_and_dispatch(self) -> None:
+        import io
+        import os
+
+        from lazyplan.infrastructure import agent_install, host_models, profiles
+        from lazyplan.presentation.cli.main import main as lpui_main
+        from tests.support.home import sandbox_home
+
+        bin_dir = Path(self.tmp.name) / "bin"
+        bin_dir.mkdir()
+        opencode = bin_dir / "opencode"
+        opencode.write_text(
+            "#!/bin/sh\nprintf 'provider/tiny\\nprovider/big\\n'\n", encoding="utf-8"
+        )
+        opencode.chmod(0o755)
+        codex = bin_dir / "codex"
+        codex.write_text(
+            '#!/bin/sh\nprintf \'%s\' \'{"models": [{"slug": "gpt-6.1-sol"},'
+            '{"slug": "gpt-6-luna"}]}\'\n',
+            encoding="utf-8",
+        )
+        codex.chmod(0o755)
+        old_path = os.environ.get("PATH", "")
+        os.environ["PATH"] = f"{bin_dir}:{old_path}"
+        self.addCleanup(lambda: os.environ.__setitem__("PATH", old_path))
+        for name in ("opencode", "claude", "codex", "gemini", "cursor", "copilot"):
+            (self.home / f".{name}").mkdir(exist_ok=True)
+        (self.home / ".config/opencode").mkdir(parents=True, exist_ok=True)
+        (self.home / ".config/opencode/opencode.json").write_text(
+            '{"model": "provider/big", "small_model": "provider/tiny"}', encoding="utf-8"
+        )
+        (self.home / ".codex/config.toml").write_text('model = "gpt-6.1-sol"\n', encoding="utf-8")
+        (self.home / ".gemini/settings.json").write_text(
+            '{"model": {"name": "gemini-3.8-flash"}}', encoding="utf-8"
+        )
+        (self.home / ".cursor/settings.json").write_text(
+            '{"model": "composer-2"}', encoding="utf-8"
+        )
+        (self.home / ".copilot/config.json").write_text(
+            '{"model": "local/model"}', encoding="utf-8"
+        )
+        sandbox_home(self, str(self.home))
+        answers = iter(["", "", "", "y"])
+        result = setup.run_wizard(
+            self.home,
+            self.home,
+            setup.SetupState(),
+            "1.0",
+            read=lambda: next(answers),
+            write=io.StringIO(),
+            initial=setup.SetupChoice(placement=setup.HOME),
+            hooks_mode="off",
+        )
+        self.assertIsNotNone(result)
+        setup.install_integrations(result, self.home, None)
+        state = setup.load_state(self.home)
+        inspection = setup.inspect(setup.choice_from_state(state), state, None, self.home, "1.0")
+        if setup.remember_installed(inspection, state, "1.0"):
+            setup.save_state(state, self.home)
+        written = json.loads(self.map.read_text(encoding="utf-8"))
+        self.assertEqual(written["tiers"]["fast"]["opencode"], "provider/tiny")
+        self.assertEqual(written["tiers"]["deep"]["codex"], "gpt-6.1-sol")
+        self.assertTrue((self.home / ".copilot/agents/lazyplan-qa.agent.md").is_file())
+        report = host_models.discover_all(profiles.HOSTS, self.home, None)
+        self.assertEqual(report["opencode"].tier_defaults["fast"], "provider/tiny")
+        db = self.home / ".lazyplan/lazyplan.db"
+        manifest = profiles.dispatch_profiles(db, self.home)
+        self.assertEqual(manifest["reviewer"]["models"]["claude"], "opus")
+        old_cwd = os.getcwd()
+        old_no_setup = os.environ.get("LAZYPLAN_NO_SETUP")
+        os.chdir(self.home)
+        os.environ["LAZYPLAN_NO_SETUP"] = "1"
+        self.addCleanup(os.chdir, old_cwd)
+        self.addCleanup(
+            lambda: (
+                os.environ.__setitem__("LAZYPLAN_NO_SETUP", old_no_setup)
+                if old_no_setup is not None
+                else os.environ.pop("LAZYPLAN_NO_SETUP", None)
+            )
+        )
+        code = lpui_main(["--json", "doctor"])
+        self.assertEqual(code, 0)
+        state = setup.load_state(self.home)
+        before = {
+            path: path.stat().st_mtime_ns
+            for path in agent_install.profile_paths("global", None, self.home, state.agents)
+        }
+        setup.apply_choice(setup.choice_from_state(state), None, self.home, "1.0")
+        after = {path: path.stat().st_mtime_ns for path in before}
+        self.assertEqual(after, before)
+
     def test_deselected_host_removes_only_managed_profiles(self) -> None:
         setup.apply_choice(self._choice(agents=["opencode", "claude"]), None, self.home, "1.0")
         custom = self.home / ".claude/agents/lazyplan-custom.md"

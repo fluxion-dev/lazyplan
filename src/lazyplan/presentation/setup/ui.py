@@ -10,6 +10,7 @@ import os
 import shutil
 import sys
 from collections.abc import Callable, Mapping
+from dataclasses import replace
 from pathlib import Path
 from typing import TextIO
 
@@ -286,6 +287,85 @@ def render_models(
         ),
     )
     _line(write.write)
+
+
+def model_help(write: TextIO, color: bool) -> None:
+    """Print the model review edit commands."""
+    for line in (
+        "  t ROLE TIER       change one role's tier",
+        "  m HOST TIER MODEL set one host target for a tier",
+        "  r HOST TIER       reset a tier target to the discovered default",
+        "  inherit           use the host default for a model",
+        "  enter             accept the map",
+    ):
+        _line(write.write, _paint(line, "dim", color=color))
+
+
+def _model_edit(
+    answer: str,
+    hosts: list[str],
+    profiles_map: dict[str, profiles.Profile],
+    tiers: dict[str, dict[str, str]],
+    catalogs: Mapping[str, HostCatalog],
+) -> tuple[dict[str, profiles.Profile], dict[str, dict[str, str]], str]:
+    """Apply one edit command; return maps and an error message."""
+    parts = answer.split()
+    command = parts[0].lower()
+    updated = dict(profiles_map)
+    targets = {tier: dict(values) for tier, values in tiers.items()}
+    if command == "t" and len(parts) == 3:
+        role, tier = parts[1], parts[2].lower()
+        if role not in updated:
+            return profiles_map, tiers, f"unknown role {role!r}"
+        if tier not in profiles.TIERS:
+            return profiles_map, tiers, f"tier must be {'|'.join(profiles.TIERS)}"
+        updated[role] = replace(updated[role], tier=tier)
+        return updated, targets, ""
+    if command == "m" and len(parts) == 4:
+        host, tier, model = parts[1], parts[2].lower(), parts[3]
+        if host not in hosts:
+            return profiles_map, tiers, f"host must be one of {', '.join(hosts)}"
+        if tier not in profiles.TIERS:
+            return profiles_map, tiers, f"tier must be {'|'.join(profiles.TIERS)}"
+        targets.setdefault(tier, {})[host] = "" if model.lower() == "inherit" else model
+        return updated, targets, ""
+    if command == "r" and len(parts) == 3:
+        host, tier = parts[1], parts[2].lower()
+        if host not in hosts:
+            return profiles_map, tiers, f"host must be one of {', '.join(hosts)}"
+        if tier not in profiles.TIERS:
+            return profiles_map, tiers, f"tier must be {'|'.join(profiles.TIERS)}"
+        reset = catalogs[host].tier_defaults.get(tier, "")
+        targets.setdefault(tier, {})[host] = reset
+        return updated, targets, ""
+    return profiles_map, tiers, "unknown command; use t, m, r, inherit, or ?"
+
+
+def ask_models(
+    write: TextIO,
+    read: Callable[[], str],
+    hosts: list[str],
+    profiles_map: dict[str, profiles.Profile],
+    tiers: dict[str, dict[str, str]],
+    catalogs: Mapping[str, HostCatalog],
+    color: bool,
+) -> tuple[dict[str, profiles.Profile], dict[str, dict[str, str]]]:
+    """Show the model map and apply edits until the human accepts it."""
+    current_profiles = dict(profiles_map)
+    current_tiers = {tier: dict(values) for tier, values in tiers.items()}
+    while True:
+        render_models(write, hosts, current_profiles, current_tiers, catalogs, color)
+        answer = _ask(write, read, "  edit [enter to accept]: ").strip()
+        if not answer:
+            return current_profiles, current_tiers
+        if answer in ("?", "help"):
+            model_help(write, color)
+            continue
+        current_profiles, current_tiers, error = _model_edit(
+            answer, hosts, current_profiles, current_tiers, catalogs
+        )
+        if error:
+            note(write, error, color, "warn")
 
 
 def render_review(

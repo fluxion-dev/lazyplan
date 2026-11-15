@@ -16,11 +16,30 @@ export type NavLink = Readonly<{
   external?: boolean
 }>
 
+export type SectionId =
+  | "first-run"
+  | "story"
+  | "dispatch"
+  | "proof"
+  | "screens"
+  | "faq"
+
+export type SectionLink = Readonly<{
+  id: SectionId
+  href: `#${SectionId}`
+  label: string
+}>
+
+export const SECTION_LINKS: readonly SectionLink[] = [
+  { id: "first-run", href: "#first-run", label: "First run" },
+  { id: "story", href: "#story", label: "Plan" },
+  { id: "dispatch", href: "#dispatch", label: "Dispatch" },
+  { id: "proof", href: "#proof", label: "Proof" },
+  { id: "screens", href: "#screens", label: "Screenshots" },
+  { id: "faq", href: "#faq", label: "FAQ" },
+]
+
 export const NAV_LINKS: readonly NavLink[] = [
-  { href: "#story", label: "Story" },
-  { href: "#features", label: "Features" },
-  { href: "#proof", label: "Proof" },
-  { href: "#screens", label: "Screenshots" },
-  { href: "#faq", label: "FAQ" },
+  ...SECTION_LINKS,
   { href: DOCS_URL, label: "Docs", external: true },
 ]

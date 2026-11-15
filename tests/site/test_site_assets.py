@@ -37,6 +37,11 @@ EXPECTED = {
     "lpui-share-sync",
     "lpui-gates",
     "lpui-imports",
+    "lpui-setup",
+    "lpui-setup-review",
+    "lpui-update",
+    "lpui-dispatch",
+    "lpui-worktrees",
 }
 
 

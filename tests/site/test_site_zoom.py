@@ -9,7 +9,6 @@ from tests.support.paths import ROOT
 from tests.support.site import has_built_site, page_html
 
 TRIGGERS = re.compile(r"<button[^>]*data-zoom[^>]*>")
-IMAGES = re.compile(r'<img (?![^>]*(?:data-hero|data-proof))[^>]*src="(\./screens/[^"]+\.png)"')
 COMPONENT = ROOT / "site/src/components/site/screenshots.tsx"
 FRAME = ROOT / "site/src/components/site/screenshot-frame.tsx"
 
@@ -22,16 +21,18 @@ class TestScreenshotZoom(unittest.TestCase):
         self.frame = FRAME.read_text(encoding="utf-8")
 
     def test_every_screenshot_is_a_zoom_trigger(self):
-        self.assertEqual(len(TRIGGERS.findall(self.page)), 7)
-        self.assertEqual(len(IMAGES.findall(self.page)), 7)
+        self.assertEqual(len(TRIGGERS.findall(self.page)), 8)
 
     def test_every_trigger_targets_a_published_png(self):
-        for href in IMAGES.findall(self.page):
-            with self.subTest(href=href):
-                png = ROOT / "site/public" / href
-                webp = png.with_suffix(".webp")
-                self.assertTrue(png.is_file())
-                self.assertTrue(webp.is_file())
+        triggers = re.findall(r"<button[^>]*data-zoom[^>]*>(.*?)</button>", self.page, re.S)
+        self.assertEqual(len(triggers), 8)
+        for block in triggers:
+            img = re.search(r'src="(\./screens/[^"]+\.png)"', block)
+            self.assertIsNotNone(img)
+            png = ROOT / "site/public" / img.group(1)
+            webp = png.with_suffix(".webp")
+            self.assertTrue(png.is_file())
+            self.assertTrue(webp.is_file())
 
     def test_dialog_is_shadcn_with_a_title(self):
         for fragment in ("<Dialog", "DialogContent", "DialogTitle"):

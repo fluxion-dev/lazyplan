@@ -129,8 +129,8 @@ class TestSiteSEO(unittest.TestCase):
             )
         ]
         visible = dict(zip(questions, answers, strict=True))
-        self.assertEqual(len(faq["mainEntity"]), 6)
-        self.assertEqual(len(visible), 6)
+        self.assertEqual(len(faq["mainEntity"]), 8)
+        self.assertEqual(len(visible), 8)
         for item in faq["mainEntity"]:
             name = item["name"]
             self.assertIn(name, visible)
@@ -139,14 +139,15 @@ class TestSiteSEO(unittest.TestCase):
     def test_planner_executor_story_is_present(self):
         page = page_html()
         self.assertIn('id="ways-to-work"', page)
+        self.assertIn('id="dispatch"', page)
         for phrase in (
-            "One plan. Many workers. Shared context.",
-            "Edit any row yourself",
+            "Solo, paired, or parallel.",
             "Ask for a plan.",
             "Hand off one task.",
+            "Run the lanes.",
             "Add the token model",
             "Executor subagent:",
-            "Claimed by executor",
+            "lpui dispatch --plan 7",
         ):
             self.assertIn(phrase, page)
 
@@ -155,9 +156,9 @@ class TestSiteSEO(unittest.TestCase):
         text = html.unescape(
             re.sub(r"<[^>]+>", " ", re.sub(r"<script.*?</script>", "", page, flags=re.S))
         )
-        self.assertLessEqual(len(text.split()), 1200)
+        self.assertLessEqual(len(text.split()), 1900)
         self.assertLessEqual(page.count("<code"), 8)
-        self.assertEqual(page.count("<figure"), 9)
+        self.assertEqual(page.count("<figure"), 12)
         self.assertIn('id="ways-to-work"', page)
 
 

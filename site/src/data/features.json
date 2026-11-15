@@ -2,27 +2,69 @@
   "lead": [
     {
       "id": "shared-plan",
-      "title": "One shared plan",
-      "description": "Plans, milestones, tasks, and acceptance criteria live in one place. You and your agent read and write the same rows.",
+      "title": "A plan, not a chat log",
+      "description": "Plans, milestones, tasks, and acceptance criteria live in one local SQLite journal that your screen and your agent's CLI both read.",
       "icon": "network",
       "group": "plan"
     },
     {
-      "id": "agent-loop",
-      "title": "One agent plans. Another builds.",
-      "description": "A planner writes the plan while an executor claims tasks, leaves a handoff, and links the commit.",
-      "icon": "bot",
+      "id": "dispatch",
+      "title": "Milestones are lanes",
+      "description": "A lane names its wave and role. Dispatch prints the worktree command for the lane and the command that starts the next ready task.",
+      "icon": "layers",
       "group": "agents"
     },
     {
       "id": "proof",
-      "title": "Proof where the work landed.",
-      "description": "Follow every task into commits, changed files, and pull requests. Missing proof is marked stale, never hidden.",
-      "icon": "git-branch",
+      "title": "Proof on every criterion",
+      "description": "Evidence, commits, and pull requests attach to the criterion they prove. Missing proof is marked stale, never hidden.",
+      "icon": "shield-check",
       "group": "proof"
     }
   ],
   "support": [
+    {
+      "id": "setup",
+      "title": "A guided first run",
+      "description": "Placement, agents, hooks, model tiers, and role effort live in one wizard that shows every file before it writes.",
+      "icon": "sparkles",
+      "group": "product"
+    },
+    {
+      "id": "models",
+      "title": "Tiers, models, and effort",
+      "description": "Fast, standard, and deep tiers map to each host's models. Roles can also set low, medium, or high effort.",
+      "icon": "sliders",
+      "group": "agents"
+    },
+    {
+      "id": "lanes",
+      "title": "Lanes in waves",
+      "description": "Waves run in order and lanes in parallel up to the plan's cap. A lane holds one doing task at a time.",
+      "icon": "route",
+      "group": "agents"
+    },
+    {
+      "id": "worktrees",
+      "title": "One worktree per lane",
+      "description": "lpui plan worktree prints and registers the checkout commands. lazyplan never creates, merges, or removes one itself.",
+      "icon": "git-branch",
+      "group": "agents"
+    },
+    {
+      "id": "claims",
+      "title": "Claims that prevent collisions",
+      "description": "Leases, touch-points, and expiry keep parallel agents off each other's files.",
+      "icon": "lock",
+      "group": "agents"
+    },
+    {
+      "id": "handoffs",
+      "title": "Sessions and handoffs",
+      "description": "Hooks record each agent session, and the next worker resumes from a note instead of a briefing.",
+      "icon": "messages-square",
+      "group": "agents"
+    },
     {
       "id": "control-room",
       "title": "A control room for what needs you",
@@ -38,52 +80,24 @@
       "group": "proof"
     },
     {
-      "id": "claims",
-      "title": "Claims that prevent collisions",
-      "description": "Leases, touch-points, and expiry keep parallel agents off each other's files.",
-      "icon": "lock",
-      "group": "agents"
-    },
-    {
-      "id": "sessions",
-      "title": "Sessions and handoffs",
-      "description": "Every run leaves a summary, a handoff, and comments, so the next agent can resume without a briefing.",
-      "icon": "messages-square",
-      "group": "agents"
-    },
-    {
-      "id": "overview",
-      "title": "The overview is the detail",
-      "description": "Select a row and read its milestones, tasks, criteria, proof, and notes without leaving the plan tree.",
-      "icon": "monitor",
-      "group": "plan"
+      "id": "evidence",
+      "title": "Evidence with the command",
+      "description": "Record the command, exit code, commit, and proving task. The latest record decides whether a criterion is proven.",
+      "icon": "list-checks",
+      "group": "proof"
     },
     {
       "id": "source-trail",
       "title": "Source trail",
       "description": "Walk from task to repo, commit, changed file, and pull request. Missing proof is marked stale.",
-      "icon": "route",
+      "icon": "network",
       "group": "proof"
     },
     {
-      "id": "timeline",
-      "title": "Timeline on demand",
-      "description": "See plans and milestones across lanes without leaving the screen.",
-      "icon": "timer",
-      "group": "plan"
-    },
-    {
-      "id": "keyboard",
-      "title": "Keyboard-first",
-      "description": "A fast tree, command palette, history, and bulk actions. The mouse is optional.",
-      "icon": "keyboard",
-      "group": "plan"
-    },
-    {
-      "id": "themes",
-      "title": "Three terminal themes",
-      "description": "Mocha, void, and latte. The screen follows your terminal, not the other way around.",
-      "icon": "palette",
+      "id": "updates",
+      "title": "Version in the taskbar",
+      "description": "The running version sits at the right edge. A newer release adds an arrow; click it or press U to download and verify.",
+      "icon": "download",
       "group": "product"
     },
     {
@@ -94,18 +108,18 @@
       "group": "product"
     },
     {
-      "id": "auditability",
-      "title": "Writes are deliberate and recorded",
-      "description": "Writes go straight to the plan; every change lands in the activity feed.",
-      "icon": "list-checks",
-      "group": "proof"
+      "id": "keyboard",
+      "title": "Keyboard-first",
+      "description": "A fast tree, command palette, and history. The mouse is optional.",
+      "icon": "keyboard",
+      "group": "product"
     },
     {
-      "id": "bulk-search",
-      "title": "Find, mark, edit once",
-      "description": "Filter the tree, mark rows, and apply bulk moves, blocks, and releases.",
-      "icon": "search",
-      "group": "plan"
+      "id": "themes",
+      "title": "Three terminal themes",
+      "description": "Mocha, void, and latte. The screen follows your terminal, not the other way around.",
+      "icon": "palette",
+      "group": "product"
     }
   ]
 }

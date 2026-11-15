@@ -8,13 +8,13 @@ import {
 } from "lucide-react"
 
 import { Card, CardContent } from "@/components/ui/card"
-import { COPY, STORY_SCREENS } from "@/data/site"
+import { COPY, screen } from "@/data/site"
 
 import { Reveal } from "./reveal"
+import { ScreenshotFigure } from "./screenshot-figure"
 import { Section, SectionHeading } from "./section"
 
-const PROOF_SCREEN =
-  STORY_SCREENS.find((screen) => screen.name === "control-room") ?? STORY_SCREENS[0]
+const PROOF_SCREEN = screen("control-room")
 
 const TRUST = [
   {
@@ -87,27 +87,7 @@ export function ProofSection() {
         </Reveal>
 
         <Reveal delay={100}>
-          <figure className="relative m-0">
-            <div
-              aria-hidden="true"
-              className="absolute -inset-6 rounded-[2rem] bg-brand-cyan/10 blur-3xl"
-            />
-            <div className="relative overflow-hidden rounded-2xl border border-border bg-card/70 p-1.5 shadow-cinema">
-              <img
-                data-proof
-                src={`./screens/${PROOF_SCREEN.file}.png`}
-                width={PROOF_SCREEN.width}
-                height={PROOF_SCREEN.height}
-                loading="lazy"
-                decoding="async"
-                alt={PROOF_SCREEN.alt}
-                className="block h-auto w-full rounded-xl"
-              />
-            </div>
-            <figcaption className="mt-3 text-sm text-muted-foreground">
-              {PROOF_SCREEN.caption}
-            </figcaption>
-          </figure>
+          <ScreenshotFigure screen={PROOF_SCREEN} glow="cyan" marker="proof" />
         </Reveal>
       </div>
     </Section>

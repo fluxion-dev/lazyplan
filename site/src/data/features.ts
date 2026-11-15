@@ -4,20 +4,20 @@ export type FeatureGroup = "plan" | "agents" | "proof" | "product"
 
 export type FeatureIcon =
   | "activity"
-  | "bot"
   | "database"
+  | "download"
   | "git-branch"
   | "keyboard"
+  | "layers"
   | "list-checks"
   | "lock"
   | "messages-square"
-  | "monitor"
   | "network"
   | "palette"
   | "route"
-  | "search"
   | "shield-check"
-  | "timer"
+  | "sliders"
+  | "sparkles"
 
 export type Feature = Readonly<{
   id: string

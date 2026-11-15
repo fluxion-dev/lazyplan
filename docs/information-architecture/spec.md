@@ -1,9 +1,9 @@
 # Target information architecture
 
-This spec is the review artifact for P138. The generated
-[inventory](inventory.md) proves what exists today; the
-[findings](findings.md) rank the gaps. This page defines the target model and
-the rules that later refactor milestones implement.
+This spec is the review artifact for P138, kept current for the setup wizard
+and the taskbar version badge. The generated [inventory](inventory.md) proves
+what exists today; the [findings](findings.md) rank the gaps. This page defines
+the target model and the rules that later refactor milestones implement.
 
 ## Entity model
 
@@ -51,10 +51,30 @@ number of interactions from the tree; hubs never exceed three.
 | Ship | tree | open plan → review → export/ship note | Markdown packet | 3 |
 | Inspect | tree | open row → provenance → commit/file/PR | read-only trail | 3 |
 | Coordinate | tree | open task → claims/touch-points → claim/block | active lease or blocked row | 3 |
-| Administer | tree | palette → setup/update/doctor | resolved layout | 3 |
+| Administer | tree | `S` setup wizard or `U` update → review → apply or download | resolved layout, or a staged release for the next launch | 2 |
 
 Human and agent variants use the same steps; agents call the CLI/MCP adapter for
 the same action ID instead of pressing the key.
+
+## Setup and update surfaces
+
+Setup and update are reachable from the tree without leaving the screen, and
+both keep a headless path for scripts and agents.
+
+- The setup wizard opens on first run, on a version change, on a new skill or
+  hook, on managed profile drift, and from the palette or `S`. It edits one
+  session draft and applies through the same writer as `lpui setup`; **finish
+  later** writes nothing and keeps the wizard due. `lpui doctor` reports the
+  resolved layout read-only, and `lpui setup` is the terminal fallback.
+- The taskbar pins the health count and the running version at the right edge.
+  A newer release already in the update cache renders as an arrow, and a click
+  on the badge or `U` opens the update screen. That screen names the installed
+  and latest versions and the install method, and only **Download** touches the
+  network; the staged release applies at the next launch, or on **Restart now**
+  on Windows. `lpui upgrade` is the headless equivalent.
+
+Setup steps, `S`, `U`, and the update screen are inventoried like every other
+surface, so a rename or a dropped path fails the snapshot check.
 
 ## Canonical taxonomy
 
@@ -78,11 +98,13 @@ all) share one action; `rename` when the label changes but the handler stays;
 ## Keymap
 
 Global keys are reserved and mean the same thing everywhere: `?` help,
-`c` palette, `escape` back, `q` quit.
+`c` palette, `escape` back, `q` quit. `S` opens the setup wizard from the tree,
+and `U` opens the update screen from every view that carries the taskbar.
 
 | Context | Keys |
 | --- | --- |
 | tree | `j`/`k` move, `left`/`right` fold, `space` mark, `e` edit, `s` status, `a` add criterion, `p` prove, `d` delete, `n` create, `/` filter, `f` plan mode, `g` source, `z` fold, `r` refresh, `t` theme |
+| app | `S` setup, `U` update, `W` release notes, `m` maintenance |
 | hubs | `j`/`k` move, `enter` open, `escape` back, `?` help |
 | modal | `enter` accept, `escape` cancel |
 
@@ -102,9 +124,10 @@ The main tree is the root. Every hub is at most three interactions away.
 | tree → source trail | `g` | 1 |
 | tree → pull requests | palette pull request hub | 1 |
 | tree → activity | palette activity hub | 1 |
+| tree → setup wizard | `S` or palette **Open setup wizard** | 1 |
+| tree → update | `U` or the taskbar badge | 1 |
 | tree → create → form | `n` → kind | 2 |
 | tree → export picker | palette → export | 2 |
-| tree → update | `U` | 1 |
 
 Back and forward history, breadcrumbs, and selection restoration are required on
 every route. Palette and help are available in every context.
@@ -122,13 +145,15 @@ every route. Palette and help are available in every context.
 | comments/notes | yes | yes | yes | yes | — |
 | commits/files/PRs/repos | yes | yes | read-only | yes | — |
 | feed | yes | yes | read-only | yes | — |
-| setup/upgrade/doctor | palette | yes | no | yes | CLI-only by design |
+| setup/upgrade/doctor | yes (palette, `S`, `U`) | yes | no | yes | MCP has no setup or update tool; headless runs use the CLI |
 | theme/fold/mark/bulk | yes | no | no | no | TUI-only by design |
 
-Exceptions marked `M45x` are resolved by that milestone. CLI-only setup and
-TUI-only view actions are approved exceptions and stay in the parity matrix.
-`registry_surfaces.py` records one mapping per surface plus every approved
-exception with a reason; `tests/ia/test_surface_parity.py` fails on an
+Exceptions marked `M45x` are resolved by that milestone. Setup is now a screen
+surface as well as a CLI one: the wizard and the update screen write through
+the same apply and stage paths as `lpui setup` and `lpui upgrade`. The MCP gap
+and TUI-only view actions are the approved exceptions that stay in the parity
+matrix. `registry_surfaces.py` records one mapping per surface plus every
+approved exception with a reason; `tests/ia/test_surface_parity.py` fails on an
 undocumented gap.
 
 ## Deprecation policy
@@ -153,7 +178,8 @@ The [reachability report](reachability.md) is generated from the registry and
 proves every action is at most three interactions from the tree. The
 [newcomer walkthrough](walkthrough.md) records each journey at 80x24 and
 120x40; the [acceptance record](acceptance.md) carries the final gate evidence.
-The [inventory](inventory.md) is the reproducible surface snapshot.
+The [inventory](inventory.md) is the reproducible surface snapshot, including
+the wizard steps, the `S` and `U` bindings, and the update screen.
 
 Legacy CLI aliases keep working for one minor release. Removal target: `0.37.0`, for deprecations introduced in `0.36.0`.
 `registry.deprecations()` names each replacement, and the help screen renders

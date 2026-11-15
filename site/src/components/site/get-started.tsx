@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { COPY, REPO_URL } from "@/data/site"
+import { COPY, DOCS_URL } from "@/data/site"
 
 import { Section } from "./section"
 
@@ -20,7 +20,7 @@ export function GetStarted() {
               <a href="#install">Install</a>
             </Button>
             <Button asChild size="lg" variant="outline">
-              <a href={REPO_URL}>GitHub</a>
+              <a href={DOCS_URL}>Usage guide</a>
             </Button>
           </div>
         </CardContent>

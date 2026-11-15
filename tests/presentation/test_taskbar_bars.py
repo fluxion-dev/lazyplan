@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import os
 import tempfile
 import unittest
 from collections.abc import Iterable
 from pathlib import Path
+from unittest import mock
 
 from lazyplan.core.entities import PlanRevision
 
@@ -19,7 +21,7 @@ try:
     from lazyplan.presentation.tui.screens.plan_diff import PlanDiffScreen
     from lazyplan.presentation.tui.screens.setup import SetupWizardScreen
     from lazyplan.presentation.tui.screens.source import SourceScreen
-    from lazyplan.presentation.tui.widgets.taskbar import Taskbar
+    from lazyplan.presentation.tui.widgets.taskbar import Taskbar, badge_start
     from lazyplan.services.revisions import DiffResult
     from lazyplan.store import Store
 
@@ -108,13 +110,27 @@ class TaskbarBarsTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_clicking_a_plan_diff_badge_opens_updates(self) -> None:
         app = create_app(str(self.store.path))
-        async with app.run_test(size=(120, 40)) as pilot:
-            app.push_screen(PlanDiffScreen(EMPTY_DIFF))
-            await pilot.pause(0.3)
-            app.update_controller.latest = "99.0.0"
-            app.refresh_taskbar()
-            await pilot.pause()
-            bar = app.screen.query_one("#plan-diff-hints", Taskbar)
-            await pilot.click(bar, offset=(bar.size.width - 2, 0))
-            await pilot.pause()
-            self.assertIsInstance(app.screen, UpdateScreen)
+        # Own the update state: the mount poll must not discover a release, or
+        # a toast over the bottom-right corner would swallow the badge click.
+        with mock.patch.dict(os.environ, {"LAZYPLAN_NO_UPDATE_CHECK": "1"}):
+            async with app.run_test(size=(120, 40)) as pilot:
+                app.push_screen(PlanDiffScreen(EMPTY_DIFF))
+                await pilot.pause(0.3)
+                controller = app.update_controller
+                for _ in range(40):
+                    if not controller.checking:
+                        break
+                    await pilot.pause(0.05)
+                controller.stop()
+                controller.latest = "99.0.0"
+                app.refresh_taskbar()
+                await pilot.pause()
+                bar = app.screen.query_one("#plan-diff-hints", Taskbar)
+                column = badge_start(
+                    running=package_version(),
+                    latest="99.0.0",
+                    width=bar.size.width,
+                )
+                await pilot.click(bar, offset=(column + 1, 0))
+                await pilot.pause()
+                self.assertIsInstance(app.screen, UpdateScreen)

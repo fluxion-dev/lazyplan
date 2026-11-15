@@ -44,3 +44,20 @@ None.
 
 The human approved the spec on 2026-11-07; the refactor work began after
 this record.
+
+## Addendum — 2026-11-15
+
+The setup wizard and the taskbar version badge changed two decisions in this
+record; everything else stands as approved.
+
+- Setup is no longer CLI-only. The wizard opens on first run and from `S` or the
+  palette, and applies through the same writer as `lpui setup`. The spec's
+  parity row and exception note were updated; MCP still has no setup tool.
+- The taskbar carries the running version and, when the cache knows a newer
+  release, an arrow to it. A click on the badge or `U` opens the update screen,
+  which stages a verified download for the next launch. `lpui upgrade` remains
+  the headless path.
+
+Both surfaces are in the regenerated [inventory](inventory.md) and
+[reachability report](reachability.md); `tools/ia_inventory.py --check` and
+`tools/ia_reachability.py --check` pass on this tree.

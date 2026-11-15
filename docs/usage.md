@@ -626,6 +626,14 @@ Gemini reads `~/.gemini/settings.json`; Cursor and Copilot read their config
 and otherwise keep the host default. A missing binary or bad config becomes a
 warning, never a failed setup.
 
+The interactive flow has four steps: placement, agents, model targets, and
+review. The model step prints the tier table, then one row per role with its
+tier and each selected host's resolved model. Enter accepts the map;
+`t ROLE TIER`, `m HOST TIER MODEL`, and `r HOST TIER` edit it, and `inherit`
+clears a target back to the host default. Setup backs up `agents.json` before
+rewriting it, and rerunning with an unchanged map writes no profile bytes.
+When a host is deselected, setup removes only its marked `lazyplan-*` files.
+
 Retune without a prompt in scripts:
 
 ```bash
@@ -634,10 +642,11 @@ lpui setup --tier-model opencode:fast=provider/tiny
 lpui setup --role-model claude:reviewer=opus --no-model-review
 ```
 
-Managed files carry a marker and are refreshed; an unmarked file of the same
-name is left alone. `lpui doctor` lists missing, drifted, and unmarked
-profiles, and `lpui dispatch --json` carries the resolved tier, effort, and
-model for every host.
+`--yes`, `--json`, a version upgrade, and every agent command apply the saved
+map without prompting. Managed files carry a marker and are refreshed; an
+unmarked file of the same name is left alone. `lpui doctor` lists missing,
+drifted, and unmarked profiles, and `lpui dispatch --json` carries the
+resolved tier, effort, and model for every host.
 
 ### Porcelain output
 

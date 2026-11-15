@@ -21,6 +21,10 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
   name fast, standard, or deep; each host maps that tier to its own model, and
   version 1 files migrate on write. Other hosts receive role, tier, effort, and
   prompt hints in the dispatch manifest.
+- **Setup reviews model targets before writing.** The wizard shows one row per
+  tier and role, lets the human edit tiers or host models in place, and backs
+  up the map before a rewrite. Deselecting a host removes only its marked
+  profiles, and an unchanged rerun writes no profile bytes.
 - **Setup targets models without prompts when asked.** `--agent-tier`,
   `--tier-model`, and `--role-model` set the role tiers and host models, and
   `--no-model-review` keeps the current map. OpenCode and Codex catalogs are

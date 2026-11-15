@@ -11,9 +11,12 @@ import copy
 from dataclasses import dataclass, field
 from typing import Any
 
-from ....core.policies.agents import HOSTS
+from ....core.policies import effort as effort_policy
+from ....core.policies.agents import DEFAULT_ROLE_TIERS, HOSTS, TIERS
 from ....core.policies.hooks import MODES
+from ....core.policies.lanes import AGENT_ROLES
 from ....infrastructure import skills
+from ....infrastructure.host_models import HostCatalog
 from ...setup import ui as setup_ui
 from ...setup.constants import HOME
 from ...setup.layout import resolve_choice
@@ -31,6 +34,7 @@ try:
     from textual.widgets import (
         Button,
         Checkbox,
+        Input,
         Label,
         OptionList,
         Select,
@@ -54,6 +58,8 @@ HOOK_MODES: tuple[tuple[str, str], ...] = (
     ("advisory", "Advisory — hooks remind but never block"),
     ("off", "Off — remove the managed hooks"),
 )
+INHERIT = "__inherit__"
+INHERIT_LABEL = "inherit (host default)"
 
 
 @dataclass(frozen=True)
@@ -259,6 +265,8 @@ if _TEXTUAL_OK:
                 "placement": self._placement_panel,
                 "agents": self._agents_panel,
                 "hooks": self._hooks_panel,
+                "models": self._models_panel,
+                "roles": self._roles_panel,
             }
             builder = builders.get(step.key)
             if builder is not None:
@@ -383,6 +391,133 @@ if _TEXTUAL_OK:
             ]
             return widgets
 
+        def _models_panel(self) -> list[Any]:
+            """One tier target per selected host, with catalog options and manual entry."""
+            draft = self.session.draft
+            widgets: list[Any] = [
+                Static(
+                    "Each host maps the fast, standard, and deep tiers to one of its"
+                    " own models. Type any model id the host accepts, or leave a"
+                    " target empty to inherit the host's configured default.",
+                    classes="setup-note",
+                )
+            ]
+            for host in draft.agents:
+                catalog = self.session.catalogs.get(host)
+                label = catalog.label if catalog is not None else host.title()
+                widgets.append(Static(f"[b]{escape_markup(label)}[/]", classes="setup-host"))
+                if catalog is not None:
+                    source = catalog.source or "defaults"
+                    widgets.append(
+                        Static(
+                            f"[dim]source: {escape_markup(source)}[/]",
+                            classes="setup-note",
+                        )
+                    )
+                    if catalog.warning:
+                        widgets.append(
+                            Static(
+                                f"[yellow]{escape_markup(catalog.warning)}[/]",
+                                classes="setup-note",
+                            )
+                        )
+                for tier in TIERS:
+                    current = str((draft.tiers_map.get(tier) or {}).get(host, "") or "").strip()
+                    widgets.append(
+                        Horizontal(
+                            Label(tier, classes="setup-row-label"),
+                            Select(
+                                self._model_options(catalog, current),
+                                value=current or INHERIT,
+                                allow_blank=False,
+                                id=f"setup-tier-{host}-{tier}",
+                            ),
+                            Input(
+                                value=current,
+                                placeholder="model id, empty for inherit",
+                                id=f"setup-model-{host}-{tier}",
+                            ),
+                            classes="setup-row",
+                        )
+                    )
+            return widgets
+
+        @staticmethod
+        def _model_options(catalog: HostCatalog | None, current: str) -> list[tuple[str, str]]:
+            """Catalog models plus inherit, keeping a manual id visible."""
+            models = list(catalog.models) if catalog is not None else []
+            values = [INHERIT, *models]
+            if current and current not in models:
+                values.insert(1, current)
+            return [(INHERIT_LABEL if value == INHERIT else value, value) for value in values]
+
+        def _roles_panel(self) -> list[Any]:
+            """One tier and curated effort selector per role, plus a reset."""
+            draft = self.session.draft
+            supported = [host for host in draft.agents if effort_policy.supports(host)]
+            widgets: list[Any] = [
+                Static(
+                    "Every role names a capability tier and an optional effort"
+                    " level. Effort is written only into hosts that have a native"
+                    " field; every other host stays at inherit.",
+                    classes="setup-note",
+                )
+            ]
+            if not supported:
+                widgets.append(
+                    Static(
+                        "None of the selected hosts has an effort field, so the"
+                        " effort selectors are disabled and roles stay at inherit.",
+                        classes="setup-note",
+                    )
+                )
+            else:
+                widgets.append(
+                    Static(
+                        f"[dim]effort renders into: {escape_markup(', '.join(supported))}[/]",
+                        classes="setup-note",
+                    )
+                )
+            for role in AGENT_ROLES:
+                profile = draft.profiles_map.get(role)
+                if profile is None:
+                    continue
+                stored = effort_policy.normalize(profile.effort)
+                level = stored if stored in effort_policy.LEVELS else effort_policy.INHERIT
+                widgets.append(
+                    Horizontal(
+                        Label(role, classes="setup-row-label"),
+                        Select(
+                            [(tier, tier) for tier in TIERS],
+                            value=profile.tier if profile.tier in TIERS else "standard",
+                            allow_blank=False,
+                            id=f"setup-role-tier-{role}",
+                        ),
+                        Select(
+                            [
+                                (effort_policy.LABELS[value], value)
+                                for value in effort_policy.LEVELS
+                            ],
+                            value=level,
+                            allow_blank=False,
+                            disabled=not supported,
+                            id=f"setup-role-effort-{role}",
+                        ),
+                        classes="setup-row",
+                    )
+                )
+                if profile.effort and stored not in effort_policy.LEVELS:
+                    widgets.append(
+                        Static(
+                            f"[yellow]{escape_markup(role)} keeps the stored effort"
+                            f" {escape_markup(profile.effort)} until you choose a"
+                            " level; choosing inherit clears it.[/]",
+                            classes="setup-note",
+                        )
+                    )
+            widgets.append(Button("Reset roles to tier defaults", id="setup-roles-reset"))
+            return widgets
+
         async def _show_step(self) -> None:
             """Swap the panel for the step now selected."""
             panel = self.query_one("#setup-panel", Vertical)
@@ -444,12 +579,24 @@ if _TEXTUAL_OK:
         def _dirty(self) -> bool:
             return self.session.draft != self._initial
 
+        def _commit_inputs(self) -> None:
+            """Adopt typed model ids before leaving a step."""
+            for widget in self.query(Input):
+                ident = widget.id or ""
+                if not ident.startswith("setup-model-"):
+                    continue
+                host, _, tier = ident.removeprefix("setup-model-").rpartition("-")
+                if host and tier:
+                    self.session.set_tier_model(host, tier, widget.value.strip())
+
         async def action_previous(self) -> None:
             """Move one step back; edits stay in the draft."""
+            self._commit_inputs()
             await self._select(self._index - 1)
 
         async def action_next(self) -> None:
             """Validate this step, then move one step forward."""
+            self._commit_inputs()
             self._errors = tuple(self.session.validate())
             if self._errors:
                 self._update_chrome()
@@ -528,6 +675,50 @@ if _TEXTUAL_OK:
                 return
             self.session.set_hooks_mode(mode)
             self._after_change()
+
+        @on(Select.Changed)
+        def _select_changed(self, event: Select.Changed) -> None:
+            """Route tier and role selectors to the session mutators."""
+            ident = event.select.id or ""
+            value = str(event.value)
+            if ident.startswith("setup-tier-"):
+                host, _, tier = ident.removeprefix("setup-tier-").rpartition("-")
+                model = "" if value == INHERIT else value
+                if host and tier:
+                    self.session.set_tier_model(host, tier, model)
+                    entry = query_one_opt(self, f"#setup-model-{host}-{tier}", Input)
+                    if entry is not None:
+                        entry.value = model
+            elif ident.startswith("setup-role-tier-"):
+                self.session.set_role_tier(ident.removeprefix("setup-role-tier-"), value)
+            elif ident.startswith("setup-role-effort-"):
+                self.session.set_role_effort(ident.removeprefix("setup-role-effort-"), value)
+
+        @on(Input.Submitted)
+        def _model_submitted(self, event: Input.Submitted) -> None:
+            """Store a manually typed model id and mirror it in the selector."""
+            ident = event.input.id or ""
+            if not ident.startswith("setup-model-"):
+                return
+            host, _, tier = ident.removeprefix("setup-model-").rpartition("-")
+            if not host or not tier:
+                return
+            model = event.value.strip()
+            self.session.set_tier_model(host, tier, model)
+            catalog = self.session.catalogs.get(host)
+            known = not model or (catalog is not None and model in catalog.models)
+            selector = query_one_opt(self, f"#setup-tier-{host}-{tier}", Select)
+            if known and selector is not None:
+                selector.value = model or INHERIT
+
+        @on(Button.Pressed, "#setup-roles-reset")
+        async def _reset_roles(self) -> None:
+            """Return every role to its packaged tier and inherited effort."""
+            for role in self.session.draft.profiles_map:
+                self.session.set_role_tier(role, DEFAULT_ROLE_TIERS.get(role, "standard"))
+                self.session.set_role_effort(role, effort_policy.INHERIT)
+            self._update_chrome()
+            await self._show_step()
 
         @on(Button.Pressed, "#setup-back")
         async def _back(self) -> None:

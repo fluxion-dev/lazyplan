@@ -7,8 +7,17 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from dataclasses import replace
+
 from lazyplan.core.policies import hooks as hook_policy
-from lazyplan.infrastructure import agent_install, hook_install, skills, textfile
+from lazyplan.infrastructure import (
+    agent_install,
+    host_models,
+    hook_install,
+    profiles,
+    skills,
+    textfile,
+)
 from lazyplan.infrastructure.integrations import HOOK
 from lazyplan.infrastructure.repo import (
     find_repo_root,
@@ -34,6 +43,43 @@ from .integrations import Inspection, inspect, remember_installed, review_pendin
 from .layout import SetupChoice
 from .state import SetupState, load_state, save_state, state_path, timestamp
 from .wizard import explicit_db, prompt_allowed, run_wizard, setup_skipped
+
+
+def _seed_profile_map(
+    choice: SetupChoice,
+    root: Path | None,
+    home: Path,
+    db_path: Path,
+    agents: list[str],
+) -> tuple[Path | None, Path | None]:
+    """Write or migrate agents.json; return its path and backup, if any."""
+    if choice.explicit_db or not agents:
+        return None, None
+    path = profiles.path_for(db_path)
+    loaded, _saved = profiles.load_all(db_path)
+    effective = host_models.effective_tiers(db_path, home, root, agents)
+    role_models: dict[str, dict[str, str]] = {}
+    for host, roles in (choice.role_models or {}).items():
+        for role, model in roles.items():
+            role_models.setdefault(role, {})[host] = model
+    updated: dict[str, profiles.Profile] = {}
+    for role, profile in loaded.items():
+        tier = (choice.role_tiers or {}).get(role, profile.tier)
+        models = dict(profile.models)
+        models.update(role_models.get(role, {}))
+        updated[role] = replace(profile, tier=tier, models=models)
+    for host, tiers in (choice.tier_models or {}).items():
+        for tier, model in tiers.items():
+            effective.setdefault(tier, {})[host] = model
+    text = profiles.render(updated, effective)
+    if path.is_file() and textfile.read(path) == text:
+        return path, None
+    backup: Path | None = None
+    if path.is_file():
+        backup_dir = layout.new_backup_dir(home)
+        backup = layout.backup_file(backup_dir, path)
+    profiles.save(db_path, updated, effective)
+    return path, backup
 
 
 def _install_agent_profiles(
@@ -82,6 +128,12 @@ def apply_choice(
         home,
         only_existing=bool(previous.last_version and previous.skills_enabled),
     )
+    agents = choice.agents or [host.key for host in skills.detect_agents(home) if host.detected]
+    profile_map: Path | None = None
+    if skill_plan.scope != "none":
+        profile_map, profile_backup = _seed_profile_map(choice, root, home, resolved.db, agents)
+        if profile_backup is not None:
+            backups.append(profile_backup)
     profile_results, profile_files = _install_agent_profiles(
         choice, skill_plan, root, home, resolved.db
     )
@@ -95,6 +147,7 @@ def apply_choice(
         "config": str(resolved.config) if resolved.config else None,
         "skills": [str(path) for path in skill_plan.skill_files],
         "installed": result.installed,
+        "agents_json": str(profile_map) if profile_map is not None else None,
         "profiles": [item.to_dict() for item in profile_results],
         "profile_files": profile_files,
         "refreshed": [str(path) for path in refreshed],

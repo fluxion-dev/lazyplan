@@ -1,7 +1,7 @@
 export const COPY = {
   hero: {
     badge: "The terminal plan tracker",
-    title: "Plan it. Dispatch it. Prove it.",
+    title: ["Plan it.", "Dispatch it.", "Prove it."],
     intro:
       "One local plan you and your agents share. First run sets it up, lanes carry it out, and every criterion keeps its proof.",
   },

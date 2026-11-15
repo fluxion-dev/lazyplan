@@ -34,7 +34,11 @@ export function Hero() {
           id="hero-title"
           className="m-0 text-display leading-display font-extrabold tracking-display text-balance text-foreground"
         >
-          {COPY.hero.title}
+          {COPY.hero.title.map((line) => (
+            <span key={line} className="block">
+              {line}
+            </span>
+          ))}
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lead text-pretty text-muted-foreground">
           {COPY.hero.intro}

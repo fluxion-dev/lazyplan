@@ -22,36 +22,7 @@ export function FirstRun() {
   return (
     <Section id="first-run" className="max-w-7xl">
       <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
-        <Reveal>
-          <figure className="relative m-0">
-            <div
-              aria-hidden="true"
-              className="absolute -inset-6 rounded-[2rem] bg-brand-gold/10 blur-3xl"
-            />
-            <div className="relative overflow-hidden rounded-2xl border border-border bg-card/70 p-1.5 shadow-cinema">
-              <picture>
-                <source
-                  srcSet={`./screens/${SETUP.file}.webp`}
-                  type="image/webp"
-                />
-                <img
-                  src={`./screens/${SETUP.file}.png`}
-                  width={SETUP.width}
-                  height={SETUP.height}
-                  loading="lazy"
-                  decoding="async"
-                  alt={SETUP.alt}
-                  className="block h-auto w-full rounded-xl"
-                />
-              </picture>
-            </div>
-            <figcaption className="mt-3 text-sm text-muted-foreground">
-              {SETUP.caption}
-            </figcaption>
-          </figure>
-        </Reveal>
-
-        <Reveal delay={100}>
+        <Reveal className="lg:order-2">
           <SectionHeading
             eyebrow={COPY.firstRun.eyebrow}
             title={COPY.firstRun.title}
@@ -88,6 +59,35 @@ export function FirstRun() {
             or press <code className="font-mono text-foreground">S</code> in the
             screen.
           </p>
+        </Reveal>
+
+        <Reveal delay={100} className="lg:order-1">
+          <figure className="relative m-0">
+            <div
+              aria-hidden="true"
+              className="absolute -inset-6 rounded-[2rem] bg-brand-gold/10 blur-3xl"
+            />
+            <div className="relative overflow-hidden rounded-2xl border border-border bg-card/70 p-1.5 shadow-cinema">
+              <picture>
+                <source
+                  srcSet={`./screens/${SETUP.file}.webp`}
+                  type="image/webp"
+                />
+                <img
+                  src={`./screens/${SETUP.file}.png`}
+                  width={SETUP.width}
+                  height={SETUP.height}
+                  loading="lazy"
+                  decoding="async"
+                  alt={SETUP.alt}
+                  className="block h-auto w-full rounded-xl"
+                />
+              </picture>
+            </div>
+            <figcaption className="mt-3 text-sm text-muted-foreground">
+              {SETUP.caption}
+            </figcaption>
+          </figure>
         </Reveal>
       </div>
     </Section>

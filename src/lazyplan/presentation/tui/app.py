@@ -279,29 +279,22 @@ if _TEXTUAL_OK:
         return app
 
 
-def _setup_check_off(db_path: str | None) -> bool:
-    """True when a caller-owned database or a skipped setup turns checks off."""
+def _startup_checks(
+    db_path: str | None,
+) -> tuple[HealthCheck | None, WizardCheck | None]:
+    """The two read-only startup checks, built once from one cwd and version."""
     from ..setup.triggers import setup_off
 
-    return setup_off(db_path)
+    if setup_off(db_path):
+        return None, None
+    from ..setup.health import current as health_check
+    from .controllers.setup import current as wizard_check
 
-
-def _startup_health_check(db_path: str | None) -> HealthCheck | None:
-    """The real check, off for a caller-owned database or a skipped setup."""
-    from ..setup.health import current
-
-    if _setup_check_off(db_path):
-        return None
-    return lambda: current(Path.cwd(), version=package_version())
-
-
-def _startup_wizard_check(db_path: str | None) -> WizardCheck | None:
-    """The read-only wizard trigger, off for the same runs health skips."""
-    from .controllers.setup import current
-
-    if _setup_check_off(db_path):
-        return None
-    return current(Path.cwd(), version=package_version())
+    cwd, version = Path.cwd(), package_version()
+    return (
+        lambda: health_check(cwd, version=version),
+        wizard_check(cwd, version=version),
+    )
 
 
 def run(db_path: str | None = None) -> int:
@@ -313,13 +306,14 @@ def run(db_path: str | None = None) -> int:
     startup_notice, exit_now = launch_update()
     if exit_now:
         return 0
+    health_check, wizard_check = _startup_checks(db_path)
     app = create_app(
         db_path,
         startup_notice,
         launch_notes(),
-        health_check=_startup_health_check(db_path),
+        health_check=health_check,
         restart_notice=take_restart_notice(),
-        wizard_check=_startup_wizard_check(db_path),
+        wizard_check=wizard_check,
     )
     result = app.run()
     if isinstance(result, Restart):

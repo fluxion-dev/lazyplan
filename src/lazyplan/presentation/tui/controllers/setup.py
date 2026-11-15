@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Any
 
 from ...setup.session import SetupSession
 from ...setup.triggers import WizardNeed, detect
+from .background import run_off_thread
 
 if TYPE_CHECKING:
     from ..app import LazyplanApp
@@ -84,7 +85,7 @@ class SetupController:
             if self.check is None:
                 self._continue()
                 return
-            self.app.run_worker(lambda: self._worker(False), thread=True, group="setup")
+            run_off_thread(self.app, lambda: self._detect(False), self._apply, "setup")
             return
         self._continue()
 
@@ -96,7 +97,7 @@ class SetupController:
             self.app.notify("setup is unavailable for this database")
             return
         self.opening = True
-        self.app.run_worker(lambda: self._worker(True), thread=True, group="setup")
+        run_off_thread(self.app, lambda: self._detect(True), self._apply, "setup")
 
     def on_dismiss(self, result: Any) -> None:
         """Refresh health and the tree after a completed apply."""
@@ -107,13 +108,12 @@ class SetupController:
         self.app.health_controller.refresh()
         self.app.refresh_all("setup applied")
 
-    def _worker(self, requested: bool) -> None:
+    def _detect(self, requested: bool) -> WizardLaunch:
+        assert self.check is not None
         try:
-            assert self.check is not None
-            launch = self.check(requested)
-        except Exception:  # noqa: BLE001 - a failed check must never break the TUI
-            launch = WizardLaunch(WizardNeed())
-        self.app.call_from_thread(self._apply, launch)
+            return self.check(requested)
+        except Exception:  # noqa: BLE001 - a broken check still hands over to health
+            return WizardLaunch(WizardNeed())
 
     def _apply(self, launch: WizardLaunch) -> None:
         self.opening = False

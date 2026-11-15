@@ -170,9 +170,9 @@ def tui_owns_setup(
     return _screen_terminal(interactive) and textual_available()
 
 
-def defer_to_tui(home: Path, version: str, fresh: bool) -> WizardNeed:
-    """Remember why the TUI wizard is pending and return the reason."""
-    reason = FRESH if fresh else VERSION
+def defer_to_tui(state: SetupState, version: str, home: Path) -> WizardNeed:
+    """Remember why setup left the wizard to the screen and return the reason."""
+    reason = pending_reason(state, version) or VERSION
     mark_pending(load_state(home), reason, version, home)
     return WizardNeed(reason, version, DEFAULT_DETAILS[reason])
 

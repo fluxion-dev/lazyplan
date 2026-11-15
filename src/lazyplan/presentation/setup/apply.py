@@ -486,7 +486,7 @@ def ensure(
         if result is None:
             return None
         if defer:
-            defer_to_tui(home, version, first)
+            defer_to_tui(state, version, home)
     if human and findings:
         _review_setup(args, findings, home, root, can_prompt)
     return result

@@ -13,6 +13,7 @@ from ...shared.help import hint_bar
 from ..launch import Restart
 from ..screens import TextScreen
 from ..screens.health import INSTALL, LATER, NEVER, HealthScreen
+from .background import run_off_thread
 
 if TYPE_CHECKING:
     from ..app import LazyplanApp
@@ -50,31 +51,26 @@ class HealthController:
             self.app.push_screen(TextScreen("RESTART YOUR AGENTS", self.restart_notice))
         if self.check is None:
             return
-        self.app.run_worker(self._worker, thread=True, group="health")
+        run_off_thread(self.app, self._check, self._apply, "health")
 
     def refresh(self) -> None:
         """Re-run the check off the UI thread without offering anything."""
         if self.check is None:
             return
-        self.app.run_worker(self._refresh_worker, thread=True, group="health")
+        run_off_thread(
+            self.app,
+            self._check,
+            lambda pair: self.apply(*pair, prompt=False),
+            "health",
+        )
 
-    def _refresh_worker(self) -> None:
+    def _check(self) -> tuple[HealthSession, HealthReport]:
         assert self.check is not None
-        try:
-            session = self.check()
-            report = session.report()
-        except Exception:  # noqa: BLE001 - a failed check must never break the TUI
-            return
-        self.app.call_from_thread(self.apply, session, report, False)
+        session = self.check()
+        return session, session.report()
 
-    def _worker(self) -> None:
-        assert self.check is not None
-        try:
-            session = self.check()
-            report = session.report()
-        except Exception:  # noqa: BLE001 - a failed check must never break the TUI
-            return
-        self.app.call_from_thread(self.apply, session, report)
+    def _apply(self, result: tuple[HealthSession, HealthReport]) -> None:
+        self.apply(*result)
 
     def apply(self, session: HealthSession, report: HealthReport, prompt: bool = True) -> None:
         """Store the report, update the chip, and prompt for open errors."""

@@ -14,6 +14,7 @@ try:
     from lazyplan.presentation import setup
     from lazyplan.presentation.cli.parser import package_version
     from lazyplan.presentation.tui import create_app
+    from lazyplan.presentation.tui.screens import UpdateScreen
     from lazyplan.presentation.tui.screens.maintenance import MaintenanceScreen
     from lazyplan.presentation.tui.screens.plan_diff import PlanDiffScreen
     from lazyplan.presentation.tui.screens.setup import SetupWizardScreen
@@ -73,27 +74,47 @@ class TaskbarBarsTest(unittest.IsolatedAsyncioTestCase):
         text = str(bar.render())
         self.assertTrue(text.endswith(f"v{package_version()}"), text)
 
+    def sizes(self) -> tuple[tuple[int, int], ...]:
+        return ((120, 40), (80, 24))
+
     async def test_the_hub_bar_shows_the_version(self) -> None:
-        app = create_app(str(self.store.path))
-        async with app.run_test(size=(120, 40)) as pilot:
-            app.push_screen(MaintenanceScreen(self.store))
-            await self.assert_bar(app, pilot, "hub-hints")
+        for size in self.sizes():
+            app = create_app(str(self.store.path))
+            async with app.run_test(size=size) as pilot:
+                app.push_screen(MaintenanceScreen(self.store))
+                await self.assert_bar(app, pilot, "hub-hints")
 
     async def test_the_plan_diff_bar_shows_the_version(self) -> None:
+        for size in self.sizes():
+            app = create_app(str(self.store.path))
+            async with app.run_test(size=size) as pilot:
+                app.push_screen(PlanDiffScreen(EMPTY_DIFF))
+                await self.assert_bar(app, pilot, "plan-diff-hints")
+
+    async def test_the_source_bar_shows_the_version(self) -> None:
+        for size in self.sizes():
+            app = create_app(str(self.store.path))
+            async with app.run_test(size=size) as pilot:
+                app.push_screen(SourceScreen(self.store, "task", self.task.id))
+                await self.assert_bar(app, pilot, "source-hints")
+
+    async def test_the_setup_bar_shows_the_version(self) -> None:
+        for size in self.sizes():
+            session = setup.SetupSession.load(self.repo, self.home, "1.0", discover=_catalogs)
+            app = create_app(str(self.store.path))
+            async with app.run_test(size=size) as pilot:
+                app.push_screen(SetupWizardScreen(session))
+                await self.assert_bar(app, pilot, "setup-hints")
+
+    async def test_clicking_a_plan_diff_badge_opens_updates(self) -> None:
         app = create_app(str(self.store.path))
         async with app.run_test(size=(120, 40)) as pilot:
             app.push_screen(PlanDiffScreen(EMPTY_DIFF))
-            await self.assert_bar(app, pilot, "plan-diff-hints")
-
-    async def test_the_source_bar_shows_the_version(self) -> None:
-        app = create_app(str(self.store.path))
-        async with app.run_test(size=(120, 40)) as pilot:
-            app.push_screen(SourceScreen(self.store, "task", self.task.id))
-            await self.assert_bar(app, pilot, "source-hints")
-
-    async def test_the_setup_bar_shows_the_version(self) -> None:
-        session = setup.SetupSession.load(self.repo, self.home, "1.0", discover=_catalogs)
-        app = create_app(str(self.store.path))
-        async with app.run_test(size=(120, 40)) as pilot:
-            app.push_screen(SetupWizardScreen(session))
-            await self.assert_bar(app, pilot, "setup-hints")
+            await pilot.pause(0.3)
+            app.update_controller.latest = "99.0.0"
+            app.refresh_taskbar()
+            await pilot.pause()
+            bar = app.screen.query_one("#plan-diff-hints", Taskbar)
+            await pilot.click(bar, offset=(bar.size.width - 2, 0))
+            await pilot.pause()
+            self.assertIsInstance(app.screen, UpdateScreen)

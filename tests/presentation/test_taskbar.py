@@ -193,3 +193,18 @@ class TaskbarPilotTest(unittest.IsolatedAsyncioTestCase):
             diff = str(app.screen.query_one("#plan-diff-hints", Taskbar).render())
             self.assertIn("→ v99.0.0", main)
             self.assertIn("→ v99.0.0", diff)
+
+    async def test_clearing_the_update_removes_the_arrow(self) -> None:
+        app = create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.update_controller.latest = "99.0.0"
+            app.update_controller.notice = "update available"
+            app.refresh_taskbar()
+            await pilot.pause()
+            self.assertIn("→ v99.0.0", str(app.query_one("#hints", Taskbar).render()))
+            app.update_controller.clear()
+            await pilot.pause()
+            text = str(app.query_one("#hints", Taskbar).render())
+            self.assertNotIn("→", text)
+            self.assertTrue(text.endswith(f"v{package_version()}"))

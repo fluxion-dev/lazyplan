@@ -45,11 +45,10 @@ lpui
 ```
 
 The first `lpui` applies a baseline setup, then opens a wizard before normal
-use: where plans live, which agents get lazyplan, hooks and the `AGENTS.md`
-pointer, per-host model targets, per-role tier and effort, and a review of every
-write before it applies. **Finish later** writes nothing and asks again at the
-next applicable launch; `S` opens the wizard from any screen. A run without a
-terminal, or with `--json` or `--yes`, applies the same defaults without asking.
+use. **Finish later** writes nothing, and `S` reopens the wizard from any
+screen; a run without a terminal, or with `--json` or `--yes`, applies the same
+defaults without asking. See [setup and scope](docs/usage.md#setup-and-scope)
+for the steps.
 
 Keep the plan in the repo with `lpui setup --placement repo`, or try the demo
 data with `lpui seed`.
@@ -77,9 +76,8 @@ lpui criterion edit --id 1 --done # mark an acceptance item done
 lpui feed                         # recent activity
 ```
 
-The bottom bar pins the running version at its right edge, with an arrow to a
-newer release once one is cached. Click it or press `U` to open the update
-screen.
+The bottom bar pins the running version, with an arrow beside it when a newer
+release is cached; click the badge or press `U` to update.
 
 ## For your agent
 
@@ -94,14 +92,12 @@ lpui plan recipe feature > plan.json
 lpui --actor helper --porcelain plan apply --file plan.json
 ```
 
-Roles name a capability tier (`fast`, `standard`, `deep`) and an effort level;
-`agents.json` maps each tier to a model per host, and setup installs one managed
-subagent file per role. See [agent profiles](docs/usage.md#agent-profiles).
-
-Parallel plans are lanes: a milestone is a lane with a wave and a role, and it
-gets its own registered worktree. `lpui dispatch --plan P` prints the waves,
-lane worktrees, and one worker prompt per ready task; lazyplan never creates a
-worktree or starts an agent itself.
+Parallel plans are lanes: a milestone gets a wave, a role, and its own
+registered worktree, and roles name a capability tier and an effort level.
+[Agent profiles](docs/usage.md#agent-profiles) and [lanes and
+waves](docs/usage.md#lanes-and-waves) cover the model map and the worktree
+commands; `lpui dispatch --plan P` prints the waves, worktrees, and one worker
+prompt per ready task.
 
 See the [agent contract](docs/usage.md#agents) for claims, agents, evidence,
 and MCP. For your data, back up with `lpui export --format json` and restore

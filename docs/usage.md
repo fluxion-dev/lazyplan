@@ -13,9 +13,8 @@ pipx install lazyplan-tui
 lpui
 ```
 
-The first `lpui` run finishes setup (agents, skills, database) and opens the
-screen, where the setup wizard reviews the choices. On Windows, use the pip
-backend:
+The first `lpui` run finishes setup and, on a terminal, opens the wizard;
+[Start](#start) covers the first plan. On Windows, use the pip backend:
 
 ```powershell
 pipx install --backend pip lazyplan-tui
@@ -79,12 +78,9 @@ lpui upgrade --check
 `lpui upgrade` manages pipx and venv installs. System packages upgrade through
 `dnf` or `apt`. The TUI notifies and CLI stderr mentions new versions; stdout
 stays clean for `--json`. A successful upgrade re-runs setup with the new
-binary. Installed skills and hooks refresh silently, and a release that
-changed setup or added a skill or hook surface makes the setup wizard due at
-the next launch, where the integrations step offers the new items. Headless
-runs (`--json`, `--yes`, agent calls, and the Windows helper) never prompt;
-`lpui doctor` names what is pending, and the next `lpui` or `lpui setup`
-offers it.
+binary and refreshes installed skills and hooks silently. [Upgrades and
+migration](#upgrades-and-migration) covers when the wizard reopens and which
+runs never prompt.
 
 On Windows the command and the TUI Update screen use a detached helper. lpui
 closes first, then the helper waits for the process to exit, updates the
@@ -148,11 +144,10 @@ cd ~/my-plan
 lpui
 ```
 
-The first run sets up lazyplan: it detects your coding agents, installs their
-skills, creates the database, and remembers the choices in
-`~/.lazyplan/setup.json`. The screen then opens the setup wizard to review and
-change those choices; scripts, agents, and `--json` get the same defaults
-without prompts.
+The first run sets up lazyplan — agents, skills, database, and the remembered
+choices in `~/.lazyplan/setup.json` — and then opens the setup wizard before
+normal use. [Setup and scope](#setup-and-scope) covers the steps, the flags, and
+the headless defaults.
 
 Then create your first plan:
 
@@ -185,12 +180,12 @@ palette command lists every gap with Install & restart. The check is off with
 
 ## Setup and scope
 
-Setup writes one layout, and the screen is where you review it. `lpui` on a
-terminal opens a multi-step setup wizard before normal use: placement, agents
-and their skills, hooks and the `AGENTS.md` pointer, model targets, per-role
-tier and effort, pending integrations, the theme, and read-only tool checks.
-Nothing is written until the last step lists the exact writes and removals and
-you apply them.
+Setup writes one layout, and the screen is where you review it. On a terminal,
+`lpui` applies a baseline and then opens a multi-step setup wizard before normal
+use: placement, agents and their skills, hooks and the `AGENTS.md` pointer,
+model targets, per-role tier and effort, pending integrations, the theme, and
+read-only tool checks. Nothing more is written until the last step lists the
+exact writes and removals and you apply them.
 
 The wizard opens when setup is due: a fresh install, a release that changed
 setup, new skills or hooks a release added, managed agent profiles that are
@@ -200,11 +195,11 @@ any time from the palette's **Open setup wizard** or the `S` key; it starts
 filled with the remembered choices. In the wizard, `n` moves to the next step,
 `b` goes back, and `l` or `escape` closes it without writing.
 
-`lpui setup` keeps the terminal wizard for an explicit run. Runs without a
+`lpui setup` keeps the terminal wizard when it has a terminal. Runs without a
 terminal, without Textual, with `--json`, `--yes`, or `LAZYPLAN_NO_SETUP`
-apply the same defaults silently and never wait for input; an explicit `--db`
-or `$LAZYPLAN_DB` keeps setup out of the way entirely. `lpui setup` is the
-fallback for a headless shell.
+apply the same defaults silently and never wait for input, so `lpui setup` is
+also the headless fallback; an explicit `--db` or `$LAZYPLAN_DB` keeps setup
+out of the way entirely.
 
 ```bash
 lpui setup
@@ -442,6 +437,7 @@ before it.
 | `c` | command palette, from any screen |
 | `S` | setup wizard, from any screen |
 | `U` | update screen: version badge and download |
+| `W` | release notes for the installed version |
 | `t` | cycle theme: mocha, void, latte |
 | `T` | show or hide the timeline card |
 | `q` | quit, from any screen |
@@ -677,10 +673,8 @@ Gemini reads `~/.gemini/settings.json`; Cursor and Copilot read their config
 and otherwise keep the host default. A missing binary or bad config becomes a
 warning, never a failed setup.
 
-The interactive flow has four steps: placement, agents, model targets, and
-review, and the screen wizard asks the same questions across its own steps. The
-model step prints the tier table, then one row per role with its
-tier and each selected host's resolved model. Enter accepts the map;
+The terminal wizard's model step prints the tier table, then one row per role
+with its tier and each selected host's resolved model. Enter accepts the map;
 `t ROLE TIER`, `m HOST TIER MODEL`, and `r HOST TIER` edit it, and `inherit`
 clears a target back to the host default. Setup backs up `agents.json` before
 rewriting it, and rerunning with an unchanged map writes no profile bytes.

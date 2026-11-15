@@ -159,8 +159,7 @@ class IntegrationFindingsTest(HealthCase):
         db = shared_db_path(self.home)
         self.state.agents = ["claude"]
         self.state.profile_files = [
-            str(path)
-            for path in agent_install.profile_paths("global", None, self.home, ["claude"])
+            str(path) for path in agent_install.profile_paths("global", None, self.home, ["claude"])
         ]
         agent_install.install_profiles("global", None, self.home, ["claude"], db)
         self.assertNotIn("profile:agents", self.by_id(self.check()))

@@ -169,6 +169,21 @@ class TaskbarPilotTest(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             self.assertIsInstance(app.screen, UpdateScreen)
 
+    async def test_clicking_the_badge_after_a_health_chip_opens_updates(self) -> None:
+        app = create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            finding = HealthFinding(id="tool:git", label="git", capability="Commit links fail.")
+            app.health_controller.report = HealthReport(findings=(finding,))
+            app.health_controller.refresh_hints()
+            app.update_controller.latest = "99.0.0"
+            app.refresh_taskbar()
+            await pilot.pause()
+            bar = app.query_one("#hints", Taskbar)
+            await pilot.click(bar, offset=(bar.size.width - 2, 0))
+            await pilot.pause()
+            self.assertIsInstance(app.screen, UpdateScreen)
+
     async def test_u_opens_updates_from_a_stacked_screen(self) -> None:
         app = create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
